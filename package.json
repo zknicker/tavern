@@ -7,13 +7,13 @@
     "packages/*"
   ],
   "scripts": {
-    "dev": "node scripts/run-dev-stack.mjs web",
-    "dev:runtime": "node scripts/run-dev-stack.mjs web-runtime",
+    "dev": "node scripts/run-dev-stack.mjs desktop-runtime",
+    "dev:web": "node scripts/run-dev-stack.mjs web",
+    "dev:web:runtime": "node scripts/run-dev-stack.mjs web-runtime",
     "build": "bun run --filter @tavern/agent-runtime-protocol build && bun run --filter @tavern/memory build && bun run --filter @zknicker/tavern-openclaw-messenger build && bun run --filter @tavern/openclaw-gateway-adapter build && bun run --filter @tavern/claude-usage build && bun run --filter @tavern/codex-usage build && bun run --filter @tavern/server build && bun run --filter @tavern/runtime build && bun run --filter @tavern/website build",
     "build:desktop": "bun run desktop:build",
     "build:desktop:unsigned": "bun run --filter @tavern/website desktop:build:unsigned",
     "desktop:dev": "node scripts/run-dev-stack.mjs desktop",
-    "desktop:dev:runtime": "node scripts/run-dev-stack.mjs desktop-runtime",
     "desktop:build": "bun run --filter @tavern/website desktop:build",
     "desktop:release": "bun run --filter @tavern/website desktop:release",
     "publish:desktop": "bun run --filter @tavern/website desktop:publish",

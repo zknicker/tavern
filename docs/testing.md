@@ -155,7 +155,7 @@ Tavern tests should prove product behavior, not implementation trivia.
 
 - Manual development smoke tests may use the developer's local `~/.openclaw`.
 - Treat that local OpenClaw home as disposable Tavern test state, not production data.
-- Start the app with `bun run dev:runtime` and point `TAVERN_RUNTIME_URL` at
+- Start the app with `bun run dev` and point `TAVERN_RUNTIME_URL` at
   `http://127.0.0.1:4310`.
 - Tavern Runtime reads the local OpenClaw Gateway token from `OPENCLAW_GATEWAY_TOKEN` or
   `~/.openclaw/openclaw.json`; do not paste or commit the token in docs, tests, fixtures, or logs.

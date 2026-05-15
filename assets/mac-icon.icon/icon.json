@@ -1,34 +1,49 @@
 {
-  "fill": {
-    "linear-gradient": [
-      "display-p3:0.04904,0.03964,0.23254,1.00000",
-      "display-p3:0.03922,0.03922,0.26611,1.00000"
-    ]
+  "fill" : {
+    "automatic-gradient" : "extended-gray:1.00000,1.00000"
   },
-  "groups": [
+  "groups" : [
     {
-      "layers": [
+      "layers" : [
         {
-          "image-name": "bannerwstar.png",
-          "name": "bannerwstar",
-          "position": {
-            "scale": 0.94,
-            "translation-in-points": [0, 15]
+          "image-name" : "bannerwstar 2.png",
+          "name" : "bannerwstar 2",
+          "position" : {
+            "scale" : 0.9,
+            "translation-in-points" : [
+              0.029999999999972715,
+              18
+            ]
           }
         }
       ],
-      "shadow": {
-        "kind": "neutral",
-        "opacity": 0.5
+      "shadow" : {
+        "kind" : "neutral",
+        "opacity" : 0.5
       },
-      "translucency": {
-        "enabled": true,
-        "value": 0.5
+      "translucency" : {
+        "enabled" : true,
+        "value" : 0.5
+      }
+    },
+    {
+      "layers" : [
+
+      ],
+      "shadow" : {
+        "kind" : "neutral",
+        "opacity" : 0.5
+      },
+      "translucency" : {
+        "enabled" : true,
+        "value" : 0.5
       }
     }
   ],
-  "supported-platforms": {
-    "circles": ["watchOS"],
-    "squares": "shared"
+  "supported-platforms" : {
+    "circles" : [
+      "watchOS"
+    ],
+    "squares" : "shared"
   }
 }

@@ -174,22 +174,19 @@ signals, not rendering preconditions.
 
 ```bash
 TAVERN_RUNTIME_URL=http://127.0.0.1:4310 \
-bun run dev:runtime
+bun run dev
 ```
 
 Tavern stores local state in SQLite at `DATABASE_PATH`, defaulting to `~/.tavern/tavern.sqlite`.
-`bun run dev:runtime` starts the web app, server, and local development Tavern Runtime. It does not
-start or manage OpenClaw; Tavern Runtime connects to the local OpenClaw Gateway at
-`ws://127.0.0.1:18789` with the token from `OPENCLAW_GATEWAY_TOKEN` or `~/.openclaw/openclaw.json`.
-Before starting Tavern Runtime, the dev stack deploys the Tavern Messenger plugin from this
-worktree to `~/.tavern/openclaw-plugins/tavern-openclaw-messenger` and points OpenClaw at that
-stable path. This keeps `~/.openclaw/openclaw.json` from referencing deleted Conductor worktrees.
+`bun run dev` starts the desktop shell, website dev server, server, and local development Tavern
+Runtime. Before starting Tavern Runtime, the dev stack deploys the Tavern Messenger plugin from
+this worktree to `~/.tavern/openclaw-plugins/tavern-openclaw-messenger` and points OpenClaw at that
+stable path. This keeps managed OpenClaw config from referencing deleted Conductor worktrees.
 
 The local `~/.openclaw` install is the development OpenClaw sandbox for this repo. It is acceptable
 for local smoke tests to install skills, materialize agent workspace skills, and clean up generated
 state there. Do not use a production or shared OpenClaw home for this development loop.
 
-For desktop development, use the same Tavern Runtime URL with `bun run desktop:dev:runtime`.
 
 Runtime startup does not require Docker. Agent execution belongs to OpenClaw.
 Tavern configures OpenClaw sandboxes with a one-hour idle prune window and the dev stack removes
@@ -205,7 +202,7 @@ bun run desktop:build
 ```
 
 This compiles the website, produces a bundled Tavern sidecar binary, and builds the Tauri shell.
-For `bun run desktop:dev`, Tavern points Cargo at a shared user cache directory so fresh
+For `bun run dev`, Tavern points Cargo at a shared user cache directory so fresh
 workspaces can reuse Rust build artifacts instead of recompiling them into each workspace-local
 `src-tauri/target` directory. If `sccache` is installed and on `PATH`, desktop commands also use
 it as the Rust compiler wrapper. On macOS, install it with `brew install sccache`. If it is not

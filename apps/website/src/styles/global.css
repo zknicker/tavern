@@ -5,6 +5,22 @@
 @import "tailwindcss";
 @import "tw-animate-css";
 
+@font-face {
+    font-family: 'Clash Display';
+    font-style: normal;
+    font-weight: 600;
+    font-display: swap;
+    src: url('../assets/fonts/clash-display-semibold.woff2') format('woff2');
+}
+
+@font-face {
+    font-family: 'Clash Display';
+    font-style: normal;
+    font-weight: 700;
+    font-display: swap;
+    src: url('../assets/fonts/clash-display-bold.woff2') format('woff2');
+}
+
 /* ── Dark mode = default (anything not light) ── */
 @custom-variant dark (&:where(.dark, .dark *));
 
@@ -12,6 +28,7 @@
 @theme inline {
     --font-sans: var(--font-sans);
     --font-heading: var(--font-heading);
+    --font-display: 'Clash Display', var(--font-heading);
     --font-mono: var(--font-mono);
 
     --text-micro: calc(var(--app-ui-font-size) - 4px);

@@ -256,7 +256,7 @@ Add or update focused tests for:
 Manual smoke test:
 
 1. Reset local Tavern DB and managed OpenClaw run state.
-2. Boot `bun run desktop:dev:runtime`.
+2. Boot `bun run dev`.
 3. Confirm chat sidebar starts empty.
 4. Create one chat and send one message.
 5. Confirm the OpenClaw session appears under the deterministic session key.

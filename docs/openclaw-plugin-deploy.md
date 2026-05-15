@@ -19,7 +19,7 @@ Current local paths:
 Run the Tavern Runtime dev stack:
 
 ```bash
-bun run desktop:dev:runtime
+bun run dev
 ```
 
 During startup, the dev stack builds `packages/tavern-openclaw-messenger`, then Tavern Runtime

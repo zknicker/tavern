@@ -30,7 +30,7 @@ export function Overview() {
             agent={agent}
             agents={agents.agents}
             chats={chats.chats}
-            heading="Tavern is quiet tonight, Zach."
+            heading="The Tavern is quiet tonight, Zach."
             jobCount={cronJobsQuery.data?.jobs.length ?? 0}
             memoryCount={0}
             recentCronJobs={cronJobs}

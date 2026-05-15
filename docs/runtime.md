@@ -104,7 +104,7 @@ See `../specs/agent-runtimes/tavern-messenger.md` for the Tavern Messenger chat 
 The normal local development stack is:
 
 ```txt
-bun run dev:runtime
+bun run dev
   -> apps/runtime dev server
   -> apps/runtime starts the pinned OpenClaw Gateway
   -> apps/server dev server
@@ -138,16 +138,15 @@ Tavern Runtime URL:
 
 ```bash
 TAVERN_RUNTIME_URL=http://127.0.0.1:4310 \
-bun run dev:runtime
+bun run dev
 ```
 
 If those values live in `.env`, the command can be shortened to:
 
 ```bash
-bun run dev:runtime
+bun run dev
 ```
 
-Use `bun run desktop:dev:runtime` for the same managed OpenClaw setup with the desktop shell.
 See `docs/openclaw-runtime-upgrade.md` for the managed OpenClaw version bump and state migration
 process.
 

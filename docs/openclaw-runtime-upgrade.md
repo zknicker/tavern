@@ -78,7 +78,7 @@ For state/config upgrades, also smoke with a copied `~/.tavern` tree:
 ```bash
 TAVERN_RUNTIME_ROOT=/tmp/tavern-upgrade-smoke/runtime \
 DATABASE_PATH=/tmp/tavern-upgrade-smoke/tavern.sqlite \
-bun run desktop:dev:runtime
+bun run dev
 ```
 
 Confirm that:

@@ -17,7 +17,7 @@ export function NewChat() {
             <div className="relative z-10 flex w-full max-w-2xl flex-col items-center">
                 <div className="animate-float-up">
                     <OverviewHeader
-                        heading="Tavern is quiet tonight, Zach."
+                        heading="The Tavern is quiet tonight, Zach."
                         jobCount={cronJobsQuery.data?.jobs.length ?? 0}
                         memoryCount={0}
                         sessionsCount={sessionsData.sessions.length}
