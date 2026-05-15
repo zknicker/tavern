@@ -1,0 +1,7 @@
+{
+  "scripts": {
+    "setup": "cp /Users/zknicker/Programming/tavern/.env .\nbun install",
+    "run": "bun run desktop:dev:runtime",
+    "archive": "true"
+  }
+}

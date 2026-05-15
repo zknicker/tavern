@@ -1,0 +1,180 @@
+import { expect, test } from 'bun:test';
+import { createChatSendMutationHandlers } from './chat-send-mutation.ts';
+
+test('useChatSend stores the local user row in app state until the log catches up', async () => {
+    const invalidatedQueries: string[] = [];
+    const timelineMessages: Array<{
+        chatId: string;
+        content: string;
+        id: string;
+        timestamp: string;
+    }> = [];
+    const acceptedMessages: Array<{
+        chatId: string;
+        messageId: string;
+        sessionKey?: string | null;
+    }> = [];
+    const startedTurns: Array<{
+        agentId: string;
+        chatId: string;
+        runId: string;
+        sessionKey: string;
+        startedAt: string;
+    }> = [];
+
+    const mutation = createChatSendMutationHandlers({
+        chat: {
+            list: {
+                invalidate: async () => {
+                    invalidatedQueries.push('chat.list');
+                },
+            },
+            status: {
+                list: {
+                    invalidate: async () => {
+                        invalidatedQueries.push('chat.status.list');
+                    },
+                },
+            },
+        },
+        timelineMessage: {
+            add: (message) => {
+                timelineMessages.push(message);
+            },
+            setSession: (message) => {
+                acceptedMessages.push(message);
+            },
+            remove: () => {
+                throw new Error('Expected the local row to stay until logged history replaces it.');
+            },
+        },
+        timelineTurn: {
+            start: (turn) => {
+                startedTurns.push(turn);
+            },
+        },
+        session: {
+            get: {
+                invalidate: async () => {
+                    invalidatedQueries.push('session.get');
+                },
+            },
+            history: {
+                get: {
+                    invalidate: async () => {
+                        invalidatedQueries.push('session.history.get');
+                    },
+                },
+            },
+            list: {
+                invalidate: async () => {
+                    invalidatedQueries.push('session.list');
+                },
+            },
+        },
+    });
+    const input = {
+        agentId: 'agent-1',
+        chatId: 'chat-1',
+        clientMessageId: 'tavern-message:1',
+        content: 'love to hear it',
+    };
+    const context = await mutation.onMutate(input);
+
+    expect(timelineMessages).toHaveLength(1);
+    expect(timelineMessages[0]).toMatchObject({
+        chatId: 'chat-1',
+        content: 'love to hear it',
+    });
+    expect(timelineMessages[0]?.id).toBe('tavern-message:1');
+    expect(context?.timelineMessageId).toBe(timelineMessages[0]?.id);
+
+    const result = {
+        acceptedAt: '2026-04-20T18:15:00.000Z',
+        chatId: 'chat-1',
+        runId: 'run-1',
+        sessionKey: 'session-1',
+        status: 'accepted' as const,
+    };
+
+    await mutation.onSuccess(result, input, context);
+
+    expect(invalidatedQueries).toEqual([
+        'chat.list',
+        'chat.status.list',
+        'session.get',
+        'session.list',
+        'session.history.get',
+    ]);
+    expect(acceptedMessages).toEqual([
+        {
+            chatId: 'chat-1',
+            messageId: context?.timelineMessageId,
+            sessionKey: 'session-1',
+        },
+    ]);
+    expect(startedTurns).toEqual([
+        {
+            agentId: 'agent-1',
+            chatId: 'chat-1',
+            runId: 'run-1',
+            sessionKey: 'session-1',
+            startedAt: '2026-04-20T18:15:00.000Z',
+        },
+    ]);
+});
+
+test('useChatSend removes the local user row if the send fails', async () => {
+    const removedMessages: Array<{ chatId: string; messageId: string }> = [];
+
+    const mutation = createChatSendMutationHandlers({
+        chat: {
+            list: {
+                invalidate: async () => undefined,
+            },
+            status: {
+                list: {
+                    invalidate: async () => undefined,
+                },
+            },
+        },
+        timelineMessage: {
+            add: () => undefined,
+            setSession: () => undefined,
+            remove: (message) => {
+                removedMessages.push(message);
+            },
+        },
+        timelineTurn: {
+            start: () => undefined,
+        },
+        session: {
+            get: {
+                invalidate: async () => undefined,
+            },
+            history: {
+                get: {
+                    invalidate: async () => undefined,
+                },
+            },
+            list: {
+                invalidate: async () => undefined,
+            },
+        },
+    });
+    const input = {
+        agentId: 'agent-1',
+        chatId: 'chat-1',
+        content: 'love to hear it',
+    };
+    const context = await mutation.onMutate(input);
+
+    mutation.onError(new Error('send failed'), input, context);
+
+    expect(removedMessages).toEqual([
+        {
+            chatId: 'chat-1',
+            messageId: context?.timelineMessageId,
+        },
+    ]);
+});

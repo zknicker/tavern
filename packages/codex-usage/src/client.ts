@@ -1,0 +1,221 @@
+import { z } from 'zod';
+import { loadCodexCredentials } from './credentials.ts';
+import { CodexUsageAuthError, CodexUsageParseError, CodexUsageRequestError } from './errors.ts';
+import type {
+    CodexUsageOptions,
+    CodexUsageSnapshot,
+    CodexUsageWindow,
+    CodexUsageWindowId,
+} from './types.ts';
+
+const CODEX_USAGE_URL = 'https://chatgpt.com/backend-api/wham/usage';
+
+const codexUsageResponseSchema = z
+    .object({
+        credits: z
+            .object({
+                balance: z
+                    .union([z.number().finite(), z.string().trim().min(1)])
+                    .nullable()
+                    .optional(),
+            })
+            .passthrough()
+            .optional(),
+        plan_type: z.string().trim().min(1).optional(),
+        rate_limit: z
+            .object({
+                primary_window: z.record(z.string(), z.unknown()).optional(),
+                secondary_window: z.record(z.string(), z.unknown()).optional(),
+            })
+            .passthrough()
+            .optional(),
+    })
+    .passthrough();
+
+export function normalizeCodexUsageResponse(
+    input: unknown,
+    options: {
+        capturedAt?: Date;
+        headers?: Headers;
+        now?: Date;
+    } = {}
+): CodexUsageSnapshot {
+    const response = codexUsageResponseSchema.parse(input);
+    const now = options.now ?? new Date();
+    const windows: CodexUsageWindow[] = [];
+
+    appendWindow(
+        windows,
+        'current-session',
+        'Current session',
+        headerNumber(options.headers, 'x-codex-primary-used-percent') ??
+            numberField(response.rate_limit?.primary_window, 'used_percent'),
+        response.rate_limit?.primary_window,
+        now
+    );
+
+    appendWindow(
+        windows,
+        'current-week',
+        'Current week',
+        headerNumber(options.headers, 'x-codex-secondary-used-percent') ??
+            numberField(response.rate_limit?.secondary_window, 'used_percent'),
+        response.rate_limit?.secondary_window,
+        now
+    );
+
+    return {
+        capturedAt: (options.capturedAt ?? now).toISOString(),
+        creditsBalance:
+            headerNumber(options.headers, 'x-codex-credits-balance') ??
+            coerceNumber(response.credits?.balance) ??
+            null,
+        planType: response.plan_type ?? null,
+        provider: 'codex',
+        source: 'chatgpt-wham-usage',
+        windows,
+    };
+}
+
+export async function getCodexUsage(options: CodexUsageOptions = {}): Promise<CodexUsageSnapshot> {
+    const fetchImpl = options.fetch ?? fetch;
+    const signal = options.signal ?? AbortSignal.timeout(options.timeoutMs ?? 15_000);
+    const loaded = options.credentials
+        ? {
+              credentials: options.credentials,
+              document: { tokens: {} },
+              path: '',
+              source: 'manual' as const,
+          }
+        : await loadCodexCredentials(options);
+
+    if (!loaded) {
+        throw new CodexUsageAuthError('Codex auth was not found. Run `codex` to log in first.');
+    }
+
+    const credentials = loaded.credentials;
+    const usageResponse = await fetchCodexUsageResponse({
+        accessToken: credentials.accessToken,
+        accountId: credentials.accountId,
+        fetch: fetchImpl,
+        signal,
+    });
+
+    if (usageResponse.status === 401 || usageResponse.status === 403) {
+        throw new CodexUsageAuthError('Codex session expired. Run `codex` to log in again.');
+    }
+
+    if (usageResponse.status !== 200) {
+        throw new CodexUsageRequestError(
+            `Codex usage request failed with HTTP ${usageResponse.status}`,
+            usageResponse.status
+        );
+    }
+
+    const body = await usageResponse.json();
+    try {
+        return normalizeCodexUsageResponse(body, {
+            capturedAt: options.now,
+            headers: usageResponse.headers,
+            now: options.now,
+        });
+    } catch (error) {
+        if (error instanceof z.ZodError) {
+            throw new CodexUsageParseError('Codex usage response shape changed');
+        }
+
+        throw error;
+    }
+}
+
+function appendWindow(
+    windows: CodexUsageWindow[],
+    id: CodexUsageWindowId,
+    label: string,
+    usedPercent: number | null,
+    rawWindow: Record<string, unknown> | undefined,
+    now: Date
+): void {
+    if (usedPercent === null) {
+        return;
+    }
+
+    const resetAfterSeconds = numberField(rawWindow, 'reset_after_seconds');
+    const resetAt = numberField(rawWindow, 'reset_at');
+
+    windows.push({
+        id,
+        label,
+        remainingPercent: clampPercent(100 - usedPercent),
+        resetAfterSeconds,
+        resetsAt:
+            resetAt !== null
+                ? new Date(resetAt * 1000).toISOString()
+                : resetAfterSeconds !== null
+                  ? new Date(now.getTime() + resetAfterSeconds * 1000).toISOString()
+                  : null,
+        usedPercent: clampPercent(usedPercent),
+    });
+}
+
+function clampPercent(value: number): number {
+    return Math.max(0, Math.min(100, value));
+}
+
+async function fetchCodexUsageResponse(options: {
+    accessToken: string;
+    accountId: string | null;
+    fetch: typeof fetch;
+    signal: AbortSignal;
+}): Promise<Response> {
+    const headers = new Headers({
+        accept: 'application/json',
+        authorization: `Bearer ${options.accessToken}`,
+    });
+
+    if (options.accountId) {
+        headers.set('ChatGPT-Account-Id', options.accountId);
+    }
+
+    return options.fetch(CODEX_USAGE_URL, {
+        headers,
+        method: 'GET',
+        signal: options.signal,
+    });
+}
+
+function headerNumber(headers: Headers | undefined, key: string): number | null {
+    if (!headers) {
+        return null;
+    }
+
+    const value = headers.get(key);
+    if (value === null) {
+        return null;
+    }
+
+    const parsed = Number(value);
+    return Number.isFinite(parsed) ? parsed : null;
+}
+
+function numberField(value: Record<string, unknown> | undefined, key: string): number | null {
+    if (!value) {
+        return null;
+    }
+
+    const raw = value[key];
+    return coerceNumber(raw);
+}
+
+function coerceNumber(value: unknown): number | null {
+    if (typeof value === 'number') {
+        return Number.isFinite(value) ? value : null;
+    }
+
+    if (typeof value === 'string' && value.trim().length > 0) {
+        const parsed = Number(value);
+        return Number.isFinite(parsed) ? parsed : null;
+    }
+
+    return null;
+}

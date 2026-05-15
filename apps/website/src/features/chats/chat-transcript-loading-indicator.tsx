@@ -1,0 +1,43 @@
+import * as React from 'react';
+import { Spinner } from '../../components/ui/spinner.tsx';
+import { cn } from '../../lib/utils.ts';
+
+const loadingIndicatorDelayMs = 180;
+
+export function ChatTranscriptLoadingIndicator({
+    className,
+    iconClassName,
+    visible,
+}: {
+    className?: string;
+    iconClassName?: string;
+    visible: boolean;
+}) {
+    const [show, setShow] = React.useState(false);
+
+    React.useEffect(() => {
+        if (!visible) {
+            setShow(false);
+            return;
+        }
+
+        const timeout = window.setTimeout(() => setShow(true), loadingIndicatorDelayMs);
+        return () => window.clearTimeout(timeout);
+    }, [visible]);
+
+    if (!show) {
+        return null;
+    }
+
+    return (
+        <output
+            aria-label="Loading chat transcript"
+            className={cn(
+                'pointer-events-none inline-flex animate-[chat-loading-indicator-in_160ms_cubic-bezier(0.23,1,0.32,1)_both] items-center justify-center text-muted-foreground/75',
+                className
+            )}
+        >
+            <Spinner className={cn('size-4', iconClassName)} />
+        </output>
+    );
+}

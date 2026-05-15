@@ -1,0 +1,79 @@
+import { index, sqliteTable, text } from 'drizzle-orm/sqlite-core';
+
+export const profilesTable = sqliteTable('profiles', {
+    avatar: text('avatar'),
+    createdAt: text('created_at').notNull(),
+    displayName: text('display_name'),
+    id: text('id').primaryKey(),
+    primaryColor: text('primary_color'),
+    updatedAt: text('updated_at').notNull(),
+});
+
+export const participantsTable = sqliteTable(
+    'participants',
+    {
+        accountKey: text('account_key'),
+        createdAt: text('created_at').notNull(),
+        externalId: text('external_id'),
+        id: text('id').primaryKey(),
+        lastSeenAt: text('last_seen_at'),
+        observedName: text('observed_name').notNull(),
+        provider: text('provider').notNull(),
+        updatedAt: text('updated_at').notNull(),
+    },
+    (table) => ({
+        observedNameIdx: index('participants_observed_name_idx').on(table.observedName),
+        sourceIdx: index('participants_source_idx').on(
+            table.provider,
+            table.accountKey,
+            table.externalId
+        ),
+    })
+);
+
+export const participantLabelsTable = sqliteTable(
+    'participant_labels',
+    {
+        createdAt: text('created_at').notNull(),
+        id: text('id').primaryKey(),
+        label: text('label').notNull(),
+        lastSeenAt: text('last_seen_at').notNull(),
+        normalizedLabel: text('normalized_label').notNull(),
+        participantId: text('participant_id')
+            .notNull()
+            .references(() => participantsTable.id, { onDelete: 'cascade' }),
+        updatedAt: text('updated_at').notNull(),
+    },
+    (table) => ({
+        normalizedIdx: index('participant_labels_normalized_idx').on(
+            table.participantId,
+            table.normalizedLabel
+        ),
+        participantIdx: index('participant_labels_participant_idx').on(table.participantId),
+    })
+);
+
+export const profileParticipantsTable = sqliteTable(
+    'profile_participants',
+    {
+        createdAt: text('created_at').notNull(),
+        participantId: text('participant_id')
+            .notNull()
+            .references(() => participantsTable.id, { onDelete: 'cascade' }),
+        profileId: text('profile_id')
+            .notNull()
+            .references(() => profilesTable.id, { onDelete: 'cascade' }),
+    },
+    (table) => ({
+        participantIdx: index('profile_participants_participant_idx').on(table.participantId),
+        profileIdx: index('profile_participants_profile_idx').on(table.profileId),
+    })
+);
+
+export type ParticipantLabelInsert = typeof participantLabelsTable.$inferInsert;
+export type ParticipantLabelRecord = typeof participantLabelsTable.$inferSelect;
+export type ParticipantInsert = typeof participantsTable.$inferInsert;
+export type ParticipantRecord = typeof participantsTable.$inferSelect;
+export type ProfileInsert = typeof profilesTable.$inferInsert;
+export type ProfileParticipantInsert = typeof profileParticipantsTable.$inferInsert;
+export type ProfileRecord = typeof profilesTable.$inferSelect;

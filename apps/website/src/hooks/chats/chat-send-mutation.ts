@@ -1,0 +1,129 @@
+export interface ChatSendMutationContext {
+    timelineMessageId: string;
+}
+
+export interface ChatSendMutationUtils {
+    chat: {
+        list: {
+            invalidate: () => Promise<unknown>;
+        };
+        status: {
+            list: {
+                invalidate: () => Promise<unknown>;
+            };
+        };
+    };
+    session: {
+        get: {
+            invalidate: () => Promise<unknown>;
+        };
+        history: {
+            get: {
+                invalidate: () => Promise<unknown>;
+            };
+        };
+        list: {
+            invalidate: () => Promise<unknown>;
+        };
+    };
+    timelineMessage: {
+        add: (input: {
+            chatId: string;
+            content: string;
+            id: string;
+            metadata?: Record<string, unknown>;
+            timestamp: string;
+        }) => void;
+        setSession: (input: {
+            chatId: string;
+            messageId: string;
+            sessionKey?: string | null;
+        }) => void;
+        remove: (input: { chatId: string; messageId: string }) => void;
+    };
+    timelineTurn: {
+        start: (input: {
+            agentId: string;
+            chatId: string;
+            runId: string;
+            sessionKey: string;
+            startedAt: string;
+        }) => void;
+    };
+}
+
+export function createChatSendMutationHandlers(utils: ChatSendMutationUtils) {
+    return {
+        onMutate: async (input: {
+            chatId: string;
+            clientMessageId?: string;
+            content: string;
+            metadata?: Record<string, unknown>;
+        }) => {
+            const timestamp = new Date().toISOString();
+            const timelineMessageId =
+                input.clientMessageId ?? `tavern-message:${crypto.randomUUID()}`;
+            utils.timelineMessage.add({
+                chatId: input.chatId,
+                content: input.content,
+                id: timelineMessageId,
+                metadata: input.metadata,
+                timestamp,
+            });
+
+            return {
+                timelineMessageId,
+            } satisfies ChatSendMutationContext;
+        },
+        onError: (
+            _error: unknown,
+            input: { chatId: string },
+            context: ChatSendMutationContext | undefined
+        ) => {
+            if (!context) {
+                return;
+            }
+
+            utils.timelineMessage.remove({
+                chatId: input.chatId,
+                messageId: context.timelineMessageId,
+            });
+        },
+        onSuccess: async (
+            result: {
+                acceptedAt: string;
+                chatId: string;
+                runId: string;
+                sessionKey?: string | null;
+            },
+            input: { agentId?: string },
+            context: ChatSendMutationContext | undefined
+        ) => {
+            if (context) {
+                utils.timelineMessage.setSession({
+                    chatId: result.chatId,
+                    messageId: context.timelineMessageId,
+                    sessionKey: result.sessionKey ?? null,
+                });
+            }
+
+            if (result.sessionKey && input.agentId) {
+                utils.timelineTurn.start({
+                    agentId: input.agentId,
+                    chatId: result.chatId,
+                    runId: result.runId,
+                    sessionKey: result.sessionKey,
+                    startedAt: result.acceptedAt,
+                });
+            }
+
+            await Promise.all([
+                utils.chat.list.invalidate(),
+                utils.chat.status.list.invalidate(),
+                utils.session.get.invalidate(),
+                utils.session.list.invalidate(),
+                utils.session.history.get.invalidate(),
+            ]);
+        },
+    };
+}

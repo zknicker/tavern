@@ -1,0 +1,43 @@
+{
+  "name": "the-tavern",
+  "private": true,
+  "packageManager": "bun@1.3.5",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "node scripts/run-dev-stack.mjs web",
+    "dev:runtime": "node scripts/run-dev-stack.mjs web-runtime",
+    "build": "bun run --filter @tavern/agent-runtime-protocol build && bun run --filter @tavern/memory build && bun run --filter @zknicker/tavern-openclaw-messenger build && bun run --filter @tavern/openclaw-gateway-adapter build && bun run --filter @tavern/claude-usage build && bun run --filter @tavern/codex-usage build && bun run --filter @tavern/server build && bun run --filter @tavern/runtime build && bun run --filter @tavern/website build",
+    "build:desktop": "bun run desktop:build",
+    "build:desktop:unsigned": "bun run --filter @tavern/website desktop:build:unsigned",
+    "desktop:dev": "node scripts/run-dev-stack.mjs desktop",
+    "desktop:dev:runtime": "node scripts/run-dev-stack.mjs desktop-runtime",
+    "desktop:build": "bun run --filter @tavern/website desktop:build",
+    "desktop:release": "bun run --filter @tavern/website desktop:release",
+    "publish:desktop": "bun run --filter @tavern/website desktop:publish",
+    "release:bump": "node scripts/release/bump-version.mjs",
+    "release:notes": "node scripts/release/extract-release-notes-from-changelog.mjs",
+    "release:collect-changelog-context": "node scripts/release/collect-changelog-context.mjs",
+    "release:check": "node scripts/release/validate-release-metadata.mjs",
+    "release:check-desktop-artifacts": "node scripts/release/check-desktop-artifacts.mjs",
+    "release:publish": "node scripts/release/publish-release.mjs",
+    "test:e2e": "bun run --filter @tavern/website test:e2e",
+    "test:e2e:debug": "bun run --filter @tavern/website test:e2e:debug",
+    "test:e2e:headed": "bun run --filter @tavern/website test:e2e:headed",
+    "test:e2e:live-openclaw": "bun run --filter @tavern/website test:e2e:live-openclaw",
+    "test:e2e:screenshot": "bun run --filter @tavern/website test:e2e:screenshot",
+    "test:e2e:screenshot-failures": "bun run --filter @tavern/website test:e2e:screenshot-failures",
+    "test:e2e:ui": "bun run --filter @tavern/website test:e2e:ui",
+    "typecheck": "bun run --filter @tavern/agent-runtime-protocol typecheck && bun run --filter @tavern/memory typecheck && bun run --filter @zknicker/tavern-openclaw-messenger typecheck && bun run --filter @tavern/openclaw-gateway-adapter typecheck && bun run --filter @tavern/claude-usage typecheck && bun run --filter @tavern/codex-usage typecheck && bun run --filter @tavern/server typecheck && bun run --filter @tavern/runtime typecheck && bun run --filter @tavern/website typecheck",
+    "lint": "ultracite check .",
+    "lint:fix": "ultracite fix ."
+  },
+  "devDependencies": {
+    "@biomejs/biome": "2.4.5",
+    "openclaw": "2026.5.12",
+    "ultracite": "^7.3.0",
+    "zod": "^4.1.11"
+  }
+}

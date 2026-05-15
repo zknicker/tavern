@@ -1,0 +1,34 @@
+{
+  "fill": {
+    "linear-gradient": [
+      "display-p3:0.04904,0.03964,0.23254,1.00000",
+      "display-p3:0.03922,0.03922,0.26611,1.00000"
+    ]
+  },
+  "groups": [
+    {
+      "layers": [
+        {
+          "image-name": "bannerwstar.png",
+          "name": "bannerwstar",
+          "position": {
+            "scale": 0.94,
+            "translation-in-points": [0, 15]
+          }
+        }
+      ],
+      "shadow": {
+        "kind": "neutral",
+        "opacity": 0.5
+      },
+      "translucency": {
+        "enabled": true,
+        "value": 0.5
+      }
+    }
+  ],
+  "supported-platforms": {
+    "circles": ["watchOS"],
+    "squares": "shared"
+  }
+}

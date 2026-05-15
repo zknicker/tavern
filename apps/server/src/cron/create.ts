@@ -1,0 +1,88 @@
+import { requireConfiguredAgentRuntimeClientForRuntimeId } from '../agent-runtime/configured-client.ts';
+import * as agentRuntimeCron from '../agent-runtime/cron.ts';
+import { requirePrimaryAgent } from '../agents/catalog.ts';
+import { emitCronUpdated, emitSyncDataUpdated } from '../api/invalidation-events.ts';
+import { getAgent as getAgentProjection } from '../storage/agents.ts';
+import { getChatProjection } from '../storage/chats.ts';
+import { saveCronJobProjection } from '../storage/cron-jobs.ts';
+import { syncAgentRuntimeCron } from '../sync/agent-runtime-projections.ts';
+import { addCronJobParamsSchema } from './contracts.ts';
+import { buildOpenClawCronSchedule } from './schedule-config.ts';
+
+async function resolveCronRuntimeId(input: {
+    agentId?: string | null;
+    delivery?: { chatId: string } | null;
+}) {
+    const [agent, deliveryChat] = await Promise.all([
+        input.agentId ? getAgentProjection(input.agentId) : null,
+        input.delivery?.chatId ? getChatProjection(input.delivery.chatId) : null,
+    ]);
+
+    if (input.agentId && !agent) {
+        throw new Error(`No synced agent named "${input.agentId}" exists.`);
+    }
+
+    if (input.delivery?.chatId && !deliveryChat) {
+        throw new Error(`No Tavern chat named "${input.delivery.chatId}" exists.`);
+    }
+
+    const runtimeId = agent?.runtimeId ?? deliveryChat?.runtimeId ?? null;
+
+    if (!runtimeId) {
+        throw new Error('Cron jobs need an agent or delivery chat to resolve their runtime.');
+    }
+
+    if (deliveryChat && deliveryChat.runtimeId !== runtimeId) {
+        throw new Error(
+            'Cron delivery chat must belong to the same runtime as the selected agent.'
+        );
+    }
+
+    return {
+        agent,
+        runtimeId,
+    };
+}
+
+export async function createCronJob(input: unknown) {
+    const parsed = addCronJobParamsSchema.parse(input);
+    const defaultAgent =
+        parsed.payload.kind === 'agentTurn' && !parsed.agentId ? await requirePrimaryAgent() : null;
+    const agentId = parsed.agentId ?? defaultAgent?.id;
+    const jobId = `tavern:cron:${crypto.randomUUID()}`;
+    const { agent, runtimeId } = await resolveCronRuntimeId({
+        agentId,
+        delivery: parsed.delivery,
+    });
+    const runtimeClient = await requireConfiguredAgentRuntimeClientForRuntimeId(runtimeId);
+
+    const created = await agentRuntimeCron.createCronJob(
+        {
+            agentId: agent?.id ?? agentId ?? null,
+            deleteAfterRun: parsed.deleteAfterRun ?? false,
+            delivery: parsed.delivery ?? null,
+            description: parsed.description ?? null,
+            enabled: parsed.enabled ?? true,
+            id: jobId,
+            name: parsed.name,
+            payload: parsed.payload,
+            schedule: buildOpenClawCronSchedule(parsed.scheduleConfig),
+            wakeMode: parsed.wakeMode,
+        },
+        runtimeClient
+    );
+    await saveCronJobProjection({
+        job: created,
+        runtimeId,
+    });
+    void syncAgentRuntimeCron().catch((error) => {
+        console.warn('[tavern] failed to refresh cron projections after create', error);
+    });
+    emitCronUpdated();
+    emitSyncDataUpdated();
+
+    return {
+        success: true as const,
+        synced: true,
+    };
+}

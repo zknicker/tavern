@@ -1,0 +1,65 @@
+{
+  "extends": ["ultracite/core", "ultracite/react"],
+  "$schema": "./node_modules/@biomejs/biome/configuration_schema.json",
+  "files": {
+    "ignoreUnknown": true,
+    "includes": [
+      "!.context",
+      "!apps/server/dist",
+      "!apps/server/drizzle/meta",
+      "!apps/website/dist",
+      "!apps/website/e2e/openclaw/mock-provider/server.ts",
+      "!**/*.css"
+    ]
+  },
+  "formatter": {
+    "indentStyle": "space",
+    "indentWidth": 4,
+    "lineWidth": 100,
+    "lineEnding": "lf",
+    "formatWithErrors": true,
+    "attributePosition": "auto",
+    "bracketSpacing": true
+  },
+  "javascript": {
+    "globals": ["Bun"],
+    "formatter": {
+      "quoteStyle": "single",
+      "semicolons": "always"
+    }
+  },
+  "linter": {
+    "rules": {
+      "complexity": {
+        "noExcessiveCognitiveComplexity": "off",
+        "noVoid": "off"
+      },
+      "a11y": {
+        "noLabelWithoutControl": "off"
+      },
+      "correctness": {
+        "noUnresolvedImports": "off"
+      },
+      "performance": {
+        "noBarrelFile": "off",
+        "noNamespaceImport": "off",
+        "useTopLevelRegex": "off"
+      },
+      "style": {
+        "noExportedImports": "off",
+        "noNestedTernary": "off",
+        "noNonNullAssertion": "off",
+        "useConsistentMemberAccessibility": "off",
+        "useDefaultSwitchClause": "off",
+        "noParameterProperties": "off"
+      },
+      "suspicious": {
+        "noBitwiseOperators": "off",
+        "noControlCharactersInRegex": "off",
+        "noEmptyBlockStatements": "off",
+        "noMisplacedAssertion": "off",
+        "useAwait": "off"
+      }
+    }
+  }
+}

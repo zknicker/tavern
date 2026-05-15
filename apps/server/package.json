@@ -1,0 +1,39 @@
+{
+  "name": "@tavern/server",
+  "private": true,
+  "type": "module",
+  "packageManager": "bun@1.3.5",
+  "scripts": {
+    "dev": "bun --watch src/index.ts",
+    "build": "bun build src/index.ts --target bun --format esm --outdir dist",
+    "start": "bun dist/index.js",
+    "lint": "ultracite check src test",
+    "lint:fix": "ultracite fix src test",
+    "test": "bun test",
+    "typecheck": "tsc --noEmit",
+    "db:generate": "drizzle-kit generate",
+    "db:ensure": "bun src/db/ensure-runner.ts"
+  },
+  "dependencies": {
+    "@fastify/cors": "^11.1.0",
+    "@tavern/agent-runtime-protocol": "workspace:*",
+    "@tavern/claude-usage": "workspace:*",
+    "@tavern/codex-usage": "workspace:*",
+    "@tavern/openclaw-gateway-adapter": "workspace:*",
+    "@trpc/server": "^11.10.0",
+    "bottleneck": "^2.19.5",
+    "bunqueue": "^2.6.38",
+    "drizzle-orm": "^0.44.6",
+    "fastify": "^5.6.0",
+    "ws": "^8.18.3",
+    "yaml": "^2.8.3",
+    "zod": "^4.1.11"
+  },
+  "devDependencies": {
+    "@types/ws": "^8.18.1",
+    "@types/node": "^24.5.2",
+    "bun-types": "^1.3.5",
+    "drizzle-kit": "^0.31.5",
+    "typescript": "^5.9.2"
+  }
+}

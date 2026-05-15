@@ -1,0 +1,261 @@
+#!/usr/bin/env node
+
+import { spawnSync } from 'node:child_process';
+import { mkdtempSync, writeFileSync } from 'node:fs';
+import { readdir } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import path from 'node:path';
+import { fail, isSemver, readFlagValue, readJson, readText, repoRoot } from './release-utils.mjs';
+
+const argv = process.argv.slice(2);
+const pushBranch = readFlagValue(argv, '--push-branch') ?? 'main';
+
+if (argv.includes('--help') || argv.includes('-h')) {
+    printUsage();
+    process.exit(0);
+}
+
+const allowedDirtyPaths = new Set([
+    'CHANGELOG.md',
+    'apps/website/package.json',
+    'apps/website/src-tauri/Cargo.lock',
+    'apps/website/src-tauri/Cargo.toml',
+    'apps/website/src-tauri/tauri.conf.json',
+]);
+const generatedSchemaPaths = [
+    'apps/website/src-tauri/gen/schemas/acl-manifests.json',
+    'apps/website/src-tauri/gen/schemas/capabilities.json',
+    'apps/website/src-tauri/gen/schemas/desktop-schema.json',
+    'apps/website/src-tauri/gen/schemas/macOS-schema.json',
+];
+const bundleRoot = path.join(
+    repoRoot,
+    'apps',
+    'website',
+    'src-tauri',
+    'target',
+    'release',
+    'bundle'
+);
+const macosBundleDir = path.join(bundleRoot, 'macos');
+const dmgBundleDir = path.join(bundleRoot, 'dmg');
+
+const main = async () => {
+    const version = await readReleaseVersion();
+    const tagName = `v${version}`;
+
+    assertVersion(version);
+    assertNoTag(tagName);
+    run('bun', ['run', 'release:check']);
+    run('bun', ['run', 'publish:desktop']);
+    restoreGeneratedSchemas();
+    run('bun', ['run', 'release:check-desktop-artifacts']);
+
+    const releasePaths = readReleaseDirtyPaths();
+    stageReleasePaths(releasePaths);
+    commitReleaseIfNeeded(tagName);
+    createTag(tagName);
+    pushRelease({ pushBranch, tagName });
+
+    const notesPath = await writeReleaseNotes(version);
+    const artifacts = await findReleaseArtifacts(version);
+    createGithubRelease({ artifacts, notesPath, tagName });
+
+    console.log(`Released ${tagName}`);
+};
+
+await main();
+
+function printUsage() {
+    console.log(
+        [
+            'Usage: bun run release:publish [-- --push-branch main]',
+            '',
+            'Builds, notarizes, publishes desktop artifacts, commits release metadata,',
+            'pushes the release commit and tag, and creates the GitHub Release.',
+        ].join('\n')
+    );
+}
+
+async function readReleaseVersion() {
+    const packageJson = await readJson('apps/website/package.json');
+    return packageJson.version;
+}
+
+function assertVersion(version) {
+    if (!isSemver(version)) {
+        fail(`invalid release version: ${version}`);
+    }
+}
+
+function assertNoTag(tagName) {
+    const localTag = spawnSync(
+        'git',
+        ['rev-parse', '--verify', '--quiet', `refs/tags/${tagName}`],
+        {
+            cwd: repoRoot,
+            stdio: 'ignore',
+        }
+    );
+    if (localTag.status === 0) {
+        fail(`tag ${tagName} already exists locally`);
+    }
+
+    const remoteTag = spawnSync(
+        'git',
+        ['ls-remote', '--exit-code', 'origin', `refs/tags/${tagName}`],
+        {
+            cwd: repoRoot,
+            encoding: 'utf8',
+        }
+    );
+    if (remoteTag.status === 0) {
+        fail(`tag ${tagName} already exists on origin`);
+    }
+}
+
+function restoreGeneratedSchemas() {
+    run('git', ['restore', ...generatedSchemaPaths]);
+}
+
+function readReleaseDirtyPaths() {
+    const status = runCapture('git', ['status', '--porcelain']);
+    const dirtyPaths = status
+        .split('\n')
+        .filter(Boolean)
+        .map((line) => line.slice(3).replace(/^.* -> /, ''));
+    const unexpectedPaths = dirtyPaths.filter((filePath) => !allowedDirtyPaths.has(filePath));
+
+    if (unexpectedPaths.length > 0) {
+        fail('release has unexpected dirty files', { unexpectedPaths });
+    }
+
+    return dirtyPaths;
+}
+
+function stageReleasePaths(paths) {
+    if (paths.length === 0) {
+        return;
+    }
+
+    run('git', ['add', ...paths]);
+}
+
+function commitReleaseIfNeeded(tagName) {
+    const diff = spawnSync('git', ['diff', '--cached', '--quiet'], {
+        cwd: repoRoot,
+        stdio: 'ignore',
+    });
+
+    if (diff.status === 0) {
+        return;
+    }
+
+    run('git', ['commit', '-m', `release: ${tagName}`]);
+}
+
+function createTag(tagName) {
+    run('git', ['tag', '-a', tagName, '-m', tagName]);
+}
+
+function pushRelease({ pushBranch, tagName }) {
+    run('git', ['push', 'origin', `HEAD:${pushBranch}`]);
+    run('git', ['push', 'origin', tagName]);
+}
+
+async function writeReleaseNotes(version) {
+    const notes = extractReleaseNotes(await readText('CHANGELOG.md'), version);
+    const notesDirectory = mkdtempSync(path.join(tmpdir(), 'tavern-release-'));
+    const notesPath = path.join(notesDirectory, `${version}-notes.md`);
+    writeFileSync(notesPath, `${notes}\n`, 'utf8');
+    return notesPath;
+}
+
+function extractReleaseNotes(changelog, version) {
+    const headingPattern = /^## v(\d+\.\d+\.\d+) - \d{4}-\d{2}-\d{2}$/gm;
+    const headings = Array.from(changelog.matchAll(headingPattern));
+    const targetIndex = headings.findIndex((match) => match[1] === version);
+
+    if (targetIndex === -1) {
+        fail(`could not find CHANGELOG.md entry for v${version}`);
+    }
+
+    const start = headings[targetIndex].index + headings[targetIndex][0].length;
+    const end =
+        targetIndex + 1 < headings.length ? headings[targetIndex + 1].index : changelog.length;
+    const notes = changelog.slice(start, end).trim();
+
+    if (!notes) {
+        fail(`CHANGELOG.md entry for v${version} has no body`);
+    }
+
+    return notes;
+}
+
+async function findReleaseArtifacts(version) {
+    const dmgName = `Tavern_${version}_aarch64.dmg`;
+    const artifacts = [
+        path.join(dmgBundleDir, dmgName),
+        path.join(macosBundleDir, 'Tavern.app.tar.gz'),
+        path.join(macosBundleDir, 'Tavern.app.tar.gz.sig'),
+        path.join(bundleRoot, 'latest.json'),
+    ];
+    const dmgFiles = (await readdir(dmgBundleDir)).filter((entry) => entry.endsWith('.dmg'));
+
+    if (!dmgFiles.includes(dmgName)) {
+        fail(`could not find expected DMG ${dmgName}`, { dmgFiles });
+    }
+
+    return artifacts;
+}
+
+function createGithubRelease({ artifacts, notesPath, tagName }) {
+    run('gh', [
+        'release',
+        'create',
+        tagName,
+        ...artifacts,
+        '--title',
+        tagName,
+        '--notes-file',
+        notesPath,
+        '--latest',
+    ]);
+}
+
+function run(command, args) {
+    const result = spawnSync(command, args, {
+        cwd: repoRoot,
+        env: process.env,
+        stdio: 'inherit',
+    });
+
+    if (result.error) {
+        fail(`${command} failed`, { message: result.error.message });
+    }
+
+    if (result.status !== 0) {
+        process.exit(result.status ?? 1);
+    }
+}
+
+function runCapture(command, args) {
+    const result = spawnSync(command, args, {
+        cwd: repoRoot,
+        env: process.env,
+        encoding: 'utf8',
+    });
+
+    if (result.error) {
+        fail(`${command} failed`, { message: result.error.message });
+    }
+
+    if (result.status !== 0) {
+        fail(`${command} exited with ${result.status}`, {
+            stderr: result.stderr.trim(),
+            stdout: result.stdout.trim(),
+        });
+    }
+
+    return result.stdout;
+}

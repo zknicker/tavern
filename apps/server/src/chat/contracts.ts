@@ -1,0 +1,170 @@
+import {
+    agentRuntimeChatPlatformMetadataSchema,
+    agentRuntimeTavernMessageMetadataSchema,
+} from '@tavern/agent-runtime-protocol';
+import { z } from 'zod';
+import {
+    historyRowSchema,
+    messageRowSchema,
+    toolRowSchema,
+    workerRowSchema,
+} from '../rows/contracts.ts';
+import { chatConversationKinds } from './conversation-kind.ts';
+import { chatSourceKinds } from './source.ts';
+
+export const chatScopeSchema = z.enum(['channel', 'dm', 'group', 'topic']).nullable();
+export const chatConversationKindSchema = z.enum(chatConversationKinds);
+
+export const chatBindingSchema = z.object({
+    accountKey: z.string().nullable(),
+    agentId: z.string(),
+    id: z.string(),
+});
+
+export const chatParticipantSchema = z.object({
+    actorId: z.string(),
+    actorType: z.enum(['agent', 'participant']),
+    avatar: z.string().nullable(),
+    name: z.string(),
+    primaryColor: z.string().nullable(),
+    profileId: z.string().nullable().optional(),
+});
+
+export const chatTargetParticipantSchema = z
+    .object({
+        avatar: z.string().nullable(),
+        id: z.string(),
+        name: z.string(),
+        observedName: z.string(),
+        primaryColor: z.string().nullable(),
+        profileId: z.string().nullable(),
+    })
+    .nullable();
+
+export const chatLatestSessionSchema = z.object({
+    agentId: z.string().nullable(),
+    lastActivityAt: z.string().nullable(),
+    platform: z.string().nullable(),
+    sessionId: z.string().nullable(),
+    sessionKey: z.string(),
+    title: z.string().nullable(),
+});
+
+export const chatAgentRuntimeSyncSchema = z
+    .object({
+        lastAttemptedAt: z.string().datetime().nullable(),
+        lastError: z.string().nullable(),
+        lastSuccessfulAt: z.string().datetime().nullable(),
+        status: z.enum(['error', 'pending', 'synced']),
+    })
+    .nullable();
+
+export const chatSourceSchema = z.object({
+    kind: z.enum(chatSourceKinds),
+    label: z.string().trim().min(1),
+});
+
+export const chatSchema = z.object({
+    boundAgentIds: z.array(z.string()),
+    canSend: z.boolean(),
+    conversationKind: chatConversationKindSchema,
+    displayName: z.string(),
+    externalId: z.string().nullable(),
+    framework: z.string(),
+    id: z.string(),
+    isEnabled: z.boolean(),
+    lastActivityAt: z.string().nullable(),
+    latestSession: chatLatestSessionSchema.nullable(),
+    participants: z.array(chatParticipantSchema),
+    agentRuntimeSync: chatAgentRuntimeSyncSchema,
+    platformMetadata: agentRuntimeChatPlatformMetadataSchema,
+    scope: chatScopeSchema,
+    sessionCount: z.number().int().nonnegative(),
+    source: chatSourceSchema,
+    target: z.string().nullable(),
+    targetParticipant: chatTargetParticipantSchema,
+    title: z.string(),
+    type: z.string(),
+});
+
+export const chatListSchema = z.object({
+    chats: z.array(chatSchema),
+});
+
+export const createChatInputSchema = z.object({
+    agentIds: z.array(z.string().trim().min(1)).length(1).optional(),
+    displayName: z.string().trim().min(1).max(120),
+});
+
+export const createChatResultSchema = z.object({
+    chatId: z.string().trim().min(1),
+});
+
+export const sendChatMessageMetadataSchema = z
+    .object({
+        tavern: agentRuntimeTavernMessageMetadataSchema.optional(),
+    })
+    .strict();
+
+export const startChatInputSchema = z.object({
+    agentId: z.string().trim().min(1).optional(),
+    clientMessageId: z.string().trim().min(1).optional(),
+    content: z.string().trim().min(1),
+    metadata: sendChatMessageMetadataSchema.optional(),
+});
+
+export const updateChatInputSchema = z.object({
+    agentIds: z.array(z.string().trim().min(1)).length(1),
+    chatId: z.string().trim().min(1),
+    displayName: z.string().trim().min(1).max(120),
+});
+
+export const archiveChatInputSchema = z.object({
+    chatId: z.string().trim().min(1),
+});
+
+export const archiveChatResultSchema = z.object({
+    archived: z.literal(true),
+    chatId: z.string().trim().min(1),
+});
+
+export const sendChatMessageInputSchema = z.object({
+    agentId: z.string().trim().min(1).optional(),
+    chatId: z.string().trim().min(1),
+    clientMessageId: z.string().trim().min(1).optional(),
+    content: z.string().trim().min(1),
+    metadata: sendChatMessageMetadataSchema.optional(),
+});
+
+export const sendChatMessageResultSchema = z.object({
+    acceptedAt: z.string().datetime(),
+    chatId: z.string().trim().min(1),
+    clientMessageId: z.string().trim().min(1),
+    runId: z.string().trim().min(1),
+    sessionKey: z.string().trim().min(1).nullable(),
+    status: z.literal('accepted'),
+});
+
+export const chatLogMessageRowSchema = messageRowSchema;
+export const chatLogToolRowSchema = toolRowSchema;
+export const chatLogWorkerRowSchema = workerRowSchema;
+export const chatLogRowSchema = historyRowSchema;
+
+export const chatLogPageSchema = z.object({
+    limit: z.number().int().positive(),
+    rows: z.array(chatLogRowSchema),
+    offset: z.number().int().nonnegative(),
+    total: z.number().int().nonnegative(),
+});
+
+export type Chat = z.infer<typeof chatSchema>;
+export type ChatList = z.infer<typeof chatListSchema>;
+export type ChatLogPage = z.infer<typeof chatLogPageSchema>;
+export type CreateChatInput = z.infer<typeof createChatInputSchema>;
+export type CreateChatResult = z.infer<typeof createChatResultSchema>;
+export type StartChatInput = z.infer<typeof startChatInputSchema>;
+export type UpdateChatInput = z.infer<typeof updateChatInputSchema>;
+export type ArchiveChatInput = z.infer<typeof archiveChatInputSchema>;
+export type ArchiveChatResult = z.infer<typeof archiveChatResultSchema>;
+export type SendChatMessageInput = z.infer<typeof sendChatMessageInputSchema>;
+export type SendChatMessageResult = z.infer<typeof sendChatMessageResultSchema>;

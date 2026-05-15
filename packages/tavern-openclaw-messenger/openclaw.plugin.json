@@ -1,0 +1,26 @@
+{
+  "id": "tavern",
+  "kind": "channel",
+  "name": "Tavern Messenger",
+  "description": "First-party Tavern chat channel for OpenClaw.",
+  "activation": {
+    "onStartup": true
+  },
+  "channels": ["tavern"],
+  "configSchema": {
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {}
+  },
+  "channelConfigs": {
+    "tavern": {
+      "label": "Tavern",
+      "description": "Tavern chat channel settings.",
+      "schema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {}
+      }
+    }
+  }
+}

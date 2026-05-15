@@ -1,0 +1,50 @@
+export const agentRuntimeMutationHeaders = {
+    origin: 'x-tavern-origin',
+} as const;
+
+export const agentRuntimeMutationOrigins = {
+    tavern: 'tavern',
+    agentRuntime: 'agent-runtime',
+} as const;
+
+export const agentRuntimeRoutes = {
+    agent: (id: string) => `/agents/${id}`,
+    agentConfig: (id: string) => `/agents/${id}/config`,
+    agentFile: (agentId: string, path: string) =>
+        `/agents/${agentId}/files/${encodeURIComponent(path)}`,
+    agentFiles: (agentId: string) => `/agents/${agentId}/files`,
+    agents: '/agents',
+    memorySettings: '/memory/settings',
+    memoryStatus: '/memory/status',
+    modelAccess: '/model-access',
+    modelAccessClaudeCredential: '/model-access/claude',
+    modelAccessCodexCredential: '/model-access/codex',
+    modelAccessOpenRouterSettings: '/model-access/openrouter',
+    openClawConfig: '/openclaw-config',
+    openClawGatewayStatus: '/openclaw-gateway/status',
+    cronJob: (id: string) => `/cron-jobs/${id}`,
+    cronJobs: '/cron-jobs',
+    cronJobRun: (id: string) => `/cron-jobs/${id}/run`,
+    cronJobRuns: (id: string) => `/cron-jobs/${id}/runs`,
+    cronRun: (id: string) => `/cron-runs/${id}`,
+    cronRuns: '/cron-runs',
+    events: '/events',
+    chatSocket: '/chat',
+    chatStatus: '/chat-status',
+    chatMessages: (chatId: string) => `/chats/${chatId}/messages`,
+    chats: '/chats',
+    health: '/health',
+    models: '/models',
+    binding: (id: string) => `/bindings/${id}`,
+    bindings: '/bindings',
+    skillInstall: '/skills/install',
+    skill: (id: string) => `/skills/${id}`,
+    skillConfig: (id: string) => `/skills/${id}/config`,
+    skills: '/skills',
+    sessionGraph: (sessionKey: string) => `/sessions/${sessionKey}/graph`,
+    sessionMessages: (sessionKey: string) => `/sessions/${sessionKey}/messages`,
+    sessionPrompt: (sessionKey: string) => `/sessions/${sessionKey}/prompt`,
+    sessionResync: (sessionKey: string) => `/sessions/${sessionKey}/resync`,
+    sessions: '/sessions',
+    status: '/status',
+} as const;

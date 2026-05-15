@@ -1,0 +1,39 @@
+{
+  "name": "@zknicker/tavern-openclaw-messenger",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Tavern Messenger channel plugin for OpenClaw",
+  "type": "module",
+  "exports": {
+    ".": "./index.js"
+  },
+  "peerDependencies": {
+    "openclaw": "2026.5.12"
+  },
+  "peerDependenciesMeta": {
+    "openclaw": {
+      "optional": true
+    }
+  },
+  "openclaw": {
+    "extensions": [
+      "./index.js"
+    ],
+    "channel": {
+      "id": "tavern",
+      "label": "Tavern",
+      "selectionLabel": "Tavern",
+      "detailLabel": "Tavern Messenger",
+      "docsPath": "/channels/tavern",
+      "docsLabel": "Tavern",
+      "blurb": "First-party Tavern chat channel for OpenClaw.",
+      "systemImage": "message-square",
+      "order": 90
+    }
+  },
+  "scripts": {
+    "build": "bun test src/*.test.js",
+    "typecheck": "bun test src/*.test.js",
+    "test": "bun test src/*.test.js"
+  }
+}

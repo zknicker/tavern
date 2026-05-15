@@ -1,0 +1,24 @@
+{
+  "name": "@tavern/claude-usage",
+  "private": true,
+  "type": "module",
+  "packageManager": "bun@1.3.5",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "build": "tsup src/index.ts --format esm --dts --target node20 --out-dir dist",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:live": "bun run src/live.ts"
+  },
+  "dependencies": {
+    "zod": "^4.1.11"
+  },
+  "devDependencies": {
+    "@types/node": "^24.5.2",
+    "tsup": "^8.5.0",
+    "typescript": "^5.9.2",
+    "vitest": "^3.2.4"
+  }
+}

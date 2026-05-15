@@ -1,0 +1,59 @@
+import assert from 'node:assert/strict';
+import test from 'node:test';
+import type { ChatLogOutput, ModelListOutput } from '../../lib/trpc.tsx';
+import { getChatContextFullness } from './chat-context-fullness.ts';
+
+type ChatRows = NonNullable<ChatLogOutput>['rows'];
+
+test('getChatContextFullness reads latest agent usage against model context window', () => {
+    const rows = [
+        {
+            actor: { id: 'atlas', kind: 'agent' },
+            connectsToNext: false,
+            connectsToPrevious: false,
+            id: 'message-1',
+            isFirstInGroup: true,
+            kind: 'message',
+            message: {
+                content: 'Working on it.',
+                id: 'message-1',
+                metadata: {
+                    model: 'gpt-5.5',
+                    provider: 'openrouter',
+                    usage: {
+                        totalTokens: 50_000,
+                    },
+                },
+                sender: 'Atlas',
+                senderType: 'agent',
+                sourceSessionId: 'session-1',
+                sourceSessionKey: 'session-key-1',
+                timestamp: '2026-05-08T18:00:00.000Z',
+            },
+        },
+    ] satisfies ChatRows;
+    const models = [
+        {
+            availability: 'configured',
+            contextWindow: 200_000,
+            framework: 'tavern',
+            id: 'openrouter/gpt-5.5',
+            modelId: 'gpt-5.5',
+            name: 'GPT-5.5',
+            provider: 'openrouter',
+            reasoning: null,
+            ref: 'openrouter/gpt-5.5',
+            supportsChatRouting: true,
+        },
+    ] satisfies ModelListOutput['models'];
+
+    assert.deepEqual(getChatContextFullness({ models, rows }), {
+        contextWindow: 200_000,
+        percent: 0.25,
+        tokenCount: 50_000,
+    });
+});
+
+test('getChatContextFullness hides when usage or context window is unavailable', () => {
+    assert.equal(getChatContextFullness({ models: [], rows: [] }), null);
+});
