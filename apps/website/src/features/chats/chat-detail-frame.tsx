@@ -1,14 +1,7 @@
 import { ArrowDown01Icon } from '@hugeicons-pro/core-stroke-rounded';
 import type * as React from 'react';
-import { Link } from 'react-router-dom';
-import {
-    Breadcrumb,
-    BreadcrumbItem,
-    BreadcrumbLink,
-    BreadcrumbList,
-    BreadcrumbPage,
-    BreadcrumbSeparator,
-} from '../../components/ui/breadcrumb.tsx';
+import { AppShellContentHeader } from '../../components/ui/app-shell.tsx';
+import { BreadcrumbTrail } from '../../components/ui/breadcrumb.tsx';
 import { Icon } from '../../components/ui/icon.tsx';
 import { Button } from '../../components/ui/primitives/button.tsx';
 import type {
@@ -59,25 +52,15 @@ export function ChatDetailFrame({
 
     return (
         <div className="flex min-h-0 flex-1 flex-col">
-            <div className="relative flex shrink-0 items-center gap-3 px-6 pt-4 pb-2">
-                <Breadcrumb className="min-w-0">
-                    <BreadcrumbList className="flex-nowrap">
-                        <BreadcrumbItem>
-                            <BreadcrumbLink render={<Link to="/dashboard/chats" />}>
-                                Chats
-                            </BreadcrumbLink>
-                        </BreadcrumbItem>
-                        <BreadcrumbSeparator />
-                        <BreadcrumbItem className="min-w-0">
-                            <BreadcrumbPage className="min-w-0">{title}</BreadcrumbPage>
-                        </BreadcrumbItem>
-                    </BreadcrumbList>
-                </Breadcrumb>
+            <AppShellContentHeader>
+                <BreadcrumbTrail
+                    items={[{ label: 'Chats', to: '/dashboard/chats' }, { label: title }]}
+                />
                 <ChatTranscriptLoadingIndicator
-                    className="absolute top-5 right-7"
+                    className="shrink-0"
                     visible={isInitialTranscriptPending}
                 />
-            </div>
+            </AppShellContentHeader>
 
             <div className="relative min-h-0 flex-1">
                 <div

@@ -130,6 +130,30 @@ export function AppShellTopbarSidebarSlot({
 }
 
 /**
+ * AppShellContentHeader — aligns page chrome in the main column with the
+ * sidebar controls in AppShellTopbar.
+ */
+export function AppShellContentHeader({
+    className,
+    render,
+    ...props
+}: useRender.ComponentProps<'div'>): React.ReactElement {
+    const defaultProps = {
+        className: cn(
+            'no-drag relative z-40 flex h-[var(--topbar-height)] shrink-0 items-start gap-2 px-4 pt-[9px]',
+            className
+        ),
+        'data-slot': 'app-shell-content-header',
+    };
+
+    return useRender({
+        defaultTagName: 'div',
+        props: mergeProps<'div'>(defaultProps, props),
+        render,
+    });
+}
+
+/**
  * AppShellBody — flex row holding the sidebar and main column, both
  * reaching the full window height.
  */

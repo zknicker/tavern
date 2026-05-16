@@ -1,13 +1,6 @@
 import { Clock, PlayIcon, Trash2 } from '@hugeicons/core-free-icons';
-import { Link } from 'react-router-dom';
-import {
-    Breadcrumb,
-    BreadcrumbItem,
-    BreadcrumbLink,
-    BreadcrumbList,
-    BreadcrumbPage,
-    BreadcrumbSeparator,
-} from '../../components/ui/breadcrumb.tsx';
+import { AppShellContentHeader } from '../../components/ui/app-shell.tsx';
+import { BreadcrumbTrail } from '../../components/ui/breadcrumb.tsx';
 import { Icon } from '../../components/ui/icon.tsx';
 import { Button } from '../../components/ui/primitives/button.tsx';
 
@@ -37,22 +30,13 @@ export function CronEditorHeader({
     onRun,
 }: CronEditorHeaderProps) {
     return (
-        <div className="no-drag relative z-40 flex h-[var(--topbar-height)] items-center gap-2 px-4">
-            <Breadcrumb className="min-w-0 flex-1">
-                <BreadcrumbList className="flex-nowrap">
-                    <BreadcrumbItem>
-                        <BreadcrumbLink render={<Link to="/dashboard/cron" />}>
-                            Automations
-                        </BreadcrumbLink>
-                    </BreadcrumbItem>
-                    <BreadcrumbSeparator />
-                    <BreadcrumbItem className="min-w-0">
-                        <BreadcrumbPage>
-                            {isNew ? 'New automation' : (jobName ?? 'Edit automation')}
-                        </BreadcrumbPage>
-                    </BreadcrumbItem>
-                </BreadcrumbList>
-            </Breadcrumb>
+        <AppShellContentHeader>
+            <BreadcrumbTrail
+                items={[
+                    { label: 'Automations', to: '/dashboard/cron' },
+                    { label: isNew ? 'New automation' : (jobName ?? 'Edit automation') },
+                ]}
+            />
 
             <div className="flex shrink-0 items-center gap-2">
                 {isNew ? null : (
@@ -112,6 +96,6 @@ export function CronEditorHeader({
                     )}
                 </Button>
             </div>
-        </div>
+        </AppShellContentHeader>
     );
 }

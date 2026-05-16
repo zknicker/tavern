@@ -5,15 +5,9 @@ import {
     Trash2,
 } from '@hugeicons/core-free-icons';
 import * as React from 'react';
-import { Link, useNavigate, useParams } from 'react-router-dom';
-import {
-    Breadcrumb,
-    BreadcrumbItem,
-    BreadcrumbLink,
-    BreadcrumbList,
-    BreadcrumbPage,
-    BreadcrumbSeparator,
-} from '../../components/ui/breadcrumb.tsx';
+import { useNavigate, useParams } from 'react-router-dom';
+import { AppShellContentHeader } from '../../components/ui/app-shell.tsx';
+import { BreadcrumbTrail } from '../../components/ui/breadcrumb.tsx';
 import { Card } from '../../components/ui/card.tsx';
 import {
     Dialog,
@@ -88,22 +82,15 @@ function SkillDetailHeader({
     skill: SkillDetail | null;
 }) {
     return (
-        <div className="no-drag relative z-40 flex h-[var(--topbar-height)] items-center gap-2 px-4">
-            <Breadcrumb className="min-w-0 flex-1">
-                <BreadcrumbList className="flex-nowrap">
-                    <BreadcrumbItem>
-                        <BreadcrumbLink render={<Link to="/dashboard/skills" />}>
-                            Skills
-                        </BreadcrumbLink>
-                    </BreadcrumbItem>
-                    <BreadcrumbSeparator />
-                    <BreadcrumbItem className="min-w-0">
-                        <BreadcrumbPage>{skill?.name ?? 'Skill'}</BreadcrumbPage>
-                    </BreadcrumbItem>
-                </BreadcrumbList>
-            </Breadcrumb>
+        <AppShellContentHeader>
+            <BreadcrumbTrail
+                items={[
+                    { label: 'Skills', to: '/dashboard/skills' },
+                    { label: skill?.name ?? 'Skill' },
+                ]}
+            />
             {skill ? <SkillPageActions onDeleted={onDeleted} skill={skill} /> : null}
-        </div>
+        </AppShellContentHeader>
     );
 }
 
