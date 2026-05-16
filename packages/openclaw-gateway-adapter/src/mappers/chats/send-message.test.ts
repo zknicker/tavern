@@ -2,6 +2,7 @@ import { describe, expect, it } from 'bun:test';
 import type { AgentRuntimeCreateMessage } from '@tavern/agent-runtime-protocol';
 import {
     mapOpenClawMessageAccepted,
+    mapTavernMessageToOpenClawChatSend,
     mapTavernMessageToOpenClawTavernTurn,
 } from './send-message.ts';
 
@@ -117,6 +118,29 @@ describe('OpenClaw send-message mapping', () => {
             },
             sessionKey: 'agent:blippy:tavern:channel:chat-1',
             turnId: 'tavern-message-1',
+        });
+    });
+
+    it('maps Tavern chat sends to native OpenClaw chat.send params', () => {
+        expect(
+            mapTavernMessageToOpenClawChatSend({
+                agent: { agentId: 'blippy' },
+                message: {
+                    content: 'hello',
+                    id: 'tavern-message-1',
+                },
+                target: {
+                    externalId: 'chat-1',
+                    sessionKey: 'agent:blippy:tavern:channel:chat-1',
+                    target: 'chat:chat-1',
+                    type: 'tavern',
+                },
+            })
+        ).toEqual({
+            deliver: false,
+            idempotencyKey: 'tavern-run:tavern-message-1',
+            message: 'hello',
+            sessionKey: 'agent:blippy:tavern:channel:chat-1',
         });
     });
 

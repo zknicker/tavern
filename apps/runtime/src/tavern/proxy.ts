@@ -1,7 +1,6 @@
 import { agentRuntimeRoutes } from '@tavern/agent-runtime-protocol';
 
 import { createLocalOpenClawClient } from '../openclaw/local-client';
-import { sendTavernChannelMessage } from './channel-relay';
 import { json } from './http';
 
 type LocalOpenClawClient = ReturnType<typeof createLocalOpenClawClient>;
@@ -176,7 +175,7 @@ async function dispatchChats({ client, request, url }: RouteContext, segments: s
         return undefined;
     }
     if (request.method === 'POST' && segments[2] === 'messages') {
-        return await sendTavernChannelMessage(chatId, await readJson(request));
+        return await client.postMessage(chatId, await readJson(request));
     }
     return undefined;
 }

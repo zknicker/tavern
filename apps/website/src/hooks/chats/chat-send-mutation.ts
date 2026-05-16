@@ -42,6 +42,7 @@ export interface ChatSendMutationUtils {
         remove: (input: { chatId: string; messageId: string }) => void;
     };
     timelineTurn: {
+        clear: (input: { chatId: string; runId?: string }) => void;
         start: (input: {
             agentId: string;
             chatId: string;
@@ -55,6 +56,7 @@ export interface ChatSendMutationUtils {
 export function createChatSendMutationHandlers(utils: ChatSendMutationUtils) {
     return {
         onMutate: async (input: {
+            agentId?: string;
             chatId: string;
             clientMessageId?: string;
             content: string;
@@ -70,6 +72,16 @@ export function createChatSendMutationHandlers(utils: ChatSendMutationUtils) {
                 metadata: input.metadata,
                 timestamp,
             });
+
+            if (input.agentId) {
+                utils.timelineTurn.start({
+                    agentId: input.agentId,
+                    chatId: input.chatId,
+                    runId: `pending:${timelineMessageId}`,
+                    sessionKey: '',
+                    startedAt: timestamp,
+                });
+            }
 
             return {
                 timelineMessageId,
@@ -87,6 +99,10 @@ export function createChatSendMutationHandlers(utils: ChatSendMutationUtils) {
             utils.timelineMessage.remove({
                 chatId: input.chatId,
                 messageId: context.timelineMessageId,
+            });
+            utils.timelineTurn.clear({
+                chatId: input.chatId,
+                runId: `pending:${context.timelineMessageId}`,
             });
         },
         onSuccess: async (

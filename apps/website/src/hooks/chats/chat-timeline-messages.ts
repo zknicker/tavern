@@ -132,6 +132,10 @@ function hasCompatibleSession(row: ChatMessageRow, message: ChatTimelineMessage)
 }
 
 function isMatchingLoggedUserMessage(row: ChatMessageRow, message: ChatTimelineMessage) {
+    if (row.id === message.id || row.message.id === message.id) {
+        return true;
+    }
+
     if (row.message.senderType !== 'user' || row.message.content !== message.content) {
         return false;
     }
@@ -143,7 +147,7 @@ function isMatchingLoggedUserMessage(row: ChatMessageRow, message: ChatTimelineM
     const loggedTimestamp = getTimelineTimestampMs(row.message.timestamp);
     const localTimestamp = getTimelineTimestampMs(message.timestamp);
 
-    return Math.abs(loggedTimestamp - localTimestamp) <= timelineMessageMatchToleranceMs;
+    return loggedTimestamp >= localTimestamp - timelineMessageMatchToleranceMs;
 }
 
 export function appendTimelineMessage(

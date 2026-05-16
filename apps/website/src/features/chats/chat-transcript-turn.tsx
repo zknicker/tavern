@@ -23,9 +23,10 @@ import type {
 } from './chat-transcript-model.ts';
 import { ThinkingIndicator, TypingIndicator } from './thinking-indicator.tsx';
 
-const rowClassName = 'relative w-full px-3 pt-3 pb-7';
-const newTurnGapClassName = 'mt-6';
+const rowClassName = 'relative w-full px-3 pt-1.5 pb-4';
+const newTurnGapClassName = 'mt-2.5';
 const hoverGroupClassName = 'group';
+const metadataGapClassName = 'pb-8';
 
 export function TranscriptEntryView({
     conversationLayout,
@@ -78,7 +79,7 @@ function UserTurn({
                     className={cn(
                         hoverGroupClassName,
                         'relative flex max-w-[min(42rem,78%)] flex-col items-end gap-1.5',
-                        lastMessage && 'pb-6'
+                        lastMessage && metadataGapClassName
                     )}
                 >
                     {entry.items.map((item) => (
@@ -95,7 +96,13 @@ function UserTurn({
     return (
         <div className={cn(rowClassName, 'flex justify-end', newTurnGapClassName)}>
             <div className="grid max-w-[min(42rem,82%)] grid-cols-[minmax(0,1fr)_2rem] gap-x-2.5">
-                <div className={cn(hoverGroupClassName, 'relative min-w-0', lastMessage && 'pb-6')}>
+                <div
+                    className={cn(
+                        hoverGroupClassName,
+                        'relative min-w-0',
+                        lastMessage && metadataGapClassName
+                    )}
+                >
                     <div className="mb-1.5 min-w-0 truncate pr-4 text-right font-medium text-[0.8125rem] text-muted-foreground/80 leading-none">
                         {displayName}
                     </div>
@@ -160,7 +167,7 @@ function AgentTurn({
                     className={cn(
                         hoverGroupClassName,
                         'relative w-[min(80%,52rem)] min-w-0',
-                        lastMessage && 'pb-6'
+                        lastMessage && metadataGapClassName
                     )}
                 >
                     {showIdentity ? (

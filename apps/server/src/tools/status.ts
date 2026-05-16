@@ -9,7 +9,9 @@ export function isErrorStatus(status: string | null) {
     return (
         normalizedStatus.includes('error') ||
         normalizedStatus.includes('forbidden') ||
-        normalizedStatus.includes('failed')
+        normalizedStatus.includes('failed') ||
+        normalizedStatus.includes('timeout') ||
+        normalizedStatus.includes('timed out')
     );
 }
 

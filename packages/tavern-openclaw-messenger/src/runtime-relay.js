@@ -137,25 +137,6 @@ function mapTavernPluginEvent(name, payload) {
         };
     }
 
-    if (name === 'plugin.tavern.turn.progress') {
-        const step = payload.step ?? {};
-        if (!(step.id && step.kind && step.label)) {
-            return null;
-        }
-        return {
-            step: {
-                detail: typeof step.detail === 'string' ? step.detail : undefined,
-                id: String(step.id),
-                kind: step.kind,
-                label: String(step.label),
-                status: step.status ?? 'active',
-            },
-            timestamp,
-            turn,
-            type: 'turn.progress',
-        };
-    }
-
     if (name === 'plugin.tavern.message.created') {
         return {
             isThinking: false,

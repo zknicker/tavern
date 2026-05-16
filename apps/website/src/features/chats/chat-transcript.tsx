@@ -2,6 +2,7 @@ import * as React from 'react';
 import { DayDivider, formatDayLabel } from '../../components/ui/day-divider.tsx';
 import type {
     ChatActiveReply,
+    ChatCompletedProgress,
     ChatTurnFailure,
     ChatTurnProgressStep,
 } from '../../hooks/chats/chat-timeline-state.ts';
@@ -22,14 +23,18 @@ const directConversationMessageLayout: ConversationMessageLayout = {
 
 export function ChatTranscript({
     activeReply,
+    activeReplyProgressStartedAt = null,
     activeReplySteps = [],
+    completedProgress = null,
     conversationLayout = directConversationMessageLayout,
     currentSessionKey,
     failedTurn = null,
     rows,
 }: {
     activeReply: ChatActiveReply | null;
+    activeReplyProgressStartedAt?: string | null;
     activeReplySteps?: ChatTurnProgressStep[];
+    completedProgress?: ChatCompletedProgress | null;
     conversationLayout?: ConversationMessageLayout;
     currentSessionKey?: string | null;
     failedTurn?: ChatTurnFailure | null;
@@ -39,11 +44,20 @@ export function ChatTranscript({
         () =>
             buildTranscriptEntries({
                 activeReply,
+                activeReplyProgressStartedAt,
                 activeReplySteps,
+                completedProgress,
                 failedTurn,
                 rows,
             }),
-        [activeReply, activeReplySteps, failedTurn, rows]
+        [
+            activeReply,
+            activeReplyProgressStartedAt,
+            activeReplySteps,
+            completedProgress,
+            failedTurn,
+            rows,
+        ]
     );
     const latestAgentMessage = React.useMemo(() => getLatestAgentMessage(rows), [rows]);
 
@@ -57,6 +71,18 @@ export function ChatTranscript({
             sessionKey: activeReply.sessionKey,
         });
     }, [activeReply]);
+
+    React.useEffect(() => {
+        if (!(activeReply && activeReplySteps.length > 0)) {
+            return;
+        }
+
+        markChatTiming('working-visible', {
+            runId: activeReply.runId,
+            sessionKey: activeReply.sessionKey,
+            stepCount: activeReplySteps.length,
+        });
+    }, [activeReply, activeReplySteps.length]);
 
     React.useEffect(() => {
         if (!latestAgentMessage) {

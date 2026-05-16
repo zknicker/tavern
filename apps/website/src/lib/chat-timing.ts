@@ -5,6 +5,9 @@ export type ChatTimingMarkName =
     | 'client.chatListRefreshFailed'
     | 'client.sendMessageDispatched'
     | 'client.startChat'
+    | 'client.turnProgressEvent'
+    | 'client.turnReplyUpdatedEvent'
+    | 'client.turnStartedEvent'
     | 'draft.created'
     | 'draft.navigationDispatched'
     | 'final-message-visible'
@@ -12,7 +15,8 @@ export type ChatTimingMarkName =
     | 'optimistic-sidebar-visible'
     | 'optimistic-user-message-visible'
     | 'submit'
-    | 'thinking-visible';
+    | 'thinking-visible'
+    | 'working-visible';
 
 export interface ChatTimingEvent {
     fields: Record<string, string | number | boolean | null | undefined>;
@@ -64,4 +68,27 @@ export function markChatTiming(
     } catch {
         // Test timing should never affect product behavior.
     }
+}
+
+export function debugChatEvent(
+    label: string,
+    fields: Record<string, string | number | boolean | null | undefined> = {}
+) {
+    if (typeof window === 'undefined') {
+        return;
+    }
+
+    const enabled =
+        window.__TAVERN_CHAT_TIMING__?.enabled ||
+        window.localStorage.getItem('tavern.chat.debug') === '1';
+
+    if (!enabled) {
+        return;
+    }
+
+    console.debug('[tavern:chat]', label, {
+        ...fields,
+        elapsedMs: Math.round(performance.now()),
+        wallClockMs: Date.now(),
+    });
 }

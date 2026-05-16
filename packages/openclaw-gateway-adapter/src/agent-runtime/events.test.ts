@@ -258,31 +258,31 @@ describe('OpenClaw event mapping', () => {
         });
     });
 
-    it('maps Tavern Messenger plugin turn progress events directly', () => {
+    it('maps OpenClaw session tool events to Tavern turn progress', () => {
         const events = mapOpenClawGatewayEvent({
-            event: 'plugin.tavern.turn.progress',
+            event: 'session.tool',
             payload: {
-                agentId: 'blippy',
-                chatId: '220f46ed-2d7c-41dd-9d7e-d02691f1afc3',
                 runId: 'tavern-run:msg-1',
+                seq: 3,
                 sessionKey: 'agent:blippy:tavern:channel:220f46ed-2d7c-41dd-9d7e-d02691f1afc3',
                 startedAt: '2026-05-04T12:00:00.000Z',
-                step: {
-                    detail: 'Searching current sources',
-                    id: 'tool:web',
-                    kind: 'tool',
-                    label: 'Using web search',
-                    status: 'active',
+                stream: 'tool',
+                data: {
+                    args: {
+                        command: "sleep 5; printf 'done\\n'",
+                    },
+                    name: 'bash',
+                    phase: 'start',
+                    toolCallId: 'tool-call-1',
                 },
             },
         });
 
         expect(events[0]).toMatchObject({
             step: {
-                detail: 'Searching current sources',
-                id: 'tool:web',
+                id: 'tool-call-1',
                 kind: 'tool',
-                label: 'Using web search',
+                label: "Used sleep 5; printf 'done\\n'",
                 status: 'active',
             },
             turn: {
@@ -293,6 +293,88 @@ describe('OpenClaw event mapping', () => {
             },
             type: 'turn.progress',
         });
+        expect(events[1]).toMatchObject({
+            sessionKey: 'agent:blippy:tavern:channel:220f46ed-2d7c-41dd-9d7e-d02691f1afc3',
+            type: 'session.invalidated',
+        });
+    });
+
+    it('maps OpenClaw command output events onto the same tool step id', () => {
+        const events = mapOpenClawGatewayEvent({
+            event: 'agent',
+            payload: {
+                runId: 'tavern-run:msg-1',
+                sessionKey: 'agent:blippy:tavern:channel:220f46ed-2d7c-41dd-9d7e-d02691f1afc3',
+                stream: 'command_output',
+                data: {
+                    durationMs: 5030,
+                    exitCode: 0,
+                    name: 'bash',
+                    phase: 'end',
+                    status: 'completed',
+                    title: '/bin/zsh -lc "sleep 5; printf \'done\\n\'"',
+                    toolCallId: 'tool-call-1',
+                },
+            },
+        });
+
+        expect(events).toHaveLength(1);
+        expect(events[0]).toMatchObject({
+            step: {
+                detail: 'completed 5.0s',
+                id: 'tool-call-1',
+                kind: 'tool',
+                label: 'Used /bin/zsh -lc "sleep 5; printf \'done\\n\'"',
+                status: 'completed',
+            },
+            type: 'turn.progress',
+        });
+    });
+
+    it('maps OpenClaw thinking events to reasoning progress with text', () => {
+        const events = mapOpenClawGatewayEvent({
+            event: 'agent',
+            payload: {
+                runId: 'tavern-run:msg-1',
+                sessionKey: 'agent:blippy:tavern:channel:220f46ed-2d7c-41dd-9d7e-d02691f1afc3',
+                stream: 'thinking',
+                data: {
+                    text: 'Checking the current workspace before running tools.',
+                },
+            },
+        });
+
+        expect(events).toHaveLength(1);
+        expect(events[0]).toMatchObject({
+            step: {
+                detail: 'Checking the current workspace before running tools.',
+                id: 'reasoning',
+                kind: 'reasoning',
+                label: 'Reasoning',
+                status: 'active',
+            },
+            type: 'turn.progress',
+        });
+    });
+
+    it('does not synthesize empty reasoning rows from item events', () => {
+        const events = mapOpenClawGatewayEvent({
+            event: 'agent',
+            payload: {
+                runId: 'tavern-run:msg-1',
+                sessionKey: 'agent:blippy:tavern:channel:220f46ed-2d7c-41dd-9d7e-d02691f1afc3',
+                stream: 'item',
+                data: {
+                    itemId: 'reasoning-item-1',
+                    kind: 'message',
+                    phase: 'start',
+                    status: 'running',
+                    title: 'Reasoning',
+                },
+            },
+        });
+
+        expect(events).toEqual([]);
     });
 
     it('maps Tavern Messenger delivered replies into live reply updates', () => {

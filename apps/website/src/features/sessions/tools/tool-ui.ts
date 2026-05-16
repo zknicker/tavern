@@ -14,7 +14,9 @@ export function formatToolStatusLabel(status: string) {
     if (
         normalizedStatus.includes('error') ||
         normalizedStatus.includes('forbidden') ||
-        normalizedStatus.includes('failed')
+        normalizedStatus.includes('failed') ||
+        normalizedStatus.includes('timeout') ||
+        normalizedStatus.includes('timed out')
     ) {
         return 'Failed';
     }
@@ -59,7 +61,9 @@ export function hasErrorStatus(status: string | null) {
     return (
         normalizedStatus.includes('error') ||
         normalizedStatus.includes('forbidden') ||
-        normalizedStatus.includes('failed')
+        normalizedStatus.includes('failed') ||
+        normalizedStatus.includes('timeout') ||
+        normalizedStatus.includes('timed out')
     );
 }
 

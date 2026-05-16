@@ -47,6 +47,7 @@ export async function applyObservedAgentRuntimeEvent(
     connection?: RuntimeConnectionRecord
 ) {
     emitObservedAgentRuntimeEvent(event);
+    debugTurnEvent(event);
 
     switch (event.type) {
         case 'agent.updated': {
@@ -131,6 +132,37 @@ export async function applyObservedAgentRuntimeEvent(
             emitSyncDataUpdated();
             return;
         }
+    }
+}
+
+function debugTurnEvent(event: AgentRuntimeEvent) {
+    if (process.env.TAVERN_CHAT_DEBUG !== '1') {
+        return;
+    }
+
+    switch (event.type) {
+        case 'turn.completed':
+        case 'turn.failed':
+        case 'turn.progress':
+        case 'turn.replyUpdated':
+        case 'turn.started':
+            console.info('[tavern:chat:server]', event.type, {
+                runId: event.turn.runId,
+                sessionKey: event.turn.sessionKey,
+                step:
+                    event.type === 'turn.progress'
+                        ? {
+                              id: event.step.id,
+                              kind: event.step.kind,
+                              label: event.step.label,
+                              status: event.step.status,
+                          }
+                        : undefined,
+                timestamp: event.timestamp,
+            });
+            return;
+        default:
+            return;
     }
 }
 

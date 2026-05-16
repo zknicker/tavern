@@ -7,7 +7,6 @@ import {
     readFinalAssistantReply,
 } from './failed-inbound-message.js';
 import { registerTavernDeliveryContext, sendTavernTextMessage } from './outbound.js';
-import { createTurnProgressBroadcaster } from './turn-progress.js';
 
 export async function handleTavernInboundMessage({ context, event, runtime, sendAccepted }) {
     const input = parseTavernRelayInbound(event);
@@ -77,15 +76,6 @@ async function runTavernTurn({ context, input, runId, runtime, startedAt }) {
         agentId: input.agentId,
     });
     const target = `chat:${input.chatId}`;
-    const turnEvent = {
-        agentId: input.agentId,
-        chatId: input.chatId,
-        messageId: input.messageId,
-        runId,
-        sessionKey: input.sessionKey,
-        startedAt,
-    };
-    const broadcastProgress = createTurnProgressBroadcaster(context, turnEvent);
     const persistAcceptedInbound = createAcceptedInboundPersistor({ input, storePath });
     const sessionMetaTasks = [];
     let observedFinalReplyDelivery = false;
@@ -191,65 +181,7 @@ async function runTavernTurn({ context, input, runId, runtime, startedAt }) {
             replyPipeline: {},
             replyOptions: {
                 bootstrapContextMode: 'lightweight',
-                onCommandOutput: (payload) =>
-                    broadcastProgress({
-                        detail: payload.output ?? payload.summary ?? payload.status,
-                        id: payload.itemId ?? payload.toolCallId ?? payload.name,
-                        kind: 'command',
-                        label: payload.title ?? payload.name ?? 'Command',
-                        status:
-                            payload.status === 'completed'
-                                ? 'completed'
-                                : payload.status === 'failed'
-                                  ? 'failed'
-                                  : 'active',
-                    }),
-                onItemEvent: (payload) =>
-                    broadcastProgress({
-                        detail: payload.summary ?? payload.progressText ?? payload.meta,
-                        id: payload.itemId ?? payload.title ?? payload.name,
-                        kind: payload.kind === 'tool' ? 'tool' : 'message',
-                        label: payload.title ?? payload.name ?? payload.kind ?? 'Working',
-                        status:
-                            payload.status === 'completed' || payload.phase === 'completed'
-                                ? 'completed'
-                                : payload.status === 'failed' || payload.phase === 'failed'
-                                  ? 'failed'
-                                  : 'active',
-                    }),
-                onPlanUpdate: (payload) =>
-                    broadcastProgress({
-                        detail: payload.explanation,
-                        id: payload.source ?? payload.title ?? 'plan',
-                        kind: 'plan',
-                        label: payload.title ?? 'Updated plan',
-                        status: payload.phase === 'completed' ? 'completed' : 'active',
-                    }),
-                onReasoningStream: () => {
-                    broadcastProgress({
-                        id: 'reasoning',
-                        kind: 'reasoning',
-                        label: 'Reasoning',
-                        status: 'active',
-                    });
-                },
-                onToolResult: (payload) =>
-                    broadcastProgress({
-                        detail: payload.text,
-                        id: payload.toolCallId ?? payload.name,
-                        kind: 'tool',
-                        label: payload.name ?? 'Tool result',
-                        status: 'completed',
-                    }),
                 runId,
-                onToolStart: (payload) =>
-                    broadcastProgress({
-                        detail: payload.phase,
-                        id: payload.toolCallId ?? payload.name,
-                        kind: 'tool',
-                        label: payload.name ? `Using ${payload.name}` : 'Using tool',
-                        status: 'active',
-                    }),
                 suppressDefaultToolProgressMessages: true,
             },
         });

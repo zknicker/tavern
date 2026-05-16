@@ -289,8 +289,10 @@ function SyncedAgentChatDetail({
     return (
         <ChatDetailFrame
             activeReply={timeline.activeReply}
+            activeReplyProgressStartedAt={timeline.activeReplyProgressStartedAt}
             activeReplySteps={timeline.activeReplySteps}
             animateTimeline={animateTimeline}
+            completedProgress={timeline.completedProgress}
             conversationLayout={conversationLayout}
             emptyLabel="No synced messages for this chat yet."
             error={timeline.error}

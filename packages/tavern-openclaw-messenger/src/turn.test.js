@@ -241,29 +241,7 @@ describe('Tavern Messenger turn handling', () => {
         const progressBroadcasts = broadcast.mock.calls.filter(
             ([eventName]) => eventName === 'plugin.tavern.turn.progress'
         );
-        expect(progressBroadcasts.map(([, payload]) => payload.step)).toEqual([
-            {
-                detail: undefined,
-                id: 'reasoning',
-                kind: 'reasoning',
-                label: 'Reasoning',
-                status: 'active',
-            },
-            {
-                detail: 'started',
-                id: 'tool-call-1',
-                kind: 'tool',
-                label: 'Using web_search',
-                status: 'active',
-            },
-            {
-                detail: 'Found sources',
-                id: 'tool-call-1',
-                kind: 'tool',
-                label: 'web_search',
-                status: 'completed',
-            },
-        ]);
+        expect(progressBroadcasts).toHaveLength(0);
     });
 
     it('persists the accepted inbound message before waiting for the final reply', async () => {

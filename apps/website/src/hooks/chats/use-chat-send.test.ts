@@ -49,6 +49,9 @@ test('useChatSend stores the local user row in app state until the log catches u
             },
         },
         timelineTurn: {
+            clear: () => {
+                throw new Error('Expected no pending turn clear on success.');
+            },
             start: (turn) => {
                 startedTurns.push(turn);
             },
@@ -117,6 +120,13 @@ test('useChatSend stores the local user row in app state until the log catches u
         {
             agentId: 'agent-1',
             chatId: 'chat-1',
+            runId: 'pending:tavern-message:1',
+            sessionKey: '',
+            startedAt: timelineMessages[0]?.timestamp,
+        },
+        {
+            agentId: 'agent-1',
+            chatId: 'chat-1',
             runId: 'run-1',
             sessionKey: 'session-1',
             startedAt: '2026-04-20T18:15:00.000Z',
@@ -126,6 +136,7 @@ test('useChatSend stores the local user row in app state until the log catches u
 
 test('useChatSend removes the local user row if the send fails', async () => {
     const removedMessages: Array<{ chatId: string; messageId: string }> = [];
+    const clearedTurns: Array<{ chatId: string; runId?: string }> = [];
 
     const mutation = createChatSendMutationHandlers({
         chat: {
@@ -146,6 +157,9 @@ test('useChatSend removes the local user row if the send fails', async () => {
             },
         },
         timelineTurn: {
+            clear: (turn) => {
+                clearedTurns.push(turn);
+            },
             start: () => undefined,
         },
         session: {
@@ -175,6 +189,12 @@ test('useChatSend removes the local user row if the send fails', async () => {
         {
             chatId: 'chat-1',
             messageId: context?.timelineMessageId,
+        },
+    ]);
+    expect(clearedTurns).toEqual([
+        {
+            chatId: 'chat-1',
+            runId: `pending:${context?.timelineMessageId}`,
         },
     ]);
 });

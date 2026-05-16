@@ -15,7 +15,7 @@ export function isActivityItem(item: TranscriptItem): item is ActivityItem {
 
 export function isActiveActivityItem(item: ActivityItem) {
     if (item.kind === 'activeProgress') {
-        return item.steps.some((step) => step.status === 'active');
+        return !item.completedAt;
     }
 
     return false;
@@ -43,7 +43,7 @@ function getActivityStartTimestamp(item: ActivityItem | undefined): string | nul
     }
 
     if (item.kind === 'activeProgress') {
-        return item.reply.startedAt;
+        return item.startedAt;
     }
 
     if (item.row.kind === 'tool' || item.row.kind === 'worker') {
@@ -63,7 +63,7 @@ function getActivityEndTimestamp(item: ActivityItem | undefined): string | null 
     }
 
     if (item.kind === 'activeProgress') {
-        return item.reply.startedAt;
+        return item.completedAt ?? item.reply.startedAt;
     }
 
     if (item.row.kind === 'tool' || item.row.kind === 'worker') {
@@ -95,6 +95,20 @@ export function formatActivityHeader({
     }
 
     return `${isActive ? 'Working' : 'Worked'} for ${duration}`;
+}
+
+export function formatActiveActivitySeconds({ now, start }: { now: number; start: string | null }) {
+    if (!start) {
+        return null;
+    }
+
+    const startMs = Date.parse(start);
+
+    if (Number.isNaN(startMs)) {
+        return null;
+    }
+
+    return `${Math.floor(Math.max(0, now - startMs) / 1000)}s`;
 }
 
 function formatElapsed(start: string | null, end: number | string | null) {

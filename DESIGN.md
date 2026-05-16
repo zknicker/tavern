@@ -97,6 +97,10 @@ Tavern is a dense, quiet desktop control-plane app. The interface should feel cl
 to a marketing dashboard: restrained, highly scannable, compact, and built for repeated use by an
 operator who already understands the product.
 
+The current visual north star is [`docs/assets/tavern-north-star-home.png`](docs/assets/tavern-north-star-home.png).
+Use it as directional reference for the product feel: warm Tavern identity, agent activity as a
+living operational scene, and dashboard information kept readable and actionable.
+
 The design system source of truth is code, not this prose:
 
 - Theme tokens live in `apps/website/src/styles/global.css`.

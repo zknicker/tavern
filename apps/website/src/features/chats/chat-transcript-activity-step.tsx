@@ -7,7 +7,9 @@ import {
     PuzzleIcon,
     TerminalIcon,
 } from '@hugeicons-pro/core-stroke-rounded';
+import type { ChatTurnProgressStep } from '../../hooks/chats/chat-timeline-state.ts';
 import { useSessionDrawer } from '../../hooks/sessions/use-session-drawer.ts';
+import { cn } from '../../lib/utils.ts';
 import { workerKindConfig } from '../workers/config.ts';
 import type { ActivityItem } from './chat-transcript-activity-utils.ts';
 import type { TranscriptRow } from './chat-transcript-model.ts';
@@ -40,16 +42,28 @@ export function ActivityStep({
     item: ActivityItem;
 }) {
     if (item.kind === 'activeProgress') {
+        const steps = item.steps;
+
+        if (steps.length === 0) {
+            return null;
+        }
+
         return (
             <>
-                {item.steps.map((step, stepIndex) => (
+                {steps.map((step, stepIndex) => (
                     <ThinkingStep
-                        description={step.detail}
+                        description={step.kind === 'tool' ? null : step.detail}
                         icon={progressStepIcon[step.kind]}
                         index={index + stepIndex}
-                        isLast={isLast && stepIndex === item.steps.length - 1}
+                        isLast={isLast && stepIndex === steps.length - 1}
                         key={step.id}
-                        label={step.label}
+                        label={
+                            step.kind === 'tool' ? (
+                                <ActiveProgressToolLabel step={step} />
+                            ) : (
+                                step.label
+                            )
+                        }
                         status={step.status === 'completed' ? 'complete' : step.status}
                     />
                 ))}
@@ -74,6 +88,52 @@ export function ActivityStep({
         default:
             return null;
     }
+}
+
+function ActiveProgressToolLabel({ step }: { step: ChatTurnProgressStep }) {
+    const presentation = getActiveProgressToolPresentation(step);
+
+    return (
+        <span className="inline-flex min-w-0 max-w-full flex-nowrap items-baseline gap-1.5">
+            <span className={cn('shrink-0', presentation.verbClassName)}>{presentation.verb}</span>
+            <span className="truncate text-muted-foreground">{presentation.target}</span>
+        </span>
+    );
+}
+
+function getActiveProgressToolPresentation(step: ChatTurnProgressStep) {
+    const target = getActiveProgressToolTarget(step.label);
+
+    if (step.status === 'failed') {
+        return {
+            target,
+            verb: 'Failed',
+            verbClassName: 'text-destructive',
+        };
+    }
+
+    if (step.status === 'completed') {
+        return {
+            target,
+            verb: 'Used',
+            verbClassName: 'text-success',
+        };
+    }
+
+    return {
+        target,
+        verb: 'Using',
+        verbClassName: 'text-muted-foreground/70',
+    };
+}
+
+function getActiveProgressToolTarget(label: string) {
+    return (
+        label
+            .replace(/^(?:using|used|failed|timed out)\s+/iu, '')
+            .replace(/\.{3}$/u, '')
+            .trim() || 'tool'
+    );
 }
 
 function WorkerStep({

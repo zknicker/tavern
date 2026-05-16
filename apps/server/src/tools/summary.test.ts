@@ -53,3 +53,25 @@ test('buildToolSummaryFromValues marks error tool results consistently', () => {
         },
     ]);
 });
+
+test('buildToolSummaryFromValues marks timed out tool results consistently', () => {
+    const summary = buildToolSummaryFromValues({
+        argumentsValue: {
+            command: 'sleep 5',
+        },
+        callId: 'call-timeout',
+        isError: false,
+        name: 'bash',
+        resultValue: {
+            failureKind: 'overall-timeout',
+            reason: 'command timed out',
+            timedOut: true,
+        },
+    });
+
+    assert.equal(summary.status, 'timeout');
+    assert.equal(
+        summary.facts.some((fact) => fact.label === 'Reason'),
+        true
+    );
+});

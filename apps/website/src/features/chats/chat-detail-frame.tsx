@@ -5,19 +5,23 @@ import { BreadcrumbTrail } from '../../components/ui/breadcrumb.tsx';
 import { Icon } from '../../components/ui/icon.tsx';
 import { Button } from '../../components/ui/primitives/button.tsx';
 import type {
+    ChatCompletedProgress,
     ChatTurnFailure,
     ChatTurnProgressStep,
 } from '../../hooks/chats/chat-timeline-state.ts';
 import type { ChatLogOutput, ChatStatusListOutput } from '../../lib/trpc.tsx';
 import { ChatTimeline } from './chat-timeline.tsx';
+import { getChatTimelineFollowKey } from './chat-timeline-follow-key.ts';
 import { ChatTranscriptLoadingIndicator } from './chat-transcript-loading-indicator.tsx';
 import type { ConversationMessageLayout } from './chat-transcript-model.ts';
 import { useChatScroll } from './use-chat-scroll.ts';
 
 export function ChatDetailFrame({
     activeReply,
+    activeReplyProgressStartedAt = null,
     activeReplySteps = [],
     animateTimeline = true,
+    completedProgress = null,
     conversationLayout,
     emptyLabel,
     error,
@@ -30,8 +34,10 @@ export function ChatDetailFrame({
     totalRows,
 }: {
     activeReply: ChatStatusListOutput['chats'][number]['activeReply'] | null;
+    activeReplyProgressStartedAt?: string | null;
     activeReplySteps?: ChatTurnProgressStep[];
     animateTimeline?: boolean;
+    completedProgress?: ChatCompletedProgress | null;
     conversationLayout?: ConversationMessageLayout;
     emptyLabel: string;
     error?: unknown;
@@ -46,8 +52,14 @@ export function ChatDetailFrame({
     const hasActiveReply = activeReply !== null;
     const hasTimelineContent = rows.length > 0 || hasActiveReply || failedTurn !== null;
     const isInitialTranscriptPending = isPending && !historyLoaded && !hasActiveReply;
+    const followKey = getChatTimelineFollowKey({
+        activeReply,
+        activeReplySteps,
+        failedTurn,
+    });
     const chatScroll = useChatScroll({
         enabled: !isInitialTranscriptPending && hasTimelineContent,
+        followKey,
     });
 
     return (
@@ -79,8 +91,10 @@ export function ChatDetailFrame({
                         ) : hasTimelineContent ? (
                             <ChatTimeline
                                 activeReply={activeReply}
+                                activeReplyProgressStartedAt={activeReplyProgressStartedAt}
                                 activeReplySteps={activeReplySteps}
                                 animate={animateTimeline}
+                                completedProgress={completedProgress}
                                 conversationLayout={conversationLayout}
                                 failedTurn={failedTurn}
                                 rows={rows}

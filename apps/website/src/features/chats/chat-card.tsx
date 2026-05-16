@@ -8,6 +8,7 @@ import { ChatCardHeader } from './chat-card-header.tsx';
 import type { ChatListItem } from './chat-list-data.ts';
 import { ChatMessageComposer } from './chat-message-composer.tsx';
 import { ChatTimeline } from './chat-timeline.tsx';
+import { getChatTimelineFollowKey } from './chat-timeline-follow-key.ts';
 import { ChatTranscriptLoadingIndicator } from './chat-transcript-loading-indicator.tsx';
 import { useChatScroll } from './use-chat-scroll.ts';
 
@@ -42,8 +43,14 @@ export function ChatCard({
     const hasTimelineContent = rowCount > 0 || hasActiveReply || timeline.failedTurn !== null;
     const isInitialTranscriptPending =
         timeline.isPending && !timeline.historyLoaded && !hasActiveReply;
+    const followKey = getChatTimelineFollowKey({
+        activeReply: timeline.activeReply,
+        activeReplySteps: timeline.activeReplySteps,
+        failedTurn: timeline.failedTurn,
+    });
     const chatScroll = useChatScroll({
         enabled: !isInitialTranscriptPending && hasTimelineContent,
+        followKey,
     });
 
     React.useEffect(() => {
@@ -88,8 +95,10 @@ export function ChatCard({
                     {isInitialTranscriptPending ? null : hasTimelineContent ? (
                         <ChatTimeline
                             activeReply={timeline.activeReply}
+                            activeReplyProgressStartedAt={timeline.activeReplyProgressStartedAt}
                             activeReplySteps={timeline.activeReplySteps}
                             animate
+                            completedProgress={timeline.completedProgress}
                             failedTurn={timeline.failedTurn}
                             rows={rows}
                             totalRows={totalRows}

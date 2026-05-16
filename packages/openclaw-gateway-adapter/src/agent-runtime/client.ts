@@ -12,12 +12,14 @@ import type {
     AgentRuntimeChatStatusList,
     AgentRuntimeCreateAgent,
     AgentRuntimeCreateCron,
+    AgentRuntimeCreateMessage,
     AgentRuntimeCron,
     AgentRuntimeCronList,
     AgentRuntimeCronRun,
     AgentRuntimeInstallSkill,
     AgentRuntimeMemorySettings,
     AgentRuntimeMemoryStatus,
+    AgentRuntimeMessageAccepted,
     AgentRuntimeModelAccess,
     AgentRuntimeModelAccessStatus,
     AgentRuntimeModels,
@@ -66,6 +68,10 @@ import {
     mapTavernBindingToOpenClawProjection,
 } from '../mappers/chats/bindings.ts';
 import { mapOpenClawChatsFromSessions } from '../mappers/chats/list.ts';
+import {
+    mapOpenClawMessageAccepted,
+    mapTavernMessageToOpenClawChatSend,
+} from '../mappers/chats/send-message.ts';
 import { mapOpenClawChatStatuses } from '../mappers/chats/status.ts';
 import { mapTavernCronCreateToOpenClaw } from '../mappers/cron/create.ts';
 import { mapOpenClawDeletedCron } from '../mappers/cron/delete.ts';
@@ -128,6 +134,10 @@ export interface OpenClawAgentRuntimeClient {
     ): Promise<AgentRuntimeSessionMessageList>;
     listSessions(): Promise<AgentRuntimeSessionList>;
     listSkills(options?: { agentId?: string }): Promise<{ skills: AgentRuntimeSkillSummary[] }>;
+    postMessage(
+        chatId: string,
+        input: AgentRuntimeCreateMessage
+    ): Promise<AgentRuntimeMessageAccepted>;
     resyncSession(sessionKey: string): Promise<AgentRuntimeSessionResync>;
     runCronJob(jobId: string, input?: AgentRuntimeRunCron): Promise<AgentRuntimeCronRun>;
     saveAgentFile(
@@ -253,7 +263,14 @@ class GatewayBackedOpenClawAgentRuntimeClient implements OpenClawAgentRuntimeCli
     }
 
     async listChatStatuses() {
-        return mapOpenClawChatStatuses();
+        return mapOpenClawChatStatuses(await this.#gateway.request('sessions.list'));
+    }
+
+    async postMessage(_chatId: string, input: AgentRuntimeCreateMessage) {
+        const payload = mapTavernMessageToOpenClawChatSend(input);
+        const accepted = await this.#gateway.request('chat.send', payload);
+
+        return mapOpenClawMessageAccepted(accepted, payload.sessionKey);
     }
 
     async listSessions() {

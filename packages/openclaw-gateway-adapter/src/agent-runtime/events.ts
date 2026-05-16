@@ -8,6 +8,7 @@ import type {
 } from '../gateway/types.ts';
 import { resolveOpenClawConversationIdentity } from '../mappers/chats/conversation-identity.ts';
 import { parseOpenClawSessionKey } from '../mappers/sessions/session-key.ts';
+import { mapOpenClawAgentProgressEvent, mapOpenClawSessionToolProgressEvent } from './progress.ts';
 
 export interface OpenClawEventSubscription {
     close(): void;
@@ -65,9 +66,6 @@ export function mapOpenClawGatewayEvent(event: OpenClawGatewayEvent): AgentRunti
         case 'plugin.tavern.turn.started': {
             return mapOpenClawTavernTurnEvent(payload, timestamp, 'turn.started');
         }
-        case 'plugin.tavern.turn.progress': {
-            return mapOpenClawTavernTurnProgressEvent(payload, timestamp);
-        }
         case 'plugin.tavern.message.created': {
             return mapOpenClawTavernDeliveredMessageEvent(payload, timestamp);
         }
@@ -77,11 +75,17 @@ export function mapOpenClawGatewayEvent(event: OpenClawGatewayEvent): AgentRunti
         case 'plugin.tavern.turn.failed': {
             return mapOpenClawTavernTurnEvent(payload, timestamp, 'turn.failed');
         }
+        case 'agent': {
+            return mapOpenClawAgentProgressEvent(payload, timestamp);
+        }
         case 'chat': {
             return mapOpenClawChatEvent(payload, timestamp);
         }
         case 'session.tool': {
-            return mapOpenClawSessionInvalidatedEvent(payload, timestamp);
+            return [
+                ...mapOpenClawSessionToolProgressEvent(payload, timestamp),
+                ...mapOpenClawSessionInvalidatedEvent(payload, timestamp),
+            ];
         }
         case 'sessions.changed': {
             return mapOpenClawSessionInvalidatedEvent(payload, timestamp);
@@ -186,42 +190,6 @@ function mapOpenClawSessionMessageEvent(
                     timestamp,
             },
             type: 'turn.replyUpdated',
-        }),
-    ];
-}
-
-function mapOpenClawTavernTurnProgressEvent(
-    payload: Record<string, unknown>,
-    timestamp: string
-): AgentRuntimeEvent[] {
-    const turn = mapOpenClawTavernTurn(payload, timestamp);
-
-    if (!turn) {
-        return [];
-    }
-
-    const stepRecord = asRecord(payload.step);
-    const id = readString(stepRecord, ['id']) ?? readString(payload, ['stepId', 'id']);
-    const kind = readString(stepRecord, ['kind']) ?? readString(payload, ['kind']);
-    const label = readString(stepRecord, ['label']) ?? readString(payload, ['label']);
-    const status = readString(stepRecord, ['status']) ?? readString(payload, ['status']);
-
-    if (!(id && kind && label)) {
-        return [];
-    }
-
-    return [
-        agentRuntimeEventSchema.parse({
-            step: {
-                detail: readString(stepRecord, ['detail', 'description', 'summary']),
-                id,
-                kind,
-                label,
-                status: status ?? 'active',
-            },
-            timestamp,
-            turn,
-            type: 'turn.progress',
         }),
     ];
 }

@@ -33,6 +33,7 @@ export function useChatSend() {
                 },
             },
             timelineTurn: {
+                clear: timelineState.clearTurn,
                 start: timelineState.startTurn,
             },
             session: utils.session,

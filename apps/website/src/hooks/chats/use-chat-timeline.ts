@@ -38,7 +38,9 @@ export function useChatTimeline(input: {
     return {
         ...query,
         activeReply: projectedState.activeReply,
+        activeReplyProgressStartedAt: projectedState.activeReplyProgressStartedAt,
         activeReplySteps: projectedState.activeReplySteps,
+        completedProgress: projectedState.completedProgress,
         failedTurn: projectedState.failedTurn,
         historyLoaded: projectedState.historyLoaded,
         rows: projectedState.timeline,

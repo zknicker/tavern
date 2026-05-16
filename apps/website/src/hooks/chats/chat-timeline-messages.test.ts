@@ -250,6 +250,44 @@ test('getLoggedTimelineMessageIds matches a completed turn when the runtime time
     expect(confirmedIds).toEqual(['timeline:yo']);
 });
 
+test('getLoggedTimelineMessageIds matches a long-running turn when the runtime timestamp lands late', () => {
+    const logged = {
+        limit: 20,
+        offset: 0,
+        rows: [
+            {
+                actor: null,
+                connectsToNext: false,
+                connectsToPrevious: false,
+                id: 'message-1',
+                isFirstInGroup: true,
+                kind: 'message' as const,
+                message: {
+                    content: 'run five slow tools',
+                    id: 'message-1',
+                    sender: 'You',
+                    senderType: 'user' as const,
+                    sourceSessionId: null,
+                    sourceSessionKey: 'session-1',
+                    timestamp: '2026-04-20T18:15:42.000Z',
+                },
+            },
+        ],
+        total: 1,
+    };
+
+    const confirmedIds = getLoggedTimelineMessageIds(logged, [
+        {
+            content: 'run five slow tools',
+            id: 'timeline:slow-tools',
+            sessionKey: 'session-1',
+            timestamp: '2026-04-20T18:15:00.000Z',
+        },
+    ]);
+
+    expect(confirmedIds).toEqual(['timeline:slow-tools']);
+});
+
 test('getLoggedTimelineMessageIds matches logged session keys', () => {
     const logged = {
         limit: 20,

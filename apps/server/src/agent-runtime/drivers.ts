@@ -35,6 +35,11 @@ export async function subscribeAgentRuntimeEventsForConnection(
         const parsed = agentRuntimeEventSchema.safeParse(parsedJson);
         if (parsed.success) {
             observer.onEvent(parsed.data);
+        } else if (process.env.TAVERN_CHAT_DEBUG === '1') {
+            console.warn('[tavern:chat:server] dropped runtime event', {
+                issues: parsed.error.issues.map((issue) => issue.message),
+                raw: parsedJson,
+            });
         }
     });
     socket.on('close', () => observer.onClose?.());

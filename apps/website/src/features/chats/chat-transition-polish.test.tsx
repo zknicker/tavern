@@ -5,6 +5,7 @@ import {
     shouldAnimateSyncedChatTimeline,
     shouldReleaseDraftHandoff,
 } from './agent-chat-detail.tsx';
+import { resolveDraftHandoffFrame } from './chat-draft-detail.tsx';
 import { ChatTimeline } from './chat-timeline.tsx';
 
 test('synced timeline does not replay entrance animation after optimistic draft handoff', () => {
@@ -48,13 +49,57 @@ test('draft handoff waits while the accepted turn is still blank thinking', () =
                 startedAt: '2026-05-13T12:00:00.000Z',
                 text: '',
             },
+            activeReplyProgressStartedAt: null,
             activeReplySteps: [],
+            completedProgress: null,
             failedTurn: null,
             historyLoaded: true,
             timeline: [],
             totalRows: 0,
         })
     ).toBe(false);
+});
+
+test('draft handoff forwards real turn progress before final text', () => {
+    const frame = resolveDraftHandoffFrame({
+        draftActiveReply: {
+            agentId: 'agent-1',
+            isThinking: true,
+            runId: 'draft-message-1',
+            sessionKey: 'draft-chat-1',
+            startedAt: '2026-05-13T12:00:00.000Z',
+            text: '',
+        },
+        handoffState: {
+            activeReply: {
+                agentId: 'agent-1',
+                isThinking: true,
+                runId: 'run-1',
+                sessionKey: 'session-1',
+                startedAt: '2026-05-13T12:00:01.000Z',
+                text: '',
+            },
+            activeReplyProgressStartedAt: '2026-05-13T12:00:04.000Z',
+            activeReplySteps: [
+                {
+                    id: 'tool:pwd',
+                    kind: 'tool',
+                    label: 'Using bash',
+                    status: 'active',
+                },
+            ],
+            completedProgress: null,
+            failedTurn: null,
+            historyLoaded: true,
+            timeline: [],
+            totalRows: 0,
+        },
+    });
+
+    expect(frame.activeReply?.runId).toBe('run-1');
+    expect(frame.activeReplyProgressStartedAt).toBe('2026-05-13T12:00:04.000Z');
+    expect(frame.activeReplySteps).toHaveLength(1);
+    expect(frame.activeReplySteps[0]?.label).toBe('Using bash');
 });
 
 test('draft handoff releases when the active reply has visible text', () => {
@@ -68,7 +113,9 @@ test('draft handoff releases when the active reply has visible text', () => {
                 startedAt: '2026-05-13T12:00:00.000Z',
                 text: 'Done.',
             },
+            activeReplyProgressStartedAt: null,
             activeReplySteps: [],
+            completedProgress: null,
             failedTurn: null,
             historyLoaded: true,
             timeline: [],

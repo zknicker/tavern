@@ -51,11 +51,13 @@ ThinkingSteps.displayName = 'ThinkingSteps';
 
 interface ThinkingStepsHeaderProps extends HTMLAttributes<HTMLButtonElement> {
     children?: ReactNode;
+    showIcon?: boolean;
+    wrapperClassName?: string;
 }
 
 export const ThinkingStepsHeader = forwardRef<HTMLButtonElement, ThinkingStepsHeaderProps>(
-    ({ children = 'Thinking', className, ...props }, ref) => (
-        <div className="w-fit">
+    ({ children = 'Thinking', className, showIcon = true, wrapperClassName, ...props }, ref) => (
+        <div className={cn('w-fit', wrapperClassName)}>
             <CollapsibleTrigger
                 className={cn(
                     'group flex w-auto items-center gap-1.5 rounded-md py-1 font-medium text-[13px] text-foreground leading-tight transition-colors hover:text-foreground',
@@ -65,11 +67,13 @@ export const ThinkingStepsHeader = forwardRef<HTMLButtonElement, ThinkingStepsHe
                 {...props}
             >
                 <span>{children}</span>
-                <Icon
-                    className="size-3.5 text-muted-foreground transition-transform group-data-[panel-open]:rotate-180"
-                    icon={ArrowDown01Icon}
-                    strokeWidth={1.7}
-                />
+                {showIcon ? (
+                    <Icon
+                        className="size-3.5 text-muted-foreground transition-transform group-data-[panel-open]:rotate-180"
+                        icon={ArrowDown01Icon}
+                        strokeWidth={1.7}
+                    />
+                ) : null}
             </CollapsibleTrigger>
         </div>
     )
@@ -166,7 +170,7 @@ export function ThinkingStep({
                         )}
                     >
                         {label}
-                        {isActive ? '...' : null}
+                        {isActive && typeof label === 'string' ? '...' : null}
                     </span>
                     {description ? (
                         <span className="min-w-0 text-[13px] text-muted-foreground leading-snug">

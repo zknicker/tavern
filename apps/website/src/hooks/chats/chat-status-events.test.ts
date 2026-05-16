@@ -3,6 +3,7 @@ import { createChatStatusEventHandlers } from './chat-status-events.ts';
 
 test('turn completion preserves the handoff and invalidates transcript queries', async () => {
     const invalidatedQueries: string[] = [];
+    const completedTurns: string[] = [];
 
     const handlers = createChatStatusEventHandlers({
         agent: {
@@ -51,6 +52,9 @@ test('turn completion preserves the handoff and invalidates transcript queries',
             clearTurn: () => {
                 throw new Error('Expected no turn clear while handling completion.');
             },
+            completeTurn: (input) => {
+                completedTurns.push(input.turn.runId);
+            },
             failTurn: () => {
                 throw new Error('Expected no turn failure while handling completion.');
             },
@@ -82,6 +86,7 @@ test('turn completion preserves the handoff and invalidates transcript queries',
     });
     await Promise.resolve();
 
+    expect(completedTurns).toEqual(['run-1']);
     expect(invalidatedQueries).toEqual([
         'agent.activity',
         'chat.log.list',
@@ -143,6 +148,9 @@ test('turn start keeps the status refresh narrow', async () => {
         timeline: {
             clearTurn: () => {
                 throw new Error('Expected no turn clear while handling start.');
+            },
+            completeTurn: () => {
+                throw new Error('Expected no turn completion while handling start.');
             },
             failTurn: () => {
                 throw new Error('Expected no turn failure while handling start.');
@@ -229,6 +237,9 @@ test('turn progress updates local timeline state without invalidating queries', 
         timeline: {
             clearTurn: () => {
                 throw new Error('Expected no turn clear while handling progress.');
+            },
+            completeTurn: () => {
+                throw new Error('Expected no turn completion while handling progress.');
             },
             failTurn: () => {
                 throw new Error('Expected no turn failure while handling progress.');
@@ -323,6 +334,9 @@ test('turn reply updates local timeline state without invalidating queries', () 
             clearTurn: () => {
                 throw new Error('Expected no turn clear while handling reply updates.');
             },
+            completeTurn: () => {
+                throw new Error('Expected no turn completion while handling reply updates.');
+            },
             failTurn: () => {
                 throw new Error('Expected no turn failure while handling reply updates.');
             },
@@ -411,6 +425,9 @@ test('turn failure marks the local timeline failed and invalidates transcript qu
         timeline: {
             clearTurn: () => {
                 throw new Error('Expected no turn clear while handling failure.');
+            },
+            completeTurn: () => {
+                throw new Error('Expected no turn completion while handling failure.');
             },
             failTurn: (input) => {
                 failedTurns.push(`${input.turn.runId}:${input.error}`);

@@ -27,6 +27,8 @@ const preferredResultKeys = [
     'childSessionKey',
     'sessionKey',
     'runId',
+    'failureKind',
+    'reason',
     'path',
     'transcriptPath',
     'streamLogPath',
@@ -46,6 +48,7 @@ const toolLabelByKey: Partial<Record<string, string>> = {
     mode: 'Mode',
     note: 'Note',
     path: 'Path',
+    reason: 'Reason',
     pattern: 'Pattern',
     query: 'Query',
     runId: 'Run',
@@ -58,6 +61,30 @@ const toolLabelByKey: Partial<Record<string, string>> = {
 
 function formatToolStatusValue(value: unknown): string | null {
     return typeof value === 'string' && value.trim().length > 0 ? value.trim() : null;
+}
+
+function inferToolStatus(result: Record<string, unknown> | null) {
+    if (!result) {
+        return null;
+    }
+
+    if (result.timedOut === true) {
+        return 'timeout';
+    }
+
+    const failureKind = formatToolStatusValue(result.failureKind);
+
+    if (failureKind) {
+        return failureKind;
+    }
+
+    const exitCode = result.exitCode;
+
+    if (typeof exitCode === 'number' && Number.isFinite(exitCode) && exitCode !== 0) {
+        return `exit ${exitCode}`;
+    }
+
+    return null;
 }
 
 function buildToolFacts(
@@ -132,7 +159,9 @@ export function buildToolSummaryFromValues(input: {
         : [];
     const facts = [...argumentFacts, ...resultFacts];
     const errorText = toolResult ? resolveToolValue(toolResult.error) : null;
-    let status = toolResult ? formatToolStatusValue(toolResult.status) : null;
+    let status = toolResult
+        ? (formatToolStatusValue(toolResult.status) ?? inferToolStatus(toolResult))
+        : null;
 
     if (!status && input.isError) {
         status = 'error';

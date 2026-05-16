@@ -9,6 +9,7 @@ import {
     type ChatTurn,
     type ChatTurnProgressStep,
     clearTimelineTurn,
+    completeTimelineTurn,
     emptyTimelineState,
     failTimelineTurn,
     startTimelineTurn,
@@ -18,6 +19,7 @@ import {
 
 interface TimelineContextValue {
     clearTurn: (input: { chatId: string; runId?: string }) => void;
+    completeTurn: (input: { chatId: string; completedAt: string; turn: ChatTurn }) => void;
     failTurn: (input: { chatId: string; error: string; turn: ChatTurn }) => void;
     setLog: (chatId: string, log: ChatLogOutput | undefined) => void;
     setReply: (
@@ -29,6 +31,7 @@ interface TimelineContextValue {
     updateReply: (update: ChatReplyUpdate) => void;
     updateTurnProgress: (input: {
         chatId: string;
+        receivedAt: string;
         step: ChatTurnProgressStep;
         turn: ChatTurn;
     }) => void;
@@ -103,6 +106,20 @@ export function TimelineContextProvider({ children }: PropsWithChildren) {
         );
     }, []);
 
+    const completeTurn = React.useCallback(
+        (input: { chatId: string; completedAt: string; turn: ChatTurn }) => {
+            setTimelineStates((current) =>
+                updateTimelineState(current, input.chatId, (state) =>
+                    completeTimelineTurn(state, {
+                        completedAt: input.completedAt,
+                        turn: input.turn,
+                    })
+                )
+            );
+        },
+        []
+    );
+
     const failTurn = React.useCallback(
         (input: { chatId: string; error: string; turn: ChatTurn }) => {
             setTimelineStates((current) =>
@@ -118,10 +135,16 @@ export function TimelineContextProvider({ children }: PropsWithChildren) {
     );
 
     const updateTurnProgress = React.useCallback(
-        (input: { chatId: string; step: ChatTurnProgressStep; turn: ChatTurn }) => {
+        (input: {
+            chatId: string;
+            receivedAt: string;
+            step: ChatTurnProgressStep;
+            turn: ChatTurn;
+        }) => {
             setTimelineStates((current) =>
                 updateTimelineState(current, input.chatId, (state) =>
                     updateTimelineTurnProgress(state, {
+                        receivedAt: input.receivedAt,
                         step: input.step,
                         turn: input.turn,
                     })
@@ -134,6 +157,7 @@ export function TimelineContextProvider({ children }: PropsWithChildren) {
     const value = React.useMemo<TimelineContextValue>(
         () => ({
             clearTurn,
+            completeTurn,
             failTurn,
             setLog,
             setReply,
@@ -144,6 +168,7 @@ export function TimelineContextProvider({ children }: PropsWithChildren) {
         }),
         [
             clearTurn,
+            completeTurn,
             failTurn,
             setLog,
             setReply,

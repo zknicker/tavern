@@ -1,8 +1,10 @@
 import * as React from 'react';
 import { useAgentList } from '../../hooks/agents/use-agent-list.ts';
 import { mergeTimelineMessages } from '../../hooks/chats/chat-timeline-messages.ts';
+import type { ChatTimelineState } from '../../hooks/chats/chat-timeline-state.ts';
 import type { ChatStartDraft } from '../../hooks/chats/use-chat-start-drafts.tsx';
 import { useChatTimelineRows } from '../../hooks/chats/use-chat-timeline-store.tsx';
+import { useTimelineContext } from '../../hooks/chats/use-timeline-context.tsx';
 import { markChatTiming } from '../../lib/chat-timing.ts';
 import type { ChatStatusListOutput } from '../../lib/trpc.tsx';
 import { ChatDetailFrame } from './chat-detail-frame.tsx';
@@ -25,12 +27,18 @@ export function ChatDraftDetail({
     const boundAgentIds = React.useMemo(() => (draft ? [draft.agentId] : []), [draft]);
     const [agentId, setAgentId] = React.useState(draft?.agentId ?? '');
     const [content, setContent] = React.useState('');
+    const { timelineStates } = useTimelineContext();
+    const handoffState = timelineStates[timelineChatId];
     const timeline = useChatTimelineRows({
         chatId: timelineChatId,
         limit: draftTimelineLimit,
         logged: undefined,
     });
     const draftActiveReply = buildDraftActiveReply(draft);
+    const handoffFrame = resolveDraftHandoffFrame({
+        draftActiveReply,
+        handoffState,
+    });
     const fallbackTimeline = draft
         ? mergeTimelineMessages({
               limit: draftTimelineLimit,
@@ -79,9 +87,13 @@ export function ChatDraftDetail({
 
     return (
         <ChatDetailFrame
-            activeReply={draftActiveReply}
+            activeReply={handoffFrame.activeReply}
+            activeReplyProgressStartedAt={handoffFrame.activeReplyProgressStartedAt}
+            activeReplySteps={handoffFrame.activeReplySteps}
             animateTimeline={animateTimeline}
+            completedProgress={handoffFrame.completedProgress}
             emptyLabel=""
+            failedTurn={handoffFrame.failedTurn}
             footer={
                 <ChatMessageComposerSurface
                     agentId={agentId}
@@ -110,6 +122,22 @@ export function ChatDraftDetail({
             totalRows={visibleTimeline?.total ?? 0}
         />
     );
+}
+
+export function resolveDraftHandoffFrame({
+    draftActiveReply,
+    handoffState,
+}: {
+    draftActiveReply: ChatStatusListOutput['chats'][number]['activeReply'] | null;
+    handoffState: ChatTimelineState | undefined;
+}) {
+    return {
+        activeReply: handoffState?.activeReply ?? draftActiveReply,
+        activeReplyProgressStartedAt: handoffState?.activeReplyProgressStartedAt ?? null,
+        activeReplySteps: handoffState?.activeReplySteps ?? [],
+        completedProgress: handoffState?.completedProgress ?? null,
+        failedTurn: handoffState?.failedTurn ?? null,
+    };
 }
 
 export function buildDraftActiveReply(

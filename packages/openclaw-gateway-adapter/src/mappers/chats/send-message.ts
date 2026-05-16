@@ -30,6 +30,18 @@ export function mapTavernMessageToOpenClawTavernTurn(
     };
 }
 
+export function mapTavernMessageToOpenClawChatSend(input: AgentRuntimeCreateMessage) {
+    const sessionKey = resolveOpenClawSendSessionKey(input, input.agent.agentId);
+    const runId = buildTavernMessageRunId(input.message.id);
+
+    return {
+        deliver: false,
+        idempotencyKey: runId,
+        message: input.message.content,
+        sessionKey,
+    };
+}
+
 export function mapOpenClawMessageAccepted(
     input: unknown,
     fallbackSessionKey?: string | null
@@ -69,4 +81,8 @@ function pickTavernMessageMetadata(
     }
 
     return { tavern: tavernValue as Record<string, unknown> };
+}
+
+function buildTavernMessageRunId(messageId: string) {
+    return messageId.startsWith('tavern-run:') ? messageId : `tavern-run:${messageId}`;
 }

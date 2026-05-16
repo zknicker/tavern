@@ -6,7 +6,13 @@ function isNearBottom(container: HTMLElement) {
     return container.scrollHeight - container.scrollTop - container.clientHeight <= bottomTolerance;
 }
 
-export function useChatScroll({ enabled }: { enabled: boolean }) {
+export function useChatScroll({
+    enabled,
+    followKey,
+}: {
+    enabled: boolean;
+    followKey?: string | null;
+}) {
     const viewportRef = React.useRef<HTMLDivElement | null>(null);
     const contentRef = React.useRef<HTMLDivElement | null>(null);
     const shouldFollowRef = React.useRef(true);
@@ -46,6 +52,14 @@ export function useChatScroll({ enabled }: { enabled: boolean }) {
 
         scrollToBottom('auto');
     }, [enabled, scrollToBottom]);
+
+    React.useLayoutEffect(() => {
+        if (!(enabled && followKey)) {
+            return;
+        }
+
+        scrollToBottom('smooth');
+    }, [enabled, followKey, scrollToBottom]);
 
     React.useEffect(() => {
         if (!enabled || typeof ResizeObserver === 'undefined') {

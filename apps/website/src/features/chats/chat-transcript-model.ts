@@ -1,4 +1,5 @@
 import type {
+    ChatCompletedProgress,
     ChatTurnFailure,
     ChatTurnProgressStep,
 } from '../../hooks/chats/chat-timeline-state.ts';
@@ -22,7 +23,13 @@ export interface ConversationMessageLayout {
 }
 
 export type TranscriptItem =
-    | { kind: 'activeProgress'; reply: ChatActiveReply; steps: ChatTurnProgressStep[] }
+    | {
+          completedAt?: string;
+          kind: 'activeProgress';
+          reply: ChatActiveReply;
+          startedAt: string;
+          steps: ChatTurnProgressStep[];
+      }
     | { kind: 'activeReply'; reply: ChatActiveReply }
     | { kind: 'activeStatus'; reply: ChatActiveReply; status: 'thinking' | 'typing' }
     | { failure: ChatTurnFailure; kind: 'failure' }
@@ -48,10 +55,13 @@ export interface TranscriptTurnEntry {
 export type TranscriptEntry = TranscriptSystemEntry | TranscriptTurnEntry;
 
 const turnMaxGapMs = 5 * 60 * 1000;
+const completedProgressActivityToleranceMs = 30 * 1000;
 
 export function buildTranscriptEntries(input: {
     activeReply: ChatActiveReply | null;
+    activeReplyProgressStartedAt?: string | null;
     activeReplySteps?: ChatTurnProgressStep[];
+    completedProgress?: ChatCompletedProgress | null;
     failedTurn?: ChatTurnFailure | null;
     rows: TranscriptRow[];
 }) {
@@ -95,7 +105,9 @@ export function buildTranscriptEntries(input: {
 
 function buildTranscriptItems(input: {
     activeReply: ChatActiveReply | null;
+    activeReplyProgressStartedAt?: string | null;
     activeReplySteps?: ChatTurnProgressStep[];
+    completedProgress?: ChatCompletedProgress | null;
     failedTurn?: ChatTurnFailure | null;
     rows: TranscriptRow[];
 }) {
@@ -111,7 +123,22 @@ function buildTranscriptItems(input: {
         items.push({
             kind: 'activeProgress',
             reply: input.activeReply,
+            startedAt: input.activeReplyProgressStartedAt ?? input.activeReply.startedAt,
             steps: activeReplySteps,
+        });
+    }
+
+    if (
+        !input.activeReply &&
+        input.completedProgress &&
+        !hasDurableActivityForCompletedProgress(input.rows, input.completedProgress)
+    ) {
+        items.push({
+            completedAt: input.completedProgress.completedAt,
+            kind: 'activeProgress',
+            reply: input.completedProgress.reply,
+            startedAt: input.completedProgress.startedAt,
+            steps: input.completedProgress.steps,
         });
     }
 
@@ -128,6 +155,35 @@ function buildTranscriptItems(input: {
     }
 
     return items;
+}
+
+function hasDurableActivityForCompletedProgress(
+    rows: TranscriptRow[],
+    completedProgress: ChatCompletedProgress
+) {
+    const startedAt =
+        parseTimestamp(completedProgress.reply.startedAt) - completedProgressActivityToleranceMs;
+    const completedAt =
+        parseTimestamp(completedProgress.completedAt) + completedProgressActivityToleranceMs;
+    const sessionKey = completedProgress.reply.sessionKey.trim();
+
+    return rows.some((row) => {
+        if (row.kind !== 'system' && row.kind !== 'tool') {
+            return false;
+        }
+
+        const rowSessionKey = row.kind === 'tool' ? row.sessionKey : null;
+
+        if (sessionKey && rowSessionKey?.trim() && rowSessionKey.trim() !== sessionKey) {
+            return false;
+        }
+
+        const timestamp = parseTimestamp(
+            row.kind === 'system' ? row.timestamp : (row.startedAt ?? row.completedAt)
+        );
+
+        return timestamp >= startedAt && timestamp <= completedAt;
+    });
 }
 
 function canAppendToTurn(
@@ -223,7 +279,7 @@ function getItemParticipant(item: TranscriptItem): 'agent' | 'system' | 'user' {
     }
 
     if (row.kind === 'tool' || row.kind === 'worker') {
-        return row.actor?.kind === 'agent' ? 'agent' : 'system';
+        return row.sessionKey?.trim() || row.actor?.kind === 'agent' ? 'agent' : 'system';
     }
 
     return 'agent';
@@ -292,11 +348,11 @@ export function getItemSessionKey(item: TranscriptItem) {
 }
 
 export function getItemTimestamp(item: TranscriptItem) {
-    if (
-        item.kind === 'activeReply' ||
-        item.kind === 'activeProgress' ||
-        item.kind === 'activeStatus'
-    ) {
+    if (item.kind === 'activeProgress') {
+        return item.startedAt;
+    }
+
+    if (item.kind === 'activeReply' || item.kind === 'activeStatus') {
         return item.reply.startedAt;
     }
 

@@ -3,6 +3,7 @@ import type { ChatLogOutput } from '../../lib/trpc.tsx';
 import { buildTranscriptEntries } from './chat-transcript-model.ts';
 
 type ChatRow = NonNullable<ChatLogOutput>['rows'][number];
+type ToolChatRow = Extract<ChatRow, { kind: 'tool' }>;
 
 test('buildTranscriptEntries keeps agent tool calls inside the agent turn', () => {
     const rows: ChatRow[] = [
@@ -88,6 +89,57 @@ test('buildTranscriptEntries appends active reply and progress to one agent turn
     }
 
     expect(entries[0].items.map((item) => item.kind)).toEqual(['activeReply', 'activeProgress']);
+});
+
+test('buildTranscriptEntries keeps prior completed tool activity grouped during a later active turn', () => {
+    const rows: ChatRow[] = [
+        userMessage('user-1', 'Use the tool', false, false),
+        toolRow('tool-1', false, false, null),
+        toolRow('tool-2', false, false, null),
+        toolRow('tool-3', false, false, null),
+        toolRow('tool-4', false, false, null),
+        toolRow('tool-5', false, false, null),
+        agentMessage('agent-1', 'Done.', false, false),
+        userMessage('user-2', 'Do it again', false, false),
+    ];
+
+    const entries = buildTranscriptEntries({
+        activeReply: {
+            agentId: 'agent-1',
+            isThinking: true,
+            runId: 'run-2',
+            sessionKey: 'session-1',
+            startedAt: '2026-05-11T16:01:00.000Z',
+            text: '',
+        },
+        activeReplySteps: [
+            {
+                id: 'step-active-tool',
+                kind: 'tool',
+                label: 'Using bash',
+                status: 'active',
+            },
+        ],
+        rows,
+    });
+
+    const completedAgentTurn = entries.find(
+        (entry) =>
+            entry.kind === 'turn' &&
+            entry.participant === 'agent' &&
+            entry.items.some((item) => item.kind === 'row' && item.row.id === 'tool-1')
+    );
+
+    expect(completedAgentTurn).toBeDefined();
+
+    if (completedAgentTurn?.kind !== 'turn') {
+        throw new Error('Expected completed agent turn entry.');
+    }
+
+    expect(
+        completedAgentTurn.items.map((item) => (item.kind === 'row' ? item.row.kind : item.kind))
+    ).toEqual(['tool', 'tool', 'tool', 'tool', 'tool', 'message']);
+    expect(entries.filter((entry) => entry.kind === 'system')).toHaveLength(0);
 });
 
 test('buildTranscriptEntries shows thinking status without a generic activity block', () => {
@@ -194,10 +246,15 @@ function agentMessage(
     };
 }
 
-function toolRow(id: string, connectsToPrevious: boolean, connectsToNext: boolean): ChatRow {
+function toolRow(
+    id: string,
+    connectsToPrevious: boolean,
+    connectsToNext: boolean,
+    actor: ToolChatRow['actor'] = { id: 'agent-1', kind: 'agent' }
+): ChatRow {
     return {
-        actor: { id: 'agent-1', kind: 'agent' },
-        completedAt: null,
+        actor,
+        completedAt: '2026-05-11T16:00:05.000Z',
         connectsToNext,
         connectsToPrevious,
         id,

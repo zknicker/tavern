@@ -227,7 +227,88 @@ export function buildChatRows(input: {
 
     rows.sort((left, right) => getRowTimestamp(left) - getRowTimestamp(right));
 
-    return annotateRows(rows);
+    return annotateRows(orderRowsForChatTurns(rows));
+}
+
+function orderRowsForChatTurns(rows: ChatLogPage['rows']) {
+    const ordered = [...rows];
+    let index = 0;
+
+    while (index < ordered.length) {
+        const row = ordered[index];
+        const sessionKey = row ? getRowSessionKey(row) : null;
+
+        if (
+            !(
+                row &&
+                sessionKey &&
+                isUserMessageRow(row) &&
+                hasFollowingAgentMessage(ordered, index, sessionKey)
+            )
+        ) {
+            index += 1;
+            continue;
+        }
+
+        let activityStart = index;
+
+        while (
+            activityStart > 0 &&
+            isAgentActivityRowForSession(ordered[activityStart - 1], sessionKey)
+        ) {
+            activityStart -= 1;
+        }
+
+        if (activityStart === index) {
+            index += 1;
+            continue;
+        }
+
+        const activityRows = ordered.splice(activityStart, index - activityStart);
+        const userIndex = activityStart;
+
+        ordered.splice(userIndex + 1, 0, ...activityRows);
+        index = userIndex + activityRows.length + 2;
+    }
+
+    return ordered;
+}
+
+function isUserMessageRow(row: ChatLogPage['rows'][number]) {
+    return row.kind === 'message' && row.message.senderType === 'user';
+}
+
+function hasFollowingAgentMessage(
+    rows: ChatLogPage['rows'],
+    startIndex: number,
+    sessionKey: string
+) {
+    for (let index = startIndex + 1; index < rows.length; index += 1) {
+        const row = rows[index];
+
+        if (!row || getRowSessionKey(row) !== sessionKey) {
+            continue;
+        }
+
+        if (row.kind !== 'message') {
+            continue;
+        }
+
+        return row.message.senderType === 'agent';
+    }
+
+    return false;
+}
+
+function isAgentActivityRowForSession(
+    row: ChatLogPage['rows'][number] | undefined,
+    sessionKey: string
+) {
+    if (!(row && (row.kind === 'tool' || row.kind === 'worker'))) {
+        return false;
+    }
+
+    return getRowSessionKey(row) === sessionKey;
 }
 
 function findToolActorCandidate(

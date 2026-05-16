@@ -1,4 +1,5 @@
 import type {
+    ChatCompletedProgress,
     ChatTurnFailure,
     ChatTurnProgressStep,
 } from '../../hooks/chats/chat-timeline-state.ts';
@@ -10,16 +11,20 @@ import type { ConversationMessageLayout } from './chat-transcript-model.ts';
 
 export function ChatTimeline({
     activeReply,
+    activeReplyProgressStartedAt = null,
     activeReplySteps = [],
     animate = false,
+    completedProgress = null,
     conversationLayout,
     failedTurn,
     rows,
     totalRows,
 }: {
     activeReply: ChatStatusListOutput['chats'][number]['activeReply'] | null;
+    activeReplyProgressStartedAt?: string | null;
     activeReplySteps?: ChatTurnProgressStep[];
     animate?: boolean;
+    completedProgress?: ChatCompletedProgress | null;
     conversationLayout?: ConversationMessageLayout;
     failedTurn?: ChatTurnFailure | null;
     rows: NonNullable<ChatLogOutput>['rows'];
@@ -32,7 +37,9 @@ export function ChatTimeline({
             <SessionLogHiddenCount hiddenCount={hiddenCount} />
             <ChatTranscript
                 activeReply={activeReply}
+                activeReplyProgressStartedAt={activeReplyProgressStartedAt}
                 activeReplySteps={activeReplySteps}
+                completedProgress={completedProgress}
                 conversationLayout={conversationLayout}
                 failedTurn={failedTurn}
                 rows={rows}
