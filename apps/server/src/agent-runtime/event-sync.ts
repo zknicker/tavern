@@ -11,6 +11,11 @@ import {
     emitSyncDataUpdated,
     emitWorkersUpdated,
 } from '../api/invalidation-events.ts';
+import { projectAcceptedChatMessage } from '../chat/accepted-message-projection.ts';
+import {
+    clearActiveTurnProgress,
+    projectActiveTurnProgress,
+} from '../chat/active-turn-progress.ts';
 import { refreshOpenClawSyncJobSchedules } from '../jobs/manager.ts';
 import { listReachableAgentRuntimeConnections } from '../storage/agent-runtime-connections.ts';
 import {
@@ -46,27 +51,50 @@ export async function applyObservedAgentRuntimeEvent(
     event: AgentRuntimeEvent,
     connection?: RuntimeConnectionRecord
 ) {
-    emitObservedAgentRuntimeEvent(event);
-    debugTurnEvent(event);
-
     switch (event.type) {
         case 'agent.updated': {
+            emitObservedAgentRuntimeEvent(event);
+            debugTurnEvent(event);
             void syncAgentRuntimeAgents().catch((error) => {
                 console.warn('[tavern] failed to sync agent event projection', error);
             });
             emitAgentUpdated();
             return;
         }
+        case 'chat.messageAccepted': {
+            if (connection) {
+                await projectAcceptedChatMessage({
+                    event,
+                    runtimeId: connection.id,
+                });
+            }
+            emitObservedAgentRuntimeEvent(event);
+            debugTurnEvent(event);
+            emitSyncDataUpdated();
+            return;
+        }
+        case 'chat.read': {
+            emitObservedAgentRuntimeEvent(event);
+            debugTurnEvent(event);
+            emitSyncDataUpdated();
+            return;
+        }
         case 'skill.updated': {
+            emitObservedAgentRuntimeEvent(event);
+            debugTurnEvent(event);
             emitSkillInvalidationCascade();
             return;
         }
         case 'skill.deleted': {
+            emitObservedAgentRuntimeEvent(event);
+            debugTurnEvent(event);
             emitSkillInvalidationCascade();
             return;
         }
         case 'cron.updated':
         case 'cron.deleted': {
+            emitObservedAgentRuntimeEvent(event);
+            debugTurnEvent(event);
             void syncAgentRuntimeCron().catch((error) => {
                 console.warn('[tavern] failed to sync cron event projection', error);
             });
@@ -76,6 +104,8 @@ export async function applyObservedAgentRuntimeEvent(
         }
         case 'cron.runStarted':
         case 'cron.runFinished': {
+            emitObservedAgentRuntimeEvent(event);
+            debugTurnEvent(event);
             void syncAgentRuntimeCron().catch((error) => {
                 console.warn('[tavern] failed to sync cron run event projection', error);
             });
@@ -84,19 +114,28 @@ export async function applyObservedAgentRuntimeEvent(
             return;
         }
         case 'turn.progress': {
+            await projectActiveTurnProgress(event);
             markTurnSessionActive(event.turn.sessionKey);
+            emitObservedAgentRuntimeEvent(event);
+            debugTurnEvent(event);
             return;
         }
         case 'turn.started': {
             markTurnSessionActive(event.turn.sessionKey);
+            emitObservedAgentRuntimeEvent(event);
+            debugTurnEvent(event);
             return;
         }
         case 'turn.replyUpdated': {
             markTurnSessionActive(event.turn.sessionKey);
+            emitObservedAgentRuntimeEvent(event);
+            debugTurnEvent(event);
             return;
         }
         case 'turn.completed':
         case 'turn.failed': {
+            emitObservedAgentRuntimeEvent(event);
+            debugTurnEvent(event);
             if (connection) {
                 void (async () => {
                     try {
@@ -104,10 +143,12 @@ export async function applyObservedAgentRuntimeEvent(
                     } catch (error) {
                         console.warn('[tavern] failed to sync turn projection', error);
                     } finally {
+                        await clearActiveTurnProgress(event.turn);
                         clearTurnSessionActive(event.turn.sessionKey);
                     }
                 })();
             } else {
+                await clearActiveTurnProgress(event.turn);
                 clearTurnSessionActive(event.turn.sessionKey);
             }
             return;
@@ -116,6 +157,8 @@ export async function applyObservedAgentRuntimeEvent(
         case 'session.updated': {
             const sessionKey =
                 event.type === 'session.updated' ? event.session.key : event.sessionKey;
+            emitObservedAgentRuntimeEvent(event);
+            debugTurnEvent(event);
             if (hasActiveTurnSession(sessionKey)) {
                 emitWorkersUpdated();
                 emitSyncDataUpdated();

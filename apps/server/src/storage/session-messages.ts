@@ -9,7 +9,10 @@ import {
     syncRuntimeParticipantIdentities,
 } from '../participants/chat-participants.ts';
 import { resolveParticipantIdsForSourceIdentities } from './participants.ts';
-import { filterDuplicateTavernAcceptedInboundMessages } from './session-message-deduplication.ts';
+import {
+    filterDuplicateTavernAcceptedInboundMessages,
+    isTavernAcceptedInboundRawJson,
+} from './session-message-deduplication.ts';
 
 export type SessionMessageProjection = typeof sessionMessagesTable.$inferSelect;
 
@@ -54,8 +57,11 @@ export async function syncSessionMessagesForRuntime(input: {
         );
 
         if (window && messageIds.length > 0) {
-            const rowsToDelete = await db
-                .select({ id: sessionMessagesTable.id })
+            const candidateRowsToDelete = await db
+                .select({
+                    id: sessionMessagesTable.id,
+                    rawJson: sessionMessagesTable.rawJson,
+                })
                 .from(sessionMessagesTable)
                 .where(
                     and(
@@ -65,6 +71,9 @@ export async function syncSessionMessagesForRuntime(input: {
                         notInArray(sessionMessagesTable.id, messageIds)
                     )
                 );
+            const rowsToDelete = candidateRowsToDelete.filter(
+                (row) => !isTavernAcceptedInboundRawJson(row.rawJson)
+            );
 
             if (rowsToDelete.length > 0) {
                 await db.delete(sessionMessagesTable).where(

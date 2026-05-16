@@ -13,7 +13,7 @@ export function buildTavernTurnContext({ input, runtime, target, timestamp }) {
             name: input.sender.name,
         },
         conversation: {
-            kind: 'channel',
+            kind: input.conversationKind ?? 'channel',
             id: input.chatId,
             label: input.chatId,
             nativeChannelId: input.chatId,
@@ -50,6 +50,9 @@ export function buildTavernTurnContext({ input, runtime, target, timestamp }) {
             commandBody: input.text,
             envelopeFrom: input.sender.name,
             inboundHistory: input.recentMessages,
+            parentMessageId: input.parentMessageId,
+            sequence: input.sequence,
+            threadRootId: input.threadRootId,
         },
     });
 }

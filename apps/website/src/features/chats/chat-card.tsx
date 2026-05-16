@@ -33,6 +33,8 @@ export function ChatCard({
 }) {
     const timeline = useChatTimeline({
         activeReply: chatStatus?.activeReply ?? null,
+        activeReplyProgressStartedAt: chatStatus?.activeReplyProgressStartedAt ?? null,
+        activeReplySteps: chatStatus?.activeReplySteps ?? [],
         chatId: chat.id,
         limit: chatSummaryLimit,
     });

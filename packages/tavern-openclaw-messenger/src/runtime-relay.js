@@ -105,6 +105,10 @@ async function handleRelayMessage({ socket, value }) {
 
                 if (runtimeEvent) {
                     sendFrame(socket, {
+                        deliveryId:
+                            payload && typeof payload === 'object'
+                                ? readString(payload.deliveryId)
+                                : undefined,
                         event: runtimeEvent,
                         kind: 'runtime-event',
                     });
@@ -148,6 +152,21 @@ function mapTavernPluginEvent(name, payload) {
         };
     }
 
+    if (name === 'plugin.tavern.turn.progress') {
+        const step = readProgressStep(payload);
+
+        if (!step) {
+            return null;
+        }
+
+        return {
+            step,
+            timestamp,
+            turn,
+            type: 'turn.progress',
+        };
+    }
+
     if (name === 'plugin.tavern.turn.completed') {
         return {
             timestamp,
@@ -188,6 +207,42 @@ function readTurn(payload, fallbackTimestamp) {
 
 function readDate(value) {
     return typeof value === 'string' && Number.isFinite(Date.parse(value)) ? value : null;
+}
+
+function readProgressStep(payload) {
+    if (!payload || typeof payload !== 'object') {
+        return null;
+    }
+
+    const rawStep = payload.step && typeof payload.step === 'object' ? payload.step : payload;
+    const id = readString(rawStep.id ?? rawStep.stepId);
+    const label = readString(rawStep.label);
+    const kind = readProgressKind(rawStep.kind);
+    const status = readProgressStatus(rawStep.status);
+
+    if (!(id && label && kind && status)) {
+        return null;
+    }
+
+    return {
+        detail: readString(rawStep.detail) ?? null,
+        id,
+        kind,
+        label,
+        status,
+    };
+}
+
+function readProgressKind(value) {
+    return ['command', 'message', 'plan', 'reasoning', 'tool'].includes(value) ? value : null;
+}
+
+function readProgressStatus(value) {
+    return ['active', 'completed', 'failed'].includes(value) ? value : null;
+}
+
+function readString(value) {
+    return typeof value === 'string' && value.trim().length > 0 ? value.trim() : undefined;
 }
 
 function sendFrame(socket, frame) {

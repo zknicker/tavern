@@ -4,6 +4,8 @@ import type { ChatLogOutput, ChatStatusListOutput } from '../../lib/trpc.tsx';
 import {
     applyLogSnapshot,
     applyReplySnapshot,
+    applyStatusSnapshot,
+    type ChatActiveStatus,
     type ChatReplyUpdate,
     type ChatTimelineState,
     type ChatTurn,
@@ -26,6 +28,7 @@ interface TimelineContextValue {
         chatId: string,
         activeReply: ChatStatusListOutput['chats'][number]['activeReply'] | null
     ) => void;
+    setStatus: (chatId: string, status: ChatActiveStatus | null) => void;
     startTurn: (turn: ChatTurn) => void;
     timelineStates: Record<string, ChatTimelineState>;
     updateReply: (update: ChatReplyUpdate) => void;
@@ -81,6 +84,12 @@ export function TimelineContextProvider({ children }: PropsWithChildren) {
         },
         []
     );
+
+    const setStatus = React.useCallback((chatId: string, status: ChatActiveStatus | null) => {
+        setTimelineStates((current) =>
+            updateTimelineState(current, chatId, (state) => applyStatusSnapshot(state, status))
+        );
+    }, []);
 
     const startTurn = React.useCallback((turn: ChatTurn) => {
         setTimelineStates((current) =>
@@ -161,6 +170,7 @@ export function TimelineContextProvider({ children }: PropsWithChildren) {
             failTurn,
             setLog,
             setReply,
+            setStatus,
             startTurn,
             timelineStates,
             updateTurnProgress,
@@ -172,6 +182,7 @@ export function TimelineContextProvider({ children }: PropsWithChildren) {
             failTurn,
             setLog,
             setReply,
+            setStatus,
             startTurn,
             timelineStates,
             updateReply,

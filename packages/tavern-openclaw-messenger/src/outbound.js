@@ -38,6 +38,7 @@ export function registerTavernDeliveryContext(input) {
         agentId: input.agentId,
         broadcast: input.context.broadcast,
         chatId: input.chatId,
+        deliverySequence: 0,
         markFinalReplySent: input.markFinalReplySent,
         runId: input.runId,
         sessionKey: input.sessionKey,
@@ -64,12 +65,14 @@ export async function sendTavernTextMessage(ctx) {
     const target = buildTavernTarget(ctx.to);
     const chatId = readChatIdFromTarget(target);
     const sentAt = Date.now();
-    const messageId = `tavern-delivery:${randomUUID()}`;
     const text = String(ctx.text ?? '');
     const deliveryContext = getCurrentDeliveryContext({
         accountId: ctx.accountId,
         chatId,
     });
+    const messageId = deliveryContext
+        ? nextDeliveryId(deliveryContext)
+        : `tavern-delivery:${randomUUID()}`;
 
     if (text.trim() && deliveryContext) {
         deliveryContext.markFinalReplySent?.();
@@ -78,6 +81,7 @@ export async function sendTavernTextMessage(ctx) {
             {
                 agentId: deliveryContext.agentId,
                 chatId,
+                deliveryId: messageId,
                 runId: deliveryContext.runId,
                 sessionKey: deliveryContext.sessionKey,
                 text,
@@ -114,4 +118,9 @@ function getCurrentDeliveryContext(input) {
 
 function getDeliveryContextKey(input) {
     return `${input.accountId ?? DEFAULT_ACCOUNT_ID}:${input.chatId}`;
+}
+
+function nextDeliveryId(deliveryContext) {
+    deliveryContext.deliverySequence += 1;
+    return `tavern-delivery:${deliveryContext.runId}:final:${deliveryContext.deliverySequence}`;
 }

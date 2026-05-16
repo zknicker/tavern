@@ -55,6 +55,31 @@ test('preserves Tavern chat session routing and renders one final reply', async 
     }
 });
 
+test('recovers accepted user message and active turn after hard reload', async ({ page }) => {
+    test.setTimeout(150_000);
+
+    const expectedReply = 'RECOVERED-SUBAGENT-OK';
+    const prompt = `Subagent recovery worker reload qa check ${Date.now()}. Reply exactly \`${expectedReply}\`.`;
+
+    await page.goto('/dashboard/overview');
+
+    await page.locator('#home-prompt').fill(prompt);
+    await page.getByRole('button', { name: 'Start chat' }).click();
+
+    await waitForRealChatRoute(page);
+    await expect(page.getByLabel('Agent is thinking')).toBeVisible({ timeout: 30_000 });
+
+    await page.reload();
+
+    await expect(page.locator('main p').filter({ hasText: prompt })).toBeVisible({
+        timeout: 30_000,
+    });
+    await expect(page.getByLabel('Agent is thinking')).toBeVisible({ timeout: 30_000 });
+    await expect(page.locator('main').getByText(expectedReply, { exact: true })).toBeVisible({
+        timeout: 90_000,
+    });
+});
+
 async function waitForRealChatRoute(page: Page) {
     await page.waitForURL((url) => /^\/dashboard\/chats\/(?!new$)[^/]+$/.test(url.pathname), {
         timeout: 30_000,

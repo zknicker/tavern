@@ -64,11 +64,20 @@ async function listProjectedTavernAcceptedInboundMessages(sessionKey: string) {
     });
 }
 
-function isTavernAcceptedInboundRawJson(rawJson: string) {
+export function isTavernAcceptedInboundRawJson(rawJson: string) {
     try {
         const parsed = JSON.parse(rawJson) as Partial<AgentRuntimeSessionMessage>;
+        const metadata = parsed.metadata as
+            | { tavern?: { acceptedRunId?: unknown; acceptedRuntimeId?: unknown } }
+            | undefined;
 
-        return parsed.sender === 'Tavern' && parsed.senderName === 'Tavern';
+        return (
+            parsed.senderType === 'user' &&
+            (typeof metadata?.tavern?.acceptedRunId === 'string' ||
+                typeof metadata?.tavern?.acceptedRuntimeId === 'string' ||
+                (parsed.sender === 'tavern:user' && parsed.senderName === 'Tavern') ||
+                (parsed.sender === 'Tavern' && parsed.senderName === 'Tavern'))
+        );
     } catch {
         return false;
     }
@@ -77,9 +86,10 @@ function isTavernAcceptedInboundRawJson(rawJson: string) {
 function isTavernAcceptedInboundMessage(message: AgentRuntimeSessionMessage) {
     return (
         message.senderType === 'user' &&
-        message.sender === 'Tavern' &&
-        message.senderName === 'Tavern' &&
-        !message.chatId.startsWith('openclaw:')
+        !message.chatId.startsWith('openclaw:') &&
+        (message.sender === 'tavern:user' ||
+            (message.sender === 'Tavern' && message.senderName === 'Tavern') ||
+            typeof message.metadata?.tavern?.acceptedRunId === 'string')
     );
 }
 
@@ -87,7 +97,7 @@ function isDuplicateOpenClawInboundMessage(
     message: AgentRuntimeSessionMessage,
     acceptedMessages: MessageFingerprint[]
 ) {
-    if (!(message.senderType === 'user' && message.chatId.startsWith('openclaw:'))) {
+    if (message.senderType !== 'user' || isTavernAcceptedInboundMessage(message)) {
         return false;
     }
 

@@ -115,12 +115,8 @@ function buildTranscriptItems(input: {
     const activeReplyText = input.activeReply?.text?.trim() ?? '';
     const activeReplySteps = input.activeReplySteps ?? [];
 
-    if (input.activeReply && activeReplyText.length > 0) {
-        items.push({ kind: 'activeReply', reply: input.activeReply });
-    }
-
     if (input.activeReply && activeReplySteps.length > 0) {
-        items.push({
+        insertProgressBeforeTerminalReply(items, {
             kind: 'activeProgress',
             reply: input.activeReply,
             startedAt: input.activeReplyProgressStartedAt ?? input.activeReply.startedAt,
@@ -128,12 +124,16 @@ function buildTranscriptItems(input: {
         });
     }
 
+    if (input.activeReply && activeReplyText.length > 0) {
+        items.push({ kind: 'activeReply', reply: input.activeReply });
+    }
+
     if (
         !input.activeReply &&
         input.completedProgress &&
         !hasDurableActivityForCompletedProgress(input.rows, input.completedProgress)
     ) {
-        items.push({
+        insertProgressBeforeTerminalReply(items, {
             completedAt: input.completedProgress.completedAt,
             kind: 'activeProgress',
             reply: input.completedProgress.reply,
@@ -155,6 +155,56 @@ function buildTranscriptItems(input: {
     }
 
     return items;
+}
+
+function insertProgressBeforeTerminalReply(
+    items: TranscriptItem[],
+    progress: Extract<TranscriptItem, { kind: 'activeProgress' }>
+) {
+    const terminalReplyIndex = items.findIndex((item) =>
+        isTerminalReplyForProgress(item, progress.reply)
+    );
+
+    if (terminalReplyIndex === -1) {
+        items.push(progress);
+        return;
+    }
+
+    items.splice(terminalReplyIndex, 0, progress);
+}
+
+function isTerminalReplyForProgress(item: TranscriptItem, reply: ChatActiveReply) {
+    if (item.kind !== 'row' || item.row.kind !== 'message') {
+        return false;
+    }
+
+    const row = item.row;
+
+    if (row.message.senderType !== 'agent') {
+        return false;
+    }
+
+    if (row.actor?.kind === 'agent' && row.actor.id !== reply.agentId) {
+        return false;
+    }
+
+    if (row.message.tavernAgentId && row.message.tavernAgentId !== reply.agentId) {
+        return false;
+    }
+
+    const rowSessionKey = row.message.sourceSessionKey.trim();
+    const replySessionKey = reply.sessionKey.trim();
+
+    if (rowSessionKey && replySessionKey && rowSessionKey !== replySessionKey) {
+        return false;
+    }
+
+    const messageTimestamp = parseOptionalTimestamp(row.message.timestamp);
+    const replyStartedAt = parseOptionalTimestamp(reply.startedAt);
+
+    return (
+        messageTimestamp === null || replyStartedAt === null || messageTimestamp >= replyStartedAt
+    );
 }
 
 function hasDurableActivityForCompletedProgress(
@@ -376,4 +426,9 @@ export function getItemTimestamp(item: TranscriptItem) {
 function parseTimestamp(timestamp: string | null) {
     const parsed = timestamp ? Date.parse(timestamp) : Number.NaN;
     return Number.isNaN(parsed) ? Number.MAX_SAFE_INTEGER : parsed;
+}
+
+function parseOptionalTimestamp(timestamp: string | null) {
+    const parsed = timestamp ? Date.parse(timestamp) : Number.NaN;
+    return Number.isNaN(parsed) ? null : parsed;
 }

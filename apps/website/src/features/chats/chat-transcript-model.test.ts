@@ -60,7 +60,7 @@ test('buildTranscriptEntries keeps thinking rows inside the agent turn', () => {
     ).toEqual(['tool', 'system:thinking', 'message']);
 });
 
-test('buildTranscriptEntries appends active reply and progress to one agent turn', () => {
+test('buildTranscriptEntries renders active progress before active reply text', () => {
     const entries = buildTranscriptEntries({
         activeReply: {
             agentId: 'agent-1',
@@ -88,7 +88,48 @@ test('buildTranscriptEntries appends active reply and progress to one agent turn
         throw new Error('Expected agent turn entry.');
     }
 
-    expect(entries[0].items.map((item) => item.kind)).toEqual(['activeReply', 'activeProgress']);
+    expect(entries[0].items.map((item) => item.kind)).toEqual(['activeProgress', 'activeReply']);
+});
+
+test('buildTranscriptEntries renders preserved completed progress before final reply', () => {
+    const entries = buildTranscriptEntries({
+        activeReply: null,
+        completedProgress: {
+            completedAt: '2026-05-11T16:00:03.000Z',
+            reply: {
+                agentId: 'agent-1',
+                isThinking: true,
+                runId: 'run-1',
+                sessionKey: 'session-1',
+                startedAt: '2026-05-11T16:00:00.000Z',
+                text: '',
+            },
+            startedAt: '2026-05-11T16:00:01.000Z',
+            steps: [
+                {
+                    id: 'step-1',
+                    kind: 'tool',
+                    label: 'Running tool',
+                    status: 'completed',
+                },
+            ],
+        },
+        rows: [
+            userMessage('user-1', 'Use the tool', false, false),
+            agentMessage('agent-1', 'Done.', false, false),
+        ],
+    });
+
+    expect(entries).toHaveLength(2);
+    expect(entries[1]).toMatchObject({ kind: 'turn', participant: 'agent' });
+
+    if (entries[1]?.kind !== 'turn') {
+        throw new Error('Expected agent turn entry.');
+    }
+
+    expect(
+        entries[1].items.map((item) => (item.kind === 'row' ? item.row.kind : item.kind))
+    ).toEqual(['activeProgress', 'message']);
 });
 
 test('buildTranscriptEntries keeps prior completed tool activity grouped during a later active turn', () => {

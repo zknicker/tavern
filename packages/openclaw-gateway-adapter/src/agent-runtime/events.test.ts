@@ -167,6 +167,24 @@ describe('OpenClaw event mapping', () => {
         ]);
     });
 
+    it('does not map empty Tavern chat completion events into completed turns', () => {
+        const events = mapOpenClawGatewayEvent({
+            event: 'chat',
+            payload: {
+                message: {
+                    content: [{ text: '', type: 'text' }],
+                    role: 'assistant',
+                    timestamp: 1_778_613_883_642,
+                },
+                runId: 'run-1',
+                sessionKey: 'agent:blippy:tavern:channel:220f46ed-2d7c-41dd-9d7e-d02691f1afc3',
+                state: 'done',
+            },
+        });
+
+        expect(events).toEqual([]);
+    });
+
     it('maps cron events to Tavern cron events', () => {
         const events = mapOpenClawGatewayEvent({
             event: 'cron',

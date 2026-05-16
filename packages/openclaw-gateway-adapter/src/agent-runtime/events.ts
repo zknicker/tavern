@@ -351,6 +351,10 @@ function mapOpenClawChatEvent(
     if (state === 'final' || state === 'completed' || state === 'done') {
         const events: AgentRuntimeEvent[] = [];
 
+        if (!visibleReplyText && isTavernMessengerSessionKey(sessionKey)) {
+            return events;
+        }
+
         if (visibleReplyText) {
             events.push(
                 agentRuntimeEventSchema.parse({
@@ -390,6 +394,10 @@ function mapOpenClawChatEvent(
     }
 
     return [];
+}
+
+function isTavernMessengerSessionKey(sessionKey: string) {
+    return sessionKey.includes(':tavern:channel:');
 }
 
 function readOpenClawChatReplyText(message: Record<string, unknown>) {

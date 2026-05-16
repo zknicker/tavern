@@ -145,6 +145,12 @@ tool results, command output, plan updates, and coarse reasoning activity. Taver
 as progress only; it is not a durable transcript record and should not expose private reasoning
 content.
 
+Runtime WebSocket delivery is a notification path, not the source of truth. Tavern Runtime stores
+recoverable Tavern Messenger events before broadcasting them. A reconnecting client must be able to
+backfill accepted messages and active turn state from Runtime over HTTP or websocket replay using a
+cursor. If a websocket notification is missed, hard reload should still reconstruct the accepted
+user message, active reply state, and active progress steps from Runtime/server projections.
+
 ## Message Metadata
 
 Tavern Messenger preserves Tavern-owned message metadata on the durable user message. OpenClaw may
@@ -183,13 +189,20 @@ Tavern should not wait for durable history sync before showing progress.
 2. Tavern Server validates the selected chat has exactly one bound agent and a synced session key.
 3. Tavern Runtime relays an `inbound-message` with the chat id, bound OpenClaw agent id, session
    key, message text, client message id, and optional message metadata.
-4. Tavern Messenger accepts the send and returns a run id through Runtime.
-5. Tavern maps that acceptance into app-local accepted state.
-6. Live runtime events update volatile active reply, message delta, tool, and completion state.
-7. Durable history sync later replaces optimistic and volatile presentation with persisted records.
+4. Tavern Runtime persists the accepted message and a recoverable message event in one local
+   transaction before forwarding the frame to the plugin.
+5. Tavern Messenger accepts the send and returns a run id through Runtime.
+6. Tavern Server projects the accepted message event into local session message history so reload
+   does not wait for final transcript sync.
+7. Live runtime events update active reply, message delta, tool, and completion state. Active turn
+   progress is projected as recoverable active-turn state until the turn completes or fails, so
+   leaving and returning to a chat preserves the same in-progress surface a continuously connected
+   client would have seen.
+8. Durable history sync later reconciles OpenClaw's authoritative transcript with persisted records
+   and deduplicates any overlap with accepted Tavern inbound messages.
 
-Optimistic rows and active reply indicators are app-local presentation state. They are not durable
-transcript sync.
+Optimistic rows are app-local presentation state. Accepted messages and active turn state are
+recoverable Runtime/server state, but active reply progress is not a second durable transcript.
 
 ## ACP
 

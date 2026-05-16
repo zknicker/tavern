@@ -270,6 +270,8 @@ function SyncedAgentChatDetail({
     const conversationLayout = getChatMessageLayout(chat);
     const timeline = useChatTimeline({
         activeReply: chatStatus?.activeReply ?? null,
+        activeReplyProgressStartedAt: chatStatus?.activeReplyProgressStartedAt ?? null,
+        activeReplySteps: chatStatus?.activeReplySteps ?? [],
         chatId,
         limit: chatDetailLogLimit,
     });

@@ -215,9 +215,10 @@ function collapseTavernAcceptedInboundDuplicates(messages: AgentRuntimeSessionMe
 function isTavernAcceptedInboundMessage(message: AgentRuntimeSessionMessage) {
     return (
         message.senderType === 'user' &&
-        message.sender === 'Tavern' &&
-        message.senderName === 'Tavern' &&
-        !message.chatId.startsWith('openclaw:')
+        !message.chatId.startsWith('openclaw:') &&
+        (message.sender === 'tavern:user' ||
+            (message.sender === 'Tavern' && message.senderName === 'Tavern') ||
+            typeof message.metadata?.tavern?.acceptedRunId === 'string')
     );
 }
 
@@ -225,7 +226,7 @@ function isDuplicateOpenClawInboundMessage(
     message: AgentRuntimeSessionMessage,
     acceptedInboundMessages: AgentRuntimeSessionMessage[]
 ) {
-    if (!(message.senderType === 'user' && message.chatId.startsWith('openclaw:'))) {
+    if (message.senderType !== 'user' || isTavernAcceptedInboundMessage(message)) {
         return false;
     }
 

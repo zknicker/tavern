@@ -8,6 +8,7 @@ import { WebSocket, WebSocketServer } from 'ws';
 
 import { createLocalOpenClawGatewayOptions } from '../openclaw/local-client';
 import { attachTavernChannelSocket, isTavernChannelSocketPath } from './channel-relay';
+import { listTavernRuntimeEvents } from './channel-store';
 import { subscribeToTavernRuntimeEvents } from './events';
 import { internalError, toFetchRequest, writeFetchResponse } from './http';
 import { handleTavernRuntimeRequest } from './router';
@@ -68,6 +69,14 @@ export function startTavernRuntimeServer(): TavernRuntimeServerHandle {
         if (isTavernChannelSocketPath(request.url)) {
             attachTavernChannelSocket(socket);
             return;
+        }
+
+        const url = new URL(request.url ?? '/', 'http://127.0.0.1');
+        const afterCursor = Number(url.searchParams.get('after_cursor') ?? 0);
+        for (const entry of listTavernRuntimeEvents({
+            afterCursor: Number.isFinite(afterCursor) ? afterCursor : 0,
+        })) {
+            socket.send(JSON.stringify(runtimeEventSchema.parse(entry.event)));
         }
 
         const unsubscribe = subscribeToTavernRuntimeEvents((event: RuntimeEvent) => {

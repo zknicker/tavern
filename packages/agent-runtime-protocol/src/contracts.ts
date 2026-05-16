@@ -883,30 +883,48 @@ export const agentRuntimeCreateMessageSchema = z.object({
         content: z.string().trim().min(1),
         id: z.string().trim().min(1),
         metadata: agentRuntimeMessageMetadataSchema.optional(),
+        nonce: z.string().trim().min(1).optional(),
+        parentMessageId: z.string().trim().min(1).nullable().optional(),
+        threadRootId: z.string().trim().min(1).nullable().optional(),
     }),
     target: chatTargetSchema,
 });
 
 export const agentRuntimeMessageAcceptedSchema = z.object({
     acceptedAt: z.string().datetime(),
+    cursor: z.number().int().positive().optional(),
+    messageId: z.string().trim().min(1).optional(),
     runId: z.string().trim().min(1),
+    sequence: z.number().int().positive().optional(),
     sessionKey: z.string().trim().min(1).nullable(),
     status: z.literal('accepted'),
 });
 
 export const tavernChannelConversationSchema = z.object({
     id: z.string().trim().min(1),
-    kind: z.literal('channel'),
+    kind: z.enum(['channel', 'dm', 'thread']),
     label: z.string().trim().min(1).nullable(),
+    parentId: z.string().trim().min(1).nullable().optional(),
+    threadRootId: z.string().trim().min(1).nullable().optional(),
 });
 
 export const tavernChannelMessageSchema = z.object({
     attachments: z.array(z.unknown()).default([]),
+    author: z
+        .object({
+            id: z.string().trim().min(1),
+            name: z.string().trim().min(1),
+        })
+        .optional(),
     id: z.string().trim().min(1),
     metadata: agentRuntimeMessageMetadataSchema.optional(),
+    nonce: z.string().trim().min(1).optional(),
+    parentMessageId: z.string().trim().min(1).nullable().optional(),
     senderId: z.string().trim().min(1),
     senderName: z.string().trim().min(1),
+    sequence: z.number().int().positive().optional(),
     text: z.string().trim().min(1),
+    threadRootId: z.string().trim().min(1).nullable().optional(),
     timestamp: z.string().datetime(),
 });
 
@@ -919,6 +937,7 @@ export const tavernChannelInboundMessageSchema = z.object({
     message: tavernChannelMessageSchema,
     requestId: z.string().trim().min(1),
     sessionKey: z.string().trim().min(1),
+    turnId: z.string().trim().min(1).optional(),
 });
 
 export const tavernChannelMessageAcceptedFrameSchema = z.object({
@@ -928,6 +947,8 @@ export const tavernChannelMessageAcceptedFrameSchema = z.object({
 });
 
 export const tavernChannelRuntimeEventFrameSchema = z.object({
+    cursor: z.number().int().positive().optional(),
+    deliveryId: z.string().trim().min(1).optional(),
     event: z.unknown(),
     kind: z.literal('runtime-event'),
 });
@@ -973,6 +994,8 @@ export const agentRuntimeActiveChatReplySchema = z.object({
 
 export const agentRuntimeChatStatusSchema = z.object({
     activeReply: agentRuntimeActiveChatReplySchema,
+    activeReplyProgressStartedAt: z.string().datetime().nullable().optional(),
+    activeReplySteps: z.array(agentRuntimeTurnProgressStepSchema).optional(),
     chatId: z.string().trim().min(1),
 });
 
@@ -982,6 +1005,8 @@ export const agentRuntimeChatStatusListSchema = z.object({
 
 export const agentRuntimeEventTypeSchema = z.enum([
     'agent.updated',
+    'chat.messageAccepted',
+    'chat.read',
     'skill.updated',
     'skill.deleted',
     'cron.updated',
@@ -1001,6 +1026,38 @@ export const agentRuntimeAgentUpdatedEventSchema = z.object({
     agentId: z.string().trim().min(1),
     timestamp: z.string().datetime(),
     type: z.literal('agent.updated'),
+});
+
+export const agentRuntimeChatAcceptedMessageSchema = z.object({
+    id: z.string().trim().min(1),
+    nonce: z.string().trim().min(1).optional(),
+    parentMessageId: z.string().trim().min(1).nullable().optional(),
+    senderId: z.string().trim().min(1),
+    senderName: z.string().trim().min(1),
+    sequence: z.number().int().positive(),
+    text: z.string().trim().min(1),
+    threadRootId: z.string().trim().min(1).nullable().optional(),
+    timestamp: z.string().datetime(),
+});
+
+export const agentRuntimeChatMessageAcceptedEventSchema = z.object({
+    agentId: z.string().trim().min(1),
+    chatId: z.string().trim().min(1),
+    message: agentRuntimeChatAcceptedMessageSchema,
+    runId: z.string().trim().min(1),
+    sessionKey: z.string().trim().min(1),
+    timestamp: z.string().datetime(),
+    type: z.literal('chat.messageAccepted'),
+});
+
+export const agentRuntimeChatReadEventSchema = z.object({
+    agentId: z.string().trim().min(1).nullable().optional(),
+    chatId: z.string().trim().min(1),
+    lastReadSequence: z.number().int().positive(),
+    readerId: z.string().trim().min(1),
+    sessionKey: z.string().trim().min(1).nullable().optional(),
+    timestamp: z.string().datetime(),
+    type: z.literal('chat.read'),
 });
 
 export const agentRuntimeSkillUpdatedEventSchema = z.object({
@@ -1091,6 +1148,8 @@ export const agentRuntimeSessionUpdatedEventSchema = z.object({
 
 export const agentRuntimeEventSchema = z.discriminatedUnion('type', [
     agentRuntimeAgentUpdatedEventSchema,
+    agentRuntimeChatMessageAcceptedEventSchema,
+    agentRuntimeChatReadEventSchema,
     agentRuntimeSkillUpdatedEventSchema,
     agentRuntimeSkillDeletedEventSchema,
     agentRuntimeCronUpdatedEventSchema,
@@ -1133,6 +1192,10 @@ export type AgentRuntimeAgentFileList = z.infer<typeof agentRuntimeAgentFileList
 export type AgentRuntimeSaveAgentFile = z.infer<typeof agentRuntimeSaveAgentFileSchema>;
 export type AgentRuntimeCreateCron = z.infer<typeof agentRuntimeCreateCronSchema>;
 export type AgentRuntimeAgentUpdatedEvent = z.infer<typeof agentRuntimeAgentUpdatedEventSchema>;
+export type AgentRuntimeChatMessageAcceptedEvent = z.infer<
+    typeof agentRuntimeChatMessageAcceptedEventSchema
+>;
+export type AgentRuntimeChatReadEvent = z.infer<typeof agentRuntimeChatReadEventSchema>;
 export type AgentRuntimeCron = z.infer<typeof agentRuntimeCronSchema>;
 export type AgentRuntimeCronDeletedEvent = z.infer<typeof agentRuntimeCronDeletedEventSchema>;
 export type AgentRuntimeCronList = z.infer<typeof agentRuntimeCronListSchema>;
@@ -1245,6 +1308,7 @@ export type TavernChannelMessageAcceptedFrame = z.infer<
 >;
 export type AgentRuntimeRunCron = z.infer<typeof agentRuntimeRunCronSchema>;
 export type AgentRuntimeTurn = z.infer<typeof agentRuntimeTurnSchema>;
+export type AgentRuntimeTurnProgressStep = z.infer<typeof agentRuntimeTurnProgressStepSchema>;
 export type AgentRuntimeActiveChatReply = z.infer<typeof agentRuntimeActiveChatReplySchema>;
 export type AgentRuntimeChatStatus = z.infer<typeof agentRuntimeChatStatusSchema>;
 export type AgentRuntimeChatStatusList = z.infer<typeof agentRuntimeChatStatusListSchema>;

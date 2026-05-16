@@ -25,7 +25,7 @@ const { tavernChannelPlugin, buildTavernOutboundSessionRoute } = await import('.
 const { tavernMessageAdapter, registerTavernDeliveryContext } = await import('./outbound.js');
 
 describe('Tavern Messenger channel routing', () => {
-    it('advertises Tavern chats as channel chats', () => {
+    it('advertises Tavern chats as channel-only chats', () => {
         expect(tavernChannelPlugin.base.capabilities.chatTypes).toEqual(['channel']);
         expect(
             tavernChannelPlugin.base.messaging.parseExplicitTarget({

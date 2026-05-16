@@ -5,6 +5,7 @@ import type { TavernAgentRuntimeClient } from '../agent-runtime/client.ts';
 import { createConfiguredAgentRuntimeClientForRuntimeId } from '../agent-runtime/configured-client.ts';
 import { getAgent as getAgentProjection } from '../storage/agents.ts';
 import { getChatProjection, parseChatRawJson } from '../storage/chats.ts';
+import { projectAcceptedChatMessage } from './accepted-message-projection.ts';
 import {
     type SendChatMessageInput,
     sendChatMessageInputSchema,
@@ -87,6 +88,31 @@ export async function sendTavernChatMessage(
                 target: buildAgentRuntimeMessageTarget(chat, sessionKey),
             })
     );
+    const acceptedSessionKey = accepted.sessionKey ?? sessionKey;
+    const acceptedMessageId = accepted.messageId ?? clientMessageId;
+
+    await projectAcceptedChatMessage({
+        event: {
+            agentId,
+            chatId: parsed.chatId,
+            message: {
+                id: acceptedMessageId,
+                nonce: undefined,
+                parentMessageId: null,
+                senderId: 'tavern:user',
+                senderName: 'Tavern',
+                sequence: accepted.sequence ?? 1,
+                text: parsed.content,
+                threadRootId: acceptedMessageId,
+                timestamp: accepted.acceptedAt,
+            },
+            runId: accepted.runId,
+            sessionKey: acceptedSessionKey,
+            timestamp: accepted.acceptedAt,
+            type: 'chat.messageAccepted',
+        },
+        runtimeId: chatProjection.runtimeId,
+    });
 
     return sendChatMessageResultSchema.parse({
         acceptedAt: accepted.acceptedAt,

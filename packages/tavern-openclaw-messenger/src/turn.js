@@ -91,7 +91,7 @@ async function runTavernTurn({ context, input, runId, runtime, startedAt }) {
             name: input.sender.name,
         },
         conversation: {
-            kind: 'channel',
+            kind: input.conversationKind,
             id: input.chatId,
             label: input.chatId,
             nativeChannelId: input.chatId,
@@ -128,6 +128,9 @@ async function runTavernTurn({ context, input, runId, runtime, startedAt }) {
             commandBody: input.text,
             envelopeFrom: input.sender.name,
             inboundHistory: input.recentMessages,
+            parentMessageId: input.parentMessageId,
+            sequence: input.sequence,
+            threadRootId: input.threadRootId,
         },
     });
 
@@ -209,6 +212,7 @@ async function runTavernTurn({ context, input, runId, runtime, startedAt }) {
                 {
                     agentId: input.agentId,
                     chatId: input.chatId,
+                    deliveryId: `tavern-delivery:${runId}:fallback:1`,
                     runId,
                     sessionKey: input.sessionKey,
                     text: finalReplyText,
@@ -234,8 +238,22 @@ async function runTavernTurn({ context, input, runId, runtime, startedAt }) {
 
         const error = new Error('OpenClaw turn ended before producing a reply.');
 
-        await persistFailedTurnMessages({ error, input, runId, storePath }).catch(() => undefined);
-        throw error;
+        context.broadcast(
+            'plugin.tavern.turn.failed',
+            {
+                agentId: input.agentId,
+                chatId: input.chatId,
+                error: error.message,
+                messageId: input.messageId,
+                runId,
+                sessionKey: input.sessionKey,
+                startedAt,
+                timestamp: new Date().toISOString(),
+            },
+            { dropIfSlow: true }
+        );
+        void persistFailedTurnMessages({ error, input, runId, storePath }).catch(() => undefined);
+        return;
     }
 
     await settleSessionMetaTasks(sessionMetaTasks);
@@ -261,11 +279,15 @@ function parseTavernRelayInbound(event) {
     return {
         agentId: requireString(event.agentId, 'agentId'),
         chatId: requireString(conversation.id, 'conversation.id'),
+        conversationKind: readConversationKind(conversation.kind),
         messageId: requireString(message.id, 'message.id'),
         metadata: readRecord(message.metadata),
+        parentMessageId: readString(message.parentMessageId),
+        sequence: readPositiveInteger(message.sequence),
         sentAt: readString(message.timestamp) ?? new Date().toISOString(),
         sessionKey: requireString(event.sessionKey, 'sessionKey'),
         text: requireString(message.text, 'message.text'),
+        threadRootId: readString(message.threadRootId),
         turnId: readString(event.turnId),
         sender: {
             id: readString(message.senderId) ?? 'tavern-user',
@@ -355,10 +377,6 @@ function hasFinalReplyDispatch(dispatchResult, signals = {}) {
         return false;
     }
 
-    if (dispatchResult.queuedFinal === true) {
-        return true;
-    }
-
     return Number(dispatchResult.counts?.final ?? 0) > 0;
 }
 
@@ -394,6 +412,14 @@ function looksLikeDeliveredFailureNotice(text) {
 
 function readRecord(value) {
     return typeof value === 'object' && value !== null && !Array.isArray(value) ? value : undefined;
+}
+
+function readConversationKind(value) {
+    return value === 'dm' || value === 'thread' ? value : 'channel';
+}
+
+function readPositiveInteger(value) {
+    return Number.isInteger(value) && value > 0 ? value : undefined;
 }
 
 function requireString(value, label) {

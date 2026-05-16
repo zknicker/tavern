@@ -113,6 +113,14 @@ be identical.
   of making product screens depend on websocket payload completeness.
 - Event payloads may be partial. Tavern should not require an event echo after a successful
   Tavern-originated write.
+- Runtime websocket events must not be the only copy of durable chat state. Accepted messages,
+  active turn markers, and active progress steps that affect reload behavior need recoverable
+  Runtime/server state. A hard reload after send acceptance should recover the accepted user
+  message, current active reply status, and already observed progress before the final assistant
+  message exists.
+- A durable message event should be written in the same Runtime transaction as the accepted message
+  it represents. Clients may use optimistic rows for speed, but reconciliation must be possible
+  from a cursor-replayed event or an HTTP refetch.
 
 ## Jobs
 

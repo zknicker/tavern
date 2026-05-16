@@ -139,8 +139,13 @@ describe('OpenClaw session message mapping', () => {
                     chatId: 'chat-1',
                     content: [{ text: 'hi', type: 'text' }],
                     messageId: 'tavern-message-1',
+                    metadata: {
+                        tavern: {
+                            acceptedRunId: 'run-1',
+                        },
+                    },
                     role: 'user',
-                    sender: 'Tavern',
+                    sender: 'tavern:user',
                     senderName: 'Tavern',
                     sessionKey,
                     timestamp: '2026-05-13T12:00:00.000Z',
@@ -149,7 +154,7 @@ describe('OpenClaw session message mapping', () => {
                     __openclaw: {
                         id: 'openclaw-copy',
                     },
-                    chatId: `openclaw:${sessionKey}`,
+                    chatId: 'chat-1',
                     content: [{ text: 'hi', type: 'text' }],
                     role: 'user',
                     sender: 'user',

@@ -4,7 +4,7 @@ import {
     type SessionMessage,
     sessionMessageAttachmentSchema,
 } from '../sessions/contracts.ts';
-import { getChatProjection } from '../storage/chats.ts';
+import { getChatProjection, parseChatRawJson } from '../storage/chats.ts';
 import { listSessionMessagesForSessionKeys } from '../storage/session-messages.ts';
 import { listProjectedSessionToolCalls } from '../storage/session-tool-calls.ts';
 import { listSessionProjections, parseSessionProjection } from '../storage/sessions.ts';
@@ -23,14 +23,23 @@ export async function listAgentRuntimeChatRows(
 }
 
 async function listProjectedChatRows(chatId: string): Promise<SessionHistory['rows']> {
-    const [agents, sessionRecords] = await Promise.all([listAgents(), listSessionProjections()]);
+    const [agents, projectedChat, sessionRecords] = await Promise.all([
+        listAgents(),
+        getChatProjection(chatId),
+        listSessionProjections(),
+    ]);
+    const chatSessionKeys = projectedChat
+        ? listChatSessionKeys(parseChatRawJson(projectedChat))
+        : [];
     const sessions = sessionRecords.flatMap((record) => {
         const session = parseSessionProjection(record);
         return session && session.chatId === chatId && session.sessionRole === 'main'
             ? [session]
             : [];
     });
-    const sessionKeys = sessions.map((session) => session.key);
+    const sessionKeys = [
+        ...new Set([...sessions.map((session) => session.key), ...chatSessionKeys]),
+    ];
     const sessionsByKey = new Map(sessions.map((session) => [session.key, session]));
     const [messages, toolCalls] = await Promise.all([
         listSessionMessagesForSessionKeys(sessionKeys),
@@ -80,6 +89,15 @@ async function listProjectedChatRows(chatId: string): Promise<SessionHistory['ro
         toolCalls,
         workers: [],
     });
+}
+
+function listChatSessionKeys(chat: ReturnType<typeof parseChatRawJson>) {
+    return Array.isArray(chat.metadata.sessionKeys)
+        ? chat.metadata.sessionKeys.filter(
+              (sessionKey): sessionKey is string =>
+                  typeof sessionKey === 'string' && sessionKey.trim().length > 0
+          )
+        : [];
 }
 
 function parseProjectedMessageRaw(messageJson: string | null) {
