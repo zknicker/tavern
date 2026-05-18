@@ -1,4 +1,5 @@
 ---
+summary: Frontend ownership rules for routes, features, components, hooks, lib helpers, and reusable UI promotion.
 read_when:
   - changing React file layout, shared UI ownership, frontend hooks, or presentation helpers
   - moving reusable UI between route, feature, component, hook, or lib folders

@@ -1,4 +1,5 @@
 ---
+summary: Tavern App boundary for the Tauri product shell, React/tRPC client, app cache/settings, runtime adapters, and optimistic UI rules.
 read_when:
   - changing the local app backend, tRPC procedures, client cache, or app-owned settings
   - changing how Tavern App consumes Tavern Runtime or Tavern API records

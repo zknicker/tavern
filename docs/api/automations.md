@@ -1,4 +1,5 @@
 ---
+summary: Scheduled agent work API for durable automations, schedules, delivery targets, run history, failures, and recovery events.
 read_when:
   - changing cron automations, scheduled work, delivery targets, or run history APIs
   - changing how external clients create or inspect recurring agent work

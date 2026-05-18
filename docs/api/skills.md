@@ -1,4 +1,5 @@
 ---
+summary: Skills API for package inspection, install/remove, setup requirements, secret bindings, updates, and per-agent enablement.
 read_when:
   - changing skill install, update, secret, setup, or agent assignment APIs
   - changing how clients inspect reusable agent abilities

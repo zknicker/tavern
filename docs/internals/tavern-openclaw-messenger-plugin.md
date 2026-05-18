@@ -1,4 +1,5 @@
 ---
+summary: Tavern Messenger plugin contract for OpenClaw channel package shape, message/turn lifecycle, durable identity, relay frames, tests, and audit gaps.
 read_when:
   - changing the Tavern OpenClaw Messenger plugin, relay, activity, or delivery path
   - changing how OpenClaw turns map into Tavern API messages, activity, or events

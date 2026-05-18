@@ -1,4 +1,5 @@
 ---
+summary: Internals index for Tavern architecture, app/runtime ownership, data model, frontend structure, React conventions, and plugin bridge.
 read_when:
   - changing Tavern architecture, ownership boundaries, or implementation layout
   - looking for app, runtime, data model, frontend, or plugin internals

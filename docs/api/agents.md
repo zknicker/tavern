@@ -1,4 +1,5 @@
 ---
+summary: Agent records and configuration API for model choices, tool policy, memory policy, skill assignment, and runtime metadata boundaries.
 read_when:
   - changing agent records, model settings, tool policy, or per-agent skill and memory controls
   - changing how clients list, configure, or address agents

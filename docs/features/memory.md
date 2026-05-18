@@ -1,4 +1,5 @@
 ---
+summary: Memory feature for inspectable and editable facts/preferences, agent-aware context, and the knowledgebase boundary.
 read_when:
   - changing long-term context, user review, or memory visibility
   - changing the boundary between memory and the knowledgebase

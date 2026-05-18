@@ -1,4 +1,5 @@
 ---
+summary: Local development workflow for managed dev stack startup, OpenClaw-specific recipes, and verification pointers.
 read_when:
   - running Tavern locally or changing managed runtime development workflow
   - changing local stack startup, ports, or developer verification

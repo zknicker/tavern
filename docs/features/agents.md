@@ -1,4 +1,5 @@
 ---
+summary: User-facing agent controls for named workers, model choices, tool policy, skill assignment, and the OpenClaw execution boundary.
 read_when:
   - changing how users configure or work with agents
   - changing model, tool, memory, or skill controls for agents

@@ -1,4 +1,5 @@
 ---
+summary: Tavern Runtime internals for canonical chat storage, managed OpenClaw startup, Messenger plugin sync, persistence, sync paths, and tool boundaries.
 read_when:
   - changing the always-on chat server, managed OpenClaw startup, or runtime ownership
   - changing sync paths, execution evidence, or agent-facing Tavern tools

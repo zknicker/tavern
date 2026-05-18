@@ -1,4 +1,5 @@
 ---
+summary: Runtime admin and control routes for health, events, managed OpenClaw, sessions, cron, skills, models, bindings, and files.
 read_when:
   - changing Tavern Runtime health, status, admin, or control routes
   - changing managed OpenClaw, cron, skills, sessions, models, or memory runtime APIs

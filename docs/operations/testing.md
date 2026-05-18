@@ -1,4 +1,5 @@
 ---
+summary: Testing strategy for Vitest defaults, contract-first API gates, Runtime chat store coverage, website e2e, OpenClaw contract tests, and smoke hygiene.
 read_when:
   - adding tests, changing runtime contracts, or choosing a verification lane
   - changing OpenAPI, Runtime chat store, SDK, website e2e, or OpenClaw contract tests

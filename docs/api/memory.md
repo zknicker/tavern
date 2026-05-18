@@ -1,4 +1,5 @@
 ---
+summary: Memory API for inspectable remembered facts, user review, scoping, attribution, prompt usage, and deletion behavior.
 read_when:
   - changing memory records, review flows, or memory API contracts
   - changing how agents read or write user-reviewable context

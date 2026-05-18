@@ -1,4 +1,5 @@
 ---
+summary: Operations index for local development, test lanes, desktop releases, OpenClaw plugin lifecycle, and runtime upgrades.
 read_when:
   - running, testing, releasing, or upgrading Tavern
   - looking for operational recipes and verification gates

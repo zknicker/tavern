@@ -1,4 +1,5 @@
 ---
+summary: Skills feature for ClawHub/GitHub installs, readable skill.md, setup, secrets, updates, per-agent enablement, and workspace materialization.
 read_when:
   - changing skill install, inspection, secrets, updates, or agent assignment
   - changing how selected skills materialize into agent workspaces

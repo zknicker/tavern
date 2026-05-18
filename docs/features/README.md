@@ -1,4 +1,5 @@
 ---
+summary: Feature docs index for Tavern product capabilities: chat, agents, memory, knowledgebase, automations, skills, stats, and pets.
 read_when:
   - looking for Tavern's user-facing product capabilities
   - adding, renaming, or reorganizing feature docs

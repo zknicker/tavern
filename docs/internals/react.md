@@ -1,4 +1,5 @@
 ---
+summary: React conventions for route boundaries, Suspense, granular hooks, small components, forms, and realtime subscriptions.
 read_when:
   - changing route structure, loading behavior, hooks, or component boundaries
   - reviewing React data ownership, Suspense usage, or presentation state

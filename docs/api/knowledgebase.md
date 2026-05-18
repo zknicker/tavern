@@ -1,4 +1,5 @@
 ---
+summary: Knowledgebase API for pages, files, citations, backlinks, agent-authored notes, attribution, and memory boundaries.
 read_when:
   - changing knowledgebase pages, files, citations, links, or collections
   - changing how agents create durable working material

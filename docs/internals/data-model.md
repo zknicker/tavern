@@ -1,4 +1,5 @@
 ---
+summary: Tavern data model for Runtime chat tables, semantic ids, transaction rules, execution evidence, app cache, FTS, and invariants.
 read_when:
   - changing SQLite tables, ids, projection invariants, or runtime transcript storage
   - changing chat/session/message identity, event recovery, or sync semantics

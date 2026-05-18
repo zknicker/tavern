@@ -1,4 +1,5 @@
 ---
+summary: Durable chat API for messages, per-chat sequence, receipts, deliveries, activity, reads, events, soft deletes, and OpenClaw metadata.
 read_when:
   - changing chat messages, receipts, live activity, history, or timeline recovery
   - changing how OpenClaw, bots, webhooks, or local tools send chat work into Tavern

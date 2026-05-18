@@ -1,4 +1,5 @@
 ---
+summary: Realtime contract for durable chat events, volatile activity notifications, websocket recovery, cursors, ordering, and app stream boundaries.
 read_when:
   - changing websocket subscriptions, event cursors, or reconnect behavior
   - adding a durable event type or volatile activity signal

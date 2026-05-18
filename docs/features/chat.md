@@ -1,4 +1,5 @@
 ---
+summary: Agent chat experience for durable timeline rows, live activity, receipts, offline catch-up, optimistic rows, and rendering rules.
 read_when:
   - changing the main agent conversation experience
   - changing durable messages, live activity, receipts, or timeline recovery

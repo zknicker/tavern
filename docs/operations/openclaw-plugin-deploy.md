@@ -1,4 +1,5 @@
 ---
+summary: Managed Messenger plugin workflow for Runtime-owned build/sync into OpenClaw, generated config checks, and lifecycle verification.
 read_when:
   - changing how managed OpenClaw loads the Tavern Messenger plugin
   - verifying plugin build, sync, or managed Gateway lifecycle

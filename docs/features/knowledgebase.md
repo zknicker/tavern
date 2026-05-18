@@ -1,4 +1,5 @@
 ---
+summary: Knowledgebase feature for wiki pages, backlinks, collections, files, citations, agent notes, and durable project context.
 read_when:
   - changing wiki pages, agent notes, source material, or document workflows
   - changing knowledgebase files, citations, links, or collections

@@ -1,4 +1,5 @@
 ---
+summary: Local-owner trust model for Tavern App, Runtime credentials, managed OpenClaw access, external clients, and secret storage.
 read_when:
   - changing local app auth, runtime trust, secrets, or operator identity
   - exposing Tavern API access to external clients

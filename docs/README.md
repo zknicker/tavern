@@ -1,4 +1,5 @@
 ---
+summary: Tavern product overview, feature map, operations entrypoints, and app/runtime/OpenClaw architecture routes.
 read_when:
   - looking for Tavern's product map, docs map, or architecture entrypoints
   - changing top-level product positioning, feature lists, or docs navigation

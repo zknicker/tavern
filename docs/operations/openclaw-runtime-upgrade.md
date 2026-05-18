@@ -1,4 +1,5 @@
 ---
+summary: Managed OpenClaw upgrade workflow for npm version bumps, generated config, state rules, projection namespace, migrations, and verification gates.
 read_when:
   - bumping the managed OpenClaw version Tavern Runtime launches
   - changing managed OpenClaw state, generated config, or upgrade verification

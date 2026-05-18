@@ -1,4 +1,5 @@
 ---
+summary: Documentation policy for product-first structure, surfaces, frontmatter routing, ClickClack-style writing, reviews, and maintenance.
 read_when:
   - adding docs, reorganizing docs, or changing documentation style
   - turning implementation notes, specs, or architecture decisions into docs

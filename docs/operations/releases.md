@@ -1,4 +1,5 @@
 ---
+summary: Desktop release workflow for version bumps, changelog context, signing/notarization, updater metadata, S3 upload, tags, and GitHub Release.
 read_when:
   - cutting, signing, notarizing, or publishing a Tavern desktop release
   - changing release scripts, updater metadata, or release environment variables

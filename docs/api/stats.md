@@ -1,4 +1,5 @@
 ---
+summary: Stats API for usage summaries, spend estimates, model/provider activity, runtime health, and source-backed operational signals.
 read_when:
   - changing usage, spend, runtime health, or operational stats APIs
   - changing how clients read provider activity or cost signals

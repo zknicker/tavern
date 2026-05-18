@@ -1,4 +1,5 @@
 ---
+summary: Scheduled work feature for cron automations, run history, delivery targets, follow-up state, and Runtime/OpenClaw ownership.
 read_when:
   - changing scheduled work, recurring runs, or automation history
   - changing cron delivery or run history presentation

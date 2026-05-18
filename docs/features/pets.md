@@ -1,4 +1,5 @@
 ---
+summary: Pets and rewards feature for companion presence, progress rewards, and feedback that stays out of core work controls.
 read_when:
   - changing the playful layer around agent work
   - changing pets, rewards, or progress delight

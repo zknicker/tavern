@@ -1,4 +1,5 @@
 ---
+summary: Stats feature for model/provider usage, spend signals, runtime health, and slow, failed, or expensive work clues.
 read_when:
   - changing usage, spend, provider activity, or runtime health views
   - changing operational stats surfaced to users

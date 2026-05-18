@@ -1,4 +1,5 @@
 ---
+summary: Tavern API map for the @tavern/api contract, Runtime host, SDK wrapper, and capability docs.
 read_when:
   - looking for Tavern API capability contracts
   - changing client-facing API docs
