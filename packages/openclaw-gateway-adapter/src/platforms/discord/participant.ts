@@ -1,4 +1,4 @@
-import type { AgentRuntimeChatParticipant } from '@tavern/agent-runtime-protocol';
+import type { AgentRuntimeChatParticipant } from '@tavern/api';
 
 type DiscordObservedParticipant = Extract<AgentRuntimeChatParticipant, { type: 'participant' }>;
 

@@ -1,7 +1,4 @@
-import {
-    type AgentRuntimeSkillList,
-    agentRuntimeSkillListSchema,
-} from '@tavern/agent-runtime-protocol';
+import { type AgentRuntimeSkillList, agentRuntimeSkillListSchema } from '@tavern/api';
 import {
     asRecord,
     readArray,

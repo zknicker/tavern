@@ -1,8 +1,8 @@
-import type { AgentRuntimeChat } from '@tavern/agent-runtime-protocol';
+import type { AgentRuntimeChat } from '@tavern/api';
 import { readString } from '../../gateway/records.ts';
 import type { OpenClawConversationIdentity } from '../types.ts';
 
-const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/iu;
+const tavernChatIdPattern = /^cht_[A-Za-z0-9_-]+$/u;
 
 interface TavernConversationInput {
     keyParts: {
@@ -120,7 +120,7 @@ function readTavernChatTarget(value: string | null) {
         ? routeTarget.slice('chat:'.length)
         : routeTarget;
 
-    return uuidPattern.test(chatTarget) ? chatTarget : null;
+    return tavernChatIdPattern.test(chatTarget) ? chatTarget : null;
 }
 
 function resolveTavernChatId(input: {

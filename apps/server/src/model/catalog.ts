@@ -2,7 +2,7 @@ import {
     type AgentRuntimeModelProviderId,
     agentRuntimeModelProviderCapabilities,
     parseAgentRuntimeModelRef,
-} from '@tavern/agent-runtime-protocol';
+} from '@tavern/api';
 import type { Model } from './contracts.ts';
 import {
     formatOpenClawModelName,

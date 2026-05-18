@@ -1,7 +1,4 @@
-import {
-    type AgentRuntimeCronList,
-    agentRuntimeCronListSchema,
-} from '@tavern/agent-runtime-protocol';
+import { type AgentRuntimeCronList, agentRuntimeCronListSchema } from '@tavern/api';
 import { asRecord, readRecordArray } from '../../gateway/records.ts';
 import { mapOpenClawCronSummaryRecord } from './shared.ts';
 

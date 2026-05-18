@@ -24,9 +24,10 @@ export function WorkingLog({
     const isActive = status === 'active';
     const now = useNow(isActive && start !== null, start);
     const activeSeconds = isActive ? formatActiveActivitySeconds({ now, start }) : null;
+    const defaultOpen = isActive || hasNarration(items);
 
     return (
-        <ThinkingSteps className="w-full max-w-[34rem]" defaultOpen={isActive}>
+        <ThinkingSteps className="w-full max-w-[34rem]" defaultOpen={defaultOpen}>
             <ThinkingStepsHeader>
                 {isActive && activeSeconds ? (
                     <span>
@@ -52,6 +53,29 @@ export function WorkingLog({
             </ThinkingStepsContent>
         </ThinkingSteps>
     );
+}
+
+function hasNarration(items: ActivityItem[]) {
+    return items.some((item) => {
+        if (item.kind === 'activeProgress') {
+            return item.steps.some(
+                (step) =>
+                    (step.kind === 'message' || step.kind === 'reasoning') &&
+                    Boolean(step.detail?.trim())
+            );
+        }
+
+        if (item.row.kind === 'system') {
+            return item.row.systemKind === 'thinking';
+        }
+
+        if (item.row.kind !== 'tool') {
+            return false;
+        }
+
+        const name = item.row.toolCall.name.trim().toLowerCase();
+        return name === 'message' || name === 'reasoning';
+    });
 }
 
 function useNow(enabled: boolean, start: string | null) {

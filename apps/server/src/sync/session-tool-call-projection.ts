@@ -1,7 +1,4 @@
-import type {
-    AgentRuntimeSessionMessage,
-    AgentRuntimeSessionToolCall,
-} from '@tavern/agent-runtime-protocol';
+import type { AgentRuntimeSessionMessage, AgentRuntimeSessionToolCall } from '@tavern/api';
 
 export function buildSessionToolCallsFromMessages(
     messages: AgentRuntimeSessionMessage[]

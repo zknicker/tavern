@@ -48,7 +48,7 @@ export const tavernChannelPlugin = createChatChannelPlugin({
             inferTargetChatType: () => 'channel',
             targetResolver: {
                 looksLikeId: (raw) => raw.trim().length > 0,
-                hint: '<tavern-chat-uuid>',
+                hint: '<tavern-chat-id>',
             },
             resolveOutboundSessionRoute: ({ cfg, agentId, accountId, target }) =>
                 buildTavernOutboundSessionRoute({

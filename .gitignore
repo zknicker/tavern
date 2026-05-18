@@ -4,6 +4,7 @@ dist
 apps/server/data
 .DS_Store
 .*.bun-build
+.context
 apps/server/dist-sidecar
 apps/website/src-tauri/.tmp
 apps/website/src-tauri/binaries

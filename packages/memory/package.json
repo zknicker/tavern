@@ -9,10 +9,10 @@
   "scripts": {
     "build": "tsup src/index.ts --format esm --dts --target node20 --out-dir dist",
     "typecheck": "tsc --noEmit",
-    "test": "bun test"
+    "test": "bun test --pass-with-no-tests"
   },
   "dependencies": {
-    "zod": "^4.1.11"
+    "zod": "4.1.11"
   },
   "devDependencies": {
     "tsup": "^8.5.0",

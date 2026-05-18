@@ -1,4 +1,4 @@
-import { agentRuntimeOpenClawConfigSchema } from '@tavern/agent-runtime-protocol';
+import { agentRuntimeOpenClawConfigSchema } from '@tavern/api';
 import { z } from 'zod';
 
 export const openClawConfigSnapshotSchema = z.object({

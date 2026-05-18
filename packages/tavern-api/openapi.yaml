@@ -1,0 +1,917 @@
+openapi: 3.1.0
+info:
+  title: Tavern API
+  version: 0.1.0
+  summary: OpenAPI contract for Tavern Runtime chat and realtime clients.
+  description: >
+    Tavern API is the runtime-hosted contract for clients, bots, webhooks,
+    automations, managed OpenClaw, and tests. This first slice covers durable
+    chat state and realtime recovery.
+servers:
+  - url: http://127.0.0.1:4310
+    description: Local Tavern Runtime
+tags:
+  - name: Chats
+  - name: Messages
+  - name: Realtime
+paths:
+  /api/activity:
+    get:
+      operationId: listChatActivity
+      tags: [Chats]
+      summary: List current live chat activity.
+      responses:
+        '200':
+          description: Current activity state for chats with live or recent work.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ListChatActivityResponse'
+        default:
+          $ref: '#/components/responses/Error'
+  /api/chats:
+    get:
+      operationId: listChats
+      tags: [Chats]
+      summary: List chats.
+      parameters:
+        - $ref: '#/components/parameters/Cursor'
+        - $ref: '#/components/parameters/Limit'
+      responses:
+        '200':
+          description: Chats ordered by recent activity.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ListChatsResponse'
+        default:
+          $ref: '#/components/responses/Error'
+    post:
+      operationId: createChat
+      tags: [Chats]
+      summary: Create a chat.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateChatRequest'
+      responses:
+        '201':
+          description: Created chat.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Chat'
+        '200':
+          description: Existing chat returned for an idempotent request.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Chat'
+        default:
+          $ref: '#/components/responses/Error'
+  /api/chats/{chat_id}:
+    get:
+      operationId: getChat
+      tags: [Chats]
+      summary: Get a chat.
+      parameters:
+        - $ref: '#/components/parameters/ChatId'
+      responses:
+        '200':
+          description: Chat.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Chat'
+        default:
+          $ref: '#/components/responses/Error'
+  /api/chats/{chat_id}/messages:
+    get:
+      operationId: listChatMessages
+      tags: [Messages]
+      summary: List chat messages by sequence.
+      parameters:
+        - $ref: '#/components/parameters/ChatId'
+        - name: after_sequence
+          in: query
+          schema:
+            type: integer
+            minimum: 0
+        - name: before_sequence
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+        - $ref: '#/components/parameters/Limit'
+      responses:
+        '200':
+          description: Messages ordered by ascending sequence.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ListMessagesResponse'
+        default:
+          $ref: '#/components/responses/Error'
+    post:
+      operationId: createChatMessage
+      tags: [Messages]
+      summary: Create a durable chat message.
+      description: >
+        Message creation is durable first. Duplicate message ids or duplicate
+        nonces within a chat return the existing receipt instead of creating a
+        second row.
+      parameters:
+        - $ref: '#/components/parameters/ChatId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateMessageRequest'
+      responses:
+        '201':
+          description: Created message receipt.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ChatMessageReceipt'
+        '200':
+          description: Existing message receipt returned for idempotent retry.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ChatMessageReceipt'
+        default:
+          $ref: '#/components/responses/Error'
+  /api/chats/{chat_id}/deliveries:
+    post:
+      operationId: createChatDelivery
+      tags: [Messages]
+      summary: Create an agent delivery and assistant message.
+      description: >
+        Delivery ids are idempotent. The nested assistant message still uses
+        durable message identity; duplicate assistant message ids link the
+        delivery to the existing message instead of creating a second message
+        row.
+      parameters:
+        - $ref: '#/components/parameters/ChatId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateDeliveryRequest'
+      responses:
+        '201':
+          description: Delivery receipt.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeliveryReceipt'
+        '200':
+          description: Existing delivery receipt returned for idempotent retry.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeliveryReceipt'
+        default:
+          $ref: '#/components/responses/Error'
+  /api/chats/{chat_id}/activity:
+    post:
+      operationId: updateChatActivity
+      tags: [Chats]
+      summary: Update the live activity state for a chat.
+      parameters:
+        - $ref: '#/components/parameters/ChatId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateActivityRequest'
+      responses:
+        '200':
+          description: Current activity state.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ChatActivity'
+        default:
+          $ref: '#/components/responses/Error'
+  /api/chats/{chat_id}/read:
+    post:
+      operationId: markChatRead
+      tags: [Chats]
+      summary: Mark a chat read through a sequence.
+      parameters:
+        - $ref: '#/components/parameters/ChatId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MarkReadRequest'
+      responses:
+        '200':
+          description: Read receipt.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReadReceipt'
+        default:
+          $ref: '#/components/responses/Error'
+  /api/messages/{message_id}:
+    get:
+      operationId: getMessage
+      tags: [Messages]
+      summary: Get a message by id.
+      parameters:
+        - $ref: '#/components/parameters/MessageId'
+      responses:
+        '200':
+          description: Message.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ChatMessage'
+        default:
+          $ref: '#/components/responses/Error'
+    delete:
+      operationId: deleteMessage
+      tags: [Messages]
+      summary: Soft delete a message.
+      parameters:
+        - $ref: '#/components/parameters/MessageId'
+      responses:
+        '200':
+          description: Deleted message receipt.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeleteMessageReceipt'
+        default:
+          $ref: '#/components/responses/Error'
+  /api/events:
+    get:
+      operationId: listEvents
+      tags: [Realtime]
+      summary: Replay durable events after a cursor.
+      parameters:
+        - name: after_cursor
+          in: query
+          schema:
+            type: string
+        - name: recipient_id
+          in: query
+          description: Include private events addressed to this recipient.
+          schema:
+            $ref: '#/components/schemas/ParticipantId'
+        - $ref: '#/components/parameters/Limit'
+      responses:
+        '200':
+          description: Events ordered by ascending cursor.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EventList'
+        default:
+          $ref: '#/components/responses/Error'
+  /api/events/ws:
+    get:
+      operationId: connectEvents
+      tags: [Realtime]
+      summary: Subscribe to event notifications.
+      description: >
+        WebSocket delivery is best effort. Clients recover missed state by
+        replaying /api/events from the last seen cursor.
+      parameters:
+        - name: after_cursor
+          in: query
+          schema:
+            type: string
+        - name: recipient_id
+          in: query
+          description: Include private events addressed to this recipient.
+          schema:
+            $ref: '#/components/schemas/ParticipantId'
+      responses:
+        '101':
+          description: WebSocket upgrade. Messages are ChatEvent objects.
+        default:
+          $ref: '#/components/responses/Error'
+components:
+  parameters:
+    ChatId:
+      name: chat_id
+      in: path
+      required: true
+      schema:
+        $ref: '#/components/schemas/ChatId'
+    Cursor:
+      name: cursor
+      in: query
+      schema:
+        type: string
+    Limit:
+      name: limit
+      in: query
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 500
+        default: 100
+    MessageId:
+      name: message_id
+      in: path
+      required: true
+      schema:
+        $ref: '#/components/schemas/MessageId'
+  responses:
+    Error:
+      description: Error response.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+  schemas:
+    Id:
+      type: string
+      minLength: 1
+    ChatId:
+      type: string
+      pattern: '^cht_[A-Za-z0-9_-]+$'
+    MessageId:
+      type: string
+      pattern: '^msg_[A-Za-z0-9_-]+$'
+    MessagePartId:
+      type: string
+      pattern: '^part_[A-Za-z0-9_-]+$'
+    ParticipantId:
+      type: string
+      pattern: '^(usr|agt|sys)_[A-Za-z0-9_-]+$'
+    UserParticipantId:
+      type: string
+      pattern: '^usr_[A-Za-z0-9_-]+$'
+    AgentParticipantId:
+      type: string
+      pattern: '^agt_[A-Za-z0-9_-]+$'
+    EventId:
+      type: string
+      pattern: '^evt_[A-Za-z0-9_-]+$'
+    DeliveryId:
+      type: string
+      pattern: '^del_[A-Za-z0-9_-]+$'
+    RunId:
+      type: string
+      pattern: '^run_[A-Za-z0-9_-]+$'
+    Timestamp:
+      type: string
+      format: date-time
+    JsonObject:
+      type: object
+      additionalProperties: true
+    Chat:
+      type: object
+      additionalProperties: false
+      required:
+        - id
+        - title
+        - created_at
+        - updated_at
+        - last_message_sequence
+        - metadata
+      properties:
+        id:
+          $ref: '#/components/schemas/ChatId'
+        title:
+          type: [string, 'null']
+        created_at:
+          $ref: '#/components/schemas/Timestamp'
+        updated_at:
+          $ref: '#/components/schemas/Timestamp'
+        last_message_sequence:
+          type: integer
+          minimum: 0
+        metadata:
+          $ref: '#/components/schemas/JsonObject'
+    CreateChatRequest:
+      type: object
+      additionalProperties: false
+      required:
+        - id
+      properties:
+        id:
+          $ref: '#/components/schemas/ChatId'
+        title:
+          type: [string, 'null']
+        metadata:
+          $ref: '#/components/schemas/JsonObject'
+    ListChatsResponse:
+      type: object
+      additionalProperties: false
+      required:
+        - chats
+        - next_cursor
+      properties:
+        chats:
+          type: array
+          items:
+            $ref: '#/components/schemas/Chat'
+        next_cursor:
+          type: [string, 'null']
+    Participant:
+      type: object
+      additionalProperties: false
+      required:
+        - id
+        - kind
+        - label
+        - metadata
+      properties:
+        id:
+          $ref: '#/components/schemas/ParticipantId'
+        kind:
+          type: string
+          enum: [user, agent, system, integration]
+        label:
+          type: [string, 'null']
+        metadata:
+          $ref: '#/components/schemas/JsonObject'
+    MessagePart:
+      type: object
+      additionalProperties: false
+      required:
+        - id
+        - kind
+        - content
+        - metadata
+      properties:
+        id:
+          $ref: '#/components/schemas/MessagePartId'
+        kind:
+          type: string
+          enum: [text, reasoning, tool_call, tool_result, attachment]
+        content:
+          type: string
+        metadata:
+          $ref: '#/components/schemas/JsonObject'
+    ChatMessage:
+      type: object
+      additionalProperties: false
+      required:
+        - id
+        - chat_id
+        - sequence
+        - author
+        - role
+        - parts
+        - nonce
+        - parent_message_id
+        - thread_root_id
+        - delivery_id
+        - created_at
+        - deleted_at
+        - metadata
+      properties:
+        id:
+          $ref: '#/components/schemas/MessageId'
+        chat_id:
+          $ref: '#/components/schemas/ChatId'
+        sequence:
+          type: integer
+          minimum: 1
+        author:
+          $ref: '#/components/schemas/Participant'
+        role:
+          type: string
+          enum: [user, assistant, system]
+        parts:
+          type: array
+          items:
+            $ref: '#/components/schemas/MessagePart'
+        nonce:
+          type: [string, 'null']
+        parent_message_id:
+          oneOf:
+            - $ref: '#/components/schemas/MessageId'
+            - type: 'null'
+        thread_root_id:
+          oneOf:
+            - $ref: '#/components/schemas/MessageId'
+            - type: 'null'
+        delivery_id:
+          oneOf:
+            - $ref: '#/components/schemas/DeliveryId'
+            - type: 'null'
+        created_at:
+          $ref: '#/components/schemas/Timestamp'
+        deleted_at:
+          oneOf:
+            - $ref: '#/components/schemas/Timestamp'
+            - type: 'null'
+        metadata:
+          $ref: '#/components/schemas/JsonObject'
+    CreateMessageRequest:
+      type: object
+      additionalProperties: false
+      required:
+        - id
+        - author_id
+        - role
+        - parts
+      properties:
+        id:
+          $ref: '#/components/schemas/MessageId'
+        author_id:
+          $ref: '#/components/schemas/ParticipantId'
+        role:
+          type: string
+          enum: [user, assistant, system]
+        parts:
+          type: array
+          minItems: 1
+          items:
+            $ref: '#/components/schemas/MessagePartInput'
+        nonce:
+          type: string
+        parent_message_id:
+          oneOf:
+            - $ref: '#/components/schemas/MessageId'
+            - type: 'null'
+        thread_root_id:
+          oneOf:
+            - $ref: '#/components/schemas/MessageId'
+            - type: 'null'
+        metadata:
+          $ref: '#/components/schemas/JsonObject'
+    MessagePartInput:
+      type: object
+      additionalProperties: false
+      required:
+        - kind
+        - content
+      properties:
+        id:
+          $ref: '#/components/schemas/MessagePartId'
+        kind:
+          type: string
+          enum: [text, reasoning, tool_call, tool_result, attachment]
+        content:
+          type: string
+        metadata:
+          $ref: '#/components/schemas/JsonObject'
+    ChatMessageReceipt:
+      type: object
+      additionalProperties: false
+      required:
+        - message
+        - cursor
+        - idempotent
+      properties:
+        message:
+          $ref: '#/components/schemas/ChatMessage'
+        cursor:
+          type: string
+        idempotent:
+          type: boolean
+    ListMessagesResponse:
+      type: object
+      additionalProperties: false
+      required:
+        - messages
+        - next_sequence
+      properties:
+        messages:
+          type: array
+          items:
+            $ref: '#/components/schemas/ChatMessage'
+        next_sequence:
+          type: [integer, 'null']
+    CreateDeliveryRequest:
+      type: object
+      additionalProperties: false
+      required:
+        - id
+        - agent_id
+        - message
+      properties:
+        id:
+          $ref: '#/components/schemas/DeliveryId'
+        agent_id:
+          $ref: '#/components/schemas/AgentParticipantId'
+        turn_id:
+          oneOf:
+            - $ref: '#/components/schemas/RunId'
+            - type: 'null'
+        message:
+          $ref: '#/components/schemas/CreateMessageRequest'
+        metadata:
+          $ref: '#/components/schemas/JsonObject'
+    DeliveryReceipt:
+      type: object
+      additionalProperties: false
+      required:
+        - id
+        - message
+        - cursor
+        - idempotent
+      properties:
+        id:
+          $ref: '#/components/schemas/DeliveryId'
+        message:
+          $ref: '#/components/schemas/ChatMessage'
+        cursor:
+          type: string
+        idempotent:
+          type: boolean
+    ActivityStep:
+      type: object
+      additionalProperties: false
+      required:
+        - id
+        - kind
+        - status
+        - label
+        - started_at
+        - completed_at
+        - metadata
+      properties:
+        id:
+          $ref: '#/components/schemas/Id'
+        kind:
+          type: string
+          enum: [thinking, tool, command, file, message, custom]
+        status:
+          type: string
+          enum: [queued, running, completed, failed]
+        label:
+          type: string
+        started_at:
+          $ref: '#/components/schemas/Timestamp'
+        completed_at:
+          oneOf:
+            - $ref: '#/components/schemas/Timestamp'
+            - type: 'null'
+        metadata:
+          $ref: '#/components/schemas/JsonObject'
+    ChatActivity:
+      type: object
+      additionalProperties: false
+      required:
+        - chat_id
+        - run_id
+        - agent_id
+        - status
+        - summary
+        - steps
+        - updated_at
+        - metadata
+      properties:
+        chat_id:
+          $ref: '#/components/schemas/ChatId'
+        run_id:
+          $ref: '#/components/schemas/RunId'
+        agent_id:
+          $ref: '#/components/schemas/AgentParticipantId'
+        status:
+          type: string
+          enum: [queued, running, completed, failed]
+        summary:
+          type: [string, 'null']
+        steps:
+          type: array
+          items:
+            $ref: '#/components/schemas/ActivityStep'
+        updated_at:
+          $ref: '#/components/schemas/Timestamp'
+        metadata:
+          $ref: '#/components/schemas/JsonObject'
+    UpdateActivityRequest:
+      type: object
+      additionalProperties: false
+      required:
+        - run_id
+        - agent_id
+        - status
+      properties:
+        run_id:
+          $ref: '#/components/schemas/RunId'
+        agent_id:
+          $ref: '#/components/schemas/AgentParticipantId'
+        status:
+          type: string
+          enum: [queued, running, completed, failed]
+        summary:
+          type: [string, 'null']
+        steps:
+          type: array
+          items:
+            $ref: '#/components/schemas/ActivityStep'
+        metadata:
+          $ref: '#/components/schemas/JsonObject'
+    ListChatActivityResponse:
+      type: object
+      additionalProperties: false
+      required:
+        - activities
+      properties:
+        activities:
+          type: array
+          items:
+            $ref: '#/components/schemas/ChatActivity'
+    ReadReceipt:
+      type: object
+      additionalProperties: false
+      required:
+        - chat_id
+        - reader_id
+        - last_read_sequence
+        - read_at
+        - cursor
+      properties:
+        chat_id:
+          $ref: '#/components/schemas/ChatId'
+        reader_id:
+          $ref: '#/components/schemas/UserParticipantId'
+        last_read_sequence:
+          type: integer
+          minimum: 0
+        read_at:
+          $ref: '#/components/schemas/Timestamp'
+        cursor:
+          type: string
+    MarkReadRequest:
+      type: object
+      additionalProperties: false
+      required:
+        - reader_id
+        - last_read_sequence
+      properties:
+        reader_id:
+          $ref: '#/components/schemas/UserParticipantId'
+        last_read_sequence:
+          type: integer
+          minimum: 0
+    DeleteMessageReceipt:
+      type: object
+      additionalProperties: false
+      required:
+        - message_id
+        - deleted_at
+        - cursor
+      properties:
+        message_id:
+          $ref: '#/components/schemas/MessageId'
+        deleted_at:
+          $ref: '#/components/schemas/Timestamp'
+        cursor:
+          type: string
+    EventList:
+      type: object
+      additionalProperties: false
+      required:
+        - events
+        - next_cursor
+      properties:
+        events:
+          type: array
+          items:
+            $ref: '#/components/schemas/ChatEvent'
+        next_cursor:
+          type: [string, 'null']
+    ChatEvent:
+      oneOf:
+        - $ref: '#/components/schemas/MessageCreatedEvent'
+        - $ref: '#/components/schemas/MessageDeliveredEvent'
+        - $ref: '#/components/schemas/MessageDeletedEvent'
+        - $ref: '#/components/schemas/ChatReadEvent'
+        - $ref: '#/components/schemas/ChatActivityUpdatedEvent'
+        - $ref: '#/components/schemas/ChatActivityCompletedEvent'
+        - $ref: '#/components/schemas/ChatActivityFailedEvent'
+    EventBase:
+      type: object
+      additionalProperties: false
+      required:
+        - id
+        - cursor
+        - chat_id
+        - created_at
+        - private
+        - recipients
+      properties:
+        id:
+          $ref: '#/components/schemas/EventId'
+        cursor:
+          type: string
+        chat_id:
+          $ref: '#/components/schemas/ChatId'
+        created_at:
+          $ref: '#/components/schemas/Timestamp'
+        private:
+          type: boolean
+        recipients:
+          type: array
+          items:
+            $ref: '#/components/schemas/ParticipantId'
+    MessageCreatedEvent:
+      allOf:
+        - $ref: '#/components/schemas/EventBase'
+        - type: object
+          additionalProperties: false
+          required: [type, message]
+          properties:
+            type:
+              type: string
+              const: message.created
+            message:
+              $ref: '#/components/schemas/ChatMessage'
+    MessageDeliveredEvent:
+      allOf:
+        - $ref: '#/components/schemas/EventBase'
+        - type: object
+          additionalProperties: false
+          required: [type, delivery]
+          properties:
+            type:
+              type: string
+              const: message.delivered
+            delivery:
+              $ref: '#/components/schemas/DeliveryReceipt'
+    MessageDeletedEvent:
+      allOf:
+        - $ref: '#/components/schemas/EventBase'
+        - type: object
+          additionalProperties: false
+          required: [type, message_id]
+          properties:
+            type:
+              type: string
+              const: message.deleted
+            message_id:
+              $ref: '#/components/schemas/MessageId'
+    ChatReadEvent:
+      allOf:
+        - $ref: '#/components/schemas/EventBase'
+        - type: object
+          additionalProperties: false
+          required: [type, read]
+          properties:
+            type:
+              type: string
+              const: chat.read
+            read:
+              $ref: '#/components/schemas/ReadReceipt'
+    ChatActivityUpdatedEvent:
+      allOf:
+        - $ref: '#/components/schemas/EventBase'
+        - type: object
+          additionalProperties: false
+          required: [type, activity]
+          properties:
+            type:
+              type: string
+              const: chat.activity.updated
+            activity:
+              $ref: '#/components/schemas/ChatActivity'
+    ChatActivityCompletedEvent:
+      allOf:
+        - $ref: '#/components/schemas/EventBase'
+        - type: object
+          additionalProperties: false
+          required: [type, activity]
+          properties:
+            type:
+              type: string
+              const: chat.activity.completed
+            activity:
+              $ref: '#/components/schemas/ChatActivity'
+    ChatActivityFailedEvent:
+      allOf:
+        - $ref: '#/components/schemas/EventBase'
+        - type: object
+          additionalProperties: false
+          required: [type, activity]
+          properties:
+            type:
+              type: string
+              const: chat.activity.failed
+            activity:
+              $ref: '#/components/schemas/ChatActivity'
+    Error:
+      type: object
+      additionalProperties: false
+      required:
+        - code
+        - message
+        - retryable
+      properties:
+        code:
+          type: string
+        message:
+          type: string
+        retryable:
+          type: boolean
+        details:
+          $ref: '#/components/schemas/JsonObject'

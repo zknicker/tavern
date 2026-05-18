@@ -548,24 +548,6 @@ const schemaStatements = [
     'CREATE INDEX IF NOT EXISTS session_tool_calls_tool_call_id_idx ON session_tool_calls (tool_call_id);',
     `CREATE INDEX IF NOT EXISTS session_tool_calls_child_session_key_idx
         ON session_tool_calls (child_session_key);`,
-    `CREATE TABLE IF NOT EXISTS chat_active_turn_steps (
-        run_id TEXT NOT NULL,
-        step_id TEXT NOT NULL,
-        chat_id TEXT NOT NULL,
-        agent_id TEXT NOT NULL,
-        session_key TEXT NOT NULL,
-        started_at TEXT NOT NULL,
-        progress_started_at TEXT NOT NULL,
-        first_observed_at TEXT NOT NULL,
-        updated_at TEXT NOT NULL,
-        step_json TEXT NOT NULL,
-        PRIMARY KEY (session_key, run_id, step_id)
-    );`,
-    'CREATE INDEX IF NOT EXISTS chat_active_turn_steps_chat_idx ON chat_active_turn_steps (chat_id);',
-    `CREATE INDEX IF NOT EXISTS chat_active_turn_steps_session_key_idx
-        ON chat_active_turn_steps (session_key);`,
-    `CREATE UNIQUE INDEX IF NOT EXISTS chat_active_turn_steps_turn_step_idx
-        ON chat_active_turn_steps (session_key, run_id, step_id);`,
     `CREATE TABLE IF NOT EXISTS session_links (
         id TEXT PRIMARY KEY NOT NULL,
         parent_session_key TEXT NOT NULL,

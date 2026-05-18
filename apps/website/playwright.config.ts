@@ -9,6 +9,10 @@ const serverPort = Number.parseInt(process.env.TAVERN_SERVER_PORT ?? '8081', 10)
 const websitePort = Number.parseInt(process.env.TAVERN_WEBSITE_PORT ?? '3101', 10);
 const gatewayToken = process.env.OPENCLAW_GATEWAY_TOKEN ?? `tavern-e2e-${runId}`;
 const liveGatewayUrl = process.env.OPENCLAW_GATEWAY_URL ?? 'ws://127.0.0.1:18789';
+const runtimeWebServerTimeoutMs = Number.parseInt(
+    process.env.TAVERN_RUNTIME_WEBSERVER_TIMEOUT_MS ?? '180000',
+    10
+);
 
 export default defineConfig({
     fullyParallel: false,
@@ -30,7 +34,7 @@ function buildWebServers() {
                 reuseExistingServer: false,
                 stderr: 'pipe',
                 stdout: 'pipe',
-                timeout: 30_000,
+                timeout: runtimeWebServerTimeoutMs,
                 url: `http://127.0.0.1:${runtimePort}/openclaw-gateway/status`,
             },
             {
@@ -66,7 +70,7 @@ function buildWebServers() {
             reuseExistingServer: false,
             stderr: 'pipe',
             stdout: 'pipe',
-            timeout: 30_000,
+            timeout: runtimeWebServerTimeoutMs,
             url: `http://127.0.0.1:${runtimePort}/openclaw-gateway/status`,
         },
         {

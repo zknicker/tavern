@@ -1,4 +1,4 @@
-import type { AgentRuntimeCapability } from '@tavern/agent-runtime-protocol';
+import type { AgentRuntimeCapability } from '@tavern/api';
 
 export const openClawAgentRuntimeCapabilities = [
     'agentTurns',

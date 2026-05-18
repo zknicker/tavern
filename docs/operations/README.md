@@ -1,0 +1,16 @@
+---
+read_when:
+  - running, testing, releasing, or upgrading Tavern
+  - looking for operational recipes and verification gates
+---
+
+# Operations
+
+Operations docs are recipes. They name when to run the workflow, the commands
+to use, and the result to verify.
+
+| Workflow | Doc |
+| --- | --- |
+| Development | [Development](development.md) |
+| Testing | [Testing](testing.md) |
+| Release process | [Release Process](releases.md) |

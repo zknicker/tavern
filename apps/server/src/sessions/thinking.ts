@@ -23,6 +23,8 @@ export function buildSessionThinking(messages: SessionMessage[]) {
 
             if (typeof part.text === 'string') {
                 text = part.text.trim();
+            } else if (typeof part.thinking === 'string') {
+                text = part.thinking.trim();
             } else if (typeof part.thinkingText === 'string') {
                 text = part.thinkingText.trim();
             }

@@ -1,7 +1,4 @@
-import {
-    type AgentRuntimeArchiveAgent,
-    agentRuntimeArchiveAgentSchema,
-} from '@tavern/agent-runtime-protocol';
+import { type AgentRuntimeArchiveAgent, agentRuntimeArchiveAgentSchema } from '@tavern/api';
 
 export function mapOpenClawDeletedAgent(agentId: string): AgentRuntimeArchiveAgent {
     return agentRuntimeArchiveAgentSchema.parse({

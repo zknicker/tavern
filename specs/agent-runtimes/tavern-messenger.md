@@ -7,15 +7,14 @@ generic IDE bridge, or a fallback over OpenClaw's operator session APIs.
 
 ```txt
 Tavern App
-  -> Tavern Server
-  -> OpenClaw Gateway adapter
-  -> OpenClaw Gateway
+  -> Tavern API
+  -> Tavern Runtime chat server
   -> Tavern Messenger channel/plugin
   -> OpenClaw execution
 ```
 
-Tavern App and Tavern Server code speak Tavern Runtime Protocol records such as `chat`, `session`,
-`turn`, `message`, and `tool`. OpenClaw Gateway payloads stay behind Tavern Runtime and the
+Tavern App speaks Tavern API records such as `chat`, `message`, `event`, `session`, `turn`, and
+`tool`. Tavern Runtime owns the durable chat server and keeps OpenClaw Gateway payloads behind the
 OpenClaw adapter.
 
 ## Architecture
@@ -23,11 +22,11 @@ OpenClaw adapter.
 ```mermaid
 flowchart LR
     subgraph Tavern["Tavern"]
-        App["Tavern App<br/>chat UI and optimistic rows"]
-        Server["Tavern Server<br/>chat, session, turn APIs"]
-        Driver["Tavern Runtime<br/>managed OpenClaw relay"]
-        Protocol["Tavern Runtime Protocol<br/>clients, events, projections"]
-        Store["Local projections<br/>chats, sessions, messages, tools"]
+        App["Tavern App<br/>first-party Mac client"]
+        API["Tavern API<br/>chat, message, event APIs"]
+        Driver["Tavern Runtime<br/>chat server and managed OpenClaw relay"]
+        SDK["TypeScript SDK<br/>Tavern API client"]
+        Store["Runtime SQLite<br/>chats, messages, events, delivery"]
     end
 
     subgraph Adapter["Runtime Adapter Package"]
@@ -41,58 +40,53 @@ flowchart LR
         Runtime["OpenClaw execution<br/>sessions, turns, tools, history"]
     end
 
-    App -->|"send message + clientMessageId"| Server
-    Server -->|"postMessage(chat, one bound agent)"| Driver
+    App -->|"send message + clientMessageId"| API
+    API -->|"postMessage(chat, one bound agent)"| Driver
     Driver -->|"inbound-message over /chat"| Messenger
     Messenger --> Runtime
 
     Runtime -->|"accepted run id"| Messenger
     Messenger -->|"message-accepted"| Driver
-    Driver -->|"AgentRuntimeMessageAccepted"| Protocol
-    Protocol --> Server
-    Server -->|"accepted state"| App
+    Driver -->|"accepted receipt"| API
+    API -->|"accepted receipt"| App
 
-    Runtime -. "live chat/tool events" .-> Gateway
-    Gateway -. "Gateway events" .-> Mapper
-    Mapper -. "AgentRuntimeEvent" .-> Protocol
-    Protocol -. "active reply and invalidation" .-> Server
-    Server -. "tRPC subscriptions" .-> App
+    Runtime -. "turn/tool/reasoning callbacks" .-> Messenger
+    Messenger -. "activity + delivery writes" .-> SDK
+    SDK -. "OpenAPI requests" .-> API
+    API -. "events + client notifications" .-> App
 
     Runtime ==>|"durable history snapshots"| Gateway
     Gateway ==>|"chat.history / sessions.*"| OCAdapter
-    OCAdapter ==>|"chat, session, message records"| Store
-    Store ==>|"chat.log.list and session reads"| Server
+    OCAdapter ==>|"session, turn, transcript evidence"| Store
+    Store ==>|"chat history and event reads"| API
 ```
 
-The fast lane is the accepted run id plus live reply/tool events relayed through Tavern Runtime. The
-durable lane is runtime history sync into local projections. The UI can render progress from the
-fast lane while durable history catches up.
+The fast lane is the accepted receipt plus SDK-backed activity writes. The durable lane is
+Runtime-owned chat state linked to OpenClaw history as execution evidence. The UI renders progress
+from Runtime activity while durable message history stays canonical.
 
-## V1 Model
-
-Tavern Messenger v1 intentionally keeps the chat model small.
+## Model
 
 - One Tavern chat has exactly one bound OpenClaw agent.
 - One Tavern chat is one long-lived, single-threaded conversation.
 - Sends use text as the agent-facing prompt and may include Tavern-owned message metadata for
   presentation.
-- Tavern App and Tavern Server do not choose an "active agent" inside a chat.
-- Multi-agent chat, fan-out, attachments, and rich message composition are future work.
+- Tavern App does not choose an "active agent" inside a chat.
 - Tavern Runtime must install the Tavern Messenger plugin into managed OpenClaw before launch and
   report that install as the `tavernPlugin` capability. Tavern chat send does not fall back to
   `sessions.send`, `chat.send`, ACP, platform-specific targets, or Tavern-specific Gateway RPCs.
 
-Tavern Server sends Tavern chat messages to Tavern Runtime, which relays private channel frames to
+Tavern Runtime accepts Tavern chat messages through Tavern API and relays private channel frames to
 the Tavern Messenger plugin.
 
 ## Channel Responsibilities
 
-Tavern Messenger channel/plugin should preserve first-party Tavern facts instead of forcing
-Tavern to reconstruct them from transport-specific labels.
+Tavern Messenger channel/plugin preserves first-party Tavern facts instead of forcing Tavern to
+reconstruct them from transport-specific labels.
 
 - Stable Tavern chat id.
 - OpenClaw session key for the chat's single bound agent. OpenClaw Tavern session keys must be
-  chat-specific, using `agent:<agent-id>:tavern:channel:<tavern-chat-uuid>`, with OpenClaw
+  chat-specific, using `agent:<agent-id>:tavern:channel:<tavern-chat-id>`, with OpenClaw
   `chatType: "channel"` and `peer.kind: "channel"`. They must not collapse to the agent's `main`
   session through generic direct-message scoping.
 - OpenClaw session id when available. This is the current transcript identity for the session key,
@@ -105,51 +99,49 @@ Tavern to reconstruct them from transport-specific labels.
 - Delivery metadata such as accepted, delivered, failed, active reply, approval, and tool state.
 - Timestamps supplied by the source event or runtime record.
 
-If a required id, timestamp, actor, or session key is absent, the plugin or adapter should report a
-degraded capability or fail the mapping. It should not invent product identity.
+If a required id, timestamp, actor, or session key is absent, the plugin or adapter reports a
+degraded capability or fails the mapping. It does not invent product identity.
 
-The channel/plugin must not publish an Tavern chat catalog. Tavern App and Tavern Server own Tavern
-chat existence, labels, bindings, and presentation. OpenClaw Tavern sessions are runtime facts that
-attach to an existing Tavern chat; they are not a source for creating or renaming Tavern chats.
+The channel/plugin must not publish a Tavern chat catalog. Tavern Runtime owns Tavern chat
+existence, bindings, durable messages, and labels. Tavern App owns presentation. OpenClaw Tavern
+sessions are execution facts that attach to an existing Tavern chat; they are not a source for
+creating or renaming Tavern chats.
 
 ## Adapter Responsibilities
 
-The OpenClaw adapter maps Gateway payloads into Tavern Runtime Protocol records.
+The OpenClaw adapter maps Gateway payloads into Tavern API records and runtime evidence records.
 
 - Do not require Tavern Messenger plugin methods for Tavern chat send or chat registry operations.
 - Validate required Tavern Messenger fields.
-- Normalize OpenClaw Gateway event names into `AgentRuntimeEvent` records.
+- Normalize OpenClaw Gateway event names into runtime evidence invalidation records.
 - Do not map OpenClaw Tavern sessions into `AgentRuntimeChat` rows. Tavern chat rows come only from
   Tavern-owned create/update flows.
-- Map external runtime-owned channel chats into `AgentRuntimeChat` rows with typed platform
+- Map external runtime-owned channel chats into runtime chat evidence rows with typed platform
   metadata.
 - Map durable runtime history into session message records.
-- Map live reply and tool events into volatile protocol events.
+- Keep live reply and tool activity on the Tavern API activity path, not adapter-local chat events.
 - Keep Gateway method names, plugin versions, and channel quirks out of app/domain code.
 
-The adapter should be mostly `parse -> validate -> rename -> emit`. If it must derive product
-meaning from labels or opaque ids, the Tavern Messenger channel contract is missing a field.
+The adapter is mostly `parse -> validate -> rename -> emit`. If it must derive product meaning from
+labels or opaque ids, the Tavern Messenger channel contract is missing a field.
 
 ## Runtime Relay
 
-Tavern Runtime exposes a private local WebSocket at `/chat`. Tavern
-Messenger plugin connects to that relay from inside managed OpenClaw. Tavern Server posts chat sends
-to Runtime, and Runtime forwards them as `inbound-message` frames.
+Tavern Runtime exposes a private local WebSocket at `/chat`. Tavern Messenger plugin connects to
+that relay from inside managed OpenClaw. Tavern API writes chat sends into Runtime, and Runtime
+forwards them as `inbound-message` frames.
 
-The plugin should broadcast Tavern-specific turn events such as `plugin.tavern.turn.started`,
-`plugin.tavern.turn.progress`, `plugin.tavern.turn.completed`, and `plugin.tavern.turn.failed`.
-Runtime maps those events to Tavern Runtime Protocol turn events.
-
-`plugin.tavern.turn.progress` is volatile turn state for the active reply row. It may include tool starts,
-tool results, command output, plan updates, and coarse reasoning activity. Tavern should render it
-as progress only; it is not a durable transcript record and should not expose private reasoning
-content.
+The plugin writes turn activity through `@tavern/sdk` and the Tavern Chat API. Activity can include
+tool starts, tool results, command output, plan updates, assistant draft text, and provider-exposed
+reasoning summaries. Tavern renders it as progress only; it is not a durable transcript record and
+does not expose private reasoning content.
 
 Runtime WebSocket delivery is a notification path, not the source of truth. Tavern Runtime stores
-recoverable Tavern Messenger events before broadcasting them. A reconnecting client must be able to
-backfill accepted messages and active turn state from Runtime over HTTP or websocket replay using a
-cursor. If a websocket notification is missed, hard reload should still reconstruct the accepted
-user message, active reply state, and active progress steps from Runtime/server projections.
+durable messages, cursor-backed chat events, and current activity before broadcasting. The private
+plugin relay keeps only a small outbox keyed by the durable Tavern message id. A reconnecting client
+must be able to backfill accepted messages and active turn state from Runtime over HTTP or websocket
+replay using a cursor. If a websocket notification is missed, hard reload still reconstructs the
+accepted user message, active reply state, and active progress steps from Runtime state.
 
 ## Message Metadata
 
@@ -183,26 +175,29 @@ instruction.
 
 ## Chat Send Flow
 
-Tavern should not wait for durable history sync before showing progress.
+Tavern does not wait for durable history sync before showing progress.
 
 1. Tavern App creates a client message id and renders an app-local optimistic user row.
-2. Tavern Server validates the selected chat has exactly one bound agent and a synced session key.
-3. Tavern Runtime relays an `inbound-message` with the chat id, bound OpenClaw agent id, session
-   key, message text, client message id, and optional message metadata.
-4. Tavern Runtime persists the accepted message and a recoverable message event in one local
-   transaction before forwarding the frame to the plugin.
+2. Tavern Runtime validates the selected chat has exactly one bound agent and a synced session key.
+3. Tavern Runtime creates or reuses the durable Tavern API message and cursor-backed
+   `message.created` event.
+4. Tavern Runtime writes a private plugin outbox entry keyed by the durable message id, then relays
+   an `inbound-message` with the chat id, bound OpenClaw agent id, session key, message text,
+   message id, nonce, per-chat sequence, and optional message metadata.
 5. Tavern Messenger accepts the send and returns a run id through Runtime.
-6. Tavern Server projects the accepted message event into local session message history so reload
-   does not wait for final transcript sync.
-7. Live runtime events update active reply, message delta, tool, and completion state. Active turn
-   progress is projected as recoverable active-turn state until the turn completes or fails, so
-   leaving and returning to a chat preserves the same in-progress surface a continuously connected
-   client would have seen.
-8. Durable history sync later reconciles OpenClaw's authoritative transcript with persisted records
-   and deduplicates any overlap with accepted Tavern inbound messages.
+6. Tavern Runtime exposes the accepted message through chat history so reload does not wait for
+   final transcript sync.
+7. The plugin writes active reply, message delta, tool, reasoning-summary, and completion state to
+   Tavern API activity. Leaving and returning to a chat reads the current activity state from
+   Runtime.
+8. Tavern Messenger persists the accepted Tavern message id, nonce, run id, session key, and
+   sequence into OpenClaw transcript history.
+9. OpenClaw transcript sync links execution evidence by stable Tavern ids. The accepted user row and
+   final assistant delivery are already durable Tavern records, so final sync is a pure evidence
+   upsert rather than content/timestamp deduplication.
 
 Optimistic rows are app-local presentation state. Accepted messages and active turn state are
-recoverable Runtime/server state, but active reply progress is not a second durable transcript.
+recoverable Runtime state, but active reply progress is not a second durable transcript.
 
 ## ACP
 

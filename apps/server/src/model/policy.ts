@@ -4,7 +4,7 @@ import {
     type AgentRuntimeModels,
     agentRuntimeModelProviderCapabilities,
     formatAgentRuntimeModelRef,
-} from '@tavern/agent-runtime-protocol';
+} from '@tavern/api';
 import { TRPCError } from '@trpc/server';
 
 function normalizeModelIdentity(model: null | AgentRuntimeModelIdentity | undefined) {

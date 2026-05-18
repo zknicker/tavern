@@ -2,18 +2,18 @@
 
 Tavern presents one primary OpenClaw-backed agent that it observes, presents, and can configure
 through OpenClaw. Runtime adapters may still project multiple OpenClaw agents, but normal product
-surfaces should resolve the primary agent instead of asking the person to choose among agents.
+surfaces resolve the primary agent instead of asking the person to choose among agents.
 
 ## Product Expectations
 
 - An agent has a stable OpenClaw identity.
 - An agent has a user-facing name.
-- An agent should feel like the same worker wherever Tavern presents it.
-- An agent should remain visible in Tavern when OpenClaw is offline if Tavern has already synced
+- An agent feels like the same worker wherever Tavern presents it.
+- An agent remains visible in Tavern when OpenClaw is offline if Tavern has already synced
   it.
 - An agent is not a session, turn, worker process, or tool call.
 - Product-facing navigation, chat start, cron setup, skills, model settings, and messaging
-  bindings should presume one primary agent.
+  bindings presume one primary agent.
 - Plural agent lists are runtime/internal projection surfaces, not normal product navigation.
 
 ## Ownership
@@ -37,8 +37,8 @@ surfaces should resolve the primary agent instead of asking the person to choose
 - An agent may run many sessions.
 - An agent may own many turns and workers.
 - An agent may author many messages and tool interactions.
-- Tavern currently selects one primary projected agent for user-facing flows. Future multi-agent
-  support should introduce explicit product behavior rather than leaking runtime lists into the UI.
+- Tavern selects one primary projected agent for user-facing flows. Multi-agent support uses
+  explicit product behavior rather than leaking runtime lists into the UI.
 
 ## Lifecycle
 

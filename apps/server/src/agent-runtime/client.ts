@@ -91,7 +91,7 @@ import {
     agentRuntimeStatusSchema,
     agentRuntimeUpdateCronSchema,
     agentRuntimeUpsertBindingSchema,
-} from '@tavern/agent-runtime-protocol';
+} from '@tavern/api';
 import { z } from 'zod';
 
 const agentRuntimeClientOptionsSchema = z.object({

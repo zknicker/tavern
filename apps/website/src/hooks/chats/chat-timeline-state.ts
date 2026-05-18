@@ -16,6 +16,14 @@ export interface ChatTurnProgressStep {
     status: 'active' | 'completed' | 'failed';
 }
 
+const initialPlanningStep: ChatTurnProgressStep = {
+    detail: null,
+    id: 'planning',
+    kind: 'plan',
+    label: 'Planning',
+    status: 'active',
+};
+
 export interface ChatTimelineState {
     activeReply: ChatActiveReply | null;
     activeReplyProgressStartedAt: string | null;
@@ -65,6 +73,24 @@ function normalizeReplyText(text: string | null | undefined) {
     return text?.trim() ?? '';
 }
 
+function getRuntimeMetadataString(
+    metadata: Record<string, unknown> | null | undefined,
+    key: string
+) {
+    const runtime = metadata?.runtime;
+
+    if (!(runtime && typeof runtime === 'object' && !Array.isArray(runtime))) {
+        return null;
+    }
+
+    const value = (runtime as Record<string, unknown>)[key];
+    return typeof value === 'string' && value.trim().length > 0 ? value : null;
+}
+
+function getMessageRuntimeRunId(row: ChatTimelineMessageRow) {
+    return getRuntimeMetadataString(row.message.metadata, 'runId');
+}
+
 function hasCompatibleAssistantIdentity(row: ChatTimelineMessageRow, activeReply: ChatActiveReply) {
     if (row.actor?.kind === 'agent' && row.actor.id !== activeReply.agentId) {
         return false;
@@ -85,10 +111,19 @@ function hasCompatibleSession(row: ChatTimelineMessageRow, activeReply: ChatActi
 }
 
 function isDurableReplyForActiveReply(row: ChatTimelineMessageRow, activeReply: ChatActiveReply) {
+    if (row.message.senderType !== 'agent') {
+        return false;
+    }
+
+    if (getMessageRuntimeRunId(row) === activeReply.runId) {
+        return true;
+    }
+
     if (
-        row.message.senderType !== 'agent' ||
-        !hasCompatibleAssistantIdentity(row, activeReply) ||
-        !hasCompatibleSession(row, activeReply)
+        !(
+            hasCompatibleAssistantIdentity(row, activeReply) &&
+            hasCompatibleSession(row, activeReply)
+        )
     ) {
         return false;
     }
@@ -433,6 +468,7 @@ export function startTimelineTurn(state: ChatTimelineState, turn: ChatTurn): Cha
             text: '',
         }),
         activeReplyProgressStartedAt: null,
+        activeReplySteps: [initialPlanningStep],
         completedProgress: null,
         failedTurn: null,
     };
@@ -455,15 +491,15 @@ export function updateTimelineTurnProgress(
         return state;
     }
 
-    const existingIndex = stateForTurn.activeReplySteps.findIndex(
-        (step) => step.id === input.step.id
-    );
+    const currentSteps =
+        input.step.id === initialPlanningStep.id
+            ? stateForTurn.activeReplySteps
+            : stateForTurn.activeReplySteps.filter((step) => step.id !== initialPlanningStep.id);
+    const existingIndex = currentSteps.findIndex((step) => step.id === input.step.id);
     const nextSteps =
         existingIndex >= 0
-            ? stateForTurn.activeReplySteps.map((step, index) =>
-                  index === existingIndex ? input.step : step
-              )
-            : [...stateForTurn.activeReplySteps, input.step];
+            ? currentSteps.map((step, index) => (index === existingIndex ? input.step : step))
+            : [...currentSteps, input.step];
 
     return {
         ...stateForTurn,
@@ -500,7 +536,10 @@ function mergeProgressSteps(
     current: ChatTurnProgressStep[],
     incoming: ChatTurnProgressStep[]
 ): ChatTurnProgressStep[] {
-    let next = current;
+    const hasConcreteIncomingStep = incoming.some((step) => step.id !== initialPlanningStep.id);
+    let next = hasConcreteIncomingStep
+        ? current.filter((step) => step.id !== initialPlanningStep.id)
+        : current;
 
     for (const step of incoming) {
         const existingIndex = next.findIndex((candidate) => candidate.id === step.id);
@@ -567,7 +606,9 @@ export function updateTimelineReply(
         state.activeReply && state.activeReply.runId === update.turn.runId
             ? (state.activeReply.text ?? '')
             : '';
-    const nextText = update.replace ? update.text : update.text || existingText;
+    const nextText = update.replace
+        ? update.text
+        : update.text || (update.delta ? `${existingText}${update.delta}` : existingText);
     const nextReply = normalizeActiveReply({
         agentId: update.turn.agentId,
         isThinking: update.isThinking,

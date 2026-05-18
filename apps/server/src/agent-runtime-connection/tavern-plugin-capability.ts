@@ -1,4 +1,4 @@
-import type { AgentRuntimeStatus } from '@tavern/agent-runtime-protocol';
+import type { AgentRuntimeStatus } from '@tavern/api';
 import { saveAgentRuntimeCapabilityStatus } from '../storage/agent-runtime-capability-status.ts';
 
 export async function recordTavernPluginCapability(input: {

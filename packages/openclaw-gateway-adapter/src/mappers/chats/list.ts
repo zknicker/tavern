@@ -3,7 +3,7 @@ import {
     type AgentRuntimeChatParticipant,
     type AgentRuntimeChatPlatformMetadata,
     agentRuntimeChatListSchema,
-} from '@tavern/agent-runtime-protocol';
+} from '@tavern/api';
 import { asRecord, readArray } from '../../gateway/records.ts';
 import { mapOpenClawSessionRecord } from '../sessions/shared.ts';
 import { resolveOpenClawConversationIdentity } from './conversation-identity.ts';

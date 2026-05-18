@@ -1,12 +1,15 @@
+import { readFile } from 'node:fs/promises';
 import { buildTavernOutboundSessionRoute } from './channel.js';
 import { DEFAULT_ACCOUNT_ID, TAVERN_CHANNEL_ID } from './config.js';
 import {
     persistAcceptedInboundMessage,
     persistDeliveredTurnMessage,
     persistFailedTurnMessages,
-    readFinalAssistantReply,
+    readTranscriptSession,
 } from './failed-inbound-message.js';
+import { buildAcceptedTavernMetadata, registerActiveTavernTurn } from './message-identity.js';
 import { registerTavernDeliveryContext, sendTavernTextMessage } from './outbound.js';
+import { createTurnProgressProjector } from './turn-progress.js';
 
 export async function handleTavernInboundMessage({ context, event, runtime, sendAccepted }) {
     const input = parseTavernRelayInbound(event);
@@ -23,7 +26,7 @@ export async function handleTavernInboundMessage({ context, event, runtime, send
     }
 
     const acceptedAt = new Date().toISOString();
-    const runId = input.turnId ?? `tavern-run:${input.messageId}`;
+    const runId = input.turnId ?? buildRunId(input.messageId);
     const turn = {
         agentId: input.agentId,
         chatId: input.chatId,
@@ -39,36 +42,36 @@ export async function handleTavernInboundMessage({ context, event, runtime, send
     await persistAcceptedInboundMessage({ createSession: true, input, storePath }).catch(
         () => undefined
     );
-    context.broadcast('plugin.tavern.turn.started', turn, { dropIfSlow: true });
+    await requireTavernApi(context).updateTurnActivity(turn, { status: 'running' });
     sendAccepted({
         acceptedAt,
+        cursor: input.cursor,
+        messageId: input.messageId,
+        nonce: input.nonce,
         runId,
+        sequence: input.sequence,
         sessionKey: input.sessionKey,
         status: 'accepted',
     });
 
     runTavernTurn({ context, input, runId, runtime, startedAt: acceptedAt }).catch((error) => {
-        context.broadcast(
-            'plugin.tavern.turn.failed',
-            {
-                ...turn,
-                error: error instanceof Error ? error.message : String(error),
-                timestamp: new Date().toISOString(),
-            },
-            { dropIfSlow: true }
-        );
+        void requireTavernApi(context).updateTurnActivity(turn, {
+            status: 'failed',
+            summary: error instanceof Error ? error.message : String(error),
+        });
     });
 }
 
+function buildRunId(messageId) {
+    return `run_${stripPrefix(String(messageId), 'msg_')}`;
+}
+
+function stripPrefix(value, prefix) {
+    return value.startsWith(prefix) ? value.slice(prefix.length) : value;
+}
+
 async function runTavernTurn({ context, input, runId, runtime, startedAt }) {
-    const timing = createTurnTimingBroadcaster(context, {
-        agentId: input.agentId,
-        chatId: input.chatId,
-        messageId: input.messageId,
-        runId,
-        sessionKey: input.sessionKey,
-        startedAt,
-    });
+    const timing = createTurnTimingLogger();
     const cfg = runtime.config.current();
     const timestampMs = Date.parse(input.sentAt);
     const timestamp = Number.isFinite(timestampMs) ? timestampMs : Date.now();
@@ -79,6 +82,15 @@ async function runTavernTurn({ context, input, runId, runtime, startedAt }) {
     const persistAcceptedInbound = createAcceptedInboundPersistor({ input, storePath });
     const sessionMetaTasks = [];
     let observedFinalReplyDelivery = false;
+    const acceptedMetadata = buildAcceptedTavernMetadata(input);
+    const partialReplies = createPartialReplyTracker();
+    const unregisterActiveTurn = registerActiveTavernTurn(input);
+    const turnProgress = createTurnProgressProjector({
+        context,
+        input,
+        runId,
+        startedAt,
+    });
     const ctxPayload = runtime.channel.turn.buildContext({
         channel: TAVERN_CHANNEL_ID,
         accountId: DEFAULT_ACCOUNT_ID,
@@ -117,11 +129,9 @@ async function runTavernTurn({ context, input, runId, runtime, startedAt }) {
                 authorizers: [{ configured: true, allowed: true }],
             },
         },
-        extra: input.metadata
-            ? {
-                  TavernMessageMetadata: input.metadata,
-              }
-            : undefined,
+        extra: {
+            TavernMessageMetadata: acceptedMetadata,
+        },
         message: {
             rawBody: input.text,
             bodyForAgent: input.text,
@@ -161,6 +171,7 @@ async function runTavernTurn({ context, input, runId, runtime, startedAt }) {
                 runtime.channel.reply.dispatchReplyWithBufferedBlockDispatcher,
             delivery: createTavernDeliveryAdapter({
                 cfg,
+                context,
                 input,
                 markFinalReplySent: () => {
                     observedFinalReplyDelivery = true;
@@ -183,12 +194,118 @@ async function runTavernTurn({ context, input, runId, runtime, startedAt }) {
             messageId: input.messageId,
             replyPipeline: {},
             replyOptions: {
+                allowProgressCallbacksWhenSourceDeliverySuppressed: true,
                 bootstrapContextMode: 'lightweight',
+                onApprovalEvent: (event) => {
+                    partialReplies.stopAcceptingPreamble();
+                    turnProgress.handle({
+                        data: event,
+                        stream: 'approval',
+                    });
+                },
+                onCommandOutput: (event) => {
+                    partialReplies.stopAcceptingPreamble();
+                    turnProgress.handle({
+                        data: event,
+                        stream: 'command_output',
+                    });
+                },
+                onCompactionEnd: () =>
+                    turnProgress.handle({
+                        data: {
+                            completed: true,
+                            phase: 'end',
+                        },
+                        stream: 'compaction',
+                    }),
+                onCompactionStart: () =>
+                    turnProgress.handle({
+                        data: {
+                            phase: 'start',
+                        },
+                        stream: 'compaction',
+                    }),
+                onAgentEvent: (event) => turnProgress.handle(event),
+                onItemEvent: (event) => {
+                    if (isWorkItemEvent(event)) {
+                        partialReplies.stopAcceptingPreamble();
+                    }
+                    turnProgress.handle({
+                        data: event,
+                        stream: 'item',
+                    });
+                },
+                onPatchSummary: (event) => {
+                    partialReplies.stopAcceptingPreamble();
+                    turnProgress.handle({
+                        data: event,
+                        stream: 'patch',
+                    });
+                },
+                onPartialReply: (event) =>
+                    emitPartialReplyUpdate({
+                        context,
+                        event,
+                        input,
+                        partialReplies,
+                        runId,
+                        startedAt,
+                    }),
+                onReasoningStream: (event) =>
+                    turnProgress.handle({
+                        data: {
+                            text: typeof event?.text === 'string' ? event.text : '',
+                        },
+                        stream: 'thinking',
+                    }),
+                onPlanUpdate: (event) =>
+                    turnProgress.handle({
+                        data: event,
+                        stream: 'plan',
+                    }),
+                onToolStart: (event) => {
+                    partialReplies.stopAcceptingPreamble();
+                    turnProgress.handle({
+                        data: event,
+                        stream: 'tool',
+                    });
+                },
                 runId,
                 suppressDefaultToolProgressMessages: true,
+                suppressPromptPersistence: true,
             },
         });
         timing('runAssembled.done');
+        await settleSessionMetaTasks(sessionMetaTasks);
+        const dispatchResult = turnResult?.dispatchResult ?? turnResult;
+
+        if (!hasFinalReplyDispatch(dispatchResult, { observedFinalReplyDelivery })) {
+            await settleSessionMetaTasks(sessionMetaTasks);
+            const error = new Error('OpenClaw turn ended before producing a reply.');
+
+            await requireTavernApi(context).updateTurnActivity(
+                {
+                    agentId: input.agentId,
+                    chatId: input.chatId,
+                    messageId: input.messageId,
+                    runId,
+                    sessionKey: input.sessionKey,
+                    startedAt,
+                },
+                {
+                    status: 'failed',
+                    summary: error.message,
+                }
+            );
+            void persistFailedTurnMessages({ error, input, runId, storePath }).catch(
+                () => undefined
+            );
+            return;
+        }
+
+        await settleSessionMetaTasks(sessionMetaTasks);
+        await updateTurnReasoningFromTranscript({ context, input, runId, startedAt, storePath });
+        await updateTurnCompleted({ context, input, runId, startedAt });
     } catch (error) {
         timing('runAssembled.error', {
             error: error instanceof Error ? error.message : String(error),
@@ -197,68 +314,27 @@ async function runTavernTurn({ context, input, runId, runtime, startedAt }) {
         await persistFailedTurnMessages({ error, input, runId, storePath }).catch(() => undefined);
         throw error;
     } finally {
+        unregisterActiveTurn();
         unregisterDeliveryContext();
     }
+}
 
-    const dispatchResult = turnResult?.dispatchResult ?? turnResult;
+function emitPartialReplyUpdate({ context, event, input, partialReplies, runId, startedAt }) {
+    const text = typeof event?.text === 'string' ? event.text : '';
+    const delta = typeof event?.delta === 'string' ? event.delta : undefined;
+    const visibleText = text.trim() || (delta ?? '').trim();
 
-    if (!hasFinalReplyDispatch(dispatchResult, { observedFinalReplyDelivery })) {
-        await settleSessionMetaTasks(sessionMetaTasks);
-        const finalReplyText = await readFinalAssistantReply({ input, storePath });
-
-        if (finalReplyText) {
-            context.broadcast(
-                'plugin.tavern.message.created',
-                {
-                    agentId: input.agentId,
-                    chatId: input.chatId,
-                    deliveryId: `tavern-delivery:${runId}:fallback:1`,
-                    runId,
-                    sessionKey: input.sessionKey,
-                    text: finalReplyText,
-                    timestamp: new Date().toISOString(),
-                },
-                { dropIfSlow: true }
-            );
-            context.broadcast(
-                'plugin.tavern.turn.completed',
-                {
-                    agentId: input.agentId,
-                    chatId: input.chatId,
-                    messageId: input.messageId,
-                    runId,
-                    sessionKey: input.sessionKey,
-                    startedAt,
-                    timestamp: new Date().toISOString(),
-                },
-                { dropIfSlow: true }
-            );
-            return;
-        }
-
-        const error = new Error('OpenClaw turn ended before producing a reply.');
-
-        context.broadcast(
-            'plugin.tavern.turn.failed',
-            {
-                agentId: input.agentId,
-                chatId: input.chatId,
-                error: error.message,
-                messageId: input.messageId,
-                runId,
-                sessionKey: input.sessionKey,
-                startedAt,
-                timestamp: new Date().toISOString(),
-            },
-            { dropIfSlow: true }
-        );
-        void persistFailedTurnMessages({ error, input, runId, storePath }).catch(() => undefined);
+    if (visibleText.length === 0) {
         return;
     }
 
-    await settleSessionMetaTasks(sessionMetaTasks);
-    context.broadcast(
-        'plugin.tavern.turn.completed',
+    const step = partialReplies.update(visibleText);
+
+    if (!step) {
+        return;
+    }
+
+    void requireTavernApi(context).updateTurnActivity(
         {
             agentId: input.agentId,
             chatId: input.chatId,
@@ -266,10 +342,210 @@ async function runTavernTurn({ context, input, runId, runtime, startedAt }) {
             runId,
             sessionKey: input.sessionKey,
             startedAt,
-            timestamp: new Date().toISOString(),
         },
-        { dropIfSlow: true }
+        {
+            status: 'running',
+            summary: text,
+            step: {
+                completed_at: null,
+                id: step.id,
+                kind: 'message',
+                label: 'Assistant reply',
+                metadata: {
+                    detail: step.text,
+                },
+                started_at: step.startedAt,
+                status: 'running',
+            },
+        }
     );
+}
+
+function createPartialReplyTracker() {
+    let sequence = 0;
+    let current = null;
+    let acceptsPreamble = true;
+
+    return {
+        stopAcceptingPreamble() {
+            acceptsPreamble = false;
+        },
+        update(text) {
+            if (!acceptsPreamble) {
+                return null;
+            }
+
+            if (!(current && (text.startsWith(current.text) || current.text.startsWith(text)))) {
+                sequence += 1;
+                current = {
+                    id: `assistant-reply:${sequence}`,
+                    startedAt: new Date().toISOString(),
+                    text,
+                };
+                return current;
+            }
+
+            current = {
+                ...current,
+                text,
+            };
+
+            return current;
+        },
+    };
+}
+
+function isWorkItemEvent(event) {
+    const kind = readString(event?.kind) ?? readString(event?.type);
+
+    return kind !== 'reasoning' && kind !== 'message' && kind !== 'assistant_message';
+}
+
+function updateTurnCompleted({ context, input, runId, startedAt }) {
+    return requireTavernApi(context).updateTurnActivity(
+        {
+            agentId: input.agentId,
+            chatId: input.chatId,
+            messageId: input.messageId,
+            runId,
+            sessionKey: input.sessionKey,
+            startedAt,
+        },
+        {
+            status: 'completed',
+        }
+    );
+}
+
+async function updateTurnReasoningFromTranscript({ context, input, runId, startedAt, storePath }) {
+    const session = await readTranscriptSession({ input, storePath });
+
+    if (!session) {
+        return;
+    }
+
+    const reasoning = await readLatestAssistantReasoning({
+        after: input.sentAt,
+        transcriptPath: session.transcriptPath,
+    });
+
+    if (!reasoning) {
+        return;
+    }
+
+    await requireTavernApi(context).updateTurnActivity(
+        {
+            agentId: input.agentId,
+            chatId: input.chatId,
+            messageId: input.messageId,
+            runId,
+            sessionKey: input.sessionKey,
+            startedAt,
+        },
+        {
+            status: 'running',
+            step: {
+                completed_at: reasoning.timestamp,
+                id: 'reasoning',
+                kind: 'thinking',
+                label: 'Reasoning',
+                metadata: {
+                    detail: reasoning.text,
+                },
+                started_at: reasoning.timestamp,
+                status: 'completed',
+            },
+        }
+    );
+}
+
+async function readLatestAssistantReasoning({ after, transcriptPath }) {
+    const raw = await readFile(transcriptPath, 'utf8').catch(() => null);
+
+    if (!raw) {
+        return null;
+    }
+
+    const afterMs = Date.parse(after);
+    let latest = null;
+
+    for (const line of raw.split(/\r?\n/)) {
+        if (!line.trim()) {
+            continue;
+        }
+
+        let record;
+
+        try {
+            record = JSON.parse(line);
+        } catch {
+            continue;
+        }
+
+        const message = record?.message;
+
+        if (!(message && typeof message === 'object' && message.role === 'assistant')) {
+            continue;
+        }
+
+        const timestamp = readString(record.timestamp) ?? readString(message.timestamp);
+        const timestampMs = timestamp ? Date.parse(timestamp) : Number.NaN;
+
+        if (Number.isFinite(afterMs) && Number.isFinite(timestampMs) && timestampMs < afterMs) {
+            continue;
+        }
+
+        const text = readAssistantReasoningText(message);
+
+        if (text) {
+            latest = {
+                text,
+                timestamp: timestamp ?? new Date().toISOString(),
+            };
+        }
+    }
+
+    return latest;
+}
+
+function readAssistantReasoningText(message) {
+    const parts = Array.isArray(message.content) ? message.content : [];
+    const text = parts
+        .map((part) => {
+            if (!(part && typeof part === 'object' && part.type === 'thinking')) {
+                return null;
+            }
+
+            return (
+                readString(part.thinking) ??
+                readString(part.thinkingText) ??
+                readString(part.text) ??
+                readReasoningSignatureSummary(part.thinkingSignature)
+            );
+        })
+        .filter(Boolean)
+        .join('\n');
+
+    return text.trim().length > 0 ? text : null;
+}
+
+function readReasoningSignatureSummary(value) {
+    if (typeof value !== 'string' || !value.trim()) {
+        return null;
+    }
+
+    try {
+        const parsed = JSON.parse(value);
+        const summary = Array.isArray(parsed?.summary) ? parsed.summary : [];
+        const text = summary
+            .map((entry) => (entry && typeof entry === 'object' ? readString(entry.text) : null))
+            .filter(Boolean)
+            .join('\n');
+
+        return text.trim().length > 0 ? text : null;
+    } catch {
+        return null;
+    }
 }
 
 function parseTavernRelayInbound(event) {
@@ -280,8 +556,10 @@ function parseTavernRelayInbound(event) {
         agentId: requireString(event.agentId, 'agentId'),
         chatId: requireString(conversation.id, 'conversation.id'),
         conversationKind: readConversationKind(conversation.kind),
+        cursor: readPositiveInteger(event.cursor),
         messageId: requireString(message.id, 'message.id'),
         metadata: readRecord(message.metadata),
+        nonce: readString(message.nonce),
         parentMessageId: readString(message.parentMessageId),
         sequence: readPositiveInteger(message.sequence),
         sentAt: readString(message.timestamp) ?? new Date().toISOString(),
@@ -297,25 +575,11 @@ function parseTavernRelayInbound(event) {
     };
 }
 
-function createTurnTimingBroadcaster(context, turn) {
-    const startMs = performance.now();
-
-    return (stage, extra = {}) => {
-        context.broadcast(
-            'plugin.tavern.turn.timing',
-            {
-                ...turn,
-                elapsedMs: Math.round(performance.now() - startMs),
-                stage,
-                timestamp: new Date().toISOString(),
-                ...extra,
-            },
-            { dropIfSlow: true }
-        );
-    };
+function createTurnTimingLogger() {
+    return () => undefined;
 }
 
-function createTavernDeliveryAdapter({ cfg, input, markFinalReplySent, storePath }) {
+function createTavernDeliveryAdapter({ cfg, context, input, markFinalReplySent, storePath }) {
     return {
         durable: (_payload, info = {}) =>
             info.kind === 'final'
@@ -332,6 +596,7 @@ function createTavernDeliveryAdapter({ cfg, input, markFinalReplySent, storePath
             const result = await sendTavernTextMessage({
                 accountId: DEFAULT_ACCOUNT_ID,
                 cfg,
+                context,
                 text,
                 to: `chat:${input.chatId}`,
             });
@@ -408,6 +673,13 @@ function looksLikeDeliveredFailureNotice(text) {
         normalized.includes('Session history was corrupted') ||
         normalized.includes('Message ordering conflict')
     );
+}
+
+function requireTavernApi(context) {
+    if (!context?.tavern) {
+        throw new Error('Tavern Messenger requires a Tavern API client.');
+    }
+    return context.tavern;
 }
 
 function readRecord(value) {

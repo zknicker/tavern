@@ -6,7 +6,7 @@ import {
     agentRuntimeArchiveBindingSchema,
     agentRuntimeBindingListSchema,
     agentRuntimeBindingSchema,
-} from '@tavern/agent-runtime-protocol';
+} from '@tavern/api';
 import { nowIso } from '../../gateway/records.ts';
 
 export function mapOpenClawBindingList(): AgentRuntimeBindingList {

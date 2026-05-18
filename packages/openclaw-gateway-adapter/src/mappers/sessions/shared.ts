@@ -1,4 +1,4 @@
-import type { AgentRuntimeSession } from '@tavern/agent-runtime-protocol';
+import type { AgentRuntimeSession } from '@tavern/api';
 import {
     asRecord,
     readNumber,

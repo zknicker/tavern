@@ -1,11 +1,12 @@
 import { randomUUID } from 'node:crypto';
-import type { AgentRuntimeCreateMessage } from '@tavern/agent-runtime-protocol';
+import type { AgentRuntimeCreateMessage } from '@tavern/api';
+import { createTavernClient } from '@tavern/sdk';
 import { withCapabilityStatus } from '../agent-runtime/capability-status.ts';
 import type { TavernAgentRuntimeClient } from '../agent-runtime/client.ts';
 import { createConfiguredAgentRuntimeClientForRuntimeId } from '../agent-runtime/configured-client.ts';
+import { getAgentRuntimeConnection } from '../storage/agent-runtime-connections.ts';
 import { getAgent as getAgentProjection } from '../storage/agents.ts';
 import { getChatProjection, parseChatRawJson } from '../storage/chats.ts';
-import { projectAcceptedChatMessage } from './accepted-message-projection.ts';
 import {
     type SendChatMessageInput,
     sendChatMessageInputSchema,
@@ -68,7 +69,37 @@ export async function sendTavernChatMessage(
 
     const sessionKey = requireStoredTavernSessionKey(chat, agentId);
 
-    const clientMessageId = parsed.clientMessageId ?? `tavern-message:${randomUUID()}`;
+    const clientMessageId = parsed.clientMessageId ?? `msg_${randomUUID()}`;
+    const tavernApi = await createTavernApiClient(chatProjection.runtimeId);
+    await tavernApi.chat.create({
+        id: parsed.chatId,
+        metadata: {
+            runtime: {
+                runtimeId: chatProjection.runtimeId,
+            },
+        },
+    });
+    const messageReceipt = await tavernApi.chat.createMessage(parsed.chatId, {
+        author_id: 'usr_tavern',
+        id: clientMessageId,
+        metadata: {
+            ...(parsed.metadata ?? {}),
+            runtime: {
+                agentId,
+                runtimeId: chatProjection.runtimeId,
+                sessionKey,
+                source: 'openclaw',
+            },
+        },
+        nonce: clientMessageId,
+        parts: [
+            {
+                content: parsed.content,
+                kind: 'text',
+            },
+        ],
+        role: 'user',
+    });
     const accepted = await withCapabilityStatus(
         {
             capability: 'messages',
@@ -84,42 +115,29 @@ export async function sendTavernChatMessage(
                     content: parsed.content,
                     id: clientMessageId,
                     ...(parsed.metadata ? { metadata: parsed.metadata } : {}),
+                    nonce: clientMessageId,
                 },
                 target: buildAgentRuntimeMessageTarget(chat, sessionKey),
             })
     );
     const acceptedSessionKey = accepted.sessionKey ?? sessionKey;
-    const acceptedMessageId = accepted.messageId ?? clientMessageId;
-
-    await projectAcceptedChatMessage({
-        event: {
-            agentId,
-            chatId: parsed.chatId,
-            message: {
-                id: acceptedMessageId,
-                nonce: undefined,
-                parentMessageId: null,
-                senderId: 'tavern:user',
-                senderName: 'Tavern',
-                sequence: accepted.sequence ?? 1,
-                text: parsed.content,
-                threadRootId: acceptedMessageId,
-                timestamp: accepted.acceptedAt,
-            },
-            runId: accepted.runId,
-            sessionKey: acceptedSessionKey,
-            timestamp: accepted.acceptedAt,
-            type: 'chat.messageAccepted',
-        },
-        runtimeId: chatProjection.runtimeId,
-    });
 
     return sendChatMessageResultSchema.parse({
-        acceptedAt: accepted.acceptedAt,
+        acceptedAt: accepted.acceptedAt ?? messageReceipt.message.created_at,
         chatId: parsed.chatId,
         clientMessageId,
         runId: accepted.runId,
-        sessionKey: accepted.sessionKey,
+        sessionKey: acceptedSessionKey,
         status: accepted.status,
     });
+}
+
+async function createTavernApiClient(runtimeId: string) {
+    const connection = await getAgentRuntimeConnection(runtimeId);
+
+    if (!(connection?.enabled && connection.baseUrl)) {
+        throw new Error(`Tavern Runtime connection "${runtimeId}" is not configured.`);
+    }
+
+    return createTavernClient({ baseUrl: connection.baseUrl });
 }

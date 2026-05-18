@@ -1,4 +1,4 @@
-import type { AgentRuntimeOpenClawConfigSnapshot } from '@tavern/agent-runtime-protocol';
+import type { AgentRuntimeOpenClawConfigSnapshot } from '@tavern/api';
 import { eq } from 'drizzle-orm';
 import { db } from '../db/index.ts';
 import { openClawConfigSnapshotsTable } from '../db/schema.ts';

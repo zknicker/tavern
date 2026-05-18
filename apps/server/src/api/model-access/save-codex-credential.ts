@@ -1,4 +1,4 @@
-import { agentRuntimeSaveCodexCredentialSchema } from '@tavern/agent-runtime-protocol';
+import { agentRuntimeSaveCodexCredentialSchema } from '@tavern/api';
 import { saveCodexCredential } from '../../model-access/service.ts';
 import { emitModelUpdated } from '../invalidation-events.ts';
 import { publicProcedure } from '../trpc.ts';

@@ -1,7 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import fs from 'node:fs/promises';
 import path from 'node:path';
-import type { AgentRuntimeSkillSummary } from '@tavern/agent-runtime-protocol';
+import type { AgentRuntimeSkillSummary } from '@tavern/api';
 import type { TavernAgentRuntimeClient } from '../agent-runtime/client.ts';
 import { listAgentRuntimeSkills } from '../agent-runtime/skills.ts';
 import type { AgentProjection } from '../storage/agents.ts';

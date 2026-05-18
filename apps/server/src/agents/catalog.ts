@@ -1,4 +1,4 @@
-import type { AgentRuntimeAgent } from '@tavern/agent-runtime-protocol';
+import type { AgentRuntimeAgent } from '@tavern/api';
 import { z } from 'zod';
 import {
     deleteAgentRuntimeAgent,

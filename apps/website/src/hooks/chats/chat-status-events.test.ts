@@ -187,7 +187,7 @@ test('turn start keeps the status refresh narrow', async () => {
     expect(invalidatedQueries).toEqual(['agent.activity', 'chat.status.list', 'worker.list']);
 });
 
-test('turn progress updates local timeline state without invalidating queries', () => {
+test('turn progress updates local timeline state and refreshes live chat activity', () => {
     const invalidatedQueries: string[] = [];
     const progress: string[] = [];
 
@@ -280,10 +280,15 @@ test('turn progress updates local timeline state without invalidating queries', 
     });
 
     expect(progress).toEqual(['run-1:tool:web']);
-    expect(invalidatedQueries).toEqual([]);
+    expect(invalidatedQueries).toEqual([
+        'agent.activity',
+        'chat.log.list',
+        'chat.status.list',
+        'worker.list',
+    ]);
 });
 
-test('turn reply updates local timeline state without invalidating queries', () => {
+test('turn reply updates local timeline state and refreshes live chat activity', () => {
     const invalidatedQueries: string[] = [];
     const updates: string[] = [];
 
@@ -372,7 +377,12 @@ test('turn reply updates local timeline state without invalidating queries', () 
     });
 
     expect(updates).toEqual(['run-1:Done']);
-    expect(invalidatedQueries).toEqual([]);
+    expect(invalidatedQueries).toEqual([
+        'agent.activity',
+        'chat.log.list',
+        'chat.status.list',
+        'worker.list',
+    ]);
 });
 
 test('turn failure marks the local timeline failed and invalidates transcript queries', async () => {

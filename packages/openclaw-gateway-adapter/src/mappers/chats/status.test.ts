@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'bun:test';
 import { mapOpenClawChatStatuses } from './status.ts';
 
-const chatId = '220f46ed-2d7c-41dd-9d7e-d02691f1afc3';
+const chatId = 'cht_220f46ed-2d7c-41dd-9d7e-d02691f1afc3';
 const sessionKey = `agent:main:tavern:channel:${chatId}`;
 
 describe('mapOpenClawChatStatuses', () => {

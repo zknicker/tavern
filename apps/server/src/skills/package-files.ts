@@ -4,7 +4,7 @@ import fs from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import { promisify } from 'node:util';
-import type { AgentRuntimeSkillFile } from '@tavern/agent-runtime-protocol';
+import type { AgentRuntimeSkillFile } from '@tavern/api';
 import { env } from '../config/env.ts';
 import { parseSkillMarkdown } from './markdown.ts';
 

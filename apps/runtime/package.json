@@ -19,7 +19,7 @@
     "test:watch": "bunx --bun vitest"
   },
   "dependencies": {
-    "@tavern/agent-runtime-protocol": "workspace:*",
+    "@tavern/api": "workspace:*",
     "@tavern/openclaw-gateway-adapter": "workspace:*",
     "ws": "^8.18.3"
   },

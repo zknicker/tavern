@@ -1,4 +1,4 @@
-import type { AgentRuntimeChat } from '@tavern/agent-runtime-protocol';
+import type { AgentRuntimeChat } from '@tavern/api';
 import { buildTavernChatSessionKey } from '../agent-runtime/chats.ts';
 
 export function findChatSessionKeyForAgent(chat: AgentRuntimeChat, agentId: string) {

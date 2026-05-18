@@ -2,12 +2,7 @@ import { describe, expect, it, mock } from 'bun:test';
 import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import {
-    createRuntime,
-    waitForBroadcast,
-    waitForDispatch,
-    waitForMockCallCount,
-} from './turn-test-support.js';
+import { createRuntime, waitForDispatch, waitForMockCallCount } from './turn-test-support.js';
 
 const runPrepared = mock(async (params) => {
     return { dispatchResult: await params.runDispatch() };
@@ -48,21 +43,34 @@ const emitSessionTranscriptUpdate = mock((update) => {
 let nextDispatchResult = { counts: { final: 1 }, queuedFinal: false };
 const dispatchReplyWithBufferedBlockDispatcher = mock(
     async ({ dispatcherOptions, replyOptions }) => {
-        await replyOptions?.onReasoningStream?.({ text: 'reasoning' });
-        replyOptions?.onToolStart?.({
+        await replyOptions?.onReasoningStream?.({ text: 'Checking Tavern QA context.' });
+        await replyOptions?.onItemEvent?.({
+            id: 'rs_mock_summary',
+            status: 'completed',
+            summary: [{ text: 'Reasoning summary visible in Tavern.' }],
+            type: 'reasoning',
+        });
+        await replyOptions?.onItemEvent?.({
+            itemId: 'tool:tool-call-1',
+            kind: 'tool',
             name: 'web_search',
-            phase: 'started',
-            toolCallId: 'tool-call-1',
+            phase: 'start',
+            status: 'running',
+            title: 'web search Tavern QA',
         });
         await replyOptions?.onPartialReply?.({
             delta: 'reply',
             text: 'reply',
         });
         await dispatcherOptions.deliver({ text: 'reply' });
-        replyOptions?.onToolResult?.({
+        await replyOptions?.onItemEvent?.({
+            itemId: 'tool:tool-call-1',
+            kind: 'tool',
             name: 'web_search',
-            text: 'Found sources',
-            toolCallId: 'tool-call-1',
+            phase: 'end',
+            status: 'completed',
+            summary: 'Found sources',
+            title: 'web search Tavern QA',
         });
         await replyOptions?.onReasoningEnd?.();
         return nextDispatchResult;
@@ -79,6 +87,9 @@ mock.module('openclaw/plugin-sdk/reply-payload', () => ({
 
 mock.module('openclaw/plugin-sdk/agent-harness-runtime', () => ({
     appendSessionTranscriptMessage,
+    acquireSessionWriteLock: async () => ({
+        release: async () => undefined,
+    }),
     emitSessionTranscriptUpdate,
 }));
 
@@ -104,6 +115,48 @@ mock.module('openclaw/plugin-sdk/channel-plugin-common', () => ({
 
 const { handleTavernInboundMessage } = await import('./turn.js');
 
+function createTurnTestContext() {
+    return {
+        tavern: {
+            createDelivery: mock(async (input) => ({
+                cursor: '1',
+                id: input.deliveryId,
+                idempotent: false,
+                message: {
+                    id: input.messageId,
+                },
+            })),
+            updateTurnActivity: mock(async (turn, input = {}) => ({
+                ...turn,
+                ...input,
+            })),
+        },
+    };
+}
+
+async function waitForActivityStatus(tavern, status) {
+    const deadline = Date.now() + 5000;
+
+    while (Date.now() < deadline) {
+        if (tavern.updateTurnActivity.mock.calls.some(([, input]) => input?.status === status)) {
+            return;
+        }
+        await new Promise((resolve) => setTimeout(resolve, 0));
+    }
+    throw new Error(`Tavern activity status ${status} was not written.`);
+}
+
+function hasActivityStatus(tavern, status) {
+    return tavern.updateTurnActivity.mock.calls.some(([, input]) => input?.status === status);
+}
+
+function lastActivityInput(tavern, status) {
+    return tavern.updateTurnActivity.mock.calls
+        .map(([, input]) => input)
+        .filter((input) => input?.status === status)
+        .at(-1);
+}
+
 async function dispatchInboundTavernMessage({ context, params, respond, runtime }) {
     try {
         await handleTavernInboundMessage({
@@ -123,8 +176,10 @@ async function dispatchInboundTavernMessage({ context, params, respond, runtime 
                     attachments: [],
                     id: params.message.id,
                     metadata: params.message.metadata,
+                    nonce: params.message.nonce,
                     senderId: params.sender?.id,
                     senderName: params.sender?.name,
+                    sequence: params.message.sequence,
                     text: params.message.content ?? params.message.text,
                     timestamp: params.message.sentAt,
                 },
@@ -148,19 +203,19 @@ describe('Tavern Messenger turn handling', () => {
         nextDispatchResult = { counts: { final: 1 }, queuedFinal: false };
 
         const response = {};
-        const broadcast = mock(() => undefined);
+        const context = createTurnTestContext();
         const runtime = createRuntime({ dispatchReplyWithBufferedBlockDispatcher, runPrepared });
 
         await dispatchInboundTavernMessage({
-            context: { broadcast },
+            context,
             params: {
                 agent: {
                     agentId: 'blippy',
                 },
-                chatId: '220f46ed-2d7c-41dd-9d7e-d02691f1afc3',
+                chatId: 'cht_220f46ed-2d7c-41dd-9d7e-d02691f1afc3',
                 message: {
                     content: 'hello',
-                    id: 'message-1',
+                    id: 'msg_1',
                     metadata: {
                         tavern: {
                             toolMentions: [
@@ -181,7 +236,7 @@ describe('Tavern Messenger turn handling', () => {
                     id: 'zach',
                     name: 'Zach',
                 },
-                sessionKey: 'agent:blippy:tavern:channel:220f46ed-2d7c-41dd-9d7e-d02691f1afc3',
+                sessionKey: 'agent:blippy:tavern:channel:cht_220f46ed-2d7c-41dd-9d7e-d02691f1afc3',
             },
             respond: (ok, payload, error) => {
                 response.ok = ok;
@@ -192,12 +247,12 @@ describe('Tavern Messenger turn handling', () => {
         });
 
         await waitForDispatch(runPrepared);
-        await waitForBroadcast(broadcast, 'plugin.tavern.turn.completed');
+        await waitForActivityStatus(context.tavern, 'completed');
 
         expect(response).toMatchObject({
             ok: true,
             payload: {
-                sessionKey: 'agent:blippy:tavern:channel:220f46ed-2d7c-41dd-9d7e-d02691f1afc3',
+                sessionKey: 'agent:blippy:tavern:channel:cht_220f46ed-2d7c-41dd-9d7e-d02691f1afc3',
                 status: 'accepted',
             },
         });
@@ -205,8 +260,8 @@ describe('Tavern Messenger turn handling', () => {
         expect(runPrepared.mock.calls[0][0]).toMatchObject({
             accountId: 'default',
             channel: 'tavern',
-            messageId: 'message-1',
-            routeSessionKey: 'agent:blippy:tavern:channel:220f46ed-2d7c-41dd-9d7e-d02691f1afc3',
+            messageId: 'msg_1',
+            routeSessionKey: 'agent:blippy:tavern:channel:cht_220f46ed-2d7c-41dd-9d7e-d02691f1afc3',
         });
         expect(runPrepared.mock.calls[0][0].ctxPayload).toMatchObject({
             TavernMessageMetadata: {
@@ -224,24 +279,157 @@ describe('Tavern Messenger turn handling', () => {
                 },
             },
             ChatType: 'channel',
-            From: 'chat:220f46ed-2d7c-41dd-9d7e-d02691f1afc3',
+            From: 'chat:cht_220f46ed-2d7c-41dd-9d7e-d02691f1afc3',
             Provider: 'tavern',
-            SessionKey: 'agent:blippy:tavern:channel:220f46ed-2d7c-41dd-9d7e-d02691f1afc3',
-            To: 'chat:220f46ed-2d7c-41dd-9d7e-d02691f1afc3',
+            SessionKey: 'agent:blippy:tavern:channel:cht_220f46ed-2d7c-41dd-9d7e-d02691f1afc3',
+            To: 'chat:cht_220f46ed-2d7c-41dd-9d7e-d02691f1afc3',
         });
         expect(dispatchReplyWithBufferedBlockDispatcher).toHaveBeenCalledTimes(1);
         expect(
             dispatchReplyWithBufferedBlockDispatcher.mock.calls[0][0].replyOptions
         ).toMatchObject({
+            allowProgressCallbacksWhenSourceDeliverySuppressed: true,
             bootstrapContextMode: 'lightweight',
-            runId: 'tavern-run:message-1',
+            runId: 'run_1',
             suppressDefaultToolProgressMessages: true,
         });
+        expect(
+            typeof dispatchReplyWithBufferedBlockDispatcher.mock.calls[0][0].replyOptions
+                .onAgentEvent
+        ).toBe('function');
 
-        const progressBroadcasts = broadcast.mock.calls.filter(
-            ([eventName]) => eventName === 'plugin.tavern.turn.progress'
-        );
-        expect(progressBroadcasts).toHaveLength(0);
+        expect(context.tavern.createDelivery).toHaveBeenCalledTimes(1);
+        expect(context.tavern.createDelivery.mock.calls[0][0]).toMatchObject({
+            chatId: 'cht_220f46ed-2d7c-41dd-9d7e-d02691f1afc3',
+            deliveryId: 'del_1_final_1',
+            messageId: 'msg_1_final_1',
+            runId: 'run_1',
+            text: 'reply',
+        });
+        expect(
+            context.tavern.updateTurnActivity.mock.calls.map(([, input]) => input)
+        ).toMatchObject([
+            {
+                status: 'running',
+            },
+            {
+                step: {
+                    id: 'reasoning',
+                    kind: 'thinking',
+                    label: 'Reasoning',
+                    metadata: {
+                        detail: 'Checking Tavern QA context.',
+                    },
+                    status: 'running',
+                },
+                status: 'running',
+            },
+            {
+                step: {
+                    id: 'reasoning',
+                    kind: 'thinking',
+                    label: 'Reasoning',
+                    metadata: {
+                        detail: 'Reasoning summary visible in Tavern.',
+                    },
+                    status: 'completed',
+                },
+                status: 'running',
+            },
+            {
+                step: {
+                    id: 'tool:tool-call-1',
+                    kind: 'tool',
+                    label: 'web search Tavern QA',
+                    status: 'running',
+                },
+                status: 'running',
+            },
+            {
+                step: {
+                    id: 'tool:tool-call-1',
+                    kind: 'tool',
+                    label: 'web search Tavern QA',
+                    metadata: {
+                        detail: 'Found sources',
+                    },
+                    status: 'completed',
+                },
+                status: 'running',
+            },
+            {
+                status: 'completed',
+            },
+        ]);
+    });
+
+    it('keeps streamed assistant activity to pre-tool preamble text', async () => {
+        runPrepared.mockClear();
+        const response = {};
+        const context = createTurnTestContext();
+        const dispatchWithPreamble = mock(async ({ dispatcherOptions, replyOptions }) => {
+            await replyOptions?.onPartialReply?.({
+                delta: 'I will inspect the workspace first.',
+                text: 'I will inspect the workspace first.',
+            });
+            await replyOptions?.onToolStart?.({
+                itemId: 'tool:tool-call-1',
+                name: 'exec',
+                phase: 'start',
+                title: 'exec sleep 4',
+            });
+            await replyOptions?.onPartialReply?.({
+                delta: 'FINAL-MARKER',
+                text: 'FINAL-MARKER',
+            });
+            await dispatcherOptions.deliver({ text: 'FINAL-MARKER' });
+            return { counts: { final: 1 }, queuedFinal: false };
+        });
+
+        await dispatchInboundTavernMessage({
+            context,
+            params: {
+                agent: {
+                    agentId: 'blippy',
+                },
+                chatId: 'cht_220f46ed-2d7c-41dd-9d7e-d02691f1afc3',
+                message: {
+                    content: 'hello',
+                    id: 'msg_1',
+                    sentAt: '2026-05-04T12:00:00.000Z',
+                },
+                sender: {
+                    id: 'zach',
+                    name: 'Zach',
+                },
+                sessionKey: 'agent:blippy:tavern:channel:cht_220f46ed-2d7c-41dd-9d7e-d02691f1afc3',
+            },
+            respond: (ok, payload, error) => {
+                response.ok = ok;
+                response.payload = payload;
+                response.error = error;
+            },
+            runtime: createRuntime({
+                dispatchReplyWithBufferedBlockDispatcher: dispatchWithPreamble,
+                runPrepared,
+            }),
+        });
+
+        await waitForActivityStatus(context.tavern, 'completed');
+
+        const messageSteps = context.tavern.updateTurnActivity.mock.calls
+            .map(([, input]) => input?.step)
+            .filter((step) => step?.kind === 'message');
+
+        expect(response).toMatchObject({ ok: true });
+        expect(messageSteps).toHaveLength(1);
+        expect(messageSteps[0]).toMatchObject({
+            label: 'Assistant reply',
+            metadata: {
+                detail: 'I will inspect the workspace first.',
+            },
+        });
+        expect(JSON.stringify(messageSteps)).not.toContain('FINAL-MARKER');
     });
 
     it('persists the accepted inbound message before waiting for the final reply', async () => {
@@ -251,10 +439,10 @@ describe('Tavern Messenger turn handling', () => {
 
         let releaseDispatch = () => undefined;
         const response = {};
-        const broadcast = mock(() => undefined);
+        const context = createTurnTestContext();
         const tempDir = await mkdtemp(join(tmpdir(), 'tavern-turn-accepted-test-'));
         const storePath = join(tempDir, 'sessions.json');
-        const sessionKey = 'agent:blippy:tavern:channel:220f46ed-2d7c-41dd-9d7e-d02691f1afc3';
+        const sessionKey = 'agent:blippy:tavern:channel:cht_220f46ed-2d7c-41dd-9d7e-d02691f1afc3';
         const blockingDispatch = mock(async () => {
             await new Promise((resolve) => {
                 releaseDispatch = resolve;
@@ -284,15 +472,17 @@ describe('Tavern Messenger turn handling', () => {
 
         try {
             await dispatchInboundTavernMessage({
-                context: { broadcast },
+                context,
                 params: {
                     agent: {
                         agentId: 'blippy',
                     },
-                    chatId: '220f46ed-2d7c-41dd-9d7e-d02691f1afc3',
+                    chatId: 'cht_220f46ed-2d7c-41dd-9d7e-d02691f1afc3',
                     message: {
                         content: 'hello before final',
-                        id: 'message-1',
+                        id: 'msg_1',
+                        nonce: 'msg_1',
+                        sequence: 7,
                         sentAt: '2026-05-04T12:00:00.000Z',
                     },
                     sender: {
@@ -325,8 +515,19 @@ describe('Tavern Messenger turn handling', () => {
             });
             expect(appendSessionTranscriptMessage.mock.calls[0][0].message).toMatchObject({
                 content: [{ text: 'hello before final', type: 'text' }],
-                messageId: 'message-1',
+                messageId: 'msg_1',
+                metadata: {
+                    tavern: {
+                        acceptedMessageId: 'msg_1',
+                        acceptedRunId: 'run_1',
+                        nonce: 'msg_1',
+                        sequence: 7,
+                        sessionKey,
+                    },
+                },
+                nonce: 'msg_1',
                 role: 'user',
+                sequence: 7,
                 sessionKey,
             });
             expect(transcriptUpdates[0]).toMatchObject({
@@ -335,14 +536,14 @@ describe('Tavern Messenger turn handling', () => {
 
             await waitForMockCallCount(blockingDispatch, 1);
             releaseDispatch();
-            await waitForBroadcast(broadcast, 'plugin.tavern.turn.completed');
+            await waitForActivityStatus(context.tavern, 'completed');
         } finally {
             releaseDispatch();
             await rm(tempDir, { force: true, recursive: true });
         }
     });
 
-    it('broadcasts turn failure when OpenClaw finishes without a final reply', async () => {
+    it('writes turn failure activity when OpenClaw finishes without a final reply', async () => {
         runPrepared.mockClear();
         appendSessionTranscriptMessage.mockClear();
         emitSessionTranscriptUpdate.mockClear();
@@ -351,14 +552,14 @@ describe('Tavern Messenger turn handling', () => {
         const silentDispatch = mock(async () => nextDispatchResult);
 
         const response = {};
-        const broadcast = mock(() => undefined);
+        const context = createTurnTestContext();
         const tempDir = await mkdtemp(join(tmpdir(), 'tavern-turn-test-'));
         const storePath = join(tempDir, 'sessions.json');
         const transcriptPath = join(tempDir, 'session.jsonl');
         await writeFile(
             storePath,
             `${JSON.stringify({
-                'agent:blippy:tavern:channel:220f46ed-2d7c-41dd-9d7e-d02691f1afc3': {
+                'agent:blippy:tavern:channel:cht_220f46ed-2d7c-41dd-9d7e-d02691f1afc3': {
                     sessionFile: transcriptPath,
                     sessionId: 'session-1',
                 },
@@ -367,22 +568,23 @@ describe('Tavern Messenger turn handling', () => {
 
         try {
             await dispatchInboundTavernMessage({
-                context: { broadcast },
+                context,
                 params: {
                     agent: {
                         agentId: 'blippy',
                     },
-                    chatId: '220f46ed-2d7c-41dd-9d7e-d02691f1afc3',
+                    chatId: 'cht_220f46ed-2d7c-41dd-9d7e-d02691f1afc3',
                     message: {
                         content: 'use web search',
-                        id: 'message-1',
+                        id: 'msg_1',
                         sentAt: '2026-05-04T12:00:00.000Z',
                     },
                     sender: {
                         id: 'zach',
                         name: 'Zach',
                     },
-                    sessionKey: 'agent:blippy:tavern:channel:220f46ed-2d7c-41dd-9d7e-d02691f1afc3',
+                    sessionKey:
+                        'agent:blippy:tavern:channel:cht_220f46ed-2d7c-41dd-9d7e-d02691f1afc3',
                 },
                 respond: (ok, payload, error) => {
                     response.ok = ok;
@@ -396,7 +598,7 @@ describe('Tavern Messenger turn handling', () => {
                 }),
             });
 
-            await waitForBroadcast(broadcast, 'plugin.tavern.turn.failed');
+            await waitForActivityStatus(context.tavern, 'failed');
             await waitForMockCallCount(appendSessionTranscriptMessage, 2);
             await waitForMockCallCount(emitSessionTranscriptUpdate, 2);
 
@@ -406,35 +608,30 @@ describe('Tavern Messenger turn handling', () => {
                     status: 'accepted',
                 },
             });
-            expect(
-                broadcast.mock.calls.find(
-                    ([eventName]) => eventName === 'plugin.tavern.turn.failed'
-                )?.[1]
-            ).toMatchObject({
-                chatId: '220f46ed-2d7c-41dd-9d7e-d02691f1afc3',
-                error: 'OpenClaw turn ended before producing a reply.',
-                runId: 'tavern-run:message-1',
+            expect(lastActivityInput(context.tavern, 'failed')).toMatchObject({
+                status: 'failed',
+                summary: 'OpenClaw turn ended before producing a reply.',
             });
             expect(appendSessionTranscriptMessage).toHaveBeenCalledTimes(2);
             const persistedTranscriptPath = transcriptUpdates[0]?.sessionFile;
 
             expect(transcriptUpdates[0]).toMatchObject({
                 message: {
-                    chatId: '220f46ed-2d7c-41dd-9d7e-d02691f1afc3',
-                    messageId: 'message-1',
+                    chatId: 'cht_220f46ed-2d7c-41dd-9d7e-d02691f1afc3',
+                    messageId: 'msg_1',
                     role: 'user',
                     senderName: 'Zach',
                 },
-                sessionKey: 'agent:blippy:tavern:channel:220f46ed-2d7c-41dd-9d7e-d02691f1afc3',
+                sessionKey: 'agent:blippy:tavern:channel:cht_220f46ed-2d7c-41dd-9d7e-d02691f1afc3',
             });
             expect(transcriptUpdates[1]).toMatchObject({
                 message: {
-                    messageId: 'tavern-turn-failure:tavern-run:message-1',
+                    messageId: 'tavern-turn-failure:run_1',
                     metadata: {
                         tavern: {
                             turnFailure: {
-                                messageId: 'message-1',
-                                runId: 'tavern-run:message-1',
+                                messageId: 'msg_1',
+                                runId: 'run_1',
                             },
                         },
                         isError: true,
@@ -462,29 +659,30 @@ describe('Tavern Messenger turn handling', () => {
         nextDispatchResult = { counts: { final: 0 }, queuedFinal: false };
 
         const response = {};
-        const broadcast = mock(() => undefined);
+        const context = createTurnTestContext();
         const tempDir = await mkdtemp(join(tmpdir(), 'tavern-turn-observed-delivery-test-'));
         const storePath = join(tempDir, 'sessions.json');
         await writeFile(storePath, '{}\n');
 
         try {
             await dispatchInboundTavernMessage({
-                context: { broadcast },
+                context,
                 params: {
                     agent: {
                         agentId: 'blippy',
                     },
-                    chatId: '220f46ed-2d7c-41dd-9d7e-d02691f1afc3',
+                    chatId: 'cht_220f46ed-2d7c-41dd-9d7e-d02691f1afc3',
                     message: {
                         content: 'use read then answer',
-                        id: 'message-1',
+                        id: 'msg_1',
                         sentAt: '2026-05-04T12:00:00.000Z',
                     },
                     sender: {
                         id: 'zach',
                         name: 'Zach',
                     },
-                    sessionKey: 'agent:blippy:tavern:channel:220f46ed-2d7c-41dd-9d7e-d02691f1afc3',
+                    sessionKey:
+                        'agent:blippy:tavern:channel:cht_220f46ed-2d7c-41dd-9d7e-d02691f1afc3',
                 },
                 respond: (ok, payload, error) => {
                     response.ok = ok;
@@ -498,7 +696,7 @@ describe('Tavern Messenger turn handling', () => {
                 }),
             });
 
-            await waitForBroadcast(broadcast, 'plugin.tavern.turn.completed');
+            await waitForActivityStatus(context.tavern, 'completed');
 
             expect(response).toMatchObject({
                 ok: true,
@@ -506,114 +704,10 @@ describe('Tavern Messenger turn handling', () => {
                     status: 'accepted',
                 },
             });
-            expect(
-                broadcast.mock.calls.some(
-                    ([eventName]) => eventName === 'plugin.tavern.turn.failed'
-                )
-            ).toBe(false);
-            expect(
-                broadcast.mock.calls.find(
-                    ([eventName]) => eventName === 'plugin.tavern.message.created'
-                )?.[1]
-            ).toMatchObject({
+            expect(hasActivityStatus(context.tavern, 'failed')).toBe(false);
+            expect(context.tavern.createDelivery.mock.calls[0][0]).toMatchObject({
                 text: 'reply',
             });
-        } finally {
-            await rm(tempDir, { force: true, recursive: true });
-        }
-    });
-
-    it('completes when OpenClaw persisted the final transcript reply but dispatch counts lag', async () => {
-        runPrepared.mockClear();
-        appendSessionTranscriptMessage.mockClear();
-        emitSessionTranscriptUpdate.mockClear();
-        transcriptUpdates.length = 0;
-
-        const response = {};
-        const broadcast = mock(() => undefined);
-        const tempDir = await mkdtemp(join(tmpdir(), 'tavern-turn-transcript-final-test-'));
-        const storePath = join(tempDir, 'sessions.json');
-        const sessionKey = 'agent:blippy:tavern:channel:220f46ed-2d7c-41dd-9d7e-d02691f1afc3';
-        const transcriptFinalDispatch = mock(async () => {
-            const store = JSON.parse(await readFile(storePath, 'utf8'));
-            const transcriptPath = store[sessionKey]?.sessionFile;
-
-            await appendSessionTranscriptMessage({
-                message: {
-                    content: [{ text: 'reply from transcript', type: 'text' }],
-                    role: 'assistant',
-                    sessionKey,
-                    timestamp: Date.parse('2026-05-04T12:00:01.000Z'),
-                },
-                now: Date.parse('2026-05-04T12:00:01.000Z'),
-                sessionId: store[sessionKey]?.sessionId,
-                transcriptPath,
-            });
-
-            return { counts: { final: 0 }, queuedFinal: false };
-        });
-
-        await writeFile(
-            storePath,
-            `${JSON.stringify({
-                [sessionKey]: {
-                    sessionId: 'session-1',
-                },
-            })}\n`
-        );
-
-        try {
-            await dispatchInboundTavernMessage({
-                context: { broadcast },
-                params: {
-                    agent: {
-                        agentId: 'blippy',
-                    },
-                    chatId: '220f46ed-2d7c-41dd-9d7e-d02691f1afc3',
-                    message: {
-                        content: 'hello',
-                        id: 'message-1',
-                        sentAt: '2026-05-04T12:00:00.000Z',
-                    },
-                    sender: {
-                        id: 'zach',
-                        name: 'Zach',
-                    },
-                    sessionKey,
-                },
-                respond: (ok, payload, error) => {
-                    response.ok = ok;
-                    response.payload = payload;
-                    response.error = error;
-                },
-                runtime: createRuntime({
-                    dispatchReplyWithBufferedBlockDispatcher: transcriptFinalDispatch,
-                    runPrepared,
-                    storePath,
-                }),
-            });
-
-            await waitForBroadcast(broadcast, 'plugin.tavern.turn.completed');
-
-            expect(response).toMatchObject({
-                ok: true,
-                payload: {
-                    status: 'accepted',
-                },
-            });
-            expect(
-                broadcast.mock.calls.some(
-                    ([eventName]) => eventName === 'plugin.tavern.turn.failed'
-                )
-            ).toBe(false);
-            expect(
-                broadcast.mock.calls.find(
-                    ([eventName]) => eventName === 'plugin.tavern.message.created'
-                )?.[1]
-            ).toMatchObject({
-                text: 'reply from transcript',
-            });
-            expect(appendSessionTranscriptMessage).toHaveBeenCalledTimes(2);
         } finally {
             await rm(tempDir, { force: true, recursive: true });
         }
@@ -628,14 +722,14 @@ describe('Tavern Messenger turn handling', () => {
         const silentDispatch = mock(async () => nextDispatchResult);
 
         const response = {};
-        const broadcast = mock(() => undefined);
+        const context = createTurnTestContext();
         const tempDir = await mkdtemp(join(tmpdir(), 'tavern-turn-repeat-test-'));
         const storePath = join(tempDir, 'sessions.json');
         const transcriptPath = join(tempDir, 'session.jsonl');
         await writeFile(
             storePath,
             `${JSON.stringify({
-                'agent:blippy:tavern:channel:220f46ed-2d7c-41dd-9d7e-d02691f1afc3': {
+                'agent:blippy:tavern:channel:cht_220f46ed-2d7c-41dd-9d7e-d02691f1afc3': {
                     sessionFile: transcriptPath,
                     sessionId: 'session-1',
                 },
@@ -654,15 +748,15 @@ describe('Tavern Messenger turn handling', () => {
                 JSON.stringify({
                     id: 'transcript-existing',
                     message: {
-                        chatId: '220f46ed-2d7c-41dd-9d7e-d02691f1afc3',
+                        chatId: 'cht_220f46ed-2d7c-41dd-9d7e-d02691f1afc3',
                         content: [{ text: 'use web search', type: 'text' }],
-                        messageId: 'message-0',
+                        messageId: 'msg_0',
                         role: 'user',
                         sender: 'Zach',
                         senderId: 'zach',
                         senderName: 'Zach',
                         sessionKey:
-                            'agent:blippy:tavern:channel:220f46ed-2d7c-41dd-9d7e-d02691f1afc3',
+                            'agent:blippy:tavern:channel:cht_220f46ed-2d7c-41dd-9d7e-d02691f1afc3',
                         timestamp: '2026-05-04T11:59:30.000Z',
                     },
                     parentId: null,
@@ -674,22 +768,23 @@ describe('Tavern Messenger turn handling', () => {
 
         try {
             await dispatchInboundTavernMessage({
-                context: { broadcast },
+                context,
                 params: {
                     agent: {
                         agentId: 'blippy',
                     },
-                    chatId: '220f46ed-2d7c-41dd-9d7e-d02691f1afc3',
+                    chatId: 'cht_220f46ed-2d7c-41dd-9d7e-d02691f1afc3',
                     message: {
                         content: 'use web search',
-                        id: 'message-1',
+                        id: 'msg_1',
                         sentAt: '2026-05-04T12:00:00.000Z',
                     },
                     sender: {
                         id: 'zach',
                         name: 'Zach',
                     },
-                    sessionKey: 'agent:blippy:tavern:channel:220f46ed-2d7c-41dd-9d7e-d02691f1afc3',
+                    sessionKey:
+                        'agent:blippy:tavern:channel:cht_220f46ed-2d7c-41dd-9d7e-d02691f1afc3',
                 },
                 respond: (ok, payload, error) => {
                     response.ok = ok;
@@ -703,7 +798,7 @@ describe('Tavern Messenger turn handling', () => {
                 }),
             });
 
-            await waitForBroadcast(broadcast, 'plugin.tavern.turn.failed');
+            await waitForActivityStatus(context.tavern, 'failed');
             await waitForMockCallCount(appendSessionTranscriptMessage, 2);
 
             expect(response).toMatchObject({
@@ -714,8 +809,8 @@ describe('Tavern Messenger turn handling', () => {
             });
 
             const transcript = await readFile(transcriptPath, 'utf8');
-            expect(transcript).toContain('"messageId":"message-0"');
-            expect(transcript).toContain('"messageId":"message-1"');
+            expect(transcript).toContain('"messageId":"msg_0"');
+            expect(transcript).toContain('"messageId":"msg_1"');
             expect(transcript.match(/use web search/g)?.length).toBeGreaterThanOrEqual(2);
         } finally {
             await rm(tempDir, { force: true, recursive: true });
@@ -731,13 +826,13 @@ describe('Tavern Messenger turn handling', () => {
         const silentDispatch = mock(async () => nextDispatchResult);
 
         const response = {};
-        const broadcast = mock(() => undefined);
+        const context = createTurnTestContext();
         const tempDir = await mkdtemp(join(tmpdir(), 'tavern-turn-session-id-test-'));
         const storePath = join(tempDir, 'sessions.json');
         await writeFile(
             storePath,
             `${JSON.stringify({
-                'agent:blippy:tavern:channel:220f46ed-2d7c-41dd-9d7e-d02691f1afc3': {
+                'agent:blippy:tavern:channel:cht_220f46ed-2d7c-41dd-9d7e-d02691f1afc3': {
                     sessionId: 'session-1',
                 },
             })}\n`
@@ -745,22 +840,23 @@ describe('Tavern Messenger turn handling', () => {
 
         try {
             await dispatchInboundTavernMessage({
-                context: { broadcast },
+                context,
                 params: {
                     agent: {
                         agentId: 'blippy',
                     },
-                    chatId: '220f46ed-2d7c-41dd-9d7e-d02691f1afc3',
+                    chatId: 'cht_220f46ed-2d7c-41dd-9d7e-d02691f1afc3',
                     message: {
                         content: 'use web search',
-                        id: 'message-1',
+                        id: 'msg_1',
                         sentAt: '2026-05-04T12:00:00.000Z',
                     },
                     sender: {
                         id: 'zach',
                         name: 'Zach',
                     },
-                    sessionKey: 'agent:blippy:tavern:channel:220f46ed-2d7c-41dd-9d7e-d02691f1afc3',
+                    sessionKey:
+                        'agent:blippy:tavern:channel:cht_220f46ed-2d7c-41dd-9d7e-d02691f1afc3',
                 },
                 respond: (ok, payload, error) => {
                     response.ok = ok;
@@ -774,12 +870,12 @@ describe('Tavern Messenger turn handling', () => {
                 }),
             });
 
-            await waitForBroadcast(broadcast, 'plugin.tavern.turn.failed');
+            await waitForActivityStatus(context.tavern, 'failed');
             await waitForMockCallCount(appendSessionTranscriptMessage, 2);
 
             const nextStore = JSON.parse(await readFile(storePath, 'utf8'));
             const transcriptPath =
-                nextStore['agent:blippy:tavern:channel:220f46ed-2d7c-41dd-9d7e-d02691f1afc3']
+                nextStore['agent:blippy:tavern:channel:cht_220f46ed-2d7c-41dd-9d7e-d02691f1afc3']
                     ?.sessionFile;
 
             expect(response).toMatchObject({
@@ -804,7 +900,7 @@ describe('Tavern Messenger turn handling', () => {
         transcriptUpdates.length = 0;
         dispatchReplyWithBufferedBlockDispatcher.mockClear();
         const response = {};
-        const broadcast = mock(() => undefined);
+        const context = createTurnTestContext();
         const tempDir = await mkdtemp(join(tmpdir(), 'tavern-turn-auth-error-test-'));
         const storePath = join(tempDir, 'sessions.json');
         const transcriptPath = join(tempDir, 'session.jsonl');
@@ -816,7 +912,7 @@ describe('Tavern Messenger turn handling', () => {
         await writeFile(
             storePath,
             `${JSON.stringify({
-                'agent:blippy:tavern:channel:220f46ed-2d7c-41dd-9d7e-d02691f1afc3': {
+                'agent:blippy:tavern:channel:cht_220f46ed-2d7c-41dd-9d7e-d02691f1afc3': {
                     sessionFile: transcriptPath,
                     sessionId: 'session-1',
                 },
@@ -825,22 +921,23 @@ describe('Tavern Messenger turn handling', () => {
 
         try {
             await dispatchInboundTavernMessage({
-                context: { broadcast },
+                context,
                 params: {
                     agent: {
                         agentId: 'blippy',
                     },
-                    chatId: '220f46ed-2d7c-41dd-9d7e-d02691f1afc3',
+                    chatId: 'cht_220f46ed-2d7c-41dd-9d7e-d02691f1afc3',
                     message: {
                         content: 'hi',
-                        id: 'message-1',
+                        id: 'msg_1',
                         sentAt: '2026-05-04T12:00:00.000Z',
                     },
                     sender: {
                         id: 'zach',
                         name: 'Zach',
                     },
-                    sessionKey: 'agent:blippy:tavern:channel:220f46ed-2d7c-41dd-9d7e-d02691f1afc3',
+                    sessionKey:
+                        'agent:blippy:tavern:channel:cht_220f46ed-2d7c-41dd-9d7e-d02691f1afc3',
                 },
                 respond: (ok, payload, error) => {
                     response.ok = ok;
@@ -854,7 +951,7 @@ describe('Tavern Messenger turn handling', () => {
                 }),
             });
 
-            await waitForBroadcast(broadcast, 'plugin.tavern.turn.failed');
+            await waitForActivityStatus(context.tavern, 'failed');
             await waitForMockCallCount(appendSessionTranscriptMessage, 2);
 
             expect(response).toMatchObject({
@@ -863,17 +960,13 @@ describe('Tavern Messenger turn handling', () => {
                     status: 'accepted',
                 },
             });
-            expect(
-                broadcast.mock.calls.find(
-                    ([eventName]) => eventName === 'plugin.tavern.turn.failed'
-                )?.[1]
-            ).toMatchObject({
-                error: authError,
+            expect(lastActivityInput(context.tavern, 'failed')).toMatchObject({
+                summary: authError,
             });
 
             const nextStore = JSON.parse(await readFile(storePath, 'utf8'));
             const persistedTranscriptPath =
-                nextStore['agent:blippy:tavern:channel:220f46ed-2d7c-41dd-9d7e-d02691f1afc3']
+                nextStore['agent:blippy:tavern:channel:cht_220f46ed-2d7c-41dd-9d7e-d02691f1afc3']
                     ?.sessionFile;
 
             expect(typeof persistedTranscriptPath).toBe('string');
@@ -885,15 +978,15 @@ describe('Tavern Messenger turn handling', () => {
         }
     });
 
-    it('persists delivered OpenClaw error replies when the turn completes with a visible fallback', async () => {
+    it('persists delivered OpenClaw error replies when the turn completes with a visible final delivery', async () => {
         appendSessionTranscriptMessage.mockClear();
         emitSessionTranscriptUpdate.mockClear();
         transcriptUpdates.length = 0;
         const response = {};
-        const broadcast = mock(() => undefined);
+        const context = createTurnTestContext();
         const tempDir = await mkdtemp(join(tmpdir(), 'tavern-turn-delivered-error-test-'));
         const storePath = join(tempDir, 'sessions.json');
-        const sessionKey = 'agent:blippy:tavern:channel:220f46ed-2d7c-41dd-9d7e-d02691f1afc3';
+        const sessionKey = 'agent:blippy:tavern:channel:cht_220f46ed-2d7c-41dd-9d7e-d02691f1afc3';
         const visibleError =
             '⚠️ Model login failed on the gateway for openai-codex. Please try again.';
         const visibleErrorDispatch = mock(async ({ dispatcherOptions }) => {
@@ -920,15 +1013,15 @@ describe('Tavern Messenger turn handling', () => {
 
         try {
             await dispatchInboundTavernMessage({
-                context: { broadcast },
+                context,
                 params: {
                     agent: {
                         agentId: 'blippy',
                     },
-                    chatId: '220f46ed-2d7c-41dd-9d7e-d02691f1afc3',
+                    chatId: 'cht_220f46ed-2d7c-41dd-9d7e-d02691f1afc3',
                     message: {
                         content: 'hi',
-                        id: 'message-1',
+                        id: 'msg_1',
                         sentAt: '2026-05-04T12:00:00.000Z',
                     },
                     sender: {
@@ -949,7 +1042,7 @@ describe('Tavern Messenger turn handling', () => {
                 }),
             });
 
-            await waitForBroadcast(broadcast, 'plugin.tavern.turn.completed');
+            await waitForActivityStatus(context.tavern, 'completed');
             await waitForMockCallCount(appendSessionTranscriptMessage, 2);
 
             const nextStore = JSON.parse(await readFile(storePath, 'utf8'));
@@ -962,11 +1055,7 @@ describe('Tavern Messenger turn handling', () => {
                 },
             });
             expect(typeof transcriptPath).toBe('string');
-            expect(
-                broadcast.mock.calls.find(
-                    ([eventName]) => eventName === 'plugin.tavern.message.created'
-                )?.[1]
-            ).toMatchObject({
+            expect(context.tavern.createDelivery.mock.calls[0][0]).toMatchObject({
                 text: visibleError,
             });
 
@@ -987,10 +1076,10 @@ describe('Tavern Messenger turn handling', () => {
 
         let releaseSessionMetaTask = () => undefined;
         const response = {};
-        const broadcast = mock(() => undefined);
+        const context = createTurnTestContext();
         const tempDir = await mkdtemp(join(tmpdir(), 'tavern-turn-meta-task-test-'));
         const storePath = join(tempDir, 'sessions.json');
-        const sessionKey = 'agent:blippy:tavern:channel:220f46ed-2d7c-41dd-9d7e-d02691f1afc3';
+        const sessionKey = 'agent:blippy:tavern:channel:cht_220f46ed-2d7c-41dd-9d7e-d02691f1afc3';
         const authError =
             'OAuth token refresh failed for openai-codex: Failed to refresh OpenAI Codex token.';
         await writeFile(storePath, '{}\n');
@@ -1025,15 +1114,15 @@ describe('Tavern Messenger turn handling', () => {
 
         try {
             await dispatchInboundTavernMessage({
-                context: { broadcast },
+                context,
                 params: {
                     agent: {
                         agentId: 'blippy',
                     },
-                    chatId: '220f46ed-2d7c-41dd-9d7e-d02691f1afc3',
+                    chatId: 'cht_220f46ed-2d7c-41dd-9d7e-d02691f1afc3',
                     message: {
                         content: 'hi',
-                        id: 'message-1',
+                        id: 'msg_1',
                         sentAt: '2026-05-04T12:00:00.000Z',
                     },
                     sender: {
@@ -1055,9 +1144,10 @@ describe('Tavern Messenger turn handling', () => {
                 }),
             });
 
+            await waitForDispatch(failingRunPrepared);
             releaseSessionMetaTask();
 
-            await waitForBroadcast(broadcast, 'plugin.tavern.turn.failed');
+            await waitForActivityStatus(context.tavern, 'failed');
             await waitForMockCallCount(appendSessionTranscriptMessage, 2);
 
             expect(response).toMatchObject({
@@ -1073,7 +1163,7 @@ describe('Tavern Messenger turn handling', () => {
             expect(typeof transcriptPath).toBe('string');
 
             const transcript = await readFile(transcriptPath, 'utf8');
-            expect(transcript).toContain('"messageId":"message-1"');
+            expect(transcript).toContain('"messageId":"msg_1"');
             expect(transcript).toContain(authError);
         } finally {
             await rm(tempDir, { force: true, recursive: true });

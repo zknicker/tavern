@@ -6,4 +6,8 @@ const { getRuntime: getTavernChannelRuntime, setRuntime: setTavernChannelRuntime
         pluginId: 'tavern',
     });
 
-export { getTavernChannelRuntime, setTavernChannelRuntime };
+function setRuntime(runtime) {
+    setTavernChannelRuntime(runtime);
+}
+
+export { getTavernChannelRuntime, setRuntime as setTavernChannelRuntime };

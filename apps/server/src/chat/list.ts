@@ -1,7 +1,4 @@
-import type {
-    AgentRuntimeChatParticipant,
-    AgentRuntimeChatPlatformMetadata,
-} from '@tavern/agent-runtime-protocol';
+import type { AgentRuntimeChatParticipant, AgentRuntimeChatPlatformMetadata } from '@tavern/api';
 import { listAgents } from '../agents/catalog.ts';
 import { buildAgentPalette, resolveAgentAvatar, resolveAgentName } from '../agents/palette.ts';
 import {

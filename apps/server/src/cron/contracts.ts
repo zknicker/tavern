@@ -1,7 +1,4 @@
-import {
-    agentRuntimeExecutionErrorSchema,
-    agentRuntimeExecutionStatusSchema,
-} from '@tavern/agent-runtime-protocol';
+import { agentRuntimeExecutionErrorSchema, agentRuntimeExecutionStatusSchema } from '@tavern/api';
 import { z } from 'zod';
 import { cronScheduleConfigSchema } from './schedule-config.ts';
 

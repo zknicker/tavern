@@ -1,7 +1,4 @@
-import {
-    type AgentRuntimeSessionResync,
-    agentRuntimeSessionResyncSchema,
-} from '@tavern/agent-runtime-protocol';
+import { type AgentRuntimeSessionResync, agentRuntimeSessionResyncSchema } from '@tavern/api';
 
 export function mapOpenClawSessionResync(sessionKey: string): AgentRuntimeSessionResync {
     return agentRuntimeSessionResyncSchema.parse({

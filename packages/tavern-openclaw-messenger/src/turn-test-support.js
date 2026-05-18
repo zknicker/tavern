@@ -73,16 +73,6 @@ export async function waitForDispatch(runPrepared) {
     throw new Error('runPrepared was not called.');
 }
 
-export async function waitForBroadcast(broadcast, eventName) {
-    for (let index = 0; index < 100; index += 1) {
-        if (broadcast.mock.calls.some(([name]) => name === eventName)) {
-            return;
-        }
-        await new Promise((resolve) => setTimeout(resolve, 0));
-    }
-    throw new Error(`${eventName} was not broadcast.`);
-}
-
 export async function waitForMockCallCount(mockFn, count) {
     for (let index = 0; index < 100; index += 1) {
         if (mockFn.mock.calls.length >= count) {

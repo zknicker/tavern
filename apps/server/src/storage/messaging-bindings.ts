@@ -1,7 +1,4 @@
-import type {
-    AgentRuntimeBinding,
-    AgentRuntimeUpsertBinding,
-} from '@tavern/agent-runtime-protocol';
+import type { AgentRuntimeBinding, AgentRuntimeUpsertBinding } from '@tavern/api';
 import { asc, eq } from 'drizzle-orm';
 import { db } from '../db/index.ts';
 import { messagingBindingsTable } from '../db/schema.ts';

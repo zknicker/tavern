@@ -1,4 +1,4 @@
-import type { AgentRuntimeAgent } from '@tavern/agent-runtime-protocol';
+import type { AgentRuntimeAgent } from '@tavern/api';
 import { and, asc, eq, notInArray } from 'drizzle-orm';
 import { db } from '../db/index.ts';
 import { agentsTable } from '../db/schema.ts';

@@ -15,6 +15,11 @@ writeFileSync(
 );
 
 process.env.TAVERN_RUNTIME_ROOT = runtimeRoot;
+process.env.TAVERN_OPENCLAW_PLUGIN_DEPLOY_PATH = path.join(
+    runtimeRoot,
+    'openclaw-plugins',
+    'tavern-openclaw-messenger'
+);
 process.env.NODE_ENV = 'test';
 
 process.chdir(workspaceRoot);

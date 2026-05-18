@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import type { AgentRuntimeSessionMessage } from '@tavern/agent-runtime-protocol';
+import type { AgentRuntimeSessionMessage } from '@tavern/api';
 import { buildSessionToolCallsFromMessages } from './session-tool-call-projection.ts';
 
 test('buildSessionToolCallsFromMessages derives tool calls from chat history messages', () => {

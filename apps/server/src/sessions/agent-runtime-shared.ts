@@ -3,7 +3,7 @@ import {
     type AgentRuntimeSessionGraph,
     type AgentRuntimeSessionMessage,
     agentRuntimeModelProviderIdSchema,
-} from '@tavern/agent-runtime-protocol';
+} from '@tavern/api';
 import { inArray, or } from 'drizzle-orm';
 import { createAgentRuntimeClientForConnection } from '../agent-runtime/client-factory.ts';
 import { listAgents } from '../agents/catalog.ts';
@@ -108,68 +108,6 @@ function compareMessages(left: AgentRuntimeSessionMessage, right: AgentRuntimeSe
     }
 
     return left.id.localeCompare(right.id);
-}
-
-const transcriptEchoMaxGapMs = 15_000;
-
-function isTranscriptBackedClaudeSession(session: AgentRuntimeSession) {
-    return Boolean(session.sessionId?.trim());
-}
-
-function isLiveTavernEcho(message: AgentRuntimeSessionMessage) {
-    return message.id.startsWith('tavern-message:');
-}
-
-function canDropLiveTavernEcho(
-    message: AgentRuntimeSessionMessage,
-    candidates: AgentRuntimeSessionMessage[]
-) {
-    const messageTimestamp = Date.parse(message.timestamp);
-
-    if (Number.isNaN(messageTimestamp)) {
-        return false;
-    }
-
-    const normalizedContent = message.content.trim();
-    const messageToolCallId = message.metadata?.toolCallId ?? null;
-
-    return candidates.some((candidate) => {
-        if (candidate.id === message.id || isLiveTavernEcho(candidate)) {
-            return false;
-        }
-
-        if (candidate.senderType !== message.senderType) {
-            return false;
-        }
-
-        if ((candidate.metadata?.toolCallId ?? null) !== messageToolCallId) {
-            return false;
-        }
-
-        if (candidate.content.trim() !== normalizedContent) {
-            return false;
-        }
-
-        const candidateTimestamp = Date.parse(candidate.timestamp);
-
-        return (
-            !Number.isNaN(candidateTimestamp) &&
-            Math.abs(candidateTimestamp - messageTimestamp) <= transcriptEchoMaxGapMs
-        );
-    });
-}
-
-function dedupeTranscriptBackedSessionMessages(
-    session: AgentRuntimeSession,
-    messages: AgentRuntimeSessionMessage[]
-) {
-    if (!isTranscriptBackedClaudeSession(session)) {
-        return messages;
-    }
-
-    return messages.filter(
-        (message) => !(isLiveTavernEcho(message) && canDropLiveTavernEcho(message, messages))
-    );
 }
 
 export function mapAgentRuntimeSessionMessage(
@@ -505,12 +443,10 @@ export function buildAgentRuntimeSessionMetadata(snapshot: AgentRuntimeSessionSn
 }
 
 export function listAgentRuntimeSessionMessages(snapshot: AgentRuntimeSessionSnapshot) {
-    return dedupeTranscriptBackedSessionMessages(
-        snapshot.targetSession,
-        snapshot.graph.messages
-            .filter((message) => message.sessionKey === snapshot.targetSession.key)
-            .sort(compareMessages)
-    ).map((message) => mapAgentRuntimeSessionMessage(snapshot.targetSession, message));
+    return snapshot.graph.messages
+        .filter((message) => message.sessionKey === snapshot.targetSession.key)
+        .sort(compareMessages)
+        .map((message) => mapAgentRuntimeSessionMessage(snapshot.targetSession, message));
 }
 
 export function buildAgentRuntimeSessionRelationships(snapshot: AgentRuntimeSessionSnapshot) {

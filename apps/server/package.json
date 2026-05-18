@@ -9,17 +9,18 @@
     "start": "bun dist/index.js",
     "lint": "ultracite check src test",
     "lint:fix": "ultracite fix src test",
-    "test": "bun test",
+    "test": "node scripts/run-tests.mjs",
     "typecheck": "tsc --noEmit",
     "db:generate": "drizzle-kit generate",
     "db:ensure": "bun src/db/ensure-runner.ts"
   },
   "dependencies": {
     "@fastify/cors": "^11.1.0",
-    "@tavern/agent-runtime-protocol": "workspace:*",
+    "@tavern/api": "workspace:*",
     "@tavern/claude-usage": "workspace:*",
     "@tavern/codex-usage": "workspace:*",
     "@tavern/openclaw-gateway-adapter": "workspace:*",
+    "@tavern/sdk": "workspace:*",
     "@trpc/server": "^11.10.0",
     "bottleneck": "^2.19.5",
     "bunqueue": "^2.6.38",
@@ -27,7 +28,7 @@
     "fastify": "^5.6.0",
     "ws": "^8.18.3",
     "yaml": "^2.8.3",
-    "zod": "^4.1.11"
+    "zod": "4.1.11"
   },
   "devDependencies": {
     "@types/ws": "^8.18.1",

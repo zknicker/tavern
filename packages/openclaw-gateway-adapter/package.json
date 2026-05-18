@@ -12,8 +12,8 @@
     "test": "bun test"
   },
   "dependencies": {
-    "@tavern/agent-runtime-protocol": "workspace:*",
-    "zod": "^4.1.11"
+    "@tavern/api": "workspace:*",
+    "zod": "4.1.11"
   },
   "devDependencies": {
     "@types/node": "^24.5.2",

@@ -1,4 +1,4 @@
-import type { AgentRuntimeSessionPrompt } from '@tavern/agent-runtime-protocol';
+import type { AgentRuntimeSessionPrompt } from '@tavern/api';
 
 export function mapOpenClawSessionPrompt(): AgentRuntimeSessionPrompt | null {
     return null;

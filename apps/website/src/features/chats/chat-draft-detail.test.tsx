@@ -5,7 +5,7 @@ import { buildDraftActiveReply } from './chat-draft-detail.tsx';
 function createDraft(overrides: Partial<ChatStartDraft> = {}): ChatStartDraft {
     return {
         agentId: 'agent-1',
-        clientMessageId: 'tavern-message:1',
+        clientMessageId: 'msg_1',
         content: 'Hello',
         createdAt: '2026-05-13T12:00:00.000Z',
         errorMessage: null,
@@ -25,7 +25,7 @@ describe('buildDraftActiveReply', () => {
         expect(buildDraftActiveReply(createDraft())).toEqual({
             agentId: 'agent-1',
             isThinking: true,
-            runId: 'tavern-message:1',
+            runId: 'msg_1',
             sessionKey: 'tavern-draft-chat:1',
             startedAt: '2026-05-13T12:00:00.000Z',
             text: '',

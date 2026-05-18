@@ -1,4 +1,4 @@
-import type { AgentRuntimeAgent, AgentRuntimeCreateAgent } from '@tavern/agent-runtime-protocol';
+import type { AgentRuntimeAgent, AgentRuntimeCreateAgent } from '@tavern/api';
 import { emitAgentUpdated } from '../api/invalidation-events.ts';
 import { AgentRuntimeRequestError, type TavernAgentRuntimeClient } from './client.ts';
 import { createConfiguredAgentRuntimeClient } from './configured-client.ts';

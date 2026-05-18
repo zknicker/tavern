@@ -1,4 +1,4 @@
-import type { AgentRuntimeSessionGraph } from '@tavern/agent-runtime-protocol';
+import type { AgentRuntimeSessionGraph } from '@tavern/api';
 import { and, inArray, notInArray } from 'drizzle-orm';
 import { db } from '../db/index.ts';
 import { sessionToolCallsTable } from '../db/schema.ts';

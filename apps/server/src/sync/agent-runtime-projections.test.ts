@@ -16,11 +16,6 @@ const [
     sessionStorage,
     messageStorage,
     activeTurnSessions,
-    chatStorage,
-    chatRuntime,
-    acceptedMessageProjection,
-    chatLog,
-    activeTurnProgress,
 ] = await Promise.all([
     import('../db/bootstrap.ts'),
     import('../db/index.ts'),
@@ -28,11 +23,6 @@ const [
     import('../storage/sessions.ts'),
     import('../storage/session-messages.ts'),
     import('../agent-runtime/active-turn-sessions.ts'),
-    import('../storage/chats.ts'),
-    import('../agent-runtime/chats.ts'),
-    import('../chat/accepted-message-projection.ts'),
-    import('../chat/log.ts'),
-    import('../chat/active-turn-progress.ts'),
 ]);
 
 ensureDatabaseSchema();
@@ -42,59 +32,6 @@ test.beforeEach(() => {
     databaseClient.exec('delete from session_messages');
     databaseClient.exec('delete from session_runs');
     databaseClient.exec('delete from chats');
-    databaseClient.exec('delete from chat_active_turn_steps');
-});
-
-test('active turn progress statuses hydrate persisted tool steps', async () => {
-    await activeTurnProgress.projectActiveTurnProgress({
-        step: {
-            detail: 'Searching docs',
-            id: 'tool:web',
-            kind: 'tool',
-            label: 'Using web search',
-            status: 'active',
-        },
-        timestamp: '2026-05-16T12:00:03.000Z',
-        turn: {
-            agentId: 'main',
-            chatId: 'chat-1',
-            runId: 'run-1',
-            sessionKey: 'agent:main:tavern:channel:chat-1',
-            startedAt: '2026-05-16T12:00:00.000Z',
-        },
-        type: 'turn.progress',
-    });
-
-    assert.deepEqual(await activeTurnProgress.listActiveTurnProgressStatuses(), [
-        {
-            activeReply: {
-                agentId: 'main',
-                isThinking: true,
-                runId: 'run-1',
-                sessionKey: 'agent:main:tavern:channel:chat-1',
-                startedAt: '2026-05-16T12:00:00.000Z',
-                text: '',
-            },
-            activeReplyProgressStartedAt: '2026-05-16T12:00:03.000Z',
-            activeReplySteps: [
-                {
-                    detail: 'Searching docs',
-                    id: 'tool:web',
-                    kind: 'tool',
-                    label: 'Using web search',
-                    status: 'active',
-                },
-            ],
-            chatId: 'chat-1',
-        },
-    ]);
-
-    await activeTurnProgress.clearActiveTurnProgress({
-        runId: 'run-1',
-        sessionKey: 'agent:main:tavern:channel:chat-1',
-    });
-
-    assert.deepEqual(await activeTurnProgress.listActiveTurnProgressStatuses(), []);
 });
 
 test('syncAgentRuntimeSession projects only the requested session', async () => {
@@ -175,76 +112,9 @@ test('syncAgentRuntimeSessionMessagesWithRetry retries empty history', async () 
     );
 });
 
-test('projectAcceptedChatMessage makes accepted user messages visible before session sync', async () => {
-    const chat = chatRuntime.buildTavernChatRecord({
-        agentIds: ['main'],
-        displayName: 'Recover me',
-        id: 'chat-accepted',
-    });
-
-    await chatStorage.upsertChatForRuntime({
-        chat,
-        runtimeId: 'openclaw-local',
-        syncedAt: '2026-05-16T12:00:00.000Z',
-    });
-    await acceptedMessageProjection.projectAcceptedChatMessage({
-        event: {
-            agentId: 'main',
-            chatId: 'chat-accepted',
-            message: {
-                id: 'message-accepted',
-                senderId: 'tavern:user',
-                senderName: 'Tavern',
-                sequence: 1,
-                text: 'hello',
-                timestamp: '2026-05-16T12:00:01.000Z',
-            },
-            runId: 'run-accepted',
-            sessionKey: 'agent:main:tavern:channel:chat-accepted',
-            timestamp: '2026-05-16T12:00:02.000Z',
-            type: 'chat.messageAccepted',
-        },
-        runtimeId: 'openclaw-local',
-    });
-
-    const page = await chatLog.getChatLogPage({
-        id: 'chat-accepted',
-        limit: 20,
-    });
-
-    assert.deepEqual(
-        page.rows.map((row) =>
-            row.kind === 'message'
-                ? [row.message.id, row.message.senderType, row.message.content]
-                : []
-        ),
-        [['message-accepted', 'user', 'hello']]
-    );
-});
-
-test('syncAgentRuntimeSessionMessages skips later generic copies of accepted Tavern prompts', async () => {
-    const sessionKey = 'agent:main:tavern:channel:dedupe-chat';
+test('syncAgentRuntimeSessionMessages upserts accepted Tavern prompts by stable message id', async () => {
+    const sessionKey = 'agent:main:tavern:channel:identity-chat';
     const prompt = 'same prompt';
-
-    await acceptedMessageProjection.projectAcceptedChatMessage({
-        event: {
-            agentId: 'main',
-            chatId: 'dedupe-chat',
-            message: {
-                id: 'accepted-message',
-                senderId: 'tavern:user',
-                senderName: 'Tavern',
-                sequence: 1,
-                text: prompt,
-                timestamp: '2026-05-13T12:04:00.000Z',
-            },
-            runId: 'run-accepted',
-            sessionKey,
-            timestamp: '2026-05-13T12:04:00.100Z',
-            type: 'chat.messageAccepted',
-        },
-        runtimeId: 'openclaw-local',
-    });
 
     const result = await projections.syncAgentRuntimeSessionMessages({
         client: {
@@ -252,14 +122,22 @@ test('syncAgentRuntimeSessionMessages skips later generic copies of accepted Tav
                 return {
                     messages: [
                         createMessage({
-                            chatId: 'dedupe-chat',
+                            chatId: 'identity-chat',
                             content: prompt,
-                            id: 'openclaw-copy',
-                            sender: 'user',
-                            senderName: 'user',
+                            id: 'msg_accepted',
+                            metadata: {
+                                tavern: {
+                                    acceptedMessageId: 'msg_accepted',
+                                    acceptedRunId: 'run-accepted',
+                                    nonce: 'msg_accepted',
+                                    sequence: 1,
+                                },
+                            },
+                            sender: 'tavern:user',
+                            senderName: 'Tavern',
                             senderType: 'user',
                             sessionKey,
-                            timestamp: '2026-05-13T12:04:08.000Z',
+                            timestamp: '2026-05-13T12:04:00.000Z',
                         }),
                         createMessage({
                             agentId: 'main',
@@ -283,95 +161,12 @@ test('syncAgentRuntimeSessionMessages skips later generic copies of accepted Tav
     const messages = await messageStorage.listSessionMessagesForSessionKeys([sessionKey]);
 
     assert.equal(result.deleted, 0);
-    assert.equal(result.synced, 1);
-    assert.deepEqual(
-        messages.map((message) => [message.externalMessageId, message.role, message.contentText]),
-        [
-            ['accepted-message', 'user', prompt],
-            ['assistant-message', 'agent', 'Reply.'],
-        ]
-    );
-});
-
-test('syncAgentRuntimeSessionMessages preserves accepted prompts inside replace windows', async () => {
-    const sessionKey = 'agent:main:tavern:channel:window-chat';
-    const prompt = 'please run three tools';
-
-    await acceptedMessageProjection.projectAcceptedChatMessage({
-        event: {
-            agentId: 'main',
-            chatId: 'window-chat',
-            message: {
-                id: 'accepted-window-message',
-                senderId: 'tavern:user',
-                senderName: 'Tavern',
-                sequence: 1,
-                text: prompt,
-                timestamp: '2026-05-13T12:04:00.000Z',
-            },
-            runId: 'run-window',
-            sessionKey,
-            timestamp: '2026-05-13T12:04:00.100Z',
-            type: 'chat.messageAccepted',
-        },
-        runtimeId: 'openclaw-local',
-    });
-
-    const result = await projections.syncAgentRuntimeSessionMessages({
-        client: {
-            async listSessionMessages() {
-                return {
-                    messages: [
-                        createMessage({
-                            agentId: 'main',
-                            chatId: `openclaw:${sessionKey}`,
-                            content: 'Working.',
-                            id: 'assistant-before',
-                            sender: 'assistant',
-                            senderName: 'agent',
-                            senderType: 'agent',
-                            sessionKey,
-                            timestamp: '2026-05-13T12:03:59.000Z',
-                        }),
-                        createMessage({
-                            chatId: 'window-chat',
-                            content: prompt,
-                            id: 'openclaw-window-copy',
-                            sender: 'user',
-                            senderName: 'user',
-                            senderType: 'user',
-                            sessionKey,
-                            timestamp: '2026-05-13T12:04:08.000Z',
-                        }),
-                        createMessage({
-                            agentId: 'main',
-                            chatId: `openclaw:${sessionKey}`,
-                            content: 'Reply.',
-                            id: 'assistant-after',
-                            sender: 'assistant',
-                            senderName: 'agent',
-                            senderType: 'agent',
-                            sessionKey,
-                            timestamp: '2026-05-13T12:04:08.100Z',
-                        }),
-                    ],
-                };
-            },
-        },
-        runtimeId: 'openclaw-local',
-        sessionKey,
-    });
-
-    const messages = await messageStorage.listSessionMessagesForSessionKeys([sessionKey]);
-
-    assert.equal(result.deleted, 0);
     assert.equal(result.synced, 2);
     assert.deepEqual(
         messages.map((message) => [message.externalMessageId, message.role, message.contentText]),
         [
-            ['assistant-before', 'agent', 'Working.'],
-            ['accepted-window-message', 'user', prompt],
-            ['assistant-after', 'agent', 'Reply.'],
+            ['msg_accepted', 'user', prompt],
+            ['assistant-message', 'agent', 'Reply.'],
         ]
     );
 });
@@ -457,6 +252,7 @@ function createMessage(input: {
     chatId: string;
     content: string;
     id: string;
+    metadata?: Record<string, unknown> | null;
     sender: string;
     senderName: string;
     senderType: 'agent' | 'system' | 'user';
@@ -468,7 +264,7 @@ function createMessage(input: {
         chatId: input.chatId,
         content: input.content,
         id: input.id,
-        metadata: null,
+        metadata: input.metadata ?? null,
         sender: input.sender,
         senderName: input.senderName,
         senderType: input.senderType,

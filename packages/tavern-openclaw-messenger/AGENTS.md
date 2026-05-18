@@ -6,7 +6,7 @@ output after OpenClaw has created the wrong session.
 
 ## Core Principles
 
-- Tavern chat identity is a UUID. Do not introduce an `tavern:` chat-id namespace.
+- Tavern chat identity is a durable `cht_` id. Do not introduce an `tavern:` chat-id namespace.
 - Do not derive Tavern chat identity from the sender, label, delivery metadata, or a prefixed
   variant.
 - Tavern chats are room-like runtime conversations, even when they contain one agent.
@@ -14,8 +14,8 @@ output after OpenClaw has created the wrong session.
 - Tavern sender is message actor metadata, not the OpenClaw session peer.
 - Tavern owns product projection and UI state. OpenClaw owns native sessions, turns, tools, and
   durable runtime history.
-- The OpenClaw Gateway adapter maps valid plugin output into Tavern Runtime Protocol. It must not
-  repair invalid plugin routing.
+- The OpenClaw Gateway adapter maps valid plugin output into Tavern API and runtime evidence
+  records. It must not repair invalid plugin routing.
 
 ## OpenClaw Routing Rules
 
@@ -24,9 +24,9 @@ output after OpenClaw has created the wrong session.
 - Tavern chats are OpenClaw channel chats, not OpenClaw direct messages.
 - Build routes through OpenClaw's channel SDK, especially `buildChannelOutboundSessionRoute`.
 - For Tavern chat routes, use `chatType: "channel"` and `peer.kind: "channel"`.
-- Tavern chat ids are UUIDs. Preserve that id shape in route construction.
+- Tavern chat ids use the `cht_` prefix. Preserve that id shape in route construction.
 - The expected OpenClaw session key shape is
-  `agent:<agent-id>:tavern:channel:<tavern-chat-uuid>`.
+  `agent:<agent-id>:tavern:channel:<tavern-chat-id>`.
 - Never let Tavern chat routing collapse to `agent:<agent-id>:main`.
 - Never override a derived Tavern route with `currentSessionKey`.
 - Never manually fabricate final session records in the Tavern adapter to hide bad plugin routing.
@@ -38,7 +38,7 @@ peer and chat type should be channel-scoped.
 ## Failure Policy
 
 - If an Tavern session has no stable Tavern chat id, fail.
-- If an Tavern chat id is not a UUID, fail.
+- If a Tavern chat id does not use the `cht_` prefix, fail.
 - If an Tavern session is observed as `agent:<agent-id>:main`, fail.
 - If a send does not use the synced session key for the selected Tavern chat and agent, fail.
 - If the plugin cannot validate the requested chat id, agent id, and session key together, fail.
@@ -55,8 +55,8 @@ is using the correct session while OpenClaw is actually executing in the wrong o
 - `src/turn.js` validates inbound Tavern channel messages, agent ids, and session keys before
   dispatching an OpenClaw turn.
 
-The OpenClaw Gateway adapter may map valid Tavern Messenger records into Tavern Runtime Protocol,
-but it must not repair invalid Tavern Messenger routing.
+The OpenClaw Gateway adapter may map valid Tavern Messenger records into Tavern API and runtime
+evidence records, but it must not repair invalid Tavern Messenger routing.
 
 ## Runtime Boundary
 

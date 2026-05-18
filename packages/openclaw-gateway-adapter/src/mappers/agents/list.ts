@@ -1,7 +1,4 @@
-import {
-    type AgentRuntimeAgentList,
-    agentRuntimeAgentListSchema,
-} from '@tavern/agent-runtime-protocol';
+import { type AgentRuntimeAgentList, agentRuntimeAgentListSchema } from '@tavern/api';
 import { asRecord, readRecordArray } from '../../gateway/records.ts';
 import { mapOpenClawAgentRecord } from './shared.ts';
 

@@ -1,4 +1,4 @@
-import type { AgentRuntimeSkillSummary } from '@tavern/agent-runtime-protocol';
+import type { AgentRuntimeSkillSummary } from '@tavern/api';
 import { readBoolean, readString } from '../../gateway/records.ts';
 
 export function mapOpenClawSkillSource(

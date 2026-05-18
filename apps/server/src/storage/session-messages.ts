@@ -1,5 +1,5 @@
-import type { AgentRuntimeSessionMessage } from '@tavern/agent-runtime-protocol';
-import { and, asc, desc, eq, gte, inArray, lte, notInArray } from 'drizzle-orm';
+import type { AgentRuntimeSessionMessage } from '@tavern/api';
+import { asc, desc, eq, inArray } from 'drizzle-orm';
 import { db } from '../db/index.ts';
 import { sessionMessagesTable } from '../db/schema.ts';
 import { normalizeOpenClawModelIdentity } from '../model/openclaw-mapping.ts';
@@ -9,10 +9,6 @@ import {
     syncRuntimeParticipantIdentities,
 } from '../participants/chat-participants.ts';
 import { resolveParticipantIdsForSourceIdentities } from './participants.ts';
-import {
-    filterDuplicateTavernAcceptedInboundMessages,
-    isTavernAcceptedInboundRawJson,
-} from './session-message-deduplication.ts';
 
 export type SessionMessageProjection = typeof sessionMessagesTable.$inferSelect;
 
@@ -40,57 +36,12 @@ export async function syncSessionMessagesForRuntime(input: {
         messagesBySessionKey: input.messagesBySessionKey,
         syncedAt: timestamp,
     });
-    let deleted = 0;
     let synced = 0;
 
     for (const [runtimeSessionKey, messages] of input.messagesBySessionKey.entries()) {
         const sessionKey = runtimeSessionKey;
-        const messagesToSync = await filterDuplicateTavernAcceptedInboundMessages({
-            messages,
-            sessionKey,
-        });
-        const window = resolveMessageTimestampWindow(messagesToSync);
-        const messageIds = messagesToSync.map((message) =>
-            buildSessionMessageId({
-                messageId: message.id,
-            })
-        );
 
-        if (window && messageIds.length > 0) {
-            const candidateRowsToDelete = await db
-                .select({
-                    id: sessionMessagesTable.id,
-                    rawJson: sessionMessagesTable.rawJson,
-                })
-                .from(sessionMessagesTable)
-                .where(
-                    and(
-                        eq(sessionMessagesTable.sessionKey, sessionKey),
-                        gte(sessionMessagesTable.timestamp, window.start),
-                        lte(sessionMessagesTable.timestamp, window.end),
-                        notInArray(sessionMessagesTable.id, messageIds)
-                    )
-                );
-            const rowsToDelete = candidateRowsToDelete.filter(
-                (row) => !isTavernAcceptedInboundRawJson(row.rawJson)
-            );
-
-            if (rowsToDelete.length > 0) {
-                await db.delete(sessionMessagesTable).where(
-                    and(
-                        eq(sessionMessagesTable.sessionKey, sessionKey),
-                        inArray(
-                            sessionMessagesTable.id,
-                            rowsToDelete.map((row) => row.id)
-                        )
-                    )
-                );
-            }
-
-            deleted += rowsToDelete.length;
-        }
-
-        for (const [index, message] of messagesToSync.entries()) {
+        for (const [index, message] of messages.entries()) {
             const modelInfo = normalizeOpenClawModelIdentity({
                 harness: message.metadata?.openClawHarness ?? null,
                 model: message.metadata?.openClawModel ?? message.metadata?.model ?? null,
@@ -178,10 +129,10 @@ export async function syncSessionMessagesForRuntime(input: {
                 });
         }
 
-        synced += messagesToSync.length;
+        synced += messages.length;
     }
 
-    return { deleted, synced };
+    return { deleted: 0, synced };
 }
 
 export async function listSessionMessagesForSessionKeys(sessionKeys: string[]) {
@@ -198,22 +149,6 @@ export async function listSessionMessagesForSessionKeys(sessionKeys: string[]) {
             asc(sessionMessagesTable.seq),
             asc(sessionMessagesTable.id)
         );
-}
-
-function resolveMessageTimestampWindow(messages: AgentRuntimeSessionMessage[]) {
-    const timestamps = messages
-        .map((message) => message.timestamp)
-        .filter((timestamp): timestamp is string => Boolean(timestamp))
-        .sort();
-
-    if (timestamps.length === 0) {
-        return null;
-    }
-
-    return {
-        end: timestamps.at(-1) ?? timestamps[0],
-        start: timestamps[0],
-    };
 }
 
 function buildSessionMessageId(input: { messageId: string }) {

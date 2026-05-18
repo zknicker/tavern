@@ -6,7 +6,7 @@ Sessions are Tavern's per-agent execution records inside chats, backed by observ
 
 - Tavern defines the session surface it presents.
 - The owning runtime is canonical for native execution history.
-- Session logs, relationships, deliveries, and navigation should feel like one coherent Tavern
+- Session logs, relationships, deliveries, and navigation feel like one coherent Tavern
   model rather than a leaked runtime-specific UI.
 - Sessions are first-class, but they are not the primary shared conversation surface. That role
   belongs to chats.
@@ -38,20 +38,20 @@ Sessions are Tavern's per-agent execution records inside chats, backed by observ
 
 ## Session Log
 
-- Every synced session should have a detailed log when the runtime exposes messages or events.
-- The session log should include normal messages and important non-message interactions.
-- The session log should make tool use, deliveries, access failures, thinking, and artifacts easy
+- Every synced session has a detailed log when the runtime exposes messages or events.
+- The session log includes normal messages and important non-message interactions.
+- The session log makes tool use, deliveries, access failures, thinking, and artifacts easy
   to distinguish from normal chat text.
 - Message attachments use Tavern's canonical attachment union:
   `inline` attachments carry embedded base64 payloads, while `file` attachments carry runtime file
   references such as paths or file URIs.
-- Older runs and interactions should not disappear just because a newer sync happened.
+- Older runs and interactions do not disappear just because a newer sync happened.
 
 ## Navigation
 
-- A person inspecting a session should be able to jump to related sessions, cron runs, and
+- A person inspecting a session can jump to related sessions, cron runs, and
   delivered messages when those relationships are known.
-- A session should surface enough relationship information that a person can understand why a
+- A session surfaces enough relationship information that a person can understand why a
   message or interaction happened.
 
 ## History

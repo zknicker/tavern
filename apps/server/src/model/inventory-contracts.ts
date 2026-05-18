@@ -1,7 +1,4 @@
-import {
-    type AgentRuntimeModelProviderId,
-    agentRuntimeModelProviderIdSchema,
-} from '@tavern/agent-runtime-protocol';
+import { type AgentRuntimeModelProviderId, agentRuntimeModelProviderIdSchema } from '@tavern/api';
 import { z } from 'zod';
 
 export const modelProviderIdSchema = agentRuntimeModelProviderIdSchema;

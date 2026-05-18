@@ -1,4 +1,4 @@
-import type { AgentRuntimeChat } from '@tavern/agent-runtime-protocol';
+import type { AgentRuntimeChat } from '@tavern/api';
 import type { TavernAgentRuntimeClient } from './client.ts';
 import { createConfiguredAgentRuntimeClient } from './configured-client.ts';
 

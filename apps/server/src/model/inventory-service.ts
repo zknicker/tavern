@@ -3,7 +3,7 @@ import {
     type AgentRuntimeModels,
     formatAgentRuntimeModelRef,
     parseAgentRuntimeModelRef,
-} from '@tavern/agent-runtime-protocol';
+} from '@tavern/api';
 import { TRPCError } from '@trpc/server';
 import { emitModelUpdated } from '../api/invalidation-events.ts';
 import { getMemorySettings } from '../memory/service.ts';

@@ -1,4 +1,4 @@
-import type { AgentRuntimeEvent } from '@tavern/agent-runtime-protocol';
+import type { AgentRuntimeEvent } from '@tavern/api';
 import { asRecord, readString } from '../gateway/records.ts';
 
 export type AgentRuntimeTurnProgressStep = Extract<

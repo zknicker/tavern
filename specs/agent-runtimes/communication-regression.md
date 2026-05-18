@@ -34,7 +34,7 @@ Allowed flow:
 ```txt
 Website UI or tRPC client
   -> Tavern server
-  -> agent-runtime protocol client
+  -> Tavern API client
   -> mock agent runtime
   -> Tavern sync paths and event handlers
   -> local projections

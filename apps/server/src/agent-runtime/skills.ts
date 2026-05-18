@@ -1,4 +1,4 @@
-import type { AgentRuntimeInstallSkill } from '@tavern/agent-runtime-protocol';
+import type { AgentRuntimeInstallSkill } from '@tavern/api';
 import { withCapabilityStatus } from './capability-status.ts';
 import { AgentRuntimeRequestError, type TavernAgentRuntimeClient } from './client.ts';
 import {

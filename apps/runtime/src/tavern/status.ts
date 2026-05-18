@@ -1,5 +1,5 @@
-import type { RuntimeStatus } from '@tavern/agent-runtime-protocol';
-import { runtimeProtocolVersion } from '@tavern/agent-runtime-protocol';
+import type { RuntimeStatus } from '@tavern/api';
+import { runtimeProtocolVersion } from '@tavern/api';
 
 import { getManagedOpenClawState } from '../openclaw/state';
 import { nowIso } from './shared';

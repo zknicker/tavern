@@ -1,4 +1,4 @@
-import { type AgentRuntimeEvent, agentRuntimeEventSchema } from '@tavern/agent-runtime-protocol';
+import { type AgentRuntimeEvent, agentRuntimeEventSchema } from '@tavern/api';
 import { createOpenClawGatewayClient } from '../gateway/client.ts';
 import { asRecord, nowIso, readString, toIsoString } from '../gateway/records.ts';
 import type {

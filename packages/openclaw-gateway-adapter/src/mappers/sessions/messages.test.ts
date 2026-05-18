@@ -128,39 +128,32 @@ describe('OpenClaw session message mapping', () => {
         });
     });
 
-    it('drops OpenClaw generic duplicates of accepted Tavern inbound messages', () => {
-        const sessionKey = 'agent:main:tavern:channel:chat-1';
+    it('maps accepted Tavern inbound messages by the durable Tavern message id', () => {
+        const sessionKey = 'agent:main:tavern:channel:cht_1';
         const mapped = mapOpenClawSessionMessages({
             messages: [
                 {
                     __openclaw: {
-                        id: 'accepted-message',
+                        id: 'transcript-wrapper-id',
                     },
-                    chatId: 'chat-1',
+                    chatId: 'cht_1',
                     content: [{ text: 'hi', type: 'text' }],
-                    messageId: 'tavern-message-1',
+                    messageId: 'msg_1',
                     metadata: {
                         tavern: {
-                            acceptedRunId: 'run-1',
+                            acceptedMessageId: 'msg_1',
+                            acceptedRunId: 'run_1',
+                            nonce: 'msg_1',
+                            sequence: 1,
                         },
                     },
+                    nonce: 'msg_1',
                     role: 'user',
                     sender: 'tavern:user',
                     senderName: 'Tavern',
+                    sequence: 1,
                     sessionKey,
                     timestamp: '2026-05-13T12:00:00.000Z',
-                },
-                {
-                    __openclaw: {
-                        id: 'openclaw-copy',
-                    },
-                    chatId: 'chat-1',
-                    content: [{ text: 'hi', type: 'text' }],
-                    role: 'user',
-                    sender: 'user',
-                    senderName: 'user',
-                    sessionKey,
-                    timestamp: '2026-05-13T12:00:08.000Z',
                 },
                 {
                     __openclaw: {
@@ -175,9 +168,23 @@ describe('OpenClaw session message mapping', () => {
             sessionKey,
         });
 
-        expect(mapped.messages.map((message) => [message.id, message.content])).toEqual([
-            ['accepted-message', 'hi'],
-            ['assistant-message', 'hello'],
+        expect(mapped.messages[0]).toMatchObject({
+            content: 'hi',
+            id: 'msg_1',
+            metadata: {
+                tavern: {
+                    acceptedMessageId: 'msg_1',
+                    acceptedRunId: 'run_1',
+                    nonce: 'msg_1',
+                    sequence: 1,
+                },
+            },
+            senderType: 'user',
+            sessionKey,
+        });
+        expect(mapped.messages.map((message) => message.id)).toEqual([
+            'msg_1',
+            'assistant-message',
         ]);
     });
 

@@ -1,9 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import { readFile, rename, stat, unlink, writeFile } from 'node:fs/promises';
-import {
-    resolveSessionStoreEntry,
-    updateSessionStore,
-} from 'openclaw/plugin-sdk/session-store-runtime';
+import { updateSessionStore } from 'openclaw/plugin-sdk/session-store-runtime';
 
 export async function ensureSessionStoreEntry({ displayName, sessionKey, storePath }) {
     if (!(sessionKey && storePath)) {
@@ -15,24 +12,16 @@ export async function ensureSessionStoreEntry({ displayName, sessionKey, storePa
     await updateSessionStore(
         storePath,
         (nextStore) => {
-            const resolved = resolveSessionStoreEntry({
-                sessionKey,
-                store: nextStore,
-            });
-            const existing = resolved.existing ?? {};
+            const existing = readStoreRecord(nextStore[sessionKey]) ?? {};
 
             created = !existing.sessionId;
-            nextStore[resolved.normalizedKey] = {
+            nextStore[sessionKey] = {
                 ...existing,
-                displayName: existing.displayName ?? displayName ?? resolved.normalizedKey,
+                displayName: existing.displayName ?? displayName ?? sessionKey,
                 sessionId: existing.sessionId ?? randomUUID(),
             };
 
-            for (const legacyKey of resolved.legacyKeys) {
-                delete nextStore[legacyKey];
-            }
-
-            return nextStore[resolved.normalizedKey];
+            return nextStore[sessionKey];
         },
         { activeSessionKey: sessionKey }
     );
@@ -88,4 +77,8 @@ function parseSessionStore(raw, storePath) {
     }
 
     return parsed;
+}
+
+function readStoreRecord(value) {
+    return value && typeof value === 'object' && !Array.isArray(value) ? value : null;
 }

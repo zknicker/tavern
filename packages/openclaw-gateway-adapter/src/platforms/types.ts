@@ -2,7 +2,7 @@ import type {
     AgentRuntimeChat,
     AgentRuntimeChatParticipant,
     AgentRuntimeChatPlatformMetadata,
-} from '@tavern/agent-runtime-protocol';
+} from '@tavern/api';
 
 export interface OpenClawConversationIdentity {
     id: string;

@@ -58,4 +58,4 @@ default CI gate.
   UI state. Timing alone is not enough if the user can still see duplicate, blank, or flickering
   transcript state.
 - When OpenClaw publishes a better typed SDK or official contract surface, update this README and
-  `docs/testing.md` so the live-lane guidance points at that newer source of truth.
+  `docs/operations/testing.md` so the live-lane guidance points at that newer source of truth.

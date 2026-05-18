@@ -1,4 +1,4 @@
-import type { AgentRuntimeChat } from '@tavern/agent-runtime-protocol';
+import type { AgentRuntimeChat } from '@tavern/api';
 import { listChatProjections, parseChatRawJson } from '../storage/chats.ts';
 import { type CronDeliveryTarget, cronDeliveryTargetListSchema } from './contracts.ts';
 

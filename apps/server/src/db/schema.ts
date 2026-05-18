@@ -4,7 +4,6 @@ export * from './schema/agent-runtime-connections.ts';
 export * from './schema/agent-thought-snapshots.ts';
 export * from './schema/agents.ts';
 export * from './schema/cache.ts';
-export * from './schema/chat-active-turns.ts';
 export * from './schema/chats.ts';
 export * from './schema/cron.ts';
 export * from './schema/jobs.ts';

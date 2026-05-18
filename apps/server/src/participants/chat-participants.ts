@@ -1,4 +1,4 @@
-import type { AgentRuntimeChat, AgentRuntimeChatParticipant } from '@tavern/agent-runtime-protocol';
+import type { AgentRuntimeChat, AgentRuntimeChatParticipant } from '@tavern/api';
 import { upsertParticipantLabels, upsertParticipants } from '../storage/participants.ts';
 import { normalizeObservedParticipantLabel } from './observed.ts';
 

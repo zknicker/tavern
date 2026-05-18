@@ -3,7 +3,7 @@ import {
     type AgentRuntimeSessionMessage,
     type AgentRuntimeSessionToolCall,
     agentRuntimeSessionGraphSchema,
-} from '@tavern/agent-runtime-protocol';
+} from '@tavern/api';
 import { asRecord, readString } from '../../gateway/records.ts';
 import { mapOpenClawSessionMessages } from './messages.ts';
 import { mapOpenClawSessionRecord } from './shared.ts';

@@ -3,7 +3,7 @@ import {
     type AgentRuntimeModelProviderId,
     type AgentRuntimeModels,
     agentRuntimeModelsSchema,
-} from '@tavern/agent-runtime-protocol';
+} from '@tavern/api';
 import { asRecord, readArray, readString } from '../../gateway/records.ts';
 
 export function mapOpenClawModels(input: unknown): AgentRuntimeModels {

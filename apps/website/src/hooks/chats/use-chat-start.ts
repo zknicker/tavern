@@ -30,7 +30,7 @@ export function useChatStart() {
                 sendMessage.mutate({
                     agentId: input.agentId,
                     chatId: created.chatId,
-                    clientMessageId: `tavern-message:${crypto.randomUUID()}`,
+                    clientMessageId: `msg_${crypto.randomUUID()}`,
                     content: input.content,
                 });
                 logTiming('client.sendMessageDispatched', { chatId: created.chatId });

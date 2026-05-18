@@ -5,7 +5,6 @@ import {
 } from './agent-runtime-shared.ts';
 import type { SessionHistory } from './contracts.ts';
 import { getSessionDisplay } from './display.ts';
-import { buildSessionThinking } from './thinking.ts';
 
 function buildWorkerRows(snapshot: AgentRuntimeSessionSnapshot) {
     return snapshot.graph.links
@@ -188,13 +187,6 @@ export function buildAgentRuntimeSessionHistoryRows(snapshot: AgentRuntimeSessio
         ),
         workers: buildWorkerRows(snapshot),
     }) as SessionHistory['rows'];
-    const thinkingRows = buildSessionThinking(messages).map((thinking) => ({
-        id: thinking.id,
-        kind: 'system' as const,
-        systemKind: 'thinking' as const,
-        thinking,
-        timestamp: thinking.timestamp,
-    }));
     const artifactRows = snapshot.graph.artifacts
         .filter((artifact) => artifact.sessionKey === snapshot.targetSession.key)
         .map((artifact) => ({
@@ -212,5 +204,5 @@ export function buildAgentRuntimeSessionHistoryRows(snapshot: AgentRuntimeSessio
             timestamp: artifact.createdAt,
         }));
 
-    return [...baseRows, ...thinkingRows, ...artifactRows];
+    return [...baseRows, ...artifactRows];
 }

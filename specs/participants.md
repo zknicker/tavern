@@ -7,7 +7,7 @@ Discord, Slack, iMessage, Telegram, or OpenClaw.
 
 ## Model
 
-- A `profile` is an Tavern-owned person record.
+- A `profile` is a Tavern-owned person record.
 - The self profile is `profile:self`.
 - Profile presentation, such as display name, avatar, and color, is Tavern-owned local state.
 - A `participant` is one observed source identity from one runtime/provider/account/external id.

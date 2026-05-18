@@ -1,4 +1,4 @@
-import { type AgentRuntimeEvent, agentRuntimeEventSchema } from '@tavern/agent-runtime-protocol';
+import { type AgentRuntimeEvent, agentRuntimeEventSchema } from '@tavern/api';
 import { asRecord, readString, toIsoString } from '../gateway/records.ts';
 import { resolveOpenClawConversationIdentity } from '../mappers/chats/conversation-identity.ts';
 import { parseOpenClawSessionKey } from '../mappers/sessions/session-key.ts';

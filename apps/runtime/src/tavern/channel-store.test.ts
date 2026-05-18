@@ -3,13 +3,11 @@ import { closeDb, initTestDb } from '../db/connection';
 import { ensureRuntimeSchema } from '../db/schema';
 import {
     listPendingTavernInboundMessages,
-    listTavernActiveChannelStatuses,
-    listTavernRuntimeEvents,
-    markTavernChannelRead,
     markTavernInboundMessageAccepted,
     persistTavernInboundMessage,
-    persistTavernRuntimeEvent,
 } from './channel-store';
+import { createChat, createDelivery, createMessage, updateActivity } from './chat-api';
+import { listTavernRuntimeEvents } from './runtime-event-replay';
 
 describe('Tavern channel store', () => {
     beforeEach(() => {
@@ -20,12 +18,19 @@ describe('Tavern channel store', () => {
         closeDb();
     });
 
-    it('persists accepted messages with per-chat sequences and idempotent nonces', () => {
-        const first = persistMessage({ id: 'msg-1', nonce: 'nonce-1', text: 'hello' });
-        const replay = persistMessage({ id: 'msg-1', nonce: 'nonce-1', text: 'hello' });
-        const second = persistMessage({ id: 'msg-2', nonce: 'nonce-2', text: 'again' });
+    it('stores only one outbox entry for idempotent durable messages', () => {
+        const first = persistMessage({ id: 'msg_1', nonce: 'nonce-1', text: 'hello' });
+        const replay = persistMessage({ id: 'msg_1', nonce: 'nonce-1', text: 'hello' });
+        const nonceReplay = persistMessage({ id: 'msg_retry', nonce: 'nonce-1', text: 'hello' });
+        const second = persistMessage({ id: 'msg_2', nonce: 'nonce-2', text: 'again' });
 
         expect(replay).toMatchObject({
+            cursor: first.cursor,
+            messageId: first.messageId,
+            runId: first.runId,
+            sequence: first.sequence,
+        });
+        expect(nonceReplay).toMatchObject({
             cursor: first.cursor,
             messageId: first.messageId,
             runId: first.runId,
@@ -36,270 +41,275 @@ describe('Tavern channel store', () => {
         expect(second.cursor).toBeGreaterThan(first.cursor);
     });
 
-    it('rejects nonce reuse for a different message body', () => {
-        persistMessage({ id: 'msg-1', nonce: 'nonce-1', text: 'hello' });
+    it('rejects nonce reuse for a different durable message shape', () => {
+        persistMessage({ id: 'msg_1', nonce: 'nonce-1', text: 'hello' });
 
-        expect(() => persistMessage({ id: 'msg-2', nonce: 'nonce-1', text: 'different' })).toThrow(
+        expect(() => persistMessage({ id: 'msg_2', nonce: 'nonce-1', text: 'different' })).toThrow(
             'already used'
         );
     });
 
     it('keeps pending messages available until the plugin accepts them', () => {
-        const accepted = persistMessage({ id: 'msg-1', nonce: 'nonce-1', text: 'hello' });
+        const accepted = persistMessage({ id: 'msg_1', nonce: 'nonce-1', text: 'hello' });
 
         expect(listPendingTavernInboundMessages()).toHaveLength(1);
         markTavernInboundMessageAccepted(accepted.frame.requestId, accepted.acceptedAt);
         expect(listPendingTavernInboundMessages()).toHaveLength(0);
     });
 
-    it('persists accepted message events before the plugin accepts the turn', () => {
-        const accepted = persistMessage({ id: 'msg-1', nonce: 'nonce-1', text: 'hello' });
+    it('maps durable chat events into runtime event replay', () => {
+        createChat({
+            id: 'cht_1',
+            metadata: {
+                runtime: {
+                    agentId: 'agt_1',
+                    sessionKey: 'session-1',
+                },
+            },
+        });
+        createMessage('cht_1', {
+            author_id: 'usr_tavern',
+            id: 'msg_1',
+            metadata: {
+                runtime: {
+                    agentId: 'agt_1',
+                    sessionKey: 'session-1',
+                },
+            },
+            nonce: 'nonce-1',
+            parts: [
+                {
+                    content: 'hello',
+                    kind: 'text',
+                },
+            ],
+            role: 'user',
+        });
 
-        expect(listTavernRuntimeEvents({ afterCursor: 0 })).toEqual([
+        expect(listTavernRuntimeEvents({ afterCursor: 0 })).toMatchObject([
             {
-                cursor: accepted.cursor,
                 event: {
-                    agentId: 'agent-1',
-                    chatId: 'chat-1',
+                    agentId: 'agt_1',
+                    chatId: 'cht_1',
                     message: {
-                        id: 'msg-1',
+                        id: 'msg_1',
                         nonce: 'nonce-1',
                         parentMessageId: null,
-                        senderId: 'tavern:user',
-                        senderName: 'Tavern',
+                        senderId: 'usr_tavern',
+                        senderName: 'usr_tavern',
                         sequence: 1,
                         text: 'hello',
-                        threadRootId: 'msg-1',
-                        timestamp: '2026-05-16T12:00:00.000Z',
+                        threadRootId: 'msg_1',
                     },
-                    runId: accepted.runId,
+                    runId: 'run_1',
                     sessionKey: 'session-1',
-                    timestamp: accepted.acceptedAt,
                     type: 'chat.messageAccepted',
                 },
             },
         ]);
     });
 
-    it('persists runtime events for replay and suppresses duplicate delivery ids', () => {
-        const event = {
-            text: 'reply',
-            timestamp: '2026-05-16T12:00:00.000Z',
-            turn: {
-                agentId: 'agent-1',
-                chatId: 'chat-1',
-                runId: 'run-1',
-                sessionKey: 'session-1',
-                startedAt: '2026-05-16T12:00:00.000Z',
+    it('maps durable activity events into runtime turn replay', () => {
+        createChat({ id: 'cht_1' });
+        updateActivity('cht_1', {
+            agent_id: 'agt_1',
+            metadata: {
+                runtime: {
+                    agentId: 'main',
+                    sessionKey: 'session-1',
+                    startedAt: '2026-05-16T12:00:00.000Z',
+                },
             },
-            type: 'turn.replyUpdated' as const,
-        };
+            run_id: 'run_1',
+            status: 'running',
+        });
+        updateActivity('cht_1', {
+            agent_id: 'agt_1',
+            metadata: {
+                runtime: {
+                    agentId: 'main',
+                    sessionKey: 'session-1',
+                    startedAt: '2026-05-16T12:00:00.000Z',
+                },
+            },
+            run_id: 'run_1',
+            status: 'running',
+            steps: [
+                {
+                    completed_at: null,
+                    id: 'tool-1',
+                    kind: 'command',
+                    label: 'Using sleep',
+                    metadata: {
+                        detail: 'sleep 1',
+                    },
+                    started_at: '2026-05-16T12:00:01.000Z',
+                    status: 'running',
+                },
+            ],
+            summary: 'Working on it.',
+        });
+        updateActivity('cht_1', {
+            agent_id: 'agt_1',
+            metadata: {
+                runtime: {
+                    agentId: 'main',
+                    sessionKey: 'session-1',
+                    startedAt: '2026-05-16T12:00:00.000Z',
+                },
+            },
+            run_id: 'run_1',
+            status: 'completed',
+            summary: 'Working on it.',
+        });
 
-        const first = persistTavernRuntimeEvent({ deliveryId: 'delivery-1', event });
-        const replay = persistTavernRuntimeEvent({ deliveryId: 'delivery-1', event });
-
-        expect(replay.cursor).toBe(first.cursor);
-        expect(listTavernRuntimeEvents({ afterCursor: 0 })).toEqual([
+        expect(listTavernRuntimeEvents({ afterCursor: 0 }).map((entry) => entry.event)).toEqual([
             {
-                cursor: first.cursor,
-                event,
-            },
-        ]);
-        expect(listTavernRuntimeEvents({ afterCursor: first.cursor })).toEqual([]);
-    });
-
-    it('reconstructs active turn status from durable events', () => {
-        const turn = {
-            agentId: 'agent-1',
-            chatId: 'chat-1',
-            runId: 'run-1',
-            sessionKey: 'session-1',
-            startedAt: '2026-05-16T12:00:00.000Z',
-        };
-
-        persistTavernRuntimeEvent({
-            deliveryId: 'started-1',
-            event: {
-                timestamp: '2026-05-16T12:00:01.000Z',
-                turn,
+                timestamp: expect.any(String),
+                turn: {
+                    agentId: 'main',
+                    chatId: 'cht_1',
+                    runId: 'run_1',
+                    sessionKey: 'session-1',
+                    startedAt: '2026-05-16T12:00:00.000Z',
+                },
                 type: 'turn.started',
             },
-        });
-
-        expect(listTavernActiveChannelStatuses()).toEqual([
             {
-                activeReply: {
-                    agentId: 'agent-1',
-                    isThinking: true,
-                    runId: 'run-1',
+                isThinking: true,
+                text: 'Working on it.',
+                timestamp: expect.any(String),
+                turn: {
+                    agentId: 'main',
+                    chatId: 'cht_1',
+                    runId: 'run_1',
                     sessionKey: 'session-1',
                     startedAt: '2026-05-16T12:00:00.000Z',
-                    text: '',
                 },
-                chatId: 'chat-1',
+                type: 'turn.replyUpdated',
             },
-        ]);
-
-        persistTavernRuntimeEvent({
-            deliveryId: 'completed-1',
-            event: {
-                timestamp: '2026-05-16T12:00:02.000Z',
-                turn,
-                type: 'turn.completed',
-            },
-        });
-
-        expect(listTavernActiveChannelStatuses()).toEqual([]);
-    });
-
-    it('reconstructs active turn progress from durable events', () => {
-        const turn = {
-            agentId: 'agent-1',
-            chatId: 'chat-1',
-            runId: 'run-1',
-            sessionKey: 'session-1',
-            startedAt: '2026-05-16T12:00:00.000Z',
-        };
-
-        persistTavernRuntimeEvent({
-            deliveryId: 'progress-1',
-            event: {
+            {
                 step: {
-                    detail: 'Searching docs',
-                    id: 'tool:web',
-                    kind: 'tool',
-                    label: 'Using web search',
+                    detail: 'sleep 1',
+                    id: 'tool-1',
+                    kind: 'command',
+                    label: 'Using sleep',
                     status: 'active',
                 },
-                timestamp: '2026-05-16T12:00:03.000Z',
-                turn,
-                type: 'turn.progress',
-            },
-        });
-
-        expect(listTavernActiveChannelStatuses()).toEqual([
-            {
-                activeReply: {
-                    agentId: 'agent-1',
-                    isThinking: true,
-                    runId: 'run-1',
+                timestamp: expect.any(String),
+                turn: {
+                    agentId: 'main',
+                    chatId: 'cht_1',
+                    runId: 'run_1',
                     sessionKey: 'session-1',
                     startedAt: '2026-05-16T12:00:00.000Z',
-                    text: '',
                 },
-                activeReplyProgressStartedAt: '2026-05-16T12:00:03.000Z',
-                activeReplySteps: [
-                    {
-                        detail: 'Searching docs',
-                        id: 'tool:web',
-                        kind: 'tool',
-                        label: 'Using web search',
-                        status: 'active',
-                    },
-                ],
-                chatId: 'chat-1',
+                type: 'turn.progress',
             },
-        ]);
-    });
-
-    it('reconstructs active turn status from accepted inbound messages', () => {
-        const accepted = persistMessage({ id: 'msg-1', nonce: 'nonce-1', text: 'hello' });
-
-        expect(listTavernActiveChannelStatuses()).toEqual([]);
-
-        markTavernInboundMessageAccepted(accepted.frame.requestId, accepted.acceptedAt);
-
-        expect(listTavernActiveChannelStatuses()).toEqual([
             {
-                activeReply: {
-                    agentId: 'agent-1',
-                    isThinking: true,
-                    runId: accepted.runId,
-                    sessionKey: 'session-1',
-                    startedAt: accepted.acceptedAt,
-                    text: '',
-                },
-                chatId: 'chat-1',
-            },
-        ]);
-
-        persistTavernRuntimeEvent({
-            deliveryId: 'completed-1',
-            event: {
-                timestamp: '2026-05-16T12:00:02.000Z',
+                timestamp: expect.any(String),
                 turn: {
-                    agentId: 'agent-1',
-                    chatId: 'chat-1',
-                    runId: accepted.runId,
+                    agentId: 'main',
+                    chatId: 'cht_1',
+                    runId: 'run_1',
                     sessionKey: 'session-1',
-                    startedAt: accepted.acceptedAt,
+                    startedAt: '2026-05-16T12:00:00.000Z',
                 },
                 type: 'turn.completed',
             },
-        });
-
-        expect(listTavernActiveChannelStatuses()).toEqual([]);
+        ]);
     });
 
-    it('persists monotonic read pointers as recoverable events', () => {
-        const first = markTavernChannelRead({
-            agentId: 'agent-1',
-            chatId: 'chat-1',
-            lastReadSequence: 2,
-            readAt: '2026-05-16T12:01:00.000Z',
-            readerId: 'tavern:user',
-            sessionKey: 'session-1',
-        });
-        const stale = markTavernChannelRead({
-            agentId: 'agent-1',
-            chatId: 'chat-1',
-            lastReadSequence: 1,
-            readAt: '2026-05-16T12:02:00.000Z',
-            readerId: 'tavern:user',
-            sessionKey: 'session-1',
-        });
-        const second = markTavernChannelRead({
-            agentId: 'agent-1',
-            chatId: 'chat-1',
-            lastReadSequence: 3,
-            readAt: '2026-05-16T12:03:00.000Z',
-            readerId: 'tavern:user',
-            sessionKey: 'session-1',
+    it('maps durable assistant deliveries into final turn replay events', () => {
+        createChat({ id: 'cht_1' });
+        createDelivery('cht_1', {
+            agent_id: 'agt_1',
+            id: 'del_1',
+            message: {
+                author_id: 'agt_1',
+                id: 'msg_agent_1',
+                metadata: {
+                    runtime: {
+                        agentId: 'main',
+                        runId: 'run_1',
+                        sessionKey: 'session-1',
+                        startedAt: '2026-05-16T12:00:00.000Z',
+                    },
+                },
+                parts: [
+                    {
+                        content: 'Done.',
+                        kind: 'text',
+                    },
+                ],
+                role: 'assistant',
+            },
+            turn_id: 'run_1',
         });
 
-        expect(stale).toBeNull();
-        expect(first?.event).toMatchObject({
-            chatId: 'chat-1',
-            lastReadSequence: 2,
-            readerId: 'tavern:user',
-            type: 'chat.read',
-        });
-        expect(second?.event).toMatchObject({
-            lastReadSequence: 3,
-            type: 'chat.read',
-        });
-        expect(listTavernRuntimeEvents({ afterCursor: first?.cursor ?? 0 })).toEqual([second]);
+        expect(listTavernRuntimeEvents({ afterCursor: 0 }).map((entry) => entry.event)).toEqual([
+            {
+                isThinking: false,
+                replace: true,
+                text: 'Done.',
+                timestamp: expect.any(String),
+                turn: {
+                    agentId: 'main',
+                    chatId: 'cht_1',
+                    runId: 'run_1',
+                    sessionKey: 'session-1',
+                    startedAt: '2026-05-16T12:00:00.000Z',
+                },
+                type: 'turn.replyUpdated',
+            },
+            {
+                timestamp: expect.any(String),
+                turn: {
+                    agentId: 'main',
+                    chatId: 'cht_1',
+                    runId: 'run_1',
+                    sessionKey: 'session-1',
+                    startedAt: '2026-05-16T12:00:00.000Z',
+                },
+                type: 'turn.completed',
+            },
+        ]);
     });
 });
 
 function persistMessage(input: { id: string; nonce: string; text: string }) {
+    createChat({ id: 'cht_1' });
+    const receipt = createMessage('cht_1', {
+        author_id: 'usr_tavern',
+        id: input.id,
+        metadata: {
+            runtime: {
+                agentId: 'agt_1',
+                sessionKey: 'session-1',
+            },
+        },
+        nonce: input.nonce,
+        parts: [
+            {
+                content: input.text,
+                kind: 'text',
+            },
+        ],
+        role: 'user',
+    });
+
     return persistTavernInboundMessage({
         accountId: 'default',
-        agentId: 'agent-1',
-        chatId: 'chat-1',
+        agentId: 'agt_1',
+        chatId: 'cht_1',
         conversation: {
-            id: 'chat-1',
+            id: 'cht_1',
             kind: 'channel',
             label: 'General',
         },
-        message: {
-            content: input.text,
-            id: input.id,
-            metadata: {},
-            nonce: input.nonce,
-        },
+        cursor: receipt.cursor,
+        messageId: receipt.message.id,
         requestId: `request-${input.id}`,
-        sentAt: '2026-05-16T12:00:00.000Z',
         sessionKey: 'session-1',
     });
 }

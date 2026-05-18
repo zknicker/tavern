@@ -1,4 +1,4 @@
-import type { AgentRuntimeSkillSummary } from '@tavern/agent-runtime-protocol';
+import type { AgentRuntimeSkillSummary } from '@tavern/api';
 import type { AgentSkillSelectionRecord } from './storage.ts';
 
 export function resolveDependencyState(selections: AgentSkillSelectionRecord[]) {

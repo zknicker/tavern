@@ -1,4 +1,4 @@
-import type { AgentRuntimeModels, AgentRuntimeSaveModels } from '@tavern/agent-runtime-protocol';
+import type { AgentRuntimeModels, AgentRuntimeSaveModels } from '@tavern/api';
 import { withCapabilityStatus } from './capability-status.ts';
 import type { TavernAgentRuntimeClient } from './client.ts';
 import {

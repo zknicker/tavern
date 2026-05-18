@@ -40,7 +40,7 @@ import type {
     AgentRuntimeStatus,
     AgentRuntimeUpdateCron,
     AgentRuntimeUpsertBinding,
-} from '@tavern/agent-runtime-protocol';
+} from '@tavern/api';
 import { createOpenClawGatewayClient } from '../gateway/client.ts';
 import { OpenClawGatewayError, OpenClawUnsupportedError } from '../gateway/errors.ts';
 import {

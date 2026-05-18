@@ -1,7 +1,7 @@
 export const TAVERN_CHANNEL_ID = 'tavern';
 export const DEFAULT_ACCOUNT_ID = 'default';
 
-const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/iu;
+const tavernChatIdPattern = /^cht_[A-Za-z0-9_-]+$/u;
 
 export function resolveTavernAccount(_config, accountId = DEFAULT_ACCOUNT_ID) {
     return {
@@ -35,8 +35,8 @@ export function assertSafeStoreKey(key) {
 export function assertTavernChatId(value) {
     const id = typeof value === 'string' ? value.trim() : '';
 
-    if (!uuidPattern.test(id)) {
-        throw new Error('Tavern chat id must be a UUID.');
+    if (!tavernChatIdPattern.test(id)) {
+        throw new Error('Tavern chat id must use a cht_ id.');
     }
 
     return id;

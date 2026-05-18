@@ -1,4 +1,4 @@
-import { agentRuntimeModelProviderIdSchema } from '@tavern/agent-runtime-protocol';
+import { agentRuntimeModelProviderIdSchema } from '@tavern/api';
 import { z } from 'zod';
 
 export const normalizedModelSchema = z.object({

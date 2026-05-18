@@ -51,7 +51,7 @@ export function ChatStartDraftProvider({ children }: PropsWithChildren) {
         const content = input.content.trim();
         const draft: ChatStartDraft = {
             agentId: input.agentId,
-            clientMessageId: `tavern-message:${crypto.randomUUID()}`,
+            clientMessageId: `msg_${crypto.randomUUID()}`,
             content,
             createdAt: new Date().toISOString(),
             errorMessage: null,

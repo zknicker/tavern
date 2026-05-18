@@ -7,8 +7,6 @@ export async function transcriptHasInboundMessage({ input, transcriptPath }) {
         return false;
     }
 
-    const sentAtMs = Date.parse(input.sentAt);
-
     for (const line of raw.split(/\r?\n/)) {
         if (!line.trim()) {
             continue;
@@ -26,19 +24,7 @@ export async function transcriptHasInboundMessage({ input, transcriptPath }) {
                 return true;
             }
 
-            if (readNonEmptyString(message.messageId)) {
-                continue;
-            }
-
-            const messageAtMs = resolveMessageTimestampMs(message.timestamp ?? record.timestamp);
-            const isSamePrompt = resolveMessageText(message) === input.text;
-
-            if (
-                isSamePrompt &&
-                Number.isFinite(sentAtMs) &&
-                Number.isFinite(messageAtMs) &&
-                Math.abs(messageAtMs - sentAtMs) < 60_000
-            ) {
+            if (message.metadata?.tavern?.acceptedMessageId === input.messageId) {
                 return true;
             }
         } catch {}
@@ -113,22 +99,4 @@ function resolveMessageText(message) {
             part && typeof part === 'object' && typeof part.text === 'string' ? part.text : ''
         )
         .join('');
-}
-
-function resolveMessageTimestampMs(value) {
-    if (typeof value === 'number' && Number.isFinite(value)) {
-        return value;
-    }
-
-    if (typeof value === 'string') {
-        const parsed = Date.parse(value);
-
-        return Number.isFinite(parsed) ? parsed : Number.NaN;
-    }
-
-    return Number.NaN;
-}
-
-function readNonEmptyString(value) {
-    return typeof value === 'string' && value.trim().length > 0 ? value.trim() : null;
 }

@@ -3,35 +3,23 @@ import {
     type AgentRuntimeCreateMessage,
     type AgentRuntimeMessageAccepted,
     agentRuntimeCreateMessageSchema,
-    agentRuntimeEventSchema,
     agentRuntimeMessageAcceptedSchema,
     agentRuntimeRoutes,
     type TavernChannelInboundMessage,
     tavernChannelClientFrameSchema,
-} from '@tavern/agent-runtime-protocol';
+} from '@tavern/api';
 import { WebSocket } from 'ws';
 import {
     listPendingTavernInboundMessages,
     markTavernInboundMessageAccepted,
-    type PersistedInboundMessage,
     persistTavernInboundMessage,
-    persistTavernRuntimeEvent,
 } from './channel-store';
-import { emitTavernRuntimeEvent } from './events';
+import { createChat, createMessage, updateActivity } from './chat-api';
+import { createAgentParticipantId } from './chat-api/ids';
 
 const defaultAccountId = 'default';
-const relayTimeoutMs = 30_000;
 
 const sockets = new Set<WebSocket>();
-const pending = new Map<
-    string,
-    {
-        reject: (error: Error) => void;
-        resolve: (accepted: AgentRuntimeMessageAccepted) => void;
-        persisted: PersistedInboundMessage;
-        timer: ReturnType<typeof setTimeout>;
-    }
->();
 
 export function isTavernChannelSocketPath(requestUrl: string | undefined) {
     if (!requestUrl) {
@@ -56,10 +44,7 @@ export function attachTavernChannelSocket(socket: WebSocket) {
             console.warn('[tavern-runtime] failed to process Tavern channel frame', error);
         }
     });
-    socket.on('close', () => {
-        sockets.delete(socket);
-        rejectAllPending(new Error('Tavern OpenClaw plugin disconnected.'));
-    });
+    socket.on('close', () => sockets.delete(socket));
 }
 
 export async function sendTavernChannelMessage(
@@ -72,20 +57,46 @@ export async function sendTavernChannelMessage(
     if (!sessionKey) {
         throw new Error('Tavern messages require a synced OpenClaw session key.');
     }
-    if (payload.target.type !== 'channel') {
+    if (payload.target.type !== 'channel' && payload.target.type !== 'tavern') {
         throw new Error('Tavern OpenClaw messenger currently supports only root chat messages.');
     }
     if (payload.message.parentMessageId || payload.message.threadRootId) {
         throw new Error('Tavern OpenClaw messenger currently supports only root chat messages.');
     }
 
-    const socket = findOpenSocket();
-    if (!socket) {
-        throw new Error('Tavern OpenClaw plugin is not connected to the runtime relay.');
-    }
-
     const requestId = randomUUID();
-    const sentAt = new Date().toISOString();
+    const messageReceipt = createMessage(
+        createChat({
+            id: chatId,
+            metadata: {
+                runtime: {
+                    agentId: payload.agent.agentId,
+                    sessionKey,
+                    source: 'openclaw',
+                },
+            },
+        }).id,
+        {
+            author_id: 'usr_tavern',
+            id: payload.message.id,
+            metadata: {
+                ...(payload.message.metadata ?? {}),
+                runtime: {
+                    agentId: payload.agent.agentId,
+                    sessionKey,
+                    source: 'openclaw',
+                },
+            },
+            nonce: payload.message.nonce,
+            parts: [
+                {
+                    content: payload.message.content,
+                    kind: 'text',
+                },
+            ],
+            role: 'user',
+        }
+    );
     const persisted = persistTavernInboundMessage({
         accountId: defaultAccountId,
         agentId: payload.agent.agentId,
@@ -97,28 +108,38 @@ export async function sendTavernChannelMessage(
             parentId: null,
             threadRootId: null,
         },
-        message: {
-            content: payload.message.content,
-            id: payload.message.id,
-            metadata: payload.message.metadata,
-            nonce: payload.message.nonce,
-            parentMessageId: payload.message.parentMessageId,
-            threadRootId: payload.message.threadRootId,
-        },
+        cursor: messageReceipt.cursor,
+        messageId: messageReceipt.message.id,
         requestId,
-        sentAt,
         sessionKey,
     });
-    emitTavernRuntimeEvent(persisted.acceptedEvent);
-
-    return await new Promise((resolve, reject) => {
-        const timer = setTimeout(() => {
-            pending.delete(requestId);
-            reject(new Error('Timed out waiting for Tavern OpenClaw plugin acceptance.'));
-        }, relayTimeoutMs);
-
-        pending.set(requestId, { persisted, reject, resolve, timer });
+    updateActivity(chatId, {
+        agent_id: createAgentParticipantId(payload.agent.agentId),
+        metadata: {
+            runtime: {
+                agentId: payload.agent.agentId,
+                sessionKey,
+                source: 'openclaw',
+                startedAt: persisted.acceptedAt,
+            },
+        },
+        run_id: persisted.runId,
+        status: 'running',
+    });
+    const socket = findOpenSocket();
+    if (socket) {
         sendFrame(socket, persisted.frame);
+    }
+
+    return agentRuntimeMessageAcceptedSchema.parse({
+        acceptedAt: persisted.acceptedAt,
+        cursor: persisted.cursor,
+        messageId: persisted.messageId,
+        nonce: persisted.frame.message.nonce,
+        runId: persisted.runId,
+        sequence: persisted.sequence,
+        sessionKey: persisted.sessionKey,
+        status: 'accepted',
     });
 }
 
@@ -128,28 +149,6 @@ function handleClientFrame(value: unknown) {
     if (frame.kind === 'message-accepted') {
         const accepted = agentRuntimeMessageAcceptedSchema.parse(frame.accepted);
         markTavernInboundMessageAccepted(frame.requestId, accepted.acceptedAt);
-        const request = pending.get(frame.requestId);
-        if (request) {
-            clearTimeout(request.timer);
-            pending.delete(frame.requestId);
-            request.resolve(
-                agentRuntimeMessageAcceptedSchema.parse({
-                    ...accepted,
-                    cursor: accepted.cursor ?? request.persisted.cursor,
-                    messageId: accepted.messageId ?? request.persisted.messageId,
-                    sequence: accepted.sequence ?? request.persisted.sequence,
-                })
-            );
-        }
-        return;
-    }
-
-    if (frame.kind === 'runtime-event') {
-        const persisted = persistTavernRuntimeEvent({
-            deliveryId: frame.deliveryId,
-            event: agentRuntimeEventSchema.parse(frame.event),
-        });
-        emitTavernRuntimeEvent(persisted.event);
         return;
     }
 
@@ -174,12 +173,4 @@ function sendFrame(socket: WebSocket, frame: TavernChannelInboundMessage) {
             console.warn('[tavern-runtime] failed to send Tavern channel frame', error);
         }
     });
-}
-
-function rejectAllPending(error: Error) {
-    for (const [requestId, request] of pending.entries()) {
-        clearTimeout(request.timer);
-        pending.delete(requestId);
-        request.reject(error);
-    }
 }

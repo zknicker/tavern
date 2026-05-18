@@ -2,8 +2,8 @@ import {
     type AgentRuntimeCreateMessage,
     type AgentRuntimeMessageAccepted,
     agentRuntimeMessageAcceptedSchema,
-} from '@tavern/agent-runtime-protocol';
-import { asRecord, nowIso, readString, requireString } from '../../gateway/records.ts';
+} from '@tavern/api';
+import { asRecord, nowIso, readNumber, readString, requireString } from '../../gateway/records.ts';
 
 export function mapTavernMessageToOpenClawTavernTurn(
     chatId: string,
@@ -12,6 +12,7 @@ export function mapTavernMessageToOpenClawTavernTurn(
     const agentId = input.agent.agentId;
     const sessionKey = resolveOpenClawSendSessionKey(input, agentId);
     const metadata = pickTavernMessageMetadata(input.message.metadata);
+    const runId = buildTavernMessageRunId(input.message.id);
 
     return {
         agent: input.agent,
@@ -20,13 +21,14 @@ export function mapTavernMessageToOpenClawTavernTurn(
             content: input.message.content,
             id: input.message.id,
             ...(metadata ? { metadata } : {}),
+            ...(input.message.nonce ? { nonce: input.message.nonce } : {}),
         },
         sender: {
             id: 'tavern-user',
             name: 'Tavern',
         },
         sessionKey,
-        turnId: input.message.id,
+        turnId: runId,
     };
 }
 
@@ -50,7 +52,11 @@ export function mapOpenClawMessageAccepted(
 
     return agentRuntimeMessageAcceptedSchema.parse({
         acceptedAt: readString(record, ['acceptedAt', 'timestamp']) ?? nowIso(),
+        cursor: readNumber(record, ['cursor']) ?? undefined,
+        messageId: readString(record, ['messageId']) ?? undefined,
+        nonce: readString(record, ['nonce']) ?? undefined,
         runId: requireString(record, ['runId', 'taskId', 'id'], 'OpenClaw message acceptance'),
+        sequence: readNumber(record, ['sequence']) ?? undefined,
         sessionKey: readString(record, ['sessionKey', 'key']) ?? fallbackSessionKey ?? null,
         status: 'accepted',
     });
@@ -84,5 +90,9 @@ function pickTavernMessageMetadata(
 }
 
 function buildTavernMessageRunId(messageId: string) {
-    return messageId.startsWith('tavern-run:') ? messageId : `tavern-run:${messageId}`;
+    return messageId.startsWith('run_') ? messageId : `run_${stripPrefix(messageId, 'msg_')}`;
+}
+
+function stripPrefix(value: string, prefix: string) {
+    return value.startsWith(prefix) ? value.slice(prefix.length) : value;
 }

@@ -1,4 +1,4 @@
-import type { AgentRuntimeSessionArtifact } from '@tavern/agent-runtime-protocol';
+import type { AgentRuntimeSessionArtifact } from '@tavern/api';
 import { buildToolActions } from '../tools/actions.ts';
 import { toolDetailSchema } from '../tools/contracts.ts';
 import { buildToolSummaryFromValues } from '../tools/summary.ts';

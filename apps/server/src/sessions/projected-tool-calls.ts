@@ -1,4 +1,4 @@
-import type { AgentRuntimeSessionGraph } from '@tavern/agent-runtime-protocol';
+import type { AgentRuntimeSessionGraph } from '@tavern/api';
 
 export type ProjectedToolCall = AgentRuntimeSessionGraph['toolCalls'][number];
 

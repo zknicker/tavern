@@ -1,7 +1,7 @@
 import { type ChildProcess, spawn } from 'node:child_process';
 import net from 'node:net';
 
-import { agentRuntimeRoutes } from '@tavern/agent-runtime-protocol';
+import { agentRuntimeRoutes } from '@tavern/api';
 import { log } from '../log';
 import { prepareManagedOpenClawConfig } from './config';
 import { ensureManagedOpenClawPlugins, resolveManagedOpenClawInstall } from './install';
@@ -36,6 +36,7 @@ export async function startOpenClawForRuntime(): Promise<ManagedOpenClawHandle> 
     process.env.OPENCLAW_GATEWAY_TOKEN = runtimeConfig.gatewayToken;
     process.env.OPENCLAW_GATEWAY_URL = runtimeConfig.gatewayUrl;
     process.env.OPENCLAW_STATE_DIR = runtimeConfig.stateDir;
+    process.env.TAVERN_API_BASE_URL = buildRuntimeApiBaseUrl();
     process.env.TAVERN_RUNTIME_CHANNEL_URL = buildRuntimeChatSocketUrl();
 
     let child: ChildProcess | null = null;
@@ -129,6 +130,7 @@ function spawnOpenClawGateway(
                 ...process.env,
                 TAVERN_RUNTIME_CHANNEL_URL:
                     process.env.TAVERN_RUNTIME_CHANNEL_URL ?? buildRuntimeChatSocketUrl(),
+                TAVERN_API_BASE_URL: process.env.TAVERN_API_BASE_URL ?? buildRuntimeApiBaseUrl(),
                 OPENCLAW_CONFIG_DIR: runtimeConfig.configDir,
                 OPENCLAW_CONFIG_PATH: runtimeConfig.configPath,
                 OPENCLAW_GATEWAY_TOKEN: runtimeConfig.gatewayToken,
@@ -143,6 +145,10 @@ function buildRuntimeChatSocketUrl() {
     return `ws://127.0.0.1:${process.env.TAVERN_RUNTIME_PORT || 4310}${agentRuntimeRoutes.chatSocket}`;
 }
 
+function buildRuntimeApiBaseUrl() {
+    return `http://127.0.0.1:${process.env.TAVERN_RUNTIME_PORT || 4310}`;
+}
+
 function stopChild(child: ChildProcess) {
     if (child.exitCode !== null || child.signalCode !== null) {
         return;
@@ -151,7 +157,11 @@ function stopChild(child: ChildProcess) {
 }
 
 async function waitForGateway(port: number, child: ChildProcess) {
-    const deadline = Date.now() + 30_000;
+    const timeoutMs = Number.parseInt(
+        process.env.TAVERN_OPENCLAW_GATEWAY_START_TIMEOUT_MS ?? '180000',
+        10
+    );
+    const deadline = Date.now() + timeoutMs;
 
     while (Date.now() < deadline) {
         if (child.exitCode !== null || child.signalCode !== null) {

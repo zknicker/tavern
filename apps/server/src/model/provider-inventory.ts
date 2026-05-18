@@ -1,7 +1,4 @@
-import {
-    agentRuntimeModelProviderIds,
-    parseAgentRuntimeModelRef,
-} from '@tavern/agent-runtime-protocol';
+import { agentRuntimeModelProviderIds, parseAgentRuntimeModelRef } from '@tavern/api';
 import { listModelAccessStatuses } from '../model-access/service.ts';
 import { getOpenRouterSettings } from '../openrouter/settings.ts';
 import {

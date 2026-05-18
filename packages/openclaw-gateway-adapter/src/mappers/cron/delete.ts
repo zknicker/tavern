@@ -1,7 +1,4 @@
-import {
-    type AgentRuntimeArchiveCron,
-    agentRuntimeArchiveCronSchema,
-} from '@tavern/agent-runtime-protocol';
+import { type AgentRuntimeArchiveCron, agentRuntimeArchiveCronSchema } from '@tavern/api';
 
 export function mapOpenClawDeletedCron(jobId: string): AgentRuntimeArchiveCron {
     return agentRuntimeArchiveCronSchema.parse({

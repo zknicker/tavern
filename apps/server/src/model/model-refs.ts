@@ -2,7 +2,7 @@ import {
     type AgentRuntimeModelIdentity,
     formatAgentRuntimeModelRef,
     parseAgentRuntimeModelRef,
-} from '@tavern/agent-runtime-protocol';
+} from '@tavern/api';
 
 export interface ModelRefSelection {
     fallbackModels: string[];

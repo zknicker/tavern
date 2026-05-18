@@ -4,7 +4,7 @@ import {
     agentRuntimeSkillFileSchema,
     agentRuntimeSkillInstallOptionSchema,
     agentRuntimeSkillRequirementsSchema,
-} from '@tavern/agent-runtime-protocol';
+} from '@tavern/api';
 import { z } from 'zod';
 
 export const skillIdSchema = z.string().trim().min(1).max(200);

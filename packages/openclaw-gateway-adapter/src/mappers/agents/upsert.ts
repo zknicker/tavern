@@ -1,7 +1,4 @@
-import type {
-    AgentRuntimeCreateAgent,
-    AgentRuntimeUpdateAgent,
-} from '@tavern/agent-runtime-protocol';
+import type { AgentRuntimeCreateAgent, AgentRuntimeUpdateAgent } from '@tavern/api';
 
 export function mapTavernAgentToOpenClawUpsert(
     input: AgentRuntimeCreateAgent | AgentRuntimeUpdateAgent

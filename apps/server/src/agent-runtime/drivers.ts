@@ -1,5 +1,5 @@
-import type { AgentRuntimeEvent } from '@tavern/agent-runtime-protocol';
-import { agentRuntimeEventSchema, agentRuntimeRoutes } from '@tavern/agent-runtime-protocol';
+import type { AgentRuntimeEvent } from '@tavern/api';
+import { agentRuntimeEventSchema, agentRuntimeRoutes } from '@tavern/api';
 import { WebSocket } from 'ws';
 import type { TavernAgentRuntimeClient } from './client.ts';
 import { createAgentRuntimeClient } from './client.ts';

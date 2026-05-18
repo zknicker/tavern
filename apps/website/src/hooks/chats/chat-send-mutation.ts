@@ -63,8 +63,7 @@ export function createChatSendMutationHandlers(utils: ChatSendMutationUtils) {
             metadata?: Record<string, unknown>;
         }) => {
             const timestamp = new Date().toISOString();
-            const timelineMessageId =
-                input.clientMessageId ?? `tavern-message:${crypto.randomUUID()}`;
+            const timelineMessageId = input.clientMessageId ?? `msg_${crypto.randomUUID()}`;
             utils.timelineMessage.add({
                 chatId: input.chatId,
                 content: input.content,

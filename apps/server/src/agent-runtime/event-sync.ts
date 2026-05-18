@@ -1,4 +1,4 @@
-import type { AgentRuntimeEvent } from '@tavern/agent-runtime-protocol';
+import type { AgentRuntimeEvent } from '@tavern/api';
 import {
     markAgentRuntimeConnectionFailure,
     markAgentRuntimeConnectionReachable,
@@ -11,11 +11,6 @@ import {
     emitSyncDataUpdated,
     emitWorkersUpdated,
 } from '../api/invalidation-events.ts';
-import { projectAcceptedChatMessage } from '../chat/accepted-message-projection.ts';
-import {
-    clearActiveTurnProgress,
-    projectActiveTurnProgress,
-} from '../chat/active-turn-progress.ts';
 import { refreshOpenClawSyncJobSchedules } from '../jobs/manager.ts';
 import { listReachableAgentRuntimeConnections } from '../storage/agent-runtime-connections.ts';
 import {
@@ -62,12 +57,6 @@ export async function applyObservedAgentRuntimeEvent(
             return;
         }
         case 'chat.messageAccepted': {
-            if (connection) {
-                await projectAcceptedChatMessage({
-                    event,
-                    runtimeId: connection.id,
-                });
-            }
             emitObservedAgentRuntimeEvent(event);
             debugTurnEvent(event);
             emitSyncDataUpdated();
@@ -114,7 +103,6 @@ export async function applyObservedAgentRuntimeEvent(
             return;
         }
         case 'turn.progress': {
-            await projectActiveTurnProgress(event);
             markTurnSessionActive(event.turn.sessionKey);
             emitObservedAgentRuntimeEvent(event);
             debugTurnEvent(event);
@@ -143,12 +131,10 @@ export async function applyObservedAgentRuntimeEvent(
                     } catch (error) {
                         console.warn('[tavern] failed to sync turn projection', error);
                     } finally {
-                        await clearActiveTurnProgress(event.turn);
                         clearTurnSessionActive(event.turn.sessionKey);
                     }
                 })();
             } else {
-                await clearActiveTurnProgress(event.turn);
                 clearTurnSessionActive(event.turn.sessionKey);
             }
             return;

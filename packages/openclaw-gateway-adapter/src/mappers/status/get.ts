@@ -2,7 +2,7 @@ import {
     type AgentRuntimeStatus,
     agentRuntimeProtocolVersion,
     agentRuntimeStatusSchema,
-} from '@tavern/agent-runtime-protocol';
+} from '@tavern/api';
 import { asRecord, nowIso, readString } from '../../gateway/records.ts';
 
 export function mapOpenClawStatus(input: { health: unknown; status: unknown }): AgentRuntimeStatus {

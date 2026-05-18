@@ -1,4 +1,4 @@
-import type { AgentRuntimeSessionMessage } from '@tavern/agent-runtime-protocol';
+import type { AgentRuntimeSessionMessage } from '@tavern/api';
 import { readString } from '../../gateway/records.ts';
 import { buildDiscordParticipant } from './participant.ts';
 

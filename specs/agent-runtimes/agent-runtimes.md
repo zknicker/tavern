@@ -8,10 +8,11 @@ Tavern primitives.
 - OpenClaw owns agent execution.
 - Tavern Runtime owns the generated OpenClaw config policy and applies a full managed config to
   OpenClaw.
-- OpenClaw owns native cron jobs, sessions, messages, logs, skills, agent files,
+- Tavern Runtime owns canonical chats, messages, events, reads, automations, deliveries, memory,
+  generated config inputs, sync status, and Runtime-specific metadata.
+- OpenClaw owns native agent execution, sessions, turns, transcripts, logs, skills, agent files,
   applied model/runtime config, platform channels, and runtime settings.
-- Tavern owns app chats, memory, tasks, local projections, sync status, generated config inputs,
-  and Tavern-specific presentation metadata.
+- Tavern App owns client cache, presentation state, profiles, participant links, and app settings.
 - Tavern Runtime installs, starts, supervises, upgrades, and launches OpenClaw with Seatbelt
   guardrails.
 - Tavern does not require users to configure OpenClaw through native files or CLIs.
@@ -21,7 +22,7 @@ Tavern primitives.
 - Tavern has one managed runtime namespace: `tavern-openclaw-managed`.
 - The namespace is stable across OpenClaw reinstall, OpenClaw runtime-state reset, and version
   upgrade.
-- Projection tables may continue to store a `runtime_id` column for scoping and future-proofing, but
+- Projection tables may keep a `runtime_id` column for scoping and forward compatibility, but
   product behavior must treat it as the stable managed OpenClaw namespace, not as a selectable
   runtime list.
 - Tavern Runtime endpoint can be offline while previously synced projections remain visible.
@@ -59,7 +60,7 @@ Tavern primitives.
 - Platform-specific parsing belongs inside the OpenClaw adapter, such as the Discord platform
   module.
 - Tavern product code works with normalized chats, sessions, messages, agents, and participants. It
-  should not parse OpenClaw session keys or platform-native payload fragments.
+  does not parse OpenClaw session keys or platform-native payload fragments.
 
 ## Events
 

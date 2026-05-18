@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'bun:test';
-import { parseAgentRuntimeModelRef } from '@tavern/agent-runtime-protocol';
+import { parseAgentRuntimeModelRef } from '@tavern/api';
 import type { OpenClawGatewayClient, OpenClawGatewayEventHandler } from '../gateway/types.ts';
 import { openClawGatewaySample } from '../test-data/openclaw-gateway-sample.ts';
 import { createOpenClawAgentRuntimeClient } from './client.ts';
@@ -10,7 +10,7 @@ describe('OpenClaw agent runtime client', () => {
             'sessions.list': {
                 sessions: [
                     {
-                        key: 'agent:blippy:tavern:channel:220f46ed-2d7c-41dd-9d7e-d02691f1afc3',
+                        key: 'agent:blippy:tavern:channel:cht_220f46ed-2d7c-41dd-9d7e-d02691f1afc3',
                         sessionId: 'tavern-session',
                     },
                 ],
@@ -55,7 +55,7 @@ describe('OpenClaw agent runtime client', () => {
     it('posts Tavern chat messages through native OpenClaw chat.send', async () => {
         const gateway = new FakeGateway({
             'chat.send': {
-                runId: 'tavern-run:tavern-message-1',
+                runId: 'run_1',
             },
         });
         const client = createOpenClawAgentRuntimeClient({
@@ -63,23 +63,23 @@ describe('OpenClaw agent runtime client', () => {
             gatewayUrl: 'ws://sample',
         });
 
-        const accepted = await client.postMessage('chat-1', {
+        const accepted = await client.postMessage('cht_1', {
             agent: { agentId: 'blippy' },
             message: {
                 content: 'hello',
-                id: 'tavern-message-1',
+                id: 'msg_1',
             },
             target: {
-                externalId: 'chat-1',
-                sessionKey: 'agent:blippy:tavern:channel:chat-1',
-                target: 'chat:chat-1',
+                externalId: 'cht_1',
+                sessionKey: 'agent:blippy:tavern:channel:cht_1',
+                target: 'chat:cht_1',
                 type: 'tavern',
             },
         });
 
         expect(accepted).toMatchObject({
-            runId: 'tavern-run:tavern-message-1',
-            sessionKey: 'agent:blippy:tavern:channel:chat-1',
+            runId: 'run_1',
+            sessionKey: 'agent:blippy:tavern:channel:cht_1',
             status: 'accepted',
         });
         expect(gateway.requests).toEqual([
@@ -87,16 +87,16 @@ describe('OpenClaw agent runtime client', () => {
                 method: 'chat.send',
                 params: {
                     deliver: false,
-                    idempotencyKey: 'tavern-run:tavern-message-1',
+                    idempotencyKey: 'run_1',
                     message: 'hello',
-                    sessionKey: 'agent:blippy:tavern:channel:chat-1',
+                    sessionKey: 'agent:blippy:tavern:channel:cht_1',
                 },
             },
         ]);
     });
 
     it('hydrates active chat status from OpenClaw sessions.list', async () => {
-        const chatId = '220f46ed-2d7c-41dd-9d7e-d02691f1afc3';
+        const chatId = 'cht_220f46ed-2d7c-41dd-9d7e-d02691f1afc3';
         const sessionKey = `agent:main:tavern:channel:${chatId}`;
         const gateway = new FakeGateway({
             'sessions.list': {

@@ -79,7 +79,7 @@ test('useChatSend stores the local user row in app state until the log catches u
     const input = {
         agentId: 'agent-1',
         chatId: 'chat-1',
-        clientMessageId: 'tavern-message:1',
+        clientMessageId: 'msg_1',
         content: 'love to hear it',
     };
     const context = await mutation.onMutate(input);
@@ -89,7 +89,7 @@ test('useChatSend stores the local user row in app state until the log catches u
         chatId: 'chat-1',
         content: 'love to hear it',
     });
-    expect(timelineMessages[0]?.id).toBe('tavern-message:1');
+    expect(timelineMessages[0]?.id).toBe('msg_1');
     expect(context?.timelineMessageId).toBe(timelineMessages[0]?.id);
 
     const result = {
@@ -120,7 +120,7 @@ test('useChatSend stores the local user row in app state until the log catches u
         {
             agentId: 'agent-1',
             chatId: 'chat-1',
-            runId: 'pending:tavern-message:1',
+            runId: 'pending:msg_1',
             sessionKey: '',
             startedAt: timelineMessages[0]?.timestamp,
         },

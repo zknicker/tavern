@@ -1,6 +1,6 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
-import type { AgentRuntimeSkillFile } from '@tavern/agent-runtime-protocol';
+import type { AgentRuntimeSkillFile } from '@tavern/api';
 import { z } from 'zod';
 import { createAgentRuntimeClientForConnection } from '../agent-runtime/client-factory.ts';
 import { resolveAgentDefaultPrimaryColor } from '../agents/palette.ts';

@@ -1,8 +1,8 @@
-import { listAgentRuntimeChatRows } from './agent-runtime-log.ts';
 import { chatLogPageSchema } from './contracts.ts';
+import { listRuntimeChatRows } from './runtime-chat-api.ts';
 
 export async function getChatLogPage(input: { id: string; limit: number; offset?: number }) {
-    const rows = await listAgentRuntimeChatRows(input.id);
+    const rows = await listRuntimeChatRows(input.id);
 
     if (rows === null) {
         return chatLogPageSchema.parse({

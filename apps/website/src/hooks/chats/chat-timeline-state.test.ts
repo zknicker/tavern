@@ -68,6 +68,51 @@ test('applyLogSnapshot clears the active reply when the assistant message lands'
     expect(next.timeline).toHaveLength(1);
 });
 
+test('applyLogSnapshot clears the active reply by durable runtime run id', () => {
+    const state = startTimelineTurn(emptyTimelineState(), {
+        agentId: 'main',
+        chatId: 'cht_1',
+        runId: 'run_1',
+        sessionKey: 'session_1',
+        startedAt: '2026-05-18T12:00:00.000Z',
+    });
+
+    const next = applyLogSnapshot(state, {
+        limit: 100,
+        offset: 0,
+        rows: [
+            {
+                actor: { id: 'agt_main', kind: 'agent' },
+                connectsToNext: false,
+                connectsToPrevious: false,
+                id: 'msg_final',
+                isFirstInGroup: true,
+                kind: 'message',
+                message: {
+                    tavernAgentId: 'agt_main',
+                    content: 'Done.',
+                    id: 'msg_final',
+                    metadata: {
+                        runtime: {
+                            agentId: 'main',
+                            runId: 'run_1',
+                            sessionKey: 'session_1',
+                        },
+                    },
+                    sender: 'Main',
+                    senderType: 'agent',
+                    sourceSessionId: null,
+                    sourceSessionKey: '',
+                    timestamp: '2026-05-18T11:59:59.000Z',
+                },
+            },
+        ],
+        total: 1,
+    });
+
+    expect(next.activeReply).toBeNull();
+});
+
 test('applyLogSnapshot keeps completed progress until durable activity lands', () => {
     const turn = {
         agentId: 'claw',
@@ -514,6 +559,32 @@ test('updateTimelineReply stores streamed text and thinking state', () => {
     });
 });
 
+test('updateTimelineReply accumulates delta-only streamed text', () => {
+    const turn = {
+        agentId: 'claw',
+        chatId: 'chat-1',
+        runId: 'run-1',
+        sessionKey: 'session-1',
+        startedAt: '2026-04-21T16:08:42.000Z',
+    };
+    const state = startTimelineTurn(emptyTimelineState(), turn);
+
+    const first = updateTimelineReply(state, {
+        delta: 'I will run ',
+        isThinking: true,
+        text: '',
+        turn,
+    });
+    const next = updateTimelineReply(first, {
+        delta: 'the tools.',
+        isThinking: true,
+        text: '',
+        turn,
+    });
+
+    expect(next.activeReply?.text).toBe('I will run the tools.');
+});
+
 test('updateTimelineReply preserves completed progress when the final replacement lands first', () => {
     const turn = {
         agentId: 'claw',
@@ -707,6 +778,16 @@ test('updateTimelineTurnProgress stores volatile active reply steps by run', () 
         sessionKey: 'session-1',
         startedAt: '2026-04-21T16:08:42.000Z',
     });
+
+    expect(state.activeReplySteps).toEqual([
+        {
+            detail: null,
+            id: 'planning',
+            kind: 'plan',
+            label: 'Planning',
+            status: 'active',
+        },
+    ]);
 
     const updated = updateTimelineTurnProgress(state, {
         receivedAt: '2026-04-21T16:08:46.000Z',

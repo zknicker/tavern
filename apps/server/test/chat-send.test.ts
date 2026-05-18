@@ -4,22 +4,70 @@ import { saveTavernChatRecord } from '../src/chat/records.ts';
 import { sendTavernChatMessage } from '../src/chat/send.ts';
 import { ensureDatabaseSchema } from '../src/db/bootstrap.ts';
 import { databaseClient } from '../src/db/index.ts';
+import { saveAgentRuntimeConnection } from '../src/storage/agent-runtime-connections.ts';
 import { syncAgentsForRuntime } from '../src/storage/agents.ts';
 
 ensureDatabaseSchema();
 
 const planningChatId = '220f46ed-2d7c-41dd-9d7e-d02691f1afc3';
 const planningSessionKey = `agent:agent:planner:tavern:channel:${planningChatId}`;
+const originalFetch = globalThis.fetch;
 
 afterEach(() => {
     mock.restore();
-    databaseClient.exec('DELETE FROM session_messages; DELETE FROM chats; DELETE FROM agents;');
+    globalThis.fetch = originalFetch;
+    databaseClient.exec(
+        'DELETE FROM session_messages; DELETE FROM chats; DELETE FROM agents; DELETE FROM agent_runtime_connections;'
+    );
 });
 
 test('sendTavernChatMessage posts to Runtime', async () => {
     await seedPlanningProjection();
     const calls: unknown[] = [];
+    const tavernApiCalls: Array<{ body: unknown; method: string; path: string }> = [];
     const historyCalls: unknown[] = [];
+    globalThis.fetch = (async (input, init) => {
+        const request = new Request(input, init);
+        const url = new URL(request.url);
+        const body = request.method === 'GET' ? null : await request.json();
+        tavernApiCalls.push({ body, method: request.method, path: url.pathname });
+
+        if (url.pathname === '/api/chats') {
+            return Response.json({
+                created_at: '2026-04-06T12:10:00.000Z',
+                id: planningChatId,
+                last_message_sequence: 0,
+                metadata: { runtime: { runtimeId: 'runtime-1' } },
+                title: null,
+                updated_at: '2026-04-06T12:10:00.000Z',
+            });
+        }
+
+        return Response.json({
+            cursor: '1',
+            idempotent: false,
+            message: {
+                author: {
+                    id: 'usr_tavern',
+                    kind: 'user',
+                    label: null,
+                    metadata: {},
+                },
+                chat_id: planningChatId,
+                created_at: '2026-04-06T12:10:00.000Z',
+                deleted_at: null,
+                delivery_id: null,
+                id: body.id,
+                metadata: body.metadata,
+                nonce: body.nonce,
+                parent_message_id: null,
+                parts: body.parts,
+                role: 'user',
+                sequence: 1,
+                thread_root_id: null,
+            },
+        });
+    }) as typeof fetch;
     const agentRuntimeClient = {
         listChats: async () => ({
             chats: [
@@ -125,6 +173,7 @@ test('sendTavernChatMessage posts to Runtime', async () => {
                 message: {
                     content: 'Plan the next launch.',
                     id: sentMessageId,
+                    nonce: sentMessageId,
                 },
                 target: {
                     externalId: planningChatId,
@@ -135,11 +184,58 @@ test('sendTavernChatMessage posts to Runtime', async () => {
             },
         },
     ]);
+    assert.deepEqual(tavernApiCalls, [
+        {
+            body: {
+                id: planningChatId,
+                metadata: {
+                    runtime: {
+                        runtimeId: 'runtime-1',
+                    },
+                },
+            },
+            method: 'POST',
+            path: '/api/chats',
+        },
+        {
+            body: {
+                author_id: 'usr_tavern',
+                id: sentMessageId,
+                metadata: {
+                    runtime: {
+                        agentId: 'agent:planner',
+                        runtimeId: 'runtime-1',
+                        sessionKey: planningSessionKey,
+                        source: 'openclaw',
+                    },
+                },
+                nonce: sentMessageId,
+                parts: [
+                    {
+                        content: 'Plan the next launch.',
+                        kind: 'text',
+                    },
+                ],
+                role: 'user',
+            },
+            method: 'POST',
+            path: `/api/chats/${planningChatId}/messages`,
+        },
+    ]);
     assert.deepEqual(historyCalls, []);
-    assert.match(sentMessageId ?? '', /^tavern-message:/u);
+    assert.match(sentMessageId ?? '', /^msg_/u);
 });
 
 async function seedPlanningProjection() {
+    await saveAgentRuntimeConnection({
+        baseUrl: 'http://runtime.test',
+        enabled: true,
+        id: 'runtime-1',
+        isActive: true,
+        lastCheckedAt: '2026-04-06T12:10:00.000Z',
+        lastError: null,
+        name: 'Runtime',
+    });
     await syncAgentsForRuntime({
         agents: [
             {

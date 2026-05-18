@@ -1,7 +1,4 @@
-import {
-    type AgentRuntimeChatStatusList,
-    agentRuntimeChatStatusListSchema,
-} from '@tavern/agent-runtime-protocol';
+import { type AgentRuntimeChatStatusList, agentRuntimeChatStatusListSchema } from '@tavern/api';
 import {
     asRecord,
     readArray,

@@ -2,7 +2,7 @@ import type {
     AgentRuntimeModelAccessStatus,
     AgentRuntimeSaveClaudeCredential,
     AgentRuntimeSaveCodexCredential,
-} from '@tavern/agent-runtime-protocol';
+} from '@tavern/api';
 import { z } from 'zod';
 import {
     getTavernVaultSecret,

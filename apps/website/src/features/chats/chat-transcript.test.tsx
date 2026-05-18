@@ -176,6 +176,43 @@ test('ChatTranscript shows completed activity as worked duration', () => {
     assert.match(markup, /Worked for 2 minutes 3 seconds/);
 });
 
+test('ChatTranscript keeps completed assistant narration expanded', () => {
+    const markup = renderTranscript([
+        {
+            actor: { id: 'tiny', kind: 'agent' },
+            completedAt: '2026-03-31T15:00:01.000Z',
+            connectsToNext: false,
+            connectsToPrevious: false,
+            id: 'activity:run-1:assistant-reply:1',
+            isFirstInGroup: true,
+            kind: 'tool',
+            sessionKey: 'agent:tiny:session-1',
+            spawnedRelationships: [],
+            startedAt: '2026-03-31T15:00:00.000Z',
+            toolCall: {
+                callId: null,
+                facts: [
+                    {
+                        label: 'Detail',
+                        tone: 'default',
+                        value: 'I will run the slow QA command before the final reply.',
+                    },
+                ],
+                label: 'Assistant reply',
+                name: 'message',
+                status: 'ok',
+                summaryParts: [
+                    'Assistant reply',
+                    'I will run the slow QA command before the final reply.',
+                ],
+            },
+        },
+    ]);
+
+    assert.match(markup, /aria-expanded="true"/);
+    assert.match(markup, /I will run the slow QA command before the final reply\./);
+});
+
 test('ChatTranscript does not render preserved completed progress when durable activity exists', () => {
     const rows: ChatRow[] = [
         {

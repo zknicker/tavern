@@ -2,7 +2,7 @@ import {
     type AgentRuntimeCronRun,
     type AgentRuntimeCronRunList,
     agentRuntimeCronRunListSchema,
-} from '@tavern/agent-runtime-protocol';
+} from '@tavern/api';
 import {
     asRecord,
     readRecordArray,

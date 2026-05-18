@@ -151,6 +151,8 @@ const QA_EMPTY_RESPONSE_EXHAUSTION_PROMPT_RE = /empty response exhaustion qa che
 const QA_STREAMING_PROMPT_RE = /(?:partial|quiet) streaming qa check/i;
 const QA_BLOCK_STREAMING_PROMPT_RE = /block streaming qa check/i;
 const QA_TOOL_PROGRESS_ERROR_PROMPT_RE = /tool progress error qa check/i;
+const QA_LIVE_PREAMBLE_TOOL_PROGRESS_PROMPT_RE = /live preamble tool progress qa check/i;
+const QA_LIVE_TOOL_PROGRESS_PROMPT_RE = /live tool progress qa check/i;
 const QA_TOOL_PROGRESS_PROMPT_RE = /tool progress qa check/i;
 const QA_GROUP_VISIBLE_REPLY_TOOL_PROMPT_RE = /qa group visible reply tool check/i;
 const QA_GROUP_MESSAGE_UNAVAILABLE_FALLBACK_PROMPT_RE =
@@ -181,6 +183,7 @@ type MockScenarioState = {
 const MOCK_OPENAI_MAX_BODY_BYTES = 16 * 1024 * 1024;
 const MOCK_OPENAI_BODY_TIMEOUT_MS = 30_000;
 const MOCK_OPENAI_DEBUG_REQUEST_LIMIT = 200;
+const QA_LIVE_PREAMBLE_FINAL_DELAY_MS = 25_000;
 
 function readBody(req: IncomingMessage): Promise<string> {
   return readRequestBodyWithLimit(req, {
@@ -634,6 +637,97 @@ function buildToolCallEventsWithArgs(name: string, args: Record<string, unknown>
           },
         ],
         usage: { input_tokens: 64, output_tokens: 16, total_tokens: 80 },
+      },
+    },
+  ];
+}
+
+function buildAssistantPreambleToolCallEvents({
+  args,
+  name,
+  preamble,
+}: {
+  args: Record<string, unknown>;
+  name: string;
+  preamble: string;
+}): StreamEvent[] {
+  const serialized = JSON.stringify(args);
+  const callSuffix = createHash("sha1")
+    .update(name)
+    .update("\0")
+    .update(serialized)
+    .update("\0")
+    .update(preamble)
+    .digest("hex")
+    .slice(0, 10);
+  const messageId = `msg_mock_preamble_${callSuffix}`;
+  const callId = `call_mock_${name}_${callSuffix}`;
+  const itemId = `fc_mock_${name}_${callSuffix}`;
+  const messageItem = buildAssistantOutputItem({
+    id: messageId,
+    phase: "commentary",
+    text: preamble,
+  });
+  const functionItem = {
+    type: "function_call",
+    id: itemId,
+    call_id: callId,
+    name,
+    arguments: serialized,
+  } as const;
+
+  return [
+    {
+      type: "response.output_item.added",
+      item: {
+        type: "message",
+        id: messageId,
+        role: "assistant",
+        phase: "commentary",
+        content: [],
+        status: "in_progress",
+      },
+    },
+    ...splitMockStreamingText(preamble, 3).map((delta) => ({
+      type: "response.output_text.delta" as const,
+      item_id: messageId,
+      output_index: 0,
+      content_index: 0,
+      delta,
+    })),
+    {
+      type: "response.output_text.done",
+      item_id: messageId,
+      output_index: 0,
+      content_index: 0,
+      text: preamble,
+    },
+    {
+      type: "response.output_item.done",
+      item: messageItem,
+    },
+    {
+      type: "response.output_item.added",
+      item: {
+        type: "function_call",
+        id: itemId,
+        call_id: callId,
+        name,
+        arguments: "",
+      },
+    },
+    { type: "response.function_call_arguments.delta", delta: serialized },
+    {
+      type: "response.output_item.done",
+      item: functionItem,
+    },
+    {
+      type: "response.completed",
+      response: {
+        id: `resp_mock_preamble_${callSuffix}`,
+        status: "completed",
+        output: [messageItem, functionItem],
+        usage: { input_tokens: 64, output_tokens: 24, total_tokens: 88 },
       },
     },
   ];
@@ -1331,11 +1425,12 @@ function buildReasoningAndAssistantEvents(params: {
   reasoningId: string;
   answerText: string;
   answerId?: string;
+  summaryText?: string;
 }): StreamEvent[] {
   const reasoningItem = {
     type: "reasoning",
     id: params.reasoningId,
-    summary: [],
+    summary: params.summaryText ? [{ text: params.summaryText }] : [],
   } as const;
   const answerItem = buildAssistantOutputItem({
     id: params.answerId ?? "msg_mock_reasoned_answer",
@@ -1502,6 +1597,7 @@ async function buildResponsesPayload(
   if (QA_THINKING_VISIBILITY_MAX_PROMPT_RE.test(prompt)) {
     return buildReasoningAndAssistantEvents({
       reasoningId: "rs_mock_thinking_visibility_max",
+      summaryText: "I should show this reasoning summary in Tavern.",
       answerText: "THINKING-MAX-OK",
     });
   }
@@ -1582,6 +1678,33 @@ async function buildResponsesPayload(
         ? toolProgressReplyDirective
         : "BUG-TOOL-DID-NOT-FAIL",
     );
+  }
+  if (QA_LIVE_PREAMBLE_TOOL_PROGRESS_PROMPT_RE.test(allInputText) && toolProgressReplyDirective) {
+    if (!toolOutput && hasDeclaredTool(body, "exec")) {
+      return buildAssistantPreambleToolCallEvents({
+        name: "exec",
+        args: {
+          command: "sleep 4 && cat QA_KICKOFF_TASK.md",
+        },
+        preamble: "I will run the slow QA command before the final reply.",
+      });
+    }
+    if (!toolOutput) {
+      return buildToolProgressReadEvents(QA_LIVE_PREAMBLE_TOOL_PROGRESS_PROMPT_RE);
+    }
+    await sleep(QA_LIVE_PREAMBLE_FINAL_DELAY_MS);
+    return buildAssistantEvents(toolProgressReplyDirective);
+  }
+  if (QA_LIVE_TOOL_PROGRESS_PROMPT_RE.test(allInputText) && toolProgressReplyDirective) {
+    if (!toolOutput && hasDeclaredTool(body, "exec")) {
+      return buildToolCallEventsWithArgs("exec", {
+        command: "sleep 4 && cat QA_KICKOFF_TASK.md",
+      });
+    }
+    if (!toolOutput) {
+      return buildToolProgressReadEvents(QA_LIVE_TOOL_PROGRESS_PROMPT_RE);
+    }
+    return buildAssistantEvents(toolProgressReplyDirective);
   }
   if (QA_TOOL_PROGRESS_PROMPT_RE.test(allInputText) && toolProgressReplyDirective) {
     if (!toolOutput) {

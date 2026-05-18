@@ -1,7 +1,9 @@
-import { agentRuntimeRoutes } from '@tavern/agent-runtime-protocol';
+import type { AgentRuntimeCreateMessage } from '@tavern/api';
+import { agentRuntimeRoutes } from '@tavern/api';
 
 import { createLocalOpenClawClient } from '../openclaw/local-client';
-import { listTavernActiveChannelStatuses } from './channel-store';
+import { sendTavernChannelMessage } from './channel-relay';
+import { listTavernActiveChannelStatuses } from './chat-statuses';
 import { json } from './http';
 
 type LocalOpenClawClient = ReturnType<typeof createLocalOpenClawClient>;
@@ -190,9 +192,20 @@ async function dispatchChats({ client, request, url }: RouteContext, segments: s
         return undefined;
     }
     if (request.method === 'POST' && segments[2] === 'messages') {
-        return await client.postMessage(chatId, await readJson(request));
+        const input = (await readJson(request)) as AgentRuntimeCreateMessage;
+        if (isTavernChannelMessage(input)) {
+            return await sendTavernChannelMessage(chatId, input);
+        }
+        return await client.postMessage(chatId, input);
     }
     return undefined;
+}
+
+function isTavernChannelMessage(input: AgentRuntimeCreateMessage) {
+    return (
+        input.target.type === 'tavern' ||
+        input.target.sessionKey?.includes(':tavern:channel:') === true
+    );
 }
 
 async function dispatchCron({ client, request, url }: RouteContext, segments: string[]) {

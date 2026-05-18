@@ -18,7 +18,7 @@ test('startTavernChat creates a bound chat and sends the first message', async (
     const sendSpy = spyOn(chatSend, 'sendTavernChatMessage').mockResolvedValue({
         acceptedAt: '2026-04-06T14:00:00.000Z',
         chatId: firstChatId,
-        clientMessageId: 'tavern-message:1',
+        clientMessageId: 'msg_1',
         runId: 'run-1',
         sessionKey: `agent:agent:planner:tavern:channel:${firstChatId}`,
         status: 'accepted',
@@ -32,7 +32,7 @@ test('startTavernChat creates a bound chat and sends the first message', async (
     assert.deepEqual(result, {
         acceptedAt: '2026-04-06T14:00:00.000Z',
         chatId: firstChatId,
-        clientMessageId: 'tavern-message:1',
+        clientMessageId: 'msg_1',
         runId: 'run-1',
         sessionKey: `agent:agent:planner:tavern:channel:${firstChatId}`,
         status: 'accepted',
@@ -55,7 +55,7 @@ test('startTavernChat trims long first messages into a stable chat display name'
     spyOn(chatSend, 'sendTavernChatMessage').mockResolvedValue({
         acceptedAt: '2026-04-06T14:00:00.000Z',
         chatId: secondChatId,
-        clientMessageId: 'tavern-message:2',
+        clientMessageId: 'msg_2',
         runId: 'run-2',
         sessionKey: `agent:agent:planner:tavern:channel:${secondChatId}`,
         status: 'accepted',

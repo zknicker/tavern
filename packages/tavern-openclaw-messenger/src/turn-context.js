@@ -1,6 +1,9 @@
 import { DEFAULT_ACCOUNT_ID, TAVERN_CHANNEL_ID } from './config.js';
+import { buildAcceptedTavernMetadata } from './message-identity.js';
 
 export function buildTavernTurnContext({ input, runtime, target, timestamp }) {
+    const acceptedMetadata = buildAcceptedTavernMetadata(input);
+
     return runtime.channel.turn.buildContext({
         channel: TAVERN_CHANNEL_ID,
         accountId: DEFAULT_ACCOUNT_ID,
@@ -39,11 +42,9 @@ export function buildTavernTurnContext({ input, runtime, target, timestamp }) {
                 authorizers: [{ configured: true, allowed: true }],
             },
         },
-        extra: input.metadata
-            ? {
-                  TavernMessageMetadata: input.metadata,
-              }
-            : undefined,
+        extra: {
+            TavernMessageMetadata: acceptedMetadata,
+        },
         message: {
             rawBody: input.text,
             bodyForAgent: input.text,

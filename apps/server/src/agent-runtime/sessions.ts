@@ -2,7 +2,7 @@ import type {
     AgentRuntimeSession,
     AgentRuntimeSessionGraph,
     AgentRuntimeSessionMessageList,
-} from '@tavern/agent-runtime-protocol';
+} from '@tavern/api';
 import type { TavernAgentRuntimeClient } from './client.ts';
 import { AgentRuntimeRequestError } from './client.ts';
 import { createConfiguredAgentRuntimeClient } from './configured-client.ts';

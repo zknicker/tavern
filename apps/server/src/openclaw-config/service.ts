@@ -1,4 +1,4 @@
-import type { AgentRuntimeOpenClawConfigSnapshot } from '@tavern/agent-runtime-protocol';
+import type { AgentRuntimeOpenClawConfigSnapshot } from '@tavern/api';
 import { TRPCError } from '@trpc/server';
 import type { TavernAgentRuntimeClient } from '../agent-runtime/client.ts';
 import { createAgentRuntimeClientForConnection } from '../agent-runtime/client-factory.ts';

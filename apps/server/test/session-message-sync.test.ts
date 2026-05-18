@@ -59,7 +59,7 @@ test('session tool call sync projects durable graph timings', async () => {
     assert.deepEqual(toolCall?.result, { path: 'README.md', status: 'ok' });
 });
 
-test('session message sync deletes absent rows only inside the fetched timestamp window', async () => {
+test('session message sync upserts by stable id without deleting absent partial-history rows', async () => {
     insertMessage({
         id: 'old',
         sessionKey: 'session-1',
@@ -69,7 +69,7 @@ test('session message sync deletes absent rows only inside the fetched timestamp
     insertMessage({
         id: 'stale',
         sessionKey: 'session-1',
-        text: 'inside fetched window but absent',
+        text: 'same window but absent from partial history',
         timestamp: '2026-05-02T01:04:00.000Z',
     });
     insertMessage({
@@ -118,12 +118,13 @@ test('session message sync deletes absent rows only inside the fetched timestamp
     const messages = await listSessionMessagesForSessionKeys(['session-1']);
 
     assert.equal(result.synced, 2);
-    assert.equal(result.deleted, 1);
+    assert.equal(result.deleted, 0);
     assert.deepEqual(
         messages.map((message) => [message.id, message.contentText]),
         [
             ['old', 'outside fetched window'],
             ['keep', 'new content'],
+            ['stale', 'same window but absent from partial history'],
             ['fresh', 'fresh reply'],
         ]
     );

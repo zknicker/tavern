@@ -3,9 +3,12 @@ import assert from 'node:assert/strict';
 import { applyObservedAgentRuntimeEvent } from '../src/agent-runtime/event-sync.ts';
 import * as agentRuntimeSync from '../src/agent-runtime/sync.ts';
 import * as invalidationEvents from '../src/api/invalidation-events.ts';
+import { ensureDatabaseSchema } from '../src/db/bootstrap.ts';
 
 const chatId = '220f46ed-2d7c-41dd-9d7e-d02691f1afc3';
 const sessionKey = `agent:agent:planner:tavern:channel:${chatId}`;
+
+ensureDatabaseSchema();
 
 afterEach(() => {
     mock.restore();

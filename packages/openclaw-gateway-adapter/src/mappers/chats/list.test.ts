@@ -17,10 +17,10 @@ describe('OpenClaw chat mapping', () => {
                 {
                     agentId: 'main',
                     displayName: 'Planning room',
-                    key: 'agent:main:tavern:channel:220f46ed-2d7c-41dd-9d7e-d02691f1afc3',
+                    key: 'agent:main:tavern:channel:cht_220f46ed-2d7c-41dd-9d7e-d02691f1afc3',
                     metadata: {
                         tavern: {
-                            chatId: '220f46ed-2d7c-41dd-9d7e-d02691f1afc3',
+                            chatId: 'cht_220f46ed-2d7c-41dd-9d7e-d02691f1afc3',
                             conversationId: 'conversation:1',
                             displayName: 'Planning room',
                         },
@@ -30,10 +30,10 @@ describe('OpenClaw chat mapping', () => {
                 },
                 {
                     agentId: 'tiny',
-                    key: 'agent:tiny:tavern:channel:220f46ed-2d7c-41dd-9d7e-d02691f1afc3',
+                    key: 'agent:tiny:tavern:channel:cht_220f46ed-2d7c-41dd-9d7e-d02691f1afc3',
                     metadata: {
                         tavern: {
-                            chatId: '220f46ed-2d7c-41dd-9d7e-d02691f1afc3',
+                            chatId: 'cht_220f46ed-2d7c-41dd-9d7e-d02691f1afc3',
                             conversationId: 'conversation:1',
                         },
                     },
@@ -50,7 +50,7 @@ describe('OpenClaw chat mapping', () => {
             sessions: withSessionIds([
                 {
                     agentId: 'blippy',
-                    key: 'agent:blippy:tavern:channel:220f46ed-2d7c-41dd-9d7e-d02691f1afc3',
+                    key: 'agent:blippy:tavern:channel:cht_220f46ed-2d7c-41dd-9d7e-d02691f1afc3',
                     title: 'Blippy Tavern chat',
                 },
             ]),
@@ -67,7 +67,7 @@ describe('OpenClaw chat mapping', () => {
                     deliveryContext: {
                         channel: 'tavern',
                     },
-                    key: 'agent:main:tavern:channel:220f46ed-2d7c-41dd-9d7e-d02691f1afc3',
+                    key: 'agent:main:tavern:channel:cht_220f46ed-2d7c-41dd-9d7e-d02691f1afc3',
                     origin: {
                         provider: 'webchat',
                         surface: 'webchat',
@@ -88,12 +88,12 @@ describe('OpenClaw chat mapping', () => {
                         lastChannel: 'tavern',
                         origin: {
                             chatType: 'direct',
-                            from: 'chat:tavern:220f46ed-2d7c-41dd-9d7e-d02691f1afc3',
-                            label: 'tavern:220f46ed-2d7c-41dd-9d7e-d02691f1afc3',
-                            nativeChannelId: 'tavern:220f46ed-2d7c-41dd-9d7e-d02691f1afc3',
+                            from: 'chat:tavern:cht_220f46ed-2d7c-41dd-9d7e-d02691f1afc3',
+                            label: 'tavern:cht_220f46ed-2d7c-41dd-9d7e-d02691f1afc3',
+                            nativeChannelId: 'tavern:cht_220f46ed-2d7c-41dd-9d7e-d02691f1afc3',
                             provider: 'tavern',
                             surface: 'tavern',
-                            to: 'chat:tavern:220f46ed-2d7c-41dd-9d7e-d02691f1afc3',
+                            to: 'chat:tavern:cht_220f46ed-2d7c-41dd-9d7e-d02691f1afc3',
                         },
                     },
                 ],
@@ -106,16 +106,16 @@ describe('OpenClaw chat mapping', () => {
             mapOpenClawChatsFromSessions({
                 sessions: [
                     {
-                        key: 'agent:blippy:tavern:channel:chat:tavern:220f46ed-2d7c-41dd-9d7e-d02691f1afc3',
+                        key: 'agent:blippy:tavern:channel:chat:tavern:cht_220f46ed-2d7c-41dd-9d7e-d02691f1afc3',
                         lastChannel: 'tavern',
                         origin: {
                             chatType: 'channel',
-                            from: 'chat:tavern:220f46ed-2d7c-41dd-9d7e-d02691f1afc3',
-                            label: 'tavern:220f46ed-2d7c-41dd-9d7e-d02691f1afc3',
-                            nativeChannelId: 'tavern:220f46ed-2d7c-41dd-9d7e-d02691f1afc3',
+                            from: 'chat:tavern:cht_220f46ed-2d7c-41dd-9d7e-d02691f1afc3',
+                            label: 'tavern:cht_220f46ed-2d7c-41dd-9d7e-d02691f1afc3',
+                            nativeChannelId: 'tavern:cht_220f46ed-2d7c-41dd-9d7e-d02691f1afc3',
                             provider: 'tavern',
                             surface: 'tavern',
-                            to: 'chat:tavern:220f46ed-2d7c-41dd-9d7e-d02691f1afc3',
+                            to: 'chat:tavern:cht_220f46ed-2d7c-41dd-9d7e-d02691f1afc3',
                         },
                     },
                 ],

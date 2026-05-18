@@ -1,7 +1,7 @@
 # OpenClaw Gateway Adapter
 
 `@tavern/openclaw-gateway-adapter` makes an OpenClaw Gateway look like Tavern's
-agent-runtime protocol.
+runtime evidence and managed OpenClaw control surfaces.
 
 ```txt
 Tavern Server
@@ -51,7 +51,7 @@ OpenClaw is the agent runtime. Platforms such as Tavern Messenger and Discord ar
 inside OpenClaw.
 Platform-specific parsing belongs under `src/platforms/<platform>/`.
 
-The adapter must normalize platform records before returning Tavern protocol shapes:
+The adapter must normalize platform records before returning Tavern API records:
 
 - Chats include typed `participants`, where each member is an Tavern agent or observed participant.
 - Chats carry platform-specific source facts in typed `platformMetadata`, not in display names.

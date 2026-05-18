@@ -1,7 +1,4 @@
-import type {
-    AgentRuntimeMemorySettings,
-    AgentRuntimeMemoryStatus,
-} from '@tavern/agent-runtime-protocol';
+import type { AgentRuntimeMemorySettings, AgentRuntimeMemoryStatus } from '@tavern/api';
 import type { TavernAgentRuntimeClient } from './client.ts';
 import { createConfiguredAgentRuntimeClient } from './configured-client.ts';
 

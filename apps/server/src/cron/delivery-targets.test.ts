@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import type { AgentRuntimeChat } from '@tavern/agent-runtime-protocol';
+import type { AgentRuntimeChat } from '@tavern/api';
 import { buildCronDeliveryTargets } from './delivery-targets.ts';
 
 const productChatId = '220f46ed-2d7c-41dd-9d7e-d02691f1afc3';

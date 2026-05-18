@@ -3,7 +3,7 @@ import type {
     AgentRuntimeCronPayload,
     AgentRuntimeCronSchedule,
     AgentRuntimeCronSummary,
-} from '@tavern/agent-runtime-protocol';
+} from '@tavern/api';
 import {
     asRecord,
     readBoolean,

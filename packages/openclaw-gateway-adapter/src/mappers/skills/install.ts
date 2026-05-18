@@ -1,4 +1,4 @@
-import type { AgentRuntimeInstallSkill } from '@tavern/agent-runtime-protocol';
+import type { AgentRuntimeInstallSkill } from '@tavern/api';
 
 export function mapTavernSkillInstallToOpenClaw(input: AgentRuntimeInstallSkill) {
     return {

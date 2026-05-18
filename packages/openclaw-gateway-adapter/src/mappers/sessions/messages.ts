@@ -3,7 +3,7 @@ import {
     type AgentRuntimeSessionMessageAttachment,
     type AgentRuntimeSessionMessageList,
     agentRuntimeSessionMessageListSchema,
-} from '@tavern/agent-runtime-protocol';
+} from '@tavern/api';
 import {
     asRecord,
     readArray,
@@ -21,15 +21,14 @@ export function mapOpenClawSessionMessages(input: {
     sessionKey: string;
 }): AgentRuntimeSessionMessageList {
     const record = asRecord(input.messages);
-    const messages = collapseTavernAcceptedInboundDuplicates(
-        readArray(record.messages ?? record.items ?? input.messages).map((message, index) =>
+    const messages = readArray(record.messages ?? record.items ?? input.messages).map(
+        (message, index) =>
             mapMessageRecord({
                 chatId: input.chatId ?? `openclaw:${input.sessionKey}`,
                 index,
                 message,
                 sessionKey: input.sessionKey,
             })
-        )
     );
 
     return agentRuntimeSessionMessageListSchema.parse({ messages });
@@ -46,14 +45,13 @@ function mapMessageRecord(input: {
     const senderType =
         role === 'assistant' || role === 'agent' ? 'agent' : role === 'user' ? 'user' : 'system';
     const openClawMeta = asRecord(record.__openclaw);
-    const id =
-        readString(openClawMeta, ['id']) ??
-        readString(record, ['id', 'messageId', 'idempotencyKey']);
+    const recordMetadata = asRecord(record.metadata);
+    const tavernMetadata = asRecord(recordMetadata.tavern);
+    const id = resolveMessageId({ openClawMeta, record, tavernMetadata });
     const agentId = readString(record, ['agentId', 'agent']);
     const openClawApi = readString(record, ['api']);
     const openClawModel = readString(record, ['model']);
     const openClawProvider = readString(record, ['provider']);
-    const recordMetadata = asRecord(record.metadata);
 
     if (!id) {
         throw new Error(
@@ -96,6 +94,18 @@ function mapMessageRecord(input: {
             `OpenClaw message ${id}`
         ),
     };
+}
+
+function resolveMessageId(input: {
+    openClawMeta: Record<string, unknown>;
+    record: Record<string, unknown>;
+    tavernMetadata: Record<string, unknown>;
+}) {
+    return (
+        readString(input.tavernMetadata, ['acceptedMessageId']) ??
+        readString(input.record, ['messageId', 'id', 'idempotencyKey']) ??
+        readString(input.openClawMeta, ['id'])
+    );
 }
 
 function mapOpenClawAttachments(
@@ -191,59 +201,4 @@ function resolveMessageContent(record: Record<string, unknown>) {
         })
         .filter((part) => part.length > 0)
         .join('\n');
-}
-
-function collapseTavernAcceptedInboundDuplicates(messages: AgentRuntimeSessionMessage[]) {
-    const acceptedInboundMessages: AgentRuntimeSessionMessage[] = [];
-    const collapsed: AgentRuntimeSessionMessage[] = [];
-
-    for (const message of messages) {
-        if (isDuplicateOpenClawInboundMessage(message, acceptedInboundMessages)) {
-            continue;
-        }
-
-        collapsed.push(message);
-
-        if (isTavernAcceptedInboundMessage(message)) {
-            acceptedInboundMessages.push(message);
-        }
-    }
-
-    return collapsed;
-}
-
-function isTavernAcceptedInboundMessage(message: AgentRuntimeSessionMessage) {
-    return (
-        message.senderType === 'user' &&
-        !message.chatId.startsWith('openclaw:') &&
-        (message.sender === 'tavern:user' ||
-            (message.sender === 'Tavern' && message.senderName === 'Tavern') ||
-            typeof message.metadata?.tavern?.acceptedRunId === 'string')
-    );
-}
-
-function isDuplicateOpenClawInboundMessage(
-    message: AgentRuntimeSessionMessage,
-    acceptedInboundMessages: AgentRuntimeSessionMessage[]
-) {
-    if (message.senderType !== 'user' || isTavernAcceptedInboundMessage(message)) {
-        return false;
-    }
-
-    const messageAt = Date.parse(message.timestamp);
-
-    if (!Number.isFinite(messageAt)) {
-        return false;
-    }
-
-    return acceptedInboundMessages.some((accepted) => {
-        const acceptedAt = Date.parse(accepted.timestamp);
-
-        return (
-            accepted.content === message.content &&
-            accepted.sessionKey === message.sessionKey &&
-            Number.isFinite(acceptedAt) &&
-            Math.abs(messageAt - acceptedAt) < 60_000
-        );
-    });
 }

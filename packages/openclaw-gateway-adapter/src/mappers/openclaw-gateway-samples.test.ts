@@ -132,7 +132,7 @@ describe('OpenClaw Gateway sample mapping', () => {
         });
 
         expect(dm.messages[0]).toMatchObject({
-            id: '5b2e44f9-b3dc-42e0-9a81-cd9e98338d85',
+            id: 'client:user:0',
             participant: {
                 externalId: '100000000000000001',
                 name: 'Example User',

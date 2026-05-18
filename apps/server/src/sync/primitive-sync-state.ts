@@ -1,7 +1,4 @@
-import {
-    hashAgentRuntimeConfig,
-    toCanonicalAgentRuntimeConfigJson,
-} from '@tavern/agent-runtime-protocol/config';
+import { hashAgentRuntimeConfig, toCanonicalAgentRuntimeConfigJson } from '@tavern/api/config';
 import { findSyncState, saveSyncState } from '../storage/sync-state.ts';
 import type { SyncPrimitiveKind, SyncPrimitiveState, SyncPrimitiveStatus } from './contracts.ts';
 

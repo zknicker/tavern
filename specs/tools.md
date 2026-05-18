@@ -17,6 +17,6 @@ Tools are Tavern's inline execution interactions.
 
 ## Presentation
 
-- Tool interactions should render as first-class rows, not duplicated invocation/result noise.
-- The product should make tool name, status, and summary understandable without exposing raw tool
+- Tool interactions render as first-class rows, not duplicated invocation/result noise.
+- The product makes tool name, status, and summary understandable without exposing raw tool
   protocol details.

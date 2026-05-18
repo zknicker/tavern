@@ -1,7 +1,6 @@
 import type { ChatLogOutput } from '../../lib/trpc.tsx';
 
 const sessionRailMaxGapMs = 5 * 60 * 1000;
-const timelineMessageMatchToleranceMs = 30 * 1000;
 
 type ChatLogRow = NonNullable<ChatLogOutput>['rows'][number];
 type ChatMessageRow = Extract<ChatLogRow, { kind: 'message' }>;
@@ -113,41 +112,8 @@ function createEmptyLog(limit: number): ChatLogOutput {
     };
 }
 
-function getTimelineTimestampMs(timestamp: string) {
-    const parsed = Date.parse(timestamp);
-
-    return Number.isNaN(parsed) ? Number.MIN_SAFE_INTEGER : parsed;
-}
-
-function hasCompatibleSession(row: ChatMessageRow, message: ChatTimelineMessage) {
-    const sessionKey = message.sessionKey?.trim();
-
-    if (!sessionKey) {
-        return true;
-    }
-
-    const rowSessionKey = row.message.sourceSessionKey.trim();
-
-    return rowSessionKey.length === 0 || rowSessionKey === sessionKey;
-}
-
 function isMatchingLoggedUserMessage(row: ChatMessageRow, message: ChatTimelineMessage) {
-    if (row.id === message.id || row.message.id === message.id) {
-        return true;
-    }
-
-    if (row.message.senderType !== 'user' || row.message.content !== message.content) {
-        return false;
-    }
-
-    if (!hasCompatibleSession(row, message)) {
-        return false;
-    }
-
-    const loggedTimestamp = getTimelineTimestampMs(row.message.timestamp);
-    const localTimestamp = getTimelineTimestampMs(message.timestamp);
-
-    return loggedTimestamp >= localTimestamp - timelineMessageMatchToleranceMs;
+    return row.id === message.id || row.message.id === message.id;
 }
 
 export function appendTimelineMessage(

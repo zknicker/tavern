@@ -1,34 +1,40 @@
 # Tavern
 
-Tavern is an OpenClaw dashboard, agent homebase, and utility layer backed by Tavern Runtime.
+Tavern is an always-on agent chat system backed by Tavern Runtime.
 
 ## Product Expectations
 
-- Tavern should feel like one coherent product around its own product model.
-- Tavern should define its own product surfaces such as agents, chats, sessions, cron, models,
-  memories, and jobs.
-- OpenClaw should support those Tavern surfaces rather than redefine them.
-- The app shell should feel stable, with a top bar, a persistent left rail, and a main workspace.
-- The left rail should remain visible across the main product areas rather than disappearing on
-  route changes.
+- Tavern feels like one coherent product around its own product model.
+- Tavern Runtime keeps chats, automations, deliveries, and event history alive while the app is
+  closed.
+- Tavern defines its own product surfaces such as agents, chats, sessions, turns, automations,
+  models, memories, and jobs.
+- OpenClaw participates in those Tavern surfaces rather than redefining them.
+- The app shell is stable, with a top bar, a persistent left rail, and a main workspace.
+- The left rail remains visible across the main product areas rather than disappearing on route
+  changes.
 
 ## Local-First Behavior
 
-- Tavern should render Tavern-owned local state immediately.
-- OpenClaw-owned config state such as agents and cron jobs appears from synced Tavern projections.
-- Config projections are refreshed from OpenClaw and record `last_synced_at`.
-- If a full OpenClaw config snapshot omits a record, Tavern removes that projected record.
-- OpenClaw-owned history such as chats, sessions, messages, logs, and run events remains useful as
-  an archive and is not deleted merely because a later sync does not mention it.
+- Tavern App renders the best Runtime-backed state immediately from cache, then reconciles with
+  Tavern Runtime.
+- OpenClaw-owned config and execution evidence appears through Runtime projections.
+- Runtime projections record freshness.
+- If a full OpenClaw config snapshot omits an OpenClaw-owned record, Tavern removes that projected
+  record.
+- OpenClaw-owned history such as sessions, transcripts, logs, and run events remains useful as
+  evidence and is not deleted merely because a later sync does not mention it.
 
 ## Config And Runtime Facts
 
-- Tavern should own shared services such as memory and local app settings.
-- OpenClaw-native records such as agents, cron jobs, sessions, and logs should live in OpenClaw.
-- Tavern should separately observe and store what happened in OpenClaw.
+- Tavern Runtime owns shared services such as chat, memory, automations, delivery, and jobs.
+- Tavern App owns first-party client settings and presentation.
+- OpenClaw-native records such as sessions, turns, transcripts, logs, tools, and agent files live
+  in OpenClaw.
+- Tavern separately observes and stores what happened in OpenClaw as execution evidence.
 
 ## Runtime Relationship
 
-- OpenClaw is the external execution layer connected to Tavern.
-- OpenClaw behavior should map cleanly into Tavern's named primitives rather than redefining them.
-- Connecting Tavern to OpenClaw Gateway should be a normal product flow in settings.
+- OpenClaw is the managed execution layer connected to Tavern Runtime.
+- OpenClaw behavior maps cleanly into Tavern's named primitives rather than redefining them.
+- Tavern Runtime manages OpenClaw Gateway for the supported local product path.

@@ -15,7 +15,7 @@ test('startTavernChat stores the deterministic Tavern chat name', async () => {
     const sendTavernChatMessage = spyOn(send, 'sendTavernChatMessage').mockResolvedValue({
         acceptedAt: '2026-04-17T18:00:00.000Z',
         chatId: '220f46ed-2d7c-41dd-9d7e-d02691f1afc3',
-        clientMessageId: 'tavern-message:1',
+        clientMessageId: 'msg_1',
         runId: 'run-1',
         sessionKey: 'session:chat-1',
         status: 'accepted',
@@ -29,7 +29,7 @@ test('startTavernChat stores the deterministic Tavern chat name', async () => {
     assert.deepEqual(result, {
         acceptedAt: '2026-04-17T18:00:00.000Z',
         chatId: '220f46ed-2d7c-41dd-9d7e-d02691f1afc3',
-        clientMessageId: 'tavern-message:1',
+        clientMessageId: 'msg_1',
         runId: 'run-1',
         sessionKey: 'session:chat-1',
         status: 'accepted',
@@ -60,7 +60,7 @@ test('startTavernChat can defer agent resolution to chat creation', async () => 
     const sendTavernChatMessage = spyOn(send, 'sendTavernChatMessage').mockResolvedValue({
         acceptedAt: '2026-04-17T18:00:00.000Z',
         chatId: '220f46ed-2d7c-41dd-9d7e-d02691f1afc3',
-        clientMessageId: 'tavern-message:1',
+        clientMessageId: 'msg_1',
         runId: 'run-1',
         sessionKey: 'session:chat-1',
         status: 'accepted',
@@ -96,7 +96,7 @@ test('startTavernChat preserves the optimistic first message identity', async ()
     const sendTavernChatMessage = spyOn(send, 'sendTavernChatMessage').mockResolvedValue({
         acceptedAt: '2026-04-17T18:00:00.000Z',
         chatId: '220f46ed-2d7c-41dd-9d7e-d02691f1afc3',
-        clientMessageId: 'tavern-message:draft-1',
+        clientMessageId: 'msg_draft_1',
         runId: 'run-1',
         sessionKey: 'session:chat-1',
         status: 'accepted',
@@ -104,7 +104,7 @@ test('startTavernChat preserves the optimistic first message identity', async ()
 
     await startTavernChat({
         agentId: 'claw',
-        clientMessageId: 'tavern-message:draft-1',
+        clientMessageId: 'msg_draft_1',
         content: 'Hey!',
         metadata: {
             tavern: {
@@ -127,7 +127,7 @@ test('startTavernChat preserves the optimistic first message identity', async ()
             {
                 agentId: 'claw',
                 chatId: '220f46ed-2d7c-41dd-9d7e-d02691f1afc3',
-                clientMessageId: 'tavern-message:draft-1',
+                clientMessageId: 'msg_draft_1',
                 content: 'Hey!',
                 metadata: {
                     tavern: {

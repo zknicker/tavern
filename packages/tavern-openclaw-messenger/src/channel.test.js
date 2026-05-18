@@ -29,11 +29,11 @@ describe('Tavern Messenger channel routing', () => {
         expect(tavernChannelPlugin.base.capabilities.chatTypes).toEqual(['channel']);
         expect(
             tavernChannelPlugin.base.messaging.parseExplicitTarget({
-                raw: '220f46ed-2d7c-41dd-9d7e-d02691f1afc3',
+                raw: 'cht_220f46ed-2d7c-41dd-9d7e-d02691f1afc3',
             })
         ).toEqual({
             chatType: 'channel',
-            to: 'chat:220f46ed-2d7c-41dd-9d7e-d02691f1afc3',
+            to: 'chat:cht_220f46ed-2d7c-41dd-9d7e-d02691f1afc3',
         });
         expect(tavernChannelPlugin.base.messaging.inferTargetChatType()).toBe('channel');
     });
@@ -44,30 +44,39 @@ describe('Tavern Messenger channel routing', () => {
                 accountId: 'default',
                 agentId: 'blippy',
                 cfg: { session: { dmScope: 'main' } },
-                target: 'chat:220f46ed-2d7c-41dd-9d7e-d02691f1afc3',
+                target: 'chat:cht_220f46ed-2d7c-41dd-9d7e-d02691f1afc3',
             })
         ).toMatchObject({
-            baseSessionKey: 'agent:blippy:tavern:channel:220f46ed-2d7c-41dd-9d7e-d02691f1afc3',
+            baseSessionKey: 'agent:blippy:tavern:channel:cht_220f46ed-2d7c-41dd-9d7e-d02691f1afc3',
             chatType: 'channel',
             from: 'tavern:default',
             peer: {
-                id: '220f46ed-2d7c-41dd-9d7e-d02691f1afc3',
+                id: 'cht_220f46ed-2d7c-41dd-9d7e-d02691f1afc3',
                 kind: 'channel',
             },
-            sessionKey: 'agent:blippy:tavern:channel:220f46ed-2d7c-41dd-9d7e-d02691f1afc3',
-            to: 'chat:220f46ed-2d7c-41dd-9d7e-d02691f1afc3',
+            sessionKey: 'agent:blippy:tavern:channel:cht_220f46ed-2d7c-41dd-9d7e-d02691f1afc3',
+            to: 'chat:cht_220f46ed-2d7c-41dd-9d7e-d02691f1afc3',
         });
     });
 
     it('exposes a channel message adapter backed by Tavern Gateway events', async () => {
-        const broadcast = mock(() => undefined);
-        const chatId = '220f46ed-2d7c-41dd-9d7e-d02691f1afc3';
+        const tavern = {
+            createDelivery: mock(async (input) => ({
+                cursor: '1',
+                id: input.deliveryId,
+                idempotent: false,
+                message: {
+                    id: input.messageId,
+                },
+            })),
+        };
+        const chatId = 'cht_220f46ed-2d7c-41dd-9d7e-d02691f1afc3';
         const unregister = registerTavernDeliveryContext({
             accountId: 'default',
             agentId: 'blippy',
             chatId,
-            context: { broadcast },
-            runId: 'run-1',
+            context: { tavern },
+            runId: 'run_1',
             sessionKey: `agent:blippy:tavern:channel:${chatId}`,
         });
 
@@ -75,22 +84,22 @@ describe('Tavern Messenger channel routing', () => {
             const result = await tavernMessageAdapter.send.text({
                 accountId: 'default',
                 cfg: {},
+                context: { tavern },
                 text: 'hello from core',
                 to: `chat:${chatId}`,
             });
 
             expect(result.receipt.platformMessageIds).toEqual([result.messageId]);
-            expect(broadcast.mock.calls[0]).toMatchObject([
-                'plugin.tavern.message.created',
-                {
-                    agentId: 'blippy',
-                    chatId,
-                    runId: 'run-1',
-                    sessionKey: `agent:blippy:tavern:channel:${chatId}`,
-                    text: 'hello from core',
-                },
-                { dropIfSlow: true },
-            ]);
+            expect(tavern.createDelivery.mock.calls[0][0]).toMatchObject({
+                agentId: 'blippy',
+                chatId,
+                deliveryId: 'del_1_final_1',
+                messageId: 'msg_1_final_1',
+                runId: 'run_1',
+                sessionKey: `agent:blippy:tavern:channel:${chatId}`,
+                text: 'hello from core',
+            });
+            unregister();
 
             await expect(
                 verifyChannelMessageAdapterCapabilityProofs({

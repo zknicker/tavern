@@ -1,4 +1,4 @@
-import type { AgentRuntimeChat } from '@tavern/agent-runtime-protocol';
+import type { AgentRuntimeChat } from '@tavern/api';
 import { and, asc, eq, ne, notInArray } from 'drizzle-orm';
 import { db } from '../db/index.ts';
 import { chatsTable } from '../db/schema.ts';

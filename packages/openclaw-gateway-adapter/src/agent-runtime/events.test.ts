@@ -84,13 +84,13 @@ describe('OpenClaw event mapping', () => {
         const events = mapOpenClawGatewayEvent({
             event: 'session.message',
             payload: {
-                key: 'agent:blippy:tavern:channel:220f46ed-2d7c-41dd-9d7e-d02691f1afc3',
+                key: 'agent:blippy:tavern:channel:cht_220f46ed-2d7c-41dd-9d7e-d02691f1afc3',
                 title: 'Blippy Tavern chat',
             },
         });
 
         expect(events[0]).toMatchObject({
-            sessionKey: 'agent:blippy:tavern:channel:220f46ed-2d7c-41dd-9d7e-d02691f1afc3',
+            sessionKey: 'agent:blippy:tavern:channel:cht_220f46ed-2d7c-41dd-9d7e-d02691f1afc3',
             type: 'session.invalidated',
         });
     });
@@ -115,10 +115,10 @@ describe('OpenClaw event mapping', () => {
                 },
                 messageId: 'message-1',
                 session: {
-                    key: 'agent:blippy:discord:channel:220f46ed-2d7c-41dd-9d7e-d02691f1afc3',
+                    key: 'agent:blippy:discord:channel:cht_220f46ed-2d7c-41dd-9d7e-d02691f1afc3',
                     startedAt: 1_778_613_883_497,
                 },
-                sessionKey: 'agent:blippy:discord:channel:220f46ed-2d7c-41dd-9d7e-d02691f1afc3',
+                sessionKey: 'agent:blippy:discord:channel:cht_220f46ed-2d7c-41dd-9d7e-d02691f1afc3',
             },
         });
 
@@ -128,14 +128,14 @@ describe('OpenClaw event mapping', () => {
             text: 'Contract check OK.',
             turn: {
                 agentId: 'blippy',
-                chatId: 'channel:220f46ed-2d7c-41dd-9d7e-d02691f1afc3',
+                chatId: 'channel:cht_220f46ed-2d7c-41dd-9d7e-d02691f1afc3',
                 runId: 'message-1',
-                sessionKey: 'agent:blippy:discord:channel:220f46ed-2d7c-41dd-9d7e-d02691f1afc3',
+                sessionKey: 'agent:blippy:discord:channel:cht_220f46ed-2d7c-41dd-9d7e-d02691f1afc3',
             },
             type: 'turn.replyUpdated',
         });
         expect(events[1]).toMatchObject({
-            sessionKey: 'agent:blippy:discord:channel:220f46ed-2d7c-41dd-9d7e-d02691f1afc3',
+            sessionKey: 'agent:blippy:discord:channel:cht_220f46ed-2d7c-41dd-9d7e-d02691f1afc3',
             type: 'session.invalidated',
         });
     });
@@ -155,13 +155,13 @@ describe('OpenClaw event mapping', () => {
                     timestamp: 1_778_613_883_642,
                 },
                 messageId: 'message-1',
-                sessionKey: 'agent:blippy:tavern:channel:220f46ed-2d7c-41dd-9d7e-d02691f1afc3',
+                sessionKey: 'agent:blippy:tavern:channel:cht_220f46ed-2d7c-41dd-9d7e-d02691f1afc3',
             },
         });
 
         expect(events).toEqual([
             expect.objectContaining({
-                sessionKey: 'agent:blippy:tavern:channel:220f46ed-2d7c-41dd-9d7e-d02691f1afc3',
+                sessionKey: 'agent:blippy:tavern:channel:cht_220f46ed-2d7c-41dd-9d7e-d02691f1afc3',
                 type: 'session.invalidated',
             }),
         ]);
@@ -176,8 +176,8 @@ describe('OpenClaw event mapping', () => {
                     role: 'assistant',
                     timestamp: 1_778_613_883_642,
                 },
-                runId: 'run-1',
-                sessionKey: 'agent:blippy:tavern:channel:220f46ed-2d7c-41dd-9d7e-d02691f1afc3',
+                runId: 'run_1',
+                sessionKey: 'agent:blippy:tavern:channel:cht_220f46ed-2d7c-41dd-9d7e-d02691f1afc3',
                 state: 'done',
             },
         });
@@ -190,14 +190,14 @@ describe('OpenClaw event mapping', () => {
             event: 'cron',
             payload: {
                 jobId: 'brief',
-                runId: 'run-1',
+                runId: 'run_1',
                 status: 'running',
             },
         });
 
         expect(events[0]).toMatchObject({
             cronJobId: 'brief',
-            runId: 'run-1',
+            runId: 'run_1',
             type: 'cron.runStarted',
         });
     });
@@ -217,11 +217,11 @@ describe('OpenClaw event mapping', () => {
                 },
                 metadata: {
                     tavern: {
-                        chatId: '220f46ed-2d7c-41dd-9d7e-d02691f1afc3',
+                        chatId: 'cht_220f46ed-2d7c-41dd-9d7e-d02691f1afc3',
                     },
                 },
-                runId: 'run-1',
-                sessionKey: 'agent:main:tavern:channel:220f46ed-2d7c-41dd-9d7e-d02691f1afc3',
+                runId: 'run_1',
+                sessionKey: 'agent:main:tavern:channel:cht_220f46ed-2d7c-41dd-9d7e-d02691f1afc3',
                 state: 'final',
                 timestamp: '2026-05-03T20:00:00.000Z',
             },
@@ -234,9 +234,9 @@ describe('OpenClaw event mapping', () => {
             text: '⚠️ Model login failed on the gateway for openai.',
             turn: {
                 agentId: 'main',
-                chatId: '220f46ed-2d7c-41dd-9d7e-d02691f1afc3',
-                runId: 'run-1',
-                sessionKey: 'agent:main:tavern:channel:220f46ed-2d7c-41dd-9d7e-d02691f1afc3',
+                chatId: 'cht_220f46ed-2d7c-41dd-9d7e-d02691f1afc3',
+                runId: 'run_1',
+                sessionKey: 'agent:main:tavern:channel:cht_220f46ed-2d7c-41dd-9d7e-d02691f1afc3',
                 startedAt: '2026-05-03T20:00:00.000Z',
             },
             type: 'turn.replyUpdated',
@@ -244,9 +244,9 @@ describe('OpenClaw event mapping', () => {
         expect(events[1]).toMatchObject({
             turn: {
                 agentId: 'main',
-                chatId: '220f46ed-2d7c-41dd-9d7e-d02691f1afc3',
-                runId: 'run-1',
-                sessionKey: 'agent:main:tavern:channel:220f46ed-2d7c-41dd-9d7e-d02691f1afc3',
+                chatId: 'cht_220f46ed-2d7c-41dd-9d7e-d02691f1afc3',
+                runId: 'run_1',
+                sessionKey: 'agent:main:tavern:channel:cht_220f46ed-2d7c-41dd-9d7e-d02691f1afc3',
                 startedAt: '2026-05-03T20:00:00.000Z',
             },
             type: 'turn.completed',
@@ -258,9 +258,9 @@ describe('OpenClaw event mapping', () => {
             event: 'plugin.tavern.turn.started',
             payload: {
                 agentId: 'blippy',
-                chatId: '220f46ed-2d7c-41dd-9d7e-d02691f1afc3',
-                runId: 'tavern-run:msg-1',
-                sessionKey: 'agent:blippy:tavern:channel:220f46ed-2d7c-41dd-9d7e-d02691f1afc3',
+                chatId: 'cht_220f46ed-2d7c-41dd-9d7e-d02691f1afc3',
+                runId: 'run_1',
+                sessionKey: 'agent:blippy:tavern:channel:cht_220f46ed-2d7c-41dd-9d7e-d02691f1afc3',
                 startedAt: '2026-05-04T12:00:00.000Z',
             },
         });
@@ -268,9 +268,9 @@ describe('OpenClaw event mapping', () => {
         expect(events[0]).toMatchObject({
             turn: {
                 agentId: 'blippy',
-                chatId: '220f46ed-2d7c-41dd-9d7e-d02691f1afc3',
-                runId: 'tavern-run:msg-1',
-                sessionKey: 'agent:blippy:tavern:channel:220f46ed-2d7c-41dd-9d7e-d02691f1afc3',
+                chatId: 'cht_220f46ed-2d7c-41dd-9d7e-d02691f1afc3',
+                runId: 'run_1',
+                sessionKey: 'agent:blippy:tavern:channel:cht_220f46ed-2d7c-41dd-9d7e-d02691f1afc3',
             },
             type: 'turn.started',
         });
@@ -280,9 +280,9 @@ describe('OpenClaw event mapping', () => {
         const events = mapOpenClawGatewayEvent({
             event: 'session.tool',
             payload: {
-                runId: 'tavern-run:msg-1',
+                runId: 'run_1',
                 seq: 3,
-                sessionKey: 'agent:blippy:tavern:channel:220f46ed-2d7c-41dd-9d7e-d02691f1afc3',
+                sessionKey: 'agent:blippy:tavern:channel:cht_220f46ed-2d7c-41dd-9d7e-d02691f1afc3',
                 startedAt: '2026-05-04T12:00:00.000Z',
                 stream: 'tool',
                 data: {
@@ -305,14 +305,14 @@ describe('OpenClaw event mapping', () => {
             },
             turn: {
                 agentId: 'blippy',
-                chatId: '220f46ed-2d7c-41dd-9d7e-d02691f1afc3',
-                runId: 'tavern-run:msg-1',
-                sessionKey: 'agent:blippy:tavern:channel:220f46ed-2d7c-41dd-9d7e-d02691f1afc3',
+                chatId: 'cht_220f46ed-2d7c-41dd-9d7e-d02691f1afc3',
+                runId: 'run_1',
+                sessionKey: 'agent:blippy:tavern:channel:cht_220f46ed-2d7c-41dd-9d7e-d02691f1afc3',
             },
             type: 'turn.progress',
         });
         expect(events[1]).toMatchObject({
-            sessionKey: 'agent:blippy:tavern:channel:220f46ed-2d7c-41dd-9d7e-d02691f1afc3',
+            sessionKey: 'agent:blippy:tavern:channel:cht_220f46ed-2d7c-41dd-9d7e-d02691f1afc3',
             type: 'session.invalidated',
         });
     });
@@ -321,8 +321,8 @@ describe('OpenClaw event mapping', () => {
         const events = mapOpenClawGatewayEvent({
             event: 'agent',
             payload: {
-                runId: 'tavern-run:msg-1',
-                sessionKey: 'agent:blippy:tavern:channel:220f46ed-2d7c-41dd-9d7e-d02691f1afc3',
+                runId: 'run_1',
+                sessionKey: 'agent:blippy:tavern:channel:cht_220f46ed-2d7c-41dd-9d7e-d02691f1afc3',
                 stream: 'command_output',
                 data: {
                     durationMs: 5030,
@@ -353,8 +353,8 @@ describe('OpenClaw event mapping', () => {
         const events = mapOpenClawGatewayEvent({
             event: 'agent',
             payload: {
-                runId: 'tavern-run:msg-1',
-                sessionKey: 'agent:blippy:tavern:channel:220f46ed-2d7c-41dd-9d7e-d02691f1afc3',
+                runId: 'run_1',
+                sessionKey: 'agent:blippy:tavern:channel:cht_220f46ed-2d7c-41dd-9d7e-d02691f1afc3',
                 stream: 'thinking',
                 data: {
                     text: 'Checking the current workspace before running tools.',
@@ -379,8 +379,8 @@ describe('OpenClaw event mapping', () => {
         const events = mapOpenClawGatewayEvent({
             event: 'agent',
             payload: {
-                runId: 'tavern-run:msg-1',
-                sessionKey: 'agent:blippy:tavern:channel:220f46ed-2d7c-41dd-9d7e-d02691f1afc3',
+                runId: 'run_1',
+                sessionKey: 'agent:blippy:tavern:channel:cht_220f46ed-2d7c-41dd-9d7e-d02691f1afc3',
                 stream: 'item',
                 data: {
                     itemId: 'reasoning-item-1',
@@ -400,9 +400,9 @@ describe('OpenClaw event mapping', () => {
             event: 'plugin.tavern.message.created',
             payload: {
                 agentId: 'blippy',
-                chatId: '220f46ed-2d7c-41dd-9d7e-d02691f1afc3',
-                runId: 'tavern-run:msg-1',
-                sessionKey: 'agent:blippy:tavern:channel:220f46ed-2d7c-41dd-9d7e-d02691f1afc3',
+                chatId: 'cht_220f46ed-2d7c-41dd-9d7e-d02691f1afc3',
+                runId: 'run_1',
+                sessionKey: 'agent:blippy:tavern:channel:cht_220f46ed-2d7c-41dd-9d7e-d02691f1afc3',
                 startedAt: '2026-05-04T12:00:00.000Z',
                 text: '⚠️ Model login failed on the gateway.',
             },
@@ -414,9 +414,9 @@ describe('OpenClaw event mapping', () => {
             text: '⚠️ Model login failed on the gateway.',
             turn: {
                 agentId: 'blippy',
-                chatId: '220f46ed-2d7c-41dd-9d7e-d02691f1afc3',
-                runId: 'tavern-run:msg-1',
-                sessionKey: 'agent:blippy:tavern:channel:220f46ed-2d7c-41dd-9d7e-d02691f1afc3',
+                chatId: 'cht_220f46ed-2d7c-41dd-9d7e-d02691f1afc3',
+                runId: 'run_1',
+                sessionKey: 'agent:blippy:tavern:channel:cht_220f46ed-2d7c-41dd-9d7e-d02691f1afc3',
                 startedAt: '2026-05-04T12:00:00.000Z',
             },
             type: 'turn.replyUpdated',
@@ -428,10 +428,10 @@ describe('OpenClaw event mapping', () => {
             event: 'chat',
             payload: {
                 agentId: 'main',
-                chatId: '220f46ed-2d7c-41dd-9d7e-d02691f1afc3',
+                chatId: 'cht_220f46ed-2d7c-41dd-9d7e-d02691f1afc3',
                 error: 'no model configured',
-                runId: 'run-1',
-                sessionKey: 'agent:main:tavern:channel:220f46ed-2d7c-41dd-9d7e-d02691f1afc3',
+                runId: 'run_1',
+                sessionKey: 'agent:main:tavern:channel:cht_220f46ed-2d7c-41dd-9d7e-d02691f1afc3',
                 state: 'error',
             },
         });
@@ -439,8 +439,8 @@ describe('OpenClaw event mapping', () => {
         expect(events[0]).toMatchObject({
             error: 'no model configured',
             turn: {
-                chatId: '220f46ed-2d7c-41dd-9d7e-d02691f1afc3',
-                runId: 'run-1',
+                chatId: 'cht_220f46ed-2d7c-41dd-9d7e-d02691f1afc3',
+                runId: 'run_1',
             },
             type: 'turn.failed',
         });

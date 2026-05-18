@@ -1,45 +1,38 @@
 import { afterEach, beforeEach, expect, mock, test } from 'bun:test';
+import { mkdtempSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+
+process.env.DATABASE_PATH = join(mkdtempSync(join(tmpdir(), 'tavern-event-sync-')), 'test.sqlite');
 
 const emitAgentRuntimeUpdated = mock(() => undefined);
 const emitAgentRuntimeCapabilityUpdated = mock(() => undefined);
+const emitAgentInvalidationCascade = mock(() => undefined);
 const emitAgentUpdated = mock(() => undefined);
 const emitCronUpdated = mock(() => undefined);
+const emitJobsUpdated = mock(() => undefined);
+const emitModelUpdated = mock(() => undefined);
+const emitOpenClawConfigUpdated = mock(() => undefined);
+const emitOpenRouterSettingsInvalidationCascade = mock(() => undefined);
+const emitOpenRouterSettingsUpdated = mock(() => undefined);
 const emitSkillInvalidationCascade = mock(() => undefined);
+const emitSkillUpdated = mock(() => undefined);
 const emitSyncDataUpdated = mock(() => undefined);
+const emitTavernEvent = mock(() => undefined);
+const emitUsageLiveUpdated = mock(() => undefined);
 const emitWorkersUpdated = mock(() => undefined);
-const agentRuntimeConnectionId = 'tavern-openclaw-managed';
-const activateAgentRuntimeConnection = mock(async () => null);
-const deleteAgentRuntimeConnection = mock(async () => undefined);
-const disableAgentRuntimeConnection = mock(async () => undefined);
-const getActiveAgentRuntimeConnection = mock(async () => null);
-const getActiveProjectionRuntimeId = mock(async () => null);
-const getDefaultAgentRuntimeConnection = mock(async () => null);
-const getAgentRuntimeConnection = mock(async () => null);
-const getLatestAgentRuntimeConnection = mock(async () => null);
-const listAgentRuntimeConnections = mock(async () => []);
-const listConfiguredAgentRuntimeConnections = mock(async () => []);
-const listReachableAgentRuntimeConnections = mock(async () => [
-    {
-        id: 'runtime-1',
-    },
-]);
 const markAgentRuntimeConnectionFailure = mock(async () => undefined);
 const markAgentRuntimeConnectionReachable = mock(async () => undefined);
-const markAgentRuntimeConnectionSync = mock(async () => undefined);
 const refreshOpenClawSyncJobSchedules = mock(async () => undefined);
 const requestAgentRuntimeSessionSync = mock(async () => undefined);
-const saveAgentRuntimeConnection = mock(async () => null);
 const createAgentRuntimeClientForConnection = mock(() => undefined);
 const subscribeAgentRuntimeEventsForConnection = mock(async () => ({
     close() {},
 }));
-const syncAgentRuntimeAgents = mock(async () => undefined);
-const syncAgentRuntimeCron = mock(async () => undefined);
-const syncAgentRuntimeSession = mock(async () => ({ synced: 1 }));
-const syncAgentRuntimeSessionMessages = mock(async () => undefined);
-const syncAgentRuntimeSessionMessagesWithRetry = mock(async () => undefined);
 const emitObservedAgentRuntimeEvent = mock(() => undefined);
 const tavernChatId = '220f46ed-2d7c-41dd-9d7e-d02691f1afc3';
+const originalFetch = globalThis.fetch;
+let tavernApiRequests: Array<{ body: unknown; method: string; path: string }> = [];
 
 mock.module('../src/agent-runtime-connection/service.ts', () => ({
     markAgentRuntimeConnectionFailure,
@@ -47,42 +40,26 @@ mock.module('../src/agent-runtime-connection/service.ts', () => ({
 }));
 
 mock.module('../src/api/invalidation-events.ts', () => ({
+    emitAgentInvalidationCascade,
     emitAgentRuntimeCapabilityUpdated,
     emitAgentRuntimeUpdated,
     emitAgentUpdated,
     emitCronUpdated,
+    emitJobsUpdated,
+    emitModelUpdated,
+    emitOpenClawConfigUpdated,
+    emitOpenRouterSettingsInvalidationCascade,
+    emitOpenRouterSettingsUpdated,
     emitSkillInvalidationCascade,
+    emitSkillUpdated,
     emitSyncDataUpdated,
+    emitTavernEvent,
+    emitUsageLiveUpdated,
     emitWorkersUpdated,
 }));
 
 mock.module('../src/jobs/manager.ts', () => ({
     refreshOpenClawSyncJobSchedules,
-}));
-
-mock.module('../src/storage/agent-runtime-connections.ts', () => ({
-    activateAgentRuntimeConnection,
-    agentRuntimeConnectionId,
-    deleteAgentRuntimeConnection,
-    disableAgentRuntimeConnection,
-    getActiveAgentRuntimeConnection,
-    getActiveProjectionRuntimeId,
-    getDefaultAgentRuntimeConnection,
-    getAgentRuntimeConnection,
-    getLatestAgentRuntimeConnection,
-    listAgentRuntimeConnections,
-    listConfiguredAgentRuntimeConnections,
-    listReachableAgentRuntimeConnections,
-    markAgentRuntimeConnectionSync,
-    saveAgentRuntimeConnection,
-}));
-
-mock.module('../src/sync/agent-runtime-projections.ts', () => ({
-    syncAgentRuntimeAgents,
-    syncAgentRuntimeCron,
-    syncAgentRuntimeSession,
-    syncAgentRuntimeSessionMessages,
-    syncAgentRuntimeSessionMessagesWithRetry,
 }));
 
 mock.module('../src/agent-runtime/drivers.ts', () => ({
@@ -98,46 +75,126 @@ mock.module('../src/agent-runtime/events.ts', () => ({
     emitObservedAgentRuntimeEvent,
 }));
 
+const { ensureDatabaseSchema } = await import('../src/db/bootstrap.ts');
+ensureDatabaseSchema();
+const { databaseClient } = await import('../src/db/index.ts');
+const { saveAgentRuntimeConnection } = await import('../src/storage/agent-runtime-connections.ts');
 const { applyObservedAgentRuntimeEvent, startAgentRuntimeEventSync } = await import(
     '../src/agent-runtime/event-sync.ts'
 );
 
-beforeEach(() => {
+beforeEach(async () => {
+    databaseClient.exec('DELETE FROM agent_runtime_connections;');
+    await saveAgentRuntimeConnection({
+        baseUrl: 'http://runtime.test',
+        enabled: true,
+        id: 'runtime-1',
+        isActive: true,
+        lastCheckedAt: '2026-05-12T19:00:00.000Z',
+        lastError: null,
+        name: 'Runtime',
+    });
     emitAgentRuntimeUpdated.mockClear();
     emitAgentRuntimeCapabilityUpdated.mockClear();
+    emitAgentInvalidationCascade.mockClear();
     emitAgentUpdated.mockClear();
     emitCronUpdated.mockClear();
+    emitJobsUpdated.mockClear();
+    emitModelUpdated.mockClear();
+    emitOpenClawConfigUpdated.mockClear();
+    emitOpenRouterSettingsInvalidationCascade.mockClear();
+    emitOpenRouterSettingsUpdated.mockClear();
     emitSkillInvalidationCascade.mockClear();
+    emitSkillUpdated.mockClear();
     emitSyncDataUpdated.mockClear();
+    emitTavernEvent.mockClear();
+    emitUsageLiveUpdated.mockClear();
     emitWorkersUpdated.mockClear();
     emitObservedAgentRuntimeEvent.mockClear();
-    activateAgentRuntimeConnection.mockClear();
-    deleteAgentRuntimeConnection.mockClear();
-    disableAgentRuntimeConnection.mockClear();
-    getActiveAgentRuntimeConnection.mockClear();
-    getActiveProjectionRuntimeId.mockClear();
-    getDefaultAgentRuntimeConnection.mockClear();
-    getAgentRuntimeConnection.mockClear();
-    getLatestAgentRuntimeConnection.mockClear();
-    listAgentRuntimeConnections.mockClear();
-    listConfiguredAgentRuntimeConnections.mockClear();
-    listReachableAgentRuntimeConnections.mockClear();
     markAgentRuntimeConnectionFailure.mockClear();
     markAgentRuntimeConnectionReachable.mockClear();
-    markAgentRuntimeConnectionSync.mockClear();
     refreshOpenClawSyncJobSchedules.mockClear();
     requestAgentRuntimeSessionSync.mockClear();
-    saveAgentRuntimeConnection.mockClear();
     createAgentRuntimeClientForConnection.mockClear();
     subscribeAgentRuntimeEventsForConnection.mockClear();
-    syncAgentRuntimeAgents.mockClear();
-    syncAgentRuntimeCron.mockClear();
-    syncAgentRuntimeSession.mockClear();
-    syncAgentRuntimeSessionMessages.mockClear();
-    syncAgentRuntimeSessionMessagesWithRetry.mockClear();
+    tavernApiRequests = [];
+    globalThis.fetch = (async (input, init) => {
+        const request = new Request(input, init);
+        const url = new URL(request.url);
+        const body = request.method === 'GET' ? null : await request.json();
+        tavernApiRequests.push({ body, method: request.method, path: url.pathname });
+
+        if (url.pathname === '/api/activity') {
+            return Response.json({ activities: [] });
+        }
+
+        if (url.pathname.endsWith('/activity')) {
+            const record = body as {
+                agent_id: string;
+                metadata: Record<string, unknown>;
+                run_id: string;
+                status: string;
+                steps?: unknown[];
+                summary?: string | null;
+            };
+            return Response.json({
+                agent_id: record.agent_id,
+                chat_id: tavernChatId,
+                metadata: record.metadata,
+                run_id: record.run_id,
+                status: record.status,
+                steps: record.steps ?? [],
+                summary: record.summary ?? null,
+                updated_at: '2026-05-12T19:00:01.000Z',
+            });
+        }
+
+        if (url.pathname.endsWith('/deliveries')) {
+            const record = body as {
+                id: string;
+                message: { id: string; metadata: Record<string, unknown>; parts: unknown[] };
+            };
+            return Response.json({
+                cursor: '2',
+                id: record.id,
+                idempotent: false,
+                message: {
+                    author: {
+                        id: 'agent:test',
+                        kind: 'agent',
+                        label: null,
+                        metadata: {},
+                    },
+                    chat_id: tavernChatId,
+                    created_at: '2026-05-12T19:00:02.000Z',
+                    deleted_at: null,
+                    delivery_id: record.id,
+                    id: record.message.id,
+                    metadata: record.message.metadata,
+                    nonce: null,
+                    parent_message_id: null,
+                    parts: record.message.parts,
+                    role: 'assistant',
+                    sequence: 2,
+                    thread_root_id: null,
+                },
+            });
+        }
+
+        return Response.json({
+            created_at: '2026-05-12T19:00:00.000Z',
+            id: tavernChatId,
+            last_message_sequence: 1,
+            metadata: {},
+            title: null,
+            updated_at: '2026-05-12T19:00:00.000Z',
+        });
+    }) as typeof fetch;
 });
 
 afterEach(() => {
+    globalThis.fetch = originalFetch;
+    databaseClient.exec('DELETE FROM agent_runtime_connections;');
     mock.restore();
 });
 
@@ -155,8 +212,43 @@ test('startAgentRuntimeEventSync refreshes connection state and schedules when t
     expect(emitAgentRuntimeUpdated).toHaveBeenCalledTimes(1);
 });
 
-test('applyObservedAgentRuntimeEvent syncs completed turn history for the exact session', async () => {
-    const client = { listSessionMessages: async () => ({ messages: [] }) };
+test('applyObservedAgentRuntimeEvent syncs completed turn history without projecting chat deliveries', async () => {
+    const listSessions = mock(async () => ({
+        sessions: [
+            {
+                agentId: 'agent:test',
+                chatId: tavernChatId,
+                key: 'session-1',
+                lastActivityAt: '2026-05-12T19:00:02.000Z',
+                messageCount: 1,
+                parentSessionKey: null,
+                platform: 'tavern',
+                sessionId: 'session-1',
+                sessionRole: 'main' as const,
+                startedAt: '2026-05-12T19:00:00.000Z',
+                title: 'Test',
+            },
+        ],
+    }));
+    const listSessionMessages = mock(async () => ({
+        messages: [
+            {
+                agentId: 'agent:test',
+                attachments: [],
+                chatId: tavernChatId,
+                content: 'Done.',
+                id: 'assistant-message-1',
+                metadata: {},
+                participant: null,
+                sender: 'agent:test',
+                senderName: 'Agent',
+                senderType: 'agent' as const,
+                sessionKey: 'session-1',
+                timestamp: '2026-05-12T19:00:02.000Z',
+            },
+        ],
+    }));
+    const client = { listSessionMessages, listSessions };
     createAgentRuntimeClientForConnection.mockReturnValue(client as never);
 
     await applyObservedAgentRuntimeEvent(
@@ -172,22 +264,15 @@ test('applyObservedAgentRuntimeEvent syncs completed turn history for the exact 
             type: 'turn.completed',
         },
         {
+            baseUrl: 'http://runtime.test',
             id: 'runtime-1',
         } as never
     );
-    await Promise.resolve();
+    await flushAsyncEventSync();
 
-    expect(syncAgentRuntimeSession).toHaveBeenCalledWith({
-        client,
-        runtimeId: 'runtime-1',
-        sessionKey: 'session-1',
-    });
-    expect(syncAgentRuntimeSessionMessagesWithRetry).toHaveBeenCalledWith({
-        agentId: 'agent:test',
-        client,
-        runtimeId: 'runtime-1',
-        sessionKey: 'session-1',
-    });
+    expect(listSessions).toHaveBeenCalledTimes(1);
+    expect(listSessionMessages).toHaveBeenCalledWith('session-1', { limit: 1000 });
+    expect(tavernApiRequests).toEqual([]);
     expect(emitObservedAgentRuntimeEvent).toHaveBeenCalledWith({
         timestamp: '2026-05-12T19:00:00.000Z',
         turn: {
@@ -202,7 +287,9 @@ test('applyObservedAgentRuntimeEvent syncs completed turn history for the exact 
 });
 
 test('applyObservedAgentRuntimeEvent does not sync history for live reply updates', async () => {
-    const client = { listSessionMessages: async () => ({ messages: [] }) };
+    const listSessionMessages = mock(async () => ({ messages: [] }));
+    const listSessions = mock(async () => ({ sessions: [] }));
+    const client = { listSessionMessages, listSessions };
     createAgentRuntimeClientForConnection.mockReturnValue(client as never);
 
     await applyObservedAgentRuntimeEvent(
@@ -221,15 +308,16 @@ test('applyObservedAgentRuntimeEvent does not sync history for live reply update
             type: 'turn.replyUpdated',
         },
         {
+            baseUrl: 'http://runtime.test',
             id: 'runtime-1',
         } as never
     );
     await Promise.resolve();
 
     expect(createAgentRuntimeClientForConnection).not.toHaveBeenCalled();
-    expect(syncAgentRuntimeSession).not.toHaveBeenCalled();
-    expect(syncAgentRuntimeSessionMessages).not.toHaveBeenCalled();
-    expect(syncAgentRuntimeSessionMessagesWithRetry).not.toHaveBeenCalled();
+    expect(listSessions).not.toHaveBeenCalled();
+    expect(listSessionMessages).not.toHaveBeenCalled();
+    expect(tavernApiRequests).toEqual([]);
     expect(emitObservedAgentRuntimeEvent).toHaveBeenCalledWith({
         isThinking: false,
         replace: true,
@@ -247,9 +335,45 @@ test('applyObservedAgentRuntimeEvent does not sync history for live reply update
 });
 
 test('applyObservedAgentRuntimeEvent defers invalidated session sync while a turn is active', async () => {
-    const client = { listSessionMessages: async () => ({ messages: [] }) };
+    const listSessions = mock(async () => ({
+        sessions: [
+            {
+                agentId: 'agent:test',
+                chatId: tavernChatId,
+                key: 'session-1',
+                lastActivityAt: '2026-05-12T19:00:02.000Z',
+                messageCount: 1,
+                parentSessionKey: null,
+                platform: 'tavern',
+                sessionId: 'session-1',
+                sessionRole: 'main' as const,
+                startedAt: '2026-05-12T19:00:00.000Z',
+                title: 'Test',
+            },
+        ],
+    }));
+    const listSessionMessages = mock(async () => ({
+        messages: [
+            {
+                agentId: 'agent:test',
+                attachments: [],
+                chatId: tavernChatId,
+                content: 'Done.',
+                id: 'assistant-message-1',
+                metadata: {},
+                participant: null,
+                sender: 'agent:test',
+                senderName: 'Agent',
+                senderType: 'agent' as const,
+                sessionKey: 'session-1',
+                timestamp: '2026-05-12T19:00:02.000Z',
+            },
+        ],
+    }));
+    const client = { listSessionMessages, listSessions };
     createAgentRuntimeClientForConnection.mockReturnValue(client as never);
     const connection = {
+        baseUrl: 'http://runtime.test',
         id: 'runtime-1',
     } as never;
 
@@ -278,9 +402,8 @@ test('applyObservedAgentRuntimeEvent defers invalidated session sync while a tur
     await flushAsyncEventSync();
 
     expect(createAgentRuntimeClientForConnection).not.toHaveBeenCalled();
-    expect(syncAgentRuntimeSession).not.toHaveBeenCalled();
-    expect(syncAgentRuntimeSessionMessages).not.toHaveBeenCalled();
-    expect(syncAgentRuntimeSessionMessagesWithRetry).not.toHaveBeenCalled();
+    expect(listSessions).not.toHaveBeenCalled();
+    expect(listSessionMessages).not.toHaveBeenCalled();
     expect(emitWorkersUpdated).toHaveBeenCalledTimes(1);
     expect(emitSyncDataUpdated).toHaveBeenCalledTimes(1);
 
@@ -300,22 +423,12 @@ test('applyObservedAgentRuntimeEvent defers invalidated session sync while a tur
     );
     await flushAsyncEventSync();
 
-    expect(syncAgentRuntimeSession).toHaveBeenCalledWith({
-        client,
-        runtimeId: 'runtime-1',
-        sessionKey: 'session-1',
-    });
-    expect(syncAgentRuntimeSessionMessagesWithRetry).toHaveBeenCalledWith({
-        agentId: 'agent:test',
-        client,
-        runtimeId: 'runtime-1',
-        sessionKey: 'session-1',
-    });
+    expect(listSessions).toHaveBeenCalledTimes(1);
+    expect(listSessionMessages).toHaveBeenCalledTimes(1);
 
     createAgentRuntimeClientForConnection.mockClear();
-    syncAgentRuntimeSession.mockClear();
-    syncAgentRuntimeSessionMessages.mockClear();
-    syncAgentRuntimeSessionMessagesWithRetry.mockClear();
+    listSessions.mockClear();
+    listSessionMessages.mockClear();
 
     await applyObservedAgentRuntimeEvent(
         {
@@ -327,17 +440,8 @@ test('applyObservedAgentRuntimeEvent defers invalidated session sync while a tur
     );
     await flushAsyncEventSync();
 
-    expect(syncAgentRuntimeSession).toHaveBeenCalledWith({
-        client,
-        runtimeId: 'runtime-1',
-        sessionKey: 'session-1',
-    });
-    expect(syncAgentRuntimeSessionMessages).toHaveBeenCalledWith({
-        client,
-        runtimeId: 'runtime-1',
-        sessionKey: 'session-1',
-    });
-    expect(syncAgentRuntimeSessionMessagesWithRetry).not.toHaveBeenCalled();
+    expect(listSessions).toHaveBeenCalledTimes(1);
+    expect(listSessionMessages).toHaveBeenCalledWith('session-1', { limit: 200 });
 });
 
 async function flushAsyncEventSync() {

@@ -1,9 +1,5 @@
 import { setTimeout as delay } from 'node:timers/promises';
-import type {
-    AgentRuntimeCron,
-    AgentRuntimeCronRun,
-    AgentRuntimeSession,
-} from '@tavern/agent-runtime-protocol';
+import type { AgentRuntimeCron, AgentRuntimeCronRun, AgentRuntimeSession } from '@tavern/api';
 import { hasActiveTurnSession } from '../agent-runtime/active-turn-sessions.ts';
 import {
     recordCapabilityFailure,
@@ -137,12 +133,10 @@ export async function syncAgentRuntimeSessionMessages(input: {
         syncedAt,
     });
 
-    await input.log?.(
-        `Synced ${result.synced} messages for session ${input.sessionKey}; deleted ${result.deleted}.`
-    );
+    await input.log?.(`Synced ${result.synced} messages for session ${input.sessionKey}.`);
     emitSyncDataUpdatedIfChanged(result);
 
-    return result;
+    return { ...result, messages };
 }
 
 export async function syncAgentRuntimeSessionMessagesWithRetry(input: {
@@ -155,7 +149,11 @@ export async function syncAgentRuntimeSessionMessagesWithRetry(input: {
     syncedAt?: string;
 }) {
     const retryDelaysMs = input.retryDelaysMs ?? defaultSessionMessageRetryDelaysMs;
-    let lastResult = { deleted: 0, synced: 0 };
+    let lastResult: Awaited<ReturnType<typeof syncAgentRuntimeSessionMessages>> = {
+        deleted: 0,
+        messages: [],
+        synced: 0,
+    };
 
     for (const waitMs of [0, ...retryDelaysMs]) {
         if (waitMs > 0) {

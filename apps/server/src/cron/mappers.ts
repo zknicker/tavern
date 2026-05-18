@@ -1,4 +1,4 @@
-import type { AgentRuntimeCron, AgentRuntimeCronRun } from '@tavern/agent-runtime-protocol';
+import type { AgentRuntimeCron, AgentRuntimeCronRun } from '@tavern/api';
 import {
     cronJobRunSchema,
     cronJobSchema,

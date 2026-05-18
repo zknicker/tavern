@@ -1,5 +1,5 @@
 import EventEmitter, { on } from 'node:events';
-import { type AgentRuntimeEvent, agentRuntimeEventSchema } from '@tavern/agent-runtime-protocol';
+import { type AgentRuntimeEvent, agentRuntimeEventSchema } from '@tavern/api';
 
 const agentRuntimeEventEmitter = new EventEmitter();
 

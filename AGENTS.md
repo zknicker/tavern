@@ -5,7 +5,7 @@ This file is the always-on guide for AI coding assistants in Tavern.
 ## Repository Snapshot
 
 - Monorepo with the backend in `apps/server`, the app client in `apps/website`, the Tavern
-  Runtime in `apps/runtime`, and shared agent runtime contracts in `packages/agent-runtime-protocol`.
+  Runtime in `apps/runtime`, and Tavern API contracts in `packages/tavern-api`.
 - Product scope is Tavern Runtime config, runtime observability, planning, and context across
   agents, chats, sessions, logs, memories, spawned agents, and cron jobs.
 
@@ -16,12 +16,14 @@ This file is the always-on guide for AI coding assistants in Tavern.
 - A `chat` is the durable conversation container.
 - A `session` is one runtime agent's durable conversation or execution record inside a chat.
 - A `turn` is one execution inside a session.
-- Agent runtimes own native execution, sessions, messages, cron jobs, files, skills, tools, and
-  runtime config.
-- Tavern owns Tavern Runtime, local projections, sync state, memory, profiles, participant links,
-  jobs, and presentation overlays.
-- Normal chat work should use a runtime-projected chat and the selected agent's synced session key
-  when sending. Do not derive runtime session keys from Discord targets or opaque chat ids.
+- Agent runtimes own native execution, sessions, turns, runtime transcripts, files, tools, model
+  calls, and runtime config.
+- Tavern Runtime owns the chat server product model: chats, messages, participants, per-chat
+  sequence, events, reads, soft deletes, automations, deliveries, and runtime activity.
+- Tavern App owns the first-party client, cache, local presentation, profiles, participant links,
+  and app settings.
+- Normal chat work should use Tavern chats and Tavern message identity first. Runtime session keys
+  are delivery/execution metadata for the selected agent, not the product timeline identity.
 - For OpenClaw-backed sessions, Tavern `session.key` is the raw OpenClaw `sessionKey`; Tavern
   `session.id` is the OpenClaw `sessionId`, the current transcript identity behind that key.
 - APIs that fetch, resync, route, or send to a continuing session should name the lookup input
@@ -35,10 +37,12 @@ This file is the always-on guide for AI coding assistants in Tavern.
   code sees them.
 - Runtime adapters do not author final Tavern display names. They project stable primitive ids,
   typed participants, bindings, session keys, and typed `platformMetadata`.
-- Runtime-projected message history is the durable history source for a session.
-- The app reads durable chat history through server chat/session APIs backed by local projections.
+- Tavern chat history should be canonical Tavern Runtime state.
+- Runtime-projected message history is execution evidence for a session.
+- The app reads chat history through Tavern API reads backed by Runtime. Current session projection
+  reads are a transition path, not the target canonical chat store.
 - Runtime owns volatile in-flight reply state when the runtime exposes it.
-- Volatile reply state must not become a second durable transcript.
+- Volatile reply state must not become a second durable chat history.
 - Optimistic chat UI belongs in the app. It is app-local presentation state, not durable history.
 - The app may optimistically show an accepted user message immediately, but active reply indicators
   should come from runtime status/event surfaces when supported.
@@ -47,8 +51,8 @@ This file is the always-on guide for AI coding assistants in Tavern.
   chat handoffs. That state is presentation-only and must not become durable history.
 - Do not immediately refetch or invalidate durable chat history just to show an app-local
   optimistic message row. Let logged history replace it when that data arrives.
-- Do not describe app-local optimistic rows or active reply indicators as transcript sync, logging,
-  or durable message persistence.
+- Do not describe app-local optimistic rows or active reply indicators as chat history sync,
+  logging, or durable message persistence.
 
 ## Test Chat Hygiene
 
@@ -93,7 +97,7 @@ This file is the always-on guide for AI coding assistants in Tavern.
 
 - Agent runtime adapters should project Tavern primitives plus source facts. Do not let adapter code
   author final Tavern presentation.
-- Runtime chat protocol records must not include final chat names or fake chat workspace folders.
+- Runtime adapter records must not include final chat names or fake chat workspace folders.
   Chat labels are Tavern presentation derived from typed primitives.
 - Put platform-specific chat facts in typed `platformMetadata`, such as Discord guild, channel,
   thread, DM user, account, observed-label, and source-record facts. Keep `metadata` for projection
@@ -104,7 +108,7 @@ This file is the always-on guide for AI coding assistants in Tavern.
   Do not derive Discord channel, Discord DM, or opaque runtime session keys from chat targets.
 - If a runtime record is missing a required stable id, timestamp, schedule, file content, or actor,
   fail the mapping or mark the capability degraded instead of inventing a value.
-- Runtime session labels may be absent. Preserve that as `null` in the protocol and derive
+- Runtime session labels may be absent. Preserve that as `null` in the adapter record and derive
   user-facing session titles at the server/view-model boundary.
 
 ## API Structure
@@ -169,8 +173,8 @@ This file is the always-on guide for AI coding assistants in Tavern.
 24. Prefer inferred types from router outputs and hook return values over hand-written shared view
     types.
 25. On the server, organize code by product capability first. Keep `api/` thin, keep domain logic
-    under product nouns, keep app-specific integration code in `adapters/`, and push shared
-    first-party runtime contracts into `packages/agent-runtime-protocol`.
+    under product nouns, keep app-specific integration code in `adapters/`, and push cross-boundary
+    first-party contracts into `packages/tavern-api`.
 26. Keep server contracts with the domain that owns them, such as `sessions/contracts.ts` or
     `agents/contracts.ts`. Do not let generic integration barrels become the active owner.
 27. Keep subscription procedures in the same router namespace as the queries they affect.
@@ -222,10 +226,10 @@ This file is the always-on guide for AI coding assistants in Tavern.
    shadcn or Radix UI usage.
 8. Follow `DESIGN.md` for visual design decisions, especially token usage, settings layout, and
    shared component behavior.
-9. When agent runtime bridge capabilities change, update `packages/agent-runtime-protocol` directly
-   for the current first-party contract. Do not add legacy fallbacks, compatibility branches, or
-   client migration layers for older runtime behavior. Tavern is the only client we need to optimize
-   for.
+9. When cross-boundary runtime, admin, or product contracts change, update `packages/tavern-api`
+   directly for the current first-party contract. Do not add legacy fallbacks, compatibility
+   branches, or client migration layers for older runtime behavior. Tavern is the only client we
+   need to optimize for.
 10. Treat `apps/server/src/db/bootstrap.ts` as fresh-schema setup only. For database migrations,
    directly edit the local SQLite database instead of adding migration code.
 
@@ -268,19 +272,24 @@ This file is the always-on guide for AI coding assistants in Tavern.
   focused test that proves it from raw Gateway frames or the shipped method list instead of relying
   on memory.
 - If OpenClaw later ships a better typed SDK, exported contract surface, or clearer official docs,
-  update this section plus `docs/testing.md` and `apps/website/e2e/README.md` so future agents use
-  the newer source of truth instead of stale reverse-engineering guidance.
+  update this section plus `docs/operations/testing.md` and `apps/website/e2e/README.md` so future
+  agents use the newer source of truth instead of stale reverse-engineering guidance.
 
 ## Knowledge Index
 
 - Product behavior and primitive definitions: `specs/README.md`
-- Agent runtime behavior and protocol: `specs/agent-runtimes/README.md`
-- Frontend domains: `docs/domains.md`
-- Frontend structure and ownership: `docs/frontend.md`
+- OpenClaw runtime behavior: `specs/agent-runtimes/README.md`
+- Docs front door and policy: `docs/README.md`, `docs/docs-policy.md`
+- Product feature docs: `docs/features/README.md`
+- Tavern API contracts: `docs/api/README.md`
+- TypeScript SDK: `docs/sdk.md`
+- Architecture overview: `docs/internals/architecture-overview.md`
+- Data model: `docs/internals/data-model.md`
+- Frontend structure and ownership: `docs/internals/frontend.md`
 - Visual design system and UI principles: `DESIGN.md`
-- App backend structure and ownership: `docs/app.md`
-- App and Runtime boundary: `docs/runtime.md`
-- Tavern Messenger plugin lifecycle: `docs/openclaw-plugin-deploy.md`
-- Testing strategy and runtime test rules: `docs/testing.md`
+- App backend structure and ownership: `docs/internals/app.md`
+- App and Runtime boundary: `docs/internals/runtime.md`
+- Tavern Messenger plugin lifecycle: `docs/operations/openclaw-plugin-deploy.md`
+- Testing strategy and runtime test rules: `docs/operations/testing.md`
 - Website e2e harness boundary and mock runtime rules: `apps/website/e2e/README.md`
-- React conventions: `docs/react.md`
+- React conventions: `docs/internals/react.md`

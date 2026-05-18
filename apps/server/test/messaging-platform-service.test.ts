@@ -1,11 +1,14 @@
 import { afterEach, mock, spyOn, test } from 'bun:test';
 import assert from 'node:assert/strict';
-import type { AgentRuntimeBinding } from '@tavern/agent-runtime-protocol';
+import type { AgentRuntimeBinding } from '@tavern/api';
+import { ensureDatabaseSchema } from '../src/db/bootstrap.ts';
 import {
     listMessagingBindings,
     syncMessagingBindingsToAgentRuntime,
 } from '../src/messaging-platform/service.ts';
 import * as bindingStorage from '../src/storage/messaging-bindings.ts';
+
+ensureDatabaseSchema();
 
 afterEach(() => {
     mock.restore();

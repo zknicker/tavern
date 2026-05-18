@@ -1,15 +1,16 @@
-import {
-    runtimeEventListSchema,
-    runtimeHealthSchema,
-    runtimeRoutes,
-} from '@tavern/agent-runtime-protocol';
-import { listTavernRuntimeEvents } from './channel-store';
+import { runtimeEventListSchema, runtimeHealthSchema, runtimeRoutes } from '@tavern/api';
+import { handleTavernApiRequest } from './chat-api-router';
 import { json, notFound } from './http';
 import { handleOpenClawProxyRequest } from './proxy';
+import { listTavernRuntimeEvents } from './runtime-event-replay';
 import { getRuntimeStatus } from './status';
 
 export async function handleTavernRuntimeRequest(request: Request): Promise<Response> {
     const url = new URL(request.url);
+    const apiResponse = await handleTavernApiRequest(request);
+    if (apiResponse) {
+        return apiResponse;
+    }
 
     if (request.method === 'GET' && url.pathname === runtimeRoutes.health) {
         return json(runtimeHealthSchema.parse(getRuntimeStatus().health));

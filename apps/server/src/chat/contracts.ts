@@ -1,7 +1,7 @@
 import {
     agentRuntimeChatPlatformMetadataSchema,
     agentRuntimeTavernMessageMetadataSchema,
-} from '@tavern/agent-runtime-protocol';
+} from '@tavern/api';
 import { z } from 'zod';
 import {
     historyRowSchema,

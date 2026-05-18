@@ -1,4 +1,4 @@
-import type { AgentRuntimeSession } from '@tavern/agent-runtime-protocol';
+import type { AgentRuntimeSession } from '@tavern/api';
 import { desc, eq } from 'drizzle-orm';
 import { db } from '../db/index.ts';
 import { sessionRunsTable } from '../db/schema.ts';

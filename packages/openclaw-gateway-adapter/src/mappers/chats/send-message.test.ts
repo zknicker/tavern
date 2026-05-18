@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'bun:test';
-import type { AgentRuntimeCreateMessage } from '@tavern/agent-runtime-protocol';
+import type { AgentRuntimeCreateMessage } from '@tavern/api';
 import {
     mapOpenClawMessageAccepted,
     mapTavernMessageToOpenClawChatSend,
@@ -9,41 +9,42 @@ import {
 describe('OpenClaw send-message mapping', () => {
     it('uses the projected session key when Tavern has one for the chat and agent', () => {
         expect(
-            mapTavernMessageToOpenClawTavernTurn('220f46ed-2d7c-41dd-9d7e-d02691f1afc3', {
+            mapTavernMessageToOpenClawTavernTurn('cht_220f46ed-2d7c-41dd-9d7e-d02691f1afc3', {
                 agent: { agentId: 'blippy' },
-                message: { content: 'hello', id: 'tavern-message-1' },
+                message: { content: 'hello', id: 'msg_1' },
                 target: {
-                    externalId: 'chat-1',
-                    sessionKey: 'agent:blippy:tavern:channel:220f46ed-2d7c-41dd-9d7e-d02691f1afc3',
-                    target: 'chat:220f46ed-2d7c-41dd-9d7e-d02691f1afc3',
+                    externalId: 'cht_1',
+                    sessionKey:
+                        'agent:blippy:tavern:channel:cht_220f46ed-2d7c-41dd-9d7e-d02691f1afc3',
+                    target: 'chat:cht_220f46ed-2d7c-41dd-9d7e-d02691f1afc3',
                     type: 'tavern',
                 },
             })
         ).toEqual({
             agent: { agentId: 'blippy' },
-            chatId: '220f46ed-2d7c-41dd-9d7e-d02691f1afc3',
+            chatId: 'cht_220f46ed-2d7c-41dd-9d7e-d02691f1afc3',
             message: {
                 content: 'hello',
-                id: 'tavern-message-1',
+                id: 'msg_1',
             },
             sender: {
                 id: 'tavern-user',
                 name: 'Tavern',
             },
-            sessionKey: 'agent:blippy:tavern:channel:220f46ed-2d7c-41dd-9d7e-d02691f1afc3',
-            turnId: 'tavern-message-1',
+            sessionKey: 'agent:blippy:tavern:channel:cht_220f46ed-2d7c-41dd-9d7e-d02691f1afc3',
+            turnId: 'run_1',
         });
     });
 
     it('does not guess a session key without a projection', () => {
         expect(() =>
-            mapTavernMessageToOpenClawTavernTurn('chat-1', {
+            mapTavernMessageToOpenClawTavernTurn('cht_1', {
                 agent: { agentId: 'main' },
-                message: { content: 'hello', id: 'tavern-message-2' },
+                message: { content: 'hello', id: 'msg_2' },
                 target: {
-                    externalId: 'chat-1',
+                    externalId: 'cht_1',
                     sessionKey: null,
-                    target: 'chat:220f46ed-2d7c-41dd-9d7e-d02691f1afc3',
+                    target: 'chat:cht_220f46ed-2d7c-41dd-9d7e-d02691f1afc3',
                     type: 'tavern',
                 },
             })
@@ -55,7 +56,7 @@ describe('OpenClaw send-message mapping', () => {
             agent: { agentId: 'blippy' },
             message: {
                 content: 'use Chrome',
-                id: 'tavern-message-1',
+                id: 'msg_1',
                 metadata: {
                     tavern: {
                         toolMentions: [
@@ -72,14 +73,14 @@ describe('OpenClaw send-message mapping', () => {
                 },
             },
             target: {
-                externalId: 'chat-1',
-                sessionKey: 'agent:blippy:tavern:channel:chat-1',
-                target: 'chat:chat-1',
+                externalId: 'cht_1',
+                sessionKey: 'agent:blippy:tavern:channel:cht_1',
+                target: 'chat:cht_1',
                 type: 'tavern',
             },
         };
 
-        expect(mapTavernMessageToOpenClawTavernTurn('chat-1', input).message.metadata).toEqual({
+        expect(mapTavernMessageToOpenClawTavernTurn('cht_1', input).message.metadata).toEqual({
             tavern: {
                 toolMentions: [
                     {
@@ -97,27 +98,27 @@ describe('OpenClaw send-message mapping', () => {
 
     it('maps plain text sends through Tavern Messenger turn intake', () => {
         expect(
-            mapTavernMessageToOpenClawTavernTurn('chat-1', {
+            mapTavernMessageToOpenClawTavernTurn('cht_1', {
                 agent: { agentId: 'blippy' },
                 message: {
                     content: 'hello',
-                    id: 'tavern-message-1',
+                    id: 'msg_1',
                 },
                 target: {
-                    externalId: 'chat-1',
-                    sessionKey: 'agent:blippy:tavern:channel:chat-1',
-                    target: 'chat:chat-1',
+                    externalId: 'cht_1',
+                    sessionKey: 'agent:blippy:tavern:channel:cht_1',
+                    target: 'chat:cht_1',
                     type: 'tavern',
                 },
             })
         ).toMatchObject({
-            chatId: 'chat-1',
+            chatId: 'cht_1',
             message: {
                 content: 'hello',
-                id: 'tavern-message-1',
+                id: 'msg_1',
             },
-            sessionKey: 'agent:blippy:tavern:channel:chat-1',
-            turnId: 'tavern-message-1',
+            sessionKey: 'agent:blippy:tavern:channel:cht_1',
+            turnId: 'run_1',
         });
     });
 
@@ -127,20 +128,20 @@ describe('OpenClaw send-message mapping', () => {
                 agent: { agentId: 'blippy' },
                 message: {
                     content: 'hello',
-                    id: 'tavern-message-1',
+                    id: 'msg_1',
                 },
                 target: {
-                    externalId: 'chat-1',
-                    sessionKey: 'agent:blippy:tavern:channel:chat-1',
-                    target: 'chat:chat-1',
+                    externalId: 'cht_1',
+                    sessionKey: 'agent:blippy:tavern:channel:cht_1',
+                    target: 'chat:cht_1',
                     type: 'tavern',
                 },
             })
         ).toEqual({
             deliver: false,
-            idempotencyKey: 'tavern-run:tavern-message-1',
+            idempotencyKey: 'run_1',
             message: 'hello',
-            sessionKey: 'agent:blippy:tavern:channel:chat-1',
+            sessionKey: 'agent:blippy:tavern:channel:cht_1',
         });
     });
 
@@ -148,25 +149,25 @@ describe('OpenClaw send-message mapping', () => {
         expect(
             mapOpenClawMessageAccepted(
                 {
-                    runId: 'msg-1',
+                    runId: 'run_1',
                     status: 'started',
                 },
-                'agent:blippy:tavern:channel:chat-1'
+                'agent:blippy:tavern:channel:cht_1'
             )
         ).toMatchObject({
-            runId: 'msg-1',
-            sessionKey: 'agent:blippy:tavern:channel:chat-1',
+            runId: 'run_1',
+            sessionKey: 'agent:blippy:tavern:channel:cht_1',
             status: 'accepted',
         });
     });
 
     it('strips non-Tavern runtime metadata from Tavern sends', () => {
         expect(
-            mapTavernMessageToOpenClawTavernTurn('chat-1', {
+            mapTavernMessageToOpenClawTavernTurn('cht_1', {
                 agent: { agentId: 'blippy' },
                 message: {
                     content: 'use Chrome',
-                    id: 'tavern-message-1',
+                    id: 'msg_1',
                     metadata: {
                         tavern: {
                             toolMentions: [
@@ -187,9 +188,9 @@ describe('OpenClaw send-message mapping', () => {
                     },
                 },
                 target: {
-                    externalId: 'chat-1',
-                    sessionKey: 'agent:blippy:tavern:channel:chat-1',
-                    target: 'chat:chat-1',
+                    externalId: 'cht_1',
+                    sessionKey: 'agent:blippy:tavern:channel:cht_1',
+                    target: 'chat:cht_1',
                     type: 'tavern',
                 },
             }).message.metadata

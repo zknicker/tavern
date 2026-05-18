@@ -21,7 +21,7 @@ const uniqueAgentIdsSchema = z
     .transform((agentIds) => [...new Set(agentIds)]);
 
 function buildChatId() {
-    return randomUUID();
+    return `cht_${randomUUID()}`;
 }
 
 async function resolveTavernAgentIds(agentIds: string[] | undefined) {

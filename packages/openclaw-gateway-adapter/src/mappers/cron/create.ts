@@ -1,4 +1,4 @@
-import type { AgentRuntimeCreateCron } from '@tavern/agent-runtime-protocol';
+import type { AgentRuntimeCreateCron } from '@tavern/api';
 import { mapTavernPayloadToOpenClaw, mapTavernScheduleToOpenClaw } from './shared.ts';
 
 export function mapTavernCronCreateToOpenClaw(input: AgentRuntimeCreateCron) {

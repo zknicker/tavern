@@ -8,9 +8,9 @@ import {
 import {
     loadSessionStore,
     resolveAndPersistSessionFile,
-    resolveSessionStoreEntry,
     updateSessionStore,
 } from 'openclaw/plugin-sdk/session-store-runtime';
+import { buildAcceptedTavernMetadata } from './message-identity.js';
 
 export async function persistAcceptedInboundMessage({ createSession = false, input, storePath }) {
     const session = await readTranscriptSession({ createSession, input, storePath });
@@ -67,61 +67,6 @@ export async function persistFailedTurnMessages({ error, input, runId, storePath
     });
 }
 
-export async function transcriptHasFinalAssistantReply({ input, storePath }) {
-    return Boolean(await readFinalAssistantReply({ input, storePath }));
-}
-
-export async function readFinalAssistantReply({ input, storePath }) {
-    const session = await readTranscriptSession({ input, storePath });
-
-    if (!session) {
-        return null;
-    }
-
-    const raw = await readFile(session.transcriptPath, 'utf8').catch(() => null);
-
-    if (!raw) {
-        return null;
-    }
-
-    const inputTimestampMs = resolveInputTimestampMs(input);
-
-    for (const line of raw.split(/\r?\n/)) {
-        if (!line.trim()) {
-            continue;
-        }
-
-        try {
-            const message = JSON.parse(line)?.message;
-
-            if (!(message && isAssistantReply(message))) {
-                continue;
-            }
-
-            if (message.stopReason === 'error' || message.metadata?.isError === true) {
-                continue;
-            }
-
-            const text = resolveMessageText(message).trim();
-
-            if (!text) {
-                continue;
-            }
-
-            const messageAtMs = resolveMessageTimestampMs(message.timestamp);
-
-            if (
-                !(Number.isFinite(inputTimestampMs) && Number.isFinite(messageAtMs)) ||
-                messageAtMs >= inputTimestampMs
-            ) {
-                return text;
-            }
-        } catch {}
-    }
-
-    return null;
-}
-
 export async function persistDeliveredTurnMessage({ input, storePath, text }) {
     const session = await readTranscriptSession({ input, storePath });
 
@@ -154,7 +99,7 @@ export async function persistDeliveredTurnMessage({ input, storePath, text }) {
     });
 }
 
-async function readTranscriptSession({ createSession = false, input, storePath }) {
+export async function readTranscriptSession({ createSession = false, input, storePath }) {
     let store;
 
     try {
@@ -172,53 +117,65 @@ async function readTranscriptSession({ createSession = false, input, storePath }
         store = loadSessionStore(storePath);
     }
 
-    const resolved = resolveSessionStoreEntry({
-        sessionKey: input.sessionKey,
-        store,
-    });
-    const sessionId = readNonEmptyString(resolved.existing?.sessionId);
+    const existing = readStoreRecord(store[input.sessionKey]);
+    const sessionId = readNonEmptyString(existing?.sessionId);
 
     if (!sessionId) {
         return null;
     }
 
     const { sessionFile } = await resolveAndPersistSessionFile({
-        activeSessionKey: resolved.normalizedKey,
-        sessionEntry: resolved.existing,
+        activeSessionKey: input.sessionKey,
+        sessionEntry: existing,
         sessionId,
-        sessionKey: resolved.normalizedKey,
+        sessionKey: input.sessionKey,
         sessionStore: store,
         sessionsDir: dirname(storePath),
         storePath,
     });
 
     return {
+        runtimeStarted: hasRuntimeStarted(existing),
         sessionId,
         transcriptPath: sessionFile,
     };
+}
+
+export function readExistingTranscriptSessionFile({ input, storePath }) {
+    let store;
+
+    try {
+        store = loadSessionStore(storePath);
+    } catch {
+        return null;
+    }
+
+    const existing = readStoreRecord(store[input.sessionKey]);
+    const sessionId = readNonEmptyString(existing?.sessionId);
+    const transcriptPath = readNonEmptyString(existing?.sessionFile);
+
+    return sessionId && transcriptPath
+        ? {
+              runtimeStarted: hasRuntimeStarted(existing),
+              sessionId,
+              transcriptPath,
+          }
+        : null;
 }
 
 async function ensureSessionStoreEntry({ input, storePath }) {
     await updateSessionStore(
         storePath,
         (nextStore) => {
-            const resolved = resolveSessionStoreEntry({
-                sessionKey: input.sessionKey,
-                store: nextStore,
-            });
-            const existing = resolved.existing ?? {};
+            const existing = readStoreRecord(nextStore[input.sessionKey]) ?? {};
 
-            nextStore[resolved.normalizedKey] = {
+            nextStore[input.sessionKey] = {
                 ...existing,
                 displayName: existing.displayName ?? input.text.slice(0, 120),
                 sessionId: existing.sessionId ?? randomUUID(),
             };
 
-            for (const legacyKey of resolved.legacyKeys) {
-                delete nextStore[legacyKey];
-            }
-
-            return nextStore[resolved.normalizedKey];
+            return nextStore[input.sessionKey];
         },
         { activeSessionKey: input.sessionKey }
     );
@@ -236,12 +193,17 @@ async function appendInboundMessage({ input, sessionId, transcriptPath }) {
 }
 
 function buildInboundMessage({ input, timestamp }) {
+    const metadata = buildAcceptedTavernMetadata(input);
+
     return {
         chatId: input.chatId,
         content: [{ text: input.text, type: 'text' }],
+        id: input.messageId,
         messageId: input.messageId,
-        metadata: input.metadata ?? undefined,
+        metadata,
+        nonce: input.nonce,
         role: 'user',
+        sequence: input.sequence,
         sender: input.sender.name,
         senderId: input.sender.id,
         senderName: input.sender.name,
@@ -279,8 +241,6 @@ async function transcriptHasInboundMessage({ input, transcriptPath }) {
         return false;
     }
 
-    const sentAtMs = Date.parse(input.sentAt);
-
     for (const line of raw.split(/\r?\n/)) {
         if (!line.trim()) {
             continue;
@@ -298,19 +258,7 @@ async function transcriptHasInboundMessage({ input, transcriptPath }) {
                 return true;
             }
 
-            if (readNonEmptyString(message.messageId)) {
-                continue;
-            }
-
-            const messageAtMs = resolveMessageTimestampMs(message.timestamp ?? record.timestamp);
-            const isSamePrompt = resolveMessageText(message) === input.text;
-
-            if (
-                isSamePrompt &&
-                Number.isFinite(sentAtMs) &&
-                Number.isFinite(messageAtMs) &&
-                Math.abs(messageAtMs - sentAtMs) < 60_000
-            ) {
+            if (message.metadata?.tavern?.acceptedMessageId === input.messageId) {
                 return true;
             }
         } catch {}
@@ -395,24 +343,19 @@ function resolveMessageText(message) {
         .join('');
 }
 
-function resolveMessageTimestampMs(value) {
-    if (typeof value === 'number' && Number.isFinite(value)) {
-        return value;
-    }
-
-    if (typeof value === 'string') {
-        const parsed = Date.parse(value);
-
-        return Number.isFinite(parsed) ? parsed : Number.NaN;
-    }
-
-    return Number.NaN;
-}
-
-function isAssistantReply(message) {
-    return message.role === 'assistant' || message.role === 'agent';
-}
-
 function readNonEmptyString(value) {
     return typeof value === 'string' && value.trim().length > 0 ? value.trim() : null;
+}
+
+function readStoreRecord(value) {
+    return value && typeof value === 'object' && !Array.isArray(value) ? value : null;
+}
+
+function hasRuntimeStarted(entry) {
+    return Boolean(
+        entry &&
+            (entry.systemSent === true ||
+                Number.isFinite(entry.sessionStartedAt) ||
+                Number.isFinite(entry.lastInteractionAt))
+    );
 }

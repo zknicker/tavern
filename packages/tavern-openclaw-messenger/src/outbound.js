@@ -36,7 +36,6 @@ export function registerTavernDeliveryContext(input) {
     });
     const context = {
         agentId: input.agentId,
-        broadcast: input.context.broadcast,
         chatId: input.chatId,
         deliverySequence: 0,
         markFinalReplySent: input.markFinalReplySent,
@@ -70,25 +69,23 @@ export async function sendTavernTextMessage(ctx) {
         accountId: ctx.accountId,
         chatId,
     });
-    const messageId = deliveryContext
-        ? nextDeliveryId(deliveryContext)
-        : `tavern-delivery:${randomUUID()}`;
+    const messageId = deliveryContext ? nextMessageId(deliveryContext) : `msg_${randomUUID()}`;
+    const deliveryId = deliveryContext
+        ? currentDeliveryId(deliveryContext)
+        : `del_${stripPrefix(messageId, 'msg_')}`;
 
     if (text.trim() && deliveryContext) {
         deliveryContext.markFinalReplySent?.();
-        deliveryContext.broadcast(
-            'plugin.tavern.message.created',
-            {
-                agentId: deliveryContext.agentId,
-                chatId,
-                deliveryId: messageId,
-                runId: deliveryContext.runId,
-                sessionKey: deliveryContext.sessionKey,
-                text,
-                timestamp: new Date(sentAt).toISOString(),
-            },
-            { dropIfSlow: true }
-        );
+        await requireTavernApi(ctx.context).createDelivery({
+            agentId: deliveryContext.agentId,
+            chatId,
+            deliveryId,
+            messageId,
+            runId: deliveryContext.runId,
+            sessionKey: deliveryContext.sessionKey,
+            text,
+            timestamp: new Date(sentAt).toISOString(),
+        });
     }
 
     const receipt = createMessageReceiptFromOutboundResults({
@@ -111,6 +108,13 @@ export async function sendTavernTextMessage(ctx) {
     };
 }
 
+function requireTavernApi(context) {
+    if (!context?.tavern) {
+        throw new Error('Tavern Messenger requires a Tavern API client.');
+    }
+    return context.tavern;
+}
+
 function getCurrentDeliveryContext(input) {
     const stack = deliveryContexts.get(getDeliveryContextKey(input)) ?? [];
     return stack.at(-1) ?? null;
@@ -120,7 +124,19 @@ function getDeliveryContextKey(input) {
     return `${input.accountId ?? DEFAULT_ACCOUNT_ID}:${input.chatId}`;
 }
 
-function nextDeliveryId(deliveryContext) {
+function nextMessageId(deliveryContext) {
     deliveryContext.deliverySequence += 1;
-    return `tavern-delivery:${deliveryContext.runId}:final:${deliveryContext.deliverySequence}`;
+    return `msg_${runSuffix(deliveryContext.runId)}_final_${deliveryContext.deliverySequence}`;
+}
+
+function currentDeliveryId(deliveryContext) {
+    return `del_${runSuffix(deliveryContext.runId)}_final_${deliveryContext.deliverySequence}`;
+}
+
+function runSuffix(runId) {
+    return stripPrefix(String(runId), 'run_');
+}
+
+function stripPrefix(value, prefix) {
+    return value.startsWith(prefix) ? value.slice(prefix.length) : value;
 }

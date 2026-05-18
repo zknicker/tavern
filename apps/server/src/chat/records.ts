@@ -1,4 +1,4 @@
-import type { AgentRuntimeChat } from '@tavern/agent-runtime-protocol';
+import type { AgentRuntimeChat } from '@tavern/api';
 import { emitSyncDataUpdated } from '../api/invalidation-events.ts';
 import { syncChatParticipantsForRuntime } from '../participants/chat-participants.ts';
 import { upsertChatForRuntime } from '../storage/chats.ts';

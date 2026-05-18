@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import type { AgentRuntimeSession } from '@tavern/agent-runtime-protocol';
+import type { AgentRuntimeSession } from '@tavern/api';
 import {
     type AgentRuntimeSessionSnapshot,
     buildAgentRuntimeSessionListItem,
@@ -57,7 +57,7 @@ test('buildAgentRuntimeSessionListItem keeps external chat names for non-Tavern 
     assert.equal(item.type, 'chat');
 });
 
-test('listAgentRuntimeSessionMessages filters stored tavern echoes once transcript rows exist', () => {
+test('listAgentRuntimeSessionMessages renders projected message ids without content-time filtering', () => {
     const targetSession: AgentRuntimeSession = {
         agentId: 'claw',
         chatId: 'tavern:chat-1',
@@ -83,7 +83,7 @@ test('listAgentRuntimeSessionMessages filters stored tavern echoes once transcri
                     agentId: null,
                     chatId: targetSession.chatId,
                     content: 'how are you?',
-                    id: 'tavern-message:1',
+                    id: 'msg_1',
                     metadata: null,
                     sender: 'main',
                     senderName: 'main',
@@ -107,7 +107,7 @@ test('listAgentRuntimeSessionMessages filters stored tavern echoes once transcri
                     agentId: 'claw',
                     chatId: targetSession.chatId,
                     content: 'existing. thriving.',
-                    id: 'tavern-message:1:block:000',
+                    id: 'msg_1:block:000',
                     metadata: {
                         model: 'claude-opus-4-6',
                         provider: 'claude',
@@ -154,8 +154,18 @@ test('listAgentRuntimeSessionMessages filters stored tavern echoes once transcri
         [
             {
                 content: 'how are you?',
+                id: 'msg_1',
+                senderType: 'user',
+            },
+            {
+                content: 'how are you?',
                 id: 'transcript-user-1',
                 senderType: 'user',
+            },
+            {
+                content: 'existing. thriving.',
+                id: 'msg_1:block:000',
+                senderType: 'agent',
             },
             {
                 content: 'existing. thriving.',

@@ -2,7 +2,7 @@ import {
     type AgentRuntimeSkill,
     type AgentRuntimeSkillFile,
     agentRuntimeSkillSchema,
-} from '@tavern/agent-runtime-protocol';
+} from '@tavern/api';
 import {
     asRecord,
     readArray,

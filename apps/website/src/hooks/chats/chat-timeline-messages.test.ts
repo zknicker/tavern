@@ -138,7 +138,7 @@ test('mergeTimelineMessages can render a local row before the log has loaded', (
     });
 });
 
-test('getLoggedTimelineMessageIds matches the logged user row and ignores older duplicates', () => {
+test('getLoggedTimelineMessageIds confirms local user rows by stable id only', () => {
     const logged = {
         limit: 20,
         offset: 0,
@@ -169,7 +169,7 @@ test('getLoggedTimelineMessageIds matches the logged user row and ignores older 
                 kind: 'message' as const,
                 message: {
                     content: 'love to hear it',
-                    id: 'message-2',
+                    id: 'timeline:1',
                     sender: 'You',
                     senderType: 'user' as const,
                     sourceSessionId: null,
@@ -193,7 +193,45 @@ test('getLoggedTimelineMessageIds matches the logged user row and ignores older 
     expect(confirmedIds).toEqual(['timeline:1']);
 });
 
-test('getLoggedTimelineMessageIds matches a completed turn when the runtime timestamp is earlier', () => {
+test('getLoggedTimelineMessageIds does not confirm same-content user rows with different ids', () => {
+    const logged = {
+        limit: 20,
+        offset: 0,
+        rows: [
+            {
+                actor: null,
+                connectsToNext: false,
+                connectsToPrevious: false,
+                id: 'different-message-id',
+                isFirstInGroup: true,
+                kind: 'message' as const,
+                message: {
+                    content: 'love to hear it',
+                    id: 'different-message-id',
+                    sender: 'You',
+                    senderType: 'user' as const,
+                    sourceSessionId: null,
+                    sourceSessionKey: 'session-2',
+                    timestamp: '2026-04-20T18:15:01.000Z',
+                },
+            },
+        ],
+        total: 1,
+    };
+
+    const confirmedIds = getLoggedTimelineMessageIds(logged, [
+        {
+            content: 'love to hear it',
+            id: 'timeline:1',
+            sessionKey: 'session-2',
+            timestamp: '2026-04-20T18:15:00.000Z',
+        },
+    ]);
+
+    expect(confirmedIds).toEqual([]);
+});
+
+test('getLoggedTimelineMessageIds confirms completed turns by stable id when timestamps differ', () => {
     const logged = {
         limit: 20,
         offset: 0,
@@ -207,7 +245,7 @@ test('getLoggedTimelineMessageIds matches a completed turn when the runtime time
                 kind: 'message' as const,
                 message: {
                     content: 'yo',
-                    id: 'message-1',
+                    id: 'timeline:yo',
                     sender: 'You',
                     senderType: 'user' as const,
                     sourceSessionId: null,
@@ -250,7 +288,7 @@ test('getLoggedTimelineMessageIds matches a completed turn when the runtime time
     expect(confirmedIds).toEqual(['timeline:yo']);
 });
 
-test('getLoggedTimelineMessageIds matches a long-running turn when the runtime timestamp lands late', () => {
+test('getLoggedTimelineMessageIds does not confirm long-running turns by content and timestamp', () => {
     const logged = {
         limit: 20,
         offset: 0,
@@ -285,10 +323,10 @@ test('getLoggedTimelineMessageIds matches a long-running turn when the runtime t
         },
     ]);
 
-    expect(confirmedIds).toEqual(['timeline:slow-tools']);
+    expect(confirmedIds).toEqual([]);
 });
 
-test('getLoggedTimelineMessageIds matches logged session keys', () => {
+test('getLoggedTimelineMessageIds does not confirm local rows by session key alone', () => {
     const logged = {
         limit: 20,
         offset: 0,
@@ -324,5 +362,5 @@ test('getLoggedTimelineMessageIds matches logged session keys', () => {
         },
     ]);
 
-    expect(confirmedIds).toEqual(['timeline:follow-up']);
+    expect(confirmedIds).toEqual([]);
 });

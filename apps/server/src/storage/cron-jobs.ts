@@ -1,4 +1,4 @@
-import type { AgentRuntimeCron } from '@tavern/agent-runtime-protocol';
+import type { AgentRuntimeCron } from '@tavern/api';
 import { and, asc, eq, notInArray } from 'drizzle-orm';
 import { db } from '../db/index.ts';
 import { cronJobsTable } from '../db/schema.ts';

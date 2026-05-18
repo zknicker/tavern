@@ -1,4 +1,4 @@
-import type { AgentRuntimeMemoryStatus } from '@tavern/agent-runtime-protocol';
+import type { AgentRuntimeMemoryStatus } from '@tavern/api';
 import { z } from 'zod';
 import { modelRefSchema } from '../model/contracts.ts';
 

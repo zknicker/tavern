@@ -1,4 +1,4 @@
-import type { AgentRuntimeUpsertBinding } from '@tavern/agent-runtime-protocol';
+import type { AgentRuntimeUpsertBinding } from '@tavern/api';
 import { createAgentRuntimeClientForConnection } from '../agent-runtime/client-factory.ts';
 import {
     deleteAgentRuntimeBinding,

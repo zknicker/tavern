@@ -1,4 +1,4 @@
-import { type AgentRuntimeAgent, agentRuntimeAgentSchema } from '@tavern/agent-runtime-protocol';
+import { type AgentRuntimeAgent, agentRuntimeAgentSchema } from '@tavern/api';
 import { findOpenClawAgent, mapOpenClawAgentRecord } from './shared.ts';
 
 export function mapOpenClawAgentConfig(input: {

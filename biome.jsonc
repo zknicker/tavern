@@ -9,6 +9,7 @@
       "!apps/server/drizzle/meta",
       "!apps/website/dist",
       "!apps/website/e2e/openclaw/mock-provider/server.ts",
+      "!apps/website/src-tauri/gen/schemas",
       "!**/*.css"
     ]
   },

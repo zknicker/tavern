@@ -81,7 +81,7 @@ function getSystemSummary(row: Extract<TranscriptRow, { kind: 'system' }>): {
             return {
                 description: row.thinking.text,
                 icon: BrainIcon,
-                label: 'Thought',
+                label: 'Reasoning',
             };
     }
 }

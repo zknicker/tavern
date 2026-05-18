@@ -1,17 +1,16 @@
 import http from 'node:http';
 import type { Duplex } from 'node:stream';
 
-import type { RuntimeEvent } from '@tavern/agent-runtime-protocol';
-import { runtimeEventSchema, runtimeRoutes } from '@tavern/agent-runtime-protocol';
+import { runtimeEventSchema, runtimeRoutes } from '@tavern/api';
 import { subscribeOpenClawAgentRuntimeEvents } from '@tavern/openclaw-gateway-adapter';
 import { WebSocket, WebSocketServer } from 'ws';
 
 import { createLocalOpenClawGatewayOptions } from '../openclaw/local-client';
 import { attachTavernChannelSocket, isTavernChannelSocketPath } from './channel-relay';
-import { listTavernRuntimeEvents } from './channel-store';
-import { subscribeToTavernRuntimeEvents } from './events';
+import { listEvents, subscribeToTavernApiEvents } from './chat-api';
 import { internalError, toFetchRequest, writeFetchResponse } from './http';
 import { handleTavernRuntimeRequest } from './router';
+import { listTavernRuntimeEvents } from './runtime-event-replay';
 
 export interface TavernRuntimeServerHandle {
     stop(): void;
@@ -28,6 +27,18 @@ function isEventsSocketPath(requestUrl: string | undefined) {
 
     try {
         return new URL(requestUrl, 'http://localhost').pathname === runtimeRoutes.events;
+    } catch {
+        return false;
+    }
+}
+
+function isTavernApiEventsSocketPath(requestUrl: string | undefined) {
+    if (!requestUrl) {
+        return false;
+    }
+
+    try {
+        return new URL(requestUrl, 'http://localhost').pathname === '/api/events/ws';
     } catch {
         return false;
     }
@@ -55,7 +66,13 @@ export function startTavernRuntimeServer(): TavernRuntimeServerHandle {
     const openClawEventRelay = createOpenClawEventRelay();
 
     server.on('upgrade', (request, socket: Duplex, head) => {
-        if (!(isEventsSocketPath(request.url) || isTavernChannelSocketPath(request.url))) {
+        if (
+            !(
+                isEventsSocketPath(request.url) ||
+                isTavernApiEventsSocketPath(request.url) ||
+                isTavernChannelSocketPath(request.url)
+            )
+        ) {
             socket.destroy();
             return;
         }
@@ -72,6 +89,28 @@ export function startTavernRuntimeServer(): TavernRuntimeServerHandle {
         }
 
         const url = new URL(request.url ?? '/', 'http://127.0.0.1');
+        if (isTavernApiEventsSocketPath(request.url)) {
+            const afterCursor = url.searchParams.get('after_cursor');
+            const recipientId = url.searchParams.get('recipient_id');
+            for (const event of listEvents({ afterCursor, recipientId }).events) {
+                socket.send(JSON.stringify(event));
+            }
+            const unsubscribe = subscribeToTavernApiEvents(
+                (event) => {
+                    socket.send(JSON.stringify(event));
+                },
+                {
+                    recipientId,
+                }
+            );
+            unsubscribeBySocket.set(socket, unsubscribe);
+            socket.on('close', () => {
+                unsubscribeBySocket.get(socket)?.();
+                unsubscribeBySocket.delete(socket);
+            });
+            return;
+        }
+
         const afterCursor = Number(url.searchParams.get('after_cursor') ?? 0);
         for (const entry of listTavernRuntimeEvents({
             afterCursor: Number.isFinite(afterCursor) ? afterCursor : 0,
@@ -79,8 +118,14 @@ export function startTavernRuntimeServer(): TavernRuntimeServerHandle {
             socket.send(JSON.stringify(runtimeEventSchema.parse(entry.event)));
         }
 
-        const unsubscribe = subscribeToTavernRuntimeEvents((event: RuntimeEvent) => {
-            socket.send(JSON.stringify(runtimeEventSchema.parse(event)));
+        const unsubscribe = subscribeToTavernApiEvents((event) => {
+            for (const entry of listTavernRuntimeEvents({
+                afterCursor: Number(event.cursor) - 1,
+            })) {
+                if (entry.cursor === Number(event.cursor)) {
+                    socket.send(JSON.stringify(runtimeEventSchema.parse(entry.event)));
+                }
+            }
         });
         const closeHandlers = [unsubscribe];
         unsubscribeBySocket.set(socket, () => {

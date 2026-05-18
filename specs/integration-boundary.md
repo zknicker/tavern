@@ -7,16 +7,18 @@ execution state.
 
 - Tavern defines its own nouns such as agents, chats, sessions, turns, cron, events, memories,
   models, jobs, skills, and tools.
-- Tavern should avoid leaking runtime-specific product language into its primary UI when an Tavern
-  noun already exists.
-- Tavern should preserve its own distinction between chats, sessions, and turns even if a runtime
-  exposes those concepts differently.
+- Tavern avoids leaking runtime-specific product language into its primary UI when a Tavern noun
+  already exists.
+- Tavern preserves its own distinction between chats, sessions, and turns even if a runtime exposes
+  those concepts differently.
 - Ownership is per domain.
-- Tavern-owned domains include memory, app settings, runtime health, sync state, jobs, and
+- Tavern Runtime-owned domains include chats, messages, events, reads, automations, deliveries,
+  memory, runtime health, sync state, generated config policy, and jobs.
+- Tavern App-owned domains include client cache, app settings, profiles, participant links, and
   presentation overlays.
-- Runtime-owned domains include native agent config, cron config, execution sessions, messages,
-  logs, skills, tools, model routing, channel bindings, and provider secrets unless a runtime
-  explicitly delegates a domain to Tavern.
+- OpenClaw-owned domains include native execution sessions, turns, transcripts, logs, skills,
+  tools, model routing, channel bindings, and provider secrets unless OpenClaw explicitly delegates
+  a domain to Tavern.
 
 ## Runtime Expectations
 
@@ -31,5 +33,5 @@ execution state.
 
 - Tavern stays useful when a runtime is offline by rendering already synced projections and
   observed history.
-- Tavern should identify which runtime owns each projected primitive.
-- Tavern should make sync freshness and failures visible without exposing raw runtime internals.
+- Tavern identifies which runtime owns each projected primitive.
+- Tavern makes sync freshness and failures visible without exposing raw runtime internals.

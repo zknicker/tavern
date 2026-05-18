@@ -1,7 +1,4 @@
-import {
-    agentRuntimeModelProviderIdSchema,
-    parseAgentRuntimeModelRef,
-} from '@tavern/agent-runtime-protocol';
+import { agentRuntimeModelProviderIdSchema, parseAgentRuntimeModelRef } from '@tavern/api';
 import { z } from 'zod';
 import { openClawHarnessSchema } from './openclaw-mapping.ts';
 

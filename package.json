@@ -10,7 +10,7 @@
     "dev": "node scripts/run-dev-stack.mjs desktop-runtime",
     "dev:web": "node scripts/run-dev-stack.mjs web",
     "dev:web:runtime": "node scripts/run-dev-stack.mjs web-runtime",
-    "build": "bun run --filter @tavern/agent-runtime-protocol build && bun run --filter @tavern/memory build && bun run --filter @zknicker/tavern-openclaw-messenger build && bun run --filter @tavern/openclaw-gateway-adapter build && bun run --filter @tavern/claude-usage build && bun run --filter @tavern/codex-usage build && bun run --filter @tavern/server build && bun run --filter @tavern/runtime build && bun run --filter @tavern/website build",
+    "build": "bun run --filter @tavern/api build && bun run --filter @tavern/sdk build && bun run --filter @tavern/memory build && bun run --filter @zknicker/tavern-openclaw-messenger build && bun run --filter @tavern/openclaw-gateway-adapter build && bun run --filter @tavern/claude-usage build && bun run --filter @tavern/codex-usage build && bun run --filter @tavern/server build && bun run --filter @tavern/runtime build && bun run --filter @tavern/website build",
     "build:desktop": "bun run desktop:build",
     "build:desktop:unsigned": "bun run --filter @tavern/website desktop:build:unsigned",
     "desktop:dev": "node scripts/run-dev-stack.mjs desktop",
@@ -30,7 +30,7 @@
     "test:e2e:screenshot": "bun run --filter @tavern/website test:e2e:screenshot",
     "test:e2e:screenshot-failures": "bun run --filter @tavern/website test:e2e:screenshot-failures",
     "test:e2e:ui": "bun run --filter @tavern/website test:e2e:ui",
-    "typecheck": "bun run --filter @tavern/agent-runtime-protocol typecheck && bun run --filter @tavern/memory typecheck && bun run --filter @zknicker/tavern-openclaw-messenger typecheck && bun run --filter @tavern/openclaw-gateway-adapter typecheck && bun run --filter @tavern/claude-usage typecheck && bun run --filter @tavern/codex-usage typecheck && bun run --filter @tavern/server typecheck && bun run --filter @tavern/runtime typecheck && bun run --filter @tavern/website typecheck",
+    "typecheck": "bun run --filter @tavern/api typecheck && bun run --filter @tavern/sdk typecheck && bun run --filter @tavern/memory typecheck && bun run --filter @zknicker/tavern-openclaw-messenger typecheck && bun run --filter @tavern/openclaw-gateway-adapter typecheck && bun run --filter @tavern/claude-usage typecheck && bun run --filter @tavern/codex-usage typecheck && bun run --filter @tavern/server typecheck && bun run --filter @tavern/runtime typecheck && bun run --filter @tavern/website typecheck",
     "lint": "ultracite check .",
     "lint:fix": "ultracite fix ."
   },
@@ -38,6 +38,6 @@
     "@biomejs/biome": "2.4.5",
     "openclaw": "2026.5.12",
     "ultracite": "^7.3.0",
-    "zod": "^4.1.11"
+    "zod": "4.1.11"
   }
 }

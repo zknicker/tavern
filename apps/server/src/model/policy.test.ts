@@ -1,5 +1,5 @@
 import { expect, test } from 'bun:test';
-import { parseAgentRuntimeModelRef } from '@tavern/agent-runtime-protocol';
+import { parseAgentRuntimeModelRef } from '@tavern/api';
 import { validateRoutingModels } from './policy.ts';
 
 test('validateRoutingModels allows cataloged routing providers', () => {

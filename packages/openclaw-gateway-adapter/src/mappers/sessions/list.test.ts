@@ -59,7 +59,7 @@ describe('OpenClaw session mapping', () => {
                     deliveryContext: {
                         channel: 'tavern',
                     },
-                    key: 'agent:main:tavern:channel:220f46ed-2d7c-41dd-9d7e-d02691f1afc3',
+                    key: 'agent:main:tavern:channel:cht_220f46ed-2d7c-41dd-9d7e-d02691f1afc3',
                     origin: {
                         provider: 'webchat',
                         surface: 'webchat',
@@ -70,7 +70,7 @@ describe('OpenClaw session mapping', () => {
 
         expect(mapped.sessions[0]).toMatchObject({
             agentId: 'main',
-            chatId: '220f46ed-2d7c-41dd-9d7e-d02691f1afc3',
+            chatId: 'cht_220f46ed-2d7c-41dd-9d7e-d02691f1afc3',
             platform: 'tavern',
         });
     });

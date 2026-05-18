@@ -73,7 +73,7 @@ export function ChatMessageComposer({
         await sendMessage.mutateAsync({
             agentId,
             chatId: chat.id,
-            clientMessageId: `tavern-message:${crypto.randomUUID()}`,
+            clientMessageId: `msg_${crypto.randomUUID()}`,
             content: submittedContent,
             metadata,
         });

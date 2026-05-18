@@ -7,6 +7,9 @@
   "exports": {
     ".": "./index.js"
   },
+  "dependencies": {
+    "@tavern/sdk": "workspace:*"
+  },
   "peerDependencies": {
     "openclaw": "2026.5.12"
   },
@@ -32,8 +35,8 @@
     }
   },
   "scripts": {
-    "build": "bun test src/*.test.js",
-    "typecheck": "bun test src/*.test.js",
+    "build": "bun run --filter @tavern/sdk build && bun test src/*.test.js",
+    "typecheck": "bun run --filter @tavern/sdk build && bun test src/*.test.js",
     "test": "bun test src/*.test.js"
   }
 }

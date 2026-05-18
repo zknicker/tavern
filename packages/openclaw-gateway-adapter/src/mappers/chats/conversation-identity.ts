@@ -1,4 +1,4 @@
-import type { AgentRuntimeChat } from '@tavern/agent-runtime-protocol';
+import type { AgentRuntimeChat } from '@tavern/api';
 import { readString } from '../../gateway/records.ts';
 import { resolveOpenClawDiscordConversationIdentity } from '../../platforms/discord/conversation.ts';
 import { resolveOpenClawTavernConversationIdentity } from '../../platforms/tavern/conversation.ts';

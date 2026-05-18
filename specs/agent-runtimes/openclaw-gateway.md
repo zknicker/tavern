@@ -10,36 +10,36 @@ product boundary, not evidence of multiple live runtime integrations.
 ## Shape
 
 ```txt
-Tavern Server
-  -> Tavern Runtime HTTP/WebSocket protocol
+Tavern Runtime
   -> @tavern/openclaw-gateway-adapter
   -> local OpenClaw Gateway WebSocket RPC
 ```
 
-Tavern Server should not fork OpenClaw, read `~/.openclaw` directly, or shell out to the
-`openclaw` CLI for normal product operations. Tavern Runtime owns the default local OpenClaw
-install and Gateway process lifecycle. It may launch the pinned `openclaw` binary, generate
-run-scoped OpenClaw config, read the managed config for the Gateway token, and stop the managed
-Gateway during runtime shutdown.
+Tavern App does not fork OpenClaw, read `~/.openclaw` directly, or shell out to the `openclaw`
+CLI for normal product operations. Tavern Runtime owns the default local OpenClaw install and
+Gateway process lifecycle. It may launch the pinned `openclaw` binary, generate run-scoped
+OpenClaw config, read the managed config for the Gateway token, and stop the managed Gateway during
+runtime shutdown.
 
 ## Package
 
 `packages/openclaw-gateway-adapter` owns the OpenClaw-specific adapter.
 
 - `src/gateway/*` contains raw OpenClaw WebSocket RPC, auth, events, and error handling.
-- `src/agent-runtime/*` exposes Tavern agent-runtime client behavior.
-- `src/mappers/<domain>/<operation>.ts` maps OpenClaw payloads into Tavern protocol records.
+- `src/agent-runtime/*` exposes Tavern runtime client behavior.
+- `src/mappers/<domain>/<operation>.ts` maps OpenClaw payloads into Tavern API and runtime
+  evidence records.
 - Mappers use one operation per file, such as `mappers/agents/list.ts`.
 - `src/platforms/<platform>/*` contains platform-specific interpretation for OpenClaw surfaces such
   as Discord, Telegram, or Slack.
 
-OpenClaw is the agent runtime. Discord is a platform inside that runtime. Tavern protocol records
-must not expose OpenClaw/Discord parsing details such as `lastTo`, `origin.to`, or session key
-fragments.
+OpenClaw is the agent runtime. Discord is a platform inside that runtime. Tavern API and runtime
+evidence records must not expose OpenClaw/Discord parsing details such as `lastTo`, `origin.to`, or
+session key fragments.
 
 Tavern Messenger is the OpenClaw channel for Tavern-originated chat. It emits first-party Tavern
 facts directly. The OpenClaw Gateway adapter still owns the mapping from Gateway method/event
-payloads into Tavern Runtime Protocol records.
+payloads into Tavern API records and runtime evidence records.
 
 The adapter maps in two steps:
 
@@ -50,20 +50,21 @@ OpenClaw Gateway record
 ```
 
 Platform modules return normalized facts such as chat kind, stable platform conversation identity,
-and typed chat participants. Primitive mappers then return Tavern protocol records.
+and typed chat participants. Primitive mappers then return Tavern API records or runtime evidence
+records.
 
 Mappers must not invent required identity, schedule, or time fields. If OpenClaw omits a required
-stable id, schedule expression, timestamp, or actor identity, the adapter should fail the mapping or
+stable id, schedule expression, timestamp, or actor identity, the adapter fails the mapping or
 mark the capability degraded instead of fabricating values such as random ids, `default`, `main`, or
 the current time.
 
 ## Auth
 
-Tavern Server stores only the Tavern Runtime endpoint. Tavern Runtime connects to the local managed
+Tavern App stores only the Tavern Runtime endpoint. Tavern Runtime connects to the local managed
 OpenClaw Gateway at `ws://127.0.0.1:18789` as `gateway-client`/`backend`, authenticates with the
 generated local Gateway token, and does not send a device payload.
 
-Tavern Runtime generates supported token-authenticated loopback Gateway config. The app should not
+Tavern Runtime generates supported token-authenticated loopback Gateway config. The app does not
 expose OpenClaw Gateway URLs, tokens, device identities, or pairing state.
 
 ## Managed Install
@@ -88,7 +89,7 @@ the Gateway. Runtime launches OpenClaw as the current user with the normal user 
 including the user's `HOME`; Seatbelt is a guardrail, not container isolation. The current default
 policy blocks direct reads/writes for high-risk home secrets such as SSH, AWS, GnuPG, Kubernetes,
 keychain, and iCloud document paths while preserving normal local app behavior. If a channel needs
-additional host access, Runtime should expose that as an explicit capability or settings decision
+additional host access, Runtime exposes that as an explicit capability or settings decision
 rather than broadening the default silently.
 
 ## Required Mapping
@@ -113,18 +114,17 @@ pagination for primitives where Tavern expects complete snapshots or complete ob
 
 ## Config Writes
 
-Tavern Runtime owns the generated OpenClaw config. Product settings should update Tavern-owned
+Tavern Runtime owns the generated OpenClaw config. Product settings update Tavern-owned
 records that Runtime composes into OpenClaw config and applies to Gateway.
 
-The old `config.get`/`config.apply` full snapshot flow is transitional. It may remain for
-diagnostics or compatibility while settings move to focused Tavern-owned records, but it should not
-be the long-term source of truth for product settings. Tavern product settings should not call
-Gateway `config.patch`.
+`config.get`/`config.apply` full snapshots are diagnostic surfaces. Focused Tavern-owned records
+are the product source for managed settings, and Tavern Runtime composes them into OpenClaw config.
+Tavern product settings do not call Gateway `config.patch`.
 
 ## Platform Metadata
 
-OpenClaw adapters should return core chat fields plus typed platform metadata. Core chat fields
-identify the Tavern primitive: runtime chat id, platform, scope, target, participants, bindings,
+OpenClaw adapters return core chat fields plus typed platform metadata. Core chat fields identify
+the Tavern primitive: runtime chat id, platform, scope, route, participants, bindings,
 and session keys. `platformMetadata` carries source-specific facts.
 
 For Discord, `platformMetadata.provider` is `discord` and includes:
@@ -135,7 +135,7 @@ For Discord, `platformMetadata.provider` is `discord` and includes:
 - Source records containing the original `origin`, `deliveryContext`, `lastTo`, `lastChannel`,
   kind, chat type, display name, and session key.
 
-Adapters should not turn those source facts into final product names. Tavern server/frontend code
+Adapters do not turn those source facts into final product names. Tavern server/frontend code
 owns display names, using `platformMetadata`, chat participants, and linked Tavern profiles.
 
 For Tavern Messenger, `platformMetadata.provider` is `tavern` and includes:
@@ -146,7 +146,7 @@ For Tavern Messenger, `platformMetadata.provider` is `tavern` and includes:
 - Delivery and correlation facts needed to match optimistic rows, live reply state, and durable
   history.
 
-Tavern metadata should be complete enough that the adapter does not need to infer product meaning
+Tavern metadata is complete enough that the adapter does not need to infer product meaning
 from OpenClaw labels, Discord targets, or opaque session key fragments.
 
 ## Chat Send Routing
@@ -177,10 +177,9 @@ OpenClaw events are freshness signals. Tavern sync jobs still fetch authoritativ
   supplied authoritative `sessionId` and related session fields in the event payload itself.
 - `cron` -> cron job/run invalidation.
 - `health`, `shutdown` -> connection health invalidation.
-- `plugin.tavern.turn.started`, `plugin.tavern.turn.completed`, `plugin.tavern.turn.failed` ->
-  Tavern turn events.
-- `chat` -> legacy active reply, message delta/final/error, and chat/status invalidation when
-  Tavern protocol exposes matching event types.
+- `chat` and OpenClaw turn/item/tool streams -> runtime evidence invalidation. Tavern Messenger
+  writes user-visible delivery and activity through the Tavern API, so Gateway events are not a
+  second Tavern chat event stream.
 
 ## Protocol Gaps To Resolve
 
@@ -192,16 +191,16 @@ OpenClaw events are freshness signals. Tavern sync jobs still fetch authoritativ
 - Tavern session records do not expose Claude/Codex/OpenCode execution backend. That is
   runtime-specific session metadata, not a cross-runtime Tavern primitive.
 - Model provider and execution-provider types are co-located with model contracts.
-- Agent files are a first-class capability. Tavern should browse and edit runtime-exposed agent
+- Agent files are a first-class capability. Tavern browses and edits runtime-exposed agent
   files directly instead of assuming every runtime has `SOUL.md`, `ROLE.md`, or `IDENTITY.md`.
-- Runtime chat records include typed `participants`. A participant is either an Tavern agent or an
+- Runtime chat records include typed `participants`. A participant is either a Tavern agent or an
   observed external participant with normalized source identity facts.
 - Discord channel chats group by channel id across agents.
 - Discord DMs group by Discord user and OpenClaw agent, because each agent has a separate 1:1 DM
   conversation.
 - Spawned OpenClaw worker sessions inherit their parent conversation identity.
 - OpenClaw Gateway samples from real responses are the preferred tests for this adapter. Sample
-  coverage should include agents, agent files, sessions, chat history, cron jobs, cron runs, models,
+  coverage includes agents, agent files, sessions, chat history, cron jobs, cron runs, models,
   skills, and events.
 - Raw Gateway captures stay in `.context/openclaw-captures/`; sanitized checked-in samples live in
   the adapter package.

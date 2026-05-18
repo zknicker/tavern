@@ -46,6 +46,12 @@ async function syncTavernMessengerPlugin(openClawPackageRoot?: string) {
     if (openClawPackageRoot) {
         await linkOpenClawPeerDependency(temporaryPath, openClawPackageRoot);
     }
+    await linkWorkspaceDependency({
+        packageName: '@tavern/sdk',
+        pluginPath: temporaryPath,
+        repositoryRoot,
+        workspacePath: path.join(repositoryRoot, 'packages', 'tavern-sdk'),
+    });
     await fs.rm(deployPath, { force: true, recursive: true });
     await fs.rename(temporaryPath, deployPath);
     return deployPath;
@@ -58,6 +64,35 @@ async function linkOpenClawPeerDependency(pluginPath: string, openClawPackageRoo
     await fs.mkdir(nodeModulesPath, { recursive: true });
     await fs.rm(openClawLinkPath, { force: true, recursive: true });
     await fs.symlink(openClawPackageRoot, openClawLinkPath, 'dir');
+}
+
+async function linkWorkspaceDependency(input: {
+    packageName: string;
+    pluginPath: string;
+    repositoryRoot: string;
+    workspacePath: string;
+}) {
+    if (!fsSync.existsSync(path.join(input.workspacePath, 'package.json'))) {
+        return;
+    }
+
+    const nodeModulesPath = path.join(input.pluginPath, 'node_modules');
+    const packageLinkPath = path.join(nodeModulesPath, ...input.packageName.split('/'));
+
+    if (!isPathInside(input.repositoryRoot, input.workspacePath)) {
+        throw new Error(
+            `Refusing to link workspace dependency outside repository: ${input.packageName}`
+        );
+    }
+
+    await fs.mkdir(path.dirname(packageLinkPath), { recursive: true });
+    await fs.rm(packageLinkPath, { force: true, recursive: true });
+    await fs.symlink(input.workspacePath, packageLinkPath, 'dir');
+}
+
+function isPathInside(rootPath: string, candidatePath: string) {
+    const relativePath = path.relative(path.resolve(rootPath), path.resolve(candidatePath));
+    return relativePath === '' || !(relativePath.startsWith('..') || path.isAbsolute(relativePath));
 }
 
 function getStableTavernMessengerPluginPath() {

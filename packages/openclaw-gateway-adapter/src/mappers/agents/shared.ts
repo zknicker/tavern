@@ -2,7 +2,7 @@ import {
     type AgentRuntimeAgent,
     agentRuntimeOpenClawHarnessSchema,
     agentRuntimeThinkingLevelSchema,
-} from '@tavern/agent-runtime-protocol';
+} from '@tavern/api';
 import {
     asRecord,
     readArray,

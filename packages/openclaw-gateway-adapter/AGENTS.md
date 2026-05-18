@@ -1,7 +1,7 @@
 # OpenClaw Gateway Adapter
 
 This package adapts the OpenClaw Gateway WebSocket protocol to Tavern's
-`@tavern/agent-runtime-protocol`.
+`@tavern/api`.
 
 ## Boundaries
 
@@ -9,7 +9,7 @@ This package adapts the OpenClaw Gateway WebSocket protocol to Tavern's
 - Do not read `~/.openclaw`, OpenClaw config files, workspace files, or databases directly.
 - Do not shell out to `openclaw` for normal runtime operations.
 - Use OpenClaw Gateway RPC and events as the only OpenClaw integration surface.
-- Return Tavern agent-runtime protocol shapes at the package boundary.
+- Return Tavern API and runtime evidence shapes at the package boundary.
 - Keep OpenClaw-native request and response shapes inside `src/gateway` and `src/mappers`.
 
 ## Mapper Layout
@@ -35,7 +35,7 @@ For example:
 - `platforms/discord/conversation.ts` resolves Discord channel and DM identity.
 - `platforms/discord/participant.ts` normalizes Discord users into Tavern chat participants.
 
-Generic mappers should consume platform-normalized facts and emit Tavern protocol records. Do not
+Generic mappers should consume platform-normalized facts and emit Tavern API records. Do not
 let raw platform fields such as Discord session key fragments, `lastTo`, or `origin.to` leak through
 the package boundary.
 
@@ -58,6 +58,6 @@ or opaque OpenClaw session keys from chat targets.
 
 ## Protocol Fit
 
-If OpenClaw cannot map cleanly to an Tavern protocol shape, do not hide that with lossy behavior.
+If OpenClaw cannot map cleanly to a Tavern API shape, do not hide that with lossy behavior.
 Return an explicit unsupported error, document the gap in `README.md`, and propose a protocol
 change before adding broad compatibility hacks.

@@ -3,7 +3,7 @@ import {
     type AgentRuntimeAgentFileList,
     agentRuntimeAgentFileContentSchema,
     agentRuntimeAgentFileListSchema,
-} from '@tavern/agent-runtime-protocol';
+} from '@tavern/api';
 import {
     asRecord,
     readArray,

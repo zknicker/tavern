@@ -1,7 +1,4 @@
-import {
-    type AgentRuntimeSessionList,
-    agentRuntimeSessionListSchema,
-} from '@tavern/agent-runtime-protocol';
+import { type AgentRuntimeSessionList, agentRuntimeSessionListSchema } from '@tavern/api';
 import { asRecord, readRecordArray } from '../../gateway/records.ts';
 import { mapOpenClawSessionRecord } from './shared.ts';
 

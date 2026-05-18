@@ -60,9 +60,8 @@ These items are intentionally not part of the first slice:
 
 ## Non-Goals
 
-- Tavern Server does not bundle, start, repair, or shell out to OpenClaw.
-- Tavern Server does not read OpenClaw runtime state, gateway logs, or OpenClaw config files
-  directly.
+- Tavern App does not bundle, start, repair, or shell out to OpenClaw.
+- Tavern App does not read OpenClaw runtime state, gateway logs, or OpenClaw config files directly.
 - Tavern does not require every runtime to support every OpenClaw capability.
 - Tavern does not hide malformed runtime responses behind compatibility fallbacks.
 
@@ -131,9 +130,9 @@ The OpenClaw adapter owns raw runtime error classification.
 - Transport-level failure that prevents even status checks updates Tavern Runtime health and
   may mark checked capabilities `unknown` until retried.
 - Mapper failures include the affected capability and method.
-- Mapper failures do not return fabricated protocol records.
+- Mapper failures do not return fabricated Tavern records.
 
-Adapter methods should return normal protocol data on success. Capability state is exposed through a
+Adapter methods should return normal Tavern data on success. Capability state is exposed through a
 dedicated status/diagnostic path rather than mixed into every list response.
 
 The adapter should classify failures close to the gateway request or mapper that sees the failure.
@@ -158,9 +157,8 @@ projection tables or `sync_state`.
 
 Current related tables:
 
-- `agent_runtime_connections` is a legacy storage table for the single managed runtime namespace.
-  It stores the Tavern Runtime endpoint plus coarse health fields such as `last_checked_at`,
-  `last_error`, and `last_synced_at`.
+- `agent_runtime_connections` stores the Tavern Runtime endpoint plus coarse health fields such as
+  `last_checked_at`, `last_error`, and `last_synced_at`.
 - `sync_state` stores primitive sync freshness keyed by `kind` and `id`. It answers questions such
   as "did agent sync for this runtime succeed?" not "is the OpenClaw models capability available?"
 - Projection tables such as `agents`, `chats`, `session_runs`, `session_messages`, `cron_jobs`, and

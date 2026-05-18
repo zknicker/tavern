@@ -60,6 +60,14 @@ export function createChatStatusEventHandlers(utils: ChatStatusEventUtils) {
             utils.worker.list.invalidate(),
         ]).catch(() => undefined);
     };
+    const invalidateLiveTurn = () => {
+        Promise.all([
+            utils.agent.activity.invalidate(),
+            utils.chat.log.list.invalidate(),
+            utils.chat.status.list.invalidate(),
+            utils.worker.list.invalidate(),
+        ]).catch(() => undefined);
+    };
 
     const invalidateCompletedTurn = () => {
         Promise.all([
@@ -122,6 +130,7 @@ export function createChatStatusEventHandlers(utils: ChatStatusEventUtils) {
                 step: input.step,
                 turn: input.turn,
             });
+            invalidateLiveTurn();
         },
         onTurnReplyUpdated: (update: ChatReplyUpdate) => {
             markChatTiming('client.turnReplyUpdatedEvent', {
@@ -137,6 +146,7 @@ export function createChatStatusEventHandlers(utils: ChatStatusEventUtils) {
                 textLength: update.text.length,
             });
             utils.timeline.updateReply(update);
+            invalidateLiveTurn();
         },
         onTurnStarted: (turn: ChatTurn) => {
             markChatTiming('client.turnStartedEvent', {
