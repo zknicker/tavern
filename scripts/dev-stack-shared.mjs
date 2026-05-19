@@ -106,21 +106,23 @@ export async function waitForRuntimeReady(timeoutMs = 10 * 60 * 1000) {
 }
 
 export function buildManagedOpenClawPlugin({ repositoryRoot }) {
-    const result = spawnSync(
-        'bun',
-        ['run', '--filter', '@zknicker/tavern-openclaw-messenger', 'build'],
-        {
+    for (const packageName of [
+        '@zknicker/tavern-openclaw-messenger',
+        '@zknicker/tavern-openclaw-cortex',
+        '@zknicker/tavern-openclaw-workspace',
+    ]) {
+        const result = spawnSync('bun', ['run', '--filter', packageName, 'build'], {
             cwd: repositoryRoot,
             encoding: 'utf8',
+        });
+
+        if (result.status === 0) {
+            continue;
         }
-    );
 
-    if (result.status === 0) {
-        return;
+        const output = [result.stdout, result.stderr].filter(Boolean).join('\n').trim();
+        throw new Error(output || `Failed to build ${packageName}.`);
     }
-
-    const output = [result.stdout, result.stderr].filter(Boolean).join('\n').trim();
-    throw new Error(output || 'Failed to build Tavern Messenger plugin.');
 }
 
 export function assertDevStackPortsAvailable({ mode, ports, repositoryRoot }) {

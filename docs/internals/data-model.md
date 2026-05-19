@@ -21,6 +21,7 @@ automations, deliveries, activity, and the product timeline.
 | Runtime schema | `apps/runtime/src/db/schema.ts` | Runtime SQLite schema and fresh setup |
 | Runtime chat store | `apps/runtime/src/tavern/chat-api/` | OpenAPI-backed chat, message, delivery, activity, read, and event store |
 | Runtime channel outbox | `apps/runtime/src/tavern/channel-store.ts` | Tavern Messenger plugin ingress queue and accepted-message receipt state |
+| Runtime Cortex store | `apps/runtime/src/cortex/` | Proposed Runtime-owned GBrain-style page, chunk, link, embedding, audit, and maintenance store |
 | Runtime chat tests | `apps/runtime/src/tavern/chat-api-store.test.ts` | Contract, identity, sequence, event, read, and route behavior |
 | App schema | `apps/server/src/db/bootstrap.ts` | App SQLite fresh setup |
 | App Drizzle schema | `apps/server/src/db/schema/` | Typed app cache/projection tables |
@@ -33,6 +34,7 @@ automations, deliveries, activity, and the product timeline.
 | --- | --- | --- |
 | Runtime SQLite | Tavern Runtime | Canonical chat model, automation delivery, channel ingress, cursor-backed events, read markers, runtime metadata |
 | App SQLite | Tavern App | Client cache, app-local settings, presentation state, and runtime evidence views |
+| Runtime Cortex store | Tavern Runtime | Cortex pages, chunks, links, files, citations, timelines, audit, telemetry, embeddings, and maintenance state |
 | OpenClaw state | OpenClaw | Sessions, turns, tools, model calls, transcripts, and files |
 
 Runtime SQLite is the product source of truth for chat. App SQLite can cache for
@@ -65,6 +67,17 @@ Activity and read markers are scoped records, not standalone product ids.
 OpenClaw ids and runtime agent ids remain source ids. Store them in runtime
 metadata or projection fields, not as Tavern product ids unless Tavern minted
 them.
+
+Cortex ids use Tavern product identity:
+
+| Prefix | Entity |
+| --- | --- |
+| `ctxp_` | Cortex page |
+| `ctxc_` | Cortex chunk |
+| `ctxl_` | Cortex link |
+| `ctxf_` | Cortex file |
+| `ctxr_` | Cortex citation |
+| `ctxa_` | Cortex audit event |
 
 ## Runtime Chat Tables
 
@@ -398,6 +411,38 @@ runtime_tool_calls
 OpenClaw transcript messages, tool calls, links, and artifacts are runtime
 evidence. They enrich the UI, but they do not replace canonical chat history.
 
+## Cortex Tables
+
+Tavern Runtime owns Cortex storage. OpenClaw runtime memory is execution-owned
+prompt-time context; Cortex is Tavern-owned durable knowledge and memory.
+
+```text
+cortex_sources
+cortex_pages
+cortex_chunks
+cortex_links
+cortex_files
+cortex_citations
+cortex_timeline_entries
+cortex_audit_events
+cortex_telemetry_events
+```
+
+Rules:
+
+* Cortex pages are wiki-style intelligence pages with stable ids,
+  source-scoped slugs, compiled truth, timelines, frontmatter, and source
+  metadata.
+* Cortex chunks are derived from pages and carry embedding metadata. Capture and
+  recall require current embeddings; page reads do not.
+* Cortex timelines store append-only evidence rather than duplicating chat
+  history.
+* Cortex links connect pages, participants, chats, messages, sessions, files,
+  citations, and related observations.
+* Audit and telemetry records make capture, recall, maintenance, embedding
+  repair, and failures inspectable.
+* Markdown wiki files and search indexes are derived state.
+
 ## Transaction Rules
 
 Message create:
@@ -455,8 +500,7 @@ App tables are cache, settings, or execution evidence:
 Search has first-class indexing for:
 
 * chat messages
-* knowledgebase pages and files
-* memory records
+* Cortex pages and files
 
 SQLite FTS mirrors durable text fields through triggers or explicit
 transactional writes. Search indexes are derived state, not the source of truth.
@@ -472,6 +516,8 @@ transactional writes. Search indexes are derived state, not the source of truth.
 * Reconciliation never uses content/timestamp duplicate detection.
 * Events notify; runtime durable reads recover.
 * Volatile activity never becomes a second chat history.
+* Cortex capture and recall fail visibly when required embeddings are stale or
+  unavailable.
 
 ## Related Docs
 
@@ -481,3 +527,5 @@ transactional writes. Search indexes are derived state, not the source of truth.
 * [Tavern Runtime](runtime.md)
 * [Architecture overview](architecture-overview.md)
 * [Tavern Runtime Chat Server](../../specs/runtime-chat-server.md)
+* [Memories](../../specs/memories.md)
+* [Cortex](../../specs/cortex.md)

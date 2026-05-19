@@ -204,6 +204,19 @@ export const agentRuntimeSaveAgentFileSchema = z.object({
     content: z.string(),
 });
 
+export const agentRuntimeSaveWorkspaceInstructionsSchema = z.object({
+    agentName: z.string().trim().min(1).optional(),
+    soul: z.string().optional(),
+    workspaceDir: z.string().trim().min(1),
+});
+
+export const agentRuntimeWorkspaceInstructionsSchema = z.object({
+    agentId: z.string().trim().min(1),
+    renderedAt: z.string().datetime(),
+    sha256: z.string().trim().min(1),
+    updatedAt: z.string().datetime(),
+});
+
 export const agentRuntimeSkillFileSchema = z.object({
     path: z.string().trim().min(1),
     sizeBytes: z.number().int().nonnegative(),
@@ -514,6 +527,183 @@ export const agentRuntimeMemoryStatusSchema = z.object({
     lastCaptureAt: z.string().datetime().nullable(),
     lastDreamRunAt: z.string().datetime().nullable(),
     lastWorkingSynthesisAt: z.string().datetime().nullable(),
+});
+
+export const cortexJobNameSchema = z.enum([
+    'ingest',
+    'recall-index',
+    'lint',
+    'repair',
+    'export',
+    'health',
+]);
+
+export const cortexPageStatusSchema = z.enum(['active', 'archived', 'deleted', 'stale']);
+export const cortexPageTypeSchema = z.enum([
+    'agent',
+    'chat',
+    'decision',
+    'fact',
+    'file',
+    'note',
+    'person',
+    'project',
+    'source',
+    'task',
+]);
+export const cortexAuditStatusSchema = z.enum(['error', 'skipped', 'success']);
+
+export const cortexSourceRefSchema = z.object({
+    id: z.string().trim().min(1),
+    kind: z.string().trim().min(1),
+    locator: z.string().trim().min(1).nullable().default(null),
+});
+
+export const cortexPageSummarySchema = z.object({
+    aliases: z.array(z.string().trim().min(1)).default([]),
+    id: z.string().trim().min(1),
+    slug: z.string().trim().min(1),
+    status: cortexPageStatusSchema,
+    tags: z.array(z.string().trim().min(1)).default([]),
+    title: z.string().trim().min(1),
+    type: cortexPageTypeSchema,
+    updatedAt: z.string().datetime(),
+});
+
+export const cortexTimelineEntrySchema = z.object({
+    body: z.string(),
+    createdAt: z.string().datetime(),
+    id: z.string().trim().min(1),
+    sourceRefs: z.array(cortexSourceRefSchema).default([]),
+});
+
+export const cortexLinkSchema = z.object({
+    fromPageId: z.string().trim().min(1),
+    heading: z.string().trim().min(1).nullable().default(null),
+    id: z.string().trim().min(1),
+    label: z.string().trim().min(1).nullable().default(null),
+    linkKind: z.string().trim().min(1),
+    sourceLocation: z.string().trim().min(1).nullable().default(null),
+    targetPageId: z.string().trim().min(1).nullable().default(null),
+    targetSlug: z.string().trim().min(1),
+});
+
+export const cortexClaimSchema = z.object({
+    confidence: z.number().min(0).max(1).nullable().default(null),
+    id: z.string().trim().min(1),
+    pageId: z.string().trim().min(1),
+    predicate: z.string().trim().min(1),
+    sourceRefs: z.array(cortexSourceRefSchema).default([]),
+    status: z.enum(['active', 'contradicted', 'stale', 'superseded']),
+    subject: z.string().trim().min(1),
+    value: z.string().trim().min(1),
+});
+
+export const cortexPageSchema = cortexPageSummarySchema.extend({
+    body: z.string(),
+    compiledTruth: z.string(),
+    claims: z.array(cortexClaimSchema).default([]),
+    createdAt: z.string().datetime(),
+    frontmatter: z.record(z.string(), z.unknown()).default({}),
+    links: z.array(cortexLinkSchema).default([]),
+    sourceRefs: z.array(cortexSourceRefSchema).default([]),
+    timeline: z.array(cortexTimelineEntrySchema).default([]),
+});
+
+export const cortexPageListSchema = z.object({
+    pages: z.array(
+        cortexPageSummarySchema.extend({
+            links: z.array(cortexLinkSchema).default([]),
+        })
+    ),
+});
+
+export const cortexSearchInputSchema = z.object({
+    limit: z.number().int().positive().max(50).default(10),
+    query: z.string().trim().min(1),
+});
+
+export const cortexSearchHitSchema = z.object({
+    page: cortexPageSummarySchema,
+    score: z.number().nonnegative(),
+    snippet: z.string().default(''),
+});
+
+export const cortexSearchResultSchema = z.object({
+    hits: z.array(cortexSearchHitSchema),
+    query: z.string().trim().min(1),
+});
+
+export const cortexRecallInputSchema = cortexSearchInputSchema;
+
+export const cortexRecallHitSchema = cortexSearchHitSchema.extend({
+    evidence: z.array(cortexSourceRefSchema).default([]),
+});
+
+export const cortexRecallResultSchema = z.object({
+    auditId: z.string().trim().min(1),
+    hits: z.array(cortexRecallHitSchema),
+    query: z.string().trim().min(1),
+});
+
+export const cortexCaptureInputSchema = z.object({
+    content: z.string().trim().min(1),
+    source: z.object({
+        actorId: z.string().trim().min(1),
+        actorKind: z.enum(['agent', 'runtime', 'system', 'user']),
+        chatId: z.string().trim().min(1).nullable().optional(),
+        fileId: z.string().trim().min(1).nullable().optional(),
+        messageId: z.string().trim().min(1).nullable().optional(),
+        sessionKey: z.string().trim().min(1).nullable().optional(),
+        turnId: z.string().trim().min(1).nullable().optional(),
+        url: z.string().trim().min(1).nullable().optional(),
+    }),
+    tags: z.array(z.string().trim().min(1)).default([]),
+    title: z.string().trim().min(1),
+    type: cortexPageTypeSchema.default('note'),
+});
+
+export const cortexCaptureResultSchema = z.object({
+    auditId: z.string().trim().min(1),
+    page: cortexPageSchema,
+});
+
+export const cortexBacklinkListSchema = z.object({
+    links: z.array(cortexLinkSchema),
+    target: z.string().trim().min(1),
+});
+
+export const cortexJobRunSchema = z.object({
+    auditId: z.string().trim().min(1),
+    completedAt: z.string().datetime(),
+    job: cortexJobNameSchema,
+    status: cortexAuditStatusSchema,
+    summary: z.string().trim().min(1),
+});
+
+export const cortexStatusSchema = z.object({
+    auditCount: z.number().int().nonnegative(),
+    captureCount: z.number().int().nonnegative(),
+    chunkCount: z.number().int().nonnegative(),
+    claimCount: z.number().int().nonnegative(),
+    databasePath: z.string().trim().min(1),
+    encoding: z.object({
+        currentCount: z.number().int().nonnegative(),
+        dimensions: z.number().int().positive(),
+        model: z.string().trim().min(1),
+        provider: z.string().trim().min(1),
+        staleCount: z.number().int().nonnegative(),
+        totalCount: z.number().int().nonnegative(),
+    }),
+    jobRuns: z.array(cortexJobRunSchema).default([]),
+    lastCaptureAt: z.string().datetime().nullable(),
+    lastRecallAt: z.string().datetime().nullable(),
+    lastRepairAt: z.string().datetime().nullable(),
+    linkCount: z.number().int().nonnegative(),
+    pageCount: z.number().int().nonnegative(),
+    sourceCount: z.number().int().nonnegative(),
+    timelineEntryCount: z.number().int().nonnegative(),
+    wikiPath: z.string().trim().min(1),
 });
 
 export const agentRuntimeCronDeliverySchema = z.object({
@@ -1241,6 +1431,23 @@ export type AgentRuntimeMemoryEmbedderStatus = z.infer<
 >;
 export type AgentRuntimeMemorySettings = z.infer<typeof agentRuntimeMemorySettingsSchema>;
 export type AgentRuntimeMemoryStatus = z.infer<typeof agentRuntimeMemoryStatusSchema>;
+export type CortexBacklinkList = z.infer<typeof cortexBacklinkListSchema>;
+export type CortexCaptureInput = z.infer<typeof cortexCaptureInputSchema>;
+export type CortexCaptureResult = z.infer<typeof cortexCaptureResultSchema>;
+export type CortexClaim = z.infer<typeof cortexClaimSchema>;
+export type CortexJobName = z.infer<typeof cortexJobNameSchema>;
+export type CortexJobRun = z.infer<typeof cortexJobRunSchema>;
+export type CortexLink = z.infer<typeof cortexLinkSchema>;
+export type CortexPage = z.infer<typeof cortexPageSchema>;
+export type CortexPageList = z.infer<typeof cortexPageListSchema>;
+export type CortexPageSummary = z.infer<typeof cortexPageSummarySchema>;
+export type CortexRecallInput = z.infer<typeof cortexRecallInputSchema>;
+export type CortexRecallResult = z.infer<typeof cortexRecallResultSchema>;
+export type CortexSearchInput = z.infer<typeof cortexSearchInputSchema>;
+export type CortexSearchResult = z.infer<typeof cortexSearchResultSchema>;
+export type CortexSourceRef = z.infer<typeof cortexSourceRefSchema>;
+export type CortexStatus = z.infer<typeof cortexStatusSchema>;
+export type CortexTimelineEntry = z.infer<typeof cortexTimelineEntrySchema>;
 export type AgentRuntimeModelAccess = z.infer<typeof agentRuntimeModelAccessSchema>;
 export type AgentRuntimeModelAccessId = z.infer<typeof agentRuntimeModelAccessIdSchema>;
 export type AgentRuntimeModelAccessState = z.infer<typeof agentRuntimeModelAccessStateSchema>;
@@ -1260,6 +1467,12 @@ export type AgentRuntimeSaveCodexCredential = z.infer<typeof agentRuntimeSaveCod
 export type AgentRuntimeModelSelection = z.infer<typeof agentRuntimeModelSelectionSchema>;
 export type AgentRuntimeModels = z.infer<typeof agentRuntimeModelsSchema>;
 export type AgentRuntimeSkillFile = z.infer<typeof agentRuntimeSkillFileSchema>;
+export type AgentRuntimeSaveWorkspaceInstructions = z.infer<
+    typeof agentRuntimeSaveWorkspaceInstructionsSchema
+>;
+export type AgentRuntimeWorkspaceInstructions = z.infer<
+    typeof agentRuntimeWorkspaceInstructionsSchema
+>;
 export type AgentRuntimeInstallSkill = z.infer<typeof agentRuntimeInstallSkillSchema>;
 export type AgentRuntimeSkill = z.infer<typeof agentRuntimeSkillSchema>;
 export type AgentRuntimeSkillDeletedEvent = z.infer<typeof agentRuntimeSkillDeletedEventSchema>;

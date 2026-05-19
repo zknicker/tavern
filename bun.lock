@@ -6,6 +6,7 @@
       "name": "the-tavern",
       "devDependencies": {
         "@biomejs/biome": "2.4.5",
+        "@martian-engineering/lossless-claw": "0.11.1",
         "openclaw": "2026.5.12",
         "ultracite": "^7.3.0",
         "zod": "4.1.11",
@@ -191,12 +192,32 @@
         "yaml": "^2.8.3",
       },
     },
+    "packages/tavern-openclaw-cortex": {
+      "name": "@zknicker/tavern-openclaw-cortex",
+      "version": "0.0.0",
+      "peerDependencies": {
+        "openclaw": "2026.5.12",
+      },
+      "optionalPeers": [
+        "openclaw",
+      ],
+    },
     "packages/tavern-openclaw-messenger": {
       "name": "@zknicker/tavern-openclaw-messenger",
       "version": "0.0.0",
       "dependencies": {
         "@tavern/sdk": "workspace:*",
       },
+      "peerDependencies": {
+        "openclaw": "2026.5.12",
+      },
+      "optionalPeers": [
+        "openclaw",
+      ],
+    },
+    "packages/tavern-openclaw-workspace": {
+      "name": "@zknicker/tavern-openclaw-workspace",
+      "version": "0.0.0",
       "peerDependencies": {
         "openclaw": "2026.5.12",
       },
@@ -559,6 +580,8 @@
 
     "@mariozechner/clipboard-win32-x64-msvc": ["@mariozechner/clipboard-win32-x64-msvc@0.3.2", "", { "os": "win32", "cpu": "x64" }, "sha512-tGRuYpZwDOD7HBrCpyRuhGnHHSCknELvqwKKUG4JSfSB7JIU7LKRh6zx6fMUOQd8uISK35TjFg5UcNih+vJhFA=="],
 
+    "@martian-engineering/lossless-claw": ["@martian-engineering/lossless-claw@0.11.1", "", { "dependencies": { "@earendil-works/pi-agent-core": ">=0.74 <1", "@earendil-works/pi-ai": ">=0.74 <1", "@earendil-works/pi-coding-agent": ">=0.74 <1", "@sinclair/typebox": "0.34.48" }, "peerDependencies": { "openclaw": ">=2026.5.12" }, "optionalPeers": ["openclaw"] }, "sha512-9gRrkqGzFDjewR3E2tXva7tpEMP2zW1aPuvcW9dxrq9UdWe/RnhApG05wzhUJ15luHK65W6ntSvDHZlnRbzHzA=="],
+
     "@mistralai/mistralai": ["@mistralai/mistralai@2.2.1", "", { "dependencies": { "ws": "^8.18.0", "zod": "^3.25.0 || ^4.0.0", "zod-to-json-schema": "^3.25.0" } }, "sha512-uKU8CZmL2RzYKmplsU01hii4p3pe4HqJefpWNRWXm1Tcm0Sm4xXfwSLIy4k7ZCPlbETCGcp69E7hZs+WOJ5itQ=="],
 
     "@modelcontextprotocol/sdk": ["@modelcontextprotocol/sdk@1.29.0", "", { "dependencies": { "@hono/node-server": "^1.19.9", "ajv": "^8.17.1", "ajv-formats": "^3.0.1", "content-type": "^1.0.5", "cors": "^2.8.5", "cross-spawn": "^7.0.5", "eventsource": "^3.0.2", "eventsource-parser": "^3.0.0", "express": "^5.2.1", "express-rate-limit": "^8.2.1", "hono": "^4.11.4", "jose": "^6.1.3", "json-schema-typed": "^8.0.2", "pkce-challenge": "^5.0.0", "raw-body": "^3.0.0", "zod": "^3.25 || ^4.0", "zod-to-json-schema": "^3.25.1" }, "peerDependencies": { "@cfworker/json-schema": "^4.1.1" }, "optionalPeers": ["@cfworker/json-schema"] }, "sha512-zo37mZA9hJWpULgkRpowewez1y6ML5GsXJPY8FI0tBBCd77HEvza4jDqRKOXgHNn867PVGCyTdzqpz0izu5ZjQ=="],
@@ -720,6 +743,8 @@
     "@rollup/rollup-win32-x64-msvc": ["@rollup/rollup-win32-x64-msvc@4.59.0", "", { "os": "win32", "cpu": "x64" }, "sha512-2HRCml6OztYXyJXAvdDXPKcawukWY2GpR5/nxKp4iBgiO3wcoEGkAaqctIbZcNB6KlUQBIqt8VYkNSj2397EfA=="],
 
     "@silvia-odwyer/photon-node": ["@silvia-odwyer/photon-node@0.3.4", "", {}, "sha512-bnly4BKB3KDTFxrUIcgCLbaeVVS8lrAkri1pEzskpmxu9MdfGQTy8b8EgcD83ywD3RPMsIulY8xJH5Awa+t9fA=="],
+
+    "@sinclair/typebox": ["@sinclair/typebox@0.34.48", "", {}, "sha512-kKJTNuK3AQOrgjjotVxMrCn1sUJwM76wMszfq1kdU4uYVJjvEWuFQ6HgvLt4Xz3fSmZlTOxJ/Ie13KnIcWQXFA=="],
 
     "@smithy/config-resolver": ["@smithy/config-resolver@4.4.17", "", { "dependencies": { "@smithy/node-config-provider": "^4.3.14", "@smithy/types": "^4.14.1", "@smithy/util-config-provider": "^4.2.2", "@smithy/util-endpoints": "^3.4.2", "@smithy/util-middleware": "^4.2.14", "tslib": "^2.6.2" } }, "sha512-TzDZcAnhTyAHbXVxWZo7/tEcrIeFq20IBk8So3OLOetWpR8EwY/yEqBMBFaJMeyEiREDq4NfEl+qO3OAUD+vbQ=="],
 
@@ -1015,7 +1040,11 @@
 
     "@webgpu/types": ["@webgpu/types@0.1.69", "", {}, "sha512-RPmm6kgRbI8e98zSD3RVACvnuktIja5+yLgDAkTmxLr90BEwdTXRQWNLF3ETTTyH/8mKhznZuN5AveXYFEsMGQ=="],
 
+    "@zknicker/tavern-openclaw-cortex": ["@zknicker/tavern-openclaw-cortex@workspace:packages/tavern-openclaw-cortex"],
+
     "@zknicker/tavern-openclaw-messenger": ["@zknicker/tavern-openclaw-messenger@workspace:packages/tavern-openclaw-messenger"],
+
+    "@zknicker/tavern-openclaw-workspace": ["@zknicker/tavern-openclaw-workspace@workspace:packages/tavern-openclaw-workspace"],
 
     "abort-controller": ["abort-controller@3.0.0", "", { "dependencies": { "event-target-shim": "^5.0.0" } }, "sha512-h8lQ8tacZYnR3vNQTgibj+tODHI5/+l06Au2Pcriv/Gmet0eaj4TwWH41sO9wnHDiQsEj19q0drzdWdeAHtweg=="],
 

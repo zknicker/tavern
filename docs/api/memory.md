@@ -1,48 +1,57 @@
 ---
 summary: Memory API for inspectable remembered facts, user review, scoping, attribution, prompt usage, and deletion behavior.
 read_when:
-  - changing memory records, review flows, or memory API contracts
-  - changing how agents read or write user-reviewable context
+  - changing memory visibility, runtime memory status, or Cortex inspection APIs
+  - changing how agents or users inspect capture, recall, or prompt memory
 ---
 
 # Memory API
 
-The Memory API is for durable, inspectable context that agents keep in mind.
+The Memory API exposes memory readiness and inspection.
 
-Memory is not a document store and not a wiki. Larger working material belongs
-in the [Knowledgebase API](knowledgebase.md).
+It does not own a separate durable memory-record database. Durable agent memory
+lives in Cortex pages, timelines, links, embeddings, and audit records. Runtime
+prompt memory lives in OpenClaw through Lossless Claw.
 
 ## Contract
 
-* Memory records have stable ids.
-* Users can inspect, edit, and delete remembered facts.
-* Agent-written memory is attributable to the agent, chat, message, or run that
-  produced it.
-* Memory used in prompts is visible through Tavern.
-* Memory records can be scoped by agent, profile, workspace, or global policy.
-* Deleting or disabling memory prevents it from being used in later prompt
-  assembly.
+* Memory status distinguishes OpenClaw prompt-time memory readiness from Cortex
+  capture, recall, embedding, and maintenance readiness.
+* Memory used in prompts is inspectable through OpenClaw memory status, Cortex
+  recall results, Cortex page compiled truth, timeline evidence, and audit
+  records.
+* User corrections write back to Cortex pages, timelines, links, tags, or source
+  metadata.
+* Forgetting is auditable. Tavern updates or marks Cortex material rather than
+  hiding it through a second shadow memory list.
+* Memory inspection remains available from synced local Tavern data when Runtime
+  is offline, using the latest known Cortex and capability snapshots.
 
 ## Surface
 
 The API covers:
 
-* list memory records
-* get a memory record
-* create or update a memory record
-* delete or disable a memory record
 * read memory settings
 * update memory settings
-* inspect attribution and usage timestamps
+* inspect OpenClaw runtime memory readiness
+* inspect Cortex capture status and recent capture output
+* inspect Cortex recall usage and provenance
+* inspect compiled-truth changes and appended timeline evidence
+* inspect Cortex embedding and maintenance health
 
 ## Agent Boundary
 
-Agents can propose, read, or use memory only through Tavern-owned capability
-surfaces. Memory does not live only in runtime prompts, hidden files, or
-OpenClaw-native state.
+Agents use memory through explicit tools:
+
+* OpenClaw runtime memory tools for prompt-time recall.
+* Cortex tools for durable capture, page reads, recall, and maintenance.
+
+Agents do not write a separate Tavern memory table.
 
 ## Related Docs
 
 * [Memory feature](../features/memory.md)
+* [Cortex](../../specs/cortex.md)
+* [Memories](../../specs/memories.md)
 * [API overview](overview.md)
 * [Data model](../internals/data-model.md)

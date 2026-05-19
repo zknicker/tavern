@@ -186,7 +186,8 @@ and cleanup or rollback notes when relevant.
 ## Writing Rules
 
 * Use Tavern nouns at the product boundary: `chat`, `message`, `activity`,
-  `agent`, `memory`, `knowledgebase`, `automation`, `skill`, `stats`, `SDK`.
+  `agent`, `memory`, `Cortex`, `Knowledgebase`, `automation`, `skill`, `stats`,
+  `SDK`.
 * Use runtime nouns only where runtime ownership matters: `session`, `turn`,
   `transcript`, `delivery`, `event`.
 * Prefer "durable messages" over "chats survive reloads".

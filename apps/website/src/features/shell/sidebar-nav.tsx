@@ -21,7 +21,7 @@ const tabIcons = {
     overview: Home09Icon,
     stats: Activity01Icon,
     cron: HourglassIcon,
-    memory: Atom02Icon,
+    cortex: Atom02Icon,
     skills: ZapIcon,
 } satisfies Record<RouteTab, IconSvgElement>;
 

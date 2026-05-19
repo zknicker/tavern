@@ -33,7 +33,20 @@ export const agentRuntimeRoutes = {
     chatStatus: '/chat-status',
     chatMessages: (chatId: string) => `/chats/${chatId}/messages`,
     chats: '/chats',
+    cortexBacklinks: (slugOrId: string) =>
+        `/cortex/pages/${encodeURIComponent(slugOrId)}/backlinks`,
+    cortexCapture: '/cortex/capture',
+    cortexJobRun: (job: string) => `/cortex/jobs/${encodeURIComponent(job)}/run`,
+    cortexPage: (slugOrId: string) => `/cortex/pages/${encodeURIComponent(slugOrId)}`,
+    cortexPages: '/cortex/pages',
+    cortexRecall: '/cortex/recall',
+    cortexSearch: '/cortex/search',
+    cortexStatus: '/cortex/status',
     health: '/health',
+    workspaceAgentInstructions: (agentId: string) =>
+        `/workspace/agents/${encodeURIComponent(agentId)}/instructions`,
+    workspaceAgentNotes: (agentId: string) =>
+        `/workspace/agents/${encodeURIComponent(agentId)}/notes`,
     models: '/models',
     binding: (id: string) => `/bindings/${id}`,
     bindings: '/bindings',

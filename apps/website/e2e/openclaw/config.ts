@@ -7,12 +7,43 @@ const zeroCost = Object.freeze({
     output: 0,
 });
 
+const e2eAgentToolNames = [
+    'read',
+    'write',
+    'edit',
+    'apply_patch',
+    'exec',
+    'process',
+    'web_search',
+    'web_fetch',
+    'memory_search',
+    'memory_get',
+    'sessions_list',
+    'sessions_history',
+    'sessions_send',
+    'sessions_spawn',
+    'subagents',
+    'session_status',
+    'cortex.search',
+    'cortex.getPage',
+    'cortex.capture',
+    'cortex.recall',
+    'cortex.status',
+    'cortex.listBacklinks',
+    'cortex.runJob',
+    'workspace.notes.read',
+    'workspace.notes.update',
+];
+
 interface OpenClawE2eConfigInput {
+    cortexPluginPath: string;
     gatewayPort: number;
     gatewayToken: string;
+    losslessPluginPath: string;
     pluginPath: string;
     providerBaseUrl: string;
     workspaceDir: string;
+    workspacePluginPath: string;
 }
 
 export function buildOpenClawE2eConfig(input: OpenClawE2eConfigInput) {
@@ -64,6 +95,7 @@ export function buildOpenClawE2eConfig(input: OpenClawE2eConfigInput) {
                         workspaceDir: input.workspaceDir,
                     }),
                     tools: {
+                        allow: e2eAgentToolNames,
                         profile: 'coding',
                     },
                 },
@@ -92,26 +124,38 @@ export function buildOpenClawE2eConfig(input: OpenClawE2eConfigInput) {
                 deferralTimeoutMs: 1000,
             },
         },
-        memory: {
-            backend: 'builtin',
-        },
         models: {
             mode: 'replace',
             providers: createMockProviderMap(input.providerBaseUrl),
         },
         plugins: {
-            allow: ['memory-core', 'tavern'],
+            allow: ['lossless-claw', 'tavern', 'tavern-cortex', 'tavern-workspace'],
             bundledDiscovery: 'allowlist',
             entries: {
                 tavern: {
                     enabled: true,
                 },
-                'memory-core': {
+                'tavern-cortex': {
+                    enabled: true,
+                },
+                'tavern-workspace': {
+                    enabled: true,
+                },
+                'lossless-claw': {
                     enabled: true,
                 },
             },
             load: {
-                paths: [input.pluginPath],
+                paths: [
+                    input.pluginPath,
+                    input.cortexPluginPath,
+                    input.workspacePluginPath,
+                    input.losslessPluginPath,
+                ],
+            },
+            slots: {
+                contextEngine: 'lossless-claw',
+                memory: 'none',
             },
         },
         tools: {

@@ -2,7 +2,7 @@
 summary: Tavern Runtime internals for canonical chat storage, managed OpenClaw startup, Messenger plugin sync, persistence, sync paths, and tool boundaries.
 read_when:
   - changing the always-on chat server, managed OpenClaw startup, or runtime ownership
-  - changing sync paths, execution evidence, or agent-facing Tavern tools
+  - changing sync paths, execution evidence, managed workspace instructions, or agent-facing Tavern tools
 ---
 
 # Tavern Runtime
@@ -16,12 +16,14 @@ executor.
 * **Tavern Runtime owns chat and local integration.** It stores canonical chats,
   messages, participants, events, reads, automations, and delivery state. It
   starts managed OpenClaw, applies Tavern-owned config, carries runtime events,
-  stores runtime settings, and exposes Tavern tools to agents.
+  stores runtime settings, owns Cortex storage, and exposes Tavern tools to
+  agents.
 * **OpenClaw owns execution.** Agents, sessions, turns, transcripts, files,
-  tools, model calls, and native OpenClaw config behavior remain OpenClaw-owned.
+  tools, model calls, prompt-time memory, and native OpenClaw config behavior
+  remain OpenClaw-owned.
 * **Tavern App owns presentation.** The app reads runtime chat history, caches
-  what it needs, and renders chats, activity, settings, memory, automations,
-  skills, and stats.
+  what it needs, and renders chats, activity, settings, memory inspection, the
+  Cortex wiki, automations, skills, and stats.
 * **Events are recoverable notifications.** Runtime chat events are durable and
   cursor-backed. Gateway events trigger focused sync paths; they are not durable
   chat history by themselves.
@@ -51,25 +53,50 @@ The managed Gateway runs through macOS Seatbelt. Seatbelt is a guardrail, not a
 container. Strong isolation belongs in Docker, a VM, a separate macOS user, or a
 separate machine.
 
-## Tavern Messenger Plugin
+## Tavern OpenClaw Plugins
 
-Runtime builds and syncs `packages/tavern-openclaw-messenger` into the managed
-plugin directory before launching OpenClaw.
+Runtime builds and syncs first-party OpenClaw plugins into the managed plugin
+directory before launching OpenClaw:
+
+* `packages/tavern-openclaw-messenger` owns Tavern chat/channel delivery.
+* `packages/tavern-openclaw-cortex` owns Cortex agent tools.
+* `packages/tavern-openclaw-workspace` owns managed workspace instructions,
+  generated-file protection, and agent notes tools.
 
 Plugin lifecycle details live in
 [../operations/openclaw-plugin-deploy.md](../operations/openclaw-plugin-deploy.md).
 Plugin architecture lives in
 [tavern-openclaw-messenger-plugin.md](tavern-openclaw-messenger-plugin.md).
 
+## Managed Workspace
+
+Runtime writes a generated `AGENTS.md` into the managed OpenClaw workspace. The
+file combines Tavern-managed instructions, the user's agent soul/personality,
+and agent-authored notes stored by Tavern. Other OpenClaw bootstrap markdown
+files stay blank or unused for managed Tavern agents.
+
+Agents update their notes through Tavern workspace tools instead of editing
+`AGENTS.md` directly. Runtime regenerates the file on boot, config sync, and
+instruction source changes.
+
 ## Persistence
 
 `~/.tavern` is the backup unit. It contains Tavern's runtime chat database,
-memory, vault, managed skills, runtime settings, app cache, and projected
+Cortex, vault, managed skills, runtime settings, app cache, and projected
 OpenClaw archives.
 
 Tavern Runtime chat records are canonical. OpenClaw-owned execution records
 that Tavern renders relationally are stored as projections with freshness
 metadata. OpenClaw remains canonical for native execution evidence.
+
+Cortex pages are Runtime-owned durable knowledge and memory. OpenClaw runtime
+memory remains execution context for turns. Tavern reports these as separate
+readiness surfaces so users can tell whether OpenClaw prompt-time memory is
+ready and whether Cortex capture, recall, embeddings, and maintenance are
+ready.
+
+Memory and Cortex product contracts live in [Memories](../../specs/memories.md)
+and [Cortex](../../specs/cortex.md).
 
 ## Sync Paths
 
@@ -81,6 +108,9 @@ Each OpenClaw-owned execution primitive has one sync path:
 | session | OpenClaw session index |
 | transcript message | OpenClaw session history evidence |
 | automation execution | OpenClaw turn/session evidence for a Tavern automation |
+
+Cortex maintenance does not sync from OpenClaw. Runtime jobs own capture,
+embedding repair, timeline and link maintenance, and Cortex audit output.
 
 Jobs, websocket events, manual refreshes, and post-edit refreshes reuse the same
 primitive sync path instead of duplicating Gateway fetch logic.

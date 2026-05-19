@@ -24,7 +24,7 @@ OpenClaw-specific development recipes live here:
 
 | Workflow | Doc |
 | --- | --- |
-| Tavern Messenger plugin lifecycle | [openclaw-plugin-deploy.md](openclaw-plugin-deploy.md) |
+| Tavern OpenClaw plugin lifecycle | [openclaw-plugin-deploy.md](openclaw-plugin-deploy.md) |
 | Managed OpenClaw runtime upgrade | [openclaw-runtime-upgrade.md](openclaw-runtime-upgrade.md) |
 
 ## Verification

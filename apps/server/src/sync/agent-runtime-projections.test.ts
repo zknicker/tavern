@@ -3,6 +3,7 @@ import { mkdtempSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import test from 'node:test';
+import type { TavernAgentRuntimeClient } from '../agent-runtime/client.ts';
 
 const directory = mkdtempSync(join(tmpdir(), 'tavern-agent-runtime-sync-'));
 const databasePath = join(directory, 'test.sqlite');
@@ -13,6 +14,7 @@ const [
     { ensureDatabaseSchema },
     { databaseClient },
     projections,
+    agentProfileStorage,
     sessionStorage,
     messageStorage,
     activeTurnSessions,
@@ -20,6 +22,7 @@ const [
     import('../db/bootstrap.ts'),
     import('../db/index.ts'),
     import('./agent-runtime-projections.ts'),
+    import('../storage/agent-profiles.ts'),
     import('../storage/sessions.ts'),
     import('../storage/session-messages.ts'),
     import('../agent-runtime/active-turn-sessions.ts'),
@@ -29,6 +32,9 @@ ensureDatabaseSchema();
 
 test.beforeEach(() => {
     databaseClient.exec('delete from agent_runtime_capability_status');
+    databaseClient.exec('delete from agent_profiles');
+    databaseClient.exec('delete from agent_runtime_connections');
+    databaseClient.exec('delete from agents');
     databaseClient.exec('delete from session_messages');
     databaseClient.exec('delete from session_runs');
     databaseClient.exec('delete from chats');
@@ -229,6 +235,49 @@ test('shouldSyncRuntimeSessionDetails skips fresh and active session histories',
     } finally {
         activeTurnSessions.clearTurnSessionActive(sessionKey);
     }
+});
+
+test('syncAgentRuntimeAgents sends cleared workspace instructions', async () => {
+    let savedInstructions: unknown = null;
+
+    await agentProfileStorage.saveAgentProfile({
+        agentId: 'planner',
+        runtimeId: 'openclaw-local',
+        soul: '',
+    });
+
+    await projections.syncAgentWorkspaceInstructions({
+        agents: [
+            {
+                avatar: null,
+                enabledSkillIds: [],
+                emoji: null,
+                id: 'planner',
+                isAdmin: false,
+                name: 'Planner',
+                primaryColor: null,
+                workspaceFolder: '/tmp/tavern-planner',
+            },
+        ],
+        client: {
+            saveWorkspaceInstructions: async (_agentId: string, input: unknown) => {
+                savedInstructions = input;
+                return {
+                    agentId: 'planner',
+                    renderedAt: '2026-05-19T20:00:00.000Z',
+                    sha256: 'workspace-instructions-sha',
+                    updatedAt: '2026-05-19T20:00:00.000Z',
+                };
+            },
+        } as unknown as TavernAgentRuntimeClient,
+        runtimeId: 'openclaw-local',
+    });
+
+    assert.deepEqual(savedInstructions, {
+        agentName: 'Planner',
+        soul: '',
+        workspaceDir: '/tmp/tavern-planner',
+    });
 });
 
 function createSession(input: { chatId: string; key: string; lastActivityAt: string }) {

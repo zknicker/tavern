@@ -51,6 +51,7 @@ export interface Agent {
     name: string;
     primaryColor: string | null;
     runtimeId: string;
+    soul: string;
     updatedAt: string;
 }
 
@@ -69,6 +70,7 @@ export const agentPrimaryColorSchema = z
     .transform((value) => (value && value.length > 0 ? value.toLowerCase() : null));
 
 export const agentEnabledSkillIdsSchema = z.array(skillIdSchema).nullable();
+export const agentSoulSchema = z.string().max(20_000).nullable();
 
 export interface AgentCatalogItem {
     avatar: string;
@@ -79,6 +81,7 @@ export interface AgentCatalogItem {
     name: string;
     primaryColor: string | null;
     runtimeId: string;
+    soul: string;
     title: string;
     updatedAt: string;
     usesAllSkills: boolean;
@@ -97,7 +100,7 @@ function parseEnabledSkillIds(agent: AgentProjection) {
 
 function toAgent(
     agent: AgentProjection,
-    profile: { primaryColor: string | null; updatedAt: string } | null
+    profile: { primaryColor: string | null; soul: string; updatedAt: string } | null
 ): Agent {
     return {
         avatar: agent.avatar ?? null,
@@ -107,6 +110,7 @@ function toAgent(
         name: agent.name,
         primaryColor: profile?.primaryColor ?? agent.primaryColor ?? null,
         runtimeId: agent.runtimeId,
+        soul: profile?.soul ?? '',
         updatedAt: profile?.updatedAt ?? fallbackAgentUpdatedAt,
     };
 }
@@ -159,6 +163,7 @@ export function toAgentCatalogItem(
         name: resolveAgentName(agent),
         primaryColor: agent.primaryColor,
         runtimeId: agent.runtimeId,
+        soul: agent.soul,
         title: agent.name,
         updatedAt: agent.updatedAt,
         usesAllSkills:
@@ -347,7 +352,8 @@ export async function saveCatalogAgentSettings(
 
 export async function saveCatalogAgentProfile(input: {
     agentId: string;
-    primaryColor: string | null;
+    primaryColor?: string | null;
+    soul?: string | null;
 }) {
     const projection = await getAgentProjection(input.agentId);
 
@@ -355,14 +361,22 @@ export async function saveCatalogAgentProfile(input: {
         throw new Error(`No synced agent named "${input.agentId}" exists.`);
     }
 
-    const profile = await agentProfileStore.saveAgentProfile({
+    const profileInput = {
         agentId: projection.id,
-        primaryColor: input.primaryColor,
         runtimeId: projection.runtimeId,
-    });
+        ...(input.primaryColor !== undefined ? { primaryColor: input.primaryColor } : {}),
+        ...(input.soul !== undefined ? { soul: input.soul } : {}),
+    };
+    const profile = await agentProfileStore.saveAgentProfile(profileInput);
 
     if (!profile) {
         throw new Error(`Failed to save profile for agent "${input.agentId}".`);
+    }
+
+    if (input.soul !== undefined) {
+        await syncAgentWorkspaceInstructions(projection, profile).catch((error) => {
+            console.warn('[tavern] failed to sync agent workspace instructions', error);
+        });
     }
 
     return toAgentCatalogItem(toAgent(projection, profile), null);
@@ -402,7 +416,7 @@ async function createClientForAgentProjection(agent: AgentProjection) {
 function toAgentFromAgentRuntimeAgent(input: {
     agent: AgentRuntimeAgent;
     id: string;
-    profile: { primaryColor: string | null; updatedAt: string } | null;
+    profile: { primaryColor: string | null; soul: string; updatedAt: string } | null;
     runtimeId: string;
 }): Agent {
     return {
@@ -413,6 +427,23 @@ function toAgentFromAgentRuntimeAgent(input: {
         name: input.agent.name,
         primaryColor: input.profile?.primaryColor ?? input.agent.primaryColor ?? null,
         runtimeId: input.runtimeId,
+        soul: input.profile?.soul ?? '',
         updatedAt: input.profile?.updatedAt ?? fallbackAgentUpdatedAt,
     };
+}
+
+async function syncAgentWorkspaceInstructions(
+    projection: AgentProjection,
+    profile: agentProfileStore.AgentProfile
+) {
+    if (!projection.workspaceFolder) {
+        throw new Error(`No workspace folder is synced for agent "${projection.id}".`);
+    }
+
+    const client = await createClientForAgentProjection(projection);
+    await client.saveWorkspaceInstructions(projection.id, {
+        agentName: projection.name,
+        soul: profile.soul,
+        workspaceDir: projection.workspaceFolder,
+    });
 }

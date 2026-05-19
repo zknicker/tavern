@@ -10,10 +10,10 @@ read_when:
 Tavern is a macOS chat app for working with always-on agents.
 
 It gives agents a real chat server to participate in: durable messages,
-participants, sequence, events, memory, knowledgebase, automations, stats, and
-playful rewards all belong to Tavern. Tavern Runtime keeps that server alive
-while the app is closed, so automations can run, agents can post, and the app
-can catch up later.
+participants, sequence, events, Cortex memory, automations, stats, and playful
+rewards all belong to Tavern. Tavern Runtime keeps that server alive while the
+app is closed, so automations can run, agents can post, and the app can catch
+up later.
 
 Architecturally, Tavern is a Tauri app that uses a React frontend with a Node
 backend that communicates over tRPC. The app connects to Tavern Runtime, a
@@ -35,10 +35,12 @@ manage businesses, complete knowledge work, and automate routine tasks.
   turns, chat delivery, and event history keep moving.
 * **OpenClaw as agent runtime.** Sessions, turns, tools, model calls, files,
   and native transcripts stay execution-owned.
-* **Memory you can inspect.** Agents can store context, but users can browse,
-  edit, prune, and understand what is being remembered.
-* **Knowledgebase included.** Give agents a place to keep durable notes, files, and
-  working material instead of stuffing everything into prompts.
+* **Memory you can inspect.** OpenClaw handles prompt-time recall, while Tavern
+  shows the Cortex captures, timeline evidence, and recall results behind durable
+  agent memory.
+* **Cortex wiki included.** Give agents a linked markdown brain for durable
+  notes, files, citations, observations, embeddings, and working material instead
+  of stuffing everything into prompts.
 * **Automations with a face.** Cron jobs, scheduled work, and background runs show
   up as first-class app objects, not invisible daemon trivia.
 * **Work that looks alive.** Tool calls, thinking summaries, progress, and final
@@ -64,10 +66,11 @@ manage businesses, complete knowledge work, and automate routine tasks.
   summaries, and final replies in one timeline.
 * **Agents.** Model, tool, memory, skill, and plugin configuration for the
   people you actually work with in Tavern.
-* **Memory.** Inspectable long-term context, with user-owned review and cleanup
-  instead of invisible prompt stuffing.
-* **Wiki-style knowledgebase.** Pages, backlinks, collections, files,
-  citations, and agent-authored working notes.
+* **Cortex.** A browsable linked markdown brain with pages, backlinks, files,
+  citations, observations, canvas graph navigation, and agent-authored working
+  notes.
+* **Memory behavior.** Inspectable OpenClaw runtime memory plus Cortex capture,
+  recall, timeline evidence, and maintenance health.
 * **Cron automations.** Scheduled agent work with run history, delivery targets,
   and clear follow-up state, even while the app is closed.
 * **Skills & Plugins.** Reusable instruction packages and runtime plugins from
@@ -76,8 +79,8 @@ manage businesses, complete knowledge work, and automate routine tasks.
   reading logs.
 * **Pets and rewards.** A playful layer for long-running agent work.
 * **TypeScript SDK + integrations.** A typed client for the Tavern API: Tavern
-  App, chat, memory, knowledgebase, automations, webhooks, local tools, and
-  managed OpenClaw.
+  App, chat, memory inspection, Cortex wiki browsing, automations, webhooks,
+  local tools, and managed OpenClaw.
 
 ## Features
 
@@ -85,8 +88,8 @@ manage businesses, complete knowledge work, and automate routine tasks.
 | --- | --- |
 | Chat | [Chat](features/chat.md) |
 | Agents | [Agents](features/agents.md) |
-| Memory | [Memory](features/memory.md) |
-| Knowledgebase | [Knowledgebase](features/knowledgebase.md) |
+| Cortex | [Cortex](features/knowledgebase.md) |
+| Memory behavior | [Memory](features/memory.md) |
 | Automations | [Automations](features/automations.md) |
 | Skills & Plugins | [Skills & Plugins](features/skills.md) |
 | Stats | [Stats](features/stats.md) |

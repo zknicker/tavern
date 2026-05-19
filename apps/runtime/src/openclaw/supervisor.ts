@@ -37,6 +37,7 @@ export async function startOpenClawForRuntime(): Promise<ManagedOpenClawHandle> 
     process.env.OPENCLAW_GATEWAY_URL = runtimeConfig.gatewayUrl;
     process.env.OPENCLAW_STATE_DIR = runtimeConfig.stateDir;
     process.env.TAVERN_API_BASE_URL = buildRuntimeApiBaseUrl();
+    process.env.TAVERN_MANAGED_WORKSPACE_DIR = runtimeConfig.workspaceDir;
     process.env.TAVERN_RUNTIME_CHANNEL_URL = buildRuntimeChatSocketUrl();
 
     let child: ChildProcess | null = null;
@@ -131,6 +132,7 @@ function spawnOpenClawGateway(
                 TAVERN_RUNTIME_CHANNEL_URL:
                     process.env.TAVERN_RUNTIME_CHANNEL_URL ?? buildRuntimeChatSocketUrl(),
                 TAVERN_API_BASE_URL: process.env.TAVERN_API_BASE_URL ?? buildRuntimeApiBaseUrl(),
+                TAVERN_MANAGED_WORKSPACE_DIR: runtimeConfig.workspaceDir,
                 OPENCLAW_CONFIG_DIR: runtimeConfig.configDir,
                 OPENCLAW_CONFIG_PATH: runtimeConfig.configPath,
                 OPENCLAW_GATEWAY_TOKEN: runtimeConfig.gatewayToken,

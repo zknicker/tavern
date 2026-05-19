@@ -1,7 +1,7 @@
 ---
 summary: Agent records and configuration API for model choices, tool policy, memory policy, skill assignment, and runtime metadata boundaries.
 read_when:
-  - changing agent records, model settings, tool policy, or per-agent skill and memory controls
+  - changing agent records, personality, model settings, tool policy, or per-agent skill and memory controls
   - changing how clients list, configure, or address agents
 ---
 
@@ -11,16 +11,20 @@ The Agents API is for the workers users configure and talk to in Tavern.
 
 Agents are client-facing records. Runtime sessions and OpenClaw execution details
 can be attached as metadata, but the API exposes agents as named Tavern workers
-with model, tool, memory, and skill policy.
+with personality, model, tool, memory, and skill policy.
 
 ## Contract
 
 * Agent ids are durable Tavern ids.
-* Agent records expose display name, description, model policy, tool policy,
-  memory policy, skill selections, and availability.
+* Agent records expose display name, description, soul/personality, model
+  policy, tool policy, memory policy, skill selections, and availability.
 * Model availability comes from runtime projection, but app clients read it
   through agent and model capabilities.
 * Tool and skill controls are inspectable before a run starts.
+* Soul/personality is a Tavern-owned setting. It is rendered into the managed
+  OpenClaw `AGENTS.md`; clients do not edit the workspace file directly.
+* Agent notes are DB-backed and agent-owned. They are updated through Tavern
+  workspace tools, not through the first-pass user-facing agent settings UI.
 * Runtime execution state is not required just to list or edit agents.
 
 ## Surface
@@ -30,10 +34,12 @@ The API covers:
 * list agents
 * get an agent
 * create or update agent settings
+* read and update soul/personality
 * read model choices and availability
 * read and update tool policy
 * read and update memory policy
 * read and update skill assignment
+* read generated instruction status when exposed for diagnostics
 
 ## Runtime Boundary
 

@@ -1,9 +1,15 @@
 import { enforceAgentToolsFixup } from './enforce-agent-tools.ts';
 import { enforceGatewayFixup } from './enforce-gateway.ts';
+import { enforceMemoryFixup } from './enforce-memory.ts';
 import { enforcePluginAllowFixup } from './enforce-plugin-allow.ts';
 import type { AppliedOpenClawConfigFixup, OpenClawConfigFixupContext } from './types.ts';
 
-const openClawConfigFixups = [enforceGatewayFixup, enforcePluginAllowFixup, enforceAgentToolsFixup];
+const openClawConfigFixups = [
+    enforceGatewayFixup,
+    enforceMemoryFixup,
+    enforcePluginAllowFixup,
+    enforceAgentToolsFixup,
+];
 
 export async function runOpenClawConfigFixups(input: {
     config: Record<string, unknown>;

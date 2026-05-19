@@ -2,9 +2,9 @@
 
 The activity log is Tavern's append-only, structured event log for runtime activity.
 
-It is both an audit surface and a memory source. It exists separately from durable memory so Tavern
-can preserve a queryable record of what happened across the system without forcing every event to
-become a durable memory.
+It is both an audit surface and a Cortex source. It exists separately from Cortex so Tavern can
+preserve a queryable record of what happened across the system without forcing every event to
+become durable brain state.
 
 The activity log is also separate from session transcripts. Messages and transcripts already exist
 in session and chat history. The activity log records the higher-signal operational events around
@@ -16,8 +16,8 @@ The distinction between the systems should stay explicit.
 
 - `activity log` is the timestamped event record of what happened.
 - `working memory` is the synthesized recent understanding built from the activity log.
-- `durable memory` stores long-term typed knowledge.
-- `tiered durable memory` changes durable-memory recall and lifecycle behavior.
+- Cortex stores long-term typed knowledge.
+- Cortex recall tiers change long-term recall and lifecycle behavior.
 
 The activity log remains queryable even after its contents have been synthesized into working
 memory. It is not consumed and discarded when a synthesis is produced.
@@ -52,7 +52,7 @@ Tavern should record at least these categories of events:
 - `job`: cron and scheduled task execution
 - `delivery`: important cross-session or cross-agent deliveries
 - `capture`: persistence capture queued, retried, failed, or completed
-- `memory`: durable memory saved, promoted, demoted, superseded, or forgotten
+- `memory`: Cortex knowledge captured, promoted, demoted, superseded, corrected, or forgotten
 - `decision`: important choices that shape future behavior
 - `error`: tool failures, worker failures, cancellations, and other operational failures
 - `model`: model, provider, or permission-mode changes that affect the active environment
@@ -128,7 +128,7 @@ first-class operational history surface.
 
 ## Constraints
 
-- The activity log must not be treated as durable memory.
+- The activity log must not be treated as Cortex durable knowledge.
 - The activity log must not duplicate ordinary transcripts.
 - The activity log must be append-only and inspectable.
 - Activity recording must not make live session handling slow or fragile.

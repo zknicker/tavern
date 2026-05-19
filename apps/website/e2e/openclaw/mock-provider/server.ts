@@ -753,26 +753,12 @@ function extractOrbitCode(text: string) {
   return /\bORBIT-\d+\b/i.exec(text)?.[0]?.toUpperCase() ?? null;
 }
 
-function decodeXmlEntities(text: string) {
-  return text
-    .replaceAll("&lt;", "<")
-    .replaceAll("&gt;", ">")
-    .replaceAll("&amp;", "&")
-    .replaceAll("&quot;", '"')
-    .replaceAll("&#39;", "'");
-}
-
-function extractActiveMemorySummary(text: string) {
-  const match = /<active_memory_plugin>\s*([\s\S]*?)\s*<\/active_memory_plugin>/i.exec(text);
-  return match?.[1] ? decodeXmlEntities(match[1]).trim() : null;
-}
-
 function extractToolSearchTarget(text: string): string | null {
   const match = /\btarget=([A-Za-z0-9_.:-]+)\b/.exec(text);
   return match?.[1]?.trim() || null;
 }
 
-function isActiveMemorySubagentPrompt(text: string) {
+function isMemorySubagentPrompt(text: string) {
   return text.includes("You are a memory search agent.");
 }
 
@@ -997,8 +983,7 @@ function buildAssistantText(
   const finishExactlyDirective =
     extractFinishExactlyDirective(prompt) ?? extractFinishExactlyDirective(allInputText);
   const imageInputCount = countImageInputs(input);
-  const activeMemorySummary = extractActiveMemorySummary(allInputText);
-  const snackPreference = extractSnackPreference(activeMemorySummary ?? memorySnippet);
+  const snackPreference = extractSnackPreference(memorySnippet);
   const sessionsSpawnError = extractToolErrorForNamedCall({
     allInputText,
     input,
@@ -1885,7 +1870,7 @@ async function buildResponsesPayload(
     }
   }
   if (
-    isActiveMemorySubagentPrompt(allInputText) &&
+    isMemorySubagentPrompt(allInputText) &&
     /silent snack recall check/i.test(allInputText)
   ) {
     if (!toolOutput) {

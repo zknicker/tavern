@@ -7,6 +7,18 @@ CREATE TABLE IF NOT EXISTS runtime_metadata (
   updated_at TEXT NOT NULL
 );
 
+CREATE TABLE IF NOT EXISTS workspace_agent_instructions (
+  agent_id      TEXT PRIMARY KEY,
+  agent_name    TEXT NOT NULL,
+  workspace_dir TEXT NOT NULL,
+  soul          TEXT NOT NULL DEFAULT '',
+  notes         TEXT NOT NULL DEFAULT '',
+  rendered_hash TEXT,
+  rendered_at   TEXT,
+  created_at    TEXT NOT NULL,
+  updated_at    TEXT NOT NULL
+);
+
 CREATE TABLE IF NOT EXISTS tavern_channel_outbox (
   request_id        TEXT PRIMARY KEY,
   message_id        TEXT NOT NULL UNIQUE,

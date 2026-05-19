@@ -241,6 +241,7 @@ const schemaStatements = [
         runtime_id TEXT NOT NULL,
         agent_id TEXT NOT NULL,
         primary_color TEXT,
+        soul TEXT NOT NULL DEFAULT '',
         created_at TEXT NOT NULL,
         updated_at TEXT NOT NULL,
         PRIMARY KEY (runtime_id, agent_id)
@@ -605,4 +606,15 @@ function runSchemaStatements(filter: (statement: string) => boolean) {
 export function ensureDatabaseSchema() {
     runSchemaStatements((statement) => !statement.startsWith('CREATE INDEX'));
     runSchemaStatements((statement) => statement.startsWith('CREATE INDEX'));
+
+    try {
+        databaseClient.exec(`ALTER TABLE skills ADD COLUMN files_json TEXT NOT NULL DEFAULT '[]';`);
+    } catch {
+        /* column already exists */
+    }
+    try {
+        databaseClient.exec(`ALTER TABLE agent_profiles ADD COLUMN soul TEXT NOT NULL DEFAULT '';`);
+    } catch {
+        /* column already exists */
+    }
 }

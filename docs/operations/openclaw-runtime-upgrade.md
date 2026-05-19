@@ -21,8 +21,8 @@ the projection namespace stable as `tavern-openclaw-managed`.
    ```bash
    bun add -d openclaw@<version>
    ```
-4. Update `packages/tavern-openclaw-messenger` peer/runtime versions when
-   needed, then run `bun install`.
+4. Update first-party OpenClaw plugin peer/runtime versions when needed, then
+   run `bun install`.
 5. Update `apps/runtime/src/openclaw/version.ts` and version-specific tests.
 6. Read OpenClaw release notes for Gateway, event, config, plugin, and state
    changes.

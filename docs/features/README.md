@@ -15,8 +15,8 @@ implementation ownership, and runtime details live under
 | --- | --- |
 | Chat | [Chat](chat.md) |
 | Agents | [Agents](agents.md) |
-| Memory | [Memory](memory.md) |
-| Knowledgebase | [Knowledgebase](knowledgebase.md) |
+| Cortex wiki and graph | [Cortex](knowledgebase.md) |
+| Memory behavior | [Memory](memory.md) |
 | Automations | [Automations](automations.md) |
 | Skills & Plugins | [Skills & Plugins](skills.md) |
 | Stats | [Stats](stats.md) |

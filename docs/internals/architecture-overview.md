@@ -36,12 +36,12 @@ flowchart LR
 
 ## Layers
 
-* **Tavern App** presents chats, agents, memory, automations, skills, stats, and
-  settings. React and the local Node/tRPC layer are implementation pieces of one
-  client boundary.
-* **Tavern API** is the client-facing contract for chat, agents, memory,
-  knowledgebase, automations, skills, stats, and settings. The runtime is the
-  authoritative host for chat and execution-facing API state.
+* **Tavern App** presents chats, agents, memory inspection, the Cortex wiki,
+  automations, skills, stats, and settings. React and the local Node/tRPC layer
+  are implementation pieces of one client boundary.
+* **Tavern API** is the client-facing contract for chat, agents, memory
+  inspection, the Cortex wiki, automations, skills, stats, and settings. The
+  runtime is the authoritative host for chat and execution-facing API state.
 * **TypeScript SDK** is a client wrapper around the Tavern API for bots,
   webhooks, automations, managed OpenClaw, local tools, and other clients.
 * **App SQLite** stores client cache, app-local settings, and presentation state.
@@ -49,7 +49,7 @@ flowchart LR
   applies Tavern-owned config, runs automations, carries runtime events, and
   exposes Tavern tools to agents.
 * **Runtime SQLite** stores chats, messages, participants, events, reads,
-  channel ingress, execution evidence, and runtime metadata.
+  channel ingress, execution evidence, Cortex records, and runtime metadata.
 * **OpenClaw** owns agent execution: sessions, turns, model calls, tools, files,
   and native transcripts.
 

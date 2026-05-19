@@ -5,7 +5,7 @@ export const routeTabs = [
     { id: 'overview', label: 'Home', path: '/dashboard/overview' },
     { id: 'stats', label: 'Stats', path: '/dashboard/stats' },
     { id: 'cron', label: 'Automations', path: '/dashboard/cron' },
-    { id: 'memory', label: 'Memory', path: '/dashboard/memory' },
+    { id: 'cortex', label: 'Cortex', path: '/dashboard/cortex' },
     { id: 'skills', label: 'Skills & Plugins', path: '/dashboard/skills' },
 ] as const;
 

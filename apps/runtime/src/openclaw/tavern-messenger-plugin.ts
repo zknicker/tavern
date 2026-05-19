@@ -11,7 +11,11 @@ export async function resolveTavernMessengerPluginPath(openClawPackageRoot?: str
         return resolveHomePath(configured);
     }
 
-    const deployedPath = await syncTavernMessengerPlugin(openClawPackageRoot);
+    const deployedPath = await syncTavernPluginPackage({
+        openClawPackageRoot,
+        packageDirectory: 'tavern-openclaw-messenger',
+        stableDirectoryName: 'tavern-openclaw-messenger',
+    });
     if (deployedPath) {
         return deployedPath;
     }
@@ -19,19 +23,59 @@ export async function resolveTavernMessengerPluginPath(openClawPackageRoot?: str
     return getStableTavernMessengerPluginPath();
 }
 
-async function syncTavernMessengerPlugin(openClawPackageRoot?: string) {
+export async function resolveTavernCortexPluginPath(openClawPackageRoot?: string) {
+    const configured = readConfigValue('TAVERN_OPENCLAW_CORTEX_PLUGIN_PATH');
+    if (configured) {
+        return resolveHomePath(configured);
+    }
+
+    const deployedPath = await syncTavernPluginPackage({
+        openClawPackageRoot,
+        packageDirectory: 'tavern-openclaw-cortex',
+        stableDirectoryName: 'tavern-openclaw-cortex',
+    });
+    if (deployedPath) {
+        return deployedPath;
+    }
+
+    return getStableTavernCortexPluginPath();
+}
+
+export async function resolveTavernWorkspacePluginPath(openClawPackageRoot?: string) {
+    const configured = readConfigValue('TAVERN_OPENCLAW_WORKSPACE_PLUGIN_PATH');
+    if (configured) {
+        return resolveHomePath(configured);
+    }
+
+    const deployedPath = await syncTavernPluginPackage({
+        openClawPackageRoot,
+        packageDirectory: 'tavern-openclaw-workspace',
+        stableDirectoryName: 'tavern-openclaw-workspace',
+    });
+    if (deployedPath) {
+        return deployedPath;
+    }
+
+    return getStableTavernWorkspacePluginPath();
+}
+
+async function syncTavernPluginPackage(input: {
+    openClawPackageRoot?: string;
+    packageDirectory: string;
+    stableDirectoryName: string;
+}) {
     const repositoryRoot = findRepositoryRoot(process.cwd());
     if (!repositoryRoot) {
         return null;
     }
 
-    const sourcePath = path.join(repositoryRoot, 'packages', 'tavern-openclaw-messenger');
+    const sourcePath = path.join(repositoryRoot, 'packages', input.packageDirectory);
     const sourcePackageJson = path.join(sourcePath, 'package.json');
     if (!fsSync.existsSync(sourcePackageJson)) {
         return null;
     }
 
-    const deployPath = getStableTavernMessengerPluginPath();
+    const deployPath = getStableTavernPluginPath(input.stableDirectoryName);
     if (path.resolve(sourcePath) === path.resolve(deployPath)) {
         return deployPath;
     }
@@ -43,8 +87,8 @@ async function syncTavernMessengerPlugin(openClawPackageRoot?: string) {
         filter: (source) => !source.includes(`${path.sep}node_modules${path.sep}`),
         recursive: true,
     });
-    if (openClawPackageRoot) {
-        await linkOpenClawPeerDependency(temporaryPath, openClawPackageRoot);
+    if (input.openClawPackageRoot) {
+        await linkOpenClawPeerDependency(temporaryPath, input.openClawPackageRoot);
     }
     await linkWorkspaceDependency({
         packageName: '@tavern/sdk',
@@ -101,7 +145,29 @@ function getStableTavernMessengerPluginPath() {
         return resolveHomePath(configured);
     }
 
-    return path.join(os.homedir(), '.tavern', 'openclaw-plugins', 'tavern-openclaw-messenger');
+    return getStableTavernPluginPath('tavern-openclaw-messenger');
+}
+
+function getStableTavernCortexPluginPath() {
+    const configured = readConfigValue('TAVERN_OPENCLAW_CORTEX_PLUGIN_DEPLOY_PATH');
+    if (configured) {
+        return resolveHomePath(configured);
+    }
+
+    return getStableTavernPluginPath('tavern-openclaw-cortex');
+}
+
+function getStableTavernWorkspacePluginPath() {
+    const configured = readConfigValue('TAVERN_OPENCLAW_WORKSPACE_PLUGIN_DEPLOY_PATH');
+    if (configured) {
+        return resolveHomePath(configured);
+    }
+
+    return getStableTavernPluginPath('tavern-openclaw-workspace');
+}
+
+function getStableTavernPluginPath(directoryName: string) {
+    return path.join(os.homedir(), '.tavern', 'openclaw-plugins', directoryName);
 }
 
 function findRepositoryRoot(startDirectory: string) {

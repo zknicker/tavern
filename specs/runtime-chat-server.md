@@ -60,8 +60,9 @@ automations
 automation_runs
 ```
 
-Memory, knowledgebase, and search are runtime-owned product surfaces. Their
-table details live with those feature contracts.
+Cortex and search are runtime-owned product surfaces. Memory inspection and the
+Knowledgebase page read Cortex plus OpenClaw prompt-time memory readiness; table
+details live with those feature contracts.
 
 ## App Cache And Evidence
 

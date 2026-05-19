@@ -1,0 +1,28 @@
+{
+  "name": "@zknicker/tavern-openclaw-cortex",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Tavern Cortex tools for OpenClaw.",
+  "type": "module",
+  "exports": {
+    ".": "./index.js"
+  },
+  "peerDependencies": {
+    "openclaw": "2026.5.12"
+  },
+  "peerDependenciesMeta": {
+    "openclaw": {
+      "optional": true
+    }
+  },
+  "openclaw": {
+    "extensions": [
+      "./index.js"
+    ]
+  },
+  "scripts": {
+    "build": "bun test src/*.test.js",
+    "typecheck": "bun test src/*.test.js",
+    "test": "bun test src/*.test.js"
+  }
+}

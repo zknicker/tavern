@@ -99,7 +99,7 @@ export function createAppRouter() {
                                 },
                                 {
                                     path: 'workers',
-                                    element: <Navigate replace to="/dashboard/memory" />,
+                                    element: <Navigate replace to="/dashboard/cortex" />,
                                 },
                                 {
                                     path: 'cron',
@@ -145,11 +145,11 @@ export function createAppRouter() {
                                 },
                                 {
                                     path: 'events',
-                                    element: <Navigate replace to="/dashboard/memory" />,
+                                    element: <Navigate replace to="/dashboard/cortex" />,
                                 },
                                 {
                                     path: 'logs',
-                                    element: <Navigate replace to="/dashboard/memory" />,
+                                    element: <Navigate replace to="/dashboard/cortex" />,
                                 },
                                 {
                                     path: 'avatar-test',
@@ -160,22 +160,22 @@ export function createAppRouter() {
                                 },
                                 {
                                     path: 'memory',
-                                    lazy: lazyRoute(
-                                        () => import('./routes/dashboard/memory-page.tsx'),
-                                        'MemoryPage'
-                                    ),
+                                    element: <Navigate replace to="/dashboard/cortex" />,
                                 },
                                 {
                                     path: 'pulse',
-                                    element: <Navigate replace to="/dashboard/memory" />,
+                                    element: <Navigate replace to="/dashboard/cortex" />,
                                 },
                                 {
                                     path: 'memories',
-                                    element: <Navigate replace to="/dashboard/memory" />,
+                                    element: <Navigate replace to="/dashboard/cortex" />,
                                 },
                                 {
                                     path: 'cortex',
-                                    element: <Navigate replace to="/dashboard/memory" />,
+                                    lazy: lazyRoute(
+                                        () => import('./routes/dashboard/cortex-page.tsx'),
+                                        'CortexPage'
+                                    ),
                                 },
                                 {
                                     path: 'jobs',

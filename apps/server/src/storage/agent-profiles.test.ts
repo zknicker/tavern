@@ -33,6 +33,33 @@ test.beforeEach(() => {
     }
 });
 
+test('saveAgentProfile preserves independent profile fields on partial update', async () => {
+    await agentStorage.saveAgentProfile({
+        agentId: 'planner',
+        primaryColor: '#14b8a6',
+        runtimeId: 'runtime-main',
+        soul: 'Use terse planning.',
+    });
+
+    const colorOnly = await agentStorage.saveAgentProfile({
+        agentId: 'planner',
+        primaryColor: '#0ea5e9',
+        runtimeId: 'runtime-main',
+    });
+
+    assert.equal(colorOnly?.primaryColor, '#0ea5e9');
+    assert.equal(colorOnly?.soul, 'Use terse planning.');
+
+    const soulOnly = await agentStorage.saveAgentProfile({
+        agentId: 'planner',
+        runtimeId: 'runtime-main',
+        soul: 'Prefer direct answers.',
+    });
+
+    assert.equal(soulOnly?.primaryColor, '#0ea5e9');
+    assert.equal(soulOnly?.soul, 'Prefer direct answers.');
+});
+
 test('deleteAgentProfile removes app-side rows owned by the deleted agent', async () => {
     const now = new Date().toISOString();
     const agentId = 'planner';

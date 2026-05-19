@@ -245,13 +245,14 @@ This file is the always-on guide for AI coding assistants in Tavern.
 
 ## OpenClaw Plugin Development
 
-- Tavern Runtime owns the local Tavern Messenger plugin lifecycle for managed OpenClaw.
-- Dev stack startup builds `packages/tavern-openclaw-messenger`, then Runtime syncs it into
-  `/Users/zknicker/.tavern/openclaw-plugins/tavern-openclaw-messenger` before launching managed
-  OpenClaw.
+- Tavern Runtime owns the local first-party plugin lifecycle for managed OpenClaw.
+- Dev stack startup builds `packages/tavern-openclaw-messenger` and
+  `packages/tavern-openclaw-cortex`, and `packages/tavern-openclaw-workspace`,
+  then Runtime syncs them into `/Users/zknicker/.tavern/openclaw-plugins/` before
+  launching managed OpenClaw.
 - Do not restart or deploy to the global `~/.openclaw` Gateway for local Tavern Runtime work; it
   conflicts with the managed Gateway port.
-- For changes under `packages/tavern-openclaw-messenger`, run the normal runtime dev stack or
+- For changes under first-party OpenClaw plugin packages, run the normal runtime dev stack or
   `bun run --filter @tavern/runtime build` to verify the plugin lifecycle. Do not use a separate
   local plugin deploy command.
 
@@ -289,7 +290,7 @@ This file is the always-on guide for AI coding assistants in Tavern.
 - Visual design system and UI principles: `DESIGN.md`
 - App backend structure and ownership: `docs/internals/app.md`
 - App and Runtime boundary: `docs/internals/runtime.md`
-- Tavern Messenger plugin lifecycle: `docs/operations/openclaw-plugin-deploy.md`
+- Tavern OpenClaw plugin lifecycle: `docs/operations/openclaw-plugin-deploy.md`
 - Testing strategy and runtime test rules: `docs/operations/testing.md`
 - Website e2e harness boundary and mock runtime rules: `apps/website/e2e/README.md`
 - React conventions: `docs/internals/react.md`

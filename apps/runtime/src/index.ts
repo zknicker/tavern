@@ -1,10 +1,12 @@
 import path from 'node:path';
 import { DATA_DIR } from './config';
+import { ensureCortexSchema } from './cortex/schema';
 import { initDb } from './db/connection';
 import { ensureRuntimeSchema } from './db/schema';
 import { log } from './log';
 import { type ManagedOpenClawHandle, startOpenClawForRuntime } from './openclaw/supervisor';
 import { startTavernRuntimeServer } from './tavern/server';
+import { ensureWorkspaceInstructionSchema } from './workspace/instructions';
 
 let runtimeServer: ReturnType<typeof startTavernRuntimeServer> | null = null;
 let openClaw: ManagedOpenClawHandle | null = null;
@@ -15,6 +17,8 @@ async function main(): Promise<void> {
     const dbPath = path.join(DATA_DIR, 'runtime.db');
     const db = initDb(dbPath);
     ensureRuntimeSchema(db);
+    ensureCortexSchema(db);
+    ensureWorkspaceInstructionSchema(db);
     log.info('Runtime DB ready', { path: dbPath });
 
     runtimeServer = startTavernRuntimeServer();

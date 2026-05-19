@@ -11,8 +11,10 @@ describe('buildManagedOpenClawConfig', () => {
             gatewayPort: 18_789,
             gatewayToken: 'token',
             openClawInstallRoot: '/Users/me/.tavern/runtime/openclaw/versions/2026.5.12',
+            cortexPluginPath: '/Users/me/.tavern/openclaw-plugins/tavern-openclaw-cortex',
             pluginPath: '/Users/me/.tavern/openclaw-plugins/tavern-openclaw-messenger',
             version: '2026.5.12',
+            workspacePluginPath: '/Users/me/.tavern/openclaw-plugins/tavern-openclaw-workspace',
             workspaceDir: '/Users/me/.tavern/runtime/openclaw/run/workspace',
         });
 
@@ -54,15 +56,28 @@ describe('buildManagedOpenClawConfig', () => {
                 lastTouchedVersion: '2026.5.12',
             },
             plugins: {
-                allow: ['tavern', 'codex', 'memory-core', 'openai'],
+                allow: [
+                    'tavern',
+                    'tavern-cortex',
+                    'tavern-workspace',
+                    'codex',
+                    'lossless-claw',
+                    'openai',
+                ],
                 entries: {
                     tavern: {
+                        enabled: true,
+                    },
+                    'tavern-cortex': {
+                        enabled: true,
+                    },
+                    'tavern-workspace': {
                         enabled: true,
                     },
                     codex: {
                         enabled: true,
                     },
-                    'memory-core': {
+                    'lossless-claw': {
                         enabled: true,
                     },
                     openai: {
@@ -75,8 +90,15 @@ describe('buildManagedOpenClawConfig', () => {
                 load: {
                     paths: [
                         '/Users/me/.tavern/openclaw-plugins/tavern-openclaw-messenger',
+                        '/Users/me/.tavern/openclaw-plugins/tavern-openclaw-cortex',
+                        '/Users/me/.tavern/openclaw-plugins/tavern-openclaw-workspace',
                         '/Users/me/.tavern/runtime/openclaw/versions/2026.5.12/node_modules/@openclaw/codex',
+                        '/Users/me/.tavern/runtime/openclaw/versions/2026.5.12/node_modules/@martian-engineering/lossless-claw',
                     ],
+                },
+                slots: {
+                    contextEngine: 'lossless-claw',
+                    memory: 'none',
                 },
             },
         });
@@ -120,8 +142,10 @@ describe('buildManagedOpenClawConfig', () => {
             gatewayPort: 18_789,
             gatewayToken: 'token',
             openClawInstallRoot: '/Users/me/.tavern/runtime/openclaw/versions/2026.5.12',
+            cortexPluginPath: '/Users/me/.tavern/openclaw-plugins/tavern-openclaw-cortex',
             pluginPath: '/Users/me/.tavern/openclaw-plugins/tavern-openclaw-messenger',
             version: '2026.5.12',
+            workspacePluginPath: '/Users/me/.tavern/openclaw-plugins/tavern-openclaw-workspace',
             workspaceDir: '/Users/me/.tavern/runtime/openclaw/run/workspace',
         });
 
@@ -162,9 +186,11 @@ describe('buildManagedOpenClawConfig', () => {
             plugins: {
                 allow: expect.arrayContaining([
                     'tavern',
+                    'tavern-cortex',
+                    'tavern-workspace',
                     'codex',
                     'discord',
-                    'memory-core',
+                    'lossless-claw',
                     'openai',
                 ]),
             },
@@ -191,6 +217,52 @@ describe('buildManagedOpenClawConfig', () => {
         ]);
     });
 
+    it('removes stale memory plugins from existing managed config', () => {
+        const config = buildManagedOpenClawConfig({
+            existingConfig: {
+                plugins: {
+                    allow: ['active-memory', 'memory-core', 'discord'],
+                    entries: {
+                        'active-memory': {
+                            enabled: true,
+                        },
+                        'memory-core': {
+                            enabled: true,
+                        },
+                        discord: {
+                            enabled: true,
+                        },
+                    },
+                    installs: {
+                        'active-memory': {
+                            source: 'npm',
+                            spec: '@openclaw/active-memory@2026.5.12',
+                        },
+                        'memory-core': {
+                            source: 'npm',
+                            spec: '@openclaw/memory-core@2026.5.12',
+                        },
+                    },
+                },
+            },
+            gatewayPort: 18_789,
+            gatewayToken: 'token',
+            openClawInstallRoot: '/Users/me/.tavern/runtime/openclaw/versions/2026.5.12',
+            cortexPluginPath: '/Users/me/.tavern/openclaw-plugins/tavern-openclaw-cortex',
+            pluginPath: '/Users/me/.tavern/openclaw-plugins/tavern-openclaw-messenger',
+            version: '2026.5.12',
+            workspacePluginPath: '/Users/me/.tavern/openclaw-plugins/tavern-openclaw-workspace',
+            workspaceDir: '/Users/me/.tavern/runtime/openclaw/run/workspace',
+        });
+
+        expect(getPluginAllow(config)).not.toContain('active-memory');
+        expect(getPluginAllow(config)).not.toContain('memory-core');
+        expect(getPluginEntries(config)).not.toHaveProperty('active-memory');
+        expect(getPluginEntries(config)).not.toHaveProperty('memory-core');
+        expect(getPluginInstalls(config)).not.toHaveProperty('active-memory');
+        expect(getPluginInstalls(config)).not.toHaveProperty('memory-core');
+    });
+
     it('uses generic npm plugin install records without writing them to authored config', () => {
         const config = buildManagedOpenClawConfig({
             existingConfig: {
@@ -212,8 +284,10 @@ describe('buildManagedOpenClawConfig', () => {
             gatewayPort: 18_789,
             gatewayToken: 'token',
             openClawInstallRoot: '/Users/me/.tavern/runtime/openclaw/versions/2026.5.12',
+            cortexPluginPath: '/Users/me/.tavern/openclaw-plugins/tavern-openclaw-cortex',
             pluginPath: '/Users/me/.tavern/openclaw-plugins/tavern-openclaw-messenger',
             version: '2026.5.12',
+            workspacePluginPath: '/Users/me/.tavern/openclaw-plugins/tavern-openclaw-workspace',
             workspaceDir: '/Users/me/.tavern/runtime/openclaw/run/workspace',
         });
 
@@ -246,8 +320,10 @@ describe('buildManagedOpenClawConfig', () => {
             },
             gatewayPort: 18_789,
             gatewayToken: 'token',
+            cortexPluginPath: '/Users/me/.tavern/openclaw-plugins/tavern-openclaw-cortex',
             pluginPath: '/Users/me/.tavern/openclaw-plugins/tavern-openclaw-messenger',
             version: '2026.5.12',
+            workspacePluginPath: '/Users/me/.tavern/openclaw-plugins/tavern-openclaw-workspace',
             workspaceDir: '/Users/me/.tavern/runtime/openclaw/run/workspace',
         });
 
@@ -262,8 +338,7 @@ describe('buildManagedOpenClawConfig', () => {
 });
 
 function getPluginLoadPaths(config: Record<string, unknown>) {
-    const plugins =
-        typeof config.plugins === 'object' && config.plugins !== null ? config.plugins : {};
+    const plugins = getPlugins(config);
     const load =
         'load' in plugins && typeof plugins.load === 'object' && plugins.load !== null
             ? plugins.load
@@ -272,11 +347,26 @@ function getPluginLoadPaths(config: Record<string, unknown>) {
 }
 
 function getPluginInstalls(config: Record<string, unknown>) {
-    const plugins =
-        typeof config.plugins === 'object' && config.plugins !== null ? config.plugins : {};
+    const plugins = getPlugins(config);
     return 'installs' in plugins &&
         typeof plugins.installs === 'object' &&
         plugins.installs !== null
         ? plugins.installs
         : {};
+}
+
+function getPluginEntries(config: Record<string, unknown>) {
+    const plugins = getPlugins(config);
+    return 'entries' in plugins && typeof plugins.entries === 'object' && plugins.entries !== null
+        ? plugins.entries
+        : {};
+}
+
+function getPluginAllow(config: Record<string, unknown>) {
+    const plugins = getPlugins(config);
+    return 'allow' in plugins && Array.isArray(plugins.allow) ? plugins.allow : [];
+}
+
+function getPlugins(config: Record<string, unknown>) {
+    return typeof config.plugins === 'object' && config.plugins !== null ? config.plugins : {};
 }

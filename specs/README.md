@@ -4,11 +4,11 @@ This tree is the normative product model for Tavern. Specs describe the product 
 bug history or stale plans.
 
 Tavern is an always-on agent chat system backed by Tavern Runtime. Tavern Runtime owns canonical
-chats, messages, participants, event cursors, automations, deliveries, memory, knowledge/task
-systems, generated config policy, and jobs. Tavern App owns the first-party Mac client, cache,
-presentation metadata, profiles, participant links, and app settings. OpenClaw owns native agent
-execution, sessions, turns, transcripts, files, tools, applied model/runtime config, and platform
-bindings.
+chats, messages, participants, event cursors, automations, deliveries, Cortex, generated config
+policy, and jobs. Tavern App owns the first-party Mac client, cache, presentation metadata,
+profiles, participant links, and app settings. OpenClaw owns native agent execution, sessions,
+turns, transcripts, files, tools, applied model/runtime config, platform bindings, and prompt-time
+memory.
 
 Tavern currently supports one runtime product: OpenClaw. `packages/tavern-api` is the
 cross-boundary contract so product APIs stay stable and do not mirror OpenClaw design choices
@@ -34,15 +34,26 @@ directly.
 - `participants.md`: profiles, participants, labels, and manual profile links.
 - `jobs.md`, `workers.md`, `models.md`, `skills.md`, `tools.md`, `catalog.md`, `activity-log.md`:
   focused product surfaces.
+- `workspace.md`: managed OpenClaw workspace instructions, generated
+  `AGENTS.md`, agent soul, and agent notes.
 
 ## Memory Specs
 
-- `memories.md`
-- `memory-context.md`
-- `memory-lifecycle.md`
-- `memory-persistence.md`
-- `participant-knowledge.md`
-- `cortex.md`
+- `memories.md`: OpenClaw runtime memory, Cortex-backed durable memory, person
+  memory, and memory inspection surfaces.
+- `memory-context.md`: bounded prompt-facing context assembled from OpenClaw
+  runtime memory, chat state, participants, and Cortex recall.
+- `memory-lifecycle.md`: Cortex page lifecycle, recall behavior, correction,
+  forgetting, and maintenance.
+- `memory-persistence.md`: Cortex capture, watermarks, and extraction pipeline.
+- `participant-knowledge.md`: participant/profile resolution and person-level
+  knowledge.
+
+## Cortex Specs
+
+- `cortex.md`: GBrain-style durable brain with pages, compiled truth, timelines,
+  chunks, embeddings, links, files, citations, recall, capture, maintenance,
+  and product surfaces.
 
 ## Runtime Specs
 

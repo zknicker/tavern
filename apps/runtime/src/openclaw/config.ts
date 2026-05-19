@@ -3,14 +3,21 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 
 import { OPENCLAW_RUN_ROOT, readConfigValue } from '../config';
-import { mergeManagedOpenClawConfig } from './config-merge';
+import { getDb } from '../db/connection';
+import { renderAgentInstructions, updateAgentInstructionSource } from '../workspace/instructions';
+import { mergeManagedOpenClawConfig, stripRemovedManagedOpenClawPlugins } from './config-merge';
 import { createMockProviderMap } from './mock-provider-config';
 import {
     applyManagedOpenClawPluginInstallSpecs,
     type ManagedOpenClawPluginInstallSpec,
+    resolveDefaultManagedOpenClawPluginInstallSpecs,
     resolveManagedOpenClawPluginInstallSpecs,
 } from './plugin-installs';
-import { resolveTavernMessengerPluginPath } from './tavern-messenger-plugin';
+import {
+    resolveTavernCortexPluginPath,
+    resolveTavernMessengerPluginPath,
+    resolveTavernWorkspacePluginPath,
+} from './tavern-messenger-plugin';
 import { resolveManagedOpenClawVersion } from './version';
 
 export interface ManagedOpenClawRuntimeConfig {
@@ -21,6 +28,7 @@ export interface ManagedOpenClawRuntimeConfig {
     gatewayUrl: string;
     pluginInstallSpecs: ManagedOpenClawPluginInstallSpec[];
     pluginPath: string | null;
+    pluginPaths: string[];
     stateDir: string;
     workspaceDir: string;
 }
@@ -40,9 +48,14 @@ export async function prepareManagedOpenClawConfig(input?: {
     const configDir = OPENCLAW_RUN_ROOT;
     const configPath = path.join(OPENCLAW_RUN_ROOT, 'openclaw.json');
     const pluginPath = await resolveTavernMessengerPluginPath(input?.openClawPackageRoot);
-    const existingConfig = await readExistingOpenClawConfig(configPath);
+    const cortexPluginPath = await resolveTavernCortexPluginPath(input?.openClawPackageRoot);
+    const workspacePluginPath = await resolveTavernWorkspacePluginPath(input?.openClawPackageRoot);
+    const existingConfig = stripRemovedManagedOpenClawPlugins(
+        (await readExistingOpenClawConfig(configPath)) ?? {}
+    );
     const version = resolveManagedOpenClawVersion();
     const managedConfig = buildManagedOpenClawConfig({
+        cortexPluginPath,
         existingConfig,
         gatewayPort,
         gatewayToken,
@@ -50,6 +63,7 @@ export async function prepareManagedOpenClawConfig(input?: {
         openClawInstallRoot: input?.openClawInstallRoot ?? null,
         pluginPath,
         version,
+        workspacePluginPath,
         workspaceDir,
     });
     const pluginInstallSpecs = [
@@ -57,6 +71,9 @@ export async function prepareManagedOpenClawConfig(input?: {
             config: existingConfig ?? {},
             installRoot: input?.openClawInstallRoot,
             version,
+        }),
+        ...resolveDefaultManagedOpenClawPluginInstallSpecs({
+            installRoot: input?.openClawInstallRoot,
         }),
         ...resolveManagedOpenClawPluginInstallSpecs({
             config: managedConfig,
@@ -67,6 +84,12 @@ export async function prepareManagedOpenClawConfig(input?: {
 
     await fs.mkdir(stateDir, { recursive: true });
     await fs.mkdir(workspaceDir, { recursive: true });
+    updateAgentInstructionSource(getDb(), {
+        agentId: 'main',
+        agentName: 'main',
+        workspaceDir,
+    });
+    await renderAgentInstructions(getDb(), 'main');
     await fs.writeFile(configPath, `${JSON.stringify(managedConfig, null, 2)}\n`, { mode: 0o600 });
 
     return {
@@ -76,6 +99,10 @@ export async function prepareManagedOpenClawConfig(input?: {
         gatewayToken,
         gatewayUrl: `ws://127.0.0.1:${gatewayPort}`,
         pluginInstallSpecs: dedupePluginInstallSpecs(pluginInstallSpecs),
+        pluginPaths: [pluginPath, cortexPluginPath, workspacePluginPath].filter(
+            (pluginPath): pluginPath is string =>
+                typeof pluginPath === 'string' && pluginPath.length > 0
+        ),
         pluginPath,
         stateDir,
         workspaceDir,
@@ -84,15 +111,22 @@ export async function prepareManagedOpenClawConfig(input?: {
 
 export function buildManagedOpenClawConfig(input: {
     codexPluginRoot?: string | null;
+    cortexPluginPath?: string | null;
     existingConfig?: Record<string, unknown> | null;
     gatewayPort: number;
     gatewayToken: string;
     openClawInstallRoot?: string | null;
     pluginPath: string | null;
     version: string;
+    workspacePluginPath?: string | null;
     workspaceDir: string;
 }) {
-    const pluginPaths = [input.pluginPath, input.codexPluginRoot].filter(
+    const pluginPaths = [
+        input.pluginPath,
+        input.cortexPluginPath,
+        input.workspacePluginPath,
+        input.codexPluginRoot,
+    ].filter(
         (pluginPath): pluginPath is string =>
             typeof pluginPath === 'string' && pluginPath.length > 0
     );
@@ -173,9 +207,6 @@ export function buildManagedOpenClawConfig(input: {
             mode: 'local',
             port: input.gatewayPort,
         },
-        memory: {
-            backend: 'builtin',
-        },
         ...(mockProviderBaseUrl
             ? {
                   models: {
@@ -195,16 +226,29 @@ export function buildManagedOpenClawConfig(input: {
             },
         },
         plugins: {
-            allow: ['tavern', 'codex', 'memory-core', 'openai'],
+            allow: [
+                'tavern',
+                'tavern-cortex',
+                'tavern-workspace',
+                'codex',
+                'lossless-claw',
+                'openai',
+            ],
             bundledDiscovery: 'allowlist',
             entries: {
                 tavern: {
                     enabled: true,
                 },
+                'tavern-cortex': {
+                    enabled: true,
+                },
+                'tavern-workspace': {
+                    enabled: true,
+                },
                 codex: {
                     enabled: true,
                 },
-                'memory-core': {
+                'lossless-claw': {
                     enabled: true,
                 },
                 openai: {
@@ -217,6 +261,10 @@ export function buildManagedOpenClawConfig(input: {
             load: {
                 paths: pluginPaths,
             },
+            slots: {
+                contextEngine: 'lossless-claw',
+                memory: 'none',
+            },
         },
         tools: {
             profile: 'coding',
@@ -224,14 +272,16 @@ export function buildManagedOpenClawConfig(input: {
     };
 
     const mergedConfig = mergeManagedOpenClawConfig(managedConfig, input.existingConfig);
-    return applyManagedOpenClawPluginInstallSpecs(
-        mergedConfig,
-        resolveManagedOpenClawPluginInstallSpecs({
+    return applyManagedOpenClawPluginInstallSpecs(mergedConfig, [
+        ...resolveDefaultManagedOpenClawPluginInstallSpecs({
+            installRoot: input.openClawInstallRoot,
+        }),
+        ...resolveManagedOpenClawPluginInstallSpecs({
             config: mergedConfig,
             installRoot: input.openClawInstallRoot,
             version: input.version,
-        })
-    );
+        }),
+    ]);
 }
 
 async function readExistingOpenClawConfig(configPath: string) {
@@ -268,6 +318,15 @@ const defaultAgentToolNames = [
     'sessions_spawn',
     'subagents',
     'session_status',
+    'cortex.search',
+    'cortex.getPage',
+    'cortex.capture',
+    'cortex.recall',
+    'cortex.status',
+    'cortex.listBacklinks',
+    'cortex.runJob',
+    'workspace.notes.read',
+    'workspace.notes.update',
 ];
 
 function createGatewayToken() {

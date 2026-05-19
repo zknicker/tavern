@@ -92,6 +92,23 @@ keychain, and iCloud document paths while preserving normal local app behavior. 
 additional host access, Runtime exposes that as an explicit capability or settings decision
 rather than broadening the default silently.
 
+## Managed Workspace
+
+Tavern Runtime owns the managed OpenClaw workspace under
+`~/.tavern/runtime/openclaw/run/workspace`.
+
+Runtime renders one generated `AGENTS.md` for Tavern-managed agents. That file combines
+repo-managed Tavern instructions, the DB-backed user-authored agent soul, and DB-backed
+agent-authored notes. Runtime leaves the other OpenClaw bootstrap markdown files blank or unused
+for managed Tavern agents.
+
+Agents do not edit the generated `AGENTS.md` directly. Agent-authored notes are updated through
+Tavern workspace tools, then Runtime renders them into the generated file on boot, config sync, or
+instruction source changes.
+
+The `tavern-workspace` OpenClaw plugin owns generated workspace-file policy, agent notes tools, and
+file-protection hooks. See [Workspace](../workspace.md) for the full contract.
+
 ## Required Mapping
 
 - `health`, `status` -> Tavern runtime status.
@@ -120,6 +137,34 @@ records that Runtime composes into OpenClaw config and applies to Gateway.
 `config.get`/`config.apply` full snapshots are diagnostic surfaces. Focused Tavern-owned records
 are the product source for managed settings, and Tavern Runtime composes them into OpenClaw config.
 Tavern product settings do not call Gateway `config.patch`.
+
+## Config Fixups
+
+Tavern applies a small OpenClaw config fixup pipeline whenever it syncs or saves a valid managed
+OpenClaw config snapshot.
+
+Fixups are Tavern-owned guardrails over the editable OpenClaw config surface. They preserve
+unrelated OpenClaw settings while enforcing the parts Tavern needs for a working managed runtime.
+
+Fixups run in this order:
+
+1. Gateway settings: token-authenticated loopback Gateway config.
+2. Memory settings: Lossless Claw as `contextEngine`, OpenClaw `memory` slot set to `none`,
+   and `lossless-claw` enabled.
+3. Plugin trust: required Tavern plugin trust plus configured plugin entries.
+4. Agent tools: Tavern default tool policy for projected agents that do not already have explicit
+   OpenClaw tool policy.
+
+Fixups do not run against invalid OpenClaw config snapshots. Tavern stores invalid snapshots for
+inspection and asks the operator to repair the config first.
+
+Fixups merge rather than replace. They must not delete unrelated plugin entries, plugin settings,
+plugin install records, plugin load paths, channel config, bindings, agent-specific config, model
+config, or user-managed OpenClaw settings outside the field they own.
+
+When a fixup changes config, Tavern applies the full updated snapshot through `config.apply`, saves
+the returned snapshot hash, syncs affected projections, and emits config/model/agent invalidation
+events.
 
 ## Platform Metadata
 

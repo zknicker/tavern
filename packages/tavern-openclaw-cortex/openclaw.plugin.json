@@ -1,0 +1,24 @@
+{
+  "id": "tavern-cortex",
+  "name": "Tavern Cortex",
+  "description": "First-party Tavern Cortex tools for OpenClaw agents.",
+  "activation": {
+    "onStartup": true
+  },
+  "contracts": {
+    "tools": [
+      "cortex.search",
+      "cortex.getPage",
+      "cortex.capture",
+      "cortex.recall",
+      "cortex.status",
+      "cortex.listBacklinks",
+      "cortex.runJob"
+    ]
+  },
+  "configSchema": {
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {}
+  }
+}

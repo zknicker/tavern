@@ -10,6 +10,7 @@ export const agentRuntimeCapabilitySchema = z.enum([
     'events',
     'gateway',
     'logs',
+    'memory',
     'messages',
     'models',
     'sessions',

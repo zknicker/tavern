@@ -8,6 +8,7 @@ export interface AgentProfile {
     createdAt: string;
     primaryColor: string | null;
     runtimeId: string;
+    soul: string;
     updatedAt: string;
 }
 
@@ -17,6 +18,7 @@ function selection() {
         createdAt: agentProfilesTable.createdAt,
         primaryColor: agentProfilesTable.primaryColor,
         runtimeId: agentProfilesTable.runtimeId,
+        soul: agentProfilesTable.soul,
         updatedAt: agentProfilesTable.updatedAt,
     };
 }
@@ -58,9 +60,16 @@ export async function saveAgentProfile(input: {
     agentId: string;
     primaryColor?: string | null;
     runtimeId: string;
+    soul?: string | null;
 }) {
     const timestamp = new Date().toISOString();
     const hasPrimaryColor = Object.hasOwn(input, 'primaryColor');
+    const hasSoul = Object.hasOwn(input, 'soul');
+    const updateSet = {
+        ...(hasPrimaryColor ? { primaryColor: input.primaryColor ?? null } : {}),
+        ...(hasSoul ? { soul: normalizeSoul(input.soul) } : {}),
+        updatedAt: timestamp,
+    };
 
     await db
         .insert(agentProfilesTable)
@@ -69,21 +78,19 @@ export async function saveAgentProfile(input: {
             createdAt: timestamp,
             primaryColor: hasPrimaryColor ? (input.primaryColor ?? null) : null,
             runtimeId: input.runtimeId,
+            soul: hasSoul ? normalizeSoul(input.soul) : '',
             updatedAt: timestamp,
         })
         .onConflictDoUpdate({
             target: [agentProfilesTable.runtimeId, agentProfilesTable.agentId],
-            set: hasPrimaryColor
-                ? {
-                      primaryColor: input.primaryColor ?? null,
-                      updatedAt: timestamp,
-                  }
-                : {
-                      updatedAt: timestamp,
-                  },
+            set: updateSet,
         });
 
     return getAgentProfile(input);
+}
+
+function normalizeSoul(value: string | null | undefined) {
+    return (value ?? '').trim().slice(0, 20_000);
 }
 
 export async function deleteAgentProfile(input: { agentId: string; runtimeId: string }) {

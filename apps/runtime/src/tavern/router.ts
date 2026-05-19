@@ -1,4 +1,6 @@
 import { runtimeEventListSchema, runtimeHealthSchema, runtimeRoutes } from '@tavern/api';
+import { handleCortexRequest } from '../cortex/routes';
+import { handleWorkspaceRequest } from '../workspace/routes';
 import { handleTavernApiRequest } from './chat-api-router';
 import { json, notFound } from './http';
 import { handleOpenClawProxyRequest } from './proxy';
@@ -10,6 +12,16 @@ export async function handleTavernRuntimeRequest(request: Request): Promise<Resp
     const apiResponse = await handleTavernApiRequest(request);
     if (apiResponse) {
         return apiResponse;
+    }
+
+    const cortexResponse = await handleCortexRequest(request);
+    if (cortexResponse) {
+        return cortexResponse;
+    }
+
+    const workspaceResponse = await handleWorkspaceRequest(request);
+    if (workspaceResponse) {
+        return workspaceResponse;
     }
 
     if (request.method === 'GET' && url.pathname === runtimeRoutes.health) {

@@ -1,5 +1,10 @@
 import { setTimeout as delay } from 'node:timers/promises';
-import type { AgentRuntimeCron, AgentRuntimeCronRun, AgentRuntimeSession } from '@tavern/api';
+import type {
+    AgentRuntimeAgent,
+    AgentRuntimeCron,
+    AgentRuntimeCronRun,
+    AgentRuntimeSession,
+} from '@tavern/api';
 import { hasActiveTurnSession } from '../agent-runtime/active-turn-sessions.ts';
 import {
     recordCapabilityFailure,
@@ -14,6 +19,7 @@ import {
     emitSyncDataUpdated,
 } from '../api/invalidation-events.ts';
 import { syncChatParticipantsForRuntime } from '../participants/chat-participants.ts';
+import { listAgentProfiles } from '../storage/agent-profiles.ts';
 import {
     listReachableAgentRuntimeConnections,
     markAgentRuntimeConnectionSync,
@@ -262,12 +268,46 @@ async function syncAgentsForConnection(input: RuntimeSyncInput) {
         runtimeId: input.runtime.id,
         syncedAt,
     });
+    await syncAgentWorkspaceInstructions({
+        agents,
+        client,
+        log: input.log,
+        runtimeId: input.runtime.id,
+    });
 
     await input.log?.(
         `Synced ${result.synced} agents from ${input.runtime.name}; deleted ${result.deleted} missing agents.`
     );
 
     return result;
+}
+
+export async function syncAgentWorkspaceInstructions(input: {
+    agents: AgentRuntimeAgent[];
+    client: TavernAgentRuntimeClient;
+    log?: SyncLog;
+    runtimeId: string;
+}) {
+    const profiles = await listAgentProfiles({ runtimeId: input.runtimeId });
+    const profilesByAgentId = new Map(profiles.map((profile) => [profile.agentId, profile]));
+
+    for (const agent of input.agents) {
+        const profile = profilesByAgentId.get(agent.id);
+        if (!profile) {
+            continue;
+        }
+
+        try {
+            await input.client.saveWorkspaceInstructions(agent.id, {
+                agentName: agent.name,
+                soul: profile.soul,
+                workspaceDir: agent.workspaceFolder,
+            });
+        } catch (error) {
+            const message = error instanceof Error ? error.message : String(error);
+            await input.log?.(`Skipped workspace instructions sync for ${agent.id}: ${message}`);
+        }
+    }
 }
 
 async function syncChatsForConnection(input: RuntimeSyncInput) {

@@ -13,6 +13,7 @@ test('buildOverviewActivityItems uses current chat fields without requiring late
                 name: 'Atlas',
                 primaryColor: null,
                 runtimeId: 'tavern-openclaw-managed',
+                soul: '',
                 title: 'Atlas',
                 updatedAt: '2026-04-17T19:00:00.000Z',
                 usesAllSkills: false,

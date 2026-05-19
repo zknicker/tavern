@@ -82,8 +82,8 @@ Ownership:
 | Chat messages, delivery, live activity | [Chat API](api/chat.md) |
 | Health, status, and admin control | [Admin API](api/admin.md) |
 | Agents, models, and tool policy | [Agents API](api/agents.md) |
-| Memory context and review | [Memory API](api/memory.md) |
-| Knowledgebase pages, files, and citations | [Knowledgebase API](api/knowledgebase.md) |
+| Memory inspection and review | [Memory API](api/memory.md) |
+| Cortex wiki pages, files, and citations | [Knowledgebase API](api/knowledgebase.md) |
 | Cron automations and run history | [Automations API](api/automations.md) |
 | Skill packages and assignment | [Skills API](api/skills.md) |
 | Usage and operational stats | [Stats API](api/stats.md) |

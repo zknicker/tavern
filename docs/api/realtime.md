@@ -81,8 +81,8 @@ Chat events:
 * `chat.activity.completed`
 * `chat.activity.failed`
 
-Automation, memory, knowledgebase, skill, and stats events use the same durable
-event log when they affect client-visible Runtime state.
+Automation, memory inspection, Cortex wiki, skill, and stats events use the
+same durable event log when they affect client-visible Runtime state.
 
 Read events are private to the reader. Private events use `private` plus
 `recipients`, and Runtime filters them during replay and websocket delivery.
@@ -136,8 +136,8 @@ Product state still comes from:
 * `GET /api/chats/{chat_id}/messages`
 * `GET /api/events?after_cursor=...`
 * current `chat_activity`
-* focused resource reads for automations, memory, knowledgebase, skills, and
-  stats
+* focused resource reads for automations, memory inspection, the Cortex wiki,
+  skills, and stats
 
 ## What Is Intentionally Missing
 

@@ -20,6 +20,16 @@ process.env.TAVERN_OPENCLAW_PLUGIN_DEPLOY_PATH = path.join(
     'openclaw-plugins',
     'tavern-openclaw-messenger'
 );
+process.env.TAVERN_OPENCLAW_CORTEX_PLUGIN_DEPLOY_PATH = path.join(
+    runtimeRoot,
+    'openclaw-plugins',
+    'tavern-openclaw-cortex'
+);
+process.env.TAVERN_OPENCLAW_WORKSPACE_PLUGIN_DEPLOY_PATH = path.join(
+    runtimeRoot,
+    'openclaw-plugins',
+    'tavern-openclaw-workspace'
+);
 process.env.NODE_ENV = 'test';
 
 process.chdir(workspaceRoot);

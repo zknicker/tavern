@@ -18,6 +18,7 @@ import {
 import { parseAgentRuntimeConnectionAuth } from './auth.ts';
 import { splitAgentRuntimeCapabilities } from './capability-groups.ts';
 import type { AgentRuntimeConnection } from './contracts.ts';
+import { recordOpenClawMemoryCapability } from './memory-capability.ts';
 import { recordOpenClawGatewayCapability } from './openclaw-gateway-capability.ts';
 import { recordTavernPluginCapability } from './tavern-plugin-capability.ts';
 
@@ -407,6 +408,7 @@ export async function confirmAgentRuntimeConnection() {
             status: checked.status,
         });
         await recordOpenClawGatewayCapability({ client, runtimeId });
+        await recordOpenClawMemoryCapability({ client, runtimeId });
         await saveStoredAgentRuntimeConnection({
             baseUrl: checked.baseUrl,
             enabled: record.enabled,

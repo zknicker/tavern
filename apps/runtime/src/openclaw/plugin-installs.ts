@@ -1,5 +1,7 @@
 import path from 'node:path';
 
+const losslessClawNpmSpec = '@martian-engineering/lossless-claw@0.11.1';
+
 export interface ManagedOpenClawPluginInstallSpec {
     installPath: string;
     npmSpec: string;
@@ -32,6 +34,27 @@ export function resolveManagedOpenClawPluginInstallSpecs(input: {
     }
 
     return Array.from(specs.values());
+}
+
+export function resolveDefaultManagedOpenClawPluginInstallSpecs(input: {
+    installRoot: string | null | undefined;
+}) {
+    const installRoot = input.installRoot;
+    if (!installRoot) {
+        return [];
+    }
+
+    return [
+        {
+            installPath: resolveManagedPackageRoot(
+                installRoot,
+                '@martian-engineering/lossless-claw'
+            ),
+            npmSpec: losslessClawNpmSpec,
+            packageName: '@martian-engineering/lossless-claw',
+            pluginId: 'lossless-claw',
+        },
+    ] satisfies ManagedOpenClawPluginInstallSpec[];
 }
 
 export function applyManagedOpenClawPluginInstallSpecs(
@@ -170,7 +193,15 @@ function isManagedPluginId(pluginId: string) {
     return /^[a-z][a-z0-9-]{0,63}$/u.test(pluginId);
 }
 
-const managedOpenClawPluginIds = new Set(['tavern', 'codex', 'memory-core', 'openai']);
+const managedOpenClawPluginIds = new Set([
+    'tavern',
+    'tavern-cortex',
+    'tavern-workspace',
+    'codex',
+    'memory-core',
+    'lossless-claw',
+    'openai',
+]);
 
 export function readRecord(value: unknown): Record<string, unknown> {
     return typeof value === 'object' && value !== null && !Array.isArray(value)

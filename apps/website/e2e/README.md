@@ -7,7 +7,7 @@ This folder holds Playwright coverage for user-facing dashboard behavior.
 - Default deterministic lane:
   - run the real website, real server, real Tavern Runtime, and Runtime-managed OpenClaw Gateway
   - mock only the model provider by using OpenClaw's vendored QA mock OpenAI-compatible server
-  - load the real Tavern Messenger OpenClaw plugin from `packages/tavern-openclaw-messenger`
+  - load the real Tavern Messenger and Cortex OpenClaw plugins from `packages/`
   - enforce browser-visible chat latency thresholds with test-only timing instrumentation
 - Live OpenClaw lane:
   - run the real website, real server, and real Tavern Runtime against the developer's local

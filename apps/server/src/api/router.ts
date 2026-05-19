@@ -1,6 +1,7 @@
 import { agentRouter } from './agent/router.ts';
 import { agentRuntimeRouter } from './agent-runtime/router.ts';
 import { chatRouter } from './chat/router.ts';
+import { cortexRouter } from './cortex/router.ts';
 import { cronRouter } from './cron/router.ts';
 import { jobsRouter } from './jobs/router.ts';
 import { logRouter } from './log/router.ts';
@@ -23,6 +24,7 @@ export const appRouter = createRouter({
     agent: agentRouter,
     chat: chatRouter,
     cron: cronRouter,
+    cortex: cortexRouter,
     jobs: jobsRouter,
     log: logRouter,
     memory: memoryRouter,

@@ -13,30 +13,62 @@ export function mergeManagedOpenClawConfig(
         return managedConfig;
     }
 
-    const existingChannels = readRecord(existingConfig.channels);
+    const sanitizedExistingConfig = stripRemovedManagedOpenClawPlugins(existingConfig);
+    const existingChannels = readRecord(sanitizedExistingConfig.channels);
     const managedChannels = readRecord(managedConfig.channels);
 
     return {
-        ...existingConfig,
+        ...sanitizedExistingConfig,
         ...managedConfig,
         agents: mergeManagedAgents(
             readRecord(managedConfig.agents),
-            readRecord(existingConfig.agents)
+            readRecord(sanitizedExistingConfig.agents)
         ),
-        bindings: existingConfig.bindings ?? managedConfig.bindings,
+        bindings: sanitizedExistingConfig.bindings ?? managedConfig.bindings,
         channels: {
             ...existingChannels,
             ...managedChannels,
         },
         messages: mergeRecords(
             readRecord(managedConfig.messages),
-            readRecord(existingConfig.messages)
+            readRecord(sanitizedExistingConfig.messages)
         ),
         plugins: mergeManagedPlugins(
             readRecord(managedConfig.plugins),
-            readRecord(existingConfig.plugins),
+            readRecord(sanitizedExistingConfig.plugins),
             existingChannels
         ),
+    };
+}
+
+export function stripRemovedManagedOpenClawPlugins(
+    config: Record<string, unknown>
+): Record<string, unknown> {
+    const plugins = readRecord(config.plugins);
+    const entries = readRecord(plugins.entries);
+    const installs = readRecord(plugins.installs);
+    const allow = readStringArray(plugins.allow).filter(
+        (pluginId) => !removedManagedOpenClawPluginIds.has(pluginId)
+    );
+    const strippedEntries = Object.fromEntries(
+        Object.entries(entries).filter(
+            ([pluginId]) => !removedManagedOpenClawPluginIds.has(pluginId)
+        )
+    );
+    const strippedInstalls = Object.fromEntries(
+        Object.entries(installs).filter(
+            ([pluginId]) => !removedManagedOpenClawPluginIds.has(pluginId)
+        )
+    );
+
+    return {
+        ...config,
+        plugins: {
+            ...plugins,
+            allow,
+            entries: strippedEntries,
+            installs: strippedInstalls,
+        },
     };
 }
 
@@ -106,6 +138,10 @@ function mergeManagedPlugins(
             readRecord(existingPlugins.entries),
             readRecord(managedPlugins.entries)
         ),
+        installs: mergeRecords(
+            readRecord(existingPlugins.installs),
+            readRecord(managedPlugins.installs)
+        ),
     };
 }
 
@@ -119,3 +155,5 @@ function mergeRecords(base: Record<string, unknown>, overlay: Record<string, unk
 function readRecordArray(value: unknown): Record<string, unknown>[] {
     return Array.isArray(value) ? value.map(readRecord) : [];
 }
+
+const removedManagedOpenClawPluginIds = new Set(['active-memory', 'memory-core']);

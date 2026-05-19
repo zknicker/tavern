@@ -46,8 +46,8 @@ cache, and shape data for React, but it does not define a separate product API.
 | Chat | [Chat API](chat.md) |
 | Admin | [Admin API](admin.md) |
 | Agents | [Agents API](agents.md) |
-| Memory | [Memory API](memory.md) |
-| Knowledgebase | [Knowledgebase API](knowledgebase.md) |
+| Memory inspection | [Memory API](memory.md) |
+| Cortex wiki | [Knowledgebase API](knowledgebase.md) |
 | Automations | [Automations API](automations.md) |
 | Skills | [Skills API](skills.md) |
 | Stats | [Stats API](stats.md) |
@@ -72,8 +72,8 @@ capabilities.
 
 ## Contract Rules
 
-* **Durable objects first.** Create messages, memories, pages, automations, and
-  skill records before relying on realtime notifications.
+* **Durable objects first.** Create messages, Cortex pages and timeline entries,
+  automations, and skill records before relying on realtime notifications.
 * **Receipts reconcile.** Writes return stable ids, sequence values, cursors, or
   receipts that let callers reconcile optimistic UI and retries.
 * **Idempotency is explicit.** Duplicate ids or nonces return existing records
@@ -83,8 +83,8 @@ capabilities.
 * **Runtime identity rides as metadata.** `session`, `turn`, `run`, and
   `delivery` are runtime facts unless the runtime boundary is being documented.
 * **App clients use Tavern nouns.** Product-facing code speaks in chats,
-  messages, agents, memory, knowledgebase, automations, skills, stats, and
-  activity.
+  messages, agents, memory inspection, Cortex wiki pages, automations, skills,
+  stats, and activity.
 
 ## OpenClaw Alignment
 
