@@ -1,12 +1,8 @@
 import * as React from 'react';
 import type { ChatStatusListOutput } from '../../lib/trpc.tsx';
-import {
-    applyLogSnapshot,
-    applyStatusSnapshot,
-    emptyTimelineState,
-} from './chat-timeline-state.ts';
+import { applyLogSnapshot, applyStatusSnapshot } from './chat-timeline-state.ts';
 import { useChatTimelinePage } from './use-chat-timeline-page.ts';
-import { useTimelineContext } from './use-timeline-context.tsx';
+import { useChatRuntimeTimelineState, useTimelineActions } from './use-timeline-context.tsx';
 
 export function useChatTimeline(input: {
     activeReply?: ChatStatusListOutput['chats'][number]['activeReply'] | null;
@@ -22,8 +18,8 @@ export function useChatTimeline(input: {
         offset: input.offset,
     });
     const activeReply = input.activeReply ?? null;
-    const { setLog, setStatus, timelineStates } = useTimelineContext();
-    const timelineState = timelineStates[input.chatId] ?? emptyTimelineState();
+    const { setLog, setStatus } = useTimelineActions();
+    const timelineState = useChatRuntimeTimelineState(input.chatId);
     const activeStatus = React.useMemo(
         () =>
             activeReply

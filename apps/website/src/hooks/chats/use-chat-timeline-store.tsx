@@ -2,6 +2,15 @@ import type { PropsWithChildren } from 'react';
 import * as React from 'react';
 import type { ChatLogOutput } from '../../lib/trpc.tsx';
 import {
+    addChatTimelineMessage,
+    type ChatTimelineLocalMessagesState,
+    emptyChatTimelineLocalMessagesState,
+    moveChatTimelineMessages,
+    removeChatTimelineMessages,
+    selectChatTimelineMessages,
+    setChatTimelineMessageSession,
+} from './chat-timeline-local-messages.ts';
+import {
     type ChatTimelineMessage,
     getLoggedTimelineMessageIds,
     mergeTimelineMessages,
@@ -9,7 +18,7 @@ import {
 
 interface ChatTimelineStoreValue {
     addMessage: (input: { chatId: string } & ChatTimelineMessage) => void;
-    messagesByChatId: Record<string, ChatTimelineMessage[]>;
+    localMessages: ChatTimelineLocalMessagesState;
     moveMessages: (input: { fromChatId: string; toChatId: string }) => void;
     removeMessage: (input: { chatId: string; messageId: string }) => void;
     removeMessages: (input: { chatId: string; messageIds: readonly string[] }) => void;
@@ -23,103 +32,28 @@ interface ChatTimelineStoreValue {
 const ChatTimelineContext = React.createContext<ChatTimelineStoreValue | null>(null);
 
 export function ChatTimelineProvider({ children }: PropsWithChildren) {
-    const [messagesByChatId, setMessagesByChatId] = React.useState<
-        Record<string, ChatTimelineMessage[]>
-    >({});
+    const [localMessages, setLocalMessages] = React.useState<ChatTimelineLocalMessagesState>(
+        emptyChatTimelineLocalMessagesState
+    );
 
     const addMessage = React.useCallback((input: { chatId: string } & ChatTimelineMessage) => {
-        const { chatId, ...message } = input;
-
-        setMessagesByChatId((current) => ({
-            ...current,
-            [chatId]: [
-                ...(current[chatId] ?? []).filter((entry) => entry.id !== message.id),
-                message,
-            ],
-        }));
+        setLocalMessages((current) => addChatTimelineMessage(current, input));
     }, []);
 
     const moveMessages = React.useCallback((input: { fromChatId: string; toChatId: string }) => {
-        if (input.fromChatId === input.toChatId) {
-            return;
-        }
-
-        setMessagesByChatId((current) => {
-            const movedMessages = current[input.fromChatId];
-
-            if (!movedMessages || movedMessages.length === 0) {
-                return current;
-            }
-
-            const movedIds = new Set(movedMessages.map((message) => message.id));
-            const nextTargetMessages = [
-                ...(current[input.toChatId] ?? []).filter((message) => !movedIds.has(message.id)),
-                ...movedMessages,
-            ];
-            const { [input.fromChatId]: _moved, ...rest } = current;
-
-            return {
-                ...rest,
-                [input.toChatId]: nextTargetMessages,
-            };
-        });
+        setLocalMessages((current) => moveChatTimelineMessages(current, input));
     }, []);
 
     const setMessageSession = React.useCallback(
         (input: { chatId: string; messageId: string; sessionKey?: string | null }) => {
-            setMessagesByChatId((current) => {
-                const chatMessages = current[input.chatId];
-
-                if (!chatMessages) {
-                    return current;
-                }
-
-                return {
-                    ...current,
-                    [input.chatId]: chatMessages.map((message) =>
-                        message.id === input.messageId
-                            ? {
-                                  ...message,
-                                  sessionKey: input.sessionKey ?? null,
-                              }
-                            : message
-                    ),
-                };
-            });
+            setLocalMessages((current) => setChatTimelineMessageSession(current, input));
         },
         []
     );
 
     const removeMessages = React.useCallback(
         (input: { chatId: string; messageIds: readonly string[] }) => {
-            if (input.messageIds.length === 0) {
-                return;
-            }
-
-            setMessagesByChatId((current) => {
-                const chatMessages = current[input.chatId];
-
-                if (!chatMessages) {
-                    return current;
-                }
-
-                const ids = new Set(input.messageIds);
-                const nextChatMessages = chatMessages.filter((message) => !ids.has(message.id));
-
-                if (nextChatMessages.length === chatMessages.length) {
-                    return current;
-                }
-
-                if (nextChatMessages.length === 0) {
-                    const { [input.chatId]: _removed, ...rest } = current;
-                    return rest;
-                }
-
-                return {
-                    ...current,
-                    [input.chatId]: nextChatMessages,
-                };
-            });
+            setLocalMessages((current) => removeChatTimelineMessages(current, input));
         },
         []
     );
@@ -138,19 +72,12 @@ export function ChatTimelineProvider({ children }: PropsWithChildren) {
         () => ({
             addMessage,
             setMessageSession,
-            messagesByChatId,
+            localMessages,
             moveMessages,
             removeMessage,
             removeMessages,
         }),
-        [
-            addMessage,
-            messagesByChatId,
-            moveMessages,
-            removeMessage,
-            removeMessages,
-            setMessageSession,
-        ]
+        [addMessage, localMessages, moveMessages, removeMessage, removeMessages, setMessageSession]
     );
 
     return React.createElement(ChatTimelineContext.Provider, { value }, children);
@@ -158,7 +85,10 @@ export function ChatTimelineProvider({ children }: PropsWithChildren) {
 
 export function useChatTimelineMessages(chatId: string) {
     const context = useChatTimelineStore();
-    const messages = context.messagesByChatId[chatId] ?? [];
+    const messages = React.useMemo(
+        () => selectChatTimelineMessages(context.localMessages, chatId),
+        [chatId, context.localMessages]
+    );
 
     return {
         addMessage: (input: ChatTimelineMessage) => {

@@ -114,8 +114,12 @@ export function ChatCard({
             </div>
 
             <ChatMessageComposer
+                agentRuntimeSyncLabel={chat.agentRuntimeSyncLabel}
                 agents={agents}
-                chat={chat}
+                boundAgentIds={chat.boundAgentIds}
+                canSend={chat.canSend}
+                chatId={chat.id}
+                isDisabled={chat.isDisabled}
                 isReplyActive={hasActiveReply}
                 variant="compact"
             />

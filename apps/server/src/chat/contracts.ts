@@ -87,8 +87,33 @@ export const chatSchema = z.object({
     type: z.string(),
 });
 
+export const chatListItemSchema = chatSchema.pick({
+    agentRuntimeSync: true,
+    boundAgentIds: true,
+    canSend: true,
+    conversationKind: true,
+    displayName: true,
+    framework: true,
+    id: true,
+    isEnabled: true,
+    lastActivityAt: true,
+    latestSession: true,
+    participants: true,
+    scope: true,
+    sessionCount: true,
+    source: true,
+    targetParticipant: true,
+    title: true,
+    type: true,
+});
+
 export const chatListSchema = z.object({
-    chats: z.array(chatSchema),
+    ids: z.array(z.string().trim().min(1)),
+    itemsById: z.record(z.string().trim().min(1), chatListItemSchema),
+});
+
+export const getChatInputSchema = z.object({
+    chatId: z.string().trim().min(1),
 });
 
 export const createChatInputSchema = z.object({
@@ -158,7 +183,9 @@ export const chatLogPageSchema = z.object({
 });
 
 export type Chat = z.infer<typeof chatSchema>;
+export type ChatListItem = z.infer<typeof chatListItemSchema>;
 export type ChatList = z.infer<typeof chatListSchema>;
+export type GetChatInput = z.infer<typeof getChatInputSchema>;
 export type ChatLogPage = z.infer<typeof chatLogPageSchema>;
 export type CreateChatInput = z.infer<typeof createChatInputSchema>;
 export type CreateChatResult = z.infer<typeof createChatResultSchema>;

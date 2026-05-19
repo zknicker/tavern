@@ -6,28 +6,41 @@ export function useChatArchive() {
     return trpc.chat.archive.useMutation({
         onMutate: async ({ chatId }) => {
             await utils.chat.list.cancel();
+            await utils.chat.get.cancel({ chatId });
             const previousChatList = utils.chat.list.getData();
+            const previousChat = utils.chat.get.getData({ chatId });
 
             utils.chat.list.setData(undefined, (current) => {
                 if (!current) {
                     return current;
                 }
 
+                const { [chatId]: _archivedChat, ...itemsById } = current.itemsById;
+
                 return {
                     ...current,
-                    chats: current.chats.filter((chat) => chat.id !== chatId),
+                    ids: current.ids.filter((id) => id !== chatId),
+                    itemsById,
                 };
             });
+            utils.chat.get.setData({ chatId }, null);
 
-            return { previousChatList };
+            return { previousChat, previousChatList };
         },
         onError: (_error, _input, context) => {
             if (context?.previousChatList) {
                 utils.chat.list.setData(undefined, context.previousChatList);
             }
+
+            if (context?.previousChat) {
+                utils.chat.get.setData({ chatId: context.previousChat.id }, context.previousChat);
+            }
         },
-        onSettled: async () => {
-            await utils.chat.list.invalidate();
+        onSettled: async (_result, _error, { chatId }) => {
+            await Promise.all([
+                utils.chat.get.invalidate({ chatId }),
+                utils.chat.list.invalidate(),
+            ]);
         },
     });
 }

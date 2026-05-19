@@ -1,6 +1,7 @@
 import { afterEach, mock, test } from 'bun:test';
 import assert from 'node:assert/strict';
-import { listChats } from '../src/chat/list.ts';
+import type { ChatList } from '../src/chat/contracts.ts';
+import { getChat, listChats } from '../src/chat/list.ts';
 import { saveTavernChatRecord } from '../src/chat/records.ts';
 import { archiveTavernChat } from '../src/chat/save.ts';
 import { ensureDatabaseSchema } from '../src/db/bootstrap.ts';
@@ -27,18 +28,32 @@ afterEach(() => {
 test('listChats returns no rows when there are no projections', async () => {
     const result = await listChats();
 
-    assert.deepEqual(result.chats, []);
+    assert.deepEqual(result.ids, []);
+    assert.deepEqual(result.itemsById, {});
 });
 
 test('listChats prefers projected runtime chat identity and bindings for Tavern chats', async () => {
     await seedPlanningProjection({ includeSession: true });
 
     const result = await listChats();
+    const chats = listedChats(result);
 
-    assert.equal(result.chats[0]?.displayName, 'Planning');
-    assert.equal(result.chats[0]?.framework, 'tavern');
-    assert.equal(result.chats[0]?.isEnabled, true);
-    assert.deepEqual(result.chats[0]?.boundAgentIds, ['agent:planner']);
+    assert.deepEqual(result.ids, [planningChatId]);
+    assert.equal(chats[0]?.displayName, 'Planning');
+    assert.equal(chats[0]?.framework, 'tavern');
+    assert.equal(chats[0]?.isEnabled, true);
+    assert.deepEqual(chats[0]?.boundAgentIds, ['agent:planner']);
+    assert.equal('platformMetadata' in (chats[0] ?? {}), false);
+});
+
+test('getChat returns full chat detail by id', async () => {
+    await seedPlanningProjection({ includeSession: true });
+
+    const chat = await getChat({ chatId: planningChatId });
+
+    assert.equal(chat?.id, planningChatId);
+    assert.equal(chat?.displayName, 'Planning');
+    assert.equal('platformMetadata' in (chat ?? {}), true);
 });
 
 test('listChats includes projected Tavern chats before any synced activity exists', async () => {
@@ -46,13 +61,13 @@ test('listChats includes projected Tavern chats before any synced activity exist
 
     const result = await listChats();
 
-    assert.equal(result.chats.length, 1);
-    assert.equal(result.chats[0]?.id, planningChatId);
-    assert.equal(result.chats[0]?.displayName, 'Planning');
-    assert.deepEqual(result.chats[0]?.boundAgentIds, ['agent:planner']);
-    assert.equal(result.chats[0]?.participants[0]?.name, 'Planner');
-    assert.equal(result.chats[0]?.sessionCount, 0);
-    assert.equal(result.chats[0]?.lastActivityAt, '2026-04-06T12:01:00.000Z');
+    assert.equal(listedChats(result).length, 1);
+    assert.equal(listedChats(result)[0]?.id, planningChatId);
+    assert.equal(listedChats(result)[0]?.displayName, 'Planning');
+    assert.deepEqual(listedChats(result)[0]?.boundAgentIds, ['agent:planner']);
+    assert.equal(listedChats(result)[0]?.participants[0]?.name, 'Planner');
+    assert.equal(listedChats(result)[0]?.sessionCount, 0);
+    assert.equal(listedChats(result)[0]?.lastActivityAt, '2026-04-06T12:01:00.000Z');
 });
 
 test('new app-owned Tavern chats sort by chat update time before runtime activity syncs', async () => {
@@ -82,9 +97,9 @@ test('new app-owned Tavern chats sort by chat update time before runtime activit
 
     const result = await listChats();
 
-    assert.equal(result.chats[0]?.id, freshChatId);
-    assert.equal(result.chats[0]?.lastActivityAt, '2026-04-06T12:10:00.000Z');
-    assert.equal(result.chats[1]?.id, planningChatId);
+    assert.equal(listedChats(result)[0]?.id, freshChatId);
+    assert.equal(listedChats(result)[0]?.lastActivityAt, '2026-04-06T12:10:00.000Z');
+    assert.equal(listedChats(result)[1]?.id, planningChatId);
 });
 
 test('Tavern session sync does not overwrite app-owned chat labels', async () => {
@@ -111,8 +126,8 @@ test('Tavern session sync does not overwrite app-owned chat labels', async () =>
 
     const result = await listChats();
 
-    assert.equal(result.chats[0]?.displayName, 'Planning');
-    assert.equal(result.chats[0]?.title, 'Planning');
+    assert.equal(listedChats(result)[0]?.displayName, 'Planning');
+    assert.equal(listedChats(result)[0]?.title, 'Planning');
 });
 
 test('listChats hides archived app-owned Tavern chats while synced sessions keep their chat id', async () => {
@@ -123,7 +138,7 @@ test('listChats hides archived app-owned Tavern chats while synced sessions keep
     const result = await listChats();
     const projection = await getChatProjection(planningChatId);
 
-    assert.deepEqual(result.chats, []);
+    assert.deepEqual(listedChats(result), []);
     assert.equal(projection?.isArchived, true);
 });
 
@@ -187,17 +202,17 @@ test('listChats labels OpenClaw internal runtime sessions by source', async () =
 
     const result = await listChats();
 
-    assert.equal(result.chats[0]?.source.kind, 'cron');
-    assert.equal(result.chats[0]?.source.label, 'Cron');
-    assert.equal(result.chats[0]?.displayName, 'Cron session');
-    assert.equal(result.chats[0]?.latestSession?.title, 'Cron: daily-morning-briefing');
-    assert.equal(result.chats[0]?.title, 'Cron session');
+    assert.equal(listedChats(result)[0]?.source.kind, 'cron');
+    assert.equal(listedChats(result)[0]?.source.label, 'Cron');
+    assert.equal(listedChats(result)[0]?.displayName, 'Cron session');
+    assert.equal(listedChats(result)[0]?.latestSession?.title, 'Cron: daily-morning-briefing');
+    assert.equal(listedChats(result)[0]?.title, 'Cron session');
 });
 
 test('listChats ignores stale local Tavern chat rows without projected backing', async () => {
     const result = await listChats();
 
-    assert.deepEqual(result.chats, []);
+    assert.deepEqual(listedChats(result), []);
 });
 
 test('listChats titles projected runtime DMs from participants and platform metadata', async () => {
@@ -282,9 +297,9 @@ test('listChats titles projected runtime DMs from participants and platform meta
 
     const result = await listChats();
 
-    assert.equal(result.chats[0]?.conversationKind, 'direct');
-    assert.equal(result.chats[0]?.title, 'Discord DM Blippy <-> Zach Knickerbocker');
-    assert.deepEqual(result.chats[0]?.boundAgentIds, ['blippy']);
+    assert.equal(listedChats(result)[0]?.conversationKind, 'direct');
+    assert.equal(listedChats(result)[0]?.title, 'Discord DM Blippy <-> Zach Knickerbocker');
+    assert.deepEqual(listedChats(result)[0]?.boundAgentIds, ['blippy']);
 });
 
 test('listChats resolves projected DM targets through participant identities', async () => {
@@ -396,7 +411,7 @@ test('listChats resolves projected DM targets through participant identities', a
     });
 
     const result = await listChats();
-    const projectedDms = result.chats.filter((chat) => chat.scope === 'dm');
+    const projectedDms = listedChats(result).filter((chat) => chat.scope === 'dm');
 
     assert.equal(projectedDms.length, 2);
     assert.equal(projectedDms[0]?.displayName, 'Zach Knickerbocker');
@@ -476,11 +491,19 @@ test('projected DM participant sync preserves manual self profile links', async 
     const result = await listChats();
 
     assert.equal(
-        result.chats[0]?.targetParticipant?.id,
+        listedChats(result)[0]?.targetParticipant?.id,
         'participant:discord:global:external:778786269458464829'
     );
-    assert.equal(result.chats[0]?.targetParticipant?.profileId, 'profile:self');
+    assert.equal(listedChats(result)[0]?.targetParticipant?.profileId, 'profile:self');
 });
+
+function listedChats(result: ChatList) {
+    return result.ids.flatMap((chatId) => {
+        const chat = result.itemsById[chatId];
+
+        return chat ? [chat] : [];
+    });
+}
 
 async function seedPlanningProjection(input: { includeSession: boolean }) {
     await syncAgentsForRuntime({

@@ -8,6 +8,9 @@ export interface ChatStatusEventUtils {
         };
     };
     chat: {
+        get: {
+            invalidate: (input: { chatId: string }) => Promise<unknown>;
+        };
         log: {
             list: {
                 invalidate: () => Promise<unknown>;
@@ -63,15 +66,15 @@ export function createChatStatusEventHandlers(utils: ChatStatusEventUtils) {
     const invalidateLiveTurn = () => {
         Promise.all([
             utils.agent.activity.invalidate(),
-            utils.chat.log.list.invalidate(),
             utils.chat.status.list.invalidate(),
             utils.worker.list.invalidate(),
         ]).catch(() => undefined);
     };
 
-    const invalidateCompletedTurn = () => {
+    const invalidateCompletedTurn = (chatId: string) => {
         Promise.all([
             utils.agent.activity.invalidate(),
+            utils.chat.get.invalidate({ chatId }),
             utils.chat.log.list.invalidate(),
             utils.chat.status.list.invalidate(),
             utils.session.get.invalidate(),
@@ -93,7 +96,7 @@ export function createChatStatusEventHandlers(utils: ChatStatusEventUtils) {
                 completedAt: new Date().toISOString(),
                 turn: _turn,
             });
-            invalidateCompletedTurn();
+            invalidateCompletedTurn(_turn.chatId);
         },
         onTurnFailed: (input: { error: string; turn: ChatTurn }) => {
             debugChatEvent('turn.failed.event', {
@@ -106,7 +109,7 @@ export function createChatStatusEventHandlers(utils: ChatStatusEventUtils) {
                 error: input.error,
                 turn: input.turn,
             });
-            invalidateCompletedTurn();
+            invalidateCompletedTurn(input.turn.chatId);
         },
         onTurnProgress: (input: { step: ChatTurnProgressStep; turn: ChatTurn }) => {
             markChatTiming('client.turnProgressEvent', {

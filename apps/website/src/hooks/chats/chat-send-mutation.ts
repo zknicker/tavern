@@ -4,6 +4,9 @@ export interface ChatSendMutationContext {
 
 export interface ChatSendMutationUtils {
     chat: {
+        get: {
+            invalidate: (input: { chatId: string }) => Promise<unknown>;
+        };
         list: {
             invalidate: () => Promise<unknown>;
         };
@@ -133,11 +136,10 @@ export function createChatSendMutationHandlers(utils: ChatSendMutationUtils) {
             }
 
             await Promise.all([
+                utils.chat.get.invalidate({ chatId: result.chatId }),
                 utils.chat.list.invalidate(),
                 utils.chat.status.list.invalidate(),
-                utils.session.get.invalidate(),
                 utils.session.list.invalidate(),
-                utils.session.history.get.invalidate(),
             ]);
         },
     };

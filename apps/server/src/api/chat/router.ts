@@ -1,6 +1,7 @@
 import { createRouter } from '../trpc.ts';
 import { archiveChatRoute } from './archive.ts';
 import { createChatRoute } from './create.ts';
+import { getChatRoute } from './get.ts';
 import { listChatsRoute } from './list.ts';
 import { listChatLogRoute } from './log-list.ts';
 import { onChatTurnCompleted } from './on-turn-completed.ts';
@@ -16,6 +17,7 @@ import { updateChatRoute } from './update.ts';
 export const chatRouter = createRouter({
     archive: archiveChatRoute,
     create: createChatRoute,
+    get: getChatRoute,
     status: createRouter({
         list: listChatStatusesRoute,
     }),

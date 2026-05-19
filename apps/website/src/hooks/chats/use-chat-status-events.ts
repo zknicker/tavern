@@ -1,11 +1,11 @@
 import { trpc } from '../../lib/trpc.tsx';
 import { createChatStatusEventHandlers } from './chat-status-events.ts';
-import { useTimelineContext } from './use-timeline-context.tsx';
+import { useTimelineActions } from './use-timeline-context.tsx';
 
 export function useChatStatusEvents() {
     const utils = trpc.useUtils();
     const { clearTurn, completeTurn, failTurn, startTurn, updateReply, updateTurnProgress } =
-        useTimelineContext();
+        useTimelineActions();
     const handlers = createChatStatusEventHandlers({
         agent: utils.agent,
         chat: utils.chat,

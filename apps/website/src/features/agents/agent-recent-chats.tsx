@@ -14,7 +14,7 @@ export function AgentRecentChats({ agent }: { agent: AgentListOutput['agents'][n
     const [chatData] = useChatListSuspense();
     const chatStatusQuery = useChatStatus();
     const [sourceFilter, setSourceFilter] = React.useState<ChatSourceFilter>('all');
-    const chats = React.useMemo(() => buildChatList(chatData.chats), [chatData.chats]);
+    const chats = React.useMemo(() => buildChatList(chatData), [chatData]);
     const agentChats = React.useMemo(
         () => chats.filter((chat) => chat.boundAgentIds.includes(agent.id)),
         [agent.id, chats]

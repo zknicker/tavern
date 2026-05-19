@@ -39,8 +39,8 @@ export function AppSidebarChatList() {
     const archiveChat = useChatArchive();
     const [renamingChat, setRenamingChat] = React.useState<ChatListItem | null>(null);
     const recentChats = React.useMemo(
-        () => buildSidebarChatList(buildChatList(chatQuery.data?.chats ?? [])),
-        [chatQuery.data?.chats]
+        () => buildSidebarChatList(buildChatList(chatQuery.data)),
+        [chatQuery.data]
     );
     const draftChats = React.useMemo(
         () => buildSidebarDraftChatList(drafts.listDrafts(), recentChats),

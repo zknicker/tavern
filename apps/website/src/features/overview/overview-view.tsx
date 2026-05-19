@@ -1,4 +1,5 @@
-import type { AgentListOutput, ChatListOutput, WorkerListOutput } from '../../lib/trpc.tsx';
+import type { AgentListOutput, WorkerListOutput } from '../../lib/trpc.tsx';
+import type { ChatListItem } from '../chats/chat-list-data.ts';
 import { StartChatComposer } from '../chats/start-chat-composer.tsx';
 import type { CronListItem } from '../cron/cron-list-data.ts';
 import { OverviewActivityFeed } from './overview-activity-feed.tsx';
@@ -7,7 +8,7 @@ import { OverviewHeader } from './overview-header.tsx';
 interface OverviewViewProps {
     agent: AgentListOutput['agents'][number] | null;
     agents: AgentListOutput['agents'];
-    chats: ChatListOutput['chats'];
+    chats: ChatListItem[];
     heading: string;
     jobCount: number;
     memoryCount: number;

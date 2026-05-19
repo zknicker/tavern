@@ -25,6 +25,9 @@ capability lives; keep route and feature folders for page assembly.
 * Promote shared chat, agent, memory, automation, or stats UI to the matching
   `components/<capability>` or `hooks/<capability>` folder.
 * Keep feature folders for page-specific orchestration and local state.
+* Move chat workflow orchestration, optimistic reconciliation, and event cache
+  handling into `hooks/chats`. Chat feature components should receive ids,
+  narrow view models, and command callbacks.
 * Avoid generic buckets such as `shared`, `common`, `helpers`, and `misc` when
   a clearer owner exists.
 * Prefer short names scoped by folders over long prefixed filenames.

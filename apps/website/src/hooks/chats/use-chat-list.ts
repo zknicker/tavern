@@ -8,3 +8,11 @@ export function useChatList() {
 export function useChatListSuspense() {
     return trpc.chat.list.useSuspenseQuery(undefined, queryPolicy.agentRuntimeSnapshot);
 }
+
+export function useChatGet(input: { chatId: string }) {
+    return trpc.chat.get.useQuery(input, queryPolicy.agentRuntimeSnapshot);
+}
+
+export function useChatGetSuspense(input: { chatId: string }) {
+    return trpc.chat.get.useSuspenseQuery(input, queryPolicy.agentRuntimeSnapshot);
+}

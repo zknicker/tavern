@@ -19,7 +19,7 @@ import {
     updateTimelineTurnProgress,
 } from './chat-timeline-state.ts';
 
-interface TimelineContextValue {
+interface TimelineActionsValue {
     clearTurn: (input: { chatId: string; runId?: string }) => void;
     completeTurn: (input: { chatId: string; completedAt: string; turn: ChatTurn }) => void;
     failTurn: (input: { chatId: string; error: string; turn: ChatTurn }) => void;
@@ -30,7 +30,6 @@ interface TimelineContextValue {
     ) => void;
     setStatus: (chatId: string, status: ChatActiveStatus | null) => void;
     startTurn: (turn: ChatTurn) => void;
-    timelineStates: Record<string, ChatTimelineState>;
     updateReply: (update: ChatReplyUpdate) => void;
     updateTurnProgress: (input: {
         chatId: string;
@@ -40,7 +39,9 @@ interface TimelineContextValue {
     }) => void;
 }
 
-const TimelineContext = React.createContext<TimelineContextValue | null>(null);
+const TimelineActionsContext = React.createContext<TimelineActionsValue | null>(null);
+const TimelineStatesContext = React.createContext<Record<string, ChatTimelineState> | null>(null);
+const emptyRuntimeTimelineState = emptyTimelineState();
 
 function updateTimelineState(
     current: Record<string, ChatTimelineState>,
@@ -163,7 +164,7 @@ export function TimelineContextProvider({ children }: PropsWithChildren) {
         []
     );
 
-    const value = React.useMemo<TimelineContextValue>(
+    const actions = React.useMemo<TimelineActionsValue>(
         () => ({
             clearTurn,
             completeTurn,
@@ -172,7 +173,6 @@ export function TimelineContextProvider({ children }: PropsWithChildren) {
             setReply,
             setStatus,
             startTurn,
-            timelineStates,
             updateTurnProgress,
             updateReply,
         }),
@@ -184,21 +184,36 @@ export function TimelineContextProvider({ children }: PropsWithChildren) {
             setReply,
             setStatus,
             startTurn,
-            timelineStates,
             updateReply,
             updateTurnProgress,
         ]
     );
 
-    return React.createElement(TimelineContext.Provider, { value }, children);
+    return React.createElement(
+        TimelineActionsContext.Provider,
+        { value: actions },
+        React.createElement(TimelineStatesContext.Provider, { value: timelineStates }, children)
+    );
 }
 
-export function useTimelineContext() {
-    const context = React.useContext(TimelineContext);
+export function useTimelineActions() {
+    const context = React.useContext(TimelineActionsContext);
 
     if (context === null) {
-        throw new Error('useTimelineContext must be used within a TimelineContextProvider.');
+        throw new Error('useTimelineActions must be used within a TimelineContextProvider.');
     }
 
     return context;
+}
+
+export function useChatRuntimeTimelineState(chatId: string) {
+    const timelineStates = React.useContext(TimelineStatesContext);
+
+    if (timelineStates === null) {
+        throw new Error(
+            'useChatRuntimeTimelineState must be used within a TimelineContextProvider.'
+        );
+    }
+
+    return timelineStates[chatId] ?? emptyRuntimeTimelineState;
 }

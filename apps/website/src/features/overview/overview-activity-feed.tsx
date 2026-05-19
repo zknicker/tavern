@@ -9,13 +9,14 @@ import {
 import { Icon } from '../../components/ui/icon.tsx';
 import { useSessionDrawer } from '../../hooks/sessions/use-session-drawer.ts';
 import { formatRelativeTime, titleCase, truncate } from '../../lib/format.ts';
-import type { AgentListOutput, ChatListOutput, WorkerListOutput } from '../../lib/trpc.tsx';
+import type { AgentListOutput, WorkerListOutput } from '../../lib/trpc.tsx';
 import { cn } from '../../lib/utils.ts';
+import type { ChatListItem } from '../chats/chat-list-data.ts';
 import type { CronListItem } from '../cron/cron-list-data.ts';
 
 interface OverviewActivityFeedProps {
     agents: AgentListOutput['agents'];
-    chats: ChatListOutput['chats'];
+    chats: ChatListItem[];
     recentCronJobs: CronListItem[];
     workers: WorkerListOutput['workers'];
 }

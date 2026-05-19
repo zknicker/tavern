@@ -39,6 +39,18 @@ Rendering rules:
 * replace optimistic rows by durable message id
 * recover reloads from runtime durable message history first
 
+## App Data Flow
+
+The app reads chat list and detail data separately. `chat.list` is the
+lightweight ordered list contract for sidebars, overviews, and chat pickers.
+`chat.get` is the focused detail read for a single chat. Timeline rows come
+from `chat.log.list`, with live reply/progress state layered in by chat event
+hooks.
+
+Runtime progress and reply events update the volatile timeline layer directly.
+They should not refetch durable history on every event. Completion and failure
+events reconcile back to durable chat detail, status, sessions, and log reads.
+
 ## Contract
 
 The feature contract lives in [Chat API](../api/chat.md).

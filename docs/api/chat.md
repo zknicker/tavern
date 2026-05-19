@@ -50,6 +50,21 @@ GET    /api/events/ws?after_cursor=
 The transport can be local HTTP, tRPC wrapping, or a TypeScript SDK method. The
 contract stays the same.
 
+## Tavern App Reads
+
+The Tavern app keeps list and detail reads separate:
+
+* `chat.list` returns ordered chat ids plus lightweight list items. It is the
+  sidebar and overview contract, not a full chat detail payload.
+* `chat.get` returns one full chat record by `chatId`.
+* `chat.log.list` returns paged durable timeline rows for one chat.
+* `chat.status.list` returns volatile active reply and progress state.
+
+Invalidate `chat.list` when membership or list ordering can change. Invalidate
+`chat.get` when one chat's detail fields can change. Live turn progress and
+reply events should update the app's volatile timeline state directly; durable
+log invalidation belongs at final completion or failure.
+
 ## Messages
 
 `POST /api/chats/{chat_id}/messages` creates a durable user, assistant, or

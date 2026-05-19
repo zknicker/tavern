@@ -4,8 +4,11 @@ export function useChatUpdate() {
     const utils = trpc.useUtils();
 
     return trpc.chat.update.useMutation({
-        onSuccess: async () => {
-            await utils.chat.list.invalidate();
+        onSuccess: async (_result, input) => {
+            await Promise.all([
+                utils.chat.get.invalidate({ chatId: input.chatId }),
+                utils.chat.list.invalidate(),
+            ]);
         },
     });
 }

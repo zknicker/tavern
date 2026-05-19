@@ -8,34 +8,40 @@ import {
 import type { ToolMention } from '../tool-mentions/tool-mention-types.ts';
 import { handleChatComposerKeyDown } from './chat-composer-keyboard.ts';
 import type { ChatContextFullness } from './chat-context-fullness.ts';
-import type { ChatListItem } from './chat-list-data.ts';
 import {
     ChatMessageComposerSurface,
     type ChatMessageComposerVariant,
 } from './chat-message-composer-surface.tsx';
 
 export function ChatMessageComposer({
+    agentRuntimeSyncLabel = null,
     agents,
-    chat,
+    boundAgentIds,
+    canSend: chatCanSend,
+    chatId,
     contextFullness = null,
+    isDisabled,
     isReplyActive,
     variant = 'detail',
 }: {
+    agentRuntimeSyncLabel?: string | null;
     agents: AgentListOutput['agents'];
-    chat: ChatListItem;
+    boundAgentIds: string[];
+    canSend: boolean;
+    chatId: string;
     contextFullness?: ChatContextFullness | null;
+    isDisabled: boolean;
     isReplyActive: boolean;
     variant?: ChatMessageComposerVariant;
 }) {
     const sendMessage = useChatSend();
-    const boundAgentIds = React.useMemo(() => chat.boundAgentIds, [chat.boundAgentIds]);
     const [agentId, setAgentId] = React.useState<string>(boundAgentIds[0] ?? '');
     const [content, setContent] = React.useState('');
     const [toolMentions, setToolMentions] = React.useState<ToolMention[]>([]);
     const trimmedContent = content.trim();
     const canSend =
-        chat.canSend &&
-        !chat.isDisabled &&
+        chatCanSend &&
+        !isDisabled &&
         !isReplyActive &&
         !sendMessage.isPending &&
         agentId.length > 0 &&
@@ -72,7 +78,7 @@ export function ChatMessageComposer({
 
         await sendMessage.mutateAsync({
             agentId,
-            chatId: chat.id,
+            chatId,
             clientMessageId: `msg_${crypto.randomUUID()}`,
             content: submittedContent,
             metadata,
@@ -99,8 +105,8 @@ export function ChatMessageComposer({
             content={content}
             contextFullness={contextFullness}
             disabled={
-                chat.isDisabled ||
-                !chat.canSend ||
+                isDisabled ||
+                !chatCanSend ||
                 isReplyActive ||
                 sendMessage.isPending ||
                 boundAgentIds.length === 0
@@ -113,10 +119,10 @@ export function ChatMessageComposer({
             onTextKeyDown={handleKeyDown}
             onToolMentionsChange={setToolMentions}
             placeholder={getPlaceholder({
-                agentRuntimeSyncLabel: chat.agentRuntimeSyncLabel,
+                agentRuntimeSyncLabel,
                 boundAgentCount: boundAgentIds.length,
-                canSend: chat.canSend,
-                isDisabled: chat.isDisabled,
+                canSend: chatCanSend,
+                isDisabled,
                 isReplyActive,
                 variant,
             })}

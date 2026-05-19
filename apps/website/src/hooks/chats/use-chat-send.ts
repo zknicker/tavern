@@ -1,12 +1,12 @@
 import { trpc } from '../../lib/trpc.tsx';
 import { createChatSendMutationHandlers } from './chat-send-mutation.ts';
 import { useChatTimelineStore } from './use-chat-timeline-store.tsx';
-import { useTimelineContext } from './use-timeline-context.tsx';
+import { useTimelineActions } from './use-timeline-context.tsx';
 
 export function useChatSend() {
     const utils = trpc.useUtils();
     const timeline = useChatTimelineStore();
-    const timelineState = useTimelineContext();
+    const timelineState = useTimelineActions();
 
     return trpc.chat.send.useMutation(
         createChatSendMutationHandlers({

@@ -14,7 +14,7 @@ export function Chats() {
     const [agents] = useAgentListSuspense();
     const [chatData] = useChatListSuspense();
     const avatarDirectory = useAgentAvatarDirectory(agents.agents);
-    const chats = React.useMemo(() => buildChatList(chatData.chats), [chatData.chats]);
+    const chats = React.useMemo(() => buildChatList(chatData), [chatData]);
     const chatStatusQuery = useChatStatus();
     const updateChat = useChatUpdate();
     const archiveChat = useChatArchive();

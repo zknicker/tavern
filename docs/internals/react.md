@@ -19,6 +19,18 @@ read_when:
 * Keep hooks narrow and data-first.
 * Promote reusable hooks to `src/hooks/<capability>` once ownership is clear.
 * Colocate feature-only hooks with the feature.
+* Keep durable server state in React Query. Use scoped context or a tiny feature
+  store only for volatile UI state that has not become durable server data.
+* For chat and other streaming surfaces, patch exact volatile state from live
+  events. Do not refetch durable list or log queries for every progress token.
+
+## Queries
+
+* Name APIs as `<namespace>.<verb>` unless a narrower exception is clearer.
+* Make `*.list` the normal lightweight list read for a namespace.
+* Use focused `*.get` reads for detail screens.
+* Invalidate list reads for membership or ordering changes.
+* Invalidate detail reads for single-record changes.
 
 ## Components
 
@@ -27,5 +39,8 @@ read_when:
 * Split large views by responsibility before adding more branching.
 * Share reusable rows, badges, grouping helpers, formatting, and view helpers;
   avoid wrapper-only component chains.
+* Prefer nested compositional pieces with clear ownership. A route should choose
+  ids and states; hooks should coordinate data; components should render view
+  models and emit commands.
 
 Frontend layout lives in [frontend.md](frontend.md).

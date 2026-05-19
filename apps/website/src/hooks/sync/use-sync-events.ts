@@ -8,6 +8,7 @@ export function useSyncEvents() {
         onData: () => {
             Promise.all([
                 utils.agent.activity.invalidate(),
+                utils.chat.get.invalidate(),
                 utils.chat.list.invalidate(),
                 utils.chat.log.list.invalidate(),
                 utils.log.list.invalidate(),

@@ -13,7 +13,7 @@ import {
     resolveParticipantIdsForSourceIdentities,
 } from '../storage/participants.ts';
 import { listSessionProjections, parseSessionProjection } from '../storage/sessions.ts';
-import { chatListSchema } from './contracts.ts';
+import { type Chat, chatListSchema, chatSchema } from './contracts.ts';
 import { resolveChatScope, resolveObservedConversationKind } from './conversation-kind.ts';
 import { findChatSessionKeyForAgent } from './session-keys.ts';
 import { buildChatId, compareChatActors, resolveChatIdentityFromId } from './shared.ts';
@@ -190,6 +190,23 @@ function formatChatActorNames(actors: Array<{ name: string }>) {
 }
 
 export async function listChats() {
+    const chats = await listChatDetails();
+    const itemsById = Object.fromEntries(chats.map((chat) => [chat.id, toChatListItem(chat)]));
+
+    return chatListSchema.parse({
+        ids: chats.map((chat) => chat.id),
+        itemsById,
+    });
+}
+
+export async function getChat(input: { chatId: string }) {
+    const chats = await listChatDetails();
+    const chat = chats.find((entry) => entry.id === input.chatId) ?? null;
+
+    return chat ? chatSchema.parse(chat) : null;
+}
+
+export async function listChatDetails() {
     const [agents, participants, sessionRecords, chatRecords] = await Promise.all([
         listAgents(),
         listParticipants(),
@@ -233,167 +250,185 @@ export async function listChats() {
         )
     );
 
-    return chatListSchema.parse({
-        chats: [...chatIds]
-            .map((chatId) => {
-                const agentRuntimeChatEntry = agentRuntimeChatsById.get(chatId) ?? null;
-                const agentRuntimeChat = agentRuntimeChatEntry?.runtimeChat ?? null;
-                const chatSessions = sessionsByChatId.get(chatId) ?? [];
-                const identity = resolveProjectedChatIdentity({
-                    chatId,
-                    runtimeChat: agentRuntimeChat,
-                });
+    return [...chatIds]
+        .map((chatId) => {
+            const agentRuntimeChatEntry = agentRuntimeChatsById.get(chatId) ?? null;
+            const agentRuntimeChat = agentRuntimeChatEntry?.runtimeChat ?? null;
+            const chatSessions = sessionsByChatId.get(chatId) ?? [];
+            const identity = resolveProjectedChatIdentity({
+                chatId,
+                runtimeChat: agentRuntimeChat,
+            });
 
-                if (!identity) {
-                    return null;
-                }
+            if (!identity) {
+                return null;
+            }
 
-                const boundAgentIds = [
-                    ...new Set([
-                        ...(agentRuntimeChatEntry
-                            ? resolveAgentParticipants({
-                                  participants: agentRuntimeChat?.participants ?? [],
-                              })
-                            : []),
-                        ...(agentRuntimeChatEntry
-                            ? (agentRuntimeChat?.bindings ?? []).map((binding) => binding.agentId)
-                            : []),
-                        ...chatSessions.map((session) => session.agentId),
-                    ]),
-                ].sort((left, right) => left.localeCompare(right));
-                const uniqueParticipants = [
-                    ...boundAgentIds
-                        .map((agentId) => {
-                            const agent = agentById.get(agentId);
-
-                            if (!agent) {
-                                return null;
-                            }
-
-                            return {
-                                actorId: agent.id,
-                                actorType: 'agent' as const,
-                                avatar: resolveAgentAvatar(agent),
-                                name: resolveAgentName(agent),
-                                primaryColor: buildAgentPalette(agent).accentFrom,
-                            };
-                        })
-                        .flatMap((participant) => (participant ? [participant] : [])),
-                    ...resolveObservedParticipants({
-                        idsByRuntimeParticipantKey: participantIdsByRuntimeParticipantKey,
-                        participantById,
-                        participants: agentRuntimeChat?.participants ?? [],
-                        chatId: agentRuntimeChatEntry?.record.id ?? null,
-                    }),
-                ].sort(compareChatActors);
-                const runtimeLastActivityAt = [...chatSessions].reduce<string | null>(
-                    (latest, session) =>
-                        compareOptionalTimestamp(
-                            latest,
-                            session.lastActivityAt ?? session.startedAt
-                        ) > 0
-                            ? (session.lastActivityAt ?? session.startedAt)
-                            : latest,
-                    null
-                );
-                const lastActivityAt =
-                    runtimeLastActivityAt ??
-                    (identity.type === 'tavern'
-                        ? (agentRuntimeChatEntry?.record.updatedAt ?? null)
-                        : null);
-                const latestSession =
-                    [...chatSessions]
-                        .sort((left, right) =>
-                            compareOptionalTimestamp(
-                                left.lastActivityAt ?? left.startedAt,
-                                right.lastActivityAt ?? right.startedAt
-                            )
-                        )
-                        .map((session) => ({
-                            agentId: session.agentId,
-                            lastActivityAt: session.lastActivityAt ?? session.startedAt,
-                            platform: session.platform,
-                            sessionId: session.sessionId ?? null,
-                            sessionKey: session.key,
-                            title: session.title,
-                        }))[0] ?? null;
-                const targetParticipant = toChatTargetParticipant(
-                    getPrimaryObservedParticipant({
-                        idsByRuntimeParticipantKey: participantIdsByRuntimeParticipantKey,
-                        participantById,
-                        participants: agentRuntimeChat?.participants ?? [],
-                        chatId: agentRuntimeChatEntry?.record.id ?? null,
-                    })
-                );
-                const source = resolveChatSource({
-                    identity,
-                    latestSessionKey: latestSession?.sessionKey ?? null,
-                    latestSessionPlatform: latestSession?.platform ?? null,
-                    chatId: agentRuntimeChatEntry?.record.id ?? null,
-                    runtimePlatform: agentRuntimeChat?.platform ?? null,
-                });
-                const displayName = presentProjectedChatDisplayName({
-                    identity,
-                    runtimeChat: agentRuntimeChat,
-                    source,
-                    targetParticipant,
-                });
-                const conversationKind =
-                    identity.type === 'tavern' && !identity.target
-                        ? 'group'
-                        : resolveObservedConversationKind({
-                              configured: agentRuntimeChat !== null,
-                              participants: uniqueParticipants,
-                              target: identity.target,
-                              type: identity.type,
-                          });
-                const title = presentProjectedChatTitle({
-                    conversationKind,
-                    displayName,
-                    participants: uniqueParticipants,
-                    platform: identity.type,
-                    source,
-                });
-                const canSend =
-                    agentRuntimeChat !== null &&
-                    boundAgentIds.some((agentId) => {
+            const boundAgentIds = [
+                ...new Set([
+                    ...(agentRuntimeChatEntry
+                        ? resolveAgentParticipants({
+                              participants: agentRuntimeChat?.participants ?? [],
+                          })
+                        : []),
+                    ...(agentRuntimeChatEntry
+                        ? (agentRuntimeChat?.bindings ?? []).map((binding) => binding.agentId)
+                        : []),
+                    ...chatSessions.map((session) => session.agentId),
+                ]),
+            ].sort((left, right) => left.localeCompare(right));
+            const uniqueParticipants = [
+                ...boundAgentIds
+                    .map((agentId) => {
                         const agent = agentById.get(agentId);
 
-                        return agent
-                            ? Boolean(findChatSessionKeyForAgent(agentRuntimeChat, agent.id))
-                            : false;
-                    });
+                        if (!agent) {
+                            return null;
+                        }
 
-                return {
-                    boundAgentIds,
-                    canSend,
-                    conversationKind,
-                    displayName,
-                    externalId: identity.externalId,
-                    framework: identity.type === 'tavern' ? 'tavern' : 'agentRuntime',
-                    id: chatId,
-                    isEnabled: canSend,
-                    lastActivityAt,
-                    latestSession,
-                    participants: uniqueParticipants,
-                    agentRuntimeSync: null,
-                    platformMetadata: agentRuntimeChat?.platformMetadata ?? null,
-                    scope: resolveChatScope(identity.target),
-                    sessionCount: chatSessions.length,
-                    source,
-                    target: identity.target,
-                    targetParticipant,
-                    title,
-                    type: identity.type,
-                };
-            })
-            .flatMap((chat) => (chat ? [chat] : []))
-            .sort(
-                (left, right) =>
-                    compareOptionalTimestamp(left.lastActivityAt, right.lastActivityAt) ||
-                    left.title.localeCompare(right.title)
-            ),
-    });
+                        return {
+                            actorId: agent.id,
+                            actorType: 'agent' as const,
+                            avatar: resolveAgentAvatar(agent),
+                            name: resolveAgentName(agent),
+                            primaryColor: buildAgentPalette(agent).accentFrom,
+                        };
+                    })
+                    .flatMap((participant) => (participant ? [participant] : [])),
+                ...resolveObservedParticipants({
+                    idsByRuntimeParticipantKey: participantIdsByRuntimeParticipantKey,
+                    participantById,
+                    participants: agentRuntimeChat?.participants ?? [],
+                    chatId: agentRuntimeChatEntry?.record.id ?? null,
+                }),
+            ].sort(compareChatActors);
+            const runtimeLastActivityAt = [...chatSessions].reduce<string | null>(
+                (latest, session) =>
+                    compareOptionalTimestamp(latest, session.lastActivityAt ?? session.startedAt) >
+                    0
+                        ? (session.lastActivityAt ?? session.startedAt)
+                        : latest,
+                null
+            );
+            const lastActivityAt =
+                runtimeLastActivityAt ??
+                (identity.type === 'tavern'
+                    ? (agentRuntimeChatEntry?.record.updatedAt ?? null)
+                    : null);
+            const latestSession =
+                [...chatSessions]
+                    .sort((left, right) =>
+                        compareOptionalTimestamp(
+                            left.lastActivityAt ?? left.startedAt,
+                            right.lastActivityAt ?? right.startedAt
+                        )
+                    )
+                    .map((session) => ({
+                        agentId: session.agentId,
+                        lastActivityAt: session.lastActivityAt ?? session.startedAt,
+                        platform: session.platform,
+                        sessionId: session.sessionId ?? null,
+                        sessionKey: session.key,
+                        title: session.title,
+                    }))[0] ?? null;
+            const targetParticipant = toChatTargetParticipant(
+                getPrimaryObservedParticipant({
+                    idsByRuntimeParticipantKey: participantIdsByRuntimeParticipantKey,
+                    participantById,
+                    participants: agentRuntimeChat?.participants ?? [],
+                    chatId: agentRuntimeChatEntry?.record.id ?? null,
+                })
+            );
+            const source = resolveChatSource({
+                identity,
+                latestSessionKey: latestSession?.sessionKey ?? null,
+                latestSessionPlatform: latestSession?.platform ?? null,
+                chatId: agentRuntimeChatEntry?.record.id ?? null,
+                runtimePlatform: agentRuntimeChat?.platform ?? null,
+            });
+            const displayName = presentProjectedChatDisplayName({
+                identity,
+                runtimeChat: agentRuntimeChat,
+                source,
+                targetParticipant,
+            });
+            const conversationKind =
+                identity.type === 'tavern' && !identity.target
+                    ? 'group'
+                    : resolveObservedConversationKind({
+                          configured: agentRuntimeChat !== null,
+                          participants: uniqueParticipants,
+                          target: identity.target,
+                          type: identity.type,
+                      });
+            const title = presentProjectedChatTitle({
+                conversationKind,
+                displayName,
+                participants: uniqueParticipants,
+                platform: identity.type,
+                source,
+            });
+            const canSend =
+                agentRuntimeChat !== null &&
+                boundAgentIds.some((agentId) => {
+                    const agent = agentById.get(agentId);
+
+                    return agent
+                        ? Boolean(findChatSessionKeyForAgent(agentRuntimeChat, agent.id))
+                        : false;
+                });
+
+            return {
+                boundAgentIds,
+                canSend,
+                conversationKind,
+                displayName,
+                externalId: identity.externalId,
+                framework: identity.type === 'tavern' ? 'tavern' : 'agentRuntime',
+                id: chatId,
+                isEnabled: canSend,
+                lastActivityAt,
+                latestSession,
+                participants: uniqueParticipants,
+                agentRuntimeSync: null,
+                platformMetadata: agentRuntimeChat?.platformMetadata ?? null,
+                scope: resolveChatScope(identity.target),
+                sessionCount: chatSessions.length,
+                source,
+                target: identity.target,
+                targetParticipant,
+                title,
+                type: identity.type,
+            } satisfies Chat;
+        })
+        .flatMap((chat) => (chat ? [chatSchema.parse(chat)] : []))
+        .sort(
+            (left, right) =>
+                compareOptionalTimestamp(left.lastActivityAt, right.lastActivityAt) ||
+                left.title.localeCompare(right.title)
+        );
+}
+
+function toChatListItem(chat: Chat) {
+    return {
+        agentRuntimeSync: chat.agentRuntimeSync,
+        boundAgentIds: chat.boundAgentIds,
+        canSend: chat.canSend,
+        conversationKind: chat.conversationKind,
+        displayName: chat.displayName,
+        framework: chat.framework,
+        id: chat.id,
+        isEnabled: chat.isEnabled,
+        lastActivityAt: chat.lastActivityAt,
+        latestSession: chat.latestSession,
+        participants: chat.participants,
+        scope: chat.scope,
+        sessionCount: chat.sessionCount,
+        source: chat.source,
+        targetParticipant: chat.targetParticipant,
+        title: chat.title,
+        type: chat.type,
+    };
 }
 
 async function buildRuntimeParticipantIdMap(entries: RuntimeChatEntry[]) {

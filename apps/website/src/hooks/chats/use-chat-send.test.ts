@@ -24,6 +24,11 @@ test('useChatSend stores the local user row in app state until the log catches u
 
     const mutation = createChatSendMutationHandlers({
         chat: {
+            get: {
+                invalidate: async ({ chatId }) => {
+                    invalidatedQueries.push(`chat.get:${chatId}`);
+                },
+            },
             list: {
                 invalidate: async () => {
                     invalidatedQueries.push('chat.list');
@@ -103,11 +108,10 @@ test('useChatSend stores the local user row in app state until the log catches u
     await mutation.onSuccess(result, input, context);
 
     expect(invalidatedQueries).toEqual([
+        'chat.get:chat-1',
         'chat.list',
         'chat.status.list',
-        'session.get',
         'session.list',
-        'session.history.get',
     ]);
     expect(acceptedMessages).toEqual([
         {
@@ -140,6 +144,9 @@ test('useChatSend removes the local user row if the send fails', async () => {
 
     const mutation = createChatSendMutationHandlers({
         chat: {
+            get: {
+                invalidate: async () => undefined,
+            },
             list: {
                 invalidate: async () => undefined,
             },

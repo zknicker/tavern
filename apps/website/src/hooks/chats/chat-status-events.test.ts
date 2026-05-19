@@ -14,6 +14,11 @@ test('turn completion preserves the handoff and invalidates transcript queries',
             },
         },
         chat: {
+            get: {
+                invalidate: async ({ chatId }: { chatId: string }) => {
+                    invalidatedQueries.push(`chat.get:${chatId}`);
+                },
+            },
             log: {
                 list: {
                     invalidate: async () => {
@@ -89,6 +94,7 @@ test('turn completion preserves the handoff and invalidates transcript queries',
     expect(completedTurns).toEqual(['run-1']);
     expect(invalidatedQueries).toEqual([
         'agent.activity',
+        'chat.get:chat-1',
         'chat.log.list',
         'chat.status.list',
         'session.get',
@@ -111,6 +117,11 @@ test('turn start keeps the status refresh narrow', async () => {
             },
         },
         chat: {
+            get: {
+                invalidate: async ({ chatId }: { chatId: string }) => {
+                    invalidatedQueries.push(`chat.get:${chatId}`);
+                },
+            },
             log: {
                 list: {
                     invalidate: async () => {
@@ -200,6 +211,11 @@ test('turn progress updates local timeline state and refreshes live chat activit
             },
         },
         chat: {
+            get: {
+                invalidate: async ({ chatId }: { chatId: string }) => {
+                    invalidatedQueries.push(`chat.get:${chatId}`);
+                },
+            },
             log: {
                 list: {
                     invalidate: async () => {
@@ -280,12 +296,7 @@ test('turn progress updates local timeline state and refreshes live chat activit
     });
 
     expect(progress).toEqual(['run-1:tool:web']);
-    expect(invalidatedQueries).toEqual([
-        'agent.activity',
-        'chat.log.list',
-        'chat.status.list',
-        'worker.list',
-    ]);
+    expect(invalidatedQueries).toEqual(['agent.activity', 'chat.status.list', 'worker.list']);
 });
 
 test('turn reply updates local timeline state and refreshes live chat activity', () => {
@@ -301,6 +312,11 @@ test('turn reply updates local timeline state and refreshes live chat activity',
             },
         },
         chat: {
+            get: {
+                invalidate: async ({ chatId }: { chatId: string }) => {
+                    invalidatedQueries.push(`chat.get:${chatId}`);
+                },
+            },
             log: {
                 list: {
                     invalidate: async () => {
@@ -377,12 +393,7 @@ test('turn reply updates local timeline state and refreshes live chat activity',
     });
 
     expect(updates).toEqual(['run-1:Done']);
-    expect(invalidatedQueries).toEqual([
-        'agent.activity',
-        'chat.log.list',
-        'chat.status.list',
-        'worker.list',
-    ]);
+    expect(invalidatedQueries).toEqual(['agent.activity', 'chat.status.list', 'worker.list']);
 });
 
 test('turn failure marks the local timeline failed and invalidates transcript queries', async () => {
@@ -398,6 +409,11 @@ test('turn failure marks the local timeline failed and invalidates transcript qu
             },
         },
         chat: {
+            get: {
+                invalidate: async ({ chatId }: { chatId: string }) => {
+                    invalidatedQueries.push(`chat.get:${chatId}`);
+                },
+            },
             log: {
                 list: {
                     invalidate: async () => {
@@ -476,6 +492,7 @@ test('turn failure marks the local timeline failed and invalidates transcript qu
     expect(failedTurns).toEqual(['run-1:Docker is not running']);
     expect(invalidatedQueries).toEqual([
         'agent.activity',
+        'chat.get:chat-1',
         'chat.log.list',
         'chat.status.list',
         'session.get',

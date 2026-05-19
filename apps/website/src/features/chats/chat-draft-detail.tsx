@@ -4,7 +4,7 @@ import { mergeTimelineMessages } from '../../hooks/chats/chat-timeline-messages.
 import type { ChatTimelineState } from '../../hooks/chats/chat-timeline-state.ts';
 import type { ChatStartDraft } from '../../hooks/chats/use-chat-start-drafts.tsx';
 import { useChatTimelineRows } from '../../hooks/chats/use-chat-timeline-store.tsx';
-import { useTimelineContext } from '../../hooks/chats/use-timeline-context.tsx';
+import { useChatRuntimeTimelineState } from '../../hooks/chats/use-timeline-context.tsx';
 import { markChatTiming } from '../../lib/chat-timing.ts';
 import type { ChatStatusListOutput } from '../../lib/trpc.tsx';
 import { ChatDetailFrame } from './chat-detail-frame.tsx';
@@ -27,8 +27,7 @@ export function ChatDraftDetail({
     const boundAgentIds = React.useMemo(() => (draft ? [draft.agentId] : []), [draft]);
     const [agentId, setAgentId] = React.useState(draft?.agentId ?? '');
     const [content, setContent] = React.useState('');
-    const { timelineStates } = useTimelineContext();
-    const handoffState = timelineStates[timelineChatId];
+    const handoffState = useChatRuntimeTimelineState(timelineChatId);
     const timeline = useChatTimelineRows({
         chatId: timelineChatId,
         limit: draftTimelineLimit,

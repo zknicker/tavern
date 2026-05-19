@@ -8,6 +8,7 @@ import { useCronList } from '../../hooks/cron/use-cron-list.ts';
 import { useCronRuns } from '../../hooks/cron/use-cron-runs.ts';
 import { useSessionListSuspense } from '../../hooks/sessions/use-session-list.ts';
 import { useWorkerListSuspense } from '../../hooks/workers/use-worker-list.ts';
+import { buildChatList } from '../chats/chat-list-data.ts';
 import { buildCronList } from '../cron/cron-list-data.ts';
 import { OverviewView } from './overview-view.tsx';
 
@@ -24,12 +25,13 @@ export function Overview() {
         () => buildCronList(cronJobsQuery.data?.jobs ?? [], cronRunsQuery.data?.runs ?? []),
         [cronJobsQuery.data?.jobs, cronRunsQuery.data?.runs]
     );
+    const chatItems = React.useMemo(() => buildChatList(chats), [chats]);
 
     return (
         <OverviewView
             agent={agent}
             agents={agents.agents}
-            chats={chats.chats}
+            chats={chatItems}
             heading="The Tavern is quiet tonight, Zach."
             jobCount={cronJobsQuery.data?.jobs.length ?? 0}
             memoryCount={0}
