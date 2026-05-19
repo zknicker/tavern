@@ -10,7 +10,7 @@ import type { TavernAgentRuntimeClient } from '../agent-runtime/client.ts';
 import { createAgentRuntimeClientForConnection } from '../agent-runtime/client-factory.ts';
 import { skillIdSchema } from '../skills/contracts.ts';
 import { findMissingEnabledSkillIds, resolveEnabledSkillIds } from '../skills/enablement.ts';
-import { listSkillPackageIds, saveAgentSkillSelections } from '../skills/service.ts';
+import { listSkillIds } from '../skills/service.ts';
 import * as agentProfileStore from '../storage/agent-profiles.ts';
 import {
     getActiveProjectionRuntimeId,
@@ -261,9 +261,16 @@ export async function saveCatalogAgentSettings(
     }
 
     const runtimeClient = client ?? (await createClientForAgentProjection(projection));
-    const availableSkillIds = await listSkillPackageIds();
+    let availableSkillIdsForResponse: null | string[] = null;
+    let nextEnabledSkillIds: string[] | undefined;
 
     if (input.enabledSkillIds !== undefined) {
+        const availableSkillIds = await listSkillIds({
+            agentId: input.agentId,
+            client: runtimeClient,
+            runtimeId: projection.runtimeId,
+        });
+        availableSkillIdsForResponse = availableSkillIds;
         const missingSkillIds = findMissingEnabledSkillIds(
             input.enabledSkillIds,
             availableSkillIds
@@ -272,35 +279,26 @@ export async function saveCatalogAgentSettings(
         if (missingSkillIds.length > 0) {
             throw new Error(`Unknown skills: ${missingSkillIds.join(', ')}.`);
         }
-    }
 
-    const nextEnabledSkillIds =
-        input.enabledSkillIds === undefined
-            ? parseEnabledSkillIds(projection)
-            : resolveEnabledSkillIds(input.enabledSkillIds, availableSkillIds);
-
-    if (input.enabledSkillIds !== undefined) {
-        await saveAgentSkillSelections({
-            agentId: input.agentId,
-            enabledSkillIds: nextEnabledSkillIds,
-        });
-        await updateAgentEnabledSkillIds({
-            agentId: input.agentId,
-            enabledSkillIds: nextEnabledSkillIds,
-        });
+        nextEnabledSkillIds = resolveEnabledSkillIds(input.enabledSkillIds, availableSkillIds);
     }
 
     let savedAgentRuntimeAgent: AgentRuntimeAgent | null = null;
-    if (input.displayName !== undefined) {
+    if (input.displayName !== undefined || input.enabledSkillIds !== undefined) {
         const agentRuntimeAgent = await getAgentRuntimeAgentConfig(projection.id, runtimeClient);
 
         if (!agentRuntimeAgent) {
             throw new Error(`No runtime agent named "${projection.id}" exists.`);
         }
 
+        const { enabledSkillIds: _currentEnabledSkillIds, ...agentRuntimeConfigWithoutSkills } =
+            toAgentRuntimeCreateAgentConfig(agentRuntimeAgent);
         savedAgentRuntimeAgent = await saveAgentRuntimeAgentConfig(
             {
-                ...toAgentRuntimeCreateAgentConfig(agentRuntimeAgent),
+                ...agentRuntimeConfigWithoutSkills,
+                ...(nextEnabledSkillIds === undefined
+                    ? {}
+                    : { enabledSkillIds: nextEnabledSkillIds }),
                 name: input.displayName ?? agentRuntimeAgent.name,
             },
             runtimeClient
@@ -312,14 +310,17 @@ export async function saveCatalogAgentSettings(
         runtimeId: projection.runtimeId,
     });
 
-    if (input.displayName !== undefined) {
+    if (savedAgentRuntimeAgent) {
         await syncAgentsForRuntime({
             agents: (await runtimeClient.listAgents()).agents,
             runtimeId: projection.runtimeId,
         });
+    }
+
+    if (input.enabledSkillIds !== undefined) {
         await updateAgentEnabledSkillIds({
             agentId: input.agentId,
-            enabledSkillIds: nextEnabledSkillIds,
+            enabledSkillIds: nextEnabledSkillIds ?? [],
         });
     }
 
@@ -341,7 +342,7 @@ export async function saveCatalogAgentSettings(
                 profile
             );
 
-    return toAgentCatalogItem(agent, availableSkillIds);
+    return toAgentCatalogItem(agent, availableSkillIdsForResponse);
 }
 
 export async function saveCatalogAgentProfile(input: {

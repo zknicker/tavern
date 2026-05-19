@@ -1,4 +1,3 @@
-import { checkSkillUpdatesJob } from './check-skill-updates-job.ts';
 import { syncRuntimeAgentsJob } from './sync-agent-runtime-agents-job.ts';
 import { syncRuntimeChatsJob } from './sync-agent-runtime-chats-job.ts';
 import { syncRuntimeConfigJob } from './sync-agent-runtime-config-job.ts';
@@ -9,7 +8,6 @@ import { syncCodexUsageJob } from './sync-codex-usage-job.ts';
 import { syncOpenRouterUsageJob } from './sync-openrouter-usage-job.ts';
 
 export const jobDefinitions = [
-    checkSkillUpdatesJob,
     syncClaudeCodeUsageJob,
     syncCodexUsageJob,
     syncOpenRouterUsageJob,

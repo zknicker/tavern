@@ -36,7 +36,7 @@ capabilities. It is not a second product API.
 | Agents and files | `/agents`, `/agents/{id}`, `/agents/{id}/config`, `/agents/{id}/files`, `/agents/{id}/files/{path}` |
 | Sessions and execution evidence | `/sessions`, `/sessions/{sessionKey}/messages`, `/sessions/{sessionKey}/graph`, `/sessions/{sessionKey}/prompt`, `/sessions/{sessionKey}/resync` |
 | Cron | `/cron-jobs`, `/cron-jobs/{id}`, `/cron-jobs/{id}/run`, `/cron-jobs/{id}/runs`, `/cron-runs`, `/cron-runs/{id}` |
-| Skills | `/skills`, `/skills/{id}`, `/skills/install`, `/skills/{id}/config` |
+| Skills | `/skills`, `/skills/{id}`, `/skills/{id}/config` |
 | Memory, models, and access | `/memory/settings`, `/memory/status`, `/models`, `/model-access`, `/model-access/claude`, `/model-access/codex`, `/model-access/openrouter` |
 | Platform bindings | `/bindings`, `/bindings/{id}` |
 | Runtime chat control | `/chats`, `/chats/{chatId}/messages`, `/chat-status`, websocket `/chat` |
@@ -48,7 +48,7 @@ capabilities. It is not a second product API.
 | `packages/tavern-api/src/runtime/routes.ts` | Admin route names |
 | `packages/tavern-api/src/runtime/contracts.ts` | Request and response schemas |
 | `packages/tavern-api/src/runtime/model-identity.ts` | Model provider and identity shapes |
-| `packages/tavern-api/src/runtime/skills.ts` | Skill package and install shapes |
+| `packages/tavern-api/src/runtime/skills.ts` | Runtime skill file path helpers |
 | `apps/runtime/src/tavern/` | Runtime handlers |
 | `@tavern/sdk` | Typed client calls over the Tavern API |
 

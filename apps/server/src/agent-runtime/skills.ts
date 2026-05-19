@@ -1,20 +1,9 @@
-import type { AgentRuntimeInstallSkill } from '@tavern/api';
 import { withCapabilityStatus } from './capability-status.ts';
 import { AgentRuntimeRequestError, type TavernAgentRuntimeClient } from './client.ts';
 import {
     createConfiguredAgentRuntimeClient,
     getCurrentConfiguredAgentRuntimeConnection,
 } from './configured-client.ts';
-
-const agentRuntimeNotConfiguredMessage = 'Tavern Runtime is not configured.';
-
-function requireAgentRuntimeClient(client: TavernAgentRuntimeClient | null) {
-    if (!client) {
-        throw new Error(agentRuntimeNotConfiguredMessage);
-    }
-
-    return client;
-}
 
 export async function listAgentRuntimeSkills(
     client: TavernAgentRuntimeClient | null = createConfiguredAgentRuntimeClient(),
@@ -76,34 +65,4 @@ export async function getAgentRuntimeSkill(
 
         throw error;
     }
-}
-
-export async function installSkillInAgentRuntime(
-    input: AgentRuntimeInstallSkill,
-    client: TavernAgentRuntimeClient | null = createConfiguredAgentRuntimeClient()
-) {
-    return requireAgentRuntimeClient(client).installSkill(input);
-}
-
-export async function deleteSkillFromAgentRuntime(
-    skillId: string,
-    client: TavernAgentRuntimeClient | null = createConfiguredAgentRuntimeClient()
-) {
-    const agentRuntimeClient = requireAgentRuntimeClient(client);
-
-    try {
-        await agentRuntimeClient.deleteSkill(skillId);
-    } catch (error) {
-        if (error instanceof AgentRuntimeRequestError && error.status === 404) {
-            return {
-                deleted: false,
-            } as const;
-        }
-
-        throw error;
-    }
-
-    return {
-        deleted: true,
-    } as const;
 }

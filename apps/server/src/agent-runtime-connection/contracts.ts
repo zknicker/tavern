@@ -14,7 +14,6 @@ export const agentRuntimeCapabilitySchema = z.enum([
     'models',
     'sessions',
     'skills',
-    'skillMaterialization',
     'status',
 ]);
 

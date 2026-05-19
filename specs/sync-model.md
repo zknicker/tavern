@@ -13,8 +13,8 @@ do not replace Tavern chat history.
 - OpenClaw-owned primitives include native agent execution, sessions, turns, transcripts, logs,
   agent files, tool settings, applied model/runtime config, and channel bindings.
 - Tavern Runtime applies generated OpenClaw config inputs to OpenClaw.
-- Tavern-owned skill packages are synced into OpenClaw workspaces as files; OpenClaw remains
-  authoritative for observed skill eligibility/status.
+- Runtime-visible skills remain owned by the runtime; OpenClaw remains authoritative for observed
+  skill eligibility/status.
 - OpenClaw-native tools may change OpenClaw-owned records.
 - Tavern refreshes projections from OpenClaw on boot, reconnect, scheduled sync, manual refresh,
   and Gateway events.
@@ -37,7 +37,7 @@ do not replace Tavern chat history.
 | `cron run` | Tavern Runtime automation history | `automation_runs` table | row `synced_at` and runtime sync state | no, keep observed history |
 | `config` | Tavern-generated managed config | Tavern-owned settings plus diagnostic snapshots | settings `updated_at` and optional snapshot hash | Runtime reapplies generated config |
 | `agent file` | runtime filesystem/config surface | fetched live on open, optional cached metadata later | explicit refresh timestamp | runtime-specific |
-| `skill package` | Tavern package registry | `skill_packages` and `agent_skill_selections` | package `updated_at` and selection `synced_at` | Tavern desired state |
+| `skill` | runtime skill inventory | fetched live on open, optional cached metadata later | explicit refresh timestamp | runtime-specific |
 
 `last_synced_at` belongs on rows when rows can be updated independently. Primitive-level sync state
 belongs in `sync_state` when a full list is refreshed together or when per-row freshness would always

@@ -1,9 +1,3 @@
-import {
-    Github01Icon,
-    PackageSearchIcon,
-    SystemUpdate01Icon,
-    Trash2,
-} from '@hugeicons/core-free-icons';
 import * as React from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { AppShellContentHeader } from '../../components/ui/app-shell.tsx';
@@ -18,15 +12,11 @@ import {
     DialogPanel,
     DialogTitle,
 } from '../../components/ui/dialog.tsx';
-import { Icon } from '../../components/ui/icon.tsx';
 import { Button } from '../../components/ui/primitives/button.tsx';
 import { Field, FieldDescription, FieldLabel } from '../../components/ui/primitives/field.tsx';
 import { Input } from '../../components/ui/primitives/input.tsx';
 import { ScrollArea } from '../../components/ui/scroll-area.tsx';
 import { Separator } from '../../components/ui/separator.tsx';
-import { Tooltip, TooltipContent, TooltipTrigger } from '../../components/ui/tooltip.tsx';
-import { useSkillCheckUpdates } from '../../hooks/skills/use-skill-check-updates.ts';
-import { useSkillDelete } from '../../hooks/skills/use-skill-delete.ts';
 import { useSkillGet } from '../../hooks/skills/use-skill-get.ts';
 import { useSkillSecretDelete } from '../../hooks/skills/use-skill-secret-delete.ts';
 import { useSkillSecretSave } from '../../hooks/skills/use-skill-secret-save.ts';
@@ -48,12 +38,7 @@ export function SkillDetailView() {
 
     return (
         <div className="flex flex-1 flex-col overflow-hidden">
-            <SkillDetailHeader
-                onDeleted={() => {
-                    navigate('/dashboard/skills', { replace: true });
-                }}
-                skill={skill}
-            />
+            <SkillDetailHeader skill={skill} />
 
             {skillQuery.error ? (
                 <div className="border-error/40 border-b bg-error-bg px-4 py-3">
@@ -74,89 +59,16 @@ export function SkillDetailView() {
     );
 }
 
-function SkillDetailHeader({
-    onDeleted,
-    skill,
-}: {
-    onDeleted: () => void;
-    skill: SkillDetail | null;
-}) {
+function SkillDetailHeader({ skill }: { skill: SkillDetail | null }) {
     return (
         <AppShellContentHeader>
             <BreadcrumbTrail
                 items={[
-                    { label: 'Skills', to: '/dashboard/skills' },
+                    { label: 'Skills & Plugins', to: '/dashboard/skills' },
                     { label: skill?.name ?? 'Skill' },
                 ]}
             />
-            {skill ? <SkillPageActions onDeleted={onDeleted} skill={skill} /> : null}
         </AppShellContentHeader>
-    );
-}
-
-function SkillPageActions({ onDeleted, skill }: { onDeleted: () => void; skill: SkillDetail }) {
-    const deleteSkill = useSkillDelete();
-    const checkUpdates = useSkillCheckUpdates();
-    const source = formatSkillSource(skill);
-    const sourceUrl = getSkillSourceUrl(skill);
-    const sourceIcon = skill.installSource?.source === 'github' ? Github01Icon : PackageSearchIcon;
-    const canCheckUpdates = skill.installSource?.source === 'clawhub';
-
-    return (
-        <div className="flex shrink-0 items-center gap-2">
-            {source ? (
-                <Tooltip>
-                    <TooltipTrigger
-                        render={
-                            <Button
-                                aria-label="Skill source"
-                                onClick={() => {
-                                    if (sourceUrl) {
-                                        window.open(sourceUrl, '_blank', 'noopener,noreferrer');
-                                    }
-                                }}
-                                size="icon-sm"
-                                variant="ghost"
-                            />
-                        }
-                    >
-                        <Icon icon={sourceIcon} />
-                    </TooltipTrigger>
-                    <TooltipContent>{source}</TooltipContent>
-                </Tooltip>
-            ) : null}
-            {canCheckUpdates ? (
-                <Button
-                    loading={checkUpdates.isPending}
-                    onClick={() =>
-                        checkUpdates.mutate({
-                            skillId: skill.id,
-                        })
-                    }
-                    variant="outline"
-                >
-                    <Icon icon={SystemUpdate01Icon} />
-                    Check For Updates
-                </Button>
-            ) : null}
-            <Button
-                loading={deleteSkill.isPending}
-                onClick={() =>
-                    deleteSkill.mutate(
-                        { skillId: skill.id },
-                        {
-                            onSuccess: () => {
-                                onDeleted();
-                            },
-                        }
-                    )
-                }
-                variant="destructive-outline"
-            >
-                <Icon icon={Trash2} />
-                Uninstall
-            </Button>
-        </div>
     );
 }
 
@@ -438,28 +350,4 @@ function decodeSkillIdParam(value: string | undefined) {
     } catch {
         return value;
     }
-}
-
-function formatSkillSource(skill: SkillDetail) {
-    if (!skill.installSource) {
-        return null;
-    }
-    if (skill.installSource.source === 'clawhub') {
-        return `ClawHub / ${skill.installSource.spec}`;
-    }
-    return skill.installSource.spec;
-}
-
-function getSkillSourceUrl(skill: SkillDetail) {
-    if (!skill.installSource || skill.installSource.source !== 'github') {
-        return null;
-    }
-
-    const spec = skill.installSource.spec
-        .trim()
-        .replace(/^https?:\/\//u, '')
-        .replace(/^github\.com\//u, '')
-        .replace(/\.git$/u, '');
-    const [owner, repo] = spec.split('/').filter(Boolean);
-    return owner && repo ? `https://github.com/${owner}/${repo}` : null;
 }

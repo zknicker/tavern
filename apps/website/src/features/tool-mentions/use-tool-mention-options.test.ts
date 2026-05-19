@@ -3,7 +3,7 @@ import type { SkillListOutput } from '../../lib/trpc.tsx';
 import { buildSkillMentionOptions } from './use-tool-mention-options.ts';
 
 describe('buildSkillMentionOptions', () => {
-    it('returns installed skills without tool fallbacks', () => {
+    it('returns runtime skills without tool fallbacks', () => {
         const options = buildSkillMentionOptions({
             query: '',
             skills: [
@@ -14,7 +14,6 @@ describe('buildSkillMentionOptions', () => {
                 }),
                 createSkill({
                     id: 'writer',
-                    installSource: { source: 'github', spec: 'tavern/writer' },
                     name: 'Publish Changes',
                 }),
                 createSkill({
@@ -30,21 +29,21 @@ describe('buildSkillMentionOptions', () => {
                 id: 'browser',
                 kind: 'skill',
                 label: 'Chrome',
-                sourceLabel: 'Tavern',
+                sourceLabel: 'Runtime skill',
             },
             {
                 description: null,
                 id: 'writer',
                 kind: 'skill',
                 label: 'Publish Changes',
-                sourceLabel: 'GitHub',
+                sourceLabel: 'Runtime skill',
             },
             {
                 description: null,
                 id: 'unused',
                 kind: 'skill',
                 label: 'Unused Skill',
-                sourceLabel: 'Tavern',
+                sourceLabel: 'Runtime skill',
             },
         ]);
     });
@@ -61,7 +60,6 @@ describe('buildSkillMentionOptions', () => {
                 createSkill({
                     description: 'Create Codex-compatible animated pets and spritesheets.',
                     id: 'hatch-pet',
-                    installSource: { source: 'clawhub', spec: 'hatch-pet' },
                     name: 'Hatch Pet',
                 }),
             ],
@@ -73,7 +71,7 @@ describe('buildSkillMentionOptions', () => {
                 id: 'hatch-pet',
                 kind: 'skill',
                 label: 'Hatch Pet',
-                sourceLabel: 'ClawHub',
+                sourceLabel: 'Runtime skill',
             },
         ]);
     });
@@ -90,11 +88,10 @@ function createSkill(
     return {
         agentCount: 0,
         allowedTools: null,
+        diagnostic: null,
         dependencyState: 'ready',
         description: null,
         id,
-        installSource: null,
-        latestVersion: null,
         missing: {
             anyBins: [],
             bins: [],
@@ -103,10 +100,8 @@ function createSkill(
             os: [],
         },
         name,
-        updateAvailable: false,
-        updateCheckedAt: null,
-        updateError: null,
         updatedAt: null,
+        usability: 'enabled',
         version: null,
         ...rest,
     };

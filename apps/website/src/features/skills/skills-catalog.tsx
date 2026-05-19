@@ -1,164 +1,178 @@
-import { Plus } from '@hugeicons/core-free-icons';
-import { ZapIcon } from '@hugeicons-pro/core-stroke-rounded';
+import { CubeIcon, PlugIcon } from '@hugeicons-pro/core-stroke-rounded';
 import * as React from 'react';
 import { Badge } from '../../components/ui/badge.tsx';
 import { CardStack, CardStackItem } from '../../components/ui/card-stack.tsx';
 import { Icon } from '../../components/ui/icon.tsx';
-import { Button } from '../../components/ui/primitives/button.tsx';
 import { SearchInput } from '../../components/ui/primitives/search-input.tsx';
-import { SaveToast } from '../../components/ui/save-toast.tsx';
 import { ScrollArea } from '../../components/ui/scroll-area.tsx';
-import { useSaveToast } from '../../hooks/use-save-toast.ts';
 import type { SkillListOutput } from '../../lib/trpc.tsx';
 import { EmptyState } from '../shell/empty-state.tsx';
-import { InstallSkillDialog } from './skill-install-panel.tsx';
 
 type SkillSummary = SkillListOutput['skills'][number];
+type PluginSummary = SkillListOutput['plugins'][number];
+type CatalogItem =
+    | {
+          item: SkillSummary;
+          kind: 'skill';
+      }
+    | {
+          item: PluginSummary;
+          kind: 'plugin';
+      };
 
 export function SkillsCatalog({
     onOpenSkill,
+    plugins,
     skills,
 }: {
     onOpenSkill: (skillId: string) => void;
+    plugins: SkillListOutput['plugins'];
     skills: SkillListOutput['skills'];
 }) {
-    const [installDialogOpen, setInstallDialogOpen] = React.useState(false);
     const [search, setSearch] = React.useState('');
     const deferredSearch = React.useDeferredValue(search);
-    const { showSuccessToast, toast } = useSaveToast();
-    const visibleSkills = filterSkills(skills, deferredSearch);
+    const items = buildCatalogItems({ plugins, skills });
+    const visibleItems = filterCatalogItems(items, deferredSearch);
     const hasSearch = search.trim().length > 0;
-
-    const handleInstalled = React.useCallback(
-        (skillId: string) => {
-            setInstallDialogOpen(false);
-            showSuccessToast('Installed skill.');
-            onOpenSkill(skillId);
-        },
-        [onOpenSkill, showSuccessToast]
-    );
 
     return (
         <div className="flex flex-1 flex-col overflow-hidden">
-            <div className="flex justify-end px-5 py-3">
-                <Button
-                    className="w-full sm:w-auto"
-                    onClick={() => setInstallDialogOpen(true)}
-                    type="button"
-                    variant="secondary"
-                >
-                    <Icon aria-hidden="true" icon={Plus} />
-                    Add Skill
-                </Button>
-            </div>
-
             <ScrollArea className="flex-1">
                 <div className="mx-auto flex w-full max-w-5xl flex-col gap-4 px-5 py-8">
                     <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
                         <div className="text-muted-foreground text-sm tabular-nums">
-                            {skills.length} skills
+                            {items.length} skills & plugins
                         </div>
                         <SearchInput
-                            aria-label="Search skills"
+                            aria-label="Search skills and plugins"
                             className="w-full sm:ml-auto sm:max-w-xs"
                             name="skill-search"
                             onChange={(event) => setSearch(event.target.value)}
-                            placeholder="Search skills..."
+                            placeholder="Search skills and plugins..."
                             value={search}
                         />
                     </div>
 
-                    {visibleSkills.length > 0 ? (
+                    {visibleItems.length > 0 ? (
                         <CardStack>
-                            {visibleSkills.map((skill) => (
-                                <SkillCard
-                                    key={skill.id}
-                                    onOpen={() => onOpenSkill(skill.id)}
-                                    skill={skill}
+                            {visibleItems.map((catalogItem) => (
+                                <CatalogCard
+                                    item={catalogItem}
+                                    key={`${catalogItem.kind}:${catalogItem.item.id}`}
+                                    onOpenSkill={onOpenSkill}
                                 />
                             ))}
                         </CardStack>
                     ) : (
                         <EmptyState
-                            actionLabel={hasSearch ? undefined : 'Add Skill'}
                             className="py-16"
                             description={
                                 hasSearch
                                     ? 'Try a different name, source, or description.'
-                                    : 'Install a skill from ClawHub or GitHub to make it available to your agent.'
+                                    : 'No runtime-visible skills or plugins were found.'
                             }
-                            onAction={hasSearch ? undefined : () => setInstallDialogOpen(true)}
-                            title={hasSearch ? 'No skills match' : 'No skills yet'}
+                            title={hasSearch ? 'No matches' : 'No skills or plugins yet'}
                         />
                     )}
                 </div>
             </ScrollArea>
-
-            <InstallSkillDialog
-                onInstalled={handleInstalled}
-                onOpenChange={setInstallDialogOpen}
-                open={installDialogOpen}
-            />
-            {toast ? <SaveToast message={toast.message} variant={toast.variant} /> : null}
         </div>
     );
 }
 
-function filterSkills(skills: SkillSummary[], search: string) {
+export function buildCatalogItems(input: {
+    plugins: PluginSummary[];
+    skills: SkillSummary[];
+}): CatalogItem[] {
+    return [
+        ...input.skills.map((skill) => ({
+            item: skill,
+            kind: 'skill' as const,
+        })),
+        ...input.plugins.map((plugin) => ({
+            item: plugin,
+            kind: 'plugin' as const,
+        })),
+    ].sort((left, right) => left.item.name.localeCompare(right.item.name));
+}
+
+export function filterCatalogItems(items: CatalogItem[], search: string) {
     const normalizedSearch = search.trim().toLowerCase();
     if (normalizedSearch.length === 0) {
-        return skills;
+        return items;
     }
 
-    return skills.filter((skill) =>
+    return items.filter((catalogItem) =>
         [
-            skill.name,
-            skill.description,
-            skill.installSource?.source,
-            skill.installSource?.spec,
+            catalogItem.kind,
+            catalogItem.item.name,
+            catalogItem.item.description,
+            catalogItem.item.id,
+            catalogItem.kind === 'plugin' ? catalogItem.item.source : null,
         ].some((value) => (value ?? '').toLowerCase().includes(normalizedSearch))
     );
 }
 
-function formatSkillSource(skill: SkillSummary) {
-    if (!skill.installSource) {
-        return 'Tavern';
+function formatUsability(item: CatalogItem) {
+    if (item.item.usability === 'enabled') {
+        return 'Enabled';
     }
-    if (skill.installSource.source === 'clawhub') {
-        return `ClawHub / ${skill.installSource.spec}`;
+    if (item.item.usability === 'disabled') {
+        return 'Disabled';
     }
-    return skill.installSource.spec;
+    return 'Not usable';
 }
 
-function formatAgentCount(count: number) {
-    return count > 0 ? 'Assigned' : 'Not assigned';
+function usabilityVariant(item: CatalogItem): React.ComponentProps<typeof Badge>['variant'] {
+    if (item.item.usability === 'enabled') {
+        return 'success';
+    }
+    if (item.item.usability === 'not_usable') {
+        return 'error';
+    }
+    return 'secondary';
 }
 
-function SkillCard({ onOpen, skill }: { onOpen: () => void; skill: SkillSummary }) {
+function CatalogCard({
+    item,
+    onOpenSkill,
+}: {
+    item: CatalogItem;
+    onOpenSkill: (skillId: string) => void;
+}) {
+    const isSkill = item.kind === 'skill';
+
     return (
-        <CardStackItem onOpen={onOpen} openLabel={`Open ${skill.name}`}>
+        <CardStackItem
+            onOpen={isSkill ? () => onOpenSkill(item.item.id) : undefined}
+            openLabel={`Open ${item.item.name}`}
+        >
             <div className="flex size-7 shrink-0 items-center justify-center rounded-lg border border-border/70 bg-background text-muted-foreground">
-                <Icon className="size-4" icon={ZapIcon} />
+                <Icon className="size-4" icon={isSkill ? CubeIcon : PlugIcon} />
             </div>
 
             <div className="flex min-w-0 flex-1 items-center gap-3">
                 <div className="min-w-0 flex-1">
                     <div className="flex min-w-0 items-center gap-2">
-                        <p className="truncate font-medium text-foreground text-sm">{skill.name}</p>
-                        {skill.updateAvailable ? (
-                            <Badge size="sm" variant="warning">
-                                Update
-                            </Badge>
-                        ) : null}
+                        <p className="truncate font-medium text-foreground text-sm">
+                            {item.item.name}
+                        </p>
+                        <Badge size="sm" variant="secondary">
+                            {isSkill ? 'Skill' : 'Plugin'}
+                        </Badge>
                     </div>
                     <p className="mt-1 truncate text-muted-foreground text-sm">
-                        {skill.description ?? skill.id}
+                        {item.item.description ?? item.item.id}
                     </p>
                 </div>
 
                 <div className="hidden shrink-0 items-center gap-3 text-muted-foreground text-sm md:flex">
-                    <span className="max-w-36 truncate">{formatSkillSource(skill)}</span>
-                    <span className="tabular-nums">{formatAgentCount(skill.agentCount)}</span>
+                    <Badge size="sm" variant={usabilityVariant(item)}>
+                        {formatUsability(item)}
+                    </Badge>
+                    {item.kind === 'plugin' ? (
+                        <span className="max-w-36 truncate">{item.item.source}</span>
+                    ) : null}
                 </div>
             </div>
         </CardStackItem>

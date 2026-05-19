@@ -19,10 +19,6 @@ export function getDefaultDatabasePath() {
     return join(os.homedir(), '.tavern', 'tavern.sqlite');
 }
 
-export function getDefaultSkillsRoot() {
-    return join(os.homedir(), '.tavern', 'skills');
-}
-
 function resolveHomePath(value: string) {
     if (value === '~') {
         return os.homedir();
@@ -117,11 +113,6 @@ applyCliOverrides(process.argv.slice(2));
 
 const envSchema = z.object({
     APP_ORIGIN: z.string().url().default(getDefaultAppOrigin()),
-    TAVERN_SKILLS_ROOT: z
-        .string()
-        .min(1)
-        .default(getDefaultSkillsRoot())
-        .transform(resolveHomePath),
     DATABASE_PATH: z.string().min(1).default(getDefaultDatabasePath()).transform(resolveHomePath),
     TAVERN_RUNTIME_URL: z.string().url().optional(),
     SERVER_PORT: z.coerce.number().int().positive().default(getDefaultServerPort()),

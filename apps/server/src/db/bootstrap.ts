@@ -54,52 +54,6 @@ const schemaStatements = [
         ON agents (runtime_id);`,
     `CREATE INDEX IF NOT EXISTS agents_last_synced_at_idx
         ON agents (last_synced_at);`,
-    `CREATE TABLE IF NOT EXISTS skill_packages (
-        id TEXT PRIMARY KEY NOT NULL,
-        source_type TEXT NOT NULL,
-        source_spec TEXT NOT NULL,
-        source_version TEXT,
-        resolved_version TEXT,
-        content_hash TEXT NOT NULL,
-        cache_path TEXT NOT NULL,
-        skill_name TEXT NOT NULL,
-        display_name TEXT NOT NULL,
-        description TEXT,
-        allowed_tools TEXT,
-        install_source_json TEXT NOT NULL,
-        latest_version TEXT,
-        latest_version_created_at TEXT,
-        latest_source_updated_at TEXT,
-        latest_checked_at TEXT,
-        latest_check_error TEXT,
-        metadata_json TEXT NOT NULL,
-        files_json TEXT NOT NULL,
-        created_at TEXT NOT NULL,
-        updated_at TEXT NOT NULL
-    );`,
-    `CREATE INDEX IF NOT EXISTS skill_packages_source_idx
-        ON skill_packages (source_type, source_spec);`,
-    `CREATE UNIQUE INDEX IF NOT EXISTS skill_packages_source_version_idx
-        ON skill_packages (source_type, source_spec, resolved_version);`,
-    `CREATE INDEX IF NOT EXISTS skill_packages_content_hash_idx
-        ON skill_packages (content_hash);`,
-    `CREATE INDEX IF NOT EXISTS skill_packages_latest_checked_at_idx
-        ON skill_packages (latest_checked_at);`,
-    `CREATE TABLE IF NOT EXISTS agent_skill_selections (
-        agent_id TEXT NOT NULL,
-        skill_package_id TEXT NOT NULL,
-        materialized_name TEXT NOT NULL,
-        desired_hash TEXT NOT NULL,
-        synced_at TEXT,
-        sync_error TEXT,
-        observed_json TEXT,
-        updated_at TEXT NOT NULL,
-        PRIMARY KEY (agent_id, skill_package_id)
-    );`,
-    `CREATE INDEX IF NOT EXISTS agent_skill_selections_agent_idx
-        ON agent_skill_selections (agent_id);`,
-    `CREATE INDEX IF NOT EXISTS agent_skill_selections_package_idx
-        ON agent_skill_selections (skill_package_id);`,
     `CREATE TABLE IF NOT EXISTS model_catalog (
         id TEXT PRIMARY KEY NOT NULL,
         provider TEXT NOT NULL,
@@ -651,10 +605,4 @@ function runSchemaStatements(filter: (statement: string) => boolean) {
 export function ensureDatabaseSchema() {
     runSchemaStatements((statement) => !statement.startsWith('CREATE INDEX'));
     runSchemaStatements((statement) => statement.startsWith('CREATE INDEX'));
-
-    try {
-        databaseClient.exec(`ALTER TABLE skills ADD COLUMN files_json TEXT NOT NULL DEFAULT '[]';`);
-    } catch {
-        /* column already exists */
-    }
 }

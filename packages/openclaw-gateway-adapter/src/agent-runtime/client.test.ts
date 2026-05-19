@@ -30,6 +30,7 @@ describe('OpenClaw agent runtime client', () => {
     it('uses OpenClaw Gateway admin params for file and skill reads', async () => {
         const gateway = new FakeGateway({
             'agents.files.get': openClawGatewaySample.agentFileGet,
+            'skills.detail': openClawGatewaySample.skillDetail,
             'skills.status': openClawGatewaySample.skills,
         });
         const client = createOpenClawAgentRuntimeClient({
@@ -38,8 +39,9 @@ describe('OpenClaw agent runtime client', () => {
         });
 
         await client.getAgentFile('main', '/openclaw/workspace/theclaw/AGENTS.md');
-        await client.getSkillConfig('1password');
+        const skill = await client.getSkillConfig('1password');
 
+        expect(skill.contentMarkdown).toBe('# 1Password\nUse the CLI.');
         expect(gateway.requests).toEqual([
             {
                 method: 'agents.files.get',
@@ -48,6 +50,10 @@ describe('OpenClaw agent runtime client', () => {
             {
                 method: 'skills.status',
                 params: undefined,
+            },
+            {
+                method: 'skills.detail',
+                params: { slug: '1password' },
             },
         ]);
     });

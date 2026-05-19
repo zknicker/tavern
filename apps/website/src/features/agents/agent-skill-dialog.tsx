@@ -1,6 +1,4 @@
 import { Add01Icon } from '@hugeicons-pro/core-duotone-rounded';
-import { Download01Icon } from '@hugeicons-pro/core-stroke-rounded';
-import { Link } from 'react-router-dom';
 import {
     Dialog,
     DialogContent,
@@ -33,28 +31,13 @@ export function AgentSkillDialog({
                 <DialogHeader>
                     <DialogTitle>Add skill</DialogTitle>
                     <DialogDescription>
-                        Add an installed Tavern skill to {agent.name}.
+                        Add a runtime-visible skill to {agent.name}.
                     </DialogDescription>
                 </DialogHeader>
                 <DialogPanel className="grid gap-2">
-                    <Link
-                        className="mb-2 flex items-center justify-between gap-3 rounded-xl border border-border bg-card px-4 py-3 text-left transition-colors hover:border-border-strong hover:bg-accent/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                        onClick={() => onOpenChange(false)}
-                        to="/dashboard/skills"
-                    >
-                        <span className="min-w-0">
-                            <span className="font-medium text-foreground text-sm">
-                                Install new skill
-                            </span>
-                            <span className="mt-1 line-clamp-2 text-muted-foreground text-sm">
-                                Install from ClawHub or a GitHub repo path.
-                            </span>
-                        </span>
-                        <Icon className="size-4 text-muted-foreground" icon={Download01Icon} />
-                    </Link>
                     {availableSkills.length === 0 ? (
                         <p className="rounded-xl border border-border border-dashed px-4 py-4 text-muted-foreground text-sm">
-                            No unassigned Tavern skills are available.
+                            No unassigned runtime skills are available.
                         </p>
                     ) : (
                         availableSkills.map((skill) => (

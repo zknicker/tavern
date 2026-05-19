@@ -3,7 +3,6 @@ import {
     recordCapabilitySuccess,
 } from '../agent-runtime/capability-status.ts';
 import { createAgentRuntimeClientForConnection } from '../agent-runtime/client-factory.ts';
-import { checkSkillMaterializationCapability } from '../skills/capability.ts';
 import { listAgentRuntimeCapabilityStatuses } from '../storage/agent-runtime-capability-status.ts';
 import {
     activateAgentRuntimeConnection,
@@ -408,10 +407,6 @@ export async function confirmAgentRuntimeConnection() {
             status: checked.status,
         });
         await recordOpenClawGatewayCapability({ client, runtimeId });
-        await checkSkillMaterializationCapability({
-            client,
-            runtimeId,
-        });
         await saveStoredAgentRuntimeConnection({
             baseUrl: checked.baseUrl,
             enabled: record.enabled,

@@ -1,5 +1,4 @@
 import {
-    agentRuntimeInstallSkillSchema,
     agentRuntimeSkillConfigCheckSchema,
     agentRuntimeSkillFileSchema,
     agentRuntimeSkillInstallOptionSchema,
@@ -10,10 +9,6 @@ import { z } from 'zod';
 export const skillIdSchema = z.string().trim().min(1).max(200);
 
 export const getSkillInputSchema = z.object({
-    skillId: skillIdSchema,
-});
-
-export const deleteSkillInputSchema = z.object({
     skillId: skillIdSchema,
 });
 
@@ -35,20 +30,8 @@ export const deleteSkillSecretInputSchema = z.object({
     skillId: skillIdSchema,
 });
 
-export const checkSkillUpdatesInputSchema = z.object({
-    skillId: skillIdSchema,
-});
-
-export const installSkillInputSchema = agentRuntimeInstallSkillSchema;
-
-export const skillInstallSourceSchema = z.object({
-    ref: z.string().min(1).nullable().optional(),
-    source: z.enum(['clawhub', 'github']),
-    spec: z.string().min(1),
-    version: z.string().min(1).nullable().optional(),
-});
-
 export const skillDependencyStateSchema = z.enum(['missing', 'ready', 'unknown']);
+export const skillPluginUsabilitySchema = z.enum(['disabled', 'enabled', 'not_usable']);
 
 export const skillAssignedAgentSchema = z.object({
     agentId: z.string().min(1),
@@ -60,7 +43,6 @@ export const skillAssignedAgentSchema = z.object({
     configChecks: z.array(agentRuntimeSkillConfigCheckSchema),
     dependencyState: skillDependencyStateSchema,
     eligible: z.boolean().nullable(),
-    materializedName: z.string().min(1),
     missing: agentRuntimeSkillRequirementsSchema,
     modelVisible: z.boolean().nullable(),
     requirements: agentRuntimeSkillRequirementsSchema,
@@ -86,16 +68,24 @@ export const skillSummarySchema = z.object({
     allowedTools: z.string().nullable(),
     description: z.string().nullable(),
     id: z.string().min(1),
-    installSource: skillInstallSourceSchema.nullable(),
-    latestVersion: z.string().min(1).nullable(),
     name: z.string().min(1),
+    diagnostic: z.string().nullable(),
     dependencyState: skillDependencyStateSchema,
     missing: agentRuntimeSkillRequirementsSchema,
-    updateAvailable: z.boolean(),
-    updateCheckedAt: z.string().datetime().nullable(),
-    updateError: z.string().nullable(),
     updatedAt: z.string().datetime().nullable(),
+    usability: skillPluginUsabilitySchema,
     version: z.string().min(1).nullable(),
+});
+
+export const pluginSummarySchema = z.object({
+    description: z.string().nullable(),
+    diagnostic: z.string().nullable(),
+    enabled: z.boolean(),
+    id: z.string().min(1),
+    name: z.string().min(1),
+    source: z.string().min(1),
+    updatedAt: z.string().datetime().nullable(),
+    usability: skillPluginUsabilitySchema,
 });
 
 export const skillDetailSchema = skillSummarySchema.extend({
@@ -104,6 +94,7 @@ export const skillDetailSchema = skillSummarySchema.extend({
     contentMarkdown: z.string(),
     files: z.array(agentRuntimeSkillFileSchema),
     install: z.array(agentRuntimeSkillInstallOptionSchema),
+    installSource: z.unknown().nullable(),
     license: z.string().nullable(),
     metadata: z.record(z.string(), z.unknown()).nullable(),
     requirements: agentRuntimeSkillRequirementsSchema,
@@ -112,6 +103,7 @@ export const skillDetailSchema = skillSummarySchema.extend({
 });
 
 export const skillListSchema = z.object({
+    plugins: z.array(pluginSummarySchema),
     skills: z.array(skillSummarySchema),
 });
 
@@ -125,3 +117,4 @@ export const checkSkillUpdatesResultSchema = z.object({
 
 export type SkillList = z.infer<typeof skillListSchema>;
 export type SkillDetail = z.infer<typeof skillDetailSchema>;
+export type PluginSummary = z.infer<typeof pluginSummarySchema>;

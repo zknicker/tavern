@@ -1,17 +1,14 @@
-import fs from 'node:fs/promises';
-import path from 'node:path';
-import type { AgentRuntimeSkillFile } from '@tavern/api';
+import type { AgentRuntimeSkill, AgentRuntimeSkillSummary } from '@tavern/api';
 import { z } from 'zod';
-import { createAgentRuntimeClientForConnection } from '../agent-runtime/client-factory.ts';
+import type { TavernAgentRuntimeClient } from '../agent-runtime/client.ts';
+import { getAgentRuntimeSkill, listAgentRuntimeSkills } from '../agent-runtime/skills.ts';
 import { resolveAgentDefaultPrimaryColor } from '../agents/palette.ts';
 import { emitSkillInvalidationCascade } from '../api/invalidation-events.ts';
-import { applyCurrentOpenClawConfigFixups } from '../openclaw-config/service.ts';
-import { getAgentRuntimeConnection } from '../storage/agent-runtime-connections.ts';
 import {
-    getAgent as getAgentProjection,
-    listAgents,
-    updateAgentEnabledSkillIds,
-} from '../storage/agents.ts';
+    applyCurrentOpenClawConfigFixups,
+    getOpenClawConfigState,
+} from '../openclaw-config/service.ts';
+import { listAgents } from '../storage/agents.ts';
 import {
     deleteTavernVaultSecret,
     getSkillEnvSecretId,
@@ -19,11 +16,9 @@ import {
     saveTavernVaultSecret,
 } from '../storage/tavern-vault.ts';
 import {
-    checkSkillUpdatesInputSchema,
-    deleteSkillInputSchema,
     deleteSkillSecretInputSchema,
     getSkillInputSchema,
-    installSkillInputSchema,
+    type PluginSummary,
     type SkillDetail,
     type SkillList,
     saveSkillSecretInputSchema,
@@ -32,161 +27,85 @@ import {
     skillSummarySchema,
 } from './contracts.ts';
 import { parseSkillMarkdown } from './markdown.ts';
-import { syncAgentWorkspaceSkills } from './materialize.ts';
-import { readSkillInstallOptions, readSkillSecretEnvNames } from './metadata.ts';
-import { sanitizeMaterializedSkillName } from './package-files.ts';
-import { installSkillPackage } from './package-sources.ts';
-import {
-    deleteSkillPackage,
-    getSkillPackage,
-    listAllAgentSkillSelections,
-    listSkillPackages,
-    listSkillSelectionsByPackage,
-    replaceAgentSkillSelections,
-    type SkillPackageRecord,
-} from './storage.ts';
-import { checkClawHubSkillPackageForUpdates } from './update-check.ts';
-import {
-    aggregateInstallOptions,
-    aggregateRequirements,
-    groupSelectionsByPackage,
-    parseObservedSkill,
-    resolveDependencyState,
-} from './view-model.ts';
 
 const skillSecretValueSchema = z.object({
     value: z.string(),
 });
 
 export async function listSkills(): Promise<SkillList> {
-    const [packages, selections] = await Promise.all([
-        listSkillPackages(),
-        listAllAgentSkillSelections(),
+    const [agents, configState, skills] = await Promise.all([
+        listAgents({ includeInactive: true }),
+        getOpenClawConfigState(),
+        listAgentRuntimeSkills().catch(() => null),
     ]);
-    const selectionsByPackage = groupSelectionsByPackage(selections);
+    const runtimeAgents = filterAgentsByRuntime({
+        agents,
+        runtimeId: configState.runtimeId,
+    });
 
     return skillListSchema.parse({
-        skills: packages.map((skillPackage) =>
-            buildSkillSummary({
-                package: skillPackage,
-                selections: selectionsByPackage.get(skillPackage.id) ?? [],
-            })
-        ),
+        plugins: buildPluginSummaries(configState.snapshot?.config ?? null),
+        skills: (skills ?? []).map((skill) => buildSkillSummary(skill, runtimeAgents)),
     });
 }
 
 export async function getSkill(input: unknown): Promise<{ skill: SkillDetail | null }> {
     const parsed = getSkillInputSchema.parse(input);
-    const skillPackage = await getSkillPackage(parsed.skillId);
+    const runtimeSkill = await getRuntimeSkill(parsed.skillId);
 
-    if (!skillPackage) {
+    if (!runtimeSkill) {
         return skillGetSchema.parse({ skill: null });
     }
 
-    const [contentMarkdown, selections, agents, secrets] = await Promise.all([
-        readSkillMarkdown(skillPackage.cachePath),
-        listAllAgentSkillSelections(),
+    const [agents, configState, secrets] = await Promise.all([
         listAgents({ includeInactive: true }),
-        listSkillSecretStatuses(skillPackage),
+        getOpenClawConfigState(),
+        listSkillSecretStatuses(runtimeSkill),
     ]);
-    const packageSelections = selections.filter(
-        (selection) => selection.skillPackageId === skillPackage.id
-    );
-    const agentsById = new Map(agents.map((agent) => [agent.id, agent]));
+    const runtimeAgents = filterAgentsByRuntime({
+        agents,
+        runtimeId: configState.runtimeId,
+    });
     const metadata = parseSkillMarkdown({
-        contentMarkdown,
-        skillId: skillPackage.id,
+        contentMarkdown: runtimeSkill.contentMarkdown,
+        skillId: runtimeSkill.id,
     });
-    const summary = buildSkillSummary({
-        package: skillPackage,
-        selections: packageSelections,
-    });
+    const summary = buildSkillSummary(runtimeSkill, runtimeAgents);
 
     return skillGetSchema.parse({
         skill: {
             ...summary,
-            allowedTools: metadata.allowedTools,
+            allowedTools: metadata.allowedTools ?? runtimeSkill.allowedTools,
             assignedAgents: buildAssignedAgents({
-                agentsById,
-                selections: packageSelections,
+                agents: runtimeAgents,
+                skill: runtimeSkill,
             }),
             bodyMarkdown: metadata.bodyMarkdown,
-            contentMarkdown,
-            files: parseFiles(skillPackage.filesJson),
-            install: aggregateInstallOptions(packageSelections),
-            installSource: parseInstallSource(skillPackage.installSourceJson),
+            contentMarkdown: runtimeSkill.contentMarkdown,
+            files: runtimeSkill.files,
+            install: runtimeSkill.install,
+            installSource: runtimeSkill.installSource,
             license: metadata.license,
             metadata: metadata.metadata,
-            requirements: aggregateRequirements(packageSelections, 'requirements'),
+            requirements: runtimeSkill.requirements,
             secrets,
-            setupCommands: buildSetupCommands(metadata.metadata, summary.missing),
+            setupCommands: [],
         },
     });
 }
 
-export async function installSkill(input: unknown) {
-    const parsed = installSkillInputSchema.parse(input);
-    const skillPackage = await installSkillPackage(parsed);
-    emitSkillInvalidationCascade();
-
-    return await getSkill({
-        skillId: skillPackage.id,
-    });
-}
-
-export async function deleteSkill(input: unknown) {
-    const parsed = deleteSkillInputSchema.parse(input);
-    const skillPackage = await getSkillPackage(parsed.skillId);
-
-    if (!skillPackage) {
-        return { deleted: false } as const;
-    }
-
-    const selections = await listSkillSelectionsByPackage(skillPackage.id);
-    await deleteSkillPackage(skillPackage.id);
-    await fs.rm(skillPackage.cachePath, { force: true, recursive: true });
-    await Promise.all(
-        readSkillSecretEnvNames(parseSkillPackageMetadata(skillPackage)).map((envName) =>
-            deleteTavernVaultSecret(
-                getSkillEnvSecretId({
-                    envName,
-                    skillPackageId: skillPackage.id,
-                })
-            )
-        )
-    );
-    await Promise.all(
-        [...new Set(selections.map((selection) => selection.agentId))].map(async (agentId) => {
-            const agent = await getAgentProjection(agentId);
-            if (agent) {
-                await updateAgentEnabledSkillIds({
-                    agentId,
-                    enabledSkillIds: parseProjectionSkillIds(agent).filter(
-                        (skillId) => skillId !== skillPackage.id
-                    ),
-                });
-            }
-            await syncAgentSkills(agentId).catch(() => undefined);
-        })
-    );
-    await applyCurrentOpenClawConfigFixups().catch(() => undefined);
-    emitSkillInvalidationCascade();
-
-    return { deleted: true } as const;
-}
-
 export async function saveSkillSecret(input: unknown) {
     const parsed = saveSkillSecretInputSchema.parse(input);
-    const skillPackage = await requireSkillPackage(parsed.skillId);
+    const skill = await requireRuntimeSkill(parsed.skillId);
     validateSkillSecretEnvName({
         envName: parsed.envName,
-        skillPackage,
+        skill,
     });
 
     await saveTavernVaultSecret({
         id: getSkillEnvSecretId({
             envName: parsed.envName,
-            skillPackageId: skillPackage.id,
+            skillPackageId: skill.id,
         }),
         secret: {
             value: parsed.value,
@@ -195,213 +114,264 @@ export async function saveSkillSecret(input: unknown) {
     await applyCurrentOpenClawConfigFixups().catch(() => undefined);
     emitSkillInvalidationCascade();
 
-    return await getSkill({ skillId: skillPackage.id });
+    return await getSkill({ skillId: skill.id });
 }
 
 export async function deleteSkillSecret(input: unknown) {
     const parsed = deleteSkillSecretInputSchema.parse(input);
-    const skillPackage = await requireSkillPackage(parsed.skillId);
+    const skill = await requireRuntimeSkill(parsed.skillId);
     validateSkillSecretEnvName({
         envName: parsed.envName,
-        skillPackage,
+        skill,
     });
 
     await deleteTavernVaultSecret(
         getSkillEnvSecretId({
             envName: parsed.envName,
-            skillPackageId: skillPackage.id,
+            skillPackageId: skill.id,
         })
     );
     await applyCurrentOpenClawConfigFixups().catch(() => undefined);
     emitSkillInvalidationCascade();
 
-    return await getSkill({ skillId: skillPackage.id });
+    return await getSkill({ skillId: skill.id });
 }
 
-export async function checkSkillForUpdates(input: unknown) {
-    const parsed = checkSkillUpdatesInputSchema.parse(input);
-    const skillPackage = await getSkillPackage(parsed.skillId);
+export async function listSkillIds(input?: {
+    agentId?: string;
+    client?: TavernAgentRuntimeClient | null;
+    runtimeId?: string | null;
+}) {
+    const skills =
+        (await listAgentRuntimeSkills(input?.client, input?.runtimeId, {
+            agentId: input?.agentId,
+        })) ?? [];
+    return skills.map((skill) => skill.id);
+}
 
-    if (!skillPackage) {
-        throw new Error('Skill not found.');
+async function getRuntimeSkill(skillId: string) {
+    const [detail, skills] = await Promise.all([
+        getAgentRuntimeSkill(skillId),
+        listAgentRuntimeSkills(),
+    ]);
+    const summary = skills?.find((skill) => skill.id === skillId);
+
+    if (detail) {
+        return summary ? mergeRuntimeSkillDetail(detail, summary) : detail;
     }
 
-    await checkClawHubSkillPackageForUpdates(skillPackage);
-    emitSkillInvalidationCascade();
+    return summary ? toRuntimeSkill(summary) : null;
+}
 
-    const result = await getSkill({ skillId: skillPackage.id });
-    if (!result.skill) {
-        throw new Error('Skill not found.');
-    }
-
+export function mergeRuntimeSkillDetail(
+    detail: AgentRuntimeSkill,
+    summary: AgentRuntimeSkillSummary
+): AgentRuntimeSkill {
     return {
-        skill: result.skill,
+        ...detail,
+        allowedTools: summary.allowedTools ?? detail.allowedTools,
+        baseDir: summary.baseDir ?? detail.baseDir,
+        bundled: summary.bundled ?? detail.bundled,
+        commandVisible: summary.commandVisible ?? detail.commandVisible,
+        configChecks: summary.configChecks,
+        description: summary.description ?? detail.description,
+        disabled: summary.disabled ?? detail.disabled,
+        eligible: summary.eligible ?? detail.eligible,
+        filePath: summary.filePath ?? detail.filePath,
+        install: summary.install,
+        missing: summary.missing,
+        modelVisible: summary.modelVisible ?? detail.modelVisible,
+        name: summary.name,
+        primaryEnv: summary.primaryEnv ?? detail.primaryEnv,
+        requirements: summary.requirements,
+        runtimeSource: summary.runtimeSource ?? detail.runtimeSource,
+        skillKey: summary.skillKey ?? detail.skillKey,
+        source: summary.source,
+        updatedAt: summary.updatedAt ?? detail.updatedAt,
+        userInvocable: summary.userInvocable ?? detail.userInvocable,
     };
 }
 
-export async function saveAgentSkillSelections(input: {
-    agentId: string;
-    enabledSkillIds: string[] | null;
-}) {
-    const enabledSkillIds = input.enabledSkillIds ?? [];
-    const packages = await Promise.all(enabledSkillIds.map((skillId) => getSkillPackage(skillId)));
-    const missing = enabledSkillIds.filter((_, index) => !packages[index]);
-
-    if (missing.length > 0) {
-        throw new Error(`Unknown skills: ${missing.join(', ')}.`);
+async function requireRuntimeSkill(skillId: string) {
+    const skill = await getRuntimeSkill(skillId);
+    if (!skill) {
+        throw new Error('Skill not found.');
     }
+    return skill;
+}
 
-    const materialized = buildMaterializedSelections(
-        packages.filter((skillPackage): skillPackage is SkillPackageRecord => Boolean(skillPackage))
-    );
-    await replaceAgentSkillSelections({
-        agentId: input.agentId,
-        packages: materialized,
+function buildSkillSummary(
+    skill: AgentRuntimeSkillSummary,
+    agents: Awaited<ReturnType<typeof listAgents>>
+) {
+    const dependencyState = resolveDependencyState(skill);
+    const agentCount = countAssignedAgents({
+        agents,
+        skillId: skill.id,
     });
-    await syncAgentSkills(input.agentId);
-    await applyCurrentOpenClawConfigFixups().catch(() => undefined);
-    emitSkillInvalidationCascade();
-
-    return enabledSkillIds;
-}
-
-export async function listSkillPackageIds() {
-    return (await listSkillPackages()).map((skillPackage) => skillPackage.id);
-}
-
-async function syncAgentSkills(agentId: string) {
-    const agent = await getAgentProjection(agentId);
-    if (!agent) {
-        return;
-    }
-
-    const runtime = await getAgentRuntimeConnection(agent.runtimeId);
-    if (!runtime?.enabled) {
-        throw new Error('Tavern Runtime is not configured.');
-    }
-
-    const runtimeClient = createAgentRuntimeClientForConnection(runtime);
-    const packages = await listSkillPackages();
-    await syncAgentWorkspaceSkills({
-        agent,
-        packages,
-        runtimeClient,
+    const usability = resolveSkillUsability({
+        agentCount,
+        dependencyState,
     });
-}
-
-function buildMaterializedSelections(packages: SkillPackageRecord[]) {
-    const used = new Set<string>();
-
-    return packages.map((skillPackage) => {
-        const baseName = sanitizeMaterializedSkillName(skillPackage.skillName);
-        let materializedName = baseName;
-        let index = 2;
-        while (used.has(materializedName)) {
-            materializedName = `${baseName}-${index}`;
-            index += 1;
-        }
-        used.add(materializedName);
-
-        return {
-            materializedName,
-            package: skillPackage,
-        };
-    });
-}
-
-function buildSkillSummary(input: {
-    package: SkillPackageRecord;
-    selections: Awaited<ReturnType<typeof listAllAgentSkillSelections>>;
-}) {
-    const dependencyState = resolveDependencyState(input.selections);
 
     return skillSummarySchema.parse({
-        agentCount: input.selections.length,
-        allowedTools: input.package.allowedTools,
+        agentCount,
+        allowedTools: skill.allowedTools,
+        diagnostic: buildSkillDiagnostic(skill, dependencyState),
         dependencyState,
-        description: input.package.description,
-        id: input.package.id,
-        installSource: parseInstallSource(input.package.installSourceJson),
-        latestVersion: input.package.latestVersion,
-        missing: aggregateRequirements(input.selections, 'missing'),
-        name: input.package.displayName,
-        updateAvailable:
-            input.package.latestVersion !== null &&
-            input.package.latestVersion !== input.package.resolvedVersion,
-        updateCheckedAt: input.package.latestCheckedAt,
-        updateError: input.package.latestCheckError,
-        updatedAt: input.package.updatedAt,
-        version: input.package.resolvedVersion,
+        description: skill.description,
+        id: skill.id,
+        missing: skill.missing,
+        name: skill.name,
+        updatedAt: skill.updatedAt,
+        usability,
+        version: null,
     });
+}
+
+export function buildPluginSummaries(config: null | Record<string, unknown>): PluginSummary[] {
+    const plugins = readRecord(config?.plugins);
+    const entries = readRecord(plugins.entries);
+    const disabledGlobally = plugins.enabled === false;
+    const allow = new Set(readStringArray(plugins.allow));
+    const deny = new Set(readStringArray(plugins.deny));
+    const channelPluginIds = collectConfiguredChannelPluginIds(config);
+    const ids = new Set([...Object.keys(entries), ...allow]);
+
+    return [...ids]
+        .filter((id) => shouldShowPlugin({ channelPluginIds, id }))
+        .sort((left, right) => left.localeCompare(right))
+        .flatMap((id) => {
+            const entry = readRecord(entries[id]);
+            const enabled = !disabledGlobally && entry.enabled !== false && !deny.has(id);
+            const summary = buildPluginSummary({
+                enabled,
+                entry,
+                id,
+                missingEntry: Object.keys(entries).length > 0 && !(id in entries),
+            });
+            return summary ? [summary] : [];
+        });
+}
+
+function buildPluginSummary(input: {
+    enabled: boolean;
+    entry: Record<string, unknown>;
+    id: string;
+    missingEntry: boolean;
+}): PluginSummary | null {
+    const name = readString(input.entry.name) ?? formatPluginName(input.id);
+    const source = resolvePluginSource(input.id, input.entry);
+    const description = resolvePluginDescription(input.id, input.entry);
+    const notUsableReason = input.missingEntry
+        ? 'Plugin is allowed, but no configured plugin entry was found.'
+        : null;
+
+    return {
+        description,
+        diagnostic: notUsableReason,
+        enabled: input.enabled && !notUsableReason,
+        id: input.id,
+        name,
+        source,
+        updatedAt: null,
+        usability: notUsableReason ? 'not_usable' : input.enabled ? 'enabled' : 'disabled',
+    };
 }
 
 function buildAssignedAgents(input: {
-    agentsById: Map<string, Awaited<ReturnType<typeof listAgents>>[number]>;
-    selections: Awaited<ReturnType<typeof listAllAgentSkillSelections>>;
-}) {
-    return input.selections
-        .map((selection) => {
-            const agent = input.agentsById.get(selection.agentId);
-            const observed = parseObservedSkill(selection.observedJson);
-            const agentName = agent?.name ?? selection.agentId;
-
-            return {
-                agentId: selection.agentId,
-                agentAvatar: resolveAssignedAgentAvatar({
-                    agent,
-                    fallback: agentName,
-                }),
-                agentName,
-                agentPrimaryColor:
-                    agent?.primaryColor ?? resolveAgentDefaultPrimaryColor(selection.agentId),
-                baseDir: observed?.baseDir ?? null,
-                commandVisible: observed?.commandVisible ?? null,
-                configChecks: observed?.configChecks ?? [],
-                dependencyState: resolveSelectionDependencyState(selection),
-                eligible: observed?.eligible ?? null,
-                materializedName: selection.materializedName,
-                missing: observed?.missing ?? emptyRequirements(),
-                modelVisible: observed?.modelVisible ?? null,
-                requirements: observed?.requirements ?? emptyRequirements(),
-                runtimeId: agent?.runtimeId ?? 'unknown',
-                syncError: selection.syncError,
-            };
-        })
+    agents: Awaited<ReturnType<typeof listAgents>>;
+    skill: AgentRuntimeSkillSummary;
+}): SkillDetail['assignedAgents'] {
+    return input.agents
+        .filter((agent) => parseProjectionSkillIds(agent).includes(input.skill.id))
+        .map((agent) => ({
+            agentId: agent.id,
+            agentAvatar: resolveAssignedAgentAvatar({
+                agent,
+                fallback: agent.name,
+            }),
+            agentName: agent.name,
+            agentPrimaryColor: agent.primaryColor ?? resolveAgentDefaultPrimaryColor(agent.id),
+            baseDir: input.skill.baseDir ?? null,
+            commandVisible: input.skill.commandVisible ?? null,
+            configChecks: input.skill.configChecks,
+            dependencyState: resolveDependencyState(input.skill),
+            eligible: input.skill.eligible ?? null,
+            missing: input.skill.missing,
+            modelVisible: input.skill.modelVisible ?? null,
+            requirements: input.skill.requirements,
+            runtimeId: agent.runtimeId,
+            syncError: null,
+        }))
         .sort((left, right) => left.agentName.localeCompare(right.agentName));
 }
 
-function buildSetupCommands(
-    metadata: SkillDetail['metadata'],
-    missing: SkillDetail['missing']
-): SkillDetail['setupCommands'] {
-    const missingBins = new Set([...missing.bins, ...missing.anyBins]);
-    if (missingBins.size === 0) {
-        return [];
+function filterAgentsByRuntime(input: {
+    agents: Awaited<ReturnType<typeof listAgents>>;
+    runtimeId: null | string;
+}) {
+    return input.runtimeId
+        ? input.agents.filter((agent) => agent.runtimeId === input.runtimeId)
+        : input.agents;
+}
+
+function countAssignedAgents(input: {
+    agents: Awaited<ReturnType<typeof listAgents>>;
+    skillId: string;
+}) {
+    return input.agents.filter((agent) => parseProjectionSkillIds(agent).includes(input.skillId))
+        .length;
+}
+
+function resolveSkillUsability(input: {
+    agentCount: number;
+    dependencyState: SkillDetail['dependencyState'];
+}): SkillDetail['usability'] {
+    if (input.dependencyState === 'missing') {
+        return 'not_usable';
+    }
+    return input.agentCount > 0 ? 'enabled' : 'disabled';
+}
+
+function buildSkillDiagnostic(
+    skill: AgentRuntimeSkillSummary,
+    dependencyState: SkillDetail['dependencyState']
+) {
+    if (dependencyState !== 'missing') {
+        return null;
+    }
+    return formatMissingRequirements(skill.missing) ?? 'Required runtime setup is missing.';
+}
+
+function resolveDependencyState(skill: AgentRuntimeSkillSummary): SkillDetail['dependencyState'] {
+    if (skill.eligible === false || hasRequirements(skill.missing)) {
+        return 'missing';
     }
 
-    const installOptions = readSkillInstallOptions(metadata);
-    return installOptions
-        .flatMap((option) => {
-            if (!option.bins.some((bin) => missingBins.has(bin))) {
-                return [];
-            }
-            if (option.kind !== 'brew' || !option.formula) {
-                return [];
-            }
+    return skill.eligible === true ? 'ready' : 'unknown';
+}
 
-            return [
-                {
-                    bins: option.bins,
-                    command: `brew install ${option.formula}`,
-                    id: option.id,
-                    label: option.label,
-                },
-            ];
-        })
-        .filter(
-            (command, index, commands) =>
-                commands.findIndex((candidate) => candidate.command === command.command) === index
-        );
+function hasRequirements(requirements: SkillDetail['missing']) {
+    return (
+        requirements.anyBins.length > 0 ||
+        requirements.bins.length > 0 ||
+        requirements.config.length > 0 ||
+        requirements.env.length > 0 ||
+        requirements.os.length > 0
+    );
+}
+
+function formatMissingRequirements(requirements: SkillDetail['missing']) {
+    const missing = [
+        ...requirements.bins.map((value) => `bin ${value}`),
+        ...requirements.anyBins.map((value) => `any bin ${value}`),
+        ...requirements.env.map((value) => `env ${value}`),
+        ...requirements.config.map((value) => `config ${value}`),
+        ...requirements.os.map((value) => `os ${value}`),
+    ];
+
+    return missing.length > 0 ? `Missing ${missing.join(', ')}` : null;
 }
 
 function resolveAssignedAgentAvatar(input: {
@@ -422,55 +392,7 @@ function initials(value: string) {
     return result || '?';
 }
 
-function resolveSelectionDependencyState(
-    selection: Awaited<ReturnType<typeof listAllAgentSkillSelections>>[number]
-): SkillDetail['dependencyState'] {
-    if (selection.syncError) {
-        return 'missing';
-    }
-
-    const observed = parseObservedSkill(selection.observedJson);
-    if (!observed) {
-        return 'unknown';
-    }
-
-    if (observed.eligible === false || hasRequirements(observed.missing)) {
-        return 'missing';
-    }
-
-    return observed.eligible === true ? 'ready' : 'unknown';
-}
-
-function hasRequirements(requirements: ReturnType<typeof emptyRequirements>) {
-    return (
-        requirements.anyBins.length > 0 ||
-        requirements.bins.length > 0 ||
-        requirements.config.length > 0 ||
-        requirements.env.length > 0 ||
-        requirements.os.length > 0
-    );
-}
-
-function emptyRequirements() {
-    return {
-        anyBins: [] as string[],
-        bins: [] as string[],
-        config: [] as string[],
-        env: [] as string[],
-        os: [] as string[],
-    };
-}
-
-function readRecord(value: unknown) {
-    return value && typeof value === 'object' && !Array.isArray(value)
-        ? (value as Record<string, unknown>)
-        : null;
-}
-
-function parseProjectionSkillIds(agent: Awaited<ReturnType<typeof getAgentProjection>>) {
-    if (!agent) {
-        return [];
-    }
+function parseProjectionSkillIds(agent: Awaited<ReturnType<typeof listAgents>>[number]) {
     try {
         const value = JSON.parse(agent.enabledSkillIdsJson) as unknown;
         return Array.isArray(value)
@@ -481,30 +403,107 @@ function parseProjectionSkillIds(agent: Awaited<ReturnType<typeof getAgentProjec
     }
 }
 
-function parseFiles(value: string): AgentRuntimeSkillFile[] {
-    try {
-        const files = JSON.parse(value) as AgentRuntimeSkillFile[];
-        return Array.isArray(files) ? files : [];
-    } catch {
-        return [];
-    }
+function toRuntimeSkill(summary: AgentRuntimeSkillSummary): AgentRuntimeSkill {
+    return {
+        ...summary,
+        contentMarkdown: '',
+        files: [],
+        installSource: null,
+    };
 }
 
-function parseInstallSource(value: string) {
-    try {
-        return JSON.parse(value) as SkillDetail['installSource'];
-    } catch {
-        return null;
+function shouldShowPlugin(input: { channelPluginIds: Set<string>; id: string }) {
+    if (input.channelPluginIds.has(input.id)) {
+        return false;
     }
+    return input.id !== 'tavern';
 }
 
-async function listSkillSecretStatuses(skillPackage: SkillPackageRecord) {
+function collectConfiguredChannelPluginIds(config: null | Record<string, unknown>) {
+    const channels = readRecord(config?.channels);
+    return new Set(Object.keys(channels));
+}
+
+function resolvePluginSource(id: string, entry: Record<string, unknown>) {
+    const rawSource = readString(entry.source);
+    if (rawSource) {
+        return rawSource;
+    }
+    if (id === 'codex' || hasCodexNativePlugins(entry) || hasCodexComputerUse(entry)) {
+        return 'Codex';
+    }
+    return 'OpenClaw';
+}
+
+function resolvePluginDescription(id: string, entry: Record<string, unknown>) {
+    const rawDescription = readString(entry.description);
+    if (rawDescription) {
+        return rawDescription;
+    }
+    if (id === 'codex') {
+        const features = [
+            hasCodexNativePlugins(entry) ? 'native Codex plugins' : null,
+            hasCodexComputerUse(entry) ? 'Computer Use' : null,
+        ].filter(Boolean);
+
+        return features.length > 0
+            ? `Codex harness with ${features.join(' and ')}.`
+            : 'Codex app-server harness and Codex-managed model access.';
+    }
+    if (id === 'memory-core') {
+        return 'OpenClaw memory capabilities.';
+    }
+    if (id === 'openai') {
+        return 'OpenAI model and media provider capabilities.';
+    }
+    return null;
+}
+
+function hasCodexNativePlugins(entry: Record<string, unknown>) {
+    const config = readRecord(entry.config);
+    const codexPlugins = readRecord(config.codexPlugins);
+    return (
+        codexPlugins.enabled === true || Object.keys(readRecord(codexPlugins.plugins)).length > 0
+    );
+}
+
+function hasCodexComputerUse(entry: Record<string, unknown>) {
+    const config = readRecord(entry.config);
+    const computerUse = readRecord(config.computerUse);
+    return computerUse.enabled === true || Object.keys(computerUse).length > 0;
+}
+
+function formatPluginName(id: string) {
+    return id
+        .split(/[-_]+/u)
+        .filter(Boolean)
+        .map((part) => part[0]?.toUpperCase() + part.slice(1))
+        .join(' ');
+}
+
+function readRecord(value: unknown): Record<string, unknown> {
+    return value && typeof value === 'object' && !Array.isArray(value)
+        ? (value as Record<string, unknown>)
+        : {};
+}
+
+function readString(value: unknown) {
+    return typeof value === 'string' && value.trim().length > 0 ? value.trim() : null;
+}
+
+function readStringArray(value: unknown) {
+    return Array.isArray(value)
+        ? value.filter((item): item is string => typeof item === 'string' && item.length > 0)
+        : [];
+}
+
+async function listSkillSecretStatuses(skill: AgentRuntimeSkillSummary) {
     return await Promise.all(
-        readSkillSecretEnvNames(parseSkillPackageMetadata(skillPackage)).map(async (envName) => {
+        skill.requirements.env.map(async (envName) => {
             const record = await getTavernVaultSecret({
                 id: getSkillEnvSecretId({
                     envName,
-                    skillPackageId: skillPackage.id,
+                    skillPackageId: skill.id,
                 }),
                 schema: skillSecretValueSchema,
             });
@@ -518,38 +517,8 @@ async function listSkillSecretStatuses(skillPackage: SkillPackageRecord) {
     );
 }
 
-async function requireSkillPackage(skillId: string) {
-    const skillPackage = await getSkillPackage(skillId);
-    if (!skillPackage) {
-        throw new Error('Skill not found.');
-    }
-    return skillPackage;
-}
-
-function validateSkillSecretEnvName(input: { envName: string; skillPackage: SkillPackageRecord }) {
-    const envNames = readSkillSecretEnvNames(parseSkillPackageMetadata(input.skillPackage));
-    if (!envNames.includes(input.envName)) {
+function validateSkillSecretEnvName(input: { envName: string; skill: AgentRuntimeSkillSummary }) {
+    if (!input.skill.requirements.env.includes(input.envName)) {
         throw new Error(`Skill does not declare ${input.envName} as a required environment value.`);
     }
-}
-
-function parseSkillPackageMetadata(skillPackage: SkillPackageRecord) {
-    try {
-        const value = JSON.parse(skillPackage.metadataJson) as unknown;
-        return readRecord(value);
-    } catch {
-        return null;
-    }
-}
-
-async function readSkillMarkdown(cachePath: string) {
-    for (const candidate of ['SKILL.md', 'skill.md', 'skills.md', 'SKILL.MD']) {
-        try {
-            return await fs.readFile(path.join(cachePath, candidate), 'utf8');
-        } catch {
-            // Try the next candidate.
-        }
-    }
-
-    return '';
 }

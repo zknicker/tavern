@@ -62,16 +62,16 @@ manage businesses, complete knowledge work, and automate routine tasks.
 
 * **Agent chat.** Durable messages, live activity, tool progress, reasoning
   summaries, and final replies in one timeline.
-* **Agents.** Model, tool, memory, and skill configuration for the people you
-  actually work with in Tavern.
+* **Agents.** Model, tool, memory, skill, and plugin configuration for the
+  people you actually work with in Tavern.
 * **Memory.** Inspectable long-term context, with user-owned review and cleanup
   instead of invisible prompt stuffing.
 * **Wiki-style knowledgebase.** Pages, backlinks, collections, files,
   citations, and agent-authored working notes.
 * **Cron automations.** Scheduled agent work with run history, delivery targets,
   and clear follow-up state, even while the app is closed.
-* **Skills.** Reusable agent abilities from ClawHub or GitHub, with `skill.md`,
-  setup commands, secrets, updates, and per-agent assignment.
+* **Skills & Plugins.** Reusable instruction packages and runtime plugins from
+  OpenClaw, Codex, and compatible plugin bundles.
 * **Stats.** Usage, spend, runtime health, and operational signal without
   reading logs.
 * **Pets and rewards.** A playful layer for long-running agent work.
@@ -88,7 +88,7 @@ manage businesses, complete knowledge work, and automate routine tasks.
 | Memory | [Memory](features/memory.md) |
 | Knowledgebase | [Knowledgebase](features/knowledgebase.md) |
 | Automations | [Automations](features/automations.md) |
-| Skills | [Skills](features/skills.md) |
+| Skills & Plugins | [Skills & Plugins](features/skills.md) |
 | Stats | [Stats](features/stats.md) |
 | Pets and rewards | [Pets and rewards](features/pets.md) |
 | TypeScript SDK + integrations | [TypeScript SDK](sdk.md) |

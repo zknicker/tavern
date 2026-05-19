@@ -12,7 +12,6 @@ type CapabilityState = RuntimeCapability['state'];
 
 const capabilityLabels: Partial<Record<RuntimeCapability['capability'], string>> = {
     cronRuns: 'cron runs',
-    skillMaterialization: 'skill management',
 };
 
 const stateLabels: Record<CapabilityState, string> = {

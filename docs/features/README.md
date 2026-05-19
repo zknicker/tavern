@@ -1,5 +1,5 @@
 ---
-summary: Feature docs index for Tavern product capabilities: chat, agents, memory, knowledgebase, automations, skills, stats, and pets.
+summary: Feature docs index for Tavern product capabilities: chat, agents, memory, knowledgebase, automations, skills and plugins, stats, and pets.
 read_when:
   - looking for Tavern's user-facing product capabilities
   - adding, renaming, or reorganizing feature docs
@@ -18,6 +18,6 @@ implementation ownership, and runtime details live under
 | Memory | [Memory](memory.md) |
 | Knowledgebase | [Knowledgebase](knowledgebase.md) |
 | Automations | [Automations](automations.md) |
-| Skills | [Skills](skills.md) |
+| Skills & Plugins | [Skills & Plugins](skills.md) |
 | Stats | [Stats](stats.md) |
 | Pets and rewards | [Pets and rewards](pets.md) |

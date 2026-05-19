@@ -427,7 +427,11 @@ class GatewayBackedOpenClawAgentRuntimeClient implements OpenClawAgentRuntimeCli
             });
         }
 
-        return mapOpenClawSkill(skill, skillId);
+        const detail = await this.#gateway
+            .request('skills.detail', { slug: skillId })
+            .catch(() => null);
+
+        return mapOpenClawSkill(detail ?? skill, skillId);
     }
 
     async installSkill(input: AgentRuntimeInstallSkill) {

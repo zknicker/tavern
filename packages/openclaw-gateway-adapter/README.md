@@ -42,7 +42,7 @@ Server owns that storage under its own data directory and passes the signer into
 | Tavern chat send | Tavern Runtime `/chat`; Gateway adapter does not own this surface |
 | cron | `cron.list`, `cron.add`, `cron.update`, `cron.remove`, `cron.run`, `cron.runs` |
 | models | `models.list` |
-| skills/tools | `skills.status`, `skills.install`, `skills.update`, `tools.catalog` |
+| skills/tools | `skills.status`, `skills.detail`, `tools.catalog` |
 | events | `health`, `shutdown`, `sessions.changed`, `session.message`, `session.tool`, `cron`, `chat` |
 
 ## Platform Normalization
@@ -113,6 +113,5 @@ Each file should export one mapping operation. Domain-local shared helpers belon
   can remain runtime-native metadata unless a product surface needs it.
 - Tavern memory settings are Tavern Runtime-owned. OpenClaw Gateway is not expected to implement
   Tavern memory settings.
-- OpenClaw Gateway exposes local skill inventory through `skills.status`. Its `skills.detail`
-  method is ClawHub discovery metadata, not the selected local `SKILL.md` content, so Tavern marks
-  skill file content unavailable until Gateway exposes a local skill-content RPC.
+- OpenClaw Gateway exposes local skill inventory through `skills.status`. Tavern treats that
+  runtime inventory as the skill source of truth.

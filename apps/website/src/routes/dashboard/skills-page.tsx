@@ -11,6 +11,7 @@ export function SkillsPage() {
     const navigate = useNavigate();
     const [searchParams] = useSearchParams();
     const skillsQuery = useSkillList();
+    const plugins = skillsQuery.data?.plugins ?? [];
     const skills = skillsQuery.data?.skills ?? [];
     const legacySkillId = searchParams.get('skill');
 
@@ -32,6 +33,7 @@ export function SkillsPage() {
                 onOpenSkill={(skillId) => {
                     navigate(`/dashboard/skills/${encodeURIComponent(skillId)}`);
                 }}
+                plugins={plugins}
                 skills={skills}
             />
 

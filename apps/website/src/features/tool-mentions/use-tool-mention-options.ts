@@ -51,13 +51,5 @@ export function buildSkillMentionOptions({
 }
 
 function formatSkillSource(skill: SkillListOutput['skills'][number]) {
-    if (!skill.installSource) {
-        return 'Tavern';
-    }
-
-    if (skill.installSource.source === 'clawhub') {
-        return 'ClawHub';
-    }
-
-    return 'GitHub';
+    return skill.dependencyState === 'ready' ? 'Runtime skill' : 'Runtime';
 }
