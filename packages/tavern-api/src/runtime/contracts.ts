@@ -621,6 +621,14 @@ export const cortexPageListSchema = z.object({
 export const cortexSearchInputSchema = z.object({
     limit: z.number().int().positive().max(50).default(10),
     query: z.string().trim().min(1),
+    scope: z
+        .object({
+            agentId: z.string().trim().min(1).nullable().optional(),
+            chatId: z.string().trim().min(1).nullable().optional(),
+            participantId: z.string().trim().min(1).nullable().optional(),
+            profileId: z.string().trim().min(1).nullable().optional(),
+        })
+        .optional(),
 });
 
 export const cortexSearchHitSchema = z.object({
@@ -651,9 +659,12 @@ export const cortexCaptureInputSchema = z.object({
     source: z.object({
         actorId: z.string().trim().min(1),
         actorKind: z.enum(['agent', 'runtime', 'system', 'user']),
+        agentId: z.string().trim().min(1).nullable().optional(),
         chatId: z.string().trim().min(1).nullable().optional(),
         fileId: z.string().trim().min(1).nullable().optional(),
         messageId: z.string().trim().min(1).nullable().optional(),
+        participantId: z.string().trim().min(1).nullable().optional(),
+        profileId: z.string().trim().min(1).nullable().optional(),
         sessionKey: z.string().trim().min(1).nullable().optional(),
         turnId: z.string().trim().min(1).nullable().optional(),
         url: z.string().trim().min(1).nullable().optional(),

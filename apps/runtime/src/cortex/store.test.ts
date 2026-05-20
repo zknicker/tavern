@@ -2,8 +2,9 @@ import { mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { afterEach, beforeEach, describe, expect, test } from 'vitest';
-import { closeDb, initTestDb } from '../db/connection';
+import { closeDb, getDb, initTestDb } from '../db/connection';
 import { ensureRuntimeSchema } from '../db/schema';
+import type { Database } from '../db/sqlite';
 import { ensureCortexSchema } from './schema';
 import { CortexStore } from './store';
 
@@ -66,6 +67,7 @@ describe('CortexStore', () => {
 
     test('replayed capture returns existing output without duplicating timeline evidence', () => {
         const store = new CortexStore();
+        const db = getDb();
         const input = {
             content: 'One stable fact.',
             source: {
@@ -84,10 +86,15 @@ describe('CortexStore', () => {
         expect(second.page.id).toBe(first.page.id);
         expect(second.auditId).toBe(first.auditId);
         expect(store.getPage('stable-fact')?.timeline).toHaveLength(1);
+        expect(countRows(db, 'cortex_captures')).toBe(1);
+        expect(countRows(db, 'cortex_audit_events')).toBe(1);
+        expect(countRows(db, 'cortex_timeline_entries')).toBe(1);
+        expect(countRows(db, 'cortex_claims')).toBe(1);
     });
 
-    test('same source and title updates the page when content changes', () => {
+    test('same source boundary updates the page without creating a second capture record', () => {
         const store = new CortexStore();
+        const db = getDb();
         const source = {
             actorId: 'user-1',
             actorKind: 'user' as const,
@@ -114,6 +121,9 @@ describe('CortexStore', () => {
         expect(second.page.body).toBe('Updated fact.');
         expect(second.page.claims[0]?.value).toBe('Updated fact.');
         expect(store.getPage('mutable-fact')?.timeline).toHaveLength(2);
+        expect(countRows(db, 'cortex_captures')).toBe(1);
+        expect(readFirstCaptureAttemptCount(db)).toBe(2);
+        expect(countRows(db, 'cortex_audit_events')).toBe(2);
     });
 
     test('recall returns matching pages and writes audit', () => {
@@ -133,7 +143,193 @@ describe('CortexStore', () => {
 
         expect(result.auditId).toMatch(/^ctxa_/u);
         expect(result.hits[0]?.page.slug).toBe('openclaw-memory');
+        expect(result.hits[0]?.evidence[0]).toMatchObject({
+            kind: 'runtime',
+            locator: 'runtime',
+        });
         expect(store.status().lastRecallAt).not.toBeNull();
+    });
+
+    test('participant-scoped recall does not merge same-name participants', () => {
+        const store = new CortexStore();
+
+        store.capture({
+            content: 'Jordan prefers short morning summaries.',
+            source: {
+                actorId: 'discord:workspace:user-a',
+                actorKind: 'user',
+                participantId: 'participant-a',
+            },
+            tags: ['person'],
+            title: 'Jordan Preference A',
+            type: 'person',
+        });
+        store.capture({
+            content: 'Jordan prefers detailed end-of-day summaries.',
+            source: {
+                actorId: 'discord:workspace:user-b',
+                actorKind: 'user',
+                participantId: 'participant-b',
+            },
+            tags: ['person'],
+            title: 'Jordan Preference B',
+            type: 'person',
+        });
+
+        const result = store.recall({
+            limit: 10,
+            query: 'Jordan summaries',
+            scope: { participantId: 'participant-a' },
+        });
+
+        expect(result.hits.map((hit) => hit.page.slug)).toEqual(['jordan-preference-a']);
+        expect(result.hits[0]?.evidence[0]?.locator).toBe('discord:workspace:user-a');
+    });
+
+    test('shared recall includes unscoped memory but excludes unrelated scoped memory', () => {
+        const store = new CortexStore();
+
+        store.capture({
+            content: 'Tavern prefers source-linked durable memory.',
+            source: {
+                actorId: 'system',
+                actorKind: 'system',
+            },
+            tags: ['memory'],
+            title: 'Shared Memory Rule',
+            type: 'fact',
+        });
+        store.capture({
+            content: 'A private participant detail about durable memory.',
+            source: {
+                actorId: 'participant-b-source',
+                actorKind: 'user',
+                participantId: 'participant-b',
+            },
+            tags: ['person'],
+            title: 'Private Participant Memory',
+            type: 'person',
+        });
+
+        const result = store.recall({
+            limit: 10,
+            query: 'durable memory',
+            scope: { participantId: 'participant-a' },
+        });
+
+        expect(result.hits.map((hit) => hit.page.slug)).toEqual(['shared-memory-rule']);
+    });
+
+    test('recall applies limit while preserving source evidence', () => {
+        const store = new CortexStore();
+
+        for (let index = 1; index <= 3; index += 1) {
+            store.capture({
+                content: `Bounded prompt memory fact ${index}.`,
+                source: {
+                    actorId: `user-${index}`,
+                    actorKind: 'user',
+                    messageId: `msg-${index}`,
+                },
+                tags: ['memory'],
+                title: `Bounded Memory ${index}`,
+                type: 'fact',
+            });
+        }
+
+        const result = store.recall({ limit: 2, query: 'bounded prompt memory' });
+
+        expect(result.hits).toHaveLength(2);
+        expect(result.hits.every((hit) => hit.evidence.length > 0)).toBe(true);
+        expect(result.hits.map((hit) => hit.evidence[0]?.locator).sort()).toEqual([
+            'msg-1',
+            'msg-2',
+        ]);
+    });
+
+    test('recall excludes archived and deleted pages but keeps stale pages lexically searchable', () => {
+        const store = new CortexStore();
+        const db = getDb();
+        const active = store.capture({
+            content: 'Recall quality active record.',
+            source: {
+                actorId: 'user-active',
+                actorKind: 'user',
+            },
+            tags: [],
+            title: 'Recall Active',
+            type: 'fact',
+        });
+        const stale = store.capture({
+            content: 'Recall quality stale lexical record.',
+            source: {
+                actorId: 'user-stale',
+                actorKind: 'user',
+            },
+            tags: [],
+            title: 'Recall Stale',
+            type: 'fact',
+        });
+        const archived = store.capture({
+            content: 'Recall quality archived record.',
+            source: {
+                actorId: 'user-archived',
+                actorKind: 'user',
+            },
+            tags: [],
+            title: 'Recall Archived',
+            type: 'fact',
+        });
+        const deleted = store.capture({
+            content: 'Recall quality deleted record.',
+            source: {
+                actorId: 'user-deleted',
+                actorKind: 'user',
+            },
+            tags: [],
+            title: 'Recall Deleted',
+            type: 'fact',
+        });
+
+        db.prepare("UPDATE cortex_pages SET status = 'stale' WHERE id = ?").run(stale.page.id);
+        db.prepare("UPDATE cortex_pages SET status = 'archived' WHERE id = ?").run(
+            archived.page.id
+        );
+        db.prepare(
+            "UPDATE cortex_pages SET status = 'deleted', deleted_at = updated_at WHERE id = ?"
+        ).run(deleted.page.id);
+
+        const result = store.recall({ limit: 10, query: 'recall quality record' });
+
+        expect(result.hits.map((hit) => hit.page.id).sort()).toEqual(
+            [active.page.id, stale.page.id].sort()
+        );
+    });
+
+    test('stale encodings do not block lexical recall or count as current vectors', () => {
+        const store = new CortexStore();
+        const db = getDb();
+
+        store.capture({
+            content: 'Lexical fallback survives stale encodings.',
+            source: {
+                actorId: 'user-1',
+                actorKind: 'user',
+            },
+            tags: [],
+            title: 'Stale Encoding',
+            type: 'fact',
+        });
+        db.prepare("UPDATE cortex_encodings SET input_text_hash = 'stale-hash'").run();
+
+        const result = store.recall({ limit: 5, query: 'lexical fallback' });
+
+        expect(result.hits[0]?.page.slug).toBe('stale-encoding');
+        expect(store.status().encoding).toMatchObject({
+            currentCount: 0,
+            staleCount: 2,
+            totalCount: 2,
+        });
     });
 
     test('recall-index job rebuilds derived links after page edits', () => {
@@ -193,3 +389,15 @@ describe('CortexStore', () => {
         await expect(Bun.file(path.join(wikiPath, 'project/foo.md')).exists()).resolves.toBe(true);
     });
 });
+
+function countRows(db: Database, table: string): number {
+    return (db.prepare(`SELECT COUNT(*) AS count FROM ${table}`).get() as { count: number }).count;
+}
+
+function readFirstCaptureAttemptCount(db: Database): number {
+    return (
+        db
+            .prepare('SELECT attempts FROM cortex_captures ORDER BY created_at ASC LIMIT 1')
+            .get() as { attempts: number }
+    ).attempts;
+}

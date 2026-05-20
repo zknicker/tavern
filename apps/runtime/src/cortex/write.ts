@@ -19,17 +19,20 @@ export function captureCortex(db: Database, input: CortexCaptureInput): CortexCa
     upsertSource(db, sourceRefs[0], now);
     const captureKey = hashText(
         JSON.stringify({
-            content: input.content,
             sourceRefs,
-            tags: input.tags,
             title: input.title,
             type: input.type,
         })
     );
+    const contentHash = captureContentHash(input);
     const existingCapture = findCapture(db, captureKey);
     if (existingCapture?.status === 'success') {
-        const page = getCortexPage(db, existingCapture.pageId);
-        if (page) {
+        const pageRow = findPageRow(db, existingCapture.pageId);
+        if (pageRow && pageRow.content_hash === contentHash) {
+            const page = getCortexPage(db, existingCapture.pageId);
+            if (!page) {
+                throw new Error('Cortex capture points at a missing page.');
+            }
             return { auditId: existingCapture.auditId, page };
         }
     }
@@ -75,8 +78,8 @@ function upsertPage(
     const existing = findPageRow(db, slug);
     const id = existing?.id ?? createCortexId('ctxp');
     const compiledTruth = input.content.trim();
-    const frontmatter = { aliases: [], tags: input.tags };
-    const contentHash = hashText(`${compiledTruth}\n${input.content}`);
+    const frontmatter = { aliases: [], scope: memoryScopeFromCapture(input), tags: input.tags };
+    const contentHash = captureContentHash(input);
 
     if (existing) {
         updatePage(db, { compiledTruth, contentHash, frontmatter, id, input, sourceRefs, now });
@@ -103,6 +106,11 @@ function upsertPage(
     const fullPage = toPage(db, findPageRow(db, id) ?? page);
     writeMarkdownMirror(fullPage);
     return fullPage;
+}
+
+function captureContentHash(input: CortexCaptureInput): string {
+    const compiledTruth = input.content.trim();
+    return hashText(`${compiledTruth}\n${input.content}\n${JSON.stringify(input.tags)}`);
 }
 
 function updatePage(
@@ -266,6 +274,22 @@ function upsertCapture(
 }
 
 type CaptureLookup = null | { auditId: string; pageId: string; status: string };
+
+function memoryScopeFromCapture(input: CortexCaptureInput): Record<string, string> {
+    const scope = {
+        agentId: input.source.agentId,
+        chatId: input.source.chatId,
+        participantId: input.source.participantId,
+        profileId: input.source.profileId,
+    };
+
+    return Object.fromEntries(
+        Object.entries(scope).filter(
+            (entry): entry is [string, string] =>
+                typeof entry[1] === 'string' && entry[1].trim().length > 0
+        )
+    );
+}
 
 function findCapture(db: Database, captureKey: string): CaptureLookup {
     const row = db

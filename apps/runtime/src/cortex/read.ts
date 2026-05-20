@@ -69,19 +69,26 @@ export function searchCortex(db: Database, input: CortexSearchInput): CortexSear
     const rows = db
         .prepare(
             `SELECT p.id AS page_id,
+                    p.frontmatter_json,
                     p.title || ' ' || p.slug || ' ' || p.compiled_truth || ' ' || p.body AS score_text,
+                    c.text_hash,
+                    e.input_text_hash,
                     e.vector_json
              FROM cortex_pages p
              LEFT JOIN cortex_chunks c ON c.page_id = p.id
              LEFT JOIN cortex_encodings e ON e.chunk_id = c.id
-             WHERE p.deleted_at IS NULL`
+             WHERE p.deleted_at IS NULL
+               AND p.status IN ('active', 'stale')`
         )
-        .all() as ChunkEncodingRow[];
+        .all() as SearchRow[];
     const scores = new Map<string, number>();
 
     for (const row of rows) {
+        if (!matchesScope(row.frontmatter_json, input.scope)) {
+            continue;
+        }
         const lexical = scoreLexical(row.score_text, queryTerms);
-        const vector = row.vector_json
+        const vector = isCurrentEncoding(row)
             ? cosineSimilarity(JSON.parse(row.vector_json) as number[], queryVector)
             : 0;
         scores.set(row.page_id, Math.max(scores.get(row.page_id) ?? 0, lexical + vector));
@@ -101,6 +108,51 @@ export function searchCortex(db: Database, input: CortexSearchInput): CortexSear
     return { hits, query: input.query };
 }
 
+type SearchRow = ChunkEncodingRow & {
+    frontmatter_json: string;
+    input_text_hash: string | null;
+    text_hash: string | null;
+};
+
+type CortexSearchScope = NonNullable<CortexSearchInput['scope']>;
+
+function isCurrentEncoding(row: SearchRow): row is SearchRow & { vector_json: string } {
+    return Boolean(
+        row.vector_json &&
+            row.input_text_hash &&
+            row.text_hash &&
+            row.input_text_hash === row.text_hash
+    );
+}
+
+function matchesScope(frontmatterJson: string, scope: CortexSearchInput['scope']): boolean {
+    const pageScope = toRecord(readJsonRecord(frontmatterJson).scope);
+    const scopeEntries = Object.entries(pageScope).filter(
+        (entry): entry is [keyof CortexSearchScope, string] =>
+            isScopeKey(entry[0]) && typeof entry[1] === 'string' && entry[1].length > 0
+    );
+
+    if (scopeEntries.length === 0) {
+        return true;
+    }
+
+    if (!scope) {
+        return true;
+    }
+
+    return scopeEntries.every(([key, value]) => scope[key] === value);
+}
+
+function isScopeKey(value: string): value is keyof CortexSearchScope {
+    return ['agentId', 'chatId', 'participantId', 'profileId'].includes(value);
+}
+
+function toRecord(value: unknown): Record<string, unknown> {
+    return typeof value === 'object' && value !== null && !Array.isArray(value)
+        ? (value as Record<string, unknown>)
+        : {};
+}
+
 export function recallCortex(db: Database, input: CortexRecallInput): CortexRecallResult {
     const result = searchCortex(db, input);
     const auditId = writeCortexAudit(db, {
@@ -112,7 +164,10 @@ export function recallCortex(db: Database, input: CortexRecallInput): CortexReca
     });
     return {
         auditId,
-        hits: result.hits.map((hit) => ({ ...hit, evidence: [] })),
+        hits: result.hits.map((hit) => ({
+            ...hit,
+            evidence: getCortexPage(db, hit.page.id)?.sourceRefs ?? [],
+        })),
         query: result.query,
     };
 }

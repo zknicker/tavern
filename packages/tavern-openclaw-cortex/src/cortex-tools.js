@@ -27,6 +27,7 @@ export function registerTavernCortexTools(api, options = {}) {
                 maximum: 50,
             }),
             query: stringSchema('Search query.'),
+            scope: contextScopeSchema(),
         }),
         async execute(_toolCallId, params, signal) {
             return toolJson(
@@ -56,10 +57,13 @@ export function registerTavernCortexTools(api, options = {}) {
         parameters: objectSchema({
             actorId: stringSchema('Actor id to record as the capture source.'),
             actorKind: enumSchema(['agent', 'runtime', 'system', 'user'], 'Capture actor kind.'),
+            agentId: nullableStringSchema('Owning agent scope id.'),
             chatId: nullableStringSchema('Related Tavern chat id.'),
             content: stringSchema('Markdown content to save.'),
             fileId: nullableStringSchema('Related file id.'),
             messageId: nullableStringSchema('Related message id.'),
+            participantId: nullableStringSchema('Subject participant scope id.'),
+            profileId: nullableStringSchema('Subject profile scope id.'),
             sessionKey: nullableStringSchema('Related runtime session key.'),
             tags: arraySchema(stringSchema('Tag.'), 'Tags to store in page frontmatter.'),
             title: stringSchema('Cortex page title.'),
@@ -84,6 +88,7 @@ export function registerTavernCortexTools(api, options = {}) {
                 maximum: 50,
             }),
             query: stringSchema('Recall query.'),
+            scope: contextScopeSchema(),
         }),
         async execute(_toolCallId, params, signal) {
             return toolJson(
@@ -174,9 +179,12 @@ function captureParams(params = {}) {
         source: {
             actorId: optionalString(params.actorId) ?? 'openclaw-agent',
             actorKind: optionalString(params.actorKind) ?? 'agent',
+            agentId: optionalString(params.agentId),
             chatId: optionalString(params.chatId),
             fileId: optionalString(params.fileId),
             messageId: optionalString(params.messageId),
+            participantId: optionalString(params.participantId),
+            profileId: optionalString(params.profileId),
             sessionKey: optionalString(params.sessionKey),
             turnId: optionalString(params.turnId),
             url: optionalString(params.url),
@@ -193,7 +201,32 @@ function searchParams(params = {}) {
     return {
         limit: clampLimit(params.limit),
         query: requireString(params.query, 'query'),
+        scope: contextScope(params.scope),
     };
+}
+
+function contextScopeSchema() {
+    return objectSchema({
+        agentId: nullableStringSchema('Owning agent scope id.'),
+        chatId: nullableStringSchema('Active chat scope id.'),
+        participantId: nullableStringSchema('Active participant scope id.'),
+        profileId: nullableStringSchema('Active profile scope id.'),
+    });
+}
+
+function contextScope(value) {
+    if (!value || typeof value !== 'object' || Array.isArray(value)) {
+        return undefined;
+    }
+
+    const scope = {
+        agentId: optionalString(value.agentId),
+        chatId: optionalString(value.chatId),
+        participantId: optionalString(value.participantId),
+        profileId: optionalString(value.profileId),
+    };
+
+    return Object.values(scope).some(Boolean) ? scope : undefined;
 }
 
 function clampLimit(value) {
