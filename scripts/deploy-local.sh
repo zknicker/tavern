@@ -3,7 +3,7 @@ set -euo pipefail
 
 cd "$(dirname "$0")/.."
 
-bun install
+bun install --frozen-lockfile
 bun run build
 docker volume create tavern_tavern_node_modules >/dev/null
 docker run --rm \
