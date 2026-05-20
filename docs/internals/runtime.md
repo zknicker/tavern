@@ -19,8 +19,8 @@ executor.
   stores runtime settings, owns Cortex storage, and exposes Tavern tools to
   agents.
 * **OpenClaw owns execution.** Agents, sessions, turns, transcripts, files,
-  tools, model calls, prompt-time memory, and native OpenClaw config behavior
-  remain OpenClaw-owned.
+  tools, model calls, prompt-time context management, and native OpenClaw config
+  behavior remain OpenClaw-owned.
 * **Tavern App owns presentation.** The app reads runtime chat history, caches
   what it needs, and renders chats, activity, settings, memory inspection, the
   Cortex wiki, automations, skills, and stats.
@@ -89,11 +89,11 @@ Tavern Runtime chat records are canonical. OpenClaw-owned execution records
 that Tavern renders relationally are stored as projections with freshness
 metadata. OpenClaw remains canonical for native execution evidence.
 
-Cortex pages are Runtime-owned durable knowledge and memory. OpenClaw runtime
-memory remains execution context for turns. Tavern reports these as separate
-readiness surfaces so users can tell whether OpenClaw prompt-time memory is
-ready and whether Cortex capture, recall, embeddings, and maintenance are
-ready.
+Cortex pages are Runtime-owned durable knowledge and memory. Lossless Claw
+remains OpenClaw-owned context management for turns. Tavern reports these as
+separate readiness surfaces so users can tell whether prompt-time context
+management is ready and whether Cortex capture, recall, embeddings, and
+maintenance are ready.
 
 Memory and Cortex product contracts live in [Memories](../../specs/memories.md)
 and [Cortex](../../specs/cortex.md).

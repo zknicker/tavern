@@ -413,8 +413,9 @@ evidence. They enrich the UI, but they do not replace canonical chat history.
 
 ## Cortex Tables
 
-Tavern Runtime owns Cortex storage. OpenClaw runtime memory is execution-owned
-prompt-time context; Cortex is Tavern-owned durable knowledge and memory.
+Tavern Runtime owns Cortex storage. Lossless Claw is OpenClaw-owned
+prompt-time context management; Cortex is Tavern-owned durable knowledge and
+memory.
 
 ```text
 cortex_sources

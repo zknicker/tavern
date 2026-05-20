@@ -39,10 +39,10 @@ directly.
 
 ## Memory Specs
 
-- `memories.md`: OpenClaw runtime memory, Cortex-backed durable memory, person
-  memory, and memory inspection surfaces.
-- `memory-context.md`: bounded prompt-facing context assembled from OpenClaw
-  runtime memory, chat state, participants, and Cortex recall.
+- `memories.md`: Cortex-backed durable memory, person memory, and memory
+  inspection surfaces.
+- `memory-context.md`: bounded prompt-facing context assembled from Lossless
+  Claw context management, chat state, participants, and Cortex recall.
 - `memory-lifecycle.md`: Cortex page lifecycle, recall behavior, correction,
   forgetting, and maintenance.
 - `memory-persistence.md`: Cortex capture, watermarks, and extraction pipeline.

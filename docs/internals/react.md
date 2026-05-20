@@ -7,11 +7,15 @@ read_when:
 
 # React
 
+For substantial React route, hook, query, realtime, optimistic UI, or state
+architecture work, use the `react-best-practices` skill alongside this doc.
+
 ## Routes
 
 * Keep route files thin.
 * Let route/page boundaries own `Suspense`, skeletons, and error boundaries.
 * Keep primary page content mounted during background refreshes.
+* Treat empty synced database results as valid rendered states.
 
 ## Hooks
 
@@ -23,6 +27,7 @@ read_when:
   store only for volatile UI state that has not become durable server data.
 * For chat and other streaming surfaces, patch exact volatile state from live
   events. Do not refetch durable list or log queries for every progress token.
+* Effects are for external synchronization, not derived state.
 
 ## Queries
 
@@ -42,5 +47,11 @@ read_when:
 * Prefer nested compositional pieces with clear ownership. A route should choose
   ids and states; hooks should coordinate data; components should render view
   models and emit commands.
+
+## Forms
+
+* For TanStack React Form, treat fetched records as mount-time snapshots.
+* Prefer record-load gates, explicit snapshot keys, and field-level bindings in
+  leaf components.
 
 Frontend layout lives in [frontend.md](frontend.md).

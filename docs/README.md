@@ -69,8 +69,10 @@ manage businesses, complete knowledge work, and automate routine tasks.
 * **Cortex.** A browsable linked markdown brain with pages, backlinks, files,
   citations, observations, canvas graph navigation, and agent-authored working
   notes.
-* **Memory behavior.** Inspectable OpenClaw runtime memory plus Cortex capture,
-  recall, timeline evidence, and maintenance health.
+* **Context management.** Lossless Claw prompt-time continuity for active
+  OpenClaw turns.
+* **Memory.** Cortex capture, recall, timeline evidence, compiled truth, and
+  maintenance health.
 * **Cron automations.** Scheduled agent work with run history, delivery targets,
   and clear follow-up state, even while the app is closed.
 * **Skills & Plugins.** Reusable instruction packages and runtime plugins from
@@ -89,7 +91,8 @@ manage businesses, complete knowledge work, and automate routine tasks.
 | Chat | [Chat](features/chat.md) |
 | Agents | [Agents](features/agents.md) |
 | Cortex | [Cortex](features/knowledgebase.md) |
-| Memory behavior | [Memory](features/memory.md) |
+| Context management | [Context management](features/context-management.md) |
+| Memory | [Memory](features/memory.md) |
 | Automations | [Automations](features/automations.md) |
 | Skills & Plugins | [Skills & Plugins](features/skills.md) |
 | Stats | [Stats](features/stats.md) |

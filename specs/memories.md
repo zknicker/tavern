@@ -1,23 +1,22 @@
 # Memories
 
-Memory in Tavern is not a second durable database beside Cortex.
+Memory in Tavern is Cortex.
 
-Tavern has two memory layers:
+Tavern does not have two memory systems. Cortex is the durable memory system:
+compiled truth, timelines, pages, embeddings, links, observations, capture
+output, recall audit, and maintenance state.
 
-* **OpenClaw runtime memory.** Lossless Claw provides prompt-time recall during
-  active OpenClaw turns.
-* **Cortex.** Tavern's GBrain-style durable brain stores compiled truth,
-  timelines, pages, embeddings, links, observations, capture output, recall
-  audit, and maintenance state.
+Lossless Claw is context management. It provides prompt-time continuity during
+active OpenClaw turns, but it is not Tavern memory.
 
 The Memory product surface is the readable inspection and control surface for
-those layers.
+durable Cortex memory.
 
-## OpenClaw Runtime Memory
+## Context Management Boundary
 
 Managed OpenClaw uses Lossless Claw for prompt-time runtime context. Tavern
 enforces that setup as part of managed OpenClaw config rather than treating it
-as user-authored agent state.
+as user-authored memory state.
 
 Tavern's managed OpenClaw memory config:
 
@@ -25,12 +24,11 @@ Tavern's managed OpenClaw memory config:
 * sets `plugins.slots.memory` to `none`
 * enables the `lossless-claw` plugin
 
-The flat `memory` runtime capability reports this OpenClaw prompt-time memory
-readiness.
+The flat legacy `memory` runtime capability may still report this OpenClaw
+context-management readiness until the runtime capability is renamed. Product
+copy should describe it as context management, not memory.
 
 ## Durable Memory
-
-Durable memory is Cortex.
 
 Cortex pages hold the current best understanding in compiled truth and preserve
 the evidence trail in timelines. Facts, preferences, decisions, identity,
@@ -46,7 +44,6 @@ material with audit history.
 
 The Memory page shows:
 
-* OpenClaw runtime memory readiness
 * recent Cortex captures
 * compiled-truth changes
 * appended timeline evidence
@@ -54,6 +51,7 @@ The Memory page shows:
 * failed captures and recall errors
 * stale embeddings and maintenance state
 * prompt-facing context or bulletin previews when available
+* context-management readiness when Lossless Claw affects prompt continuity
 
 Memory inspection favors readable evidence over graph visualization as the
 primary experience.
@@ -75,7 +73,7 @@ and other surfaces without unsafe automatic merges.
 
 ## Prompt Continuity
 
-The prompt-facing bulletin is a rendered output, not the memory store.
+The prompt-facing bulletin is a rendered context output, not the memory store.
 
 It can include:
 
@@ -94,5 +92,5 @@ or every recent recall result.
 * Person context must not leak into unrelated participants.
 * Memory must stay bounded in prompt usage.
 * Cortex provenance must make remembered context inspectable.
-* OpenClaw runtime memory and Cortex durable memory must remain separate
-  readiness signals.
+* OpenClaw context management and Cortex memory must remain separate readiness
+  signals.

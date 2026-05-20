@@ -61,8 +61,8 @@ automation_runs
 ```
 
 Cortex and search are runtime-owned product surfaces. Memory inspection and the
-Knowledgebase page read Cortex plus OpenClaw prompt-time memory readiness; table
-details live with those feature contracts.
+Knowledgebase page read Cortex; context-management status reads OpenClaw
+prompt-time readiness. Table details live with those feature contracts.
 
 ## App Cache And Evidence
 

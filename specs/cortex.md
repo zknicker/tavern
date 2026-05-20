@@ -5,7 +5,7 @@ Cortex is Tavern's durable brain.
 It is a database-backed, wiki-shaped knowledge system where agents compile raw
 sources into maintained markdown pages. The app exposes those pages as the
 Knowledgebase and exposes memory behavior through Memory inspection. OpenClaw
-prompt-time memory remains separate.
+prompt-time context management remains separate.
 
 The design follows the LLM Wiki pattern and the GBrain operating model where it
 fits Tavern: immutable sources, compiled pages, schema-guided writing, explicit
@@ -254,8 +254,8 @@ Runtime responsibilities:
   with bounded inputs, provenance, and explicit errors.
 
 OpenClaw owns native sessions, turns, transcripts, tools, model calls, files,
-and Lossless Claw behavior during turns. Cortex failures must
-not be reported as OpenClaw prompt-time memory failures.
+and Lossless Claw behavior during turns. Cortex failures must not be reported
+as OpenClaw context-management failures.
 
 ## Storage Shape
 
@@ -297,7 +297,7 @@ captures return or update the existing capture record instead of duplicating
 page evidence.
 
 Cortex recall retrieves durable knowledge when active work needs more than
-prompt-time runtime memory. Recall can combine:
+prompt-time context. Recall can combine:
 
 * page title, slug, alias, and tag matching
 * lexical search over chunks

@@ -1,12 +1,11 @@
-# Memory Context
+# Context Management
 
-Memory context is the bounded context an active turn receives from OpenClaw
-runtime memory and Cortex recall.
+Context management is the bounded prompt context an active turn receives from
+OpenClaw, Tavern chat state, participants, activity, and Cortex recall.
 
-It is not a third durable memory system. It is prompt assembly over existing
-sources:
+It is not a durable memory system. It is prompt assembly over existing sources:
 
-* OpenClaw runtime memory for prompt-time continuity
+* Lossless Claw context management for prompt-time continuity
 * current chat, session, and activity state
 * participant/profile facts resolved by Tavern
 * Cortex recall results for durable knowledge
@@ -17,7 +16,7 @@ Each source keeps its own ownership.
 
 | Source | Owner | Role |
 | --- | --- | --- |
-| OpenClaw runtime memory | OpenClaw | Prompt-time recall during active turns |
+| Lossless Claw context management | OpenClaw | Prompt-time continuity during active turns |
 | Chat and activity state | Tavern Runtime | Recent product state and live work |
 | Participant/profile state | Tavern Runtime and Tavern App | Person identity and explicit links |
 | Cortex | Tavern Runtime | Durable pages, observations, timelines, links, embeddings, and recall |
@@ -32,7 +31,7 @@ The prompt-facing context can include:
 * active chat and session orientation
 * relevant recent activity
 * active participant/profile context
-* OpenClaw runtime memory recall
+* Lossless Claw prompt-time context
 * Cortex recall results with source links
 
 Each piece is bounded and source-linked. If Cortex recall returns nothing useful,
@@ -62,7 +61,7 @@ source metadata, citations, audit, and activity events.
 ## Constraints
 
 * Memory context stays bounded.
-* OpenClaw runtime memory remains prompt-time execution context.
+* Lossless Claw remains prompt-time execution context.
 * Cortex remains the durable memory and knowledge system.
 * The Memory page inspects source-linked context use; it is not a separate
   memory database.

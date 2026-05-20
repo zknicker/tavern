@@ -1,31 +1,26 @@
 ---
-summary: Memory feature for inspectable and editable facts/preferences, agent-aware context, and the knowledgebase boundary.
+summary: Memory feature for inspectable Cortex facts, preferences, capture, recall, provenance, and the context-management boundary.
 read_when:
-  - changing prompt-time memory readiness, Cortex memory inspection, or memory visibility
+  - changing Cortex memory inspection, recall, capture, or memory visibility
+  - changing the boundary between Lossless Claw context management and Cortex memory
   - changing how users inspect capture, recall, compiled truth, or memory health
 ---
 
 # Memory
 
-Memory is Tavern's agent-continuity behavior, not a separate primary app page.
+Memory is Tavern's durable Cortex behavior.
 
-It does not define a second durable memory database. Tavern has two memory
-systems under the hood:
+It does not define a second durable memory database. Durable memory is Cortex:
+the wiki, graph, compiled truth, timelines, pages, embeddings, links,
+observations, capture output, recall audit, and maintenance state.
 
-* **OpenClaw runtime memory.** Lossless Claw provides prompt-time recall during
-  active OpenClaw turns.
-* **Cortex.** Tavern's GBrain-style durable brain stores compiled truth,
-  timelines, pages, embeddings, links, observations, capture output, recall
-  audit, and maintenance state.
-
-Cortex is the primary app surface for durable memory because durable memory is
-Cortex. Runtime status and settings show whether prompt-time OpenClaw memory is
-healthy.
+Lossless Claw is context management. It helps an active OpenClaw turn maintain
+bounded prompt continuity, but it is not Tavern memory. Runtime status and
+settings may show whether managed OpenClaw context management is healthy, but
+remembered facts live in Cortex.
 
 ## In Cortex
 
-* **Runtime memory status.** Users can see whether managed OpenClaw has Lossless
-  Claw configured.
 * **Capture inspection.** Users can see what chats, files, notes, or agent
   observations were captured into Cortex.
 * **Compiled-truth changes.** Users can inspect recent updates to Cortex's
@@ -35,11 +30,13 @@ healthy.
 * **Recall inspection.** Users can see what Cortex returned to agents and why.
 * **Maintenance health.** Users can see stale embeddings, failed captures,
   orphan links, and recent maintenance runs.
+* **Context-management readiness.** Users can see whether managed OpenClaw has
+  Lossless Claw configured for prompt-time continuity.
 
 ## Contract
 
-Memory visibility is derived from OpenClaw memory readiness and Cortex state.
-It does not create a parallel `memory_records` store.
+Memory visibility is derived from Cortex state. It does not create a parallel
+`memory_records` store.
 
 When a user corrects memory, Tavern edits or appends to the relevant Cortex
 page, timeline entry, link, tag, or source metadata. When a user asks Tavern to
@@ -49,16 +46,20 @@ shadow list.
 
 Memory used in prompts is inspectable through its source:
 
-* OpenClaw runtime memory readiness and tool use
 * Cortex recall results
 * Cortex page compiled truth
 * Cortex timeline evidence
 * Cortex capture and maintenance audit records
+* context-management readiness when Lossless Claw contributes prompt-time
+  continuity
 
 ## Boundary
 
 The Cortex page is the browsable wiki and graph. Tavern does not maintain a
-separate Memory page or a separate `memory_records` store.
+separate Memory page or a separate `memory_records` store. Context management
+is documented separately because Lossless Claw is prompt assembly, not memory
+storage.
 
 See [Cortex](../../specs/cortex.md) for the durable brain model and
-[Memories](../../specs/memories.md) for the memory visibility contract.
+[Memories](../../specs/memories.md) for the memory visibility contract. See
+[Context management](context-management.md) for Lossless Claw's role.

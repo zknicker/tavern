@@ -1,28 +1,26 @@
 # Memory Lifecycle
 
-Tavern memory lifecycle is Cortex page lifecycle plus OpenClaw prompt-time
-context use.
+Tavern memory lifecycle is Cortex page lifecycle.
 
 There is no separate durable memory pool, promotion queue, or memory-record
 ranking system. Durable memory lives as Cortex pages, timeline entries, links,
 tags, observations, source metadata, embeddings, audit events, and maintenance
 state.
 
-## Runtime Working Context
+## Context Management Boundary
 
 OpenClaw owns the live execution context for turns.
 
-Lossless Claw provides prompt-time recall over OpenClaw's runtime memory. That
-context helps the agent stay oriented during active work, but it is not
-Tavern's durable memory database.
+Lossless Claw provides prompt-time context management. That context helps the
+agent stay oriented during active work, but it is not Tavern memory.
 
-Tavern configures managed OpenClaw so this runtime memory is available and
-inspectable:
+Tavern configures managed OpenClaw so this context-management layer is
+available and inspectable:
 
 * Lossless Claw is the OpenClaw context engine.
 * OpenClaw built-in memory is disabled for Tavern-managed runs.
-* Tavern reports readiness when the Gateway exposes memory capability and the
-  managed config matches Tavern's required memory config.
+* Tavern reports readiness when the Gateway exposes the required capability and
+  the managed config matches Tavern's required context-management config.
 
 ## Cortex Lifecycle
 

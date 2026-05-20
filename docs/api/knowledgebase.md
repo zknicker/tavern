@@ -46,8 +46,9 @@ The API covers:
 
 ## Memory Boundary
 
-Knowledgebase is the human browsing API for Cortex. Memory APIs inspect what
-Cortex and OpenClaw runtime memory are doing for agent continuity.
+Knowledgebase is the human browsing API for Cortex. Memory APIs inspect Cortex
+capture, recall, provenance, and maintenance. Context-management surfaces
+inspect Lossless Claw prompt-time continuity separately.
 
 ## Related Docs
 
