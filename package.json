@@ -41,5 +41,19 @@
     "openclaw": "2026.5.12",
     "ultracite": "^7.3.0",
     "zod": "4.1.11"
+  },
+  "overrides": {
+    "@hono/node-server": "1.19.13",
+    "brace-expansion": "5.0.6",
+    "fast-uri": "3.1.2",
+    "hono": "4.12.18",
+    "ip-address": "10.2.0",
+    "lodash": "4.18.1",
+    "path-to-regexp": "8.4.2",
+    "picomatch": "4.0.4",
+    "postcss": "8.5.14",
+    "protobufjs": "7.5.9",
+    "vite": "7.3.3",
+    "ws": "8.20.1"
   }
 }

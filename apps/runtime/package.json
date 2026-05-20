@@ -21,7 +21,7 @@
   "dependencies": {
     "@tavern/api": "workspace:*",
     "@tavern/openclaw-gateway-adapter": "workspace:*",
-    "ws": "^8.18.3"
+    "ws": "8.20.1"
   },
   "devDependencies": {
     "@types/bun": "^1.3.11",
