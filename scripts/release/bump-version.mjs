@@ -177,7 +177,7 @@ function printSummary({ currentVersion, targetVersion }) {
     console.log(`- ${tauriConfigPath}`);
     console.log(`- ${cargoManifestPath}`);
     console.log('Next:');
-    console.log('- bun install');
+    console.log('- bun install --frozen-lockfile');
     console.log('- bun run release:collect-changelog-context');
     console.log('- update CHANGELOG.md using commit analysis');
     console.log('- bun run release:check');

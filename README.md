@@ -43,7 +43,7 @@ shape instead of a second protocol package.
 Install dependencies:
 
 ```bash
-bun install
+bun install --frozen-lockfile
 ```
 
 Run the full local stack:

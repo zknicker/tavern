@@ -10,7 +10,7 @@ read_when:
 ## Flow
 
 1. Run `bun run release:bump <patch|minor|major|X.Y.Z>`.
-2. Run `bun install`.
+2. Run `bun install --frozen-lockfile`.
 3. Run `bun run release:collect-changelog-context`.
 4. Update the top `CHANGELOG.md` entry from the commit context.
 5. Run `bun run release:check`.
