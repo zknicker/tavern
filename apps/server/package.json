@@ -15,26 +15,26 @@
     "db:ensure": "bun src/db/ensure-runner.ts"
   },
   "dependencies": {
-    "@fastify/cors": "^11.1.0",
+    "@fastify/cors": "11.2.0",
     "@tavern/api": "workspace:*",
     "@tavern/claude-usage": "workspace:*",
     "@tavern/codex-usage": "workspace:*",
     "@tavern/openclaw-gateway-adapter": "workspace:*",
     "@tavern/sdk": "workspace:*",
-    "@trpc/server": "^11.10.0",
-    "bottleneck": "^2.19.5",
-    "bunqueue": "^2.6.38",
+    "@trpc/server": "11.12.0",
+    "bottleneck": "2.19.5",
+    "bunqueue": "2.6.38",
     "drizzle-orm": "0.45.2",
     "fastify": "5.8.5",
     "ws": "8.20.1",
-    "yaml": "^2.8.3",
+    "yaml": "2.9.0",
     "zod": "4.1.11"
   },
   "devDependencies": {
-    "@types/ws": "^8.18.1",
-    "@types/node": "^24.5.2",
-    "bun-types": "^1.3.5",
+    "@types/ws": "8.18.1",
+    "@types/node": "24.12.0",
+    "bun-types": "1.3.13",
     "drizzle-kit": "0.31.10",
-    "typescript": "^5.9.2"
+    "typescript": "5.9.3"
   }
 }

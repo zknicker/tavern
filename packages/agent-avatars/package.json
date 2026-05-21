@@ -15,12 +15,12 @@
     "react": ">=18"
   },
   "dependencies": {
-    "clsx": "^2.1.1",
-    "tailwind-merge": "^3.5.0"
+    "clsx": "2.1.1",
+    "tailwind-merge": "3.5.0"
   },
   "devDependencies": {
-    "@types/react": "^19.2.2",
-    "tsup": "^8.5.0",
-    "typescript": "^5.9.2"
+    "@types/react": "19.2.14",
+    "tsup": "8.5.1",
+    "typescript": "5.9.3"
   }
 }
