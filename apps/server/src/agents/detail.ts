@@ -5,7 +5,7 @@ import { listCronJobs } from '../cron/list.ts';
 import { sessionSchema } from '../sessions/contracts.ts';
 import { listLogs } from '../storage/logs.ts';
 import { listSessionMessagesForSessionKeys } from '../storage/session-messages.ts';
-import { listSessionProjections, parseSessionProjection } from '../storage/sessions.ts';
+import { listSessionRecords, parseSessionRecord } from '../storage/sessions.ts';
 import { getAgent } from './catalog.ts';
 import type { AgentDetail } from './contracts.ts';
 import { buildAgentPalette, resolveAgentAvatar, resolveAgentName } from './palette.ts';
@@ -41,14 +41,14 @@ export async function getAgentDetail(agentId: string): Promise<AgentDetail> {
     }
 
     const [sessionRecords, cronJobList, logs] = await Promise.all([
-        listSessionProjections(),
+        listSessionRecords(),
         listCronJobs(),
         listLogs(),
     ]);
     const cronJobRecords = cronJobList.jobs;
     const palette = buildAgentPalette(agent);
     const sessionsForAgent = sessionRecords
-        .map(parseSessionProjection)
+        .map(parseSessionRecord)
         .filter((record): record is NonNullable<typeof record> => record?.agentId === agentId);
     const messagesBySessionKey = await buildMessagesBySessionKey(
         sessionsForAgent.map((session) => session.key)

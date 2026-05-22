@@ -25,7 +25,7 @@ test('runtime client remains configured when a secondary capability is degraded'
     const runtimeId = 'runtime-with-degraded-chat';
     await saveRuntimeConnection({
         id: runtimeId,
-        lastError: 'chat projection sync is degraded',
+        lastError: 'chat sync is degraded',
     });
     await saveAgentRuntimeCapabilityStatus({
         capability: 'status',

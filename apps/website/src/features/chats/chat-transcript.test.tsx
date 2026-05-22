@@ -10,6 +10,8 @@ import type {
 } from '../../hooks/chats/chat-timeline-state.ts';
 import { SessionDrawerProvider } from '../../hooks/sessions/use-session-drawer.ts';
 import { type ChatLogOutput, trpc } from '../../lib/trpc.tsx';
+import { ToolDrawerBody } from '../sessions/tools/tool-drawer-body.tsx';
+import { ArtifactLogEntry } from '../sessions/log/event-entry/artifact-entry.tsx';
 import { ChatTranscript } from './chat-transcript.tsx';
 import { ToolStep } from './tool-steps/registry.tsx';
 
@@ -149,6 +151,83 @@ test('ToolStep renders bash failures through the shell tool renderer', () => {
     assert.doesNotMatch(markup, />Used</);
 });
 
+test('ToolStep keeps older tool rows inspectable when call id is missing', () => {
+    const markup = renderToStaticMarkup(
+        <ToolStep
+            index={0}
+            isLast
+            row={{
+                actor: { id: 'tiny', kind: 'agent' },
+                completedAt: '2026-03-31T15:00:05.000Z',
+                connectsToNext: false,
+                connectsToPrevious: false,
+                id: 'tool-old',
+                isFirstInGroup: true,
+                kind: 'tool',
+                sessionKey: 'agent:tiny:session-1',
+                spawnedRelationships: [],
+                startedAt: '2026-03-31T15:00:00.000Z',
+                toolCall: {
+                    callId: null,
+                    facts: [],
+                    label: 'computer use.list apps',
+                    name: 'tool',
+                    status: 'completed',
+                    summaryParts: ['computer use.list apps'],
+                },
+            }}
+        />
+    );
+
+    assert.match(markup, /data-slot="drawer-trigger"/);
+    assert.match(markup, /computer use\.list apps/);
+});
+
+test('ToolDrawerBody renders a concise unavailable state when tool details cannot load', () => {
+    const markup = renderToStaticMarkup(
+        <ToolDrawerBody
+            details={null}
+            isPending={false}
+            queryError
+        />
+    );
+
+    assert.match(markup, /Tool details not available\./);
+});
+
+test('ToolStep avoids duplicating the tool verb when the activity title already includes it', () => {
+    const markup = renderToStaticMarkup(
+        <ToolStep
+            index={0}
+            isLast
+            row={{
+                actor: { id: 'tiny', kind: 'agent' },
+                completedAt: '2026-03-31T15:00:05.000Z',
+                connectsToNext: false,
+                connectsToPrevious: false,
+                id: 'tool-read',
+                isFirstInGroup: true,
+                kind: 'tool',
+                sessionKey: 'agent:tiny:session-1',
+                spawnedRelationships: [],
+                startedAt: '2026-03-31T15:00:00.000Z',
+                toolCall: {
+                    callId: null,
+                    facts: [],
+                    label: 'read from QA_KICKOFF_TASK.md',
+                    name: 'read',
+                    status: 'completed',
+                    summaryParts: ['read from QA_KICKOFF_TASK.md'],
+                },
+            }}
+        />
+    );
+
+    assert.match(markup, />Used</);
+    assert.match(markup, /read from QA_KICKOFF_TASK\.md/);
+    assert.doesNotMatch(markup, /Read read from QA_KICKOFF_TASK\.md/);
+});
+
 test('ChatTranscript shows completed activity as worked duration', () => {
     const markup = renderTranscript([
         {
@@ -174,6 +253,34 @@ test('ChatTranscript shows completed activity as worked duration', () => {
     ]);
 
     assert.match(markup, /Worked for 2 minutes 3 seconds/);
+});
+
+test('ArtifactLogEntry renders durable artifact titles', () => {
+    const markup = renderToStaticMarkup(
+        <ArtifactLogEntry
+            entry={{
+                artifact: {
+                    artifactType: 'document',
+                    createdAt: '2026-03-31T15:00:05.000Z',
+                    id: 'art-report',
+                    mimeType: 'text/markdown',
+                    path: 'file:///tmp/report.md',
+                    payload: {
+                        contentRef: 'file:///tmp/report.md',
+                        contentText: '# Report',
+                        title: 'Report',
+                    },
+                },
+                id: 'art-report',
+                kind: 'system',
+                systemKind: 'artifact',
+                timestamp: '2026-03-31T15:00:05.000Z',
+            }}
+        />
+    );
+
+    assert.match(markup, /document/);
+    assert.match(markup, /Report/);
 });
 
 test('ChatTranscript keeps completed assistant narration expanded', () => {
@@ -435,8 +542,36 @@ test('ChatTranscript renders active tool progress as one-line status rows', () =
     );
 
     assert.match(markup, /Using[\s\S]*bash/);
+    assert.match(markup, /data-slot="drawer-trigger"/);
     assert.doesNotMatch(markup, />Running</);
     assert.doesNotMatch(markup, />start</);
+});
+
+test('ChatTranscript wires active progress tool ids to the tool drawer trigger', () => {
+    const markup = renderActiveTranscript(
+        {
+            agentId: 'tiny',
+            isThinking: true,
+            runId: 'run-progress',
+            sessionKey: 'agent:tiny:session-1',
+            startedAt: new Date(Date.now() - 3000).toISOString(),
+            text: '',
+        },
+        [
+            {
+                id: 'call_123',
+                kind: 'tool',
+                label: 'computer use.list apps',
+                status: 'active',
+                toolCallId: 'call_123',
+                toolName: 'computer-use.list_apps',
+            },
+        ],
+        new Date().toISOString()
+    );
+
+    assert.match(markup, /Using[\s\S]*computer use\.list apps/);
+    assert.match(markup, /data-slot="drawer-trigger"/);
 });
 
 test('ChatTranscript keeps live progress in working state when current steps are completed', () => {
@@ -539,6 +674,7 @@ function renderActiveTranscript(
                             activeReply={activeReply}
                             activeReplyProgressStartedAt={activeReplyProgressStartedAt}
                             activeReplySteps={activeReplySteps}
+                            chatId="cht_test"
                             rows={[]}
                         />
                     </SessionDrawerProvider>

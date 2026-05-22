@@ -59,7 +59,7 @@ test('applyObservedAgentRuntimeEvent requests a session sync for session invalid
     assert.equal(workersSpy.mock.calls.length, 1);
 });
 
-test('applyObservedAgentRuntimeEvent invalidates agent projections on agent updates', async () => {
+test('applyObservedAgentRuntimeEvent invalidates agents on agent updates', async () => {
     const invalidateSpy = spyOn(invalidationEvents, 'emitAgentUpdated').mockImplementation();
 
     await applyObservedAgentRuntimeEvent({

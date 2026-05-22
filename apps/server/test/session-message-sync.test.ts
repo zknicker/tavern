@@ -4,13 +4,13 @@ import { ensureDatabaseSchema } from '../src/db/bootstrap.ts';
 import { databaseClient } from '../src/db/index.ts';
 import { getParticipant } from '../src/storage/participants.ts';
 import {
-    getSessionMessageProjectionState,
+    getSessionMessageState,
     listSessionMessagesForSessionKeys,
     syncSessionMessagesForRuntime,
 } from '../src/storage/session-messages.ts';
 import { syncSessionToolCallsForRuntime } from '../src/storage/session-tool-call-sync.ts';
-import { listProjectedSessionToolCalls } from '../src/storage/session-tool-calls.ts';
-import { resolveSessionMessageSyncLimit } from '../src/sync/agent-runtime-projections.ts';
+import { listSessionToolCalls } from '../src/storage/session-tool-calls.ts';
+import { resolveSessionMessageSyncLimit } from '../src/sync/agent-runtime-sync.ts';
 
 ensureDatabaseSchema();
 
@@ -50,7 +50,7 @@ test('session tool call sync projects durable graph timings', async () => {
         ],
     });
 
-    const [toolCall] = await listProjectedSessionToolCalls(['session-1']);
+    const [toolCall] = await listSessionToolCalls(['session-1']);
 
     assert.equal(toolCall?.toolCallId, 'call-1');
     assert.equal(toolCall?.startedAt, '2026-05-02T01:03:00.000Z');
@@ -130,8 +130,8 @@ test('session message sync upserts by stable id without deleting absent partial-
     );
 });
 
-test('session message projection state tracks whether a session has synced messages', async () => {
-    assert.deepEqual(await getSessionMessageProjectionState('session-1'), {
+test('session message sync state tracks whether a session has synced messages', async () => {
+    assert.deepEqual(await getSessionMessageState('session-1'), {
         hasMessages: false,
         lastSyncedAt: null,
     });
@@ -144,7 +144,7 @@ test('session message projection state tracks whether a session has synced messa
         timestamp: '2026-05-02T01:00:00.000Z',
     });
 
-    assert.deepEqual(await getSessionMessageProjectionState('session-1'), {
+    assert.deepEqual(await getSessionMessageState('session-1'), {
         hasMessages: true,
         lastSyncedAt: '2026-05-02T02:00:00.000Z',
     });
@@ -197,33 +197,33 @@ test('session message sync resolves observed user senders to participants', asyn
     assert.deepEqual(participant?.labels, ['Zach Knickerbocker']);
 });
 
-test('message sync limit uses deeper reads for empty or stale projections', () => {
+test('message sync limit uses deeper reads for empty or stale synced state', () => {
     const now = '2026-05-02T12:00:00.000Z';
 
     assert.equal(
         resolveSessionMessageSyncLimit({
+            messageState: { hasMessages: false, lastSyncedAt: null },
             now,
-            projectionState: { hasMessages: false, lastSyncedAt: null },
         }),
         1000
     );
     assert.equal(
         resolveSessionMessageSyncLimit({
-            now,
-            projectionState: {
+            messageState: {
                 hasMessages: true,
                 lastSyncedAt: '2026-05-02T11:59:00.000Z',
             },
+            now,
         }),
         200
     );
     assert.equal(
         resolveSessionMessageSyncLimit({
-            now,
-            projectionState: {
+            messageState: {
                 hasMessages: true,
                 lastSyncedAt: '2026-05-02T00:00:00.000Z',
             },
+            now,
         }),
         1000
     );

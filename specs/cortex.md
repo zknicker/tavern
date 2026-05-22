@@ -314,21 +314,23 @@ database rows.
 
 Cortex exposes a focused agent tool surface:
 
-* `cortex.recall`: search Cortex and return grounded, source-linked context.
-* `cortex.capture`: save notes, facts, decisions, corrections, evidence, or
+* `cortex_recall`: search Cortex and return grounded, source-linked context.
+* `cortex_capture`: save notes, facts, decisions, corrections, evidence, or
   observations with provenance.
-* `cortex.getPage`: read a page by id, slug, alias, or link target.
-* `cortex.listBacklinks`: list pages that link to a page or unresolved slug.
-* `cortex.search`: run lexical and metadata search without LLM synthesis.
-* `cortex.status`: inspect storage, pages, chunks, encodings, jobs, audit, and
+* `cortex_get_page`: read a page by id, slug, alias, or link target.
+* `cortex_list_backlinks`: list pages that link to a page or unresolved slug.
+* `cortex_search`: run lexical and metadata search without LLM synthesis.
+* `cortex_status`: inspect storage, pages, chunks, encodings, jobs, audit, and
   recent failures.
-* `cortex.runJob`: request an allowed Cortex job such as link repair, embedding
+* `cortex_run_job`: request an allowed Cortex job such as link repair, embedding
   repair, or markdown mirror rebuild.
 
 Tools are conservative. Agents use Cortex when durable knowledge can materially
 improve the task, not before every response.
 
 In OpenClaw, these tools are owned by the first-party `tavern-cortex` plugin.
+Tool names use provider-safe `A-Za-z0-9_-` identifiers because OpenClaw may pass
+them through provider APIs and agent harnesses that reject dotted names.
 The Tavern Messenger plugin remains responsible only for Tavern chat/channel
 delivery.
 

@@ -15,8 +15,8 @@ import {
     resolveObservedAgent,
 } from '../../participants/observed.ts';
 import { sessionMessageSchema } from '../../sessions/contracts.ts';
-import { listCronJobProjections, parseCronJobRawJson } from '../cron-jobs.ts';
-import { listSessionProjections, parseSessionProjection } from '../sessions.ts';
+import { listCronJobRecords, parseCronJobRawJson } from '../cron-jobs.ts';
+import { listSessionRecords, parseSessionRecord } from '../sessions.ts';
 
 export function parseJson(value: string | null) {
     if (!value) {
@@ -208,7 +208,7 @@ async function listCronRunSessions(keys: string[]) {
             })
             .from(cronRunsTable)
             .where(inArray(cronRunsTable.sessionKey, keys)),
-        listCronJobProjections(),
+        listCronJobRecords(),
     ]);
     const cronJobsById = new Map(
         cronJobs.map((job) => {
@@ -322,8 +322,8 @@ export async function buildSessionReferenceLookup(sessionKeys: string[]) {
         return new Map<string, { agentId: string | null; channel: string | null; title: string }>();
     }
 
-    const agentRuntimeSessions = (await listSessionProjections()).flatMap((record) => {
-        const session = parseSessionProjection(record);
+    const agentRuntimeSessions = (await listSessionRecords()).flatMap((record) => {
+        const session = parseSessionRecord(record);
         return session ? [session] : [];
     });
     const relatedSessionByKey = new Map(

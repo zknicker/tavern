@@ -3,7 +3,7 @@ import type { ActorRef } from '../actors/contracts.ts';
 import { getMessageActor, toAgentActor } from '../actors/resolve.ts';
 import type { AgentLookup } from '../participants/observed.ts';
 import type { SessionMessage } from '../sessions/contracts.ts';
-import { mergeProjectedToolCalls } from '../sessions/projected-tool-calls.ts';
+import { mergeToolCalls } from '../sessions/tool-call-sync.ts';
 import { buildSessionThinking } from '../sessions/thinking.ts';
 import { buildToolSummary, buildToolSummaryFromValues } from '../tools/summary.ts';
 import type { Worker } from '../workers/contracts.ts';
@@ -138,7 +138,7 @@ export function buildChatRows(input: {
         message: normalizeAgentMessage(candidate.message, input.agentLookup, candidate.agentId),
     }));
 
-    const toolCalls = mergeProjectedToolCalls({
+    const toolCalls = mergeToolCalls({
         messages: messages.map((candidate) => ({
             content: candidate.message.content,
             id: candidate.message.id,
@@ -148,7 +148,7 @@ export function buildChatRows(input: {
             sessionKey: candidate.message.sourceSessionKey,
             timestamp: candidate.message.timestamp,
         })),
-        projectedToolCalls: input.toolCalls,
+        toolCalls: input.toolCalls,
     });
 
     for (const toolCall of toolCalls) {

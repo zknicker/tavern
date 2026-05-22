@@ -122,33 +122,6 @@ test('renders live tool progress before the final reply', async ({ page }) => {
     });
 });
 
-test('renders streamed assistant preamble while tools are still running', async ({ page }) => {
-    test.setTimeout(120_000);
-
-    const expectedReply = `LIVE-PREAMBLE-TOOL-PROGRESS-${Date.now()}`;
-    const preamble = 'I will run the slow QA command before the final reply.';
-    const prompt = `Live preamble tool progress qa check. Run the slow QA command, then reply exactly \`${expectedReply}\`.`;
-
-    await page.goto('/dashboard/overview');
-
-    await page.locator('#home-prompt').fill(prompt);
-    await page.getByRole('button', { name: 'Start chat' }).click();
-
-    await waitForRealChatRoute(page);
-
-    const finalReply = transcriptParagraph(page, expectedReply);
-    await expect(finalReply).toHaveCount(0);
-    await expect(page.getByRole('button', { name: /Working for/i })).toBeVisible({
-        timeout: 30_000,
-    });
-    await expect(page.getByText(new RegExp(escapeRegExp(preamble))).first()).toBeVisible({
-        timeout: 90_000,
-    });
-    await expect(finalReply).toHaveCount(0);
-
-    await expect(finalReply).toBeVisible({ timeout: 90_000 });
-});
-
 test('renders model reasoning summaries in chat activity', async ({ page }) => {
     test.setTimeout(120_000);
 

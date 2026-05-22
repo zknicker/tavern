@@ -10,7 +10,7 @@ import {
 } from './agent-runtime-shared.ts';
 import { type SessionDetail, sessionDetailSchema, sessionMessagesPageSchema } from './contracts.ts';
 import { buildSessionLogEntries } from './log.ts';
-import { mergeProjectedToolCalls } from './projected-tool-calls.ts';
+import { mergeToolCalls } from './tool-call-sync.ts';
 import { buildSessionThinking } from './thinking.ts';
 
 function mapAgentRuntimeArtifact(artifact: AgentRuntimeSessionArtifact) {
@@ -88,7 +88,7 @@ export function buildAgentRuntimeSessionToolDetail(input: {
     snapshot: AgentRuntimeSessionSnapshot;
     toolCallId: string;
 }) {
-    const toolCalls = mergeProjectedToolCalls({
+    const toolCalls = mergeToolCalls({
         messages: input.snapshot.graph.messages.map((message) => ({
             content: message.content,
             id: message.id,
@@ -99,7 +99,7 @@ export function buildAgentRuntimeSessionToolDetail(input: {
             sessionKey: message.sessionKey,
             timestamp: message.timestamp,
         })),
-        projectedToolCalls: input.snapshot.graph.toolCalls,
+        toolCalls: input.snapshot.graph.toolCalls,
     });
     const record =
         toolCalls.find(

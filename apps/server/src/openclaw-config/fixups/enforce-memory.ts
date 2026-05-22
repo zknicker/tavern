@@ -22,12 +22,11 @@ export const enforceMemoryFixup: OpenClawConfigFixup = {
 
 export function enforceOpenClawMemoryConfig(config: Record<string, unknown>) {
     const plugins = readRecord(config.plugins);
+    const { installs: _installs, ...openClawPlugins } = plugins;
     const slots = readRecord(plugins.slots);
     const entries = readRecord(plugins.entries);
-    const installs = readRecord(plugins.installs);
     const losslessClaw = readRecord(entries['lossless-claw']);
     const strippedEntries = stripRemovedMemoryPlugins(entries);
-    const strippedInstalls = stripRemovedMemoryPlugins(installs);
     const allow = uniqueSorted([
         ...readStringArray(plugins.allow).filter(
             (pluginId) => !removedMemoryPluginIds.has(pluginId)
@@ -38,9 +37,8 @@ export function enforceOpenClawMemoryConfig(config: Record<string, unknown>) {
     return {
         ...config,
         plugins: {
-            ...plugins,
+            ...openClawPlugins,
             allow,
-            installs: strippedInstalls,
             slots: {
                 ...slots,
                 contextEngine: requiredOpenClawMemoryConfig.contextEngine,

@@ -8,9 +8,11 @@ export type ChatTimelineMessageRow = Extract<ChatTimeline[number], { kind: 'mess
 export interface ChatTurnProgressStep {
     detail?: string | null;
     id: string;
-    kind: 'command' | 'message' | 'plan' | 'reasoning' | 'tool';
+    kind: 'approval' | 'artifact' | 'command' | 'message' | 'plan' | 'reasoning' | 'tool';
     label: string;
     status: 'active' | 'completed' | 'failed';
+    toolCallId?: string | null;
+    toolName?: string | null;
 }
 
 export const initialPlanningStep: ChatTurnProgressStep = {

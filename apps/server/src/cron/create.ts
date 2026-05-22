@@ -2,10 +2,10 @@ import { requireConfiguredAgentRuntimeClientForRuntimeId } from '../agent-runtim
 import * as agentRuntimeCron from '../agent-runtime/cron.ts';
 import { requirePrimaryAgent } from '../agents/catalog.ts';
 import { emitCronUpdated, emitSyncDataUpdated } from '../api/invalidation-events.ts';
-import { getAgent as getAgentProjection } from '../storage/agents.ts';
-import { getChatProjection } from '../storage/chats.ts';
-import { saveCronJobProjection } from '../storage/cron-jobs.ts';
-import { syncAgentRuntimeCron } from '../sync/agent-runtime-projections.ts';
+import { getAgent as getAgentRecord } from '../storage/agents.ts';
+import { getChatRecord } from '../storage/chats.ts';
+import { saveCronJobRecord } from '../storage/cron-jobs.ts';
+import { syncAgentRuntimeCron } from '../sync/agent-runtime-sync.ts';
 import { addCronJobParamsSchema } from './contracts.ts';
 import { buildOpenClawCronSchedule } from './schedule-config.ts';
 
@@ -14,12 +14,12 @@ async function resolveCronRuntimeId(input: {
     delivery?: { chatId: string } | null;
 }) {
     const [agent, deliveryChat] = await Promise.all([
-        input.agentId ? getAgentProjection(input.agentId) : null,
-        input.delivery?.chatId ? getChatProjection(input.delivery.chatId) : null,
+        input.agentId ? getAgentRecord(input.agentId) : null,
+        input.delivery?.chatId ? getChatRecord(input.delivery.chatId) : null,
     ]);
 
     if (input.agentId && !agent) {
-        throw new Error(`No synced agent named "${input.agentId}" exists.`);
+        throw new Error(`No agent named "${input.agentId}" exists.`);
     }
 
     if (input.delivery?.chatId && !deliveryChat) {
@@ -71,12 +71,12 @@ export async function createCronJob(input: unknown) {
         },
         runtimeClient
     );
-    await saveCronJobProjection({
+    await saveCronJobRecord({
         job: created,
         runtimeId,
     });
     void syncAgentRuntimeCron().catch((error) => {
-        console.warn('[tavern] failed to refresh cron projections after create', error);
+        console.warn('[tavern] failed to refresh cron records after create', error);
     });
     emitCronUpdated();
     emitSyncDataUpdated();

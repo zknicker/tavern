@@ -6,7 +6,7 @@
     "onStartup": true
   },
   "contracts": {
-    "tools": ["workspace.notes.read", "workspace.notes.update"]
+    "tools": ["workspace_notes_read", "workspace_notes_update"]
   },
   "configSchema": {
     "type": "object",

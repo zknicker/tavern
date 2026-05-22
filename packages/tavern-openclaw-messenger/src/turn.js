@@ -7,9 +7,11 @@ import {
     persistFailedTurnMessages,
     readTranscriptSession,
 } from './failed-inbound-message.js';
+import { buildBodyForAgentWithMentions } from './mentions.js';
 import { buildAcceptedTavernMetadata, registerActiveTavernTurn } from './message-identity.js';
 import { registerTavernDeliveryContext, sendTavernTextMessage } from './outbound.js';
-import { createTurnProgressProjector } from './turn-progress.js';
+import { activityStepFromProgressStep } from './tavern-api.js';
+import { createTurnProgressMapper } from './turn-progress.js';
 
 export async function handleTavernInboundMessage({ context, event, runtime, sendAccepted }) {
     const input = parseTavernRelayInbound(event);
@@ -83,9 +85,12 @@ async function runTavernTurn({ context, input, runId, runtime, startedAt }) {
     const sessionMetaTasks = [];
     let observedFinalReplyDelivery = false;
     const acceptedMetadata = buildAcceptedTavernMetadata(input);
-    const partialReplies = createPartialReplyTracker();
     const unregisterActiveTurn = registerActiveTavernTurn(input);
-    const turnProgress = createTurnProgressProjector({
+    const bodyForAgent = buildBodyForAgentWithMentions({
+        metadata: acceptedMetadata,
+        text: input.text,
+    });
+    const turnProgress = createTurnProgressMapper({
         context,
         input,
         runId,
@@ -134,7 +139,7 @@ async function runTavernTurn({ context, input, runId, runtime, startedAt }) {
         },
         message: {
             rawBody: input.text,
-            bodyForAgent: input.text,
+            bodyForAgent,
             commandBody: input.text,
             envelopeFrom: input.sender.name,
             inboundHistory: input.recentMessages,
@@ -152,6 +157,7 @@ async function runTavernTurn({ context, input, runId, runtime, startedAt }) {
         markFinalReplySent: () => {
             observedFinalReplyDelivery = true;
         },
+        requestMessageId: input.messageId,
         runId,
         sessionKey: input.sessionKey,
     });
@@ -197,14 +203,12 @@ async function runTavernTurn({ context, input, runId, runtime, startedAt }) {
                 allowProgressCallbacksWhenSourceDeliverySuppressed: true,
                 bootstrapContextMode: 'lightweight',
                 onApprovalEvent: (event) => {
-                    partialReplies.stopAcceptingPreamble();
                     turnProgress.handle({
                         data: event,
                         stream: 'approval',
                     });
                 },
                 onCommandOutput: (event) => {
-                    partialReplies.stopAcceptingPreamble();
                     turnProgress.handle({
                         data: event,
                         stream: 'command_output',
@@ -225,32 +229,18 @@ async function runTavernTurn({ context, input, runId, runtime, startedAt }) {
                         },
                         stream: 'compaction',
                     }),
-                onAgentEvent: (event) => turnProgress.handle(event),
                 onItemEvent: (event) => {
-                    if (isWorkItemEvent(event)) {
-                        partialReplies.stopAcceptingPreamble();
-                    }
                     turnProgress.handle({
                         data: event,
                         stream: 'item',
                     });
                 },
                 onPatchSummary: (event) => {
-                    partialReplies.stopAcceptingPreamble();
                     turnProgress.handle({
                         data: event,
                         stream: 'patch',
                     });
                 },
-                onPartialReply: (event) =>
-                    emitPartialReplyUpdate({
-                        context,
-                        event,
-                        input,
-                        partialReplies,
-                        runId,
-                        startedAt,
-                    }),
                 onReasoningStream: (event) =>
                     turnProgress.handle({
                         data: {
@@ -263,14 +253,15 @@ async function runTavernTurn({ context, input, runId, runtime, startedAt }) {
                         data: event,
                         stream: 'plan',
                     }),
-                onToolStart: (event) => {
-                    partialReplies.stopAcceptingPreamble();
+                onToolResult: (event) => {
                     turnProgress.handle({
                         data: event,
-                        stream: 'tool',
+                        stream: 'tool_result',
                     });
                 },
                 runId,
+                shouldEmitToolOutput: () => true,
+                shouldEmitToolResult: () => true,
                 suppressDefaultToolProgressMessages: true,
                 suppressPromptPersistence: true,
             },
@@ -305,6 +296,7 @@ async function runTavernTurn({ context, input, runId, runtime, startedAt }) {
 
         await settleSessionMetaTasks(sessionMetaTasks);
         await updateTurnReasoningFromTranscript({ context, input, runId, startedAt, storePath });
+        await updateTurnToolsFromTranscript({ context, input, runId, startedAt, storePath });
         await updateTurnCompleted({ context, input, runId, startedAt });
     } catch (error) {
         timing('runAssembled.error', {
@@ -317,88 +309,6 @@ async function runTavernTurn({ context, input, runId, runtime, startedAt }) {
         unregisterActiveTurn();
         unregisterDeliveryContext();
     }
-}
-
-function emitPartialReplyUpdate({ context, event, input, partialReplies, runId, startedAt }) {
-    const text = typeof event?.text === 'string' ? event.text : '';
-    const delta = typeof event?.delta === 'string' ? event.delta : undefined;
-    const visibleText = text.trim() || (delta ?? '').trim();
-
-    if (visibleText.length === 0) {
-        return;
-    }
-
-    const step = partialReplies.update(visibleText);
-
-    if (!step) {
-        return;
-    }
-
-    void requireTavernApi(context).updateTurnActivity(
-        {
-            agentId: input.agentId,
-            chatId: input.chatId,
-            messageId: input.messageId,
-            runId,
-            sessionKey: input.sessionKey,
-            startedAt,
-        },
-        {
-            status: 'running',
-            summary: text,
-            step: {
-                completed_at: null,
-                id: step.id,
-                kind: 'message',
-                label: 'Assistant reply',
-                metadata: {
-                    detail: step.text,
-                },
-                started_at: step.startedAt,
-                status: 'running',
-            },
-        }
-    );
-}
-
-function createPartialReplyTracker() {
-    let sequence = 0;
-    let current = null;
-    let acceptsPreamble = true;
-
-    return {
-        stopAcceptingPreamble() {
-            acceptsPreamble = false;
-        },
-        update(text) {
-            if (!acceptsPreamble) {
-                return null;
-            }
-
-            if (!(current && (text.startsWith(current.text) || current.text.startsWith(text)))) {
-                sequence += 1;
-                current = {
-                    id: `assistant-reply:${sequence}`,
-                    startedAt: new Date().toISOString(),
-                    text,
-                };
-                return current;
-            }
-
-            current = {
-                ...current,
-                text,
-            };
-
-            return current;
-        },
-    };
-}
-
-function isWorkItemEvent(event) {
-    const kind = readString(event?.kind) ?? readString(event?.type);
-
-    return kind !== 'reasoning' && kind !== 'message' && kind !== 'assistant_message';
 }
 
 function updateTurnCompleted({ context, input, runId, startedAt }) {
@@ -445,18 +355,133 @@ async function updateTurnReasoningFromTranscript({ context, input, runId, starte
         {
             status: 'running',
             step: {
-                completed_at: reasoning.timestamp,
-                id: 'reasoning',
-                kind: 'thinking',
-                label: 'Reasoning',
-                metadata: {
-                    detail: reasoning.text,
-                },
+                ...activityStepFromProgressStep(
+                    {
+                        detail: reasoning.text,
+                        id: 'reasoning',
+                        kind: 'reasoning',
+                        label: 'Reasoning',
+                        status: 'completed',
+                    },
+                    reasoning.timestamp
+                ),
                 started_at: reasoning.timestamp,
-                status: 'completed',
             },
         }
     );
+}
+
+async function updateTurnToolsFromTranscript({ context, input, runId, startedAt, storePath }) {
+    const session = await readTranscriptSession({ input, storePath });
+
+    if (!session) {
+        return;
+    }
+
+    const tools = await readTranscriptToolResults({
+        after: input.sentAt,
+        transcriptPath: session.transcriptPath,
+    });
+
+    for (const tool of tools) {
+        await requireTavernApi(context).updateTurnActivity(
+            {
+                agentId: input.agentId,
+                chatId: input.chatId,
+                messageId: input.messageId,
+                runId,
+                sessionKey: input.sessionKey,
+                startedAt,
+            },
+            {
+                status: 'running',
+                step: {
+                    ...activityStepFromProgressStep(
+                        {
+                            arguments: tool.arguments,
+                            detail: tool.resultText,
+                            id: progressToolIdFromToolCallId(tool.toolCallId),
+                            kind: 'tool',
+                            label: buildTranscriptToolLabel(tool.name, tool.arguments),
+                            result: tool.resultText,
+                            status: tool.isError ? 'failed' : 'completed',
+                            toolCallId: tool.toolCallId,
+                            toolName: tool.name,
+                        },
+                        tool.timestamp
+                    ),
+                    started_at: tool.startedAt,
+                },
+            }
+        );
+    }
+}
+
+async function readTranscriptToolResults({ after, transcriptPath }) {
+    const raw = await readFile(transcriptPath, 'utf8').catch(() => null);
+
+    if (!raw) {
+        return [];
+    }
+
+    const afterMs = Date.parse(after);
+    const callsById = new Map();
+    const results = [];
+
+    for (const line of raw.split(/\r?\n/)) {
+        if (!line.trim()) {
+            continue;
+        }
+
+        let record;
+
+        try {
+            record = JSON.parse(line);
+        } catch {
+            continue;
+        }
+
+        const message = record?.message;
+        const timestamp = readString(record?.timestamp) ?? readString(message?.timestamp);
+        const timestampMs = timestamp ? Date.parse(timestamp) : Number.NaN;
+
+        if (Number.isFinite(afterMs) && Number.isFinite(timestampMs) && timestampMs < afterMs) {
+            continue;
+        }
+
+        if (message?.role === 'assistant') {
+            for (const call of readToolCalls(message)) {
+                callsById.set(call.id, {
+                    ...call,
+                    startedAt: timestamp ?? new Date().toISOString(),
+                });
+            }
+            continue;
+        }
+
+        if (message?.role !== 'toolResult') {
+            continue;
+        }
+
+        const toolCallId = readString(message.toolCallId);
+        const call = toolCallId ? callsById.get(toolCallId) : null;
+
+        if (!call) {
+            continue;
+        }
+
+        results.push({
+            arguments: call.arguments,
+            isError: message.isError === true,
+            name: call.name,
+            resultText: readToolResultText(message),
+            startedAt: call.startedAt,
+            timestamp: timestamp ?? new Date().toISOString(),
+            toolCallId,
+        });
+    }
+
+    return results;
 }
 
 async function readLatestAssistantReasoning({ after, transcriptPath }) {
@@ -527,6 +552,73 @@ function readAssistantReasoningText(message) {
         .join('\n');
 
     return text.trim().length > 0 ? text : null;
+}
+
+function readToolCalls(message) {
+    const parts = Array.isArray(message.content) ? message.content : [];
+
+    return parts
+        .map((part) => {
+            if (!(part && typeof part === 'object' && part.type === 'toolCall')) {
+                return null;
+            }
+
+            const id = readString(part.id);
+            const name = readString(part.name);
+
+            if (!(id && name)) {
+                return null;
+            }
+
+            return {
+                arguments:
+                    part.arguments && typeof part.arguments === 'object' && !Array.isArray(part.arguments)
+                        ? part.arguments
+                        : null,
+                id,
+                name,
+            };
+        })
+        .filter(Boolean);
+}
+
+function readToolResultText(message) {
+    const parts = Array.isArray(message.content) ? message.content : [];
+    const text = parts
+        .map((part) => {
+            if (typeof part === 'string') {
+                return part;
+            }
+            if (!(part && typeof part === 'object')) {
+                return null;
+            }
+            return readString(part.text) ?? readString(part.content);
+        })
+        .filter(Boolean)
+        .join('\n');
+
+    return text.trim().length > 0 ? text : null;
+}
+
+function progressToolIdFromToolCallId(toolCallId) {
+    return toolCallId;
+}
+
+function buildTranscriptToolLabel(name, args) {
+    const target =
+        args && typeof args === 'object' && !Array.isArray(args)
+            ? readString(args.path) ??
+              readString(args.file_path) ??
+              readString(args.filePath) ??
+              readString(args.command) ??
+              readString(args.query)
+            : null;
+
+    if (name === 'read' && target) {
+        return `read from ${target}`;
+    }
+
+    return target ? `${name} ${target}` : name;
 }
 
 function readReasoningSignatureSummary(value) {

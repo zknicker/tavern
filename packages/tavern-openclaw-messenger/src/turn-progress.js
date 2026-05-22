@@ -1,8 +1,10 @@
 import { activityStepFromProgressStep } from './tavern-api.js';
 
-export function createTurnProgressProjector({ context, input, runId, startedAt }) {
+export function createTurnProgressMapper({ context, input, runId, startedAt }) {
     const labelsByStepId = new Map();
     const detailsByStepId = new Map();
+    const toolArgumentsByStepId = new Map();
+    const toolNamesByStepId = new Map();
 
     const updateActivity = (step) => {
         const timestamp = new Date().toISOString();
@@ -25,14 +27,16 @@ export function createTurnProgressProjector({ context, input, runId, startedAt }
 
     return {
         handle(event) {
-            const projected = projectOpenClawProgressEvent({
+            const mapped = mapOpenClawProgressEvent({
                 detailsByStepId,
                 event,
                 labelsByStepId,
+                toolArgumentsByStepId,
+                toolNamesByStepId,
             });
 
-            if (projected) {
-                void updateActivity(projected);
+            if (mapped) {
+                void updateActivity(mapped);
             }
         },
     };
@@ -45,72 +49,75 @@ function requireTavernApi(context) {
     return context.tavern;
 }
 
-function projectOpenClawProgressEvent({ detailsByStepId, event, labelsByStepId }) {
+function mapOpenClawProgressEvent({
+    detailsByStepId,
+    event,
+    labelsByStepId,
+    toolArgumentsByStepId,
+    toolNamesByStepId,
+}) {
     const data = event?.data && typeof event.data === 'object' ? event.data : {};
 
-    if (event?.stream === 'tool') {
-        return projectOpenClawToolEvent({ data, detailsByStepId, labelsByStepId });
+    if (event?.stream === 'tool_result') {
+        return mapOpenClawToolResultEvent({
+            data,
+            detailsByStepId,
+            labelsByStepId,
+            toolArgumentsByStepId,
+            toolNamesByStepId,
+        });
     }
 
     if (event?.stream === 'item') {
-        return projectOpenClawItemEvent({ data, detailsByStepId, labelsByStepId });
+        return mapOpenClawItemEvent({
+            data,
+            detailsByStepId,
+            labelsByStepId,
+            toolArgumentsByStepId,
+            toolNamesByStepId,
+        });
     }
 
     if (event?.stream === 'thinking') {
-        return projectOpenClawThinkingEvent({ data, detailsByStepId });
+        return mapOpenClawThinkingEvent({ data, detailsByStepId });
     }
 
     if (event?.stream === 'command_output') {
-        return projectOpenClawCommandOutputEvent({ data, detailsByStepId, labelsByStepId });
+        return mapOpenClawCommandOutputEvent({
+            data,
+            detailsByStepId,
+            labelsByStepId,
+            toolArgumentsByStepId,
+            toolNamesByStepId,
+        });
     }
 
     if (event?.stream === 'plan') {
-        return projectOpenClawPlanEvent({ data, detailsByStepId });
+        return mapOpenClawPlanEvent({ data, detailsByStepId });
     }
 
     if (event?.stream === 'approval') {
-        return projectOpenClawApprovalEvent({ data, detailsByStepId, labelsByStepId });
+        return mapOpenClawApprovalEvent({ data, detailsByStepId, labelsByStepId });
     }
 
     if (event?.stream === 'patch') {
-        return projectOpenClawPatchEvent({ data, detailsByStepId, labelsByStepId });
+        return mapOpenClawPatchEvent({ data, detailsByStepId, labelsByStepId });
     }
 
     if (event?.stream === 'compaction') {
-        return projectOpenClawCompactionEvent({ data });
+        return mapOpenClawCompactionEvent({ data });
     }
 
     return null;
 }
 
-function projectOpenClawToolEvent({ data, detailsByStepId, labelsByStepId }) {
-    const name = readString(data.name);
-    const id =
-        readString(data.toolCallId) ?? readString(data.itemId) ?? (name ? `tool:${name}` : null);
-    const phase = readString(data.phase);
-
-    if (!(id && name && phase)) {
-        return null;
-    }
-
-    const status = phase === 'result' ? resolveOpenClawToolResultStatus(data) : 'active';
-    const label = resolveOpenClawProgressLabel({ data, id, labelsByStepId, name });
-    const detail = readString(data.summary) ?? readString(data.progressText) ?? null;
-
-    if (detail) {
-        detailsByStepId.set(id, detail);
-    }
-
-    return {
-        detail: detail ?? detailsByStepId.get(id) ?? null,
-        id,
-        kind: 'tool',
-        label,
-        status,
-    };
-}
-
-function projectOpenClawItemEvent({ data, detailsByStepId, labelsByStepId }) {
+function mapOpenClawItemEvent({
+    data,
+    detailsByStepId,
+    labelsByStepId,
+    toolArgumentsByStepId,
+    toolNamesByStepId,
+}) {
     const kind = readOpenClawItemKind(data.kind) ?? readOpenClawItemKind(data.type);
     const id = readString(data.toolCallId) ?? readString(data.itemId) ?? readString(data.id);
 
@@ -136,6 +143,35 @@ function projectOpenClawItemEvent({ data, detailsByStepId, labelsByStepId }) {
         };
     }
 
+    if (kind === 'preamble') {
+        const detail = readProgressDetail(data) ?? detailsByStepId.get(id) ?? null;
+
+        if (!detail) {
+            return null;
+        }
+
+        detailsByStepId.set(id, detail);
+
+        return {
+            detail,
+            id,
+            kind: 'message',
+            label: 'Assistant reply',
+            status: resolveOpenClawProgressStatus(data),
+        };
+    }
+
+    if (kind === 'command') {
+        return mapOpenClawCommandItemEvent({
+            data,
+            detailsByStepId,
+            id,
+            labelsByStepId,
+            toolArgumentsByStepId,
+            toolNamesByStepId,
+        });
+    }
+
     const label = readString(data.title) ?? readString(data.name) ?? labelsByStepId.get(id);
 
     if (!label) {
@@ -143,6 +179,10 @@ function projectOpenClawItemEvent({ data, detailsByStepId, labelsByStepId }) {
     }
 
     labelsByStepId.set(id, label);
+    const toolName = kind === 'tool' ? readString(data.name) : null;
+    if (toolName) {
+        toolNamesByStepId.set(id, toolName);
+    }
 
     const detail = readProgressDetail(data) ?? detailsByStepId.get(id) ?? null;
 
@@ -155,11 +195,86 @@ function projectOpenClawItemEvent({ data, detailsByStepId, labelsByStepId }) {
         id,
         kind,
         label,
+        arguments: kind === 'tool' ? (toolArgumentsByStepId.get(id) ?? null) : null,
         status: resolveOpenClawProgressStatus(data),
+        toolName,
     };
 }
 
-function projectOpenClawThinkingEvent({ data, detailsByStepId }) {
+function mapOpenClawCommandItemEvent({
+    data,
+    detailsByStepId,
+    id,
+    labelsByStepId,
+    toolArgumentsByStepId,
+    toolNamesByStepId,
+}) {
+    const toolName = readString(data.name) ?? 'command';
+    const toolCallId = readToolCallId(data);
+    const detail = readProgressDetail(data) ?? detailsByStepId.get(id) ?? null;
+    const label = resolveOpenClawCommandItemLabel({
+        data,
+        id,
+        labelsByStepId,
+        toolName,
+    });
+
+    if (detail) {
+        detailsByStepId.set(id, detail);
+    }
+    toolNamesByStepId.set(id, toolName);
+
+    return {
+        arguments: toolArgumentsByStepId.get(id) ?? null,
+        detail,
+        id,
+        kind: 'tool',
+        label,
+        status: resolveOpenClawProgressStatus(data),
+        toolCallId,
+        toolName,
+    };
+}
+
+function mapOpenClawToolResultEvent({
+    data,
+    detailsByStepId,
+    labelsByStepId,
+    toolArgumentsByStepId,
+    toolNamesByStepId,
+}) {
+    const id = readString(data.itemId) ?? readString(data.toolCallId) ?? readString(data.id);
+
+    if (!id) {
+        return null;
+    }
+
+    const label = labelsByStepId.get(id);
+    const toolName = toolNamesByStepId.get(id);
+
+    if (!(label && toolName)) {
+        return null;
+    }
+
+    const detail = readProgressDetail(data) ?? detailsByStepId.get(id) ?? null;
+
+    if (detail) {
+        detailsByStepId.set(id, detail);
+    }
+
+    return {
+        arguments: toolArgumentsByStepId.get(id) ?? null,
+        detail,
+        id,
+        kind: 'tool',
+        label,
+        result: readProgressDetail(data) ?? null,
+        status: data.isError === true ? 'failed' : 'completed',
+        toolName,
+    };
+}
+
+function mapOpenClawThinkingEvent({ data, detailsByStepId }) {
     const detail = readProgressDetail(data);
 
     if (!detail) {
@@ -192,40 +307,50 @@ function readProgressDetail(data) {
     );
 }
 
-function projectOpenClawCommandOutputEvent({ data, detailsByStepId, labelsByStepId }) {
-    const id =
-        readString(data.itemId) ??
-        (readString(data.toolCallId) ? `command:${readString(data.toolCallId)}` : null);
+function mapOpenClawCommandOutputEvent({
+    data,
+    detailsByStepId,
+    labelsByStepId,
+    toolArgumentsByStepId,
+    toolNamesByStepId,
+}) {
+    const id = readString(data.itemId) ?? readString(data.toolCallId) ?? readString(data.id);
 
     if (!id) {
         return null;
     }
 
-    const label =
-        readString(data.title) ??
-        labelsByStepId.get(id) ??
-        buildOpenClawToolLabel({
-            args: { command: readString(data.output) ?? readString(data.name) },
-            name: readString(data.name) ?? 'command',
-        });
-    const detail = readString(data.output) ?? detailsByStepId.get(id) ?? null;
+    const label = labelsByStepId.get(id);
 
-    labelsByStepId.set(id, label);
+    if (!label) {
+        return null;
+    }
+
+    const detail = readString(data.output) ?? detailsByStepId.get(id) ?? null;
+    const toolName = readString(data.name);
+
+    if (toolName) {
+        toolNamesByStepId.set(id, toolName);
+    }
 
     if (detail) {
         detailsByStepId.set(id, detail);
     }
 
     return {
+        arguments: toolArgumentsByStepId.get(id) ?? null,
         detail,
         id,
-        kind: 'command',
+        kind: 'tool',
         label,
+        result: buildCommandOutputResult(data),
         status: resolveOpenClawProgressStatus(data),
+        toolCallId: readToolCallId(data),
+        toolName: toolNamesByStepId.get(id) ?? toolName ?? null,
     };
 }
 
-function projectOpenClawPlanEvent({ data, detailsByStepId }) {
+function mapOpenClawPlanEvent({ data, detailsByStepId }) {
     const id = 'plan';
     const title = readString(data.title) ?? 'Plan';
     const detail =
@@ -244,7 +369,7 @@ function projectOpenClawPlanEvent({ data, detailsByStepId }) {
     };
 }
 
-function projectOpenClawApprovalEvent({ data, detailsByStepId, labelsByStepId }) {
+function mapOpenClawApprovalEvent({ data, detailsByStepId, labelsByStepId }) {
     const id = readString(data.itemId) ?? readString(data.toolCallId) ?? 'approval';
     const label =
         readString(data.title) ??
@@ -266,13 +391,13 @@ function projectOpenClawApprovalEvent({ data, detailsByStepId, labelsByStepId })
     return {
         detail,
         id,
-        kind: 'command',
+        kind: 'approval',
         label,
         status: resolveOpenClawProgressStatus(data),
     };
 }
 
-function projectOpenClawPatchEvent({ data, detailsByStepId, labelsByStepId }) {
+function mapOpenClawPatchEvent({ data, detailsByStepId, labelsByStepId }) {
     const id = readString(data.itemId) ?? readString(data.toolCallId) ?? 'patch';
     const label = readString(data.title) ?? labelsByStepId.get(id) ?? 'Patch';
     const files = [
@@ -291,13 +416,13 @@ function projectOpenClawPatchEvent({ data, detailsByStepId, labelsByStepId }) {
     return {
         detail: detail ?? detailsByStepId.get(id) ?? null,
         id,
-        kind: 'tool',
+        kind: 'artifact',
         label,
         status: resolveOpenClawProgressStatus(data),
     };
 }
 
-function projectOpenClawCompactionEvent({ data }) {
+function mapOpenClawCompactionEvent({ data }) {
     return {
         detail: null,
         id: 'compaction',
@@ -308,44 +433,47 @@ function projectOpenClawCompactionEvent({ data }) {
     };
 }
 
-function resolveOpenClawProgressLabel({ data, id, labelsByStepId, name }) {
+function resolveOpenClawCommandItemLabel({ data, id, labelsByStepId, toolName }) {
     const existing = labelsByStepId.get(id);
 
-    if (existing) {
+    if (existing && existing !== 'Command') {
         return existing;
     }
 
-    const label = readString(data.title) ?? buildOpenClawToolLabel({ args: data.args, name });
+    const target = readString(data.meta) ?? readString(data.summary) ?? readString(data.progressText);
+    const label = target ? `${formatToolName(toolName)} ${target}` : formatToolName(toolName);
+
     labelsByStepId.set(id, label);
 
     return label;
 }
 
-function buildOpenClawToolLabel({ args, name }) {
-    const formattedName = formatToolName(name);
-    const target = readToolTarget(args);
-
-    return target ? `${formattedName} ${target}` : formattedName;
+function formatToolName(name) {
+    return name.replace(/[_-]+/g, ' ').trim() || 'tool';
 }
 
-function readToolTarget(args) {
-    if (!args || typeof args !== 'object') {
-        return null;
-    }
-
+function readToolCallId(data) {
     return (
-        readString(args.path) ??
-        readString(args.file_path) ??
-        readString(args.command) ??
-        readString(args.cmd) ??
-        readString(args.query) ??
-        readString(args.task) ??
-        readString(args.message)
+        readString(data.toolCallId) ??
+        readString(data.callId) ??
+        readLikelyToolCallId(data.itemId) ??
+        readLikelyToolCallId(data.id)
     );
 }
 
-function formatToolName(name) {
-    return name.replace(/[_-]+/g, ' ').trim() || 'tool';
+function readLikelyToolCallId(value) {
+    const text = readString(value);
+    return text?.startsWith('call_') ? text : null;
+}
+
+function buildCommandOutputResult(data) {
+    return {
+        cwd: readString(data.cwd),
+        durationMs: typeof data.durationMs === 'number' ? data.durationMs : null,
+        exitCode: typeof data.exitCode === 'number' || data.exitCode === null ? data.exitCode : null,
+        output: readString(data.output),
+        status: readString(data.status),
+    };
 }
 
 function resolveOpenClawToolResultStatus(data) {
@@ -380,7 +508,18 @@ function resolveOpenClawProgressStatus(data) {
 }
 
 function readOpenClawItemKind(value) {
-    return ['command', 'message', 'plan', 'reasoning', 'tool'].includes(value) ? value : null;
+    return [
+        'approval',
+        'artifact',
+        'command',
+        'message',
+        'plan',
+        'preamble',
+        'reasoning',
+        'tool',
+    ].includes(value)
+        ? value
+        : null;
 }
 
 function readString(value) {

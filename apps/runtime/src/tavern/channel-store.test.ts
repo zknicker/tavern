@@ -6,7 +6,13 @@ import {
     markTavernInboundMessageAccepted,
     persistTavernInboundMessage,
 } from './channel-store';
-import { createChat, createDelivery, createMessage, updateActivity } from './chat-api';
+import {
+    createChat,
+    createDelivery,
+    createMessage,
+    upsertResponse,
+    upsertResponseActivity,
+} from './chat-api';
 import { listTavernRuntimeEvents } from './runtime-event-replay';
 
 describe('Tavern channel store', () => {
@@ -111,59 +117,66 @@ describe('Tavern channel store', () => {
 
     it('maps durable activity events into runtime turn replay', () => {
         createChat({ id: 'cht_1' });
-        updateActivity('cht_1', {
-            agent_id: 'agt_1',
+        upsertResponse('cht_1', {
+            id: 'rsp_run_1',
             metadata: {
                 runtime: {
                     agentId: 'main',
+                    runId: 'run_1',
                     sessionKey: 'session-1',
                     startedAt: '2026-05-16T12:00:00.000Z',
                 },
             },
-            run_id: 'run_1',
+            participant_id: 'agt_1',
             status: 'running',
         });
-        updateActivity('cht_1', {
-            agent_id: 'agt_1',
+        upsertResponse('cht_1', {
+            id: 'rsp_run_1',
             metadata: {
                 runtime: {
                     agentId: 'main',
+                    runId: 'run_1',
                     sessionKey: 'session-1',
                     startedAt: '2026-05-16T12:00:00.000Z',
                 },
             },
-            run_id: 'run_1',
+            participant_id: 'agt_1',
             status: 'running',
-            steps: [
-                {
-                    completed_at: null,
-                    id: 'tool-1',
-                    kind: 'command',
-                    label: 'Using sleep',
-                    metadata: {
-                        detail: 'sleep 1',
-                    },
-                    started_at: '2026-05-16T12:00:01.000Z',
-                    status: 'running',
-                },
-            ],
             summary: 'Working on it.',
         });
-        updateActivity('cht_1', {
-            agent_id: 'agt_1',
+        upsertResponseActivity('cht_1', 'rsp_run_1', {
+            detail: 'sleep 1',
+            id: 'act_tool_1',
+            kind: 'command',
             metadata: {
                 runtime: {
                     agentId: 'main',
+                    runId: 'run_1',
                     sessionKey: 'session-1',
                     startedAt: '2026-05-16T12:00:00.000Z',
                 },
             },
-            run_id: 'run_1',
+            started_at: '2026-05-16T12:00:01.000Z',
+            status: 'running',
+            title: 'Using sleep',
+        });
+        upsertResponse('cht_1', {
+            completed_at: '2026-05-16T12:00:02.000Z',
+            id: 'rsp_run_1',
+            metadata: {
+                runtime: {
+                    agentId: 'main',
+                    runId: 'run_1',
+                    sessionKey: 'session-1',
+                    startedAt: '2026-05-16T12:00:00.000Z',
+                },
+            },
+            participant_id: 'agt_1',
             status: 'completed',
             summary: 'Working on it.',
         });
 
-        expect(listTavernRuntimeEvents({ afterCursor: 0 }).map((entry) => entry.event)).toEqual([
+        expect(listTavernRuntimeEvents({ afterCursor: 0 }).map((entry) => entry.event)).toMatchObject([
             {
                 timestamp: expect.any(String),
                 turn: {
@@ -191,10 +204,12 @@ describe('Tavern channel store', () => {
             {
                 step: {
                     detail: 'sleep 1',
-                    id: 'tool-1',
+                    id: 'act_tool_1',
                     kind: 'command',
                     label: 'Using sleep',
                     status: 'active',
+                    toolCallId: null,
+                    toolName: null,
                 },
                 timestamp: expect.any(String),
                 turn: {
@@ -216,6 +231,74 @@ describe('Tavern channel store', () => {
                     startedAt: '2026-05-16T12:00:00.000Z',
                 },
                 type: 'turn.completed',
+            },
+        ]);
+    });
+
+    it('replays terminal activity steps as terminal progress', () => {
+        createChat({ id: 'cht_1' });
+        upsertResponse('cht_1', {
+            completed_at: '2026-05-16T12:00:02.000Z',
+            id: 'rsp_run_1',
+            metadata: {
+                runtime: {
+                    agentId: 'main',
+                    runId: 'run_1',
+                    sessionKey: 'session-1',
+                    startedAt: '2026-05-16T12:00:00.000Z',
+                },
+            },
+            participant_id: 'agt_1',
+            status: 'completed',
+        });
+        upsertResponseActivity('cht_1', 'rsp_run_1', {
+            completed_at: '2026-05-16T12:00:02.000Z',
+            id: 'act_tool_1',
+            kind: 'tool_call',
+            metadata: {
+                runtime: {
+                    agentId: 'main',
+                    runId: 'run_1',
+                    sessionKey: 'session-1',
+                    startedAt: '2026-05-16T12:00:00.000Z',
+                },
+            },
+            started_at: '2026-05-16T12:00:01.000Z',
+            status: 'completed',
+            title: 'Using tool',
+        });
+
+        expect(listTavernRuntimeEvents({ afterCursor: 0 }).map((entry) => entry.event)).toMatchObject([
+            {
+                timestamp: expect.any(String),
+                turn: {
+                    agentId: 'main',
+                    chatId: 'cht_1',
+                    runId: 'run_1',
+                    sessionKey: 'session-1',
+                    startedAt: '2026-05-16T12:00:00.000Z',
+                },
+                type: 'turn.completed',
+            },
+            {
+                step: {
+                    detail: null,
+                    id: 'act_tool_1',
+                    kind: 'tool',
+                    label: 'Using tool',
+                    status: 'completed',
+                    toolCallId: null,
+                    toolName: null,
+                },
+                timestamp: expect.any(String),
+                turn: {
+                    agentId: 'main',
+                    chatId: 'cht_1',
+                    runId: 'run_1',
+                    sessionKey: 'session-1',
+                    startedAt: '2026-05-16T12:00:00.000Z',
+                },
+                type: 'turn.progress',
             },
         ]);
     });

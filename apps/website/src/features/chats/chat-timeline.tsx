@@ -14,6 +14,7 @@ export function ChatTimeline({
     activeReplyProgressStartedAt = null,
     activeReplySteps = [],
     animate = false,
+    chatId,
     completedProgress = null,
     conversationLayout,
     failedTurn,
@@ -24,6 +25,7 @@ export function ChatTimeline({
     activeReplyProgressStartedAt?: string | null;
     activeReplySteps?: ChatTurnProgressStep[];
     animate?: boolean;
+    chatId?: string;
     completedProgress?: ChatCompletedProgress | null;
     conversationLayout?: ConversationMessageLayout;
     failedTurn?: ChatTurnFailure | null;
@@ -39,6 +41,7 @@ export function ChatTimeline({
                 activeReply={activeReply}
                 activeReplyProgressStartedAt={activeReplyProgressStartedAt}
                 activeReplySteps={activeReplySteps}
+                chatId={chatId}
                 completedProgress={completedProgress}
                 conversationLayout={conversationLayout}
                 failedTurn={failedTurn}

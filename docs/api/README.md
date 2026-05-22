@@ -18,7 +18,7 @@ Tavern's shape is clear:
 * **`@tavern/api` defines the contract.** OpenAPI owns chat and realtime wire
   shapes; typed runtime contracts own admin and control routes.
 * **Runtime serves the contract.** Tavern Runtime owns durable chat state,
-  event cursors, activity, and automation delivery.
+  responses, activity, artifacts, event cursors, and automation delivery.
 * **The SDK wraps the contract.** `@tavern/sdk` gives TypeScript clients a small
   typed API over Tavern API types.
 * **Docs explain behavior.** Markdown covers ownership, ordering, durability,

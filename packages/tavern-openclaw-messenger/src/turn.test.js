@@ -218,12 +218,13 @@ describe('Tavern Messenger turn handling', () => {
                     id: 'msg_1',
                     metadata: {
                         tavern: {
-                            toolMentions: [
+                            mentions: [
                                 {
                                     end: 10,
                                     id: 'chrome',
                                     kind: 'skill',
                                     label: 'Chrome',
+                                    projection: 'skill-context',
                                     start: 4,
                                     text: 'Chrome',
                                 },
@@ -264,14 +265,23 @@ describe('Tavern Messenger turn handling', () => {
             routeSessionKey: 'agent:blippy:tavern:channel:cht_220f46ed-2d7c-41dd-9d7e-d02691f1afc3',
         });
         expect(runPrepared.mock.calls[0][0].ctxPayload).toMatchObject({
+            BodyForAgent: [
+                '<skill>',
+                '<name>Chrome</name>',
+                '<path>chrome</path>',
+                '</skill>',
+                '',
+                'hello',
+            ].join('\n'),
             TavernMessageMetadata: {
                 tavern: {
-                    toolMentions: [
+                    mentions: [
                         {
                             end: 10,
                             id: 'chrome',
                             kind: 'skill',
                             label: 'Chrome',
+                            projection: 'skill-context',
                             start: 4,
                             text: 'Chrome',
                         },
@@ -295,14 +305,25 @@ describe('Tavern Messenger turn handling', () => {
         });
         expect(
             typeof dispatchReplyWithBufferedBlockDispatcher.mock.calls[0][0].replyOptions
-                .onAgentEvent
+                .onItemEvent
         ).toBe('function');
+        expect(
+            typeof dispatchReplyWithBufferedBlockDispatcher.mock.calls[0][0].replyOptions
+                .onCommandOutput
+        ).toBe('function');
+        expect(dispatchReplyWithBufferedBlockDispatcher.mock.calls[0][0].replyOptions).not.toHaveProperty(
+            'onToolStart'
+        );
+        expect(dispatchReplyWithBufferedBlockDispatcher.mock.calls[0][0].replyOptions).not.toHaveProperty(
+            'onAgentEvent'
+        );
 
         expect(context.tavern.createDelivery).toHaveBeenCalledTimes(1);
         expect(context.tavern.createDelivery.mock.calls[0][0]).toMatchObject({
             chatId: 'cht_220f46ed-2d7c-41dd-9d7e-d02691f1afc3',
             deliveryId: 'del_1_final_1',
             messageId: 'msg_1_final_1',
+            requestMessageId: 'msg_1',
             runId: 'run_1',
             text: 'reply',
         });
@@ -314,46 +335,49 @@ describe('Tavern Messenger turn handling', () => {
             },
             {
                 step: {
-                    id: 'reasoning',
-                    kind: 'thinking',
-                    label: 'Reasoning',
+                    id: 'act_reasoning',
+                    kind: 'reasoning',
                     metadata: {
                         detail: 'Checking Tavern QA context.',
+                        runtime: {},
                     },
                     status: 'running',
+                    title: 'Reasoning',
                 },
                 status: 'running',
             },
             {
                 step: {
-                    id: 'reasoning',
-                    kind: 'thinking',
-                    label: 'Reasoning',
+                    id: 'act_reasoning',
+                    kind: 'reasoning',
                     metadata: {
                         detail: 'Reasoning summary visible in Tavern.',
+                        runtime: {},
                     },
                     status: 'completed',
+                    title: 'Reasoning',
                 },
                 status: 'running',
             },
             {
                 step: {
-                    id: 'tool:tool-call-1',
-                    kind: 'tool',
-                    label: 'web search Tavern QA',
+                    id: 'act_tool_tool-call-1',
+                    kind: 'tool_call',
                     status: 'running',
+                    title: 'web search Tavern QA',
                 },
                 status: 'running',
             },
             {
                 step: {
-                    id: 'tool:tool-call-1',
-                    kind: 'tool',
-                    label: 'web search Tavern QA',
+                    id: 'act_tool_tool-call-1',
+                    kind: 'tool_call',
                     metadata: {
                         detail: 'Found sources',
+                        runtime: {},
                     },
                     status: 'completed',
+                    title: 'web search Tavern QA',
                 },
                 status: 'running',
             },
@@ -363,7 +387,7 @@ describe('Tavern Messenger turn handling', () => {
         ]);
     });
 
-    it('keeps streamed assistant activity to pre-tool preamble text', async () => {
+    it('keeps assistant activity to structured pre-tool preamble events', async () => {
         runPrepared.mockClear();
         const response = {};
         const context = createTurnTestContext();
@@ -372,10 +396,20 @@ describe('Tavern Messenger turn handling', () => {
                 delta: 'I will inspect the workspace first.',
                 text: 'I will inspect the workspace first.',
             });
-            await replyOptions?.onToolStart?.({
+            await replyOptions?.onItemEvent?.({
+                itemId: 'msg_preamble_1',
+                kind: 'preamble',
+                phase: 'update',
+                progressText: 'I will inspect the workspace first.',
+                status: 'running',
+                title: 'Preamble',
+            });
+            await replyOptions?.onItemEvent?.({
                 itemId: 'tool:tool-call-1',
+                kind: 'tool',
                 name: 'exec',
                 phase: 'start',
+                status: 'running',
                 title: 'exec sleep 4',
             });
             await replyOptions?.onPartialReply?.({
@@ -424,12 +458,318 @@ describe('Tavern Messenger turn handling', () => {
         expect(response).toMatchObject({ ok: true });
         expect(messageSteps).toHaveLength(1);
         expect(messageSteps[0]).toMatchObject({
-            label: 'Assistant reply',
+            id: 'act_msg_preamble_1',
             metadata: {
                 detail: 'I will inspect the workspace first.',
             },
+            title: 'Assistant reply',
         });
         expect(JSON.stringify(messageSteps)).not.toContain('FINAL-MARKER');
+    });
+
+    it('maps the OpenClaw turn callback surface into Tavern activity writes', async () => {
+        runPrepared.mockClear();
+        const response = {};
+        const context = createTurnTestContext();
+        const dispatchWithAllProgress = mock(async ({ dispatcherOptions, replyOptions }) => {
+            await replyOptions?.onPlanUpdate?.({
+                items: [{ status: 'in_progress', title: 'Inspect workspace' }],
+            });
+            await replyOptions?.onReasoningStream?.({ text: 'Reasoning through next step.' });
+            await replyOptions?.onItemEvent?.({
+                itemId: 'msg_preamble_1',
+                kind: 'preamble',
+                phase: 'update',
+                progressText: 'I will run a check before using tools.',
+                status: 'running',
+                title: 'Preamble',
+            });
+            await replyOptions?.onPartialReply?.({
+                delta: 'I will inspect the workspace.',
+                text: 'I will inspect the workspace.',
+            });
+            await replyOptions?.onApprovalEvent?.({
+                itemId: 'approval_1',
+                status: 'running',
+                title: 'Approval requested',
+            });
+            await replyOptions?.onPatchSummary?.({
+                itemId: 'patch_1',
+                status: 'completed',
+                summary: 'Updated README.md',
+                title: 'Patch summary',
+            });
+            await replyOptions?.onItemEvent?.({
+                itemId: 'tool_call_1',
+                kind: 'tool',
+                name: 'read',
+                phase: 'start',
+                status: 'running',
+                title: 'read QA_KICKOFF_TASK.md',
+            });
+            await replyOptions?.onCommandOutput?.({
+                itemId: 'tool_call_1',
+                name: 'read',
+                resultText: 'QA evidence',
+                status: 'completed',
+                title: 'read QA_KICKOFF_TASK.md',
+            });
+            await replyOptions?.onItemEvent?.({
+                itemId: 'tool_call_2',
+                kind: 'tool',
+                name: 'web_fetch',
+                phase: 'start',
+                status: 'running',
+                title: 'web_fetch docs',
+            });
+            await replyOptions?.onToolResult?.({
+                itemId: 'tool_call_2',
+                name: 'web_fetch',
+                resultText: 'Fetched docs',
+                status: 'completed',
+                title: 'web_fetch docs',
+                toolCallId: 'tool_call_2',
+            });
+            await dispatcherOptions.deliver({ text: 'FINAL-MARKER' });
+            return { counts: { final: 1 }, queuedFinal: false };
+        });
+
+        await dispatchInboundTavernMessage({
+            context,
+            params: {
+                agent: {
+                    agentId: 'blippy',
+                },
+                chatId: 'cht_220f46ed-2d7c-41dd-9d7e-d02691f1afc3',
+                message: {
+                    content: 'exercise progress callbacks',
+                    id: 'msg_1',
+                    sentAt: '2026-05-04T12:00:00.000Z',
+                },
+                sender: {
+                    id: 'zach',
+                    name: 'Zach',
+                },
+                sessionKey: 'agent:blippy:tavern:channel:cht_220f46ed-2d7c-41dd-9d7e-d02691f1afc3',
+            },
+            respond: (ok, payload, error) => {
+                response.ok = ok;
+                response.payload = payload;
+                response.error = error;
+            },
+            runtime: createRuntime({
+                dispatchReplyWithBufferedBlockDispatcher: dispatchWithAllProgress,
+                runPrepared,
+            }),
+        });
+
+        await waitForActivityStatus(context.tavern, 'completed');
+
+        const steps = context.tavern.updateTurnActivity.mock.calls
+            .map(([, input]) => input?.step)
+            .filter(Boolean);
+
+        expect(response).toMatchObject({ ok: true });
+        expect(steps.map((step) => step.kind)).toEqual(
+            expect.arrayContaining([
+                'planning',
+                'reasoning',
+                'message',
+                'approval',
+                'artifact',
+                'tool_call',
+            ])
+        );
+        expect(steps.find((step) => step.id === 'act_msg_preamble_1')).toMatchObject({
+            detail: 'I will run a check before using tools.',
+            kind: 'message',
+            status: 'running',
+            title: 'Assistant reply',
+        });
+        expect(steps.filter((step) => step.kind === 'message')).toHaveLength(1);
+        expect(steps.find((step) => step.kind === 'approval')).toMatchObject({
+            id: 'act_approval_1',
+            status: 'running',
+            title: 'Approval requested',
+        });
+        expect(steps.find((step) => step.kind === 'artifact')).toMatchObject({
+            id: 'act_patch_1',
+            status: 'completed',
+            title: 'Patch summary',
+        });
+        expect(
+            steps.filter((step) => step.id === 'act_tool_call_1').map((step) => step.status)
+        ).toEqual(expect.arrayContaining(['running', 'completed']));
+        expect(
+            steps.find((step) => step.id === 'act_tool_call_2' && step.status === 'completed')
+        ).toMatchObject({
+            status: 'completed',
+            title: 'web_fetch docs',
+        });
+    });
+
+    it('reconciles transcript tool details into the canonical live tool activity row', async () => {
+        runPrepared.mockClear();
+        const response = {};
+        const context = createTurnTestContext();
+        const tempDir = await mkdtemp(join(tmpdir(), 'tavern-turn-tool-reconcile-test-'));
+        const storePath = join(tempDir, 'sessions.json');
+        const transcriptPath = join(tempDir, 'session.jsonl');
+        const sessionKey = 'agent:blippy:tavern:channel:cht_220f46ed-2d7c-41dd-9d7e-d02691f1afc3';
+        await writeFile(
+            storePath,
+            `${JSON.stringify({
+                [sessionKey]: {
+                    sessionFile: transcriptPath,
+                    sessionId: 'session-1',
+                },
+            })}\n`
+        );
+        await writeFile(
+            transcriptPath,
+            `${JSON.stringify({
+                cwd: '/tmp',
+                id: 'session-1',
+                timestamp: '2026-05-04T11:59:00.000Z',
+                type: 'session',
+                version: 3,
+            })}\n`
+        );
+        const dispatchWithToolTranscript = mock(async ({ dispatcherOptions, replyOptions }) => {
+            await replyOptions?.onItemEvent?.({
+                itemId: 'call_123',
+                kind: 'command',
+                name: 'bash',
+                phase: 'start',
+                status: 'running',
+                title: 'Command',
+            });
+            await replyOptions?.onItemEvent?.({
+                itemId: 'call_123',
+                kind: 'command',
+                name: 'bash',
+                phase: 'end',
+                status: 'completed',
+                title: 'Command',
+            });
+            await writeFile(
+                transcriptPath,
+                `${[
+                    JSON.stringify({
+                        id: 'tool-call-message',
+                        message: {
+                            content: [
+                                {
+                                    arguments: {
+                                        command: "/bin/zsh -lc 'sleep 3'",
+                                    },
+                                    id: 'call_123',
+                                    name: 'bash',
+                                    type: 'toolCall',
+                                },
+                            ],
+                            role: 'assistant',
+                        },
+                        parentId: null,
+                        timestamp: '2026-05-04T12:00:01.000Z',
+                        type: 'message',
+                    }),
+                    JSON.stringify({
+                        id: 'tool-result-message',
+                        message: {
+                            content: [{ text: 'done', type: 'text' }],
+                            role: 'toolResult',
+                            toolCallId: 'call_123',
+                        },
+                        parentId: null,
+                        timestamp: '2026-05-04T12:00:04.000Z',
+                        type: 'message',
+                    }),
+                ].join('\n')}\n`,
+                { flag: 'a' }
+            );
+            await dispatcherOptions.deliver({ text: 'Done.' });
+            return { counts: { final: 1 }, queuedFinal: false };
+        });
+
+        try {
+            await dispatchInboundTavernMessage({
+                context,
+                params: {
+                    agent: {
+                        agentId: 'blippy',
+                    },
+                    chatId: 'cht_220f46ed-2d7c-41dd-9d7e-d02691f1afc3',
+                    message: {
+                        content: 'run a shell tool',
+                        id: 'msg_1',
+                        sentAt: '2026-05-04T12:00:00.000Z',
+                    },
+                    sender: {
+                        id: 'zach',
+                        name: 'Zach',
+                    },
+                    sessionKey,
+                },
+                respond: (ok, payload, error) => {
+                    response.ok = ok;
+                    response.payload = payload;
+                    response.error = error;
+                },
+                runtime: createRuntime({
+                    dispatchReplyWithBufferedBlockDispatcher: dispatchWithToolTranscript,
+                    runPrepared,
+                    storePath,
+                }),
+            });
+
+            await waitForActivityStatus(context.tavern, 'completed');
+
+            const toolSteps = context.tavern.updateTurnActivity.mock.calls
+                .map(([, input]) => input?.step)
+                .filter(Boolean)
+                .filter((step) => step.id === 'act_call_123');
+
+            expect(response).toMatchObject({ ok: true });
+            expect(toolSteps.map((step) => step.id)).toEqual([
+                'act_call_123',
+                'act_call_123',
+                'act_call_123',
+            ]);
+            expect(JSON.stringify(context.tavern.updateTurnActivity.mock.calls)).not.toContain(
+                'act_tool_call_123'
+            );
+            expect(JSON.stringify(context.tavern.updateTurnActivity.mock.calls)).not.toContain(
+                'Command'
+            );
+            expect(toolSteps[0]).toMatchObject({
+                status: 'running',
+                title: 'bash',
+            });
+            expect(toolSteps[1]).toMatchObject({
+                status: 'completed',
+                title: 'bash',
+            });
+            expect(toolSteps.at(-1)).toMatchObject({
+                metadata: {
+                    runtime: {
+                        toolCallId: 'call_123',
+                        toolName: 'bash',
+                    },
+                    tool: {
+                        arguments: {
+                            command: "/bin/zsh -lc 'sleep 3'",
+                        },
+                        name: 'bash',
+                        result: 'done',
+                    },
+                },
+                status: 'completed',
+                title: "bash /bin/zsh -lc 'sleep 3'",
+            });
+        } finally {
+            await rm(tempDir, { force: true, recursive: true });
+        }
     });
 
     it('persists the accepted inbound message before waiting for the final reply', async () => {

@@ -284,7 +284,7 @@ function buildAssignedAgents(input: {
     skill: AgentRuntimeSkillSummary;
 }): SkillDetail['assignedAgents'] {
     return input.agents
-        .filter((agent) => parseProjectionSkillIds(agent).includes(input.skill.id))
+        .filter((agent) => parseAgentSkillIds(agent).includes(input.skill.id))
         .map((agent) => ({
             agentId: agent.id,
             agentAvatar: resolveAssignedAgentAvatar({
@@ -320,7 +320,7 @@ function countAssignedAgents(input: {
     agents: Awaited<ReturnType<typeof listAgents>>;
     skillId: string;
 }) {
-    return input.agents.filter((agent) => parseProjectionSkillIds(agent).includes(input.skillId))
+    return input.agents.filter((agent) => parseAgentSkillIds(agent).includes(input.skillId))
         .length;
 }
 
@@ -392,7 +392,7 @@ function initials(value: string) {
     return result || '?';
 }
 
-function parseProjectionSkillIds(agent: Awaited<ReturnType<typeof listAgents>>[number]) {
+function parseAgentSkillIds(agent: Awaited<ReturnType<typeof listAgents>>[number]) {
     try {
         const value = JSON.parse(agent.enabledSkillIdsJson) as unknown;
         return Array.isArray(value)

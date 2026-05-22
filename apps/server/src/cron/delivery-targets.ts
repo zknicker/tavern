@@ -1,5 +1,5 @@
 import type { AgentRuntimeChat } from '@tavern/api';
-import { listChatProjections, parseChatRawJson } from '../storage/chats.ts';
+import { listChatRecords, parseChatRawJson } from '../storage/chats.ts';
 import { type CronDeliveryTarget, cronDeliveryTargetListSchema } from './contracts.ts';
 
 function isDeliverableAgentRuntimeChat(chat: AgentRuntimeChat) {
@@ -70,7 +70,7 @@ export function buildCronDeliveryTargets(chats: AgentRuntimeChat[]) {
 }
 
 export async function listCronDeliveryTargets() {
-    const chats = (await listChatProjections()).map(parseChatRawJson);
+    const chats = (await listChatRecords()).map(parseChatRawJson);
 
     return cronDeliveryTargetListSchema.parse({
         targets: buildCronDeliveryTargets(chats),

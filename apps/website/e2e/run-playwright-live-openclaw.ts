@@ -1,5 +1,6 @@
 import net from 'node:net';
 import { fileURLToPath } from 'node:url';
+import { resolveE2eOpenClawInstallRoot } from './e2e-cache.ts';
 
 function getFreePort() {
     return new Promise<number>((resolve, reject) => {
@@ -39,25 +40,45 @@ const [gatewayPort, runtimePort, serverPort, websitePort] = await Promise.all([
 const gatewayUrl = `ws://127.0.0.1:${gatewayPort}`;
 const gatewayToken = `tavern-live-e2e-${runId}`;
 const command = [process.execPath, 'x', 'playwright', 'test', ...process.argv.slice(2)];
+const env = {
+    ...process.env,
+    TAVERN_E2E_MODE: 'live-openclaw',
+    TAVERN_E2E_RUN_ID: runId,
+    TAVERN_E2E_TEST_DIR: './e2e/live',
+    TAVERN_RUNTIME_PORT: `${runtimePort}`,
+    TAVERN_OPENCLAW_GATEWAY_PORT: `${gatewayPort}`,
+    TAVERN_OPENCLAW_INSTALL_ROOT: resolveE2eOpenClawInstallRoot(),
+    TAVERN_SERVER_PORT: `${serverPort}`,
+    TAVERN_WEBSITE_PORT: `${websitePort}`,
+    TAVERN_RUNTIME_URL: `http://127.0.0.1:${runtimePort}`,
+    OPENCLAW_GATEWAY_TOKEN: gatewayToken,
+    OPENCLAW_GATEWAY_URL: gatewayUrl,
+};
+
+await runPreflight(env);
 
 const child = Bun.spawn(command, {
     cwd: websiteRoot,
-    env: {
-        ...process.env,
-        TAVERN_E2E_MODE: 'live-openclaw',
-        TAVERN_E2E_RUN_ID: runId,
-        TAVERN_E2E_TEST_DIR: './e2e/live',
-        TAVERN_RUNTIME_PORT: `${runtimePort}`,
-        TAVERN_OPENCLAW_GATEWAY_PORT: `${gatewayPort}`,
-        TAVERN_SERVER_PORT: `${serverPort}`,
-        TAVERN_WEBSITE_PORT: `${websitePort}`,
-        TAVERN_RUNTIME_URL: `http://127.0.0.1:${runtimePort}`,
-        OPENCLAW_GATEWAY_TOKEN: gatewayToken,
-        OPENCLAW_GATEWAY_URL: gatewayUrl,
-    },
+    env,
     stderr: 'inherit',
     stdin: 'inherit',
     stdout: 'inherit',
 });
 
 process.exit(await child.exited);
+
+async function runPreflight(env: NodeJS.ProcessEnv) {
+    const child = Bun.spawn([process.execPath, 'e2e/preflight.ts'], {
+        cwd: websiteRoot,
+        env,
+        stderr: 'inherit',
+        stdin: 'inherit',
+        stdout: 'inherit',
+    });
+
+    const exitCode = await child.exited;
+
+    if (exitCode !== 0) {
+        process.exit(exitCode);
+    }
+}

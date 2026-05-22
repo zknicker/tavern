@@ -9,12 +9,14 @@ import {
 import { ThinkingSteps, ThinkingStepsContent, ThinkingStepsHeader } from './thinking-steps.tsx';
 
 export function WorkingLog({
+    chatId,
     currentSessionKey,
     end,
     items,
     start,
     status,
 }: {
+    chatId?: string;
     currentSessionKey?: string | null;
     end: string | null;
     items: ActivityItem[];
@@ -43,6 +45,7 @@ export function WorkingLog({
             <ThinkingStepsContent>
                 {items.map((item, index) => (
                     <ActivityStep
+                        chatId={chatId}
                         currentSessionKey={currentSessionKey}
                         index={index}
                         isLast={index === items.length - 1}

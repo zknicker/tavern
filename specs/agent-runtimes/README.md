@@ -2,13 +2,12 @@
 
 These specs define how Tavern Runtime manages OpenClaw.
 
-Tavern currently supports exactly one runtime product: OpenClaw. This folder still describes an
-Tavern-owned runtime boundary so product contracts, naming, and projections do not collapse into
-raw OpenClaw terms.
+Tavern currently supports exactly one runtime product: OpenClaw. This folder describes the
+Tavern-owned runtime boundary so product contracts and naming do not collapse into raw OpenClaw
+terms.
 
 Tavern Runtime installs, starts, supervises, upgrades, and launches OpenClaw with Seatbelt
-guardrails. Tavern observes it, syncs local projections, and exposes OpenClaw-owned records through
-Tavern product primitives.
+guardrails. Tavern observes it and maps runtime behavior into Tavern product primitives.
 
 The specs in this folder are runtime-facing and current-state only. Research notes, sidecar plans,
 and migration narratives belong outside `specs/` or should be deleted once superseded.
@@ -27,7 +26,7 @@ OpenClaw agents.
 
 ## Specs
 
-- `agent-runtimes.md`: OpenClaw ownership and projection model.
+- `agent-runtimes.md`: OpenClaw ownership and runtime mapping model.
 - `tavern-messenger.md`: first-party Tavern chat channel/plugin expectations.
 - `openclaw-gateway.md`: implemented OpenClaw Gateway integration contract.
 - `capability-degradation.md`: capability-level OpenClaw degradation model.

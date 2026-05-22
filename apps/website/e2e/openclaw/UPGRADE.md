@@ -9,6 +9,8 @@ This is the agent-driven upgrade checklist for the pinned OpenClaw e2e lane.
    `extensions/qa-lab/src/providers/mock-openai/server.ts`.
 5. Keep the local import of `./close-http-server.ts` in the vendored provider.
 6. Refresh `mock-provider/LICENSE.openclaw` from the same OpenClaw tag.
-7. Run `bun run --filter @tavern/website test:e2e`.
-8. If Gateway config shape changed, update `openclaw/config.ts` to match the new source patterns.
-9. If Tavern Messenger IPC changed, update the plugin and adapter first, then rerun e2e.
+7. Complete the OpenClaw contract impact review in
+   `docs/operations/openclaw-runtime-upgrade.md`.
+8. Run `bun run --filter @tavern/website test:e2e`.
+9. If Gateway config shape changed, update `openclaw/config.ts` to match the new source patterns.
+10. If Tavern Messenger IPC changed, update the plugin and adapter first, then rerun e2e.

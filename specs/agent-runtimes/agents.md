@@ -7,7 +7,7 @@ OpenClaw agents are durable workers and personalities owned by OpenClaw.
 - An OpenClaw agent has a stable OpenClaw identity.
 - An OpenClaw agent has a user-facing name.
 - An OpenClaw agent has durable instructions that define how it behaves.
-- An OpenClaw agent may expose editable files. File names and meanings are OpenClaw-owned.
+- An OpenClaw agent may expose editable files. File names and meanings come from OpenClaw.
 - An OpenClaw agent has durable working context according to OpenClaw's own model.
 - A runtime agent can participate in conversations, scheduled jobs, and delegated work when the
   OpenClaw supports those capabilities.
@@ -20,7 +20,7 @@ OpenClaw agents are durable workers and personalities owned by OpenClaw.
   identity, project, and live execution layers.
 - Tavern may read and update supported agent config through OpenClaw Gateway.
 - Tavern may browse and edit supported agent files through OpenClaw Gateway.
-- Tavern may store presentation overlays for the projected agent.
+- Tavern may store presentation overlays for the agent.
 - Tavern does not define agent identity from channel identity or chat identity.
 
 ## Participation
@@ -36,7 +36,7 @@ OpenClaw agents are durable workers and personalities owned by OpenClaw.
 - OpenClaw agents may delegate work if OpenClaw supports delegation.
 - Delegated work should remain attributable to a real OpenClaw agent or OpenClaw session.
 - Temporary helper sessions and execution teams are OpenClaw techniques, not replacements for the
-  durable Tavern agent projection.
+  durable Tavern agent record.
 
 ## Constraints
 

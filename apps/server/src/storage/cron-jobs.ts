@@ -2,38 +2,38 @@ import type { AgentRuntimeCron } from '@tavern/api';
 import { and, asc, eq, notInArray } from 'drizzle-orm';
 import { db } from '../db/index.ts';
 import { cronJobsTable } from '../db/schema.ts';
-import { getActiveProjectionRuntimeId } from './agent-runtime-connections.ts';
+import { getActiveRuntimeId } from './agent-runtime-connections.ts';
 
-export type CronJobProjection = typeof cronJobsTable.$inferSelect;
+export type CronJobRecord = typeof cronJobsTable.$inferSelect;
 
 export function buildCronJobId(input: { runtimeCronJobId: string }) {
     return input.runtimeCronJobId;
 }
 
-export async function listCronJobProjections(options?: {
+export async function listCronJobRecords(options?: {
     includeInactive?: boolean;
     runtimeId?: string;
 }) {
     const runtimeId = options?.includeInactive
         ? null
-        : (options?.runtimeId ?? (await getActiveProjectionRuntimeId()));
+        : (options?.runtimeId ?? (await getActiveRuntimeId()));
     const query = db.select().from(cronJobsTable);
     const scopedQuery = runtimeId ? query.where(eq(cronJobsTable.runtimeId, runtimeId)) : query;
 
     return await scopedQuery.orderBy(asc(cronJobsTable.name));
 }
 
-export async function getCronJobProjection(jobId: string) {
+export async function getCronJobRecord(jobId: string) {
     const [job] = await db.select().from(cronJobsTable).where(eq(cronJobsTable.id, jobId)).limit(1);
 
     return job ?? null;
 }
 
-export async function deleteCronJobProjection(jobId: string) {
+export async function deleteCronJobRecord(jobId: string) {
     await db.delete(cronJobsTable).where(eq(cronJobsTable.id, jobId));
 }
 
-export async function saveCronJobProjection(input: {
+export async function saveCronJobRecord(input: {
     job: AgentRuntimeCron;
     runtimeId: string;
     syncedAt?: string;
@@ -45,10 +45,10 @@ export async function saveCronJobProjection(input: {
 
     await db
         .insert(cronJobsTable)
-        .values(toCronJobProjectionRow({ ...input, id, timestamp }))
+        .values(toCronJobRow({ ...input, id, timestamp }))
         .onConflictDoUpdate({
             target: cronJobsTable.id,
-            set: toCronJobProjectionRow({ ...input, id, timestamp }),
+            set: toCronJobRow({ ...input, id, timestamp }),
         });
 
     return id;
@@ -63,7 +63,7 @@ export async function syncCronJobsForRuntime(input: {
     const syncedIds = input.jobs.map((job) => buildCronJobId({ runtimeCronJobId: job.id }));
 
     for (const job of input.jobs) {
-        await saveCronJobProjection({
+        await saveCronJobRecord({
             job,
             runtimeId: input.runtimeId,
             syncedAt: timestamp,
@@ -92,11 +92,11 @@ export async function syncCronJobsForRuntime(input: {
     };
 }
 
-export function parseCronJobRawJson(job: CronJobProjection) {
+export function parseCronJobRawJson(job: CronJobRecord) {
     return JSON.parse(job.rawJson) as AgentRuntimeCron;
 }
 
-function toCronJobProjectionRow(input: {
+function toCronJobRow(input: {
     id: string;
     job: AgentRuntimeCron;
     runtimeId: string;

@@ -62,7 +62,7 @@ manage businesses, complete knowledge work, and automate routine tasks.
 
 ## What's in the box
 
-* **Agent chat.** Durable messages, live activity, tool progress, reasoning
+* **Agent chat.** Durable messages, responses, activity, artifacts, reasoning
   summaries, and final replies in one timeline.
 * **Agents.** Model, tool, memory, skill, and plugin configuration for the
   people you actually work with in Tavern.

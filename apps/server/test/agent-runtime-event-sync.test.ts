@@ -212,7 +212,7 @@ test('startAgentRuntimeEventSync refreshes connection state and schedules when t
     expect(emitAgentRuntimeUpdated).toHaveBeenCalledTimes(1);
 });
 
-test('applyObservedAgentRuntimeEvent syncs completed turn history without projecting chat deliveries', async () => {
+test('applyObservedAgentRuntimeEvent syncs completed turn history without duplicating chat deliveries', async () => {
     const listSessions = mock(async () => ({
         sessions: [
             {

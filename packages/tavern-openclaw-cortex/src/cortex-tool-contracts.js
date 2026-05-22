@@ -14,13 +14,13 @@ export const CORTEX_PAGE_TYPES = [
 export const CORTEX_JOB_NAMES = ['ingest', 'recall-index', 'lint', 'repair', 'export', 'health'];
 
 export const TAVERN_CORTEX_TOOL_NAMES = [
-    'cortex.search',
-    'cortex.getPage',
-    'cortex.capture',
-    'cortex.recall',
-    'cortex.status',
-    'cortex.listBacklinks',
-    'cortex.runJob',
+    'cortex_search',
+    'cortex_get_page',
+    'cortex_capture',
+    'cortex_recall',
+    'cortex_status',
+    'cortex_list_backlinks',
+    'cortex_run_job',
 ];
 
 export function objectSchema(properties) {

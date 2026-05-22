@@ -20,6 +20,7 @@ import {
     type AgentRuntimeMemorySettings,
     type AgentRuntimeMemoryStatus,
     type AgentRuntimeMessageAccepted,
+    type AgentRuntimeMacAppList,
     type AgentRuntimeModelAccess,
     type AgentRuntimeModelAccessStatus,
     type AgentRuntimeModels,
@@ -68,6 +69,7 @@ import {
     agentRuntimeMemorySettingsSchema,
     agentRuntimeMemoryStatusSchema,
     agentRuntimeMessageAcceptedSchema,
+    agentRuntimeMacAppListSchema,
     agentRuntimeModelAccessSchema,
     agentRuntimeModelAccessStatusSchema,
     agentRuntimeModelsSchema,
@@ -177,6 +179,7 @@ export interface TavernAgentRuntimeClient {
     listCortexPages(): Promise<CortexPageList>;
     listCronJobs(): Promise<AgentRuntimeCronList>;
     listCronRuns(jobId?: string): Promise<{ runs: AgentRuntimeCronRun[] }>;
+    listMacApps(options?: { limit?: number; query?: string }): Promise<AgentRuntimeMacAppList>;
     listSessionMessages(
         sessionKey: string,
         options?: AgentRuntimeListSessionMessagesOptions
@@ -824,6 +827,26 @@ class HttpTavernAgentRuntimeClient implements TavernAgentRuntimeClient {
         }
 
         return agentRuntimeSkillListSchema.parse(await response.json());
+    }
+
+    async listMacApps(options?: { limit?: number; query?: string }) {
+        const url = new URL(`${this.#baseUrl}${agentRuntimeRoutes.macApps}`);
+
+        if (options?.query) {
+            url.searchParams.set('query', options.query);
+        }
+
+        if (options?.limit !== undefined) {
+            url.searchParams.set('limit', String(options.limit));
+        }
+
+        const response = await fetch(url);
+
+        if (!response.ok) {
+            await readErrorResponse(response);
+        }
+
+        return agentRuntimeMacAppListSchema.parse(await response.json());
     }
 
     async deleteSkill(skillId: string) {

@@ -55,11 +55,11 @@ export async function getActiveAgentRuntimeConnection() {
     );
 }
 
-export async function getActiveProjectionRuntimeId() {
+export async function getActiveRuntimeId() {
     const connection =
         (await getActiveAgentRuntimeConnection()) ?? (await getLatestAgentRuntimeConnection());
 
-    return connection?.id ?? inferLatestProjectionRuntimeId();
+    return connection?.id ?? inferLatestRuntimeId();
 }
 
 export async function getAgentRuntimeConnection(id: string) {
@@ -158,7 +158,7 @@ export async function markAgentRuntimeConnectionSync(input: {
 }
 
 export async function deleteAgentRuntimeConnection(id: string) {
-    deleteRuntimeProjectionData(id);
+    deleteRuntimeData(id);
     await db.delete(agentRuntimeConnectionsTable).where(eq(agentRuntimeConnectionsTable.id, id));
     await ensureActiveAgentRuntimeConnection();
 }
@@ -283,7 +283,7 @@ function listRuntimeSessionKeys(runtimeId: string) {
     return records.map((record) => record.sessionKey);
 }
 
-function deleteRuntimeProjectionData(runtimeId: string) {
+function deleteRuntimeData(runtimeId: string) {
     const agentIds = listRuntimeAgentIds(runtimeId);
     const sessionKeys = listRuntimeSessionKeys(runtimeId);
 
@@ -322,7 +322,7 @@ function deleteRuntimeProjectionData(runtimeId: string) {
     }
 }
 
-function inferLatestProjectionRuntimeId() {
+function inferLatestRuntimeId() {
     const record = databaseClient
         .query(`
             SELECT runtime_id AS runtimeId

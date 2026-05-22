@@ -2,13 +2,13 @@ import { TRPCError } from '@trpc/server';
 import { requireConfiguredAgentRuntimeClientForRuntimeId } from '../agent-runtime/configured-client.ts';
 import * as agentRuntimeCron from '../agent-runtime/cron.ts';
 import { emitCronUpdated, emitSyncDataUpdated } from '../api/invalidation-events.ts';
-import { getCronJobProjection } from '../storage/cron-jobs.ts';
-import { syncAgentRuntimeCron } from '../sync/agent-runtime-projections.ts';
+import { getCronJobRecord } from '../storage/cron-jobs.ts';
+import { syncAgentRuntimeCron } from '../sync/agent-runtime-sync.ts';
 import { runCronJobInputSchema } from './contracts.ts';
 
 export async function runCronJob(input: unknown) {
     const parsed = runCronJobInputSchema.parse(input);
-    const job = await getCronJobProjection(parsed.jobId);
+    const job = await getCronJobRecord(parsed.jobId);
 
     if (!job) {
         throw new TRPCError({
@@ -27,7 +27,7 @@ export async function runCronJob(input: unknown) {
         runtimeClient
     );
     void syncAgentRuntimeCron().catch((error) => {
-        console.warn('[tavern] failed to refresh cron projections after run', error);
+        console.warn('[tavern] failed to refresh cron records after run', error);
     });
 
     emitCronUpdated();

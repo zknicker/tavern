@@ -40,7 +40,7 @@ let raw platform fields such as Discord session key fragments, `lastTo`, or `ori
 the package boundary.
 
 When platform-specific facts are useful to Tavern, put them in typed `platformMetadata`. Do not
-hide those facts inside derived chat names or loose metadata. `metadata` is for runtime projection
+hide those facts inside derived chat names or loose metadata. `metadata` is for runtime mapping
 bookkeeping such as session keys; `platformMetadata` is for Discord, Telegram, Slack, and similar
 source facts.
 

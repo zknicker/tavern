@@ -38,7 +38,7 @@ Server owns that storage under its own data directory and passes the signer into
 | agent config docs | `agents.files.list`, `agents.files.get`, `agents.files.set` |
 | sessions | `sessions.list`, `sessions.get`, `sessions.preview` |
 | messages | `chat.history`, `sessions.messages.subscribe` |
-| Tavern chat registry | Tavern DB projections; Gateway adapter does not own this surface |
+| Tavern chat registry | Tavern DB records; Gateway adapter does not own this surface |
 | Tavern chat send | Tavern Runtime `/chat`; Gateway adapter does not own this surface |
 | cron | `cron.list`, `cron.add`, `cron.update`, `cron.remove`, `cron.run`, `cron.runs` |
 | models | `models.list` |

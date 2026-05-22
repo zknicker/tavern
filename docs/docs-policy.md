@@ -81,7 +81,7 @@ names are `Chat`, `Agents`, `Memory`, `Knowledgebase`, `Cron automations`,
 `Skills`, `Stats`, `Pets and rewards`, and `TypeScript SDK + integrations`.
 
 Implementation nouns are not features. Avoid feature pages named `Frontend`,
-`Server`, `Sessions`, `Projection`, `OpenClaw plugin`, or `Runtime status`.
+`Server`, `Sessions`, `Runtime records`, `OpenClaw plugin`, or `Runtime status`.
 Those belong in internals, operations, or SDK pages.
 
 Use this template:
@@ -126,7 +126,8 @@ not just a description of today's tRPC or app-backend implementation.
 Use this shape:
 
 * **OpenAPI for chat and realtime.** `packages/tavern-api/openapi.yaml` owns
-  public chat, message, activity, read, delivery, event, and error shapes.
+  public chat, message, response, activity, artifact, read, delivery, event,
+  and error shapes.
 * **Typed contracts for admin.** `packages/tavern-api/src/runtime/*`
   owns health, status, managed OpenClaw, agents, sessions, cron, skills, models,
   memory, files, and bindings.
@@ -138,10 +139,10 @@ Use this shape:
 SDK docs:
 
 * **Lead with a quick start.** Show the smallest useful TypeScript example.
-* **Name the public surface.** Messages, activity, receipts, history, events,
-  admin, automations, webhooks, and bots.
-* **Separate durable from volatile.** History is durable. Activity is live.
-  Events are notifications.
+* **Name the public surface.** Messages, responses, activity, artifacts,
+  receipts, history, events, admin, automations, webhooks, and bots.
+* **Separate durable from notification.** Messages, responses, activity, and
+  artifacts are durable. Events are notifications.
 * **Show idempotency.** Duplicate ids or nonces return existing receipts.
 * **Include examples.** Tavern App, bot, webhook, automation, and local tool
   examples use the real SDK surface.
@@ -158,7 +159,7 @@ Use internals docs for:
 
 * app/runtime boundaries
 * always-on runtime chat server behavior
-* database and projection layout
+* database and runtime record layout
 * frontend structure
 * OpenClaw Gateway and plugin lifecycle
 * sync paths and recovery
@@ -185,9 +186,9 @@ and cleanup or rollback notes when relevant.
 
 ## Writing Rules
 
-* Use Tavern nouns at the product boundary: `chat`, `message`, `activity`,
-  `agent`, `memory`, `Cortex`, `Knowledgebase`, `automation`, `skill`, `stats`,
-  `SDK`.
+* Use Tavern nouns at the product boundary: `chat`, `message`, `response`,
+  `activity`, `artifact`, `agent`, `memory`, `Cortex`, `Knowledgebase`,
+  `automation`, `skill`, `stats`, `SDK`.
 * Use runtime nouns only where runtime ownership matters: `session`, `turn`,
   `transcript`, `delivery`, `event`.
 * Prefer "durable messages" over "chats survive reloads".

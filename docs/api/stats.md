@@ -9,7 +9,7 @@ read_when:
 
 The Stats API is for usage, spend, runtime health, and operational signal.
 
-Stats are derived from durable records and provider/runtime projections. They do
+Stats are derived from durable records and synced provider/runtime data. They do
 not require clients to parse logs or runtime internals.
 
 ## Contract

@@ -12,7 +12,7 @@ output after OpenClaw has created the wrong session.
 - Tavern chats are room-like runtime conversations, even when they contain one agent.
 - One Tavern chat maps to one OpenClaw session per bound agent.
 - Tavern sender is message actor metadata, not the OpenClaw session peer.
-- Tavern owns product projection and UI state. OpenClaw owns native sessions, turns, tools, and
+- Tavern owns product records and UI state. OpenClaw owns native sessions, turns, tools, and
   durable runtime history.
 - The OpenClaw Gateway adapter maps valid plugin output into Tavern API and runtime evidence
   records. It must not repair invalid plugin routing.

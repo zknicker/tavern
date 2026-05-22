@@ -6,6 +6,7 @@ import { cronRouter } from './cron/router.ts';
 import { jobsRouter } from './jobs/router.ts';
 import { logRouter } from './log/router.ts';
 import { memoryRouter } from './memory/router.ts';
+import { mentionRouter } from './mention/router.ts';
 import { messagingPlatformRouter } from './messaging-platform/router.ts';
 import { modelRouter } from './model/router.ts';
 import { modelAccessRouter } from './model-access/router.ts';
@@ -28,6 +29,7 @@ export const appRouter = createRouter({
     jobs: jobsRouter,
     log: logRouter,
     memory: memoryRouter,
+    mention: mentionRouter,
     messagingPlatform: messagingPlatformRouter,
     modelAccess: modelAccessRouter,
     model: modelRouter,

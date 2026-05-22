@@ -23,7 +23,7 @@ afterEach(() => {
     databaseClient.exec('DELETE FROM cron_runs;');
 });
 
-test('listCronRuns returns mapped projected runs and honors the limit', async () => {
+test('listCronRuns returns mapped runs and honors the limit', async () => {
     await upsertCronRuns([
         {
             agentId: null,

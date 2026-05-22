@@ -8,7 +8,7 @@ export function registerWorkspaceNotesTools(api, options = {}) {
     const request = createWorkspaceRequest(options);
 
     api.registerTool({
-        name: 'workspace.notes.read',
+        name: 'workspace_notes_read',
         description: 'Read the agent-authored Tavern operating notes rendered into AGENTS.md.',
         parameters: objectSchema({
             agentId: optionalStringSchema('Agent id. Defaults to main.'),
@@ -23,7 +23,7 @@ export function registerWorkspaceNotesTools(api, options = {}) {
     });
 
     api.registerTool({
-        name: 'workspace.notes.update',
+        name: 'workspace_notes_update',
         description:
             'Replace the agent-authored Tavern operating notes. Use this instead of editing AGENTS.md.',
         parameters: objectSchema({

@@ -3,11 +3,11 @@ import { inArray } from 'drizzle-orm';
 import { db } from '../db/index.ts';
 import { sessionToolCallsTable } from '../db/schema.ts';
 
-export type ProjectedSessionToolCall = AgentRuntimeSessionGraph['toolCalls'][number];
+export type SessionToolCall = AgentRuntimeSessionGraph['toolCalls'][number];
 
-export async function listProjectedSessionToolCalls(
+export async function listSessionToolCalls(
     sessionKeys: string[]
-): Promise<ProjectedSessionToolCall[]> {
+): Promise<SessionToolCall[]> {
     if (sessionKeys.length === 0) {
         return [];
     }
@@ -18,13 +18,13 @@ export async function listProjectedSessionToolCalls(
         .where(inArray(sessionToolCallsTable.sessionKey, sessionKeys));
 
     return rows.map((row) => ({
-        arguments: parseProjectedJson(row.argumentsJson),
+        arguments: parseJson(row.argumentsJson),
         childSessionKey: row.childSessionKey,
         finishedAt: row.finishedAt,
         id: row.id,
         isError: row.isError,
         messageId: row.messageId,
-        result: parseProjectedJson(row.resultJson),
+        result: parseJson(row.resultJson),
         sessionKey: row.sessionKey,
         startedAt: row.startedAt,
         toolCallId: row.toolCallId,
@@ -32,7 +32,7 @@ export async function listProjectedSessionToolCalls(
     }));
 }
 
-function parseProjectedJson(value: string | null) {
+function parseJson(value: string | null) {
     if (!value) {
         return null;
     }

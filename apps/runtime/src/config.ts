@@ -8,8 +8,10 @@ const envConfig = readEnvFile([
     'TAVERN_OPENCLAW_GATEWAY_PORT',
     'TAVERN_OPENCLAW_CORTEX_PLUGIN_DEPLOY_PATH',
     'TAVERN_OPENCLAW_CORTEX_PLUGIN_PATH',
+    'TAVERN_OPENCLAW_CODEX_AUTH_PROFILE_ID',
     'TAVERN_OPENCLAW_PLUGIN_PATH',
     'TAVERN_OPENCLAW_PLUGIN_DEPLOY_PATH',
+    'TAVERN_OPENCLAW_INSTALL_ROOT',
     'TAVERN_OPENCLAW_VERSION',
     'TAVERN_OPENCLAW_WORKSPACE_PLUGIN_DEPLOY_PATH',
     'TAVERN_OPENCLAW_WORKSPACE_PLUGIN_PATH',
@@ -42,7 +44,8 @@ function resolveRuntimeRoot(): string {
 export const RUNTIME_ROOT = resolveRuntimeRoot();
 export const DATA_DIR = path.join(RUNTIME_ROOT, 'data');
 export const OPENCLAW_ROOT = path.join(RUNTIME_ROOT, 'openclaw');
-export const OPENCLAW_INSTALL_ROOT = path.join(OPENCLAW_ROOT, 'versions');
+export const OPENCLAW_INSTALL_ROOT =
+    readConfigValue('TAVERN_OPENCLAW_INSTALL_ROOT') ?? path.join(OPENCLAW_ROOT, 'versions');
 export const OPENCLAW_RUN_ROOT = path.join(OPENCLAW_ROOT, 'run');
 
 function resolveConfigTimezone(): string {

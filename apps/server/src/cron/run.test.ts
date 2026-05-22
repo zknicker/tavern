@@ -120,7 +120,7 @@ test('runCronJob forwards the manual run request to OpenClaw', async () => {
     assert.equal(emitSyncDataUpdatedSpy.mock.calls.length, 1);
 });
 
-test('runCronJob rejects missing projected cron jobs before calling OpenClaw', async () => {
+test('runCronJob rejects missing cron jobs before calling OpenClaw', async () => {
     const runAgentRuntimeCronSpy = spyOn(agentRuntimeCron, 'runCronJob').mockResolvedValue(
         createAgentRuntimeCronRun()
     );

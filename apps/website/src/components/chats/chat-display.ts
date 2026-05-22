@@ -16,7 +16,7 @@ export interface ChatDisplayInput {
 }
 
 export function getChatDisplayTitle(chat: ChatDisplayInput) {
-    if (isProjectedRuntimeDm(chat)) {
+    if (isRuntimeDm(chat)) {
         const agentLabel = formatParticipantNames(
             chat.participants
                 .filter((participant) => participant.actorType === 'agent')
@@ -33,7 +33,7 @@ export function getChatDisplayTitle(chat: ChatDisplayInput) {
     return chat.title;
 }
 
-export function isProjectedRuntimeDm(chat: ChatDisplayInput) {
+export function isRuntimeDm(chat: ChatDisplayInput) {
     return chat.type !== 'tavern' && chat.scope === 'dm';
 }
 

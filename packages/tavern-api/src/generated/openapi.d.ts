@@ -4,23 +4,6 @@
  */
 
 export interface paths {
-    "/api/activity": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** List current live chat activity. */
-        get: operations["listChatActivity"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/api/chats": {
         parameters: {
             query?: never;
@@ -97,7 +80,25 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/chats/{chat_id}/activity": {
+    "/api/chats/{chat_id}/responses": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List chat responses by update time. */
+        get: operations["listChatResponses"];
+        put?: never;
+        /** Create or update a durable chat response. */
+        post: operations["createChatResponse"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/chats/{chat_id}/responses/{response_id}/activity": {
         parameters: {
             query?: never;
             header?: never;
@@ -106,8 +107,42 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Update the live activity state for a chat. */
-        post: operations["updateChatActivity"];
+        /** Create or update durable response activity. */
+        post: operations["upsertResponseActivity"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/chats/{chat_id}/activity/{activity_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get durable response activity by id. */
+        get: operations["getResponseActivity"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/chats/{chat_id}/artifacts": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Create or update a durable chat artifact. */
+        post: operations["createChatArtifact"];
         delete?: never;
         options?: never;
         head?: never;
@@ -194,6 +229,9 @@ export interface components {
         ChatId: string;
         MessageId: string;
         MessagePartId: string;
+        ResponseId: string;
+        ActivityId: string;
+        ArtifactId: string;
         ParticipantId: string;
         UserParticipantId: string;
         AgentParticipantId: string;
@@ -292,39 +330,96 @@ export interface components {
             cursor: string;
             idempotent: boolean;
         };
-        ActivityStep: {
-            id: components["schemas"]["Id"];
-            /** @enum {string} */
-            kind: "thinking" | "tool" | "command" | "file" | "message" | "custom";
-            /** @enum {string} */
-            status: "queued" | "running" | "completed" | "failed";
-            label: string;
-            started_at: components["schemas"]["Timestamp"];
+        /** @enum {string} */
+        ResponseStatus: "queued" | "running" | "completed" | "failed" | "cancelled";
+        /** @enum {string} */
+        ResponseActivityKind: "planning" | "reasoning" | "tool_call" | "tool_result" | "command" | "approval" | "message" | "artifact" | "custom";
+        ChatResponse: {
+            id: components["schemas"]["ResponseId"];
+            chat_id: components["schemas"]["ChatId"];
+            participant_id: components["schemas"]["ParticipantId"];
+            request_message_id: components["schemas"]["MessageId"] | null;
+            response_message_id: components["schemas"]["MessageId"] | null;
+            status: components["schemas"]["ResponseStatus"];
+            summary: string | null;
+            created_at: components["schemas"]["Timestamp"];
+            updated_at: components["schemas"]["Timestamp"];
             completed_at: components["schemas"]["Timestamp"] | null;
             metadata: components["schemas"]["JsonObject"];
         };
-        ChatActivity: {
+        UpsertResponseRequest: {
+            id: components["schemas"]["ResponseId"];
+            participant_id: components["schemas"]["ParticipantId"];
+            request_message_id?: components["schemas"]["MessageId"] | null;
+            response_message_id?: components["schemas"]["MessageId"] | null;
+            status: components["schemas"]["ResponseStatus"];
+            summary?: string | null;
+            completed_at?: components["schemas"]["Timestamp"] | null;
+            metadata?: components["schemas"]["JsonObject"];
+        };
+        ListResponsesResponse: {
+            responses: components["schemas"]["ChatResponse"][];
+            activity: components["schemas"]["ResponseActivity"][];
+            artifacts: components["schemas"]["ChatArtifact"][];
+            next_sequence: number | null;
+        };
+        ResponseActivity: {
+            id: components["schemas"]["ActivityId"];
+            response_id: components["schemas"]["ResponseId"];
             chat_id: components["schemas"]["ChatId"];
-            run_id: components["schemas"]["RunId"];
-            agent_id: components["schemas"]["AgentParticipantId"];
-            /** @enum {string} */
-            status: "queued" | "running" | "completed" | "failed";
+            sequence: number;
+            kind: components["schemas"]["ResponseActivityKind"];
+            status: components["schemas"]["ResponseStatus"];
+            title: string;
+            detail: string | null;
             summary: string | null;
-            steps: components["schemas"]["ActivityStep"][];
+            artifact_ids: components["schemas"]["ArtifactId"][];
+            started_at: components["schemas"]["Timestamp"];
+            completed_at: components["schemas"]["Timestamp"] | null;
             updated_at: components["schemas"]["Timestamp"];
             metadata: components["schemas"]["JsonObject"];
         };
-        UpdateActivityRequest: {
-            run_id: components["schemas"]["RunId"];
-            agent_id: components["schemas"]["AgentParticipantId"];
-            /** @enum {string} */
-            status: "queued" | "running" | "completed" | "failed";
+        UpsertResponseActivityRequest: {
+            id: components["schemas"]["ActivityId"];
+            sequence?: number;
+            kind: components["schemas"]["ResponseActivityKind"];
+            status: components["schemas"]["ResponseStatus"];
+            title: string;
+            detail?: string | null;
             summary?: string | null;
-            steps?: components["schemas"]["ActivityStep"][];
+            artifact_ids?: components["schemas"]["ArtifactId"][];
+            started_at?: components["schemas"]["Timestamp"];
+            completed_at?: components["schemas"]["Timestamp"] | null;
             metadata?: components["schemas"]["JsonObject"];
         };
-        ListChatActivityResponse: {
-            activities: components["schemas"]["ChatActivity"][];
+        ChatArtifact: {
+            id: components["schemas"]["ArtifactId"];
+            chat_id: components["schemas"]["ChatId"];
+            /** @enum {string} */
+            kind: "code" | "image" | "file" | "diff" | "document" | "chart" | "text" | "custom";
+            title: string | null;
+            content_text: string | null;
+            content_ref: string | null;
+            response_id: components["schemas"]["ResponseId"] | null;
+            activity_id: components["schemas"]["ActivityId"] | null;
+            message_id: components["schemas"]["MessageId"] | null;
+            mime_type: string | null;
+            created_at: components["schemas"]["Timestamp"];
+            updated_at: components["schemas"]["Timestamp"];
+            metadata: components["schemas"]["JsonObject"];
+        };
+        UpsertArtifactRequest: {
+            id: components["schemas"]["ArtifactId"];
+            /** @enum {string} */
+            kind: "code" | "image" | "file" | "diff" | "document" | "chart" | "text" | "custom";
+            title?: string | null;
+            content_text?: string | null;
+            content_ref?: string | null;
+            response_id?: components["schemas"]["ResponseId"] | null;
+            activity_id?: components["schemas"]["ActivityId"] | null;
+            message_id?: components["schemas"]["MessageId"] | null;
+            mime_type?: string | null;
+            metadata?: components["schemas"]["JsonObject"];
         };
         ReadReceipt: {
             chat_id: components["schemas"]["ChatId"];
@@ -346,7 +441,7 @@ export interface components {
             events: components["schemas"]["ChatEvent"][];
             next_cursor: string | null;
         };
-        ChatEvent: components["schemas"]["MessageCreatedEvent"] | components["schemas"]["MessageDeliveredEvent"] | components["schemas"]["MessageDeletedEvent"] | components["schemas"]["ChatReadEvent"] | components["schemas"]["ChatActivityUpdatedEvent"] | components["schemas"]["ChatActivityCompletedEvent"] | components["schemas"]["ChatActivityFailedEvent"];
+        ChatEvent: components["schemas"]["MessageCreatedEvent"] | components["schemas"]["MessageDeliveredEvent"] | components["schemas"]["MessageDeletedEvent"] | components["schemas"]["ChatReadEvent"] | components["schemas"]["ResponseCreatedEvent"] | components["schemas"]["ResponseUpdatedEvent"] | components["schemas"]["ResponseCompletedEvent"] | components["schemas"]["ResponseFailedEvent"] | components["schemas"]["ActivityCreatedEvent"] | components["schemas"]["ActivityUpdatedEvent"] | components["schemas"]["ActivityCompletedEvent"] | components["schemas"]["ActivityFailedEvent"] | components["schemas"]["ArtifactCreatedEvent"];
         EventBase: {
             id: components["schemas"]["EventId"];
             cursor: string;
@@ -375,20 +470,50 @@ export interface components {
             type: "chat.read";
             read: components["schemas"]["ReadReceipt"];
         };
-        ChatActivityUpdatedEvent: components["schemas"]["EventBase"] & {
+        ResponseCreatedEvent: components["schemas"]["EventBase"] & {
             /** @constant */
-            type: "chat.activity.updated";
-            activity: components["schemas"]["ChatActivity"];
+            type: "response.created";
+            response: components["schemas"]["ChatResponse"];
         };
-        ChatActivityCompletedEvent: components["schemas"]["EventBase"] & {
+        ResponseUpdatedEvent: components["schemas"]["EventBase"] & {
             /** @constant */
-            type: "chat.activity.completed";
-            activity: components["schemas"]["ChatActivity"];
+            type: "response.updated";
+            response: components["schemas"]["ChatResponse"];
         };
-        ChatActivityFailedEvent: components["schemas"]["EventBase"] & {
+        ResponseCompletedEvent: components["schemas"]["EventBase"] & {
             /** @constant */
-            type: "chat.activity.failed";
-            activity: components["schemas"]["ChatActivity"];
+            type: "response.completed";
+            response: components["schemas"]["ChatResponse"];
+        };
+        ResponseFailedEvent: components["schemas"]["EventBase"] & {
+            /** @constant */
+            type: "response.failed";
+            response: components["schemas"]["ChatResponse"];
+        };
+        ActivityCreatedEvent: components["schemas"]["EventBase"] & {
+            /** @constant */
+            type: "activity.created";
+            activity: components["schemas"]["ResponseActivity"];
+        };
+        ActivityUpdatedEvent: components["schemas"]["EventBase"] & {
+            /** @constant */
+            type: "activity.updated";
+            activity: components["schemas"]["ResponseActivity"];
+        };
+        ActivityCompletedEvent: components["schemas"]["EventBase"] & {
+            /** @constant */
+            type: "activity.completed";
+            activity: components["schemas"]["ResponseActivity"];
+        };
+        ActivityFailedEvent: components["schemas"]["EventBase"] & {
+            /** @constant */
+            type: "activity.failed";
+            activity: components["schemas"]["ResponseActivity"];
+        };
+        ArtifactCreatedEvent: components["schemas"]["EventBase"] & {
+            /** @constant */
+            type: "artifact.created";
+            artifact: components["schemas"]["ChatArtifact"];
         };
         Error: {
             code: string;
@@ -413,6 +538,8 @@ export interface components {
         Cursor: string;
         Limit: number;
         MessageId: components["schemas"]["MessageId"];
+        ResponseId: components["schemas"]["ResponseId"];
+        ActivityId: components["schemas"]["ActivityId"];
     };
     requestBodies: never;
     headers: never;
@@ -420,27 +547,6 @@ export interface components {
 }
 export type $defs = Record<string, never>;
 export interface operations {
-    listChatActivity: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Current activity state for chats with live or recent work. */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ListChatActivityResponse"];
-                };
-            };
-            default: components["responses"]["Error"];
-        };
-    };
     listChats: {
         parameters: {
             query?: {
@@ -621,7 +727,33 @@ export interface operations {
             default: components["responses"]["Error"];
         };
     };
-    updateChatActivity: {
+    listChatResponses: {
+        parameters: {
+            query?: {
+                after_sequence?: number;
+                limit?: components["parameters"]["Limit"];
+            };
+            header?: never;
+            path: {
+                chat_id: components["parameters"]["ChatId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Responses for one chat. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ListResponsesResponse"];
+                };
+            };
+            default: components["responses"]["Error"];
+        };
+    };
+    createChatResponse: {
         parameters: {
             query?: never;
             header?: never;
@@ -632,17 +764,123 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["UpdateActivityRequest"];
+                "application/json": components["schemas"]["UpsertResponseRequest"];
             };
         };
         responses: {
-            /** @description Current activity state. */
+            /** @description Current response state. */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["ChatActivity"];
+                    "application/json": components["schemas"]["ChatResponse"];
+                };
+            };
+            /** @description Created response. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ChatResponse"];
+                };
+            };
+            default: components["responses"]["Error"];
+        };
+    };
+    upsertResponseActivity: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                chat_id: components["parameters"]["ChatId"];
+                response_id: components["parameters"]["ResponseId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpsertResponseActivityRequest"];
+            };
+        };
+        responses: {
+            /** @description Current response activity. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ResponseActivity"];
+                };
+            };
+            /** @description Created response activity. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ResponseActivity"];
+                };
+            };
+            default: components["responses"]["Error"];
+        };
+    };
+    getResponseActivity: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                chat_id: components["parameters"]["ChatId"];
+                activity_id: components["parameters"]["ActivityId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Response activity. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ResponseActivity"];
+                };
+            };
+            default: components["responses"]["Error"];
+        };
+    };
+    createChatArtifact: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                chat_id: components["parameters"]["ChatId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpsertArtifactRequest"];
+            };
+        };
+        responses: {
+            /** @description Current artifact. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ChatArtifact"];
+                };
+            };
+            /** @description Created artifact. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ChatArtifact"];
                 };
             };
             default: components["responses"]["Error"];

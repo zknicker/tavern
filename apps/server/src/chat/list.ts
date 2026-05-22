@@ -6,13 +6,13 @@ import {
     resolveParticipantColor,
     resolveParticipantName,
 } from '../participants/presentation.ts';
-import { listChatProjections, parseChatRawJson } from '../storage/chats.ts';
+import { listChatRecords, parseChatRawJson } from '../storage/chats.ts';
 import {
     listParticipants,
     type Participant,
     resolveParticipantIdsForSourceIdentities,
 } from '../storage/participants.ts';
-import { listSessionProjections, parseSessionProjection } from '../storage/sessions.ts';
+import { listSessionRecords, parseSessionRecord } from '../storage/sessions.ts';
 import { type Chat, chatListSchema, chatSchema } from './contracts.ts';
 import { resolveChatScope, resolveObservedConversationKind } from './conversation-kind.ts';
 import { findChatSessionKeyForAgent } from './session-keys.ts';
@@ -24,10 +24,10 @@ import {
     resolveChatSource,
 } from './source.ts';
 
-type ChatProjectionRecord = Awaited<ReturnType<typeof listChatProjections>>[number];
+type StoredChatRecord = Awaited<ReturnType<typeof listChatRecords>>[number];
 type ParsedRuntimeChat = ReturnType<typeof parseChatRawJson>;
 interface RuntimeChatEntry {
-    record: ChatProjectionRecord;
+    record: StoredChatRecord;
     runtimeChat: ParsedRuntimeChat;
 }
 
@@ -47,7 +47,7 @@ function compareOptionalTimestamp(left: string | null, right: string | null) {
     return right.localeCompare(left);
 }
 
-function presentProjectedChatDisplayName(input: {
+function presentChatDisplayName(input: {
     identity: NonNullable<ReturnType<typeof resolveChatIdentityFromId>>;
     runtimeChat: ParsedRuntimeChat | null;
     source: ChatSource;
@@ -79,7 +79,7 @@ function presentProjectedChatDisplayName(input: {
     return presentGenericTarget(input.identity.type, input.identity.target);
 }
 
-function presentProjectedChatTitle(input: {
+function presentChatTitle(input: {
     conversationKind: 'channel' | 'direct' | 'group' | 'topic';
     displayName: string;
     participants: Array<{
@@ -210,8 +210,8 @@ export async function listChatDetails() {
     const [agents, participants, sessionRecords, chatRecords] = await Promise.all([
         listAgents(),
         listParticipants(),
-        listSessionProjections(),
-        listChatProjections({ includeArchived: true }),
+        listSessionRecords(),
+        listChatRecords({ includeArchived: true }),
     ]);
     const agentById = new Map(agents.map((agent) => [agent.id, agent]));
     const participantById = new Map(
@@ -230,7 +230,7 @@ export async function listChatDetails() {
     const participantIdsByRuntimeParticipantKey =
         await buildRuntimeParticipantIdMap(agentRuntimeChats);
     const sessions = sessionRecords.flatMap((record) => {
-        const session = parseSessionProjection(record);
+        const session = parseSessionRecord(record);
         return session ? [session] : [];
     });
     const sessionsByChatId = new Map<string, typeof sessions>();
@@ -255,7 +255,7 @@ export async function listChatDetails() {
             const agentRuntimeChatEntry = agentRuntimeChatsById.get(chatId) ?? null;
             const agentRuntimeChat = agentRuntimeChatEntry?.runtimeChat ?? null;
             const chatSessions = sessionsByChatId.get(chatId) ?? [];
-            const identity = resolveProjectedChatIdentity({
+            const identity = resolveChatIdentity({
                 chatId,
                 runtimeChat: agentRuntimeChat,
             });
@@ -346,7 +346,7 @@ export async function listChatDetails() {
                 chatId: agentRuntimeChatEntry?.record.id ?? null,
                 runtimePlatform: agentRuntimeChat?.platform ?? null,
             });
-            const displayName = presentProjectedChatDisplayName({
+            const displayName = presentChatDisplayName({
                 identity,
                 runtimeChat: agentRuntimeChat,
                 source,
@@ -361,7 +361,7 @@ export async function listChatDetails() {
                           target: identity.target,
                           type: identity.type,
                       });
-            const title = presentProjectedChatTitle({
+            const title = presentChatTitle({
                 conversationKind,
                 displayName,
                 participants: uniqueParticipants,
@@ -469,7 +469,7 @@ function toChatTargetParticipant(participant: Participant | null) {
     };
 }
 
-function resolveProjectedChatIdentity(input: {
+function resolveChatIdentity(input: {
     chatId: string;
     runtimeChat: ReturnType<typeof parseChatRawJson> | null;
 }) {

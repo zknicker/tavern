@@ -14,7 +14,7 @@ import {
     markTavernInboundMessageAccepted,
     persistTavernInboundMessage,
 } from './channel-store';
-import { createChat, createMessage, updateActivity } from './chat-api';
+import { createChat, createMessage, upsertResponse } from './chat-api';
 import { createAgentParticipantId } from './chat-api/ids';
 
 const defaultAccountId = 'default';
@@ -113,17 +113,20 @@ export async function sendTavernChannelMessage(
         requestId,
         sessionKey,
     });
-    updateActivity(chatId, {
-        agent_id: createAgentParticipantId(payload.agent.agentId),
+    upsertResponse(chatId, {
+        id: createResponseId(persisted.runId),
         metadata: {
             runtime: {
                 agentId: payload.agent.agentId,
+                messageId: persisted.messageId,
+                runId: persisted.runId,
                 sessionKey,
                 source: 'openclaw',
                 startedAt: persisted.acceptedAt,
             },
         },
-        run_id: persisted.runId,
+        participant_id: createAgentParticipantId(payload.agent.agentId),
+        request_message_id: persisted.messageId,
         status: 'running',
     });
     const socket = findOpenSocket();
@@ -173,4 +176,8 @@ function sendFrame(socket: WebSocket, frame: TavernChannelInboundMessage) {
             console.warn('[tavern-runtime] failed to send Tavern channel frame', error);
         }
     });
+}
+
+function createResponseId(runId: string) {
+    return runId.startsWith('rsp_') ? runId : `rsp_${runId.replace(/[^A-Za-z0-9_-]/g, '_')}`;
 }

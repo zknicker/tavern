@@ -1,4 +1,4 @@
-import type { TavernChatActivity, TavernChatMessage } from '@tavern/api';
+import type { TavernChatMessage, TavernChatResponse, TavernResponseActivity } from '@tavern/api';
 
 export interface DeliveryReceipt {
     cursor: string;
@@ -75,14 +75,50 @@ export interface DeliveryRow {
     message_id: string;
 }
 
-export interface ActivityRow {
-    agent_id: string;
+export interface ResponseRow {
     chat_id: string;
+    completed_at: string | null;
+    created_at: string;
+    id: string;
     metadata_json: string;
-    run_id: string;
-    status: TavernChatActivity['status'];
-    steps_json: string;
+    participant_id: string;
+    request_message_id: string | null;
+    response_message_id: string | null;
+    status: TavernChatResponse['status'];
     summary: string | null;
+    updated_at: string;
+}
+
+export interface ActivityRow {
+    artifact_ids_json: string;
+    chat_id: string;
+    completed_at: string | null;
+    detail: string | null;
+    id: string;
+    kind: TavernResponseActivity['kind'];
+    metadata_json: string;
+    response_id: string;
+    sequence: number;
+    started_at: string;
+    status: TavernResponseActivity['status'];
+    summary: string | null;
+    title: string;
+    updated_at: string;
+}
+
+export interface ArtifactRow {
+    activity_id: string | null;
+    chat_id: string;
+    content_ref: string | null;
+    content_text: string | null;
+    created_at: string;
+    id: string;
+    kind: string;
+    message_id: string | null;
+    metadata_json: string;
+    mime_type: string | null;
+    response_id: string | null;
+    title: string | null;
     updated_at: string;
 }
 

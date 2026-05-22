@@ -11,7 +11,9 @@ type RuntimeCapability = RuntimeConnection['capabilities'][number];
 type CapabilityState = RuntimeCapability['state'];
 
 const capabilityLabels: Partial<Record<RuntimeCapability['capability'], string>> = {
+    computerUse: 'computer use',
     cronRuns: 'cron runs',
+    mentions: 'mentions',
 };
 
 const stateLabels: Record<CapabilityState, string> = {

@@ -32,13 +32,13 @@ export function useChatTimeline(input: {
                 : null,
         [activeReply, input.activeReplyProgressStartedAt, input.activeReplySteps, input.chatId]
     );
-    const projectedWithLog = React.useMemo(
+    const timelineWithLog = React.useMemo(
         () => applyLogSnapshot(timelineState, query.data),
         [query.data, timelineState]
     );
-    const projectedState = React.useMemo(
-        () => applyStatusSnapshot(projectedWithLog, activeStatus),
-        [activeStatus, projectedWithLog]
+    const timelineWithStatus = React.useMemo(
+        () => applyStatusSnapshot(timelineWithLog, activeStatus),
+        [activeStatus, timelineWithLog]
     );
 
     React.useEffect(() => {
@@ -51,13 +51,13 @@ export function useChatTimeline(input: {
 
     return {
         ...query,
-        activeReply: projectedState.activeReply,
-        activeReplyProgressStartedAt: projectedState.activeReplyProgressStartedAt,
-        activeReplySteps: projectedState.activeReplySteps,
-        completedProgress: projectedState.completedProgress,
-        failedTurn: projectedState.failedTurn,
-        historyLoaded: projectedState.historyLoaded,
-        rows: projectedState.timeline,
-        totalRows: projectedState.totalRows,
+        activeReply: timelineWithStatus.activeReply,
+        activeReplyProgressStartedAt: timelineWithStatus.activeReplyProgressStartedAt,
+        activeReplySteps: timelineWithStatus.activeReplySteps,
+        completedProgress: timelineWithStatus.completedProgress,
+        failedTurn: timelineWithStatus.failedTurn,
+        historyLoaded: timelineWithStatus.historyLoaded,
+        rows: timelineWithStatus.timeline,
+        totalRows: timelineWithStatus.totalRows,
     };
 }

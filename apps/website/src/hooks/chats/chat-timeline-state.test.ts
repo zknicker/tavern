@@ -458,13 +458,15 @@ test('applyLogSnapshot keeps repeated live reply text when durable history is ol
         total: 1,
     });
 
-    expect(next.activeReply).toEqual({
-        agentId: 'claw',
-        isThinking: false,
-        runId: 'run-2',
-        sessionKey: 'session-1',
-        startedAt: '2026-04-21T16:08:49.000Z',
-        text: 'OK',
+    expect(next.completedProgress).toMatchObject({
+        reply: {
+            agentId: 'claw',
+            isThinking: false,
+            runId: 'run-2',
+            sessionKey: 'session-1',
+            startedAt: '2026-04-21T16:08:49.000Z',
+            text: 'OK',
+        },
     });
 });
 
@@ -644,13 +646,16 @@ test('applyReplySnapshot does not let a stale status snapshot overwrite a richer
         text: '',
     });
 
-    expect(next.activeReply).toEqual({
-        agentId: 'claw',
-        isThinking: false,
-        runId: 'run-1',
-        sessionKey: 'session-1',
-        startedAt: '2026-04-21T16:08:42.000Z',
-        text: "that's the move",
+    expect(next.activeReply).toBeNull();
+    expect(next.completedProgress).toMatchObject({
+        reply: {
+            agentId: 'claw',
+            isThinking: false,
+            runId: 'run-1',
+            sessionKey: 'session-1',
+            startedAt: '2026-04-21T16:08:42.000Z',
+            text: "that's the move",
+        },
     });
 });
 
@@ -731,6 +736,36 @@ test('completeTimelineTurn preserves active progress immediately on completion',
             },
         ],
     });
+    expect(completed.activeReply).toBeNull();
+    expect(completed.activeReplySteps).toEqual([]);
+});
+
+test('progress replay after completion does not reactivate the turn', () => {
+    const turn = {
+        agentId: 'claw',
+        chatId: 'chat-1',
+        runId: 'run-1',
+        sessionKey: 'session-1',
+        startedAt: '2026-04-21T16:08:42.000Z',
+    };
+    const state = completeTimelineTurn(startTimelineTurn(emptyTimelineState(), turn), {
+        completedAt: '2026-04-21T16:08:46.000Z',
+        turn,
+    });
+
+    const next = updateTimelineTurnProgress(state, {
+        receivedAt: '2026-04-21T16:08:47.000Z',
+        step: {
+            id: 'tool:web',
+            kind: 'tool',
+            label: 'Using web search',
+            status: 'completed',
+        },
+        turn,
+    });
+
+    expect(next.activeReply).toBeNull();
+    expect(next.activeReplySteps).toEqual([]);
 });
 
 test('applyReplySnapshot preserves completed progress for the same run status handoff', () => {

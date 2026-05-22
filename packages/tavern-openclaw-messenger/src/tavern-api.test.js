@@ -1,5 +1,9 @@
 import { describe, expect, it, mock } from 'bun:test';
-import { createTavernPluginApi, deriveTavernApiBaseUrl } from './tavern-api.js';
+import {
+    activityStepFromProgressStep,
+    createTavernPluginApi,
+    deriveTavernApiBaseUrl,
+} from './tavern-api.js';
 
 describe('Tavern API adapter', () => {
     it('writes final assistant deliveries through the Tavern SDK OpenAPI path', async () => {
@@ -12,13 +16,28 @@ describe('Tavern API adapter', () => {
                     method: init.method,
                     url: String(url),
                 });
+                if (String(url).endsWith('/deliveries')) {
+                    return jsonResponse({
+                        cursor: '1',
+                        id: 'del_1',
+                        idempotent: false,
+                        message: {
+                            id: 'msg_reply',
+                        },
+                    });
+                }
                 return jsonResponse({
-                    cursor: '1',
-                    id: 'del_1',
-                    idempotent: false,
-                    message: {
-                        id: 'msg_reply',
-                    },
+                    chat_id: 'cht_1',
+                    completed_at: '2026-05-18T12:00:00.000Z',
+                    created_at: '2026-05-18T12:00:00.000Z',
+                    id: 'rsp_run_1',
+                    metadata: {},
+                    participant_id: 'agt_main',
+                    request_message_id: 'msg_user',
+                    response_message_id: 'msg_reply',
+                    status: 'completed',
+                    summary: null,
+                    updated_at: '2026-05-18T12:00:00.000Z',
                 });
             }),
         });
@@ -28,6 +47,7 @@ describe('Tavern API adapter', () => {
             chatId: 'cht_1',
             deliveryId: 'del_1',
             messageId: 'msg_reply',
+            requestMessageId: 'msg_user',
             runId: 'run_1',
             sessionKey: 'agent:main:tavern:channel:cht_1',
             text: 'done',
@@ -72,10 +92,32 @@ describe('Tavern API adapter', () => {
                 method: 'POST',
                 url: 'http://runtime.test/api/chats/cht_1/deliveries',
             },
+            {
+                body: {
+                    completed_at: expect.any(String),
+                    id: 'rsp_run_1',
+                    metadata: {
+                        runtime: {
+                            agentId: 'main',
+                            deliveryId: 'del_1',
+                            runId: 'run_1',
+                            sessionKey: 'agent:main:tavern:channel:cht_1',
+                            source: 'openclaw',
+                        },
+                    },
+                    participant_id: 'agt_main',
+                    request_message_id: 'msg_user',
+                    response_message_id: 'msg_reply',
+                    status: 'completed',
+                    summary: null,
+                },
+                method: 'POST',
+                url: 'http://runtime.test/api/chats/cht_1/responses',
+            },
         ]);
     });
 
-    it('writes turn activity through the Tavern SDK OpenAPI path', async () => {
+    it('writes response activity through the Tavern SDK OpenAPI path', async () => {
         const requests = [];
         const tavern = createTavernPluginApi({
             baseUrl: 'http://runtime.test',
@@ -85,14 +127,35 @@ describe('Tavern API adapter', () => {
                     method: init.method,
                     url: String(url),
                 });
+                if (String(url).endsWith('/responses')) {
+                    return jsonResponse({
+                        chat_id: 'cht_1',
+                        completed_at: null,
+                        created_at: '2026-05-18T12:00:00.000Z',
+                        id: 'rsp_run_1',
+                        metadata: {},
+                        participant_id: 'agt_main',
+                        request_message_id: 'msg_1',
+                        response_message_id: null,
+                        status: 'running',
+                        summary: 'Working',
+                        updated_at: '2026-05-18T12:00:00.000Z',
+                    });
+                }
                 return jsonResponse({
-                    agent_id: 'agt_main',
+                    artifact_ids: [],
                     chat_id: 'cht_1',
+                    completed_at: null,
+                    detail: null,
+                    id: 'act_tool_1',
+                    kind: 'tool_call',
                     metadata: {},
-                    run_id: 'run_1',
+                    response_id: 'rsp_run_1',
+                    sequence: 1,
+                    started_at: '2026-05-18T12:00:00.000Z',
                     status: 'running',
-                    steps: [],
                     summary: null,
+                    title: 'computer use.list apps',
                     updated_at: '2026-05-18T12:00:00.000Z',
                 });
             }),
@@ -110,35 +173,137 @@ describe('Tavern API adapter', () => {
             {
                 status: 'running',
                 summary: 'Working',
+                step: {
+                    completed_at: null,
+                    detail: null,
+                    id: 'act_tool_1',
+                    kind: 'tool_call',
+                    metadata: {},
+                    started_at: '2026-05-18T12:00:00.000Z',
+                    status: 'running',
+                    title: 'computer use.list apps',
+                },
             }
         );
 
         expect(requests).toEqual([
             {
                 body: {
-                    agent_id: 'agt_main',
+                    id: 'rsp_run_1',
                     metadata: {
                         runtime: {
                             agentId: 'main',
                             messageId: 'msg_1',
+                            runId: 'run_1',
                             sessionKey: 'agent:main:tavern:channel:cht_1',
                             source: 'openclaw',
                             startedAt: '2026-05-18T12:00:00.000Z',
                         },
                     },
-                    run_id: 'run_1',
+                    participant_id: 'agt_main',
+                    request_message_id: 'msg_1',
                     status: 'running',
-                    steps: [],
                     summary: 'Working',
                 },
                 method: 'POST',
-                url: 'http://runtime.test/api/chats/cht_1/activity',
+                url: 'http://runtime.test/api/chats/cht_1/responses',
+            },
+            {
+                body: {
+                    completed_at: null,
+                    detail: null,
+                    id: 'act_tool_1',
+                    kind: 'tool_call',
+                    metadata: {
+                        runtime: {
+                            agentId: 'main',
+                            messageId: 'msg_1',
+                            runId: 'run_1',
+                            sessionKey: 'agent:main:tavern:channel:cht_1',
+                            source: 'openclaw',
+                            startedAt: '2026-05-18T12:00:00.000Z',
+                        },
+                    },
+                    started_at: '2026-05-18T12:00:00.000Z',
+                    status: 'running',
+                    title: 'computer use.list apps',
+                },
+                method: 'POST',
+                url: 'http://runtime.test/api/chats/cht_1/responses/rsp_run_1/activity',
             },
         ]);
     });
 
     it('derives the API base URL from the inbound relay URL', () => {
         expect(deriveTavernApiBaseUrl('ws://127.0.0.1:4310/chat')).toBe('http://127.0.0.1:4310');
+    });
+
+    it('preserves tool ids in activity step metadata', () => {
+        expect(
+            activityStepFromProgressStep(
+                {
+                    detail: 'Timed out.',
+                    id: 'call_123',
+                    kind: 'tool',
+                    label: 'computer use.list apps',
+                    status: 'failed',
+                    toolCallId: 'call_123',
+                    toolName: 'computer-use.list_apps',
+                },
+                '2026-05-18T12:00:00.000Z'
+            )
+        ).toMatchObject({
+            detail: 'Timed out.',
+            id: 'act_call_123',
+            kind: 'tool_call',
+            metadata: {
+                detail: 'Timed out.',
+                runtime: {
+                    toolCallId: 'call_123',
+                    toolName: 'computer-use.list_apps',
+                },
+                toolCallId: 'call_123',
+                toolName: 'computer-use.list_apps',
+            },
+            title: 'computer use.list apps',
+        });
+    });
+
+    it('preserves non-tool activity kinds', () => {
+        expect(
+            activityStepFromProgressStep(
+                {
+                    detail: 'Approve file edit.',
+                    id: 'approval_1',
+                    kind: 'approval',
+                    label: 'Review command',
+                    status: 'active',
+                },
+                '2026-05-18T12:00:00.000Z'
+            )
+        ).toMatchObject({
+            id: 'act_approval_1',
+            kind: 'approval',
+            status: 'running',
+            title: 'Review command',
+        });
+        expect(
+            activityStepFromProgressStep(
+                {
+                    detail: 'modified docs/api/chat.md',
+                    id: 'patch_1',
+                    kind: 'artifact',
+                    label: 'Patch',
+                    status: 'completed',
+                },
+                '2026-05-18T12:00:00.000Z'
+            )
+        ).toMatchObject({
+            id: 'act_patch_1',
+            kind: 'artifact',
+            status: 'completed',
+            title: 'Patch',
+        });
     });
 });
 

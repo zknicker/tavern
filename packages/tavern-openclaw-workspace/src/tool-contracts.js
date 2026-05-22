@@ -1,4 +1,4 @@
-export const TAVERN_WORKSPACE_TOOL_NAMES = ['workspace.notes.read', 'workspace.notes.update'];
+export const TAVERN_WORKSPACE_TOOL_NAMES = ['workspace_notes_read', 'workspace_notes_update'];
 
 export function objectSchema(properties) {
     return {

@@ -601,7 +601,7 @@ test('session prompt reads live OpenClaw prompt inspection', async () => {
     assert.equal(prompt.sections[0]?.id, 'base:agent-runtime');
 });
 
-test('session summaries hydrate session id from the durable projection column', async () => {
+test('session summaries hydrate session id from the durable runtime column', async () => {
     await saveAgentRuntimeConnection({
         baseUrl: 'ws://openclaw.test',
         id: 'runtime-1',

@@ -5,8 +5,8 @@ import { withCapabilityStatus } from '../agent-runtime/capability-status.ts';
 import type { TavernAgentRuntimeClient } from '../agent-runtime/client.ts';
 import { createConfiguredAgentRuntimeClientForRuntimeId } from '../agent-runtime/configured-client.ts';
 import { getAgentRuntimeConnection } from '../storage/agent-runtime-connections.ts';
-import { getAgent as getAgentProjection } from '../storage/agents.ts';
-import { getChatProjection, parseChatRawJson } from '../storage/chats.ts';
+import { getAgent as getAgentRecord } from '../storage/agents.ts';
+import { getChatRecord, parseChatRawJson } from '../storage/chats.ts';
 import {
     type SendChatMessageInput,
     sendChatMessageInputSchema,
@@ -31,8 +31,8 @@ export async function sendTavernChatMessage(
     client?: TavernAgentRuntimeClient | null
 ) {
     const parsed = sendChatMessageInputSchema.parse(input);
-    const chatProjection = await getChatProjection(parsed.chatId);
-    const chat = chatProjection ? parseChatRawJson(chatProjection) : null;
+    const chatRecord = await getChatRecord(parsed.chatId);
+    const chat = chatRecord ? parseChatRawJson(chatRecord) : null;
 
     if (!chat) {
         throw new Error(`No Tavern chat named "${parsed.chatId}" exists.`);
@@ -44,23 +44,21 @@ export async function sendTavernChatMessage(
 
     const [binding] = chat.bindings;
     const agentId = parsed.agentId ?? binding.agentId;
-    const agentProjection = await getAgentProjection(agentId);
+    const agentRecord = await getAgentRecord(agentId);
 
-    if (agentProjection && agentProjection.runtimeId !== chatProjection.runtimeId) {
+    if (agentRecord && agentRecord.runtimeId !== chatRecord.runtimeId) {
         throw new Error(
-            `Agent "${agentId}" is not part of chat runtime "${chatProjection.runtimeId}".`
+            `Agent "${agentId}" is not part of chat runtime "${chatRecord.runtimeId}".`
         );
     }
 
     const runtimeClient =
         client === undefined
-            ? await createConfiguredAgentRuntimeClientForRuntimeId(chatProjection.runtimeId)
+            ? await createConfiguredAgentRuntimeClientForRuntimeId(chatRecord.runtimeId)
             : client;
 
     if (!runtimeClient) {
-        throw new Error(
-            `Tavern Runtime connection "${chatProjection.runtimeId}" is not configured.`
-        );
+        throw new Error(`Tavern Runtime connection "${chatRecord.runtimeId}" is not configured.`);
     }
 
     if (binding.agentId !== agentId) {
@@ -70,12 +68,12 @@ export async function sendTavernChatMessage(
     const sessionKey = requireStoredTavernSessionKey(chat, agentId);
 
     const clientMessageId = parsed.clientMessageId ?? `msg_${randomUUID()}`;
-    const tavernApi = await createTavernApiClient(chatProjection.runtimeId);
+    const tavernApi = await createTavernApiClient(chatRecord.runtimeId);
     await tavernApi.chat.create({
         id: parsed.chatId,
         metadata: {
             runtime: {
-                runtimeId: chatProjection.runtimeId,
+                runtimeId: chatRecord.runtimeId,
             },
         },
     });
@@ -86,7 +84,7 @@ export async function sendTavernChatMessage(
             ...(parsed.metadata ?? {}),
             runtime: {
                 agentId,
-                runtimeId: chatProjection.runtimeId,
+                runtimeId: chatRecord.runtimeId,
                 sessionKey,
                 source: 'openclaw',
             },
@@ -104,10 +102,10 @@ export async function sendTavernChatMessage(
         {
             capability: 'messages',
             method: 'messages.create',
-            runtimeId: chatProjection.runtimeId,
+            runtimeId: chatRecord.runtimeId,
         },
         async () =>
-            await runtimeClient.postMessage(chatProjection.id, {
+            await runtimeClient.postMessage(chatRecord.id, {
                 agent: {
                     agentId,
                 },

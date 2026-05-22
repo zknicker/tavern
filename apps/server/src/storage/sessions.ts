@@ -2,9 +2,9 @@ import type { AgentRuntimeSession } from '@tavern/api';
 import { desc, eq } from 'drizzle-orm';
 import { db } from '../db/index.ts';
 import { sessionRunsTable } from '../db/schema.ts';
-import { getActiveProjectionRuntimeId } from './agent-runtime-connections.ts';
+import { getActiveRuntimeId } from './agent-runtime-connections.ts';
 
-export type SessionProjection = typeof sessionRunsTable.$inferSelect;
+export type SessionRecord = typeof sessionRunsTable.$inferSelect;
 
 export function mapSessionFromRuntime(input: {
     runtimeId: string;
@@ -19,13 +19,13 @@ export function mapSessionFromRuntime(input: {
     };
 }
 
-export async function listSessionProjections(options?: {
+export async function listSessionRecords(options?: {
     includeInactive?: boolean;
     runtimeId?: string;
 }) {
     const runtimeId = options?.includeInactive
         ? null
-        : (options?.runtimeId ?? (await getActiveProjectionRuntimeId()));
+        : (options?.runtimeId ?? (await getActiveRuntimeId()));
     const query = db.select().from(sessionRunsTable);
     const scopedQuery = runtimeId ? query.where(eq(sessionRunsTable.runtime, runtimeId)) : query;
 
@@ -35,7 +35,7 @@ export async function listSessionProjections(options?: {
     );
 }
 
-export async function getSessionProjection(sessionKey: string) {
+export async function getSessionRecord(sessionKey: string) {
     const [session] = await db
         .select()
         .from(sessionRunsTable)
@@ -53,7 +53,7 @@ export async function syncSessionsForRuntime(input: {
     const timestamp = input.syncedAt ?? new Date().toISOString();
 
     for (const session of input.sessions) {
-        const projected = mapSessionFromRuntime({
+        const runtimeSession = mapSessionFromRuntime({
             runtimeId: input.runtimeId,
             session,
         });
@@ -61,46 +61,46 @@ export async function syncSessionsForRuntime(input: {
         await db
             .insert(sessionRunsTable)
             .values({
-                agentId: projected.agentId,
+                agentId: runtimeSession.agentId,
                 deliveryContextJson: null,
                 finishedAt: null,
-                id: projected.key,
-                label: projected.title,
-                mode: projected.sessionRole,
-                parentSessionKey: projected.parentSessionKey,
+                id: runtimeSession.key,
+                label: runtimeSession.title,
+                mode: runtimeSession.sessionRole,
+                parentSessionKey: runtimeSession.parentSessionKey,
                 payloadJson: JSON.stringify({
                     lastSyncedAt: timestamp,
                     runtimeSession: session,
                 }),
                 runtime: input.runtimeId,
                 sessionId: session.sessionId,
-                sessionKey: projected.key,
-                spawnedBy: projected.parentSessionKey,
+                sessionKey: runtimeSession.key,
+                spawnedBy: runtimeSession.parentSessionKey,
                 spawnedByMessageId: null,
                 spawnedByToolCallId: null,
-                startedAt: projected.startedAt,
+                startedAt: runtimeSession.startedAt,
                 status: 'idle',
                 thinkingLevel: null,
-                updatedAt: projected.lastActivityAt ?? projected.startedAt ?? timestamp,
+                updatedAt: runtimeSession.lastActivityAt ?? runtimeSession.startedAt ?? timestamp,
             })
             .onConflictDoUpdate({
                 target: sessionRunsTable.id,
                 set: {
-                    agentId: projected.agentId,
-                    label: projected.title,
-                    mode: projected.sessionRole,
-                    parentSessionKey: projected.parentSessionKey,
+                    agentId: runtimeSession.agentId,
+                    label: runtimeSession.title,
+                    mode: runtimeSession.sessionRole,
+                    parentSessionKey: runtimeSession.parentSessionKey,
                     payloadJson: JSON.stringify({
                         lastSyncedAt: timestamp,
                         runtimeSession: session,
                     }),
                     runtime: input.runtimeId,
                     sessionId: session.sessionId,
-                    sessionKey: projected.key,
-                    spawnedBy: projected.parentSessionKey,
-                    startedAt: projected.startedAt,
+                    sessionKey: runtimeSession.key,
+                    spawnedBy: runtimeSession.parentSessionKey,
+                    startedAt: runtimeSession.startedAt,
                     status: 'idle',
-                    updatedAt: projected.lastActivityAt ?? projected.startedAt ?? timestamp,
+                    updatedAt: runtimeSession.lastActivityAt ?? runtimeSession.startedAt ?? timestamp,
                 },
             });
     }
@@ -110,7 +110,7 @@ export async function syncSessionsForRuntime(input: {
     };
 }
 
-export function parseSessionRuntimePayload(session: SessionProjection) {
+export function parseSessionRuntimePayload(session: SessionRecord) {
     const parsed = JSON.parse(session.payloadJson) as {
         lastSyncedAt?: string;
         runtimeSession?: Partial<AgentRuntimeSession>;
@@ -132,7 +132,7 @@ export function parseSessionRuntimePayload(session: SessionProjection) {
     } as AgentRuntimeSession;
 }
 
-export function parseSessionProjection(session: SessionProjection) {
+export function parseSessionRecord(session: SessionRecord) {
     const runtimeId = session.runtime;
     const runtimeSession = parseSessionRuntimePayload(session);
 

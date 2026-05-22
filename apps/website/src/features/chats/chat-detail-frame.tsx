@@ -21,6 +21,7 @@ export function ChatDetailFrame({
     activeReplyProgressStartedAt = null,
     activeReplySteps = [],
     animateTimeline = true,
+    chatId,
     completedProgress = null,
     conversationLayout,
     emptyLabel,
@@ -37,6 +38,7 @@ export function ChatDetailFrame({
     activeReplyProgressStartedAt?: string | null;
     activeReplySteps?: ChatTurnProgressStep[];
     animateTimeline?: boolean;
+    chatId: string;
     completedProgress?: ChatCompletedProgress | null;
     conversationLayout?: ConversationMessageLayout;
     emptyLabel: string;
@@ -94,6 +96,7 @@ export function ChatDetailFrame({
                                 activeReplyProgressStartedAt={activeReplyProgressStartedAt}
                                 activeReplySteps={activeReplySteps}
                                 animate={animateTimeline}
+                                chatId={chatId}
                                 completedProgress={completedProgress}
                                 conversationLayout={conversationLayout}
                                 failedTurn={failedTurn}

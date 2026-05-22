@@ -1,6 +1,6 @@
 import {
-    getCronJobProjection,
-    listCronJobProjections,
+    getCronJobRecord,
+    listCronJobRecords,
     parseCronJobRawJson,
 } from '../storage/cron-jobs.ts';
 import {
@@ -13,7 +13,7 @@ import {
 import { createDefaultCronSyncState, mapCronJob, mapCronJobSummary } from './mappers.ts';
 
 export async function listCronJobs(): Promise<CronList> {
-    const jobs = await listCronJobProjections();
+    const jobs = await listCronJobRecords();
 
     return cronListSchema.parse({
         jobs: jobs.map((job) =>
@@ -31,7 +31,7 @@ export async function getCronJob(input: unknown): Promise<{
     job: CronJob | null;
 }> {
     const parsed = getCronJobInputSchema.parse(input);
-    const job = await getCronJobProjection(parsed.jobId);
+    const job = await getCronJobRecord(parsed.jobId);
     const rawJob = job ? parseCronJobRawJson(job) : null;
 
     return cronGetSchema.parse({

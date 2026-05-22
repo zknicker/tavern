@@ -1,7 +1,14 @@
 import { describe, expect, it, mock } from 'bun:test';
+import { readFileSync } from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { registerTavernCortexTools, TAVERN_CORTEX_TOOL_NAMES } from './cortex-tools.js';
 
 describe('Tavern Cortex OpenClaw tools', () => {
+    it('declares the registered tools in the OpenClaw manifest', () => {
+        expect(readManifestToolNames()).toEqual(TAVERN_CORTEX_TOOL_NAMES);
+    });
+
     it('registers all declared Cortex tools', () => {
         const tools = [];
 
@@ -31,7 +38,7 @@ describe('Tavern Cortex OpenClaw tools', () => {
             }),
         });
 
-        const result = await tools.get('cortex.search').execute('call_1', {
+        const result = await tools.get('cortex_search').execute('call_1', {
             limit: 5,
             query: 'project memory',
         });
@@ -69,7 +76,7 @@ describe('Tavern Cortex OpenClaw tools', () => {
             }),
         });
 
-        await tools.get('cortex.capture').execute('call_1', {
+        await tools.get('cortex_capture').execute('call_1', {
             content: 'The durable brain is Cortex.',
             tags: ['memory'],
             title: 'Stable memory',
@@ -103,8 +110,8 @@ describe('Tavern Cortex OpenClaw tools', () => {
             }),
         });
 
-        await tools.get('cortex.status').execute('call_1', {});
-        await tools.get('cortex.listBacklinks').execute('call_2', { target: 'Project Memory' });
+        await tools.get('cortex_status').execute('call_1', {});
+        await tools.get('cortex_list_backlinks').execute('call_2', { target: 'Project Memory' });
 
         expect(requests).toEqual([
             {
@@ -131,7 +138,7 @@ describe('Tavern Cortex OpenClaw tools', () => {
             }),
         });
 
-        await tools.get('cortex.runJob').execute('call_1', { job: 'lint' });
+        await tools.get('cortex_run_job').execute('call_1', { job: 'lint' });
 
         expect(requests).toEqual([
             {
@@ -170,4 +177,10 @@ function jsonResponse(body) {
         },
         status: 200,
     });
+}
+
+function readManifestToolNames() {
+    const dirname = path.dirname(fileURLToPath(import.meta.url));
+    const manifestPath = path.join(dirname, '..', 'openclaw.plugin.json');
+    return JSON.parse(readFileSync(manifestPath, 'utf8')).contracts.tools;
 }

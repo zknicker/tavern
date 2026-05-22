@@ -8,21 +8,31 @@ import type { TranscriptItem } from './chat-transcript-model.ts';
 import { WorkingLog } from './working-log.tsx';
 
 export function ChatTranscriptActivity({
+    chatId,
     currentSessionKey,
     item,
 }: {
+    chatId?: string;
     currentSessionKey?: string | null;
     item: TranscriptItem;
 }) {
-    return <ChatTranscriptActivityGroup currentSessionKey={currentSessionKey} items={[item]} />;
+    return (
+        <ChatTranscriptActivityGroup
+            chatId={chatId}
+            currentSessionKey={currentSessionKey}
+            items={[item]}
+        />
+    );
 }
 
 export function ChatTranscriptActivityGroup({
+    chatId,
     currentSessionKey,
     items,
     turnCompletedAt,
     turnStartedAt,
 }: {
+    chatId?: string;
     currentSessionKey?: string | null;
     items: TranscriptItem[];
     turnCompletedAt?: string | null;
@@ -41,6 +51,7 @@ export function ChatTranscriptActivityGroup({
 
     return (
         <WorkingLog
+            chatId={chatId}
             currentSessionKey={currentSessionKey}
             end={end}
             items={activityItems}

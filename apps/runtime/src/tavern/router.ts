@@ -1,5 +1,11 @@
-import { runtimeEventListSchema, runtimeHealthSchema, runtimeRoutes } from '@tavern/api';
+import {
+    agentRuntimeMacAppListSchema,
+    runtimeEventListSchema,
+    runtimeHealthSchema,
+    runtimeRoutes,
+} from '@tavern/api';
 import { handleCortexRequest } from '../cortex/routes';
+import { listMacApps } from '../mac-apps/inventory';
 import { handleWorkspaceRequest } from '../workspace/routes';
 import { handleTavernApiRequest } from './chat-api-router';
 import { json, notFound } from './http';
@@ -12,6 +18,17 @@ export async function handleTavernRuntimeRequest(request: Request): Promise<Resp
     const apiResponse = await handleTavernApiRequest(request);
     if (apiResponse) {
         return apiResponse;
+    }
+
+    if (request.method === 'GET' && url.pathname === runtimeRoutes.macApps) {
+        return json(
+            agentRuntimeMacAppListSchema.parse({
+                apps: await listMacApps({
+                    limit: Number(url.searchParams.get('limit') ?? 80),
+                    query: url.searchParams.get('query') ?? '',
+                }),
+            })
+        );
     }
 
     const cortexResponse = await handleCortexRequest(request);

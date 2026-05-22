@@ -1,11 +1,11 @@
 import { getSessionDisplay } from '../sessions/display.ts';
-import { listSessionProjections, parseSessionProjection } from '../storage/sessions.ts';
+import { listSessionRecords, parseSessionRecord } from '../storage/sessions.ts';
 import type { GlobalSubAgent } from './contracts.ts';
 
 export async function listSubAgents(): Promise<GlobalSubAgent[]> {
-    const sessionRecords = await listSessionProjections();
+    const sessionRecords = await listSessionRecords();
     const sessions = sessionRecords.flatMap((record) => {
-        const session = parseSessionProjection(record);
+        const session = parseSessionRecord(record);
         return session ? [session] : [];
     });
 

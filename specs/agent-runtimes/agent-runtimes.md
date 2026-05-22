@@ -22,34 +22,34 @@ Tavern primitives.
 - Tavern has one managed runtime namespace: `tavern-openclaw-managed`.
 - The namespace is stable across OpenClaw reinstall, OpenClaw runtime-state reset, and version
   upgrade.
-- Projection tables may keep a `runtime_id` column for scoping and forward compatibility, but
+- Synced runtime tables may keep a `runtime_id` column for scoping and forward compatibility, but
   product behavior must treat it as the stable managed OpenClaw namespace, not as a selectable
   runtime list.
-- Tavern Runtime endpoint can be offline while previously synced projections remain visible.
+- Tavern Runtime endpoint can be offline while previously synced records remain visible.
 
-## Projections
+## Synced Records
 
-- Tavern stores local projections of OpenClaw-owned primitives.
-- Projection rows use stable OpenClaw identifiers and the stable `tavern-openclaw-managed`
+- Tavern stores local records for OpenClaw primitives.
+- Synced rows use stable OpenClaw identifiers and the stable `tavern-openclaw-managed`
   namespace.
-- Projection rows include `last_synced_at`.
-- On boot, reconnect, scheduled sync, and Gateway events, Tavern refreshes affected projections.
+- Synced rows include `last_synced_at`.
+- On boot, reconnect, scheduled sync, and Gateway events, Tavern refreshes affected records.
 - For full authoritative OpenClaw snapshots, Tavern accepts OpenClaw deletion and removes matching
-  projection rows.
+  synced rows.
 - For observed message history, Tavern upserts by stable identifier and reconciles deletions only
   inside the timestamp window returned by the Gateway fetch.
-- Deleting `~/.tavern/runtime/openclaw/run` must not delete archived projections from the Tavern
+- Deleting `~/.tavern/runtime/openclaw/run` must not delete archived records from the Tavern
   database. Runtime recreates OpenClaw state and config, then sync refreshes current rows while
   archived sessions/messages remain available.
 
 ## Edits
 
-- Editing OpenClaw-owned config in Tavern updates Tavern-owned config state.
+- Editing OpenClaw config in Tavern updates Tavern-owned config state.
 - Tavern Runtime regenerates/applies managed OpenClaw config from that state.
 - OpenClaw-native config edits outside Tavern are not part of the supported product model and may
   be overwritten by Runtime.
 - OpenClaw-originated runtime events notify Tavern through Gateway events and targeted sync.
-- Tavern-owned fields on projected records, such as visual color and avatar presentation, remain
+- Tavern-owned fields on local records, such as visual color and avatar presentation, remain
   local Tavern state.
 
 ## Platforms

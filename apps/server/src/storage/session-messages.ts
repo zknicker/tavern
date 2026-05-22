@@ -10,9 +10,9 @@ import {
 } from '../participants/chat-participants.ts';
 import { resolveParticipantIdsForSourceIdentities } from './participants.ts';
 
-export type SessionMessageProjection = typeof sessionMessagesTable.$inferSelect;
+export type SessionMessageRecord = typeof sessionMessagesTable.$inferSelect;
 
-export async function getSessionMessageProjectionState(sessionKey: string) {
+export async function getSessionMessageState(sessionKey: string) {
     const [latest] = await db
         .select({ syncedAt: sessionMessagesTable.syncedAt })
         .from(sessionMessagesTable)

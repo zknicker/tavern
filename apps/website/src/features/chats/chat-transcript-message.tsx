@@ -5,10 +5,10 @@ import { Dialog, DialogPortal, DialogTitle } from '../../components/ui/dialog.ts
 import { Icon } from '../../components/ui/icon.tsx';
 import type { ChatLogOutput, SessionHistoryOutput } from '../../lib/trpc.tsx';
 import { cn } from '../../lib/utils.ts';
+import { readMentionsFromMetadata } from '../mentions/mention-metadata.ts';
+import { renderMentionText } from '../mentions/render-mention-text.tsx';
 import { CollapsibleText } from '../rows/collapsible-text.tsx';
 import { getMessageDisplay } from '../rows/message-display.ts';
-import { ToolMentionContent } from '../tool-mentions/tool-mention-content.tsx';
-import { readToolMentionsFromMetadata } from '../tool-mentions/tool-mention-metadata.ts';
 
 type TranscriptMessage =
     | Extract<NonNullable<ChatLogOutput>['rows'][number], { kind: 'message' }>['message']
@@ -27,7 +27,7 @@ export function ChatTranscriptMessageContent({ message }: { message: TranscriptM
         message.senderType === 'agent' &&
         messageDisplay.content.length === 0 &&
         message.metadata?.stopReason === 'error';
-    const toolMentions = readToolMentionsFromMetadata(
+    const mentions = readMentionsFromMetadata(
         messageDisplay.content,
         message.metadata as Record<string, unknown> | null | undefined
     );
@@ -56,11 +56,11 @@ export function ChatTranscriptMessageContent({ message }: { message: TranscriptM
                     )}
                 >
                     <CollapsibleText className="text-foreground text-sm leading-snug">
-                        {toolMentions.length > 0 ? (
-                            <ToolMentionContent
-                                content={messageDisplay.content}
-                                mentions={toolMentions}
-                            />
+                        {mentions.length > 0 ? (
+                            renderMentionText({
+                                content: messageDisplay.content,
+                                mentions,
+                            })
                         ) : (
                             messageDisplay.content
                         )}

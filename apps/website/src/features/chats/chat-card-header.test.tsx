@@ -76,7 +76,7 @@ test('ChatCardHeader renders participant avatars and omits session link blocks',
     assert.doesNotMatch(markup, /1d ago/);
 });
 
-test('ChatCardHeader derives projected runtime DM titles from chat primitives', () => {
+test('ChatCardHeader derives runtime DM titles from chat primitives', () => {
     const markup = renderToStaticMarkup(
         <ChatCardHeader
             avatarDirectory={stubAvatarDirectory}

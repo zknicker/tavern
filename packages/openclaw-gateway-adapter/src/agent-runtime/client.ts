@@ -65,7 +65,7 @@ import { mapTavernAgentToOpenClawUpsert } from '../mappers/agents/upsert.ts';
 import {
     mapOpenClawBindingList,
     mapOpenClawDeletedBinding,
-    mapTavernBindingToOpenClawProjection,
+    mapTavernBindingToOpenClawBinding,
 } from '../mappers/chats/bindings.ts';
 import { mapOpenClawChatsFromSessions } from '../mappers/chats/list.ts';
 import {
@@ -451,7 +451,7 @@ class GatewayBackedOpenClawAgentRuntimeClient implements OpenClawAgentRuntimeCli
     }
 
     async upsertBinding(input: AgentRuntimeUpsertBinding) {
-        return mapTavernBindingToOpenClawProjection(input);
+        return mapTavernBindingToOpenClawBinding(input);
     }
 
     async deleteBinding(bindingId: string) {

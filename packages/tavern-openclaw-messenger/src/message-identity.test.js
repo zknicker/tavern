@@ -25,7 +25,7 @@ describe('Tavern message identity hook', () => {
         );
     });
 
-    test('projects active accepted Tavern identity onto OpenClaw user transcript writes', () => {
+    test('maps active accepted Tavern identity onto OpenClaw user transcript writes', () => {
         const unregister = registerActiveTavernTurn({
             agentId: 'main',
             chatId: 'cht_1',

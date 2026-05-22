@@ -108,12 +108,13 @@ test('startTavernChat preserves the optimistic first message identity', async ()
         content: 'Hey!',
         metadata: {
             tavern: {
-                toolMentions: [
+                mentions: [
                     {
                         end: 5,
                         id: 'tool-1',
-                        kind: 'tool',
+                        kind: 'plugin',
                         label: 'Tool 1',
+                        projection: 'capability-reference',
                         start: 0,
                         text: '@tool',
                     },
@@ -131,12 +132,13 @@ test('startTavernChat preserves the optimistic first message identity', async ()
                 content: 'Hey!',
                 metadata: {
                     tavern: {
-                        toolMentions: [
+                        mentions: [
                             {
                                 end: 5,
                                 id: 'tool-1',
-                                kind: 'tool',
+                                kind: 'plugin',
                                 label: 'Tool 1',
+                                projection: 'capability-reference',
                                 start: 0,
                                 text: '@tool',
                             },

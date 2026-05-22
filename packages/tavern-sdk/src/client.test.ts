@@ -134,16 +134,52 @@ describe('Tavern SDK client', () => {
                 requests.push(request);
 
                 return Response.json({
-                    activities: [],
+                    next_sequence: null,
+                    responses: [],
                 });
             }) as typeof fetch,
         });
 
-        const response = await client.chat.activity();
+        const response = await client.chat.responses('cht_1');
 
-        expect(response.activities).toEqual([]);
+        expect(response.responses).toEqual([]);
         expect(requests).toHaveLength(1);
         expect(requests[0].method).toBe('GET');
-        expect(requests[0].url).toBe('http://runtime.test/api/activity');
+        expect(requests[0].url).toBe('http://runtime.test/api/chats/cht_1/responses');
+    });
+
+    it('gets one response activity through the OpenAPI path', async () => {
+        const requests: Request[] = [];
+        const client = createTavernClient({
+            baseUrl: 'http://runtime.test/',
+            fetch: (async (input, init) => {
+                const request = new Request(input, init);
+                requests.push(request);
+
+                return Response.json({
+                    artifact_ids: [],
+                    chat_id: 'cht_1',
+                    completed_at: null,
+                    detail: null,
+                    id: 'act_1',
+                    kind: 'tool_call',
+                    metadata: {},
+                    response_id: 'rsp_1',
+                    sequence: 1,
+                    started_at: '2026-05-21T12:00:00.000Z',
+                    status: 'running',
+                    summary: null,
+                    title: 'Using tool',
+                    updated_at: '2026-05-21T12:00:00.000Z',
+                });
+            }) as typeof fetch,
+        });
+
+        const activity = await client.chat.activity('cht_1', 'act_1');
+
+        expect(activity.id).toBe('act_1');
+        expect(requests).toHaveLength(1);
+        expect(requests[0].method).toBe('GET');
+        expect(requests[0].url).toBe('http://runtime.test/api/chats/cht_1/activity/act_1');
     });
 });

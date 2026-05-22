@@ -13,14 +13,14 @@ import { findMissingEnabledSkillIds, resolveEnabledSkillIds } from '../skills/en
 import { listSkillIds } from '../skills/service.ts';
 import * as agentProfileStore from '../storage/agent-profiles.ts';
 import {
-    getActiveProjectionRuntimeId,
+    getActiveRuntimeId,
     getAgentRuntimeConnection,
 } from '../storage/agent-runtime-connections.ts';
 import {
-    type AgentProjection,
-    deleteAgent as deleteAgentProjection,
-    getAgent as getAgentProjection,
-    listAgents as listAgentProjections,
+    type AgentRecord,
+    deleteAgent as deleteAgentRecord,
+    getAgent as getAgentRecord,
+    listAgents as listAgentRecords,
     syncAgentsForRuntime,
     updateAgentEnabledSkillIds,
 } from '../storage/agents.ts';
@@ -92,14 +92,14 @@ interface LiveSessionLike {
     channel: string;
 }
 
-function parseEnabledSkillIds(agent: AgentProjection) {
+function parseEnabledSkillIds(agent: AgentRecord) {
     const raw = JSON.parse(agent.enabledSkillIdsJson) as unknown;
     const parsed = z.array(skillIdSchema).safeParse(raw);
     return parsed.success ? parsed.data : [];
 }
 
 function toAgent(
-    agent: AgentProjection,
+    agent: AgentRecord,
     profile: { primaryColor: string | null; soul: string; updatedAt: string } | null
 ): Agent {
     return {
@@ -118,7 +118,7 @@ function toAgent(
 export async function listAgents() {
     const [profiles, agents] = await Promise.all([
         agentProfileStore.listAgentProfiles(),
-        listAgentProjections(),
+        listAgentRecords(),
     ]);
 
     const profilesByAgentKey = new Map(
@@ -131,7 +131,7 @@ export async function listAgents() {
 }
 
 export async function getAgent(agentId: string): Promise<null | Agent> {
-    const agent = await getAgentProjection(agentId);
+    const agent = await getAgentRecord(agentId);
 
     if (!agent) {
         return null;
@@ -182,7 +182,7 @@ export async function listAgentCatalog() {
 }
 
 export async function getPrimaryAgent() {
-    const runtimeId = await getActiveProjectionRuntimeId();
+    const runtimeId = await getActiveRuntimeId();
     const agents = await listAgents();
     const scopedAgents = runtimeId
         ? agents.filter((agent) => agent.runtimeId === runtimeId)
@@ -199,7 +199,7 @@ export async function requirePrimaryAgent() {
     const agent = await getPrimaryAgent();
 
     if (!agent) {
-        throw new Error('No synced agent exists. Start Tavern Runtime and sync an agent first.');
+        throw new Error('No agent exists. Start Tavern Runtime first.');
     }
 
     return agent;
@@ -259,13 +259,13 @@ export async function saveCatalogAgentSettings(
     },
     client?: TavernAgentRuntimeClient | null
 ) {
-    const projection = await getAgentProjection(input.agentId);
+    const agentRecord = await getAgentRecord(input.agentId);
 
-    if (!projection) {
-        throw new Error(`No synced agent named "${input.agentId}" exists.`);
+    if (!agentRecord) {
+        throw new Error(`No agent named "${input.agentId}" exists.`);
     }
 
-    const runtimeClient = client ?? (await createClientForAgentProjection(projection));
+    const runtimeClient = client ?? (await createClientForAgentRecord(agentRecord));
     let availableSkillIdsForResponse: null | string[] = null;
     let nextEnabledSkillIds: string[] | undefined;
 
@@ -273,7 +273,7 @@ export async function saveCatalogAgentSettings(
         const availableSkillIds = await listSkillIds({
             agentId: input.agentId,
             client: runtimeClient,
-            runtimeId: projection.runtimeId,
+            runtimeId: agentRecord.runtimeId,
         });
         availableSkillIdsForResponse = availableSkillIds;
         const missingSkillIds = findMissingEnabledSkillIds(
@@ -290,10 +290,10 @@ export async function saveCatalogAgentSettings(
 
     let savedAgentRuntimeAgent: AgentRuntimeAgent | null = null;
     if (input.displayName !== undefined || input.enabledSkillIds !== undefined) {
-        const agentRuntimeAgent = await getAgentRuntimeAgentConfig(projection.id, runtimeClient);
+        const agentRuntimeAgent = await getAgentRuntimeAgentConfig(agentRecord.id, runtimeClient);
 
         if (!agentRuntimeAgent) {
-            throw new Error(`No runtime agent named "${projection.id}" exists.`);
+            throw new Error(`No runtime agent named "${agentRecord.id}" exists.`);
         }
 
         const { enabledSkillIds: _currentEnabledSkillIds, ...agentRuntimeConfigWithoutSkills } =
@@ -311,14 +311,14 @@ export async function saveCatalogAgentSettings(
     }
 
     const profile = await agentProfileStore.getAgentProfile({
-        agentId: projection.id,
-        runtimeId: projection.runtimeId,
+        agentId: agentRecord.id,
+        runtimeId: agentRecord.runtimeId,
     });
 
     if (savedAgentRuntimeAgent) {
         await syncAgentsForRuntime({
             agents: (await runtimeClient.listAgents()).agents,
-            runtimeId: projection.runtimeId,
+            runtimeId: agentRecord.runtimeId,
         });
     }
 
@@ -329,19 +329,19 @@ export async function saveCatalogAgentSettings(
         });
     }
 
-    const syncedProjection = await getAgentProjection(input.agentId);
-    const agent = syncedProjection
-        ? toAgent(syncedProjection, profile)
+    const latestAgentRecord = await getAgentRecord(input.agentId);
+    const agent = latestAgentRecord
+        ? toAgent(latestAgentRecord, profile)
         : savedAgentRuntimeAgent
           ? toAgentFromAgentRuntimeAgent({
                 agent: savedAgentRuntimeAgent,
-                id: projection.id,
+                id: agentRecord.id,
                 profile,
-                runtimeId: projection.runtimeId,
+                runtimeId: agentRecord.runtimeId,
             })
           : toAgent(
                 {
-                    ...projection,
+                    ...agentRecord,
                     enabledSkillIdsJson: JSON.stringify(nextEnabledSkillIds),
                 },
                 profile
@@ -355,15 +355,15 @@ export async function saveCatalogAgentProfile(input: {
     primaryColor?: string | null;
     soul?: string | null;
 }) {
-    const projection = await getAgentProjection(input.agentId);
+    const agentRecord = await getAgentRecord(input.agentId);
 
-    if (!projection) {
-        throw new Error(`No synced agent named "${input.agentId}" exists.`);
+    if (!agentRecord) {
+        throw new Error(`No agent named "${input.agentId}" exists.`);
     }
 
     const profileInput = {
-        agentId: projection.id,
-        runtimeId: projection.runtimeId,
+        agentId: agentRecord.id,
+        runtimeId: agentRecord.runtimeId,
         ...(input.primaryColor !== undefined ? { primaryColor: input.primaryColor } : {}),
         ...(input.soul !== undefined ? { soul: input.soul } : {}),
     };
@@ -374,36 +374,36 @@ export async function saveCatalogAgentProfile(input: {
     }
 
     if (input.soul !== undefined) {
-        await syncAgentWorkspaceInstructions(projection, profile).catch((error) => {
+        await syncAgentWorkspaceInstructions(agentRecord, profile).catch((error) => {
             console.warn('[tavern] failed to sync agent workspace instructions', error);
         });
     }
 
-    return toAgentCatalogItem(toAgent(projection, profile), null);
+    return toAgentCatalogItem(toAgent(agentRecord, profile), null);
 }
 
 export async function deleteCatalogAgent(
     agentId: string,
     client?: TavernAgentRuntimeClient | null
 ) {
-    const projection = await getAgentProjection(agentId);
+    const agentRecord = await getAgentRecord(agentId);
 
-    if (!projection) {
+    if (!agentRecord) {
         return;
     }
 
     await deleteAgentRuntimeAgent(
-        projection.id,
-        client ?? (await createClientForAgentProjection(projection))
+        agentRecord.id,
+        client ?? (await createClientForAgentRecord(agentRecord))
     );
     await agentProfileStore.deleteAgentProfile({
-        agentId: projection.id,
-        runtimeId: projection.runtimeId,
+        agentId: agentRecord.id,
+        runtimeId: agentRecord.runtimeId,
     });
-    await deleteAgentProjection(agentId);
+    await deleteAgentRecord(agentId);
 }
 
-async function createClientForAgentProjection(agent: AgentProjection) {
+async function createClientForAgentRecord(agent: AgentRecord) {
     const connection = await getAgentRuntimeConnection(agent.runtimeId);
 
     if (!connection?.enabled) {
@@ -433,17 +433,17 @@ function toAgentFromAgentRuntimeAgent(input: {
 }
 
 async function syncAgentWorkspaceInstructions(
-    projection: AgentProjection,
+    agentRecord: AgentRecord,
     profile: agentProfileStore.AgentProfile
 ) {
-    if (!projection.workspaceFolder) {
-        throw new Error(`No workspace folder is synced for agent "${projection.id}".`);
+    if (!agentRecord.workspaceFolder) {
+        throw new Error(`No workspace folder is available for agent "${agentRecord.id}".`);
     }
 
-    const client = await createClientForAgentProjection(projection);
-    await client.saveWorkspaceInstructions(projection.id, {
-        agentName: projection.name,
+    const client = await createClientForAgentRecord(agentRecord);
+    await client.saveWorkspaceInstructions(agentRecord.id, {
+        agentName: agentRecord.name,
         soul: profile.soul,
-        workspaceDir: projection.workspaceFolder,
+        workspaceDir: agentRecord.workspaceFolder,
     });
 }

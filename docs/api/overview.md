@@ -29,7 +29,8 @@ cache, and shape data for React, but it does not define a separate product API.
 ## Contract-First Shape
 
 * **OpenAPI for chat and realtime.** `packages/tavern-api/openapi.yaml` owns
-  public HTTP chat, message, activity, read, delivery, event, and error shapes.
+  public HTTP chat, message, response, activity, artifact, read, delivery,
+  event, and error shapes.
 * **Typed contracts for admin.** `packages/tavern-api/src/runtime/*`
   owns health, status, managed OpenClaw, agents, sessions, cron, skills, models,
   memory, files, and bindings.
@@ -65,15 +66,16 @@ cache, and shape data for React, but it does not define a separate product API.
 | TypeScript SDK | `packages/tavern-sdk` | Typed client wrapper for Tavern App, bots, webhooks, automations, OpenClaw, and tests |
 | Tavern API docs | `docs/api/` | Capability behavior and invariants |
 | App routers | `apps/server/src/api/` | First-party app wrapper/proxy for Tavern API |
-| Runtime adapters | `apps/runtime/src/` | Mapping between Tavern chat state and OpenClaw-owned execution |
+| Runtime adapters | `apps/runtime/src/` | Mapping between Tavern chat state and OpenClaw execution |
 
 Implementation files can move. API contracts stay organized around Tavern
 capabilities.
 
 ## Contract Rules
 
-* **Durable objects first.** Create messages, Cortex pages and timeline entries,
-  automations, and skill records before relying on realtime notifications.
+* **Durable objects first.** Create messages, responses, activity, artifacts,
+  Cortex pages, automations, and skill records before relying on realtime
+  notifications.
 * **Receipts reconcile.** Writes return stable ids, sequence values, cursors, or
   receipts that let callers reconcile optimistic UI and retries.
 * **Idempotency is explicit.** Duplicate ids or nonces return existing records
@@ -83,16 +85,17 @@ capabilities.
 * **Runtime identity rides as metadata.** `session`, `turn`, `run`, and
   `delivery` are runtime facts unless the runtime boundary is being documented.
 * **App clients use Tavern nouns.** Product-facing code speaks in chats,
-  messages, agents, memory inspection, Cortex wiki pages, automations, skills,
-  stats, and activity.
+  messages, responses, activity, artifacts, agents, memory inspection, Cortex
+  wiki pages, automations, skills, and stats.
 
 ## OpenClaw Alignment
 
 OpenClaw is one agent runtime behind Tavern.
 
-The Tavern OpenClaw Messenger plugin adapts OpenClaw channel message, turn,
-ingress, and presentation signals into Tavern API records and activity. It does
-not define a separate plugin-specific chat contract for the app.
+The Tavern OpenClaw Messenger plugin maps OpenClaw channel message, turn,
+ingress, and presentation signals onto Tavern API messages, responses, activity,
+and artifacts. It does not define a separate plugin-specific chat contract for
+the app.
 
 Plugin architecture details live in
 [Tavern OpenClaw Messenger Plugin](../internals/tavern-openclaw-messenger-plugin.md).

@@ -1,16 +1,16 @@
 import { applyOpenClawConfig } from '../openclaw-config/service.ts';
-import { getAgent as getAgentProjection } from '../storage/agents.ts';
+import { getAgent as getAgentRecord } from '../storage/agents.ts';
 import { getOpenClawConfigSnapshot } from '../storage/openclaw-config-snapshots.ts';
 import { buildAgentToolPolicy } from './tool-policy-defaults.ts';
 
 export async function saveAgentToolPolicy(input: { agentId: string; tools: string[] }) {
-    const projection = await getAgentProjection(input.agentId);
+    const agentRecord = await getAgentRecord(input.agentId);
 
-    if (!projection) {
-        throw new Error(`No synced agent named "${input.agentId}" exists.`);
+    if (!agentRecord) {
+        throw new Error(`No agent named "${input.agentId}" exists.`);
     }
 
-    const snapshot = await getOpenClawConfigSnapshot(projection.runtimeId);
+    const snapshot = await getOpenClawConfigSnapshot(agentRecord.runtimeId);
     if (!snapshot) {
         throw new Error('Runtime config has not synced yet.');
     }
@@ -18,15 +18,15 @@ export async function saveAgentToolPolicy(input: { agentId: string; tools: strin
     const config = JSON.parse(snapshot.configJson) as Record<string, unknown>;
     const tools = normalizeToolNames(input.tools);
     const nextConfig = writeAgentTools(config, {
-        agentId: projection.id,
-        agentName: projection.name,
+        agentId: agentRecord.id,
+        agentName: agentRecord.name,
         tools,
     });
 
     await applyOpenClawConfig({
         baseHash: snapshot.hash,
         config: nextConfig,
-        runtimeId: projection.runtimeId,
+        runtimeId: agentRecord.runtimeId,
     });
 
     return { tools };

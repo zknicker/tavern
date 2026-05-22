@@ -1,0 +1,405 @@
+import { baseKeymap } from 'prosemirror-commands';
+import { history } from 'prosemirror-history';
+import { keymap } from 'prosemirror-keymap';
+import { DOMParser, Fragment, type Node as ProseMirrorNode, Schema } from 'prosemirror-model';
+import { EditorState, TextSelection } from 'prosemirror-state';
+import { EditorView, type NodeView } from 'prosemirror-view';
+import * as React from 'react';
+import { createRoot, type Root } from 'react-dom/client';
+import { cn } from '../../lib/utils.ts';
+import { MentionChip } from './mention-chip.tsx';
+import { getActiveMentionQuery } from './mention-text.ts';
+import type { ActiveMentionQuery, Mention, MentionKind, MentionOption } from './mention-types.ts';
+
+export interface MentionEditorHandle {
+    focus: () => void;
+    insertMention: (option: MentionOption) => void;
+}
+
+export function MentionEditor({
+    className,
+    disabled = false,
+    id,
+    name,
+    onActiveQueryChange,
+    onChange,
+    onFocus,
+    onKeyDown,
+    placeholder,
+    ref,
+    value,
+}: {
+    className?: string;
+    disabled?: boolean;
+    id?: string;
+    name: string;
+    onActiveQueryChange: (query: ActiveMentionQuery | null) => void;
+    onChange: (content: string, mentions: Mention[]) => void;
+    onFocus?: () => void;
+    onKeyDown: (event: KeyboardEvent) => boolean;
+    placeholder: string;
+    ref?: React.Ref<MentionEditorHandle>;
+    value: string;
+}) {
+    const editorRef = React.useRef<HTMLDivElement | null>(null);
+    const initialValueRef = React.useRef(value);
+    const onActiveQueryChangeRef = React.useRef(onActiveQueryChange);
+    const onChangeRef = React.useRef(onChange);
+    const onFocusRef = React.useRef(onFocus);
+    const onKeyDownRef = React.useRef(onKeyDown);
+    const viewRef = React.useRef<EditorView | null>(null);
+    const valueRef = React.useRef(value);
+
+    React.useImperativeHandle(
+        ref,
+        () => ({
+            focus() {
+                viewRef.current?.focus();
+            },
+            insertMention(option) {
+                insertMentionOption(viewRef.current, option);
+            },
+        }),
+        []
+    );
+
+    React.useEffect(() => {
+        valueRef.current = value;
+    }, [value]);
+
+    React.useEffect(() => {
+        onActiveQueryChangeRef.current = onActiveQueryChange;
+        onChangeRef.current = onChange;
+        onFocusRef.current = onFocus;
+        onKeyDownRef.current = onKeyDown;
+    }, [onActiveQueryChange, onChange, onFocus, onKeyDown]);
+
+    React.useEffect(() => {
+        const element = editorRef.current;
+
+        if (!element) {
+            return;
+        }
+
+        const view = new EditorView(element, {
+            attributes: {
+                'aria-label': placeholder,
+                class: cn(
+                    'min-h-0 whitespace-pre-wrap break-words px-3 pt-2 pb-0 text-sm leading-6 outline-none max-sm:text-base',
+                    disabled && 'pointer-events-none'
+                ),
+                id: id ?? '',
+                role: 'textbox',
+            },
+            dispatchTransaction(transaction) {
+                const nextState = view.state.apply(transaction);
+
+                view.updateState(nextState);
+
+                const serialized = serializeMentionDoc(nextState.doc);
+                valueRef.current = serialized.content;
+                onChangeRef.current(serialized.content, serialized.mentions);
+                onActiveQueryChangeRef.current(
+                    getActiveQuery(nextState.doc, nextState.selection.from)
+                );
+            },
+            editable: () => !disabled,
+            handleDOMEvents: {
+                blur: (view) => {
+                    onActiveQueryChangeRef.current(
+                        getActiveQuery(view.state.doc, view.state.selection.from)
+                    );
+                    return false;
+                },
+                focus: (view) => {
+                    onFocusRef.current?.();
+                    onActiveQueryChangeRef.current(
+                        getActiveQuery(view.state.doc, view.state.selection.from)
+                    );
+                    return false;
+                },
+                keydown: (_view, event) => onKeyDownRef.current(event),
+            },
+            nodeViews: {
+                mention: (node) => new MentionNodeView(node),
+            },
+            state: EditorState.create({
+                doc: contentToDoc(initialValueRef.current),
+                plugins: [
+                    history(),
+                    keymap({ Backspace: deleteMentionBeforeCaret }),
+                    keymap(baseKeymap),
+                ],
+                schema: mentionSchema,
+            }),
+        });
+
+        viewRef.current = view;
+        onActiveQueryChangeRef.current(getActiveQuery(view.state.doc, view.state.selection.from));
+
+        return () => {
+            view.destroy();
+            viewRef.current = null;
+        };
+    }, [disabled, id, placeholder]);
+
+    React.useEffect(() => {
+        const view = viewRef.current;
+
+        if (!view || value === valueRef.current) {
+            return;
+        }
+
+        const doc = contentToDoc(value);
+        const transaction = view.state.tr.replaceWith(0, view.state.doc.content.size, doc.content);
+
+        transaction.setSelection(TextSelection.atEnd(transaction.doc));
+        view.dispatch(transaction);
+    }, [value]);
+
+    return (
+        <div className={cn('relative', className)}>
+            {value.length === 0 ? (
+                <div className="pointer-events-none absolute inset-x-3 top-2 text-muted-foreground/60 text-sm leading-6 max-sm:text-base">
+                    {placeholder}
+                </div>
+            ) : null}
+            <input name={name} type="hidden" value={value} />
+            <div ref={editorRef} />
+        </div>
+    );
+}
+
+const mentionSchema = new Schema({
+    marks: {},
+    nodes: {
+        doc: { content: 'paragraph+' },
+        paragraph: {
+            content: 'inline*',
+            group: 'block',
+            parseDOM: [{ tag: 'p' }],
+            toDOM: () => ['p', 0],
+        },
+        text: { group: 'inline' },
+        mention: {
+            atom: true,
+            attrs: {
+                id: {},
+                kind: {},
+                label: {},
+                metadata: { default: null },
+                projection: {},
+                text: {},
+            },
+            group: 'inline',
+            inline: true,
+            leafText: (node) => node.attrs.text,
+            selectable: false,
+            toDOM: (node) => [
+                'span',
+                {
+                    'data-mention-id': node.attrs.id,
+                    'data-mention-kind': node.attrs.kind,
+                    'data-mention-label': node.attrs.label,
+                    'data-mention-metadata': node.attrs.metadata
+                        ? JSON.stringify(node.attrs.metadata)
+                        : '',
+                    'data-mention-projection': node.attrs.projection,
+                    'data-mention-text': node.attrs.text,
+                },
+                node.attrs.text,
+            ],
+        },
+    },
+});
+
+class MentionNodeView implements NodeView {
+    dom: HTMLElement;
+    readonly #root: Root;
+
+    constructor(node: ProseMirrorNode) {
+        this.dom = document.createElement('span');
+        this.dom.contentEditable = 'false';
+        this.#root = createRoot(this.dom);
+        this.#render(node);
+    }
+
+    destroy() {
+        this.#root.unmount();
+    }
+
+    ignoreMutation() {
+        return true;
+    }
+
+    update(node: ProseMirrorNode) {
+        if (node.type.name !== 'mention') {
+            return false;
+        }
+
+        this.#render(node);
+        return true;
+    }
+
+    #render(node: ProseMirrorNode) {
+        this.#root.render(
+            <MentionChip
+                id={node.attrs.id}
+                kind={node.attrs.kind as MentionKind}
+                label={node.attrs.label}
+                metadata={readMentionMetadata(node.attrs.metadata)}
+            />
+        );
+    }
+}
+
+function contentToDoc(content: string) {
+    const document = window.document.implementation.createHTMLDocument();
+    const body = document.body;
+    const paragraphs = content.split('\n');
+
+    for (const paragraph of paragraphs.length > 0 ? paragraphs : ['']) {
+        const element = document.createElement('p');
+        element.textContent = paragraph;
+        body.appendChild(element);
+    }
+
+    return DOMParser.fromSchema(mentionSchema).parse(body);
+}
+
+function getActiveQuery(doc: ProseMirrorNode, position: number) {
+    const beforeCaret = doc.textBetween(0, position, '\n', '\n');
+
+    return getActiveMentionQuery(beforeCaret, beforeCaret.length);
+}
+
+function insertMentionOption(view: EditorView | null, option: MentionOption) {
+    if (!view) {
+        return;
+    }
+
+    const activeQuery = getActiveQuery(view.state.doc, view.state.selection.from);
+
+    if (!activeQuery) {
+        return;
+    }
+
+    const from = view.state.selection.from - optionQueryLength(activeQuery);
+    const to = view.state.selection.from;
+    const mention = mentionSchema.nodes.mention.create({
+        id: option.id,
+        kind: option.kind,
+        label: option.label,
+        metadata: option.metadata ?? null,
+        projection: option.projection,
+        text: option.insertText,
+    });
+    const after = view.state.doc.textBetween(to, to + 1, '\n', '\n');
+    const space = /^\s/u.test(after) ? null : mentionSchema.text(' ');
+    const replacement = space ? Fragment.fromArray([mention, space]) : Fragment.from(mention);
+    const selectionPosition = from + replacement.size;
+    const transaction = view.state.tr.replaceWith(from, to, replacement);
+
+    transaction.setSelection(TextSelection.create(transaction.doc, selectionPosition));
+
+    view.dispatch(transaction);
+    view.focus();
+}
+
+function optionQueryLength(activeQuery: ActiveMentionQuery) {
+    return activeQuery.end - activeQuery.start;
+}
+
+function deleteMentionBeforeCaret(state: EditorState, dispatch?: EditorView['dispatch']) {
+    if (!state.selection.empty) {
+        return false;
+    }
+
+    const { $from } = state.selection;
+    const parentOffset = $from.parentOffset;
+    let childOffset = 0;
+
+    for (let index = 0; index < $from.parent.childCount; index += 1) {
+        const node = $from.parent.child(index);
+        const nextOffset = childOffset + node.nodeSize;
+
+        if (node.type.name === 'mention' && parentOffset === nextOffset) {
+            dispatch?.(
+                state.tr
+                    .delete($from.start() + childOffset, $from.start() + nextOffset)
+                    .scrollIntoView()
+            );
+            return true;
+        }
+
+        if (
+            node.isText &&
+            node.text === ' ' &&
+            parentOffset === nextOffset &&
+            index > 0 &&
+            $from.parent.child(index - 1).type.name === 'mention'
+        ) {
+            const mentionStart = childOffset - $from.parent.child(index - 1).nodeSize;
+
+            dispatch?.(
+                state.tr
+                    .delete($from.start() + mentionStart, $from.start() + nextOffset)
+                    .scrollIntoView()
+            );
+            return true;
+        }
+
+        childOffset = nextOffset;
+    }
+
+    return false;
+}
+
+function serializeMentionDoc(doc: ProseMirrorNode) {
+    const mentions: Mention[] = [];
+    let content = '';
+
+    for (let index = 0; index < doc.childCount; index += 1) {
+        const paragraph = doc.child(index);
+
+        if (index > 0) {
+            content += '\n';
+        }
+
+        for (let paragraphIndex = 0; paragraphIndex < paragraph.childCount; paragraphIndex += 1) {
+            const node = paragraph.child(paragraphIndex);
+
+            if (node.isText) {
+                content += node.text ?? '';
+                continue;
+            }
+
+            if (node.type.name !== 'mention') {
+                continue;
+            }
+
+            const text = String(node.attrs.text);
+            const start = content.length;
+
+            content += text;
+            mentions.push({
+                end: start + text.length,
+                id: node.attrs.id,
+                kind: node.attrs.kind,
+                label: node.attrs.label,
+                metadata: readMentionMetadata(node.attrs.metadata),
+                projection: node.attrs.projection,
+                start,
+                text,
+            });
+        }
+    }
+
+    return { content, mentions };
+}
+
+function readMentionMetadata(value: unknown) {
+    return value && typeof value === 'object' && !Array.isArray(value)
+        ? (value as Record<string, unknown>)
+        : undefined;
+}

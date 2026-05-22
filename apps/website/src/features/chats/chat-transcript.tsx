@@ -25,6 +25,7 @@ export function ChatTranscript({
     activeReply,
     activeReplyProgressStartedAt = null,
     activeReplySteps = [],
+    chatId,
     completedProgress = null,
     conversationLayout = directConversationMessageLayout,
     currentSessionKey,
@@ -34,6 +35,7 @@ export function ChatTranscript({
     activeReply: ChatActiveReply | null;
     activeReplyProgressStartedAt?: string | null;
     activeReplySteps?: ChatTurnProgressStep[];
+    chatId?: string;
     completedProgress?: ChatCompletedProgress | null;
     conversationLayout?: ConversationMessageLayout;
     currentSessionKey?: string | null;
@@ -119,6 +121,7 @@ export function ChatTranscript({
                             />
                         ) : null}
                         <TranscriptEntryView
+                            chatId={chatId}
                             conversationLayout={conversationLayout}
                             currentSessionKey={currentSessionKey}
                             entry={entry}

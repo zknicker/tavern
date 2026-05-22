@@ -1,4 +1,4 @@
-import { syncAgentRuntimeSessions } from '../sync/agent-runtime-projections.ts';
+import { syncAgentRuntimeSessions } from '../sync/agent-runtime-sync.ts';
 
 let activeSync: Promise<void> | null = null;
 let queuedSync = false;

@@ -124,6 +124,40 @@ test('draft handoff releases when the active reply has visible text', () => {
     ).toBe(true);
 });
 
+test('draft handoff releases when live progress completed before durable history loads', () => {
+    expect(
+        shouldReleaseDraftHandoff({
+            activeReply: null,
+            activeReplyProgressStartedAt: null,
+            activeReplySteps: [],
+            completedProgress: {
+                completedAt: '2026-05-13T12:00:06.000Z',
+                reply: {
+                    agentId: 'agent-1',
+                    isThinking: false,
+                    runId: 'run-1',
+                    sessionKey: 'session-1',
+                    startedAt: '2026-05-13T12:00:00.000Z',
+                    text: 'Done.',
+                },
+                startedAt: '2026-05-13T12:00:01.000Z',
+                steps: [
+                    {
+                        id: 'tool:pwd',
+                        kind: 'tool',
+                        label: 'Using bash',
+                        status: 'completed',
+                    },
+                ],
+            },
+            failedTurn: null,
+            historyLoaded: false,
+            timeline: [],
+            totalRows: 0,
+        })
+    ).toBe(true);
+});
+
 test('visible non-thinking fallback replies do not keep the composer blocked', () => {
     expect(
         isBlockingActiveReply({

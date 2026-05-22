@@ -1,8 +1,9 @@
 import type {
     AgentRuntimeEvent,
-    TavernChatActivity,
     TavernChatEvent,
     TavernChatMessage,
+    TavernChatResponse,
+    TavernResponseActivity,
 } from '@tavern/api';
 import type { Database } from '../db/sqlite';
 import { listEvents } from './chat-api';
@@ -30,9 +31,59 @@ function chatEventToRuntimeEvents(event: TavernChatEvent): PersistedRuntimeEvent
             const runtimeEvent = messageCreatedToRuntimeEvent(event.message, event.created_at);
             return runtimeEvent ? [{ cursor: Number(event.cursor), event: runtimeEvent }] : [];
         }
-        case 'chat.activity.updated':
-        case 'chat.activity.completed':
-        case 'chat.activity.failed':
+        case 'response.created':
+            return [
+                {
+                    cursor: Number(event.cursor),
+                    event: {
+                        timestamp: event.created_at,
+                        turn: responseToTurn(event.response),
+                        type: 'turn.started',
+                    },
+                },
+            ];
+        case 'response.completed':
+            return [
+                {
+                    cursor: Number(event.cursor),
+                    event: {
+                        timestamp: event.created_at,
+                        turn: responseToTurn(event.response),
+                        type: 'turn.completed',
+                    },
+                },
+            ];
+        case 'response.failed':
+            return [
+                {
+                    cursor: Number(event.cursor),
+                    event: {
+                        error: event.response.summary ?? 'Turn failed.',
+                        timestamp: event.created_at,
+                        turn: responseToTurn(event.response),
+                        type: 'turn.failed',
+                    },
+                },
+            ];
+        case 'response.updated':
+            return event.response.summary
+                ? [
+                      {
+                          cursor: Number(event.cursor),
+                          event: {
+                              isThinking: true,
+                              text: event.response.summary,
+                              timestamp: event.created_at,
+                              turn: responseToTurn(event.response),
+                              type: 'turn.replyUpdated',
+                          },
+                      },
+                  ]
+                : [];
+        case 'activity.created':
+        case 'activity.updated':
+        case 'activity.completed':
+        case 'activity.failed':
             return activityEventToRuntimeEvents(event);
         case 'chat.read':
             return [
@@ -52,6 +103,7 @@ function chatEventToRuntimeEvents(event: TavernChatEvent): PersistedRuntimeEvent
                 cursor: Number(event.cursor),
                 event: runtimeEvent,
             }));
+        case 'artifact.created':
         case 'message.deleted':
             return [];
     }
@@ -123,66 +175,27 @@ function activityEventToRuntimeEvents(
     event: Extract<
         TavernChatEvent,
         {
-            type: 'chat.activity.completed' | 'chat.activity.failed' | 'chat.activity.updated';
+            type: 'activity.completed' | 'activity.created' | 'activity.failed' | 'activity.updated';
         }
     >
 ): PersistedRuntimeEvent[] {
     const turn = activityToTurn(event.activity);
-    const events: AgentRuntimeEvent[] = [];
+    const runtimeEvent: AgentRuntimeEvent = {
+        step: {
+            detail: event.activity.detail,
+            id: event.activity.id,
+            kind: activityKind(event.activity.kind),
+            label: event.activity.title,
+            status: activityStatus(event.activity.status, event.type),
+            toolCallId: metadataRuntimeString(event.activity.metadata, 'toolCallId'),
+            toolName: metadataRuntimeString(event.activity.metadata, 'toolName'),
+        },
+        timestamp: event.created_at,
+        turn,
+        type: 'turn.progress',
+    };
 
-    if (event.type === 'chat.activity.completed') {
-        events.push({
-            timestamp: event.created_at,
-            turn,
-            type: 'turn.completed',
-        });
-    } else if (event.type === 'chat.activity.failed') {
-        events.push({
-            error: event.activity.summary ?? 'Turn failed.',
-            timestamp: event.created_at,
-            turn,
-            type: 'turn.failed',
-        });
-    } else if (event.activity.summary) {
-        events.push({
-            isThinking: true,
-            text: event.activity.summary,
-            timestamp: event.created_at,
-            turn,
-            type: 'turn.replyUpdated',
-        });
-    } else if (event.activity.steps.length === 0) {
-        events.push({
-            timestamp: event.created_at,
-            turn,
-            type: 'turn.started',
-        });
-    }
-
-    for (const step of event.activity.steps) {
-        events.push({
-            step: {
-                detail: typeof step.metadata.detail === 'string' ? step.metadata.detail : null,
-                id: step.id,
-                kind: activityStepKind(step.kind),
-                label: step.label,
-                status:
-                    step.status === 'completed'
-                        ? 'completed'
-                        : step.status === 'failed'
-                          ? 'failed'
-                          : 'active',
-            },
-            timestamp: event.created_at,
-            turn,
-            type: 'turn.progress',
-        });
-    }
-
-    return events.map((runtimeEvent) => ({
-        cursor: Number(event.cursor),
-        event: runtimeEvent,
-    }));
+    return [{ cursor: Number(event.cursor), event: runtimeEvent }];
 }
 
 function messageToTurn(
@@ -204,29 +217,63 @@ function messageToTurn(
     };
 }
 
-function activityToTurn(
-    activity: TavernChatActivity
+function responseToTurn(
+    response: TavernChatResponse
 ): Extract<AgentRuntimeEvent, { type: 'turn.started' }>['turn'] {
     return {
-        agentId: activityMetadataString(activity, 'agentId') ?? activity.agent_id,
-        chatId: activity.chat_id,
-        runId: activity.run_id,
-        sessionKey: activityMetadataString(activity, 'sessionKey') ?? activity.run_id,
-        startedAt: activityMetadataString(activity, 'startedAt') ?? activity.updated_at,
+        agentId: metadataRuntimeString(response.metadata, 'agentId') ?? response.participant_id,
+        chatId: response.chat_id,
+        runId: metadataRuntimeString(response.metadata, 'runId') ?? response.id,
+        sessionKey: metadataRuntimeString(response.metadata, 'sessionKey') ?? response.id,
+        startedAt: metadataRuntimeString(response.metadata, 'startedAt') ?? response.created_at,
     };
 }
 
-function activityStepKind(kind: TavernChatActivity['steps'][number]['kind']) {
-    if (kind === 'thinking') {
+function activityToTurn(
+    activity: TavernResponseActivity
+): Extract<AgentRuntimeEvent, { type: 'turn.started' }>['turn'] {
+    return {
+        agentId: metadataRuntimeString(activity.metadata, 'agentId') ?? 'main',
+        chatId: activity.chat_id,
+        runId: metadataRuntimeString(activity.metadata, 'runId') ?? activity.response_id,
+        sessionKey: metadataRuntimeString(activity.metadata, 'sessionKey') ?? activity.response_id,
+        startedAt: metadataRuntimeString(activity.metadata, 'startedAt') ?? activity.started_at,
+    };
+}
+
+function activityKind(kind: TavernResponseActivity['kind']) {
+    if (kind === 'reasoning') {
         return 'reasoning' as const;
     }
-    if (kind === 'custom') {
+    if (kind === 'planning') {
         return 'plan' as const;
     }
-    if (kind === 'file') {
-        return 'tool' as const;
+    if (kind === 'command') {
+        return 'command' as const;
     }
-    return kind;
+    if (kind === 'message') {
+        return 'message' as const;
+    }
+    return 'tool' as const;
+}
+
+function activityStatus(
+    status: TavernResponseActivity['status'],
+    eventType: 'activity.completed' | 'activity.created' | 'activity.failed' | 'activity.updated'
+) {
+    if (status === 'completed') {
+        return 'completed';
+    }
+    if (status === 'failed') {
+        return 'failed';
+    }
+    if (eventType === 'activity.completed') {
+        return 'completed';
+    }
+    if (eventType === 'activity.failed') {
+        return 'failed';
+    }
+    return 'active';
 }
 
 function messageText(message: TavernChatMessage) {
@@ -234,10 +281,6 @@ function messageText(message: TavernChatMessage) {
         .filter((part) => part.kind === 'text')
         .map((part) => part.content)
         .join('\n');
-}
-
-function activityMetadataString(activity: TavernChatActivity, key: string) {
-    return metadataRuntimeString(activity.metadata, key);
 }
 
 function metadataRuntimeString(metadata: Record<string, unknown>, key: string) {

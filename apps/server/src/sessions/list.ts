@@ -1,22 +1,22 @@
-import { presentChatProjectionLabel } from '../chat/projection-presentation.ts';
-import { listChatProjections } from '../storage/chats.ts';
-import { listSessionProjections, parseSessionProjection } from '../storage/sessions.ts';
+import { presentChatLabel } from '../chat/chat-labels.ts';
+import { listChatRecords } from '../storage/chats.ts';
+import { listSessionRecords, parseSessionRecord } from '../storage/sessions.ts';
 import { buildAgentRuntimeSessionListItem } from './agent-runtime-shared.ts';
 import type { GlobalSessionSummary } from './contracts.ts';
 
-function buildChatTitleMap(chats: Awaited<ReturnType<typeof listChatProjections>>) {
+function buildChatTitleMap(chats: Awaited<ReturnType<typeof listChatRecords>>) {
     const chatTitlesById = new Map<string, string>();
 
     for (const chat of chats) {
-        chatTitlesById.set(chat.id, presentChatProjectionLabel(chat));
+        chatTitlesById.set(chat.id, presentChatLabel(chat));
     }
 
     return chatTitlesById;
 }
 
 function compareSessions(
-    left: NonNullable<ReturnType<typeof parseSessionProjection>>,
-    right: NonNullable<ReturnType<typeof parseSessionProjection>>
+    left: NonNullable<ReturnType<typeof parseSessionRecord>>,
+    right: NonNullable<ReturnType<typeof parseSessionRecord>>
 ) {
     const leftTimestamp = left.lastActivityAt ?? left.startedAt ?? new Date(0).toISOString();
     const rightTimestamp = right.lastActivityAt ?? right.startedAt ?? new Date(0).toISOString();
@@ -63,12 +63,12 @@ export function mergeSessionSummaries(input: {
 
 export async function listSessionSummaries() {
     const [chatRecords, sessionRecords] = await Promise.all([
-        listChatProjections(),
-        listSessionProjections(),
+        listChatRecords(),
+        listSessionRecords(),
     ]);
     const chatTitlesById = buildChatTitleMap(chatRecords);
     const sessions = sessionRecords.flatMap((record) => {
-        const session = parseSessionProjection(record);
+        const session = parseSessionRecord(record);
         return session ? [session] : [];
     });
 

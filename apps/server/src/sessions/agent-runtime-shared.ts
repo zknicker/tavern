@@ -7,18 +7,18 @@ import {
 import { inArray, or } from 'drizzle-orm';
 import { createAgentRuntimeClientForConnection } from '../agent-runtime/client-factory.ts';
 import { listAgents } from '../agents/catalog.ts';
-import { presentChatProjectionLabel } from '../chat/projection-presentation.ts';
+import { presentChatLabel } from '../chat/chat-labels.ts';
 import { db } from '../db/index.ts';
 import { sessionArtifactsTable, sessionLinksTable } from '../db/schema.ts';
 import { selfProfileId } from '../participants/self.ts';
 import { getAgentRuntimeConnection } from '../storage/agent-runtime-connections.ts';
-import { listChatProjections } from '../storage/chats.ts';
+import { listChatRecords } from '../storage/chats.ts';
 import { listSessionMessagesForSessionKeys } from '../storage/session-messages.ts';
-import { listProjectedSessionToolCalls } from '../storage/session-tool-calls.ts';
+import { listSessionToolCalls } from '../storage/session-tool-calls.ts';
 import {
-    getSessionProjection,
-    listSessionProjections,
-    parseSessionProjection,
+    getSessionRecord,
+    listSessionRecords,
+    parseSessionRecord,
     parseSessionRuntimePayload,
 } from '../storage/sessions.ts';
 import {
@@ -39,11 +39,11 @@ export interface AgentRuntimeSessionSnapshot {
 }
 
 export async function findAgentRuntimeSession(id: string) {
-    const projection = await getSessionProjection(id);
+    const sessionRecord = await getSessionRecord(id);
 
-    if (projection?.runtime) {
-        const runtime = await getAgentRuntimeConnection(projection.runtime);
-        const runtimeSession = parseSessionRuntimePayload(projection);
+    if (sessionRecord?.runtime) {
+        const runtime = await getAgentRuntimeConnection(sessionRecord.runtime);
+        const runtimeSession = parseSessionRuntimePayload(sessionRecord);
 
         if (runtime && runtimeSession) {
             return {
@@ -88,11 +88,11 @@ function resolveDuration(session: AgentRuntimeSession) {
     return formatDuration(Math.max(0, lastActivityAt - startedAt));
 }
 
-function buildChatTitleMap(chats: Awaited<ReturnType<typeof listChatProjections>>) {
+function buildChatTitleMap(chats: Awaited<ReturnType<typeof listChatRecords>>) {
     const chatTitlesById = new Map<string, string>();
 
     for (const chat of chats) {
-        chatTitlesById.set(chat.id, presentChatProjectionLabel(chat));
+        chatTitlesById.set(chat.id, presentChatLabel(chat));
     }
 
     return chatTitlesById;
@@ -163,25 +163,25 @@ export function mapAgentRuntimeSessionMessage(
 export async function loadAgentRuntimeSessionSnapshot(
     id: string
 ): Promise<AgentRuntimeSessionSnapshot | null> {
-    const projectedSnapshot = await loadProjectedSessionSnapshot(id);
+    const storedSnapshot = await loadSessionSnapshotFromRecords(id);
 
-    if (projectedSnapshot) {
-        return projectedSnapshot;
+    if (storedSnapshot) {
+        return storedSnapshot;
     }
 
     return null;
 }
 
-async function loadProjectedSessionSnapshot(
+async function loadSessionSnapshotFromRecords(
     id: string
 ): Promise<AgentRuntimeSessionSnapshot | null> {
-    const projection = await getSessionProjection(id);
+    const sessionRecord = await getSessionRecord(id);
 
-    if (!projection) {
+    if (!sessionRecord) {
         return null;
     }
 
-    const targetSession = parseSessionProjection(projection);
+    const targetSession = parseSessionRecord(sessionRecord);
 
     if (!targetSession) {
         return null;
@@ -189,14 +189,14 @@ async function loadProjectedSessionSnapshot(
 
     const [agents, chatRecords, sessionRecords] = await Promise.all([
         listAgents(),
-        listChatProjections(),
-        listSessionProjections(),
+        listChatRecords(),
+        listSessionRecords(),
     ]);
     const sessions = sessionRecords.flatMap((record) => {
-        const session = parseSessionProjection(record);
+        const session = parseSessionRecord(record);
         return session ? [session] : [];
     });
-    const links = await listProjectedSessionLinks([targetSession.key]);
+    const links = await listSessionLinks([targetSession.key]);
     const graphSessionKeys = [
         ...new Set([
             targetSession.key,
@@ -205,8 +205,8 @@ async function loadProjectedSessionSnapshot(
     ];
     const [messages, toolCalls, artifacts] = await Promise.all([
         listSessionMessagesForSessionKeys(graphSessionKeys),
-        listProjectedSessionToolCalls(graphSessionKeys),
-        listProjectedSessionArtifacts(graphSessionKeys),
+        listSessionToolCalls(graphSessionKeys),
+        listSessionArtifacts(graphSessionKeys),
     ]);
 
     return {
@@ -216,7 +216,7 @@ async function loadProjectedSessionSnapshot(
             artifacts,
             links,
             messages: messages.map((message) =>
-                mapProjectedSessionMessage({
+                mapSessionMessageRecord({
                     message,
                     session: targetSession,
                 })
@@ -231,7 +231,7 @@ async function loadProjectedSessionSnapshot(
     };
 }
 
-async function listProjectedSessionLinks(sessionKeys: string[]) {
+async function listSessionLinks(sessionKeys: string[]) {
     if (sessionKeys.length === 0) {
         return [];
     }
@@ -256,7 +256,7 @@ async function listProjectedSessionLinks(sessionKeys: string[]) {
     }));
 }
 
-async function listProjectedSessionArtifacts(sessionKeys: string[]) {
+async function listSessionArtifacts(sessionKeys: string[]) {
     if (sessionKeys.length === 0) {
         return [];
     }
@@ -273,19 +273,19 @@ async function listProjectedSessionArtifacts(sessionKeys: string[]) {
         messageId: row.messageId,
         mimeType: row.mimeType,
         path: row.path,
-        payload: parseProjectedJson(row.payloadJson),
+        payload: parseJson(row.payloadJson),
         runId: row.runId,
         sessionKey: row.sessionKey,
         toolCallId: row.toolCallId,
     }));
 }
 
-function mapProjectedSessionMessage(input: {
+function mapSessionMessageRecord(input: {
     message: Awaited<ReturnType<typeof listSessionMessagesForSessionKeys>>[number];
     session: AgentRuntimeSession;
 }): AgentRuntimeSessionMessage {
-    const raw = parseProjectedMessageRaw(input.message.rawJson);
-    const modelInfo = resolveProjectedMessageModelInfo(input.message, raw);
+    const raw = parseSessionMessageRaw(input.message.rawJson);
+    const modelInfo = resolveSessionMessageModelInfo(input.message, raw);
     const metadata: NonNullable<AgentRuntimeSessionMessage['metadata']> = {
         ...(raw?.metadata ?? {}),
         api: input.message.api ?? raw?.metadata?.api ?? undefined,
@@ -299,9 +299,9 @@ function mapProjectedSessionMessage(input: {
             input.message.openClawProvider ?? raw?.metadata?.openClawProvider ?? undefined,
         provider: modelInfo?.provider ?? raw?.metadata?.provider ?? undefined,
         stopReason: input.message.stopReason ?? raw?.metadata?.stopReason ?? undefined,
-        usage: parseProjectedJson(input.message.usageJson) ?? raw?.metadata?.usage,
+        usage: parseJson(input.message.usageJson) ?? raw?.metadata?.usage,
     };
-    const senderType = resolveProjectedSenderType(input.message.role);
+    const senderType = resolveSessionMessageSenderType(input.message.role);
 
     return {
         agentId:
@@ -322,8 +322,8 @@ function mapProjectedSessionMessage(input: {
     };
 }
 
-function parseProjectedMessageRaw(rawJson: string) {
-    const parsed = parseProjectedJson(rawJson);
+function parseSessionMessageRaw(rawJson: string) {
+    const parsed = parseJson(rawJson);
 
     if (!(parsed && typeof parsed === 'object' && !Array.isArray(parsed))) {
         return null;
@@ -336,7 +336,7 @@ function resolveOpenClawHarness(value: unknown) {
     return value === 'pi' || value === 'codex' ? value : undefined;
 }
 
-function parseProjectedJson(value: string | null) {
+function parseJson(value: string | null) {
     if (!value) {
         return null;
     }
@@ -348,7 +348,7 @@ function parseProjectedJson(value: string | null) {
     }
 }
 
-function resolveProjectedSenderType(role: string): AgentRuntimeSessionMessage['senderType'] {
+function resolveSessionMessageSenderType(role: string): AgentRuntimeSessionMessage['senderType'] {
     if (role === 'agent' || role === 'system' || role === 'user') {
         return role;
     }
@@ -356,7 +356,7 @@ function resolveProjectedSenderType(role: string): AgentRuntimeSessionMessage['s
     return 'system';
 }
 
-function resolveProjectedMessageModelInfo(
+function resolveSessionMessageModelInfo(
     message: Awaited<ReturnType<typeof listSessionMessagesForSessionKeys>>[number],
     raw: Partial<AgentRuntimeSessionMessage> | null
 ) {

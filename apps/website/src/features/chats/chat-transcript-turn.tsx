@@ -29,11 +29,13 @@ const hoverGroupClassName = 'group';
 const metadataGapClassName = 'pb-8';
 
 export function TranscriptEntryView({
+    chatId,
     conversationLayout,
     currentSessionKey,
     entry,
     turnStartedAt,
 }: {
+    chatId?: string;
     conversationLayout: ConversationMessageLayout;
     currentSessionKey?: string | null;
     entry: TranscriptEntry;
@@ -42,7 +44,11 @@ export function TranscriptEntryView({
     if (entry.kind === 'system') {
         return (
             <div className="mt-4 w-full px-3 py-2.5">
-                <ChatTranscriptActivity currentSessionKey={currentSessionKey} item={entry.item} />
+                <ChatTranscriptActivity
+                    chatId={chatId}
+                    currentSessionKey={currentSessionKey}
+                    item={entry.item}
+                />
             </div>
         );
     }
@@ -53,6 +59,7 @@ export function TranscriptEntryView({
 
     return (
         <AgentTurn
+            chatId={chatId}
             currentSessionKey={currentSessionKey}
             entry={entry}
             layout={conversationLayout}
@@ -129,11 +136,13 @@ function UserTurn({
 }
 
 function AgentTurn({
+    chatId,
     currentSessionKey,
     entry,
     layout,
     turnStartedAt,
 }: {
+    chatId?: string;
     currentSessionKey?: string | null;
     entry: Extract<TranscriptEntry, { kind: 'turn' }>;
     layout: ConversationMessageLayout;
@@ -179,6 +188,7 @@ function AgentTurn({
                         {segments.map((segment) =>
                             segment.kind === 'activity' ? (
                                 <ChatTranscriptActivityGroup
+                                    chatId={chatId}
                                     currentSessionKey={currentSessionKey}
                                     items={segment.items}
                                     key={segment.key}
@@ -187,6 +197,7 @@ function AgentTurn({
                                 />
                             ) : (
                                 <AgentTurnItem
+                                    chatId={chatId}
                                     currentSessionKey={currentSessionKey}
                                     item={segment.item}
                                     key={segment.key}
@@ -218,9 +229,11 @@ function UserTurnItem({ item }: { item: TranscriptItem }) {
 }
 
 function AgentTurnItem({
+    chatId,
     currentSessionKey,
     item,
 }: {
+    chatId?: string;
     currentSessionKey?: string | null;
     item: TranscriptItem;
 }) {
@@ -244,7 +257,13 @@ function AgentTurnItem({
         return <AgentTurnFailure item={item} />;
     }
 
-    return <ChatTranscriptActivity currentSessionKey={currentSessionKey} item={item} />;
+    return (
+        <ChatTranscriptActivity
+            chatId={chatId}
+            currentSessionKey={currentSessionKey}
+            item={item}
+        />
+    );
 }
 
 function ActiveReplyText({ item }: { item: Extract<TranscriptItem, { kind: 'activeReply' }> }) {

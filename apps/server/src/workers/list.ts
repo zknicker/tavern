@@ -1,13 +1,13 @@
-import { presentChatProjectionLabel } from '../chat/projection-presentation.ts';
+import { presentChatLabel } from '../chat/chat-labels.ts';
 import { getSessionDisplay } from '../sessions/display.ts';
 import { listAgents } from '../storage/agents.ts';
-import { listChatProjections } from '../storage/chats.ts';
-import { listSessionProjections, parseSessionProjection } from '../storage/sessions.ts';
+import { listChatRecords } from '../storage/chats.ts';
+import { listSessionRecords, parseSessionRecord } from '../storage/sessions.ts';
 import type { WorkerListOutput } from './contracts.ts';
 
-type SessionProjection = NonNullable<ReturnType<typeof parseSessionProjection>>;
+type SessionRecord = NonNullable<ReturnType<typeof parseSessionRecord>>;
 
-function compareWorkerSessions(left: SessionProjection, right: SessionProjection) {
+function compareWorkerSessions(left: SessionRecord, right: SessionRecord) {
     const leftTimestamp = left.lastActivityAt ?? left.startedAt ?? '';
     const rightTimestamp = right.lastActivityAt ?? right.startedAt ?? '';
 
@@ -21,17 +21,17 @@ function compareWorkerSessions(left: SessionProjection, right: SessionProjection
 export async function listWorkers(): Promise<WorkerListOutput> {
     const [agentRecords, chatRecords, sessionRecords] = await Promise.all([
         listAgents(),
-        listChatProjections(),
-        listSessionProjections(),
+        listChatRecords(),
+        listSessionRecords(),
     ]);
     const agentNameById = new Map(agentRecords.map((agent) => [agent.id, agent.name]));
     const chatTitleById = new Map(
-        chatRecords.map((chat) => [chat.id, presentChatProjectionLabel(chat)])
+        chatRecords.map((chat) => [chat.id, presentChatLabel(chat)])
     );
     const syncedAt = new Date().toISOString();
     const sessions = sessionRecords
         .flatMap((record) => {
-            const session = parseSessionProjection(record);
+            const session = parseSessionRecord(record);
 
             return session ? [session] : [];
         })

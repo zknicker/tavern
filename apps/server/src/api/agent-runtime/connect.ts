@@ -17,7 +17,7 @@ import {
     syncAgentRuntimeAgents,
     syncAgentRuntimeChats,
     syncAgentRuntimeCron,
-} from '../../sync/agent-runtime-projections.ts';
+} from '../../sync/agent-runtime-sync.ts';
 import {
     emitAgentInvalidationCascade,
     emitAgentRuntimeUpdated,

@@ -57,7 +57,7 @@ test('buildAgentRuntimeSessionListItem keeps external chat names for non-Tavern 
     assert.equal(item.type, 'chat');
 });
 
-test('listAgentRuntimeSessionMessages renders projected message ids without content-time filtering', () => {
+test('listAgentRuntimeSessionMessages renders message ids without content-time filtering', () => {
     const targetSession: AgentRuntimeSession = {
         agentId: 'claw',
         chatId: 'tavern:chat-1',

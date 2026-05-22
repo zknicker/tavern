@@ -72,3 +72,55 @@ test('listAgentRuntimeCapabilityStatuses scopes rows by runtime', async () => {
 
     expect(statuses.map((status) => status.capability)).toEqual(['models', 'skills']);
 });
+
+test('listAgentRuntimeCapabilityStatuses accepts runtime-owned capability rows', async () => {
+    await capabilityStorage.markAgentRuntimeCapabilityHealthy({
+        capability: 'computerUse',
+        method: 'computer-use.list-apps',
+        runtimeId: 'openclaw-main',
+    });
+    await capabilityStorage.markAgentRuntimeCapabilityHealthy({
+        capability: 'memory',
+        method: 'memory.status',
+        runtimeId: 'openclaw-main',
+    });
+    await capabilityStorage.markAgentRuntimeCapabilityHealthy({
+        capability: 'mentions',
+        method: 'mention.list',
+        runtimeId: 'openclaw-main',
+    });
+    await capabilityStorage.markAgentRuntimeCapabilityHealthy({
+        capability: 'skillMaterialization',
+        method: 'local-openclaw-workspace-probe',
+        runtimeId: 'openclaw-main',
+    });
+
+    const statuses = await capabilityStorage.listAgentRuntimeCapabilityStatuses('openclaw-main');
+
+    expect(statuses).toMatchObject([
+        {
+            capability: 'computerUse',
+            method: 'computer-use.list-apps',
+            runtimeId: 'openclaw-main',
+            state: 'healthy',
+        },
+        {
+            capability: 'memory',
+            method: 'memory.status',
+            runtimeId: 'openclaw-main',
+            state: 'healthy',
+        },
+        {
+            capability: 'mentions',
+            method: 'mention.list',
+            runtimeId: 'openclaw-main',
+            state: 'healthy',
+        },
+        {
+            capability: 'skillMaterialization',
+            method: 'local-openclaw-workspace-probe',
+            runtimeId: 'openclaw-main',
+            state: 'healthy',
+        },
+    ]);
+});

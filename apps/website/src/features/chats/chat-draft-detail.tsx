@@ -90,6 +90,7 @@ export function ChatDraftDetail({
             activeReplyProgressStartedAt={handoffFrame.activeReplyProgressStartedAt}
             activeReplySteps={handoffFrame.activeReplySteps}
             animateTimeline={animateTimeline}
+            chatId={timelineChatId}
             completedProgress={handoffFrame.completedProgress}
             emptyLabel=""
             failedTurn={handoffFrame.failedTurn}

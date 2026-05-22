@@ -1,7 +1,7 @@
 # Agents
 
 Tavern presents one primary OpenClaw-backed agent that it observes, presents, and can configure
-through OpenClaw. Runtime adapters may still project multiple OpenClaw agents, but normal product
+through OpenClaw. Runtime adapters may still expose multiple OpenClaw agents, but normal product
 surfaces resolve the primary agent instead of asking the person to choose among agents.
 
 ## Product Expectations
@@ -14,17 +14,17 @@ surfaces resolve the primary agent instead of asking the person to choose among 
 - An agent is not a session, turn, worker process, or tool call.
 - Product-facing navigation, chat start, cron setup, skills, model settings, and messaging
   bindings presume one primary agent.
-- Plural agent lists are runtime/internal projection surfaces, not normal product navigation.
+- Plural agent lists are runtime/internal surfaces, not normal product navigation.
 
 ## Ownership
 
 - OpenClaw is canonical for execution config.
-- OpenClaw-owned agent config may include name, model route, tool policy, skill enablement,
+- OpenClaw agent config may include name, model route, tool policy, skill enablement,
   workspace, and persisted identity documents such as `SOUL.md`, `IDENTITY.md`, and `ROLE.md`.
 - Tavern exposes OpenClaw's per-agent `thinkingDefault` as the model effort setting. The allowed
   values come from the selected OpenClaw harness and model profile. OpenClaw's `reasoningDefault`
   controls reasoning visibility, not effort.
-- Tavern reads and writes OpenClaw-owned agent config through OpenClaw Gateway.
+- Tavern reads and writes OpenClaw agent config through OpenClaw Gateway.
 - Tavern does not keep a competing canonical agent config store.
 - Tavern may keep local presentation overlays such as color, avatar style, pinned state, and local
   notes.
@@ -37,14 +37,14 @@ surfaces resolve the primary agent instead of asking the person to choose among 
 - An agent may run many sessions.
 - An agent may own many turns and workers.
 - An agent may author many messages and tool interactions.
-- Tavern selects one primary projected agent for user-facing flows. Multi-agent support uses
+- Tavern selects one primary agent for user-facing flows. Multi-agent support uses
   explicit product behavior rather than leaking runtime lists into the UI.
 
 ## Lifecycle
 
-- Creating, editing, or deleting an OpenClaw-owned agent in Tavern acts on OpenClaw when the Gateway
+- Creating, editing, or deleting an OpenClaw agent in Tavern acts on OpenClaw when the Gateway
   supports that operation.
 - If OpenClaw reports an agent removed from an authoritative agent snapshot, Tavern removes the
-  projected agent row.
+  current agent row.
 - Tavern-owned overlays may remain available for reuse only when they are not represented as a live
   OpenClaw agent.

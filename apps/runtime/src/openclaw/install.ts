@@ -72,6 +72,7 @@ export async function ensureManagedOpenClawPlugins(
         '--prefix',
         install.installRoot,
         ...missingSpecs.map((spec) => spec.npmSpec),
+        '--legacy-peer-deps',
         '--no-audit',
         '--no-fund',
     ]);

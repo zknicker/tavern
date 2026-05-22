@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { buildChatRows } from '../src/chat/rows.ts';
 
-test('buildChatRows normalizes agent names and renders projected tool calls', () => {
+test('buildChatRows normalizes agent names and renders synced tool calls', () => {
     const rows = buildChatRows({
         agentLookup: {
             byAlias: new Map(),
@@ -293,7 +293,7 @@ test('buildChatRows renders a standalone tool call row without swallowing adjace
     assert.equal(rows[1].completedAt, '2026-04-01T12:00:03.000Z');
 });
 
-test('buildChatRows synthesizes tool rows from message parts when tool projection lags', () => {
+test('buildChatRows synthesizes tool rows from message parts when tool sync lags', () => {
     const rows = buildChatRows({
         agentLookup: {
             byAlias: new Map(),

@@ -19,7 +19,7 @@ import {
     syncAgentRuntimeSession,
     syncAgentRuntimeSessionMessages,
     syncAgentRuntimeSessionMessagesWithRetry,
-} from '../sync/agent-runtime-projections.ts';
+} from '../sync/agent-runtime-sync.ts';
 import {
     clearTurnSessionActive,
     hasActiveTurnSession,
@@ -51,7 +51,7 @@ export async function applyObservedAgentRuntimeEvent(
             emitObservedAgentRuntimeEvent(event);
             debugTurnEvent(event);
             void syncAgentRuntimeAgents().catch((error) => {
-                console.warn('[tavern] failed to sync agent event projection', error);
+                console.warn('[tavern] failed to sync agent event', error);
             });
             emitAgentUpdated();
             return;
@@ -85,7 +85,7 @@ export async function applyObservedAgentRuntimeEvent(
             emitObservedAgentRuntimeEvent(event);
             debugTurnEvent(event);
             void syncAgentRuntimeCron().catch((error) => {
-                console.warn('[tavern] failed to sync cron event projection', error);
+                console.warn('[tavern] failed to sync cron event', error);
             });
             emitCronUpdated();
             emitSyncDataUpdated();
@@ -96,7 +96,7 @@ export async function applyObservedAgentRuntimeEvent(
             emitObservedAgentRuntimeEvent(event);
             debugTurnEvent(event);
             void syncAgentRuntimeCron().catch((error) => {
-                console.warn('[tavern] failed to sync cron run event projection', error);
+                console.warn('[tavern] failed to sync cron run event', error);
             });
             emitCronUpdated();
             emitSyncDataUpdated();
@@ -129,7 +129,7 @@ export async function applyObservedAgentRuntimeEvent(
                     try {
                         await syncTurnSessionMessages(connection, event.turn);
                     } catch (error) {
-                        console.warn('[tavern] failed to sync turn projection', error);
+                        console.warn('[tavern] failed to sync turn event', error);
                     } finally {
                         clearTurnSessionActive(event.turn.sessionKey);
                     }
@@ -152,7 +152,7 @@ export async function applyObservedAgentRuntimeEvent(
             }
             if (connection) {
                 void syncInvalidatedSession(connection, sessionKey).catch((error) => {
-                    console.warn('[tavern] failed to sync invalidated session projection', error);
+                    console.warn('[tavern] failed to sync invalidated session', error);
                 });
             } else {
                 void requestAgentRuntimeSessionSync();

@@ -1,19 +1,23 @@
 import type {
     components,
+    TavernArtifact,
     TavernChat,
-    TavernChatActivity,
     TavernChatEvent,
     TavernChatMessage,
     TavernChatMessageReceipt,
+    TavernChatResponse,
     TavernCreateChatRequest,
     TavernCreateDeliveryRequest,
     TavernCreateMessageRequest,
     TavernEventList,
-    TavernListChatActivityResponse,
     TavernListChatsResponse,
     TavernListMessagesResponse,
+    TavernListResponsesResponse,
     TavernMarkReadRequest,
-    TavernUpdateActivityRequest,
+    TavernResponseActivity,
+    TavernUpsertArtifactRequest,
+    TavernUpsertResponseActivityRequest,
+    TavernUpsertResponseRequest,
 } from '@tavern/api';
 
 type TavernDeliveryReceipt = components['schemas']['DeliveryReceipt'];
@@ -139,10 +143,6 @@ class TavernChatClient {
         });
     }
 
-    activity() {
-        return this.#client.request<TavernListChatActivityResponse>('/api/activity');
-    }
-
     create(input: TavernCreateChatRequest) {
         return this.#client.request<TavernChat>('/api/chats', {
             body: input,
@@ -170,6 +170,24 @@ class TavernChatClient {
         );
     }
 
+    responses(chatId: string, input: { afterSequence?: number; limit?: number } = {}) {
+        return this.#client.request<TavernListResponsesResponse>(
+            `/api/chats/${encodeURIComponent(chatId)}/responses`,
+            {
+                query: {
+                    after_sequence: input.afterSequence,
+                    limit: input.limit,
+                },
+            }
+        );
+    }
+
+    activity(chatId: string, activityId: string) {
+        return this.#client.request<TavernResponseActivity>(
+            `/api/chats/${encodeURIComponent(chatId)}/activity/${encodeURIComponent(activityId)}`
+        );
+    }
+
     createMessage(chatId: string, input: TavernCreateMessageRequest) {
         return this.#client.request<TavernChatMessageReceipt>(
             `/api/chats/${encodeURIComponent(chatId)}/messages`,
@@ -190,9 +208,33 @@ class TavernChatClient {
         );
     }
 
-    updateActivity(chatId: string, input: TavernUpdateActivityRequest) {
-        return this.#client.request<TavernChatActivity>(
-            `/api/chats/${encodeURIComponent(chatId)}/activity`,
+    upsertResponse(chatId: string, input: TavernUpsertResponseRequest) {
+        return this.#client.request<TavernChatResponse>(
+            `/api/chats/${encodeURIComponent(chatId)}/responses`,
+            {
+                body: input,
+                method: 'POST',
+            }
+        );
+    }
+
+    upsertResponseActivity(
+        chatId: string,
+        responseId: string,
+        input: TavernUpsertResponseActivityRequest
+    ) {
+        return this.#client.request<TavernResponseActivity>(
+            `/api/chats/${encodeURIComponent(chatId)}/responses/${encodeURIComponent(responseId)}/activity`,
+            {
+                body: input,
+                method: 'POST',
+            }
+        );
+    }
+
+    upsertArtifact(chatId: string, input: TavernUpsertArtifactRequest) {
+        return this.#client.request<TavernArtifact>(
+            `/api/chats/${encodeURIComponent(chatId)}/artifacts`,
             {
                 body: input,
                 method: 'POST',

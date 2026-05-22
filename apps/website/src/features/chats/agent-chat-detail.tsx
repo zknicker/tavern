@@ -138,6 +138,10 @@ export function shouldReleaseDraftHandoff(state: ChatTimelineState | undefined) 
         return true;
     }
 
+    if (state.completedProgress) {
+        return true;
+    }
+
     if (!state.activeReply) {
         return state.historyLoaded;
     }
@@ -199,6 +203,7 @@ function SyncedAgentChatDetail({
             activeReplyProgressStartedAt={timeline.activeReplyProgressStartedAt}
             activeReplySteps={timeline.activeReplySteps}
             animateTimeline={animateTimeline}
+            chatId={chat.id}
             completedProgress={timeline.completedProgress}
             conversationLayout={conversationLayout}
             emptyLabel="No synced messages for this chat yet."

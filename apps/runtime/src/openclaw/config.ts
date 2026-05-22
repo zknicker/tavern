@@ -1,5 +1,6 @@
 import crypto from 'node:crypto';
 import fs from 'node:fs/promises';
+import os from 'node:os';
 import path from 'node:path';
 
 import { OPENCLAW_RUN_ROOT, readConfigValue } from '../config';
@@ -54,7 +55,9 @@ export async function prepareManagedOpenClawConfig(input?: {
         (await readExistingOpenClawConfig(configPath)) ?? {}
     );
     const version = resolveManagedOpenClawVersion();
+    const codexAuthProfileId = await resolveManagedCodexAuthProfileId();
     const managedConfig = buildManagedOpenClawConfig({
+        codexAuthProfileId,
         cortexPluginPath,
         existingConfig,
         gatewayPort,
@@ -110,6 +113,7 @@ export async function prepareManagedOpenClawConfig(input?: {
 }
 
 export function buildManagedOpenClawConfig(input: {
+    codexAuthProfileId?: string | null;
     codexPluginRoot?: string | null;
     cortexPluginPath?: string | null;
     existingConfig?: Record<string, unknown> | null;
@@ -144,6 +148,7 @@ export function buildManagedOpenClawConfig(input: {
                   id: 'codex',
               },
           };
+    const codexAuthConfig = buildCodexAuthConfig(input.codexAuthProfileId);
 
     const managedConfig = {
         agents: {
@@ -181,6 +186,7 @@ export function buildManagedOpenClawConfig(input: {
                 },
             ],
         },
+        ...(codexAuthConfig ? { auth: codexAuthConfig } : {}),
         channels: {
             tavern: {},
         },
@@ -246,6 +252,14 @@ export function buildManagedOpenClawConfig(input: {
                     enabled: true,
                 },
                 codex: {
+                    config: {
+                        computerUse: {
+                            autoInstall: true,
+                            enabled: true,
+                            mcpServerName: 'computer-use',
+                            pluginName: 'computer-use',
+                        },
+                    },
                     enabled: true,
                 },
                 'lossless-claw': {
@@ -301,6 +315,73 @@ function resolveMockProviderBaseUrl() {
     return port ? `http://127.0.0.1:${port}/v1` : null;
 }
 
+async function resolveManagedCodexAuthProfileId() {
+    const configuredProfileId = readConfigValue('TAVERN_OPENCLAW_CODEX_AUTH_PROFILE_ID');
+    if (configuredProfileId) {
+        return configuredProfileId;
+    }
+
+    const email = await readCodexAuthEmail();
+    return email ? `openai-codex:${email}` : null;
+}
+
+async function readCodexAuthEmail() {
+    try {
+        const authPath = path.join(os.homedir(), '.codex', 'auth.json');
+        const parsed = JSON.parse(await fs.readFile(authPath, 'utf8')) as {
+            tokens?: { id_token?: string };
+        };
+        const payload = decodeJwtPayload(parsed.tokens?.id_token);
+        return typeof payload.email === 'string' && payload.email.includes('@')
+            ? payload.email
+            : null;
+    } catch {
+        return null;
+    }
+}
+
+function decodeJwtPayload(token: string | undefined) {
+    if (!token) {
+        return {};
+    }
+
+    const payload = token.split('.')[1];
+    if (!payload) {
+        return {};
+    }
+
+    try {
+        return JSON.parse(Buffer.from(base64UrlToBase64(payload), 'base64').toString('utf8')) as {
+            email?: unknown;
+        };
+    } catch {
+        return {};
+    }
+}
+
+function base64UrlToBase64(value: string) {
+    const base64 = value.replaceAll('-', '+').replaceAll('_', '/');
+    return base64.padEnd(base64.length + ((4 - (base64.length % 4)) % 4), '=');
+}
+
+function buildCodexAuthConfig(profileId: string | null | undefined) {
+    if (!profileId) {
+        return null;
+    }
+
+    return {
+        order: {
+            'openai-codex': [profileId],
+        },
+        profiles: {
+            [profileId]: {
+                mode: 'oauth',
+                provider: 'openai-codex',
+            },
+        },
+    };
+}
+
 const defaultAgentToolNames = [
     'read',
     'write',
@@ -318,15 +399,15 @@ const defaultAgentToolNames = [
     'sessions_spawn',
     'subagents',
     'session_status',
-    'cortex.search',
-    'cortex.getPage',
-    'cortex.capture',
-    'cortex.recall',
-    'cortex.status',
-    'cortex.listBacklinks',
-    'cortex.runJob',
-    'workspace.notes.read',
-    'workspace.notes.update',
+    'cortex_search',
+    'cortex_get_page',
+    'cortex_capture',
+    'cortex_recall',
+    'cortex_status',
+    'cortex_list_backlinks',
+    'cortex_run_job',
+    'workspace_notes_read',
+    'workspace_notes_update',
 ];
 
 function createGatewayToken() {

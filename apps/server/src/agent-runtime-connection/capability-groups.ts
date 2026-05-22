@@ -2,7 +2,11 @@ import type { AgentRuntimeCapabilityStatus } from './contracts.ts';
 
 const runtimeCapabilityNames = new Set<AgentRuntimeCapabilityStatus['capability']>([
     'tavernPlugin',
+    'computerUse',
     'events',
+    'memory',
+    'mentions',
+    'skillMaterialization',
     'status',
 ]);
 

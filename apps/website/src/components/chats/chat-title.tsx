@@ -3,7 +3,7 @@ import { cn } from '../../lib/utils.ts';
 import { Icon } from '../ui/icon.tsx';
 import {
     getChatDisplayTitle,
-    isProjectedRuntimeDm,
+    isRuntimeDm,
     resolveTavernChatName,
 } from './chat-display.ts';
 
@@ -25,7 +25,7 @@ interface ChatTitleChat {
 export function ChatTitle({ chat, className }: { chat: ChatTitleChat; className?: string }) {
     const title = getChatDisplayTitle(chat);
 
-    if (isProjectedRuntimeDm(chat)) {
+    if (isRuntimeDm(chat)) {
         const agentNames = chat.participants
             .filter((participant) => participant.actorType === 'agent')
             .map((participant) => participant.name);

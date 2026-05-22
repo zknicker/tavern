@@ -1,7 +1,7 @@
 # OpenClaw Security
 
 OpenClaw security defines how Tavern Runtime manages OpenClaw while keeping secrets, execution, and
-projection boundaries explicit.
+runtime boundaries explicit.
 
 ## Product Expectations
 
@@ -45,7 +45,7 @@ projection boundaries explicit.
 ## Safety Expectations
 
 - A failed sync should not corrupt runtime config.
-- A failed turn should not corrupt unrelated projected records.
+- A failed turn should not corrupt unrelated Tavern records.
 - Managed OpenClaw failure should be visible and attributable to the failing capability or sync
   path.
 - Security boundaries should remain understandable from the Tavern Runtime and managed OpenClaw

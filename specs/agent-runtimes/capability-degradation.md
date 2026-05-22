@@ -2,7 +2,7 @@
 
 Tavern treats runtime connectivity and runtime capability health as separate facts. A runtime can
 be reachable while one capability is degraded, unavailable, unauthorized, or returning invalid data.
-Tavern keeps synced projections visible and attributes failures to the narrowest affected
+Tavern keeps synced records visible and attributes failures to the narrowest affected
 capability.
 
 This spec models OpenClaw capability failures directly.
@@ -21,7 +21,7 @@ build one-off status handling for each page.
 
 - Keep dashboard pages usable when OpenClaw is partially broken.
 - Report which runtime capability failed instead of marking the whole runtime offline.
-- Preserve existing projections when a sync path fails.
+- Preserve existing records when a sync path fails.
 - Make diagnostics and CI failures explain the affected runtime surface.
 - Avoid inventing missing runtime ids, timestamps, schedules, actors, or records.
 
@@ -101,6 +101,7 @@ The OpenClaw adapter reports capability state for these surfaces:
 | --- | --- | --- |
 | `status` | `health`, `status` | Tavern Runtime health |
 | `tavernPlugin` | managed Tavern Messenger plugin install | Tavern-native chat delivery |
+| `computerUse` | Codex Computer Use MCP app inventory | Computer Use app mentions |
 | `agents` | `agents.list`, agent config/file methods | agents and agent settings |
 | `chats` | `sessions.list`, chat target mapping | chats and bindings |
 | `sessions` | `sessions.list`, `sessions.get` | session index and session detail |
@@ -108,11 +109,14 @@ The OpenClaw adapter reports capability state for these surfaces:
 | `cron` | `cron.list`, `cron.add`, `cron.update`, `cron.remove`, `cron.run` | cron job config and manual runs |
 | `cronRuns` | `cron.runs` | cron run history |
 | `skills` | `skills.status`, `skills.detail`, `skills.install` | skills list, preview, install |
+| `skillMaterialization` | local OpenClaw workspace probe | per-agent skill workspace setup |
+| `mentions` | `mention.list` | composer mention suggestions and metadata |
 | `models` | `models.list` | model inventory |
+| `memory` | memory verification | memory context |
 | `events` | gateway websocket events | freshness and live status |
-| `logs` | `logs.tail` when supported | runtime log projection |
+| `logs` | `logs.tail` when supported | runtime logs |
 
-Future `channels` and `memory` capabilities may be added when OpenClaw exposes stable gateway
+Future `channels` capabilities may be added when OpenClaw exposes stable gateway
 surfaces that Tavern can consume without local filesystem access.
 
 The first implementation slice covers `status`, `models`, `skills`, and `cronRuns`. The full table
@@ -148,12 +152,12 @@ Tavern stores or exposes capability state alongside Tavern Runtime health and pr
 - A failed `messages` sync for one session does not delete previously synced messages.
 - A failed `skills` read does not block agents, chats, or cron from syncing.
 - Runtime edits still fail loudly when the capability needed for the edit is unavailable.
-- Product reads continue to return existing projections with freshness and error metadata.
+- Product reads continue to return existing records with freshness and error metadata.
 
 ## Database Storage
 
 Tavern should store current capability status in a dedicated table instead of overloading existing
-projection tables or `sync_state`.
+runtime-backed tables or `sync_state`.
 
 Current related tables:
 
@@ -161,7 +165,7 @@ Current related tables:
   `last_checked_at`, `last_error`, and `last_synced_at`.
 - `sync_state` stores primitive sync freshness keyed by `kind` and `id`. It answers questions such
   as "did agent sync for this runtime succeed?" not "is the OpenClaw models capability available?"
-- Projection tables such as `agents`, `chats`, `session_runs`, `session_messages`, `cron_jobs`, and
+- Runtime-backed tables such as `agents`, `chats`, `session_runs`, `session_messages`, `cron_jobs`, and
   `cron_runs` store runtime-owned records and row-level sync timestamps.
 
 Add a table shaped like `agent_runtime_capability_status`:
@@ -188,9 +192,9 @@ Runtime diagnostics compose:
 - one `agent_runtime_connections` row for the managed runtime namespace and coarse health state
 - all `agent_runtime_capability_status` rows for that runtime
 - relevant `sync_state` rows for primitive freshness
-- projected records and row `last_synced_at` values for product data
+- runtime-backed records and row `last_synced_at` values for product data
 
-Product reads reference capability status only as context. They still return projections first.
+Product reads reference capability status only as context. They still return records first.
 Mutations may fail immediately when the required capability is `unavailable` or `unauthorized`, but
 list/detail reads should not blank existing synced data because a capability status is unhealthy.
 
@@ -214,7 +218,7 @@ The dashboard shows synced data first and capability degradation second.
 
 - Runtime settings can show a capability table or diagnostic card.
 - Product pages can show scoped warnings, such as "Cron run history is degraded."
-- Empty projection results remain valid empty states.
+- Empty runtime results remain valid empty states.
 - Runtime-wide loading gates are not introduced for partial capability failures.
 - Copyable diagnostics include runtime health, capability states, sync state, and recent
   adapter errors.
@@ -249,7 +253,7 @@ Adapter tests cover:
 Server tests cover:
 
 - one primitive sync failure does not poison unrelated primitives
-- existing projections remain after failed sync
+- existing records remain after failed sync
 - per-session message sync failures do not delete other session histories
 - capability state is exposed in a stable API shape
 
@@ -280,4 +284,4 @@ First-slice acceptance is narrower:
 - `status`, `models`, `skills`, and `cronRuns` expose capability state.
 - Unsupported, unauthorized, malformed, and timeout-like failures classify deterministically.
 - The server can return a reachable runtime with a degraded or unavailable first-slice capability.
-- Existing projections are not deleted because a first-slice capability check fails.
+- Existing records are not deleted because a first-slice capability check fails.

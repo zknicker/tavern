@@ -9,7 +9,7 @@ import { databaseClient } from '../src/db/index.ts';
 import { syncChatParticipantsForRuntime } from '../src/participants/chat-participants.ts';
 import { linkParticipantToSelf } from '../src/participants/link.ts';
 import { syncAgentsForRuntime } from '../src/storage/agents.ts';
-import { getChatProjection, syncChatsForRuntime } from '../src/storage/chats.ts';
+import { getChatRecord, syncChatsForRuntime } from '../src/storage/chats.ts';
 import { syncSessionsForRuntime } from '../src/storage/sessions.ts';
 
 ensureDatabaseSchema();
@@ -25,15 +25,15 @@ afterEach(() => {
     );
 });
 
-test('listChats returns no rows when there are no projections', async () => {
+test('listChats returns no rows when there are no chats', async () => {
     const result = await listChats();
 
     assert.deepEqual(result.ids, []);
     assert.deepEqual(result.itemsById, {});
 });
 
-test('listChats prefers projected runtime chat identity and bindings for Tavern chats', async () => {
-    await seedPlanningProjection({ includeSession: true });
+test('listChats prefers runtime chat identity and bindings for Tavern chats', async () => {
+    await seedPlanningChat({ includeSession: true });
 
     const result = await listChats();
     const chats = listedChats(result);
@@ -47,7 +47,7 @@ test('listChats prefers projected runtime chat identity and bindings for Tavern 
 });
 
 test('getChat returns full chat detail by id', async () => {
-    await seedPlanningProjection({ includeSession: true });
+    await seedPlanningChat({ includeSession: true });
 
     const chat = await getChat({ chatId: planningChatId });
 
@@ -56,8 +56,8 @@ test('getChat returns full chat detail by id', async () => {
     assert.equal('platformMetadata' in (chat ?? {}), true);
 });
 
-test('listChats includes projected Tavern chats before any synced activity exists', async () => {
-    await seedPlanningProjection({ includeSession: false });
+test('listChats includes Tavern chats before any synced activity exists', async () => {
+    await seedPlanningChat({ includeSession: false });
 
     const result = await listChats();
 
@@ -71,7 +71,7 @@ test('listChats includes projected Tavern chats before any synced activity exist
 });
 
 test('new app-owned Tavern chats sort by chat update time before runtime activity syncs', async () => {
-    await seedPlanningProjection({ includeSession: true });
+    await seedPlanningChat({ includeSession: true });
     await saveTavernChatRecord({
         chat: {
             bindingId: null,
@@ -103,7 +103,7 @@ test('new app-owned Tavern chats sort by chat update time before runtime activit
 });
 
 test('Tavern session sync does not overwrite app-owned chat labels', async () => {
-    await seedPlanningProjection({ includeSession: false });
+    await seedPlanningChat({ includeSession: false });
 
     await syncSessionsForRuntime({
         runtimeId: 'runtime-1',
@@ -131,15 +131,15 @@ test('Tavern session sync does not overwrite app-owned chat labels', async () =>
 });
 
 test('listChats hides archived app-owned Tavern chats while synced sessions keep their chat id', async () => {
-    await seedPlanningProjection({ includeSession: true });
+    await seedPlanningChat({ includeSession: true });
 
     await archiveTavernChat(planningChatId);
 
     const result = await listChats();
-    const projection = await getChatProjection(planningChatId);
+    const chatRecord = await getChatRecord(planningChatId);
 
     assert.deepEqual(listedChats(result), []);
-    assert.equal(projection?.isArchived, true);
+    assert.equal(chatRecord?.isArchived, true);
 });
 
 test('listChats labels OpenClaw internal runtime sessions by source', async () => {
@@ -209,13 +209,13 @@ test('listChats labels OpenClaw internal runtime sessions by source', async () =
     assert.equal(listedChats(result)[0]?.title, 'Cron session');
 });
 
-test('listChats ignores stale local Tavern chat rows without projected backing', async () => {
+test('listChats ignores stale local Tavern chat rows without runtime backing', async () => {
     const result = await listChats();
 
     assert.deepEqual(listedChats(result), []);
 });
 
-test('listChats titles projected runtime DMs from participants and platform metadata', async () => {
+test('listChats titles runtime DMs from participants and platform metadata', async () => {
     await syncAgentsForRuntime({
         agents: [
             {
@@ -302,7 +302,7 @@ test('listChats titles projected runtime DMs from participants and platform meta
     assert.deepEqual(listedChats(result)[0]?.boundAgentIds, ['blippy']);
 });
 
-test('listChats resolves projected DM targets through participant identities', async () => {
+test('listChats resolves DM targets through participant identities', async () => {
     await syncAgentsForRuntime({
         agents: [
             {
@@ -411,16 +411,16 @@ test('listChats resolves projected DM targets through participant identities', a
     });
 
     const result = await listChats();
-    const projectedDms = listedChats(result).filter((chat) => chat.scope === 'dm');
+    const dmChats = listedChats(result).filter((chat) => chat.scope === 'dm');
 
-    assert.equal(projectedDms.length, 2);
-    assert.equal(projectedDms[0]?.displayName, 'Zach Knickerbocker');
-    assert.equal(projectedDms[0]?.targetParticipant?.name, 'Zach Knickerbocker');
-    assert.equal(projectedDms[1]?.displayName, 'Zach Knickerbocker');
-    assert.equal(projectedDms[1]?.targetParticipant?.name, 'Zach Knickerbocker');
+    assert.equal(dmChats.length, 2);
+    assert.equal(dmChats[0]?.displayName, 'Zach Knickerbocker');
+    assert.equal(dmChats[0]?.targetParticipant?.name, 'Zach Knickerbocker');
+    assert.equal(dmChats[1]?.displayName, 'Zach Knickerbocker');
+    assert.equal(dmChats[1]?.targetParticipant?.name, 'Zach Knickerbocker');
 });
 
-test('projected DM participant sync preserves manual self profile links', async () => {
+test('DM participant sync preserves manual self profile links', async () => {
     const chats = [
         {
             bindingId: null,
@@ -505,7 +505,7 @@ function listedChats(result: ChatList) {
     });
 }
 
-async function seedPlanningProjection(input: { includeSession: boolean }) {
+async function seedPlanningChat(input: { includeSession: boolean }) {
     await syncAgentsForRuntime({
         agents: [
             {

@@ -6,22 +6,19 @@ import { formatToolDuration, hasErrorStatus } from '../../sessions/tools/tool-ui
 import type { ToolStepRow } from './types.ts';
 
 export function ToolDrawerLabel({
+    chatId,
     children,
     isOpen,
     onOpenChange,
     row,
 }: {
+    chatId?: string;
     children: ReactNode;
     isOpen: boolean;
     onOpenChange: (open: boolean) => void;
     row: ToolStepRow;
 }) {
-    const toolCallId = row.toolCall.callId;
     const sessionKey = row.sessionKey;
-
-    if (!(toolCallId && sessionKey)) {
-        return children;
-    }
 
     return (
         <Drawer onOpenChange={onOpenChange} open={isOpen} position="right">
@@ -35,14 +32,16 @@ export function ToolDrawerLabel({
             >
                 {children}
             </DrawerTrigger>
-            <ToolDrawer
-                completedAt={row.completedAt}
-                isOpen={isOpen}
-                sessionKey={sessionKey}
-                startedAt={row.startedAt}
-                toolCall={row.toolCall}
-                toolCallId={toolCallId}
-            />
+            {chatId ? (
+                <ToolDrawer activityId={row.id} chatId={chatId} isOpen={isOpen} source="chat" />
+            ) : sessionKey && row.toolCall.callId ? (
+                <ToolDrawer
+                    isOpen={isOpen}
+                    sessionKey={sessionKey}
+                    source="session"
+                    toolCallId={row.toolCall.callId}
+                />
+            ) : null}
         </Drawer>
     );
 }

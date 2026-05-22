@@ -1,7 +1,7 @@
 # Catalog
 
-Tavern exposes a stable catalog of projected resources without requiring users to understand raw
-OpenClaw records.
+Tavern exposes a stable catalog of resources without requiring users to understand raw OpenClaw
+records.
 
 ## Agents
 
@@ -9,17 +9,17 @@ Agents are OpenClaw-backed workers surfaced as first-class Tavern resources.
 
 OpenClaw agent IDs are the canonical identities used for execution.
 
-Tavern may keep local projection rows and presentation overlays so known agents stay readable when
-OpenClaw is offline. Those projections do not replace OpenClaw-owned config.
+Tavern may keep local agent rows and presentation overlays so known agents stay readable when
+OpenClaw is offline. Those records do not replace OpenClaw-native config.
 
 ## Chats
 
 Chats are shared conversation surfaces that Tavern can display, read, and reuse.
 
-Tavern may know about a chat from Tavern-owned configuration, OpenClaw-owned configuration, or
+Tavern may know about a chat from Tavern-owned configuration, OpenClaw configuration, or
 observed OpenClaw participation. The UI should present one coherent chat list whenever possible.
 
-Chat labels are Tavern presentation derived from synced primitive data. For platform-backed chats,
+Chat labels are Tavern presentation derived from local records. For platform-backed chats,
 the source facts live in typed chat platform metadata, such as Discord channel, thread, DM user,
 guild, account, observed-label, and source-record facts.
 

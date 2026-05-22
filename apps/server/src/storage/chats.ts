@@ -2,18 +2,18 @@ import type { AgentRuntimeChat } from '@tavern/api';
 import { and, asc, eq, ne, notInArray } from 'drizzle-orm';
 import { db } from '../db/index.ts';
 import { chatsTable } from '../db/schema.ts';
-import { getActiveProjectionRuntimeId } from './agent-runtime-connections.ts';
+import { getActiveRuntimeId } from './agent-runtime-connections.ts';
 
-export type ChatProjection = typeof chatsTable.$inferSelect;
+export type ChatRecord = typeof chatsTable.$inferSelect;
 
-export async function listChatProjections(options?: {
+export async function listChatRecords(options?: {
     includeArchived?: boolean;
     includeInactive?: boolean;
     runtimeId?: string;
 }) {
     const runtimeId = options?.includeInactive
         ? null
-        : (options?.runtimeId ?? (await getActiveProjectionRuntimeId()));
+        : (options?.runtimeId ?? (await getActiveRuntimeId()));
     const query = db.select().from(chatsTable);
     const predicates = [
         ...(runtimeId ? [eq(chatsTable.runtimeId, runtimeId)] : []),
@@ -24,7 +24,7 @@ export async function listChatProjections(options?: {
     return await scopedQuery.orderBy(asc(chatsTable.id));
 }
 
-export async function getChatProjection(chatId: string) {
+export async function getChatRecord(chatId: string) {
     const [chat] = await db.select().from(chatsTable).where(eq(chatsTable.id, chatId)).limit(1);
 
     return chat ?? null;
@@ -39,7 +39,7 @@ export async function syncChatsForRuntime(input: {
     const syncedIds = input.chats.map((chat) => chat.id);
 
     for (const chat of input.chats) {
-        await upsertChatProjection({
+        await upsertChatRow({
             chat,
             runtimeId: input.runtimeId,
             timestamp,
@@ -74,7 +74,7 @@ export async function syncChatsForRuntime(input: {
     };
 }
 
-export async function archiveChatProjection(chatId: string) {
+export async function archiveChatRecord(chatId: string) {
     const rows = await db
         .update(chatsTable)
         .set({
@@ -94,7 +94,7 @@ export async function upsertChatForRuntime(input: {
     runtimeId: string;
     syncedAt?: string;
 }) {
-    await upsertChatProjection({
+    await upsertChatRow({
         chat: input.chat,
         runtimeId: input.runtimeId,
         timestamp: input.syncedAt ?? new Date().toISOString(),
@@ -106,11 +106,11 @@ export async function upsertChatForRuntime(input: {
     };
 }
 
-export function parseChatRawJson(chat: ChatProjection) {
+export function parseChatRawJson(chat: ChatRecord) {
     return JSON.parse(chat.rawJson) as AgentRuntimeChat;
 }
 
-async function upsertChatProjection(input: {
+async function upsertChatRow(input: {
     chat: AgentRuntimeChat;
     runtimeId: string;
     timestamp: string;

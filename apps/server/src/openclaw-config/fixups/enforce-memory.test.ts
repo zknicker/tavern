@@ -47,7 +47,6 @@ describe('enforceOpenClawMemoryConfig', () => {
                     extra: 'keep',
                 },
             },
-            installs: {},
             slots: {
                 contextEngine: 'lossless-claw',
                 memory: 'none',

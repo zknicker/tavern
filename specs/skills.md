@@ -35,7 +35,7 @@ app access, channel behavior, or local capabilities when Tavern can verify and e
 - Runtime-discovered skills remain owned by their source location. Tavern should not copy them into
   a Tavern skill store or the OpenClaw workspace as part of this surface.
 - Runtime plugins remain owned by their source runtime. Tavern owns only the user's Tavern-side
-  enablement choice and the managed config projection needed to grant access.
+  enablement choice and the managed config needed to grant access.
 - OpenClaw plugins may provide skills, workflows, tools, channels, runtime behavior, or provider
   capabilities. Tavern presents only the agent-facing pieces on the Skills & Plugins page.
 - Native Codex plugins remain Codex app-server capabilities. Tavern may enable supported plugins
@@ -111,7 +111,7 @@ cannot make the MCP server available, the Codex-mode turn should fail before the
 - Tavern does not build or manage Docker sandbox images for individual agents.
 - Setup actions execute inside managed OpenClaw's Seatbelt process boundary when OpenClaw runs
   package-manager setup.
-- Skill environment values are stored per skill in Tavern Vault and should only be projected into
+- Skill environment values are stored per skill in Tavern Vault and should only be included in
   managed runtime config when Tavern intentionally grants them.
 - A Codex harness session should receive only the native Codex plugins enabled for the acting agent
   and supported by the installed OpenClaw Codex bridge.

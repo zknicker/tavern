@@ -1,7 +1,7 @@
 ---
-summary: Durable chat API for messages, per-chat sequence, receipts, deliveries, activity, reads, events, soft deletes, and OpenClaw metadata.
+summary: Durable chat API for messages, responses, activity, artifacts, receipts, reads, events, soft deletes, and OpenClaw metadata.
 read_when:
-  - changing chat messages, receipts, live activity, history, or timeline recovery
+  - changing chat messages, responses, activity, artifacts, receipts, history, or timeline recovery
   - changing how OpenClaw, bots, webhooks, or local tools send chat work into Tavern
 ---
 
@@ -9,9 +9,10 @@ read_when:
 
 The Chat API is message-first and runtime-hosted.
 
-Agent runtimes have sessions and turns. Chat apps have messages. Tavern Runtime
-exposes durable messages, volatile activity, receipts, history, and events.
-Execution identity rides along as metadata.
+Agent runtimes have sessions and turns. Chat apps have messages and responses.
+Tavern Runtime exposes durable messages, agent responses, response activity,
+artifacts, receipts, history, and events. Execution identity rides along as
+metadata.
 
 ## Source Of Truth
 
@@ -22,8 +23,10 @@ Tavern Runtime is the durable source for chat objects.
 | `chat` | Durable | Runtime SQLite |
 | `message` | Durable | Runtime SQLite |
 | `message_part` | Durable | Runtime SQLite |
+| `response` | Durable | Runtime SQLite |
+| `activity` | Durable response work | Runtime SQLite |
+| `artifact` | Durable renderable output | Runtime SQLite or content store |
 | `delivery` | Durable receipt | Runtime SQLite |
-| `activity` | Volatile, recoverable while active | Runtime SQLite `chat_activity` |
 | `event` | Recoverable notification | Runtime SQLite |
 
 App SQLite is a cache and presentation store. OpenClaw transcripts are execution
@@ -32,14 +35,17 @@ evidence linked to Tavern messages.
 ## Endpoints
 
 ```http
-GET    /api/activity
 GET    /api/chats?cursor=&limit=
 POST   /api/chats
 GET    /api/chats/{chat_id}
 GET    /api/chats/{chat_id}/messages?after_sequence=&before_sequence=&limit=
+GET    /api/chats/{chat_id}/responses?after_sequence=&limit=
+GET    /api/chats/{chat_id}/activity/{activity_id}
 POST   /api/chats/{chat_id}/messages
 POST   /api/chats/{chat_id}/deliveries
-POST   /api/chats/{chat_id}/activity
+POST   /api/chats/{chat_id}/responses
+POST   /api/chats/{chat_id}/responses/{response_id}/activity
+POST   /api/chats/{chat_id}/artifacts
 POST   /api/chats/{chat_id}/read
 GET    /api/messages/{message_id}
 DELETE /api/messages/{message_id}
@@ -57,13 +63,15 @@ The Tavern app keeps list and detail reads separate:
 * `chat.list` returns ordered chat ids plus lightweight list items. It is the
   sidebar and overview contract, not a full chat detail payload.
 * `chat.get` returns one full chat record by `chatId`.
-* `chat.log.list` returns paged durable timeline rows for one chat.
-* `chat.status.list` returns volatile active reply and progress state.
+* `chat.log.list` returns paged durable timeline rows for one chat, including
+  messages, responses, activity, and renderable artifacts.
+* `chat.status.list` returns active response ids and coarse status derived from
+  durable responses and response activity.
 
 Invalidate `chat.list` when membership or list ordering can change. Invalidate
-`chat.get` when one chat's detail fields can change. Live turn progress and
-reply events should update the app's volatile timeline state directly; durable
-log invalidation belongs at final completion or failure.
+`chat.get` when one chat's detail fields can change. Response and activity
+events update the app timeline by stable ids. Durable log invalidation belongs
+when messages, responses, activity, or artifacts are persisted.
 
 ## Messages
 
@@ -143,7 +151,7 @@ Rules:
 * Authors are hydrated enough for clients to render without a second lookup.
 
 Runtime sessions can have their own sequence domains. Preserve runtime sequence
-in metadata or projection fields; never use it as the Tavern timeline cursor.
+in metadata or source fields; never use it as the Tavern timeline cursor.
 
 ## Deliveries
 
@@ -195,25 +203,84 @@ instead of creating a second row.
 
 ## Activity
 
-`GET /api/activity` lists current live activity for chats with active or recent
-work.
+Activity is durable work performed as part of a response.
 
-`POST /api/chats/{chat_id}/activity` updates live work state for an active
-message, delivery, or run.
+A response is one participant's attempt to answer or act on a chat message. Most
+responses are authored by agents, but the Tavern noun stays chat-first:
+OpenClaw turns, runs, and transcript ids are runtime metadata on the response,
+not the product identity.
 
 Activity can include:
 
-* working, thinking, using-tool, completed, and failed status
-* draft assistant text
-* provider-exposed reasoning summaries
-* tool or command steps
-* progress labels and timing
+* planning and reasoning summaries
+* tool calls and tool results
+* commands
+* approvals
+* code snippets
+* image, file, diff, or document outputs
+* final assistant message references
 
-Activity is not chat history. It can be dropped after completion. Reload
-recovery reads durable messages, durable events, and current active status.
-Runtime stores the latest active state in `chat_activity` and emits
-`chat.activity.*` events as notifications. Events replay that an activity
-changed; `chat_activity` is the read model clients use after reload.
+Activities are ordered inside their response and carry status:
+`queued`, `running`, `completed`, `failed`, or `cancelled`. Runtime upserts
+activity rows while work is happening, then marks the same rows complete or
+failed when results arrive. Reload recovery reads the same durable activity rows
+for running and completed responses.
+
+Common activity kinds:
+
+| Kind | Use |
+| --- | --- |
+| `planning` | Current plan or task list. |
+| `reasoning` | Provider-exposed reasoning summary. |
+| `message` | Assistant preamble or structured progress text before the final message. |
+| `tool_call` | Runtime tool work with stable tool identity. |
+| `tool_result` | Tool result material when it is represented separately. |
+| `command` | Shell-like command work when the runtime exposes it as a command. |
+| `approval` | User or system approval request and decision. |
+| `artifact` | Renderable output, patch, file, image, document, or diff summary. |
+| `custom` | Runtime-specific activity with typed metadata. |
+
+Clients open activity detail surfaces by stable activity id:
+`GET /api/chats/{chat_id}/activity/{activity_id}`. The returned row is the same
+durable activity used by timeline rendering, including runtime tool metadata and
+artifact links.
+
+```jsonc
+{
+  "id": "act_...",
+  "response_id": "rsp_...",
+  "kind": "tool_call",
+  "status": "completed",
+  "title": "bash",
+  "detail": "sed -n '1,220p' docs/api/chat.md",
+  "artifact_ids": ["art_..."],
+  "metadata": {
+    "runtime": {
+      "source": "openclaw",
+      "sessionKey": "agent:main:tavern:channel:...",
+      "turnId": "...",
+      "toolCallId": "call_...",
+      "toolName": "bash"
+    }
+  }
+}
+```
+
+## Artifacts
+
+Artifacts are durable renderable outputs produced by messages or response
+activity.
+
+Examples:
+
+* code blocks and command output
+* screenshots and generated images
+* files and file previews
+* diffs
+* documents, spreadsheets, and charts
+
+Artifacts are not tool calls by themselves. Tool-call activity may reference one
+or more artifacts when it produces renderable output.
 
 Hidden chain-of-thought is not part of the API. Reasoning text is allowed only
 when the runtime exposes a user-visible summary.
@@ -229,8 +296,8 @@ include them only when `recipient_id` matches `reader_id`.
 
 ## Events
 
-Message create, delivery, update, delete, activity, and read mutations emit
-recoverable events.
+Message, response, activity, artifact, delivery, update, delete, and read
+mutations emit recoverable events.
 
 Durable events are inserted in the same transaction as the mutation they
 describe:
@@ -239,10 +306,16 @@ describe:
 * `message.delivered`
 * `message.updated`
 * `message.deleted`
+* `response.created`
+* `response.updated`
+* `response.completed`
+* `response.failed`
+* `activity.created`
+* `activity.updated`
+* `activity.completed`
+* `activity.failed`
+* `artifact.created`
 * `chat.read`
-* `chat.activity.updated`
-* `chat.activity.completed`
-* `chat.activity.failed`
 
 Event shape:
 
@@ -279,13 +352,17 @@ runtime.agentId
 runtime.sessionKey
 runtime.sessionId
 runtime.runId
+runtime.turnId
 runtime.deliveryId
 runtime.transcriptMessageId
+runtime.toolCallId
+runtime.toolName
 ```
 
 OpenClaw transcript sync upserts by stable Tavern ids when they are present.
-Transcript rows without Tavern identity remain execution evidence; they are not
-matched to existing Tavern messages by content or timestamp.
+Transcript rows without Tavern identity remain execution evidence. Tavern links
+them through response and activity metadata when possible; they are not matched
+to existing Tavern messages by content or timestamp.
 
 ## What Is Intentionally Missing
 

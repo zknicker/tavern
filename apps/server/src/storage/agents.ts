@@ -2,14 +2,14 @@ import type { AgentRuntimeAgent } from '@tavern/api';
 import { and, asc, eq, notInArray } from 'drizzle-orm';
 import { db } from '../db/index.ts';
 import { agentsTable } from '../db/schema.ts';
-import { getActiveProjectionRuntimeId } from './agent-runtime-connections.ts';
+import { getActiveRuntimeId } from './agent-runtime-connections.ts';
 
-export type AgentProjection = typeof agentsTable.$inferSelect;
+export type AgentRecord = typeof agentsTable.$inferSelect;
 
 export async function listAgents(options?: { includeInactive?: boolean; runtimeId?: string }) {
     const runtimeId = options?.includeInactive
         ? null
-        : (options?.runtimeId ?? (await getActiveProjectionRuntimeId()));
+        : (options?.runtimeId ?? (await getActiveRuntimeId()));
     const query = db.select().from(agentsTable);
     const scopedQuery = runtimeId ? query.where(eq(agentsTable.runtimeId, runtimeId)) : query;
 
@@ -103,6 +103,6 @@ export async function syncAgentsForRuntime(input: {
     };
 }
 
-export function parseAgentRawJson(agent: AgentProjection) {
+export function parseAgentRawJson(agent: AgentRecord) {
     return JSON.parse(agent.rawJson) as AgentRuntimeAgent;
 }

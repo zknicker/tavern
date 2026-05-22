@@ -20,12 +20,14 @@ describe('Tavern OpenAPI contract', () => {
 
     it('contains the first chat and realtime API slice', () => {
         expect(Object.keys(document.paths ?? {})).toEqual([
-            '/api/activity',
             '/api/chats',
             '/api/chats/{chat_id}',
             '/api/chats/{chat_id}/messages',
             '/api/chats/{chat_id}/deliveries',
-            '/api/chats/{chat_id}/activity',
+            '/api/chats/{chat_id}/responses',
+            '/api/chats/{chat_id}/responses/{response_id}/activity',
+            '/api/chats/{chat_id}/activity/{activity_id}',
+            '/api/chats/{chat_id}/artifacts',
             '/api/chats/{chat_id}/read',
             '/api/messages/{message_id}',
             '/api/events',
@@ -36,6 +38,9 @@ describe('Tavern OpenAPI contract', () => {
     it('defines durable chat identity schemas', () => {
         expect(document.components?.schemas).toHaveProperty('Chat');
         expect(document.components?.schemas).toHaveProperty('ChatMessage');
+        expect(document.components?.schemas).toHaveProperty('ChatResponse');
+        expect(document.components?.schemas).toHaveProperty('ResponseActivity');
+        expect(document.components?.schemas).toHaveProperty('ChatArtifact');
         expect(document.components?.schemas).toHaveProperty('ChatEvent');
         expect(document.components?.schemas).toHaveProperty('ChatMessageReceipt');
     });

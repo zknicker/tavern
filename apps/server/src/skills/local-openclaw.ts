@@ -2,7 +2,7 @@ import { constants as fsConstants } from 'node:fs';
 import fs from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
-import type { AgentProjection } from '../storage/agents.ts';
+import type { AgentRecord } from '../storage/agents.ts';
 
 export function getOpenClawHome() {
     return path.join(os.homedir(), '.openclaw');
@@ -12,7 +12,7 @@ export async function assertLocalOpenClawHome() {
     await assertWritableDirectory(getOpenClawHome(), 'OpenClaw home');
 }
 
-export async function assertLocalOpenClawWorkspace(agent: AgentProjection) {
+export async function assertLocalOpenClawWorkspace(agent: AgentRecord) {
     await assertLocalOpenClawHome();
 
     const workspace = agent.workspaceFolder?.trim();

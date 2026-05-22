@@ -1,15 +1,19 @@
 import { DrawerPanel } from '../../../components/ui/drawer.tsx';
-import type { SessionToolOutput } from '../../../lib/trpc.tsx';
+import type { ChatToolOutput, SessionToolOutput } from '../../../lib/trpc.tsx';
 import { SessionLinkButton } from '../session-link-button.tsx';
 import { ToolCallDetailSection } from './tool-call-detail-section.tsx';
 
 interface ToolDrawerBodyProps {
-    details: SessionToolOutput | null;
+    details: ChatToolOutput | SessionToolOutput | null;
     isPending: boolean;
     queryError: boolean;
 }
 
-export function ToolDrawerBody({ details, isPending, queryError }: ToolDrawerBodyProps) {
+export function ToolDrawerBody({
+    details,
+    isPending,
+    queryError,
+}: ToolDrawerBodyProps) {
     return (
         <DrawerPanel className="space-y-5">
             {(details?.actions ?? []).map((action) => (
@@ -30,7 +34,7 @@ export function ToolDrawerBody({ details, isPending, queryError }: ToolDrawerBod
             ) : null}
             {!isPending && queryError ? (
                 <div className="rounded-lg border border-red-500/12 bg-red-500/4 px-3.5 py-3">
-                    <p className="text-red-400 text-sm">Unable to load tool details.</p>
+                    <p className="text-red-400 text-sm">Tool details not available.</p>
                 </div>
             ) : null}
             {details ? (

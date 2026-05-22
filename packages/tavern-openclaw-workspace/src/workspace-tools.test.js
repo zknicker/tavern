@@ -1,11 +1,17 @@
 import { describe, expect, it } from 'bun:test';
-import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { targetsGeneratedInstructionFile } from './generated-file-guard.js';
+import { TAVERN_WORKSPACE_TOOL_NAMES } from './tool-contracts.js';
 import { registerWorkspaceNotesTools } from './workspace-notes-tools.js';
 
 describe('Tavern Workspace tools', () => {
+    it('declares the registered tools in the OpenClaw manifest', () => {
+        expect(readManifestToolNames()).toEqual(TAVERN_WORKSPACE_TOOL_NAMES);
+    });
+
     it('registers agent notes tools', () => {
         const tools = [];
 
@@ -18,7 +24,7 @@ describe('Tavern Workspace tools', () => {
             { baseUrl: 'http://127.0.0.1:4310' }
         );
 
-        expect(tools).toEqual(['workspace.notes.read', 'workspace.notes.update']);
+        expect(tools).toEqual(['workspace_notes_read', 'workspace_notes_update']);
     });
 
     it('blocks generated AGENTS.md writes', () => {
@@ -153,3 +159,9 @@ describe('Tavern Workspace tools', () => {
         ).toBe(false);
     });
 });
+
+function readManifestToolNames() {
+    const dirname = path.dirname(fileURLToPath(import.meta.url));
+    const manifestPath = path.join(dirname, '..', 'openclaw.plugin.json');
+    return JSON.parse(readFileSync(manifestPath, 'utf8')).contracts.tools;
+}

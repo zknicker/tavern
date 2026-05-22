@@ -1,8 +1,13 @@
 import { DEFAULT_ACCOUNT_ID, TAVERN_CHANNEL_ID } from './config.js';
+import { buildBodyForAgentWithMentions } from './mentions.js';
 import { buildAcceptedTavernMetadata } from './message-identity.js';
 
 export function buildTavernTurnContext({ input, runtime, target, timestamp }) {
     const acceptedMetadata = buildAcceptedTavernMetadata(input);
+    const bodyForAgent = buildBodyForAgentWithMentions({
+        metadata: acceptedMetadata,
+        text: input.text,
+    });
 
     return runtime.channel.turn.buildContext({
         channel: TAVERN_CHANNEL_ID,
@@ -47,7 +52,7 @@ export function buildTavernTurnContext({ input, runtime, target, timestamp }) {
         },
         message: {
             rawBody: input.text,
-            bodyForAgent: input.text,
+            bodyForAgent,
             commandBody: input.text,
             envelopeFrom: input.sender.name,
             inboundHistory: input.recentMessages,

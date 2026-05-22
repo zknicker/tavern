@@ -32,14 +32,14 @@ test('listAgentActivity keeps activity separate from agent records and uses sync
             name: 'Beta Agent',
         }),
     ]);
-    spyOn(sessionStorage, 'listSessionProjections').mockImplementation(async () => [
-        createSessionProjection({
+    spyOn(sessionStorage, 'listSessionRecords').mockImplementation(async () => [
+        createSessionRecord({
             agentId: 'agent-1',
             key: 'agent:agent-1:session-1',
             lastActivityAt: '2026-03-13T00:02:00.000Z',
             startedAt: '2026-03-13T00:02:00.000Z',
         }),
-        createSessionProjection({
+        createSessionRecord({
             agentId: 'agent-2',
             key: 'agent:agent-2:session-2',
             lastActivityAt: '2026-03-13T00:01:00.000Z',
@@ -63,7 +63,7 @@ test('listAgentActivity keeps activity separate from agent records and uses sync
     ]);
 });
 
-function createSessionProjection(input: {
+function createSessionRecord(input: {
     agentId: string;
     key: string;
     lastActivityAt: string;
@@ -102,5 +102,5 @@ function createSessionProjection(input: {
         status: 'idle',
         thinkingLevel: null,
         updatedAt: input.lastActivityAt,
-    } satisfies sessionStorage.SessionProjection;
+    } satisfies sessionStorage.SessionRecord;
 }

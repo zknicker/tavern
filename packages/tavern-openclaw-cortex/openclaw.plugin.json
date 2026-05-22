@@ -7,13 +7,13 @@
   },
   "contracts": {
     "tools": [
-      "cortex.search",
-      "cortex.getPage",
-      "cortex.capture",
-      "cortex.recall",
-      "cortex.status",
-      "cortex.listBacklinks",
-      "cortex.runJob"
+      "cortex_search",
+      "cortex_get_page",
+      "cortex_capture",
+      "cortex_recall",
+      "cortex_status",
+      "cortex_list_backlinks",
+      "cortex_run_job"
     ]
   },
   "configSchema": {

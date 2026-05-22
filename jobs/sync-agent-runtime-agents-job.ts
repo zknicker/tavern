@@ -7,7 +7,7 @@ const emptyInputSchema = z.object({}).strict() as ZodType<Record<string, unknown
 
 export const syncRuntimeAgentsJob = defineJob('sync-runtime-agents')
     .displayName('Sync Runtime Agents')
-    .description('Reads configured runtime connections and stores agent projections for Tavern.')
+    .description('Reads configured runtime connections and stores agent records for Tavern.')
     .input(emptyInputSchema)
     .defaultInput({})
     .interval({

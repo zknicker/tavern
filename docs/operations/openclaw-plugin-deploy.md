@@ -36,37 +36,18 @@ jq '.plugins.load.paths' ~/.tavern/runtime/openclaw/run/openclaw.json
 
 ## Managed Installs
 
-Tavern extends the generated OpenClaw config with `plugins.installs` records for
-managed third-party plugin installation. This is Tavern-owned metadata, not an
-OpenClaw runtime loading primitive.
+Tavern keeps managed npm install specs in Runtime code, not in OpenClaw config.
+Generated config contains only OpenClaw-native plugin fields.
 
 The install flow is:
 
-1. Runtime reads Tavern-authored `plugins.installs` records.
+1. Runtime resolves its in-code install specs and enabled channel plugins.
 2. Runtime installs each npm package into the managed OpenClaw install root.
-3. Runtime adds each installed package path to the OpenClaw-native
-   `plugins.load.paths` array.
-4. OpenClaw loads plugins from `plugins.load.paths`, then applies the native
-   `plugins.allow`, `plugins.entries`, and `plugins.slots` settings.
+3. Runtime adds each installed package path to `plugins.load.paths`.
+4. OpenClaw loads plugins from `plugins.load.paths`, then applies
+   `plugins.allow`, `plugins.entries`, and `plugins.slots`.
 
-`plugins.installs` records use this shape:
-
-```json
-{
-  "plugins": {
-    "installs": {
-      "plugin-id": {
-        "source": "npm",
-        "spec": "@scope/openclaw-plugin@1.2.3"
-      }
-    }
-  }
-}
-```
-
-Runtime removes `plugins.installs` from the final authored config after turning
-install records into load paths. The generated config should keep OpenClaw's
-runtime-facing fields explicit:
+The generated config keeps OpenClaw's runtime-facing fields explicit:
 
 ```json
 {
@@ -84,11 +65,10 @@ runtime-facing fields explicit:
 }
 ```
 
-Built-in managed dependencies can also be installed without an authored
-`plugins.installs` record. Lossless Claw is installed this way: Runtime always
-resolves the default install spec, adds its package root to `plugins.load.paths`,
-enables `lossless-claw`, sets `plugins.slots.contextEngine` to `lossless-claw`,
-and sets `plugins.slots.memory` to `none`.
+Lossless Claw is a built-in managed dependency. Runtime resolves its install
+spec, adds its package root to `plugins.load.paths`, enables `lossless-claw`,
+sets `plugins.slots.contextEngine` to `lossless-claw`, and sets
+`plugins.slots.memory` to `none`.
 
 Verify the lifecycle directly:
 

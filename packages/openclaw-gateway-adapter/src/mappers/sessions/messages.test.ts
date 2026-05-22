@@ -95,12 +95,13 @@ describe('OpenClaw session message mapping', () => {
                     id: 'message-1',
                     metadata: {
                         tavern: {
-                            toolMentions: [
+                            mentions: [
                                 {
                                     end: 10,
                                     id: 'chrome',
                                     kind: 'skill',
                                     label: 'Chrome',
+                                    projection: 'skill-context',
                                     start: 4,
                                     text: 'Chrome',
                                 },
@@ -115,12 +116,13 @@ describe('OpenClaw session message mapping', () => {
         });
 
         expect(mapped.messages[0]?.metadata?.tavern).toEqual({
-            toolMentions: [
+            mentions: [
                 {
                     end: 10,
                     id: 'chrome',
                     kind: 'skill',
                     label: 'Chrome',
+                    projection: 'skill-context',
                     start: 4,
                     text: 'Chrome',
                 },

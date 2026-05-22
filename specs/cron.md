@@ -21,7 +21,7 @@ Cron jobs are runtime-owned scheduled producers of work surfaced in Tavern.
   runtime.
 - The cron product surface lets a person run a job manually, toggle whether it is enabled,
   and delete it without leaving the cron area.
-- If a runtime removes a cron job from an authoritative cron snapshot, Tavern removes the projected
+- If a runtime removes a cron job from an authoritative cron snapshot, Tavern removes the matching
   cron job.
 - If the runtime is unavailable, Tavern may keep the last synced snapshot visible, but it does not
   become a second canonical cron config store.

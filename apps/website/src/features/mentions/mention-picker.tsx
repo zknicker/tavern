@@ -1,0 +1,235 @@
+import * as React from 'react';
+import { Card } from '../../components/ui/card.tsx';
+import { Spinner } from '../../components/ui/spinner.tsx';
+import { cn } from '../../lib/utils.ts';
+import {
+    getMentionAppearance,
+    getMentionDisplayLabel,
+    MentionAppearanceIcon,
+} from './mention-appearance.tsx';
+import type { MentionOption } from './mention-types.ts';
+
+export function MentionPicker({
+    activeIndex,
+    className,
+    hasQuery,
+    isPathSearchActive,
+    isPathSearchLoading,
+    onSelect,
+    options,
+}: {
+    activeIndex: number;
+    className?: string;
+    hasQuery: boolean;
+    isPathSearchActive: boolean;
+    isPathSearchLoading: boolean;
+    onSelect: (option: MentionOption) => void;
+    options: MentionOption[];
+}) {
+    const optionRefs = React.useRef(new Map<number, HTMLButtonElement>());
+    const scrollContainerRef = React.useRef<HTMLDivElement | null>(null);
+
+    React.useLayoutEffect(() => {
+        const option = optionRefs.current.get(activeIndex);
+        const scrollContainer = scrollContainerRef.current;
+
+        if (!option || !scrollContainer) {
+            return;
+        }
+
+        scrollOptionIntoView(option, scrollContainer);
+    }, [activeIndex]);
+
+    if (!(hasQuery || options.length > 0)) {
+        return null;
+    }
+
+    const groups = groupMentionOptions({
+        isPathSearchActive,
+        isPathSearchLoading,
+        options,
+    });
+    const hasVisibleRows = groups.some(
+        (group) => group.options.length > 0 || group.status !== undefined
+    );
+
+    return (
+        <Card
+            className={cn(
+                'absolute right-0 bottom-[calc(100%+0.4rem)] left-0 z-20 flex max-h-64 w-full flex-col overflow-hidden rounded-2xl border-border/65 bg-popover/95 p-1 text-meta shadow-black/8 shadow-lg backdrop-blur-sm',
+                className
+            )}
+            role="listbox"
+        >
+            <div
+                className="flex w-full flex-1 flex-col overflow-y-auto"
+                data-testid="mention-list-scroll"
+                ref={scrollContainerRef}
+            >
+                <div className="flex w-full flex-col">
+                    {hasVisibleRows ? null : (
+                        <div className="px-2 py-2 text-muted-foreground">No results</div>
+                    )}
+                    {groups.map((group, groupIndex) => (
+                        <div key={group.label}>
+                            <div
+                                className={cn(
+                                    'sticky top-0 z-10 bg-popover/95 px-2 py-1 text-muted-foreground backdrop-blur-sm',
+                                    groupIndex > 0 && 'pt-2'
+                                )}
+                                data-mention-group-label
+                            >
+                                {group.label}
+                            </div>
+                            {group.status ? (
+                                <div className="flex h-8 items-center gap-2 px-2 text-muted-foreground">
+                                    <Spinner className="size-4" />
+                                    <span>Searching files...</span>
+                                </div>
+                            ) : null}
+                            {group.options.map(({ index, option }) => {
+                                const appearance = getMentionAppearance(option);
+                                const displayLabel = getMentionDisplayLabel(option);
+
+                                return (
+                                    <button
+                                        aria-selected={index === activeIndex}
+                                        className={cn(
+                                            'h-8 w-full shrink-0 cursor-pointer overflow-hidden rounded-lg px-2.5 text-left text-foreground outline-hidden focus:bg-muted',
+                                            index === activeIndex ? 'bg-muted' : 'hover:bg-muted'
+                                        )}
+                                        key={`${option.kind}:${option.id}:${option.label}`}
+                                        onMouseDown={(event) => {
+                                            event.preventDefault();
+                                            onSelect(option);
+                                        }}
+                                        ref={(element) => {
+                                            if (element) {
+                                                optionRefs.current.set(index, element);
+                                                return;
+                                            }
+
+                                            optionRefs.current.delete(index);
+                                        }}
+                                        role="option"
+                                        type="button"
+                                    >
+                                        <span className="flex w-full min-w-0 items-center gap-1 leading-normal">
+                                            <MentionAppearanceIcon
+                                                className="size-[15px] shrink-0 rounded-[3px] object-contain text-foreground"
+                                                iconDataUrl={appearance.iconDataUrl}
+                                                icon={appearance.icon}
+                                            />
+                                            <span
+                                                className={cn(
+                                                    'truncate font-medium text-foreground',
+                                                    option.description && 'shrink-0'
+                                                )}
+                                            >
+                                                {displayLabel}
+                                            </span>
+                                            {option.description ? (
+                                                <span className="min-w-0 flex-1 truncate text-muted-foreground">
+                                                    {option.description}
+                                                </span>
+                                            ) : null}
+                                            {option.sourceLabel && !option.description ? (
+                                                <span className="min-w-0 flex-1 truncate text-muted-foreground">
+                                                    {option.sourceLabel}
+                                                </span>
+                                            ) : null}
+                                        </span>
+                                    </button>
+                                );
+                            })}
+                        </div>
+                    ))}
+                </div>
+            </div>
+        </Card>
+    );
+}
+
+function scrollOptionIntoView(option: HTMLElement, scrollContainer: HTMLElement) {
+    const containerRect = scrollContainer.getBoundingClientRect();
+    const optionRect = option.getBoundingClientRect();
+    const stickyHeaderOffset = getStickyHeaderOffset(scrollContainer);
+    const visibleTop = containerRect.top + stickyHeaderOffset;
+    const visibleBottom = containerRect.bottom;
+
+    if (optionRect.top < visibleTop) {
+        scrollContainer.scrollTop -= visibleTop - optionRect.top;
+        return;
+    }
+
+    if (optionRect.bottom > visibleBottom) {
+        scrollContainer.scrollTop += optionRect.bottom - visibleBottom;
+    }
+}
+
+function getStickyHeaderOffset(scrollContainer: HTMLElement) {
+    const header = scrollContainer.querySelector<HTMLElement>('[data-mention-group-label]');
+
+    return header?.getBoundingClientRect().height ?? 0;
+}
+
+function groupMentionOptions({
+    isPathSearchActive,
+    isPathSearchLoading,
+    options,
+}: {
+    isPathSearchActive: boolean;
+    isPathSearchLoading: boolean;
+    options: MentionOption[];
+}) {
+    const groups: Array<{
+        label: string;
+        options: Array<{ index: number; option: MentionOption }>;
+        status?: 'loading';
+    }> = [];
+
+    options.forEach((option, index) => {
+        const label = getGroupLabel(option);
+        let group = groups.find((entry) => entry.label === label);
+
+        if (!group) {
+            group = {
+                label,
+                options: [],
+            };
+            groups.push(group);
+        }
+
+        group.options.push({ index, option });
+    });
+
+    if (
+        isPathSearchActive &&
+        isPathSearchLoading &&
+        !groups.some((group) => group.label === 'Files')
+    ) {
+        groups.push({
+            label: 'Files',
+            options: [],
+            status: 'loading',
+        });
+    }
+
+    return groups;
+}
+
+function getGroupLabel(option: MentionOption) {
+    if (option.kind === 'app') {
+        return 'Mac apps';
+    }
+
+    if (option.kind === 'plugin') {
+        return 'Plugins';
+    }
+
+    if (option.kind === 'file' || option.kind === 'directory' || option.kind === 'image') {
+        return 'Files';
+    }
+
+    return 'Skills';
+}

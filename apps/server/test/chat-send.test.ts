@@ -22,7 +22,7 @@ afterEach(() => {
 });
 
 test('sendTavernChatMessage posts to Runtime', async () => {
-    await seedPlanningProjection();
+    await seedPlanningChat();
     const calls: unknown[] = [];
     const tavernApiCalls: Array<{ body: unknown; method: string; path: string }> = [];
     const historyCalls: unknown[] = [];
@@ -226,7 +226,7 @@ test('sendTavernChatMessage posts to Runtime', async () => {
     assert.match(sentMessageId ?? '', /^msg_/u);
 });
 
-async function seedPlanningProjection() {
+async function seedPlanningChat() {
     await saveAgentRuntimeConnection({
         baseUrl: 'http://runtime.test',
         enabled: true,
@@ -305,7 +305,7 @@ test('sendTavernChatMessage rejects chats that are missing from Runtime', async 
 });
 
 test('sendTavernChatMessage rejects non-Tavern runtime metadata on user sends', async () => {
-    await seedPlanningProjection();
+    await seedPlanningChat();
 
     await assert.rejects(
         sendTavernChatMessage(

@@ -7,7 +7,7 @@ import {
 } from './send-message.ts';
 
 describe('OpenClaw send-message mapping', () => {
-    it('uses the projected session key when Tavern has one for the chat and agent', () => {
+    it('uses the synced session key when Tavern has one for the chat and agent', () => {
         expect(
             mapTavernMessageToOpenClawTavernTurn('cht_220f46ed-2d7c-41dd-9d7e-d02691f1afc3', {
                 agent: { agentId: 'blippy' },
@@ -36,7 +36,7 @@ describe('OpenClaw send-message mapping', () => {
         });
     });
 
-    it('does not guess a session key without a projection', () => {
+    it('does not guess a session key without a synced binding', () => {
         expect(() =>
             mapTavernMessageToOpenClawTavernTurn('cht_1', {
                 agent: { agentId: 'main' },
@@ -51,22 +51,61 @@ describe('OpenClaw send-message mapping', () => {
         ).toThrow(/session key/i);
     });
 
-    it('passes Tavern-owned message metadata through to Tavern Messenger', () => {
+    it('passes every Tavern-owned mention kind through to Tavern Messenger', () => {
         const input: AgentRuntimeCreateMessage = {
             agent: { agentId: 'blippy' },
             message: {
-                content: 'use Chrome',
+                content:
+                    'Use [$agent-browser](/Users/zknicker/.agents/skills/agent-browser/SKILL.md), [@Computer Use](plugin://computer-use@openai-bundled), [@Chrome](plugin://computer-use@openai-bundled), [mentions.md](/repo/specs/mentions.md), and [components/ui](/repo/apps/website/src/components/ui).',
                 id: 'msg_1',
                 metadata: {
                     tavern: {
-                        toolMentions: [
+                        mentions: [
                             {
-                                end: 10,
-                                id: 'chrome',
+                                end: 75,
+                                id: '/Users/zknicker/.agents/skills/agent-browser/SKILL.md',
                                 kind: 'skill',
-                                label: 'Chrome',
+                                label: 'Agent Browser',
+                                projection: 'skill-context',
                                 start: 4,
-                                text: 'Chrome',
+                                text: '[$agent-browser](/Users/zknicker/.agents/skills/agent-browser/SKILL.md)',
+                            },
+                            {
+                                end: 133,
+                                id: 'plugin://computer-use@openai-bundled',
+                                kind: 'plugin',
+                                label: 'Computer Use',
+                                projection: 'capability-reference',
+                                start: 77,
+                                text: '[@Computer Use](plugin://computer-use@openai-bundled)',
+                            },
+                            {
+                                end: 182,
+                                id: 'plugin://computer-use@openai-bundled',
+                                kind: 'app',
+                                label: 'Chrome',
+                                metadata: { bundleId: 'com.google.Chrome' },
+                                projection: 'capability-reference',
+                                start: 135,
+                                text: '[@Chrome](plugin://computer-use@openai-bundled)',
+                            },
+                            {
+                                end: 217,
+                                id: '/repo/specs/mentions.md',
+                                kind: 'file',
+                                label: 'mentions.md',
+                                projection: 'path-reference',
+                                start: 179,
+                                text: '[mentions.md](/repo/specs/mentions.md)',
+                            },
+                            {
+                                end: 278,
+                                id: '/repo/apps/website/src/components/ui',
+                                kind: 'directory',
+                                label: 'components/ui',
+                                projection: 'path-reference',
+                                start: 223,
+                                text: '[components/ui](/repo/apps/website/src/components/ui)',
                             },
                         ],
                     },
@@ -82,14 +121,52 @@ describe('OpenClaw send-message mapping', () => {
 
         expect(mapTavernMessageToOpenClawTavernTurn('cht_1', input).message.metadata).toEqual({
             tavern: {
-                toolMentions: [
+                mentions: [
                     {
-                        end: 10,
-                        id: 'chrome',
+                        end: 75,
+                        id: '/Users/zknicker/.agents/skills/agent-browser/SKILL.md',
                         kind: 'skill',
-                        label: 'Chrome',
+                        label: 'Agent Browser',
+                        projection: 'skill-context',
                         start: 4,
-                        text: 'Chrome',
+                        text: '[$agent-browser](/Users/zknicker/.agents/skills/agent-browser/SKILL.md)',
+                    },
+                    {
+                        end: 133,
+                        id: 'plugin://computer-use@openai-bundled',
+                        kind: 'plugin',
+                        label: 'Computer Use',
+                        projection: 'capability-reference',
+                        start: 77,
+                        text: '[@Computer Use](plugin://computer-use@openai-bundled)',
+                    },
+                    {
+                        end: 182,
+                        id: 'plugin://computer-use@openai-bundled',
+                        kind: 'app',
+                        label: 'Chrome',
+                        metadata: { bundleId: 'com.google.Chrome' },
+                        projection: 'capability-reference',
+                        start: 135,
+                        text: '[@Chrome](plugin://computer-use@openai-bundled)',
+                    },
+                    {
+                        end: 217,
+                        id: '/repo/specs/mentions.md',
+                        kind: 'file',
+                        label: 'mentions.md',
+                        projection: 'path-reference',
+                        start: 179,
+                        text: '[mentions.md](/repo/specs/mentions.md)',
+                    },
+                    {
+                        end: 278,
+                        id: '/repo/apps/website/src/components/ui',
+                        kind: 'directory',
+                        label: 'components/ui',
+                        projection: 'path-reference',
+                        start: 223,
+                        text: '[components/ui](/repo/apps/website/src/components/ui)',
                     },
                 ],
             },
@@ -170,12 +247,13 @@ describe('OpenClaw send-message mapping', () => {
                     id: 'msg_1',
                     metadata: {
                         tavern: {
-                            toolMentions: [
+                            mentions: [
                                 {
                                     end: 10,
                                     id: 'chrome',
                                     kind: 'skill',
                                     label: 'Chrome',
+                                    projection: 'skill-context',
                                     start: 4,
                                     text: 'Chrome',
                                 },
@@ -196,12 +274,13 @@ describe('OpenClaw send-message mapping', () => {
             }).message.metadata
         ).toEqual({
             tavern: {
-                toolMentions: [
+                mentions: [
                     {
                         end: 10,
                         id: 'chrome',
                         kind: 'skill',
                         label: 'Chrome',
+                        projection: 'skill-context',
                         start: 4,
                         text: 'Chrome',
                     },

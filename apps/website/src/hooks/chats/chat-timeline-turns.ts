@@ -133,22 +133,24 @@ export function completeTimelineTurn(
         turn: ChatTurn;
     }
 ): ChatTimelineState {
-    if (
-        !state.activeReply ||
-        state.activeReply.runId !== input.turn.runId ||
-        state.activeReplySteps.length === 0
-    ) {
+    if (!state.activeReply || state.activeReply.runId !== input.turn.runId) {
         return state;
     }
 
     return {
         ...state,
-        completedProgress: {
-            completedAt: input.completedAt,
-            reply: state.activeReply,
-            startedAt: state.activeReplyProgressStartedAt ?? state.activeReply.startedAt,
-            steps: completeProgressSteps(state.activeReplySteps),
-        },
+        activeReply: null,
+        activeReplyProgressStartedAt: null,
+        activeReplySteps: [],
+        completedProgress:
+            state.activeReplySteps.length > 0
+                ? {
+                      completedAt: input.completedAt,
+                      reply: state.activeReply,
+                      startedAt: state.activeReplyProgressStartedAt ?? state.activeReply.startedAt,
+                      steps: completeProgressSteps(state.activeReplySteps),
+                  }
+                : null,
     };
 }
 

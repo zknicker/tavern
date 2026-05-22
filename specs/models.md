@@ -17,7 +17,7 @@ choices.
 - Tavern Runtime is canonical for provider credentials, Tavern Vault state, the enabled model
   catalog, and Tavern-owned memory model settings.
 - Runtime agents have per-agent execution model settings in OpenClaw config. Tavern product
-  settings expose the primary agent's execution model while preserving projected per-agent settings
+  settings expose the primary agent's execution model while preserving per-agent settings
   internally.
 - OpenClaw execution runtime selection is model-scoped. Tavern writes
   `agents.list[].models["provider/model"].agentRuntime.id` alongside the selected

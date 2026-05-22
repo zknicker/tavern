@@ -13,7 +13,7 @@ export function mapOpenClawBindingList(): AgentRuntimeBindingList {
     return agentRuntimeBindingListSchema.parse({ bindings: [] });
 }
 
-export function mapTavernBindingToOpenClawProjection(
+export function mapTavernBindingToOpenClawBinding(
     input: AgentRuntimeUpsertBinding
 ): AgentRuntimeBinding {
     return agentRuntimeBindingSchema.parse({

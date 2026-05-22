@@ -84,11 +84,17 @@ managed Tavern Runtime, pinned OpenClaw Gateway, and the vendored mock provider.
 Chat e2e should prove identity and recovery, not styling details:
 
 * accepted user message appears once
-* activity appears before the final reply
+* tool/progress activity appears before the final reply and remains after reload
+* assistant preamble and reasoning summaries appear when OpenClaw emits them
 * final assistant message appears once
 * reload and websocket reconnect recover without duplicates, missing rows, or
   ordering bugs
-* completed activity disappears without deleting durable messages
+* completed activity remains available as durable response history
+* hover/debug metadata stays hidden unless the message surface is hovered
+
+The e2e wrapper runs preflight before Playwright starts service readiness
+timers. Preflight verifies Playwright Chromium and the managed OpenClaw
+package/plugin cache with visible terminal progress.
 
 Keep timing thresholds limited to deterministic mock-provider runs. Live
 OpenClaw smoke can print timing summaries, but should not fail normal CI on real

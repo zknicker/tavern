@@ -1,7 +1,7 @@
 import { and, asc, eq } from 'drizzle-orm';
 import { databaseClient, db } from '../db/index.ts';
 import { agentProfilesTable } from '../db/schema.ts';
-import { getActiveProjectionRuntimeId } from './agent-runtime-connections.ts';
+import { getActiveRuntimeId } from './agent-runtime-connections.ts';
 
 export interface AgentProfile {
     agentId: string;
@@ -29,7 +29,7 @@ export async function listAgentProfiles(options?: {
 }) {
     const runtimeId = options?.includeInactive
         ? null
-        : (options?.runtimeId ?? (await getActiveProjectionRuntimeId()));
+        : (options?.runtimeId ?? (await getActiveRuntimeId()));
     const query = db.select(selection()).from(agentProfilesTable);
     const scopedQuery = runtimeId
         ? query.where(eq(agentProfilesTable.runtimeId, runtimeId))

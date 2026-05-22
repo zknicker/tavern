@@ -1,5 +1,4 @@
 import { Plus } from '@hugeicons/core-free-icons';
-import { ArrowUp01Icon } from '@hugeicons-pro/core-stroke-rounded';
 import { AgentAvatar } from '@tavern/agent-avatars';
 import * as React from 'react';
 import { ChatComposer } from '../../components/ui/chat-composer.tsx';
@@ -14,8 +13,8 @@ import {
 } from '../../components/ui/select.tsx';
 import type { AgentListOutput } from '../../lib/trpc.tsx';
 import { cn } from '../../lib/utils.ts';
-import type { ToolMention } from '../tool-mentions/tool-mention-types.ts';
-import { useToolMentionComposer } from '../tool-mentions/use-tool-mention-composer.tsx';
+import type { Mention } from '../mentions/mention-types.ts';
+import { useMentionComposer } from '../mentions/use-mention-composer.tsx';
 import type { ChatContextFullness } from './chat-context-fullness.ts';
 
 export type ChatMessageComposerVariant = 'compact' | 'detail';
@@ -38,10 +37,9 @@ export function ChatMessageComposerSurface({
     error,
     name,
     onAgentChange,
-    onToolMentionsChange,
+    onMentionsChange,
     onSubmit,
     onTextChange,
-    onTextKeyDown,
     placeholder,
     variant = 'detail',
 }: {
@@ -56,9 +54,8 @@ export function ChatMessageComposerSurface({
     name: string;
     onAgentChange: (agentId: string) => void;
     onSubmit: (event?: React.FormEvent<HTMLFormElement>) => void | Promise<void>;
-    onToolMentionsChange?: (mentions: ToolMention[]) => void;
+    onMentionsChange?: (mentions: Mention[]) => void;
     onTextChange: (content: string) => void;
-    onTextKeyDown?: React.KeyboardEventHandler<HTMLTextAreaElement>;
     placeholder: string;
     variant?: ChatMessageComposerVariant;
 }) {
@@ -67,35 +64,31 @@ export function ChatMessageComposerSurface({
         [agents, boundAgentIds]
     );
     const isCompact = variant === 'compact';
-    const toolMentionComposer = useToolMentionComposer({
+    const mentionComposer = useMentionComposer({
         agentId,
         agents,
         content,
         onTextChange,
-        onTextKeyDown,
-        onToolMentionsChange,
+        onSubmit: () => {
+            void onSubmit();
+        },
+        onMentionsChange,
     });
 
     return (
         <ChatComposer
+            canSubmit={canSubmit}
             className={cn(
                 isCompact
                     ? 'border-t border-r-[3px] border-r-border/70 bg-chrome/40 px-3 py-3'
                     : null
             )}
-            composerPopover={toolMentionComposer.composerPopover}
+            composerPopover={mentionComposer.composerPopover}
             contentClassName={isCompact ? 'max-w-none' : undefined}
             disabled={disabled}
             error={error}
             footerEnd={
-                <>
-                    {contextFullness ? (
-                        <ContextFullnessIndicator fullness={contextFullness} />
-                    ) : null}
-                    <Button disabled={!canSubmit} size="icon-tight" type="submit">
-                        <Icon icon={ArrowUp01Icon} />
-                    </Button>
-                </>
+                contextFullness ? <ContextFullnessIndicator fullness={contextFullness} /> : null
             }
             footerStart={
                 <AgentSelector
@@ -109,14 +102,16 @@ export function ChatMessageComposerSurface({
             onSubmit={(event) => {
                 void onSubmit(event);
             }}
-            onTextChange={toolMentionComposer.onTextChange}
-            onTextKeyDown={toolMentionComposer.onTextKeyDown}
-            onTextSelect={toolMentionComposer.onTextSelect}
+            onTextChange={(value) => onTextChange(value)}
+            onTextEditorFocus={mentionComposer.focusTextEditor}
             placeholder={placeholder}
             surfaceClassName={isCompact ? 'rounded-2xl shadow-none' : undefined}
-            textareaRef={toolMentionComposer.textareaRef}
             textareaRows={isCompact ? 2 : undefined}
-            textOverlay={toolMentionComposer.textOverlay}
+            textEditor={mentionComposer.renderTextEditor({
+                disabled,
+                name,
+                placeholder,
+            })}
             value={content}
         />
     );

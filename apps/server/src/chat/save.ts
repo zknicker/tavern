@@ -2,8 +2,8 @@ import { randomUUID } from 'node:crypto';
 import { z } from 'zod';
 import { buildTavernChatRecord } from '../agent-runtime/chats.ts';
 import { requirePrimaryAgent } from '../agents/catalog.ts';
-import { getAgent as getAgentProjection } from '../storage/agents.ts';
-import { archiveChatProjection, getChatProjection } from '../storage/chats.ts';
+import { getAgent as getAgentRecord } from '../storage/agents.ts';
+import { archiveChatRecord, getChatRecord } from '../storage/chats.ts';
 import {
     archiveChatResultSchema,
     type CreateChatInput,
@@ -35,7 +35,7 @@ async function resolveTavernAgentIds(agentIds: string[] | undefined) {
 
 async function resolveAgentRuntimeBindings(agentIds: string[] | undefined) {
     const tavernAgentIds = await resolveTavernAgentIds(agentIds);
-    const agents = await Promise.all(tavernAgentIds.map((agentId) => getAgentProjection(agentId)));
+    const agents = await Promise.all(tavernAgentIds.map((agentId) => getAgentRecord(agentId)));
     const missingAgentIds = tavernAgentIds.filter((_, index) => !agents[index]);
 
     if (missingAgentIds.length > 0) {
@@ -85,7 +85,7 @@ export async function updateTavernChat(input: UpdateChatInput) {
     const parsed = updateChatInputSchema.parse(input);
     const agentIds = uniqueAgentIdsSchema.parse(parsed.agentIds);
     const binding = await resolveAgentRuntimeBindings(agentIds);
-    const existing = await getChatProjection(parsed.chatId);
+    const existing = await getChatRecord(parsed.chatId);
 
     if (existing && existing.runtimeId !== binding.runtimeId) {
         throw new Error('Tavern chats cannot move between runtime namespaces.');
@@ -107,13 +107,13 @@ export async function updateTavernChat(input: UpdateChatInput) {
 }
 
 export async function archiveTavernChat(chatId: string) {
-    const chat = await getChatProjection(chatId);
+    const chat = await getChatRecord(chatId);
 
     if (!chat) {
         throw new Error(`No Tavern chat named "${chatId}" exists.`);
     }
 
-    await archiveChatProjection(chat.id);
+    await archiveChatRecord(chat.id);
 
     return archiveChatResultSchema.parse({
         archived: true,

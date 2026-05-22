@@ -5,11 +5,11 @@ import { ThinkingStep } from '../thinking-steps.tsx';
 import { getToolFact, getToolTarget, InlineToolLabel, ToolDrawerLabel } from './tool-summary.tsx';
 import type { ToolStepRendererProps, ToolStepRow } from './types.ts';
 
-export function ShellToolStep({ index, isLast, row }: ToolStepRendererProps) {
+export function ShellToolStep({ chatId, index, isLast, row }: ToolStepRendererProps) {
     const [isOpen, setIsOpen] = React.useState(false);
     const hasError = hasErrorStatus(row.toolCall.status);
     const label = (
-        <ToolDrawerLabel isOpen={isOpen} onOpenChange={setIsOpen} row={row}>
+        <ToolDrawerLabel chatId={chatId} isOpen={isOpen} onOpenChange={setIsOpen} row={row}>
             <InlineToolLabel row={row} target={getShellTarget(row)} verb={getShellVerb(row)} />
         </ToolDrawerLabel>
     );

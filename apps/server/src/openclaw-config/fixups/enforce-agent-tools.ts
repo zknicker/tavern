@@ -1,5 +1,5 @@
 import { buildAgentToolPolicy, defaultAgentToolNames } from '../../agents/tool-policy-defaults.ts';
-import { type AgentProjection, listAgents } from '../../storage/agents.ts';
+import { type AgentRecord, listAgents } from '../../storage/agents.ts';
 import type { OpenClawConfigFixup } from './types.ts';
 
 export const enforceAgentToolsFixup: OpenClawConfigFixup = {
@@ -22,7 +22,7 @@ export const enforceAgentToolsFixup: OpenClawConfigFixup = {
 
 export function enforceAgentToolPolicies(
     config: Record<string, unknown>,
-    agents: Pick<AgentProjection, 'id' | 'name'>[]
+    agents: Pick<AgentRecord, 'id' | 'name'>[]
 ) {
     if (agents.length === 0) {
         return config;
@@ -63,7 +63,7 @@ export function enforceAgentToolPolicies(
 
 function writeDefaultAgentTools(
     current: Record<string, unknown> | undefined,
-    agent: Pick<AgentProjection, 'id' | 'name'>
+    agent: Pick<AgentRecord, 'id' | 'name'>
 ) {
     const tools = readRecord(current?.tools);
     const policy = buildAgentToolPolicy(defaultAgentToolNames);

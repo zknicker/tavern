@@ -1,69 +1,102 @@
-import type { AgentRuntimeChatStatus, TavernApiSchema, TavernChatActivity } from '@tavern/api';
-import { listActivity } from './chat-api';
+import type { AgentRuntimeChatStatus, TavernResponseActivity } from '@tavern/api';
+import { getDb } from '../db/connection';
+import { namedParams } from '../db/sqlite';
+import type { ActivityRow, ResponseRow } from './chat-api/types';
 
 export function listTavernActiveChannelStatuses(): AgentRuntimeChatStatus[] {
-    return listActivity().activities.filter(isActiveActivity).map(activityToChatStatus);
+    const db = getDb();
+    const responses = db
+        .prepare(
+            `SELECT *
+             FROM chat_responses
+             WHERE status IN ('queued', 'running')
+             ORDER BY updated_at DESC, id ASC`
+        )
+        .all() as ResponseRow[];
+
+    return responses.map((response) => responseToChatStatus(response, db));
 }
 
-function isActiveActivity(activity: TavernChatActivity) {
-    return activity.status === 'queued' || activity.status === 'running';
-}
-
-function activityToChatStatus(activity: TavernChatActivity): AgentRuntimeChatStatus {
-    const startedAt = activityMetadataString(activity, 'startedAt') ?? activity.updated_at;
-    const sessionKey = activityMetadataString(activity, 'sessionKey') ?? activity.chat_id;
-    const steps = activity.steps.map(activityStepToProgressStep);
+function responseToChatStatus(response: ResponseRow, db: ReturnType<typeof getDb>) {
+    const metadata = JSON.parse(response.metadata_json) as Record<string, unknown>;
+    const startedAt = metadataRuntimeString(metadata, 'startedAt') ?? response.created_at;
+    const sessionKey = metadataRuntimeString(metadata, 'sessionKey') ?? response.id;
+    const runId = metadataRuntimeString(metadata, 'runId') ?? response.id;
+    const activities = db
+        .prepare(
+            `SELECT *
+             FROM chat_response_activity
+             WHERE response_id = $responseId
+             ORDER BY sequence ASC`
+        )
+        .all(namedParams({ responseId: response.id })) as ActivityRow[];
+    const steps = activities.map(activityToProgressStep);
 
     return {
         activeReply: {
-            agentId: activityMetadataString(activity, 'agentId') ?? activity.agent_id,
+            agentId: metadataRuntimeString(metadata, 'agentId') ?? response.participant_id,
             isThinking: true,
-            runId: activity.run_id,
+            runId,
             sessionKey,
             startedAt,
-            text: activity.summary ?? '',
+            text: response.summary ?? '',
         },
         ...(steps.length > 0
             ? {
-                  activeReplyProgressStartedAt: steps[0]?.startedAt ?? activity.updated_at,
+                  activeReplyProgressStartedAt: steps[0]?.startedAt ?? response.updated_at,
                   activeReplySteps: steps.map(({ startedAt: _startedAt, ...step }) => step),
               }
             : {}),
-        chatId: activity.chat_id,
-    };
+        chatId: response.chat_id,
+    } satisfies AgentRuntimeChatStatus;
 }
 
-function activityStepToProgressStep(step: TavernApiSchema<'ActivityStep'>) {
+function activityToProgressStep(row: ActivityRow) {
+    const metadata = JSON.parse(row.metadata_json) as Record<string, unknown>;
     return {
-        ...(typeof step.metadata.detail === 'string' ? { detail: step.metadata.detail } : {}),
-        id: step.id,
-        kind: activityStepKind(step.kind),
-        label: step.label,
-        startedAt: step.started_at,
-        status:
-            step.status === 'running'
-                ? ('active' as const)
-                : step.status === 'queued'
-                  ? ('active' as const)
-                  : step.status,
+        ...(row.detail ? { detail: row.detail } : {}),
+        ...(metadataRuntimeString(metadata, 'toolCallId')
+            ? { toolCallId: metadataRuntimeString(metadata, 'toolCallId') ?? undefined }
+            : {}),
+        ...(metadataRuntimeString(metadata, 'toolName')
+            ? { toolName: metadataRuntimeString(metadata, 'toolName') ?? undefined }
+            : {}),
+        id: row.id,
+        kind: activityKind(row.kind),
+        label: row.title,
+        startedAt: row.started_at,
+        status: activityStatus(row.status),
     };
 }
 
-function activityStepKind(kind: TavernApiSchema<'ActivityStep'>['kind']) {
-    if (kind === 'thinking') {
+function activityKind(kind: TavernResponseActivity['kind']) {
+    if (kind === 'reasoning') {
         return 'reasoning' as const;
     }
-    if (kind === 'custom') {
+    if (kind === 'planning') {
         return 'plan' as const;
     }
-    if (kind === 'file') {
-        return 'tool' as const;
+    if (kind === 'command') {
+        return 'command' as const;
     }
-    return kind;
+    if (kind === 'message') {
+        return 'message' as const;
+    }
+    return 'tool' as const;
 }
 
-function activityMetadataString(activity: TavernChatActivity, key: string) {
-    const runtime = activity.metadata.runtime;
+function activityStatus(status: TavernResponseActivity['status']) {
+    if (status === 'completed') {
+        return 'completed' as const;
+    }
+    if (status === 'failed') {
+        return 'failed' as const;
+    }
+    return 'active' as const;
+}
+
+function metadataRuntimeString(metadata: Record<string, unknown>, key: string) {
+    const runtime = metadata.runtime;
 
     if (!(runtime && typeof runtime === 'object' && !Array.isArray(runtime))) {
         return null;

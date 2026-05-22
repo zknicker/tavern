@@ -90,7 +90,7 @@ block on audit logging.
 
 Tavern should capture decisions through three paths:
 
-- programmatic decisions that are already explicit in projected runtime state, such as model changes,
+- programmatic decisions that are already explicit in runtime state, such as model changes,
   permission-mode changes, or task-state changes
 - the periodic persistence pass identifying important decisions from recent conversation and work
   output

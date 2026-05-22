@@ -83,11 +83,9 @@ export function ToolBlock({
                         />
                     </DrawerTrigger>
                     <ToolDrawer
-                        completedAt={completedAt}
                         isOpen={isOpen}
                         sessionKey={sessionKey}
-                        startedAt={startedAt}
-                        toolCall={toolCall}
+                        source="session"
                         toolCallId={toolCallId}
                     />
                 </Drawer>

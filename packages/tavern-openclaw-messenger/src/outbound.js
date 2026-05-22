@@ -39,6 +39,7 @@ export function registerTavernDeliveryContext(input) {
         chatId: input.chatId,
         deliverySequence: 0,
         markFinalReplySent: input.markFinalReplySent,
+        requestMessageId: input.requestMessageId,
         runId: input.runId,
         sessionKey: input.sessionKey,
     };
@@ -81,6 +82,7 @@ export async function sendTavernTextMessage(ctx) {
             chatId,
             deliveryId,
             messageId,
+            requestMessageId: deliveryContext.requestMessageId,
             runId: deliveryContext.runId,
             sessionKey: deliveryContext.sessionKey,
             text,

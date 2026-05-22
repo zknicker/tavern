@@ -16,6 +16,7 @@ export const agentRuntimeRoutes = {
     agents: '/agents',
     memorySettings: '/memory/settings',
     memoryStatus: '/memory/status',
+    macApps: '/mac-apps',
     modelAccess: '/model-access',
     modelAccessClaudeCredential: '/model-access/claude',
     modelAccessCodexCredential: '/model-access/codex',

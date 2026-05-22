@@ -35,11 +35,11 @@ Chats are Tavern's shared conversation surfaces.
   through Tavern API.
 - OpenClaw does not create, name, rename, archive, or delete Tavern-owned chats.
 - Archiving a chat hides it from normal Tavern chat lists without deleting its chat row. Runtime
-  session and message projections may continue to reference that stable chat id.
+  session and message records may continue to reference that stable chat id.
 - OpenClaw may observe sessions and messages that belong to a Tavern chat. Those observations
   attach to the Runtime-owned chat by session key and chat id.
 - Runtime-observed external platform conversations, such as Discord channels or DMs, may still be
-  projected as chats because the external platform owns those conversation containers.
+  represented as chats because the external platform owns those conversation containers.
 
 ## Identity And Labels
 
@@ -49,16 +49,16 @@ Chats are Tavern's shared conversation surfaces.
 - For external runtime-observed chats, labels are Tavern presentation derived from synced primitive
   data.
 - The OpenClaw adapter must not provide final Tavern chat names.
-- The OpenClaw adapter must not project Tavern chats from OpenClaw sessions. Tavern sessions are
+- The OpenClaw adapter must not create Tavern chats from OpenClaw sessions. Tavern sessions are
   runtime facts that attach to an existing Tavern chat; they are not a chat catalog.
 - Direct chats prefer participant names as their primary title.
 - Channel-style chats prefer the source-native room or thread name as their primary title.
 - A synced chat keeps an explicit conversation kind so title and badge rendering do not rely
   on page-level heuristics.
-- Runtime-projected direct chat records expose primitive data such as `type`, `scope`, typed
+- Runtime-observed direct chat records expose primitive data such as `type`, `scope`, typed
   chat participants, bound agents, and observed display labels. The server does not hard-code
   final marketing-style titles when the frontend can derive them from those primitives.
-- Platform-specific facts belong in typed `platformMetadata` on the chat projection. For example,
+- Platform-specific facts belong in typed `platformMetadata` on the chat record. For example,
   a Discord chat can carry guild, channel, thread, DM user, account, observed label, and source
   record facts without making those fields part of every chat row.
 - Runtime adapter records do not include chat `name` or chat `workspaceFolder`. Names are
@@ -72,12 +72,12 @@ Chats are Tavern's shared conversation surfaces.
 ## Relationships
 
 - A chat makes it easy to understand which agent participated.
-- A runtime-projected chat includes typed chat participants.
+- A runtime-observed chat includes typed chat participants.
 - A chat participant is either an agent or an observed external participant.
 - The OpenClaw adapter owns platform-specific parsing before Tavern receives the chat. Tavern
   does not parse Discord-specific fields to understand chat membership.
 - The primary agent participates in a chat through concrete sessions.
-- Runtime projections may still include multiple bound agents when product behavior needs them, but
+- Runtime records may still include multiple bound agents when product behavior needs them, but
   normal Tavern chat UI does not expose agent choice.
 - A new session for the agent stays inside the same chat unless Tavern explicitly starts a
   different chat.

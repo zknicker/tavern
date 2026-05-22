@@ -3,6 +3,7 @@ import {
     readRecord,
     readString,
     readStringArray,
+    stripManagedOpenClawPluginInstalls,
 } from './plugin-installs';
 
 export function mergeManagedOpenClawConfig(
@@ -13,9 +14,15 @@ export function mergeManagedOpenClawConfig(
         return managedConfig;
     }
 
-    const sanitizedExistingConfig = stripRemovedManagedOpenClawPlugins(existingConfig);
+    const sanitizedExistingConfig = stripManagedOpenClawPluginInstalls(
+        stripRemovedManagedOpenClawPlugins(existingConfig)
+    );
     const existingChannels = readRecord(sanitizedExistingConfig.channels);
     const managedChannels = readRecord(managedConfig.channels);
+    const auth = mergeManagedAuth(
+        readRecord(managedConfig.auth),
+        readRecord(sanitizedExistingConfig.auth)
+    );
 
     return {
         ...sanitizedExistingConfig,
@@ -24,6 +31,7 @@ export function mergeManagedOpenClawConfig(
             readRecord(managedConfig.agents),
             readRecord(sanitizedExistingConfig.agents)
         ),
+        ...(hasRecordEntries(auth) ? { auth } : {}),
         bindings: sanitizedExistingConfig.bindings ?? managedConfig.bindings,
         channels: {
             ...existingChannels,
@@ -41,12 +49,30 @@ export function mergeManagedOpenClawConfig(
     };
 }
 
+function mergeManagedAuth(
+    managedAuth: Record<string, unknown>,
+    existingAuth: Record<string, unknown>
+) {
+    const order = mergeRecords(readRecord(existingAuth.order), readRecord(managedAuth.order));
+    const profiles = mergeRecords(
+        readRecord(existingAuth.profiles),
+        readRecord(managedAuth.profiles)
+    );
+
+    return {
+        ...existingAuth,
+        ...managedAuth,
+        ...(hasRecordEntries(order) ? { order } : {}),
+        ...(hasRecordEntries(profiles) ? { profiles } : {}),
+    };
+}
+
 export function stripRemovedManagedOpenClawPlugins(
     config: Record<string, unknown>
 ): Record<string, unknown> {
     const plugins = readRecord(config.plugins);
+    const { installs: _installs, ...pluginsWithoutInstalls } = plugins;
     const entries = readRecord(plugins.entries);
-    const installs = readRecord(plugins.installs);
     const allow = readStringArray(plugins.allow).filter(
         (pluginId) => !removedManagedOpenClawPluginIds.has(pluginId)
     );
@@ -55,19 +81,13 @@ export function stripRemovedManagedOpenClawPlugins(
             ([pluginId]) => !removedManagedOpenClawPluginIds.has(pluginId)
         )
     );
-    const strippedInstalls = Object.fromEntries(
-        Object.entries(installs).filter(
-            ([pluginId]) => !removedManagedOpenClawPluginIds.has(pluginId)
-        )
-    );
 
     return {
         ...config,
         plugins: {
-            ...plugins,
+            ...pluginsWithoutInstalls,
             allow,
             entries: strippedEntries,
-            installs: strippedInstalls,
         },
     };
 }
@@ -122,6 +142,8 @@ function mergeManagedPlugins(
     existingPlugins: Record<string, unknown>,
     existingChannels: Record<string, unknown>
 ) {
+    const { installs: _existingInstalls, ...existingOpenClawPlugins } = existingPlugins;
+    const { installs: _managedInstalls, ...managedOpenClawPlugins } = managedPlugins;
     const allow = [
         ...new Set([
             ...readStringArray(managedPlugins.allow),
@@ -131,16 +153,12 @@ function mergeManagedPlugins(
     ];
 
     return {
-        ...existingPlugins,
-        ...managedPlugins,
+        ...existingOpenClawPlugins,
+        ...managedOpenClawPlugins,
         allow,
         entries: mergeRecords(
             readRecord(existingPlugins.entries),
             readRecord(managedPlugins.entries)
-        ),
-        installs: mergeRecords(
-            readRecord(existingPlugins.installs),
-            readRecord(managedPlugins.installs)
         ),
     };
 }
@@ -150,6 +168,10 @@ function mergeRecords(base: Record<string, unknown>, overlay: Record<string, unk
         ...base,
         ...overlay,
     };
+}
+
+function hasRecordEntries(record: Record<string, unknown>) {
+    return Object.keys(record).length > 0;
 }
 
 function readRecordArray(value: unknown): Record<string, unknown>[] {

@@ -1,4 +1,4 @@
-import { syncAgentRuntimeAgents } from '../sync/agent-runtime-projections.ts';
+import { syncAgentRuntimeAgents } from '../sync/agent-runtime-sync.ts';
 
 export interface RuntimeAgentSyncResult {
     deleted: number;

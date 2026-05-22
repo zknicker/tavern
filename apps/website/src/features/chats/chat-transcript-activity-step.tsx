@@ -1,5 +1,7 @@
 import type { HugeiconsIconProps } from '@hugeicons/react';
 import {
+    Alert02Icon,
+    ArchiveIcon,
     BrainIcon,
     BrowserIcon,
     CheckListIcon,
@@ -7,9 +9,12 @@ import {
     PuzzleIcon,
     TerminalIcon,
 } from '@hugeicons-pro/core-stroke-rounded';
+import { useState } from 'react';
+import { Drawer, DrawerTrigger } from '../../components/ui/drawer.tsx';
 import type { ChatTurnProgressStep } from '../../hooks/chats/chat-timeline-state.ts';
 import { useSessionDrawer } from '../../hooks/sessions/use-session-drawer.ts';
 import { cn } from '../../lib/utils.ts';
+import { ToolDrawer } from '../sessions/tools/tool-drawer.tsx';
 import { workerKindConfig } from '../workers/config.ts';
 import type { ActivityItem } from './chat-transcript-activity-utils.ts';
 import type { TranscriptRow } from './chat-transcript-model.ts';
@@ -20,6 +25,8 @@ import { ThinkingStep } from './thinking-steps.tsx';
 type StepIcon = HugeiconsIconProps['icon'];
 
 const progressStepIcon = {
+    approval: Alert02Icon,
+    artifact: ArchiveIcon,
     command: TerminalIcon,
     message: Message01Icon,
     plan: CheckListIcon,
@@ -31,11 +38,13 @@ const progressStepIcon = {
 >;
 
 export function ActivityStep({
+    chatId,
     currentSessionKey,
     index,
     isLast,
     item,
 }: {
+    chatId?: string;
     currentSessionKey?: string | null;
     index: number;
     isLast: boolean;
@@ -59,7 +68,11 @@ export function ActivityStep({
                         key={step.id}
                         label={
                             step.kind === 'tool' ? (
-                                <ActiveProgressToolLabel step={step} />
+                                <ActiveProgressToolLabel
+                                    activityId={step.id}
+                                    chatId={chatId}
+                                    step={step}
+                                />
                             ) : (
                                 step.label
                             )
@@ -73,7 +86,7 @@ export function ActivityStep({
 
     switch (item.row.kind) {
         case 'tool':
-            return <ToolStep index={index} isLast={isLast} row={item.row} />;
+            return <ToolStep chatId={chatId} index={index} isLast={isLast} row={item.row} />;
         case 'worker':
             return <WorkerStep index={index} isLast={isLast} row={item.row} />;
         case 'system':
@@ -90,14 +103,47 @@ export function ActivityStep({
     }
 }
 
-function ActiveProgressToolLabel({ step }: { step: ChatTurnProgressStep }) {
+function ActiveProgressToolLabel({
+    activityId,
+    chatId,
+    step,
+}: {
+    activityId: string;
+    chatId?: string;
+    step: ChatTurnProgressStep;
+}) {
+    const [isOpen, setIsOpen] = useState(false);
     const presentation = getActiveProgressToolPresentation(step);
-
-    return (
+    const label = (
         <span className="inline-flex min-w-0 max-w-full flex-nowrap items-baseline gap-1.5">
             <span className={cn('shrink-0', presentation.verbClassName)}>{presentation.verb}</span>
             <span className="truncate text-muted-foreground">{presentation.target}</span>
         </span>
+    );
+
+    if (!chatId) {
+        return label;
+    }
+
+    return (
+        <Drawer onOpenChange={setIsOpen} open={isOpen} position="right">
+            <DrawerTrigger
+                render={
+                    <button
+                        className="inline-flex min-w-0 max-w-full items-baseline gap-1.5 text-left hover:text-foreground"
+                        type="button"
+                    />
+                }
+            >
+                {label}
+            </DrawerTrigger>
+            <ToolDrawer
+                activityId={activityId}
+                chatId={chatId}
+                isOpen={isOpen}
+                source="chat"
+            />
+        </Drawer>
     );
 }
 

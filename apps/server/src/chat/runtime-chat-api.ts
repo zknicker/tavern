@@ -1,6 +1,13 @@
-import { createTavernClient, type TavernChatActivity, type TavernChatMessage } from '@tavern/sdk';
+import {
+    createTavernClient,
+    type TavernArtifact,
+    type TavernChatMessage,
+    type TavernChatResponse,
+    type TavernResponseActivity,
+} from '@tavern/sdk';
 import { listAgents } from '../agents/catalog.ts';
 import { getActiveAgentRuntimeConnection } from '../storage/agent-runtime-connections.ts';
+import { buildToolSummaryFromValues } from '../tools/summary.ts';
 import type { ChatLogPage } from './contracts.ts';
 
 export async function listRuntimeChatRows(chatId: string): Promise<ChatLogPage['rows'] | null> {
@@ -11,12 +18,13 @@ export async function listRuntimeChatRows(chatId: string): Promise<ChatLogPage['
     }
 
     const client = createTavernClient({ baseUrl: connection.baseUrl });
-    const [agents, page, activityPage] = await Promise.all([
+    const [agents, page, responsePage] = await Promise.all([
         listAgents(),
         client.chat.messages(chatId, { limit: 500 }),
-        client.chat.activity(),
+        client.chat.responses(chatId, { limit: 500 }),
     ]);
     const agentsById = new Map(agents.map((agent) => [agent.id, agent]));
+    const responsesById = new Map(responsePage.responses.map((response) => [response.id, response]));
 
     const finalReplyTextByRunId = new Map(
         page.messages
@@ -25,16 +33,39 @@ export async function listRuntimeChatRows(chatId: string): Promise<ChatLogPage['
             .filter((entry): entry is [string, string] => Boolean(entry[0]))
     );
     const messageRows = page.messages.flatMap((message) => messageToChatRows(message, agentsById));
-    const activityRows = activityPage.activities
-        .filter((activity) => activity.chat_id === chatId)
-        .flatMap((activity) => activityToChatRows(activity, finalReplyTextByRunId));
-    const rows = [...messageRows, ...activityRows];
+    const activityRows = responsePage.activity.flatMap((activity) =>
+        activityToChatRows(activity, responsesById, finalReplyTextByRunId)
+    );
+    const artifactRows = responsePage.artifacts.map(artifactToChatRow);
+    const rows = [...messageRows, ...activityRows, ...artifactRows];
 
     return rows.sort((left, right) => {
         const timestampDelta = rowTimestamp(left) - rowTimestamp(right);
 
         return timestampDelta || rowSortRank(left) - rowSortRank(right);
     });
+}
+
+function artifactToChatRow(artifact: TavernArtifact): ChatLogPage['rows'][number] {
+    return {
+        artifact: {
+            artifactType: artifact.kind,
+            createdAt: artifact.created_at,
+            id: artifact.id,
+            mimeType: artifact.mime_type,
+            path: artifact.content_ref,
+            payload: {
+                contentRef: artifact.content_ref,
+                contentText: artifact.content_text,
+                metadata: artifact.metadata,
+                title: artifact.title,
+            },
+        },
+        id: artifact.id,
+        kind: 'system',
+        systemKind: 'artifact',
+        timestamp: artifact.created_at,
+    };
 }
 
 function messageToChatRows(
@@ -79,81 +110,118 @@ function messageToChatRows(
 }
 
 function activityToChatRows(
-    activity: TavernChatActivity,
+    activity: TavernResponseActivity,
+    responsesById: ReadonlyMap<string, TavernChatResponse>,
     finalReplyTextByRunId: ReadonlyMap<string, string>
 ): ChatLogPage['rows'] {
     if (activity.status !== 'completed' && activity.status !== 'failed') {
         return [];
     }
 
-    const sessionKey = activityMetadataString(activity, 'sessionKey');
+    const response = responsesById.get(activity.response_id) ?? null;
+    const sessionKey = runtimeMetadataString(response, 'sessionKey');
     const actor = {
-        id: activityMetadataString(activity, 'agentId') ?? activity.agent_id,
+        id: runtimeMetadataString(response, 'agentId') ?? response?.participant_id ?? 'agt_unknown',
         kind: 'agent' as const,
     };
 
-    return activity.steps
-        .filter(
-            (step) =>
-                step.kind === 'tool' ||
-                step.kind === 'command' ||
-                (step.kind === 'message' &&
-                    !isFinalAssistantReplyStep(activity, step, finalReplyTextByRunId)) ||
-                step.kind === 'custom' ||
-                step.kind === 'thinking'
-        )
-        .map((step) => {
-            const detail = typeof step.metadata.detail === 'string' ? step.metadata.detail : null;
-            const summaryParts = [step.label, detail].filter((part): part is string =>
-                Boolean(part?.trim())
-            );
+    if (!isRenderableActivity(activity, response, finalReplyTextByRunId)) {
+        return [];
+    }
 
-            return {
-                actor,
-                completedAt: step.completed_at,
-                connectsToNext: false,
-                connectsToPrevious: false,
-                id: `activity:${activity.run_id}:${step.id}`,
-                isFirstInGroup: true,
-                kind: 'tool' as const,
-                sessionKey,
-                spawnedRelationships: [],
-                startedAt: step.started_at,
-                toolCall: {
-                    callId: activityStepMetadataString(step, 'toolCallId'),
-                    facts: detail
-                        ? [{ label: 'Detail', tone: 'default' as const, value: detail }]
-                        : [],
-                    label: step.label,
-                    name:
-                        activityStepMetadataString(step, 'toolName') ??
-                        (step.kind === 'command'
-                            ? 'command'
-                            : step.kind === 'thinking'
-                              ? 'reasoning'
-                              : step.kind === 'message'
-                                ? 'message'
-                                : 'tool'),
-                    status: step.status === 'failed' ? 'error' : step.status,
-                    summaryParts,
-                },
-            };
-        });
+    const toolMetadata = readRecord(activity.metadata.tool);
+    const runtime = readRecord(activity.metadata.runtime);
+    const toolName = readString(runtime.toolName) ?? readString(toolMetadata.name) ?? activityName(activity);
+    const toolCallId = readString(runtime.toolCallId);
+    const toolCall = buildToolSummaryFromValues({
+        argumentsValue: Object.hasOwn(toolMetadata, 'arguments') ? toolMetadata.arguments : null,
+        callId: toolCallId,
+        isError: activity.status === 'failed',
+        name: toolName,
+        resultValue: Object.hasOwn(toolMetadata, 'result') ? toolMetadata.result : null,
+    });
+    const titledToolCall = {
+        ...toolCall,
+        label: activity.title,
+        summaryParts: [activity.title],
+    };
+
+    return [
+        {
+            actor,
+            completedAt: activity.completed_at,
+            connectsToNext: false,
+            connectsToPrevious: false,
+            id: activity.id,
+            isFirstInGroup: true,
+            kind: 'tool' as const,
+            sessionKey,
+            spawnedRelationships: [],
+            startedAt: activity.started_at,
+            toolCall: titledToolCall,
+        },
+    ];
 }
 
 function isFinalAssistantReplyStep(
-    activity: TavernChatActivity,
-    step: TavernChatActivity['steps'][number],
+    activity: TavernResponseActivity,
+    response: TavernChatResponse | null,
     finalReplyTextByRunId: ReadonlyMap<string, string>
 ) {
-    const detail = typeof step.metadata.detail === 'string' ? step.metadata.detail.trim() : '';
-    const finalReplyText = finalReplyTextByRunId.get(activity.run_id)?.trim() ?? '';
+    const detail = activity.detail?.trim() ?? '';
+    const runId = runtimeMetadataString(response, 'runId');
+    const finalReplyText = runId ? (finalReplyTextByRunId.get(runId)?.trim() ?? '') : '';
 
     return detail.length > 0 && detail === finalReplyText;
 }
 
-function activityStepMetadataString(step: TavernChatActivity['steps'][number], key: string) {
-    const value = step.metadata[key];
+function isRenderableActivity(
+    activity: TavernResponseActivity,
+    response: TavernChatResponse | null,
+    finalReplyTextByRunId: ReadonlyMap<string, string>
+) {
+    if (activity.kind === 'message') {
+        return !isFinalAssistantReplyStep(activity, response, finalReplyTextByRunId);
+    }
+
+    return (
+        activity.kind === 'tool_call' ||
+        activity.kind === 'tool_result' ||
+        activity.kind === 'command' ||
+        activity.kind === 'approval' ||
+        activity.kind === 'artifact' ||
+        activity.kind === 'custom' ||
+        activity.kind === 'reasoning' ||
+        activity.kind === 'planning'
+    );
+}
+
+function activityName(activity: TavernResponseActivity) {
+    if (activity.kind === 'command') {
+        return 'command';
+    }
+    if (activity.kind === 'approval') {
+        return 'approval';
+    }
+    if (activity.kind === 'artifact') {
+        return 'artifact';
+    }
+    if (activity.kind === 'planning' || activity.kind === 'reasoning') {
+        return 'reasoning';
+    }
+    if (activity.kind === 'message') {
+        return 'message';
+    }
+    return 'tool';
+}
+
+function readRecord(value: unknown): Record<string, unknown> {
+    return value && typeof value === 'object' && !Array.isArray(value)
+        ? (value as Record<string, unknown>)
+        : {};
+}
+
+function readString(value: unknown) {
     return typeof value === 'string' && value.trim().length > 0 ? value : null;
 }
 
@@ -182,19 +250,8 @@ function messageText(message: TavernChatMessage) {
         .join('\n');
 }
 
-function activityMetadataString(activity: TavernChatActivity, key: string) {
-    const runtime = activity.metadata.runtime;
-
-    if (!(runtime && typeof runtime === 'object' && !Array.isArray(runtime))) {
-        return null;
-    }
-
-    const value = (runtime as Record<string, unknown>)[key];
-    return typeof value === 'string' ? value : null;
-}
-
-function runtimeMetadataString(message: TavernChatMessage, key: string) {
-    const runtime = message.metadata.runtime;
+function runtimeMetadataString(message: TavernChatMessage | TavernChatResponse | null, key: string) {
+    const runtime = message?.metadata.runtime;
 
     if (!(runtime && typeof runtime === 'object' && !Array.isArray(runtime))) {
         return null;

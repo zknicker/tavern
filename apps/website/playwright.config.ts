@@ -1,3 +1,4 @@
+import { fileURLToPath } from 'node:url';
 import { defineConfig } from '@playwright/test';
 
 const e2eMode = process.env.TAVERN_E2E_MODE ?? 'mock-provider';
@@ -13,6 +14,7 @@ const runtimeWebServerTimeoutMs = Number.parseInt(
     process.env.TAVERN_RUNTIME_WEBSERVER_TIMEOUT_MS ?? '180000',
     10
 );
+const mentionPluginRoot = fileURLToPath(new URL('./e2e/fixtures/codex-plugins/', import.meta.url));
 
 export default defineConfig({
     fullyParallel: false,
@@ -38,7 +40,7 @@ function buildWebServers() {
                 url: `http://127.0.0.1:${runtimePort}/openclaw-gateway/status`,
             },
             {
-                command: `TAVERN_E2E_RUN_ID=${runId} SERVER_PORT=${serverPort} APP_ORIGIN=http://127.0.0.1:${websitePort} TAVERN_RUNTIME_URL=http://127.0.0.1:${runtimePort} bun e2e/start-tavern-server.ts`,
+                command: `TAVERN_E2E_RUN_ID=${runId} SERVER_PORT=${serverPort} APP_ORIGIN=http://127.0.0.1:${websitePort} TAVERN_RUNTIME_URL=http://127.0.0.1:${runtimePort} TAVERN_MENTION_CODEX_PLUGIN_ROOT=${mentionPluginRoot} bun e2e/start-tavern-server.ts`,
                 reuseExistingServer: false,
                 stderr: 'pipe',
                 stdout: 'pipe',
@@ -74,7 +76,7 @@ function buildWebServers() {
             url: `http://127.0.0.1:${runtimePort}/openclaw-gateway/status`,
         },
         {
-            command: `TAVERN_E2E_RUN_ID=${runId} SERVER_PORT=${serverPort} APP_ORIGIN=http://127.0.0.1:${websitePort} TAVERN_RUNTIME_URL=http://127.0.0.1:${runtimePort} bun e2e/start-tavern-server.ts`,
+            command: `TAVERN_E2E_RUN_ID=${runId} SERVER_PORT=${serverPort} APP_ORIGIN=http://127.0.0.1:${websitePort} TAVERN_RUNTIME_URL=http://127.0.0.1:${runtimePort} TAVERN_MENTION_CODEX_PLUGIN_ROOT=${mentionPluginRoot} bun e2e/start-tavern-server.ts`,
             reuseExistingServer: false,
             stderr: 'pipe',
             stdout: 'pipe',

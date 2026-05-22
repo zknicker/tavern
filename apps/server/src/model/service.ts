@@ -3,7 +3,7 @@ import { getAgentRuntimeModels } from '../agent-runtime/models.ts';
 import { listAgentCatalog } from '../agents/catalog.ts';
 import { getOpenRouterSettings } from '../openrouter/settings.ts';
 import { listConfiguredAgentRuntimeConnections } from '../storage/agent-runtime-connections.ts';
-import { listAgents as listAgentProjections, parseAgentRawJson } from '../storage/agents.ts';
+import { listAgents as listAgentRecords, parseAgentRawJson } from '../storage/agents.ts';
 import {
     listAgentModelSettings,
     listModelCatalogRecords,
@@ -147,17 +147,17 @@ async function buildModels() {
 }
 
 async function buildAgentSettings() {
-    const [agents, projections] = await Promise.all([listAgentCatalog(), listAgentProjections()]);
-    const projectionsByAgentId = new Map(
-        projections.map((projection) => [projection.id, projection] as const)
+    const [agents, agentRecords] = await Promise.all([listAgentCatalog(), listAgentRecords()]);
+    const agentRecordsById = new Map(
+        agentRecords.map((agentRecord) => [agentRecord.id, agentRecord] as const)
     );
     const settings = await listAgentModelSettings(agents.map((agent) => agent.id));
     const settingsByAgentId = new Map(settings.map((setting) => [setting.agentId, setting]));
 
     return agents.map((agent) => {
         const setting = settingsByAgentId.get(agent.id);
-        const projection = projectionsByAgentId.get(agent.id);
-        const rawAgent = projection ? parseAgentRawJson(projection) : null;
+        const agentRecord = agentRecordsById.get(agent.id);
+        const rawAgent = agentRecord ? parseAgentRawJson(agentRecord) : null;
         const runtimeModelName = rawAgent?.openClawModelName ?? null;
         const runtimeThinkingDefault = rawAgent?.thinkingDefault ?? null;
         const runtimeModel = runtimeModelName
@@ -167,15 +167,15 @@ async function buildAgentSettings() {
                   provider: runtimeModelName.provider,
               })
             : null;
-        const settingIsNewerThanProjection =
+        const settingIsNewerThanRuntimeRecord =
             setting?.syncedAt &&
-            projection?.lastSyncedAt &&
-            new Date(setting.syncedAt).getTime() > new Date(projection.lastSyncedAt).getTime();
+            agentRecord?.lastSyncedAt &&
+            new Date(setting.syncedAt).getTime() > new Date(agentRecord.lastSyncedAt).getTime();
         const settingErrorIsCurrent =
             setting?.syncError &&
-            projection?.lastSyncedAt &&
-            new Date(setting.updatedAt).getTime() > new Date(projection.lastSyncedAt).getTime();
-        const shouldPreferSetting = Boolean(settingIsNewerThanProjection);
+            agentRecord?.lastSyncedAt &&
+            new Date(setting.updatedAt).getTime() > new Date(agentRecord.lastSyncedAt).getTime();
+        const shouldPreferSetting = Boolean(settingIsNewerThanRuntimeRecord);
         const selectedHarness = shouldPreferSetting
             ? ((setting?.harness as OpenClawHarness | undefined) ?? runtimeModel?.openClawHarness)
             : (runtimeModel?.openClawHarness ?? (setting?.harness as OpenClawHarness | undefined));

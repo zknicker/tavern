@@ -1,7 +1,7 @@
 ---
-summary: Tavern data model for Runtime chat tables, semantic ids, transaction rules, execution evidence, app cache, FTS, and invariants.
+summary: Tavern data model for Runtime chat tables, responses, activity, artifacts, semantic ids, transactions, execution evidence, app cache, FTS, and invariants.
 read_when:
-  - changing SQLite tables, ids, projection invariants, or runtime transcript storage
+  - changing SQLite tables, ids, sync invariants, or runtime transcript storage
   - changing chat/session/message identity, event recovery, or sync semantics
 ---
 
@@ -11,20 +11,20 @@ Tavern Runtime is the always-on chat server.
 
 OpenClaw is an agent runtime participating in Tavern chats. It owns sessions,
 turns, tools, model calls, files, and native transcripts. Tavern Runtime owns
-chats, messages, participants, sequence, events, reads, soft deletes,
-automations, deliveries, activity, and the product timeline.
+chats, messages, responses, activity, artifacts, participants, sequence, events,
+reads, soft deletes, automations, deliveries, and the product timeline.
 
 ## Source Files
 
 | Layer | Source | Role |
 | --- | --- | --- |
 | Runtime schema | `apps/runtime/src/db/schema.ts` | Runtime SQLite schema and fresh setup |
-| Runtime chat store | `apps/runtime/src/tavern/chat-api/` | OpenAPI-backed chat, message, delivery, activity, read, and event store |
+| Runtime chat store | `apps/runtime/src/tavern/chat-api/` | OpenAPI-backed chat, message, response, activity, artifact, delivery, read, and event store |
 | Runtime channel outbox | `apps/runtime/src/tavern/channel-store.ts` | Tavern Messenger plugin ingress queue and accepted-message receipt state |
 | Runtime Cortex store | `apps/runtime/src/cortex/` | Proposed Runtime-owned GBrain-style page, chunk, link, embedding, audit, and maintenance store |
 | Runtime chat tests | `apps/runtime/src/tavern/chat-api-store.test.ts` | Contract, identity, sequence, event, read, and route behavior |
 | App schema | `apps/server/src/db/bootstrap.ts` | App SQLite fresh setup |
-| App Drizzle schema | `apps/server/src/db/schema/` | Typed app cache/projection tables |
+| App Drizzle schema | `apps/server/src/db/schema/` | Typed app cache and synced runtime tables |
 | Tavern API package | `packages/tavern-api/src/` | OpenAPI-generated and Zod-backed API contracts |
 | OpenClaw state | Managed OpenClaw store | Native execution and transcripts |
 
@@ -55,18 +55,19 @@ Use semantic prefixes at the Tavern API boundary.
 | `cht_` | chat |
 | `msg_` | message |
 | `part_` | message part |
+| `rsp_` | response |
+| `act_` | response activity |
+| `art_` | artifact |
 | `usr_` | user participant |
 | `agt_` | agent participant |
 | `sys_` | system participant |
 | `evt_` | event |
 | `del_` | delivery |
-| `run_` | Tavern-visible run |
 | `rt_` | runtime connection |
 
-Activity and read markers are scoped records, not standalone product ids.
+Read markers are scoped records, not standalone product ids.
 OpenClaw ids and runtime agent ids remain source ids. Store them in runtime
-metadata or projection fields, not as Tavern product ids unless Tavern minted
-them.
+metadata or source fields, not as Tavern product ids unless Tavern minted them.
 
 Cortex ids use Tavern product identity:
 
@@ -86,10 +87,12 @@ chats
 chat_participants
 chat_messages
 chat_message_parts
+chat_responses
+chat_response_activity
+chat_artifacts
+chat_deliveries
 chat_events
 chat_reads
-chat_deliveries
-chat_activity
 ```
 
 These tables live in Runtime SQLite and back the OpenAPI chat contract.
@@ -226,35 +229,137 @@ idx_chat_message_parts_tool_call(tool_call_id)
 Hidden chain-of-thought is not a message part. Provider-exposed reasoning
 summaries can be a `reasoning_summary` part or activity summary.
 
+## `chat_responses`
+
+Durable participant responses to chat messages.
+
+```text
+chat_responses
+  id                       TEXT PRIMARY KEY
+  chat_id                  TEXT NOT NULL
+  participant_id           TEXT NOT NULL
+  request_message_id       TEXT
+  response_message_id      TEXT
+  status                   TEXT NOT NULL        -- queued, running, completed, failed, cancelled
+  summary                  TEXT
+  metadata_json            TEXT NOT NULL DEFAULT '{}'
+  created_at               TEXT NOT NULL
+  updated_at               TEXT NOT NULL
+  completed_at             TEXT
+```
+
+Indexes:
+
+```text
+idx_chat_responses_chat_created(chat_id, created_at, id)
+idx_chat_responses_chat_updated(chat_id, updated_at, id)
+```
+
+Rules:
+
+* A response is the chat product record for one participant's attempt to answer
+  or act on a message.
+* Runtime, session, run, and turn ids remain metadata on the response.
+* `created_at` defines stable response pagination. `updated_at` changes when
+  activity or final state changes.
+* Running responses are durable and recoverable after reload.
+* Completion or failure updates the same response row.
+
+## `chat_response_activity`
+
+Ordered durable work rows inside a response.
+
+```text
+chat_response_activity
+  id                       TEXT PRIMARY KEY
+  response_id              TEXT NOT NULL
+  chat_id                  TEXT NOT NULL
+  sequence                 INTEGER NOT NULL
+  kind                     TEXT NOT NULL        -- planning, reasoning, tool_call, tool_result, command, approval, message, artifact, custom
+  status                   TEXT NOT NULL        -- queued, running, completed, failed, cancelled
+  title                    TEXT NOT NULL
+  detail                   TEXT
+  summary                  TEXT
+  artifact_ids_json        TEXT NOT NULL DEFAULT '[]'
+  metadata_json            TEXT NOT NULL DEFAULT '{}'
+  started_at               TEXT NOT NULL
+  updated_at               TEXT NOT NULL
+  completed_at             TEXT
+```
+
+Indexes and uniqueness:
+
+```text
+UNIQUE(response_id, sequence)
+idx_chat_response_activity_response_sequence(response_id, sequence)
+idx_chat_response_activity_chat_sequence(chat_id, sequence)
+```
+
+Rules:
+
+* Activity rows are statusful and updated in place as work progresses.
+* Tool calls, tool results, reasoning summaries, plans, approvals, and message
+  references are activity.
+* Runtime tool ids, tool names, arguments, results, and source facts live in
+  `metadata_json`.
+* Reload recovery reads the same activity rows for running and completed
+  responses.
+* Hidden chain-of-thought is never stored here.
+
+## `chat_artifacts`
+
+Durable renderable outputs attached to a message, response, or activity row.
+
+```text
+chat_artifacts
+  id                       TEXT PRIMARY KEY
+  chat_id                  TEXT NOT NULL
+  response_id              TEXT
+  activity_id              TEXT
+  message_id               TEXT
+  kind                     TEXT NOT NULL        -- code, image, file, diff, document, chart, text, custom
+  title                    TEXT
+  content_text             TEXT
+  content_ref              TEXT
+  mime_type                TEXT
+  metadata_json            TEXT NOT NULL DEFAULT '{}'
+  created_at               TEXT NOT NULL
+  updated_at               TEXT NOT NULL
+```
+
+Indexes:
+
+```text
+idx_chat_artifacts_chat_updated(chat_id, updated_at, id)
+```
+
+Rules:
+
+* Artifacts are renderable outputs, not tool calls by themselves.
+* Code blocks, screenshots, generated images, files, diffs, documents, and
+  charts are artifacts.
+* Tool activity may reference artifacts it produced.
+
 ## `chat_events`
 
 Recoverable notifications inserted with the mutation they describe.
 
 ```text
 chat_events
-  id                    TEXT PRIMARY KEY
-  cursor                INTEGER NOT NULL
-  type                  TEXT NOT NULL
-  actor_participant_id  TEXT
-  chat_id               TEXT
-  message_id            TEXT
-  delivery_id           TEXT
-  activity_id           TEXT
-  sequence              INTEGER
-  is_private            INTEGER NOT NULL DEFAULT 0
-  payload_json          TEXT NOT NULL DEFAULT '{}'
+  cursor                INTEGER PRIMARY KEY
+  id                    TEXT NOT NULL UNIQUE
+  event_type            TEXT NOT NULL
+  chat_id               TEXT NOT NULL
+  event_json            TEXT NOT NULL
   created_at            TEXT NOT NULL
+  is_private            INTEGER NOT NULL DEFAULT 0
+  recipients_json       TEXT NOT NULL DEFAULT '[]'
 ```
 
 Indexes and uniqueness:
 
 ```text
-UNIQUE(cursor)
 idx_chat_events_chat_cursor(chat_id, cursor)
-idx_chat_events_message(message_id)
-idx_chat_events_delivery(delivery_id)
-idx_chat_events_activity(activity_id)
-idx_chat_events_type_cursor(type, cursor)
 ```
 
 Rules:
@@ -273,21 +378,21 @@ Per-reader read pointers.
 ```text
 chat_reads
   chat_id               TEXT NOT NULL
-  reader_participant_id TEXT NOT NULL
+  reader_id             TEXT NOT NULL
   last_read_sequence    INTEGER NOT NULL
   read_at               TEXT NOT NULL
+  cursor                INTEGER NOT NULL
 ```
 
 Indexes and uniqueness:
 
 ```text
-PRIMARY KEY(chat_id, reader_participant_id)
-idx_chat_reads_reader(reader_participant_id)
+PRIMARY KEY(chat_id, reader_id)
 ```
 
 Rules:
 
-* Reads are monotonic per `(chat_id, reader_participant_id)`.
+* Reads are monotonic per `(chat_id, reader_id)`.
 * The server caps `last_read_sequence` to the chat's current last sequence.
 * Read events are private to the reader.
 
@@ -299,62 +404,17 @@ Assistant delivery receipts.
 chat_deliveries
   id                    TEXT PRIMARY KEY
   chat_id               TEXT NOT NULL
-  request_message_id    TEXT
-  message_id            TEXT
-  author_participant_id TEXT NOT NULL
-  status                TEXT NOT NULL        -- delivered, suppressed, failed
-  run_id                TEXT
-  session_key           TEXT
-  session_id            TEXT
+  agent_id              TEXT NOT NULL
+  turn_id               TEXT
+  message_id            TEXT NOT NULL
+  cursor                INTEGER NOT NULL
   metadata_json         TEXT NOT NULL DEFAULT '{}'
-  delivered_at          TEXT
   created_at            TEXT NOT NULL
-  updated_at            TEXT NOT NULL
-```
-
-Indexes:
-
-```text
-idx_chat_deliveries_chat(chat_id)
-idx_chat_deliveries_request_message(request_message_id)
-idx_chat_deliveries_message(message_id)
-idx_chat_deliveries_run(run_id)
-idx_chat_deliveries_session(session_key)
 ```
 
 Duplicate `delivery.id` returns the existing delivery receipt. Duplicate
 assistant `message.id` links the delivery to the existing durable message
 instead of creating another message row.
-
-## `chat_activity`
-
-Latest active work state for a chat, message, delivery, or run.
-
-```text
-chat_activity
-  chat_id               TEXT PRIMARY KEY
-  run_id                TEXT
-  agent_id              TEXT NOT NULL
-  status                TEXT NOT NULL        -- queued, running, completed, failed
-  summary               TEXT
-  steps_json            TEXT NOT NULL DEFAULT '[]'
-  metadata_json         TEXT NOT NULL DEFAULT '{}'
-  updated_at            TEXT NOT NULL
-```
-
-Indexes:
-
-```text
-PRIMARY KEY(chat_id)
-```
-
-Rules:
-
-* Activity is not chat history.
-* Runtime stores latest active state in `chat_activity`.
-* Runtime emits `chat.activity.*` events as notifications.
-* Completion closes activity without creating message rows.
-* Hidden chain-of-thought is never stored here.
 
 ## Runtime Execution Evidence
 
@@ -374,6 +434,7 @@ runtime_turns
   id                    TEXT PRIMARY KEY
   chat_id               TEXT NOT NULL
   request_message_id    TEXT
+  response_id           TEXT
   response_message_id   TEXT
   agent_id              TEXT NOT NULL
   session_key           TEXT NOT NULL
@@ -398,6 +459,8 @@ runtime_transcript_messages
 runtime_tool_calls
   id                    TEXT PRIMARY KEY
   chat_id               TEXT
+  response_id           TEXT
+  activity_id           TEXT
   message_id            TEXT
   session_key           TEXT NOT NULL
   run_id                TEXT
@@ -409,7 +472,9 @@ runtime_tool_calls
 ```
 
 OpenClaw transcript messages, tool calls, links, and artifacts are runtime
-evidence. They enrich the UI, but they do not replace canonical chat history.
+evidence. Sync paths map user-visible work into responses, response activity,
+and artifacts by stable ids. They enrich the UI, but they do not replace
+canonical chat history.
 
 ## Cortex Tables
 
@@ -468,9 +533,11 @@ Assistant delivery:
 Activity update:
 
 1. Open `BEGIN IMMEDIATE`.
-2. Upsert `chat_activity`.
-3. Insert `chat_events(chat.activity.updated|completed|failed)`.
-4. Commit.
+2. Resolve or create `chat_responses`.
+3. Upsert `chat_response_activity` by stable activity or runtime tool id.
+4. Upsert any referenced `chat_artifacts`.
+5. Insert `chat_events(response.*|activity.*|artifact.*)`.
+6. Commit.
 
 Read update:
 
@@ -487,11 +554,11 @@ App tables are cache, settings, or execution evidence:
 | Current table | Runtime role |
 | --- | --- |
 | `chats` | app cache of Runtime `chats` |
-| `session_runs` | `runtime_sessions` and `runtime_turns` evidence |
+| `session_runs` | runtime session/turn evidence linked to `chat_responses` |
 | `session_messages` | `runtime_transcript_messages` evidence |
-| `session_message_parts` | `runtime_transcript_messages` or runtime artifacts evidence |
-| `session_tool_calls` | `runtime_tool_calls` |
-| `session_artifacts` | runtime artifacts |
+| `session_message_parts` | transcript evidence and candidate `chat_artifacts` |
+| `session_tool_calls` | tool evidence linked to `chat_response_activity` |
+| `session_artifacts` | candidate `chat_artifacts` |
 | `session_deliveries` | `chat_deliveries` or runtime delivery evidence |
 | `cron_jobs` | `automations` |
 | `cron_runs` | `automation_runs` |
@@ -516,7 +583,8 @@ transactional writes. Search indexes are derived state, not the source of truth.
   run ids.
 * Reconciliation never uses content/timestamp duplicate detection.
 * Events notify; runtime durable reads recover.
-* Volatile activity never becomes a second chat history.
+* Response activity is durable and statusful.
+* App-local progress hints never become a second chat history.
 * Cortex capture and recall fail visibly when required embeddings are stale or
   unavailable.
 

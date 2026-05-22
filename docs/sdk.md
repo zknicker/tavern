@@ -79,7 +79,7 @@ Ownership:
 | --- | --- |
 | App and runtime API surfaces | [API Overview](api/overview.md) |
 | Realtime subscriptions and recovery | [Realtime](api/realtime.md) |
-| Chat messages, delivery, live activity | [Chat API](api/chat.md) |
+| Chat messages, responses, activity, artifacts, and delivery | [Chat API](api/chat.md) |
 | Health, status, and admin control | [Admin API](api/admin.md) |
 | Agents, models, and tool policy | [Agents API](api/agents.md) |
 | Memory inspection and review | [Memory API](api/memory.md) |
@@ -97,5 +97,6 @@ Ownership:
   nonces.
 * **History orders.** Order chat history by per-chat sequence.
 * **Events notify.** Recover reloads and missed websockets from durable reads.
-* **Activity is live.** Store live work in activity, not transcript rows.
+* **Activity is durable.** Store response work in activity rows, not transcript
+  rows.
 * **Tavern nouns lead.** Keep runtime words in metadata.

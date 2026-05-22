@@ -2,18 +2,18 @@ import { TRPCError } from '@trpc/server';
 import { requireConfiguredAgentRuntimeClientForRuntimeId } from '../agent-runtime/configured-client.ts';
 import * as agentRuntimeCron from '../agent-runtime/cron.ts';
 import { emitCronUpdated, emitSyncDataUpdated } from '../api/invalidation-events.ts';
-import { getAgent as getAgentProjection } from '../storage/agents.ts';
-import { getChatProjection } from '../storage/chats.ts';
-import { getCronJobProjection, saveCronJobProjection } from '../storage/cron-jobs.ts';
-import { syncAgentRuntimeCron } from '../sync/agent-runtime-projections.ts';
+import { getAgent as getAgentRecord } from '../storage/agents.ts';
+import { getChatRecord } from '../storage/chats.ts';
+import { getCronJobRecord, saveCronJobRecord } from '../storage/cron-jobs.ts';
+import { syncAgentRuntimeCron } from '../sync/agent-runtime-sync.ts';
 import { updateCronJobInputSchema } from './contracts.ts';
 import { buildOpenClawCronSchedule } from './schedule-config.ts';
 
 export async function updateCronJob(input: unknown) {
     const parsed = updateCronJobInputSchema.parse(input);
-    const projection = await getCronJobProjection(parsed.jobId);
+    const job = await getCronJobRecord(parsed.jobId);
 
-    if (!projection) {
+    if (!job) {
         throw new TRPCError({
             code: 'NOT_FOUND',
             message: 'Cron job not found.',
@@ -21,15 +21,15 @@ export async function updateCronJob(input: unknown) {
     }
 
     const [agent, deliveryChat] = await Promise.all([
-        parsed.patch.agentId ? getAgentProjection(parsed.patch.agentId) : null,
-        parsed.patch.delivery?.chatId ? getChatProjection(parsed.patch.delivery.chatId) : null,
+        parsed.patch.agentId ? getAgentRecord(parsed.patch.agentId) : null,
+        parsed.patch.delivery?.chatId ? getChatRecord(parsed.patch.delivery.chatId) : null,
     ]);
 
     if (parsed.patch.agentId && !agent) {
-        throw new Error(`No synced agent named "${parsed.patch.agentId}" exists.`);
+        throw new Error(`No agent named "${parsed.patch.agentId}" exists.`);
     }
 
-    if (agent && agent.runtimeId !== projection.runtimeId) {
+    if (agent && agent.runtimeId !== job.runtimeId) {
         throw new Error('Cron jobs cannot move between runtime namespaces.');
     }
 
@@ -37,16 +37,14 @@ export async function updateCronJob(input: unknown) {
         throw new Error(`No Tavern chat named "${parsed.patch.delivery.chatId}" exists.`);
     }
 
-    if (deliveryChat && deliveryChat.runtimeId !== projection.runtimeId) {
+    if (deliveryChat && deliveryChat.runtimeId !== job.runtimeId) {
         throw new Error('Cron delivery chat must belong to the same runtime as the cron job.');
     }
 
-    const runtimeClient = await requireConfiguredAgentRuntimeClientForRuntimeId(
-        projection.runtimeId
-    );
+    const runtimeClient = await requireConfiguredAgentRuntimeClientForRuntimeId(job.runtimeId);
 
     const updated = await agentRuntimeCron.updateCronJob(
-        projection.runtimeCronJobId,
+        job.runtimeCronJobId,
         {
             agentId: agent?.id ?? parsed.patch.agentId,
             deleteAfterRun: parsed.patch.deleteAfterRun,
@@ -63,12 +61,12 @@ export async function updateCronJob(input: unknown) {
         },
         runtimeClient
     );
-    await saveCronJobProjection({
+    await saveCronJobRecord({
         job: updated,
-        runtimeId: projection.runtimeId,
+        runtimeId: job.runtimeId,
     });
     void syncAgentRuntimeCron().catch((error) => {
-        console.warn('[tavern] failed to refresh cron projections after update', error);
+        console.warn('[tavern] failed to refresh cron records after update', error);
     });
     emitCronUpdated();
     emitSyncDataUpdated();

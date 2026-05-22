@@ -8,13 +8,13 @@ cursors instead of reconstructing the product timeline from OpenClaw transcripts
 
 ## Problem
 
-Tavern started as a local app projection over managed OpenClaw. That shape is
+Tavern started as a local app wrapper over managed OpenClaw. That shape is
 not enough for always-on agent work:
 
 * Automations need to create messages while the app is closed.
 * Agents need to post replies into chats while the app is closed.
 * Reconnect recovers from Tavern chat history, not from fuzzy OpenClaw
-  transcript projection.
+  transcript mapping.
 * Websocket delivery can drop, but missed state must remain recoverable.
 
 ## Decision
@@ -25,10 +25,12 @@ Tavern Runtime owns canonical chat state:
 * participants
 * messages
 * message parts
+* responses
+* response activity
+* artifacts
 * events
 * reads
 * deliveries
-* activity
 * automations and automation runs
 
 Tavern App is the first-party client. It may cache data and keep presentation
@@ -47,15 +49,16 @@ chats
 chat_participants
 chat_messages
 chat_message_parts
+chat_responses
+chat_response_activity
+chat_artifacts
 chat_events
 chat_reads
 chat_deliveries
-chat_activity
 runtime_sessions
 runtime_turns
 runtime_transcript_messages
 runtime_tool_calls
-runtime_artifacts
 automations
 automation_runs
 ```
@@ -71,11 +74,11 @@ App tables are cache, settings, or runtime evidence:
 | Current table | Runtime role |
 | --- | --- |
 | `chats` | app cache of runtime `chats` |
-| `session_runs` | `runtime_sessions` / `runtime_turns` evidence |
+| `session_runs` | runtime session/turn evidence linked to `chat_responses` |
 | `session_messages` | `runtime_transcript_messages` evidence |
-| `session_message_parts` | `runtime_transcript_messages` or `runtime_artifacts` evidence |
-| `session_tool_calls` | `runtime_tool_calls` |
-| `session_artifacts` | `runtime_artifacts` |
+| `session_message_parts` | transcript evidence and candidate `chat_artifacts` |
+| `session_tool_calls` | tool evidence linked to `chat_response_activity` |
+| `session_artifacts` | candidate `chat_artifacts` |
 | `cron_jobs` | `automations` |
 | `cron_runs` | `automation_runs` |
 
@@ -87,9 +90,11 @@ App tables are cache, settings, or runtime evidence:
 * Duplicate `message.id` or `(chat_id, nonce)` returns the existing message.
 * Plugin relay delivery is queued after the durable message exists.
 * Assistant replies are Tavern messages authored by agent participants.
+* Agent work is a durable response with ordered response activity.
+* Tool progress and results update the same durable activity rows by identity.
+* Code, images, files, diffs, documents, and charts are artifacts.
 * OpenClaw transcript rows link to Tavern messages and never replace them.
 * Soft deletes preserve sequence slots.
-* Activity is volatile and must not become a second chat history.
 * Reconnect recovers by runtime history and event cursor.
 * Content/timestamp duplicate detection is not allowed.
 
@@ -100,14 +105,16 @@ The Tavern API is OpenAPI-defined and runtime-hosted.
 Chat operations:
 
 ```text
-GET /api/activity
 POST /api/chats
 GET /api/chats
 GET /api/chats/{chat_id}
 GET /api/chats/{chat_id}/messages?after_sequence=&limit=
+GET /api/chats/{chat_id}/responses?after_sequence=&limit=
 POST /api/chats/{chat_id}/messages
 POST /api/chats/{chat_id}/deliveries
-POST /api/chats/{chat_id}/activity
+POST /api/chats/{chat_id}/responses
+POST /api/chats/{chat_id}/responses/{response_id}/activity
+POST /api/chats/{chat_id}/artifacts
 POST /api/chats/{chat_id}/read
 DELETE /api/messages/{message_id}
 GET /api/events?after_cursor=
@@ -126,7 +133,8 @@ OpenClaw, and tests.
 * Websocket drop/reconnect recovers by event cursor and history read.
 * Final OpenClaw transcript sync cannot create a second user row.
 * Automations can append chat messages while the app is closed.
-* Tool progress and reasoning summaries render as activity before final reply.
+* Tool progress and reasoning summaries persist as response activity before the
+  final reply.
 * Soft delete preserves message sequence.
 
 ## References

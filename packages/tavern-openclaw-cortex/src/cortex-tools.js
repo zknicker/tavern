@@ -19,7 +19,7 @@ export function registerTavernCortexTools(api, options = {}) {
     const request = createCortexRequest(options);
 
     api.registerTool({
-        name: 'cortex.search',
+        name: 'cortex_search',
         description: 'Search Tavern Cortex wiki pages by text and embeddings.',
         parameters: objectSchema({
             limit: integerSchema({
@@ -37,7 +37,7 @@ export function registerTavernCortexTools(api, options = {}) {
     });
 
     api.registerTool({
-        name: 'cortex.getPage',
+        name: 'cortex_get_page',
         description: 'Read a Tavern Cortex wiki page by id, slug, alias, or wiki link target.',
         parameters: objectSchema({
             target: stringSchema('Page id, slug, alias, or wiki link target.'),
@@ -51,7 +51,7 @@ export function registerTavernCortexTools(api, options = {}) {
     });
 
     api.registerTool({
-        name: 'cortex.capture',
+        name: 'cortex_capture',
         description:
             'Capture a durable note, fact, decision, source, or memory into Tavern Cortex.',
         parameters: objectSchema({
@@ -79,7 +79,7 @@ export function registerTavernCortexTools(api, options = {}) {
     });
 
     api.registerTool({
-        name: 'cortex.recall',
+        name: 'cortex_recall',
         description:
             'Recall grounded long-term context from Tavern Cortex and write a recall audit event.',
         parameters: objectSchema({
@@ -98,7 +98,7 @@ export function registerTavernCortexTools(api, options = {}) {
     });
 
     api.registerTool({
-        name: 'cortex.status',
+        name: 'cortex_status',
         description: 'Inspect Tavern Cortex storage, page, chunk, encoding, job, and audit status.',
         parameters: objectSchema({}),
         async execute(_toolCallId, _params, signal) {
@@ -107,7 +107,7 @@ export function registerTavernCortexTools(api, options = {}) {
     });
 
     api.registerTool({
-        name: 'cortex.listBacklinks',
+        name: 'cortex_list_backlinks',
         description: 'List Cortex wiki links pointing at a page or unresolved wiki target.',
         parameters: objectSchema({
             target: stringSchema('Page id, slug, alias, or unresolved wiki target.'),
@@ -121,7 +121,7 @@ export function registerTavernCortexTools(api, options = {}) {
     });
 
     api.registerTool({
-        name: 'cortex.runJob',
+        name: 'cortex_run_job',
         description: 'Run an allowed Tavern Cortex maintenance job.',
         parameters: objectSchema({
             job: enumSchema(CORTEX_JOB_NAMES, 'Cortex job name.'),

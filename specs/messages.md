@@ -27,12 +27,17 @@ Messages are Tavern's normal conversational interactions.
 - Messages render from server-owned normalized rows.
 - The product does not require React to infer authorship or model identity from raw runtime
   payloads.
-- Inline tool mentions render as message fragments when the durable message metadata includes
-  `metadata.tavern.toolMentions`.
-- Tool mention metadata uses the exact plaintext message content as its coordinate space. Each
-  mention stores a tool id, kind, display label, inserted text, and `start`/`end` string offsets.
+- Mentions render as message fragments when the durable message metadata includes
+  `metadata.tavern.mentions`.
+- Mention metadata uses the exact message content as its coordinate space. Each mention stores a
+  kind, runtime-facing id, display label, inserted text, runtime projection, and `start`/`end`
+  string offsets.
 - Tavern validates a mention before rendering it as a badge. If the offsets are missing,
   overlapping, out of bounds, or no longer match the inserted text, Tavern renders the affected
   content as normal plaintext.
-- Tool mention badges are presentation hints. The message text remains readable without the
-  metadata, and the agent prompt remains normal text.
+- Mention badges are durable presentation hints. The message text remains readable without the
+  metadata.
+- Tavern Messenger may project skill mentions into the execution-only `bodyForAgent` as
+  Codex-style skill context. Capability and path mentions stay as visible markdown. This does not
+  change durable message text and does not grant access to tools or skills that the runtime would
+  not otherwise expose.

@@ -29,7 +29,7 @@ export function registerGeneratedFileGuard(api, options = {}) {
             return {
                 block: true,
                 blockReason:
-                    'Tavern generates AGENTS.md. Use workspace.notes.update for agent-authored notes.',
+                    'Tavern generates AGENTS.md. Use workspace_notes_update for agent-authored notes.',
             };
         },
         { priority: 100 }

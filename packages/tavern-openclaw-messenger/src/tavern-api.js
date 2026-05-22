@@ -9,11 +9,10 @@ export function createTavernPluginApi({ baseUrl, fetch } = {}) {
         baseUrl,
         fetch,
     });
-    const activityByRun = new Map();
 
     return {
-        createDelivery(input) {
-            return client.chat.createDelivery(input.chatId, {
+        async createDelivery(input) {
+            const delivery = await client.chat.createDelivery(input.chatId, {
                 agent_id: agentParticipantId(input.agentId),
                 id: input.deliveryId,
                 message: {
@@ -31,37 +30,37 @@ export function createTavernPluginApi({ baseUrl, fetch } = {}) {
                 metadata: runtimeMetadata(input),
                 turn_id: input.runId,
             });
-        },
-        updateTurnActivity(turn, input = {}) {
-            const key = activityKey(turn);
-            const current = activityByRun.get(key) ?? {
+            await client.chat.upsertResponse(input.chatId, {
+                completed_at: new Date().toISOString(),
+                id: responseId(input.runId),
+                metadata: runtimeMetadata(input),
+                participant_id: agentParticipantId(input.agentId),
+                request_message_id: input.requestMessageId ?? null,
+                response_message_id: input.messageId,
+                status: 'completed',
                 summary: null,
-                steps: [],
-            };
-            const nextSteps = mergeActivitySteps(current.steps, input.step);
-            const next = {
-                summary: input.summary === undefined ? current.summary : input.summary,
-                steps: nextSteps,
-            };
-
-            activityByRun.set(key, next);
-
-            return client.chat.updateActivity(turn.chatId, {
-                agent_id: agentParticipantId(turn.agentId),
-                metadata: {
-                    runtime: {
-                        agentId: turn.agentId,
-                        messageId: turn.messageId,
-                        sessionKey: turn.sessionKey,
-                        source: 'openclaw',
-                        startedAt: turn.startedAt,
-                    },
-                },
-                run_id: turn.runId,
-                status: input.status ?? 'running',
-                steps: next.steps,
-                summary: next.summary,
             });
+            return delivery;
+        },
+        async updateTurnActivity(turn, input = {}) {
+            const response = await client.chat.upsertResponse(turn.chatId, {
+                id: responseId(turn.runId),
+                metadata: turnMetadata(turn),
+                participant_id: agentParticipantId(turn.agentId),
+                request_message_id: turn.messageId,
+                status: input.status ?? 'running',
+                summary: input.summary ?? null,
+            });
+
+            if (!input.step) {
+                return response;
+            }
+
+            return client.chat.upsertResponseActivity(
+                turn.chatId,
+                response.id,
+                activityStepWithTurnMetadata(input.step, turn)
+            );
         },
     };
 }
@@ -77,43 +76,75 @@ export function deriveTavernApiBaseUrl(relayUrl) {
     return url.toString().replace(/\/$/u, '');
 }
 
-function mergeActivitySteps(steps, step) {
-    if (!step) {
-        return steps;
-    }
-
-    const output = steps.filter((entry) => entry.id !== step.id);
-    output.push(step);
-    return output.sort((left, right) => left.started_at.localeCompare(right.started_at));
-}
-
 export function activityStepFromProgressStep(step, timestamp = new Date().toISOString()) {
+    const metadata = {
+        ...(step.detail ? { detail: step.detail } : {}),
+        ...(step.toolCallId ? { toolCallId: step.toolCallId } : {}),
+        ...(step.toolName ? { toolName: step.toolName } : {}),
+        runtime: {
+            ...(step.toolCallId ? { toolCallId: step.toolCallId } : {}),
+            ...(step.toolName ? { toolName: step.toolName } : {}),
+        },
+        tool: {
+            arguments: step.arguments ?? null,
+            name: step.toolName ?? null,
+            result: step.result ?? null,
+        },
+    };
+
     return {
         completed_at: step.status === 'active' ? null : timestamp,
-        id: step.id,
+        detail: step.detail ?? null,
+        id: activityId(step.id),
         kind: activityStepKind(step.kind),
-        label: step.label,
-        metadata: step.detail ? { detail: step.detail } : {},
+        metadata,
         started_at: timestamp,
         status: step.status === 'active' ? 'running' : step.status,
+        title: step.label,
     };
 }
 
-function activityStepKind(kind) {
-    if (kind === 'reasoning') {
-        return 'thinking';
-    }
-    if (kind === 'plan') {
-        return 'custom';
-    }
-    if (kind === 'tool' || kind === 'command' || kind === 'message') {
-        return kind;
-    }
-    return 'custom';
+function activityId(id) {
+    return id.startsWith('act_') ? id : `act_${id.replace(/[^A-Za-z0-9_-]/gu, '_')}`;
 }
 
-function activityKey(turn) {
-    return `${turn.chatId}:${turn.runId}`;
+function responseId(runId) {
+    return runId.startsWith('rsp_') ? runId : `rsp_${runId.replace(/[^A-Za-z0-9_-]/gu, '_')}`;
+}
+
+function activityStepKind(kind) {
+    if (kind === 'approval') {
+        return 'approval';
+    }
+    if (kind === 'artifact') {
+        return 'artifact';
+    }
+    if (kind === 'reasoning') {
+        return 'reasoning';
+    }
+    if (kind === 'plan') {
+        return 'planning';
+    }
+    if (kind === 'command') {
+        return 'command';
+    }
+    if (kind === 'message') {
+        return 'message';
+    }
+    return 'tool_call';
+}
+
+function turnMetadata(turn) {
+    return {
+        runtime: {
+            agentId: turn.agentId,
+            messageId: turn.messageId,
+            runId: turn.runId,
+            sessionKey: turn.sessionKey,
+            source: 'openclaw',
+            startedAt: turn.startedAt,
+        },
+    };
 }
 
 function runtimeMetadata(input) {
@@ -124,6 +155,33 @@ function runtimeMetadata(input) {
             runId: input.runId,
             sessionKey: input.sessionKey,
             source: 'openclaw',
+        },
+    };
+}
+
+function activityStepWithTurnMetadata(step, turn) {
+    const metadata =
+        step.metadata && typeof step.metadata === 'object' && !Array.isArray(step.metadata)
+            ? step.metadata
+            : {};
+    const runtime =
+        metadata.runtime && typeof metadata.runtime === 'object' && !Array.isArray(metadata.runtime)
+            ? metadata.runtime
+            : {};
+
+    return {
+        ...step,
+        metadata: {
+            ...metadata,
+            runtime: {
+                ...runtime,
+                agentId: turn.agentId,
+                messageId: turn.messageId,
+                runId: turn.runId,
+                sessionKey: turn.sessionKey,
+                source: 'openclaw',
+                startedAt: turn.startedAt,
+            },
         },
     };
 }

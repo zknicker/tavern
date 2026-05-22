@@ -18,11 +18,11 @@ Tavern is an always-on agent chat system backed by Tavern Runtime.
 
 - Tavern App renders the best Runtime-backed state immediately from cache, then reconciles with
   Tavern Runtime.
-- OpenClaw-owned config and execution evidence appears through Runtime projections.
-- Runtime projections record freshness.
-- If a full OpenClaw config snapshot omits an OpenClaw-owned record, Tavern removes that projected
+- OpenClaw config and execution evidence appear through Tavern Runtime records.
+- Runtime records track freshness.
+- If a full OpenClaw config snapshot omits a runtime-native record, Tavern removes that current
   record.
-- OpenClaw-owned history such as sessions, transcripts, logs, and run events remains useful as
+- OpenClaw history such as sessions, transcripts, logs, and run events remains useful as
   evidence and is not deleted merely because a later sync does not mention it.
 
 ## Config And Runtime Facts

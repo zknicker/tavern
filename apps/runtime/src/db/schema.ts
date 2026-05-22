@@ -127,17 +127,77 @@ CREATE TABLE IF NOT EXISTS chat_deliveries (
   FOREIGN KEY(message_id) REFERENCES chat_messages(id) ON DELETE CASCADE
 );
 
-CREATE TABLE IF NOT EXISTS chat_activity (
-  chat_id       TEXT PRIMARY KEY,
-  run_id        TEXT NOT NULL,
-  agent_id      TEXT NOT NULL,
-  status        TEXT NOT NULL CHECK (status IN ('queued', 'running', 'completed', 'failed')),
-  summary       TEXT,
-  steps_json    TEXT NOT NULL DEFAULT '[]',
-  metadata_json TEXT NOT NULL DEFAULT '{}',
-  updated_at    TEXT NOT NULL,
-  FOREIGN KEY(chat_id) REFERENCES chats(id) ON DELETE CASCADE
+CREATE TABLE IF NOT EXISTS chat_responses (
+  id                  TEXT PRIMARY KEY,
+  chat_id             TEXT NOT NULL,
+  participant_id      TEXT NOT NULL,
+  request_message_id  TEXT,
+  response_message_id TEXT,
+  status              TEXT NOT NULL CHECK (status IN ('queued', 'running', 'completed', 'failed', 'cancelled')),
+  summary             TEXT,
+  metadata_json       TEXT NOT NULL DEFAULT '{}',
+  created_at          TEXT NOT NULL,
+  updated_at          TEXT NOT NULL,
+  completed_at        TEXT,
+  FOREIGN KEY(chat_id) REFERENCES chats(id) ON DELETE CASCADE,
+  FOREIGN KEY(request_message_id) REFERENCES chat_messages(id) ON DELETE SET NULL,
+  FOREIGN KEY(response_message_id) REFERENCES chat_messages(id) ON DELETE SET NULL
 );
+
+CREATE INDEX IF NOT EXISTS idx_chat_responses_chat_updated
+  ON chat_responses(chat_id, updated_at, id);
+
+CREATE INDEX IF NOT EXISTS idx_chat_responses_chat_created
+  ON chat_responses(chat_id, created_at, id);
+
+CREATE TABLE IF NOT EXISTS chat_response_activity (
+  id             TEXT PRIMARY KEY,
+  response_id    TEXT NOT NULL,
+  chat_id        TEXT NOT NULL,
+  sequence       INTEGER NOT NULL,
+  kind           TEXT NOT NULL CHECK (kind IN ('planning', 'reasoning', 'tool_call', 'tool_result', 'command', 'approval', 'message', 'artifact', 'custom')),
+  status         TEXT NOT NULL CHECK (status IN ('queued', 'running', 'completed', 'failed', 'cancelled')),
+  title          TEXT NOT NULL,
+  detail         TEXT,
+  summary        TEXT,
+  artifact_ids_json TEXT NOT NULL DEFAULT '[]',
+  metadata_json  TEXT NOT NULL DEFAULT '{}',
+  started_at     TEXT NOT NULL,
+  updated_at     TEXT NOT NULL,
+  completed_at   TEXT,
+  FOREIGN KEY(response_id) REFERENCES chat_responses(id) ON DELETE CASCADE,
+  FOREIGN KEY(chat_id) REFERENCES chats(id) ON DELETE CASCADE,
+  UNIQUE(response_id, sequence)
+);
+
+CREATE INDEX IF NOT EXISTS idx_chat_response_activity_response_sequence
+  ON chat_response_activity(response_id, sequence);
+
+CREATE INDEX IF NOT EXISTS idx_chat_response_activity_chat_sequence
+  ON chat_response_activity(chat_id, sequence);
+
+CREATE TABLE IF NOT EXISTS chat_artifacts (
+  id            TEXT PRIMARY KEY,
+  chat_id       TEXT NOT NULL,
+  response_id   TEXT,
+  activity_id   TEXT,
+  message_id    TEXT,
+  kind          TEXT NOT NULL CHECK (kind IN ('code', 'image', 'file', 'diff', 'document', 'chart', 'text', 'custom')),
+  title         TEXT,
+  content_text  TEXT,
+  content_ref   TEXT,
+  mime_type     TEXT,
+  metadata_json TEXT NOT NULL DEFAULT '{}',
+  created_at    TEXT NOT NULL,
+  updated_at    TEXT NOT NULL,
+  FOREIGN KEY(chat_id) REFERENCES chats(id) ON DELETE CASCADE,
+  FOREIGN KEY(response_id) REFERENCES chat_responses(id) ON DELETE SET NULL,
+  FOREIGN KEY(activity_id) REFERENCES chat_response_activity(id) ON DELETE SET NULL,
+  FOREIGN KEY(message_id) REFERENCES chat_messages(id) ON DELETE SET NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_chat_artifacts_chat_updated
+  ON chat_artifacts(chat_id, updated_at, id);
 `;
 
 export function ensureRuntimeSchema(db: Database): void {

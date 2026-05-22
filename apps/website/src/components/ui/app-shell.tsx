@@ -140,7 +140,7 @@ export function AppShellContentHeader({
 }: useRender.ComponentProps<'div'>): React.ReactElement {
     const defaultProps = {
         className: cn(
-            'no-drag relative z-40 flex h-[var(--topbar-height)] shrink-0 items-start gap-2 px-4 pt-[9px]',
+            'no-drag relative z-40 flex h-[var(--topbar-height)] shrink-0 items-start gap-2 px-4 pt-[11px]',
             className
         ),
         'data-slot': 'app-shell-content-header',

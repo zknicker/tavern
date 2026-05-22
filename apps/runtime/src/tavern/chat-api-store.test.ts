@@ -1,17 +1,21 @@
 import { runtimeRoutes } from '@tavern/api';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { closeDb, initTestDb } from '../db/connection';
+import { closeDb, getDb, initTestDb } from '../db/connection';
 import { ensureRuntimeSchema } from '../db/schema';
 import {
     createChat,
     createDelivery,
     createMessage,
-    listActivity,
+    getResponse,
+    getResponseActivity,
     listEvents,
     listMessages,
+    listResponses,
     markRead,
     subscribeToTavernApiEvents,
-    updateActivity,
+    upsertArtifact,
+    upsertResponse,
+    upsertResponseActivity,
 } from './chat-api';
 import { handleTavernRuntimeRequest } from './router';
 
@@ -71,12 +75,12 @@ describe('Tavern Runtime Chat API store', () => {
             })
         ).toThrow('Delivery id must use a del_ id.');
         expect(() =>
-            updateActivity('cht_1', {
-                agent_id: 'main',
-                run_id: 'run_1',
+            upsertResponse('cht_1', {
+                id: 'response-1',
+                participant_id: 'agt_1',
                 status: 'running',
             })
-        ).toThrow('Activity agent id must use a agt_ id.');
+        ).toThrow('Response id must use a rsp_ id.');
     });
 
     it('writes delivery, assistant message, and delivered event in one receipt', () => {
@@ -128,36 +132,174 @@ describe('Tavern Runtime Chat API store', () => {
         ]);
     });
 
-    it('stores activity and read state as cursor-backed events', () => {
+    it('stores responses, activity, artifacts, and read state as cursor-backed events', () => {
         createChat({ id: 'cht_1' });
         createMessage('cht_1', messageInput('msg_1', 'nonce_1', 'hello'));
-        const activity = updateActivity('cht_1', {
-            agent_id: 'agt_1',
-            run_id: 'run_1',
+        const { response } = upsertResponse('cht_1', {
+            id: 'rsp_1',
+            participant_id: 'agt_1',
+            request_message_id: 'msg_1',
             status: 'running',
             summary: 'Working',
+        });
+        const { activity } = upsertResponseActivity('cht_1', 'rsp_1', {
+            id: 'act_1',
+            kind: 'tool_call',
+            status: 'running',
+            title: 'Using tool',
+        });
+        const { artifact } = upsertArtifact('cht_1', {
+            activity_id: 'act_1',
+            id: 'art_1',
+            kind: 'text',
+            response_id: 'rsp_1',
+            title: 'Tool output',
         });
         const read = markRead('cht_1', {
             last_read_sequence: 1,
             reader_id: 'usr_1',
         });
 
-        expect(activity.summary).toBe('Working');
+        expect(response.summary).toBe('Working');
+        expect(activity.title).toBe('Using tool');
+        expect(artifact.title).toBe('Tool output');
         expect(read.last_read_sequence).toBe(1);
-        expect(listActivity().activities).toHaveLength(1);
+        expect(listResponses('cht_1').responses).toHaveLength(1);
         expect(listEvents().events.map((event) => event.type)).toEqual([
             'message.created',
-            'chat.activity.updated',
+            'response.created',
+            'activity.created',
+            'artifact.created',
         ]);
         expect(listEvents({ recipientId: 'usr_1' }).events.map((event) => event.type)).toEqual([
             'message.created',
-            'chat.activity.updated',
+            'response.created',
+            'activity.created',
+            'artifact.created',
             'chat.read',
         ]);
         expect(listEvents({ recipientId: 'usr_2' }).events.map((event) => event.type)).toEqual([
             'message.created',
-            'chat.activity.updated',
+            'response.created',
+            'activity.created',
+            'artifact.created',
         ]);
+    });
+
+    it('stores terminal response activity in place', () => {
+        createChat({ id: 'cht_1' });
+        upsertResponse('cht_1', {
+            id: 'rsp_1',
+            participant_id: 'agt_1',
+            status: 'running',
+        });
+        upsertResponseActivity('cht_1', 'rsp_1', {
+            id: 'act_1',
+            kind: 'tool_call',
+            started_at: '2026-05-20T12:00:00.000Z',
+            status: 'running',
+            title: 'Using tool',
+        });
+        const { activity } = upsertResponseActivity('cht_1', 'rsp_1', {
+            completed_at: '2026-05-20T12:00:10.000Z',
+            id: 'act_1',
+            kind: 'tool_call',
+            started_at: '2026-05-20T12:00:10.000Z',
+            status: 'completed',
+            title: 'Using tool',
+        });
+
+        expect(activity).toMatchObject({
+            completed_at: '2026-05-20T12:00:10.000Z',
+            id: 'act_1',
+            started_at: '2026-05-20T12:00:00.000Z',
+            status: 'completed',
+        });
+    });
+
+    it('keeps response pagination stable when activity updates touch older responses', () => {
+        createChat({ id: 'cht_1' });
+        upsertResponse('cht_1', {
+            id: 'rsp_1',
+            participant_id: 'agt_1',
+            status: 'running',
+        });
+        upsertResponse('cht_1', {
+            id: 'rsp_2',
+            participant_id: 'agt_1',
+            status: 'running',
+        });
+
+        const firstPage = listResponses('cht_1', { limit: 1 });
+
+        upsertResponseActivity('cht_1', 'rsp_1', {
+            id: 'act_1',
+            kind: 'tool_call',
+            status: 'running',
+            title: 'Using tool',
+        });
+        getDb()
+            .prepare(
+                "UPDATE chat_responses SET updated_at = '2099-01-01T00:00:00.000Z' WHERE id = 'rsp_1'"
+            )
+            .run();
+
+        expect(firstPage.responses.map((response) => response.id)).toEqual(['rsp_1']);
+        expect(
+            listResponses('cht_1', {
+                afterSequence: firstPage.next_sequence ?? 0,
+                limit: 1,
+            }).responses.map((response) => response.id)
+        ).toEqual(['rsp_2']);
+    });
+
+    it('does not terminalize the parent response when activity completes or fails', () => {
+        createChat({ id: 'cht_1' });
+        upsertResponse('cht_1', {
+            id: 'rsp_1',
+            participant_id: 'agt_1',
+            status: 'queued',
+        });
+        upsertResponseActivity('cht_1', 'rsp_1', {
+            id: 'act_1',
+            kind: 'tool_call',
+            status: 'completed',
+            title: 'Used tool',
+        });
+        upsertResponseActivity('cht_1', 'rsp_1', {
+            id: 'act_2',
+            kind: 'tool_call',
+            status: 'failed',
+            title: 'Used other tool',
+        });
+
+        expect(getResponse('rsp_1')).toMatchObject({
+            completed_at: null,
+            id: 'rsp_1',
+            status: 'running',
+        });
+    });
+
+    it('gets response activity by stable id', () => {
+        createChat({ id: 'cht_1' });
+        upsertResponse('cht_1', {
+            id: 'rsp_1',
+            participant_id: 'agt_1',
+            status: 'running',
+        });
+        upsertResponseActivity('cht_1', 'rsp_1', {
+            id: 'act_1',
+            kind: 'tool_call',
+            status: 'running',
+            title: 'Using tool',
+        });
+
+        expect(getResponseActivity('act_1')).toMatchObject({
+            chat_id: 'cht_1',
+            id: 'act_1',
+            response_id: 'rsp_1',
+            title: 'Using tool',
+        });
     });
 
     it('publishes private read events only to matching recipients', () => {
@@ -242,6 +384,33 @@ describe('Tavern Runtime Chat API routes', () => {
                 id: 'msg_1',
                 sequence: 1,
             },
+        });
+    });
+
+    it('gets durable response activity through the chat API route', async () => {
+        createChat({ id: 'cht_1' });
+        upsertResponse('cht_1', {
+            id: 'rsp_1',
+            participant_id: 'agt_1',
+            status: 'running',
+        });
+        upsertResponseActivity('cht_1', 'rsp_1', {
+            id: 'act_1',
+            kind: 'tool_call',
+            status: 'running',
+            title: 'Using tool',
+        });
+
+        const response = await handleTavernRuntimeRequest(
+            getRequest('/api/chats/cht_1/activity/act_1')
+        );
+
+        expect(response.status).toBe(200);
+        await expect(response.json()).resolves.toMatchObject({
+            chat_id: 'cht_1',
+            id: 'act_1',
+            response_id: 'rsp_1',
+            title: 'Using tool',
         });
     });
 

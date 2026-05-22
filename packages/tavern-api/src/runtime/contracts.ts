@@ -292,6 +292,19 @@ export const agentRuntimeSkillListSchema = z.object({
     skills: z.array(agentRuntimeSkillSummarySchema),
 });
 
+export const agentRuntimeMacAppSchema = z.object({
+    bundleId: z.string().trim().min(1).optional(),
+    iconDataUrl: z.string().trim().min(1).optional(),
+    label: z.string().trim().min(1),
+    lastUsedAt: z.string().trim().min(1).optional(),
+    running: z.boolean().optional(),
+    usageCount: z.number().int().nonnegative().optional(),
+});
+
+export const agentRuntimeMacAppListSchema = z.object({
+    apps: z.array(agentRuntimeMacAppSchema),
+});
+
 export const agentRuntimeSkillSchema = agentRuntimeSkillSummarySchema.extend({
     contentMarkdown: z.string(),
     files: z.array(agentRuntimeSkillFileSchema).default([]),
@@ -939,23 +952,32 @@ export const agentRuntimeSessionArtifactSchema = z.object({
     toolCallId: z.string().trim().min(1).nullable(),
 });
 
-export const agentRuntimeToolMentionSchema = z
+export const agentRuntimeMentionProjectionSchema = z.enum([
+    'capability-reference',
+    'image-input',
+    'path-reference',
+    'skill-context',
+]);
+
+export const agentRuntimeMentionSchema = z
     .object({
         end: z.number().int().nonnegative(),
         id: z.string().trim().min(1),
-        kind: z.enum(['app', 'skill', 'tool']),
+        kind: z.enum(['app', 'directory', 'file', 'image', 'plugin', 'skill']),
         label: z.string().trim().min(1),
+        metadata: z.record(z.string(), z.unknown()).optional(),
+        projection: agentRuntimeMentionProjectionSchema,
         start: z.number().int().nonnegative(),
         text: z.string().min(1),
     })
     .refine((value) => value.end > value.start, {
-        message: 'Tool mention end offset must be greater than start offset.',
+        message: 'Mention end offset must be greater than start offset.',
         path: ['end'],
     });
 
 export const agentRuntimeTavernMessageMetadataSchema = z
     .object({
-        toolMentions: z.array(agentRuntimeToolMentionSchema).optional(),
+        mentions: z.array(agentRuntimeMentionSchema).optional(),
     })
     .passthrough();
 
@@ -1172,9 +1194,11 @@ export const agentRuntimeTurnProgressStatusSchema = z.enum(['active', 'completed
 export const agentRuntimeTurnProgressStepSchema = z.object({
     detail: z.string().trim().min(1).nullable().optional(),
     id: z.string().trim().min(1),
-    kind: z.enum(['command', 'message', 'plan', 'reasoning', 'tool']),
+    kind: z.enum(['approval', 'artifact', 'command', 'message', 'plan', 'reasoning', 'tool']),
     label: z.string().trim().min(1),
     status: agentRuntimeTurnProgressStatusSchema,
+    toolCallId: z.string().trim().min(1).nullable().optional(),
+    toolName: z.string().trim().min(1).nullable().optional(),
 });
 
 export const agentRuntimeActiveChatReplySchema = z.object({
@@ -1489,6 +1513,8 @@ export type AgentRuntimeSkill = z.infer<typeof agentRuntimeSkillSchema>;
 export type AgentRuntimeSkillDeletedEvent = z.infer<typeof agentRuntimeSkillDeletedEventSchema>;
 export type AgentRuntimeSkillList = z.infer<typeof agentRuntimeSkillListSchema>;
 export type AgentRuntimeSkillSummary = z.infer<typeof agentRuntimeSkillSummarySchema>;
+export type AgentRuntimeMacApp = z.infer<typeof agentRuntimeMacAppSchema>;
+export type AgentRuntimeMacAppList = z.infer<typeof agentRuntimeMacAppListSchema>;
 export type AgentRuntimeSkillUpdatedEvent = z.infer<typeof agentRuntimeSkillUpdatedEventSchema>;
 export type AgentRuntimeStatus = z.infer<typeof agentRuntimeStatusSchema>;
 export type AgentRuntimeSaveMemorySettings = z.infer<typeof agentRuntimeSaveMemorySettingsSchema>;

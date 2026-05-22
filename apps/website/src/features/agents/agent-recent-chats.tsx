@@ -86,8 +86,8 @@ export function AgentRecentChats({ agent }: { agent: AgentListOutput['agents'][n
                 <div className="mt-3 rounded-xl border border-border border-dashed px-4 py-5">
                     <h3 className="font-medium text-foreground text-sm">No synced chats yet</h3>
                     <p className="mt-1 text-muted-foreground text-sm">
-                        Tavern, Discord, and other runtime-projected chats for {agent.name} will
-                        show here.
+                        Tavern, Discord, and other synced runtime chats for {agent.name} will show
+                        here.
                     </p>
                 </div>
             )}

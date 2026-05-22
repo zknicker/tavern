@@ -1,4 +1,5 @@
 import type { Page } from '@playwright/test';
+import { createTavernClient } from '@tavern/sdk';
 import {
     type CapturedOpenClawGatewayEvent,
     readCapturedGatewayChatId,
@@ -34,21 +35,156 @@ test('runs a follow-up turn in an existing chat', async ({ page }) => {
 });
 
 test('renders tool progress and the final reply for a tool-using turn', async ({ page }) => {
+    test.setTimeout(90_000);
+
     await startChat(page, {
         expectedReply: 'QA_TOOL_PROGRESS_OK',
         prompt: 'Tool progress qa check. Read `QA_KICKOFF_TASK.md`, then reply exactly `QA_TOOL_PROGRESS_OK`.',
     });
 
-    const activity = page.getByRole('button', { name: /Worked for/i });
-    await expect(activity).toBeVisible();
-    await activity.click();
+    await openWorkedActivity(page);
+    await openFirstToolDetail(page);
 
     await expect(page.getByText('Used', { exact: true }).first()).toBeVisible();
     await expect(
         page.getByText('read from QA_KICKOFF_TASK.md', { exact: true }).first()
     ).toBeVisible();
-    await expect(page.getByText('Unable to load tool details.')).toHaveCount(0);
+    await expect(page.getByText('Tool details not available.')).toHaveCount(0);
+    await expect(page.getByText('Arguments', { exact: true })).toBeVisible();
+    await expect(page.getByText('Result', { exact: true })).toBeVisible();
+
+    await page.reload();
+
+    await expect(transcriptParagraph(page, 'QA_TOOL_PROGRESS_OK')).toBeVisible({
+        timeout: 45_000,
+    });
+    await openWorkedActivity(page);
+    await openFirstToolDetail(page);
+
+    await expect(page.getByText('Tool details not available.')).toHaveCount(0);
+    await expect(page.getByText('Arguments', { exact: true })).toBeVisible();
+    await expect(page.getByText('Result', { exact: true })).toBeVisible();
 });
+
+test('renders durable artifacts after reload', async ({ page }) => {
+    const chatId = await startChat(page, {
+        expectedReply: 'QA_ARTIFACT_BASELINE_OK',
+        prompt: 'Artifact baseline marker. Reply exactly `QA_ARTIFACT_BASELINE_OK`.',
+    });
+    const runtimeUrl = process.env.TAVERN_RUNTIME_URL;
+
+    if (!runtimeUrl) {
+        throw new Error('TAVERN_RUNTIME_URL is required for artifact e2e coverage.');
+    }
+
+    await upsertRuntimeArtifact({ chatId, runtimeUrl });
+
+    await page.reload();
+
+    await openWorkedActivity(page);
+    await expect(page.getByText('Captured artifact', { exact: true })).toBeVisible({
+        timeout: 15_000,
+    });
+    await page.getByRole('button', { name: 'Details' }).click();
+    await expect(page.getByText('document', { exact: true })).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByText('E2E artifact reload proof', { exact: true })).toBeVisible();
+});
+
+test('renders durable response activity kinds after reload', async ({ page }) => {
+    const chatId = await startChat(page, {
+        expectedReply: 'QA_ACTIVITY_KIND_BASELINE_OK',
+        prompt: 'Activity kind baseline marker. Reply exactly `QA_ACTIVITY_KIND_BASELINE_OK`.',
+    });
+    const runtimeUrl = process.env.TAVERN_RUNTIME_URL;
+
+    if (!runtimeUrl) {
+        throw new Error('TAVERN_RUNTIME_URL is required for activity kind e2e coverage.');
+    }
+
+    await upsertRuntimeActivityKinds({ chatId, runtimeUrl });
+
+    await page.reload();
+
+    await openWorkedActivity(page);
+    await expect(page.getByText('Planning diagnostic', { exact: true })).toBeVisible({
+        timeout: 15_000,
+    });
+    await expect(page.getByText('Reasoning diagnostic', { exact: true })).toBeVisible();
+    await expect(page.getByText('Assistant preamble diagnostic', { exact: true })).toBeVisible();
+    await expect(page.getByText('Approval diagnostic', { exact: true })).toBeVisible();
+    await expect(page.getByText('Artifact diagnostic', { exact: true })).toBeVisible();
+    await expect(page.getByText('Tool diagnostic', { exact: true })).toBeVisible();
+});
+
+async function upsertRuntimeArtifact(input: { chatId: string; runtimeUrl: string }) {
+    const client = createTavernClient({ baseUrl: input.runtimeUrl });
+    const responsePage = await client.chat.responses(input.chatId, { limit: 50 });
+    const responseId = responsePage.responses.at(-1)?.id;
+
+    if (!responseId) {
+        throw new Error(`Expected chat ${input.chatId} to have a response before artifact write.`);
+    }
+
+    await client.chat.upsertArtifact(input.chatId, {
+        content_text: 'Artifact body from the e2e runtime chat API.',
+        id: 'art_e2e_reload',
+        kind: 'document',
+        response_id: responseId,
+        title: 'E2E artifact reload proof',
+    });
+}
+
+async function upsertRuntimeActivityKinds(input: { chatId: string; runtimeUrl: string }) {
+    const client = createTavernClient({ baseUrl: input.runtimeUrl });
+    const responsePage = await client.chat.responses(input.chatId, { limit: 50 });
+    const responseId = responsePage.responses.at(-1)?.id;
+
+    if (!responseId) {
+        throw new Error(`Expected chat ${input.chatId} to have a response before activity writes.`);
+    }
+
+    const startedAt = new Date().toISOString();
+    const activity = [
+        { id: 'act_e2e_planning', kind: 'planning', title: 'Planning diagnostic' },
+        { id: 'act_e2e_reasoning', kind: 'reasoning', title: 'Reasoning diagnostic' },
+        { id: 'act_e2e_message', kind: 'message', title: 'Assistant preamble diagnostic' },
+        { id: 'act_e2e_approval', kind: 'approval', title: 'Approval diagnostic' },
+        { id: 'act_e2e_artifact', kind: 'artifact', title: 'Artifact diagnostic' },
+        { id: 'act_e2e_tool', kind: 'tool_call', title: 'Tool diagnostic' },
+    ] as const;
+
+    for (const step of activity) {
+        try {
+            await client.chat.upsertResponseActivity(input.chatId, responseId, {
+                artifact_ids: [],
+                detail: `${step.title} detail`,
+                id: step.id,
+                kind: step.kind,
+                metadata:
+                    step.kind === 'tool_call'
+                        ? {
+                              runtime: {
+                                  toolCallId: 'tool_call_e2e',
+                                  toolName: 'diagnostic_tool',
+                              },
+                              tool: {
+                                  arguments: { input: 'e2e' },
+                                  name: 'diagnostic_tool',
+                                  result: 'ok',
+                              },
+                          }
+                        : {},
+                started_at: startedAt,
+                status: 'completed',
+                title: step.title,
+            });
+        } catch (error) {
+            throw new Error(
+                `Failed to upsert diagnostic activity ${step.id}: ${JSON.stringify(error)}`
+            );
+        }
+    }
+}
 
 test('renders a failed turn as a top-level chat error', async ({ page }) => {
     test.setTimeout(75_000);
@@ -86,12 +222,6 @@ test('new chat renders optimistic state, final reply, and hover metadata without
         await page.locator('#home-prompt').fill(prompt);
         await page.getByRole('button', { name: 'Start chat' }).click();
         await page.mouse.move(1650, 390);
-
-        await expect(page).toHaveURL(/\/dashboard\/chats\/new$/);
-        await expect(
-            page.getByRole('link', { name: `${prompt} starting`, exact: true })
-        ).toBeVisible();
-        await expect(page.locator('main p').filter({ hasText: prompt })).toBeVisible();
 
         const optimisticTiming = await waitForChatTiming(page, [
             'optimistic-chat-visible',
@@ -157,10 +287,12 @@ async function startChat(
     await page.locator('#home-prompt').fill(prompt);
     await page.getByRole('button', { name: 'Start chat' }).click();
 
-    await waitForRealChatRoute(page);
+    const chatId = await waitForRealChatRoute(page);
     await expect(transcriptParagraph(page, expectedReply)).toBeVisible({
         timeout: 45_000,
     });
+
+    return chatId;
 }
 
 async function sendFollowUp(
@@ -182,6 +314,20 @@ async function sendFollowUp(
     await expect(transcriptParagraph(page, expectedReply)).toBeVisible({
         timeout: 45_000,
     });
+}
+
+async function openWorkedActivity(page: Page) {
+    const activity = page.getByRole('button', { name: /Worked for/i });
+    await expect(activity).toBeVisible();
+    if ((await activity.getAttribute('aria-expanded')) === 'false') {
+        await activity.click();
+    }
+}
+
+async function openFirstToolDetail(page: Page) {
+    const tool = page.getByRole('button', { name: /Used read from QA_KICKOFF_TASK\.md/i }).first();
+    await expect(tool).toBeVisible();
+    await tool.click();
 }
 
 function transcriptParagraph(page: Page, text: string | RegExp) {

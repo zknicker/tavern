@@ -2,11 +2,11 @@ import * as React from 'react';
 import { useChatSend } from '../../hooks/chats/use-chat-send.ts';
 import type { AgentListOutput } from '../../lib/trpc.tsx';
 import {
-    buildToolMentionMetadata,
-    normalizeToolMentions,
-} from '../tool-mentions/tool-mention-text.ts';
-import type { ToolMention } from '../tool-mentions/tool-mention-types.ts';
-import { handleChatComposerKeyDown } from './chat-composer-keyboard.ts';
+    buildMentionMetadata,
+    compileMentionSubmission,
+    normalizeMentions,
+} from '../mentions/mention-text.ts';
+import type { Mention } from '../mentions/mention-types.ts';
 import type { ChatContextFullness } from './chat-context-fullness.ts';
 import {
     ChatMessageComposerSurface,
@@ -37,7 +37,7 @@ export function ChatMessageComposer({
     const sendMessage = useChatSend();
     const [agentId, setAgentId] = React.useState<string>(boundAgentIds[0] ?? '');
     const [content, setContent] = React.useState('');
-    const [toolMentions, setToolMentions] = React.useState<ToolMention[]>([]);
+    const [mentions, setMentions] = React.useState<Mention[]>([]);
     const trimmedContent = content.trim();
     const canSend =
         chatCanSend &&
@@ -63,36 +63,26 @@ export function ChatMessageComposer({
         }
 
         const leadingTrimLength = content.length - content.trimStart().length;
-        const submittedContent = trimmedContent;
-        const submittedMentions = normalizeToolMentions(
+        const submittedContent = content.trimStart();
+        const submittedMentions = normalizeMentions(
             submittedContent,
-            toolMentions.map((mention) => ({
+            mentions.map((mention) => ({
                 ...mention,
                 end: mention.end - leadingTrimLength,
                 start: mention.start - leadingTrimLength,
             }))
         );
-        const metadata = buildToolMentionMetadata(submittedMentions);
+        const submission = compileMentionSubmission(submittedContent, submittedMentions);
+        const metadata = buildMentionMetadata(submission.mentions);
         setContent('');
-        setToolMentions([]);
+        setMentions([]);
 
         await sendMessage.mutateAsync({
             agentId,
             chatId,
             clientMessageId: `msg_${crypto.randomUUID()}`,
-            content: submittedContent,
+            content: submission.content.trim(),
             metadata,
-        });
-    }
-
-    function handleKeyDown(event: React.KeyboardEvent<HTMLTextAreaElement>) {
-        handleChatComposerKeyDown({
-            event,
-            onSubmit: () => {
-                void handleSubmit();
-            },
-            onValueChange: setContent,
-            value: content,
         });
     }
 
@@ -114,10 +104,9 @@ export function ChatMessageComposer({
             error={sendMessage.error?.message}
             name="chat-message"
             onAgentChange={setAgentId}
+            onMentionsChange={setMentions}
             onSubmit={handleSubmit}
             onTextChange={setContent}
-            onTextKeyDown={handleKeyDown}
-            onToolMentionsChange={setToolMentions}
             placeholder={getPlaceholder({
                 agentRuntimeSyncLabel,
                 boundAgentCount: boundAgentIds.length,

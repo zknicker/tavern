@@ -16,7 +16,7 @@ execution state.
   memory, runtime health, sync state, generated config policy, and jobs.
 - Tavern App-owned domains include client cache, app settings, profiles, participant links, and
   presentation overlays.
-- OpenClaw-owned domains include native execution sessions, turns, transcripts, logs, skills,
+- OpenClaw domains include native execution sessions, turns, transcripts, logs, skills,
   tools, model routing, channel bindings, and provider secrets unless OpenClaw explicitly delegates
   a domain to Tavern.
 
@@ -26,12 +26,12 @@ execution state.
 - Tavern edits runtime-owned config through supported runtime APIs or plugins.
 - Tavern does not maintain duplicate canonical records for runtime-owned config.
 - Runtime-native edits remain valid and refresh Tavern through sync and events.
-- Periodic sync is for projections and observed history, not for taking ownership away from the
-  runtime.
+- Periodic sync refreshes runtime evidence and observed history. It does not make runtime-native
+  config canonical Tavern state.
 
 ## Tavern Expectations
 
-- Tavern stays useful when a runtime is offline by rendering already synced projections and
-  observed history.
-- Tavern identifies which runtime owns each projected primitive.
+- Tavern stays useful when a runtime is offline by rendering existing Tavern records and observed
+  history.
+- Tavern identifies the runtime source for runtime-backed records.
 - Tavern makes sync freshness and failures visible without exposing raw runtime internals.

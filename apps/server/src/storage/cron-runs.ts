@@ -2,7 +2,7 @@ import { and, desc, eq, or, sql } from 'drizzle-orm';
 import { cronRunSchema } from '../cron/contracts.ts';
 import { db } from '../db/index.ts';
 import { type CronRunInsert, cronRunsTable } from '../db/schema.ts';
-import { getActiveProjectionRuntimeId } from './agent-runtime-connections.ts';
+import { getActiveRuntimeId } from './agent-runtime-connections.ts';
 
 function mapCronRunRecord(record: typeof cronRunsTable.$inferSelect) {
     return cronRunSchema.parse(record);
@@ -15,7 +15,7 @@ export async function listCronRuns(input?: {
 }) {
     const runtimeId = input?.includeInactive
         ? null
-        : (input?.runtimeId ?? (await getActiveProjectionRuntimeId()));
+        : (input?.runtimeId ?? (await getActiveRuntimeId()));
     const baseQuery = db.select().from(cronRunsTable);
     const filters = [
         input?.jobId ? eq(cronRunsTable.jobId, input.jobId) : null,

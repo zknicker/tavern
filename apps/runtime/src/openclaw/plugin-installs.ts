@@ -20,9 +20,6 @@ export function resolveManagedOpenClawPluginInstallSpecs(input: {
     }
 
     const specs = new Map<string, ManagedOpenClawPluginInstallSpec>();
-    for (const spec of resolveConfiguredPluginInstallSpecs(input.config, installRoot)) {
-        specs.set(spec.pluginId, spec);
-    }
     for (const spec of resolveConfiguredChannelPluginInstallSpecs({
         config: input.config,
         installRoot,
@@ -99,42 +96,6 @@ export function stripManagedOpenClawPluginInstalls(config: Record<string, unknow
     };
 }
 
-function resolveConfiguredPluginInstallSpecs(config: Record<string, unknown>, installRoot: string) {
-    return Object.entries(readRecord(readRecord(config.plugins).installs)).flatMap(
-        ([pluginId, rawRecord]) => {
-            if (!isManagedPluginId(pluginId)) {
-                return [];
-            }
-
-            const record = readRecord(rawRecord);
-            if (readString(record.source) !== 'npm') {
-                return [];
-            }
-
-            const npmSpec = readString(record.spec);
-            if (!npmSpec) {
-                return [];
-            }
-
-            const packageName = resolveNpmSpecPackageName(npmSpec);
-            if (!packageName) {
-                return [];
-            }
-
-            return [
-                {
-                    installPath:
-                        readString(record.installPath) ??
-                        resolveManagedPackageRoot(installRoot, packageName),
-                    npmSpec,
-                    packageName,
-                    pluginId,
-                },
-            ];
-        }
-    );
-}
-
 function resolveConfiguredChannelPluginInstallSpecs(input: {
     config: Record<string, unknown>;
     installRoot: string;
@@ -172,17 +133,6 @@ export function collectConfiguredChannelPluginIds(channels: Record<string, unkno
 
         return readString(channelId) ?? [];
     });
-}
-
-function resolveNpmSpecPackageName(npmSpec: string) {
-    const trimmed = npmSpec.trim();
-    if (trimmed.startsWith('@')) {
-        const match = /^(@[^/\s]+\/[^@\s/]+)/u.exec(trimmed);
-        return match?.[1] ?? null;
-    }
-
-    const match = /^([^@\s/]+)/u.exec(trimmed);
-    return match?.[1] ?? null;
 }
 
 function resolveManagedPackageRoot(installRoot: string, packageName: string) {

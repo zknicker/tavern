@@ -10,7 +10,7 @@ and does not add mock-only product APIs to Tavern.
 
 ## Goals
 
-- Prove durable projections are idempotent under duplicate and out-of-order runtime events.
+- Prove durable runtime-backed records are idempotent under duplicate and out-of-order runtime events.
 - Prove runtime history remains authoritative over volatile event payloads.
 - Detect message loss, duplicate messages, ordering violations, timeout loops, and overlapping sync
   races.
@@ -37,7 +37,7 @@ Website UI or tRPC client
   -> Tavern API client
   -> mock agent runtime
   -> Tavern sync paths and event handlers
-  -> local projections
+  -> local records
 ```
 
 The mock runtime exposes normal runtime contract routes for agents, chats, sessions, messages, cron,
@@ -52,7 +52,7 @@ Each scenario records a metrics object.
 - `duplicate_message_count`: durable messages with duplicated stable runtime ids.
 - `message_order_violation_count`: durable history sorted differently from runtime authority.
 - `duplicate_event_rate`: duplicate runtime events divided by total runtime events.
-- `event_to_sync_latency_ms`: time from runtime event to corresponding projection update.
+- `event_to_sync_latency_ms`: time from runtime event to corresponding record update.
 - `history_refetch_count`: number of history reads triggered for the scenario.
 - `history_overlap_count`: number of concurrent history syncs for the same session.
 - `inflight_sync_max`: maximum concurrent syncs per primitive/session.
@@ -115,7 +115,7 @@ The event stream disconnects while a turn is active, reconnects, and emits an in
 
 Expected:
 
-- synced projections stay visible while disconnected
+- synced records stay visible while disconnected
 - reconnect triggers focused sync
 - final history is recovered without duplicate messages
 - connection status updates without full-page loading gates
@@ -166,7 +166,7 @@ Expected:
 
 ### Runtime Status Flap
 
-Runtime health alternates between reachable and unreachable while projections already exist.
+Runtime health alternates between reachable and unreachable while records already exist.
 
 Expected:
 
@@ -194,7 +194,7 @@ Each report includes:
 - failing scenario details
 - runtime events emitted
 - sync requests observed
-- final projection counts
+- final record counts
 
 ## Acceptance Criteria
 

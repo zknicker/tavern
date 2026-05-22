@@ -75,6 +75,14 @@ describe('buildManagedOpenClawConfig', () => {
                         enabled: true,
                     },
                     codex: {
+                        config: {
+                            computerUse: {
+                                autoInstall: true,
+                                enabled: true,
+                                mcpServerName: 'computer-use',
+                                pluginName: 'computer-use',
+                            },
+                        },
                         enabled: true,
                     },
                     'lossless-claw': {
@@ -217,6 +225,48 @@ describe('buildManagedOpenClawConfig', () => {
         ]);
     });
 
+    it('can pin the Codex app-server auth profile without storing credentials', () => {
+        const config = buildManagedOpenClawConfig({
+            codexAuthProfileId: 'openai-codex:user@example.com',
+            existingConfig: {
+                auth: {
+                    profiles: {
+                        'anthropic:default': {
+                            mode: 'api_key',
+                            provider: 'anthropic',
+                        },
+                    },
+                },
+            },
+            gatewayPort: 18_789,
+            gatewayToken: 'token',
+            openClawInstallRoot: '/Users/me/.tavern/runtime/openclaw/versions/2026.5.12',
+            cortexPluginPath: '/Users/me/.tavern/openclaw-plugins/tavern-openclaw-cortex',
+            pluginPath: '/Users/me/.tavern/openclaw-plugins/tavern-openclaw-messenger',
+            version: '2026.5.12',
+            workspacePluginPath: '/Users/me/.tavern/openclaw-plugins/tavern-openclaw-workspace',
+            workspaceDir: '/Users/me/.tavern/runtime/openclaw/run/workspace',
+        });
+
+        expect(config).toMatchObject({
+            auth: {
+                order: {
+                    'openai-codex': ['openai-codex:user@example.com'],
+                },
+                profiles: {
+                    'anthropic:default': {
+                        mode: 'api_key',
+                        provider: 'anthropic',
+                    },
+                    'openai-codex:user@example.com': {
+                        mode: 'oauth',
+                        provider: 'openai-codex',
+                    },
+                },
+            },
+        });
+    });
+
     it('removes stale memory plugins from existing managed config', () => {
         const config = buildManagedOpenClawConfig({
             existingConfig: {
@@ -259,11 +309,10 @@ describe('buildManagedOpenClawConfig', () => {
         expect(getPluginAllow(config)).not.toContain('memory-core');
         expect(getPluginEntries(config)).not.toHaveProperty('active-memory');
         expect(getPluginEntries(config)).not.toHaveProperty('memory-core');
-        expect(getPluginInstalls(config)).not.toHaveProperty('active-memory');
-        expect(getPluginInstalls(config)).not.toHaveProperty('memory-core');
+        expect(hasPluginInstalls(config)).toBe(false);
     });
 
-    it('uses generic npm plugin install records without writing them to authored config', () => {
+    it('strips non-standard plugin install records from authored config', () => {
         const config = buildManagedOpenClawConfig({
             existingConfig: {
                 plugins: {
@@ -301,11 +350,9 @@ describe('buildManagedOpenClawConfig', () => {
                 },
             },
         });
-        expect(getPluginInstalls(config)).toEqual({});
-        expect(getPluginLoadPaths(config)).toEqual(
-            expect.arrayContaining([
-                '/Users/me/.tavern/runtime/openclaw/versions/2026.5.12/node_modules/@tencent-weixin/openclaw-weixin',
-            ])
+        expect(hasPluginInstalls(config)).toBe(false);
+        expect(getPluginLoadPaths(config)).not.toContain(
+            '/Users/me/.tavern/runtime/openclaw/versions/2026.5.12/node_modules/@tencent-weixin/openclaw-weixin'
         );
     });
 
@@ -346,13 +393,9 @@ function getPluginLoadPaths(config: Record<string, unknown>) {
     return 'paths' in load && Array.isArray(load.paths) ? load.paths : [];
 }
 
-function getPluginInstalls(config: Record<string, unknown>) {
+function hasPluginInstalls(config: Record<string, unknown>) {
     const plugins = getPlugins(config);
-    return 'installs' in plugins &&
-        typeof plugins.installs === 'object' &&
-        plugins.installs !== null
-        ? plugins.installs
-        : {};
+    return 'installs' in plugins;
 }
 
 function getPluginEntries(config: Record<string, unknown>) {

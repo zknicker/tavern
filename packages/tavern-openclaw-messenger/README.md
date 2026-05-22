@@ -18,8 +18,10 @@ Tavern Runtime chat server
   -> Tavern API
 ```
 
-The plugin accepts plain text and Tavern-owned message metadata, such as tool mentions, and passes
-that metadata into the channel turn context.
+The plugin accepts plain text and Tavern-owned message metadata, such as mentions, and passes that
+metadata into the channel turn context. Skill mentions are mapped into execution-only
+`bodyForAgent` skill context. Capability and path mentions stay as visible markdown in the message
+text.
 
 The managed Tavern channel scope is intentionally small:
 
@@ -30,8 +32,8 @@ The managed Tavern channel scope is intentionally small:
 
 The plugin does not store dynamic Tavern chat registrations and does not expose Tavern-specific
 Gateway RPCs for chat management or turn start. Tavern Runtime owns chat existence, bindings, and
-labels in Tavern's runtime database. The plugin adapts OpenClaw turn signals into Tavern API
-deliveries and activity.
+labels in Tavern's runtime database. The plugin maps OpenClaw turn signals onto Tavern API
+messages, responses, activity, and artifacts.
 
 ## Architecture Principles
 
@@ -46,7 +48,7 @@ deliveries and activity.
   effect.
 - Session keys come from OpenClaw's channel routing. Tavern sends with the synced session key,
   not derive session keys from chat ids or delivery metadata.
-- Runtime history remains OpenClaw-owned execution evidence. Tavern Runtime owns canonical chat
+- Runtime history remains OpenClaw execution evidence. Tavern Runtime owns canonical chat
   history, and the plugin must not create a second durable timeline.
 - Bad identity is a hard failure. Do not recover Tavern chat identity from labels, origin strings,
   delivery metadata, or stale local records.

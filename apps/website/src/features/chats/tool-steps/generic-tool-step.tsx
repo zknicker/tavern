@@ -16,12 +16,13 @@ import type { ToolStepRendererProps } from './types.ts';
 
 type StepIcon = HugeiconsIconProps['icon'];
 
-export function GenericToolStep({ index, isLast, row }: ToolStepRendererProps) {
+export function GenericToolStep({ chatId, index, isLast, row }: ToolStepRendererProps) {
     const [isOpen, setIsOpen] = React.useState(false);
     const hasError = hasErrorStatus(row.toolCall.status);
+    const target = getToolTarget(row);
     const label = (
-        <ToolDrawerLabel isOpen={isOpen} onOpenChange={setIsOpen} row={row}>
-            <InlineToolLabel row={row} target={getToolTarget(row)} verb={getToolVerb(row)} />
+        <ToolDrawerLabel chatId={chatId} isOpen={isOpen} onOpenChange={setIsOpen} row={row}>
+            <InlineToolLabel row={row} target={target} verb={getToolVerb(row, target)} />
         </ToolDrawerLabel>
     );
 
@@ -58,7 +59,7 @@ export function GenericToolStep({ index, isLast, row }: ToolStepRendererProps) {
     );
 }
 
-function getToolVerb(row: ToolStepRendererProps['row']) {
+function getToolVerb(row: ToolStepRendererProps['row'], target: string) {
     if (!(row.completedAt || hasErrorStatus(row.toolCall.status))) {
         return 'Using';
     }
@@ -70,6 +71,10 @@ function getToolVerb(row: ToolStepRendererProps['row']) {
         return normalizedStatus.includes('timeout') || normalizedStatus.includes('timed out')
             ? 'Timed out'
             : 'Failed';
+    }
+
+    if (target.toLowerCase().startsWith(normalized)) {
+        return 'Used';
     }
 
     if (isEditTool(normalized)) {

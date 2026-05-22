@@ -46,7 +46,7 @@ The adapter maps in two steps:
 ```txt
 OpenClaw Gateway record
   -> OpenClaw/platform interpretation
-  -> Tavern primitive projection
+  -> Tavern primitive mapping
 ```
 
 Platform modules return normalized facts such as chat kind, stable platform conversation identity,
@@ -81,8 +81,11 @@ Messenger behavior, and session semantics are part of Tavern's compatibility env
   local checkout, or an externally managed Gateway for normal Tavern Runtime operation.
 - Runtime writes generated OpenClaw config, state, and the default workspace under
   `~/.tavern/runtime/openclaw/run`.
+- Generated config pins Codex app-server runs to the local Codex OAuth profile when the profile can
+  be derived from Codex auth. `TAVERN_OPENCLAW_CODEX_AUTH_PROFILE_ID` overrides that profile id.
+  Tavern does not copy Codex tokens into generated OpenClaw config.
 - Runtime reports the stable id `tavern-openclaw-managed` through Tavern Runtime status. This id is
-  a projection namespace and must not change when OpenClaw is reinstalled, reset, or upgraded.
+  a runtime namespace and must not change when OpenClaw is reinstalled, reset, or upgraded.
 
 Managed OpenClaw requires macOS Seatbelt. Runtime startup must fail if `sandbox-exec` cannot launch
 the Gateway. Runtime launches OpenClaw as the current user with the normal user environment,
@@ -120,11 +123,11 @@ file-protection hooks. See [Workspace](../workspace.md) for the full contract.
 - Tavern chat message acceptance flows through Tavern Runtime's private `/chat`
   relay, not a Gateway RPC.
 - `cron.list`, `cron.add`, `cron.update`, `cron.remove`, `cron.run`, `cron.runs` -> Tavern cron.
-- `models.list` -> Tavern model inventory projection.
+- `models.list` -> Tavern model inventory.
 - `config.get`, `config.apply` -> diagnostic/transition surfaces while managed settings move to
   Tavern-owned config state.
 - `skills.status`, `skills.detail`, `skills.install`, `skills.update` -> Tavern skills.
-- `logs.tail` -> runtime logs when Tavern adds a log projection surface for runtime gateways.
+- `logs.tail` -> runtime logs when Tavern adds a log surface for runtime gateways.
 
 OpenClaw list-shaped methods may paginate. The adapter or sync path must follow authoritative
 pagination for primitives where Tavern expects complete snapshots or complete observed windows.
@@ -152,18 +155,20 @@ Fixups run in this order:
 2. Context-management settings: Lossless Claw as `contextEngine`, OpenClaw `memory` slot set to
    `none`, and `lossless-claw` enabled.
 3. Plugin trust: required Tavern plugin trust plus configured plugin entries.
-4. Agent tools: Tavern default tool policy for projected agents that do not already have explicit
+4. Agent tools: Tavern default tool policy for agents that do not already have explicit
    OpenClaw tool policy.
 
 Fixups do not run against invalid OpenClaw config snapshots. Tavern stores invalid snapshots for
 inspection and asks the operator to repair the config first.
 
-Fixups merge rather than replace. They must not delete unrelated plugin entries, plugin settings,
-plugin install records, plugin load paths, channel config, bindings, agent-specific config, model
-config, or user-managed OpenClaw settings outside the field they own.
+Fixups merge rather than replace. They preserve unrelated plugin entries, plugin settings,
+plugin load paths, channel config, bindings, agent-specific config, model config, and
+user-managed OpenClaw settings outside the field they own. Managed package installs are
+materialized as OpenClaw-native `plugins.load.paths`; install specs are Runtime-owned metadata,
+not OpenClaw config.
 
 When a fixup changes config, Tavern applies the full updated snapshot through `config.apply`, saves
-the returned snapshot hash, syncs affected projections, and emits config/model/agent invalidation
+the returned snapshot hash, syncs affected records, and emits config/model/agent invalidation
 events.
 
 ## Platform Metadata
@@ -197,19 +202,19 @@ from OpenClaw labels, Discord targets, or opaque session key fragments.
 ## Chat Send Routing
 
 Tavern sends to OpenClaw through Tavern Messenger and a resolved session key. The synced Tavern chat
-projection stores the observed OpenClaw session key for the chat's single bound agent. When a user
+chat record stores the observed OpenClaw session key for the chat's single bound agent. When a user
 sends, Tavern includes that non-worker session key in `ChatTarget.sessionKey`.
 
 The OpenClaw adapter rejects sends without `ChatTarget.sessionKey`. It must not derive Discord
 channel, Discord DM, opaque OpenClaw session keys, or generic `sessions.send` payloads from chat
-targets. A missing session key means Tavern's projection is not send-ready for that agent/chat pair.
+targets. A missing session key means Tavern is not send-ready for that agent/chat pair.
 
 ## Session Identity
 
 Tavern stores OpenClaw `sessionKey` values directly as Tavern session keys. OpenClaw `sessionId`
 values identify the current transcript file behind a session key and may rotate while the
 conversation bucket stays the same. The adapter must preserve `sessionId` as runtime state and must
-not substitute row ids or Tavern-local projection ids for it. Server and website APIs that look up
+not substitute row ids or Tavern-local ids for it. Server and website APIs that look up
 or operate on a continuing session must accept `sessionKey`; Tavern session records expose
 `session.id` as the OpenClaw `sessionId`.
 

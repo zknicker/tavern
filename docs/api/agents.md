@@ -18,8 +18,8 @@ with personality, model, tool, memory, and skill policy.
 * Agent ids are durable Tavern ids.
 * Agent records expose display name, description, soul/personality, model
   policy, tool policy, memory policy, skill selections, and availability.
-* Model availability comes from runtime projection, but app clients read it
-  through agent and model capabilities.
+* Model availability comes from runtime sync, but app clients read it through
+  agent and model capabilities.
 * Tool and skill controls are inspectable before a run starts.
 * Soul/personality is a Tavern-owned setting. It is rendered into the managed
   OpenClaw `AGENTS.md`; clients do not edit the workspace file directly.

@@ -100,6 +100,10 @@ export function applyReplySnapshot(
         }
 
         if (normalizedActiveReply !== null) {
+            if (state.completedProgress?.reply.runId === normalizedActiveReply.runId) {
+                return null;
+            }
+
             if (
                 state.failedTurn?.turn.runId === normalizedActiveReply.runId ||
                 hasLoggedTurnFailure(state.timeline, normalizedActiveReply.runId)

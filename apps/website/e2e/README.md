@@ -34,6 +34,8 @@ default CI gate.
 
 - `run-playwright.ts`: allocates unique ports and run ids for each Playwright run.
 - `run-playwright-live-openclaw.ts`: boots the live local OpenClaw lane with isolated Tavern ports.
+- `preflight.ts`: verifies Playwright Chromium and the shared managed OpenClaw package cache under
+  `~/.tavern/runtime/openclaw/versions` before Playwright starts its `webServer` readiness timers.
 - `start-tavern-server.ts`: boots the real Tavern server with a run-scoped SQLite database.
 - `start-tavern-runtime.ts`: boots the real Tavern Runtime with a run-scoped data root.
 - `openclaw/start-mock-provider.ts`: starts the vendored OpenClaw QA mock provider.
@@ -48,8 +50,10 @@ default CI gate.
 
 ## Rules
 
-- Do not point automated e2e tests at a developer or production OpenClaw home.
+- Do not point automated e2e tests at a developer or production OpenClaw run home, config, or DB.
 - Do not add mock-only product APIs for convenience.
+- Keep expensive dependency setup in preflight, not Playwright `webServer` startup. The web server
+  timeout should measure service readiness, not package installation.
 - Keep model responses deterministic by using prompt directives supported by the OpenClaw QA mock.
 - Prefer one focused e2e regression over broad fixture setup and dozens of brittle assertions.
 - When a regression depends on real Gateway method/event semantics, capture the raw Gateway frames

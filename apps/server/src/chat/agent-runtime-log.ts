@@ -4,35 +4,35 @@ import {
     type SessionMessage,
     sessionMessageAttachmentSchema,
 } from '../sessions/contracts.ts';
-import { getChatProjection, parseChatRawJson } from '../storage/chats.ts';
+import { getChatRecord, parseChatRawJson } from '../storage/chats.ts';
 import { listSessionMessagesForSessionKeys } from '../storage/session-messages.ts';
-import { listProjectedSessionToolCalls } from '../storage/session-tool-calls.ts';
-import { listSessionProjections, parseSessionProjection } from '../storage/sessions.ts';
+import { listSessionToolCalls } from '../storage/session-tool-calls.ts';
+import { listSessionRecords, parseSessionRecord } from '../storage/sessions.ts';
 import { buildChatRows } from './rows.ts';
 
 export async function listAgentRuntimeChatRows(
     chatId: string
 ): Promise<SessionHistory['rows'] | null> {
-    const projectedChat = await getChatProjection(chatId);
+    const chatRecord = await getChatRecord(chatId);
 
-    if (!projectedChat) {
+    if (!chatRecord) {
         return null;
     }
 
-    return await listProjectedChatRows(chatId);
+    return await listChatRowsFromSessionRecords(chatId);
 }
 
-async function listProjectedChatRows(chatId: string): Promise<SessionHistory['rows']> {
-    const [agents, projectedChat, sessionRecords] = await Promise.all([
+async function listChatRowsFromSessionRecords(chatId: string): Promise<SessionHistory['rows']> {
+    const [agents, chatRecord, sessionRecords] = await Promise.all([
         listAgents(),
-        getChatProjection(chatId),
-        listSessionProjections(),
+        getChatRecord(chatId),
+        listSessionRecords(),
     ]);
-    const chatSessionKeys = projectedChat
-        ? listChatSessionKeys(parseChatRawJson(projectedChat))
+    const chatSessionKeys = chatRecord
+        ? listChatSessionKeys(parseChatRawJson(chatRecord))
         : [];
     const sessions = sessionRecords.flatMap((record) => {
-        const session = parseSessionProjection(record);
+        const session = parseSessionRecord(record);
         return session && session.chatId === chatId && session.sessionRole === 'main'
             ? [session]
             : [];
@@ -43,7 +43,7 @@ async function listProjectedChatRows(chatId: string): Promise<SessionHistory['ro
     const sessionsByKey = new Map(sessions.map((session) => [session.key, session]));
     const [messages, toolCalls] = await Promise.all([
         listSessionMessagesForSessionKeys(sessionKeys),
-        listProjectedSessionToolCalls(sessionKeys),
+        listSessionToolCalls(sessionKeys),
     ]);
     const agentLookup = {
         byAlias: new Map(),
@@ -62,7 +62,7 @@ async function listProjectedChatRows(chatId: string): Promise<SessionHistory['ro
     return buildChatRows({
         agentLookup,
         messages: messages.map((message) => {
-            const actor = resolveProjectedMessageActor(message);
+            const actor = resolveMessageActor(message);
             const agentId = actor?.kind === 'agent' ? actor.id : null;
             const sourceSessionId = sessionsByKey.get(message.sessionKey)?.sessionId ?? null;
 
@@ -71,10 +71,10 @@ async function listProjectedChatRows(chatId: string): Promise<SessionHistory['ro
                 message: {
                     actor: actor?.id ? actor : null,
                     tavernAgentId: agentId,
-                    attachments: parseProjectedMessageAttachments(message.rawJson),
+                    attachments: parseMessageAttachments(message.rawJson),
                     content: message.contentText ?? '',
                     id: message.id,
-                    metadata: resolveProjectedMessageMetadata(message),
+                    metadata: resolveMessageMetadata(message),
                     sender: message.senderLabel ?? message.role,
                     senderType:
                         message.role === 'agent' || message.role === 'user'
@@ -100,7 +100,7 @@ function listChatSessionKeys(chat: ReturnType<typeof parseChatRawJson>) {
         : [];
 }
 
-function parseProjectedMessageRaw(messageJson: string | null) {
+function parseMessageRaw(messageJson: string | null) {
     if (!messageJson) {
         return null;
     }
@@ -117,7 +117,7 @@ function parseProjectedMessageRaw(messageJson: string | null) {
     }
 }
 
-function parseProjectedMessageAttachments(messageJson: string | null) {
+function parseMessageAttachments(messageJson: string | null) {
     if (!messageJson) {
         return undefined;
     }
@@ -129,7 +129,7 @@ function parseProjectedMessageAttachments(messageJson: string | null) {
             return undefined;
         }
 
-        const attachments = parsed.attachments.flatMap(mapProjectedAttachment);
+        const attachments = parsed.attachments.flatMap(mapAttachment);
 
         return attachments.length > 0 ? attachments : undefined;
     } catch {
@@ -137,7 +137,7 @@ function parseProjectedMessageAttachments(messageJson: string | null) {
     }
 }
 
-function mapProjectedAttachment(attachment: unknown, index: number) {
+function mapAttachment(attachment: unknown, index: number) {
     const result = sessionMessageAttachmentSchema.safeParse(attachment);
 
     if (result.success) {
@@ -225,7 +225,7 @@ function filenameFromPath(value: string | null) {
     return value?.split('/').filter(Boolean).at(-1) ?? null;
 }
 
-function parseProjectedUsage(usageJson: string | null) {
+function parseUsage(usageJson: string | null) {
     if (!usageJson) {
         return undefined;
     }
@@ -237,7 +237,7 @@ function parseProjectedUsage(usageJson: string | null) {
     }
 }
 
-function resolveProjectedMessageMetadata(message: {
+function resolveMessageMetadata(message: {
     api: string | null;
     model: string | null;
     openClawApi: string | null;
@@ -249,15 +249,15 @@ function resolveProjectedMessageMetadata(message: {
     stopReason: string | null;
     usageJson: string | null;
 }): SessionMessage['metadata'] {
-    const rawMetadata = parseProjectedMessageRaw(message.rawJson)?.metadata ?? {};
-    const metadata = compactProjectedMetadata(rawMetadata, ['model', 'provider']);
-    const usage = parseProjectedUsage(message.usageJson);
+    const rawMetadata = parseMessageRaw(message.rawJson)?.metadata ?? {};
+    const metadata = compactMetadata(rawMetadata, ['model', 'provider']);
+    const usage = parseUsage(message.usageJson);
 
     if (message.api) {
         metadata.api = message.api;
     }
 
-    if (message.model && isProjectedModelProvider(message.provider)) {
+    if (message.model && isModelProvider(message.provider)) {
         metadata.model = message.model;
         metadata.provider = message.provider;
     }
@@ -289,7 +289,7 @@ function resolveProjectedMessageMetadata(message: {
     return metadata as SessionMessage['metadata'];
 }
 
-function compactProjectedMetadata(
+function compactMetadata(
     metadata: Record<string, unknown>,
     excludedKeys: string[]
 ): Record<string, unknown> {
@@ -302,13 +302,13 @@ function compactProjectedMetadata(
     );
 }
 
-function isProjectedModelProvider(
+function isModelProvider(
     value: string | null
 ): value is 'claude' | 'codex' | 'openrouter' {
     return value === 'claude' || value === 'codex' || value === 'openrouter';
 }
 
-function resolveProjectedMessageActor(message: {
+function resolveMessageActor(message: {
     actorId: string | null;
     actorKind: string | null;
 }) {

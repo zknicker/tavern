@@ -1,9 +1,9 @@
 ---
-summary: Realtime contract for durable chat events, volatile activity notifications, websocket recovery, cursors, ordering, and app stream boundaries.
+summary: Realtime contract for durable chat events, response activity updates, websocket recovery, cursors, ordering, and app stream boundaries.
 read_when:
   - changing websocket subscriptions, event cursors, or reconnect behavior
-  - adding a durable event type or volatile activity signal
-  - changing chat activity, progress, or realtime recovery semantics
+  - adding a durable event type or response activity signal
+  - changing response activity, progress, or realtime recovery semantics
 ---
 
 # Realtime
@@ -19,7 +19,9 @@ with `after_cursor`, or durable resource reads.
 | Component | Owner | Role |
 | --- | --- | --- |
 | `chat_events` | Tavern Runtime | Durable cursor-backed event log |
-| `chat_activity` | Tavern Runtime | Latest active work state |
+| `chat_responses` | Tavern Runtime | Durable response lifecycle |
+| `chat_response_activity` | Tavern Runtime | Durable response work rows |
+| `chat_artifacts` | Tavern Runtime | Durable renderable outputs |
 | Runtime event replay | Tavern Runtime | Reads derived from `chat_events` |
 | App websocket | Tavern App | UI invalidation and client notifications |
 
@@ -76,10 +78,16 @@ Chat events:
 * `message.delivered`
 * `message.updated`
 * `message.deleted`
+* `response.created`
+* `response.updated`
+* `response.completed`
+* `response.failed`
+* `activity.created`
+* `activity.updated`
+* `activity.completed`
+* `activity.failed`
+* `artifact.created`
 * `chat.read`
-* `chat.activity.updated`
-* `chat.activity.completed`
-* `chat.activity.failed`
 
 Automation, memory inspection, Cortex wiki, skill, and stats events use the
 same durable event log when they affect client-visible Runtime state.
@@ -98,9 +106,9 @@ Examples:
 * short-lived hover/debug state
 * app-only invalidation hints
 
-Tool progress, assistant draft text, and provider-exposed reasoning summaries
-are not pure ephemeral notifications in Tavern chat. Runtime writes their latest
-active state to `chat_activity` and emits `chat.activity.*` events.
+Tool progress, assistant preambles, and provider-exposed reasoning summaries
+are not ephemeral notifications in Tavern chat. Runtime persists them as
+responses, response activity, or artifacts, then emits durable events.
 
 ## Cursor Recovery
 
@@ -113,7 +121,7 @@ Reconnect flow:
 3. Stream live notifications.
 4. On disconnect, keep the latest applied cursor.
 5. If the replay window is insufficient, refetch durable resources such as chat
-   history and current activity.
+   history, responses, activity, and artifacts.
 
 History recovery does not depend on the event log retaining full message
 payloads. If a client sees a cursor gap, it refetches the affected resource.
@@ -134,8 +142,8 @@ invalidation. Those subscriptions are app notifications.
 Product state still comes from:
 
 * `GET /api/chats/{chat_id}/messages`
+* response, activity, and artifact reads for the chat timeline
 * `GET /api/events?after_cursor=...`
-* current `chat_activity`
 * focused resource reads for automations, memory inspection, the Cortex wiki,
   skills, and stats
 
@@ -143,7 +151,7 @@ Product state still comes from:
 
 * WebSocket-only durable state.
 * Message history stored only in event payloads.
-* Activity rows created from app-local UI state.
+* Response activity created from app-local UI state.
 * Hidden chain-of-thought in realtime events.
 * Runtime session sequence as an event cursor.
 

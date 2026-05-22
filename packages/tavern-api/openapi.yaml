@@ -15,20 +15,6 @@ tags:
   - name: Messages
   - name: Realtime
 paths:
-  /api/activity:
-    get:
-      operationId: listChatActivity
-      tags: [Chats]
-      summary: List current live chat activity.
-      responses:
-        '200':
-          description: Current activity state for chats with live or recent work.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ListChatActivityResponse'
-        default:
-          $ref: '#/components/responses/Error'
   /api/chats:
     get:
       operationId: listChats
@@ -178,11 +164,32 @@ paths:
                 $ref: '#/components/schemas/DeliveryReceipt'
         default:
           $ref: '#/components/responses/Error'
-  /api/chats/{chat_id}/activity:
-    post:
-      operationId: updateChatActivity
+  /api/chats/{chat_id}/responses:
+    get:
+      operationId: listChatResponses
       tags: [Chats]
-      summary: Update the live activity state for a chat.
+      summary: List chat responses by update time.
+      parameters:
+        - $ref: '#/components/parameters/ChatId'
+        - name: after_sequence
+          in: query
+          schema:
+            type: integer
+            minimum: 0
+        - $ref: '#/components/parameters/Limit'
+      responses:
+        '200':
+          description: Responses for one chat.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ListResponsesResponse'
+        default:
+          $ref: '#/components/responses/Error'
+    post:
+      operationId: createChatResponse
+      tags: [Chats]
+      summary: Create or update a durable chat response.
       parameters:
         - $ref: '#/components/parameters/ChatId'
       requestBody:
@@ -190,14 +197,94 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/UpdateActivityRequest'
+              $ref: '#/components/schemas/UpsertResponseRequest'
       responses:
         '200':
-          description: Current activity state.
+          description: Current response state.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ChatActivity'
+                $ref: '#/components/schemas/ChatResponse'
+        '201':
+          description: Created response.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ChatResponse'
+        default:
+          $ref: '#/components/responses/Error'
+  /api/chats/{chat_id}/responses/{response_id}/activity:
+    post:
+      operationId: upsertResponseActivity
+      tags: [Chats]
+      summary: Create or update durable response activity.
+      parameters:
+        - $ref: '#/components/parameters/ChatId'
+        - $ref: '#/components/parameters/ResponseId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpsertResponseActivityRequest'
+      responses:
+        '200':
+          description: Current response activity.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ResponseActivity'
+        '201':
+          description: Created response activity.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ResponseActivity'
+        default:
+          $ref: '#/components/responses/Error'
+  /api/chats/{chat_id}/activity/{activity_id}:
+    get:
+      operationId: getResponseActivity
+      tags: [Chats]
+      summary: Get durable response activity by id.
+      parameters:
+        - $ref: '#/components/parameters/ChatId'
+        - $ref: '#/components/parameters/ActivityId'
+      responses:
+        '200':
+          description: Response activity.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ResponseActivity'
+        default:
+          $ref: '#/components/responses/Error'
+  /api/chats/{chat_id}/artifacts:
+    post:
+      operationId: createChatArtifact
+      tags: [Chats]
+      summary: Create or update a durable chat artifact.
+      parameters:
+        - $ref: '#/components/parameters/ChatId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpsertArtifactRequest'
+      responses:
+        '200':
+          description: Current artifact.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ChatArtifact'
+        '201':
+          description: Created artifact.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ChatArtifact'
         default:
           $ref: '#/components/responses/Error'
   /api/chats/{chat_id}/read:
@@ -328,6 +415,18 @@ components:
       required: true
       schema:
         $ref: '#/components/schemas/MessageId'
+    ResponseId:
+      name: response_id
+      in: path
+      required: true
+      schema:
+        $ref: '#/components/schemas/ResponseId'
+    ActivityId:
+      name: activity_id
+      in: path
+      required: true
+      schema:
+        $ref: '#/components/schemas/ActivityId'
   responses:
     Error:
       description: Error response.
@@ -348,6 +447,15 @@ components:
     MessagePartId:
       type: string
       pattern: '^part_[A-Za-z0-9_-]+$'
+    ResponseId:
+      type: string
+      pattern: '^rsp_[A-Za-z0-9_-]+$'
+    ActivityId:
+      type: string
+      pattern: '^act_[A-Za-z0-9_-]+$'
+    ArtifactId:
+      type: string
+      pattern: '^art_[A-Za-z0-9_-]+$'
     ParticipantId:
       type: string
       pattern: '^(usr|agt|sys)_[A-Za-z0-9_-]+$'
@@ -626,28 +734,189 @@ components:
           type: string
         idempotent:
           type: boolean
-    ActivityStep:
+    ResponseStatus:
+      type: string
+      enum: [queued, running, completed, failed, cancelled]
+    ResponseActivityKind:
+      type: string
+      enum: [planning, reasoning, tool_call, tool_result, command, approval, message, artifact, custom]
+    ChatResponse:
+      type: object
+      additionalProperties: false
+      required:
+        - id
+        - chat_id
+        - status
+        - participant_id
+        - request_message_id
+        - response_message_id
+        - summary
+        - created_at
+        - updated_at
+        - completed_at
+        - metadata
+      properties:
+        id:
+          $ref: '#/components/schemas/ResponseId'
+        chat_id:
+          $ref: '#/components/schemas/ChatId'
+        participant_id:
+          $ref: '#/components/schemas/ParticipantId'
+        request_message_id:
+          oneOf:
+            - $ref: '#/components/schemas/MessageId'
+            - type: 'null'
+        response_message_id:
+          oneOf:
+            - $ref: '#/components/schemas/MessageId'
+            - type: 'null'
+        status:
+          $ref: '#/components/schemas/ResponseStatus'
+        summary:
+          type: [string, 'null']
+        created_at:
+          $ref: '#/components/schemas/Timestamp'
+        updated_at:
+          $ref: '#/components/schemas/Timestamp'
+        completed_at:
+          oneOf:
+            - $ref: '#/components/schemas/Timestamp'
+            - type: 'null'
+        metadata:
+          $ref: '#/components/schemas/JsonObject'
+    UpsertResponseRequest:
+      type: object
+      additionalProperties: false
+      required:
+        - id
+        - participant_id
+        - status
+      properties:
+        id:
+          $ref: '#/components/schemas/ResponseId'
+        participant_id:
+          $ref: '#/components/schemas/ParticipantId'
+        request_message_id:
+          oneOf:
+            - $ref: '#/components/schemas/MessageId'
+            - type: 'null'
+        response_message_id:
+          oneOf:
+            - $ref: '#/components/schemas/MessageId'
+            - type: 'null'
+        status:
+          $ref: '#/components/schemas/ResponseStatus'
+        summary:
+          type: [string, 'null']
+        completed_at:
+          oneOf:
+            - $ref: '#/components/schemas/Timestamp'
+            - type: 'null'
+        metadata:
+          $ref: '#/components/schemas/JsonObject'
+    ListResponsesResponse:
+      type: object
+      additionalProperties: false
+      required:
+        - responses
+        - activity
+        - artifacts
+        - next_sequence
+      properties:
+        responses:
+          type: array
+          items:
+            $ref: '#/components/schemas/ChatResponse'
+        activity:
+          type: array
+          items:
+            $ref: '#/components/schemas/ResponseActivity'
+        artifacts:
+          type: array
+          items:
+            $ref: '#/components/schemas/ChatArtifact'
+        next_sequence:
+          type: [integer, 'null']
+    ResponseActivity:
+      type: object
+      additionalProperties: false
+      required:
+        - id
+        - response_id
+        - chat_id
+        - sequence
+        - kind
+        - status
+        - title
+        - detail
+        - summary
+        - artifact_ids
+        - started_at
+        - completed_at
+        - updated_at
+        - metadata
+      properties:
+        id:
+          $ref: '#/components/schemas/ActivityId'
+        response_id:
+          $ref: '#/components/schemas/ResponseId'
+        chat_id:
+          $ref: '#/components/schemas/ChatId'
+        sequence:
+          type: integer
+          minimum: 1
+        kind:
+          $ref: '#/components/schemas/ResponseActivityKind'
+        status:
+          $ref: '#/components/schemas/ResponseStatus'
+        title:
+          type: string
+        detail:
+          type: [string, 'null']
+        summary:
+          type: [string, 'null']
+        artifact_ids:
+          type: array
+          items:
+            $ref: '#/components/schemas/ArtifactId'
+        started_at:
+          $ref: '#/components/schemas/Timestamp'
+        completed_at:
+          oneOf:
+            - $ref: '#/components/schemas/Timestamp'
+            - type: 'null'
+        updated_at:
+          $ref: '#/components/schemas/Timestamp'
+        metadata:
+          $ref: '#/components/schemas/JsonObject'
+    UpsertResponseActivityRequest:
       type: object
       additionalProperties: false
       required:
         - id
         - kind
         - status
-        - label
-        - started_at
-        - completed_at
-        - metadata
+        - title
       properties:
         id:
-          $ref: '#/components/schemas/Id'
+          $ref: '#/components/schemas/ActivityId'
+        sequence:
+          type: integer
+          minimum: 1
         kind:
-          type: string
-          enum: [thinking, tool, command, file, message, custom]
+          $ref: '#/components/schemas/ResponseActivityKind'
         status:
+          $ref: '#/components/schemas/ResponseStatus'
+        title:
           type: string
-          enum: [queued, running, completed, failed]
-        label:
-          type: string
+        detail:
+          type: [string, 'null']
+        summary:
+          type: [string, 'null']
+        artifact_ids:
+          type: array
+          items:
+            $ref: '#/components/schemas/ArtifactId'
         started_at:
           $ref: '#/components/schemas/Timestamp'
         completed_at:
@@ -656,71 +925,91 @@ components:
             - type: 'null'
         metadata:
           $ref: '#/components/schemas/JsonObject'
-    ChatActivity:
+    ChatArtifact:
       type: object
       additionalProperties: false
       required:
+        - id
         - chat_id
-        - run_id
-        - agent_id
-        - status
-        - summary
-        - steps
+        - kind
+        - title
+        - content_text
+        - content_ref
+        - response_id
+        - activity_id
+        - message_id
+        - mime_type
+        - created_at
         - updated_at
         - metadata
       properties:
+        id:
+          $ref: '#/components/schemas/ArtifactId'
         chat_id:
           $ref: '#/components/schemas/ChatId'
-        run_id:
-          $ref: '#/components/schemas/RunId'
-        agent_id:
-          $ref: '#/components/schemas/AgentParticipantId'
-        status:
+        kind:
           type: string
-          enum: [queued, running, completed, failed]
-        summary:
+          enum: [code, image, file, diff, document, chart, text, custom]
+        title:
           type: [string, 'null']
-        steps:
-          type: array
-          items:
-            $ref: '#/components/schemas/ActivityStep'
+        content_text:
+          type: [string, 'null']
+        content_ref:
+          type: [string, 'null']
+        response_id:
+          oneOf:
+            - $ref: '#/components/schemas/ResponseId'
+            - type: 'null'
+        activity_id:
+          oneOf:
+            - $ref: '#/components/schemas/ActivityId'
+            - type: 'null'
+        message_id:
+          oneOf:
+            - $ref: '#/components/schemas/MessageId'
+            - type: 'null'
+        mime_type:
+          type: [string, 'null']
+        created_at:
+          $ref: '#/components/schemas/Timestamp'
         updated_at:
           $ref: '#/components/schemas/Timestamp'
         metadata:
           $ref: '#/components/schemas/JsonObject'
-    UpdateActivityRequest:
+    UpsertArtifactRequest:
       type: object
       additionalProperties: false
       required:
-        - run_id
-        - agent_id
-        - status
+        - id
+        - kind
       properties:
-        run_id:
-          $ref: '#/components/schemas/RunId'
-        agent_id:
-          $ref: '#/components/schemas/AgentParticipantId'
-        status:
+        id:
+          $ref: '#/components/schemas/ArtifactId'
+        kind:
           type: string
-          enum: [queued, running, completed, failed]
-        summary:
+          enum: [code, image, file, diff, document, chart, text, custom]
+        title:
           type: [string, 'null']
-        steps:
-          type: array
-          items:
-            $ref: '#/components/schemas/ActivityStep'
+        content_text:
+          type: [string, 'null']
+        content_ref:
+          type: [string, 'null']
+        response_id:
+          oneOf:
+            - $ref: '#/components/schemas/ResponseId'
+            - type: 'null'
+        activity_id:
+          oneOf:
+            - $ref: '#/components/schemas/ActivityId'
+            - type: 'null'
+        message_id:
+          oneOf:
+            - $ref: '#/components/schemas/MessageId'
+            - type: 'null'
+        mime_type:
+          type: [string, 'null']
         metadata:
           $ref: '#/components/schemas/JsonObject'
-    ListChatActivityResponse:
-      type: object
-      additionalProperties: false
-      required:
-        - activities
-      properties:
-        activities:
-          type: array
-          items:
-            $ref: '#/components/schemas/ChatActivity'
     ReadReceipt:
       type: object
       additionalProperties: false
@@ -787,9 +1076,15 @@ components:
         - $ref: '#/components/schemas/MessageDeliveredEvent'
         - $ref: '#/components/schemas/MessageDeletedEvent'
         - $ref: '#/components/schemas/ChatReadEvent'
-        - $ref: '#/components/schemas/ChatActivityUpdatedEvent'
-        - $ref: '#/components/schemas/ChatActivityCompletedEvent'
-        - $ref: '#/components/schemas/ChatActivityFailedEvent'
+        - $ref: '#/components/schemas/ResponseCreatedEvent'
+        - $ref: '#/components/schemas/ResponseUpdatedEvent'
+        - $ref: '#/components/schemas/ResponseCompletedEvent'
+        - $ref: '#/components/schemas/ResponseFailedEvent'
+        - $ref: '#/components/schemas/ActivityCreatedEvent'
+        - $ref: '#/components/schemas/ActivityUpdatedEvent'
+        - $ref: '#/components/schemas/ActivityCompletedEvent'
+        - $ref: '#/components/schemas/ActivityFailedEvent'
+        - $ref: '#/components/schemas/ArtifactCreatedEvent'
     EventBase:
       type: object
       additionalProperties: false
@@ -863,7 +1158,55 @@ components:
               const: chat.read
             read:
               $ref: '#/components/schemas/ReadReceipt'
-    ChatActivityUpdatedEvent:
+    ResponseCreatedEvent:
+      allOf:
+        - $ref: '#/components/schemas/EventBase'
+        - type: object
+          additionalProperties: false
+          required: [type, response]
+          properties:
+            type:
+              type: string
+              const: response.created
+            response:
+              $ref: '#/components/schemas/ChatResponse'
+    ResponseUpdatedEvent:
+      allOf:
+        - $ref: '#/components/schemas/EventBase'
+        - type: object
+          additionalProperties: false
+          required: [type, response]
+          properties:
+            type:
+              type: string
+              const: response.updated
+            response:
+              $ref: '#/components/schemas/ChatResponse'
+    ResponseCompletedEvent:
+      allOf:
+        - $ref: '#/components/schemas/EventBase'
+        - type: object
+          additionalProperties: false
+          required: [type, response]
+          properties:
+            type:
+              type: string
+              const: response.completed
+            response:
+              $ref: '#/components/schemas/ChatResponse'
+    ResponseFailedEvent:
+      allOf:
+        - $ref: '#/components/schemas/EventBase'
+        - type: object
+          additionalProperties: false
+          required: [type, response]
+          properties:
+            type:
+              type: string
+              const: response.failed
+            response:
+              $ref: '#/components/schemas/ChatResponse'
+    ActivityCreatedEvent:
       allOf:
         - $ref: '#/components/schemas/EventBase'
         - type: object
@@ -872,10 +1215,10 @@ components:
           properties:
             type:
               type: string
-              const: chat.activity.updated
+              const: activity.created
             activity:
-              $ref: '#/components/schemas/ChatActivity'
-    ChatActivityCompletedEvent:
+              $ref: '#/components/schemas/ResponseActivity'
+    ActivityUpdatedEvent:
       allOf:
         - $ref: '#/components/schemas/EventBase'
         - type: object
@@ -884,10 +1227,10 @@ components:
           properties:
             type:
               type: string
-              const: chat.activity.completed
+              const: activity.updated
             activity:
-              $ref: '#/components/schemas/ChatActivity'
-    ChatActivityFailedEvent:
+              $ref: '#/components/schemas/ResponseActivity'
+    ActivityCompletedEvent:
       allOf:
         - $ref: '#/components/schemas/EventBase'
         - type: object
@@ -896,9 +1239,33 @@ components:
           properties:
             type:
               type: string
-              const: chat.activity.failed
+              const: activity.completed
             activity:
-              $ref: '#/components/schemas/ChatActivity'
+              $ref: '#/components/schemas/ResponseActivity'
+    ActivityFailedEvent:
+      allOf:
+        - $ref: '#/components/schemas/EventBase'
+        - type: object
+          additionalProperties: false
+          required: [type, activity]
+          properties:
+            type:
+              type: string
+              const: activity.failed
+            activity:
+              $ref: '#/components/schemas/ResponseActivity'
+    ArtifactCreatedEvent:
+      allOf:
+        - $ref: '#/components/schemas/EventBase'
+        - type: object
+          additionalProperties: false
+          required: [type, artifact]
+          properties:
+            type:
+              type: string
+              const: artifact.created
+            artifact:
+              $ref: '#/components/schemas/ChatArtifact'
     Error:
       type: object
       additionalProperties: false

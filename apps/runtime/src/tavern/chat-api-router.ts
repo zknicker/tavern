@@ -3,7 +3,9 @@ import type {
     TavernCreateDeliveryRequest,
     TavernCreateMessageRequest,
     TavernMarkReadRequest,
-    TavernUpdateActivityRequest,
+    TavernUpsertArtifactRequest,
+    TavernUpsertResponseActivityRequest,
+    TavernUpsertResponseRequest,
 } from '@tavern/api';
 import {
     createChat,
@@ -12,12 +14,15 @@ import {
     deleteMessage,
     getChat,
     getMessage,
-    listActivity,
+    getResponseActivity,
     listChats,
     listEvents,
     listMessages,
+    listResponses,
     markRead,
-    updateActivity,
+    upsertArtifact,
+    upsertResponse,
+    upsertResponseActivity,
 } from './chat-api';
 import { badRequest, json, notFound, readJson } from './http';
 
@@ -42,10 +47,6 @@ async function route(request: Request, url: URL): Promise<Response> {
                 limit: numberParam(url, 'limit'),
             })
         );
-    }
-
-    if (request.method === 'GET' && url.pathname === '/api/activity') {
-        return json(listActivity());
     }
 
     if (request.method === 'POST' && url.pathname === '/api/chats') {
@@ -83,6 +84,48 @@ async function route(request: Request, url: URL): Promise<Response> {
         }
     }
 
+    const chatResponsesMatch = url.pathname.match(/^\/api\/chats\/([^/]+)\/responses$/u);
+    if (chatResponsesMatch) {
+        const chatId = decodeURIComponent(chatResponsesMatch[1]);
+        if (request.method === 'GET') {
+            return json(
+                listResponses(chatId, {
+                    afterSequence: numberParam(url, 'after_sequence'),
+                    limit: numberParam(url, 'limit'),
+                })
+            );
+        }
+        if (request.method === 'POST') {
+            const result = upsertResponse(
+                chatId,
+                (await readJson(request)) as TavernUpsertResponseRequest
+            );
+            return json(result.response, result.created ? 201 : 200);
+        }
+    }
+
+    const responseActivityMatch = url.pathname.match(
+        /^\/api\/chats\/([^/]+)\/responses\/([^/]+)\/activity$/u
+    );
+    if (responseActivityMatch && request.method === 'POST') {
+        const chatId = decodeURIComponent(responseActivityMatch[1]);
+        const responseId = decodeURIComponent(responseActivityMatch[2]);
+        const result = upsertResponseActivity(
+            chatId,
+            responseId,
+            (await readJson(request)) as TavernUpsertResponseActivityRequest
+        );
+        return json(result.activity, result.created ? 201 : 200);
+    }
+
+    const chatActivityMatch = url.pathname.match(/^\/api\/chats\/([^/]+)\/activity\/([^/]+)$/u);
+    if (chatActivityMatch && request.method === 'GET') {
+        const chatId = decodeURIComponent(chatActivityMatch[1]);
+        const activityId = decodeURIComponent(chatActivityMatch[2]);
+        const activity = getResponseActivity(activityId);
+        return activity?.chat_id === chatId ? json(activity) : notFound();
+    }
+
     const chatChildMatch = url.pathname.match(/^\/api\/chats\/([^/]+)\/([^/]+)$/u);
     if (chatChildMatch && request.method === 'POST') {
         const chatId = decodeURIComponent(chatChildMatch[1]);
@@ -94,10 +137,12 @@ async function route(request: Request, url: URL): Promise<Response> {
             );
             return json(receipt, receipt.idempotent ? 200 : 201);
         }
-        if (child === 'activity') {
-            return json(
-                updateActivity(chatId, (await readJson(request)) as TavernUpdateActivityRequest)
+        if (child === 'artifacts') {
+            const result = upsertArtifact(
+                chatId,
+                (await readJson(request)) as TavernUpsertArtifactRequest
             );
+            return json(result.artifact, result.created ? 201 : 200);
         }
         if (child === 'read') {
             return json(markRead(chatId, (await readJson(request)) as TavernMarkReadRequest));
