@@ -457,16 +457,15 @@ test('applyLogSnapshot keeps repeated live reply text when durable history is ol
         total: 1,
     });
 
-    expect(next.completedProgress).toMatchObject({
-        reply: {
-            agentId: 'claw',
-            isThinking: false,
-            runId: 'run-2',
-            sessionKey: 'session-1',
-            startedAt: '2026-04-21T16:08:49.000Z',
-            text: 'OK',
-        },
+    expect(next.activeReply).toMatchObject({
+        agentId: 'claw',
+        isThinking: false,
+        runId: 'run-2',
+        sessionKey: 'session-1',
+        startedAt: '2026-04-21T16:08:49.000Z',
+        text: 'OK',
     });
+    expect(next.completedProgress).toBeNull();
 });
 
 test('applyReplySnapshot does not restore thinking after the assistant message is visible', () => {
@@ -645,17 +644,15 @@ test('applyReplySnapshot does not let a stale reply snapshot overwrite a richer 
         text: '',
     });
 
-    expect(next.activeReply).toBeNull();
-    expect(next.completedProgress).toMatchObject({
-        reply: {
-            agentId: 'claw',
-            isThinking: false,
-            runId: 'run-1',
-            sessionKey: 'session-1',
-            startedAt: '2026-04-21T16:08:42.000Z',
-            text: "that's the move",
-        },
+    expect(next.activeReply).toMatchObject({
+        agentId: 'claw',
+        isThinking: false,
+        runId: 'run-1',
+        sessionKey: 'session-1',
+        startedAt: '2026-04-21T16:08:42.000Z',
+        text: "that's the move",
     });
+    expect(next.completedProgress).toBeNull();
 });
 
 test('clearTimelineTurn only clears the matching run', () => {
@@ -813,15 +810,7 @@ test('updateTimelineTurnProgress stores volatile active reply steps by run', () 
         startedAt: '2026-04-21T16:08:42.000Z',
     });
 
-    expect(state.activeReplySteps).toEqual([
-        {
-            detail: null,
-            id: 'planning',
-            kind: 'plan',
-            label: 'Planning',
-            status: 'active',
-        },
-    ]);
+    expect(state.activeReplySteps).toEqual([]);
 
     const updated = updateTimelineTurnProgress(state, {
         receivedAt: '2026-04-21T16:08:46.000Z',

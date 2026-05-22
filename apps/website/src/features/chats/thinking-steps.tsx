@@ -98,6 +98,7 @@ export const ThinkingStepsContent = forwardRef<HTMLDivElement, ThinkingStepsCont
 ThinkingStepsContent.displayName = 'ThinkingStepsContent';
 
 interface ThinkingStepProps {
+    animate?: boolean;
     children?: ReactNode;
     className?: string;
     delay?: number;
@@ -111,6 +112,7 @@ interface ThinkingStepProps {
 }
 
 export function ThinkingStep({
+    animate = true,
     children,
     className,
     delay = 0,
@@ -130,7 +132,9 @@ export function ThinkingStep({
     return (
         <div
             className={cn(
-                'relative z-10 overflow-hidden motion-safe:animate-[chat-loading-indicator-in_260ms_cubic-bezier(0.23,1,0.32,1)_both]',
+                'relative z-10 overflow-hidden',
+                animate &&
+                    'motion-safe:animate-[chat-loading-indicator-in_260ms_cubic-bezier(0.23,1,0.32,1)_both]',
                 className
             )}
             style={{ animationDelay: `${delay}s` }}

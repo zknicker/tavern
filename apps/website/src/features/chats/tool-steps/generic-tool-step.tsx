@@ -16,7 +16,7 @@ import type { ToolStepRendererProps } from './types.ts';
 
 type StepIcon = HugeiconsIconProps['icon'];
 
-export function GenericToolStep({ chatId, index, isLast, row }: ToolStepRendererProps) {
+export function GenericToolStep({ animate, chatId, index, isLast, row }: ToolStepRendererProps) {
     const [isOpen, setIsOpen] = React.useState(false);
     const hasError = hasErrorStatus(row.toolCall.status);
     const target = getToolTarget(row);
@@ -28,6 +28,7 @@ export function GenericToolStep({ chatId, index, isLast, row }: ToolStepRenderer
 
     return (
         <ThinkingStep
+            animate={animate}
             icon={getToolIcon(row.toolCall.name)}
             index={index}
             isLast={isLast}

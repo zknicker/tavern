@@ -103,6 +103,7 @@ test('ChatTranscript renders tool calls and agent responses through one surface'
     assert.match(markup, /Done\./);
     assert.match(markup, /Worked/);
     assert.match(markup, /aria-expanded="false"/);
+    assert.doesNotMatch(markup, /chat-loading-indicator-in/);
 });
 
 test('ToolStep renders bash failures through the shell tool renderer', () => {
@@ -510,6 +511,7 @@ test('ChatTranscript shows active progress through the same thinking steps surfa
     assert.match(markup, /Reasoning\.\.\./);
     assert.match(markup, /I&#x27;ll inspect the workspace before making changes\./);
     assert.match(markup, /Using[\s\S]*Listing files/);
+    assert.match(markup, /chat-loading-indicator-in/);
     assert.doesNotMatch(markup, />Running</);
     assert.match(markup, /aria-expanded="true"/);
 });

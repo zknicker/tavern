@@ -5,7 +5,7 @@ import { ThinkingStep } from '../thinking-steps.tsx';
 import { getToolFact, getToolTarget, InlineToolLabel, ToolDrawerLabel } from './tool-summary.tsx';
 import type { ToolStepRendererProps, ToolStepRow } from './types.ts';
 
-export function ShellToolStep({ chatId, index, isLast, row }: ToolStepRendererProps) {
+export function ShellToolStep({ animate, chatId, index, isLast, row }: ToolStepRendererProps) {
     const [isOpen, setIsOpen] = React.useState(false);
     const hasError = hasErrorStatus(row.toolCall.status);
     const label = (
@@ -16,6 +16,7 @@ export function ShellToolStep({ chatId, index, isLast, row }: ToolStepRendererPr
 
     return (
         <ThinkingStep
+            animate={animate}
             icon={CommandLineIcon}
             index={index}
             isLast={isLast}

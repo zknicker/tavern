@@ -20,7 +20,7 @@ export function startTimelineTurn(state: ChatTimelineState, turn: ChatTurn): Cha
             text: '',
         }),
         activeReplyProgressStartedAt: null,
-        activeReplySteps: [initialPlanningStep],
+        activeReplySteps: [],
         completedProgress: null,
         failedTurn: null,
     };

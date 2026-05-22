@@ -86,12 +86,28 @@ export function ActivityStep({
 
     switch (item.row.kind) {
         case 'tool':
-            return <ToolStep chatId={chatId} index={index} isLast={isLast} row={item.row} />;
+            return (
+                <ToolStep
+                    animate={!item.row.completedAt}
+                    chatId={chatId}
+                    index={index}
+                    isLast={isLast}
+                    row={item.row}
+                />
+            );
         case 'worker':
-            return <WorkerStep index={index} isLast={isLast} row={item.row} />;
+            return (
+                <WorkerStep
+                    animate={!item.row.completedAt}
+                    index={index}
+                    isLast={isLast}
+                    row={item.row}
+                />
+            );
         case 'system':
             return (
                 <SystemStep
+                    animate={false}
                     currentSessionKey={currentSessionKey}
                     index={index}
                     isLast={isLast}
@@ -137,12 +153,7 @@ function ActiveProgressToolLabel({
             >
                 {label}
             </DrawerTrigger>
-            <ToolDrawer
-                activityId={activityId}
-                chatId={chatId}
-                isOpen={isOpen}
-                source="chat"
-            />
+            <ToolDrawer activityId={activityId} chatId={chatId} isOpen={isOpen} source="chat" />
         </Drawer>
     );
 }
@@ -183,10 +194,12 @@ function getActiveProgressToolTarget(label: string) {
 }
 
 function WorkerStep({
+    animate,
     index,
     isLast,
     row,
 }: {
+    animate?: boolean;
     index: number;
     isLast: boolean;
     row: Extract<TranscriptRow, { kind: 'worker' }>;
@@ -197,6 +210,7 @@ function WorkerStep({
 
     return (
         <ThinkingStep
+            animate={animate}
             description={row.worker.detail}
             icon={PuzzleIcon}
             index={index}
