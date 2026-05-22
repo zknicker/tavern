@@ -35,12 +35,6 @@ export interface ChatTurnEventUtils {
         completeTurn: (input: { chatId: string; completedAt: string; turn: ChatTurn }) => void;
         failTurn: (input: { chatId: string; error: string; turn: ChatTurn }) => void;
         startTurn: (turn: ChatTurn) => void;
-        updateTurnProgress: (input: {
-            chatId: string;
-            receivedAt: string;
-            step: ChatTurnProgressStep;
-            turn: ChatTurn;
-        }) => void;
         updateReply: (update: ChatReplyUpdate) => void;
     };
     worker: {
@@ -120,12 +114,6 @@ export function createChatTurnEventHandlers(utils: ChatTurnEventUtils) {
                 sessionKey: input.turn.sessionKey,
                 status: input.step.status,
                 stepId: input.step.id,
-            });
-            utils.timeline.updateTurnProgress({
-                chatId: input.turn.chatId,
-                receivedAt: new Date().toISOString(),
-                step: input.step,
-                turn: input.turn,
             });
             invalidateLiveTurn();
         },

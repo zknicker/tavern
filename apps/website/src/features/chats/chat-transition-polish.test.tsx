@@ -49,9 +49,6 @@ test('draft handoff waits while the accepted turn is still blank thinking', () =
                 startedAt: '2026-05-13T12:00:00.000Z',
                 text: '',
             },
-            activeReplyProgressStartedAt: null,
-            activeReplySteps: [],
-            completedProgress: null,
             failedTurn: null,
             historyLoaded: true,
             timeline: [],
@@ -60,7 +57,7 @@ test('draft handoff waits while the accepted turn is still blank thinking', () =
     ).toBe(false);
 });
 
-test('draft handoff forwards real turn progress before final text', () => {
+test('draft handoff forwards the real active reply once the turn starts', () => {
     const frame = resolveDraftHandoffFrame({
         draftActiveReply: {
             agentId: 'agent-1',
@@ -79,16 +76,6 @@ test('draft handoff forwards real turn progress before final text', () => {
                 startedAt: '2026-05-13T12:00:01.000Z',
                 text: '',
             },
-            activeReplyProgressStartedAt: '2026-05-13T12:00:04.000Z',
-            activeReplySteps: [
-                {
-                    id: 'tool:pwd',
-                    kind: 'tool',
-                    label: 'Using bash',
-                    status: 'active',
-                },
-            ],
-            completedProgress: null,
             failedTurn: null,
             historyLoaded: true,
             timeline: [],
@@ -97,9 +84,6 @@ test('draft handoff forwards real turn progress before final text', () => {
     });
 
     expect(frame.activeReply?.runId).toBe('run-1');
-    expect(frame.activeReplyProgressStartedAt).toBe('2026-05-13T12:00:04.000Z');
-    expect(frame.activeReplySteps).toHaveLength(1);
-    expect(frame.activeReplySteps[0]?.label).toBe('Using bash');
 });
 
 test('draft handoff releases when the active reply has visible text', () => {
@@ -113,9 +97,6 @@ test('draft handoff releases when the active reply has visible text', () => {
                 startedAt: '2026-05-13T12:00:00.000Z',
                 text: 'Done.',
             },
-            activeReplyProgressStartedAt: null,
-            activeReplySteps: [],
-            completedProgress: null,
             failedTurn: null,
             historyLoaded: true,
             timeline: [],
@@ -124,34 +105,12 @@ test('draft handoff releases when the active reply has visible text', () => {
     ).toBe(true);
 });
 
-test('draft handoff releases when live progress completed before durable history loads', () => {
+test('draft handoff releases when no active reply remains', () => {
     expect(
         shouldReleaseDraftHandoff({
             activeReply: null,
-            activeReplyProgressStartedAt: null,
-            activeReplySteps: [],
-            completedProgress: {
-                completedAt: '2026-05-13T12:00:06.000Z',
-                reply: {
-                    agentId: 'agent-1',
-                    isThinking: false,
-                    runId: 'run-1',
-                    sessionKey: 'session-1',
-                    startedAt: '2026-05-13T12:00:00.000Z',
-                    text: 'Done.',
-                },
-                startedAt: '2026-05-13T12:00:01.000Z',
-                steps: [
-                    {
-                        id: 'tool:pwd',
-                        kind: 'tool',
-                        label: 'Using bash',
-                        status: 'completed',
-                    },
-                ],
-            },
             failedTurn: null,
-            historyLoaded: false,
+            historyLoaded: true,
             timeline: [],
             totalRows: 0,
         })

@@ -4,6 +4,7 @@ import { AgentAvatar } from '@tavern/agent-avatars';
 import { Alert, AlertDescription, AlertTitle } from '../../components/ui/alert.tsx';
 import { Icon } from '../../components/ui/icon.tsx';
 import { useActorProfile } from '../../hooks/actors/use-actor.ts';
+import type { ChatActiveReply } from '../../hooks/chats/chat-timeline-state.ts';
 import { useSessionDrawer } from '../../hooks/sessions/use-session-drawer.ts';
 import { formatShortTime } from '../../lib/format.ts';
 import { cn } from '../../lib/utils.ts';
@@ -21,6 +22,7 @@ import type {
     TranscriptItem,
     TranscriptRow,
 } from './chat-transcript-model.ts';
+import { getItemSessionKey } from './chat-transcript-model.ts';
 import { ThinkingIndicator, TypingIndicator } from './thinking-indicator.tsx';
 
 const rowClassName = 'relative w-full px-3 pt-1.5 pb-4';
@@ -29,12 +31,14 @@ const hoverGroupClassName = 'group';
 const metadataGapClassName = 'pb-8';
 
 export function TranscriptEntryView({
+    activeReply,
     chatId,
     conversationLayout,
     currentSessionKey,
     entry,
     turnStartedAt,
 }: {
+    activeReply: ChatActiveReply | null;
     chatId?: string;
     conversationLayout: ConversationMessageLayout;
     currentSessionKey?: string | null;
@@ -59,6 +63,7 @@ export function TranscriptEntryView({
 
     return (
         <AgentTurn
+            activeReply={activeReply}
             chatId={chatId}
             currentSessionKey={currentSessionKey}
             entry={entry}
@@ -136,12 +141,14 @@ function UserTurn({
 }
 
 function AgentTurn({
+    activeReply,
     chatId,
     currentSessionKey,
     entry,
     layout,
     turnStartedAt,
 }: {
+    activeReply: ChatActiveReply | null;
     chatId?: string;
     currentSessionKey?: string | null;
     entry: Extract<TranscriptEntry, { kind: 'turn' }>;
@@ -154,6 +161,7 @@ function AgentTurn({
     const lastMessage = getLastMessage(entry.items);
     const turnCompletedAt = lastMessage?.timestamp ?? null;
     const segments = groupAgentItems(entry.items);
+    const turnActive = isActiveTurn(entry.items, activeReply, lastMessage);
 
     return (
         <div className={cn(rowClassName, showIdentity ? newTurnGapClassName : 'mt-5')}>
@@ -192,6 +200,7 @@ function AgentTurn({
                                     currentSessionKey={currentSessionKey}
                                     items={segment.items}
                                     key={segment.key}
+                                    turnActive={turnActive}
                                     turnCompletedAt={turnCompletedAt}
                                     turnStartedAt={turnStartedAt}
                                 />
@@ -258,11 +267,7 @@ function AgentTurnItem({
     }
 
     return (
-        <ChatTranscriptActivity
-            chatId={chatId}
-            currentSessionKey={currentSessionKey}
-            item={item}
-        />
+        <ChatTranscriptActivity chatId={chatId} currentSessionKey={currentSessionKey} item={item} />
     );
 }
 
@@ -346,6 +351,18 @@ function getLastMessage(items: TranscriptItem[]) {
     }
 
     return null;
+}
+
+function isActiveTurn(
+    items: TranscriptItem[],
+    activeReply: ChatActiveReply | null,
+    lastMessage: Extract<TranscriptRow, { kind: 'message' }>['message'] | null
+) {
+    if (!(activeReply && lastMessage === null)) {
+        return false;
+    }
+
+    return items.some((item) => getItemSessionKey(item) === activeReply.sessionKey);
 }
 
 function getTurnFallbackName(entry: Extract<TranscriptEntry, { kind: 'turn' }>) {

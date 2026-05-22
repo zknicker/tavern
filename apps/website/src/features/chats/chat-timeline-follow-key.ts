@@ -1,22 +1,12 @@
-import type {
-    ChatActiveReply,
-    ChatTurnFailure,
-    ChatTurnProgressStep,
-} from '../../hooks/chats/chat-timeline-state.ts';
+import type { ChatActiveReply, ChatTurnFailure } from '../../hooks/chats/chat-timeline-state.ts';
 
 export function getChatTimelineFollowKey(input: {
     activeReply: ChatActiveReply | null;
-    activeReplySteps: ChatTurnProgressStep[];
     failedTurn?: ChatTurnFailure | null;
 }) {
     if (input.activeReply) {
         const replyText = input.activeReply.text?.trim() ?? '';
-        const phase =
-            replyText.length > 0
-                ? 'reply'
-                : input.activeReplySteps.length > 0
-                  ? 'working'
-                  : 'thinking';
+        const phase = replyText.length > 0 ? 'reply' : 'thinking';
 
         return `${input.activeReply.runId}:${phase}`;
     }

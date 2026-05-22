@@ -212,7 +212,7 @@ test('startAgentRuntimeEventSync refreshes connection state and schedules when t
     expect(emitAgentRuntimeUpdated).toHaveBeenCalledTimes(1);
 });
 
-test('applyObservedAgentRuntimeEvent syncs completed turn history without duplicating chat deliveries', async () => {
+test('applyObservedAgentRuntimeEvent syncs completed turn history without the global session index', async () => {
     const listSessions = mock(async () => ({
         sessions: [
             {
@@ -270,7 +270,7 @@ test('applyObservedAgentRuntimeEvent syncs completed turn history without duplic
     );
     await flushAsyncEventSync();
 
-    expect(listSessions).toHaveBeenCalledTimes(1);
+    expect(listSessions).not.toHaveBeenCalled();
     expect(listSessionMessages).toHaveBeenCalledWith('session-1', { limit: 1000 });
     expect(tavernApiRequests).toEqual([]);
     expect(emitObservedAgentRuntimeEvent).toHaveBeenCalledWith({
@@ -423,7 +423,7 @@ test('applyObservedAgentRuntimeEvent defers invalidated session sync while a tur
     );
     await flushAsyncEventSync();
 
-    expect(listSessions).toHaveBeenCalledTimes(1);
+    expect(listSessions).not.toHaveBeenCalled();
     expect(listSessionMessages).toHaveBeenCalledTimes(1);
 
     createAgentRuntimeClientForConnection.mockClear();

@@ -4,10 +4,6 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { httpLink } from '@trpc/client';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { MemoryRouter } from 'react-router-dom';
-import type {
-    ChatCompletedProgress,
-    ChatTurnProgressStep,
-} from '../../hooks/chats/chat-timeline-state.ts';
 import { SessionDrawerProvider } from '../../hooks/sessions/use-session-drawer.ts';
 import { type ChatLogOutput, trpc } from '../../lib/trpc.tsx';
 import { ArtifactLogEntry } from '../sessions/log/event-entry/artifact-entry.tsx';
@@ -103,7 +99,6 @@ test('ChatTranscript renders tool calls and agent responses through one surface'
     assert.match(markup, /Done\./);
     assert.match(markup, /Worked/);
     assert.match(markup, /aria-expanded="false"/);
-    assert.doesNotMatch(markup, /chat-loading-indicator-in/);
 });
 
 test('ToolStep renders bash failures through the shell tool renderer', () => {
@@ -316,7 +311,7 @@ test('ChatTranscript keeps completed assistant narration expanded', () => {
     assert.match(markup, /I will run the slow QA command before the final reply\./);
 });
 
-test('ChatTranscript does not render preserved completed progress when durable activity exists', () => {
+test('ChatTranscript renders durable activity once when an assistant reply follows it', () => {
     const rows: ChatRow[] = [
         {
             actor: { id: 'tiny', kind: 'agent' },
@@ -357,30 +352,11 @@ test('ChatTranscript does not render preserved completed progress when durable a
             },
         },
     ];
-    const completedProgress: ChatCompletedProgress = {
-        completedAt: '2026-03-31T15:00:11.000Z',
-        reply: {
-            agentId: 'tiny',
-            isThinking: true,
-            runId: 'run-1',
-            sessionKey: 'agent:tiny:session-1',
-            startedAt: '2026-03-31T15:00:00.000Z',
-            text: '',
-        },
-        startedAt: '2026-03-31T15:00:00.500Z',
-        steps: [
-            {
-                id: 'tool:weather',
-                kind: 'tool',
-                label: 'Using weather',
-                status: 'completed',
-            },
-        ],
-    };
 
-    const markup = renderTranscript(rows, { completedProgress });
+    const markup = renderTranscript(rows);
 
     assert.equal(markup.match(/Worked for/g)?.length, 1);
+    assert.match(markup, /NYC right now: 61F\./);
 });
 
 test('ChatTranscript prefers durable activity timestamps for completed activity duration', () => {
@@ -478,37 +454,71 @@ test('ChatTranscript shows a typing indicator instead of generic worked text whe
 });
 
 test('ChatTranscript shows active progress through the same thinking steps surface', () => {
-    const visibleProgressStartedAt = new Date().toISOString();
+    const now = Date.now();
     const markup = renderActiveTranscript(
         {
             agentId: 'tiny',
             isThinking: true,
             runId: 'run-progress',
             sessionKey: 'agent:tiny:session-1',
-            startedAt: new Date(Date.now() - 3000).toISOString(),
+            startedAt: new Date(now - 3000).toISOString(),
             text: '',
         },
         [
             {
-                detail: "I'll inspect the workspace before making changes.",
-                id: 'reasoning',
-                kind: 'reasoning',
-                label: 'Reasoning',
-                status: 'active',
+                actor: { id: 'tiny', kind: 'agent' },
+                completedAt: null,
+                connectsToNext: true,
+                connectsToPrevious: false,
+                id: 'activity:run-progress:assistant-reply:1',
+                isFirstInGroup: true,
+                kind: 'tool',
+                sessionKey: 'agent:tiny:session-1',
+                spawnedRelationships: [],
+                startedAt: new Date(now - 2500).toISOString(),
+                toolCall: {
+                    callId: null,
+                    facts: [
+                        {
+                            label: 'Detail',
+                            tone: 'default',
+                            value: "I'll inspect the workspace before making changes.",
+                        },
+                    ],
+                    label: 'Assistant reply',
+                    name: 'message',
+                    status: 'running',
+                    summaryParts: [
+                        'Assistant reply',
+                        "I'll inspect the workspace before making changes.",
+                    ],
+                },
             },
             {
-                detail: null,
-                id: 'tool-1',
+                actor: { id: 'tiny', kind: 'agent' },
+                completedAt: null,
+                connectsToNext: false,
+                connectsToPrevious: true,
+                id: 'activity:run-progress:tool:1',
+                isFirstInGroup: false,
                 kind: 'tool',
-                label: 'Listing files',
-                status: 'active',
+                sessionKey: 'agent:tiny:session-1',
+                spawnedRelationships: [],
+                startedAt: new Date(now - 1500).toISOString(),
+                toolCall: {
+                    callId: 'call-1',
+                    facts: [],
+                    label: 'Listing files',
+                    name: 'bash',
+                    status: 'running',
+                    summaryParts: ['Listing files'],
+                },
             },
-        ],
-        visibleProgressStartedAt
+        ]
     );
 
-    assert.match(markup, /Working for[\s\S]*>0s</);
-    assert.match(markup, /Reasoning\.\.\./);
+    assert.match(markup, /Working for[\s\S]*>\d+s</);
+    assert.match(markup, /Assistant reply/);
     assert.match(markup, /I&#x27;ll inspect the workspace before making changes\./);
     assert.match(markup, /Using[\s\S]*Listing files/);
     assert.match(markup, /chat-loading-indicator-in/);
@@ -528,14 +538,32 @@ test('ChatTranscript renders active tool progress as one-line status rows', () =
         },
         [
             {
-                detail: 'start',
+                actor: { id: 'tiny', kind: 'agent' },
+                completedAt: null,
+                connectsToNext: false,
+                connectsToPrevious: false,
                 id: 'tool-1',
+                isFirstInGroup: true,
                 kind: 'tool',
-                label: 'Using bash...',
-                status: 'active',
+                sessionKey: 'agent:tiny:session-1',
+                spawnedRelationships: [],
+                startedAt: new Date().toISOString(),
+                toolCall: {
+                    callId: 'call-1',
+                    facts: [
+                        {
+                            label: 'Detail',
+                            tone: 'default',
+                            value: 'start',
+                        },
+                    ],
+                    label: 'bash',
+                    name: 'bash',
+                    status: 'running',
+                    summaryParts: ['bash'],
+                },
             },
-        ],
-        new Date().toISOString()
+        ]
     );
 
     assert.match(markup, /Using[\s\S]*bash/);
@@ -556,15 +584,26 @@ test('ChatTranscript wires active progress tool ids to the tool drawer trigger',
         },
         [
             {
-                id: 'call_123',
+                actor: { id: 'tiny', kind: 'agent' },
+                completedAt: null,
+                connectsToNext: false,
+                connectsToPrevious: false,
+                id: 'activity:run-progress:tool:call_123',
+                isFirstInGroup: true,
                 kind: 'tool',
-                label: 'computer use.list apps',
-                status: 'active',
-                toolCallId: 'call_123',
-                toolName: 'computer-use.list_apps',
+                sessionKey: 'agent:tiny:session-1',
+                spawnedRelationships: [],
+                startedAt: new Date().toISOString(),
+                toolCall: {
+                    callId: 'call_123',
+                    facts: [],
+                    label: 'computer use.list apps',
+                    name: 'computer-use.list_apps',
+                    status: 'running',
+                    summaryParts: ['computer use.list apps'],
+                },
             },
-        ],
-        new Date().toISOString()
+        ]
     );
 
     assert.match(markup, /Using[\s\S]*computer use\.list apps/);
@@ -583,26 +622,35 @@ test('ChatTranscript keeps live progress in working state when current steps are
         },
         [
             {
-                detail: null,
-                id: 'reasoning',
-                kind: 'message',
-                label: 'Reasoning',
-                status: 'completed',
+                actor: { id: 'tiny', kind: 'agent' },
+                completedAt: new Date().toISOString(),
+                connectsToNext: false,
+                connectsToPrevious: false,
+                id: 'activity:run-progress:assistant-reply:1',
+                isFirstInGroup: true,
+                kind: 'tool',
+                sessionKey: 'agent:tiny:session-1',
+                spawnedRelationships: [],
+                startedAt: new Date(Date.now() - 3000).toISOString(),
+                toolCall: {
+                    callId: null,
+                    facts: [],
+                    label: 'Assistant reply',
+                    name: 'message',
+                    status: 'completed',
+                    summaryParts: ['Assistant reply'],
+                },
             },
-        ],
-        new Date().toISOString()
+        ]
     );
 
-    assert.match(markup, /Working for[\s\S]*>0s</);
+    assert.match(markup, /Working for[\s\S]*>\d+s</);
     assert.doesNotMatch(markup, /Worked for/);
 });
 
 type ChatRow = NonNullable<ChatLogOutput>['rows'][number];
 
-function renderTranscript(
-    rows: ChatRow[],
-    options: { completedProgress?: ChatCompletedProgress | null } = {}
-) {
+function renderTranscript(rows: ChatRow[]) {
     const queryClient = new QueryClient({
         defaultOptions: {
             queries: {
@@ -623,11 +671,7 @@ function renderTranscript(
             <QueryClientProvider client={queryClient}>
                 <MemoryRouter>
                     <SessionDrawerProvider>
-                        <ChatTranscript
-                            activeReply={null}
-                            completedProgress={options.completedProgress ?? null}
-                            rows={rows}
-                        />
+                        <ChatTranscript activeReply={null} rows={rows} />
                     </SessionDrawerProvider>
                 </MemoryRouter>
             </QueryClientProvider>
@@ -644,8 +688,7 @@ function renderActiveTranscript(
         startedAt: string;
         text: string;
     },
-    activeReplySteps: ChatTurnProgressStep[] = [],
-    activeReplyProgressStartedAt: string | null = null
+    rows: ChatRow[] = []
 ) {
     const queryClient = new QueryClient({
         defaultOptions: {
@@ -667,13 +710,7 @@ function renderActiveTranscript(
             <QueryClientProvider client={queryClient}>
                 <MemoryRouter>
                     <SessionDrawerProvider>
-                        <ChatTranscript
-                            activeReply={activeReply}
-                            activeReplyProgressStartedAt={activeReplyProgressStartedAt}
-                            activeReplySteps={activeReplySteps}
-                            chatId="cht_test"
-                            rows={[]}
-                        />
+                        <ChatTranscript activeReply={activeReply} chatId="cht_test" rows={rows} />
                     </SessionDrawerProvider>
                 </MemoryRouter>
             </QueryClientProvider>

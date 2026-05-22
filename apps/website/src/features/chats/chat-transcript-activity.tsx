@@ -29,17 +29,19 @@ export function ChatTranscriptActivityGroup({
     chatId,
     currentSessionKey,
     items,
+    turnActive = false,
     turnCompletedAt,
     turnStartedAt,
 }: {
     chatId?: string;
     currentSessionKey?: string | null;
     items: TranscriptItem[];
+    turnActive?: boolean;
     turnCompletedAt?: string | null;
     turnStartedAt?: string | null;
 }) {
     const activityItems = items.filter(isActivityItem);
-    const isActive = activityItems.some(isActiveActivityItem);
+    const isActive = turnActive || activityItems.some(isActiveActivityItem);
     const activityEnd = getActivityEnd(activityItems);
     const activityStart = getActivityStart(activityItems);
     const start = activityStart ?? (isActive ? null : (turnStartedAt ?? null));

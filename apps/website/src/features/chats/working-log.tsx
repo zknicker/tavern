@@ -60,14 +60,6 @@ export function WorkingLog({
 
 function hasNarration(items: ActivityItem[]) {
     return items.some((item) => {
-        if (item.kind === 'activeProgress') {
-            return item.steps.some(
-                (step) =>
-                    (step.kind === 'message' || step.kind === 'reasoning') &&
-                    Boolean(step.detail?.trim())
-            );
-        }
-
         if (item.row.kind === 'system') {
             return item.row.systemKind === 'thinking';
         }

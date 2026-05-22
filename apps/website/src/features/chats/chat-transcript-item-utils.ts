@@ -53,10 +53,6 @@ export function getTranscriptItemKey(item: TranscriptItem) {
         return `active-status:${item.reply.runId}:${item.status}`;
     }
 
-    if (item.kind === 'activeProgress') {
-        return `active-progress:${item.reply.runId}`;
-    }
-
     if (item.kind === 'failure') {
         return `failure:${item.failure.turn.runId}`;
     }

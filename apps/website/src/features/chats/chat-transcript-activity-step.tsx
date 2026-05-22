@@ -1,41 +1,11 @@
-import type { HugeiconsIconProps } from '@hugeicons/react';
-import {
-    Alert02Icon,
-    ArchiveIcon,
-    BrainIcon,
-    BrowserIcon,
-    CheckListIcon,
-    Message01Icon,
-    PuzzleIcon,
-    TerminalIcon,
-} from '@hugeicons-pro/core-stroke-rounded';
-import { useState } from 'react';
-import { Drawer, DrawerTrigger } from '../../components/ui/drawer.tsx';
-import type { ChatTurnProgressStep } from '../../hooks/chats/chat-timeline-state.ts';
+import { PuzzleIcon } from '@hugeicons-pro/core-stroke-rounded';
 import { useSessionDrawer } from '../../hooks/sessions/use-session-drawer.ts';
-import { cn } from '../../lib/utils.ts';
-import { ToolDrawer } from '../sessions/tools/tool-drawer.tsx';
 import { workerKindConfig } from '../workers/config.ts';
 import type { ActivityItem } from './chat-transcript-activity-utils.ts';
 import type { TranscriptRow } from './chat-transcript-model.ts';
 import { SystemStep } from './chat-transcript-system-step.tsx';
 import { ToolStep } from './chat-transcript-tool-step.tsx';
 import { ThinkingStep } from './thinking-steps.tsx';
-
-type StepIcon = HugeiconsIconProps['icon'];
-
-const progressStepIcon = {
-    approval: Alert02Icon,
-    artifact: ArchiveIcon,
-    command: TerminalIcon,
-    message: Message01Icon,
-    plan: CheckListIcon,
-    reasoning: BrainIcon,
-    tool: BrowserIcon,
-} satisfies Record<
-    Extract<ActivityItem, { kind: 'activeProgress' }>['steps'][number]['kind'],
-    StepIcon
->;
 
 export function ActivityStep({
     chatId,
@@ -50,64 +20,14 @@ export function ActivityStep({
     isLast: boolean;
     item: ActivityItem;
 }) {
-    if (item.kind === 'activeProgress') {
-        const steps = item.steps;
-
-        if (steps.length === 0) {
-            return null;
-        }
-
-        return (
-            <>
-                {steps.map((step, stepIndex) => (
-                    <ThinkingStep
-                        description={step.kind === 'tool' ? null : step.detail}
-                        icon={progressStepIcon[step.kind]}
-                        index={index + stepIndex}
-                        isLast={isLast && stepIndex === steps.length - 1}
-                        key={step.id}
-                        label={
-                            step.kind === 'tool' ? (
-                                <ActiveProgressToolLabel
-                                    activityId={step.id}
-                                    chatId={chatId}
-                                    step={step}
-                                />
-                            ) : (
-                                step.label
-                            )
-                        }
-                        status={step.status === 'completed' ? 'complete' : step.status}
-                    />
-                ))}
-            </>
-        );
-    }
-
     switch (item.row.kind) {
         case 'tool':
-            return (
-                <ToolStep
-                    animate={!item.row.completedAt}
-                    chatId={chatId}
-                    index={index}
-                    isLast={isLast}
-                    row={item.row}
-                />
-            );
+            return <ToolStep chatId={chatId} index={index} isLast={isLast} row={item.row} />;
         case 'worker':
-            return (
-                <WorkerStep
-                    animate={!item.row.completedAt}
-                    index={index}
-                    isLast={isLast}
-                    row={item.row}
-                />
-            );
+            return <WorkerStep index={index} isLast={isLast} row={item.row} />;
         case 'system':
             return (
                 <SystemStep
-                    animate={false}
                     currentSessionKey={currentSessionKey}
                     index={index}
                     isLast={isLast}
@@ -119,87 +39,11 @@ export function ActivityStep({
     }
 }
 
-function ActiveProgressToolLabel({
-    activityId,
-    chatId,
-    step,
-}: {
-    activityId: string;
-    chatId?: string;
-    step: ChatTurnProgressStep;
-}) {
-    const [isOpen, setIsOpen] = useState(false);
-    const presentation = getActiveProgressToolPresentation(step);
-    const label = (
-        <span className="inline-flex min-w-0 max-w-full flex-nowrap items-baseline gap-1.5">
-            <span className={cn('shrink-0', presentation.verbClassName)}>{presentation.verb}</span>
-            <span className="truncate text-muted-foreground">{presentation.target}</span>
-        </span>
-    );
-
-    if (!chatId) {
-        return label;
-    }
-
-    return (
-        <Drawer onOpenChange={setIsOpen} open={isOpen} position="right">
-            <DrawerTrigger
-                render={
-                    <button
-                        className="inline-flex min-w-0 max-w-full items-baseline gap-1.5 text-left hover:text-foreground"
-                        type="button"
-                    />
-                }
-            >
-                {label}
-            </DrawerTrigger>
-            <ToolDrawer activityId={activityId} chatId={chatId} isOpen={isOpen} source="chat" />
-        </Drawer>
-    );
-}
-
-function getActiveProgressToolPresentation(step: ChatTurnProgressStep) {
-    const target = getActiveProgressToolTarget(step.label);
-
-    if (step.status === 'failed') {
-        return {
-            target,
-            verb: 'Failed',
-            verbClassName: 'text-destructive',
-        };
-    }
-
-    if (step.status === 'completed') {
-        return {
-            target,
-            verb: 'Used',
-            verbClassName: 'text-success',
-        };
-    }
-
-    return {
-        target,
-        verb: 'Using',
-        verbClassName: 'text-muted-foreground/70',
-    };
-}
-
-function getActiveProgressToolTarget(label: string) {
-    return (
-        label
-            .replace(/^(?:using|used|failed|timed out)\s+/iu, '')
-            .replace(/\.{3}$/u, '')
-            .trim() || 'tool'
-    );
-}
-
 function WorkerStep({
-    animate,
     index,
     isLast,
     row,
 }: {
-    animate?: boolean;
     index: number;
     isLast: boolean;
     row: Extract<TranscriptRow, { kind: 'worker' }>;
@@ -210,7 +54,6 @@ function WorkerStep({
 
     return (
         <ThinkingStep
-            animate={animate}
             description={row.worker.detail}
             icon={PuzzleIcon}
             index={index}

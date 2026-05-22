@@ -4,12 +4,7 @@ import { AppShellContentHeader } from '../../components/ui/app-shell.tsx';
 import { BreadcrumbTrail } from '../../components/ui/breadcrumb.tsx';
 import { Icon } from '../../components/ui/icon.tsx';
 import { Button } from '../../components/ui/primitives/button.tsx';
-import type {
-    ChatActiveReply,
-    ChatCompletedProgress,
-    ChatTurnFailure,
-    ChatTurnProgressStep,
-} from '../../hooks/chats/chat-timeline-state.ts';
+import type { ChatActiveReply, ChatTurnFailure } from '../../hooks/chats/chat-timeline-state.ts';
 import type { ChatLogOutput } from '../../lib/trpc.tsx';
 import { ChatTimeline } from './chat-timeline.tsx';
 import { getChatTimelineFollowKey } from './chat-timeline-follow-key.ts';
@@ -19,11 +14,8 @@ import { useChatScroll } from './use-chat-scroll.ts';
 
 export function ChatDetailFrame({
     activeReply,
-    activeReplyProgressStartedAt = null,
-    activeReplySteps = [],
     animateTimeline = true,
     chatId,
-    completedProgress = null,
     conversationLayout,
     emptyLabel,
     error,
@@ -36,11 +28,8 @@ export function ChatDetailFrame({
     totalRows,
 }: {
     activeReply: ChatActiveReply | null;
-    activeReplyProgressStartedAt?: string | null;
-    activeReplySteps?: ChatTurnProgressStep[];
     animateTimeline?: boolean;
     chatId: string;
-    completedProgress?: ChatCompletedProgress | null;
     conversationLayout?: ConversationMessageLayout;
     emptyLabel: string;
     error?: unknown;
@@ -57,7 +46,6 @@ export function ChatDetailFrame({
     const isInitialTranscriptPending = isPending && !historyLoaded && !hasActiveReply;
     const followKey = getChatTimelineFollowKey({
         activeReply,
-        activeReplySteps,
         failedTurn,
     });
     const chatScroll = useChatScroll({
@@ -94,11 +82,8 @@ export function ChatDetailFrame({
                         ) : hasTimelineContent ? (
                             <ChatTimeline
                                 activeReply={activeReply}
-                                activeReplyProgressStartedAt={activeReplyProgressStartedAt}
-                                activeReplySteps={activeReplySteps}
                                 animate={animateTimeline}
                                 chatId={chatId}
-                                completedProgress={completedProgress}
                                 conversationLayout={conversationLayout}
                                 failedTurn={failedTurn}
                                 rows={rows}

@@ -9,11 +9,9 @@ export {
     failTimelineTurn,
     startTimelineTurn,
     updateTimelineReply,
-    updateTimelineTurnProgress,
 } from './chat-timeline-turns.ts';
 export type {
     ChatActiveReply,
-    ChatCompletedProgress,
     ChatReplyUpdate,
     ChatTimeline,
     ChatTimelineState,

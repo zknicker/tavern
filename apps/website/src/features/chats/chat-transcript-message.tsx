@@ -56,14 +56,12 @@ export function ChatTranscriptMessageContent({ message }: { message: TranscriptM
                     )}
                 >
                     <CollapsibleText className="text-foreground text-sm leading-snug">
-                        {mentions.length > 0 ? (
-                            renderMentionText({
-                                content: messageDisplay.content,
-                                mentions,
-                            })
-                        ) : (
-                            messageDisplay.content
-                        )}
+                        {mentions.length > 0
+                            ? renderMentionText({
+                                  content: messageDisplay.content,
+                                  mentions,
+                              })
+                            : messageDisplay.content}
                     </CollapsibleText>
                 </div>
             ) : null}

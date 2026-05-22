@@ -11,28 +11,12 @@ const activeReply = {
     text: '',
 };
 
-test('getChatTimelineFollowKey tracks thinking, working, and reply phases', () => {
+test('getChatTimelineFollowKey tracks thinking and reply phases', () => {
     assert.equal(
         getChatTimelineFollowKey({
             activeReply,
-            activeReplySteps: [],
         }),
         'run-1:thinking'
-    );
-
-    assert.equal(
-        getChatTimelineFollowKey({
-            activeReply,
-            activeReplySteps: [
-                {
-                    id: 'tool:pwd',
-                    kind: 'tool',
-                    label: 'Running pwd',
-                    status: 'active',
-                },
-            ],
-        }),
-        'run-1:working'
     );
 
     assert.equal(
@@ -42,7 +26,6 @@ test('getChatTimelineFollowKey tracks thinking, working, and reply phases', () =
                 isThinking: false,
                 text: 'Done.',
             },
-            activeReplySteps: [],
         }),
         'run-1:reply'
     );

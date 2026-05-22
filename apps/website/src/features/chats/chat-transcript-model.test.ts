@@ -60,7 +60,7 @@ test('buildTranscriptEntries keeps thinking rows inside the agent turn', () => {
     ).toEqual(['tool', 'system:thinking', 'message']);
 });
 
-test('buildTranscriptEntries renders active progress before active reply text', () => {
+test('buildTranscriptEntries renders active reply text after durable activity', () => {
     const entries = buildTranscriptEntries({
         activeReply: {
             agentId: 'agent-1',
@@ -70,15 +70,7 @@ test('buildTranscriptEntries renders active progress before active reply text', 
             startedAt: '2026-05-11T16:00:00.000Z',
             text: 'Working...',
         },
-        activeReplySteps: [
-            {
-                id: 'step-1',
-                kind: 'tool',
-                label: 'Running tool',
-                status: 'active',
-            },
-        ],
-        rows: [],
+        rows: [toolRow('tool-1', false, false)],
     });
 
     expect(entries).toHaveLength(1);
@@ -88,48 +80,9 @@ test('buildTranscriptEntries renders active progress before active reply text', 
         throw new Error('Expected agent turn entry.');
     }
 
-    expect(entries[0].items.map((item) => item.kind)).toEqual(['activeProgress', 'activeReply']);
-});
-
-test('buildTranscriptEntries renders preserved completed progress before final reply', () => {
-    const entries = buildTranscriptEntries({
-        activeReply: null,
-        completedProgress: {
-            completedAt: '2026-05-11T16:00:03.000Z',
-            reply: {
-                agentId: 'agent-1',
-                isThinking: true,
-                runId: 'run-1',
-                sessionKey: 'session-1',
-                startedAt: '2026-05-11T16:00:00.000Z',
-                text: '',
-            },
-            startedAt: '2026-05-11T16:00:01.000Z',
-            steps: [
-                {
-                    id: 'step-1',
-                    kind: 'tool',
-                    label: 'Running tool',
-                    status: 'completed',
-                },
-            ],
-        },
-        rows: [
-            userMessage('user-1', 'Use the tool', false, false),
-            agentMessage('agent-1', 'Done.', false, false),
-        ],
-    });
-
-    expect(entries).toHaveLength(2);
-    expect(entries[1]).toMatchObject({ kind: 'turn', participant: 'agent' });
-
-    if (entries[1]?.kind !== 'turn') {
-        throw new Error('Expected agent turn entry.');
-    }
-
     expect(
-        entries[1].items.map((item) => (item.kind === 'row' ? item.row.kind : item.kind))
-    ).toEqual(['activeProgress', 'message']);
+        entries[0].items.map((item) => (item.kind === 'row' ? item.row.kind : item.kind))
+    ).toEqual(['tool', 'activeReply']);
 });
 
 test('buildTranscriptEntries keeps prior completed tool activity grouped during a later active turn', () => {
@@ -153,14 +106,6 @@ test('buildTranscriptEntries keeps prior completed tool activity grouped during 
             startedAt: '2026-05-11T16:01:00.000Z',
             text: '',
         },
-        activeReplySteps: [
-            {
-                id: 'step-active-tool',
-                kind: 'tool',
-                label: 'Using bash',
-                status: 'active',
-            },
-        ],
         rows,
     });
 
@@ -233,6 +178,30 @@ test('buildTranscriptEntries shows typing status without a generic activity bloc
         kind: 'activeStatus',
         status: 'typing',
     });
+});
+
+test('buildTranscriptEntries does not render a thinking status when durable activity exists', () => {
+    const entries = buildTranscriptEntries({
+        activeReply: {
+            agentId: 'agent-1',
+            isThinking: true,
+            runId: 'run-1',
+            sessionKey: 'session-1',
+            startedAt: '2026-05-11T16:00:00.000Z',
+            text: '',
+        },
+        rows: [toolRow('tool-1', false, false)],
+    });
+
+    expect(entries).toHaveLength(1);
+
+    if (entries[0]?.kind !== 'turn') {
+        throw new Error('Expected agent turn entry.');
+    }
+
+    expect(
+        entries[0].items.map((item) => (item.kind === 'row' ? item.row.kind : item.kind))
+    ).toEqual(['tool']);
 });
 
 function userMessage(

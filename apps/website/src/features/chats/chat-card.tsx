@@ -42,7 +42,6 @@ export function ChatCard({
         timeline.isPending && !timeline.historyLoaded && !hasActiveReply;
     const followKey = getChatTimelineFollowKey({
         activeReply: timeline.activeReply,
-        activeReplySteps: timeline.activeReplySteps,
         failedTurn: timeline.failedTurn,
     });
     const chatScroll = useChatScroll({
@@ -92,10 +91,7 @@ export function ChatCard({
                     {isInitialTranscriptPending ? null : hasTimelineContent ? (
                         <ChatTimeline
                             activeReply={timeline.activeReply}
-                            activeReplyProgressStartedAt={timeline.activeReplyProgressStartedAt}
-                            activeReplySteps={timeline.activeReplySteps}
                             animate
-                            completedProgress={timeline.completedProgress}
                             failedTurn={timeline.failedTurn}
                             rows={rows}
                             totalRows={totalRows}

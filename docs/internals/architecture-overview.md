@@ -69,6 +69,8 @@ flowchart LR
 * Websocket events are notifications and freshness signals, not durable storage.
 * Response activity is durable and statusful. Running and completed tool rows
   use the same records.
+* Chat UIs render response activity from `chat.log.list`. App-local active reply
+  state is only for pre-activity thinking, streamed reply text, and failures.
 * Missed live events are recovered through runtime chat history, response reads,
   activity reads, artifact reads, event cursors, or sync.
 

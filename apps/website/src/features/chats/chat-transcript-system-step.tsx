@@ -15,13 +15,11 @@ import { ThinkingStep, ThinkingStepDetails } from './thinking-steps.tsx';
 type StepIcon = HugeiconsIconProps['icon'];
 
 export function SystemStep({
-    animate,
     currentSessionKey,
     index,
     isLast,
     row,
 }: {
-    animate?: boolean;
     currentSessionKey?: string | null;
     index: number;
     isLast: boolean;
@@ -32,7 +30,6 @@ export function SystemStep({
 
     return (
         <ThinkingStep
-            animate={animate}
             description={summary.description}
             icon={summary.icon}
             index={index}

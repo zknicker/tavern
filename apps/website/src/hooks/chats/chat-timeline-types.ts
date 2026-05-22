@@ -21,19 +21,8 @@ export interface ChatTurnProgressStep {
     toolName?: string | null;
 }
 
-export const initialPlanningStep: ChatTurnProgressStep = {
-    detail: null,
-    id: 'planning',
-    kind: 'plan',
-    label: 'Planning',
-    status: 'active',
-};
-
 export interface ChatTimelineState {
     activeReply: ChatActiveReply | null;
-    activeReplyProgressStartedAt: string | null;
-    activeReplySteps: ChatTurnProgressStep[];
-    completedProgress: ChatCompletedProgress | null;
     failedTurn: ChatTurnFailure | null;
     historyLoaded: boolean;
     timeline: ChatTimeline;
@@ -51,13 +40,6 @@ export interface ChatTurn {
     runId: string;
     sessionKey: string;
     startedAt: string;
-}
-
-export interface ChatCompletedProgress {
-    completedAt: string;
-    reply: ChatActiveReply;
-    startedAt: string;
-    steps: ChatTurnProgressStep[];
 }
 
 export interface ChatReplyUpdate {

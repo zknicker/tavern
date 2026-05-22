@@ -5,7 +5,6 @@ function createHandlers(input?: {
     invalidatedQueries?: string[];
     onComplete?: (runId: string) => void;
     onFail?: (value: string) => void;
-    onProgress?: (value: string) => void;
     onReply?: (value: string) => void;
     onStart?: (runId: string) => void;
 }) {
@@ -49,8 +48,6 @@ function createHandlers(input?: {
             failTurn: (event) => input?.onFail?.(`${event.turn.runId}:${event.error}`),
             startTurn: (turn) => input?.onStart?.(turn.runId),
             updateReply: (update) => input?.onReply?.(`${update.turn.runId}:${update.text}`),
-            updateTurnProgress: (event) =>
-                input?.onProgress?.(`${event.turn.runId}:${event.step.id}`),
         },
         worker: {
             list: {
@@ -106,12 +103,10 @@ test('turn start refreshes durable chat activity', async () => {
     expect(invalidatedQueries).toEqual(['agent.activity', 'chat.log.list', 'worker.list']);
 });
 
-test('turn progress updates local timeline state and refreshes durable chat activity', async () => {
+test('turn progress refreshes durable chat activity', async () => {
     const invalidatedQueries: string[] = [];
-    const progress: string[] = [];
     const handlers = createHandlers({
         invalidatedQueries,
-        onProgress: (value) => progress.push(value),
     });
 
     handlers.onTurnProgress({
@@ -125,7 +120,6 @@ test('turn progress updates local timeline state and refreshes durable chat acti
     });
     await Promise.resolve();
 
-    expect(progress).toEqual(['run-1:tool:web']);
     expect(invalidatedQueries).toEqual(['agent.activity', 'chat.log.list', 'worker.list']);
 });
 

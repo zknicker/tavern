@@ -14,10 +14,6 @@ export function isActivityItem(item: TranscriptItem): item is ActivityItem {
 }
 
 export function isActiveActivityItem(item: ActivityItem) {
-    if (item.kind === 'activeProgress') {
-        return !item.completedAt;
-    }
-
     if (item.row.kind === 'tool' || item.row.kind === 'worker') {
         return !item.row.completedAt;
     }
@@ -46,10 +42,6 @@ function getActivityStartTimestamp(item: ActivityItem | undefined): string | nul
         return null;
     }
 
-    if (item.kind === 'activeProgress') {
-        return item.startedAt;
-    }
-
     if (item.row.kind === 'tool' || item.row.kind === 'worker') {
         return item.row.startedAt ?? item.row.completedAt;
     }
@@ -64,10 +56,6 @@ function getActivityStartTimestamp(item: ActivityItem | undefined): string | nul
 function getActivityEndTimestamp(item: ActivityItem | undefined): string | null {
     if (!item) {
         return null;
-    }
-
-    if (item.kind === 'activeProgress') {
-        return item.completedAt ?? item.reply.startedAt;
     }
 
     if (item.row.kind === 'tool' || item.row.kind === 'worker') {
@@ -151,9 +139,5 @@ function formatElapsed(start: string | null, end: number | string | null) {
 }
 
 export function getActivityItemKey(item: ActivityItem) {
-    if (item.kind === 'activeProgress') {
-        return `active-progress:${item.reply.runId}`;
-    }
-
     return item.row.id;
 }

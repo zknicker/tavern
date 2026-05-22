@@ -109,6 +109,15 @@ Each OpenClaw-owned execution primitive has one sync path:
 | transcript message | OpenClaw session history evidence |
 | automation execution | OpenClaw turn/session evidence for a Tavern automation |
 
+Active chat turns use a focused sync path. When OpenClaw reports that a known
+turn completed or failed, Runtime syncs that turn's session history by
+`sessionKey` and invalidates the affected chat log. It does not refresh the full
+OpenClaw session index before updating the active conversation.
+
+Broad session and chat index syncs are for dashboard, sidebar, settings, manual
+refresh, and background catch-up surfaces. They must not block the active chat
+handoff for a known turn.
+
 Cortex maintenance does not sync from OpenClaw. Runtime jobs own capture,
 embedding repair, timeline and link maintenance, and Cortex audit output.
 

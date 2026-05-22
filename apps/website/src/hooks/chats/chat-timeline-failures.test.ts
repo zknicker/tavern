@@ -5,7 +5,6 @@ import {
     emptyTimelineState,
     failTimelineTurn,
     startTimelineTurn,
-    updateTimelineTurnProgress,
 } from './chat-timeline-state.ts';
 
 function failureLog() {
@@ -52,15 +51,7 @@ test('failTimelineTurn clears thinking and stores a terminal error', () => {
         sessionKey: 'session-1',
         startedAt: '2026-04-21T16:08:42.000Z',
     };
-    const state = updateTimelineTurnProgress(startTimelineTurn(emptyTimelineState(), turn), {
-        step: {
-            id: 'tool:web',
-            kind: 'tool',
-            label: 'Using web search',
-            status: 'active',
-        },
-        turn,
-    });
+    const state = startTimelineTurn(emptyTimelineState(), turn);
 
     const failed = failTimelineTurn(state, {
         error: 'Docker is not running',
@@ -68,7 +59,6 @@ test('failTimelineTurn clears thinking and stores a terminal error', () => {
     });
 
     expect(failed.activeReply).toBeNull();
-    expect(failed.activeReplySteps).toEqual([]);
     expect(failed.failedTurn?.error).toBe('Docker is not running');
 });
 
@@ -88,7 +78,6 @@ test('applyLogSnapshot clears thinking when the durable error message lands', ()
 
     expect(next.failedTurn).toBeNull();
     expect(next.activeReply).toBeNull();
-    expect(next.activeReplySteps).toEqual([]);
     expect(next.timeline).toHaveLength(1);
 });
 

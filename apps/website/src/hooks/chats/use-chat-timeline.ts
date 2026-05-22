@@ -23,9 +23,6 @@ export function useChatTimeline(input: { chatId: string; limit: number; offset?:
     return {
         ...query,
         activeReply: timelineWithLog.activeReply,
-        activeReplyProgressStartedAt: timelineWithLog.activeReplyProgressStartedAt,
-        activeReplySteps: timelineWithLog.activeReplySteps,
-        completedProgress: timelineWithLog.completedProgress,
         failedTurn: timelineWithLog.failedTurn,
         historyLoaded: timelineWithLog.historyLoaded,
         rows: timelineWithLog.timeline,

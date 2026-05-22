@@ -216,11 +216,6 @@ async function syncTurnSessionMessages(
 ) {
     const client = createAgentRuntimeClientForConnection(connection);
 
-    await syncAgentRuntimeSession({
-        client,
-        runtimeId: connection.id,
-        sessionKey: turn.sessionKey,
-    });
     await syncAgentRuntimeSessionMessagesWithRetry({
         agentId: turn.agentId,
         client,

@@ -1,9 +1,4 @@
-import type {
-    ChatActiveReply,
-    ChatCompletedProgress,
-    ChatTurnFailure,
-    ChatTurnProgressStep,
-} from '../../hooks/chats/chat-timeline-state.ts';
+import type { ChatActiveReply, ChatTurnFailure } from '../../hooks/chats/chat-timeline-state.ts';
 import type { ChatLogOutput } from '../../lib/trpc.tsx';
 import { cn } from '../../lib/utils.ts';
 import { SessionLogHiddenCount } from '../sessions/session-log-hidden-count.tsx';
@@ -12,22 +7,16 @@ import type { ConversationMessageLayout } from './chat-transcript-model.ts';
 
 export function ChatTimeline({
     activeReply,
-    activeReplyProgressStartedAt = null,
-    activeReplySteps = [],
     animate = false,
     chatId,
-    completedProgress = null,
     conversationLayout,
     failedTurn,
     rows,
     totalRows,
 }: {
     activeReply: ChatActiveReply | null;
-    activeReplyProgressStartedAt?: string | null;
-    activeReplySteps?: ChatTurnProgressStep[];
     animate?: boolean;
     chatId?: string;
-    completedProgress?: ChatCompletedProgress | null;
     conversationLayout?: ConversationMessageLayout;
     failedTurn?: ChatTurnFailure | null;
     rows: NonNullable<ChatLogOutput>['rows'];
@@ -40,10 +29,7 @@ export function ChatTimeline({
             <SessionLogHiddenCount hiddenCount={hiddenCount} />
             <ChatTranscript
                 activeReply={activeReply}
-                activeReplyProgressStartedAt={activeReplyProgressStartedAt}
-                activeReplySteps={activeReplySteps}
                 chatId={chatId}
-                completedProgress={completedProgress}
                 conversationLayout={conversationLayout}
                 failedTurn={failedTurn}
                 rows={rows}

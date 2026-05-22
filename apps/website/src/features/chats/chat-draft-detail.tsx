@@ -86,11 +86,8 @@ export function ChatDraftDetail({
     return (
         <ChatDetailFrame
             activeReply={handoffFrame.activeReply}
-            activeReplyProgressStartedAt={handoffFrame.activeReplyProgressStartedAt}
-            activeReplySteps={handoffFrame.activeReplySteps}
             animateTimeline={animateTimeline}
             chatId={timelineChatId}
-            completedProgress={handoffFrame.completedProgress}
             emptyLabel=""
             failedTurn={handoffFrame.failedTurn}
             footer={
@@ -132,9 +129,6 @@ export function resolveDraftHandoffFrame({
 }) {
     return {
         activeReply: handoffState?.activeReply ?? draftActiveReply,
-        activeReplyProgressStartedAt: handoffState?.activeReplyProgressStartedAt ?? null,
-        activeReplySteps: handoffState?.activeReplySteps ?? [],
-        completedProgress: handoffState?.completedProgress ?? null,
         failedTurn: handoffState?.failedTurn ?? null,
     };
 }
