@@ -1,6 +1,5 @@
 import * as React from 'react';
 import { useChatListSuspense } from '../../hooks/chats/use-chat-list.ts';
-import { useChatStatus } from '../../hooks/chats/use-chat-status.ts';
 import type { AgentListOutput } from '../../lib/trpc.tsx';
 import { AgentChatCard } from '../chats/agent-chat-card.tsx';
 import { buildChatList } from '../chats/chat-list-data.ts';
@@ -12,7 +11,6 @@ import {
 
 export function AgentRecentChats({ agent }: { agent: AgentListOutput['agents'][number] }) {
     const [chatData] = useChatListSuspense();
-    const chatStatusQuery = useChatStatus();
     const [sourceFilter, setSourceFilter] = React.useState<ChatSourceFilter>('all');
     const chats = React.useMemo(() => buildChatList(chatData), [chatData]);
     const agentChats = React.useMemo(
@@ -34,17 +32,6 @@ export function AgentRecentChats({ agent }: { agent: AgentListOutput['agents'][n
             ),
         [agentChats, effectiveSourceFilter]
     );
-    const chatStatusByChatId = React.useMemo(
-        () =>
-            new Map(
-                (chatStatusQuery.data?.chats ?? []).map((chatStatus) => [
-                    chatStatus.chatId,
-                    chatStatus,
-                ])
-            ),
-        [chatStatusQuery.data?.chats]
-    );
-
     return (
         <section>
             <div className="flex items-baseline justify-between gap-3">
@@ -65,7 +52,7 @@ export function AgentRecentChats({ agent }: { agent: AgentListOutput['agents'][n
                             {visibleAgentChats.map((chat) => (
                                 <AgentChatCard
                                     chat={chat}
-                                    hasActiveReply={chatStatusByChatId.has(chat.id)}
+                                    hasActiveReply={false}
                                     highlighted={false}
                                     key={chat.id}
                                 />

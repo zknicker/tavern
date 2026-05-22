@@ -101,45 +101,6 @@ describe('OpenClaw agent runtime client', () => {
         ]);
     });
 
-    it('hydrates active chat status from OpenClaw sessions.list', async () => {
-        const chatId = 'cht_220f46ed-2d7c-41dd-9d7e-d02691f1afc3';
-        const sessionKey = `agent:main:tavern:channel:${chatId}`;
-        const gateway = new FakeGateway({
-            'sessions.list': {
-                sessions: [
-                    {
-                        agentId: 'main',
-                        hasActiveRun: true,
-                        key: sessionKey,
-                        runId: 'run-1',
-                        sessionId: 'session-1',
-                        startedAt: 1_777_831_500_000,
-                    },
-                ],
-            },
-        });
-        const client = createOpenClawAgentRuntimeClient({
-            gateway,
-            gatewayUrl: 'ws://sample',
-        });
-
-        const statuses = await client.listChatStatuses();
-
-        expect(statuses.chats[0]).toMatchObject({
-            activeReply: {
-                runId: 'run-1',
-                sessionKey,
-            },
-            chatId,
-        });
-        expect(gateway.requests).toEqual([
-            {
-                method: 'sessions.list',
-                params: undefined,
-            },
-        ]);
-    });
-
     it('walks cron run pages until OpenClaw reports the snapshot is complete', async () => {
         const run = openClawGatewaySample.cronRuns.entries[0];
         const gateway = new FakeGateway({

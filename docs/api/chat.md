@@ -64,9 +64,7 @@ The Tavern app keeps list and detail reads separate:
   sidebar and overview contract, not a full chat detail payload.
 * `chat.get` returns one full chat record by `chatId`.
 * `chat.log.list` returns paged durable timeline rows for one chat, including
-  messages, responses, activity, and renderable artifacts.
-* `chat.status.list` returns active response ids and coarse status derived from
-  durable responses and response activity.
+  messages, responses, running and completed activity, and renderable artifacts.
 
 Invalidate `chat.list` when membership or list ordering can change. Invalidate
 `chat.get` when one chat's detail fields can change. Response and activity

@@ -9,7 +9,6 @@ import type {
     AgentRuntimeArchiveSkill,
     AgentRuntimeBinding,
     AgentRuntimeChat,
-    AgentRuntimeChatStatusList,
     AgentRuntimeCreateAgent,
     AgentRuntimeCreateCron,
     AgentRuntimeCreateMessage,
@@ -72,7 +71,6 @@ import {
     mapOpenClawMessageAccepted,
     mapTavernMessageToOpenClawChatSend,
 } from '../mappers/chats/send-message.ts';
-import { mapOpenClawChatStatuses } from '../mappers/chats/status.ts';
 import { mapTavernCronCreateToOpenClaw } from '../mappers/cron/create.ts';
 import { mapOpenClawDeletedCron } from '../mappers/cron/delete.ts';
 import { mapOpenClawCron } from '../mappers/cron/get.ts';
@@ -124,7 +122,6 @@ export interface OpenClawAgentRuntimeClient {
     listAgentFiles(agentId: string): Promise<AgentRuntimeAgentFileList>;
     listAgents(): Promise<{ agents: AgentRuntimeAgent[] }>;
     listBindings(): Promise<{ bindings: AgentRuntimeBinding[] }>;
-    listChatStatuses(): Promise<AgentRuntimeChatStatusList>;
     listChats(): Promise<{ chats: AgentRuntimeChat[] }>;
     listCronJobs(): Promise<AgentRuntimeCronList>;
     listCronRuns(jobId?: string): Promise<{ runs: AgentRuntimeCronRun[] }>;
@@ -260,10 +257,6 @@ class GatewayBackedOpenClawAgentRuntimeClient implements OpenClawAgentRuntimeCli
 
     async listChats() {
         return mapOpenClawChatsFromSessions(await this.#gateway.request('sessions.list'));
-    }
-
-    async listChatStatuses() {
-        return mapOpenClawChatStatuses(await this.#gateway.request('sessions.list'));
     }
 
     async postMessage(_chatId: string, input: AgentRuntimeCreateMessage) {

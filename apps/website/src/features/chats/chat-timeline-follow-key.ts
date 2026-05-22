@@ -1,13 +1,11 @@
 import type {
+    ChatActiveReply,
     ChatTurnFailure,
     ChatTurnProgressStep,
 } from '../../hooks/chats/chat-timeline-state.ts';
-import type { ChatStatusListOutput } from '../../lib/trpc.tsx';
-
-type ActiveReply = ChatStatusListOutput['chats'][number]['activeReply'];
 
 export function getChatTimelineFollowKey(input: {
-    activeReply: ActiveReply | null;
+    activeReply: ChatActiveReply | null;
     activeReplySteps: ChatTurnProgressStep[];
     failedTurn?: ChatTurnFailure | null;
 }) {

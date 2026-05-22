@@ -1,7 +1,7 @@
 import { debugChatEvent, markChatTiming } from '../../lib/chat-timing.ts';
 import type { ChatReplyUpdate, ChatTurn, ChatTurnProgressStep } from './chat-timeline-state.ts';
 
-export interface ChatStatusEventUtils {
+export interface ChatTurnEventUtils {
     agent: {
         activity: {
             invalidate: () => Promise<unknown>;
@@ -12,11 +12,6 @@ export interface ChatStatusEventUtils {
             invalidate: (input: { chatId: string }) => Promise<unknown>;
         };
         log: {
-            list: {
-                invalidate: () => Promise<unknown>;
-            };
-        };
-        status: {
             list: {
                 invalidate: () => Promise<unknown>;
             };
@@ -55,18 +50,18 @@ export interface ChatStatusEventUtils {
     };
 }
 
-export function createChatStatusEventHandlers(utils: ChatStatusEventUtils) {
+export function createChatTurnEventHandlers(utils: ChatTurnEventUtils) {
     const invalidateStatus = () => {
         Promise.all([
             utils.agent.activity.invalidate(),
-            utils.chat.status.list.invalidate(),
+            utils.chat.log.list.invalidate(),
             utils.worker.list.invalidate(),
         ]).catch(() => undefined);
     };
     const invalidateLiveTurn = () => {
         Promise.all([
             utils.agent.activity.invalidate(),
-            utils.chat.status.list.invalidate(),
+            utils.chat.log.list.invalidate(),
             utils.worker.list.invalidate(),
         ]).catch(() => undefined);
     };
@@ -76,7 +71,6 @@ export function createChatStatusEventHandlers(utils: ChatStatusEventUtils) {
             utils.agent.activity.invalidate(),
             utils.chat.get.invalidate({ chatId }),
             utils.chat.log.list.invalidate(),
-            utils.chat.status.list.invalidate(),
             utils.session.get.invalidate(),
             utils.session.history.get.invalidate(),
             utils.session.list.invalidate(),

@@ -1,9 +1,10 @@
 import type {
+    ChatActiveReply,
     ChatCompletedProgress,
     ChatTurnFailure,
     ChatTurnProgressStep,
 } from '../../hooks/chats/chat-timeline-state.ts';
-import type { ChatLogOutput, ChatStatusListOutput, SessionHistoryOutput } from '../../lib/trpc.tsx';
+import type { ChatLogOutput, SessionHistoryOutput } from '../../lib/trpc.tsx';
 import { getTranscriptItemKey } from './chat-transcript-item-utils.ts';
 
 export type TranscriptRow =
@@ -14,8 +15,6 @@ export type TranscriptActor = Exclude<
     Extract<TranscriptRow, { kind: 'message' | 'tool' | 'worker' }>['actor'],
     undefined
 >;
-
-export type ChatActiveReply = ChatStatusListOutput['chats'][number]['activeReply'];
 
 export interface ConversationMessageLayout {
     showAgentIdentity: boolean;

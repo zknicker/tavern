@@ -2,7 +2,6 @@ import { expect, test } from 'bun:test';
 import {
     applyLogSnapshot,
     applyReplySnapshot,
-    applyStatusSnapshot,
     clearTimelineTurn,
     completeTimelineTurn,
     emptyTimelineState,
@@ -622,7 +621,7 @@ test('updateTimelineReply preserves completed progress when the final replacemen
     ]);
 });
 
-test('applyReplySnapshot does not let a stale status snapshot overwrite a richer live reply update', () => {
+test('applyReplySnapshot does not let a stale reply snapshot overwrite a richer live reply update', () => {
     const turn = {
         agentId: 'claw',
         chatId: 'chat-1',
@@ -866,167 +865,6 @@ test('updateTimelineTurnProgress stores volatile active reply steps by run', () 
             id: 'tool:web',
             kind: 'tool',
             label: 'Using web search',
-            status: 'completed',
-        },
-    ]);
-});
-
-test('applyStatusSnapshot hydrates active progress after reload', () => {
-    const next = applyStatusSnapshot(emptyTimelineState(), {
-        activeReply: {
-            agentId: 'claw',
-            isThinking: true,
-            runId: 'run-1',
-            sessionKey: 'session-1',
-            startedAt: '2026-04-21T16:08:42.000Z',
-            text: '',
-        },
-        activeReplyProgressStartedAt: '2026-04-21T16:08:46.000Z',
-        activeReplySteps: [
-            {
-                detail: 'Searching current documentation',
-                id: 'tool:web',
-                kind: 'tool',
-                label: 'Using web search',
-                status: 'active',
-            },
-        ],
-        chatId: 'chat-1',
-    });
-
-    expect(next.activeReply?.runId).toBe('run-1');
-    expect(next.activeReplyProgressStartedAt).toBe('2026-04-21T16:08:46.000Z');
-    expect(next.activeReplySteps).toEqual([
-        {
-            detail: 'Searching current documentation',
-            id: 'tool:web',
-            kind: 'tool',
-            label: 'Using web search',
-            status: 'active',
-        },
-    ]);
-});
-
-test('live completion after status hydration keeps original progress start', () => {
-    const turn = {
-        agentId: 'claw',
-        chatId: 'chat-1',
-        runId: 'run-1',
-        sessionKey: 'session-1',
-        startedAt: '2026-04-21T16:08:42.000Z',
-    };
-    const hydrated = applyStatusSnapshot(emptyTimelineState(), {
-        activeReply: {
-            agentId: 'claw',
-            isThinking: true,
-            runId: 'run-1',
-            sessionKey: 'session-1',
-            startedAt: turn.startedAt,
-            text: '',
-        },
-        activeReplyProgressStartedAt: '2026-04-21T16:08:46.000Z',
-        activeReplySteps: [
-            {
-                detail: null,
-                id: 'tool:web',
-                kind: 'tool',
-                label: 'Using web search',
-                status: 'active',
-            },
-        ],
-        chatId: 'chat-1',
-    });
-
-    const completed = updateTimelineTurnProgress(hydrated, {
-        receivedAt: '2026-04-21T16:08:57.000Z',
-        step: {
-            detail: null,
-            id: 'tool:web',
-            kind: 'tool',
-            label: 'Used web search',
-            status: 'completed',
-        },
-        turn,
-    });
-
-    expect(completed.activeReplyProgressStartedAt).toBe('2026-04-21T16:08:46.000Z');
-    expect(completed.activeReplySteps).toEqual([
-        {
-            detail: null,
-            id: 'tool:web',
-            kind: 'tool',
-            label: 'Used web search',
-            status: 'completed',
-        },
-    ]);
-});
-
-test('stale status hydration does not downgrade a completed live progress step', () => {
-    const state = applyStatusSnapshot(
-        updateTimelineTurnProgress(
-            applyStatusSnapshot(emptyTimelineState(), {
-                activeReply: {
-                    agentId: 'claw',
-                    isThinking: true,
-                    runId: 'run-1',
-                    sessionKey: 'session-1',
-                    startedAt: '2026-04-21T16:08:42.000Z',
-                    text: '',
-                },
-                activeReplyProgressStartedAt: '2026-04-21T16:08:46.000Z',
-                activeReplySteps: [
-                    {
-                        id: 'tool:web',
-                        kind: 'tool',
-                        label: 'Using web search',
-                        status: 'active',
-                    },
-                ],
-                chatId: 'chat-1',
-            }),
-            {
-                step: {
-                    id: 'tool:web',
-                    kind: 'tool',
-                    label: 'Used web search',
-                    status: 'completed',
-                },
-                turn: {
-                    agentId: 'claw',
-                    chatId: 'chat-1',
-                    runId: 'run-1',
-                    sessionKey: 'session-1',
-                    startedAt: '2026-04-21T16:08:42.000Z',
-                },
-            }
-        ),
-        {
-            activeReply: {
-                agentId: 'claw',
-                isThinking: true,
-                runId: 'run-1',
-                sessionKey: 'session-1',
-                startedAt: '2026-04-21T16:08:42.000Z',
-                text: '',
-            },
-            activeReplyProgressStartedAt: '2026-04-21T16:08:46.000Z',
-            activeReplySteps: [
-                {
-                    id: 'tool:web',
-                    kind: 'tool',
-                    label: 'Using web search',
-                    status: 'active',
-                },
-            ],
-            chatId: 'chat-1',
-        }
-    );
-
-    expect(state.activeReplySteps).toEqual([
-        {
-            id: 'tool:web',
-            kind: 'tool',
-            label: 'Used web search',
             status: 'completed',
         },
     ]);

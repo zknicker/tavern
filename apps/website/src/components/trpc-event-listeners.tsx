@@ -1,5 +1,5 @@
 import { useAgentEvents } from '../hooks/agents/use-agent-events.ts';
-import { useChatStatusEvents } from '../hooks/chats/use-chat-status-events.ts';
+import { useChatTurnEvents } from '../hooks/chats/use-chat-turn-events.ts';
 import { useAgentRuntimeConnectionEvents } from '../hooks/connections/use-agent-runtime-connection-events.ts';
 import { useOpenRouterSettingsEvents } from '../hooks/connections/use-openrouter-settings-events.ts';
 import { useCronEvents } from '../hooks/cron/use-cron-events.ts';
@@ -12,7 +12,7 @@ import { useWorkerEvents } from '../hooks/workers/use-worker-events.ts';
 
 export function TrpcEventListeners() {
     useAgentEvents();
-    useChatStatusEvents();
+    useChatTurnEvents();
     useAgentRuntimeConnectionEvents();
     useCronEvents();
     useModelEvents();

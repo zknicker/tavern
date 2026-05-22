@@ -12,7 +12,7 @@ import {
 import { Icon } from '../../components/ui/icon.tsx';
 import type { DashboardAvatarDirectory } from '../../hooks/agents/use-agent-avatar-directory.ts';
 import { useSearch } from '../../hooks/dashboard/use-search.ts';
-import type { AgentListOutput, ChatStatusListOutput } from '../../lib/trpc.tsx';
+import type { AgentListOutput } from '../../lib/trpc.tsx';
 import { ChatCard } from './chat-card.tsx';
 import type { ChatListItem } from './chat-list-data.ts';
 import {
@@ -26,14 +26,12 @@ export function ChatsList({
     agents,
     avatarDirectory,
     chats,
-    chatStatusByChatId,
     onArchive,
     onEdit,
 }: {
     agents: AgentListOutput['agents'];
     avatarDirectory: DashboardAvatarDirectory;
     chats: ChatListItem[];
-    chatStatusByChatId: Map<string, ChatStatusListOutput['chats'][number]>;
     onArchive: (chat: ChatListItem) => void;
     onEdit: (chat: ChatListItem) => void;
 }) {
@@ -90,7 +88,6 @@ export function ChatsList({
                                 agents={agents}
                                 avatarDirectory={avatarDirectory}
                                 chat={chat}
-                                chatStatus={chatStatusByChatId.get(chat.id) ?? null}
                                 highlighted={highlightedChatId === chat.id}
                                 key={chat.id}
                                 onArchive={

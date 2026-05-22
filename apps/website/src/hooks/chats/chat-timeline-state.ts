@@ -1,7 +1,6 @@
 export {
     applyLogSnapshot,
     applyReplySnapshot,
-    applyStatusSnapshot,
     emptyTimelineState,
 } from './chat-timeline-snapshots.ts';
 export {
@@ -14,7 +13,6 @@ export {
 } from './chat-timeline-turns.ts';
 export type {
     ChatActiveReply,
-    ChatActiveStatus,
     ChatCompletedProgress,
     ChatReplyUpdate,
     ChatTimeline,

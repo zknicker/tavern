@@ -39,7 +39,7 @@ capabilities. It is not a second product API.
 | Skills | `/skills`, `/skills/{id}`, `/skills/{id}/config` |
 | Memory, models, and access | `/memory/settings`, `/memory/status`, `/models`, `/model-access`, `/model-access/claude`, `/model-access/codex`, `/model-access/openrouter` |
 | Platform bindings | `/bindings`, `/bindings/{id}` |
-| Runtime chat control | `/chats`, `/chats/{chatId}/messages`, `/chat-status`, websocket `/chat` |
+| Runtime chat control | `/chats`, `/chats/{chatId}/messages`, websocket `/chat` |
 
 ## Contract Source
 

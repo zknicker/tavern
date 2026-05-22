@@ -24,7 +24,9 @@ export async function listRuntimeChatRows(chatId: string): Promise<ChatLogPage['
         client.chat.responses(chatId, { limit: 500 }),
     ]);
     const agentsById = new Map(agents.map((agent) => [agent.id, agent]));
-    const responsesById = new Map(responsePage.responses.map((response) => [response.id, response]));
+    const responsesById = new Map(
+        responsePage.responses.map((response) => [response.id, response])
+    );
 
     const finalReplyTextByRunId = new Map(
         page.messages
@@ -114,10 +116,6 @@ function activityToChatRows(
     responsesById: ReadonlyMap<string, TavernChatResponse>,
     finalReplyTextByRunId: ReadonlyMap<string, string>
 ): ChatLogPage['rows'] {
-    if (activity.status !== 'completed' && activity.status !== 'failed') {
-        return [];
-    }
-
     const response = responsesById.get(activity.response_id) ?? null;
     const sessionKey = runtimeMetadataString(response, 'sessionKey');
     const actor = {
@@ -131,7 +129,8 @@ function activityToChatRows(
 
     const toolMetadata = readRecord(activity.metadata.tool);
     const runtime = readRecord(activity.metadata.runtime);
-    const toolName = readString(runtime.toolName) ?? readString(toolMetadata.name) ?? activityName(activity);
+    const toolName =
+        readString(runtime.toolName) ?? readString(toolMetadata.name) ?? activityName(activity);
     const toolCallId = readString(runtime.toolCallId);
     const toolCall = buildToolSummaryFromValues({
         argumentsValue: Object.hasOwn(toolMetadata, 'arguments') ? toolMetadata.arguments : null,
@@ -143,7 +142,7 @@ function activityToChatRows(
     const titledToolCall = {
         ...toolCall,
         label: activity.title,
-        summaryParts: [activity.title],
+        summaryParts: activitySummaryParts(activity),
     };
 
     return [
@@ -215,6 +214,21 @@ function activityName(activity: TavernResponseActivity) {
     return 'tool';
 }
 
+function activitySummaryParts(activity: TavernResponseActivity) {
+    const detail = activity.detail?.trim() ?? '';
+
+    if (
+        detail &&
+        (activity.kind === 'message' ||
+            activity.kind === 'reasoning' ||
+            activity.kind === 'planning')
+    ) {
+        return [detail];
+    }
+
+    return [activity.title];
+}
+
 function readRecord(value: unknown): Record<string, unknown> {
     return value && typeof value === 'object' && !Array.isArray(value)
         ? (value as Record<string, unknown>)
@@ -250,7 +264,10 @@ function messageText(message: TavernChatMessage) {
         .join('\n');
 }
 
-function runtimeMetadataString(message: TavernChatMessage | TavernChatResponse | null, key: string) {
+function runtimeMetadataString(
+    message: TavernChatMessage | TavernChatResponse | null,
+    key: string
+) {
     const runtime = message?.metadata.runtime;
 
     if (!(runtime && typeof runtime === 'object' && !Array.isArray(runtime))) {

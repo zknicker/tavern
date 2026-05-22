@@ -9,7 +9,6 @@ import {
     type AgentRuntimeArchiveSkill,
     type AgentRuntimeBinding,
     type AgentRuntimeChat,
-    type AgentRuntimeChatStatusList,
     type AgentRuntimeCreateAgent,
     type AgentRuntimeCreateCron,
     type AgentRuntimeCreateMessage,
@@ -17,10 +16,10 @@ import {
     type AgentRuntimeCronList,
     type AgentRuntimeCronRun,
     type AgentRuntimeInstallSkill,
+    type AgentRuntimeMacAppList,
     type AgentRuntimeMemorySettings,
     type AgentRuntimeMemoryStatus,
     type AgentRuntimeMessageAccepted,
-    type AgentRuntimeMacAppList,
     type AgentRuntimeModelAccess,
     type AgentRuntimeModelAccessStatus,
     type AgentRuntimeModels,
@@ -56,7 +55,6 @@ import {
     agentRuntimeBindingListSchema,
     agentRuntimeBindingSchema,
     agentRuntimeChatListSchema,
-    agentRuntimeChatStatusListSchema,
     agentRuntimeCreateAgentSchema,
     agentRuntimeCreateCronSchema,
     agentRuntimeCreateMessageSchema,
@@ -66,10 +64,10 @@ import {
     agentRuntimeCronSchema,
     agentRuntimeErrorSchema,
     agentRuntimeInstallSkillSchema,
+    agentRuntimeMacAppListSchema,
     agentRuntimeMemorySettingsSchema,
     agentRuntimeMemoryStatusSchema,
     agentRuntimeMessageAcceptedSchema,
-    agentRuntimeMacAppListSchema,
     agentRuntimeModelAccessSchema,
     agentRuntimeModelAccessStatusSchema,
     agentRuntimeModelsSchema,
@@ -173,7 +171,6 @@ export interface TavernAgentRuntimeClient {
     listAgentFiles(agentId: string): Promise<AgentRuntimeAgentFileList>;
     listAgents(): Promise<{ agents: AgentRuntimeAgent[] }>;
     listBindings(): Promise<{ bindings: AgentRuntimeBinding[] }>;
-    listChatStatuses(): Promise<AgentRuntimeChatStatusList>;
     listChats(): Promise<{ chats: AgentRuntimeChat[] }>;
     listCortexBacklinks(slugOrId: string): Promise<CortexBacklinkList>;
     listCortexPages(): Promise<CortexPageList>;
@@ -948,16 +945,6 @@ class HttpTavernAgentRuntimeClient implements TavernAgentRuntimeClient {
         }
 
         return agentRuntimeStatusSchema.parse(await response.json());
-    }
-
-    async listChatStatuses() {
-        const response = await fetch(`${this.#baseUrl}${agentRuntimeRoutes.chatStatus}`);
-
-        if (!response.ok) {
-            await readErrorResponse(response);
-        }
-
-        return agentRuntimeChatStatusListSchema.parse(await response.json());
     }
 
     async listSessions() {

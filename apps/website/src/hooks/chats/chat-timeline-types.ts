@@ -1,8 +1,14 @@
-import type { ChatLogOutput, ChatStatusListOutput } from '../../lib/trpc.tsx';
+import type { ChatLogOutput } from '../../lib/trpc.tsx';
 
 export type ChatTimeline = NonNullable<ChatLogOutput>['rows'];
-export type ChatActiveReply = ChatStatusListOutput['chats'][number]['activeReply'];
-export type ChatActiveStatus = ChatStatusListOutput['chats'][number];
+export interface ChatActiveReply {
+    agentId: string;
+    isThinking?: boolean;
+    runId: string;
+    sessionKey: string;
+    startedAt: string;
+    text?: string;
+}
 export type ChatTimelineMessageRow = Extract<ChatTimeline[number], { kind: 'message' }>;
 
 export interface ChatTurnProgressStep {

@@ -1,7 +1,7 @@
 import * as React from 'react';
 import type { DashboardAvatarDirectory } from '../../hooks/agents/use-agent-avatar-directory.ts';
 import { useChatTimeline } from '../../hooks/chats/use-chat-timeline.ts';
-import type { AgentListOutput, ChatStatusListOutput } from '../../lib/trpc.tsx';
+import type { AgentListOutput } from '../../lib/trpc.tsx';
 import { cn } from '../../lib/utils.ts';
 import { getChatCardDomId } from './chat-card-dom-id.ts';
 import { ChatCardHeader } from './chat-card-header.tsx';
@@ -19,7 +19,6 @@ export function ChatCard({
     avatarDirectory,
     chat,
     highlighted,
-    chatStatus,
     onArchive,
     onEdit,
 }: {
@@ -27,14 +26,10 @@ export function ChatCard({
     avatarDirectory: DashboardAvatarDirectory;
     chat: ChatListItem;
     highlighted: boolean;
-    chatStatus: ChatStatusListOutput['chats'][number] | null;
     onArchive?: (() => void) | null;
     onEdit?: (() => void) | null;
 }) {
     const timeline = useChatTimeline({
-        activeReply: chatStatus?.activeReply ?? null,
-        activeReplyProgressStartedAt: chatStatus?.activeReplyProgressStartedAt ?? null,
-        activeReplySteps: chatStatus?.activeReplySteps ?? [],
         chatId: chat.id,
         limit: chatSummaryLimit,
     });

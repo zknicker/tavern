@@ -1201,26 +1201,6 @@ export const agentRuntimeTurnProgressStepSchema = z.object({
     toolName: z.string().trim().min(1).nullable().optional(),
 });
 
-export const agentRuntimeActiveChatReplySchema = z.object({
-    agentId: z.string().trim().min(1),
-    isThinking: z.boolean().optional(),
-    runId: z.string().trim().min(1),
-    sessionKey: z.string().trim().min(1),
-    startedAt: z.string().datetime(),
-    text: z.string().optional(),
-});
-
-export const agentRuntimeChatStatusSchema = z.object({
-    activeReply: agentRuntimeActiveChatReplySchema,
-    activeReplyProgressStartedAt: z.string().datetime().nullable().optional(),
-    activeReplySteps: z.array(agentRuntimeTurnProgressStepSchema).optional(),
-    chatId: z.string().trim().min(1),
-});
-
-export const agentRuntimeChatStatusListSchema = z.object({
-    chats: z.array(agentRuntimeChatStatusSchema),
-});
-
 export const agentRuntimeEventTypeSchema = z.enum([
     'agent.updated',
     'chat.messageAccepted',
@@ -1552,9 +1532,6 @@ export type TavernChannelMessageAcceptedFrame = z.infer<
 export type AgentRuntimeRunCron = z.infer<typeof agentRuntimeRunCronSchema>;
 export type AgentRuntimeTurn = z.infer<typeof agentRuntimeTurnSchema>;
 export type AgentRuntimeTurnProgressStep = z.infer<typeof agentRuntimeTurnProgressStepSchema>;
-export type AgentRuntimeActiveChatReply = z.infer<typeof agentRuntimeActiveChatReplySchema>;
-export type AgentRuntimeChatStatus = z.infer<typeof agentRuntimeChatStatusSchema>;
-export type AgentRuntimeChatStatusList = z.infer<typeof agentRuntimeChatStatusListSchema>;
 export type AgentRuntimeTurnCompletedEvent = z.infer<typeof agentRuntimeTurnCompletedEventSchema>;
 export type AgentRuntimeTurnFailedEvent = z.infer<typeof agentRuntimeTurnFailedEventSchema>;
 export type AgentRuntimeTurnStartedEvent = z.infer<typeof agentRuntimeTurnStartedEventSchema>;

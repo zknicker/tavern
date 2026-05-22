@@ -1,11 +1,10 @@
 import type { PropsWithChildren } from 'react';
 import * as React from 'react';
-import type { ChatLogOutput, ChatStatusListOutput } from '../../lib/trpc.tsx';
+import type { ChatLogOutput } from '../../lib/trpc.tsx';
 import {
     applyLogSnapshot,
     applyReplySnapshot,
-    applyStatusSnapshot,
-    type ChatActiveStatus,
+    type ChatActiveReply,
     type ChatReplyUpdate,
     type ChatTimelineState,
     type ChatTurn,
@@ -24,11 +23,7 @@ interface TimelineActionsValue {
     completeTurn: (input: { chatId: string; completedAt: string; turn: ChatTurn }) => void;
     failTurn: (input: { chatId: string; error: string; turn: ChatTurn }) => void;
     setLog: (chatId: string, log: ChatLogOutput | undefined) => void;
-    setReply: (
-        chatId: string,
-        activeReply: ChatStatusListOutput['chats'][number]['activeReply'] | null
-    ) => void;
-    setStatus: (chatId: string, status: ChatActiveStatus | null) => void;
+    setReply: (chatId: string, activeReply: ChatActiveReply | null) => void;
     startTurn: (turn: ChatTurn) => void;
     updateReply: (update: ChatReplyUpdate) => void;
     updateTurnProgress: (input: {
@@ -72,23 +67,9 @@ export function TimelineContextProvider({ children }: PropsWithChildren) {
         );
     }, []);
 
-    const setReply = React.useCallback(
-        (
-            chatId: string,
-            activeReply: ChatStatusListOutput['chats'][number]['activeReply'] | null
-        ) => {
-            setTimelineStates((current) =>
-                updateTimelineState(current, chatId, (state) =>
-                    applyReplySnapshot(state, activeReply)
-                )
-            );
-        },
-        []
-    );
-
-    const setStatus = React.useCallback((chatId: string, status: ChatActiveStatus | null) => {
+    const setReply = React.useCallback((chatId: string, activeReply: ChatActiveReply | null) => {
         setTimelineStates((current) =>
-            updateTimelineState(current, chatId, (state) => applyStatusSnapshot(state, status))
+            updateTimelineState(current, chatId, (state) => applyReplySnapshot(state, activeReply))
         );
     }, []);
 
@@ -171,7 +152,6 @@ export function TimelineContextProvider({ children }: PropsWithChildren) {
             failTurn,
             setLog,
             setReply,
-            setStatus,
             startTurn,
             updateTurnProgress,
             updateReply,
@@ -182,7 +162,6 @@ export function TimelineContextProvider({ children }: PropsWithChildren) {
             failTurn,
             setLog,
             setReply,
-            setStatus,
             startTurn,
             updateReply,
             updateTurnProgress,

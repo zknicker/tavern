@@ -5,11 +5,12 @@ import { BreadcrumbTrail } from '../../components/ui/breadcrumb.tsx';
 import { Icon } from '../../components/ui/icon.tsx';
 import { Button } from '../../components/ui/primitives/button.tsx';
 import type {
+    ChatActiveReply,
     ChatCompletedProgress,
     ChatTurnFailure,
     ChatTurnProgressStep,
 } from '../../hooks/chats/chat-timeline-state.ts';
-import type { ChatLogOutput, ChatStatusListOutput } from '../../lib/trpc.tsx';
+import type { ChatLogOutput } from '../../lib/trpc.tsx';
 import { ChatTimeline } from './chat-timeline.tsx';
 import { getChatTimelineFollowKey } from './chat-timeline-follow-key.ts';
 import { ChatTranscriptLoadingIndicator } from './chat-transcript-loading-indicator.tsx';
@@ -34,7 +35,7 @@ export function ChatDetailFrame({
     title,
     totalRows,
 }: {
-    activeReply: ChatStatusListOutput['chats'][number]['activeReply'] | null;
+    activeReply: ChatActiveReply | null;
     activeReplyProgressStartedAt?: string | null;
     activeReplySteps?: ChatTurnProgressStep[];
     animateTimeline?: boolean;

@@ -3,11 +3,9 @@ import { agentRuntimeRoutes } from '@tavern/api';
 
 import { createLocalOpenClawClient } from '../openclaw/local-client';
 import { sendTavernChannelMessage } from './channel-relay';
-import { listTavernActiveChannelStatuses } from './chat-statuses';
 import { json } from './http';
 
 type LocalOpenClawClient = ReturnType<typeof createLocalOpenClawClient>;
-type LocalOpenClawChatStatusList = Awaited<ReturnType<LocalOpenClawClient['listChatStatuses']>>;
 
 interface RouteContext {
     client: LocalOpenClawClient;
@@ -159,22 +157,6 @@ async function dispatchSkills({ client, request, url }: RouteContext, segments: 
 }
 
 async function dispatchChats({ client, request, url }: RouteContext, segments: string[]) {
-    if (request.method === 'GET' && url.pathname === agentRuntimeRoutes.chatStatus) {
-        const activeTavernStatuses = listTavernActiveChannelStatuses();
-        const runtimeStatuses: LocalOpenClawChatStatusList = await client.listChatStatuses();
-        const activeRunIds = new Set(
-            activeTavernStatuses.map((status) => status.activeReply.runId)
-        );
-
-        return {
-            chats: [
-                ...runtimeStatuses.chats.filter(
-                    (status) => !activeRunIds.has(status.activeReply.runId)
-                ),
-                ...activeTavernStatuses,
-            ],
-        };
-    }
     if (request.method === 'GET' && url.pathname === agentRuntimeRoutes.chats) {
         return await client.listChats();
     }

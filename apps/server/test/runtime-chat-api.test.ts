@@ -319,6 +319,82 @@ test('listRuntimeChatRows preserves durable activity titles for tool rows', asyn
     ]);
 });
 
+test('listRuntimeChatRows includes running durable activity as active tool rows', async () => {
+    await saveAgentRuntimeConnection({
+        baseUrl: 'http://runtime.test',
+        enabled: true,
+        id: 'runtime-1',
+        isActive: true,
+        lastCheckedAt: '2026-05-18T12:00:00.000Z',
+        lastError: null,
+        name: 'Runtime',
+    });
+
+    globalThis.fetch = (async (input, init) => {
+        const request = new Request(input, init);
+        const url = new URL(request.url);
+
+        if (url.pathname === '/api/chats/cht_1/messages') {
+            return Response.json({ messages: [] });
+        }
+
+        if (url.pathname === '/api/chats/cht_1/responses') {
+            return Response.json({
+                activity: [
+                    responseActivity({
+                        detail: 'I will run a timed shell check before the final reply.',
+                        id: 'act_assistant_reply_1',
+                        kind: 'message',
+                        responseId: 'rsp_run_1',
+                        status: 'running',
+                        title: 'Assistant reply',
+                    }),
+                ],
+                artifacts: [],
+                next_sequence: null,
+                responses: [
+                    {
+                        chat_id: 'cht_1',
+                        completed_at: null,
+                        created_at: '2026-05-18T12:00:01.500Z',
+                        id: 'rsp_run_1',
+                        metadata: {
+                            runtime: {
+                                agentId: 'main',
+                                runId: 'run_1',
+                                sessionKey: 'session_1',
+                            },
+                        },
+                        participant_id: 'agt_main',
+                        request_message_id: null,
+                        response_message_id: null,
+                        status: 'running',
+                        summary: null,
+                        updated_at: '2026-05-18T12:00:03.000Z',
+                    },
+                ],
+            });
+        }
+
+        throw new Error(`Unexpected Tavern API request: ${url.pathname}`);
+    }) as typeof fetch;
+
+    const rows = await listRuntimeChatRows('cht_1');
+
+    expect(rows).toMatchObject([
+        {
+            completedAt: null,
+            id: 'act_assistant_reply_1',
+            kind: 'tool',
+            toolCall: {
+                label: 'Assistant reply',
+                name: 'message',
+                summaryParts: ['I will run a timed shell check before the final reply.'],
+            },
+        },
+    ]);
+});
+
 test('getChatToolActivity resolves durable response activity into tool details', async () => {
     await saveAgentRuntimeConnection({
         baseUrl: 'http://runtime.test',
@@ -378,7 +454,6 @@ test('getChatToolActivity resolves durable response activity into tool details',
     });
 });
 
-
 function chatMessage(input: {
     authorId: string;
     authorKind: 'agent' | 'system' | 'user';
@@ -429,12 +504,13 @@ function responseActivity(input: {
     kind: 'message' | 'reasoning' | 'tool_call';
     metadata?: Record<string, unknown>;
     responseId: string;
+    status?: 'completed' | 'running';
     title: string;
 }) {
     return {
         artifact_ids: [],
         chat_id: 'cht_1',
-        completed_at: '2026-05-18T12:00:03.000Z',
+        completed_at: input.status === 'running' ? null : '2026-05-18T12:00:03.000Z',
         detail: input.detail,
         id: input.id,
         kind: input.kind,
@@ -442,7 +518,7 @@ function responseActivity(input: {
         response_id: input.responseId,
         sequence: input.id.endsWith('_1') ? 1 : input.id.includes('reasoning') ? 2 : 3,
         started_at: '2026-05-18T12:00:02.000Z',
-        status: 'completed',
+        status: input.status ?? 'completed',
         summary: null,
         title: input.title,
         updated_at: '2026-05-18T12:00:03.000Z',

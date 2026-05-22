@@ -10,8 +10,8 @@ import type {
 } from '../../hooks/chats/chat-timeline-state.ts';
 import { SessionDrawerProvider } from '../../hooks/sessions/use-session-drawer.ts';
 import { type ChatLogOutput, trpc } from '../../lib/trpc.tsx';
-import { ToolDrawerBody } from '../sessions/tools/tool-drawer-body.tsx';
 import { ArtifactLogEntry } from '../sessions/log/event-entry/artifact-entry.tsx';
+import { ToolDrawerBody } from '../sessions/tools/tool-drawer-body.tsx';
 import { ChatTranscript } from './chat-transcript.tsx';
 import { ToolStep } from './tool-steps/registry.tsx';
 
@@ -62,7 +62,7 @@ test('ChatTranscript renders tool calls and agent responses through one surface'
     const markup = renderTranscript([
         {
             actor: { id: 'tiny', kind: 'agent' },
-            completedAt: null,
+            completedAt: '2026-03-31T15:00:01.000Z',
             connectsToNext: true,
             connectsToPrevious: false,
             id: 'tool-1',
@@ -102,7 +102,6 @@ test('ChatTranscript renders tool calls and agent responses through one surface'
 
     assert.match(markup, /Done\./);
     assert.match(markup, /Worked/);
-    assert.doesNotMatch(markup, /Worked for 1 second/);
     assert.match(markup, /aria-expanded="false"/);
 });
 
@@ -185,11 +184,7 @@ test('ToolStep keeps older tool rows inspectable when call id is missing', () =>
 
 test('ToolDrawerBody renders a concise unavailable state when tool details cannot load', () => {
     const markup = renderToStaticMarkup(
-        <ToolDrawerBody
-            details={null}
-            isPending={false}
-            queryError
-        />
+        <ToolDrawerBody details={null} isPending={false} queryError />
     );
 
     assert.match(markup, /Tool details not available\./);

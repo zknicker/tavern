@@ -10,7 +10,7 @@ export interface ChatSendMutationUtils {
         list: {
             invalidate: () => Promise<unknown>;
         };
-        status: {
+        log: {
             list: {
                 invalidate: () => Promise<unknown>;
             };
@@ -138,7 +138,7 @@ export function createChatSendMutationHandlers(utils: ChatSendMutationUtils) {
             await Promise.all([
                 utils.chat.get.invalidate({ chatId: result.chatId }),
                 utils.chat.list.invalidate(),
-                utils.chat.status.list.invalidate(),
+                utils.chat.log.list.invalidate(),
                 utils.session.list.invalidate(),
             ]);
         },

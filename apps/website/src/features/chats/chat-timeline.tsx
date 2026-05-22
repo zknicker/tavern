@@ -1,9 +1,10 @@
 import type {
+    ChatActiveReply,
     ChatCompletedProgress,
     ChatTurnFailure,
     ChatTurnProgressStep,
 } from '../../hooks/chats/chat-timeline-state.ts';
-import type { ChatLogOutput, ChatStatusListOutput } from '../../lib/trpc.tsx';
+import type { ChatLogOutput } from '../../lib/trpc.tsx';
 import { cn } from '../../lib/utils.ts';
 import { SessionLogHiddenCount } from '../sessions/session-log-hidden-count.tsx';
 import { ChatTranscript } from './chat-transcript.tsx';
@@ -21,7 +22,7 @@ export function ChatTimeline({
     rows,
     totalRows,
 }: {
-    activeReply: ChatStatusListOutput['chats'][number]['activeReply'] | null;
+    activeReply: ChatActiveReply | null;
     activeReplyProgressStartedAt?: string | null;
     activeReplySteps?: ChatTurnProgressStep[];
     animate?: boolean;

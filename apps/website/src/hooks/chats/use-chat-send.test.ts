@@ -34,10 +34,10 @@ test('useChatSend stores the local user row in app state until the log catches u
                     invalidatedQueries.push('chat.list');
                 },
             },
-            status: {
+            log: {
                 list: {
                     invalidate: async () => {
-                        invalidatedQueries.push('chat.status.list');
+                        invalidatedQueries.push('chat.log.list');
                     },
                 },
             },
@@ -110,7 +110,7 @@ test('useChatSend stores the local user row in app state until the log catches u
     expect(invalidatedQueries).toEqual([
         'chat.get:chat-1',
         'chat.list',
-        'chat.status.list',
+        'chat.log.list',
         'session.list',
     ]);
     expect(acceptedMessages).toEqual([
@@ -150,7 +150,7 @@ test('useChatSend removes the local user row if the send fails', async () => {
             list: {
                 invalidate: async () => undefined,
             },
-            status: {
+            log: {
                 list: {
                     invalidate: async () => undefined,
                 },

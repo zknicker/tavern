@@ -217,6 +217,37 @@ describe('Tavern Runtime Chat API store', () => {
         });
     });
 
+    it('closes open activity when the response becomes terminal', () => {
+        createChat({ id: 'cht_1' });
+        upsertResponse('cht_1', {
+            id: 'rsp_1',
+            participant_id: 'agt_1',
+            status: 'running',
+        });
+        upsertResponseActivity('cht_1', 'rsp_1', {
+            id: 'act_1',
+            kind: 'message',
+            started_at: '2026-05-20T12:00:00.000Z',
+            status: 'running',
+            title: 'Assistant reply',
+        });
+
+        upsertResponse('cht_1', {
+            completed_at: '2026-05-20T12:00:10.000Z',
+            id: 'rsp_1',
+            participant_id: 'agt_1',
+            status: 'completed',
+        });
+
+        expect(listResponses('cht_1').activity).toMatchObject([
+            {
+                completed_at: expect.any(String),
+                id: 'act_1',
+                status: 'completed',
+            },
+        ]);
+    });
+
     it('keeps response pagination stable when activity updates touch older responses', () => {
         createChat({ id: 'cht_1' });
         upsertResponse('cht_1', {

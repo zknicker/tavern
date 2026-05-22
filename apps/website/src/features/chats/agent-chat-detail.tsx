@@ -7,7 +7,6 @@ import { getChatDraftRouteState } from '../../hooks/chats/use-chat-draft-launch.
 import { useChatDraftStart } from '../../hooks/chats/use-chat-draft-start.ts';
 import { useChatGet } from '../../hooks/chats/use-chat-list.ts';
 import { useChatStartDrafts } from '../../hooks/chats/use-chat-start-drafts.tsx';
-import { useChatStatus } from '../../hooks/chats/use-chat-status.ts';
 import { useChatTimeline } from '../../hooks/chats/use-chat-timeline.ts';
 import { useChatRuntimeTimelineState } from '../../hooks/chats/use-timeline-context.tsx';
 import { useModelList } from '../../hooks/models/use-model-list.ts';
@@ -170,17 +169,12 @@ function SyncedAgentChatDetail({
     chatId: string;
 }) {
     const agentsQuery = useAgentList();
-    const chatStatusQuery = useChatStatus();
     const modelsQuery = useModelList();
     const agentId = resolveChatAgentId(chat);
     const agents = agentsQuery.data?.agents ?? [];
     const agent = agents.find((entry) => entry.id === agentId) ?? null;
-    const chatStatus = chatStatusQuery.data?.chats.find((entry) => entry.chatId === chatId) ?? null;
     const conversationLayout = getChatMessageLayout(chat);
     const timeline = useChatTimeline({
-        activeReply: chatStatus?.activeReply ?? null,
-        activeReplyProgressStartedAt: chatStatus?.activeReplyProgressStartedAt ?? null,
-        activeReplySteps: chatStatus?.activeReplySteps ?? [],
         chatId,
         limit: chatDetailLogLimit,
     });

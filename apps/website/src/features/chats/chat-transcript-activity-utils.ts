@@ -18,6 +18,10 @@ export function isActiveActivityItem(item: ActivityItem) {
         return !item.completedAt;
     }
 
+    if (item.row.kind === 'tool' || item.row.kind === 'worker') {
+        return !item.row.completedAt;
+    }
+
     return false;
 }
 

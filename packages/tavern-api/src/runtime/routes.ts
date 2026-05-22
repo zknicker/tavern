@@ -31,7 +31,6 @@ export const agentRuntimeRoutes = {
     cronRuns: '/cron-runs',
     events: '/events',
     chatSocket: '/chat',
-    chatStatus: '/chat-status',
     chatMessages: (chatId: string) => `/chats/${chatId}/messages`,
     chats: '/chats',
     cortexBacklinks: (slugOrId: string) =>

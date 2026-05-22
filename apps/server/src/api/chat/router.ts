@@ -11,7 +11,6 @@ import { onChatTurnReplyUpdated } from './on-turn-reply-updated.ts';
 import { onChatTurnStarted } from './on-turn-started.ts';
 import { sendChatMessageRoute } from './send.ts';
 import { startChatRoute } from './start.ts';
-import { listChatStatusesRoute } from './status-list.ts';
 import { getChatToolRoute } from './tool-get.ts';
 import { updateChatRoute } from './update.ts';
 
@@ -19,9 +18,6 @@ export const chatRouter = createRouter({
     archive: archiveChatRoute,
     create: createChatRoute,
     get: getChatRoute,
-    status: createRouter({
-        list: listChatStatusesRoute,
-    }),
     tool: createRouter({
         get: getChatToolRoute,
     }),

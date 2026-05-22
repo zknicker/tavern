@@ -4,7 +4,6 @@ import { ensureRuntimeSchema } from '../db/schema';
 import { attachTavernChannelSocket, sendTavernChannelMessage } from './channel-relay';
 import { listPendingTavernInboundMessages } from './channel-store';
 import { listMessages } from './chat-api';
-import { listTavernActiveChannelStatuses } from './chat-statuses';
 
 describe('Tavern channel relay', () => {
     beforeEach(() => {
@@ -89,18 +88,6 @@ describe('Tavern channel relay', () => {
             'msg_offline',
         ]);
         expect(listPendingTavernInboundMessages()).toHaveLength(1);
-        expect(listTavernActiveChannelStatuses()).toMatchObject([
-            {
-                activeReply: {
-                    agentId: 'agt_1',
-                    isThinking: true,
-                    runId: accepted.runId,
-                    sessionKey: 'session_1',
-                    text: '',
-                },
-                chatId: 'cht_1',
-            },
-        ]);
 
         const socket = createRelaySocket();
         attachTavernChannelSocket(socket.value);

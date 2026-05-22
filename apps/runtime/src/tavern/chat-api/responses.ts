@@ -34,7 +34,9 @@ export function listResponses(
              ORDER BY row_sequence ASC
              LIMIT $limit`
         )
-        .all(namedParams({ afterSequence: input.afterSequence ?? 0, chatId, limit })) as (ResponseRow & {
+        .all(
+            namedParams({ afterSequence: input.afterSequence ?? 0, chatId, limit })
+        ) as (ResponseRow & {
         row_sequence: number;
     })[];
     const responseIds = rows.map((row) => row.id);
@@ -45,7 +47,7 @@ export function listResponses(
         artifacts: listArtifactsForResponses(responseIds, db),
         next_sequence:
             responses.length === limit
-                ? (rows.at(-1)?.row_sequence ?? (input.afterSequence ?? 0))
+                ? (rows.at(-1)?.row_sequence ?? input.afterSequence ?? 0)
                 : null,
         responses,
     };
@@ -94,6 +96,7 @@ export function upsertResponse(
             })
         );
         const response = getResponseOrThrow(input.id, db);
+        closeOpenActivityForTerminalResponse(response.id, response.status, now, db);
         const event = insertEvent(
             {
                 chatId,
@@ -344,11 +347,7 @@ function nextActivitySequence(responseId: string, db: Database) {
     return row.sequence;
 }
 
-function touchResponse(
-    responseId: string,
-    updatedAt: string,
-    db: Database
-) {
+function touchResponse(responseId: string, updatedAt: string, db: Database) {
     db.prepare(
         `UPDATE chat_responses
          SET updated_at = $updatedAt,
@@ -358,6 +357,36 @@ function touchResponse(
              END
          WHERE id = $responseId`
     ).run(namedParams({ responseId, updatedAt }));
+}
+
+function closeOpenActivityForTerminalResponse(
+    responseId: string,
+    status: TavernChatResponse['status'],
+    now: string,
+    db: Database
+) {
+    if (status !== 'completed' && status !== 'failed' && status !== 'cancelled') {
+        return;
+    }
+
+    db.prepare(
+        `UPDATE chat_response_activity
+         SET status = CASE
+               WHEN status IN ('queued', 'running') THEN $status
+               ELSE status
+             END,
+             updated_at = $updatedAt,
+             completed_at = COALESCE(completed_at, $completedAt)
+         WHERE response_id = $responseId
+           AND status IN ('queued', 'running')`
+    ).run(
+        namedParams({
+            completedAt: now,
+            responseId,
+            status,
+            updatedAt: now,
+        })
+    );
 }
 
 function assertResponseInputIds(chatId: string, input: TavernUpsertResponseRequest) {

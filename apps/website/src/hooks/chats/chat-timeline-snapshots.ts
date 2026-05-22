@@ -1,11 +1,7 @@
-import type { ChatLogOutput, ChatStatusListOutput } from '../../lib/trpc.tsx';
+import type { ChatLogOutput } from '../../lib/trpc.tsx';
 import { hasDurableActivityForTurn } from './chat-timeline-activity.ts';
 import { hasLoggedTurnFailure } from './chat-timeline-failures.ts';
-import {
-    areSameProgressSteps,
-    completeProgressSteps,
-    mergeProgressSteps,
-} from './chat-timeline-progress.ts';
+import { completeProgressSteps } from './chat-timeline-progress.ts';
 import {
     getTerminalAssistantReplyTimestamp,
     hasAssistantReplyForActiveTurn,
@@ -17,7 +13,6 @@ import {
 } from './chat-timeline-reply.ts';
 import type {
     ChatActiveReply,
-    ChatActiveStatus,
     ChatCompletedProgress,
     ChatTimeline,
     ChatTimelineState,
@@ -88,7 +83,7 @@ export function applyLogSnapshot(
 
 export function applyReplySnapshot(
     state: ChatTimelineState,
-    activeReply: ChatStatusListOutput['chats'][number]['activeReply'] | null
+    activeReply: ChatActiveReply | null
 ): ChatTimelineState {
     const normalizedActiveReply = mergeActiveReplySnapshot(
         state.activeReply,
@@ -146,41 +141,6 @@ export function applyReplySnapshot(
                 ? null
                 : state.completedProgress,
         failedTurn: nextActiveReply && keepsSameRun ? state.failedTurn : null,
-    };
-}
-
-export function applyStatusSnapshot(
-    state: ChatTimelineState,
-    status: ChatActiveStatus | null
-): ChatTimelineState {
-    const next = applyReplySnapshot(state, status?.activeReply ?? null);
-    const steps = status?.activeReplySteps ?? [];
-
-    if (!status?.activeReply || steps.length === 0 || !next.activeReply) {
-        return next;
-    }
-
-    if (next.activeReply.runId !== status.activeReply.runId) {
-        return next;
-    }
-
-    const mergedSteps = mergeProgressSteps(next.activeReplySteps, steps);
-    const progressStartedAt =
-        next.activeReplyProgressStartedAt ??
-        status.activeReplyProgressStartedAt ??
-        status.activeReply.startedAt;
-
-    if (
-        next.activeReplyProgressStartedAt === progressStartedAt &&
-        areSameProgressSteps(next.activeReplySteps, mergedSteps)
-    ) {
-        return next;
-    }
-
-    return {
-        ...next,
-        activeReplyProgressStartedAt: progressStartedAt,
-        activeReplySteps: mergedSteps,
     };
 }
 
