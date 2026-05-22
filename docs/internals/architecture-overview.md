@@ -71,6 +71,8 @@ flowchart LR
   use the same records.
 * Chat UIs render response activity from `chat.log.list`. App-local active reply
   state is only for pre-activity thinking, streamed reply text, and failures.
+* Live response activity events patch the `chat.log.list` cache by stable row id.
+  Completion and recovery reads reconcile the same ids from Runtime storage.
 * Missed live events are recovered through runtime chat history, response reads,
   activity reads, artifact reads, event cursors, or sync.
 

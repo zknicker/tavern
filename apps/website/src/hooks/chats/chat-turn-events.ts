@@ -1,4 +1,6 @@
 import { debugChatEvent, markChatTiming } from '../../lib/chat-timing.ts';
+import type { ChatLogOutput } from '../../lib/trpc.tsx';
+import { patchChatLogWithProgress } from './chat-log-cache.ts';
 import type { ChatReplyUpdate, ChatTurn, ChatTurnProgressStep } from './chat-timeline-state.ts';
 
 export interface ChatTurnEventUtils {
@@ -14,6 +16,10 @@ export interface ChatTurnEventUtils {
         log: {
             list: {
                 invalidate: () => Promise<unknown>;
+                patchProgress: (input: {
+                    chatId: string;
+                    updater: (current: ChatLogOutput | undefined) => ChatLogOutput | undefined;
+                }) => void;
             };
         };
     };
@@ -52,12 +58,10 @@ export function createChatTurnEventHandlers(utils: ChatTurnEventUtils) {
             utils.worker.list.invalidate(),
         ]).catch(() => undefined);
     };
-    const invalidateLiveTurn = () => {
-        Promise.all([
-            utils.agent.activity.invalidate(),
-            utils.chat.log.list.invalidate(),
-            utils.worker.list.invalidate(),
-        ]).catch(() => undefined);
+    const invalidateLiveTurnStatus = () => {
+        Promise.all([utils.agent.activity.invalidate(), utils.worker.list.invalidate()]).catch(
+            () => undefined
+        );
     };
 
     const invalidateCompletedTurn = (chatId: string) => {
@@ -99,7 +103,11 @@ export function createChatTurnEventHandlers(utils: ChatTurnEventUtils) {
             });
             invalidateCompletedTurn(input.turn.chatId);
         },
-        onTurnProgress: (input: { step: ChatTurnProgressStep; turn: ChatTurn }) => {
+        onTurnProgress: (input: {
+            step: ChatTurnProgressStep;
+            timestamp?: string;
+            turn: ChatTurn;
+        }) => {
             markChatTiming('client.turnProgressEvent', {
                 chatId: input.turn.chatId,
                 kind: input.step.kind,
@@ -115,7 +123,16 @@ export function createChatTurnEventHandlers(utils: ChatTurnEventUtils) {
                 status: input.step.status,
                 stepId: input.step.id,
             });
-            invalidateLiveTurn();
+            utils.chat.log.list.patchProgress({
+                chatId: input.turn.chatId,
+                updater: (current) =>
+                    patchChatLogWithProgress(current, {
+                        step: input.step,
+                        timestamp: input.timestamp ?? new Date().toISOString(),
+                        turn: input.turn,
+                    }),
+            });
+            invalidateLiveTurnStatus();
         },
         onTurnReplyUpdated: (update: ChatReplyUpdate) => {
             markChatTiming('client.turnReplyUpdatedEvent', {
@@ -131,7 +148,7 @@ export function createChatTurnEventHandlers(utils: ChatTurnEventUtils) {
                 textLength: update.text.length,
             });
             utils.timeline.updateReply(update);
-            invalidateLiveTurn();
+            invalidateLiveTurnStatus();
         },
         onTurnStarted: (turn: ChatTurn) => {
             markChatTiming('client.turnStartedEvent', {

@@ -22,6 +22,8 @@ export function createToolStep(data: Record<string, unknown>, payload: Record<st
         kind: 'tool' as const,
         label,
         status: readProgressStatus(data),
+        toolCallId: readToolCallId(data),
+        toolName: readToolName(data),
     };
 }
 
@@ -44,6 +46,8 @@ export function createCommandOutputStep(
         kind: 'tool' as const,
         label,
         status: readProgressStatus(data),
+        toolCallId: readToolCallId(data),
+        toolName: readToolName(data),
     };
 }
 
@@ -150,6 +154,10 @@ function readStableToolProgressId(data: Record<string, unknown>, payload: Record
     const key = normalizeProgressKeyText(readToolName(data) ?? readToolTarget(data));
 
     return key && typeof seq === 'number' ? `tool:${key}:${seq}` : null;
+}
+
+function readToolCallId(data: Record<string, unknown>) {
+    return readFirstString(data, ['toolCallId', 'callId', 'id', 'itemId']);
 }
 
 function readToolTarget(data: Record<string, unknown>) {

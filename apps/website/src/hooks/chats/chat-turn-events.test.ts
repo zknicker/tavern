@@ -7,6 +7,7 @@ function createHandlers(input?: {
     onFail?: (value: string) => void;
     onReply?: (value: string) => void;
     onStart?: (runId: string) => void;
+    patchedProgress?: string[];
 }) {
     const invalidatedQueries = input?.invalidatedQueries ?? [];
 
@@ -24,6 +25,10 @@ function createHandlers(input?: {
             log: {
                 list: {
                     invalidate: async () => invalidatedQueries.push('chat.log.list'),
+                    patchProgress: ({ chatId, updater }) => {
+                        input?.patchedProgress?.push(chatId);
+                        updater(undefined);
+                    },
                 },
             },
         },
@@ -103,10 +108,12 @@ test('turn start refreshes durable chat activity', async () => {
     expect(invalidatedQueries).toEqual(['agent.activity', 'chat.log.list', 'worker.list']);
 });
 
-test('turn progress refreshes durable chat activity', async () => {
+test('turn progress patches durable chat activity and refreshes live status', async () => {
     const invalidatedQueries: string[] = [];
+    const patchedProgress: string[] = [];
     const handlers = createHandlers({
         invalidatedQueries,
+        patchedProgress,
     });
 
     handlers.onTurnProgress({
@@ -116,14 +123,16 @@ test('turn progress refreshes durable chat activity', async () => {
             label: 'Using web search',
             status: 'active',
         },
+        timestamp: '2026-04-27T17:20:08.408Z',
         turn,
     });
     await Promise.resolve();
 
-    expect(invalidatedQueries).toEqual(['agent.activity', 'chat.log.list', 'worker.list']);
+    expect(patchedProgress).toEqual(['chat-1']);
+    expect(invalidatedQueries).toEqual(['agent.activity', 'worker.list']);
 });
 
-test('turn reply updates local timeline state and refreshes durable chat activity', async () => {
+test('turn reply updates local timeline state and refreshes live status', async () => {
     const invalidatedQueries: string[] = [];
     const updates: string[] = [];
     const handlers = createHandlers({
@@ -139,7 +148,7 @@ test('turn reply updates local timeline state and refreshes durable chat activit
     await Promise.resolve();
 
     expect(updates).toEqual(['run-1:Done']);
-    expect(invalidatedQueries).toEqual(['agent.activity', 'chat.log.list', 'worker.list']);
+    expect(invalidatedQueries).toEqual(['agent.activity', 'worker.list']);
 });
 
 test('turn failure marks the local timeline failed and invalidates transcript queries', async () => {

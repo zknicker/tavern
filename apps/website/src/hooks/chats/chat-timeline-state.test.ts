@@ -133,13 +133,13 @@ test('clearTimelineTurn only clears the matching run', () => {
     expect(clearTimelineTurn(state, { runId: 'run-1' }).activeReply).toBeNull();
 });
 
-test('completeTimelineTurn clears the active reply without preserving volatile progress', () => {
+test('completeTimelineTurn keeps active reply visible until durable history catches up', () => {
     const completed = completeTimelineTurn(startTimelineTurn(emptyTimelineState(), turn), {
         completedAt: '2026-04-21T16:08:46.000Z',
         turn,
     });
 
-    expect(completed.activeReply).toBeNull();
+    expect(completed.activeReply?.runId).toBe('run-1');
 });
 
 test('failTimelineTurn stores a failed turn marker', () => {

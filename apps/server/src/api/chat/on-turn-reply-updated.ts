@@ -8,6 +8,7 @@ export const onChatTurnReplyUpdated = publicProcedure.subscription(async functio
             isThinking: event.isThinking,
             replace: event.replace,
             text: event.text,
+            timestamp: event.timestamp,
             turn: event.turn,
         };
     }

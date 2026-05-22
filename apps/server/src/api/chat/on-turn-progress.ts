@@ -5,6 +5,7 @@ export const onChatTurnProgress = publicProcedure.subscription(async function* (
     for await (const event of subscribeToObservedAgentRuntimeTurnProgress(options.signal)) {
         yield {
             step: event.step,
+            timestamp: event.timestamp,
             turn: event.turn,
         };
     }

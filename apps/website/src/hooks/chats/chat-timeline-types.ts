@@ -47,5 +47,6 @@ export interface ChatReplyUpdate {
     isThinking?: boolean;
     replace?: boolean;
     text: string;
+    timestamp?: string;
     turn: ChatTurn;
 }

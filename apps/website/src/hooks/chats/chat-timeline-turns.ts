@@ -74,10 +74,7 @@ export function completeTimelineTurn(
         return state;
     }
 
-    return {
-        ...state,
-        activeReply: null,
-    };
+    return state;
 }
 
 export function failTimelineTurn(

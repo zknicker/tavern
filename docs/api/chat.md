@@ -71,6 +71,11 @@ Invalidate `chat.list` when membership or list ordering can change. Invalidate
 events update the app timeline by stable ids. Durable log invalidation belongs
 when messages, responses, activity, or artifacts are persisted.
 
+Live turn progress updates the visible `chat.log.list` cache by activity id.
+The eventual durable read returns the same row ids, so running activity becomes
+completed activity without remounting the transcript. Streamed final reply text
+stays app-local until the final assistant message is persisted.
+
 ## Messages
 
 `POST /api/chats/{chat_id}/messages` creates a durable user, assistant, or

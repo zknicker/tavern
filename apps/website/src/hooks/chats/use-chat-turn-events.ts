@@ -1,13 +1,35 @@
+import { useQueryClient } from '@tanstack/react-query';
+import { getQueryKey } from '@trpc/react-query';
+import type { ChatLogOutput } from '../../lib/trpc.tsx';
 import { trpc } from '../../lib/trpc.tsx';
 import { createChatTurnEventHandlers } from './chat-turn-events.ts';
 import { useTimelineActions } from './use-timeline-context.tsx';
 
 export function useChatTurnEvents() {
+    const queryClient = useQueryClient();
     const utils = trpc.useUtils();
     const { clearTurn, completeTurn, failTurn, startTurn, updateReply } = useTimelineActions();
     const handlers = createChatTurnEventHandlers({
         agent: utils.agent,
-        chat: utils.chat,
+        chat: {
+            ...utils.chat,
+            log: {
+                ...utils.chat.log,
+                list: {
+                    ...utils.chat.log.list,
+                    patchProgress: ({ chatId, updater }) => {
+                        queryClient.setQueriesData<ChatLogOutput>(
+                            {
+                                exact: false,
+                                predicate: (query) => isLiveChatLogQuery(query.queryKey, chatId),
+                                queryKey: getQueryKey(trpc.chat.log.list, undefined, 'query'),
+                            },
+                            updater
+                        );
+                    },
+                },
+            },
+        },
         session: utils.session,
         timeline: {
             clearTurn,
@@ -38,4 +60,26 @@ export function useChatTurnEvents() {
     trpc.chat.onTurnReplyUpdated.useSubscription(undefined, {
         onData: handlers.onTurnReplyUpdated,
     });
+}
+
+function isLiveChatLogQuery(queryKey: readonly unknown[], chatId: string) {
+    const input = readChatLogQueryInput(queryKey);
+
+    return input?.id === chatId && input.offset === undefined;
+}
+
+function readChatLogQueryInput(queryKey: readonly unknown[]) {
+    const metadata = queryKey[1];
+
+    if (!(metadata && typeof metadata === 'object' && 'input' in metadata)) {
+        return null;
+    }
+
+    const input = metadata.input;
+
+    if (!(input && typeof input === 'object' && 'id' in input)) {
+        return null;
+    }
+
+    return input as { id?: string; offset?: number };
 }
