@@ -147,7 +147,7 @@ describe('Tavern API adapter', () => {
                     chat_id: 'cht_1',
                     completed_at: null,
                     detail: null,
-                    id: 'act_tool_1',
+                    id: 'act_run_1_tool_1',
                     kind: 'tool_call',
                     metadata: {},
                     response_id: 'rsp_run_1',
@@ -212,7 +212,7 @@ describe('Tavern API adapter', () => {
                 body: {
                     completed_at: null,
                     detail: null,
-                    id: 'act_tool_1',
+                    id: 'act_run_1_tool_1',
                     kind: 'tool_call',
                     metadata: {
                         runtime: {
@@ -236,6 +236,85 @@ describe('Tavern API adapter', () => {
 
     it('derives the API base URL from the inbound relay URL', () => {
         expect(deriveTavernApiBaseUrl('ws://127.0.0.1:4310/chat')).toBe('http://127.0.0.1:4310');
+    });
+
+    it('scopes activity ids to the Tavern turn', async () => {
+        const activityIds = [];
+        const tavern = createTavernPluginApi({
+            baseUrl: 'http://runtime.test',
+            fetch: mock(async (url, init) => {
+                const body = JSON.parse(String(init.body));
+                if (String(url).endsWith('/activity')) {
+                    activityIds.push(body.id);
+                    return jsonResponse({
+                        artifact_ids: [],
+                        chat_id: 'cht_1',
+                        completed_at: null,
+                        detail: null,
+                        id: body.id,
+                        kind: body.kind,
+                        metadata: body.metadata,
+                        response_id: String(url).split('/responses/')[1].split('/activity')[0],
+                        sequence: 1,
+                        started_at: body.started_at,
+                        status: body.status,
+                        summary: null,
+                        title: body.title,
+                        updated_at: '2026-05-18T12:00:00.000Z',
+                    });
+                }
+                return jsonResponse({
+                    chat_id: 'cht_1',
+                    completed_at: null,
+                    created_at: '2026-05-18T12:00:00.000Z',
+                    id: body.id,
+                    metadata: body.metadata,
+                    participant_id: 'agt_main',
+                    request_message_id: body.request_message_id,
+                    response_message_id: null,
+                    status: body.status,
+                    summary: body.summary,
+                    updated_at: '2026-05-18T12:00:00.000Z',
+                });
+            }),
+        });
+        const step = {
+            detail: 'I will run a timed shell check.',
+            id: 'act_raw-assistant-2',
+            kind: 'message',
+            metadata: {},
+            started_at: '2026-05-18T12:00:00.000Z',
+            status: 'running',
+            title: 'Assistant reply',
+        };
+
+        await tavern.updateTurnActivity(
+            {
+                agentId: 'main',
+                chatId: 'cht_1',
+                messageId: 'msg_1',
+                runId: 'run_1',
+                sessionKey: 'agent:main:tavern:channel:cht_1',
+                startedAt: '2026-05-18T12:00:00.000Z',
+            },
+            { step }
+        );
+        await tavern.updateTurnActivity(
+            {
+                agentId: 'main',
+                chatId: 'cht_1',
+                messageId: 'msg_2',
+                runId: 'run_2',
+                sessionKey: 'agent:main:tavern:channel:cht_1',
+                startedAt: '2026-05-18T12:00:01.000Z',
+            },
+            { step }
+        );
+
+        expect(activityIds).toEqual([
+            'act_run_1_raw-assistant-2',
+            'act_run_2_raw-assistant-2',
+        ]);
     });
 
     it('preserves tool ids in activity step metadata', () => {

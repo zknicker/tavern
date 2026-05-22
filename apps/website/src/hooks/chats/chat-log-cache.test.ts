@@ -35,7 +35,7 @@ test('progress patch inserts a durable activity row with the persisted activity 
     expect(log?.rows).toHaveLength(1);
     expect(log?.rows[0]).toMatchObject({
         completedAt: null,
-        id: 'act_preamble-1',
+        id: 'act_run-1_preamble-1',
         kind: 'tool',
         sessionKey: turn.sessionKey,
         startedAt: '2026-05-22T19:00:01.000Z',
@@ -76,7 +76,7 @@ test('progress patch updates an existing activity row without replacing its star
     expect(completed?.total).toBe(1);
     expect(completed?.rows[0]).toMatchObject({
         completedAt: '2026-05-22T19:00:06.000Z',
-        id: 'act_tool-call-1',
+        id: 'act_run-1_tool-call-1',
         startedAt: '2026-05-22T19:00:01.000Z',
         toolCall: {
             facts: [

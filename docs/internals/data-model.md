@@ -298,6 +298,7 @@ idx_chat_response_activity_chat_sequence(chat_id, sequence)
 Rules:
 
 * Activity rows are statusful and updated in place as work progresses.
+* Activity ids are global and cannot move between chats or responses.
 * Tool calls, tool results, reasoning summaries, plans, approvals, and message
   references are activity.
 * Runtime tool ids, tool names, arguments, results, and source facts live in

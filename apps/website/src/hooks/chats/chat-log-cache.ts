@@ -52,7 +52,7 @@ function progressStepToToolRow(input: {
         completedAt,
         connectsToNext: false,
         connectsToPrevious: false,
-        id: activityId(input.step.id),
+        id: progressActivityId(input.turn.runId, input.step.id),
         isFirstInGroup: true,
         kind: 'tool',
         sessionKey: input.turn.sessionKey,
@@ -143,6 +143,17 @@ function stripToolVerb(label: string) {
 
 function likelyToolCallId(id: string) {
     return id.startsWith('call_') || id.startsWith('tool-call-') ? id : null;
+}
+
+function progressActivityId(runId: string, stepId: string) {
+    const activity = stripActivityPrefix(stepId);
+    const scopedActivity = activity.startsWith(`${runId}_`) ? activity : `${runId}_${activity}`;
+
+    return activityId(scopedActivity);
+}
+
+function stripActivityPrefix(id: string) {
+    return id.startsWith('act_') ? id.slice('act_'.length) : id;
 }
 
 function activityId(id: string) {

@@ -261,6 +261,10 @@ These events are notifications. If the websocket drops, Tavern recovers from
 chat history, event cursors, response reads, activity reads, and OpenClaw
 execution evidence.
 
+Activity ids written to Tavern are scoped to the OpenClaw turn. OpenClaw item
+ids can repeat across turns, so raw item ids must stay in metadata and must not
+become global Tavern activity ids.
+
 Reasoning display must only use provider/OpenClaw-exposed summaries. It must
 not expose hidden chain-of-thought text.
 
@@ -329,6 +333,7 @@ The important shape is message-first:
 * final assistant replies create or deliver Tavern assistant messages
 * assistant preamble, tool progress, and reasoning summaries become Runtime
   Chat API activity
+* activity ids are stable inside Tavern and include turn identity
 * completion and failure close activity, while Tavern chat history remains the
   reload source of truth
 

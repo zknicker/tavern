@@ -171,6 +171,7 @@ function activityStepWithTurnMetadata(step, turn) {
 
     return {
         ...step,
+        id: turnActivityId(turn.runId, step.id),
         metadata: {
             ...metadata,
             runtime: {
@@ -184,6 +185,15 @@ function activityStepWithTurnMetadata(step, turn) {
             },
         },
     };
+}
+
+function turnActivityId(runId, stepId) {
+    const activity = stripActivityPrefix(stepId);
+    return activityId(`${runId}_${activity}`);
+}
+
+function stripActivityPrefix(id) {
+    return id.startsWith('act_') ? id.slice('act_'.length) : id;
 }
 
 function agentParticipantId(agentId) {

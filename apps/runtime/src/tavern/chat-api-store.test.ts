@@ -217,6 +217,36 @@ describe('Tavern Runtime Chat API store', () => {
         });
     });
 
+    it('rejects activity ids that already belong to another response', () => {
+        createChat({ id: 'cht_1' });
+        createChat({ id: 'cht_2' });
+        upsertResponse('cht_1', {
+            id: 'rsp_1',
+            participant_id: 'agt_1',
+            status: 'running',
+        });
+        upsertResponse('cht_2', {
+            id: 'rsp_2',
+            participant_id: 'agt_1',
+            status: 'running',
+        });
+        upsertResponseActivity('cht_1', 'rsp_1', {
+            id: 'act_1',
+            kind: 'message',
+            status: 'running',
+            title: 'Assistant reply',
+        });
+
+        expect(() =>
+            upsertResponseActivity('cht_2', 'rsp_2', {
+                id: 'act_1',
+                kind: 'message',
+                status: 'running',
+                title: 'Assistant reply',
+            })
+        ).toThrow('Activity act_1 belongs to response rsp_1 in chat cht_1.');
+    });
+
     it('closes open activity when the response becomes terminal', () => {
         createChat({ id: 'cht_1' });
         upsertResponse('cht_1', {

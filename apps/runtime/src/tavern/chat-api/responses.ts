@@ -130,6 +130,11 @@ export function upsertResponseActivity(
         if (response.chat_id !== chatId) {
             throw new Error(`Response ${responseId} does not belong to chat ${chatId}.`);
         }
+        if (existing && (existing.chat_id !== chatId || existing.response_id !== responseId)) {
+            throw new Error(
+                `Activity ${input.id} belongs to response ${existing.response_id} in chat ${existing.chat_id}.`
+            );
+        }
         const sequence = input.sequence ?? nextActivitySequence(responseId, db);
         db.prepare(
             `INSERT INTO chat_response_activity
