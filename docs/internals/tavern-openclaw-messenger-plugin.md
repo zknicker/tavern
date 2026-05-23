@@ -233,14 +233,42 @@ messages.
 
 ## Runtime Events
 
-OpenClaw owns turn state. The plugin forwards OpenClaw turn state to Tavern
-instead of inventing a parallel event stream.
+OpenClaw owns turn state. For OpenClaw `2026.5.20-beta.1`, the Tavern
+Messenger plugin maps the channel SDK `replyOptions` callbacks into Tavern API
+writes.
 
-Use `replyOptions` from the buffered dispatcher:
+The core mapping is:
 
-* `onItemEvent` and `onCommandOutput` for OpenClaw work-item progress
-* `onItemEvent` with `kind: "preamble"` for Codex commentary text before tools
-* `onReasoningStream` for provider-exposed reasoning summaries
+* `kind: "preamble"` item events update one turn-scoped preamble activity row.
+* `kind: "tool"` and `kind: "command"` item events create or update durable
+  tool activity rows keyed by normalized tool call id.
+* `onCommandOutput` and `onToolResult` enrich existing tool activity rows.
+* `onPartialReply` is final assistant draft streaming, not response activity.
+
+| OpenClaw callback | Tavern API write | Contract |
+| --- | --- | --- |
+| `onItemEvent` with `kind: "preamble"` | `chat.response_activity.upsert` with `message` kind | Codex commentary before tool use. It is activity, not the final assistant reply. |
+| `onItemEvent` with `kind: "tool"` or `kind: "command"` | `chat.response_activity.upsert` with `tool_call` kind | The live tool row starts here and is keyed by normalized tool call id. |
+| `onCommandOutput` | Update an existing `tool_call` activity row | Command output, exit status, duration, and command detail enrich the same row. |
+| `onToolResult` | Update an existing `tool_call` activity row | Channel-visible tool output can enrich the same row, but cannot create one. |
+| `onReasoningStream` | `chat.response_activity.upsert` with `reasoning` kind | Provider-exposed reasoning summaries only. |
+| `onPlanUpdate` | `chat.response_activity.upsert` with `planning` kind | Live plan state. |
+| `onApprovalEvent` | `chat.response_activity.upsert` with `approval` kind | Approval requests and decisions. |
+| `onPatchSummary` | `chat.response_activity.upsert` with `artifact` kind | Patch/file-summary activity. |
+| `onPartialReply` | No durable API write | This callback is draft text, not Tavern response activity. |
+
+Do not add a parallel event stream or choose between alternate ids at call
+sites.
+
+Codex app-server can emit the same commentary text twice: first as a streamed
+`onItemEvent` preamble with a normal `msg_...` item id, then as a completed
+raw assistant response item that OpenClaw maps back to `kind: "preamble"` with
+an id like `raw-assistant-2`. Tavern treats all `kind: "preamble"` events in a
+turn as updates to the same turn-scoped assistant preamble activity. OpenClaw
+item ids are audit data for preambles, not Tavern activity identity. Duplicate
+writes with unchanged text are idempotent at the Tavern API/database layer.
+`raw-assistant-*` message items remain ignored because final assistant text
+belongs to the delivery path.
 
 The plugin writes Tavern API records. Runtime emits durable chat events from
 those writes:
@@ -264,6 +292,17 @@ execution evidence.
 Activity ids written to Tavern are scoped to the OpenClaw turn. OpenClaw item
 ids can repeat across turns, so raw item ids must stay in metadata and must not
 become global Tavern activity ids.
+
+Tool activity identity is pinned to the normalized OpenClaw tool call id:
+
+* `toolCallId` and `callId` are canonical tool-call ids.
+* `itemId` is canonical only after parsing OpenClaw's current tool wrapper
+  shape: `tool:<toolCallId>` or `tool:<toolCallId>|<providerItemId>`.
+* tool activity ids use `act_<runId>_<normalizedToolCallId>`.
+* raw `itemId`, `id`, `toolCallId`, `callId`, and provider item ids stay in
+  activity metadata for audit.
+* a tool-like event without a normalized tool call id is not durable tool
+  activity.
 
 Reasoning display must only use provider/OpenClaw-exposed summaries. It must
 not expose hidden chain-of-thought text.
@@ -352,7 +391,7 @@ The plugin can keep OpenClaw words internally because it is adapting OpenClaw,
 but the boundary with Tavern Runtime is Tavern API messages, receipts, activity,
 and events.
 
-OpenClaw callbacks adapt into Tavern API writes:
+For OpenClaw `2026.5.20-beta.1`, turn phases adapt into Tavern API writes:
 
 | OpenClaw callback or phase | Tavern API write | User-facing behavior |
 | --- | --- | --- |
@@ -362,11 +401,11 @@ OpenClaw callbacks adapt into Tavern API writes:
 | `onPlanUpdate` | `chat.response_activity.upsert` with `planning` kind | Planning appears as a live response activity row. |
 | `onReasoningStream` | `chat.response_activity.upsert` with `reasoning` kind | Provider-exposed reasoning summaries appear as live activity. |
 | `onItemEvent` preamble item | `chat.response_activity.upsert` with `message` kind | Codex commentary preambles appear before tools finish without becoming final answers. |
-| `onItemEvent` command or tool item | `chat.response_activity.upsert` with `tool_call` or `command` kind, keyed by `itemId` or `toolCallId` | A tool row appears as soon as the tool starts. |
-| `onCommandOutput` | Update the existing activity row by `itemId` or `toolCallId` | Output, exit status, duration, and command detail enrich the same tool row. |
+| `onItemEvent` command or tool item | `chat.response_activity.upsert` with `tool_call` kind, keyed by normalized tool call id | A tool row appears as soon as the tool starts. |
+| `onCommandOutput` | Update the existing activity row by normalized tool call id | Output, exit status, duration, and command detail enrich the same tool row. |
 | `onApprovalEvent` | `chat.response_activity.upsert` with `approval` kind | Approval requests and decisions appear in the response activity timeline. |
 | `onPatchSummary` | `chat.response_activity.upsert` with `artifact` kind | File edits or patch summaries appear as activity and may link artifacts. |
-| `onToolResult` | Enrich an existing tool activity row only when it can be matched by `itemId` or `toolCallId` | Channel-visible tool output may add details to the same row. |
+| `onToolResult` | Enrich an existing tool activity row only when it has the same normalized tool call id | Channel-visible tool output may add details to the same row. |
 | Turn completion | `chat.deliveries.create` assistant message plus `chat.responses.upsert` with `completed` status | The final assistant message appears and the activity group becomes completed. |
 | Turn failure | `chat.responses.upsert` with `failed` status and failed activity rows where available | The chat shows the failed response without inventing a final message. |
 | Session history sync | Runtime execution evidence linked by stable ids | Reload and audit views can inspect the native OpenClaw transcript. |
@@ -379,17 +418,18 @@ persist `Command` as durable tool identity.
 
 `onCommandOutput` enriches existing command rows with structured output and
 status. `onToolResult` is a channel-visible reply payload, not canonical tool
-identity. It may enrich an existing row when OpenClaw includes a matching id,
-but it must not create a new activity row. If no matching row exists, the mapper
-fails the contract instead of creating anonymous tool activity.
+identity. It may enrich an existing row when OpenClaw includes the same
+normalized tool call id, but it must not create a new activity row. If no
+matching row exists, the mapper fails the contract instead of creating anonymous
+tool activity.
 
 The plugin does not register `onToolStart` for durable activity. That callback
 does not include stable activity identity, and registering it suppresses richer
 ID-bearing `onItemEvent` callbacks for some tool-like items.
 
-`onPartialReply` is OpenClaw's draft text preview surface. Tavern does not
-persist it as response activity; final assistant message streaming should use a
-separate draft-message path.
+`onPartialReply` is OpenClaw's draft text preview surface. The Messenger plugin
+does not write it to durable response activity. Final assistant message
+streaming needs a dedicated draft-message path, not preamble activity rows.
 
 Gateway operator events, such as `session.tool`, are useful for contract tests
 and debugging. The Messenger write path uses channel SDK callbacks because the
@@ -445,9 +485,13 @@ The minimum test set for this plugin proves:
 * final turn sync cannot create a second user row
 * id-bearing `onItemEvent` tool progress appears before the final reply
 * generic `Command` item events do not display `Command` or overwrite richer tool rows
-* command output and transcript sync update one activity row keyed by `itemId`
+* command output and transcript sync update one activity row keyed by normalized
+  OpenClaw tool call id
 * Codex commentary preamble appears while tools are still running when OpenClaw
   emits a preamble item event
+* streamed `msg_...` and raw `raw-assistant-*` preamble events update the same
+  turn-scoped assistant preamble row
+* `raw-assistant-*` message mirror events do not create assistant activity rows
 * reasoning summaries appear only when OpenClaw emits reasoning summary text
 * hard reloads during a tool-heavy turn preserve one user row, ordered progress,
   and one final assistant reply

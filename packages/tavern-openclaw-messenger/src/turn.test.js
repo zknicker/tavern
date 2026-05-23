@@ -51,7 +51,7 @@ const dispatchReplyWithBufferedBlockDispatcher = mock(
             type: 'reasoning',
         });
         await replyOptions?.onItemEvent?.({
-            itemId: 'tool:tool-call-1',
+            itemId: 'tool:call_tool_1|fc_tool_1',
             kind: 'tool',
             name: 'web_search',
             phase: 'start',
@@ -64,7 +64,7 @@ const dispatchReplyWithBufferedBlockDispatcher = mock(
         });
         await dispatcherOptions.deliver({ text: 'reply' });
         await replyOptions?.onItemEvent?.({
-            itemId: 'tool:tool-call-1',
+            itemId: 'tool:call_tool_1|fc_tool_1',
             kind: 'tool',
             name: 'web_search',
             phase: 'end',
@@ -361,7 +361,7 @@ describe('Tavern Messenger turn handling', () => {
             },
             {
                 step: {
-                    id: 'act_tool_tool-call-1',
+                    id: 'act_call_tool_1',
                     kind: 'tool_call',
                     status: 'running',
                     title: 'web search Tavern QA',
@@ -370,7 +370,7 @@ describe('Tavern Messenger turn handling', () => {
             },
             {
                 step: {
-                    id: 'act_tool_tool-call-1',
+                    id: 'act_call_tool_1',
                     kind: 'tool_call',
                     metadata: {
                         detail: 'Found sources',
@@ -405,7 +405,15 @@ describe('Tavern Messenger turn handling', () => {
                 title: 'Preamble',
             });
             await replyOptions?.onItemEvent?.({
-                itemId: 'tool:tool-call-1',
+                itemId: 'raw-assistant-2',
+                kind: 'preamble',
+                phase: 'update',
+                progressText: 'I will inspect the workspace first.',
+                status: 'running',
+                title: 'Preamble',
+            });
+            await replyOptions?.onItemEvent?.({
+                itemId: 'tool:call_tool_1|fc_tool_1',
                 kind: 'tool',
                 name: 'exec',
                 phase: 'start',
@@ -456,9 +464,11 @@ describe('Tavern Messenger turn handling', () => {
             .filter((step) => step?.kind === 'message');
 
         expect(response).toMatchObject({ ok: true });
-        expect(messageSteps).toHaveLength(1);
-        expect(messageSteps[0]).toMatchObject({
-            id: 'act_msg_preamble_1',
+        expect(new Set(messageSteps.map((step) => step.id))).toEqual(
+            new Set(['act_assistant-preamble'])
+        );
+        expect(messageSteps.at(-1)).toMatchObject({
+            id: 'act_assistant-preamble',
             metadata: {
                 detail: 'I will inspect the workspace first.',
             },
@@ -500,7 +510,7 @@ describe('Tavern Messenger turn handling', () => {
                 title: 'Patch summary',
             });
             await replyOptions?.onItemEvent?.({
-                itemId: 'tool_call_1',
+                itemId: 'call_read_1',
                 kind: 'tool',
                 name: 'read',
                 phase: 'start',
@@ -508,14 +518,14 @@ describe('Tavern Messenger turn handling', () => {
                 title: 'read QA_KICKOFF_TASK.md',
             });
             await replyOptions?.onCommandOutput?.({
-                itemId: 'tool_call_1',
+                itemId: 'call_read_1',
                 name: 'read',
                 resultText: 'QA evidence',
                 status: 'completed',
                 title: 'read QA_KICKOFF_TASK.md',
             });
             await replyOptions?.onItemEvent?.({
-                itemId: 'tool_call_2',
+                itemId: 'call_web_fetch_2',
                 kind: 'tool',
                 name: 'web_fetch',
                 phase: 'start',
@@ -523,12 +533,12 @@ describe('Tavern Messenger turn handling', () => {
                 title: 'web_fetch docs',
             });
             await replyOptions?.onToolResult?.({
-                itemId: 'tool_call_2',
+                itemId: 'call_web_fetch_2',
                 name: 'web_fetch',
                 resultText: 'Fetched docs',
                 status: 'completed',
                 title: 'web_fetch docs',
-                toolCallId: 'tool_call_2',
+                toolCallId: 'call_web_fetch_2',
             });
             await dispatcherOptions.deliver({ text: 'FINAL-MARKER' });
             return { counts: { final: 1 }, queuedFinal: false };
@@ -580,7 +590,7 @@ describe('Tavern Messenger turn handling', () => {
                 'tool_call',
             ])
         );
-        expect(steps.find((step) => step.id === 'act_msg_preamble_1')).toMatchObject({
+        expect(steps.find((step) => step.id === 'act_assistant-preamble')).toMatchObject({
             detail: 'I will run a check before using tools.',
             kind: 'message',
             status: 'running',
@@ -598,10 +608,10 @@ describe('Tavern Messenger turn handling', () => {
             title: 'Patch summary',
         });
         expect(
-            steps.filter((step) => step.id === 'act_tool_call_1').map((step) => step.status)
+            steps.filter((step) => step.id === 'act_call_read_1').map((step) => step.status)
         ).toEqual(expect.arrayContaining(['running', 'completed']));
         expect(
-            steps.find((step) => step.id === 'act_tool_call_2' && step.status === 'completed')
+            steps.find((step) => step.id === 'act_call_web_fetch_2' && step.status === 'completed')
         ).toMatchObject({
             status: 'completed',
             title: 'web_fetch docs',
@@ -737,7 +747,7 @@ describe('Tavern Messenger turn handling', () => {
                 'act_call_123',
             ]);
             expect(JSON.stringify(context.tavern.updateTurnActivity.mock.calls)).not.toContain(
-                'act_tool_call_123'
+                'act_call_read_123'
             );
             expect(JSON.stringify(context.tavern.updateTurnActivity.mock.calls)).not.toContain(
                 'Command'

@@ -2,13 +2,15 @@ import { useQueryClient } from '@tanstack/react-query';
 import { getQueryKey } from '@trpc/react-query';
 import type { ChatLogOutput } from '../../lib/trpc.tsx';
 import { trpc } from '../../lib/trpc.tsx';
+import { defaultLiveChatLogLimit } from './chat-log-cache.ts';
 import { createChatTurnEventHandlers } from './chat-turn-events.ts';
 import { useTimelineActions } from './use-timeline-context.tsx';
 
 export function useChatTurnEvents() {
     const queryClient = useQueryClient();
     const utils = trpc.useUtils();
-    const { clearTurn, completeTurn, failTurn, startTurn, updateReply } = useTimelineActions();
+    const { clearTurn, completeTurn, failTurn, patchProgress, startTurn, updateReply } =
+        useTimelineActions();
     const handlers = createChatTurnEventHandlers({
         agent: utils.agent,
         chat: {
@@ -18,12 +20,30 @@ export function useChatTurnEvents() {
                 list: {
                     ...utils.chat.log.list,
                     patchProgress: ({ chatId, updater }) => {
+                        let matchedQuery = false;
+
                         queryClient.setQueriesData<ChatLogOutput>(
                             {
                                 exact: false,
                                 predicate: (query) => isLiveChatLogQuery(query.queryKey, chatId),
                                 queryKey: getQueryKey(trpc.chat.log.list, undefined, 'query'),
                             },
+                            (current) => {
+                                matchedQuery = true;
+                                return updater(current);
+                            }
+                        );
+
+                        if (matchedQuery) {
+                            return;
+                        }
+
+                        queryClient.setQueryData<ChatLogOutput>(
+                            getQueryKey(
+                                trpc.chat.log.list,
+                                { id: chatId, limit: defaultLiveChatLogLimit },
+                                'query'
+                            ),
                             updater
                         );
                     },
@@ -35,6 +55,7 @@ export function useChatTurnEvents() {
             clearTurn,
             completeTurn,
             failTurn,
+            patchProgress,
             startTurn,
             updateReply,
         },

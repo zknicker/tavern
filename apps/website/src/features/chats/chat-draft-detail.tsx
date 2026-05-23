@@ -1,6 +1,7 @@
 import * as React from 'react';
 import { useAgentList } from '../../hooks/agents/use-agent-list.ts';
 import { mergeTimelineMessages } from '../../hooks/chats/chat-timeline-messages.ts';
+import type { ChatLogOutput } from '../../lib/trpc.tsx';
 import type { ChatActiveReply, ChatTimelineState } from '../../hooks/chats/chat-timeline-state.ts';
 import type { ChatStartDraft } from '../../hooks/chats/use-chat-start-drafts.tsx';
 import { useChatTimelineRows } from '../../hooks/chats/use-chat-timeline-store.tsx';
@@ -27,10 +28,11 @@ export function ChatDraftDetail({
     const [agentId, setAgentId] = React.useState(draft?.agentId ?? '');
     const [content, setContent] = React.useState('');
     const handoffState = useChatRuntimeTimelineState(timelineChatId);
+    const handoffLog = buildDraftHandoffLog(handoffState);
     const timeline = useChatTimelineRows({
         chatId: timelineChatId,
         limit: draftTimelineLimit,
-        logged: undefined,
+        logged: handoffLog,
     });
     const draftActiveReply = buildDraftActiveReply(draft);
     const handoffFrame = resolveDraftHandoffFrame({
@@ -118,6 +120,21 @@ export function ChatDraftDetail({
             totalRows={visibleTimeline?.total ?? 0}
         />
     );
+}
+
+export function buildDraftHandoffLog(
+    handoffState: ChatTimelineState | undefined
+): ChatLogOutput | undefined {
+    if (!handoffState || handoffState.timeline.length === 0) {
+        return undefined;
+    }
+
+    return {
+        limit: Math.max(handoffState.timeline.length, draftTimelineLimit),
+        offset: 0,
+        rows: handoffState.timeline,
+        total: handoffState.totalRows,
+    };
 }
 
 export function resolveDraftHandoffFrame({

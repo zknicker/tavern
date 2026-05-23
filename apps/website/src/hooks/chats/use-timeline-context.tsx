@@ -8,10 +8,12 @@ import {
     type ChatReplyUpdate,
     type ChatTimelineState,
     type ChatTurn,
+    type ChatTurnProgressStep,
     clearTimelineTurn,
     completeTimelineTurn,
     emptyTimelineState,
     failTimelineTurn,
+    patchTimelineProgress,
     startTimelineTurn,
     updateTimelineReply,
 } from './chat-timeline-state.ts';
@@ -20,6 +22,11 @@ interface TimelineActionsValue {
     clearTurn: (input: { chatId: string; runId?: string }) => void;
     completeTurn: (input: { chatId: string; completedAt: string; turn: ChatTurn }) => void;
     failTurn: (input: { chatId: string; error: string; turn: ChatTurn }) => void;
+    patchProgress: (input: {
+        step: ChatTurnProgressStep;
+        timestamp: string;
+        turn: ChatTurn;
+    }) => void;
     setLog: (chatId: string, log: ChatLogOutput | undefined) => void;
     setReply: (chatId: string, activeReply: ChatActiveReply | null) => void;
     startTurn: (turn: ChatTurn) => void;
@@ -79,6 +86,17 @@ export function TimelineContextProvider({ children }: PropsWithChildren) {
         );
     }, []);
 
+    const patchProgress = React.useCallback(
+        (input: { step: ChatTurnProgressStep; timestamp: string; turn: ChatTurn }) => {
+            setTimelineStates((current) =>
+                updateTimelineState(current, input.turn.chatId, (state) =>
+                    patchTimelineProgress(state, input)
+                )
+            );
+        },
+        []
+    );
+
     const clearTurn = React.useCallback((input: { chatId: string; runId?: string }) => {
         setTimelineStates((current) =>
             updateTimelineState(current, input.chatId, (state) =>
@@ -122,12 +140,22 @@ export function TimelineContextProvider({ children }: PropsWithChildren) {
             clearTurn,
             completeTurn,
             failTurn,
+            patchProgress,
             setLog,
             setReply,
             startTurn,
             updateReply,
         }),
-        [clearTurn, completeTurn, failTurn, setLog, setReply, startTurn, updateReply]
+        [
+            clearTurn,
+            completeTurn,
+            failTurn,
+            patchProgress,
+            setLog,
+            setReply,
+            startTurn,
+            updateReply,
+        ]
     );
 
     return React.createElement(

@@ -3,6 +3,7 @@ export {
     applyReplySnapshot,
     emptyTimelineState,
 } from './chat-timeline-snapshots.ts';
+export { patchTimelineProgress } from './chat-timeline-progress.ts';
 export {
     clearTimelineTurn,
     completeTimelineTurn,

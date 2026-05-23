@@ -4,6 +4,8 @@ import type { ChatTurn, ChatTurnProgressStep } from './chat-timeline-state.ts';
 type ChatLogRow = NonNullable<ChatLogOutput>['rows'][number];
 type ToolRow = Extract<ChatLogRow, { kind: 'tool' }>;
 
+export const defaultLiveChatLogLimit = 100;
+
 export function patchChatLogWithProgress(
     log: ChatLogOutput | undefined,
     input: {
@@ -12,26 +14,33 @@ export function patchChatLogWithProgress(
         turn: ChatTurn;
     }
 ): ChatLogOutput | undefined {
-    if (!log) {
-        return log;
-    }
+    const sourceLog = log ?? emptyChatLog();
 
     const row = progressStepToToolRow(input);
-    const existingIndex = log.rows.findIndex((entry) => entry.id === row.id);
+    const existingIndex = sourceLog.rows.findIndex((entry) => entry.id === row.id);
     const rows =
         existingIndex === -1
-            ? [...log.rows, row]
-            : log.rows.map((entry, index) =>
+            ? [...sourceLog.rows, row]
+            : sourceLog.rows.map((entry, index) =>
                   index === existingIndex ? mergeToolRows(entry as ToolRow, row) : entry
               );
     const sortedRows = rows.sort(compareChatLogRows);
-    const nextRows = trimRows(sortedRows, log.limit);
-    const total = existingIndex === -1 ? log.total + 1 : log.total;
+    const nextRows = trimRows(sortedRows, sourceLog.limit);
+    const total = existingIndex === -1 ? sourceLog.total + 1 : sourceLog.total;
 
     return {
-        ...log,
+        ...sourceLog,
         rows: nextRows,
         total,
+    };
+}
+
+function emptyChatLog(): ChatLogOutput {
+    return {
+        limit: defaultLiveChatLogLimit,
+        offset: 0,
+        rows: [],
+        total: 0,
     };
 }
 

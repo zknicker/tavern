@@ -1,4 +1,5 @@
-import { readFile } from 'node:fs/promises';
+import { appendFile, mkdir, readFile } from 'node:fs/promises';
+import path from 'node:path';
 import { buildTavernOutboundSessionRoute } from './channel.js';
 import { DEFAULT_ACCOUNT_ID, TAVERN_CHANNEL_ID } from './config.js';
 import {
@@ -203,12 +204,14 @@ async function runTavernTurn({ context, input, runId, runtime, startedAt }) {
                 allowProgressCallbacksWhenSourceDeliverySuppressed: true,
                 bootstrapContextMode: 'lightweight',
                 onApprovalEvent: (event) => {
+                    recordTurnCallback({ data: event, input, runId, stream: 'approval' });
                     turnProgress.handle({
                         data: event,
                         stream: 'approval',
                     });
                 },
                 onCommandOutput: (event) => {
+                    recordTurnCallback({ data: event, input, runId, stream: 'command_output' });
                     turnProgress.handle({
                         data: event,
                         stream: 'command_output',
@@ -230,30 +233,44 @@ async function runTavernTurn({ context, input, runId, runtime, startedAt }) {
                         stream: 'compaction',
                     }),
                 onItemEvent: (event) => {
+                    recordTurnCallback({ data: event, input, runId, stream: 'item' });
                     turnProgress.handle({
                         data: event,
                         stream: 'item',
                     });
                 },
                 onPatchSummary: (event) => {
+                    recordTurnCallback({ data: event, input, runId, stream: 'patch' });
                     turnProgress.handle({
                         data: event,
                         stream: 'patch',
                     });
                 },
-                onReasoningStream: (event) =>
+                onPartialReply: (event) => {
+                    recordTurnCallback({ data: event, input, runId, stream: 'partial_reply' });
+                    turnProgress.handle({
+                        data: event,
+                        stream: 'partial_reply',
+                    });
+                },
+                onReasoningStream: (event) => {
+                    recordTurnCallback({ data: event, input, runId, stream: 'thinking' });
                     turnProgress.handle({
                         data: {
                             text: typeof event?.text === 'string' ? event.text : '',
                         },
                         stream: 'thinking',
-                    }),
-                onPlanUpdate: (event) =>
+                    });
+                },
+                onPlanUpdate: (event) => {
+                    recordTurnCallback({ data: event, input, runId, stream: 'plan' });
                     turnProgress.handle({
                         data: event,
                         stream: 'plan',
-                    }),
+                    });
+                },
                 onToolResult: (event) => {
+                    recordTurnCallback({ data: event, input, runId, stream: 'tool_result' });
                     turnProgress.handle({
                         data: event,
                         stream: 'tool_result',
@@ -747,6 +764,28 @@ async function settleSessionMetaTasks(tasks) {
 
 function throwAsError(error) {
     throw error instanceof Error ? error : new Error(String(error));
+}
+
+function recordTurnCallback({ data, input, runId, stream }) {
+    const logPath = process.env.TAVERN_OPENCLAW_TURN_EVENT_LOG;
+    if (!logPath) {
+        return;
+    }
+
+    const entry = {
+        agentId: input.agentId,
+        capturedAt: new Date().toISOString(),
+        chatId: input.chatId,
+        data,
+        messageId: input.messageId,
+        runId,
+        sessionKey: input.sessionKey,
+        stream,
+    };
+
+    void mkdir(path.dirname(logPath), { recursive: true })
+        .then(() => appendFile(logPath, `${JSON.stringify(entry)}\n`))
+        .catch(() => undefined);
 }
 
 function looksLikeDeliveredFailureNotice(text) {

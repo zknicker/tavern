@@ -6,6 +6,7 @@ import {
     completeTimelineTurn,
     emptyTimelineState,
     failTimelineTurn,
+    patchTimelineProgress,
     startTimelineTurn,
     updateTimelineReply,
 } from './chat-timeline-state.ts';
@@ -96,6 +97,180 @@ test('applyLogSnapshot preserves active reply while durable activity is running'
 
     expect(next.activeReply?.runId).toBe('run-1');
     expect(next.timeline[0]?.id).toBe('act_tool_web');
+});
+
+test('patchTimelineProgress adds live activity before durable log data arrives', () => {
+    const state = patchTimelineProgress(startTimelineTurn(emptyTimelineState(), turn), {
+        step: {
+            id: 'tool:web',
+            kind: 'tool',
+            label: 'Using web search',
+            status: 'active',
+        },
+        timestamp: '2026-04-21T16:08:43.000Z',
+        turn,
+    });
+
+    expect(state.timeline).toMatchObject([
+        {
+            completedAt: null,
+            id: 'act_run-1_tool_web',
+            kind: 'tool',
+            toolCall: {
+                label: 'web search',
+                name: 'tool',
+            },
+        },
+    ]);
+});
+
+test('applyLogSnapshot preserves live progress rows while the turn is active', () => {
+    const live = patchTimelineProgress(startTimelineTurn(emptyTimelineState(), turn), {
+        step: {
+            id: 'tool:web',
+            kind: 'tool',
+            label: 'Using web search',
+            status: 'active',
+        },
+        timestamp: '2026-04-21T16:08:43.000Z',
+        turn,
+    });
+
+    const next = applyLogSnapshot(live, {
+        limit: 100,
+        offset: 0,
+        rows: [],
+        total: 0,
+    });
+
+    expect(next.timeline.map((row) => row.id)).toEqual(['act_run-1_tool_web']);
+    expect(next.totalRows).toBe(1);
+});
+
+test('patchTimelineProgress updates the same preamble and OpenClaw tool rows through completion', () => {
+    const withPreamble = patchTimelineProgress(startTimelineTurn(emptyTimelineState(), turn), {
+        step: {
+            detail: 'I will inspect the workspace before replying.',
+            id: 'assistant-preamble',
+            kind: 'message',
+            label: 'Assistant reply',
+            status: 'active',
+        },
+        timestamp: '2026-04-21T16:08:43.000Z',
+        turn,
+    });
+    const withRunningTool = patchTimelineProgress(withPreamble, {
+        step: {
+            id: 'call_mock_read_123',
+            kind: 'tool',
+            label: 'read from QA_KICKOFF_TASK.md',
+            status: 'active',
+            toolCallId: 'call_mock_read_123',
+            toolName: 'read',
+        },
+        timestamp: '2026-04-21T16:08:44.000Z',
+        turn,
+    });
+    const completed = patchTimelineProgress(withRunningTool, {
+        step: {
+            detail: '# QA kickoff task',
+            id: 'call_mock_read_123',
+            kind: 'tool',
+            label: 'read from QA_KICKOFF_TASK.md',
+            status: 'completed',
+            toolCallId: 'call_mock_read_123',
+            toolName: 'read',
+        },
+        timestamp: '2026-04-21T16:08:48.000Z',
+        turn,
+    });
+
+    expect(completed.timeline.map((row) => row.id)).toEqual([
+        'act_run-1_assistant-preamble',
+        'act_run-1_call_mock_read_123',
+    ]);
+    expect(completed.timeline[0]).toMatchObject({
+        completedAt: null,
+        startedAt: '2026-04-21T16:08:43.000Z',
+    });
+    expect(completed.timeline[1]).toMatchObject({
+        completedAt: '2026-04-21T16:08:48.000Z',
+        startedAt: '2026-04-21T16:08:44.000Z',
+        toolCall: {
+            callId: 'call_mock_read_123',
+            name: 'read',
+        },
+    });
+});
+
+test('applyLogSnapshot preserves live progress rows while replacing a pending turn id', () => {
+    const pendingTurn = {
+        ...turn,
+        runId: 'pending:msg-1',
+        sessionKey: '',
+    };
+    const live = patchTimelineProgress(startTimelineTurn(emptyTimelineState(), pendingTurn), {
+        step: {
+            id: 'tool:web',
+            kind: 'tool',
+            label: 'Using web search',
+            status: 'active',
+        },
+        timestamp: '2026-04-21T16:08:43.000Z',
+        turn,
+    });
+
+    const next = applyLogSnapshot(live, {
+        limit: 100,
+        offset: 0,
+        rows: [],
+        total: 0,
+    });
+
+    expect(next.activeReply?.runId).toBe('pending:msg-1');
+    expect(next.timeline.map((row) => row.id)).toEqual(['act_run-1_tool_web']);
+    expect(next.totalRows).toBe(1);
+});
+
+test('applyLogSnapshot clears live progress rows when the assistant message lands', () => {
+    const live = patchTimelineProgress(startTimelineTurn(emptyTimelineState(), turn), {
+        step: {
+            id: 'tool:web',
+            kind: 'tool',
+            label: 'Using web search',
+            status: 'active',
+        },
+        timestamp: '2026-04-21T16:08:43.000Z',
+        turn,
+    });
+
+    const next = applyLogSnapshot(live, {
+        limit: 100,
+        offset: 0,
+        rows: [
+            {
+                actor: { id: 'claw', kind: 'agent' },
+                connectsToNext: false,
+                connectsToPrevious: false,
+                id: 'message-1',
+                isFirstInGroup: true,
+                kind: 'message',
+                message: {
+                    tavernAgentId: 'claw',
+                    content: 'Done.',
+                    id: 'message-1',
+                    sender: 'Claw',
+                    senderType: 'agent',
+                    sourceSessionId: null,
+                    sourceSessionKey: 'session-1',
+                    timestamp: '2026-04-21T16:08:49.000Z',
+                },
+            },
+        ],
+        total: 1,
+    });
+
+    expect(next.timeline.map((row) => row.id)).toEqual(['message-1']);
 });
 
 test('updateTimelineReply stores streamed text and thinking state', () => {

@@ -1,4 +1,5 @@
 import net from 'node:net';
+import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { resolveE2eOpenClawInstallRoot } from './e2e-cache.ts';
 
@@ -30,6 +31,7 @@ function getFreePort() {
 }
 
 const websiteRoot = fileURLToPath(new URL('../', import.meta.url));
+const workspaceRoot = fileURLToPath(new URL('../../../', import.meta.url));
 const runId = `${Date.now()}-${Math.random().toString(16).slice(2, 8)}`;
 const [mockProviderPort, gatewayPort, runtimePort, serverPort, websitePort] = await Promise.all([
     getFreePort(),
@@ -50,6 +52,13 @@ const env = {
     TAVERN_SERVER_PORT: `${serverPort}`,
     TAVERN_WEBSITE_PORT: `${websitePort}`,
     TAVERN_RUNTIME_URL: `http://127.0.0.1:${runtimePort}`,
+    TAVERN_OPENCLAW_TURN_EVENT_LOG: path.join(
+        workspaceRoot,
+        '.context',
+        'e2e',
+        runId,
+        'openclaw-turn-callbacks.jsonl'
+    ),
     OPENCLAW_GATEWAY_TOKEN: gatewayToken,
     OPENCLAW_GATEWAY_URL: `ws://127.0.0.1:${gatewayPort}`,
 };

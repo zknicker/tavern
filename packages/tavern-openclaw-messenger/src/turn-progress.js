@@ -58,6 +58,10 @@ function mapOpenClawProgressEvent({
 }) {
     const data = event?.data && typeof event.data === 'object' ? event.data : {};
 
+    if (event?.stream === 'partial_reply') {
+        return null;
+    }
+
     if (event?.stream === 'tool_result') {
         return mapOpenClawToolResultEvent({
             data,
@@ -119,10 +123,28 @@ function mapOpenClawItemEvent({
     toolNamesByStepId,
 }) {
     const kind = readOpenClawItemKind(data.kind) ?? readOpenClawItemKind(data.type);
-    const id = readString(data.toolCallId) ?? readString(data.itemId) ?? readString(data.id);
+    const toolIdentity =
+        kind === 'command' || kind === 'tool' ? readOpenClawToolIdentity(data) : null;
+    let id =
+        toolIdentity?.toolCallId ??
+        readString(data.toolCallId) ??
+        readString(data.itemId) ??
+        readString(data.id);
 
     if (!(id && kind)) {
         return null;
+    }
+
+    if ((kind === 'command' || kind === 'tool') && !toolIdentity?.toolCallId) {
+        return null;
+    }
+
+    if (kind === 'message' && isRawAssistantItemId(id)) {
+        return null;
+    }
+
+    if (isAssistantProgressItem(data, kind)) {
+        id = 'assistant-preamble';
     }
 
     if (kind === 'reasoning') {
@@ -187,6 +209,9 @@ function mapOpenClawItemEvent({
     const detail = readProgressDetail(data) ?? detailsByStepId.get(id) ?? null;
 
     if (detail) {
+        if (kind === 'message' && detailsByStepId.get(id) === detail) {
+            return null;
+        }
         detailsByStepId.set(id, detail);
     }
 
@@ -197,6 +222,8 @@ function mapOpenClawItemEvent({
         label,
         arguments: kind === 'tool' ? (toolArgumentsByStepId.get(id) ?? null) : null,
         status: resolveOpenClawProgressStatus(data),
+        rawOpenClawIds: kind === 'tool' ? toolIdentity.rawIds : null,
+        toolCallId: kind === 'tool' ? toolIdentity.toolCallId : null,
         toolName,
     };
 }
@@ -210,7 +237,13 @@ function mapOpenClawCommandItemEvent({
     toolNamesByStepId,
 }) {
     const toolName = readString(data.name) ?? 'command';
-    const toolCallId = readToolCallId(data);
+    const toolIdentity = readOpenClawToolIdentity(data);
+
+    if (!toolIdentity?.toolCallId) {
+        return null;
+    }
+
+    const toolCallId = toolIdentity.toolCallId;
     const detail = readProgressDetail(data) ?? detailsByStepId.get(id) ?? null;
     const label = resolveOpenClawCommandItemLabel({
         data,
@@ -230,6 +263,7 @@ function mapOpenClawCommandItemEvent({
         id,
         kind: 'tool',
         label,
+        rawOpenClawIds: toolIdentity.rawIds,
         status: resolveOpenClawProgressStatus(data),
         toolCallId,
         toolName,
@@ -243,7 +277,8 @@ function mapOpenClawToolResultEvent({
     toolArgumentsByStepId,
     toolNamesByStepId,
 }) {
-    const id = readString(data.itemId) ?? readString(data.toolCallId) ?? readString(data.id);
+    const toolIdentity = readOpenClawToolIdentity(data);
+    const id = toolIdentity?.toolCallId;
 
     if (!id) {
         return null;
@@ -268,8 +303,10 @@ function mapOpenClawToolResultEvent({
         id,
         kind: 'tool',
         label,
+        rawOpenClawIds: toolIdentity.rawIds,
         result: readProgressDetail(data) ?? null,
         status: data.isError === true ? 'failed' : 'completed',
+        toolCallId: toolIdentity.toolCallId,
         toolName,
     };
 }
@@ -314,7 +351,8 @@ function mapOpenClawCommandOutputEvent({
     toolArgumentsByStepId,
     toolNamesByStepId,
 }) {
-    const id = readString(data.itemId) ?? readString(data.toolCallId) ?? readString(data.id);
+    const toolIdentity = readOpenClawToolIdentity(data);
+    const id = toolIdentity?.toolCallId;
 
     if (!id) {
         return null;
@@ -343,9 +381,10 @@ function mapOpenClawCommandOutputEvent({
         id,
         kind: 'tool',
         label,
+        rawOpenClawIds: toolIdentity.rawIds,
         result: buildCommandOutputResult(data),
         status: resolveOpenClawProgressStatus(data),
-        toolCallId: readToolCallId(data),
+        toolCallId: toolIdentity.toolCallId,
         toolName: toolNamesByStepId.get(id) ?? toolName ?? null,
     };
 }
@@ -452,13 +491,56 @@ function formatToolName(name) {
     return name.replace(/[_-]+/g, ' ').trim() || 'tool';
 }
 
-function readToolCallId(data) {
-    return (
-        readString(data.toolCallId) ??
-        readString(data.callId) ??
-        readLikelyToolCallId(data.itemId) ??
-        readLikelyToolCallId(data.id)
-    );
+function readOpenClawToolIdentity(data) {
+    const directToolCallId = readLikelyToolCallId(data.toolCallId);
+    const directCallId = readLikelyToolCallId(data.callId);
+    const itemId = readString(data.itemId);
+    const id = readString(data.id);
+    const parsedItem = parseOpenClawToolWrapperId(itemId);
+    const parsedId = parseOpenClawToolWrapperId(id);
+    const toolCallId =
+        directToolCallId ??
+        directCallId ??
+        parsedItem?.toolCallId ??
+        parsedId?.toolCallId ??
+        readLikelyToolCallId(itemId) ??
+        readLikelyToolCallId(id);
+
+    if (!toolCallId) {
+        return null;
+    }
+
+    return {
+        providerItemId: parsedItem?.providerItemId ?? parsedId?.providerItemId ?? null,
+        rawIds: {
+            callId: readString(data.callId),
+            id,
+            itemId,
+            providerItemId: parsedItem?.providerItemId ?? parsedId?.providerItemId ?? null,
+            toolCallId: readString(data.toolCallId),
+        },
+        toolCallId,
+    };
+}
+
+function parseOpenClawToolWrapperId(value) {
+    const text = readString(value);
+
+    if (!text?.startsWith('tool:')) {
+        return null;
+    }
+
+    const [toolCallId, providerItemId = null] = text.slice('tool:'.length).split('|');
+    const normalizedToolCallId = readLikelyToolCallId(toolCallId);
+
+    if (!normalizedToolCallId) {
+        return null;
+    }
+
+    return {
+        providerItemId: readString(providerItemId),
+        toolCallId: normalizedToolCallId,
+    };
 }
 
 function readLikelyToolCallId(value) {
@@ -520,6 +602,24 @@ function readOpenClawItemKind(value) {
     ].includes(value)
         ? value
         : null;
+}
+
+function isRawAssistantItemId(id) {
+    return id.startsWith('raw-assistant');
+}
+
+function isAssistantProgressItem(data, kind) {
+    if (kind === 'preamble') {
+        return true;
+    }
+
+    if (kind !== 'message') {
+        return false;
+    }
+
+    const title = readString(data.title)?.toLowerCase();
+
+    return title === 'assistant reply' || title === 'preamble';
 }
 
 function readString(value) {

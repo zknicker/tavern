@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test';
 import type { ChatStartDraft } from '../../hooks/chats/use-chat-start-drafts.tsx';
-import { buildDraftActiveReply } from './chat-draft-detail.tsx';
+import { buildDraftActiveReply, buildDraftHandoffLog } from './chat-draft-detail.tsx';
 
 function createDraft(overrides: Partial<ChatStartDraft> = {}): ChatStartDraft {
     return {
@@ -55,5 +55,48 @@ describe('buildDraftActiveReply', () => {
             startedAt: '2026-05-13T12:00:01.000Z',
             text: '',
         });
+    });
+});
+
+describe('buildDraftHandoffLog', () => {
+    test('exposes live handoff rows to the draft transcript', () => {
+        const log = buildDraftHandoffLog({
+            activeReply: {
+                agentId: 'agent-1',
+                isThinking: true,
+                runId: 'run-1',
+                sessionKey: 'session-1',
+                startedAt: '2026-05-13T12:00:01.000Z',
+                text: '',
+            },
+            failedTurn: null,
+            historyLoaded: false,
+            timeline: [
+                {
+                    actor: { id: 'agent-1', kind: 'agent' },
+                    completedAt: null,
+                    connectsToNext: false,
+                    connectsToPrevious: false,
+                    id: 'act_run-1_tool',
+                    isFirstInGroup: true,
+                    kind: 'tool',
+                    sessionKey: 'session-1',
+                    spawnedRelationships: [],
+                    startedAt: '2026-05-13T12:00:02.000Z',
+                    toolCall: {
+                        callId: 'call-1',
+                        facts: [],
+                        label: 'bash sleep 4',
+                        name: 'bash',
+                        status: null,
+                        summaryParts: ['bash sleep 4'],
+                    },
+                },
+            ],
+            totalRows: 1,
+        });
+
+        expect(log?.rows.map((row) => row.id)).toEqual(['act_run-1_tool']);
+        expect(log?.total).toBe(1);
     });
 });

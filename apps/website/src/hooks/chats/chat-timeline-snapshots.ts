@@ -40,10 +40,18 @@ export function applyLogSnapshot(
     const nextActiveReply = hasTerminalMessage ? null : state.activeReply;
     const nextFailedTurn = hasFailureMessage(log.rows, state.failedTurn) ? null : state.failedTurn;
     const historyLoaded = true;
+    const nextTimeline = hasTerminalMessage
+        ? log.rows
+        : mergeActiveProgressRows({
+              liveRows: state.timeline,
+              loggedRows: log.rows,
+              runId: state.activeReply?.runId,
+          });
+    const nextTotal = log.total + Math.max(0, nextTimeline.length - log.rows.length);
 
     if (
-        areSameTimeline(state.timeline, log.rows) &&
-        state.totalRows === log.total &&
+        areSameTimeline(state.timeline, nextTimeline) &&
+        state.totalRows === nextTotal &&
         state.historyLoaded === historyLoaded &&
         isSameActiveReply(state.activeReply, nextActiveReply) &&
         isSameTurnFailure(state.failedTurn, nextFailedTurn)
@@ -55,8 +63,8 @@ export function applyLogSnapshot(
         activeReply: nextActiveReply,
         failedTurn: nextFailedTurn,
         historyLoaded,
-        timeline: log.rows,
-        totalRows: log.total,
+        timeline: nextTimeline,
+        totalRows: nextTotal,
     };
 }
 
@@ -137,4 +145,57 @@ function areSameTimeline(left: ChatTimeline, right: ChatTimeline) {
 
 function hasFailureMessage(rows: ChatTimeline, failure: ChatTurnFailure | null) {
     return failure ? hasLoggedTurnFailure(rows, failure.turn.runId) : false;
+}
+
+function mergeActiveProgressRows(input: {
+    liveRows: ChatTimeline;
+    loggedRows: ChatTimeline;
+    runId?: string;
+}) {
+    const loggedIds = new Set(input.loggedRows.map((row) => row.id));
+    const missingLiveRows = input.liveRows.filter(
+        (row) => isLiveProgressRow(row, input.runId) && !loggedIds.has(row.id)
+    );
+
+    if (missingLiveRows.length === 0) {
+        return input.loggedRows;
+    }
+
+    return [...input.loggedRows, ...missingLiveRows].sort(compareTimelineRows);
+}
+
+function isLiveProgressRow(row: ChatTimeline[number], runId?: string) {
+    if (row.kind !== 'tool' || !row.id.startsWith('act_')) {
+        return false;
+    }
+
+    return !runId || row.id.startsWith(`act_${runId}_`) || runId.startsWith('pending:');
+}
+
+function compareTimelineRows(left: ChatTimeline[number], right: ChatTimeline[number]) {
+    const timestampDelta = rowTimestamp(left) - rowTimestamp(right);
+
+    return timestampDelta || rowSortRank(left) - rowSortRank(right);
+}
+
+function rowTimestamp(row: ChatTimeline[number]) {
+    const timestamp =
+        row.kind === 'message'
+            ? row.message.timestamp
+            : row.kind === 'tool'
+              ? (row.startedAt ?? row.completedAt)
+              : row.kind === 'worker'
+                ? (row.startedAt ?? row.completedAt ?? row.worker.lastEventAt)
+                : row.timestamp;
+    const parsed = timestamp ? Date.parse(timestamp) : Number.NaN;
+
+    return Number.isNaN(parsed) ? Number.MAX_SAFE_INTEGER : parsed;
+}
+
+function rowSortRank(row: ChatTimeline[number]) {
+    if (row.kind === 'message') {
+        return row.message.senderType === 'user' ? 0 : 2;
+    }
+
+    return 1;
 }

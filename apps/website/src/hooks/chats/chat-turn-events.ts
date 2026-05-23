@@ -40,6 +40,11 @@ export interface ChatTurnEventUtils {
         clearTurn: (input: { chatId: string; runId?: string }) => void;
         completeTurn: (input: { chatId: string; completedAt: string; turn: ChatTurn }) => void;
         failTurn: (input: { chatId: string; error: string; turn: ChatTurn }) => void;
+        patchProgress: (input: {
+            step: ChatTurnProgressStep;
+            timestamp: string;
+            turn: ChatTurn;
+        }) => void;
         startTurn: (turn: ChatTurn) => void;
         updateReply: (update: ChatReplyUpdate) => void;
     };
@@ -51,13 +56,6 @@ export interface ChatTurnEventUtils {
 }
 
 export function createChatTurnEventHandlers(utils: ChatTurnEventUtils) {
-    const invalidateStatus = () => {
-        Promise.all([
-            utils.agent.activity.invalidate(),
-            utils.chat.log.list.invalidate(),
-            utils.worker.list.invalidate(),
-        ]).catch(() => undefined);
-    };
     const invalidateLiveTurnStatus = () => {
         Promise.all([utils.agent.activity.invalidate(), utils.worker.list.invalidate()]).catch(
             () => undefined
@@ -108,6 +106,8 @@ export function createChatTurnEventHandlers(utils: ChatTurnEventUtils) {
             timestamp?: string;
             turn: ChatTurn;
         }) => {
+            const timestamp = input.timestamp ?? new Date().toISOString();
+
             markChatTiming('client.turnProgressEvent', {
                 chatId: input.turn.chatId,
                 kind: input.step.kind,
@@ -123,12 +123,17 @@ export function createChatTurnEventHandlers(utils: ChatTurnEventUtils) {
                 status: input.step.status,
                 stepId: input.step.id,
             });
+            utils.timeline.patchProgress({
+                step: input.step,
+                timestamp,
+                turn: input.turn,
+            });
             utils.chat.log.list.patchProgress({
                 chatId: input.turn.chatId,
                 updater: (current) =>
                     patchChatLogWithProgress(current, {
                         step: input.step,
-                        timestamp: input.timestamp ?? new Date().toISOString(),
+                        timestamp,
                         turn: input.turn,
                     }),
             });
@@ -161,7 +166,7 @@ export function createChatTurnEventHandlers(utils: ChatTurnEventUtils) {
                 sessionKey: turn.sessionKey,
             });
             utils.timeline.startTurn(turn);
-            invalidateStatus();
+            invalidateLiveTurnStatus();
         },
     };
 }

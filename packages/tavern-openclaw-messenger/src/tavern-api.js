@@ -82,6 +82,7 @@ export function activityStepFromProgressStep(step, timestamp = new Date().toISOS
         ...(step.toolCallId ? { toolCallId: step.toolCallId } : {}),
         ...(step.toolName ? { toolName: step.toolName } : {}),
         runtime: {
+            ...(step.rawOpenClawIds ? { openClawIds: step.rawOpenClawIds } : {}),
             ...(step.toolCallId ? { toolCallId: step.toolCallId } : {}),
             ...(step.toolName ? { toolName: step.toolName } : {}),
         },
