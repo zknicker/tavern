@@ -11,7 +11,6 @@ import {
     emitSyncDataUpdated,
     emitWorkersUpdated,
 } from '../api/invalidation-events.ts';
-import { refreshOpenClawSyncJobSchedules } from '../jobs/manager.ts';
 import { listReachableAgentRuntimeConnections } from '../storage/agent-runtime-connections.ts';
 import {
     syncAgentRuntimeAgents,
@@ -30,7 +29,6 @@ import {
     subscribeAgentRuntimeEventsForConnection,
 } from './drivers.ts';
 import { emitObservedAgentRuntimeEvent } from './events.ts';
-import { requestAgentRuntimeSessionSync } from './sync.ts';
 
 type RuntimeConnectionRecord = Awaited<
     ReturnType<typeof listReachableAgentRuntimeConnections>
@@ -147,15 +145,12 @@ export async function applyObservedAgentRuntimeEvent(
             debugTurnEvent(event);
             if (hasActiveTurnSession(sessionKey)) {
                 emitWorkersUpdated();
-                emitSyncDataUpdated();
                 return;
             }
             if (connection) {
                 void syncInvalidatedSession(connection, sessionKey).catch((error) => {
                     console.warn('[tavern] failed to sync invalidated session', error);
                 });
-            } else {
-                void requestAgentRuntimeSessionSync();
             }
             emitWorkersUpdated();
             emitSyncDataUpdated();
@@ -241,14 +236,12 @@ async function markConnectionUnavailable(connection: RuntimeConnectionRecord, er
         connectionId: connection.id,
         error,
     });
-    await refreshOpenClawSyncJobSchedules();
     emitAgentRuntimeUpdated();
     emitSyncDataUpdated();
 }
 
 async function markConnectionReachable(connection: RuntimeConnectionRecord) {
     await markAgentRuntimeConnectionReachable({ connectionId: connection.id });
-    await refreshOpenClawSyncJobSchedules();
     emitAgentRuntimeUpdated();
 }
 
@@ -298,7 +291,6 @@ function connectRuntimeEvents(connection: RuntimeConnectionRecord, revision: num
             void markConnectionReachable(connection).catch((error) => {
                 console.warn('[tavern] failed to mark runtime reachable', error);
             });
-            void requestAgentRuntimeSessionSync();
             emitCronUpdated();
             emitSyncDataUpdated();
         })

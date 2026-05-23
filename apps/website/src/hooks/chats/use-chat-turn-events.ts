@@ -14,11 +14,10 @@ export function useChatTurnEvents() {
     const handlers = createChatTurnEventHandlers({
         agent: utils.agent,
         chat: {
-            ...utils.chat,
+            get: utils.chat.get,
             log: {
-                ...utils.chat.log,
                 list: {
-                    ...utils.chat.log.list,
+                    invalidate: utils.chat.log.list.invalidate,
                     patchProgress: ({ chatId, updater }) => {
                         let matchedQuery = false;
 

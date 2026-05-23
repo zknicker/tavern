@@ -39,18 +39,6 @@ export async function startJobsManager() {
 
 export { getJobBinding, getRegisteredJobDefinitions };
 
-const openClawSyncJobSlugs: RegisteredJobSlug[] = [
-    'sync-runtime-agents',
-    'sync-runtime-config',
-    'sync-runtime-chats',
-    'sync-runtime-sessions',
-    'sync-runtime-cron',
-];
-
-export async function refreshOpenClawSyncJobSchedules(options: { runImmediately?: boolean } = {}) {
-    await Promise.all(openClawSyncJobSlugs.map((slug) => refreshJobSchedule(slug, options)));
-}
-
 export async function refreshJobSchedule(
     slug: RegisteredJobSlug,
     options: {

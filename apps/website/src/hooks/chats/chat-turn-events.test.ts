@@ -9,9 +9,7 @@ function createHandlers(input?: {
     onProgress?: (value: string) => void;
     onReply?: (value: string) => void;
     onStart?: (runId: string) => void;
-    patchLog?: (
-        updater: (current: ChatLogOutput | undefined) => ChatLogOutput | undefined
-    ) => void;
+    patchLog?: (updater: (current: ChatLogOutput | undefined) => ChatLogOutput | undefined) => void;
     patchedProgress?: string[];
 }) {
     const invalidatedQueries = input?.invalidatedQueries ?? [];
@@ -100,6 +98,30 @@ test('turn completion preserves the handoff and invalidates transcript queries',
     ]);
 });
 
+test('duplicate turn completion events do not refetch transcript queries again', async () => {
+    const invalidatedQueries: string[] = [];
+    const completedTurns: string[] = [];
+    const handlers = createHandlers({
+        invalidatedQueries,
+        onComplete: (runId) => completedTurns.push(runId),
+    });
+
+    handlers.onTurnCompleted(turn);
+    handlers.onTurnCompleted(turn);
+    await Promise.resolve();
+
+    expect(completedTurns).toEqual(['run-1']);
+    expect(invalidatedQueries).toEqual([
+        'agent.activity',
+        'chat.get:chat-1',
+        'chat.log.list',
+        'session.get',
+        'session.history.get',
+        'session.list',
+        'worker.list',
+    ]);
+});
+
 test('turn start refreshes live status without refetching durable chat activity', async () => {
     const invalidatedQueries: string[] = [];
     const startedTurns: string[] = [];
@@ -115,7 +137,7 @@ test('turn start refreshes live status without refetching durable chat activity'
     expect(invalidatedQueries).toEqual(['agent.activity', 'worker.list']);
 });
 
-test('turn progress patches durable chat activity and refreshes live status', async () => {
+test('turn progress patches durable chat activity without refetching live status', async () => {
     const invalidatedQueries: string[] = [];
     const patchedProgress: string[] = [];
     const timelineProgress: string[] = [];
@@ -139,7 +161,7 @@ test('turn progress patches durable chat activity and refreshes live status', as
 
     expect(patchedProgress).toEqual(['chat-1']);
     expect(timelineProgress).toEqual(['run-1:tool:web:2026-04-27T17:20:08.408Z']);
-    expect(invalidatedQueries).toEqual(['agent.activity', 'worker.list']);
+    expect(invalidatedQueries).toEqual([]);
 });
 
 test('turn progress applies preamble and normalized tool updates without refetching chat log', async () => {
@@ -201,17 +223,10 @@ test('turn progress applies preamble and normalized tool updates without refetch
         completedAt: '2026-04-27T17:20:10.000Z',
         startedAt: '2026-04-27T17:20:09.000Z',
     });
-    expect(invalidatedQueries).toEqual([
-        'agent.activity',
-        'worker.list',
-        'agent.activity',
-        'worker.list',
-        'agent.activity',
-        'worker.list',
-    ]);
+    expect(invalidatedQueries).toEqual([]);
 });
 
-test('turn reply updates local timeline state and refreshes live status', async () => {
+test('turn reply updates local timeline state without refetching live status', async () => {
     const invalidatedQueries: string[] = [];
     const updates: string[] = [];
     const handlers = createHandlers({
@@ -227,7 +242,7 @@ test('turn reply updates local timeline state and refreshes live status', async 
     await Promise.resolve();
 
     expect(updates).toEqual(['run-1:Done']);
-    expect(invalidatedQueries).toEqual(['agent.activity', 'worker.list']);
+    expect(invalidatedQueries).toEqual([]);
 });
 
 test('turn failure marks the local timeline failed and invalidates transcript queries', async () => {

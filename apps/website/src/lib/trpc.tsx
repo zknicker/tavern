@@ -128,16 +128,12 @@ function createTrpcClient(serverOrigin: string | null) {
         client: trpc.createClient({
             links: [
                 loggerLink({
-                    enabled: (options) => {
+                    enabled: () => {
                         if (!import.meta.env.DEV) {
                             return false;
                         }
 
-                        if (options.direction === 'down') {
-                            return true;
-                        }
-
-                        return options.type === 'subscription';
+                        return true;
                     },
                     colorMode: 'css',
                 }),

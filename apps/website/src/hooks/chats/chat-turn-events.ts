@@ -56,6 +56,8 @@ export interface ChatTurnEventUtils {
 }
 
 export function createChatTurnEventHandlers(utils: ChatTurnEventUtils) {
+    const terminalTurnIds = new Set<string>();
+
     const invalidateLiveTurnStatus = () => {
         Promise.all([utils.agent.activity.invalidate(), utils.worker.list.invalidate()]).catch(
             () => undefined
@@ -76,6 +78,10 @@ export function createChatTurnEventHandlers(utils: ChatTurnEventUtils) {
 
     return {
         onTurnCompleted: (_turn: ChatTurn) => {
+            if (!rememberTerminalTurn(terminalTurnIds, `completed:${_turn.runId}`)) {
+                return;
+            }
+
             debugChatEvent('turn.completed.event', {
                 chatId: _turn.chatId,
                 runId: _turn.runId,
@@ -89,6 +95,10 @@ export function createChatTurnEventHandlers(utils: ChatTurnEventUtils) {
             invalidateCompletedTurn(_turn.chatId);
         },
         onTurnFailed: (input: { error: string; turn: ChatTurn }) => {
+            if (!rememberTerminalTurn(terminalTurnIds, `failed:${input.turn.runId}`)) {
+                return;
+            }
+
             debugChatEvent('turn.failed.event', {
                 chatId: input.turn.chatId,
                 runId: input.turn.runId,
@@ -137,7 +147,6 @@ export function createChatTurnEventHandlers(utils: ChatTurnEventUtils) {
                         turn: input.turn,
                     }),
             });
-            invalidateLiveTurnStatus();
         },
         onTurnReplyUpdated: (update: ChatReplyUpdate) => {
             markChatTiming('client.turnReplyUpdatedEvent', {
@@ -153,7 +162,6 @@ export function createChatTurnEventHandlers(utils: ChatTurnEventUtils) {
                 textLength: update.text.length,
             });
             utils.timeline.updateReply(update);
-            invalidateLiveTurnStatus();
         },
         onTurnStarted: (turn: ChatTurn) => {
             markChatTiming('client.turnStartedEvent', {
@@ -169,4 +177,21 @@ export function createChatTurnEventHandlers(utils: ChatTurnEventUtils) {
             invalidateLiveTurnStatus();
         },
     };
+}
+
+function rememberTerminalTurn(terminalTurnIds: Set<string>, key: string) {
+    if (terminalTurnIds.has(key)) {
+        return false;
+    }
+
+    terminalTurnIds.add(key);
+
+    if (terminalTurnIds.size > 200) {
+        const oldest = terminalTurnIds.values().next().value;
+        if (oldest) {
+            terminalTurnIds.delete(oldest);
+        }
+    }
+
+    return true;
 }

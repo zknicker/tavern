@@ -1,8 +1,8 @@
 ---
-summary: Tavern Runtime internals for canonical chat storage, managed OpenClaw startup, Messenger plugin sync, persistence, sync paths, and tool boundaries.
+summary: Tavern Runtime internals for canonical chat storage, managed OpenClaw startup, Messenger plugin sync, persistence, ingestion paths, and tool boundaries.
 read_when:
   - changing the always-on chat server, managed OpenClaw startup, or runtime ownership
-  - changing sync paths, execution evidence, managed workspace instructions, or agent-facing Tavern tools
+  - changing ingestion paths, execution evidence, managed workspace instructions, or agent-facing Tavern tools
 ---
 
 # Tavern Runtime
@@ -30,8 +30,8 @@ executor.
   what it needs, and renders chats, activity, settings, memory inspection, the
   Cortex wiki, automations, skills, and stats.
 * **Events are recoverable notifications.** Runtime chat events are durable and
-  cursor-backed. Gateway events trigger focused sync paths; they are not durable
-  chat history by themselves.
+  cursor-backed. Gateway events trigger focused ingestion paths; they are not
+  durable chat history by themselves.
 
 ## Managed OpenClaw
 
@@ -91,8 +91,9 @@ Cortex, vault, managed skills, runtime settings, app cache, and projected
 OpenClaw archives.
 
 Tavern Runtime chat records are canonical. OpenClaw-owned execution records
-that Tavern renders relationally are stored as projections with freshness
-metadata. OpenClaw remains canonical for native execution evidence.
+that Tavern renders, inspects, searches, or recovers are persisted in Tavern
+Runtime storage as execution evidence. OpenClaw remains canonical for native
+execution behavior.
 
 Cortex pages are Runtime-owned durable knowledge and memory. Lossless Claw
 remains OpenClaw-owned context management for turns. Tavern reports these as
@@ -103,31 +104,26 @@ maintenance are ready.
 Memory and Cortex product contracts live in [Memories](../../specs/memories.md)
 and [Cortex](../../specs/cortex.md).
 
-## Sync Paths
+## Runtime Ingestion
 
-Each OpenClaw-owned execution primitive has one sync path:
+OpenClaw execution enters Tavern through Runtime ingestion paths. App-facing
+queries read Tavern Runtime storage; they do not reach around Runtime to
+OpenClaw and they do not schedule background jobs when a screen mounts.
 
-| Primitive | Projection |
+| Source | Tavern stores |
 | --- | --- |
-| agent | current OpenClaw agents |
-| session | OpenClaw session index |
-| transcript message | OpenClaw session history evidence |
-| automation execution | OpenClaw turn/session evidence for a Tavern automation |
+| agent events | agent records and activity |
+| session events | session records and execution history |
+| transcript messages | message and tool-call evidence linked to Tavern chats |
+| automation events | automation runs, delivery state, and related session evidence |
 
-Active chat turns use a focused sync path. When OpenClaw reports that a known
-turn completed or failed, Runtime syncs that turn's session history by
-`sessionKey` and invalidates the affected chat log. It does not refresh the full
-OpenClaw session index before updating the active conversation.
+Provider usage imports and other scheduled operational tasks use Runtime jobs.
+Routine agent, chat, session, cron, and config freshness comes from writes and
+events that update Tavern Runtime storage directly.
 
-Broad session and chat index syncs are for dashboard, sidebar, settings, manual
-refresh, and background catch-up surfaces. They must not block the active chat
-handoff for a known turn.
-
-Cortex maintenance does not sync from OpenClaw. Runtime jobs own capture,
-embedding repair, timeline and link maintenance, and Cortex audit output.
-
-Jobs, websocket events, manual refreshes, and post-edit refreshes reuse the same
-primitive sync path instead of duplicating Gateway fetch logic.
+Cortex maintenance does not sync from OpenClaw. Runtime-owned maintenance owns
+capture, embedding repair, timeline and link maintenance, and Cortex audit
+output.
 
 ## Boundaries
 

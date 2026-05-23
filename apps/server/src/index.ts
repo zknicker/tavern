@@ -92,8 +92,8 @@ async function start() {
     );
     logStartupDetail(
         '⏱️',
-        'Refresh',
-        `sync ${formatDurationMs(apiEventSchedulerIntervals.syncIntervalMs)} · usage ${formatDurationMs(apiEventSchedulerIntervals.usageIntervalMs)}`
+        'Usage refresh',
+        formatDurationMs(apiEventSchedulerIntervals.usageIntervalMs)
     );
     logStartupComplete('Tavern is ready');
 }

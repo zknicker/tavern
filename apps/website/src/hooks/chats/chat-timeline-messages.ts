@@ -55,6 +55,20 @@ function getActorKey(row: ChatLogRow | null) {
     return row.actor ? `${row.actor.kind}:${row.actor.id}` : null;
 }
 
+function compareChatLogRows(left: ChatLogRow, right: ChatLogRow) {
+    const timestampDelta = getRowTimestampMs(left) - getRowTimestampMs(right);
+
+    return timestampDelta || getRowSortRank(left) - getRowSortRank(right);
+}
+
+function getRowSortRank(row: ChatLogRow) {
+    if (row.kind === 'message') {
+        return row.message.senderType === 'user' ? 0 : 2;
+    }
+
+    return 1;
+}
+
 function canConnectSessionRail(currentRow: ChatLogRow, adjacentRow: ChatLogRow | null) {
     if (!adjacentRow || currentRow.kind === 'system' || adjacentRow.kind === 'system') {
         return false;
@@ -116,6 +130,25 @@ function isMatchingLoggedUserMessage(row: ChatMessageRow, message: ChatTimelineM
     return row.id === message.id || row.message.id === message.id;
 }
 
+function recomputeRowConnections(rows: ChatLogRow[]): ChatLogRow[] {
+    return rows.map((row, index) => {
+        if (row.kind === 'system') {
+            return row;
+        }
+
+        const previousRow = rows[index - 1] ?? null;
+        const nextRow = rows[index + 1] ?? null;
+        const connectsToPrevious = canConnectSessionRail(row, previousRow);
+
+        return {
+            ...row,
+            connectsToNext: canConnectSessionRail(row, nextRow),
+            connectsToPrevious,
+            isFirstInGroup: getActorKey(previousRow) !== getActorKey(row) || !connectsToPrevious,
+        };
+    });
+}
+
 export function appendTimelineMessage(
     current: ChatLogOutput | undefined,
     input: ChatTimelineMessage
@@ -124,26 +157,9 @@ export function appendTimelineMessage(
         return current;
     }
 
-    const nextRow = buildUserMessageRow(input);
-    const previousRow = current.rows.at(-1) ?? null;
-    const connectsToPrevious = canConnectSessionRail(nextRow, previousRow);
-    const updatedNextRow: ChatMessageRow = {
-        ...nextRow,
-        connectsToPrevious,
-        isFirstInGroup: getActorKey(previousRow) !== getActorKey(nextRow) || !connectsToPrevious,
-    };
-
-    const nextRows =
-        previousRow && previousRow.kind !== 'system'
-            ? [
-                  ...current.rows.slice(0, -1),
-                  {
-                      ...previousRow,
-                      connectsToNext: canConnectSessionRail(previousRow, updatedNextRow),
-                  },
-                  updatedNextRow,
-              ]
-            : [...current.rows, updatedNextRow];
+    const nextRows = recomputeRowConnections(
+        [...current.rows, buildUserMessageRow(input)].sort(compareChatLogRows)
+    );
     const total = current.total + 1;
 
     return {
@@ -203,37 +219,4 @@ export function getLoggedTimelineMessageIds(
     }
 
     return confirmedIds;
-}
-
-function compareChatLogRows(left: ChatLogRow, right: ChatLogRow) {
-    const timestampDelta = getRowTimestampMs(left) - getRowTimestampMs(right);
-
-    return timestampDelta || getRowSortRank(left) - getRowSortRank(right);
-}
-
-function getRowSortRank(row: ChatLogRow) {
-    if (row.kind === 'message') {
-        return row.message.senderType === 'user' ? 0 : 2;
-    }
-
-    return 1;
-}
-
-function recomputeRowConnections(rows: ChatLogRow[]) {
-    return rows.map((row, index) => {
-        if (row.kind === 'system') {
-            return row;
-        }
-
-        const previousRow = rows[index - 1] ?? null;
-        const nextRow = rows[index + 1] ?? null;
-        const connectsToPrevious = canConnectSessionRail(row, previousRow);
-
-        return {
-            ...row,
-            connectsToNext: canConnectSessionRail(row, nextRow),
-            connectsToPrevious,
-            isFirstInGroup: getActorKey(previousRow) !== getActorKey(row) || !connectsToPrevious,
-        };
-    });
 }

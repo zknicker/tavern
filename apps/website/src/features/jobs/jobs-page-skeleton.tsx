@@ -18,7 +18,7 @@ function JobSummarySkeleton() {
             </div>
 
             <div className="overflow-hidden rounded-xl border bg-card">
-                {Array.from({ length: 4 }, (_, index) => `jobs-summary-skeleton-${index + 1}`).map(
+                {Array.from({ length: 3 }, (_, index) => `jobs-summary-skeleton-${index + 1}`).map(
                     (id, index) => (
                         <div className="contents" key={id}>
                             {index > 0 ? <div className="h-px bg-border" /> : null}

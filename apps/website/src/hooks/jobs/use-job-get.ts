@@ -8,11 +8,11 @@ export function useJobGet(slug: string | null) {
         { slug: slug ?? fallbackJobSlug },
         {
             enabled: slug !== null,
-            ...queryPolicy.livePollDetail,
+            ...queryPolicy.syncedSnapshot,
         }
     );
 }
 
 export function useJobGetSuspense(slug: string) {
-    return trpc.jobs.get.useSuspenseQuery({ slug }, queryPolicy.livePollDetail);
+    return trpc.jobs.get.useSuspenseQuery({ slug }, queryPolicy.syncedSnapshot);
 }

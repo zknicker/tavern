@@ -6,6 +6,7 @@ import type {
 } from '../agent-runtime-connection/contracts.ts';
 import { emitAgentRuntimeCapabilityUpdated } from '../api/invalidation-events.ts';
 import {
+    getAgentRuntimeCapabilityStatus,
     markAgentRuntimeCapabilityHealthy,
     saveAgentRuntimeCapabilityStatus,
 } from '../storage/agent-runtime-capability-status.ts';
@@ -25,18 +26,26 @@ interface CapabilityFailure {
 }
 
 export async function recordCapabilitySuccess(input: CapabilityCallInput) {
-    await markAgentRuntimeCapabilityHealthy({
+    const existing = await getAgentRuntimeCapabilityStatus(input);
+    const next = await markAgentRuntimeCapabilityHealthy({
         capability: input.capability,
         method: input.method,
         runtimeId: input.runtimeId,
     });
-    emitAgentRuntimeCapabilityUpdated();
+    if (
+        existing?.state !== next.state ||
+        existing.errorCode !== next.errorCode ||
+        existing.method !== next.method
+    ) {
+        emitAgentRuntimeCapabilityUpdated();
+    }
 }
 
 export async function recordCapabilityFailure(input: CapabilityCallInput & { error: unknown }) {
     const failure = classifyCapabilityFailure(input.error);
+    const existing = await getAgentRuntimeCapabilityStatus(input);
 
-    await saveAgentRuntimeCapabilityStatus({
+    const next = await saveAgentRuntimeCapabilityStatus({
         capability: input.capability,
         errorCode: failure.errorCode,
         method: input.method,
@@ -45,7 +54,15 @@ export async function recordCapabilityFailure(input: CapabilityCallInput & { err
         state: failure.state,
         technicalMessage: failure.technicalMessage,
     });
-    emitAgentRuntimeCapabilityUpdated();
+    if (
+        existing?.state !== next.state ||
+        existing.errorCode !== next.errorCode ||
+        existing.method !== next.method ||
+        existing.reason !== next.reason ||
+        existing.technicalMessage !== next.technicalMessage
+    ) {
+        emitAgentRuntimeCapabilityUpdated();
+    }
 }
 
 export async function withCapabilityStatus<T>(

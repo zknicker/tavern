@@ -23,8 +23,6 @@ const emitUsageLiveUpdated = mock(() => undefined);
 const emitWorkersUpdated = mock(() => undefined);
 const markAgentRuntimeConnectionFailure = mock(async () => undefined);
 const markAgentRuntimeConnectionReachable = mock(async () => undefined);
-const refreshOpenClawSyncJobSchedules = mock(async () => undefined);
-const requestAgentRuntimeSessionSync = mock(async () => undefined);
 const createAgentRuntimeClientForConnection = mock(() => undefined);
 const subscribeAgentRuntimeEventsForConnection = mock(async () => ({
     close() {},
@@ -58,17 +56,9 @@ mock.module('../src/api/invalidation-events.ts', () => ({
     emitWorkersUpdated,
 }));
 
-mock.module('../src/jobs/manager.ts', () => ({
-    refreshOpenClawSyncJobSchedules,
-}));
-
 mock.module('../src/agent-runtime/drivers.ts', () => ({
     createAgentRuntimeClientForConnection,
     subscribeAgentRuntimeEventsForConnection,
-}));
-
-mock.module('../src/agent-runtime/sync.ts', () => ({
-    requestAgentRuntimeSessionSync,
 }));
 
 mock.module('../src/agent-runtime/events.ts', () => ({
@@ -113,8 +103,6 @@ beforeEach(async () => {
     emitObservedAgentRuntimeEvent.mockClear();
     markAgentRuntimeConnectionFailure.mockClear();
     markAgentRuntimeConnectionReachable.mockClear();
-    refreshOpenClawSyncJobSchedules.mockClear();
-    requestAgentRuntimeSessionSync.mockClear();
     createAgentRuntimeClientForConnection.mockClear();
     subscribeAgentRuntimeEventsForConnection.mockClear();
     tavernApiRequests = [];
@@ -199,7 +187,7 @@ afterEach(() => {
     mock.restore();
 });
 
-test('startAgentRuntimeEventSync refreshes connection state and schedules when the stream connects', async () => {
+test('startAgentRuntimeEventSync refreshes connection state when the stream connects', async () => {
     startAgentRuntimeEventSync();
     await Promise.resolve();
     await Promise.resolve();
@@ -209,7 +197,6 @@ test('startAgentRuntimeEventSync refreshes connection state and schedules when t
     expect(markAgentRuntimeConnectionReachable).toHaveBeenCalledWith({
         connectionId: 'runtime-1',
     });
-    expect(refreshOpenClawSyncJobSchedules).toHaveBeenCalledTimes(1);
     expect(emitAgentRuntimeUpdated).toHaveBeenCalledTimes(1);
 });
 
@@ -406,7 +393,7 @@ test('applyObservedAgentRuntimeEvent defers invalidated session sync while a tur
     expect(listSessions).not.toHaveBeenCalled();
     expect(listSessionMessages).not.toHaveBeenCalled();
     expect(emitWorkersUpdated).toHaveBeenCalledTimes(1);
-    expect(emitSyncDataUpdated).toHaveBeenCalledTimes(1);
+    expect(emitSyncDataUpdated).not.toHaveBeenCalled();
 
     await applyObservedAgentRuntimeEvent(
         {

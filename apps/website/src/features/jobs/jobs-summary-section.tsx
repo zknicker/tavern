@@ -18,8 +18,8 @@ interface JobsSummarySectionProps {
 export function JobsSummarySection({ jobs, onSelectJob }: JobsSummarySectionProps) {
     return (
         <section className="flex flex-col">
-            <BadgeDivider className="pb-4" subtext="Schedules and status.">
-                Scheduled Jobs
+            <BadgeDivider className="pb-4" subtext="Provider imports and maintenance.">
+                Operational Jobs
             </BadgeDivider>
 
             <Card className="overflow-hidden p-0">

@@ -40,7 +40,7 @@ function JobsContent() {
     if (jobs.length === 0) {
         return (
             <EmptyState
-                description="Internal jobs will appear here after they are registered on the server."
+                description="Scheduled provider imports and maintenance tasks will appear here after they are registered."
                 eyebrow="Jobs"
                 title="No jobs are registered yet."
             />

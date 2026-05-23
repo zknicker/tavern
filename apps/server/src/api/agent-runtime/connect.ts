@@ -1,7 +1,6 @@
 import { TRPCError } from '@trpc/server';
 import { recordCapabilitySuccess } from '../../agent-runtime/capability-status.ts';
 import { refreshAgentRuntimeEventSync } from '../../agent-runtime/event-sync.ts';
-import { requestAgentRuntimeSessionSync } from '../../agent-runtime/sync.ts';
 import { agentRuntimeConnectionInputSchema } from '../../agent-runtime-connection/contracts.ts';
 import { refreshOpenClawGatewayCapability } from '../../agent-runtime-connection/openclaw-gateway-capability.ts';
 import {
@@ -10,14 +9,8 @@ import {
     saveAgentRuntimeConnection,
 } from '../../agent-runtime-connection/service.ts';
 import { recordTavernPluginCapability } from '../../agent-runtime-connection/tavern-plugin-capability.ts';
-import { refreshOpenClawSyncJobSchedules } from '../../jobs/manager.ts';
 import { syncMessagingBindingsToAgentRuntime } from '../../messaging-platform/service.ts';
 import { listAgentRuntimeCapabilityStatuses } from '../../storage/agent-runtime-capability-status.ts';
-import {
-    syncAgentRuntimeAgents,
-    syncAgentRuntimeChats,
-    syncAgentRuntimeCron,
-} from '../../sync/agent-runtime-sync.ts';
 import {
     emitAgentInvalidationCascade,
     emitAgentRuntimeUpdated,
@@ -86,21 +79,8 @@ export const connectAgentRuntimeRoute = publicProcedure
             }
 
             refreshAgentRuntimeEventSync();
-            await refreshOpenClawSyncJobSchedules({ runImmediately: true });
             void syncMessagingBindingsToAgentRuntime().catch((error) => {
                 console.warn('[tavern] failed to sync runtime messaging bindings', error);
-            });
-            void syncAgentRuntimeAgents().catch((error) => {
-                console.warn('[tavern] failed to sync runtime agents after connect', error);
-            });
-            void syncAgentRuntimeChats().catch((error) => {
-                console.warn('[tavern] failed to sync runtime chats after connect', error);
-            });
-            void requestAgentRuntimeSessionSync().catch((error) => {
-                console.warn('[tavern] failed to sync runtime sessions after connect', error);
-            });
-            void syncAgentRuntimeCron().catch((error) => {
-                console.warn('[tavern] failed to sync runtime cron after connect', error);
             });
             emitAgentInvalidationCascade();
             emitCronUpdated();

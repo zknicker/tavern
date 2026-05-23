@@ -3,7 +3,7 @@ import test from 'node:test';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { JobsSummarySection } from './jobs-summary-section.tsx';
 
-test('JobsSummarySection renders each scheduled job with its cadence and next run', () => {
+test('JobsSummarySection renders each operational job with its cadence and next run', () => {
     const now = Date.now;
 
     Date.now = () => Date.parse('2026-04-22T18:00:00.000Z');
@@ -48,7 +48,7 @@ test('JobsSummarySection renders each scheduled job with its cadence and next ru
             />
         );
 
-        assert.match(markup, /Scheduled Jobs/);
+        assert.match(markup, /Operational Jobs/);
         assert.match(markup, /Sync OpenRouter Usage/);
         assert.match(markup, /every 1h/);
         assert.match(markup, /runs on startup/);

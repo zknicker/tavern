@@ -34,7 +34,7 @@ commands you ran and anything you did not verify.
 | Lane | Use when | Keep current by |
 | --- | --- | --- |
 | Focused unit/domain tests | Pure logic, view models, hooks, mappers, scheduling rules, validation, or regressions. | Add one targeted regression for behavior changes. Avoid asserting implementation calls. |
-| Runtime store/service tests | Persistence, ids, ordering, idempotency, transactions, recovery, Cortex, chat, cron, jobs, or runtime projections. | Use real temp SQLite/temp dirs and the real store/service. Do not mock tables or transaction behavior. |
+| Runtime store/service tests | Persistence, ids, ordering, idempotency, transactions, recovery, Cortex, chat, cron, jobs, or execution evidence. | Use real temp SQLite/temp dirs and the real store/service. Do not mock tables or transaction behavior. |
 | Runtime handler tests | Boot, process wiring, HTTP payload shape, event delivery, or route-owned error/auth/transport behavior. | Use the real Bun handler or a started local service only when the handler owns meaningful behavior. |
 | Contract/API/SDK gates | `packages/tavern-api`, OpenAPI, SDK client shape, generated types, or cross-boundary request/response contracts. | Run `@tavern/api check`, SDK tests/typecheck, and update docs with the product contract. |
 | App component/hook tests | React state rules, cache invalidation, optimistic UI, row models, filters, keyboard behavior, or rendering transforms. | Prefer hook/model/component tests before e2e. Use the `react-best-practices` skill for nontrivial React architecture. |

@@ -4,7 +4,6 @@ import {
     confirmAgentRuntimeConnection,
     getAgentRuntimeConnection,
 } from '../../agent-runtime-connection/service.ts';
-import { refreshOpenClawSyncJobSchedules } from '../../jobs/manager.ts';
 import { listAgentRuntimeCapabilityStatuses } from '../../storage/agent-runtime-capability-status.ts';
 import { emitAgentRuntimeUpdated, emitSyncDataUpdated } from '../invalidation-events.ts';
 import { publicProcedure } from '../trpc.ts';
@@ -28,7 +27,6 @@ export const checkAgentRuntimeHealthRoute = publicProcedure.mutation(async () =>
         const capabilities = await listAgentRuntimeCapabilityStatuses(runtimeId);
 
         refreshAgentRuntimeEventSync();
-        await refreshOpenClawSyncJobSchedules({ runImmediately: true });
         emitAgentRuntimeUpdated();
         emitSyncDataUpdated();
 
@@ -45,7 +43,6 @@ export const checkAgentRuntimeHealthRoute = publicProcedure.mutation(async () =>
     const capabilities = await listAgentRuntimeCapabilityStatuses(connection.id);
 
     refreshAgentRuntimeEventSync();
-    await refreshOpenClawSyncJobSchedules();
     emitAgentRuntimeUpdated();
     emitSyncDataUpdated();
 
