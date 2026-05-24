@@ -395,6 +395,83 @@ test('listRuntimeChatRows includes running durable activity as active tool rows'
     ]);
 });
 
+test('listRuntimeChatRows keeps response activity after its request message while a turn is running', async () => {
+    await saveAgentRuntimeConnection({
+        baseUrl: 'http://runtime.test',
+        enabled: true,
+        id: 'runtime-1',
+        isActive: true,
+        lastCheckedAt: '2026-05-18T12:00:00.000Z',
+        lastError: null,
+        name: 'Runtime',
+    });
+
+    globalThis.fetch = (async (input, init) => {
+        const request = new Request(input, init);
+        const url = new URL(request.url);
+
+        if (url.pathname === '/api/chats/cht_1/messages') {
+            return Response.json({
+                messages: [
+                    chatMessage({
+                        authorId: 'usr_owner',
+                        authorKind: 'user',
+                        authorLabel: 'You',
+                        content: 'Investigate the ordering.',
+                        id: 'msg_user',
+                        role: 'user',
+                        sequence: 2,
+                    }),
+                ],
+            });
+        }
+
+        if (url.pathname === '/api/chats/cht_1/responses') {
+            return Response.json({
+                activity: [
+                    responseActivity({
+                        detail: 'I will inspect the projector first.',
+                        id: 'act_assistant_reply_1',
+                        kind: 'message',
+                        responseId: 'rsp_run_1',
+                        status: 'running',
+                        title: 'Assistant reply',
+                    }),
+                ],
+                artifacts: [],
+                next_sequence: null,
+                responses: [
+                    {
+                        chat_id: 'cht_1',
+                        completed_at: null,
+                        created_at: '2026-05-18T12:00:01.000Z',
+                        id: 'rsp_run_1',
+                        metadata: {
+                            runtime: {
+                                agentId: 'main',
+                                runId: 'run_1',
+                                sessionKey: 'session_1',
+                            },
+                        },
+                        participant_id: 'agt_main',
+                        request_message_id: 'msg_user',
+                        response_message_id: null,
+                        status: 'running',
+                        summary: null,
+                        updated_at: '2026-05-18T12:00:03.000Z',
+                    },
+                ],
+            });
+        }
+
+        throw new Error(`Unexpected Tavern API request: ${url.pathname}`);
+    }) as typeof fetch;
+
+    const rows = await listRuntimeChatRows('cht_1');
+
+    expect(rows?.map((row) => row.id)).toEqual(['msg_user', 'act_assistant_reply_1']);
+});
+
 test('getChatToolActivity resolves durable response activity into tool details', async () => {
     await saveAgentRuntimeConnection({
         baseUrl: 'http://runtime.test',
@@ -464,6 +541,7 @@ function chatMessage(input: {
     sequence: number;
 }) {
     return {
+        attachment: null,
         author: {
             id: input.authorId,
             kind: input.authorKind,
@@ -471,6 +549,7 @@ function chatMessage(input: {
             metadata: {},
         },
         chat_id: 'cht_1',
+        content: input.content,
         created_at: `2026-05-18T12:00:0${input.sequence}.000Z`,
         deleted_at: null,
         delivery_id: input.role === 'assistant' ? 'del_1' : null,
@@ -484,14 +563,6 @@ function chatMessage(input: {
         },
         nonce: null,
         parent_message_id: null,
-        parts: [
-            {
-                content: input.content,
-                id: `${input.id}:part`,
-                kind: 'text',
-                metadata: {},
-            },
-        ],
         role: input.role,
         sequence: input.sequence,
         thread_root_id: null,

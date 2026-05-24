@@ -122,16 +122,24 @@ function mapOpenClawItemEvent({
     toolArgumentsByStepId,
     toolNamesByStepId,
 }) {
-    const kind = readOpenClawItemKind(data.kind) ?? readOpenClawItemKind(data.type);
+    const openClawKind = readString(data.kind) ?? readString(data.type);
+    const kind = readOpenClawItemKind(openClawKind) ?? (openClawKind ? 'custom' : null);
     const toolIdentity =
         kind === 'command' || kind === 'tool' ? readOpenClawToolIdentity(data) : null;
-    let id =
+    const id =
         toolIdentity?.toolCallId ??
         readString(data.toolCallId) ??
         readString(data.itemId) ??
         readString(data.id);
 
     if (!(id && kind)) {
+        return null;
+    }
+
+    // Codex emits completed raw-assistant preamble mirrors after streaming the
+    // same visible commentary through a msg_... preamble item. The msg_... item
+    // is the live activity identity; raw echoes would duplicate the timeline.
+    if (kind === 'preamble' && isRawAssistantItemId(id)) {
         return null;
     }
 
@@ -143,24 +151,22 @@ function mapOpenClawItemEvent({
         return null;
     }
 
-    if (isAssistantProgressItem(data, kind)) {
-        id = 'assistant-preamble';
-    }
-
-    if (kind === 'reasoning') {
-        const detail = readProgressDetail(data) ?? detailsByStepId.get('reasoning') ?? null;
+    if (kind === 'reasoning' || kind === 'analysis') {
+        const detail = readProgressDetail(data) ?? detailsByStepId.get(id) ?? null;
+        const label = readString(data.title) ?? labelsByStepId.get(id) ?? 'Reasoning';
 
         if (!detail) {
             return null;
         }
 
-        detailsByStepId.set('reasoning', detail);
-
+        labelsByStepId.set(id, label);
+        detailsByStepId.set(id, detail);
         return {
             detail,
-            id: 'reasoning',
+            id,
             kind: 'reasoning',
-            label: 'Reasoning',
+            label,
+            metadata: buildOpenClawItemMetadata(openClawKind),
             status: resolveOpenClawProgressStatus(data),
         };
     }
@@ -179,6 +185,7 @@ function mapOpenClawItemEvent({
             id,
             kind: 'message',
             label: 'Assistant reply',
+            metadata: buildOpenClawItemMetadata(openClawKind),
             status: resolveOpenClawProgressStatus(data),
         };
     }
@@ -194,7 +201,15 @@ function mapOpenClawItemEvent({
         });
     }
 
-    const label = readString(data.title) ?? readString(data.name) ?? labelsByStepId.get(id);
+    if (kind === 'patch') {
+        return mapOpenClawPatchEvent({ data, detailsByStepId, labelsByStepId });
+    }
+
+    const label =
+        readString(data.title) ??
+        readString(data.name) ??
+        labelsByStepId.get(id) ??
+        (kind === 'custom' ? openClawKind : null);
 
     if (!label) {
         return null;
@@ -218,14 +233,25 @@ function mapOpenClawItemEvent({
     return {
         detail,
         id,
-        kind,
+        kind: kind === 'custom' ? 'custom' : kind,
         label,
         arguments: kind === 'tool' ? (toolArgumentsByStepId.get(id) ?? null) : null,
+        metadata: buildOpenClawItemMetadata(openClawKind),
         status: resolveOpenClawProgressStatus(data),
         rawOpenClawIds: kind === 'tool' ? toolIdentity.rawIds : null,
         toolCallId: kind === 'tool' ? toolIdentity.toolCallId : null,
         toolName,
     };
+}
+
+function buildOpenClawItemMetadata(openClawKind) {
+    return openClawKind
+        ? {
+              runtime: {
+                  openClawKind,
+              },
+          }
+        : null;
 }
 
 function mapOpenClawCommandItemEvent({
@@ -479,7 +505,8 @@ function resolveOpenClawCommandItemLabel({ data, id, labelsByStepId, toolName })
         return existing;
     }
 
-    const target = readString(data.meta) ?? readString(data.summary) ?? readString(data.progressText);
+    const target =
+        readString(data.meta) ?? readString(data.summary) ?? readString(data.progressText);
     const label = target ? `${formatToolName(toolName)} ${target}` : formatToolName(toolName);
 
     labelsByStepId.set(id, label);
@@ -552,7 +579,8 @@ function buildCommandOutputResult(data) {
     return {
         cwd: readString(data.cwd),
         durationMs: typeof data.durationMs === 'number' ? data.durationMs : null,
-        exitCode: typeof data.exitCode === 'number' || data.exitCode === null ? data.exitCode : null,
+        exitCode:
+            typeof data.exitCode === 'number' || data.exitCode === null ? data.exitCode : null,
         output: readString(data.output),
         status: readString(data.status),
     };
@@ -591,10 +619,12 @@ function resolveOpenClawProgressStatus(data) {
 
 function readOpenClawItemKind(value) {
     return [
+        'analysis',
         'approval',
         'artifact',
         'command',
         'message',
+        'patch',
         'plan',
         'preamble',
         'reasoning',
@@ -606,20 +636,6 @@ function readOpenClawItemKind(value) {
 
 function isRawAssistantItemId(id) {
     return id.startsWith('raw-assistant');
-}
-
-function isAssistantProgressItem(data, kind) {
-    if (kind === 'preamble') {
-        return true;
-    }
-
-    if (kind !== 'message') {
-        return false;
-    }
-
-    const title = readString(data.title)?.toLowerCase();
-
-    return title === 'assistant reply' || title === 'preamble';
 }
 
 function readString(value) {

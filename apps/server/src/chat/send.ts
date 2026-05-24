@@ -89,13 +89,8 @@ export async function sendTavernChatMessage(
                 source: 'openclaw',
             },
         },
+        content: parsed.content,
         nonce: clientMessageId,
-        parts: [
-            {
-                content: parsed.content,
-                kind: 'text',
-            },
-        ],
         role: 'user',
     });
     const accepted = await withCapabilityStatus(

@@ -48,7 +48,9 @@ describe('turn progress mapper', () => {
         await flushPendingUpdates();
 
         expect(context.tavern.updateTurnActivity.mock.calls).toHaveLength(2);
-        expect(context.tavern.updateTurnActivity.mock.calls.map(([, input]) => input)).toMatchObject([
+        expect(
+            context.tavern.updateTurnActivity.mock.calls.map(([, input]) => input)
+        ).toMatchObject([
             {
                 status: 'running',
                 step: {
@@ -239,11 +241,7 @@ describe('turn progress mapper', () => {
             'bash run sleep 3',
         ]);
         expect(JSON.stringify(steps)).not.toContain('Command');
-        expect(steps.map((step) => step.status)).toEqual([
-            'running',
-            'completed',
-            'completed',
-        ]);
+        expect(steps.map((step) => step.status)).toEqual(['running', 'completed', 'completed']);
         expect(steps[1]).toMatchObject({
             id: 'act_call_123',
             detail: 'done',
@@ -397,7 +395,7 @@ describe('turn progress mapper', () => {
             status: 'running',
             step: {
                 detail: 'I will inspect the workspace before replying.',
-                id: 'act_assistant-preamble',
+                id: 'act_msg_preamble_1',
                 kind: 'message',
                 status: 'running',
                 title: 'Assistant reply',
@@ -405,7 +403,7 @@ describe('turn progress mapper', () => {
         });
     });
 
-    it('maps streamed and raw assistant preamble events to one turn-scoped activity id', async () => {
+    it('keeps separate streamed assistant preamble item ids and ignores raw assistant echoes', async () => {
         const context = {
             tavern: {
                 updateTurnActivity: mock(async () => ({})),
@@ -425,7 +423,7 @@ describe('turn progress mapper', () => {
 
         mapper.handle({
             data: {
-                itemId: 'msg_07e39fa71f5978ad016a112ca27c6c8193bf774b00e5aa4fe6',
+                itemId: 'msg_preamble_1',
                 kind: 'preamble',
                 phase: 'update',
                 progressText: 'I will run a timed shell check before the final reply.',
@@ -445,23 +443,36 @@ describe('turn progress mapper', () => {
             },
             stream: 'item',
         });
+        mapper.handle({
+            data: {
+                itemId: 'msg_preamble_2',
+                kind: 'preamble',
+                phase: 'update',
+                progressText: 'The timed check finished. I will inspect the output next.',
+                source: 'codex-app-server',
+                title: 'Preamble',
+            },
+            stream: 'item',
+        });
 
         await flushPendingUpdates();
 
         expect(context.tavern.updateTurnActivity.mock.calls).toHaveLength(2);
-        expect(context.tavern.updateTurnActivity.mock.calls.map(([, input]) => input)).toMatchObject([
+        expect(
+            context.tavern.updateTurnActivity.mock.calls.map(([, input]) => input)
+        ).toMatchObject([
             {
                 step: {
                     detail: 'I will run a timed shell check before the final reply.',
-                    id: 'act_assistant-preamble',
+                    id: 'act_msg_preamble_1',
                     kind: 'message',
                     title: 'Assistant reply',
                 },
             },
             {
                 step: {
-                    detail: 'I will run a timed shell check before the final reply.',
-                    id: 'act_assistant-preamble',
+                    detail: 'The timed check finished. I will inspect the output next.',
+                    id: 'act_msg_preamble_2',
                     kind: 'message',
                     title: 'Assistant reply',
                 },
@@ -469,7 +480,7 @@ describe('turn progress mapper', () => {
         ]);
     });
 
-    it('maps raw assistant preamble transcript item events to the turn-scoped preamble activity', async () => {
+    it('ignores raw assistant preamble transcript echoes', async () => {
         const context = {
             tavern: {
                 updateTurnActivity: mock(async () => ({})),
@@ -501,15 +512,7 @@ describe('turn progress mapper', () => {
 
         await flushPendingUpdates();
 
-        expect(context.tavern.updateTurnActivity.mock.calls).toHaveLength(1);
-        expect(context.tavern.updateTurnActivity.mock.calls[0][1]).toMatchObject({
-            step: {
-                detail: 'I will inspect the workspace before replying.',
-                id: 'act_assistant-preamble',
-                kind: 'message',
-                title: 'Assistant reply',
-            },
-        });
+        expect(context.tavern.updateTurnActivity.mock.calls).toHaveLength(0);
     });
 
     it('ignores raw assistant message transcript item events', async () => {
@@ -544,6 +547,191 @@ describe('turn progress mapper', () => {
         await flushPendingUpdates();
 
         expect(context.tavern.updateTurnActivity.mock.calls).toHaveLength(0);
+    });
+
+    it('maps unknown stable item events to custom activity rows', async () => {
+        const context = {
+            tavern: {
+                updateTurnActivity: mock(async () => ({})),
+            },
+        };
+        const mapper = createTurnProgressMapper({
+            context,
+            input: {
+                agentId: 'main',
+                chatId: 'cht_1',
+                messageId: 'msg_1',
+                sessionKey: 'agent:main:tavern:channel:cht_1',
+            },
+            runId: 'run_1',
+            startedAt: '2026-05-18T12:00:00.000Z',
+        });
+
+        mapper.handle({
+            data: {
+                itemId: 'item_unexpected_1',
+                kind: 'workspace_scan',
+                phase: 'update',
+                progressText: 'Scanned the temporary workspace.',
+                status: 'running',
+                title: 'Workspace scan',
+            },
+            stream: 'item',
+        });
+
+        await flushPendingUpdates();
+
+        expect(context.tavern.updateTurnActivity.mock.calls).toHaveLength(1);
+        expect(context.tavern.updateTurnActivity.mock.calls[0][1]).toMatchObject({
+            step: {
+                detail: 'Scanned the temporary workspace.',
+                id: 'act_item_unexpected_1',
+                kind: 'custom',
+                metadata: {
+                    runtime: {
+                        openClawKind: 'workspace_scan',
+                    },
+                },
+                status: 'running',
+                title: 'Workspace scan',
+            },
+        });
+    });
+
+    it('maps analysis item events to reasoning activity rows', async () => {
+        const context = {
+            tavern: {
+                updateTurnActivity: mock(async () => ({})),
+            },
+        };
+        const mapper = createTurnProgressMapper({
+            context,
+            input: {
+                agentId: 'main',
+                chatId: 'cht_1',
+                messageId: 'msg_1',
+                sessionKey: 'agent:main:tavern:channel:cht_1',
+            },
+            runId: 'run_1',
+            startedAt: '2026-05-18T12:00:00.000Z',
+        });
+
+        mapper.handle({
+            data: {
+                itemId: 'analysis_1',
+                kind: 'analysis',
+                progressText: 'Reasoning summary visible to the app.',
+                status: 'completed',
+                title: 'Reasoning',
+            },
+            stream: 'item',
+        });
+
+        await flushPendingUpdates();
+
+        expect(context.tavern.updateTurnActivity.mock.calls).toHaveLength(1);
+        expect(context.tavern.updateTurnActivity.mock.calls[0][1]).toMatchObject({
+            step: {
+                detail: 'Reasoning summary visible to the app.',
+                id: 'act_analysis_1',
+                kind: 'reasoning',
+                metadata: {
+                    runtime: {
+                        openClawKind: 'analysis',
+                    },
+                },
+                status: 'completed',
+                title: 'Reasoning',
+            },
+        });
+    });
+
+    it('ignores analysis lifecycle item events without visible reasoning text', async () => {
+        const context = {
+            tavern: {
+                updateTurnActivity: mock(async () => ({})),
+            },
+        };
+        const mapper = createTurnProgressMapper({
+            context,
+            input: {
+                agentId: 'main',
+                chatId: 'cht_1',
+                messageId: 'msg_1',
+                sessionKey: 'agent:main:tavern:channel:cht_1',
+            },
+            runId: 'run_1',
+            startedAt: '2026-05-18T12:00:00.000Z',
+        });
+
+        mapper.handle({
+            data: {
+                itemId: 'rs_01e1d5a2ba33f641016a12640b77c081969592e5df6c7baca4',
+                kind: 'analysis',
+                phase: 'start',
+                status: 'running',
+                title: 'Reasoning',
+            },
+            stream: 'item',
+        });
+        mapper.handle({
+            data: {
+                itemId: 'rs_01e1d5a2ba33f641016a12640b77c081969592e5df6c7baca4',
+                kind: 'analysis',
+                phase: 'end',
+                status: 'completed',
+                title: 'Reasoning',
+            },
+            stream: 'item',
+        });
+
+        await flushPendingUpdates();
+
+        expect(context.tavern.updateTurnActivity.mock.calls).toHaveLength(0);
+    });
+
+    it('maps patch item events to artifact activity rows', async () => {
+        const context = {
+            tavern: {
+                updateTurnActivity: mock(async () => ({})),
+            },
+        };
+        const mapper = createTurnProgressMapper({
+            context,
+            input: {
+                agentId: 'main',
+                chatId: 'cht_1',
+                messageId: 'msg_1',
+                sessionKey: 'agent:main:tavern:channel:cht_1',
+            },
+            runId: 'run_1',
+            startedAt: '2026-05-18T12:00:00.000Z',
+        });
+
+        mapper.handle({
+            data: {
+                itemId: 'patch_1',
+                kind: 'patch',
+                phase: 'end',
+                status: 'completed',
+                summary: 'Edited probe.txt',
+                title: 'File change',
+            },
+            stream: 'item',
+        });
+
+        await flushPendingUpdates();
+
+        expect(context.tavern.updateTurnActivity.mock.calls).toHaveLength(1);
+        expect(context.tavern.updateTurnActivity.mock.calls[0][1]).toMatchObject({
+            step: {
+                detail: 'Edited probe.txt',
+                id: 'act_patch_1',
+                kind: 'artifact',
+                status: 'completed',
+                title: 'File change',
+            },
+        });
     });
 
     it('uses the normalized OpenClaw tool call id as the canonical id for wrapped tool item events', async () => {

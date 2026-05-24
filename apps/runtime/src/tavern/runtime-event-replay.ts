@@ -175,7 +175,11 @@ function activityEventToRuntimeEvents(
     event: Extract<
         TavernChatEvent,
         {
-            type: 'activity.completed' | 'activity.created' | 'activity.failed' | 'activity.updated';
+            type:
+                | 'activity.completed'
+                | 'activity.created'
+                | 'activity.failed'
+                | 'activity.updated';
         }
     >
 ): PersistedRuntimeEvent[] {
@@ -277,9 +281,26 @@ function activityStatus(
 }
 
 function messageText(message: TavernChatMessage) {
-    return message.parts
-        .filter((part) => part.kind === 'text')
-        .map((part) => part.content)
+    if (typeof message.content === 'string') {
+        return message.content;
+    }
+
+    const parts = Array.isArray((message as unknown as { parts?: unknown }).parts)
+        ? (message as unknown as { parts: unknown[] }).parts
+        : [];
+
+    return parts
+        .map((part) => {
+            if (typeof part === 'string') {
+                return part;
+            }
+            if (!(part && typeof part === 'object')) {
+                return null;
+            }
+            const value = (part as Record<string, unknown>).content;
+            return typeof value === 'string' ? value : null;
+        })
+        .filter((part): part is string => Boolean(part?.trim()))
         .join('\n');
 }
 

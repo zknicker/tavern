@@ -152,7 +152,7 @@ beforeEach(async () => {
         if (url.pathname.endsWith('/deliveries')) {
             const record = body as {
                 id: string;
-                message: { id: string; metadata: Record<string, unknown>; parts: unknown[] };
+                message: { content: string; id: string; metadata: Record<string, unknown> };
             };
             return Response.json({
                 cursor: '2',
@@ -165,7 +165,9 @@ beforeEach(async () => {
                         label: null,
                         metadata: {},
                     },
+                    attachment: null,
                     chat_id: tavernChatId,
+                    content: record.message.content,
                     created_at: '2026-05-12T19:00:02.000Z',
                     deleted_at: null,
                     delivery_id: record.id,
@@ -173,7 +175,6 @@ beforeEach(async () => {
                     metadata: record.message.metadata,
                     nonce: null,
                     parent_message_id: null,
-                    parts: record.message.parts,
                     role: 'assistant',
                     sequence: 2,
                     thread_root_id: null,

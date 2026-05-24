@@ -60,6 +60,7 @@ describe('Tavern API adapter', () => {
                     id: 'del_1',
                     message: {
                         author_id: 'agt_main',
+                        content: 'done',
                         id: 'msg_reply',
                         metadata: {
                             runtime: {
@@ -70,12 +71,6 @@ describe('Tavern API adapter', () => {
                                 source: 'openclaw',
                             },
                         },
-                        parts: [
-                            {
-                                content: 'done',
-                                kind: 'text',
-                            },
-                        ],
                         role: 'assistant',
                     },
                     metadata: {
@@ -311,10 +306,7 @@ describe('Tavern API adapter', () => {
             { step }
         );
 
-        expect(activityIds).toEqual([
-            'act_run_1_raw-assistant-2',
-            'act_run_2_raw-assistant-2',
-        ]);
+        expect(activityIds).toEqual(['act_run_1_raw-assistant-2', 'act_run_2_raw-assistant-2']);
     });
 
     it('preserves tool ids in activity step metadata', () => {

@@ -8,9 +8,9 @@ import type { Database } from '../../db/sqlite';
 import { namedParams, optionalRow } from '../../db/sqlite';
 import { assertChatExists } from './chats';
 import { currentCursor, insertEvent, publish } from './events';
-import { assertOptionalTavernIdPrefix, assertTavernIdPrefix, createMessagePartId } from './ids';
+import { assertOptionalTavernIdPrefix, assertTavernIdPrefix } from './ids';
 import { clampLimit } from './limits';
-import type { DeleteReceipt, MessageReceipt, MessageRow, ParticipantRow, PartRow } from './types';
+import type { DeleteReceipt, MessageReceipt, MessageRow, ParticipantRow } from './types';
 
 export function createMessage(
     chatId: string,
@@ -115,14 +115,19 @@ export function insertMessage(
     const createdAt = new Date().toISOString();
     db.prepare(
         `INSERT INTO chat_messages
-         (id, chat_id, sequence, author_id, role, nonce, parent_message_id, thread_root_id,
-          delivery_id, created_at, metadata_json)
-         VALUES ($id, $chatId, $sequence, $authorId, $role, $nonce, $parentMessageId,
-          $threadRootId, $deliveryId, $createdAt, $metadataJson)`
+         (id, chat_id, sequence, author_id, role, content, attachment_json, nonce, parent_message_id,
+          thread_root_id, delivery_id, created_at, metadata_json)
+         VALUES ($id, $chatId, $sequence, $authorId, $role, $content, $attachmentJson, $nonce,
+          $parentMessageId, $threadRootId, $deliveryId, $createdAt, $metadataJson)`
     ).run(
         namedParams({
+            attachmentJson:
+                input.attachment === undefined || input.attachment === null
+                    ? null
+                    : JSON.stringify(input.attachment),
             authorId,
             chatId,
+            content: input.content,
             createdAt,
             deliveryId,
             id: input.id,
@@ -134,22 +139,6 @@ export function insertMessage(
             threadRootId: input.thread_root_id ?? null,
         })
     );
-    input.parts.forEach((part, index) => {
-        db.prepare(
-            `INSERT INTO chat_message_parts
-             (id, message_id, part_index, kind, content, metadata_json)
-             VALUES ($id, $messageId, $partIndex, $kind, $content, $metadataJson)`
-        ).run(
-            namedParams({
-                content: part.content,
-                id: part.id ?? createMessagePartId(input.id, index),
-                kind: part.kind,
-                messageId: input.id,
-                metadataJson: JSON.stringify(part.metadata ?? {}),
-                partIndex: index,
-            })
-        );
-    });
     db.prepare(
         `UPDATE chats
          SET last_message_sequence = $sequence, updated_at = $createdAt
@@ -194,14 +183,13 @@ export function findExistingMessage(
 
 function rowToMessage(row: MessageRow, db: Database): TavernChatMessage {
     const author = getParticipant(row.chat_id, row.author_id, db);
-    const parts = db
-        .prepare(
-            'SELECT * FROM chat_message_parts WHERE message_id = $messageId ORDER BY part_index'
-        )
-        .all(namedParams({ messageId: row.id })) as PartRow[];
     return {
+        attachment: row.attachment_json
+            ? (JSON.parse(row.attachment_json) as Record<string, unknown>)
+            : null,
         author,
         chat_id: row.chat_id,
+        content: row.content,
         created_at: row.created_at,
         deleted_at: row.deleted_at,
         delivery_id: row.delivery_id,
@@ -209,12 +197,6 @@ function rowToMessage(row: MessageRow, db: Database): TavernChatMessage {
         metadata: JSON.parse(row.metadata_json) as Record<string, unknown>,
         nonce: row.nonce,
         parent_message_id: row.parent_message_id,
-        parts: parts.map((part) => ({
-            content: part.content,
-            id: part.id,
-            kind: part.kind,
-            metadata: JSON.parse(part.metadata_json) as Record<string, unknown>,
-        })),
         role: row.role,
         sequence: row.sequence,
         thread_root_id: row.thread_root_id,
@@ -227,10 +209,6 @@ function assertMessageInputIds(chatId: string, input: TavernCreateMessageRequest
     assertTavernIdPrefix(input.author_id, authorPrefix(input.role), 'Author id');
     assertOptionalTavernIdPrefix(input.parent_message_id, 'msg_', 'Parent message id');
     assertOptionalTavernIdPrefix(input.thread_root_id, 'msg_', 'Thread root message id');
-
-    for (const part of input.parts) {
-        assertOptionalTavernIdPrefix(part.id, 'part_', 'Message part id');
-    }
 }
 
 function authorPrefix(role: TavernChatMessage['role']) {
@@ -289,8 +267,8 @@ function assertSameMessage(
         existing.chat_id !== chatId ||
         existing.author.id !== input.author_id ||
         existing.role !== input.role ||
-        JSON.stringify(existing.parts.map((part) => [part.kind, part.content])) !==
-            JSON.stringify(input.parts.map((part) => [part.kind, part.content]))
+        existing.content !== input.content ||
+        JSON.stringify(existing.attachment) !== JSON.stringify(input.attachment ?? null)
     ) {
         throw new Error('Tavern message id or nonce was already used for a different message.');
     }

@@ -165,10 +165,15 @@ export function mergeTimelineMessages(input: {
 
     const initial = input.logged ?? createEmptyLog(input.limit);
 
-    return input.messages.reduce(
+    const merged = input.messages.reduce(
         (current, message) => appendTimelineMessage(current, message) ?? current,
         initial
     );
+
+    return {
+        ...merged,
+        rows: [...merged.rows].sort(compareChatLogRows),
+    };
 }
 
 export function getLoggedTimelineMessageIds(
@@ -198,4 +203,18 @@ export function getLoggedTimelineMessageIds(
     }
 
     return confirmedIds;
+}
+
+function compareChatLogRows(left: ChatLogRow, right: ChatLogRow) {
+    const timestampDelta = getRowTimestampMs(left) - getRowTimestampMs(right);
+
+    return timestampDelta || getRowSortRank(left) - getRowSortRank(right);
+}
+
+function getRowSortRank(row: ChatLogRow) {
+    if (row.kind === 'message') {
+        return row.message.senderType === 'user' ? 0 : 2;
+    }
+
+    return 1;
 }

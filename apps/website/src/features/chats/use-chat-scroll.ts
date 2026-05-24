@@ -8,9 +8,11 @@ function isNearBottom(container: HTMLElement) {
 
 export function useChatScroll({
     enabled,
+    followResizes = true,
     followKey,
 }: {
     enabled: boolean;
+    followResizes?: boolean;
     followKey?: string | null;
 }) {
     const viewportRef = React.useRef<HTMLDivElement | null>(null);
@@ -62,7 +64,7 @@ export function useChatScroll({
     }, [enabled, followKey, scrollToBottom]);
 
     React.useEffect(() => {
-        if (!enabled || typeof ResizeObserver === 'undefined') {
+        if (!enabled || !followResizes || typeof ResizeObserver === 'undefined') {
             return;
         }
 
@@ -81,7 +83,7 @@ export function useChatScroll({
         observer.observe(content);
 
         return () => observer.disconnect();
-    }, [enabled, scrollToBottom]);
+    }, [enabled, followResizes, scrollToBottom]);
 
     return {
         contentRef,

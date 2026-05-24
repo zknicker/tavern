@@ -239,16 +239,23 @@ writes.
 
 The core mapping is:
 
-* `kind: "preamble"` item events update one turn-scoped preamble activity row.
+* `kind: "preamble"` item events update one activity row per OpenClaw
+  `msg_...` item id.
 * `kind: "tool"` and `kind: "command"` item events create or update durable
   tool activity rows keyed by normalized tool call id.
+* Unknown id-bearing item events become `custom` activity rows with the original
+  OpenClaw kind preserved in metadata.
 * `onCommandOutput` and `onToolResult` enrich existing tool activity rows.
 * `onPartialReply` is final assistant draft streaming, not response activity.
 
 | OpenClaw callback | Tavern API write | Contract |
 | --- | --- | --- |
-| `onItemEvent` with `kind: "preamble"` | `chat.response_activity.upsert` with `message` kind | Codex commentary before tool use. It is activity, not the final assistant reply. |
+| `onItemEvent` with `kind: "preamble"` and `msg_...` item id | `chat.response_activity.upsert` with `message` kind | Codex commentary before tool use. It streams into the activity row for that item id and is not the final assistant reply. |
+| `onItemEvent` with `kind: "preamble"` and `raw-assistant-*` item id | No durable API write | Completed raw assistant echoes duplicate the streamed `msg_...` preamble surface and are ignored. |
 | `onItemEvent` with `kind: "tool"` or `kind: "command"` | `chat.response_activity.upsert` with `tool_call` kind | The live tool row starts here and is keyed by normalized tool call id. |
+| `onItemEvent` with `kind: "patch"` | `chat.response_activity.upsert` with `artifact` kind | File edit activity appears in the ordered activity timeline. |
+| `onItemEvent` with `kind: "reasoning"` or `kind: "analysis"` | `chat.response_activity.upsert` with `reasoning` kind | OpenClaw-exposed reasoning item status or summary appears as reasoning activity. Hidden chain-of-thought is not exposed. |
+| `onItemEvent` with an unknown stable kind | `chat.response_activity.upsert` with `custom` kind | The row is recoverable and compactly renderable while Tavern preserves the source kind in metadata. |
 | `onCommandOutput` | Update an existing `tool_call` activity row | Command output, exit status, duration, and command detail enrich the same row. |
 | `onToolResult` | Update an existing `tool_call` activity row | Channel-visible tool output can enrich the same row, but cannot create one. |
 | `onReasoningStream` | `chat.response_activity.upsert` with `reasoning` kind | Provider-exposed reasoning summaries only. |
@@ -263,12 +270,11 @@ sites.
 Codex app-server can emit the same commentary text twice: first as a streamed
 `onItemEvent` preamble with a normal `msg_...` item id, then as a completed
 raw assistant response item that OpenClaw maps back to `kind: "preamble"` with
-an id like `raw-assistant-2`. Tavern treats all `kind: "preamble"` events in a
-turn as updates to the same turn-scoped assistant preamble activity. OpenClaw
-item ids are audit data for preambles, not Tavern activity identity. Duplicate
-writes with unchanged text are idempotent at the Tavern API/database layer.
-`raw-assistant-*` message items remain ignored because final assistant text
-belongs to the delivery path.
+an id like `raw-assistant-2`. Tavern uses the `msg_...` id as the activity row
+identity because it is the live streaming identity. `raw-assistant-*` preamble
+items are ignored because they are completed transcript echoes of the streamed
+commentary item. `raw-assistant-*` message items also remain ignored because
+final assistant text belongs to the delivery path.
 
 The plugin writes Tavern API records. Runtime emits durable chat events from
 those writes:
@@ -400,8 +406,10 @@ For OpenClaw `2026.5.20-beta.1`, turn phases adapt into Tavern API writes:
 | Turn start | `chat.responses.upsert` with `running` status | The chat shows an active response and a working timer. |
 | `onPlanUpdate` | `chat.response_activity.upsert` with `planning` kind | Planning appears as a live response activity row. |
 | `onReasoningStream` | `chat.response_activity.upsert` with `reasoning` kind | Provider-exposed reasoning summaries appear as live activity. |
-| `onItemEvent` preamble item | `chat.response_activity.upsert` with `message` kind | Codex commentary preambles appear before tools finish without becoming final answers. |
+| `onItemEvent` preamble item with `msg_...` id | `chat.response_activity.upsert` with `message` kind | Codex commentary preambles appear before tools finish without becoming final answers. |
+| `onItemEvent` preamble item with `raw-assistant-*` id | No durable API write | Completed raw assistant echoes do not duplicate streamed commentary rows. |
 | `onItemEvent` command or tool item | `chat.response_activity.upsert` with `tool_call` kind, keyed by normalized tool call id | A tool row appears as soon as the tool starts. |
+| Unknown id-bearing `onItemEvent` kind | `chat.response_activity.upsert` with `custom` kind | Tavern keeps the source activity visible without inventing first-class semantics. |
 | `onCommandOutput` | Update the existing activity row by normalized tool call id | Output, exit status, duration, and command detail enrich the same tool row. |
 | `onApprovalEvent` | `chat.response_activity.upsert` with `approval` kind | Approval requests and decisions appear in the response activity timeline. |
 | `onPatchSummary` | `chat.response_activity.upsert` with `artifact` kind | File edits or patch summaries appear as activity and may link artifacts. |
@@ -489,9 +497,11 @@ The minimum test set for this plugin proves:
   OpenClaw tool call id
 * Codex commentary preamble appears while tools are still running when OpenClaw
   emits a preamble item event
-* streamed `msg_...` and raw `raw-assistant-*` preamble events update the same
-  turn-scoped assistant preamble row
+* streamed `msg_...` preamble events update one durable activity row per
+  OpenClaw item id
+* raw `raw-assistant-*` preamble echoes do not create duplicate activity rows
 * `raw-assistant-*` message mirror events do not create assistant activity rows
+* unknown id-bearing `onItemEvent` kinds become compact `custom` activity rows
 * reasoning summaries appear only when OpenClaw emits reasoning summary text
 * hard reloads during a tool-heavy turn preserve one user row, ordered progress,
   and one final assistant reply

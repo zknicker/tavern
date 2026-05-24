@@ -228,7 +228,6 @@ export interface components {
         Id: string;
         ChatId: string;
         MessageId: string;
-        MessagePartId: string;
         ResponseId: string;
         ActivityId: string;
         ArtifactId: string;
@@ -267,13 +266,6 @@ export interface components {
             label: string | null;
             metadata: components["schemas"]["JsonObject"];
         };
-        MessagePart: {
-            id: components["schemas"]["MessagePartId"];
-            /** @enum {string} */
-            kind: "text" | "reasoning" | "tool_call" | "tool_result" | "attachment";
-            content: string;
-            metadata: components["schemas"]["JsonObject"];
-        };
         ChatMessage: {
             id: components["schemas"]["MessageId"];
             chat_id: components["schemas"]["ChatId"];
@@ -281,7 +273,8 @@ export interface components {
             author: components["schemas"]["Participant"];
             /** @enum {string} */
             role: "user" | "assistant" | "system";
-            parts: components["schemas"]["MessagePart"][];
+            content: string;
+            attachment: components["schemas"]["JsonObject"] | null;
             nonce: string | null;
             parent_message_id: components["schemas"]["MessageId"] | null;
             thread_root_id: components["schemas"]["MessageId"] | null;
@@ -295,17 +288,11 @@ export interface components {
             author_id: components["schemas"]["ParticipantId"];
             /** @enum {string} */
             role: "user" | "assistant" | "system";
-            parts: components["schemas"]["MessagePartInput"][];
+            content: string;
+            attachment?: components["schemas"]["JsonObject"] | null;
             nonce?: string;
             parent_message_id?: components["schemas"]["MessageId"] | null;
             thread_root_id?: components["schemas"]["MessageId"] | null;
-            metadata?: components["schemas"]["JsonObject"];
-        };
-        MessagePartInput: {
-            id?: components["schemas"]["MessagePartId"];
-            /** @enum {string} */
-            kind: "text" | "reasoning" | "tool_call" | "tool_result" | "attachment";
-            content: string;
             metadata?: components["schemas"]["JsonObject"];
         };
         ChatMessageReceipt: {

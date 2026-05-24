@@ -22,7 +22,6 @@ Tavern Runtime is the durable source for chat objects.
 | --- | --- | --- |
 | `chat` | Durable | Runtime SQLite |
 | `message` | Durable | Runtime SQLite |
-| `message_part` | Durable | Runtime SQLite |
 | `response` | Durable | Runtime SQLite |
 | `activity` | Durable response work | Runtime SQLite |
 | `artifact` | Durable renderable output | Runtime SQLite or content store |
@@ -81,6 +80,10 @@ stays app-local until the final assistant message is persisted.
 `POST /api/chats/{chat_id}/messages` creates a durable user, assistant, or
 system message before work starts.
 
+Messages have one text body and an optional durable attachment. Agent work such
+as reasoning summaries, tool calls, tool results, preambles, and progress belongs
+to `response` and `activity` records, not message body fields.
+
 Request:
 
 ```jsonc
@@ -89,9 +92,8 @@ Request:
   "nonce": "client-send-...",
   "author_id": "usr_...",
   "role": "user",
-  "parts": [
-    { "kind": "text", "content": "Run the report." }
-  ],
+  "content": "Run the report.",
+  "attachment": null,
   "metadata": {
     "runtime": {
       "source": "openclaw",
@@ -119,9 +121,8 @@ Response:
       "metadata": {}
     },
     "role": "user",
-    "parts": [
-      { "id": "part_...", "kind": "text", "content": "Run the report.", "metadata": {} }
-    ],
+    "content": "Run the report.",
+    "attachment": null,
     "nonce": "client-send-...",
     "delivery_id": null,
     "parent_message_id": null,
@@ -150,7 +151,7 @@ Rules:
 * `after_sequence` and `before_sequence` are exclusive cursor windows.
 * `limit` is clamped by the server.
 * Soft-deleted messages keep their sequence slot.
-* Message parts are hydrated in display order.
+* Message `content` and optional `attachment` are hydrated with the row.
 * Authors are hydrated enough for clients to render without a second lookup.
 
 Runtime sessions can have their own sequence domains. Preserve runtime sequence
@@ -172,9 +173,8 @@ Request:
     "id": "msg_assistant_...",
     "author_id": "agt_...",
     "role": "assistant",
-    "parts": [
-      { "kind": "text", "content": "Done." }
-    ],
+    "content": "Done.",
+    "attachment": null,
     "metadata": {}
   },
   "metadata": {

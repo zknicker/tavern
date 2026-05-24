@@ -63,6 +63,8 @@ CREATE TABLE IF NOT EXISTS chat_messages (
   sequence          INTEGER NOT NULL,
   author_id         TEXT NOT NULL,
   role              TEXT NOT NULL CHECK (role IN ('user', 'assistant', 'system')),
+  content           TEXT NOT NULL DEFAULT '',
+  attachment_json   TEXT,
   nonce             TEXT,
   parent_message_id TEXT,
   thread_root_id    TEXT,
@@ -77,17 +79,6 @@ CREATE TABLE IF NOT EXISTS chat_messages (
 
 CREATE INDEX IF NOT EXISTS idx_chat_messages_chat_sequence
   ON chat_messages(chat_id, sequence);
-
-CREATE TABLE IF NOT EXISTS chat_message_parts (
-  id            TEXT PRIMARY KEY,
-  message_id    TEXT NOT NULL,
-  part_index    INTEGER NOT NULL,
-  kind          TEXT NOT NULL CHECK (kind IN ('text', 'reasoning', 'tool_call', 'tool_result', 'attachment')),
-  content       TEXT NOT NULL,
-  metadata_json TEXT NOT NULL DEFAULT '{}',
-  FOREIGN KEY(message_id) REFERENCES chat_messages(id) ON DELETE CASCADE,
-  UNIQUE(message_id, part_index)
-);
 
 CREATE TABLE IF NOT EXISTS chat_events (
   cursor          INTEGER PRIMARY KEY,

@@ -24,7 +24,6 @@ Tavern Runtime owns canonical chat state:
 * chats
 * participants
 * messages
-* message parts
 * responses
 * response activity
 * artifacts
@@ -48,7 +47,6 @@ Runtime SQLite owns:
 chats
 chat_participants
 chat_messages
-chat_message_parts
 chat_responses
 chat_response_activity
 chat_artifacts

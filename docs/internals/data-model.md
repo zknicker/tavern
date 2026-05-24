@@ -54,7 +54,6 @@ Use semantic prefixes at the Tavern API boundary.
 | --- | --- |
 | `cht_` | chat |
 | `msg_` | message |
-| `part_` | message part |
 | `rsp_` | response |
 | `act_` | response activity |
 | `art_` | artifact |
@@ -86,7 +85,6 @@ Cortex ids use Tavern product identity:
 chats
 chat_participants
 chat_messages
-chat_message_parts
 chat_responses
 chat_response_activity
 chat_artifacts
@@ -167,6 +165,8 @@ chat_messages
   sequence              INTEGER NOT NULL
   author_participant_id TEXT NOT NULL
   status                TEXT NOT NULL        -- accepted, delivered, failed, deleted
+  content               TEXT NOT NULL
+  attachment_json       TEXT
   nonce                 TEXT
   source                TEXT NOT NULL        -- tavern, openclaw, automation, system
   request_id            TEXT
@@ -201,33 +201,11 @@ Rules:
 * Content, timestamp, and display text are never duplicate keys.
 * Soft delete updates `status` and `deleted_at`; it keeps the row and sequence.
 
-## `chat_message_parts`
-
-Ordered content inside a message.
-
-```text
-chat_message_parts
-  id                    TEXT PRIMARY KEY
-  message_id            TEXT NOT NULL
-  part_index            INTEGER NOT NULL
-  type                  TEXT NOT NULL        -- text, reasoning_summary, file, image, tool_ref, json
-  text                  TEXT
-  asset_id              TEXT
-  tool_call_id          TEXT
-  metadata_json         TEXT NOT NULL DEFAULT '{}'
-  created_at            TEXT NOT NULL
-```
-
-Indexes and uniqueness:
-
-```text
-UNIQUE(message_id, part_index)
-idx_chat_message_parts_message(message_id)
-idx_chat_message_parts_tool_call(tool_call_id)
-```
-
-Hidden chain-of-thought is not a message part. Provider-exposed reasoning
-summaries can be a `reasoning_summary` part or activity summary.
+Message body fields are rendered content only. `content` stores the durable text
+body. `attachment_json` stores one optional message-attached file or media object.
+Hidden chain-of-thought is never message body content. Provider-exposed
+reasoning summaries, tool calls, tool results, preambles, and progress rows are
+response activity.
 
 ## `chat_responses`
 
@@ -518,9 +496,8 @@ Message create:
 2. Resolve duplicate `message.id` or `(chat_id, nonce)`.
 3. Assign `sequence = MAX(sequence) + 1` for the chat.
 4. Insert `chat_messages`.
-5. Insert ordered `chat_message_parts`.
-6. Insert `chat_events(message.created)` with the same sequence.
-7. Commit.
+5. Insert `chat_events(message.created)` with the same sequence.
+6. Commit.
 
 Assistant delivery:
 

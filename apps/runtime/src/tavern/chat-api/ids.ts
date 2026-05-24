@@ -6,10 +6,6 @@ export function createAgentParticipantId(agentId: string) {
     return agentId.startsWith('agt_') ? agentId : `agt_${agentId.replace(/[^A-Za-z0-9_-]/g, '_')}`;
 }
 
-export function createMessagePartId(messageId: string, index: number) {
-    return `part_${stripPrefix(messageId, 'msg_')}_${String(index + 1).padStart(3, '0')}`;
-}
-
 export function createRunId(messageId: string) {
     return `run_${stripPrefix(messageId, 'msg_')}`;
 }

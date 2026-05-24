@@ -311,12 +311,12 @@ describe('Tavern Messenger turn handling', () => {
             typeof dispatchReplyWithBufferedBlockDispatcher.mock.calls[0][0].replyOptions
                 .onCommandOutput
         ).toBe('function');
-        expect(dispatchReplyWithBufferedBlockDispatcher.mock.calls[0][0].replyOptions).not.toHaveProperty(
-            'onToolStart'
-        );
-        expect(dispatchReplyWithBufferedBlockDispatcher.mock.calls[0][0].replyOptions).not.toHaveProperty(
-            'onAgentEvent'
-        );
+        expect(
+            dispatchReplyWithBufferedBlockDispatcher.mock.calls[0][0].replyOptions
+        ).not.toHaveProperty('onToolStart');
+        expect(
+            dispatchReplyWithBufferedBlockDispatcher.mock.calls[0][0].replyOptions
+        ).not.toHaveProperty('onAgentEvent');
 
         expect(context.tavern.createDelivery).toHaveBeenCalledTimes(1);
         expect(context.tavern.createDelivery.mock.calls[0][0]).toMatchObject({
@@ -339,7 +339,6 @@ describe('Tavern Messenger turn handling', () => {
                     kind: 'reasoning',
                     metadata: {
                         detail: 'Checking Tavern QA context.',
-                        runtime: {},
                     },
                     status: 'running',
                     title: 'Reasoning',
@@ -348,11 +347,13 @@ describe('Tavern Messenger turn handling', () => {
             },
             {
                 step: {
-                    id: 'act_reasoning',
+                    id: 'act_rs_mock_summary',
                     kind: 'reasoning',
                     metadata: {
                         detail: 'Reasoning summary visible in Tavern.',
-                        runtime: {},
+                        runtime: {
+                            openClawKind: 'reasoning',
+                        },
                     },
                     status: 'completed',
                     title: 'Reasoning',
@@ -374,7 +375,6 @@ describe('Tavern Messenger turn handling', () => {
                     kind: 'tool_call',
                     metadata: {
                         detail: 'Found sources',
-                        runtime: {},
                     },
                     status: 'completed',
                     title: 'web search Tavern QA',
@@ -465,10 +465,10 @@ describe('Tavern Messenger turn handling', () => {
 
         expect(response).toMatchObject({ ok: true });
         expect(new Set(messageSteps.map((step) => step.id))).toEqual(
-            new Set(['act_assistant-preamble'])
+            new Set(['act_msg_preamble_1'])
         );
         expect(messageSteps.at(-1)).toMatchObject({
-            id: 'act_assistant-preamble',
+            id: 'act_msg_preamble_1',
             metadata: {
                 detail: 'I will inspect the workspace first.',
             },
@@ -590,7 +590,7 @@ describe('Tavern Messenger turn handling', () => {
                 'tool_call',
             ])
         );
-        expect(steps.find((step) => step.id === 'act_assistant-preamble')).toMatchObject({
+        expect(steps.find((step) => step.id === 'act_msg_preamble_1')).toMatchObject({
             detail: 'I will run a check before using tools.',
             kind: 'message',
             status: 'running',

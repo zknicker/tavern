@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { closeDb, initTestDb } from '../db/connection';
+import { closeDb, getDb, initTestDb } from '../db/connection';
 import { ensureRuntimeSchema } from '../db/schema';
 import {
     listPendingTavernInboundMessages,
@@ -82,13 +82,8 @@ describe('Tavern channel store', () => {
                     sessionKey: 'session-1',
                 },
             },
+            content: 'hello',
             nonce: 'nonce-1',
-            parts: [
-                {
-                    content: 'hello',
-                    kind: 'text',
-                },
-            ],
             role: 'user',
         });
 
@@ -176,7 +171,9 @@ describe('Tavern channel store', () => {
             summary: 'Working on it.',
         });
 
-        expect(listTavernRuntimeEvents({ afterCursor: 0 }).map((entry) => entry.event)).toMatchObject([
+        expect(
+            listTavernRuntimeEvents({ afterCursor: 0 }).map((entry) => entry.event)
+        ).toMatchObject([
             {
                 timestamp: expect.any(String),
                 turn: {
@@ -268,7 +265,9 @@ describe('Tavern channel store', () => {
             title: 'Using tool',
         });
 
-        expect(listTavernRuntimeEvents({ afterCursor: 0 }).map((entry) => entry.event)).toMatchObject([
+        expect(
+            listTavernRuntimeEvents({ afterCursor: 0 }).map((entry) => entry.event)
+        ).toMatchObject([
             {
                 timestamp: expect.any(String),
                 turn: {
@@ -310,6 +309,7 @@ describe('Tavern channel store', () => {
             id: 'del_1',
             message: {
                 author_id: 'agt_1',
+                content: 'Done.',
                 id: 'msg_agent_1',
                 metadata: {
                     runtime: {
@@ -319,12 +319,6 @@ describe('Tavern channel store', () => {
                         startedAt: '2026-05-16T12:00:00.000Z',
                     },
                 },
-                parts: [
-                    {
-                        content: 'Done.',
-                        kind: 'text',
-                    },
-                ],
                 role: 'assistant',
             },
             turn_id: 'run_1',
@@ -335,6 +329,71 @@ describe('Tavern channel store', () => {
                 isThinking: false,
                 replace: true,
                 text: 'Done.',
+                timestamp: expect.any(String),
+                turn: {
+                    agentId: 'main',
+                    chatId: 'cht_1',
+                    runId: 'run_1',
+                    sessionKey: 'session-1',
+                    startedAt: '2026-05-16T12:00:00.000Z',
+                },
+                type: 'turn.replyUpdated',
+            },
+            {
+                timestamp: expect.any(String),
+                turn: {
+                    agentId: 'main',
+                    chatId: 'cht_1',
+                    runId: 'run_1',
+                    sessionKey: 'session-1',
+                    startedAt: '2026-05-16T12:00:00.000Z',
+                },
+                type: 'turn.completed',
+            },
+        ]);
+    });
+
+    it('replays legacy delivered message events that still use parts', () => {
+        createChat({ id: 'cht_1' });
+        createDelivery('cht_1', {
+            agent_id: 'agt_1',
+            id: 'del_1',
+            message: {
+                author_id: 'agt_1',
+                content: 'Done.',
+                id: 'msg_agent_1',
+                metadata: {
+                    runtime: {
+                        agentId: 'main',
+                        runId: 'run_1',
+                        sessionKey: 'session-1',
+                        startedAt: '2026-05-16T12:00:00.000Z',
+                    },
+                },
+                role: 'assistant',
+            },
+            turn_id: 'run_1',
+        });
+
+        const db = getDb();
+        const row = db
+            .prepare("SELECT cursor, event_json FROM chat_events WHERE event_type = 'message.delivered'")
+            .get() as { cursor: number; event_json: string };
+        const event = JSON.parse(row.event_json) as {
+            delivery: { message: Record<string, unknown> };
+        };
+        event.delivery.message.parts = [{ content: 'Legacy done.', kind: 'text' }];
+        delete event.delivery.message.content;
+        db.prepare('UPDATE chat_events SET event_json = $eventJson WHERE cursor = $cursor').run({
+            $cursor: row.cursor,
+            $eventJson: JSON.stringify(event),
+        });
+
+        expect(listTavernRuntimeEvents({ afterCursor: 0 }).map((entry) => entry.event)).toEqual([
+            {
+                isThinking: false,
+                replace: true,
+                text: 'Legacy done.',
                 timestamp: expect.any(String),
                 turn: {
                     agentId: 'main',
@@ -371,13 +430,8 @@ function persistMessage(input: { id: string; nonce: string; text: string }) {
                 sessionKey: 'session-1',
             },
         },
+        content: input.text,
         nonce: input.nonce,
-        parts: [
-            {
-                content: input.text,
-                kind: 'text',
-            },
-        ],
         role: 'user',
     });
 

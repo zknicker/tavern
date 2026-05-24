@@ -444,9 +444,6 @@ components:
     MessageId:
       type: string
       pattern: '^msg_[A-Za-z0-9_-]+$'
-    MessagePartId:
-      type: string
-      pattern: '^part_[A-Za-z0-9_-]+$'
     ResponseId:
       type: string
       pattern: '^rsp_[A-Za-z0-9_-]+$'
@@ -547,24 +544,6 @@ components:
           type: [string, 'null']
         metadata:
           $ref: '#/components/schemas/JsonObject'
-    MessagePart:
-      type: object
-      additionalProperties: false
-      required:
-        - id
-        - kind
-        - content
-        - metadata
-      properties:
-        id:
-          $ref: '#/components/schemas/MessagePartId'
-        kind:
-          type: string
-          enum: [text, reasoning, tool_call, tool_result, attachment]
-        content:
-          type: string
-        metadata:
-          $ref: '#/components/schemas/JsonObject'
     ChatMessage:
       type: object
       additionalProperties: false
@@ -574,7 +553,8 @@ components:
         - sequence
         - author
         - role
-        - parts
+        - content
+        - attachment
         - nonce
         - parent_message_id
         - thread_root_id
@@ -595,10 +575,12 @@ components:
         role:
           type: string
           enum: [user, assistant, system]
-        parts:
-          type: array
-          items:
-            $ref: '#/components/schemas/MessagePart'
+        content:
+          type: string
+        attachment:
+          oneOf:
+            - $ref: '#/components/schemas/JsonObject'
+            - type: 'null'
         nonce:
           type: [string, 'null']
         parent_message_id:
@@ -628,7 +610,7 @@ components:
         - id
         - author_id
         - role
-        - parts
+        - content
       properties:
         id:
           $ref: '#/components/schemas/MessageId'
@@ -637,11 +619,12 @@ components:
         role:
           type: string
           enum: [user, assistant, system]
-        parts:
-          type: array
-          minItems: 1
-          items:
-            $ref: '#/components/schemas/MessagePartInput'
+        content:
+          type: string
+        attachment:
+          oneOf:
+            - $ref: '#/components/schemas/JsonObject'
+            - type: 'null'
         nonce:
           type: string
         parent_message_id:
@@ -652,22 +635,6 @@ components:
           oneOf:
             - $ref: '#/components/schemas/MessageId'
             - type: 'null'
-        metadata:
-          $ref: '#/components/schemas/JsonObject'
-    MessagePartInput:
-      type: object
-      additionalProperties: false
-      required:
-        - kind
-        - content
-      properties:
-        id:
-          $ref: '#/components/schemas/MessagePartId'
-        kind:
-          type: string
-          enum: [text, reasoning, tool_call, tool_result, attachment]
-        content:
-          type: string
         metadata:
           $ref: '#/components/schemas/JsonObject'
     ChatMessageReceipt:

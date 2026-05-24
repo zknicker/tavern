@@ -87,13 +87,8 @@ export async function sendTavernChannelMessage(
                     source: 'openclaw',
                 },
             },
+            content: payload.message.content,
             nonce: payload.message.nonce,
-            parts: [
-                {
-                    content: payload.message.content,
-                    kind: 'text',
-                },
-            ],
             role: 'user',
         }
     );

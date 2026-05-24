@@ -44,8 +44,10 @@ export interface ParticipantRow {
 }
 
 export interface MessageRow {
+    attachment_json: string | null;
     author_id: string;
     chat_id: string;
+    content: string;
     created_at: string;
     deleted_at: string | null;
     delivery_id: string | null;
@@ -56,13 +58,6 @@ export interface MessageRow {
     role: TavernChatMessage['role'];
     sequence: number;
     thread_root_id: string | null;
-}
-
-export interface PartRow {
-    content: string;
-    id: string;
-    kind: TavernChatMessage['parts'][number]['kind'];
-    metadata_json: string;
 }
 
 export interface EventRow {

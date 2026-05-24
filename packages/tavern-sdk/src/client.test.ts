@@ -22,6 +22,8 @@ describe('Tavern SDK client', () => {
                             metadata: {},
                         },
                         chat_id: 'cht_1',
+                        attachment: null,
+                        content: 'hello',
                         created_at: '2026-05-17T00:00:00.000Z',
                         deleted_at: null,
                         delivery_id: null,
@@ -29,14 +31,6 @@ describe('Tavern SDK client', () => {
                         metadata: {},
                         nonce: 'nonce_1',
                         parent_message_id: null,
-                        parts: [
-                            {
-                                content: 'hello',
-                                id: 'part_1',
-                                kind: 'text',
-                                metadata: {},
-                            },
-                        ],
                         role: 'user',
                         sequence: 1,
                         thread_root_id: null,
@@ -46,14 +40,9 @@ describe('Tavern SDK client', () => {
         });
         const body: TavernCreateMessageRequest = {
             author_id: 'usr_1',
+            content: 'hello',
             id: 'msg_1',
             nonce: 'nonce_1',
-            parts: [
-                {
-                    content: 'hello',
-                    kind: 'text',
-                },
-            ],
             role: 'user',
         };
 

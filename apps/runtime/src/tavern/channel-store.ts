@@ -260,8 +260,5 @@ function getMessageOrThrow(messageId: string, db: Database = getDb()): TavernCha
 }
 
 function messageText(message: TavernChatMessage) {
-    return message.parts
-        .filter((part) => part.kind === 'text')
-        .map((part) => part.content)
-        .join('\n');
+    return message.content;
 }

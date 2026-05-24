@@ -17,14 +17,9 @@ export function createTavernPluginApi({ baseUrl, fetch } = {}) {
                 id: input.deliveryId,
                 message: {
                     author_id: agentParticipantId(input.agentId),
+                    content: input.text,
                     id: input.messageId,
                     metadata: runtimeMetadata(input),
-                    parts: [
-                        {
-                            content: input.text,
-                            kind: 'text',
-                        },
-                    ],
                     role: 'assistant',
                 },
                 metadata: runtimeMetadata(input),
@@ -77,11 +72,23 @@ export function deriveTavernApiBaseUrl(relayUrl) {
 }
 
 export function activityStepFromProgressStep(step, timestamp = new Date().toISOString()) {
+    const stepMetadata =
+        step.metadata && typeof step.metadata === 'object' && !Array.isArray(step.metadata)
+            ? step.metadata
+            : {};
+    const stepRuntimeMetadata =
+        stepMetadata.runtime &&
+        typeof stepMetadata.runtime === 'object' &&
+        !Array.isArray(stepMetadata.runtime)
+            ? stepMetadata.runtime
+            : {};
     const metadata = {
+        ...stepMetadata,
         ...(step.detail ? { detail: step.detail } : {}),
         ...(step.toolCallId ? { toolCallId: step.toolCallId } : {}),
         ...(step.toolName ? { toolName: step.toolName } : {}),
         runtime: {
+            ...stepRuntimeMetadata,
             ...(step.rawOpenClawIds ? { openClawIds: step.rawOpenClawIds } : {}),
             ...(step.toolCallId ? { toolCallId: step.toolCallId } : {}),
             ...(step.toolName ? { toolName: step.toolName } : {}),
@@ -131,6 +138,9 @@ function activityStepKind(kind) {
     }
     if (kind === 'message') {
         return 'message';
+    }
+    if (kind === 'custom') {
+        return 'custom';
     }
     return 'tool_call';
 }

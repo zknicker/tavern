@@ -40,9 +40,34 @@ export async function listRuntimeChatRows(chatId: string): Promise<ChatLogPage['
     );
     const artifactRows = responsePage.artifacts.map(artifactToChatRow);
     const rows = [...messageRows, ...activityRows, ...artifactRows];
+    const messageTimestampById = new Map(
+        messageRows
+            .filter(
+                (row): row is Extract<ChatLogPage['rows'][number], { kind: 'message' }> =>
+                    row.kind === 'message'
+            )
+            .map((row) => [row.id, row.message.timestamp])
+    );
+    const requestMessageIdByRowId = new Map<string, string>();
+
+    for (const activity of responsePage.activity) {
+        const response = responsesById.get(activity.response_id);
+        if (response?.request_message_id) {
+            requestMessageIdByRowId.set(activity.id, response.request_message_id);
+        }
+    }
+
+    for (const artifact of responsePage.artifacts) {
+        const response = artifact.response_id ? responsesById.get(artifact.response_id) : null;
+        if (response?.request_message_id) {
+            requestMessageIdByRowId.set(artifact.id, response.request_message_id);
+        }
+    }
 
     return rows.sort((left, right) => {
-        const timestampDelta = rowTimestamp(left) - rowTimestamp(right);
+        const timestampDelta =
+            rowTimestamp(left, { messageTimestampById, requestMessageIdByRowId }) -
+            rowTimestamp(right, { messageTimestampById, requestMessageIdByRowId });
 
         return timestampDelta || rowSortRank(left) - rowSortRank(right);
     });
@@ -108,7 +133,7 @@ function messageToChatRows(
         },
     };
 
-    return [...reasoningRows(message), row];
+    return [row];
 }
 
 function activityToChatRows(
@@ -239,29 +264,8 @@ function readString(value: unknown) {
     return typeof value === 'string' && value.trim().length > 0 ? value : null;
 }
 
-function reasoningRows(message: TavernChatMessage): ChatLogPage['rows'] {
-    return message.parts
-        .filter((part) => part.kind === 'reasoning' && part.content.trim().length > 0)
-        .map((part) => ({
-            id: `${message.id}:reasoning:${part.id}`,
-            kind: 'system' as const,
-            systemKind: 'thinking' as const,
-            thinking: {
-                id: `${message.id}:reasoning:${part.id}`,
-                messageId: message.id,
-                sender: message.author.label ?? message.author.id,
-                text: part.content,
-                timestamp: message.created_at,
-            },
-            timestamp: message.created_at,
-        }));
-}
-
 function messageText(message: TavernChatMessage) {
-    return message.parts
-        .filter((part) => part.kind === 'text')
-        .map((part) => part.content)
-        .join('\n');
+    return message.content;
 }
 
 function runtimeMetadataString(
@@ -278,15 +282,26 @@ function runtimeMetadataString(
     return typeof value === 'string' ? value : null;
 }
 
-function rowTimestamp(row: ChatLogPage['rows'][number]) {
+function rowTimestamp(
+    row: ChatLogPage['rows'][number],
+    context: {
+        messageTimestampById?: ReadonlyMap<string, string>;
+        requestMessageIdByRowId?: ReadonlyMap<string, string>;
+    } = {}
+) {
+    const requestMessageId = context.requestMessageIdByRowId?.get(row.id);
+    const requestMessageTimestamp = requestMessageId
+        ? context.messageTimestampById?.get(requestMessageId)
+        : null;
     const timestamp =
-        row.kind === 'message'
+        requestMessageTimestamp ??
+        (row.kind === 'message'
             ? row.message.timestamp
             : row.kind === 'tool'
               ? (row.startedAt ?? row.completedAt)
               : row.kind === 'worker'
                 ? (row.startedAt ?? row.completedAt ?? row.worker.lastEventAt)
-                : row.timestamp;
+                : row.timestamp);
     const parsed = timestamp ? Date.parse(timestamp) : Number.NaN;
 
     return Number.isNaN(parsed) ? Number.MAX_SAFE_INTEGER : parsed;

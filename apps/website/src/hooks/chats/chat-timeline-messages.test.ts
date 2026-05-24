@@ -138,6 +138,52 @@ test('mergeTimelineMessages can render a local row before the log has loaded', (
     });
 });
 
+test('mergeTimelineMessages keeps a local user row before already visible live activity', () => {
+    const next = mergeTimelineMessages({
+        limit: 20,
+        logged: {
+            limit: 20,
+            offset: 0,
+            rows: [
+                {
+                    actor: { id: 'agent-1', kind: 'agent' as const },
+                    completedAt: null,
+                    connectsToNext: false,
+                    connectsToPrevious: false,
+                    id: 'act_run-1_assistant-preamble',
+                    isFirstInGroup: true,
+                    kind: 'tool' as const,
+                    sessionKey: 'session-1',
+                    spawnedRelationships: [],
+                    startedAt: '2026-04-20T18:15:05.000Z',
+                    toolCall: {
+                        callId: null,
+                        facts: [],
+                        label: 'Assistant reply',
+                        name: 'message',
+                        status: null,
+                        summaryParts: ['I will inspect this first.'],
+                    },
+                },
+            ],
+            total: 1,
+        },
+        messages: [
+            {
+                content: 'Please investigate.',
+                id: 'timeline:1',
+                sessionKey: 'session-1',
+                timestamp: '2026-04-20T18:15:00.000Z',
+            },
+        ],
+    });
+
+    expect(next?.rows.map((row) => row.id)).toEqual([
+        'timeline:1',
+        'act_run-1_assistant-preamble',
+    ]);
+});
+
 test('getLoggedTimelineMessageIds confirms local user rows by stable id only', () => {
     const logged = {
         limit: 20,

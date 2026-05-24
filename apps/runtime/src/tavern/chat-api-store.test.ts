@@ -543,14 +543,9 @@ describe('Tavern Runtime Chat API routes', () => {
 function messageInput(id: string, nonce: string | undefined, content: string) {
     return {
         author_id: 'usr_1',
+        content,
         id,
         ...(nonce ? { nonce } : {}),
-        parts: [
-            {
-                content,
-                kind: 'text' as const,
-            },
-        ],
         role: 'user' as const,
     };
 }
