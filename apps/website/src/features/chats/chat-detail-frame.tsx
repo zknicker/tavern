@@ -48,10 +48,8 @@ export function ChatDetailFrame({
         activeReply,
         failedTurn,
     });
-    const activeReplyText = activeReply?.text?.trim() ?? '';
     const chatScroll = useChatScroll({
         enabled: !isInitialTranscriptPending && hasTimelineContent,
-        followResizes: !(activeReply && activeReplyText.length === 0),
         followKey,
     });
 

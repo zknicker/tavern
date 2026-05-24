@@ -55,7 +55,7 @@ export function ChatTranscriptMessageContent({ message }: { message: TranscriptM
                             'w-fit max-w-full rounded-md border border-border/40 bg-muted/45 px-3 py-2'
                     )}
                 >
-                    <CollapsibleText className="text-foreground text-sm leading-snug">
+                    <CollapsibleText className="text-foreground text-sm leading-[1.72]">
                         {mentions.length > 0
                             ? renderMentionText({
                                   content: messageDisplay.content,

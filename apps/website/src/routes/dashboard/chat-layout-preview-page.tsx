@@ -5,6 +5,7 @@ import type { ChatLogOutput } from '../../lib/trpc.tsx';
 type ChatRows = NonNullable<ChatLogOutput>['rows'];
 type MessageRow = Extract<ChatRows[number], { kind: 'message' }>;
 type SenderType = MessageRow['message']['senderType'];
+type ToolRow = Extract<ChatRows[number], { kind: 'tool' }>;
 
 const previewTime = '2026-05-08T18:00:00.000Z';
 
@@ -70,6 +71,59 @@ const previews = [
         ]),
         title: '2 agents, 2 humans',
     },
+    {
+        chat: chatActors({ agents: ['Atlas'], humans: ['You'] }),
+        rows: rows([
+            user('You', 'Make the OpenClaw activity stream feel like Codex App.'),
+            narration(
+                'Atlas',
+                'I’ll first split visible assistant progress updates from tool activity, then I’ll keep command and file work grouped between those updates.'
+            ),
+            toolActivity({
+                id: 'read-turn-progress',
+                label: 'Read turn-progress.js',
+                name: 'read',
+                summaryParts: ['turn-progress.js'],
+            }),
+            toolActivity({
+                id: 'read-chat-transcript',
+                label: 'Read chat-transcript-turn.tsx',
+                name: 'read',
+                summaryParts: ['chat-transcript-turn.tsx'],
+            }),
+            toolActivity({
+                id: 'run-rg',
+                label: 'rg activity grouping',
+                name: 'bash',
+                summaryParts: ['rg activity grouping apps/website/src/features/chats'],
+            }),
+            narration(
+                'Atlas',
+                'The grouping boundary is clear now: preambles should render as assistant prose, while adjacent work rows should stay compact and expandable.'
+            ),
+            toolActivity({
+                id: 'edit-files',
+                label: 'Edited 3 files',
+                name: 'patch',
+                summaryParts: ['chat-transcript-turn.tsx', 'working-log.tsx', 'chat-layout-preview-page.tsx'],
+            }),
+            narration(
+                'Atlas',
+                'The demo now exercises interleaved updates, grouped work, and the final assistant response in one mocked turn.'
+            ),
+            toolActivity({
+                id: 'run-tests',
+                label: 'bun test chat transcript',
+                name: 'bash',
+                summaryParts: ['bun test apps/website/src/features/chats/chat-transcript.test.tsx'],
+            }),
+            agent(
+                'Atlas',
+                'Implemented the Codex-style transcript layout. Visible progress updates render as assistant text, and the work rows between them stay grouped by phase.'
+            ),
+        ]),
+        title: 'OpenClaw activity turn',
+    },
 ];
 
 export function ChatLayoutPreviewPage() {
@@ -125,7 +179,7 @@ function chatActors({ agents, humans }: { agents: string[]; humans: string[] }) 
     };
 }
 
-function rows(messages: MessageRow[]): ChatRows {
+function rows(messages: ChatRows): ChatRows {
     return messages.map((row, index, allRows) => {
         const previous = allRows[index - 1] ?? null;
         const next = allRows[index + 1] ?? null;
@@ -147,6 +201,63 @@ function agent(sender: string, content: string): MessageRow {
         sender,
         senderType: 'agent',
     });
+}
+
+function narration(sender: string, content: string): ToolRow {
+    return toolActivity({
+        id: `narration:${content.slice(0, 16)}`,
+        label: content,
+        name: 'message',
+        sender,
+        summaryParts: [content],
+    });
+}
+
+function toolActivity({
+    id,
+    label,
+    name,
+    sender = 'Atlas',
+    summaryParts,
+}: {
+    id: string;
+    label: string;
+    name: string;
+    sender?: string;
+    summaryParts: string[];
+}): ToolRow {
+    return {
+        actor: {
+            id: toActorId(sender),
+            kind: 'agent',
+        },
+        completedAt: previewTime,
+        connectsToNext: false,
+        connectsToPrevious: false,
+        id,
+        isFirstInGroup: true,
+        kind: 'tool',
+        sessionKey: `preview:${toActorId(sender)}`,
+        spawnedRelationships: [],
+        startedAt: previewTime,
+        toolCall: {
+            callId: `call_${id.replaceAll(/[^a-z0-9]+/gi, '_')}`,
+            facts:
+                name === 'bash'
+                    ? [
+                          {
+                              label: 'Command',
+                              tone: 'default',
+                              value: summaryParts.join(' '),
+                          },
+                      ]
+                    : [],
+            label,
+            name,
+            status: null,
+            summaryParts,
+        },
+    };
 }
 
 function user(sender: string, content: string): MessageRow {
@@ -194,8 +305,8 @@ function message({
     };
 }
 
-function getActorKey(row: MessageRow) {
-    return row.actor ? `${row.actor.kind}:${row.actor.id}` : null;
+function getActorKey(row: ChatRows[number]) {
+    return 'actor' in row && row.actor ? `${row.actor.kind}:${row.actor.id}` : null;
 }
 
 function toActorId(name: string) {

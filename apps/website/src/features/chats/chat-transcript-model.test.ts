@@ -180,7 +180,7 @@ test('buildTranscriptEntries shows typing status without a generic activity bloc
     });
 });
 
-test('buildTranscriptEntries does not render a thinking status when durable activity exists', () => {
+test('buildTranscriptEntries hides active thinking status after tool activity starts', () => {
     const entries = buildTranscriptEntries({
         activeReply: {
             agentId: 'agent-1',
@@ -202,6 +202,32 @@ test('buildTranscriptEntries does not render a thinking status when durable acti
     expect(
         entries[0].items.map((item) => (item.kind === 'row' ? item.row.kind : item.kind))
     ).toEqual(['tool']);
+});
+
+test('buildTranscriptEntries keeps active thinking status after assistant narration', () => {
+    const entries = buildTranscriptEntries({
+        activeReply: {
+            agentId: 'agent-1',
+            isThinking: true,
+            runId: 'run-1',
+            sessionKey: 'session-1',
+            startedAt: '2026-05-11T16:00:00.000Z',
+            text: '',
+        },
+        rows: [toolRow('tool-1', false, true), narrationRow('narration-1', true, false)],
+    });
+
+    expect(entries).toHaveLength(1);
+
+    if (entries[0]?.kind !== 'turn') {
+        throw new Error('Expected agent turn entry.');
+    }
+
+    expect(
+        entries[0].items.map((item) =>
+            item.kind === 'row' ? `${item.row.kind}:${getRowKindLabel(item.row)}` : item.kind
+        )
+    ).toEqual(['tool:exec', 'tool:message', 'activeStatus']);
 });
 
 function userMessage(
@@ -282,6 +308,32 @@ function toolRow(
             summaryParts: ['command -v gog'],
         },
     };
+}
+
+function narrationRow(
+    id: string,
+    connectsToPrevious: boolean,
+    connectsToNext: boolean
+): ChatRow {
+    const row = toolRow(id, connectsToPrevious, connectsToNext) as ToolChatRow;
+
+    return {
+        ...row,
+        completedAt: null,
+        startedAt: '2026-05-11T16:00:06.000Z',
+        toolCall: {
+            callId: null,
+            facts: [],
+            label: 'I found the first file.',
+            name: 'message',
+            status: 'running',
+            summaryParts: ['I found the first file.'],
+        },
+    };
+}
+
+function getRowKindLabel(row: ChatRow) {
+    return row.kind === 'tool' ? row.toolCall.name : row.kind;
 }
 
 function thinkingRow(id: string): ChatRow {

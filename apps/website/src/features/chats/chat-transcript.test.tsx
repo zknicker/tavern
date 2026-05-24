@@ -49,6 +49,7 @@ test('ChatTranscript renders hover message metadata and the session action', () 
     assert.match(markup, /group-hover:opacity-100/);
     assert.doesNotMatch(markup, /class="[^"]*\bgroup\b[^"]*\bw-full\b/);
     assert.doesNotMatch(markup, /group-focus-within:opacity-100/);
+    assert.match(markup, /aria-label="Copy message"/);
     assert.match(markup, /aria-label="View session"/);
     assert.doesNotMatch(markup, /aria-label="Collapse message"/);
     assert.doesNotMatch(markup, /session 9f83ac/);
@@ -98,7 +99,7 @@ test('ChatTranscript renders tool calls and agent responses through one surface'
 
     assert.match(markup, /Done\./);
     assert.match(markup, /Worked/);
-    assert.match(markup, /aria-expanded="false"/);
+    assert.match(markup, /aria-expanded="true"/);
 });
 
 test('ToolStep renders bash failures through the shell tool renderer', () => {
@@ -274,7 +275,7 @@ test('ArtifactLogEntry renders durable artifact titles', () => {
     assert.match(markup, /Report/);
 });
 
-test('ChatTranscript keeps completed assistant narration expanded', () => {
+test('ChatTranscript renders completed assistant narration as prose', () => {
     const markup = renderTranscript([
         {
             actor: { id: 'tiny', kind: 'agent' },
@@ -307,8 +308,8 @@ test('ChatTranscript keeps completed assistant narration expanded', () => {
         },
     ]);
 
-    assert.match(markup, /aria-expanded="true"/);
     assert.match(markup, /I will run the slow QA command before the final reply\./);
+    assert.doesNotMatch(markup, /Assistant reply\n/);
 });
 
 test('ChatTranscript renders durable activity once when an assistant reply follows it', () => {
@@ -497,7 +498,7 @@ test('ChatTranscript shows active progress through the same thinking steps surfa
             {
                 actor: { id: 'tiny', kind: 'agent' },
                 completedAt: null,
-                connectsToNext: false,
+                connectsToNext: true,
                 connectsToPrevious: true,
                 id: 'activity:run-progress:tool:1',
                 isFirstInGroup: false,
@@ -514,13 +515,35 @@ test('ChatTranscript shows active progress through the same thinking steps surfa
                     summaryParts: ['Listing files'],
                 },
             },
+            {
+                actor: { id: 'tiny', kind: 'agent' },
+                completedAt: null,
+                connectsToNext: false,
+                connectsToPrevious: true,
+                id: 'activity:run-progress:assistant-reply:2',
+                isFirstInGroup: false,
+                kind: 'tool',
+                sessionKey: 'agent:tiny:session-1',
+                spawnedRelationships: [],
+                startedAt: new Date(now - 500).toISOString(),
+                toolCall: {
+                    callId: null,
+                    facts: [],
+                    label: 'I found the files. Next I will inspect the renderer.',
+                    name: 'message',
+                    status: 'running',
+                    summaryParts: ['I found the files. Next I will inspect the renderer.'],
+                },
+            },
         ]
     );
 
     assert.match(markup, /Working for[\s\S]*>\d+s</);
-    assert.match(markup, /Assistant reply/);
     assert.match(markup, /I&#x27;ll inspect the workspace before making changes\./);
+    assert.doesNotMatch(markup, /Assistant reply\n/);
     assert.match(markup, /Using[\s\S]*Listing files/);
+    assert.match(markup, /I found the files\. Next I will inspect the renderer\./);
+    assert.match(markup, /Agent is thinking/);
     assert.match(markup, /chat-loading-indicator-in/);
     assert.doesNotMatch(markup, />Running</);
     assert.match(markup, /aria-expanded="true"/);
@@ -568,6 +591,7 @@ test('ChatTranscript renders active tool progress as one-line status rows', () =
 
     assert.match(markup, /Using[\s\S]*bash/);
     assert.match(markup, /data-slot="drawer-trigger"/);
+    assert.doesNotMatch(markup, /Agent is thinking/);
     assert.doesNotMatch(markup, />Running</);
     assert.doesNotMatch(markup, />start</);
 });

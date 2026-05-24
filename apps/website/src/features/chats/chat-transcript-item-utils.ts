@@ -1,4 +1,5 @@
 import type { TranscriptItem } from './chat-transcript-model.ts';
+import { isAssistantNarrationItem } from './chat-transcript-activity-utils.ts';
 
 export type AgentItemSegment =
     | { item: TranscriptItem; key: string; kind: 'item' }
@@ -41,7 +42,7 @@ export function isTranscriptActivityItem(item: TranscriptItem) {
         return false;
     }
 
-    return item.kind !== 'row' || item.row.kind !== 'message';
+    return item.kind !== 'row' || (item.row.kind !== 'message' && !isAssistantNarrationItem(item));
 }
 
 export function getTranscriptItemKey(item: TranscriptItem) {

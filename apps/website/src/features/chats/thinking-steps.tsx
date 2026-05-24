@@ -69,7 +69,7 @@ export const ThinkingStepsHeader = forwardRef<HTMLButtonElement, ThinkingStepsHe
                 <span>{children}</span>
                 {showIcon ? (
                     <Icon
-                        className="size-3.5 text-muted-foreground transition-transform group-data-[panel-open]:rotate-180"
+                        className="-rotate-90 size-3.5 text-muted-foreground transition-transform group-data-[panel-open]:rotate-0"
                         icon={ArrowDown01Icon}
                         strokeWidth={1.7}
                     />
@@ -135,7 +135,7 @@ export function ThinkingStep({
             )}
             style={{ animationDelay: `${delay}s` }}
         >
-            <div className="flex gap-2.5 rounded-md px-2 py-1.5 transition-colors hover:bg-muted/35">
+            <div className="flex gap-2.5 rounded-md px-2 py-1.5 hover:bg-muted">
                 <div className="flex w-[14px] shrink-0 flex-col items-center">
                     <div className="pt-0.5">
                         {showIcon && icon ? (
@@ -202,9 +202,13 @@ export function ThinkingStepDetails({
     return (
         <Collapsible className={cn('mt-1 -ml-3', className)} defaultOpen={defaultOpen}>
             <div className="w-fit">
-                <CollapsibleTrigger className="flex w-auto items-center gap-1.5 rounded-md px-3 py-1 text-[13px] text-muted-foreground leading-tight transition-colors hover:bg-muted/35 hover:text-foreground">
+                <CollapsibleTrigger className="group flex w-auto items-center gap-1.5 rounded-md px-3 py-1 text-[13px] text-muted-foreground leading-tight hover:bg-muted hover:text-foreground">
                     <span>{summary}</span>
-                    <Icon className="size-3 opacity-70" icon={ArrowDown01Icon} strokeWidth={1.7} />
+                    <Icon
+                        className="-rotate-90 size-3 opacity-70 transition-transform group-data-[panel-open]:rotate-0"
+                        icon={ArrowDown01Icon}
+                        strokeWidth={1.7}
+                    />
                 </CollapsibleTrigger>
             </div>
             <CollapsiblePanel>

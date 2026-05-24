@@ -1,4 +1,4 @@
-import type { TranscriptItem } from './chat-transcript-model.ts';
+import type { TranscriptItem, TranscriptRow } from './chat-transcript-model.ts';
 
 export type ActivityItem = Exclude<
     TranscriptItem,
@@ -10,7 +10,15 @@ export function isActivityItem(item: TranscriptItem): item is ActivityItem {
         return false;
     }
 
-    return item.kind !== 'row' || item.row.kind !== 'message';
+    return item.kind !== 'row' || (item.row.kind !== 'message' && !isNarrationToolRow(item.row));
+}
+
+export function isAssistantNarrationItem(
+    item: TranscriptItem
+): item is Extract<TranscriptItem, { kind: 'row' }> & {
+    row: Extract<TranscriptRow, { kind: 'tool' }>;
+} {
+    return item.kind === 'row' && isNarrationToolRow(item.row);
 }
 
 export function isActiveActivityItem(item: ActivityItem) {
@@ -140,4 +148,106 @@ function formatElapsed(start: string | null, end: number | string | null) {
 
 export function getActivityItemKey(item: ActivityItem) {
     return item.row.id;
+}
+
+export function getAssistantNarrationText(item: TranscriptItem) {
+    if (!isAssistantNarrationItem(item)) {
+        return null;
+    }
+
+    const label = item.row.toolCall.label?.trim() ?? '';
+    const parts = item.row.toolCall.summaryParts.map((part) => part.trim()).filter(Boolean);
+    const [firstPart, ...remainingParts] = parts;
+    const bodyParts =
+        firstPart && isNarrationTitle(firstPart, label) && remainingParts.length > 0
+            ? remainingParts
+            : parts;
+    const text = bodyParts.join('\n').trim() || label;
+
+    return text.length > 0 ? text : null;
+}
+
+export function formatWorkGroupHeader(items: ActivityItem[]) {
+    const counts = countWorkItems(items);
+    const parts = [
+        formatCount(counts.explore, 'Explored', 'file'),
+        formatCount(counts.edit, 'Edited', 'file'),
+        formatCount(counts.command, 'Ran', 'command'),
+        formatCount(counts.other, 'Used', 'tool'),
+    ].filter((part): part is string => Boolean(part));
+
+    return parts.length > 0 ? joinHeaderParts(parts) : 'Worked';
+}
+
+function isNarrationToolRow(row: TranscriptRow) {
+    return row.kind === 'tool' && row.toolCall.name.trim().toLowerCase() === 'message';
+}
+
+function countWorkItems(items: ActivityItem[]) {
+    return items.reduce(
+        (counts, item) => {
+            if (item.row.kind !== 'tool') {
+                counts.other += 1;
+                return counts;
+            }
+
+            const name = item.row.toolCall.name.trim().toLowerCase();
+            const label = item.row.toolCall.label?.trim().toLowerCase() ?? '';
+            const summary = item.row.toolCall.summaryParts.join(' ').trim().toLowerCase();
+            const text = `${name} ${label} ${summary}`;
+
+            if (
+                matchesAny(text, ['patch', 'edit', 'edited', 'write', 'modified', 'file change'])
+            ) {
+                counts.edit += 1;
+                return counts;
+            }
+
+            if (
+                matchesAny(name, ['read', 'grep', 'search']) ||
+                matchesAny(text, ['read ', 'search'])
+            ) {
+                counts.explore += 1;
+                return counts;
+            }
+
+            if (matchesAny(name, ['bash', 'command', 'exec', 'shell', 'zsh'])) {
+                counts.command += 1;
+                return counts;
+            }
+
+            counts.other += 1;
+            return counts;
+        },
+        { command: 0, edit: 0, explore: 0, other: 0 }
+    );
+}
+
+function formatCount(count: number, verb: string, noun: string) {
+    if (count === 0) {
+        return null;
+    }
+
+    return `${verb} ${count} ${noun}${count === 1 ? '' : 's'}`;
+}
+
+function joinHeaderParts(parts: string[]) {
+    return parts
+        .map((part, index) => (index === 0 ? part : part.charAt(0).toLowerCase() + part.slice(1)))
+        .join(', ');
+}
+
+function isNarrationTitle(value: string, label: string) {
+    const normalizedValue = value.trim().toLowerCase();
+    const normalizedLabel = label.trim().toLowerCase();
+
+    return (
+        normalizedValue === 'assistant reply' ||
+        normalizedValue === 'preamble' ||
+        (normalizedLabel.length > 0 && normalizedValue === normalizedLabel)
+    );
+}
+
+function matchesAny(value: string, needles: string[]) {
+    return needles.some((needle) => value.includes(needle));
 }

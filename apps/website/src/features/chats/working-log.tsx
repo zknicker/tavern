@@ -1,9 +1,17 @@
 import * as React from 'react';
+import { ArrowDown01Icon } from '@hugeicons-pro/core-stroke-rounded';
+import {
+    Collapsible,
+    CollapsiblePanel,
+    CollapsibleTrigger,
+} from '../../components/ui/collapsible.tsx';
+import { Icon } from '../../components/ui/icon.tsx';
 import { ActivityStep } from './chat-transcript-activity-step.tsx';
 import {
     type ActivityItem,
     formatActiveActivitySeconds,
     formatActivityHeader,
+    formatWorkGroupHeader,
     getActivityItemKey,
 } from './chat-transcript-activity-utils.ts';
 import { ThinkingSteps, ThinkingStepsContent, ThinkingStepsHeader } from './thinking-steps.tsx';
@@ -13,6 +21,7 @@ export function WorkingLog({
     currentSessionKey,
     end,
     items,
+    showDurationHeader = true,
     start,
     status,
 }: {
@@ -20,18 +29,21 @@ export function WorkingLog({
     currentSessionKey?: string | null;
     end: string | null;
     items: ActivityItem[];
+    showDurationHeader?: boolean;
     start: string | null;
     status: 'active' | 'completed';
 }) {
     const isActive = status === 'active';
     const now = useNow(isActive && start !== null, start);
     const activeSeconds = isActive ? formatActiveActivitySeconds({ now, start }) : null;
-    const defaultOpen = isActive || hasNarration(items);
+    const defaultOpen = isActive || hasNarration(items) || !showDurationHeader;
 
     return (
         <ThinkingSteps className="w-full max-w-[34rem]" defaultOpen={defaultOpen}>
             <ThinkingStepsHeader>
-                {isActive && activeSeconds ? (
+                {!showDurationHeader ? (
+                    formatWorkGroupHeader(items)
+                ) : isActive && activeSeconds ? (
                     <span>
                         Working for{' '}
                         <span className="inline-block min-w-[2.2ch] text-left tabular-nums">
@@ -42,7 +54,7 @@ export function WorkingLog({
                     formatActivityHeader({ end, isActive, now, start })
                 )}
             </ThinkingStepsHeader>
-            <ThinkingStepsContent>
+            <ThinkingStepsContent className={showDurationHeader ? undefined : 'pt-1'}>
                 {items.map((item, index) => (
                     <ActivityStep
                         chatId={chatId}
@@ -55,6 +67,67 @@ export function WorkingLog({
                 ))}
             </ThinkingStepsContent>
         </ThinkingSteps>
+    );
+}
+
+export function TurnWorkDisclosure({
+    children,
+    end,
+    start,
+    status,
+}: {
+    children: React.ReactNode;
+    end: string | null;
+    start: string | null;
+    status: 'active' | 'completed';
+}) {
+    return (
+        <Collapsible className="flex min-w-0 flex-col gap-5" defaultOpen>
+            <CollapsibleTrigger className="group border-border/70 border-b pb-2 text-left font-medium text-[13px] text-muted-foreground leading-tight transition-colors hover:text-foreground">
+                <span className="inline-flex items-center gap-1.5">
+                    <TurnWorkHeaderContent end={end} start={start} status={status} />
+                    <Icon
+                        className="-rotate-90 size-3.5 transition-transform group-data-[panel-open]:rotate-0"
+                        icon={ArrowDown01Icon}
+                        strokeWidth={1.7}
+                    />
+                </span>
+            </CollapsibleTrigger>
+            <CollapsiblePanel>
+                <div className="flex min-w-0 flex-col gap-6">{children}</div>
+            </CollapsiblePanel>
+        </Collapsible>
+    );
+}
+
+function TurnWorkHeaderContent({
+    end,
+    start,
+    status,
+    wrapperClassName,
+}: {
+    end: string | null;
+    start: string | null;
+    status: 'active' | 'completed';
+    wrapperClassName?: string;
+}) {
+    const isActive = status === 'active';
+    const now = useNow(isActive && start !== null, start);
+    const activeSeconds = isActive ? formatActiveActivitySeconds({ now, start }) : null;
+
+    return (
+        <span className={wrapperClassName}>
+            {isActive && activeSeconds ? (
+                <span>
+                    Working for{' '}
+                    <span className="inline-block min-w-[2.2ch] text-left tabular-nums">
+                        {activeSeconds}
+                    </span>
+                </span>
+            ) : (
+                formatActivityHeader({ end, isActive, now, start })
+            )}
+        </span>
     );
 }
 

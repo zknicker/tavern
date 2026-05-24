@@ -1,4 +1,3 @@
-import { hasDurableActivityForTurn } from '../../hooks/chats/chat-timeline-activity.ts';
 import type { ChatActiveReply, ChatTurnFailure } from '../../hooks/chats/chat-timeline-state.ts';
 import type { ChatLogOutput, SessionHistoryOutput } from '../../lib/trpc.tsx';
 import { getTranscriptItemKey } from './chat-transcript-item-utils.ts';
@@ -92,7 +91,14 @@ function buildTranscriptItems(input: {
     failedTurn?: ChatTurnFailure | null;
     rows: TranscriptRow[];
 }) {
-    const items: TranscriptItem[] = input.rows.map((row) => ({ kind: 'row', row }));
+    let lastActiveProgressRow: TranscriptRow | null = null;
+    const items: TranscriptItem[] = input.rows.map((row) => {
+        if (input.activeReply && isActiveProgressRow(row, input.activeReply)) {
+            lastActiveProgressRow = row;
+        }
+
+        return { kind: 'row', row };
+    });
     const activeReplyText = input.activeReply?.text?.trim() ?? '';
 
     if (input.activeReply && activeReplyText.length > 0) {
@@ -102,7 +108,7 @@ function buildTranscriptItems(input: {
     if (
         input.activeReply &&
         activeReplyText.length === 0 &&
-        !hasDurableActivityForTurn(input.rows, input.activeReply)
+        shouldShowActiveStatus(lastActiveProgressRow)
     ) {
         items.push({
             kind: 'activeStatus',
@@ -116,6 +122,30 @@ function buildTranscriptItems(input: {
     }
 
     return items;
+}
+
+function shouldShowActiveStatus(lastProgressRow: TranscriptRow | null) {
+    return !lastProgressRow || isAssistantNarrationRow(lastProgressRow);
+}
+
+function isActiveProgressRow(row: TranscriptRow, activeReply: ChatActiveReply) {
+    if (row.kind === 'message') {
+        return false;
+    }
+
+    const activeSessionKey = activeReply.sessionKey.trim();
+    const activeStartedAt = parseTimestamp(activeReply.startedAt);
+    const rowSessionKey = getRowSessionKey(row);
+
+    if (activeSessionKey && rowSessionKey && rowSessionKey !== activeSessionKey) {
+        return false;
+    }
+
+    return parseTimestamp(getRowTimestamp(row)) >= activeStartedAt;
+}
+
+function isAssistantNarrationRow(row: TranscriptRow) {
+    return row.kind === 'tool' && row.toolCall.name.trim().toLowerCase() === 'message';
 }
 
 function canAppendToTurn(
@@ -277,6 +307,26 @@ export function getItemTimestamp(item: TranscriptItem) {
 
     const { row } = item;
 
+    if (row.kind === 'message') {
+        return row.message.timestamp;
+    }
+
+    if (row.kind === 'tool' || row.kind === 'worker') {
+        return row.startedAt ?? row.completedAt;
+    }
+
+    return row.timestamp;
+}
+
+function getRowSessionKey(row: TranscriptRow) {
+    if (row.kind === 'tool' || row.kind === 'worker') {
+        return row.sessionKey?.trim() ?? '';
+    }
+
+    return '';
+}
+
+function getRowTimestamp(row: TranscriptRow) {
     if (row.kind === 'message') {
         return row.message.timestamp;
     }

@@ -2,6 +2,7 @@ import { AlertCircleIcon } from '@hugeicons/core-free-icons';
 import { InspectCodeIcon } from '@hugeicons-pro/core-stroke-rounded';
 import { AgentAvatar } from '@tavern/agent-avatars';
 import { Alert, AlertDescription, AlertTitle } from '../../components/ui/alert.tsx';
+import { CopyButton } from '../../components/ui/copy-button.tsx';
 import { Icon } from '../../components/ui/icon.tsx';
 import { useActorProfile } from '../../hooks/actors/use-actor.ts';
 import type { ChatActiveReply } from '../../hooks/chats/chat-timeline-state.ts';
@@ -14,7 +15,18 @@ import {
     ChatTranscriptActivity,
     ChatTranscriptActivityGroup,
 } from './chat-transcript-activity.tsx';
-import { getTranscriptItemKey, groupAgentItems } from './chat-transcript-item-utils.ts';
+import {
+    getActivityEnd,
+    getActivityStart,
+    getAssistantNarrationText,
+    isActivityItem,
+    isAssistantNarrationItem,
+} from './chat-transcript-activity-utils.ts';
+import {
+    type AgentItemSegment,
+    getTranscriptItemKey,
+    groupAgentItems,
+} from './chat-transcript-item-utils.ts';
 import { ChatTranscriptMessageContent } from './chat-transcript-message.tsx';
 import type {
     ConversationMessageLayout,
@@ -24,6 +36,7 @@ import type {
 } from './chat-transcript-model.ts';
 import { getItemSessionKey } from './chat-transcript-model.ts';
 import { ThinkingIndicator, TypingIndicator } from './thinking-indicator.tsx';
+import { TurnWorkDisclosure } from './working-log.tsx';
 
 const rowClassName = 'relative w-full px-3 pt-1.5 pb-4';
 const newTurnGapClassName = 'mt-2.5';
@@ -162,6 +175,22 @@ function AgentTurn({
     const turnCompletedAt = lastMessage?.timestamp ?? null;
     const segments = groupAgentItems(entry.items);
     const turnActive = isActiveTurn(entry.items, activeReply, lastMessage);
+    const activityItems = entry.items.filter(isActivityItem);
+    const hasWorkHeader = activityItems.length > 0 || entry.items.some(isAssistantNarrationItem);
+    const activityEnd = getActivityEnd(activityItems);
+    const workStart = getActivityStart(activityItems) ?? turnStartedAt ?? entry.timestamp;
+    const workEnd = turnActive
+        ? null
+        : activityEnd
+          ? (turnCompletedAt ?? activityEnd)
+          : (turnCompletedAt ?? entry.timestamp);
+    const finalSegmentIndex = findFinalSegmentIndex(segments);
+    const workSegments =
+        hasWorkHeader && finalSegmentIndex >= 0
+            ? segments.filter((_, index) => index !== finalSegmentIndex)
+            : segments;
+    const replySegments =
+        hasWorkHeader && finalSegmentIndex >= 0 ? [segments[finalSegmentIndex]] : [];
 
     return (
         <div className={cn(rowClassName, showIdentity ? newTurnGapClassName : 'mt-5')}>
@@ -192,27 +221,37 @@ function AgentTurn({
                             {displayName}
                         </div>
                     ) : null}
-                    <div className="flex min-w-0 flex-col gap-3">
-                        {segments.map((segment) =>
-                            segment.kind === 'activity' ? (
-                                <ChatTranscriptActivityGroup
-                                    chatId={chatId}
-                                    currentSessionKey={currentSessionKey}
-                                    items={segment.items}
-                                    key={segment.key}
-                                    turnActive={turnActive}
-                                    turnCompletedAt={turnCompletedAt}
-                                    turnStartedAt={turnStartedAt}
-                                />
-                            ) : (
-                                <AgentTurnItem
-                                    chatId={chatId}
-                                    currentSessionKey={currentSessionKey}
-                                    item={segment.item}
-                                    key={segment.key}
-                                />
-                            )
-                        )}
+                    <div className="flex min-w-0 flex-col gap-5">
+                        {hasWorkHeader ? (
+                            <TurnWorkDisclosure
+                                end={workEnd}
+                                start={workStart}
+                                status={turnActive ? 'active' : 'completed'}
+                            >
+                                {workSegments.map((segment) => (
+                                    <AgentTurnSegment
+                                        chatId={chatId}
+                                        currentSessionKey={currentSessionKey}
+                                        key={segment.key}
+                                        segment={segment}
+                                        turnActive={turnActive}
+                                        turnCompletedAt={turnCompletedAt}
+                                        turnStartedAt={turnStartedAt}
+                                    />
+                                ))}
+                            </TurnWorkDisclosure>
+                        ) : null}
+                        {(hasWorkHeader ? replySegments : segments).map((segment) => (
+                            <AgentTurnSegment
+                                chatId={chatId}
+                                currentSessionKey={currentSessionKey}
+                                key={segment.key}
+                                segment={segment}
+                                turnActive={turnActive}
+                                turnCompletedAt={turnCompletedAt}
+                                turnStartedAt={turnStartedAt}
+                            />
+                        ))}
                     </div>
                     {lastMessage ? (
                         <TranscriptHoverMeta includeContextBadges message={lastMessage} />
@@ -220,6 +259,60 @@ function AgentTurn({
                 </div>
             </div>
         </div>
+    );
+}
+
+function AgentTurnSegment({
+    chatId,
+    currentSessionKey,
+    segment,
+    turnActive,
+    turnCompletedAt,
+    turnStartedAt,
+}: {
+    chatId?: string;
+    currentSessionKey?: string | null;
+    segment: AgentItemSegment;
+    turnActive: boolean;
+    turnCompletedAt: string | null;
+    turnStartedAt?: string | null;
+}) {
+    return segment.kind === 'activity' ? (
+        <ChatTranscriptActivityGroup
+            chatId={chatId}
+            currentSessionKey={currentSessionKey}
+            items={segment.items}
+            showDurationHeader={false}
+            turnActive={turnActive}
+            turnCompletedAt={turnCompletedAt}
+            turnStartedAt={turnStartedAt}
+        />
+    ) : (
+        <AgentTurnItem
+            chatId={chatId}
+            currentSessionKey={currentSessionKey}
+            item={segment.item}
+        />
+    );
+}
+
+function findFinalSegmentIndex(segments: AgentItemSegment[]) {
+    for (let index = segments.length - 1; index >= 0; index -= 1) {
+        const segment = segments[index];
+
+        if (segment.kind === 'item' && isReplyOutcomeItem(segment.item)) {
+            return index;
+        }
+    }
+
+    return -1;
+}
+
+function isReplyOutcomeItem(item: TranscriptItem) {
+    return (
+        item.kind === 'activeReply' ||
+        item.kind === 'failure' ||
+        (item.kind === 'row' && item.row.kind === 'message')
     );
 }
 
@@ -258,6 +351,10 @@ function AgentTurnItem({
         );
     }
 
+    if (isAssistantNarrationItem(item)) {
+        return <AssistantNarrationText item={item} />;
+    }
+
     if (item.kind === 'row' && item.row.kind === 'message') {
         return <ChatTranscriptMessageContent message={item.row.message} />;
     }
@@ -271,9 +368,19 @@ function AgentTurnItem({
     );
 }
 
+function AssistantNarrationText({ item }: { item: TranscriptItem }) {
+    const text = getAssistantNarrationText(item);
+
+    return text ? (
+        <div className="whitespace-pre-wrap break-words text-foreground text-sm leading-[1.72]">
+            {text}
+        </div>
+    ) : null;
+}
+
 function ActiveReplyText({ item }: { item: Extract<TranscriptItem, { kind: 'activeReply' }> }) {
     return (
-        <div className="whitespace-pre-wrap break-words text-foreground text-sm leading-snug">
+        <div className="whitespace-pre-wrap break-words text-foreground text-sm leading-[1.72]">
             {item.reply.text}
         </div>
     );
@@ -324,22 +431,31 @@ function TranscriptMessageActions({
     const { openSession } = useSessionDrawer();
     const sessionContext = getMessageSessionContext(message);
 
-    if (!sessionContext) {
-        return null;
-    }
-
     return (
-        <button
-            aria-label="View session"
-            className="inline-flex size-5 items-center justify-center rounded-md text-muted-foreground/75 hover:text-foreground"
-            onClick={() => openSession(sessionContext.sessionKey)}
-            title="View session"
-            type="button"
-        >
-            <Icon className="size-3.5" icon={InspectCodeIcon} strokeWidth={2} />
-        </button>
+        <>
+            {sessionContext ? (
+                <button
+                    aria-label="View session"
+                    className={messageActionButtonClassName}
+                    onClick={() => openSession(sessionContext.sessionKey)}
+                    title="View session"
+                    type="button"
+                >
+                    <Icon className="size-3.5" icon={InspectCodeIcon} strokeWidth={2} />
+                </button>
+            ) : null}
+            <CopyButton
+                className={messageActionButtonClassName}
+                copiedLabel="Copied message"
+                label="Copy message"
+                value={message.content}
+            />
+        </>
     );
 }
+
+const messageActionButtonClassName =
+    'inline-flex size-5 items-center justify-center rounded-md border-0 bg-transparent p-0 text-muted-foreground/75 shadow-none hover:bg-transparent hover:text-foreground';
 
 function getLastMessage(items: TranscriptItem[]) {
     for (let index = items.length - 1; index >= 0; index -= 1) {
