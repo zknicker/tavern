@@ -15,8 +15,11 @@ import type { TavernAgentRuntimeClient } from '../agent-runtime/client.ts';
 import { createAgentRuntimeClientForConnection } from '../agent-runtime/client-factory.ts';
 import {
     emitAgentUpdated,
+    emitChatLogUpdated,
+    emitChatUpdated,
     emitCronUpdated,
-    emitSyncDataUpdated,
+    emitSessionUpdated,
+    emitSkillUpdated,
 } from '../api/invalidation-events.ts';
 import { syncChatParticipantsForRuntime } from '../participants/chat-participants.ts';
 import { listAgentProfiles } from '../storage/agent-profiles.ts';
@@ -98,7 +101,7 @@ export async function syncAgentRuntimeSession(input: {
     });
 
     await input.log?.(`Synced session ${input.sessionKey}.`);
-    emitSyncDataUpdatedIfChanged(result);
+    emitSessionUpdatedIfChanged(result, input.sessionKey);
 
     return result;
 }
@@ -139,7 +142,7 @@ export async function syncAgentRuntimeSessionMessages(input: {
     });
 
     await input.log?.(`Synced ${result.synced} messages for session ${input.sessionKey}.`);
-    emitSyncDataUpdatedIfChanged(result);
+    emitSessionDetailUpdatedIfChanged(result, input.sessionKey);
 
     return { ...result, messages };
 }
@@ -245,7 +248,10 @@ async function syncPrimitiveAcrossRuntimes(
         }
     }
 
-    emitForPrimitive(kind);
+    if (results.some(hasChanged)) {
+        emitForPrimitive(kind);
+    }
+
     return results;
 }
 
@@ -489,9 +495,26 @@ export function resolveSessionMessageSyncLimit(input: {
         : recentSessionMessageLimit;
 }
 
-function emitSyncDataUpdatedIfChanged(result: { deleted?: number; synced: number }) {
-    if (result.synced > 0 || (result.deleted ?? 0) > 0) {
-        emitSyncDataUpdated();
+function hasChanged(result: { deleted?: number; synced: number }) {
+    return result.synced > 0 || (result.deleted ?? 0) > 0;
+}
+
+function emitSessionUpdatedIfChanged(
+    result: { deleted?: number; synced: number },
+    sessionKey: string
+) {
+    if (hasChanged(result)) {
+        emitSessionUpdated({ sessionKey });
+    }
+}
+
+function emitSessionDetailUpdatedIfChanged(
+    result: { deleted?: number; synced: number },
+    sessionKey: string
+) {
+    if (hasChanged(result)) {
+        emitSessionUpdated({ sessionKey });
+        emitChatLogUpdated({ sessionKey });
     }
 }
 
@@ -634,15 +657,19 @@ function emitForPrimitive(kind: SyncPrimitiveKind) {
             return;
         case 'cron':
             emitCronUpdated();
-            emitSyncDataUpdated();
             return;
         case 'chat':
+            emitChatUpdated();
+            return;
         case 'session':
-            emitSyncDataUpdated();
+            emitSessionUpdated();
+            emitChatLogUpdated();
             return;
         case 'cronRun':
+            emitCronUpdated();
+            return;
         case 'skill':
-            emitSyncDataUpdated();
+            emitSkillUpdated();
             return;
     }
 }

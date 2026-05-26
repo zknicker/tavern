@@ -2,19 +2,25 @@ import type { ChatLogOutput } from '../../lib/trpc.tsx';
 import type { ChatTurn, ChatTurnProgressStep } from './chat-timeline-state.ts';
 
 type ChatLogRow = NonNullable<ChatLogOutput>['rows'][number];
+type ChatLogPage = NonNullable<ChatLogOutput>;
+type ChatLogInput = Omit<ChatLogPage, 'activeReply'> & Partial<Pick<ChatLogPage, 'activeReply'>>;
 type ToolRow = Extract<ChatLogRow, { kind: 'tool' }>;
 
 export const defaultLiveChatLogLimit = 100;
 
 export function patchChatLogWithProgress(
-    log: ChatLogOutput | undefined,
+    log: ChatLogInput | undefined,
     input: {
         step: ChatTurnProgressStep;
         timestamp: string;
         turn: ChatTurn;
     }
 ): ChatLogOutput | undefined {
-    const sourceLog = log ?? emptyChatLog();
+    if (!log) {
+        return undefined;
+    }
+
+    const sourceLog = normalizeChatLog(log);
 
     const row = progressStepToToolRow(input);
     const existingIndex = sourceLog.rows.findIndex((entry) => entry.id === row.id);
@@ -35,12 +41,13 @@ export function patchChatLogWithProgress(
     };
 }
 
-function emptyChatLog(): ChatLogOutput {
+function normalizeChatLog(log: ChatLogInput): ChatLogPage {
     return {
-        limit: defaultLiveChatLogLimit,
-        offset: 0,
-        rows: [],
-        total: 0,
+        activeReply: log.activeReply ?? null,
+        limit: log.limit,
+        offset: log.offset,
+        rows: log.rows,
+        total: log.total,
     };
 }
 

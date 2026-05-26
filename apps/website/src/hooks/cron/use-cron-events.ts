@@ -6,6 +6,7 @@ export function useCronEvents() {
     trpc.cron.onUpdate.useSubscription(undefined, {
         onData: () => {
             Promise.all([
+                utils.cron.deliveryTargets.invalidate(),
                 utils.cron.get.invalidate(),
                 utils.cron.list.invalidate(),
                 utils.cron.runs.invalidate(),

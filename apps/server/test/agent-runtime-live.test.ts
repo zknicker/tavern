@@ -14,7 +14,7 @@ afterEach(() => {
 });
 
 test('applyObservedAgentRuntimeEvent invalidates session queries for session updates without a connection', async () => {
-    const invalidateSpy = spyOn(invalidationEvents, 'emitSyncDataUpdated').mockImplementation();
+    const invalidateSpy = spyOn(invalidationEvents, 'emitSessionUpdated').mockImplementation();
     const workersSpy = spyOn(invalidationEvents, 'emitWorkersUpdated').mockImplementation();
 
     await applyObservedAgentRuntimeEvent({
@@ -41,7 +41,7 @@ test('applyObservedAgentRuntimeEvent invalidates session queries for session upd
 });
 
 test('applyObservedAgentRuntimeEvent invalidates session queries for session invalidations without a connection', async () => {
-    const invalidateSpy = spyOn(invalidationEvents, 'emitSyncDataUpdated').mockImplementation();
+    const invalidateSpy = spyOn(invalidationEvents, 'emitSessionUpdated').mockImplementation();
     const workersSpy = spyOn(invalidationEvents, 'emitWorkersUpdated').mockImplementation();
 
     await applyObservedAgentRuntimeEvent({
@@ -98,7 +98,6 @@ test('applyObservedAgentRuntimeEvent invalidates runtime-owned skill queries on 
 
 test('applyObservedAgentRuntimeEvent invalidates runtime-owned cron queries on update', async () => {
     const cronSpy = spyOn(invalidationEvents, 'emitCronUpdated').mockImplementation();
-    const syncSpy = spyOn(invalidationEvents, 'emitSyncDataUpdated').mockImplementation();
 
     await applyObservedAgentRuntimeEvent({
         cronJobId: 'cron:daily-standup',
@@ -107,12 +106,10 @@ test('applyObservedAgentRuntimeEvent invalidates runtime-owned cron queries on u
     });
 
     assert.equal(cronSpy.mock.calls.length, 1);
-    assert.equal(syncSpy.mock.calls.length, 1);
 });
 
 test('applyObservedAgentRuntimeEvent invalidates runtime-owned cron queries on delete', async () => {
     const cronSpy = spyOn(invalidationEvents, 'emitCronUpdated').mockImplementation();
-    const syncSpy = spyOn(invalidationEvents, 'emitSyncDataUpdated').mockImplementation();
 
     await applyObservedAgentRuntimeEvent({
         cronJobId: 'cron:daily-standup',
@@ -121,5 +118,4 @@ test('applyObservedAgentRuntimeEvent invalidates runtime-owned cron queries on d
     });
 
     assert.equal(cronSpy.mock.calls.length, 1);
-    assert.equal(syncSpy.mock.calls.length, 1);
 });

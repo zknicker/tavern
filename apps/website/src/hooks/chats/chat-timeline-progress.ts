@@ -1,10 +1,6 @@
 import type { ChatLogOutput } from '../../lib/trpc.tsx';
 import { patchChatLogWithProgress } from './chat-log-cache.ts';
-import type {
-    ChatTimelineState,
-    ChatTurn,
-    ChatTurnProgressStep,
-} from './chat-timeline-types.ts';
+import type { ChatTimelineState, ChatTurn, ChatTurnProgressStep } from './chat-timeline-types.ts';
 
 export function patchTimelineProgress(
     state: ChatTimelineState,
@@ -29,6 +25,13 @@ export function patchTimelineProgress(
 
 function timelineLog(state: ChatTimelineState): ChatLogOutput {
     return {
+        activeReply: state.activeReply
+            ? {
+                  ...state.activeReply,
+                  isThinking: state.activeReply.isThinking ?? true,
+                  text: state.activeReply.text ?? '',
+              }
+            : null,
         limit: Math.max(state.timeline.length + 1, 100),
         offset: 0,
         rows: state.timeline,

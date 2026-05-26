@@ -14,10 +14,10 @@ executor.
 ## Ownership
 
 * **Tavern Runtime owns chat and local integration.** It stores canonical chats,
-  messages, participants, events, reads, automations, and delivery state. It
-  starts managed OpenClaw, applies Tavern-owned config, carries runtime events,
-  stores runtime settings, owns Cortex storage, and exposes Tavern tools to
-  agents.
+  messages, participants, events, reads, automations, agents, and delivery
+  state. It starts managed OpenClaw, applies Tavern-owned config, carries
+  runtime events, stores runtime settings, owns Cortex storage, and exposes
+  Tavern tools to agents.
 * **OpenClaw owns execution.** Agents, sessions, turns, transcripts, files,
   tools, model calls, prompt-time context management, and native OpenClaw config
   behavior remain OpenClaw-owned.
@@ -112,7 +112,7 @@ OpenClaw and they do not schedule background jobs when a screen mounts.
 
 | Source | Tavern stores |
 | --- | --- |
-| agent events | agent records and activity |
+| agent API and events | agent records and activity |
 | session events | session records and execution history |
 | transcript messages | message and tool-call evidence linked to Tavern chats |
 | automation events | automation runs, delivery state, and related session evidence |

@@ -20,6 +20,9 @@ canonical chat server.
   integration folders.
 * **Chat history is runtime-owned.** Tavern Runtime owns chats, messages,
   participants, sequence, events, reads, soft deletes, and the product timeline.
+* **Agent records are runtime-owned.** Tavern App lists, reads, and edits agents
+  through first-class Tavern APIs hosted by Runtime. App storage may keep
+  presentation overlays, but it does not decide whether an agent exists.
 * **Runtime integration stays behind adapters.** OpenClaw Gateway payloads and
   plugin-specific details do not leak into product domains.
 * **App storage is cache and settings.** App screens can cache runtime records
@@ -31,7 +34,8 @@ canonical chat server.
 ## Data Shape
 
 App storage includes client cache, presentation state, profiles, local settings,
-and runtime evidence views. Canonical chat records belong in Tavern Runtime.
+and runtime evidence views. Canonical chat and agent records belong in Tavern
+Runtime.
 
 Keep table names in product language. Attach runtime ownership with columns such
 as `runtime_id`, `source`, or `last_synced_at`; do not create integration-shaped

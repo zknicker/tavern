@@ -34,7 +34,8 @@ Cron jobs are runtime-owned scheduled producers of work surfaced in Tavern.
   latest session.
 - Cron runs show status, timing, summary, errors, and related downstream interactions when
   the runtime reports them.
-- Live events refresh or invalidate run history; durable run records still come from runtime sync.
+- Live events refresh or invalidate run history; durable run records come from Runtime automation
+  storage and APIs.
 
 ## Cron Relationships
 

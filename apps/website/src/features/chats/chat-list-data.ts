@@ -28,9 +28,9 @@ export function buildChatListItem(chat: ChatListRecord) {
             : 'no activity yet',
         agentRuntimeSyncLabel:
             chat.agentRuntimeSync?.status === 'error'
-                ? (chat.agentRuntimeSync.lastError ?? 'Runtime sync failed')
+                ? (chat.agentRuntimeSync.lastError ?? 'Runtime update failed')
                 : chat.agentRuntimeSync?.status === 'pending'
-                  ? 'Waiting for runtime sync'
+                  ? 'Waiting for Runtime update'
                   : null,
         title,
         searchText: [

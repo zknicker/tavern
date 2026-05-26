@@ -7,8 +7,9 @@ read_when:
 
 # Agents
 
-Agents are the named workers in Tavern. They own the user-facing personality,
-model choices, tool policy, memory behavior, and skill selection.
+Agents are the named workers in Tavern. Tavern Runtime hosts their records and
+user-editable controls: personality, model choices, tool policy, memory
+behavior, and skill selection.
 
 ## In the box
 
@@ -17,8 +18,8 @@ model choices, tool policy, memory behavior, and skill selection.
   behavior.
 * **Generated instructions.** Tavern renders the agent's runtime instructions
   from Tavern policy, user-authored personality, and agent-authored notes.
-* **Model choices.** Tavern projects the runtime's available model surface into
-  app settings.
+* **Model choices.** Tavern reads Runtime model capabilities and config for app
+  settings.
 * **Tool policy.** Users can inspect what an agent is allowed to use.
 * **Skill assignment.** Installed skills can be enabled per agent.
 
@@ -39,8 +40,10 @@ read-only or hidden from normal editing.
 
 ## Runtime boundary
 
-OpenClaw owns native execution. Tavern owns agent-facing app records, controls,
-and the chat state where agents participate.
+OpenClaw owns native execution. Tavern Runtime owns agent-facing records,
+controls, and the chat state where agents participate. Tavern App displays and
+edits agents through first-class Tavern APIs instead of treating OpenClaw as an
+app-facing read backend.
 
 Tavern renders each managed agent's `AGENTS.md` from separate instruction
 sources: Tavern-managed operating instructions, the user-authored soul, and

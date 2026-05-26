@@ -12,6 +12,7 @@ const turn = {
 
 function emptyLog(): ChatLogOutput {
     return {
+        activeReply: null,
         limit: 100,
         offset: 0,
         rows: [],
@@ -46,7 +47,7 @@ test('progress patch inserts a durable activity row with the persisted activity 
     });
 });
 
-test('progress patch creates a live log when progress arrives before the query data', () => {
+test('progress patch waits for query data before patching the cache', () => {
     const log = patchChatLogWithProgress(undefined, {
         step: {
             detail: 'I will run a timed shell check before the final reply.',
@@ -59,19 +60,7 @@ test('progress patch creates a live log when progress arrives before the query d
         turn,
     });
 
-    expect(log).toMatchObject({
-        limit: 100,
-        offset: 0,
-        total: 1,
-    });
-    expect(log?.rows[0]).toMatchObject({
-        id: 'act_run-1_preamble-1',
-        kind: 'tool',
-        toolCall: {
-            name: 'message',
-            summaryParts: ['I will run a timed shell check before the final reply.'],
-        },
-    });
+    expect(log).toBeUndefined();
 });
 
 test('progress patch updates an existing activity row without replacing its start time', () => {

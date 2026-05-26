@@ -167,7 +167,13 @@ test('turn progress patches durable chat activity without refetching live status
 test('turn progress applies preamble and normalized tool updates without refetching chat log', async () => {
     const invalidatedQueries: string[] = [];
     const patchedProgress: string[] = [];
-    let log: ChatLogOutput | undefined;
+    let log: ChatLogOutput | undefined = {
+        activeReply: null,
+        limit: 100,
+        offset: 0,
+        rows: [],
+        total: 0,
+    };
     const handlers = createHandlers({
         invalidatedQueries,
         patchLog: (updater) => {

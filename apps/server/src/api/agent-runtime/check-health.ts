@@ -5,7 +5,7 @@ import {
     getAgentRuntimeConnection,
 } from '../../agent-runtime-connection/service.ts';
 import { listAgentRuntimeCapabilityStatuses } from '../../storage/agent-runtime-capability-status.ts';
-import { emitAgentRuntimeUpdated, emitSyncDataUpdated } from '../invalidation-events.ts';
+import { emitAgentRuntimeUpdated } from '../invalidation-events.ts';
 import { publicProcedure } from '../trpc.ts';
 
 export const checkAgentRuntimeHealthRoute = publicProcedure.mutation(async () => {
@@ -28,7 +28,6 @@ export const checkAgentRuntimeHealthRoute = publicProcedure.mutation(async () =>
 
         refreshAgentRuntimeEventSync();
         emitAgentRuntimeUpdated();
-        emitSyncDataUpdated();
 
         return agentRuntimeConnectionStatusSchema.parse({
             capabilities,
@@ -44,7 +43,6 @@ export const checkAgentRuntimeHealthRoute = publicProcedure.mutation(async () =>
 
     refreshAgentRuntimeEventSync();
     emitAgentRuntimeUpdated();
-    emitSyncDataUpdated();
 
     return agentRuntimeConnectionStatusSchema.parse({
         capabilities,

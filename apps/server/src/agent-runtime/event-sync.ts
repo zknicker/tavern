@@ -6,9 +6,11 @@ import {
 import {
     emitAgentRuntimeUpdated,
     emitAgentUpdated,
+    emitChatLogUpdated,
+    emitChatUpdated,
     emitCronUpdated,
+    emitSessionUpdated,
     emitSkillInvalidationCascade,
-    emitSyncDataUpdated,
     emitWorkersUpdated,
 } from '../api/invalidation-events.ts';
 import { listReachableAgentRuntimeConnections } from '../storage/agent-runtime-connections.ts';
@@ -57,13 +59,14 @@ export async function applyObservedAgentRuntimeEvent(
         case 'chat.messageAccepted': {
             emitObservedAgentRuntimeEvent(event);
             debugTurnEvent(event);
-            emitSyncDataUpdated();
+            emitChatUpdated();
+            emitChatLogUpdated();
             return;
         }
         case 'chat.read': {
             emitObservedAgentRuntimeEvent(event);
             debugTurnEvent(event);
-            emitSyncDataUpdated();
+            emitChatUpdated();
             return;
         }
         case 'skill.updated': {
@@ -86,7 +89,6 @@ export async function applyObservedAgentRuntimeEvent(
                 console.warn('[tavern] failed to sync cron event', error);
             });
             emitCronUpdated();
-            emitSyncDataUpdated();
             return;
         }
         case 'cron.runStarted':
@@ -97,7 +99,6 @@ export async function applyObservedAgentRuntimeEvent(
                 console.warn('[tavern] failed to sync cron run event', error);
             });
             emitCronUpdated();
-            emitSyncDataUpdated();
             return;
         }
         case 'turn.progress': {
@@ -153,7 +154,7 @@ export async function applyObservedAgentRuntimeEvent(
                 });
             }
             emitWorkersUpdated();
-            emitSyncDataUpdated();
+            emitSessionUpdated({ sessionKey });
             return;
         }
     }
@@ -237,7 +238,6 @@ async function markConnectionUnavailable(connection: RuntimeConnectionRecord, er
         error,
     });
     emitAgentRuntimeUpdated();
-    emitSyncDataUpdated();
 }
 
 async function markConnectionReachable(connection: RuntimeConnectionRecord) {
@@ -292,7 +292,6 @@ function connectRuntimeEvents(connection: RuntimeConnectionRecord, revision: num
                 console.warn('[tavern] failed to mark runtime reachable', error);
             });
             emitCronUpdated();
-            emitSyncDataUpdated();
         })
         .catch((error) => {
             if (revision !== connectionRevision) {

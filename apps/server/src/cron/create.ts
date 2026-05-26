@@ -1,7 +1,7 @@
 import { requireConfiguredAgentRuntimeClientForRuntimeId } from '../agent-runtime/configured-client.ts';
 import * as agentRuntimeCron from '../agent-runtime/cron.ts';
 import { requirePrimaryAgent } from '../agents/catalog.ts';
-import { emitCronUpdated, emitSyncDataUpdated } from '../api/invalidation-events.ts';
+import { emitCronUpdated } from '../api/invalidation-events.ts';
 import { getRuntimeChatRecord } from '../chat/runtime-chats.ts';
 import { getAgent as getAgentRecord } from '../storage/agents.ts';
 import { saveCronJobRecord } from '../storage/cron-jobs.ts';
@@ -79,7 +79,6 @@ export async function createCronJob(input: unknown) {
         console.warn('[tavern] failed to refresh cron records after create', error);
     });
     emitCronUpdated();
-    emitSyncDataUpdated();
 
     return {
         success: true as const,

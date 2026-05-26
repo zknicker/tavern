@@ -1,7 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import { z } from 'zod';
-import { requirePrimaryAgent } from '../agents/catalog.ts';
-import { getAgent as getAgentRecord } from '../storage/agents.ts';
+import { listAgents, requirePrimaryAgent } from '../agents/catalog.ts';
 import {
     archiveChatResultSchema,
     type CreateChatInput,
@@ -27,18 +26,18 @@ function buildChatId() {
     return `cht_${randomUUID()}`;
 }
 
-async function resolveTavernAgentIds(agentIds: string[] | undefined) {
-    if (agentIds && agentIds.length > 0) {
-        return agentIds;
+async function resolveAgentRuntimeBindings(agentIds: string[] | undefined) {
+    if (!(agentIds && agentIds.length > 0)) {
+        const agent = await requirePrimaryAgent();
+        return {
+            agentIds: [agent.id],
+            runtimeId: agent.runtimeId,
+        };
     }
 
-    const agent = await requirePrimaryAgent();
-    return [agent.id];
-}
-
-async function resolveAgentRuntimeBindings(agentIds: string[] | undefined) {
-    const tavernAgentIds = await resolveTavernAgentIds(agentIds);
-    const agents = await Promise.all(tavernAgentIds.map((agentId) => getAgentRecord(agentId)));
+    const tavernAgentIds = agentIds;
+    const agentsById = new Map((await listAgents()).map((agent) => [agent.id, agent] as const));
+    const agents = tavernAgentIds.map((agentId) => agentsById.get(agentId) ?? null);
     const missingAgentIds = tavernAgentIds.filter((_, index) => !agents[index]);
 
     if (missingAgentIds.length > 0) {

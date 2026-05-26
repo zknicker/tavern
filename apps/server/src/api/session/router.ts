@@ -3,6 +3,7 @@ import { getSessionRoute } from './get.ts';
 import { getSessionHistoryRoute } from './history-get.ts';
 import { listSessionsRoute } from './list.ts';
 import { listSessionLogRoute } from './log-list.ts';
+import { onSessionUpdate } from './on-update.ts';
 import { getSessionPromptRoute } from './prompt-get.ts';
 import { resyncSessionRoute } from './resync.ts';
 import { getSessionToolRoute } from './tool-get.ts';
@@ -10,6 +11,7 @@ import { getSessionToolRoute } from './tool-get.ts';
 export const sessionRouter = createRouter({
     get: getSessionRoute,
     list: listSessionsRoute,
+    onUpdate: onSessionUpdate,
     resync: resyncSessionRoute,
     log: createRouter({
         list: listSessionLogRoute,

@@ -1,7 +1,7 @@
 import { TRPCError } from '@trpc/server';
 import { requireConfiguredAgentRuntimeClientForRuntimeId } from '../agent-runtime/configured-client.ts';
 import * as agentRuntimeCron from '../agent-runtime/cron.ts';
-import { emitCronUpdated, emitSyncDataUpdated } from '../api/invalidation-events.ts';
+import { emitCronUpdated } from '../api/invalidation-events.ts';
 import { getCronJobRecord } from '../storage/cron-jobs.ts';
 import { syncAgentRuntimeCron } from '../sync/agent-runtime-sync.ts';
 import { runCronJobInputSchema } from './contracts.ts';
@@ -31,7 +31,6 @@ export async function runCronJob(input: unknown) {
     });
 
     emitCronUpdated();
-    emitSyncDataUpdated();
 
     return {
         success: true as const,

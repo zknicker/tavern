@@ -1,7 +1,7 @@
 import { TRPCError } from '@trpc/server';
 import { requireConfiguredAgentRuntimeClientForRuntimeId } from '../agent-runtime/configured-client.ts';
 import * as agentRuntimeCron from '../agent-runtime/cron.ts';
-import { emitCronUpdated, emitSyncDataUpdated } from '../api/invalidation-events.ts';
+import { emitCronUpdated } from '../api/invalidation-events.ts';
 import { deleteCronJobRecord, getCronJobRecord } from '../storage/cron-jobs.ts';
 import { syncAgentRuntimeCron } from '../sync/agent-runtime-sync.ts';
 
@@ -15,9 +15,7 @@ export async function deleteCronJob(jobId: string) {
         });
     }
 
-    const runtimeClient = await requireConfiguredAgentRuntimeClientForRuntimeId(
-        job.runtimeId
-    );
+    const runtimeClient = await requireConfiguredAgentRuntimeClientForRuntimeId(job.runtimeId);
 
     await agentRuntimeCron.deleteCronJob(job.runtimeCronJobId, runtimeClient);
     await deleteCronJobRecord(jobId);
@@ -25,7 +23,6 @@ export async function deleteCronJob(jobId: string) {
         console.warn('[tavern] failed to refresh cron records after delete', error);
     });
     emitCronUpdated();
-    emitSyncDataUpdated();
 
     return {
         success: true as const,

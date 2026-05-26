@@ -23,7 +23,7 @@ Discord, Slack, iMessage, Telegram, or OpenClaw.
 - `participant_labels`: observed labels for one participant.
 - `profile_participants`: manual many-to-one links from observed participants to profiles.
 
-The runtime sync layer owns participant observation. The profile layer owns profile links and
+Runtime ingestion owns participant observation. The profile layer owns profile links and
 presentation.
 
 ## Identity Rules

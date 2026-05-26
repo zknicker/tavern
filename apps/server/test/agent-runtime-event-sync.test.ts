@@ -9,15 +9,17 @@ const emitAgentRuntimeUpdated = mock(() => undefined);
 const emitAgentRuntimeCapabilityUpdated = mock(() => undefined);
 const emitAgentInvalidationCascade = mock(() => undefined);
 const emitAgentUpdated = mock(() => undefined);
+const emitChatLogUpdated = mock(() => undefined);
+const emitChatUpdated = mock(() => undefined);
 const emitCronUpdated = mock(() => undefined);
 const emitJobsUpdated = mock(() => undefined);
 const emitModelUpdated = mock(() => undefined);
 const emitOpenClawConfigUpdated = mock(() => undefined);
 const emitOpenRouterSettingsInvalidationCascade = mock(() => undefined);
 const emitOpenRouterSettingsUpdated = mock(() => undefined);
+const emitSessionUpdated = mock(() => undefined);
 const emitSkillInvalidationCascade = mock(() => undefined);
 const emitSkillUpdated = mock(() => undefined);
-const emitSyncDataUpdated = mock(() => undefined);
 const emitTavernEvent = mock(() => undefined);
 const emitUsageLiveUpdated = mock(() => undefined);
 const emitWorkersUpdated = mock(() => undefined);
@@ -42,15 +44,17 @@ mock.module('../src/api/invalidation-events.ts', () => ({
     emitAgentRuntimeCapabilityUpdated,
     emitAgentRuntimeUpdated,
     emitAgentUpdated,
+    emitChatLogUpdated,
+    emitChatUpdated,
     emitCronUpdated,
     emitJobsUpdated,
     emitModelUpdated,
     emitOpenClawConfigUpdated,
     emitOpenRouterSettingsInvalidationCascade,
     emitOpenRouterSettingsUpdated,
+    emitSessionUpdated,
     emitSkillInvalidationCascade,
     emitSkillUpdated,
-    emitSyncDataUpdated,
     emitTavernEvent,
     emitUsageLiveUpdated,
     emitWorkersUpdated,
@@ -94,9 +98,11 @@ beforeEach(async () => {
     emitOpenClawConfigUpdated.mockClear();
     emitOpenRouterSettingsInvalidationCascade.mockClear();
     emitOpenRouterSettingsUpdated.mockClear();
+    emitSessionUpdated.mockClear();
     emitSkillInvalidationCascade.mockClear();
     emitSkillUpdated.mockClear();
-    emitSyncDataUpdated.mockClear();
+    emitChatLogUpdated.mockClear();
+    emitChatUpdated.mockClear();
     emitTavernEvent.mockClear();
     emitUsageLiveUpdated.mockClear();
     emitWorkersUpdated.mockClear();
@@ -393,7 +399,7 @@ test('applyObservedAgentRuntimeEvent defers invalidated session sync while a tur
     expect(listSessions).not.toHaveBeenCalled();
     expect(listSessionMessages).not.toHaveBeenCalled();
     expect(emitWorkersUpdated).toHaveBeenCalledTimes(1);
-    expect(emitSyncDataUpdated).not.toHaveBeenCalled();
+    expect(emitSessionUpdated).not.toHaveBeenCalled();
 
     await applyObservedAgentRuntimeEvent(
         {

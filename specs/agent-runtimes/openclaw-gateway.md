@@ -220,7 +220,9 @@ or operate on a continuing session must accept `sessionKey`; Tavern session reco
 
 ## Events
 
-OpenClaw events are freshness signals. Tavern sync jobs still fetch authoritative snapshots.
+OpenClaw events are freshness signals. Tavern persists app-facing chat, session, cron, participant,
+and activity state through Runtime storage, then emits focused app invalidation events. The Tavern
+App recovers by reading Runtime APIs, not by reading OpenClaw directly.
 
 - `sessions.changed`, `session.message`, `session.tool` -> session invalidation. These event
   payloads must not force Tavern to fabricate a full session snapshot when OpenClaw has not

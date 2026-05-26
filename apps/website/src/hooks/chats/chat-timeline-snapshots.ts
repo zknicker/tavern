@@ -15,6 +15,9 @@ import type {
     ChatTurnFailure,
 } from './chat-timeline-types.ts';
 
+type ChatLogPage = NonNullable<ChatLogOutput>;
+type ChatLogInput = Omit<ChatLogPage, 'activeReply'> & Partial<Pick<ChatLogPage, 'activeReply'>>;
+
 export function emptyTimelineState(): ChatTimelineState {
     return {
         activeReply: null,
@@ -27,27 +30,30 @@ export function emptyTimelineState(): ChatTimelineState {
 
 export function applyLogSnapshot(
     state: ChatTimelineState,
-    log: ChatLogOutput | undefined
+    log: ChatLogInput | undefined
 ): ChatTimelineState {
     if (!log) {
         return state;
     }
 
+    const snapshot = normalizeChatLog(log);
     const hasTerminalMessage = hasTerminalReplyOrFailure({
         activeReply: state.activeReply,
-        rows: log.rows,
+        rows: snapshot.rows,
     });
     const nextActiveReply = hasTerminalMessage ? null : state.activeReply;
-    const nextFailedTurn = hasFailureMessage(log.rows, state.failedTurn) ? null : state.failedTurn;
+    const nextFailedTurn = hasFailureMessage(snapshot.rows, state.failedTurn)
+        ? null
+        : state.failedTurn;
     const historyLoaded = true;
     const nextTimeline = hasTerminalMessage
-        ? log.rows
+        ? snapshot.rows
         : mergeActiveProgressRows({
               liveRows: state.timeline,
-              loggedRows: log.rows,
+              loggedRows: snapshot.rows,
               runId: state.activeReply?.runId,
           });
-    const nextTotal = log.total + Math.max(0, nextTimeline.length - log.rows.length);
+    const nextTotal = snapshot.total + Math.max(0, nextTimeline.length - snapshot.rows.length);
 
     if (
         areSameTimeline(state.timeline, nextTimeline) &&
@@ -65,6 +71,16 @@ export function applyLogSnapshot(
         historyLoaded,
         timeline: nextTimeline,
         totalRows: nextTotal,
+    };
+}
+
+function normalizeChatLog(log: ChatLogInput): ChatLogPage {
+    return {
+        activeReply: log.activeReply ?? null,
+        limit: log.limit,
+        offset: log.offset,
+        rows: log.rows,
+        total: log.total,
     };
 }
 

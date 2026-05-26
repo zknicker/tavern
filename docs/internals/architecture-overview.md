@@ -2,7 +2,7 @@
 summary: Tavern architecture layers for App, API, SDK, Runtime, Runtime SQLite, App SQLite, OpenClaw execution, and event recovery.
 read_when:
   - changing the boundary between Tavern App, Tavern Runtime, and OpenClaw
-  - changing realtime recovery, runtime sync, or managed runtime ownership
+  - changing realtime recovery, Runtime data flow, or managed runtime ownership
 ---
 
 # Architecture Overview

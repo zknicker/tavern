@@ -55,6 +55,12 @@ export interface Agent {
     updatedAt: string;
 }
 
+interface ActiveRuntimeAgentRead {
+    agent: AgentRuntimeAgent;
+    client: TavernAgentRuntimeClient;
+    runtimeId: string;
+}
+
 export const agentDisplayNameSchema = z
     .string()
     .trim()
@@ -116,14 +122,28 @@ function toAgent(
 }
 
 export async function listAgents() {
-    const [profiles, agents] = await Promise.all([
+    const [profiles, activeRuntimeAgents] = await Promise.all([
         agentProfileStore.listAgentProfiles(),
-        listAgentRecords(),
+        listActiveRuntimeAgents().catch(() => null),
     ]);
 
     const profilesByAgentKey = new Map(
         profiles.map((profile) => [`${profile.runtimeId}:${profile.agentId}`, profile] as const)
     );
+
+    if (activeRuntimeAgents) {
+        return activeRuntimeAgents.agents.map((agent) =>
+            toAgentFromAgentRuntimeAgent({
+                agent,
+                id: agent.id,
+                profile:
+                    profilesByAgentKey.get(`${activeRuntimeAgents.runtimeId}:${agent.id}`) ?? null,
+                runtimeId: activeRuntimeAgents.runtimeId,
+            })
+        );
+    }
+
+    const agents = await listAgentRecords();
 
     return agents.map((agent) =>
         toAgent(agent, profilesByAgentKey.get(`${agent.runtimeId}:${agent.id}`) ?? null)
@@ -131,18 +151,7 @@ export async function listAgents() {
 }
 
 export async function getAgent(agentId: string): Promise<null | Agent> {
-    const agent = await getAgentRecord(agentId);
-
-    if (!agent) {
-        return null;
-    }
-
-    const profile = await agentProfileStore.getAgentProfile({
-        agentId: agent.id,
-        runtimeId: agent.runtimeId,
-    });
-
-    return toAgent(agent, profile);
+    return (await listAgents()).find((agent) => agent.id === agentId) ?? null;
 }
 
 export function toAgentCatalogItem(
@@ -260,12 +269,24 @@ export async function saveCatalogAgentSettings(
     client?: TavernAgentRuntimeClient | null
 ) {
     const agentRecord = await getAgentRecord(input.agentId);
+    const runtimeAgentRead =
+        agentRecord === null ? await getActiveRuntimeAgent(input.agentId, client) : null;
 
-    if (!agentRecord) {
+    if (!(agentRecord || runtimeAgentRead)) {
         throw new Error(`No agent named "${input.agentId}" exists.`);
     }
 
-    const runtimeClient = client ?? (await createClientForAgentRecord(agentRecord));
+    const runtimeId = agentRecord?.runtimeId ?? runtimeAgentRead?.runtimeId ?? '';
+    const runtimeClient =
+        client ??
+        (agentRecord ? await createClientForAgentRecord(agentRecord) : runtimeAgentRead?.client);
+
+    if (!runtimeClient) {
+        throw new Error(
+            `No enabled Tavern Runtime connection exists for agent "${input.agentId}".`
+        );
+    }
+
     let availableSkillIdsForResponse: null | string[] = null;
     let nextEnabledSkillIds: string[] | undefined;
 
@@ -273,7 +294,7 @@ export async function saveCatalogAgentSettings(
         const availableSkillIds = await listSkillIds({
             agentId: input.agentId,
             client: runtimeClient,
-            runtimeId: agentRecord.runtimeId,
+            runtimeId,
         });
         availableSkillIdsForResponse = availableSkillIds;
         const missingSkillIds = findMissingEnabledSkillIds(
@@ -290,10 +311,10 @@ export async function saveCatalogAgentSettings(
 
     let savedAgentRuntimeAgent: AgentRuntimeAgent | null = null;
     if (input.displayName !== undefined || input.enabledSkillIds !== undefined) {
-        const agentRuntimeAgent = await getAgentRuntimeAgentConfig(agentRecord.id, runtimeClient);
+        const agentRuntimeAgent = await getAgentRuntimeAgentConfig(input.agentId, runtimeClient);
 
         if (!agentRuntimeAgent) {
-            throw new Error(`No runtime agent named "${agentRecord.id}" exists.`);
+            throw new Error(`No runtime agent named "${input.agentId}" exists.`);
         }
 
         const { enabledSkillIds: _currentEnabledSkillIds, ...agentRuntimeConfigWithoutSkills } =
@@ -311,41 +332,49 @@ export async function saveCatalogAgentSettings(
     }
 
     const profile = await agentProfileStore.getAgentProfile({
-        agentId: agentRecord.id,
-        runtimeId: agentRecord.runtimeId,
+        agentId: input.agentId,
+        runtimeId,
     });
 
-    if (savedAgentRuntimeAgent) {
+    if (agentRecord && savedAgentRuntimeAgent) {
         await syncAgentsForRuntime({
             agents: (await runtimeClient.listAgents()).agents,
             runtimeId: agentRecord.runtimeId,
         });
     }
 
-    if (input.enabledSkillIds !== undefined) {
+    if (agentRecord && input.enabledSkillIds !== undefined) {
         await updateAgentEnabledSkillIds({
             agentId: input.agentId,
             enabledSkillIds: nextEnabledSkillIds ?? [],
         });
     }
 
-    const latestAgentRecord = await getAgentRecord(input.agentId);
-    const agent = latestAgentRecord
-        ? toAgent(latestAgentRecord, profile)
-        : savedAgentRuntimeAgent
+    const latestAgentRecord = agentRecord ? await getAgentRecord(input.agentId) : null;
+    const storedAgent = latestAgentRecord ?? agentRecord;
+    const runtimeAgent = savedAgentRuntimeAgent ?? runtimeAgentRead?.agent ?? null;
+    const agent = storedAgent
+        ? toAgent(
+              latestAgentRecord ?? {
+                  ...storedAgent,
+                  enabledSkillIdsJson: JSON.stringify(
+                      nextEnabledSkillIds ?? parseEnabledSkillIds(storedAgent)
+                  ),
+              },
+              profile
+          )
+        : runtimeAgent
           ? toAgentFromAgentRuntimeAgent({
-                agent: savedAgentRuntimeAgent,
-                id: agentRecord.id,
+                agent: runtimeAgent,
+                id: input.agentId,
                 profile,
-                runtimeId: agentRecord.runtimeId,
+                runtimeId,
             })
-          : toAgent(
-                {
-                    ...agentRecord,
-                    enabledSkillIdsJson: JSON.stringify(nextEnabledSkillIds),
-                },
-                profile
-            );
+          : null;
+
+    if (!agent) {
+        throw new Error(`No agent named "${input.agentId}" exists.`);
+    }
 
     return toAgentCatalogItem(agent, availableSkillIdsForResponse);
 }
@@ -356,14 +385,17 @@ export async function saveCatalogAgentProfile(input: {
     soul?: string | null;
 }) {
     const agentRecord = await getAgentRecord(input.agentId);
+    const runtimeAgentRead =
+        agentRecord === null ? await getActiveRuntimeAgent(input.agentId) : null;
 
-    if (!agentRecord) {
+    if (!(agentRecord || runtimeAgentRead)) {
         throw new Error(`No agent named "${input.agentId}" exists.`);
     }
 
+    const runtimeId = agentRecord?.runtimeId ?? runtimeAgentRead?.runtimeId ?? '';
     const profileInput = {
-        agentId: agentRecord.id,
-        runtimeId: agentRecord.runtimeId,
+        agentId: input.agentId,
+        runtimeId,
         ...(input.primaryColor !== undefined ? { primaryColor: input.primaryColor } : {}),
         ...(input.soul !== undefined ? { soul: input.soul } : {}),
     };
@@ -374,12 +406,37 @@ export async function saveCatalogAgentProfile(input: {
     }
 
     if (input.soul !== undefined) {
-        await syncAgentWorkspaceInstructions(agentRecord, profile).catch((error) => {
+        const instructionAgent = agentRecord ?? runtimeAgentRead?.agent ?? null;
+        await syncAgentWorkspaceInstructions(
+            {
+                id: input.agentId,
+                name: instructionAgent?.name ?? input.agentId,
+                runtimeId,
+                workspaceFolder: instructionAgent?.workspaceFolder ?? null,
+            },
+            profile,
+            runtimeAgentRead?.client ?? null
+        ).catch((error) => {
             console.warn('[tavern] failed to sync agent workspace instructions', error);
         });
     }
 
-    return toAgentCatalogItem(toAgent(agentRecord, profile), null);
+    const agent = agentRecord
+        ? toAgent(agentRecord, profile)
+        : runtimeAgentRead
+          ? toAgentFromAgentRuntimeAgent({
+                agent: runtimeAgentRead.agent,
+                id: input.agentId,
+                profile,
+                runtimeId,
+            })
+          : null;
+
+    if (!agent) {
+        throw new Error(`No agent named "${input.agentId}" exists.`);
+    }
+
+    return toAgentCatalogItem(agent, null);
 }
 
 export async function deleteCatalogAgent(
@@ -387,30 +444,77 @@ export async function deleteCatalogAgent(
     client?: TavernAgentRuntimeClient | null
 ) {
     const agentRecord = await getAgentRecord(agentId);
+    const runtimeAgentRead = agentRecord === null ? await getActiveRuntimeAgent(agentId) : null;
 
-    if (!agentRecord) {
+    if (!(agentRecord || runtimeAgentRead)) {
         return;
     }
 
     await deleteAgentRuntimeAgent(
-        agentRecord.id,
-        client ?? (await createClientForAgentRecord(agentRecord))
+        agentId,
+        client ??
+            (agentRecord ? await createClientForAgentRecord(agentRecord) : runtimeAgentRead?.client)
     );
     await agentProfileStore.deleteAgentProfile({
-        agentId: agentRecord.id,
-        runtimeId: agentRecord.runtimeId,
+        agentId,
+        runtimeId: agentRecord?.runtimeId ?? runtimeAgentRead?.runtimeId ?? '',
     });
-    await deleteAgentRecord(agentId);
+    if (agentRecord) {
+        await deleteAgentRecord(agentId);
+    }
 }
 
 async function createClientForAgentRecord(agent: AgentRecord) {
-    const connection = await getAgentRuntimeConnection(agent.runtimeId);
+    return await createClientForRuntimeId(agent.runtimeId);
+}
+
+async function createClientForRuntimeId(runtimeId: string) {
+    const connection = await getAgentRuntimeConnection(runtimeId);
 
     if (!connection?.enabled) {
-        throw new Error(`No enabled Tavern Runtime connection named "${agent.runtimeId}" exists.`);
+        throw new Error(`No enabled Tavern Runtime connection named "${runtimeId}" exists.`);
     }
 
     return createAgentRuntimeClientForConnection(connection);
+}
+
+async function listActiveRuntimeAgents() {
+    const runtimeId = await getActiveRuntimeId();
+
+    if (!runtimeId) {
+        return null;
+    }
+
+    const connection = await getAgentRuntimeConnection(runtimeId);
+
+    if (!connection?.enabled) {
+        return null;
+    }
+
+    const client = createAgentRuntimeClientForConnection(connection);
+
+    return {
+        agents: (await client.listAgents()).agents,
+        runtimeId,
+    };
+}
+
+async function getActiveRuntimeAgent(
+    agentId: string,
+    client?: TavernAgentRuntimeClient | null
+): Promise<ActiveRuntimeAgentRead | null> {
+    const runtimeId = await getActiveRuntimeId();
+
+    if (!runtimeId) {
+        return null;
+    }
+
+    const runtimeClient = client ?? (await createClientForRuntimeId(runtimeId));
+    const agent = (await runtimeClient.listAgents()).agents.find(
+        (candidate) => candidate.id === agentId
+    );
+
+    return agent ? { agent, client: runtimeClient, runtimeId } : null;
 }
 
 function toAgentFromAgentRuntimeAgent(input: {
@@ -433,17 +537,23 @@ function toAgentFromAgentRuntimeAgent(input: {
 }
 
 async function syncAgentWorkspaceInstructions(
-    agentRecord: AgentRecord,
-    profile: agentProfileStore.AgentProfile
+    agent: {
+        id: string;
+        name: string;
+        runtimeId: string;
+        workspaceFolder: string | null;
+    },
+    profile: agentProfileStore.AgentProfile,
+    client?: TavernAgentRuntimeClient | null
 ) {
-    if (!agentRecord.workspaceFolder) {
-        throw new Error(`No workspace folder is available for agent "${agentRecord.id}".`);
+    if (!agent.workspaceFolder) {
+        throw new Error(`No workspace folder is available for agent "${agent.id}".`);
     }
 
-    const client = await createClientForAgentRecord(agentRecord);
-    await client.saveWorkspaceInstructions(agentRecord.id, {
-        agentName: agentRecord.name,
+    const runtimeClient = client ?? (await createClientForRuntimeId(agent.runtimeId));
+    await runtimeClient.saveWorkspaceInstructions(agent.id, {
+        agentName: agent.name,
         soul: profile.soul,
-        workspaceDir: agentRecord.workspaceFolder,
+        workspaceDir: agent.workspaceFolder,
     });
 }

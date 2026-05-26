@@ -1,12 +1,12 @@
 import * as React from 'react';
 import { useAgentList } from '../../hooks/agents/use-agent-list.ts';
 import { mergeTimelineMessages } from '../../hooks/chats/chat-timeline-messages.ts';
-import type { ChatLogOutput } from '../../lib/trpc.tsx';
 import type { ChatActiveReply, ChatTimelineState } from '../../hooks/chats/chat-timeline-state.ts';
 import type { ChatStartDraft } from '../../hooks/chats/use-chat-start-drafts.tsx';
 import { useChatTimelineRows } from '../../hooks/chats/use-chat-timeline-store.tsx';
 import { useChatRuntimeTimelineState } from '../../hooks/chats/use-timeline-context.tsx';
 import { markChatTiming } from '../../lib/chat-timing.ts';
+import type { ChatLogOutput } from '../../lib/trpc.tsx';
 import { ChatDetailFrame } from './chat-detail-frame.tsx';
 import { ChatMessageComposerSurface } from './chat-message-composer-surface.tsx';
 
@@ -130,6 +130,13 @@ export function buildDraftHandoffLog(
     }
 
     return {
+        activeReply: handoffState.activeReply
+            ? {
+                  ...handoffState.activeReply,
+                  isThinking: handoffState.activeReply.isThinking ?? true,
+                  text: handoffState.activeReply.text ?? '',
+              }
+            : null,
         limit: Math.max(handoffState.timeline.length, draftTimelineLimit),
         offset: 0,
         rows: handoffState.timeline,

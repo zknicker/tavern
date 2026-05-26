@@ -1,14 +1,18 @@
 import EventEmitter, { on } from 'node:events';
 import { z } from 'zod';
 
-const invalidationEventSchema = z.object({
-    emittedAt: z.string().datetime(),
-});
+const invalidationEventSchema = z
+    .object({
+        emittedAt: z.string().datetime(),
+    })
+    .passthrough();
 
 export type InvalidationEvent = z.infer<typeof invalidationEventSchema>;
 
 export const tavernEventNames = {
     agentUpdated: 'agent.updated',
+    chatLogUpdated: 'chat.log.updated',
+    chatUpdated: 'chat.updated',
     cronUpdated: 'cron.updated',
     jobsUpdated: 'jobs.updated',
     modelUpdated: 'model.updated',
@@ -16,8 +20,9 @@ export const tavernEventNames = {
     openClawConfigUpdated: 'openclaw-config.updated',
     agentRuntimeCapabilityUpdated: 'agent-runtime-capability.updated',
     agentRuntimeUpdated: 'agent-runtime.updated',
+    participantUpdated: 'participant.updated',
+    sessionUpdated: 'session.updated',
     skillUpdated: 'skill.updated',
-    syncDataUpdated: 'sync.data.updated',
     usageLiveUpdated: 'usage.live.updated',
     workersUpdated: 'workers.updated',
 } as const;
@@ -57,7 +62,6 @@ export function emitAgentUpdated() {
 
 export function emitAgentInvalidationCascade() {
     emitAgentUpdated();
-    emitSyncDataUpdated();
 }
 
 export function emitSkillUpdated() {
@@ -67,11 +71,32 @@ export function emitSkillUpdated() {
 export function emitSkillInvalidationCascade() {
     emitSkillUpdated();
     emitAgentUpdated();
-    emitSyncDataUpdated();
 }
 
-export function emitSyncDataUpdated() {
-    emitTavernEvent(tavernEventNames.syncDataUpdated);
+export function emitChatUpdated(input?: { chatId?: string }) {
+    emitTavernEvent(tavernEventNames.chatUpdated, {
+        ...createInvalidationEvent(),
+        ...(input?.chatId ? { chatId: input.chatId } : {}),
+    });
+}
+
+export function emitChatLogUpdated(input?: { chatId?: string; sessionKey?: string }) {
+    emitTavernEvent(tavernEventNames.chatLogUpdated, {
+        ...createInvalidationEvent(),
+        ...(input?.chatId ? { chatId: input.chatId } : {}),
+        ...(input?.sessionKey ? { sessionKey: input.sessionKey } : {}),
+    });
+}
+
+export function emitSessionUpdated(input?: { sessionKey?: string }) {
+    emitTavernEvent(tavernEventNames.sessionUpdated, {
+        ...createInvalidationEvent(),
+        ...(input?.sessionKey ? { sessionKey: input.sessionKey } : {}),
+    });
+}
+
+export function emitParticipantUpdated() {
+    emitTavernEvent(tavernEventNames.participantUpdated);
 }
 
 export function emitJobsUpdated() {

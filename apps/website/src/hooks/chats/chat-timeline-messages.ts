@@ -3,6 +3,8 @@ import type { ChatLogOutput } from '../../lib/trpc.tsx';
 const sessionRailMaxGapMs = 5 * 60 * 1000;
 
 type ChatLogRow = NonNullable<ChatLogOutput>['rows'][number];
+type ChatLogPage = NonNullable<ChatLogOutput>;
+type ChatLogInput = Omit<ChatLogPage, 'activeReply'> & Partial<Pick<ChatLogPage, 'activeReply'>>;
 type ChatMessageRow = Extract<ChatLogRow, { kind: 'message' }>;
 
 export interface ChatTimelineMessage {
@@ -117,8 +119,9 @@ function buildUserMessageRow(input: {
     };
 }
 
-function createEmptyLog(limit: number): ChatLogOutput {
+function createEmptyLog(limit: number): ChatLogPage {
     return {
+        activeReply: null,
         limit,
         offset: 0,
         rows: [],
@@ -150,36 +153,37 @@ function recomputeRowConnections(rows: ChatLogRow[]): ChatLogRow[] {
 }
 
 export function appendTimelineMessage(
-    current: ChatLogOutput | undefined,
+    current: ChatLogInput | undefined,
     input: ChatTimelineMessage
-) {
+): ChatLogPage | undefined {
     if (!current || current.rows.some((row) => row.id === input.id)) {
-        return current;
+        return current ? normalizeChatLog(current) : undefined;
     }
 
+    const source = normalizeChatLog(current);
     const nextRows = recomputeRowConnections(
-        [...current.rows, buildUserMessageRow(input)].sort(compareChatLogRows)
+        [...source.rows, buildUserMessageRow(input)].sort(compareChatLogRows)
     );
-    const total = current.total + 1;
+    const total = source.total + 1;
 
     return {
-        ...current,
-        offset: Math.max(total - current.limit, 0),
-        rows: nextRows.slice(-current.limit),
+        ...source,
+        offset: Math.max(total - source.limit, 0),
+        rows: nextRows.slice(-source.limit),
         total,
     };
 }
 
 export function mergeTimelineMessages(input: {
     limit: number;
-    logged: ChatLogOutput | undefined;
+    logged: ChatLogInput | undefined;
     messages: readonly ChatTimelineMessage[];
-}) {
+}): ChatLogPage | undefined {
     if (!input.logged && input.messages.length === 0) {
         return undefined;
     }
 
-    const initial = input.logged ?? createEmptyLog(input.limit);
+    const initial = input.logged ? normalizeChatLog(input.logged) : createEmptyLog(input.limit);
 
     const merged = input.messages.reduce(
         (current, message) => appendTimelineMessage(current, message) ?? current,
@@ -193,7 +197,7 @@ export function mergeTimelineMessages(input: {
 }
 
 export function getLoggedTimelineMessageIds(
-    logged: ChatLogOutput | undefined,
+    logged: ChatLogInput | undefined,
     messages: readonly ChatTimelineMessage[]
 ) {
     if (!logged || messages.length === 0) {
@@ -219,4 +223,14 @@ export function getLoggedTimelineMessageIds(
     }
 
     return confirmedIds;
+}
+
+function normalizeChatLog(log: ChatLogInput): ChatLogPage {
+    return {
+        activeReply: log.activeReply ?? null,
+        limit: log.limit,
+        offset: log.offset,
+        rows: log.rows,
+        total: log.total,
+    };
 }

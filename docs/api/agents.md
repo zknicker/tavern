@@ -15,14 +15,17 @@ with personality, model, tool, memory, and skill policy.
 
 ## Contract
 
-* Agent ids are durable Tavern ids.
+* Agent ids are durable Tavern ids hosted by Tavern Runtime.
+* Agent list and detail reads come from Runtime-backed agent APIs. Mounting an
+  app screen must not enqueue a background sync job to discover agents.
 * Agent records expose display name, description, soul/personality, model
   policy, tool policy, memory policy, skill selections, and availability.
-* Model availability comes from Runtime capabilities and config reads. App
-  clients read it through agent and model capabilities.
+* Model availability comes from Runtime capabilities and config reads. Clients
+  read it through agent and model capabilities.
 * Tool and skill controls are inspectable before a run starts.
-* Soul/personality is a Tavern-owned setting. It is rendered into the managed
-  OpenClaw `AGENTS.md`; clients do not edit the workspace file directly.
+* Soul/personality is a Tavern-owned setting stored through the Runtime-hosted
+  agent API. It is rendered into the managed OpenClaw `AGENTS.md`; clients do
+  not edit the workspace file directly.
 * Agent notes are DB-backed and agent-owned. They are updated through Tavern
   workspace tools, not through the first-pass user-facing agent settings UI.
 * Runtime execution state is not required just to list or edit agents.
@@ -44,8 +47,10 @@ The API covers:
 ## Runtime Boundary
 
 OpenClaw owns native execution, tool invocation, model calls, files, and
-sessions. Tavern owns agent-facing app records, controls users edit, and the
-chat state where agents participate.
+sessions. Tavern Runtime owns the first-class agent records, user-editable
+agent controls, and the chat state where agents participate. Tavern App reads
+those records through tRPC/React Query and may keep app-owned presentation
+overlays, but the app database is not the source of truth for agent existence.
 
 Runtime words such as `session`, `turn`, and `run` appear only where the API is
 returning execution metadata for a specific agent activity.

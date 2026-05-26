@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { linkParticipantToSelf } from '../../participants/link.ts';
-import { emitSyncDataUpdated } from '../invalidation-events.ts';
+import { emitParticipantUpdated } from '../invalidation-events.ts';
 import { publicProcedure } from '../trpc.ts';
 
 export const linkParticipantRoute = publicProcedure
@@ -11,7 +11,7 @@ export const linkParticipantRoute = publicProcedure
     )
     .mutation(async ({ input }) => {
         const participant = await linkParticipantToSelf(input.participantId);
-        emitSyncDataUpdated();
+        emitParticipantUpdated();
 
         return {
             participant,

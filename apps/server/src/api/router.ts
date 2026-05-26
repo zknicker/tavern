@@ -16,7 +16,6 @@ import { participantRouter } from './participant/router.ts';
 import { sessionRouter } from './session/router.ts';
 import { skillRouter } from './skill/router.ts';
 import { subAgentRouter } from './sub-agent/router.ts';
-import { syncRouter } from './sync/router.ts';
 import { createRouter } from './trpc.ts';
 import { usageRouter } from './usage/router.ts';
 import { workerRouter } from './worker/router.ts';
@@ -40,7 +39,6 @@ export const appRouter = createRouter({
     session: sessionRouter,
     skill: skillRouter,
     subAgent: subAgentRouter,
-    sync: syncRouter,
     usage: usageRouter,
     worker: workerRouter,
 });

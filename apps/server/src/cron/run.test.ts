@@ -98,10 +98,6 @@ test('runCronJob forwards the manual run request to OpenClaw', async () => {
     const emitCronUpdatedSpy = spyOn(invalidationEvents, 'emitCronUpdated').mockImplementation(
         () => undefined
     );
-    const emitSyncDataUpdatedSpy = spyOn(
-        invalidationEvents,
-        'emitSyncDataUpdated'
-    ).mockImplementation(() => undefined);
 
     const result = await runCronJob({
         jobId: 'cron:daily-standup',
@@ -117,7 +113,6 @@ test('runCronJob forwards the manual run request to OpenClaw', async () => {
         { mode: 'enqueue' },
     ]);
     assert.equal(emitCronUpdatedSpy.mock.calls.length, 1);
-    assert.equal(emitSyncDataUpdatedSpy.mock.calls.length, 1);
 });
 
 test('runCronJob rejects missing cron jobs before calling OpenClaw', async () => {
