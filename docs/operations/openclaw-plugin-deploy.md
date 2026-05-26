@@ -65,10 +65,9 @@ The generated config keeps OpenClaw's runtime-facing fields explicit:
 }
 ```
 
-Lossless Claw is a built-in managed dependency. Runtime resolves its install
-spec, adds its package root to `plugins.load.paths`, enables `lossless-claw`,
-sets `plugins.slots.contextEngine` to `lossless-claw`, and sets
-`plugins.slots.memory` to `none`.
+Managed OpenClaw does not install or enable Lossless Claw. Runtime keeps the
+OpenClaw `memory` slot set to `none` and strips stale managed memory plugins,
+including `lossless-claw`, from regenerated configs.
 
 Verify the lifecycle directly:
 

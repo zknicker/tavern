@@ -1,7 +1,7 @@
 ---
-summary: Context management feature for Lossless Claw prompt continuity, bounded turn context, and the boundary with Cortex memory.
+summary: Context management feature for bounded turn context and the boundary with Cortex memory.
 read_when:
-  - changing Lossless Claw setup, prompt-time context readiness, or context-engine status
+  - changing prompt-time context readiness or context-engine status
   - changing how active turns receive bounded context from chat, participants, activity, or Cortex recall
 ---
 
@@ -9,16 +9,15 @@ read_when:
 
 Context management is the prompt-time continuity layer for active turns.
 
-Lossless Claw belongs here. Tavern configures managed OpenClaw to use Lossless
-Claw as the context engine so an active OpenClaw turn can stay oriented inside
-its execution context. That is not Tavern memory.
+Managed Tavern OpenClaw does not use Lossless Claw. It is incompatible with the
+Codex harness Tavern launches through managed OpenClaw, so Runtime strips stale
+`lossless-claw` config instead of installing or enabling that plugin.
 
 Memory means Cortex: the durable wiki, graph, capture, recall, timeline,
 claims, links, embeddings, audit, and maintenance state.
 
 ## Contract
 
-* Lossless Claw is OpenClaw context management for active turns.
 * Cortex is Tavern memory.
 * Context management may read Cortex recall output, chat state, activity, and
   participant context when building bounded prompt context.
@@ -30,9 +29,9 @@ claims, links, embeddings, audit, and maintenance state.
 
 Tavern's managed OpenClaw config:
 
-* sets `plugins.slots.contextEngine` to `lossless-claw`
 * sets `plugins.slots.memory` to `none`
-* enables the `lossless-claw` plugin
+* strips stale `lossless-claw`, `active-memory`, and `memory-core` managed
+  memory plugin entries
 
 The flat runtime capability should describe this as context-management
 readiness, even if the underlying OpenClaw slot or legacy capability name still
@@ -45,7 +44,8 @@ own the remembered fact.
 
 When a user corrects memory, Tavern writes Cortex material. When an agent needs
 durable memory, it recalls Cortex. When an active turn needs continuity,
-OpenClaw and Lossless Claw manage bounded prompt context.
+OpenClaw manages bounded prompt context without Lossless Claw in the managed
+Tavern runtime.
 
 ## Related Docs
 

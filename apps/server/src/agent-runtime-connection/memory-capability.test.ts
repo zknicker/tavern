@@ -11,7 +11,7 @@ beforeEach(() => {
     databaseClient.exec('delete from agent_runtime_capability_status');
 });
 
-test('records OpenClaw memory healthy when Lossless Claw is loaded and config is ready', async () => {
+test('records OpenClaw memory healthy when config is ready', async () => {
     await recordOpenClawMemoryCapability({
         client: createMemoryClient({
             config: readyMemoryConfig(),
@@ -29,14 +29,13 @@ test('records OpenClaw memory healthy when Lossless Claw is loaded and config is
     });
 });
 
-test('records OpenClaw memory unavailable when Lossless Claw is missing', async () => {
+test('records OpenClaw memory unavailable when required config is missing', async () => {
     await recordOpenClawMemoryCapability({
         client: createMemoryClient({
             config: {
                 plugins: {
                     slots: {
-                        contextEngine: 'lossless-claw',
-                        memory: 'none',
+                        memory: 'active-memory',
                     },
                 },
             },
@@ -50,12 +49,12 @@ test('records OpenClaw memory unavailable when Lossless Claw is missing', async 
             runtimeId: 'runtime-memory-missing',
         })
     ).resolves.toMatchObject({
-        errorCode: 'lossless_claw_missing',
+        errorCode: 'openclaw_memory_config_unavailable',
         state: 'unavailable',
     });
 });
 
-test('records OpenClaw memory unavailable when required config is missing', async () => {
+test('records OpenClaw memory unavailable when removed memory plugins remain configured', async () => {
     await recordOpenClawMemoryCapability({
         client: createMemoryClient({
             config: {
@@ -67,7 +66,7 @@ test('records OpenClaw memory unavailable when required config is missing', asyn
                     },
                     slots: {
                         contextEngine: 'lossless-claw',
-                        memory: 'active-memory',
+                        memory: 'none',
                     },
                 },
             },
@@ -101,13 +100,7 @@ function createMemoryClient(input: { config: Record<string, unknown> }): TavernA
 function readyMemoryConfig() {
     return {
         plugins: {
-            entries: {
-                'lossless-claw': {
-                    enabled: true,
-                },
-            },
             slots: {
-                contextEngine: 'lossless-claw',
                 memory: 'none',
             },
         },

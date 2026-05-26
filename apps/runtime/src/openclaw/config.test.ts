@@ -56,14 +56,7 @@ describe('buildManagedOpenClawConfig', () => {
                 lastTouchedVersion: '2026.5.12',
             },
             plugins: {
-                allow: [
-                    'tavern',
-                    'tavern-cortex',
-                    'tavern-workspace',
-                    'codex',
-                    'lossless-claw',
-                    'openai',
-                ],
+                allow: ['tavern', 'tavern-cortex', 'tavern-workspace', 'codex', 'openai'],
                 entries: {
                     tavern: {
                         enabled: true,
@@ -85,9 +78,6 @@ describe('buildManagedOpenClawConfig', () => {
                         },
                         enabled: true,
                     },
-                    'lossless-claw': {
-                        enabled: true,
-                    },
                     openai: {
                         config: {
                             personality: 'friendly',
@@ -101,11 +91,9 @@ describe('buildManagedOpenClawConfig', () => {
                         '/Users/me/.tavern/openclaw-plugins/tavern-openclaw-cortex',
                         '/Users/me/.tavern/openclaw-plugins/tavern-openclaw-workspace',
                         '/Users/me/.tavern/runtime/openclaw/versions/2026.5.12/node_modules/@openclaw/codex',
-                        '/Users/me/.tavern/runtime/openclaw/versions/2026.5.12/node_modules/@martian-engineering/lossless-claw',
                     ],
                 },
                 slots: {
-                    contextEngine: 'lossless-claw',
                     memory: 'none',
                 },
             },
@@ -198,7 +186,6 @@ describe('buildManagedOpenClawConfig', () => {
                     'tavern-workspace',
                     'codex',
                     'discord',
-                    'lossless-claw',
                     'openai',
                 ]),
             },
@@ -271,12 +258,15 @@ describe('buildManagedOpenClawConfig', () => {
         const config = buildManagedOpenClawConfig({
             existingConfig: {
                 plugins: {
-                    allow: ['active-memory', 'memory-core', 'discord'],
+                    allow: ['active-memory', 'memory-core', 'lossless-claw', 'discord'],
                     entries: {
                         'active-memory': {
                             enabled: true,
                         },
                         'memory-core': {
+                            enabled: true,
+                        },
+                        'lossless-claw': {
                             enabled: true,
                         },
                         discord: {
@@ -293,6 +283,10 @@ describe('buildManagedOpenClawConfig', () => {
                             spec: '@openclaw/memory-core@2026.5.12',
                         },
                     },
+                    slots: {
+                        contextEngine: 'lossless-claw',
+                        memory: 'none',
+                    },
                 },
             },
             gatewayPort: 18_789,
@@ -307,8 +301,11 @@ describe('buildManagedOpenClawConfig', () => {
 
         expect(getPluginAllow(config)).not.toContain('active-memory');
         expect(getPluginAllow(config)).not.toContain('memory-core');
+        expect(getPluginAllow(config)).not.toContain('lossless-claw');
         expect(getPluginEntries(config)).not.toHaveProperty('active-memory');
         expect(getPluginEntries(config)).not.toHaveProperty('memory-core');
+        expect(getPluginEntries(config)).not.toHaveProperty('lossless-claw');
+        expect(getPluginSlots(config)).not.toHaveProperty('contextEngine');
         expect(hasPluginInstalls(config)).toBe(false);
     });
 
@@ -402,6 +399,13 @@ function getPluginEntries(config: Record<string, unknown>) {
     const plugins = getPlugins(config);
     return 'entries' in plugins && typeof plugins.entries === 'object' && plugins.entries !== null
         ? plugins.entries
+        : {};
+}
+
+function getPluginSlots(config: Record<string, unknown>) {
+    const plugins = getPlugins(config);
+    return 'slots' in plugins && typeof plugins.slots === 'object' && plugins.slots !== null
+        ? plugins.slots
         : {};
 }
 

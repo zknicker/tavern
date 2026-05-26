@@ -11,14 +11,14 @@ state.
 
 OpenClaw owns the live execution context for turns.
 
-Lossless Claw provides prompt-time context management. That context helps the
-agent stay oriented during active work, but it is not Tavern memory.
+Prompt-time context management helps the agent stay oriented during active
+work, but it is not Tavern memory.
 
 Tavern configures managed OpenClaw so this context-management layer is
 available and inspectable:
 
-* Lossless Claw is the OpenClaw context engine.
 * OpenClaw built-in memory is disabled for Tavern-managed runs.
+* Lossless Claw is not installed or enabled for managed Tavern OpenClaw.
 * Tavern reports readiness when the Gateway exposes the required capability and
   the managed config matches Tavern's required context-management config.
 

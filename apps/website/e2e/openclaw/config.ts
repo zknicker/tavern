@@ -39,7 +39,6 @@ interface OpenClawE2eConfigInput {
     cortexPluginPath: string;
     gatewayPort: number;
     gatewayToken: string;
-    losslessPluginPath: string;
     pluginPath: string;
     providerBaseUrl: string;
     workspaceDir: string;
@@ -129,7 +128,7 @@ export function buildOpenClawE2eConfig(input: OpenClawE2eConfigInput) {
             providers: createMockProviderMap(input.providerBaseUrl),
         },
         plugins: {
-            allow: ['lossless-claw', 'tavern', 'tavern-cortex', 'tavern-workspace'],
+            allow: ['tavern', 'tavern-cortex', 'tavern-workspace'],
             bundledDiscovery: 'allowlist',
             entries: {
                 tavern: {
@@ -141,20 +140,11 @@ export function buildOpenClawE2eConfig(input: OpenClawE2eConfigInput) {
                 'tavern-workspace': {
                     enabled: true,
                 },
-                'lossless-claw': {
-                    enabled: true,
-                },
             },
             load: {
-                paths: [
-                    input.pluginPath,
-                    input.cortexPluginPath,
-                    input.workspacePluginPath,
-                    input.losslessPluginPath,
-                ],
+                paths: [input.pluginPath, input.cortexPluginPath, input.workspacePluginPath],
             },
             slots: {
-                contextEngine: 'lossless-claw',
                 memory: 'none',
             },
         },

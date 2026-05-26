@@ -232,14 +232,7 @@ export function buildManagedOpenClawConfig(input: {
             },
         },
         plugins: {
-            allow: [
-                'tavern',
-                'tavern-cortex',
-                'tavern-workspace',
-                'codex',
-                'lossless-claw',
-                'openai',
-            ],
+            allow: ['tavern', 'tavern-cortex', 'tavern-workspace', 'codex', 'openai'],
             bundledDiscovery: 'allowlist',
             entries: {
                 tavern: {
@@ -262,9 +255,6 @@ export function buildManagedOpenClawConfig(input: {
                     },
                     enabled: true,
                 },
-                'lossless-claw': {
-                    enabled: true,
-                },
                 openai: {
                     config: {
                         personality: 'friendly',
@@ -276,7 +266,6 @@ export function buildManagedOpenClawConfig(input: {
                 paths: pluginPaths,
             },
             slots: {
-                contextEngine: 'lossless-claw',
                 memory: 'none',
             },
         },

@@ -2,10 +2,10 @@ import { describe, expect, test } from 'bun:test';
 import { enforceOpenClawMemoryConfig, isOpenClawMemoryConfigReady } from './enforce-memory.ts';
 
 describe('enforceOpenClawMemoryConfig', () => {
-    test('writes required Lossless Claw plugin config', () => {
+    test('removes incompatible OpenClaw memory plugins', () => {
         const config = enforceOpenClawMemoryConfig({
             plugins: {
-                allow: ['active-memory', 'memory-core', 'other-plugin'],
+                allow: ['active-memory', 'memory-core', 'lossless-claw', 'other-plugin'],
                 entries: {
                     'active-memory': {
                         enabled: true,
@@ -13,11 +13,11 @@ describe('enforceOpenClawMemoryConfig', () => {
                     'memory-core': {
                         enabled: true,
                     },
-                    'other-plugin': {
+                    'lossless-claw': {
                         enabled: true,
                     },
-                    'lossless-claw': {
-                        extra: 'keep',
+                    'other-plugin': {
+                        enabled: true,
                     },
                 },
                 installs: {
@@ -31,24 +31,20 @@ describe('enforceOpenClawMemoryConfig', () => {
                     },
                 },
                 slots: {
+                    contextEngine: 'lossless-claw',
                     other: 'keep',
                 },
             },
         });
 
         expect(config.plugins as unknown).toEqual({
-            allow: ['lossless-claw', 'other-plugin'],
+            allow: ['other-plugin'],
             entries: {
                 'other-plugin': {
                     enabled: true,
                 },
-                'lossless-claw': {
-                    enabled: true,
-                    extra: 'keep',
-                },
             },
             slots: {
-                contextEngine: 'lossless-claw',
                 memory: 'none',
                 other: 'keep',
             },
@@ -61,9 +57,6 @@ describe('enforceOpenClawMemoryConfig', () => {
             isOpenClawMemoryConfigReady({
                 plugins: {
                     entries: {
-                        'lossless-claw': {
-                            enabled: true,
-                        },
                         'active-memory': {
                             enabled: true,
                         },
@@ -71,9 +64,8 @@ describe('enforceOpenClawMemoryConfig', () => {
                             enabled: true,
                         },
                     },
-                    allow: ['active-memory', 'memory-core', 'lossless-claw'],
+                    allow: ['active-memory', 'memory-core'],
                     slots: {
-                        contextEngine: 'lossless-claw',
                         memory: 'none',
                     },
                 },
@@ -81,7 +73,7 @@ describe('enforceOpenClawMemoryConfig', () => {
         ).toBe(false);
     });
 
-    test('reports disallowed Lossless Claw as not ready', () => {
+    test('reports removed context engine as not ready', () => {
         expect(
             isOpenClawMemoryConfigReady({
                 plugins: {
@@ -90,7 +82,7 @@ describe('enforceOpenClawMemoryConfig', () => {
                             enabled: true,
                         },
                     },
-                    allow: ['other-plugin'],
+                    allow: ['lossless-claw', 'other-plugin'],
                     slots: {
                         contextEngine: 'lossless-claw',
                         memory: 'none',

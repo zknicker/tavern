@@ -254,8 +254,8 @@ Runtime responsibilities:
   with bounded inputs, provenance, and explicit errors.
 
 OpenClaw owns native sessions, turns, transcripts, tools, model calls, files,
-and Lossless Claw behavior during turns. Cortex failures must not be reported
-as OpenClaw context-management failures.
+and prompt-time context behavior during turns. Cortex failures must not be
+reported as OpenClaw context-management failures.
 
 ## Storage Shape
 

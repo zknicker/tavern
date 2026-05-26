@@ -73,6 +73,7 @@ export function stripRemovedManagedOpenClawPlugins(
     const plugins = readRecord(config.plugins);
     const { installs: _installs, ...pluginsWithoutInstalls } = plugins;
     const entries = readRecord(plugins.entries);
+    const slots = readRecord(plugins.slots);
     const allow = readStringArray(plugins.allow).filter(
         (pluginId) => !removedManagedOpenClawPluginIds.has(pluginId)
     );
@@ -88,8 +89,18 @@ export function stripRemovedManagedOpenClawPlugins(
             ...pluginsWithoutInstalls,
             allow,
             entries: strippedEntries,
+            slots: stripRemovedManagedOpenClawSlots(slots),
         },
     };
+}
+
+function stripRemovedManagedOpenClawSlots(slots: Record<string, unknown>) {
+    if (!removedManagedOpenClawPluginIds.has(readString(slots.contextEngine) ?? '')) {
+        return slots;
+    }
+
+    const { contextEngine: _contextEngine, ...slotsWithoutRemovedContextEngine } = slots;
+    return slotsWithoutRemovedContextEngine;
 }
 
 function mergeManagedAgents(
@@ -178,4 +189,4 @@ function readRecordArray(value: unknown): Record<string, unknown>[] {
     return Array.isArray(value) ? value.map(readRecord) : [];
 }
 
-const removedManagedOpenClawPluginIds = new Set(['active-memory', 'memory-core']);
+const removedManagedOpenClawPluginIds = new Set(['active-memory', 'memory-core', 'lossless-claw']);

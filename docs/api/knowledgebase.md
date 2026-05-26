@@ -48,7 +48,7 @@ The API covers:
 
 Knowledgebase is the human browsing API for Cortex. Memory APIs inspect Cortex
 capture, recall, provenance, and maintenance. Context-management surfaces
-inspect Lossless Claw prompt-time continuity separately.
+inspect prompt-time continuity separately.
 
 ## Related Docs
 

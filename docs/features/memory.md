@@ -2,7 +2,7 @@
 summary: Memory feature for inspectable Cortex facts, preferences, capture, recall, provenance, and the context-management boundary.
 read_when:
   - changing Cortex memory inspection, recall, capture, or memory visibility
-  - changing the boundary between Lossless Claw context management and Cortex memory
+  - changing the boundary between OpenClaw context management and Cortex memory
   - changing how users inspect capture, recall, compiled truth, or memory health
 ---
 
@@ -14,10 +14,10 @@ It does not define a second durable memory database. Durable memory is Cortex:
 the wiki, graph, compiled truth, timelines, pages, embeddings, links,
 observations, capture output, recall audit, and maintenance state.
 
-Lossless Claw is context management. It helps an active OpenClaw turn maintain
-bounded prompt continuity, but it is not Tavern memory. Runtime status and
-settings may show whether managed OpenClaw context management is healthy, but
-remembered facts live in Cortex.
+OpenClaw context management can help an active turn maintain bounded prompt
+continuity, but it is not Tavern memory. Managed Tavern OpenClaw does not use
+Lossless Claw. Runtime status and settings may show whether context management
+is healthy, but remembered facts live in Cortex.
 
 ## In Cortex
 
@@ -31,7 +31,7 @@ remembered facts live in Cortex.
 * **Maintenance health.** Users can see stale embeddings, failed captures,
   orphan links, and recent maintenance runs.
 * **Context-management readiness.** Users can see whether managed OpenClaw has
-  Lossless Claw configured for prompt-time continuity.
+  prompt-time continuity available.
 
 ## Contract
 
@@ -50,16 +50,14 @@ Memory used in prompts is inspectable through its source:
 * Cortex page compiled truth
 * Cortex timeline evidence
 * Cortex capture and maintenance audit records
-* context-management readiness when Lossless Claw contributes prompt-time
-  continuity
+* context-management readiness when prompt-time continuity affects memory use
 
 ## Boundary
 
 The Cortex page is the browsable wiki and graph. Tavern does not maintain a
 separate Memory page or a separate `memory_records` store. Context management
-is documented separately because Lossless Claw is prompt assembly, not memory
-storage.
+is documented separately because prompt assembly is not memory storage.
 
 See [Cortex](../../specs/cortex.md) for the durable brain model and
 [Memories](../../specs/memories.md) for the memory visibility contract. See
-[Context management](context-management.md) for Lossless Claw's role.
+[Context management](context-management.md) for the managed OpenClaw boundary.

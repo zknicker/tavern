@@ -152,8 +152,8 @@ unrelated OpenClaw settings while enforcing the parts Tavern needs for a working
 Fixups run in this order:
 
 1. Gateway settings: token-authenticated loopback Gateway config.
-2. Context-management settings: Lossless Claw as `contextEngine`, OpenClaw `memory` slot set to
-   `none`, and `lossless-claw` enabled.
+2. Context-management settings: OpenClaw `memory` slot set to `none` and stale managed memory
+   plugins such as `lossless-claw`, `active-memory`, and `memory-core` removed.
 3. Plugin trust: required Tavern plugin trust plus configured plugin entries.
 4. Agent tools: Tavern default tool policy for agents that do not already have explicit
    OpenClaw tool policy.

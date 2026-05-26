@@ -20,7 +20,6 @@ const openClawBin = path.join(workspaceRoot, 'node_modules', '.bin', 'openclaw')
 
 mkdirSync(stateDir, { recursive: true });
 mkdirSync(workspaceDir, { recursive: true });
-const losslessPluginPath = resolveLosslessClawPluginPath();
 writeFileSync(
     path.join(workspaceDir, 'QA_KICKOFF_TASK.md'),
     '# QA kickoff task\n\nThis file exists so e2e tool-read tests can inspect a deterministic workspace fixture.\n'
@@ -32,7 +31,6 @@ writeFileSync(
             cortexPluginPath,
             gatewayPort,
             gatewayToken,
-            losslessPluginPath,
             pluginPath,
             providerBaseUrl: `http://127.0.0.1:${mockProviderPort}/v1`,
             workspacePluginPath,
@@ -79,24 +77,3 @@ process.on('SIGINT', shutdown);
 process.on('SIGTERM', shutdown);
 
 process.exit(await child.exited);
-
-function resolveLosslessClawPluginPath() {
-    const explicitPath = process.env.TAVERN_E2E_LOSSLESS_CLAW_PLUGIN_PATH;
-    if (explicitPath) {
-        return explicitPath;
-    }
-
-    const workspacePackagePath = path.join(
-        workspaceRoot,
-        'node_modules',
-        '@martian-engineering',
-        'lossless-claw'
-    );
-    if (Bun.file(path.join(workspacePackagePath, 'package.json')).size) {
-        return workspacePackagePath;
-    }
-
-    throw new Error(
-        'Missing @martian-engineering/lossless-claw. Run bun install before starting e2e OpenClaw.'
-    );
-}

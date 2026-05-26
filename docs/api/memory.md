@@ -2,7 +2,7 @@
 summary: Memory API for inspectable Cortex facts, user review, scoping, attribution, prompt usage, and deletion behavior.
 read_when:
   - changing memory visibility or Cortex inspection APIs
-  - changing the boundary between Lossless Claw context management and Cortex memory
+  - changing the boundary between OpenClaw context management and Cortex memory
   - changing how agents or users inspect capture, recall, or prompt memory
 ---
 
@@ -12,15 +12,14 @@ The Memory API exposes Cortex memory inspection.
 
 It does not own a separate durable memory-record database. Durable agent memory
 lives in Cortex pages, timelines, links, embeddings, and audit records.
-Lossless Claw is context management for active OpenClaw turns, not Tavern
-memory.
+OpenClaw context management for active turns is not Tavern memory.
 
 ## Contract
 
 * Memory status reports Cortex capture, recall, embedding, and maintenance
   readiness.
-* Context-management status reports whether managed OpenClaw has Lossless Claw
-  configured for prompt-time continuity.
+* Context-management status reports whether managed OpenClaw prompt-time
+  continuity is available.
 * Memory used in prompts is inspectable through Cortex recall results, Cortex
   page compiled truth, timeline evidence, and audit records.
 * User corrections write back to Cortex pages, timelines, links, tags, or source

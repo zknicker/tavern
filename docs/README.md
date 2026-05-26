@@ -69,8 +69,7 @@ manage businesses, complete knowledge work, and automate routine tasks.
 * **Cortex.** A browsable linked markdown brain with pages, backlinks, files,
   citations, observations, canvas graph navigation, and agent-authored working
   notes.
-* **Context management.** Lossless Claw prompt-time continuity for active
-  OpenClaw turns.
+* **Context management.** Prompt-time continuity for active OpenClaw turns.
 * **Memory.** Cortex capture, recall, timeline evidence, compiled truth, and
   maintenance health.
 * **Cron automations.** Scheduled agent work with run history, delivery targets,

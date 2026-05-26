@@ -1,7 +1,5 @@
 import path from 'node:path';
 
-const losslessClawNpmSpec = '@martian-engineering/lossless-claw@0.11.1';
-
 export interface ManagedOpenClawPluginInstallSpec {
     installPath: string;
     npmSpec: string;
@@ -41,17 +39,7 @@ export function resolveDefaultManagedOpenClawPluginInstallSpecs(input: {
         return [];
     }
 
-    return [
-        {
-            installPath: resolveManagedPackageRoot(
-                installRoot,
-                '@martian-engineering/lossless-claw'
-            ),
-            npmSpec: losslessClawNpmSpec,
-            packageName: '@martian-engineering/lossless-claw',
-            pluginId: 'lossless-claw',
-        },
-    ] satisfies ManagedOpenClawPluginInstallSpec[];
+    return [] satisfies ManagedOpenClawPluginInstallSpec[];
 }
 
 export function applyManagedOpenClawPluginInstallSpecs(
@@ -149,7 +137,6 @@ const managedOpenClawPluginIds = new Set([
     'tavern-workspace',
     'codex',
     'memory-core',
-    'lossless-claw',
     'openai',
 ]);
 

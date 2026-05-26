@@ -95,11 +95,11 @@ that Tavern renders, inspects, searches, or recovers are persisted in Tavern
 Runtime storage as execution evidence. OpenClaw remains canonical for native
 execution behavior.
 
-Cortex pages are Runtime-owned durable knowledge and memory. Lossless Claw
-remains OpenClaw-owned context management for turns. Tavern reports these as
-separate readiness surfaces so users can tell whether prompt-time context
-management is ready and whether Cortex capture, recall, embeddings, and
-maintenance are ready.
+Cortex pages are Runtime-owned durable knowledge and memory. OpenClaw
+context management for turns remains separate from Cortex memory. Tavern
+reports these as separate readiness surfaces so users can tell whether
+prompt-time context management is ready and whether Cortex capture, recall,
+embeddings, and maintenance are ready.
 
 Memory and Cortex product contracts live in [Memories](../../specs/memories.md)
 and [Cortex](../../specs/cortex.md).

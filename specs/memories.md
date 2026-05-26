@@ -6,23 +6,23 @@ Tavern does not have two memory systems. Cortex is the durable memory system:
 compiled truth, timelines, pages, embeddings, links, observations, capture
 output, recall audit, and maintenance state.
 
-Lossless Claw is context management. It provides prompt-time continuity during
-active OpenClaw turns, but it is not Tavern memory.
+Managed Tavern OpenClaw does not use Lossless Claw. Prompt-time context is
+separate from Tavern memory, and durable memory lives in Cortex.
 
 The Memory product surface is the readable inspection and control surface for
 durable Cortex memory.
 
 ## Context Management Boundary
 
-Managed OpenClaw uses Lossless Claw for prompt-time runtime context. Tavern
-enforces that setup as part of managed OpenClaw config rather than treating it
-as user-authored memory state.
+Managed OpenClaw keeps OpenClaw-native memory disabled. Tavern enforces that
+setup as part of managed OpenClaw config rather than treating it as
+user-authored memory state.
 
 Tavern's managed OpenClaw memory config:
 
-* sets `plugins.slots.contextEngine` to `lossless-claw`
 * sets `plugins.slots.memory` to `none`
-* enables the `lossless-claw` plugin
+* removes stale managed memory plugin entries such as `lossless-claw`,
+  `active-memory`, and `memory-core`
 
 The flat legacy `memory` runtime capability may still report this OpenClaw
 context-management readiness until the runtime capability is renamed. Product
@@ -51,7 +51,7 @@ The Memory page shows:
 * failed captures and recall errors
 * stale embeddings and maintenance state
 * prompt-facing context or bulletin previews when available
-* context-management readiness when Lossless Claw affects prompt continuity
+* context-management readiness when prompt-time continuity affects memory use
 
 Memory inspection favors readable evidence over graph visualization as the
 primary experience.
