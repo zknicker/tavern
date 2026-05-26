@@ -13,6 +13,9 @@ export interface ChatTurnEventUtils {
         get: {
             invalidate: (input: { chatId: string }) => Promise<unknown>;
         };
+        list: {
+            invalidate: () => Promise<unknown>;
+        };
         log: {
             list: {
                 invalidate: () => Promise<unknown>;
@@ -68,6 +71,7 @@ export function createChatTurnEventHandlers(utils: ChatTurnEventUtils) {
         Promise.all([
             utils.agent.activity.invalidate(),
             utils.chat.get.invalidate({ chatId }),
+            utils.chat.list.invalidate(),
             utils.chat.log.list.invalidate(),
             utils.session.get.invalidate(),
             utils.session.history.get.invalidate(),
@@ -175,6 +179,7 @@ export function createChatTurnEventHandlers(utils: ChatTurnEventUtils) {
             });
             utils.timeline.startTurn(turn);
             invalidateLiveTurnStatus();
+            void utils.chat.list.invalidate();
         },
     };
 }

@@ -25,6 +25,9 @@ function createHandlers(input?: {
                 invalidate: async ({ chatId }: { chatId: string }) =>
                     invalidatedQueries.push(`chat.get:${chatId}`),
             },
+            list: {
+                invalidate: async () => invalidatedQueries.push('chat.list'),
+            },
             log: {
                 list: {
                     invalidate: async () => invalidatedQueries.push('chat.log.list'),
@@ -90,6 +93,7 @@ test('turn completion preserves the handoff and invalidates transcript queries',
     expect(invalidatedQueries).toEqual([
         'agent.activity',
         'chat.get:chat-1',
+        'chat.list',
         'chat.log.list',
         'session.get',
         'session.history.get',
@@ -114,6 +118,7 @@ test('duplicate turn completion events do not refetch transcript queries again',
     expect(invalidatedQueries).toEqual([
         'agent.activity',
         'chat.get:chat-1',
+        'chat.list',
         'chat.log.list',
         'session.get',
         'session.history.get',
@@ -134,7 +139,7 @@ test('turn start refreshes live status without refetching durable chat activity'
     await Promise.resolve();
 
     expect(startedTurns).toEqual(['run-1']);
-    expect(invalidatedQueries).toEqual(['agent.activity', 'worker.list']);
+    expect(invalidatedQueries).toEqual(['agent.activity', 'worker.list', 'chat.list']);
 });
 
 test('turn progress patches durable chat activity without refetching live status', async () => {
@@ -269,6 +274,7 @@ test('turn failure marks the local timeline failed and invalidates transcript qu
     expect(invalidatedQueries).toEqual([
         'agent.activity',
         'chat.get:chat-1',
+        'chat.list',
         'chat.log.list',
         'session.get',
         'session.history.get',

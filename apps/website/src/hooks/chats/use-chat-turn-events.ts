@@ -15,6 +15,7 @@ export function useChatTurnEvents() {
         agent: utils.agent,
         chat: {
             get: utils.chat.get,
+            list: utils.chat.list,
             log: {
                 list: {
                     invalidate: utils.chat.log.list.invalidate,

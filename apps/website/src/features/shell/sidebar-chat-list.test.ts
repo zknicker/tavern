@@ -5,6 +5,7 @@ import { canRenameSidebarChat } from './sidebar-chat-actions.tsx';
 import {
     buildSidebarChatList,
     buildSidebarDraftChatList,
+    formatSidebarActivityLabel,
     getSidebarChatTitle,
     getSidebarDraftActivityLabel,
     getSidebarDraftPath,
@@ -20,6 +21,7 @@ function createChat(overrides: Partial<ChatListItem> = {}): ChatListItem {
         conversationKind: 'group',
         displayName: 'Tavern chat',
         framework: 'tavern',
+        hasActiveTurn: false,
         hasActivity: true,
         id: 'chat-1',
         isDisabled: false,
@@ -111,6 +113,13 @@ describe('sidebar chat list', () => {
             'just now'
         );
         expect(getSidebarDraftActivityLabel(createDraft({ status: 'error' }))).toBe('failed');
+    });
+
+    test('shortens sidebar activity labels', () => {
+        expect(formatSidebarActivityLabel('33m ago')).toBe('33m');
+        expect(formatSidebarActivityLabel('2h ago')).toBe('2h');
+        expect(formatSidebarActivityLabel('just now')).toBe('just now');
+        expect(formatSidebarActivityLabel('no activity yet')).toBe('no activity yet');
     });
 
     test('shows the chat name without the Tavern prefix', () => {

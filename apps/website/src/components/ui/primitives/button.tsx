@@ -29,7 +29,7 @@ export const buttonVariants = cva(
                 lg: 'h-10 px-[calc(--spacing(3.5)-1px)] sm:h-9',
                 sm: 'h-8 gap-1.5 px-[calc(--spacing(2.5)-1px)] sm:h-7',
                 xl: "h-11 px-[calc(--spacing(4)-1px)] text-lg sm:h-10 sm:text-base [&_svg:not([class*='size-'])]:size-5 sm:[&_svg:not([class*='size-'])]:size-4.5",
-                xs: "h-7 gap-1 rounded-md px-[calc(--spacing(2)-1px)] text-sm before:rounded-[calc(var(--radius-md)-1px)] sm:h-6 sm:text-xs [&_svg:not([class*='size-'])]:size-4 sm:[&_svg:not([class*='size-'])]:size-3.5",
+                xs: "h-6 gap-1 rounded-md px-[calc(--spacing(1.5)-1px)] font-normal text-sm before:rounded-[calc(var(--radius-md)-1px)] sm:h-5 sm:text-[0.8125rem] [&_svg:not([class*='size-'])]:size-4 sm:[&_svg:not([class*='size-'])]:size-3.5",
             },
             variant: {
                 chrome: 'border-border/60 bg-muted/22 text-[var(--sidebar-icon-muted)] hover:border-border/85 hover:bg-muted/44 hover:text-[var(--sidebar-icon-muted)] disabled:border-border/30 disabled:bg-muted/10 disabled:text-[var(--sidebar-icon-muted)] disabled:opacity-100 [&_svg]:opacity-100',
@@ -41,6 +41,8 @@ export const buttonVariants = cva(
                     'border-input bg-popover not-dark:bg-clip-padding text-destructive-foreground shadow-xs/5 not-disabled:not-active:not-data-pressed:before:shadow-[0_1px_--theme(--color-black/4%)] hover:border-destructive/32 hover:bg-destructive/4 data-pressed:border-destructive/32 data-pressed:bg-destructive/4 *:data-[slot=button-loading-indicator]:text-foreground dark:bg-input/32 dark:not-disabled:before:shadow-[0_-1px_--theme(--color-white/2%)] dark:not-disabled:not-active:not-data-pressed:before:shadow-[0_-1px_--theme(--color-white/6%)] [:disabled,:active,[data-pressed]]:shadow-none',
                 'destructive-ghost':
                     'border-transparent text-destructive-foreground hover:bg-destructive/4 data-pressed:bg-destructive/4 *:data-[slot=button-loading-indicator]:text-foreground',
+                'destructive-soft':
+                    'border-transparent bg-[color-mix(in_srgb,var(--error-bg),transparent_45%)] text-error-foreground hover:bg-[color-mix(in_srgb,var(--error-bg),transparent_15%)] data-pressed:bg-error-bg *:data-[slot=button-loading-indicator]:text-error-foreground',
                 ghost: 'border-transparent text-foreground hover:bg-accent data-pressed:bg-accent *:data-[slot=button-loading-indicator]:text-foreground',
                 link: 'border-transparent text-foreground underline-offset-4 hover:underline data-pressed:underline *:data-[slot=button-loading-indicator]:text-foreground',
                 outline:

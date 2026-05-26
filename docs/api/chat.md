@@ -60,7 +60,9 @@ contract stays the same.
 The Tavern app keeps list and detail reads separate:
 
 * `chat.list` returns ordered chat ids plus lightweight list items. It is the
-  sidebar and overview contract, not a full chat detail payload.
+  sidebar and overview contract, not a full chat detail payload. List items
+  include `hasActiveTurn` so compact views can show in-progress agent work
+  without reading the full chat log.
 * `chat.get` returns one full chat record by `chatId`.
 * `chat.log.list` returns paged durable timeline rows for one chat, including
   messages, responses, running and completed activity, and renderable artifacts.
