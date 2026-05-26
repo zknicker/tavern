@@ -219,6 +219,53 @@ test('listChats ignores stale local Tavern chat rows without runtime backing', a
     assert.deepEqual(listedChats(result), []);
 });
 
+test('listChats keeps non-Tavern session-only runtime surfaces visible', async () => {
+    await syncAgentsForRuntime({
+        agents: [
+            {
+                avatar: null,
+                enabledSkillIds: [],
+                emoji: null,
+                id: 'main',
+                isAdmin: false,
+                name: 'Main',
+                primaryColor: null,
+                workspaceFolder: 'main',
+            },
+        ],
+        runtimeId: 'runtime-1',
+    });
+    const internalChatId = 'openclaw:internal:agent:main:cron:session-only';
+
+    await syncSessionsForRuntime({
+        runtimeId: 'runtime-1',
+        sessions: [
+            {
+                agentId: 'main',
+                chatId: internalChatId,
+                key: 'agent:main:cron:session-only',
+                lastActivityAt: '2026-05-02T20:48:22.769Z',
+                messageCount: 1,
+                parentSessionKey: null,
+                platform: 'cron',
+                sessionId: 'cron-session-only',
+                sessionRole: 'main',
+                startedAt: '2026-05-02T20:48:15.961Z',
+                title: 'Cron: session-only',
+            },
+        ],
+    });
+
+    const result = await listChats();
+    const [chat] = listedChats(result);
+
+    assert.equal(chat?.id, internalChatId);
+    assert.deepEqual(chat?.boundAgentIds, ['main']);
+    assert.equal(chat?.source.kind, 'cron');
+    assert.equal(chat?.displayName, 'Cron session');
+    assert.equal(chat?.latestSession?.title, 'Cron: session-only');
+});
+
 test('listChats titles runtime DMs from participants and platform metadata', async () => {
     await syncAgentsForRuntime({
         agents: [

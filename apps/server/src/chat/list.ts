@@ -280,7 +280,9 @@ export async function listChatDetails() {
                     ...(agentRuntimeChatEntry
                         ? (agentRuntimeChat?.bindings ?? []).map((binding) => binding.agentId)
                         : []),
-                    ...chatSessions.map((session) => session.agentId),
+                    ...(agentRuntimeChatEntry
+                        ? []
+                        : chatSessions.map((session) => session.agentId)),
                 ]),
             ].sort((left, right) => left.localeCompare(right));
             const uniqueParticipants = [
