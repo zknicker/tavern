@@ -47,9 +47,11 @@ For Tavern, the data plane is narrow:
 
 The plugin does not become a second chat system. Tavern Runtime owns chat
 messages, participants, sequence, events, reads, soft deletes, and durable
-delivery state. Tavern App owns presentation, optimistic UI, and websocket
-clients. OpenClaw owns native execution, session transcripts, tools, provider
-and harness policy, and runtime lifecycle.
+delivery state. Tavern Runtime also owns chat creation, chat-to-agent binding,
+session-key binding, and chat-level Tavern metadata. Tavern App owns
+presentation, optimistic UI, and websocket clients. OpenClaw owns native
+execution, session transcripts, tools, provider and harness policy, and runtime
+lifecycle.
 
 ## Package Shape
 
@@ -170,8 +172,8 @@ Tavern inbound messages enter OpenClaw through the channel turn kernel.
 
 The preferred shape is `runtime.channel.turn.runAssembled(...)`:
 
-1. Tavern already has the accepted message, chat id, agent id, session key, and
-   sender facts.
+1. Tavern Runtime already owns the chat, accepted message, agent id, session
+   key, and sender facts.
 2. The plugin builds a `FinalizedMsgContext` with
    `runtime.channel.turn.buildContext(...)`.
 3. OpenClaw owns record, dispatch, reply pipeline ordering, and finalization.
@@ -230,6 +232,12 @@ Runtime transcript sync then becomes identity-based:
 No content/timestamp duplicate detection is necessary. Tavern chat history is
 canonical; OpenClaw transcript rows are execution evidence linked to Tavern
 messages.
+
+Chat-level Tavern metadata stays on Tavern chat records. OpenClaw execution
+metadata belongs on messages, responses, activity, delivery, and evidence rows.
+The relay must not use OpenClaw routing facts to replace Tavern-owned chat
+metadata such as title, status, agent bindings, session-key bindings, or
+presentation state.
 
 ## Runtime Events
 
@@ -315,10 +323,12 @@ not expose hidden chain-of-thought text.
 
 ## Relay Contract
 
-The Tavern runtime relay is a transport, not the durable log. Runtime creates or
-reuses the Tavern API message before it sends an inbound frame to the plugin. If
-the plugin websocket is offline, Runtime keeps the relay message pending and
-returns the durable accepted receipt.
+The Tavern runtime relay is a transport, not the durable log. Runtime must
+already own the Tavern chat and create the durable Tavern API message before it
+sends an inbound frame to the plugin. The relay does not create chats, ensure
+chats, repair chats, or write chat-level Tavern metadata. If the plugin
+websocket is offline, Runtime keeps the relay message pending and returns the
+durable accepted receipt.
 
 Inbound frame:
 

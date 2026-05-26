@@ -2,8 +2,8 @@ import { requireConfiguredAgentRuntimeClientForRuntimeId } from '../agent-runtim
 import * as agentRuntimeCron from '../agent-runtime/cron.ts';
 import { requirePrimaryAgent } from '../agents/catalog.ts';
 import { emitCronUpdated, emitSyncDataUpdated } from '../api/invalidation-events.ts';
+import { getRuntimeChatRecord } from '../chat/runtime-chats.ts';
 import { getAgent as getAgentRecord } from '../storage/agents.ts';
-import { getChatRecord } from '../storage/chats.ts';
 import { saveCronJobRecord } from '../storage/cron-jobs.ts';
 import { syncAgentRuntimeCron } from '../sync/agent-runtime-sync.ts';
 import { addCronJobParamsSchema } from './contracts.ts';
@@ -15,7 +15,7 @@ async function resolveCronRuntimeId(input: {
 }) {
     const [agent, deliveryChat] = await Promise.all([
         input.agentId ? getAgentRecord(input.agentId) : null,
-        input.delivery?.chatId ? getChatRecord(input.delivery.chatId) : null,
+        input.delivery?.chatId ? getRuntimeChatRecord(input.delivery.chatId) : null,
     ]);
 
     if (input.agentId && !agent) {

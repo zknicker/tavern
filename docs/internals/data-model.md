@@ -44,7 +44,8 @@ OpenClaw transcripts are execution evidence linked to Tavern messages.
 The Tavern Messenger plugin has a small Runtime outbox. It stores only relay
 state: request id, durable message id, route, cursor, and plugin acceptance. It
 does not store message content, nonce, sequence, participants, or duplicate
-history.
+history. It references existing Runtime chat and message ids; it never creates
+chats or repairs chat metadata.
 
 ## IDs
 
@@ -97,7 +98,7 @@ These tables live in Runtime SQLite and back the OpenAPI chat contract.
 
 `tavern_channel_outbox` also lives in Runtime SQLite, but it is not chat
 history. It is the private relay queue for the managed Tavern Messenger plugin
-and hydrates frames from `chat_messages`.
+and hydrates frames from existing `chats` and `chat_messages` rows.
 
 ## `chats`
 
@@ -531,7 +532,6 @@ App tables are cache, settings, or execution evidence:
 
 | Current table | Runtime role |
 | --- | --- |
-| `chats` | app cache of Runtime `chats` |
 | `session_runs` | runtime session/turn evidence linked to `chat_responses` |
 | `session_messages` | `runtime_transcript_messages` evidence |
 | `session_message_parts` | transcript evidence and candidate `chat_artifacts` |

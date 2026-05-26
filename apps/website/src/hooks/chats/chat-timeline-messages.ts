@@ -172,7 +172,7 @@ export function mergeTimelineMessages(input: {
 
     return {
         ...merged,
-        rows: [...merged.rows].sort(compareChatLogRows),
+        rows: recomputeRowConnections([...merged.rows].sort(compareChatLogRows)),
     };
 }
 
@@ -217,4 +217,23 @@ function getRowSortRank(row: ChatLogRow) {
     }
 
     return 1;
+}
+
+function recomputeRowConnections(rows: ChatLogRow[]) {
+    return rows.map((row, index) => {
+        if (row.kind === 'system') {
+            return row;
+        }
+
+        const previousRow = rows[index - 1] ?? null;
+        const nextRow = rows[index + 1] ?? null;
+        const connectsToPrevious = canConnectSessionRail(row, previousRow);
+
+        return {
+            ...row,
+            connectsToNext: canConnectSessionRail(row, nextRow),
+            connectsToPrevious,
+            isFirstInGroup: getActorKey(previousRow) !== getActorKey(row) || !connectsToPrevious,
+        };
+    });
 }

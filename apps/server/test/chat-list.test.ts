@@ -1,15 +1,15 @@
-import { afterEach, mock, test } from 'bun:test';
+import { afterEach, beforeEach, mock, test } from 'bun:test';
 import assert from 'node:assert/strict';
+import type { AgentRuntimeChat, TavernChat } from '@tavern/api';
 import type { ChatList } from '../src/chat/contracts.ts';
 import { getChat, listChats } from '../src/chat/list.ts';
-import { saveTavernChatRecord } from '../src/chat/records.ts';
 import { archiveTavernChat } from '../src/chat/save.ts';
 import { ensureDatabaseSchema } from '../src/db/bootstrap.ts';
 import { databaseClient } from '../src/db/index.ts';
 import { syncChatParticipantsForRuntime } from '../src/participants/chat-participants.ts';
 import { linkParticipantToSelf } from '../src/participants/link.ts';
+import { saveAgentRuntimeConnection } from '../src/storage/agent-runtime-connections.ts';
 import { syncAgentsForRuntime } from '../src/storage/agents.ts';
-import { getChatRecord, syncChatsForRuntime } from '../src/storage/chats.ts';
 import { syncSessionsForRuntime } from '../src/storage/sessions.ts';
 
 ensureDatabaseSchema();
@@ -17,11 +17,30 @@ ensureDatabaseSchema();
 const planningChatId = '220f46ed-2d7c-41dd-9d7e-d02691f1afc3';
 const planningSessionKey = `agent:agent:planner:tavern:channel:${planningChatId}`;
 const freshChatId = '5d9b79d7-3193-4c0c-849b-f64225ea7cad';
+const originalFetch = globalThis.fetch;
+let runtimeChats: AgentRuntimeChat[] = [];
+let tavernChats: TavernChat[] = [];
+
+beforeEach(async () => {
+    runtimeChats = [];
+    tavernChats = [];
+    globalThis.fetch = mockRuntimeFetch as typeof fetch;
+    await saveAgentRuntimeConnection({
+        baseUrl: 'http://runtime.test',
+        enabled: true,
+        id: 'runtime-1',
+        isActive: true,
+        lastCheckedAt: '2026-04-06T12:10:00.000Z',
+        lastError: null,
+        name: 'Runtime',
+    });
+});
 
 afterEach(() => {
     mock.restore();
+    globalThis.fetch = originalFetch;
     databaseClient.exec(
-        'DELETE FROM session_runs; DELETE FROM chats; DELETE FROM agents; DELETE FROM profile_participants; DELETE FROM participant_labels; DELETE FROM participants; DELETE FROM profiles;'
+        'DELETE FROM session_runs; DELETE FROM agents; DELETE FROM agent_runtime_connections; DELETE FROM profile_participants; DELETE FROM participant_labels; DELETE FROM participants; DELETE FROM profiles;'
     );
 });
 
@@ -70,30 +89,16 @@ test('listChats includes Tavern chats before any synced activity exists', async 
     assert.equal(listedChats(result)[0]?.lastActivityAt, '2026-04-06T12:01:00.000Z');
 });
 
-test('new app-owned Tavern chats sort by chat update time before runtime activity syncs', async () => {
+test('new Runtime-owned Tavern chats sort by chat update time before runtime activity syncs', async () => {
     await seedPlanningChat({ includeSession: true });
-    await saveTavernChatRecord({
-        chat: {
-            bindingId: null,
-            bindings: [{ agentId: 'agent:planner' }],
+    tavernChats.push(
+        runtimeTavernChat({
+            agentIds: ['agent:planner'],
+            displayName: 'Fresh chat',
             id: freshChatId,
-            inboundMode: 'active',
-            metadata: {
-                tavern: { displayName: 'Fresh chat' },
-                sessionKeys: [],
-            },
-            parentTarget: null,
-            participants: [{ agentId: 'agent:planner', type: 'agent' }],
-            platform: 'tavern',
-            platformMetadata: null,
-            requiresTrigger: false,
-            scope: null,
-            target: `chat:${freshChatId}`,
-            trigger: null,
-        },
-        runtimeId: 'runtime-1',
-        syncedAt: '2026-04-06T12:10:00.000Z',
-    });
+            updatedAt: '2026-04-06T12:10:00.000Z',
+        })
+    );
 
     const result = await listChats();
 
@@ -102,7 +107,7 @@ test('new app-owned Tavern chats sort by chat update time before runtime activit
     assert.equal(listedChats(result)[1]?.id, planningChatId);
 });
 
-test('Tavern session sync does not overwrite app-owned chat labels', async () => {
+test('Tavern session sync does not overwrite Runtime-owned chat labels', async () => {
     await seedPlanningChat({ includeSession: false });
 
     await syncSessionsForRuntime({
@@ -130,16 +135,18 @@ test('Tavern session sync does not overwrite app-owned chat labels', async () =>
     assert.equal(listedChats(result)[0]?.title, 'Planning');
 });
 
-test('listChats hides archived app-owned Tavern chats while synced sessions keep their chat id', async () => {
+test('listChats hides archived Runtime-owned Tavern chats while synced sessions keep their chat id', async () => {
     await seedPlanningChat({ includeSession: true });
 
     await archiveTavernChat(planningChatId);
 
     const result = await listChats();
-    const chatRecord = await getChatRecord(planningChatId);
 
     assert.deepEqual(listedChats(result), []);
-    assert.equal(chatRecord?.isArchived, true);
+    assert.equal(
+        (tavernChats[0]?.metadata.tavern as { archived?: boolean } | undefined)?.archived,
+        true
+    );
 });
 
 test('listChats labels OpenClaw internal runtime sessions by source', async () => {
@@ -159,28 +166,25 @@ test('listChats labels OpenClaw internal runtime sessions by source', async () =
         runtimeId: 'runtime-1',
     });
     const internalChatId = 'openclaw:internal:agent:main:cron:8300bbe8-7fb6-4ffb-aa7e-7f19005775c6';
-    await syncChatsForRuntime({
-        chats: [
-            {
-                bindingId: null,
-                bindings: [{ agentId: 'main' }],
-                id: internalChatId,
-                inboundMode: 'active',
-                metadata: {
-                    sessionKeys: ['agent:main:cron:8300bbe8-7fb6-4ffb-aa7e-7f19005775c6'],
-                },
-                parentTarget: null,
-                participants: [{ agentId: 'main', type: 'agent' }],
-                platform: 'cron',
-                platformMetadata: null,
-                requiresTrigger: false,
-                scope: null,
-                target: null,
-                trigger: null,
+    runtimeChats = [
+        {
+            bindingId: null,
+            bindings: [{ agentId: 'main' }],
+            id: internalChatId,
+            inboundMode: 'active',
+            metadata: {
+                sessionKeys: ['agent:main:cron:8300bbe8-7fb6-4ffb-aa7e-7f19005775c6'],
             },
-        ],
-        runtimeId: 'runtime-1',
-    });
+            parentTarget: null,
+            participants: [{ agentId: 'main', type: 'agent' }],
+            platform: 'cron',
+            platformMetadata: null,
+            requiresTrigger: false,
+            scope: null,
+            target: null,
+            trigger: null,
+        },
+    ];
     await syncSessionsForRuntime({
         runtimeId: 'runtime-1',
         sessions: [
@@ -268,10 +272,7 @@ test('listChats titles runtime DMs from participants and platform metadata', asy
             trigger: null,
         },
     ];
-    await syncChatsForRuntime({
-        chats,
-        runtimeId: 'runtime-1',
-    });
+    runtimeChats = chats;
     await syncChatParticipantsForRuntime({
         chats,
         syncedAt: '2026-05-02T20:48:22.769Z',
@@ -401,10 +402,7 @@ test('listChats resolves DM targets through participant identities', async () =>
         },
     ];
 
-    await syncChatsForRuntime({
-        chats,
-        runtimeId: 'runtime-1',
-    });
+    runtimeChats = chats;
     await syncChatParticipantsForRuntime({
         chats,
         syncedAt: '2026-05-02T20:48:22.769Z',
@@ -474,10 +472,7 @@ test('DM participant sync preserves manual self profile links', async () => {
         ],
         runtimeId: 'runtime-1',
     });
-    await syncChatsForRuntime({
-        chats,
-        runtimeId: 'runtime-1',
-    });
+    runtimeChats = chats;
     await syncChatParticipantsForRuntime({
         chats,
         syncedAt: '2026-05-02T20:48:22.769Z',
@@ -505,6 +500,108 @@ function listedChats(result: ChatList) {
     });
 }
 
+async function mockRuntimeFetch(input: RequestInfo | URL, init?: RequestInit) {
+    const request = new Request(input, init);
+    const url = new URL(request.url);
+
+    if (url.pathname === '/api/chats' && request.method === 'GET') {
+        return Response.json({
+            chats: tavernChats,
+            next_cursor: null,
+        });
+    }
+
+    if (url.pathname === '/chats' && request.method === 'GET') {
+        return Response.json({ chats: runtimeChats });
+    }
+
+    const chatMatch = url.pathname.match(/^\/api\/chats\/([^/]+)$/u);
+    if (chatMatch && request.method === 'GET') {
+        const chat = tavernChats.find((entry) => entry.id === decodeURIComponent(chatMatch[1]));
+
+        return chat ? Response.json(chat) : new Response('Not found', { status: 404 });
+    }
+
+    if (url.pathname === '/api/chats' && request.method === 'POST') {
+        const body = (await request.json()) as {
+            id: string;
+            metadata?: Record<string, unknown>;
+            title?: string | null;
+        };
+        const chat = runtimeTavernChat({
+            agentIds: readAgentIds(body.metadata),
+            archived: readArchived(body.metadata),
+            displayName: readDisplayName(body.metadata) ?? body.title ?? body.id,
+            id: body.id,
+            updatedAt: '2026-04-06T12:30:00.000Z',
+        });
+        const existingIndex = tavernChats.findIndex((entry) => entry.id === body.id);
+
+        if (existingIndex >= 0) {
+            tavernChats[existingIndex] = chat;
+        } else {
+            tavernChats.push(chat);
+        }
+
+        return Response.json(chat);
+    }
+
+    return new Response('Not found', { status: 404 });
+}
+
+function runtimeTavernChat(input: {
+    agentIds: string[];
+    archived?: boolean;
+    displayName: string;
+    id: string;
+    updatedAt: string;
+}): TavernChat {
+    return {
+        created_at: input.updatedAt,
+        id: input.id,
+        last_message_sequence: 0,
+        metadata: {
+            runtime: {
+                source: 'tavern',
+            },
+            sessionKeys: input.agentIds.map(
+                (agentId) => `agent:${agentId}:tavern:channel:${input.id}`
+            ),
+            tavern: {
+                agentIds: input.agentIds,
+                archived: input.archived ?? false,
+                displayName: input.displayName,
+            },
+        },
+        title: input.displayName,
+        updated_at: input.updatedAt,
+    };
+}
+
+function readTavernMetadata(metadata: Record<string, unknown> | undefined) {
+    return typeof metadata?.tavern === 'object' && metadata.tavern !== null
+        ? (metadata.tavern as Record<string, unknown>)
+        : {};
+}
+
+function readAgentIds(metadata: Record<string, unknown> | undefined) {
+    const tavern = readTavernMetadata(metadata);
+
+    return Array.isArray(tavern.agentIds)
+        ? tavern.agentIds.filter((agentId): agentId is string => typeof agentId === 'string')
+        : [];
+}
+
+function readArchived(metadata: Record<string, unknown> | undefined) {
+    return readTavernMetadata(metadata).archived === true;
+}
+
+function readDisplayName(metadata: Record<string, unknown> | undefined) {
+    const displayName = readTavernMetadata(metadata).displayName;
+
+    return typeof displayName === 'string' ? displayName : null;
+}
+
 async function seedPlanningChat(input: { includeSession: boolean }) {
     await syncAgentsForRuntime({
         agents: [
@@ -521,28 +618,14 @@ async function seedPlanningChat(input: { includeSession: boolean }) {
         ],
         runtimeId: 'runtime-1',
     });
-    await saveTavernChatRecord({
-        chat: {
-            bindingId: null,
-            bindings: [{ agentId: 'agent:planner' }],
+    tavernChats.push(
+        runtimeTavernChat({
+            agentIds: ['agent:planner'],
+            displayName: 'Planning',
             id: planningChatId,
-            inboundMode: 'active',
-            metadata: {
-                tavern: { displayName: 'Planning' },
-                sessionKeys: input.includeSession ? [planningSessionKey] : [],
-            },
-            parentTarget: null,
-            participants: [{ agentId: 'agent:planner', type: 'agent' }],
-            platform: 'tavern',
-            platformMetadata: null,
-            requiresTrigger: false,
-            scope: null,
-            target: `chat:${planningChatId}`,
-            trigger: null,
-        },
-        runtimeId: 'runtime-1',
-        syncedAt: '2026-04-06T12:01:00.000Z',
-    });
+            updatedAt: '2026-04-06T12:01:00.000Z',
+        })
+    );
 
     if (!input.includeSession) {
         return;

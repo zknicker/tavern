@@ -178,9 +178,13 @@ test('mergeTimelineMessages keeps a local user row before already visible live a
         ],
     });
 
-    expect(next?.rows.map((row) => row.id)).toEqual([
-        'timeline:1',
-        'act_run-1_assistant-preamble',
+    expect(next?.rows.map((row) => row.id)).toEqual(['timeline:1', 'act_run-1_assistant-preamble']);
+    expect(
+        next?.rows.map((row) => (row.kind === 'system' ? null : row.connectsToPrevious))
+    ).toEqual([false, true]);
+    expect(next?.rows.map((row) => (row.kind === 'system' ? null : row.connectsToNext))).toEqual([
+        true,
+        false,
     ]);
 });
 

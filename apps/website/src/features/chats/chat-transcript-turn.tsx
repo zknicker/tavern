@@ -288,11 +288,7 @@ function AgentTurnSegment({
             turnStartedAt={turnStartedAt}
         />
     ) : (
-        <AgentTurnItem
-            chatId={chatId}
-            currentSessionKey={currentSessionKey}
-            item={segment.item}
-        />
+        <AgentTurnItem chatId={chatId} currentSessionKey={currentSessionKey} item={segment.item} />
     );
 }
 

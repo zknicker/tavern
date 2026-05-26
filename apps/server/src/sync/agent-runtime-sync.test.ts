@@ -37,7 +37,6 @@ test.beforeEach(() => {
     databaseClient.exec('delete from agents');
     databaseClient.exec('delete from session_messages');
     databaseClient.exec('delete from session_runs');
-    databaseClient.exec('delete from chats');
 });
 
 test('syncAgentRuntimeSession projects only the requested session', async () => {

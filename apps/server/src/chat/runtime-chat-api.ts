@@ -6,11 +6,21 @@ import {
     type TavernResponseActivity,
 } from '@tavern/sdk';
 import { listAgents } from '../agents/catalog.ts';
+import { sessionMessageAttachmentSchema } from '../sessions/contracts/messages.ts';
 import { getActiveAgentRuntimeConnection } from '../storage/agent-runtime-connections.ts';
 import { buildToolSummaryFromValues } from '../tools/summary.ts';
 import type { ChatLogPage } from './contracts.ts';
 
 export async function listRuntimeChatRows(chatId: string): Promise<ChatLogPage['rows'] | null> {
+    const timeline = await listRuntimeChatTimeline(chatId);
+
+    return timeline?.rows ?? null;
+}
+
+export async function listRuntimeChatTimeline(chatId: string): Promise<{
+    activeReply: ChatLogPage['activeReply'];
+    rows: ChatLogPage['rows'];
+} | null> {
     const connection = await getActiveAgentRuntimeConnection();
 
     if (!(connection?.enabled && connection.baseUrl)) {
@@ -40,6 +50,7 @@ export async function listRuntimeChatRows(chatId: string): Promise<ChatLogPage['
     );
     const artifactRows = responsePage.artifacts.map(artifactToChatRow);
     const rows = [...messageRows, ...activityRows, ...artifactRows];
+    const activeReply = activeReplyFromResponses(responsePage.responses);
     const messageTimestampById = new Map(
         messageRows
             .filter(
@@ -64,13 +75,18 @@ export async function listRuntimeChatRows(chatId: string): Promise<ChatLogPage['
         }
     }
 
-    return rows.sort((left, right) => {
+    const sortedRows = rows.sort((left, right) => {
         const timestampDelta =
             rowTimestamp(left, { messageTimestampById, requestMessageIdByRowId }) -
             rowTimestamp(right, { messageTimestampById, requestMessageIdByRowId });
 
         return timestampDelta || rowSortRank(left) - rowSortRank(right);
     });
+
+    return {
+        activeReply,
+        rows: sortedRows,
+    };
 }
 
 function artifactToChatRow(artifact: TavernArtifact): ChatLogPage['rows'][number] {
@@ -117,7 +133,7 @@ function messageToChatRows(
         kind: 'message',
         message: {
             actor,
-            attachments: undefined,
+            attachments: messageAttachments(message),
             content: messageText(message),
             id: message.id,
             metadata: message.metadata,
@@ -134,6 +150,15 @@ function messageToChatRows(
     };
 
     return [row];
+}
+
+function messageAttachments(message: TavernChatMessage) {
+    if (!message.attachment) {
+        return undefined;
+    }
+
+    const result = sessionMessageAttachmentSchema.safeParse(message.attachment);
+    return result.success ? [result.data] : undefined;
 }
 
 function activityToChatRows(
@@ -266,6 +291,32 @@ function readString(value: unknown) {
 
 function messageText(message: TavernChatMessage) {
     return message.content;
+}
+
+function activeReplyFromResponses(
+    responses: readonly TavernChatResponse[]
+): ChatLogPage['activeReply'] {
+    const activeResponses = responses
+        .filter(
+            (response) =>
+                (response.status === 'queued' || response.status === 'running') &&
+                !response.response_message_id
+        )
+        .sort((left, right) => Date.parse(right.updated_at) - Date.parse(left.updated_at));
+    const response = activeResponses[0];
+
+    if (!response) {
+        return null;
+    }
+
+    return {
+        agentId: runtimeMetadataString(response, 'agentId') ?? response.participant_id,
+        isThinking: true,
+        runId: runtimeMetadataString(response, 'runId') ?? response.id,
+        sessionKey: runtimeMetadataString(response, 'sessionKey') ?? response.id,
+        startedAt: runtimeMetadataString(response, 'startedAt') ?? response.created_at,
+        text: response.summary ?? '',
+    };
 }
 
 function runtimeMetadataString(

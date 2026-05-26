@@ -5,7 +5,7 @@ import { openClawGatewaySample } from '../test-data/openclaw-gateway-sample.ts';
 import { createOpenClawAgentRuntimeClient } from './client.ts';
 
 describe('OpenClaw agent runtime client', () => {
-    it('does not project Tavern sessions into the app-owned chat registry', async () => {
+    it('does not project Tavern sessions into the OpenClaw chat list', async () => {
         const gateway = new FakeGateway({
             'sessions.list': {
                 sessions: [

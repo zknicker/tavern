@@ -1,14 +1,13 @@
-import { presentChatLabel } from '../chat/chat-labels.ts';
-import { listChatRecords } from '../storage/chats.ts';
+import { listRuntimeChatRecords, presentRuntimeChatLabel } from '../chat/runtime-chats.ts';
 import { listSessionRecords, parseSessionRecord } from '../storage/sessions.ts';
 import { buildAgentRuntimeSessionListItem } from './agent-runtime-shared.ts';
 import type { GlobalSessionSummary } from './contracts.ts';
 
-function buildChatTitleMap(chats: Awaited<ReturnType<typeof listChatRecords>>) {
+function buildChatTitleMap(chats: Awaited<ReturnType<typeof listRuntimeChatRecords>>) {
     const chatTitlesById = new Map<string, string>();
 
-    for (const chat of chats) {
-        chatTitlesById.set(chat.id, presentChatLabel(chat));
+    for (const record of chats) {
+        chatTitlesById.set(record.chat.id, presentRuntimeChatLabel(record.chat));
     }
 
     return chatTitlesById;
@@ -63,7 +62,7 @@ export function mergeSessionSummaries(input: {
 
 export async function listSessionSummaries() {
     const [chatRecords, sessionRecords] = await Promise.all([
-        listChatRecords(),
+        listRuntimeChatRecords(),
         listSessionRecords(),
     ]);
     const chatTitlesById = buildChatTitleMap(chatRecords);

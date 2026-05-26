@@ -64,15 +64,13 @@ export function useChatDraftStart(input: {
                         messageId: routeDraft.clientMessageId,
                         sessionKey: started.sessionKey,
                     });
-                    if (started.sessionKey) {
-                        timelineState.startTurn({
-                            agentId: routeDraft.agentId,
-                            chatId: started.chatId,
-                            runId: started.runId,
-                            sessionKey: started.sessionKey,
-                            startedAt: started.acceptedAt,
-                        });
-                    }
+                    timelineState.startTurn({
+                        agentId: routeDraft.agentId,
+                        chatId: started.chatId,
+                        runId: started.runId,
+                        sessionKey: started.sessionKey ?? started.chatId,
+                        startedAt: started.acceptedAt,
+                    });
                 });
                 logTiming('client.sendMessageDispatched', { chatId: started.chatId });
 

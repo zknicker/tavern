@@ -51,7 +51,7 @@ test('keeps mention chips editable in common composer flows', async ({ page }) =
     await page.getByRole('option', { name: /GitHub Issues/u }).click();
     await composer.pressSequentially('and @git');
     await expect(page.getByRole('listbox')).toBeVisible({ timeout: 15_000 });
-    await page.getByRole('option', { name: /GitHub\s+Use gh for GitHub/u }).click();
+    await page.getByRole('option', { name: /GitHub\s+GitHub CLI/u }).click();
     await composer.pressSequentially('done');
 
     await expect(composer).toContainText(/^GitHub Issues and GitHub done$/);

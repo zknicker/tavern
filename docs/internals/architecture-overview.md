@@ -66,6 +66,10 @@ flowchart LR
 * Tavern maps OpenClaw execution into Tavern messages, responses, artifacts,
   activity, and runtime evidence. It does not replace canonical Tavern chat
   history.
+* Runtime creates and updates Tavern chat records through the Chat API before
+  OpenClaw dispatch. The OpenClaw relay is transport only: it references
+  existing chat and message ids, and it must not create chats or mutate
+  Tavern-owned chat metadata.
 * Websocket events are notifications and freshness signals, not durable storage.
 * Response activity is durable and statusful. Running and completed tool rows
   use the same records.

@@ -14,7 +14,7 @@ import {
     markTavernInboundMessageAccepted,
     persistTavernInboundMessage,
 } from './channel-store';
-import { createChat, createMessage, upsertResponse } from './chat-api';
+import { createMessage, upsertResponse } from './chat-api';
 import { createAgentParticipantId } from './chat-api/ids';
 
 const defaultAccountId = 'default';
@@ -65,33 +65,21 @@ export async function sendTavernChannelMessage(
     }
 
     const requestId = randomUUID();
-    const messageReceipt = createMessage(
-        createChat({
-            id: chatId,
-            metadata: {
-                runtime: {
-                    agentId: payload.agent.agentId,
-                    sessionKey,
-                    source: 'openclaw',
-                },
+    const messageReceipt = createMessage(chatId, {
+        author_id: 'usr_tavern',
+        id: payload.message.id,
+        metadata: {
+            ...(payload.message.metadata ?? {}),
+            runtime: {
+                agentId: payload.agent.agentId,
+                sessionKey,
+                source: 'openclaw',
             },
-        }).id,
-        {
-            author_id: 'usr_tavern',
-            id: payload.message.id,
-            metadata: {
-                ...(payload.message.metadata ?? {}),
-                runtime: {
-                    agentId: payload.agent.agentId,
-                    sessionKey,
-                    source: 'openclaw',
-                },
-            },
-            content: payload.message.content,
-            nonce: payload.message.nonce,
-            role: 'user',
-        }
-    );
+        },
+        content: payload.message.content,
+        nonce: payload.message.nonce,
+        role: 'user',
+    });
     const persisted = persistTavernInboundMessage({
         accountId: defaultAccountId,
         agentId: payload.agent.agentId,

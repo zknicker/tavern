@@ -4,16 +4,16 @@ import {
     type SessionMessage,
     sessionMessageAttachmentSchema,
 } from '../sessions/contracts.ts';
-import { getChatRecord, parseChatRawJson } from '../storage/chats.ts';
 import { listSessionMessagesForSessionKeys } from '../storage/session-messages.ts';
 import { listSessionToolCalls } from '../storage/session-tool-calls.ts';
 import { listSessionRecords, parseSessionRecord } from '../storage/sessions.ts';
 import { buildChatRows } from './rows.ts';
+import { getRuntimeChatRecord, runtimeChatSessionKeys } from './runtime-chats.ts';
 
 export async function listAgentRuntimeChatRows(
     chatId: string
 ): Promise<SessionHistory['rows'] | null> {
-    const chatRecord = await getChatRecord(chatId);
+    const chatRecord = await getRuntimeChatRecord(chatId);
 
     if (!chatRecord) {
         return null;
@@ -25,12 +25,10 @@ export async function listAgentRuntimeChatRows(
 async function listChatRowsFromSessionRecords(chatId: string): Promise<SessionHistory['rows']> {
     const [agents, chatRecord, sessionRecords] = await Promise.all([
         listAgents(),
-        getChatRecord(chatId),
+        getRuntimeChatRecord(chatId),
         listSessionRecords(),
     ]);
-    const chatSessionKeys = chatRecord
-        ? listChatSessionKeys(parseChatRawJson(chatRecord))
-        : [];
+    const chatSessionKeys = chatRecord ? runtimeChatSessionKeys(chatRecord.chat) : [];
     const sessions = sessionRecords.flatMap((record) => {
         const session = parseSessionRecord(record);
         return session && session.chatId === chatId && session.sessionRole === 'main'
@@ -89,15 +87,6 @@ async function listChatRowsFromSessionRecords(chatId: string): Promise<SessionHi
         toolCalls,
         workers: [],
     });
-}
-
-function listChatSessionKeys(chat: ReturnType<typeof parseChatRawJson>) {
-    return Array.isArray(chat.metadata.sessionKeys)
-        ? chat.metadata.sessionKeys.filter(
-              (sessionKey): sessionKey is string =>
-                  typeof sessionKey === 'string' && sessionKey.trim().length > 0
-          )
-        : [];
 }
 
 function parseMessageRaw(messageJson: string | null) {
@@ -302,16 +291,11 @@ function compactMetadata(
     );
 }
 
-function isModelProvider(
-    value: string | null
-): value is 'claude' | 'codex' | 'openrouter' {
+function isModelProvider(value: string | null): value is 'claude' | 'codex' | 'openrouter' {
     return value === 'claude' || value === 'codex' || value === 'openrouter';
 }
 
-function resolveMessageActor(message: {
-    actorId: string | null;
-    actorKind: string | null;
-}) {
+function resolveMessageActor(message: { actorId: string | null; actorKind: string | null }) {
     if (
         !(message.actorId && (message.actorKind === 'agent' || message.actorKind === 'participant'))
     ) {

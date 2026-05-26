@@ -7,12 +7,11 @@ import {
 import { inArray, or } from 'drizzle-orm';
 import { createAgentRuntimeClientForConnection } from '../agent-runtime/client-factory.ts';
 import { listAgents } from '../agents/catalog.ts';
-import { presentChatLabel } from '../chat/chat-labels.ts';
+import { listRuntimeChatRecords, presentRuntimeChatLabel } from '../chat/runtime-chats.ts';
 import { db } from '../db/index.ts';
 import { sessionArtifactsTable, sessionLinksTable } from '../db/schema.ts';
 import { selfProfileId } from '../participants/self.ts';
 import { getAgentRuntimeConnection } from '../storage/agent-runtime-connections.ts';
-import { listChatRecords } from '../storage/chats.ts';
 import { listSessionMessagesForSessionKeys } from '../storage/session-messages.ts';
 import { listSessionToolCalls } from '../storage/session-tool-calls.ts';
 import {
@@ -88,11 +87,11 @@ function resolveDuration(session: AgentRuntimeSession) {
     return formatDuration(Math.max(0, lastActivityAt - startedAt));
 }
 
-function buildChatTitleMap(chats: Awaited<ReturnType<typeof listChatRecords>>) {
+function buildChatTitleMap(chats: Awaited<ReturnType<typeof listRuntimeChatRecords>>) {
     const chatTitlesById = new Map<string, string>();
 
-    for (const chat of chats) {
-        chatTitlesById.set(chat.id, presentChatLabel(chat));
+    for (const record of chats) {
+        chatTitlesById.set(record.chat.id, presentRuntimeChatLabel(record.chat));
     }
 
     return chatTitlesById;
@@ -189,7 +188,7 @@ async function loadSessionSnapshotFromRecords(
 
     const [agents, chatRecords, sessionRecords] = await Promise.all([
         listAgents(),
-        listChatRecords(),
+        listRuntimeChatRecords(),
         listSessionRecords(),
     ]);
     const sessions = sessionRecords.flatMap((record) => {

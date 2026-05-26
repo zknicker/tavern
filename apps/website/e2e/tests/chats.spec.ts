@@ -106,14 +106,16 @@ test('renders durable response activity kinds after reload', async ({ page }) =>
     await page.reload();
 
     await openWorkedActivity(page);
-    await expect(page.getByText('Planning diagnostic', { exact: true })).toBeVisible({
+    await expect(page.getByRole('button', { name: /Planning diagnostic detail/u })).toBeVisible({
         timeout: 15_000,
     });
-    await expect(page.getByText('Reasoning diagnostic', { exact: true })).toBeVisible();
-    await expect(page.getByText('Assistant preamble diagnostic', { exact: true })).toBeVisible();
-    await expect(page.getByText('Approval diagnostic', { exact: true })).toBeVisible();
-    await expect(page.getByText('Artifact diagnostic', { exact: true })).toBeVisible();
-    await expect(page.getByText('Tool diagnostic', { exact: true })).toBeVisible();
+    await expect(page.getByRole('button', { name: /Reasoning diagnostic detail/u })).toBeVisible();
+    await expect(
+        page.getByText('Assistant preamble diagnostic detail', { exact: true })
+    ).toBeVisible();
+    await expect(page.getByRole('button', { name: /Approval diagnostic/u })).toBeVisible();
+    await expect(page.getByRole('button', { name: /Artifact diagnostic/u })).toBeVisible();
+    await expect(page.getByRole('button', { name: /Tool diagnostic/u })).toBeVisible();
 });
 
 async function upsertRuntimeArtifact(input: { chatId: string; runtimeUrl: string }) {

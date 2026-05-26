@@ -215,7 +215,7 @@ function buildInboundFrame(input: {
         cursor: input.row.cursor,
         kind: 'inbound-message',
         message: {
-            attachments: [],
+            attachments: input.message.attachment ? [input.message.attachment] : [],
             author: {
                 id: input.message.author.id,
                 name: input.message.author.label ?? input.message.author.id,

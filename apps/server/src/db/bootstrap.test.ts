@@ -85,7 +85,7 @@ test('ensureDatabaseSchema creates the current Tavern schema without obsolete ta
         assert.equal(actualTableNames.includes('agent_channels_sync_state'), false);
         assert.equal(actualTableNames.includes('chat_projection_sync_state'), false);
         assert.equal(actualTableNames.includes('cron_job_runs'), false);
-        assert.equal(actualTableNames.includes('chats'), true);
+        assert.equal(actualTableNames.includes('chats'), false);
         assert.equal(actualTableNames.includes('observed_chats'), false);
         assert.equal(actualTableNames.includes('agent_chat_bindings'), false);
         assert.equal(actualTableNames.includes('agents'), true);
@@ -140,29 +140,6 @@ test('ensureDatabaseSchema creates the current Tavern schema without obsolete ta
                 'stream_log_path',
                 'target_message_id',
                 'transcript_path',
-                'updated_at',
-            ].sort((left, right) => left.localeCompare(right))
-        );
-        assert.deepEqual(
-            listSortedColumnNames(db, 'chats'),
-            [
-                'binding_id',
-                'bindings_json',
-                'conversation_kind',
-                'id',
-                'inbound_mode',
-                'is_archived',
-                'last_synced_at',
-                'metadata_json',
-                'parent_target',
-                'platform',
-                'platform_metadata_json',
-                'raw_json',
-                'requires_trigger',
-                'runtime_id',
-                'scope',
-                'target',
-                'trigger',
                 'updated_at',
             ].sort((left, right) => left.localeCompare(right))
         );

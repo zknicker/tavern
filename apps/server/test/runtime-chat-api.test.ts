@@ -22,7 +22,9 @@ mock.module('../src/agents/catalog.ts', () => ({
 
 ensureDatabaseSchema();
 
-const { listRuntimeChatRows } = await import('../src/chat/runtime-chat-api.ts');
+const { listRuntimeChatRows, listRuntimeChatTimeline } = await import(
+    '../src/chat/runtime-chat-api.ts'
+);
 const { getChatToolActivity } = await import('../src/chat/tool.ts');
 
 afterEach(() => {
@@ -51,6 +53,13 @@ test('listRuntimeChatRows maps Tavern API messages and keeps preamble/reasoning 
             return Response.json({
                 messages: [
                     chatMessage({
+                        attachment: {
+                            filename: 'notes.txt',
+                            mediaType: 'text/plain',
+                            path: '/tmp/notes.txt',
+                            sizeBytes: 14,
+                            type: 'file',
+                        },
                         authorId: 'usr_owner',
                         authorKind: 'user',
                         authorLabel: 'You',
@@ -143,6 +152,19 @@ test('listRuntimeChatRows maps Tavern API messages and keeps preamble/reasoning 
             sender: 'Main',
             sourceSessionKey: 'session_1',
             tavernAgentId: 'main',
+        },
+    });
+    expect(rows?.find((row) => row.id === 'msg_user')).toMatchObject({
+        message: {
+            attachments: [
+                {
+                    filename: 'notes.txt',
+                    mediaType: 'text/plain',
+                    path: '/tmp/notes.txt',
+                    sizeBytes: 14,
+                    type: 'file',
+                },
+            ],
         },
     });
 });
@@ -472,6 +494,83 @@ test('listRuntimeChatRows keeps response activity after its request message whil
     expect(rows?.map((row) => row.id)).toEqual(['msg_user', 'act_assistant_reply_1']);
 });
 
+test('listRuntimeChatTimeline exposes running responses as active replies after reload', async () => {
+    await saveAgentRuntimeConnection({
+        baseUrl: 'http://runtime.test',
+        enabled: true,
+        id: 'runtime-1',
+        isActive: true,
+        lastCheckedAt: '2026-05-18T12:00:00.000Z',
+        lastError: null,
+        name: 'Runtime',
+    });
+
+    globalThis.fetch = (async (input, init) => {
+        const request = new Request(input, init);
+        const url = new URL(request.url);
+
+        if (url.pathname === '/api/chats/cht_1/messages') {
+            return Response.json({
+                messages: [
+                    chatMessage({
+                        authorId: 'usr_owner',
+                        authorKind: 'user',
+                        authorLabel: 'You',
+                        content: 'Wait for it.',
+                        id: 'msg_user',
+                        role: 'user',
+                        sequence: 1,
+                    }),
+                ],
+            });
+        }
+
+        if (url.pathname === '/api/chats/cht_1/responses') {
+            return Response.json({
+                activity: [],
+                artifacts: [],
+                next_sequence: null,
+                responses: [
+                    {
+                        chat_id: 'cht_1',
+                        completed_at: null,
+                        created_at: '2026-05-18T12:00:01.000Z',
+                        id: 'rsp_run_1',
+                        metadata: {
+                            runtime: {
+                                agentId: 'main',
+                                runId: 'run_1',
+                                sessionKey: 'session_1',
+                                startedAt: '2026-05-18T12:00:01.500Z',
+                            },
+                        },
+                        participant_id: 'agt_main',
+                        request_message_id: 'msg_user',
+                        response_message_id: null,
+                        status: 'running',
+                        summary: null,
+                        updated_at: '2026-05-18T12:00:03.000Z',
+                    },
+                ],
+            });
+        }
+
+        throw new Error(`Unexpected Tavern API request: ${url.pathname}`);
+    }) as typeof fetch;
+
+    const timeline = await listRuntimeChatTimeline('cht_1');
+
+    expect(timeline?.rows.map((row) => row.id)).toEqual(['msg_user']);
+    expect(timeline?.activeReply).toEqual({
+        agentId: 'main',
+        isThinking: true,
+        runId: 'run_1',
+        sessionKey: 'session_1',
+        startedAt: '2026-05-18T12:00:01.500Z',
+        text: '',
+    });
+});
+
 test('getChatToolActivity resolves durable response activity into tool details', async () => {
     await saveAgentRuntimeConnection({
         baseUrl: 'http://runtime.test',
@@ -532,6 +631,7 @@ test('getChatToolActivity resolves durable response activity into tool details',
 });
 
 function chatMessage(input: {
+    attachment?: Record<string, unknown>;
     authorId: string;
     authorKind: 'agent' | 'system' | 'user';
     authorLabel: string | null;
@@ -541,7 +641,7 @@ function chatMessage(input: {
     sequence: number;
 }) {
     return {
-        attachment: null,
+        attachment: input.attachment ?? null,
         author: {
             id: input.authorId,
             kind: input.authorKind,

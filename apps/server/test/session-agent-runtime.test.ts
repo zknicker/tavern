@@ -24,7 +24,6 @@ const [
     { getSessionToolCall },
     { saveAgentRuntimeConnection },
     { syncAgentsForRuntime },
-    { saveTavernChatRecord },
     { syncSessionMessagesForRuntime },
     { syncSessionsForRuntime },
 ] = await Promise.all([
@@ -42,21 +41,62 @@ const [
     import('../src/sessions/tool-call.ts'),
     import('../src/storage/agent-runtime-connections.ts'),
     import('../src/storage/agents.ts'),
-    import('../src/chat/records.ts'),
     import('../src/storage/session-messages.ts'),
     import('../src/storage/sessions.ts'),
 ]);
 
 await ensureDatabaseSchema();
 
+const originalFetch = globalThis.fetch;
+
 afterEach(() => {
     mock.restore();
+    globalThis.fetch = originalFetch;
     databaseClient.exec(
-        'DELETE FROM session_artifacts; DELETE FROM session_links; DELETE FROM session_messages; DELETE FROM session_tool_calls; DELETE FROM session_runs; DELETE FROM chats; DELETE FROM agents; DELETE FROM agent_runtime_connections;'
+        'DELETE FROM session_artifacts; DELETE FROM session_links; DELETE FROM session_messages; DELETE FROM session_tool_calls; DELETE FROM session_runs; DELETE FROM agents; DELETE FROM agent_runtime_connections;'
     );
 });
 
+function mockRuntimeChatFetch(chats = [runtimeTavernChat()]) {
+    globalThis.fetch = async (input) => {
+        const url = new URL(input instanceof Request ? input.url : String(input));
+
+        if (url.pathname === '/api/chats') {
+            return Response.json({
+                chats,
+                next_cursor: null,
+            });
+        }
+
+        if (url.pathname === '/chats') {
+            return Response.json({ chats: [] });
+        }
+
+        return new Response('Not found', { status: 404 });
+    };
+}
+
+function runtimeTavernChat() {
+    return {
+        created_at: '2026-04-15T21:27:15.953Z',
+        id: 'chat-support',
+        metadata: {
+            runtime: {
+                source: 'tavern',
+            },
+            tavern: {
+                agentIds: ['support'],
+                archived: false,
+                displayName: 'Support Chat',
+            },
+        },
+        title: 'Support Chat',
+        updated_at: '2026-04-15T21:28:10.000Z',
+    };
+}
+
 test('session queries read live OpenClaw session graphs', async () => {
+    mockRuntimeChatFetch();
     spyOn(agentRuntimeClient, 'createConfiguredAgentRuntimeClient').mockReturnValue({
         getSessionGraph: async () => ({
             artifacts: [
@@ -314,6 +354,7 @@ test('session queries read live OpenClaw session graphs', async () => {
         }),
     } as never);
     spyOn(agentRuntimeClientFactory, 'createAgentRuntimeClientForConnection').mockReturnValue({
+        listChats: async () => ({ chats: [] }),
         resyncSession: async (sessionKey: string) => ({
             resynced: true,
             rootSessionKey: 'chat-support::support',
@@ -321,7 +362,7 @@ test('session queries read live OpenClaw session graphs', async () => {
         }),
     } as never);
     await saveAgentRuntimeConnection({
-        baseUrl: 'ws://openclaw.test',
+        baseUrl: 'http://openclaw.test',
         id: 'runtime-1',
         lastCheckedAt: null,
         lastError: null,
@@ -340,24 +381,6 @@ test('session queries read live OpenClaw session graphs', async () => {
                 workspaceFolder: 'support',
             },
         ],
-        runtimeId: 'runtime-1',
-    });
-    await saveTavernChatRecord({
-        chat: {
-            bindingId: null,
-            bindings: [{ agentId: 'support' }],
-            id: 'chat-support',
-            inboundMode: 'active',
-            metadata: { tavern: { displayName: 'Support Chat' } },
-            parentTarget: null,
-            participants: [{ agentId: 'support', type: 'agent' }],
-            platform: 'tavern',
-            platformMetadata: null,
-            requiresTrigger: false,
-            scope: null,
-            target: 'support',
-            trigger: null,
-        },
         runtimeId: 'runtime-1',
     });
     await syncSessionsForRuntime({
@@ -568,7 +591,7 @@ test('session prompt reads live OpenClaw prompt inspection', async () => {
         }),
     } as never);
     await saveAgentRuntimeConnection({
-        baseUrl: 'ws://openclaw.test',
+        baseUrl: 'http://openclaw.test',
         id: 'runtime-1',
         lastCheckedAt: null,
         lastError: null,
@@ -602,8 +625,9 @@ test('session prompt reads live OpenClaw prompt inspection', async () => {
 });
 
 test('session summaries hydrate session id from the durable runtime column', async () => {
+    mockRuntimeChatFetch();
     await saveAgentRuntimeConnection({
-        baseUrl: 'ws://openclaw.test',
+        baseUrl: 'http://openclaw.test',
         id: 'runtime-1',
         lastCheckedAt: null,
         lastError: null,

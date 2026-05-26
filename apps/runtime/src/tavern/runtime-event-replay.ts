@@ -106,6 +106,8 @@ function chatEventToRuntimeEvents(event: TavernChatEvent): PersistedRuntimeEvent
         case 'artifact.created':
         case 'message.deleted':
             return [];
+        default:
+            throw new Error('Unsupported Tavern chat event type during runtime replay.');
     }
 }
 
@@ -281,27 +283,7 @@ function activityStatus(
 }
 
 function messageText(message: TavernChatMessage) {
-    if (typeof message.content === 'string') {
-        return message.content;
-    }
-
-    const parts = Array.isArray((message as unknown as { parts?: unknown }).parts)
-        ? (message as unknown as { parts: unknown[] }).parts
-        : [];
-
-    return parts
-        .map((part) => {
-            if (typeof part === 'string') {
-                return part;
-            }
-            if (!(part && typeof part === 'object')) {
-                return null;
-            }
-            const value = (part as Record<string, unknown>).content;
-            return typeof value === 'string' ? value : null;
-        })
-        .filter((part): part is string => Boolean(part?.trim()))
-        .join('\n');
+    return message.content;
 }
 
 function metadataRuntimeString(metadata: Record<string, unknown>, key: string) {

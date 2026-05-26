@@ -116,30 +116,6 @@ const schemaStatements = [
         last_synced_at TEXT NOT NULL,
         updated_at TEXT NOT NULL
     );`,
-    `CREATE TABLE IF NOT EXISTS chats (
-        id TEXT PRIMARY KEY NOT NULL,
-        runtime_id TEXT NOT NULL,
-        platform TEXT NOT NULL,
-        target TEXT,
-        parent_target TEXT,
-        scope TEXT,
-        conversation_kind TEXT,
-        is_archived INTEGER NOT NULL DEFAULT 0,
-        binding_id TEXT,
-        bindings_json TEXT NOT NULL,
-        inbound_mode TEXT NOT NULL,
-        requires_trigger INTEGER NOT NULL,
-        trigger TEXT,
-        metadata_json TEXT NOT NULL,
-        platform_metadata_json TEXT NOT NULL,
-        raw_json TEXT NOT NULL,
-        last_synced_at TEXT NOT NULL,
-        updated_at TEXT NOT NULL
-    );`,
-    `CREATE INDEX IF NOT EXISTS chats_runtime_idx
-        ON chats (runtime_id);`,
-    `CREATE INDEX IF NOT EXISTS chats_last_synced_at_idx
-        ON chats (last_synced_at);`,
     `CREATE TABLE IF NOT EXISTS claude_code_usage (
         id TEXT PRIMARY KEY NOT NULL,
         snapshot_json TEXT NOT NULL,

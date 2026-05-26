@@ -1,6 +1,5 @@
 import { afterEach, mock, test } from 'bun:test';
 import assert from 'node:assert/strict';
-import { saveTavernChatRecord } from '../src/chat/records.ts';
 import { sendTavernChatMessage } from '../src/chat/send.ts';
 import { ensureDatabaseSchema } from '../src/db/bootstrap.ts';
 import { databaseClient } from '../src/db/index.ts';
@@ -17,7 +16,7 @@ afterEach(() => {
     mock.restore();
     globalThis.fetch = originalFetch;
     databaseClient.exec(
-        'DELETE FROM session_messages; DELETE FROM chats; DELETE FROM agents; DELETE FROM agent_runtime_connections;'
+        'DELETE FROM session_messages; DELETE FROM agents; DELETE FROM agent_runtime_connections;'
     );
 });
 
@@ -32,13 +31,24 @@ test('sendTavernChatMessage posts to Runtime', async () => {
         const body = request.method === 'GET' ? null : await request.json();
         tavernApiCalls.push({ body, method: request.method, path: url.pathname });
 
-        if (url.pathname === '/api/chats') {
+        if (url.pathname === '/api/chats' && request.method === 'GET') {
+            return Response.json({
+                chats: [runtimeTavernChat()],
+                next_cursor: null,
+            });
+        }
+
+        if (url.pathname === '/chats') {
+            return Response.json({ chats: [] });
+        }
+
+        if (url.pathname === '/api/chats' && request.method === 'POST') {
             return Response.json({
                 created_at: '2026-04-06T12:10:00.000Z',
                 id: planningChatId,
                 last_message_sequence: 0,
-                metadata: { runtime: { runtimeId: 'runtime-1' } },
-                title: null,
+                metadata: body.metadata,
+                title: body.title,
                 updated_at: '2026-04-06T12:10:00.000Z',
             });
         }
@@ -187,13 +197,30 @@ test('sendTavernChatMessage posts to Runtime', async () => {
     ]);
     assert.deepEqual(tavernApiCalls, [
         {
+            body: null,
+            method: 'GET',
+            path: '/chats',
+        },
+        {
+            body: null,
+            method: 'GET',
+            path: '/api/chats',
+        },
+        {
             body: {
                 id: planningChatId,
                 metadata: {
                     runtime: {
-                        runtimeId: 'runtime-1',
+                        source: 'tavern',
+                    },
+                    sessionKeys: [planningSessionKey],
+                    tavern: {
+                        agentIds: ['agent:planner'],
+                        archived: false,
+                        displayName: 'Planning',
                     },
                 },
+                title: 'Planning',
             },
             method: 'POST',
             path: '/api/chats',
@@ -247,33 +274,27 @@ async function seedPlanningChat() {
         ],
         runtimeId: 'runtime-1',
     });
-    await saveTavernChatRecord({
-        chat: {
-            bindingId: null,
-            bindings: [{ agentId: 'agent:planner' }],
-            id: planningChatId,
-            inboundMode: 'active',
-            metadata: {
-                tavern: { displayName: 'Planning' },
-                sessionKeys: [planningSessionKey],
+}
+
+function runtimeTavernChat() {
+    return {
+        created_at: '2026-04-06T12:01:00.000Z',
+        id: planningChatId,
+        last_message_sequence: 0,
+        metadata: {
+            runtime: {
+                source: 'tavern',
             },
-            parentTarget: null,
-            participants: [{ agentId: 'agent:planner', type: 'agent' }],
-            platform: 'tavern',
-            platformMetadata: {
-                chatId: planningChatId,
-                conversationId: null,
-                observedLabels: ['Planning'],
-                provider: 'tavern',
-                sourceRecords: [],
+            sessionKeys: [planningSessionKey],
+            tavern: {
+                agentIds: ['agent:planner'],
+                archived: false,
+                displayName: 'Planning',
             },
-            requiresTrigger: false,
-            scope: null,
-            target: `chat:${planningChatId}`,
-            trigger: null,
         },
-        runtimeId: 'runtime-1',
-    });
+        title: 'Planning',
+        updated_at: '2026-04-06T12:01:00.000Z',
+    };
 }
 
 test('sendTavernChatMessage rejects chats that are missing from Runtime', async () => {

@@ -175,7 +175,19 @@ export const chatLogToolRowSchema = toolRowSchema;
 export const chatLogWorkerRowSchema = workerRowSchema;
 export const chatLogRowSchema = historyRowSchema;
 
+export const chatLogActiveReplySchema = z
+    .object({
+        agentId: z.string().trim().min(1),
+        isThinking: z.boolean(),
+        runId: z.string().trim().min(1),
+        sessionKey: z.string().trim().min(1),
+        startedAt: z.string().datetime(),
+        text: z.string(),
+    })
+    .nullable();
+
 export const chatLogPageSchema = z.object({
+    activeReply: chatLogActiveReplySchema,
     limit: z.number().int().positive(),
     rows: z.array(chatLogRowSchema),
     offset: z.number().int().nonnegative(),

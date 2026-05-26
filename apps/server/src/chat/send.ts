@@ -6,16 +6,16 @@ import type { TavernAgentRuntimeClient } from '../agent-runtime/client.ts';
 import { createConfiguredAgentRuntimeClientForRuntimeId } from '../agent-runtime/configured-client.ts';
 import { getAgentRuntimeConnection } from '../storage/agent-runtime-connections.ts';
 import { getAgent as getAgentRecord } from '../storage/agents.ts';
-import { getChatRecord, parseChatRawJson } from '../storage/chats.ts';
 import {
     type SendChatMessageInput,
     sendChatMessageInputSchema,
     sendChatMessageResultSchema,
 } from './contracts.ts';
+import { getRuntimeChatRecord } from './runtime-chats.ts';
 import { requireStoredTavernSessionKey } from './session-keys.ts';
 
 function buildAgentRuntimeMessageTarget(
-    chat: ReturnType<typeof parseChatRawJson>,
+    chat: NonNullable<Awaited<ReturnType<typeof getRuntimeChatRecord>>>['chat'],
     sessionKey: string
 ): AgentRuntimeCreateMessage['target'] {
     return {
@@ -31,12 +31,13 @@ export async function sendTavernChatMessage(
     client?: TavernAgentRuntimeClient | null
 ) {
     const parsed = sendChatMessageInputSchema.parse(input);
-    const chatRecord = await getChatRecord(parsed.chatId);
-    const chat = chatRecord ? parseChatRawJson(chatRecord) : null;
+    const chatRecord = await getRuntimeChatRecord(parsed.chatId);
 
-    if (!chat) {
+    if (!chatRecord) {
         throw new Error(`No Tavern chat named "${parsed.chatId}" exists.`);
     }
+
+    const chat = chatRecord.chat;
 
     if (chat.bindings.length !== 1) {
         throw new Error(`Tavern chat "${parsed.chatId}" must have exactly one bound agent.`);
@@ -71,11 +72,13 @@ export async function sendTavernChatMessage(
     const tavernApi = await createTavernApiClient(chatRecord.runtimeId);
     await tavernApi.chat.create({
         id: parsed.chatId,
-        metadata: {
-            runtime: {
-                runtimeId: chatRecord.runtimeId,
-            },
-        },
+        metadata: chat.metadata,
+        title:
+            typeof chat.metadata.tavern === 'object' &&
+            chat.metadata.tavern !== null &&
+            typeof (chat.metadata.tavern as Record<string, unknown>).displayName === 'string'
+                ? ((chat.metadata.tavern as Record<string, unknown>).displayName as string)
+                : undefined,
     });
     const messageReceipt = await tavernApi.chat.createMessage(parsed.chatId, {
         author_id: 'usr_tavern',
@@ -100,7 +103,7 @@ export async function sendTavernChatMessage(
             runtimeId: chatRecord.runtimeId,
         },
         async () =>
-            await runtimeClient.postMessage(chatRecord.id, {
+            await runtimeClient.postMessage(chatRecord.chat.id, {
                 agent: {
                     agentId,
                 },

@@ -138,10 +138,20 @@ export function shouldReleaseDraftHandoff(state: ChatTimelineState | undefined) 
     }
 
     if (!state.activeReply) {
-        return state.historyLoaded;
+        return state.historyLoaded && hasTerminalChatRow(state);
     }
 
     return (state.activeReply.text ?? '').trim().length > 0;
+}
+
+function hasTerminalChatRow(state: ChatTimelineState) {
+    return state.timeline.some((row) => {
+        if (row.kind !== 'message') {
+            return false;
+        }
+
+        return row.message.senderType === 'agent' || row.message.senderType === 'system';
+    });
 }
 
 export function isBlockingActiveReply(input: {

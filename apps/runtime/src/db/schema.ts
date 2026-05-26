@@ -1,4 +1,4 @@
-import type { Database } from './sqlite';
+import type { Database } from './sqlite.ts';
 
 export const RUNTIME_SCHEMA = `
 CREATE TABLE IF NOT EXISTS runtime_metadata (

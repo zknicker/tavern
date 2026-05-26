@@ -1,5 +1,5 @@
-import * as React from 'react';
 import { ArrowDown01Icon } from '@hugeicons-pro/core-stroke-rounded';
+import * as React from 'react';
 import {
     Collapsible,
     CollapsiblePanel,
@@ -41,17 +41,19 @@ export function WorkingLog({
     return (
         <ThinkingSteps className="w-full max-w-[34rem]" defaultOpen={defaultOpen}>
             <ThinkingStepsHeader>
-                {!showDurationHeader ? (
-                    formatWorkGroupHeader(items)
-                ) : isActive && activeSeconds ? (
-                    <span>
-                        Working for{' '}
-                        <span className="inline-block min-w-[2.2ch] text-left tabular-nums">
-                            {activeSeconds}
+                {showDurationHeader ? (
+                    isActive && activeSeconds ? (
+                        <span>
+                            Working for{' '}
+                            <span className="inline-block min-w-[2.2ch] text-left tabular-nums">
+                                {activeSeconds}
+                            </span>
                         </span>
-                    </span>
+                    ) : (
+                        formatActivityHeader({ end, isActive, now, start })
+                    )
                 ) : (
-                    formatActivityHeader({ end, isActive, now, start })
+                    formatWorkGroupHeader(items)
                 )}
             </ThinkingStepsHeader>
             <ThinkingStepsContent className={showDurationHeader ? undefined : 'pt-1'}>
@@ -87,7 +89,7 @@ export function TurnWorkDisclosure({
                 <span className="inline-flex items-center gap-1.5">
                     <TurnWorkHeaderContent end={end} start={start} status={status} />
                     <Icon
-                        className="-rotate-90 size-3.5 transition-transform group-data-[panel-open]:rotate-0"
+                        className="size-3.5 -rotate-90 transition-transform group-data-[panel-open]:rotate-0"
                         icon={ArrowDown01Icon}
                         strokeWidth={1.7}
                     />

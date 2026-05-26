@@ -308,7 +308,6 @@ function deleteRuntimeData(runtimeId: string) {
         deleteColumnValue('agent_profiles', 'runtime_id', runtimeId);
         deleteColumnValue('agent_runtime_capability_status', 'runtime_id', runtimeId);
         deleteColumnValue('agents', 'runtime_id', runtimeId);
-        deleteColumnValue('chats', 'runtime_id', runtimeId);
         deleteColumnValue('cron_jobs', 'runtime_id', runtimeId);
         deleteColumnValue('cron_runs', 'runtime_id', runtimeId);
         deleteColumnValue('openclaw_config_snapshots', 'runtime_id', runtimeId);
@@ -328,8 +327,6 @@ function inferLatestRuntimeId() {
             SELECT runtime_id AS runtimeId
             FROM (
                 SELECT runtime_id, updated_at FROM agents
-                UNION ALL
-                SELECT runtime_id, updated_at FROM chats
                 UNION ALL
                 SELECT runtime_id, updated_at FROM cron_jobs
                 UNION ALL

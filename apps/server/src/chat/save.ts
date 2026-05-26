@@ -1,9 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import { z } from 'zod';
-import { buildTavernChatRecord } from '../agent-runtime/chats.ts';
 import { requirePrimaryAgent } from '../agents/catalog.ts';
 import { getAgent as getAgentRecord } from '../storage/agents.ts';
-import { archiveChatRecord, getChatRecord } from '../storage/chats.ts';
 import {
     archiveChatResultSchema,
     type CreateChatInput,
@@ -12,7 +10,12 @@ import {
     type UpdateChatInput,
     updateChatInputSchema,
 } from './contracts.ts';
-import { saveTavernChatRecord } from './records.ts';
+import {
+    archiveRuntimeTavernChat,
+    createRuntimeTavernChat,
+    getRuntimeChatRecord,
+    updateRuntimeTavernChat,
+} from './runtime-chats.ts';
 import { createChatTiming } from './timing.ts';
 
 const uniqueAgentIdsSchema = z
@@ -62,14 +65,10 @@ export async function createTavernChat(input: CreateChatInput) {
     logTiming('tavern.resolveAgentRuntimeBindings', { runtimeId: binding.runtimeId });
 
     const chatId = buildChatId();
-    const chat = buildTavernChatRecord({
+    await createRuntimeTavernChat({
         agentIds: binding.agentIds,
         displayName: parsed.displayName,
         id: chatId,
-    });
-    await saveTavernChatRecord({
-        chat,
-        runtimeId: binding.runtimeId,
     });
     logTiming('tavern.saveChatRecord', { chatId });
 
@@ -85,20 +84,16 @@ export async function updateTavernChat(input: UpdateChatInput) {
     const parsed = updateChatInputSchema.parse(input);
     const agentIds = uniqueAgentIdsSchema.parse(parsed.agentIds);
     const binding = await resolveAgentRuntimeBindings(agentIds);
-    const existing = await getChatRecord(parsed.chatId);
+    const existing = await getRuntimeChatRecord(parsed.chatId);
 
     if (existing && existing.runtimeId !== binding.runtimeId) {
         throw new Error('Tavern chats cannot move between runtime namespaces.');
     }
 
-    const chat = buildTavernChatRecord({
+    await updateRuntimeTavernChat({
         agentIds: binding.agentIds,
         displayName: parsed.displayName,
         id: parsed.chatId,
-    });
-    await saveTavernChatRecord({
-        chat,
-        runtimeId: binding.runtimeId,
     });
 
     return createChatResultSchema.parse({
@@ -107,13 +102,13 @@ export async function updateTavernChat(input: UpdateChatInput) {
 }
 
 export async function archiveTavernChat(chatId: string) {
-    const chat = await getChatRecord(chatId);
+    const chat = await getRuntimeChatRecord(chatId);
 
     if (!chat) {
         throw new Error(`No Tavern chat named "${chatId}" exists.`);
     }
 
-    await archiveChatRecord(chat.id);
+    await archiveRuntimeTavernChat(chat.chat.id);
 
     return archiveChatResultSchema.parse({
         archived: true,

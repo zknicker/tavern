@@ -13,9 +13,10 @@ export function isActivityItem(item: TranscriptItem): item is ActivityItem {
     return item.kind !== 'row' || (item.row.kind !== 'message' && !isNarrationToolRow(item.row));
 }
 
-export function isAssistantNarrationItem(
-    item: TranscriptItem
-): item is Extract<TranscriptItem, { kind: 'row' }> & {
+export function isAssistantNarrationItem(item: TranscriptItem): item is Extract<
+    TranscriptItem,
+    { kind: 'row' }
+> & {
     row: Extract<TranscriptRow, { kind: 'tool' }>;
 } {
     return item.kind === 'row' && isNarrationToolRow(item.row);
@@ -196,9 +197,7 @@ function countWorkItems(items: ActivityItem[]) {
             const summary = item.row.toolCall.summaryParts.join(' ').trim().toLowerCase();
             const text = `${name} ${label} ${summary}`;
 
-            if (
-                matchesAny(text, ['patch', 'edit', 'edited', 'write', 'modified', 'file change'])
-            ) {
+            if (matchesAny(text, ['patch', 'edit', 'edited', 'write', 'modified', 'file change'])) {
                 counts.edit += 1;
                 return counts;
             }

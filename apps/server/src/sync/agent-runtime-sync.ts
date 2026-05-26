@@ -25,7 +25,6 @@ import {
     markAgentRuntimeConnectionSync,
 } from '../storage/agent-runtime-connections.ts';
 import { syncAgentsForRuntime } from '../storage/agents.ts';
-import { syncChatsForRuntime } from '../storage/chats.ts';
 import { buildCronJobId, syncCronJobsForRuntime } from '../storage/cron-jobs.ts';
 import { upsertCronRuns } from '../storage/cron-runs.ts';
 import {
@@ -323,21 +322,19 @@ async function syncChatsForConnection(input: RuntimeSyncInput) {
             async () => await client.listChats()
         )
     ).chats;
-    const result = await syncChatsForRuntime({
-        chats,
-        runtimeId: input.runtime.id,
-        syncedAt,
-    });
     const participantResult = await syncChatParticipantsForRuntime({
         chats,
         syncedAt,
     });
 
     await input.log?.(
-        `Synced ${result.synced} chats and ${participantResult.synced} participant identities from ${input.runtime.name}; deleted ${result.deleted} missing chats.`
+        `Synced ${participantResult.synced} chat participant identities from ${input.runtime.name}.`
     );
 
-    return result;
+    return {
+        deleted: 0,
+        synced: chats.length,
+    };
 }
 
 async function syncSessionsForConnection(input: RuntimeSyncInput) {

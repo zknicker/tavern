@@ -10,7 +10,24 @@ export function createChat(input: TavernCreateChatRequest, db: Database = getDb(
     assertTavernIdPrefix(input.id, 'cht_', 'Chat id');
     const existing = getChat(input.id, db);
     if (existing) {
-        return existing;
+        const metadata = input.metadata ?? existing.metadata;
+        const title = input.title ?? existing.title;
+        const now = new Date().toISOString();
+        db.prepare(
+            `UPDATE chats
+             SET title = $title,
+                 metadata_json = $metadataJson,
+                 updated_at = $now
+             WHERE id = $id`
+        ).run(
+            namedParams({
+                id: input.id,
+                metadataJson: JSON.stringify(metadata),
+                now,
+                title,
+            })
+        );
+        return getChatOrThrow(input.id, db);
     }
 
     const now = new Date().toISOString();

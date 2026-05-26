@@ -105,14 +105,64 @@ test('draft handoff releases when the active reply has visible text', () => {
     ).toBe(true);
 });
 
-test('draft handoff releases when no active reply remains', () => {
+test('draft handoff waits when the loaded real chat only has the user message', () => {
     expect(
         shouldReleaseDraftHandoff({
             activeReply: null,
             failedTurn: null,
             historyLoaded: true,
-            timeline: [],
-            totalRows: 0,
+            timeline: [
+                {
+                    actor: { id: 'user-1', kind: 'participant' },
+                    connectsToNext: false,
+                    connectsToPrevious: false,
+                    id: 'msg-user',
+                    isFirstInGroup: true,
+                    kind: 'message',
+                    message: {
+                        content: 'Hello',
+                        id: 'msg-user',
+                        metadata: null,
+                        senderType: 'user',
+                        sourceSessionKey: '',
+                        tavernAgentId: null,
+                        timestamp: '2026-05-13T12:00:00.000Z',
+                    },
+                    sessionKey: null,
+                },
+            ],
+            totalRows: 1,
+        })
+    ).toBe(false);
+});
+
+test('draft handoff releases when no active reply remains after terminal history loads', () => {
+    expect(
+        shouldReleaseDraftHandoff({
+            activeReply: null,
+            failedTurn: null,
+            historyLoaded: true,
+            timeline: [
+                {
+                    actor: { id: 'agent-1', kind: 'agent' },
+                    connectsToNext: false,
+                    connectsToPrevious: false,
+                    id: 'msg-agent',
+                    isFirstInGroup: true,
+                    kind: 'message',
+                    message: {
+                        content: 'Done.',
+                        id: 'msg-agent',
+                        metadata: null,
+                        senderType: 'agent',
+                        sourceSessionKey: 'session-1',
+                        tavernAgentId: 'agent-1',
+                        timestamp: '2026-05-13T12:00:02.000Z',
+                    },
+                    sessionKey: 'session-1',
+                },
+            ],
+            totalRows: 1,
         })
     ).toBe(true);
 });

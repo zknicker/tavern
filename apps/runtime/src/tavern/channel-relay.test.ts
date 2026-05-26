@@ -3,7 +3,7 @@ import { closeDb, initTestDb } from '../db/connection';
 import { ensureRuntimeSchema } from '../db/schema';
 import { attachTavernChannelSocket, sendTavernChannelMessage } from './channel-relay';
 import { listPendingTavernInboundMessages } from './channel-store';
-import { listMessages } from './chat-api';
+import { createChat, getChat, listMessages } from './chat-api';
 
 describe('Tavern channel relay', () => {
     beforeEach(() => {
@@ -15,6 +15,7 @@ describe('Tavern channel relay', () => {
     });
 
     it('creates the OpenAPI chat message before relaying to the plugin', async () => {
+        createChat({ id: 'cht_1' });
         const socket = createRelaySocket();
         attachTavernChannelSocket(socket.value);
 
@@ -62,6 +63,7 @@ describe('Tavern channel relay', () => {
     });
 
     it('returns the durable accepted receipt when the plugin socket is offline', async () => {
+        createChat({ id: 'cht_1' });
         const accepted = await sendTavernChannelMessage('cht_1', {
             agent: {
                 agentId: 'agt_1',
@@ -96,6 +98,74 @@ describe('Tavern channel relay', () => {
         expect(socket.sent[0]?.message.id).toBe('msg_offline');
 
         socket.close();
+    });
+
+    it('requires Tavern Runtime to own the chat before relaying', async () => {
+        await expect(
+            sendTavernChannelMessage('cht_missing', {
+                agent: {
+                    agentId: 'agt_1',
+                },
+                message: {
+                    content: 'hello',
+                    id: 'msg_1',
+                    nonce: 'nonce_1',
+                },
+                target: {
+                    externalId: null,
+                    sessionKey: 'session_1',
+                    target: 'cht_missing',
+                    type: 'tavern',
+                },
+            })
+        ).rejects.toThrow('Chat cht_missing does not exist.');
+    });
+
+    it('preserves Tavern-owned chat metadata when relaying a message', async () => {
+        createChat({
+            id: 'cht_1',
+            metadata: {
+                runtime: {
+                    source: 'tavern',
+                },
+                sessionKeys: ['agent:main:tavern:channel:cht_1'],
+                tavern: {
+                    agentIds: ['main'],
+                    archived: false,
+                    displayName: 'Planning',
+                },
+            },
+            title: 'Planning',
+        });
+
+        await sendTavernChannelMessage('cht_1', {
+            agent: {
+                agentId: 'main',
+            },
+            message: {
+                content: 'hello',
+                id: 'msg_1',
+                nonce: 'nonce_1',
+            },
+            target: {
+                externalId: null,
+                sessionKey: 'agent:main:tavern:channel:cht_1',
+                target: 'cht_1',
+                type: 'tavern',
+            },
+        });
+
+        expect(getChat('cht_1')?.metadata).toEqual({
+            runtime: {
+                source: 'tavern',
+            },
+            sessionKeys: ['agent:main:tavern:channel:cht_1'],
+            tavern: {
+                agentIds: ['main'],
+                archived: false,
+                displayName: 'Planning',
+            },
+        });
     });
 });
 

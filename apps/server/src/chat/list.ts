@@ -6,7 +6,6 @@ import {
     resolveParticipantColor,
     resolveParticipantName,
 } from '../participants/presentation.ts';
-import { listChatRecords, parseChatRawJson } from '../storage/chats.ts';
 import {
     listParticipants,
     type Participant,
@@ -15,6 +14,11 @@ import {
 import { listSessionRecords, parseSessionRecord } from '../storage/sessions.ts';
 import { type Chat, chatListSchema, chatSchema } from './contracts.ts';
 import { resolveChatScope, resolveObservedConversationKind } from './conversation-kind.ts';
+import {
+    listRuntimeChatRecords,
+    type RuntimeChatRecord,
+    readRuntimeChatDisplayName,
+} from './runtime-chats.ts';
 import { findChatSessionKeyForAgent } from './session-keys.ts';
 import { buildChatId, compareChatActors, resolveChatIdentityFromId } from './shared.ts';
 import {
@@ -24,10 +28,9 @@ import {
     resolveChatSource,
 } from './source.ts';
 
-type StoredChatRecord = Awaited<ReturnType<typeof listChatRecords>>[number];
-type ParsedRuntimeChat = ReturnType<typeof parseChatRawJson>;
+type ParsedRuntimeChat = RuntimeChatRecord['chat'];
 interface RuntimeChatEntry {
-    record: StoredChatRecord;
+    record: RuntimeChatRecord;
     runtimeChat: ParsedRuntimeChat;
 }
 
@@ -69,7 +72,9 @@ function presentChatDisplayName(input: {
     }
 
     if (input.identity.type === 'tavern') {
-        return readTavernDisplayName(input.runtimeChat?.metadata) ?? input.identity.id;
+        return input.runtimeChat
+            ? (readRuntimeChatDisplayName(input.runtimeChat) ?? input.identity.id)
+            : input.identity.id;
     }
 
     if (input.targetParticipant) {
@@ -163,16 +168,6 @@ function presentGenericTarget(platform: string, target: string | null) {
     return target ? `${platform}:${target}` : platform;
 }
 
-function readTavernDisplayName(metadata: Record<string, unknown> | undefined) {
-    const tavern =
-        typeof metadata?.tavern === 'object' && metadata.tavern !== null
-            ? (metadata.tavern as Record<string, unknown>)
-            : null;
-    const displayName = tavern?.displayName;
-
-    return typeof displayName === 'string' && displayName.trim() ? displayName.trim() : null;
-}
-
 function formatChatActorNames(actors: Array<{ name: string }>) {
     if (actors.length === 0) {
         return null;
@@ -211,22 +206,33 @@ export async function listChatDetails() {
         listAgents(),
         listParticipants(),
         listSessionRecords(),
-        listChatRecords({ includeArchived: true }),
+        listRuntimeChatRecords({ includeArchived: true }),
     ]);
     const agentById = new Map(agents.map((agent) => [agent.id, agent]));
     const participantById = new Map(
         participants.map((participant) => [participant.id, participant])
     );
     const archivedChatIds = new Set(
-        chatRecords.filter((record) => record.isArchived).map((record) => record.id)
+        chatRecords
+            .filter((record) => {
+                const tavern =
+                    typeof record.chat.metadata.tavern === 'object' &&
+                    record.chat.metadata.tavern !== null
+                        ? (record.chat.metadata.tavern as Record<string, unknown>)
+                        : null;
+                return tavern?.archived === true;
+            })
+            .map((record) => record.chat.id)
     );
     const agentRuntimeChats = chatRecords
-        .filter((record) => !record.isArchived)
+        .filter((record) => !archivedChatIds.has(record.chat.id))
         .map((record) => ({
             record,
-            runtimeChat: parseChatRawJson(record),
+            runtimeChat: record.chat,
         }));
-    const agentRuntimeChatsById = new Map(agentRuntimeChats.map((chat) => [chat.record.id, chat]));
+    const agentRuntimeChatsById = new Map(
+        agentRuntimeChats.map((chat) => [chat.record.chat.id, chat])
+    );
     const participantIdsByRuntimeParticipantKey =
         await buildRuntimeParticipantIdMap(agentRuntimeChats);
     const sessions = sessionRecords.flatMap((record) => {
@@ -299,7 +305,7 @@ export async function listChatDetails() {
                     idsByRuntimeParticipantKey: participantIdsByRuntimeParticipantKey,
                     participantById,
                     participants: agentRuntimeChat?.participants ?? [],
-                    chatId: agentRuntimeChatEntry?.record.id ?? null,
+                    chatId: agentRuntimeChatEntry?.record.chat.id ?? null,
                 }),
             ].sort(compareChatActors);
             const runtimeLastActivityAt = [...chatSessions].reduce<string | null>(
@@ -336,14 +342,14 @@ export async function listChatDetails() {
                     idsByRuntimeParticipantKey: participantIdsByRuntimeParticipantKey,
                     participantById,
                     participants: agentRuntimeChat?.participants ?? [],
-                    chatId: agentRuntimeChatEntry?.record.id ?? null,
+                    chatId: agentRuntimeChatEntry?.record.chat.id ?? null,
                 })
             );
             const source = resolveChatSource({
                 identity,
                 latestSessionKey: latestSession?.sessionKey ?? null,
                 latestSessionPlatform: latestSession?.platform ?? null,
-                chatId: agentRuntimeChatEntry?.record.id ?? null,
+                chatId: agentRuntimeChatEntry?.record.chat.id ?? null,
                 runtimePlatform: agentRuntimeChat?.platform ?? null,
             });
             const displayName = presentChatDisplayName({
@@ -443,7 +449,7 @@ async function buildRuntimeParticipantIdMap(entries: RuntimeChatEntry[]) {
                     externalId: participant.externalId,
                     key: getRuntimeParticipantKey({
                         participantId: participant.participantId,
-                        chatId: entry.record.id,
+                        chatId: entry.record.chat.id,
                     }),
                     provider: participant.platform,
                 },
@@ -469,10 +475,16 @@ function toChatTargetParticipant(participant: Participant | null) {
     };
 }
 
-function resolveChatIdentity(input: {
-    chatId: string;
-    runtimeChat: ReturnType<typeof parseChatRawJson> | null;
-}) {
+function resolveChatIdentity(input: { chatId: string; runtimeChat: ParsedRuntimeChat | null }) {
+    if (input.runtimeChat?.platform === 'tavern') {
+        return {
+            externalId: null,
+            id: input.chatId,
+            target: null,
+            type: 'tavern',
+        };
+    }
+
     if (input.runtimeChat?.platform && input.runtimeChat.target) {
         const id = buildChatId({
             externalId: null,

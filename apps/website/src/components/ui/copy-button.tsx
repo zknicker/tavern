@@ -27,8 +27,7 @@ export function CopyButton({
     ...props
 }: CopyButtonProps) {
     const [copied, setCopied] = React.useState(false);
-    const copyValue = value.trim();
-    const canCopy = copyValue.length > 0;
+    const canCopy = value.trim().length > 0;
 
     React.useEffect(() => {
         if (!copied) {
@@ -46,7 +45,7 @@ export function CopyButton({
             disabled={disabled || !canCopy}
             onClick={async () => {
                 try {
-                    await writeClipboardText(copyValue);
+                    await writeClipboardText(value);
                     setCopied(true);
                     onCopy?.();
                 } catch {

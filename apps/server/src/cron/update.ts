@@ -2,8 +2,8 @@ import { TRPCError } from '@trpc/server';
 import { requireConfiguredAgentRuntimeClientForRuntimeId } from '../agent-runtime/configured-client.ts';
 import * as agentRuntimeCron from '../agent-runtime/cron.ts';
 import { emitCronUpdated, emitSyncDataUpdated } from '../api/invalidation-events.ts';
+import { getRuntimeChatRecord } from '../chat/runtime-chats.ts';
 import { getAgent as getAgentRecord } from '../storage/agents.ts';
-import { getChatRecord } from '../storage/chats.ts';
 import { getCronJobRecord, saveCronJobRecord } from '../storage/cron-jobs.ts';
 import { syncAgentRuntimeCron } from '../sync/agent-runtime-sync.ts';
 import { updateCronJobInputSchema } from './contracts.ts';
@@ -22,7 +22,7 @@ export async function updateCronJob(input: unknown) {
 
     const [agent, deliveryChat] = await Promise.all([
         parsed.patch.agentId ? getAgentRecord(parsed.patch.agentId) : null,
-        parsed.patch.delivery?.chatId ? getChatRecord(parsed.patch.delivery.chatId) : null,
+        parsed.patch.delivery?.chatId ? getRuntimeChatRecord(parsed.patch.delivery.chatId) : null,
     ]);
 
     if (parsed.patch.agentId && !agent) {

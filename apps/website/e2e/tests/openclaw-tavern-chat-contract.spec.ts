@@ -70,18 +70,14 @@ test('recovers accepted user message and active turn after hard reload', async (
     await page.getByRole('button', { name: 'Start chat' }).click();
 
     await waitForRealChatRoute(page);
-    await expect(page.getByRole('button', { name: /Working for/i })).toBeVisible({
-        timeout: 30_000,
-    });
+    await expectActiveTurnIndicator(page);
 
     await page.reload();
 
     await expect(page.locator('main p').filter({ hasText: prompt })).toBeVisible({
         timeout: 30_000,
     });
-    await expect(page.getByRole('button', { name: /Working for/i })).toBeVisible({
-        timeout: 30_000,
-    });
+    await expectActiveTurnIndicator(page);
     await expect(transcriptParagraph(page, expectedReply)).toBeVisible({
         timeout: 90_000,
     });
@@ -211,6 +207,14 @@ async function openActivityIfClosed(activity: ReturnType<Page['getByRole']>) {
     if ((await activity.getAttribute('aria-expanded')) === 'false') {
         await activity.click();
     }
+}
+
+async function expectActiveTurnIndicator(page: Page) {
+    await expect(
+        page
+            .getByRole('button', { name: /Working for/i })
+            .or(page.getByLabel('Agent is thinking'))
+    ).toBeVisible({ timeout: 30_000 });
 }
 
 function isVisibleFinalReplyEvent(event: CapturedOpenClawGatewayEvent) {

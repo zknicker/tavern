@@ -21,6 +21,11 @@ executor.
 * **OpenClaw owns execution.** Agents, sessions, turns, transcripts, files,
   tools, model calls, prompt-time context management, and native OpenClaw config
   behavior remain OpenClaw-owned.
+* **The OpenClaw relay is transport only.** Runtime creates chats, binds chats
+  to agents and session keys, writes durable Tavern messages, and then dispatches
+  accepted work through the relay. The relay references existing Runtime chat
+  and message ids; it does not create chats, repair chats, or write chat-level
+  Tavern metadata.
 * **Tavern App owns presentation.** The app reads runtime chat history, caches
   what it needs, and renders chats, activity, settings, memory inspection, the
   Cortex wiki, automations, skills, and stats.

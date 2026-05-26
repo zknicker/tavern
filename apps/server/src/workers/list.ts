@@ -1,7 +1,6 @@
-import { presentChatLabel } from '../chat/chat-labels.ts';
+import { listRuntimeChatRecords, presentRuntimeChatLabel } from '../chat/runtime-chats.ts';
 import { getSessionDisplay } from '../sessions/display.ts';
 import { listAgents } from '../storage/agents.ts';
-import { listChatRecords } from '../storage/chats.ts';
 import { listSessionRecords, parseSessionRecord } from '../storage/sessions.ts';
 import type { WorkerListOutput } from './contracts.ts';
 
@@ -21,12 +20,12 @@ function compareWorkerSessions(left: SessionRecord, right: SessionRecord) {
 export async function listWorkers(): Promise<WorkerListOutput> {
     const [agentRecords, chatRecords, sessionRecords] = await Promise.all([
         listAgents(),
-        listChatRecords(),
+        listRuntimeChatRecords(),
         listSessionRecords(),
     ]);
     const agentNameById = new Map(agentRecords.map((agent) => [agent.id, agent.name]));
     const chatTitleById = new Map(
-        chatRecords.map((chat) => [chat.id, presentChatLabel(chat)])
+        chatRecords.map((record) => [record.chat.id, presentRuntimeChatLabel(record.chat)])
     );
     const syncedAt = new Date().toISOString();
     const sessions = sessionRecords
