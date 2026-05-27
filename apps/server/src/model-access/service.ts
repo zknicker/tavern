@@ -1,97 +1,65 @@
-import type {
-    AgentRuntimeModelAccessStatus,
-    AgentRuntimeSaveClaudeCredential,
-    AgentRuntimeSaveCodexCredential,
-} from '@tavern/api';
-import { z } from 'zod';
+import type { AgentRuntimeModelAccessStatus } from '@tavern/api';
 import {
-    getTavernVaultSecret,
-    saveTavernVaultSecret,
-    tavernVaultSecretIds,
-} from '../storage/tavern-vault.ts';
+    CodexUsageParseError,
+    decodeCodexAccessTokenMetadata,
+    loadCodexCredentials,
+} from '@tavern/codex-usage';
 
-export const modelAccessIds = ['claude-code', 'codex'] as const;
+export const modelAccessIds = ['codex'] as const;
 
 export type ModelAccessId = (typeof modelAccessIds)[number];
 export type ModelAccessStatus = AgentRuntimeModelAccessStatus;
-
-const credentialSecretSchema = z.object({
-    credential: z.string().trim().min(1),
-});
 
 function toStatus(input: {
     description: string;
     id: ModelAccessId;
     isConfigured: boolean;
+    source?: string | null;
 }): ModelAccessStatus {
     return {
         description: input.description,
         id: input.id,
-        source: input.isConfigured ? 'tavern-vault' : null,
+        source: input.isConfigured ? (input.source ?? 'tavern-vault') : null,
         state: input.isConfigured ? 'live' : 'needs-auth',
     };
 }
 
 export async function listModelAccessStatuses(): Promise<ModelAccessStatus[]> {
-    const [claudeCredential, codexCredential] = await Promise.all([
-        getTavernVaultSecret({
-            id: tavernVaultSecretIds.claudeCredential,
-            schema: credentialSecretSchema,
-        }),
-        getTavernVaultSecret({
-            id: tavernVaultSecretIds.codexCredential,
-            schema: credentialSecretSchema,
-        }),
-    ]);
+    let codexCredential: Awaited<ReturnType<typeof loadCodexCredentials>>;
+
+    try {
+        codexCredential = await loadCodexCredentials();
+    } catch (error) {
+        return [
+            {
+                description:
+                    error instanceof CodexUsageParseError
+                        ? 'Codex local auth is invalid. Sign in with Codex again.'
+                        : 'Codex local auth could not be read.',
+                id: 'codex',
+                source: null,
+                state: 'error',
+            },
+        ];
+    }
+
+    const codexMetadata = codexCredential
+        ? decodeCodexAccessTokenMetadata(codexCredential.credentials.accessToken)
+        : null;
+    const codexLabel =
+        codexMetadata?.email ??
+        codexCredential?.credentials.accountId ??
+        codexCredential?.path ??
+        '~/.codex/auth.json';
 
     return [
         toStatus({
-            description: claudeCredential
-                ? 'Claude Code credential is saved in Tavern Vault.'
-                : 'Save a Claude Code credential in Tavern Vault.',
-            id: 'claude-code',
-            isConfigured: Boolean(claudeCredential),
-        }),
-        toStatus({
             description: codexCredential
-                ? 'Codex credential is saved in Tavern Vault.'
-                : 'Save a Codex credential in Tavern Vault.',
+                ? `Using Codex local auth for ${codexLabel}.`
+                : 'Sign in with Codex to create ~/.codex/auth.json.',
             id: 'codex',
             isConfigured: Boolean(codexCredential),
+            source: 'codex-auth-file',
         }),
     ];
-}
-
-export async function saveClaudeCredential(
-    input: AgentRuntimeSaveClaudeCredential
-): Promise<ModelAccessStatus> {
-    await saveTavernVaultSecret({
-        id: tavernVaultSecretIds.claudeCredential,
-        secret: {
-            credential: input.credential,
-        },
-    });
-
-    return toStatus({
-        description: 'Claude Code credential is saved in Tavern Vault.',
-        id: 'claude-code',
-        isConfigured: true,
-    });
-}
-
-export async function saveCodexCredential(
-    input: AgentRuntimeSaveCodexCredential
-): Promise<ModelAccessStatus> {
-    await saveTavernVaultSecret({
-        id: tavernVaultSecretIds.codexCredential,
-        secret: {
-            credential: input.credential,
-        },
-    });
-
-    return toStatus({
-        description: 'Codex credential is saved in Tavern Vault.',
-        id: 'codex',
-        isConfigured: true,
-    });
 }

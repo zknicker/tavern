@@ -29,9 +29,12 @@ choices.
 
 ## Provider Access
 
-- Provider credentials entered in the Tavern app stay in Tavern Vault.
+- OpenRouter credentials entered in the Tavern app stay in Tavern Vault.
 - Tavern-owned provider credentials stay in Tavern. OpenClaw receives only the generated managed
   runtime config that Tavern chooses to materialize.
+- Codex OAuth uses the local Codex auth file as the credential source. Runtime owns the Tavern
+  profile/model record and reads `~/.codex/auth.json` for access state and usage, while Codex and
+  OpenClaw continue to refresh that shared local auth.
 - OpenClaw should not be treated as the authoritative credential store for Tavern-configured
   model providers.
 - Tavern may later display transport/sync status showing whether OpenClaw has received the

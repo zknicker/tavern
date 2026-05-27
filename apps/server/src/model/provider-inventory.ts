@@ -1,4 +1,4 @@
-import { agentRuntimeModelProviderIds, parseAgentRuntimeModelRef } from '@tavern/api';
+import { parseAgentRuntimeModelRef } from '@tavern/api';
 import { listModelAccessStatuses } from '../model-access/service.ts';
 import { getOpenRouterSettings } from '../openrouter/settings.ts';
 import {
@@ -8,20 +8,18 @@ import {
     modelInventorySnapshotSchema,
 } from './inventory-contracts.ts';
 
-export const modelInventoryProviders = agentRuntimeModelProviderIds;
+export const modelInventoryProviders = [
+    'codex',
+    'openrouter',
+] as const satisfies readonly ModelProviderId[];
+type CatalogModelProviderId = (typeof modelInventoryProviders)[number];
 
 const providerDisplayNames = {
-    claude: 'Claude',
     codex: 'Codex',
     openrouter: 'OpenRouter',
-} as const satisfies Record<ModelProviderId, string>;
+} as const satisfies Record<CatalogModelProviderId, string>;
 
 const curatedModels = {
-    claude: [
-        ['claude-opus-4-7', 'Claude Opus 4.7', 1_000_000],
-        ['claude-sonnet-4-6', 'Claude Sonnet 4.6', 1_000_000],
-        ['claude-haiku-4-5-20251001', 'Claude Haiku 4.5', 200_000],
-    ],
     codex: [
         ['gpt-5.5', 'GPT-5.5', 400_000],
         ['gpt-5.4', 'GPT-5.4', null],
@@ -31,10 +29,13 @@ const curatedModels = {
         ['gpt-5.2', 'GPT-5.2', null],
     ],
     openrouter: [['moonshotai/kimi-k2.5', 'Kimi K2.5', 262_144]],
-} as const satisfies Record<ModelProviderId, readonly (readonly [string, string, number | null])[]>;
+} as const satisfies Record<
+    CatalogModelProviderId,
+    readonly (readonly [string, string, number | null])[]
+>;
 
 export type ModelProviderConnections = Record<
-    ModelProviderId,
+    CatalogModelProviderId,
     {
         isConnected: boolean;
         stateMessage: string;
@@ -42,7 +43,9 @@ export type ModelProviderConnections = Record<
 >;
 
 export function getModelProviderDisplayName(provider: ModelProviderId) {
-    return providerDisplayNames[provider];
+    return provider in providerDisplayNames
+        ? providerDisplayNames[provider as keyof typeof providerDisplayNames]
+        : titleizeModelId(provider);
 }
 
 export function createCatalogInventoryRecord(input: {
@@ -64,9 +67,12 @@ export function createCatalogInventoryRecord(input: {
 }
 
 export function createCuratedProviderInventory(provider: ModelProviderId): ModelInventorySnapshot {
+    const models =
+        provider in curatedModels ? curatedModels[provider as keyof typeof curatedModels] : [];
+
     return modelInventorySnapshotSchema.parse({
         models: sortModels(
-            curatedModels[provider].map(([modelId, displayName, contextWindow]) =>
+            models.map(([modelId, displayName, contextWindow]) =>
                 createCatalogInventoryRecord({
                     contextWindow,
                     displayName,
@@ -85,16 +91,9 @@ export async function listModelProviderConnections(): Promise<ModelProviderConne
         listModelAccessStatuses(),
         getOpenRouterSettings(),
     ]);
-    const claudeStatus = modelAccessStatuses.find((status) => status.id === 'claude-code') ?? null;
     const codexStatus = modelAccessStatuses.find((status) => status.id === 'codex') ?? null;
 
     return {
-        claude: {
-            isConnected: claudeStatus?.state === 'live',
-            stateMessage:
-                claudeStatus?.description ??
-                'Claude Code availability could not be read from the runtime.',
-        },
         codex: {
             isConnected: codexStatus?.state === 'live',
             stateMessage:
@@ -119,7 +118,9 @@ export function sortModels(models: ModelInventorySnapshotRecord[]) {
 
 export function inferCatalogModelName(modelRef: string) {
     const { modelId, provider } = parseAgentRuntimeModelRef(modelRef);
-    const curatedModel = curatedModels[provider].find(([candidate]) => candidate === modelId);
+    const models =
+        provider in curatedModels ? curatedModels[provider as keyof typeof curatedModels] : [];
+    const curatedModel = models.find(([candidate]) => candidate === modelId);
 
     return curatedModel?.[1] ?? titleizeModelId(modelId);
 }

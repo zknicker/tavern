@@ -25,7 +25,7 @@ not require clients to parse logs or runtime internals.
 
 The API covers:
 
-* read usage summaries
+* read Codex and OpenRouter usage summaries
 * read provider and model activity
 * read spend estimates
 * read runtime health

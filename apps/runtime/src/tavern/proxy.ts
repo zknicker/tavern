@@ -102,12 +102,6 @@ async function dispatchModelAccess({ client, request, url }: RouteContext) {
     if (request.method === 'GET' && url.pathname === agentRuntimeRoutes.modelAccess) {
         return await client.getModelAccess();
     }
-    if (url.pathname === agentRuntimeRoutes.modelAccessClaudeCredential) {
-        return await client.saveClaudeCredential(await readJson(request));
-    }
-    if (url.pathname === agentRuntimeRoutes.modelAccessCodexCredential) {
-        return await client.saveCodexCredential(await readJson(request));
-    }
     if (url.pathname === agentRuntimeRoutes.modelAccessOpenRouterSettings) {
         if (request.method === 'GET') {
             return await client.getOpenRouterSettings();

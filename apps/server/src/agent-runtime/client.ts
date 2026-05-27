@@ -21,14 +21,11 @@ import {
     type AgentRuntimeMemoryStatus,
     type AgentRuntimeMessageAccepted,
     type AgentRuntimeModelAccess,
-    type AgentRuntimeModelAccessStatus,
     type AgentRuntimeModels,
     type AgentRuntimeOpenClawConfigSnapshot,
     type AgentRuntimeOpenRouterSettings,
     type AgentRuntimeRunCron,
     type AgentRuntimeSaveAgentFile,
-    type AgentRuntimeSaveClaudeCredential,
-    type AgentRuntimeSaveCodexCredential,
     type AgentRuntimeSaveModels,
     type AgentRuntimeSaveOpenRouterSettings,
     type AgentRuntimeSaveWorkspaceInstructions,
@@ -70,7 +67,6 @@ import {
     agentRuntimeMemoryStatusSchema,
     agentRuntimeMessageAcceptedSchema,
     agentRuntimeModelAccessSchema,
-    agentRuntimeModelAccessStatusSchema,
     agentRuntimeModelsSchema,
     agentRuntimeMutationHeaders,
     agentRuntimeMutationOrigins,
@@ -79,8 +75,6 @@ import {
     agentRuntimeRoutes,
     agentRuntimeRunCronSchema,
     agentRuntimeSaveAgentFileSchema,
-    agentRuntimeSaveClaudeCredentialSchema,
-    agentRuntimeSaveCodexCredentialSchema,
     agentRuntimeSaveMemorySettingsSchema,
     agentRuntimeSaveModelsSchema,
     agentRuntimeSaveOpenRouterSettingsSchema,
@@ -203,12 +197,6 @@ export interface TavernAgentRuntimeClient {
         path: string,
         input: AgentRuntimeSaveAgentFile
     ): Promise<AgentRuntimeAgentFileContent>;
-    saveClaudeCredential(
-        input: AgentRuntimeSaveClaudeCredential
-    ): Promise<AgentRuntimeModelAccessStatus>;
-    saveCodexCredential(
-        input: AgentRuntimeSaveCodexCredential
-    ): Promise<AgentRuntimeModelAccessStatus>;
     saveMemorySettings(
         input: Omit<AgentRuntimeMemorySettings, 'updatedAt'>
     ): Promise<AgentRuntimeMemorySettings>;
@@ -682,48 +670,6 @@ class HttpTavernAgentRuntimeClient implements TavernAgentRuntimeClient {
         }
 
         return agentRuntimeModelAccessSchema.parse(await response.json());
-    }
-
-    async saveClaudeCredential(input: AgentRuntimeSaveClaudeCredential) {
-        const payload = agentRuntimeSaveClaudeCredentialSchema.parse(input);
-        const response = await fetch(
-            `${this.#baseUrl}${agentRuntimeRoutes.modelAccessClaudeCredential}`,
-            {
-                body: JSON.stringify(payload),
-                headers: {
-                    'content-type': 'application/json',
-                    [agentRuntimeMutationHeaders.origin]: agentRuntimeMutationOrigins.tavern,
-                },
-                method: 'PUT',
-            }
-        );
-
-        if (!response.ok) {
-            await readErrorResponse(response);
-        }
-
-        return agentRuntimeModelAccessStatusSchema.parse(await response.json());
-    }
-
-    async saveCodexCredential(input: AgentRuntimeSaveCodexCredential) {
-        const payload = agentRuntimeSaveCodexCredentialSchema.parse(input);
-        const response = await fetch(
-            `${this.#baseUrl}${agentRuntimeRoutes.modelAccessCodexCredential}`,
-            {
-                body: JSON.stringify(payload),
-                headers: {
-                    'content-type': 'application/json',
-                    [agentRuntimeMutationHeaders.origin]: agentRuntimeMutationOrigins.tavern,
-                },
-                method: 'PUT',
-            }
-        );
-
-        if (!response.ok) {
-            await readErrorResponse(response);
-        }
-
-        return agentRuntimeModelAccessStatusSchema.parse(await response.json());
     }
 
     async getOpenRouterSettings() {

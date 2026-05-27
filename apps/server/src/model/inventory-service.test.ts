@@ -12,7 +12,7 @@ afterEach(() => {
     mock.restore();
 });
 
-test('listModelInventory keeps memory refs visible even when they are absent from the catalog', async () => {
+test('listModelInventory keeps supported memory refs visible when absent from the catalog', async () => {
     mockProviderConnections();
     spyOn(memoryService, 'getMemorySettings').mockResolvedValue({
         dreamModel: null,
@@ -20,28 +20,21 @@ test('listModelInventory keeps memory refs visible even when they are absent fro
         memoryEnabled: true,
         persistenceModel: null,
         updatedAt: null,
-        workingModel: 'claude/claude-opus-4-6',
+        workingModel: 'codex/gpt-5.4-mini',
     });
     spyOn(inventoryCache, 'loadProviderInventory').mockImplementation(async (provider) =>
-        createSnapshot(provider, {
-            claude: [
-                {
-                    displayName: 'Claude Sonnet 4.6',
-                    modelId: 'claude-sonnet-4-6',
-                },
-            ],
-        })
+        createSnapshot(provider)
     );
 
     const result = await listModelInventory();
-    const claude = result.providers.find((provider) => provider.provider === 'claude');
+    const codex = result.providers.find((provider) => provider.provider === 'codex');
 
-    assert.ok(claude);
+    assert.ok(codex);
     assert.equal(
-        claude.models.some(
+        codex.models.some(
             (model) =>
-                model.ref === 'claude/claude-opus-4-6' &&
-                model.displayName === 'Claude Opus 4 6' &&
+                model.ref === 'codex/gpt-5.4-mini' &&
+                model.displayName === 'Gpt 5.4 Mini' &&
                 !model.canDelete &&
                 model.inUse &&
                 model.usageLabels.includes('Memory working model')
@@ -114,12 +107,6 @@ test('deleteCatalogModel rejects models that are still in use', async () => {
 
 function mockProviderConnections() {
     spyOn(modelAccessService, 'listModelAccessStatuses').mockResolvedValue([
-        {
-            description: 'Connected to Tavern Vault',
-            id: 'claude-code',
-            source: 'file',
-            state: 'live',
-        },
         {
             description: 'Connected to Tavern Vault',
             id: 'codex',

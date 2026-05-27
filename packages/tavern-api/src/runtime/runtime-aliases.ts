@@ -19,8 +19,6 @@ export const runtimeModelAccessIdSchema = contracts.agentRuntimeModelAccessIdSch
 export const runtimeModelAccessStateSchema = contracts.agentRuntimeModelAccessStateSchema;
 export const runtimeModelAccessStatusSchema = contracts.agentRuntimeModelAccessStatusSchema;
 export const runtimeModelAccessSchema = contracts.agentRuntimeModelAccessSchema;
-export const runtimeSaveClaudeCredentialSchema = contracts.agentRuntimeSaveClaudeCredentialSchema;
-export const runtimeSaveCodexCredentialSchema = contracts.agentRuntimeSaveCodexCredentialSchema;
 export const runtimeOpenRouterSettingsSchema = contracts.agentRuntimeOpenRouterSettingsSchema;
 export const runtimeSaveOpenRouterSettingsSchema =
     contracts.agentRuntimeSaveOpenRouterSettingsSchema;
@@ -166,8 +164,6 @@ export type RuntimeModelAccessId = contracts.AgentRuntimeModelAccessId;
 export type RuntimeModelAccessState = contracts.AgentRuntimeModelAccessState;
 export type RuntimeModelAccessStatus = contracts.AgentRuntimeModelAccessStatus;
 export type RuntimeOpenRouterSettings = contracts.AgentRuntimeOpenRouterSettings;
-export type RuntimeSaveClaudeCredential = contracts.AgentRuntimeSaveClaudeCredential;
-export type RuntimeSaveCodexCredential = contracts.AgentRuntimeSaveCodexCredential;
 export type RuntimeModelSelection = contracts.AgentRuntimeModelSelection;
 export type RuntimeModels = contracts.AgentRuntimeModels;
 export type RuntimeSkillFile = contracts.AgentRuntimeSkillFile;

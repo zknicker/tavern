@@ -1,5 +1,5 @@
 import type { IconSvgElement } from '@hugeicons/react';
-import { ChatGptIcon, ClaudeIcon } from '@hugeicons-pro/core-stroke-rounded';
+import { ChatGptIcon } from '@hugeicons-pro/core-stroke-rounded';
 import { Card, CardContent } from '../../components/ui/card.tsx';
 import { Icon } from '../../components/ui/icon.tsx';
 import { Progress } from '../../components/ui/progress.tsx';
@@ -17,14 +17,6 @@ export function UsageModules() {
     return (
         <div className="grid gap-3">
             <div className="grid gap-3 xl:grid-cols-2">
-                <UsageCard
-                    accent={usageAccent}
-                    icon={ClaudeIcon}
-                    state={liveUsage?.claude}
-                    title="Claude"
-                    windowIds={['current-session', 'current-week-all-models']}
-                    windowLabels={['Current session', 'Current week']}
-                />
                 <UsageCard
                     accent={usageAccent}
                     icon={ChatGptIcon}
@@ -62,7 +54,7 @@ function UsageCard({
 }: {
     accent: string;
     icon: IconSvgElement;
-    state: LiveUsageOutput['claude'] | LiveUsageOutput['codex'] | undefined;
+    state: LiveUsageOutput['codex'] | undefined;
     title: string;
     windowIds: string[];
     windowLabels: string[];

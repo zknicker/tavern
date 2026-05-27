@@ -55,7 +55,7 @@ export const agentRuntimeStatusSchema = z.object({
         .optional(),
 });
 
-export const agentRuntimeModelAccessIdSchema = z.enum(['claude-code', 'codex']);
+export const agentRuntimeModelAccessIdSchema = z.enum(['codex']);
 export const agentRuntimeModelAccessStateSchema = z.enum(['error', 'live', 'needs-auth']);
 
 export const agentRuntimeModelAccessStatusSchema = z.object({
@@ -67,25 +67,6 @@ export const agentRuntimeModelAccessStatusSchema = z.object({
 
 export const agentRuntimeModelAccessSchema = z.object({
     providers: z.array(agentRuntimeModelAccessStatusSchema),
-});
-
-export const agentRuntimeSaveClaudeCredentialSchema = z.object({
-    credential: z
-        .string()
-        .trim()
-        .min(1, 'Enter a Claude setup token or Anthropic API key.')
-        .refine(
-            (value) => value.startsWith('sk-ant-oat') || value.startsWith('sk-ant-api'),
-            'Enter a Claude setup token or Anthropic API key.'
-        ),
-});
-
-export const agentRuntimeSaveCodexCredentialSchema = z.object({
-    credential: z
-        .string()
-        .trim()
-        .min(1, 'Enter a Codex auth.json payload or OpenAI API key.')
-        .refine(isCodexCredentialInput, 'Enter a Codex auth.json payload or OpenAI API key.'),
 });
 
 const agentRuntimeOpenRouterKeySchema = z
@@ -1510,10 +1491,6 @@ export type AgentRuntimeOpenClawConfigSnapshot = z.infer<
     typeof agentRuntimeOpenClawConfigSnapshotSchema
 >;
 export type AgentRuntimeApplyOpenClawConfig = z.infer<typeof agentRuntimeApplyOpenClawConfigSchema>;
-export type AgentRuntimeSaveClaudeCredential = z.infer<
-    typeof agentRuntimeSaveClaudeCredentialSchema
->;
-export type AgentRuntimeSaveCodexCredential = z.infer<typeof agentRuntimeSaveCodexCredentialSchema>;
 export type AgentRuntimeModelSelection = z.infer<typeof agentRuntimeModelSelectionSchema>;
 export type AgentRuntimeModels = z.infer<typeof agentRuntimeModelsSchema>;
 export type AgentRuntimeSkillFile = z.infer<typeof agentRuntimeSkillFileSchema>;
@@ -1576,25 +1553,3 @@ export type AgentRuntimeTurnStartedEvent = z.infer<typeof agentRuntimeTurnStarte
 export type AgentRuntimeUpsertBinding = z.infer<typeof agentRuntimeUpsertBindingSchema>;
 export type AgentRuntimeUpdateAgent = z.infer<typeof agentRuntimeUpdateAgentSchema>;
 export type AgentRuntimeUpdateCron = z.infer<typeof agentRuntimeUpdateCronSchema>;
-
-function isCodexCredentialInput(value: string): boolean {
-    return isOpenAiApiKey(value) || isCodexAuthJson(value);
-}
-
-function isOpenAiApiKey(value: string): boolean {
-    return value.startsWith('sk-') && !(value.startsWith('sk-ant-') || value.startsWith('sk-or-'));
-}
-
-function isCodexAuthJson(value: string): boolean {
-    try {
-        const parsed = JSON.parse(value) as { tokens?: { access_token?: unknown } };
-        return (
-            typeof parsed === 'object' &&
-            parsed !== null &&
-            typeof parsed.tokens?.access_token === 'string' &&
-            parsed.tokens.access_token.trim().length > 0
-        );
-    } catch {
-        return false;
-    }
-}

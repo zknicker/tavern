@@ -37,7 +37,7 @@ capabilities. It is not a second product API.
 | Sessions and execution evidence | `/openclaw/sessions`, `/openclaw/sessions/previews`, `/openclaw/sessions/{sessionKey}/messages`, `/openclaw/sessions/{sessionKey}/graph`, `/openclaw/sessions/{sessionKey}/prompt`, `/openclaw/sessions/{sessionKey}/resync` |
 | Cron | `/cron-jobs`, `/cron-jobs/{id}`, `/cron-jobs/{id}/run`, `/cron-jobs/{id}/runs`, `/cron-runs`, `/cron-runs/{id}` |
 | Skills | `/skills`, `/skills/{id}`, `/skills/{id}/config` |
-| Memory, models, and access | `/memory/settings`, `/memory/status`, `/models`, `/model-access`, `/model-access/claude`, `/model-access/codex`, `/model-access/openrouter` |
+| Memory, models, and access | `/memory/settings`, `/memory/status`, `/models`, `/model-access`, `/model-access/openrouter` |
 | Platform bindings | `/bindings`, `/bindings/{id}` |
 | OpenClaw chat projections | `/openclaw/chats`, `/openclaw/chats/{chatId}/messages` |
 | Runtime chat relay | websocket `/chat` |

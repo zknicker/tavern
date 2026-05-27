@@ -6,8 +6,7 @@ export function Stats() {
             <div className="max-w-3xl">
                 <h1 className="font-bold text-2xl text-foreground tracking-tight">Stats</h1>
                 <p className="mt-2 text-base text-foreground/70 leading-relaxed">
-                    Track Claude, Codex, and OpenRouter usage without crowding the Home compose
-                    flow.
+                    Track Codex and OpenRouter usage without crowding the Home compose flow.
                 </p>
             </div>
 

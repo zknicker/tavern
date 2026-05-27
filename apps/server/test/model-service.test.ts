@@ -23,7 +23,6 @@ test('listModels exposes explicit runtime harness model names', async () => {
 
     const result = await listModels();
     const codexModel = result.models.find((model) => model.ref === 'codex/gpt-5.5');
-    const claudeModel = result.models.find((model) => model.ref === 'claude/claude-sonnet-4-6');
 
     assert.deepEqual(
         codexModel?.openClawNames?.map((name) => ({
@@ -41,9 +40,9 @@ test('listModels exposes explicit runtime harness model names', async () => {
             },
         ]
     );
-    assert.deepEqual(
-        claudeModel?.openClawNames?.map((name) => name.harness),
-        ['pi']
+    assert.equal(
+        result.models.some((model) => model.provider === 'claude'),
+        false
     );
     assert.equal(result.openRouter.updatedAt, '2026-04-04T12:00:00.000Z');
 });

@@ -18,8 +18,6 @@ export const agentRuntimeRoutes = {
     memoryStatus: '/memory/status',
     macApps: '/mac-apps',
     modelAccess: '/model-access',
-    modelAccessClaudeCredential: '/model-access/claude',
-    modelAccessCodexCredential: '/model-access/codex',
     modelAccessOpenRouterSettings: '/model-access/openrouter',
     openClawConfig: '/openclaw-config',
     openClawGatewayStatus: '/openclaw-gateway/status',

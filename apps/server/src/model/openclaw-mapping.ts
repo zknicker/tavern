@@ -30,9 +30,6 @@ export interface CanonicalOpenClawModel {
 }
 
 export const tavernModelCatalog: TavernModelDefinition[] = [
-    createModel('claude', 'claude-opus-4-7', 'Claude Opus 4.7', 1_000_000),
-    createModel('claude', 'claude-sonnet-4-6', 'Claude Sonnet 4.6', 1_000_000),
-    createModel('claude', 'claude-haiku-4-5-20251001', 'Claude Haiku 4.5', 200_000),
     createModel('codex', 'gpt-5.5', 'GPT-5.5', 400_000),
     createModel('codex', 'gpt-5.4', 'GPT-5.4', null),
     createModel('codex', 'gpt-5.4-mini', 'GPT-5.4 Mini', null),
@@ -55,21 +52,6 @@ export const openClawModelNames: OpenClawModelNameDefinition[] = [
                 modelCatalogId: formatTavernModelId(model),
                 openClawModel: model.modelId,
                 openClawProvider: 'openai',
-            }),
-        ];
-    }),
-    ...tavernModelCatalog.flatMap((model) => {
-        if (model.provider !== 'claude') {
-            return [];
-        }
-
-        return [
-            createOpenClawModelName({
-                harness: 'pi',
-                isPreferred: true,
-                modelCatalogId: formatTavernModelId(model),
-                openClawModel: model.modelId,
-                openClawProvider: 'anthropic',
             }),
         ];
     }),
@@ -179,15 +161,6 @@ export function normalizeOpenClawModelIdentity(input: {
         return createDynamicCanonicalModel({
             modelId: rawModel,
             provider: 'openrouter',
-            rawModel,
-            rawProvider,
-        });
-    }
-
-    if (rawProvider === 'anthropic') {
-        return createDynamicCanonicalModel({
-            modelId: rawModel,
-            provider: 'claude',
             rawModel,
             rawProvider,
         });

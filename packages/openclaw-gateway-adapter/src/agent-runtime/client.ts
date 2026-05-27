@@ -20,13 +20,10 @@ import type {
     AgentRuntimeMemoryStatus,
     AgentRuntimeMessageAccepted,
     AgentRuntimeModelAccess,
-    AgentRuntimeModelAccessStatus,
     AgentRuntimeModels,
     AgentRuntimeOpenClawConfigSnapshot,
     AgentRuntimeOpenRouterSettings,
     AgentRuntimeRunCron,
-    AgentRuntimeSaveClaudeCredential,
-    AgentRuntimeSaveCodexCredential,
     AgentRuntimeSaveModels,
     AgentRuntimeSaveOpenRouterSettings,
     AgentRuntimeSessionGraph,
@@ -147,12 +144,6 @@ export interface OpenClawAgentRuntimeClient {
         path: string,
         input: { content: string }
     ): Promise<AgentRuntimeAgentFileContent>;
-    saveClaudeCredential(
-        input: AgentRuntimeSaveClaudeCredential
-    ): Promise<AgentRuntimeModelAccessStatus>;
-    saveCodexCredential(
-        input: AgentRuntimeSaveCodexCredential
-    ): Promise<AgentRuntimeModelAccessStatus>;
     saveMemorySettings(
         input: Omit<AgentRuntimeMemorySettings, 'updatedAt'>
     ): Promise<AgentRuntimeMemorySettings>;
@@ -486,14 +477,6 @@ class GatewayBackedOpenClawAgentRuntimeClient implements OpenClawAgentRuntimeCli
 
     async getModelAccess() {
         return unsupportedOpenClawSurface('model access credentials');
-    }
-
-    async saveClaudeCredential(_input: AgentRuntimeSaveClaudeCredential) {
-        return unsupportedOpenClawSurface('Claude credential writes');
-    }
-
-    async saveCodexCredential(_input: AgentRuntimeSaveCodexCredential) {
-        return unsupportedOpenClawSurface('Codex credential writes');
     }
 
     async getOpenRouterSettings() {

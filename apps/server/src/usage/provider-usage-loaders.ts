@@ -1,8 +1,12 @@
 import type { ClaudeUsageSnapshot } from '@tavern/claude-usage';
-import type { CodexUsageSnapshot } from '@tavern/codex-usage';
-import { getClaudeUsageSnapshot, getCodexUsageSnapshot } from '../storage/provider-usage.ts';
+import { CodexUsageAuthError, type CodexUsageSnapshot, getCodexUsage } from '@tavern/codex-usage';
+import {
+    getClaudeUsageSnapshot,
+    getCodexUsageSnapshot,
+    saveCodexUsageSnapshot,
+} from '../storage/provider-usage.ts';
 import { toUsageErrorState, type UsageErrorCode } from './live-errors.ts';
-import { createEmptyClaudeUsageSnapshot, createEmptyCodexUsageSnapshot } from './live-snapshots.ts';
+import { createEmptyClaudeUsageSnapshot } from './live-snapshots.ts';
 
 export interface LiveUsageErrorState {
     error: {
@@ -45,19 +49,49 @@ export async function loadClaudeUsage(
 export async function loadCodexUsage(
     capturedAt: Date
 ): Promise<LiveUsageProviderState<CodexUsageSnapshot>> {
+    const cachedSnapshot = await loadCachedCodexUsage();
+
+    if (cachedSnapshot) {
+        return {
+            provider: 'codex',
+            snapshot: cachedSnapshot,
+            status: 'ok',
+        };
+    }
+
     try {
-        const snapshot = await getCodexUsageSnapshot();
+        const snapshot = await getCodexUsage({
+            now: capturedAt,
+        });
+
+        await saveCodexUsageSnapshot(snapshot);
 
         return {
             provider: 'codex',
-            snapshot: snapshot ?? createEmptyCodexUsageSnapshot(capturedAt),
+            snapshot,
             status: 'ok',
         };
     } catch (error) {
+        if (error instanceof CodexUsageAuthError) {
+            return {
+                error: toUsageErrorState(error, 'Codex usage is unavailable.'),
+                provider: 'codex',
+                status: 'error',
+            };
+        }
+
         return {
             error: toUsageErrorState(error, 'Codex usage is unavailable.'),
             provider: 'codex',
             status: 'error',
         };
+    }
+}
+
+async function loadCachedCodexUsage(): Promise<CodexUsageSnapshot | null> {
+    try {
+        return await getCodexUsageSnapshot();
+    } catch {
+        return null;
     }
 }

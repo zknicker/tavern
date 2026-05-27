@@ -70,12 +70,15 @@ export async function seedModelCatalog() {
     }
 
     const currentNameIds = openClawModelNames.map(formatOpenClawModelNameDefinitionId);
+    const currentCatalogIds = tavernModelCatalog.map(formatTavernModelId);
+
     await db
         .delete(runtimeModelAvailabilityTable)
         .where(notInArray(runtimeModelAvailabilityTable.openClawModelNameId, currentNameIds));
     await db
         .delete(openClawModelNamesTable)
         .where(notInArray(openClawModelNamesTable.id, currentNameIds));
+    await db.delete(modelCatalogTable).where(notInArray(modelCatalogTable.id, currentCatalogIds));
 }
 
 export async function listModelCatalogRecords() {

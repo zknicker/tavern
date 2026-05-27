@@ -138,7 +138,7 @@ function AddCatalogModelDialog({
 }) {
     const addMutation = useAddCatalogModel();
     const providerOptions = listModelProviderConfigs();
-    const [provider, setProvider] = React.useState(providerOptions[0]?.configName ?? 'claude');
+    const [provider, setProvider] = React.useState(providerOptions[0]?.configName ?? 'codex');
     const [modelId, setModelId] = React.useState('');
     const trimmedModelId = modelId.trim();
     const canAdd = trimmedModelId.length > 0 && !addMutation.isPending;

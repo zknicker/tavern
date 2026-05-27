@@ -11,13 +11,13 @@ test('modelInventorySnapshotSchema accepts cached provider records without usage
                 {
                     contextWindow: null,
                     description: null,
-                    displayName: 'Claude Sonnet 4.6',
-                    modelId: 'claude-sonnet-4-6',
-                    provider: 'claude',
-                    ref: 'claude/claude-sonnet-4-6',
+                    displayName: 'GPT-5.4',
+                    modelId: 'gpt-5.4',
+                    provider: 'codex',
+                    ref: 'codex/gpt-5.4',
                 },
             ],
-            provider: 'claude',
+            provider: 'codex',
             syncedAt: '2026-04-22T17:00:00.000Z',
         })
     ).toEqual({
@@ -25,13 +25,13 @@ test('modelInventorySnapshotSchema accepts cached provider records without usage
             {
                 contextWindow: null,
                 description: null,
-                displayName: 'Claude Sonnet 4.6',
-                modelId: 'claude-sonnet-4-6',
-                provider: 'claude',
-                ref: 'claude/claude-sonnet-4-6',
+                displayName: 'GPT-5.4',
+                modelId: 'gpt-5.4',
+                provider: 'codex',
+                ref: 'codex/gpt-5.4',
             },
         ],
-        provider: 'claude',
+        provider: 'codex',
         syncedAt: '2026-04-22T17:00:00.000Z',
     });
 });
@@ -39,23 +39,23 @@ test('modelInventorySnapshotSchema accepts cached provider records without usage
 test('modelInventoryProviderSchema still requires usage labels on the live API shape', () => {
     expect(() =>
         modelInventoryProviderSchema.parse({
-            displayName: 'Claude',
+            displayName: 'Codex',
             isConnected: true,
             models: [
                 {
                     contextWindow: null,
                     canDelete: false,
                     description: null,
-                    displayName: 'Claude Sonnet 4.6',
+                    displayName: 'GPT-5.4',
                     inUse: true,
-                    modelId: 'claude-sonnet-4-6',
-                    provider: 'claude',
-                    ref: 'claude/claude-sonnet-4-6',
+                    modelId: 'gpt-5.4',
+                    provider: 'codex',
+                    ref: 'codex/gpt-5.4',
                 },
             ],
-            provider: 'claude',
+            provider: 'codex',
             state: 'connected',
-            stateMessage: 'Claude Code is available on the runtime from a runtime auth file.',
+            stateMessage: 'Using Codex local auth.',
         })
     ).toThrow(/usageLabels/);
 });

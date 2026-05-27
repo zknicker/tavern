@@ -4,7 +4,6 @@ import { jobSlugSchema, runJobInputSchema } from '../src/jobs/contracts.ts';
 
 test('registered jobs are limited to provider usage imports', () => {
     expect(jobDefinitions.map((job) => job.slug)).toEqual([
-        'sync-claude-code-usage',
         'sync-codex-usage',
         'sync-openrouter-usage',
     ]);

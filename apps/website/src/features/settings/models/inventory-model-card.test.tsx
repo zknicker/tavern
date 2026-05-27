@@ -11,19 +11,19 @@ test('InventoryModelCard renders a tooltip trigger for usage-locked delete actio
                 canDelete: false,
                 contextWindow: 200_000,
                 description: null,
-                displayName: 'Claude Sonnet 4.6',
+                displayName: 'GPT-5.4',
                 inUse: true,
-                modelId: 'claude-sonnet-4-6',
-                provider: 'claude',
-                ref: 'claude/claude-sonnet-4-6',
+                modelId: 'gpt-5.4',
+                provider: 'codex',
+                ref: 'codex/gpt-5.4',
                 usageLabels: ['Shared default chat model', 'Memory working model'],
             }}
             onDelete={() => {}}
-            providerId="claude"
+            providerId="codex"
         />
     );
 
     assert.match(markup, /data-slot="tooltip-trigger"/);
     assert.match(markup, /pointer-events-none/);
-    assert.match(markup, /Delete Claude Sonnet 4.6/);
+    assert.match(markup, /Delete GPT-5.4/);
 });

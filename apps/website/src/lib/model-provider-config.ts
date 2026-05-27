@@ -1,12 +1,7 @@
 import type { IconSvgElement } from '@hugeicons/react';
-import {
-    Atom02Icon,
-    ChatGptIcon,
-    ClaudeIcon,
-    Globe02Icon,
-} from '@hugeicons-pro/core-stroke-rounded';
+import { Atom02Icon, ChatGptIcon, Globe02Icon } from '@hugeicons-pro/core-stroke-rounded';
 
-export type ModelAccessId = 'claude-code' | 'codex';
+export type ModelAccessId = 'codex';
 
 export interface ModelConfig {
     displayName: string;
@@ -30,25 +25,6 @@ export interface ModelIdentityConfig {
 }
 
 const configuredModelProviders = [
-    {
-        accessDisplayName: 'Claude Code',
-        accessId: 'claude-code',
-        color: '#EA580C',
-        configName: 'claude',
-        displayName: 'Claude',
-        icon: ClaudeIcon,
-        models: {
-            'claude-opus-4-7': {
-                displayName: 'Claude Opus 4.7',
-            },
-            'claude-sonnet-4-6': {
-                displayName: 'Claude Sonnet 4.6',
-            },
-            'claude-haiku-4-5-20251001': {
-                displayName: 'Claude Haiku 4.5',
-            },
-        },
-    },
     {
         accessDisplayName: 'Codex',
         accessId: 'codex',

@@ -38,6 +38,8 @@ const emptyAgentRuntimeModels: AgentRuntimeModels = {
     updatedAt: null,
 };
 
+type CatalogModelProviderId = (typeof modelInventoryProviders)[number];
+
 function toPolicyMemorySettings(
     settings: Awaited<ReturnType<typeof getMemorySettings>>
 ): AgentRuntimeMemorySettings | null {
@@ -61,7 +63,11 @@ function toPolicyMemorySettings(
     };
 }
 
-function listRefsForProvider(modelRefs: Set<string>, provider: ModelProviderId) {
+function isCatalogModelProvider(provider: ModelProviderId): provider is CatalogModelProviderId {
+    return modelInventoryProviders.some((candidate) => candidate === provider);
+}
+
+function listRefsForProvider(modelRefs: Set<string>, provider: CatalogModelProviderId) {
     return [...modelRefs].filter((modelRef) => modelRef.startsWith(`${provider}/`));
 }
 
@@ -76,7 +82,7 @@ function createFallbackInventoryRecord(modelRef: string) {
 
 async function buildProviderInventory(input: {
     inUseModelRefs: Set<string>;
-    provider: ModelProviderId;
+    provider: CatalogModelProviderId;
     agentRuntimeConnections: Awaited<ReturnType<typeof listModelProviderConnections>>;
     usageLabelsByModelRef: Map<string, string[]>;
 }) {
@@ -138,6 +144,14 @@ export async function listModelInventory(): Promise<ModelInventory> {
 
 export async function addCatalogModel(input: unknown) {
     const parsed = addCatalogModelInputSchema.parse(input);
+
+    if (!isCatalogModelProvider(parsed.provider)) {
+        throw new TRPCError({
+            code: 'BAD_REQUEST',
+            message: `${parsed.provider} is not supported in the Tavern model catalog.`,
+        });
+    }
+
     const model = createCatalogInventoryRecord(parsed);
     const snapshot = await loadProviderInventory(parsed.provider);
 
