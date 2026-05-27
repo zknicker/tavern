@@ -1,7 +1,6 @@
+import { recordCapabilityStatus } from '../agent-runtime/capability-status.ts';
 import type { TavernAgentRuntimeClient } from '../agent-runtime/client.ts';
-import { emitAgentRuntimeCapabilityUpdated } from '../api/invalidation-events.ts';
 import { isOpenClawMemoryConfigReady } from '../openclaw-config/fixups/enforce-memory.ts';
-import { saveAgentRuntimeCapabilityStatus } from '../storage/agent-runtime-capability-status.ts';
 
 const memoryCapabilityMethod = 'openclaw.memory.verify';
 
@@ -15,7 +14,7 @@ export async function recordOpenClawMemoryCapability(input: {
         const configSnapshot = await input.client.getOpenClawConfig();
         hasRequiredConfig = isOpenClawMemoryConfigReady(configSnapshot.config);
     } catch (error) {
-        await saveAgentRuntimeCapabilityStatus({
+        await recordCapabilityStatus({
             capability: 'memory',
             errorCode: 'openclaw_memory_unverifiable',
             method: memoryCapabilityMethod,
@@ -24,22 +23,20 @@ export async function recordOpenClawMemoryCapability(input: {
             state: 'unavailable',
             technicalMessage: error instanceof Error ? error.message : String(error),
         });
-        emitAgentRuntimeCapabilityUpdated();
         return;
     }
 
     if (hasRequiredConfig) {
-        await saveAgentRuntimeCapabilityStatus({
+        await recordCapabilityStatus({
             capability: 'memory',
             method: memoryCapabilityMethod,
             runtimeId: input.runtimeId,
             state: 'healthy',
         });
-        emitAgentRuntimeCapabilityUpdated();
         return;
     }
 
-    await saveAgentRuntimeCapabilityStatus({
+    await recordCapabilityStatus({
         capability: 'memory',
         errorCode: 'openclaw_memory_config_unavailable',
         method: memoryCapabilityMethod,
@@ -50,5 +47,4 @@ export async function recordOpenClawMemoryCapability(input: {
             hasRequiredConfig,
         }),
     });
-    emitAgentRuntimeCapabilityUpdated();
 }

@@ -23,7 +23,7 @@ happen, and keep the durable timeline as context.
   durable outputs attached to messages or response activity.
 * **Receipts.** Message creation and assistant delivery are acknowledged by id.
 * **Offline catch-up.** Tavern Runtime keeps chat history while the app is
-  closed; the app reloads from durable rows and event cursors.
+  closed; the app reloads from durable rows and refetches on reconnect.
 
 ## Timeline inputs
 
@@ -46,13 +46,14 @@ Rendering rules:
 * key artifacts by artifact id
 * update running activity rows in place
 * replace optimistic rows by durable message id
-* recover reloads from Runtime messages, responses, activity, artifacts, and
-  event cursors
+* recover reloads from Runtime messages, responses, activity, and artifacts
 
 ## App Data Flow
 
 The app reads chat list and detail data separately. `chat.list` is the
-lightweight ordered list contract for sidebars, overviews, and chat pickers.
+lightweight ordered list contract for Tavern sidebars, overviews, and chat
+pickers. Agent pages use `agent.chats.list` when they need the combined Tavern
+and external runtime chat inventory.
 `chat.get` is the focused detail read for a single chat. Timeline rows come from
 `chat.log.list`, including durable messages, responses, activity, and artifacts.
 

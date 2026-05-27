@@ -32,6 +32,7 @@ import type {
     AgentRuntimeSessionGraph,
     AgentRuntimeSessionList,
     AgentRuntimeSessionMessageList,
+    AgentRuntimeSessionPreviewList,
     AgentRuntimeSessionPrompt,
     AgentRuntimeSessionResync,
     AgentRuntimeSkill,
@@ -82,6 +83,7 @@ import { mapOpenClawModels } from '../mappers/models/list.ts';
 import { mapOpenClawSessionGraph } from '../mappers/sessions/graph.ts';
 import { mapOpenClawSessionList } from '../mappers/sessions/list.ts';
 import { mapOpenClawSessionMessages } from '../mappers/sessions/messages.ts';
+import { mapOpenClawSessionPreviews } from '../mappers/sessions/preview.ts';
 import { mapOpenClawSessionPrompt } from '../mappers/sessions/prompt.ts';
 import { mapOpenClawSessionResync } from '../mappers/sessions/resync.ts';
 import { mapOpenClawSkill } from '../mappers/skills/get.ts';
@@ -129,6 +131,9 @@ export interface OpenClawAgentRuntimeClient {
         sessionKey: string,
         options?: AgentRuntimeListSessionMessagesOptions
     ): Promise<AgentRuntimeSessionMessageList>;
+    listSessionPreviews(
+        input: AgentRuntimeListSessionPreviewsInput
+    ): Promise<AgentRuntimeSessionPreviewList>;
     listSessions(): Promise<AgentRuntimeSessionList>;
     listSkills(options?: { agentId?: string }): Promise<{ skills: AgentRuntimeSkillSummary[] }>;
     postMessage(
@@ -162,6 +167,12 @@ export interface OpenClawAgentRuntimeClient {
 
 interface AgentRuntimeListSessionMessagesOptions {
     limit?: number;
+}
+
+interface AgentRuntimeListSessionPreviewsInput {
+    keys: string[];
+    limit?: number;
+    maxChars?: number;
 }
 
 export function createOpenClawAgentRuntimeClient(
@@ -281,6 +292,16 @@ class GatewayBackedOpenClawAgentRuntimeClient implements OpenClawAgentRuntimeCli
             }),
             sessionKey,
         });
+    }
+
+    async listSessionPreviews(input: AgentRuntimeListSessionPreviewsInput) {
+        return mapOpenClawSessionPreviews(
+            await this.#gateway.request('sessions.preview', {
+                keys: input.keys,
+                limit: input.limit,
+                maxChars: input.maxChars,
+            })
+        );
     }
 
     async getSessionGraph(sessionKey: string) {

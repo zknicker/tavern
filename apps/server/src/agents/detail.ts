@@ -1,11 +1,12 @@
 import { TRPCError } from '@trpc/server';
-import type { ActorRef } from '../actors/contracts.ts';
 import type { CronJobSummary } from '../cron/contracts.ts';
 import { listCronJobs } from '../cron/list.ts';
 import { sessionSchema } from '../sessions/contracts.ts';
+import {
+    listRuntimeSessionPreviewsForKeys,
+    listRuntimeSessions,
+} from '../sessions/runtime-sessions.ts';
 import { listLogs } from '../storage/logs.ts';
-import { listSessionMessagesForSessionKeys } from '../storage/session-messages.ts';
-import { listSessionRecords, parseSessionRecord } from '../storage/sessions.ts';
 import { getAgent } from './catalog.ts';
 import type { AgentDetail } from './contracts.ts';
 import { buildAgentPalette, resolveAgentAvatar, resolveAgentName } from './palette.ts';
@@ -40,22 +41,38 @@ export async function getAgentDetail(agentId: string): Promise<AgentDetail> {
         });
     }
 
-    const [sessionRecords, cronJobList, logs] = await Promise.all([
-        listSessionRecords(),
+    const [runtimeSessions, cronJobList, logs] = await Promise.all([
+        listRuntimeSessions(),
         listCronJobs(),
         listLogs(),
     ]);
     const cronJobRecords = cronJobList.jobs;
     const palette = buildAgentPalette(agent);
-    const sessionsForAgent = sessionRecords
-        .map(parseSessionRecord)
-        .filter((record): record is NonNullable<typeof record> => record?.agentId === agentId);
-    const messagesBySessionKey = await buildMessagesBySessionKey(
-        sessionsForAgent.map((session) => session.key)
+    const sessionsForAgent = runtimeSessions.filter((session) => session.agentId === agentId);
+    const previewsBySessionKey = await listRuntimeSessionPreviewsForKeys(
+        sessionsForAgent.map((session) => session.key),
+        { limit: 3, maxChars: 180 }
     );
     const sessions = await Promise.all(
         sessionsForAgent.map(async (sessionRecord) => {
-            const messages = messagesBySessionKey.get(sessionRecord.key) ?? [];
+            const timestamp =
+                sessionRecord.lastActivityAt ??
+                sessionRecord.startedAt ??
+                new Date(0).toISOString();
+            const messages = (previewsBySessionKey.get(sessionRecord.key)?.items ?? []).map(
+                (item, index) => ({
+                    content: item.text,
+                    id: `${sessionRecord.key}:preview:${index}`,
+                    sender: item.role,
+                    senderType:
+                        item.role === 'assistant' || item.role === 'agent'
+                            ? 'agent'
+                            : item.role === 'user'
+                              ? 'user'
+                              : 'system',
+                    timestamp,
+                })
+            );
 
             return sessionSchema.parse({
                 duration: 'live',
@@ -105,42 +122,5 @@ export async function getAgentDetail(agentId: string): Promise<AgentDetail> {
         memories: [],
         sessions,
         subAgents: [],
-    };
-}
-
-async function buildMessagesBySessionKey(sessionKeys: string[]) {
-    const records = await listSessionMessagesForSessionKeys(sessionKeys);
-    const buckets = new Map<
-        string,
-        NonNullable<AgentDetail['sessions'][number]['messages']>[number][]
-    >();
-
-    for (const record of records) {
-        const bucket = buckets.get(record.sessionKey) ?? [];
-        const actor = resolveStoredActor(record.actorKind, record.actorId);
-
-        bucket.push({
-            actor,
-            tavernAgentId: record.actorKind === 'agent' ? record.actorId : null,
-            content: record.contentText ?? '',
-            id: record.id,
-            sender: record.senderLabel ?? record.role,
-            senderType: record.role === 'agent' || record.role === 'user' ? record.role : 'system',
-            timestamp: record.timestamp ?? record.syncedAt,
-        });
-        buckets.set(record.sessionKey, bucket);
-    }
-
-    return buckets;
-}
-
-function resolveStoredActor(kind: string | null, id: string | null): ActorRef | null {
-    if (!(id && (kind === 'agent' || kind === 'participant' || kind === 'profile'))) {
-        return null;
-    }
-
-    return {
-        id,
-        kind,
     };
 }

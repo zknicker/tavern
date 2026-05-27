@@ -56,7 +56,7 @@ describe('Tavern SDK client', () => {
         expect(await requests[0].json()).toEqual(body);
     });
 
-    it('opens realtime sockets with cursor recovery', () => {
+    it('opens realtime sockets as live notification streams', () => {
         const urls: string[] = [];
         class FakeWebSocket extends EventTarget {
             constructor(url: string | URL) {
@@ -69,13 +69,13 @@ describe('Tavern SDK client', () => {
             WebSocket: FakeWebSocket as typeof WebSocket,
         });
 
-        const socket = client.realtime.connect({ afterCursor: '12' });
+        const socket = client.realtime.connect();
 
         expect(socket).toBeInstanceOf(FakeWebSocket);
-        expect(urls).toEqual(['wss://runtime.test/api/events/ws?after_cursor=12']);
+        expect(urls).toEqual(['wss://runtime.test/api/events/ws']);
     });
 
-    it('passes realtime recipient filters through event replay and sockets', async () => {
+    it('passes realtime recipient filters through event lists and sockets', async () => {
         const requests: Request[] = [];
         const urls: string[] = [];
         class FakeWebSocket extends EventTarget {
@@ -99,19 +99,14 @@ describe('Tavern SDK client', () => {
         });
 
         await client.realtime.events({
-            afterCursor: '12',
             limit: 25,
             recipientId: 'usr_1',
         });
-        client.realtime.connect({ afterCursor: '12', recipientId: 'usr_1' });
+        client.realtime.connect({ recipientId: 'usr_1' });
 
         expect(requests).toHaveLength(1);
-        expect(requests[0].url).toBe(
-            'https://runtime.test/api/events?after_cursor=12&limit=25&recipient_id=usr_1'
-        );
-        expect(urls).toEqual([
-            'wss://runtime.test/api/events/ws?after_cursor=12&recipient_id=usr_1',
-        ]);
+        expect(requests[0].url).toBe('https://runtime.test/api/events?limit=25&recipient_id=usr_1');
+        expect(urls).toEqual(['wss://runtime.test/api/events/ws?recipient_id=usr_1']);
     });
 
     it('lists chat activity through the OpenAPI path', async () => {

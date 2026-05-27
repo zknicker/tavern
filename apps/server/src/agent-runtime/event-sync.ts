@@ -1,26 +1,24 @@
 import type { AgentRuntimeEvent } from '@tavern/api';
+import { refreshOpenClawGatewayCapability } from '../agent-runtime-connection/openclaw-gateway-capability.ts';
 import {
+    confirmAgentRuntimeConnection,
     markAgentRuntimeConnectionFailure,
     markAgentRuntimeConnectionReachable,
 } from '../agent-runtime-connection/service.ts';
+import { recordTavernPluginCapability } from '../agent-runtime-connection/tavern-plugin-capability.ts';
 import {
     emitAgentRuntimeUpdated,
     emitAgentUpdated,
     emitChatLogUpdated,
     emitChatUpdated,
     emitCronUpdated,
+    emitModelUpdated,
     emitSessionUpdated,
     emitSkillInvalidationCascade,
     emitWorkersUpdated,
 } from '../api/invalidation-events.ts';
 import { listReachableAgentRuntimeConnections } from '../storage/agent-runtime-connections.ts';
-import {
-    syncAgentRuntimeAgents,
-    syncAgentRuntimeCron,
-    syncAgentRuntimeSession,
-    syncAgentRuntimeSessionMessages,
-    syncAgentRuntimeSessionMessagesWithRetry,
-} from '../sync/agent-runtime-sync.ts';
+import { syncAgentRuntimeAgents, syncAgentRuntimeCron } from '../sync/agent-runtime-sync.ts';
 import {
     clearTurnSessionActive,
     hasActiveTurnSession,
@@ -69,6 +67,12 @@ export async function applyObservedAgentRuntimeEvent(
             emitChatUpdated();
             return;
         }
+        case 'model.updated': {
+            emitObservedAgentRuntimeEvent(event);
+            debugTurnEvent(event);
+            emitModelUpdated();
+            return;
+        }
         case 'skill.updated': {
             emitObservedAgentRuntimeEvent(event);
             debugTurnEvent(event);
@@ -101,6 +105,18 @@ export async function applyObservedAgentRuntimeEvent(
             emitCronUpdated();
             return;
         }
+        case 'capability.updated': {
+            emitObservedAgentRuntimeEvent(event);
+            if (!connection) {
+                emitAgentRuntimeUpdated();
+                return;
+            }
+
+            void refreshRuntimeCapability(connection, event.capability).catch((error) => {
+                console.warn('[tavern] failed to refresh runtime capability', error);
+            });
+            return;
+        }
         case 'turn.progress': {
             markTurnSessionActive(event.turn.sessionKey);
             emitObservedAgentRuntimeEvent(event);
@@ -123,19 +139,9 @@ export async function applyObservedAgentRuntimeEvent(
         case 'turn.failed': {
             emitObservedAgentRuntimeEvent(event);
             debugTurnEvent(event);
-            if (connection) {
-                void (async () => {
-                    try {
-                        await syncTurnSessionMessages(connection, event.turn);
-                    } catch (error) {
-                        console.warn('[tavern] failed to sync turn event', error);
-                    } finally {
-                        clearTurnSessionActive(event.turn.sessionKey);
-                    }
-                })();
-            } else {
-                clearTurnSessionActive(event.turn.sessionKey);
-            }
+            clearTurnSessionActive(event.turn.sessionKey);
+            emitSessionUpdated({ sessionKey: event.turn.sessionKey });
+            emitChatLogUpdated({ sessionKey: event.turn.sessionKey });
             return;
         }
         case 'session.invalidated':
@@ -148,13 +154,9 @@ export async function applyObservedAgentRuntimeEvent(
                 emitWorkersUpdated();
                 return;
             }
-            if (connection) {
-                void syncInvalidatedSession(connection, sessionKey).catch((error) => {
-                    console.warn('[tavern] failed to sync invalidated session', error);
-                });
-            }
             emitWorkersUpdated();
             emitSessionUpdated({ sessionKey });
+            emitChatLogUpdated({ sessionKey });
             return;
         }
     }
@@ -191,33 +193,29 @@ function debugTurnEvent(event: AgentRuntimeEvent) {
     }
 }
 
-async function syncInvalidatedSession(connection: RuntimeConnectionRecord, sessionKey: string) {
-    const client = createAgentRuntimeClientForConnection(connection);
+async function refreshRuntimeCapability(connection: RuntimeConnectionRecord, capability: string) {
+    if (capability === 'gateway') {
+        await refreshOpenClawGatewayCapability(connection.id);
+        emitAgentRuntimeUpdated();
+        return;
+    }
 
-    await syncAgentRuntimeSession({
-        client,
-        runtimeId: connection.id,
-        sessionKey,
-    });
-    await syncAgentRuntimeSessionMessages({
-        client,
-        runtimeId: connection.id,
-        sessionKey,
-    });
-}
+    if (capability === 'tavernPlugin') {
+        const client = createAgentRuntimeClientForConnection(connection);
+        try {
+            const status = await client.getStatus();
+            await recordTavernPluginCapability({
+                runtimeId: connection.id,
+                status,
+            });
+        } finally {
+            client.close();
+        }
+        emitAgentRuntimeUpdated();
+        return;
+    }
 
-async function syncTurnSessionMessages(
-    connection: RuntimeConnectionRecord,
-    turn: Extract<AgentRuntimeEvent, { type: 'turn.completed' | 'turn.failed' }>['turn']
-) {
-    const client = createAgentRuntimeClientForConnection(connection);
-
-    await syncAgentRuntimeSessionMessagesWithRetry({
-        agentId: turn.agentId,
-        client,
-        runtimeId: connection.id,
-        sessionKey: turn.sessionKey,
-    });
+    emitAgentRuntimeUpdated();
 }
 
 function disconnectActiveSockets() {
@@ -290,6 +288,9 @@ function connectRuntimeEvents(connection: RuntimeConnectionRecord, revision: num
             activeEventConnections.set(connection.id, subscription);
             void markConnectionReachable(connection).catch((error) => {
                 console.warn('[tavern] failed to mark runtime reachable', error);
+            });
+            void confirmAgentRuntimeConnection({ refreshCapabilities: false }).catch((error) => {
+                console.warn('[tavern] failed to refresh runtime capabilities', error);
             });
             emitCronUpdated();
         })

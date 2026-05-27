@@ -13,7 +13,7 @@ import {
     upsertResponse,
     upsertResponseActivity,
 } from './chat-api/index.ts';
-import { listTavernRuntimeEvents } from './runtime-event-replay.ts';
+import { listProjectedTavernRuntimeEvents } from './runtime-event-projection.ts';
 
 describe('Tavern channel store', () => {
     beforeEach(() => {
@@ -88,7 +88,7 @@ describe('Tavern channel store', () => {
         ]);
     });
 
-    it('maps durable chat events into runtime event replay', () => {
+    it('maps durable chat events into runtime event projections', () => {
         createChat({
             id: 'cht_1',
             metadata: {
@@ -112,7 +112,7 @@ describe('Tavern channel store', () => {
             role: 'user',
         });
 
-        expect(listTavernRuntimeEvents({ afterCursor: 0 })).toMatchObject([
+        expect(listProjectedTavernRuntimeEvents({ afterCursor: 0 })).toMatchObject([
             {
                 event: {
                     agentId: 'agt_1',
@@ -135,7 +135,7 @@ describe('Tavern channel store', () => {
         ]);
     });
 
-    it('maps durable activity events into runtime turn replay', () => {
+    it('maps durable activity events into runtime turn projections', () => {
         createChat({ id: 'cht_1' });
         upsertResponse('cht_1', {
             id: 'rsp_run_1',
@@ -197,7 +197,7 @@ describe('Tavern channel store', () => {
         });
 
         expect(
-            listTavernRuntimeEvents({ afterCursor: 0 }).map((entry) => entry.event)
+            listProjectedTavernRuntimeEvents({ afterCursor: 0 }).map((entry) => entry.event)
         ).toMatchObject([
             {
                 timestamp: expect.any(String),
@@ -257,7 +257,7 @@ describe('Tavern channel store', () => {
         ]);
     });
 
-    it('replays terminal activity steps as terminal progress', () => {
+    it('projects terminal activity steps as terminal progress', () => {
         createChat({ id: 'cht_1' });
         upsertResponse('cht_1', {
             completed_at: '2026-05-16T12:00:02.000Z',
@@ -291,7 +291,7 @@ describe('Tavern channel store', () => {
         });
 
         expect(
-            listTavernRuntimeEvents({ afterCursor: 0 }).map((entry) => entry.event)
+            listProjectedTavernRuntimeEvents({ afterCursor: 0 }).map((entry) => entry.event)
         ).toMatchObject([
             {
                 timestamp: expect.any(String),
@@ -327,7 +327,7 @@ describe('Tavern channel store', () => {
         ]);
     });
 
-    it('maps durable assistant deliveries into final turn replay events', () => {
+    it('maps durable assistant deliveries into final turn projection events', () => {
         createChat({ id: 'cht_1' });
         createDelivery('cht_1', {
             agent_id: 'agt_1',
@@ -349,7 +349,9 @@ describe('Tavern channel store', () => {
             turn_id: 'run_1',
         });
 
-        expect(listTavernRuntimeEvents({ afterCursor: 0 }).map((entry) => entry.event)).toEqual([
+        expect(
+            listProjectedTavernRuntimeEvents({ afterCursor: 0 }).map((entry) => entry.event)
+        ).toEqual([
             {
                 isThinking: false,
                 replace: true,

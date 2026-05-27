@@ -14,6 +14,7 @@ import {
     waitForPort,
     waitForRuntimeReady,
 } from './dev-stack-shared.mjs';
+import { getTauriEnvironment } from './tauri-environment.mjs';
 
 export class DevStackController extends EventEmitter {
     constructor({ mode, ports, repositoryRoot }) {
@@ -192,6 +193,33 @@ export class DevStackController extends EventEmitter {
         });
     }
 
+    spawnBackgroundProcess(source, command, env = process.env) {
+        const child = spawn(command, {
+            cwd: this.repositoryRoot,
+            env,
+            shell: true,
+            stdio: ['ignore', 'pipe', 'pipe'],
+        });
+
+        this.attachProcessOutput(source, child);
+
+        return new Promise((resolve) => {
+            child.on('exit', (code, signal) => {
+                if (code !== 0 && !this.isStopping) {
+                    this.addLog(source, `prebuild exited (${signal ?? code ?? 'unknown'})`);
+                }
+                resolve(code === 0);
+            });
+
+            child.on('error', (error) => {
+                if (!this.isStopping) {
+                    this.addLog(source, error.message);
+                }
+                resolve(false);
+            });
+        });
+    }
+
     cleanupStaleProcesses() {
         this.update((snapshot) => {
             snapshot.staleCleanupCount = cleanupStaleProcesses({
@@ -223,6 +251,53 @@ export class DevStackController extends EventEmitter {
                   TAVERN_RUNTIME_URL: 'http://127.0.0.1:4310',
               }
             : startupUiEnv;
+        let websiteReadyPromise = null;
+        let desktopPrebuildPromise = null;
+
+        const startWebsite = () => {
+            if (!websiteReadyPromise) {
+                this.spawnProcess(
+                    'website',
+                    'cd apps/website && bun x vite --host 127.0.0.1',
+                    process.env
+                );
+                websiteReadyPromise = waitForPort(Number(this.ports.websitePort)).then(() => {
+                    this.update((snapshot) => {
+                        snapshot.processes.website.status = 'running';
+                    });
+                });
+            }
+        };
+
+        const getDesktopEnv = () => ({
+            ...process.env,
+            TAVERN_DEV_STACK_HAS_RUNTIME: hasRuntime ? '1' : '0',
+            TAVERN_OPENCLAW_GATEWAY_PORT: process.env.TAVERN_OPENCLAW_GATEWAY_PORT ?? '18789',
+            TAVERN_RUNTIME_PORT: '4310',
+            TAVERN_SERVER_PORT: String(this.ports.serverPort),
+            TAVERN_WEBSITE_PORT: String(this.ports.websitePort),
+        });
+
+        const startDesktopPrebuild = () => {
+            if (!(isDesktopMode(this.mode) && !desktopPrebuildPromise)) {
+                return;
+            }
+
+            const desktopEnv = getTauriEnvironment({
+                baseEnvironment: getDesktopEnv(),
+                commandArguments: ['dev'],
+                warn: () => {},
+            });
+            const prebuildCommand = [
+                'node scripts/build-tauri-sidecar.mjs',
+                'cd apps/website/src-tauri && cargo build --no-default-features --color always',
+            ].join(' && ');
+            desktopPrebuildPromise = this.spawnBackgroundProcess(
+                'desktop',
+                prebuildCommand,
+                desktopEnv
+            );
+        };
 
         if (hasRuntime) {
             this.addLog('runtime', 'building Tavern Messenger plugin');
@@ -234,6 +309,8 @@ export class DevStackController extends EventEmitter {
                 'cd apps/runtime && bun --watch src/index.ts',
                 startupUiEnv
             );
+            startWebsite();
+            startDesktopPrebuild();
             await waitForRuntimeReady();
             this.update((snapshot) => {
                 snapshot.processes.runtime.status = 'running';
@@ -246,25 +323,17 @@ export class DevStackController extends EventEmitter {
             snapshot.processes.server.status = 'running';
         });
 
-        this.spawnProcess('website', 'cd apps/website && bun x vite --host 127.0.0.1', process.env);
-        await waitForPort(Number(this.ports.websitePort));
-        this.update((snapshot) => {
-            snapshot.processes.website.status = 'running';
-        });
+        startWebsite();
+        await websiteReadyPromise;
 
         if (isDesktopMode(this.mode)) {
-            const desktopEnv = {
-                ...process.env,
-                TAVERN_DEV_STACK_HAS_RUNTIME: hasRuntime ? '1' : '0',
-                TAVERN_OPENCLAW_GATEWAY_PORT: process.env.TAVERN_OPENCLAW_GATEWAY_PORT ?? '18789',
-                TAVERN_RUNTIME_PORT: '4310',
-                TAVERN_SERVER_PORT: String(this.ports.serverPort),
-                TAVERN_WEBSITE_PORT: String(this.ports.websitePort),
-            };
+            if (desktopPrebuildPromise) {
+                await desktopPrebuildPromise;
+            }
             this.spawnProcess(
                 'desktop',
                 "node scripts/run-desktop-dev.mjs --skip-server-cleanup --before-dev-command 'node ../../scripts/noop-command.mjs'",
-                desktopEnv
+                getDesktopEnv()
             );
         }
 

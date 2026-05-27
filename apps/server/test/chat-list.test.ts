@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, mock, test } from 'bun:test';
 import assert from 'node:assert/strict';
 import type { AgentRuntimeChat, TavernChat } from '@tavern/api';
+import { listAgentChats } from '../src/agents/chats.ts';
 import type { ChatList } from '../src/chat/contracts.ts';
 import { getChat, listChats } from '../src/chat/list.ts';
 import { archiveTavernChat } from '../src/chat/save.ts';
@@ -10,7 +11,11 @@ import { syncChatParticipantsForRuntime } from '../src/participants/chat-partici
 import { linkParticipantToSelf } from '../src/participants/link.ts';
 import { saveAgentRuntimeConnection } from '../src/storage/agent-runtime-connections.ts';
 import { syncAgentsForRuntime } from '../src/storage/agents.ts';
-import { syncSessionsForRuntime } from '../src/storage/sessions.ts';
+import {
+    listSessionRecords,
+    parseSessionRecord,
+    syncSessionsForRuntime,
+} from '../src/storage/sessions.ts';
 
 ensureDatabaseSchema();
 
@@ -149,7 +154,7 @@ test('listChats hides archived Runtime-owned Tavern chats while synced sessions 
     );
 });
 
-test('listChats labels OpenClaw internal runtime sessions by source', async () => {
+test('agent chat list labels OpenClaw internal runtime sessions by source', async () => {
     await syncAgentsForRuntime({
         agents: [
             {
@@ -204,8 +209,10 @@ test('listChats labels OpenClaw internal runtime sessions by source', async () =
         ],
     });
 
-    const result = await listChats();
+    const sidebarResult = await listChats();
+    const result = await listAgentChats({ agentId: 'main' });
 
+    assert.deepEqual(sidebarResult.ids, []);
     assert.equal(listedChats(result)[0]?.source.kind, 'cron');
     assert.equal(listedChats(result)[0]?.source.label, 'Cron');
     assert.equal(listedChats(result)[0]?.displayName, 'Cron session');
@@ -219,7 +226,7 @@ test('listChats ignores stale local Tavern chat rows without runtime backing', a
     assert.deepEqual(listedChats(result), []);
 });
 
-test('listChats keeps non-Tavern session-only runtime surfaces visible', async () => {
+test('agent chat list keeps non-Tavern session-only runtime surfaces visible', async () => {
     await syncAgentsForRuntime({
         agents: [
             {
@@ -256,7 +263,7 @@ test('listChats keeps non-Tavern session-only runtime surfaces visible', async (
         ],
     });
 
-    const result = await listChats();
+    const result = await listAgentChats({ agentId: 'main' });
     const [chat] = listedChats(result);
 
     assert.equal(chat?.id, internalChatId);
@@ -266,7 +273,7 @@ test('listChats keeps non-Tavern session-only runtime surfaces visible', async (
     assert.equal(chat?.latestSession?.title, 'Cron: session-only');
 });
 
-test('listChats titles runtime DMs from participants and platform metadata', async () => {
+test('agent chat list titles runtime DMs from participants and platform metadata', async () => {
     await syncAgentsForRuntime({
         agents: [
             {
@@ -343,14 +350,14 @@ test('listChats titles runtime DMs from participants and platform metadata', asy
         ],
     });
 
-    const result = await listChats();
+    const result = await listAgentChats({ agentId: 'blippy' });
 
     assert.equal(listedChats(result)[0]?.conversationKind, 'direct');
     assert.equal(listedChats(result)[0]?.title, 'Discord DM Blippy <-> Zach Knickerbocker');
     assert.deepEqual(listedChats(result)[0]?.boundAgentIds, ['blippy']);
 });
 
-test('listChats resolves DM targets through participant identities', async () => {
+test('agent chat list resolves DM targets through participant identities', async () => {
     await syncAgentsForRuntime({
         agents: [
             {
@@ -455,14 +462,12 @@ test('listChats resolves DM targets through participant identities', async () =>
         syncedAt: '2026-05-02T20:48:22.769Z',
     });
 
-    const result = await listChats();
+    const result = await listAgentChats({ agentId: 'blippy' });
     const dmChats = listedChats(result).filter((chat) => chat.scope === 'dm');
 
-    assert.equal(dmChats.length, 2);
+    assert.equal(dmChats.length, 1);
     assert.equal(dmChats[0]?.displayName, 'Zach Knickerbocker');
     assert.equal(dmChats[0]?.targetParticipant?.name, 'Zach Knickerbocker');
-    assert.equal(dmChats[1]?.displayName, 'Zach Knickerbocker');
-    assert.equal(dmChats[1]?.targetParticipant?.name, 'Zach Knickerbocker');
 });
 
 test('DM participant sync preserves manual self profile links', async () => {
@@ -530,7 +535,7 @@ test('DM participant sync preserves manual self profile links', async () => {
         syncedAt: '2026-05-02T21:48:22.769Z',
     });
 
-    const result = await listChats();
+    const result = await listAgentChats({ agentId: 'blippy' });
 
     assert.equal(
         listedChats(result)[0]?.targetParticipant?.id,
@@ -551,6 +556,17 @@ async function mockRuntimeFetch(input: RequestInfo | URL, init?: RequestInit) {
     const request = new Request(input, init);
     const url = new URL(request.url);
 
+    if (url.pathname === '/agents' && request.method === 'GET') {
+        return Response.json({
+            agents: [
+                runtimeAgent('agent:planner', 'Planner', 'planning'),
+                runtimeAgent('blippy', 'Blippy', 'blippy'),
+                runtimeAgent('main', 'Main', 'main'),
+                runtimeAgent('support', 'Support', 'support'),
+            ],
+        });
+    }
+
     if (url.pathname === '/api/chats' && request.method === 'GET') {
         return Response.json({
             chats: tavernChats,
@@ -558,8 +574,17 @@ async function mockRuntimeFetch(input: RequestInfo | URL, init?: RequestInit) {
         });
     }
 
-    if (url.pathname === '/chats' && request.method === 'GET') {
+    if (url.pathname === '/openclaw/chats' && request.method === 'GET') {
         return Response.json({ chats: runtimeChats });
+    }
+
+    if (url.pathname === '/openclaw/sessions' && request.method === 'GET') {
+        return Response.json({
+            sessions: (await listSessionRecords()).flatMap((record) => {
+                const session = parseSessionRecord(record);
+                return session ? [session] : [];
+            }),
+        });
     }
 
     const chatMatch = url.pathname.match(/^\/api\/chats\/([^/]+)$/u);
@@ -594,6 +619,19 @@ async function mockRuntimeFetch(input: RequestInfo | URL, init?: RequestInit) {
     }
 
     return new Response('Not found', { status: 404 });
+}
+
+function runtimeAgent(id: string, name: string, workspaceFolder: string) {
+    return {
+        avatar: null,
+        enabledSkillIds: [],
+        emoji: null,
+        id,
+        isAdmin: false,
+        name,
+        primaryColor: null,
+        workspaceFolder,
+    };
 }
 
 function runtimeTavernChat(input: {

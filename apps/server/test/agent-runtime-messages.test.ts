@@ -11,7 +11,7 @@ afterEach(() => {
 
 test('postMessage submits a chat-scoped runtime message', async () => {
     const fetchSpy = spyOn(globalThis, 'fetch').mockImplementation(async (input, init) => {
-        assert.equal(String(input), `http://agent-runtime.test/chats/${chatId}/messages`);
+        assert.equal(String(input), `http://agent-runtime.test/openclaw/chats/${chatId}/messages`);
         assert.equal(init?.method, 'POST');
         assert.deepEqual(JSON.parse(String(init?.body)), {
             agent: {

@@ -13,13 +13,13 @@ export async function recordOpenClawGatewayCapability(input: {
 }) {
     try {
         await input.client.getOpenClawGatewayStatus();
-        await recordCapabilitySuccess({
+        return await recordCapabilitySuccess({
             capability: 'gateway',
             method: 'openclaw-gateway/status',
             runtimeId: input.runtimeId,
         });
     } catch (error) {
-        await recordCapabilityFailure({
+        return await recordCapabilityFailure({
             capability: 'gateway',
             error,
             method: 'openclaw-gateway/status',
@@ -38,7 +38,7 @@ export async function refreshOpenClawGatewayCapability(runtimeId: string) {
     const client = createAgentRuntimeClientForConnection(record);
 
     try {
-        await recordOpenClawGatewayCapability({ client, runtimeId });
+        return await recordOpenClawGatewayCapability({ client, runtimeId });
     } finally {
         client.close();
     }

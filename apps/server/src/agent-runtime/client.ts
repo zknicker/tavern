@@ -35,6 +35,7 @@ import {
     type AgentRuntimeSessionGraph,
     type AgentRuntimeSessionList,
     type AgentRuntimeSessionMessageList,
+    type AgentRuntimeSessionPreviewList,
     type AgentRuntimeSessionPrompt,
     type AgentRuntimeSessionResync,
     type AgentRuntimeSkill,
@@ -87,6 +88,7 @@ import {
     agentRuntimeSessionGraphSchema,
     agentRuntimeSessionListSchema,
     agentRuntimeSessionMessageListSchema,
+    agentRuntimeSessionPreviewListSchema,
     agentRuntimeSessionPromptSchema,
     agentRuntimeSessionResyncSchema,
     agentRuntimeSkillListSchema,
@@ -181,6 +183,9 @@ export interface TavernAgentRuntimeClient {
         sessionKey: string,
         options?: AgentRuntimeListSessionMessagesOptions
     ): Promise<AgentRuntimeSessionMessageList>;
+    listSessionPreviews(
+        input: AgentRuntimeListSessionPreviewsInput
+    ): Promise<AgentRuntimeSessionPreviewList>;
     listSessions(): Promise<AgentRuntimeSessionList>;
     listSkills(
         options?: AgentRuntimeListSkillsOptions
@@ -223,6 +228,12 @@ export interface TavernAgentRuntimeClient {
 
 export interface AgentRuntimeListSessionMessagesOptions {
     limit?: number;
+}
+
+export interface AgentRuntimeListSessionPreviewsInput {
+    keys: string[];
+    limit?: number;
+    maxChars?: number;
 }
 
 export interface AgentRuntimeListSkillsOptions {
@@ -974,6 +985,28 @@ class HttpTavernAgentRuntimeClient implements TavernAgentRuntimeClient {
         }
 
         return agentRuntimeSessionMessageListSchema.parse(await response.json());
+    }
+
+    async listSessionPreviews(input: AgentRuntimeListSessionPreviewsInput) {
+        const url = new URL(`${this.#baseUrl}${agentRuntimeRoutes.sessionPreviews}`);
+
+        for (const key of input.keys) {
+            url.searchParams.append('key', key);
+        }
+        if (input.limit !== undefined) {
+            url.searchParams.set('limit', String(input.limit));
+        }
+        if (input.maxChars !== undefined) {
+            url.searchParams.set('maxChars', String(input.maxChars));
+        }
+
+        const response = await fetch(url);
+
+        if (!response.ok) {
+            await readErrorResponse(response);
+        }
+
+        return agentRuntimeSessionPreviewListSchema.parse(await response.json());
     }
 
     async getSessionGraph(sessionKey: string) {

@@ -475,7 +475,7 @@ describe('Tavern Runtime Chat API routes', () => {
         });
     });
 
-    it('filters private event replay by recipient', async () => {
+    it('filters private event lists by recipient', async () => {
         await handleTavernRuntimeRequest(jsonRequest('POST', '/api/chats', { id: 'cht_1' }));
         await handleTavernRuntimeRequest(
             jsonRequest(
@@ -506,7 +506,7 @@ describe('Tavern Runtime Chat API routes', () => {
         });
     });
 
-    it('returns runtime replay events from the durable chat event log', async () => {
+    it('returns runtime projection events from the durable chat event log', async () => {
         await handleTavernRuntimeRequest(jsonRequest('POST', '/api/chats', { id: 'cht_1' }));
         await handleTavernRuntimeRequest(
             jsonRequest('POST', '/api/chats/cht_1/messages', {

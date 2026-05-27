@@ -20,6 +20,7 @@ export function mapOpenClawSessionGraph(input: {
     const session = mapOpenClawSessionRecord({
         ...rawSession,
         key: readString(rawSession, ['key', 'sessionKey']) ?? input.sessionKey,
+        sessionId: readString(rawSession, ['sessionId']) ?? input.sessionKey,
     });
     const messages = mapOpenClawSessionMessages({
         chatId: session.chatId,

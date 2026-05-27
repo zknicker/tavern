@@ -31,6 +31,7 @@ export const queryPolicy = {
 
 export const queryClientDefaultOptions = {
     queries: {
+        refetchOnReconnect: true,
         refetchOnWindowFocus: false,
         retry: shouldRetryQuery,
     },

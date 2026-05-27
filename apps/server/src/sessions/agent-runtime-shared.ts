@@ -1,25 +1,17 @@
-import {
-    type AgentRuntimeSession,
-    type AgentRuntimeSessionGraph,
-    type AgentRuntimeSessionMessage,
-    agentRuntimeModelProviderIdSchema,
+import type {
+    AgentRuntimeSession,
+    AgentRuntimeSessionGraph,
+    AgentRuntimeSessionMessage,
 } from '@tavern/api';
-import { inArray, or } from 'drizzle-orm';
-import { createAgentRuntimeClientForConnection } from '../agent-runtime/client-factory.ts';
+import {
+    AgentRuntimeRequestError,
+    type TavernAgentRuntimeClient,
+} from '../agent-runtime/client.ts';
+import { createConfiguredAgentRuntimeClient } from '../agent-runtime/configured-client.ts';
 import { listAgents } from '../agents/catalog.ts';
 import { listRuntimeChatRecords, presentRuntimeChatLabel } from '../chat/runtime-chats.ts';
-import { db } from '../db/index.ts';
-import { sessionArtifactsTable, sessionLinksTable } from '../db/schema.ts';
 import { selfProfileId } from '../participants/self.ts';
-import { getAgentRuntimeConnection } from '../storage/agent-runtime-connections.ts';
-import { listSessionMessagesForSessionKeys } from '../storage/session-messages.ts';
-import { listSessionToolCalls } from '../storage/session-tool-calls.ts';
-import {
-    getSessionRecord,
-    listSessionRecords,
-    parseSessionRecord,
-    parseSessionRuntimePayload,
-} from '../storage/sessions.ts';
+import { buildSessionToolCallsFromMessages } from '../sync/session-tool-call-sync.ts';
 import {
     globalSessionListItemSchema,
     globalSessionMetadataSchema,
@@ -38,22 +30,28 @@ export interface AgentRuntimeSessionSnapshot {
 }
 
 export async function findAgentRuntimeSession(id: string) {
-    const sessionRecord = await getSessionRecord(id);
+    const client = createConfiguredAgentRuntimeClient();
 
-    if (sessionRecord?.runtime) {
-        const runtime = await getAgentRuntimeConnection(sessionRecord.runtime);
-        const runtimeSession = parseSessionRuntimePayload(sessionRecord);
-
-        if (runtime && runtimeSession) {
-            return {
-                client: createAgentRuntimeClientForConnection(runtime),
-                runtimeId: runtime.id,
-                targetSession: runtimeSession,
-            };
-        }
+    if (!client) {
+        return null;
     }
 
-    return null;
+    try {
+        const targetSession = await findRuntimeSession(client, id);
+
+        if (!targetSession) {
+            client.close();
+            return null;
+        }
+
+        return {
+            client,
+            targetSession,
+        };
+    } catch (error) {
+        client.close();
+        throw error;
+    }
 }
 
 function formatDuration(durationMs: number | null) {
@@ -162,220 +160,54 @@ export function mapAgentRuntimeSessionMessage(
 export async function loadAgentRuntimeSessionSnapshot(
     id: string
 ): Promise<AgentRuntimeSessionSnapshot | null> {
-    const storedSnapshot = await loadSessionSnapshotFromRecords(id);
+    const client = createConfiguredAgentRuntimeClient();
 
-    if (storedSnapshot) {
-        return storedSnapshot;
-    }
-
-    return null;
-}
-
-async function loadSessionSnapshotFromRecords(
-    id: string
-): Promise<AgentRuntimeSessionSnapshot | null> {
-    const sessionRecord = await getSessionRecord(id);
-
-    if (!sessionRecord) {
-        return null;
-    }
-
-    const targetSession = parseSessionRecord(sessionRecord);
-
-    if (!targetSession) {
-        return null;
-    }
-
-    const [agents, chatRecords, sessionRecords] = await Promise.all([
-        listAgents(),
-        listRuntimeChatRecords(),
-        listSessionRecords(),
-    ]);
-    const sessions = sessionRecords.flatMap((record) => {
-        const session = parseSessionRecord(record);
-        return session ? [session] : [];
-    });
-    const links = await listSessionLinks([targetSession.key]);
-    const graphSessionKeys = [
-        ...new Set([
-            targetSession.key,
-            ...links.flatMap((link) => [link.childSessionKey, link.parentSessionKey]),
-        ]),
-    ];
-    const [messages, toolCalls, artifacts] = await Promise.all([
-        listSessionMessagesForSessionKeys(graphSessionKeys),
-        listSessionToolCalls(graphSessionKeys),
-        listSessionArtifacts(graphSessionKeys),
-    ]);
-
-    return {
-        agentsById: new Map(agents.map((agent) => [agent.id, agent.name])),
-        chatTitlesById: buildChatTitleMap(chatRecords),
-        graph: {
-            artifacts,
-            links,
-            messages: messages.map((message) =>
-                mapSessionMessageRecord({
-                    message,
-                    session: targetSession,
-                })
-            ),
-            rootSessionKey: targetSession.key,
-            sessions,
-            toolCalls,
-        },
-        sessions,
-        sessionsByKey: new Map(sessions.map((session) => [session.key, session])),
-        targetSession,
-    };
-}
-
-async function listSessionLinks(sessionKeys: string[]) {
-    if (sessionKeys.length === 0) {
-        return [];
-    }
-
-    const rows = await db
-        .select()
-        .from(sessionLinksTable)
-        .where(
-            or(
-                inArray(sessionLinksTable.parentSessionKey, sessionKeys),
-                inArray(sessionLinksTable.childSessionKey, sessionKeys)
-            )
-        );
-
-    return rows.map((row) => ({
-        childSessionKey: row.childSessionKey,
-        createdAt: row.createdAt,
-        id: row.id,
-        linkType: row.linkType,
-        parentSessionKey: row.parentSessionKey,
-        sourceToolCallId: row.sourceToolCallId,
-    }));
-}
-
-async function listSessionArtifacts(sessionKeys: string[]) {
-    if (sessionKeys.length === 0) {
-        return [];
-    }
-
-    const rows = await db
-        .select()
-        .from(sessionArtifactsTable)
-        .where(inArray(sessionArtifactsTable.sessionKey, sessionKeys));
-
-    return rows.map((row) => ({
-        artifactType: row.artifactType,
-        createdAt: row.createdAt,
-        id: row.id,
-        messageId: row.messageId,
-        mimeType: row.mimeType,
-        path: row.path,
-        payload: parseJson(row.payloadJson),
-        runId: row.runId,
-        sessionKey: row.sessionKey,
-        toolCallId: row.toolCallId,
-    }));
-}
-
-function mapSessionMessageRecord(input: {
-    message: Awaited<ReturnType<typeof listSessionMessagesForSessionKeys>>[number];
-    session: AgentRuntimeSession;
-}): AgentRuntimeSessionMessage {
-    const raw = parseSessionMessageRaw(input.message.rawJson);
-    const modelInfo = resolveSessionMessageModelInfo(input.message, raw);
-    const metadata: NonNullable<AgentRuntimeSessionMessage['metadata']> = {
-        ...(raw?.metadata ?? {}),
-        api: input.message.api ?? raw?.metadata?.api ?? undefined,
-        model: modelInfo?.model ?? raw?.metadata?.model ?? undefined,
-        openClawApi: input.message.openClawApi ?? raw?.metadata?.openClawApi ?? undefined,
-        openClawHarness: resolveOpenClawHarness(
-            input.message.openClawHarness ?? raw?.metadata?.openClawHarness
-        ),
-        openClawModel: input.message.openClawModel ?? raw?.metadata?.openClawModel ?? undefined,
-        openClawProvider:
-            input.message.openClawProvider ?? raw?.metadata?.openClawProvider ?? undefined,
-        provider: modelInfo?.provider ?? raw?.metadata?.provider ?? undefined,
-        stopReason: input.message.stopReason ?? raw?.metadata?.stopReason ?? undefined,
-        usage: parseJson(input.message.usageJson) ?? raw?.metadata?.usage,
-    };
-    const senderType = resolveSessionMessageSenderType(input.message.role);
-
-    return {
-        agentId:
-            input.message.actorKind === 'agent' ? input.message.actorId : (raw?.agentId ?? null),
-        attachments: raw?.attachments,
-        chatId: input.session.chatId,
-        content: input.message.contentText ?? raw?.content ?? '',
-        id: input.message.id,
-        metadata: Object.values(metadata).some((value) => typeof value !== 'undefined')
-            ? metadata
-            : null,
-        participant: raw?.participant,
-        sender: input.message.senderLabel ?? raw?.sender ?? senderType,
-        senderName: input.message.senderLabel ?? raw?.senderName ?? raw?.sender ?? senderType,
-        senderType,
-        sessionKey: input.message.sessionKey,
-        timestamp: input.message.timestamp ?? input.message.syncedAt,
-    };
-}
-
-function parseSessionMessageRaw(rawJson: string) {
-    const parsed = parseJson(rawJson);
-
-    if (!(parsed && typeof parsed === 'object' && !Array.isArray(parsed))) {
-        return null;
-    }
-
-    return parsed as Partial<AgentRuntimeSessionMessage>;
-}
-
-function resolveOpenClawHarness(value: unknown) {
-    return value === 'pi' || value === 'codex' ? value : undefined;
-}
-
-function parseJson(value: string | null) {
-    if (!value) {
+    if (!client) {
         return null;
     }
 
     try {
-        return JSON.parse(value) as unknown;
-    } catch {
-        return null;
+        const sessionsResult = await client.listSessions();
+        const targetSession = findSessionById(sessionsResult.sessions, id);
+
+        if (!targetSession) {
+            return null;
+        }
+
+        const [agents, chatRecords, messages] = await Promise.all([
+            listAgents(),
+            listRuntimeChatRecords(),
+            client.listSessionMessages(targetSession.key, { limit: 500 }),
+        ]);
+        const sessionsByKey = new Map(
+            sessionsResult.sessions.map((session) => [session.key, session])
+        );
+        const graph = {
+            artifacts: [],
+            links: [],
+            messages: messages.messages,
+            rootSessionKey: targetSession.key,
+            sessions: [targetSession],
+            toolCalls: buildSessionToolCallsFromMessages(messages.messages),
+        } satisfies AgentRuntimeSessionGraph;
+
+        return {
+            agentsById: new Map(agents.map((agent) => [agent.id, agent.name])),
+            chatTitlesById: buildChatTitleMap(chatRecords),
+            graph,
+            sessions: [...sessionsByKey.values()],
+            sessionsByKey,
+            targetSession,
+        };
+    } catch (error) {
+        if (error instanceof AgentRuntimeRequestError && error.status === 404) {
+            return null;
+        }
+
+        throw error;
+    } finally {
+        client.close();
     }
-}
-
-function resolveSessionMessageSenderType(role: string): AgentRuntimeSessionMessage['senderType'] {
-    if (role === 'agent' || role === 'system' || role === 'user') {
-        return role;
-    }
-
-    return 'system';
-}
-
-function resolveSessionMessageModelInfo(
-    message: Awaited<ReturnType<typeof listSessionMessagesForSessionKeys>>[number],
-    raw: Partial<AgentRuntimeSessionMessage> | null
-) {
-    const provider = message.provider ?? raw?.metadata?.provider ?? null;
-    const model = message.model ?? raw?.metadata?.model ?? null;
-
-    if (!(provider && model)) {
-        return null;
-    }
-
-    const parsedProvider = agentRuntimeModelProviderIdSchema.safeParse(provider);
-
-    if (!parsedProvider.success) {
-        return null;
-    }
-
-    return {
-        model,
-        provider: parsedProvider.data,
-    };
 }
 
 export function buildAgentRuntimeSessionListItem(
@@ -486,4 +318,13 @@ export function buildAgentRuntimeSessionRelationships(snapshot: AgentRuntimeSess
                 sourceToolCallId: link.sourceToolCallId,
             });
         });
+}
+
+async function findRuntimeSession(client: TavernAgentRuntimeClient, id: string) {
+    const { sessions } = await client.listSessions();
+    return findSessionById(sessions, id);
+}
+
+function findSessionById(sessions: AgentRuntimeSession[], id: string) {
+    return sessions.find((session) => session.key === id || session.sessionId === id) ?? null;
 }

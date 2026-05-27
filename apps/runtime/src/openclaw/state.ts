@@ -13,13 +13,25 @@ export function getManagedOpenClawState() {
 }
 
 export function markTavernPluginInstalled(pluginPath: string | null) {
+    const changed = state.tavernPluginPath !== pluginPath;
     state.tavernPluginPath = pluginPath;
+    return changed;
 }
 
 export function markManagedOpenClawGatewayReady() {
+    if (state.gatewayReady) {
+        return false;
+    }
+
     state.gatewayReady = true;
+    return true;
 }
 
 export function markManagedOpenClawGatewayStopped() {
+    if (!state.gatewayReady) {
+        return false;
+    }
+
     state.gatewayReady = false;
+    return true;
 }

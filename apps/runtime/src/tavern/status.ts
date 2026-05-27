@@ -31,8 +31,8 @@ export function getRuntimeStatus(): RuntimeStatus {
 
     return {
         health: {
-            ok: managedOpenClaw.gatewayReady,
-            status: managedOpenClaw.gatewayReady ? 'healthy' : 'starting',
+            ok: true,
+            status: 'healthy',
             timestamp: nowIso(),
         },
         identity: {
@@ -43,6 +43,9 @@ export function getRuntimeStatus(): RuntimeStatus {
                 agentRuntimeId: managedOpenClawRuntimeId,
                 version: process.env.TAVERN_RUNTIME_VERSION?.trim() || '0.2.0',
             },
+        },
+        managedOpenClaw: {
+            gatewayReady: managedOpenClaw.gatewayReady,
         },
     };
 }

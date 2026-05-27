@@ -3,8 +3,11 @@ import net from 'node:net';
 
 import { agentRuntimeRoutes } from '@tavern/api';
 import { log } from '../log';
+import { publishRuntimeEvent } from '../tavern/runtime-events';
+import { syncManagedOpenClawSnapshotsInBackground } from './agent-sync';
 import { prepareManagedOpenClawConfig } from './config';
 import { ensureManagedOpenClawPlugins, resolveManagedOpenClawInstall } from './install';
+import { createLocalOpenClawClient } from './local-client';
 import { buildOpenClawLaunchCommand } from './sandbox';
 import {
     markManagedOpenClawGatewayReady,
@@ -24,7 +27,9 @@ export async function startOpenClawForRuntime(): Promise<ManagedOpenClawHandle> 
         openClawPackageRoot: install.packageRoot,
     });
     await ensureManagedOpenClawPlugins(install, runtimeConfig.pluginInstallSpecs);
-    markTavernPluginInstalled(runtimeConfig.pluginPath);
+    if (markTavernPluginInstalled(runtimeConfig.pluginPath)) {
+        publishCapabilityUpdated('tavernPlugin');
+    }
     const launchCommand = await buildOpenClawLaunchCommand(install.binPath, {
         installPath: install.packageRoot,
         stateDir: runtimeConfig.stateDir,
@@ -44,16 +49,38 @@ export async function startOpenClawForRuntime(): Promise<ManagedOpenClawHandle> 
     let stopping = false;
     let restartTimer: ReturnType<typeof setTimeout> | null = null;
 
-    const startGateway = async (reason: 'initial' | 'restart') => {
-        child = spawnOpenClawGateway(launchCommand, runtimeConfig);
-        attachRestartHandler(child);
+    const startGateway = (reason: 'initial' | 'restart') => {
+        const gateway = spawnOpenClawGateway(launchCommand, runtimeConfig);
+        child = gateway;
+        attachRestartHandler(gateway);
         log.info('Managed OpenClaw Gateway starting', {
             gatewayUrl: runtimeConfig.gatewayUrl,
             reason,
             version: install.version,
         });
-        await waitForGateway(runtimeConfig.gatewayPort, child);
-        markManagedOpenClawGatewayReady();
+        void waitForGatewayReady(runtimeConfig.gatewayPort, gateway)
+            .then(() => {
+                if (stopping || child !== gateway) {
+                    return;
+                }
+
+                if (markManagedOpenClawGatewayReady()) {
+                    publishCapabilityUpdated('gateway');
+                }
+                syncManagedOpenClawSnapshotsInBackground('gateway-ready');
+            })
+            .catch((err) => {
+                if (stopping || child !== gateway) {
+                    return;
+                }
+
+                if (markManagedOpenClawGatewayStopped()) {
+                    publishCapabilityUpdated('gateway');
+                }
+                log.error('Managed OpenClaw Gateway startup failed', { err });
+                stopChild(gateway);
+                scheduleRestart();
+            });
     };
 
     const scheduleRestart = () => {
@@ -63,11 +90,7 @@ export async function startOpenClawForRuntime(): Promise<ManagedOpenClawHandle> 
 
         restartTimer = setTimeout(() => {
             restartTimer = null;
-            void startGateway('restart').catch((err) => {
-                markManagedOpenClawGatewayStopped();
-                log.error('Managed OpenClaw Gateway restart failed', { err });
-                scheduleRestart();
-            });
+            startGateway('restart');
         }, 500);
     };
 
@@ -78,13 +101,15 @@ export async function startOpenClawForRuntime(): Promise<ManagedOpenClawHandle> 
             }
 
             child = null;
-            markManagedOpenClawGatewayStopped();
+            if (markManagedOpenClawGatewayStopped()) {
+                publishCapabilityUpdated('gateway');
+            }
             log.warn('Managed OpenClaw Gateway exited; restarting', { code, signal });
             scheduleRestart();
         });
     };
 
-    await startGateway('initial');
+    startGateway('initial');
 
     return {
         stop() {
@@ -93,13 +118,23 @@ export async function startOpenClawForRuntime(): Promise<ManagedOpenClawHandle> 
                 clearTimeout(restartTimer);
                 restartTimer = null;
             }
-            markManagedOpenClawGatewayStopped();
+            if (markManagedOpenClawGatewayStopped()) {
+                publishCapabilityUpdated('gateway');
+            }
             if (child) {
                 stopChild(child);
                 child = null;
             }
         },
     };
+}
+
+function publishCapabilityUpdated(capability: string) {
+    publishRuntimeEvent({
+        capability,
+        timestamp: new Date().toISOString(),
+        type: 'capability.updated',
+    });
 }
 
 function spawnOpenClawGateway(
@@ -178,6 +213,36 @@ async function waitForGateway(port: number, child: ChildProcess) {
     }
 
     throw new Error(`Timed out waiting for managed OpenClaw Gateway on port ${port}.`);
+}
+
+async function waitForGatewayReady(port: number, child: ChildProcess) {
+    await waitForGateway(port, child);
+
+    const timeoutMs = Number.parseInt(
+        process.env.TAVERN_OPENCLAW_GATEWAY_START_TIMEOUT_MS ?? '180000',
+        10
+    );
+    const deadline = Date.now() + timeoutMs;
+
+    while (Date.now() < deadline) {
+        if (child.exitCode !== null || child.signalCode !== null) {
+            throw new Error(
+                `Managed OpenClaw Gateway exited before becoming ready on port ${port}.`
+            );
+        }
+
+        const client = createLocalOpenClawClient();
+        try {
+            await client.getStatus();
+            return;
+        } catch {
+            await new Promise((resolve) => setTimeout(resolve, 100));
+        } finally {
+            client.close();
+        }
+    }
+
+    throw new Error(`Timed out waiting for managed OpenClaw Gateway readiness on port ${port}.`);
 }
 
 function isPortOpen(port: number) {

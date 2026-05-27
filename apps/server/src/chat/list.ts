@@ -7,12 +7,12 @@ import {
     resolveParticipantColor,
     resolveParticipantName,
 } from '../participants/presentation.ts';
+import { listRuntimeSessions } from '../sessions/runtime-sessions.ts';
 import {
     listParticipants,
     type Participant,
     resolveParticipantIdsForSourceIdentities,
 } from '../storage/participants.ts';
-import { listSessionRecords, parseSessionRecord } from '../storage/sessions.ts';
 import { type Chat, chatListSchema, chatSchema } from './contracts.ts';
 import { resolveChatScope, resolveObservedConversationKind } from './conversation-kind.ts';
 import {
@@ -186,7 +186,7 @@ function formatChatActorNames(actors: Array<{ name: string }>) {
 }
 
 export async function listChats() {
-    const chats = await listChatDetails();
+    const chats = await listChatDetails({ includeExternal: false });
     const itemsById = Object.fromEntries(chats.map((chat) => [chat.id, toChatListItem(chat)]));
 
     return chatListSchema.parse({
@@ -196,18 +196,22 @@ export async function listChats() {
 }
 
 export async function getChat(input: { chatId: string }) {
-    const chats = await listChatDetails();
+    const chats = await listChatDetails({ includeExternal: false });
     const chat = chats.find((entry) => entry.id === input.chatId) ?? null;
 
     return chat ? chatSchema.parse(chat) : null;
 }
 
-export async function listChatDetails() {
-    const [agents, participants, sessionRecords, chatRecords] = await Promise.all([
+export async function listChatDetails(options?: { includeExternal?: boolean }) {
+    const includeExternal = options?.includeExternal ?? true;
+    const [agents, participants, sessions, chatRecords] = await Promise.all([
         listAgents(),
         listParticipants(),
-        listSessionRecords(),
-        listRuntimeChatRecords({ includeArchived: true }),
+        listRuntimeSessions(),
+        listRuntimeChatRecords({
+            includeArchived: true,
+            includeExternal,
+        }),
     ]);
     const agentById = new Map(agents.map((agent) => [agent.id, agent]));
     const participantById = new Map(
@@ -236,10 +240,6 @@ export async function listChatDetails() {
     );
     const participantIdsByRuntimeParticipantKey =
         await buildRuntimeParticipantIdMap(agentRuntimeChats);
-    const sessions = sessionRecords.flatMap((record) => {
-        const session = parseSessionRecord(record);
-        return session ? [session] : [];
-    });
     const sessionsByChatId = new Map<string, typeof sessions>();
 
     for (const session of sessions) {
@@ -248,9 +248,11 @@ export async function listChatDetails() {
         sessionsByChatId.set(session.chatId, bucket);
     }
 
-    const runtimeSessionChatIds = [...sessionsByChatId.entries()].flatMap(([chatId, sessions]) =>
-        sessions.some((session) => session.platform !== 'tavern') ? [chatId] : []
-    );
+    const runtimeSessionChatIds = includeExternal
+        ? [...sessionsByChatId.entries()].flatMap(([chatId, sessions]) =>
+              sessions.some((session) => session.platform !== 'tavern') ? [chatId] : []
+          )
+        : [];
     const chatIds = new Set(
         [...agentRuntimeChatsById.keys(), ...runtimeSessionChatIds].filter(
             (chatId) => !archivedChatIds.has(chatId)

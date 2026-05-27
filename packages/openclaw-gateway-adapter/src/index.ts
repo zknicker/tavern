@@ -25,3 +25,4 @@ export type {
     OpenClawGatewayOptions,
     OpenClawOperatorScope,
 } from './gateway/types.ts';
+export { mapOpenClawChatsFromSessions } from './mappers/chats/list.ts';

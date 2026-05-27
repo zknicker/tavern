@@ -1,11 +1,5 @@
 import { setTimeout as delay } from 'node:timers/promises';
-import type {
-    AgentRuntimeAgent,
-    AgentRuntimeCron,
-    AgentRuntimeCronRun,
-    AgentRuntimeSession,
-} from '@tavern/api';
-import { hasActiveTurnSession } from '../agent-runtime/active-turn-sessions.ts';
+import type { AgentRuntimeAgent, AgentRuntimeCron, AgentRuntimeCronRun } from '@tavern/api';
 import {
     recordCapabilityFailure,
     recordCapabilitySuccess,
@@ -30,12 +24,6 @@ import {
 import { syncAgentsForRuntime } from '../storage/agents.ts';
 import { buildCronJobId, syncCronJobsForRuntime } from '../storage/cron-jobs.ts';
 import { upsertCronRuns } from '../storage/cron-runs.ts';
-import {
-    getSessionMessageState,
-    syncSessionMessagesForRuntime,
-} from '../storage/session-messages.ts';
-import { syncSessionToolCallsForRuntime } from '../storage/session-tool-call-sync.ts';
-import { syncSessionsForRuntime } from '../storage/sessions.ts';
 import type { SyncPrimitiveKind } from './contracts.ts';
 import { savePrimitiveSyncState } from './primitive-sync-state.ts';
 
@@ -76,7 +64,6 @@ export async function syncAgentRuntimeSession(input: {
     sessionKey: string;
     syncedAt?: string;
 }) {
-    const syncedAt = input.syncedAt ?? new Date().toISOString();
     const sessions = (
         await withCapabilityStatus(
             {
@@ -94,16 +81,10 @@ export async function syncAgentRuntimeSession(input: {
         return { synced: 0 };
     }
 
-    const result = await syncSessionsForRuntime({
-        runtimeId: input.runtimeId,
-        sessions: [session],
-        syncedAt,
-    });
-
     await input.log?.(`Synced session ${input.sessionKey}.`);
-    emitSessionUpdatedIfChanged(result, input.sessionKey);
+    emitSessionUpdated({ sessionKey: input.sessionKey });
 
-    return result;
+    return { synced: 1 };
 }
 
 export async function syncAgentRuntimeSessionMessages(input: {
@@ -114,19 +95,13 @@ export async function syncAgentRuntimeSessionMessages(input: {
     sessionKey: string;
     syncedAt?: string;
 }) {
-    const syncedAt = input.syncedAt ?? new Date().toISOString();
-    const messageState = await getSessionMessageState(input.sessionKey);
-    const limit = resolveSessionMessageSyncLimit({
-        now: syncedAt,
-        messageState,
-    });
     const response = await withCapabilityStatus(
         {
             capability: 'messages',
             method: 'chat.history',
             runtimeId: input.runtimeId,
         },
-        async () => await input.client.listSessionMessages(input.sessionKey, { limit })
+        async () => await input.client.listSessionMessages(input.sessionKey)
     );
     const messages = response.messages.map((message) => ({
         ...message,
@@ -135,16 +110,12 @@ export async function syncAgentRuntimeSessionMessages(input: {
                 ? (message.agentId ?? input.agentId ?? null)
                 : message.agentId,
     }));
-    const result = await syncSessionMessagesForRuntime({
-        messagesBySessionKey: new Map([[input.sessionKey, messages]]),
-        runtimeId: input.runtimeId,
-        syncedAt,
-    });
 
-    await input.log?.(`Synced ${result.synced} messages for session ${input.sessionKey}.`);
-    emitSessionDetailUpdatedIfChanged(result, input.sessionKey);
+    await input.log?.(`Read ${messages.length} messages for session ${input.sessionKey}.`);
+    emitSessionUpdated({ sessionKey: input.sessionKey });
+    emitChatLogUpdated({ sessionKey: input.sessionKey });
 
-    return { ...result, messages };
+    return { deleted: 0, messages, synced: messages.length };
 }
 
 export async function syncAgentRuntimeSessionMessagesWithRetry(input: {
@@ -345,7 +316,6 @@ async function syncChatsForConnection(input: RuntimeSyncInput) {
 
 async function syncSessionsForConnection(input: RuntimeSyncInput) {
     const client = createAgentRuntimeClientForConnection(input.runtime);
-    const syncedAt = new Date().toISOString();
     const sessions = (
         await withCapabilityStatus(
             {
@@ -356,123 +326,12 @@ async function syncSessionsForConnection(input: RuntimeSyncInput) {
             async () => await client.listSessions()
         )
     ).sessions;
-    const result = await syncSessionsForRuntime({
-        runtimeId: input.runtime.id,
-        sessions,
-        syncedAt,
-    });
-    const messagesBySessionKey = new Map<
-        string,
-        Awaited<ReturnType<typeof client.listSessionMessages>>['messages']
-    >();
-    const graphToolCalls: Awaited<ReturnType<typeof client.getSessionGraph>>['toolCalls'] = [];
-    const graphToolCallSessionKeys: string[] = [];
-    let skippedMessageSyncs = 0;
-    let skippedFreshSessionSyncs = 0;
-    let skippedToolCallSyncs = 0;
 
-    for (const session of sessions) {
-        if (!(await shouldSyncRuntimeSessionDetails({ session }))) {
-            skippedFreshSessionSyncs += 1;
-            continue;
-        }
-
-        try {
-            const localSessionKey = session.key;
-            const messageState = await getSessionMessageState(localSessionKey);
-            const limit = resolveSessionMessageSyncLimit({
-                now: syncedAt,
-                messageState,
-            });
-            const response = await client.listSessionMessages(session.key, { limit });
-
-            messagesBySessionKey.set(
-                session.key,
-                response.messages.map((message) => ({
-                    ...message,
-                    agentId:
-                        message.senderType === 'agent'
-                            ? (message.agentId ?? session.agentId)
-                            : message.agentId,
-                }))
-            );
-        } catch (error) {
-            skippedMessageSyncs += 1;
-            const message = error instanceof Error ? error.message : String(error);
-            await input.log?.(`Skipped message sync for ${session.key}: ${message}`);
-        }
-
-        try {
-            const graph = await client.getSessionGraph(session.key);
-
-            graphToolCalls.push(...graph.toolCalls);
-            graphToolCallSessionKeys.push(session.key);
-        } catch (error) {
-            skippedToolCallSyncs += 1;
-            const message = error instanceof Error ? error.message : String(error);
-            await input.log?.(`Skipped tool call sync for ${session.key}: ${message}`);
-        }
-    }
-    if (skippedMessageSyncs > 0) {
-        await recordCapabilityFailure({
-            capability: 'messages',
-            error: new Error(`Skipped ${skippedMessageSyncs} session message syncs.`),
-            method: 'chat.history',
-            runtimeId: input.runtime.id,
-        });
-    } else {
-        await recordCapabilitySuccess({
-            capability: 'messages',
-            method: 'chat.history',
-            runtimeId: input.runtime.id,
-        });
-    }
-    const messageResult = await syncSessionMessagesForRuntime({
-        messagesBySessionKey,
-        runtimeId: input.runtime.id,
-        syncedAt,
-    });
-    const toolCallResult = await syncSessionToolCallsForRuntime({
-        runtimeId: input.runtime.id,
-        runtimeSessionKeys: graphToolCallSessionKeys,
-        syncedAt,
-        toolCalls: graphToolCalls,
-    });
-
-    await input.log?.(
-        `Synced ${result.synced} sessions, ${messageResult.synced} messages, and ${toolCallResult.synced} tool calls from ${input.runtime.name}; skipped ${skippedFreshSessionSyncs} fresh sessions, ${skippedMessageSyncs} message histories, and ${skippedToolCallSyncs} tool call graphs.`
-    );
+    await input.log?.(`Read ${sessions.length} stored sessions from ${input.runtime.name}.`);
 
     return {
-        synced: result.synced + messageResult.synced + toolCallResult.synced,
+        synced: sessions.length,
     };
-}
-
-export async function shouldSyncRuntimeSessionDetails(input: { session: AgentRuntimeSession }) {
-    if (hasActiveTurnSession(input.session.key)) {
-        return false;
-    }
-
-    const messageState = await getSessionMessageState(input.session.key);
-
-    if (!(messageState.hasMessages && messageState.lastSyncedAt)) {
-        return true;
-    }
-
-    const lastActivityAt = input.session.lastActivityAt ?? input.session.startedAt;
-
-    if (!lastActivityAt) {
-        return true;
-    }
-
-    const lastSyncedAtMs = Date.parse(messageState.lastSyncedAt);
-    const lastActivityAtMs = Date.parse(lastActivityAt);
-
-    if (!(Number.isFinite(lastSyncedAtMs) && Number.isFinite(lastActivityAtMs))) {
-        return true;
-    }
-
-    return lastActivityAtMs > lastSyncedAtMs;
 }
 
 export function resolveSessionMessageSyncLimit(input: {
@@ -497,25 +356,6 @@ export function resolveSessionMessageSyncLimit(input: {
 
 function hasChanged(result: { deleted?: number; synced: number }) {
     return result.synced > 0 || (result.deleted ?? 0) > 0;
-}
-
-function emitSessionUpdatedIfChanged(
-    result: { deleted?: number; synced: number },
-    sessionKey: string
-) {
-    if (hasChanged(result)) {
-        emitSessionUpdated({ sessionKey });
-    }
-}
-
-function emitSessionDetailUpdatedIfChanged(
-    result: { deleted?: number; synced: number },
-    sessionKey: string
-) {
-    if (hasChanged(result)) {
-        emitSessionUpdated({ sessionKey });
-        emitChatLogUpdated({ sessionKey });
-    }
 }
 
 async function syncCronForConnection(input: RuntimeSyncInput) {

@@ -65,13 +65,13 @@ async function dispatch(context: RouteContext) {
     if (url.pathname.startsWith('/skills')) {
         return await dispatchSkills(context, segments);
     }
-    if (url.pathname.startsWith('/chats') || url.pathname.startsWith('/bindings')) {
+    if (url.pathname.startsWith('/openclaw/chats') || url.pathname.startsWith('/bindings')) {
         return await dispatchChats(context, segments);
     }
     if (url.pathname.startsWith('/cron')) {
         return await dispatchCron(context, segments);
     }
-    if (url.pathname.startsWith('/sessions')) {
+    if (url.pathname.startsWith('/openclaw/sessions')) {
         return await dispatchSessions(context, segments);
     }
     if (url.pathname.startsWith('/memory')) {
@@ -169,11 +169,11 @@ async function dispatchChats({ client, request, url }: RouteContext, segments: s
     if (segments[0] === 'bindings' && segments[1] && request.method === 'DELETE') {
         return await client.deleteBinding(segments[1]);
     }
-    const chatId = segments[0] === 'chats' ? segments[1] : null;
+    const chatId = segments[0] === 'openclaw' && segments[1] === 'chats' ? segments[2] : null;
     if (!chatId) {
         return undefined;
     }
-    if (request.method === 'POST' && segments[2] === 'messages') {
+    if (request.method === 'POST' && segments[3] === 'messages') {
         const input = (await readJson(request)) as AgentRuntimeCreateMessage;
         if (isTavernChannelMessage(input)) {
             return await sendTavernChannelMessage(chatId, input);
@@ -225,25 +225,26 @@ async function dispatchSessions({ client, request, url }: RouteContext, segments
     if (request.method === 'GET' && url.pathname === agentRuntimeRoutes.sessions) {
         return await client.listSessions();
     }
-    const sessionKey = segments[1];
+    const sessionKey =
+        segments[0] === 'openclaw' && segments[1] === 'sessions' ? segments[2] : null;
     if (!sessionKey) {
         return undefined;
     }
-    if (request.method === 'GET' && segments[2] === 'messages') {
+    if (request.method === 'GET' && segments[3] === 'messages') {
         const limit = url.searchParams.get('limit');
         return await client.listSessionMessages(
             sessionKey,
             limit ? { limit: Number(limit) } : undefined
         );
     }
-    if (request.method === 'GET' && segments[2] === 'graph') {
+    if (request.method === 'GET' && segments[3] === 'graph') {
         return await client.getSessionGraph(sessionKey);
     }
-    if (request.method === 'GET' && segments[2] === 'prompt') {
+    if (request.method === 'GET' && segments[3] === 'prompt') {
         const prompt = await client.getSessionPrompt(sessionKey);
         return prompt ?? undefined;
     }
-    if (request.method === 'POST' && segments[2] === 'resync') {
+    if (request.method === 'POST' && segments[3] === 'resync') {
         return await client.resyncSession(sessionKey);
     }
     return undefined;

@@ -33,13 +33,27 @@ canonical chat server.
 
 ## Data Shape
 
-App storage includes client cache, presentation state, profiles, local settings,
-and runtime evidence views. Canonical chat and agent records belong in Tavern
-Runtime.
+App storage includes client cache, presentation state, profiles, and local
+settings. Canonical chat, agent, session, and execution evidence records belong
+in Tavern Runtime.
 
 Keep table names in product language. Attach runtime ownership with columns such
 as `runtime_id`, `source`, or `last_synced_at`; do not create integration-shaped
 table families for first-party Tavern behavior.
+
+## Capability State
+
+Settings screens read current runtime capability state from normal tRPC queries
+when they open. They subscribe to capability invalidation events only while that
+surface is mounted, then let React Query refetch the current state.
+
+Runtime-owned transitions, such as managed OpenClaw Gateway readiness or Tavern
+plugin installation, emit `capability.updated` from Tavern Runtime. App-observed
+capability checks write through the capability status recorder, which emits the
+same app invalidation event when the persisted capability state changes.
+
+Do not use broad startup refreshes or global polling to keep capability UI
+current. The flow is current query data plus capability-specific events.
 
 ## Boundaries
 

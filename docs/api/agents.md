@@ -16,8 +16,9 @@ with personality, model, tool, memory, and skill policy.
 ## Contract
 
 * Agent ids are durable Tavern ids hosted by Tavern Runtime.
-* Agent list and detail reads come from Runtime-backed agent APIs. Mounting an
-  app screen must not enqueue a background sync job to discover agents.
+* Agent list and detail reads use synced Runtime records. Mounting an app screen
+  must not contact OpenClaw Gateway or enqueue a background sync job just to
+  discover agents.
 * Agent records expose display name, description, soul/personality, model
   policy, tool policy, memory policy, skill selections, and availability.
 * Model availability comes from Runtime capabilities and config reads. Clients
@@ -28,7 +29,7 @@ with personality, model, tool, memory, and skill policy.
   not edit the workspace file directly.
 * Agent notes are DB-backed and agent-owned. They are updated through Tavern
   workspace tools, not through the first-pass user-facing agent settings UI.
-* Runtime execution state is not required just to list or edit agents.
+* Runtime execution state is not required just to list agents.
 
 ## Surface
 
@@ -36,6 +37,7 @@ The API covers:
 
 * list agents
 * get an agent
+* list an agent's Tavern and external runtime chat references
 * create or update agent settings
 * read and update soul/personality
 * read model choices and availability
@@ -54,6 +56,11 @@ overlays, but the app database is not the source of truth for agent existence.
 
 Runtime words such as `session`, `turn`, and `run` appear only where the API is
 returning execution metadata for a specific agent activity.
+
+`agent.chats.list` is the agent-scoped chat inventory for agent pages. It
+combines Tavern chats bound to the agent with Runtime-owned OpenClaw chat
+references such as Discord channels. OpenClaw chat references are read-only
+evidence surfaces; they do not appear in the global Tavern sidebar chat list.
 
 ## Related Docs
 

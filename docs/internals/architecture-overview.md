@@ -78,11 +78,11 @@ flowchart LR
 * Live response activity events patch the `chat.log.list` cache by stable row id.
   Completion and recovery reads reconcile the same ids from Runtime storage.
 * Missed live events are recovered through runtime chat history, response reads,
-  activity reads, artifact reads, event cursors, or sync.
+  activity reads, artifact reads, or focused sync.
 
 ## Cross-Cutting Docs
 
 * [API overview](../api/overview.md) - client-facing and runtime-facing surfaces.
 * [Data model](data-model.md) - tables, ids, and invariants.
-* [Realtime](../api/realtime.md) - durable vs ephemeral events, cursor recovery.
+* [Realtime](../api/realtime.md) - durable vs ephemeral events, reconnect recovery.
 * [Auth](../api/auth.md) - local owner and runtime trust model.

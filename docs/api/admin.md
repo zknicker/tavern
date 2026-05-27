@@ -18,8 +18,8 @@ capabilities. It is not a second product API.
 
 * **Health and status.** Runtime readiness, identity, version, and capability
   state.
-* **Runtime events.** Event replay and websocket notifications for operational
-  state.
+* **Runtime events.** Recent event lists and websocket notifications for
+  operational state.
 * **Managed OpenClaw.** Config, Gateway status, and local lifecycle control.
 * **Operational records.** Agents, sessions, cron jobs, cron runs, models,
   skills, bindings, memory status, memory settings, and agent files.
@@ -34,12 +34,13 @@ capabilities. It is not a second product API.
 | Runtime events | `/events`, websocket `/events` |
 | Managed OpenClaw | `/openclaw-config`, `/openclaw-gateway/status` |
 | Agents and files | `/agents`, `/agents/{id}`, `/agents/{id}/config`, `/agents/{id}/files`, `/agents/{id}/files/{path}` |
-| Sessions and execution evidence | `/sessions`, `/sessions/{sessionKey}/messages`, `/sessions/{sessionKey}/graph`, `/sessions/{sessionKey}/prompt`, `/sessions/{sessionKey}/resync` |
+| Sessions and execution evidence | `/openclaw/sessions`, `/openclaw/sessions/previews`, `/openclaw/sessions/{sessionKey}/messages`, `/openclaw/sessions/{sessionKey}/graph`, `/openclaw/sessions/{sessionKey}/prompt`, `/openclaw/sessions/{sessionKey}/resync` |
 | Cron | `/cron-jobs`, `/cron-jobs/{id}`, `/cron-jobs/{id}/run`, `/cron-jobs/{id}/runs`, `/cron-runs`, `/cron-runs/{id}` |
 | Skills | `/skills`, `/skills/{id}`, `/skills/{id}/config` |
 | Memory, models, and access | `/memory/settings`, `/memory/status`, `/models`, `/model-access`, `/model-access/claude`, `/model-access/codex`, `/model-access/openrouter` |
 | Platform bindings | `/bindings`, `/bindings/{id}` |
-| Runtime chat control | `/chats`, `/chats/{chatId}/messages`, websocket `/chat` |
+| OpenClaw chat projections | `/openclaw/chats`, `/openclaw/chats/{chatId}/messages` |
+| Runtime chat relay | websocket `/chat` |
 
 ## Contract Source
 
@@ -56,6 +57,13 @@ capabilities. It is not a second product API.
 
 * **Runtime owns operations.** Health, status, managed OpenClaw, cron, sessions,
   and skill state come from Tavern Runtime.
+* **Read routes are Runtime-backed.** Agent, chat, model, skill, and session
+  reads return the latest Runtime SQLite snapshot. Runtime refreshes
+  execution-owned records from specific OpenClaw events. Session update events
+  only record the session row they carry; they do not fetch the full transcript
+  or graph. Session preview reads are bounded Runtime API calls for index views.
+  Skill and model reads may start a background refresh when their stored snapshot
+  is missing or stale, but client reads do not synchronously call OpenClaw.
 * **Chat stays canonical.** Runtime chat control routes do not replace the
   durable Chat API timeline.
 * **Session facts stay execution-owned.** Session messages, graphs, prompts, and

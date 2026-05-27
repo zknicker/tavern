@@ -1,14 +1,10 @@
-import { listSessionRecords, parseSessionRecord } from '../storage/sessions.ts';
+import { listRuntimeSessions } from '../sessions/runtime-sessions.ts';
 import { getLatestTimestamp } from '../utils/time.ts';
 import { listAgents } from './catalog.ts';
 import type { AgentActivity } from './contracts.ts';
 
 export async function listAgentActivity(): Promise<AgentActivity[]> {
-    const [agents, sessionRecords] = await Promise.all([listAgents(), listSessionRecords()]);
-    const sessions = sessionRecords.flatMap((record) => {
-        const session = parseSessionRecord(record);
-        return session ? [session] : [];
-    });
+    const [agents, sessions] = await Promise.all([listAgents(), listRuntimeSessions()]);
     const latestSessionAtByAgent = new Map<string, string>();
 
     for (const session of sessions) {

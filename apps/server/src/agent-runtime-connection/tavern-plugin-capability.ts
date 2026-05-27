@@ -1,12 +1,12 @@
 import type { AgentRuntimeStatus } from '@tavern/api';
-import { saveAgentRuntimeCapabilityStatus } from '../storage/agent-runtime-capability-status.ts';
+import { recordCapabilityStatus } from '../agent-runtime/capability-status.ts';
 
 export async function recordTavernPluginCapability(input: {
     runtimeId: string;
     status: AgentRuntimeStatus;
 }) {
     if (input.status.identity.capabilities.includes('tavernPlugin')) {
-        await saveAgentRuntimeCapabilityStatus({
+        await recordCapabilityStatus({
             capability: 'tavernPlugin',
             method: 'runtime/status',
             runtimeId: input.runtimeId,
@@ -15,7 +15,7 @@ export async function recordTavernPluginCapability(input: {
         return;
     }
 
-    await saveAgentRuntimeCapabilityStatus({
+    await recordCapabilityStatus({
         capability: 'tavernPlugin',
         errorCode: 'tavern_plugin_not_installed',
         method: 'runtime/status',

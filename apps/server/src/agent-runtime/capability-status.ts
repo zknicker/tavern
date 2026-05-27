@@ -8,6 +8,7 @@ import { emitAgentRuntimeCapabilityUpdated } from '../api/invalidation-events.ts
 import {
     getAgentRuntimeCapabilityStatus,
     markAgentRuntimeCapabilityHealthy,
+    type SaveAgentRuntimeCapabilityStatusInput,
     saveAgentRuntimeCapabilityStatus,
 } from '../storage/agent-runtime-capability-status.ts';
 import { AgentRuntimeRequestError } from './client.ts';
@@ -32,13 +33,8 @@ export async function recordCapabilitySuccess(input: CapabilityCallInput) {
         method: input.method,
         runtimeId: input.runtimeId,
     });
-    if (
-        existing?.state !== next.state ||
-        existing.errorCode !== next.errorCode ||
-        existing.method !== next.method
-    ) {
-        emitAgentRuntimeCapabilityUpdated();
-    }
+    emitCapabilityUpdatedForChange(existing, next);
+    return next;
 }
 
 export async function recordCapabilityFailure(input: CapabilityCallInput & { error: unknown }) {
@@ -54,15 +50,15 @@ export async function recordCapabilityFailure(input: CapabilityCallInput & { err
         state: failure.state,
         technicalMessage: failure.technicalMessage,
     });
-    if (
-        existing?.state !== next.state ||
-        existing.errorCode !== next.errorCode ||
-        existing.method !== next.method ||
-        existing.reason !== next.reason ||
-        existing.technicalMessage !== next.technicalMessage
-    ) {
-        emitAgentRuntimeCapabilityUpdated();
-    }
+    emitCapabilityUpdatedForChange(existing, next);
+    return next;
+}
+
+export async function recordCapabilityStatus(input: SaveAgentRuntimeCapabilityStatusInput) {
+    const existing = await getAgentRuntimeCapabilityStatus(input);
+    const next = await saveAgentRuntimeCapabilityStatus(input);
+    emitCapabilityUpdatedForChange(existing, next);
+    return next;
 }
 
 export async function withCapabilityStatus<T>(
@@ -141,6 +137,27 @@ export function classifyCapabilityFailure(error: unknown): CapabilityFailure {
         state: 'degraded',
         technicalMessage: message,
     };
+}
+
+function emitCapabilityUpdatedForChange(
+    existing: Awaited<ReturnType<typeof getAgentRuntimeCapabilityStatus>>,
+    next: Awaited<ReturnType<typeof saveAgentRuntimeCapabilityStatus>>
+) {
+    if (!existing) {
+        emitAgentRuntimeCapabilityUpdated();
+        return;
+    }
+
+    if (
+        existing.state !== next.state ||
+        existing.errorCode !== next.errorCode ||
+        existing.metadataJson !== next.metadataJson ||
+        existing.method !== next.method ||
+        existing.reason !== next.reason ||
+        existing.technicalMessage !== next.technicalMessage
+    ) {
+        emitAgentRuntimeCapabilityUpdated();
+    }
 }
 
 function readErrorCode(error: unknown) {

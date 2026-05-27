@@ -1,5 +1,6 @@
+import type { AgentRuntimeSession } from '@tavern/api';
+import { createConfiguredAgentRuntimeClient } from '../agent-runtime/configured-client.ts';
 import { listRuntimeChatRecords, presentRuntimeChatLabel } from '../chat/runtime-chats.ts';
-import { listSessionRecords, parseSessionRecord } from '../storage/sessions.ts';
 import { buildAgentRuntimeSessionListItem } from './agent-runtime-shared.ts';
 import type { GlobalSessionSummary } from './contracts.ts';
 
@@ -13,10 +14,7 @@ function buildChatTitleMap(chats: Awaited<ReturnType<typeof listRuntimeChatRecor
     return chatTitlesById;
 }
 
-function compareSessions(
-    left: NonNullable<ReturnType<typeof parseSessionRecord>>,
-    right: NonNullable<ReturnType<typeof parseSessionRecord>>
-) {
+function compareSessions(left: AgentRuntimeSession, right: AgentRuntimeSession) {
     const leftTimestamp = left.lastActivityAt ?? left.startedAt ?? new Date(0).toISOString();
     const rightTimestamp = right.lastActivityAt ?? right.startedAt ?? new Date(0).toISOString();
 
@@ -61,17 +59,23 @@ export function mergeSessionSummaries(input: {
 }
 
 export async function listSessionSummaries() {
-    const [chatRecords, sessionRecords] = await Promise.all([
-        listRuntimeChatRecords(),
-        listSessionRecords(),
-    ]);
-    const chatTitlesById = buildChatTitleMap(chatRecords);
-    const sessions = sessionRecords.flatMap((record) => {
-        const session = parseSessionRecord(record);
-        return session ? [session] : [];
-    });
+    const client = createConfiguredAgentRuntimeClient();
 
-    return sessions
-        .sort(compareSessions)
-        .map((session) => buildAgentRuntimeSessionListItem(session, chatTitlesById));
+    if (!client) {
+        return [];
+    }
+
+    try {
+        const [chatRecords, sessionsResult] = await Promise.all([
+            listRuntimeChatRecords(),
+            client.listSessions(),
+        ]);
+        const chatTitlesById = buildChatTitleMap(chatRecords);
+
+        return sessionsResult.sessions
+            .sort(compareSessions)
+            .map((session) => buildAgentRuntimeSessionListItem(session, chatTitlesById));
+    } finally {
+        client.close();
+    }
 }

@@ -101,6 +101,49 @@ describe('OpenClaw agent runtime client', () => {
         ]);
     });
 
+    it('reads bounded session previews through sessions.preview', async () => {
+        const gateway = new FakeGateway({
+            'sessions.preview': {
+                previews: [
+                    {
+                        items: [{ role: 'assistant', text: 'Done.' }],
+                        key: 'agent:main:main',
+                        status: 'ok',
+                    },
+                ],
+                ts: 1,
+            },
+        });
+        const client = createOpenClawAgentRuntimeClient({
+            gateway,
+            gatewayUrl: 'ws://sample',
+        });
+
+        const result = await client.listSessionPreviews({
+            keys: ['agent:main:main'],
+            limit: 3,
+            maxChars: 120,
+        });
+
+        expect(result.previews).toEqual([
+            {
+                items: [{ role: 'assistant', text: 'Done.' }],
+                key: 'agent:main:main',
+                status: 'ok',
+            },
+        ]);
+        expect(gateway.requests).toEqual([
+            {
+                method: 'sessions.preview',
+                params: {
+                    keys: ['agent:main:main'],
+                    limit: 3,
+                    maxChars: 120,
+                },
+            },
+        ]);
+    });
+
     it('walks cron run pages until OpenClaw reports the snapshot is complete', async () => {
         const run = openClawGatewaySample.cronRuns.entries[0];
         const gateway = new FakeGateway({

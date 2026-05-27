@@ -1,3 +1,4 @@
+import type { AgentRuntimeStatus } from '@tavern/api';
 import {
     recordCapabilityFailure,
     recordCapabilitySuccess,
@@ -383,7 +384,9 @@ export async function markAgentRuntimeConnectionReachable(input: { connectionId:
     });
 }
 
-export async function confirmAgentRuntimeConnection() {
+export async function confirmAgentRuntimeConnection(
+    options: { refreshCapabilities?: boolean } = {}
+) {
     const record = await getDefaultAgentRuntimeConnection();
 
     if (!record?.enabled) {
@@ -403,12 +406,16 @@ export async function confirmAgentRuntimeConnection() {
             method: 'health/status',
             runtimeId,
         });
-        await recordTavernPluginCapability({
-            runtimeId,
-            status: checked.status,
-        });
-        await recordOpenClawGatewayCapability({ client, runtimeId });
-        await recordOpenClawMemoryCapability({ client, runtimeId });
+        if (options.refreshCapabilities ?? true) {
+            await recordTavernPluginCapability({
+                runtimeId,
+                status: checked.status,
+            });
+            if (shouldRefreshOpenClawCapabilities(checked.status)) {
+                await recordOpenClawGatewayCapability({ client, runtimeId });
+                await recordOpenClawMemoryCapability({ client, runtimeId });
+            }
+        }
         await saveStoredAgentRuntimeConnection({
             baseUrl: checked.baseUrl,
             enabled: record.enabled,
@@ -428,4 +435,8 @@ export async function confirmAgentRuntimeConnection() {
         });
         return false;
     }
+}
+
+function shouldRefreshOpenClawCapabilities(status: AgentRuntimeStatus) {
+    return status.managedOpenClaw?.gatewayReady !== false;
 }

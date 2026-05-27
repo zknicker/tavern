@@ -8,6 +8,10 @@ export function useAgentRuntimeConnectionEvents() {
             utils.agentRuntime.get.invalidate().catch(() => undefined);
         },
     });
+}
+
+export function useAgentRuntimeCapabilityEvents() {
+    const utils = trpc.useUtils();
 
     trpc.agentRuntime.onCapabilityUpdated.useSubscription(undefined, {
         onData: () => {

@@ -17,6 +17,7 @@ interface TavernChatMetadata {
 }
 
 export async function listRuntimeChatRecords(options?: {
+    includeExternal?: boolean;
     includeArchived?: boolean;
 }): Promise<RuntimeChatRecord[]> {
     const connection = await getActiveAgentRuntimeConnection();
@@ -25,11 +26,14 @@ export async function listRuntimeChatRecords(options?: {
         return [];
     }
 
+    const includeExternal = options?.includeExternal !== false;
     const tavernClient = createTavernClient({ baseUrl: connection.baseUrl });
-    const runtimeClient = createAgentRuntimeClientForConnection(connection);
+    const runtimeClient = includeExternal
+        ? createAgentRuntimeClientForConnection(connection)
+        : null;
     const [tavernChats, runtimeChats] = await Promise.all([
         listAllTavernChats(tavernClient),
-        runtimeClient.listChats().then((result) => result.chats),
+        runtimeClient ? runtimeClient.listChats().then((result) => result.chats) : [],
     ]);
     const tavernRecords = tavernChats
         .map((chat) => ({
@@ -38,13 +42,15 @@ export async function listRuntimeChatRecords(options?: {
             updatedAt: chat.updated_at,
         }))
         .filter((record) => options?.includeArchived || !isArchivedTavernChat(record.chat));
-    const externalRecords = runtimeChats
-        .filter((chat) => chat.platform !== 'tavern')
-        .map((chat) => ({
-            chat,
-            runtimeId: connection.id,
-            updatedAt: null,
-        }));
+    const externalRecords = includeExternal
+        ? runtimeChats
+              .filter((chat) => chat.platform !== 'tavern')
+              .map((chat) => ({
+                  chat,
+                  runtimeId: connection.id,
+                  updatedAt: null,
+              }))
+        : [];
 
     return [...tavernRecords, ...externalRecords];
 }

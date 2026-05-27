@@ -39,7 +39,9 @@ async function start() {
     logStartupBanner('🎰 Tavern Server', 'Booting Tavern Runtime services');
     await ensureDatabaseSchema();
     await loadAgentRuntimeConnection();
-    const agentRuntimeReachable = await confirmAgentRuntimeConnection();
+    const agentRuntimeReachable = await confirmAgentRuntimeConnection({
+        refreshCapabilities: false,
+    });
 
     const app = Fastify({
         logger: false,
@@ -75,6 +77,9 @@ async function start() {
     startTrpcWebSocketServer(app.server);
     startApiEventScheduler();
     startAgentRuntimeEventSync();
+    void confirmAgentRuntimeConnection({ refreshCapabilities: false }).catch((error) => {
+        console.warn('[tavern] failed to refresh runtime capabilities', error);
+    });
     const observedAgentRuntimeCount = (await listConfiguredAgentRuntimeConnections()).length;
 
     logStartupSection('Tavern Runtime');

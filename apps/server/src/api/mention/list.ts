@@ -3,15 +3,15 @@ import os from 'node:os';
 import path from 'node:path';
 import {
     recordCapabilityFailure,
+    recordCapabilityStatus,
     recordCapabilitySuccess,
 } from '../../agent-runtime/capability-status.ts';
 import { getAgentRuntimeConnection } from '../../agent-runtime-connection/service.ts';
-import { saveAgentRuntimeCapabilityStatus } from '../../storage/agent-runtime-capability-status.ts';
 import { publicProcedure } from '../trpc.ts';
 import {
+    type ComputerUseAppInventory,
     getComputerUsePluginUri,
     listComputerUseApps,
-    type ComputerUseAppInventory,
 } from './computer-use-apps.ts';
 import {
     listMentionInventoryInputSchema,
@@ -21,10 +21,7 @@ import {
     listMentionPathOptionsInputSchema,
     type MentionOptionResult,
 } from './contracts.ts';
-import {
-    listRuntimeSkillMentionOptions,
-    type RuntimeSkillList,
-} from './skill-options.ts';
+import { listRuntimeSkillMentionOptions, type RuntimeSkillList } from './skill-options.ts';
 import { listWorkspacePathMentionOptions } from './workspace-options.ts';
 
 const codexBundledPluginRoot = path.join(
@@ -197,9 +194,13 @@ function listDefaultMentionOptions({
 
     appendMentionOptions(options, usedKeys, sourceSlices.apps, Math.min(1, limit));
 
-    const reservedPluginCount =
-        sourceSlices.plugins.length > 0 && options.length < limit ? 1 : 0;
-    appendMentionOptions(options, usedKeys, sourceSlices.skills, limit - options.length - reservedPluginCount);
+    const reservedPluginCount = sourceSlices.plugins.length > 0 && options.length < limit ? 1 : 0;
+    appendMentionOptions(
+        options,
+        usedKeys,
+        sourceSlices.skills,
+        limit - options.length - reservedPluginCount
+    );
     appendMentionOptions(options, usedKeys, sourceSlices.plugins, limit - options.length);
 
     if (options.length < limit) {
@@ -446,7 +447,7 @@ async function recordComputerUseCapability(inventory: ComputerUseAppInventory) {
         return;
     }
 
-    await saveAgentRuntimeCapabilityStatus({
+    await recordCapabilityStatus({
         capability: 'computerUse',
         errorCode: 'computer_use_app_inventory_unavailable',
         metadataJson: JSON.stringify({

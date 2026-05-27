@@ -22,8 +22,15 @@ async function main(): Promise<void> {
     log.info('Runtime DB ready', { path: dbPath });
 
     runtimeServer = startTavernRuntimeServer();
-    openClaw = await startOpenClawForRuntime();
     log.info('Tavern Runtime running', { url: runtimeServer.url.toString() });
+
+    void startOpenClawForRuntime()
+        .then((handle) => {
+            openClaw = handle;
+        })
+        .catch((err) => {
+            log.error('Managed OpenClaw Gateway startup failed', { err });
+        });
 }
 
 function shutdown(signal: string): void {

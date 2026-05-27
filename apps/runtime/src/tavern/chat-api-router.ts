@@ -56,7 +56,6 @@ async function route(request: Request, url: URL): Promise<Response> {
     if (request.method === 'GET' && url.pathname === '/api/events') {
         return json(
             listEvents({
-                afterCursor: url.searchParams.get('after_cursor'),
                 limit: numberParam(url, 'limit'),
                 recipientId: url.searchParams.get('recipient_id'),
             })

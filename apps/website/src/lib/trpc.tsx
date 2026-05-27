@@ -22,6 +22,7 @@ type RouterOutput = inferRouterOutputs<AppRouter>;
 export type AppRouterOutputs = RouterOutput;
 export type AgentOutput = RouterOutput['agent']['get'];
 export type AgentActivityOutput = RouterOutput['agent']['activity'];
+export type AgentChatListOutput = RouterOutput['agent']['chats']['list'];
 export type AgentListOutput = RouterOutput['agent']['list'];
 export type PrimaryAgentOutput = RouterOutput['agent']['primary'];
 export type ChatGetOutput = RouterOutput['chat']['get'];
@@ -118,8 +119,17 @@ function getTrpcWebSocketUrl(serverOrigin: string | null) {
     return url.toString();
 }
 
-function createTrpcClient(serverOrigin: string | null) {
+function createTrpcClient(serverOrigin: string | null, queryClient: QueryClient) {
+    let hasOpened = false;
     const wsClient = createWSClient({
+        onOpen: () => {
+            if (hasOpened) {
+                void queryClient.invalidateQueries({ refetchType: 'active' });
+                return;
+            }
+
+            hasOpened = true;
+        },
         url: getTrpcWebSocketUrl(serverOrigin),
     });
     const trpcUrl = getTrpcUrl(serverOrigin);
@@ -205,8 +215,8 @@ export function TavernProviders({ children }: React.PropsWithChildren) {
             return null;
         }
 
-        return createTrpcClient(serverOrigin);
-    }, [isAgentRuntimeReady, serverOrigin]);
+        return createTrpcClient(serverOrigin, queryClient);
+    }, [isAgentRuntimeReady, queryClient, serverOrigin]);
 
     React.useEffect(() => {
         return () => {

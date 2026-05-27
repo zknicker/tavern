@@ -30,13 +30,25 @@ const subscribeAgentRuntimeEventsForConnection = mock(async () => ({
     close() {},
 }));
 const emitObservedAgentRuntimeEvent = mock(() => undefined);
+const confirmAgentRuntimeConnection = mock(async () => true);
+const refreshOpenClawGatewayCapability = mock(async () => undefined);
+const recordTavernPluginCapability = mock(async () => undefined);
 const tavernChatId = '220f46ed-2d7c-41dd-9d7e-d02691f1afc3';
 const originalFetch = globalThis.fetch;
 let tavernApiRequests: Array<{ body: unknown; method: string; path: string }> = [];
 
 mock.module('../src/agent-runtime-connection/service.ts', () => ({
+    confirmAgentRuntimeConnection,
     markAgentRuntimeConnectionFailure,
     markAgentRuntimeConnectionReachable,
+}));
+
+mock.module('../src/agent-runtime-connection/openclaw-gateway-capability.ts', () => ({
+    refreshOpenClawGatewayCapability,
+}));
+
+mock.module('../src/agent-runtime-connection/tavern-plugin-capability.ts', () => ({
+    recordTavernPluginCapability,
 }));
 
 mock.module('../src/api/invalidation-events.ts', () => ({
@@ -107,6 +119,9 @@ beforeEach(async () => {
     emitUsageLiveUpdated.mockClear();
     emitWorkersUpdated.mockClear();
     emitObservedAgentRuntimeEvent.mockClear();
+    confirmAgentRuntimeConnection.mockClear();
+    refreshOpenClawGatewayCapability.mockClear();
+    recordTavernPluginCapability.mockClear();
     markAgentRuntimeConnectionFailure.mockClear();
     markAgentRuntimeConnectionReachable.mockClear();
     createAgentRuntimeClientForConnection.mockClear();
@@ -204,9 +219,28 @@ test('startAgentRuntimeEventSync refreshes connection state when the stream conn
         connectionId: 'runtime-1',
     });
     expect(emitAgentRuntimeUpdated).toHaveBeenCalledTimes(1);
+    expect(confirmAgentRuntimeConnection).toHaveBeenCalledWith({ refreshCapabilities: false });
 });
 
-test('applyObservedAgentRuntimeEvent syncs completed turn history without the global session index', async () => {
+test('applyObservedAgentRuntimeEvent refreshes gateway capability update events', async () => {
+    await applyObservedAgentRuntimeEvent(
+        {
+            capability: 'gateway',
+            timestamp: '2026-05-12T19:00:00.000Z',
+            type: 'capability.updated',
+        },
+        {
+            baseUrl: 'http://runtime.test',
+            id: 'runtime-1',
+        } as never
+    );
+    await flushAsyncEventSync();
+
+    expect(refreshOpenClawGatewayCapability).toHaveBeenCalledWith('runtime-1');
+    expect(emitAgentRuntimeUpdated).toHaveBeenCalledTimes(1);
+});
+
+test('applyObservedAgentRuntimeEvent forwards completed turns without fetching session history', async () => {
     const listSessions = mock(async () => ({
         sessions: [
             {
@@ -265,7 +299,7 @@ test('applyObservedAgentRuntimeEvent syncs completed turn history without the gl
     await flushAsyncEventSync();
 
     expect(listSessions).not.toHaveBeenCalled();
-    expect(listSessionMessages).toHaveBeenCalledWith('session-1', { limit: 1000 });
+    expect(listSessionMessages).not.toHaveBeenCalled();
     expect(tavernApiRequests).toEqual([]);
     expect(emitObservedAgentRuntimeEvent).toHaveBeenCalledWith({
         timestamp: '2026-05-12T19:00:00.000Z',
@@ -418,7 +452,7 @@ test('applyObservedAgentRuntimeEvent defers invalidated session sync while a tur
     await flushAsyncEventSync();
 
     expect(listSessions).not.toHaveBeenCalled();
-    expect(listSessionMessages).toHaveBeenCalledTimes(1);
+    expect(listSessionMessages).not.toHaveBeenCalled();
 
     createAgentRuntimeClientForConnection.mockClear();
     listSessions.mockClear();
@@ -434,8 +468,8 @@ test('applyObservedAgentRuntimeEvent defers invalidated session sync while a tur
     );
     await flushAsyncEventSync();
 
-    expect(listSessions).toHaveBeenCalledTimes(1);
-    expect(listSessionMessages).toHaveBeenCalledWith('session-1', { limit: 200 });
+    expect(listSessions).not.toHaveBeenCalled();
+    expect(listSessionMessages).not.toHaveBeenCalled();
 });
 
 async function flushAsyncEventSync() {

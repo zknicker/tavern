@@ -33,13 +33,14 @@ reads, soft deletes, automations, deliveries, and the product timeline.
 | Store | Owner | Contents |
 | --- | --- | --- |
 | Runtime SQLite | Tavern Runtime | Canonical chat model, automation delivery, channel ingress, cursor-backed events, read markers, runtime metadata |
-| App SQLite | Tavern App | Client cache, app-local settings, presentation state, and runtime evidence views |
+| App SQLite | Tavern App | Client cache, app-local settings, and presentation state |
 | Runtime Cortex store | Tavern Runtime | Cortex pages, chunks, links, files, citations, timelines, audit, telemetry, embeddings, and maintenance state |
 | OpenClaw state | OpenClaw | Sessions, turns, tools, model calls, transcripts, and files |
 
 Runtime SQLite is the product source of truth for chat. App SQLite can cache for
 fast UI, but reconnect and hard reload recover from Runtime history and cursors.
-OpenClaw transcripts are execution evidence linked to Tavern messages.
+OpenClaw transcripts are execution evidence linked to Tavern messages and stored
+through Tavern Runtime.
 
 The Tavern Messenger plugin has a small Runtime outbox. It stores only relay
 state: request id, durable message id, route, cursor, and plugin acceptance. It

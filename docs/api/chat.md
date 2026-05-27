@@ -48,8 +48,8 @@ POST   /api/chats/{chat_id}/artifacts
 POST   /api/chats/{chat_id}/read
 GET    /api/messages/{message_id}
 DELETE /api/messages/{message_id}
-GET    /api/events?after_cursor=&limit=
-GET    /api/events/ws?after_cursor=
+GET    /api/events?limit=
+GET    /api/events/ws
 ```
 
 The transport can be local HTTP, tRPC wrapping, or a TypeScript SDK method. The
@@ -59,10 +59,11 @@ contract stays the same.
 
 The Tavern app keeps list and detail reads separate:
 
-* `chat.list` returns ordered chat ids plus lightweight list items. It is the
-  sidebar and overview contract, not a full chat detail payload. List items
+* `chat.list` returns ordered Tavern chat ids plus lightweight list items. It is
+  the sidebar and overview contract, not a full chat detail payload. List items
   include `hasActiveTurn` so compact views can show in-progress agent work
-  without reading the full chat log.
+  without reading the full chat log. External OpenClaw chat references belong to
+  `agent.chats.list`, not the global Tavern chat list.
 * `chat.get` returns one full chat record by `chatId`.
 * `chat.log.list` returns paged durable timeline rows for one chat, including
   messages, responses, running and completed activity, and renderable artifacts.
@@ -300,7 +301,7 @@ when the runtime exposes a user-visible summary.
 `{ "reader_id": "usr_...", "last_read_sequence": 12 }` and advances the
 reader's monotonic read pointer for that chat.
 
-Read events are private to the reader. Event replay and websocket delivery
+Read events are private to the reader. Event list and websocket delivery
 include them only when `recipient_id` matches `reader_id`.
 
 ## Events
@@ -342,7 +343,7 @@ Event shape:
 ```
 
 Websocket delivery is a notification pipe. Clients recover missed state through
-`GET /api/events?after_cursor=...` or durable chat reads.
+durable chat reads.
 
 ## Deletes
 

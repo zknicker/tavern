@@ -48,6 +48,11 @@ export const agentRuntimeIdentitySchema = z.object({
 export const agentRuntimeStatusSchema = z.object({
     health: agentRuntimeHealthSchema,
     identity: agentRuntimeIdentitySchema,
+    managedOpenClaw: z
+        .object({
+            gatewayReady: z.boolean(),
+        })
+        .optional(),
 });
 
 export const agentRuntimeModelAccessIdSchema = z.enum(['claude-code', 'codex']);
@@ -1063,6 +1068,22 @@ export const agentRuntimeSessionMessageListSchema = z.object({
     messages: z.array(agentRuntimeSessionMessageSchema),
 });
 
+export const agentRuntimeSessionPreviewItemSchema = z.object({
+    role: z.string().trim().min(1),
+    text: z.string(),
+});
+
+export const agentRuntimeSessionPreviewSchema = z.object({
+    items: z.array(agentRuntimeSessionPreviewItemSchema),
+    key: z.string().trim().min(1),
+    status: z.enum(['empty', 'error', 'missing', 'ok']),
+});
+
+export const agentRuntimeSessionPreviewListSchema = z.object({
+    previews: z.array(agentRuntimeSessionPreviewSchema),
+    ts: z.number().int().nonnegative().optional(),
+});
+
 export const agentRuntimeSessionPromptSectionSchema = z.object({
     content: z.string(),
     id: z.string().trim().min(1),
@@ -1205,6 +1226,7 @@ export const agentRuntimeEventTypeSchema = z.enum([
     'agent.updated',
     'chat.messageAccepted',
     'chat.read',
+    'model.updated',
     'skill.updated',
     'skill.deleted',
     'cron.updated',
@@ -1258,6 +1280,11 @@ export const agentRuntimeChatReadEventSchema = z.object({
     type: z.literal('chat.read'),
 });
 
+export const agentRuntimeModelUpdatedEventSchema = z.object({
+    timestamp: z.string().datetime(),
+    type: z.literal('model.updated'),
+});
+
 export const agentRuntimeSkillUpdatedEventSchema = z.object({
     skillId: z.string().trim().min(1),
     timestamp: z.string().datetime(),
@@ -1294,6 +1321,12 @@ export const agentRuntimeCronRunFinishedEventSchema = z.object({
     runId: z.string().trim().min(1),
     timestamp: z.string().datetime(),
     type: z.literal('cron.runFinished'),
+});
+
+export const agentRuntimeCapabilityUpdatedEventSchema = z.object({
+    capability: z.string().trim().min(1),
+    timestamp: z.string().datetime(),
+    type: z.literal('capability.updated'),
 });
 
 export const agentRuntimeTurnStartedEventSchema = z.object({
@@ -1348,12 +1381,14 @@ export const agentRuntimeEventSchema = z.discriminatedUnion('type', [
     agentRuntimeAgentUpdatedEventSchema,
     agentRuntimeChatMessageAcceptedEventSchema,
     agentRuntimeChatReadEventSchema,
+    agentRuntimeModelUpdatedEventSchema,
     agentRuntimeSkillUpdatedEventSchema,
     agentRuntimeSkillDeletedEventSchema,
     agentRuntimeCronUpdatedEventSchema,
     agentRuntimeCronDeletedEventSchema,
     agentRuntimeCronRunStartedEventSchema,
     agentRuntimeCronRunFinishedEventSchema,
+    agentRuntimeCapabilityUpdatedEventSchema,
     agentRuntimeTurnStartedEventSchema,
     agentRuntimeTurnProgressEventSchema,
     agentRuntimeTurnReplyUpdatedEventSchema,
@@ -1512,6 +1547,9 @@ export type AgentRuntimeSessionMessageAttachment = z.infer<
 >;
 export type AgentRuntimeSessionMessage = z.infer<typeof agentRuntimeSessionMessageSchema>;
 export type AgentRuntimeSessionMessageList = z.infer<typeof agentRuntimeSessionMessageListSchema>;
+export type AgentRuntimeSessionPreview = z.infer<typeof agentRuntimeSessionPreviewSchema>;
+export type AgentRuntimeSessionPreviewItem = z.infer<typeof agentRuntimeSessionPreviewItemSchema>;
+export type AgentRuntimeSessionPreviewList = z.infer<typeof agentRuntimeSessionPreviewListSchema>;
 export type AgentRuntimeSessionPrompt = z.infer<typeof agentRuntimeSessionPromptSchema>;
 export type AgentRuntimeSessionPromptSection = z.infer<
     typeof agentRuntimeSessionPromptSectionSchema

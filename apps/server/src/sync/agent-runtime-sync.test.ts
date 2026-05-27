@@ -10,23 +10,13 @@ const databasePath = join(directory, 'test.sqlite');
 
 process.env.DATABASE_PATH = databasePath;
 
-const [
-    { ensureDatabaseSchema },
-    { databaseClient },
-    runtimeSync,
-    agentProfileStorage,
-    sessionStorage,
-    messageStorage,
-    activeTurnSessions,
-] = await Promise.all([
-    import('../db/bootstrap.ts'),
-    import('../db/index.ts'),
-    import('./agent-runtime-sync.ts'),
-    import('../storage/agent-profiles.ts'),
-    import('../storage/sessions.ts'),
-    import('../storage/session-messages.ts'),
-    import('../agent-runtime/active-turn-sessions.ts'),
-]);
+const [{ ensureDatabaseSchema }, { databaseClient }, runtimeSync, agentProfileStorage] =
+    await Promise.all([
+        import('../db/bootstrap.ts'),
+        import('../db/index.ts'),
+        import('./agent-runtime-sync.ts'),
+        import('../storage/agent-profiles.ts'),
+    ]);
 
 ensureDatabaseSchema();
 
@@ -64,13 +54,7 @@ test('syncAgentRuntimeSession projects only the requested session', async () => 
         syncedAt: '2026-05-13T12:02:00.000Z',
     });
 
-    const sessions = await sessionStorage.listSessionRecords({ includeInactive: true });
-
     assert.equal(result.synced, 1);
-    assert.deepEqual(
-        sessions.map((session) => [session.sessionKey, session.updatedAt]),
-        [['agent:main:tavern:channel:second-chat', '2026-05-13T12:01:00.000Z']]
-    );
 });
 
 test('syncAgentRuntimeSessionMessagesWithRetry retries empty history', async () => {
@@ -107,17 +91,12 @@ test('syncAgentRuntimeSessionMessagesWithRetry retries empty history', async () 
         sessionKey,
     });
 
-    const messages = await messageStorage.listSessionMessagesForSessionKeys([sessionKey]);
-
     assert.equal(calls, 2);
     assert.equal(result.synced, 1);
-    assert.deepEqual(
-        messages.map((message) => [message.sessionKey, message.role, message.contentText]),
-        [[sessionKey, 'agent', 'Ready.']]
-    );
+    assert.equal(result.messages[0]?.content, 'Ready.');
 });
 
-test('syncAgentRuntimeSessionMessages upserts accepted Tavern prompts by stable message id', async () => {
+test('syncAgentRuntimeSessionMessages reads accepted Tavern prompts by stable message id', async () => {
     const sessionKey = 'agent:main:tavern:channel:identity-chat';
     const prompt = 'same prompt';
 
@@ -163,77 +142,15 @@ test('syncAgentRuntimeSessionMessages upserts accepted Tavern prompts by stable 
         sessionKey,
     });
 
-    const messages = await messageStorage.listSessionMessagesForSessionKeys([sessionKey]);
-
     assert.equal(result.deleted, 0);
     assert.equal(result.synced, 2);
     assert.deepEqual(
-        messages.map((message) => [message.externalMessageId, message.role, message.contentText]),
+        result.messages.map((message) => [message.id, message.senderType, message.content]),
         [
             ['msg_accepted', 'user', prompt],
             ['assistant-message', 'agent', 'Reply.'],
         ]
     );
-});
-
-test('shouldSyncRuntimeSessionDetails skips fresh and active session histories', async () => {
-    const sessionKey = 'agent:main:tavern:channel:fresh-chat';
-    const session = createSession({
-        chatId: 'fresh-chat',
-        key: sessionKey,
-        lastActivityAt: '2026-05-13T12:05:00.000Z',
-    });
-
-    assert.equal(await runtimeSync.shouldSyncRuntimeSessionDetails({ session }), true);
-
-    await messageStorage.syncSessionMessagesForRuntime({
-        messagesBySessionKey: new Map([
-            [
-                sessionKey,
-                [
-                    createMessage({
-                        agentId: 'main',
-                        chatId: 'fresh-chat',
-                        content: 'Ready.',
-                        id: 'fresh-message',
-                        sender: 'assistant',
-                        senderName: 'agent',
-                        senderType: 'agent',
-                        sessionKey,
-                        timestamp: '2026-05-13T12:04:59.000Z',
-                    }),
-                ],
-            ],
-        ]),
-        runtimeId: 'openclaw-local',
-        syncedAt: '2026-05-13T12:06:00.000Z',
-    });
-
-    assert.equal(await runtimeSync.shouldSyncRuntimeSessionDetails({ session }), false);
-    assert.equal(
-        await runtimeSync.shouldSyncRuntimeSessionDetails({
-            session: {
-                ...session,
-                lastActivityAt: '2026-05-13T12:07:00.000Z',
-            },
-        }),
-        true
-    );
-
-    activeTurnSessions.markTurnSessionActive(sessionKey);
-    try {
-        assert.equal(
-            await runtimeSync.shouldSyncRuntimeSessionDetails({
-                session: {
-                    ...session,
-                    lastActivityAt: '2026-05-13T12:07:00.000Z',
-                },
-            }),
-            false
-        );
-    } finally {
-        activeTurnSessions.clearTurnSessionActive(sessionKey);
-    }
 });
 
 test('syncAgentRuntimeAgents sends cleared workspace instructions', async () => {

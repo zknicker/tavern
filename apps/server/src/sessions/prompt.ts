@@ -7,5 +7,9 @@ export async function getSessionPrompt(input: { sessionKey: string }) {
         return null;
     }
 
-    return resolved.client.getSessionPrompt(resolved.targetSession.key);
+    try {
+        return await resolved.client.getSessionPrompt(resolved.targetSession.key);
+    } finally {
+        resolved.client.close();
+    }
 }

@@ -25,7 +25,7 @@ const [
     { saveAgentRuntimeConnection },
     { syncAgentsForRuntime },
     { syncSessionMessagesForRuntime },
-    { syncSessionsForRuntime },
+    { listSessionRecords, parseSessionRecord, syncSessionsForRuntime },
 ] = await Promise.all([
     import('../src/agent-runtime/client-factory.ts'),
     import('../src/agent-runtime/configured-client.ts'),
@@ -61,6 +61,23 @@ function mockRuntimeChatFetch(chats = [runtimeTavernChat()]) {
     globalThis.fetch = async (input) => {
         const url = new URL(input instanceof Request ? input.url : String(input));
 
+        if (url.pathname === '/agents') {
+            return Response.json({
+                agents: [
+                    {
+                        avatar: null,
+                        enabledSkillIds: [],
+                        emoji: null,
+                        id: 'support',
+                        isAdmin: false,
+                        name: 'Support',
+                        primaryColor: null,
+                        workspaceFolder: 'support',
+                    },
+                ],
+            });
+        }
+
         if (url.pathname === '/api/chats') {
             return Response.json({
                 chats,
@@ -68,8 +85,17 @@ function mockRuntimeChatFetch(chats = [runtimeTavernChat()]) {
             });
         }
 
-        if (url.pathname === '/chats') {
+        if (url.pathname === '/openclaw/chats') {
             return Response.json({ chats: [] });
+        }
+
+        if (url.pathname === '/openclaw/sessions') {
+            return Response.json({
+                sessions: (await listSessionRecords()).flatMap((record) => {
+                    const session = parseSessionRecord(record);
+                    return session ? [session] : [];
+                }),
+            });
         }
 
         return new Response('Not found', { status: 404 });
@@ -95,9 +121,97 @@ function runtimeTavernChat() {
     };
 }
 
-test('session queries read live OpenClaw session graphs', async () => {
+test('session queries read bounded OpenClaw session history', async () => {
     mockRuntimeChatFetch();
     spyOn(agentRuntimeClient, 'createConfiguredAgentRuntimeClient').mockReturnValue({
+        close: () => {},
+        listSessionMessages: async (_sessionKey: string) => ({
+            messages: [
+                {
+                    agentId: null,
+                    chatId: 'chat-support',
+                    content: 'You are Support.\n## Soul\nBe precise and calm.',
+                    id: 'chat-support::support:system-prompt',
+                    metadata: null,
+                    sender: 'system-prompt',
+                    senderName: 'System Prompt',
+                    senderType: 'system',
+                    sessionKey: 'chat-support::support',
+                    timestamp: '2026-04-15T21:27:15.953Z',
+                },
+                {
+                    agentId: null,
+                    chatId: 'chat-support',
+                    content: 'Find the incident summary.',
+                    id: 'message-user',
+                    metadata: null,
+                    sender: 'user',
+                    senderName: 'User',
+                    senderType: 'user',
+                    sessionKey: 'chat-support::support',
+                    timestamp: '2026-04-15T21:27:20.000Z',
+                },
+                {
+                    agentId: 'support',
+                    chatId: 'chat-support',
+                    content: '',
+                    id: 'message-tool-call',
+                    metadata: {
+                        model: 'claude-sonnet-4-6',
+                        parts: [
+                            {
+                                id: 'tool-call-1',
+                                name: 'Agent',
+                                arguments: {
+                                    prompt: 'Research the incident timeline.',
+                                },
+                                type: 'toolCall',
+                            },
+                            {
+                                text: 'Need a focused worker for this.',
+                                type: 'thinking',
+                            },
+                        ],
+                        provider: 'claude',
+                        toolCallId: 'tool-call-1',
+                        toolName: 'Agent',
+                    },
+                    sender: 'support',
+                    senderName: 'Support',
+                    senderType: 'agent',
+                    sessionKey: 'chat-support::support',
+                    timestamp: '2026-04-15T21:27:30.000Z',
+                },
+                {
+                    agentId: null,
+                    chatId: 'chat-support',
+                    content:
+                        '{"childSessionKey":"chat-support::support::worker:research","status":"completed"}',
+                    id: 'message-tool-result',
+                    metadata: {
+                        toolCallId: 'tool-call-1',
+                        toolName: 'Agent',
+                    },
+                    sender: 'tool',
+                    senderName: 'ToolResult',
+                    senderType: 'system',
+                    sessionKey: 'chat-support::support',
+                    timestamp: '2026-04-15T21:28:00.000Z',
+                },
+                {
+                    agentId: 'support',
+                    chatId: 'chat-support',
+                    content: 'The worker finished the timeline summary.',
+                    id: 'message-final',
+                    metadata: null,
+                    sender: 'support',
+                    senderName: 'Support',
+                    senderType: 'agent',
+                    sessionKey: 'chat-support::support',
+                    timestamp: '2026-04-15T21:28:10.000Z',
+                },
+            ],
+        }),
         getSessionGraph: async () => ({
             artifacts: [
                 {
@@ -354,7 +468,55 @@ test('session queries read live OpenClaw session graphs', async () => {
         }),
     } as never);
     spyOn(agentRuntimeClientFactory, 'createAgentRuntimeClientForConnection').mockReturnValue({
+        close: () => {},
+        listAgents: async () => ({
+            agents: [
+                {
+                    avatar: null,
+                    enabledSkillIds: [],
+                    emoji: null,
+                    id: 'support',
+                    isAdmin: false,
+                    name: 'Support',
+                    primaryColor: null,
+                    workspaceFolder: 'support',
+                },
+            ],
+        }),
         listChats: async () => ({ chats: [] }),
+        listSessionMessages: async (_sessionKey: string) => ({
+            messages: [
+                {
+                    agentId: null,
+                    chatId: 'chat-support',
+                    content: 'Find the incident summary.',
+                    id: 'message-user',
+                    metadata: null,
+                    sender: 'user',
+                    senderName: 'User',
+                    senderType: 'user',
+                    sessionKey: 'chat-support::support',
+                    timestamp: '2026-04-15T21:27:20.000Z',
+                },
+            ],
+        }),
+        listSessions: async () => ({
+            sessions: [
+                {
+                    agentId: 'support',
+                    chatId: 'chat-support',
+                    key: 'chat-support::support',
+                    lastActivityAt: '2026-04-15T21:28:10.000Z',
+                    messageCount: 5,
+                    parentSessionKey: null,
+                    platform: 'tavern',
+                    sessionId: 'session-root',
+                    sessionRole: 'main',
+                    startedAt: '2026-04-15T21:27:15.953Z',
+                    title: 'Support Chat',
+                },
+            ],
+        }),
         resyncSession: async (sessionKey: string) => ({
             resynced: true,
             rootSessionKey: 'chat-support::support',
@@ -531,11 +693,8 @@ test('session queries read live OpenClaw session graphs', async () => {
     assert.equal(summaries[0]?.source, 'Support Chat');
     assert.equal(detail?.session.key, sessionKey);
     assert.equal(detail?.messages.total, 5);
-    assert.equal(detail?.relationships[0]?.relatedSession.key, childSessionKey);
 
     assert.ok(history);
-    assert.ok(history.rows.some((row) => row.kind === 'worker'));
-    assert.ok(history.rows.some((row) => row.kind === 'system' && row.systemKind === 'artifact'));
     assert.ok(history.rows.some((row) => row.kind === 'system' && row.systemKind === 'thinking'));
     assert.deepEqual(
         history.rows.find((row) => row.kind === 'message' && row.message.id === 'message-user')
@@ -552,7 +711,6 @@ test('session queries read live OpenClaw session graphs', async () => {
     );
 
     assert.ok(logPage);
-    assert.ok(logPage.entries.some((entry) => entry.kind === 'artifact'));
     assert.ok(logPage.entries.some((entry) => entry.kind === 'toolExecution'));
 
     assert.ok(tool);
@@ -568,7 +726,8 @@ test('session queries read live OpenClaw session graphs', async () => {
 });
 
 test('session prompt reads live OpenClaw prompt inspection', async () => {
-    spyOn(agentRuntimeClientFactory, 'createAgentRuntimeClientForConnection').mockReturnValue({
+    spyOn(agentRuntimeClient, 'createConfiguredAgentRuntimeClient').mockReturnValue({
+        close: () => {},
         getSessionPrompt: async (_sessionKey: string) => ({
             assistantName: 'Support',
             fullText: 'Base instructions\n\n---\n\n## Soul\n\nBe precise and calm.',
@@ -586,6 +745,23 @@ test('session prompt reads live OpenClaw prompt inspection', async () => {
                     id: 'identity:soul',
                     kind: 'identity',
                     label: 'Soul',
+                },
+            ],
+        }),
+        listSessions: async () => ({
+            sessions: [
+                {
+                    agentId: 'support',
+                    chatId: 'chat-support',
+                    key: 'chat-support::support',
+                    lastActivityAt: '2026-04-28T16:00:00.000Z',
+                    messageCount: 1,
+                    parentSessionKey: null,
+                    platform: 'tavern',
+                    sessionId: 'session-root',
+                    sessionRole: 'main',
+                    startedAt: '2026-04-28T16:00:00.000Z',
+                    title: 'Support Chat',
                 },
             ],
         }),
@@ -626,6 +802,26 @@ test('session prompt reads live OpenClaw prompt inspection', async () => {
 
 test('session summaries hydrate session id from the durable runtime column', async () => {
     mockRuntimeChatFetch();
+    spyOn(agentRuntimeClient, 'createConfiguredAgentRuntimeClient').mockReturnValue({
+        close: () => {},
+        listSessions: async () => ({
+            sessions: [
+                {
+                    agentId: 'support',
+                    chatId: 'chat-support',
+                    key: 'chat-support::support',
+                    lastActivityAt: '2026-04-28T16:00:00.000Z',
+                    messageCount: 1,
+                    parentSessionKey: null,
+                    platform: 'tavern',
+                    sessionId: 'session-root',
+                    sessionRole: 'main',
+                    startedAt: '2026-04-28T16:00:00.000Z',
+                    title: 'Support Chat',
+                },
+            ],
+        }),
+    } as never);
     await saveAgentRuntimeConnection({
         baseUrl: 'http://openclaw.test',
         id: 'runtime-1',

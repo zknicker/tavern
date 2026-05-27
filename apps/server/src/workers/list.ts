@@ -1,12 +1,11 @@
+import type { AgentRuntimeSession } from '@tavern/api';
 import { listRuntimeChatRecords, presentRuntimeChatLabel } from '../chat/runtime-chats.ts';
 import { getSessionDisplay } from '../sessions/display.ts';
+import { listRuntimeSessions } from '../sessions/runtime-sessions.ts';
 import { listAgents } from '../storage/agents.ts';
-import { listSessionRecords, parseSessionRecord } from '../storage/sessions.ts';
 import type { WorkerListOutput } from './contracts.ts';
 
-type SessionRecord = NonNullable<ReturnType<typeof parseSessionRecord>>;
-
-function compareWorkerSessions(left: SessionRecord, right: SessionRecord) {
+function compareWorkerSessions(left: AgentRuntimeSession, right: AgentRuntimeSession) {
     const leftTimestamp = left.lastActivityAt ?? left.startedAt ?? '';
     const rightTimestamp = right.lastActivityAt ?? right.startedAt ?? '';
 
@@ -18,22 +17,17 @@ function compareWorkerSessions(left: SessionRecord, right: SessionRecord) {
 }
 
 export async function listWorkers(): Promise<WorkerListOutput> {
-    const [agentRecords, chatRecords, sessionRecords] = await Promise.all([
+    const [agentRecords, chatRecords, runtimeSessions] = await Promise.all([
         listAgents(),
         listRuntimeChatRecords(),
-        listSessionRecords(),
+        listRuntimeSessions(),
     ]);
     const agentNameById = new Map(agentRecords.map((agent) => [agent.id, agent.name]));
     const chatTitleById = new Map(
         chatRecords.map((record) => [record.chat.id, presentRuntimeChatLabel(record.chat)])
     );
     const syncedAt = new Date().toISOString();
-    const sessions = sessionRecords
-        .flatMap((record) => {
-            const session = parseSessionRecord(record);
-
-            return session ? [session] : [];
-        })
+    const sessions = runtimeSessions
         .filter((session) => session.sessionRole === 'worker')
         .sort(compareWorkerSessions);
 

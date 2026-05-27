@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { useChatListSuspense } from '../../hooks/chats/use-chat-list.ts';
+import { useAgentChatListSuspense } from '../../hooks/agents/use-agent-chats.ts';
 import type { AgentListOutput } from '../../lib/trpc.tsx';
 import { AgentChatCard } from '../chats/agent-chat-card.tsx';
 import { buildChatList } from '../chats/chat-list-data.ts';
@@ -10,13 +10,10 @@ import {
 } from '../chats/chat-source-filter-tabs.tsx';
 
 export function AgentRecentChats({ agent }: { agent: AgentListOutput['agents'][number] }) {
-    const [chatData] = useChatListSuspense();
+    const [chatData] = useAgentChatListSuspense({ agentId: agent.id });
     const [sourceFilter, setSourceFilter] = React.useState<ChatSourceFilter>('all');
     const chats = React.useMemo(() => buildChatList(chatData), [chatData]);
-    const agentChats = React.useMemo(
-        () => chats.filter((chat) => chat.boundAgentIds.includes(agent.id)),
-        [agent.id, chats]
-    );
+    const agentChats = chats;
     const sourceFilterOptions = React.useMemo(
         () => buildChatSourceFilterOptions(agentChats),
         [agentChats]

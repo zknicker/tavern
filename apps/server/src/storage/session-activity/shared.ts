@@ -15,8 +15,8 @@ import {
     resolveObservedAgent,
 } from '../../participants/observed.ts';
 import { sessionMessageSchema } from '../../sessions/contracts.ts';
+import { listRuntimeSessions } from '../../sessions/runtime-sessions.ts';
 import { listCronJobRecords, parseCronJobRawJson } from '../cron-jobs.ts';
-import { listSessionRecords, parseSessionRecord } from '../sessions.ts';
 
 export function parseJson(value: string | null) {
     if (!value) {
@@ -322,10 +322,7 @@ export async function buildSessionReferenceLookup(sessionKeys: string[]) {
         return new Map<string, { agentId: string | null; channel: string | null; title: string }>();
     }
 
-    const agentRuntimeSessions = (await listSessionRecords()).flatMap((record) => {
-        const session = parseSessionRecord(record);
-        return session ? [session] : [];
-    });
+    const agentRuntimeSessions = await listRuntimeSessions();
     const relatedSessionByKey = new Map(
         agentRuntimeSessions
             .filter((session) => uniqueKeys.includes(session.key))

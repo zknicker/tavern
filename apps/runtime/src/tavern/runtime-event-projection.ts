@@ -14,7 +14,7 @@ export interface PersistedRuntimeEvent {
     event: AgentRuntimeEvent;
 }
 
-export function listTavernRuntimeEvents(
+export function listProjectedTavernRuntimeEvents(
     options: { afterCursor?: number; limit?: number } = {},
     db?: Database
 ): PersistedRuntimeEvent[] {
@@ -107,7 +107,7 @@ function chatEventToRuntimeEvents(event: TavernChatEvent): PersistedRuntimeEvent
         case 'message.deleted':
             return [];
         default:
-            throw new Error('Unsupported Tavern chat event type during runtime replay.');
+            throw new Error('Unsupported Tavern chat event type during runtime projection.');
     }
 }
 

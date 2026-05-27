@@ -20,24 +20,17 @@ export function AgentChatCard({
     highlighted: boolean;
     hasActiveReply: boolean;
 }) {
-    const timeline = useChatTimeline({
-        chatId: chat.id,
-        limit: 8,
-    });
-    const previewLines = buildAgentChatPreview(timeline.rows);
-
-    return (
-        <Link
-            className={cn(
-                'group flex aspect-square flex-col rounded-xl border border-border bg-card transition-shadow duration-200 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
-                highlighted
-                    ? 'bg-sky-500/5 shadow-lg shadow-sky-500/10 ring-2 ring-sky-300/80'
-                    : null,
-                hasActiveReply ? 'ring-1 ring-sky-200/80' : null
-            )}
-            id={getChatCardDomId(chat.id)}
-            to={buildChatPath(chat.id)}
-        >
+    const isTavernChat = chat.framework === 'tavern';
+    const className = cn(
+        'group flex aspect-square flex-col rounded-xl border border-border bg-card transition-shadow duration-200',
+        isTavernChat
+            ? 'hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring'
+            : null,
+        highlighted ? 'bg-sky-500/5 shadow-lg shadow-sky-500/10 ring-2 ring-sky-300/80' : null,
+        hasActiveReply ? 'ring-1 ring-sky-200/80' : null
+    );
+    const content = (
+        <>
             <div className="flex items-baseline justify-between gap-2 px-4 pt-3.5 pb-1">
                 <h2
                     className="min-w-0 truncate font-semibold text-foreground text-sm"
@@ -60,25 +53,72 @@ export function AgentChatCard({
             </p>
 
             <div className="flex min-h-0 flex-1 flex-col justify-end px-4 pt-3 pb-3.5">
-                {timeline.isPending ? (
-                    <div className="space-y-2">
-                        <Skeleton className="h-3.5 w-28 rounded-full" />
-                        <Skeleton className="h-3.5 w-full rounded-full" />
-                        <Skeleton className="h-3.5 w-4/5 rounded-full" />
-                    </div>
-                ) : previewLines.length > 0 ? (
-                    <div className="space-y-1">
-                        {previewLines.map((line) => (
-                            <AgentChatPreviewRow key={line.id} line={line} />
-                        ))}
-                    </div>
+                {isTavernChat ? (
+                    <TavernChatPreview chatId={chat.id} />
                 ) : (
-                    <div className="rounded-lg border border-border border-dashed px-3 py-3 text-muted-foreground text-xs">
-                        No synced messages yet.
-                    </div>
+                    <OpenClawChatPreview chat={chat} />
                 )}
             </div>
+        </>
+    );
+
+    return isTavernChat ? (
+        <Link className={className} id={getChatCardDomId(chat.id)} to={buildChatPath(chat.id)}>
+            {content}
         </Link>
+    ) : (
+        <div className={className} id={getChatCardDomId(chat.id)}>
+            {content}
+        </div>
+    );
+}
+
+function TavernChatPreview({ chatId }: { chatId: string }) {
+    const timeline = useChatTimeline({
+        chatId,
+        limit: 8,
+    });
+    const previewLines = buildAgentChatPreview(timeline.rows);
+
+    if (timeline.isPending) {
+        return (
+            <div className="space-y-2">
+                <Skeleton className="h-3.5 w-28 rounded-full" />
+                <Skeleton className="h-3.5 w-full rounded-full" />
+                <Skeleton className="h-3.5 w-4/5 rounded-full" />
+            </div>
+        );
+    }
+
+    if (previewLines.length > 0) {
+        return (
+            <div className="space-y-1">
+                {previewLines.map((line) => (
+                    <AgentChatPreviewRow key={line.id} line={line} />
+                ))}
+            </div>
+        );
+    }
+
+    return (
+        <div className="rounded-lg border border-border border-dashed px-3 py-3 text-muted-foreground text-xs">
+            No synced messages yet.
+        </div>
+    );
+}
+
+function OpenClawChatPreview({ chat }: { chat: ChatListItem }) {
+    const sessionLabel =
+        chat.sessionCount === 1
+            ? '1 contributing session'
+            : `${chat.sessionCount} contributing sessions`;
+
+    return (
+        <div className="rounded-lg border border-border border-dashed px-3 py-3 text-muted-foreground text-xs">
+            <p className="font-medium text-foreground">{chat.source.label}</p>
+            <p className="mt-1">{sessionLabel}</p>
+            <p className="mt-1">Read-only runtime chat reference.</p>
+        </div>
     );
 }
 

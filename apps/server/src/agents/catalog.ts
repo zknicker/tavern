@@ -122,10 +122,8 @@ function toAgent(
 }
 
 export async function listAgents() {
-    const [profiles, activeRuntimeAgents] = await Promise.all([
-        agentProfileStore.listAgentProfiles(),
-        listActiveRuntimeAgents().catch(() => null),
-    ]);
+    const profiles = await agentProfileStore.listAgentProfiles();
+    const activeRuntimeAgents = await listActiveRuntimeAgents();
 
     const profilesByAgentKey = new Map(
         profiles.map((profile) => [`${profile.runtimeId}:${profile.agentId}`, profile] as const)
@@ -493,10 +491,14 @@ async function listActiveRuntimeAgents() {
 
     const client = createAgentRuntimeClientForConnection(connection);
 
-    return {
-        agents: (await client.listAgents()).agents,
-        runtimeId,
-    };
+    try {
+        return {
+            agents: (await client.listAgents()).agents,
+            runtimeId,
+        };
+    } finally {
+        client.close();
+    }
 }
 
 async function getActiveRuntimeAgent(

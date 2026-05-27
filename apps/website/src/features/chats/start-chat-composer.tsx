@@ -5,6 +5,7 @@ import { ChatComposer } from '../../components/ui/chat-composer.tsx';
 import { Icon } from '../../components/ui/icon.tsx';
 import { Button } from '../../components/ui/primitives/button.tsx';
 import { useChatDraftLaunch } from '../../hooks/chats/use-chat-draft-launch.ts';
+import { useAgentRuntimeConnection } from '../../hooks/connections/use-agent-runtime-connection.ts';
 import type { AgentListOutput } from '../../lib/trpc.tsx';
 import { cn } from '../../lib/utils.ts';
 import {
@@ -29,14 +30,17 @@ export function StartChatComposer({
     id?: string;
 }) {
     const launchChatDraft = useChatDraftLaunch();
+    const agentRuntimeConnection = useAgentRuntimeConnection();
     const [prompt, setPrompt] = React.useState('');
     const [mentions, setMentions] = React.useState<Mention[]>([]);
 
     const isPromptReady = prompt.trim().length > 0 && agent !== null;
+    const canSendToGateway = isOpenClawGatewayHealthy(agentRuntimeConnection.connection);
+    const canSubmit = isPromptReady && canSendToGateway;
     const handleSubmit = React.useEffectEvent((event?: React.FormEvent<HTMLFormElement>) => {
         event?.preventDefault();
 
-        if (!(agent && isPromptReady)) {
+        if (!(agent && canSubmit)) {
             return;
         }
 
@@ -83,7 +87,7 @@ export function StartChatComposer({
 
     return (
         <ChatComposer
-            canSubmit={isPromptReady}
+            canSubmit={canSubmit}
             className={cn(isAgentDensity ? 'p-0' : 'mt-8 w-full p-0', className)}
             composerPopover={agent ? mentionComposer.composerPopover : null}
             contentClassName="max-w-none"
@@ -137,5 +141,15 @@ export function StartChatComposer({
             }
             value={prompt}
         />
+    );
+}
+
+function isOpenClawGatewayHealthy(
+    connection: ReturnType<typeof useAgentRuntimeConnection>['connection']
+) {
+    return (
+        connection?.openClawCapabilities.some(
+            (capability) => capability.capability === 'gateway' && capability.state === 'healthy'
+        ) ?? false
     );
 }

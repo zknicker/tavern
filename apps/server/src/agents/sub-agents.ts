@@ -1,13 +1,9 @@
 import { getSessionDisplay } from '../sessions/display.ts';
-import { listSessionRecords, parseSessionRecord } from '../storage/sessions.ts';
+import { listRuntimeSessions } from '../sessions/runtime-sessions.ts';
 import type { GlobalSubAgent } from './contracts.ts';
 
 export async function listSubAgents(): Promise<GlobalSubAgent[]> {
-    const sessionRecords = await listSessionRecords();
-    const sessions = sessionRecords.flatMap((record) => {
-        const session = parseSessionRecord(record);
-        return session ? [session] : [];
-    });
+    const sessions = await listRuntimeSessions();
 
     return sessions.flatMap((session) => {
         if (session.sessionRole !== 'worker' || !session.parentSessionKey) {

@@ -1,7 +1,9 @@
 import { useAgentRuntimeConnection } from '../../../hooks/connections/use-agent-runtime-connection.ts';
+import { useAgentRuntimeCapabilityEvents } from '../../../hooks/connections/use-agent-runtime-connection-events.ts';
 import { AgentRuntimeSettingsPanel } from './agent-runtime-panel.tsx';
 
 export function AgentRuntimeSettings() {
+    useAgentRuntimeCapabilityEvents();
     const runtime = useAgentRuntimeConnection();
 
     if (runtime.status === 'checking') {

@@ -108,12 +108,19 @@ and [Cortex](../../specs/cortex.md).
 
 OpenClaw execution enters Tavern through Runtime ingestion paths. App-facing
 queries read Tavern Runtime storage; they do not reach around Runtime to
-OpenClaw and they do not schedule background jobs when a screen mounts.
+OpenClaw. Gateway-ready sync avoids OpenClaw reference catalogs such as skills,
+models, external chat projections, and session indexes. Skill and model surfaces
+return the latest stored snapshot immediately and refresh in the background when
+the snapshot is missing or stale. OpenClaw events refresh the named agent or
+skill. Session events record the small session row when the event carries it and
+otherwise act as freshness notifications; they do not pull full transcripts or
+graphs during normal chat flow. Session index surfaces use bounded Runtime
+previews. Session inspection uses a bounded recent history window.
 
 | Source | Tavern stores |
 | --- | --- |
 | agent API and events | agent records and activity |
-| session events | session records and execution history |
+| session events | session records and freshness notifications |
 | transcript messages | message and tool-call evidence linked to Tavern chats |
 | automation events | automation runs, delivery state, and related session evidence |
 

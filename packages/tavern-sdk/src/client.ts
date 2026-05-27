@@ -40,7 +40,6 @@ export interface TavernRequestOptions {
 }
 
 export interface TavernEventSocketOptions {
-    afterCursor?: string | null;
     onEvent?: (event: TavernChatEvent) => void;
     onMessage?: (event: MessageEvent<string>) => void;
     recipientId?: string | null;
@@ -260,12 +259,9 @@ class TavernRealtimeClient {
         this.#client = client;
     }
 
-    events(
-        input: { afterCursor?: string | null; limit?: number; recipientId?: string | null } = {}
-    ) {
+    events(input: { limit?: number; recipientId?: string | null } = {}) {
         return this.#client.request<TavernEventList>('/api/events', {
             query: {
-                after_cursor: input.afterCursor,
                 limit: input.limit,
                 recipient_id: input.recipientId,
             },
@@ -274,7 +270,6 @@ class TavernRealtimeClient {
 
     connect(input: TavernEventSocketOptions = {}) {
         const socket = this.#client.socket('/api/events/ws', {
-            after_cursor: input.afterCursor,
             recipient_id: input.recipientId,
         });
 

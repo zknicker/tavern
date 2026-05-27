@@ -2,7 +2,7 @@ import { afterEach, mock, spyOn, test } from 'bun:test';
 import assert from 'node:assert/strict';
 import { listAgentActivity } from '../src/agents/activity.ts';
 import * as agentCatalog from '../src/agents/catalog.ts';
-import * as sessionStorage from '../src/storage/sessions.ts';
+import * as runtimeSessions from '../src/sessions/runtime-sessions.ts';
 
 afterEach(() => {
     mock.restore();
@@ -32,14 +32,14 @@ test('listAgentActivity keeps activity separate from agent records and uses sync
             name: 'Beta Agent',
         }),
     ]);
-    spyOn(sessionStorage, 'listSessionRecords').mockImplementation(async () => [
-        createSessionRecord({
+    spyOn(runtimeSessions, 'listRuntimeSessions').mockImplementation(async () => [
+        createSession({
             agentId: 'agent-1',
             key: 'agent:agent-1:session-1',
             lastActivityAt: '2026-03-13T00:02:00.000Z',
             startedAt: '2026-03-13T00:02:00.000Z',
         }),
-        createSessionRecord({
+        createSession({
             agentId: 'agent-2',
             key: 'agent:agent-2:session-2',
             lastActivityAt: '2026-03-13T00:01:00.000Z',
@@ -63,7 +63,7 @@ test('listAgentActivity keeps activity separate from agent records and uses sync
     ]);
 });
 
-function createSessionRecord(input: {
+function createSession(input: {
     agentId: string;
     key: string;
     lastActivityAt: string;
@@ -71,36 +71,15 @@ function createSessionRecord(input: {
 }) {
     return {
         agentId: input.agentId,
-        deliveryContextJson: null,
-        finishedAt: null,
-        id: input.key,
-        label: 'Ops Session',
-        mode: 'main',
+        chatId: 'tavern:ops',
+        key: input.key,
+        lastActivityAt: input.lastActivityAt,
+        messageCount: 1,
         parentSessionKey: null,
-        payloadJson: JSON.stringify({
-            runtimeSession: {
-                agentId: input.agentId,
-                chatId: 'tavern:ops',
-                key: input.key,
-                lastActivityAt: input.lastActivityAt,
-                messageCount: 1,
-                parentSessionKey: null,
-                platform: 'tavern',
-                sessionId: input.key,
-                sessionRole: 'main',
-                startedAt: input.startedAt,
-                title: 'Ops Session',
-            },
-        }),
-        runtime: 'runtime-1',
+        platform: 'tavern',
         sessionId: input.key,
-        sessionKey: input.key,
-        spawnedBy: null,
-        spawnedByMessageId: null,
-        spawnedByToolCallId: null,
+        sessionRole: 'main',
         startedAt: input.startedAt,
-        status: 'idle',
-        thinkingLevel: null,
-        updatedAt: input.lastActivityAt,
-    } satisfies sessionStorage.SessionRecord;
+        title: 'Ops Session',
+    };
 }

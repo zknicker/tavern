@@ -191,7 +191,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Replay durable events after a cursor. */
+        /** List recent durable events. */
         get: operations["listEvents"];
         put?: never;
         post?: never;
@@ -210,7 +210,7 @@ export interface paths {
         };
         /**
          * Subscribe to event notifications.
-         * @description WebSocket delivery is best effort. Clients recover missed state by replaying /api/events from the last seen cursor.
+         * @description WebSocket delivery is best effort and live-only. Clients recover missed state by refetching durable resources.
          */
         get: operations["connectEvents"];
         put?: never;
@@ -949,7 +949,6 @@ export interface operations {
     listEvents: {
         parameters: {
             query?: {
-                after_cursor?: string;
                 /** @description Include private events addressed to this recipient. */
                 recipient_id?: components["schemas"]["ParticipantId"];
                 limit?: components["parameters"]["Limit"];
@@ -975,7 +974,6 @@ export interface operations {
     connectEvents: {
         parameters: {
             query?: {
-                after_cursor?: string;
                 /** @description Include private events addressed to this recipient. */
                 recipient_id?: components["schemas"]["ParticipantId"];
             };

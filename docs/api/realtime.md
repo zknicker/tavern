@@ -1,7 +1,7 @@
 ---
-summary: Realtime contract for durable chat events, response activity updates, websocket recovery, cursors, ordering, and app stream boundaries.
+summary: Realtime contract for durable chat events, response activity updates, live websocket notifications, reconnect refetch, and app stream boundaries.
 read_when:
-  - changing websocket subscriptions, event cursors, or reconnect behavior
+  - changing websocket subscriptions or reconnect behavior
   - adding a durable event type or response activity signal
   - changing response activity, progress, or realtime recovery semantics
 ---
@@ -11,8 +11,7 @@ read_when:
 Realtime is notification plus recovery.
 
 Runtime SQLite is the source of truth. WebSocket delivery is allowed to drop.
-Clients recover through `GET /api/events?after_cursor=...`, websocket reconnect
-with `after_cursor`, or durable resource reads.
+Clients recover by refetching durable resources through normal Tavern API reads.
 
 ## Components
 
@@ -22,31 +21,30 @@ with `after_cursor`, or durable resource reads.
 | `chat_responses` | Tavern Runtime | Durable response lifecycle |
 | `chat_response_activity` | Tavern Runtime | Durable response work rows |
 | `chat_artifacts` | Tavern Runtime | Durable renderable outputs |
-| Runtime event replay | Tavern Runtime | Reads derived from `chat_events` |
+| Event list | Tavern Runtime | Inspectable recent events derived from `chat_events` |
 | App websocket | Tavern App | UI invalidation and client notifications |
 
 App websocket events are not the durable event source. They can mirror Runtime
 events, but missed app notifications recover through Tavern API reads.
 
-Runtime event replay does not own a second event log. App notifications are
-derived from durable `chat_events`.
+The event list does not own a second event log. App notifications are derived
+from durable `chat_events`.
 
 ## Endpoints
 
 ```http
-GET /api/events?after_cursor=&recipient_id=&limit=
-GET /api/events/ws?after_cursor=&recipient_id=
+GET /api/events?recipient_id=&limit=
+GET /api/events/ws?recipient_id=
 ```
 
-`GET /api/events` returns durable events with `cursor > after_cursor`, ordered
-by cursor ascending. The server clamps `limit`.
+`GET /api/events` returns recent durable events ordered by cursor ascending. The
+server clamps `limit`.
 
-`GET /api/events/ws` upgrades to a WebSocket. On connect, Runtime backfills
-durable events newer than `after_cursor`, then streams live notifications until
-disconnect.
+`GET /api/events/ws` upgrades to a WebSocket and streams live notifications
+until disconnect. It does not backfill missed events.
 
 Private events are delivered only when `recipient_id` matches an event
-recipient. Without a matching `recipient_id`, replay and websocket delivery
+recipient. Without a matching `recipient_id`, event list and websocket delivery
 include public events only.
 
 ## Event Shape
@@ -93,7 +91,7 @@ Automation, memory inspection, Cortex wiki, skill, and stats events use the
 same durable event log when they affect client-visible Runtime state.
 
 Read events are private to the reader. Private events use `private` plus
-`recipients`, and Runtime filters them during replay and websocket delivery.
+`recipients`, and Runtime filters them during event list and websocket delivery.
 
 ## Ephemeral Notifications
 
@@ -110,27 +108,28 @@ Tool progress, assistant preambles, and provider-exposed reasoning summaries
 are not ephemeral notifications in Tavern chat. Runtime persists them as
 responses, response activity, or artifacts, then emits durable events.
 
-## Cursor Recovery
+## Reconnect Recovery
 
-Clients keep the latest applied `cursor`.
+Clients do not rebuild state from missed websocket events. They refetch durable
+resources and let React Query reconcile active views.
 
 Reconnect flow:
 
-1. Connect to `GET /api/events/ws?after_cursor=<cursor>&recipient_id=<id>`.
-2. Apply backfilled durable events in cursor order.
-3. Stream live notifications.
-4. On disconnect, keep the latest applied cursor.
-5. If the replay window is insufficient, refetch durable resources such as chat
-   history, responses, activity, and artifacts.
+1. Keep rendering cached query data while the socket reconnects.
+2. When the websocket reconnects, invalidate active Runtime-backed queries.
+3. Refetch chat history, responses, activity, artifacts, agents, sessions, cron,
+   skills, stats, or other visible resources through their normal API reads.
+4. Resume applying live notifications.
 
 History recovery does not depend on the event log retaining full message
-payloads. If a client sees a cursor gap, it refetches the affected resource.
+payloads. If a client suspects missed events, it refetches the affected
+resource.
 
 ## Ordering
 
 * `chat_events.cursor` is monotonic inside Runtime SQLite.
 * Message timeline order is `chat_messages.sequence`, not event cursor.
-* Event cursor order tells clients what changed.
+* Event cursor order records mutation order for inspection.
 * Sequence order tells clients how to render chat history.
 * Final reconciliation upserts by stable ids.
 
@@ -143,7 +142,6 @@ Product state still comes from:
 
 * `GET /api/chats/{chat_id}/messages`
 * response, activity, and artifact reads for the chat timeline
-* `GET /api/events?after_cursor=...`
 * focused resource reads for automations, memory inspection, the Cortex wiki,
   skills, and stats
 

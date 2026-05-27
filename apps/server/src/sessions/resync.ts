@@ -7,5 +7,9 @@ export async function resyncSession(input: { sessionKey: string }) {
         return null;
     }
 
-    return resolved.client.resyncSession(resolved.targetSession.key);
+    try {
+        return await resolved.client.resyncSession(resolved.targetSession.key);
+    } finally {
+        resolved.client.close();
+    }
 }

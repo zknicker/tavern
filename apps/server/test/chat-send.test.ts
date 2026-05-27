@@ -38,7 +38,7 @@ test('sendTavernChatMessage posts to Runtime', async () => {
             });
         }
 
-        if (url.pathname === '/chats') {
+        if (url.pathname === '/openclaw/chats') {
             return Response.json({ chats: [] });
         }
 
@@ -199,7 +199,7 @@ test('sendTavernChatMessage posts to Runtime', async () => {
         {
             body: null,
             method: 'GET',
-            path: '/chats',
+            path: '/openclaw/chats',
         },
         {
             body: null,
