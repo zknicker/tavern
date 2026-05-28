@@ -11,12 +11,10 @@ const defaultAppLimit = 80;
 const appIconLimit = 12;
 const inventoryTtlMs = 60_000;
 const appIconDataUrlCache = new Map<string, string | null>();
-let cachedInventory:
-    | {
-          entries: LocalAppCandidate[];
-          expiresAt: number;
-      }
-    | null = null;
+let cachedInventory: {
+    entries: LocalAppCandidate[];
+    expiresAt: number;
+} | null = null;
 let refreshPromise: Promise<LocalAppCandidate[]> | null = null;
 
 interface LocalAppCandidate extends AgentRuntimeMacApp {
@@ -129,14 +127,20 @@ async function readAppMetadata(appPath: string): Promise<LocalAppCandidate | nul
         appPath,
     ]);
     const metadata = parseMdlsOutput(output);
-    const label = metadata.kMDItemDisplayName ?? appPath.split('/').at(-1)?.replace(/\.app$/u, '');
+    const label =
+        metadata.kMDItemDisplayName ??
+        appPath
+            .split('/')
+            .at(-1)
+            ?.replace(/\.app$/u, '');
 
     if (!label) {
         return null;
     }
 
     const bundleId =
-        metadata.kMDItemCFBundleIdentifier ?? (await readAppPlistValue(appPath, 'CFBundleIdentifier'));
+        metadata.kMDItemCFBundleIdentifier ??
+        (await readAppPlistValue(appPath, 'CFBundleIdentifier'));
 
     return {
         bundleId: bundleId ?? undefined,
@@ -343,10 +347,14 @@ async function convertIconToDataUrl(iconPath: string) {
     const outputPath = path.join(tempDir, 'icon.png');
 
     try {
-        await execFileAsync('sips', ['-Z', '64', '-s', 'format', 'png', iconPath, '--out', outputPath], {
-            maxBuffer: 1024 * 1024,
-            timeout: 1200,
-        });
+        await execFileAsync(
+            'sips',
+            ['-Z', '64', '-s', 'format', 'png', iconPath, '--out', outputPath],
+            {
+                maxBuffer: 1024 * 1024,
+                timeout: 1200,
+            }
+        );
         const data = await readFile(outputPath);
 
         return `data:image/png;base64,${data.toString('base64')}`;

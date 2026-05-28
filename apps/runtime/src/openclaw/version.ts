@@ -3,7 +3,7 @@ import path from 'node:path';
 
 import { readConfigValue } from '../config';
 
-const defaultOpenClawVersion = '2026.5.20-beta.1';
+const defaultOpenClawVersion = '2026.5.27';
 
 export function resolveManagedOpenClawVersion(startDirectory = process.cwd()): string {
     const configured = readConfigValue('TAVERN_OPENCLAW_VERSION');

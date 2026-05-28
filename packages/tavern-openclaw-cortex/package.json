@@ -8,7 +8,7 @@
     ".": "./index.js"
   },
   "peerDependencies": {
-    "openclaw": "2026.5.20-beta.1"
+    "openclaw": "2026.5.27"
   },
   "peerDependenciesMeta": {
     "openclaw": {

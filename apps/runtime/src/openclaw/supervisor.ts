@@ -1,7 +1,8 @@
 import { type ChildProcess, spawn } from 'node:child_process';
 import net from 'node:net';
 
-import { agentRuntimeRoutes } from '@tavern/api';
+import { type AgentRuntimeCapabilityHealthId, agentRuntimeRoutes } from '@tavern/api';
+import { refreshRuntimeCapabilities } from '../capabilities/store';
 import { log } from '../log';
 import { publishRuntimeEvent } from '../tavern/runtime-events';
 import { syncManagedOpenClawSnapshotsInBackground } from './agent-sync';
@@ -130,12 +131,21 @@ export async function startOpenClawForRuntime(): Promise<ManagedOpenClawHandle> 
     };
 }
 
-function publishCapabilityUpdated(capability: string) {
-    publishRuntimeEvent({
-        capability,
-        timestamp: new Date().toISOString(),
-        type: 'capability.updated',
-    });
+function publishCapabilityUpdated(capability: AgentRuntimeCapabilityHealthId) {
+    void refreshRuntimeCapabilities({ ids: [capability] })
+        .catch((err) => {
+            log.warn('Failed to refresh Runtime capability before publishing update', {
+                capability,
+                err,
+            });
+        })
+        .finally(() => {
+            publishRuntimeEvent({
+                capability,
+                timestamp: new Date().toISOString(),
+                type: 'capability.updated',
+            });
+        });
 }
 
 function spawnOpenClawGateway(

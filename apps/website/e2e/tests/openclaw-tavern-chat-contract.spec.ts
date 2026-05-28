@@ -144,7 +144,7 @@ test('preserves one user message and tool progress across repeated hard reloads'
 }) => {
     test.setTimeout(180_000);
 
-    const prompt = `Reload-heavy tool turn qa ${Date.now()}. Read \`QA_KICKOFF_TASK.md\`, then summarize the evidence.`;
+    const prompt = `Live tool progress qa check. Reload-heavy tool turn qa ${Date.now()}. Run the slow QA command, then reply exactly \`Evidence snippet: # QA kickoff task\`.`;
 
     await page.goto('/dashboard/overview');
 
@@ -211,9 +211,7 @@ async function openActivityIfClosed(activity: ReturnType<Page['getByRole']>) {
 
 async function expectActiveTurnIndicator(page: Page) {
     await expect(
-        page
-            .getByRole('button', { name: /Working for/i })
-            .or(page.getByLabel('Agent is thinking'))
+        page.getByRole('button', { name: /Working for/i }).or(page.getByLabel('Agent is thinking'))
     ).toBeVisible({ timeout: 30_000 });
 }
 

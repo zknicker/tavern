@@ -241,7 +241,7 @@ presentation state.
 
 ## Runtime Events
 
-OpenClaw owns turn state. For OpenClaw `2026.5.20-beta.1`, the Tavern
+OpenClaw owns turn state. For OpenClaw `2026.5.27`, the Tavern
 Messenger plugin maps the channel SDK `replyOptions` callbacks into Tavern API
 writes.
 
@@ -407,7 +407,7 @@ The plugin can keep OpenClaw words internally because it is adapting OpenClaw,
 but the boundary with Tavern Runtime is Tavern API messages, receipts, activity,
 and events.
 
-For OpenClaw `2026.5.20-beta.1`, turn phases adapt into Tavern API writes:
+For OpenClaw `2026.5.27`, turn phases adapt into Tavern API writes:
 
 | OpenClaw callback or phase | Tavern API write | User-facing behavior |
 | --- | --- | --- |

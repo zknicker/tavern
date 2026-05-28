@@ -9,7 +9,12 @@ export function buildTavernTurnContext({ input, runtime, target, timestamp }) {
         text: input.text,
     });
 
-    return runtime.channel.turn.buildContext({
+    const inbound = runtime.channel?.inbound ?? runtime.channel?.turn;
+    if (!inbound?.buildContext) {
+        throw new Error('Tavern Messenger requires OpenClaw channel inbound context helpers.');
+    }
+
+    return inbound.buildContext({
         channel: TAVERN_CHANNEL_ID,
         accountId: DEFAULT_ACCOUNT_ID,
         messageId: input.messageId,

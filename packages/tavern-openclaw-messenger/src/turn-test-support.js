@@ -18,9 +18,9 @@ export function createRuntime({
                 recordInboundSession,
                 resolveStorePath: () => storePath,
             },
-            turn: {
+            inbound: {
                 buildContext: buildContextPayload,
-                runAssembled:
+                dispatchReply:
                     runAssembled ??
                     createRunAssembledFromPrepared({
                         dispatchReplyWithBufferedBlockDispatcher,

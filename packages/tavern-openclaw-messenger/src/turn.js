@@ -76,6 +76,7 @@ function stripPrefix(value, prefix) {
 async function runTavernTurn({ context, input, runId, runtime, startedAt }) {
     const timing = createTurnTimingLogger();
     const cfg = runtime.config.current();
+    const dispatchCfg = withTavernProgressCallbacksEnabled(cfg);
     const timestampMs = Date.parse(input.sentAt);
     const timestamp = Number.isFinite(timestampMs) ? timestampMs : Date.now();
     const storePath = runtime.channel.session.resolveStorePath(cfg.session?.store, {
@@ -97,7 +98,8 @@ async function runTavernTurn({ context, input, runId, runtime, startedAt }) {
         runId,
         startedAt,
     });
-    const ctxPayload = runtime.channel.turn.buildContext({
+    const channelInbound = resolveChannelInboundRuntime(runtime);
+    const ctxPayload = channelInbound.buildContext({
         channel: TAVERN_CHANNEL_ID,
         accountId: DEFAULT_ACCOUNT_ID,
         messageId: input.messageId,
@@ -166,18 +168,18 @@ async function runTavernTurn({ context, input, runId, runtime, startedAt }) {
     let turnResult;
     try {
         timing('runAssembled.start');
-        turnResult = await runtime.channel.turn.runAssembled({
+        turnResult = await channelInbound.dispatchReply({
             agentId: input.agentId,
             channel: TAVERN_CHANNEL_ID,
             accountId: DEFAULT_ACCOUNT_ID,
             routeSessionKey: input.sessionKey,
             storePath,
             ctxPayload,
-            cfg,
+            cfg: dispatchCfg,
             dispatchReplyWithBufferedBlockDispatcher:
                 runtime.channel.reply.dispatchReplyWithBufferedBlockDispatcher,
             delivery: createTavernDeliveryAdapter({
-                cfg,
+                cfg: dispatchCfg,
                 context,
                 input,
                 markFinalReplySent: () => {
@@ -326,6 +328,27 @@ async function runTavernTurn({ context, input, runId, runtime, startedAt }) {
         unregisterActiveTurn();
         unregisterDeliveryContext();
     }
+}
+
+function withTavernProgressCallbacksEnabled(cfg) {
+    return {
+        ...cfg,
+        agents: {
+            ...cfg.agents,
+            defaults: {
+                ...cfg.agents?.defaults,
+                verboseDefault: 'on',
+            },
+        },
+    };
+}
+
+function resolveChannelInboundRuntime(runtime) {
+    const inbound = runtime.channel?.inbound ?? runtime.channel?.turn;
+    if (!inbound?.buildContext || !inbound?.dispatchReply) {
+        throw new Error('Tavern Messenger requires OpenClaw channel inbound runtime helpers.');
+    }
+    return inbound;
 }
 
 function updateTurnCompleted({ context, input, runId, startedAt }) {
