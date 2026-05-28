@@ -4,7 +4,6 @@ import {
     agentRuntimeConnectionSchema,
 } from '../agent-runtime-connection/contracts.ts';
 import { databaseClient } from '../db/index.ts';
-import { getAgentRuntimeCapabilityStatus } from '../storage/agent-runtime-capability-status.ts';
 import { getAgentRuntimeConnection } from '../storage/agent-runtime-connections.ts';
 import { createAgentRuntimeClientForConnection } from './client-factory.ts';
 
@@ -25,7 +24,7 @@ export async function createConfiguredAgentRuntimeClientForRuntimeId(runtimeId: 
         return null;
     }
 
-    if (connection.lastError && !(await hasHealthyStatusCapability(runtimeId))) {
+    if (connection.lastError) {
         return null;
     }
 
@@ -70,15 +69,6 @@ export function getCurrentConfiguredAgentRuntimeConnection():
     } catch {
         return null;
     }
-}
-
-async function hasHealthyStatusCapability(runtimeId: string) {
-    const status = await getAgentRuntimeCapabilityStatus({
-        capability: 'status',
-        runtimeId,
-    });
-
-    return status?.state === 'healthy';
 }
 
 function parseConfiguredAgentRuntimeConnection(record: unknown) {

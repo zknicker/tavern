@@ -1,6 +1,5 @@
 import {
     arraySchema,
-    CORTEX_JOB_NAMES,
     CORTEX_PAGE_TYPES,
     enumSchema,
     integerSchema,
@@ -98,15 +97,6 @@ export function registerTavernCortexTools(api, options = {}) {
     });
 
     api.registerTool({
-        name: 'cortex_status',
-        description: 'Inspect Tavern Cortex storage, page, chunk, encoding, job, and audit status.',
-        parameters: objectSchema({}),
-        async execute(_toolCallId, _params, signal) {
-            return toolJson(await request('/cortex/status', { signal }));
-        },
-    });
-
-    api.registerTool({
         name: 'cortex_list_backlinks',
         description: 'List Cortex wiki links pointing at a page or unresolved wiki target.',
         parameters: objectSchema({
@@ -116,27 +106,6 @@ export function registerTavernCortexTools(api, options = {}) {
             const target = requireString(params?.target, 'target');
             return toolJson(
                 await request(`/cortex/pages/${encodeURIComponent(target)}/backlinks`, { signal })
-            );
-        },
-    });
-
-    api.registerTool({
-        name: 'cortex_run_job',
-        description: 'Run an allowed Tavern Cortex maintenance job.',
-        parameters: objectSchema({
-            job: enumSchema(CORTEX_JOB_NAMES, 'Cortex job name.'),
-        }),
-        async execute(_toolCallId, params, signal) {
-            const job = requireString(params?.job, 'job');
-            if (!CORTEX_JOB_NAMES.includes(job)) {
-                throw new Error(`Unsupported Cortex job: ${job}`);
-            }
-
-            return toolJson(
-                await request(`/cortex/jobs/${encodeURIComponent(job)}/run`, {
-                    method: 'POST',
-                    signal,
-                })
             );
         },
     });

@@ -16,6 +16,12 @@ import {
 } from './dev-stack-shared.mjs';
 import { getTauriEnvironment } from './tauri-environment.mjs';
 
+const shutdownProcessOrder = ['desktop', 'website', 'server', 'runtime'];
+const shutdownTimeoutMs = Number.parseInt(
+    process.env.TAVERN_DEV_SHUTDOWN_TIMEOUT_MS ?? '30000',
+    10
+);
+
 export class DevStackController extends EventEmitter {
     constructor({ mode, ports, repositoryRoot }) {
         super();
@@ -23,6 +29,7 @@ export class DevStackController extends EventEmitter {
         this.ports = ports;
         this.repositoryRoot = repositoryRoot;
         this.processes = new Map();
+        this.backgroundProcesses = new Set();
         this.isStopping = false;
         this.isSteadyState = false;
         this.stopPromise = null;
@@ -166,6 +173,7 @@ export class DevStackController extends EventEmitter {
 
         const child = spawn(command, {
             cwd: this.repositoryRoot,
+            detached: true,
             env,
             shell: true,
             stdio: ['ignore', 'pipe', 'pipe'],
@@ -196,15 +204,18 @@ export class DevStackController extends EventEmitter {
     spawnBackgroundProcess(source, command, env = process.env) {
         const child = spawn(command, {
             cwd: this.repositoryRoot,
+            detached: true,
             env,
             shell: true,
             stdio: ['ignore', 'pipe', 'pipe'],
         });
 
         this.attachProcessOutput(source, child);
+        this.backgroundProcesses.add(child);
 
         return new Promise((resolve) => {
             child.on('exit', (code, signal) => {
+                this.backgroundProcesses.delete(child);
                 if (code !== 0 && !this.isStopping) {
                     this.addLog(source, `prebuild exited (${signal ?? code ?? 'unknown'})`);
                 }
@@ -212,6 +223,7 @@ export class DevStackController extends EventEmitter {
             });
 
             child.on('error', (error) => {
+                this.backgroundProcesses.delete(child);
                 if (!this.isStopping) {
                     this.addLog(source, error.message);
                 }
@@ -340,22 +352,81 @@ export class DevStackController extends EventEmitter {
         this.maybeEnterSteadyState();
     }
 
-    async stop(exitCode = 0) {
+    async stop(exitCode = 0, options = {}) {
         if (this.stopPromise) {
+            if (options.force) {
+                this.signalManagedProcesses('SIGTERM');
+            }
             return this.stopPromise;
         }
         this.isStopping = true;
 
         this.stopPromise = (async () => {
-            for (const child of this.processes.values()) {
-                child.kill('SIGTERM');
+            this.addLog(
+                'tavern',
+                options.signal ? `shutdown requested (${options.signal})` : 'shutdown requested'
+            );
+            this.update((snapshot) => {
+                snapshot.phase = 'stopping';
+            });
+
+            this.signalBackgroundProcesses('SIGTERM');
+
+            for (const source of shutdownProcessOrder) {
+                await this.stopProcess(source);
             }
 
-            await new Promise((resolve) => setTimeout(resolve, 300));
             this.emit('exit', exitCode);
         })();
 
         return this.stopPromise;
+    }
+
+    signalManagedProcesses(signal) {
+        for (const child of this.processes.values()) {
+            signalChildProcessGroup(child, signal);
+        }
+        this.signalBackgroundProcesses(signal);
+    }
+
+    signalBackgroundProcesses(signal) {
+        for (const child of this.backgroundProcesses) {
+            signalChildProcessGroup(child, signal);
+        }
+    }
+
+    async stopProcess(source) {
+        const child = this.processes.get(source);
+
+        if (!child) {
+            return;
+        }
+
+        this.update((snapshot) => {
+            snapshot.processes[source].status = 'stopping';
+        });
+        this.addLog(
+            source,
+            source === 'runtime' ? 'stopping; waiting for managed OpenClaw Gateway' : 'stopping'
+        );
+
+        const stopped = await waitForChildExit(child, () => {
+            signalChildProcessGroup(child, 'SIGTERM');
+        });
+
+        if (!stopped) {
+            this.addLog(
+                source,
+                `shutdown timed out after ${Math.round(shutdownTimeoutMs / 1000)}s; killing`
+            );
+            signalChildProcessGroup(child, 'SIGKILL');
+            await waitForChildExit(child);
+        }
+
+        this.processes.delete(source);
+        this.update((snapshot) => {
+            snapshot.processes[source].status = 'stopped';
+        });
     }
 
     maybeEnterSteadyState() {
@@ -369,6 +440,38 @@ export class DevStackController extends EventEmitter {
         });
         this.emit('steady');
     }
+}
+
+function signalChildProcessGroup(child, signal) {
+    if (!child.pid || child.exitCode !== null || child.signalCode !== null) {
+        return false;
+    }
+
+    try {
+        process.kill(-child.pid, signal);
+        return true;
+    } catch {
+        return child.kill(signal);
+    }
+}
+
+function waitForChildExit(child, beforeWait) {
+    if (child.exitCode !== null || child.signalCode !== null) {
+        return Promise.resolve(true);
+    }
+
+    return new Promise((resolve) => {
+        const timeout = setTimeout(() => {
+            child.off('exit', onExit);
+            resolve(false);
+        }, shutdownTimeoutMs);
+        const onExit = () => {
+            clearTimeout(timeout);
+            resolve(true);
+        };
+        child.once('exit', onExit);
+        beforeWait?.();
+    });
 }
 
 function isStartupComplete(snapshot) {

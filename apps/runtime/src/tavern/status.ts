@@ -1,7 +1,4 @@
-import type { RuntimeStatus } from '@tavern/api';
-import { runtimeProtocolVersion } from '@tavern/api';
-
-import { getManagedOpenClawState } from '../openclaw/state';
+import { type RuntimeHealth, type RuntimeInfo, runtimeProtocolVersion } from '@tavern/api';
 import { nowIso } from './shared';
 
 function getRuntimeName() {
@@ -10,42 +7,19 @@ function getRuntimeName() {
 
 const managedOpenClawRuntimeId = 'tavern-openclaw-managed';
 
-export function getRuntimeStatus(): RuntimeStatus {
-    const managedOpenClaw = getManagedOpenClawState();
-    const capabilities = [
-        'agentFiles',
-        'agentTurns',
-        'agents',
-        'chats',
-        'cron',
-        'cronRuns',
-        'logs',
-        'models',
-        'sessionEvents',
-        'skills',
-        'knowledgebase',
-        'memory',
-        'tasks',
-        ...(managedOpenClaw.tavernPluginPath ? ['tavernPlugin'] : []),
-    ] as RuntimeStatus['identity']['capabilities'];
-
+export function getRuntimeHealth(): RuntimeHealth {
     return {
-        health: {
-            ok: true,
-            status: 'healthy',
-            timestamp: nowIso(),
-        },
-        identity: {
-            capabilities,
-            info: {
-                name: getRuntimeName(),
-                protocolVersion: runtimeProtocolVersion,
-                agentRuntimeId: managedOpenClawRuntimeId,
-                version: process.env.TAVERN_RUNTIME_VERSION?.trim() || '0.2.0',
-            },
-        },
-        managedOpenClaw: {
-            gatewayReady: managedOpenClaw.gatewayReady,
-        },
+        ok: true,
+        status: 'healthy',
+        timestamp: nowIso(),
+    };
+}
+
+export function getRuntimeInfo(): RuntimeInfo {
+    return {
+        agentRuntimeId: managedOpenClawRuntimeId,
+        name: getRuntimeName(),
+        protocolVersion: runtimeProtocolVersion,
+        version: process.env.TAVERN_RUNTIME_VERSION?.trim() || '0.2.0',
     };
 }

@@ -5,7 +5,7 @@ be reachable while one capability is degraded, unavailable, unauthorized, or ret
 Tavern keeps synced records visible and attributes failures to the narrowest affected
 capability.
 
-This spec models OpenClaw capability failures directly.
+This spec models capability failures through Tavern Runtime.
 
 ## Workstream
 
@@ -30,10 +30,10 @@ build one-off status handling for each page.
 The full implementation has three parts:
 
 - a common capability status contract
-- adapter/server plumbing that records status for every runtime capability Tavern depends on
+- Runtime checks that record status for every capability Tavern depends on
 - diagnostics and product reads that reference the stored status without blocking synced data
 
-The first slice should still be small enough to land safely, but it should use the same table,
+The first slice should still be small enough to land safely, but it should use the same Runtime
 contracts, helpers, and API shape that the full implementation uses. A narrow slice is only a
 delivery strategy, not a different design.
 
@@ -143,9 +143,11 @@ The adapter should classify failures close to the gateway request or mapper that
 It does not own long-term persistence. It returns data or throws typed failures with enough context
 for the server to update capability status.
 
-## Server Behavior
+## Runtime And Server Behavior
 
-Tavern stores or exposes capability state alongside Tavern Runtime health and primitive sync state.
+Tavern Runtime stores capability state alongside Runtime health and primitive sync state.
+The app backend reads this state through Runtime `/capabilities`; it does not run checks or store
+Runtime capability health locally.
 
 - A failed primitive sync updates that primitive's sync state only.
 - A failed `cronRuns` sync does not mark `cron` job config as failed.
@@ -154,9 +156,9 @@ Tavern stores or exposes capability state alongside Tavern Runtime health and pr
 - Runtime edits still fail loudly when the capability needed for the edit is unavailable.
 - Product reads continue to return existing records with freshness and error metadata.
 
-## Database Storage
+## Runtime Storage
 
-Tavern should store current capability status in a dedicated table instead of overloading existing
+Tavern Runtime stores current capability status in a dedicated table instead of overloading
 runtime-backed tables or `sync_state`.
 
 Current related tables:
@@ -168,29 +170,27 @@ Current related tables:
 - Runtime-backed tables such as `agents`, `chats`, `session_runs`, `session_messages`, `cron_jobs`, and
   `cron_runs` store runtime-owned records and row-level sync timestamps.
 
-Add a table shaped like `agent_runtime_capability_status`:
+Runtime owns a table shaped like `runtime_capabilities`:
 
 | Column | Purpose |
 | --- | --- |
-| `runtime_id` | stable managed runtime namespace |
 | `capability` | stable capability id such as `skills` or `cronRuns` |
 | `state` | `unknown`, `healthy`, `degraded`, `unavailable`, or `unauthorized` |
 | `checked_at` | latest check or observed failure time |
 | `last_healthy_at` | latest successful check time |
 | `reason` | short user-safe reason |
-| `method` | runtime RPC method or event stream, when known |
-| `error_code` | stable adapter/server error code, when known |
 | `technical_message` | concise diagnostic message |
 | `metadata_json` | optional structured diagnostic details |
 | `updated_at` | row update timestamp |
 
-Use `(runtime_id, capability)` as the primary key. The table stores current status, not an event
-log. Historical debugging can use job logs, server logs, or a later status history table if needed.
+Use `capability` as the primary key within the Runtime database. The table stores current status,
+not an event log. Historical debugging uses Runtime job runs, server logs, or a later status
+history table if needed.
 
 Runtime diagnostics compose:
 
-- one `agent_runtime_connections` row for the managed runtime namespace and coarse health state
-- all `agent_runtime_capability_status` rows for that runtime
+- one `agent_runtime_connections` row for the managed runtime namespace and coarse connection state
+- all Runtime `/capabilities` rows for that runtime
 - relevant `sync_state` rows for primitive freshness
 - runtime-backed records and row `last_synced_at` values for product data
 
@@ -200,11 +200,10 @@ list/detail reads should not blank existing synced data because a capability sta
 
 ## Event Invalidation
 
-Capability status changes use their own app event. They do not reuse runtime health or product data
+Capability status changes come from Runtime capability events. They do not reuse product data
 events.
 
-- Runtime health changes emit the runtime health event and refresh the runtime settings surface.
-- Capability status checks emit the runtime capability event and refresh capability badges.
+- Runtime capability changes refresh the runtime settings surface.
 - Product data changes emit the owning domain event, such as `skill.onUpdate`, `agent.onUpdate`, or
   `cron.onUpdate`.
 
@@ -228,17 +227,14 @@ path. A polished dashboard view belongs to a later diagnostics workstream.
 
 ## Implementation Order
 
-1. Define the capability ids, states, and record shape in the runtime contract or server contract
-   that owns runtime status.
-2. Add the `agent_runtime_capability_status` table and storage helpers.
-3. Add OpenClaw adapter helpers that convert gateway and mapper failures into typed capability
-   failures.
-4. Update server runtime calls and sync paths to save capability status on success and failure.
+1. Define the capability ids, states, and record shape in the Runtime contract.
+2. Add the Runtime `runtime_capabilities` table and storage helpers.
+3. Add Runtime capability checks that convert dependency failures into typed capability failures.
+4. Expose the stored state through Runtime `/capabilities`.
 5. Wire the first slice: `status`, `models`, `skills`, and `cronRuns`.
-6. Expose the stored state through the runtime status or diagnostics API.
-7. Add adapter and server tests for the first slice.
-8. Repeat the same pattern across the remaining capability table.
-9. Add minimal app visibility only if the API path cannot otherwise be verified.
+6. Add Runtime, server client, and app rendering tests for the first slice.
+7. Repeat the same pattern across the remaining capability table.
+8. Add minimal app visibility only if the API path cannot otherwise be verified.
 
 ## Tests
 

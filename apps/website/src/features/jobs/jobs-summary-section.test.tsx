@@ -22,6 +22,7 @@ test('JobsSummarySection renders each operational job with its cadence and next 
                             waiting: 0,
                         },
                         description: 'Syncs OpenRouter usage totals for Settings.',
+                        disabledReason: null,
                         displayName: 'Sync OpenRouter Usage',
                         latestRun: {
                             attemptsMade: 0,
@@ -58,4 +59,40 @@ test('JobsSummarySection renders each operational job with its cadence and next 
     } finally {
         Date.now = now;
     }
+});
+
+test('JobsSummarySection renders disabled job reasons inline', () => {
+    const markup = renderToStaticMarkup(
+        <JobsSummarySection
+            jobs={[
+                {
+                    availability: 'disabled',
+                    counts: {
+                        active: 0,
+                        completed: 0,
+                        delayed: 0,
+                        failed: 0,
+                        waiting: 0,
+                    },
+                    description: 'Generates embeddings for missing or stale Cortex chunks.',
+                    disabledReason: 'Required capability missing: embedding model.',
+                    displayName: 'Generate Cortex Embeddings',
+                    latestRun: null,
+                    queueName: 'cortex-generate-embeddings',
+                    schedule: {
+                        everyMs: 900_000,
+                        kind: 'interval',
+                        nextRunAt: null,
+                        runOnStart: true,
+                    },
+                    slug: 'cortex-generate-embeddings',
+                },
+            ]}
+            onSelectJob={() => undefined}
+        />
+    );
+
+    assert.match(markup, /Generate Cortex Embeddings/);
+    assert.match(markup, /Disabled/);
+    assert.match(markup, /Required capability missing: embedding model/);
 });

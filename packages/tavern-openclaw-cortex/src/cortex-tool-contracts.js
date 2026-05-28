@@ -11,16 +11,12 @@ export const CORTEX_PAGE_TYPES = [
     'task',
 ];
 
-export const CORTEX_JOB_NAMES = ['ingest', 'recall-index', 'lint', 'repair', 'export', 'health'];
-
 export const TAVERN_CORTEX_TOOL_NAMES = [
     'cortex_search',
     'cortex_get_page',
     'cortex_capture',
     'cortex_recall',
-    'cortex_status',
     'cortex_list_backlinks',
-    'cortex_run_job',
 ];
 
 export function objectSchema(properties) {

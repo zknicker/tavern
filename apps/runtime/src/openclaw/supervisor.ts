@@ -16,7 +16,7 @@ import {
 } from './state';
 
 export interface ManagedOpenClawHandle {
-    stop(): void;
+    stop(options?: { force?: boolean }): Promise<void>;
 }
 
 export async function startOpenClawForRuntime(): Promise<ManagedOpenClawHandle> {
@@ -112,7 +112,7 @@ export async function startOpenClawForRuntime(): Promise<ManagedOpenClawHandle> 
     startGateway('initial');
 
     return {
-        stop() {
+        async stop(options?: { force?: boolean }) {
             stopping = true;
             if (restartTimer) {
                 clearTimeout(restartTimer);
@@ -121,9 +121,10 @@ export async function startOpenClawForRuntime(): Promise<ManagedOpenClawHandle> 
             if (markManagedOpenClawGatewayStopped()) {
                 publishCapabilityUpdated('gateway');
             }
-            if (child) {
-                stopChild(child);
-                child = null;
+            const gateway = child;
+            child = null;
+            if (gateway) {
+                await stopChild(gateway, options);
             }
         },
     };
@@ -186,11 +187,30 @@ function buildRuntimeApiBaseUrl() {
     return `http://127.0.0.1:${process.env.TAVERN_RUNTIME_PORT || 4310}`;
 }
 
-function stopChild(child: ChildProcess) {
+async function stopChild(child: ChildProcess, options?: { force?: boolean }) {
     if (child.exitCode !== null || child.signalCode !== null) {
         return;
     }
-    child.kill('SIGTERM');
+
+    await new Promise<void>((resolve) => {
+        const startedAt = Date.now();
+        const interval = setInterval(() => {
+            log.info('Still waiting for managed OpenClaw Gateway to stop', {
+                elapsedSeconds: Math.round((Date.now() - startedAt) / 1000),
+            });
+        }, 5000);
+        child.once('exit', () => {
+            clearInterval(interval);
+            resolve();
+        });
+
+        const signal = options?.force ? 'SIGKILL' : 'SIGTERM';
+        log.info('Stopping managed OpenClaw Gateway', { pid: child.pid, signal });
+        if (child.exitCode !== null || child.signalCode !== null || !child.kill(signal)) {
+            clearInterval(interval);
+            resolve();
+        }
+    });
 }
 
 async function waitForGateway(port: number, child: ChildProcess) {

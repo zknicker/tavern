@@ -21,7 +21,6 @@ const [{ ensureDatabaseSchema }, { databaseClient }, runtimeSync, agentProfileSt
 ensureDatabaseSchema();
 
 test.beforeEach(() => {
-    databaseClient.exec('delete from agent_runtime_capability_status');
     databaseClient.exec('delete from agent_profiles');
     databaseClient.exec('delete from agent_runtime_connections');
     databaseClient.exec('delete from agents');

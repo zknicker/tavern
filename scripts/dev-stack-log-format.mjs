@@ -31,6 +31,7 @@ const statusMeta = {
     running: { color: theme.ok, icon: '✓', label: 'ready' },
     starting: { color: theme.warning, icon: '◐', label: 'starting' },
     stopped: { color: theme.muted, icon: '·', label: 'stopped' },
+    stopping: { color: theme.warning, icon: '◐', label: 'stopping' },
     waiting: { color: theme.muted, icon: '·', label: 'waiting' },
 };
 
@@ -203,7 +204,9 @@ function readyServiceLine(label, value, colorize) {
 }
 
 function shouldPrintStatus(status) {
-    return status === 'starting' || status === 'error' || status === 'stopped';
+    return (
+        status === 'starting' || status === 'stopping' || status === 'error' || status === 'stopped'
+    );
 }
 
 function getStatusValue(source, status, snapshot) {

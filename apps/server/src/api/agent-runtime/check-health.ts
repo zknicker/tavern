@@ -4,7 +4,6 @@ import {
     confirmAgentRuntimeConnection,
     getAgentRuntimeConnection,
 } from '../../agent-runtime-connection/service.ts';
-import { listAgentRuntimeCapabilityStatuses } from '../../storage/agent-runtime-capability-status.ts';
 import { emitAgentRuntimeUpdated } from '../invalidation-events.ts';
 import { publicProcedure } from '../trpc.ts';
 
@@ -23,8 +22,7 @@ export const checkAgentRuntimeHealthRoute = publicProcedure.mutation(async () =>
 
     if (await confirmAgentRuntimeConnection()) {
         const refreshedConnection = await getAgentRuntimeConnection();
-        const runtimeId = refreshedConnection?.id ?? connection.id;
-        const capabilities = await listAgentRuntimeCapabilityStatuses(runtimeId);
+        const capabilities = refreshedConnection?.capabilities ?? connection.capabilities;
 
         refreshAgentRuntimeEventSync();
         emitAgentRuntimeUpdated();
@@ -39,7 +37,7 @@ export const checkAgentRuntimeHealthRoute = publicProcedure.mutation(async () =>
     }
 
     const refreshedConnection = await getAgentRuntimeConnection();
-    const capabilities = await listAgentRuntimeCapabilityStatuses(connection.id);
+    const capabilities = refreshedConnection?.capabilities ?? connection.capabilities;
 
     refreshAgentRuntimeEventSync();
     emitAgentRuntimeUpdated();

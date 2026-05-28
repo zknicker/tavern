@@ -10,6 +10,7 @@ export function writeCortexAudit(
         kind: string;
         recordRefs: string[];
         sourceRefs: CortexSourceRef[];
+        metadata?: Record<string, unknown>;
         status: 'error' | 'skipped' | 'success';
         summary: string;
     }
@@ -17,13 +18,14 @@ export function writeCortexAudit(
     const id = createCortexId('ctxa');
     db.prepare(
         `INSERT INTO cortex_audit_events
-         (id, kind, status, record_refs_json, source_refs_json, summary, created_at)
-         VALUES ($id, $kind, $status, $recordRefs, $sourceRefs, $summary, $createdAt)`
+         (id, kind, status, record_refs_json, source_refs_json, metadata_json, summary, created_at)
+         VALUES ($id, $kind, $status, $recordRefs, $sourceRefs, $metadata, $summary, $createdAt)`
     ).run(
         namedParams({
             createdAt: nowIso(),
             id,
             kind: input.kind,
+            metadata: JSON.stringify(input.metadata ?? {}),
             recordRefs: JSON.stringify(input.recordRefs),
             sourceRefs: JSON.stringify(input.sourceRefs),
             status: input.status,

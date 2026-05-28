@@ -24,6 +24,7 @@ export function ModelAccessSettings() {
         modelAccessQuery.error?.message ?? null,
         'Codex status is unavailable.'
     );
+
     if (modelAccessQuery.isLoading) {
         return (
             <CardFrame>

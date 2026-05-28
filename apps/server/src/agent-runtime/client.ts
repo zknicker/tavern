@@ -8,6 +8,9 @@ import {
     type AgentRuntimeArchiveCron,
     type AgentRuntimeArchiveSkill,
     type AgentRuntimeBinding,
+    type AgentRuntimeCapabilityHealth,
+    type AgentRuntimeCapabilityHealthId,
+    type AgentRuntimeCapabilityHealthList,
     type AgentRuntimeChat,
     type AgentRuntimeCreateAgent,
     type AgentRuntimeCreateCron,
@@ -16,15 +19,17 @@ import {
     type AgentRuntimeCronList,
     type AgentRuntimeCronRun,
     type AgentRuntimeInstallSkill,
+    type AgentRuntimeJobDetail,
+    type AgentRuntimeJobList,
+    type AgentRuntimeJobSlug,
     type AgentRuntimeMacAppList,
-    type AgentRuntimeMemorySettings,
-    type AgentRuntimeMemoryStatus,
     type AgentRuntimeMessageAccepted,
     type AgentRuntimeModelAccess,
     type AgentRuntimeModels,
     type AgentRuntimeOpenClawConfigSnapshot,
     type AgentRuntimeOpenRouterSettings,
     type AgentRuntimeRunCron,
+    type AgentRuntimeRunJob,
     type AgentRuntimeSaveAgentFile,
     type AgentRuntimeSaveModels,
     type AgentRuntimeSaveOpenRouterSettings,
@@ -37,7 +42,6 @@ import {
     type AgentRuntimeSessionResync,
     type AgentRuntimeSkill,
     type AgentRuntimeSkillSummary,
-    type AgentRuntimeStatus,
     type AgentRuntimeUpdateCron,
     type AgentRuntimeUpsertBinding,
     type AgentRuntimeWorkspaceInstructions,
@@ -52,6 +56,9 @@ import {
     agentRuntimeArchiveSkillSchema,
     agentRuntimeBindingListSchema,
     agentRuntimeBindingSchema,
+    agentRuntimeCapabilityHealthIdSchema,
+    agentRuntimeCapabilityHealthListSchema,
+    agentRuntimeCapabilityHealthSchema,
     agentRuntimeChatListSchema,
     agentRuntimeCreateAgentSchema,
     agentRuntimeCreateCronSchema,
@@ -62,9 +69,10 @@ import {
     agentRuntimeCronSchema,
     agentRuntimeErrorSchema,
     agentRuntimeInstallSkillSchema,
+    agentRuntimeJobDetailSchema,
+    agentRuntimeJobListSchema,
+    agentRuntimeJobSlugSchema,
     agentRuntimeMacAppListSchema,
-    agentRuntimeMemorySettingsSchema,
-    agentRuntimeMemoryStatusSchema,
     agentRuntimeMessageAcceptedSchema,
     agentRuntimeModelAccessSchema,
     agentRuntimeModelsSchema,
@@ -74,8 +82,8 @@ import {
     agentRuntimeOpenRouterSettingsSchema,
     agentRuntimeRoutes,
     agentRuntimeRunCronSchema,
+    agentRuntimeRunJobSchema,
     agentRuntimeSaveAgentFileSchema,
-    agentRuntimeSaveMemorySettingsSchema,
     agentRuntimeSaveModelsSchema,
     agentRuntimeSaveOpenRouterSettingsSchema,
     agentRuntimeSaveWorkspaceInstructionsSchema,
@@ -87,7 +95,6 @@ import {
     agentRuntimeSessionResyncSchema,
     agentRuntimeSkillListSchema,
     agentRuntimeSkillSchema,
-    agentRuntimeStatusSchema,
     agentRuntimeUpdateCronSchema,
     agentRuntimeUpsertBindingSchema,
     agentRuntimeWorkspaceInstructionsSchema,
@@ -100,8 +107,10 @@ import {
     type CortexPageList,
     type CortexRecallInput,
     type CortexRecallResult,
+    type CortexSaveSettings,
     type CortexSearchInput,
     type CortexSearchResult,
+    type CortexSettings,
     type CortexStatus,
     cortexBacklinkListSchema,
     cortexCaptureInputSchema,
@@ -111,8 +120,10 @@ import {
     cortexPageSchema,
     cortexRecallInputSchema,
     cortexRecallResultSchema,
+    cortexSaveSettingsSchema,
     cortexSearchInputSchema,
     cortexSearchResultSchema,
+    cortexSettingsSchema,
     cortexStatusSchema,
 } from '@tavern/api';
 import { z } from 'zod';
@@ -149,30 +160,31 @@ export interface TavernAgentRuntimeClient {
     deleteSkill(skillId: string): Promise<AgentRuntimeArchiveSkill>;
     getAgentConfig(agentId: string): Promise<AgentRuntimeAgent>;
     getAgentFile(agentId: string, path: string): Promise<AgentRuntimeAgentFileContent>;
+    getCapability(id: AgentRuntimeCapabilityHealthId): Promise<AgentRuntimeCapabilityHealth>;
     getCortexPage(slugOrId: string): Promise<CortexPage | null>;
+    getCortexSettings(): Promise<CortexSettings>;
     getCortexStatus(): Promise<CortexStatus>;
     getCronJob(jobId: string): Promise<AgentRuntimeCron>;
-    getMemorySettings(): Promise<AgentRuntimeMemorySettings>;
-    getMemoryStatus(): Promise<AgentRuntimeMemoryStatus>;
     getModelAccess(): Promise<AgentRuntimeModelAccess>;
     getModels(): Promise<AgentRuntimeModels>;
     getOpenClawConfig(): Promise<AgentRuntimeOpenClawConfigSnapshot>;
-    getOpenClawGatewayStatus(): Promise<AgentRuntimeStatus>;
     getOpenRouterSettings(): Promise<AgentRuntimeOpenRouterSettings>;
+    getRuntimeJob(slug: AgentRuntimeJobSlug): Promise<AgentRuntimeJobDetail | null>;
     getSessionGraph(sessionKey: string): Promise<AgentRuntimeSessionGraph>;
     getSessionPrompt(sessionKey: string): Promise<AgentRuntimeSessionPrompt | null>;
     getSkillConfig(skillId: string): Promise<AgentRuntimeSkill>;
-    getStatus(): Promise<AgentRuntimeStatus>;
     installSkill(input: AgentRuntimeInstallSkill): Promise<AgentRuntimeSkill>;
     listAgentFiles(agentId: string): Promise<AgentRuntimeAgentFileList>;
     listAgents(): Promise<{ agents: AgentRuntimeAgent[] }>;
     listBindings(): Promise<{ bindings: AgentRuntimeBinding[] }>;
+    listCapabilities(): Promise<AgentRuntimeCapabilityHealthList>;
     listChats(): Promise<{ chats: AgentRuntimeChat[] }>;
     listCortexBacklinks(slugOrId: string): Promise<CortexBacklinkList>;
     listCortexPages(): Promise<CortexPageList>;
     listCronJobs(): Promise<AgentRuntimeCronList>;
     listCronRuns(jobId?: string): Promise<{ runs: AgentRuntimeCronRun[] }>;
     listMacApps(options?: { limit?: number; query?: string }): Promise<AgentRuntimeMacAppList>;
+    listRuntimeJobs(): Promise<AgentRuntimeJobList>;
     listSessionMessages(
         sessionKey: string,
         options?: AgentRuntimeListSessionMessagesOptions
@@ -189,17 +201,17 @@ export interface TavernAgentRuntimeClient {
         input: AgentRuntimeCreateMessage
     ): Promise<AgentRuntimeMessageAccepted>;
     recallCortex(input: CortexRecallInput): Promise<CortexRecallResult>;
+    refreshCapability(id: AgentRuntimeCapabilityHealthId): Promise<AgentRuntimeCapabilityHealth>;
     resyncSession(sessionKey: string): Promise<AgentRuntimeSessionResync>;
     runCortexJob(job: CortexJobName): Promise<CortexJobRun>;
     runCronJob(jobId: string, input?: AgentRuntimeRunCron): Promise<AgentRuntimeCronRun>;
+    runRuntimeJob(slug: AgentRuntimeJobSlug): Promise<AgentRuntimeRunJob>;
     saveAgentFile(
         agentId: string,
         path: string,
         input: AgentRuntimeSaveAgentFile
     ): Promise<AgentRuntimeAgentFileContent>;
-    saveMemorySettings(
-        input: Omit<AgentRuntimeMemorySettings, 'updatedAt'>
-    ): Promise<AgentRuntimeMemorySettings>;
+    saveCortexSettings(input: CortexSaveSettings): Promise<CortexSettings>;
     saveModels(input: AgentRuntimeSaveModels): Promise<AgentRuntimeModels>;
     saveOpenRouterSettings(
         input: AgentRuntimeSaveOpenRouterSettings
@@ -498,19 +510,116 @@ class HttpTavernAgentRuntimeClient implements TavernAgentRuntimeClient {
         return agentRuntimeCronRunSchema.parse(await response.json());
     }
 
-    async getMemorySettings() {
-        const response = await fetch(`${this.#baseUrl}${agentRuntimeRoutes.memorySettings}`);
+    async listRuntimeJobs() {
+        const response = await fetch(`${this.#baseUrl}${agentRuntimeRoutes.jobs}`);
 
         if (!response.ok) {
             await readErrorResponse(response);
         }
 
-        return agentRuntimeMemorySettingsSchema.parse(await response.json());
+        return agentRuntimeJobListSchema.parse(await response.json());
     }
 
-    async saveMemorySettings(input: Omit<AgentRuntimeMemorySettings, 'updatedAt'>) {
-        const payload = agentRuntimeSaveMemorySettingsSchema.parse(input);
-        const response = await fetch(`${this.#baseUrl}${agentRuntimeRoutes.memorySettings}`, {
+    async listCapabilities() {
+        const response = await fetch(`${this.#baseUrl}${agentRuntimeRoutes.capabilities}`);
+
+        if (!response.ok) {
+            await readErrorResponse(response);
+        }
+
+        return agentRuntimeCapabilityHealthListSchema.parse(await response.json());
+    }
+
+    async getCapability(id: AgentRuntimeCapabilityHealthId) {
+        const response = await fetch(
+            `${this.#baseUrl}${agentRuntimeRoutes.capability(
+                agentRuntimeCapabilityHealthIdSchema.parse(id)
+            )}`
+        );
+
+        if (!response.ok) {
+            await readErrorResponse(response);
+        }
+
+        return agentRuntimeCapabilityHealthSchema.parse(await response.json());
+    }
+
+    async refreshCapability(id: AgentRuntimeCapabilityHealthId) {
+        const response = await fetch(
+            `${this.#baseUrl}${agentRuntimeRoutes.capabilityRefresh(
+                agentRuntimeCapabilityHealthIdSchema.parse(id)
+            )}`,
+            {
+                headers: {
+                    [agentRuntimeMutationHeaders.origin]: agentRuntimeMutationOrigins.tavern,
+                },
+                method: 'POST',
+            }
+        );
+
+        if (!response.ok) {
+            await readErrorResponse(response);
+        }
+
+        return agentRuntimeCapabilityHealthSchema.parse(await response.json());
+    }
+
+    async getRuntimeJob(slug: AgentRuntimeJobSlug) {
+        const response = await fetch(
+            `${this.#baseUrl}${agentRuntimeRoutes.job(agentRuntimeJobSlugSchema.parse(slug))}`
+        );
+
+        if (response.status === 404) {
+            return null;
+        }
+        if (!response.ok) {
+            await readErrorResponse(response);
+        }
+
+        return agentRuntimeJobDetailSchema.parse(await response.json());
+    }
+
+    async runRuntimeJob(slug: AgentRuntimeJobSlug) {
+        const response = await fetch(
+            `${this.#baseUrl}${agentRuntimeRoutes.jobRun(agentRuntimeJobSlugSchema.parse(slug))}`,
+            {
+                headers: {
+                    [agentRuntimeMutationHeaders.origin]: agentRuntimeMutationOrigins.tavern,
+                },
+                method: 'POST',
+            }
+        );
+
+        if (!response.ok) {
+            await readErrorResponse(response);
+        }
+
+        return agentRuntimeRunJobSchema.parse(await response.json());
+    }
+
+    async getCortexStatus() {
+        const response = await fetch(`${this.#baseUrl}${agentRuntimeRoutes.cortexStatus}`);
+
+        if (!response.ok) {
+            await readErrorResponse(response);
+        }
+
+        return cortexStatusSchema.parse(await response.json());
+    }
+
+    async getCortexSettings() {
+        const response = await fetch(`${this.#baseUrl}${agentRuntimeRoutes.cortexSettings}`);
+
+        if (!response.ok) {
+            await readErrorResponse(response);
+        }
+
+        return cortexSettingsSchema.parse(await response.json());
+    }
+
+    async saveCortexSettings(input: CortexSaveSettings) {
+        const payload = cortexSaveSettingsSchema.parse(input);
+        const response = await fetch(`${this.#baseUrl}${agentRuntimeRoutes.cortexSettings}`, {
             body: JSON.stringify(payload),
             headers: {
                 'content-type': 'application/json',
@@ -523,27 +632,7 @@ class HttpTavernAgentRuntimeClient implements TavernAgentRuntimeClient {
             await readErrorResponse(response);
         }
 
-        return agentRuntimeMemorySettingsSchema.parse(await response.json());
-    }
-
-    async getMemoryStatus() {
-        const response = await fetch(`${this.#baseUrl}${agentRuntimeRoutes.memoryStatus}`);
-
-        if (!response.ok) {
-            await readErrorResponse(response);
-        }
-
-        return agentRuntimeMemoryStatusSchema.parse(await response.json());
-    }
-
-    async getCortexStatus() {
-        const response = await fetch(`${this.#baseUrl}${agentRuntimeRoutes.cortexStatus}`);
-
-        if (!response.ok) {
-            await readErrorResponse(response);
-        }
-
-        return cortexStatusSchema.parse(await response.json());
+        return cortexSettingsSchema.parse(await response.json());
     }
 
     async listCortexPages() {
@@ -882,26 +971,6 @@ class HttpTavernAgentRuntimeClient implements TavernAgentRuntimeClient {
         }
 
         return agentRuntimeArchiveBindingSchema.parse(await response.json());
-    }
-
-    async getStatus() {
-        const response = await fetch(`${this.#baseUrl}${agentRuntimeRoutes.status}`);
-
-        if (!response.ok) {
-            await readErrorResponse(response);
-        }
-
-        return agentRuntimeStatusSchema.parse(await response.json());
-    }
-
-    async getOpenClawGatewayStatus() {
-        const response = await fetch(`${this.#baseUrl}${agentRuntimeRoutes.openClawGatewayStatus}`);
-
-        if (!response.ok) {
-            await readErrorResponse(response);
-        }
-
-        return agentRuntimeStatusSchema.parse(await response.json());
     }
 
     async listSessions() {

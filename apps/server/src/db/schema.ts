@@ -1,5 +1,4 @@
 export * from './schema/agent-profiles.ts';
-export * from './schema/agent-runtime-capability-status.ts';
 export * from './schema/agent-runtime-connections.ts';
 export * from './schema/agent-thought-snapshots.ts';
 export * from './schema/agents.ts';
@@ -7,7 +6,6 @@ export * from './schema/cache.ts';
 export * from './schema/cron.ts';
 export * from './schema/jobs.ts';
 export * from './schema/logs.ts';
-export * from './schema/memory-settings.ts';
 export * from './schema/messaging-bindings.ts';
 export * from './schema/models.ts';
 export * from './schema/openclaw-config-snapshots.ts';

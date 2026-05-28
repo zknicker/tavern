@@ -1,16 +1,12 @@
 import { TRPCError } from '@trpc/server';
-import { recordCapabilitySuccess } from '../../agent-runtime/capability-status.ts';
 import { refreshAgentRuntimeEventSync } from '../../agent-runtime/event-sync.ts';
 import { agentRuntimeConnectionInputSchema } from '../../agent-runtime-connection/contracts.ts';
-import { refreshOpenClawGatewayCapability } from '../../agent-runtime-connection/openclaw-gateway-capability.ts';
 import {
     checkAgentRuntimeConnection,
     getAgentRuntimeConnection,
     saveAgentRuntimeConnection,
 } from '../../agent-runtime-connection/service.ts';
-import { recordTavernPluginCapability } from '../../agent-runtime-connection/tavern-plugin-capability.ts';
 import { syncMessagingBindingsToAgentRuntime } from '../../messaging-platform/service.ts';
-import { listAgentRuntimeCapabilityStatuses } from '../../storage/agent-runtime-capability-status.ts';
 import {
     emitAgentInvalidationCascade,
     emitAgentRuntimeUpdated,
@@ -64,20 +60,6 @@ export const connectAgentRuntimeRoute = publicProcedure
                 id: input.id,
                 lastError: null,
             });
-            if (connection) {
-                await recordCapabilitySuccess({
-                    capability: 'status',
-                    method: 'health/status',
-                    runtimeId: connection.id,
-                });
-                await recordTavernPluginCapability({
-                    runtimeId: connection.id,
-                    status: checked.status,
-                });
-                await refreshOpenClawGatewayCapability(connection.id);
-                connection.capabilities = await listAgentRuntimeCapabilityStatuses(connection.id);
-            }
-
             refreshAgentRuntimeEventSync();
             void syncMessagingBindingsToAgentRuntime().catch((error) => {
                 console.warn('[tavern] failed to sync runtime messaging bindings', error);

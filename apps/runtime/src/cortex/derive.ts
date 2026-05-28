@@ -1,11 +1,5 @@
 import type { Database } from '../db/sqlite';
 import { namedParams } from '../db/sqlite';
-import {
-    cortexEncodingDimensions,
-    cortexEncodingModel,
-    cortexEncodingProvider,
-    encodeCortexText,
-} from './encoding';
 import { createCortexId, hashText } from './ids';
 import { extractWikiLinks, splitCortexChunks } from './markdown';
 import { findPageRow } from './read';
@@ -47,13 +41,51 @@ function replaceLinks(db: Database, page: PageRow, now: string): void {
 }
 
 function replaceChunks(db: Database, page: PageRow, now: string): void {
-    db.prepare('DELETE FROM cortex_chunks WHERE page_id = ?').run(page.id);
+    const currentKeys = new Set<string>();
     for (const chunk of splitCortexChunks({
         body: page.body,
         compiledTruth: page.compiled_truth,
     })) {
-        const chunkId = createCortexId('ctxc');
+        currentKeys.add(`${chunk.section}:${chunk.ordinal}`);
         const textHash = hashText(chunk.text);
+        const existing = db
+            .prepare(
+                `SELECT id
+                 FROM cortex_chunks
+                 WHERE page_id = $pageId
+                   AND source_id IS NULL
+                   AND section = $section
+                   AND ordinal = $ordinal
+                 LIMIT 1`
+            )
+            .get(
+                namedParams({
+                    ordinal: chunk.ordinal,
+                    pageId: page.id,
+                    section: chunk.section,
+                })
+            ) as { id: string } | null;
+
+        if (existing) {
+            db.prepare(
+                `UPDATE cortex_chunks
+                 SET text = $text,
+                     token_count = $tokenCount,
+                     text_hash = $textHash,
+                     updated_at = $updatedAt
+                 WHERE id = $id`
+            ).run(
+                namedParams({
+                    id: existing.id,
+                    text: chunk.text,
+                    textHash,
+                    tokenCount: chunk.tokenCount,
+                    updatedAt: now,
+                })
+            );
+            continue;
+        }
+
         db.prepare(
             `INSERT INTO cortex_chunks
              (id, page_id, section, ordinal, text, token_count, text_hash, created_at, updated_at)
@@ -61,7 +93,7 @@ function replaceChunks(db: Database, page: PageRow, now: string): void {
         ).run(
             namedParams({
                 createdAt: now,
-                id: chunkId,
+                id: createCortexId('ctxc'),
                 ordinal: chunk.ordinal,
                 pageId: page.id,
                 section: chunk.section,
@@ -71,28 +103,18 @@ function replaceChunks(db: Database, page: PageRow, now: string): void {
                 updatedAt: now,
             })
         );
-        insertEncoding(db, { chunkId, text: chunk.text, textHash, now });
     }
-}
 
-function insertEncoding(
-    db: Database,
-    input: { chunkId: string; now: string; text: string; textHash: string }
-): void {
-    db.prepare(
-        `INSERT INTO cortex_encodings
-         (id, chunk_id, provider, model, dimensions, vector_json, input_text_hash, embedded_at)
-         VALUES ($id, $chunkId, $provider, $model, $dimensions, $vectorJson, $textHash, $embeddedAt)`
-    ).run(
-        namedParams({
-            chunkId: input.chunkId,
-            dimensions: cortexEncodingDimensions,
-            embeddedAt: input.now,
-            id: createCortexId('ctxe'),
-            model: cortexEncodingModel,
-            provider: cortexEncodingProvider,
-            textHash: input.textHash,
-            vectorJson: JSON.stringify(encodeCortexText(input.text)),
-        })
-    );
+    for (const existing of db
+        .prepare(
+            `SELECT id, section, ordinal
+             FROM cortex_chunks
+             WHERE page_id = ?
+               AND source_id IS NULL`
+        )
+        .all(page.id) as Array<{ id: string; ordinal: number; section: string }>) {
+        if (!currentKeys.has(`${existing.section}:${existing.ordinal}`)) {
+            db.prepare('DELETE FROM cortex_chunks WHERE id = ?').run(existing.id);
+        }
+    }
 }

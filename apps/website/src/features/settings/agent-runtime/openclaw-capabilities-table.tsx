@@ -1,3 +1,5 @@
+import { Refresh04Icon } from '@hugeicons-pro/core-solid-rounded';
+import { Icon } from '../../../components/ui/icon.tsx';
 import {
     Tooltip,
     TooltipContent,
@@ -13,6 +15,7 @@ type CapabilityState = RuntimeCapability['state'];
 const capabilityLabels: Partial<Record<RuntimeCapability['capability'], string>> = {
     computerUse: 'computer use',
     cronRuns: 'cron runs',
+    embeddingModel: 'embedding model',
     mentions: 'mentions',
 };
 
@@ -120,10 +123,14 @@ export function OpenClawCapabilitiesSummary({
     capabilities,
     emptyLabel = 'No capability checks recorded.',
     onCapabilityClick,
+    onCapabilityRefresh,
+    refreshingCapability,
 }: {
     capabilities: RuntimeConnection['capabilities'];
     emptyLabel?: string;
     onCapabilityClick?: (capability: RuntimeCapability) => void;
+    onCapabilityRefresh?: (capability: RuntimeCapability) => void;
+    refreshingCapability?: RuntimeCapability['capability'] | null;
 }) {
     if (capabilities.length === 0) {
         return (
@@ -143,16 +150,53 @@ export function OpenClawCapabilitiesSummary({
 
                     return (
                         <div
-                            className="flex min-w-0 items-baseline justify-between gap-3"
+                            className="group flex min-w-0 items-center justify-between gap-3"
                             key={capability.capability}
                         >
-                            <dt className="min-w-0 text-sm">
+                            <dt className="flex h-5 min-w-0 items-center gap-1 text-sm">
+                                <span className="inline-flex size-4 shrink-0 items-center justify-center">
+                                    {onCapabilityRefresh ? (
+                                        <Tooltip>
+                                            <TooltipTrigger
+                                                render={
+                                                    <button
+                                                        aria-label={`Refresh ${getCapabilityLabel(capability)}`}
+                                                        className="inline-flex size-4 items-center justify-center rounded-sm outline-none hover:bg-background hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+                                                        disabled={
+                                                            refreshingCapability ===
+                                                            capability.capability
+                                                        }
+                                                        onClick={() =>
+                                                            onCapabilityRefresh(capability)
+                                                        }
+                                                        type="button"
+                                                    />
+                                                }
+                                            >
+                                                <span
+                                                    aria-hidden="true"
+                                                    className={`size-2 rounded-full ${refreshingCapability === capability.capability ? 'hidden' : 'group-hover:hidden'} ${getStateDotClass(capability.state)}`}
+                                                />
+                                                <Icon
+                                                    className={`size-3 ${refreshingCapability === capability.capability ? 'block animate-spin' : 'hidden group-hover:block'}`}
+                                                    icon={Refresh04Icon}
+                                                />
+                                            </TooltipTrigger>
+                                            <TooltipContent>Refresh capability</TooltipContent>
+                                        </Tooltip>
+                                    ) : (
+                                        <span
+                                            aria-hidden="true"
+                                            className={`size-2 rounded-full ${getStateDotClass(capability.state)}`}
+                                        />
+                                    )}
+                                </span>
                                 <Tooltip>
                                     <TooltipTrigger
                                         render={
                                             <button
                                                 aria-disabled={!isClickable}
-                                                className={`inline-flex min-w-0 items-center gap-2 rounded-sm outline-none focus-visible:ring-2 focus-visible:ring-ring ${isClickable ? 'cursor-pointer' : 'cursor-default'}`}
+                                                className={`inline-flex min-w-0 rounded-sm outline-none focus-visible:ring-2 focus-visible:ring-ring ${isClickable ? 'cursor-pointer' : 'cursor-default'}`}
                                                 onClick={() => {
                                                     if (isClickable) {
                                                         onCapabilityClick?.(capability);
@@ -172,10 +216,6 @@ export function OpenClawCapabilitiesSummary({
                                             />
                                         }
                                     >
-                                        <span
-                                            aria-hidden="true"
-                                            className={`size-2 shrink-0 rounded-full ${getStateDotClass(capability.state)}`}
-                                        />
                                         <span className="truncate font-mono text-foreground">
                                             {getCapabilityLabel(capability)}
                                         </span>
@@ -185,7 +225,7 @@ export function OpenClawCapabilitiesSummary({
                                     </TooltipContent>
                                 </Tooltip>
                             </dt>
-                            <dd className="shrink-0 font-mono text-meta text-muted-foreground tabular-nums">
+                            <dd className="flex h-5 shrink-0 items-center gap-1 font-mono text-meta text-muted-foreground tabular-nums">
                                 <RelativeTime value={capability.checkedAt} />
                             </dd>
                         </div>

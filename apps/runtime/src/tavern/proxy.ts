@@ -32,9 +32,6 @@ async function dispatch(context: RouteContext) {
     const method = request.method;
     const segments = url.pathname.split('/').filter(Boolean).map(decodeURIComponent);
 
-    if (method === 'GET' && url.pathname === agentRuntimeRoutes.openClawGatewayStatus) {
-        return await client.getStatus();
-    }
     if (method === 'GET' && url.pathname === agentRuntimeRoutes.agents) {
         return await client.listAgents();
     }
@@ -73,9 +70,6 @@ async function dispatch(context: RouteContext) {
     }
     if (url.pathname.startsWith('/openclaw/sessions')) {
         return await dispatchSessions(context, segments);
-    }
-    if (url.pathname.startsWith('/memory')) {
-        return await dispatchMemory(context);
     }
     return undefined;
 }
@@ -240,19 +234,6 @@ async function dispatchSessions({ client, request, url }: RouteContext, segments
     }
     if (request.method === 'POST' && segments[3] === 'resync') {
         return await client.resyncSession(sessionKey);
-    }
-    return undefined;
-}
-
-async function dispatchMemory({ client, request, url }: RouteContext) {
-    if (request.method === 'GET' && url.pathname === agentRuntimeRoutes.memorySettings) {
-        return await client.getMemorySettings();
-    }
-    if (request.method === 'PUT' && url.pathname === agentRuntimeRoutes.memorySettings) {
-        return await client.saveMemorySettings(await readJson(request));
-    }
-    if (request.method === 'GET' && url.pathname === agentRuntimeRoutes.memoryStatus) {
-        return await client.getMemoryStatus();
     }
     return undefined;
 }

@@ -4,13 +4,6 @@ import type {
     AgentRuntimeCapability,
     AgentRuntimeCapabilityState,
 } from '../agent-runtime-connection/contracts.ts';
-import { emitAgentRuntimeCapabilityUpdated } from '../api/invalidation-events.ts';
-import {
-    getAgentRuntimeCapabilityStatus,
-    markAgentRuntimeCapabilityHealthy,
-    type SaveAgentRuntimeCapabilityStatusInput,
-    saveAgentRuntimeCapabilityStatus,
-} from '../storage/agent-runtime-capability-status.ts';
 import { AgentRuntimeRequestError } from './client.ts';
 
 interface CapabilityCallInput {
@@ -27,50 +20,33 @@ interface CapabilityFailure {
 }
 
 export async function recordCapabilitySuccess(input: CapabilityCallInput) {
-    const existing = await getAgentRuntimeCapabilityStatus(input);
-    const next = await markAgentRuntimeCapabilityHealthy({
-        capability: input.capability,
-        method: input.method,
-        runtimeId: input.runtimeId,
-    });
-    emitCapabilityUpdatedForChange(existing, next);
-    return next;
+    void input;
 }
 
 export async function recordCapabilityFailure(input: CapabilityCallInput & { error: unknown }) {
-    const failure = classifyCapabilityFailure(input.error);
-    const existing = await getAgentRuntimeCapabilityStatus(input);
-
-    const next = await saveAgentRuntimeCapabilityStatus({
-        capability: input.capability,
-        errorCode: failure.errorCode,
-        method: input.method,
-        reason: failure.reason,
-        runtimeId: input.runtimeId,
-        state: failure.state,
-        technicalMessage: failure.technicalMessage,
-    });
-    emitCapabilityUpdatedForChange(existing, next);
-    return next;
+    void input.capability;
+    void input.method;
+    void input.runtimeId;
+    return classifyCapabilityFailure(input.error);
 }
 
-export async function recordCapabilityStatus(input: SaveAgentRuntimeCapabilityStatusInput) {
-    const existing = await getAgentRuntimeCapabilityStatus(input);
-    const next = await saveAgentRuntimeCapabilityStatus(input);
-    emitCapabilityUpdatedForChange(existing, next);
-    return next;
+export async function recordCapabilityStatus(input: {
+    capability: AgentRuntimeCapability;
+    runtimeId: string;
+    state: AgentRuntimeCapabilityState;
+    [key: string]: unknown;
+}) {
+    void input;
 }
 
 export async function withCapabilityStatus<T>(
-    input: CapabilityCallInput,
+    _input: CapabilityCallInput,
     run: () => Promise<T>
 ): Promise<T> {
     try {
-        const result = await run();
-        await recordCapabilitySuccess(input);
-        return result;
+        return await run();
     } catch (error) {
-        await recordCapabilityFailure({ ...input, error });
+        classifyCapabilityFailure(error);
         throw error;
     }
 }
@@ -137,27 +113,6 @@ export function classifyCapabilityFailure(error: unknown): CapabilityFailure {
         state: 'degraded',
         technicalMessage: message,
     };
-}
-
-function emitCapabilityUpdatedForChange(
-    existing: Awaited<ReturnType<typeof getAgentRuntimeCapabilityStatus>>,
-    next: Awaited<ReturnType<typeof saveAgentRuntimeCapabilityStatus>>
-) {
-    if (!existing) {
-        emitAgentRuntimeCapabilityUpdated();
-        return;
-    }
-
-    if (
-        existing.state !== next.state ||
-        existing.errorCode !== next.errorCode ||
-        existing.metadataJson !== next.metadataJson ||
-        existing.method !== next.method ||
-        existing.reason !== next.reason ||
-        existing.technicalMessage !== next.technicalMessage
-    ) {
-        emitAgentRuntimeCapabilityUpdated();
-    }
 }
 
 function readErrorCode(error: unknown) {

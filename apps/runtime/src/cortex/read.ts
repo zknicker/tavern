@@ -6,19 +6,15 @@ import type {
     CortexRecallResult,
     CortexSearchInput,
     CortexSearchResult,
+    CortexSettings,
     CortexSourceRef,
     CortexStatus,
 } from '@tavern/api';
 import { DATA_DIR, RUNTIME_ROOT } from '../config';
 import type { Database } from '../db/sqlite';
+import { namedParams } from '../db/sqlite';
 import { writeCortexAudit } from './audit';
-import {
-    cortexEncodingDimensions,
-    cortexEncodingModel,
-    cortexEncodingProvider,
-    cosineSimilarity,
-    encodeCortexText,
-} from './encoding';
+import { embedCortexText } from './encoding';
 import {
     type ChunkEncodingRow,
     type ClaimRow,
@@ -35,6 +31,8 @@ import {
     toLink,
     toPageSummary,
 } from './rows';
+import { getCortexSettings } from './settings';
+import type { CortexVectorDatabase } from './vector-db/types';
 
 export const cortexWikiPath = `${RUNTIME_ROOT}/cortex/wiki`;
 export const cortexDatabasePath = `${DATA_DIR}/runtime.db`;
@@ -63,17 +61,19 @@ export function getCortexPage(db: Database, slugOrId: string): CortexPage | null
     return row ? toPage(db, row) : null;
 }
 
-export function searchCortex(db: Database, input: CortexSearchInput): CortexSearchResult {
+export async function searchCortex(
+    db: Database,
+    input: CortexSearchInput,
+    vectorDatabase: CortexVectorDatabase
+): Promise<CortexSearchResult> {
     const queryTerms = tokenize(input.query);
-    const queryVector = encodeCortexText(input.query);
     const rows = db
         .prepare(
             `SELECT p.id AS page_id,
                     p.frontmatter_json,
                     p.title || ' ' || p.slug || ' ' || p.compiled_truth || ' ' || p.body AS score_text,
                     c.text_hash,
-                    e.input_text_hash,
-                    e.vector_json
+                    e.input_text_hash
              FROM cortex_pages p
              LEFT JOIN cortex_chunks c ON c.page_id = p.id
              LEFT JOIN cortex_encodings e ON e.chunk_id = c.id
@@ -82,16 +82,41 @@ export function searchCortex(db: Database, input: CortexSearchInput): CortexSear
         )
         .all() as SearchRow[];
     const scores = new Map<string, number>();
+    let vectorDegradedReason: string | null = null;
 
     for (const row of rows) {
         if (!matchesScope(row.frontmatter_json, input.scope)) {
             continue;
         }
         const lexical = scoreLexical(row.score_text, queryTerms);
-        const vector = isCurrentEncoding(row)
-            ? cosineSimilarity(JSON.parse(row.vector_json) as number[], queryVector)
-            : 0;
-        scores.set(row.page_id, Math.max(scores.get(row.page_id) ?? 0, lexical + vector));
+        scores.set(row.page_id, Math.max(scores.get(row.page_id) ?? 0, lexical));
+    }
+
+    try {
+        const queryEmbedding = await embedCortexText(db, input.query);
+        if (queryEmbedding) {
+            const vectorHits = await vectorDatabase.search({
+                dimensions: queryEmbedding.dimensions,
+                limit: Math.max(input.limit * 4, input.limit),
+                model: queryEmbedding.model,
+                provider: queryEmbedding.provider,
+                vector: queryEmbedding.vector,
+            });
+
+            for (const hit of vectorHits) {
+                if (!isCurrentVectorHit(db, hit.chunkId, hit.textHash)) {
+                    continue;
+                }
+                const page = findPageRow(db, hit.pageId);
+                if (!(page && matchesScope(page.frontmatter_json, input.scope))) {
+                    continue;
+                }
+                scores.set(hit.pageId, Math.max(scores.get(hit.pageId) ?? 0, hit.score));
+            }
+        }
+    } catch (error) {
+        vectorDegradedReason = error instanceof Error ? error.message : 'Vector search failed.';
+        // Lexical search remains available when the derived vector index is degraded.
     }
 
     const hits = Array.from(scores.entries())
@@ -105,7 +130,7 @@ export function searchCortex(db: Database, input: CortexSearchInput): CortexSear
                 : [];
         });
 
-    return { hits, query: input.query };
+    return { hits, query: input.query, vectorDegradedReason };
 }
 
 type SearchRow = ChunkEncodingRow & {
@@ -116,13 +141,17 @@ type SearchRow = ChunkEncodingRow & {
 
 type CortexSearchScope = NonNullable<CortexSearchInput['scope']>;
 
-function isCurrentEncoding(row: SearchRow): row is SearchRow & { vector_json: string } {
-    return Boolean(
-        row.vector_json &&
-            row.input_text_hash &&
-            row.text_hash &&
-            row.input_text_hash === row.text_hash
-    );
+function isCurrentVectorHit(db: Database, chunkId: string, textHash: string): boolean {
+    const row = db
+        .prepare(
+            `SELECT c.text_hash, e.input_text_hash
+             FROM cortex_chunks c
+             JOIN cortex_encodings e ON e.chunk_id = c.id
+             WHERE c.id = ?
+             LIMIT 1`
+        )
+        .get(chunkId) as { input_text_hash: string; text_hash: string } | null;
+    return Boolean(row && row.text_hash === textHash && row.input_text_hash === row.text_hash);
 }
 
 function matchesScope(frontmatterJson: string, scope: CortexSearchInput['scope']): boolean {
@@ -153,10 +182,21 @@ function toRecord(value: unknown): Record<string, unknown> {
         : {};
 }
 
-export function recallCortex(db: Database, input: CortexRecallInput): CortexRecallResult {
-    const result = searchCortex(db, input);
+export async function recallCortex(
+    db: Database,
+    input: CortexRecallInput,
+    vectorDatabase: CortexVectorDatabase
+): Promise<CortexRecallResult> {
+    const mode = input.mode ?? getCortexSettings(db).recall.mode;
+    const result = await searchCortex(db, resolveRecallSearchInput(input, mode), vectorDatabase);
     const auditId = writeCortexAudit(db, {
         kind: 'recall',
+        metadata: {
+            effectiveMode: mode,
+            expandedQueries: [],
+            requestedMode: input.mode ?? null,
+            vectorDegradedReason: result.vectorDegradedReason,
+        },
         recordRefs: result.hits.map((hit) => hit.page.id),
         sourceRefs: [],
         status: 'success',
@@ -168,9 +208,28 @@ export function recallCortex(db: Database, input: CortexRecallInput): CortexReca
             ...hit,
             evidence: getCortexPage(db, hit.page.id)?.sourceRefs ?? [],
         })),
+        mode,
         query: result.query,
+        requestedMode: input.mode ?? null,
+        vectorDegradedReason: result.vectorDegradedReason,
     };
 }
+
+function resolveRecallSearchInput(
+    input: CortexRecallInput,
+    mode: CortexRecallResult['mode']
+): CortexSearchInput {
+    return {
+        ...input,
+        limit: input.limit ?? recallModeLimits[mode],
+    };
+}
+
+const recallModeLimits: Record<CortexRecallResult['mode'], number> = {
+    balanced: 25,
+    conservative: 10,
+    tokenmax: 50,
+};
 
 export function listCortexBacklinks(db: Database, target: string): CortexBacklinkList {
     const links = db
@@ -184,7 +243,11 @@ export function listCortexBacklinks(db: Database, target: string): CortexBacklin
     return { links: links.map(toLink), target };
 }
 
-export function getCortexStatus(db: Database): CortexStatus {
+export async function getCortexStatus(
+    db: Database,
+    vectorDatabase: CortexVectorDatabase
+): Promise<CortexStatus> {
+    const cortexSettings = getCortexSettings(db);
     return {
         auditCount: count(db, 'cortex_audit_events'),
         captureCount: count(db, 'cortex_captures'),
@@ -192,23 +255,41 @@ export function getCortexStatus(db: Database): CortexStatus {
         claimCount: count(db, 'cortex_claims'),
         databasePath: cortexDatabasePath,
         encoding: {
-            currentCount: currentEncodingCount(db),
-            dimensions: cortexEncodingDimensions,
-            model: cortexEncodingModel,
-            provider: cortexEncodingProvider,
-            staleCount: staleEncodingCount(db),
+            currentCount: currentEncodingCount(db, cortexSettings.embedding),
+            dimensions: cortexSettings.embedding.dimensions,
+            model: cortexSettings.embedding.model,
+            provider: cortexSettings.embedding.provider,
+            staleCount: staleEncodingCount(db, cortexSettings.embedding),
             totalCount: count(db, 'cortex_encodings'),
         },
         jobRuns: listRecentJobRuns(db),
         lastCaptureAt: lastAuditAt(db, 'capture'),
         lastRecallAt: lastAuditAt(db, 'recall'),
-        lastRepairAt: lastAuditAt(db, 'job.repair'),
+        lastMaintenanceAt: lastAuditAt(db, 'job.maintenance'),
         linkCount: count(db, 'cortex_links'),
         pageCount: count(db, 'cortex_pages'),
         sourceCount: count(db, 'cortex_sources'),
         timelineEntryCount: count(db, 'cortex_timeline_entries'),
+        vectorIndex: await withEmbeddingDegradedReason(db, vectorDatabase),
         wikiPath: resolveCortexWikiPath(),
     };
+}
+
+async function withEmbeddingDegradedReason(
+    db: Database,
+    vectorDatabase: CortexVectorDatabase
+): Promise<CortexStatus['vectorIndex']> {
+    const status = await vectorDatabase.status();
+    if (status.degradedReason) {
+        return status;
+    }
+    if (!getCortexSettings(db).embedding.apiKeyConfigured) {
+        return {
+            ...status,
+            degradedReason: 'OpenAI API key is not configured.',
+        };
+    }
+    return status;
 }
 
 export function findPageRow(db: Database, slugOrId: string): PageRow | null {
@@ -235,9 +316,64 @@ export function toPage(db: Database, row: PageRow): CortexPage {
         compiledTruth: row.compiled_truth,
         createdAt: row.created_at,
         frontmatter: readJsonRecord(row.frontmatter_json),
+        indexing: getPageIndexing(db, row.id),
         links: listPageLinks(db, row.id),
         sourceRefs: readJsonArray<CortexSourceRef>(row.source_refs_json),
         timeline: listTimeline(db, row.id),
+    };
+}
+
+function getPageIndexing(db: Database, pageId: string): CortexPage['indexing'] {
+    const embedding = getCortexSettings(db).embedding;
+    const row = db
+        .prepare(
+            `SELECT COUNT(c.id) AS chunkCount,
+                    SUM(CASE WHEN e.id IS NOT NULL AND e.input_text_hash = c.text_hash THEN 1 ELSE 0 END) AS currentEmbeddingCount,
+                    SUM(CASE WHEN e.id IS NULL THEN 1 ELSE 0 END) AS missingEmbeddingCount,
+                    SUM(CASE WHEN e.id IS NOT NULL AND e.input_text_hash != c.text_hash THEN 1 ELSE 0 END) AS staleEmbeddingCount,
+                    MAX(e.embedded_at) AS lastEmbeddedAt
+             FROM cortex_chunks c
+             LEFT JOIN cortex_encodings e
+               ON e.chunk_id = c.id
+              AND e.provider = $provider
+              AND e.model = $model
+              AND e.dimensions = $dimensions
+             WHERE c.page_id = $pageId`
+        )
+        .get(
+            namedParams({
+                dimensions: embedding.dimensions,
+                model: embedding.model,
+                pageId,
+                provider: embedding.provider,
+            })
+        ) as {
+        chunkCount: number;
+        currentEmbeddingCount: number | null;
+        lastEmbeddedAt: string | null;
+        missingEmbeddingCount: number | null;
+        staleEmbeddingCount: number | null;
+    };
+    const chunkCount = row.chunkCount;
+    const currentEmbeddingCount = row.currentEmbeddingCount ?? 0;
+    const missingEmbeddingCount = row.missingEmbeddingCount ?? 0;
+    const staleEmbeddingCount = row.staleEmbeddingCount ?? 0;
+    const status =
+        chunkCount === 0
+            ? 'not-indexed'
+            : missingEmbeddingCount === 0 && staleEmbeddingCount === 0
+              ? 'ready'
+              : 'needs-indexing';
+
+    return {
+        chunkCount,
+        currentEmbeddingCount,
+        embeddingModel: embedding.model,
+        embeddingProvider: embedding.provider,
+        lastEmbeddedAt: row.lastEmbeddedAt,
+        missingEmbeddingCount,
+        staleEmbeddingCount,
+        status,
     };
 }
 
@@ -295,29 +431,35 @@ function count(db: Database, table: string): number {
     return (db.prepare(`SELECT COUNT(*) AS count FROM ${table}`).get() as { count: number }).count;
 }
 
-function currentEncodingCount(db: Database): number {
+function currentEncodingCount(db: Database, embedding: CortexSettings['embedding']): number {
     return (
         db
             .prepare(
                 `SELECT COUNT(*) AS count
              FROM cortex_encodings e
              JOIN cortex_chunks c ON c.id = e.chunk_id
-             WHERE e.input_text_hash = c.text_hash`
+             WHERE e.provider = ?
+               AND e.model = ?
+               AND e.dimensions = ?
+               AND e.input_text_hash = c.text_hash`
             )
-            .get() as { count: number }
+            .get(embedding.provider, embedding.model, embedding.dimensions) as { count: number }
     ).count;
 }
 
-function staleEncodingCount(db: Database): number {
+function staleEncodingCount(db: Database, embedding: CortexSettings['embedding']): number {
     return (
         db
             .prepare(
                 `SELECT COUNT(*) AS count
              FROM cortex_encodings e
              JOIN cortex_chunks c ON c.id = e.chunk_id
-             WHERE e.input_text_hash != c.text_hash`
+             WHERE e.provider != ?
+                OR e.model != ?
+                OR e.dimensions != ?
+                OR e.input_text_hash != c.text_hash`
             )
-            .get() as { count: number }
+            .get(embedding.provider, embedding.model, embedding.dimensions) as { count: number }
     ).count;
 }
 

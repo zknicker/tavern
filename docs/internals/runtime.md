@@ -125,8 +125,17 @@ previews. Session inspection uses a bounded recent history window.
 | automation events | automation runs, delivery state, and related session evidence |
 
 Provider usage imports and other scheduled operational tasks use Runtime jobs.
+Runtime jobs run through Bunqueue, store run metadata in `runtime_job_runs`, and
+expose list, detail, and manual-run routes under `/jobs` so the app can audit
+background work without recreating job status from domain status endpoints.
 Routine agent, chat, session, cron, and config freshness comes from writes and
 events that update Tavern Runtime storage directly.
+
+Runtime-owned capability checks live in
+[runtime-capabilities.md](runtime-capabilities.md). Runtime stores capability
+health and exposes it through the Admin API. Jobs and app surfaces can use
+capability health to decide whether dependent functionality is available. The
+app renders capability health; it does not own Runtime capability checks.
 
 Cortex maintenance does not sync from OpenClaw. Runtime-owned maintenance owns
 capture, embedding repair, timeline and link maintenance, and Cortex audit

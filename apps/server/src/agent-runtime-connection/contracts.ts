@@ -3,22 +3,29 @@ import { connectionStateSchema } from '../contracts/shared.ts';
 
 export const agentRuntimeCapabilitySchema = z.enum([
     'tavernPlugin',
+    'agentFiles',
+    'agentTurns',
     'agents',
+    'chatTargets',
     'chats',
     'computerUse',
     'cron',
     'cronRuns',
     'events',
     'gateway',
+    'knowledgebase',
     'logs',
+    'embeddingModel',
     'messages',
     'memory',
     'mentions',
     'models',
     'sessions',
+    'sessionEvents',
     'skills',
     'skillMaterialization',
     'status',
+    'tasks',
 ]);
 
 export const agentRuntimeCapabilityStateSchema = z.enum([
@@ -31,7 +38,7 @@ export const agentRuntimeCapabilityStateSchema = z.enum([
 
 export const agentRuntimeCapabilityStatusSchema = z.object({
     capability: agentRuntimeCapabilitySchema,
-    checkedAt: z.string().datetime(),
+    checkedAt: z.string().datetime().nullable(),
     errorCode: z.string().nullable(),
     lastHealthyAt: z.string().datetime().nullable(),
     metadataJson: z.string().nullable(),
@@ -40,7 +47,7 @@ export const agentRuntimeCapabilityStatusSchema = z.object({
     runtimeId: z.string().trim().min(1),
     state: agentRuntimeCapabilityStateSchema,
     technicalMessage: z.string().nullable(),
-    updatedAt: z.string().datetime(),
+    updatedAt: z.string().datetime().nullable(),
 });
 
 export const agentRuntimeConnectionAuthSchema = z
@@ -69,7 +76,6 @@ export const agentRuntimeConnectionSchema = z.object({
     lastError: z.string().nullable(),
     lastSyncedAt: z.string().nullable(),
     name: z.string().trim().min(1),
-    openClawCapabilities: z.array(agentRuntimeCapabilityStatusSchema).default([]),
     runtimeCapabilities: z.array(agentRuntimeCapabilityStatusSchema).default([]),
     source: z.enum(['environment', 'saved']),
 });

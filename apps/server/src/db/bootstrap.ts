@@ -16,20 +16,6 @@ const schemaStatements = [
         created_at TEXT NOT NULL,
         updated_at TEXT NOT NULL
     );`,
-    `CREATE TABLE IF NOT EXISTS agent_runtime_capability_status (
-        runtime_id TEXT NOT NULL,
-        capability TEXT NOT NULL,
-        state TEXT NOT NULL,
-        checked_at TEXT NOT NULL,
-        last_healthy_at TEXT,
-        reason TEXT,
-        method TEXT,
-        error_code TEXT,
-        technical_message TEXT,
-        metadata_json TEXT,
-        updated_at TEXT NOT NULL,
-        PRIMARY KEY (runtime_id, capability)
-    );`,
     `CREATE TABLE IF NOT EXISTS tavern_vault_secrets (
         id TEXT PRIMARY KEY NOT NULL,
         secret_json TEXT NOT NULL,
@@ -239,11 +225,6 @@ const schemaStatements = [
         ON messaging_bindings (platform);`,
     `CREATE INDEX IF NOT EXISTS messaging_bindings_agent_id_idx
         ON messaging_bindings (agent_id);`,
-    `CREATE TABLE IF NOT EXISTS memory_settings (
-        id TEXT PRIMARY KEY NOT NULL,
-        settings_json TEXT NOT NULL,
-        updated_at TEXT NOT NULL
-    );`,
     `CREATE TABLE IF NOT EXISTS agent_thought_snapshots (
         id TEXT PRIMARY KEY NOT NULL,
         agent_id TEXT NOT NULL,

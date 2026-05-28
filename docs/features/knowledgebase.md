@@ -18,7 +18,8 @@ of wiki links, backlinks, files, citations, tags, search, and graph navigation.
 * **Wiki pages.** Durable Cortex pages with titles, slugs, frontmatter,
   compiled truth, timelines, body content, and `[[wiki links]]`.
 * **Search and recall.** Users and agents can search Cortex through hybrid text
-  and embedding-backed retrieval.
+  and vector-backed retrieval. Tavern stores the vector index in LanceDB as
+  rebuildable derived state.
 * **Backlinks and graph navigation.** Related pages are discoverable through
   links, tags, types, and source relationships.
 * **Files and citations.** Source material keeps attachment, citation, and
@@ -39,10 +40,11 @@ Knowledgebase writes are Cortex writes. Agent-authored notes are attributable to
 the user, agent, runtime job, chat, message, session, turn, file, URL, or
 citation that produced them.
 
-Embedding-backed capture and recall are all-or-nothing for paths that require
-embeddings. Tavern must not write newly captured searchable page state with
-missing embeddings. Plain page reads can remain healthy while capture and recall
-are unavailable.
+Cortex pages, sources, links, claims, timelines, chunks, audit, and job state
+remain canonical in Runtime SQLite and markdown mirrors. LanceDB owns only the
+derived vector index for chunk retrieval. If the vector database is unavailable,
+plain page reads and lexical search can remain healthy while Cortex reports
+degraded vector recall.
 
 ## Boundary
 

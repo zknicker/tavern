@@ -1,9 +1,21 @@
 import type * as React from 'react';
 import { cn } from '../../lib/utils.ts';
 
-export function Table({ className, ...props }: React.ComponentProps<'table'>): React.ReactElement {
+type TableProps = React.ComponentProps<'table'> & {
+    variant?: 'default' | 'card';
+};
+
+export function Table({
+    className,
+    variant = 'default',
+    ...props
+}: TableProps): React.ReactElement {
     return (
-        <div className="relative w-full overflow-x-auto" data-slot="table-container">
+        <div
+            className="relative w-full overflow-x-auto"
+            data-slot="table-container"
+            data-variant={variant}
+        >
             <table
                 className={cn(
                     'w-full caption-bottom in-data-[slot=frame]:border-separate in-data-[slot=frame]:border-spacing-0 text-sm',

@@ -33,13 +33,17 @@ function getHealthBadge(
 function CapabilitySection({
     capabilities,
     emptyLabel,
-    title,
     onCapabilityClick,
+    onCapabilityRefresh,
+    refreshingCapability,
+    title,
 }: {
     capabilities: RuntimeConnection['capabilities'];
     emptyLabel: string;
-    title: string;
     onCapabilityClick?: (capability: RuntimeConnection['capabilities'][number]) => void;
+    onCapabilityRefresh?: (capability: RuntimeConnection['capabilities'][number]) => void;
+    refreshingCapability?: RuntimeConnection['capabilities'][number]['capability'] | null;
+    title: string;
 }) {
     return (
         <div className="space-y-2">
@@ -48,6 +52,8 @@ function CapabilitySection({
                 capabilities={capabilities}
                 emptyLabel={emptyLabel}
                 onCapabilityClick={onCapabilityClick}
+                onCapabilityRefresh={onCapabilityRefresh}
+                refreshingCapability={refreshingCapability}
             />
         </div>
     );
@@ -56,6 +62,11 @@ function CapabilitySection({
 function RuntimeConnectionRow({ connection }: { connection: RuntimeConnection }) {
     const queryClient = useQueryClient();
     const healthMutation = trpc.agentRuntime.checkHealth.useMutation({
+        onSettled: async () => {
+            await queryClient.invalidateQueries();
+        },
+    });
+    const capabilityMutation = trpc.agentRuntime.refreshCapability.useMutation({
         onSettled: async () => {
             await queryClient.invalidateQueries();
         },
@@ -101,12 +112,13 @@ function RuntimeConnectionRow({ connection }: { connection: RuntimeConnection })
             <CapabilitySection
                 capabilities={connection.runtimeCapabilities}
                 emptyLabel="No Tavern Runtime capability checks recorded."
+                onCapabilityRefresh={(capability) =>
+                    capabilityMutation.mutate(capability.capability)
+                }
+                refreshingCapability={
+                    capabilityMutation.isPending ? capabilityMutation.variables : null
+                }
                 title="Runtime capabilities"
-            />
-            <CapabilitySection
-                capabilities={connection.openClawCapabilities}
-                emptyLabel="No OpenClaw capability checks recorded."
-                title="OpenClaw capabilities"
             />
         </SettingsItem>
     );

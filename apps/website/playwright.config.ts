@@ -37,7 +37,7 @@ function buildWebServers() {
                 stderr: 'pipe',
                 stdout: 'pipe',
                 timeout: runtimeWebServerTimeoutMs,
-                url: `http://127.0.0.1:${runtimePort}/openclaw-gateway/status`,
+                url: `http://127.0.0.1:${runtimePort}/capabilities`,
             },
             {
                 command: `TAVERN_E2E_RUN_ID=${runId} SERVER_PORT=${serverPort} APP_ORIGIN=http://127.0.0.1:${websitePort} TAVERN_RUNTIME_URL=http://127.0.0.1:${runtimePort} TAVERN_MENTION_CODEX_PLUGIN_ROOT=${mentionPluginRoot} bun e2e/start-tavern-server.ts`,
@@ -73,7 +73,7 @@ function buildWebServers() {
             stderr: 'pipe',
             stdout: 'pipe',
             timeout: runtimeWebServerTimeoutMs,
-            url: `http://127.0.0.1:${runtimePort}/openclaw-gateway/status`,
+            url: `http://127.0.0.1:${runtimePort}/capabilities`,
         },
         {
             command: `TAVERN_E2E_RUN_ID=${runId} SERVER_PORT=${serverPort} APP_ORIGIN=http://127.0.0.1:${websitePort} TAVERN_RUNTIME_URL=http://127.0.0.1:${runtimePort} TAVERN_MENTION_CODEX_PLUGIN_ROOT=${mentionPluginRoot} bun e2e/start-tavern-server.ts`,

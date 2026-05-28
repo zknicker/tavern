@@ -106,6 +106,9 @@ function JobDotTooltipBody({ job }: { job: JobSummary }) {
                 <div className="font-medium text-foreground capitalize">
                     {resolveHealthLabel(job)}
                 </div>
+                {job.disabledReason ? (
+                    <div className="text-destructive text-meta">{job.disabledReason}</div>
+                ) : null}
                 {job.latestRun?.createdAt ? (
                     <div className="text-muted-foreground tabular-nums">
                         Latest run {formatRelativeTime(job.latestRun.createdAt)} ·{' '}
@@ -146,7 +149,7 @@ function resolveDotClass(job: JobSummary): string {
         case 'delayed':
             return 'bg-warning';
         default:
-            return 'bg-muted-foreground/50';
+            return 'bg-success/70';
     }
 }
 
@@ -169,6 +172,6 @@ function resolveHealthLabel(job: JobSummary): string {
         case 'delayed':
             return 'Delayed';
         default:
-            return 'Never run';
+            return 'Idle';
     }
 }

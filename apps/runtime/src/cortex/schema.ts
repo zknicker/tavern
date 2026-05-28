@@ -177,6 +177,12 @@ CREATE TABLE IF NOT EXISTS cortex_telemetry_events (
   created_at    TEXT NOT NULL
 );
 
+CREATE TABLE IF NOT EXISTS cortex_settings (
+  key        TEXT PRIMARY KEY,
+  value_json TEXT NOT NULL,
+  updated_at TEXT NOT NULL
+);
+
 CREATE INDEX IF NOT EXISTS idx_cortex_pages_updated ON cortex_pages(updated_at);
 CREATE INDEX IF NOT EXISTS idx_cortex_pages_type ON cortex_pages(type);
 CREATE INDEX IF NOT EXISTS idx_cortex_alias_page ON cortex_page_aliases(page_id);

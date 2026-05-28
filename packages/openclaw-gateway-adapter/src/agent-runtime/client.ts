@@ -16,8 +16,6 @@ import type {
     AgentRuntimeCronList,
     AgentRuntimeCronRun,
     AgentRuntimeInstallSkill,
-    AgentRuntimeMemorySettings,
-    AgentRuntimeMemoryStatus,
     AgentRuntimeMessageAccepted,
     AgentRuntimeModelAccess,
     AgentRuntimeModels,
@@ -34,7 +32,6 @@ import type {
     AgentRuntimeSessionResync,
     AgentRuntimeSkill,
     AgentRuntimeSkillSummary,
-    AgentRuntimeStatus,
     AgentRuntimeUpdateCron,
     AgentRuntimeUpsertBinding,
 } from '@tavern/api';
@@ -86,7 +83,6 @@ import { mapOpenClawSessionResync } from '../mappers/sessions/resync.ts';
 import { mapOpenClawSkill } from '../mappers/skills/get.ts';
 import { mapTavernSkillInstallToOpenClaw } from '../mappers/skills/install.ts';
 import { mapOpenClawSkillList } from '../mappers/skills/list.ts';
-import { mapOpenClawStatus } from '../mappers/status/get.ts';
 import { unsupportedOpenClawSurface } from './unsupported.ts';
 
 export interface OpenClawAgentRuntimeClientOptions extends OpenClawGatewayOptions {
@@ -107,8 +103,6 @@ export interface OpenClawAgentRuntimeClient {
     getAgentConfig(agentId: string): Promise<AgentRuntimeAgent>;
     getAgentFile(agentId: string, path: string): Promise<AgentRuntimeAgentFileContent>;
     getCronJob(jobId: string): Promise<AgentRuntimeCron>;
-    getMemorySettings(): Promise<AgentRuntimeMemorySettings>;
-    getMemoryStatus(): Promise<AgentRuntimeMemoryStatus>;
     getModelAccess(): Promise<AgentRuntimeModelAccess>;
     getModels(): Promise<AgentRuntimeModels>;
     getOpenClawConfig(): Promise<AgentRuntimeOpenClawConfigSnapshot>;
@@ -116,7 +110,7 @@ export interface OpenClawAgentRuntimeClient {
     getSessionGraph(sessionKey: string): Promise<AgentRuntimeSessionGraph>;
     getSessionPrompt(sessionKey: string): Promise<AgentRuntimeSessionPrompt | null>;
     getSkillConfig(skillId: string): Promise<AgentRuntimeSkill>;
-    getStatus(): Promise<AgentRuntimeStatus>;
+    getStatus(): Promise<void>;
     installSkill(input: AgentRuntimeInstallSkill): Promise<AgentRuntimeSkill>;
     listAgentFiles(agentId: string): Promise<AgentRuntimeAgentFileList>;
     listAgents(): Promise<{ agents: AgentRuntimeAgent[] }>;
@@ -144,9 +138,6 @@ export interface OpenClawAgentRuntimeClient {
         path: string,
         input: { content: string }
     ): Promise<AgentRuntimeAgentFileContent>;
-    saveMemorySettings(
-        input: Omit<AgentRuntimeMemorySettings, 'updatedAt'>
-    ): Promise<AgentRuntimeMemorySettings>;
     saveModels(input: AgentRuntimeSaveModels): Promise<AgentRuntimeModels>;
     saveOpenRouterSettings(
         input: AgentRuntimeSaveOpenRouterSettings
@@ -200,11 +191,7 @@ class GatewayBackedOpenClawAgentRuntimeClient implements OpenClawAgentRuntimeCli
     }
 
     async getStatus() {
-        const [health, status] = await Promise.all([
-            this.#gateway.request('health'),
-            this.#gateway.request('status'),
-        ]);
-        return mapOpenClawStatus({ health, status });
+        await this.#gateway.request('health');
     }
 
     async listAgents() {
@@ -461,18 +448,6 @@ class GatewayBackedOpenClawAgentRuntimeClient implements OpenClawAgentRuntimeCli
 
     async deleteBinding(bindingId: string) {
         return mapOpenClawDeletedBinding(bindingId);
-    }
-
-    async getMemorySettings() {
-        return unsupportedOpenClawSurface('memory settings');
-    }
-
-    async saveMemorySettings(_input: Omit<AgentRuntimeMemorySettings, 'updatedAt'>) {
-        return unsupportedOpenClawSurface('memory settings');
-    }
-
-    async getMemoryStatus() {
-        return unsupportedOpenClawSurface('memory status');
     }
 
     async getModelAccess() {

@@ -1,35 +1,65 @@
-import { hashText } from './ids';
+import type { Database } from '../db/sqlite';
+import { getCortexEmbeddingConfig } from './settings';
 
-export const cortexEncodingProvider = 'local-hash';
-export const cortexEncodingModel = 'tavern-local-hash-v1';
-export const cortexEncodingDimensions = 64;
-
-export function encodeCortexText(text: string): number[] {
-    const vector = Array.from({ length: cortexEncodingDimensions }, () => 0);
-    const tokens = text
-        .toLowerCase()
-        .split(/[^a-z0-9]+/u)
-        .filter(Boolean);
-
-    for (const token of tokens) {
-        const hash = hashText(token);
-        const bucket = Number.parseInt(hash.slice(0, 8), 16) % cortexEncodingDimensions;
-        vector[bucket] += 1;
-    }
-
-    const magnitude = Math.sqrt(vector.reduce((sum, value) => sum + value * value, 0));
-    if (magnitude === 0) {
-        return vector;
-    }
-
-    return vector.map((value) => value / magnitude);
+export interface CortexEmbedding {
+    dimensions: number;
+    model: string;
+    provider: string;
+    vector: number[];
 }
 
-export function cosineSimilarity(left: number[], right: number[]): number {
-    const length = Math.min(left.length, right.length);
-    let score = 0;
-    for (let index = 0; index < length; index += 1) {
-        score += (left[index] ?? 0) * (right[index] ?? 0);
+export async function embedCortexText(db: Database, text: string): Promise<CortexEmbedding | null> {
+    const config = getCortexEmbeddingConfig(db);
+    if (!config.apiKey) {
+        return null;
     }
-    return Math.max(0, score);
+
+    const response = await fetch('https://api.openai.com/v1/embeddings', {
+        body: JSON.stringify({
+            input: text,
+            model: config.model,
+        }),
+        headers: {
+            authorization: `Bearer ${config.apiKey}`,
+            'content-type': 'application/json',
+        },
+        method: 'POST',
+    });
+
+    if (!response.ok) {
+        throw new Error(await formatOpenAiEmbeddingError(response));
+    }
+
+    const body = (await response.json()) as {
+        data?: Array<{ embedding?: unknown }>;
+    };
+    const vector = body.data?.[0]?.embedding;
+    if (!(Array.isArray(vector) && vector.every((value) => typeof value === 'number'))) {
+        throw new Error('OpenAI embedding response did not include a numeric embedding.');
+    }
+
+    return {
+        dimensions: vector.length,
+        model: config.model,
+        provider: config.provider,
+        vector,
+    };
+}
+
+async function formatOpenAiEmbeddingError(response: Response): Promise<string> {
+    const body = (await response.json().catch(() => null)) as {
+        error?: { code?: unknown; message?: unknown; type?: unknown };
+    } | null;
+    const message = typeof body?.error?.message === 'string' ? body.error.message : null;
+    const code = typeof body?.error?.code === 'string' ? body.error.code : null;
+    const type = typeof body?.error?.type === 'string' ? body.error.type : null;
+    const detail = [code, type].filter(Boolean).join('/');
+
+    if (message) {
+        return detail
+            ? `OpenAI embedding request failed (${response.status}, ${detail}): ${message}`
+            : `OpenAI embedding request failed (${response.status}): ${message}`;
+    }
+
+    return `OpenAI embedding request failed (${response.status}).`;
 }

@@ -63,6 +63,10 @@ test('formatStatusLine shows concise process transitions', () => {
         formatStatusLine('runtime', 'running', 'http://127.0.0.1:4310', { colorize: false }),
         '✓ runtime ready http://127.0.0.1:4310'
     );
+    assert.equal(
+        formatStatusLine('runtime', 'stopping', 'http://127.0.0.1:4310', { colorize: false }),
+        '◐ runtime stopping http://127.0.0.1:4310'
+    );
 });
 
 test('formatReadyBlock prints the final startup summary', () => {

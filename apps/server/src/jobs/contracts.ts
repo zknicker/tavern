@@ -2,12 +2,20 @@ import { z } from 'zod';
 import { jobDefinitions } from '../../../../jobs/index.ts';
 
 const jobSlugs = jobDefinitions.map((definition) => definition.slug);
+export const runtimeJobSlugs = [
+    'cortex-generate-embeddings',
+    'cortex-ingest',
+    'cortex-lint',
+    'cortex-maintenance',
+    'refresh-runtime-capabilities',
+] as const;
+const allJobSlugs = [...jobSlugs, ...runtimeJobSlugs];
 
-if (jobSlugs.length === 0) {
+if (allJobSlugs.length === 0) {
     throw new Error('At least one job definition must be registered.');
 }
 
-const [firstJobSlug, ...remainingJobSlugs] = jobSlugs;
+const [firstJobSlug, ...remainingJobSlugs] = allJobSlugs;
 
 export const jobSlugSchema = z.enum([firstJobSlug, ...remainingJobSlugs]);
 
@@ -62,6 +70,7 @@ export const jobSummarySchema = z.object({
     availability: jobAvailabilitySchema,
     counts: jobCountsSchema,
     description: z.string(),
+    disabledReason: z.string().nullable().default(null),
     displayName: z.string(),
     latestRun: jobRunSummarySchema.nullable(),
     queueName: z.string(),

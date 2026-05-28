@@ -12,12 +12,15 @@ function main() {
     const screen = new DevStackScreen(controller);
     screen.start();
 
-    const stop = () => {
-        void controller.stop(0);
+    const stop = (signal) => {
+        void controller.stop(signal === 'SIGINT' ? 130 : 143, {
+            force: true,
+            signal,
+        });
     };
 
-    process.on('SIGINT', stop);
-    process.on('SIGTERM', stop);
+    process.on('SIGINT', () => stop('SIGINT'));
+    process.on('SIGTERM', () => stop('SIGTERM'));
 
     controller.on('exit', (code) => {
         screen.stop();

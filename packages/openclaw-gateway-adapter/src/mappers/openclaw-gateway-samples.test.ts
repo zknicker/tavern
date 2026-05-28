@@ -10,18 +10,11 @@ import { mapOpenClawSessionList } from './sessions/list.ts';
 import { mapOpenClawSessionMessages } from './sessions/messages.ts';
 import { mapOpenClawSkill } from './skills/get.ts';
 import { mapOpenClawSkillList } from './skills/list.ts';
-import { mapOpenClawStatus } from './status/get.ts';
 
 describe('OpenClaw Gateway sample mapping', () => {
-    it('maps status and model inventory without volatile timestamps', () => {
-        const status = mapOpenClawStatus(openClawGatewaySample.status);
+    it('maps model inventory without volatile timestamps', () => {
         const models = mapOpenClawModels(openClawGatewaySample.models);
 
-        expect(status.identity.info).toMatchObject({
-            agentRuntimeId: 'openclaw',
-            name: 'OpenClaw',
-            version: '2026.5.2',
-        });
         expect(models.updatedAt).toBeNull();
         expect(models.configuredModels).toEqual([
             { modelId: 'gpt-5.5', provider: 'codex' },

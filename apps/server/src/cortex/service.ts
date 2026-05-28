@@ -2,6 +2,7 @@ import type {
     CortexCaptureInput,
     CortexJobName,
     CortexRecallInput,
+    CortexSaveSettings,
     CortexSearchInput,
 } from '@tavern/api';
 import type { TavernAgentRuntimeClient } from '../agent-runtime/client.ts';
@@ -18,6 +19,19 @@ export async function getCortexStatus(
     client: TavernAgentRuntimeClient | null = createConfiguredAgentRuntimeClient()
 ) {
     return client ? await client.getCortexStatus() : null;
+}
+
+export async function getCortexSettings(
+    client: TavernAgentRuntimeClient | null = createConfiguredAgentRuntimeClient()
+) {
+    return client ? await client.getCortexSettings() : null;
+}
+
+export async function saveCortexSettings(
+    input: CortexSaveSettings,
+    client: TavernAgentRuntimeClient | null = createConfiguredAgentRuntimeClient()
+) {
+    return await requireRuntimeClient(client).saveCortexSettings(input);
 }
 
 export async function listCortexPages(

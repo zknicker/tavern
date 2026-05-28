@@ -1,12 +1,10 @@
 import {
-    type AgentRuntimeMemorySettings,
     type AgentRuntimeModels,
     formatAgentRuntimeModelRef,
     parseAgentRuntimeModelRef,
 } from '@tavern/api';
 import { TRPCError } from '@trpc/server';
 import { emitModelUpdated } from '../api/invalidation-events.ts';
-import { getMemorySettings } from '../memory/service.ts';
 import { loadProviderInventory, saveProviderInventory } from './inventory-cache.ts';
 import {
     addCatalogModelInputSchema,
@@ -39,29 +37,6 @@ const emptyAgentRuntimeModels: AgentRuntimeModels = {
 };
 
 type CatalogModelProviderId = (typeof modelInventoryProviders)[number];
-
-function toPolicyMemorySettings(
-    settings: Awaited<ReturnType<typeof getMemorySettings>>
-): AgentRuntimeMemorySettings | null {
-    if (!settings) {
-        return null;
-    }
-
-    return {
-        dreamModel: settings.dreamModel ? parseAgentRuntimeModelRef(settings.dreamModel) : null,
-        knowledgeModel: settings.knowledgeModel
-            ? parseAgentRuntimeModelRef(settings.knowledgeModel)
-            : null,
-        memoryEnabled: settings.memoryEnabled,
-        persistenceModel: settings.persistenceModel
-            ? parseAgentRuntimeModelRef(settings.persistenceModel)
-            : null,
-        updatedAt: settings.updatedAt,
-        workingModel: settings.workingModel
-            ? parseAgentRuntimeModelRef(settings.workingModel)
-            : null,
-    };
-}
 
 function isCatalogModelProvider(provider: ModelProviderId): provider is CatalogModelProviderId {
     return modelInventoryProviders.some((candidate) => candidate === provider);
@@ -116,17 +91,10 @@ async function buildProviderInventory(input: {
 }
 
 export async function listModelInventory(): Promise<ModelInventory> {
-    const [memorySettings, agentRuntimeConnections] = await Promise.all([
-        getMemorySettings(),
-        listModelProviderConnections(),
-    ]);
+    const agentRuntimeConnections = await listModelProviderConnections();
     const nextAgentRuntimeModels = emptyAgentRuntimeModels;
-    const policyMemorySettings = toPolicyMemorySettings(memorySettings);
-    const usageLabelsByModelRef = listModelUsageLabels(
-        nextAgentRuntimeModels,
-        policyMemorySettings
-    );
-    const inUseModelRefs = listInUseModelRefs(nextAgentRuntimeModels, policyMemorySettings);
+    const usageLabelsByModelRef = listModelUsageLabels(nextAgentRuntimeModels);
+    const inUseModelRefs = listInUseModelRefs(nextAgentRuntimeModels);
 
     return modelInventorySchema.parse({
         providers: await Promise.all(
@@ -175,14 +143,8 @@ export async function addCatalogModel(input: unknown) {
 export async function deleteCatalogModel(input: unknown) {
     const parsed = deleteCatalogModelInputSchema.parse(input);
     const { provider } = parseAgentRuntimeModelRef(parsed.modelRef);
-    const [inventory, memorySettings] = await Promise.all([
-        loadProviderInventory(provider),
-        getMemorySettings(),
-    ]);
-    const policyMemorySettings = toPolicyMemorySettings(memorySettings);
-    const usageLabels = listModelUsageLabels(emptyAgentRuntimeModels, policyMemorySettings).get(
-        parsed.modelRef
-    );
+    const inventory = await loadProviderInventory(provider);
+    const usageLabels = listModelUsageLabels(emptyAgentRuntimeModels).get(parsed.modelRef);
 
     if (usageLabels && usageLabels.length > 0) {
         throw new TRPCError({

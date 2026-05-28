@@ -1,11 +1,9 @@
 import type { AgentRuntimeEvent } from '@tavern/api';
-import { refreshOpenClawGatewayCapability } from '../agent-runtime-connection/openclaw-gateway-capability.ts';
 import {
     confirmAgentRuntimeConnection,
     markAgentRuntimeConnectionFailure,
     markAgentRuntimeConnectionReachable,
 } from '../agent-runtime-connection/service.ts';
-import { recordTavernPluginCapability } from '../agent-runtime-connection/tavern-plugin-capability.ts';
 import {
     emitAgentRuntimeUpdated,
     emitAgentUpdated,
@@ -24,10 +22,7 @@ import {
     hasActiveTurnSession,
     markTurnSessionActive,
 } from './active-turn-sessions.ts';
-import {
-    createAgentRuntimeClientForConnection,
-    subscribeAgentRuntimeEventsForConnection,
-} from './drivers.ts';
+import { subscribeAgentRuntimeEventsForConnection } from './drivers.ts';
 import { emitObservedAgentRuntimeEvent } from './events.ts';
 
 type RuntimeConnectionRecord = Awaited<
@@ -194,27 +189,8 @@ function debugTurnEvent(event: AgentRuntimeEvent) {
 }
 
 async function refreshRuntimeCapability(connection: RuntimeConnectionRecord, capability: string) {
-    if (capability === 'gateway') {
-        await refreshOpenClawGatewayCapability(connection.id);
-        emitAgentRuntimeUpdated();
-        return;
-    }
-
-    if (capability === 'tavernPlugin') {
-        const client = createAgentRuntimeClientForConnection(connection);
-        try {
-            const status = await client.getStatus();
-            await recordTavernPluginCapability({
-                runtimeId: connection.id,
-                status,
-            });
-        } finally {
-            client.close();
-        }
-        emitAgentRuntimeUpdated();
-        return;
-    }
-
+    void connection;
+    void capability;
     emitAgentRuntimeUpdated();
 }
 
@@ -289,7 +265,7 @@ function connectRuntimeEvents(connection: RuntimeConnectionRecord, revision: num
             void markConnectionReachable(connection).catch((error) => {
                 console.warn('[tavern] failed to mark runtime reachable', error);
             });
-            void confirmAgentRuntimeConnection({ refreshCapabilities: false }).catch((error) => {
+            void confirmAgentRuntimeConnection().catch((error) => {
                 console.warn('[tavern] failed to refresh runtime capabilities', error);
             });
             emitCronUpdated();

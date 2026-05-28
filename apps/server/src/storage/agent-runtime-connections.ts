@@ -2,7 +2,6 @@ import { desc, eq } from 'drizzle-orm';
 import type { AgentRuntimeConnectionAuth } from '../agent-runtime-connection/contracts.ts';
 import { databaseClient, db } from '../db/index.ts';
 import { agentRuntimeConnectionsTable } from '../db/schema.ts';
-import { getAgentRuntimeCapabilityStatus } from './agent-runtime-capability-status.ts';
 
 export const managedOpenClawRuntimeId = 'tavern-openclaw-managed';
 export const agentRuntimeConnectionId = managedOpenClawRuntimeId;
@@ -34,7 +33,7 @@ export async function listReachableAgentRuntimeConnections() {
         return [];
     }
 
-    if (record.lastError && !(await hasHealthyStatusCapability(record.id))) {
+    if (record.lastError) {
         return [];
     }
 
@@ -212,15 +211,6 @@ async function ensureActiveAgentRuntimeConnection() {
     await activateAgentRuntimeConnection(next.id);
 }
 
-async function hasHealthyStatusCapability(runtimeId: string) {
-    const status = await getAgentRuntimeCapabilityStatus({
-        capability: 'status',
-        runtimeId,
-    });
-
-    return status?.state === 'healthy';
-}
-
 const directAgentReferences = [
     { column: 'tavern_agent_id', table: 'activity_items' },
     { column: 'agent_id', table: 'agent_thought_snapshots' },
@@ -306,7 +296,6 @@ function deleteRuntimeData(runtimeId: string) {
         }
 
         deleteColumnValue('agent_profiles', 'runtime_id', runtimeId);
-        deleteColumnValue('agent_runtime_capability_status', 'runtime_id', runtimeId);
         deleteColumnValue('agents', 'runtime_id', runtimeId);
         deleteColumnValue('cron_jobs', 'runtime_id', runtimeId);
         deleteColumnValue('cron_runs', 'runtime_id', runtimeId);

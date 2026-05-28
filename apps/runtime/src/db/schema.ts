@@ -7,6 +7,20 @@ CREATE TABLE IF NOT EXISTS runtime_metadata (
   updated_at TEXT NOT NULL
 );
 
+CREATE TABLE IF NOT EXISTS runtime_capabilities (
+  id                TEXT PRIMARY KEY,
+  display_name      TEXT NOT NULL,
+  state             TEXT NOT NULL CHECK (state IN ('degraded', 'healthy', 'unauthorized', 'unavailable', 'unknown')),
+  healthy           INTEGER NOT NULL CHECK (healthy IN (0, 1)),
+  reason            TEXT,
+  technical_message TEXT,
+  metadata_json     TEXT NOT NULL DEFAULT '{}',
+  checked_at        TEXT,
+  last_healthy_at   TEXT,
+  next_check_at     TEXT,
+  updated_at        TEXT NOT NULL
+);
+
 CREATE TABLE IF NOT EXISTS workspace_agent_instructions (
   agent_id      TEXT PRIMARY KEY,
   agent_name    TEXT NOT NULL,

@@ -10,18 +10,55 @@ export const agentRuntimeCapabilitySchema = z.enum([
     'agentTurns',
     'agentFiles',
     'agents',
-    'skills',
-    'cron',
     'chats',
     'chatTargets',
+    'computerUse',
+    'cron',
     'cronRuns',
-    'logs',
+    'embeddingModel',
+    'events',
+    'gateway',
     'knowledgebase',
+    'logs',
     'memory',
+    'mentions',
+    'messages',
     'models',
     'sessionEvents',
+    'sessions',
+    'skills',
+    'skillMaterialization',
+    'status',
     'tasks',
 ]);
+
+export const agentRuntimeCapabilityHealthIdSchema = agentRuntimeCapabilitySchema;
+
+export const agentRuntimeCapabilityHealthStateSchema = z.enum([
+    'degraded',
+    'healthy',
+    'unauthorized',
+    'unavailable',
+    'unknown',
+]);
+
+export const agentRuntimeCapabilityHealthSchema = z.object({
+    checkedAt: z.string().datetime().nullable(),
+    displayName: z.string().trim().min(1),
+    healthy: z.boolean(),
+    id: agentRuntimeCapabilityHealthIdSchema,
+    lastHealthyAt: z.string().datetime().nullable(),
+    metadata: z.record(z.string(), z.unknown()).default({}),
+    nextCheckAt: z.string().datetime().nullable(),
+    reason: z.string().trim().min(1).nullable(),
+    state: agentRuntimeCapabilityHealthStateSchema,
+    technicalMessage: z.string().trim().min(1).nullable(),
+    updatedAt: z.string().datetime().nullable(),
+});
+
+export const agentRuntimeRefreshCapabilitiesSchema = z.object({
+    capabilities: z.array(agentRuntimeCapabilityHealthIdSchema),
+});
 
 export const agentRuntimeInfoSchema = z.object({
     name: z.string().trim().min(1),
@@ -36,23 +73,14 @@ export const agentRuntimeHealthSchema = z.object({
     timestamp: z.string().datetime(),
 });
 
-export const agentRuntimeAgentBindingSchema = z.object({
-    agentId: z.string().trim().min(1),
-});
-
-export const agentRuntimeIdentitySchema = z.object({
-    capabilities: z.array(agentRuntimeCapabilitySchema).min(1),
+export const agentRuntimeCapabilityHealthListSchema = z.object({
+    capabilities: z.array(agentRuntimeCapabilityHealthSchema),
+    health: agentRuntimeHealthSchema,
     info: agentRuntimeInfoSchema,
 });
 
-export const agentRuntimeStatusSchema = z.object({
-    health: agentRuntimeHealthSchema,
-    identity: agentRuntimeIdentitySchema,
-    managedOpenClaw: z
-        .object({
-            gatewayReady: z.boolean(),
-        })
-        .optional(),
+export const agentRuntimeAgentBindingSchema = z.object({
+    agentId: z.string().trim().min(1),
 });
 
 export const agentRuntimeModelAccessIdSchema = z.enum(['codex']);
@@ -74,6 +102,10 @@ const agentRuntimeOpenRouterKeySchema = z
     .trim()
     .min(20, 'Enter a valid OpenRouter key.')
     .regex(/^sk-or(?:-v1)?-[A-Za-z0-9_-]+$/u, 'Enter a valid OpenRouter key.');
+
+function isOpenAiApiKey(value: string) {
+    return /^sk-[A-Za-z0-9_-]{20,}$/u.test(value);
+}
 
 export const agentRuntimeOpenRouterSettingsSchema = z.object({
     apiKey: z.string(),
@@ -504,38 +536,7 @@ export const agentRuntimeSaveModelsSchema = agentRuntimeModelsSchema
         agents: z.array(agentRuntimeSaveAgentModelSchema),
     });
 
-export const agentRuntimeMemorySettingsSchema = z.object({
-    dreamModel: agentRuntimeModelIdentitySchema.nullable(),
-    knowledgeModel: agentRuntimeModelIdentitySchema.nullable(),
-    memoryEnabled: z.boolean(),
-    persistenceModel: agentRuntimeModelIdentitySchema.nullable(),
-    updatedAt: z.string().datetime().nullable(),
-    workingModel: agentRuntimeModelIdentitySchema.nullable(),
-});
-
-export const agentRuntimeSaveMemorySettingsSchema = agentRuntimeMemorySettingsSchema.omit({
-    updatedAt: true,
-});
-
-export const agentRuntimeMemoryEmbedderStatusSchema = z.enum(['disabled', 'not-ready', 'ready']);
-
-export const agentRuntimeMemoryStatusSchema = z.object({
-    embedderStatus: agentRuntimeMemoryEmbedderStatusSchema,
-    lanceDbPath: z.string().trim().min(1),
-    lastBulletinBuildAt: z.string().datetime().nullable(),
-    lastCaptureAt: z.string().datetime().nullable(),
-    lastDreamRunAt: z.string().datetime().nullable(),
-    lastWorkingSynthesisAt: z.string().datetime().nullable(),
-});
-
-export const cortexJobNameSchema = z.enum([
-    'ingest',
-    'recall-index',
-    'lint',
-    'repair',
-    'export',
-    'health',
-]);
+export const cortexJobNameSchema = z.enum(['ingest', 'generate-embeddings', 'lint', 'maintenance']);
 
 export const cortexPageStatusSchema = z.enum(['active', 'archived', 'deleted', 'stale']);
 export const cortexPageTypeSchema = z.enum([
@@ -551,6 +552,12 @@ export const cortexPageTypeSchema = z.enum([
     'task',
 ]);
 export const cortexAuditStatusSchema = z.enum(['error', 'skipped', 'success']);
+export const cortexEmbeddingProviderSchema = z.enum(['openai']);
+
+export const cortexEmbeddingModelSchema = z.enum([
+    'text-embedding-3-small',
+    'text-embedding-3-large',
+]);
 
 export const cortexSourceRefSchema = z.object({
     id: z.string().trim().min(1),
@@ -598,12 +605,26 @@ export const cortexClaimSchema = z.object({
     value: z.string().trim().min(1),
 });
 
+export const cortexPageIndexingStatusSchema = z.enum(['ready', 'needs-indexing', 'not-indexed']);
+
+export const cortexPageIndexingSchema = z.object({
+    chunkCount: z.number().int().nonnegative(),
+    currentEmbeddingCount: z.number().int().nonnegative(),
+    embeddingModel: cortexEmbeddingModelSchema,
+    embeddingProvider: cortexEmbeddingProviderSchema,
+    lastEmbeddedAt: z.string().datetime().nullable(),
+    missingEmbeddingCount: z.number().int().nonnegative(),
+    staleEmbeddingCount: z.number().int().nonnegative(),
+    status: cortexPageIndexingStatusSchema,
+});
+
 export const cortexPageSchema = cortexPageSummarySchema.extend({
     body: z.string(),
     compiledTruth: z.string(),
     claims: z.array(cortexClaimSchema).default([]),
     createdAt: z.string().datetime(),
     frontmatter: z.record(z.string(), z.unknown()).default({}),
+    indexing: cortexPageIndexingSchema,
     links: z.array(cortexLinkSchema).default([]),
     sourceRefs: z.array(cortexSourceRefSchema).default([]),
     timeline: z.array(cortexTimelineEntrySchema).default([]),
@@ -639,9 +660,15 @@ export const cortexSearchHitSchema = z.object({
 export const cortexSearchResultSchema = z.object({
     hits: z.array(cortexSearchHitSchema),
     query: z.string().trim().min(1),
+    vectorDegradedReason: z.string().nullable().default(null),
 });
 
-export const cortexRecallInputSchema = cortexSearchInputSchema;
+export const cortexRecallModeSchema = z.enum(['conservative', 'balanced', 'tokenmax']);
+
+export const cortexRecallInputSchema = cortexSearchInputSchema.extend({
+    limit: z.number().int().positive().max(50).optional(),
+    mode: cortexRecallModeSchema.optional(),
+});
 
 export const cortexRecallHitSchema = cortexSearchHitSchema.extend({
     evidence: z.array(cortexSourceRefSchema).default([]),
@@ -650,7 +677,10 @@ export const cortexRecallHitSchema = cortexSearchHitSchema.extend({
 export const cortexRecallResultSchema = z.object({
     auditId: z.string().trim().min(1),
     hits: z.array(cortexRecallHitSchema),
+    mode: cortexRecallModeSchema,
     query: z.string().trim().min(1),
+    requestedMode: cortexRecallModeSchema.nullable(),
+    vectorDegradedReason: z.string().nullable().default(null),
 });
 
 export const cortexCaptureInputSchema = z.object({
@@ -691,6 +721,40 @@ export const cortexJobRunSchema = z.object({
     summary: z.string().trim().min(1),
 });
 
+export const cortexSettingsSchema = z.object({
+    embedding: z.object({
+        apiKey: z.string().nullable(),
+        apiKeyConfigured: z.boolean(),
+        apiKeySource: z.enum(['environment', 'runtime-settings']).nullable(),
+        dimensions: z.number().int().positive(),
+        model: cortexEmbeddingModelSchema,
+        provider: cortexEmbeddingProviderSchema,
+        updatedAt: z.string().datetime().nullable(),
+    }),
+    recall: z.object({
+        mode: cortexRecallModeSchema,
+        updatedAt: z.string().datetime().nullable(),
+    }),
+});
+
+export const cortexSaveSettingsSchema = z.object({
+    embedding: z.object({
+        apiKey: z
+            .string()
+            .trim()
+            .min(1)
+            .refine(isOpenAiApiKey, 'Enter an OpenAI API key.')
+            .optional(),
+        model: cortexEmbeddingModelSchema.default('text-embedding-3-small'),
+        provider: cortexEmbeddingProviderSchema.default('openai'),
+    }),
+    recall: z
+        .object({
+            mode: cortexRecallModeSchema.default('balanced'),
+        })
+        .optional(),
+});
+
 export const cortexStatusSchema = z.object({
     auditCount: z.number().int().nonnegative(),
     captureCount: z.number().int().nonnegative(),
@@ -708,11 +772,18 @@ export const cortexStatusSchema = z.object({
     jobRuns: z.array(cortexJobRunSchema).default([]),
     lastCaptureAt: z.string().datetime().nullable(),
     lastRecallAt: z.string().datetime().nullable(),
-    lastRepairAt: z.string().datetime().nullable(),
+    lastMaintenanceAt: z.string().datetime().nullable(),
     linkCount: z.number().int().nonnegative(),
     pageCount: z.number().int().nonnegative(),
     sourceCount: z.number().int().nonnegative(),
     timelineEntryCount: z.number().int().nonnegative(),
+    vectorIndex: z.object({
+        backend: z.string().trim().min(1),
+        degradedReason: z.string().trim().min(1).nullable(),
+        indexedCount: z.number().int().nonnegative(),
+        path: z.string().trim().min(1),
+        table: z.string().trim().min(1),
+    }),
     wikiPath: z.string().trim().min(1),
 });
 
@@ -880,6 +951,85 @@ export const agentRuntimeCronRunListSchema = z.object({
 
 export const agentRuntimeRunCronSchema = z.object({
     mode: z.enum(['enqueue', 'force']).default('force'),
+});
+
+export const agentRuntimeJobSlugSchema = z.enum([
+    'cortex-generate-embeddings',
+    'cortex-ingest',
+    'cortex-lint',
+    'cortex-maintenance',
+    'refresh-runtime-capabilities',
+]);
+
+export const agentRuntimeJobAvailabilitySchema = z.enum(['disabled', 'enabled']);
+
+export const agentRuntimeJobRunStateSchema = z.enum([
+    'active',
+    'completed',
+    'delayed',
+    'failed',
+    'unknown',
+    'waiting',
+]);
+
+export const agentRuntimeJobCountsSchema = z.object({
+    active: z.number().int().nonnegative(),
+    completed: z.number().int().nonnegative(),
+    delayed: z.number().int().nonnegative(),
+    failed: z.number().int().nonnegative(),
+    waiting: z.number().int().nonnegative(),
+});
+
+export const agentRuntimeJobScheduleSchema = z.discriminatedUnion('kind', [
+    z.object({
+        kind: z.literal('manual'),
+    }),
+    z.object({
+        everyMs: z.number().int().positive(),
+        kind: z.literal('interval'),
+        nextRunAt: z.string().datetime().nullable(),
+        runOnStart: z.boolean(),
+    }),
+]);
+
+export const agentRuntimeJobRunSummarySchema = z.object({
+    attemptsMade: z.number().int().nonnegative(),
+    createdAt: z.string().datetime(),
+    durationMs: z.number().int().nonnegative().nullable(),
+    error: z.string().nullable(),
+    finishedAt: z.string().datetime().nullable(),
+    id: z.string().trim().min(1),
+    progress: z.number().int().nonnegative(),
+    startedAt: z.string().datetime().nullable(),
+    state: agentRuntimeJobRunStateSchema,
+});
+
+export const agentRuntimeJobRunDetailSchema = agentRuntimeJobRunSummarySchema.extend({
+    logs: z.array(z.string()),
+});
+
+export const agentRuntimeJobSummarySchema = z.object({
+    availability: agentRuntimeJobAvailabilitySchema,
+    counts: agentRuntimeJobCountsSchema,
+    description: z.string().trim().min(1),
+    disabledReason: z.string().trim().min(1).nullable().default(null),
+    displayName: z.string().trim().min(1),
+    latestRun: agentRuntimeJobRunSummarySchema.nullable(),
+    queueName: z.string().trim().min(1),
+    schedule: agentRuntimeJobScheduleSchema,
+    slug: agentRuntimeJobSlugSchema,
+});
+
+export const agentRuntimeJobDetailSchema = agentRuntimeJobSummarySchema.extend({
+    recentRuns: z.array(agentRuntimeJobRunDetailSchema),
+});
+
+export const agentRuntimeJobListSchema = z.object({
+    jobs: z.array(agentRuntimeJobSummarySchema),
+});
+
+export const agentRuntimeRunJobSchema = z.object({
+    jobId: z.string().trim().min(1),
 });
 
 export const agentRuntimeSessionRoleSchema = z.enum(['main', 'worker']);
@@ -1450,18 +1600,21 @@ export type AgentRuntimeDiscordChatSourceRecord = z.infer<
 >;
 export type PlatformChatScope = z.infer<typeof agentRuntimeChatScopeSchema>;
 export type AgentRuntimeHealth = z.infer<typeof agentRuntimeHealthSchema>;
-export type AgentRuntimeIdentity = z.infer<typeof agentRuntimeIdentitySchema>;
+export type AgentRuntimeCapabilityHealth = z.infer<typeof agentRuntimeCapabilityHealthSchema>;
+export type AgentRuntimeCapabilityHealthId = z.infer<typeof agentRuntimeCapabilityHealthIdSchema>;
+export type AgentRuntimeCapabilityHealthList = z.infer<
+    typeof agentRuntimeCapabilityHealthListSchema
+>;
+export type AgentRuntimeCapabilityHealthState = z.infer<
+    typeof agentRuntimeCapabilityHealthStateSchema
+>;
+export type AgentRuntimeRefreshCapabilities = z.infer<typeof agentRuntimeRefreshCapabilitiesSchema>;
 export type PlatformInboundMode = z.infer<typeof agentRuntimeInboundModeSchema>;
 export type AgentRuntimeInfo = z.infer<typeof agentRuntimeInfoSchema>;
 export type AgentRuntimeBinding = z.infer<typeof agentRuntimeBindingSchema>;
 export type AgentRuntimeBindingList = z.infer<typeof agentRuntimeBindingListSchema>;
 export type AgentRuntimeBindingMatch = z.infer<typeof agentRuntimeBindingMatchSchema>;
 export type PlatformBindingStatus = z.infer<typeof agentRuntimeBindingStatusSchema>;
-export type AgentRuntimeMemoryEmbedderStatus = z.infer<
-    typeof agentRuntimeMemoryEmbedderStatusSchema
->;
-export type AgentRuntimeMemorySettings = z.infer<typeof agentRuntimeMemorySettingsSchema>;
-export type AgentRuntimeMemoryStatus = z.infer<typeof agentRuntimeMemoryStatusSchema>;
 export type CortexBacklinkList = z.infer<typeof cortexBacklinkListSchema>;
 export type CortexCaptureInput = z.infer<typeof cortexCaptureInputSchema>;
 export type CortexCaptureResult = z.infer<typeof cortexCaptureResultSchema>;
@@ -1474,8 +1627,10 @@ export type CortexPageList = z.infer<typeof cortexPageListSchema>;
 export type CortexPageSummary = z.infer<typeof cortexPageSummarySchema>;
 export type CortexRecallInput = z.infer<typeof cortexRecallInputSchema>;
 export type CortexRecallResult = z.infer<typeof cortexRecallResultSchema>;
+export type CortexSaveSettings = z.infer<typeof cortexSaveSettingsSchema>;
 export type CortexSearchInput = z.infer<typeof cortexSearchInputSchema>;
 export type CortexSearchResult = z.infer<typeof cortexSearchResultSchema>;
+export type CortexSettings = z.infer<typeof cortexSettingsSchema>;
 export type CortexSourceRef = z.infer<typeof cortexSourceRefSchema>;
 export type CortexStatus = z.infer<typeof cortexStatusSchema>;
 export type CortexTimelineEntry = z.infer<typeof cortexTimelineEntrySchema>;
@@ -1508,8 +1663,6 @@ export type AgentRuntimeSkillSummary = z.infer<typeof agentRuntimeSkillSummarySc
 export type AgentRuntimeMacApp = z.infer<typeof agentRuntimeMacAppSchema>;
 export type AgentRuntimeMacAppList = z.infer<typeof agentRuntimeMacAppListSchema>;
 export type AgentRuntimeSkillUpdatedEvent = z.infer<typeof agentRuntimeSkillUpdatedEventSchema>;
-export type AgentRuntimeStatus = z.infer<typeof agentRuntimeStatusSchema>;
-export type AgentRuntimeSaveMemorySettings = z.infer<typeof agentRuntimeSaveMemorySettingsSchema>;
 export type AgentRuntimeSaveModels = z.infer<typeof agentRuntimeSaveModelsSchema>;
 export type AgentRuntimeSaveOpenRouterSettings = z.infer<
     typeof agentRuntimeSaveOpenRouterSettingsSchema
@@ -1545,6 +1698,11 @@ export type TavernChannelMessageAcceptedFrame = z.infer<
     typeof tavernChannelMessageAcceptedFrameSchema
 >;
 export type AgentRuntimeRunCron = z.infer<typeof agentRuntimeRunCronSchema>;
+export type AgentRuntimeJobDetail = z.infer<typeof agentRuntimeJobDetailSchema>;
+export type AgentRuntimeJobList = z.infer<typeof agentRuntimeJobListSchema>;
+export type AgentRuntimeJobSlug = z.infer<typeof agentRuntimeJobSlugSchema>;
+export type AgentRuntimeJobSummary = z.infer<typeof agentRuntimeJobSummarySchema>;
+export type AgentRuntimeRunJob = z.infer<typeof agentRuntimeRunJobSchema>;
 export type AgentRuntimeTurn = z.infer<typeof agentRuntimeTurnSchema>;
 export type AgentRuntimeTurnProgressStep = z.infer<typeof agentRuntimeTurnProgressStepSchema>;
 export type AgentRuntimeTurnCompletedEvent = z.infer<typeof agentRuntimeTurnCompletedEventSchema>;

@@ -38,6 +38,18 @@ is healthy, but remembered facts live in Cortex.
 Memory visibility is derived from Cortex state. It does not create a parallel
 `memory_records` store.
 
+Memory configuration does not expose retired persistence, working, knowledge,
+or dream model slots. Current settings and health should name Cortex concepts
+directly: storage, wiki mirrors, capture, recall, encodings, links, audit, and
+maintenance.
+
+The implemented Cortex path is not the complete GBrain loop yet. Today it
+stores captured material, mirrors pages, parses links, builds deterministic
+claims, indexes OpenAI embeddings when configured, and reports recall and job
+health. The missing work is model-backed review of bounded source captures:
+extracting durable observations, inferring typed relationships, updating
+compiled truth, and recording source-backed timeline and audit output.
+
 When a user corrects memory, Tavern edits or appends to the relevant Cortex
 page, timeline entry, link, tag, or source metadata. When a user asks Tavern to
 forget something, Tavern marks or rewrites the relevant Cortex material with

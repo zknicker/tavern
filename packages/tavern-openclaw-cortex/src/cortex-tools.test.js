@@ -101,7 +101,7 @@ describe('Tavern Cortex OpenClaw tools', () => {
         ]);
     });
 
-    it('reads status and backlinks with GET routes', async () => {
+    it('reads backlinks with a GET route', async () => {
         const requests = [];
         const tools = registerTools({
             fetch: mock(async (url, init) => {
@@ -110,41 +110,12 @@ describe('Tavern Cortex OpenClaw tools', () => {
             }),
         });
 
-        await tools.get('cortex_status').execute('call_1', {});
-        await tools.get('cortex_list_backlinks').execute('call_2', { target: 'Project Memory' });
+        await tools.get('cortex_list_backlinks').execute('call_1', { target: 'Project Memory' });
 
         expect(requests).toEqual([
-            {
-                method: 'GET',
-                url: 'http://runtime.test/cortex/status',
-            },
             {
                 method: 'GET',
                 url: 'http://runtime.test/cortex/pages/Project%20Memory/backlinks',
-            },
-        ]);
-    });
-
-    it('runs Cortex jobs with a bodyless POST request', async () => {
-        const requests = [];
-        const tools = registerTools({
-            fetch: mock(async (url, init) => {
-                requests.push({
-                    body: init.body,
-                    method: init.method,
-                    url: String(url),
-                });
-                return jsonResponse({ job: 'lint', status: 'completed' });
-            }),
-        });
-
-        await tools.get('cortex_run_job').execute('call_1', { job: 'lint' });
-
-        expect(requests).toEqual([
-            {
-                body: undefined,
-                method: 'POST',
-                url: 'http://runtime.test/cortex/jobs/lint/run',
             },
         ]);
     });

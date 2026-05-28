@@ -1,10 +1,5 @@
-import type { AgentRuntimeStatus } from '@tavern/api';
-import {
-    recordCapabilityFailure,
-    recordCapabilitySuccess,
-} from '../agent-runtime/capability-status.ts';
+import type { AgentRuntimeCapabilityHealth } from '@tavern/api';
 import { createAgentRuntimeClientForConnection } from '../agent-runtime/client-factory.ts';
-import { listAgentRuntimeCapabilityStatuses } from '../storage/agent-runtime-capability-status.ts';
 import {
     activateAgentRuntimeConnection,
     agentRuntimeConnectionId,
@@ -17,11 +12,8 @@ import {
     saveAgentRuntimeConnection as saveStoredAgentRuntimeConnection,
 } from '../storage/agent-runtime-connections.ts';
 import { parseAgentRuntimeConnectionAuth } from './auth.ts';
-import { splitAgentRuntimeCapabilities } from './capability-groups.ts';
-import type { AgentRuntimeConnection } from './contracts.ts';
-import { recordOpenClawMemoryCapability } from './memory-capability.ts';
-import { recordOpenClawGatewayCapability } from './openclaw-gateway-capability.ts';
-import { recordTavernPluginCapability } from './tavern-plugin-capability.ts';
+import type { AgentRuntimeCapabilityStatus, AgentRuntimeConnection } from './contracts.ts';
+import { type AgentRuntimeCapability, agentRuntimeCapabilitySchema } from './contracts.ts';
 
 function getAgentRuntimeEnvironmentBaseUrl() {
     return process.env.TAVERN_RUNTIME_URL?.trim() || null;
@@ -63,7 +55,6 @@ function toAgentRuntimeConnection(input: {
     source: 'environment' | 'saved';
 }): AgentRuntimeConnection {
     const capabilities = input.capabilities ?? [];
-    const capabilityGroups = splitAgentRuntimeCapabilities(capabilities);
 
     return {
         authConfigured: input.authConfigured,
@@ -76,9 +67,43 @@ function toAgentRuntimeConnection(input: {
         lastError: input.lastError,
         lastSyncedAt: input.lastSyncedAt,
         name: input.name,
-        openClawCapabilities: capabilityGroups.openClawCapabilities,
-        runtimeCapabilities: capabilityGroups.runtimeCapabilities,
+        runtimeCapabilities: capabilities,
         source: input.source,
+    };
+}
+
+async function listRuntimeOwnedCapabilities(input: {
+    baseUrl: string;
+    runtimeId: string;
+}): Promise<AgentRuntimeConnection['capabilities']> {
+    let client: ReturnType<typeof createAgentRuntimeClientForConnection> | null = null;
+    try {
+        client = createAgentRuntimeClientForConnection({ baseUrl: input.baseUrl });
+        const { capabilities } = await client.listCapabilities();
+        return capabilities.map((capability) => toAppCapabilityStatus(capability, input.runtimeId));
+    } catch {
+        return [];
+    } finally {
+        client?.close();
+    }
+}
+
+function toAppCapabilityStatus(
+    capability: AgentRuntimeCapabilityHealth,
+    runtimeId: string
+): AgentRuntimeCapabilityStatus {
+    return {
+        capability: capability.id,
+        checkedAt: capability.checkedAt,
+        errorCode: null,
+        lastHealthyAt: capability.lastHealthyAt,
+        metadataJson: JSON.stringify(capability.metadata),
+        method: 'runtime.capabilities',
+        reason: capability.reason,
+        runtimeId,
+        state: capability.state,
+        technicalMessage: capability.technicalMessage,
+        updatedAt: capability.updatedAt,
     };
 }
 
@@ -92,7 +117,10 @@ async function toSavedAgentRuntimeConnection(
     return toAgentRuntimeConnection({
         authConfigured: parseAgentRuntimeConnectionAuth(record.authJson) !== null,
         baseUrl: record.baseUrl,
-        capabilities: await listAgentRuntimeCapabilityStatuses(record.id),
+        capabilities: await listRuntimeOwnedCapabilities({
+            baseUrl: record.baseUrl,
+            runtimeId: record.id,
+        }),
         enabled: record.enabled,
         id: record.id,
         isActive: record.isActive,
@@ -122,11 +150,11 @@ export async function loadAgentRuntimeConnection() {
         const record = await saveStoredAgentRuntimeConnection({
             baseUrl: checked.baseUrl,
             enabled: true,
-            id: checked.status.identity.info.agentRuntimeId,
+            id: checked.capabilities.info.agentRuntimeId,
             isActive: true,
             lastCheckedAt: null,
             lastError: null,
-            name: checked.status.identity.info.name,
+            name: checked.capabilities.info.name,
         });
         currentAgentRuntimeUrl = checked.baseUrl;
 
@@ -134,12 +162,12 @@ export async function loadAgentRuntimeConnection() {
             baseUrl: checked.baseUrl,
             authConfigured: false,
             enabled: true,
-            id: record?.id ?? checked.status.identity.info.agentRuntimeId,
+            id: record?.id ?? checked.capabilities.info.agentRuntimeId,
             isActive: true,
             lastCheckedAt: null,
             lastError: null,
             lastSyncedAt: null,
-            name: checked.status.identity.info.name,
+            name: checked.capabilities.info.name,
             source: 'environment',
         });
     }
@@ -180,7 +208,10 @@ export async function getAgentRuntimeConnection() {
             enabled: true,
             id: runtimeId,
             isActive: true,
-            capabilities: await listAgentRuntimeCapabilityStatuses(runtimeId),
+            capabilities: await listRuntimeOwnedCapabilities({
+                baseUrl: environmentBaseUrl,
+                runtimeId,
+            }),
             lastCheckedAt: environmentRecord?.lastCheckedAt ?? null,
             lastError: environmentRecord?.lastError ?? null,
             lastSyncedAt: environmentRecord?.lastSyncedAt ?? null,
@@ -209,6 +240,24 @@ export async function getAgentRuntimeConnection() {
         name: 'Tavern Runtime',
         source: 'environment',
     });
+}
+
+export async function refreshAgentRuntimeCapability(input: {
+    capability: AgentRuntimeCapability;
+}): Promise<AgentRuntimeCapabilityStatus> {
+    const capability = agentRuntimeCapabilitySchema.parse(input.capability);
+    const connection = await getAgentRuntimeConnection();
+    if (!connection?.enabled) {
+        throw new Error('Tavern Runtime is not configured.');
+    }
+
+    const client = createAgentRuntimeClientForConnection({ baseUrl: connection.baseUrl });
+    try {
+        const refreshed = await client.refreshCapability(capability);
+        return toAppCapabilityStatus(refreshed, connection.id);
+    } finally {
+        client.close();
+    }
 }
 
 export async function listAgentRuntimeConnections() {
@@ -243,11 +292,11 @@ export async function saveAgentRuntimeConnection(input: {
         auth,
         baseUrl: checked.baseUrl,
         enabled: input.enabled,
-        id: input.id ?? checked.status.identity.info.agentRuntimeId,
+        id: input.id ?? checked.capabilities.info.agentRuntimeId,
         isActive: true,
         lastCheckedAt: checkedAt,
         lastError: input.lastError,
-        name: checked.status.identity.info.name,
+        name: checked.capabilities.info.name,
     });
 
     currentAgentRuntimeUrl = getAgentRuntimeEnvironmentBaseUrl() ?? checked.baseUrl;
@@ -297,19 +346,19 @@ export async function deleteAgentRuntimeConnection(input: { id: string }) {
 
 export async function checkAgentRuntimeConnection(input: { auth?: unknown; baseUrl: string }) {
     const auth = input.auth ? parseAgentRuntimeConnectionAuth(input.auth) : null;
-    return await checkAgentRuntimeStatus({
+    return await checkAgentRuntimeCapabilities({
         authJson: auth ? JSON.stringify(auth) : null,
         baseUrl: input.baseUrl,
     });
 }
 
-async function checkAgentRuntimeStatus(input: { authJson?: null | string; baseUrl: string }) {
+async function checkAgentRuntimeCapabilities(input: { authJson?: null | string; baseUrl: string }) {
     try {
         const client = createAgentRuntimeClientForConnection(input);
-        const status = await client.getStatus();
+        const capabilities = await client.listCapabilities();
         return {
             baseUrl: input.baseUrl,
-            status,
+            capabilities,
         };
     } catch (error) {
         const secureBaseUrl = toSecureRuntimeUrl(input.baseUrl);
@@ -322,10 +371,10 @@ async function checkAgentRuntimeStatus(input: { authJson?: null | string; baseUr
             ...input,
             baseUrl: secureBaseUrl,
         });
-        const status = await client.getStatus();
+        const capabilities = await client.listCapabilities();
         return {
             baseUrl: secureBaseUrl,
-            status,
+            capabilities,
         };
     }
 }
@@ -342,12 +391,6 @@ export async function markAgentRuntimeConnectionFailure(input: {
 
     const message = toErrorMessage(input.error);
 
-    await recordCapabilityFailure({
-        capability: 'status',
-        error: input.error,
-        method: 'health/status',
-        runtimeId: record.id,
-    });
     await saveStoredAgentRuntimeConnection({
         baseUrl: record.baseUrl,
         enabled: record.enabled,
@@ -367,11 +410,6 @@ export async function markAgentRuntimeConnectionReachable(input: { connectionId:
         return;
     }
 
-    await recordCapabilitySuccess({
-        capability: 'status',
-        method: 'health/status',
-        runtimeId: record.id,
-    });
     await saveStoredAgentRuntimeConnection({
         baseUrl: record.baseUrl,
         enabled: record.enabled,
@@ -384,9 +422,7 @@ export async function markAgentRuntimeConnectionReachable(input: { connectionId:
     });
 }
 
-export async function confirmAgentRuntimeConnection(
-    options: { refreshCapabilities?: boolean } = {}
-) {
+export async function confirmAgentRuntimeConnection() {
     const record = await getDefaultAgentRuntimeConnection();
 
     if (!record?.enabled) {
@@ -394,28 +430,9 @@ export async function confirmAgentRuntimeConnection(
     }
 
     try {
-        const checked = await checkAgentRuntimeStatus(record);
-        const runtimeId = checked.status.identity.info.agentRuntimeId;
-        const runtimeName = checked.status.identity.info.name;
-        const client = createAgentRuntimeClientForConnection({
-            ...record,
-            baseUrl: checked.baseUrl,
-        });
-        await recordCapabilitySuccess({
-            capability: 'status',
-            method: 'health/status',
-            runtimeId,
-        });
-        if (options.refreshCapabilities ?? true) {
-            await recordTavernPluginCapability({
-                runtimeId,
-                status: checked.status,
-            });
-            if (shouldRefreshOpenClawCapabilities(checked.status)) {
-                await recordOpenClawGatewayCapability({ client, runtimeId });
-                await recordOpenClawMemoryCapability({ client, runtimeId });
-            }
-        }
+        const checked = await checkAgentRuntimeCapabilities(record);
+        const runtimeId = checked.capabilities.info.agentRuntimeId;
+        const runtimeName = checked.capabilities.info.name;
         await saveStoredAgentRuntimeConnection({
             baseUrl: checked.baseUrl,
             enabled: record.enabled,
@@ -435,8 +452,4 @@ export async function confirmAgentRuntimeConnection(
         });
         return false;
     }
-}
-
-function shouldRefreshOpenClawCapabilities(status: AgentRuntimeStatus) {
-    return status.managedOpenClaw?.gatewayReady !== false;
 }

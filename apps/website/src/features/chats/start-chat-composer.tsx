@@ -148,7 +148,7 @@ function isOpenClawGatewayHealthy(
     connection: ReturnType<typeof useAgentRuntimeConnection>['connection']
 ) {
     return (
-        connection?.openClawCapabilities.some(
+        connection?.runtimeCapabilities.some(
             (capability) => capability.capability === 'gateway' && capability.state === 'healthy'
         ) ?? false
     );

@@ -11,9 +11,16 @@ import type {
     JobRunDetail,
     JobRunEvent,
     JobRunSummary,
+    JobSlug,
     JobSummary,
 } from './contracts.ts';
 import { getJobBinding, getRegisteredJobDefinitions } from './manager.ts';
+import {
+    getRuntimeJobDetail,
+    isRuntimeJobSlug,
+    listRuntimeJobSummaries,
+    runRuntimeJob,
+} from './runtime-jobs.ts';
 
 const recentRunWindowMs = 24 * 60 * 60 * 1000;
 
@@ -126,6 +133,7 @@ async function buildJobSummary(slug: RegisteredJobSlug): Promise<JobSummary> {
         availability: enabled ? 'enabled' : 'disabled',
         counts: summarizeRecentRuns(recentRuns),
         description: binding.definition.description,
+        disabledReason: null,
         displayName: binding.definition.displayName,
         latestRun: recentRuns[0] ?? null,
         queueName: binding.definition.slug,
@@ -135,16 +143,25 @@ async function buildJobSummary(slug: RegisteredJobSlug): Promise<JobSummary> {
 }
 
 export async function listJobs() {
-    const jobs = await Promise.all(
-        getRegisteredJobDefinitions().map(async (definition) => buildJobSummary(definition.slug))
-    );
+    const [registeredJobs, runtimeJobs] = await Promise.all([
+        Promise.all(
+            getRegisteredJobDefinitions().map(async (definition) =>
+                buildJobSummary(definition.slug)
+            )
+        ),
+        listRuntimeJobSummaries(),
+    ]);
 
     return {
-        jobs,
+        jobs: [...registeredJobs, ...runtimeJobs],
     };
 }
 
-export async function getJobDetail(slug: RegisteredJobSlug): Promise<JobDetail> {
+export async function getJobDetail(slug: JobSlug): Promise<JobDetail> {
+    if (isRuntimeJobSlug(slug)) {
+        return await getRuntimeJobDetail(slug);
+    }
+
     const summary = await buildJobSummary(slug);
     const records = await listRecentJobExecutions({
         jobSlug: slug,
@@ -182,10 +199,11 @@ export async function listRecentRuns() {
     return { runs };
 }
 
-export async function runJob(
-    slug: RegisteredJobSlug,
-    payload: Record<string, unknown> | undefined
-) {
+export async function runJob(slug: JobSlug, payload: Record<string, unknown> | undefined) {
+    if (isRuntimeJobSlug(slug)) {
+        return await runRuntimeJob(slug);
+    }
+
     const binding = await getJobBinding(slug);
 
     if (!(await binding.definition.isEnabled())) {

@@ -1,5 +1,4 @@
 import {
-    type AgentRuntimeMemorySettings,
     type AgentRuntimeModelIdentity,
     type AgentRuntimeModels,
     agentRuntimeModelProviderCapabilities,
@@ -106,11 +105,8 @@ export function validateRoutingModels(input: AgentRuntimeModels) {
     }
 }
 
-export function listInUseModelRefs(
-    agentRuntimeModels: AgentRuntimeModels,
-    memorySettings: null | AgentRuntimeMemorySettings
-) {
-    return new Set(listModelUsageLabels(agentRuntimeModels, memorySettings).keys());
+export function listInUseModelRefs(agentRuntimeModels: AgentRuntimeModels) {
+    return new Set(listModelUsageLabels(agentRuntimeModels).keys());
 }
 
 function addModelUsage(
@@ -129,10 +125,7 @@ function addModelUsage(
     usagesByModelRef.set(normalized, usageLabels);
 }
 
-export function listModelUsageLabels(
-    agentRuntimeModels: AgentRuntimeModels,
-    memorySettings: null | AgentRuntimeMemorySettings
-) {
+export function listModelUsageLabels(agentRuntimeModels: AgentRuntimeModels) {
     const usagesByModelRef = new Map<string, Set<string>>();
 
     addModelUsage(
@@ -145,11 +138,6 @@ export function listModelUsageLabels(
         agentRuntimeModels.subAgentDefaultModel,
         'Default subagent model'
     );
-    addModelUsage(usagesByModelRef, memorySettings?.dreamModel, 'Memory dream model');
-    addModelUsage(usagesByModelRef, memorySettings?.knowledgeModel, 'Memory knowledge model');
-    addModelUsage(usagesByModelRef, memorySettings?.persistenceModel, 'Memory persistence model');
-    addModelUsage(usagesByModelRef, memorySettings?.workingModel, 'Memory working model');
-
     for (const modelRef of agentRuntimeModels.defaults.fallbackModels) {
         addModelUsage(usagesByModelRef, modelRef, 'Shared fallback chat model');
     }

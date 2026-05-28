@@ -1,60 +1,75 @@
 import * as React from 'react';
 import { BadgeDivider } from '../../components/ui/badge-divider.tsx';
-import { Card, CardContent } from '../../components/ui/card.tsx';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../components/ui/tabs.tsx';
-import { memoryTabs } from './memory-tabs.ts';
+import { Card, CardContent, CardFrame } from '../../components/ui/card.tsx';
+import { CodeSnippet } from '../../components/ui/code-snippet.tsx';
+import { Separator } from '../../components/ui/separator.tsx';
+import { SettingsRow, SettingsValue } from '../../components/ui/settings-row.tsx';
+import { useCortexStatusSuspense } from '../../hooks/cortex/use-cortex-status.ts';
 
 function MemoryContent() {
+    const [status] = useCortexStatusSuspense();
+    const unavailable = 'Tavern Runtime unavailable';
+
     return (
         <div className="flex min-h-0 flex-1 flex-col gap-6 px-4 pt-4 pb-4">
             <div className="max-w-3xl">
                 <h1 className="font-semibold text-2xl tracking-tight">Memory</h1>
                 <p className="mt-2 text-muted-foreground text-sm leading-6">
-                    Memory is the inspection surface for Tavern&apos;s generated continuity layers.
-                    This page stays focused on activity, bulletin, and durable memory output rather
-                    than configuration.
+                    Memory is inspectable Cortex state: pages, sources, links, chunks, encodings,
+                    recall audit, and maintenance runs.
                 </p>
             </div>
 
             <div>
                 <BadgeDivider
                     className="pb-4"
-                    subtext="Activity, bulletin, and durable memory stay separate so the generated memory output remains inspectable by layer."
+                    subtext="Durable memory lives in Cortex. OpenClaw context management is prompt-time continuity, not a second memory store."
                 >
-                    Memory Layers
+                    Cortex Memory
                 </BadgeDivider>
-                <Card>
-                    <CardContent className="p-4">
-                        <Tabs defaultValue="activity">
-                            <TabsList className="mb-4">
-                                {memoryTabs.map((tab) => (
-                                    <TabsTrigger key={tab.value} value={tab.value}>
-                                        {tab.title}
-                                    </TabsTrigger>
-                                ))}
-                            </TabsList>
-                            {memoryTabs.map((tab) => (
-                                <TabsContent
-                                    className="outline-none"
-                                    key={tab.value}
-                                    value={tab.value}
-                                >
-                                    <div className="rounded-3xl border border-border/70 border-dashed bg-card/20 p-6">
-                                        <p className="font-medium text-foreground text-sm">
-                                            {tab.title}
-                                        </p>
-                                        <p className="mt-2 text-muted-foreground text-sm">
-                                            {tab.description}
-                                        </p>
-                                        <p className="mt-4 text-muted-foreground text-sm leading-6">
-                                            {tab.emptyState}
-                                        </p>
-                                    </div>
-                                </TabsContent>
-                            ))}
-                        </Tabs>
-                    </CardContent>
-                </Card>
+                <CardFrame>
+                    <Card className="overflow-hidden p-0">
+                        <SettingsRow title="Pages">
+                            <SettingsValue>{status?.pageCount ?? unavailable}</SettingsValue>
+                        </SettingsRow>
+                        <Separator />
+                        <SettingsRow title="Sources">
+                            <SettingsValue>{status?.sourceCount ?? unavailable}</SettingsValue>
+                        </SettingsRow>
+                        <Separator />
+                        <SettingsRow title="Claims">
+                            <SettingsValue>{status?.claimCount ?? unavailable}</SettingsValue>
+                        </SettingsRow>
+                        <Separator />
+                        <SettingsRow title="Links">
+                            <SettingsValue>{status?.linkCount ?? unavailable}</SettingsValue>
+                        </SettingsRow>
+                        <Separator />
+                        <SettingsRow title="Chunks">
+                            <SettingsValue>{status?.chunkCount ?? unavailable}</SettingsValue>
+                        </SettingsRow>
+                        <Separator />
+                        <SettingsRow title="Encodings">
+                            <SettingsValue>
+                                {status
+                                    ? `${status.encoding.currentCount} current / ${status.encoding.totalCount} total`
+                                    : unavailable}
+                            </SettingsValue>
+                        </SettingsRow>
+                        <Separator />
+                        <SettingsRow title="Vector database">
+                            <SettingsValue>
+                                {status
+                                    ? `${status.vectorIndex.backend} / ${status.vectorIndex.indexedCount} indexed chunk(s)`
+                                    : unavailable}
+                            </SettingsValue>
+                        </SettingsRow>
+                        <Separator />
+                        <SettingsRow title="Wiki path">
+                            <CodeSnippet lines={status?.wikiPath ?? unavailable} />
+                        </SettingsRow>
+                    </Card>
+                </CardFrame>
             </div>
         </div>
     );

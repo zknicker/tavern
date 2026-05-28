@@ -5,7 +5,9 @@ import {
     runtimeHealthSchema,
     runtimeRoutes,
 } from '@tavern/api';
+import { handleRuntimeCapabilitiesRequest } from '../capabilities/routes';
 import { handleCortexRequest } from '../cortex/routes';
+import { handleRuntimeJobsRequest } from '../jobs/routes';
 import { listMacApps } from '../mac-apps/inventory';
 import {
     previewManagedOpenClawSessions,
@@ -30,7 +32,7 @@ import {
 } from './openclaw-snapshots-store';
 import { handleOpenClawProxyRequest } from './proxy';
 import { listProjectedTavernRuntimeEvents } from './runtime-event-projection';
-import { getRuntimeStatus } from './status';
+import { getRuntimeHealth } from './status';
 
 export async function handleTavernRuntimeRequest(request: Request): Promise<Response> {
     const url = new URL(request.url);
@@ -55,17 +57,23 @@ export async function handleTavernRuntimeRequest(request: Request): Promise<Resp
         return cortexResponse;
     }
 
+    const jobsResponse = await handleRuntimeJobsRequest(request);
+    if (jobsResponse) {
+        return jobsResponse;
+    }
+
+    const capabilitiesResponse = await handleRuntimeCapabilitiesRequest(request);
+    if (capabilitiesResponse) {
+        return capabilitiesResponse;
+    }
+
     const workspaceResponse = await handleWorkspaceRequest(request);
     if (workspaceResponse) {
         return workspaceResponse;
     }
 
     if (request.method === 'GET' && url.pathname === runtimeRoutes.health) {
-        return json(runtimeHealthSchema.parse(getRuntimeStatus().health));
-    }
-
-    if (request.method === 'GET' && url.pathname === runtimeRoutes.status) {
-        return json(getRuntimeStatus());
+        return json(runtimeHealthSchema.parse(getRuntimeHealth()));
     }
 
     if (request.method === 'GET' && url.pathname === runtimeRoutes.events) {

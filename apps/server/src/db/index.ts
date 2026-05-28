@@ -7,7 +7,6 @@ import * as schemaTables from './schema.ts';
 
 const {
     agentProfilesTable,
-    agentRuntimeCapabilityStatusTable,
     agentsTable,
     agentThoughtSnapshotsTable,
     apiUsageEventsTable,
@@ -51,7 +50,6 @@ const client = new Database(databasePath);
 
 const schema = {
     agentProfilesTable,
-    agentRuntimeCapabilityStatusTable,
     agentsTable,
     agentThoughtSnapshotsTable,
     cachedDocumentsTable,

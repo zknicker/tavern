@@ -88,10 +88,10 @@ export async function waitForRuntimeReady(timeoutMs = 10 * 60 * 1000) {
 
     while (Date.now() < deadline) {
         try {
-            const response = await fetch(`${runtimeBaseUrl}/status`);
+            const response = await fetch(`${runtimeBaseUrl}/capabilities`);
             if (response.ok) {
-                const status = await response.json();
-                if (status?.health?.ok === true) {
+                const capabilities = await response.json();
+                if (capabilities?.health?.ok === true) {
                     return;
                 }
             }

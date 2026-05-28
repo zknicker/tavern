@@ -28,9 +28,7 @@ const e2eAgentToolNames = [
     'cortex_get_page',
     'cortex_capture',
     'cortex_recall',
-    'cortex_status',
     'cortex_list_backlinks',
-    'cortex_run_job',
     'workspace_notes_read',
     'workspace_notes_update',
 ];

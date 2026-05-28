@@ -18,6 +18,17 @@ bun run dev
 This starts Tavern Runtime, managed OpenClaw Gateway, the local app backend, and
 the website dev server.
 
+## Shutdown
+
+From the terminal, stop the dev stack with `Ctrl+C` or `kill -TERM <dev-stack-pid>`.
+The stack sends `SIGTERM` to managed child processes and waits for each one to
+exit before returning control to the shell. Runtime owns managed OpenClaw
+shutdown, so the Runtime process logs while it waits for the Gateway to exit.
+
+In desktop mode, quitting the app with `Cmd+Q` also lets the stack unwind. The
+desktop process exits first, then the website, app backend, Runtime, and managed
+OpenClaw Gateway stop.
+
 ## OpenClaw Development
 
 OpenClaw-specific development recipes live here:

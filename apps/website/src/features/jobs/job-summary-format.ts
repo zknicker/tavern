@@ -13,7 +13,11 @@ export function buildJobSummaryMetaItems(job: JobSummary): JobSummaryMetaItem[] 
     const metaItems: JobSummaryMetaItem[] = [];
 
     if (job.availability === 'disabled') {
-        metaItems.push({ kind: 'availability', label: 'disabled' });
+        metaItems.push({ kind: 'availability', label: 'Disabled' });
+        if (job.disabledReason) {
+            metaItems.push({ kind: 'availability', label: job.disabledReason });
+        }
+        return metaItems;
     }
 
     metaItems.push({ kind: 'schedule', label: formatSchedulePhrase(job.schedule) });

@@ -23,8 +23,15 @@ chunks, embeddings, timelines, audit records, and telemetry.
 * Pages link to chats, messages, automations, files, citations, and other pages.
 * Search and recall results return enough metadata for agents and users to cite
   the source.
-* Capture and recall fail visibly when required embeddings are unavailable or
-  stale. Plain page reads can remain available.
+* Page reads include a small memory-health summary: chunk coverage, current
+  embeddings, stale or missing embeddings, active model, and last indexed time.
+* Vector recall uses a Runtime-owned vector database as rebuildable derived
+  state. Plain page reads and lexical search can remain available when vector
+  recall is degraded.
+* Runtime requests embedding generation after Cortex writes. Runtime `/jobs`
+  exposes the Generate Cortex Embeddings job on a 15-minute cadence so app
+  surfaces can show runs, failures, and audit history without owning Cortex
+  maintenance.
 * Audit records track page writes, captures, recalls, maintenance, embedding
   repair, and failures.
 
