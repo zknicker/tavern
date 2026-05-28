@@ -168,8 +168,7 @@ export function appendTimelineMessage(
 
     return {
         ...source,
-        offset: Math.max(total - source.limit, 0),
-        rows: nextRows.slice(-source.limit),
+        rows: nextRows,
         total,
     };
 }

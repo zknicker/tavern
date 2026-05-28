@@ -52,7 +52,7 @@ test('appendTimelineMessage appends a user message row', () => {
     });
 });
 
-test('appendTimelineMessage trims to the current page limit', () => {
+test('appendTimelineMessage keeps loaded rows visible past the page limit', () => {
     const current = {
         limit: 2,
         offset: 0,
@@ -103,9 +103,9 @@ test('appendTimelineMessage trims to the current page limit', () => {
         timestamp: '2026-04-20T18:15:00.000Z',
     });
 
-    expect(next?.offset).toBe(1);
+    expect(next?.offset).toBe(0);
     expect(next?.total).toBe(3);
-    expect(next?.rows.map((row) => row.id)).toEqual(['message-2', 'timeline:2']);
+    expect(next?.rows.map((row) => row.id)).toEqual(['message-1', 'message-2', 'timeline:2']);
 });
 
 test('mergeTimelineMessages can render a local row before the log has loaded', () => {

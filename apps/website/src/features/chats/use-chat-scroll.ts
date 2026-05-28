@@ -60,11 +60,11 @@ export function useChatScroll({
             return;
         }
 
-        scrollToBottom('smooth');
+        scrollToBottom('auto');
     }, [enabled, followKey, scrollToBottom]);
 
     React.useEffect(() => {
-        if (!enabled || !followResizes || typeof ResizeObserver === 'undefined') {
+        if (!(enabled && followResizes) || typeof ResizeObserver === 'undefined') {
             return;
         }
 
