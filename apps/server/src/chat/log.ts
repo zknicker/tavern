@@ -1,7 +1,15 @@
 import { chatLogPageSchema } from './contracts.ts';
 import { listRuntimeChatTimeline } from './runtime-chat-api.ts';
 
-export async function getChatLogPage(input: { id: string; limit: number; offset?: number }) {
+type ChatLogCursor = number | { offset: number };
+
+export async function getChatLogPage(input: {
+    cursor?: ChatLogCursor;
+    direction?: 'backward' | 'forward';
+    id: string;
+    limit: number;
+    offset?: number;
+}) {
     const timeline = await listRuntimeChatTimeline(input.id);
 
     if (timeline === null) {
@@ -15,10 +23,13 @@ export async function getChatLogPage(input: { id: string; limit: number; offset?
     }
     const { activeReply, rows } = timeline;
     const total = rows.length;
-    const offset =
-        typeof input.offset === 'number'
-            ? Math.min(input.offset, total)
-            : Math.max(total - input.limit, 0);
+    const offset = resolveChatLogOffset({
+        cursor: input.cursor,
+        direction: input.direction,
+        limit: input.limit,
+        offset: input.offset,
+        total,
+    });
 
     return chatLogPageSchema.parse({
         activeReply,
@@ -27,4 +38,36 @@ export async function getChatLogPage(input: { id: string; limit: number; offset?
         offset,
         total,
     });
+}
+
+export function resolveChatLogOffset(input: {
+    cursor?: ChatLogCursor;
+    direction?: 'backward' | 'forward';
+    limit: number;
+    offset?: number;
+    total: number;
+}) {
+    const cursorOffset = getCursorOffset(input.cursor);
+
+    if (typeof cursorOffset === 'number') {
+        return Math.min(cursorOffset, input.total);
+    }
+
+    if (input.direction === 'backward') {
+        return 0;
+    }
+
+    if (typeof input.offset === 'number') {
+        return Math.min(input.offset, input.total);
+    }
+
+    return Math.max(input.total - input.limit, 0);
+}
+
+function getCursorOffset(cursor: ChatLogCursor | undefined) {
+    if (typeof cursor === 'number') {
+        return cursor;
+    }
+
+    return cursor?.offset;
 }

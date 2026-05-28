@@ -32,10 +32,12 @@ export function patchChatLogWithProgress(
               );
     const sortedRows = rows.sort(compareChatLogRows);
     const nextRows = trimRows(sortedRows, sourceLog.limit);
+    const trimmedCount = sortedRows.length - nextRows.length;
     const total = existingIndex === -1 ? sourceLog.total + 1 : sourceLog.total;
 
     return {
         ...sourceLog,
+        offset: sourceLog.offset + trimmedCount,
         rows: nextRows,
         total,
     };

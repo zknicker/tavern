@@ -1,15 +1,15 @@
 import * as React from 'react';
-import { DayDivider, formatDayLabel } from '../../components/ui/day-divider.tsx';
 import type { ChatActiveReply, ChatTurnFailure } from '../../hooks/chats/chat-timeline-state.ts';
 import { markChatTiming } from '../../lib/chat-timing.ts';
+import { SessionLogHiddenCount } from '../sessions/session-log-hidden-count.tsx';
 import {
     buildTranscriptEntries,
     type ConversationMessageLayout,
-    getItemSessionKey,
-    type TranscriptEntry,
     type TranscriptRow,
 } from './chat-transcript-model.ts';
-import { TranscriptEntryView } from './chat-transcript-turn.tsx';
+import { buildTranscriptRenderRows } from './chat-transcript-row-model.ts';
+import { TranscriptEntryRow } from './chat-transcript-rows.tsx';
+import { VirtualizedChatTranscript } from './virtualized-chat-transcript.tsx';
 
 const directConversationMessageLayout: ConversationMessageLayout = {
     showAgentIdentity: false,
@@ -21,15 +21,25 @@ export function ChatTranscript({
     chatId,
     conversationLayout = directConversationMessageLayout,
     currentSessionKey,
+    fetchPreviousPage,
     failedTurn = null,
+    hasPreviousPage = false,
+    hiddenCount = 0,
+    isFetchingPreviousPage = false,
     rows,
+    scrollViewportRef,
 }: {
     activeReply: ChatActiveReply | null;
     chatId?: string;
     conversationLayout?: ConversationMessageLayout;
     currentSessionKey?: string | null;
+    fetchPreviousPage?: () => void;
     failedTurn?: ChatTurnFailure | null;
+    hasPreviousPage?: boolean;
+    hiddenCount?: number;
+    isFetchingPreviousPage?: boolean;
     rows: TranscriptRow[];
+    scrollViewportRef?: React.RefObject<HTMLDivElement | null>;
 }) {
     const entries = React.useMemo(
         () =>
@@ -39,6 +49,10 @@ export function ChatTranscript({
                 rows,
             }),
         [activeReply, failedTurn, rows]
+    );
+    const transcriptRows = React.useMemo(
+        () => buildTranscriptRenderRows(entries, hiddenCount),
+        [entries, hiddenCount]
     );
     const latestAgentMessage = React.useMemo(() => getLatestAgentMessage(rows), [rows]);
 
@@ -64,51 +78,40 @@ export function ChatTranscript({
         });
     }, [latestAgentMessage]);
 
-    let previousDayKey: string | null = null;
+    if (scrollViewportRef) {
+        return (
+            <VirtualizedChatTranscript
+                activeReply={activeReply}
+                chatId={chatId}
+                conversationLayout={conversationLayout}
+                currentSessionKey={currentSessionKey}
+                fetchPreviousPage={fetchPreviousPage}
+                hasPreviousPage={hasPreviousPage}
+                hiddenCount={hiddenCount}
+                isFetchingPreviousPage={isFetchingPreviousPage}
+                rows={transcriptRows}
+                scrollViewportRef={scrollViewportRef}
+            />
+        );
+    }
 
     return (
         <>
-            {entries.map((entry, index) => {
-                const previousEntry = index > 0 ? entries[index - 1] : null;
-                const timestamp = entry.timestamp;
-                const dayKey = getDayKey(timestamp);
-                const showDayDivider = dayKey !== null && dayKey !== previousDayKey;
-                const turnStartedAt = getAgentTurnStartedAt(previousEntry, entry);
-
-                if (dayKey !== null) {
-                    previousDayKey = dayKey;
-                }
-
-                return (
-                    <React.Fragment key={entry.id}>
-                        {showDayDivider && timestamp ? (
-                            <DayDivider
-                                className="mx-3 mt-3 mb-1"
-                                label={formatDayLabel(timestamp)}
-                            />
-                        ) : null}
-                        <TranscriptEntryView
-                            activeReply={activeReply}
-                            chatId={chatId}
-                            conversationLayout={conversationLayout}
-                            currentSessionKey={currentSessionKey}
-                            entry={entry}
-                            turnStartedAt={turnStartedAt}
-                        />
-                    </React.Fragment>
-                );
-            })}
+            <SessionLogHiddenCount hiddenCount={hiddenCount} />
+            {transcriptRows.map((row) =>
+                row.kind === 'entry' ? (
+                    <TranscriptEntryRow
+                        activeReply={activeReply}
+                        chatId={chatId}
+                        conversationLayout={conversationLayout}
+                        currentSessionKey={currentSessionKey}
+                        key={row.id}
+                        row={row}
+                    />
+                ) : null
+            )}
         </>
     );
-}
-
-function getDayKey(timestamp: string | null) {
-    if (!timestamp) {
-        return null;
-    }
-
-    const date = new Date(timestamp);
-    return `${date.getFullYear()}-${date.getMonth()}-${date.getDate()}`;
 }
 
 function getLatestAgentMessage(rows: TranscriptRow[]) {
@@ -117,37 +120,6 @@ function getLatestAgentMessage(rows: TranscriptRow[]) {
 
         if (row?.kind === 'message' && row.message.senderType === 'agent') {
             return row.message;
-        }
-    }
-
-    return null;
-}
-
-function getAgentTurnStartedAt(
-    previousEntry: TranscriptEntry | null,
-    entry: TranscriptEntry
-): string | null {
-    if (
-        entry.kind !== 'turn' ||
-        entry.participant !== 'agent' ||
-        previousEntry?.kind !== 'turn' ||
-        previousEntry.participant !== 'user'
-    ) {
-        return null;
-    }
-
-    const agentSessionKey = getEntrySessionKey(entry);
-    const userSessionKey = getEntrySessionKey(previousEntry);
-
-    return agentSessionKey && agentSessionKey === userSessionKey ? previousEntry.timestamp : null;
-}
-
-function getEntrySessionKey(entry: Extract<TranscriptEntry, { kind: 'turn' }>) {
-    for (const item of entry.items) {
-        const sessionKey = getItemSessionKey(item);
-
-        if (sessionKey) {
-            return sessionKey;
         }
     }
 

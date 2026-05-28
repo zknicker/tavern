@@ -12,6 +12,7 @@ import {
     SidebarMenuItem,
 } from '../../components/ui/sidebar.tsx';
 import { Spinner } from '../../components/ui/spinner.tsx';
+import type { ChatTimelineState } from '../../hooks/chats/chat-timeline-state.ts';
 import { useChatArchive } from '../../hooks/chats/use-chat-archive.ts';
 import { getChatDraftRouteState } from '../../hooks/chats/use-chat-draft-launch.ts';
 import { useChatList } from '../../hooks/chats/use-chat-list.ts';
@@ -200,7 +201,7 @@ function SidebarDraftChatItem({
     const hasActiveTurn =
         draft.status === 'queued' ||
         draft.status === 'creating' ||
-        (draft.status === 'reconciled' && timelineState.activeReply !== null);
+        (draft.status === 'reconciled' && hasLocalActiveTurn(timelineState));
 
     return (
         <SidebarMenuItem>
@@ -248,7 +249,7 @@ function SidebarRecentChatItem({
     const title = getSidebarChatTitle(chat);
     const path = buildChatPath(chat.id);
     const timelineState = useChatRuntimeTimelineState(chat.id);
-    const hasActiveTurn = chat.hasActiveTurn || timelineState.activeReply !== null;
+    const hasActiveTurn = chat.hasActiveTurn || hasLocalActiveTurn(timelineState);
 
     return (
         <SidebarMenuItem>
@@ -464,4 +465,8 @@ export function isSidebarTavernChat(
 
 export function getSidebarChatTitle(chat: ChatListItem) {
     return resolveTavernChatName(chat);
+}
+
+export function hasLocalActiveTurn(state: Pick<ChatTimelineState, 'activeTurn'>) {
+    return state.activeTurn !== null;
 }

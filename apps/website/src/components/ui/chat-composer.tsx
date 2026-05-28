@@ -135,12 +135,12 @@ export function ChatComposer({
     );
 
     return (
-        <form className={cn('px-6 pt-2 pb-6', className)} {...props}>
+        <form className={cn('px-6 pt-1 pb-4', className)} {...props}>
             <div className={cn('mx-auto w-full max-w-[46rem]', contentClassName)}>
                 {/* biome-ignore lint/a11y/noStaticElementInteractions lint/a11y/noNoninteractiveElementInteractions: The Fluid composer shell focuses its textarea when inert surface space is clicked. */}
                 <div
                     className={cn(
-                        'relative flex min-h-[6.25rem] cursor-text flex-col justify-between gap-1 rounded-3xl border border-transparent bg-popover p-2 shadow-sm ring-1 ring-border/80',
+                        'relative flex min-h-[5.5rem] cursor-text flex-col justify-between gap-1 rounded-3xl border border-transparent bg-popover p-2 shadow-sm ring-1 ring-border/80',
                         disabled && 'cursor-not-allowed opacity-64',
                         surfaceClassName
                     )}
@@ -174,7 +174,7 @@ export function ChatComposer({
                                     ref={setTextareaRef}
                                     rows={textareaRows}
                                     textareaClassName={cn(
-                                        'min-h-0 resize-none bg-transparent px-3 pt-2 pb-0 text-sm leading-6 placeholder:text-muted-foreground/60 max-sm:text-base',
+                                        'min-h-0 resize-none bg-transparent px-3 pt-1.5 pb-0 text-sm leading-6 placeholder:text-muted-foreground/60 max-sm:text-base',
                                         textOverlay &&
                                             'text-transparent caret-foreground selection:bg-ring/25'
                                     )}

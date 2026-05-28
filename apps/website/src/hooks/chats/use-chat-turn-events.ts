@@ -1,8 +1,9 @@
+import type { InfiniteData } from '@tanstack/react-query';
 import { useQueryClient } from '@tanstack/react-query';
 import { getQueryKey } from '@trpc/react-query';
 import type { ChatLogOutput } from '../../lib/trpc.tsx';
 import { trpc } from '../../lib/trpc.tsx';
-import { defaultLiveChatLogLimit } from './chat-log-cache.ts';
+import { patchInfiniteChatLogWithProgress } from './chat-log-infinite-cache.ts';
 import { createChatTurnEventHandlers } from './chat-turn-events.ts';
 import { useTimelineActions } from './use-timeline-context.tsx';
 
@@ -38,13 +39,16 @@ export function useChatTurnEvents() {
                             return;
                         }
 
-                        queryClient.setQueryData<ChatLogOutput>(
-                            getQueryKey(
-                                trpc.chat.log.list,
-                                { id: chatId, limit: defaultLiveChatLogLimit },
-                                'query'
-                            ),
-                            updater
+                        queryClient.setQueriesData<InfiniteData<NonNullable<ChatLogOutput>>>(
+                            {
+                                exact: false,
+                                predicate: (query) => isLiveChatLogQuery(query.queryKey, chatId),
+                                queryKey: getQueryKey(trpc.chat.log.list, undefined, 'infinite'),
+                            },
+                            (current) => {
+                                matchedQuery = true;
+                                return patchInfiniteChatLogWithProgress(current, updater);
+                            }
                         );
                     },
                 },

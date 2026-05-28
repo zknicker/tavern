@@ -21,6 +21,7 @@ type ChatLogInput = Omit<ChatLogPage, 'activeReply'> & Partial<Pick<ChatLogPage,
 export function emptyTimelineState(): ChatTimelineState {
     return {
         activeReply: null,
+        activeTurn: null,
         failedTurn: null,
         historyLoaded: false,
         timeline: [],
@@ -42,6 +43,7 @@ export function applyLogSnapshot(
         rows: snapshot.rows,
     });
     const nextActiveReply = hasTerminalMessage ? null : state.activeReply;
+    const nextActiveTurn = hasTerminalMessage ? null : state.activeTurn;
     const nextFailedTurn = hasFailureMessage(snapshot.rows, state.failedTurn)
         ? null
         : state.failedTurn;
@@ -60,6 +62,7 @@ export function applyLogSnapshot(
         state.totalRows === nextTotal &&
         state.historyLoaded === historyLoaded &&
         isSameActiveReply(state.activeReply, nextActiveReply) &&
+        state.activeTurn === nextActiveTurn &&
         isSameTurnFailure(state.failedTurn, nextFailedTurn)
     ) {
         return state;
@@ -67,6 +70,7 @@ export function applyLogSnapshot(
 
     return {
         activeReply: nextActiveReply,
+        activeTurn: nextActiveTurn,
         failedTurn: nextFailedTurn,
         historyLoaded,
         timeline: nextTimeline,
@@ -128,6 +132,10 @@ export function applyReplySnapshot(
     return {
         ...state,
         activeReply: nextActiveReply,
+        activeTurn:
+            nextActiveReply || state.activeTurn?.runId !== state.activeReply?.runId
+                ? state.activeTurn
+                : null,
         failedTurn:
             nextActiveReply && isSameActiveReplyRun(state.activeReply, nextActiveReply)
                 ? state.failedTurn

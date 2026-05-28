@@ -30,6 +30,7 @@ test('startTimelineTurn creates blank active reply state', () => {
         startedAt: '2026-04-21T16:08:42.000Z',
         text: '',
     });
+    expect(state.activeTurn).toEqual(turn);
     expect(state.failedTurn).toBeNull();
 });
 
@@ -62,6 +63,7 @@ test('applyLogSnapshot clears the active reply when the assistant message lands'
     });
 
     expect(next.activeReply).toBeNull();
+    expect(next.activeTurn).toBeNull();
     expect(next.timeline).toHaveLength(1);
 });
 
@@ -96,6 +98,7 @@ test('applyLogSnapshot preserves active reply while durable activity is running'
     });
 
     expect(next.activeReply?.runId).toBe('run-1');
+    expect(next.activeTurn?.runId).toBe('run-1');
     expect(next.timeline[0]?.id).toBe('act_tool_web');
 });
 
@@ -122,6 +125,7 @@ test('patchTimelineProgress adds live activity before durable log data arrives',
             },
         },
     ]);
+    expect(state.activeTurn).toEqual(turn);
 });
 
 test('applyLogSnapshot preserves live progress rows while the turn is active', () => {
@@ -306,15 +310,17 @@ test('clearTimelineTurn only clears the matching run', () => {
 
     expect(clearTimelineTurn(state, { runId: 'other' }).activeReply?.runId).toBe('run-1');
     expect(clearTimelineTurn(state, { runId: 'run-1' }).activeReply).toBeNull();
+    expect(clearTimelineTurn(state, { runId: 'run-1' }).activeTurn).toBeNull();
 });
 
-test('completeTimelineTurn keeps active reply visible until durable history catches up', () => {
+test('completeTimelineTurn keeps active reply visible while clearing active work', () => {
     const completed = completeTimelineTurn(startTimelineTurn(emptyTimelineState(), turn), {
         completedAt: '2026-04-21T16:08:46.000Z',
         turn,
     });
 
     expect(completed.activeReply?.runId).toBe('run-1');
+    expect(completed.activeTurn).toBeNull();
 });
 
 test('failTimelineTurn stores a failed turn marker', () => {
@@ -324,6 +330,7 @@ test('failTimelineTurn stores a failed turn marker', () => {
     });
 
     expect(failed.activeReply).toBeNull();
+    expect(failed.activeTurn).toBeNull();
     expect(failed.failedTurn).toEqual({ error: 'boom', turn });
 });
 

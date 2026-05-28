@@ -49,6 +49,7 @@ test('draft handoff waits while the accepted turn is still blank thinking', () =
                 startedAt: '2026-05-13T12:00:00.000Z',
                 text: '',
             },
+            activeTurn: null,
             failedTurn: null,
             historyLoaded: true,
             timeline: [],
@@ -76,6 +77,7 @@ test('draft handoff forwards the real active reply once the turn starts', () => 
                 startedAt: '2026-05-13T12:00:01.000Z',
                 text: '',
             },
+            activeTurn: null,
             failedTurn: null,
             historyLoaded: true,
             timeline: [],
@@ -97,6 +99,7 @@ test('draft handoff releases when the active reply has visible text', () => {
                 startedAt: '2026-05-13T12:00:00.000Z',
                 text: 'Done.',
             },
+            activeTurn: null,
             failedTurn: null,
             historyLoaded: true,
             timeline: [],
@@ -109,6 +112,7 @@ test('draft handoff waits when the loaded real chat only has the user message', 
     expect(
         shouldReleaseDraftHandoff({
             activeReply: null,
+            activeTurn: null,
             failedTurn: null,
             historyLoaded: true,
             timeline: [
@@ -141,6 +145,7 @@ test('draft handoff releases when no active reply remains after terminal history
     expect(
         shouldReleaseDraftHandoff({
             activeReply: null,
+            activeTurn: null,
             failedTurn: null,
             historyLoaded: true,
             timeline: [

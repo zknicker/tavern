@@ -38,10 +38,10 @@ import { getItemSessionKey } from './chat-transcript-model.ts';
 import { ThinkingIndicator, TypingIndicator } from './thinking-indicator.tsx';
 import { TurnWorkDisclosure } from './working-log.tsx';
 
-const rowClassName = 'relative w-full px-3 pt-1.5 pb-4';
-const newTurnGapClassName = 'mt-2.5';
+const rowClassName = 'relative w-full px-3 pt-1 pb-3';
+const newTurnGapClassName = 'mt-1.5';
 const hoverGroupClassName = 'group';
-const metadataGapClassName = 'pb-8';
+const metadataGapClassName = 'pb-6';
 
 export function TranscriptEntryView({
     activeReply,
@@ -193,7 +193,7 @@ function AgentTurn({
         hasWorkHeader && finalSegmentIndex >= 0 ? [segments[finalSegmentIndex]] : [];
 
     return (
-        <div className={cn(rowClassName, showIdentity ? newTurnGapClassName : 'mt-5')}>
+        <div className={cn(rowClassName, showIdentity ? newTurnGapClassName : 'mt-3.5')}>
             <div
                 className={cn(
                     showIdentity ? 'grid grid-cols-[2rem_minmax(0,1fr)] gap-x-2.5' : 'block'
@@ -221,7 +221,7 @@ function AgentTurn({
                             {displayName}
                         </div>
                     ) : null}
-                    <div className="flex min-w-0 flex-col gap-5">
+                    <div className="flex min-w-0 flex-col gap-3.5">
                         {hasWorkHeader ? (
                             <TurnWorkDisclosure
                                 end={workEnd}
@@ -368,15 +368,13 @@ function AssistantNarrationText({ item }: { item: TranscriptItem }) {
     const text = getAssistantNarrationText(item);
 
     return text ? (
-        <div className="whitespace-pre-wrap break-words text-foreground text-sm leading-[1.72]">
-            {text}
-        </div>
+        <div className="whitespace-pre-wrap break-words text-foreground text-sm">{text}</div>
     ) : null;
 }
 
 function ActiveReplyText({ item }: { item: Extract<TranscriptItem, { kind: 'activeReply' }> }) {
     return (
-        <div className="whitespace-pre-wrap break-words text-foreground text-sm leading-[1.72]">
+        <div className="whitespace-pre-wrap break-words text-foreground text-sm">
             {item.reply.text}
         </div>
     );

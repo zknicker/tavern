@@ -8,6 +8,7 @@ import { useChatDraftStart } from '../../hooks/chats/use-chat-draft-start.ts';
 import { useChatGet } from '../../hooks/chats/use-chat-list.ts';
 import { useChatStartDrafts } from '../../hooks/chats/use-chat-start-drafts.tsx';
 import { useChatTimeline } from '../../hooks/chats/use-chat-timeline.ts';
+import { useChatVirtualizationPreference } from '../../hooks/chats/use-chat-virtualization-preference.ts';
 import { useChatRuntimeTimelineState } from '../../hooks/chats/use-timeline-context.tsx';
 import { useModelList } from '../../hooks/models/use-model-list.ts';
 import { MissingAgentState } from '../agents/missing-agent-state.tsx';
@@ -176,6 +177,7 @@ function SyncedAgentChatDetail({
 }) {
     const agentsQuery = useAgentList();
     const modelsQuery = useModelList();
+    const chatVirtualization = useChatVirtualizationPreference();
     const agentId = resolveChatAgentId(chat);
     const agents = agentsQuery.data?.agents ?? [];
     const agent = agents.find((entry) => entry.id === agentId) ?? null;
@@ -204,8 +206,10 @@ function SyncedAgentChatDetail({
             chatId={chat.id}
             conversationLayout={conversationLayout}
             emptyLabel="No synced messages for this chat yet."
+            enableVirtualization={chatVirtualization.enabled}
             error={timeline.error}
             failedTurn={timeline.failedTurn}
+            fetchPreviousPage={timeline.fetchPreviousPage}
             footer={
                 <ChatMessageComposer
                     agentRuntimeSyncLabel={chat.agentRuntimeSyncLabel}
@@ -221,7 +225,9 @@ function SyncedAgentChatDetail({
                     })}
                 />
             }
+            hasPreviousPage={timeline.hasPreviousPage}
             historyLoaded={timeline.historyLoaded}
+            isFetchingPreviousPage={timeline.isFetchingPreviousPage}
             isPending={timeline.isPending}
             rows={rows}
             title={getBreadcrumbChatTitle(chat)}

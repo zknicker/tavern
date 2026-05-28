@@ -132,9 +132,10 @@ export async function applyObservedAgentRuntimeEvent(
         }
         case 'turn.completed':
         case 'turn.failed': {
+            clearTurnSessionActive(event.turn.sessionKey);
             emitObservedAgentRuntimeEvent(event);
             debugTurnEvent(event);
-            clearTurnSessionActive(event.turn.sessionKey);
+            emitChatUpdated({ chatId: event.turn.chatId });
             emitSessionUpdated({ sessionKey: event.turn.sessionKey });
             emitChatLogUpdated({ sessionKey: event.turn.sessionKey });
             return;

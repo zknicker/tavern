@@ -1,14 +1,27 @@
+import * as React from 'react';
 import { queryPolicy } from '../../lib/query-policy.ts';
-import { trpc } from '../../lib/trpc.tsx';
+import { type ChatLogOutput, trpc } from '../../lib/trpc.tsx';
 import { useChatTimelineRows } from './use-chat-timeline-store.tsx';
 
-export function useChatTimelinePage(input: { id: string; limit: number; offset?: number }) {
-    const query = trpc.chat.log.list.useQuery(input, queryPolicy.agentRuntimeSnapshot);
+type ChatLogPage = NonNullable<ChatLogOutput>;
+
+export function useChatTimelinePage(input: { id: string; limit: number }) {
+    const query = trpc.chat.log.list.useInfiniteQuery(
+        {
+            id: input.id,
+            limit: input.limit,
+        },
+        {
+            ...queryPolicy.agentRuntimeSnapshot,
+            getNextPageParam: (lastPage) => getNextChatLogCursor(lastPage),
+            getPreviousPageParam: (firstPage) => getPreviousChatLogCursor(firstPage),
+        }
+    );
+    const logged = React.useMemo(() => mergeChatLogPages(query.data?.pages), [query.data?.pages]);
     const data = useChatTimelineRows({
         chatId: input.id,
-        limit: input.limit,
-        logged: query.data,
-        offset: input.offset,
+        limit: Math.max(input.limit, logged?.rows.length ?? 0),
+        logged,
     });
     const isPending = query.isPending && data === undefined;
 
@@ -16,5 +29,48 @@ export function useChatTimelinePage(input: { id: string; limit: number; offset?:
         ...query,
         data,
         isPending,
+    };
+}
+
+function getPreviousChatLogCursor(page: ChatLogPage) {
+    if (page.offset <= 0) {
+        return undefined;
+    }
+
+    return {
+        offset: Math.max(page.offset - page.limit, 0),
+    };
+}
+
+function getNextChatLogCursor(page: ChatLogPage) {
+    const nextOffset = page.offset + page.rows.length;
+
+    return nextOffset < page.total ? { offset: nextOffset } : undefined;
+}
+
+function mergeChatLogPages(pages: ChatLogPage[] | undefined): ChatLogPage | undefined {
+    if (!(pages && pages.length > 0)) {
+        return undefined;
+    }
+
+    const latestPage = pages.at(-1);
+
+    if (!latestPage) {
+        return undefined;
+    }
+
+    const rowsById = new Map<string, ChatLogPage['rows'][number]>();
+
+    for (const page of pages) {
+        for (const row of page.rows) {
+            rowsById.set(row.id, row);
+        }
+    }
+
+    return {
+        ...latestPage,
+        limit: rowsById.size,
+        offset: pages[0]?.offset ?? latestPage.offset,
+        rows: [...rowsById.values()],
     };
 }

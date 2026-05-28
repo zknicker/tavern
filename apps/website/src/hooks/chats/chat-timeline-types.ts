@@ -23,6 +23,7 @@ export interface ChatTurnProgressStep {
 
 export interface ChatTimelineState {
     activeReply: ChatActiveReply | null;
+    activeTurn: ChatTurn | null;
     failedTurn: ChatTurnFailure | null;
     historyLoaded: boolean;
     timeline: ChatTimeline;

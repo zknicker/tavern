@@ -18,10 +18,14 @@ export function ChatDetailFrame({
     chatId,
     conversationLayout,
     emptyLabel,
+    enableVirtualization = true,
     error,
+    fetchPreviousPage,
     failedTurn,
     footer,
+    hasPreviousPage = false,
     historyLoaded,
+    isFetchingPreviousPage = false,
     isPending,
     rows,
     title,
@@ -32,10 +36,14 @@ export function ChatDetailFrame({
     chatId: string;
     conversationLayout?: ConversationMessageLayout;
     emptyLabel: string;
+    enableVirtualization?: boolean;
     error?: unknown;
+    fetchPreviousPage?: () => void;
     failedTurn?: ChatTurnFailure | null;
     footer: React.ReactNode;
+    hasPreviousPage?: boolean;
     historyLoaded: boolean;
+    isFetchingPreviousPage?: boolean;
     isPending: boolean;
     rows: NonNullable<ChatLogOutput>['rows'];
     title: string;
@@ -52,6 +60,23 @@ export function ChatDetailFrame({
         enabled: !isInitialTranscriptPending && hasTimelineContent,
         followKey,
     });
+    const handleScroll = () => {
+        chatScroll.handleScroll();
+
+        const viewport = chatScroll.viewportRef.current;
+
+        if (
+            enableVirtualization ||
+            !viewport ||
+            viewport.scrollTop > 160 ||
+            !hasPreviousPage ||
+            isFetchingPreviousPage
+        ) {
+            return;
+        }
+
+        fetchPreviousPage?.();
+    };
 
     return (
         <div className="flex min-h-0 flex-1 flex-col">
@@ -67,8 +92,8 @@ export function ChatDetailFrame({
 
             <div className="relative min-h-0 flex-1">
                 <div
-                    className="h-full min-h-0 overflow-y-auto px-6 py-5"
-                    onScroll={chatScroll.handleScroll}
+                    className="h-full min-h-0 overflow-y-auto px-6 py-4"
+                    onScroll={handleScroll}
                     ref={chatScroll.viewportRef}
                 >
                     <div
@@ -86,7 +111,13 @@ export function ChatDetailFrame({
                                 chatId={chatId}
                                 conversationLayout={conversationLayout}
                                 failedTurn={failedTurn}
+                                fetchPreviousPage={fetchPreviousPage}
+                                hasPreviousPage={hasPreviousPage}
+                                isFetchingPreviousPage={isFetchingPreviousPage}
                                 rows={rows}
+                                scrollViewportRef={
+                                    enableVirtualization ? chatScroll.viewportRef : undefined
+                                }
                                 totalRows={totalRows}
                             />
                         ) : (

@@ -12,6 +12,7 @@ export function startTimelineTurn(state: ChatTimelineState, turn: ChatTurn): Cha
             startedAt: turn.startedAt,
             text: '',
         }),
+        activeTurn: turn,
         failedTurn: null,
     };
 }
@@ -40,7 +41,12 @@ export function updateTimelineReply(
         text: nextText,
     });
 
-    return applyReplySnapshot(state, nextReply);
+    const nextState = applyReplySnapshot(state, nextReply);
+
+    return {
+        ...nextState,
+        activeTurn: nextState.activeReply ? update.turn : nextState.activeTurn,
+    };
 }
 
 export function clearTimelineTurn(
@@ -60,6 +66,8 @@ export function clearTimelineTurn(
     return {
         ...state,
         activeReply: null,
+        activeTurn:
+            input.runId && state.activeTurn?.runId !== input.runId ? state.activeTurn : null,
     };
 }
 
@@ -71,10 +79,18 @@ export function completeTimelineTurn(
     }
 ): ChatTimelineState {
     if (!state.activeReply || state.activeReply.runId !== input.turn.runId) {
-        return state;
+        return state.activeTurn?.runId === input.turn.runId
+            ? {
+                  ...state,
+                  activeTurn: null,
+              }
+            : state;
     }
 
-    return state;
+    return {
+        ...state,
+        activeTurn: null,
+    };
 }
 
 export function failTimelineTurn(
@@ -100,6 +116,10 @@ export function failTimelineTurn(
     return {
         ...state,
         activeReply: null,
+        activeTurn:
+            state.activeTurn?.runId === input.turn.runId || !state.activeTurn
+                ? null
+                : state.activeTurn,
         failedTurn,
     };
 }

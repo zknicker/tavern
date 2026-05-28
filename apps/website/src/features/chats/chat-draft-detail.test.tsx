@@ -69,6 +69,7 @@ describe('buildDraftHandoffLog', () => {
                 startedAt: '2026-05-13T12:00:01.000Z',
                 text: '',
             },
+            activeTurn: null,
             failedTurn: null,
             historyLoaded: false,
             timeline: [

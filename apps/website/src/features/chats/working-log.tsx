@@ -84,7 +84,7 @@ export function TurnWorkDisclosure({
     status: 'active' | 'completed';
 }) {
     return (
-        <Collapsible className="flex min-w-0 flex-col gap-5" defaultOpen>
+        <Collapsible className="flex min-w-0 flex-col gap-3.5" defaultOpen>
             <CollapsibleTrigger className="group border-border/70 border-b pb-2 text-left font-medium text-[13px] text-muted-foreground leading-tight transition-colors hover:text-foreground">
                 <span className="inline-flex items-center gap-1.5">
                     <TurnWorkHeaderContent end={end} start={start} status={status} />
@@ -96,7 +96,7 @@ export function TurnWorkDisclosure({
                 </span>
             </CollapsibleTrigger>
             <CollapsiblePanel>
-                <div className="flex min-w-0 flex-col gap-6">{children}</div>
+                <div className="flex min-w-0 flex-col gap-4">{children}</div>
             </CollapsiblePanel>
         </Collapsible>
     );

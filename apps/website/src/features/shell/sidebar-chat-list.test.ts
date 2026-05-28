@@ -9,6 +9,7 @@ import {
     getSidebarChatTitle,
     getSidebarDraftActivityLabel,
     getSidebarDraftPath,
+    hasLocalActiveTurn,
     isSidebarTavernChat,
 } from './sidebar-chat-list.tsx';
 
@@ -131,6 +132,21 @@ describe('sidebar chat list', () => {
                 })
             )
         ).toBe('Hey Blippy!');
+    });
+
+    test('uses explicit active turn state for local sidebar progress', () => {
+        expect(hasLocalActiveTurn({ activeTurn: null })).toBeFalse();
+        expect(
+            hasLocalActiveTurn({
+                activeTurn: {
+                    agentId: 'agent-1',
+                    chatId: 'chat-1',
+                    runId: 'run-1',
+                    sessionKey: 'session-1',
+                    startedAt: '2026-05-06T12:00:00.000Z',
+                },
+            })
+        ).toBeTrue();
     });
 
     test('renames only chats with one bound agent', () => {

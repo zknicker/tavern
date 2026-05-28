@@ -4,6 +4,9 @@ import { Tick02Icon } from '@hugeicons-pro/core-stroke-rounded';
 import { type ThemePreference, useTheme } from '../../../components/theme-provider.tsx';
 import { BadgeDivider } from '../../../components/ui/badge-divider.tsx';
 import { Icon } from '../../../components/ui/icon.tsx';
+import { SettingsRow } from '../../../components/ui/settings-row.tsx';
+import { Switch } from '../../../components/ui/switch.tsx';
+import { useChatVirtualizationPreference } from '../../../hooks/chats/use-chat-virtualization-preference.ts';
 import { cn } from '../../../lib/utils.ts';
 
 const themeOptions: Array<{
@@ -19,76 +22,99 @@ const themeOptions: Array<{
 
 export function AppearanceSettings() {
     const { setTheme, theme } = useTheme();
+    const chatVirtualization = useChatVirtualizationPreference();
 
     return (
-        <div>
-            <BadgeDivider className="pb-5">Theme Mode</BadgeDivider>
-            <div className="grid gap-4 sm:grid-cols-3">
-                {themeOptions.map((option) => {
-                    const isActive = option.id === theme;
+        <div className="space-y-8">
+            <div>
+                <BadgeDivider className="pb-5">Theme Mode</BadgeDivider>
+                <div className="grid gap-4 sm:grid-cols-3">
+                    {themeOptions.map((option) => {
+                        const isActive = option.id === theme;
 
-                    return (
-                        <button
-                            aria-pressed={isActive}
-                            className={cn(
-                                'group relative flex flex-col overflow-hidden rounded-2xl border bg-popover not-dark:bg-clip-padding text-left shadow-xs/5 outline-none transition-shadow dark:bg-input/32',
-                                'focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 focus-visible:ring-offset-background',
-                                isActive
-                                    ? 'border-brand'
-                                    : 'border-input hover:bg-accent/50 dark:hover:bg-input/64'
-                            )}
-                            key={option.id}
-                            onClick={() => setTheme(option.id)}
-                            type="button"
-                        >
-                            <ThemePreview isActive={isActive} variant={option.id} />
-                            <div className="flex items-center justify-between gap-2 px-4 pt-3.5 pb-4">
-                                <div className="flex min-w-0 items-center gap-2.5">
-                                    <Icon
-                                        aria-hidden="true"
-                                        className={cn(
-                                            isActive
-                                                ? 'text-brand'
-                                                : 'text-muted-foreground group-hover:text-foreground'
-                                        )}
-                                        icon={option.icon}
-                                        size={18}
-                                    />
-                                    <div className="min-w-0">
-                                        <div
+                        return (
+                            <button
+                                aria-pressed={isActive}
+                                className={cn(
+                                    'group relative flex flex-col overflow-hidden rounded-2xl border bg-popover not-dark:bg-clip-padding text-left shadow-xs/5 outline-none transition-shadow dark:bg-input/32',
+                                    'focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 focus-visible:ring-offset-background',
+                                    isActive
+                                        ? 'border-brand'
+                                        : 'border-input hover:bg-accent/50 dark:hover:bg-input/64'
+                                )}
+                                key={option.id}
+                                onClick={() => setTheme(option.id)}
+                                type="button"
+                            >
+                                <ThemePreview isActive={isActive} variant={option.id} />
+                                <div className="flex items-center justify-between gap-2 px-4 pt-3.5 pb-4">
+                                    <div className="flex min-w-0 items-center gap-2.5">
+                                        <Icon
+                                            aria-hidden="true"
                                             className={cn(
-                                                'truncate font-semibold text-sm leading-none',
-                                                isActive ? 'text-foreground' : 'text-foreground/85'
+                                                isActive
+                                                    ? 'text-brand'
+                                                    : 'text-muted-foreground group-hover:text-foreground'
                                             )}
-                                        >
-                                            {option.label}
-                                        </div>
-                                        <div className="mt-1 truncate text-muted-foreground text-xs leading-none">
-                                            {option.description}
+                                            icon={option.icon}
+                                            size={18}
+                                        />
+                                        <div className="min-w-0">
+                                            <div
+                                                className={cn(
+                                                    'truncate font-semibold text-sm leading-none',
+                                                    isActive
+                                                        ? 'text-foreground'
+                                                        : 'text-foreground/85'
+                                                )}
+                                            >
+                                                {option.label}
+                                            </div>
+                                            <div className="mt-1 truncate text-muted-foreground text-xs leading-none">
+                                                {option.description}
+                                            </div>
                                         </div>
                                     </div>
+                                    <span
+                                        aria-hidden="true"
+                                        className={cn(
+                                            'inline-flex size-5 shrink-0 items-center justify-center rounded-full',
+                                            isActive
+                                                ? 'bg-brand text-brand-foreground'
+                                                : 'border border-border bg-transparent'
+                                        )}
+                                    >
+                                        {isActive ? (
+                                            <Icon
+                                                className="size-3"
+                                                icon={Tick02Icon}
+                                                strokeWidth={3}
+                                            />
+                                        ) : null}
+                                    </span>
                                 </div>
-                                <span
-                                    aria-hidden="true"
-                                    className={cn(
-                                        'inline-flex size-5 shrink-0 items-center justify-center rounded-full',
-                                        isActive
-                                            ? 'bg-brand text-brand-foreground'
-                                            : 'border border-border bg-transparent'
-                                    )}
-                                >
-                                    {isActive ? (
-                                        <Icon
-                                            className="size-3"
-                                            icon={Tick02Icon}
-                                            strokeWidth={3}
-                                        />
-                                    ) : null}
-                                </span>
-                            </div>
-                        </button>
-                    );
-                })}
+                            </button>
+                        );
+                    })}
+                </div>
+            </div>
+
+            <div>
+                <BadgeDivider className="pb-3">Chat Display</BadgeDivider>
+                <div className="overflow-hidden rounded-lg border border-border bg-card">
+                    <SettingsRow
+                        description="Keep long chats smooth while scrolling."
+                        title="Virtualize chat history"
+                    >
+                        <div className="flex justify-start md:justify-end">
+                            <Switch
+                                aria-label="Virtualize chat history"
+                                checked={chatVirtualization.enabled}
+                                onCheckedChange={chatVirtualization.setEnabled}
+                            />
+                        </div>
+                    </SettingsRow>
+                </div>
             </div>
         </div>
     );

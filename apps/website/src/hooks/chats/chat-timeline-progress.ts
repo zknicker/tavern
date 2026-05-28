@@ -18,6 +18,7 @@ export function patchTimelineProgress(
 
     return {
         ...state,
+        activeTurn: input.turn,
         timeline: patched.rows,
         totalRows: patched.total,
     };

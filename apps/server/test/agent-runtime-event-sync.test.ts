@@ -299,6 +299,9 @@ test('applyObservedAgentRuntimeEvent forwards completed turns without fetching s
         },
         type: 'turn.completed',
     });
+    expect(emitChatUpdated).toHaveBeenCalledWith({ chatId: tavernChatId });
+    expect(emitSessionUpdated).toHaveBeenCalledWith({ sessionKey: 'session-1' });
+    expect(emitChatLogUpdated).toHaveBeenCalledWith({ sessionKey: 'session-1' });
 });
 
 test('applyObservedAgentRuntimeEvent does not sync history for live reply updates', async () => {
