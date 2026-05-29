@@ -68,10 +68,7 @@ export function createAppRouter() {
                                 },
                                 {
                                     path: 'agent',
-                                    lazy: lazyRoute(
-                                        () => import('./routes/dashboard/agent-landing-page.tsx'),
-                                        'AgentLandingPage'
-                                    ),
+                                    element: <Navigate replace to="/dashboard/settings/sessions" />,
                                 },
                                 {
                                     path: 'chats/:chatId',
@@ -242,6 +239,16 @@ export function createAppRouter() {
                                             ),
                                         },
                                         {
+                                            path: 'sessions',
+                                            lazy: lazyRoute(
+                                                () =>
+                                                    import(
+                                                        './routes/dashboard/settings-sessions-page.tsx'
+                                                    ),
+                                                'SettingsSessionsPage'
+                                            ),
+                                        },
+                                        {
                                             path: 'jobs',
                                             lazy: lazyRoute(
                                                 () =>
@@ -253,12 +260,11 @@ export function createAppRouter() {
                                         },
                                         {
                                             path: 'agent',
-                                            lazy: lazyRoute(
-                                                () =>
-                                                    import(
-                                                        './routes/dashboard/settings-agent-page.tsx'
-                                                    ),
-                                                'SettingsAgentPage'
+                                            element: (
+                                                <Navigate
+                                                    replace
+                                                    to="/dashboard/settings/sessions"
+                                                />
                                             ),
                                         },
                                         {

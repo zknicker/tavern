@@ -1,4 +1,3 @@
-import { AgentAvatar } from '@tavern/agent-avatars';
 import { NavLink } from 'react-router-dom';
 import { Icon } from '../../../components/ui/icon.tsx';
 import {
@@ -9,18 +8,13 @@ import {
     SidebarMenuButton,
     SidebarMenuItem,
 } from '../../../components/ui/sidebar.tsx';
-import type { AgentRailItem } from '../../../hooks/agents/use-agent-rail.ts';
-import { buildAgentSettingsPath } from '../../agents/agent-path.ts';
 import { backToAppIcon, settingsNavSections } from './navigation.ts';
 
 interface SettingsSidebarNavProps {
     onBackToApp: () => void;
-    sidebarAgents: AgentRailItem[];
 }
 
-export function SettingsSidebarNav({ onBackToApp, sidebarAgents }: SettingsSidebarNavProps) {
-    const agent = sidebarAgents[0] ?? null;
-
+export function SettingsSidebarNav({ onBackToApp }: SettingsSidebarNavProps) {
     return (
         <>
             <SidebarGroup className="pt-2">
@@ -77,43 +71,6 @@ export function SettingsSidebarNav({ onBackToApp, sidebarAgents }: SettingsSideb
                     </SidebarGroupContent>
                 </SidebarGroup>
             ))}
-
-            <SidebarGroup className="min-h-0 flex-1 py-1">
-                <SidebarGroupLabel>Agent</SidebarGroupLabel>
-                <SidebarGroupContent>
-                    <SidebarMenu>
-                        {agent ? (
-                            <SidebarMenuItem key={agent.id}>
-                                <NavLink className="contents" to={buildAgentSettingsPath(agent.id)}>
-                                    {({ isActive }) => (
-                                        <SidebarMenuButton
-                                            isActive={isActive}
-                                            render={<div />}
-                                            tooltip={agent.name}
-                                        >
-                                            <AgentAvatar
-                                                avatar={agent.avatar}
-                                                backgroundColor={agent.primaryColor ?? '#64748b'}
-                                                className="size-5"
-                                                name={agent.name}
-                                            />
-                                            <span className="min-w-0 truncate">{agent.name}</span>
-                                        </SidebarMenuButton>
-                                    )}
-                                </NavLink>
-                            </SidebarMenuItem>
-                        ) : null}
-
-                        {agent ? null : (
-                            <SidebarMenuItem>
-                                <div className="px-2 py-3 text-sidebar-muted text-xs">
-                                    No agent synced
-                                </div>
-                            </SidebarMenuItem>
-                        )}
-                    </SidebarMenu>
-                </SidebarGroupContent>
-            </SidebarGroup>
         </>
     );
 }

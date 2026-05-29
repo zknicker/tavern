@@ -54,7 +54,7 @@ describe('AppSidebarAgentList', () => {
         assert.doesNotMatch(markup, /Home/);
     });
 
-    test('uses the agent row as the active home link on the agent root route', () => {
+    test('does not mark the retired agent root route as active', () => {
         const markup = renderToStaticMarkup(
             React.createElement(
                 MemoryRouter,
@@ -71,7 +71,7 @@ describe('AppSidebarAgentList', () => {
 
         const activeFillCount = markup.match(/data-active=""/g)?.length ?? 0;
 
-        assert.equal(activeFillCount, 1);
+        assert.equal(activeFillCount, 0);
         assert.match(markup, /Claw/);
         assert.doesNotMatch(markup, /Chats/);
         assert.doesNotMatch(markup, /Home/);

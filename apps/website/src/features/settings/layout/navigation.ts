@@ -2,6 +2,7 @@ import type { IconSvgElement } from '@hugeicons/react';
 import {
     AiBrain01Icon,
     ArrowLeft01Icon,
+    ChatIcon,
     ComputerTerminal01Icon,
     Database02Icon,
     HourglassIcon,
@@ -34,6 +35,12 @@ export const settingsNavItems = [
         id: 'updates',
         label: 'Updates',
         to: '/dashboard/settings/updates',
+    },
+    {
+        icon: ChatIcon,
+        id: 'sessions',
+        label: 'Sessions',
+        to: '/dashboard/settings/sessions',
     },
     {
         icon: AiBrain01Icon,

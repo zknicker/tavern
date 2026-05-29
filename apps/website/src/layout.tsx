@@ -10,9 +10,6 @@ import { SidebarProvider } from './components/ui/sidebar.tsx';
 import { SessionDrawerHost } from './features/sessions/session-drawer.tsx';
 import { AppSidebar } from './features/shell/sidebar.tsx';
 import { AppTopbar } from './features/shell/topbar.tsx';
-import { useAgentActivity } from './hooks/agents/use-agent-activity.ts';
-import { usePrimaryAgent } from './hooks/agents/use-agent-list.ts';
-import { useAgentRail } from './hooks/agents/use-agent-rail.ts';
 import { useRouteTab } from './hooks/dashboard/use-route-tab.ts';
 import { useWindowNavigation } from './hooks/navigation/use-window-navigation.ts';
 import { SessionDrawerProvider } from './hooks/sessions/use-session-drawer.ts';
@@ -22,16 +19,10 @@ export interface DashboardLayoutContextValue {
 }
 
 export function Layout() {
-    const primaryAgentQuery = usePrimaryAgent();
-    const agentActivityQuery = useAgentActivity();
     const { activeTab, setActiveTab } = useRouteTab();
     const location = useLocation();
     const navigate = useNavigate();
     const windowNavigation = useWindowNavigation();
-    const sidebarAgents = useAgentRail(
-        primaryAgentQuery.data?.agent ? [primaryAgentQuery.data.agent] : [],
-        agentActivityQuery.data?.activity ?? []
-    );
 
     const navigateToSettings = React.useCallback(() => navigate('/dashboard/settings'), [navigate]);
     const navigateToApp = React.useCallback(() => navigate('/dashboard/overview'), [navigate]);
@@ -54,7 +45,6 @@ export function Layout() {
                         onBackToApp={navigateToApp}
                         onNavigateToSettings={navigateToSettings}
                         onSelectTab={setActiveTab}
-                        sidebarAgents={sidebarAgents}
                     />
 
                     <AppShellMain>

@@ -9,10 +9,8 @@ import {
     SidebarMenuItem,
     SidebarRail,
 } from '../../components/ui/sidebar.tsx';
-import type { AgentRailItem } from '../../hooks/agents/use-agent-rail.ts';
 import type { RouteTab } from '../../hooks/dashboard/use-route-tab.ts';
 import { SettingsSidebarNav } from '../settings/layout/sidebar-nav.tsx';
-import { AppSidebarAgentList } from './sidebar-agent-list.tsx';
 import { AppSidebarChatList } from './sidebar-chat-list.tsx';
 import { AppSidebarNav } from './sidebar-nav.tsx';
 
@@ -22,7 +20,6 @@ interface AppSidebarProps {
     onBackToApp: () => void;
     onNavigateToSettings: () => void;
     onSelectTab: (tab: RouteTab) => void;
-    sidebarAgents: AgentRailItem[];
 }
 
 export function AppSidebar({
@@ -31,7 +28,6 @@ export function AppSidebar({
     onBackToApp,
     onNavigateToSettings,
     onSelectTab,
-    sidebarAgents,
 }: AppSidebarProps) {
     return (
         <Sidebar
@@ -40,12 +36,11 @@ export function AppSidebar({
         >
             <SidebarContent>
                 {isSettingsRoute ? (
-                    <SettingsSidebarNav onBackToApp={onBackToApp} sidebarAgents={sidebarAgents} />
+                    <SettingsSidebarNav onBackToApp={onBackToApp} />
                 ) : (
                     <>
                         <AppSidebarNav activeTab={activeTab} onSelectTab={onSelectTab} />
                         <AppSidebarChatList />
-                        <AppSidebarAgentList sidebarAgents={sidebarAgents} />
                     </>
                 )}
             </SidebarContent>

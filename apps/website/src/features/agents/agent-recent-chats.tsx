@@ -31,13 +31,9 @@ export function AgentRecentChats({ agent }: { agent: AgentListOutput['agents'][n
     );
     return (
         <section>
-            <div className="flex items-baseline justify-between gap-3">
-                <h2 className="font-medium text-muted-foreground text-sm">Recent chats</h2>
-            </div>
-
             {agentChats.length > 0 ? (
                 <>
-                    <div className="mt-3">
+                    <div>
                         <ChatSourceFilterTabs
                             filter={effectiveSourceFilter}
                             onFilterChange={setSourceFilter}
