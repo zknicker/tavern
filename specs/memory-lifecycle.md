@@ -62,7 +62,7 @@ Cortex maintenance keeps the durable brain usable.
 Maintenance can:
 
 * repair stale chunks and embeddings
-* rebuild markdown mirrors
+* rebuild SQLite projections from canonical markdown
 * merge or split pages
 * repair links and backlinks
 * preserve contradictions as timeline evidence

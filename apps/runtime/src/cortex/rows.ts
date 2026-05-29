@@ -1,6 +1,5 @@
 import type {
     CortexCaptureInput,
-    CortexJobRun,
     CortexLink,
     CortexPage,
     CortexPageSummary,
@@ -31,6 +30,7 @@ export interface ClaimRow {
     source_refs_json: string;
     status: CortexPage['claims'][number]['status'];
     subject: string;
+    supersedes_claim_id: string | null;
     value: string;
 }
 
@@ -56,14 +56,6 @@ export interface TimelineRow {
     created_at: string;
     id: string;
     source_refs_json: string;
-}
-
-export interface JobRunRow {
-    audit_id: string;
-    completed_at: string;
-    job_name: CortexJobRun['job'];
-    status: CortexJobRun['status'];
-    summary: string;
 }
 
 export function toPageSummary(

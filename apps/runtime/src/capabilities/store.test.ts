@@ -1,3 +1,6 @@
+import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import path from 'node:path';
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 import { ensureCortexSchema } from '../cortex/schema';
 import { saveCortexSettings } from '../cortex/settings';
@@ -7,16 +10,24 @@ import { ensureRuntimeJobsSchema } from '../jobs/schema';
 import { getRuntimeCapability, listRuntimeCapabilities, refreshRuntimeCapabilities } from './store';
 
 describe('Runtime capabilities store', () => {
-    beforeEach(() => {
+    let runtimeRoot: string;
+
+    beforeEach(async () => {
+        runtimeRoot = await mkdtemp(path.join(tmpdir(), 'tavern-runtime-capabilities-'));
+        process.env.CODEX_HOME = path.join(runtimeRoot, 'empty-codex-home');
+        process.env.TAVERN_CORTEX_WIKI_PATH = path.join(runtimeRoot, 'cortex-wiki');
         const db = initTestDb();
         ensureRuntimeSchema(db);
         ensureCortexSchema(db);
         ensureRuntimeJobsSchema(db);
     });
 
-    afterEach(() => {
+    afterEach(async () => {
         vi.restoreAllMocks();
         closeDb();
+        process.env.CODEX_HOME = undefined;
+        process.env.TAVERN_CORTEX_WIKI_PATH = undefined;
+        await rm(runtimeRoot, { force: true, recursive: true });
     });
 
     test('lists expected Runtime capabilities before the first refresh', () => {
@@ -28,7 +39,10 @@ describe('Runtime capabilities store', () => {
             'agentTurns',
             'chats',
             'chatTargets',
+            'codexOAuth',
             'computerUse',
+            'cortexDatabase',
+            'cortexWiki',
             'cron',
             'cronRuns',
             'embeddingModel',
@@ -53,6 +67,64 @@ describe('Runtime capabilities store', () => {
             healthy: false,
             reason: 'Capability has not been checked yet.',
             state: 'unknown',
+        });
+    });
+
+    test('records empty Cortex database and wiki capabilities as healthy', async () => {
+        const capabilities = await refreshRuntimeCapabilities({
+            ids: ['cortexDatabase', 'cortexWiki'],
+        });
+
+        expect(capabilities.map((capability) => capability.id).sort()).toEqual([
+            'cortexDatabase',
+            'cortexWiki',
+        ]);
+        expect(capabilities.every((capability) => capability.healthy)).toBe(true);
+        expect(getRuntimeCapability('cortexDatabase')).toMatchObject({
+            healthy: true,
+            state: 'healthy',
+        });
+    });
+
+    test('records Codex OAuth as unavailable without Codex auth', async () => {
+        const [codexAccess] = await refreshRuntimeCapabilities({
+            ids: ['codexOAuth'],
+        });
+
+        expect(codexAccess).toMatchObject({
+            healthy: false,
+            id: 'codexOAuth',
+            reason: 'Codex OAuth credentials are not configured.',
+            state: 'unauthorized',
+        });
+    });
+
+    test('records Codex OAuth from Codex OAuth credentials', async () => {
+        const codexHome = path.join(runtimeRoot, 'codex-home');
+        await mkdir(codexHome, { recursive: true });
+        await writeFile(
+            path.join(codexHome, 'auth.json'),
+            JSON.stringify({
+                tokens: {
+                    access_token: 'codex-access-token',
+                    account_id: 'account-1',
+                },
+            })
+        );
+        process.env.CODEX_HOME = codexHome;
+
+        const [codexAccess] = await refreshRuntimeCapabilities({
+            ids: ['codexOAuth'],
+        });
+
+        expect(codexAccess).toMatchObject({
+            healthy: true,
+            id: 'codexOAuth',
+            metadata: {
+                accountId: 'account-1',
+                source: 'file',
+            },
+            state: 'healthy',
         });
     });
 

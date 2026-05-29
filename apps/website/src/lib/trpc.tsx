@@ -31,6 +31,7 @@ export type ChatLogOutput = RouterOutput['chat']['log']['list'];
 export type ChatToolOutput = RouterOutput['chat']['tool']['get'];
 export type CortexListOutput = RouterOutput['cortex']['list'];
 export type CortexPageOutput = RouterOutput['cortex']['get'];
+export type CortexSchemaOutput = RouterOutput['cortex']['schema'];
 export type CortexSettingsOutput = RouterOutput['cortex']['settings'];
 export type CortexStatusOutput = RouterOutput['cortex']['status'];
 export type JobsListOutput = RouterOutput['jobs']['list'];

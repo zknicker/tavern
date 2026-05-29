@@ -1,9 +1,10 @@
 import type { Database } from '../db/sqlite';
 import { namedParams } from '../db/sqlite';
+import { getActiveCortexSchema } from './cortex-schema';
 import { createCortexId, hashText } from './ids';
-import { extractWikiLinks, splitCortexChunks } from './markdown';
+import { extractCortexLinks, splitCortexChunks } from './markdown';
 import { findPageRow } from './read';
-import type { PageRow } from './rows';
+import { type PageRow, readJsonRecord } from './rows';
 
 export function refreshDerivedPageState(db: Database, page: PageRow, now: string): void {
     replaceLinks(db, page, now);
@@ -12,11 +13,15 @@ export function refreshDerivedPageState(db: Database, page: PageRow, now: string
 
 function replaceLinks(db: Database, page: PageRow, now: string): void {
     db.prepare('DELETE FROM cortex_links WHERE from_page_id = ?').run(page.id);
+    const schema = getActiveCortexSchema(db);
     const links = new Map(
-        extractWikiLinks(`${page.compiled_truth}\n${page.body}`).map((link) => [
-            `${link.targetSlug}:${link.heading ?? ''}:${link.linkKind}`,
-            link,
-        ])
+        extractCortexLinks({
+            body: page.body,
+            compiledTruth: page.compiled_truth,
+            frontmatter: readJsonRecord(page.frontmatter_json),
+            pageType: page.type,
+            schema,
+        }).map((link) => [`${link.targetSlug}:${link.heading ?? ''}:${link.linkKind}`, link])
     );
     for (const link of links.values()) {
         const target = findPageRow(db, link.targetSlug);

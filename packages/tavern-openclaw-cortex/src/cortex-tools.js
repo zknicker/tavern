@@ -1,6 +1,7 @@
 import {
     arraySchema,
     CORTEX_PAGE_TYPES,
+    CORTEX_RECALL_MODES,
     enumSchema,
     integerSchema,
     nullableStringSchema,
@@ -67,7 +68,7 @@ export function registerTavernCortexTools(api, options = {}) {
             tags: arraySchema(stringSchema('Tag.'), 'Tags to store in page frontmatter.'),
             title: stringSchema('Cortex page title.'),
             turnId: nullableStringSchema('Related runtime turn id.'),
-            type: enumSchema(CORTEX_PAGE_TYPES, 'Cortex page type.'),
+            type: stringSchema(`Cortex page type. Default types: ${CORTEX_PAGE_TYPES.join(', ')}.`),
             url: nullableStringSchema('Related source URL.'),
         }),
         async execute(_toolCallId, params, signal) {
@@ -86,12 +87,13 @@ export function registerTavernCortexTools(api, options = {}) {
                 description: 'Maximum number of pages to return.',
                 maximum: 50,
             }),
+            mode: enumSchema(CORTEX_RECALL_MODES, 'Recall budget mode.'),
             query: stringSchema('Recall query.'),
             scope: contextScopeSchema(),
         }),
         async execute(_toolCallId, params, signal) {
             return toolJson(
-                await request('/cortex/recall', { body: searchParams(params), signal })
+                await request('/cortex/recall', { body: recallParams(params), signal })
             );
         },
     });
@@ -171,6 +173,13 @@ function searchParams(params = {}) {
         limit: clampLimit(params.limit),
         query: requireString(params.query, 'query'),
         scope: contextScope(params.scope),
+    };
+}
+
+function recallParams(params = {}) {
+    return {
+        ...searchParams(params),
+        mode: CORTEX_RECALL_MODES.includes(params.mode) ? params.mode : undefined,
     };
 }
 

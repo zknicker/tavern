@@ -144,18 +144,6 @@ CREATE TABLE IF NOT EXISTS cortex_jobs (
   updated_at      TEXT NOT NULL
 );
 
-CREATE TABLE IF NOT EXISTS cortex_job_runs (
-  id              TEXT PRIMARY KEY,
-  audit_id        TEXT NOT NULL DEFAULT '',
-  job_name         TEXT NOT NULL,
-  status           TEXT NOT NULL CHECK (status IN ('error', 'skipped', 'success')),
-  summary          TEXT NOT NULL,
-  records_json     TEXT NOT NULL DEFAULT '[]',
-  error_message    TEXT,
-  started_at       TEXT NOT NULL,
-  completed_at     TEXT NOT NULL
-);
-
 CREATE TABLE IF NOT EXISTS cortex_audit_events (
   id             TEXT PRIMARY KEY,
   kind           TEXT NOT NULL,
@@ -167,6 +155,15 @@ CREATE TABLE IF NOT EXISTS cortex_audit_events (
   metadata_json  TEXT NOT NULL DEFAULT '{}',
   error_message  TEXT,
   created_at     TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS cortex_signal_cursors (
+  chat_id                   TEXT PRIMARY KEY REFERENCES chats(id) ON DELETE CASCADE,
+  last_processed_sequence   INTEGER NOT NULL DEFAULT 0,
+  last_processed_message_id TEXT,
+  last_processed_at         TEXT,
+  last_source_hash          TEXT,
+  updated_at                TEXT NOT NULL
 );
 
 CREATE TABLE IF NOT EXISTS cortex_telemetry_events (
@@ -183,6 +180,16 @@ CREATE TABLE IF NOT EXISTS cortex_settings (
   updated_at TEXT NOT NULL
 );
 
+CREATE TABLE IF NOT EXISTS cortex_schemas (
+  id            TEXT PRIMARY KEY,
+  name          TEXT NOT NULL,
+  version       INTEGER NOT NULL DEFAULT 1,
+  schema_json   TEXT NOT NULL,
+  status        TEXT NOT NULL DEFAULT 'active' CHECK (status IN ('active', 'archived')),
+  created_at    TEXT NOT NULL,
+  updated_at    TEXT NOT NULL
+);
+
 CREATE INDEX IF NOT EXISTS idx_cortex_pages_updated ON cortex_pages(updated_at);
 CREATE INDEX IF NOT EXISTS idx_cortex_pages_type ON cortex_pages(type);
 CREATE INDEX IF NOT EXISTS idx_cortex_alias_page ON cortex_page_aliases(page_id);
@@ -195,14 +202,16 @@ CREATE INDEX IF NOT EXISTS idx_cortex_chunks_page ON cortex_chunks(page_id);
 CREATE INDEX IF NOT EXISTS idx_cortex_chunks_hash ON cortex_chunks(text_hash);
 CREATE INDEX IF NOT EXISTS idx_cortex_encodings_chunk ON cortex_encodings(chunk_id);
 CREATE INDEX IF NOT EXISTS idx_cortex_audit_kind ON cortex_audit_events(kind, created_at);
-CREATE INDEX IF NOT EXISTS idx_cortex_job_runs_name ON cortex_job_runs(job_name, completed_at);
+CREATE INDEX IF NOT EXISTS idx_cortex_signal_cursors_updated ON cortex_signal_cursors(updated_at);
+CREATE INDEX IF NOT EXISTS idx_cortex_schemas_status ON cortex_schemas(status, updated_at);
 `;
 
 export function ensureCortexSchema(db: Database): void {
     db.exec(CORTEX_SCHEMA);
     try {
-        db.exec(`ALTER TABLE cortex_job_runs ADD COLUMN audit_id TEXT NOT NULL DEFAULT '';`);
+        db.exec('ALTER TABLE cortex_claims ADD COLUMN supersedes_claim_id TEXT;');
     } catch {
         /* column already exists */
     }
+    db.exec('DROP TABLE IF EXISTS cortex_job_runs;');
 }

@@ -7,16 +7,22 @@ import type {
 import type { Database } from '../db/sqlite';
 import { namedParams } from '../db/sqlite';
 import { writeCortexAudit } from './audit';
-import { refreshDerivedPageState } from './derive';
 import { createCortexId, hashText, slugifyCortexTitle } from './ids';
-import { writeMarkdownMirror } from './mirror';
+import { writeCanonicalCortexMarkdownDraft } from './markdown-file';
 import { findPageRow, getCortexPage, toPage } from './read';
-import { nowIso, sourceRefFromCapture } from './rows';
+import {
+    nowIso,
+    readJsonArray,
+    readJsonRecord,
+    readStringArray,
+    sourceRefFromCapture,
+    type TimelineRow,
+} from './rows';
+import { syncCortexMarkdown } from './sync';
 
 export function captureCortex(db: Database, input: CortexCaptureInput): CortexCaptureResult {
     const now = nowIso();
     const sourceRefs = [sourceRefFromCapture(input)];
-    upsertSource(db, sourceRefs[0], now);
     const captureKey = hashText(
         JSON.stringify({
             sourceRefs,
@@ -24,11 +30,10 @@ export function captureCortex(db: Database, input: CortexCaptureInput): CortexCa
             type: input.type,
         })
     );
-    const contentHash = captureContentHash(input);
     const existingCapture = findCapture(db, captureKey);
     if (existingCapture?.status === 'success') {
         const pageRow = findPageRow(db, existingCapture.pageId);
-        if (pageRow && pageRow.content_hash === contentHash) {
+        if (pageRow && isSameCaptureContent(pageRow, input)) {
             const page = getCortexPage(db, existingCapture.pageId);
             if (!page) {
                 throw new Error('Cortex capture points at a missing page.');
@@ -37,7 +42,7 @@ export function captureCortex(db: Database, input: CortexCaptureInput): CortexCa
         }
     }
 
-    const page = upsertPage(db, input, sourceRefs, now);
+    const page = writePageMarkdownThenProject(db, input, sourceRefs, now);
     const auditId = writeCortexAudit(db, {
         kind: 'capture',
         recordRefs: [page.id],
@@ -49,26 +54,7 @@ export function captureCortex(db: Database, input: CortexCaptureInput): CortexCa
     return { auditId, page };
 }
 
-function upsertSource(db: Database, sourceRef: CortexSourceRef, now: string): void {
-    db.prepare(
-        `INSERT INTO cortex_sources
-         (id, kind, locator, hash, metadata_json, created_at, updated_at)
-         VALUES ($id, $kind, $locator, $hash, '{}', $createdAt, $updatedAt)
-         ON CONFLICT(kind, locator) DO UPDATE SET
-            updated_at = excluded.updated_at`
-    ).run(
-        namedParams({
-            createdAt: now,
-            hash: hashText(`${sourceRef.kind}:${sourceRef.locator ?? ''}`),
-            id: sourceRef.id,
-            kind: sourceRef.kind,
-            locator: sourceRef.locator,
-            updatedAt: now,
-        })
-    );
-}
-
-function upsertPage(
+function writePageMarkdownThenProject(
     db: Database,
     input: CortexCaptureInput,
     sourceRefs: CortexSourceRef[],
@@ -79,114 +65,55 @@ function upsertPage(
     const id = existing?.id ?? createCortexId('ctxp');
     const compiledTruth = input.content.trim();
     const frontmatter = { aliases: [], scope: memoryScopeFromCapture(input), tags: input.tags };
-    const contentHash = captureContentHash(input);
-
-    if (existing) {
-        updatePage(db, { compiledTruth, contentHash, frontmatter, id, input, sourceRefs, now });
-    } else {
-        insertPage(db, {
-            compiledTruth,
-            contentHash,
-            frontmatter,
-            id,
-            input,
-            slug,
-            sourceRefs,
-            now,
-        });
-    }
-
-    const page = findPageRow(db, id);
+    const existingSourceRefs = existing
+        ? readJsonArray<CortexSourceRef>(existing.source_refs_json)
+        : [];
+    const allSourceRefs = uniqueSourceRefs([...existingSourceRefs, ...sourceRefs]);
+    const timeline = [
+        ...listTimelineDrafts(db, existing?.id),
+        { body: `Captured: ${input.title}`, createdAt: now, sourceRefs },
+    ];
+    writeCanonicalCortexMarkdownDraft({
+        aliases: [],
+        body: input.content,
+        compiledTruth,
+        frontmatter,
+        id,
+        slug,
+        sourceRefs: allSourceRefs,
+        status: 'active',
+        tags: input.tags,
+        timeline,
+        title: input.title,
+        type: input.type,
+        updatedAt: now,
+    });
+    syncCortexMarkdown(db);
+    const page = findPageRow(db, id) ?? findPageRow(db, slug);
     if (!page) {
-        throw new Error('Cortex page write did not return a page.');
+        throw new Error('Cortex markdown projection did not return a page.');
     }
-    appendTimeline(db, page.id, `Captured: ${input.title}`, sourceRefs, now);
     replaceClaims(db, page.id, input, sourceRefs, now);
-    refreshDerivedPageState(db, page, now);
-    const fullPage = toPage(db, findPageRow(db, id) ?? page);
-    writeMarkdownMirror(fullPage);
-    return fullPage;
+    return toPage(db, findPageRow(db, id) ?? page);
 }
 
-function captureContentHash(input: CortexCaptureInput): string {
-    const compiledTruth = input.content.trim();
-    return hashText(`${compiledTruth}\n${input.content}\n${JSON.stringify(input.tags)}`);
-}
-
-function updatePage(
-    db: Database,
-    input: {
-        compiledTruth: string;
-        contentHash: string;
-        frontmatter: Record<string, unknown>;
-        id: string;
-        input: CortexCaptureInput;
-        now: string;
-        sourceRefs: CortexSourceRef[];
-    }
-): void {
-    db.prepare(
-        `UPDATE cortex_pages
-         SET title = $title,
-             type = $type,
-             status = 'active',
-             compiled_truth = $compiledTruth,
-             body = $body,
-             frontmatter_json = $frontmatter,
-             source_refs_json = $sourceRefs,
-             content_hash = $contentHash,
-             updated_at = $updatedAt,
-             deleted_at = NULL
-         WHERE id = $id`
-    ).run(
-        namedParams({
-            body: input.input.content,
-            compiledTruth: input.compiledTruth,
-            contentHash: input.contentHash,
-            frontmatter: JSON.stringify(input.frontmatter),
-            id: input.id,
-            sourceRefs: JSON.stringify(input.sourceRefs),
-            title: input.input.title,
-            type: input.input.type,
-            updatedAt: input.now,
-        })
+function isSameCaptureContent(
+    pageRow: NonNullable<ReturnType<typeof findPageRow>>,
+    input: CortexCaptureInput
+): boolean {
+    const frontmatter = readJsonRecord(pageRow.frontmatter_json);
+    return (
+        pageRow.compiled_truth.trim() === input.content.trim() &&
+        pageRow.body.trim() === input.content.trim() &&
+        pageRow.type === input.type &&
+        sameStringSet(readStringArray(frontmatter.tags), input.tags)
     );
 }
 
-function insertPage(
-    db: Database,
-    input: {
-        compiledTruth: string;
-        contentHash: string;
-        frontmatter: Record<string, unknown>;
-        id: string;
-        input: CortexCaptureInput;
-        now: string;
-        slug: string;
-        sourceRefs: CortexSourceRef[];
-    }
-): void {
-    db.prepare(
-        `INSERT INTO cortex_pages
-         (id, slug, title, type, status, compiled_truth, body, frontmatter_json,
-          source_refs_json, content_hash, created_at, updated_at)
-         VALUES ($id, $slug, $title, $type, 'active', $compiledTruth, $body,
-          $frontmatter, $sourceRefs, $contentHash, $createdAt, $updatedAt)`
-    ).run(
-        namedParams({
-            body: input.input.content,
-            compiledTruth: input.compiledTruth,
-            contentHash: input.contentHash,
-            createdAt: input.now,
-            frontmatter: JSON.stringify(input.frontmatter),
-            id: input.id,
-            slug: input.slug,
-            sourceRefs: JSON.stringify(input.sourceRefs),
-            title: input.input.title,
-            type: input.input.type,
-            updatedAt: input.now,
-        })
-    );
+function sameStringSet(left: string[], right: string[]): boolean {
+    const leftSet = new Set(left);
+    const rightSet = new Set(right);
+    return leftSet.size === rightSet.size && [...leftSet].every((value) => rightSet.has(value));
 }
 
 function replaceClaims(
@@ -222,28 +149,6 @@ function replaceClaims(
     }
 }
 
-function appendTimeline(
-    db: Database,
-    pageId: string,
-    body: string,
-    sourceRefs: CortexSourceRef[],
-    now: string
-): void {
-    db.prepare(
-        `INSERT INTO cortex_timeline_entries
-         (id, page_id, body, source_refs_json, created_at)
-         VALUES ($id, $pageId, $body, $sourceRefs, $createdAt)`
-    ).run(
-        namedParams({
-            body,
-            createdAt: now,
-            id: createCortexId('ctxt'),
-            pageId,
-            sourceRefs: JSON.stringify(sourceRefs),
-        })
-    );
-}
-
 function upsertCapture(
     db: Database,
     captureKey: string,
@@ -271,6 +176,41 @@ function upsertCapture(
             updatedAt: now,
         })
     );
+}
+
+function listTimelineDrafts(
+    db: Database,
+    pageId: string | undefined
+): Array<{ body: string; createdAt: string; sourceRefs: CortexSourceRef[] }> {
+    if (!pageId) {
+        return [];
+    }
+    return (
+        db
+            .prepare(
+                `SELECT body, created_at, source_refs_json
+                 FROM cortex_timeline_entries
+                 WHERE page_id = ?
+                 ORDER BY created_at ASC`
+            )
+            .all(pageId) as TimelineRow[]
+    ).map((row) => ({
+        body: row.body,
+        createdAt: row.created_at,
+        sourceRefs: readJsonArray<CortexSourceRef>(row.source_refs_json),
+    }));
+}
+
+function uniqueSourceRefs(sourceRefs: CortexSourceRef[]): CortexSourceRef[] {
+    const seen = new Set<string>();
+    return sourceRefs.filter((sourceRef) => {
+        const key = `${sourceRef.kind}:${sourceRef.locator ?? ''}:${sourceRef.id}`;
+        if (seen.has(key)) {
+            return false;
+        }
+        seen.add(key);
+        return true;
+    });
 }
 
 type CaptureLookup = null | { auditId: string; pageId: string; status: string };

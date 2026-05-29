@@ -49,11 +49,20 @@ Current Cortex capture, recall, indexing, and maintenance settings belong under
 Cortex contracts when they exist.
 
 The current Cortex implementation exposes storage, tools, deterministic claim
-splitting, markdown mirrors, hybrid lexical/vector recall with OpenAI
-embeddings when configured, and job status. The GBrain review loop is still
-missing: bounded source capture should call a configured model to extract
-observations, infer relationships, update compiled truth, and write
-source-backed timeline and audit records.
+splitting, canonical markdown-backed captures and page edits, archive/merge/split
+lifecycle actions, hybrid lexical/vector recall with OpenAI embeddings when
+configured, tokenmax recall expansion across page metadata and graph neighbors,
+status recommendations from lint findings, and job status. Cortex Signal and
+Cortex Dream use Codex OAuth credentials for source review when
+`~/.codex/auth.json` or `CODEX_HOME` is available, with
+`TAVERN_CORTEX_SIGNAL_MODEL` and `TAVERN_CORTEX_DREAM_MODEL` as optional model
+overrides. Signal reviews per-chat message backlog every few minutes; Dream
+consolidates recent chats later. Both apply structured page writes,
+observations, relationships, timeline entries, citations, noops, and warnings,
+with source-hash, model-call metadata, and token usage when returned by the
+Codex route. Without Codex auth, the Runtime job capability gate disables
+`cortex-signal` and `cortex-dream`. Non-chat Dream source coverage remains
+future work.
 
 ## Agent Boundary
 

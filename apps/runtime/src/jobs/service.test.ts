@@ -1,4 +1,4 @@
-import { mkdtemp, rm } from 'node:fs/promises';
+import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, test, vi } from 'vitest';
@@ -32,6 +32,7 @@ describe('Runtime jobs service', () => {
         vectorPath = path.join(runtimeRoot, 'vectors');
         process.env.TAVERN_CORTEX_VECTOR_PATH = vectorPath;
         process.env.TAVERN_CORTEX_WIKI_PATH = wikiPath;
+        process.env.CODEX_HOME = path.join(runtimeRoot, 'empty-codex-home');
         const db = initTestDb();
         ensureRuntimeSchema(db);
         ensureCortexSchema(db);
@@ -45,6 +46,7 @@ describe('Runtime jobs service', () => {
         closeDb();
         process.env.TAVERN_CORTEX_VECTOR_PATH = undefined;
         process.env.TAVERN_CORTEX_WIKI_PATH = undefined;
+        process.env.CODEX_HOME = undefined;
         await rm(runtimeRoot, { force: true, recursive: true });
     });
 
@@ -69,9 +71,11 @@ describe('Runtime jobs service', () => {
         expect(summaries.map((job) => job.slug)).toEqual([
             'refresh-runtime-capabilities',
             'cortex-generate-embeddings',
-            'cortex-ingest',
+            'cortex-sync',
             'cortex-lint',
             'cortex-maintenance',
+            'cortex-signal',
+            'cortex-dream',
         ]);
         expect(embeddingsJob).toMatchObject({
             availability: 'enabled',
@@ -106,6 +110,79 @@ describe('Runtime jobs service', () => {
         await expect(runRuntimeJob('cortex-generate-embeddings')).rejects.toThrow(
             'Required capability missing: embedding model.'
         );
+    });
+
+    test('disables Cortex Dream when Codex OAuth credentials are missing', async () => {
+        jobs = await startRuntimeJobsManager({
+            clearQueuesOnStop: true,
+            jobsDatabasePath: jobsPath,
+        });
+
+        const dreamJob = await getRuntimeJob('cortex-dream');
+
+        expect(dreamJob).toMatchObject({
+            availability: 'disabled',
+            disabledReason: 'Required capability missing: Codex OAuth.',
+            latestRun: null,
+            schedule: {
+                nextRunAt: null,
+            },
+            slug: 'cortex-dream',
+        });
+        await expect(runRuntimeJob('cortex-dream')).rejects.toThrow(
+            'Required capability missing: Codex OAuth.'
+        );
+    });
+
+    test('disables Cortex Signal when Codex OAuth credentials are missing', async () => {
+        jobs = await startRuntimeJobsManager({
+            clearQueuesOnStop: true,
+            jobsDatabasePath: jobsPath,
+        });
+
+        const signalJob = await getRuntimeJob('cortex-signal');
+
+        expect(signalJob).toMatchObject({
+            availability: 'disabled',
+            disabledReason: 'Required capability missing: Codex OAuth.',
+            latestRun: null,
+            schedule: {
+                everyMs: 5 * 60 * 1000,
+                nextRunAt: null,
+            },
+            slug: 'cortex-signal',
+        });
+        await expect(runRuntimeJob('cortex-signal')).rejects.toThrow(
+            'Required capability missing: Codex OAuth.'
+        );
+    });
+
+    test('enables Cortex Dream when Codex OAuth credentials are available', async () => {
+        const codexHome = path.join(runtimeRoot, 'codex-home');
+        await mkdir(codexHome, { recursive: true });
+        await writeFile(
+            path.join(codexHome, 'auth.json'),
+            JSON.stringify({
+                tokens: {
+                    access_token: 'codex-access-token',
+                    account_id: 'account-1',
+                },
+            })
+        );
+        process.env.CODEX_HOME = codexHome;
+
+        const dreamJob = await getRuntimeJob('cortex-dream');
+
+        expect(dreamJob).toMatchObject({
+            availability: 'enabled',
+            disabledReason: null,
+            slug: 'cortex-dream',
+        });
+        await expect(getRuntimeJob('cortex-signal')).resolves.toMatchObject({
+            availability: 'enabled',
+            disabledReason: null,
+            slug: 'cortex-signal',
+        });
     });
 
     test('disables Cortex embedding generation with a generic missing capability reason', async () => {

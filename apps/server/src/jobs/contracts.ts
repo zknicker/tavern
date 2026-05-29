@@ -3,10 +3,12 @@ import { jobDefinitions } from '../../../../jobs/index.ts';
 
 const jobSlugs = jobDefinitions.map((definition) => definition.slug);
 export const runtimeJobSlugs = [
+    'cortex-dream',
     'cortex-generate-embeddings',
-    'cortex-ingest',
     'cortex-lint',
     'cortex-maintenance',
+    'cortex-signal',
+    'cortex-sync',
     'refresh-runtime-capabilities',
 ] as const;
 const allJobSlugs = [...jobSlugs, ...runtimeJobSlugs];

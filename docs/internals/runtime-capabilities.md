@@ -143,6 +143,8 @@ integration points, and external dependencies.
 | `tavernPlugin` | Managed OpenClaw reports the Tavern plugin is installed. |
 | `memory` | Managed OpenClaw memory configuration matches Tavern requirements. |
 | `mentions` | Runtime can expose mention/search hooks used by Tavern tools. |
+| `cortexDatabase` | Cortex SQLite schema exists and is usable. Empty Cortex stores are still healthy. |
+| `cortexWiki` | The Cortex wiki path can be read and written, or its parent path can host an empty wiki. |
 | `embeddingModel` | Cortex embedding settings are usable and recent embedding failures do not indicate auth or quota failure. |
 | `models` | Runtime can serve the current model inventory. |
 

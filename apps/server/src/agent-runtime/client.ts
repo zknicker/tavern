@@ -101,13 +101,17 @@ import {
     type CortexBacklinkList,
     type CortexCaptureInput,
     type CortexCaptureResult,
+    type CortexEditPageInput,
+    type CortexEditPageResult,
     type CortexJobName,
     type CortexJobRun,
     type CortexPage,
     type CortexPageList,
     type CortexRecallInput,
     type CortexRecallResult,
+    type CortexSaveSchemaInput,
     type CortexSaveSettings,
+    type CortexSchemaRecord,
     type CortexSearchInput,
     type CortexSearchResult,
     type CortexSettings,
@@ -115,12 +119,16 @@ import {
     cortexBacklinkListSchema,
     cortexCaptureInputSchema,
     cortexCaptureResultSchema,
+    cortexEditPageInputSchema,
+    cortexEditPageResultSchema,
     cortexJobRunSchema,
     cortexPageListSchema,
     cortexPageSchema,
     cortexRecallInputSchema,
     cortexRecallResultSchema,
+    cortexSaveSchemaInputSchema,
     cortexSaveSettingsSchema,
+    cortexSchemaRecordSchema,
     cortexSearchInputSchema,
     cortexSearchResultSchema,
     cortexSettingsSchema,
@@ -158,10 +166,12 @@ export interface TavernAgentRuntimeClient {
     deleteCronJob(jobId: string): Promise<AgentRuntimeArchiveCron>;
     deleteOpenRouterSettings(): Promise<AgentRuntimeOpenRouterSettings>;
     deleteSkill(skillId: string): Promise<AgentRuntimeArchiveSkill>;
+    editCortexPage(input: CortexEditPageInput): Promise<CortexEditPageResult>;
     getAgentConfig(agentId: string): Promise<AgentRuntimeAgent>;
     getAgentFile(agentId: string, path: string): Promise<AgentRuntimeAgentFileContent>;
     getCapability(id: AgentRuntimeCapabilityHealthId): Promise<AgentRuntimeCapabilityHealth>;
     getCortexPage(slugOrId: string): Promise<CortexPage | null>;
+    getCortexSchema(): Promise<CortexSchemaRecord>;
     getCortexSettings(): Promise<CortexSettings>;
     getCortexStatus(): Promise<CortexStatus>;
     getCronJob(jobId: string): Promise<AgentRuntimeCron>;
@@ -211,6 +221,7 @@ export interface TavernAgentRuntimeClient {
         path: string,
         input: AgentRuntimeSaveAgentFile
     ): Promise<AgentRuntimeAgentFileContent>;
+    saveCortexSchema(input: CortexSaveSchemaInput): Promise<CortexSchemaRecord>;
     saveCortexSettings(input: CortexSaveSettings): Promise<CortexSettings>;
     saveModels(input: AgentRuntimeSaveModels): Promise<AgentRuntimeModels>;
     saveOpenRouterSettings(
@@ -635,6 +646,34 @@ class HttpTavernAgentRuntimeClient implements TavernAgentRuntimeClient {
         return cortexSettingsSchema.parse(await response.json());
     }
 
+    async getCortexSchema(): Promise<CortexSchemaRecord> {
+        const response = await fetch(`${this.#baseUrl}${agentRuntimeRoutes.cortexSchema}`);
+
+        if (!response.ok) {
+            await readErrorResponse(response);
+        }
+
+        return cortexSchemaRecordSchema.parse(await response.json());
+    }
+
+    async saveCortexSchema(input: CortexSaveSchemaInput): Promise<CortexSchemaRecord> {
+        const payload = cortexSaveSchemaInputSchema.parse(input);
+        const response = await fetch(`${this.#baseUrl}${agentRuntimeRoutes.cortexSchema}`, {
+            body: JSON.stringify(payload),
+            headers: {
+                'content-type': 'application/json',
+                [agentRuntimeMutationHeaders.origin]: agentRuntimeMutationOrigins.tavern,
+            },
+            method: 'PUT',
+        });
+
+        if (!response.ok) {
+            await readErrorResponse(response);
+        }
+
+        return cortexSchemaRecordSchema.parse(await response.json());
+    }
+
     async listCortexPages() {
         const response = await fetch(`${this.#baseUrl}${agentRuntimeRoutes.cortexPages}`);
 
@@ -662,7 +701,10 @@ class HttpTavernAgentRuntimeClient implements TavernAgentRuntimeClient {
         const payload = cortexCaptureInputSchema.parse(input);
         const response = await fetch(`${this.#baseUrl}${agentRuntimeRoutes.cortexCapture}`, {
             body: JSON.stringify(payload),
-            headers: { 'content-type': 'application/json' },
+            headers: {
+                'content-type': 'application/json',
+                [agentRuntimeMutationHeaders.origin]: agentRuntimeMutationOrigins.tavern,
+            },
             method: 'POST',
         });
 
@@ -671,6 +713,24 @@ class HttpTavernAgentRuntimeClient implements TavernAgentRuntimeClient {
         }
 
         return cortexCaptureResultSchema.parse(await response.json());
+    }
+
+    async editCortexPage(input: CortexEditPageInput) {
+        const payload = cortexEditPageInputSchema.parse(input);
+        const response = await fetch(`${this.#baseUrl}${agentRuntimeRoutes.cortexEdit}`, {
+            body: JSON.stringify(payload),
+            headers: {
+                'content-type': 'application/json',
+                [agentRuntimeMutationHeaders.origin]: agentRuntimeMutationOrigins.tavern,
+            },
+            method: 'POST',
+        });
+
+        if (!response.ok) {
+            await readErrorResponse(response);
+        }
+
+        return cortexEditPageResultSchema.parse(await response.json());
     }
 
     async searchCortex(input: CortexSearchInput) {

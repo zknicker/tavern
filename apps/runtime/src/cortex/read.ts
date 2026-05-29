@@ -4,6 +4,7 @@ import type {
     CortexPageList,
     CortexRecallInput,
     CortexRecallResult,
+    CortexRecommendation,
     CortexSearchInput,
     CortexSearchResult,
     CortexSettings,
@@ -11,14 +12,15 @@ import type {
     CortexStatus,
 } from '@tavern/api';
 import { DATA_DIR, RUNTIME_ROOT } from '../config';
+import { hasTable } from '../db/connection';
 import type { Database } from '../db/sqlite';
 import { namedParams } from '../db/sqlite';
 import { writeCortexAudit } from './audit';
 import { embedCortexText } from './encoding';
+import { type CortexIssue, type CortexIssueKind, detectCortexIssues } from './lint';
 import {
     type ChunkEncodingRow,
     type ClaimRow,
-    type JobRunRow,
     type LinkRow,
     normalizePageLookup,
     type PageRow,
@@ -188,31 +190,67 @@ export async function recallCortex(
     vectorDatabase: CortexVectorDatabase
 ): Promise<CortexRecallResult> {
     const mode = input.mode ?? getCortexSettings(db).recall.mode;
-    const result = await searchCortex(db, resolveRecallSearchInput(input, mode), vectorDatabase);
+    const recall = await runRecallSearch(db, input, mode, vectorDatabase);
     const auditId = writeCortexAudit(db, {
         kind: 'recall',
         metadata: {
             effectiveMode: mode,
-            expandedQueries: [],
+            expandedQueries: recall.expandedQueries,
+            expandedQueryCount: recall.expandedQueries.length,
+            payload: estimateRecallPayload(recall.result),
             requestedMode: input.mode ?? null,
-            vectorDegradedReason: result.vectorDegradedReason,
+            resultCount: recall.result.hits.length,
+            vectorDegradedReason: recall.result.vectorDegradedReason,
         },
-        recordRefs: result.hits.map((hit) => hit.page.id),
+        recordRefs: recall.result.hits.map((hit) => hit.page.id),
         sourceRefs: [],
         status: 'success',
-        summary: `Recalled ${result.hits.length} Cortex page(s).`,
+        summary: `Recalled ${recall.result.hits.length} Cortex page(s).`,
     });
     return {
         auditId,
-        hits: result.hits.map((hit) => ({
+        hits: recall.result.hits.map((hit) => ({
             ...hit,
             evidence: getCortexPage(db, hit.page.id)?.sourceRefs ?? [],
         })),
         mode,
-        query: result.query,
+        query: recall.result.query,
         requestedMode: input.mode ?? null,
-        vectorDegradedReason: result.vectorDegradedReason,
+        vectorDegradedReason: recall.result.vectorDegradedReason,
     };
+}
+
+function estimateRecallPayload(result: CortexSearchResult) {
+    const chars = result.hits.reduce(
+        (total, hit) =>
+            total +
+            hit.snippet.length +
+            hit.page.title.length +
+            hit.page.slug.length +
+            hit.page.tags.join(' ').length,
+        0
+    );
+    return {
+        estimatedTokens: Math.ceil(chars / 4),
+        returnedChars: chars,
+        returnedPageIds: result.hits.map((hit) => hit.page.id),
+    };
+}
+
+async function runRecallSearch(
+    db: Database,
+    input: CortexRecallInput,
+    mode: CortexRecallResult['mode'],
+    vectorDatabase: CortexVectorDatabase
+): Promise<{ expandedQueries: string[]; result: CortexSearchResult }> {
+    if (mode !== 'tokenmax') {
+        return {
+            expandedQueries: [],
+            result: await searchCortex(db, resolveRecallSearchInput(input, mode), vectorDatabase),
+        };
+    }
+
+    return searchCortexTokenmax(db, resolveRecallSearchInput(input, mode), vectorDatabase);
 }
 
 function resolveRecallSearchInput(
@@ -231,6 +269,175 @@ const recallModeLimits: Record<CortexRecallResult['mode'], number> = {
     tokenmax: 50,
 };
 
+async function searchCortexTokenmax(
+    db: Database,
+    input: CortexSearchInput,
+    vectorDatabase: CortexVectorDatabase
+): Promise<{ expandedQueries: string[]; result: CortexSearchResult }> {
+    const limit = input.limit ?? recallModeLimits.tokenmax;
+    const primary = await searchCortex(db, { ...input, limit: 50 }, vectorDatabase);
+    const expandedQueries = buildTokenmaxExpandedQueries(db, input.query, primary.hits);
+    const merged = new Map<string, CortexSearchResult['hits'][number]>();
+    let vectorDegradedReason = primary.vectorDegradedReason;
+
+    mergeSearchHits(merged, primary.hits, 1);
+    for (const query of expandedQueries) {
+        const expanded = await searchCortex(db, { ...input, limit: 50, query }, vectorDatabase);
+        vectorDegradedReason ??= expanded.vectorDegradedReason;
+        mergeSearchHits(merged, expanded.hits, 0.8);
+    }
+
+    addTokenmaxGraphHits(db, merged, input, primary.hits);
+
+    const hits = Array.from(merged.values())
+        .sort((left, right) => right.score - left.score)
+        .slice(0, limit);
+
+    return {
+        expandedQueries,
+        result: {
+            hits,
+            query: input.query,
+            vectorDegradedReason,
+        },
+    };
+}
+
+function mergeSearchHits(
+    merged: Map<string, CortexSearchResult['hits'][number]>,
+    hits: CortexSearchResult['hits'],
+    weight: number
+): void {
+    for (const hit of hits) {
+        const score = hit.score * weight;
+        const existing = merged.get(hit.page.id);
+        merged.set(
+            hit.page.id,
+            existing ? { ...existing, score: Math.max(existing.score, score) } : { ...hit, score }
+        );
+    }
+}
+
+function buildTokenmaxExpandedQueries(
+    db: Database,
+    query: string,
+    hits: CortexSearchResult['hits']
+): string[] {
+    const terms = new Set(tokenize(query));
+    const expansions: string[] = [];
+    for (const hit of hits.slice(0, 5)) {
+        const page = getCortexPage(db, hit.page.id);
+        if (!page) {
+            continue;
+        }
+        const pageTerms = [
+            page.title,
+            page.slug,
+            page.type,
+            ...page.tags,
+            ...page.aliases,
+            ...page.links.flatMap((link) => [link.targetSlug, link.label ?? '', link.linkKind]),
+        ]
+            .flatMap(tokenize)
+            .filter((term) => !terms.has(term));
+        const uniqueTerms = [...new Set(pageTerms)].slice(0, 12);
+        if (uniqueTerms.length > 0) {
+            expansions.push(`${query} ${uniqueTerms.join(' ')}`);
+            for (const term of uniqueTerms) {
+                terms.add(term);
+            }
+        }
+        if (expansions.length >= 3) {
+            break;
+        }
+    }
+    return expansions;
+}
+
+function addTokenmaxGraphHits(
+    db: Database,
+    merged: Map<string, CortexSearchResult['hits'][number]>,
+    input: CortexSearchInput,
+    seedHits: CortexSearchResult['hits']
+): void {
+    const seedIds = seedHits.slice(0, 12).map((hit) => hit.page.id);
+    if (seedIds.length === 0) {
+        return;
+    }
+    const seedScores = new Map(seedHits.map((hit) => [hit.page.id, hit.score]));
+    const rows = db
+        .prepare(
+            `SELECT from_page_id, target_page_id, target_slug, link_kind
+             FROM cortex_links
+             WHERE from_page_id IN (${seedIds.map(() => '?').join(',')})
+                OR target_page_id IN (${seedIds.map(() => '?').join(',')})`
+        )
+        .all(...seedIds, ...seedIds) as Array<{
+        from_page_id: string;
+        link_kind: string;
+        target_page_id: string | null;
+        target_slug: string;
+    }>;
+
+    const queryTerms = tokenize(input.query);
+    for (const row of rows) {
+        const candidates = [
+            { anchorId: row.from_page_id, pageId: row.target_page_id, slug: row.target_slug },
+            { anchorId: row.target_page_id, pageId: row.from_page_id, slug: null },
+        ];
+        for (const candidate of candidates) {
+            if (!(candidate.anchorId && seedScores.has(candidate.anchorId))) {
+                continue;
+            }
+            const page = candidate.pageId
+                ? findPageRow(db, candidate.pageId)
+                : candidate.slug
+                  ? findPageRow(db, candidate.slug)
+                  : null;
+            if (!isGraphRecallCandidate(page, input.scope)) {
+                continue;
+            }
+            const existing = merged.get(page.id);
+            const anchorScore = seedScores.get(candidate.anchorId) ?? 0;
+            const graphScore = anchorScore * graphWeight(row.link_kind);
+            const hit = {
+                page: toPageSummary(page),
+                score: existing ? Math.max(existing.score, graphScore) : graphScore,
+                snippet: existing?.snippet ?? snippet(page, queryTerms),
+            };
+            merged.set(page.id, hit);
+        }
+    }
+}
+
+function isGraphRecallCandidate(
+    page: PageRow | null,
+    scope: CortexSearchInput['scope']
+): page is PageRow {
+    return Boolean(
+        page &&
+            page.status !== 'archived' &&
+            page.status !== 'deleted' &&
+            matchesScope(page.frontmatter_json, scope)
+    );
+}
+
+function graphWeight(linkKind: string): number {
+    switch (linkKind) {
+        case 'same_as':
+        case 'supports':
+        case 'contradicts':
+            return 0.75;
+        case 'depends_on':
+        case 'blocks':
+        case 'uses':
+        case 'tracks':
+            return 0.55;
+        default:
+            return 0.35;
+    }
+}
+
 export function listCortexBacklinks(db: Database, target: string): CortexBacklinkList {
     const links = db
         .prepare(
@@ -248,6 +455,7 @@ export async function getCortexStatus(
     vectorDatabase: CortexVectorDatabase
 ): Promise<CortexStatus> {
     const cortexSettings = getCortexSettings(db);
+    const issues = detectCortexIssues(db);
     return {
         auditCount: count(db, 'cortex_audit_events'),
         captureCount: count(db, 'cortex_captures'),
@@ -268,11 +476,96 @@ export async function getCortexStatus(
         lastMaintenanceAt: lastAuditAt(db, 'job.maintenance'),
         linkCount: count(db, 'cortex_links'),
         pageCount: count(db, 'cortex_pages'),
+        recommendations: buildCortexRecommendations(
+            issues,
+            cortexSettings.embedding.apiKeyConfigured
+        ),
         sourceCount: count(db, 'cortex_sources'),
         timelineEntryCount: count(db, 'cortex_timeline_entries'),
         vectorIndex: await withEmbeddingDegradedReason(db, vectorDatabase),
         wikiPath: resolveCortexWikiPath(),
     };
+}
+
+function buildCortexRecommendations(
+    issues: CortexIssue[],
+    embeddingConfigured: boolean
+): CortexRecommendation[] {
+    const recommendations: CortexRecommendation[] = [];
+    const add = (kind: CortexIssueKind, input: Omit<CortexRecommendation, 'count' | 'kind'>) => {
+        const count = issues.filter((issue) => issue.kind === kind).length;
+        if (count > 0) {
+            recommendations.push({ ...input, count, kind });
+        }
+    };
+
+    add('unresolved-link', {
+        action: 'run-cortex-maintenance',
+        severity: 'warning',
+        summary: 'Some Cortex links do not resolve to pages.',
+    });
+    add('invalid-link-kind', {
+        action: 'inspect-lint',
+        severity: 'error',
+        summary: 'Some Cortex links use relationship types outside the active schema.',
+    });
+    add('unsourced-page', {
+        action: 'inspect-lint',
+        severity: 'warning',
+        summary: 'Some Cortex pages do not have source references.',
+    });
+    add('missing-citation', {
+        action: 'inspect-lint',
+        severity: 'info',
+        summary: 'Some sourced Cortex pages do not have citation rows.',
+    });
+    add('without-timeline', {
+        action: 'run-cortex-sync',
+        severity: 'warning',
+        summary: 'Some Cortex pages do not have timeline evidence.',
+    });
+    add('orphan-page', {
+        action: 'inspect-lint',
+        severity: 'info',
+        summary: 'Some Cortex pages are not connected to the graph.',
+    });
+    add('missing-chunks', {
+        action: 'run-cortex-maintenance',
+        severity: 'warning',
+        summary: 'Some Cortex pages are missing derived chunks.',
+    });
+    add('stale-embedding', {
+        action: embeddingConfigured ? 'run-cortex-generate-embeddings' : 'configure-embeddings',
+        severity: 'warning',
+        summary: 'Some Cortex embeddings are stale.',
+    });
+    add('failed-capture', {
+        action: 'inspect-lint',
+        severity: 'error',
+        summary: 'Some Cortex captures failed.',
+    });
+    add('failed-dream', {
+        action: 'inspect-lint',
+        severity: 'error',
+        summary: 'Some Cortex Dream reviews failed.',
+    });
+    add('failed-signal', {
+        action: 'inspect-lint',
+        severity: 'error',
+        summary: 'Some Cortex Signal reviews failed.',
+    });
+
+    if (!embeddingConfigured) {
+        recommendations.push({
+            action: 'configure-embeddings',
+            count: 1,
+            kind: 'embedding-not-configured',
+            severity: 'info',
+            summary: 'Configure embeddings to enable semantic Cortex recall.',
+        });
+    }
+
+    return recommendations;
 }
 
 async function withEmbeddingDegradedReason(
@@ -380,7 +673,7 @@ function getPageIndexing(db: Database, pageId: string): CortexPage['indexing'] {
 function listClaims(db: Database, pageId: string): CortexPage['claims'] {
     const rows = db
         .prepare(
-            `SELECT id, page_id, subject, predicate, value, confidence, status, source_refs_json
+            `SELECT id, page_id, subject, predicate, value, confidence, status, source_refs_json, supersedes_claim_id
              FROM cortex_claims
              WHERE page_id = ?
              ORDER BY created_at ASC`
@@ -394,6 +687,7 @@ function listClaims(db: Database, pageId: string): CortexPage['claims'] {
         sourceRefs: readJsonArray<CortexSourceRef>(row.source_refs_json),
         status: row.status,
         subject: row.subject,
+        supersedesClaimId: row.supersedes_claim_id,
         value: row.value,
     }));
 }
@@ -477,19 +771,67 @@ function lastAuditAt(db: Database, kind: string): string | null {
 }
 
 function listRecentJobRuns(db: Database): CortexStatus['jobRuns'] {
+    if (!hasTable(db, 'runtime_job_runs')) {
+        return [];
+    }
     const rows = db
         .prepare(
-            `SELECT audit_id, job_name, status, summary, completed_at
-             FROM cortex_job_runs
-             ORDER BY completed_at DESC
+            `SELECT job_slug, state, error, logs_json, created_at, finished_at, updated_at
+             FROM runtime_job_runs
+             WHERE job_slug IN (
+               'cortex-sync',
+               'cortex-generate-embeddings',
+               'cortex-lint',
+               'cortex-maintenance',
+               'cortex-signal',
+               'cortex-dream'
+             )
+             ORDER BY created_at DESC
              LIMIT 10`
         )
-        .all() as JobRunRow[];
+        .all() as Array<{
+        created_at: string;
+        error: string | null;
+        finished_at: string | null;
+        job_slug: string;
+        logs_json: string;
+        state: string;
+        updated_at: string;
+    }>;
     return rows.map((row) => ({
-        auditId: row.audit_id,
-        completedAt: row.completed_at,
-        job: row.job_name,
-        status: row.status,
-        summary: row.summary,
+        auditId: `runtime:${row.job_slug}:${row.created_at}`,
+        completedAt: row.finished_at ?? row.updated_at ?? row.created_at,
+        job: toCortexJobName(row.job_slug),
+        status:
+            row.state === 'failed' ? 'error' : row.state === 'completed' ? 'success' : 'skipped',
+        summary: row.error ?? latestLog(row.logs_json) ?? `${row.job_slug} ${row.state}`,
     }));
+}
+
+function toCortexJobName(jobSlug: string): CortexStatus['jobRuns'][number]['job'] {
+    switch (jobSlug) {
+        case 'cortex-sync':
+            return 'sync';
+        case 'cortex-generate-embeddings':
+            return 'generate-embeddings';
+        case 'cortex-lint':
+            return 'lint';
+        case 'cortex-maintenance':
+            return 'maintenance';
+        case 'cortex-signal':
+            return 'signal';
+        case 'cortex-dream':
+            return 'dream';
+        default:
+            return 'lint';
+    }
+}
+
+function latestLog(logsJson: string): string | null {
+    try {
+        const logs = JSON.parse(logsJson) as unknown;
+        return Array.isArray(logs) && typeof logs.at(-1) === 'string' ? logs.at(-1) : null;
+    } catch {
+        return null;
+    }
 }

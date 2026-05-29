@@ -1,7 +1,9 @@
 import type {
     CortexCaptureInput,
+    CortexEditPageInput,
     CortexJobName,
     CortexRecallInput,
+    CortexSaveSchemaInput,
     CortexSaveSettings,
     CortexSearchInput,
 } from '@tavern/api';
@@ -34,6 +36,19 @@ export async function saveCortexSettings(
     return await requireRuntimeClient(client).saveCortexSettings(input);
 }
 
+export async function getCortexSchema(
+    client: TavernAgentRuntimeClient | null = createConfiguredAgentRuntimeClient()
+) {
+    return client ? await client.getCortexSchema() : null;
+}
+
+export async function saveCortexSchema(
+    input: CortexSaveSchemaInput,
+    client: TavernAgentRuntimeClient | null = createConfiguredAgentRuntimeClient()
+) {
+    return await requireRuntimeClient(client).saveCortexSchema(input);
+}
+
 export async function listCortexPages(
     client: TavernAgentRuntimeClient | null = createConfiguredAgentRuntimeClient()
 ) {
@@ -52,6 +67,13 @@ export async function captureCortex(
     client: TavernAgentRuntimeClient | null = createConfiguredAgentRuntimeClient()
 ) {
     return await requireRuntimeClient(client).captureCortex(input);
+}
+
+export async function editCortexPage(
+    input: CortexEditPageInput,
+    client: TavernAgentRuntimeClient | null = createConfiguredAgentRuntimeClient()
+) {
+    return await requireRuntimeClient(client).editCortexPage(input);
 }
 
 export async function searchCortex(

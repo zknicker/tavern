@@ -56,6 +56,48 @@ describe('Tavern Cortex OpenClaw tools', () => {
         expect(JSON.parse(result.content[0].text)).toEqual({ hits: [], query: 'project memory' });
     });
 
+    it('calls Cortex recall with an explicit search mode', async () => {
+        const requests = [];
+        const tools = registerTools({
+            fetch: mock(async (url, init) => {
+                requests.push({
+                    body: JSON.parse(String(init.body)),
+                    method: init.method,
+                    url: String(url),
+                });
+                return jsonResponse({ hits: [], mode: 'tokenmax', query: 'project memory' });
+            }),
+        });
+
+        await tools.get('cortex_recall').execute('call_1', {
+            limit: 20,
+            mode: 'tokenmax',
+            query: 'project memory',
+        });
+
+        expect(requests).toEqual([
+            {
+                body: {
+                    limit: 20,
+                    mode: 'tokenmax',
+                    query: 'project memory',
+                },
+                method: 'POST',
+                url: 'http://runtime.test/cortex/recall',
+            },
+        ]);
+    });
+
+    it('describes current default Cortex page types without rejecting schema extensions', () => {
+        const tools = registerTools({ fetch: mockFetch({}) });
+        const captureType = tools.get('cortex_capture').parameters.properties.type;
+
+        expect(captureType.type).toBe('string');
+        expect(captureType.description).toContain('product');
+        expect(captureType.description).toContain('campaign');
+        expect(captureType.description).toContain('metric');
+    });
+
     it('captures Cortex pages with a default OpenClaw agent source', async () => {
         const requests = [];
         const tools = registerTools({

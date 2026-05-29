@@ -1,15 +1,23 @@
 export const CORTEX_PAGE_TYPES = [
-    'agent',
-    'chat',
-    'decision',
-    'fact',
-    'file',
-    'note',
     'person',
+    'company',
     'project',
-    'source',
+    'product',
+    'brand',
+    'campaign',
+    'customer-segment',
+    'supplier',
+    'platform',
+    'tool',
+    'asset',
+    'decision',
     'task',
+    'metric',
+    'idea',
+    'note',
 ];
+
+export const CORTEX_RECALL_MODES = ['conservative', 'balanced', 'tokenmax'];
 
 export const TAVERN_CORTEX_TOOL_NAMES = [
     'cortex_search',

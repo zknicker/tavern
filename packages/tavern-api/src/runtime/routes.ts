@@ -38,10 +38,12 @@ export const agentRuntimeRoutes = {
     cortexBacklinks: (slugOrId: string) =>
         `/cortex/pages/${encodeURIComponent(slugOrId)}/backlinks`,
     cortexCapture: '/cortex/capture',
+    cortexEdit: '/cortex/edit',
     cortexJobRun: (job: string) => `/cortex/jobs/${encodeURIComponent(job)}/run`,
     cortexPage: (slugOrId: string) => `/cortex/pages/${encodeURIComponent(slugOrId)}`,
     cortexPages: '/cortex/pages',
     cortexRecall: '/cortex/recall',
+    cortexSchema: '/cortex/schema',
     cortexSearch: '/cortex/search',
     cortexSettings: '/cortex/settings',
     cortexStatus: '/cortex/status',

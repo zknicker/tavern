@@ -16,6 +16,7 @@
       "dependencies": {
         "@lancedb/lancedb": "0.29.0",
         "@tavern/api": "workspace:*",
+        "@tavern/codex-usage": "workspace:*",
         "@tavern/openclaw-gateway-adapter": "workspace:*",
         "bunqueue": "2.6.38",
         "ws": "8.20.1",

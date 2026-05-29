@@ -1,8 +1,12 @@
+import fs from 'node:fs';
+import path from 'node:path';
 import type {
     AgentRuntimeCapabilityHealth,
     AgentRuntimeCapabilityHealthId,
     AgentRuntimeCapabilityHealthState,
 } from '@tavern/api';
+import { loadCodexCredentials } from '@tavern/codex-usage/credentials';
+import { resolveCortexWikiPath } from '../cortex/read';
 import { getCortexSettings } from '../cortex/settings';
 import { getDb } from '../db/connection';
 import { listRuntimeJobRuns } from '../jobs/history';
@@ -35,6 +39,29 @@ export const runtimeCapabilityDefinitions: RuntimeCapabilityDefinition[] = [
     healthyCapability('chats', 'chats'),
     healthyCapability('chatTargets', 'chat targets'),
     healthyCapability('computerUse', 'computer use', 10 * minuteMs),
+    {
+        async check() {
+            return await checkCodexModelAccessCapability();
+        },
+        displayName: 'Codex OAuth',
+        id: 'codexOAuth',
+        refresh: {
+            intervalMs: 15 * minuteMs,
+            runOnStart: true,
+        },
+    },
+    cortexDatabaseCapability(),
+    {
+        check() {
+            return checkCortexWikiCapability();
+        },
+        displayName: 'Cortex wiki',
+        id: 'cortexWiki',
+        refresh: {
+            intervalMs: 5 * minuteMs,
+            runOnStart: true,
+        },
+    },
     healthyCapability('cron', 'cron'),
     healthyCapability('cronRuns', 'cron runs'),
     healthyCapability('events', 'events'),
@@ -145,6 +172,82 @@ function healthyCapability(
     };
 }
 
+function cortexDatabaseCapability(): RuntimeCapabilityDefinition {
+    return {
+        check() {
+            try {
+                const missingTables = [
+                    'cortex_pages',
+                    'cortex_sources',
+                    'cortex_chunks',
+                    'cortex_links',
+                    'cortex_timeline_entries',
+                    'cortex_audit_events',
+                    'cortex_signal_cursors',
+                ].filter((tableName) => !hasSqliteTable(tableName));
+                if (missingTables.length > 0) {
+                    return {
+                        metadata: { missingTables },
+                        reason: 'Cortex database schema is incomplete.',
+                        state: 'unavailable',
+                    };
+                }
+                return { state: 'healthy' };
+            } catch (error) {
+                return {
+                    reason: 'Cortex database could not be checked.',
+                    state: 'unavailable',
+                    technicalMessage: error instanceof Error ? error.message : String(error),
+                };
+            }
+        },
+        displayName: 'Cortex database',
+        id: 'cortexDatabase',
+        refresh: {
+            intervalMs: 5 * minuteMs,
+            runOnStart: true,
+        },
+    };
+}
+
+function hasSqliteTable(tableName: string): boolean {
+    const row = getDb()
+        .prepare(
+            `SELECT COUNT(*) AS count
+             FROM sqlite_master
+             WHERE type = 'table' AND name = ?`
+        )
+        .get(tableName) as { count: number };
+    return row.count > 0;
+}
+
+function checkCortexWikiCapability(): RuntimeCapabilityCheckResult {
+    const wikiPath = resolveCortexWikiPath();
+    try {
+        if (fs.existsSync(wikiPath)) {
+            const stat = fs.statSync(wikiPath);
+            if (!stat.isDirectory()) {
+                return {
+                    reason: 'Cortex wiki path is not a directory.',
+                    state: 'unavailable',
+                    technicalMessage: wikiPath,
+                };
+            }
+            fs.accessSync(wikiPath, fs.constants.R_OK | fs.constants.W_OK);
+            return { metadata: { wikiPath }, state: 'healthy' };
+        }
+
+        fs.accessSync(path.dirname(wikiPath), fs.constants.R_OK | fs.constants.W_OK);
+        return { metadata: { missing: true, wikiPath }, state: 'healthy' };
+    } catch (error) {
+        return {
+            reason: 'Cortex wiki path is not readable and writable.',
+            state: 'unavailable',
+            technicalMessage: error instanceof Error ? error.message : String(error),
+        };
+    }
+}
+
 export function getRuntimeCapabilityDefinition(id: AgentRuntimeCapabilityHealthId) {
     const definition = runtimeCapabilityDefinitions.find((capability) => capability.id === id);
     if (!definition) {
@@ -169,6 +272,31 @@ export function getExpectedRuntimeCapability(
         technicalMessage: null,
         updatedAt: null,
     };
+}
+
+async function checkCodexModelAccessCapability(): Promise<RuntimeCapabilityCheckResult> {
+    try {
+        const credentials = await loadCodexCredentials({ environment: process.env });
+        if (!credentials) {
+            return {
+                reason: 'Codex OAuth credentials are not configured.',
+                state: 'unauthorized',
+            };
+        }
+        return {
+            metadata: {
+                accountId: credentials.credentials.accountId,
+                source: credentials.source,
+            },
+            state: 'healthy',
+        };
+    } catch (error) {
+        return {
+            reason: 'Codex OAuth credentials could not be loaded.',
+            state: 'unauthorized',
+            technicalMessage: error instanceof Error ? error.message : String(error),
+        };
+    }
 }
 
 async function checkEmbeddingModelCapability(): Promise<RuntimeCapabilityCheckResult> {

@@ -40,15 +40,21 @@ Memory visibility is derived from Cortex state. It does not create a parallel
 
 Memory configuration does not expose retired persistence, working, knowledge,
 or dream model slots. Current settings and health should name Cortex concepts
-directly: storage, wiki mirrors, capture, recall, encodings, links, audit, and
+directly: storage, markdown pages, capture, recall, encodings, links, audit, and
 maintenance.
 
-The implemented Cortex path is not the complete GBrain loop yet. Today it
-stores captured material, mirrors pages, parses links, builds deterministic
-claims, indexes OpenAI embeddings when configured, and reports recall and job
-health. The missing work is model-backed review of bounded source captures:
-extracting durable observations, inferring typed relationships, updating
-compiled truth, and recording source-backed timeline and audit output.
+The implemented Cortex path writes captures to canonical markdown, projects
+them into SQLite, parses typed links, builds deterministic claims, indexes
+OpenAI embeddings when configured, and reports recall and job health. Cortex
+Signal reviews per-chat message backlog every few minutes through the standard
+Codex OAuth model path when the `codexOAuth` capability is healthy. Cortex Dream
+consolidates recent chats later through the same model path. Both apply
+structured page writes, timeline evidence, observations, relationships,
+citations, noops, and warnings, and record source-hash checkpoints plus
+model-call metadata in Cortex audit. Without Codex auth, the Runtime job
+capability gate disables Signal and Dream. Cortex page edits support archive,
+merge, split, contradiction-preserving claims, and health recommendations.
+Non-chat Dream source coverage is still future work.
 
 When a user corrects memory, Tavern edits or appends to the relevant Cortex
 page, timeline entry, link, tag, or source metadata. When a user asks Tavern to

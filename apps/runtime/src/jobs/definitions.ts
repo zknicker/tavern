@@ -6,6 +6,7 @@ import type { RuntimeJobDefinition } from './types';
 
 const hourMs = 60 * 60 * 1000;
 const dayMs = 24 * hourMs;
+const fiveMinutesMs = 5 * 60 * 1000;
 export const cortexEmbeddingIntervalMs = 15 * 60 * 1000;
 export const runtimeCapabilitiesRefreshIntervalMs = 60 * 1000;
 
@@ -55,12 +56,12 @@ export const cortexGenerateEmbeddingsJob: RuntimeJobDefinition = {
     slug: 'cortex-generate-embeddings',
 };
 
-export const cortexIngestJob = createCortexJob({
-    description: 'Imports queued Cortex source files and folders into the knowledgebase.',
-    displayName: 'Ingest Knowledge',
+export const cortexSyncJob = createCortexJob({
+    description: 'Syncs canonical Cortex markdown into the SQLite projection.',
+    displayName: 'Sync Cortex',
     everyMs: dayMs,
-    job: 'ingest',
-    slug: 'cortex-ingest',
+    job: 'sync',
+    slug: 'cortex-sync',
 });
 
 export const cortexLintJob = createCortexJob({
@@ -72,20 +73,39 @@ export const cortexLintJob = createCortexJob({
 });
 
 export const cortexMaintenanceJob = createCortexJob({
-    description: 'Repairs derived Cortex state, markdown mirrors, and searchable indexes.',
+    description: 'Repairs deterministic Cortex derived links, chunks, and orphan rows.',
     displayName: 'Cortex Maintenance',
     everyMs: dayMs,
     job: 'maintenance',
-    requiredCapabilities: ['embeddingModel'],
     slug: 'cortex-maintenance',
+});
+
+export const cortexSignalJob = createCortexJob({
+    description: 'Reviews per-chat message backlog and captures durable Cortex memory.',
+    displayName: 'Cortex Signal',
+    everyMs: fiveMinutesMs,
+    job: 'signal',
+    requiredCapabilities: ['codexOAuth'],
+    slug: 'cortex-signal',
+});
+
+export const cortexDreamJob = createCortexJob({
+    description: 'Reviews bounded source material and writes validated Cortex memory updates.',
+    displayName: 'Cortex Dream',
+    everyMs: dayMs,
+    job: 'dream',
+    requiredCapabilities: ['codexOAuth'],
+    slug: 'cortex-dream',
 });
 
 export const runtimeJobDefinitions = [
     runtimeCapabilitiesRefreshJob,
     cortexGenerateEmbeddingsJob,
-    cortexIngestJob,
+    cortexSyncJob,
     cortexLintJob,
     cortexMaintenanceJob,
+    cortexSignalJob,
+    cortexDreamJob,
 ] as const;
 
 export function getRuntimeJobDefinition(slug: RuntimeJobDefinition['slug']): RuntimeJobDefinition {

@@ -3,13 +3,17 @@ import {
     cortexBacklinkListSchema,
     cortexCaptureInputSchema,
     cortexCaptureResultSchema,
+    cortexEditPageInputSchema,
+    cortexEditPageResultSchema,
     cortexJobNameSchema,
     cortexJobRunSchema,
     cortexPageListSchema,
     cortexPageSchema,
     cortexRecallInputSchema,
     cortexRecallResultSchema,
+    cortexSaveSchemaInputSchema,
     cortexSaveSettingsSchema,
+    cortexSchemaRecordSchema,
     cortexSearchInputSchema,
     cortexSearchResultSchema,
     cortexSettingsSchema,
@@ -18,6 +22,8 @@ import {
 import { getDb } from '../db/connection';
 import { requestRuntimeJobRun } from '../jobs/request';
 import { json, notFound } from '../tavern/http';
+import { getActiveCortexSchemaRecord, saveActiveCortexSchema } from './cortex-schema';
+import { editCortexPage } from './edit';
 import { runCortexJob } from './jobs';
 import {
     getCortexPage,
@@ -51,6 +57,15 @@ export async function handleCortexRequest(request: Request): Promise<Response | 
         return json(cortexSettingsSchema.parse(settings));
     }
 
+    if (request.method === 'GET' && url.pathname === agentRuntimeRoutes.cortexSchema) {
+        return json(cortexSchemaRecordSchema.parse(getActiveCortexSchemaRecord(db)));
+    }
+
+    if (request.method === 'PUT' && url.pathname === agentRuntimeRoutes.cortexSchema) {
+        const input = cortexSaveSchemaInputSchema.parse(await readJson(request));
+        return json(cortexSchemaRecordSchema.parse(saveActiveCortexSchema(db, input.schema)));
+    }
+
     if (request.method === 'GET' && url.pathname === agentRuntimeRoutes.cortexPages) {
         const limit = Number(url.searchParams.get('limit') ?? 100);
         return json(
@@ -63,6 +78,13 @@ export async function handleCortexRequest(request: Request): Promise<Response | 
         const result = captureCortex(db, input);
         requestRuntimeJobRun('cortex-generate-embeddings', { trigger: 'write' });
         return json(cortexCaptureResultSchema.parse(result));
+    }
+
+    if (request.method === 'POST' && url.pathname === agentRuntimeRoutes.cortexEdit) {
+        const input = cortexEditPageInputSchema.parse(await readJson(request));
+        const result = editCortexPage(db, input);
+        requestRuntimeJobRun('cortex-generate-embeddings', { trigger: 'write' });
+        return json(cortexEditPageResultSchema.parse(result));
     }
 
     if (request.method === 'POST' && url.pathname === agentRuntimeRoutes.cortexSearch) {
@@ -93,7 +115,11 @@ export async function handleCortexRequest(request: Request): Promise<Response | 
     const jobMatch = url.pathname.match(/^\/cortex\/jobs\/([^/]+)\/run$/u);
     if (request.method === 'POST' && jobMatch?.[1]) {
         const job = cortexJobNameSchema.parse(decodeURIComponent(jobMatch[1]));
-        return json(cortexJobRunSchema.parse(await runCortexJob(db, job, vectorDatabase)));
+        return json(
+            cortexJobRunSchema.parse(
+                await runCortexJob(db, job, vectorDatabase, { recordRuntimeRun: true })
+            )
+        );
     }
 
     return null;
