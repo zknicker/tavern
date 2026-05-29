@@ -14,8 +14,9 @@ The generated `AGENTS.md` is assembled from three Tavern-owned sources:
 * **Tavern instructions.** Repo-managed markdown that explains how a Tavern
   agent should operate inside Tavern, including Cortex tool use and workspace
   rules.
-* **Agent soul.** User-authored personality, voice, role, and durable behavior
-  settings stored with the agent record.
+* **User-authored instructions.** The user's full agent instruction block:
+  role, personality, voice, collaboration rules, output protocol, stop rules,
+  and other durable behavior settings stored with the agent record.
 * **Agent notes.** Agent-authored operational notes stored by Tavern and updated
   through Tavern tools.
 
@@ -32,6 +33,14 @@ Runtime leaves the other OpenClaw bootstrap markdown files blank or unused for
 managed Tavern agents. OpenClaw may still support those files, but Tavern does
 not rely on them for managed agent behavior.
 
+Runtime clears known companion bootstrap files such as `SOUL.md`, `TOOLS.md`,
+`IDENTITY.md`, `USER.md`, `HEARTBEAT.md`, `BOOTSTRAP.md`, `MEMORY.md`, and
+`ROLE.md` before rendering Tavern's generated `AGENTS.md`. The files are left
+present but empty so OpenClaw skips them without injecting missing-file marker
+lines. Runtime does not set `skipBootstrap`, because Tavern still relies on
+OpenClaw's bootstrap injection path for generated `AGENTS.md`. Tavern chat
+turns must not request lightweight bootstrap context.
+
 The generated file is not the source of truth. If it is missing, stale, or
 modified, Runtime regenerates it from the separate Tavern sources.
 
@@ -43,12 +52,12 @@ the DB-backed agent notes source. Runtime then renders those notes into the next
 generated `AGENTS.md`.
 
 Agent notes are for reusable operating guidance, not raw chat history, Cortex
-knowledge, secrets, or user personality settings.
+knowledge, secrets, or user-authored instruction settings.
 
 ## App Surfaces
 
-The Tavern app exposes the user-authored soul/personality in agent settings. It
-is edited as a normal Tavern setting and saved to Tavern storage.
+The Tavern app exposes the user-authored instructions block in agent settings.
+It is edited as a normal Tavern setting and saved to Tavern storage.
 
 The app does not need a first-pass editor for agent-authored notes. Notes are
 agent-owned and updated through Tavern workspace tools. The app may later show

@@ -203,7 +203,7 @@ const schemaStatements = [
         runtime_id TEXT NOT NULL,
         agent_id TEXT NOT NULL,
         primary_color TEXT,
-        soul TEXT NOT NULL DEFAULT '',
+        user_instructions TEXT NOT NULL DEFAULT '',
         created_at TEXT NOT NULL,
         updated_at TEXT NOT NULL,
         PRIMARY KEY (runtime_id, agent_id)
@@ -569,8 +569,21 @@ export function ensureDatabaseSchema() {
     } catch {
         /* column already exists */
     }
+    migrateAgentProfilesUserInstructions();
+}
+
+function migrateAgentProfilesUserInstructions() {
     try {
-        databaseClient.exec(`ALTER TABLE agent_profiles ADD COLUMN soul TEXT NOT NULL DEFAULT '';`);
+        databaseClient.exec('ALTER TABLE agent_profiles RENAME COLUMN soul TO user_instructions;');
+        return;
+    } catch {
+        /* column already migrated or table is fresh */
+    }
+
+    try {
+        databaseClient.exec(
+            `ALTER TABLE agent_profiles ADD COLUMN user_instructions TEXT NOT NULL DEFAULT '';`
+        );
     } catch {
         /* column already exists */
     }

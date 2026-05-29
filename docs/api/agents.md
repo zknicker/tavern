@@ -1,7 +1,7 @@
 ---
 summary: Agent records and configuration API for model choices, tool policy, memory policy, skill assignment, and runtime metadata boundaries.
 read_when:
-  - changing agent records, personality, model settings, tool policy, or per-agent skill and memory controls
+  - changing agent records, instructions, personality, model settings, tool policy, or per-agent skill and memory controls
   - changing how clients list, configure, or address agents
 ---
 
@@ -11,7 +11,7 @@ The Agents API is for the workers users configure and talk to in Tavern.
 
 Agents are client-facing records. Runtime sessions and OpenClaw execution details
 can be attached as metadata, but the API exposes agents as named Tavern workers
-with personality, model, tool, memory, and skill policy.
+with user-authored instructions, model, tool, memory, and skill policy.
 
 ## Contract
 
@@ -19,13 +19,14 @@ with personality, model, tool, memory, and skill policy.
 * Agent list and detail reads use synced Runtime records. Mounting an app screen
   must not contact OpenClaw Gateway or enqueue a background sync job just to
   discover agents.
-* Agent records expose display name, description, soul/personality, model
-  policy, tool policy, memory policy, skill selections, and availability.
+* Agent records expose display name, description, user-authored instructions,
+  model policy, tool policy, memory policy, skill selections, and availability.
 * Model availability comes from Runtime capabilities and config reads. Clients
   read it through agent and model capabilities.
 * Tool and skill controls are inspectable before a run starts.
-* Soul/personality is a Tavern-owned setting stored through the Runtime-hosted
-  agent API. It is rendered into the managed OpenClaw `AGENTS.md`; clients do
+* User-authored instructions are a Tavern-owned setting stored through the
+  Runtime-hosted agent API. They are rendered into the managed OpenClaw
+  `AGENTS.md` after Tavern policy and before agent-authored notes; clients do
   not edit the workspace file directly.
 * Agent notes are DB-backed and agent-owned. They are updated through Tavern
   workspace tools, not through the first-pass user-facing agent settings UI.
@@ -39,7 +40,7 @@ The API covers:
 * get an agent
 * list an agent's Tavern and external runtime chat references
 * create or update agent settings
-* read and update soul/personality
+* read and update user-authored instructions
 * read model choices and availability
 * read and update tool policy
 * read and update memory policy

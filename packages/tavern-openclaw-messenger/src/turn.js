@@ -204,7 +204,6 @@ async function runTavernTurn({ context, input, runId, runtime, startedAt }) {
             replyPipeline: {},
             replyOptions: {
                 allowProgressCallbacksWhenSourceDeliverySuppressed: true,
-                bootstrapContextMode: 'lightweight',
                 onApprovalEvent: (event) => {
                     recordTurnCallback({ data: event, input, runId, stream: 'approval' });
                     turnProgress.handle({
@@ -345,7 +344,7 @@ function withTavernProgressCallbacksEnabled(cfg) {
 
 function resolveChannelInboundRuntime(runtime) {
     const inbound = runtime.channel?.inbound ?? runtime.channel?.turn;
-    if (!inbound?.buildContext || !inbound?.dispatchReply) {
+    if (!(inbound?.buildContext && inbound?.dispatchReply)) {
         throw new Error('Tavern Messenger requires OpenClaw channel inbound runtime helpers.');
     }
     return inbound;
@@ -612,7 +611,9 @@ function readToolCalls(message) {
 
             return {
                 arguments:
-                    part.arguments && typeof part.arguments === 'object' && !Array.isArray(part.arguments)
+                    part.arguments &&
+                    typeof part.arguments === 'object' &&
+                    !Array.isArray(part.arguments)
                         ? part.arguments
                         : null,
                 id,
@@ -647,11 +648,11 @@ function progressToolIdFromToolCallId(toolCallId) {
 function buildTranscriptToolLabel(name, args) {
     const target =
         args && typeof args === 'object' && !Array.isArray(args)
-            ? readString(args.path) ??
+            ? (readString(args.path) ??
               readString(args.file_path) ??
               readString(args.filePath) ??
               readString(args.command) ??
-              readString(args.query)
+              readString(args.query))
             : null;
 
     if (name === 'read' && target) {

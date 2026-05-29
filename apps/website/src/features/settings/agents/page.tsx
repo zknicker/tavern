@@ -93,13 +93,14 @@ function AgentSettingsContent({
         modelOptions,
     });
     const saveAgentProfile = useAgentProfileUpdate();
-    const [soulDraft, setSoulDraft] = useState(agent.soul);
+    const savedUserInstructions = agent.userInstructions;
+    const [instructionsDraft, setInstructionsDraft] = useState(savedUserInstructions);
 
     if (!draft) {
         return <p className="text-muted-foreground text-sm">Loading agent settings...</p>;
     }
 
-    const soulChanged = soulDraft !== agent.soul;
+    const instructionsChanged = instructionsDraft !== savedUserInstructions;
     const previewName = draft.profile.displayName.trim() || agent.id;
     const selectedColor = agent.effectivePrimaryColor;
     const selectedColorPreset =
@@ -203,40 +204,46 @@ function AgentSettingsContent({
                 <CardFrame>
                     <Card className="overflow-hidden p-0">
                         <SettingsRow
-                            description="Personality and operating guidance Tavern writes into the generated AGENTS.md."
-                            title="Personality"
+                            description="User-authored AGENTS.md block inserted after Tavern runtime guidance and before agent-authored notes."
+                            title="Agent instructions"
                         >
                             <div className="grid gap-3">
                                 <Textarea
                                     disabled={saveAgentProfile.isPending}
-                                    id="agent-soul"
-                                    name="agent-soul"
-                                    onChange={(event) => setSoulDraft(event.target.value)}
-                                    placeholder="Describe how this agent should act."
-                                    rows={8}
-                                    textareaClassName="min-h-36 resize-y"
-                                    value={soulDraft}
+                                    id="agent-instructions"
+                                    name="agent-instructions"
+                                    onChange={(event) => setInstructionsDraft(event.target.value)}
+                                    placeholder="Write the agent's role, personality, operating rules, output protocol, and stop rules."
+                                    rows={16}
+                                    textareaClassName="min-h-96 resize-y font-mono text-sm"
+                                    value={instructionsDraft}
                                 />
                                 <div className="flex justify-end gap-2">
                                     <Button
-                                        disabled={!soulChanged || saveAgentProfile.isPending}
-                                        onClick={() => setSoulDraft(agent.soul)}
+                                        disabled={
+                                            !instructionsChanged || saveAgentProfile.isPending
+                                        }
+                                        onClick={() => setInstructionsDraft(savedUserInstructions)}
                                         type="button"
                                         variant="secondary"
                                     >
                                         Discard
                                     </Button>
                                     <Button
-                                        disabled={!soulChanged || saveAgentProfile.isPending}
+                                        disabled={
+                                            !instructionsChanged || saveAgentProfile.isPending
+                                        }
                                         onClick={() =>
                                             saveAgentProfile.mutate(
                                                 {
                                                     agentId: agent.id,
-                                                    soul: soulDraft,
+                                                    userInstructions: instructionsDraft,
                                                 },
                                                 {
                                                     onSuccess: ({ agent: savedAgent }) =>
-                                                        setSoulDraft(savedAgent.soul),
+                                                        setInstructionsDraft(
+                                                            savedAgent.userInstructions
+                                                        ),
                                                 }
                                             )
                                         }

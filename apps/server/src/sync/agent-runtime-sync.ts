@@ -276,7 +276,7 @@ export async function syncAgentWorkspaceInstructions(input: {
         try {
             await input.client.saveWorkspaceInstructions(agent.id, {
                 agentName: agent.name,
-                soul: profile.soul,
+                userInstructions: profile.userInstructions,
                 workspaceDir: agent.workspaceFolder,
             });
         } catch (error) {

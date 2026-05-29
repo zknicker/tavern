@@ -8,8 +8,8 @@ export interface AgentInstructionSource {
     agentId: string;
     agentName: string;
     notes: string;
-    soul: string;
     updatedAt: string;
+    userInstructions: string;
     workspaceDir: string;
 }
 
@@ -20,6 +20,16 @@ export interface AgentInstructionRenderResult {
 }
 
 export const generatedInstructionFileName = 'AGENTS.md';
+export const openClawBootstrapFileNamesToClear = [
+    'BOOTSTRAP.md',
+    'HEARTBEAT.md',
+    'IDENTITY.md',
+    'MEMORY.md',
+    'ROLE.md',
+    'SOUL.md',
+    'TOOLS.md',
+    'USER.md',
+] as const;
 
 const defaultAgentName = 'main';
 const defaultAgentId = 'main';
@@ -48,7 +58,7 @@ CREATE TABLE IF NOT EXISTS workspace_agent_instructions (
   agent_id TEXT PRIMARY KEY,
   agent_name TEXT NOT NULL,
   workspace_dir TEXT NOT NULL,
-  soul TEXT NOT NULL DEFAULT '',
+  user_instructions TEXT NOT NULL DEFAULT '',
   notes TEXT NOT NULL DEFAULT '',
   rendered_hash TEXT,
   rendered_at TEXT,
@@ -56,6 +66,20 @@ CREATE TABLE IF NOT EXISTS workspace_agent_instructions (
   updated_at TEXT NOT NULL
 );
 `);
+    try {
+        db.exec(
+            'ALTER TABLE workspace_agent_instructions RENAME COLUMN soul TO user_instructions;'
+        );
+    } catch {
+        /* column already migrated or table is fresh */
+    }
+    try {
+        db.exec(
+            `ALTER TABLE workspace_agent_instructions ADD COLUMN user_instructions TEXT NOT NULL DEFAULT '';`
+        );
+    } catch {
+        /* column already exists */
+    }
 }
 
 export function getAgentInstructionSource(
@@ -64,7 +88,7 @@ export function getAgentInstructionSource(
 ): AgentInstructionSource | null {
     const row = db
         .prepare(
-            `SELECT agent_id, agent_name, workspace_dir, soul, notes, updated_at
+            `SELECT agent_id, agent_name, workspace_dir, user_instructions, notes, updated_at
              FROM workspace_agent_instructions
              WHERE agent_id = ?`
         )
@@ -73,8 +97,8 @@ export function getAgentInstructionSource(
               agent_id: string;
               agent_name: string;
               notes: string;
-              soul: string;
               updated_at: string;
+              user_instructions: string;
               workspace_dir: string;
           }
         | undefined;
@@ -84,8 +108,8 @@ export function getAgentInstructionSource(
               agentId: row.agent_id,
               agentName: row.agent_name,
               notes: row.notes,
-              soul: row.soul,
               updatedAt: row.updated_at,
+              userInstructions: row.user_instructions,
               workspaceDir: row.workspace_dir,
           }
         : null;
@@ -96,32 +120,45 @@ export function updateAgentInstructionSource(
     input: {
         agentId?: string | null;
         agentName?: string | null;
-        soul?: string | null;
+        userInstructions?: string | null;
         workspaceDir: string;
     }
 ) {
     const timestamp = new Date().toISOString();
     const existing = getAgentInstructionSource(db, input.agentId ?? defaultAgentId);
+    const userInstructions =
+        input.userInstructions !== undefined
+            ? (input.userInstructions?.trim() ?? existing?.userInstructions ?? '')
+            : (existing?.userInstructions ?? '');
     const source = {
         agentId: input.agentId?.trim() || defaultAgentId,
         agentName: input.agentName?.trim() || existing?.agentName || defaultAgentName,
         notes: existing?.notes ?? '',
-        soul: input.soul?.trim() ?? existing?.soul ?? '',
+        userInstructions,
         workspaceDir: input.workspaceDir,
     };
 
     db.prepare(
         `INSERT INTO workspace_agent_instructions (
-            agent_id, agent_name, workspace_dir, soul, notes, created_at, updated_at
+            agent_id, agent_name, workspace_dir, user_instructions, notes, created_at, updated_at
         ) VALUES (
-            $agentId, $agentName, $workspaceDir, $soul, $notes, $timestamp, $timestamp
+            $agentId, $agentName, $workspaceDir, $userInstructions, $notes, $timestamp, $timestamp
         )
         ON CONFLICT(agent_id) DO UPDATE SET
             agent_name = excluded.agent_name,
             workspace_dir = excluded.workspace_dir,
-            soul = excluded.soul,
+            user_instructions = excluded.user_instructions,
             updated_at = excluded.updated_at`
-    ).run(namedParams({ ...source, timestamp }));
+    ).run(
+        namedParams({
+            agentId: source.agentId,
+            agentName: source.agentName,
+            notes: source.notes,
+            timestamp,
+            userInstructions: source.userInstructions,
+            workspaceDir: source.workspaceDir,
+        })
+    );
 
     return getAgentInstructionSource(db, source.agentId) as AgentInstructionSource;
 }
@@ -145,9 +182,9 @@ export function updateAgentNotes(
 
     db.prepare(
         `INSERT INTO workspace_agent_instructions (
-            agent_id, agent_name, workspace_dir, soul, notes, created_at, updated_at
+            agent_id, agent_name, workspace_dir, user_instructions, notes, created_at, updated_at
         ) VALUES (
-            $agentId, $agentName, $workspaceDir, $soul, $notes, $timestamp, $timestamp
+            $agentId, $agentName, $workspaceDir, $userInstructions, $notes, $timestamp, $timestamp
         )
         ON CONFLICT(agent_id) DO UPDATE SET
             notes = excluded.notes,
@@ -157,8 +194,8 @@ export function updateAgentNotes(
             agentId,
             agentName: existing?.agentName ?? defaultAgentName,
             notes: normalizeNotes(input.notes),
-            soul: existing?.soul ?? '',
             timestamp,
+            userInstructions: existing?.userInstructions ?? '',
             workspaceDir,
         })
     );
@@ -189,14 +226,22 @@ export async function renderAgentInstructions(db: Database, agentId = defaultAge
     return { content, renderedAt, sha256 } satisfies AgentInstructionRenderResult;
 }
 
+export async function clearOpenClawBootstrapFiles(workspaceDir: string) {
+    await Promise.all(
+        openClawBootstrapFileNamesToClear.map((fileName) =>
+            fs.writeFile(path.join(workspaceDir, fileName), '', { mode: 0o600 })
+        )
+    );
+}
+
 export function composeAgentInstructions(
-    source: Pick<AgentInstructionSource, 'agentName' | 'notes' | 'soul'>
+    source: Pick<AgentInstructionSource, 'agentName' | 'notes' | 'userInstructions'>
 ) {
     const sections = [
         '# Tavern Agent Instructions',
         `You are ${source.agentName}, a Tavern-managed agent.`,
         tavernManagedInstructions,
-        formatOptionalParagraph(source.soul),
+        formatOptionalParagraph(source.userInstructions),
         formatOptionalParagraph(source.notes),
     ].filter((section): section is string => Boolean(section));
 

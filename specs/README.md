@@ -37,7 +37,7 @@ directly.
 - `jobs.md`, `workers.md`, `models.md`, `skills.md`, `tools.md`, `catalog.md`, `activity-log.md`:
   focused product surfaces.
 - `workspace.md`: managed OpenClaw workspace instructions, generated
-  `AGENTS.md`, agent soul, and agent notes.
+  `AGENTS.md`, user-authored instructions, and agent notes.
 
 ## Memory Specs
 

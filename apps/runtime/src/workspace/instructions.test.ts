@@ -1,13 +1,15 @@
-import { mkdtemp, readFile, rm } from 'node:fs/promises';
+import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { afterEach, beforeEach, describe, expect, test } from 'vitest';
 import { closeDb, getDb, initTestDb } from '../db/connection';
 import { ensureRuntimeSchema } from '../db/schema';
 import {
+    clearOpenClawBootstrapFiles,
     composeAgentInstructions,
     generatedInstructionFileName,
     getAgentInstructionSource,
+    openClawBootstrapFileNamesToClear,
     renderAgentInstructions,
     updateAgentInstructionSource,
     updateAgentNotes,
@@ -27,12 +29,12 @@ describe('workspace instructions', () => {
         await rm(workspaceDir, { force: true, recursive: true });
     });
 
-    test('renders generated AGENTS.md from managed soul and agent notes', async () => {
+    test('renders generated AGENTS.md from user instructions and agent notes', async () => {
         const db = getDb();
         updateAgentInstructionSource(db, {
             agentId: 'planner',
             agentName: 'Planner',
-            soul: 'Speak plainly.',
+            userInstructions: 'Speak plainly.',
             workspaceDir,
         });
         updateAgentNotes(db, {
@@ -49,16 +51,19 @@ describe('workspace instructions', () => {
         expect(result.sha256).toMatch(/^[a-f0-9]{64}$/u);
         expect(content).toContain('You are Planner, a Tavern-managed agent.');
         expect(content).toContain('Cortex is Tavern');
+        expect(content).toContain("Follow Tavern's Cortex operating resources");
+        expect(content).toContain('Use cortex_recall with tokenmax mode only');
+        expect(content).toContain('Default Cortex page types:');
         expect(content).toContain('Speak plainly.');
         expect(content).toContain('Prefer Cortex recall');
     });
 
-    test('preserves notes when the user-authored soul changes', () => {
+    test('preserves notes when user instructions change', () => {
         const db = getDb();
         updateAgentInstructionSource(db, {
             agentId: 'planner',
             agentName: 'Planner',
-            soul: 'First soul.',
+            userInstructions: 'First instructions.',
             workspaceDir,
         });
         updateAgentNotes(db, {
@@ -67,32 +72,32 @@ describe('workspace instructions', () => {
         });
         updateAgentInstructionSource(db, {
             agentId: 'planner',
-            soul: 'Second soul.',
+            userInstructions: 'Second instructions.',
             workspaceDir,
         });
 
         expect(getAgentInstructionSource(db, 'planner')).toMatchObject({
             notes: 'Durable agent note.',
-            soul: 'Second soul.',
+            userInstructions: 'Second instructions.',
         });
     });
 
-    test('preserves an explicit empty soul update', () => {
+    test('preserves an explicit empty user instructions update', () => {
         const db = getDb();
         updateAgentInstructionSource(db, {
             agentId: 'planner',
             agentName: 'Planner',
-            soul: 'First soul.',
+            userInstructions: 'First instructions.',
             workspaceDir,
         });
         updateAgentInstructionSource(db, {
             agentId: 'planner',
-            soul: '',
+            userInstructions: '',
             workspaceDir,
         });
 
         expect(getAgentInstructionSource(db, 'planner')).toMatchObject({
-            soul: '',
+            userInstructions: '',
         });
     });
 
@@ -101,7 +106,7 @@ describe('workspace instructions', () => {
         updateAgentInstructionSource(db, {
             agentId: 'planner',
             agentName: 'Planner',
-            soul: 'First soul.',
+            userInstructions: 'First instructions.',
             workspaceDir,
         });
         updateAgentNotes(db, {
@@ -130,8 +135,28 @@ describe('workspace instructions', () => {
             composeAgentInstructions({
                 agentName: 'Planner',
                 notes: '',
-                soul: '',
+                userInstructions: '',
             })
         ).not.toContain('\n\n\n');
+    });
+
+    test('clears OpenClaw bootstrap files owned by Tavern AGENTS.md composition', async () => {
+        await Promise.all(
+            openClawBootstrapFileNamesToClear.map((fileName) =>
+                writeFile(path.join(workspaceDir, fileName), 'legacy bootstrap')
+            )
+        );
+        await writeFile(path.join(workspaceDir, generatedInstructionFileName), 'managed');
+
+        await clearOpenClawBootstrapFiles(workspaceDir);
+
+        await expect(
+            readFile(path.join(workspaceDir, generatedInstructionFileName), 'utf8')
+        ).resolves.toBe('managed');
+        await Promise.all(
+            openClawBootstrapFileNamesToClear.map((fileName) =>
+                expect(readFile(path.join(workspaceDir, fileName), 'utf8')).resolves.toBe('')
+            )
+        );
     });
 });

@@ -51,8 +51,8 @@ export interface Agent {
     name: string;
     primaryColor: string | null;
     runtimeId: string;
-    soul: string;
     updatedAt: string;
+    userInstructions: string;
 }
 
 interface ActiveRuntimeAgentRead {
@@ -76,7 +76,7 @@ export const agentPrimaryColorSchema = z
     .transform((value) => (value && value.length > 0 ? value.toLowerCase() : null));
 
 export const agentEnabledSkillIdsSchema = z.array(skillIdSchema).nullable();
-export const agentSoulSchema = z.string().max(20_000).nullable();
+export const agentUserInstructionsSchema = z.string().max(20_000).nullable();
 
 export interface AgentCatalogItem {
     avatar: string;
@@ -87,9 +87,9 @@ export interface AgentCatalogItem {
     name: string;
     primaryColor: string | null;
     runtimeId: string;
-    soul: string;
     title: string;
     updatedAt: string;
+    userInstructions: string;
     usesAllSkills: boolean;
 }
 
@@ -106,7 +106,7 @@ function parseEnabledSkillIds(agent: AgentRecord) {
 
 function toAgent(
     agent: AgentRecord,
-    profile: { primaryColor: string | null; soul: string; updatedAt: string } | null
+    profile: { primaryColor: string | null; updatedAt: string; userInstructions: string } | null
 ): Agent {
     return {
         avatar: agent.avatar ?? null,
@@ -116,8 +116,8 @@ function toAgent(
         name: agent.name,
         primaryColor: profile?.primaryColor ?? agent.primaryColor ?? null,
         runtimeId: agent.runtimeId,
-        soul: profile?.soul ?? '',
         updatedAt: profile?.updatedAt ?? fallbackAgentUpdatedAt,
+        userInstructions: profile?.userInstructions ?? '',
     };
 }
 
@@ -170,9 +170,9 @@ export function toAgentCatalogItem(
         name: resolveAgentName(agent),
         primaryColor: agent.primaryColor,
         runtimeId: agent.runtimeId,
-        soul: agent.soul,
         title: agent.name,
         updatedAt: agent.updatedAt,
+        userInstructions: agent.userInstructions,
         usesAllSkills:
             availableSkillIds !== null &&
             availableSkillIds.length > 0 &&
@@ -380,7 +380,7 @@ export async function saveCatalogAgentSettings(
 export async function saveCatalogAgentProfile(input: {
     agentId: string;
     primaryColor?: string | null;
-    soul?: string | null;
+    userInstructions?: string | null;
 }) {
     const agentRecord = await getAgentRecord(input.agentId);
     const runtimeAgentRead =
@@ -395,7 +395,9 @@ export async function saveCatalogAgentProfile(input: {
         agentId: input.agentId,
         runtimeId,
         ...(input.primaryColor !== undefined ? { primaryColor: input.primaryColor } : {}),
-        ...(input.soul !== undefined ? { soul: input.soul } : {}),
+        ...(input.userInstructions !== undefined
+            ? { userInstructions: input.userInstructions }
+            : {}),
     };
     const profile = await agentProfileStore.saveAgentProfile(profileInput);
 
@@ -403,7 +405,7 @@ export async function saveCatalogAgentProfile(input: {
         throw new Error(`Failed to save profile for agent "${input.agentId}".`);
     }
 
-    if (input.soul !== undefined) {
+    if (input.userInstructions !== undefined) {
         const instructionAgent = agentRecord ?? runtimeAgentRead?.agent ?? null;
         await syncAgentWorkspaceInstructions(
             {
@@ -522,7 +524,7 @@ async function getActiveRuntimeAgent(
 function toAgentFromAgentRuntimeAgent(input: {
     agent: AgentRuntimeAgent;
     id: string;
-    profile: { primaryColor: string | null; soul: string; updatedAt: string } | null;
+    profile: { primaryColor: string | null; updatedAt: string; userInstructions: string } | null;
     runtimeId: string;
 }): Agent {
     return {
@@ -533,8 +535,8 @@ function toAgentFromAgentRuntimeAgent(input: {
         name: input.agent.name,
         primaryColor: input.profile?.primaryColor ?? input.agent.primaryColor ?? null,
         runtimeId: input.runtimeId,
-        soul: input.profile?.soul ?? '',
         updatedAt: input.profile?.updatedAt ?? fallbackAgentUpdatedAt,
+        userInstructions: input.profile?.userInstructions ?? '',
     };
 }
 
@@ -555,7 +557,7 @@ async function syncAgentWorkspaceInstructions(
     const runtimeClient = client ?? (await createClientForRuntimeId(agent.runtimeId));
     await runtimeClient.saveWorkspaceInstructions(agent.id, {
         agentName: agent.name,
-        soul: profile.soul,
+        userInstructions: profile.userInstructions,
         workspaceDir: agent.workspaceFolder,
     });
 }

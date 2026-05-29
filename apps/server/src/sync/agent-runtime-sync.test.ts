@@ -158,7 +158,7 @@ test('syncAgentRuntimeAgents sends cleared workspace instructions', async () => 
     await agentProfileStorage.saveAgentProfile({
         agentId: 'planner',
         runtimeId: 'openclaw-local',
-        soul: '',
+        userInstructions: '',
     });
 
     await runtimeSync.syncAgentWorkspaceInstructions({
@@ -190,7 +190,7 @@ test('syncAgentRuntimeAgents sends cleared workspace instructions', async () => 
 
     assert.deepEqual(savedInstructions, {
         agentName: 'Planner',
-        soul: '',
+        userInstructions: '',
         workspaceDir: '/tmp/tavern-planner',
     });
 });

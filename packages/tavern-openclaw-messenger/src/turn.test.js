@@ -299,7 +299,6 @@ describe('Tavern Messenger turn handling', () => {
             dispatchReplyWithBufferedBlockDispatcher.mock.calls[0][0].replyOptions
         ).toMatchObject({
             allowProgressCallbacksWhenSourceDeliverySuppressed: true,
-            bootstrapContextMode: 'lightweight',
             runId: 'run_1',
             suppressDefaultToolProgressMessages: true,
         });

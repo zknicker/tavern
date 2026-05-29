@@ -7,8 +7,8 @@ export const agentProfilesTable = sqliteTable(
         agentId: text('agent_id').notNull(),
         primaryColor: text('primary_color'),
         runtimeId: text('runtime_id').notNull(),
-        soul: text('soul').notNull().default(''),
         updatedAt: text('updated_at').notNull(),
+        userInstructions: text('user_instructions').notNull().default(''),
     },
     (table) => ({
         pk: primaryKey({

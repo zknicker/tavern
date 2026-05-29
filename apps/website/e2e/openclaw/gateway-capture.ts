@@ -38,7 +38,7 @@ export async function startOpenClawGatewayCapture(
 
     const gateway =
         options.gateway ?? createOpenClawGatewayClient(createLocalOpenClawGatewayOptions());
-    await gateway.connect();
+    await connectGatewayWithRetry(gateway);
     await gateway.request('sessions.subscribe', {});
 
     const captured: CapturedOpenClawGatewayEvent[] = [];
@@ -135,6 +135,24 @@ export async function startOpenClawGatewayCapture(
             });
         },
     };
+}
+
+async function connectGatewayWithRetry(gateway: OpenClawGatewayClient) {
+    let lastError: unknown;
+
+    for (let attempt = 0; attempt < 60; attempt += 1) {
+        try {
+            await gateway.connect();
+            return;
+        } catch (error) {
+            lastError = error;
+            await new Promise((resolve) => setTimeout(resolve, 250));
+        }
+    }
+
+    throw lastError instanceof Error
+        ? lastError
+        : new Error('Failed to connect to OpenClaw Gateway.');
 }
 
 export function readCapturedGatewayChatId(event: OpenClawGatewayEvent) {

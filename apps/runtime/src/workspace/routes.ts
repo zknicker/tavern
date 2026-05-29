@@ -49,7 +49,7 @@ export async function handleWorkspaceRequest(request: Request): Promise<Response
         const source = updateAgentInstructionSource(getDb(), {
             agentId,
             agentName: readOptionalString(body.agentName),
-            soul: readOptionalString(body.soul),
+            userInstructions: readOptionalString(body.userInstructions),
             workspaceDir: readString(body.workspaceDir, 'workspaceDir'),
         });
         const rendered = await renderAgentInstructions(getDb(), agentId);

@@ -101,7 +101,7 @@ Tavern Runtime owns the managed OpenClaw workspace under
 `~/.tavern/runtime/openclaw/run/workspace`.
 
 Runtime renders one generated `AGENTS.md` for Tavern-managed agents. That file combines
-repo-managed Tavern instructions, the DB-backed user-authored agent soul, and DB-backed
+repo-managed Tavern instructions, the DB-backed user-authored instructions block, and DB-backed
 agent-authored notes. Runtime leaves the other OpenClaw bootstrap markdown files blank or unused
 for managed Tavern agents.
 

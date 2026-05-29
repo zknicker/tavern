@@ -227,7 +227,7 @@ export const agentRuntimeSaveAgentFileSchema = z.object({
 
 export const agentRuntimeSaveWorkspaceInstructionsSchema = z.object({
     agentName: z.string().trim().min(1).optional(),
-    soul: z.string().optional(),
+    userInstructions: z.string().optional(),
     workspaceDir: z.string().trim().min(1),
 });
 

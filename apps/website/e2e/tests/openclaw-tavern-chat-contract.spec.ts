@@ -58,6 +58,64 @@ test('preserves Tavern chat session routing and renders one final reply', async 
     }
 });
 
+test('injects Tavern generated AGENTS.md without OpenClaw bootstrap companion files', async ({
+    page,
+}) => {
+    test.setTimeout(120_000);
+
+    const runtimeUrl = requireRuntimeUrl();
+    const userInstructionMarker = `QA_USER_INSTRUCTIONS_${Date.now()}`;
+    const agentNoteMarker = `QA_AGENT_NOTES_${Date.now()}`;
+    const prompt = `Generated AGENTS prompt inspection check ${Date.now()}.`;
+    const capture = await startOpenClawGatewayCapture('generated-agents-prompt');
+
+    await saveWorkspaceInstructions({
+        agentName: 'main',
+        notes: `Agent-authored note marker: ${agentNoteMarker}`,
+        runtimeUrl,
+        userInstructions: `User-authored instructions marker: ${userInstructionMarker}`,
+        workspaceDir: getManagedWorkspaceDir(),
+    });
+
+    try {
+        await page.goto('/dashboard/overview');
+
+        await page.locator('#home-prompt').fill(prompt);
+        await page.getByRole('button', { name: 'Start chat' }).click();
+
+        const chatId = await waitForRealChatRoute(page);
+        const sessionEvent = await capture.waitForEvent(
+            (event) =>
+                readCapturedGatewayChatId(event) === chatId && Boolean(readSessionKey(event)),
+            60_000
+        );
+        const sessionKey = readSessionKey(sessionEvent);
+
+        if (!sessionKey) {
+            throw new Error('Expected generated AGENTS e2e turn to have an OpenClaw session key.');
+        }
+
+        const fullText = await waitForCompiledSystemPrompt(sessionKey);
+
+        expect(fullText).toContain('# Tavern Agent Instructions');
+        expect(fullText).toContain('Tavern chat history is the product timeline');
+        expect(fullText).toContain("Follow Tavern's Cortex operating resources");
+        expect(fullText).toContain('Use cortex_recall with tokenmax mode only');
+        expect(fullText).toContain('Default Cortex page types:');
+        expect(fullText).toContain(userInstructionMarker);
+        expect(fullText).toContain(agentNoteMarker);
+        expect(fullText).not.toContain('# SOUL.md - Who You Are');
+        expect(fullText).not.toContain('# TOOLS.md - Local Notes');
+        expect(fullText).not.toContain('# IDENTITY.md - Who Am I?');
+        expect(fullText).not.toContain('Missing file: SOUL.md');
+        expect(fullText).not.toContain('Missing file: TOOLS.md');
+        expect(fullText).not.toContain('Missing file: IDENTITY.md');
+    } finally {
+        capture.snapshot('generated-agents-prompt');
+        capture.close();
+    }
+});
+
 test('recovers accepted user message and active turn after hard reload', async ({ page }) => {
     test.setTimeout(150_000);
 
@@ -261,21 +319,57 @@ function asRecord(value: unknown) {
     return typeof value === 'object' && value !== null ? (value as Record<string, unknown>) : {};
 }
 
-async function expectOpenClawTranscriptIdentity(prompt: string) {
+function getManagedWorkspaceDir() {
     const runId = process.env.TAVERN_E2E_RUN_ID ?? 'default';
-    const runtimeRoot = fileURLToPath(
-        new URL(`../../../../.context/e2e/${runId}/tavern-runtime`, import.meta.url)
+    return fileURLToPath(
+        new URL(
+            `../../../../.context/e2e/${runId}/tavern-runtime/openclaw/run/workspace`,
+            import.meta.url
+        )
     );
+}
 
-    const sessionsDir = path.join(
-        runtimeRoot,
-        'openclaw',
-        'run',
-        'state',
-        'agents',
-        'main',
-        'sessions'
-    );
+function requireRuntimeUrl() {
+    const runtimeUrl = process.env.TAVERN_RUNTIME_URL;
+
+    if (!runtimeUrl) {
+        throw new Error('TAVERN_RUNTIME_URL is required for prompt inspection e2e coverage.');
+    }
+
+    return runtimeUrl;
+}
+
+async function saveWorkspaceInstructions(input: {
+    agentName: string;
+    notes: string;
+    runtimeUrl: string;
+    userInstructions: string;
+    workspaceDir: string;
+}) {
+    await putRuntimeJson(`${input.runtimeUrl}/workspace/agents/main/instructions`, {
+        agentName: input.agentName,
+        userInstructions: input.userInstructions,
+        workspaceDir: input.workspaceDir,
+    });
+    await putRuntimeJson(`${input.runtimeUrl}/workspace/agents/main/notes`, {
+        notes: input.notes,
+    });
+}
+
+async function putRuntimeJson(url: string, body: Record<string, unknown>) {
+    const response = await fetch(url, {
+        body: JSON.stringify(body),
+        headers: { 'content-type': 'application/json' },
+        method: 'PUT',
+    });
+
+    if (!response.ok) {
+        throw new Error(`Runtime request failed (${response.status}): ${await response.text()}`);
+    }
+}
+
+async function expectOpenClawTranscriptIdentity(prompt: string) {
+    const sessionsDir = getOpenClawSessionsDir();
 
     for (let attempt = 0; attempt < 300; attempt += 1) {
         const entries = await readdir(sessionsDir).catch(() => []);
@@ -322,4 +416,71 @@ async function expectOpenClawTranscriptIdentity(prompt: string) {
     }
 
     throw new Error('OpenClaw transcript did not preserve Tavern message identity.');
+}
+
+async function waitForCompiledSystemPrompt(sessionKey: string) {
+    const sessionsDir = getOpenClawSessionsDir();
+
+    for (let attempt = 0; attempt < 300; attempt += 1) {
+        const entries = await readdir(sessionsDir).catch(() => []);
+
+        for (const entry of entries) {
+            if (!entry.endsWith('.trajectory.jsonl')) {
+                continue;
+            }
+
+            const raw = await readFile(path.join(sessionsDir, entry), 'utf8').catch(() => '');
+
+            if (!raw.includes(sessionKey)) {
+                continue;
+            }
+
+            for (const line of raw.split(/\n/).filter(Boolean)) {
+                const record = parseJsonLine(line);
+
+                if (record?.type !== 'context.compiled') {
+                    continue;
+                }
+
+                const systemPrompt = readSystemPrompt(record);
+
+                if (systemPrompt) {
+                    return systemPrompt;
+                }
+            }
+        }
+
+        await new Promise((resolve) => setTimeout(resolve, 100));
+    }
+
+    throw new Error(`OpenClaw compiled prompt did not become available for ${sessionKey}.`);
+}
+
+function getOpenClawSessionsDir() {
+    const runId = process.env.TAVERN_E2E_RUN_ID ?? 'default';
+    const runtimeRoot = fileURLToPath(
+        new URL(`../../../../.context/e2e/${runId}/tavern-runtime`, import.meta.url)
+    );
+
+    return path.join(runtimeRoot, 'openclaw', 'run', 'state', 'agents', 'main', 'sessions');
+}
+
+function parseJsonLine(line: string) {
+    try {
+        return JSON.parse(line) as Record<string, unknown>;
+    } catch {
+        return null;
+    }
+}
+
+function readSystemPrompt(record: Record<string, unknown>) {
+    const directSystemPrompt = record.systemPrompt;
+
+    if (typeof directSystemPrompt === 'string') {
+        return directSystemPrompt;
+    }
+
+    const dataSystemPrompt = asRecord(record.data).systemPrompt;
+
+    return typeof dataSystemPrompt === 'string' ? dataSystemPrompt : null;
 }

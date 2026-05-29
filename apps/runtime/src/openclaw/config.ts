@@ -4,7 +4,11 @@ import path from 'node:path';
 
 import { OPENCLAW_RUN_ROOT, readConfigValue } from '../config';
 import { getDb } from '../db/connection';
-import { renderAgentInstructions, updateAgentInstructionSource } from '../workspace/instructions';
+import {
+    clearOpenClawBootstrapFiles,
+    renderAgentInstructions,
+    updateAgentInstructionSource,
+} from '../workspace/instructions';
 import { buildCodexAuthConfig, resolveManagedCodexAuthProfileId } from './codex-auth';
 import { mergeManagedOpenClawConfig, stripRemovedManagedOpenClawPlugins } from './config-merge';
 import { createMockProviderMap } from './mock-provider-config';
@@ -87,6 +91,7 @@ export async function prepareManagedOpenClawConfig(input?: {
 
     await fs.mkdir(stateDir, { recursive: true });
     await fs.mkdir(workspaceDir, { recursive: true });
+    await clearOpenClawBootstrapFiles(workspaceDir);
     updateAgentInstructionSource(getDb(), {
         agentId: 'main',
         agentName: 'main',

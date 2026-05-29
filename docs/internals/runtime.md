@@ -76,9 +76,15 @@ Plugin architecture lives in
 ## Managed Workspace
 
 Runtime writes a generated `AGENTS.md` into the managed OpenClaw workspace. The
-file combines Tavern-managed instructions, the user's agent soul/personality,
+file combines Tavern-managed instructions, the user's agent instructions block,
 and agent-authored notes stored by Tavern. Other OpenClaw bootstrap markdown
 files stay blank or unused for managed Tavern agents.
+
+Runtime clears legacy companion bootstrap files from the managed workspace
+before rendering `AGENTS.md`. Empty files are intentional: OpenClaw skips blank
+bootstrap files but may inject marker lines for missing ones. Tavern leaves
+OpenClaw bootstrap injection enabled, and Tavern chat turns use full bootstrap
+context so generated `AGENTS.md` reaches turns.
 
 Agents update their notes through Tavern workspace tools instead of editing
 `AGENTS.md` directly. Runtime regenerates the file on boot, config sync, and

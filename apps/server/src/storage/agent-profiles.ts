@@ -8,8 +8,8 @@ export interface AgentProfile {
     createdAt: string;
     primaryColor: string | null;
     runtimeId: string;
-    soul: string;
     updatedAt: string;
+    userInstructions: string;
 }
 
 function selection() {
@@ -18,8 +18,8 @@ function selection() {
         createdAt: agentProfilesTable.createdAt,
         primaryColor: agentProfilesTable.primaryColor,
         runtimeId: agentProfilesTable.runtimeId,
-        soul: agentProfilesTable.soul,
         updatedAt: agentProfilesTable.updatedAt,
+        userInstructions: agentProfilesTable.userInstructions,
     };
 }
 
@@ -60,14 +60,16 @@ export async function saveAgentProfile(input: {
     agentId: string;
     primaryColor?: string | null;
     runtimeId: string;
-    soul?: string | null;
+    userInstructions?: string | null;
 }) {
     const timestamp = new Date().toISOString();
     const hasPrimaryColor = Object.hasOwn(input, 'primaryColor');
-    const hasSoul = Object.hasOwn(input, 'soul');
+    const hasUserInstructions = Object.hasOwn(input, 'userInstructions');
     const updateSet = {
         ...(hasPrimaryColor ? { primaryColor: input.primaryColor ?? null } : {}),
-        ...(hasSoul ? { soul: normalizeSoul(input.soul) } : {}),
+        ...(hasUserInstructions
+            ? { userInstructions: normalizeUserInstructions(input.userInstructions) }
+            : {}),
         updatedAt: timestamp,
     };
 
@@ -78,8 +80,10 @@ export async function saveAgentProfile(input: {
             createdAt: timestamp,
             primaryColor: hasPrimaryColor ? (input.primaryColor ?? null) : null,
             runtimeId: input.runtimeId,
-            soul: hasSoul ? normalizeSoul(input.soul) : '',
             updatedAt: timestamp,
+            userInstructions: hasUserInstructions
+                ? normalizeUserInstructions(input.userInstructions)
+                : '',
         })
         .onConflictDoUpdate({
             target: [agentProfilesTable.runtimeId, agentProfilesTable.agentId],
@@ -89,7 +93,7 @@ export async function saveAgentProfile(input: {
     return getAgentProfile(input);
 }
 
-function normalizeSoul(value: string | null | undefined) {
+function normalizeUserInstructions(value: string | null | undefined) {
     return (value ?? '').trim().slice(0, 20_000);
 }
 

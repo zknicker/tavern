@@ -1,7 +1,7 @@
 import { z } from 'zod';
 import {
     agentPrimaryColorSchema,
-    agentSoulSchema,
+    agentUserInstructionsSchema,
     saveCatalogAgentProfile,
 } from '../../agents/catalog.ts';
 import { emitAgentInvalidationCascade } from '../invalidation-events.ts';
@@ -11,9 +11,9 @@ const saveAgentProfileInputSchema = z
     .object({
         agentId: z.string().trim().min(1),
         primaryColor: agentPrimaryColorSchema.optional(),
-        soul: agentSoulSchema.optional(),
+        userInstructions: agentUserInstructionsSchema.optional(),
     })
-    .refine((input) => input.primaryColor !== undefined || input.soul !== undefined, {
+    .refine((input) => input.primaryColor !== undefined || input.userInstructions !== undefined, {
         message: 'Choose a profile field to update.',
     });
 

@@ -99,9 +99,14 @@ test('ensureDatabaseSchema creates the current Tavern schema without obsolete ta
 
         assert.deepEqual(
             listSortedColumnNames(db, 'agent_profiles'),
-            ['agent_id', 'created_at', 'primary_color', 'runtime_id', 'soul', 'updated_at'].sort(
-                (left, right) => left.localeCompare(right)
-            )
+            [
+                'agent_id',
+                'created_at',
+                'primary_color',
+                'runtime_id',
+                'updated_at',
+                'user_instructions',
+            ].sort((left, right) => left.localeCompare(right))
         );
         assert.deepEqual(
             listSortedColumnNames(db, 'agents'),
