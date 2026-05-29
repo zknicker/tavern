@@ -248,11 +248,13 @@ export interface components {
             created_at: components["schemas"]["Timestamp"];
             updated_at: components["schemas"]["Timestamp"];
             last_message_sequence: number;
+            pinned: boolean;
             metadata: components["schemas"]["JsonObject"];
         };
         CreateChatRequest: {
             id: components["schemas"]["ChatId"];
             title?: string | null;
+            pinned?: boolean;
             metadata?: components["schemas"]["JsonObject"];
         };
         ListChatsResponse: {

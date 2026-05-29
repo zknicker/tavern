@@ -3,6 +3,7 @@ import type { ChatStartDraft } from '../../hooks/chats/use-chat-start-drafts.tsx
 import type { ChatListItem } from '../chats/chat-list-data.ts';
 import { canRenameSidebarChat } from './sidebar-chat-actions.tsx';
 import {
+    buildSidebarChatGroups,
     buildSidebarChatList,
     buildSidebarDraftChatList,
     formatSidebarActivityLabel,
@@ -27,6 +28,7 @@ function createChat(overrides: Partial<ChatListItem> = {}): ChatListItem {
         id: 'chat-1',
         isDisabled: false,
         isEnabled: true,
+        isPinned: false,
         lastActivityAt: '2026-05-06T12:00:00.000Z',
         lastActivityLabel: 'now',
         latestSession: {
@@ -81,6 +83,16 @@ describe('sidebar chat list', () => {
         ];
 
         expect(buildSidebarChatList(chats)).toEqual([chats[1]]);
+    });
+
+    test('groups pinned chats separately from recent chats', () => {
+        const pinned = createChat({ id: 'pinned', isPinned: true });
+        const recent = createChat({ id: 'recent' });
+        const groups = buildSidebarChatGroups([pinned, recent]);
+
+        expect(groups.pinnedChats).toEqual([pinned]);
+        expect(groups.recentChats).toEqual([recent]);
+        expect(groups.allChats).toEqual([pinned, recent]);
     });
 
     test('keeps draft chats visible until their synced chat appears', () => {

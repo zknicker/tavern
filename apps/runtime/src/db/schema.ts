@@ -140,6 +140,7 @@ CREATE INDEX IF NOT EXISTS idx_tavern_channel_outbox_pending
 CREATE TABLE IF NOT EXISTS chats (
   id                    TEXT PRIMARY KEY,
   title                 TEXT,
+  pinned                INTEGER NOT NULL DEFAULT 0 CHECK (pinned IN (0, 1)),
   metadata_json         TEXT NOT NULL DEFAULT '{}',
   created_at            TEXT NOT NULL,
   updated_at            TEXT NOT NULL,
@@ -292,4 +293,22 @@ CREATE INDEX IF NOT EXISTS idx_chat_artifacts_chat_updated
 
 export function ensureRuntimeSchema(db: Database): void {
     db.exec(RUNTIME_SCHEMA);
+    ensureColumn(db, {
+        column: 'pinned',
+        definition: 'INTEGER NOT NULL DEFAULT 0 CHECK (pinned IN (0, 1))',
+        table: 'chats',
+    });
+}
+
+function ensureColumn(
+    db: Database,
+    input: { column: string; definition: string; table: string }
+): void {
+    const rows = db.prepare(`PRAGMA table_info(${input.table})`).all() as Array<{ name: string }>;
+
+    if (rows.some((row) => row.name === input.column)) {
+        return;
+    }
+
+    db.exec(`ALTER TABLE ${input.table} ADD COLUMN ${input.column} ${input.definition}`);
 }

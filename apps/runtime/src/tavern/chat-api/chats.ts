@@ -11,20 +11,26 @@ export function createChat(input: TavernCreateChatRequest, db: Database = getDb(
     const existing = getChat(input.id, db);
     if (existing) {
         const metadata = input.metadata ?? existing.metadata;
+        const pinned = input.pinned ?? existing.pinned;
         const title = input.title ?? existing.title;
-        const now = new Date().toISOString();
+        const shouldTouch =
+            title !== existing.title ||
+            JSON.stringify(metadata) !== JSON.stringify(existing.metadata);
+        const updatedAt = shouldTouch ? new Date().toISOString() : existing.updated_at;
         db.prepare(
             `UPDATE chats
              SET title = $title,
+                 pinned = $pinned,
                  metadata_json = $metadataJson,
-                 updated_at = $now
+                 updated_at = $updatedAt
              WHERE id = $id`
         ).run(
             namedParams({
                 id: input.id,
                 metadataJson: JSON.stringify(metadata),
-                now,
+                pinned: pinned ? 1 : 0,
                 title,
+                updatedAt,
             })
         );
         return getChatOrThrow(input.id, db);
@@ -32,13 +38,14 @@ export function createChat(input: TavernCreateChatRequest, db: Database = getDb(
 
     const now = new Date().toISOString();
     db.prepare(
-        `INSERT INTO chats (id, title, metadata_json, created_at, updated_at)
-         VALUES ($id, $title, $metadataJson, $now, $now)`
+        `INSERT INTO chats (id, title, pinned, metadata_json, created_at, updated_at)
+         VALUES ($id, $title, $pinned, $metadataJson, $now, $now)`
     ).run(
         namedParams({
             id: input.id,
             metadataJson: JSON.stringify(input.metadata ?? {}),
             now,
+            pinned: input.pinned ? 1 : 0,
             title: input.title ?? null,
         })
     );
@@ -97,6 +104,7 @@ function rowToChat(row: ChatRow): TavernChat {
         id: row.id,
         last_message_sequence: row.last_message_sequence,
         metadata: JSON.parse(row.metadata_json) as Record<string, unknown>,
+        pinned: row.pinned === 1,
         title: row.title,
         updated_at: row.updated_at,
     };

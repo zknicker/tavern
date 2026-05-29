@@ -6,6 +6,7 @@ import { getActiveAgentRuntimeConnection } from '../storage/agent-runtime-connec
 
 export interface RuntimeChatRecord {
     chat: AgentRuntimeChat;
+    isPinned: boolean;
     runtimeId: string;
     updatedAt: string | null;
 }
@@ -38,6 +39,7 @@ export async function listRuntimeChatRecords(options?: {
     const tavernRecords = tavernChats
         .map((chat) => ({
             chat: tavernChatToRuntimeChat(chat),
+            isPinned: chat.pinned,
             runtimeId: connection.id,
             updatedAt: chat.updated_at,
         }))
@@ -47,6 +49,7 @@ export async function listRuntimeChatRecords(options?: {
               .filter((chat) => chat.platform !== 'tavern')
               .map((chat) => ({
                   chat,
+                  isPinned: false,
                   runtimeId: connection.id,
                   updatedAt: null,
               }))
@@ -77,6 +80,7 @@ export async function createRuntimeTavernChat(input: {
             displayName: input.displayName,
             id: input.id,
         }),
+        pinned: false,
         title: input.displayName,
     });
 }
@@ -89,6 +93,7 @@ export async function updateRuntimeTavernChat(input: {
     const { client } = await requireRuntimeChatClient();
     const current = await getTavernChatOrNull(client, input.id);
     const archived = current ? readTavernChatMetadata(current).archived : false;
+    const pinned = current?.pinned ?? false;
 
     await client.chat.create({
         id: input.id,
@@ -98,6 +103,7 @@ export async function updateRuntimeTavernChat(input: {
             displayName: input.displayName,
             id: input.id,
         }),
+        pinned,
         title: input.displayName,
     });
 }
@@ -119,7 +125,24 @@ export async function archiveRuntimeTavernChat(chatId: string) {
             displayName: metadata.displayName,
             id: chatId,
         }),
+        pinned: current.pinned,
         title: metadata.displayName,
+    });
+}
+
+export async function setRuntimeTavernChatPinned(input: { chatId: string; pinned: boolean }) {
+    const { client } = await requireRuntimeChatClient();
+    const current = await getTavernChatOrNull(client, input.chatId);
+
+    if (!current) {
+        throw new Error(`No Tavern chat named "${input.chatId}" exists.`);
+    }
+
+    await client.chat.create({
+        id: input.chatId,
+        metadata: current.metadata,
+        pinned: input.pinned,
+        title: current.title,
     });
 }
 

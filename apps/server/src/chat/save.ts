@@ -6,6 +6,9 @@ import {
     type CreateChatInput,
     createChatInputSchema,
     createChatResultSchema,
+    type SetChatPinnedInput,
+    setChatPinnedInputSchema,
+    setChatPinnedResultSchema,
     type UpdateChatInput,
     updateChatInputSchema,
 } from './contracts.ts';
@@ -13,6 +16,7 @@ import {
     archiveRuntimeTavernChat,
     createRuntimeTavernChat,
     getRuntimeChatRecord,
+    setRuntimeTavernChatPinned,
     updateRuntimeTavernChat,
 } from './runtime-chats.ts';
 import { createChatTiming } from './timing.ts';
@@ -113,4 +117,21 @@ export async function archiveTavernChat(chatId: string) {
         archived: true,
         chatId,
     });
+}
+
+export async function setTavernChatPinned(input: SetChatPinnedInput) {
+    const parsed = setChatPinnedInputSchema.parse(input);
+    const chat = await getRuntimeChatRecord(parsed.chatId);
+
+    if (!chat) {
+        throw new Error(`No Tavern chat named "${parsed.chatId}" exists.`);
+    }
+
+    if (chat.chat.platform !== 'tavern') {
+        throw new Error('Only Tavern chats can be pinned.');
+    }
+
+    await setRuntimeTavernChatPinned(parsed);
+
+    return setChatPinnedResultSchema.parse(parsed);
 }

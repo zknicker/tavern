@@ -32,6 +32,7 @@ export interface ChatRow {
     id: string;
     last_message_sequence: number;
     metadata_json: string;
+    pinned: number;
     title: string | null;
     updated_at: string;
 }

@@ -22,6 +22,8 @@ happen, and keep the durable timeline as context.
 * **Artifacts.** Code, images, files, diffs, documents, and charts render as
   durable outputs attached to messages or response activity.
 * **Receipts.** Message creation and assistant delivery are acknowledged by id.
+* **Pinned chats.** Users can pin durable chats as focus-area homes. Pinned
+  chats stay in their own sidebar section above recent chats.
 * **Offline catch-up.** Tavern Runtime keeps chat history while the app is
   closed; the app reloads from durable rows and refetches on reconnect.
 
@@ -59,6 +61,13 @@ and external runtime chat inventory.
 
 Runtime progress and reply events update response and activity rows by stable
 ids. They should not create a second volatile progress transcript.
+
+## Pinned chats
+
+Pinned chat state is durable Tavern Runtime chat state. It survives app
+reinstall and syncs through the normal chat list/detail reads. Pinning changes
+sidebar grouping only; it does not change chat membership, message ordering,
+response delivery, or archive behavior.
 
 ## Contract
 

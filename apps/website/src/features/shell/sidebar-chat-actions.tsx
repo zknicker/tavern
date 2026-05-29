@@ -1,4 +1,4 @@
-import { PencilEdit02Icon, Trash2 } from '@hugeicons/core-free-icons';
+import { PencilEdit02Icon, PinIcon, PinOffIcon, Trash2 } from '@hugeicons/core-free-icons';
 import * as React from 'react';
 import {
     ContextMenu,
@@ -24,6 +24,7 @@ interface SidebarChatContextMenuProps {
     chat: ChatListItem;
     children: React.ReactNode;
     onArchive: (chat: ChatListItem) => void;
+    onPinChange: (chat: ChatListItem, pinned: boolean) => void;
     onRename: (chat: ChatListItem) => void;
 }
 
@@ -31,6 +32,7 @@ export function SidebarChatContextMenu({
     chat,
     children,
     onArchive,
+    onPinChange,
     onRename,
 }: SidebarChatContextMenuProps) {
     return (
@@ -43,6 +45,10 @@ export function SidebarChatContextMenu({
                 >
                     <Icon className="size-3.5" icon={PencilEdit02Icon} />
                     Rename chat
+                </ContextMenuItem>
+                <ContextMenuItem onClick={() => onPinChange(chat, !chat.isPinned)}>
+                    <Icon className="size-3.5" icon={chat.isPinned ? PinOffIcon : PinIcon} />
+                    {chat.isPinned ? 'Unpin chat' : 'Pin chat'}
                 </ContextMenuItem>
                 <ContextMenuItem onClick={() => onArchive(chat)} variant="destructive">
                     <Icon className="size-3.5" icon={Trash2} />

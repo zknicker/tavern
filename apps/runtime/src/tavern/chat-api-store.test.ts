@@ -6,8 +6,10 @@ import {
     createChat,
     createDelivery,
     createMessage,
+    getChat,
     getResponse,
     getResponseActivity,
+    listChats,
     listEvents,
     listMessages,
     listResponses,
@@ -81,6 +83,24 @@ describe('Tavern Runtime Chat API store', () => {
                 status: 'running',
             })
         ).toThrow('Response id must use a rsp_ id.');
+    });
+
+    it('stores pinned chat state as a durable chat field', () => {
+        createChat({ id: 'cht_1', pinned: true, title: 'Pinned' });
+        createChat({ id: 'cht_1', title: 'Renamed' });
+
+        expect(getChat('cht_1')?.pinned).toBe(true);
+        expect(listChats().chats[0]?.pinned).toBe(true);
+
+        getDb()
+            .prepare("UPDATE chats SET updated_at = '2026-05-28T22:55:00.000Z' WHERE id = 'cht_1'")
+            .run();
+        createChat({ id: 'cht_1', pinned: false });
+
+        expect(getChat('cht_1')).toMatchObject({
+            pinned: false,
+            updated_at: '2026-05-28T22:55:00.000Z',
+        });
     });
 
     it('writes delivery, assistant message, and delivered event in one receipt', () => {

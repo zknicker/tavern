@@ -62,9 +62,11 @@ The Tavern app keeps list and detail reads separate:
 * `chat.list` returns ordered Tavern chat ids plus lightweight list items. It is
   the sidebar and overview contract, not a full chat detail payload. List items
   include `hasActiveTurn` so compact views can show in-progress agent work
-  without reading the full chat log. External OpenClaw chat references belong to
-  `agent.chats.list`, not the global Tavern chat list.
+  without reading the full chat log. List items also include `isPinned` so the
+  app can render durable focus-area chats above recent chats. External OpenClaw
+  chat references belong to `agent.chats.list`, not the global Tavern chat list.
 * `chat.get` returns one full chat record by `chatId`.
+* `chat.setPinned` changes one chat's durable pinned state.
 * `chat.log.list` returns paged durable timeline rows for one chat, including
   messages, responses, running and completed activity, and renderable artifacts.
 
@@ -72,6 +74,7 @@ Invalidate `chat.list` when membership or list ordering can change. Invalidate
 `chat.get` when one chat's detail fields can change. Response and activity
 events update the app timeline by stable ids. Durable log invalidation belongs
 when messages, responses, activity, or artifacts are persisted.
+Pinned state changes invalidate `chat.list` and the changed `chat.get` record.
 
 Live turn progress updates the visible `chat.log.list` cache by activity id.
 The eventual durable read returns the same row ids, so running activity becomes

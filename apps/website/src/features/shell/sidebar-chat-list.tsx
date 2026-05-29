@@ -16,6 +16,7 @@ import type { ChatTimelineState } from '../../hooks/chats/chat-timeline-state.ts
 import { useChatArchive } from '../../hooks/chats/use-chat-archive.ts';
 import { getChatDraftRouteState } from '../../hooks/chats/use-chat-draft-launch.ts';
 import { useChatList } from '../../hooks/chats/use-chat-list.ts';
+import { useChatPin } from '../../hooks/chats/use-chat-pin.ts';
 import type { ChatStartDraft } from '../../hooks/chats/use-chat-start-drafts.tsx';
 import { useChatStartDrafts } from '../../hooks/chats/use-chat-start-drafts.tsx';
 import { useChatUpdate } from '../../hooks/chats/use-chat-update.ts';
@@ -40,18 +41,19 @@ export function AppSidebarChatList() {
     const drafts = useChatStartDrafts();
     const updateChat = useChatUpdate();
     const archiveChat = useChatArchive();
+    const pinChat = useChatPin();
     const [renamingChat, setRenamingChat] = React.useState<ChatListItem | null>(null);
-    const recentChats = React.useMemo(
-        () => buildSidebarChatList(buildChatList(chatQuery.data)),
+    const sidebarChats = React.useMemo(
+        () => buildSidebarChatGroups(buildChatList(chatQuery.data)),
         [chatQuery.data]
     );
     const draftChats = React.useMemo(
-        () => buildSidebarDraftChatList(drafts.listDrafts(), recentChats),
-        [drafts, recentChats]
+        () => buildSidebarDraftChatList(drafts.listDrafts(), sidebarChats.allChats),
+        [drafts, sidebarChats.allChats]
     );
     const visibleRecentChats = React.useMemo(
-        () => recentChats.slice(0, Math.max(sidebarChatLimit - draftChats.length, 0)),
-        [draftChats.length, recentChats]
+        () => sidebarChats.recentChats.slice(0, Math.max(sidebarChatLimit - draftChats.length, 0)),
+        [draftChats.length, sidebarChats.recentChats]
     );
     const activeDraftRoute = getChatDraftRouteState(location.state);
 
@@ -96,9 +98,61 @@ export function AppSidebarChatList() {
         onConfirm: archiveSidebarChat,
         timeoutMs: archiveConfirmTimeoutMs,
     });
+    const pinSidebarChat = React.useCallback(
+        async (chat: ChatListItem, pinned: boolean) => {
+            try {
+                await pinChat.mutateAsync({ chatId: chat.id, pinned });
+            } catch (error) {
+                // biome-ignore lint/suspicious/noAlert: Keep sidebar failures visible without adding a global toast dependency.
+                window.alert(getErrorMessage(error));
+            }
+        },
+        [pinChat]
+    );
 
     return (
         <>
+            {sidebarChats.pinnedChats.length > 0 ? (
+                <SidebarGroup className="group/pinned pt-1">
+                    <div className="relative flex h-8 items-center px-2">
+                        <div className="font-medium text-[var(--nav-section-label)] text-sm">
+                            Pinned
+                        </div>
+                    </div>
+                    <SidebarGroupContent>
+                        <SidebarMenu>
+                            {sidebarChats.pinnedChats.map((chat) => {
+                                const isConfirmingArchive =
+                                    archiveConfirmation.confirmingKey === chat.id;
+                                const isArchivePending =
+                                    archiveChat.isPending &&
+                                    archiveChat.variables?.chatId === chat.id;
+
+                                return (
+                                    <SidebarRecentChatItem
+                                        chat={chat}
+                                        isActive={location.pathname === buildChatPath(chat.id)}
+                                        isArchivePending={isArchivePending}
+                                        isConfirmingArchive={isConfirmingArchive}
+                                        key={chat.id}
+                                        onArchive={(selectedChat) => {
+                                            void archiveSidebarChat(selectedChat);
+                                        }}
+                                        onCommitInlineArchive={(selectedChat) => {
+                                            void archiveConfirmation.confirm(selectedChat);
+                                        }}
+                                        onConfirmArchive={() => archiveConfirmation.request(chat)}
+                                        onPinChange={(selectedChat, pinned) => {
+                                            void pinSidebarChat(selectedChat, pinned);
+                                        }}
+                                        onRename={openRename}
+                                    />
+                                );
+                            })}
+                        </SidebarMenu>
+                    </SidebarGroupContent>
+                </SidebarGroup>
+            ) : null}
             <SidebarGroup className="group/chats pt-1">
                 <div className="relative flex h-8 items-center px-2">
                     <div className="font-medium text-[var(--nav-section-label)] text-sm">Chats</div>
@@ -151,6 +205,9 @@ export function AppSidebarChatList() {
                                         void archiveConfirmation.confirm(selectedChat);
                                     }}
                                     onConfirmArchive={() => archiveConfirmation.request(chat)}
+                                    onPinChange={(selectedChat, pinned) => {
+                                        void pinSidebarChat(selectedChat, pinned);
+                                    }}
                                     onRename={openRename}
                                 />
                             );
@@ -235,6 +292,7 @@ function SidebarRecentChatItem({
     onArchive,
     onCommitInlineArchive,
     onConfirmArchive,
+    onPinChange,
     onRename,
 }: {
     chat: ChatListItem;
@@ -244,6 +302,7 @@ function SidebarRecentChatItem({
     onArchive: (chat: ChatListItem) => void;
     onCommitInlineArchive: (chat: ChatListItem) => void;
     onConfirmArchive: () => void;
+    onPinChange: (chat: ChatListItem, pinned: boolean) => void;
     onRename: (chat: ChatListItem) => void;
 }) {
     const title = getSidebarChatTitle(chat);
@@ -253,7 +312,12 @@ function SidebarRecentChatItem({
 
     return (
         <SidebarMenuItem>
-            <SidebarChatContextMenu chat={chat} onArchive={onArchive} onRename={onRename}>
+            <SidebarChatContextMenu
+                chat={chat}
+                onArchive={onArchive}
+                onPinChange={onPinChange}
+                onRename={onRename}
+            >
                 <SidebarMenuButton
                     className="font-normal group-focus-within/menu-item:bg-sidebar-accent group-focus-within/menu-item:text-sidebar-accent-foreground group-hover/menu-item:bg-sidebar-accent group-hover/menu-item:text-sidebar-accent-foreground"
                     data-archive-confirm={isConfirmingArchive ? '' : undefined}
@@ -429,7 +493,17 @@ function useInlineDeleteConfirmation<TItem>({
 }
 
 export function buildSidebarChatList(chats: ChatListItem[]) {
-    return chats.filter(isSidebarTavernChat).slice(0, sidebarChatLimit);
+    return chats.filter(isSidebarTavernChat);
+}
+
+export function buildSidebarChatGroups(chats: ChatListItem[]) {
+    const allChats = buildSidebarChatList(chats);
+
+    return {
+        allChats,
+        pinnedChats: allChats.filter((chat) => chat.isPinned),
+        recentChats: allChats.filter((chat) => !chat.isPinned),
+    };
 }
 
 export function buildSidebarDraftChatList(drafts: ChatStartDraft[], chats: ChatListItem[]) {

@@ -478,6 +478,7 @@ components:
         - created_at
         - updated_at
         - last_message_sequence
+        - pinned
         - metadata
       properties:
         id:
@@ -491,6 +492,8 @@ components:
         last_message_sequence:
           type: integer
           minimum: 0
+        pinned:
+          type: boolean
         metadata:
           $ref: '#/components/schemas/JsonObject'
     CreateChatRequest:
@@ -503,6 +506,8 @@ components:
           $ref: '#/components/schemas/ChatId'
         title:
           type: [string, 'null']
+        pinned:
+          type: boolean
         metadata:
           $ref: '#/components/schemas/JsonObject'
     ListChatsResponse:

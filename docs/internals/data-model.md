@@ -110,6 +110,7 @@ chats
   id                    TEXT PRIMARY KEY
   kind                  TEXT NOT NULL        -- channel, dm, thread
   title                 TEXT
+  pinned                INTEGER NOT NULL DEFAULT 0
   status                TEXT NOT NULL        -- active, archived
   created_by            TEXT
   metadata_json         TEXT NOT NULL DEFAULT '{}'
@@ -554,6 +555,8 @@ transactional writes. Search indexes are derived state, not the source of truth.
 ## Invariants
 
 * Tavern Runtime chat history is canonical product state.
+* Chat pinned state is a first-class Runtime chat field, not app-local
+  presentation state.
 * OpenClaw transcript history is runtime-owned evidence.
 * Runtime adapters preserve source ids and metadata without authoring final
   Tavern presentation.
