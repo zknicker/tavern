@@ -2,6 +2,10 @@
 
 All notable changes to this project will be documented in this file.
 
+## v1.1.2 - 2026-05-30
+
+- Fixed the macOS app and DMG icons by compiling the Icon Composer source into the bundled Liquid Glass asset catalog with an ICNS fallback.
+
 ## v1.1.1 - 2026-05-30
 
 - Added a standalone `tavern-runtime` release artifact for always-on Mac mini deployments.
