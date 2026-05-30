@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file.
 
+## v1.1.1 - 2026-05-30
+
+- Added a standalone `tavern-runtime` release artifact for always-on Mac mini deployments.
+- Added Homebrew tap publishing so releases can update `zknicker/homebrew-tavern` with the runtime formula.
+- Added Runtime deployment docs for Homebrew services, trusted-network exposure, and app Runtime URL setup.
+- Patched the transitive `qs` dependency to clear the current dependency audit.
+
 ## v1.1.0 - 2026-05-30
 
 - Added Cortex-backed memory and knowledgebase surfaces for durable project context, recall, and agent notes.
