@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file.
 
+## v1.1.4 - 2026-05-30
+
+- Added exact app/Runtime version checks with an onboarding update flow, Runtime update progress, timeout handling, and disconnect recovery.
+- Added `tavern update` and `tavern restart`, kept `tavern-runtime` as a compatibility binary, and documented Homebrew install/update/env usage.
+- Changed the default Runtime port to `18790`.
+- Refreshed the Tavern brand color to a dustier purple.
+
 ## v1.1.3 - 2026-05-30
 
 - Show onboarding when Tavern Runtime is unavailable instead of leaving the app stuck retrying the dashboard connection.
