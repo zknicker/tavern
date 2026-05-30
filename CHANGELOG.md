@@ -2,6 +2,15 @@
 
 All notable changes to this project will be documented in this file.
 
+## v1.1.0 - 2026-05-30
+
+- Added Cortex-backed memory and knowledgebase surfaces for durable project context, recall, and agent notes.
+- Moved canonical chat, response activity, and OpenClaw execution evidence into Tavern Runtime so chat history recovers cleanly across restarts.
+- Added pinned chats, virtualized chat history, polished sidebar actions, and smoother Codex-style turn activity updates.
+- Added skills and plugins inventory, managed agent instructions through AGENTS files, and aligned the skill catalog with the managed runtime.
+- Updated managed OpenClaw to 2026.5.27 and removed stale Lossless Claw memory plugin wiring from the managed runtime config.
+- Hardened installs, dependency pins, Tauri dependencies, and local Codex model auth.
+
 ## v1.0.1 - 2026-05-09
 
 - Fixed signed Mac desktop releases failing to start the bundled Tavern server.
