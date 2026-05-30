@@ -8,5 +8,6 @@ apps/server/data
 apps/server/dist-sidecar
 apps/website/src-tauri/.tmp
 apps/website/src-tauri/binaries
+apps/website/src-tauri/generated-icons
 apps/website/src-tauri/target
 apps/website/test-results

@@ -24,7 +24,7 @@
       "entitlements": "Entitlements.plist"
     },
     "resources": {
-      "../../../assets/mac-icon.icon": "AppIcon.icon",
+      "generated-icons/Assets.car": "Assets.car",
       "icons/AppIcon.icns": "AppIcon.icns"
     },
     "icon": [

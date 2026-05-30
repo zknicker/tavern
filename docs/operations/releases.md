@@ -25,6 +25,11 @@ Runtime tarballs to `TAVERN_RELEASE_S3_URI`, commits release metadata, pushes
 `main`, pushes the version tag, creates the GitHub Release, and updates the
 Homebrew tap formula.
 
+Desktop builds compile `assets/mac-icon.icon` with Xcode `actool` before Tauri
+packaging. The compiled `Assets.car` provides the layered Liquid Glass app icon
+on macOS 26, and `AppIcon.icns` remains the fallback icon for older macOS
+versions and Tauri's DMG/app bundle path.
+
 Tavern ships two production artifacts:
 
 * `Tavern.app` is the desktop client plus its local app backend.
