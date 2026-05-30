@@ -2,6 +2,10 @@
 
 All notable changes to this project will be documented in this file.
 
+## v1.1.5 - 2026-05-30
+
+- Fixed stale or unreachable Runtime connections showing the Runtime update screen instead of the connect form after disconnect.
+
 ## v1.1.4 - 2026-05-30
 
 - Added exact app/Runtime version checks with an onboarding update flow, Runtime update progress, timeout handling, and disconnect recovery.
