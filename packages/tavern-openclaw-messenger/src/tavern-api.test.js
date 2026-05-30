@@ -230,7 +230,9 @@ describe('Tavern API adapter', () => {
     });
 
     it('derives the API base URL from the inbound relay URL', () => {
-        expect(deriveTavernApiBaseUrl('ws://127.0.0.1:4310/chat')).toBe('http://127.0.0.1:4310');
+        expect(deriveTavernApiBaseUrl('ws://127.0.0.1:18790/chat')).toBe(
+            'http://127.0.0.1:18790'
+        );
     });
 
     it('scopes activity ids to the Tavern turn', async () => {

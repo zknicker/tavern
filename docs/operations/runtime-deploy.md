@@ -16,9 +16,12 @@ configured Runtime URL.
 Keep the CLI small:
 
 ```bash
-tavern-runtime serve
-tavern-runtime --version
-tavern-runtime --help
+tavern serve
+tavern update
+tavern update --no-restart
+tavern restart
+tavern --version
+tavern --help
 ```
 
 `serve` runs the foreground Runtime process. It starts the Runtime HTTP and
@@ -26,8 +29,12 @@ WebSocket API, Runtime storage, managed OpenClaw, first-party OpenClaw plugin
 sync, Cortex, and Runtime jobs. It logs to stdout and stderr, and exits on
 `SIGINT` or `SIGTERM`.
 
-`tavern-runtime` does not own daemon lifecycle commands. Use the host service
-manager for start, stop, restart, logs, and boot persistence.
+`tavern` is the preferred CLI. `tavern-runtime` remains as a compatibility
+alias.
+
+`update` shells out to Homebrew and restarts the service by default. Use
+`tavern update --no-restart` to upgrade without restarting. Use Homebrew
+directly for stop, logs, and boot persistence.
 
 ## Homebrew Service
 
@@ -41,7 +48,7 @@ brew services start tavern-runtime
 The formula should run:
 
 ```bash
-tavern-runtime serve
+tavern serve
 ```
 
 Use Homebrew for lifecycle:
@@ -52,13 +59,20 @@ brew services restart tavern-runtime
 brew upgrade tavern-runtime
 ```
 
+Or use the Tavern CLI wrappers:
+
+```bash
+tavern update
+tavern restart
+```
+
 ## Configuration
 
 Runtime defaults to local-only binding:
 
 ```bash
 TAVERN_RUNTIME_HOST=127.0.0.1
-TAVERN_RUNTIME_PORT=4310
+TAVERN_RUNTIME_PORT=18790
 TAVERN_RUNTIME_ROOT=~/.tavern/runtime
 ```
 
@@ -67,17 +81,26 @@ the service environment:
 
 ```bash
 TAVERN_RUNTIME_HOST=0.0.0.0
-TAVERN_RUNTIME_PORT=4310
+TAVERN_RUNTIME_PORT=18790
 ```
 
 The app stores a Runtime URL such as:
 
 ```txt
-http://mac-mini.local:4310
+http://mac-mini.local:18790
 ```
 
 Tavern does not enforce a network topology. Operators can use LAN DNS,
 Tailscale, a reverse proxy, or another trusted network path.
+
+Change `TAVERN_RUNTIME_PORT` only when the app Runtime URL uses the same port.
+Managed OpenClaw keeps its own Gateway port, which defaults to `18789`.
+
+## Version Match
+
+For now, Tavern App and Tavern Runtime must use the exact same release version.
+The app blocks normal dashboard use when the connected Runtime version differs
+and shows the expected version on the onboarding-style Runtime screen.
 
 ## Trust Model
 
@@ -100,10 +123,15 @@ public `TAVERN_RELEASE_BASE_URL`.
 `TAVERN_HOMEBREW_TAP_REPO` to publish to another tap, or
 `TAVERN_HOMEBREW_TAP_DIR` to update an existing local checkout.
 
+The Homebrew tap is maintained as part of Tavern. Runtime deployment changes in
+this repository must keep the tap formula and tap README current in the same
+release work.
+
 The tarball contains:
 
 ```txt
 bin/tavern-runtime
+bin/tavern
 share/tavern/openclaw-plugins/
 share/tavern/node_modules/@tavern/sdk/
 ```

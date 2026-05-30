@@ -3,7 +3,7 @@ import net from 'node:net';
 import os from 'node:os';
 import path from 'node:path';
 
-export const runtimeBaseUrl = 'http://127.0.0.1:4310';
+export const runtimeBaseUrl = 'http://127.0.0.1:18790';
 export const startupEventPrefix = 'TAVERN_STARTUP_EVENT ';
 const ansiPattern = /\u001B\[[0-9;?]*[ -/]*[@-~]/gu;
 
@@ -131,7 +131,7 @@ export function assertDevStackPortsAvailable({ mode, ports, repositoryRoot }) {
         {
             enabled: hasRuntime,
             label: 'runtime',
-            port: 4310,
+            port: 18_790,
         },
         {
             enabled: hasRuntime,
@@ -191,7 +191,7 @@ export function cleanupStaleProcesses({ mode, ports, repositoryRoot }) {
             commandPattern: 'bun --watch src/index.ts',
             cwd: path.join(repositoryRoot, 'apps', 'runtime'),
             enabled: hasRuntime,
-            port: 4310,
+            port: 18_790,
         },
         {
             commandPattern: null,

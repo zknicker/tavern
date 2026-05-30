@@ -7,7 +7,8 @@ export type AgentRuntimeConnectionStatus =
     | 'error'
     | 'reachable'
     | 'unconfigured'
-    | 'unreachable';
+    | 'unreachable'
+    | 'version-mismatch';
 
 export type AgentRuntimePageConnectionState = 'reachable' | 'unconfigured' | 'unreachable';
 
@@ -49,7 +50,13 @@ function deriveAgentRuntimeConnectionStatus(input: {
         return 'unconfigured';
     }
 
-    return input.connection.lastError ? 'unreachable' : 'reachable';
+    if (input.connection.lastError) {
+        return 'unreachable';
+    }
+
+    return input.connection.runtimeVersion && input.connection.versionStatus === 'mismatched'
+        ? 'version-mismatch'
+        : 'reachable';
 }
 
 export function useAgentRuntimeConnection(): AgentRuntimeConnectionState {

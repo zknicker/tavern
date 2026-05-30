@@ -42,6 +42,7 @@ import {
     type AgentRuntimeSessionResync,
     type AgentRuntimeSkill,
     type AgentRuntimeSkillSummary,
+    type AgentRuntimeUpdate,
     type AgentRuntimeUpdateCron,
     type AgentRuntimeUpsertBinding,
     type AgentRuntimeWorkspaceInstructions,
@@ -96,6 +97,7 @@ import {
     agentRuntimeSkillListSchema,
     agentRuntimeSkillSchema,
     agentRuntimeUpdateCronSchema,
+    agentRuntimeUpdateSchema,
     agentRuntimeUpsertBindingSchema,
     agentRuntimeWorkspaceInstructionsSchema,
     type CortexBacklinkList,
@@ -232,6 +234,7 @@ export interface TavernAgentRuntimeClient {
         input: AgentRuntimeSaveWorkspaceInstructions
     ): Promise<AgentRuntimeWorkspaceInstructions>;
     searchCortex(input: CortexSearchInput): Promise<CortexSearchResult>;
+    startUpdate(): Promise<AgentRuntimeUpdate>;
     updateCronJob(jobId: string, input: AgentRuntimeUpdateCron): Promise<AgentRuntimeCron>;
     upsertAgent(input: AgentRuntimeCreateAgent): Promise<AgentRuntimeAgent>;
     upsertBinding(input: AgentRuntimeUpsertBinding): Promise<AgentRuntimeBinding>;
@@ -573,6 +576,21 @@ class HttpTavernAgentRuntimeClient implements TavernAgentRuntimeClient {
         }
 
         return agentRuntimeCapabilityHealthSchema.parse(await response.json());
+    }
+
+    async startUpdate(): Promise<AgentRuntimeUpdate> {
+        const response = await fetch(`${this.#baseUrl}${agentRuntimeRoutes.update}`, {
+            headers: {
+                [agentRuntimeMutationHeaders.origin]: agentRuntimeMutationOrigins.tavern,
+            },
+            method: 'POST',
+        });
+
+        if (!response.ok) {
+            await readErrorResponse(response);
+        }
+
+        return agentRuntimeUpdateSchema.parse(await response.json());
     }
 
     async getRuntimeJob(slug: AgentRuntimeJobSlug) {

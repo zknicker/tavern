@@ -28,6 +28,9 @@ function getHealthBadge(
     if (connection.lastError) {
         return { label: 'Unreachable', variant: 'error' };
     }
+    if (connection.runtimeVersion && connection.versionStatus === 'mismatched') {
+        return { label: 'Version mismatch', variant: 'error' };
+    }
     if (connection.runtimeCapabilities.some((capability) => capability.state !== 'healthy')) {
         return { label: 'Degraded', variant: 'warning' };
     }
@@ -113,6 +116,11 @@ function RuntimeConnectionRow({ connection }: { connection: RuntimeConnection })
                 Tavern owns this local OpenClaw runtime, its generated config, and its Seatbelt
                 guardrails. OpenClaw is not configured as a separate app connection.
             </p>
+            {connection.runtimeVersion ? (
+                <p className="text-muted-foreground text-sm">
+                    App v{connection.appVersion} · Runtime v{connection.runtimeVersion}
+                </p>
+            ) : null}
             <RuntimeUrlForm connection={connection} />
             <CapabilitySection
                 capabilities={connection.runtimeCapabilities}

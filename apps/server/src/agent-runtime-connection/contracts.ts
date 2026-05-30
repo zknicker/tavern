@@ -69,6 +69,7 @@ export const agentRuntimeConnectionInputSchema = z.object({
 });
 
 export const agentRuntimeConnectionSchema = z.object({
+    appVersion: z.string().trim().min(1),
     authConfigured: z.boolean(),
     baseUrl: z.string().url(),
     capabilities: z.array(agentRuntimeCapabilityStatusSchema).default([]),
@@ -80,7 +81,9 @@ export const agentRuntimeConnectionSchema = z.object({
     lastSyncedAt: z.string().nullable(),
     name: z.string().trim().min(1),
     runtimeCapabilities: z.array(agentRuntimeCapabilityStatusSchema).default([]),
+    runtimeVersion: z.string().trim().min(1).nullable(),
     source: z.enum(['environment', 'saved']),
+    versionStatus: z.enum(['matched', 'mismatched']),
 });
 
 export const agentRuntimeConnectionStatusSchema = z.object({

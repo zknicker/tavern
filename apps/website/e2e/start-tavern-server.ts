@@ -20,7 +20,7 @@ rmSync(`${jobsDatabasePath}-wal`, { force: true });
 process.env.NODE_ENV = 'test';
 process.env.APP_ORIGIN = process.env.APP_ORIGIN ?? 'http://127.0.0.1:3101';
 process.env.DATABASE_PATH = databasePath;
-process.env.TAVERN_RUNTIME_URL = process.env.TAVERN_RUNTIME_URL ?? 'http://127.0.0.1:4310';
+process.env.TAVERN_RUNTIME_URL = process.env.TAVERN_RUNTIME_URL ?? 'http://127.0.0.1:18790';
 process.env.SERVER_PORT = process.env.SERVER_PORT ?? '8081';
 
 process.chdir(workspaceRoot);

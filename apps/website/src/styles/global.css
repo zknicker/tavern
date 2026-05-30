@@ -256,8 +256,8 @@
         --background: color-mix(in srgb, var(--color-neutral-950) 95%, var(--color-white));
         --chrome: var(--sidebar);
         --foreground: var(--color-neutral-100);
-        --brand: var(--color-blue-700);
-        --brand-foreground: var(--color-blue-50);
+        --brand: #7658b8;
+        --brand-foreground: #f7f4ff;
         --brand-muted: --alpha(var(--brand) / 17%);
         --brand-ring: --alpha(var(--brand) / 30%);
 
@@ -355,8 +355,8 @@
         --background: var(--color-white);
         --chrome: var(--sidebar);
         --foreground: var(--color-neutral-800);
-        --brand: var(--color-blue-700);
-        --brand-foreground: var(--color-blue-50);
+        --brand: #7658b8;
+        --brand-foreground: #f7f4ff;
         --brand-muted: --alpha(var(--brand) / 13%);
         --brand-ring: --alpha(var(--brand) / 22%);
 

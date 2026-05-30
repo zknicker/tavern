@@ -82,6 +82,12 @@ export const agentRuntimeCapabilityHealthListSchema = z.object({
     info: agentRuntimeInfoSchema,
 });
 
+export const agentRuntimeUpdateSchema = z.object({
+    accepted: z.literal(true),
+    message: z.string().trim().min(1),
+    startedAt: z.string().datetime(),
+});
+
 export const agentRuntimeAgentBindingSchema = z.object({
     agentId: z.string().trim().min(1),
 });
@@ -1747,6 +1753,7 @@ export type AgentRuntimeCapabilityHealthId = z.infer<typeof agentRuntimeCapabili
 export type AgentRuntimeCapabilityHealthList = z.infer<
     typeof agentRuntimeCapabilityHealthListSchema
 >;
+export type AgentRuntimeUpdate = z.infer<typeof agentRuntimeUpdateSchema>;
 export type AgentRuntimeCapabilityHealthState = z.infer<
     typeof agentRuntimeCapabilityHealthStateSchema
 >;

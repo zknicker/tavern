@@ -25,6 +25,25 @@ Runtime tarballs to `TAVERN_RELEASE_S3_URI`, commits release metadata, pushes
 `main`, pushes the version tag, creates the GitHub Release, and updates the
 Homebrew tap formula.
 
+## Homebrew Tap
+
+`zknicker/homebrew-tavern` is first-party Tavern release infrastructure. Treat
+it as part of this repository's release surface, not as a separate downstream
+project.
+
+When Runtime install, update, service, artifact, environment, port, or CLI
+behavior changes:
+
+* update Tavern release scripts in this repository
+* update the generated Homebrew formula contract
+* update the tap README and any tap-local operator docs
+* verify the tap still documents install, update, service control, logs, and
+  environment overrides
+
+`release:publish-homebrew-formula` owns the formula write path. It updates
+`zknicker/homebrew-tavern` by default through `TAVERN_HOMEBREW_TAP_REPO`, or an
+explicit local checkout through `TAVERN_HOMEBREW_TAP_DIR`.
+
 Desktop builds compile `assets/mac-icon.icon` with Xcode `actool` before Tauri
 packaging. The compiled `Assets.car` provides the layered Liquid Glass app icon
 on macOS 26, and `AppIcon.icns` remains the fallback icon for older macOS

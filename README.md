@@ -59,6 +59,21 @@ the Tavern Messenger plugin before launching managed OpenClaw.
 Tavern state lives under `~/.tavern`. Managed OpenClaw state lives under
 `~/.tavern/runtime/openclaw`.
 
+Default local ports:
+
+```bash
+TAVERN_RUNTIME_HOST=127.0.0.1
+TAVERN_RUNTIME_PORT=18790
+TAVERN_OPENCLAW_GATEWAY_PORT=18789
+```
+
+Set `TAVERN_RUNTIME_HOST=0.0.0.0` and point the app at
+`http://<host>:18790` when Runtime runs on an always-on Mac.
+
+Production Runtime installs expose `tavern` as the preferred CLI and keep
+`tavern-runtime` as a compatibility alias. `tavern update` upgrades the
+Homebrew formula and restarts the service by default.
+
 ## Desktop Build
 
 Build a debug desktop app and DMG:

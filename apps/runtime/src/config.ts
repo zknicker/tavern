@@ -73,7 +73,7 @@ export function getRuntimeHost(): string {
 }
 
 export function getRuntimePort(): string {
-    return readConfigValue('TAVERN_RUNTIME_PORT') ?? '4310';
+    return readConfigValue('TAVERN_RUNTIME_PORT') ?? '18790';
 }
 
 export function readConfigValue(key: string): string | null {

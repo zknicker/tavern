@@ -12,14 +12,14 @@ test('formatPortBlockers includes owner process details', () => {
                 cwd: path.join('/Users', 'zknicker', 'repo', 'apps', 'runtime'),
                 label: 'runtime',
                 pid: 1234,
-                port: 4310,
+                port: 18_790,
             },
         ],
         repositoryRoot
     );
 
     assert.match(message, /Required dev port unavailable/u);
-    assert.match(message, /runtime port 4310 is already in use by PID 1234/u);
+    assert.match(message, /runtime port 18790 is already in use by PID 1234/u);
     assert.match(message, /bun --watch src\/index\.ts/u);
     assert.match(message, /\.\/apps\/runtime/u);
 });
@@ -45,5 +45,5 @@ test('waitForRuntimeReady reads the Runtime capabilities health envelope', async
         globalThis.fetch = originalFetch;
     }
 
-    assert.deepEqual(requestedUrls, ['http://127.0.0.1:4310/capabilities']);
+    assert.deepEqual(requestedUrls, ['http://127.0.0.1:18790/capabilities']);
 });

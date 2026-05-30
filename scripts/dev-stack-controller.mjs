@@ -260,7 +260,7 @@ export class DevStackController extends EventEmitter {
         const serverEnv = hasRuntime
             ? {
                   ...startupUiEnv,
-                  TAVERN_RUNTIME_URL: 'http://127.0.0.1:4310',
+                  TAVERN_RUNTIME_URL: 'http://127.0.0.1:18790',
               }
             : startupUiEnv;
         let websiteReadyPromise = null;
@@ -285,7 +285,7 @@ export class DevStackController extends EventEmitter {
             ...process.env,
             TAVERN_DEV_STACK_HAS_RUNTIME: hasRuntime ? '1' : '0',
             TAVERN_OPENCLAW_GATEWAY_PORT: process.env.TAVERN_OPENCLAW_GATEWAY_PORT ?? '18789',
-            TAVERN_RUNTIME_PORT: '4310',
+            TAVERN_RUNTIME_PORT: '18790',
             TAVERN_SERVER_PORT: String(this.ports.serverPort),
             TAVERN_WEBSITE_PORT: String(this.ports.websitePort),
         });

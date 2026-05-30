@@ -32,8 +32,12 @@ const main = async () => {
         'apps/runtime/src/index.ts',
         '--compile',
         '--outfile',
-        path.join(stageRoot, 'bin', 'tavern-runtime'),
+        path.join(stageRoot, 'bin', 'tavern'),
     ]);
+    await fs.copyFile(
+        path.join(stageRoot, 'bin', 'tavern'),
+        path.join(stageRoot, 'bin', 'tavern-runtime')
+    );
 
     await stageRuntimePackages(stageRoot);
     await fs.mkdir(runtimeArtifactDir, { recursive: true });

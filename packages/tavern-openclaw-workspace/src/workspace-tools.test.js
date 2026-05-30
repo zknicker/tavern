@@ -21,7 +21,7 @@ describe('Tavern Workspace tools', () => {
                     tools.push(tool.name);
                 },
             },
-            { baseUrl: 'http://127.0.0.1:4310' }
+            { baseUrl: 'http://127.0.0.1:18790' }
         );
 
         expect(tools).toEqual(['workspace_notes_read', 'workspace_notes_update']);

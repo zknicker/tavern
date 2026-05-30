@@ -14,7 +14,7 @@ function snapshot(overrides = {}) {
             databasePath: '~/.tavern/tavern.sqlite',
             desktopEnabled: true,
             runtimeRoot: '~/.tavern',
-            runtimeUrl: 'http://127.0.0.1:4310',
+            runtimeUrl: 'http://127.0.0.1:18790',
             serverUrl: 'http://localhost:8080',
             websiteUrl: 'http://localhost:3100',
         },
@@ -60,12 +60,12 @@ test('formatStatusLine shows concise process transitions', () => {
         '◐ desktop starting enabled'
     );
     assert.equal(
-        formatStatusLine('runtime', 'running', 'http://127.0.0.1:4310', { colorize: false }),
-        '✓ runtime ready http://127.0.0.1:4310'
+        formatStatusLine('runtime', 'running', 'http://127.0.0.1:18790', { colorize: false }),
+        '✓ runtime ready http://127.0.0.1:18790'
     );
     assert.equal(
-        formatStatusLine('runtime', 'stopping', 'http://127.0.0.1:4310', { colorize: false }),
-        '◐ runtime stopping http://127.0.0.1:4310'
+        formatStatusLine('runtime', 'stopping', 'http://127.0.0.1:18790', { colorize: false }),
+        '◐ runtime stopping http://127.0.0.1:18790'
     );
 });
 
@@ -96,7 +96,7 @@ test('formatReadyBlock prints the final startup summary', () => {
 
     assert.match(output, /╭─ 🎰 TAVERN/u);
     assert.match(output, /Ready to go/u);
-    assert.match(output, /Runtime\s+http:\/\/127\.0\.0\.1:4310/u);
+    assert.match(output, /Runtime\s+http:\/\/127\.0\.0\.1:18790/u);
     assert.match(output, /Server\s+http:\/\/localhost:8080/u);
     assert.match(output, /Website\s+http:\/\/localhost:3100/u);
     assert.match(output, /Desktop\s+running/u);

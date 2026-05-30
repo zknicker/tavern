@@ -18,6 +18,16 @@ export const badRequest = (message: string) =>
         400
     );
 
+export const forbidden = (message: string) =>
+    json(
+        {
+            code: 'forbidden',
+            message,
+            retryable: false,
+        },
+        403
+    );
+
 export const notFound = () =>
     json(
         {

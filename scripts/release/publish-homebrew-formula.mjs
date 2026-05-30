@@ -84,6 +84,7 @@ function renderFormula(input) {
   depends_on "node"
 
   def install
+    bin.install "bin/tavern"
     bin.install "bin/tavern-runtime"
     (share/"tavern").install "share/tavern/openclaw-plugins"
     (share/"tavern/node_modules/@tavern").install "share/tavern/node_modules/@tavern/sdk"
@@ -93,9 +94,9 @@ function renderFormula(input) {
   end
 
   service do
-    run [opt_bin/"tavern-runtime", "serve"]
+    run [opt_bin/"tavern", "serve"]
     environment_variables TAVERN_RUNTIME_HOST: "127.0.0.1",
-      TAVERN_RUNTIME_PORT: "4310",
+      TAVERN_RUNTIME_PORT: "18790",
       TAVERN_RUNTIME_ROOT: var/"tavern/runtime"
     keep_alive true
     log_path var/"log/tavern/runtime.log"
@@ -103,6 +104,7 @@ function renderFormula(input) {
   end
 
   test do
+    assert_match version.to_s, shell_output("#{bin}/tavern --version")
     assert_match version.to_s, shell_output("#{bin}/tavern-runtime --version")
   end
 end

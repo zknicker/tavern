@@ -1,3 +1,4 @@
+import appPackage from '../../../website/package.json';
 import { parseAgentRuntimeConnectionAuth } from '../agent-runtime-connection/auth.ts';
 import {
     type AgentRuntimeConnection,
@@ -91,9 +92,13 @@ function parseConfiguredAgentRuntimeConnection(record: unknown) {
 
     const parsed = agentRuntimeConnectionSchema.parse({
         ...raw,
+        appVersion: appPackage.version,
         authConfigured: Boolean(parseAgentRuntimeConnectionAuth(raw.authJson)),
         enabled: Boolean(raw.enabled),
         isActive: Boolean(raw.isActive),
+        runtimeCapabilities: [],
+        runtimeVersion: null,
+        versionStatus: 'mismatched',
     });
 
     return {

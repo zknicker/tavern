@@ -571,7 +571,7 @@ function messageInput(id: string, nonce: string | undefined, content: string) {
 }
 
 function jsonRequest(method: string, path: string, body: unknown) {
-    return new Request(`http://127.0.0.1:4310${path}`, {
+    return new Request(`http://127.0.0.1:18790${path}`, {
         body: JSON.stringify(body),
         headers: { 'content-type': 'application/json' },
         method,
@@ -579,5 +579,5 @@ function jsonRequest(method: string, path: string, body: unknown) {
 }
 
 function getRequest(path: string) {
-    return new Request(`http://127.0.0.1:4310${path}`);
+    return new Request(`http://127.0.0.1:18790${path}`);
 }

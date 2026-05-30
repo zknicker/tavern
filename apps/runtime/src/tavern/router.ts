@@ -1,6 +1,9 @@
 import {
     agentRuntimeMacAppListSchema,
+    agentRuntimeMutationHeaders,
+    agentRuntimeMutationOrigins,
     agentRuntimeRoutes,
+    agentRuntimeUpdateSchema,
     runtimeEventListSchema,
     runtimeHealthSchema,
     runtimeRoutes,
@@ -18,7 +21,7 @@ import {
 import { handleWorkspaceRequest } from '../workspace/routes';
 import { getStoredAgent, listStoredAgents } from './agents-store';
 import { handleTavernApiRequest } from './chat-api-router';
-import { json, notFound } from './http';
+import { forbidden, json, notFound } from './http';
 import {
     getStoredOpenClawSessionGraph,
     listStoredOpenClawSessionMessages,
@@ -34,6 +37,7 @@ import {
 import { handleOpenClawProxyRequest } from './proxy';
 import { listProjectedTavernRuntimeEvents } from './runtime-event-projection';
 import { getRuntimeHealth } from './status';
+import { startRuntimeUpdate } from './update';
 
 export async function handleTavernRuntimeRequest(request: Request): Promise<Response> {
     const url = new URL(request.url);
@@ -75,6 +79,16 @@ export async function handleTavernRuntimeRequest(request: Request): Promise<Resp
 
     if (request.method === 'GET' && url.pathname === runtimeRoutes.health) {
         return json(runtimeHealthSchema.parse(getRuntimeHealth()));
+    }
+
+    if (request.method === 'POST' && url.pathname === agentRuntimeRoutes.update) {
+        if (
+            request.headers.get(agentRuntimeMutationHeaders.origin) !==
+            agentRuntimeMutationOrigins.tavern
+        ) {
+            return forbidden('Runtime update requires a Tavern caller.');
+        }
+        return json(agentRuntimeUpdateSchema.parse(startRuntimeUpdate()));
     }
 
     if (request.method === 'GET' && url.pathname === runtimeRoutes.events) {
