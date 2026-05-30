@@ -2,6 +2,10 @@
 
 All notable changes to this project will be documented in this file.
 
+## v1.1.6 - 2026-05-30
+
+- Fixed disconnected Runtime onboarding showing stale Runtime update copy and the old saved URL.
+
 ## v1.1.5 - 2026-05-30
 
 - Fixed stale or unreachable Runtime connections showing the Runtime update screen instead of the connect form after disconnect.
