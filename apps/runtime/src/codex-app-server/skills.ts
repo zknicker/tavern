@@ -114,12 +114,25 @@ function stripCodexSkillPrefix(id: string) {
 
 class CodexAppServerClient {
     readonly #child: ChildProcessWithoutNullStreams;
-    readonly #pending = new Map<number, (response: CodexRpcResponse) => void>();
+    readonly #pending = new Map<
+        number,
+        {
+            reject: (error: Error) => void;
+            resolve: (response: CodexRpcResponse) => void;
+        }
+    >();
     #nextId = 1;
 
     constructor() {
         this.#child = spawn('codex', ['app-server', '--listen', 'stdio://'], {
             stdio: ['pipe', 'pipe', 'pipe'],
+        });
+        this.#child.once('error', (error) => {
+            const nextError = error instanceof Error ? error : new Error(String(error));
+            for (const pending of this.#pending.values()) {
+                pending.reject(nextError);
+            }
+            this.#pending.clear();
         });
         const lines = createInterface({ input: this.#child.stdout });
         lines.on('line', (line) => this.#handleLine(line));
@@ -148,13 +161,16 @@ class CodexAppServerClient {
                 reject(new Error(`codex app-server ${method} timed out`));
             }, requestTimeoutMs);
 
-            this.#pending.set(id, (response) => {
-                clearTimeout(timeout);
-                if (response.error) {
-                    reject(new Error(response.error.message ?? `${method} failed`));
-                    return;
-                }
-                resolve(response.result);
+            this.#pending.set(id, {
+                reject,
+                resolve: (response) => {
+                    clearTimeout(timeout);
+                    if (response.error) {
+                        reject(new Error(response.error.message ?? `${method} failed`));
+                        return;
+                    }
+                    resolve(response.result);
+                },
             });
         });
     }
@@ -183,7 +199,7 @@ class CodexAppServerClient {
             return;
         }
 
-        this.#pending.get(parsed.id)?.(parsed);
+        this.#pending.get(parsed.id)?.resolve(parsed);
         this.#pending.delete(parsed.id);
     }
 }

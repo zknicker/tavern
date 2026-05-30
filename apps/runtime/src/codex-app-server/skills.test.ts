@@ -1,6 +1,10 @@
 import { describe, expect, it } from 'vitest';
 
-import { mapCodexSkillsResult, mergeOpenClawAndCodexSkills } from './skills';
+import {
+    listCodexAppServerSkills,
+    mapCodexSkillsResult,
+    mergeOpenClawAndCodexSkills,
+} from './skills';
 
 describe('Codex app-server skills', () => {
     it('maps Codex skills into runtime skill summaries', () => {
@@ -66,6 +70,19 @@ describe('Codex app-server skills', () => {
         );
 
         expect(merged.map((skill) => skill.id)).toEqual(['agent-browser', 'codex:github:github']);
+    });
+
+    it('rejects when the Codex app-server executable is unavailable', async () => {
+        const originalPath = process.env.PATH;
+        process.env.PATH = '/definitely-missing-codex-bin';
+
+        try {
+            await expect(listCodexAppServerSkills()).rejects.toThrow(
+                /Executable not found|ENOENT/u
+            );
+        } finally {
+            process.env.PATH = originalPath;
+        }
     });
 });
 

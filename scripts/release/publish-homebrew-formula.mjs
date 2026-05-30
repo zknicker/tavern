@@ -97,7 +97,8 @@ function renderFormula(input) {
     run [opt_bin/"tavern", "serve"]
     environment_variables TAVERN_RUNTIME_HOST: "127.0.0.1",
       TAVERN_RUNTIME_PORT: "18790",
-      TAVERN_RUNTIME_ROOT: var/"tavern/runtime"
+      TAVERN_RUNTIME_ROOT: var/"tavern/runtime",
+      PATH: "#{HOMEBREW_PREFIX}/bin:#{HOMEBREW_PREFIX}/sbin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin"
     keep_alive true
     log_path var/"log/tavern/runtime.log"
     error_log_path var/"log/tavern/runtime.log"

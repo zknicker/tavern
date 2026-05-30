@@ -119,7 +119,7 @@ export async function handleTavernRuntimeRequest(request: Request): Promise<Resp
         refreshManagedOpenClawSkillsInBackground('skills-read');
         const [openClawSkills, codexSkills] = await Promise.all([
             Promise.resolve(listStoredOpenClawSkills()),
-            listCodexAppServerSkills().catch(() => []),
+            listCodexAppServerSkillsOrEmpty(),
         ]);
         return json({
             skills: mergeOpenClawAndCodexSkills(openClawSkills.skills, codexSkills),
@@ -191,6 +191,14 @@ export async function handleTavernRuntimeRequest(request: Request): Promise<Resp
     const proxyResponse = await handleOpenClawProxyRequest(request);
 
     return proxyResponse ?? notFound();
+}
+
+async function listCodexAppServerSkillsOrEmpty() {
+    try {
+        return await listCodexAppServerSkills();
+    } catch {
+        return [];
+    }
 }
 
 function readPositiveInteger(value: string | null) {
