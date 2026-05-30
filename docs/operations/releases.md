@@ -22,7 +22,8 @@ read_when:
 `release:publish` builds the Runtime artifact, builds the signed desktop app,
 notarizes it, creates updater metadata, uploads desktop updater artifacts and
 Runtime tarballs to `TAVERN_RELEASE_S3_URI`, commits release metadata, pushes
-`main`, pushes the version tag, and creates the GitHub Release.
+`main`, pushes the version tag, creates the GitHub Release, and updates the
+Homebrew tap formula.
 
 Tavern ships two production artifacts:
 
@@ -43,6 +44,8 @@ Required release environment:
 
 * `TAVERN_RELEASE_BASE_URL`
 * `TAVERN_RELEASE_S3_URI`
+* `TAVERN_HOMEBREW_TAP_REPO` defaults to `zknicker/homebrew-tavern`
+* `TAVERN_HOMEBREW_TAP_DIR` optionally points to a local tap checkout
 * `TAURI_UPDATER_PUBLIC_KEY`
 * `TAURI_SIGNING_PRIVATE_KEY`
 * `TAURI_SIGNING_PRIVATE_KEY_PASSWORD`

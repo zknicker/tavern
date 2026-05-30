@@ -96,6 +96,10 @@ The release publisher uploads that tarball and its checksum beside the desktop
 updater artifacts under `TAVERN_RELEASE_S3_URI`. The formula URL uses the same
 public `TAVERN_RELEASE_BASE_URL`.
 
+`release:publish` updates `zknicker/homebrew-tavern` by default. Set
+`TAVERN_HOMEBREW_TAP_REPO` to publish to another tap, or
+`TAVERN_HOMEBREW_TAP_DIR` to update an existing local checkout.
+
 The tarball contains:
 
 ```txt

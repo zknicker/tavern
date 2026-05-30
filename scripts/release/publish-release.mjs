@@ -71,6 +71,7 @@ const main = async () => {
     const notesPath = await writeReleaseNotes(version);
     const artifacts = await findReleaseArtifacts(version);
     createGithubRelease({ artifacts, notesPath, tagName });
+    run('bun', ['run', 'release:publish-homebrew-formula']);
 
     console.log(`Released ${tagName}`);
 };
