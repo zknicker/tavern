@@ -2,6 +2,10 @@
 
 All notable changes to this project will be documented in this file.
 
+## v1.1.7 - 2026-05-30
+
+- Fixed unreachable Runtime onboarding so it keeps the saved Runtime URL, shows the connection error, and does not report a version mismatch without a Runtime version.
+
 ## v1.1.6 - 2026-05-30
 
 - Fixed disconnected Runtime onboarding showing stale Runtime update copy and the old saved URL.
