@@ -8,15 +8,15 @@ export function TavernRuntimeGate() {
     const isRuntimeSettingsRoute = location.pathname.startsWith(
         '/dashboard/settings/agent-runtime'
     );
+    const shouldShowOnboarding = ['error', 'unconfigured', 'unreachable'].includes(
+        agentRuntimeConnection.status
+    );
 
     if (agentRuntimeConnection.status === 'checking' && !isChatLayoutPreviewRoute) {
         return <p className="p-6 text-muted-foreground text-sm">Loading Tavern Runtime…</p>;
     }
 
-    if (
-        agentRuntimeConnection.status === 'unconfigured' &&
-        !(isRuntimeSettingsRoute || isChatLayoutPreviewRoute)
-    ) {
+    if (shouldShowOnboarding && !(isRuntimeSettingsRoute || isChatLayoutPreviewRoute)) {
         return <Navigate replace state={{ from: location }} to="/onboarding" />;
     }
 

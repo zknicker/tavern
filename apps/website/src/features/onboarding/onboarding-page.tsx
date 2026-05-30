@@ -21,7 +21,7 @@ export function OnboardingPage() {
         return <p className="p-6 text-muted-foreground text-sm">Loading Tavern Runtime…</p>;
     }
 
-    if (!isPreview && agentRuntimeConnection.status !== 'unconfigured') {
+    if (!isPreview && agentRuntimeConnection.status === 'reachable') {
         return <Navigate replace to="/dashboard" />;
     }
 
@@ -32,7 +32,7 @@ export function OnboardingPage() {
             <div className="relative z-10 flex min-h-screen flex-col items-center justify-center px-6 py-8 md:px-10">
                 <div className="grid w-full justify-items-center">
                     <div className="mb-7 grid max-w-[1040px] gap-4 text-center text-white">
-                        <h1 className="max-w-full justify-self-center text-nowrap font-[600] font-display text-4xl drop-shadow-xl [font-kerning:normal] [text-rendering:optimizeLegibility] [word-spacing:0.08em] sm:text-5xl">
+                        <h1 className="max-w-full justify-self-center text-nowrap text-balance font-display font-semibold text-4xl text-white drop-shadow-[0_10px_28px_rgb(49_25_11_/_0.34)] [font-kerning:normal] [text-rendering:optimizeLegibility] sm:text-5xl">
                             Welcome in, traveler!
                         </h1>
                     </div>
@@ -61,21 +61,21 @@ function OnboardingBackground() {
             <img
                 alt=""
                 aria-hidden="true"
-                className="absolute inset-0 h-full w-full scale-[1.12] object-cover blur-[16px] brightness-[1.05] saturate-[1.05] [mask-image:radial-gradient(ellipse_400px_300px_at_50%_50%,black_0%,black_45%,rgb(0_0_0_/_0.72)_64%,transparent_100%)]"
+                className="absolute inset-0 h-full w-full scale-[1.12] object-cover blur-[16px] brightness-[1.05] saturate-[1.05] [mask-image:radial-gradient(ellipse_490px_350px_at_50%_50%,black_0%,black_46%,rgb(0_0_0_/_0.72)_68%,transparent_100%)]"
                 height={941}
                 src={onboardingBackground}
                 width={1672}
             />
             <div className="absolute inset-0 bg-[linear-gradient(to_bottom,rgb(255_248_232_/_0.2),rgb(255_255_255_/_0.04)_42%,rgb(67_38_20_/_0.12)_100%)]" />
-            <div className="absolute inset-0 bg-[radial-gradient(ellipse_400px_300px_at_50%_50%,rgb(36_19_13_/_0.36)_0%,rgb(33_20_15_/_0.24)_58%,transparent_100%)]" />
-            <div className="absolute inset-0 bg-[radial-gradient(ellipse_360px_260px_at_50%_45%,rgb(0_0_0_/_0.18)_0%,transparent_72%)]" />
+            <div className="absolute inset-0 bg-[radial-gradient(ellipse_510px_360px_at_50%_50%,rgb(36_19_13_/_0.34)_0%,rgb(33_20_15_/_0.22)_60%,transparent_100%)]" />
+            <div className="absolute inset-0 bg-[radial-gradient(ellipse_460px_315px_at_50%_45%,rgb(0_0_0_/_0.16)_0%,transparent_74%)]" />
         </div>
     );
 }
 
 function RuntimeConnectionCard({ onConnect }: { onConnect: () => void }) {
     return (
-        <Card className="w-full max-w-[620px] rounded-[8px] border-[#ffd89a]/60 bg-[#fff7e8]/88 text-[#21140d] shadow-[0_26px_80px_rgb(46_24_8_/_0.32),inset_0_1px_rgb(255_255_255_/_0.74)] backdrop-blur-xl">
+        <Card className="w-full max-w-[620px] rounded-[8px] border-white/42 bg-white/72 text-neutral-900 shadow-[0_26px_80px_rgb(17_24_39_/_0.24),inset_0_1px_rgb(255_255_255_/_0.72)] backdrop-blur-2xl">
             <CardContent className="px-8 py-7 sm:px-10 sm:py-9">
                 <TavernRuntimeOnboardingForm onConnect={onConnect} />
             </CardContent>
@@ -105,7 +105,7 @@ function TavernRuntimeOnboardingForm({ onConnect }: { onConnect: () => void }) {
             }}
         >
             <div className="grid gap-1.5">
-                <p className="max-w-[54ch] text-pretty text-[#5b4637] text-base leading-7">
+                <p className="max-w-[54ch] text-pretty text-base text-neutral-700 leading-7">
                     The Tavern Runtime is where your agents live, store their memories, and work on
                     tasks. Once you have it up and running, connect to it here.
                 </p>
@@ -115,7 +115,7 @@ function TavernRuntimeOnboardingForm({ onConnect }: { onConnect: () => void }) {
                 <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_auto]">
                     <Input
                         aria-label="Tavern Runtime URL"
-                        className="select-text border-[#d8b98d]/70 bg-white/58 font-mono text-[#2a1b12] shadow-[#5b3512]/5 shadow-inner hover:border-[#c69856] hover:bg-white/76"
+                        className="select-text border-white/60 bg-white/64 font-mono text-neutral-900 shadow-inner shadow-neutral-900/5 hover:border-white/80 hover:bg-white/82"
                         id={runtimeUrlInputId}
                         name="runtime-url"
                         onChange={(event) => setBaseUrl(event.currentTarget.value)}
@@ -124,13 +124,12 @@ function TavernRuntimeOnboardingForm({ onConnect }: { onConnect: () => void }) {
                         value={baseUrl}
                     />
                     <Button
-                        className="border-[#1b1238] bg-[#1b1238] text-white shadow-[#1b1238]/20 hover:bg-[#281a54]"
                         disabled={!baseUrl.trim()}
                         loading={connectMutation.isPending}
                         size="lg"
                         type="submit"
                     >
-                        Connect runtime
+                        Connect
                     </Button>
                 </div>
             </Field>

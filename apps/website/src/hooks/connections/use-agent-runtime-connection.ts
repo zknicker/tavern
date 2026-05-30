@@ -53,7 +53,10 @@ function deriveAgentRuntimeConnectionStatus(input: {
 }
 
 export function useAgentRuntimeConnection(): AgentRuntimeConnectionState {
-    const connectionQuery = trpc.agentRuntime.get.useQuery(undefined, queryPolicy.volatileState);
+    const connectionQuery = trpc.agentRuntime.get.useQuery(undefined, {
+        ...queryPolicy.volatileState,
+        retry: false,
+    });
 
     return React.useMemo(() => {
         const connection = connectionQuery.data ?? null;
