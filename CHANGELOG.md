@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file.
 
+## v1.1.8 - 2026-05-30
+
+- Fixed Runtime skill inventory so missing Codex CLI support is handled through capability health instead of crashing Runtime.
+- Updated the Homebrew Runtime service environment so managed OpenClaw and Codex commands can find Homebrew-installed binaries.
+
 ## v1.1.7 - 2026-05-30
 
 - Fixed unreachable Runtime onboarding so it keeps the saved Runtime URL, shows the connection error, and does not report a version mismatch without a Runtime version.
