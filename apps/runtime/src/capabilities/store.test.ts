@@ -15,10 +15,17 @@ import { getRuntimeCapability, listRuntimeCapabilities, refreshRuntimeCapabiliti
 
 describe('Runtime capabilities store', () => {
     let runtimeRoot: string;
+    const originalPath = process.env.PATH;
 
     beforeEach(async () => {
         runtimeRoot = await mkdtemp(path.join(tmpdir(), 'tavern-runtime-capabilities-'));
+        const binPath = path.join(runtimeRoot, 'bin');
+        await mkdir(binPath, { recursive: true });
+        await writeFile(path.join(binPath, 'codex'), '#!/bin/sh\necho codex-test\n', {
+            mode: 0o755,
+        });
         process.env.CODEX_HOME = path.join(runtimeRoot, 'empty-codex-home');
+        process.env.PATH = binPath;
         process.env.TAVERN_CORTEX_WIKI_PATH = path.join(runtimeRoot, 'cortex-wiki');
         const db = initTestDb();
         ensureRuntimeSchema(db);
@@ -31,6 +38,7 @@ describe('Runtime capabilities store', () => {
         markManagedOpenClawGatewayStopped();
         closeDb();
         process.env.CODEX_HOME = undefined;
+        process.env.PATH = originalPath;
         process.env.TAVERN_CORTEX_WIKI_PATH = undefined;
         await rm(runtimeRoot, { force: true, recursive: true });
     });
@@ -101,6 +109,21 @@ describe('Runtime capabilities store', () => {
             id: 'codexOAuth',
             reason: 'Codex OAuth credentials are not configured.',
             state: 'unauthorized',
+        });
+    });
+
+    test('records Codex OAuth as unavailable when Codex CLI is missing', async () => {
+        process.env.PATH = path.join(runtimeRoot, 'missing-bin');
+
+        const [codexAccess] = await refreshRuntimeCapabilities({
+            ids: ['codexOAuth'],
+        });
+
+        expect(codexAccess).toMatchObject({
+            healthy: false,
+            id: 'codexOAuth',
+            reason: 'Codex CLI is not available to Tavern Runtime.',
+            state: 'unavailable',
         });
     });
 

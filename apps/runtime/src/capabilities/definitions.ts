@@ -1,3 +1,4 @@
+import { spawnSync } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
 import type {
@@ -306,6 +307,12 @@ export function getExpectedRuntimeCapability(
 
 async function checkCodexModelAccessCapability(): Promise<RuntimeCapabilityCheckResult> {
     try {
+        if (!canRunCommand('codex')) {
+            return {
+                reason: 'Codex CLI is not available to Tavern Runtime.',
+                state: 'unavailable',
+            };
+        }
         const credentials = await loadCodexCredentials({ environment: process.env });
         if (!credentials) {
             return {
@@ -327,6 +334,15 @@ async function checkCodexModelAccessCapability(): Promise<RuntimeCapabilityCheck
             technicalMessage: error instanceof Error ? error.message : String(error),
         };
     }
+}
+
+function canRunCommand(command: string) {
+    const result = spawnSync(command, ['--version'], {
+        env: process.env,
+        stdio: 'ignore',
+    });
+
+    return !result.error && result.status === 0;
 }
 
 async function checkEmbeddingModelCapability(): Promise<RuntimeCapabilityCheckResult> {

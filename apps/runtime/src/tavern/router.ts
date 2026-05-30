@@ -9,6 +9,7 @@ import {
     runtimeRoutes,
 } from '@tavern/api';
 import { handleRuntimeCapabilitiesRequest } from '../capabilities/routes';
+import { isRuntimeCapabilityHealthy } from '../capabilities/store';
 import { listCodexAppServerSkills, mergeOpenClawAndCodexSkills } from '../codex-app-server/skills';
 import { handleCortexRequest } from '../cortex/routes';
 import { handleRuntimeJobsRequest } from '../jobs/routes';
@@ -194,6 +195,10 @@ export async function handleTavernRuntimeRequest(request: Request): Promise<Resp
 }
 
 async function listCodexAppServerSkillsOrEmpty() {
+    if (!isRuntimeCapabilityHealthy('codexOAuth')) {
+        return [];
+    }
+
     try {
         return await listCodexAppServerSkills();
     } catch {
