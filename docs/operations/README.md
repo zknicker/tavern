@@ -15,3 +15,4 @@ to use, and the result to verify.
 | Development | [Development](development.md) |
 | Testing | [Testing](testing.md) |
 | Release process | [Release Process](releases.md) |
+| Runtime deployment | [Runtime Deployment](runtime-deploy.md) |

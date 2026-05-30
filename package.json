@@ -22,6 +22,7 @@
     "release:collect-changelog-context": "node scripts/release/collect-changelog-context.mjs",
     "release:check": "node scripts/release/validate-release-metadata.mjs",
     "release:check-desktop-artifacts": "node scripts/release/check-desktop-artifacts.mjs",
+    "release:build-runtime-artifact": "node scripts/release/build-runtime-artifact.mjs",
     "release:publish": "node scripts/release/publish-release.mjs",
     "test:e2e": "bun run --filter @tavern/website test:e2e",
     "test:e2e:debug": "bun run --filter @tavern/website test:e2e:debug",
@@ -53,6 +54,7 @@
     "picomatch": "4.0.4",
     "postcss": "8.5.14",
     "protobufjs": "7.5.9",
+    "qs": "6.15.2",
     "vite": "7.3.3",
     "ws": "8.20.1"
   }

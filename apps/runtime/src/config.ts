@@ -16,6 +16,8 @@ const envConfig = readEnvFile([
     'TAVERN_OPENCLAW_WORKSPACE_PLUGIN_DEPLOY_PATH',
     'TAVERN_OPENCLAW_WORKSPACE_PLUGIN_PATH',
     'TAVERN_CORTEX_VECTOR_PATH',
+    'TAVERN_RUNTIME_HOST',
+    'TAVERN_RUNTIME_PORT',
     'TAVERN_RUNTIME_ROOT',
     'OPENCLAW_CONFIG_DIR',
     'OPENCLAW_CONFIG_PATH',
@@ -65,6 +67,14 @@ function resolveConfigTimezone(): string {
 }
 
 export const TIMEZONE = resolveConfigTimezone();
+
+export function getRuntimeHost(): string {
+    return readConfigValue('TAVERN_RUNTIME_HOST') ?? '127.0.0.1';
+}
+
+export function getRuntimePort(): string {
+    return readConfigValue('TAVERN_RUNTIME_PORT') ?? '4310';
+}
 
 export function readConfigValue(key: string): string | null {
     return process.env[key]?.trim() || envConfig[key]?.trim() || null;

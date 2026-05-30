@@ -1,11 +1,15 @@
 import { Refresh04Icon } from '@hugeicons-pro/core-solid-rounded';
 import { useQueryClient } from '@tanstack/react-query';
+import * as React from 'react';
 import { Badge } from '../../../components/ui/badge.tsx';
 import { BadgeDivider } from '../../../components/ui/badge-divider.tsx';
 import { Card, CardFrame } from '../../../components/ui/card.tsx';
 import { Icon } from '../../../components/ui/icon.tsx';
 import { Button } from '../../../components/ui/primitives/button.tsx';
+import { Field, FieldError } from '../../../components/ui/primitives/field.tsx';
+import { Input } from '../../../components/ui/primitives/input.tsx';
 import { SettingsItem } from '../../../components/ui/settings-row.tsx';
+import { useConnectAgentRuntime } from '../../../hooks/connections/use-connect-agent-runtime.ts';
 import { type AgentRuntimeConnectionOutput, trpc } from '../../../lib/trpc.tsx';
 import { OpenClawCapabilitiesSummary } from './openclaw-capabilities-table.tsx';
 
@@ -109,6 +113,7 @@ function RuntimeConnectionRow({ connection }: { connection: RuntimeConnection })
                 Tavern owns this local OpenClaw runtime, its generated config, and its Seatbelt
                 guardrails. OpenClaw is not configured as a separate app connection.
             </p>
+            <RuntimeUrlForm connection={connection} />
             <CapabilitySection
                 capabilities={connection.runtimeCapabilities}
                 emptyLabel="No Tavern Runtime capability checks recorded."
@@ -121,6 +126,66 @@ function RuntimeConnectionRow({ connection }: { connection: RuntimeConnection })
                 title="Runtime capabilities"
             />
         </SettingsItem>
+    );
+}
+
+function RuntimeUrlForm({ connection }: { connection: RuntimeConnection }) {
+    const inputId = React.useId();
+    const [baseUrl, setBaseUrl] = React.useState(connection.baseUrl);
+    const connectMutation = useConnectAgentRuntime();
+    const trimmedBaseUrl = baseUrl.trim();
+    const hasChanged = trimmedBaseUrl !== connection.baseUrl;
+
+    React.useEffect(() => {
+        setBaseUrl(connection.baseUrl);
+    }, [connection.baseUrl]);
+
+    return (
+        <form
+            className="grid gap-2"
+            onSubmit={(event) => {
+                event.preventDefault();
+                if (!(trimmedBaseUrl && hasChanged)) {
+                    return;
+                }
+                connectMutation.mutate({ baseUrl: trimmedBaseUrl });
+            }}
+        >
+            <Field>
+                <div className="grid gap-2 sm:grid-cols-[minmax(0,1fr)_auto]">
+                    <Input
+                        aria-label="Tavern Runtime URL"
+                        className="font-mono"
+                        disabled={connectMutation.isPending || connection.source === 'environment'}
+                        id={inputId}
+                        name="runtime-url"
+                        onChange={(event) => setBaseUrl(event.currentTarget.value)}
+                        value={baseUrl}
+                    />
+                    <Button
+                        disabled={
+                            !(trimmedBaseUrl && hasChanged) ||
+                            connectMutation.isPending ||
+                            connection.source === 'environment'
+                        }
+                        loading={connectMutation.isPending}
+                        size="sm"
+                        type="submit"
+                        variant="secondary"
+                    >
+                        Save URL
+                    </Button>
+                </div>
+            </Field>
+            {connection.source === 'environment' ? (
+                <p className="text-muted-foreground text-xs">
+                    Runtime URL is set by `TAVERN_RUNTIME_URL`.
+                </p>
+            ) : null}
+            {connectMutation.error ? (
+                <FieldError>{connectMutation.error.message}</FieldError>
+            ) : null}
+        </form>
     );
 }
 

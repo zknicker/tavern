@@ -11,6 +11,7 @@ const repoRoot = path.resolve(__dirname, '..', '..');
 const expectedVersion = resolveExpectedVersion(process.argv.slice(2));
 
 const versionedFiles = {
+    runtime: 'apps/runtime/package.json',
     website: 'apps/website/package.json',
     tauri: 'apps/website/src-tauri/tauri.conf.json',
     cargo: 'apps/website/src-tauri/Cargo.toml',
@@ -20,10 +21,12 @@ const changelogPath = 'CHANGELOG.md';
 
 const main = async () => {
     const websitePackage = await readJson(versionedFiles.website);
+    const runtimePackage = await readJson(versionedFiles.runtime);
     const tauriConfig = await readJson(versionedFiles.tauri);
     const cargoVersion = await readCargoVersion(versionedFiles.cargo);
 
     const versions = {
+        runtime: runtimePackage.version,
         website: websitePackage.version,
         tauri: tauriConfig.version,
         cargo: cargoVersion,

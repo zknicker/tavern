@@ -1,4 +1,5 @@
 import path from 'node:path';
+import runtimePackage from '../package.json';
 import { DATA_DIR } from './config';
 import { ensureCortexSchema } from './cortex/schema';
 import { initDb } from './db/connection';
@@ -15,6 +16,43 @@ let openClaw: ManagedOpenClawHandle | null = null;
 let runtimeJobs: RuntimeJobsManager | null = null;
 let openClawStartup: Promise<ManagedOpenClawHandle> | null = null;
 let shuttingDown = false;
+
+function printHelp(): void {
+    console.log(`Tavern Runtime ${runtimePackage.version}
+
+Usage:
+  tavern-runtime serve
+  tavern-runtime --version
+  tavern-runtime --help
+
+Commands:
+  serve        Run the foreground Tavern Runtime server.
+
+Environment:
+  TAVERN_RUNTIME_HOST   Bind host. Defaults to 127.0.0.1.
+  TAVERN_RUNTIME_PORT   Bind port. Defaults to 4310.
+  TAVERN_RUNTIME_ROOT   Runtime data root. Defaults to ~/.tavern/runtime.`);
+}
+
+function resolveCommand(args: string[]): 'help' | 'serve' | 'version' {
+    const [command] = args;
+
+    if (!command || command === 'serve') {
+        return 'serve';
+    }
+
+    if (command === '--help' || command === '-h' || command === 'help') {
+        return 'help';
+    }
+
+    if (command === '--version' || command === '-v' || command === 'version') {
+        return 'version';
+    }
+
+    console.error(`Unknown command: ${command}`);
+    printHelp();
+    process.exit(1);
+}
 
 async function main(): Promise<void> {
     log.info('Tavern Runtime starting');
@@ -75,14 +113,22 @@ async function shutdown(signal: string): Promise<void> {
     process.exit(0);
 }
 
-process.on('SIGTERM', () => {
-    void shutdown('SIGTERM');
-});
-process.on('SIGINT', () => {
-    void shutdown('SIGINT');
-});
+const command = resolveCommand(process.argv.slice(2));
 
-main().catch((err) => {
-    log.fatal('Startup failed', { err });
-    process.exit(1);
-});
+if (command === 'help') {
+    printHelp();
+} else if (command === 'version') {
+    console.log(runtimePackage.version);
+} else {
+    process.on('SIGTERM', () => {
+        void shutdown('SIGTERM');
+    });
+    process.on('SIGINT', () => {
+        void shutdown('SIGINT');
+    });
+
+    main().catch((err) => {
+        log.fatal('Startup failed', { err });
+        process.exit(1);
+    });
+}

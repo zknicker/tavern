@@ -1,4 +1,5 @@
 import { type RuntimeHealth, type RuntimeInfo, runtimeProtocolVersion } from '@tavern/api';
+import runtimePackage from '../../package.json';
 import { nowIso } from './shared';
 
 function getRuntimeName() {
@@ -20,6 +21,6 @@ export function getRuntimeInfo(): RuntimeInfo {
         agentRuntimeId: managedOpenClawRuntimeId,
         name: getRuntimeName(),
         protocolVersion: runtimeProtocolVersion,
-        version: process.env.TAVERN_RUNTIME_VERSION?.trim() || '0.2.0',
+        version: process.env.TAVERN_RUNTIME_VERSION?.trim() || runtimePackage.version,
     };
 }

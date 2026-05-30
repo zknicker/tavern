@@ -11,7 +11,7 @@ import {
     writeText,
 } from './release-utils.mjs';
 
-const versionedPackagePaths = ['apps/website/package.json'];
+const versionedPackagePaths = ['apps/website/package.json', 'apps/runtime/package.json'];
 const tauriConfigPath = 'apps/website/src-tauri/tauri.conf.json';
 const cargoManifestPath = 'apps/website/src-tauri/Cargo.toml';
 const changelogPath = 'CHANGELOG.md';

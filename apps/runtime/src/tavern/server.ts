@@ -5,6 +5,7 @@ import { runtimeEventSchema, runtimeRoutes } from '@tavern/api';
 import { subscribeOpenClawAgentRuntimeEvents } from '@tavern/openclaw-gateway-adapter';
 import { WebSocket, WebSocketServer } from 'ws';
 
+import { getRuntimeHost, getRuntimePort } from '../config';
 import {
     recordManagedOpenClawSessionUpdate,
     syncManagedOpenClawAgents,
@@ -52,7 +53,8 @@ function isTavernApiEventsSocketPath(requestUrl: string | undefined) {
 }
 
 export function startTavernRuntimeServer(): TavernRuntimeServerHandle {
-    const port = Number(process.env.TAVERN_RUNTIME_PORT || 4310);
+    const port = Number(getRuntimePort());
+    const host = getRuntimeHost();
     const server = http.createServer(async (request, response) => {
         try {
             const fetchRequest = await toFetchRequest(request, `http://127.0.0.1:${port}`);
@@ -143,9 +145,10 @@ export function startTavernRuntimeServer(): TavernRuntimeServerHandle {
         });
     });
 
-    server.listen(port);
+    server.listen(port, host);
     const address = server.address();
     const boundPort = typeof address === 'object' && address ? address.port : port;
+    const boundHost = typeof address === 'object' && address ? address.address : host;
 
     return {
         stop() {
@@ -156,8 +159,16 @@ export function startTavernRuntimeServer(): TavernRuntimeServerHandle {
             openClawEventRelay.close();
             server.close();
         },
-        url: new URL(`http://127.0.0.1:${boundPort}`),
+        url: new URL(`http://${normalizeHostForUrl(boundHost)}:${boundPort}`),
     };
+}
+
+function normalizeHostForUrl(host: string) {
+    if (host === '::' || host === '0.0.0.0') {
+        return '127.0.0.1';
+    }
+
+    return host.includes(':') ? `[${host}]` : host;
 }
 
 function createOpenClawEventRelay() {

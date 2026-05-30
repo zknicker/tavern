@@ -1,11 +1,12 @@
 ---
-summary: Desktop release workflow for version bumps, changelog context, signing/notarization, updater metadata, S3 upload, tags, and GitHub Release.
+summary: Release workflow for version bumps, changelog context, Runtime artifacts, desktop signing/notarization, updater metadata, S3 upload, tags, and GitHub Release.
 read_when:
-  - cutting, signing, notarizing, or publishing a Tavern desktop release
+  - cutting, signing, notarizing, or publishing a Tavern release
+  - changing Runtime release artifacts or Homebrew deployment
   - changing release scripts, updater metadata, or release environment variables
 ---
 
-# Desktop Releases
+# Releases
 
 ## Flow
 
@@ -14,17 +15,23 @@ read_when:
 3. Run `bun run release:collect-changelog-context`.
 4. Update the top `CHANGELOG.md` entry from the commit context.
 5. Run `bun run release:check`.
-6. Run `bun run release:publish` from macOS with signing, notarization, updater,
+6. Run `bun run release:build-runtime-artifact`.
+7. Run `bun run release:publish` from macOS with signing, notarization, updater,
    S3, and GitHub auth configured.
 
-`release:publish` builds the signed desktop app, notarizes it, creates updater
-metadata, uploads artifacts, commits release metadata, pushes `main`, pushes the
-version tag, and creates the GitHub Release.
+`release:publish` builds the Runtime artifact, builds the signed desktop app,
+notarizes it, creates updater metadata, uploads desktop updater artifacts and
+Runtime tarballs to `TAVERN_RELEASE_S3_URI`, commits release metadata, pushes
+`main`, pushes the version tag, and creates the GitHub Release.
 
-The desktop app carries the runtime as a Tauri sidecar. The release build
-compiles `apps/server/src/index.ts` into `src-tauri/binaries/tavern-server-*`,
-then Tauri bundles that binary inside `Tavern.app`, the DMG, and the updater
-archive. There is no separate runtime artifact to deploy for desktop releases.
+Tavern ships two production artifacts:
+
+* `Tavern.app` is the desktop client plus its local app backend.
+* `tavern-runtime-<version>-<target>.tar.gz` is the always-on Runtime server for
+  a Mac mini or other host.
+
+The desktop app connects to the configured Runtime URL. Runtime deployment and
+Homebrew service management live in [Runtime Deployment](runtime-deploy.md).
 
 Keep every published changelog version anchored by a matching `vX.Y.Z` git tag
 or a `release: vX.Y.Z` commit. The changelog context command uses that anchor to

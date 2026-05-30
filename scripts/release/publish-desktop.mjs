@@ -1,9 +1,10 @@
 #!/usr/bin/env node
 
 import { spawnSync } from 'node:child_process';
+import { existsSync } from 'node:fs';
 import { readdir } from 'node:fs/promises';
 import path from 'node:path';
-import { loadEnvFile, repoRoot } from './release-utils.mjs';
+import { loadEnvFile, readJson, repoRoot } from './release-utils.mjs';
 
 loadEnvFile();
 
@@ -19,20 +20,31 @@ const bundleRoot = path.join(
 );
 const macosBundleDir = path.join(bundleRoot, 'macos');
 const dmgBundleDir = path.join(bundleRoot, 'dmg');
+const runtimeBundleDir = path.join(
+    repoRoot,
+    'apps',
+    'website',
+    'src-tauri',
+    'target',
+    'release',
+    'runtime'
+);
 
 const main = async () => {
+    const { version } = await readJson('apps/website/package.json');
     const artifacts = [
         path.join(bundleRoot, 'latest.json'),
         ...(await findFiles(dmgBundleDir, (entry) => entry.endsWith('.dmg'))),
         ...(await findFiles(macosBundleDir, (entry) => entry.endsWith('.app.tar.gz'))),
         ...(await findFiles(macosBundleDir, (entry) => entry.endsWith('.app.tar.gz.sig'))),
+        ...(await findRuntimeArtifacts(version)),
     ];
 
     for (const artifact of artifacts) {
         runAws(['s3', 'cp', artifact, `${s3Uri}/${path.basename(artifact)}`]);
     }
 
-    console.log(`Published ${artifacts.length} desktop release artifacts to ${s3Uri}`);
+    console.log(`Published ${artifacts.length} release artifacts to ${s3Uri}`);
 };
 
 await main();
@@ -40,6 +52,24 @@ await main();
 async function findFiles(directory, predicate) {
     const entries = await readdir(directory);
     return entries.filter(predicate).map((entry) => path.join(directory, entry));
+}
+
+async function findFilesIfExists(directory, predicate) {
+    if (!existsSync(directory)) {
+        return [];
+    }
+
+    return findFiles(directory, predicate);
+}
+
+async function findRuntimeArtifacts(version) {
+    const expectedPrefix = `tavern-runtime-${version}-`;
+    return findFilesIfExists(
+        runtimeBundleDir,
+        (entry) =>
+            entry.startsWith(expectedPrefix) &&
+            (entry.endsWith('.tar.gz') || entry.endsWith('.tar.gz.sha256'))
+    );
 }
 
 function runAws(args) {

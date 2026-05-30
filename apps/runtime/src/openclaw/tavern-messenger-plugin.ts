@@ -64,41 +64,68 @@ async function syncTavernPluginPackage(input: {
     packageDirectory: string;
     stableDirectoryName: string;
 }) {
-    const repositoryRoot = findRepositoryRoot(process.cwd());
-    if (!repositoryRoot) {
+    const source = findPluginPackageSource(input.packageDirectory);
+    if (!source) {
         return null;
     }
 
-    const sourcePath = path.join(repositoryRoot, 'packages', input.packageDirectory);
-    const sourcePackageJson = path.join(sourcePath, 'package.json');
+    const sourcePackageJson = path.join(source.sourcePath, 'package.json');
     if (!fsSync.existsSync(sourcePackageJson)) {
         return null;
     }
 
     const deployPath = getStableTavernPluginPath(input.stableDirectoryName);
-    if (path.resolve(sourcePath) === path.resolve(deployPath)) {
+    if (path.resolve(source.sourcePath) === path.resolve(deployPath)) {
         return deployPath;
     }
 
     const temporaryPath = `${deployPath}.tmp-${process.pid}-${Date.now()}`;
     await fs.rm(temporaryPath, { force: true, recursive: true });
     await fs.mkdir(path.dirname(deployPath), { recursive: true });
-    await fs.cp(sourcePath, temporaryPath, {
+    await fs.cp(source.sourcePath, temporaryPath, {
         filter: (source) => !source.includes(`${path.sep}node_modules${path.sep}`),
         recursive: true,
     });
     if (input.openClawPackageRoot) {
         await linkOpenClawPeerDependency(temporaryPath, input.openClawPackageRoot);
     }
-    await linkWorkspaceDependency({
+    await linkPackageDependency({
         packageName: '@tavern/sdk',
         pluginPath: temporaryPath,
-        repositoryRoot,
-        workspacePath: path.join(repositoryRoot, 'packages', 'tavern-sdk'),
+        packagePath: source.sdkPath,
+        rootPath: source.rootPath,
     });
     await fs.rm(deployPath, { force: true, recursive: true });
     await fs.rename(temporaryPath, deployPath);
     return deployPath;
+}
+
+function findPluginPackageSource(packageDirectory: string) {
+    const repositoryRoot = findRepositoryRoot(process.cwd());
+    if (repositoryRoot) {
+        return {
+            rootPath: repositoryRoot,
+            sdkPath: path.join(repositoryRoot, 'packages', 'tavern-sdk'),
+            sourcePath: path.join(repositoryRoot, 'packages', packageDirectory),
+        };
+    }
+
+    const packagedRoot = findPackagedRuntimeRoot();
+    if (!packagedRoot) {
+        return null;
+    }
+
+    return {
+        rootPath: packagedRoot,
+        sdkPath: path.join(packagedRoot, 'share', 'tavern', 'node_modules', '@tavern', 'sdk'),
+        sourcePath: path.join(
+            packagedRoot,
+            'share',
+            'tavern',
+            'openclaw-plugins',
+            packageDirectory
+        ),
+    };
 }
 
 async function linkOpenClawPeerDependency(pluginPath: string, openClawPackageRoot: string) {
@@ -110,28 +137,26 @@ async function linkOpenClawPeerDependency(pluginPath: string, openClawPackageRoo
     await fs.symlink(openClawPackageRoot, openClawLinkPath, 'dir');
 }
 
-async function linkWorkspaceDependency(input: {
+async function linkPackageDependency(input: {
     packageName: string;
     pluginPath: string;
-    repositoryRoot: string;
-    workspacePath: string;
+    packagePath: string;
+    rootPath: string;
 }) {
-    if (!fsSync.existsSync(path.join(input.workspacePath, 'package.json'))) {
+    if (!fsSync.existsSync(path.join(input.packagePath, 'package.json'))) {
         return;
     }
 
     const nodeModulesPath = path.join(input.pluginPath, 'node_modules');
     const packageLinkPath = path.join(nodeModulesPath, ...input.packageName.split('/'));
 
-    if (!isPathInside(input.repositoryRoot, input.workspacePath)) {
-        throw new Error(
-            `Refusing to link workspace dependency outside repository: ${input.packageName}`
-        );
+    if (!isPathInside(input.rootPath, input.packagePath)) {
+        throw new Error(`Refusing to link package dependency outside root: ${input.packageName}`);
     }
 
     await fs.mkdir(path.dirname(packageLinkPath), { recursive: true });
     await fs.rm(packageLinkPath, { force: true, recursive: true });
-    await fs.symlink(input.workspacePath, packageLinkPath, 'dir');
+    await fs.symlink(input.packagePath, packageLinkPath, 'dir');
 }
 
 function isPathInside(rootPath: string, candidatePath: string) {
@@ -184,6 +209,28 @@ function findRepositoryRoot(startDirectory: string) {
             }
         } catch {
             // Keep walking.
+        }
+
+        const parentDirectory = path.dirname(currentDirectory);
+        if (parentDirectory === currentDirectory) {
+            return null;
+        }
+        currentDirectory = parentDirectory;
+    }
+}
+
+function findPackagedRuntimeRoot() {
+    const executablePath = process.execPath;
+    if (!executablePath) {
+        return null;
+    }
+
+    let currentDirectory = path.dirname(executablePath);
+
+    while (true) {
+        const candidate = path.join(currentDirectory, 'share', 'tavern', 'openclaw-plugins');
+        if (fsSync.existsSync(candidate)) {
+            return currentDirectory;
         }
 
         const parentDirectory = path.dirname(currentDirectory);

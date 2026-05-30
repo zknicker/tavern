@@ -5,6 +5,7 @@ import path from 'node:path';
 
 import { type AgentRuntimeCapabilityHealthId, agentRuntimeRoutes } from '@tavern/api';
 import { refreshRuntimeCapabilities } from '../capabilities/store';
+import { getRuntimePort } from '../config';
 import { log } from '../log';
 import { publishRuntimeEvent } from '../tavern/runtime-events';
 import { syncManagedOpenClawSnapshotsInBackground } from './agent-sync';
@@ -241,11 +242,11 @@ function spawnOpenClawGateway(
 }
 
 function buildRuntimeChatSocketUrl() {
-    return `ws://127.0.0.1:${process.env.TAVERN_RUNTIME_PORT || 4310}${agentRuntimeRoutes.chatSocket}`;
+    return `ws://127.0.0.1:${getRuntimePort()}${agentRuntimeRoutes.chatSocket}`;
 }
 
 function buildRuntimeApiBaseUrl() {
-    return `http://127.0.0.1:${process.env.TAVERN_RUNTIME_PORT || 4310}`;
+    return `http://127.0.0.1:${getRuntimePort()}`;
 }
 
 async function stopChild(child: ChildProcess, options?: { force?: boolean }) {
