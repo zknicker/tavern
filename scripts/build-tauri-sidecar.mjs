@@ -38,6 +38,10 @@ if (!forceBuild && isCurrentSidecar(sidecarSignature)) {
 rmSync(sidecarOutputPath, { force: true });
 rmSync(`${sidecarOutputPath}.exe`, { force: true });
 
+execFileSync('bun', ['run', '--filter', '@tavern/sdk', 'build'], {
+    cwd: repositoryRoot,
+    stdio: 'inherit',
+});
 execFileSync(
     'bun',
     ['build', 'apps/server/src/index.ts', '--compile', '--outfile', sidecarOutputPath],

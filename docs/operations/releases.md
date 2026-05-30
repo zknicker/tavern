@@ -21,6 +21,15 @@ read_when:
 metadata, uploads artifacts, commits release metadata, pushes `main`, pushes the
 version tag, and creates the GitHub Release.
 
+The desktop app carries the runtime as a Tauri sidecar. The release build
+compiles `apps/server/src/index.ts` into `src-tauri/binaries/tavern-server-*`,
+then Tauri bundles that binary inside `Tavern.app`, the DMG, and the updater
+archive. There is no separate runtime artifact to deploy for desktop releases.
+
+Keep every published changelog version anchored by a matching `vX.Y.Z` git tag
+or a `release: vX.Y.Z` commit. The changelog context command uses that anchor to
+collect changes for the next release.
+
 ## Environment
 
 Required release environment:
