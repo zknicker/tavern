@@ -82,6 +82,7 @@ function toAgentRuntimeConnection(input: {
 
 async function getRuntimeOwnedStatus(input: { baseUrl: string; runtimeId: string }): Promise<{
     capabilities: AgentRuntimeConnection['capabilities'];
+    lastError: null | string;
     runtimeVersion: null | string;
 }> {
     let client: ReturnType<typeof createAgentRuntimeClientForConnection> | null = null;
@@ -92,10 +93,11 @@ async function getRuntimeOwnedStatus(input: { baseUrl: string; runtimeId: string
             capabilities: capabilities.map((capability) =>
                 toAppCapabilityStatus(capability, input.runtimeId)
             ),
+            lastError: null,
             runtimeVersion: info.version,
         };
-    } catch {
-        return { capabilities: [], runtimeVersion: null };
+    } catch (error) {
+        return { capabilities: [], lastError: toErrorMessage(error), runtimeVersion: null };
     } finally {
         client?.close();
     }
@@ -139,7 +141,7 @@ async function toSavedAgentRuntimeConnection(
         id: record.id,
         isActive: record.isActive,
         lastCheckedAt: record.lastCheckedAt,
-        lastError: record.lastError,
+        lastError: runtimeStatus.lastError,
         lastSyncedAt: record.lastSyncedAt,
         name: record.name,
         runtimeVersion: runtimeStatus.runtimeVersion,
@@ -230,7 +232,7 @@ export async function getAgentRuntimeConnection() {
             isActive: true,
             capabilities: runtimeStatus.capabilities,
             lastCheckedAt: environmentRecord?.lastCheckedAt ?? null,
-            lastError: environmentRecord?.lastError ?? null,
+            lastError: runtimeStatus.lastError,
             lastSyncedAt: environmentRecord?.lastSyncedAt ?? null,
             name: 'Tavern Runtime',
             runtimeVersion: runtimeStatus.runtimeVersion,

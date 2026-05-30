@@ -44,7 +44,7 @@ export function OnboardingPage() {
     const navigate = useNavigate();
     const agentRuntimeConnection = useAgentRuntimeConnection();
     const connection = agentRuntimeConnection.connection;
-    const isVersionMismatch = connection?.versionStatus === 'mismatched';
+    const isVersionMismatch = agentRuntimeConnection.status === 'version-mismatch';
     const mismatchKind = connection ? getRuntimeVersionMismatchKind(connection) : null;
 
     React.useEffect(() => {
@@ -85,6 +85,7 @@ export function OnboardingPage() {
                         onConnect={() => {
                             navigate('/dashboard/overview');
                         }}
+                        status={agentRuntimeConnection.status}
                     />
                 </div>
             </div>
@@ -120,20 +121,25 @@ function OnboardingBackground() {
 
 function RuntimeConnectionCard({
     connection,
+    status,
     onConnect,
 }: {
     connection:
         | RuntimeUpdateConnection
         | ReturnType<typeof useAgentRuntimeConnection>['connection'];
+    status: ReturnType<typeof useAgentRuntimeConnection>['status'];
     onConnect: () => void;
 }) {
     return (
         <Card className="w-full max-w-[620px] rounded-[8px] border-white/42 bg-white/72 text-neutral-900 shadow-[0_26px_80px_rgb(17_24_39_/_0.24),inset_0_1px_rgb(255_255_255_/_0.72)] backdrop-blur-2xl">
             <CardContent className="px-8 py-7 sm:px-10 sm:py-9">
-                {connection?.versionStatus === 'mismatched' ? (
+                {status === 'version-mismatch' && connection ? (
                     <RuntimeUpdatePanel connection={connection} />
                 ) : (
-                    <TavernRuntimeOnboardingForm connection={connection} onConnect={onConnect} />
+                    <TavernRuntimeOnboardingForm
+                        connection={status === 'unconfigured' ? null : connection}
+                        onConnect={onConnect}
+                    />
                 )}
             </CardContent>
         </Card>
