@@ -136,35 +136,20 @@ function RuntimeConnectionCard({
                 {status === 'version-mismatch' && connection ? (
                     <RuntimeUpdatePanel connection={connection} />
                 ) : (
-                    <TavernRuntimeOnboardingForm
-                        connection={status === 'unconfigured' ? null : connection}
-                        onConnect={onConnect}
-                    />
+                    <TavernRuntimeOnboardingForm onConnect={onConnect} />
                 )}
             </CardContent>
         </Card>
     );
 }
 
-function TavernRuntimeOnboardingForm({
-    connection,
-    onConnect,
-}: {
-    connection:
-        | RuntimeUpdateConnection
-        | ReturnType<typeof useAgentRuntimeConnection>['connection'];
-    onConnect: () => void;
-}) {
+function TavernRuntimeOnboardingForm({ onConnect }: { onConnect: () => void }) {
     const runtimeUrlInputId = React.useId();
-    const [baseUrl, setBaseUrl] = React.useState(connection?.baseUrl ?? '');
+    const [baseUrl, setBaseUrl] = React.useState('');
     const connectMutation = useConnectAgentRuntime({
         onSuccess: onConnect,
     });
     const errorMessage = connectMutation.error?.message ?? null;
-
-    React.useEffect(() => {
-        setBaseUrl(connection?.baseUrl ?? '');
-    }, [connection?.baseUrl]);
 
     return (
         <form
@@ -184,14 +169,6 @@ function TavernRuntimeOnboardingForm({
                     The Tavern Runtime is where your agents live, store their memories, and work on
                     tasks. Once you have it up and running, connect to it here.
                 </p>
-                {connection?.versionStatus === 'mismatched' ? (
-                    <p className="rounded-[8px] border border-[#b7631f]/35 bg-[#fff2dc] px-3 py-2 text-[#6b3412] text-sm">
-                        App v{connection.appVersion} requires Runtime v{connection.appVersion}.
-                        Connected Runtime is{' '}
-                        {connection.runtimeVersion ? `v${connection.runtimeVersion}` : 'unknown'}.
-                        Update Runtime, then reconnect.
-                    </p>
-                ) : null}
             </div>
 
             <Field>
