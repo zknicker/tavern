@@ -98,7 +98,7 @@ function parseConfiguredAgentRuntimeConnection(record: unknown) {
         isActive: Boolean(raw.isActive),
         runtimeCapabilities: [],
         runtimeVersion: null,
-        versionStatus: 'mismatched',
+        versionStatus: 'unknown',
     });
 
     return {

@@ -1,4 +1,4 @@
-import { afterEach, test } from 'bun:test';
+import { afterEach, mock, test } from 'bun:test';
 import assert from 'node:assert/strict';
 import { mkdtempSync } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -6,10 +6,23 @@ import { join } from 'node:path';
 
 const originalDatabasePath = process.env.DATABASE_PATH;
 const originalTavernRuntimeUrl = process.env.TAVERN_RUNTIME_URL;
+const listCapabilities = mock(async () => {
+    throw new Error('Runtime request failed with status 502.');
+});
+const closeRuntimeClient = mock(() => undefined);
+
+mock.module('../src/agent-runtime/client-factory.ts', () => ({
+    createAgentRuntimeClientForConnection: mock(() => ({
+        close: closeRuntimeClient,
+        listCapabilities,
+    })),
+}));
 
 afterEach(() => {
     process.env.DATABASE_PATH = originalDatabasePath;
     process.env.TAVERN_RUNTIME_URL = originalTavernRuntimeUrl;
+    listCapabilities.mockClear();
+    closeRuntimeClient.mockClear();
 });
 
 test('clearAgentRuntimeConnection can clear an active Tavern Runtime environment override', async () => {
@@ -30,4 +43,36 @@ test('clearAgentRuntimeConnection can clear an active Tavern Runtime environment
     assert.equal(process.env.TAVERN_RUNTIME_URL, undefined);
     assert.equal(agentRuntimeConnection.getCurrentAgentRuntimeUrl(), null);
     assert.equal(await agentRuntimeConnection.getAgentRuntimeConnection(), null);
+});
+
+test('unreachable saved Runtime keeps its URL without reporting a version mismatch', async () => {
+    process.env.DATABASE_PATH = join(
+        mkdtempSync(join(tmpdir(), 'tavern-agent-runtime-connection-test-')),
+        'test.sqlite'
+    );
+    process.env.TAVERN_RUNTIME_URL = undefined;
+
+    const [{ ensureDatabaseSchema }, agentRuntimeConnection, storage] = await Promise.all([
+        import('../src/db/bootstrap.ts'),
+        import('../src/agent-runtime-connection/service.ts'),
+        import('../src/storage/agent-runtime-connections.ts'),
+    ]);
+
+    await ensureDatabaseSchema();
+    await storage.saveAgentRuntimeConnection({
+        baseUrl: 'https://zachs-mac-mini.taila0b849.ts.net:18790',
+        enabled: true,
+        id: 'tavern-openclaw-managed',
+        isActive: true,
+        lastCheckedAt: new Date().toISOString(),
+        lastError: null,
+        name: 'Tavern Runtime',
+    });
+
+    const connection = await agentRuntimeConnection.getAgentRuntimeConnection();
+
+    assert.equal(connection?.baseUrl, 'https://zachs-mac-mini.taila0b849.ts.net:18790');
+    assert.equal(connection?.lastError, 'Runtime request failed with status 502.');
+    assert.equal(connection?.runtimeVersion, null);
+    assert.equal(connection?.versionStatus, 'unknown');
 });

@@ -76,7 +76,11 @@ function toAgentRuntimeConnection(input: {
         runtimeCapabilities: capabilities,
         runtimeVersion,
         source: input.source,
-        versionStatus: runtimeVersion === appVersion ? 'matched' : 'mismatched',
+        versionStatus: runtimeVersion
+            ? runtimeVersion === appVersion
+                ? 'matched'
+                : 'mismatched'
+            : 'unknown',
     };
 }
 

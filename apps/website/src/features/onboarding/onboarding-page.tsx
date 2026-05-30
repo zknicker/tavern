@@ -33,12 +33,8 @@ const runtimeUpdateSteps = [
 type RuntimeUpdateStep = (typeof runtimeUpdateSteps)[number];
 type RuntimeVersionMismatchKind = 'app-needs-update' | 'runtime-needs-update';
 
-interface RuntimeUpdateConnection {
-    appVersion: string;
-    baseUrl: string;
-    runtimeVersion: string | null;
-    versionStatus: 'matched' | 'mismatched';
-}
+type RuntimeConnection = ReturnType<typeof useAgentRuntimeConnection>['connection'];
+type RuntimeUpdateConnection = NonNullable<RuntimeConnection>;
 
 export function OnboardingPage() {
     const navigate = useNavigate();
@@ -124,9 +120,7 @@ function RuntimeConnectionCard({
     status,
     onConnect,
 }: {
-    connection:
-        | RuntimeUpdateConnection
-        | ReturnType<typeof useAgentRuntimeConnection>['connection'];
+    connection: RuntimeConnection;
     status: ReturnType<typeof useAgentRuntimeConnection>['status'];
     onConnect: () => void;
 }) {
@@ -136,20 +130,30 @@ function RuntimeConnectionCard({
                 {status === 'version-mismatch' && connection ? (
                     <RuntimeUpdatePanel connection={connection} />
                 ) : (
-                    <TavernRuntimeOnboardingForm onConnect={onConnect} />
+                    <TavernRuntimeOnboardingForm connection={connection} onConnect={onConnect} />
                 )}
             </CardContent>
         </Card>
     );
 }
 
-function TavernRuntimeOnboardingForm({ onConnect }: { onConnect: () => void }) {
+function TavernRuntimeOnboardingForm({
+    connection,
+    onConnect,
+}: {
+    connection: RuntimeConnection;
+    onConnect: () => void;
+}) {
     const runtimeUrlInputId = React.useId();
-    const [baseUrl, setBaseUrl] = React.useState('');
+    const [baseUrl, setBaseUrl] = React.useState(connection?.baseUrl ?? '');
     const connectMutation = useConnectAgentRuntime({
         onSuccess: onConnect,
     });
     const errorMessage = connectMutation.error?.message ?? null;
+
+    React.useEffect(() => {
+        setBaseUrl((current) => current || connection?.baseUrl || '');
+    }, [connection?.baseUrl]);
 
     return (
         <form
@@ -194,6 +198,9 @@ function TavernRuntimeOnboardingForm({ onConnect }: { onConnect: () => void }) {
                     </Button>
                 </div>
             </Field>
+            {connection?.lastError ? (
+                <FieldError>Could not reach Tavern Runtime: {connection.lastError}</FieldError>
+            ) : null}
             {errorMessage ? <FieldError>{errorMessage}</FieldError> : null}
         </form>
     );
