@@ -24,6 +24,7 @@ import type { SkillGetOutput } from '../../lib/trpc.tsx';
 import { SkillDetails } from './skill-install-panel.tsx';
 
 type SkillDetail = NonNullable<SkillGetOutput['skill']>;
+const skillsBasePath = '/dashboard/settings/skills';
 
 export function SkillDetailView() {
     const navigate = useNavigate();
@@ -33,7 +34,7 @@ export function SkillDetailView() {
     const skill = skillQuery.data?.skill ?? null;
 
     const handleBack = React.useCallback(() => {
-        navigate('/dashboard/skills');
+        navigate(skillsBasePath);
     }, [navigate]);
 
     return (
@@ -64,7 +65,7 @@ function SkillDetailHeader({ skill }: { skill: SkillDetail | null }) {
         <AppShellContentHeader>
             <BreadcrumbTrail
                 items={[
-                    { label: 'Skills & Plugins', to: '/dashboard/skills' },
+                    { label: 'Skills & Plugins', to: skillsBasePath },
                     { label: skill?.name ?? 'Skill' },
                 ]}
             />

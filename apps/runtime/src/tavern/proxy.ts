@@ -1,6 +1,7 @@
 import type { AgentRuntimeCreateMessage } from '@tavern/api';
 import { agentRuntimeRoutes } from '@tavern/api';
 
+import { listCodexAppServerSkills, mergeOpenClawAndCodexSkills } from '../codex-app-server/skills';
 import { createLocalOpenClawClient } from '../openclaw/local-client';
 import { sendTavernChannelMessage } from './channel-relay';
 import { json } from './http';
@@ -126,7 +127,13 @@ async function dispatchModels({ client, request, url }: RouteContext) {
 async function dispatchSkills({ client, request, url }: RouteContext, segments: string[]) {
     if (request.method === 'GET' && url.pathname === agentRuntimeRoutes.skills) {
         const agentId = url.searchParams.get('agentId');
-        return await client.listSkills(agentId ? { agentId } : undefined);
+        const [openClawSkills, codexSkills] = await Promise.all([
+            client.listSkills(agentId ? { agentId } : undefined),
+            listCodexAppServerSkills().catch(() => []),
+        ]);
+        return {
+            skills: mergeOpenClawAndCodexSkills(openClawSkills.skills, codexSkills),
+        };
     }
     if (request.method === 'POST' && url.pathname === agentRuntimeRoutes.skillInstall) {
         return await client.installSkill(await readJson(request));

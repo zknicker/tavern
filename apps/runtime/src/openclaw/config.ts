@@ -25,6 +25,8 @@ import {
 } from './tavern-messenger-plugin';
 import { resolveManagedOpenClawVersion } from './version';
 
+const noBundledSkillAllowlist = ['__tavern_no_bundled_openclaw_skills__'];
+
 export interface ManagedOpenClawRuntimeConfig {
     configDir: string;
     configPath: string;
@@ -273,6 +275,9 @@ export function buildManagedOpenClawConfig(input: {
             slots: {
                 memory: 'none',
             },
+        },
+        skills: {
+            allowBundled: noBundledSkillAllowlist,
         },
         tools: {
             profile: 'coding',

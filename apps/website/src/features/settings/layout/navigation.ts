@@ -9,6 +9,7 @@ import {
     PaintBrush03Icon,
     SystemUpdate01Icon,
     UserAccountIcon,
+    ZapIcon,
 } from '@hugeicons-pro/core-stroke-rounded';
 
 export const settingsNavItems = [
@@ -41,6 +42,12 @@ export const settingsNavItems = [
         id: 'sessions',
         label: 'Sessions',
         to: '/dashboard/settings/sessions',
+    },
+    {
+        icon: ZapIcon,
+        id: 'skills',
+        label: 'Skills & Plugins',
+        to: '/dashboard/settings/skills',
     },
     {
         icon: AiBrain01Icon,

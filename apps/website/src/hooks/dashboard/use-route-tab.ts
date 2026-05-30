@@ -6,7 +6,6 @@ export const routeTabs = [
     { id: 'stats', label: 'Stats', path: '/dashboard/stats' },
     { id: 'cron', label: 'Automations', path: '/dashboard/cron' },
     { id: 'cortex', label: 'Cortex', path: '/dashboard/cortex' },
-    { id: 'skills', label: 'Skills & Plugins', path: '/dashboard/skills' },
 ] as const;
 
 type RouteTab = (typeof routeTabs)[number]['id'];

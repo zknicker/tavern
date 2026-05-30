@@ -7,6 +7,8 @@ const zeroCost = Object.freeze({
     output: 0,
 });
 
+const noBundledSkillAllowlist = ['__tavern_no_bundled_openclaw_skills__'];
+
 const e2eAgentToolNames = [
     'read',
     'write',
@@ -145,6 +147,9 @@ export function buildOpenClawE2eConfig(input: OpenClawE2eConfigInput) {
             slots: {
                 memory: 'none',
             },
+        },
+        skills: {
+            allowBundled: noBundledSkillAllowlist,
         },
         tools: {
             profile: 'coding',

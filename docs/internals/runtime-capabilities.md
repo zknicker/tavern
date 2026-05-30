@@ -141,12 +141,14 @@ integration points, and external dependencies.
 | --- | --- |
 | `status` | Runtime is reachable and returns its capability contract. |
 | `tavernPlugin` | Managed OpenClaw reports the Tavern plugin is installed. |
-| `memory` | Managed OpenClaw memory configuration matches Tavern requirements. |
+| `gateway` | Runtime owns a ready managed OpenClaw Gateway process. |
+| `memory` | Managed OpenClaw Gateway is ready and memory state can be refreshed. |
 | `mentions` | Runtime can expose mention/search hooks used by Tavern tools. |
 | `cortexDatabase` | Cortex SQLite schema exists and is usable. Empty Cortex stores are still healthy. |
 | `cortexWiki` | The Cortex wiki path can be read and written, or its parent path can host an empty wiki. |
 | `embeddingModel` | Cortex embedding settings are usable and recent embedding failures do not indicate auth or quota failure. |
-| `models` | Runtime can serve the current model inventory. |
+| `models` | Runtime can serve the current model inventory. If Gateway is down, cached inventory is degraded. |
+| `skills` | Runtime can serve the current skill inventory. If Gateway is down, cached inventory is degraded. |
 
 ## App Rendering
 

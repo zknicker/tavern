@@ -2,13 +2,12 @@ import type { AgentRuntimeSkill, AgentRuntimeSkillSummary } from '@tavern/api';
 import { z } from 'zod';
 import type { TavernAgentRuntimeClient } from '../agent-runtime/client.ts';
 import { getAgentRuntimeSkill, listAgentRuntimeSkills } from '../agent-runtime/skills.ts';
-import { resolveAgentDefaultPrimaryColor } from '../agents/palette.ts';
 import { emitSkillInvalidationCascade } from '../api/invalidation-events.ts';
 import {
     applyCurrentOpenClawConfigFixups,
     getOpenClawConfigState,
+    syncOpenClawConfigSnapshots,
 } from '../openclaw-config/service.ts';
-import { listAgents } from '../storage/agents.ts';
 import {
     deleteTavernVaultSecret,
     getSkillEnvSecretId,
@@ -33,19 +32,15 @@ const skillSecretValueSchema = z.object({
 });
 
 export async function listSkills(): Promise<SkillList> {
-    const [agents, configState, skills] = await Promise.all([
-        listAgents({ includeInactive: true }),
+    await syncOpenClawConfigSnapshots().catch(() => undefined);
+    const [configState, skills] = await Promise.all([
         getOpenClawConfigState(),
         listAgentRuntimeSkills().catch(() => null),
     ]);
-    const runtimeAgents = filterAgentsByRuntime({
-        agents,
-        runtimeId: configState.runtimeId,
-    });
 
     return skillListSchema.parse({
         plugins: buildPluginSummaries(configState.snapshot?.config ?? null),
-        skills: (skills ?? []).map((skill) => buildSkillSummary(skill, runtimeAgents)),
+        skills: filterRuntimeVisibleSkills(skills ?? []).map((skill) => buildSkillSummary(skill)),
     });
 }
 
@@ -53,33 +48,21 @@ export async function getSkill(input: unknown): Promise<{ skill: SkillDetail | n
     const parsed = getSkillInputSchema.parse(input);
     const runtimeSkill = await getRuntimeSkill(parsed.skillId);
 
-    if (!runtimeSkill) {
+    if (!(runtimeSkill && isRuntimeVisibleSkill(runtimeSkill))) {
         return skillGetSchema.parse({ skill: null });
     }
 
-    const [agents, configState, secrets] = await Promise.all([
-        listAgents({ includeInactive: true }),
-        getOpenClawConfigState(),
-        listSkillSecretStatuses(runtimeSkill),
-    ]);
-    const runtimeAgents = filterAgentsByRuntime({
-        agents,
-        runtimeId: configState.runtimeId,
-    });
+    const secrets = await listSkillSecretStatuses(runtimeSkill);
     const metadata = parseSkillMarkdown({
         contentMarkdown: runtimeSkill.contentMarkdown,
         skillId: runtimeSkill.id,
     });
-    const summary = buildSkillSummary(runtimeSkill, runtimeAgents);
+    const summary = buildSkillSummary(runtimeSkill);
 
     return skillGetSchema.parse({
         skill: {
             ...summary,
             allowedTools: metadata.allowedTools ?? runtimeSkill.allowedTools,
-            assignedAgents: buildAssignedAgents({
-                agents: runtimeAgents,
-                skill: runtimeSkill,
-            }),
             bodyMarkdown: metadata.bodyMarkdown,
             contentMarkdown: runtimeSkill.contentMarkdown,
             files: runtimeSkill.files,
@@ -163,6 +146,14 @@ async function getRuntimeSkill(skillId: string) {
     return summary ? toRuntimeSkill(summary) : null;
 }
 
+export function filterRuntimeVisibleSkills(skills: AgentRuntimeSkillSummary[]) {
+    return skills.filter((skill) => isRuntimeVisibleSkill(skill));
+}
+
+function isRuntimeVisibleSkill(skill: AgentRuntimeSkillSummary) {
+    return skill.blockedByAllowlist !== true;
+}
+
 export function mergeRuntimeSkillDetail(
     detail: AgentRuntimeSkill,
     summary: AgentRuntimeSkillSummary
@@ -171,6 +162,7 @@ export function mergeRuntimeSkillDetail(
         ...detail,
         allowedTools: summary.allowedTools ?? detail.allowedTools,
         baseDir: summary.baseDir ?? detail.baseDir,
+        blockedByAllowlist: summary.blockedByAllowlist ?? detail.blockedByAllowlist,
         bundled: summary.bundled ?? detail.bundled,
         commandVisible: summary.commandVisible ?? detail.commandVisible,
         configChecks: summary.configChecks,
@@ -200,22 +192,11 @@ async function requireRuntimeSkill(skillId: string) {
     return skill;
 }
 
-function buildSkillSummary(
-    skill: AgentRuntimeSkillSummary,
-    agents: Awaited<ReturnType<typeof listAgents>>
-) {
+function buildSkillSummary(skill: AgentRuntimeSkillSummary) {
     const dependencyState = resolveDependencyState(skill);
-    const agentCount = countAssignedAgents({
-        agents,
-        skillId: skill.id,
-    });
-    const usability = resolveSkillUsability({
-        agentCount,
-        dependencyState,
-    });
+    const usability = resolveSkillUsability(dependencyState);
 
     return skillSummarySchema.parse({
-        agentCount,
         allowedTools: skill.allowedTools,
         diagnostic: buildSkillDiagnostic(skill, dependencyState),
         dependencyState,
@@ -223,10 +204,15 @@ function buildSkillSummary(
         id: skill.id,
         missing: skill.missing,
         name: skill.name,
+        surface: resolveSkillSurface(skill),
         updatedAt: skill.updatedAt,
         usability,
         version: null,
     });
+}
+
+function resolveSkillSurface(skill: AgentRuntimeSkillSummary): SkillDetail['surface'] {
+    return skill.runtimeSource?.toLowerCase().includes('codex') ? 'codex' : 'openclaw';
 }
 
 export function buildPluginSummaries(config: null | Record<string, unknown>): PluginSummary[] {
@@ -279,59 +265,13 @@ function buildPluginSummary(input: {
     };
 }
 
-function buildAssignedAgents(input: {
-    agents: Awaited<ReturnType<typeof listAgents>>;
-    skill: AgentRuntimeSkillSummary;
-}): SkillDetail['assignedAgents'] {
-    return input.agents
-        .filter((agent) => parseAgentSkillIds(agent).includes(input.skill.id))
-        .map((agent) => ({
-            agentId: agent.id,
-            agentAvatar: resolveAssignedAgentAvatar({
-                agent,
-                fallback: agent.name,
-            }),
-            agentName: agent.name,
-            agentPrimaryColor: agent.primaryColor ?? resolveAgentDefaultPrimaryColor(agent.id),
-            baseDir: input.skill.baseDir ?? null,
-            commandVisible: input.skill.commandVisible ?? null,
-            configChecks: input.skill.configChecks,
-            dependencyState: resolveDependencyState(input.skill),
-            eligible: input.skill.eligible ?? null,
-            missing: input.skill.missing,
-            modelVisible: input.skill.modelVisible ?? null,
-            requirements: input.skill.requirements,
-            runtimeId: agent.runtimeId,
-            syncError: null,
-        }))
-        .sort((left, right) => left.agentName.localeCompare(right.agentName));
-}
-
-function filterAgentsByRuntime(input: {
-    agents: Awaited<ReturnType<typeof listAgents>>;
-    runtimeId: null | string;
-}) {
-    return input.runtimeId
-        ? input.agents.filter((agent) => agent.runtimeId === input.runtimeId)
-        : input.agents;
-}
-
-function countAssignedAgents(input: {
-    agents: Awaited<ReturnType<typeof listAgents>>;
-    skillId: string;
-}) {
-    return input.agents.filter((agent) => parseAgentSkillIds(agent).includes(input.skillId))
-        .length;
-}
-
-function resolveSkillUsability(input: {
-    agentCount: number;
-    dependencyState: SkillDetail['dependencyState'];
-}): SkillDetail['usability'] {
-    if (input.dependencyState === 'missing') {
+function resolveSkillUsability(
+    dependencyState: SkillDetail['dependencyState']
+): SkillDetail['usability'] {
+    if (dependencyState === 'missing') {
         return 'not_usable';
     }
-    return input.agentCount > 0 ? 'enabled' : 'disabled';
+    return 'enabled';
 }
 
 function buildSkillDiagnostic(
@@ -372,35 +312,6 @@ function formatMissingRequirements(requirements: SkillDetail['missing']) {
     ];
 
     return missing.length > 0 ? `Missing ${missing.join(', ')}` : null;
-}
-
-function resolveAssignedAgentAvatar(input: {
-    agent: Awaited<ReturnType<typeof listAgents>>[number] | undefined;
-    fallback: string;
-}) {
-    return input.agent?.emoji ?? input.agent?.avatar ?? initials(input.fallback);
-}
-
-function initials(value: string) {
-    const result = value
-        .split(/[^a-zA-Z0-9]+/u)
-        .filter(Boolean)
-        .slice(0, 2)
-        .map((part) => part[0]?.toUpperCase() ?? '')
-        .join('');
-
-    return result || '?';
-}
-
-function parseAgentSkillIds(agent: Awaited<ReturnType<typeof listAgents>>[number]) {
-    try {
-        const value = JSON.parse(agent.enabledSkillIdsJson) as unknown;
-        return Array.isArray(value)
-            ? value.filter((item): item is string => typeof item === 'string')
-            : [];
-    } catch {
-        return [];
-    }
 }
 
 function toRuntimeSkill(summary: AgentRuntimeSkillSummary): AgentRuntimeSkill {

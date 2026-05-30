@@ -46,6 +46,10 @@ export function mergeManagedOpenClawConfig(
             readRecord(sanitizedExistingConfig.plugins),
             existingChannels
         ),
+        skills: mergeRecords(
+            readRecord(sanitizedExistingConfig.skills),
+            readRecord(managedConfig.skills)
+        ),
     };
 }
 

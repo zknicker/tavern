@@ -4,7 +4,6 @@ import {
     Atom02Icon,
     Home09Icon,
     HourglassIcon,
-    ZapIcon,
 } from '@hugeicons-pro/core-stroke-rounded';
 import { Icon } from '../../components/ui/icon.tsx';
 import {
@@ -22,7 +21,6 @@ const tabIcons = {
     stats: Activity01Icon,
     cron: HourglassIcon,
     cortex: Atom02Icon,
-    skills: ZapIcon,
 } satisfies Record<RouteTab, IconSvgElement>;
 
 interface AppSidebarNavProps {

@@ -68,6 +68,7 @@ export function mapOpenClawSkillList(input: unknown): AgentRuntimeSkillList {
     const skills = readRecordArray(record, ['skills', 'items', 'entries']).map((skill) => ({
         allowedTools: readString(skill, ['allowedTools']),
         baseDir: readString(skill, ['baseDir']),
+        blockedByAllowlist: readBoolean(skill, ['blockedByAllowlist']),
         bundled: readBoolean(skill, ['bundled']),
         commandVisible: readBoolean(skill, ['commandVisible']),
         configChecks: readConfigChecks(skill.configChecks),

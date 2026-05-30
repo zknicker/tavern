@@ -128,16 +128,16 @@ export function createAppRouter() {
                                 },
                                 {
                                     path: 'skills',
-                                    lazy: lazyRoute(
-                                        () => import('./routes/dashboard/skills-page.tsx'),
-                                        'SkillsPage'
-                                    ),
+                                    element: <Navigate replace to="/dashboard/settings/skills" />,
                                 },
                                 {
                                     path: 'skills/:skillId',
                                     lazy: lazyRoute(
-                                        () => import('./routes/dashboard/skill-detail-page.tsx'),
-                                        'SkillDetailPage'
+                                        () =>
+                                            import(
+                                                './routes/dashboard/legacy-skill-detail-redirect-page.tsx'
+                                            ),
+                                        'LegacySkillDetailRedirectPage'
                                     ),
                                 },
                                 {
@@ -246,6 +246,23 @@ export function createAppRouter() {
                                                         './routes/dashboard/settings-sessions-page.tsx'
                                                     ),
                                                 'SettingsSessionsPage'
+                                            ),
+                                        },
+                                        {
+                                            path: 'skills',
+                                            lazy: lazyRoute(
+                                                () => import('./routes/dashboard/skills-page.tsx'),
+                                                'SkillsPage'
+                                            ),
+                                        },
+                                        {
+                                            path: 'skills/:skillId',
+                                            lazy: lazyRoute(
+                                                () =>
+                                                    import(
+                                                        './routes/dashboard/skill-detail-page.tsx'
+                                                    ),
+                                                'SkillDetailPage'
                                             ),
                                         },
                                         {

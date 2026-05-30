@@ -7,8 +7,8 @@ export function SettingsLayout() {
     return (
         <OpenClawSettingsDraftProvider>
             <div className="flex min-h-full flex-col md:h-full md:min-h-0">
-                <section className="flex min-h-0 flex-1 flex-col overflow-y-auto">
-                    <div className="mx-auto w-full max-w-5xl px-6 pt-9 pb-10">
+                <section className="flex min-h-0 flex-1 flex-col overflow-y-scroll [scrollbar-gutter:stable]">
+                    <div className="mx-auto w-full max-w-5xl px-12 pt-14 pb-16">
                         <Outlet />
                     </div>
                     <OpenClawSettingsSaveBar />

@@ -10,6 +10,7 @@ export function useOpenClawConfigEvents() {
                 utils.agent.list.invalidate(),
                 utils.agent.primary.invalidate(),
                 utils.model.list.invalidate(),
+                utils.skill.list.invalidate(),
             ]);
         },
     });

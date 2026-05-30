@@ -288,6 +288,7 @@ export const agentRuntimeSkillInstallOptionSchema = z.object({
 export const agentRuntimeSkillSummarySchema = z.object({
     allowedTools: z.string().nullable(),
     baseDir: z.string().trim().min(1).nullable().optional(),
+    blockedByAllowlist: z.boolean().optional(),
     bundled: z.boolean().optional(),
     commandVisible: z.boolean().optional(),
     configChecks: z.array(agentRuntimeSkillConfigCheckSchema).default([]),

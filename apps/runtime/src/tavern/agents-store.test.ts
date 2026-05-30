@@ -365,7 +365,7 @@ describe('Runtime agent store', () => {
 
         expect(listResponse.status).toBe(200);
         await expect(listResponse.json()).resolves.toMatchObject({
-            skills: [{ id: 'browser' }],
+            skills: expect.arrayContaining([expect.objectContaining({ id: 'browser' })]),
         });
         expect(detailResponse.status).toBe(200);
         await expect(detailResponse.json()).resolves.toMatchObject({

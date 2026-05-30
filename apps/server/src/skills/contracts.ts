@@ -1,5 +1,4 @@
 import {
-    agentRuntimeSkillConfigCheckSchema,
     agentRuntimeSkillFileSchema,
     agentRuntimeSkillInstallOptionSchema,
     agentRuntimeSkillRequirementsSchema,
@@ -32,23 +31,7 @@ export const deleteSkillSecretInputSchema = z.object({
 
 export const skillDependencyStateSchema = z.enum(['missing', 'ready', 'unknown']);
 export const skillPluginUsabilitySchema = z.enum(['disabled', 'enabled', 'not_usable']);
-
-export const skillAssignedAgentSchema = z.object({
-    agentId: z.string().min(1),
-    agentAvatar: z.string().min(1),
-    agentName: z.string().min(1),
-    agentPrimaryColor: z.string().min(1),
-    baseDir: z.string().min(1).nullable(),
-    commandVisible: z.boolean().nullable(),
-    configChecks: z.array(agentRuntimeSkillConfigCheckSchema),
-    dependencyState: skillDependencyStateSchema,
-    eligible: z.boolean().nullable(),
-    missing: agentRuntimeSkillRequirementsSchema,
-    modelVisible: z.boolean().nullable(),
-    requirements: agentRuntimeSkillRequirementsSchema,
-    runtimeId: z.string().min(1),
-    syncError: z.string().nullable(),
-});
+export const skillRuntimeSurfaceSchema = z.enum(['codex', 'openclaw']);
 
 export const skillSetupCommandSchema = z.object({
     bins: z.array(z.string().min(1)),
@@ -64,7 +47,6 @@ export const skillSecretSchema = z.object({
 });
 
 export const skillSummarySchema = z.object({
-    agentCount: z.number().int().nonnegative(),
     allowedTools: z.string().nullable(),
     description: z.string().nullable(),
     id: z.string().min(1),
@@ -72,6 +54,7 @@ export const skillSummarySchema = z.object({
     diagnostic: z.string().nullable(),
     dependencyState: skillDependencyStateSchema,
     missing: agentRuntimeSkillRequirementsSchema,
+    surface: skillRuntimeSurfaceSchema,
     updatedAt: z.string().datetime().nullable(),
     usability: skillPluginUsabilitySchema,
     version: z.string().min(1).nullable(),
@@ -89,7 +72,6 @@ export const pluginSummarySchema = z.object({
 });
 
 export const skillDetailSchema = skillSummarySchema.extend({
-    assignedAgents: z.array(skillAssignedAgentSchema),
     bodyMarkdown: z.string(),
     contentMarkdown: z.string(),
     files: z.array(agentRuntimeSkillFileSchema),

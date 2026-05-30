@@ -6,6 +6,7 @@ import {
     runtimeRoutes,
 } from '@tavern/api';
 import { handleRuntimeCapabilitiesRequest } from '../capabilities/routes';
+import { listCodexAppServerSkills, mergeOpenClawAndCodexSkills } from '../codex-app-server/skills';
 import { handleCortexRequest } from '../cortex/routes';
 import { handleRuntimeJobsRequest } from '../jobs/routes';
 import { listMacApps } from '../mac-apps/inventory';
@@ -102,7 +103,13 @@ export async function handleTavernRuntimeRequest(request: Request): Promise<Resp
 
     if (request.method === 'GET' && url.pathname === agentRuntimeRoutes.skills) {
         refreshManagedOpenClawSkillsInBackground('skills-read');
-        return json(listStoredOpenClawSkills());
+        const [openClawSkills, codexSkills] = await Promise.all([
+            Promise.resolve(listStoredOpenClawSkills()),
+            listCodexAppServerSkills().catch(() => []),
+        ]);
+        return json({
+            skills: mergeOpenClawAndCodexSkills(openClawSkills.skills, codexSkills),
+        });
     }
 
     if (request.method === 'GET' && url.pathname === agentRuntimeRoutes.sessions) {

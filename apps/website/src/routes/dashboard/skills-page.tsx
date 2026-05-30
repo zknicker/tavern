@@ -7,6 +7,8 @@ import { SkillsCatalog } from '../../features/skills/skills-catalog.tsx';
 import { SkillsPageSkeleton } from '../../features/skills/skills-page-skeleton.tsx';
 import { useSkillList } from '../../hooks/skills/use-skill-list.ts';
 
+const skillsBasePath = '/dashboard/settings/skills';
+
 export function SkillsPage() {
     const navigate = useNavigate();
     const [searchParams] = useSearchParams();
@@ -20,7 +22,7 @@ export function SkillsPage() {
             return;
         }
 
-        navigate(`/dashboard/skills/${encodeURIComponent(legacySkillId)}`, { replace: true });
+        navigate(`${skillsBasePath}/${encodeURIComponent(legacySkillId)}`, { replace: true });
     }, [legacySkillId, navigate]);
 
     if (skillsQuery.isPending && !skillsQuery.data) {
@@ -28,10 +30,10 @@ export function SkillsPage() {
     }
 
     return (
-        <div className="flex h-full min-h-0 bg-background">
+        <div>
             <SkillsCatalog
                 onOpenSkill={(skillId) => {
-                    navigate(`/dashboard/skills/${encodeURIComponent(skillId)}`);
+                    navigate(`${skillsBasePath}/${encodeURIComponent(skillId)}`);
                 }}
                 plugins={plugins}
                 skills={skills}

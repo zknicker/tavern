@@ -21,11 +21,13 @@ function SessionsSettingsContent() {
     }
 
     return (
-        <div className="grid gap-6">
-            <BadgeDivider subtext="Synced Tavern, system, and external chats.">
-                Sessions
-            </BadgeDivider>
-            <AgentRecentChats agent={agent} />
+        <div className="grid gap-10">
+            <section>
+                <BadgeDivider className="pb-4" subtext="Synced Tavern, system, and external chats.">
+                    Sessions
+                </BadgeDivider>
+                <AgentRecentChats agent={agent} />
+            </section>
         </div>
     );
 }

@@ -71,7 +71,7 @@ export const runtimeCapabilityDefinitions: RuntimeCapabilityDefinition[] = [
     healthyCapability('messages', 'messages'),
     healthyCapability('sessionEvents', 'session events'),
     healthyCapability('sessions', 'sessions'),
-    healthyCapability('skills', 'skills'),
+    gatewayBackedCapability('skills', 'skills', 'Skill inventory may be stale.'),
     healthyCapability('skillMaterialization', 'skill materialization'),
     healthyCapability('status', 'runtime'),
     healthyCapability('tasks', 'tasks'),
@@ -112,8 +112,8 @@ export const runtimeCapabilityDefinitions: RuntimeCapabilityDefinition[] = [
         check() {
             return getManagedOpenClawState().gatewayReady === false
                 ? {
-                      reason: 'Managed OpenClaw Gateway is not ready.',
-                      state: 'unavailable',
+                      reason: 'Managed OpenClaw Gateway is not ready; memory may be stale.',
+                      state: 'degraded',
                   }
                 : { state: 'healthy' };
         },
@@ -137,6 +137,12 @@ export const runtimeCapabilityDefinitions: RuntimeCapabilityDefinition[] = [
     },
     {
         check() {
+            if (getManagedOpenClawState().gatewayReady === false) {
+                return {
+                    reason: 'Managed OpenClaw Gateway is not ready; model inventory may be stale.',
+                    state: 'degraded',
+                };
+            }
             const models = getStoredOpenClawModels();
             return models.agents.length > 0
                 ? { state: 'healthy' }
@@ -162,6 +168,30 @@ function healthyCapability(
     return {
         check() {
             return { state: 'healthy' };
+        },
+        displayName,
+        id,
+        refresh: {
+            intervalMs,
+            runOnStart: true,
+        },
+    };
+}
+
+function gatewayBackedCapability(
+    id: AgentRuntimeCapabilityHealthId,
+    displayName: string,
+    degradedReason: string,
+    intervalMs = 5 * minuteMs
+): RuntimeCapabilityDefinition {
+    return {
+        check() {
+            return getManagedOpenClawState().gatewayReady === false
+                ? {
+                      reason: `Managed OpenClaw Gateway is not ready; ${degradedReason}`,
+                      state: 'degraded',
+                  }
+                : { state: 'healthy' };
         },
         displayName,
         id,

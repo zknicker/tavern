@@ -2,7 +2,7 @@
 
 Skills are reusable instruction packages that the runtime can expose to the agent.
 
-The Skills & Plugins product surface also shows runtime plugins. A plugin is not necessarily a
+The Skills & Plugins settings surface also shows runtime plugins. A plugin is not necessarily a
 Tavern skill. It is a runtime-owned package or capability that can add workflows, skills, tools,
 app access, channel behavior, or local capabilities when Tavern can verify and enable it.
 
@@ -13,15 +13,15 @@ app access, channel behavior, or local capabilities when Tavern can verify and e
   assets.
 - Tavern shows skills from runtime-visible sources without owning their filesystem lifecycle.
 - A plugin has a stable product identity scoped by its runtime source.
-- Plugins appear beside skills on the Skills & Plugins page because both answer "what can the agent
+- Plugins appear beside skills on the Skills & Plugins settings page because both answer "what can the agent
   do?" for users.
 - Plugin rows must be visibly distinct from skill rows. A runtime plugin, MCP server, or Codex app
   is never labeled as a Tavern skill.
 - Product-facing skill and plugin selection applies to the agent.
 - Selecting a skill should affect only the agent's runtime access.
 - Enabling a plugin should affect only the agent's runtime config.
-- Tavern product APIs expose visible skills with source metadata. OpenClaw bundled/runtime skill
-  categories remain source facts, not separate product concepts.
+- Tavern product APIs expose runtime-reported skills with source metadata. Managed OpenClaw
+  bundled skills are blocked from prompt eligibility by Runtime config, not by a catalog filter.
 - Tavern product APIs may expose runtime plugins as plugin records with source metadata, usability,
   and runtime-provided diagnostic text.
 - Platform connections are not plugins. Messaging accounts and places where an agent exists, such
@@ -37,7 +37,7 @@ app access, channel behavior, or local capabilities when Tavern can verify and e
 - Runtime plugins remain owned by their source runtime. Tavern owns only the user's Tavern-side
   enablement choice and the managed config needed to grant access.
 - OpenClaw plugins may provide skills, workflows, tools, channels, runtime behavior, or provider
-  capabilities. Tavern presents only the agent-facing pieces on the Skills & Plugins page.
+  capabilities. Tavern presents only the agent-facing pieces on the Skills & Plugins settings page.
 - Native Codex plugins remain Codex app-server capabilities. Tavern may enable supported plugins
   through OpenClaw Codex harness config, but it does not copy them into a Tavern skill store or the
   OpenClaw workspace.
@@ -58,7 +58,9 @@ when names conflict:
 5. `<workspace>/.agents/skills`
 6. `<workspace>/skills`
 
-Tavern should show OpenClaw-visible skill sources when OpenClaw reports them.
+Tavern should show the skill inventory OpenClaw reports. Tavern should not inject managed OpenClaw
+bundled skills into agent prompt context; Runtime owns the managed OpenClaw install and keeps
+bundled skills available to OpenClaw itself.
 
 OpenClaw plugin skills are a hybrid source. A plugin may list skill directories in
 `openclaw.plugin.json`; those skill directories load only when the plugin is enabled and currently
@@ -88,7 +90,9 @@ separate product state.
 
 Codex native plugins are a Codex harness source. Tavern should read availability from Codex
 app-server inventory when possible and project supported entries into OpenClaw Codex harness config.
-Codex native plugins stay Codex-owned and are not represented as Tavern skills.
+Codex native plugins stay Codex-owned and are not represented as Tavern skills. Any Codex-only row
+shown in Tavern must be labeled as Codex-only so users do not mistake it for an OpenClaw prompt
+skill.
 
 Codex Computer Use is special. OpenClaw's bundled `codex` plugin does not perform desktop actions
 itself. It enables Codex app-server plugin support, finds or asks Codex app-server to install or
@@ -108,6 +112,8 @@ cannot make the MCP server available, the Codex-mode turn should fail before the
   can show those as diagnostic details, but they are not separate product states.
 - Tavern Runtime launches managed OpenClaw with Seatbelt guardrails and generates OpenClaw config
   for the managed workspace.
+- Managed OpenClaw config sets `skills.allowBundled` to a Tavern sentinel allowlist with no real
+  bundled skill ids so bundled skills do not appear in `<available_skills>`.
 - Tavern does not build or manage Docker sandbox images for individual agents.
 - Setup actions execute inside managed OpenClaw's Seatbelt process boundary when OpenClaw runs
   package-manager setup.
@@ -128,13 +134,15 @@ cannot make the MCP server available, the Codex-mode turn should fail before the
 
 ## UI Model
 
-- The Skills list contains runtime-visible skills.
-- The Skills & Plugins page contains a Plugins area for runtime-backed capabilities visible to
+- The Skills list contains product-visible runtime skills.
+- The Skills & Plugins settings page contains a Plugins area for runtime-backed capabilities visible to
   Tavern.
 - Skill provenance is shown from source metadata, such as workspace, project, personal,
-  managed/local, bundled, plugin-owned, or extra directory.
+  managed/local, plugin-owned, or extra directory.
 - Plugin provenance is shown from its product source, such as OpenClaw, Codex, or Claude, not from
   raw marketplace paths by default.
+- Codex-only capabilities are explicitly labeled because they execute through the Codex harness
+  rather than OpenClaw skill prompt injection.
 - The detail header should show the skill or plugin name and description only.
 - Agent usability lives in the detail sidebar as enabled, disabled, or not usable. Runtime
   diagnostics can explain not usable, but they are not first-class product states.

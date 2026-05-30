@@ -7,7 +7,9 @@ import test from 'node:test';
 const directory = mkdtempSync(join(tmpdir(), 'tavern-skill-plugin-inventory-'));
 process.env.DATABASE_PATH = join(directory, 'test.sqlite');
 
-const { buildPluginSummaries, mergeRuntimeSkillDetail } = await import('../src/skills/service.ts');
+const { buildPluginSummaries, filterRuntimeVisibleSkills, mergeRuntimeSkillDetail } = await import(
+    '../src/skills/service.ts'
+);
 
 test('buildPluginSummaries projects agent-facing OpenClaw plugins', () => {
     const plugins = buildPluginSummaries({
@@ -84,6 +86,41 @@ test('buildPluginSummaries marks disabled plugins without expanding diagnostic s
     assert.equal(plugins[0]?.id, 'browser');
     assert.equal(plugins[0]?.enabled, false);
     assert.equal(plugins[0]?.usability, 'disabled');
+});
+
+test('filterRuntimeVisibleSkills hides skills blocked by runtime policy', () => {
+    const visible = filterRuntimeVisibleSkills([
+        {
+            blockedByAllowlist: true,
+            description: 'Bundled skill blocked by managed Runtime config',
+            eligible: false,
+            id: 'github',
+            install: [],
+            missing: { anyBins: [], bins: [], config: [], env: [], os: [] },
+            name: 'github',
+            requirements: { anyBins: [], bins: [], config: [], env: [], os: [] },
+            runtimeSource: 'openclaw-bundled',
+            source: 'builtin',
+            updatedAt: null,
+        },
+        {
+            description: 'Personal browser workflow',
+            eligible: true,
+            id: 'agent-browser',
+            install: [],
+            missing: { anyBins: [], bins: [], config: [], env: [], os: [] },
+            name: 'agent-browser',
+            requirements: { anyBins: [], bins: [], config: [], env: [], os: [] },
+            runtimeSource: 'agents-skills-personal',
+            source: 'installed',
+            updatedAt: null,
+        },
+    ]);
+
+    assert.deepEqual(
+        visible.map((skill) => skill.id),
+        ['agent-browser']
+    );
 });
 
 test('mergeRuntimeSkillDetail preserves live requirement metadata from status', () => {

@@ -1,5 +1,7 @@
 import { type ChildProcess, spawn } from 'node:child_process';
+import fs from 'node:fs/promises';
 import net from 'node:net';
+import path from 'node:path';
 
 import { type AgentRuntimeCapabilityHealthId, agentRuntimeRoutes } from '@tavern/api';
 import { refreshRuntimeCapabilities } from '../capabilities/store';
@@ -50,9 +52,41 @@ export async function startOpenClawForRuntime(): Promise<ManagedOpenClawHandle> 
     let stopping = false;
     let restartTimer: ReturnType<typeof setTimeout> | null = null;
 
-    const startGateway = (reason: 'initial' | 'restart') => {
+    const startGateway = async (reason: 'initial' | 'restart') => {
+        if (await isPortOpen(runtimeConfig.gatewayPort)) {
+            if (await stopRecordedManagedGateway(runtimeConfig)) {
+                log.warn('Stopped stale managed OpenClaw Gateway before restart', {
+                    gatewayUrl: runtimeConfig.gatewayUrl,
+                    reason,
+                });
+            } else {
+                log.error('Managed OpenClaw Gateway port is already in use; not restarting', {
+                    gatewayUrl: runtimeConfig.gatewayUrl,
+                    port: runtimeConfig.gatewayPort,
+                    reason,
+                });
+                markManagedOpenClawGatewayStopped();
+                publishGatewayCapabilitiesUpdated();
+                scheduleRestart({ delayMs: 5000 });
+                return;
+            }
+        }
+
+        if (await isPortOpen(runtimeConfig.gatewayPort)) {
+            log.error('Managed OpenClaw Gateway port is already in use; not restarting', {
+                gatewayUrl: runtimeConfig.gatewayUrl,
+                port: runtimeConfig.gatewayPort,
+                reason,
+            });
+            markManagedOpenClawGatewayStopped();
+            publishGatewayCapabilitiesUpdated();
+            scheduleRestart({ delayMs: 5000 });
+            return;
+        }
+
         const gateway = spawnOpenClawGateway(launchCommand, runtimeConfig);
         child = gateway;
+        void writeManagedGatewayHandoff(runtimeConfig, gateway);
         attachRestartHandler(gateway);
         log.info('Managed OpenClaw Gateway starting', {
             gatewayUrl: runtimeConfig.gatewayUrl,
@@ -65,9 +99,8 @@ export async function startOpenClawForRuntime(): Promise<ManagedOpenClawHandle> 
                     return;
                 }
 
-                if (markManagedOpenClawGatewayReady()) {
-                    publishCapabilityUpdated('gateway');
-                }
+                markManagedOpenClawGatewayReady();
+                publishGatewayCapabilitiesUpdated();
                 syncManagedOpenClawSnapshotsInBackground('gateway-ready');
             })
             .catch((err) => {
@@ -75,24 +108,23 @@ export async function startOpenClawForRuntime(): Promise<ManagedOpenClawHandle> 
                     return;
                 }
 
-                if (markManagedOpenClawGatewayStopped()) {
-                    publishCapabilityUpdated('gateway');
-                }
+                markManagedOpenClawGatewayStopped();
+                publishGatewayCapabilitiesUpdated();
                 log.error('Managed OpenClaw Gateway startup failed', { err });
                 stopChild(gateway);
                 scheduleRestart();
             });
     };
 
-    const scheduleRestart = () => {
+    const scheduleRestart = (options?: { delayMs?: number }) => {
         if (stopping || restartTimer) {
             return;
         }
 
         restartTimer = setTimeout(() => {
             restartTimer = null;
-            startGateway('restart');
-        }, 500);
+            void startGateway('restart');
+        }, options?.delayMs ?? 500);
     };
 
     const attachRestartHandler = (nextChild: ChildProcess) => {
@@ -102,15 +134,15 @@ export async function startOpenClawForRuntime(): Promise<ManagedOpenClawHandle> 
             }
 
             child = null;
-            if (markManagedOpenClawGatewayStopped()) {
-                publishCapabilityUpdated('gateway');
-            }
+            void clearManagedGatewayHandoff(runtimeConfig, nextChild.pid);
+            markManagedOpenClawGatewayStopped();
+            publishGatewayCapabilitiesUpdated();
             log.warn('Managed OpenClaw Gateway exited; restarting', { code, signal });
             scheduleRestart();
         });
     };
 
-    startGateway('initial');
+    void startGateway('initial');
 
     return {
         async stop(options?: { force?: boolean }) {
@@ -119,32 +151,51 @@ export async function startOpenClawForRuntime(): Promise<ManagedOpenClawHandle> 
                 clearTimeout(restartTimer);
                 restartTimer = null;
             }
-            if (markManagedOpenClawGatewayStopped()) {
-                publishCapabilityUpdated('gateway');
-            }
+            markManagedOpenClawGatewayStopped();
+            publishGatewayCapabilitiesUpdated();
             const gateway = child;
             child = null;
             if (gateway) {
                 await stopChild(gateway, options);
+                await clearManagedGatewayHandoff(runtimeConfig, gateway.pid);
             }
         },
     };
 }
 
+interface ManagedGatewayHandoff {
+    configPath: string;
+    gatewayPort: number;
+    pid: number;
+    stateDir: string;
+    updatedAt: string;
+}
+
+function publishGatewayCapabilitiesUpdated() {
+    publishCapabilitiesUpdated(['gateway', 'memory', 'models', 'skills']);
+}
+
 function publishCapabilityUpdated(capability: AgentRuntimeCapabilityHealthId) {
-    void refreshRuntimeCapabilities({ ids: [capability] })
+    publishCapabilitiesUpdated([capability]);
+}
+
+function publishCapabilitiesUpdated(capabilities: AgentRuntimeCapabilityHealthId[]) {
+    void refreshRuntimeCapabilities({ ids: capabilities })
         .catch((err) => {
             log.warn('Failed to refresh Runtime capability before publishing update', {
-                capability,
+                capabilities,
                 err,
             });
         })
         .finally(() => {
-            publishRuntimeEvent({
-                capability,
-                timestamp: new Date().toISOString(),
-                type: 'capability.updated',
-            });
+            const timestamp = new Date().toISOString();
+            for (const capability of capabilities) {
+                publishRuntimeEvent({
+                    capability,
+                    timestamp,
+                    type: 'capability.updated',
+                });
+            }
         });
 }
 
@@ -221,6 +272,133 @@ async function stopChild(child: ChildProcess, options?: { force?: boolean }) {
             resolve();
         }
     });
+}
+
+async function stopRecordedManagedGateway(
+    runtimeConfig: Awaited<ReturnType<typeof prepareManagedOpenClawConfig>>
+) {
+    const handoff = await readManagedGatewayHandoff(runtimeConfig);
+    if (!handoff || handoff.gatewayPort !== runtimeConfig.gatewayPort) {
+        return false;
+    }
+    if (
+        handoff.configPath !== runtimeConfig.configPath ||
+        handoff.stateDir !== runtimeConfig.stateDir
+    ) {
+        return false;
+    }
+    if (!isPidAlive(handoff.pid)) {
+        await clearManagedGatewayHandoff(runtimeConfig, handoff.pid);
+        return false;
+    }
+
+    log.warn('Stopping stale managed OpenClaw Gateway from previous Runtime process', {
+        pid: handoff.pid,
+        port: handoff.gatewayPort,
+    });
+    try {
+        process.kill(handoff.pid, 'SIGTERM');
+    } catch {
+        await clearManagedGatewayHandoff(runtimeConfig, handoff.pid);
+        return false;
+    }
+
+    const stopped = await waitForPortClosed(runtimeConfig.gatewayPort, 5000);
+    if (!stopped && isPidAlive(handoff.pid)) {
+        log.warn('Force stopping stale managed OpenClaw Gateway', { pid: handoff.pid });
+        try {
+            process.kill(handoff.pid, 'SIGKILL');
+        } catch {}
+    }
+
+    const cleared = stopped || (await waitForPortClosed(runtimeConfig.gatewayPort, 5000));
+    if (cleared) {
+        await clearManagedGatewayHandoff(runtimeConfig, handoff.pid);
+    }
+    return cleared;
+}
+
+async function writeManagedGatewayHandoff(
+    runtimeConfig: Awaited<ReturnType<typeof prepareManagedOpenClawConfig>>,
+    child: ChildProcess
+) {
+    if (!child.pid) {
+        return;
+    }
+    await fs
+        .writeFile(
+            managedGatewayHandoffPath(runtimeConfig),
+            `${JSON.stringify(
+                {
+                    configPath: runtimeConfig.configPath,
+                    gatewayPort: runtimeConfig.gatewayPort,
+                    pid: child.pid,
+                    stateDir: runtimeConfig.stateDir,
+                    updatedAt: new Date().toISOString(),
+                } satisfies ManagedGatewayHandoff,
+                null,
+                2
+            )}\n`,
+            { mode: 0o600 }
+        )
+        .catch((err) => {
+            log.warn('Failed to write managed OpenClaw Gateway handoff', { err });
+        });
+}
+
+async function readManagedGatewayHandoff(
+    runtimeConfig: Awaited<ReturnType<typeof prepareManagedOpenClawConfig>>
+) {
+    try {
+        const parsed = JSON.parse(
+            await fs.readFile(managedGatewayHandoffPath(runtimeConfig), 'utf8')
+        ) as Partial<ManagedGatewayHandoff>;
+        return typeof parsed.pid === 'number' &&
+            typeof parsed.gatewayPort === 'number' &&
+            typeof parsed.configPath === 'string' &&
+            typeof parsed.stateDir === 'string'
+            ? (parsed as ManagedGatewayHandoff)
+            : null;
+    } catch {
+        return null;
+    }
+}
+
+async function clearManagedGatewayHandoff(
+    runtimeConfig: Awaited<ReturnType<typeof prepareManagedOpenClawConfig>>,
+    pid: number | undefined
+) {
+    const handoff = await readManagedGatewayHandoff(runtimeConfig);
+    if (handoff && pid && handoff.pid !== pid) {
+        return;
+    }
+    await fs.rm(managedGatewayHandoffPath(runtimeConfig), { force: true }).catch(() => undefined);
+}
+
+function managedGatewayHandoffPath(
+    runtimeConfig: Awaited<ReturnType<typeof prepareManagedOpenClawConfig>>
+) {
+    return path.join(runtimeConfig.stateDir, 'tavern-managed-gateway-handoff.json');
+}
+
+function isPidAlive(pid: number) {
+    try {
+        process.kill(pid, 0);
+        return true;
+    } catch {
+        return false;
+    }
+}
+
+async function waitForPortClosed(port: number, timeoutMs: number) {
+    const deadline = Date.now() + timeoutMs;
+    while (Date.now() < deadline) {
+        if (!(await isPortOpen(port))) {
+            return true;
+        }
+        await new Promise((resolve) => setTimeout(resolve, 100));
+    }
+    return !(await isPortOpen(port));
 }
 
 async function waitForGateway(port: number, child: ChildProcess) {

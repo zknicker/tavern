@@ -97,6 +97,9 @@ describe('buildManagedOpenClawConfig', () => {
                     memory: 'none',
                 },
             },
+            skills: {
+                allowBundled: ['__tavern_no_bundled_openclaw_skills__'],
+            },
         });
     });
 
@@ -133,6 +136,16 @@ describe('buildManagedOpenClawConfig', () => {
                             },
                         },
                     },
+                },
+                skills: {
+                    entries: {
+                        github: {
+                            env: {
+                                GITHUB_TOKEN: 'token',
+                            },
+                        },
+                    },
+                    allowBundled: ['github'],
                 },
             },
             gatewayPort: 18_789,
@@ -188,6 +201,16 @@ describe('buildManagedOpenClawConfig', () => {
                     'discord',
                     'openai',
                 ]),
+            },
+            skills: {
+                allowBundled: ['__tavern_no_bundled_openclaw_skills__'],
+                entries: {
+                    github: {
+                        env: {
+                            GITHUB_TOKEN: 'token',
+                        },
+                    },
+                },
             },
         });
         expect(getPluginLoadPaths(config)).toEqual(

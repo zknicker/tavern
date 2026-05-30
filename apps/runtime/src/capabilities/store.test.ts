@@ -7,6 +7,10 @@ import { saveCortexSettings } from '../cortex/settings';
 import { closeDb, getDb, initTestDb } from '../db/connection';
 import { ensureRuntimeSchema } from '../db/schema';
 import { ensureRuntimeJobsSchema } from '../jobs/schema';
+import {
+    markManagedOpenClawGatewayReady,
+    markManagedOpenClawGatewayStopped,
+} from '../openclaw/state';
 import { getRuntimeCapability, listRuntimeCapabilities, refreshRuntimeCapabilities } from './store';
 
 describe('Runtime capabilities store', () => {
@@ -24,6 +28,7 @@ describe('Runtime capabilities store', () => {
 
     afterEach(async () => {
         vi.restoreAllMocks();
+        markManagedOpenClawGatewayStopped();
         closeDb();
         process.env.CODEX_HOME = undefined;
         process.env.TAVERN_CORTEX_WIKI_PATH = undefined;
@@ -126,6 +131,43 @@ describe('Runtime capabilities store', () => {
             },
             state: 'healthy',
         });
+    });
+
+    test('marks Gateway-backed cached capabilities degraded when managed Gateway is down', async () => {
+        const capabilities = await refreshRuntimeCapabilities({
+            ids: ['gateway', 'memory', 'models', 'skills'],
+        });
+
+        expect(
+            capabilities.map((capability) => ({
+                id: capability.id,
+                state: capability.state,
+            }))
+        ).toEqual([
+            { id: 'gateway', state: 'unavailable' },
+            { id: 'memory', state: 'degraded' },
+            { id: 'models', state: 'degraded' },
+            { id: 'skills', state: 'degraded' },
+        ]);
+    });
+
+    test('marks Gateway-backed capabilities healthy when managed Gateway is ready', async () => {
+        markManagedOpenClawGatewayReady();
+
+        const capabilities = await refreshRuntimeCapabilities({
+            ids: ['gateway', 'memory', 'skills'],
+        });
+
+        expect(
+            capabilities.map((capability) => ({
+                id: capability.id,
+                state: capability.state,
+            }))
+        ).toEqual([
+            { id: 'gateway', state: 'healthy' },
+            { id: 'memory', state: 'healthy' },
+            { id: 'skills', state: 'healthy' },
+        ]);
     });
 
     test('records embedding model health from Runtime-owned checks', async () => {

@@ -10,11 +10,11 @@ describe('dashboard route tab', () => {
         expect(getRouteTab('/dashboard/overview')).toBe('overview');
         expect(getRouteTab('/dashboard/stats')).toBe('stats');
         expect(getRouteTab('/dashboard/cortex')).toBe('cortex');
-        expect(getRouteTab('/dashboard/skills')).toBe('skills');
     });
 
     test('returns null when no dashboard tab is active', () => {
         expect(getRouteTab('/dashboard/agent')).toBeNull();
+        expect(getRouteTab('/dashboard/skills')).toBeNull();
         expect(getRouteTab('/dashboard/settings')).toBeNull();
         expect(getRouteTab('/dashboard/settings/theme')).toBeNull();
     });
