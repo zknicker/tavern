@@ -14,7 +14,7 @@ export function UpdatesSettings() {
     const { checkForUpdate, status, updateAndRestart } = useDesktopUpdate();
     const copy = getUpdateCopy(status);
     const canCheck = status.phase !== 'checking' && status.phase !== 'downloading';
-    const canInstall = status.phase === 'available';
+    const canInstall = status.phase === 'available' || status.phase === 'ready';
 
     return (
         <div>
@@ -47,7 +47,7 @@ export function UpdatesSettings() {
                                     size="sm"
                                 >
                                     <Icon icon={SystemUpdate01Icon} />
-                                    Update
+                                    {status.phase === 'ready' ? 'Restart' : 'Update'}
                                 </Button>
                             </div>
                         </div>
@@ -92,6 +92,8 @@ function getStatusLabel(status: DesktopUpdateStatus) {
             return 'Up to date';
         case 'downloading':
             return `Downloading ${Math.round(status.progress * 100)}%`;
+        case 'ready':
+            return `v${status.version} ready`;
         case 'error':
             return 'Update failed';
         case 'restarting':
@@ -112,7 +114,9 @@ function getUpdateCopy(status: DesktopUpdateStatus) {
         case 'current':
             return 'This copy is on the latest published release.';
         case 'downloading':
-            return 'Downloading the update. Tavern will restart after installation.';
+            return 'Downloading the update in the background.';
+        case 'ready':
+            return 'The update is installed. Restart Tavern to finish updating.';
         case 'error':
             return status.message;
         case 'restarting':

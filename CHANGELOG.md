@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file.
 
+## v1.1.3 - 2026-05-30
+
+- Show onboarding when Tavern Runtime is unavailable instead of leaving the app stuck retrying the dashboard connection.
+- Added a global desktop update hint that downloads updates in the background and keeps a restart action visible when an update is ready.
+
 ## v1.1.2 - 2026-05-30
 
 - Fixed the macOS app and DMG icons by compiling the Icon Composer source into the bundled Liquid Glass asset catalog with an ICNS fallback.
