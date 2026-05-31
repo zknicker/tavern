@@ -2,6 +2,10 @@
 
 All notable changes to this project will be documented in this file.
 
+## v1.1.10 - 2026-05-30
+
+- Fixed desktop releases rebuilding with stale embedded server versions after app version bumps.
+
 ## v1.1.9 - 2026-05-30
 
 - Added the desktop updater action to the onboarding app-update screen when Runtime is newer than the app.
