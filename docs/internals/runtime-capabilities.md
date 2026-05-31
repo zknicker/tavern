@@ -175,6 +175,8 @@ integration points, and external dependencies.
 The Runtime settings page reads Runtime capability health and renders:
 
 * one row per expected Runtime capability,
+* capability groups by product category,
+* criticality ordering so required surfaces sort before supporting checks,
 * a status color from `state`,
 * the last check time,
 * the `reason` inline or in the row detail for non-healthy capabilities.

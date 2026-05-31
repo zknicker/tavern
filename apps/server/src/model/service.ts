@@ -25,6 +25,15 @@ function formatModelRef(input: { modelId: string; provider: string }) {
     return `${input.provider}/${input.modelId}`;
 }
 
+function parseRuntimeModelCatalogEntry(input: { id: string; provider: null | string }) {
+    const separatorIndex = input.id.indexOf('/');
+    const provider =
+        input.provider ?? (separatorIndex > 0 ? input.id.slice(0, separatorIndex) : null);
+    const model = separatorIndex > 0 ? input.id.slice(separatorIndex + 1) : input.id;
+
+    return provider ? { model, provider } : null;
+}
+
 function createEmptySelection() {
     return {
         fallbackModels: [],
@@ -45,17 +54,20 @@ async function refreshRuntimeModelAvailability() {
                     continue;
                 }
 
-                const modelNameIds = models.configuredModels.flatMap((model) => {
-                    const canonical = normalizeOpenClawModelIdentity({
-                        model: model.modelId,
-                        provider: model.provider,
-                    });
+                const modelNameIds = models.models.flatMap((model) => {
+                    const parsed = parseRuntimeModelCatalogEntry(model);
+
+                    if (!parsed) {
+                        return [];
+                    }
+
+                    const canonical = normalizeOpenClawModelIdentity(parsed);
 
                     if (canonical?.openClawModelNameId) {
                         return [canonical.openClawModelNameId];
                     }
 
-                    const modelCatalogId = `${model.provider}/${model.modelId}`;
+                    const modelCatalogId = `${parsed.provider}/${parsed.model}`;
                     const matchingNames = openClawModelNames
                         .filter((name) => name.modelCatalogId === modelCatalogId)
                         .map((name) =>

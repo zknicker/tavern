@@ -22,7 +22,6 @@ import type {
     AgentRuntimeOpenClawConfigSnapshot,
     AgentRuntimeOpenRouterSettings,
     AgentRuntimeRunCron,
-    AgentRuntimeSaveModels,
     AgentRuntimeSaveOpenRouterSettings,
     AgentRuntimeSessionGraph,
     AgentRuntimeSessionList,
@@ -138,7 +137,6 @@ export interface OpenClawAgentRuntimeClient {
         path: string,
         input: { content: string }
     ): Promise<AgentRuntimeAgentFileContent>;
-    saveModels(input: AgentRuntimeSaveModels): Promise<AgentRuntimeModels>;
     saveOpenRouterSettings(
         input: AgentRuntimeSaveOpenRouterSettings
     ): Promise<AgentRuntimeOpenRouterSettings>;
@@ -367,37 +365,6 @@ class GatewayBackedOpenClawAgentRuntimeClient implements OpenClawAgentRuntimeCli
         return await getOpenClawConfigSnapshot(this.#gateway);
     }
 
-    async saveModels(input: AgentRuntimeSaveModels) {
-        const agent = input.agents[0];
-        const primaryModel = agent?.primaryModel;
-
-        if (!(agent && primaryModel)) {
-            throw new OpenClawUnsupportedError(
-                'OpenClaw model saves require one explicit agent model setting.'
-            );
-        }
-
-        const modelName = agent.openClawModelName;
-        const model = `${modelName.provider}/${modelName.model}`;
-        const [currentConfig, models] = await Promise.all([
-            getOpenClawConfigSnapshot(this.#gateway),
-            this.#gateway.request('models.list'),
-        ]);
-
-        await this.#gateway.request('config.apply', {
-            baseHash: currentConfig.hash,
-            raw: JSON.stringify(
-                upsertOpenClawAgentConfig(currentConfig.config, {
-                    agentId: agent.agentId,
-                    harness: modelName.harness,
-                    model,
-                })
-            ),
-        });
-
-        return mapOpenClawModels(models);
-    }
-
     async listSkills(options?: { agentId?: string }) {
         return mapOpenClawSkillList(
             await this.#gateway.request(
@@ -521,52 +488,6 @@ function readOpenClawConfigRecord(
     }
 
     return {};
-}
-
-function upsertOpenClawAgentConfig(
-    config: Record<string, unknown>,
-    input: { agentId: string; harness: string; model: string }
-) {
-    const agents = asRecord(config.agents);
-    const list = readRecordArray(agents, ['list']);
-    const existing = list.find((agent) => readString(agent, ['id']) === input.agentId);
-    const {
-        agentRuntime: _legacyAgentRuntime,
-        embeddedHarness: _legacyEmbeddedHarness,
-        ...existingConfig
-    } = existing ?? {};
-    const models = asRecord(existingConfig.models);
-    const selectedModelConfig = asRecord(models[input.model]);
-    const nextAgent = {
-        ...existingConfig,
-        id: input.agentId,
-        model: {
-            ...asRecord(existingConfig.model),
-            fallbacks: [],
-            primary: input.model,
-        },
-        models: {
-            ...models,
-            [input.model]: {
-                ...selectedModelConfig,
-                agentRuntime: {
-                    ...asRecord(selectedModelConfig.agentRuntime),
-                    id: input.harness,
-                },
-            },
-        },
-    };
-    const nextList = existing
-        ? list.map((agent) => (readString(agent, ['id']) === input.agentId ? nextAgent : agent))
-        : [...list, nextAgent];
-
-    return {
-        ...config,
-        agents: {
-            ...agents,
-            list: nextList,
-        },
-    };
 }
 
 async function listCronRunPages(gateway: OpenClawGatewayClient, jobId?: string) {

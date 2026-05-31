@@ -1,5 +1,4 @@
 import { describe, expect, it } from 'bun:test';
-import { parseAgentRuntimeModelRef } from '@tavern/api';
 import type { OpenClawGatewayClient, OpenClawGatewayEventHandler } from '../gateway/types.ts';
 import { openClawGatewaySample } from '../test-data/openclaw-gateway-sample.ts';
 import { createOpenClawAgentRuntimeClient } from './client.ts';
@@ -186,94 +185,6 @@ describe('OpenClaw agent runtime client', () => {
             {
                 method: 'cron.runs',
                 params: { id: 'd3292360-3ce0-4331-a917-e7eaba948886', offset: 1 },
-            },
-        ]);
-    });
-
-    it('saves one explicit agent model name and harness through OpenClaw Gateway', async () => {
-        const primaryModel = parseAgentRuntimeModelRef('codex/gpt-5.5');
-        const gateway = new FakeGateway({
-            'config.apply': {},
-            'config.get': {
-                hash: 'config-hash-1',
-                raw: JSON.stringify({
-                    agents: {
-                        list: [
-                            {
-                                id: 'blippy',
-                                name: 'Blippy',
-                            },
-                        ],
-                    },
-                }),
-            },
-            'models.list': openClawGatewaySample.models,
-        });
-        const client = createOpenClawAgentRuntimeClient({
-            gateway,
-            gatewayUrl: 'ws://sample',
-        });
-
-        await client.saveModels({
-            agents: [
-                {
-                    agentId: 'blippy',
-                    fallbackModels: [],
-                    isOverridden: true,
-                    openClawModelName: {
-                        harness: 'codex',
-                        model: 'gpt-5.5',
-                        provider: 'openai',
-                    },
-                    primaryModel,
-                    subAgentModel: null,
-                },
-            ],
-            configuredModels: [primaryModel],
-            defaults: {
-                fallbackModels: [],
-                primaryModel: null,
-            },
-            defaultsThinkingLevel: null,
-            subAgentDefaultModel: null,
-            subAgentThinkingLevel: null,
-        });
-
-        expect(gateway.requests).toEqual([
-            {
-                method: 'config.get',
-                params: undefined,
-            },
-            {
-                method: 'models.list',
-                params: undefined,
-            },
-            {
-                method: 'config.apply',
-                params: {
-                    baseHash: 'config-hash-1',
-                    raw: JSON.stringify({
-                        agents: {
-                            list: [
-                                {
-                                    id: 'blippy',
-                                    name: 'Blippy',
-                                    model: {
-                                        fallbacks: [],
-                                        primary: 'openai/gpt-5.5',
-                                    },
-                                    models: {
-                                        'openai/gpt-5.5': {
-                                            agentRuntime: {
-                                                id: 'codex',
-                                            },
-                                        },
-                                    },
-                                },
-                            ],
-                        },
-                    }),
-                },
             },
         ]);
     });

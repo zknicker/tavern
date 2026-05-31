@@ -43,18 +43,15 @@ function CapabilitySection({
     onCapabilityClick,
     onCapabilityRefresh,
     refreshingCapability,
-    title,
 }: {
     capabilities: RuntimeConnection['capabilities'];
     emptyLabel: string;
     onCapabilityClick?: (capability: RuntimeConnection['capabilities'][number]) => void;
     onCapabilityRefresh?: (capability: RuntimeConnection['capabilities'][number]) => void;
     refreshingCapability?: RuntimeConnection['capabilities'][number]['capability'] | null;
-    title: string;
 }) {
     return (
-        <div className="space-y-2">
-            <p className="font-medium text-muted-foreground text-xs">{title}</p>
+        <div>
             <OpenClawCapabilitiesSummary
                 capabilities={capabilities}
                 emptyLabel={emptyLabel}
@@ -81,9 +78,9 @@ function RuntimeConnectionRow({ connection }: { connection: RuntimeConnection })
     const healthBadge = getHealthBadge(connection);
 
     return (
-        <SettingsItem className="flex flex-col gap-3 px-3.5 pt-3.5 pb-1.5">
+        <SettingsItem className="flex flex-col gap-4 px-3.5 pt-3.5 pb-2">
             <div className="grid gap-3 md:grid-cols-[minmax(10rem,1fr)_minmax(18rem,32rem)] md:items-start md:gap-6">
-                <div className="min-w-0 space-y-0.5">
+                <div className="min-w-0">
                     <div className="flex items-center gap-2">
                         <h3 className="font-medium text-foreground text-sm">Tavern Runtime</h3>
                         {healthBadge ? (
@@ -92,9 +89,6 @@ function RuntimeConnectionRow({ connection }: { connection: RuntimeConnection })
                             </Badge>
                         ) : null}
                     </div>
-                    <p className="truncate font-mono text-meta text-muted-foreground">
-                        {connection.baseUrl}
-                    </p>
                 </div>
                 <div className="flex items-center gap-2 md:justify-end">
                     <Button
@@ -112,16 +106,10 @@ function RuntimeConnectionRow({ connection }: { connection: RuntimeConnection })
             {connection.lastError ? (
                 <p className="text-destructive text-sm">{connection.lastError}</p>
             ) : null}
-            <p className="text-muted-foreground text-sm">
-                Tavern owns this local OpenClaw runtime, its generated config, and its Seatbelt
-                guardrails. OpenClaw is not configured as a separate app connection.
+            <p className="max-w-3xl text-muted-foreground text-sm leading-6">
+                Tavern manages the local OpenClaw runtime for agent work, including generated
+                configuration, Seatbelt guardrails, and capability health.
             </p>
-            {connection.runtimeVersion ? (
-                <p className="text-muted-foreground text-sm">
-                    App v{connection.appVersion} · Runtime v{connection.runtimeVersion} · Minimum
-                    Runtime v{connection.requiredRuntimeVersion}
-                </p>
-            ) : null}
             <RuntimeUrlForm connection={connection} />
             <CapabilitySection
                 capabilities={connection.runtimeCapabilities}
@@ -132,9 +120,25 @@ function RuntimeConnectionRow({ connection }: { connection: RuntimeConnection })
                 refreshingCapability={
                     capabilityMutation.isPending ? capabilityMutation.variables : null
                 }
-                title="Runtime capabilities"
             />
         </SettingsItem>
+    );
+}
+
+function RuntimeMetadata({ connection }: { connection: RuntimeConnection }) {
+    return (
+        <dl className="flex flex-wrap gap-x-8 gap-y-2 text-xs">
+            <div className="min-w-0">
+                <dt className="text-muted-foreground">App</dt>
+                <dd className="truncate font-mono text-foreground">{connection.appVersion}</dd>
+            </div>
+            <div className="min-w-0">
+                <dt className="text-muted-foreground">Runtime</dt>
+                <dd className="truncate font-mono text-foreground">
+                    {connection.runtimeVersion ?? 'Unknown'}
+                </dd>
+            </div>
+        </dl>
     );
 }
 
@@ -161,10 +165,10 @@ function RuntimeUrlForm({ connection }: { connection: RuntimeConnection }) {
             }}
         >
             <Field>
-                <div className="grid gap-2 sm:grid-cols-[minmax(0,1fr)_auto]">
+                <div className="flex max-w-full flex-col gap-2 sm:flex-row sm:items-center">
                     <Input
                         aria-label="Tavern Runtime URL"
-                        className="font-mono"
+                        className="font-mono sm:w-[32rem]"
                         disabled={connectMutation.isPending || connection.source === 'environment'}
                         id={inputId}
                         name="runtime-url"
@@ -172,13 +176,13 @@ function RuntimeUrlForm({ connection }: { connection: RuntimeConnection }) {
                         value={baseUrl}
                     />
                     <Button
+                        className="w-fit"
                         disabled={
                             !(trimmedBaseUrl && hasChanged) ||
                             connectMutation.isPending ||
                             connection.source === 'environment'
                         }
                         loading={connectMutation.isPending}
-                        size="sm"
                         type="submit"
                         variant="secondary"
                     >
@@ -186,11 +190,6 @@ function RuntimeUrlForm({ connection }: { connection: RuntimeConnection }) {
                     </Button>
                 </div>
             </Field>
-            {connection.source === 'environment' ? (
-                <p className="text-muted-foreground text-xs">
-                    Runtime URL is set by `TAVERN_RUNTIME_URL`.
-                </p>
-            ) : null}
             {connectMutation.error ? (
                 <FieldError>{connectMutation.error.message}</FieldError>
             ) : null}
@@ -224,6 +223,11 @@ export function AgentRuntimeSettingsPanel({ runtime }: AgentRuntimeSettingsPanel
                         )}
                     </Card>
                 </CardFrame>
+                {runtime ? (
+                    <div className="px-3.5 pt-3">
+                        <RuntimeMetadata connection={runtime} />
+                    </div>
+                ) : null}
             </section>
         </div>
     );

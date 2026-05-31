@@ -7,17 +7,11 @@ import {
     TooltipTrigger,
 } from '../../../components/ui/tooltip.tsx';
 import type { AgentRuntimeConnectionOutput } from '../../../lib/trpc.tsx';
+import { type CapabilityView, groupCapabilities } from './openclaw-capabilities-view.ts';
 
 type RuntimeConnection = NonNullable<AgentRuntimeConnectionOutput>;
 type RuntimeCapability = RuntimeConnection['capabilities'][number];
 type CapabilityState = RuntimeCapability['state'];
-
-const capabilityLabels: Partial<Record<RuntimeCapability['capability'], string>> = {
-    computerUse: 'computer use',
-    cronRuns: 'cron runs',
-    embeddingModel: 'embedding model',
-    mentions: 'mentions',
-};
 
 const stateLabels: Record<CapabilityState, string> = {
     degraded: 'Degraded',
@@ -66,10 +60,6 @@ function formatRelative(value: string | null) {
 
 function getDetail(capability: RuntimeCapability) {
     return capability.reason ?? capability.technicalMessage ?? null;
-}
-
-function getCapabilityLabel(capability: RuntimeCapability) {
-    return capabilityLabels[capability.capability] ?? capability.capability;
 }
 
 function getStateDotClass(state: CapabilityState): string {
@@ -140,98 +130,118 @@ export function OpenClawCapabilitiesSummary({
         );
     }
 
-    const sorted = [...capabilities].sort((a, b) => a.capability.localeCompare(b.capability));
+    const groups = groupCapabilities(capabilities);
 
     return (
         <TooltipProvider>
-            <dl className="-mx-2 grid grid-cols-1 gap-x-6 gap-y-2 rounded-md bg-muted px-2 py-2 sm:grid-cols-2">
-                {sorted.map((capability) => {
-                    const isClickable = Boolean(onCapabilityClick);
-
-                    return (
-                        <div
-                            className="group flex min-w-0 items-center justify-between gap-3"
-                            key={capability.capability}
-                        >
-                            <dt className="flex h-5 min-w-0 items-center gap-1 text-sm">
-                                <span className="inline-flex size-4 shrink-0 items-center justify-center">
-                                    {onCapabilityRefresh ? (
-                                        <Tooltip>
-                                            <TooltipTrigger
-                                                render={
-                                                    <button
-                                                        aria-label={`Refresh ${getCapabilityLabel(capability)}`}
-                                                        className="inline-flex size-4 items-center justify-center rounded-sm outline-none hover:bg-background hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
-                                                        disabled={
-                                                            refreshingCapability ===
-                                                            capability.capability
-                                                        }
-                                                        onClick={() =>
-                                                            onCapabilityRefresh(capability)
-                                                        }
-                                                        type="button"
-                                                    />
-                                                }
-                                            >
-                                                <span
-                                                    aria-hidden="true"
-                                                    className={`size-2 rounded-full ${refreshingCapability === capability.capability ? 'hidden' : 'group-hover:hidden'} ${getStateDotClass(capability.state)}`}
-                                                />
-                                                <Icon
-                                                    className={`size-3 ${refreshingCapability === capability.capability ? 'block animate-spin' : 'hidden group-hover:block'}`}
-                                                    icon={Refresh04Icon}
-                                                />
-                                            </TooltipTrigger>
-                                            <TooltipContent>Refresh capability</TooltipContent>
-                                        </Tooltip>
-                                    ) : (
-                                        <span
-                                            aria-hidden="true"
-                                            className={`size-2 rounded-full ${getStateDotClass(capability.state)}`}
-                                        />
-                                    )}
-                                </span>
-                                <Tooltip>
-                                    <TooltipTrigger
-                                        render={
-                                            <button
-                                                aria-disabled={!isClickable}
-                                                className={`inline-flex min-w-0 rounded-sm outline-none focus-visible:ring-2 focus-visible:ring-ring ${isClickable ? 'cursor-pointer' : 'cursor-default'}`}
-                                                onClick={() => {
-                                                    if (isClickable) {
-                                                        onCapabilityClick?.(capability);
-                                                    }
-                                                }}
-                                                onKeyDown={(event) => {
-                                                    if (
-                                                        isClickable &&
-                                                        (event.key === 'Enter' || event.key === ' ')
-                                                    ) {
-                                                        event.preventDefault();
-                                                        onCapabilityClick?.(capability);
-                                                    }
-                                                }}
-                                                tabIndex={isClickable ? 0 : -1}
-                                                type="button"
-                                            />
-                                        }
-                                    >
-                                        <span className="truncate font-mono text-foreground">
-                                            {getCapabilityLabel(capability)}
-                                        </span>
-                                    </TooltipTrigger>
-                                    <TooltipContent>
-                                        <CapabilityTooltipContent capability={capability} />
-                                    </TooltipContent>
-                                </Tooltip>
-                            </dt>
-                            <dd className="flex h-5 shrink-0 items-center gap-1 font-mono text-meta text-muted-foreground tabular-nums">
-                                <RelativeTime value={capability.checkedAt} />
-                            </dd>
-                        </div>
-                    );
-                })}
-            </dl>
+            <div className="-mx-2 grid gap-3">
+                {groups.map((group) => (
+                    <section className="grid gap-1.5" key={group.category.id}>
+                        <h4 className="px-2 font-medium text-muted-foreground text-xs">
+                            {group.category.label}
+                        </h4>
+                        <dl className="grid grid-cols-1 gap-x-6 gap-y-1 rounded-md bg-muted px-2 py-2 sm:grid-cols-2">
+                            {group.items.map((view) => (
+                                <CapabilityRow
+                                    key={view.item.capability}
+                                    onCapabilityClick={onCapabilityClick}
+                                    onCapabilityRefresh={onCapabilityRefresh}
+                                    refreshingCapability={refreshingCapability}
+                                    view={view}
+                                />
+                            ))}
+                        </dl>
+                    </section>
+                ))}
+            </div>
         </TooltipProvider>
+    );
+}
+
+function CapabilityRow({
+    onCapabilityClick,
+    onCapabilityRefresh,
+    refreshingCapability,
+    view,
+}: {
+    onCapabilityClick?: (capability: RuntimeCapability) => void;
+    onCapabilityRefresh?: (capability: RuntimeCapability) => void;
+    refreshingCapability?: RuntimeCapability['capability'] | null;
+    view: CapabilityView;
+}) {
+    const capability = view.item;
+    const isClickable = Boolean(onCapabilityClick);
+
+    return (
+        <div className="group flex min-w-0 items-center justify-between gap-3">
+            <dt className="flex h-5 min-w-0 items-center gap-1 text-sm">
+                <span className="inline-flex size-4 shrink-0 items-center justify-center">
+                    {onCapabilityRefresh ? (
+                        <Tooltip>
+                            <TooltipTrigger
+                                render={
+                                    <button
+                                        aria-label={`Refresh ${view.label}`}
+                                        className="inline-flex size-4 items-center justify-center rounded-sm outline-none hover:bg-background hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+                                        disabled={refreshingCapability === capability.capability}
+                                        onClick={() => onCapabilityRefresh(capability)}
+                                        type="button"
+                                    />
+                                }
+                            >
+                                <span
+                                    aria-hidden="true"
+                                    className={`size-2 rounded-full ${refreshingCapability === capability.capability ? 'hidden' : 'group-hover:hidden'} ${getStateDotClass(capability.state)}`}
+                                />
+                                <Icon
+                                    className={`size-3 ${refreshingCapability === capability.capability ? 'block animate-spin' : 'hidden group-hover:block'}`}
+                                    icon={Refresh04Icon}
+                                />
+                            </TooltipTrigger>
+                            <TooltipContent>Refresh capability</TooltipContent>
+                        </Tooltip>
+                    ) : (
+                        <span
+                            aria-hidden="true"
+                            className={`size-2 rounded-full ${getStateDotClass(capability.state)}`}
+                        />
+                    )}
+                </span>
+                <Tooltip>
+                    <TooltipTrigger
+                        render={
+                            <button
+                                aria-disabled={!isClickable}
+                                className={`inline-flex min-w-0 rounded-sm outline-none focus-visible:ring-2 focus-visible:ring-ring ${isClickable ? 'cursor-pointer' : 'cursor-default'}`}
+                                onClick={() => {
+                                    if (isClickable) {
+                                        onCapabilityClick?.(capability);
+                                    }
+                                }}
+                                onKeyDown={(event) => {
+                                    if (
+                                        isClickable &&
+                                        (event.key === 'Enter' || event.key === ' ')
+                                    ) {
+                                        event.preventDefault();
+                                        onCapabilityClick?.(capability);
+                                    }
+                                }}
+                                tabIndex={isClickable ? 0 : -1}
+                                type="button"
+                            />
+                        }
+                    >
+                        <span className="truncate font-mono text-foreground">{view.label}</span>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                        <CapabilityTooltipContent capability={capability} />
+                    </TooltipContent>
+                </Tooltip>
+            </dt>
+            <dd className="flex h-5 shrink-0 items-center gap-1 font-mono text-meta text-muted-foreground tabular-nums">
+                <RelativeTime value={capability.checkedAt} />
+            </dd>
+        </div>
     );
 }

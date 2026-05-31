@@ -69,6 +69,9 @@ capabilities. It is not a second product API.
   or graph. Session preview reads are bounded Runtime API calls for index views.
   Skill and model reads may start a background refresh when their stored snapshot
   is missing or stale, but client reads do not synchronously call OpenClaw.
+* **Models are a catalog.** `/models` mirrors OpenClaw `models.list` as a
+  read-only model catalog. Agent model selection belongs to the OpenClaw config
+  snapshot/apply flow, not the model inventory response.
 * **Chat stays canonical.** Runtime chat control routes do not replace the
   durable Chat API timeline.
 * **Session facts stay execution-owned.** Session messages, graphs, prompts, and

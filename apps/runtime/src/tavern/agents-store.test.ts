@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { closeDb, initTestDb } from '../db/connection.ts';
+import { closeDb, getDb, initTestDb } from '../db/connection.ts';
 import { ensureRuntimeSchema } from '../db/schema.ts';
 import { replaceStoredAgents } from './agents-store.ts';
 import {
@@ -301,23 +301,7 @@ describe('Runtime agent store', () => {
     it('serves model reads from Runtime storage', async () => {
         replaceStoredOpenClawModels({
             models: {
-                agents: [
-                    {
-                        agentId: 'main',
-                        fallbackModels: [],
-                        isOverridden: true,
-                        primaryModel: { modelId: 'gpt-5.5', provider: 'codex' },
-                        subAgentModel: null,
-                    },
-                ],
-                configuredModels: [{ modelId: 'gpt-5.5', provider: 'codex' }],
-                defaults: {
-                    fallbackModels: [],
-                    primaryModel: { modelId: 'gpt-5.5', provider: 'codex' },
-                },
-                defaultsThinkingLevel: 'medium',
-                subAgentDefaultModel: null,
-                subAgentThinkingLevel: null,
+                models: [{ id: 'openai/gpt-5.5', label: 'GPT-5.5', provider: 'openai' }],
                 updatedAt: '2026-05-26T20:00:00.000Z',
             },
             syncedAt: '2026-05-26T20:00:00.000Z',
@@ -329,9 +313,46 @@ describe('Runtime agent store', () => {
 
         expect(response.status).toBe(200);
         await expect(response.json()).resolves.toMatchObject({
-            agents: [{ agentId: 'main' }],
-            configuredModels: [{ modelId: 'gpt-5.5', provider: 'codex' }],
+            models: [{ id: 'openai/gpt-5.5', label: 'GPT-5.5', provider: 'openai' }],
         });
+    });
+
+    it('invalidates stale OpenClaw model snapshots with the old shape', async () => {
+        const timestamp = '2026-05-26T20:00:00.000Z';
+        const db = getDb();
+        db.prepare(
+            `INSERT INTO openclaw_models_snapshot (
+                id,
+                raw_json,
+                last_synced_at,
+                created_at,
+                updated_at
+            )
+            VALUES ('default', ?, ?, ?, ?)`
+        ).run(
+            JSON.stringify({
+                agents: [],
+                configuredModels: [],
+                defaults: { fallbackModels: [], primaryModel: null },
+                updatedAt: timestamp,
+            }),
+            timestamp,
+            timestamp,
+            timestamp
+        );
+
+        const response = await handleTavernRuntimeRequest(
+            new Request('http://runtime.test/models')
+        );
+
+        expect(response.status).toBe(200);
+        await expect(response.json()).resolves.toEqual({
+            models: [],
+            updatedAt: null,
+        });
+        expect(
+            db.prepare("SELECT id FROM openclaw_models_snapshot WHERE id = 'default'").get()
+        ).toBeNull();
     });
 
     it('serves skill list and detail reads from Runtime storage', async () => {

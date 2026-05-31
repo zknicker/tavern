@@ -1,5 +1,5 @@
 import {
-    type AgentRuntimeModelIdentity,
+    type AgentRuntimeModelCatalogEntry,
     type AgentRuntimeModelProviderId,
     type AgentRuntimeModels,
     agentRuntimeModelsSchema,
@@ -8,21 +8,12 @@ import { asRecord, readArray, readString } from '../../gateway/records.ts';
 
 export function mapOpenClawModels(input: unknown): AgentRuntimeModels {
     const record = asRecord(input);
-    const configuredModels = readArray(record.models ?? record.items ?? input)
-        .map(mapModelIdentity)
-        .filter((model): model is AgentRuntimeModelIdentity => model !== null);
-    const primaryModel = configuredModels[0] ?? null;
+    const models = readArray(record.models ?? record.items ?? input)
+        .map(mapModelCatalogEntry)
+        .filter((model): model is AgentRuntimeModelCatalogEntry => model !== null);
 
     return agentRuntimeModelsSchema.parse({
-        agents: [],
-        configuredModels,
-        defaults: {
-            fallbackModels: configuredModels.slice(1),
-            primaryModel,
-        },
-        defaultsThinkingLevel: null,
-        subAgentDefaultModel: null,
-        subAgentThinkingLevel: null,
+        models,
         updatedAt: null,
     });
 }
@@ -49,21 +40,22 @@ export function normalizeOpenClawModelProvider(
     return 'openrouter';
 }
 
-function mapModelIdentity(value: unknown): AgentRuntimeModelIdentity | null {
+function mapModelCatalogEntry(value: unknown) {
     const record = asRecord(value);
-    const raw = typeof value === 'string' ? value : readString(record, ['id', 'model', 'name']);
+    const id = typeof value === 'string' ? value : readString(record, ['id', 'model', 'name']);
 
-    if (!raw) {
+    if (!id) {
         return null;
     }
 
-    const separatorIndex = raw.indexOf('/');
+    const separatorIndex = id.indexOf('/');
     const provider =
-        separatorIndex > 0 ? raw.slice(0, separatorIndex) : readString(record, ['provider']);
-    const modelId = separatorIndex > 0 ? raw.slice(separatorIndex + 1) : raw;
+        readString(record, ['provider']) ??
+        (separatorIndex > 0 ? id.slice(0, separatorIndex) : null);
 
     return {
-        modelId,
-        provider: normalizeOpenClawModelProvider(provider) ?? 'openrouter',
+        id,
+        label: readString(record, ['label', 'name']),
+        provider,
     };
 }

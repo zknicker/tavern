@@ -16,6 +16,10 @@ interface RawJsonRow {
     raw_json: string;
 }
 
+interface ModelSnapshotRow extends RawJsonRow {
+    last_synced_at: string;
+}
+
 interface SnapshotStatus {
     hasSnapshot: boolean;
     lastSyncedAt: null | string;
@@ -28,15 +32,7 @@ interface SkillRow {
 }
 
 const emptyModels: AgentRuntimeModels = {
-    agents: [],
-    configuredModels: [],
-    defaults: {
-        fallbackModels: [],
-        primaryModel: null,
-    },
-    defaultsThinkingLevel: null,
-    subAgentDefaultModel: null,
-    subAgentThinkingLevel: null,
+    models: [],
     updatedAt: null,
 };
 
@@ -109,21 +105,15 @@ export function replaceStoredOpenClawChats(input: {
 }
 
 export function getStoredOpenClawModels(db: Database = getDb()) {
-    const row = db
-        .prepare("SELECT raw_json FROM openclaw_models_snapshot WHERE id = 'default' LIMIT 1")
-        .get() as RawJsonRow | null;
-
-    return agentRuntimeModelsSchema.parse(row ? JSON.parse(row.raw_json) : emptyModels);
+    return readStoredOpenClawModelsSnapshot(db)?.models ?? emptyModels;
 }
 
 export function getStoredOpenClawModelsSnapshotStatus(db: Database = getDb()): SnapshotStatus {
-    const row = db
-        .prepare("SELECT last_synced_at FROM openclaw_models_snapshot WHERE id = 'default' LIMIT 1")
-        .get() as { last_synced_at: string } | null;
+    const snapshot = readStoredOpenClawModelsSnapshot(db);
 
     return {
-        hasSnapshot: Boolean(row),
-        lastSyncedAt: row?.last_synced_at ?? null,
+        hasSnapshot: Boolean(snapshot),
+        lastSyncedAt: snapshot?.lastSyncedAt ?? null,
     };
 }
 
@@ -318,4 +308,26 @@ function deleteMissingRows(
 
 function stableJson(value: unknown) {
     return JSON.stringify(value);
+}
+
+function readStoredOpenClawModelsSnapshot(db: Database) {
+    const row = db
+        .prepare(
+            "SELECT raw_json, last_synced_at FROM openclaw_models_snapshot WHERE id = 'default' LIMIT 1"
+        )
+        .get() as ModelSnapshotRow | null;
+
+    if (!row) {
+        return null;
+    }
+
+    try {
+        return {
+            lastSyncedAt: row.last_synced_at,
+            models: agentRuntimeModelsSchema.parse(JSON.parse(row.raw_json)),
+        };
+    } catch {
+        db.prepare("DELETE FROM openclaw_models_snapshot WHERE id = 'default'").run();
+        return null;
+    }
 }

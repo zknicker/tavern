@@ -1,6 +1,5 @@
 import * as z from 'zod';
 
-import { agentRuntimeModelIdentitySchema } from './model-identity.js';
 import { agentRuntimeModelProviderIdSchema } from './model-providers.js';
 
 export const agentRuntimeProtocolVersion = 1 as const;
@@ -511,40 +510,16 @@ export const agentRuntimeArchiveBindingSchema = z.object({
     id: z.string().trim().min(1),
 });
 
-export const agentRuntimeModelSelectionSchema = z.object({
-    fallbackModels: z.array(agentRuntimeModelIdentitySchema),
-    primaryModel: agentRuntimeModelIdentitySchema.nullable(),
-});
-
-export const agentRuntimeAgentModelSchema = z.object({
-    agentId: z.string().trim().min(1),
-    fallbackModels: z.array(agentRuntimeModelIdentitySchema),
-    isOverridden: z.boolean(),
-    primaryModel: agentRuntimeModelIdentitySchema.nullable(),
-    subAgentModel: agentRuntimeModelIdentitySchema.nullable(),
-});
-
-export const agentRuntimeSaveAgentModelSchema = agentRuntimeAgentModelSchema.extend({
-    openClawModelName: agentRuntimeOpenClawModelNameSchema,
+export const agentRuntimeModelCatalogEntrySchema = z.object({
+    id: z.string().trim().min(1),
+    label: z.string().trim().min(1).nullable(),
+    provider: z.string().trim().min(1).nullable(),
 });
 
 export const agentRuntimeModelsSchema = z.object({
-    agents: z.array(agentRuntimeAgentModelSchema),
-    configuredModels: z.array(agentRuntimeModelIdentitySchema),
-    defaults: agentRuntimeModelSelectionSchema,
-    defaultsThinkingLevel: agentRuntimeThinkingLevelSchema.nullable(),
-    subAgentDefaultModel: agentRuntimeModelIdentitySchema.nullable(),
-    subAgentThinkingLevel: agentRuntimeThinkingLevelSchema.nullable(),
+    models: z.array(agentRuntimeModelCatalogEntrySchema),
     updatedAt: z.string().datetime().nullable(),
 });
-
-export const agentRuntimeSaveModelsSchema = agentRuntimeModelsSchema
-    .omit({
-        updatedAt: true,
-    })
-    .extend({
-        agents: z.array(agentRuntimeSaveAgentModelSchema),
-    });
 
 export const cortexJobNameSchema = z.enum([
     'dream',
@@ -1695,7 +1670,6 @@ export type AgentRuntimeArchiveAgent = z.infer<typeof agentRuntimeArchiveAgentSc
 export type AgentRuntimeArchiveBinding = z.infer<typeof agentRuntimeArchiveBindingSchema>;
 export type AgentRuntimeArchiveCron = z.infer<typeof agentRuntimeArchiveCronSchema>;
 export type AgentRuntimeArchiveSkill = z.infer<typeof agentRuntimeArchiveSkillSchema>;
-export type AgentRuntimeAgentModel = z.infer<typeof agentRuntimeAgentModelSchema>;
 export type AgentRuntimeCapability = z.infer<typeof agentRuntimeCapabilitySchema>;
 export type AgentRuntimeCreateAgent = z.infer<typeof agentRuntimeCreateAgentSchema>;
 export type AgentRuntimeAgentFile = z.infer<typeof agentRuntimeAgentFileSchema>;
@@ -1803,7 +1777,7 @@ export type AgentRuntimeOpenClawConfigSnapshot = z.infer<
     typeof agentRuntimeOpenClawConfigSnapshotSchema
 >;
 export type AgentRuntimeApplyOpenClawConfig = z.infer<typeof agentRuntimeApplyOpenClawConfigSchema>;
-export type AgentRuntimeModelSelection = z.infer<typeof agentRuntimeModelSelectionSchema>;
+export type AgentRuntimeModelCatalogEntry = z.infer<typeof agentRuntimeModelCatalogEntrySchema>;
 export type AgentRuntimeModels = z.infer<typeof agentRuntimeModelsSchema>;
 export type AgentRuntimeSkillFile = z.infer<typeof agentRuntimeSkillFileSchema>;
 export type AgentRuntimeSaveWorkspaceInstructions = z.infer<
@@ -1820,7 +1794,6 @@ export type AgentRuntimeSkillSummary = z.infer<typeof agentRuntimeSkillSummarySc
 export type AgentRuntimeMacApp = z.infer<typeof agentRuntimeMacAppSchema>;
 export type AgentRuntimeMacAppList = z.infer<typeof agentRuntimeMacAppListSchema>;
 export type AgentRuntimeSkillUpdatedEvent = z.infer<typeof agentRuntimeSkillUpdatedEventSchema>;
-export type AgentRuntimeSaveModels = z.infer<typeof agentRuntimeSaveModelsSchema>;
 export type AgentRuntimeSaveOpenRouterSettings = z.infer<
     typeof agentRuntimeSaveOpenRouterSettingsSchema
 >;

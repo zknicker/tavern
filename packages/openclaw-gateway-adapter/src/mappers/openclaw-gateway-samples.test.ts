@@ -16,9 +16,13 @@ describe('OpenClaw Gateway sample mapping', () => {
         const models = mapOpenClawModels(openClawGatewaySample.models);
 
         expect(models.updatedAt).toBeNull();
-        expect(models.configuredModels).toEqual([
-            { modelId: 'gpt-5.5', provider: 'codex' },
-            { modelId: 'claude-4.5-sonnet', provider: 'claude' },
+        expect(models.models).toEqual([
+            { id: 'openai/gpt-5.5', label: 'GPT-5.5', provider: 'openai' },
+            {
+                id: 'anthropic/claude-4.5-sonnet',
+                label: 'Claude Sonnet',
+                provider: 'anthropic',
+            },
         ]);
     });
 

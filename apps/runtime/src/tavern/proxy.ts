@@ -118,9 +118,6 @@ async function dispatchModels({ client, request, url }: RouteContext) {
     if (request.method === 'GET') {
         return await client.getModels();
     }
-    if (request.method === 'PUT') {
-        return await client.saveModels(await readJson(request));
-    }
     return undefined;
 }
 

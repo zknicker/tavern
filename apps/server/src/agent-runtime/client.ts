@@ -31,7 +31,6 @@ import {
     type AgentRuntimeRunCron,
     type AgentRuntimeRunJob,
     type AgentRuntimeSaveAgentFile,
-    type AgentRuntimeSaveModels,
     type AgentRuntimeSaveOpenRouterSettings,
     type AgentRuntimeSaveWorkspaceInstructions,
     type AgentRuntimeSessionGraph,
@@ -85,7 +84,6 @@ import {
     agentRuntimeRunCronSchema,
     agentRuntimeRunJobSchema,
     agentRuntimeSaveAgentFileSchema,
-    agentRuntimeSaveModelsSchema,
     agentRuntimeSaveOpenRouterSettingsSchema,
     agentRuntimeSaveWorkspaceInstructionsSchema,
     agentRuntimeSessionGraphSchema,
@@ -225,7 +223,6 @@ export interface TavernAgentRuntimeClient {
     ): Promise<AgentRuntimeAgentFileContent>;
     saveCortexSchema(input: CortexSaveSchemaInput): Promise<CortexSchemaRecord>;
     saveCortexSettings(input: CortexSaveSettings): Promise<CortexSettings>;
-    saveModels(input: AgentRuntimeSaveModels): Promise<AgentRuntimeModels>;
     saveOpenRouterSettings(
         input: AgentRuntimeSaveOpenRouterSettings
     ): Promise<AgentRuntimeOpenRouterSettings>;
@@ -888,24 +885,6 @@ class HttpTavernAgentRuntimeClient implements TavernAgentRuntimeClient {
         }
 
         return agentRuntimeOpenRouterSettingsSchema.parse(await response.json());
-    }
-
-    async saveModels(input: AgentRuntimeSaveModels) {
-        const payload = agentRuntimeSaveModelsSchema.parse(input);
-        const response = await fetch(`${this.#baseUrl}${agentRuntimeRoutes.models}`, {
-            body: JSON.stringify(payload),
-            headers: {
-                'content-type': 'application/json',
-                [agentRuntimeMutationHeaders.origin]: agentRuntimeMutationOrigins.tavern,
-            },
-            method: 'PUT',
-        });
-
-        if (!response.ok) {
-            await readErrorResponse(response);
-        }
-
-        return agentRuntimeModelsSchema.parse(await response.json());
     }
 
     async installSkill(input: AgentRuntimeInstallSkill) {

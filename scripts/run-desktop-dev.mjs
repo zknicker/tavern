@@ -269,6 +269,7 @@ function waitForStaleDesktopDevServerShutdown({
 function main() {
     const currentDirectory = path.dirname(fileURLToPath(import.meta.url));
     const repositoryRoot = path.resolve(currentDirectory, '..');
+    const buildIconScriptPath = path.join(currentDirectory, 'build-macos-app-icon.mjs');
     const buildScriptPath = path.join(currentDirectory, 'build-tauri-sidecar.mjs');
     const runTauriScriptPath = path.join(currentDirectory, 'run-tauri.mjs');
     const { pid, port, serverPort, skipServerCleanup, tauriArguments, websitePort } =
@@ -280,6 +281,14 @@ function main() {
             repositoryRoot,
             serverPort: environment.TAVERN_SERVER_PORT,
         });
+    }
+
+    const iconResult = runNodeScript(buildIconScriptPath, [], {
+        cwd: repositoryRoot,
+    });
+
+    if (iconResult.status !== 0) {
+        process.exit(iconResult.status ?? 1);
     }
 
     const buildResult = runNodeScript(buildScriptPath, [], {

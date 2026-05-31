@@ -1,8 +1,4 @@
-import {
-    type AgentRuntimeModels,
-    formatAgentRuntimeModelRef,
-    parseAgentRuntimeModelRef,
-} from '@tavern/api';
+import { formatAgentRuntimeModelRef, parseAgentRuntimeModelRef } from '@tavern/api';
 import { TRPCError } from '@trpc/server';
 import { emitModelUpdated } from '../api/invalidation-events.ts';
 import { loadProviderInventory, saveProviderInventory } from './inventory-cache.ts';
@@ -14,7 +10,6 @@ import {
     type ModelProviderId,
     modelInventorySchema,
 } from './inventory-contracts.ts';
-import { listInUseModelRefs, listModelUsageLabels } from './policy.ts';
 import {
     createCatalogInventoryRecord,
     getModelProviderDisplayName,
@@ -22,19 +17,6 @@ import {
     modelInventoryProviders,
     sortModels,
 } from './provider-inventory.ts';
-
-const emptyAgentRuntimeModels: AgentRuntimeModels = {
-    agents: [],
-    configuredModels: [],
-    defaults: {
-        fallbackModels: [],
-        primaryModel: null,
-    },
-    defaultsThinkingLevel: null,
-    subAgentDefaultModel: null,
-    subAgentThinkingLevel: null,
-    updatedAt: null,
-};
 
 type CatalogModelProviderId = (typeof modelInventoryProviders)[number];
 
@@ -92,18 +74,15 @@ async function buildProviderInventory(input: {
 
 export async function listModelInventory(): Promise<ModelInventory> {
     const agentRuntimeConnections = await listModelProviderConnections();
-    const nextAgentRuntimeModels = emptyAgentRuntimeModels;
-    const usageLabelsByModelRef = listModelUsageLabels(nextAgentRuntimeModels);
-    const inUseModelRefs = listInUseModelRefs(nextAgentRuntimeModels);
 
     return modelInventorySchema.parse({
         providers: await Promise.all(
             modelInventoryProviders.map((provider) =>
                 buildProviderInventory({
-                    inUseModelRefs,
+                    inUseModelRefs: new Set(),
                     provider,
                     agentRuntimeConnections,
-                    usageLabelsByModelRef,
+                    usageLabelsByModelRef: new Map(),
                 })
             )
         ),
@@ -144,14 +123,6 @@ export async function deleteCatalogModel(input: unknown) {
     const parsed = deleteCatalogModelInputSchema.parse(input);
     const { provider } = parseAgentRuntimeModelRef(parsed.modelRef);
     const inventory = await loadProviderInventory(provider);
-    const usageLabels = listModelUsageLabels(emptyAgentRuntimeModels).get(parsed.modelRef);
-
-    if (usageLabels && usageLabels.length > 0) {
-        throw new TRPCError({
-            code: 'BAD_REQUEST',
-            message: `Cannot delete ${parsed.modelRef} because it is still in use.`,
-        });
-    }
 
     const nextModels = inventory.models.filter((model) => model.ref !== parsed.modelRef);
 

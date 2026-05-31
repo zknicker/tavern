@@ -301,6 +301,7 @@ export class DevStackController extends EventEmitter {
                 warn: () => {},
             });
             const prebuildCommand = [
+                'node scripts/build-macos-app-icon.mjs',
                 'node scripts/build-tauri-sidecar.mjs',
                 'cd apps/website/src-tauri && cargo build --no-default-features --color always',
             ].join(' && ');

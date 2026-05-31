@@ -11,6 +11,7 @@ import {
     markManagedOpenClawGatewayReady,
     markManagedOpenClawGatewayStopped,
 } from '../openclaw/state';
+import { replaceStoredOpenClawModels } from '../tavern/openclaw-snapshots-store';
 import { getRuntimeCapability, listRuntimeCapabilities, refreshRuntimeCapabilities } from './store';
 
 describe('Runtime capabilities store', () => {
@@ -191,6 +192,30 @@ describe('Runtime capabilities store', () => {
             { id: 'memory', state: 'healthy' },
             { id: 'skills', state: 'healthy' },
         ]);
+    });
+
+    test('marks model inventory healthy when synced models exist', async () => {
+        markManagedOpenClawGatewayReady();
+        replaceStoredOpenClawModels({
+            models: {
+                models: [{ id: 'openai/gpt-5.5', label: 'GPT-5.5', provider: 'openai' }],
+                updatedAt: '2026-05-31T18:00:00.000Z',
+            },
+            syncedAt: '2026-05-31T18:00:00.000Z',
+        });
+
+        const [models] = await refreshRuntimeCapabilities({
+            ids: ['models'],
+        });
+
+        expect(models).toMatchObject({
+            healthy: true,
+            id: 'models',
+            metadata: {
+                models: 1,
+            },
+            state: 'healthy',
+        });
     });
 
     test('records embedding model health from Runtime-owned checks', async () => {

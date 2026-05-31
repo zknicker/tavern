@@ -12,7 +12,10 @@ import { getCortexSettings } from '../cortex/settings';
 import { getDb } from '../db/connection';
 import { listRuntimeJobRuns } from '../jobs/history';
 import { getManagedOpenClawState } from '../openclaw/state';
-import { getStoredOpenClawModels } from '../tavern/openclaw-snapshots-store';
+import {
+    getStoredOpenClawModels,
+    getStoredOpenClawModelsSnapshotStatus,
+} from '../tavern/openclaw-snapshots-store';
 
 export interface RuntimeCapabilityCheckResult {
     metadata?: Record<string, unknown>;
@@ -144,9 +147,22 @@ export const runtimeCapabilityDefinitions: RuntimeCapabilityDefinition[] = [
                     state: 'degraded',
                 };
             }
+            const snapshot = getStoredOpenClawModelsSnapshotStatus();
             const models = getStoredOpenClawModels();
-            return models.agents.length > 0
-                ? { state: 'healthy' }
+            if (hasUsableModelInventory(models)) {
+                return {
+                    metadata: {
+                        models: models.models.length,
+                    },
+                    state: 'healthy',
+                };
+            }
+
+            return snapshot.hasSnapshot
+                ? {
+                      reason: 'Runtime synced an empty model inventory.',
+                      state: 'degraded',
+                  }
                 : {
                       reason: 'Runtime has not synced model inventory yet.',
                       state: 'unknown',
@@ -160,6 +176,10 @@ export const runtimeCapabilityDefinitions: RuntimeCapabilityDefinition[] = [
         },
     },
 ];
+
+function hasUsableModelInventory(models: { models: unknown[] }) {
+    return models.models.length > 0;
+}
 
 function healthyCapability(
     id: AgentRuntimeCapabilityHealthId,
