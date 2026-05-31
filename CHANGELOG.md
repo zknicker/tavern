@@ -2,6 +2,10 @@
 
 All notable changes to this project will be documented in this file.
 
+## v1.1.11 - 2026-05-30
+
+- Fixed chat sends so stale app-local Runtime errors no longer block a configured Runtime; sends now gate on the Runtime `gateway` capability.
+
 ## v1.1.10 - 2026-05-30
 
 - Fixed desktop releases rebuilding with stale embedded server versions after app version bumps.
