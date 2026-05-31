@@ -69,6 +69,7 @@ function createSidecarSignature() {
         'bun.lock',
         'package.json',
         'apps/server/package.json',
+        'apps/website/package.json',
         'apps/server/src',
         'packages',
         'scripts/build-tauri-sidecar.mjs',

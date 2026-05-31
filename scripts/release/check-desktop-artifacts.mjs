@@ -25,8 +25,10 @@ const main = async () => {
     const appPath = path.join(macosBundleDir, 'Tavern.app');
     const dmgPath = path.join(dmgBundleDir, `Tavern_${version}_aarch64.dmg`);
     const latestJsonPath = path.join(bundleRoot, 'latest.json');
+    const sidecarPath = path.join(appPath, 'Contents', 'MacOS', 'tavern-server');
 
     await assertDirectory(appPath, 'Tavern.app');
+    await assertSidecarVersion(sidecarPath, version);
     await assertFileHasContent(dmgPath, path.basename(dmgPath));
 
     if (await exists(latestJsonPath)) {
@@ -96,6 +98,20 @@ async function assertFileHasContent(filePath, label) {
     const stats = await stat(filePath);
     if (!stats.isFile() || stats.size < 1) {
         fail(`${label} is missing or empty`);
+    }
+}
+
+async function assertSidecarVersion(filePath, version) {
+    await assertFileHasContent(filePath, 'tavern-server sidecar');
+    const binary = await readFile(filePath);
+    const versionPatterns = [
+        Buffer.from(`version: "${version}"`),
+        Buffer.from(`"version":"${version}"`),
+        Buffer.from(`"version": "${version}"`),
+    ];
+
+    if (!versionPatterns.some((pattern) => binary.includes(pattern))) {
+        fail(`tavern-server sidecar does not embed app version ${version}`);
     }
 }
 
