@@ -89,6 +89,11 @@ so `docs:list` routes future agents correctly.
   to shared records when a focused query can expose that activity.
 - Keep optimistic chat rows app-local. Do not patch durable chat history to show optimistic rows.
 - Keep hooks granular and capability-first under `apps/website/src/hooks/<capability>`.
+- Runtime and managed OpenClaw feature gates must use Runtime capabilities as the singular
+  readiness contract. Do not gate app behavior on app-local connection `lastError`, sync
+  timestamps, process guesses, or cached OpenClaw state. Add a Runtime capability when the
+  requirement is not represented. Prefer primitive capability gates such as `gateway` over
+  umbrella feature names.
 - Prefer COSS UI components backed by Base UI for shared app primitives. Do not add new shadcn or
   Radix UI usage.
 - Follow `DESIGN.md` for visual design decisions, especially token usage, settings layout, and

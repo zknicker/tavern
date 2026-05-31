@@ -25,10 +25,6 @@ export async function createConfiguredAgentRuntimeClientForRuntimeId(runtimeId: 
         return null;
     }
 
-    if (connection.lastError) {
-        return null;
-    }
-
     return createAgentRuntimeClientForConnection(connection);
 }
 

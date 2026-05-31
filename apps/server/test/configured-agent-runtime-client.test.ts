@@ -31,7 +31,7 @@ test('runtime client remains configured when the connection is reachable', async
     assert.ok(client);
 });
 
-test('runtime client is not configured when the connection is unreachable', async () => {
+test('runtime client remains configured when the last health check failed', async () => {
     const runtimeId = 'runtime-with-degraded-status';
     await saveRuntimeConnection({
         id: runtimeId,
@@ -40,7 +40,7 @@ test('runtime client is not configured when the connection is unreachable', asyn
 
     const client = await createConfiguredAgentRuntimeClientForRuntimeId(runtimeId);
 
-    assert.equal(client, null);
+    assert.ok(client);
 });
 
 async function saveRuntimeConnection(input: { id: string; lastError: null | string }) {

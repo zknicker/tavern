@@ -4,7 +4,7 @@ import type {
     AgentRuntimeCapability,
     AgentRuntimeCapabilityState,
 } from '../agent-runtime-connection/contracts.ts';
-import { AgentRuntimeRequestError } from './client.ts';
+import { AgentRuntimeRequestError, type TavernAgentRuntimeClient } from './client.ts';
 
 interface CapabilityCallInput {
     capability: AgentRuntimeCapability;
@@ -49,6 +49,22 @@ export async function withCapabilityStatus<T>(
         classifyCapabilityFailure(error);
         throw error;
     }
+}
+
+export async function requireRuntimeCapabilityHealthy(input: {
+    capability: AgentRuntimeCapability;
+    client: Pick<TavernAgentRuntimeClient, 'getCapability'>;
+    runtimeId: string;
+}) {
+    const capability = await input.client.getCapability(input.capability);
+
+    if (capability.healthy) {
+        return capability;
+    }
+
+    throw new Error(
+        capability.reason ?? `Required Runtime capability "${input.capability}" is not healthy.`
+    );
 }
 
 export function classifyCapabilityFailure(error: unknown): CapabilityFailure {

@@ -1,8 +1,10 @@
 ---
-summary: Runtime-owned capability health for local services, dependencies, background jobs, and app readiness surfaces.
+summary: Runtime-owned capability health; the singular feature-gating contract between Tavern App and Tavern Runtime.
 read_when:
   - changing Runtime capability checks, capability storage, or capability APIs
   - changing job enablement that depends on Runtime readiness
+  - gating Tavern App features on Runtime or managed OpenClaw readiness
+  - changing chat send, runtime sync, skills, models, mentions, jobs, or OpenClaw-backed app behavior
   - changing the Tavern Runtime settings capability table
 ---
 
@@ -18,6 +20,24 @@ degraded, or blocked.
 
 The app only renders capability state. It does not decide whether a Runtime
 capability is healthy.
+
+## App Rule
+
+Runtime capabilities are the app's singular readiness interface.
+
+If an app feature needs Runtime or managed OpenClaw behavior, it must gate on
+the relevant Runtime capability health. Do not gate feature availability on
+app-local connection fields such as `lastError`, sync timestamps, stored
+OpenClaw state, or inferred process status.
+
+Add a new capability when the existing ids do not describe the feature
+requirement. Keep the capability check in Runtime, expose it through
+`/capabilities`, and have the app read only the returned health record.
+
+Prefer primitive capabilities over umbrella feature names. For example, if a
+chat send only needs the managed OpenClaw Gateway to be ready, gate on
+`gateway` instead of inventing a broader `agentExecution` or `agentTurns`
+capability.
 
 ## Contract
 

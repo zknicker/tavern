@@ -1,7 +1,10 @@
 import { randomUUID } from 'node:crypto';
 import type { AgentRuntimeCreateMessage } from '@tavern/api';
 import { createTavernClient } from '@tavern/sdk';
-import { withCapabilityStatus } from '../agent-runtime/capability-status.ts';
+import {
+    requireRuntimeCapabilityHealthy,
+    withCapabilityStatus,
+} from '../agent-runtime/capability-status.ts';
 import type { TavernAgentRuntimeClient } from '../agent-runtime/client.ts';
 import { createConfiguredAgentRuntimeClientForRuntimeId } from '../agent-runtime/configured-client.ts';
 import { getAgentRuntimeConnection } from '../storage/agent-runtime-connections.ts';
@@ -61,6 +64,12 @@ export async function sendTavernChatMessage(
     if (!runtimeClient) {
         throw new Error(`Tavern Runtime connection "${chatRecord.runtimeId}" is not configured.`);
     }
+
+    await requireRuntimeCapabilityHealthy({
+        capability: 'gateway',
+        client: runtimeClient,
+        runtimeId: chatRecord.runtimeId,
+    });
 
     if (binding.agentId !== agentId) {
         throw new Error(`Agent "${agentId}" is not bound to chat "${parsed.chatId}".`);

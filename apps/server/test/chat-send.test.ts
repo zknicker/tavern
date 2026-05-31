@@ -121,6 +121,19 @@ test('sendTavernChatMessage posts to Runtime', async () => {
                 ],
             };
         },
+        getCapability: async () => ({
+            checkedAt: '2026-04-06T12:10:00.000Z',
+            displayName: 'gateway',
+            healthy: true,
+            id: 'gateway',
+            lastHealthyAt: '2026-04-06T12:10:00.000Z',
+            metadata: {},
+            nextCheckAt: null,
+            reason: null,
+            state: 'healthy' as const,
+            technicalMessage: null,
+            updatedAt: '2026-04-06T12:10:00.000Z',
+        }),
         listSessions: async () => ({
             sessions: [
                 {
