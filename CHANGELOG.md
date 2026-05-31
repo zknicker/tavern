@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file.
 
+## v1.1.13 - 2026-05-31
+
+- Simplified Runtime model inventory to match OpenClaw's model catalog shape and removed unused model policy writes.
+- Fixed model capability health so synced OpenClaw models report correctly and stale model snapshots self-heal.
+- Reorganized Runtime capability sections and moved app/runtime versions into quieter metadata.
+- Fixed desktop dev startup by building the macOS app icon asset before launching Tauri.
+
 ## v1.1.12 - 2026-05-31
 
 - Decoupled app releases from Runtime releases with a minimum compatible Runtime version, so app-only patch updates no longer force a Runtime update.
