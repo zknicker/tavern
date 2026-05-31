@@ -1,3 +1,4 @@
+import { SystemUpdate01Icon } from '@hugeicons/core-free-icons';
 import { Tick02Icon } from '@hugeicons-pro/core-stroke-rounded';
 import * as React from 'react';
 import { Navigate, useNavigate } from 'react-router-dom';
@@ -17,6 +18,10 @@ import {
 } from '../../hooks/connections/runtime-update-progress.ts';
 import { useAgentRuntimeConnection } from '../../hooks/connections/use-agent-runtime-connection.ts';
 import { useConnectAgentRuntime } from '../../hooks/connections/use-connect-agent-runtime.ts';
+import {
+    type DesktopUpdateStatus,
+    useDesktopUpdate,
+} from '../../hooks/desktop/use-desktop-update.ts';
 import { trpc } from '../../lib/trpc.tsx';
 
 const tavernRuntimeUrlPlaceholder = 'http://127.0.0.1:18790';
@@ -208,6 +213,7 @@ function TavernRuntimeOnboardingForm({
 
 function RuntimeUpdatePanel({ connection }: { connection: RuntimeUpdateConnection }) {
     const utils = trpc.useUtils();
+    const desktopUpdate = useDesktopUpdate();
     const storedProgress = readRuntimeUpdateProgress();
     const mismatchKind = getRuntimeVersionMismatchKind(connection);
     const isAppUpdateRequired = mismatchKind === 'app-needs-update';
@@ -329,7 +335,12 @@ function RuntimeUpdatePanel({ connection }: { connection: RuntimeUpdateConnectio
                         >
                             Disconnect
                         </Button>
-                        {isAppUpdateRequired ? null : (
+                        {isAppUpdateRequired ? (
+                            <DesktopUpdateButton
+                                status={desktopUpdate.status}
+                                updateAndRestart={desktopUpdate.updateAndRestart}
+                            />
+                        ) : (
                             <Button
                                 className="border-brand bg-brand text-brand-foreground shadow-brand/20 hover:bg-brand/90"
                                 disabled={started && !hasTimedOut}
@@ -357,6 +368,9 @@ function RuntimeUpdatePanel({ connection }: { connection: RuntimeUpdateConnectio
                         <UpdateStepList currentStep={currentStep} />
                     </>
                 )}
+                {isAppUpdateRequired ? (
+                    <DesktopUpdateStatusLine status={desktopUpdate.status} />
+                ) : null}
                 {hasTimedOut ? (
                     <FieldError>
                         Runtime update is taking longer than expected. Tavern stopped polling after
@@ -372,6 +386,78 @@ function RuntimeUpdatePanel({ connection }: { connection: RuntimeUpdateConnectio
             </div>
         </div>
     );
+}
+
+function DesktopUpdateButton({
+    status,
+    updateAndRestart,
+}: {
+    status: DesktopUpdateStatus;
+    updateAndRestart: () => Promise<void>;
+}) {
+    const canAct = status.phase === 'available' || status.phase === 'ready';
+    const loading =
+        status.phase === 'checking' ||
+        status.phase === 'downloading' ||
+        status.phase === 'restarting';
+
+    return (
+        <Button
+            className="border-brand bg-brand text-brand-foreground shadow-brand/20 hover:bg-brand/90"
+            disabled={!canAct}
+            loading={loading}
+            onClick={() => {
+                void updateAndRestart();
+            }}
+            size="lg"
+            type="button"
+        >
+            <Icon icon={SystemUpdate01Icon} />
+            {status.phase === 'ready' ? 'Restart' : 'Update'}
+        </Button>
+    );
+}
+
+function DesktopUpdateStatusLine({ status }: { status: DesktopUpdateStatus }) {
+    if (status.phase === 'downloading') {
+        return (
+            <div className="grid gap-2">
+                <Progress
+                    className="h-2.5 bg-[#d5c2aa]/70"
+                    color="var(--brand)"
+                    value={status.progress * 100}
+                />
+                <p className="text-[#715a48] text-sm">
+                    Downloading Tavern {Math.round(status.progress * 100)}%
+                </p>
+            </div>
+        );
+    }
+
+    if (status.phase === 'error') {
+        return <FieldError>{status.message}</FieldError>;
+    }
+
+    return <p className="text-[#715a48] text-sm">{getDesktopUpdateStatusCopy(status)}</p>;
+}
+
+function getDesktopUpdateStatusCopy(status: DesktopUpdateStatus) {
+    switch (status.phase) {
+        case 'available':
+            return `Tavern ${status.version} is ready to install.`;
+        case 'checking':
+            return 'Checking for the latest Tavern update.';
+        case 'current':
+            return 'No Tavern update is available yet.';
+        case 'ready':
+            return 'The update is installed. Restart Tavern to finish.';
+        case 'restarting':
+            return 'Restarting Tavern.';
+        case 'unsupported':
+            return 'Desktop updates are available in the packaged Mac app.';
+        default:
+            return 'Preparing the Tavern updater.';
+    }
 }
 
 function getRuntimeVersionMismatchKind(
