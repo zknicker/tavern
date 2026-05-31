@@ -15,6 +15,7 @@ import {
 import { parseAgentRuntimeConnectionAuth } from './auth.ts';
 import type { AgentRuntimeCapabilityStatus, AgentRuntimeConnection } from './contracts.ts';
 import { type AgentRuntimeCapability, agentRuntimeCapabilitySchema } from './contracts.ts';
+import { getRequiredRuntimeVersion, getRuntimeVersionStatus } from './version-compatibility.ts';
 
 function getAgentRuntimeEnvironmentBaseUrl() {
     return process.env.TAVERN_RUNTIME_URL?.trim() || null;
@@ -60,6 +61,7 @@ function toAgentRuntimeConnection(input: {
     const capabilities = input.capabilities ?? [];
     const appVersion = input.appVersion ?? appPackage.version;
     const runtimeVersion = input.runtimeVersion ?? null;
+    const requiredRuntimeVersion = getRequiredRuntimeVersion(appVersion);
 
     return {
         appVersion,
@@ -73,14 +75,15 @@ function toAgentRuntimeConnection(input: {
         lastError: input.lastError,
         lastSyncedAt: input.lastSyncedAt,
         name: input.name,
+        requiredRuntimeVersion,
         runtimeCapabilities: capabilities,
         runtimeVersion,
         source: input.source,
-        versionStatus: runtimeVersion
-            ? runtimeVersion === appVersion
-                ? 'matched'
-                : 'mismatched'
-            : 'unknown',
+        versionStatus: getRuntimeVersionStatus({
+            appVersion,
+            requiredRuntimeVersion,
+            runtimeVersion,
+        }),
     };
 }
 

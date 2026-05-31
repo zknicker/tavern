@@ -52,7 +52,7 @@ export function clearRuntimeUpdateProgress() {
 }
 
 export function isRuntimeUpdateProgressActive(input: {
-    connection: null | { appVersion: string; baseUrl: string };
+    connection: null | { baseUrl: string; requiredRuntimeVersion: string };
     now?: number;
 }) {
     const progress = readRuntimeUpdateProgress();
@@ -67,7 +67,7 @@ export function isRuntimeUpdateProgressActive(input: {
 
     return (
         progress.baseUrl === input.connection.baseUrl &&
-        progress.requiredVersion === input.connection.appVersion &&
+        progress.requiredVersion === input.connection.requiredRuntimeVersion &&
         (input.now ?? Date.now()) - startedAt < runtimeUpdateTimeoutMs
     );
 }

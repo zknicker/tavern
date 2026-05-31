@@ -4,6 +4,7 @@ import {
     type AgentRuntimeConnection,
     agentRuntimeConnectionSchema,
 } from '../agent-runtime-connection/contracts.ts';
+import { getRequiredRuntimeVersion } from '../agent-runtime-connection/version-compatibility.ts';
 import { databaseClient } from '../db/index.ts';
 import { getAgentRuntimeConnection } from '../storage/agent-runtime-connections.ts';
 import { createAgentRuntimeClientForConnection } from './client-factory.ts';
@@ -92,6 +93,7 @@ function parseConfiguredAgentRuntimeConnection(record: unknown) {
         authConfigured: Boolean(parseAgentRuntimeConnectionAuth(raw.authJson)),
         enabled: Boolean(raw.enabled),
         isActive: Boolean(raw.isActive),
+        requiredRuntimeVersion: getRequiredRuntimeVersion(appPackage.version),
         runtimeCapabilities: [],
         runtimeVersion: null,
         versionStatus: 'unknown',

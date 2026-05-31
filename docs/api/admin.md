@@ -16,7 +16,8 @@ capabilities. It is not a second product API.
 
 ## In The Box
 
-* **Capabilities.** Runtime readiness, identity, version, and feature health.
+* **Capabilities.** Runtime readiness, identity, version, compatibility, and
+  feature health.
 * **Runtime events.** Recent event lists and websocket notifications for
   operational state.
 * **Managed OpenClaw.** Config and local lifecycle control.

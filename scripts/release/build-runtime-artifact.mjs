@@ -51,15 +51,8 @@ const main = async () => {
 await main();
 
 async function readReleaseVersion() {
-    const packageJson = await readJson('apps/website/package.json');
     const runtimePackageJson = await readJson('apps/runtime/package.json');
-    if (runtimePackageJson.version !== packageJson.version) {
-        fail('runtime package version must match app version', {
-            app: packageJson.version,
-            runtime: runtimePackageJson.version,
-        });
-    }
-    return packageJson.version;
+    return runtimePackageJson.version;
 }
 
 function readTargetTriple() {

@@ -9,6 +9,8 @@ import { loadEnvFile, readJson, repoRoot } from './release-utils.mjs';
 loadEnvFile();
 
 const s3Uri = trimTrailingSlash(requireEnv('TAVERN_RELEASE_S3_URI'));
+const includeRuntime =
+    process.argv.includes('--runtime') || process.env.TAVERN_RELEASE_INCLUDE_RUNTIME === '1';
 const bundleRoot = path.join(
     repoRoot,
     'apps',
@@ -37,7 +39,7 @@ const main = async () => {
         ...(await findFiles(dmgBundleDir, (entry) => entry.endsWith('.dmg'))),
         ...(await findFiles(macosBundleDir, (entry) => entry.endsWith('.app.tar.gz'))),
         ...(await findFiles(macosBundleDir, (entry) => entry.endsWith('.app.tar.gz.sig'))),
-        ...(await findRuntimeArtifacts(version)),
+        ...(includeRuntime ? await findRuntimeArtifacts(version) : []),
     ];
 
     for (const artifact of artifacts) {

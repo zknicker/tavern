@@ -49,7 +49,7 @@ export function OnboardingPage() {
     const mismatchKind = connection ? getRuntimeVersionMismatchKind(connection) : null;
 
     React.useEffect(() => {
-        if (connection?.versionStatus === 'matched') {
+        if (connection?.versionStatus === 'matched' || connection?.versionStatus === 'compatible') {
             clearRuntimeUpdateProgress();
         }
     }, [connection?.versionStatus]);
@@ -227,7 +227,7 @@ function RuntimeUpdatePanel({ connection }: { connection: RuntimeUpdateConnectio
         onSuccess: (result) => {
             writeRuntimeUpdateProgress({
                 baseUrl: connection.baseUrl,
-                requiredVersion: connection.appVersion,
+                requiredVersion: connection.requiredRuntimeVersion,
                 runtimeVersion: connection.runtimeVersion,
                 startedAt: result.startedAt,
             });
@@ -300,10 +300,10 @@ function RuntimeUpdatePanel({ connection }: { connection: RuntimeUpdateConnectio
                 <p className="text-pretty text-[#5b4637] text-base leading-6">
                     {isAppUpdateRequired
                         ? 'Tavern is connected to a newer Runtime than this app supports. Update Tavern, then reopen the app.'
-                        : 'Tavern is connected to your Runtime, but this app needs a newer Runtime before the dashboard can open.'}
+                        : 'Tavern is connected to your Runtime, but this app needs a newer compatible Runtime before the dashboard can open.'}
                 </p>
                 <div className="grid gap-2 rounded-[8px] border border-[#d8b98d]/70 bg-white/46 px-3 py-3 text-sm">
-                    <VersionRow label="Required" value={`v${connection.appVersion}`} />
+                    <VersionRow label="Minimum" value={`v${connection.requiredRuntimeVersion}`} />
                     <VersionRow
                         label="Connected"
                         value={
@@ -463,7 +463,10 @@ function getDesktopUpdateStatusCopy(status: DesktopUpdateStatus) {
 function getRuntimeVersionMismatchKind(
     connection: RuntimeUpdateConnection | null
 ): RuntimeVersionMismatchKind {
-    const comparison = compareRuntimeVersions(connection?.runtimeVersion, connection?.appVersion);
+    const comparison = compareRuntimeVersions(
+        connection?.runtimeVersion,
+        connection?.requiredRuntimeVersion
+    );
     return comparison > 0 ? 'app-needs-update' : 'runtime-needs-update';
 }
 

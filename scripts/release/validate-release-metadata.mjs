@@ -25,14 +25,18 @@ const main = async () => {
     const tauriConfig = await readJson(versionedFiles.tauri);
     const cargoVersion = await readCargoVersion(versionedFiles.cargo);
 
-    const versions = {
-        runtime: runtimePackage.version,
+    const appVersions = {
         website: websitePackage.version,
         tauri: tauriConfig.version,
         cargo: cargoVersion,
     };
 
-    const releaseVersion = assertSynchronizedVersions(versions);
+    const releaseVersion = assertSynchronizedAppVersions(appVersions);
+    assertRuntimeCompatibilityMetadata({
+        appVersion: releaseVersion,
+        requiredRuntimeVersion: websitePackage.tavern?.runtime?.minimumVersion,
+        runtimeVersion: runtimePackage.version,
+    });
 
     assert(
         tauriConfig.identifier === 'build.tavern.desktop',
@@ -88,7 +92,7 @@ function resolveExpectedVersion(argv) {
     return value;
 }
 
-function assertSynchronizedVersions(versions) {
+function assertSynchronizedAppVersions(versions) {
     const unique = new Set(Object.values(versions));
     if (unique.size !== 1) {
         fail('website, Tauri, and Cargo versions are not synchronized', versions);
@@ -100,6 +104,28 @@ function assertSynchronizedVersions(versions) {
     }
 
     return version;
+}
+
+function assertRuntimeCompatibilityMetadata(input) {
+    if (!isSemver(input.runtimeVersion)) {
+        fail(`invalid runtime package version: ${input.runtimeVersion}`);
+    }
+
+    if (!input.requiredRuntimeVersion) {
+        fail('apps/website/package.json must declare tavern.runtime.minimumVersion');
+    }
+
+    if (!isSemver(input.requiredRuntimeVersion)) {
+        fail(`invalid required Runtime version: ${input.requiredRuntimeVersion}`);
+    }
+
+    if (compareVersions(input.requiredRuntimeVersion, input.appVersion) > 0) {
+        fail('required Runtime version cannot be newer than the app release version', input);
+    }
+
+    if (!isCompatibleRuntimeVersion(input.runtimeVersion, input.requiredRuntimeVersion)) {
+        fail('runtime package version must satisfy the app Runtime compatibility floor', input);
+    }
 }
 
 function parseLatestReleaseFromChangelog(changelog) {
@@ -136,6 +162,49 @@ async function readText(relativePath) {
 
 function isSemver(value) {
     return /^\d+\.\d+\.\d+$/.test(value);
+}
+
+function isCompatibleRuntimeVersion(runtimeVersion, requiredRuntimeVersion) {
+    const runtime = parseVersion(runtimeVersion);
+    const required = parseVersion(requiredRuntimeVersion);
+
+    return (
+        runtime.major === required.major &&
+        runtime.minor === required.minor &&
+        compareVersions(runtimeVersion, requiredRuntimeVersion) >= 0
+    );
+}
+
+function compareVersions(left, right) {
+    const leftParts = parseVersion(left);
+    const rightParts = parseVersion(right);
+
+    if (leftParts.major !== rightParts.major) {
+        return leftParts.major > rightParts.major ? 1 : -1;
+    }
+
+    if (leftParts.minor !== rightParts.minor) {
+        return leftParts.minor > rightParts.minor ? 1 : -1;
+    }
+
+    if (leftParts.patch !== rightParts.patch) {
+        return leftParts.patch > rightParts.patch ? 1 : -1;
+    }
+
+    return 0;
+}
+
+function parseVersion(value) {
+    const match = /^(\d+)\.(\d+)\.(\d+)$/.exec(value);
+    if (!match) {
+        fail(`invalid semver value: ${value}`);
+    }
+
+    return {
+        major: Number.parseInt(match[1], 10),
+        minor: Number.parseInt(match[2], 10),
+        patch: Number.parseInt(match[3], 10),
+    };
 }
 
 function assert(condition, message) {

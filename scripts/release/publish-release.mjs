@@ -9,6 +9,7 @@ import { fail, isSemver, readFlagValue, readJson, readText, repoRoot } from './r
 
 const argv = process.argv.slice(2);
 const pushBranch = readFlagValue(argv, '--push-branch') ?? 'main';
+const publishRuntime = argv.includes('--runtime');
 
 if (argv.includes('--help') || argv.includes('-h')) {
     printUsage();
@@ -57,7 +58,11 @@ const main = async () => {
     assertVersion(version);
     assertNoTag(tagName);
     run('bun', ['run', 'release:check']);
-    run('bun', ['run', 'release:build-runtime-artifact']);
+    if (publishRuntime) {
+        await assertRuntimeReleaseVersion(version);
+        run('bun', ['run', 'release:build-runtime-artifact']);
+    }
+    process.env.TAVERN_RELEASE_INCLUDE_RUNTIME = publishRuntime ? '1' : '0';
     run('bun', ['run', 'publish:desktop']);
     restoreGeneratedSchemas();
     run('bun', ['run', 'release:check-desktop-artifacts']);
@@ -69,9 +74,11 @@ const main = async () => {
     pushRelease({ pushBranch, tagName });
 
     const notesPath = await writeReleaseNotes(version);
-    const artifacts = await findReleaseArtifacts(version);
+    const artifacts = await findReleaseArtifacts({ includeRuntime: publishRuntime, version });
     createGithubRelease({ artifacts, notesPath, tagName });
-    run('bun', ['run', 'release:publish-homebrew-formula']);
+    if (publishRuntime) {
+        run('bun', ['run', 'release:publish-homebrew-formula']);
+    }
 
     console.log(`Released ${tagName}`);
 };
@@ -82,9 +89,11 @@ function printUsage() {
     console.log(
         [
             'Usage: bun run release:publish [-- --push-branch main]',
+            '       bun run release:publish -- --runtime',
             '',
             'Builds, notarizes, publishes desktop artifacts, commits release metadata,',
             'pushes the release commit and tag, and creates the GitHub Release.',
+            'Pass --runtime to also build/publish the Runtime tarball and Homebrew formula.',
         ].join('\n')
     );
 }
@@ -97,6 +106,16 @@ async function readReleaseVersion() {
 function assertVersion(version) {
     if (!isSemver(version)) {
         fail(`invalid release version: ${version}`);
+    }
+}
+
+async function assertRuntimeReleaseVersion(appVersion) {
+    const runtimePackage = await readJson('apps/runtime/package.json');
+    if (runtimePackage.version !== appVersion) {
+        fail('Runtime releases must use the same version as the desktop release tag', {
+            app: appVersion,
+            runtime: runtimePackage.version,
+        });
     }
 }
 
@@ -204,14 +223,14 @@ function extractReleaseNotes(changelog, version) {
     return notes;
 }
 
-async function findReleaseArtifacts(version) {
+async function findReleaseArtifacts({ includeRuntime, version }) {
     const dmgName = `Tavern_${version}_aarch64.dmg`;
     const artifacts = [
         path.join(dmgBundleDir, dmgName),
         path.join(macosBundleDir, 'Tavern.app.tar.gz'),
         path.join(macosBundleDir, 'Tavern.app.tar.gz.sig'),
         path.join(bundleRoot, 'latest.json'),
-        ...(await findRuntimeArtifacts(version)),
+        ...(includeRuntime ? await findRuntimeArtifacts(version) : []),
     ];
     const dmgFiles = (await readdir(dmgBundleDir)).filter((entry) => entry.endsWith('.dmg'));
 

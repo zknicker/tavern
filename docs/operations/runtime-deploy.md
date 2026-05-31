@@ -98,9 +98,19 @@ Managed OpenClaw keeps its own Gateway port, which defaults to `18789`.
 
 ## Version Match
 
-For now, Tavern App and Tavern Runtime must use the exact same release version.
-The app blocks normal dashboard use when the connected Runtime version differs
-and shows the expected version on the onboarding-style Runtime screen.
+Tavern App and Tavern Runtime do not need exact release-version lockstep. The
+app declares its Runtime compatibility floor in `apps/website/package.json` at
+`tavern.runtime.minimumVersion`.
+
+The app accepts a Runtime when the Runtime version is exactly the app version,
+or when it is in the same Runtime API epoch as the floor and is greater than or
+equal to the floor. The Runtime API epoch is `major.minor`; patch releases inside
+that epoch are compatible unless a release raises the floor.
+
+The app blocks normal dashboard use only when the connected Runtime is below the
+floor or from a different Runtime API epoch. The onboarding-style Runtime screen
+shows the app version, the minimum Runtime version, and the connected Runtime
+version.
 
 ## Trust Model
 

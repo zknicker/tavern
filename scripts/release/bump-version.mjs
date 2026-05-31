@@ -11,16 +11,22 @@ import {
     writeText,
 } from './release-utils.mjs';
 
-const versionedPackagePaths = ['apps/website/package.json', 'apps/runtime/package.json'];
 const tauriConfigPath = 'apps/website/src-tauri/tauri.conf.json';
 const cargoManifestPath = 'apps/website/src-tauri/Cargo.toml';
 const changelogPath = 'CHANGELOG.md';
 
 const releaseType = process.argv[2];
+const flags = new Set(process.argv.slice(3));
+const bumpRuntime = flags.has('--runtime');
+const requireRuntime = flags.has('--require-runtime');
 
 if (!releaseType || releaseType === '--help' || releaseType === '-h') {
     printUsage();
     process.exit(releaseType ? 0 : 1);
+}
+
+if (requireRuntime && !bumpRuntime) {
+    fail('--require-runtime requires --runtime');
 }
 
 const main = async () => {
@@ -43,9 +49,12 @@ const main = async () => {
         fail(`target version ${targetVersion} must be greater than current ${currentVersion}`);
     }
 
-    await updateVersionedFiles(targetVersion);
+    await updateVersionedFiles(targetVersion, {
+        bumpRuntime,
+        requireRuntime,
+    });
 
-    printSummary({ currentVersion, targetVersion });
+    printSummary({ bumpRuntime, currentVersion, requireRuntime, targetVersion });
 };
 
 await main();
@@ -57,6 +66,8 @@ function printUsage() {
             '',
             'Examples:',
             '  bun run release:bump patch',
+            '  bun run release:bump patch -- --runtime',
+            '  bun run release:bump patch -- --runtime --require-runtime',
             '  bun run release:bump 1.0.1',
         ].join('\n')
     );
@@ -64,10 +75,7 @@ function printUsage() {
 
 async function readCurrentVersion() {
     const versions = await Promise.all([
-        ...versionedPackagePaths.map(async (packagePath) => {
-            const packageJson = await readJson(packagePath);
-            return packageJson.version;
-        }),
+        readWebsiteVersion(),
         readTauriVersion(),
         readCargoVersion(),
     ]);
@@ -75,7 +83,7 @@ async function readCurrentVersion() {
     const unique = new Set(versions);
     if (unique.size !== 1) {
         fail('website, Tauri, and Cargo versions are not synchronized', {
-            paths: [...versionedPackagePaths, tauriConfigPath, cargoManifestPath],
+            paths: ['apps/website/package.json', tauriConfigPath, cargoManifestPath],
             versions,
         });
     }
@@ -86,6 +94,11 @@ async function readCurrentVersion() {
     }
 
     return version;
+}
+
+async function readWebsiteVersion() {
+    const packageJson = await readJson('apps/website/package.json');
+    return packageJson.version;
 }
 
 async function readLatestChangelogVersion() {
@@ -131,15 +144,25 @@ function bumpVersion(version, type) {
     return `${parsed.major + 1}.0.0`;
 }
 
-async function updateVersionedFiles(targetVersion) {
-    await Promise.all(
-        versionedPackagePaths.map((packagePath) => {
-            return updateJson(packagePath, (packageJson) => {
-                packageJson.version = targetVersion;
-                return packageJson;
-            });
-        })
-    );
+async function updateVersionedFiles(targetVersion, options) {
+    await updateJson('apps/website/package.json', (packageJson) => {
+        packageJson.version = targetVersion;
+
+        if (options.requireRuntime) {
+            packageJson.tavern ??= {};
+            packageJson.tavern.runtime ??= {};
+            packageJson.tavern.runtime.minimumVersion = targetVersion;
+        }
+
+        return packageJson;
+    });
+
+    if (options.bumpRuntime) {
+        await updateJson('apps/runtime/package.json', (packageJson) => {
+            packageJson.version = targetVersion;
+            return packageJson;
+        });
+    }
 
     await updateJson(tauriConfigPath, (config) => {
         config.version = targetVersion;
@@ -168,14 +191,18 @@ async function readCargoVersion() {
     return match[1];
 }
 
-function printSummary({ currentVersion, targetVersion }) {
+function printSummary({ bumpRuntime, currentVersion, requireRuntime, targetVersion }) {
     console.log(`Bumped release version ${currentVersion} -> ${targetVersion}`);
     console.log('Updated files:');
-    for (const packagePath of versionedPackagePaths) {
-        console.log(`- ${packagePath}`);
+    console.log('- apps/website/package.json');
+    if (bumpRuntime) {
+        console.log('- apps/runtime/package.json');
     }
     console.log(`- ${tauriConfigPath}`);
     console.log(`- ${cargoManifestPath}`);
+    if (requireRuntime) {
+        console.log('- apps/website/package.json tavern.runtime.minimumVersion');
+    }
     console.log('Next:');
     console.log('- bun install --frozen-lockfile');
     console.log('- bun run release:collect-changelog-context');

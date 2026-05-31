@@ -80,10 +80,11 @@ export const agentRuntimeConnectionSchema = z.object({
     lastError: z.string().nullable(),
     lastSyncedAt: z.string().nullable(),
     name: z.string().trim().min(1),
+    requiredRuntimeVersion: z.string().trim().min(1),
     runtimeCapabilities: z.array(agentRuntimeCapabilityStatusSchema).default([]),
     runtimeVersion: z.string().trim().min(1).nullable(),
     source: z.enum(['environment', 'saved']),
-    versionStatus: z.enum(['matched', 'mismatched', 'unknown']),
+    versionStatus: z.enum(['compatible', 'matched', 'mismatched', 'unknown']),
 });
 
 export const agentRuntimeConnectionStatusSchema = z.object({

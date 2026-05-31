@@ -118,7 +118,8 @@ function RuntimeConnectionRow({ connection }: { connection: RuntimeConnection })
             </p>
             {connection.runtimeVersion ? (
                 <p className="text-muted-foreground text-sm">
-                    App v{connection.appVersion} · Runtime v{connection.runtimeVersion}
+                    App v{connection.appVersion} · Runtime v{connection.runtimeVersion} · Minimum
+                    Runtime v{connection.requiredRuntimeVersion}
                 </p>
             ) : null}
             <RuntimeUrlForm connection={connection} />

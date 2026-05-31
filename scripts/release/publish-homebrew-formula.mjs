@@ -23,7 +23,7 @@ const runtimeBundleDir = path.join(
 );
 
 const main = async () => {
-    const { version } = await readJson('apps/website/package.json');
+    const { version } = await readJson('apps/runtime/package.json');
     const artifactName = await findRuntimeArtifactName(version);
     const sha256 = readRuntimeArtifactSha256(artifactName);
     const formulaPath = path.join(tapDirectory, 'Formula', 'tavern-runtime.rb');

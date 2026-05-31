@@ -1,29 +1,118 @@
 ---
-summary: Release workflow for version bumps, changelog context, Runtime artifacts, desktop signing/notarization, updater metadata, S3 upload, tags, and GitHub Release.
+summary: Release workflow for app-only releases, Runtime compatibility floors, Runtime artifacts, desktop signing/notarization, updater metadata, S3 upload, tags, and GitHub Release.
 read_when:
   - cutting, signing, notarizing, or publishing a Tavern release
+  - deciding whether a Tavern app release needs a Runtime release
   - changing Runtime release artifacts or Homebrew deployment
   - changing release scripts, updater metadata, or release environment variables
 ---
 
 # Releases
 
-## Flow
+Tavern releases optimize for frequent app updates and infrequent Runtime updates.
+The desktop app has its own release version. Runtime has a package version, and
+the app declares the minimum compatible Runtime version in
+`apps/website/package.json` at `tavern.runtime.minimumVersion`.
+
+The app accepts a connected Runtime when:
+
+* the Runtime version is exactly the app version, or
+* the Runtime version is in the same Runtime API epoch as
+  `tavern.runtime.minimumVersion` and is greater than or equal to that floor.
+
+The Runtime API epoch is `major.minor`. Patch releases inside the same epoch are
+compatible unless the app raises the floor.
+
+## Agent Release Decision
+
+Before every release, inspect the changed files and choose one lane:
+
+| Lane | Use when | Runtime package | Runtime floor |
+| --- | --- | --- | --- |
+| App-only | UI, desktop shell, docs, app cache, app presentation, or any change that does not require a new Runtime behavior | unchanged | unchanged |
+| Compatible Runtime | Runtime bugfix or operational improvement that existing apps can keep using without new API behavior | bump with app release | unchanged |
+| Required Runtime | App depends on new Runtime API, storage, capability, event, job, managed OpenClaw behavior, or CLI behavior | bump with app release | bump to the release version |
+
+Default to **App-only** unless the app needs new Runtime behavior. Runtime
+updates are operator work; do not force one for a desktop-only patch.
+
+## App-Only Flow
 
 1. Run `bun run release:bump <patch|minor|major|X.Y.Z>`.
 2. Run `bun install --frozen-lockfile`.
 3. Run `bun run release:collect-changelog-context`.
 4. Update the top `CHANGELOG.md` entry from the commit context.
 5. Run `bun run release:check`.
-6. Run `bun run release:build-runtime-artifact`.
-7. Run `bun run release:publish` from macOS with signing, notarization, updater,
+6. Run `bun run release:publish` from macOS with signing, notarization, updater,
    S3, and GitHub auth configured.
 
-`release:publish` builds the Runtime artifact, builds the signed desktop app,
-notarizes it, creates updater metadata, uploads desktop updater artifacts and
-Runtime tarballs to `TAVERN_RELEASE_S3_URI`, commits release metadata, pushes
-`main`, pushes the version tag, creates the GitHub Release, and updates the
-Homebrew tap formula.
+`release:publish` builds the signed desktop app, notarizes it, creates updater
+metadata, uploads desktop updater artifacts to `TAVERN_RELEASE_S3_URI`, commits
+release metadata, pushes `main`, pushes the version tag, and creates the GitHub
+Release.
+
+## Runtime Release Flow
+
+Use this lane only when the Runtime package must ship.
+
+1. Run `bun run release:bump <patch|minor|major|X.Y.Z> -- --runtime`.
+2. If the app requires this Runtime version, use
+   `bun run release:bump <patch|minor|major|X.Y.Z> -- --runtime --require-runtime`
+   instead. This also updates `tavern.runtime.minimumVersion`.
+3. Run `bun install --frozen-lockfile`.
+4. Run `bun run release:collect-changelog-context`.
+5. Update the top `CHANGELOG.md` entry. Name app changes and Runtime changes
+   separately when both ship.
+6. Run `bun run release:check`.
+7. Run `bun run release:build-runtime-artifact` when validating the Runtime
+   artifact before publish.
+8. Run `bun run release:publish -- --runtime` from macOS.
+
+`release:publish -- --runtime` builds the Runtime artifact, builds the signed
+desktop app, notarizes it, creates updater metadata, uploads desktop updater
+artifacts and Runtime tarballs to `TAVERN_RELEASE_S3_URI`, commits release
+metadata, pushes `main`, pushes the version tag, creates the GitHub Release, and
+updates the Homebrew tap formula.
+
+## Compatibility Floor Rules
+
+* **Do not raise the floor for desktop-only work.** App version bumps do not
+  imply Runtime updates.
+* **Raise the floor when the app calls a new Runtime contract.** This includes
+  new or changed Runtime API fields, capability ids, websocket events, durable
+  records, managed OpenClaw lifecycle behavior, Runtime CLI behavior, or
+  first-party plugin behavior that the app requires.
+* **Keep compatible Runtime fixes optional.** If a Runtime patch improves
+  reliability but old app builds keep working, publish the Runtime artifact
+  without changing `tavern.runtime.minimumVersion`.
+* **Use patch bumps inside a Runtime API epoch.** If Runtime compatibility needs
+  a clean break, bump the minor version and raise the app floor to that new
+  minor.
+* **Verify old Runtime behavior when leaving the floor unchanged.** Run the
+  focused app/server test lane against the floor contract or add a fixture-backed
+  test for the field/event/capability the app consumes.
+
+Raise `tavern.runtime.minimumVersion` when any answer is yes:
+
+* Does the app require a new Runtime API route, request field, response field, or
+  error shape?
+* Does the app require a new Runtime capability id, health state, event, durable
+  record, job, or storage invariant?
+* Does the app require new managed OpenClaw startup, plugin sync, Gateway, or
+  first-party plugin behavior?
+* Does the app require new Runtime CLI, Homebrew service, artifact layout, port,
+  or environment behavior?
+* Would the new app fail, hide core functionality, corrupt state, or show a
+  false healthy state against the current floor Runtime?
+
+Do not raise `tavern.runtime.minimumVersion` when every answer is no. Examples:
+
+* UI copy, layout, navigation, visual polish, or desktop updater changes.
+* App cache, optimistic UI, local settings, or presentation-only fixes.
+* Runtime fixes that old app builds can use opportunistically but the new app
+  does not require.
+* Release tooling or documentation changes that do not change the Runtime
+  artifact contract.
 
 ## Homebrew Tap
 
