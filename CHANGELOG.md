@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file.
 
+## v1.1.12 - 2026-05-31
+
+- Decoupled app releases from Runtime releases with a minimum compatible Runtime version, so app-only patch updates no longer force a Runtime update.
+- Updated release tooling and docs so agents choose app-only, compatible Runtime, or required Runtime release lanes and publish Runtime artifacts only when requested.
+
 ## v1.1.11 - 2026-05-30
 
 - Fixed chat sends so stale app-local Runtime errors no longer block a configured Runtime; sends now gate on the Runtime `gateway` capability.
