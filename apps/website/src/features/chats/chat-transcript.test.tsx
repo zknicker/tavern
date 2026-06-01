@@ -360,6 +360,30 @@ test('ChatTranscript renders durable activity once when an assistant reply follo
     assert.match(markup, /NYC right now: 61F\./);
 });
 
+test('ChatTranscript renders runtime notices outside the work disclosure', () => {
+    const markup = renderTranscript([
+        {
+            id: 'runtime-notice-1',
+            kind: 'system',
+            runtimeNotice: {
+                detail: 'd348a369-223c-42a7-8220-67c7340810c2',
+                kind: 'new_session',
+                sessionId: 'd348a369-223c-42a7-8220-67c7340810c2',
+                text: 'New session: d348a369-223c-42a7-8220-67c7340810c2',
+                title: 'Started new session',
+            },
+            systemKind: 'runtimeNotice',
+            timestamp: '2026-03-31T15:00:00.000Z',
+        },
+    ]);
+
+    assert.match(markup, /Started new session/);
+    assert.doesNotMatch(markup, /d348a369-223c-42a7-8220-67c7340810c2/);
+    assert.match(markup, /data-slot="drawer-trigger"/);
+    assert.doesNotMatch(markup, /Working/);
+    assert.doesNotMatch(markup, /Worked/);
+});
+
 test('ChatTranscript prefers durable activity timestamps for completed activity duration', () => {
     const markup = renderTranscript([
         {

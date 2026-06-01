@@ -60,6 +60,24 @@ test('buildTranscriptEntries keeps thinking rows inside the agent turn', () => {
     ).toEqual(['tool', 'system:thinking', 'message']);
 });
 
+test('buildTranscriptEntries keeps runtime notices as standalone system entries', () => {
+    const rows: ChatRow[] = [
+        toolRow('tool-1', false, false),
+        runtimeNoticeRow('notice-1'),
+        agentMessage('agent-1', 'Done.', false, false),
+    ];
+
+    const entries = buildTranscriptEntries({
+        activeReply: null,
+        rows,
+    });
+
+    expect(entries).toHaveLength(3);
+    expect(entries[0]).toMatchObject({ kind: 'turn', participant: 'agent' });
+    expect(entries[1]).toMatchObject({ id: 'notice-1', kind: 'system' });
+    expect(entries[2]).toMatchObject({ kind: 'turn', participant: 'agent' });
+});
+
 test('buildTranscriptEntries renders active reply text after durable activity', () => {
     const entries = buildTranscriptEntries({
         activeReply: {
@@ -310,11 +328,7 @@ function toolRow(
     };
 }
 
-function narrationRow(
-    id: string,
-    connectsToPrevious: boolean,
-    connectsToNext: boolean
-): ChatRow {
+function narrationRow(id: string, connectsToPrevious: boolean, connectsToNext: boolean): ChatRow {
     const row = toolRow(id, connectsToPrevious, connectsToNext) as ToolChatRow;
 
     return {
@@ -348,6 +362,22 @@ function thinkingRow(id: string): ChatRow {
             text: 'Need to inspect the files before replying.',
             timestamp: '2026-05-11T16:00:01.500Z',
         },
+        timestamp: '2026-05-11T16:00:01.500Z',
+    };
+}
+
+function runtimeNoticeRow(id: string): ChatRow {
+    return {
+        id,
+        kind: 'system',
+        runtimeNotice: {
+            detail: 'd348a369-223c-42a7-8220-67c7340810c2',
+            kind: 'new_session',
+            sessionId: 'd348a369-223c-42a7-8220-67c7340810c2',
+            text: 'New session: d348a369-223c-42a7-8220-67c7340810c2',
+            title: 'Started new session',
+        },
+        systemKind: 'runtimeNotice',
         timestamp: '2026-05-11T16:00:01.500Z',
     };
 }

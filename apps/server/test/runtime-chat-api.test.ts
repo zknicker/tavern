@@ -255,6 +255,90 @@ test('listRuntimeChatRows maps Tavern API artifacts into chat timeline rows', as
     ]);
 });
 
+test('listRuntimeChatRows maps runtime notice activity into system rows', async () => {
+    await saveAgentRuntimeConnection({
+        baseUrl: 'http://runtime.test',
+        enabled: true,
+        id: 'runtime-1',
+        isActive: true,
+        lastCheckedAt: '2026-05-18T12:00:00.000Z',
+        lastError: null,
+        name: 'Runtime',
+    });
+
+    globalThis.fetch = (async (input, init) => {
+        const request = new Request(input, init);
+        const url = new URL(request.url);
+
+        if (url.pathname === '/api/chats/cht_1/messages') {
+            return Response.json({ messages: [] });
+        }
+
+        if (url.pathname === '/api/chats/cht_1/responses') {
+            return Response.json({
+                activity: [
+                    responseActivity({
+                        detail: 'd348a369-223c-42a7-8220-67c7340810c2',
+                        id: 'act_notice_1',
+                        kind: 'custom',
+                        metadata: {
+                            runtime: {
+                                notice: {
+                                    detail: 'd348a369-223c-42a7-8220-67c7340810c2',
+                                    kind: 'new_session',
+                                    sessionId: 'd348a369-223c-42a7-8220-67c7340810c2',
+                                    text: 'New session: d348a369-223c-42a7-8220-67c7340810c2',
+                                    title: 'Started new session',
+                                },
+                            },
+                        },
+                        responseId: 'rsp_run_1',
+                        title: 'Started new session',
+                    }),
+                ],
+                artifacts: [],
+                next_sequence: null,
+                responses: [
+                    {
+                        chat_id: 'cht_1',
+                        completed_at: '2026-05-18T12:00:03.000Z',
+                        created_at: '2026-05-18T12:00:01.500Z',
+                        id: 'rsp_run_1',
+                        metadata: {},
+                        participant_id: 'agt_main',
+                        request_message_id: null,
+                        response_message_id: null,
+                        status: 'completed',
+                        summary: null,
+                        updated_at: '2026-05-18T12:00:03.000Z',
+                    },
+                ],
+            });
+        }
+
+        throw new Error(`Unexpected Tavern API request: ${url.pathname}`);
+    }) as typeof fetch;
+
+    const rows = await listRuntimeChatRows('cht_1');
+
+    expect(rows).toEqual([
+        {
+            id: 'act_notice_1',
+            kind: 'system',
+            runtimeNotice: {
+                compactionCount: null,
+                detail: 'd348a369-223c-42a7-8220-67c7340810c2',
+                kind: 'new_session',
+                sessionId: 'd348a369-223c-42a7-8220-67c7340810c2',
+                text: 'New session: d348a369-223c-42a7-8220-67c7340810c2',
+                title: 'Started new session',
+            },
+            systemKind: 'runtimeNotice',
+            timestamp: '2026-05-18T12:00:02.000Z',
+        },
+    ]);
+});
+
 test('listRuntimeChatRows preserves durable activity titles for tool rows', async () => {
     await saveAgentRuntimeConnection({
         baseUrl: 'http://runtime.test',
@@ -672,7 +756,7 @@ function chatMessage(input: {
 function responseActivity(input: {
     detail: string;
     id: string;
-    kind: 'message' | 'reasoning' | 'tool_call';
+    kind: 'custom' | 'message' | 'reasoning' | 'tool_call';
     metadata?: Record<string, unknown>;
     responseId: string;
     status?: 'completed' | 'running';

@@ -386,6 +386,279 @@ describe('Tavern Messenger turn handling', () => {
         ]);
     });
 
+    it('does not persist OpenClaw new-session notices as assistant deliveries', async () => {
+        runPrepared.mockClear();
+        const response = {};
+        const context = createTurnTestContext();
+        const dispatchWithNewSessionNotice = mock(async ({ dispatcherOptions }) => {
+            await dispatcherOptions.deliver({
+                text: '🧭 New session: d348a369-223c-42a7-8220-67c7340810c2',
+            });
+            await dispatcherOptions.deliver({ text: 'gm!' });
+            return { counts: { final: 2 }, queuedFinal: false };
+        });
+
+        await dispatchInboundTavernMessage({
+            context,
+            params: {
+                agent: {
+                    agentId: 'blippy',
+                },
+                chatId: 'cht_220f46ed-2d7c-41dd-9d7e-d02691f1afc3',
+                message: {
+                    content: 'Gm',
+                    id: 'msg_1',
+                    sentAt: '2026-06-01T15:17:23.941Z',
+                },
+                sender: {
+                    id: 'zach',
+                    name: 'Zach',
+                },
+                sessionKey: 'agent:blippy:tavern:channel:cht_220f46ed-2d7c-41dd-9d7e-d02691f1afc3',
+            },
+            respond: (ok, payload, error) => {
+                response.ok = ok;
+                response.payload = payload;
+                response.error = error;
+            },
+            runtime: createRuntime({
+                dispatchReplyWithBufferedBlockDispatcher: dispatchWithNewSessionNotice,
+                runPrepared,
+            }),
+        });
+
+        await waitForActivityStatus(context.tavern, 'completed');
+
+        expect(response).toMatchObject({ ok: true });
+        expect(context.tavern.createDelivery).toHaveBeenCalledTimes(1);
+        expect(context.tavern.createDelivery.mock.calls[0][0]).toMatchObject({
+            deliveryId: 'del_1_final_1',
+            messageId: 'msg_1_final_1',
+            text: 'gm!',
+        });
+        expect(
+            context.tavern.updateTurnActivity.mock.calls.map(([, input]) => input?.step)
+        ).toContainEqual(
+            expect.objectContaining({
+                id: 'act_runtime_notice_new_session_d348a369-223c-42a7-8220-67c7340810c2',
+                kind: 'custom',
+                metadata: expect.objectContaining({
+                    detail: 'd348a369-223c-42a7-8220-67c7340810c2',
+                    runtime: expect.objectContaining({
+                        notice: expect.objectContaining({
+                            kind: 'new_session',
+                            sessionId: 'd348a369-223c-42a7-8220-67c7340810c2',
+                            title: 'Started new session',
+                        }),
+                    }),
+                }),
+                title: 'Started new session',
+            })
+        );
+    });
+
+    it('strips OpenClaw new-session notice prefixes from combined final replies', async () => {
+        runPrepared.mockClear();
+        const response = {};
+        const context = createTurnTestContext();
+        const dispatchWithCombinedNewSessionNotice = mock(async ({ dispatcherOptions }) => {
+            await dispatcherOptions.deliver({
+                text: [
+                    '🧭 New session: ede39adf-cec5-4678-883c-b8215c559159',
+                    '',
+                    'Doing well, thanks. How are ya?',
+                ].join('\n'),
+            });
+            return { counts: { final: 1 }, queuedFinal: false };
+        });
+
+        await dispatchInboundTavernMessage({
+            context,
+            params: {
+                agent: {
+                    agentId: 'blippy',
+                },
+                chatId: 'cht_220f46ed-2d7c-41dd-9d7e-d02691f1afc3',
+                message: {
+                    content: 'Hi how are ya',
+                    id: 'msg_1',
+                    sentAt: '2026-06-01T17:55:23.941Z',
+                },
+                sender: {
+                    id: 'zach',
+                    name: 'Zach',
+                },
+                sessionKey: 'agent:blippy:tavern:channel:cht_220f46ed-2d7c-41dd-9d7e-d02691f1afc3',
+            },
+            respond: (ok, payload, error) => {
+                response.ok = ok;
+                response.payload = payload;
+                response.error = error;
+            },
+            runtime: createRuntime({
+                dispatchReplyWithBufferedBlockDispatcher: dispatchWithCombinedNewSessionNotice,
+                runPrepared,
+            }),
+        });
+
+        await waitForActivityStatus(context.tavern, 'completed');
+
+        expect(response).toMatchObject({ ok: true });
+        expect(context.tavern.createDelivery).toHaveBeenCalledTimes(1);
+        expect(context.tavern.createDelivery.mock.calls[0][0]).toMatchObject({
+            deliveryId: 'del_1_final_1',
+            messageId: 'msg_1_final_1',
+            text: 'Doing well, thanks. How are ya?',
+        });
+        expect(context.tavern.createDelivery.mock.calls[0][0].text).not.toContain('New session');
+        expect(
+            context.tavern.updateTurnActivity.mock.calls.map(([, input]) => input?.step)
+        ).toContainEqual(
+            expect.objectContaining({
+                id: 'act_runtime_notice_new_session_ede39adf-cec5-4678-883c-b8215c559159',
+                kind: 'custom',
+                metadata: expect.objectContaining({
+                    detail: 'ede39adf-cec5-4678-883c-b8215c559159',
+                    runtime: expect.objectContaining({
+                        notice: expect.objectContaining({
+                            kind: 'new_session',
+                            sessionId: 'ede39adf-cec5-4678-883c-b8215c559159',
+                            title: 'Started new session',
+                        }),
+                    }),
+                }),
+                title: 'Started new session',
+            })
+        );
+    });
+
+    it('maps OpenClaw auto-compaction final notices to runtime notice activity', async () => {
+        runPrepared.mockClear();
+        const response = {};
+        const context = createTurnTestContext();
+        const dispatchWithCompactionNotice = mock(async ({ dispatcherOptions }) => {
+            await dispatcherOptions.deliver({ text: '🧹 Auto-compaction complete (count 2).' });
+            return { counts: { final: 1 }, queuedFinal: false };
+        });
+
+        await dispatchInboundTavernMessage({
+            context,
+            params: {
+                agent: {
+                    agentId: 'blippy',
+                },
+                chatId: 'cht_220f46ed-2d7c-41dd-9d7e-d02691f1afc3',
+                message: {
+                    content: 'Do long work',
+                    id: 'msg_1',
+                    sentAt: '2026-06-01T15:17:23.941Z',
+                },
+                sender: {
+                    id: 'zach',
+                    name: 'Zach',
+                },
+                sessionKey: 'agent:blippy:tavern:channel:cht_220f46ed-2d7c-41dd-9d7e-d02691f1afc3',
+            },
+            respond: (ok, payload, error) => {
+                response.ok = ok;
+                response.payload = payload;
+                response.error = error;
+            },
+            runtime: createRuntime({
+                dispatchReplyWithBufferedBlockDispatcher: dispatchWithCompactionNotice,
+                runPrepared,
+            }),
+        });
+
+        await waitForActivityStatus(context.tavern, 'completed');
+
+        expect(response).toMatchObject({ ok: true });
+        expect(context.tavern.createDelivery).toHaveBeenCalledTimes(0);
+        expect(
+            context.tavern.updateTurnActivity.mock.calls.map(([, input]) => input?.step)
+        ).toContainEqual(
+            expect.objectContaining({
+                id: 'act_runtime_notice_auto_compaction',
+                kind: 'custom',
+                metadata: expect.objectContaining({
+                    detail: '🧹 Auto-compaction complete (count 2).',
+                    runtime: expect.objectContaining({
+                        notice: expect.objectContaining({
+                            compactionCount: 2,
+                            kind: 'auto_compaction',
+                            title: 'Compacted context',
+                        }),
+                    }),
+                }),
+                title: 'Compacted context',
+            })
+        );
+    });
+
+    it('maps structured OpenClaw status final payloads to runtime notice activity', async () => {
+        runPrepared.mockClear();
+        const response = {};
+        const context = createTurnTestContext();
+        const dispatchWithStatusNotice = mock(async ({ dispatcherOptions }) => {
+            await dispatcherOptions.deliver({
+                isStatusNotice: true,
+                text: 'Runtime status updated.',
+            });
+            return { counts: { final: 1 }, queuedFinal: false };
+        });
+
+        await dispatchInboundTavernMessage({
+            context,
+            params: {
+                agent: {
+                    agentId: 'blippy',
+                },
+                chatId: 'cht_220f46ed-2d7c-41dd-9d7e-d02691f1afc3',
+                message: {
+                    content: 'Status please',
+                    id: 'msg_1',
+                    sentAt: '2026-06-01T15:17:23.941Z',
+                },
+                sender: {
+                    id: 'zach',
+                    name: 'Zach',
+                },
+                sessionKey: 'agent:blippy:tavern:channel:cht_220f46ed-2d7c-41dd-9d7e-d02691f1afc3',
+            },
+            respond: (ok, payload, error) => {
+                response.ok = ok;
+                response.payload = payload;
+                response.error = error;
+            },
+            runtime: createRuntime({
+                dispatchReplyWithBufferedBlockDispatcher: dispatchWithStatusNotice,
+                runPrepared,
+            }),
+        });
+
+        await waitForActivityStatus(context.tavern, 'completed');
+
+        expect(response).toMatchObject({ ok: true });
+        expect(context.tavern.createDelivery).toHaveBeenCalledTimes(0);
+        expect(
+            context.tavern.updateTurnActivity.mock.calls.map(([, input]) => input?.step)
+        ).toContainEqual(
+            expect.objectContaining({
+                kind: 'custom',
+                metadata: expect.objectContaining({
+                    detail: 'Runtime status updated.',
+                    runtime: expect.objectContaining({
+                        notice: expect.objectContaining({
+                            kind: 'status',
+                            text: 'Runtime status updated.',
+                        }),
+                    }),
+                }),
+                title: 'Runtime status updated.',
+            })
+        );
+    });
+
     it('keeps assistant activity to structured pre-tool preamble events', async () => {
         runPrepared.mockClear();
         const response = {};

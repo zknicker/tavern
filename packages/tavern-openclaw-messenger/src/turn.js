@@ -11,6 +11,7 @@ import {
 import { buildBodyForAgentWithMentions } from './mentions.js';
 import { buildAcceptedTavernMetadata, registerActiveTavernTurn } from './message-identity.js';
 import { registerTavernDeliveryContext, sendTavernTextMessage } from './outbound.js';
+import { recordRuntimeNotice, splitOpenClawFinalPayload } from './runtime-notices.js';
 import { activityStepFromProgressStep } from './tavern-api.js';
 import { createTurnProgressMapper } from './turn-progress.js';
 
@@ -163,6 +164,7 @@ async function runTavernTurn({ context, input, runId, runtime, startedAt }) {
         requestMessageId: input.messageId,
         runId,
         sessionKey: input.sessionKey,
+        startedAt,
     });
 
     let turnResult;
@@ -185,6 +187,8 @@ async function runTavernTurn({ context, input, runId, runtime, startedAt }) {
                 markFinalReplySent: () => {
                     observedFinalReplyDelivery = true;
                 },
+                runId,
+                startedAt,
                 storePath,
             }),
             recordInboundSession: runtime.channel.session.recordInboundSession,
@@ -712,7 +716,15 @@ function createTurnTimingLogger() {
     return () => undefined;
 }
 
-function createTavernDeliveryAdapter({ cfg, context, input, markFinalReplySent, storePath }) {
+function createTavernDeliveryAdapter({
+    cfg,
+    context,
+    input,
+    markFinalReplySent,
+    runId,
+    startedAt,
+    storePath,
+}) {
     return {
         durable: (_payload, info = {}) =>
             info.kind === 'final'
@@ -725,7 +737,25 @@ function createTavernDeliveryAdapter({ cfg, context, input, markFinalReplySent, 
                 return { visibleReplySent: false };
             }
 
-            const text = typeof payload?.text === 'string' ? payload.text : '';
+            const { notices, text } = splitOpenClawFinalPayload(payload);
+            for (const notice of notices) {
+                await recordRuntimeNotice({
+                    context,
+                    input,
+                    notice,
+                    runId,
+                    startedAt,
+                });
+            }
+
+            if (!text.trim()) {
+                return {
+                    messageIds: [],
+                    receipt: null,
+                    visibleReplySent: false,
+                };
+            }
+
             const result = await sendTavernTextMessage({
                 accountId: DEFAULT_ACCOUNT_ID,
                 cfg,
@@ -745,7 +775,12 @@ function createTavernDeliveryAdapter({ cfg, context, input, markFinalReplySent, 
             };
         },
         onDelivered: async (payload, info = {}) => {
-            const text = typeof payload?.text === 'string' ? payload.text : '';
+            const text =
+                info.kind === 'final'
+                    ? splitOpenClawFinalPayload(payload).text
+                    : typeof payload?.text === 'string'
+                      ? payload.text
+                      : '';
 
             if (info.kind === 'final' && looksLikeDeliveredFailureNotice(text)) {
                 await persistDeliveredTurnMessage({ input, storePath, text });

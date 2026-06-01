@@ -9,6 +9,7 @@ import {
     readChatIdFromTarget,
     TAVERN_CHANNEL_ID,
 } from './config.js';
+import { recordRuntimeNotice, splitOpenClawFinalPayload } from './runtime-notices.js';
 
 const deliveryContexts = new Map();
 
@@ -43,6 +44,7 @@ export function registerTavernDeliveryContext(input) {
         requestMessageId: input.requestMessageId,
         runId: input.runId,
         sessionKey: input.sessionKey,
+        startedAt: input.startedAt,
     };
     const stack = deliveryContexts.get(key) ?? [];
 
@@ -66,7 +68,8 @@ export async function sendTavernTextMessage(ctx) {
     const target = buildTavernTarget(ctx.to);
     const chatId = readChatIdFromTarget(target);
     const sentAt = Date.now();
-    const text = String(ctx.text ?? '');
+    const splitFinal = splitOpenClawFinalPayload({ text: String(ctx.text ?? '') });
+    const text = splitFinal.text;
     const deliveryContext = getCurrentDeliveryContext({
         accountId: ctx.accountId,
         chatId,
@@ -75,6 +78,23 @@ export async function sendTavernTextMessage(ctx) {
     const deliveryId = deliveryContext
         ? currentDeliveryId(deliveryContext)
         : `del_${stripPrefix(messageId, 'msg_')}`;
+
+    if (deliveryContext) {
+        for (const notice of splitFinal.notices) {
+            await recordRuntimeNotice({
+                context: ctx.context ?? deliveryContext.context,
+                input: {
+                    agentId: deliveryContext.agentId,
+                    chatId,
+                    messageId: deliveryContext.requestMessageId,
+                    sessionKey: deliveryContext.sessionKey,
+                },
+                notice,
+                runId: deliveryContext.runId,
+                startedAt: deliveryContext.startedAt,
+            });
+        }
+    }
 
     if (text.trim() && deliveryContext) {
         deliveryContext.markFinalReplySent?.();

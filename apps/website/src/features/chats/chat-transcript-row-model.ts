@@ -7,6 +7,7 @@ export type TranscriptRenderRow =
     | {
           dayLabel: string | null;
           entry: TranscriptEntry;
+          followsRuntimeNotice: boolean;
           id: string;
           kind: 'entry';
           turnStartedAt: string | null;
@@ -30,6 +31,7 @@ export function buildTranscriptRenderRows(entries: TranscriptEntry[], hiddenCoun
         rows.push({
             dayLabel: showDayDivider && timestamp ? formatDayLabel(timestamp) : null,
             entry,
+            followsRuntimeNotice: isRuntimeNoticeEntry(previousEntry),
             id: entry.id,
             kind: 'entry',
             turnStartedAt: getAgentTurnStartedAt(previousEntry, entry),
@@ -53,6 +55,15 @@ export function getEstimatedTranscriptRowSize(row: TranscriptRenderRow | undefin
     }
 
     return row.entry.participant === 'user' ? 88 : 180;
+}
+
+function isRuntimeNoticeEntry(entry: TranscriptEntry | null) {
+    return (
+        entry?.kind === 'system' &&
+        entry.item.kind === 'row' &&
+        entry.item.row.kind === 'system' &&
+        entry.item.row.systemKind === 'runtimeNotice'
+    );
 }
 
 function getDayKey(timestamp: string | null) {

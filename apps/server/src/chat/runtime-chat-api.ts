@@ -172,6 +172,19 @@ function activityToChatRows(
         id: runtimeMetadataString(response, 'agentId') ?? response?.participant_id ?? 'agt_unknown',
         kind: 'agent' as const,
     };
+    const runtimeNotice = runtimeNoticeFromActivity(activity);
+
+    if (runtimeNotice) {
+        return [
+            {
+                id: activity.id,
+                kind: 'system' as const,
+                runtimeNotice,
+                systemKind: 'runtimeNotice' as const,
+                timestamp: activity.started_at,
+            },
+        ];
+    }
 
     if (!isRenderableActivity(activity, response, finalReplyTextByRunId)) {
         return [];
@@ -210,6 +223,56 @@ function activityToChatRows(
             toolCall: titledToolCall,
         },
     ];
+}
+
+function runtimeNoticeFromActivity(
+    activity: TavernResponseActivity
+):
+    | Extract<
+          ChatLogPage['rows'][number],
+          { kind: 'system'; systemKind: 'runtimeNotice' }
+      >['runtimeNotice']
+    | null {
+    const runtime = readRecord(activity.metadata.runtime);
+    const notice = readRecord(runtime.notice);
+    const kind = runtimeNoticeKind(notice.kind);
+
+    if (!kind) {
+        return null;
+    }
+
+    const title = readString(notice.title) ?? runtimeNoticeFallbackTitle(kind);
+    const text = readString(notice.text) ?? readString(activity.detail) ?? title;
+    const compactionCount =
+        kind === 'auto_compaction' && typeof notice.compactionCount === 'number'
+            ? notice.compactionCount
+            : null;
+
+    return {
+        compactionCount,
+        detail: readString(notice.detail) ?? readString(activity.detail),
+        kind,
+        sessionId: readString(notice.sessionId),
+        text,
+        title,
+    };
+}
+
+function runtimeNoticeKind(value: unknown) {
+    return value === 'new_session' || value === 'auto_compaction' || value === 'status'
+        ? value
+        : null;
+}
+
+function runtimeNoticeFallbackTitle(kind: 'auto_compaction' | 'new_session' | 'status') {
+    switch (kind) {
+        case 'auto_compaction':
+            return 'Compacted context';
+        case 'new_session':
+            return 'Started new session';
+        case 'status':
+            return 'Runtime notice';
+    }
 }
 
 function isFinalAssistantReplyStep(

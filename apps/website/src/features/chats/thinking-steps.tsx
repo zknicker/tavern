@@ -69,7 +69,7 @@ export const ThinkingStepsHeader = forwardRef<HTMLButtonElement, ThinkingStepsHe
                 <span>{children}</span>
                 {showIcon ? (
                     <Icon
-                        className="-rotate-90 size-3.5 text-muted-foreground transition-transform group-data-[panel-open]:rotate-0"
+                        className="size-3.5 -rotate-90 text-muted-foreground transition-transform group-data-[panel-open]:rotate-0"
                         icon={ArrowDown01Icon}
                         strokeWidth={1.7}
                     />
@@ -136,19 +136,19 @@ export function ThinkingStep({
             style={{ animationDelay: `${delay}s` }}
         >
             <div className="flex gap-2.5 rounded-md px-2 py-1.5 hover:bg-muted">
-                <div className="flex w-[14px] shrink-0 flex-col items-center">
-                    <div className="pt-0.5">
+                <div className="flex w-4 shrink-0 flex-col items-center">
+                    <div>
                         {showIcon && icon ? (
                             <Icon
-                                className="size-3.5 text-muted-foreground"
+                                className="size-4 text-muted-foreground"
                                 icon={icon}
                                 strokeWidth={1.5}
                             />
                         ) : (
-                            <div className="flex size-3.5 items-center justify-center">
+                            <div className="flex size-4 items-center justify-center">
                                 <div
                                     className={cn(
-                                        'size-1.5 rounded-full',
+                                        'size-2 rounded-full',
                                         status === 'failed'
                                             ? 'bg-destructive'
                                             : isActive
@@ -205,7 +205,7 @@ export function ThinkingStepDetails({
                 <CollapsibleTrigger className="group flex w-auto items-center gap-1.5 rounded-md px-3 py-1 text-[13px] text-muted-foreground leading-tight hover:bg-muted hover:text-foreground">
                     <span>{summary}</span>
                     <Icon
-                        className="-rotate-90 size-3 opacity-70 transition-transform group-data-[panel-open]:rotate-0"
+                        className="size-3 -rotate-90 opacity-70 transition-transform group-data-[panel-open]:rotate-0"
                         icon={ArrowDown01Icon}
                         strokeWidth={1.7}
                     />

@@ -69,6 +69,7 @@ packages/tavern-openclaw-messenger/
     runtime-relay.js
     turn.js
     outbound.js
+    runtime-notices.js
     message-identity.js
     turn-progress.js
 ```
@@ -165,6 +166,12 @@ not need to pretend it has external platform ids. It mints a stable
 Do not call deprecated direct outbound helpers from new code. New message sends
 go through the channel-message lifecycle or the channel turn delivery
 adapter.
+
+Both final-delivery paths must classify OpenClaw runtime notices before writing
+assistant deliveries. OpenClaw can send verbose notices such as `🧭 New session:
+<session-id>` through either the turn delivery adapter or the channel message
+adapter. The plugin maps those notices to Tavern `runtimeNotice` activity and
+delivers only the remaining assistant text as the final message.
 
 ## Turn Lifecycle
 
@@ -271,6 +278,14 @@ The core mapping is:
 | `onApprovalEvent` | `chat.response_activity.upsert` with `approval` kind | Approval requests and decisions. |
 | `onPatchSummary` | `chat.response_activity.upsert` with `artifact` kind | Patch/file-summary activity. |
 | `onPartialReply` | No durable API write | This callback is draft text, not Tavern response activity. |
+
+OpenClaw verbose notices such as `New session: <id>` and auto-compaction
+messages are runtime telemetry, not assistant replies. The Messenger keeps
+progress callbacks enabled, classifies those final payloads before creating
+deliveries, and records them as `custom` response activity with
+`metadata.runtime.notice`. Tavern Runtime projects those activity records into
+`runtimeNotice` system rows so Tavern App can render native notice UI outside
+the work disclosure.
 
 Do not add a parallel event stream or choose between alternate ids at call
 sites.

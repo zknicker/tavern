@@ -55,6 +55,15 @@ export const workerRowSchema = z.object({
     worker: workerSchema,
 });
 
+export const runtimeNoticeSchema = z.object({
+    compactionCount: z.number().int().nonnegative().nullable().optional(),
+    detail: z.string().nullable(),
+    kind: z.enum(['new_session', 'auto_compaction', 'status']),
+    sessionId: z.string().nullable(),
+    text: z.string(),
+    title: z.string(),
+});
+
 export const systemRowSchema = z.discriminatedUnion('systemKind', [
     z.object({
         accessEvent: sessionAccessEventSchema,
@@ -76,6 +85,13 @@ export const systemRowSchema = z.discriminatedUnion('systemKind', [
         kind: z.literal('system'),
         systemKind: z.literal('delivery'),
         timestamp: z.string().nullable(),
+    }),
+    z.object({
+        id: z.string(),
+        kind: z.literal('system'),
+        runtimeNotice: runtimeNoticeSchema,
+        systemKind: z.literal('runtimeNotice'),
+        timestamp: z.string(),
     }),
     z.object({
         id: z.string(),

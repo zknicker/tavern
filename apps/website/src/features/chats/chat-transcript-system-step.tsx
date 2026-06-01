@@ -1,10 +1,25 @@
 import type { HugeiconsIconProps } from '@hugeicons/react';
 import {
     BrainIcon,
+    CompassIcon,
+    DatabaseSyncIcon,
+    InformationCircleIcon,
     Message01Icon,
     PackageIcon,
     ToolsIcon,
 } from '@hugeicons-pro/core-stroke-rounded';
+import * as React from 'react';
+import {
+    Drawer,
+    DrawerDescription,
+    DrawerHeader,
+    DrawerPanel,
+    DrawerPopup,
+    DrawerTitle,
+    DrawerTrigger,
+} from '../../components/ui/drawer.tsx';
+import { Icon } from '../../components/ui/icon.tsx';
+import { formatTimestamp } from '../../lib/format.ts';
 import { AccessEventLogEntry } from '../sessions/log/event-entry/access-entry.tsx';
 import { ArtifactLogEntry } from '../sessions/log/event-entry/artifact-entry.tsx';
 import { DeliveryLogEntry } from '../sessions/log/event-entry/delivery-entry.tsx';
@@ -13,6 +28,39 @@ import type { TranscriptRow } from './chat-transcript-model.ts';
 import { ThinkingStep, ThinkingStepDetails } from './thinking-steps.tsx';
 
 type StepIcon = HugeiconsIconProps['icon'];
+
+type RuntimeNoticeRow = Extract<TranscriptRow, { kind: 'system'; systemKind: 'runtimeNotice' }>;
+interface RuntimeNoticeSummary {
+    description?: string;
+    icon: StepIcon;
+    label: string;
+}
+
+export function RuntimeNoticeEntry({ row }: { row: RuntimeNoticeRow }) {
+    const [isOpen, setIsOpen] = React.useState(false);
+    const summary = getRuntimeNoticeSummary(row);
+
+    return (
+        <div className="relative w-full px-3 py-1">
+            <div className="w-[min(80%,52rem)] min-w-0">
+                <ThinkingStep
+                    className="-ml-2.5 [&>div]:gap-1.5"
+                    icon={summary.icon}
+                    index={0}
+                    isLast
+                    label={
+                        <RuntimeNoticeLabel
+                            isOpen={isOpen}
+                            onOpenChange={setIsOpen}
+                            row={row}
+                            summary={summary}
+                        />
+                    }
+                />
+            </div>
+        </div>
+    );
+}
 
 export function SystemStep({
     currentSessionKey,
@@ -60,6 +108,8 @@ function getSystemBody({
                     delivery={row.delivery}
                 />
             );
+        case 'runtimeNotice':
+            return null;
         case 'thinking':
             return <ThinkingLogEntry entry={row} />;
     }
@@ -77,11 +127,174 @@ function getSystemSummary(row: Extract<TranscriptRow, { kind: 'system' }>): {
             return { icon: PackageIcon, label: 'Captured artifact' };
         case 'delivery':
             return { icon: Message01Icon, label: 'Delivered update' };
+        case 'runtimeNotice': {
+            const summary = getRuntimeNoticeSummary(row);
+            return {
+                description: summary.description,
+                icon: summary.icon,
+                label: summary.label,
+            };
+        }
         case 'thinking':
             return {
                 description: row.thinking.text,
                 icon: BrainIcon,
                 label: 'Reasoning',
             };
+    }
+}
+
+function getRuntimeNoticeSummary(row: RuntimeNoticeRow): RuntimeNoticeSummary {
+    switch (row.runtimeNotice.kind) {
+        case 'auto_compaction':
+            return {
+                description: formatCompactionDescription(row.runtimeNotice.compactionCount),
+                icon: DatabaseSyncIcon,
+                label: row.runtimeNotice.title,
+            };
+        case 'new_session':
+            return {
+                description: row.runtimeNotice.sessionId ?? row.runtimeNotice.detail ?? undefined,
+                icon: CompassIcon,
+                label: row.runtimeNotice.title,
+            };
+        case 'status':
+            return {
+                description:
+                    row.runtimeNotice.text === row.runtimeNotice.title
+                        ? undefined
+                        : row.runtimeNotice.text,
+                icon: InformationCircleIcon,
+                label: row.runtimeNotice.title,
+            };
+    }
+}
+
+function formatCompactionDescription(count: number | null | undefined) {
+    return typeof count === 'number' ? `count ${count}` : undefined;
+}
+
+function RuntimeNoticeLabel({
+    isOpen,
+    onOpenChange,
+    row,
+    summary,
+}: {
+    isOpen: boolean;
+    onOpenChange: (open: boolean) => void;
+    row: RuntimeNoticeRow;
+    summary: RuntimeNoticeSummary;
+}) {
+    return (
+        <Drawer onOpenChange={onOpenChange} open={isOpen} position="right">
+            <DrawerTrigger
+                render={
+                    <button
+                        className="inline-flex min-w-0 max-w-full items-baseline gap-1.5 text-left hover:text-foreground"
+                        type="button"
+                    />
+                }
+            >
+                <span className="truncate font-medium text-muted-foreground">{summary.label}</span>
+            </DrawerTrigger>
+            {isOpen ? <RuntimeNoticeDrawer row={row} summary={summary} /> : null}
+        </Drawer>
+    );
+}
+
+function RuntimeNoticeDrawer({
+    row,
+    summary,
+}: {
+    row: RuntimeNoticeRow;
+    summary: RuntimeNoticeSummary;
+}) {
+    const details = runtimeNoticeDetails(row);
+
+    return (
+        <DrawerPopup className="max-w-xl" showCloseButton variant="inset">
+            <DrawerHeader className="gap-4">
+                <div className="flex items-center gap-3">
+                    <div className="flex size-9 shrink-0 items-center justify-center rounded-lg border border-border/50 bg-muted/40">
+                        <Icon
+                            className="size-[18px] text-muted-foreground"
+                            icon={summary.icon}
+                            strokeWidth={1.6}
+                        />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                        <DrawerTitle className="truncate">{summary.label}</DrawerTitle>
+                        <DrawerDescription className="mt-1 truncate">
+                            Runtime notice
+                        </DrawerDescription>
+                    </div>
+                </div>
+            </DrawerHeader>
+            <DrawerPanel className="space-y-5">
+                <div className="flex flex-col gap-1 rounded-md border border-border/30 bg-muted/10 px-3 py-2.5">
+                    {details.map((detail) => (
+                        <RuntimeNoticeMetaRow
+                            key={detail.label}
+                            label={detail.label}
+                            value={detail.value}
+                        />
+                    ))}
+                </div>
+                {row.runtimeNotice.text ? (
+                    <div className="space-y-3">
+                        <div className="space-y-1">
+                            <h3 className="font-medium text-foreground text-sm">
+                                Raw OpenClaw notice
+                            </h3>
+                            <p className="max-w-[58ch] text-pretty text-muted-foreground text-sm">
+                                Original OpenClaw text captured before Tavern rendered it as a
+                                runtime notice.
+                            </p>
+                        </div>
+                        <div className="rounded-md border border-border/30 bg-muted/15 px-3 py-2">
+                            <code className="break-all font-mono text-foreground/90 text-sm leading-relaxed">
+                                {row.runtimeNotice.text}
+                            </code>
+                        </div>
+                    </div>
+                ) : null}
+            </DrawerPanel>
+        </DrawerPopup>
+    );
+}
+
+function RuntimeNoticeMetaRow({ label, value }: { label: string; value: string }) {
+    return (
+        <div className="grid grid-cols-[6.5rem_minmax(0,1fr)] gap-3 text-sm">
+            <span className="text-muted-foreground">{label}</span>
+            <span className="min-w-0 break-all text-foreground/90">{value}</span>
+        </div>
+    );
+}
+
+function runtimeNoticeDetails(row: RuntimeNoticeRow) {
+    const details = [
+        { label: 'Notice type', value: formatNoticeKind(row.runtimeNotice.kind) },
+        { label: 'Timestamp', value: formatTimestamp(row.timestamp) },
+    ];
+
+    if (typeof row.runtimeNotice.compactionCount === 'number') {
+        details.push({
+            label: 'Count',
+            value: String(row.runtimeNotice.compactionCount),
+        });
+    }
+
+    return details;
+}
+
+function formatNoticeKind(kind: RuntimeNoticeRow['runtimeNotice']['kind']) {
+    switch (kind) {
+        case 'auto_compaction':
+            return 'Auto-compaction';
+        case 'new_session':
+            return 'New session';
+        case 'status':
+            return 'Status';
     }
 }

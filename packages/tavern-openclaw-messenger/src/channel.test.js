@@ -168,4 +168,73 @@ describe('Tavern Messenger channel routing', () => {
             unregister();
         }
     });
+
+    it('strips runtime notice prefixes when OpenClaw sends through the channel adapter', async () => {
+        const tavern = {
+            createDelivery: mock(async (input) => ({
+                cursor: '1',
+                id: input.deliveryId,
+                idempotent: false,
+                message: {
+                    id: input.messageId,
+                },
+            })),
+            updateTurnActivity: mock(async (turn, input = {}) => ({
+                ...turn,
+                ...input,
+            })),
+        };
+        const chatId = 'cht_220f46ed-2d7c-41dd-9d7e-d02691f1afc3';
+        const unregister = registerTavernDeliveryContext({
+            accountId: 'default',
+            agentId: 'blippy',
+            chatId,
+            context: { tavern },
+            requestMessageId: 'msg_request',
+            runId: 'run_1',
+            sessionKey: `agent:blippy:tavern:channel:${chatId}`,
+            startedAt: '2026-06-01T17:59:40.985Z',
+        });
+
+        try {
+            await tavernMessageAdapter.send.text({
+                accountId: 'default',
+                cfg: {},
+                text: [
+                    '🧭 New session: 4851269c-9b4c-4bf5-b9f0-169f56ed5376',
+                    '',
+                    'Today is Monday, June 1, 2026.',
+                ].join('\n'),
+                to: `chat:${chatId}`,
+            });
+
+            expect(tavern.createDelivery).toHaveBeenCalledTimes(1);
+            expect(tavern.createDelivery.mock.calls[0][0]).toMatchObject({
+                chatId,
+                requestMessageId: 'msg_request',
+                text: 'Today is Monday, June 1, 2026.',
+            });
+            expect(tavern.createDelivery.mock.calls[0][0].text).not.toContain('New session');
+            expect(
+                tavern.updateTurnActivity.mock.calls.map(([, input]) => input?.step)
+            ).toContainEqual(
+                expect.objectContaining({
+                    id: 'act_runtime_notice_new_session_4851269c-9b4c-4bf5-b9f0-169f56ed5376',
+                    kind: 'custom',
+                    metadata: expect.objectContaining({
+                        detail: '4851269c-9b4c-4bf5-b9f0-169f56ed5376',
+                        runtime: expect.objectContaining({
+                            notice: expect.objectContaining({
+                                kind: 'new_session',
+                                sessionId: '4851269c-9b4c-4bf5-b9f0-169f56ed5376',
+                            }),
+                        }),
+                    }),
+                    title: 'Started new session',
+                })
+            );
+        } finally {
+            unregister();
+        }
+    });
 });

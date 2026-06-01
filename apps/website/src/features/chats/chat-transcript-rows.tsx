@@ -26,6 +26,7 @@ export function TranscriptEntryRow({
                 conversationLayout={conversationLayout}
                 currentSessionKey={currentSessionKey}
                 entry={row.entry}
+                followsRuntimeNotice={row.followsRuntimeNotice}
                 turnStartedAt={row.turnStartedAt}
             />
         </>

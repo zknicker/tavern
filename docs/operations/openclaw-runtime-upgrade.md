@@ -31,9 +31,16 @@ the runtime namespace stable as `tavern-openclaw-managed`.
    owning Tavern spec before changing code.
 8. Update generated config, Gateway adapter mappings, tests, and website e2e
    mock provider fixtures when the contract changes.
-9. Add a runtime-state migration only when OpenClaw state cannot be
+9. Run the Tavern Messenger final-payload classification regressions. These
+   guard OpenClaw verbose/status payloads such as new-session and
+   auto-compaction notices so they keep mapping to `runtimeNotice` activity
+   instead of assistant messages:
+   ```bash
+   bun run --filter @zknicker/tavern-openclaw-messenger typecheck
+   ```
+10. Add a runtime-state migration only when OpenClaw state cannot be
    regenerated or resynced.
-10. Run verification.
+11. Run verification.
 
 ## Feature Overlap Review
 
@@ -81,6 +88,7 @@ bun run --filter @tavern/runtime lint
 bun run --filter @tavern/runtime typecheck
 bun run --filter @tavern/runtime test
 bun run --filter @tavern/server typecheck
+bun run --filter @zknicker/tavern-openclaw-messenger typecheck
 bun run --filter @tavern/openclaw-gateway-adapter test
 bun run test:e2e:live-openclaw
 ```

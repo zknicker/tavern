@@ -35,6 +35,7 @@ import type {
     TranscriptRow,
 } from './chat-transcript-model.ts';
 import { getItemSessionKey } from './chat-transcript-model.ts';
+import { RuntimeNoticeEntry } from './chat-transcript-system-step.tsx';
 import { ThinkingIndicator, TypingIndicator } from './thinking-indicator.tsx';
 import { TurnWorkDisclosure } from './working-log.tsx';
 
@@ -49,6 +50,7 @@ export function TranscriptEntryView({
     conversationLayout,
     currentSessionKey,
     entry,
+    followsRuntimeNotice,
     turnStartedAt,
 }: {
     activeReply: ChatActiveReply | null;
@@ -56,9 +58,18 @@ export function TranscriptEntryView({
     conversationLayout: ConversationMessageLayout;
     currentSessionKey?: string | null;
     entry: TranscriptEntry;
+    followsRuntimeNotice?: boolean;
     turnStartedAt?: string | null;
 }) {
     if (entry.kind === 'system') {
+        if (
+            entry.item.kind === 'row' &&
+            entry.item.row.kind === 'system' &&
+            entry.item.row.systemKind === 'runtimeNotice'
+        ) {
+            return <RuntimeNoticeEntry row={entry.item.row} />;
+        }
+
         return (
             <div className="mt-4 w-full px-3 py-2.5">
                 <ChatTranscriptActivity
@@ -80,6 +91,7 @@ export function TranscriptEntryView({
             chatId={chatId}
             currentSessionKey={currentSessionKey}
             entry={entry}
+            followsRuntimeNotice={Boolean(followsRuntimeNotice)}
             layout={conversationLayout}
             turnStartedAt={turnStartedAt}
         />
@@ -158,6 +170,7 @@ function AgentTurn({
     chatId,
     currentSessionKey,
     entry,
+    followsRuntimeNotice,
     layout,
     turnStartedAt,
 }: {
@@ -165,6 +178,7 @@ function AgentTurn({
     chatId?: string;
     currentSessionKey?: string | null;
     entry: Extract<TranscriptEntry, { kind: 'turn' }>;
+    followsRuntimeNotice: boolean;
     layout: ConversationMessageLayout;
     turnStartedAt?: string | null;
 }) {
@@ -193,7 +207,12 @@ function AgentTurn({
         hasWorkHeader && finalSegmentIndex >= 0 ? [segments[finalSegmentIndex]] : [];
 
     return (
-        <div className={cn(rowClassName, showIdentity ? newTurnGapClassName : 'mt-3.5')}>
+        <div
+            className={cn(
+                rowClassName,
+                showIdentity ? newTurnGapClassName : followsRuntimeNotice ? 'mt-0' : 'mt-3.5'
+            )}
+        >
             <div
                 className={cn(
                     showIdentity ? 'grid grid-cols-[2rem_minmax(0,1fr)] gap-x-2.5' : 'block'
