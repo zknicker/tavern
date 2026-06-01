@@ -1,6 +1,6 @@
 [package]
 name = "tavern-desktop"
-version = "1.1.15"
+version = "1.1.16"
 description = "Tavern desktop shell"
 authors = ["Tavern"]
 edition = "2021"

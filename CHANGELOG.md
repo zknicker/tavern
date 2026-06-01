@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file.
 
+## v1.1.16 - 2026-06-01
+
+- Added Settings -> Instructions for editing the managed agent's custom AGENTS.md block with a code editor and a generated AGENTS.md preview.
+- Added Runtime API and realtime updates for reading the current generated managed workspace instructions.
+- Simplified agent appearance settings, removed the Runtime JSON drawer, and replaced the agent avatar package with the app's built-in avatar UI.
+- Fixed agent model settings so explicit non-preferred OpenClaw harness routes are preserved when reading and saving settings.
+
 ## v1.1.15 - 2026-06-01
 
 - Fixed Tavern Runtime URL saves so unreachable URLs still persist in the app database and reopen with the configured URL.
