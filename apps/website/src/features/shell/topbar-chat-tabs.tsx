@@ -30,6 +30,7 @@ import { useChatRuntimeTimelineState } from '../../hooks/chats/use-timeline-cont
 import type { RouteTab } from '../../hooks/dashboard/use-route-tab.ts';
 import { routeTabs } from '../../hooks/dashboard/use-route-tab.ts';
 import { markChatTiming } from '../../lib/chat-timing.ts';
+import { formatTimestamp } from '../../lib/format.ts';
 import { cn } from '../../lib/utils.ts';
 import { buildChatList, type ChatListItem } from '../chats/chat-list-data.ts';
 import { buildChatPath, buildNewChatDraftPath } from '../chats/chat-path.ts';
@@ -39,7 +40,11 @@ import {
     SidebarChatContextMenu,
     SidebarChatRenameDialog,
 } from './sidebar-chat-actions.tsx';
-import { buildSidebarChatGroups, getSidebarDraftActivityLabel } from './sidebar-chat-list.tsx';
+import {
+    buildSidebarChatGroups,
+    formatSidebarActivityLabel,
+    getSidebarDraftActivityLabel,
+} from './sidebar-chat-list.tsx';
 
 const openChatTabsStorageKey = 'tavern.chatTabs.openChatIds.v1';
 const openChatTabsChangedEvent = 'tavern:open-chat-tabs-changed';
@@ -397,11 +402,11 @@ export function TopbarAllChatsMenuButton() {
             >
                 <Icon aria-hidden="true" className="size-4.5" icon={MoreHorizontalIcon} size={18} />
             </MenuTrigger>
-            <MenuPopup align="end" className="w-64">
+            <MenuPopup align="end" className="w-80">
                 {chats.length > 0 ? (
                     chats.map((chat) => (
                         <MenuItem
-                            className="gap-2.5"
+                            className="grid grid-cols-[auto_minmax(0,1fr)_auto] gap-2.5"
                             key={chat.id}
                             onClick={() => {
                                 void openChat(chat);
@@ -413,6 +418,12 @@ export function TopbarAllChatsMenuButton() {
                             />
                             <span className="min-w-0 flex-1 overflow-hidden text-ellipsis whitespace-nowrap leading-none">
                                 {resolveTavernChatName(chat)}
+                            </span>
+                            <span
+                                className="shrink-0 text-muted-foreground text-xs tabular-nums"
+                                title={formatTopbarChatActivityTitle(chat)}
+                            >
+                                {formatSidebarActivityLabel(chat.lastActivityLabel)}
                             </span>
                         </MenuItem>
                     ))
@@ -611,9 +622,13 @@ function sortChatsByCreatedAt(chats: ChatListItem[]) {
     );
 }
 
+function formatTopbarChatActivityTitle(chat: ChatListItem) {
+    return chat.lastActivityAt ? formatTimestamp(chat.lastActivityAt) : chat.lastActivityLabel;
+}
+
 function compareCreatedAt(left: string | null, right: string | null) {
     if (left && right) {
-        return left.localeCompare(right);
+        return right.localeCompare(left);
     }
 
     if (left) {
