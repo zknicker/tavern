@@ -283,12 +283,12 @@ function main() {
         });
     }
 
-    const iconResult = runNodeScript(buildIconScriptPath, [], {
+    const iconBuildResult = runNodeScript(buildIconScriptPath, [], {
         cwd: repositoryRoot,
     });
 
-    if (iconResult.status !== 0) {
-        process.exit(iconResult.status ?? 1);
+    if (iconBuildResult.status !== 0) {
+        process.exit(iconBuildResult.status ?? 1);
     }
 
     const buildResult = runNodeScript(buildScriptPath, [], {

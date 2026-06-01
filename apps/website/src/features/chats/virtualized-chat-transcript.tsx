@@ -9,6 +9,8 @@ import {
 } from './chat-transcript-row-model.ts';
 import { TranscriptEntryRow } from './chat-transcript-rows.tsx';
 
+const initialScrollToEndFrames = 12;
+
 export function VirtualizedChatTranscript({
     activeReply,
     chatId,
@@ -17,6 +19,7 @@ export function VirtualizedChatTranscript({
     fetchPreviousPage,
     hasPreviousPage,
     hiddenCount,
+    initialScrollKey,
     isFetchingPreviousPage,
     rows,
     scrollViewportRef,
@@ -28,21 +31,20 @@ export function VirtualizedChatTranscript({
     fetchPreviousPage?: () => void;
     hasPreviousPage: boolean;
     hiddenCount: number;
+    initialScrollKey?: string | null;
     isFetchingPreviousPage: boolean;
     rows: TranscriptRenderRow[];
     scrollViewportRef: React.RefObject<HTMLDivElement | null>;
 }) {
-    const pendingPrependRef = React.useRef<{
-        rowCount: number;
-        scrollHeight: number;
-        scrollTop: number;
-    } | null>(null);
     const virtualizer = useVirtualizer({
         count: rows.length,
         estimateSize: (index) => getEstimatedTranscriptRowSize(rows[index]),
         getItemKey: (index) => rows[index]?.id ?? index,
         getScrollElement: () => scrollViewportRef.current,
+        anchorTo: 'end',
+        followOnAppend: true,
         overscan: 8,
+        scrollEndThreshold: 72,
     });
     const virtualItems = virtualizer.getVirtualItems();
     const firstEntryIndex = virtualItems.find((item) => rows[item.index]?.kind === 'entry')?.index;
@@ -58,46 +60,34 @@ export function VirtualizedChatTranscript({
             return;
         }
 
-        const scrollElement = scrollViewportRef.current;
-
-        if (scrollElement) {
-            pendingPrependRef.current = {
-                rowCount: rows.length,
-                scrollHeight: scrollElement.scrollHeight,
-                scrollTop: scrollElement.scrollTop,
-            };
-        }
-
         fetchPreviousPage();
-    }, [
-        fetchPreviousPage,
-        firstEntryIndex,
-        hasPreviousPage,
-        hiddenCount,
-        isFetchingPreviousPage,
-        rows.length,
-        scrollViewportRef.current,
-    ]);
+    }, [fetchPreviousPage, firstEntryIndex, hasPreviousPage, hiddenCount, isFetchingPreviousPage]);
 
     React.useLayoutEffect(() => {
-        const pendingPrepend = pendingPrependRef.current;
-        const scrollElement = scrollViewportRef.current;
-
-        if (!(pendingPrepend && scrollElement)) {
+        if (!(initialScrollKey && rows.length > 0)) {
             return;
         }
 
-        if (rows.length <= pendingPrepend.rowCount) {
-            if (!isFetchingPreviousPage) {
-                pendingPrependRef.current = null;
+        let frameCount = 0;
+        let animationFrame: number | null = null;
+
+        const scrollToInitialEnd = () => {
+            frameCount += 1;
+            virtualizer.scrollToEnd({ behavior: 'auto' });
+
+            if (frameCount < initialScrollToEndFrames) {
+                animationFrame = requestAnimationFrame(scrollToInitialEnd);
             }
-            return;
-        }
+        };
 
-        const heightDelta = scrollElement.scrollHeight - pendingPrepend.scrollHeight;
-        scrollElement.scrollTop = pendingPrepend.scrollTop + Math.max(heightDelta, 0);
-        pendingPrependRef.current = null;
-    });
+        scrollToInitialEnd();
+
+        return () => {
+            if (animationFrame !== null) {
+                cancelAnimationFrame(animationFrame);
+            }
+        };
+    }, [initialScrollKey, rows.length, virtualizer]);
 
     return (
         <div className="relative w-full" style={{ height: `${virtualizer.getTotalSize()}px` }}>

@@ -6,6 +6,7 @@ import {
     readCapturedGatewayReplyText,
     startOpenClawGatewayCapture,
 } from '../openclaw/gateway-capture.ts';
+import { fillComposer } from '../support/composer.ts';
 import { expect, test } from '../support/test.ts';
 
 const optimisticVisibleLimitMs = 750;
@@ -193,9 +194,11 @@ test('renders a failed turn as a top-level chat error', async ({ page }) => {
 
     await page.goto('/dashboard/overview');
 
-    await page
-        .locator('#home-prompt')
-        .fill('Empty response exhaustion qa check. Read `QA_KICKOFF_TASK.md`.');
+    await fillComposer(
+        page,
+        '#home-prompt',
+        'Empty response exhaustion qa check. Read `QA_KICKOFF_TASK.md`.'
+    );
     await page.getByRole('button', { name: 'Start chat' }).click();
 
     await waitForRealChatRoute(page);
@@ -221,7 +224,7 @@ test('new chat renders optimistic state, final reply, and hover metadata without
 
         const expectedReply = 'QA_CHAT_LATENCY_OK';
         const prompt = `Latency regression marker. Reply exactly \`${expectedReply}\`.`;
-        await page.locator('#home-prompt').fill(prompt);
+        await fillComposer(page, '#home-prompt', prompt);
         await page.getByRole('button', { name: 'Start chat' }).click();
         await page.mouse.move(1650, 390);
 
@@ -286,7 +289,7 @@ async function startChat(
 ) {
     await page.goto('/dashboard/overview');
 
-    await page.locator('#home-prompt').fill(prompt);
+    await fillComposer(page, '#home-prompt', prompt);
     await page.getByRole('button', { name: 'Start chat' }).click();
 
     const chatId = await waitForRealChatRoute(page);

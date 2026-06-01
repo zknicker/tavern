@@ -33,7 +33,7 @@ export function CortexDocumentPane({
         <div className="flex h-full min-h-0 flex-col">
             <article className="min-h-0 flex-1 overflow-auto px-6 pt-6 pb-10">
                 <div className="w-full">
-                    <h1 className="text-pretty font-semibold text-3xl tracking-tight">
+                    <h1 className="text-pretty font-semibold text-2xl tracking-tight">
                         {page.title}
                     </h1>
                     <div className="mt-4 flex flex-wrap gap-1.5">
@@ -61,7 +61,7 @@ function MetaPill({ children }: { children: React.ReactNode }) {
 
 function DocumentBody({ value }: { value: string }) {
     return (
-        <div className="mt-8 whitespace-pre-wrap break-words text-base text-foreground leading-7">
+        <div className="mt-8 whitespace-pre-wrap break-words text-foreground text-sm leading-6">
             {value || 'No body content.'}
         </div>
     );

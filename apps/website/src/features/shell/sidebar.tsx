@@ -17,7 +17,6 @@ import { AppSidebarNav } from './sidebar-nav.tsx';
 interface AppSidebarProps {
     activeTab: RouteTab | null;
     isSettingsRoute: boolean;
-    onBackToApp: () => void;
     onNavigateToSettings: () => void;
     onSelectTab: (tab: RouteTab) => void;
 }
@@ -25,7 +24,6 @@ interface AppSidebarProps {
 export function AppSidebar({
     activeTab,
     isSettingsRoute,
-    onBackToApp,
     onNavigateToSettings,
     onSelectTab,
 }: AppSidebarProps) {
@@ -36,7 +34,7 @@ export function AppSidebar({
         >
             <SidebarContent>
                 {isSettingsRoute ? (
-                    <SettingsSidebarNav onBackToApp={onBackToApp} />
+                    <SettingsSidebarNav />
                 ) : (
                     <>
                         <AppSidebarNav activeTab={activeTab} onSelectTab={onSelectTab} />

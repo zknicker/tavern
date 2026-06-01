@@ -1,9 +1,15 @@
 import { PencilEdit02Icon, PinIcon, PinOffIcon, Trash2 } from '@hugeicons/core-free-icons';
+import { ColorsIcon as ColorsSolidIcon } from '@hugeicons-pro/core-solid-rounded';
+import { Cancel01Icon, ColorsIcon } from '@hugeicons-pro/core-stroke-rounded';
 import * as React from 'react';
 import {
     ContextMenu,
     ContextMenuItem,
     ContextMenuPopup,
+    ContextMenuSeparator,
+    ContextMenuSub,
+    ContextMenuSubPopup,
+    ContextMenuSubTrigger,
     ContextMenuTrigger,
 } from '../../components/ui/context-menu.tsx';
 import {
@@ -18,40 +24,94 @@ import {
 import { Icon } from '../../components/ui/icon.tsx';
 import { Button } from '../../components/ui/primitives/button.tsx';
 import { Input } from '../../components/ui/primitives/input.tsx';
+import { cn } from '../../lib/utils.ts';
 import type { ChatListItem } from '../chats/chat-list-data.ts';
+import { pinnedTabColorOptions } from './pinned-tab-options.ts';
+
+const contextMenuIconClassName = 'size-4';
 
 interface SidebarChatContextMenuProps {
     chat: ChatListItem;
     children: React.ReactNode;
     onArchive: (chat: ChatListItem) => void;
+    onCloseTab?: (chat: ChatListItem) => void;
+    onCustomizeColor?: (chat: ChatListItem, color: string | null) => void;
     onPinChange: (chat: ChatListItem, pinned: boolean) => void;
     onRename: (chat: ChatListItem) => void;
+    triggerClassName?: string;
 }
 
 export function SidebarChatContextMenu({
     chat,
     children,
     onArchive,
+    onCloseTab,
+    onCustomizeColor,
     onPinChange,
     onRename,
+    triggerClassName,
 }: SidebarChatContextMenuProps) {
+    const canCustomizePinnedTab = chat.isPinned && onCustomizeColor;
+    const canCloseTab = onCloseTab && !chat.isPinned;
+
     return (
         <ContextMenu>
-            <ContextMenuTrigger className="block min-w-0">{children}</ContextMenuTrigger>
+            <ContextMenuTrigger className={cn('block min-w-0', triggerClassName)}>
+                {children}
+            </ContextMenuTrigger>
             <ContextMenuPopup>
                 <ContextMenuItem
                     disabled={!canRenameSidebarChat(chat)}
                     onClick={() => onRename(chat)}
                 >
-                    <Icon className="size-3.5" icon={PencilEdit02Icon} />
+                    <Icon className={contextMenuIconClassName} icon={PencilEdit02Icon} />
                     Rename chat
                 </ContextMenuItem>
+                <ContextMenuSeparator />
                 <ContextMenuItem onClick={() => onPinChange(chat, !chat.isPinned)}>
-                    <Icon className="size-3.5" icon={chat.isPinned ? PinOffIcon : PinIcon} />
+                    <Icon
+                        className={contextMenuIconClassName}
+                        icon={chat.isPinned ? PinOffIcon : PinIcon}
+                    />
                     {chat.isPinned ? 'Unpin chat' : 'Pin chat'}
                 </ContextMenuItem>
+                {canCustomizePinnedTab ? (
+                    <ContextMenuSub>
+                        <ContextMenuSubTrigger>
+                            <Icon className={contextMenuIconClassName} icon={ColorsIcon} />
+                            Color
+                        </ContextMenuSubTrigger>
+                        <ContextMenuSubPopup>
+                            <ContextMenuItem onClick={() => onCustomizeColor(chat, null)}>
+                                <Icon className={contextMenuIconClassName} icon={ColorsIcon} />
+                                Default
+                            </ContextMenuItem>
+                            <ContextMenuSeparator />
+                            {pinnedTabColorOptions.map((option) => (
+                                <ContextMenuItem
+                                    key={option.id}
+                                    onClick={() => onCustomizeColor(chat, option.value)}
+                                >
+                                    <Icon
+                                        className={contextMenuIconClassName}
+                                        icon={ColorsSolidIcon}
+                                        style={{ color: option.value }}
+                                    />
+                                    {option.label}
+                                </ContextMenuItem>
+                            ))}
+                        </ContextMenuSubPopup>
+                    </ContextMenuSub>
+                ) : null}
+                <ContextMenuSeparator />
+                {canCloseTab ? (
+                    <ContextMenuItem onClick={() => onCloseTab(chat)}>
+                        <Icon className={contextMenuIconClassName} icon={Cancel01Icon} />
+                        Close tab
+                    </ContextMenuItem>
+                ) : null}
                 <ContextMenuItem onClick={() => onArchive(chat)} variant="destructive">
-                    <Icon className="size-3.5" icon={Trash2} />
+                    <Icon className={contextMenuIconClassName} icon={Trash2} />
                     Archive chat
                 </ContextMenuItem>
             </ContextMenuPopup>

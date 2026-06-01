@@ -231,6 +231,9 @@ test('sendTavernChatMessage posts to Runtime', async () => {
                         agentIds: ['agent:planner'],
                         archived: false,
                         displayName: 'Planning',
+                        tabAppearance: {
+                            color: null,
+                        },
                     },
                 },
                 title: 'Planning',

@@ -1,7 +1,6 @@
 import { ArrowDown01Icon } from '@hugeicons-pro/core-stroke-rounded';
 import type * as React from 'react';
-import { AppShellContentHeader } from '../../components/ui/app-shell.tsx';
-import { BreadcrumbTrail } from '../../components/ui/breadcrumb.tsx';
+import { useLocation } from 'react-router-dom';
 import { Icon } from '../../components/ui/icon.tsx';
 import { Button } from '../../components/ui/primitives/button.tsx';
 import type { ChatActiveReply, ChatTurnFailure } from '../../hooks/chats/chat-timeline-state.ts';
@@ -28,7 +27,6 @@ export function ChatDetailFrame({
     isFetchingPreviousPage = false,
     isPending,
     rows,
-    title,
     totalRows,
 }: {
     activeReply: ChatActiveReply | null;
@@ -46,9 +44,9 @@ export function ChatDetailFrame({
     isFetchingPreviousPage?: boolean;
     isPending: boolean;
     rows: NonNullable<ChatLogOutput>['rows'];
-    title: string;
     totalRows: number;
 }) {
+    const location = useLocation();
     const hasActiveReply = activeReply !== null;
     const hasTimelineContent = rows.length > 0 || hasActiveReply || failedTurn !== null;
     const isInitialTranscriptPending = isPending && !historyLoaded && !hasActiveReply;
@@ -56,9 +54,11 @@ export function ChatDetailFrame({
         activeReply,
         failedTurn,
     });
+    const initialScrollKey = isInitialTranscriptPending ? null : `${chatId}:${location.key}`;
     const chatScroll = useChatScroll({
         enabled: !isInitialTranscriptPending && hasTimelineContent,
         followKey,
+        initialScrollKey,
     });
     const handleScroll = () => {
         chatScroll.handleScroll();
@@ -80,15 +80,12 @@ export function ChatDetailFrame({
 
     return (
         <div className="flex min-h-0 flex-1 flex-col">
-            <AppShellContentHeader>
-                <BreadcrumbTrail
-                    items={[{ label: 'Chats', to: '/dashboard/chats' }, { label: title }]}
-                />
+            <div className="absolute top-3 left-1/2 z-10 -translate-x-1/2">
                 <ChatTranscriptLoadingIndicator
                     className="shrink-0"
                     visible={isInitialTranscriptPending}
                 />
-            </AppShellContentHeader>
+            </div>
 
             <div className="relative min-h-0 flex-1">
                 <div
@@ -113,6 +110,7 @@ export function ChatDetailFrame({
                                 failedTurn={failedTurn}
                                 fetchPreviousPage={fetchPreviousPage}
                                 hasPreviousPage={hasPreviousPage}
+                                initialScrollKey={initialScrollKey}
                                 isFetchingPreviousPage={isFetchingPreviousPage}
                                 rows={rows}
                                 scrollViewportRef={
@@ -127,10 +125,13 @@ export function ChatDetailFrame({
                         )}
                     </div>
                 </div>
-                {hasTimelineContent && !chatScroll.isAtBottom ? (
+            </div>
+
+            {hasTimelineContent && !chatScroll.isAtBottom ? (
+                <div className="pointer-events-none relative z-10 flex justify-center">
                     <Button
                         aria-label="Jump to latest message"
-                        className="absolute right-7 bottom-4 z-10 rounded-full bg-background/92 shadow-black/10 shadow-lg backdrop-blur"
+                        className="pointer-events-auto -mt-11 rounded-full bg-background/92 shadow-black/10 shadow-lg backdrop-blur"
                         onClick={() => chatScroll.scrollToBottom()}
                         size="icon"
                         type="button"
@@ -138,8 +139,8 @@ export function ChatDetailFrame({
                     >
                         <Icon className="size-4" icon={ArrowDown01Icon} />
                     </Button>
-                ) : null}
-            </div>
+                </div>
+            ) : null}
 
             {footer}
         </div>

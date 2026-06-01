@@ -84,7 +84,7 @@ export function AppSidebarChatList() {
                 await archiveChat.mutateAsync({ chatId: chat.id });
 
                 if (location.pathname === buildChatPath(chat.id)) {
-                    await navigate('/dashboard/chats');
+                    await navigate('/dashboard/overview');
                 }
             } catch (error) {
                 // biome-ignore lint/suspicious/noAlert: Keep sidebar failures visible without adding a global toast dependency.
@@ -159,7 +159,7 @@ export function AppSidebarChatList() {
                     <Button
                         aria-label="New chat"
                         className="absolute top-1/2 right-[0.0625rem] -translate-y-1/2 opacity-0 group-focus-within/chats:opacity-100 group-hover/chats:opacity-100 [&_svg]:size-[1.0625rem]"
-                        render={<NavLink to="/dashboard/chats" />}
+                        render={<NavLink to="/dashboard/overview" />}
                         size="icon-xs"
                         title="New chat"
                         variant="ghost"

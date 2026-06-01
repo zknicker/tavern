@@ -1,6 +1,5 @@
 import * as React from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
-import { resolveTavernChatName } from '../../components/chats/chat-display.ts';
 import { useAgentList } from '../../hooks/agents/use-agent-list.ts';
 import type { ChatTimelineState } from '../../hooks/chats/chat-timeline-state.ts';
 import { getChatDraftRouteState } from '../../hooks/chats/use-chat-draft-launch.ts';
@@ -77,7 +76,7 @@ export function AgentChatDetail({ chatId }: { chatId: string }) {
 
     if (chatId === 'new') {
         if (!routeDraft) {
-            return <Navigate replace to="/dashboard/chats" />;
+            return <Navigate replace to="/dashboard/overview" />;
         }
 
         return <ChatDraftDetail draft={routeDraft} timelineChatId={routeDraft.id} />;
@@ -104,7 +103,7 @@ export function AgentChatDetail({ chatId }: { chatId: string }) {
             return <ChatDraftDetail draft={null} timelineChatId={chatId} />;
         }
 
-        return <Navigate replace to="/dashboard/chats" />;
+        return <Navigate replace to="/dashboard/overview" />;
     }
 
     return (
@@ -230,7 +229,6 @@ function SyncedAgentChatDetail({
             isFetchingPreviousPage={timeline.isFetchingPreviousPage}
             isPending={timeline.isPending}
             rows={rows}
-            title={getBreadcrumbChatTitle(chat)}
             totalRows={totalRows}
         />
     );
@@ -238,8 +236,4 @@ function SyncedAgentChatDetail({
 
 function resolveChatAgentId(chat: ChatListItem | null) {
     return chat?.latestSession?.agentId ?? chat?.boundAgentIds[0] ?? '';
-}
-
-function getBreadcrumbChatTitle(chat: ChatListItem) {
-    return chat.type === 'tavern' ? resolveTavernChatName(chat) : chat.title;
 }

@@ -37,6 +37,7 @@ export function registerTavernDeliveryContext(input) {
     const context = {
         agentId: input.agentId,
         chatId: input.chatId,
+        context: input.context,
         deliverySequence: 0,
         markFinalReplySent: input.markFinalReplySent,
         requestMessageId: input.requestMessageId,
@@ -77,7 +78,7 @@ export async function sendTavernTextMessage(ctx) {
 
     if (text.trim() && deliveryContext) {
         deliveryContext.markFinalReplySent?.();
-        await requireTavernApi(ctx.context).createDelivery({
+        await requireTavernApi(ctx.context ?? deliveryContext.context).createDelivery({
             agentId: deliveryContext.agentId,
             chatId,
             deliveryId,

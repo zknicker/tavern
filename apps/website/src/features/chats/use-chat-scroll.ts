@@ -10,10 +10,12 @@ export function useChatScroll({
     enabled,
     followResizes = true,
     followKey,
+    initialScrollKey,
 }: {
     enabled: boolean;
     followResizes?: boolean;
     followKey?: string | null;
+    initialScrollKey?: string | null;
 }) {
     const viewportRef = React.useRef<HTMLDivElement | null>(null);
     const contentRef = React.useRef<HTMLDivElement | null>(null);
@@ -62,6 +64,15 @@ export function useChatScroll({
 
         scrollToBottom('auto');
     }, [enabled, followKey, scrollToBottom]);
+
+    React.useLayoutEffect(() => {
+        if (!(enabled && initialScrollKey)) {
+            return;
+        }
+
+        shouldFollowRef.current = true;
+        scrollToBottom('auto');
+    }, [enabled, initialScrollKey, scrollToBottom]);
 
     React.useEffect(() => {
         if (!(enabled && followResizes) || typeof ResizeObserver === 'undefined') {

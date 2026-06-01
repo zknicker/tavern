@@ -47,14 +47,14 @@ test('keeps mention chips editable in common composer flows', async ({ page }) =
     const composer = page.locator('#home-prompt');
 
     await composer.click();
-    await composer.pressSequentially('@gh');
-    await page.getByRole('option', { name: /GitHub Issues/u }).click();
-    await composer.pressSequentially('and @git');
+    await composer.pressSequentially('@agent-browser');
+    await page.getByRole('option', { name: /Agent Browser/u }).click();
+    await composer.pressSequentially('and @computer');
     await expect(page.getByRole('listbox')).toBeVisible({ timeout: 15_000 });
-    await page.getByRole('option', { name: /GitHub\s+GitHub CLI/u }).click();
+    await page.getByRole('option', { name: /Computer Use\s+Control local Mac apps/u }).click();
     await composer.pressSequentially('done');
 
-    await expect(composer).toContainText(/^GitHub Issues and GitHub done$/);
+    await expect(composer).toContainText(/^Agent Browser and Computer Use done$/);
 
     await page.goto('/dashboard/overview');
     await composer.click();
@@ -316,7 +316,7 @@ function readMentions(metadata: unknown) {
         throw new Error('Expected Tavern mention metadata.');
     }
 
-    return mentions as Array<Record<string, unknown>>;
+    return mentions as Record<string, unknown>[];
 }
 
 function readRecord(value: unknown) {

@@ -8,69 +8,52 @@ import {
     SidebarMenuButton,
     SidebarMenuItem,
 } from '../../../components/ui/sidebar.tsx';
-import { backToAppIcon, settingsNavSections } from './navigation.ts';
+import { settingsNavItems, settingsNavSections } from './navigation.ts';
 
-interface SettingsSidebarNavProps {
-    onBackToApp: () => void;
-}
+const settingsNavItemsById = new Map(settingsNavItems.map((item) => [item.id, item]));
 
-export function SettingsSidebarNav({ onBackToApp }: SettingsSidebarNavProps) {
+export function SettingsSidebarNav() {
     return (
-        <>
-            <SidebarGroup className="pt-2">
-                <SidebarGroupContent>
-                    <SidebarMenu className="gap-2">
-                        <SidebarMenuItem>
-                            <SidebarMenuButton
-                                className="text-sidebar-muted"
-                                onClick={onBackToApp}
-                                tooltip="Back to app"
-                            >
-                                <Icon
-                                    aria-hidden="true"
-                                    className="shrink-0"
-                                    icon={backToAppIcon}
-                                    size={18}
-                                />
-                                <span className="min-w-0 truncate">Back to app</span>
-                            </SidebarMenuButton>
-                        </SidebarMenuItem>
-                    </SidebarMenu>
-                </SidebarGroupContent>
-            </SidebarGroup>
-
+        <aside className="flex min-h-0 w-[260px] shrink-0 flex-col border-border/60 border-r bg-transparent">
             {settingsNavSections.map((section) => (
-                <SidebarGroup className="py-1" key={section.id}>
+                <SidebarGroup key={section.id}>
                     <SidebarGroupLabel>{section.label}</SidebarGroupLabel>
                     <SidebarGroupContent>
                         <SidebarMenu>
-                            {section.items.map((item) => (
-                                <SidebarMenuItem key={item.id}>
-                                    <NavLink className="contents" to={item.to}>
-                                        {({ isActive }) => (
-                                            <SidebarMenuButton
-                                                isActive={isActive}
-                                                render={<div />}
-                                                tooltip={item.label}
-                                            >
-                                                <Icon
-                                                    aria-hidden="true"
-                                                    className="shrink-0"
-                                                    icon={item.icon}
-                                                    size={18}
-                                                />
-                                                <span className="min-w-0 truncate">
-                                                    {item.label}
-                                                </span>
-                                            </SidebarMenuButton>
-                                        )}
-                                    </NavLink>
-                                </SidebarMenuItem>
-                            ))}
+                            {section.itemIds.map((itemId) => {
+                                const item = settingsNavItemsById.get(itemId);
+
+                                if (!item) {
+                                    return null;
+                                }
+
+                                return (
+                                    <SidebarMenuItem key={item.id}>
+                                        <NavLink className="contents" to={item.to}>
+                                            {({ isActive }) => (
+                                                <SidebarMenuButton
+                                                    isActive={isActive}
+                                                    render={<div />}
+                                                >
+                                                    <Icon
+                                                        aria-hidden="true"
+                                                        className="shrink-0"
+                                                        icon={item.icon}
+                                                        size={18}
+                                                    />
+                                                    <span className="min-w-0 truncate">
+                                                        {item.label}
+                                                    </span>
+                                                </SidebarMenuButton>
+                                            )}
+                                        </NavLink>
+                                    </SidebarMenuItem>
+                                );
+                            })}
                         </SidebarMenu>
                     </SidebarGroupContent>
                 </SidebarGroup>
             ))}
-        </>
+        </aside>
     );
 }

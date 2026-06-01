@@ -90,7 +90,7 @@ export function AppShellTopbar({
 }: useRender.ComponentProps<'header'>): React.ReactElement {
     const defaultProps = {
         className: cn(
-            'app-shell-topbar pointer-events-auto absolute top-0 left-0 z-40 flex h-[var(--topbar-height)] w-[var(--sidebar-width)] cursor-default select-none items-stretch',
+            'app-shell-topbar pointer-events-auto absolute top-0 left-0 z-40 flex h-[var(--topbar-height)] w-full cursor-default select-none items-stretch',
             className
         ),
         'data-slot': 'app-shell-topbar',
@@ -163,7 +163,7 @@ export function AppShellBody({
     ...props
 }: useRender.ComponentProps<'div'>): React.ReactElement {
     const defaultProps = {
-        className: cn('flex min-h-0 flex-1 flex-col md:flex-row', className),
+        className: cn('flex min-h-0 flex-1 flex-col pt-[var(--topbar-height)]', className),
         'data-slot': 'app-shell-body',
     };
 
@@ -181,7 +181,7 @@ export function AppShellMain({ className, ...props }: React.ComponentProps<'main
     return (
         <main
             className={cn(
-                'app-shell-main relative flex min-h-0 flex-1 flex-col overflow-hidden border-[var(--content-card-border)] bg-[var(--content-card)] md:rounded-[var(--main-radius)] md:border',
+                'app-shell-main relative mx-[3px] mb-[3px] flex min-h-0 flex-1 flex-col overflow-hidden border-[var(--content-card-border)] bg-[var(--content-card)] md:rounded-[var(--main-radius)] md:border',
                 className
             )}
             data-slot="app-shell-main"

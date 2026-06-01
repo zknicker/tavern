@@ -4,6 +4,7 @@ import {
     readCapturedGatewayChatId,
     startOpenClawGatewayCapture,
 } from '../openclaw/gateway-capture.ts';
+import { fillComposer } from '../support/composer.ts';
 import { expect, test } from '../support/test.ts';
 
 test('renders a successful live OpenClaw agent turn', async ({ page }) => {
@@ -15,7 +16,7 @@ test('renders a successful live OpenClaw agent turn', async ({ page }) => {
         await page.goto('/dashboard/overview');
 
         const prompt = `Live OpenClaw contract check ${Date.now()}. Reply briefly with the words "Contract check".`;
-        await page.locator('#home-prompt').fill(prompt);
+        await fillComposer(page, '#home-prompt', prompt);
         await page.getByRole('button', { name: 'Start chat' }).click();
 
         const chatId = normalizeGatewayChatId(await waitForRealChatRoute(page));

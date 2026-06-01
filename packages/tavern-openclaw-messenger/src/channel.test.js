@@ -128,4 +128,44 @@ describe('Tavern Messenger channel routing', () => {
             unregister();
         }
     });
+
+    it('uses the registered delivery context when OpenClaw omits send context', async () => {
+        const tavern = {
+            createDelivery: mock(async (input) => ({
+                cursor: '1',
+                id: input.deliveryId,
+                idempotent: false,
+                message: {
+                    id: input.messageId,
+                },
+            })),
+        };
+        const chatId = 'cht_220f46ed-2d7c-41dd-9d7e-d02691f1afc3';
+        const unregister = registerTavernDeliveryContext({
+            accountId: 'default',
+            agentId: 'blippy',
+            chatId,
+            context: { tavern },
+            requestMessageId: 'msg_request',
+            runId: 'run_1',
+            sessionKey: `agent:blippy:tavern:channel:${chatId}`,
+        });
+
+        try {
+            await tavernMessageAdapter.send.text({
+                accountId: 'default',
+                cfg: {},
+                text: 'hello from core',
+                to: `chat:${chatId}`,
+            });
+
+            expect(tavern.createDelivery.mock.calls[0][0]).toMatchObject({
+                chatId,
+                requestMessageId: 'msg_request',
+                text: 'hello from core',
+            });
+        } finally {
+            unregister();
+        }
+    });
 });

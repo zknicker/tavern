@@ -2,9 +2,8 @@ import * as React from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 
 export const routeTabs = [
-    { id: 'overview', label: 'Home', path: '/dashboard/overview' },
-    { id: 'stats', label: 'Stats', path: '/dashboard/stats' },
-    { id: 'cron', label: 'Automations', path: '/dashboard/cron' },
+    { id: 'overview', label: 'Tavern', path: '/dashboard/overview' },
+    { id: 'cron', label: 'Tasks', path: '/dashboard/cron' },
     { id: 'cortex', label: 'Cortex', path: '/dashboard/cortex' },
 ] as const;
 

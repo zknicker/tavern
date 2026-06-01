@@ -1,7 +1,5 @@
 import * as React from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { AppShellContentHeader } from '../../components/ui/app-shell.tsx';
-import { BreadcrumbTrail } from '../../components/ui/breadcrumb.tsx';
 import { Card } from '../../components/ui/card.tsx';
 import {
     Dialog,
@@ -39,8 +37,6 @@ export function SkillDetailView() {
 
     return (
         <div className="flex flex-1 flex-col overflow-hidden">
-            <SkillDetailHeader skill={skill} />
-
             {skillQuery.error ? (
                 <div className="border-error/40 border-b bg-error-bg px-4 py-3">
                     <p className="text-error-foreground text-sm">{skillQuery.error.message}</p>
@@ -57,19 +53,6 @@ export function SkillDetailView() {
                 </div>
             )}
         </div>
-    );
-}
-
-function SkillDetailHeader({ skill }: { skill: SkillDetail | null }) {
-    return (
-        <AppShellContentHeader>
-            <BreadcrumbTrail
-                items={[
-                    { label: 'Skills & Plugins', to: skillsBasePath },
-                    { label: skill?.name ?? 'Skill' },
-                ]}
-            />
-        </AppShellContentHeader>
     );
 }
 

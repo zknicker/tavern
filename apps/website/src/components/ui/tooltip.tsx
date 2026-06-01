@@ -59,4 +59,30 @@ export function TooltipContent({
     );
 }
 
+export function MouseTooltip({
+    children,
+    content,
+    delay = 350,
+    side = 'bottom',
+    sideOffset = 10,
+    contentClassName,
+    ...props
+}: Omit<TooltipPrimitive.Root.Props, 'children' | 'trackCursorAxis'> & {
+    children: React.ReactElement;
+    content: React.ReactNode;
+    contentClassName?: string;
+    delay?: TooltipPrimitive.Trigger.Props['delay'];
+    side?: TooltipPrimitive.Positioner.Props['side'];
+    sideOffset?: TooltipPrimitive.Positioner.Props['sideOffset'];
+}): React.ReactElement {
+    return (
+        <TooltipPrimitive.Root trackCursorAxis="both" {...props}>
+            <TooltipTrigger delay={delay} render={children} />
+            <TooltipContent className={contentClassName} side={side} sideOffset={sideOffset}>
+                {content}
+            </TooltipContent>
+        </TooltipPrimitive.Root>
+    );
+}
+
 export { TooltipPrimitive };

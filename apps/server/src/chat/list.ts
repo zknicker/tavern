@@ -393,6 +393,7 @@ export async function listChatDetails(options?: { includeExternal?: boolean }) {
                 boundAgentIds,
                 canSend,
                 conversationKind,
+                createdAt: agentRuntimeChatEntry?.record.createdAt ?? null,
                 displayName,
                 externalId: identity.externalId,
                 framework: identity.type === 'tavern' ? 'tavern' : 'agentRuntime',
@@ -408,6 +409,7 @@ export async function listChatDetails(options?: { includeExternal?: boolean }) {
                 scope: resolveChatScope(identity.target),
                 sessionCount: chatSessions.length,
                 source,
+                tabAppearance: readRuntimeChatTabAppearance(agentRuntimeChat),
                 target: identity.target,
                 targetParticipant,
                 title,
@@ -428,6 +430,7 @@ function toChatListItem(chat: Chat) {
         boundAgentIds: chat.boundAgentIds,
         canSend: chat.canSend,
         conversationKind: chat.conversationKind,
+        createdAt: chat.createdAt,
         displayName: chat.displayName,
         framework: chat.framework,
         hasActiveTurn: chat.hasActiveTurn,
@@ -440,6 +443,7 @@ function toChatListItem(chat: Chat) {
         scope: chat.scope,
         sessionCount: chat.sessionCount,
         source: chat.source,
+        tabAppearance: chat.tabAppearance,
         targetParticipant: chat.targetParticipant,
         title: chat.title,
         type: chat.type,
@@ -594,4 +598,20 @@ function resolveRuntimeParticipantId(input: {
 
 function getRuntimeParticipantKey(input: { chatId: string; participantId: string }) {
     return `${input.chatId}:${input.participantId}`;
+}
+
+function readRuntimeChatTabAppearance(runtimeChat: ParsedRuntimeChat | null) {
+    const tavern =
+        typeof runtimeChat?.metadata.tavern === 'object' && runtimeChat.metadata.tavern !== null
+            ? (runtimeChat.metadata.tavern as Record<string, unknown>)
+            : null;
+    const tabAppearance =
+        typeof tavern?.tabAppearance === 'object' && tavern.tabAppearance !== null
+            ? (tavern.tabAppearance as Record<string, unknown>)
+            : null;
+    const color =
+        typeof tabAppearance?.color === 'string' && /^#[0-9a-fA-F]{6}$/u.test(tabAppearance.color)
+            ? tabAppearance.color
+            : null;
+    return { color };
 }

@@ -45,7 +45,7 @@ fn create_main_window<R: Runtime>(app: &App<R>) -> tauri::Result<()> {
         .resizable(true)
         .hidden_title(true)
         .title_bar_style(TitleBarStyle::Overlay)
-        .traffic_light_position(LogicalPosition::new(17.0, 24.0))
+        .traffic_light_position(LogicalPosition::new(13.0, 21.0))
         .devtools(true);
 
     #[cfg(target_os = "macos")]

@@ -64,7 +64,6 @@ export function CronEditor() {
                 isNew={isNew}
                 isPending={isPending}
                 isRunning={runMutation.isPending}
-                jobName={job?.name ?? null}
                 onDelete={() => {
                     setDeleteDialogOpen(true);
                 }}

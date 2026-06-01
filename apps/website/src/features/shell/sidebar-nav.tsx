@@ -1,10 +1,5 @@
 import type { IconSvgElement } from '@hugeicons/react';
-import {
-    Activity01Icon,
-    Atom02Icon,
-    Home09Icon,
-    HourglassIcon,
-} from '@hugeicons-pro/core-stroke-rounded';
+import { Atom02Icon, Home09Icon, HourglassIcon } from '@hugeicons-pro/core-stroke-rounded';
 import { Icon } from '../../components/ui/icon.tsx';
 import {
     SidebarGroup,
@@ -18,7 +13,6 @@ import { routeTabs } from '../../hooks/dashboard/use-route-tab.ts';
 
 const tabIcons = {
     overview: Home09Icon,
-    stats: Activity01Icon,
     cron: HourglassIcon,
     cortex: Atom02Icon,
 } satisfies Record<RouteTab, IconSvgElement>;

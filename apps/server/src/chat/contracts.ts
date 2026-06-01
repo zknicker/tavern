@@ -59,6 +59,13 @@ export const chatAgentRuntimeSyncSchema = z
     })
     .nullable();
 
+export const chatTabAppearanceSchema = z.object({
+    color: z
+        .string()
+        .regex(/^#[0-9a-fA-F]{6}$/u)
+        .nullable(),
+});
+
 export const chatSourceSchema = z.object({
     kind: z.enum(chatSourceKinds),
     label: z.string().trim().min(1),
@@ -68,6 +75,7 @@ export const chatSchema = z.object({
     boundAgentIds: z.array(z.string()),
     canSend: z.boolean(),
     conversationKind: chatConversationKindSchema,
+    createdAt: z.string().nullable(),
     displayName: z.string(),
     externalId: z.string().nullable(),
     framework: z.string(),
@@ -83,6 +91,7 @@ export const chatSchema = z.object({
     scope: chatScopeSchema,
     sessionCount: z.number().int().nonnegative(),
     source: chatSourceSchema,
+    tabAppearance: chatTabAppearanceSchema,
     target: z.string().nullable(),
     targetParticipant: chatTargetParticipantSchema,
     title: z.string(),
@@ -94,6 +103,7 @@ export const chatListItemSchema = chatSchema.pick({
     boundAgentIds: true,
     canSend: true,
     conversationKind: true,
+    createdAt: true,
     displayName: true,
     framework: true,
     hasActiveTurn: true,
@@ -106,6 +116,7 @@ export const chatListItemSchema = chatSchema.pick({
     scope: true,
     sessionCount: true,
     source: true,
+    tabAppearance: true,
     targetParticipant: true,
     title: true,
     type: true,
@@ -157,6 +168,11 @@ export const setChatPinnedInputSchema = z.object({
     pinned: z.boolean(),
 });
 
+export const updateChatTabAppearanceInputSchema = z.object({
+    chatId: z.string().trim().min(1),
+    color: chatTabAppearanceSchema.shape.color,
+});
+
 export const archiveChatResultSchema = z.object({
     archived: z.literal(true),
     chatId: z.string().trim().min(1),
@@ -165,6 +181,11 @@ export const archiveChatResultSchema = z.object({
 export const setChatPinnedResultSchema = z.object({
     chatId: z.string().trim().min(1),
     pinned: z.boolean(),
+});
+
+export const updateChatTabAppearanceResultSchema = z.object({
+    chatId: z.string().trim().min(1),
+    tabAppearance: chatTabAppearanceSchema,
 });
 
 export const sendChatMessageInputSchema = z.object({
@@ -221,5 +242,7 @@ export type ArchiveChatInput = z.infer<typeof archiveChatInputSchema>;
 export type ArchiveChatResult = z.infer<typeof archiveChatResultSchema>;
 export type SetChatPinnedInput = z.infer<typeof setChatPinnedInputSchema>;
 export type SetChatPinnedResult = z.infer<typeof setChatPinnedResultSchema>;
+export type UpdateChatTabAppearanceInput = z.infer<typeof updateChatTabAppearanceInputSchema>;
+export type UpdateChatTabAppearanceResult = z.infer<typeof updateChatTabAppearanceResultSchema>;
 export type SendChatMessageInput = z.infer<typeof sendChatMessageInputSchema>;
 export type SendChatMessageResult = z.infer<typeof sendChatMessageResultSchema>;

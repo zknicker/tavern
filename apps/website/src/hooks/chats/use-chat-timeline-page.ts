@@ -15,6 +15,7 @@ export function useChatTimelinePage(input: { id: string; limit: number }) {
             ...queryPolicy.agentRuntimeSnapshot,
             getNextPageParam: (lastPage) => getNextChatLogCursor(lastPage),
             getPreviousPageParam: (firstPage) => getPreviousChatLogCursor(firstPage),
+            refetchOnMount: 'always',
         }
     );
     const logged = React.useMemo(() => mergeChatLogPages(query.data?.pages), [query.data?.pages]);

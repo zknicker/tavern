@@ -10,9 +10,15 @@ export function useChatListSuspense() {
 }
 
 export function useChatGet(input: { chatId: string }) {
-    return trpc.chat.get.useQuery(input, queryPolicy.agentRuntimeSnapshot);
+    return trpc.chat.get.useQuery(input, {
+        ...queryPolicy.agentRuntimeSnapshot,
+        refetchOnMount: 'always',
+    });
 }
 
 export function useChatGetSuspense(input: { chatId: string }) {
-    return trpc.chat.get.useSuspenseQuery(input, queryPolicy.agentRuntimeSnapshot);
+    return trpc.chat.get.useSuspenseQuery(input, {
+        ...queryPolicy.agentRuntimeSnapshot,
+        refetchOnMount: 'always',
+    });
 }

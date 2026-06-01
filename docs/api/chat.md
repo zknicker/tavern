@@ -67,6 +67,8 @@ The Tavern app keeps list and detail reads separate:
   chat references belong to `agent.chats.list`, not the global Tavern chat list.
 * `chat.get` returns one full chat record by `chatId`.
 * `chat.setPinned` changes one chat's durable pinned state.
+* `chat.updateTabAppearance` changes the durable color metadata for a pinned
+  Tavern chat tab.
 * `chat.log.list` returns paged durable timeline rows for one chat, including
   messages, responses, running and completed activity, and renderable artifacts.
 
@@ -74,7 +76,8 @@ Invalidate `chat.list` when membership or list ordering can change. Invalidate
 `chat.get` when one chat's detail fields can change. Response and activity
 events update the app timeline by stable ids. Durable log invalidation belongs
 when messages, responses, activity, or artifacts are persisted.
-Pinned state changes invalidate `chat.list` and the changed `chat.get` record.
+Pinned state and pinned tab color changes invalidate `chat.list` and the changed
+`chat.get` record.
 
 Live turn progress updates the visible `chat.log.list` cache by activity id.
 The eventual durable read returns the same row ids, so running activity becomes

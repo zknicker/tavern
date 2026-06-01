@@ -50,7 +50,7 @@ export function SidebarGroupLabel({
         props: mergeProps<'div'>(
             {
                 className: cn(
-                    'flex h-8 shrink-0 items-center rounded-md px-2 font-medium text-[var(--nav-section-label)] text-sm outline-hidden ring-sidebar-ring transition-[margin,opacity] duration-200 ease-linear focus-visible:ring-2 group-data-[collapsible=icon]:-mt-8 group-data-[collapsible=icon]:opacity-0 [&>svg]:size-4.5 [&>svg]:shrink-0',
+                    'flex h-8 shrink-0 items-center rounded-md px-2 font-medium text-[var(--nav-section-label)] text-sm outline-hidden ring-sidebar-ring focus-visible:ring-2 group-data-[collapsible=icon]:-mt-8 group-data-[collapsible=icon]:opacity-0 [&>svg]:size-4.5 [&>svg]:shrink-0',
                     className
                 ),
             },
@@ -74,7 +74,7 @@ export function SidebarGroupAction({
         props: mergeProps<'button'>(
             {
                 className: cn(
-                    'absolute top-3.5 right-3 flex aspect-square w-5 items-center justify-center rounded-md p-0 text-sidebar-foreground outline-hidden ring-sidebar-ring transition-transform after:absolute after:-inset-2 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground focus-visible:ring-2 group-data-[collapsible=icon]:hidden md:after:hidden [&>svg]:size-4.5 [&>svg]:shrink-0',
+                    'absolute top-3.5 right-3 flex aspect-square w-5 cursor-default items-center justify-center rounded-md p-0 text-sidebar-foreground outline-hidden ring-sidebar-ring after:absolute after:-inset-2 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground focus-visible:ring-2 group-data-[collapsible=icon]:hidden md:after:hidden [&>svg]:size-4.5 [&>svg]:shrink-0',
                     className
                 ),
                 type: 'button',

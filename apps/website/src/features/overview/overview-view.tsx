@@ -20,7 +20,7 @@ export function OverviewView({
     workerCount,
 }: OverviewViewProps) {
     return (
-        <div className="flex flex-1 flex-col items-center justify-center overflow-y-auto overflow-x-hidden px-6 py-12">
+        <div className="flex flex-1 flex-col items-center overflow-y-auto overflow-x-hidden px-6 pt-[28vh] pb-12">
             <div className="relative z-10 flex w-full max-w-2xl flex-col items-center">
                 <div className="animate-float-up">
                     <OverviewHeader

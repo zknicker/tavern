@@ -8,6 +8,7 @@ import {
     readCapturedGatewayReplyText,
     startOpenClawGatewayCapture,
 } from '../openclaw/gateway-capture.ts';
+import { fillComposer } from '../support/composer.ts';
 import { expect, test } from '../support/test.ts';
 
 test('preserves Tavern chat session routing and renders one final reply', async ({ page }) => {
@@ -19,9 +20,11 @@ test('preserves Tavern chat session routing and renders one final reply', async 
     try {
         await page.goto('/dashboard/overview');
 
-        await page
-            .locator('#home-prompt')
-            .fill(`Tavern Gateway marker check. Use exact marker: \`${expectedReply}\`.`);
+        await fillComposer(
+            page,
+            '#home-prompt',
+            `Tavern Gateway marker check. Use exact marker: \`${expectedReply}\`.`
+        );
         await page.getByRole('button', { name: 'Start chat' }).click();
 
         const chatId = await waitForRealChatRoute(page);
@@ -80,7 +83,7 @@ test('injects Tavern generated AGENTS.md without OpenClaw bootstrap companion fi
     try {
         await page.goto('/dashboard/overview');
 
-        await page.locator('#home-prompt').fill(prompt);
+        await fillComposer(page, '#home-prompt', prompt);
         await page.getByRole('button', { name: 'Start chat' }).click();
 
         const chatId = await waitForRealChatRoute(page);
@@ -124,7 +127,7 @@ test('recovers accepted user message and active turn after hard reload', async (
 
     await page.goto('/dashboard/overview');
 
-    await page.locator('#home-prompt').fill(prompt);
+    await fillComposer(page, '#home-prompt', prompt);
     await page.getByRole('button', { name: 'Start chat' }).click();
 
     await waitForRealChatRoute(page);
@@ -149,7 +152,7 @@ test('renders live tool progress before the final reply', async ({ page }) => {
 
     await page.goto('/dashboard/overview');
 
-    await page.locator('#home-prompt').fill(prompt);
+    await fillComposer(page, '#home-prompt', prompt);
     await page.getByRole('button', { name: 'Start chat' }).click();
 
     await waitForRealChatRoute(page);
@@ -181,7 +184,7 @@ test('renders model reasoning summaries in chat activity', async ({ page }) => {
 
     await page.goto('/dashboard/overview');
 
-    await page.locator('#home-prompt').fill('QA thinking visibility check max');
+    await fillComposer(page, '#home-prompt', 'QA thinking visibility check max');
     await page.getByRole('button', { name: 'Start chat' }).click();
 
     await waitForRealChatRoute(page);
@@ -206,7 +209,7 @@ test('preserves one user message and tool progress across repeated hard reloads'
 
     await page.goto('/dashboard/overview');
 
-    await page.locator('#home-prompt').fill(prompt);
+    await fillComposer(page, '#home-prompt', prompt);
     await page.getByRole('button', { name: 'Start chat' }).click();
 
     await waitForRealChatRoute(page);

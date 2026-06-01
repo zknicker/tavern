@@ -10,7 +10,10 @@ import {
     setChatPinnedInputSchema,
     setChatPinnedResultSchema,
     type UpdateChatInput,
+    type UpdateChatTabAppearanceInput,
     updateChatInputSchema,
+    updateChatTabAppearanceInputSchema,
+    updateChatTabAppearanceResultSchema,
 } from './contracts.ts';
 import {
     archiveRuntimeTavernChat,
@@ -18,6 +21,7 @@ import {
     getRuntimeChatRecord,
     setRuntimeTavernChatPinned,
     updateRuntimeTavernChat,
+    updateRuntimeTavernChatTabAppearance,
 } from './runtime-chats.ts';
 import { createChatTiming } from './timing.ts';
 
@@ -134,4 +138,35 @@ export async function setTavernChatPinned(input: SetChatPinnedInput) {
     await setRuntimeTavernChatPinned(parsed);
 
     return setChatPinnedResultSchema.parse(parsed);
+}
+
+export async function updateTavernChatTabAppearance(input: UpdateChatTabAppearanceInput) {
+    const parsed = updateChatTabAppearanceInputSchema.parse(input);
+    const chat = await getRuntimeChatRecord(parsed.chatId);
+
+    if (!chat) {
+        throw new Error(`No Tavern chat named "${parsed.chatId}" exists.`);
+    }
+
+    if (chat.chat.platform !== 'tavern') {
+        throw new Error('Only Tavern chats can customize pinned tab appearance.');
+    }
+
+    if (!chat.isPinned) {
+        throw new Error('Only pinned chats can customize tab appearance.');
+    }
+
+    await updateRuntimeTavernChatTabAppearance({
+        chatId: parsed.chatId,
+        tabAppearance: {
+            color: parsed.color,
+        },
+    });
+
+    return updateChatTabAppearanceResultSchema.parse({
+        chatId: parsed.chatId,
+        tabAppearance: {
+            color: parsed.color,
+        },
+    });
 }

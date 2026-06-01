@@ -7,7 +7,6 @@ import * as React from 'react';
 import { cn } from '../../../lib/utils.ts';
 import { Skeleton } from '../skeleton.tsx';
 import { Tooltip, TooltipContent, TooltipTrigger } from '../tooltip.tsx';
-import { useSidebar } from './context.tsx';
 
 export function SidebarMenu({ className, ...props }: React.ComponentProps<'ul'>) {
     return (
@@ -32,7 +31,7 @@ export function SidebarMenuItem({ className, ...props }: React.ComponentProps<'l
 }
 
 const sidebarMenuButtonVariants = cva(
-    'peer/menu-button group/menu-button flex w-full items-center gap-2 overflow-hidden rounded-lg px-2 py-1 text-left font-medium text-sidebar-foreground text-sm outline-hidden ring-sidebar-ring hover:bg-sidebar-accent hover:text-sidebar-accent-foreground focus-visible:ring-2 active:bg-sidebar-accent active:text-sidebar-accent-foreground disabled:pointer-events-none disabled:opacity-50 group-has-data-[sidebar=menu-action]/menu-item:pr-8 aria-disabled:pointer-events-none aria-disabled:opacity-50 data-active:bg-[var(--sidebar-accent-active)] data-active:text-sidebar-accent-foreground group-data-[collapsible=icon]:size-9! group-data-[collapsible=icon]:p-2.5! [&>span:last-child]:truncate [&_svg]:size-4.5 [&_svg]:shrink-0',
+    'peer/menu-button group/menu-button flex w-full cursor-default items-center gap-2 overflow-hidden rounded-lg px-2 py-1 text-left font-medium text-sidebar-foreground text-sm outline-hidden ring-sidebar-ring hover:bg-sidebar-accent hover:text-sidebar-accent-foreground focus-visible:ring-2 active:bg-sidebar-accent active:text-sidebar-accent-foreground disabled:pointer-events-none disabled:opacity-50 group-has-data-[sidebar=menu-action]/menu-item:pr-8 aria-disabled:pointer-events-none aria-disabled:opacity-50 data-active:bg-[var(--sidebar-accent-active)] data-active:text-sidebar-accent-foreground group-data-[collapsible=icon]:size-9! group-data-[collapsible=icon]:p-2.5! [&>span:last-child]:truncate [&_svg]:size-4.5 [&_svg]:shrink-0',
     {
         defaultVariants: {
             size: 'default',
@@ -66,7 +65,6 @@ export function SidebarMenuButton({
         isActive?: boolean;
         tooltip?: string | React.ComponentProps<typeof TooltipContent>;
     } & VariantProps<typeof sidebarMenuButtonVariants>) {
-    const { isMobile, state } = useSidebar();
     const button = useRender({
         defaultTagName: 'button',
         props: mergeProps<'button'>(
@@ -94,12 +92,7 @@ export function SidebarMenuButton({
     return (
         <Tooltip>
             {button}
-            <TooltipContent
-                align="center"
-                hidden={state !== 'collapsed' || isMobile}
-                side="right"
-                {...content}
-            />
+            <TooltipContent align="center" side="right" {...content} />
         </Tooltip>
     );
 }
@@ -118,7 +111,7 @@ export function SidebarMenuAction({
         props: mergeProps<'button'>(
             {
                 className: cn(
-                    'absolute top-2 right-1.5 flex aspect-square w-5 items-center justify-center rounded-md p-0 text-sidebar-foreground outline-hidden ring-sidebar-ring transition-transform after:absolute after:-inset-2 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground focus-visible:ring-2 group-data-[collapsible=icon]:hidden md:after:hidden [&>svg]:size-4.5 [&>svg]:shrink-0',
+                    'absolute top-2 right-1.5 flex aspect-square w-5 cursor-default items-center justify-center rounded-md p-0 text-sidebar-foreground outline-hidden ring-sidebar-ring after:absolute after:-inset-2 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground focus-visible:ring-2 group-data-[collapsible=icon]:hidden md:after:hidden [&>svg]:size-4.5 [&>svg]:shrink-0',
                     showOnHover &&
                         'group-focus-within/menu-item:opacity-100 group-hover/menu-item:opacity-100 aria-expanded:opacity-100 peer-data-active/menu-button:text-sidebar-accent-foreground md:opacity-0',
                     className
@@ -218,7 +211,7 @@ export function SidebarMenuSubButton({
         props: mergeProps<'a'>(
             {
                 className: cn(
-                    'flex h-7 min-w-0 -translate-x-px items-center gap-2 overflow-hidden rounded-md px-2 text-sidebar-foreground outline-hidden ring-sidebar-ring hover:bg-sidebar-accent hover:text-sidebar-accent-foreground focus-visible:ring-2 active:bg-sidebar-accent active:text-sidebar-accent-foreground data-active:bg-sidebar-accent data-[size=md]:text-sm data-[size=sm]:text-xs data-active:text-sidebar-accent-foreground group-data-[collapsible=icon]:hidden [&>span:last-child]:truncate [&>svg]:size-4 [&>svg]:shrink-0',
+                    'flex h-7 min-w-0 -translate-x-px cursor-default items-center gap-2 overflow-hidden rounded-md px-2 text-sidebar-foreground outline-hidden ring-sidebar-ring hover:bg-sidebar-accent hover:text-sidebar-accent-foreground focus-visible:ring-2 active:bg-sidebar-accent active:text-sidebar-accent-foreground data-active:bg-sidebar-accent data-[size=md]:text-sm data-[size=sm]:text-xs data-active:text-sidebar-accent-foreground group-data-[collapsible=icon]:hidden [&>span:last-child]:truncate [&>svg]:size-4 [&>svg]:shrink-0',
                     className
                 ),
             },

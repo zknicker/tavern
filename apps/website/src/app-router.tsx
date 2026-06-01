@@ -61,10 +61,7 @@ export function createAppRouter() {
                                 },
                                 {
                                     path: 'stats',
-                                    lazy: lazyRoute(
-                                        () => import('./routes/dashboard/stats-page.tsx'),
-                                        'StatsPage'
-                                    ),
+                                    element: <Navigate replace to="/dashboard/settings/stats" />,
                                 },
                                 {
                                     path: 'agent',
@@ -79,10 +76,7 @@ export function createAppRouter() {
                                 },
                                 {
                                     path: 'chats',
-                                    lazy: lazyRoute(
-                                        () => import('./routes/dashboard/chats-page.tsx'),
-                                        'ChatsPage'
-                                    ),
+                                    element: <Navigate replace to="/dashboard/overview" />,
                                 },
                                 {
                                     path: 'chat-layout-preview',
@@ -217,6 +211,13 @@ export function createAppRouter() {
                                                         './routes/dashboard/settings-updates-page.tsx'
                                                     ),
                                                 'SettingsUpdatesPage'
+                                            ),
+                                        },
+                                        {
+                                            path: 'stats',
+                                            lazy: lazyRoute(
+                                                () => import('./routes/dashboard/stats-page.tsx'),
+                                                'StatsPage'
                                             ),
                                         },
                                         {

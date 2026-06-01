@@ -25,6 +25,7 @@ export function ChatTranscript({
     failedTurn = null,
     hasPreviousPage = false,
     hiddenCount = 0,
+    initialScrollKey,
     isFetchingPreviousPage = false,
     rows,
     scrollViewportRef,
@@ -37,6 +38,7 @@ export function ChatTranscript({
     failedTurn?: ChatTurnFailure | null;
     hasPreviousPage?: boolean;
     hiddenCount?: number;
+    initialScrollKey?: string | null;
     isFetchingPreviousPage?: boolean;
     rows: TranscriptRow[];
     scrollViewportRef?: React.RefObject<HTMLDivElement | null>;
@@ -68,6 +70,17 @@ export function ChatTranscript({
     }, [activeReply]);
 
     React.useEffect(() => {
+        if (!(activeReply && activeReply.isThinking === false && activeReply.text?.trim())) {
+            return;
+        }
+
+        markChatTiming('final-message-visible', {
+            runId: activeReply.runId,
+            sessionKey: activeReply.sessionKey,
+        });
+    }, [activeReply]);
+
+    React.useEffect(() => {
         if (!latestAgentMessage) {
             return;
         }
@@ -88,6 +101,7 @@ export function ChatTranscript({
                 fetchPreviousPage={fetchPreviousPage}
                 hasPreviousPage={hasPreviousPage}
                 hiddenCount={hiddenCount}
+                initialScrollKey={initialScrollKey}
                 isFetchingPreviousPage={isFetchingPreviousPage}
                 rows={transcriptRows}
                 scrollViewportRef={scrollViewportRef}

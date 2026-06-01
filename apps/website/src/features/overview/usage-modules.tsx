@@ -16,16 +16,14 @@ export function UsageModules() {
 
     return (
         <div className="grid gap-3">
-            <div className="grid gap-3 xl:grid-cols-2">
-                <UsageCard
-                    accent={usageAccent}
-                    icon={ChatGptIcon}
-                    state={liveUsage?.codex}
-                    title="Codex"
-                    windowIds={['current-session', 'current-week']}
-                    windowLabels={['5h limit', 'Weekly limit']}
-                />
-            </div>
+            <UsageCard
+                accent={usageAccent}
+                icon={ChatGptIcon}
+                state={liveUsage?.codex}
+                title="Codex"
+                windowIds={['current-session', 'current-week']}
+                windowLabels={['5h limit', 'Weekly limit']}
+            />
 
             <UsageSpendModule liveUsage={liveUsage} />
         </div>
@@ -35,10 +33,7 @@ export function UsageModules() {
 export function UsageModulesSkeleton() {
     return (
         <div className="grid gap-3">
-            <div className="grid gap-3 xl:grid-cols-2">
-                <Skeleton className="h-36 w-full rounded-xl" />
-                <Skeleton className="h-36 w-full rounded-xl" />
-            </div>
+            <Skeleton className="h-28 w-full rounded-xl" />
             <Skeleton className="h-72 w-full rounded-xl" />
         </div>
     );
@@ -80,7 +75,7 @@ function UsageCard({
                 {state?.status === 'error' ? (
                     <div className="text-muted-foreground text-sm">Usage unavailable</div>
                 ) : (
-                    <div className="space-y-3">
+                    <div className="grid gap-4 md:grid-cols-2">
                         {windows.map((w) => {
                             const barColor = w.usedPercent >= 90 ? '#ef4444' : accent;
                             return (

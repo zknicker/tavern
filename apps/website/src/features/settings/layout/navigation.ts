@@ -1,7 +1,7 @@
 import type { IconSvgElement } from '@hugeicons/react';
 import {
+    Activity01Icon,
     AiBrain01Icon,
-    ArrowLeft01Icon,
     ChatIcon,
     ComputerTerminal01Icon,
     Database02Icon,
@@ -36,6 +36,12 @@ export const settingsNavItems = [
         id: 'updates',
         label: 'Updates',
         to: '/dashboard/settings/updates',
+    },
+    {
+        icon: Activity01Icon,
+        id: 'stats',
+        label: 'Stats',
+        to: '/dashboard/settings/stats',
     },
     {
         icon: ChatIcon,
@@ -76,13 +82,21 @@ export const settingsNavItems = [
 
 export const settingsNavSections = [
     {
-        id: 'tavern',
-        items: settingsNavItems,
-        label: 'Tavern',
+        id: 'general',
+        itemIds: ['agent-runtime', 'participants', 'appearance', 'updates'],
+        label: 'General',
+    },
+    {
+        id: 'agent',
+        itemIds: ['models', 'skills', 'memories'],
+        label: 'Agent',
+    },
+    {
+        id: 'activity',
+        itemIds: ['sessions', 'jobs', 'stats'],
+        label: 'Activity',
     },
 ] as const;
-
-export const backToAppIcon = ArrowLeft01Icon;
 
 export type SettingsNavItem = (typeof settingsNavItems)[number];
 export type SettingsRouteTab = SettingsNavItem['id'];

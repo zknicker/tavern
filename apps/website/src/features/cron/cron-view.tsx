@@ -89,7 +89,7 @@ export function CronView({
                 totalJobs={totalJobs}
             />
 
-            <div className="hidden justify-end px-5 py-3 md:flex">
+            <div className="hidden justify-end py-3 pr-3 pl-5 md:flex">
                 <Button disabled={isMutating} onClick={onCreate} type="button" variant="secondary">
                     <Icon aria-hidden="true" icon={Plus} />
                     New Automation

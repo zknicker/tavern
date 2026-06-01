@@ -16,12 +16,10 @@ export function ChatDraftDetail({
     animateTimeline = true,
     draft,
     timelineChatId,
-    title,
 }: {
     animateTimeline?: boolean;
     draft: ChatStartDraft | null;
     timelineChatId: string;
-    title?: string;
 }) {
     const agentsQuery = useAgentList();
     const boundAgentIds = React.useMemo(() => (draft ? [draft.agentId] : []), [draft]);
@@ -116,7 +114,6 @@ export function ChatDraftDetail({
             historyLoaded
             isPending={false}
             rows={visibleTimeline?.rows ?? []}
-            title={title ?? draft?.title ?? 'New chat'}
             totalRows={visibleTimeline?.total ?? 0}
         />
     );

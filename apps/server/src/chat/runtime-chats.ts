@@ -6,6 +6,7 @@ import { getActiveAgentRuntimeConnection } from '../storage/agent-runtime-connec
 
 export interface RuntimeChatRecord {
     chat: AgentRuntimeChat;
+    createdAt: string | null;
     isPinned: boolean;
     runtimeId: string;
     updatedAt: string | null;
@@ -15,6 +16,11 @@ interface TavernChatMetadata {
     agentIds: string[];
     archived: boolean;
     displayName: string;
+    tabAppearance: TavernChatTabAppearance;
+}
+
+export interface TavernChatTabAppearance {
+    color: string | null;
 }
 
 export async function listRuntimeChatRecords(options?: {
@@ -39,6 +45,7 @@ export async function listRuntimeChatRecords(options?: {
     const tavernRecords = tavernChats
         .map((chat) => ({
             chat: tavernChatToRuntimeChat(chat),
+            createdAt: chat.created_at,
             isPinned: chat.pinned,
             runtimeId: connection.id,
             updatedAt: chat.updated_at,
@@ -49,6 +56,7 @@ export async function listRuntimeChatRecords(options?: {
               .filter((chat) => chat.platform !== 'tavern')
               .map((chat) => ({
                   chat,
+                  createdAt: null,
                   isPinned: false,
                   runtimeId: connection.id,
                   updatedAt: null,
@@ -79,6 +87,7 @@ export async function createRuntimeTavernChat(input: {
             archived: false,
             displayName: input.displayName,
             id: input.id,
+            tabAppearance: emptyTabAppearance(),
         }),
         pinned: false,
         title: input.displayName,
@@ -94,6 +103,9 @@ export async function updateRuntimeTavernChat(input: {
     const current = await getTavernChatOrNull(client, input.id);
     const archived = current ? readTavernChatMetadata(current).archived : false;
     const pinned = current?.pinned ?? false;
+    const tabAppearance = current
+        ? readTavernChatMetadata(current).tabAppearance
+        : emptyTabAppearance();
 
     await client.chat.create({
         id: input.id,
@@ -102,6 +114,7 @@ export async function updateRuntimeTavernChat(input: {
             archived,
             displayName: input.displayName,
             id: input.id,
+            tabAppearance,
         }),
         pinned,
         title: input.displayName,
@@ -124,6 +137,7 @@ export async function archiveRuntimeTavernChat(chatId: string) {
             archived: true,
             displayName: metadata.displayName,
             id: chatId,
+            tabAppearance: metadata.tabAppearance,
         }),
         pinned: current.pinned,
         title: metadata.displayName,
@@ -142,6 +156,32 @@ export async function setRuntimeTavernChatPinned(input: { chatId: string; pinned
         id: input.chatId,
         metadata: current.metadata,
         pinned: input.pinned,
+        title: current.title,
+    });
+}
+
+export async function updateRuntimeTavernChatTabAppearance(input: {
+    chatId: string;
+    tabAppearance: TavernChatTabAppearance;
+}) {
+    const { client } = await requireRuntimeChatClient();
+    const current = await getTavernChatOrNull(client, input.chatId);
+
+    if (!current) {
+        throw new Error(`No Tavern chat named "${input.chatId}" exists.`);
+    }
+
+    const metadata = readTavernChatMetadata(current);
+    await client.chat.create({
+        id: input.chatId,
+        metadata: buildRuntimeTavernChatMetadata({
+            agentIds: metadata.agentIds,
+            archived: metadata.archived,
+            displayName: metadata.displayName,
+            id: input.chatId,
+            tabAppearance: input.tabAppearance,
+        }),
+        pinned: current.pinned,
         title: current.title,
     });
 }
@@ -248,6 +288,7 @@ function tavernChatToRuntimeChat(chat: TavernChat): AgentRuntimeChat {
             tavern: {
                 ...metadata,
                 archived: metadata.archived,
+                tabAppearance: metadata.tabAppearance,
             },
         },
         parentTarget: null,
@@ -295,6 +336,7 @@ function readTavernChatMetadata(chat: TavernChat): TavernChatMetadata {
         agentIds,
         archived: tavern.archived === true,
         displayName,
+        tabAppearance: readTavernChatTabAppearance(tavern.tabAppearance),
     };
 }
 
@@ -303,6 +345,7 @@ function buildRuntimeTavernChatMetadata(input: {
     archived: boolean;
     displayName: string;
     id: string;
+    tabAppearance: TavernChatTabAppearance;
 }) {
     return {
         runtime: {
@@ -313,8 +356,26 @@ function buildRuntimeTavernChatMetadata(input: {
             agentIds: input.agentIds,
             archived: input.archived,
             displayName: input.displayName,
+            tabAppearance: input.tabAppearance,
         },
     };
+}
+
+function readTavernChatTabAppearance(input: unknown): TavernChatTabAppearance {
+    if (!(input && typeof input === 'object')) {
+        return emptyTabAppearance();
+    }
+
+    const record = input as Record<string, unknown>;
+    const color =
+        typeof record.color === 'string' && /^#[0-9a-fA-F]{6}$/u.test(record.color)
+            ? record.color
+            : null;
+    return { color };
+}
+
+function emptyTabAppearance(): TavernChatTabAppearance {
+    return { color: null };
 }
 
 function isArchivedTavernChat(chat: AgentRuntimeChat) {

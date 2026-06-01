@@ -22,8 +22,15 @@ happen, and keep the durable timeline as context.
 * **Artifacts.** Code, images, files, diffs, documents, and charts render as
   durable outputs attached to messages or response activity.
 * **Receipts.** Message creation and assistant delivery are acknowledged by id.
+* **Chat tabs.** Pinned chats always appear first in the topbar. Unpinned chats
+  appear only while locally open during the current app session, sorted by chat
+  creation time. Restarting the app clears unpinned topbar tabs without
+  archiving them. `Cmd+T` opens the new-chat surface; `Cmd+W` or a tab close
+  button removes the current unpinned chat from the topbar. The overflow chat
+  menu can reopen any non-archived chat.
 * **Pinned chats.** Users can pin durable chats as focus-area homes. Pinned
-  chats stay in their own sidebar section above recent chats.
+  chats stay in the tab strip, survive app restarts, and can carry a custom
+  tab color.
 * **Offline catch-up.** Tavern Runtime keeps chat history while the app is
   closed; the app reloads from durable rows and refetches on reconnect.
 
@@ -66,8 +73,9 @@ ids. They should not create a second volatile progress transcript.
 
 Pinned chat state is durable Tavern Runtime chat state. It survives app
 reinstall and syncs through the normal chat list/detail reads. Pinning changes
-sidebar grouping only; it does not change chat membership, message ordering,
-response delivery, or archive behavior.
+tab grouping only; it does not change chat membership, message ordering,
+response delivery, or archive behavior. Pinned tab color is durable Tavern chat
+metadata.
 
 ## Contract
 
