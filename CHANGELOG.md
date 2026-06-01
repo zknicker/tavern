@@ -2,6 +2,15 @@
 
 All notable changes to this project will be documented in this file.
 
+## v1.1.14 - 2026-06-01
+
+- Added native Runtime notice rows for OpenClaw session and compaction notices, with an inspect drawer and regression coverage for both final delivery paths.
+- Fixed OpenClaw verbose runtime notices leaking into assistant replies.
+- Fixed managed OpenClaw plugin changes in the dev stack so plugin rebuilds are synced into the managed runtime.
+- Fixed chat transcript scroll initialization in general chat.
+- Added last-activity times to the temporary chat menu and sorted those chats by creation time.
+- Refined dashboard shell tab styling.
+
 ## v1.1.13 - 2026-05-31
 
 - Simplified Runtime model inventory to match OpenClaw's model catalog shape and removed unused model policy writes.
