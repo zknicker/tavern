@@ -41,10 +41,7 @@ export function VirtualizedChatTranscript({
         estimateSize: (index) => getEstimatedTranscriptRowSize(rows[index]),
         getItemKey: (index) => rows[index]?.id ?? index,
         getScrollElement: () => scrollViewportRef.current,
-        anchorTo: 'end',
-        followOnAppend: true,
         overscan: 8,
-        scrollEndThreshold: 72,
     });
     const virtualItems = virtualizer.getVirtualItems();
     const firstEntryIndex = virtualItems.find((item) => rows[item.index]?.kind === 'entry')?.index;
@@ -73,7 +70,10 @@ export function VirtualizedChatTranscript({
 
         const scrollToInitialEnd = () => {
             frameCount += 1;
-            virtualizer.scrollToEnd({ behavior: 'auto' });
+            virtualizer.scrollToIndex(rows.length - 1, {
+                align: 'end',
+                behavior: 'auto',
+            });
 
             if (frameCount < initialScrollToEndFrames) {
                 animationFrame = requestAnimationFrame(scrollToInitialEnd);
