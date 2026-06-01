@@ -325,10 +325,37 @@ export async function saveAgentRuntimeConnection(input: {
 }) {
     const checkedAt = new Date().toISOString();
     const auth = input.auth === undefined ? undefined : parseAgentRuntimeConnectionAuth(input.auth);
-    const checked = await checkAgentRuntimeConnection({
-        auth: input.auth,
-        baseUrl: input.baseUrl,
-    });
+    let checked: Awaited<ReturnType<typeof checkAgentRuntimeConnection>>;
+
+    try {
+        checked = await checkAgentRuntimeConnection({
+            auth: input.auth,
+            baseUrl: input.baseUrl,
+        });
+    } catch (error) {
+        const existing = input.id
+            ? await getStoredAgentRuntimeConnection(input.id)
+            : await getDefaultAgentRuntimeConnection();
+        const message = toErrorMessage(error);
+        const fallbackId = input.id ?? existing?.id ?? agentRuntimeConnectionId;
+
+        await saveStoredAgentRuntimeConnection({
+            auth,
+            baseUrl: input.baseUrl,
+            enabled: input.enabled,
+            id: fallbackId,
+            isActive: true,
+            lastCheckedAt: checkedAt,
+            lastError: message,
+            lastSyncedAt: existing?.lastSyncedAt ?? null,
+            name: existing?.name ?? 'Tavern Runtime',
+        });
+
+        currentAgentRuntimeUrl = getAgentRuntimeEnvironmentBaseUrl() ?? input.baseUrl;
+
+        throw error;
+    }
+
     const record = await saveStoredAgentRuntimeConnection({
         auth,
         baseUrl: checked.baseUrl,

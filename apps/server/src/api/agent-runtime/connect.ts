@@ -2,7 +2,6 @@ import { TRPCError } from '@trpc/server';
 import { refreshAgentRuntimeEventSync } from '../../agent-runtime/event-sync.ts';
 import { agentRuntimeConnectionInputSchema } from '../../agent-runtime-connection/contracts.ts';
 import {
-    checkAgentRuntimeConnection,
     getAgentRuntimeConnection,
     saveAgentRuntimeConnection,
 } from '../../agent-runtime-connection/service.ts';
@@ -37,20 +36,7 @@ function toErrorMessage(error: unknown) {
 export const connectAgentRuntimeRoute = publicProcedure
     .input(agentRuntimeConnectionInputSchema)
     .mutation(async ({ input }) => {
-        let baseUrl = normalizeBaseUrl(input.baseUrl);
-        let checked: Awaited<ReturnType<typeof checkAgentRuntimeConnection>>;
-
-        try {
-            checked = await checkAgentRuntimeConnection({ auth: input.auth, baseUrl });
-            baseUrl = checked.baseUrl;
-        } catch (error) {
-            const message = toErrorMessage(error);
-
-            throw new TRPCError({
-                code: 'BAD_REQUEST',
-                message,
-            });
-        }
+        const baseUrl = normalizeBaseUrl(input.baseUrl);
 
         try {
             const connection = await saveAgentRuntimeConnection({

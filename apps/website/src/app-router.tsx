@@ -27,13 +27,12 @@ export function createAppRouter() {
 
     return createRouter([
         {
-            path: '/onboarding',
-            lazy: lazyRoute(() => import('./routes/onboarding-page.tsx'), 'OnboardingPage'),
-        },
-        {
-            path: '/',
             element: <AppFrame />,
             children: [
+                {
+                    path: '/onboarding',
+                    lazy: lazyRoute(() => import('./routes/onboarding-page.tsx'), 'OnboardingPage'),
+                },
                 {
                     index: true,
                     element: <Navigate replace to="/dashboard/overview" />,

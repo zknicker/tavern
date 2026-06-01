@@ -76,3 +76,35 @@ test('unreachable saved Runtime keeps its URL without reporting a version mismat
     assert.equal(connection?.runtimeVersion, null);
     assert.equal(connection?.versionStatus, 'unknown');
 });
+
+test('failed Runtime connect attempts still persist the configured URL', async () => {
+    process.env.DATABASE_PATH = join(
+        mkdtempSync(join(tmpdir(), 'tavern-agent-runtime-connection-test-')),
+        'test.sqlite'
+    );
+    process.env.TAVERN_RUNTIME_URL = undefined;
+
+    const [{ ensureDatabaseSchema }, agentRuntimeConnection, storage] = await Promise.all([
+        import('../src/db/bootstrap.ts'),
+        import('../src/agent-runtime-connection/service.ts'),
+        import('../src/storage/agent-runtime-connections.ts'),
+    ]);
+
+    await ensureDatabaseSchema();
+
+    await assert.rejects(
+        () =>
+            agentRuntimeConnection.saveAgentRuntimeConnection({
+                baseUrl: 'https://zachs-mac-mini.taila0b849.ts.net:18790',
+                lastError: null,
+            }),
+        /Runtime request failed with status 502/
+    );
+
+    const saved = await storage.getDefaultAgentRuntimeConnection();
+
+    assert.equal(saved?.baseUrl, 'https://zachs-mac-mini.taila0b849.ts.net:18790');
+    assert.equal(saved?.enabled, true);
+    assert.equal(saved?.isActive, true);
+    assert.equal(saved?.lastError, 'Runtime request failed with status 502.');
+});
