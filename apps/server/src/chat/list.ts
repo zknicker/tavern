@@ -1,7 +1,7 @@
 import type { AgentRuntimeChatParticipant, AgentRuntimeChatPlatformMetadata } from '@tavern/api';
 import { hasActiveTurnSession } from '../agent-runtime/active-turn-sessions.ts';
 import { listAgents } from '../agents/catalog.ts';
-import { buildAgentPalette, resolveAgentAvatar, resolveAgentName } from '../agents/palette.ts';
+import { buildAgentPalette, resolveAgentName } from '../agents/palette.ts';
 import {
     resolveParticipantAvatar,
     resolveParticipantColor,
@@ -300,7 +300,7 @@ export async function listChatDetails(options?: { includeExternal?: boolean }) {
                         return {
                             actorId: agent.id,
                             actorType: 'agent' as const,
-                            avatar: resolveAgentAvatar(agent),
+                            avatar: null,
                             name: resolveAgentName(agent),
                             primaryColor: buildAgentPalette(agent).accentFrom,
                         };

@@ -10,6 +10,7 @@ const invalidationEventSchema = z
 export type InvalidationEvent = z.infer<typeof invalidationEventSchema>;
 
 export const tavernEventNames = {
+    agentInstructionsUpdated: 'agent.instructions.updated',
     agentUpdated: 'agent.updated',
     chatLogUpdated: 'chat.log.updated',
     chatUpdated: 'chat.updated',
@@ -58,6 +59,13 @@ export async function* subscribeToTavernEvent(eventName: TavernEventName, signal
 
 export function emitAgentUpdated() {
     emitTavernEvent(tavernEventNames.agentUpdated);
+}
+
+export function emitAgentInstructionsUpdated(input: { agentId: string }) {
+    emitTavernEvent(tavernEventNames.agentInstructionsUpdated, {
+        ...createInvalidationEvent(),
+        agentId: input.agentId,
+    });
 }
 
 export function emitAgentInvalidationCascade() {

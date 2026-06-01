@@ -22,7 +22,7 @@ export function useOpenClawAgentDraft(input: {
     modelOptions: ModelListOutput['models'];
 }) {
     const context = useOpenClawSettingsDraft();
-    const draft = readAgentDraft({
+    const draft = readOpenClawAgentDraftConfig({
         agent: input.agent,
         baseline: input.baseline,
         config: context.config,
@@ -33,7 +33,7 @@ export function useOpenClawAgentDraft(input: {
         draft,
         update: (updater: AgentDraftUpdater) => {
             context.updateConfig((config) =>
-                writeAgentDraft(config, {
+                writeOpenClawAgentDraftConfig(config, {
                     agent: input.agent,
                     draft: updater(draft),
                     modelOptions: input.modelOptions,
@@ -47,7 +47,7 @@ export function readOpenClawAgentConfigEntry(config: OpenClawConfig | null, agen
     return findAgentEntry(config, agentId);
 }
 
-function readAgentDraft(input: {
+export function readOpenClawAgentDraftConfig(input: {
     agent: AgentListOutput['agents'][number];
     baseline: AgentSettingsDraft;
     config: OpenClawConfig | null;
@@ -77,7 +77,7 @@ function readAgentDraft(input: {
     };
 }
 
-function writeAgentDraft(
+export function writeOpenClawAgentDraftConfig(
     config: OpenClawConfig,
     input: {
         agent: AgentListOutput['agents'][number];
@@ -99,6 +99,21 @@ function writeAgentDraft(
     const selectedModelRef = selected ? `${selected.provider}/${selected.model}` : null;
     const models = readRecord(currentConfig.models);
     const selectedModelConfig = selectedModelRef ? readRecord(models[selectedModelRef]) : {};
+    const {
+        agentRuntime: _selectedAgentRuntime,
+        embeddedHarness: _selectedEmbeddedHarness,
+        ...selectedModelConfigWithoutHarness
+    } = selectedModelConfig;
+    const nextSelectedModelConfig =
+        selected && !selected.isPreferred
+            ? {
+                  ...selectedModelConfigWithoutHarness,
+                  agentRuntime: {
+                      ...readRecord(_selectedAgentRuntime),
+                      id: selected.harness,
+                  },
+              }
+            : selectedModelConfigWithoutHarness;
     const nextEntry = {
         ...currentConfig,
         id: input.agent.id,
@@ -115,13 +130,7 @@ function writeAgentDraft(
                   },
                   models: {
                       ...models,
-                      [selectedModelRef]: {
-                          ...selectedModelConfig,
-                          agentRuntime: {
-                              ...readRecord(selectedModelConfig.agentRuntime),
-                              id: selected.harness,
-                          },
-                      },
+                      [selectedModelRef]: nextSelectedModelConfig,
                   },
               }
             : {}),
@@ -148,16 +157,19 @@ function readAgentModelDraft(
         ? readString(readRecord(readRecord(readRecord(entry?.models)[primary]).agentRuntime).id)
         : null;
 
-    if (!(harness && primary)) {
+    if (!primary) {
         return fallback;
     }
 
     for (const model of modelOptions) {
-        const name = model.openClawNames?.find(
-            (candidate) =>
-                candidate.harness === harness &&
-                `${candidate.provider}/${candidate.model}` === primary
-        );
+        const matchingNames =
+            model.openClawNames?.filter(
+                (candidate) => `${candidate.provider}/${candidate.model}` === primary
+            ) ?? [];
+        const name =
+            matchingNames.find((candidate) => candidate.harness === harness) ??
+            matchingNames.find((candidate) => candidate.isPreferred) ??
+            matchingNames[0];
 
         if (name) {
             return {

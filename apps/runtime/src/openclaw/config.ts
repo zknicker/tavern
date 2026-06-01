@@ -150,11 +150,7 @@ export function buildManagedOpenClawConfig(input: {
                   transport: 'sse',
               },
           }
-        : {
-              agentRuntime: {
-                  id: 'codex',
-              },
-          };
+        : {};
     const codexAuthConfig = buildCodexAuthConfig(input.codexAuthProfileId);
 
     const managedConfig = {

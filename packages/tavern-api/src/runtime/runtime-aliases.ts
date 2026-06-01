@@ -34,6 +34,8 @@ export const runtimeAgentFileSchema = contracts.agentRuntimeAgentFileSchema;
 export const runtimeAgentFileListSchema = contracts.agentRuntimeAgentFileListSchema;
 export const runtimeAgentFileContentSchema = contracts.agentRuntimeAgentFileContentSchema;
 export const runtimeSaveAgentFileSchema = contracts.agentRuntimeSaveAgentFileSchema;
+export const runtimeRenderedWorkspaceInstructionsSchema =
+    contracts.agentRuntimeRenderedWorkspaceInstructionsSchema;
 export const runtimeSkillFileSchema = contracts.agentRuntimeSkillFileSchema;
 export const runtimeSkillSourceSchema = contracts.agentRuntimeSkillSourceSchema;
 export const runtimeSkillInstallSourceSchema = contracts.agentRuntimeSkillInstallSourceSchema;
@@ -93,6 +95,8 @@ export const runtimeMessageAcceptedSchema = contracts.agentRuntimeMessageAccepte
 export const runtimeTurnSchema = contracts.agentRuntimeTurnSchema;
 export const runtimeEventTypeSchema = contracts.agentRuntimeEventTypeSchema;
 export const runtimeAgentUpdatedEventSchema = contracts.agentRuntimeAgentUpdatedEventSchema;
+export const runtimeWorkspaceInstructionsUpdatedEventSchema =
+    contracts.agentRuntimeWorkspaceInstructionsUpdatedEventSchema;
 export const runtimeSkillUpdatedEventSchema = contracts.agentRuntimeSkillUpdatedEventSchema;
 export const runtimeSkillDeletedEventSchema = contracts.agentRuntimeSkillDeletedEventSchema;
 export const runtimeCronUpdatedEventSchema = contracts.agentRuntimeCronUpdatedEventSchema;
@@ -119,6 +123,8 @@ export type RuntimeAgentFile = contracts.AgentRuntimeAgentFile;
 export type RuntimeAgentFileContent = contracts.AgentRuntimeAgentFileContent;
 export type RuntimeAgentFileList = contracts.AgentRuntimeAgentFileList;
 export type RuntimeSaveAgentFile = contracts.AgentRuntimeSaveAgentFile;
+export type RuntimeRenderedWorkspaceInstructions =
+    contracts.AgentRuntimeRenderedWorkspaceInstructions;
 export type RuntimeCreateCron = contracts.AgentRuntimeCreateCron;
 export type RuntimeAgentUpdatedEvent = contracts.AgentRuntimeAgentUpdatedEvent;
 export type RuntimeCron = contracts.AgentRuntimeCron;
@@ -170,6 +176,8 @@ export type RuntimeSkillDeletedEvent = contracts.AgentRuntimeSkillDeletedEvent;
 export type RuntimeSkillList = contracts.AgentRuntimeSkillList;
 export type RuntimeSkillSummary = contracts.AgentRuntimeSkillSummary;
 export type RuntimeSkillUpdatedEvent = contracts.AgentRuntimeSkillUpdatedEvent;
+export type RuntimeWorkspaceInstructionsUpdatedEvent =
+    contracts.AgentRuntimeWorkspaceInstructionsUpdatedEvent;
 export type RuntimeSaveOpenRouterSettings = contracts.AgentRuntimeSaveOpenRouterSettings;
 export type RuntimeSession = contracts.AgentRuntimeSession;
 export type RuntimeSessionList = contracts.AgentRuntimeSessionList;

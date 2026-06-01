@@ -25,12 +25,7 @@ import {
     updateAgentEnabledSkillIds,
 } from '../storage/agents.ts';
 import type { AgentDetail, DashboardData } from './contracts.ts';
-import {
-    buildAgentPalette,
-    resolveAgentAvatar,
-    resolveAgentDefaultPrimaryColor,
-    resolveAgentName,
-} from './palette.ts';
+import { buildAgentPalette, resolveAgentDefaultPrimaryColor, resolveAgentName } from './palette.ts';
 
 export {
     type AgentDiscordBinding,
@@ -44,8 +39,6 @@ const hexColorPattern = /^#[0-9a-f]{6}$/i;
 const fallbackAgentUpdatedAt = new Date(0).toISOString();
 
 export interface Agent {
-    avatar: string | null;
-    emoji: string | null;
     enabledSkillIds: string[] | null;
     id: string;
     name: string;
@@ -79,7 +72,6 @@ export const agentEnabledSkillIdsSchema = z.array(skillIdSchema).nullable();
 export const agentUserInstructionsSchema = z.string().max(20_000).nullable();
 
 export interface AgentCatalogItem {
-    avatar: string;
     defaultPrimaryColor: string;
     effectivePrimaryColor: string;
     enabledSkillIds: string[];
@@ -109,8 +101,6 @@ function toAgent(
     profile: { primaryColor: string | null; updatedAt: string; userInstructions: string } | null
 ): Agent {
     return {
-        avatar: agent.avatar ?? null,
-        emoji: agent.emoji ?? null,
         enabledSkillIds: parseEnabledSkillIds(agent),
         id: agent.id,
         name: agent.name,
@@ -162,7 +152,6 @@ export function toAgentCatalogItem(
             : resolveEnabledSkillIds(agent.enabledSkillIds, availableSkillIds);
 
     return {
-        avatar: resolveAgentAvatar(agent),
         defaultPrimaryColor: resolveAgentDefaultPrimaryColor(agent.id),
         effectivePrimaryColor: buildAgentPalette(agent).accentFrom,
         enabledSkillIds,
@@ -229,7 +218,6 @@ export function buildDashboardAgents(input: {
             return {
                 accentFrom: palette.accentFrom,
                 accentTo: palette.accentTo,
-                avatar: resolveAgentAvatar(agent),
                 chatCount: new Set(sessions.map((session) => session.channel)).size,
                 cronCount,
                 description: 'Runtime-backed agent.',
@@ -439,6 +427,25 @@ export async function saveCatalogAgentProfile(input: {
     return toAgentCatalogItem(agent, null);
 }
 
+export async function getCatalogAgentInstructions(agentId: string) {
+    const agentRecord = await getAgentRecord(agentId);
+    const runtimeAgentRead = agentRecord === null ? await getActiveRuntimeAgent(agentId) : null;
+
+    if (!(agentRecord || runtimeAgentRead)) {
+        throw new Error(`No agent named "${agentId}" exists.`);
+    }
+
+    const runtimeClient = agentRecord
+        ? await createClientForAgentRecord(agentRecord)
+        : runtimeAgentRead?.client;
+
+    if (!runtimeClient) {
+        throw new Error(`No enabled Tavern Runtime connection exists for agent "${agentId}".`);
+    }
+
+    return runtimeClient.getWorkspaceInstructions(agentId);
+}
+
 export async function deleteCatalogAgent(
     agentId: string,
     client?: TavernAgentRuntimeClient | null
@@ -528,8 +535,6 @@ function toAgentFromAgentRuntimeAgent(input: {
     runtimeId: string;
 }): Agent {
     return {
-        avatar: input.agent.avatar ?? null,
-        emoji: input.agent.emoji ?? null,
         enabledSkillIds: input.agent.enabledSkillIds,
         id: input.id,
         name: input.agent.name,

@@ -462,6 +462,7 @@ function TopbarDraftChatTab({ draft, isActive }: { draft: ChatStartDraft; isActi
         <TabsSubtleItem
             aria-current={isActive ? 'page' : undefined}
             className={topbarChatTabButtonClassName({
+                hasCustomColor: false,
                 isActive,
                 tone: draft.status === 'error' ? 'error' : 'default',
             })}
@@ -518,7 +519,10 @@ function TopbarRecentChatTab({
             <div className="group/tab relative h-7">
                 <TabsSubtleItem
                     aria-current={isActive ? 'page' : undefined}
-                    className={topbarChatTabButtonClassName({ isActive })}
+                    className={topbarChatTabButtonClassName({
+                        hasCustomColor: tabColor !== null,
+                        isActive,
+                    })}
                     iconNode={
                         <TopbarChatTabIcon
                             className={canClose ? 'group-hover/tab:opacity-0' : null}
@@ -599,19 +603,35 @@ function TopbarChatTabIcon({
 }
 
 function topbarChatTabButtonClassName({
+    hasCustomColor,
     isActive,
     tone = 'default',
 }: {
+    hasCustomColor: boolean;
     isActive: boolean;
     tone?: 'default' | 'error';
 }) {
     return cn(
-        'no-drag h-7 w-fit max-w-[180px] justify-start overflow-hidden rounded-lg px-2 [&_svg]:opacity-80',
-        isActive
-            ? 'text-[var(--topbar-tab-active-foreground)] hover:bg-transparent'
-            : 'text-muted-foreground hover:bg-[var(--topbar-tab-hover)] hover:text-foreground',
+        'no-drag h-7 w-fit max-w-[180px] justify-start overflow-hidden rounded-lg px-2 [&_svg]:opacity-70',
+        getTopbarChatTabTextClassName({ hasCustomColor, isActive }),
         tone === 'error' ? 'text-error-foreground hover:text-error-foreground' : null
     );
+}
+
+function getTopbarChatTabTextClassName({
+    hasCustomColor,
+    isActive,
+}: {
+    hasCustomColor: boolean;
+    isActive: boolean;
+}) {
+    if (hasCustomColor && isActive) {
+        return 'text-[var(--topbar-tab-active-foreground)] hover:bg-transparent';
+    }
+
+    return isActive
+        ? 'text-primary hover:bg-transparent'
+        : 'text-primary hover:bg-[var(--topbar-tab-hover)] hover:text-primary';
 }
 
 function sortChatsByCreatedAt(chats: ChatListItem[]) {
@@ -704,13 +724,13 @@ function getRouteTabIconNode(tab: RouteTab) {
             return (
                 <Icon
                     aria-hidden="true"
-                    className="size-5 shrink-0 -translate-y-px opacity-80 transition-opacity duration-150 group-data-active:opacity-100"
+                    className="size-5 shrink-0 opacity-70 transition-opacity duration-150 group-data-active:opacity-90"
                     icon={Joystick04Icon}
                     size={20}
                 />
             );
         case 'overview':
-            return <TavernTabIcon aria-hidden="true" className="size-5 shrink-0" />;
+            return <TavernTabIcon aria-hidden="true" className="size-5 shrink-0 opacity-70" />;
         case 'cortex':
             return undefined;
     }
@@ -816,13 +836,13 @@ function buildPinnedTabStyle(color: string, isActive: boolean): React.CSSPropert
     }
 
     return {
-        color: `color-mix(in srgb, ${color} 82%, var(--color-black))`,
+        color: `color-mix(in srgb, ${color} 35%, var(--color-black))`,
     };
 }
 
 function buildChatTabCloseStyle(color: string | null): React.CSSProperties {
     const closeColor = color
-        ? `color-mix(in srgb, ${color} 82%, var(--color-black))`
+        ? `color-mix(in srgb, ${color} 35%, var(--color-black))`
         : 'var(--topbar-tab-active-foreground)';
 
     return {
@@ -834,6 +854,6 @@ function buildChatTabCloseStyle(color: string | null): React.CSSProperties {
 function buildPinnedTabIndicatorStyle(color: string): React.CSSProperties {
     return {
         '--topbar-tab-active': `color-mix(in srgb, ${color} 16%, transparent)`,
-        '--topbar-tab-active-foreground': `color-mix(in srgb, ${color} 82%, var(--color-black))`,
+        '--topbar-tab-active-foreground': `color-mix(in srgb, ${color} 35%, var(--color-black))`,
     } as React.CSSProperties;
 }

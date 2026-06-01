@@ -8,6 +8,7 @@ process.env.DATABASE_PATH = join(mkdtempSync(join(tmpdir(), 'tavern-event-sync-'
 const emitAgentRuntimeUpdated = mock(() => undefined);
 const emitAgentRuntimeCapabilityUpdated = mock(() => undefined);
 const emitAgentInvalidationCascade = mock(() => undefined);
+const emitAgentInstructionsUpdated = mock(() => undefined);
 const emitAgentUpdated = mock(() => undefined);
 const emitChatLogUpdated = mock(() => undefined);
 const emitChatUpdated = mock(() => undefined);
@@ -43,6 +44,7 @@ mock.module('../src/agent-runtime-connection/service.ts', () => ({
 
 mock.module('../src/api/invalidation-events.ts', () => ({
     emitAgentInvalidationCascade,
+    emitAgentInstructionsUpdated,
     emitAgentRuntimeCapabilityUpdated,
     emitAgentRuntimeUpdated,
     emitAgentUpdated,
@@ -93,6 +95,7 @@ beforeEach(async () => {
     emitAgentRuntimeUpdated.mockClear();
     emitAgentRuntimeCapabilityUpdated.mockClear();
     emitAgentInvalidationCascade.mockClear();
+    emitAgentInstructionsUpdated.mockClear();
     emitAgentUpdated.mockClear();
     emitCronUpdated.mockClear();
     emitJobsUpdated.mockClear();
@@ -225,6 +228,27 @@ test('applyObservedAgentRuntimeEvent invalidates runtime capability rows', async
     await flushAsyncEventSync();
 
     expect(emitAgentRuntimeUpdated).toHaveBeenCalledTimes(1);
+});
+
+test('applyObservedAgentRuntimeEvent invalidates rendered agent instructions', async () => {
+    await applyObservedAgentRuntimeEvent({
+        agentId: 'main',
+        path: 'AGENTS.md',
+        renderedAt: '2026-05-12T19:00:00.000Z',
+        sha256: 'a'.repeat(64),
+        timestamp: '2026-05-12T19:00:00.000Z',
+        type: 'workspace.instructions.updated',
+    });
+
+    expect(emitObservedAgentRuntimeEvent).toHaveBeenCalledWith({
+        agentId: 'main',
+        path: 'AGENTS.md',
+        renderedAt: '2026-05-12T19:00:00.000Z',
+        sha256: 'a'.repeat(64),
+        timestamp: '2026-05-12T19:00:00.000Z',
+        type: 'workspace.instructions.updated',
+    });
+    expect(emitAgentInstructionsUpdated).toHaveBeenCalledWith({ agentId: 'main' });
 });
 
 test('applyObservedAgentRuntimeEvent forwards completed turns without fetching session history', async () => {

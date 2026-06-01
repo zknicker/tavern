@@ -1,5 +1,5 @@
-import { AgentAvatar } from '@tavern/agent-avatars';
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import { SimpleCodeEditor } from '../../../components/code-editor/simple-code-editor.tsx';
 import { BadgeDivider } from '../../../components/ui/badge-divider.tsx';
 import { Card, CardFrame } from '../../../components/ui/card.tsx';
 import { Button } from '../../../components/ui/primitives/button.tsx';
@@ -11,8 +11,8 @@ import {
     SelectTrigger,
     SelectValue,
 } from '../../../components/ui/select.tsx';
+import { Separator } from '../../../components/ui/separator.tsx';
 import { SettingsRow } from '../../../components/ui/settings-row.tsx';
-import { Textarea } from '../../../components/ui/textarea.tsx';
 import { usePrimaryAgent } from '../../../hooks/agents/use-agent-list.ts';
 import {
     type AgentRuntimeConnectionStatus,
@@ -27,7 +27,7 @@ import { MessagingPlatformsSection } from '../connections/messaging-platform-sec
 import { useOpenClawAgentDraft } from '../openclaw-draft/agent-draft.ts';
 import { useOpenClawSettingsDraft } from '../openclaw-draft/provider.tsx';
 import type { AgentSettingsDraft } from '../openclaw-draft/types.ts';
-import { AgentRuntimeConfigDrawer } from './agent-runtime-config-drawer.tsx';
+import { AgentInstructionsPreviewDrawer } from './agent-instructions-preview-drawer.tsx';
 import { AgentModelSection } from './model-section.tsx';
 
 export function AgentSettingsPage() {
@@ -95,13 +95,28 @@ function AgentSettingsContent({
     const saveAgentProfile = useAgentProfileUpdate();
     const savedUserInstructions = agent.userInstructions;
     const [instructionsDraft, setInstructionsDraft] = useState(savedUserInstructions);
+    const previousSavedUserInstructionsRef = useRef(savedUserInstructions);
+
+    useEffect(() => {
+        const previousSavedUserInstructions = previousSavedUserInstructionsRef.current;
+
+        if (previousSavedUserInstructions === savedUserInstructions) {
+            return;
+        }
+
+        previousSavedUserInstructionsRef.current = savedUserInstructions;
+        setInstructionsDraft((current) =>
+            current === previousSavedUserInstructions ? savedUserInstructions : current
+        );
+    }, [savedUserInstructions]);
 
     if (!draft) {
         return <p className="text-muted-foreground text-sm">Loading agent settings...</p>;
     }
 
     const instructionsChanged = instructionsDraft !== savedUserInstructions;
-    const previewName = draft.profile.displayName.trim() || agent.id;
+    const isSavingInstructions =
+        saveAgentProfile.isPending && saveAgentProfile.variables?.userInstructions !== undefined;
     const selectedColor = agent.effectivePrimaryColor;
     const selectedColorPreset =
         agentColorPresets.find(
@@ -110,24 +125,8 @@ function AgentSettingsContent({
 
     return (
         <div className="grid gap-8">
-            <header className="flex min-w-0 flex-wrap items-center gap-3">
-                <AgentAvatar
-                    avatar={agent.avatar}
-                    backgroundColor={selectedColor}
-                    className="size-12"
-                    name={previewName}
-                />
-                <div className="min-w-0 flex-1">
-                    <h1 className="truncate font-semibold text-2xl text-foreground">
-                        {previewName}
-                    </h1>
-                    <p className="text-muted-foreground text-sm">Agent settings</p>
-                </div>
-                <AgentRuntimeConfigDrawer agentId={agent.id} />
-            </header>
-
             <section>
-                <BadgeDivider className="pb-4">Profile</BadgeDivider>
+                <BadgeDivider className="pb-4">Appearance</BadgeDivider>
                 <CardFrame>
                     <Card className="overflow-hidden p-0">
                         <SettingsRow title="Display name">
@@ -148,14 +147,9 @@ function AgentSettingsContent({
                                 value={draft.profile.displayName}
                             />
                         </SettingsRow>
-                    </Card>
-                </CardFrame>
-            </section>
 
-            <section>
-                <BadgeDivider className="pb-4">Appearance</BadgeDivider>
-                <CardFrame>
-                    <Card className="overflow-hidden p-0">
+                        <Separator />
+
                         <SettingsRow title="Color">
                             <Select
                                 disabled={saveAgentProfile.isPending}
@@ -202,60 +196,40 @@ function AgentSettingsContent({
             <section>
                 <BadgeDivider className="pb-4">Instructions</BadgeDivider>
                 <CardFrame>
-                    <Card className="overflow-hidden p-0">
-                        <SettingsRow
-                            description="User-authored AGENTS.md block inserted after Tavern runtime guidance and before agent-authored notes."
-                            title="Agent instructions"
-                        >
-                            <div className="grid gap-3">
-                                <Textarea
-                                    disabled={saveAgentProfile.isPending}
-                                    id="agent-instructions"
-                                    name="agent-instructions"
-                                    onChange={(event) => setInstructionsDraft(event.target.value)}
-                                    placeholder="Write the agent's role, personality, operating rules, output protocol, and stop rules."
-                                    rows={16}
-                                    textareaClassName="min-h-96 resize-y font-mono text-sm"
-                                    value={instructionsDraft}
-                                />
-                                <div className="flex justify-end gap-2">
-                                    <Button
-                                        disabled={
-                                            !instructionsChanged || saveAgentProfile.isPending
-                                        }
-                                        onClick={() => setInstructionsDraft(savedUserInstructions)}
-                                        type="button"
-                                        variant="secondary"
-                                    >
-                                        Discard
-                                    </Button>
-                                    <Button
-                                        disabled={
-                                            !instructionsChanged || saveAgentProfile.isPending
-                                        }
-                                        onClick={() =>
-                                            saveAgentProfile.mutate(
-                                                {
-                                                    agentId: agent.id,
-                                                    userInstructions: instructionsDraft,
-                                                },
-                                                {
-                                                    onSuccess: ({ agent: savedAgent }) =>
-                                                        setInstructionsDraft(
-                                                            savedAgent.userInstructions
-                                                        ),
-                                                }
-                                            )
-                                        }
-                                        type="button"
-                                    >
-                                        Save
-                                    </Button>
-                                </div>
-                            </div>
-                        </SettingsRow>
+                    <Card className="relative h-[400px] overflow-hidden p-0">
+                        <SimpleCodeEditor
+                            disabled={disabled || isSavingInstructions}
+                            filePath="AGENTS.md"
+                            onChange={setInstructionsDraft}
+                            placeholder="Write the agent's role, personality, operating rules, output protocol, and stop rules."
+                            value={instructionsDraft}
+                        />
                     </Card>
                 </CardFrame>
+                <div className="mt-3 flex flex-wrap items-center justify-end gap-2">
+                    <AgentInstructionsPreviewDrawer agentId={agent.id} />
+                    <Button
+                        disabled={!instructionsChanged || saveAgentProfile.isPending}
+                        loading={isSavingInstructions}
+                        onClick={() =>
+                            saveAgentProfile.mutate(
+                                {
+                                    agentId: agent.id,
+                                    userInstructions: instructionsDraft,
+                                },
+                                {
+                                    onSuccess: ({ agent: savedAgent }) => {
+                                        previousSavedUserInstructionsRef.current =
+                                            savedAgent.userInstructions;
+                                        setInstructionsDraft(savedAgent.userInstructions);
+                                    },
+                                }
+                            )
+                        }
+                    >
+                        Save
+                    </Button>
+                </div>
             </section>
 
             <AgentModelSection

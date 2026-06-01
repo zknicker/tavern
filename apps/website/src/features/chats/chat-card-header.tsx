@@ -1,7 +1,7 @@
-import { AgentAvatar } from '@tavern/agent-avatars';
 import { getChatDisplayTitle } from '../../components/chats/chat-display.ts';
 import { ChatTitle } from '../../components/chats/chat-title.tsx';
 import { ChatTypeBadge } from '../../components/chats/chat-type-badge.tsx';
+import { AgentAvatar } from '../../components/ui/agent-avatar.tsx';
 import { Badge } from '../../components/ui/badge.tsx';
 import { Button } from '../../components/ui/primitives/button.tsx';
 import { Tooltip, TooltipContent, TooltipTrigger } from '../../components/ui/tooltip.tsx';

@@ -11,4 +11,17 @@ export function useAgentEvents() {
             void utils.agent.primary.invalidate();
         },
     });
+
+    trpc.agent.onInstructionsUpdate.useSubscription(undefined, {
+        onData: (event) => {
+            const agentId = typeof event.agentId === 'string' ? event.agentId : null;
+
+            if (!agentId) {
+                void utils.agent.instructions.invalidate(undefined, { exact: false });
+                return;
+            }
+
+            void utils.agent.instructions.invalidate({ agentId });
+        },
+    });
 }

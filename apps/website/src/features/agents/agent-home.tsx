@@ -1,8 +1,8 @@
 import { Add01Icon } from '@hugeicons-pro/core-duotone-rounded';
 import { PlugIcon } from '@hugeicons-pro/core-stroke-rounded';
-import { AgentAvatar } from '@tavern/agent-avatars';
 import type * as React from 'react';
 import { Link } from 'react-router-dom';
+import { AgentAvatar } from '../../components/ui/agent-avatar.tsx';
 import { Icon } from '../../components/ui/icon.tsx';
 import { usePrimaryAgentSuspense } from '../../hooks/agents/use-agent-list.ts';
 import { useMessagingPlatformListSuspense } from '../../hooks/connections/use-messaging-platform-list.ts';
@@ -100,7 +100,7 @@ function AgentHero({ agent }: { agent: AgentListOutput['agents'][number] }) {
         <header className="flex flex-col gap-5">
             <AgentAvatar
                 active
-                avatar={agent.avatar}
+                avatar={agent.name}
                 backgroundColor={agent.effectivePrimaryColor}
                 className="size-14"
                 name={agent.name}
@@ -131,7 +131,7 @@ function AgentChannels({
                     description="Built-in direct chats"
                     icon={
                         <AgentAvatar
-                            avatar={agent.avatar}
+                            avatar={agent.name}
                             backgroundColor={agent.effectivePrimaryColor}
                             className="size-7"
                             name={agent.name}

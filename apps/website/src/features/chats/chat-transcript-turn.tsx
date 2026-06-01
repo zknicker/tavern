@@ -1,6 +1,6 @@
 import { AlertCircleIcon } from '@hugeicons/core-free-icons';
 import { InspectCodeIcon } from '@hugeicons-pro/core-stroke-rounded';
-import { AgentAvatar } from '@tavern/agent-avatars';
+import { AgentAvatar } from '../../components/ui/agent-avatar.tsx';
 import { Alert, AlertDescription, AlertTitle } from '../../components/ui/alert.tsx';
 import { CopyButton } from '../../components/ui/copy-button.tsx';
 import { Icon } from '../../components/ui/icon.tsx';

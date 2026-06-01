@@ -9,7 +9,7 @@ import {
 import { listLogs } from '../storage/logs.ts';
 import { getAgent } from './catalog.ts';
 import type { AgentDetail } from './contracts.ts';
-import { buildAgentPalette, resolveAgentAvatar, resolveAgentName } from './palette.ts';
+import { buildAgentPalette, resolveAgentName } from './palette.ts';
 
 function mapAgentCronJobs(agentId: string, records: CronJobSummary[]): AgentDetail['cronJobs'] {
     return records
@@ -100,7 +100,6 @@ export async function getAgentDetail(agentId: string): Promise<AgentDetail> {
         agent: {
             accentFrom: palette.accentFrom,
             accentTo: palette.accentTo,
-            avatar: resolveAgentAvatar(agent),
             chatCount: new Set(sessionsForAgent.map((session) => session.chatId)).size,
             cronCount: cronJobRecords.filter((record) => record.agentId === agentId).length,
             description: 'Runtime-backed agent.',

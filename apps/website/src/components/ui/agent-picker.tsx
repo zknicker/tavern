@@ -1,6 +1,6 @@
-import { AgentAvatar } from '@tavern/agent-avatars';
 import type * as React from 'react';
 import { cn } from '../../lib/utils.ts';
+import { AgentAvatar } from './agent-avatar.tsx';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './select.tsx';
 
 export interface AgentOptionItem {

@@ -18,7 +18,7 @@ export function Progress({ className, value, color }: ProgressProps): React.Reac
                 className="h-full rounded-full transition-all duration-500"
                 style={{
                     width: `${Math.min(100, Math.max(0, value))}%`,
-                    backgroundColor: color,
+                    backgroundColor: color ?? 'var(--primary)',
                 }}
             />
         </div>

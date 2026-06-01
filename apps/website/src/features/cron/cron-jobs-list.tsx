@@ -1,5 +1,5 @@
-import { AgentAvatar } from '@tavern/agent-avatars';
 import * as React from 'react';
+import { AgentAvatar } from '../../components/ui/agent-avatar.tsx';
 import { CardStack, CardStackItem } from '../../components/ui/card-stack.tsx';
 import type { DashboardAvatarDirectory } from '../../hooks/agents/use-agent-avatar-directory.ts';
 import { CronJobActions } from './cron-job-actions.tsx';

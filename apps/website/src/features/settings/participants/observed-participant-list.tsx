@@ -1,5 +1,5 @@
-import { AgentAvatar } from '@tavern/agent-avatars';
 import * as React from 'react';
+import { AgentAvatar } from '../../../components/ui/agent-avatar.tsx';
 import { Badge } from '../../../components/ui/badge.tsx';
 import { Card, CardFrame } from '../../../components/ui/card.tsx';
 import { Button } from '../../../components/ui/primitives/button.tsx';

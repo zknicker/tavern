@@ -142,13 +142,6 @@ export function createAppRouter() {
                                     element: <Navigate replace to="/dashboard/cortex" />,
                                 },
                                 {
-                                    path: 'avatar-test',
-                                    lazy: lazyRoute(
-                                        () => import('./routes/dashboard/avatar-test-page.tsx'),
-                                        'AvatarTestPage'
-                                    ),
-                                },
-                                {
                                     path: 'memory',
                                     element: <Navigate replace to="/dashboard/cortex" />,
                                 },
@@ -277,11 +270,12 @@ export function createAppRouter() {
                                         },
                                         {
                                             path: 'agent',
-                                            element: (
-                                                <Navigate
-                                                    replace
-                                                    to="/dashboard/settings/sessions"
-                                                />
+                                            lazy: lazyRoute(
+                                                () =>
+                                                    import(
+                                                        './routes/dashboard/settings-agent-page.tsx'
+                                                    ),
+                                                'SettingsAgentPage'
                                             ),
                                         },
                                         {

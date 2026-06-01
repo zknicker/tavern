@@ -2,7 +2,6 @@ import { AlertCircleIcon } from '@hugeicons/core-free-icons';
 import { Alert, AlertDescription } from '../../../components/ui/alert.tsx';
 import { BadgeDivider } from '../../../components/ui/badge-divider.tsx';
 import { Card, CardFrame } from '../../../components/ui/card.tsx';
-import { ChoiceBox, ChoiceBoxGroup } from '../../../components/ui/choice-box.tsx';
 import { Icon } from '../../../components/ui/icon.tsx';
 import {
     Select,
@@ -28,18 +27,6 @@ import type {
 type Model = ModelListOutput['models'][number];
 type ModelChoice = ReturnType<typeof listModelChoices>[number];
 
-const harnessOptions: Array<{ description: string; label: string; value: OpenClawHarness }> = [
-    {
-        description: 'OpenAI GPT models.',
-        label: 'Codex',
-        value: 'codex',
-    },
-    {
-        description: 'Broad model support.',
-        label: 'Pi',
-        value: 'pi',
-    },
-];
 const inheritThinkingValue = '__inherit__';
 
 export function AgentModelSection({
@@ -55,8 +42,7 @@ export function AgentModelSection({
     syncError: string | null;
     value: AgentModelDraft | null;
 }) {
-    const selectedHarness = value?.harness ?? 'codex';
-    const choices = listModelChoices(modelOptions, selectedHarness);
+    const choices = listModelChoices(modelOptions, value);
     const selectedChoice =
         choices.find((choice) => choice.name.id === value?.openClawModelNameId) ?? null;
     const selectedThinkingOptions = listThinkingOptionsForModelChoice(selectedChoice);
@@ -67,50 +53,6 @@ export function AgentModelSection({
             <BadgeDivider className="pb-4">Model</BadgeDivider>
             <CardFrame>
                 <Card className="overflow-hidden p-0">
-                    <SettingsRow title="Harness">
-                        <ChoiceBoxGroup
-                            disabled={isDisabled}
-                            onValueChange={(harness) => {
-                                const nextChoice = selectModelChoiceForHarness(
-                                    modelOptions,
-                                    harness,
-                                    value
-                                );
-
-                                onChange(
-                                    nextChoice
-                                        ? {
-                                              harness,
-                                              modelId: nextChoice.model.ref,
-                                              openClawModelNameId: nextChoice.name.id,
-                                              thinkingDefault: normalizeThinkingDefaultForChoice(
-                                                  value?.thinkingDefault ?? null,
-                                                  nextChoice
-                                              ),
-                                          }
-                                        : {
-                                              harness,
-                                              modelId: null,
-                                              openClawModelNameId: null,
-                                              thinkingDefault: null,
-                                          }
-                                );
-                            }}
-                            value={selectedHarness}
-                        >
-                            {harnessOptions.map((option) => (
-                                <ChoiceBox
-                                    description={option.description}
-                                    key={option.value}
-                                    title={option.label}
-                                    value={option.value}
-                                />
-                            ))}
-                        </ChoiceBoxGroup>
-                    </SettingsRow>
-
-                    <Separator />
-
                     <SettingsRow title="Model">
                         <Select
                             disabled={isDisabled}
@@ -122,7 +64,7 @@ export function AgentModelSection({
                                 onChange(
                                     nextChoice
                                         ? {
-                                              harness: selectedHarness,
+                                              harness: nextChoice.name.harness,
                                               modelId: nextChoice.model.ref,
                                               openClawModelNameId: nextChoice.name.id,
                                               thinkingDefault: normalizeThinkingDefaultForChoice(
@@ -172,7 +114,7 @@ export function AgentModelSection({
                                     selectedChoice
                                         ? {
                                               ...(value ?? {
-                                                  harness: selectedHarness,
+                                                  harness: selectedChoice.name.harness,
                                                   modelId: selectedChoice.model.ref,
                                                   openClawModelNameId: selectedChoice.name.id,
                                               }),
@@ -248,39 +190,48 @@ function ThinkingSelectLabel({ description, label }: { description: string; labe
     );
 }
 
-function modelSupportsHarness(model: Model, harness: OpenClawHarness) {
-    return (model.openClawNames ?? []).some((name) => name.harness === harness);
-}
-
-function listModelChoices(models: Model[], harness: OpenClawHarness) {
+function listModelChoices(models: Model[], current?: AgentModelDraft | null) {
     return models
-        .filter((model) => modelSupportsHarness(model, harness))
-        .flatMap((model) =>
-            (model.openClawNames ?? [])
-                .filter((name) => name.harness === harness)
-                .map((name) => ({ model, name }))
-        )
+        .flatMap((model) => {
+            const names = model.openClawNames ?? [];
+            const defaultNames = listDefaultOpenClawNames(model);
+            const currentName =
+                current?.modelId === model.ref
+                    ? names.find((name) => name.id === current.openClawModelNameId)
+                    : null;
+            const visibleNames =
+                currentName && !defaultNames.some((name) => name.id === currentName.id)
+                    ? [...defaultNames, currentName]
+                    : defaultNames;
+
+            return visibleNames.map((name) => ({
+                model,
+                name,
+            }));
+        })
         .sort(
             (left, right) =>
-                Number(right.name.isPreferred) - Number(left.name.isPreferred) ||
                 left.model.name.localeCompare(right.model.name) ||
                 left.name.label.localeCompare(right.name.label)
         );
 }
 
-export function selectModelChoiceForHarness(
-    models: Model[],
-    harness: OpenClawHarness,
-    current: AgentModelDraft | null
-) {
-    const choices = listModelChoices(models, harness);
+function listDefaultOpenClawNames(model: Model) {
+    const names = model.openClawNames ?? [];
+    const preferred = names.filter((name) => name.isPreferred);
+
+    return preferred.length > 0 ? preferred : names.slice(0, 1);
+}
+
+export function selectModelChoice(models: Model[], current: AgentModelDraft | null) {
+    const choices = listModelChoices(models, current);
 
     if (!current?.modelId) {
         return choices[0] ?? null;
     }
 
     return (
-        choices.find((choice) => choice.model.ref === current.modelId && choice.name.isPreferred) ??
+        choices.find((choice) => choice.name.id === current.openClawModelNameId) ??
         choices.find((choice) => choice.model.ref === current.modelId) ??
         choices[0] ??
         null

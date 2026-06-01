@@ -1,6 +1,6 @@
 import { Plus } from '@hugeicons/core-free-icons';
-import { AgentAvatar } from '@tavern/agent-avatars';
 import * as React from 'react';
+import { AgentAvatar } from '../../components/ui/agent-avatar.tsx';
 import { ChatComposer } from '../../components/ui/chat-composer.tsx';
 import { Icon } from '../../components/ui/icon.tsx';
 import { Button } from '../../components/ui/primitives/button.tsx';
@@ -243,7 +243,7 @@ function getAgentOption(agents: AgentListOutput['agents'], agentId: string): Age
     const name = agent?.name ?? agentId;
 
     return {
-        avatar: agent?.avatar ?? fallbackAvatar(name),
+        avatar: fallbackAvatar(name),
         id: agentId,
         name,
         primaryColor: agent?.effectivePrimaryColor ?? '#64748b',

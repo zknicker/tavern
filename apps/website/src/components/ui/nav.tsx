@@ -2,9 +2,9 @@
 
 import { mergeProps } from '@base-ui/react/merge-props';
 import { useRender } from '@base-ui/react/use-render';
-import { AgentAvatar } from '@tavern/agent-avatars';
 import type React from 'react';
 import { cn } from '../../lib/utils.ts';
+import { AgentAvatar } from './agent-avatar.tsx';
 
 export function Nav({
     className,

@@ -26,7 +26,7 @@ export function useActorProfile(actor: HistoryActorOutput | null) {
 
             return agent
                 ? ({
-                      avatar: agent.avatar,
+                      avatar: agent.name,
                       id: agent.id,
                       kind: 'agent',
                       name: agent.name,

@@ -5,6 +5,7 @@ import {
     markAgentRuntimeConnectionReachable,
 } from '../agent-runtime-connection/service.ts';
 import {
+    emitAgentInstructionsUpdated,
     emitAgentRuntimeUpdated,
     emitAgentUpdated,
     emitChatLogUpdated,
@@ -66,6 +67,12 @@ export async function applyObservedAgentRuntimeEvent(
             emitObservedAgentRuntimeEvent(event);
             debugTurnEvent(event);
             emitModelUpdated();
+            return;
+        }
+        case 'workspace.instructions.updated': {
+            emitObservedAgentRuntimeEvent(event);
+            debugTurnEvent(event);
+            emitAgentInstructionsUpdated({ agentId: event.agentId });
             return;
         }
         case 'skill.updated': {

@@ -14,6 +14,9 @@ page or a sidebar Agents section.
 
 * **Single managed agent.** Tavern routes new work through the primary Runtime
   agent.
+* **Agent instructions.** Settings -> Instructions edits the user-authored
+  AGENTS.md block for the managed agent and can read the current generated
+  AGENTS.md file from the managed workspace.
 * **New chats.** Starting a direct chat belongs to the normal New Chat flow, not
   an agent landing page.
 * **Global tools and skills.** Per-agent tool policy and per-agent skill
@@ -25,7 +28,9 @@ page or a sidebar Agents section.
 ## App surfaces
 
 The primary app sidebar lists product areas and chats. It does not list agents.
-Legacy agent URLs redirect to Settings -> Sessions.
+Legacy agent URLs redirect to Settings -> Sessions. Agent configuration lives in
+Settings, including instructions, model choice, skills, memory, sessions, and
+jobs.
 
 ## Runtime boundary
 

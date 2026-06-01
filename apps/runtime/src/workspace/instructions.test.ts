@@ -4,12 +4,14 @@ import path from 'node:path';
 import { afterEach, beforeEach, describe, expect, test } from 'vitest';
 import { closeDb, getDb, initTestDb } from '../db/connection';
 import { ensureRuntimeSchema } from '../db/schema';
+import { subscribeToRuntimeEvents } from '../tavern/runtime-events';
 import {
     clearOpenClawBootstrapFiles,
     composeAgentInstructions,
     generatedInstructionFileName,
     getAgentInstructionSource,
     openClawBootstrapFileNamesToClear,
+    readRenderedAgentInstructions,
     renderAgentInstructions,
     updateAgentInstructionSource,
     updateAgentNotes,
@@ -58,6 +60,34 @@ describe('workspace instructions', () => {
         expect(content).toContain('Prefer Cortex recall');
     });
 
+    test('emits an AGENTS.md update event when rendered instructions are written', async () => {
+        const db = getDb();
+        const events: unknown[] = [];
+        const unsubscribe = subscribeToRuntimeEvents((event) => events.push(event));
+
+        try {
+            updateAgentInstructionSource(db, {
+                agentId: 'planner',
+                agentName: 'Planner',
+                userInstructions: 'Speak plainly.',
+                workspaceDir,
+            });
+
+            const result = await renderAgentInstructions(db, 'planner');
+
+            expect(events).toContainEqual({
+                agentId: 'planner',
+                path: generatedInstructionFileName,
+                renderedAt: result.renderedAt,
+                sha256: result.sha256,
+                timestamp: result.renderedAt,
+                type: 'workspace.instructions.updated',
+            });
+        } finally {
+            unsubscribe();
+        }
+    });
+
     test('preserves notes when user instructions change', () => {
         const db = getDb();
         updateAgentInstructionSource(db, {
@@ -80,6 +110,53 @@ describe('workspace instructions', () => {
             notes: 'Durable agent note.',
             userInstructions: 'Second instructions.',
         });
+    });
+
+    test('reads rendered AGENTS.md from disk', async () => {
+        const db = getDb();
+        updateAgentInstructionSource(db, {
+            agentId: 'planner',
+            agentName: 'Planner',
+            userInstructions: 'Saved instructions.',
+            workspaceDir,
+        });
+        updateAgentNotes(db, {
+            agentId: 'planner',
+            notes: 'Durable agent note.',
+        });
+
+        const rendered = await renderAgentInstructions(db, 'planner');
+        const read = await readRenderedAgentInstructions(db, 'planner');
+
+        expect(read).toMatchObject({
+            agentId: 'planner',
+            path: generatedInstructionFileName,
+            renderedAt: rendered.renderedAt,
+            sha256: rendered.sha256,
+        });
+        expect(read.content).toContain('You are Planner, a Tavern-managed agent.');
+        expect(read.content).toContain('Saved instructions.');
+        expect(read.content).toContain('Durable agent note.');
+    });
+
+    test('instructions route returns the rendered AGENTS.md file', async () => {
+        const db = getDb();
+        updateAgentInstructionSource(db, {
+            agentId: 'planner',
+            agentName: 'Planner',
+            userInstructions: 'Saved instructions.',
+            workspaceDir,
+        });
+        await renderAgentInstructions(db, 'planner');
+
+        const response = await handleWorkspaceRequest(
+            new Request('http://runtime.test/workspace/agents/planner/instructions')
+        );
+        const body = (await response?.json()) as { content: string; path: string };
+
+        expect(response?.status).toBe(200);
+        expect(body.path).toBe(generatedInstructionFileName);
+        expect(body.content).toContain('Saved instructions.');
     });
 
     test('preserves an explicit empty user instructions update', () => {

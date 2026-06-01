@@ -3,6 +3,7 @@ import path from 'node:path';
 import { defaultCortexPageTypes } from '@tavern/api';
 import type { Database } from '../db/sqlite';
 import { namedParams } from '../db/sqlite';
+import { publishRuntimeEvent } from '../tavern/runtime-events';
 
 export interface AgentInstructionSource {
     agentId: string;
@@ -17,6 +18,15 @@ export interface AgentInstructionRenderResult {
     content: string;
     renderedAt: string;
     sha256: string;
+}
+
+export interface AgentInstructionReadResult {
+    agentId: string;
+    content: string;
+    path: string;
+    renderedAt: string | null;
+    sha256: string | null;
+    updatedAt: string | null;
 }
 
 export const generatedInstructionFileName = 'AGENTS.md';
@@ -222,8 +232,49 @@ export async function renderAgentInstructions(db: Database, agentId = defaultAge
          SET rendered_at = $renderedAt, rendered_hash = $sha256, updated_at = $renderedAt
          WHERE agent_id = $agentId`
     ).run(namedParams({ agentId: source.agentId, renderedAt, sha256 }));
+    publishRuntimeEvent({
+        agentId: source.agentId,
+        path: generatedInstructionFileName,
+        renderedAt,
+        sha256,
+        timestamp: renderedAt,
+        type: 'workspace.instructions.updated',
+    });
 
     return { content, renderedAt, sha256 } satisfies AgentInstructionRenderResult;
+}
+
+export async function readRenderedAgentInstructions(db: Database, agentId = defaultAgentId) {
+    const row = db
+        .prepare(
+            `SELECT agent_id, workspace_dir, rendered_at, rendered_hash, updated_at
+             FROM workspace_agent_instructions
+             WHERE agent_id = ?`
+        )
+        .get(agentId) as
+        | {
+              agent_id: string;
+              rendered_at: string | null;
+              rendered_hash: string | null;
+              updated_at: string | null;
+              workspace_dir: string;
+          }
+        | undefined;
+
+    if (!row) {
+        throw new Error(`No managed workspace is registered for agent "${agentId}".`);
+    }
+
+    return {
+        agentId: row.agent_id,
+        content: await fs.readFile(path.join(row.workspace_dir, generatedInstructionFileName), {
+            encoding: 'utf8',
+        }),
+        path: generatedInstructionFileName,
+        renderedAt: row.rendered_at,
+        sha256: row.rendered_hash,
+        updatedAt: row.updated_at,
+    } satisfies AgentInstructionReadResult;
 }
 
 export async function clearOpenClawBootstrapFiles(workspaceDir: string) {

@@ -5,6 +5,7 @@ import {
     ChatIcon,
     ComputerTerminal01Icon,
     Database02Icon,
+    FileEditIcon,
     HourglassIcon,
     PaintBrush03Icon,
     SystemUpdate01Icon,
@@ -50,6 +51,12 @@ export const settingsNavItems = [
         to: '/dashboard/settings/sessions',
     },
     {
+        icon: FileEditIcon,
+        id: 'agent',
+        label: 'Instructions',
+        to: '/dashboard/settings/agent',
+    },
+    {
         icon: ZapIcon,
         id: 'skills',
         label: 'Skills & Plugins',
@@ -88,7 +95,7 @@ export const settingsNavSections = [
     },
     {
         id: 'agent',
-        itemIds: ['models', 'skills', 'memories'],
+        itemIds: ['agent', 'models', 'skills', 'memories'],
         label: 'Agent',
     },
     {

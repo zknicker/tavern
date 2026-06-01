@@ -1,6 +1,6 @@
-import { AgentAvatar } from '@tavern/agent-avatars';
 import type * as React from 'react';
 import { cn } from '../../lib/utils.ts';
+import { AgentAvatar } from '../ui/agent-avatar.tsx';
 import { Badge } from '../ui/badge.tsx';
 
 export interface AgentBadgeProps {

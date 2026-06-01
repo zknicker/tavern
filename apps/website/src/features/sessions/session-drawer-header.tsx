@@ -1,4 +1,4 @@
-import { AgentAvatar } from '@tavern/agent-avatars';
+import { AgentAvatar } from '../../components/ui/agent-avatar.tsx';
 import { Badge, type BadgeProps } from '../../components/ui/badge.tsx';
 import { DrawerDescription, DrawerHeader, DrawerTitle } from '../../components/ui/drawer.tsx';
 import type { DashboardAvatarDirectory } from '../../hooks/agents/use-agent-avatar-directory.ts';

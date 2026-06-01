@@ -47,7 +47,7 @@ export function useAgentAvatarDirectory(
 
         for (const agent of agents) {
             const resolved = {
-                avatar: agent.avatar,
+                avatar: fallbackAvatar(agent.name),
                 backgroundColor: agent.effectivePrimaryColor,
                 displayName: agent.name ?? agent.id,
             } satisfies ResolvedAgentAvatar;

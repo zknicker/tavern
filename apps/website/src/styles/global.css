@@ -328,8 +328,8 @@
         --nav-hover: --alpha(var(--color-white) / 6%);
         --nav-active: --alpha(var(--color-white) / 10%);
         --topbar-tab-hover: color-mix(in srgb, var(--foreground) 5%, transparent);
-        --topbar-tab-active: color-mix(in srgb, var(--info) 14%, transparent);
-        --topbar-tab-active-foreground: var(--info-foreground);
+        --topbar-tab-active: var(--nav-active);
+        --topbar-tab-active-foreground: var(--primary);
 
         --subnav-hover: var(--nav-hover);
         --subnav-active: var(--nav-active);
@@ -433,8 +433,8 @@
         --nav-hover: --alpha(var(--color-black) / 4%);
         --nav-active: --alpha(var(--color-black) / 6%);
         --topbar-tab-hover: color-mix(in srgb, var(--foreground) 5%, transparent);
-        --topbar-tab-active: color-mix(in srgb, var(--info) 12%, transparent);
-        --topbar-tab-active-foreground: var(--info-foreground);
+        --topbar-tab-active: var(--nav-active);
+        --topbar-tab-active-foreground: var(--primary);
 
         --subnav-hover: var(--nav-hover);
         --subnav-active: var(--nav-active);
@@ -476,8 +476,6 @@
         line-height: 1.5;
         -webkit-font-smoothing: antialiased;
         -moz-osx-font-smoothing: grayscale;
-        -webkit-user-select: none;
-        user-select: none;
     }
 
     html.macos-tauri,

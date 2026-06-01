@@ -28,6 +28,7 @@ import {
     type AgentRuntimeModels,
     type AgentRuntimeOpenClawConfigSnapshot,
     type AgentRuntimeOpenRouterSettings,
+    type AgentRuntimeRenderedWorkspaceInstructions,
     type AgentRuntimeRunCron,
     type AgentRuntimeRunJob,
     type AgentRuntimeSaveAgentFile,
@@ -80,6 +81,7 @@ import {
     agentRuntimeMutationOrigins,
     agentRuntimeOpenClawConfigSnapshotSchema,
     agentRuntimeOpenRouterSettingsSchema,
+    agentRuntimeRenderedWorkspaceInstructionsSchema,
     agentRuntimeRoutes,
     agentRuntimeRunCronSchema,
     agentRuntimeRunJobSchema,
@@ -183,6 +185,7 @@ export interface TavernAgentRuntimeClient {
     getSessionGraph(sessionKey: string): Promise<AgentRuntimeSessionGraph>;
     getSessionPrompt(sessionKey: string): Promise<AgentRuntimeSessionPrompt | null>;
     getSkillConfig(skillId: string): Promise<AgentRuntimeSkill>;
+    getWorkspaceInstructions(agentId: string): Promise<AgentRuntimeRenderedWorkspaceInstructions>;
     installSkill(input: AgentRuntimeInstallSkill): Promise<AgentRuntimeSkill>;
     listAgentFiles(agentId: string): Promise<AgentRuntimeAgentFileList>;
     listAgents(): Promise<{ agents: AgentRuntimeAgent[] }>;
@@ -394,6 +397,18 @@ class HttpTavernAgentRuntimeClient implements TavernAgentRuntimeClient {
         }
 
         return agentRuntimeWorkspaceInstructionsSchema.parse(await response.json());
+    }
+
+    async getWorkspaceInstructions(agentId: string) {
+        const response = await fetch(
+            `${this.#baseUrl}${agentRuntimeRoutes.workspaceAgentInstructions(agentId)}`
+        );
+
+        if (!response.ok) {
+            await readErrorResponse(response);
+        }
+
+        return agentRuntimeRenderedWorkspaceInstructionsSchema.parse(await response.json());
     }
 
     async listAgents() {

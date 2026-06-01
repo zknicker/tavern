@@ -3,8 +3,8 @@
 import { mergeProps } from '@base-ui/react/merge-props';
 import { Select as SelectPrimitive } from '@base-ui/react/select';
 import { useRender } from '@base-ui/react/use-render';
-import { ArrowDown01, ArrowUp01 } from '@hugeicons/core-free-icons';
-import { ChevronDoubleCloseIcon } from '@hugeicons-pro/core-solid-rounded';
+import { ArrowUp01 } from '@hugeicons/core-free-icons';
+import { ArrowDown01Icon, ChevronDoubleCloseIcon } from '@hugeicons-pro/core-solid-rounded';
 import { cva, type VariantProps } from 'class-variance-authority';
 import type * as React from 'react';
 import {
@@ -182,7 +182,10 @@ export function SelectContent({
                         className="bottom-0 z-50 flex h-6 w-full cursor-default items-center justify-center before:pointer-events-none before:absolute before:inset-x-px before:bottom-px before:h-[200%] before:rounded-b-[calc(var(--radius-lg)-1px)] before:bg-linear-to-t before:from-50% before:from-popover"
                         data-slot="select-scroll-down-arrow"
                     >
-                        <Icon className="relative size-4" icon={ArrowDown01} />
+                        <Icon
+                            className="relative size-4 text-foreground/30 dark:text-foreground/36"
+                            icon={ArrowDown01Icon}
+                        />
                     </SelectPrimitive.ScrollDownArrow>
                 </SelectPrimitive.Popup>
             </SelectPrimitive.Positioner>

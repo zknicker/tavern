@@ -49,7 +49,7 @@ export function useActorDirectory(
 
         for (const agent of agents) {
             directory.set(`agent:${agent.id}`, {
-                avatar: agent.avatar,
+                avatar: fallbackAvatar(agent.name),
                 backgroundColor: agent.effectivePrimaryColor,
                 displayName: agent.name,
                 kind: 'agent',

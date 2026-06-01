@@ -34,60 +34,50 @@ export function DesktopUpdateIndicator() {
 
     const progressPercent =
         status.phase === 'downloading' ? Math.round(status.progress * 100) : 100;
-    const label = getUpdateLabel(status.phase);
-    const detail = getUpdateDetail(status);
     const ellipsis = '.'.repeat(ellipsisFrame);
     const canRestart = status.phase === 'ready';
     const canInstall = status.phase === 'available';
+    const icon = status.phase === 'downloading' ? ArrowDown01Icon : SystemUpdate01Icon;
+    const detail = getUpdateDetail(status);
 
     return (
-        <div className="no-drag pointer-events-none fixed top-3 right-4 z-50">
-            <div className="group pointer-events-auto relative flex items-center gap-2 rounded-full border border-border/70 bg-popover/92 px-2.5 py-1.5 text-foreground text-sm shadow-[0_12px_36px_rgb(15_23_42_/_0.18),0_2px_8px_rgb(15_23_42_/_0.08)] backdrop-blur-xl">
-                <span
-                    aria-hidden="true"
-                    className="relative flex size-4 shrink-0 items-center justify-center rounded-full border border-border/70"
-                    style={{
-                        background:
-                            status.phase === 'downloading'
-                                ? getProgressWedge(progressPercent)
-                                : 'var(--primary)',
-                    }}
-                >
-                    <Icon
-                        className="size-2.5 text-primary-foreground"
-                        icon={status.phase === 'downloading' ? ArrowDown01Icon : SystemUpdate01Icon}
-                        strokeWidth={2.2}
-                    />
-                </span>
-                <span className="font-medium text-sm">
-                    {label}
-                    {status.phase === 'downloading' ? (
-                        <span className="inline-block min-w-3 text-left tabular-nums">
-                            {ellipsis}
-                        </span>
-                    ) : null}
-                </span>
+        <div className="group relative flex h-7 shrink-0 items-center gap-2 rounded-md border border-border/60 bg-muted/24 px-2 text-foreground text-sm">
+            <span
+                aria-hidden="true"
+                className="relative flex size-4 shrink-0 items-center justify-center rounded-full border border-border/70"
+                style={{
+                    background:
+                        status.phase === 'downloading'
+                            ? getProgressWedge(progressPercent)
+                            : 'var(--primary)',
+                }}
+            >
+                <Icon className="size-2.5 text-primary-foreground" icon={icon} strokeWidth={2.2} />
+            </span>
+            <span className="font-medium">
+                {status.phase === 'downloading' ? 'Updating' : getUpdateLabel(status.phase)}
                 {status.phase === 'downloading' ? (
-                    <span className="text-muted-foreground text-sm tabular-nums">
-                        {progressPercent}%
-                    </span>
+                    <span className="inline-block min-w-3 text-left tabular-nums">{ellipsis}</span>
                 ) : null}
-                {canInstall || canRestart ? (
-                    <Button
-                        className="h-6 rounded-full px-2 text-sm"
-                        onClick={() => {
-                            updateAndRestart().catch(() => undefined);
-                        }}
-                        size="xs"
-                        variant={canRestart ? 'default' : 'secondary'}
-                    >
-                        {canRestart ? 'Restart' : 'Update'}
-                    </Button>
-                ) : null}
-                <div className="pointer-events-none absolute top-[calc(100%+8px)] right-0 w-64 translate-y-1 opacity-0 transition-[opacity,transform] duration-150 group-hover:translate-y-0 group-hover:opacity-100">
-                    <div className="rounded-lg border border-border/70 bg-popover/96 px-3 py-2 text-popover-foreground shadow-[0_16px_44px_rgb(15_23_42_/_0.18),0_3px_10px_rgb(15_23_42_/_0.08)] backdrop-blur-xl">
-                        <p className="text-muted-foreground text-sm leading-5">{detail}</p>
-                    </div>
+            </span>
+            {status.phase === 'downloading' ? (
+                <span className="text-muted-foreground tabular-nums">{progressPercent}%</span>
+            ) : null}
+            {canInstall || canRestart ? (
+                <Button
+                    className="h-5 rounded-md px-2 text-[0.8125rem]"
+                    onClick={() => {
+                        updateAndRestart().catch(() => undefined);
+                    }}
+                    size="xs"
+                    variant="ghost"
+                >
+                    {canRestart ? 'Restart' : 'Update'}
+                </Button>
+            ) : null}
+            <div className="pointer-events-none absolute top-[calc(100%+8px)] right-0 z-50 w-64 translate-y-1 opacity-0 transition-[opacity,transform] duration-150 ease-out group-hover:translate-y-0 group-hover:opacity-100">
+                <div className="rounded-lg border border-border/70 bg-popover/96 px-3 py-2 text-popover-foreground shadow-[0_16px_44px_rgb(15_23_42_/_0.18),0_3px_10px_rgb(15_23_42_/_0.08)] backdrop-blur-xl">
+                    <p className="text-muted-foreground text-sm leading-5">{detail}</p>
                 </div>
             </div>
         </div>

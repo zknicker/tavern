@@ -1,5 +1,5 @@
-import { AgentAvatar } from '@tavern/agent-avatars';
 import { NavLink, useLocation } from 'react-router-dom';
+import { AgentAvatar } from '../../components/ui/agent-avatar.tsx';
 import {
     SidebarGroup,
     SidebarGroupContent,
@@ -39,7 +39,7 @@ export function AppSidebarAgentList({ sidebarAgents }: { sidebarAgents: AgentRai
                             >
                                 <AgentAvatar
                                     active={isAvatarActive}
-                                    avatar={agent.avatar}
+                                    avatar={agent.name}
                                     backgroundColor={agent.primaryColor ?? '#64748b'}
                                     className="size-5"
                                     name={agent.name}

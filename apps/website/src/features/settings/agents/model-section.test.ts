@@ -1,10 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import type { ModelListOutput } from '../../../lib/trpc.tsx';
-import {
-    listThinkingOptionsForModelChoice,
-    selectModelChoiceForHarness,
-} from './model-section.tsx';
+import { listThinkingOptionsForModelChoice, selectModelChoice } from './model-section.tsx';
 
 const models = [
     {
@@ -15,6 +12,15 @@ const models = [
         modelId: 'gpt-5.5',
         name: 'GPT-5.5',
         openClawNames: [
+            {
+                available: true,
+                harness: 'pi',
+                id: 'pi:openai/gpt-5.5',
+                isPreferred: false,
+                label: 'openai/gpt-5.5',
+                model: 'gpt-5.5',
+                provider: 'openai',
+            },
             {
                 available: true,
                 harness: 'codex',
@@ -78,32 +84,29 @@ const models = [
     },
 ] satisfies ModelListOutput['models'];
 
-test('selectModelChoiceForHarness returns the selected Codex route', () => {
+test('selectModelChoice preserves the selected non-preferred route', () => {
     assert.equal(
-        selectModelChoiceForHarness(models, 'codex', {
-            harness: 'codex',
+        selectModelChoice(models, {
+            harness: 'pi',
             modelId: 'codex/gpt-5.5',
-            openClawModelNameId: 'codex:openai/gpt-5.5',
+            openClawModelNameId: 'pi:openai/gpt-5.5',
             thinkingDefault: null,
         })?.name.id,
-        'codex:openai/gpt-5.5'
+        'pi:openai/gpt-5.5'
     );
 });
 
-test('selectModelChoiceForHarness chooses the first model for a different harness', () => {
-    assert.equal(
-        selectModelChoiceForHarness(models, 'pi', {
-            harness: 'codex',
-            modelId: 'codex/gpt-5.5',
-            openClawModelNameId: 'codex:openai/gpt-5.5',
-            thinkingDefault: null,
-        })?.name.id,
-        'pi:anthropic/claude-sonnet-4-6'
-    );
+test('selectModelChoice chooses the first preferred model without a current selection', () => {
+    assert.equal(selectModelChoice(models, null)?.name.id, 'pi:anthropic/claude-opus-4-7');
 });
 
 test('listThinkingOptionsForModelChoice includes xhigh for Codex GPT-5.5', () => {
-    const choice = selectModelChoiceForHarness(models, 'codex', null);
+    const choice = selectModelChoice(models, {
+        harness: 'codex',
+        modelId: 'codex/gpt-5.5',
+        openClawModelNameId: 'codex:openai/gpt-5.5',
+        thinkingDefault: null,
+    });
     assert.deepEqual(
         listThinkingOptionsForModelChoice(choice).map((option) => option.value),
         ['off', 'minimal', 'low', 'medium', 'high', 'xhigh']
@@ -111,7 +114,7 @@ test('listThinkingOptionsForModelChoice includes xhigh for Codex GPT-5.5', () =>
 });
 
 test('listThinkingOptionsForModelChoice includes adaptive for Claude Sonnet 4.6', () => {
-    const choice = selectModelChoiceForHarness(models, 'pi', {
+    const choice = selectModelChoice(models, {
         harness: 'pi',
         modelId: 'claude/claude-sonnet-4-6',
         openClawModelNameId: 'pi:anthropic/claude-sonnet-4-6',
@@ -125,7 +128,7 @@ test('listThinkingOptionsForModelChoice includes adaptive for Claude Sonnet 4.6'
 });
 
 test('listThinkingOptionsForModelChoice includes maximum options for Claude Opus 4.7', () => {
-    const choice = selectModelChoiceForHarness(models, 'pi', {
+    const choice = selectModelChoice(models, {
         harness: 'pi',
         modelId: 'claude/claude-opus-4-7',
         openClawModelNameId: 'pi:anthropic/claude-opus-4-7',

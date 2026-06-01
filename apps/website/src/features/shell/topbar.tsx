@@ -1,4 +1,5 @@
 import { Setting07Icon } from '@hugeicons-pro/core-stroke-rounded';
+import { DesktopUpdateIndicator } from '../../components/desktop-update-indicator.tsx';
 import { AppShellTopbar } from '../../components/ui/app-shell.tsx';
 import { Icon } from '../../components/ui/icon.tsx';
 import { Button } from '../../components/ui/primitives/button.tsx';
@@ -28,6 +29,7 @@ export function AppTopbar({
                 <TopbarChatTabs activeRouteTab={activeTab} onSelectRouteTab={onSelectTab} />
 
                 <div className="no-drag ml-auto flex shrink-0 items-center gap-1">
+                    <DesktopUpdateIndicator />
                     <TopbarAllChatsMenuButton />
                     <TopbarNewChatButton />
                     <Button

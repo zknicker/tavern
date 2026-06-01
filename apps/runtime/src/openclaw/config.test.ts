@@ -24,11 +24,7 @@ describe('buildManagedOpenClawConfig', () => {
                     maxConcurrent: 4,
                     model: 'openai/gpt-5.5',
                     models: {
-                        'openai/gpt-5.5': {
-                            agentRuntime: {
-                                id: 'codex',
-                            },
-                        },
+                        'openai/gpt-5.5': {},
                     },
                     sandbox: {
                         backend: 'none',

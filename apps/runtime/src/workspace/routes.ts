@@ -2,6 +2,7 @@ import { getDb } from '../db/connection';
 import { json } from '../tavern/http';
 import {
     getAgentInstructionSource,
+    readRenderedAgentInstructions,
     renderAgentInstructions,
     updateAgentInstructionSource,
     updateAgentNotes,
@@ -42,6 +43,11 @@ export async function handleWorkspaceRequest(request: Request): Promise<Response
             sha256: rendered.sha256,
             updatedAt: source.updatedAt,
         });
+    }
+
+    if (request.method === 'GET' && segments[3] === 'instructions') {
+        const rendered = await readRenderedAgentInstructions(getDb(), agentId);
+        return json(rendered);
     }
 
     if (request.method === 'PUT' && segments[3] === 'instructions') {

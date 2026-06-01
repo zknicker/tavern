@@ -34,7 +34,6 @@ export const agentSchema = z.object({
     kind: agentKindSchema,
     accentFrom: z.string(),
     accentTo: z.string(),
-    avatar: z.string(),
     parentId: z.string().nullable(),
     peerIds: z.array(z.string()),
     chatCount: z.number().int().nonnegative(),

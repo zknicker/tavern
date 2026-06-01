@@ -36,7 +36,7 @@ export function TabsSubtleList({
             {children}
             {showIndicator ? (
                 <TabsPrimitive.Indicator
-                    className="absolute bottom-0 left-0 -z-1 h-(--active-tab-height) w-(--active-tab-width) translate-x-(--active-tab-left) -translate-y-(--active-tab-bottom) rounded-lg bg-[var(--topbar-tab-active)] transition-[width,translate,background-color] duration-200 ease-out"
+                    className="absolute bottom-0 left-0 -z-1 h-(--active-tab-height) w-(--active-tab-width) translate-x-(--active-tab-left) -translate-y-(--active-tab-bottom) rounded-lg bg-[var(--topbar-tab-active)] transition-[width,translate,background-color] duration-200 ease-out will-change-[translate,width]"
                     data-slot="tabs-subtle-indicator"
                 />
             ) : null}
@@ -62,7 +62,7 @@ export function TabsSubtleItem({
         <TabsPrimitive.Tab
             aria-label={iconOnly ? label : undefined}
             className={cn(
-                'no-drag group relative z-10 flex h-7 shrink-0 cursor-pointer items-center justify-center gap-1 whitespace-nowrap rounded-lg bg-transparent px-2 font-medium text-muted-foreground text-sm outline-none transition-colors duration-150 ease-out hover:bg-[var(--topbar-tab-hover)] hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring data-active:bg-transparent data-active:text-[var(--topbar-tab-active-foreground)] [&_svg]:pointer-events-none [&_svg]:shrink-0',
+                'no-drag group relative z-10 flex h-7 shrink-0 cursor-pointer items-center justify-center gap-1 whitespace-nowrap rounded-lg bg-transparent px-2 font-medium text-primary text-sm outline-none transition-colors duration-150 ease-out hover:bg-[var(--topbar-tab-hover)] hover:text-primary focus-visible:ring-2 focus-visible:ring-ring data-active:bg-transparent data-active:text-primary [&_svg]:pointer-events-none [&_svg]:shrink-0',
                 iconOnly && 'w-8 px-0',
                 className
             )}
@@ -73,7 +73,7 @@ export function TabsSubtleItem({
             {icon && !iconNode ? (
                 <Icon
                     aria-hidden="true"
-                    className="size-4.5 opacity-80 transition-opacity duration-150 group-data-active:opacity-100"
+                    className="size-4.5 opacity-70 transition-opacity duration-150 group-data-active:opacity-90"
                     icon={icon}
                     size={18}
                 />

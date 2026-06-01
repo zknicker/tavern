@@ -9,7 +9,7 @@ export function useAgentRail(
         const activityByAgentId = new Map(activity.map((entry) => [entry.agentId, entry]));
 
         return agents.map((agent) => ({
-            avatar: agent.avatar,
+            avatar: agent.name,
             id: agent.id,
             isThinking: activityByAgentId.get(agent.id)?.state === 'thinking',
             name: agent.name,

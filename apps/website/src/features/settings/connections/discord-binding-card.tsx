@@ -1,5 +1,5 @@
 import { Trash2 } from '@hugeicons/core-free-icons';
-import { AgentAvatar } from '@tavern/agent-avatars';
+import { AgentAvatar } from '../../../components/ui/agent-avatar.tsx';
 import { Icon } from '../../../components/ui/icon.tsx';
 import { Button } from '../../../components/ui/primitives/button.tsx';
 import { SettingsItem } from '../../../components/ui/settings-row.tsx';

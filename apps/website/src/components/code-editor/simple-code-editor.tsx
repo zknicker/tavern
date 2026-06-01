@@ -20,8 +20,10 @@ import { cn } from '../../lib/utils.ts';
 
 interface SimpleCodeEditorProps {
     className?: string;
+    disabled?: boolean;
     filePath: string;
     onChange?: (value: string) => void;
+    placeholder?: string;
     readOnly?: boolean;
     value: string;
 }
@@ -86,8 +88,10 @@ function highlightCode(code: string, language: string) {
 
 export function SimpleCodeEditor({
     className,
+    disabled = false,
     filePath,
     onChange,
+    placeholder,
     readOnly = false,
     value,
 }: SimpleCodeEditorProps): React.ReactElement {
@@ -111,10 +115,12 @@ export function SimpleCodeEditor({
                 >
                     <Editor
                         className="min-h-full font-mono text-code leading-[1.65]"
+                        disabled={disabled}
                         highlight={(code) => highlightCode(code, language.prism)}
                         insertSpaces
                         onValueChange={onChange ?? noop}
                         padding={12}
+                        placeholder={placeholder}
                         preClassName="min-h-full"
                         readOnly={readOnly}
                         tabSize={4}

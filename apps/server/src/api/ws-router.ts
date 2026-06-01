@@ -1,3 +1,4 @@
+import { onAgentInstructionsUpdate } from './agent/on-instructions-update.ts';
 import { onAgentUpdate } from './agent/on-update.ts';
 import { onAgentRuntimeCapabilityUpdated } from './agent-runtime/on-capability-updated.ts';
 import { onAgentRuntimeUpdate } from './agent-runtime/on-update.ts';
@@ -21,6 +22,7 @@ import { onWorkersUpdate } from './worker/on-update.ts';
 
 export const wsRouter = createRouter({
     agent: createRouter({
+        onInstructionsUpdate: onAgentInstructionsUpdate,
         onUpdate: onAgentUpdate,
     }),
     chat: createRouter({

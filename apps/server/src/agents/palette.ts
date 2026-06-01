@@ -1,16 +1,5 @@
 import type { Agent } from './catalog.ts';
 
-const initialsSplitPattern = /[\s:_-]+/;
-
-function shortName(value: string) {
-    return value
-        .split(initialsSplitPattern)
-        .filter(Boolean)
-        .map((part) => part[0]?.toUpperCase() ?? '')
-        .join('')
-        .slice(0, 2);
-}
-
 export function resolveAgentName(agent: Agent) {
     return agent.name;
 }
@@ -60,8 +49,4 @@ export function buildAgentPalette(agent: Agent) {
         accentFrom: primaryColor,
         accentTo: darkenHex(primaryColor, 0.58),
     };
-}
-
-export function resolveAgentAvatar(agent: Agent) {
-    return agent.emoji ?? agent.avatar ?? shortName(resolveAgentName(agent) || agent.id);
 }

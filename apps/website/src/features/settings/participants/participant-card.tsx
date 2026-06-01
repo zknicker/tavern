@@ -1,4 +1,4 @@
-import { AgentAvatar } from '@tavern/agent-avatars';
+import { AgentAvatar } from '../../../components/ui/agent-avatar.tsx';
 import { Badge } from '../../../components/ui/badge.tsx';
 import { Card, CardFrame } from '../../../components/ui/card.tsx';
 import { Input } from '../../../components/ui/primitives/input.tsx';

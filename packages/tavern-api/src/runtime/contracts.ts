@@ -243,6 +243,15 @@ export const agentRuntimeWorkspaceInstructionsSchema = z.object({
     updatedAt: z.string().datetime(),
 });
 
+export const agentRuntimeRenderedWorkspaceInstructionsSchema = z.object({
+    agentId: z.string().trim().min(1),
+    content: z.string(),
+    path: z.string().trim().min(1),
+    renderedAt: z.string().datetime().nullable(),
+    sha256: z.string().trim().min(1).nullable(),
+    updatedAt: z.string().datetime().nullable(),
+});
+
 export const agentRuntimeSkillFileSchema = z.object({
     path: z.string().trim().min(1),
     sizeBytes: z.number().int().nonnegative(),
@@ -1481,6 +1490,7 @@ export const agentRuntimeEventTypeSchema = z.enum([
     'chat.messageAccepted',
     'chat.read',
     'model.updated',
+    'workspace.instructions.updated',
     'skill.updated',
     'skill.deleted',
     'cron.updated',
@@ -1537,6 +1547,15 @@ export const agentRuntimeChatReadEventSchema = z.object({
 export const agentRuntimeModelUpdatedEventSchema = z.object({
     timestamp: z.string().datetime(),
     type: z.literal('model.updated'),
+});
+
+export const agentRuntimeWorkspaceInstructionsUpdatedEventSchema = z.object({
+    agentId: z.string().trim().min(1),
+    path: z.literal('AGENTS.md'),
+    renderedAt: z.string().datetime(),
+    sha256: z.string().trim().min(1),
+    timestamp: z.string().datetime(),
+    type: z.literal('workspace.instructions.updated'),
 });
 
 export const agentRuntimeSkillUpdatedEventSchema = z.object({
@@ -1636,6 +1655,7 @@ export const agentRuntimeEventSchema = z.discriminatedUnion('type', [
     agentRuntimeChatMessageAcceptedEventSchema,
     agentRuntimeChatReadEventSchema,
     agentRuntimeModelUpdatedEventSchema,
+    agentRuntimeWorkspaceInstructionsUpdatedEventSchema,
     agentRuntimeSkillUpdatedEventSchema,
     agentRuntimeSkillDeletedEventSchema,
     agentRuntimeCronUpdatedEventSchema,
@@ -1783,8 +1803,14 @@ export type AgentRuntimeSkillFile = z.infer<typeof agentRuntimeSkillFileSchema>;
 export type AgentRuntimeSaveWorkspaceInstructions = z.infer<
     typeof agentRuntimeSaveWorkspaceInstructionsSchema
 >;
+export type AgentRuntimeRenderedWorkspaceInstructions = z.infer<
+    typeof agentRuntimeRenderedWorkspaceInstructionsSchema
+>;
 export type AgentRuntimeWorkspaceInstructions = z.infer<
     typeof agentRuntimeWorkspaceInstructionsSchema
+>;
+export type AgentRuntimeWorkspaceInstructionsUpdatedEvent = z.infer<
+    typeof agentRuntimeWorkspaceInstructionsUpdatedEventSchema
 >;
 export type AgentRuntimeInstallSkill = z.infer<typeof agentRuntimeInstallSkillSchema>;
 export type AgentRuntimeSkill = z.infer<typeof agentRuntimeSkillSchema>;
