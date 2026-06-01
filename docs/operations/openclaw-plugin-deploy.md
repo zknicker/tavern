@@ -28,6 +28,12 @@ During startup, Runtime builds and syncs:
 
 OpenClaw launches with all managed plugin paths in the generated config.
 
+While the dev stack is running, changes under those first-party plugin packages
+trigger a managed plugin rebuild and Runtime restart. Runtime startup then
+syncs the changed plugin sources into `~/.tavern/openclaw-plugins/` before
+OpenClaw loads them. Watch the dev stack log for `managed OpenClaw plugins
+synced` after editing plugin code.
+
 Verify the generated managed config:
 
 ```bash
@@ -75,8 +81,8 @@ Verify the lifecycle directly:
 bun run --filter @tavern/runtime build
 ```
 
-Changed plugin module bytes are loaded by restarting the Tavern Runtime dev
-stack.
+That command verifies the plugin packages and Runtime build. The dev stack owns
+the live plugin sync and reload path.
 
 ## Architecture
 

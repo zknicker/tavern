@@ -1,11 +1,14 @@
 import { spawn } from 'node:child_process';
 import { EventEmitter } from 'node:events';
+import fs from 'node:fs';
+import path from 'node:path';
 import readline from 'node:readline';
 import {
     assertDevStackPortsAvailable,
     buildManagedOpenClawPlugin,
     cleanupStaleProcesses,
     createDevStackConfig,
+    getManagedOpenClawPluginPackagePaths,
     isDesktopMode,
     isRuntimeMode,
     isSuppressedStartupLine,
@@ -21,6 +24,7 @@ const shutdownTimeoutMs = Number.parseInt(
     process.env.TAVERN_DEV_SHUTDOWN_TIMEOUT_MS ?? '30000',
     10
 );
+const pluginRestartDebounceMs = 250;
 
 export class DevStackController extends EventEmitter {
     constructor({ mode, ports, repositoryRoot }) {
@@ -30,6 +34,11 @@ export class DevStackController extends EventEmitter {
         this.repositoryRoot = repositoryRoot;
         this.processes = new Map();
         this.backgroundProcesses = new Set();
+        this.expectedProcessStops = new Set();
+        this.managedOpenClawPluginRestartPromise = null;
+        this.managedOpenClawPluginRestartQueued = false;
+        this.managedOpenClawPluginWatchers = [];
+        this.managedOpenClawPluginWatchTimer = null;
         this.isStopping = false;
         this.isSteadyState = false;
         this.stopPromise = null;
@@ -183,6 +192,9 @@ export class DevStackController extends EventEmitter {
         this.attachProcessOutput(source, child);
 
         child.on('exit', (code, signal) => {
+            if (this.expectedProcessStops.delete(source)) {
+                return;
+            }
             if (!this.isStopping) {
                 this.update((snapshot) => {
                     snapshot.processes[source].status = code === 0 ? 'stopped' : 'error';
@@ -328,6 +340,7 @@ export class DevStackController extends EventEmitter {
             this.update((snapshot) => {
                 snapshot.processes.runtime.status = 'running';
             });
+            this.watchManagedOpenClawPluginPackages(startupUiEnv);
         }
 
         this.spawnProcess('server', serverCommand, serverEnv);
@@ -363,6 +376,7 @@ export class DevStackController extends EventEmitter {
         this.isStopping = true;
 
         this.stopPromise = (async () => {
+            this.closeManagedOpenClawPluginWatchers();
             this.addLog(
                 'tavern',
                 options.signal ? `shutdown requested (${options.signal})` : 'shutdown requested'
@@ -396,7 +410,7 @@ export class DevStackController extends EventEmitter {
         }
     }
 
-    async stopProcess(source) {
+    async stopProcess(source, options = {}) {
         const child = this.processes.get(source);
 
         if (!child) {
@@ -411,9 +425,14 @@ export class DevStackController extends EventEmitter {
             source === 'runtime' ? 'stopping; waiting for managed OpenClaw Gateway' : 'stopping'
         );
 
+        if (options.expected) {
+            this.expectedProcessStops.add(source);
+        }
+
         const stopped = await waitForChildExit(child, () => {
             signalChildProcessGroup(child, 'SIGTERM');
         });
+        this.expectedProcessStops.delete(source);
 
         if (!stopped) {
             this.addLog(
@@ -430,6 +449,141 @@ export class DevStackController extends EventEmitter {
         });
     }
 
+    watchManagedOpenClawPluginPackages(runtimeEnv) {
+        if (this.managedOpenClawPluginWatchers.length > 0) {
+            return;
+        }
+
+        for (const pluginPackage of getManagedOpenClawPluginPackagePaths({
+            repositoryRoot: this.repositoryRoot,
+        })) {
+            try {
+                const watcher = fs.watch(
+                    pluginPackage.path,
+                    { recursive: true },
+                    (_eventType, fileName) => {
+                        const changedPath =
+                            typeof fileName === 'string'
+                                ? path.join(pluginPackage.path, fileName)
+                                : pluginPackage.path;
+
+                        if (shouldIgnorePluginWatchPath(changedPath)) {
+                            return;
+                        }
+
+                        this.queueManagedOpenClawPluginRestart(runtimeEnv, pluginPackage.directory);
+                    }
+                );
+                this.managedOpenClawPluginWatchers.push(watcher);
+            } catch (error) {
+                this.addLog(
+                    'runtime',
+                    `OpenClaw plugin watch unavailable for ${pluginPackage.directory}: ${formatError(error)}`
+                );
+            }
+        }
+
+        if (this.managedOpenClawPluginWatchers.length > 0) {
+            this.addLog('runtime', 'watching Tavern OpenClaw plugins');
+        }
+    }
+
+    closeManagedOpenClawPluginWatchers() {
+        if (this.managedOpenClawPluginWatchTimer) {
+            clearTimeout(this.managedOpenClawPluginWatchTimer);
+            this.managedOpenClawPluginWatchTimer = null;
+        }
+
+        for (const watcher of this.managedOpenClawPluginWatchers) {
+            watcher.close();
+        }
+
+        this.managedOpenClawPluginWatchers = [];
+    }
+
+    queueManagedOpenClawPluginRestart(runtimeEnv, changedPackage) {
+        if (this.isStopping) {
+            return;
+        }
+
+        this.managedOpenClawPluginRestartQueued = true;
+        if (this.managedOpenClawPluginWatchTimer) {
+            clearTimeout(this.managedOpenClawPluginWatchTimer);
+        }
+
+        this.managedOpenClawPluginWatchTimer = setTimeout(() => {
+            this.managedOpenClawPluginWatchTimer = null;
+            void this.restartManagedRuntimeForPluginChange(runtimeEnv, changedPackage);
+        }, pluginRestartDebounceMs);
+    }
+
+    async restartManagedRuntimeForPluginChange(runtimeEnv, changedPackage) {
+        if (this.managedOpenClawPluginRestartPromise) {
+            this.managedOpenClawPluginRestartQueued = true;
+            await this.managedOpenClawPluginRestartPromise;
+            return;
+        }
+
+        this.managedOpenClawPluginRestartQueued = false;
+        this.managedOpenClawPluginRestartPromise = this.runManagedRuntimePluginRestart(
+            runtimeEnv,
+            changedPackage
+        );
+
+        try {
+            await this.managedOpenClawPluginRestartPromise;
+        } finally {
+            this.managedOpenClawPluginRestartPromise = null;
+        }
+
+        if (this.managedOpenClawPluginRestartQueued && !this.isStopping) {
+            this.queueManagedOpenClawPluginRestart(runtimeEnv, 'queued plugin change');
+        }
+    }
+
+    async runManagedRuntimePluginRestart(runtimeEnv, changedPackage) {
+        if (this.isStopping) {
+            return;
+        }
+
+        this.addLog(
+            'runtime',
+            `Tavern OpenClaw plugin changed (${changedPackage}); rebuilding managed plugins`
+        );
+
+        try {
+            buildManagedOpenClawPlugin({
+                repositoryRoot: this.repositoryRoot,
+            });
+        } catch (error) {
+            this.addLog('runtime', `managed OpenClaw plugin rebuild failed: ${formatError(error)}`);
+            return;
+        }
+
+        if (this.isStopping) {
+            return;
+        }
+
+        this.addLog('runtime', 'managed plugins rebuilt; restarting Runtime to sync OpenClaw');
+        await this.stopProcess('runtime', { expected: true });
+
+        if (this.isStopping) {
+            return;
+        }
+
+        try {
+            this.spawnProcess('runtime', 'cd apps/runtime && bun --watch src/index.ts', runtimeEnv);
+            await waitForRuntimeReady();
+            this.update((snapshot) => {
+                snapshot.processes.runtime.status = 'running';
+            });
+            this.addLog('runtime', 'managed OpenClaw plugins synced');
+        } catch (error) {
+            this.addLog('runtime', `managed Runtime restart failed: ${formatError(error)}`);
+            void this.stop(1);
+        }
+    }
+
     maybeEnterSteadyState() {
         if (this.isSteadyState || !isStartupComplete(this.snapshot)) {
             return;
@@ -441,6 +595,17 @@ export class DevStackController extends EventEmitter {
         });
         this.emit('steady');
     }
+}
+
+function shouldIgnorePluginWatchPath(filePath) {
+    const parts = filePath.split(path.sep);
+    return parts.some((part) =>
+        ['.git', '.turbo', 'coverage', 'dist', 'node_modules'].includes(part)
+    );
+}
+
+function formatError(error) {
+    return error instanceof Error ? error.message : String(error);
 }
 
 function signalChildProcessGroup(child, signal) {

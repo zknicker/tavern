@@ -18,6 +18,11 @@ bun run dev
 This starts Tavern Runtime, managed OpenClaw Gateway, the local app backend, and
 the website dev server.
 
+When Runtime mode is active, the dev stack watches first-party Tavern OpenClaw
+plugin packages. Editing those packages rebuilds the plugins, restarts Runtime,
+and lets Runtime sync the changed plugin sources before managed OpenClaw loads
+them.
+
 ## Shutdown
 
 From the terminal, stop the dev stack with `Ctrl+C` or `kill -TERM <dev-stack-pid>`.

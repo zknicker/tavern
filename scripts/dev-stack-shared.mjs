@@ -6,6 +6,20 @@ import path from 'node:path';
 export const runtimeBaseUrl = 'http://127.0.0.1:18790';
 export const startupEventPrefix = 'TAVERN_STARTUP_EVENT ';
 const ansiPattern = /\u001B\[[0-9;?]*[ -/]*[@-~]/gu;
+const managedOpenClawPluginPackages = [
+    {
+        directory: 'tavern-openclaw-messenger',
+        packageName: '@zknicker/tavern-openclaw-messenger',
+    },
+    {
+        directory: 'tavern-openclaw-cortex',
+        packageName: '@zknicker/tavern-openclaw-cortex',
+    },
+    {
+        directory: 'tavern-openclaw-workspace',
+        packageName: '@zknicker/tavern-openclaw-workspace',
+    },
+];
 
 export function isRuntimeMode(mode) {
     return mode === 'web-runtime' || mode === 'desktop-runtime';
@@ -106,11 +120,7 @@ export async function waitForRuntimeReady(timeoutMs = 10 * 60 * 1000) {
 }
 
 export function buildManagedOpenClawPlugin({ repositoryRoot }) {
-    for (const packageName of [
-        '@zknicker/tavern-openclaw-messenger',
-        '@zknicker/tavern-openclaw-cortex',
-        '@zknicker/tavern-openclaw-workspace',
-    ]) {
+    for (const { packageName } of managedOpenClawPluginPackages) {
         const result = spawnSync('bun', ['run', '--filter', packageName, 'build'], {
             cwd: repositoryRoot,
             encoding: 'utf8',
@@ -123,6 +133,13 @@ export function buildManagedOpenClawPlugin({ repositoryRoot }) {
         const output = [result.stdout, result.stderr].filter(Boolean).join('\n').trim();
         throw new Error(output || `Failed to build ${packageName}.`);
     }
+}
+
+export function getManagedOpenClawPluginPackagePaths({ repositoryRoot }) {
+    return managedOpenClawPluginPackages.map((pluginPackage) => ({
+        ...pluginPackage,
+        path: path.join(repositoryRoot, 'packages', pluginPackage.directory),
+    }));
 }
 
 export function assertDevStackPortsAvailable({ mode, ports, repositoryRoot }) {
