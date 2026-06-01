@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file.
 
+## v1.1.15 - 2026-06-01
+
+- Fixed Tavern Runtime URL saves so unreachable URLs still persist in the app database and reopen with the configured URL.
+- Fixed the desktop update indicator on onboarding so app updates are visible even when Runtime is disconnected or unreachable.
+
 ## v1.1.14 - 2026-06-01
 
 - Added native Runtime notice rows for OpenClaw session and compaction notices, with an inspect drawer and regression coverage for both final delivery paths.
