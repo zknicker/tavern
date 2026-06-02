@@ -8,6 +8,7 @@ import {
     PromptInputTools,
 } from '../../components/ui/prompt-input.tsx';
 import { useChatSend } from '../../hooks/chats/use-chat-send.ts';
+import { useAgentRuntimeCapability } from '../../hooks/connections/use-agent-runtime-capability.ts';
 import type { AgentListOutput } from '../../lib/trpc.tsx';
 import { cn } from '../../lib/utils.ts';
 import {
@@ -47,13 +48,21 @@ export function ChatMessageComposer({
     variant?: ChatMessageComposerVariant;
 }) {
     const sendMessage = useChatSend();
+    const gatewayCapability = useAgentRuntimeCapability('gateway');
+    const messagesCapability = useAgentRuntimeCapability('messages');
     const [agentId, setAgentId] = React.useState<string>(boundAgentIds[0] ?? '');
     const [content, setContent] = React.useState('');
     const [mentions, setMentions] = React.useState<Mention[]>([]);
     const isCompact = variant === 'compact';
     const trimmedContent = content.trim();
+    const canSendToRuntime = gatewayCapability.healthy && messagesCapability.healthy;
+    const runtimeDisabledReason =
+        gatewayCapability.reason ??
+        messagesCapability.reason ??
+        'Tavern Runtime is not ready for sending.';
     const canSend =
         chatCanSend &&
+        canSendToRuntime &&
         !isDisabled &&
         !sendMessage.isPending &&
         agentId.length > 0 &&
@@ -152,6 +161,8 @@ export function ChatMessageComposer({
                             canSend: chatCanSend,
                             isDisabled,
                             isPending: sendMessage.isPending,
+                            runtimeReady: canSendToRuntime,
+                            runtimeReason: runtimeDisabledReason,
                         })}
                     />
                 </PromptInputActions>
@@ -166,12 +177,16 @@ function getSendDisabledTooltip({
     canSend,
     isDisabled,
     isPending,
+    runtimeReady,
+    runtimeReason,
 }: {
     agentRuntimeSyncLabel: string | null;
     boundAgentCount: number;
     canSend: boolean;
     isDisabled: boolean;
     isPending: boolean;
+    runtimeReady: boolean;
+    runtimeReason: string;
 }) {
     if (isPending) {
         return 'Sending message...';
@@ -181,8 +196,16 @@ function getSendDisabledTooltip({
         return 'Bind an agent before sending.';
     }
 
-    if (isDisabled || !canSend) {
-        return agentRuntimeSyncLabel ?? 'Tavern is booting up, just a sec!';
+    if (isDisabled) {
+        return agentRuntimeSyncLabel ?? 'Chat is not ready for sending.';
+    }
+
+    if (!runtimeReady) {
+        return runtimeReason;
+    }
+
+    if (!canSend) {
+        return 'This chat does not have a synced session for sending.';
     }
 
     return undefined;

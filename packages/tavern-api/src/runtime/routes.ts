@@ -19,6 +19,8 @@ export const agentRuntimeRoutes = {
     capabilityRefresh: (id: string) => `/capabilities/${encodeURIComponent(id)}/refresh`,
     capabilitiesRefresh: '/capabilities/refresh',
     update: '/update',
+    updateRestart: '/update/restart',
+    updateStatus: '/update/status',
     macApps: '/mac-apps',
     modelAccess: '/model-access',
     modelAccessOpenRouterSettings: '/model-access/openrouter',

@@ -1,23 +1,27 @@
-import { SystemUpdate01Icon } from '@hugeicons/core-free-icons';
+import { AlertCircleIcon, SystemUpdate01Icon } from '@hugeicons/core-free-icons';
 import { CheckmarkCircle01Icon, Download04Icon } from '@hugeicons-pro/core-stroke-rounded';
 import { useEffect, useState } from 'react';
-import { useDesktopUpdate } from '../hooks/desktop/use-desktop-update.ts';
+import { type TavernUpdateStatus, useTavernUpdate } from '../hooks/desktop/use-tavern-update.ts';
 import { cn } from '../lib/utils.ts';
 import { Icon } from './ui/icon.tsx';
 import { Button } from './ui/primitives/button.tsx';
+import { Tooltip, TooltipContent, TooltipTrigger } from './ui/tooltip.tsx';
 
 interface DesktopUpdateIndicatorProps {
     placement?: 'floating' | 'inline';
 }
 
 export function DesktopUpdateIndicator({ placement = 'inline' }: DesktopUpdateIndicatorProps) {
-    const { status, updateAndRestart } = useDesktopUpdate();
+    const { status, updateAndRestart } = useTavernUpdate();
     const [shouldRender, setShouldRender] = useState(false);
     const isVisible =
         status.phase === 'available' ||
-        status.phase === 'downloading' ||
+        status.phase === 'staging-runtime' ||
+        status.phase === 'downloading-app' ||
+        status.phase === 'failed' ||
         status.phase === 'ready' ||
-        status.phase === 'restarting';
+        status.phase === 'restarting-runtime' ||
+        status.phase === 'restarting-app';
 
     useEffect(() => {
         if (!isVisible) {
@@ -38,9 +42,10 @@ export function DesktopUpdateIndicator({ placement = 'inline' }: DesktopUpdateIn
         return null;
     }
 
-    const canAct = status.phase === 'available' || status.phase === 'ready';
+    const canAct =
+        status.phase === 'available' || status.phase === 'failed' || status.phase === 'ready';
     const label = getUpdateLabel(status);
-    const progress = status.phase === 'downloading' ? status.progress : undefined;
+    const progress = status.phase === 'downloading-app' ? status.progress : undefined;
 
     return (
         <div
@@ -51,21 +56,38 @@ export function DesktopUpdateIndicator({ placement = 'inline' }: DesktopUpdateIn
                     : 'relative -mr-[6px] w-7 shrink-0 animate-[desktop-update-indicator-inline-in_280ms_cubic-bezier(0.23,1,0.32,1)_both] overflow-visible'
             )}
         >
-            <Button
-                aria-label={label}
-                className="size-7 rounded-[var(--main-radius)] shadow-none before:rounded-[calc(var(--main-radius)-1px)]"
-                disabled={!canAct}
-                loading={status.phase === 'restarting'}
-                onClick={() => {
-                    updateAndRestart().catch(() => undefined);
-                }}
-                size="icon-sm"
-                title={getUpdateDetail(status)}
-                type="button"
-                variant="brand-soft"
-            >
-                <UpdateIcon phase={status.phase} progress={progress} />
-            </Button>
+            <Tooltip>
+                <TooltipTrigger
+                    render={
+                        <Button
+                            aria-label={label}
+                            className="size-7 rounded-[var(--main-radius)] shadow-none before:rounded-[calc(var(--main-radius)-1px)]"
+                            disabled={!canAct}
+                            loading={
+                                status.phase === 'restarting-runtime' ||
+                                status.phase === 'restarting-app'
+                            }
+                            onClick={() => {
+                                updateAndRestart().catch(() => undefined);
+                            }}
+                            size="icon-sm"
+                            title={status.detail}
+                            type="button"
+                            variant={status.phase === 'failed' ? 'destructive-soft' : 'brand-soft'}
+                        >
+                            <UpdateIcon phase={status.phase} progress={progress} />
+                        </Button>
+                    }
+                />
+                <TooltipContent className="max-w-[18rem]" side="bottom">
+                    <div className="grid gap-1 py-0.5">
+                        <div className="font-medium text-foreground text-sm">{label}</div>
+                        <div className="text-muted-foreground text-xs leading-5">
+                            {status.detail}
+                        </div>
+                    </div>
+                </TooltipContent>
+            </Tooltip>
         </div>
     );
 }
@@ -74,11 +96,15 @@ function UpdateIcon({
     phase,
     progress,
 }: {
-    phase: 'available' | 'downloading' | 'ready' | 'restarting';
+    phase: TavernUpdateStatus['phase'];
     progress?: number;
 }) {
-    if (phase === 'downloading') {
+    if (phase === 'downloading-app') {
         return <ProgressDonut progress={progress ?? 0} />;
+    }
+
+    if (phase === 'staging-runtime') {
+        return <IndeterminateDonut />;
     }
 
     if (phase === 'ready') {
@@ -93,11 +119,27 @@ function UpdateIcon({
         );
     }
 
+    if (phase === 'failed') {
+        return (
+            <Icon
+                aria-hidden="true"
+                className="size-4.5 shrink-0"
+                icon={AlertCircleIcon}
+                size={18}
+                strokeWidth={2.4}
+            />
+        );
+    }
+
     return (
         <Icon
             aria-hidden="true"
             className="size-4.5 shrink-0"
-            icon={phase === 'restarting' ? SystemUpdate01Icon : Download04Icon}
+            icon={
+                phase === 'restarting-runtime' || phase === 'restarting-app'
+                    ? SystemUpdate01Icon
+                    : Download04Icon
+            }
             size={18}
             strokeWidth={2.4}
         />
@@ -121,35 +163,38 @@ function ProgressDonut({ progress }: { progress: number }) {
     );
 }
 
-function getUpdateLabel(status: {
-    phase: 'available' | 'downloading' | 'ready' | 'restarting';
-    progress?: number;
-}) {
+function IndeterminateDonut() {
+    return (
+        <span
+            aria-hidden="true"
+            className="size-4 shrink-0 animate-spin rounded-full"
+            style={{
+                WebkitMask: 'radial-gradient(farthest-side, transparent calc(100% - 3px), #000 0)',
+                background:
+                    'conic-gradient(var(--brand) 0deg 90deg, color-mix(in srgb, var(--brand), transparent 78%) 90deg 360deg)',
+                mask: 'radial-gradient(farthest-side, transparent calc(100% - 3px), #000 0)',
+            }}
+        />
+    );
+}
+
+function getUpdateLabel(status: TavernUpdateStatus) {
     switch (status.phase) {
         case 'available':
             return 'Update';
-        case 'downloading':
+        case 'staging-runtime':
+            return 'Staging Runtime';
+        case 'downloading-app':
             return `Updating ${Math.round((status.progress ?? 0) * 100)}%`;
         case 'ready':
-            return 'Restart To Apply Update';
-        case 'restarting':
+            return 'Restart To Finish Update';
+        case 'restarting-runtime':
+            return 'Restarting Runtime';
+        case 'restarting-app':
             return 'Restarting';
-    }
-}
-
-function getUpdateDetail(status: {
-    phase: 'available' | 'downloading' | 'ready' | 'restarting';
-    progress?: number;
-    version: string;
-}) {
-    switch (status.phase) {
-        case 'available':
-            return `Tavern ${status.version} is available. Download it now and restart when ready.`;
-        case 'downloading':
-            return `Tavern ${status.version} is downloading in the background. Hang tight.`;
-        case 'ready':
-            return `Tavern ${status.version} is installed. Restart to finish updating.`;
-        case 'restarting':
-            return 'Tavern is restarting to finish the update.';
+        case 'failed':
+            return 'Update Failed';
+        default:
+            return 'Update';
     }
 }

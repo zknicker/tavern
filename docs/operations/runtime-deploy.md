@@ -18,7 +18,6 @@ Keep the CLI small:
 ```bash
 tavern serve
 tavern update
-tavern update --no-restart
 tavern restart
 tavern --version
 tavern --help
@@ -32,9 +31,22 @@ sync, Cortex, and Runtime jobs. It logs to stdout and stderr, and exits on
 `tavern` is the preferred CLI. `tavern-runtime` remains as a compatibility
 alias.
 
-`update` shells out to Homebrew and restarts the service by default. Use
-`tavern update --no-restart` to upgrade without restarting. Use Homebrew
-directly for stop, logs, and boot persistence.
+`update` shells out to Homebrew and stages the newest Runtime package without
+restarting the running service. `restart` restarts the Homebrew service and is
+the explicit cutover step. Use Homebrew directly for stop, logs, and boot
+persistence.
+
+Runtime updates are two-phase:
+
+1. **Stage.** Tavern installs the new Runtime package while the old Runtime
+   process stays online.
+2. **Cut over.** Tavern restarts Runtime only after the desktop update is also
+   ready, then waits for Runtime health before restarting the app when an app
+   update is staged.
+
+This keeps OpenClaw-backed features online during download/install work and
+prevents the old app from sitting against a newly restarted incompatible
+Runtime.
 
 ## Homebrew Service
 
@@ -110,7 +122,9 @@ that epoch are compatible unless a release raises the floor.
 The app blocks normal dashboard use only when the connected Runtime is below the
 floor or from a different Runtime API epoch. The onboarding-style Runtime screen
 shows the app version, the minimum Runtime version, and the connected Runtime
-version.
+version. The updater control stages any required Runtime update first, downloads
+the app update when needed, then exposes one restart action for the final
+cutover.
 
 ## Trust Model
 

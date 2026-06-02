@@ -14,6 +14,12 @@ The desktop app has its own release version. Runtime has a package version, and
 the app declares the minimum compatible Runtime version in
 `apps/website/package.json` at `tavern.runtime.minimumVersion`.
 
+Users experience app and Runtime updates as one Tavern update. The desktop
+updater stages a Runtime package first when a newer Runtime is required, keeps
+the existing Runtime process online, downloads the desktop update, then asks for
+one restart. The final restart restarts Runtime, waits for Runtime health, and
+then restarts the app when an app update is staged.
+
 The app accepts a connected Runtime when:
 
 * the Runtime version is exactly the app version, or
@@ -114,6 +120,22 @@ Do not raise `tavern.runtime.minimumVersion` when every answer is no. Examples:
   does not require.
 * Release tooling or documentation changes that do not change the Runtime
   artifact contract.
+
+## User Update Contract
+
+The Tavern updater has one visible product flow:
+
+1. Show the topbar updater control when an app update is available, Runtime must
+   be staged, a stage/download/restart is active, or the update failed.
+2. Stage Runtime with `brew update && brew upgrade tavern-runtime`. Do not
+   restart Runtime during staging.
+3. Download the desktop update.
+4. Show **Restart** only when every required artifact is staged.
+5. On restart, restart Runtime first, wait for the minimal Runtime health check,
+   then restart the desktop app when an app update is staged.
+
+Do not reintroduce a separate Runtime update wizard or fake progress checklist.
+Runtime install progress is phase-based unless Runtime owns real byte progress.
 
 ## Homebrew Tap
 

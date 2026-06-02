@@ -168,6 +168,18 @@ Onboarding is the recovery surface for explicit setup, missing configuration,
 or incompatible Runtime connections. Runtime startup is not a full-page loading
 gate.
 
+## Capability Events
+
+Runtime emits `capability.updated` after a capability write. Managed OpenClaw
+state changes use the same path: Gateway down writes updated Runtime capability
+health, Runtime emits `capability.updated`, App backend emits
+`agent-runtime-capability.updated`, and the frontend invalidates
+`agentRuntime.get`.
+
+Frontend controls must render from the refreshed capability record. Do not
+disable sends, cron actions, or other OpenClaw-backed actions from app-local
+connection status.
+
 ## Capability Examples
 
 Runtime capabilities cover first-party Runtime services, managed OpenClaw

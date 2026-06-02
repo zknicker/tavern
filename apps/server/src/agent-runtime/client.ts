@@ -185,6 +185,7 @@ export interface TavernAgentRuntimeClient {
     getSessionGraph(sessionKey: string): Promise<AgentRuntimeSessionGraph>;
     getSessionPrompt(sessionKey: string): Promise<AgentRuntimeSessionPrompt | null>;
     getSkillConfig(skillId: string): Promise<AgentRuntimeSkill>;
+    getUpdateStatus(): Promise<AgentRuntimeUpdate>;
     getWorkspaceInstructions(agentId: string): Promise<AgentRuntimeRenderedWorkspaceInstructions>;
     installSkill(input: AgentRuntimeInstallSkill): Promise<AgentRuntimeSkill>;
     listAgentFiles(agentId: string): Promise<AgentRuntimeAgentFileList>;
@@ -215,6 +216,7 @@ export interface TavernAgentRuntimeClient {
     ): Promise<AgentRuntimeMessageAccepted>;
     recallCortex(input: CortexRecallInput): Promise<CortexRecallResult>;
     refreshCapability(id: AgentRuntimeCapabilityHealthId): Promise<AgentRuntimeCapabilityHealth>;
+    restartForUpdate(): Promise<AgentRuntimeUpdate>;
     resyncSession(sessionKey: string): Promise<AgentRuntimeSessionResync>;
     runCortexJob(job: CortexJobName): Promise<CortexJobRun>;
     runCronJob(jobId: string, input?: AgentRuntimeRunCron): Promise<AgentRuntimeCronRun>;
@@ -234,7 +236,7 @@ export interface TavernAgentRuntimeClient {
         input: AgentRuntimeSaveWorkspaceInstructions
     ): Promise<AgentRuntimeWorkspaceInstructions>;
     searchCortex(input: CortexSearchInput): Promise<CortexSearchResult>;
-    startUpdate(): Promise<AgentRuntimeUpdate>;
+    startUpdate(input?: { targetVersion?: null | string }): Promise<AgentRuntimeUpdate>;
     updateCronJob(jobId: string, input: AgentRuntimeUpdateCron): Promise<AgentRuntimeCron>;
     upsertAgent(input: AgentRuntimeCreateAgent): Promise<AgentRuntimeAgent>;
     upsertBinding(input: AgentRuntimeUpsertBinding): Promise<AgentRuntimeBinding>;
@@ -590,9 +592,36 @@ class HttpTavernAgentRuntimeClient implements TavernAgentRuntimeClient {
         return agentRuntimeCapabilityHealthSchema.parse(await response.json());
     }
 
-    async startUpdate(): Promise<AgentRuntimeUpdate> {
-        const response = await fetch(`${this.#baseUrl}${agentRuntimeRoutes.update}`, {
+    async getUpdateStatus(): Promise<AgentRuntimeUpdate> {
+        const response = await fetch(`${this.#baseUrl}${agentRuntimeRoutes.updateStatus}`);
+
+        if (!response.ok) {
+            await readErrorResponse(response);
+        }
+
+        return agentRuntimeUpdateSchema.parse(await response.json());
+    }
+
+    async restartForUpdate(): Promise<AgentRuntimeUpdate> {
+        const response = await fetch(`${this.#baseUrl}${agentRuntimeRoutes.updateRestart}`, {
             headers: {
+                [agentRuntimeMutationHeaders.origin]: agentRuntimeMutationOrigins.tavern,
+            },
+            method: 'POST',
+        });
+
+        if (!response.ok) {
+            await readErrorResponse(response);
+        }
+
+        return agentRuntimeUpdateSchema.parse(await response.json());
+    }
+
+    async startUpdate(input?: { targetVersion?: null | string }): Promise<AgentRuntimeUpdate> {
+        const response = await fetch(`${this.#baseUrl}${agentRuntimeRoutes.update}`, {
+            body: JSON.stringify(input ?? {}),
+            headers: {
+                'content-type': 'application/json',
                 [agentRuntimeMutationHeaders.origin]: agentRuntimeMutationOrigins.tavern,
             },
             method: 'POST',

@@ -2,7 +2,7 @@ import * as React from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { BadgeDivider } from '../../components/ui/badge-divider.tsx';
 import { Card } from '../../components/ui/card.tsx';
-import { useAgentRuntimeConnection } from '../../hooks/connections/use-agent-runtime-connection.ts';
+import { useAgentRuntimeCapability } from '../../hooks/connections/use-agent-runtime-capability.ts';
 import { useCronCreate } from '../../hooks/cron/use-cron-create.ts';
 import { useCronDelete } from '../../hooks/cron/use-cron-delete.ts';
 import { useCronGet } from '../../hooks/cron/use-cron-get.ts';
@@ -32,7 +32,7 @@ export function CronEditor() {
     const navigate = useNavigate();
     const { jobId } = useParams<{ jobId?: string }>();
     const isNew = !jobId;
-    const agentRuntimeConnection = useAgentRuntimeConnection();
+    const cronCapability = useAgentRuntimeCapability('cron');
     const cronJobQuery = useCronGet(jobId ?? null);
     const createMutation = useCronCreate();
     const deleteMutation = useCronDelete();
@@ -42,7 +42,7 @@ export function CronEditor() {
     const cronRunsQuery = useCronRuns(job ? { jobId: job.id, limit: 20 } : null);
     const isMissingJob = !isNew && cronJobQuery.status === 'success' && !job;
     const isPending = createMutation.isPending || updateMutation.isPending;
-    const canEdit = agentRuntimeConnection.isConnected && !isMissingJob;
+    const canEdit = cronCapability.healthy && !isMissingJob;
     const shouldRenderForm = shouldRenderCronEditorPageForm({
         isLoading: cronJobQuery.isPending,
         isNew,
@@ -59,7 +59,7 @@ export function CronEditor() {
         <div className="flex flex-1 flex-col overflow-hidden">
             <CronEditorHeader
                 canEdit={canEdit}
-                canRunActions={agentRuntimeConnection.isConnected && Boolean(job)}
+                canRunActions={cronCapability.healthy && Boolean(job)}
                 isDeleting={deleteMutation.isPending}
                 isNew={isNew}
                 isPending={isPending}

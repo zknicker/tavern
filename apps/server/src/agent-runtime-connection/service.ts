@@ -302,7 +302,35 @@ export async function startAgentRuntimeUpdate() {
 
     const client = createAgentRuntimeClientForConnection({ baseUrl: connection.baseUrl });
     try {
-        return await client.startUpdate();
+        return await client.startUpdate({ targetVersion: connection.requiredRuntimeVersion });
+    } finally {
+        client.close();
+    }
+}
+
+export async function getAgentRuntimeUpdateStatus() {
+    const connection = await getAgentRuntimeConnection();
+    if (!connection?.enabled) {
+        throw new Error('Tavern Runtime is not configured.');
+    }
+
+    const client = createAgentRuntimeClientForConnection({ baseUrl: connection.baseUrl });
+    try {
+        return await client.getUpdateStatus();
+    } finally {
+        client.close();
+    }
+}
+
+export async function restartAgentRuntimeForUpdate() {
+    const connection = await getAgentRuntimeConnection();
+    if (!connection?.enabled) {
+        throw new Error('Tavern Runtime is not configured.');
+    }
+
+    const client = createAgentRuntimeClientForConnection({ baseUrl: connection.baseUrl });
+    try {
+        return await client.restartForUpdate();
     } finally {
         client.close();
     }

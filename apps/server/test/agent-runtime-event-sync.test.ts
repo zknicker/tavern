@@ -264,6 +264,7 @@ test('applyObservedAgentRuntimeEvent invalidates runtime capability rows', async
     );
     await flushAsyncEventSync();
 
+    expect(emitAgentRuntimeCapabilityUpdated).toHaveBeenCalledTimes(1);
     expect(emitAgentRuntimeUpdated).toHaveBeenCalledTimes(1);
 });
 

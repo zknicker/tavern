@@ -12,7 +12,7 @@ import {
     PromptInputTools,
 } from '../../components/ui/prompt-input.tsx';
 import { useChatDraftLaunch } from '../../hooks/chats/use-chat-draft-launch.ts';
-import { useAgentRuntimeConnection } from '../../hooks/connections/use-agent-runtime-connection.ts';
+import { useAgentRuntimeCapability } from '../../hooks/connections/use-agent-runtime-capability.ts';
 import type { AgentListOutput } from '../../lib/trpc.tsx';
 import { cn } from '../../lib/utils.ts';
 import {
@@ -41,14 +41,20 @@ export function StartChatComposer({
     id?: string;
 }) {
     const launchChatDraft = useChatDraftLaunch();
-    const agentRuntimeConnection = useAgentRuntimeConnection();
+    const gatewayCapability = useAgentRuntimeCapability('gateway');
+    const mentionsCapability = useAgentRuntimeCapability('mentions');
+    const messagesCapability = useAgentRuntimeCapability('messages');
     const [prompt, setPrompt] = React.useState('');
     const [mentions, setMentions] = React.useState<Mention[]>([]);
 
-    const canSendToGateway = isOpenClawGatewayHealthy(agentRuntimeConnection.connection);
-    const canUseMentions = Boolean(agent && canSendToGateway);
+    const canSendToRuntime = gatewayCapability.healthy && messagesCapability.healthy;
+    const canUseMentions = Boolean(agent && mentionsCapability.healthy);
     const isPromptReady = prompt.trim().length > 0 && agent !== null;
-    const canSubmit = isPromptReady && canSendToGateway;
+    const canSubmit = isPromptReady && canSendToRuntime;
+    const runtimeDisabledReason =
+        gatewayCapability.reason ??
+        messagesCapability.reason ??
+        'Tavern Runtime is not ready for sending.';
     const handleSubmit = React.useEffectEvent((event?: React.FormEvent<HTMLFormElement>) => {
         event?.preventDefault();
 
@@ -91,10 +97,11 @@ export function StartChatComposer({
     const isAgentDensity = density === 'agent';
     const promptId =
         id ?? (isAgentDensity ? `agent-${agent?.id ?? 'unknown'}-prompt` : 'home-prompt');
-    const placeholder =
-        agent && isAgentDensity
+    const placeholder = agent
+        ? isAgentDensity
             ? `Send a message to ${agent.name}...`
-            : 'Ask Tavern to investigate, summarize, or take the next step...';
+            : 'Ask Tavern to investigate, summarize, or take the next step...'
+        : 'Start Tavern Runtime to sync your agent.';
 
     return (
         <PromptInput
@@ -143,7 +150,11 @@ export function StartChatComposer({
                         className={cn(isAgentDensity ? null : 'rounded-full')}
                         label="Start chat"
                         size="icon"
-                        tooltip={canSendToGateway ? undefined : 'Tavern is booting up, just a sec!'}
+                        tooltip={getStartChatDisabledTooltip({
+                            hasAgent: Boolean(agent),
+                            runtimeReady: canSendToRuntime,
+                            runtimeReason: runtimeDisabledReason,
+                        })}
                     />
                 </PromptInputActions>
             </PromptInputFooter>
@@ -151,12 +162,22 @@ export function StartChatComposer({
     );
 }
 
-function isOpenClawGatewayHealthy(
-    connection: ReturnType<typeof useAgentRuntimeConnection>['connection']
-) {
-    return (
-        connection?.runtimeCapabilities.some(
-            (capability) => capability.capability === 'gateway' && capability.state === 'healthy'
-        ) ?? false
-    );
+function getStartChatDisabledTooltip({
+    hasAgent,
+    runtimeReady,
+    runtimeReason,
+}: {
+    hasAgent: boolean;
+    runtimeReady: boolean;
+    runtimeReason: string;
+}) {
+    if (!hasAgent) {
+        return 'Start Tavern Runtime to sync your agent.';
+    }
+
+    if (!runtimeReady) {
+        return runtimeReason;
+    }
+
+    return undefined;
 }

@@ -31,6 +31,7 @@ capabilities. It is not a second product API.
 | Group | Routes |
 | --- | --- |
 | Health and capabilities | `/health`, `/capabilities`, `/capabilities/{id}`, `/capabilities/{id}/refresh`, `/capabilities/refresh` |
+| Runtime update | `/update/status`, `/update`, `/update/restart` |
 | Runtime events | `/events`, websocket `/events` |
 | Managed OpenClaw | `/openclaw-config` |
 | Agents and files | `/agents`, `/agents/{id}`, `/agents/{id}/config`, `/agents/{id}/files`, `/agents/{id}/files/{path}` |
@@ -62,6 +63,10 @@ capabilities. It is not a second product API.
   the capability API. Jobs and app surfaces can use capability health to decide
   whether dependent functionality is available. The app may cache and render
   capability health, but it does not run checks or decide readiness.
+* **Runtime update is staged.** `/update` installs the new Runtime package
+  without restarting the service. `/update/status` reports the stage state.
+  `/update/restart` is the explicit cutover request and restarts the Homebrew
+  service only after Tavern is ready to finish the whole app/Runtime update.
 * **Read routes are Runtime-backed.** Agent, chat, model, skill, and session
   reads return the latest Runtime SQLite snapshot. Runtime refreshes
   execution-owned records from specific OpenClaw events. Session update events

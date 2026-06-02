@@ -1,45 +1,98 @@
 import { spawn } from 'node:child_process';
+import type { AgentRuntimeUpdate } from '@tavern/api';
+import { getRuntimeInfo } from './status';
 
-let updateStartedAt: string | null = null;
+let updateStatus: AgentRuntimeUpdate = idleUpdateStatus();
 
-function clearStartedUpdate(startedAt: string) {
-    if (updateStartedAt === startedAt) {
-        updateStartedAt = null;
-    }
+function idleUpdateStatus(): AgentRuntimeUpdate {
+    return {
+        currentVersion: getRuntimeInfo().version,
+        finishedAt: null,
+        message: null,
+        phase: 'idle',
+        startedAt: null,
+        targetVersion: null,
+    };
 }
 
-export function startRuntimeUpdate() {
-    const isAlreadyStarted = Boolean(updateStartedAt);
-    const startedAt = updateStartedAt ?? new Date().toISOString();
-    updateStartedAt = startedAt;
+export function getRuntimeUpdateStatus() {
+    return updateStatus;
+}
 
-    if (!isAlreadyStarted) {
-        const child = spawn(
-            'sh',
-            [
-                '-lc',
-                'brew update && brew upgrade tavern-runtime && brew services restart tavern-runtime',
-            ],
-            {
-                detached: true,
-                env: process.env,
-                stdio: 'ignore',
-            }
-        );
-        child.once('error', () => {
-            clearStartedUpdate(startedAt);
-        });
-        child.once('exit', (code) => {
-            if (code !== 0) {
-                clearStartedUpdate(startedAt);
-            }
-        });
-        child.unref();
+export function startRuntimeUpdate(input?: { targetVersion?: null | string }) {
+    if (updateStatus.phase === 'installing' || updateStatus.phase === 'staged') {
+        return updateStatus;
     }
 
-    return {
-        accepted: true,
-        message: 'Runtime update started.',
+    const startedAt = new Date().toISOString();
+    updateStatus = {
+        currentVersion: getRuntimeInfo().version,
+        finishedAt: null,
+        message: 'Installing the Runtime update. Restart is held until Tavern is ready.',
+        phase: 'installing',
         startedAt,
+        targetVersion: input?.targetVersion ?? null,
     };
+
+    const child = spawn('sh', ['-lc', 'brew update && brew upgrade tavern-runtime'], {
+        env: process.env,
+        stdio: 'ignore',
+    });
+    child.once('error', (error) => {
+        updateStatus = {
+            ...updateStatus,
+            finishedAt: new Date().toISOString(),
+            message: error.message,
+            phase: 'failed',
+        };
+    });
+    child.once('exit', (code) => {
+        updateStatus =
+            code === 0
+                ? {
+                      ...updateStatus,
+                      finishedAt: new Date().toISOString(),
+                      message: 'Runtime update staged. Restart Tavern to finish.',
+                      phase: 'staged',
+                  }
+                : {
+                      ...updateStatus,
+                      finishedAt: new Date().toISOString(),
+                      message: `Runtime update failed with exit code ${code ?? 'unknown'}.`,
+                      phase: 'failed',
+                  };
+    });
+
+    return updateStatus;
+}
+
+export function restartRuntimeForUpdate() {
+    if (updateStatus.phase === 'restarting') {
+        return updateStatus;
+    }
+
+    updateStatus = {
+        ...updateStatus,
+        finishedAt: null,
+        message: 'Restarting Tavern Runtime.',
+        phase: 'restarting',
+        startedAt: updateStatus.startedAt ?? new Date().toISOString(),
+    };
+
+    const child = spawn('sh', ['-lc', 'brew services restart tavern-runtime'], {
+        detached: true,
+        env: process.env,
+        stdio: 'ignore',
+    });
+    child.once('error', (error) => {
+        updateStatus = {
+            ...updateStatus,
+            finishedAt: new Date().toISOString(),
+            message: error.message,
+            phase: 'failed',
+        };
+    });
+    child.unref();
+
+    return updateStatus;
 }

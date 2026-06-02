@@ -6,23 +6,23 @@ import { Button } from '../../../components/ui/primitives/button.tsx';
 import { Progress } from '../../../components/ui/progress.tsx';
 import { SettingsRow, SettingsValue } from '../../../components/ui/settings-row.tsx';
 import {
-    type DesktopUpdateStatus,
-    useDesktopUpdate,
-} from '../../../hooks/desktop/use-desktop-update.ts';
+    type TavernUpdateStatus,
+    useTavernUpdate,
+} from '../../../hooks/desktop/use-tavern-update.ts';
 
 export function UpdatesSettings() {
-    const { checkForUpdate, status, updateAndRestart } = useDesktopUpdate();
+    const { checkForUpdate, status, updateAndRestart } = useTavernUpdate();
     const copy = getUpdateCopy(status);
-    const canCheck = status.phase !== 'checking' && status.phase !== 'downloading';
+    const canCheck = status.phase !== 'checking' && status.phase !== 'downloading-app';
     const canInstall = status.phase === 'available' || status.phase === 'ready';
 
     return (
         <div>
-            <BadgeDivider className="pb-5">Desktop Updates</BadgeDivider>
+            <BadgeDivider className="pb-5">Tavern Updates</BadgeDivider>
             <div className="overflow-hidden rounded-lg border border-border bg-card">
                 <SettingsRow
-                    description="Check the signed release feed and restart when the update is ready."
-                    title="Tavern for Mac"
+                    description="Stage Runtime first, download the app update, then restart when ready."
+                    title="Tavern"
                 >
                     <div className="flex min-w-0 flex-col gap-3">
                         <div className="flex min-w-0 items-center justify-between gap-3">
@@ -40,8 +40,10 @@ export function UpdatesSettings() {
                                 <Button
                                     disabled={!canInstall}
                                     loading={
-                                        status.phase === 'downloading' ||
-                                        status.phase === 'restarting'
+                                        status.phase === 'downloading-app' ||
+                                        status.phase === 'staging-runtime' ||
+                                        status.phase === 'restarting-runtime' ||
+                                        status.phase === 'restarting-app'
                                     }
                                     onClick={updateAndRestart}
                                     size="sm"
@@ -54,7 +56,7 @@ export function UpdatesSettings() {
                         <SettingsValue className="min-h-0 justify-start text-left md:justify-start md:text-left">
                             {copy}
                         </SettingsValue>
-                        {status.phase === 'downloading' ? (
+                        {status.phase === 'downloading-app' ? (
                             <Progress value={status.progress * 100} />
                         ) : null}
                     </div>
@@ -64,14 +66,14 @@ export function UpdatesSettings() {
     );
 }
 
-function StatusBadge({ status }: { status: DesktopUpdateStatus }) {
+function StatusBadge({ status }: { status: TavernUpdateStatus }) {
     const label = getStatusLabel(status);
     const variant =
         status.phase === 'available'
             ? 'info'
-            : status.phase === 'error'
+            : status.phase === 'failed'
               ? 'warning'
-              : status.phase === 'current'
+              : status.phase === 'idle'
                 ? 'success'
                 : 'secondary';
 
@@ -82,22 +84,26 @@ function StatusBadge({ status }: { status: DesktopUpdateStatus }) {
     );
 }
 
-function getStatusLabel(status: DesktopUpdateStatus) {
+function getStatusLabel(status: TavernUpdateStatus) {
     switch (status.phase) {
         case 'available':
             return `v${status.version} available`;
         case 'checking':
             return 'Checking';
-        case 'current':
+        case 'idle':
             return 'Up to date';
-        case 'downloading':
+        case 'staging-runtime':
+            return 'Staging Runtime';
+        case 'downloading-app':
             return `Downloading ${Math.round(status.progress * 100)}%`;
         case 'ready':
             return `v${status.version} ready`;
-        case 'error':
+        case 'failed':
             return 'Update failed';
-        case 'restarting':
-            return 'Restarting';
+        case 'restarting-runtime':
+            return 'Restarting Runtime';
+        case 'restarting-app':
+            return 'Restarting Tavern';
         case 'unsupported':
             return 'Mac app only';
         default:
@@ -105,22 +111,19 @@ function getStatusLabel(status: DesktopUpdateStatus) {
     }
 }
 
-function getUpdateCopy(status: DesktopUpdateStatus) {
+function getUpdateCopy(status: TavernUpdateStatus) {
     switch (status.phase) {
         case 'available':
-            return `Version ${status.version} is ready to download and install.`;
+            return status.detail;
         case 'checking':
-            return 'Looking for the latest signed Tavern release.';
-        case 'current':
-            return 'This copy is on the latest published release.';
-        case 'downloading':
-            return 'Downloading the update in the background.';
+        case 'idle':
+        case 'staging-runtime':
+        case 'downloading-app':
         case 'ready':
-            return 'The update is installed. Restart Tavern to finish updating.';
-        case 'error':
-            return status.message;
-        case 'restarting':
-            return 'The update is installed. Tavern is restarting now.';
+        case 'failed':
+        case 'restarting-runtime':
+        case 'restarting-app':
+            return status.detail;
         case 'unsupported':
             return 'Updates are available inside the packaged Mac desktop app.';
         default:

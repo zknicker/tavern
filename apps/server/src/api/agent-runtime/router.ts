@@ -6,7 +6,9 @@ import { getAgentRuntimeRoute } from './get.ts';
 import { onAgentRuntimeCapabilityUpdated } from './on-capability-updated.ts';
 import { onAgentRuntimeUpdate } from './on-update.ts';
 import { refreshAgentRuntimeCapabilityRoute } from './refresh-capability.ts';
+import { restartAgentRuntimeUpdateRoute } from './restart-update.ts';
 import { startAgentRuntimeUpdateRoute } from './start-update.ts';
+import { getAgentRuntimeUpdateStatusRoute } from './update-status.ts';
 
 export const agentRuntimeRouter = createRouter({
     checkHealth: checkAgentRuntimeHealthRoute,
@@ -16,5 +18,7 @@ export const agentRuntimeRouter = createRouter({
     onCapabilityUpdated: onAgentRuntimeCapabilityUpdated,
     onUpdate: onAgentRuntimeUpdate,
     refreshCapability: refreshAgentRuntimeCapabilityRoute,
+    restartUpdate: restartAgentRuntimeUpdateRoute,
     startUpdate: startAgentRuntimeUpdateRoute,
+    updateStatus: getAgentRuntimeUpdateStatusRoute,
 });

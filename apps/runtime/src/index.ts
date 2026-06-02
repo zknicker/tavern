@@ -24,14 +24,13 @@ function printHelp(): void {
 Usage:
   tavern serve
   tavern update
-  tavern update --no-restart
   tavern restart
   tavern --version
   tavern --help
 
 Commands:
   serve        Run the foreground Tavern Runtime server.
-  update       Upgrade Runtime through Homebrew and restart the service by default.
+  update       Stage a Runtime upgrade through Homebrew without restarting the service.
   restart      Restart the Homebrew tavern-runtime service.
 
 Environment:
@@ -149,7 +148,6 @@ async function shutdown(signal: string): Promise<void> {
 }
 
 const command = resolveCommand(process.argv.slice(2));
-const noRestart = process.argv.slice(2).includes('--no-restart');
 
 if (command === 'help') {
     printHelp();
@@ -157,9 +155,6 @@ if (command === 'help') {
     console.log(runtimePackage.version);
 } else if (command === 'update') {
     updateRuntime();
-    if (!noRestart) {
-        restartRuntime();
-    }
 } else if (command === 'restart') {
     restartRuntime();
 } else {

@@ -3,6 +3,7 @@ import {
     agentRuntimeMutationHeaders,
     agentRuntimeMutationOrigins,
     agentRuntimeRoutes,
+    agentRuntimeUpdateRequestSchema,
     agentRuntimeUpdateSchema,
     runtimeEventListSchema,
     runtimeHealthSchema,
@@ -22,7 +23,7 @@ import {
 import { handleWorkspaceRequest } from '../workspace/routes';
 import { getStoredAgent, listStoredAgents } from './agents-store';
 import { handleTavernApiRequest } from './chat-api-router';
-import { forbidden, json, notFound } from './http';
+import { forbidden, json, notFound, readJson } from './http';
 import {
     getStoredOpenClawSessionGraph,
     listStoredOpenClawSessionMessages,
@@ -38,7 +39,7 @@ import {
 import { handleOpenClawProxyRequest } from './proxy';
 import { listProjectedTavernRuntimeEvents } from './runtime-event-projection';
 import { getRuntimeHealth } from './status';
-import { startRuntimeUpdate } from './update';
+import { getRuntimeUpdateStatus, restartRuntimeForUpdate, startRuntimeUpdate } from './update';
 
 export async function handleTavernRuntimeRequest(request: Request): Promise<Response> {
     const url = new URL(request.url);
@@ -89,7 +90,25 @@ export async function handleTavernRuntimeRequest(request: Request): Promise<Resp
         ) {
             return forbidden('Runtime update requires a Tavern caller.');
         }
-        return json(agentRuntimeUpdateSchema.parse(startRuntimeUpdate()));
+        return json(
+            agentRuntimeUpdateSchema.parse(
+                startRuntimeUpdate(agentRuntimeUpdateRequestSchema.parse(await readJson(request)))
+            )
+        );
+    }
+
+    if (request.method === 'GET' && url.pathname === agentRuntimeRoutes.updateStatus) {
+        return json(agentRuntimeUpdateSchema.parse(getRuntimeUpdateStatus()));
+    }
+
+    if (request.method === 'POST' && url.pathname === agentRuntimeRoutes.updateRestart) {
+        if (
+            request.headers.get(agentRuntimeMutationHeaders.origin) !==
+            agentRuntimeMutationOrigins.tavern
+        ) {
+            return forbidden('Runtime restart requires a Tavern caller.');
+        }
+        return json(agentRuntimeUpdateSchema.parse(restartRuntimeForUpdate()));
     }
 
     if (request.method === 'GET' && url.pathname === runtimeRoutes.events) {

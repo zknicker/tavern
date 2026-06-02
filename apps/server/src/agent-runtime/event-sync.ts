@@ -6,6 +6,7 @@ import {
 } from '../agent-runtime-connection/service.ts';
 import {
     emitAgentInstructionsUpdated,
+    emitAgentRuntimeCapabilityUpdated,
     emitAgentRuntimeUpdated,
     emitAgentUpdated,
     emitChatLogUpdated,
@@ -110,6 +111,7 @@ export async function applyObservedAgentRuntimeEvent(
         case 'capability.updated': {
             emitObservedAgentRuntimeEvent(event);
             if (!connection) {
+                emitAgentRuntimeCapabilityUpdated();
                 emitAgentRuntimeUpdated();
                 return;
             }
@@ -331,6 +333,7 @@ function sanitizeRuntimeId(id: string) {
 async function refreshRuntimeCapability(connection: RuntimeConnectionRecord, capability: string) {
     void connection;
     void capability;
+    emitAgentRuntimeCapabilityUpdated();
     emitAgentRuntimeUpdated();
 }
 

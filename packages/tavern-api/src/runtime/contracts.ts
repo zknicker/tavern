@@ -81,10 +81,27 @@ export const agentRuntimeCapabilityHealthListSchema = z.object({
     info: agentRuntimeInfoSchema,
 });
 
+export const agentRuntimeUpdatePhaseSchema = z.enum([
+    'idle',
+    'installing',
+    'staged',
+    'restarting',
+    'failed',
+]);
+
+export const agentRuntimeUpdateRequestSchema = z
+    .object({
+        targetVersion: z.string().trim().min(1).nullable().optional(),
+    })
+    .optional();
+
 export const agentRuntimeUpdateSchema = z.object({
-    accepted: z.literal(true),
-    message: z.string().trim().min(1),
-    startedAt: z.string().datetime(),
+    currentVersion: z.string().trim().min(1),
+    finishedAt: z.string().datetime().nullable(),
+    message: z.string().trim().min(1).nullable(),
+    phase: agentRuntimeUpdatePhaseSchema,
+    startedAt: z.string().datetime().nullable(),
+    targetVersion: z.string().trim().min(1).nullable(),
 });
 
 export const agentRuntimeAgentBindingSchema = z.object({
@@ -1758,6 +1775,8 @@ export type AgentRuntimeCapabilityHealthList = z.infer<
     typeof agentRuntimeCapabilityHealthListSchema
 >;
 export type AgentRuntimeUpdate = z.infer<typeof agentRuntimeUpdateSchema>;
+export type AgentRuntimeUpdatePhase = z.infer<typeof agentRuntimeUpdatePhaseSchema>;
+export type AgentRuntimeUpdateRequest = z.infer<typeof agentRuntimeUpdateRequestSchema>;
 export type AgentRuntimeCapabilityHealthState = z.infer<
     typeof agentRuntimeCapabilityHealthStateSchema
 >;
