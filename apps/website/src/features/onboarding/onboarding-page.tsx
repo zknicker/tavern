@@ -1,8 +1,10 @@
-import { SystemUpdate01Icon } from '@hugeicons/core-free-icons';
+import { AlertCircleIcon, SystemUpdate01Icon } from '@hugeicons/core-free-icons';
 import { Tick02Icon } from '@hugeicons-pro/core-stroke-rounded';
 import * as React from 'react';
 import { Navigate, useNavigate } from 'react-router-dom';
 import onboardingBackground from '../../assets/tavern-onboarding-background.webp';
+import { DesktopUpdateIndicator } from '../../components/desktop-update-indicator.tsx';
+import { Alert, AlertDescription, AlertTitle } from '../../components/ui/alert.tsx';
 import { AppShell, AppShellDragRegion } from '../../components/ui/app-shell.tsx';
 import { Card, CardContent } from '../../components/ui/card.tsx';
 import { Icon } from '../../components/ui/icon.tsx';
@@ -69,6 +71,7 @@ export function OnboardingPage() {
     return (
         <AppShell className="dashboard-reference-theme select-none overflow-hidden bg-background text-foreground">
             <AppShellDragRegion />
+            <DesktopUpdateIndicator placement="floating" />
             <OnboardingBackground />
             <div className="relative z-10 flex min-h-screen flex-col items-center justify-center px-6 py-8 md:px-10">
                 <div className="grid w-full justify-items-center">
@@ -150,11 +153,23 @@ function TavernRuntimeOnboardingForm({
     onConnect: () => void;
 }) {
     const runtimeUrlInputId = React.useId();
+    const runtimeUrlErrorId = React.useId();
     const [baseUrl, setBaseUrl] = React.useState(connection?.baseUrl ?? '');
     const connectMutation = useConnectAgentRuntime({
         onSuccess: onConnect,
     });
     const errorMessage = connectMutation.error?.message ?? null;
+    const runtimeConnectionError = errorMessage
+        ? {
+              message: formatRuntimeConnectionError(errorMessage),
+              title: 'Connection failed',
+          }
+        : connection?.lastError
+          ? {
+                message: formatRuntimeConnectionError(connection.lastError),
+                title: 'Tavern Runtime is unreachable',
+            }
+          : null;
 
     React.useEffect(() => {
         setBaseUrl((current) => current || connection?.baseUrl || '');
@@ -183,6 +198,8 @@ function TavernRuntimeOnboardingForm({
             <Field>
                 <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_auto]">
                     <Input
+                        aria-describedby={runtimeConnectionError ? runtimeUrlErrorId : undefined}
+                        aria-invalid={Boolean(runtimeConnectionError)}
                         aria-label="Tavern Runtime URL"
                         className="select-text border-white/60 bg-white/64 font-mono text-neutral-900 shadow-inner shadow-neutral-900/5 hover:border-white/80 hover:bg-white/82"
                         id={runtimeUrlInputId}
@@ -203,12 +220,47 @@ function TavernRuntimeOnboardingForm({
                     </Button>
                 </div>
             </Field>
-            {connection?.lastError ? (
-                <FieldError>Could not reach Tavern Runtime: {connection.lastError}</FieldError>
+            {runtimeConnectionError ? (
+                <RuntimeConnectionError
+                    id={runtimeUrlErrorId}
+                    message={runtimeConnectionError.message}
+                    title={runtimeConnectionError.title}
+                />
             ) : null}
-            {errorMessage ? <FieldError>{errorMessage}</FieldError> : null}
         </form>
     );
+}
+
+function RuntimeConnectionError({
+    id,
+    message,
+    title,
+}: {
+    id: string;
+    message: string;
+    title: string;
+}) {
+    return (
+        <Alert
+            className="border-error-border/70 bg-error-bg/70 shadow-none"
+            id={id}
+            variant="error"
+        >
+            <Icon className="size-4 text-error" icon={AlertCircleIcon} />
+            <AlertTitle className="text-error-foreground">{title}</AlertTitle>
+            <AlertDescription className="text-error-foreground/82">{message}</AlertDescription>
+        </Alert>
+    );
+}
+
+function formatRuntimeConnectionError(message: string) {
+    const normalized = message.trim().replace(/\burl\b/gi, 'URL');
+
+    if (/^Unable to connect\. Is the computer able to access the URL\??$/i.test(normalized)) {
+        return 'Unable to connect. Check that this computer can access the URL.';
+    }
+
+    return normalized || 'Check that Tavern Runtime is running and this computer can access it.';
 }
 
 function RuntimeUpdatePanel({ connection }: { connection: RuntimeUpdateConnection }) {

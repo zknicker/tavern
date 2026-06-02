@@ -1,103 +1,137 @@
-import { ArrowDown01Icon, SystemUpdate01Icon } from '@hugeicons/core-free-icons';
-import * as React from 'react';
+import { SystemUpdate01Icon } from '@hugeicons/core-free-icons';
+import { CheckmarkCircle01Icon, Download04Icon } from '@hugeicons-pro/core-stroke-rounded';
+import { useEffect, useState } from 'react';
 import { useDesktopUpdate } from '../hooks/desktop/use-desktop-update.ts';
+import { cn } from '../lib/utils.ts';
 import { Icon } from './ui/icon.tsx';
 import { Button } from './ui/primitives/button.tsx';
 
-export function DesktopUpdateIndicator() {
+interface DesktopUpdateIndicatorProps {
+    placement?: 'floating' | 'inline';
+}
+
+export function DesktopUpdateIndicator({ placement = 'inline' }: DesktopUpdateIndicatorProps) {
     const { status, updateAndRestart } = useDesktopUpdate();
-    const [ellipsisFrame, setEllipsisFrame] = React.useState(0);
+    const [shouldRender, setShouldRender] = useState(false);
     const isVisible =
         status.phase === 'available' ||
         status.phase === 'downloading' ||
         status.phase === 'ready' ||
         status.phase === 'restarting';
 
-    React.useEffect(() => {
-        if (!isVisible || status.phase === 'ready') {
-            setEllipsisFrame(0);
+    useEffect(() => {
+        if (!isVisible) {
+            setShouldRender(false);
             return;
         }
 
-        const intervalId = window.setInterval(() => {
-            setEllipsisFrame((current) => (current + 1) % 4);
-        }, 640);
+        const timeoutId = window.setTimeout(() => {
+            setShouldRender(true);
+        }, 360);
 
         return () => {
-            window.clearInterval(intervalId);
+            window.clearTimeout(timeoutId);
         };
-    }, [isVisible, status.phase]);
+    }, [isVisible]);
 
-    if (!isVisible) {
+    if (!(isVisible && shouldRender)) {
         return null;
     }
 
-    const progressPercent =
-        status.phase === 'downloading' ? Math.round(status.progress * 100) : 100;
-    const ellipsis = '.'.repeat(ellipsisFrame);
-    const canRestart = status.phase === 'ready';
-    const canInstall = status.phase === 'available';
-    const icon = status.phase === 'downloading' ? ArrowDown01Icon : SystemUpdate01Icon;
-    const detail = getUpdateDetail(status);
+    const canAct = status.phase === 'available' || status.phase === 'ready';
+    const label = getUpdateLabel(status);
+    const progress = status.phase === 'downloading' ? status.progress : undefined;
 
     return (
-        <div className="group relative flex h-7 shrink-0 items-center gap-2 rounded-md border border-border/60 bg-muted/24 px-2 text-foreground text-sm">
-            <span
-                aria-hidden="true"
-                className="relative flex size-4 shrink-0 items-center justify-center rounded-full border border-border/70"
-                style={{
-                    background:
-                        status.phase === 'downloading'
-                            ? getProgressWedge(progressPercent)
-                            : 'var(--primary)',
+        <div
+            className={cn(
+                'no-drag pointer-events-auto z-50',
+                placement === 'floating'
+                    ? 'absolute top-3 right-4 animate-[desktop-update-indicator-floating-in_240ms_cubic-bezier(0.23,1,0.32,1)_both]'
+                    : 'relative -mr-[6px] w-7 shrink-0 animate-[desktop-update-indicator-inline-in_280ms_cubic-bezier(0.23,1,0.32,1)_both] overflow-visible'
+            )}
+        >
+            <Button
+                aria-label={label}
+                className="size-7 rounded-[var(--main-radius)] shadow-none before:rounded-[calc(var(--main-radius)-1px)]"
+                disabled={!canAct}
+                loading={status.phase === 'restarting'}
+                onClick={() => {
+                    updateAndRestart().catch(() => undefined);
                 }}
+                size="icon-sm"
+                title={getUpdateDetail(status)}
+                type="button"
+                variant="brand-soft"
             >
-                <Icon className="size-2.5 text-primary-foreground" icon={icon} strokeWidth={2.2} />
-            </span>
-            <span className="font-medium">
-                {status.phase === 'downloading' ? 'Updating' : getUpdateLabel(status.phase)}
-                {status.phase === 'downloading' ? (
-                    <span className="inline-block min-w-3 text-left tabular-nums">{ellipsis}</span>
-                ) : null}
-            </span>
-            {status.phase === 'downloading' ? (
-                <span className="text-muted-foreground tabular-nums">{progressPercent}%</span>
-            ) : null}
-            {canInstall || canRestart ? (
-                <Button
-                    className="h-5 rounded-md px-2 text-[0.8125rem]"
-                    onClick={() => {
-                        updateAndRestart().catch(() => undefined);
-                    }}
-                    size="xs"
-                    variant="ghost"
-                >
-                    {canRestart ? 'Restart' : 'Update'}
-                </Button>
-            ) : null}
-            <div className="pointer-events-none absolute top-[calc(100%+8px)] right-0 z-50 w-64 translate-y-1 opacity-0 transition-[opacity,transform] duration-150 ease-out group-hover:translate-y-0 group-hover:opacity-100">
-                <div className="rounded-lg border border-border/70 bg-popover/96 px-3 py-2 text-popover-foreground shadow-[0_16px_44px_rgb(15_23_42_/_0.18),0_3px_10px_rgb(15_23_42_/_0.08)] backdrop-blur-xl">
-                    <p className="text-muted-foreground text-sm leading-5">{detail}</p>
-                </div>
-            </div>
+                <UpdateIcon phase={status.phase} progress={progress} />
+            </Button>
         </div>
     );
 }
 
-function getProgressWedge(progressPercent: number) {
-    const clamped = Math.max(1, Math.min(progressPercent, 100));
-    const sweep = clamped * 3.6;
-    return `conic-gradient(from 0deg, var(--primary) 0deg, var(--primary) ${sweep}deg, var(--muted) ${sweep}deg, var(--muted) 360deg)`;
+function UpdateIcon({
+    phase,
+    progress,
+}: {
+    phase: 'available' | 'downloading' | 'ready' | 'restarting';
+    progress?: number;
+}) {
+    if (phase === 'downloading') {
+        return <ProgressDonut progress={progress ?? 0} />;
+    }
+
+    if (phase === 'ready') {
+        return (
+            <Icon
+                aria-hidden="true"
+                className="size-4.5 shrink-0"
+                icon={CheckmarkCircle01Icon}
+                size={18}
+                strokeWidth={2.4}
+            />
+        );
+    }
+
+    return (
+        <Icon
+            aria-hidden="true"
+            className="size-4.5 shrink-0"
+            icon={phase === 'restarting' ? SystemUpdate01Icon : Download04Icon}
+            size={18}
+            strokeWidth={2.4}
+        />
+    );
 }
 
-function getUpdateLabel(phase: 'available' | 'downloading' | 'ready' | 'restarting') {
-    switch (phase) {
+function ProgressDonut({ progress }: { progress: number }) {
+    const progressPercent = Math.max(0, Math.min(100, Math.round(progress * 100)));
+    const progressDegrees = progressPercent * 3.6;
+
+    return (
+        <span
+            aria-hidden="true"
+            className="size-4 shrink-0 rounded-full"
+            style={{
+                WebkitMask: 'radial-gradient(farthest-side, transparent calc(100% - 3px), #000 0)',
+                background: `conic-gradient(var(--brand) 0deg ${progressDegrees}deg, color-mix(in srgb, var(--brand), transparent 78%) ${progressDegrees}deg 360deg)`,
+                mask: 'radial-gradient(farthest-side, transparent calc(100% - 3px), #000 0)',
+            }}
+        />
+    );
+}
+
+function getUpdateLabel(status: {
+    phase: 'available' | 'downloading' | 'ready' | 'restarting';
+    progress?: number;
+}) {
+    switch (status.phase) {
         case 'available':
-            return 'Update available';
+            return 'Update';
         case 'downloading':
-            return 'Updating';
+            return `Updating ${Math.round((status.progress ?? 0) * 100)}%`;
         case 'ready':
-            return 'Update ready';
+            return 'Restart To Apply Update';
         case 'restarting':
             return 'Restarting';
     }
@@ -110,9 +144,9 @@ function getUpdateDetail(status: {
 }) {
     switch (status.phase) {
         case 'available':
-            return `Tavern ${status.version} is available.`;
+            return `Tavern ${status.version} is available. Download it now and restart when ready.`;
         case 'downloading':
-            return `Tavern ${status.version} is downloading in the background.`;
+            return `Tavern ${status.version} is downloading in the background. Hang tight.`;
         case 'ready':
             return `Tavern ${status.version} is installed. Restart to finish updating.`;
         case 'restarting':

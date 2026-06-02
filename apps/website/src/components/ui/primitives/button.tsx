@@ -32,6 +32,9 @@ export const buttonVariants = cva(
                 xs: "h-6 gap-1 rounded-md px-[calc(--spacing(1.5)-1px)] font-normal text-sm before:rounded-[calc(var(--radius-md)-1px)] sm:h-5 sm:text-[0.8125rem] [&_svg:not([class*='size-'])]:size-4 sm:[&_svg:not([class*='size-'])]:size-3.5",
             },
             variant: {
+                brand: 'not-disabled:inset-shadow-[0_1px_--theme(--color-white/16%)] border-brand bg-brand text-brand-foreground shadow-brand/24 shadow-xs hover:bg-brand/90 data-pressed:bg-brand/90 *:data-[slot=button-loading-indicator]:text-brand-foreground [:active,[data-pressed]]:inset-shadow-[0_1px_--theme(--color-black/8%)] [:disabled,:active,[data-pressed]]:shadow-none',
+                'brand-soft':
+                    'border-transparent bg-brand/12 text-brand shadow-none hover:bg-brand/18 disabled:opacity-100 data-pressed:bg-brand/22 *:data-[slot=button-loading-indicator]:text-brand',
                 chrome: 'border-border/60 bg-muted/22 text-[var(--sidebar-icon-muted)] hover:border-border/85 hover:bg-muted/44 hover:text-[var(--sidebar-icon-muted)] disabled:border-border/30 disabled:bg-muted/10 disabled:text-[var(--sidebar-icon-muted)] disabled:opacity-100 [&_svg]:opacity-100',
                 default:
                     'not-disabled:inset-shadow-[0_1px_--theme(--color-white/16%)] border-primary bg-primary text-primary-foreground shadow-primary/24 shadow-xs hover:bg-primary/90 data-pressed:bg-primary/90 *:data-[slot=button-loading-indicator]:text-primary-foreground [:active,[data-pressed]]:inset-shadow-[0_1px_--theme(--color-black/8%)] [:disabled,:active,[data-pressed]]:shadow-none',

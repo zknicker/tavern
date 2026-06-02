@@ -222,119 +222,128 @@ export function TopbarChatTabs({
 
     return (
         <>
-            <TabsSubtle
-                aria-label="Primary"
-                className="scrollbar-hidden min-w-0 flex-1 overflow-x-auto overscroll-x-contain pr-1"
-                onValueChange={(value) => {
-                    setSelectedTabValue(value);
+            <div className="flex min-w-0 flex-1 items-center gap-1">
+                <TabsSubtle
+                    aria-label="Primary"
+                    className="scrollbar-hidden min-w-0 max-w-full shrink overflow-x-auto overscroll-x-contain"
+                    onValueChange={(value) => {
+                        setSelectedTabValue(value);
 
-                    const routeTab = parseRouteTabValue(value);
+                        const routeTab = parseRouteTabValue(value);
 
-                    if (routeTab) {
-                        onSelectRouteTab(routeTab);
-                        return;
-                    }
-
-                    const draftId = parseDraftTabValue(value);
-
-                    if (draftId) {
-                        const draft = draftChats.find((entry) => entry.id === draftId);
-
-                        if (draft) {
-                            void navigate(getTopbarDraftPath(draft), {
-                                state: { draftChatId: draft.id },
-                            });
+                        if (routeTab) {
+                            onSelectRouteTab(routeTab);
+                            return;
                         }
 
-                        return;
-                    }
+                        const draftId = parseDraftTabValue(value);
 
-                    if (getSelectedChat(value, topbarChats.allChats)) {
-                        void navigate(buildChatPath(value));
-                    }
-                }}
-                value={selectedTabValue}
-            >
-                <TabsSubtleList className="gap-1 overflow-visible">
-                    {routeTabs.map((tab) => (
-                        <TabsSubtleItem
-                            icon={getRouteTabIcon(tab.id)}
-                            iconNode={getRouteTabIconNode(tab.id)}
-                            key={tab.id}
-                            label={tab.label}
-                            value={getRouteTabValue(tab.id)}
-                        />
-                    ))}
-                    <div
-                        aria-hidden="true"
-                        className="mx-1 h-6 shrink-0 border-border/60 border-r"
-                    />
-                    {pinnedChats.map((chat) => (
-                        <TopbarRecentChatTab
-                            chat={chat}
-                            isActive={location.pathname === buildChatPath(chat.id)}
-                            isArchivePending={
-                                archiveChat.isPending && archiveChat.variables?.chatId === chat.id
-                            }
-                            key={chat.id}
-                            onArchive={(selectedChat) => {
-                                void archiveTopbarChat(selectedChat);
-                            }}
-                            onCloseTab={(selectedChat) => {
-                                void closeChatTab(selectedChat);
-                            }}
-                            onCustomizeColor={(selectedChat, color) => {
-                                tabAppearance.reset();
-                                void setPinnedTabColor(selectedChat, color);
-                            }}
-                            onPinChange={(selectedChat, pinned) => {
-                                void pinTopbarChat(selectedChat, pinned);
-                            }}
-                            onRename={(selectedChat) => {
-                                updateChat.reset();
-                                setRenamingChat(selectedChat);
-                            }}
-                        />
-                    ))}
-                    {draftChats.map((draft) => {
-                        const isActive =
-                            activeDraftRoute?.draftChatId === draft.id ||
-                            (draft.realChatId !== null &&
-                                location.pathname === buildChatPath(draft.realChatId));
+                        if (draftId) {
+                            const draft = draftChats.find((entry) => entry.id === draftId);
 
-                        return (
-                            <TopbarDraftChatTab draft={draft} isActive={isActive} key={draft.id} />
-                        );
-                    })}
-                    {visibleRecentChats.map((chat) => (
-                        <TopbarRecentChatTab
-                            chat={chat}
-                            isActive={location.pathname === buildChatPath(chat.id)}
-                            isArchivePending={
-                                archiveChat.isPending && archiveChat.variables?.chatId === chat.id
+                            if (draft) {
+                                void navigate(getTopbarDraftPath(draft), {
+                                    state: { draftChatId: draft.id },
+                                });
                             }
-                            key={chat.id}
-                            onArchive={(selectedChat) => {
-                                void archiveTopbarChat(selectedChat);
-                            }}
-                            onCloseTab={(selectedChat) => {
-                                void closeChatTab(selectedChat);
-                            }}
-                            onCustomizeColor={(selectedChat, color) => {
-                                tabAppearance.reset();
-                                void setPinnedTabColor(selectedChat, color);
-                            }}
-                            onPinChange={(selectedChat, pinned) => {
-                                void pinTopbarChat(selectedChat, pinned);
-                            }}
-                            onRename={(selectedChat) => {
-                                updateChat.reset();
-                                setRenamingChat(selectedChat);
-                            }}
+
+                            return;
+                        }
+
+                        if (getSelectedChat(value, topbarChats.allChats)) {
+                            void navigate(buildChatPath(value));
+                        }
+                    }}
+                    value={selectedTabValue}
+                >
+                    <TabsSubtleList className="gap-1 overflow-visible">
+                        {routeTabs.map((tab) => (
+                            <TabsSubtleItem
+                                icon={getRouteTabIcon(tab.id)}
+                                iconNode={getRouteTabIconNode(tab.id)}
+                                key={tab.id}
+                                label={tab.label}
+                                value={getRouteTabValue(tab.id)}
+                            />
+                        ))}
+                        <div
+                            aria-hidden="true"
+                            className="mx-1 h-6 shrink-0 border-border/60 border-r"
                         />
-                    ))}
-                </TabsSubtleList>
-            </TabsSubtle>
+                        {pinnedChats.map((chat) => (
+                            <TopbarRecentChatTab
+                                chat={chat}
+                                isActive={location.pathname === buildChatPath(chat.id)}
+                                isArchivePending={
+                                    archiveChat.isPending &&
+                                    archiveChat.variables?.chatId === chat.id
+                                }
+                                key={chat.id}
+                                onArchive={(selectedChat) => {
+                                    void archiveTopbarChat(selectedChat);
+                                }}
+                                onCloseTab={(selectedChat) => {
+                                    void closeChatTab(selectedChat);
+                                }}
+                                onCustomizeColor={(selectedChat, color) => {
+                                    tabAppearance.reset();
+                                    void setPinnedTabColor(selectedChat, color);
+                                }}
+                                onPinChange={(selectedChat, pinned) => {
+                                    void pinTopbarChat(selectedChat, pinned);
+                                }}
+                                onRename={(selectedChat) => {
+                                    updateChat.reset();
+                                    setRenamingChat(selectedChat);
+                                }}
+                            />
+                        ))}
+                        {draftChats.map((draft) => {
+                            const isActive =
+                                activeDraftRoute?.draftChatId === draft.id ||
+                                (draft.realChatId !== null &&
+                                    location.pathname === buildChatPath(draft.realChatId));
+
+                            return (
+                                <TopbarDraftChatTab
+                                    draft={draft}
+                                    isActive={isActive}
+                                    key={draft.id}
+                                />
+                            );
+                        })}
+                        {visibleRecentChats.map((chat) => (
+                            <TopbarRecentChatTab
+                                chat={chat}
+                                isActive={location.pathname === buildChatPath(chat.id)}
+                                isArchivePending={
+                                    archiveChat.isPending &&
+                                    archiveChat.variables?.chatId === chat.id
+                                }
+                                key={chat.id}
+                                onArchive={(selectedChat) => {
+                                    void archiveTopbarChat(selectedChat);
+                                }}
+                                onCloseTab={(selectedChat) => {
+                                    void closeChatTab(selectedChat);
+                                }}
+                                onCustomizeColor={(selectedChat, color) => {
+                                    tabAppearance.reset();
+                                    void setPinnedTabColor(selectedChat, color);
+                                }}
+                                onPinChange={(selectedChat, pinned) => {
+                                    void pinTopbarChat(selectedChat, pinned);
+                                }}
+                                onRename={(selectedChat) => {
+                                    updateChat.reset();
+                                    setRenamingChat(selectedChat);
+                                }}
+                            />
+                        ))}
+                    </TabsSubtleList>
+                </TabsSubtle>
+                <TopbarNewChatButton />
+            </div>
             <SidebarChatRenameDialog
                 chat={renamingChat}
                 errorMessage={updateChat.error?.message ?? null}
@@ -435,13 +444,13 @@ export function TopbarNewChatButton() {
     return (
         <Button
             aria-label="New chat"
-            className="size-7 rounded-md"
+            className="no-drag size-7 rounded-md text-muted-foreground/70 hover:text-foreground data-pressed:text-foreground [&_svg]:opacity-70 hover:[&_svg]:opacity-90"
             render={<NavLink to="/dashboard/overview" />}
             size="icon-sm"
             title="New chat"
-            variant="secondary"
+            variant="ghost"
         >
-            <Icon aria-hidden="true" className="size-4.5" icon={PlusSignIcon} size={18} />
+            <Icon aria-hidden="true" className="size-4" icon={PlusSignIcon} size={16} />
         </Button>
     );
 }

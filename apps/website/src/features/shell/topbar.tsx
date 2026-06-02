@@ -4,11 +4,7 @@ import { AppShellTopbar } from '../../components/ui/app-shell.tsx';
 import { Icon } from '../../components/ui/icon.tsx';
 import { Button } from '../../components/ui/primitives/button.tsx';
 import type { RouteTab } from '../../hooks/dashboard/use-route-tab.ts';
-import {
-    TopbarAllChatsMenuButton,
-    TopbarChatTabs,
-    TopbarNewChatButton,
-} from './topbar-chat-tabs.tsx';
+import { TopbarAllChatsMenuButton, TopbarChatTabs } from './topbar-chat-tabs.tsx';
 
 interface AppTopbarProps {
     activeTab: RouteTab | null;
@@ -29,9 +25,7 @@ export function AppTopbar({
                 <TopbarChatTabs activeRouteTab={activeTab} onSelectRouteTab={onSelectTab} />
 
                 <div className="no-drag ml-auto flex shrink-0 items-center gap-1">
-                    <DesktopUpdateIndicator />
                     <TopbarAllChatsMenuButton />
-                    <TopbarNewChatButton />
                     <Button
                         aria-current={isSettingsRoute ? 'page' : undefined}
                         aria-label="Settings"
@@ -48,6 +42,7 @@ export function AppTopbar({
                             size={18}
                         />
                     </Button>
+                    <DesktopUpdateIndicator />
                 </div>
             </div>
         </AppShellTopbar>

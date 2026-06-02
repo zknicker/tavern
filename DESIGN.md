@@ -51,11 +51,11 @@ typography:
     fontWeight: 400
     lineHeight: 1.4
 rounded:
-  sm: 0.375rem
-  md: 0.5rem
-  lg: 0.625rem
-  xl: 0.75rem
-  2xl: 1rem
+  sm: 0.3125rem
+  md: 0.4375rem
+  lg: 0.5625rem
+  xl: 0.6875rem
+  2xl: 0.9375rem
 spacing:
   xs: 0.25rem
   sm: 0.5rem
