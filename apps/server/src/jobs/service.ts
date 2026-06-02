@@ -230,14 +230,14 @@ export async function runJob(slug: JobSlug, payload: Record<string, unknown> | u
     };
 }
 
-export async function runJobUnlessRunningOrQueued(
+export async function runJobUnlessQueued(
     slug: RegisteredJobSlug,
     payload: Record<string, unknown> | undefined
 ) {
     const binding = await getJobBinding(slug);
     const counts = await binding.queue.getJobCountsAsync();
 
-    if (counts.active > 0 || counts.waiting > 0) {
+    if (counts.waiting > 0) {
         return null;
     }
 

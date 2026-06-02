@@ -13,9 +13,9 @@ import {
     emitCronUpdated,
     emitModelUpdated,
     emitSessionUpdated,
-    emitSkillInvalidationCascade,
     emitWorkersUpdated,
 } from '../api/invalidation-events.ts';
+import { enqueueRuntimeSkillInventoryRefresh } from '../skills/inventory-job.ts';
 import { listReachableAgentRuntimeConnections } from '../storage/agent-runtime-connections.ts';
 import { syncAgentRuntimeAgents, syncAgentRuntimeCron } from '../sync/agent-runtime-sync.ts';
 import {
@@ -78,13 +78,13 @@ export async function applyObservedAgentRuntimeEvent(
         case 'skill.updated': {
             emitObservedAgentRuntimeEvent(event);
             debugTurnEvent(event);
-            emitSkillInvalidationCascade();
+            queueRuntimeSkillInventoryRefresh();
             return;
         }
         case 'skill.deleted': {
             emitObservedAgentRuntimeEvent(event);
             debugTurnEvent(event);
-            emitSkillInvalidationCascade();
+            queueRuntimeSkillInventoryRefresh();
             return;
         }
         case 'cron.updated':
@@ -204,6 +204,12 @@ function debugTurnEvent(event: AgentRuntimeEvent) {
         default:
             return;
     }
+}
+
+function queueRuntimeSkillInventoryRefresh() {
+    void enqueueRuntimeSkillInventoryRefresh().catch((error) => {
+        console.warn('[tavern] failed to queue skills inventory refresh', error);
+    });
 }
 
 async function recordSteeredTurnNotice(

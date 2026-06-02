@@ -2,10 +2,11 @@ import { expect, test } from 'bun:test';
 import { jobDefinitions } from '../../../jobs/index.ts';
 import { jobSlugSchema, runJobInputSchema } from '../src/jobs/contracts.ts';
 
-test('registered jobs are limited to provider usage imports', () => {
+test('registered jobs cover scheduled external snapshot imports', () => {
     expect(jobDefinitions.map((job) => job.slug)).toEqual([
         'sync-codex-usage',
         'sync-openrouter-usage',
+        'sync-runtime-skills',
     ]);
 });
 

@@ -1,6 +1,6 @@
 import { afterEach, mock, spyOn, test } from 'bun:test';
 import assert from 'node:assert/strict';
-import { listJobs } from '../src/jobs/service.ts';
+import { listJobs, runJobUnlessQueued } from '../src/jobs/service.ts';
 import type { JobExecution } from '../src/storage/jobs.ts';
 
 afterEach(() => {
@@ -9,6 +9,37 @@ afterEach(() => {
 
 const jobsManager = await import('../src/jobs/manager.ts');
 const jobsStorage = await import('../src/storage/jobs.ts');
+
+function createJobBinding(input: {
+    active: number;
+    add: ReturnType<typeof mock>;
+    waiting: number;
+}) {
+    return {
+        definition: {
+            defaultInput: {},
+            description: 'Reads runtime skill inventory and stores the latest snapshot.',
+            displayName: 'Sync Runtime Skills',
+            isEnabled: async () => true,
+            payloadSchema: {
+                parse: (payload: unknown) => payload ?? {},
+            },
+            schedule: {
+                everyMs: 900_000,
+                kind: 'interval',
+                runOnStart: true,
+            },
+            slug: 'sync-runtime-skills',
+        },
+        queue: {
+            add: input.add,
+            getJobCountsAsync: async () => ({
+                active: input.active,
+                waiting: input.waiting,
+            }),
+        },
+    } as Awaited<ReturnType<typeof jobsManager.getJobBinding>>;
+}
 
 function createExecutionRecord(overrides: Partial<JobExecution> = {}): JobExecution {
     return {
@@ -103,4 +134,40 @@ test('listJobs returns persisted execution records ordered by recency', async ()
         failed: 1,
         waiting: 0,
     });
+});
+
+test('runJobUnlessQueued queues one follow-up while the job is active', async () => {
+    const add = mock(async () => ({ id: 'job-1' }));
+    spyOn(jobsManager, 'getJobBinding').mockImplementation(() =>
+        Promise.resolve(
+            createJobBinding({
+                active: 1,
+                add,
+                waiting: 0,
+            })
+        )
+    );
+
+    const result = await runJobUnlessQueued('sync-runtime-skills', undefined);
+
+    assert.deepEqual(result, { jobId: 'job-1' });
+    assert.equal(add.mock.calls.length, 1);
+});
+
+test('runJobUnlessQueued dedupes existing waiting runs', async () => {
+    const add = mock(async () => ({ id: 'job-1' }));
+    spyOn(jobsManager, 'getJobBinding').mockImplementation(() =>
+        Promise.resolve(
+            createJobBinding({
+                active: 1,
+                add,
+                waiting: 1,
+            })
+        )
+    );
+
+    const result = await runJobUnlessQueued('sync-runtime-skills', undefined);
+
+    assert.equal(result, null);
+    assert.equal(add.mock.calls.length, 0);
 });

@@ -30,6 +30,8 @@ const createAgentRuntimeClientForConnection = mock(() => undefined);
 const subscribeAgentRuntimeEventsForConnection = mock(async () => ({
     close() {},
 }));
+const enqueueRuntimeSkillInventoryRefresh = mock(async () => undefined);
+const enqueueRuntimeSkillInventoryRefreshIfStale = mock(async () => undefined);
 const emitObservedAgentRuntimeEvent = mock(() => undefined);
 const confirmAgentRuntimeConnection = mock(async () => true);
 const tavernChatId = '220f46ed-2d7c-41dd-9d7e-d02691f1afc3';
@@ -67,6 +69,11 @@ mock.module('../src/api/invalidation-events.ts', () => ({
 mock.module('../src/agent-runtime/drivers.ts', () => ({
     createAgentRuntimeClientForConnection,
     subscribeAgentRuntimeEventsForConnection,
+}));
+
+mock.module('../src/skills/inventory-job.ts', () => ({
+    enqueueRuntimeSkillInventoryRefresh,
+    enqueueRuntimeSkillInventoryRefreshIfStale,
 }));
 
 mock.module('../src/agent-runtime/events.ts', () => ({
@@ -117,6 +124,8 @@ beforeEach(async () => {
     markAgentRuntimeConnectionReachable.mockClear();
     createAgentRuntimeClientForConnection.mockClear();
     subscribeAgentRuntimeEventsForConnection.mockClear();
+    enqueueRuntimeSkillInventoryRefresh.mockClear();
+    enqueueRuntimeSkillInventoryRefreshIfStale.mockClear();
     tavernApiRequests = [];
     globalThis.fetch = (async (input, init) => {
         const request = new Request(input, init);
@@ -256,6 +265,28 @@ test('applyObservedAgentRuntimeEvent invalidates runtime capability rows', async
     await flushAsyncEventSync();
 
     expect(emitAgentRuntimeUpdated).toHaveBeenCalledTimes(1);
+});
+
+test('applyObservedAgentRuntimeEvent queues runtime skill refreshes after skill updates', async () => {
+    await applyObservedAgentRuntimeEvent({
+        skillId: 'agent-browser',
+        timestamp: '2026-05-12T19:00:00.000Z',
+        type: 'skill.updated',
+    });
+
+    expect(enqueueRuntimeSkillInventoryRefresh).toHaveBeenCalledTimes(1);
+    expect(emitSkillInvalidationCascade).toHaveBeenCalledTimes(0);
+});
+
+test('applyObservedAgentRuntimeEvent queues runtime skill refreshes after skill deletes', async () => {
+    await applyObservedAgentRuntimeEvent({
+        skillId: 'agent-browser',
+        timestamp: '2026-05-12T19:00:00.000Z',
+        type: 'skill.deleted',
+    });
+
+    expect(enqueueRuntimeSkillInventoryRefresh).toHaveBeenCalledTimes(1);
+    expect(emitSkillInvalidationCascade).toHaveBeenCalledTimes(0);
 });
 
 test('applyObservedAgentRuntimeEvent invalidates rendered agent instructions', async () => {

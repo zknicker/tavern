@@ -72,6 +72,9 @@ edge case into a separate product state.
 
 Tavern reads skill and plugin inventory from the runtime and stores plugin
 access choices where Tavern has a supported config path.
+Skill catalog reads use the latest stored Runtime inventory snapshot. Runtime
+refreshes the snapshot on startup, every 15 minutes, and after skill-related
+writes, then notifies the app when the stored inventory changes.
 
 Managed Runtime config sets `skills.allowBundled` to a Tavern sentinel allowlist
 with no real bundled skill ids. That keeps OpenClaw's bundled skill catalog out

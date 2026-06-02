@@ -6,6 +6,7 @@ import {
 } from '../agent-runtime-connection/environment-override.ts';
 import { databaseClient, db } from '../db/index.ts';
 import { agentRuntimeConnectionsTable } from '../db/schema.ts';
+import { formatSkillInventorySyncStateId } from './skills.ts';
 
 export const managedOpenClawRuntimeId = 'tavern-openclaw-managed';
 export const agentRuntimeConnectionId = managedOpenClawRuntimeId;
@@ -352,6 +353,8 @@ function deleteRuntimeData(runtimeId: string) {
         deleteColumnValue('cron_runs', 'runtime_id', runtimeId);
         deleteColumnValue('openclaw_config_snapshots', 'runtime_id', runtimeId);
         deleteColumnValue('session_runs', 'runtime', runtimeId);
+        deleteColumnValue('skills', 'runtime_id', runtimeId);
+        deleteColumnValue('sync_state', 'id', formatSkillInventorySyncStateId(runtimeId));
         deleteColumnValue('sync_state', 'id', runtimeId);
 
         databaseClient.exec('COMMIT');

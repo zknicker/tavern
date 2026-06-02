@@ -6,6 +6,7 @@ import {
     saveAgentRuntimeConnection,
 } from '../../agent-runtime-connection/service.ts';
 import { syncMessagingBindingsToAgentRuntime } from '../../messaging-platform/service.ts';
+import { enqueueRuntimeSkillInventoryRefresh } from '../../skills/inventory-job.ts';
 import {
     emitAgentInvalidationCascade,
     emitAgentRuntimeUpdated,
@@ -50,6 +51,7 @@ export const connectAgentRuntimeRoute = publicProcedure
             void syncMessagingBindingsToAgentRuntime().catch((error) => {
                 console.warn('[tavern] failed to sync runtime messaging bindings', error);
             });
+            void enqueueRuntimeSkillInventoryRefresh().catch(() => undefined);
             emitAgentInvalidationCascade();
             emitCronUpdated();
             emitAgentRuntimeUpdated();

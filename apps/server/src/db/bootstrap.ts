@@ -78,6 +78,15 @@ const schemaStatements = [
         ON runtime_model_availability (openclaw_model_name_id);`,
     `CREATE UNIQUE INDEX IF NOT EXISTS runtime_model_availability_runtime_model_idx
         ON runtime_model_availability (runtime_id, openclaw_model_name_id);`,
+    `CREATE TABLE IF NOT EXISTS skills (
+        runtime_id TEXT NOT NULL,
+        id TEXT NOT NULL,
+        summary_json TEXT NOT NULL,
+        last_synced_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL,
+        PRIMARY KEY (runtime_id, id)
+    );`,
+    'CREATE INDEX IF NOT EXISTS skills_runtime_idx ON skills (runtime_id);',
     `CREATE TABLE IF NOT EXISTS agent_model_settings (
         agent_id TEXT PRIMARY KEY NOT NULL,
         model_catalog_id TEXT NOT NULL,
@@ -563,12 +572,6 @@ function runSchemaStatements(filter: (statement: string) => boolean) {
 export function ensureDatabaseSchema() {
     runSchemaStatements((statement) => !statement.startsWith('CREATE INDEX'));
     runSchemaStatements((statement) => statement.startsWith('CREATE INDEX'));
-
-    try {
-        databaseClient.exec(`ALTER TABLE skills ADD COLUMN files_json TEXT NOT NULL DEFAULT '[]';`);
-    } catch {
-        /* column already exists */
-    }
     migrateAgentProfilesUserInstructions();
 }
 

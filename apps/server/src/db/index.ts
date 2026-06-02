@@ -24,6 +24,7 @@ const {
     openClawConfigSnapshotsTable,
     openClawModelNamesTable,
     runtimeModelAvailabilityTable,
+    skillsTable,
     sessionAccessEventsTable,
     sessionArtifactsTable,
     sessionDeliveriesTable,
@@ -81,6 +82,7 @@ const schema = {
     openClawConfigSnapshotsTable,
     openClawModelNamesTable,
     runtimeModelAvailabilityTable,
+    skillsTable,
     agentRuntimeConnectionsTable,
     telemetryIngestCursorsTable,
 };

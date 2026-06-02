@@ -66,36 +66,6 @@ test('applyObservedAgentRuntimeEvent invalidates agent queries on agent updates'
     assert.equal(invalidateSpy.mock.calls.length, 1);
 });
 
-test('applyObservedAgentRuntimeEvent invalidates runtime-owned skill queries on update', async () => {
-    const invalidateSpy = spyOn(
-        invalidationEvents,
-        'emitSkillInvalidationCascade'
-    ).mockImplementation();
-
-    await applyObservedAgentRuntimeEvent({
-        skillId: 'agent-browser',
-        timestamp: '2026-04-06T12:10:01.000Z',
-        type: 'skill.updated',
-    });
-
-    assert.equal(invalidateSpy.mock.calls.length, 1);
-});
-
-test('applyObservedAgentRuntimeEvent invalidates runtime-owned skill queries on delete', async () => {
-    const invalidateSpy = spyOn(
-        invalidationEvents,
-        'emitSkillInvalidationCascade'
-    ).mockImplementation();
-
-    await applyObservedAgentRuntimeEvent({
-        skillId: 'agent-browser',
-        timestamp: '2026-04-06T12:10:01.000Z',
-        type: 'skill.deleted',
-    });
-
-    assert.equal(invalidateSpy.mock.calls.length, 1);
-});
-
 test('applyObservedAgentRuntimeEvent invalidates runtime-owned cron queries on update', async () => {
     const cronSpy = spyOn(invalidationEvents, 'emitCronUpdated').mockImplementation();
 

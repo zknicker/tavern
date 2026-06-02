@@ -6,8 +6,8 @@ import { emitSkillInvalidationCascade } from '../api/invalidation-events.ts';
 import {
     applyCurrentOpenClawConfigFixups,
     getOpenClawConfigState,
-    syncOpenClawConfigSnapshots,
 } from '../openclaw-config/service.ts';
+import { getActiveAgentRuntimeConnection } from '../storage/agent-runtime-connections.ts';
 import {
     deleteTavernVaultSecret,
     getSkillEnvSecretId,
@@ -25,6 +25,11 @@ import {
     skillListSchema,
     skillSummarySchema,
 } from './contracts.ts';
+import {
+    enqueueRuntimeSkillInventoryRefresh,
+    enqueueRuntimeSkillInventoryRefreshIfStale,
+} from './inventory-job.ts';
+import { getCachedRuntimeSkillInventory } from './inventory-sync.ts';
 import { parseSkillMarkdown } from './markdown.ts';
 
 const skillSecretValueSchema = z.object({
@@ -32,15 +37,22 @@ const skillSecretValueSchema = z.object({
 });
 
 export async function listSkills(): Promise<SkillList> {
-    await syncOpenClawConfigSnapshots().catch(() => undefined);
-    const [configState, skills] = await Promise.all([
+    const [configState, runtime] = await Promise.all([
         getOpenClawConfigState(),
-        listAgentRuntimeSkills().catch(() => null),
+        getActiveAgentRuntimeConnection(),
     ]);
+    const skillRuntimeId = getSkillInventoryRuntimeId(runtime);
+    const cachedInventory = skillRuntimeId
+        ? await getCachedRuntimeSkillInventory(skillRuntimeId).catch(() => null)
+        : null;
+
+    void enqueueRuntimeSkillInventoryRefreshIfStale(skillRuntimeId).catch(() => undefined);
 
     return skillListSchema.parse({
         plugins: buildPluginSummaries(configState.snapshot?.config ?? null),
-        skills: filterRuntimeVisibleSkills(skills ?? []).map((skill) => buildSkillSummary(skill)),
+        skills: filterRuntimeVisibleSkills(cachedInventory?.skills ?? []).map((skill) =>
+            buildSkillSummary(skill)
+        ),
     });
 }
 
@@ -95,6 +107,7 @@ export async function saveSkillSecret(input: unknown) {
         },
     });
     await applyCurrentOpenClawConfigFixups().catch(() => undefined);
+    void enqueueRuntimeSkillInventoryRefresh().catch(() => undefined);
     emitSkillInvalidationCascade();
 
     return await getSkill({ skillId: skill.id });
@@ -115,6 +128,7 @@ export async function deleteSkillSecret(input: unknown) {
         })
     );
     await applyCurrentOpenClawConfigFixups().catch(() => undefined);
+    void enqueueRuntimeSkillInventoryRefresh().catch(() => undefined);
     emitSkillInvalidationCascade();
 
     return await getSkill({ skillId: skill.id });
@@ -133,17 +147,29 @@ export async function listSkillIds(input?: {
 }
 
 async function getRuntimeSkill(skillId: string) {
-    const [detail, skills] = await Promise.all([
+    const runtime = await getActiveAgentRuntimeConnection();
+    const skillRuntimeId = getSkillInventoryRuntimeId(runtime);
+    const [detail, cachedInventory] = await Promise.all([
         getAgentRuntimeSkill(skillId),
-        listAgentRuntimeSkills(),
+        skillRuntimeId ? getCachedRuntimeSkillInventory(skillRuntimeId).catch(() => null) : null,
     ]);
-    const summary = skills?.find((skill) => skill.id === skillId);
+    const summary = cachedInventory?.skills.find((skill) => skill.id === skillId);
 
     if (detail) {
         return summary ? mergeRuntimeSkillDetail(detail, summary) : detail;
     }
 
     return summary ? toRuntimeSkill(summary) : null;
+}
+
+function getSkillInventoryRuntimeId(
+    runtime: Awaited<ReturnType<typeof getActiveAgentRuntimeConnection>>
+) {
+    if (!(runtime?.enabled && runtime.lastCheckedAt)) {
+        return null;
+    }
+
+    return runtime.id;
 }
 
 export function filterRuntimeVisibleSkills(skills: AgentRuntimeSkillSummary[]) {

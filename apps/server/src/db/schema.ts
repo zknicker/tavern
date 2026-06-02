@@ -12,6 +12,7 @@ export * from './schema/openclaw-config-snapshots.ts';
 export * from './schema/participants.ts';
 export * from './schema/provider-usage.ts';
 export * from './schema/session-activity.ts';
+export * from './schema/skills.ts';
 export * from './schema/sync.ts';
 export * from './schema/tavern-vault.ts';
 export * from './schema/telemetry.ts';

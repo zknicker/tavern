@@ -50,6 +50,12 @@ The API covers:
 Tavern owns skill secrets. The runtime owns skill and plugin discovery,
 eligibility, and execution.
 
+Skill list reads return the latest Runtime SQLite skill inventory snapshot.
+Runtime refreshes that snapshot on startup, every 15 minutes, and after
+skill-related writes. The refresh job emits the skill update event only when
+the stored inventory changes, so the app can refetch without blocking settings
+navigation on live OpenClaw discovery.
+
 Managed OpenClaw bundled skills stay available to OpenClaw itself, but Tavern
 configures `skills.allowBundled` to a Tavern sentinel allowlist with no real
 bundled skill ids, so bundled skills are not eligible for agent prompt
