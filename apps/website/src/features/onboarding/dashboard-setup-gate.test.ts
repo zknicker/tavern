@@ -23,4 +23,13 @@ describe('dashboard setup gate', () => {
             expect(shouldRedirectToRuntimeOnboarding(status)).toBe(true);
         }
     });
+
+    test('keeps the static chat layout preview available without runtime setup', () => {
+        expect(
+            shouldRedirectToRuntimeOnboarding('unconfigured', '/dashboard/chat-layout-preview')
+        ).toBe(false);
+        expect(
+            shouldRedirectToRuntimeOnboarding('version-mismatch', '/dashboard/chat-layout-preview')
+        ).toBe(false);
+    });
 });
