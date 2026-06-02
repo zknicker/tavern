@@ -121,10 +121,21 @@
     --color-info-foreground: var(--info-foreground);
     --color-info-bg: var(--info-bg);
 
-    --radius-sm: 0.375rem;
-    --radius-md: 0.5rem;
-    --radius-lg: 0.625rem;
-    --radius-2xl: 1rem;
+    --corner-radius-scale: 1;
+    --radius-sm-base: 0.375rem;
+    --radius-md-base: 0.5rem;
+    --radius-lg-base: 0.625rem;
+    --radius-xl-base: 0.75rem;
+    --radius-2xl-base: 1rem;
+    --radius-3xl-base: 1.5rem;
+    --radius-4xl-base: 2rem;
+    --radius-sm: calc(var(--radius-sm-base) * var(--corner-radius-scale));
+    --radius-md: calc(var(--radius-md-base) * var(--corner-radius-scale));
+    --radius-lg: calc(var(--radius-lg-base) * var(--corner-radius-scale));
+    --radius-xl: calc(var(--radius-xl-base) * var(--corner-radius-scale));
+    --radius-2xl: calc(var(--radius-2xl-base) * var(--corner-radius-scale));
+    --radius-3xl: calc(var(--radius-3xl-base) * var(--corner-radius-scale));
+    --radius-4xl: calc(var(--radius-4xl-base) * var(--corner-radius-scale));
 
     --color-content-card: var(--content-card);
     --color-content-card-border: var(--content-card-border);
@@ -235,6 +246,21 @@
     .text-inline-meta {
         font-size: 0.8125em;
         line-height: 1.35;
+    }
+}
+
+@supports (corner-shape: superellipse(1.5)) {
+    :root {
+        --corner-radius-scale: 1.25;
+    }
+
+    .rounded-md,
+    .rounded-lg,
+    .rounded-xl,
+    .rounded-2xl,
+    .rounded-3xl,
+    .rounded-4xl {
+        corner-shape: superellipse(1.5);
     }
 }
 
