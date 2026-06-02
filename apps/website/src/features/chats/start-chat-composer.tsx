@@ -21,7 +21,11 @@ import {
     normalizeMentions,
 } from '../mentions/mention-text.ts';
 import type { Mention } from '../mentions/mention-types.ts';
-import { useMentionComposer } from '../mentions/use-mention-composer.tsx';
+import {
+    MentionComposerEditor,
+    MentionComposerPicker,
+    useMentionComposer,
+} from '../mentions/use-mention-composer.tsx';
 
 type Agent = AgentListOutput['agents'][number];
 
@@ -101,12 +105,12 @@ export function StartChatComposer({
         >
             <PromptInputBody>
                 {canUseMentions ? (
-                    mentionComposer.renderTextEditor({
-                        disabled: false,
-                        id: promptId,
-                        name: 'start-chat',
-                        placeholder,
-                    })
+                    <MentionComposerEditor
+                        composer={mentionComposer}
+                        id={promptId}
+                        name="start-chat"
+                        placeholder={placeholder}
+                    />
                 ) : (
                     <PromptInputTextarea
                         aria-label={placeholder}
@@ -119,7 +123,7 @@ export function StartChatComposer({
                     />
                 )}
             </PromptInputBody>
-            {canUseMentions ? mentionComposer.composerPopover : null}
+            {canUseMentions ? <MentionComposerPicker composer={mentionComposer} /> : null}
             <PromptInputFooter>
                 <PromptInputTools>
                     <PromptInputButton

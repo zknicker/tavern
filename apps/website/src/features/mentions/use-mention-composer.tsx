@@ -1,10 +1,26 @@
 import * as React from 'react';
 import { queryPolicy } from '../../lib/query-policy.ts';
-import { trpc, type AgentListOutput } from '../../lib/trpc.tsx';
+import { type AgentListOutput, trpc } from '../../lib/trpc.tsx';
 import { MentionEditor, type MentionEditorHandle } from './mention-editor.tsx';
 import { MentionPicker } from './mention-picker.tsx';
-import type { Mention, MentionOption } from './mention-types.ts';
+import type { ActiveMentionQuery, Mention, MentionOption } from './mention-types.ts';
 import { useMentionOptions } from './use-mention-options.ts';
+
+export interface MentionComposerState {
+    activeIndex: number;
+    editorRef: React.RefObject<MentionEditorHandle | null>;
+    focusTextEditor: () => void;
+    handleKeyDown: (event: KeyboardEvent) => boolean;
+    handleMentionSelect: (option: MentionOption) => void;
+    handleTextChange: (content: string, mentions: Mention[]) => void;
+    hasQuery: boolean;
+    isPathSearchActive: boolean;
+    isPathSearchLoading: boolean;
+    onActiveQueryChange: (query: ActiveMentionQuery | null) => void;
+    options: MentionOption[];
+    prefetchMentionOptions: () => void;
+    value: string;
+}
 
 export function useMentionComposer({
     agentId,
@@ -24,7 +40,7 @@ export function useMentionComposer({
     const utils = trpc.useUtils();
     const editorRef = React.useRef<MentionEditorHandle | null>(null);
     const [mentions, setMentions] = React.useState<Mention[]>([]);
-    const [activeQuery, setActiveQuery] = React.useState<{ query: string } | null>(null);
+    const [activeQuery, setActiveQuery] = React.useState<ActiveMentionQuery | null>(null);
     const [activeIndex, setActiveIndex] = React.useState(0);
     const mentionOptionsState = useMentionOptions({
         agentId,
@@ -128,40 +144,60 @@ export function useMentionComposer({
     }
 
     return {
-        composerPopover: (
-            <MentionPicker
-                activeIndex={activeIndex}
-                hasQuery={Boolean(activeQuery)}
-                isPathSearchActive={mentionOptionsState.isPathSearchActive}
-                isPathSearchLoading={mentionOptionsState.isPathSearchLoading}
-                onSelect={handleMentionSelect}
-                options={visibleMentionOptions}
-            />
-        ),
+        activeIndex,
+        editorRef,
         focusTextEditor: () => editorRef.current?.focus(),
-        renderTextEditor: ({
-            disabled,
-            id,
-            name,
-            placeholder,
-        }: {
-            disabled?: boolean;
-            id?: string;
-            name: string;
-            placeholder: string;
-        }) => (
-            <MentionEditor
-                disabled={disabled}
-                id={id}
-                name={name}
-                onActiveQueryChange={setActiveQuery}
-                onChange={handleTextChange}
-                onFocus={prefetchMentionOptions}
-                onKeyDown={handleKeyDown}
-                placeholder={placeholder}
-                ref={editorRef}
-                value={content}
-            />
-        ),
-    };
+        handleKeyDown,
+        handleMentionSelect,
+        handleTextChange,
+        hasQuery: Boolean(activeQuery),
+        isPathSearchActive: mentionOptionsState.isPathSearchActive,
+        isPathSearchLoading: mentionOptionsState.isPathSearchLoading,
+        onActiveQueryChange: setActiveQuery,
+        options: visibleMentionOptions,
+        prefetchMentionOptions,
+        value: content,
+    } satisfies MentionComposerState;
+}
+
+export function MentionComposerEditor({
+    composer,
+    disabled,
+    id,
+    name,
+    placeholder,
+}: {
+    composer: MentionComposerState;
+    disabled?: boolean;
+    id?: string;
+    name: string;
+    placeholder: string;
+}) {
+    return (
+        <MentionEditor
+            disabled={disabled}
+            id={id}
+            name={name}
+            onActiveQueryChange={composer.onActiveQueryChange}
+            onChange={composer.handleTextChange}
+            onFocus={composer.prefetchMentionOptions}
+            onKeyDown={composer.handleKeyDown}
+            placeholder={placeholder}
+            ref={composer.editorRef}
+            value={composer.value}
+        />
+    );
+}
+
+export function MentionComposerPicker({ composer }: { composer: MentionComposerState }) {
+    return (
+        <MentionPicker
+            activeIndex={composer.activeIndex}
+            hasQuery={composer.hasQuery}
+            isPathSearchActive={composer.isPathSearchActive}
+            isPathSearchLoading={composer.isPathSearchLoading}
+            onSelect={composer.handleMentionSelect}
+            options={composer.options}
+        />
+    );
 }

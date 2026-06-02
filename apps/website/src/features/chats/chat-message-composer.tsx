@@ -16,7 +16,11 @@ import {
     normalizeMentions,
 } from '../mentions/mention-text.ts';
 import type { Mention } from '../mentions/mention-types.ts';
-import { useMentionComposer } from '../mentions/use-mention-composer.tsx';
+import {
+    MentionComposerEditor,
+    MentionComposerPicker,
+    useMentionComposer,
+} from '../mentions/use-mention-composer.tsx';
 import { ChatComposerAgentSelector, ChatComposerContextFullness } from './chat-composer-tools.tsx';
 import type { ChatContextFullness } from './chat-context-fullness.ts';
 
@@ -119,13 +123,13 @@ export function ChatMessageComposer({
             surfaceClassName={isCompact ? 'rounded-2xl shadow-none' : undefined}
         >
             <PromptInputBody>
-                {mentionComposer.renderTextEditor({
-                    disabled: false,
-                    name: 'chat-message',
-                    placeholder: getPlaceholder({ variant }),
-                })}
+                <MentionComposerEditor
+                    composer={mentionComposer}
+                    name="chat-message"
+                    placeholder={getPlaceholder({ variant })}
+                />
             </PromptInputBody>
-            {mentionComposer.composerPopover}
+            <MentionComposerPicker composer={mentionComposer} />
             <PromptInputFooter>
                 <PromptInputTools>
                     <ChatComposerAgentSelector

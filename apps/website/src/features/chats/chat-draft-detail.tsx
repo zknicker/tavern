@@ -15,7 +15,11 @@ import { useChatTimelineRows } from '../../hooks/chats/use-chat-timeline-store.t
 import { useChatRuntimeTimelineState } from '../../hooks/chats/use-timeline-context.tsx';
 import { markChatTiming } from '../../lib/chat-timing.ts';
 import type { ChatLogOutput } from '../../lib/trpc.tsx';
-import { useMentionComposer } from '../mentions/use-mention-composer.tsx';
+import {
+    MentionComposerEditor,
+    MentionComposerPicker,
+    useMentionComposer,
+} from '../mentions/use-mention-composer.tsx';
 import { ChatComposerAgentSelector } from './chat-composer-tools.tsx';
 import { ChatDetailFrame } from './chat-detail-frame.tsx';
 
@@ -113,13 +117,13 @@ export function ChatDraftDetail({
                     onTextEditorFocus={mentionComposer.focusTextEditor}
                 >
                     <PromptInputBody>
-                        {mentionComposer.renderTextEditor({
-                            disabled: false,
-                            name: 'draft-chat-message',
-                            placeholder: 'Ask for follow-up changes',
-                        })}
+                        <MentionComposerEditor
+                            composer={mentionComposer}
+                            name="draft-chat-message"
+                            placeholder="Ask for follow-up changes"
+                        />
                     </PromptInputBody>
-                    {mentionComposer.composerPopover}
+                    <MentionComposerPicker composer={mentionComposer} />
                     <PromptInputFooter>
                         <PromptInputTools>
                             <ChatComposerAgentSelector
