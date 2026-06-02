@@ -1,5 +1,9 @@
 import { desc, eq } from 'drizzle-orm';
 import type { AgentRuntimeConnectionAuth } from '../agent-runtime-connection/contracts.ts';
+import {
+    getEnvironmentAgentRuntimeConnection,
+    saveEnvironmentAgentRuntimeConnection,
+} from '../agent-runtime-connection/environment-override.ts';
 import { databaseClient, db } from '../db/index.ts';
 import { agentRuntimeConnectionsTable } from '../db/schema.ts';
 
@@ -23,11 +27,29 @@ export async function getLatestAgentRuntimeConnection() {
 }
 
 export async function listConfiguredAgentRuntimeConnections() {
+    const environmentRecord = getEnvironmentAgentRuntimeConnection();
+    if (environmentRecord?.enabled) {
+        return [environmentRecord];
+    }
+
     const record = await getActiveAgentRuntimeConnection();
     return record?.enabled ? [record] : [];
 }
 
 export async function listReachableAgentRuntimeConnections() {
+    const environmentRecord = getEnvironmentAgentRuntimeConnection();
+    if (environmentRecord) {
+        if (
+            environmentRecord.enabled &&
+            environmentRecord.lastCheckedAt &&
+            !environmentRecord.lastError
+        ) {
+            return [environmentRecord];
+        }
+
+        return [];
+    }
+
     const record = await getActiveAgentRuntimeConnection();
     if (!(record?.enabled && record.lastCheckedAt)) {
         return [];
@@ -41,10 +63,20 @@ export async function listReachableAgentRuntimeConnections() {
 }
 
 export async function getDefaultAgentRuntimeConnection() {
+    const environmentRecord = getEnvironmentAgentRuntimeConnection();
+    if (environmentRecord) {
+        return environmentRecord;
+    }
+
     return await getActiveAgentRuntimeConnection();
 }
 
 export async function getActiveAgentRuntimeConnection() {
+    const environmentRecord = getEnvironmentAgentRuntimeConnection();
+    if (environmentRecord) {
+        return environmentRecord;
+    }
+
     const records = await listAgentRuntimeConnectionRecords();
     return (
         records.find((record) => record.id === agentRuntimeConnectionId) ??
@@ -62,6 +94,11 @@ export async function getActiveRuntimeId() {
 }
 
 export async function getAgentRuntimeConnection(id: string) {
+    const environmentRecord = getEnvironmentAgentRuntimeConnection();
+    if (environmentRecord?.id === id) {
+        return environmentRecord;
+    }
+
     const [record] = await db
         .select()
         .from(agentRuntimeConnectionsTable)
@@ -144,6 +181,20 @@ export async function markAgentRuntimeConnectionSync(input: {
     lastSyncedAt?: string | null;
 }) {
     const timestamp = new Date().toISOString();
+    const environmentRecord = getEnvironmentAgentRuntimeConnection();
+
+    if (environmentRecord?.id === input.id) {
+        saveEnvironmentAgentRuntimeConnection({
+            baseUrl: environmentRecord.baseUrl,
+            enabled: environmentRecord.enabled,
+            id: environmentRecord.id,
+            lastCheckedAt: timestamp,
+            lastError: input.lastError,
+            lastSyncedAt: input.lastSyncedAt ?? null,
+            name: environmentRecord.name,
+        });
+        return;
+    }
 
     await db
         .update(agentRuntimeConnectionsTable)

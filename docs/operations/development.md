@@ -18,6 +18,18 @@ bun run dev
 This starts Tavern Runtime, managed OpenClaw Gateway, the local app backend, and
 the website dev server.
 
+The dev stack uses isolated state by default:
+
+```txt
+~/.tavern/dev/<worktree-hash>/tavern.sqlite
+~/.tavern/dev/<worktree-hash>/runtime
+```
+
+This keeps `TAVERN_RUNTIME_URL=http://127.0.0.1:18790` and the managed dev
+Runtime out of the packaged app's `~/.tavern/tavern.sqlite` state. Set
+`DATABASE_PATH` or `TAVERN_RUNTIME_ROOT` explicitly when a dev run should use a
+specific app database or Runtime root.
+
 When Runtime mode is active, the dev stack watches first-party Tavern OpenClaw
 plugin packages. Editing those packages rebuilds the plugins, restarts Runtime,
 and lets Runtime sync the changed plugin sources before managed OpenClaw loads

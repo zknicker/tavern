@@ -8,6 +8,7 @@ import {
     buildManagedOpenClawPlugin,
     cleanupStaleProcesses,
     createDevStackConfig,
+    createDevStackEnvironment,
     getManagedOpenClawPluginPackagePaths,
     isDesktopMode,
     isRuntimeMode,
@@ -261,8 +262,11 @@ export class DevStackController extends EventEmitter {
             repositoryRoot: this.repositoryRoot,
         });
 
+        const devStackEnvironment = createDevStackEnvironment({
+            repositoryRoot: this.repositoryRoot,
+        });
         const startupUiEnv = {
-            ...process.env,
+            ...devStackEnvironment,
             TAVERN_STARTUP_UI: '1',
         };
 

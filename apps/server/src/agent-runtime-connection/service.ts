@@ -15,6 +15,11 @@ import {
 import { parseAgentRuntimeConnectionAuth } from './auth.ts';
 import type { AgentRuntimeCapabilityStatus, AgentRuntimeConnection } from './contracts.ts';
 import { type AgentRuntimeCapability, agentRuntimeCapabilitySchema } from './contracts.ts';
+import {
+    clearEnvironmentAgentRuntimeConnection,
+    getEnvironmentAgentRuntimeConnection,
+    saveEnvironmentAgentRuntimeConnection,
+} from './environment-override.ts';
 import { getRequiredRuntimeVersion, getRuntimeVersionStatus } from './version-compatibility.ts';
 
 function getAgentRuntimeEnvironmentBaseUrl() {
@@ -23,6 +28,7 @@ function getAgentRuntimeEnvironmentBaseUrl() {
 
 function clearAgentRuntimeEnvironmentOverride() {
     process.env.TAVERN_RUNTIME_URL = undefined;
+    clearEnvironmentAgentRuntimeConnection();
 }
 
 function toErrorMessage(error: unknown) {
@@ -167,16 +173,16 @@ export async function loadAgentRuntimeConnection() {
     currentAgentRuntimeUrl = environmentBaseUrl ?? saved?.baseUrl ?? null;
 
     if (environmentBaseUrl) {
+        const checkedAt = new Date().toISOString();
         const checked = await checkAgentRuntimeConnection({
             auth: undefined,
             baseUrl: environmentBaseUrl,
         });
-        const record = await saveStoredAgentRuntimeConnection({
+        const record = saveEnvironmentAgentRuntimeConnection({
             baseUrl: checked.baseUrl,
             enabled: true,
             id: checked.capabilities.info.agentRuntimeId,
-            isActive: true,
-            lastCheckedAt: null,
+            lastCheckedAt: checkedAt,
             lastError: null,
             name: checked.capabilities.info.name,
         });
@@ -186,9 +192,9 @@ export async function loadAgentRuntimeConnection() {
             baseUrl: checked.baseUrl,
             authConfigured: false,
             enabled: true,
-            id: record?.id ?? checked.capabilities.info.agentRuntimeId,
+            id: record.id,
             isActive: true,
-            lastCheckedAt: null,
+            lastCheckedAt: checkedAt,
             lastError: null,
             lastSyncedAt: null,
             name: checked.capabilities.info.name,
@@ -224,7 +230,8 @@ export async function getAgentRuntimeConnection() {
     const environmentBaseUrl = getAgentRuntimeEnvironmentBaseUrl();
 
     if (environmentBaseUrl) {
-        const environmentRecord = saved ?? (await getDefaultAgentRuntimeConnection());
+        const environmentRecord =
+            getEnvironmentAgentRuntimeConnection() ?? (await getDefaultAgentRuntimeConnection());
         const runtimeId = environmentRecord?.id ?? agentRuntimeConnectionId;
         const runtimeStatus = await getRuntimeOwnedStatus({
             baseUrl: environmentBaseUrl,
@@ -451,13 +458,27 @@ export async function markAgentRuntimeConnectionFailure(input: {
     connectionId: string;
     error: unknown;
 }) {
+    const environmentRecord = getEnvironmentAgentRuntimeConnection();
+    const message = toErrorMessage(input.error);
+
+    if (environmentRecord?.id === input.connectionId) {
+        saveEnvironmentAgentRuntimeConnection({
+            baseUrl: environmentRecord.baseUrl,
+            enabled: environmentRecord.enabled,
+            id: environmentRecord.id,
+            lastCheckedAt: new Date().toISOString(),
+            lastError: message,
+            lastSyncedAt: environmentRecord.lastSyncedAt,
+            name: environmentRecord.name,
+        });
+        return;
+    }
+
     const record = await getDefaultAgentRuntimeConnection();
 
     if (!record || record.id !== input.connectionId) {
         return;
     }
-
-    const message = toErrorMessage(input.error);
 
     await saveStoredAgentRuntimeConnection({
         baseUrl: record.baseUrl,
@@ -472,6 +493,21 @@ export async function markAgentRuntimeConnectionFailure(input: {
 }
 
 export async function markAgentRuntimeConnectionReachable(input: { connectionId: string }) {
+    const environmentRecord = getEnvironmentAgentRuntimeConnection();
+
+    if (environmentRecord?.id === input.connectionId) {
+        saveEnvironmentAgentRuntimeConnection({
+            baseUrl: environmentRecord.baseUrl,
+            enabled: environmentRecord.enabled,
+            id: environmentRecord.id,
+            lastCheckedAt: new Date().toISOString(),
+            lastError: null,
+            lastSyncedAt: environmentRecord.lastSyncedAt,
+            name: environmentRecord.name,
+        });
+        return;
+    }
+
     const record = await getDefaultAgentRuntimeConnection();
 
     if (!record || record.id !== input.connectionId) {
@@ -501,6 +537,22 @@ export async function confirmAgentRuntimeConnection() {
         const checked = await checkAgentRuntimeCapabilities(record);
         const runtimeId = checked.capabilities.info.agentRuntimeId;
         const runtimeName = checked.capabilities.info.name;
+        const environmentRecord = getEnvironmentAgentRuntimeConnection();
+
+        if (environmentRecord) {
+            saveEnvironmentAgentRuntimeConnection({
+                baseUrl: checked.baseUrl,
+                enabled: record.enabled,
+                id: runtimeId,
+                lastCheckedAt: new Date().toISOString(),
+                lastError: null,
+                lastSyncedAt: record.lastSyncedAt,
+                name: runtimeName,
+            });
+            currentAgentRuntimeUrl = checked.baseUrl;
+            return true;
+        }
+
         await saveStoredAgentRuntimeConnection({
             baseUrl: checked.baseUrl,
             enabled: record.enabled,

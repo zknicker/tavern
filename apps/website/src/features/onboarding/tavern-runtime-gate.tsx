@@ -1,4 +1,5 @@
 import { Navigate, Outlet, useLocation } from 'react-router-dom';
+import type { AgentRuntimeConnectionStatus } from '../../hooks/connections/use-agent-runtime-connection.ts';
 import { useAgentRuntimeConnection } from '../../hooks/connections/use-agent-runtime-connection.ts';
 
 export function TavernRuntimeGate() {
@@ -8,12 +9,7 @@ export function TavernRuntimeGate() {
     const isRuntimeSettingsRoute = location.pathname.startsWith(
         '/dashboard/settings/agent-runtime'
     );
-    const shouldShowOnboarding = [
-        'error',
-        'unconfigured',
-        'unreachable',
-        'version-mismatch',
-    ].includes(agentRuntimeConnection.status);
+    const shouldShowOnboarding = shouldRedirectToRuntimeOnboarding(agentRuntimeConnection.status);
 
     if (agentRuntimeConnection.status === 'checking' && !isChatLayoutPreviewRoute) {
         return <p className="p-6 text-muted-foreground text-sm">Loading Tavern Runtime…</p>;
@@ -24,4 +20,8 @@ export function TavernRuntimeGate() {
     }
 
     return <Outlet />;
+}
+
+export function shouldRedirectToRuntimeOnboarding(status: AgentRuntimeConnectionStatus) {
+    return ['error', 'unconfigured', 'version-mismatch'].includes(status);
 }

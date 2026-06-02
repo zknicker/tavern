@@ -4,6 +4,7 @@ import {
     type AgentRuntimeConnection,
     agentRuntimeConnectionSchema,
 } from '../agent-runtime-connection/contracts.ts';
+import { getEnvironmentAgentRuntimeConnection } from '../agent-runtime-connection/environment-override.ts';
 import { getRequiredRuntimeVersion } from '../agent-runtime-connection/version-compatibility.ts';
 import { databaseClient } from '../db/index.ts';
 import { getAgentRuntimeConnection } from '../storage/agent-runtime-connections.ts';
@@ -42,6 +43,14 @@ export async function requireConfiguredAgentRuntimeClientForRuntimeId(runtimeId:
 export function getCurrentConfiguredAgentRuntimeConnection():
     | (AgentRuntimeConnection & { authJson?: null | string })
     | null {
+    const environmentRecord = getEnvironmentAgentRuntimeConnection();
+    if (environmentRecord?.enabled) {
+        return parseConfiguredAgentRuntimeConnection({
+            ...environmentRecord,
+            source: 'environment',
+        });
+    }
+
     try {
         const record = databaseClient
             .query(
@@ -80,7 +89,7 @@ function parseConfiguredAgentRuntimeConnection(record: unknown) {
         lastError: null | string;
         lastSyncedAt: null | string;
         name: string;
-        source: 'saved';
+        source: 'environment' | 'saved';
     };
 
     if (!raw) {

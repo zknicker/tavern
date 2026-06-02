@@ -1,4 +1,5 @@
 import { spawnSync } from 'node:child_process';
+import { createHash } from 'node:crypto';
 import net from 'node:net';
 import os from 'node:os';
 import path from 'node:path';
@@ -29,16 +30,33 @@ export function isDesktopMode(mode) {
     return mode === 'desktop' || mode === 'desktop-runtime';
 }
 
-export function createDevStackConfig({ mode, ports, repositoryRoot: _repositoryRoot }) {
-    const hasRuntime = isRuntimeMode(mode);
-    const isDesktop = isDesktopMode(mode);
-    const databasePath = resolveHomePath(process.env.DATABASE_PATH ?? getDefaultDatabasePath());
-    const runtimeRoot = resolveHomePath(
-        process.env.TAVERN_RUNTIME_ROOT ?? path.join(os.homedir(), '.tavern', 'runtime')
-    );
+export function createDevStackEnvironment({
+    baseEnvironment = process.env,
+    repositoryRoot = process.cwd(),
+} = {}) {
+    const statePaths = createDevStackStatePaths(repositoryRoot);
 
     return {
-        appOrigin: process.env.APP_ORIGIN ?? `http://localhost:${ports.websitePort}`,
+        ...baseEnvironment,
+        DATABASE_PATH: baseEnvironment.DATABASE_PATH ?? statePaths.databasePath,
+        TAVERN_RUNTIME_ROOT: baseEnvironment.TAVERN_RUNTIME_ROOT ?? statePaths.runtimeRoot,
+    };
+}
+
+export function createDevStackConfig({
+    baseEnvironment = process.env,
+    mode,
+    ports,
+    repositoryRoot,
+}) {
+    const hasRuntime = isRuntimeMode(mode);
+    const isDesktop = isDesktopMode(mode);
+    const devEnvironment = createDevStackEnvironment({ baseEnvironment, repositoryRoot });
+    const databasePath = resolveHomePath(devEnvironment.DATABASE_PATH);
+    const runtimeRoot = resolveHomePath(devEnvironment.TAVERN_RUNTIME_ROOT);
+
+    return {
+        appOrigin: devEnvironment.APP_ORIGIN ?? `http://localhost:${ports.websitePort}`,
         connect: hasRuntime ? 'dev runtime' : 'onboarding/settings',
         databasePath: shortenHomePath(databasePath),
         desktopEnabled: isDesktop,
@@ -47,7 +65,7 @@ export function createDevStackConfig({ mode, ports, repositoryRoot: _repositoryR
         runtimeRoot: shortenHomePath(runtimeRoot),
         runtimeUrl: hasRuntime ? runtimeBaseUrl : 'disabled',
         serverUrl: `http://localhost:${ports.serverPort}`,
-        trigger: `@${process.env.ASSISTANT_NAME ?? 'Tavern'}`,
+        trigger: `@${devEnvironment.ASSISTANT_NAME ?? 'Tavern'}`,
         websiteUrl: `http://localhost:${ports.websitePort}`,
         wsUrl: `ws://localhost:${ports.serverPort}/trpc`,
     };
@@ -339,6 +357,19 @@ function resolveHomePath(value) {
     return path.resolve(value);
 }
 
+function createDevStackStatePaths(repositoryRoot) {
+    const stateRoot = path.join(os.homedir(), '.tavern', 'dev', hashRepositoryRoot(repositoryRoot));
+
+    return {
+        databasePath: path.join(stateRoot, 'tavern.sqlite'),
+        runtimeRoot: path.join(stateRoot, 'runtime'),
+    };
+}
+
+function hashRepositoryRoot(repositoryRoot) {
+    return createHash('sha256').update(path.resolve(repositoryRoot)).digest('hex').slice(0, 12);
+}
+
 function shortenRepositoryPath(value, repositoryRoot) {
     if (value === repositoryRoot) {
         return '.';
@@ -347,10 +378,6 @@ function shortenRepositoryPath(value, repositoryRoot) {
         return `.${path.sep}${path.relative(repositoryRoot, value)}`;
     }
     return shortenHomePath(value);
-}
-
-function getDefaultDatabasePath() {
-    return path.join(os.homedir(), '.tavern', 'tavern.sqlite');
 }
 
 function deriveJobsDatabasePath(databasePath) {

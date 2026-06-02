@@ -21,6 +21,9 @@ mock.module('../src/agent-runtime/client-factory.ts', () => ({
 afterEach(() => {
     process.env.DATABASE_PATH = originalDatabasePath;
     process.env.TAVERN_RUNTIME_URL = originalTavernRuntimeUrl;
+    listCapabilities.mockImplementation(async () => {
+        throw new Error('Runtime request failed with status 502.');
+    });
     listCapabilities.mockClear();
     closeRuntimeClient.mockClear();
 });
@@ -75,6 +78,54 @@ test('unreachable saved Runtime keeps its URL without reporting a version mismat
     assert.equal(connection?.lastError, 'Runtime request failed with status 502.');
     assert.equal(connection?.runtimeVersion, null);
     assert.equal(connection?.versionStatus, 'unknown');
+});
+
+test('Tavern Runtime environment override does not replace the saved Runtime URL', async () => {
+    process.env.DATABASE_PATH = join(
+        mkdtempSync(join(tmpdir(), 'tavern-agent-runtime-connection-test-')),
+        'test.sqlite'
+    );
+    process.env.TAVERN_RUNTIME_URL = 'http://127.0.0.1:18790';
+    listCapabilities.mockImplementation(async () => ({
+        capabilities: [],
+        health: {
+            ok: true,
+            status: 'healthy',
+            timestamp: new Date().toISOString(),
+        },
+        info: {
+            agentRuntimeId: 'dev-runtime',
+            name: 'Dev Tavern Runtime',
+            protocolVersion: 1,
+            version: '1.2.1',
+        },
+    }));
+
+    const [{ ensureDatabaseSchema }, agentRuntimeConnection, storage] = await Promise.all([
+        import('../src/db/bootstrap.ts'),
+        import('../src/agent-runtime-connection/service.ts'),
+        import('../src/storage/agent-runtime-connections.ts'),
+    ]);
+
+    await ensureDatabaseSchema();
+    await storage.saveAgentRuntimeConnection({
+        baseUrl: 'https://zachs-mac-mini.example:18790',
+        enabled: true,
+        id: 'tavern-openclaw-managed',
+        isActive: true,
+        lastCheckedAt: new Date().toISOString(),
+        lastError: null,
+        name: 'Tavern Runtime',
+    });
+
+    const connection = await agentRuntimeConnection.loadAgentRuntimeConnection();
+    const saved = await storage.getAgentRuntimeConnection('tavern-openclaw-managed');
+
+    assert.equal(connection?.source, 'environment');
+    assert.equal(connection?.baseUrl, 'http://127.0.0.1:18790');
+    assert.equal(saved?.baseUrl, 'https://zachs-mac-mini.example:18790');
+
+    await agentRuntimeConnection.clearAgentRuntimeConnection({ clearEnvironmentOverride: true });
 });
 
 test('failed Runtime connect attempts still persist the configured URL', async () => {
