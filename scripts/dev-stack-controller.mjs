@@ -24,6 +24,7 @@ const shutdownTimeoutMs = Number.parseInt(
     process.env.TAVERN_DEV_SHUTDOWN_TIMEOUT_MS ?? '30000',
     10
 );
+const processGroupShutdownPollMs = 50;
 const pluginRestartDebounceMs = 250;
 
 export class DevStackController extends EventEmitter {
@@ -430,7 +431,7 @@ export class DevStackController extends EventEmitter {
             this.expectedProcessStops.add(source);
         }
 
-        const stopped = await waitForChildExit(child, () => {
+        const stopped = await waitForChildShutdown(child, () => {
             signalChildProcessGroup(child, 'SIGTERM');
         });
         this.expectedProcessStops.delete(source);
@@ -441,7 +442,7 @@ export class DevStackController extends EventEmitter {
                 `shutdown timed out after ${Math.round(shutdownTimeoutMs / 1000)}s; killing`
             );
             signalChildProcessGroup(child, 'SIGKILL');
-            await waitForChildExit(child);
+            await waitForChildShutdown(child);
         }
 
         this.processes.delete(source);
@@ -622,23 +623,71 @@ function signalChildProcessGroup(child, signal) {
     }
 }
 
-function waitForChildExit(child, beforeWait) {
-    if (child.exitCode !== null || child.signalCode !== null) {
-        return Promise.resolve(true);
+export function waitForChildShutdown(child, beforeWait, options = {}) {
+    const isProcessGroupActive =
+        options.isProcessGroupActive ??
+        (() => {
+            return isChildProcessGroupActive(child);
+        });
+    const pollMs = options.pollMs ?? processGroupShutdownPollMs;
+    const timeoutMs = options.timeoutMs ?? shutdownTimeoutMs;
+    let childExited = child.exitCode !== null || child.signalCode !== null;
+
+    if (!child.pid) {
+        return Promise.resolve(childExited);
     }
 
     return new Promise((resolve) => {
+        let interval = null;
         const timeout = setTimeout(() => {
             child.off('exit', onExit);
+            if (interval) {
+                clearInterval(interval);
+            }
             resolve(false);
-        }, shutdownTimeoutMs);
-        const onExit = () => {
+        }, timeoutMs);
+
+        const finish = () => {
             clearTimeout(timeout);
+            if (interval) {
+                clearInterval(interval);
+            }
+            child.off('exit', onExit);
             resolve(true);
         };
-        child.once('exit', onExit);
+
+        const checkShutdown = () => {
+            if (childExited && !isProcessGroupActive()) {
+                finish();
+            }
+        };
+
+        const onExit = () => {
+            childExited = true;
+            checkShutdown();
+        };
+
+        if (!childExited) {
+            child.once('exit', onExit);
+        }
+
+        interval = setInterval(checkShutdown, pollMs);
         beforeWait?.();
+        checkShutdown();
     });
+}
+
+function isChildProcessGroupActive(child) {
+    if (!child.pid) {
+        return false;
+    }
+
+    try {
+        process.kill(-child.pid, 0);
+        return true;
+    } catch {
+        return false;
+    }
 }
 
 function isStartupComplete(snapshot) {
