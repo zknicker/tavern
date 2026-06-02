@@ -610,15 +610,19 @@ function formatError(error) {
     return error instanceof Error ? error.message : String(error);
 }
 
-function signalChildProcessGroup(child, signal) {
-    if (!child.pid || child.exitCode !== null || child.signalCode !== null) {
+export function signalChildProcessGroup(child, signal, killProcessGroup = process.kill) {
+    if (!child.pid) {
         return false;
     }
 
     try {
-        process.kill(-child.pid, signal);
+        killProcessGroup(-child.pid, signal);
         return true;
     } catch {
+        if (child.exitCode !== null || child.signalCode !== null) {
+            return false;
+        }
+
         return child.kill(signal);
     }
 }

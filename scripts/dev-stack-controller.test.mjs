@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { EventEmitter } from 'node:events';
 import test from 'node:test';
-import { waitForChildShutdown } from './dev-stack-controller.mjs';
+import { signalChildProcessGroup, waitForChildShutdown } from './dev-stack-controller.mjs';
 
 test('waitForChildShutdown waits after the shell exits until the process group is gone', async () => {
     const child = createChildProcessStub();
@@ -47,9 +47,26 @@ test('waitForChildShutdown times out when the process group survives the shell',
     assert.equal(stopped, false);
 });
 
+test('signalChildProcessGroup can signal surviving groups after the shell exits', () => {
+    const child = createChildProcessStub();
+    const signals = [];
+
+    child.exitCode = 0;
+
+    const signaled = signalChildProcessGroup(child, 'SIGKILL', (pid, signal) => {
+        signals.push({ pid, signal });
+    });
+
+    assert.equal(signaled, true);
+    assert.deepEqual(signals, [{ pid: -12_345, signal: 'SIGKILL' }]);
+});
+
 function createChildProcessStub() {
     const child = new EventEmitter();
     child.exitCode = null;
+    child.kill = () => {
+        throw new Error('child.kill should not be called');
+    };
     child.off = child.removeListener.bind(child);
     child.pid = 12_345;
     child.signalCode = null;
