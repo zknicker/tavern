@@ -327,8 +327,8 @@
 
         --nav-hover: --alpha(var(--color-white) / 6%);
         --nav-active: --alpha(var(--color-white) / 10%);
-        --topbar-tab-hover: color-mix(in srgb, var(--foreground) 5%, transparent);
-        --topbar-tab-active: var(--nav-active);
+        --topbar-tab-hover: color-mix(in srgb, var(--input) 64%, transparent);
+        --topbar-tab-active: var(--secondary);
         --topbar-tab-active-foreground: var(--primary);
 
         --subnav-hover: var(--nav-hover);
@@ -432,8 +432,8 @@
 
         --nav-hover: --alpha(var(--color-black) / 4%);
         --nav-active: --alpha(var(--color-black) / 6%);
-        --topbar-tab-hover: color-mix(in srgb, var(--foreground) 5%, transparent);
-        --topbar-tab-active: var(--nav-active);
+        --topbar-tab-hover: color-mix(in srgb, var(--input) 64%, transparent);
+        --topbar-tab-active: var(--secondary);
         --topbar-tab-active-foreground: var(--primary);
 
         --subnav-hover: var(--nav-hover);

@@ -10,5 +10,11 @@ describe('pinned tab options', () => {
         expect(pinnedTabColorOptions.every((option) => /^#[0-9a-f]{6}$/u.test(option.value))).toBe(
             true
         );
+        expect(
+            pinnedTabColorOptions.every((option) => /^#[0-9a-f]{6}$/u.test(option.lightValue))
+        ).toBe(true);
+        expect(
+            pinnedTabColorOptions.every((option) => /^#[0-9a-f]{6}$/u.test(option.darkValue))
+        ).toBe(true);
     });
 });

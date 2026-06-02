@@ -1,5 +1,6 @@
 import { Archive02Icon } from '@hugeicons/core-free-icons';
 import { CancelCircleIcon as CancelCircleDuotoneIcon } from '@hugeicons-pro/core-duotone-rounded';
+import { HashtagIcon } from '@hugeicons-pro/core-solid-rounded';
 import {
     BubbleChatIcon,
     BubbleChatTemporaryIcon,
@@ -34,6 +35,7 @@ import { formatTimestamp } from '../../lib/format.ts';
 import { cn } from '../../lib/utils.ts';
 import { buildChatList, type ChatListItem } from '../chats/chat-list-data.ts';
 import { buildChatPath, buildNewChatDraftPath } from '../chats/chat-path.ts';
+import { pinnedTabColorOptions } from './pinned-tab-options.ts';
 import {
     canRenameSidebarChat,
     getErrorMessage,
@@ -100,12 +102,6 @@ export function TopbarChatTabs({
     const activeChat = activeChatId
         ? (topbarChats.allChats.find((chat) => chat.id === activeChatId) ?? null)
         : null;
-    const selectedChat = getSelectedChat(selectedTabValue, topbarChats.allChats);
-    const activeChatIndicatorStyle =
-        selectedChat?.isPinned && selectedChat.tabAppearance.color
-            ? buildPinnedTabIndicatorStyle(selectedChat.tabAppearance.color)
-            : undefined;
-
     React.useEffect(() => {
         setSelectedTabValue(activeTabValue ?? '');
     }, [activeTabValue]);
@@ -259,7 +255,7 @@ export function TopbarChatTabs({
                 }}
                 value={selectedTabValue}
             >
-                <TabsSubtleList className="gap-1 overflow-visible" style={activeChatIndicatorStyle}>
+                <TabsSubtleList className="gap-1 overflow-visible">
                     {routeTabs.map((tab) => (
                         <TabsSubtleItem
                             icon={getRouteTabIcon(tab.id)}
@@ -462,7 +458,6 @@ function TopbarDraftChatTab({ draft, isActive }: { draft: ChatStartDraft; isActi
         <TabsSubtleItem
             aria-current={isActive ? 'page' : undefined}
             className={topbarChatTabButtonClassName({
-                hasCustomColor: false,
                 isActive,
                 tone: draft.status === 'error' ? 'error' : 'default',
             })}
@@ -520,18 +515,17 @@ function TopbarRecentChatTab({
                 <TabsSubtleItem
                     aria-current={isActive ? 'page' : undefined}
                     className={topbarChatTabButtonClassName({
-                        hasCustomColor: tabColor !== null,
                         isActive,
                     })}
                     iconNode={
                         <TopbarChatTabIcon
                             className={canClose ? 'group-hover/tab:opacity-0' : null}
+                            color={tabColor}
                             isActiveTurn={hasActiveTurn}
                             isPinned={chat.isPinned}
                         />
                     }
                     label={title}
-                    style={tabColor ? buildPinnedTabStyle(tabColor, isActive) : undefined}
                     title={title}
                     value={chat.id}
                 >
@@ -556,7 +550,6 @@ function TopbarRecentChatTab({
                         onPointerDown={(event) => {
                             event.stopPropagation();
                         }}
-                        style={buildChatTabCloseStyle(tabColor)}
                         title="Close tab"
                         type="button"
                     >
@@ -581,10 +574,12 @@ function TopbarRecentChatTab({
 
 function TopbarChatTabIcon({
     className,
+    color,
     isActiveTurn,
     isPinned = false,
 }: {
     className?: string | null;
+    color?: string | null;
     isActiveTurn: boolean;
     isPinned?: boolean;
 }) {
@@ -595,43 +590,65 @@ function TopbarChatTabIcon({
     return (
         <Icon
             aria-hidden="true"
-            className={cn('size-4 shrink-0', className)}
-            icon={isPinned ? BubbleChatIcon : BubbleChatTemporaryIcon}
+            className={cn(
+                'size-4 shrink-0',
+                isPinned ? '-mr-0.5' : null,
+                isPinned && color
+                    ? 'text-[var(--topbar-pinned-tab-icon-light)] dark:text-[var(--topbar-pinned-tab-icon-dark)]'
+                    : null,
+                className
+            )}
+            icon={isPinned ? HashtagIcon : BubbleChatTemporaryIcon}
             size={16}
+            style={getTopbarChatTabIconStyle({ color, isPinned })}
         />
     );
 }
 
+function getTopbarChatTabIconStyle({
+    color,
+    isPinned,
+}: {
+    color?: string | null;
+    isPinned: boolean;
+}): React.CSSProperties | undefined {
+    if (!(color || isPinned)) {
+        return undefined;
+    }
+
+    const themeColor = color ? getPinnedTabThemeColor(color) : null;
+
+    return {
+        '--topbar-pinned-tab-icon-dark': themeColor?.darkValue,
+        '--topbar-pinned-tab-icon-light': themeColor?.lightValue,
+        stroke: isPinned ? 'currentColor' : undefined,
+        strokeWidth: isPinned ? 0.6 : undefined,
+    } as React.CSSProperties;
+}
+
+function getPinnedTabThemeColor(color: string) {
+    const normalized = color.toLowerCase();
+    const option = pinnedTabColorOptions.find((entry) => entry.value === normalized);
+
+    return option ?? { darkValue: color, lightValue: color };
+}
+
 function topbarChatTabButtonClassName({
-    hasCustomColor,
     isActive,
     tone = 'default',
 }: {
-    hasCustomColor: boolean;
     isActive: boolean;
     tone?: 'default' | 'error';
 }) {
     return cn(
         'no-drag h-7 w-fit max-w-[180px] justify-start overflow-hidden rounded-lg px-2 [&_svg]:opacity-70',
-        getTopbarChatTabTextClassName({ hasCustomColor, isActive }),
+        getTopbarChatTabTextClassName({ isActive }),
         tone === 'error' ? 'text-error-foreground hover:text-error-foreground' : null
     );
 }
 
-function getTopbarChatTabTextClassName({
-    hasCustomColor,
-    isActive,
-}: {
-    hasCustomColor: boolean;
-    isActive: boolean;
-}) {
-    if (hasCustomColor && isActive) {
-        return 'text-[var(--topbar-tab-active-foreground)] hover:bg-transparent';
-    }
-
-    return isActive
-        ? 'text-primary hover:bg-transparent'
-        : 'text-primary hover:bg-[var(--topbar-tab-hover)] hover:text-primary';
+function getTopbarChatTabTextClassName({ isActive }: { isActive: boolean }) {
+    return isActive ? 'text-primary hover:bg-transparent' : 'text-primary hover:text-primary';
 }
 
 function sortChatsByCreatedAt(chats: ChatListItem[]) {
@@ -828,32 +845,4 @@ function getRouteChatId(pathname: string) {
     const chatId = match?.[1] ?? null;
 
     return chatId && chatId !== 'new' ? chatId : null;
-}
-
-function buildPinnedTabStyle(color: string, isActive: boolean): React.CSSProperties {
-    if (!isActive) {
-        return {};
-    }
-
-    return {
-        color: `color-mix(in srgb, ${color} 35%, var(--color-black))`,
-    };
-}
-
-function buildChatTabCloseStyle(color: string | null): React.CSSProperties {
-    const closeColor = color
-        ? `color-mix(in srgb, ${color} 35%, var(--color-black))`
-        : 'var(--topbar-tab-active-foreground)';
-
-    return {
-        '--topbar-tab-close': closeColor,
-        '--topbar-tab-close-hover': `color-mix(in srgb, ${closeColor} 82%, var(--foreground))`,
-    } as React.CSSProperties;
-}
-
-function buildPinnedTabIndicatorStyle(color: string): React.CSSProperties {
-    return {
-        '--topbar-tab-active': `color-mix(in srgb, ${color} 16%, transparent)`,
-        '--topbar-tab-active-foreground': `color-mix(in srgb, ${color} 35%, var(--color-black))`,
-    } as React.CSSProperties;
 }
