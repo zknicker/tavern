@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file.
 
+## v1.2.1 - 2026-06-02
+
+- Fixed macOS traffic light alignment in the Electron desktop shell.
+- Polished topbar tabs with smoother active/hover states, quieter secondary-button greys, and clearer pinned chat color markers.
+
 ## v1.2.0 - 2026-06-01
 
 - Migrated the desktop app from Tauri to Electron while preserving the macOS window treatment, transparent background, and traffic light placement.
