@@ -72,6 +72,9 @@ export function mapOpenClawGatewayEvent(event: OpenClawGatewayEvent): AgentRunti
         case 'plugin.tavern.turn.completed': {
             return mapOpenClawTavernTurnEvent(payload, timestamp, 'turn.completed');
         }
+        case 'plugin.tavern.turn.steered': {
+            return mapOpenClawTavernTurnSteeredEvent(payload, timestamp);
+        }
         case 'plugin.tavern.turn.failed': {
             return mapOpenClawTavernTurnEvent(payload, timestamp, 'turn.failed');
         }
@@ -271,6 +274,27 @@ function mapOpenClawTavernTurnEvent(
     ];
 }
 
+function mapOpenClawTavernTurnSteeredEvent(
+    payload: Record<string, unknown>,
+    timestamp: string
+): AgentRuntimeEvent[] {
+    const turn = mapOpenClawTavernTurn(payload, timestamp);
+
+    if (!turn) {
+        return [];
+    }
+
+    return [
+        agentRuntimeEventSchema.parse({
+            message: readString(payload, ['message', 'text', 'content']),
+            requestMessageId: readString(payload, ['requestMessageId', 'messageId']),
+            timestamp,
+            turn,
+            type: 'turn.steered',
+        }),
+    ];
+}
+
 function mapOpenClawTavernTurn(payload: Record<string, unknown>, timestamp: string) {
     const agentId = readString(payload, ['agentId', 'agent']);
     const chatId = readString(payload, ['chatId', 'tavernChatId']);
@@ -321,6 +345,20 @@ function mapOpenClawChatEvent(
     };
 
     const visibleReplyText = readOpenClawChatReplyText(message);
+
+    if (state === 'steered') {
+        return [
+            agentRuntimeEventSchema.parse({
+                message:
+                    readString(payload, ['message', 'text', 'content']) ??
+                    readOpenClawChatReplyText(message),
+                requestMessageId: readString(payload, ['requestMessageId', 'messageId']),
+                timestamp,
+                turn,
+                type: 'turn.steered',
+            }),
+        ];
+    }
 
     if (state === 'started' || state === 'running') {
         return [

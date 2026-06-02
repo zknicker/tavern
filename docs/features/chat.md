@@ -33,6 +33,9 @@ happen, and keep the durable timeline as context.
   tab color.
 * **Offline catch-up.** Tavern Runtime keeps chat history while the app is
   closed; the app reloads from durable rows and refetches on reconnect.
+* **Mid-turn steering.** The chat composer stays available while an agent turn
+  is running. OpenClaw owns active-run behavior and Tavern configures normal
+  mid-turn messages to steer the active run by default.
 
 ## Timeline inputs
 
@@ -68,6 +71,10 @@ and external runtime chat inventory.
 
 Runtime progress and reply events update response and activity rows by stable
 ids. They should not create a second volatile progress transcript.
+
+When OpenClaw accepts a mid-turn steer, Runtime records a `runtimeNotice`
+activity row. Tavern App renders it as a system row in the same notice style as
+runtime session and compaction notices.
 
 ## Pinned chats
 

@@ -130,20 +130,48 @@ beforeEach(async () => {
 
         if (url.pathname.endsWith('/activity')) {
             const record = body as {
-                agent_id: string;
+                id: string;
                 metadata: Record<string, unknown>;
-                run_id: string;
                 status: string;
-                steps?: unknown[];
+                title: string;
+            };
+            return Response.json({
+                artifact_ids: [],
+                chat_id: tavernChatId,
+                completed_at: '2026-05-12T19:00:01.000Z',
+                detail: null,
+                id: record.id,
+                kind: 'custom',
+                metadata: record.metadata,
+                response_id: url.pathname.split('/responses/')[1].split('/activity')[0],
+                sequence: 1,
+                started_at: '2026-05-12T19:00:00.000Z',
+                status: record.status,
+                summary: null,
+                title: record.title,
+                updated_at: '2026-05-12T19:00:01.000Z',
+            });
+        }
+
+        if (url.pathname.endsWith('/responses')) {
+            const record = body as {
+                id: string;
+                metadata: Record<string, unknown>;
+                participant_id: string;
+                request_message_id: string | null;
+                status: string;
                 summary?: string | null;
             };
             return Response.json({
-                agent_id: record.agent_id,
                 chat_id: tavernChatId,
+                completed_at: null,
+                created_at: '2026-05-12T19:00:00.000Z',
+                id: record.id,
                 metadata: record.metadata,
-                run_id: record.run_id,
+                participant_id: record.participant_id,
+                request_message_id: record.request_message_id,
+                response_message_id: null,
                 status: record.status,
-                steps: record.steps ?? [],
                 summary: record.summary ?? null,
                 updated_at: '2026-05-12T19:00:01.000Z',
             });
@@ -374,6 +402,76 @@ test('applyObservedAgentRuntimeEvent does not sync history for live reply update
         },
         type: 'turn.replyUpdated',
     });
+});
+
+test('applyObservedAgentRuntimeEvent records steered turns as runtime notices', async () => {
+    await applyObservedAgentRuntimeEvent(
+        {
+            message: 'Use the smaller fix.',
+            requestMessageId: 'msg_steer_1',
+            timestamp: '2026-05-12T19:00:00.000Z',
+            turn: {
+                agentId: 'agent:test',
+                chatId: tavernChatId,
+                runId: 'run-1',
+                sessionKey: 'session-1',
+                startedAt: '2026-05-12T18:59:00.000Z',
+            },
+            type: 'turn.steered',
+        },
+        {
+            baseUrl: 'http://runtime.test',
+            id: 'runtime-1',
+        } as never
+    );
+    await flushAsyncEventSync();
+
+    expect(emitObservedAgentRuntimeEvent).toHaveBeenCalledWith({
+        message: 'Use the smaller fix.',
+        requestMessageId: 'msg_steer_1',
+        timestamp: '2026-05-12T19:00:00.000Z',
+        turn: {
+            agentId: 'agent:test',
+            chatId: tavernChatId,
+            runId: 'run-1',
+            sessionKey: 'session-1',
+            startedAt: '2026-05-12T18:59:00.000Z',
+        },
+        type: 'turn.steered',
+    });
+    expect(tavernApiRequests).toEqual([
+        expect.objectContaining({
+            body: expect.objectContaining({
+                id: 'rsp_run-1',
+                participant_id: 'agent:test',
+                request_message_id: 'msg_steer_1',
+                status: 'running',
+            }),
+            method: 'POST',
+            path: `/api/chats/${tavernChatId}/responses`,
+        }),
+        expect.objectContaining({
+            body: expect.objectContaining({
+                detail: 'Use the smaller fix.',
+                id: 'act_run-1_runtime_notice_steered',
+                kind: 'custom',
+                metadata: expect.objectContaining({
+                    runtime: expect.objectContaining({
+                        notice: expect.objectContaining({
+                            kind: 'status',
+                            text: 'Steered active turn: Use the smaller fix.',
+                            title: 'Steered active turn',
+                        }),
+                    }),
+                }),
+                status: 'completed',
+                title: 'Steered active turn',
+            }),
+            method: 'POST',
+            path: `/api/chats/${tavernChatId}/responses/rsp_run-1/activity`,
+        }),
+    ]);
+    expect(emitChatLogUpdated).toHaveBeenCalledWith({ sessionKey: 'session-1' });
 });
 
 test('applyObservedAgentRuntimeEvent defers invalidated session sync while a turn is active', async () => {

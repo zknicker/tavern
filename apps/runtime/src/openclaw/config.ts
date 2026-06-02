@@ -233,6 +233,9 @@ export function buildManagedOpenClawConfig(input: {
             groupChat: {
                 visibleReplies: 'message_tool',
             },
+            queue: {
+                mode: 'steer',
+            },
         },
         plugins: {
             allow: ['tavern', 'tavern-cortex', 'tavern-workspace', 'codex', 'openai'],

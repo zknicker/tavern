@@ -276,6 +276,61 @@ describe('OpenClaw event mapping', () => {
         });
     });
 
+    it('maps Tavern Messenger plugin steering events', () => {
+        const events = mapOpenClawGatewayEvent({
+            event: 'plugin.tavern.turn.steered',
+            payload: {
+                agentId: 'blippy',
+                chatId: 'cht_220f46ed-2d7c-41dd-9d7e-d02691f1afc3',
+                message: 'Use the smaller fix.',
+                requestMessageId: 'msg_steer_1',
+                runId: 'run_1',
+                sessionKey: 'agent:blippy:tavern:channel:cht_220f46ed-2d7c-41dd-9d7e-d02691f1afc3',
+                startedAt: '2026-05-04T12:00:00.000Z',
+            },
+        });
+
+        expect(events[0]).toMatchObject({
+            message: 'Use the smaller fix.',
+            requestMessageId: 'msg_steer_1',
+            turn: {
+                agentId: 'blippy',
+                chatId: 'cht_220f46ed-2d7c-41dd-9d7e-d02691f1afc3',
+                runId: 'run_1',
+                sessionKey: 'agent:blippy:tavern:channel:cht_220f46ed-2d7c-41dd-9d7e-d02691f1afc3',
+            },
+            type: 'turn.steered',
+        });
+    });
+
+    it('maps chat steered events into Tavern steering events', () => {
+        const events = mapOpenClawGatewayEvent({
+            event: 'chat',
+            payload: {
+                agentId: 'main',
+                chatId: 'cht_220f46ed-2d7c-41dd-9d7e-d02691f1afc3',
+                message: 'Skip the optional cleanup.',
+                requestMessageId: 'msg_steer_2',
+                runId: 'run_1',
+                sessionKey: 'agent:main:tavern:channel:cht_220f46ed-2d7c-41dd-9d7e-d02691f1afc3',
+                state: 'steered',
+                timestamp: '2026-05-03T20:00:00.000Z',
+            },
+        });
+
+        expect(events[0]).toMatchObject({
+            message: 'Skip the optional cleanup.',
+            requestMessageId: 'msg_steer_2',
+            turn: {
+                agentId: 'main',
+                chatId: 'cht_220f46ed-2d7c-41dd-9d7e-d02691f1afc3',
+                runId: 'run_1',
+                sessionKey: 'agent:main:tavern:channel:cht_220f46ed-2d7c-41dd-9d7e-d02691f1afc3',
+            },
+            type: 'turn.steered',
+        });
+    });
+
     it('maps OpenClaw session tool events to Tavern turn progress', () => {
         const events = mapOpenClawGatewayEvent({
             event: 'session.tool',

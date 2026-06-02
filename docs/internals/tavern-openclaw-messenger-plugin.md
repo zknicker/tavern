@@ -167,6 +167,11 @@ Do not call deprecated direct outbound helpers from new code. New message sends
 go through the channel-message lifecycle or the channel turn delivery
 adapter.
 
+Managed Tavern config sets `messages.queue.mode` to `steer` and leaves
+OpenClaw's queue tunables at their native defaults. Mid-turn Tavern messages
+therefore steer the active OpenClaw run when the runtime can accept steering,
+and fall back to OpenClaw's normal later-turn behavior when it cannot.
+
 Both final-delivery paths must classify OpenClaw runtime notices before writing
 assistant deliveries. OpenClaw can send verbose notices such as `🧭 New session:
 <session-id>` through either the turn delivery adapter or the channel message
@@ -286,6 +291,11 @@ deliveries, and records them as `custom` response activity with
 `metadata.runtime.notice`. Tavern Runtime projects those activity records into
 `runtimeNotice` system rows so Tavern App can render native notice UI outside
 the work disclosure.
+
+OpenClaw steering acceptance uses the same notice surface. Gateway steering
+events map to `turn.steered`, and Runtime persists a `status` runtime notice on
+the active response so reconnects and reloads recover the steering marker from
+chat history.
 
 Do not add a parallel event stream or choose between alternate ids at call
 sites.

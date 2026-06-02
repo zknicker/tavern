@@ -21,7 +21,6 @@ export function ChatMessageComposer({
     chatId,
     contextFullness = null,
     isDisabled,
-    isReplyActive,
     variant = 'detail',
 }: {
     agentRuntimeSyncLabel?: string | null;
@@ -42,7 +41,6 @@ export function ChatMessageComposer({
     const canSend =
         chatCanSend &&
         !isDisabled &&
-        !isReplyActive &&
         !sendMessage.isPending &&
         agentId.length > 0 &&
         trimmedContent.length > 0;
@@ -95,11 +93,7 @@ export function ChatMessageComposer({
             content={content}
             contextFullness={contextFullness}
             disabled={
-                isDisabled ||
-                !chatCanSend ||
-                isReplyActive ||
-                sendMessage.isPending ||
-                boundAgentIds.length === 0
+                isDisabled || !chatCanSend || sendMessage.isPending || boundAgentIds.length === 0
             }
             error={sendMessage.error?.message}
             name="chat-message"
@@ -112,7 +106,6 @@ export function ChatMessageComposer({
                 boundAgentCount: boundAgentIds.length,
                 canSend: chatCanSend,
                 isDisabled,
-                isReplyActive,
                 variant,
             })}
             variant={variant}
@@ -125,14 +118,12 @@ function getPlaceholder({
     boundAgentCount,
     canSend,
     isDisabled,
-    isReplyActive,
     variant,
 }: {
     agentRuntimeSyncLabel: string | null;
     boundAgentCount: number;
     canSend: boolean;
     isDisabled: boolean;
-    isReplyActive: boolean;
     variant: ChatMessageComposerVariant;
 }) {
     if (isDisabled) {
@@ -141,10 +132,6 @@ function getPlaceholder({
 
     if (!canSend) {
         return 'This chat does not have a synced session for sending.';
-    }
-
-    if (isReplyActive) {
-        return 'A reply is already in progress for this chat.';
     }
 
     if (boundAgentCount === 0) {

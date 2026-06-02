@@ -47,6 +47,9 @@ describe('buildManagedOpenClawConfig', () => {
                 groupChat: {
                     visibleReplies: 'message_tool',
                 },
+                queue: {
+                    mode: 'steer',
+                },
             },
             meta: {
                 lastTouchedVersion: '2026.5.12',
