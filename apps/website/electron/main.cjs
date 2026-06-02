@@ -11,6 +11,12 @@ const sidecarStartupDeadlineMs = 10_000;
 const sidecarStartupPollMs = 200;
 const updateCheckIntervalMs = 10 * 60 * 1000;
 const openDevtoolsMenuId = 'open-devtools';
+const topbarHeightPx = 38;
+const macosTrafficLightDiameterPx = 12;
+const macosTrafficLightPosition = {
+    x: 13,
+    y: (topbarHeightPx - macosTrafficLightDiameterPx) / 2 - 1,
+};
 const { autoUpdater } = electronUpdater;
 const useMockUpdater = !app.isPackaged && process.env.TAVERN_ELECTRON_UPDATER_MOCK === '1';
 
@@ -48,7 +54,7 @@ function createMainWindow() {
         backgroundColor: '#00000000',
         transparent: process.platform === 'darwin',
         titleBarStyle: process.platform === 'darwin' ? 'hidden' : 'default',
-        trafficLightPosition: process.platform === 'darwin' ? { x: 13, y: 21 } : undefined,
+        trafficLightPosition: process.platform === 'darwin' ? macosTrafficLightPosition : undefined,
         vibrancy: process.platform === 'darwin' ? 'menu' : undefined,
         visualEffectState: process.platform === 'darwin' ? 'active' : undefined,
         webPreferences: {
