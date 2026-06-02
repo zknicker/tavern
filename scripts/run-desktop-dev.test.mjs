@@ -6,7 +6,7 @@ import {
     parseDesktopDevArguments,
 } from './run-desktop-dev.mjs';
 
-test('parses a positional base port and forwards remaining tauri args', () => {
+test('parses a positional base port and forwards remaining electron args', () => {
     const options = parseDesktopDevArguments(['4242', '--no-watch']);
 
     assert.deepEqual(options, {
@@ -14,12 +14,12 @@ test('parses a positional base port and forwards remaining tauri args', () => {
         port: '4242',
         serverPort: undefined,
         skipServerCleanup: false,
-        tauriArguments: ['--no-watch'],
+        electronArguments: ['--no-watch'],
         websitePort: undefined,
     });
 });
 
-test('parses named port options and preserves other tauri args', () => {
+test('parses named port options and preserves other electron args', () => {
     const options = parseDesktopDevArguments([
         '--port',
         '4242',
@@ -33,7 +33,7 @@ test('parses named port options and preserves other tauri args', () => {
         port: '4242',
         serverPort: '4243',
         skipServerCleanup: false,
-        tauriArguments: ['--verbose'],
+        electronArguments: ['--verbose'],
         websitePort: undefined,
     });
 });
@@ -46,7 +46,7 @@ test('parses an optional PID separately from port settings', () => {
         port: undefined,
         serverPort: undefined,
         skipServerCleanup: false,
-        tauriArguments: [],
+        electronArguments: [],
         websitePort: '4242',
     });
 });

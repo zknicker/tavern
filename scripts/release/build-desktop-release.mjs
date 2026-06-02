@@ -11,31 +11,16 @@ const repoRoot = path.resolve(__dirname, '..', '..');
 
 loadEnvFile();
 
-const updaterPublicKey = requireEnv('TAURI_UPDATER_PUBLIC_KEY');
 const releaseBaseUrl = trimTrailingSlash(requireEnv('TAVERN_RELEASE_BASE_URL'));
 
-requireEnv('TAURI_SIGNING_PRIVATE_KEY');
 requireSigningEnvironment();
 requireNotarizationEnvironment();
 
-const releaseConfig = {
-    bundle: {
-        targets: ['app', 'dmg'],
-        createUpdaterArtifacts: true,
-        macOS: {
-            entitlements: 'Entitlements.plist',
-            hardenedRuntime: true,
-        },
-    },
-    plugins: {
-        updater: {
-            pubkey: updaterPublicKey,
-            endpoints: [`${releaseBaseUrl}/latest.json`],
-        },
-    },
-};
+process.env.TAVERN_RELEASE_BASE_URL = releaseBaseUrl;
+process.env.APPLE_APP_SPECIFIC_PASSWORD ??= process.env.APPLE_PASSWORD;
+process.env.CSC_NAME ??= normalizeSigningIdentity(process.env.APPLE_SIGNING_IDENTITY);
 
-runTauri(['build', '--config', JSON.stringify(releaseConfig)]);
+runElectronBuilder(['--config', 'electron-builder.config.cjs', '--mac', '--publish', 'never']);
 
 function requireEnv(name) {
     const value = process.env[name]?.trim();
@@ -48,27 +33,29 @@ function requireEnv(name) {
 }
 
 function requireSigningEnvironment() {
-    if (process.env.APPLE_SIGNING_IDENTITY?.trim()) {
+    if (process.env.CSC_NAME?.trim() || process.env.APPLE_SIGNING_IDENTITY?.trim()) {
         return;
     }
 
-    if (process.env.APPLE_CERTIFICATE?.trim() && process.env.APPLE_CERTIFICATE_PASSWORD?.trim()) {
+    if (
+        (process.env.CSC_LINK?.trim() || process.env.APPLE_CERTIFICATE?.trim()) &&
+        (process.env.CSC_KEY_PASSWORD?.trim() || process.env.APPLE_CERTIFICATE_PASSWORD?.trim())
+    ) {
         return;
     }
 
-    console.error(
-        'release error: missing APPLE_SIGNING_IDENTITY or APPLE_CERTIFICATE + APPLE_CERTIFICATE_PASSWORD'
-    );
+    console.error('release error: missing CSC_NAME or CSC_LINK + CSC_KEY_PASSWORD');
     process.exit(1);
 }
 
 function requireNotarizationEnvironment() {
     const hasAppleIdCredentials =
         process.env.APPLE_ID?.trim() &&
-        process.env.APPLE_PASSWORD?.trim() &&
+        (process.env.APPLE_APP_SPECIFIC_PASSWORD?.trim() || process.env.APPLE_PASSWORD?.trim()) &&
         process.env.APPLE_TEAM_ID?.trim();
     const hasApiCredentials =
         process.env.APPLE_API_KEY?.trim() &&
+        process.env.APPLE_API_KEY_ID?.trim() &&
         process.env.APPLE_API_ISSUER?.trim() &&
         process.env.APPLE_API_KEY_PATH?.trim();
 
@@ -77,7 +64,7 @@ function requireNotarizationEnvironment() {
     }
 
     console.error(
-        'release error: missing Apple notarization credentials. Set APPLE_ID + APPLE_PASSWORD + APPLE_TEAM_ID or APPLE_API_KEY + APPLE_API_ISSUER + APPLE_API_KEY_PATH'
+        'release error: missing Apple notarization credentials. Set APPLE_ID + APPLE_APP_SPECIFIC_PASSWORD + APPLE_TEAM_ID or APPLE_API_KEY + APPLE_API_KEY_ID + APPLE_API_ISSUER + APPLE_API_KEY_PATH'
     );
     process.exit(1);
 }
@@ -86,9 +73,13 @@ function trimTrailingSlash(value) {
     return value.replace(/\/+$/, '');
 }
 
-function runTauri(args) {
-    const child = spawn('node', ['scripts/run-tauri.mjs', ...args], {
-        cwd: repoRoot,
+function normalizeSigningIdentity(identity) {
+    return identity?.replace(/^Developer ID Application:\s*/u, '').trim();
+}
+
+function runElectronBuilder(args) {
+    const child = spawn('bun', ['x', 'electron-builder', ...args], {
+        cwd: path.join(repoRoot, 'apps', 'website'),
         env: process.env,
         stdio: 'inherit',
     });

@@ -8,7 +8,7 @@ const staleServerShutdownTimeoutMs = 3000;
 const staleServerShutdownPollMs = 50;
 
 export function parseDesktopDevArguments(arguments_) {
-    const tauriArguments = [];
+    const electronArguments = [];
     let pid;
     let port;
     let skipServerCleanup = false;
@@ -53,24 +53,12 @@ export function parseDesktopDevArguments(arguments_) {
             continue;
         }
 
-        if (argument === '--before-dev-command') {
-            const nextValue = arguments_[index + 1];
-
-            if (!nextValue) {
-                throw new Error('Missing value for --before-dev-command.');
-            }
-
-            tauriArguments.push(argument, nextValue);
-            index += 1;
-            continue;
-        }
-
         if (!(port || websitePort || argument.startsWith('-'))) {
             port = parsePort(argument, 'port');
             continue;
         }
 
-        tauriArguments.push(argument);
+        electronArguments.push(argument);
     }
 
     return {
@@ -78,7 +66,7 @@ export function parseDesktopDevArguments(arguments_) {
         port,
         serverPort,
         skipServerCleanup,
-        tauriArguments,
+        electronArguments,
         websitePort,
     };
 }
@@ -270,9 +258,8 @@ function main() {
     const currentDirectory = path.dirname(fileURLToPath(import.meta.url));
     const repositoryRoot = path.resolve(currentDirectory, '..');
     const buildIconScriptPath = path.join(currentDirectory, 'build-macos-app-icon.mjs');
-    const buildScriptPath = path.join(currentDirectory, 'build-tauri-sidecar.mjs');
-    const runTauriScriptPath = path.join(currentDirectory, 'run-tauri.mjs');
-    const { pid, port, serverPort, skipServerCleanup, tauriArguments, websitePort } =
+    const buildScriptPath = path.join(currentDirectory, 'build-electron-sidecar.mjs');
+    const { electronArguments, pid, port, serverPort, skipServerCleanup, websitePort } =
         parseDesktopDevArguments(process.argv.slice(2));
     const environment = getDesktopDevEnvironment({ pid, port, serverPort, websitePort });
 
@@ -299,11 +286,18 @@ function main() {
         process.exit(buildResult.status ?? 1);
     }
 
-    const child = spawn('node', [runTauriScriptPath, 'dev', ...tauriArguments], {
-        cwd: repositoryRoot,
-        env: environment,
-        stdio: 'inherit',
-    });
+    const child = spawn(
+        'bun',
+        ['x', 'electron', 'apps/website/electron/main.cjs', ...electronArguments],
+        {
+            cwd: repositoryRoot,
+            env: {
+                ...environment,
+                TAVERN_ELECTRON_DEV_URL: `http://localhost:${environment.TAVERN_WEBSITE_PORT}`,
+            },
+            stdio: 'inherit',
+        }
+    );
 
     child.on('exit', (code, signal) => {
         if (signal) {

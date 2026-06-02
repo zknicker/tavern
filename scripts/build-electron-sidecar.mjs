@@ -14,19 +14,22 @@ import { fileURLToPath } from 'node:url';
 
 const currentDirectory = path.dirname(fileURLToPath(import.meta.url));
 const repositoryRoot = path.resolve(currentDirectory, '..');
-const websiteTauriDirectory = path.join(repositoryRoot, 'apps', 'website', 'src-tauri');
-const sidecarBinaryDirectory = path.join(websiteTauriDirectory, 'binaries');
-
-const hostTriple = readRustHostTriple();
-const sidecarBasename = toSidecarBasename(hostTriple);
-const sidecarOutputPath = path.join(sidecarBinaryDirectory, sidecarBasename);
+const resourcesDirectory = path.join(
+    repositoryRoot,
+    'apps',
+    'website',
+    'electron',
+    'resources',
+    'bin'
+);
+const sidecarOutputPath = path.join(
+    resourcesDirectory,
+    process.platform === 'win32' ? 'tavern-server.exe' : 'tavern-server'
+);
 const sidecarSignaturePath = `${sidecarOutputPath}.build-signature`;
 const forceBuild = process.argv.includes('--force');
 
-mkdirSync(sidecarBinaryDirectory, { recursive: true });
-rmSync(path.join(sidecarBinaryDirectory, `tavern-node-${hostTriple}`), { force: true });
-rmSync(path.join(sidecarBinaryDirectory, `tavern-node-${hostTriple}.exe`), { force: true });
-rmSync(path.join(websiteTauriDirectory, 'resources', 'server', 'index.cjs'), { force: true });
+mkdirSync(resourcesDirectory, { recursive: true });
 
 const sidecarSignature = createSidecarSignature();
 
@@ -63,7 +66,8 @@ function isCurrentSidecar(sidecarSignature) {
 function createSidecarSignature() {
     const hash = createHash('sha256');
 
-    hash.update(`host:${hostTriple}\n`);
+    hash.update(`platform:${process.platform}\n`);
+    hash.update(`arch:${process.arch}\n`);
     hash.update(`bun:${readBunVersion()}\n`);
     hashFiles(hash, [
         'bun.lock',
@@ -72,7 +76,7 @@ function createSidecarSignature() {
         'apps/website/package.json',
         'apps/server/src',
         'packages',
-        'scripts/build-tauri-sidecar.mjs',
+        'scripts/build-electron-sidecar.mjs',
     ]);
 
     return hash.digest('hex');
@@ -117,27 +121,5 @@ function hashPath(hash, absolutePath, relativePath) {
 function shouldIgnore(relativePath) {
     return relativePath
         .split('/')
-        .some((part) => ['.turbo', 'dist', 'node_modules'].includes(part));
-}
-
-function readRustHostTriple() {
-    const rustVersion = execFileSync('rustc', ['-vV'], {
-        cwd: repositoryRoot,
-        encoding: 'utf8',
-    });
-    const hostLine = rustVersion.split('\n').find((line) => line.startsWith('host: '));
-
-    if (!hostLine) {
-        throw new Error('Unable to determine the Rust host target triple.');
-    }
-
-    return hostLine.replace('host: ', '').trim();
-}
-
-function toSidecarBasename(host) {
-    if (host.includes('windows')) {
-        return `tavern-server-${host}.exe`;
-    }
-
-    return `tavern-server-${host}`;
+        .some((part) => ['.turbo', 'dist', 'electron-dist', 'node_modules'].includes(part));
 }

@@ -1,5 +1,4 @@
-import { isTauri } from '@tauri-apps/api/core';
-import { getCurrentWindow } from '@tauri-apps/api/window';
+import { getDesktopBridge } from './desktop-bridge.ts';
 
 const windowDragBlockSelector = [
     '.no-drag',
@@ -22,17 +21,9 @@ export function canStartWindowDrag(target: WindowDragTarget | null | undefined) 
 }
 
 export async function startCurrentWindowDrag() {
-    if (!isTauri()) {
-        return;
-    }
-
-    await getCurrentWindow().startDragging();
+    await getDesktopBridge()?.startWindowDrag();
 }
 
 export async function setCurrentWindowTheme(theme: 'dark' | 'light' | null) {
-    if (!isTauri()) {
-        return;
-    }
-
-    await getCurrentWindow().setTheme(theme);
+    await getDesktopBridge()?.setTheme(theme);
 }

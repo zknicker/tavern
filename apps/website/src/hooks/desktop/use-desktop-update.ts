@@ -1,9 +1,9 @@
-import { isTauri } from '@tauri-apps/api/core';
-import { relaunch } from '@tauri-apps/plugin-process';
-import { check, type DownloadEvent, type Update } from '@tauri-apps/plugin-updater';
 import { useCallback, useEffect, useSyncExternalStore } from 'react';
-
-const updateCheckIntervalMs = 10 * 60 * 1000;
+import {
+    type DesktopUpdateBridgeStatus,
+    getDesktopBridge,
+    isElectronDesktopApp,
+} from '../../lib/desktop-bridge.ts';
 
 export type DesktopUpdateStatus =
     | { phase: 'unsupported' }
@@ -16,10 +16,10 @@ export type DesktopUpdateStatus =
     | { phase: 'restarting'; version: string }
     | { phase: 'error'; message: string };
 
-let currentStatus: DesktopUpdateStatus = isTauri() ? { phase: 'idle' } : { phase: 'unsupported' };
-let currentUpdate: Update | null = null;
+let currentStatus: DesktopUpdateStatus = isElectronDesktopApp()
+    ? { phase: 'idle' }
+    : { phase: 'unsupported' };
 let monitorStarted = false;
-let monitorIntervalId: number | null = null;
 let activeTask: Promise<void> | null = null;
 
 const listeners = new Set<() => void>();
@@ -47,15 +47,17 @@ export function useDesktopUpdate() {
 }
 
 function startDesktopUpdateMonitor() {
-    if (monitorStarted || !isTauri()) {
+    const bridge = getDesktopBridge();
+
+    if (monitorStarted || !bridge) {
         return;
     }
 
     monitorStarted = true;
-    void checkForDesktopUpdate({ install: true });
-    monitorIntervalId = window.setInterval(() => {
-        void checkForDesktopUpdate({ install: true });
-    }, updateCheckIntervalMs);
+    bridge.onUpdateStatus((status) => {
+        setDesktopUpdateStatus(fromBridgeStatus(status));
+    });
+    void checkForDesktopUpdate({ install: false });
 }
 
 function subscribeDesktopUpdate(listener: () => void) {
@@ -63,12 +65,6 @@ function subscribeDesktopUpdate(listener: () => void) {
 
     return () => {
         listeners.delete(listener);
-
-        if (listeners.size === 0 && monitorIntervalId !== null) {
-            window.clearInterval(monitorIntervalId);
-            monitorIntervalId = null;
-            monitorStarted = false;
-        }
     };
 }
 
@@ -85,7 +81,9 @@ function setDesktopUpdateStatus(status: DesktopUpdateStatus) {
 }
 
 async function checkForDesktopUpdate({ install }: { install: boolean }) {
-    if (!isTauri()) {
+    const bridge = getDesktopBridge();
+
+    if (!bridge) {
         setDesktopUpdateStatus({ phase: 'unsupported' });
         return;
     }
@@ -107,25 +105,18 @@ async function checkForDesktopUpdate({ install }: { install: boolean }) {
 }
 
 async function checkForDesktopUpdateTask({ install }: { install: boolean }) {
-    currentUpdate = null;
+    const bridge = getDesktopBridge();
 
-    if (!isPersistentUpdateStatus(currentStatus)) {
-        setDesktopUpdateStatus({ phase: 'checking' });
+    if (!bridge) {
+        setDesktopUpdateStatus({ phase: 'unsupported' });
+        return;
     }
 
     try {
-        const update = await check();
-        currentUpdate = update;
-
-        if (!update) {
-            setDesktopUpdateStatus({ phase: 'current' });
-            return;
-        }
-
-        setDesktopUpdateStatus({ phase: 'available', version: update.version });
+        await bridge.checkForUpdate();
 
         if (install) {
-            await downloadAndInstallUpdate(update);
+            await installDesktopUpdateAndRestart();
         }
     } catch (error) {
         setDesktopUpdateStatus({
@@ -136,47 +127,26 @@ async function checkForDesktopUpdateTask({ install }: { install: boolean }) {
 }
 
 async function installDesktopUpdateAndRestart() {
-    if (currentStatus.phase === 'ready') {
-        setDesktopUpdateStatus({ phase: 'restarting', version: currentStatus.version });
-        await relaunch();
+    const bridge = getDesktopBridge();
+
+    if (!bridge) {
+        setDesktopUpdateStatus({ phase: 'unsupported' });
         return;
     }
 
-    const update = currentUpdate;
+    if (currentStatus.phase === 'ready') {
+        setDesktopUpdateStatus({ phase: 'restarting', version: currentStatus.version });
+        await bridge.restartForUpdate();
+        return;
+    }
 
-    if (!update) {
+    if (currentStatus.phase !== 'available') {
         await checkForDesktopUpdate({ install: true });
         return;
     }
 
-    await downloadAndInstallUpdate(update);
-    await installDesktopUpdateAndRestart();
-}
-
-async function downloadAndInstallUpdate(update: Update) {
-    let totalBytes = 0;
-    let downloadedBytes = 0;
-
     try {
-        setDesktopUpdateStatus({ phase: 'downloading', progress: 0, version: update.version });
-        await update.download((event) => {
-            const nextProgress = readDownloadProgress({
-                downloadedBytes,
-                event,
-                totalBytes,
-            });
-
-            downloadedBytes = nextProgress.downloadedBytes;
-            totalBytes = nextProgress.totalBytes;
-
-            setDesktopUpdateStatus({
-                phase: 'downloading',
-                progress: nextProgress.progress,
-                version: update.version,
-            });
-        });
-        await update.install();
-        setDesktopUpdateStatus({ phase: 'ready', version: update.version });
+        await bridge.downloadUpdate();
     } catch (error) {
         setDesktopUpdateStatus({
             phase: 'error',
@@ -191,40 +161,6 @@ function isPersistentUpdateStatus(status: DesktopUpdateStatus) {
     );
 }
 
-function readDownloadProgress({
-    downloadedBytes,
-    event,
-    totalBytes,
-}: {
-    downloadedBytes: number;
-    event: DownloadEvent;
-    totalBytes: number;
-}) {
-    if (event.event === 'Started') {
-        const nextTotalBytes = event.data.contentLength ?? 0;
-        return {
-            downloadedBytes: 0,
-            progress: 0,
-            totalBytes: nextTotalBytes,
-        };
-    }
-
-    if (event.event === 'Progress') {
-        const nextDownloadedBytes = downloadedBytes + event.data.chunkLength;
-        return {
-            downloadedBytes: nextDownloadedBytes,
-            progress: totalBytes > 0 ? Math.min(nextDownloadedBytes / totalBytes, 1) : 0,
-            totalBytes,
-        };
-    }
-
-    return {
-        downloadedBytes: totalBytes,
-        progress: 1,
-        totalBytes,
-    };
-}
-
 function getErrorMessage(error: unknown, fallback: string) {
     if (error instanceof Error && error.message) {
         return error.message;
@@ -235,4 +171,8 @@ function getErrorMessage(error: unknown, fallback: string) {
     }
 
     return fallback;
+}
+
+function fromBridgeStatus(status: DesktopUpdateBridgeStatus): DesktopUpdateStatus {
+    return status;
 }

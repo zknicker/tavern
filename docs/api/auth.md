@@ -17,7 +17,7 @@ needs explicit trust.
 
 | Boundary | Trust Rule |
 | --- | --- |
-| Tauri shell and local Node app | One Tavern App product boundary |
+| Electron shell and local Node app | One Tavern App product boundary |
 | Tavern App to Tavern Runtime | Paired local transport with runtime credentials |
 | Tavern Runtime to managed OpenClaw | Generated Gateway credentials and runtime config |
 | External client to Tavern API | Explicit Tavern-issued credentials when exposed |

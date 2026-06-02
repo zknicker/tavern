@@ -17,7 +17,6 @@ import {
     waitForPort,
     waitForRuntimeReady,
 } from './dev-stack-shared.mjs';
-import { getTauriEnvironment } from './tauri-environment.mjs';
 
 const shutdownProcessOrder = ['desktop', 'website', 'server', 'runtime'];
 const shutdownTimeoutMs = Number.parseInt(
@@ -307,15 +306,10 @@ export class DevStackController extends EventEmitter {
                 return;
             }
 
-            const desktopEnv = getTauriEnvironment({
-                baseEnvironment: getDesktopEnv(),
-                commandArguments: ['dev'],
-                warn: () => {},
-            });
+            const desktopEnv = getDesktopEnv();
             const prebuildCommand = [
                 'node scripts/build-macos-app-icon.mjs',
-                'node scripts/build-tauri-sidecar.mjs',
-                'cd apps/website/src-tauri && cargo build --no-default-features --color always',
+                'node scripts/build-electron-sidecar.mjs',
             ].join(' && ');
             desktopPrebuildPromise = this.spawnBackgroundProcess(
                 'desktop',
@@ -358,9 +352,12 @@ export class DevStackController extends EventEmitter {
             }
             this.spawnProcess(
                 'desktop',
-                "node scripts/run-desktop-dev.mjs --skip-server-cleanup --before-dev-command 'node ../../scripts/noop-command.mjs'",
+                'node scripts/run-desktop-dev.mjs --skip-server-cleanup',
                 getDesktopEnv()
             );
+            this.update((snapshot) => {
+                snapshot.processes.desktop.status = 'running';
+            });
         }
 
         this.maybeEnterSteadyState();

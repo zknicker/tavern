@@ -4,7 +4,7 @@ Tavern is a macOS chat app for working with always-on agents.
 
 Tavern Runtime is the local chat server. It owns canonical chats, messages,
 participants, sequence, events, reads, deliveries, activity, automations, and
-runtime-owned product state. Tavern App is the first-party Tauri client and
+runtime-owned product state. Tavern App is the first-party Electron client and
 presentation layer. OpenClaw is the managed agent runtime: sessions, turns,
 tools, model calls, files, and native transcripts stay execution-owned.
 
@@ -35,7 +35,7 @@ shape instead of a second protocol package.
   Tavern chats.
 * `apps/runtime`: always-on Tavern Runtime and managed OpenClaw supervisor.
 * `apps/server`: local app backend, tRPC facade, app cache, and product logic.
-* `apps/website`: Tauri/React app client.
+* `apps/website`: Electron/React app client.
 * `jobs`: local background jobs for sync, usage ingest, and refresh work.
 
 ## Development
@@ -82,8 +82,7 @@ Build a debug desktop app and DMG:
 bun run desktop:build
 ```
 
-The macOS outputs are written under
-`apps/website/src-tauri/target/debug/bundle/`.
+The macOS outputs are written under `apps/website/electron-dist/`.
 
 ## Docs
 

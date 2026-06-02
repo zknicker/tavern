@@ -13,8 +13,8 @@ export function isAllowedAppOrigin(origin: string | undefined) {
         const url = new URL(origin);
 
         return (
-            origin === 'http://tauri.localhost' ||
-            url.protocol === 'tauri:' ||
+            origin === 'file://' ||
+            url.protocol === 'file:' ||
             url.hostname === '127.0.0.1' ||
             url.hostname === 'localhost'
         );

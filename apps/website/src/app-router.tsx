@@ -2,7 +2,7 @@ import type { ComponentType } from 'react';
 import { createBrowserRouter, createHashRouter, Navigate } from 'react-router-dom';
 import { AppFrame } from './components/app-frame.tsx';
 import { Layout } from './layout.tsx';
-import { isPackagedTauriApp } from './lib/agent-runtime.ts';
+import { isPackagedDesktopApp } from './lib/agent-runtime.ts';
 
 function lazyRoute<TModule extends Record<string, unknown>>(
     load: () => Promise<TModule>,
@@ -23,7 +23,7 @@ function lazyRoute<TModule extends Record<string, unknown>>(
 }
 
 export function createAppRouter() {
-    const createRouter = isPackagedTauriApp() ? createHashRouter : createBrowserRouter;
+    const createRouter = isPackagedDesktopApp() ? createHashRouter : createBrowserRouter;
 
     return createRouter([
         {

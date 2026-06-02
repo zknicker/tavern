@@ -478,13 +478,13 @@
         -moz-osx-font-smoothing: grayscale;
     }
 
-    html.macos-tauri,
-    html.macos-tauri body,
-    html.macos-tauri #root {
+    html.macos-electron,
+    html.macos-electron body,
+    html.macos-electron #root {
         background: transparent;
     }
 
-    html.macos-tauri .app-window-shell {
+    html.macos-electron .app-window-shell {
         min-height: 100vh;
         overflow: hidden;
         border-radius: var(--desktop-window-radius);
@@ -495,24 +495,24 @@
     [role='tab'],
     summary,
     label,
-    [data-tauri-drag-region],
-    [data-tauri-drag-region] * {
+    [data-window-drag-region],
+    [data-window-drag-region] * {
         -webkit-user-select: none;
         user-select: none;
     }
 
-    [data-tauri-drag-region] {
+    [data-window-drag-region] {
         cursor: default;
     }
 
-    [data-tauri-drag-region]
+    [data-window-drag-region]
         :is(button, a[href], [role='button'], [role='tab']):not(:disabled):not(
             [aria-disabled='true']
         ) {
         cursor: pointer;
     }
 
-    html.macos-tauri [data-tauri-drag-region] {
+    html.macos-electron [data-window-drag-region] {
         app-region: drag;
         -webkit-app-region: drag;
     }
@@ -580,13 +580,13 @@
         width: var(--sidebar-width-icon);
     }
 
-    html.macos-tauri .app-chrome-glass {
+    html.macos-electron .app-chrome-glass {
         background: transparent;
         backdrop-filter: none;
         -webkit-backdrop-filter: none;
     }
 
-    html.macos-tauri .app-shell {
+    html.macos-electron .app-shell {
         background: var(--app-chrome-native-fill);
     }
 

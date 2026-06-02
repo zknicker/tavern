@@ -15,7 +15,7 @@ is the first-party client for that server. OpenClaw owns native agent execution.
 ```mermaid
 flowchart LR
     user[User]
-    app[Tavern App<br/>Tauri + React + local Node]
+    app[Tavern App<br/>Electron + React + local Node]
     api[Tavern API<br/>runtime contract]
     appdb[(App SQLite<br/>cache + settings)]
     runtime[Tavern Runtime<br/>chat server + tools + managed services]

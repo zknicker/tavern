@@ -20,36 +20,9 @@ const allowedDirtyPaths = new Set([
     'CHANGELOG.md',
     'apps/runtime/package.json',
     'apps/website/package.json',
-    'apps/website/src-tauri/Cargo.lock',
-    'apps/website/src-tauri/Cargo.toml',
-    'apps/website/src-tauri/tauri.conf.json',
 ]);
-const generatedSchemaPaths = [
-    'apps/website/src-tauri/gen/schemas/acl-manifests.json',
-    'apps/website/src-tauri/gen/schemas/capabilities.json',
-    'apps/website/src-tauri/gen/schemas/desktop-schema.json',
-    'apps/website/src-tauri/gen/schemas/macOS-schema.json',
-];
-const bundleRoot = path.join(
-    repoRoot,
-    'apps',
-    'website',
-    'src-tauri',
-    'target',
-    'release',
-    'bundle'
-);
-const macosBundleDir = path.join(bundleRoot, 'macos');
-const dmgBundleDir = path.join(bundleRoot, 'dmg');
-const runtimeBundleDir = path.join(
-    repoRoot,
-    'apps',
-    'website',
-    'src-tauri',
-    'target',
-    'release',
-    'runtime'
-);
+const bundleRoot = path.join(repoRoot, 'apps', 'website', 'electron-dist');
+const runtimeBundleDir = path.join(repoRoot, 'apps', 'website', 'electron-dist', 'runtime');
 
 const main = async () => {
     const version = await readReleaseVersion();
@@ -64,7 +37,6 @@ const main = async () => {
     }
     process.env.TAVERN_RELEASE_INCLUDE_RUNTIME = publishRuntime ? '1' : '0';
     run('bun', ['run', 'publish:desktop']);
-    restoreGeneratedSchemas();
     run('bun', ['run', 'release:check-desktop-artifacts']);
 
     const releasePaths = readReleaseDirtyPaths();
@@ -145,10 +117,6 @@ function assertNoTag(tagName) {
     }
 }
 
-function restoreGeneratedSchemas() {
-    run('git', ['restore', ...generatedSchemaPaths]);
-}
-
 function readReleaseDirtyPaths() {
     const status = runCapture('git', ['status', '--porcelain']);
     const dirtyPaths = status
@@ -224,21 +192,25 @@ function extractReleaseNotes(changelog, version) {
 }
 
 async function findReleaseArtifacts({ includeRuntime, version }) {
-    const dmgName = `Tavern_${version}_aarch64.dmg`;
     const artifacts = [
-        path.join(dmgBundleDir, dmgName),
-        path.join(macosBundleDir, 'Tavern.app.tar.gz'),
-        path.join(macosBundleDir, 'Tavern.app.tar.gz.sig'),
-        path.join(bundleRoot, 'latest.json'),
+        ...(await findFiles(bundleRoot, (entry) => entry.endsWith('.dmg'))),
+        ...(await findFiles(bundleRoot, (entry) => entry.endsWith('.zip'))),
+        ...(await findFiles(bundleRoot, (entry) => entry.endsWith('.blockmap'))),
+        path.join(bundleRoot, 'latest-mac.yml'),
         ...(includeRuntime ? await findRuntimeArtifacts(version) : []),
     ];
-    const dmgFiles = (await readdir(dmgBundleDir)).filter((entry) => entry.endsWith('.dmg'));
 
-    if (!dmgFiles.includes(dmgName)) {
-        fail(`could not find expected DMG ${dmgName}`, { dmgFiles });
+    if (!artifacts.some((artifact) => path.basename(artifact).endsWith('.dmg'))) {
+        fail('could not find expected Electron DMG artifact', {
+            files: await readdir(bundleRoot),
+        });
     }
 
     return artifacts;
+}
+
+async function findFiles(directory, predicate) {
+    return (await readdir(directory)).filter(predicate).map((entry) => path.join(directory, entry));
 }
 
 async function findRuntimeArtifacts(version) {

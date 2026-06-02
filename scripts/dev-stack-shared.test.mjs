@@ -1,7 +1,11 @@
 import assert from 'node:assert/strict';
 import path from 'node:path';
 import test from 'node:test';
-import { formatPortBlockers, waitForRuntimeReady } from './dev-stack-shared.mjs';
+import {
+    cleanupStaleProcesses,
+    formatPortBlockers,
+    waitForRuntimeReady,
+} from './dev-stack-shared.mjs';
 
 test('formatPortBlockers includes owner process details', () => {
     const repositoryRoot = path.join('/Users', 'zknicker', 'repo');
@@ -46,4 +50,36 @@ test('waitForRuntimeReady reads the Runtime capabilities health envelope', async
     }
 
     assert.deepEqual(requestedUrls, ['http://127.0.0.1:18790/capabilities']);
+});
+
+test('cleanupStaleProcesses closes the old Tauri desktop app in desktop mode', () => {
+    const killedProcesses = [];
+    const cleanupCount = cleanupStaleProcesses({
+        mode: 'desktop-runtime',
+        ports: {
+            serverPort: 8080,
+            websitePort: 3100,
+        },
+        processTools: {
+            killProcess: (pid, signal) => {
+                killedProcesses.push([pid, signal]);
+            },
+            listListeningProcessIds: (port) => (port === 3180 ? [222] : []),
+            readProcessCommand: (pid) =>
+                pid === 222
+                    ? '/Applications/Tavern.app/Contents/MacOS/tavern-server --app-origin tauri://localhost --server-port 3180'
+                    : '',
+            readProcessParentId: (pid) => (pid === 222 ? 111 : null),
+            readProcessWorkingDirectory: () => null,
+            stopGlobalOpenClawLaunchAgent: () => undefined,
+            waitForProcessExit: () => undefined,
+        },
+        repositoryRoot: '/repo',
+    });
+
+    assert.equal(cleanupCount, 2);
+    assert.deepEqual(killedProcesses, [
+        [222, 'SIGTERM'],
+        [111, 'SIGTERM'],
+    ]);
 });

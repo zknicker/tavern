@@ -94,7 +94,7 @@ export function AppShellTopbar({
             className
         ),
         'data-slot': 'app-shell-topbar',
-        'data-tauri-drag-region': '',
+        'data-window-drag-region': '',
     };
 
     return useRender({

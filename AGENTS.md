@@ -17,7 +17,7 @@ Tavern has three first-party layers plus OpenClaw execution.
 | Layer | Owns |
 | --- | --- |
 | Tavern Runtime | Canonical chats, messages, participants, events, reads, automations, deliveries, runtime activity, Cortex storage, managed OpenClaw startup, and Tavern tools. |
-| Tavern App | The Tauri/React product surface, local presentation, app cache, profiles, participant links, app settings, optimistic UI, and tRPC client behavior. |
+| Tavern App | The Electron/React product surface, local presentation, app cache, profiles, participant links, app settings, optimistic UI, and tRPC client behavior. |
 | Tavern API / SDK | Stable contracts for chats, realtime, admin/runtime control, automations, Cortex, memory inspection, skills, stats, and external clients. |
 | OpenClaw | Native agent execution: agents, sessions, turns, transcripts, files, tools, model calls, context management, and Gateway behavior. |
 

@@ -1,8 +1,8 @@
-import { isTauri } from '@tauri-apps/api/core';
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import App from './app.tsx';
 import { ThemeProvider } from './components/theme-provider.tsx';
+import { isElectronDesktopApp } from './lib/desktop-bridge.ts';
 import { TavernProviders } from './lib/trpc.tsx';
 import './styles/global.css';
 
@@ -12,8 +12,8 @@ if (!rootElement) {
     throw new Error('Root element not found.');
 }
 
-if (isTauri() && navigator.userAgent.includes('Mac')) {
-    document.documentElement.classList.add('macos-tauri');
+if (isElectronDesktopApp() && navigator.userAgent.includes('Mac')) {
+    document.documentElement.classList.add('macos-electron');
 }
 
 createRoot(rootElement).render(

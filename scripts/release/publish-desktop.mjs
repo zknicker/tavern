@@ -11,39 +11,35 @@ loadEnvFile();
 const s3Uri = trimTrailingSlash(requireEnv('TAVERN_RELEASE_S3_URI'));
 const includeRuntime =
     process.argv.includes('--runtime') || process.env.TAVERN_RELEASE_INCLUDE_RUNTIME === '1';
-const bundleRoot = path.join(
-    repoRoot,
-    'apps',
-    'website',
-    'src-tauri',
-    'target',
-    'release',
-    'bundle'
-);
-const macosBundleDir = path.join(bundleRoot, 'macos');
-const dmgBundleDir = path.join(bundleRoot, 'dmg');
-const runtimeBundleDir = path.join(
-    repoRoot,
-    'apps',
-    'website',
-    'src-tauri',
-    'target',
-    'release',
-    'runtime'
-);
+const bundleRoot = path.join(repoRoot, 'apps', 'website', 'electron-dist');
+const runtimeBundleDir = path.join(repoRoot, 'apps', 'website', 'electron-dist', 'runtime');
 
 const main = async () => {
     const { version } = await readJson('apps/website/package.json');
+    const artifactPrefix = `Tavern_${version}_arm64`;
+    const desktopArtifacts = [
+        ...(await findFiles(bundleRoot, (entry) => entry === 'latest-mac.yml')),
+        ...(await findFiles(bundleRoot, (entry) => entry === `${artifactPrefix}.dmg`)),
+        ...(await findFiles(bundleRoot, (entry) => entry === `${artifactPrefix}.zip`)),
+        ...(await findFiles(bundleRoot, (entry) => entry === `${artifactPrefix}.dmg.blockmap`)),
+        ...(await findFiles(bundleRoot, (entry) => entry === `${artifactPrefix}.zip.blockmap`)),
+    ];
+    if (desktopArtifacts.length !== 5) {
+        console.error(
+            `release:publish-desktop error: expected 5 desktop artifacts for ${version}, found ${desktopArtifacts.length}`
+        );
+        process.exit(1);
+    }
+
     const artifacts = [
-        path.join(bundleRoot, 'latest.json'),
-        ...(await findFiles(dmgBundleDir, (entry) => entry.endsWith('.dmg'))),
-        ...(await findFiles(macosBundleDir, (entry) => entry.endsWith('.app.tar.gz'))),
-        ...(await findFiles(macosBundleDir, (entry) => entry.endsWith('.app.tar.gz.sig'))),
+        ...desktopArtifacts,
         ...(includeRuntime ? await findRuntimeArtifacts(version) : []),
     ];
 
     for (const artifact of artifacts) {
-        runAws(['s3', 'cp', artifact, `${s3Uri}/${path.basename(artifact)}`]);
+        const targetUri = `${s3Uri}/${path.basename(artifact)}`;
+        runAws(['s3', 'cp', artifact, targetUri]);
+        runAws(['s3', 'ls', targetUri]);
     }
 
     console.log(`Published ${artifacts.length} release artifacts to ${s3Uri}`);

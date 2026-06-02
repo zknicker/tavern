@@ -7,7 +7,7 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import { fail, readJson, repoRoot } from './release-utils.mjs';
 
-const artifactRoot = path.join(repoRoot, 'apps', 'website', 'src-tauri', 'target', 'release');
+const artifactRoot = path.join(repoRoot, 'apps', 'website', 'electron-dist');
 const runtimeArtifactDir = path.join(artifactRoot, 'runtime');
 const pluginPackages = [
     'tavern-openclaw-messenger',

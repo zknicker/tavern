@@ -12,15 +12,7 @@ loadEnvFile();
 const releaseBaseUrl = trimTrailingSlash(requireEnv('TAVERN_RELEASE_BASE_URL'));
 const tapRepository = process.env.TAVERN_HOMEBREW_TAP_REPO?.trim() || 'zknicker/homebrew-tavern';
 const tapDirectory = process.env.TAVERN_HOMEBREW_TAP_DIR?.trim() || cloneTapRepository();
-const runtimeBundleDir = path.join(
-    repoRoot,
-    'apps',
-    'website',
-    'src-tauri',
-    'target',
-    'release',
-    'runtime'
-);
+const runtimeBundleDir = path.join(repoRoot, 'apps', 'website', 'electron-dist', 'runtime');
 
 const main = async () => {
     const { version } = await readJson('apps/runtime/package.json');

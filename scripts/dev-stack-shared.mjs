@@ -185,8 +185,14 @@ export function assertDevStackPortsAvailable({ mode, ports, repositoryRoot }) {
     throw new Error(formatPortBlockers(blockers, repositoryRoot));
 }
 
-export function cleanupStaleProcesses({ mode, ports, repositoryRoot }) {
+export function cleanupStaleProcesses({
+    mode,
+    ports,
+    processTools = defaultProcessTools,
+    repositoryRoot,
+}) {
     const hasRuntime = isRuntimeMode(mode);
+    const isDesktop = isDesktopMode(mode);
     const managedOpenClawGatewayPort = Number.parseInt(
         process.env.TAVERN_OPENCLAW_GATEWAY_PORT ?? '18789',
         10
@@ -215,8 +221,22 @@ export function cleanupStaleProcesses({ mode, ports, repositoryRoot }) {
             cwd: null,
             enabled: hasRuntime,
             matches: (pid) =>
-                isOpenClawGatewayProcess(readProcessCommand(pid), managedOpenClawGatewayPort),
+                isOpenClawGatewayProcess(
+                    processTools.readProcessCommand(pid),
+                    managedOpenClawGatewayPort
+                ),
             port: managedOpenClawGatewayPort,
+        },
+        {
+            commandPattern: null,
+            cwd: null,
+            enabled: isDesktop,
+            getProcessIds: (pid) =>
+                [pid, processTools.readProcessParentId(pid)].filter(
+                    (value) => Number.isInteger(value) && value > 1
+                ),
+            matches: (pid) => isStaleTauriDesktopSidecar(processTools.readProcessCommand(pid)),
+            port: 3180,
         },
     ];
 
@@ -227,29 +247,33 @@ export function cleanupStaleProcesses({ mode, ports, repositoryRoot }) {
             continue;
         }
 
-        const matches = listListeningProcessIds(definition.port).filter((pid) => {
-            const cwd = readProcessWorkingDirectory(pid);
-            const command = readProcessCommand(pid);
+        const matches = processTools.listListeningProcessIds(definition.port).filter((pid) => {
+            const cwd = processTools.readProcessWorkingDirectory(pid);
+            const command = processTools.readProcessCommand(pid);
             if (definition.matches) {
                 return definition.matches(pid);
             }
             return cwd === definition.cwd && command.includes(definition.commandPattern);
         });
 
-        staleProcessIds.push(...matches);
+        staleProcessIds.push(
+            ...matches.flatMap((pid) =>
+                definition.getProcessIds ? definition.getProcessIds(pid) : pid
+            )
+        );
     }
 
     const uniqueProcessIds = [...new Set(staleProcessIds)];
 
     if (hasRuntime && uniqueProcessIds.length > 0) {
-        stopGlobalOpenClawLaunchAgent();
+        processTools.stopGlobalOpenClawLaunchAgent();
     }
 
     for (const pid of uniqueProcessIds) {
-        process.kill(pid, 'SIGTERM');
+        processTools.killProcess(pid, 'SIGTERM');
     }
 
-    waitForProcessExit(uniqueProcessIds);
+    processTools.waitForProcessExit(uniqueProcessIds);
 
     return uniqueProcessIds.length;
 }
@@ -385,11 +409,30 @@ function readProcessCommand(pid) {
     return typeof result.stdout === 'string' ? result.stdout.trim() : '';
 }
 
+function readProcessParentId(pid) {
+    const result = spawnSync('ps', ['-p', String(pid), '-o', 'ppid='], {
+        encoding: 'utf8',
+    });
+    const value = Number.parseInt(
+        typeof result.stdout === 'string' ? result.stdout.trim() : '',
+        10
+    );
+
+    return Number.isInteger(value) ? value : null;
+}
+
 function isOpenClawGatewayProcess(command, port) {
     return (
         command.includes('openclaw') &&
         command.includes('gateway') &&
         command.includes(String(port))
+    );
+}
+
+function isStaleTauriDesktopSidecar(command) {
+    return (
+        command.includes('/Applications/Tavern.app/Contents/MacOS/tavern-server') &&
+        command.includes('--app-origin tauri://localhost')
     );
 }
 
@@ -431,3 +474,13 @@ function waitForProcessExit(processIds) {
         Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, 50);
     }
 }
+
+const defaultProcessTools = {
+    killProcess: (pid, signal) => process.kill(pid, signal),
+    listListeningProcessIds,
+    readProcessCommand,
+    readProcessParentId,
+    readProcessWorkingDirectory,
+    stopGlobalOpenClawLaunchAgent,
+    waitForProcessExit,
+};

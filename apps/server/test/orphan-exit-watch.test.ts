@@ -55,6 +55,29 @@ test('startOrphanExitWatch exits once the dev parent disappears', () => {
     stopWatching();
 });
 
+test('startOrphanExitWatch exits immediately when already orphaned', () => {
+    let exitedWithCode: number | undefined;
+    let scheduled = false;
+
+    startOrphanExitWatch({
+        enabled: true,
+        exit: (code) => {
+            exitedWithCode = code;
+        },
+        getParentPid: () => 1,
+        logger: {
+            log: () => undefined,
+        },
+        setInterval: () => {
+            scheduled = true;
+            return setInterval(() => undefined, 1000);
+        },
+    });
+
+    assert.equal(exitedWithCode, 0);
+    assert.equal(scheduled, false);
+});
+
 test('startOrphanExitWatch stays disabled when orphan exits are turned off', () => {
     let scheduled = false;
 

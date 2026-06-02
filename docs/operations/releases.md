@@ -46,10 +46,11 @@ updates are operator work; do not force one for a desktop-only patch.
 6. Run `bun run release:publish` from macOS with signing, notarization, updater,
    S3, and GitHub auth configured.
 
-`release:publish` builds the signed desktop app, notarizes it, creates updater
-metadata, uploads desktop updater artifacts to `TAVERN_RELEASE_S3_URI`, commits
-release metadata, pushes `main`, pushes the version tag, and creates the GitHub
-Release.
+`release:publish` builds the signed desktop app, notarizes it, creates Electron
+updater metadata (`latest-mac.yml`), uploads the DMG, updater zip, blockmaps,
+and metadata to `TAVERN_RELEASE_S3_URI`, verifies each S3 object is visible,
+commits release metadata, pushes `main`, pushes the version tag, and creates the
+GitHub Release.
 
 ## Runtime Release Flow
 
@@ -70,9 +71,9 @@ Use this lane only when the Runtime package must ship.
 
 `release:publish -- --runtime` builds the Runtime artifact, builds the signed
 desktop app, notarizes it, creates updater metadata, uploads desktop updater
-artifacts and Runtime tarballs to `TAVERN_RELEASE_S3_URI`, commits release
-metadata, pushes `main`, pushes the version tag, creates the GitHub Release, and
-updates the Homebrew tap formula.
+artifacts and Runtime tarballs to `TAVERN_RELEASE_S3_URI`, verifies each S3
+object is visible, commits release metadata, pushes `main`, pushes the version
+tag, creates the GitHub Release, and updates the Homebrew tap formula.
 
 ## Compatibility Floor Rules
 
@@ -133,10 +134,10 @@ behavior changes:
 `zknicker/homebrew-tavern` by default through `TAVERN_HOMEBREW_TAP_REPO`, or an
 explicit local checkout through `TAVERN_HOMEBREW_TAP_DIR`.
 
-Desktop builds compile `assets/mac-icon.icon` with Xcode `actool` before Tauri
+Desktop builds compile `assets/mac-icon.icon` with Xcode `actool` before Electron
 packaging. The compiled `Assets.car` provides the layered Liquid Glass app icon
 on macOS 26, and `AppIcon.icns` remains the fallback icon for older macOS
-versions and Tauri's DMG/app bundle path.
+versions and Electron's DMG/app bundle path.
 
 Tavern ships two production artifacts:
 
@@ -159,11 +160,10 @@ Required release environment:
 * `TAVERN_RELEASE_S3_URI`
 * `TAVERN_HOMEBREW_TAP_REPO` defaults to `zknicker/homebrew-tavern`
 * `TAVERN_HOMEBREW_TAP_DIR` optionally points to a local tap checkout
-* `TAURI_UPDATER_PUBLIC_KEY`
-* `TAURI_SIGNING_PRIVATE_KEY`
-* `TAURI_SIGNING_PRIVATE_KEY_PASSWORD`
-* `APPLE_SIGNING_IDENTITY` or CI certificate variables
-* `APPLE_ID`, `APPLE_PASSWORD`, `APPLE_TEAM_ID`
+* `CSC_NAME` or `CSC_LINK` + `CSC_KEY_PASSWORD`
+* `APPLE_ID`, `APPLE_APP_SPECIFIC_PASSWORD`, `APPLE_TEAM_ID`
+* `APPLE_PASSWORD` is accepted as a compatibility alias for
+  `APPLE_APP_SPECIFIC_PASSWORD`
 * `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`
 
 The GitHub Release step uses `gh`; run `gh auth status` before publishing.

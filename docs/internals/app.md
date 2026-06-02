@@ -1,5 +1,5 @@
 ---
-summary: Tavern App boundary for the Tauri product shell, React/tRPC client, app cache/settings, runtime adapters, and optimistic UI rules.
+summary: Tavern App boundary for the Electron product shell, React/tRPC client, app cache/settings, runtime adapters, and optimistic UI rules.
 read_when:
   - changing the local app backend, tRPC procedures, client cache, or app-owned settings
   - changing how Tavern App consumes Tavern Runtime or Tavern API records
@@ -7,7 +7,7 @@ read_when:
 
 # Tavern App
 
-Tavern App is the Tauri product surface and first-party Tavern Runtime client.
+Tavern App is the Electron product surface and first-party Tavern Runtime client.
 Its React client and local Node/tRPC layer are one app boundary, not the
 canonical chat server.
 

@@ -15,7 +15,7 @@ rewards all belong to Tavern. Tavern Runtime keeps that server alive while the
 app is closed, so automations can run, agents can post, and the app can catch
 up later.
 
-Architecturally, Tavern is a Tauri app that uses a React frontend with a Node
+Architecturally, Tavern is an Electron app that uses a React frontend with a Node
 backend that communicates over tRPC. The app connects to Tavern Runtime, a
 separate Node-based service that owns canonical chat state, runs managed
 OpenClaw, and exposes local runtime capabilities. OpenClaw owns native agent

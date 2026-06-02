@@ -1,20 +1,21 @@
 #!/usr/bin/env node
 
 import { readFile } from 'node:fs/promises';
+import { createRequire } from 'node:module';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const repoRoot = path.resolve(__dirname, '..', '..');
+const require = createRequire(import.meta.url);
 
 const expectedVersion = resolveExpectedVersion(process.argv.slice(2));
 
 const versionedFiles = {
     runtime: 'apps/runtime/package.json',
     website: 'apps/website/package.json',
-    tauri: 'apps/website/src-tauri/tauri.conf.json',
-    cargo: 'apps/website/src-tauri/Cargo.toml',
+    electronBuilder: 'apps/website/electron-builder.config.cjs',
 };
 
 const changelogPath = 'CHANGELOG.md';
@@ -22,16 +23,9 @@ const changelogPath = 'CHANGELOG.md';
 const main = async () => {
     const websitePackage = await readJson(versionedFiles.website);
     const runtimePackage = await readJson(versionedFiles.runtime);
-    const tauriConfig = await readJson(versionedFiles.tauri);
-    const cargoVersion = await readCargoVersion(versionedFiles.cargo);
+    const electronBuilderConfig = require(path.join(repoRoot, versionedFiles.electronBuilder));
 
-    const appVersions = {
-        website: websitePackage.version,
-        tauri: tauriConfig.version,
-        cargo: cargoVersion,
-    };
-
-    const releaseVersion = assertSynchronizedAppVersions(appVersions);
+    const releaseVersion = assertReleaseVersion(websitePackage.version);
     assertRuntimeCompatibilityMetadata({
         appVersion: releaseVersion,
         requiredRuntimeVersion: websitePackage.tavern?.runtime?.minimumVersion,
@@ -39,7 +33,7 @@ const main = async () => {
     });
 
     assert(
-        tauriConfig.identifier === 'build.tavern.desktop',
+        electronBuilderConfig.appId === 'build.tavern.desktop',
         'desktop app identifier must be build.tavern.desktop'
     );
 
@@ -92,13 +86,7 @@ function resolveExpectedVersion(argv) {
     return value;
 }
 
-function assertSynchronizedAppVersions(versions) {
-    const unique = new Set(Object.values(versions));
-    if (unique.size !== 1) {
-        fail('website, Tauri, and Cargo versions are not synchronized', versions);
-    }
-
-    const [version] = unique;
+function assertReleaseVersion(version) {
     if (!isSemver(version)) {
         fail(`invalid release version: ${version}`);
     }
@@ -138,16 +126,6 @@ function parseLatestReleaseFromChangelog(changelog) {
         version: match[1],
         date: match[2],
     };
-}
-
-async function readCargoVersion(relativePath) {
-    const content = await readText(relativePath);
-    const match = content.match(/^version = "(\d+\.\d+\.\d+)"/m);
-    if (!match) {
-        fail('could not find version in Cargo.toml');
-    }
-
-    return match[1];
 }
 
 async function readJson(relativePath) {

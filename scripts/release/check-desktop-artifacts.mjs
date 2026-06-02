@@ -7,49 +7,33 @@ import { fileURLToPath } from 'node:url';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const repoRoot = path.resolve(__dirname, '..', '..');
-const bundleRoot = path.join(
-    repoRoot,
-    'apps',
-    'website',
-    'src-tauri',
-    'target',
-    'release',
-    'bundle'
-);
-const macosBundleDir = path.join(bundleRoot, 'macos');
-const dmgBundleDir = path.join(bundleRoot, 'dmg');
+const bundleRoot = path.join(repoRoot, 'apps', 'website', 'electron-dist');
+const macosBundleDir = path.join(bundleRoot, 'mac-arm64');
 
 const main = async () => {
     const websitePackage = await readJson('apps/website/package.json');
     const version = websitePackage.version;
     const appPath = path.join(macosBundleDir, 'Tavern.app');
-    const dmgPath = path.join(dmgBundleDir, `Tavern_${version}_aarch64.dmg`);
-    const latestJsonPath = path.join(bundleRoot, 'latest.json');
-    const sidecarPath = path.join(appPath, 'Contents', 'MacOS', 'tavern-server');
+    const artifactPrefix = `Tavern_${version}_arm64`;
+    const dmgPath = await findSingleFile(bundleRoot, (entry) => entry === `${artifactPrefix}.dmg`);
+    const zipPath = await findSingleFile(bundleRoot, (entry) => entry === `${artifactPrefix}.zip`);
+    const latestYamlPath = path.join(bundleRoot, 'latest-mac.yml');
+    const sidecarPath = path.join(appPath, 'Contents', 'Resources', 'bin', 'tavern-server');
 
     await assertDirectory(appPath, 'Tavern.app');
     await assertSidecarVersion(sidecarPath, version);
     await assertFileHasContent(dmgPath, path.basename(dmgPath));
+    await assertFileHasContent(zipPath, path.basename(zipPath));
 
-    if (await exists(latestJsonPath)) {
-        const updaterArchivePath = await findSingleFile(macosBundleDir, (entry) =>
-            entry.endsWith('.app.tar.gz')
-        );
-        const updaterSignaturePath = `${updaterArchivePath}.sig`;
-
-        await assertFileHasContent(updaterArchivePath, path.basename(updaterArchivePath));
-        await assertFileHasContent(updaterSignaturePath, path.basename(updaterSignaturePath));
-
-        const latestJson = JSON.parse(await readFile(latestJsonPath, 'utf8'));
-        assert(latestJson.version === version, 'latest.json version must match package version');
+    if (await exists(latestYamlPath)) {
+        await assertFileHasContent(latestYamlPath, 'latest-mac.yml');
+        const latestYaml = await readFile(latestYamlPath, 'utf8');
         assert(
-            typeof latestJson.platforms?.['darwin-aarch64']?.url === 'string',
-            'latest.json missing darwin-aarch64 update URL'
+            latestYaml.includes(`version: ${version}`),
+            'latest-mac.yml version must match package version'
         );
-        assert(
-            typeof latestJson.platforms?.['darwin-aarch64']?.signature === 'string',
-            'latest.json missing darwin-aarch64 signature'
-        );
+        assert(latestYaml.includes('sha512:'), 'latest-mac.yml missing signed artifact checksum');
+        assert(latestYaml.includes(path.basename(zipPath)), 'latest-mac.yml missing updater zip');
     }
 
     console.log('release:check-desktop-artifacts passed');
@@ -64,15 +48,6 @@ async function readJson(relativePath) {
     return JSON.parse(await readFile(absolutePath, 'utf8'));
 }
 
-async function exists(filePath) {
-    try {
-        await stat(filePath);
-        return true;
-    } catch {
-        return false;
-    }
-}
-
 async function findSingleFile(directory, predicate) {
     const matches = (await readdir(directory))
         .filter(predicate)
@@ -85,6 +60,15 @@ async function findSingleFile(directory, predicate) {
     }
 
     return matches[0];
+}
+
+async function exists(filePath) {
+    try {
+        await stat(filePath);
+        return true;
+    } catch {
+        return false;
+    }
 }
 
 async function assertDirectory(filePath, label) {

@@ -13,11 +13,8 @@ const sourceAppPath = join(
     repositoryRoot,
     'apps',
     'website',
-    'src-tauri',
-    'target',
-    'release',
-    'bundle',
-    'macos',
+    'electron-dist',
+    'mac-arm64',
     'Tavern.app'
 );
 const destinationAppPath = '/Applications/Tavern.app';

@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file.
 
+## v1.2.0 - 2026-06-01
+
+- Migrated the desktop app from Tauri to Electron while preserving the macOS window treatment, transparent background, and traffic light placement.
+- Reset the Electron desktop release line to 1.2.0.
+- Updated Electron dev startup so `bun run dev` starts the managed Runtime stack, launches the app against Vite, and cleans up stale Tauri sidecars.
+- Replaced Tauri release artifacts with Electron signing, notarization, updater metadata, and S3 publishing.
+
 ## v1.1.16 - 2026-06-01
 
 - Added Settings -> Instructions for editing the managed agent's custom AGENTS.md block with a code editor and a generated AGENTS.md preview.

@@ -1,15 +1,17 @@
+import { getDesktopBridge, isElectronDesktopApp } from './desktop-bridge.ts';
+
 const desktopServerOrigin = 'http://127.0.0.1:3180';
 const sidecarStartupDeadlineMs = 10_000;
 const sidecarStartupPollMs = 200;
 
 let desktopAgentRuntimePromise: Promise<string> | null = null;
 
-export function isPackagedTauriApp() {
-    if (typeof window === 'undefined') {
+export function isPackagedDesktopApp() {
+    if (!(isElectronDesktopApp() && typeof window !== 'undefined')) {
         return false;
     }
 
-    return window.location.protocol === 'tauri:' || window.location.host === 'tauri.localhost';
+    return window.location.protocol === 'file:';
 }
 
 export function getConfiguredServerOrigin() {
@@ -17,7 +19,7 @@ export function getConfiguredServerOrigin() {
 }
 
 export function getTavernRuntimeOrigin() {
-    if (isPackagedTauriApp()) {
+    if (isPackagedDesktopApp()) {
         return desktopServerOrigin;
     }
 
@@ -25,7 +27,7 @@ export function getTavernRuntimeOrigin() {
 }
 
 export async function ensureDesktopServerOrigin(): Promise<string> {
-    if (!isPackagedTauriApp()) {
+    if (!isPackagedDesktopApp()) {
         return getConfiguredServerOrigin() ?? '';
     }
 
@@ -35,23 +37,20 @@ export async function ensureDesktopServerOrigin(): Promise<string> {
 }
 
 async function startDesktopSidecar() {
-    const [{ homeDir, join }, { Command }] = await Promise.all([
-        import('@tauri-apps/api/path'),
-        import('@tauri-apps/plugin-shell'),
-    ]);
-    const databasePath = await join(await homeDir(), '.tavern', 'tavern.sqlite');
-    const command = Command.sidecar('binaries/tavern-server', [
-        '--app-origin',
-        window.location.origin,
-        '--database-path',
-        databasePath,
-        '--server-port',
-        '3180',
-    ]);
+    const bridge = getDesktopBridge();
 
-    await command.spawn();
+    if (bridge) {
+        const info = await bridge.getInfo();
+
+        if (!info.isPackaged) {
+            return getConfiguredServerOrigin() ?? '';
+        }
+
+        const origin = await bridge.ensureServerOrigin();
+        return origin || desktopServerOrigin;
+    }
+
     await waitForSidecarHealth();
-
     return desktopServerOrigin;
 }
 

@@ -23,7 +23,13 @@ export function startOrphanExitWatch({
     logger = console,
     setInterval = globalThis.setInterval,
 }: OrphanExitWatchOptions) {
-    if (!enabled || isOrphanedProcess(getParentPid())) {
+    if (!enabled) {
+        return () => undefined;
+    }
+
+    if (isOrphanedProcess(getParentPid())) {
+        logger.log('[tavern] server exiting because the dev parent process disappeared');
+        exit(0);
         return () => undefined;
     }
 

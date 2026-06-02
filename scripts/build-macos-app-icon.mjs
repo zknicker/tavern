@@ -7,12 +7,12 @@ import { fileURLToPath } from 'node:url';
 const currentDirectory = path.dirname(fileURLToPath(import.meta.url));
 const repositoryRoot = path.resolve(currentDirectory, '..');
 const sourceIconPath = path.join(repositoryRoot, 'assets', 'mac-icon.icon');
-const iconsDirectory = path.join(repositoryRoot, 'apps', 'website', 'src-tauri', 'icons');
+const iconsDirectory = path.join(repositoryRoot, 'apps', 'website', 'electron', 'icons');
 const generatedIconsDirectory = path.join(
     repositoryRoot,
     'apps',
     'website',
-    'src-tauri',
+    'electron',
     'generated-icons'
 );
 
@@ -32,6 +32,7 @@ try {
     }).trim();
 
     mkdirSync(generatedIconsDirectory, { recursive: true });
+    mkdirSync(iconsDirectory, { recursive: true });
     cpSync(sourceIconPath, stagedIconPath, { recursive: true });
     execFileSync(
         actoolPath,

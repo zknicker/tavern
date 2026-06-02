@@ -11,7 +11,7 @@ import { TimelineContextProvider } from '../hooks/chats/use-timeline-context.tsx
 import {
     ensureDesktopServerOrigin,
     getConfiguredServerOrigin,
-    isPackagedTauriApp,
+    isPackagedDesktopApp,
 } from './agent-runtime.ts';
 import { queryClientDefaultOptions } from './query-policy.ts';
 
@@ -175,10 +175,10 @@ export function TavernProviders({ children }: React.PropsWithChildren) {
     const [serverOrigin, setServerOrigin] = React.useState<string | null>(
         getConfiguredServerOrigin()
     );
-    const [isAgentRuntimeReady, setIsAgentRuntimeReady] = React.useState(!isPackagedTauriApp());
+    const [isAgentRuntimeReady, setIsAgentRuntimeReady] = React.useState(!isPackagedDesktopApp());
 
     React.useEffect(() => {
-        if (!isPackagedTauriApp()) {
+        if (!isPackagedDesktopApp()) {
             return;
         }
 

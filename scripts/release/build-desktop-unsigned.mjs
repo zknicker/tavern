@@ -8,20 +8,22 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const repoRoot = path.resolve(__dirname, '..', '..');
 
-const unsignedConfig = {
-    bundle: {
-        targets: ['app', 'dmg'],
-        macOS: {
-            signingIdentity: '-',
-        },
-    },
-};
+process.env.CSC_IDENTITY_AUTO_DISCOVERY = 'false';
+process.env.TAVERN_ELECTRON_NOTARIZE = '0';
 
-runTauri(['build', '--config', JSON.stringify(unsignedConfig)]);
+runElectronBuilder([
+    '--config',
+    'electron-builder.config.cjs',
+    '--mac',
+    '--config.mac.identity=-',
+    '--config.mac.hardenedRuntime=false',
+    '--publish',
+    'never',
+]);
 
-function runTauri(args) {
-    const child = spawn('node', ['scripts/run-tauri.mjs', ...args], {
-        cwd: repoRoot,
+function runElectronBuilder(args) {
+    const child = spawn('bun', ['x', 'electron-builder', ...args], {
+        cwd: path.join(repoRoot, 'apps', 'website'),
         env: process.env,
         stdio: 'inherit',
     });

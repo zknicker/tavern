@@ -8,11 +8,8 @@ import {
     readJson,
     readText,
     updateJson,
-    writeText,
 } from './release-utils.mjs';
 
-const tauriConfigPath = 'apps/website/src-tauri/tauri.conf.json';
-const cargoManifestPath = 'apps/website/src-tauri/Cargo.toml';
 const changelogPath = 'CHANGELOG.md';
 
 const releaseType = process.argv[2];
@@ -74,21 +71,7 @@ function printUsage() {
 }
 
 async function readCurrentVersion() {
-    const versions = await Promise.all([
-        readWebsiteVersion(),
-        readTauriVersion(),
-        readCargoVersion(),
-    ]);
-
-    const unique = new Set(versions);
-    if (unique.size !== 1) {
-        fail('website, Tauri, and Cargo versions are not synchronized', {
-            paths: ['apps/website/package.json', tauriConfigPath, cargoManifestPath],
-            versions,
-        });
-    }
-
-    const [version] = unique;
+    const version = await readWebsiteVersion();
     if (!isSemver(version)) {
         fail(`invalid current version: ${version}`);
     }
@@ -163,32 +146,6 @@ async function updateVersionedFiles(targetVersion, options) {
             return packageJson;
         });
     }
-
-    await updateJson(tauriConfigPath, (config) => {
-        config.version = targetVersion;
-        return config;
-    });
-
-    const cargoManifest = await readText(cargoManifestPath);
-    await writeText(
-        cargoManifestPath,
-        cargoManifest.replace(/^version = "\d+\.\d+\.\d+"/m, `version = "${targetVersion}"`)
-    );
-}
-
-async function readTauriVersion() {
-    const config = await readJson(tauriConfigPath);
-    return config.version;
-}
-
-async function readCargoVersion() {
-    const cargoManifest = await readText(cargoManifestPath);
-    const match = cargoManifest.match(/^version = "(\d+\.\d+\.\d+)"/m);
-    if (!match) {
-        fail('could not find version in Cargo.toml');
-    }
-
-    return match[1];
 }
 
 function printSummary({ bumpRuntime, currentVersion, requireRuntime, targetVersion }) {
@@ -198,8 +155,6 @@ function printSummary({ bumpRuntime, currentVersion, requireRuntime, targetVersi
     if (bumpRuntime) {
         console.log('- apps/runtime/package.json');
     }
-    console.log(`- ${tauriConfigPath}`);
-    console.log(`- ${cargoManifestPath}`);
     if (requireRuntime) {
         console.log('- apps/website/package.json tavern.runtime.minimumVersion');
     }
