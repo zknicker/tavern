@@ -1,6 +1,7 @@
 import type { ComponentType } from 'react';
-import { createBrowserRouter, createHashRouter, Navigate, Outlet } from 'react-router-dom';
+import { createBrowserRouter, createHashRouter, Navigate } from 'react-router-dom';
 import { AppFrame } from './components/app-frame.tsx';
+import { DashboardSetupGate } from './features/onboarding/dashboard-setup-gate.tsx';
 import { Layout } from './layout.tsx';
 import { isPackagedDesktopApp } from './lib/agent-runtime.ts';
 
@@ -39,7 +40,7 @@ export function createAppRouter() {
                 },
                 {
                     path: 'dashboard',
-                    element: <Outlet />,
+                    element: <DashboardSetupGate />,
                     children: [
                         {
                             element: <Layout />,
