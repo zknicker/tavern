@@ -2,6 +2,15 @@
 
 All notable changes to this project will be documented in this file.
 
+## v1.2.2 - 2026-06-02
+
+- Added a unified desktop updater flow that stages required Runtime updates, downloads the app update, and waits for one user restart before cutting over.
+- Changed Runtime updates so `tavern update` stages the Homebrew package without restarting the running Runtime, while the app performs the Runtime restart only during final update restart.
+- Added Runtime update status and restart control APIs, and raised the required Runtime floor to 1.2.2 for this app release.
+- Fixed OpenClaw-backed send and cron controls so they gate on Runtime capability health and update when capability events arrive.
+- Fixed development stack shutdown so child process groups are cleaned up more reliably.
+- Polished chat prompt input composition, setup-state rendering, desktop update UI, and app corner styling.
+
 ## v1.2.1 - 2026-06-02
 
 - Fixed macOS traffic light alignment in the Electron desktop shell.
