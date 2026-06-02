@@ -1,5 +1,5 @@
 import type { ComponentType } from 'react';
-import { createBrowserRouter, createHashRouter, Navigate } from 'react-router-dom';
+import { createBrowserRouter, createHashRouter, Navigate, Outlet } from 'react-router-dom';
 import { AppFrame } from './components/app-frame.tsx';
 import { Layout } from './layout.tsx';
 import { isPackagedDesktopApp } from './lib/agent-runtime.ts';
@@ -39,10 +39,7 @@ export function createAppRouter() {
                 },
                 {
                     path: 'dashboard',
-                    lazy: lazyRoute(
-                        () => import('./features/onboarding/tavern-runtime-gate.tsx'),
-                        'TavernRuntimeGate'
-                    ),
+                    element: <Outlet />,
                     children: [
                         {
                             element: <Layout />,

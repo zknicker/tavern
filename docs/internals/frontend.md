@@ -31,6 +31,11 @@ capability lives; keep route and feature folders for page assembly.
 * Move chat workflow orchestration, optimistic reconciliation, and event cache
   handling into `hooks/chats`. Chat feature components should receive ids,
   narrow view models, and command callbacks.
+* Composer surfaces use `components/ui/prompt-input.tsx` slot components such as
+  `PromptInput`, `PromptInputBody`, `PromptInputTextarea`, `PromptInputFooter`,
+  `PromptInputTools`, and `PromptInputSubmit`. Feature components assemble those
+  slots; avoid monolithic composer wrappers that own toolbar layout or disabled
+  state.
 * Avoid generic buckets such as `shared`, `common`, `helpers`, and `misc` when
   a clearer owner exists.
 * Prefer short names scoped by folders over long prefixed filenames.

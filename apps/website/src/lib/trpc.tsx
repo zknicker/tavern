@@ -240,11 +240,7 @@ export function TavernProviders({ children }: React.PropsWithChildren) {
     }
 
     if (!isAgentRuntimeReady) {
-        return (
-            <div className="flex min-h-screen items-center justify-center bg-background p-6 text-center text-muted-foreground">
-                Starting Tavern desktop backend...
-            </div>
-        );
+        return null;
     }
 
     if (!clientState) {

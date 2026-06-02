@@ -1,4 +1,12 @@
 import * as React from 'react';
+import {
+    PromptInput,
+    PromptInputActions,
+    PromptInputBody,
+    PromptInputFooter,
+    PromptInputSubmit,
+    PromptInputTools,
+} from '../../components/ui/prompt-input.tsx';
 import { useAgentList } from '../../hooks/agents/use-agent-list.ts';
 import { mergeTimelineMessages } from '../../hooks/chats/chat-timeline-messages.ts';
 import type { ChatActiveReply, ChatTimelineState } from '../../hooks/chats/chat-timeline-state.ts';
@@ -7,8 +15,9 @@ import { useChatTimelineRows } from '../../hooks/chats/use-chat-timeline-store.t
 import { useChatRuntimeTimelineState } from '../../hooks/chats/use-timeline-context.tsx';
 import { markChatTiming } from '../../lib/chat-timing.ts';
 import type { ChatLogOutput } from '../../lib/trpc.tsx';
+import { useMentionComposer } from '../mentions/use-mention-composer.tsx';
+import { ChatComposerAgentSelector } from './chat-composer-tools.tsx';
 import { ChatDetailFrame } from './chat-detail-frame.tsx';
-import { ChatMessageComposerSurface } from './chat-message-composer-surface.tsx';
 
 const draftTimelineLimit = 100;
 
@@ -25,6 +34,13 @@ export function ChatDraftDetail({
     const boundAgentIds = React.useMemo(() => (draft ? [draft.agentId] : []), [draft]);
     const [agentId, setAgentId] = React.useState(draft?.agentId ?? '');
     const [content, setContent] = React.useState('');
+    const mentionComposer = useMentionComposer({
+        agentId,
+        agents: agentsQuery.data?.agents ?? [],
+        content,
+        onTextChange: setContent,
+        onSubmit: () => undefined,
+    });
     const handoffState = useChatRuntimeTimelineState(timelineChatId);
     const handoffLog = buildDraftHandoffLog(handoffState);
     const timeline = useChatTimelineRows({
@@ -91,25 +107,41 @@ export function ChatDraftDetail({
             emptyLabel=""
             failedTurn={handoffFrame.failedTurn}
             footer={
-                <ChatMessageComposerSurface
-                    agentId={agentId}
-                    agents={agentsQuery.data?.agents ?? []}
-                    boundAgentIds={boundAgentIds}
-                    canSubmit={false}
-                    content={content}
-                    contextFullness={null}
-                    disabled={false}
+                <PromptInput
                     error={draft?.errorMessage}
-                    name="draft-chat-message"
-                    onAgentChange={setAgentId}
                     onSubmit={(event) => event?.preventDefault()}
-                    onTextChange={setContent}
-                    placeholder={
-                        draft && draft.status !== 'error'
-                            ? 'A reply is already in progress for this chat.'
-                            : 'Ask for follow-up changes'
-                    }
-                />
+                    onTextEditorFocus={mentionComposer.focusTextEditor}
+                >
+                    <PromptInputBody>
+                        {mentionComposer.renderTextEditor({
+                            disabled: false,
+                            name: 'draft-chat-message',
+                            placeholder: 'Ask for follow-up changes',
+                        })}
+                    </PromptInputBody>
+                    {mentionComposer.composerPopover}
+                    <PromptInputFooter>
+                        <PromptInputTools>
+                            <ChatComposerAgentSelector
+                                agentId={agentId}
+                                agents={agentsQuery.data?.agents ?? []}
+                                boundAgentIds={boundAgentIds}
+                                onAgentChange={setAgentId}
+                            />
+                        </PromptInputTools>
+                        <PromptInputActions>
+                            <PromptInputSubmit
+                                canSubmit={false}
+                                label="Send message"
+                                tooltip={
+                                    draft && draft.status !== 'error'
+                                        ? 'A reply is already in progress.'
+                                        : undefined
+                                }
+                            />
+                        </PromptInputActions>
+                    </PromptInputFooter>
+                </PromptInput>
             }
             historyLoaded
             isPending={false}

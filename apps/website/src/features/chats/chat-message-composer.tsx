@@ -1,17 +1,26 @@
 import * as React from 'react';
+import {
+    PromptInput,
+    PromptInputActions,
+    PromptInputBody,
+    PromptInputFooter,
+    PromptInputSubmit,
+    PromptInputTools,
+} from '../../components/ui/prompt-input.tsx';
 import { useChatSend } from '../../hooks/chats/use-chat-send.ts';
 import type { AgentListOutput } from '../../lib/trpc.tsx';
+import { cn } from '../../lib/utils.ts';
 import {
     buildMentionMetadata,
     compileMentionSubmission,
     normalizeMentions,
 } from '../mentions/mention-text.ts';
 import type { Mention } from '../mentions/mention-types.ts';
+import { useMentionComposer } from '../mentions/use-mention-composer.tsx';
+import { ChatComposerAgentSelector, ChatComposerContextFullness } from './chat-composer-tools.tsx';
 import type { ChatContextFullness } from './chat-context-fullness.ts';
-import {
-    ChatMessageComposerSurface,
-    type ChatMessageComposerVariant,
-} from './chat-message-composer-surface.tsx';
+
+export type ChatMessageComposerVariant = 'compact' | 'detail';
 
 export function ChatMessageComposer({
     agentRuntimeSyncLabel = null,
@@ -37,6 +46,7 @@ export function ChatMessageComposer({
     const [agentId, setAgentId] = React.useState<string>(boundAgentIds[0] ?? '');
     const [content, setContent] = React.useState('');
     const [mentions, setMentions] = React.useState<Mention[]>([]);
+    const isCompact = variant === 'compact';
     const trimmedContent = content.trim();
     const canSend =
         chatCanSend &&
@@ -52,6 +62,17 @@ export function ChatMessageComposer({
             setAgentId(nextAgentId);
         }
     }, [agentId, boundAgentIds]);
+
+    const mentionComposer = useMentionComposer({
+        agentId,
+        agents,
+        content,
+        onTextChange: setContent,
+        onSubmit: () => {
+            void handleSubmit();
+        },
+        onMentionsChange: setMentions,
+    });
 
     async function handleSubmit(event?: React.FormEvent<HTMLFormElement>) {
         event?.preventDefault();
@@ -85,58 +106,84 @@ export function ChatMessageComposer({
     }
 
     return (
-        <ChatMessageComposerSurface
-            agentId={agentId}
-            agents={agents}
-            boundAgentIds={boundAgentIds}
-            canSubmit={canSend}
-            content={content}
-            contextFullness={contextFullness}
-            disabled={
-                isDisabled || !chatCanSend || sendMessage.isPending || boundAgentIds.length === 0
-            }
+        <PromptInput
+            className={cn(
+                isCompact
+                    ? 'border-t border-r-[3px] border-r-border/70 bg-chrome/40 px-3 py-3'
+                    : null
+            )}
+            contentClassName={isCompact ? 'max-w-none' : undefined}
             error={sendMessage.error?.message}
-            name="chat-message"
-            onAgentChange={setAgentId}
-            onMentionsChange={setMentions}
             onSubmit={handleSubmit}
-            onTextChange={setContent}
-            placeholder={getPlaceholder({
-                agentRuntimeSyncLabel,
-                boundAgentCount: boundAgentIds.length,
-                canSend: chatCanSend,
-                isDisabled,
-                variant,
-            })}
-            variant={variant}
-        />
+            onTextEditorFocus={mentionComposer.focusTextEditor}
+            surfaceClassName={isCompact ? 'rounded-2xl shadow-none' : undefined}
+        >
+            <PromptInputBody>
+                {mentionComposer.renderTextEditor({
+                    disabled: false,
+                    name: 'chat-message',
+                    placeholder: getPlaceholder({ variant }),
+                })}
+            </PromptInputBody>
+            {mentionComposer.composerPopover}
+            <PromptInputFooter>
+                <PromptInputTools>
+                    <ChatComposerAgentSelector
+                        agentId={agentId}
+                        agents={agents}
+                        boundAgentIds={boundAgentIds}
+                        onAgentChange={setAgentId}
+                    />
+                </PromptInputTools>
+                <PromptInputActions>
+                    {contextFullness ? (
+                        <ChatComposerContextFullness fullness={contextFullness} />
+                    ) : null}
+                    <PromptInputSubmit
+                        canSubmit={canSend}
+                        label="Send message"
+                        tooltip={getSendDisabledTooltip({
+                            agentRuntimeSyncLabel,
+                            boundAgentCount: boundAgentIds.length,
+                            canSend: chatCanSend,
+                            isDisabled,
+                            isPending: sendMessage.isPending,
+                        })}
+                    />
+                </PromptInputActions>
+            </PromptInputFooter>
+        </PromptInput>
     );
 }
 
-function getPlaceholder({
+function getSendDisabledTooltip({
     agentRuntimeSyncLabel,
     boundAgentCount,
     canSend,
     isDisabled,
-    variant,
+    isPending,
 }: {
     agentRuntimeSyncLabel: string | null;
     boundAgentCount: number;
     canSend: boolean;
     isDisabled: boolean;
-    variant: ChatMessageComposerVariant;
+    isPending: boolean;
 }) {
-    if (isDisabled) {
-        return agentRuntimeSyncLabel ?? 'Chat is not ready for sending.';
-    }
-
-    if (!canSend) {
-        return 'This chat does not have a synced session for sending.';
+    if (isPending) {
+        return 'Sending message...';
     }
 
     if (boundAgentCount === 0) {
-        return 'Bind at least one agent to this chat.';
+        return 'Bind an agent before sending.';
     }
 
+    if (isDisabled || !canSend) {
+        return agentRuntimeSyncLabel ?? 'Tavern is booting up, just a sec!';
+    }
+
+    return undefined;
+}
+
+function getPlaceholder({ variant }: { variant: ChatMessageComposerVariant }) {
     return variant === 'compact' ? 'Send a message to this chat...' : 'Ask for follow-up changes';
 }

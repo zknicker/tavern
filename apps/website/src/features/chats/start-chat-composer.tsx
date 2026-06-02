@@ -1,9 +1,16 @@
 import { Plus } from '@hugeicons/core-free-icons';
 import * as React from 'react';
-import { Link } from 'react-router-dom';
-import { ChatComposer } from '../../components/ui/chat-composer.tsx';
 import { Icon } from '../../components/ui/icon.tsx';
-import { Button } from '../../components/ui/primitives/button.tsx';
+import {
+    PromptInput,
+    PromptInputActions,
+    PromptInputBody,
+    PromptInputButton,
+    PromptInputFooter,
+    PromptInputSubmit,
+    PromptInputTextarea,
+    PromptInputTools,
+} from '../../components/ui/prompt-input.tsx';
 import { useChatDraftLaunch } from '../../hooks/chats/use-chat-draft-launch.ts';
 import { useAgentRuntimeConnection } from '../../hooks/connections/use-agent-runtime-connection.ts';
 import type { AgentListOutput } from '../../lib/trpc.tsx';
@@ -34,8 +41,9 @@ export function StartChatComposer({
     const [prompt, setPrompt] = React.useState('');
     const [mentions, setMentions] = React.useState<Mention[]>([]);
 
-    const isPromptReady = prompt.trim().length > 0 && agent !== null;
     const canSendToGateway = isOpenClawGatewayHealthy(agentRuntimeConnection.connection);
+    const canUseMentions = Boolean(agent && canSendToGateway);
+    const isPromptReady = prompt.trim().length > 0 && agent !== null;
     const canSubmit = isPromptReady && canSendToGateway;
     const handleSubmit = React.useEffectEvent((event?: React.FormEvent<HTMLFormElement>) => {
         event?.preventDefault();
@@ -66,8 +74,8 @@ export function StartChatComposer({
         });
     });
     const mentionComposer = useMentionComposer({
-        agentId: agent?.id ?? '',
-        agents: agent ? [agent] : [],
+        agentId: canUseMentions && agent ? agent.id : '',
+        agents: canUseMentions && agent ? [agent] : [],
         content: prompt,
         onTextChange: setPrompt,
         onSubmit: () => {
@@ -79,68 +87,63 @@ export function StartChatComposer({
     const isAgentDensity = density === 'agent';
     const promptId =
         id ?? (isAgentDensity ? `agent-${agent?.id ?? 'unknown'}-prompt` : 'home-prompt');
-    const placeholder = agent
-        ? isAgentDensity
+    const placeholder =
+        agent && isAgentDensity
             ? `Send a message to ${agent.name}...`
-            : 'Ask Tavern to investigate, summarize, or take the next step...'
-        : 'Start Tavern Runtime to sync your agent.';
+            : 'Ask Tavern to investigate, summarize, or take the next step...';
 
     return (
-        <ChatComposer
-            canSubmit={canSubmit}
+        <PromptInput
             className={cn(isAgentDensity ? 'p-0' : 'mt-8 w-full p-0', className)}
-            composerPopover={agent ? mentionComposer.composerPopover : null}
             contentClassName="max-w-none"
-            disabled={!agent}
-            footerStart={
-                agent ? (
-                    <Button
+            onSubmit={handleSubmit}
+            onTextEditorFocus={canUseMentions ? mentionComposer.focusTextEditor : undefined}
+        >
+            <PromptInputBody>
+                {canUseMentions ? (
+                    mentionComposer.renderTextEditor({
+                        disabled: false,
+                        id: promptId,
+                        name: 'start-chat',
+                        placeholder,
+                    })
+                ) : (
+                    <PromptInputTextarea
+                        aria-label={placeholder}
+                        id={promptId}
+                        name="start-chat"
+                        onChange={(event) => setPrompt(event.target.value)}
+                        placeholder={placeholder}
+                        rows={1}
+                        value={prompt}
+                    />
+                )}
+            </PromptInputBody>
+            {canUseMentions ? mentionComposer.composerPopover : null}
+            <PromptInputFooter>
+                <PromptInputTools>
+                    <PromptInputButton
                         aria-label="Attach file"
                         disabled
                         size="icon"
-                        title="Attachments are not available for sending yet."
+                        tooltip="Attachments are not available for sending yet."
                         type="button"
                         variant="ghost"
                     >
                         <Icon icon={Plus} />
-                    </Button>
-                ) : (
-                    <Button
-                        render={<Link to="/dashboard/settings/agent-runtime" />}
-                        size="sm"
-                        variant="secondary"
-                    >
-                        Tavern Runtime
-                    </Button>
-                )
-            }
-            name="start-chat"
-            onSubmit={handleSubmit}
-            onTextChange={(value) => {
-                if (agent) {
-                    setPrompt(value);
-                }
-            }}
-            onTextEditorFocus={agent ? mentionComposer.focusTextEditor : undefined}
-            placeholder={placeholder}
-            submitButtonClassName={cn(isAgentDensity ? null : 'rounded-full')}
-            submitButtonLabel="Start chat"
-            submitButtonSize="icon"
-            surfaceClassName={agent ? undefined : 'bg-muted/55 shadow-none'}
-            textareaId={promptId}
-            textareaRows={1}
-            textEditor={
-                agent
-                    ? mentionComposer.renderTextEditor({
-                          disabled: !agent,
-                          id: promptId,
-                          name: 'start-chat',
-                          placeholder,
-                      })
-                    : undefined
-            }
-            value={prompt}
-        />
+                    </PromptInputButton>
+                </PromptInputTools>
+                <PromptInputActions>
+                    <PromptInputSubmit
+                        canSubmit={canSubmit}
+                        className={cn(isAgentDensity ? null : 'rounded-full')}
+                        label="Start chat"
+                        size="icon"
+                        tooltip={canSendToGateway ? undefined : 'Tavern is booting up, just a sec!'}
+                    />
+                </PromptInputActions>
+            </PromptInputFooter>
+        </PromptInput>
     );
 }
 

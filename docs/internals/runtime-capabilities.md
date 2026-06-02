@@ -152,6 +152,22 @@ controls, and smaller micro-features can use the same health records.
 Feature gating does not make the app the source of truth. Runtime capability
 health comes from Runtime.
 
+## App Startup
+
+The app shell and dashboard mount as soon as the Tavern App backend is ready.
+Runtime connection checks run in the background. Synced records render from the
+best local data available, and empty synced results are valid first-boot states.
+
+Controls that can capture local draft state stay interactive while Runtime
+boots. Commit actions that need Runtime or managed OpenClaw behavior disable
+until the specific required capability is healthy. Surfaces whose only useful
+content comes from Runtime may stay hidden or render an empty state until
+synced data arrives.
+
+Onboarding is the recovery surface for explicit setup, missing configuration,
+or incompatible Runtime connections. Runtime startup is not a full-page loading
+gate.
+
 ## Capability Examples
 
 Runtime capabilities cover first-party Runtime services, managed OpenClaw

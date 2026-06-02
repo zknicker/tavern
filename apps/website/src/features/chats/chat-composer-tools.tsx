@@ -1,9 +1,7 @@
 import { Plus } from '@hugeicons/core-free-icons';
-import * as React from 'react';
 import { AgentAvatar } from '../../components/ui/agent-avatar.tsx';
-import { ChatComposer } from '../../components/ui/chat-composer.tsx';
 import { Icon } from '../../components/ui/icon.tsx';
-import { Button } from '../../components/ui/primitives/button.tsx';
+import { PromptInputButton } from '../../components/ui/prompt-input.tsx';
 import {
     Select,
     SelectContent,
@@ -13,11 +11,7 @@ import {
 } from '../../components/ui/select.tsx';
 import type { AgentListOutput } from '../../lib/trpc.tsx';
 import { cn } from '../../lib/utils.ts';
-import type { Mention } from '../mentions/mention-types.ts';
-import { useMentionComposer } from '../mentions/use-mention-composer.tsx';
 import type { ChatContextFullness } from './chat-context-fullness.ts';
-
-export type ChatMessageComposerVariant = 'compact' | 'detail';
 
 interface AgentOption {
     avatar: string;
@@ -26,120 +20,31 @@ interface AgentOption {
     primaryColor: string;
 }
 
-export function ChatMessageComposerSurface({
+export function ChatComposerAgentSelector({
     agentId,
     agents,
     boundAgentIds,
-    canSubmit,
-    content,
-    contextFullness,
-    disabled,
-    error,
-    name,
     onAgentChange,
-    onMentionsChange,
-    onSubmit,
-    onTextChange,
-    placeholder,
-    variant = 'detail',
 }: {
     agentId: string;
     agents: AgentListOutput['agents'];
     boundAgentIds: string[];
-    canSubmit: boolean;
-    content: string;
-    contextFullness: ChatContextFullness | null;
-    disabled: boolean;
-    error?: React.ReactNode;
-    name: string;
-    onAgentChange: (agentId: string) => void;
-    onSubmit: (event?: React.FormEvent<HTMLFormElement>) => void | Promise<void>;
-    onMentionsChange?: (mentions: Mention[]) => void;
-    onTextChange: (content: string) => void;
-    placeholder: string;
-    variant?: ChatMessageComposerVariant;
-}) {
-    const boundAgents = React.useMemo(
-        () => boundAgentIds.map((boundAgentId) => getAgentOption(agents, boundAgentId)),
-        [agents, boundAgentIds]
-    );
-    const isCompact = variant === 'compact';
-    const mentionComposer = useMentionComposer({
-        agentId,
-        agents,
-        content,
-        onTextChange,
-        onSubmit: () => {
-            void onSubmit();
-        },
-        onMentionsChange,
-    });
-
-    return (
-        <ChatComposer
-            canSubmit={canSubmit}
-            className={cn(
-                isCompact
-                    ? 'border-t border-r-[3px] border-r-border/70 bg-chrome/40 px-3 py-3'
-                    : null
-            )}
-            composerPopover={mentionComposer.composerPopover}
-            contentClassName={isCompact ? 'max-w-none' : undefined}
-            disabled={disabled}
-            error={error}
-            footerEnd={
-                contextFullness ? <ContextFullnessIndicator fullness={contextFullness} /> : null
-            }
-            footerStart={
-                <AgentSelector
-                    agentId={agentId}
-                    boundAgentIds={boundAgentIds}
-                    boundAgents={boundAgents}
-                    onAgentChange={onAgentChange}
-                />
-            }
-            name={name}
-            onSubmit={(event) => {
-                void onSubmit(event);
-            }}
-            onTextChange={(value) => onTextChange(value)}
-            onTextEditorFocus={mentionComposer.focusTextEditor}
-            placeholder={placeholder}
-            surfaceClassName={isCompact ? 'rounded-2xl shadow-none' : undefined}
-            textareaRows={isCompact ? 2 : undefined}
-            textEditor={mentionComposer.renderTextEditor({
-                disabled,
-                name,
-                placeholder,
-            })}
-            value={content}
-        />
-    );
-}
-
-function AgentSelector({
-    agentId,
-    boundAgentIds,
-    boundAgents,
-    onAgentChange,
-}: {
-    agentId: string;
-    boundAgentIds: string[];
-    boundAgents: AgentOption[];
     onAgentChange: (agentId: string) => void;
 }) {
+    const boundAgents = boundAgentIds.map((boundAgentId) => getAgentOption(agents, boundAgentId));
+
     return (
         <div className="flex min-w-0 items-center gap-2">
-            <Button
+            <PromptInputButton
                 aria-label="Attach file"
                 disabled
                 size="icon-sm"
-                title="Attachments are not available for sending yet."
+                tooltip="Attachments are not available for sending yet."
                 type="button"
                 variant="ghost"
             >
                 <Icon icon={Plus} />
-            </Button>
+            </PromptInputButton>
             {boundAgentIds.length > 1 ? (
                 <div className="min-w-0">
                     <Select
@@ -176,32 +81,7 @@ function AgentSelector({
     );
 }
 
-function AgentAvatarCluster({
-    agents,
-    selectedAgentId,
-}: {
-    agents: AgentOption[];
-    selectedAgentId: string;
-}) {
-    return (
-        <div className="flex min-w-0 items-center -space-x-1.5">
-            {agents.map((agent) => (
-                <AgentAvatar
-                    avatar={agent.avatar}
-                    backgroundColor={agent.primaryColor}
-                    className={cn(
-                        'size-7 shrink-0 rounded-full ring-2 ring-popover',
-                        agent.id === selectedAgentId ? 'z-10' : 'opacity-88'
-                    )}
-                    key={agent.id}
-                    name={agent.name}
-                />
-            ))}
-        </div>
-    );
-}
-
-function ContextFullnessIndicator({ fullness }: { fullness: ChatContextFullness }) {
+export function ChatComposerContextFullness({ fullness }: { fullness: ChatContextFullness }) {
     const radius = 7;
     const circumference = 2 * Math.PI * radius;
     const dashOffset = circumference * (1 - fullness.percent);
@@ -234,6 +114,31 @@ function ContextFullnessIndicator({ fullness }: { fullness: ChatContextFullness 
                 />
             </svg>
             <span className="font-medium text-foreground text-sm tabular-nums">{percentLabel}</span>
+        </div>
+    );
+}
+
+function AgentAvatarCluster({
+    agents,
+    selectedAgentId,
+}: {
+    agents: AgentOption[];
+    selectedAgentId: string;
+}) {
+    return (
+        <div className="flex min-w-0 items-center -space-x-1.5">
+            {agents.map((agent) => (
+                <AgentAvatar
+                    avatar={agent.avatar}
+                    backgroundColor={agent.primaryColor}
+                    className={cn(
+                        'size-7 shrink-0 rounded-full ring-2 ring-popover',
+                        agent.id === selectedAgentId ? 'z-10' : 'opacity-88'
+                    )}
+                    key={agent.id}
+                    name={agent.name}
+                />
+            ))}
         </div>
     );
 }
