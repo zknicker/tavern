@@ -1,5 +1,5 @@
 import { SystemUpdate01Icon } from '@hugeicons/core-free-icons';
-import type React from 'react';
+import * as React from 'react';
 import { BadgeDivider } from '../../../components/ui/badge-divider.tsx';
 import { Card, CardFrame } from '../../../components/ui/card.tsx';
 import { Icon } from '../../../components/ui/icon.tsx';
@@ -8,16 +8,27 @@ import { Progress } from '../../../components/ui/progress.tsx';
 import { Separator } from '../../../components/ui/separator.tsx';
 import { SettingsRow, SettingsValue } from '../../../components/ui/settings-row.tsx';
 import { useRuntimeConnection } from '../../../hooks/connections/use-runtime-connection.ts';
-import { useTavernUpdate } from '../../../hooks/desktop/use-tavern-update.ts';
+import {
+    type TavernUpdateStatus,
+    useTavernUpdate,
+} from '../../../hooks/desktop/use-tavern-update.ts';
+import { cn } from '../../../lib/utils.ts';
 
 export function UpdatesSettings() {
     const { connection } = useRuntimeConnection();
     const { checkForUpdate, status, updateAndRestart } = useTavernUpdate();
+    const [hasCheckedForUpdate, setHasCheckedForUpdate] = React.useState(false);
     const canCheck = status.phase !== 'checking' && status.phase !== 'downloading-app';
     const canInstall =
         status.phase === 'app-update-required' ||
         status.phase === 'available' ||
         status.phase === 'ready';
+    const updateStatusMessage = getUpdateStatusMessage(status, hasCheckedForUpdate);
+
+    const handleCheckForUpdate = React.useCallback(async () => {
+        await checkForUpdate();
+        setHasCheckedForUpdate(true);
+    }, [checkForUpdate]);
 
     return (
         <div>
@@ -34,7 +45,7 @@ export function UpdatesSettings() {
                                 <Button
                                     disabled={!canCheck}
                                     loading={status.phase === 'checking'}
-                                    onClick={checkForUpdate}
+                                    onClick={handleCheckForUpdate}
                                     size="sm"
                                     variant="secondary"
                                 >
@@ -58,10 +69,8 @@ export function UpdatesSettings() {
                             {status.phase === 'downloading-app' ? (
                                 <Progress value={status.progress * 100} />
                             ) : null}
-                            {status.phase === 'app-update-required' || status.phase === 'failed' ? (
-                                <SettingsValue className="min-h-0 justify-start text-left md:justify-start md:text-left">
-                                    {status.detail}
-                                </SettingsValue>
+                            {updateStatusMessage ? (
+                                <UpdateStatusMessage {...updateStatusMessage} />
                             ) : null}
                         </div>
                     </SettingsRow>
@@ -83,8 +92,58 @@ export function UpdatesSettings() {
     );
 }
 
+function UpdateStatusMessage({
+    detail,
+    tone,
+}: {
+    detail: string;
+    tone: 'error' | 'neutral' | 'success';
+}) {
+    return (
+        <SettingsValue
+            className={cn(
+                'min-h-0 justify-start text-left font-medium md:justify-start md:text-left',
+                tone === 'success' && 'text-success-foreground',
+                tone === 'error' && 'text-error-foreground',
+                tone === 'neutral' && 'text-muted-foreground'
+            )}
+        >
+            {detail}
+        </SettingsValue>
+    );
+}
+
 function VersionValue({ children }: { children: React.ReactNode }) {
     return (
         <SettingsValue className="font-mono text-foreground tabular-nums">{children}</SettingsValue>
     );
+}
+
+export function getUpdateStatusMessage(
+    status: TavernUpdateStatus,
+    hasCheckedForUpdate: boolean
+): null | {
+    detail: string;
+    tone: 'error' | 'neutral' | 'success';
+} {
+    switch (status.phase) {
+        case 'idle':
+            return hasCheckedForUpdate ? { detail: 'Up to date', tone: 'success' } : null;
+        case 'available':
+        case 'app-update-required':
+        case 'ready':
+            return { detail: status.detail, tone: 'error' };
+        case 'failed':
+            return { detail: status.detail, tone: 'error' };
+        case 'checking':
+        case 'runtime-disconnected':
+        case 'unsupported':
+            return hasCheckedForUpdate ? { detail: status.detail, tone: 'neutral' } : null;
+        case 'staging-runtime':
+            return { detail: status.detail, tone: 'neutral' };
+        case 'downloading-app':
+        case 'restarting-app':
+        case 'restarting-runtime':
+            return null;
+    }
 }
