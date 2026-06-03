@@ -84,10 +84,29 @@ export function useTavernUpdate() {
                 });
             }
 
-            if (desktopUpdate.status.phase === 'available') {
+            const desktopAction = getRuntimeUpdateDesktopAction(desktopUpdate.status);
+
+            if (desktopAction === 'download-app-before-runtime-restart') {
                 await desktopUpdate.updateAndRestart();
                 return;
             }
+
+            setFinalRestartPhase('runtime');
+            await restartRuntime.mutateAsync();
+            await waitForRuntimeVersion({
+                getStatus: () => utils.agentRuntime.updateStatus.fetch(),
+                requiredVersion: runtimeConnection.connection?.requiredRuntimeVersion ?? null,
+            });
+
+            if (desktopAction === 'restart-app-after-runtime-restart') {
+                setFinalRestartPhase('app');
+                await desktopUpdate.updateAndRestart();
+                return;
+            }
+
+            setFinalRestartPhase('idle');
+            await utils.agentRuntime.get.invalidate();
+            return;
         }
 
         if (desktopUpdate.status.phase !== 'ready') {
@@ -95,23 +114,8 @@ export function useTavernUpdate() {
             return;
         }
 
-        if (needsRuntimeUpdate) {
-            setFinalRestartPhase('runtime');
-            await restartRuntime.mutateAsync();
-            await waitForRuntimeVersion({
-                getStatus: () => utils.agentRuntime.updateStatus.fetch(),
-                requiredVersion: runtimeConnection.connection?.requiredRuntimeVersion ?? null,
-            });
-        }
-
-        if (desktopUpdate.status.phase === 'ready') {
-            setFinalRestartPhase('app');
-            await desktopUpdate.updateAndRestart();
-            return;
-        }
-
-        setFinalRestartPhase('idle');
-        await utils.agentRuntime.get.invalidate();
+        setFinalRestartPhase('app');
+        await desktopUpdate.updateAndRestart();
     }, [
         appNeedsUpdate,
         desktopUpdate,
@@ -129,6 +133,18 @@ export function useTavernUpdate() {
         status,
         updateAndRestart,
     };
+}
+
+export function getRuntimeUpdateDesktopAction(status: DesktopUpdateStatus) {
+    if (status.phase === 'available') {
+        return 'download-app-before-runtime-restart';
+    }
+
+    if (status.phase === 'ready') {
+        return 'restart-app-after-runtime-restart';
+    }
+
+    return 'none';
 }
 
 export function getTavernUpdateStatus(input: {
@@ -176,7 +192,7 @@ export function getTavernUpdateStatus(input: {
             return desktopStatus.phase === 'ready'
                 ? {
                       ...desktopStatus,
-                      detail: 'Tavern update ready. Restart Tavern to reconnect to this Runtime.',
+                      detail: `Tavern v${desktopStatus.version} is ready. Click to install and restart.`,
                   }
                 : desktopStatus;
         }
@@ -207,7 +223,7 @@ export function getTavernUpdateStatus(input: {
             return {
                 detail:
                     input.runtimeUpdateStatus.message ??
-                    `Runtime ${getRuntimeTargetVersion(input.runtimeConnection)} could not be staged. Click to try again.`,
+                    `Tavern Runtime v${getRuntimeTargetVersion(input.runtimeConnection)} could not download. Click to try again.`,
                 phase: 'available',
                 version: getRuntimeTargetVersion(input.runtimeConnection),
             };
@@ -217,7 +233,7 @@ export function getTavernUpdateStatus(input: {
             return {
                 detail:
                     input.runtimeUpdateStatus.message ??
-                    'Installing Runtime update without restarting Runtime.',
+                    `Downloading Tavern Runtime v${getRuntimeTargetVersion(input.runtimeConnection)}.`,
                 phase: 'staging-runtime',
                 version: getRuntimeTargetVersion(input.runtimeConnection),
             };
@@ -229,20 +245,25 @@ export function getTavernUpdateStatus(input: {
                 input.desktopUpdateStatus.phase === 'unsupported'
             ) {
                 return {
-                    detail: 'Runtime update staged. Restart Runtime to finish.',
+                    detail: `Tavern Runtime v${getRuntimeTargetVersion(input.runtimeConnection)} is ready. Click to restart runtime.`,
                     phase: 'ready',
                     version: getRuntimeTargetVersion(input.runtimeConnection),
                 };
             }
 
-            return fromDesktopUpdateStatus(input.desktopUpdateStatus, {
-                readyDetail:
-                    'Tavern update ready. Restart will restart Runtime first, then Tavern.',
-            });
+            const desktopStatusWithRuntimeRestart = fromDesktopUpdateStatus(
+                input.desktopUpdateStatus
+            );
+            return desktopStatusWithRuntimeRestart.phase === 'ready'
+                ? {
+                      ...desktopStatusWithRuntimeRestart,
+                      detail: `Tavern v${desktopStatusWithRuntimeRestart.version} is ready. Click to install and restart.`,
+                  }
+                : desktopStatusWithRuntimeRestart;
         }
 
         return {
-            detail: `Runtime ${getRuntimeTargetVersion(input.runtimeConnection)} must be staged before Tavern restarts.`,
+            detail: `The Tavern Runtime is ready to update to v${getRuntimeTargetVersion(input.runtimeConnection)}. Click to download.`,
             phase: 'available',
             version: getRuntimeTargetVersion(input.runtimeConnection),
         };
@@ -251,14 +272,11 @@ export function getTavernUpdateStatus(input: {
     return desktopStatus;
 }
 
-function fromDesktopUpdateStatus(
-    status: DesktopUpdateStatus,
-    options?: { readyDetail?: string }
-): TavernUpdateStatus {
+function fromDesktopUpdateStatus(status: DesktopUpdateStatus): TavernUpdateStatus {
     switch (status.phase) {
         case 'available':
             return {
-                detail: `Tavern ${status.version} is available.`,
+                detail: `Tavern v${status.version} is ready to download.`,
                 phase: 'available',
                 version: status.version,
             };
@@ -268,14 +286,14 @@ function fromDesktopUpdateStatus(
             return { detail: 'Tavern is up to date.', phase: 'idle' };
         case 'downloading':
             return {
-                detail: `Downloading Tavern ${status.version}.`,
+                detail: `Downloading Tavern v${status.version}.`,
                 phase: 'downloading-app',
                 progress: status.progress,
                 version: status.version,
             };
         case 'ready':
             return {
-                detail: options?.readyDetail ?? `Tavern ${status.version} is ready to restart.`,
+                detail: `Tavern v${status.version} is ready. Click to install and restart.`,
                 phase: 'ready',
                 version: status.version,
             };

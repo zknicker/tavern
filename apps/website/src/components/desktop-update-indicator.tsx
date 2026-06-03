@@ -6,6 +6,7 @@ import { type TavernUpdateStatus, useTavernUpdate } from '../hooks/desktop/use-t
 import { cn } from '../lib/utils.ts';
 import { Icon } from './ui/icon.tsx';
 import { Button } from './ui/primitives/button.tsx';
+import { toastManager } from './ui/toast.tsx';
 import { Tooltip, TooltipContent, TooltipTrigger } from './ui/tooltip.tsx';
 
 interface DesktopUpdateIndicatorProps {
@@ -70,7 +71,7 @@ export function DesktopUpdateIndicator({ placement = 'inline' }: DesktopUpdateIn
                         <Button
                             aria-label={label}
                             className={cn(
-                                'size-7 rounded-[var(--main-radius)] shadow-none before:rounded-[calc(var(--main-radius)-1px)]',
+                                'size-7 rounded-[var(--main-radius)] shadow-none before:rounded-[calc(var(--main-radius)-1px)] [&_[data-slot=button-loading-indicator]]:size-4',
                                 (status.phase === 'runtime-disconnected' ||
                                     status.phase === 'app-update-required' ||
                                     status.phase === 'failed') &&
@@ -87,6 +88,10 @@ export function DesktopUpdateIndicator({ placement = 'inline' }: DesktopUpdateIn
                                     return;
                                 }
 
+                                toastManager.add({
+                                    title: 'A Tavern Runtime update has begun downloading.',
+                                    type: 'success',
+                                });
                                 updateAndRestart().catch(() => undefined);
                             }}
                             size="icon-sm"
@@ -216,7 +221,7 @@ function getUpdateLabel(status: TavernUpdateStatus) {
         case 'downloading-app':
             return `Updating ${Math.round((status.progress ?? 0) * 100)}%`;
         case 'ready':
-            return 'Restart To Finish Update';
+            return 'Ready to install';
         case 'failed':
             return 'Update Failed';
         case 'runtime-disconnected':

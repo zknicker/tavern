@@ -36,6 +36,10 @@ const main = async () => {
         electronBuilderConfig.appId === 'build.tavern.desktop',
         'desktop app identifier must be build.tavern.desktop'
     );
+    await assertElectronMainRequiresPackaged({
+        electronBuilderConfig,
+        mainPath: 'apps/website/electron/main.cjs',
+    });
 
     const changelog = await readText(changelogPath);
     assert(
@@ -136,6 +140,30 @@ async function readJson(relativePath) {
 async function readText(relativePath) {
     const absolutePath = path.join(repoRoot, relativePath);
     return readFile(absolutePath, 'utf8');
+}
+
+async function assertElectronMainRequiresPackaged(input) {
+    const mainContent = await readText(input.mainPath);
+    const packageFiles = input.electronBuilderConfig.files ?? [];
+    const packageFileSet = new Set(packageFiles);
+    const mainDirectory = path.posix.dirname(input.mainPath.replace(/^apps\/website\//u, ''));
+    const localRequirePattern = /require\(['"](\.\/[^'"]+)['"]\)/gu;
+    const missingFiles = [];
+
+    for (const match of mainContent.matchAll(localRequirePattern)) {
+        const requiredPath = `${path.posix.join(mainDirectory, match[1])}`;
+
+        if (!packageFileSet.has(requiredPath)) {
+            missingFiles.push(requiredPath);
+        }
+    }
+
+    if (missingFiles.length > 0) {
+        fail('desktop Electron package is missing files required by main.cjs', {
+            missingFiles,
+            packageFiles,
+        });
+    }
 }
 
 function isSemver(value) {

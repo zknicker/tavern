@@ -8,7 +8,13 @@ module.exports = {
     directories: {
         output: 'electron-dist',
     },
-    files: ['dist/**', 'electron/main.cjs', 'electron/preload.cjs', 'package.json'],
+    files: [
+        'dist/**',
+        'electron/edit-context-menu.cjs',
+        'electron/main.cjs',
+        'electron/preload.cjs',
+        'package.json',
+    ],
     extraResources: [
         {
             from: 'electron/resources/bin/tavern-server',
