@@ -1,5 +1,9 @@
 import { describe, expect, test } from 'bun:test';
-import { buildOverviewHeading, overviewHeadingPhrases } from './overview-heading.ts';
+import {
+    buildOverviewHeading,
+    overviewHeadingPhrases,
+    overviewIdleHourPhrases,
+} from './overview-heading.ts';
 
 const idleState = {
     jobs: [],
@@ -9,15 +13,22 @@ const idleState = {
 };
 
 describe('buildOverviewHeading', () => {
-    test('reflects time of day for an idle tavern', () => {
-        expect(overviewHeadingPhrases.morning).toContain(
+    test('reflects the exact hour for an idle tavern', () => {
+        expect(overviewIdleHourPhrases[9]).toContain(
             buildOverviewHeading({
                 ...idleState,
                 now: new Date('2026-06-03T09:00:00'),
             })
         );
 
-        expect(overviewHeadingPhrases.deepNight).toContain(
+        expect(overviewIdleHourPhrases[12]).toContain(
+            buildOverviewHeading({
+                ...idleState,
+                now: new Date('2026-06-03T12:00:00'),
+            })
+        );
+
+        expect(overviewIdleHourPhrases[22]).toContain(
             buildOverviewHeading({
                 ...idleState,
                 now: new Date('2026-06-03T22:00:00'),
@@ -25,18 +36,18 @@ describe('buildOverviewHeading', () => {
         );
     });
 
-    test('prioritizes live worker state over quiet state', () => {
-        expect(overviewHeadingPhrases.activeMany).toContain(
+    test('uses completed quest copy for succeeded workers', () => {
+        expect(overviewHeadingPhrases.completedQuests).toContain(
             buildOverviewHeading({
                 ...idleState,
                 now: new Date('2026-06-03T18:00:00'),
-                workers: [{ status: 'running' }, { status: 'waiting' }],
+                workers: [{ status: 'succeeded' }],
             })
         );
     });
 
-    test('uses scheduled and stale work as ambient state', () => {
-        expect(overviewHeadingPhrases.scheduled).toContain(
+    test('uses cron and warning copy for ambient state', () => {
+        expect(overviewHeadingPhrases.cronJobs).toContain(
             buildOverviewHeading({
                 ...idleState,
                 jobs: [
@@ -65,20 +76,46 @@ describe('buildOverviewHeading', () => {
         );
     });
 
-    test('keeps the phrase pool short and varied', () => {
-        const phrases = Object.values(overviewHeadingPhrases).flat();
+    test('uses arrival and chronicle copy for existing state', () => {
+        expect(overviewHeadingPhrases.newSessions).toContain(
+            buildOverviewHeading({
+                ...idleState,
+                now: new Date('2026-06-03T19:00:00'),
+                sessionsCount: 2,
+            })
+        );
 
-        expect(phrases).toHaveLength(30);
-        expect(new Set(phrases).size).toBe(30);
+        expect(overviewHeadingPhrases.memoryStored).toContain(
+            buildOverviewHeading({
+                ...idleState,
+                memoryCount: 1,
+                now: new Date('2026-06-03T07:00:00'),
+            })
+        );
+    });
+
+    test('keeps the phrase pool short and varied', () => {
+        const phrases = [
+            ...Object.values(overviewHeadingPhrases).flat(),
+            ...overviewIdleHourPhrases.flat(),
+        ];
+
+        expect(overviewIdleHourPhrases).toHaveLength(24);
+        for (const hourPhrases of overviewIdleHourPhrases) {
+            expect(hourPhrases).toHaveLength(3);
+        }
+
+        expect(phrases).toHaveLength(102);
+        expect(new Set(phrases).size).toBe(102);
 
         for (const phrase of phrases) {
             const wordCount = phrase
                 .replace(/[.,;!]/g, '')
                 .split(/\s+/u)
                 .filter(Boolean).length;
-            expect(phrase).not.toMatch(/[;—–-]|--/u);
-            expect(wordCount).toBeGreaterThanOrEqual(5);
-            expect(wordCount).toBeLessThanOrEqual(6);
+            expect(phrase).not.toMatch(/[—–-]|--/u);
+            expect(wordCount).toBeGreaterThanOrEqual(4);
+            expect(wordCount).toBeLessThanOrEqual(8);
         }
     });
 });

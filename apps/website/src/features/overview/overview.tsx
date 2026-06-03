@@ -20,6 +20,7 @@ export function Overview() {
     const sessions = sessionsQuery.data?.sessions ?? [];
     const workers = workersQuery.data?.workers ?? [];
     const memoryCount = 0;
+    const phraseSeed = React.useMemo(() => Math.random(), []);
     const selectedHighlight = React.useMemo(() => pickLandingHighlight(highlights), [highlights]);
 
     return (
@@ -30,6 +31,7 @@ export function Overview() {
                 buildOverviewHeading({
                     jobs,
                     memoryCount,
+                    phraseSeed,
                     sessionsCount: sessions.length,
                     workers,
                 })
