@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## v1.2.5 - 2026-06-03
+
+- Fixed signed desktop releases failing to start after the edit context menu sidecar was omitted from the Electron app bundle.
+- Fixed Runtime-only updates so they restart Tavern Runtime without invoking the desktop app updater.
+- Refined desktop updater tooltip and toast copy.
+
 ## v1.2.4 - 2026-06-03
 
 - Added narrow Runtime-backed settings mutations for agent name, model, thinking default, and Discord bindings, and raised the required Runtime floor to 1.2.4.
