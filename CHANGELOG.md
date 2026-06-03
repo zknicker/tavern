@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented in this file.
 
+## v1.2.4 - 2026-06-03
+
+- Added narrow Runtime-backed settings mutations for agent name, model, thinking default, and Discord bindings, and raised the required Runtime floor to 1.2.4.
+- Changed settings saves to use field-level autosave with saving/error toasts, while keeping agent instructions on explicit save.
+- Removed the app-managed OpenClaw config draft and global Settings save bar.
+- Added Tavern homepage highlights.
+- Fixed desktop edit context menu behavior, chat select-all scoping, and update check result display.
+
 ## v1.2.3 - 2026-06-03
 
 - Added a unified desktop updater flow that stages required Runtime updates, downloads the app update, and waits for one user restart before cutting over.
