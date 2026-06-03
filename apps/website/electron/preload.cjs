@@ -13,6 +13,7 @@ contextBridge.exposeInMainWorld('tavernDesktop', {
         return () => ipcRenderer.off('desktop:update:status', handler);
     },
     restartForUpdate: () => ipcRenderer.invoke('desktop:update:restart'),
+    runEditCommand: (command) => ipcRenderer.invoke('desktop:edit:run', command),
     setTheme: (theme) => ipcRenderer.invoke('desktop:window:set-theme', theme),
     startWindowDrag: () => ipcRenderer.invoke('desktop:window:start-drag'),
 });

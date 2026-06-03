@@ -5,6 +5,7 @@ const path = require('node:path');
 const { spawn, execFile, spawnSync } = require('node:child_process');
 const { existsSync } = require('node:fs');
 const electronUpdater = require('electron-updater');
+const { registerEditContextMenuHandlers } = require('./edit-context-menu.cjs');
 
 const desktopServerOrigin = 'http://127.0.0.1:3180';
 const sidecarStartupDeadlineMs = 10_000;
@@ -132,6 +133,8 @@ function installAppMenu() {
 }
 
 function registerIpcHandlers() {
+    registerEditContextMenuHandlers();
+
     ipcMain.handle('desktop:get-info', () => ({
         isPackaged: app.isPackaged,
         platform: process.platform,

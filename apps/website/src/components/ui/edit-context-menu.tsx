@@ -1,0 +1,254 @@
+import * as React from 'react';
+import { type DesktopEditCommand, getDesktopBridge } from '../../lib/desktop-bridge.ts';
+import { cn } from '../../lib/utils.ts';
+import {
+    contextMenuItemClassName,
+    contextMenuPopupClassName,
+    contextMenuSeparatorClassName,
+} from './context-menu.tsx';
+
+const editableSelector =
+    'input, textarea, [contenteditable="true"], [contenteditable="plaintext-only"]';
+const textInputTypes = new Set(['', 'email', 'number', 'password', 'search', 'tel', 'text', 'url']);
+const menuWidthPx = 152;
+const editableMenuHeightPx = 222;
+const selectionMenuHeightPx = 38;
+
+interface EditContextMenuState {
+    hasSelection: boolean;
+    mode: 'editable' | 'selection';
+    x: number;
+    y: number;
+}
+
+export function DesktopEditContextMenuProvider({
+    children,
+}: {
+    children: React.ReactNode;
+}): React.ReactElement {
+    const [menu, setMenu] = React.useState<EditContextMenuState | null>(null);
+    const menuRef = React.useRef<HTMLDivElement | null>(null);
+    const bridge = getDesktopBridge();
+
+    React.useEffect(() => {
+        if (!bridge) {
+            return;
+        }
+
+        function handleContextMenu(event: MouseEvent) {
+            if (event.defaultPrevented) {
+                return;
+            }
+
+            const target = event.target instanceof Element ? event.target : null;
+            const editable = findEditableTarget(target);
+            const hasSelection = editable ? hasEditableSelection(editable) : hasDocumentSelection();
+
+            if (!(editable || hasSelection)) {
+                setMenu(null);
+                return;
+            }
+
+            event.preventDefault();
+            setMenu({
+                hasSelection,
+                mode: editable ? 'editable' : 'selection',
+                ...getMenuPosition(
+                    event.clientX,
+                    event.clientY,
+                    editable ? editableMenuHeightPx : selectionMenuHeightPx
+                ),
+            });
+        }
+
+        function closeMenu(event: Event) {
+            if (event.target instanceof Node && menuRef.current?.contains(event.target)) {
+                return;
+            }
+
+            setMenu(null);
+        }
+
+        function handleKeyDown(event: KeyboardEvent) {
+            if (event.key === 'Escape') {
+                setMenu(null);
+            }
+        }
+
+        document.addEventListener('contextmenu', handleContextMenu);
+        document.addEventListener('mousedown', closeMenu, true);
+        document.addEventListener('scroll', closeMenu, true);
+        window.addEventListener('blur', closeMenu);
+        window.addEventListener('resize', closeMenu);
+        window.addEventListener('keydown', handleKeyDown);
+
+        return () => {
+            document.removeEventListener('contextmenu', handleContextMenu);
+            document.removeEventListener('mousedown', closeMenu, true);
+            document.removeEventListener('scroll', closeMenu, true);
+            window.removeEventListener('blur', closeMenu);
+            window.removeEventListener('resize', closeMenu);
+            window.removeEventListener('keydown', handleKeyDown);
+        };
+    }, [bridge]);
+
+    return (
+        <>
+            {children}
+            {menu ? (
+                <div className="fixed z-50" ref={menuRef} style={{ left: menu.x, top: menu.y }}>
+                    <div className={contextMenuPopupClassName}>
+                        <div className="max-h-(--available-height) w-full overflow-y-auto p-1">
+                            {menu.mode === 'editable' ? (
+                                <EditableMenuItems
+                                    hasSelection={menu.hasSelection}
+                                    onCommand={async (command) => {
+                                        setMenu(null);
+                                        await runEditCommand(command);
+                                    }}
+                                />
+                            ) : (
+                                <EditContextMenuItem
+                                    command="copy"
+                                    onCommand={async (command) => {
+                                        setMenu(null);
+                                        await runEditCommand(command);
+                                    }}
+                                >
+                                    Copy
+                                </EditContextMenuItem>
+                            )}
+                        </div>
+                    </div>
+                </div>
+            ) : null}
+        </>
+    );
+}
+
+function EditableMenuItems({
+    hasSelection,
+    onCommand,
+}: {
+    hasSelection: boolean;
+    onCommand: (command: DesktopEditCommand) => Promise<void>;
+}) {
+    return (
+        <>
+            <EditContextMenuItem command="undo" onCommand={onCommand}>
+                Undo
+            </EditContextMenuItem>
+            <EditContextMenuItem command="redo" onCommand={onCommand}>
+                Redo
+            </EditContextMenuItem>
+            <EditContextMenuSeparator />
+            <EditContextMenuItem command="cut" disabled={!hasSelection} onCommand={onCommand}>
+                Cut
+            </EditContextMenuItem>
+            <EditContextMenuItem command="copy" disabled={!hasSelection} onCommand={onCommand}>
+                Copy
+            </EditContextMenuItem>
+            <EditContextMenuItem command="paste" onCommand={onCommand}>
+                Paste
+            </EditContextMenuItem>
+            <EditContextMenuSeparator />
+            <EditContextMenuItem command="selectAll" onCommand={onCommand}>
+                Select All
+            </EditContextMenuItem>
+        </>
+    );
+}
+
+function EditContextMenuItem({
+    children,
+    command,
+    disabled,
+    onCommand,
+}: {
+    children: React.ReactNode;
+    command: DesktopEditCommand;
+    disabled?: boolean;
+    onCommand: (command: DesktopEditCommand) => Promise<void>;
+}) {
+    const [highlighted, setHighlighted] = React.useState(false);
+
+    return (
+        <button
+            className={cn(
+                'flex w-full cursor-default select-none items-center text-left text-foreground outline-none disabled:pointer-events-none disabled:opacity-50',
+                contextMenuItemClassName
+            )}
+            data-highlighted={highlighted ? '' : undefined}
+            disabled={disabled}
+            onClick={() => {
+                void onCommand(command);
+            }}
+            onFocus={() => setHighlighted(true)}
+            onMouseDown={(event) => event.preventDefault()}
+            onMouseEnter={() => setHighlighted(true)}
+            onMouseLeave={() => setHighlighted(false)}
+            type="button"
+        >
+            {children}
+        </button>
+    );
+}
+
+function EditContextMenuSeparator() {
+    return <div className={cn('h-px', contextMenuSeparatorClassName)} />;
+}
+
+async function runEditCommand(command: DesktopEditCommand) {
+    const bridge = getDesktopBridge();
+
+    if (bridge) {
+        await bridge.runEditCommand(command);
+        return;
+    }
+
+    document.execCommand(command);
+}
+
+function findEditableTarget(target: Element | null) {
+    const editable = target?.closest(editableSelector);
+
+    if (editable instanceof HTMLTextAreaElement) {
+        return editable.disabled || editable.readOnly ? null : editable;
+    }
+
+    if (editable instanceof HTMLInputElement) {
+        return editable.disabled || editable.readOnly || !textInputTypes.has(editable.type)
+            ? null
+            : editable;
+    }
+
+    if (editable instanceof HTMLElement && editable.isContentEditable) {
+        return editable;
+    }
+
+    return null;
+}
+
+function hasEditableSelection(editable: Element) {
+    if (editable instanceof HTMLInputElement || editable instanceof HTMLTextAreaElement) {
+        return (
+            typeof editable.selectionStart === 'number' &&
+            typeof editable.selectionEnd === 'number' &&
+            editable.selectionStart !== editable.selectionEnd
+        );
+    }
+
+    return hasDocumentSelection();
+}
+
+function hasDocumentSelection() {
+    const selection = window.getSelection();
+    return Boolean(selection && !selection.isCollapsed && selection.toString().length > 0);
+}
+
+function getMenuPosition(clientX: number, clientY: number, menuHeight: number) {
+    return {
+        x: Math.max(0, Math.min(clientX, window.innerWidth - menuWidthPx - 8)),
+        y: Math.max(0, Math.min(clientY, window.innerHeight - menuHeight - 8)),
+    };
+}

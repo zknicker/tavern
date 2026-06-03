@@ -7,6 +7,8 @@ export type DesktopUpdateBridgeStatus =
     | { phase: 'ready'; version: string }
     | { phase: 'error'; message: string };
 
+export type DesktopEditCommand = 'copy' | 'cut' | 'paste' | 'redo' | 'selectAll' | 'undo';
+
 export interface TavernDesktopBridge {
     checkForUpdate: () => Promise<void>;
     downloadUpdate: () => Promise<void>;
@@ -14,6 +16,7 @@ export interface TavernDesktopBridge {
     getInfo: () => Promise<{ isPackaged: boolean; platform: NodeJS.Platform; version: string }>;
     onUpdateStatus: (listener: (status: DesktopUpdateBridgeStatus) => void) => () => void;
     restartForUpdate: () => Promise<void>;
+    runEditCommand: (command: DesktopEditCommand) => Promise<void>;
     setTheme: (theme: 'dark' | 'light' | null) => Promise<void>;
     startWindowDrag: () => Promise<void>;
 }

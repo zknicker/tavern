@@ -2,6 +2,7 @@ import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import App from './app.tsx';
 import { ThemeProvider } from './components/theme-provider.tsx';
+import { DesktopEditContextMenuProvider } from './components/ui/edit-context-menu.tsx';
 import { isElectronDesktopApp } from './lib/desktop-bridge.ts';
 import { TavernProviders } from './lib/trpc.tsx';
 import './styles/global.css';
@@ -20,7 +21,9 @@ createRoot(rootElement).render(
     <StrictMode>
         <ThemeProvider>
             <TavernProviders>
-                <App />
+                <DesktopEditContextMenuProvider>
+                    <App />
+                </DesktopEditContextMenuProvider>
             </TavernProviders>
         </ThemeProvider>
     </StrictMode>
