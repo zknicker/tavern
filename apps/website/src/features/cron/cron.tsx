@@ -2,11 +2,11 @@ import * as React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAgentAvatarDirectory } from '../../hooks/agents/use-agent-avatar-directory.ts';
 import { useAgentListSuspense } from '../../hooks/agents/use-agent-list.ts';
-import { useAgentRuntimeCapability } from '../../hooks/connections/use-agent-runtime-capability.ts';
+import { useCapability } from '../../hooks/connections/use-capability.ts';
 import {
-    toAgentRuntimePageConnectionState,
-    useAgentRuntimeConnection,
-} from '../../hooks/connections/use-agent-runtime-connection.ts';
+    toRuntimePageConnectionState,
+    useRuntimeConnection,
+} from '../../hooks/connections/use-runtime-connection.ts';
 import { useCronDelete } from '../../hooks/cron/use-cron-delete.ts';
 import { useCronList } from '../../hooks/cron/use-cron-list.ts';
 import { useCronRun } from '../../hooks/cron/use-cron-run.ts';
@@ -27,8 +27,8 @@ export function Cron() {
     const { navigateToSettings } = useLayoutContext();
     const [agents] = useAgentListSuspense();
     const avatarDirectory = useAgentAvatarDirectory(agents.agents);
-    const agentRuntimeConnection = useAgentRuntimeConnection();
-    const cronCapability = useAgentRuntimeCapability('cron');
+    const runtimeConnection = useRuntimeConnection();
+    const cronCapability = useCapability('cron');
     const cronJobsQuery = useCronList();
     const deleteMutation = useCronDelete();
     const toggleMutation = useCronToggle();
@@ -88,7 +88,7 @@ export function Cron() {
                 activeToggleJobId={activeToggleJobId}
                 avatarDirectory={avatarDirectory}
                 canEdit={cronCapability.healthy}
-                connectionState={toAgentRuntimePageConnectionState(agentRuntimeConnection.status)}
+                connectionState={toRuntimePageConnectionState(runtimeConnection.status)}
                 cronJobs={cronJobs}
                 enabledJobs={enabledJobs}
                 filter={filter}

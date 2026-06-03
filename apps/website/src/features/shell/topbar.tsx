@@ -37,9 +37,9 @@ export function AppTopbar({
                     >
                         <Icon
                             aria-hidden="true"
-                            className="size-4.5"
+                            className="size-5"
                             icon={Setting07Icon}
-                            size={18}
+                            size={20}
                         />
                     </Button>
                     <DesktopUpdateIndicator />

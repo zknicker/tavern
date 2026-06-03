@@ -47,6 +47,11 @@ Settings screens read current runtime capability state from normal tRPC queries
 when they open. They subscribe to capability invalidation events only while that
 surface is mounted, then let React Query refetch the current state.
 
+The app setup gate is first-time setup only. If an enabled Tavern Runtime
+connection exists in app storage, the app opens the dashboard even when Runtime
+is disconnected or version-mismatched. Runtime health, update, and capability
+problems surface inside the normal app shell.
+
 Runtime-owned transitions, such as managed OpenClaw Gateway readiness or Tavern
 plugin installation, emit `capability.updated` from Tavern Runtime. App-observed
 capability checks write through the capability status recorder, which emits the

@@ -21,6 +21,11 @@ import type { ChatStartDraft } from '../../hooks/chats/use-chat-start-drafts.tsx
 import { useChatStartDrafts } from '../../hooks/chats/use-chat-start-drafts.tsx';
 import { useChatUpdate } from '../../hooks/chats/use-chat-update.ts';
 import { useChatRuntimeTimelineState } from '../../hooks/chats/use-timeline-context.tsx';
+import {
+    formatCapabilityDisabledReason,
+    newChatCapabilityRequirements,
+    useCapability,
+} from '../../hooks/connections/use-capability.ts';
 import { markChatTiming } from '../../lib/chat-timing.ts';
 import { buildChatList, type ChatListItem } from '../chats/chat-list-data.ts';
 import { buildChatPath, buildNewChatDraftPath } from '../chats/chat-path.ts';
@@ -37,6 +42,7 @@ const archiveConfirmTimeoutMs = 2400;
 export function AppSidebarChatList() {
     const location = useLocation();
     const navigate = useNavigate();
+    const capability = useCapability();
     const chatQuery = useChatList();
     const drafts = useChatStartDrafts();
     const updateChat = useChatUpdate();
@@ -56,6 +62,10 @@ export function AppSidebarChatList() {
         [draftChats.length, sidebarChats.recentChats]
     );
     const activeDraftRoute = getChatDraftRouteState(location.state);
+    const newChatGate = capability(newChatCapabilityRequirements);
+    const newChatDisabledReason = newChatGate.healthy
+        ? null
+        : formatCapabilityDisabledReason(newChatGate);
 
     React.useEffect(() => {
         const visibleDraft = draftChats.find((draft) => draft.status !== 'error');
@@ -159,9 +169,12 @@ export function AppSidebarChatList() {
                     <Button
                         aria-label="New chat"
                         className="absolute top-1/2 right-[0.0625rem] -translate-y-1/2 opacity-0 group-focus-within/chats:opacity-100 group-hover/chats:opacity-100 [&_svg]:size-[1.0625rem]"
-                        render={<NavLink to="/dashboard/overview" />}
+                        disabled={!newChatGate.healthy}
+                        render={
+                            newChatGate.healthy ? <NavLink to="/dashboard/overview" /> : undefined
+                        }
                         size="icon-xs"
-                        title="New chat"
+                        title={newChatDisabledReason ?? 'New chat'}
                         variant="ghost"
                     >
                         <Icon aria-hidden="true" icon={Plus} />

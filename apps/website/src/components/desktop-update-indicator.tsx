@@ -1,6 +1,7 @@
 import { AlertCircleIcon, SystemUpdate01Icon } from '@hugeicons/core-free-icons';
 import { CheckmarkCircle01Icon, Download04Icon } from '@hugeicons-pro/core-stroke-rounded';
 import { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { type TavernUpdateStatus, useTavernUpdate } from '../hooks/desktop/use-tavern-update.ts';
 import { cn } from '../lib/utils.ts';
 import { Icon } from './ui/icon.tsx';
@@ -13,12 +14,15 @@ interface DesktopUpdateIndicatorProps {
 
 export function DesktopUpdateIndicator({ placement = 'inline' }: DesktopUpdateIndicatorProps) {
     const { status, updateAndRestart } = useTavernUpdate();
+    const navigate = useNavigate();
     const [shouldRender, setShouldRender] = useState(false);
     const isVisible =
+        status.phase === 'app-update-required' ||
         status.phase === 'available' ||
         status.phase === 'staging-runtime' ||
         status.phase === 'downloading-app' ||
         status.phase === 'failed' ||
+        status.phase === 'runtime-disconnected' ||
         status.phase === 'ready' ||
         status.phase === 'restarting-runtime' ||
         status.phase === 'restarting-app';
@@ -43,7 +47,11 @@ export function DesktopUpdateIndicator({ placement = 'inline' }: DesktopUpdateIn
     }
 
     const canAct =
-        status.phase === 'available' || status.phase === 'failed' || status.phase === 'ready';
+        status.phase === 'app-update-required' ||
+        status.phase === 'available' ||
+        status.phase === 'failed' ||
+        status.phase === 'runtime-disconnected' ||
+        status.phase === 'ready';
     const label = getUpdateLabel(status);
     const progress = status.phase === 'downloading-app' ? status.progress : undefined;
 
@@ -61,31 +69,50 @@ export function DesktopUpdateIndicator({ placement = 'inline' }: DesktopUpdateIn
                     render={
                         <Button
                             aria-label={label}
-                            className="size-7 rounded-[var(--main-radius)] shadow-none before:rounded-[calc(var(--main-radius)-1px)]"
+                            className={cn(
+                                'size-7 rounded-[var(--main-radius)] shadow-none before:rounded-[calc(var(--main-radius)-1px)]',
+                                (status.phase === 'runtime-disconnected' ||
+                                    status.phase === 'app-update-required' ||
+                                    status.phase === 'failed') &&
+                                    'bg-error-bg hover:bg-error-bg data-pressed:bg-error-bg'
+                            )}
                             disabled={!canAct}
                             loading={
                                 status.phase === 'restarting-runtime' ||
                                 status.phase === 'restarting-app'
                             }
                             onClick={() => {
+                                if (status.phase === 'runtime-disconnected') {
+                                    navigate('/dashboard/settings/agent-runtime');
+                                    return;
+                                }
+
                                 updateAndRestart().catch(() => undefined);
                             }}
                             size="icon-sm"
-                            title={status.detail}
                             type="button"
-                            variant={status.phase === 'failed' ? 'destructive-soft' : 'brand-soft'}
+                            variant={
+                                status.phase === 'runtime-disconnected'
+                                    ? 'destructive-soft'
+                                    : status.phase === 'app-update-required' ||
+                                        status.phase === 'failed'
+                                      ? 'destructive-soft'
+                                      : 'brand-soft'
+                            }
                         >
                             <UpdateIcon phase={status.phase} progress={progress} />
                         </Button>
                     }
                 />
                 <TooltipContent className="max-w-[18rem]" side="bottom">
-                    <div className="grid gap-1 py-0.5">
-                        <div className="font-medium text-foreground text-sm">{label}</div>
-                        <div className="text-muted-foreground text-xs leading-5">
-                            {status.detail}
+                    {status.phase === 'runtime-disconnected' ? (
+                        <div className="py-0.5">{status.detail}</div>
+                    ) : (
+                        <div className="grid gap-1 py-0.5">
+                            <div className="font-medium">{label}</div>
+                            <div>{status.detail}</div>
                         </div>
-                    </div>
+                    )}
                 </TooltipContent>
             </Tooltip>
         </div>
@@ -119,7 +146,7 @@ function UpdateIcon({
         );
     }
 
-    if (phase === 'failed') {
+    if (phase === 'runtime-disconnected') {
         return (
             <Icon
                 aria-hidden="true"
@@ -182,18 +209,22 @@ function getUpdateLabel(status: TavernUpdateStatus) {
     switch (status.phase) {
         case 'available':
             return 'Update';
+        case 'app-update-required':
+            return 'Tavern Update Required';
         case 'staging-runtime':
             return 'Staging Runtime';
         case 'downloading-app':
             return `Updating ${Math.round((status.progress ?? 0) * 100)}%`;
         case 'ready':
             return 'Restart To Finish Update';
+        case 'failed':
+            return 'Update Failed';
+        case 'runtime-disconnected':
+            return 'Runtime Disconnected';
         case 'restarting-runtime':
             return 'Restarting Runtime';
         case 'restarting-app':
             return 'Restarting';
-        case 'failed':
-            return 'Update Failed';
         default:
             return 'Update';
     }

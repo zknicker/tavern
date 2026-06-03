@@ -149,6 +149,12 @@ the job is disabled with the capability reason.
 Runtime jobs are one consumer of the broader feature-gating pattern. App pages,
 controls, and smaller micro-features can use the same health records.
 
+App navigation controls that open Runtime-backed surfaces must declare the
+capabilities needed by that surface. If any required capability is not healthy,
+the route button is disabled and explains the missing capabilities. App-local
+surfaces such as profile, appearance, updates, and Runtime connection settings
+do not require Runtime capabilities.
+
 Feature gating does not make the app the source of truth. Runtime capability
 health comes from Runtime.
 

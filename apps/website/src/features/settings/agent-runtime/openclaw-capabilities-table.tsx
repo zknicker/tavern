@@ -98,10 +98,10 @@ function CapabilityTooltipContent({ capability }: { capability: RuntimeCapabilit
     return (
         <div className="grid gap-0.5">
             <p className="font-medium">{stateLabels[capability.state]}</p>
-            {detail ? <p className="text-muted-foreground">{detail}</p> : null}
-            <p className="text-muted-foreground">Checked {formatAbsolute(capability.checkedAt)}</p>
+            {detail ? <p className="text-neutral-300">{detail}</p> : null}
+            <p className="text-neutral-300">Checked {formatAbsolute(capability.checkedAt)}</p>
             {!isHealthy && capability.lastHealthyAt ? (
-                <p className="text-muted-foreground">
+                <p className="text-neutral-300">
                     Last healthy {formatAbsolute(capability.lastHealthyAt)}
                 </p>
             ) : null}
@@ -124,7 +124,7 @@ export function OpenClawCapabilitiesSummary({
 }) {
     if (capabilities.length === 0) {
         return (
-            <div className="-mx-2 rounded-md bg-muted px-2 py-1.5">
+            <div className="rounded-md bg-muted px-2 py-1.5">
                 <p className="text-meta text-muted-foreground">{emptyLabel}</p>
             </div>
         );
@@ -134,7 +134,7 @@ export function OpenClawCapabilitiesSummary({
 
     return (
         <TooltipProvider>
-            <div className="-mx-2 grid gap-3">
+            <div className="grid gap-3">
                 {groups.map((group) => (
                     <section className="grid gap-1.5" key={group.category.id}>
                         <h4 className="px-2 font-medium text-muted-foreground text-xs">

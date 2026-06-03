@@ -1,10 +1,10 @@
-import { useAgentRuntimeConnection } from '../../../hooks/connections/use-agent-runtime-connection.ts';
-import { useAgentRuntimeCapabilityEvents } from '../../../hooks/connections/use-agent-runtime-connection-events.ts';
+import { useRuntimeConnection } from '../../../hooks/connections/use-runtime-connection.ts';
+import { useRuntimeCapabilityEvents } from '../../../hooks/connections/use-runtime-events.ts';
 import { AgentRuntimeSettingsPanel } from './agent-runtime-panel.tsx';
 
 export function AgentRuntimeSettings() {
-    useAgentRuntimeCapabilityEvents();
-    const runtime = useAgentRuntimeConnection();
+    useRuntimeCapabilityEvents();
+    const runtime = useRuntimeConnection();
 
     if (runtime.status === 'checking') {
         return <p className="text-muted-foreground text-sm">Loading Tavern Runtime...</p>;

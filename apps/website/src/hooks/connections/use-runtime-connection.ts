@@ -2,7 +2,7 @@ import * as React from 'react';
 import { queryPolicy } from '../../lib/query-policy.ts';
 import { type AgentRuntimeConnectionOutput, trpc } from '../../lib/trpc.tsx';
 
-export type AgentRuntimeConnectionStatus =
+export type RuntimeConnectionStatus =
     | 'checking'
     | 'error'
     | 'reachable'
@@ -10,19 +10,17 @@ export type AgentRuntimeConnectionStatus =
     | 'unreachable'
     | 'version-mismatch';
 
-export type AgentRuntimePageConnectionState = 'reachable' | 'unconfigured' | 'unreachable';
+export type RuntimePageConnectionState = 'reachable' | 'unconfigured' | 'unreachable';
 
-export interface AgentRuntimeConnectionState {
-    agentRuntimeConnection: AgentRuntimeConnectionOutput;
+export interface RuntimeConnectionState {
     connection: AgentRuntimeConnectionOutput;
-    isAgentRuntimeConnected: boolean;
     isConnected: boolean;
-    status: AgentRuntimeConnectionStatus;
+    status: RuntimeConnectionStatus;
 }
 
-export function toAgentRuntimePageConnectionState(
-    status: AgentRuntimeConnectionStatus
-): AgentRuntimePageConnectionState {
+export function toRuntimePageConnectionState(
+    status: RuntimeConnectionStatus
+): RuntimePageConnectionState {
     switch (status) {
         case 'reachable':
             return 'reachable';
@@ -33,11 +31,11 @@ export function toAgentRuntimePageConnectionState(
     }
 }
 
-function deriveAgentRuntimeConnectionStatus(input: {
+function deriveRuntimeConnectionStatus(input: {
     hasError: boolean;
     isPending: boolean;
     connection: AgentRuntimeConnectionOutput;
-}): AgentRuntimeConnectionStatus {
+}): RuntimeConnectionStatus {
     if (input.isPending && !input.connection) {
         return 'checking';
     }
@@ -59,7 +57,7 @@ function deriveAgentRuntimeConnectionStatus(input: {
         : 'reachable';
 }
 
-export function useAgentRuntimeConnection(): AgentRuntimeConnectionState {
+export function useRuntimeConnection(): RuntimeConnectionState {
     const connectionQuery = trpc.agentRuntime.get.useQuery(undefined, {
         ...queryPolicy.volatileState,
         retry: false,
@@ -67,7 +65,7 @@ export function useAgentRuntimeConnection(): AgentRuntimeConnectionState {
 
     return React.useMemo(() => {
         const connection = connectionQuery.data ?? null;
-        const status = deriveAgentRuntimeConnectionStatus({
+        const status = deriveRuntimeConnectionStatus({
             connection,
             hasError: Boolean(connectionQuery.error),
             isPending: connectionQuery.isPending,
@@ -75,8 +73,6 @@ export function useAgentRuntimeConnection(): AgentRuntimeConnectionState {
 
         return {
             connection,
-            agentRuntimeConnection: connection,
-            isAgentRuntimeConnected: status === 'reachable',
             isConnected: status === 'reachable',
             status,
         };

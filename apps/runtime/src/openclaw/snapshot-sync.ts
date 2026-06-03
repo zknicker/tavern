@@ -43,22 +43,53 @@ export async function syncManagedOpenClawSnapshots(options?: { publishEvents?: b
     const publishEvents = options?.publishEvents ?? true;
 
     try {
-        const agents = await client.listAgents();
+        const [agents, models, skills] = await Promise.allSettled([
+            client.listAgents(),
+            client.getModels(),
+            client.listSkills(),
+        ]);
 
-        const agentResult = replaceStoredAgents({ agents: agents.agents });
+        const agentResult =
+            agents.status === 'fulfilled'
+                ? replaceStoredAgents({ agents: agents.value.agents })
+                : { changedAgentIds: [], synced: 0 };
+        const modelResult =
+            models.status === 'fulfilled'
+                ? replaceStoredOpenClawModels({ models: models.value })
+                : { changed: false, synced: 0 };
+        const skillResult =
+            skills.status === 'fulfilled'
+                ? replaceStoredOpenClawSkills({
+                      skills: skills.value.skills,
+                  })
+                : { changedSkillIds: [], synced: 0 };
+
+        if (agents.status === 'rejected') {
+            log.warn('Managed OpenClaw agent snapshot sync failed', { error: agents.reason });
+        }
+        if (models.status === 'rejected') {
+            log.warn('Managed OpenClaw model snapshot sync failed', { error: models.reason });
+        }
+        if (skills.status === 'rejected') {
+            log.warn('Managed OpenClaw skill snapshot sync failed', { error: skills.reason });
+        }
 
         if (publishEvents) {
             publishAgentUpdatedEvents(agentResult.changedAgentIds);
+            if (modelResult.changed) {
+                publishModelUpdatedEvent();
+            }
+            publishSkillUpdatedEvents(skillResult.changedSkillIds);
         }
 
         return {
             agents: agentResult.synced,
             chats: 0,
-            models: 0,
+            models: modelResult.synced,
             sessionGraphs: 0,
             sessionMessages: 0,
             sessions: 0,
-            skills: 0,
+            skills: skillResult.synced,
         };
     } finally {
         client.close();
@@ -288,7 +319,7 @@ export function refreshManagedOpenClawSkillsInBackground(reason: string) {
 }
 
 export function syncManagedOpenClawSnapshotsInBackground(reason: string) {
-    void syncManagedOpenClawSnapshots().catch((error) => {
+    return syncManagedOpenClawSnapshots().catch((error) => {
         log.warn('Managed OpenClaw snapshot sync failed', { error, reason });
     });
 }

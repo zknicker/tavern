@@ -8,7 +8,7 @@ import {
     PromptInputTools,
 } from '../../components/ui/prompt-input.tsx';
 import { useChatSend } from '../../hooks/chats/use-chat-send.ts';
-import { useAgentRuntimeCapability } from '../../hooks/connections/use-agent-runtime-capability.ts';
+import { useCapability } from '../../hooks/connections/use-capability.ts';
 import type { AgentListOutput } from '../../lib/trpc.tsx';
 import { cn } from '../../lib/utils.ts';
 import {
@@ -26,6 +26,7 @@ import { ChatComposerAgentSelector, ChatComposerContextFullness } from './chat-c
 import type { ChatContextFullness } from './chat-context-fullness.ts';
 
 export type ChatMessageComposerVariant = 'compact' | 'detail';
+const runtimeDisconnectedTooltip = 'Tavern Runtime is disconnected.';
 
 export function ChatMessageComposer({
     agentRuntimeSyncLabel = null,
@@ -48,18 +49,15 @@ export function ChatMessageComposer({
     variant?: ChatMessageComposerVariant;
 }) {
     const sendMessage = useChatSend();
-    const gatewayCapability = useAgentRuntimeCapability('gateway');
-    const messagesCapability = useAgentRuntimeCapability('messages');
+    const gatewayCapability = useCapability('gateway');
+    const messagesCapability = useCapability('messages');
     const [agentId, setAgentId] = React.useState<string>(boundAgentIds[0] ?? '');
     const [content, setContent] = React.useState('');
     const [mentions, setMentions] = React.useState<Mention[]>([]);
     const isCompact = variant === 'compact';
     const trimmedContent = content.trim();
     const canSendToRuntime = gatewayCapability.healthy && messagesCapability.healthy;
-    const runtimeDisabledReason =
-        gatewayCapability.reason ??
-        messagesCapability.reason ??
-        'Tavern Runtime is not ready for sending.';
+    const runtimeDisabledReason = runtimeDisconnectedTooltip;
     const canSend =
         chatCanSend &&
         canSendToRuntime &&

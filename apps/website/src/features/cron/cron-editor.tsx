@@ -2,7 +2,7 @@ import * as React from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { BadgeDivider } from '../../components/ui/badge-divider.tsx';
 import { Card } from '../../components/ui/card.tsx';
-import { useAgentRuntimeCapability } from '../../hooks/connections/use-agent-runtime-capability.ts';
+import { useCapability } from '../../hooks/connections/use-capability.ts';
 import { useCronCreate } from '../../hooks/cron/use-cron-create.ts';
 import { useCronDelete } from '../../hooks/cron/use-cron-delete.ts';
 import { useCronGet } from '../../hooks/cron/use-cron-get.ts';
@@ -32,7 +32,7 @@ export function CronEditor() {
     const navigate = useNavigate();
     const { jobId } = useParams<{ jobId?: string }>();
     const isNew = !jobId;
-    const cronCapability = useAgentRuntimeCapability('cron');
+    const cronCapability = useCapability('cron');
     const cronJobQuery = useCronGet(jobId ?? null);
     const createMutation = useCronCreate();
     const deleteMutation = useCronDelete();

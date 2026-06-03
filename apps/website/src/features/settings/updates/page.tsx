@@ -1,33 +1,36 @@
 import { SystemUpdate01Icon } from '@hugeicons/core-free-icons';
-import { Badge } from '../../../components/ui/badge.tsx';
+import type React from 'react';
 import { BadgeDivider } from '../../../components/ui/badge-divider.tsx';
+import { Card, CardFrame } from '../../../components/ui/card.tsx';
 import { Icon } from '../../../components/ui/icon.tsx';
 import { Button } from '../../../components/ui/primitives/button.tsx';
 import { Progress } from '../../../components/ui/progress.tsx';
+import { Separator } from '../../../components/ui/separator.tsx';
 import { SettingsRow, SettingsValue } from '../../../components/ui/settings-row.tsx';
-import {
-    type TavernUpdateStatus,
-    useTavernUpdate,
-} from '../../../hooks/desktop/use-tavern-update.ts';
+import { useRuntimeConnection } from '../../../hooks/connections/use-runtime-connection.ts';
+import { useTavernUpdate } from '../../../hooks/desktop/use-tavern-update.ts';
 
 export function UpdatesSettings() {
+    const { connection } = useRuntimeConnection();
     const { checkForUpdate, status, updateAndRestart } = useTavernUpdate();
-    const copy = getUpdateCopy(status);
     const canCheck = status.phase !== 'checking' && status.phase !== 'downloading-app';
-    const canInstall = status.phase === 'available' || status.phase === 'ready';
+    const canInstall =
+        status.phase === 'app-update-required' ||
+        status.phase === 'available' ||
+        status.phase === 'ready';
 
     return (
         <div>
             <BadgeDivider className="pb-5">Tavern Updates</BadgeDivider>
-            <div className="overflow-hidden rounded-lg border border-border bg-card">
-                <SettingsRow
-                    description="Stage Runtime first, download the app update, then restart when ready."
-                    title="Tavern"
-                >
-                    <div className="flex min-w-0 flex-col gap-3">
-                        <div className="flex min-w-0 items-center justify-between gap-3">
-                            <StatusBadge status={status} />
-                            <div className="flex shrink-0 items-center gap-2">
+            <CardFrame>
+                <Card className="overflow-hidden p-0">
+                    <SettingsRow
+                        className="md:items-start"
+                        description="Tavern will update both your app and the connected runtime automatically."
+                        title="Update"
+                    >
+                        <div className="flex min-w-0 flex-col gap-2">
+                            <div className="flex shrink-0 items-center gap-2 md:justify-end">
                                 <Button
                                     disabled={!canCheck}
                                     loading={status.phase === 'checking'}
@@ -52,81 +55,36 @@ export function UpdatesSettings() {
                                     {status.phase === 'ready' ? 'Restart' : 'Update'}
                                 </Button>
                             </div>
+                            {status.phase === 'downloading-app' ? (
+                                <Progress value={status.progress * 100} />
+                            ) : null}
+                            {status.phase === 'app-update-required' || status.phase === 'failed' ? (
+                                <SettingsValue className="min-h-0 justify-start text-left md:justify-start md:text-left">
+                                    {status.detail}
+                                </SettingsValue>
+                            ) : null}
                         </div>
-                        <SettingsValue className="min-h-0 justify-start text-left md:justify-start md:text-left">
-                            {copy}
-                        </SettingsValue>
-                        {status.phase === 'downloading-app' ? (
-                            <Progress value={status.progress * 100} />
-                        ) : null}
-                    </div>
-                </SettingsRow>
-            </div>
+                    </SettingsRow>
+                    <Separator />
+                    <SettingsRow title="App version">
+                        <VersionValue>{connection?.appVersion ?? 'Unknown'}</VersionValue>
+                    </SettingsRow>
+                    <Separator />
+                    <SettingsRow title="Runtime version">
+                        <VersionValue>
+                            {connection
+                                ? (connection.runtimeVersion ?? 'Unknown')
+                                : 'No Runtime Connected'}
+                        </VersionValue>
+                    </SettingsRow>
+                </Card>
+            </CardFrame>
         </div>
     );
 }
 
-function StatusBadge({ status }: { status: TavernUpdateStatus }) {
-    const label = getStatusLabel(status);
-    const variant =
-        status.phase === 'available'
-            ? 'info'
-            : status.phase === 'failed'
-              ? 'warning'
-              : status.phase === 'idle'
-                ? 'success'
-                : 'secondary';
-
+function VersionValue({ children }: { children: React.ReactNode }) {
     return (
-        <Badge className="max-w-full truncate" variant={variant}>
-            {label}
-        </Badge>
+        <SettingsValue className="font-mono text-foreground tabular-nums">{children}</SettingsValue>
     );
-}
-
-function getStatusLabel(status: TavernUpdateStatus) {
-    switch (status.phase) {
-        case 'available':
-            return `v${status.version} available`;
-        case 'checking':
-            return 'Checking';
-        case 'idle':
-            return 'Up to date';
-        case 'staging-runtime':
-            return 'Staging Runtime';
-        case 'downloading-app':
-            return `Downloading ${Math.round(status.progress * 100)}%`;
-        case 'ready':
-            return `v${status.version} ready`;
-        case 'failed':
-            return 'Update failed';
-        case 'restarting-runtime':
-            return 'Restarting Runtime';
-        case 'restarting-app':
-            return 'Restarting Tavern';
-        case 'unsupported':
-            return 'Mac app only';
-        default:
-            return 'Ready';
-    }
-}
-
-function getUpdateCopy(status: TavernUpdateStatus) {
-    switch (status.phase) {
-        case 'available':
-            return status.detail;
-        case 'checking':
-        case 'idle':
-        case 'staging-runtime':
-        case 'downloading-app':
-        case 'ready':
-        case 'failed':
-        case 'restarting-runtime':
-        case 'restarting-app':
-            return status.detail;
-        case 'unsupported':
-            return 'Updates are available inside the packaged Mac desktop app.';
-        default:
-            return 'Tavern checks the release feed automatically when this page opens.';
-    }
 }

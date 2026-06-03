@@ -54,20 +54,20 @@ test('waitForRuntimeReady reads the Runtime capabilities health envelope', async
     assert.deepEqual(requestedUrls, ['http://127.0.0.1:18790/capabilities']);
 });
 
-test('createDevStackEnvironment isolates default dev state from packaged app state', () => {
+test('createDevStackEnvironment uses shared dev state outside packaged app state', () => {
     const environment = createDevStackEnvironment({
         baseEnvironment: { PATH: '/usr/bin' },
         repositoryRoot: '/repo/tavern',
     });
 
     assert.equal(environment.PATH, '/usr/bin');
-    assert.match(
+    assert.equal(
         environment.DATABASE_PATH,
-        new RegExp(`^${escapeRegExp(path.join(os.homedir(), '.tavern', 'dev'))}/`)
+        path.join(os.homedir(), '.tavern', 'dev', 'tavern.sqlite')
     );
-    assert.match(
+    assert.equal(
         environment.TAVERN_RUNTIME_ROOT,
-        new RegExp(`^${escapeRegExp(path.join(os.homedir(), '.tavern', 'dev'))}/`)
+        path.join(os.homedir(), '.tavern', 'dev', 'runtime')
     );
     assert.notEqual(environment.DATABASE_PATH, path.join(os.homedir(), '.tavern', 'tavern.sqlite'));
     assert.notEqual(environment.TAVERN_RUNTIME_ROOT, path.join(os.homedir(), '.tavern', 'runtime'));
@@ -117,7 +117,3 @@ test('cleanupStaleProcesses closes the old Tauri desktop app in desktop mode', (
         [111, 'SIGTERM'],
     ]);
 });
-
-function escapeRegExp(value) {
-    return value.replace(/[.*+?^${}()|[\]\\]/gu, '\\$&');
-}

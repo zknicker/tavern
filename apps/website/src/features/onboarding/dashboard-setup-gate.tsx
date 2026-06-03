@@ -1,25 +1,39 @@
 import { Navigate, Outlet, useLocation } from 'react-router-dom';
-import type { AgentRuntimeConnectionStatus } from '../../hooks/connections/use-agent-runtime-connection.ts';
-import { useAgentRuntimeConnection } from '../../hooks/connections/use-agent-runtime-connection.ts';
+import type { RuntimeConnectionStatus } from '../../hooks/connections/use-runtime-connection.ts';
+import { useRuntimeConnection } from '../../hooks/connections/use-runtime-connection.ts';
 
 export function DashboardSetupGate() {
-    const agentRuntimeConnection = useAgentRuntimeConnection();
+    const runtimeConnection = useRuntimeConnection();
     const location = useLocation();
 
-    if (shouldRedirectToRuntimeOnboarding(agentRuntimeConnection.status, location.pathname)) {
+    if (
+        shouldRedirectToRuntimeOnboarding(
+            {
+                hasConfiguredRuntime: Boolean(runtimeConnection.connection?.enabled),
+                status: runtimeConnection.status,
+            },
+            location.pathname
+        )
+    ) {
         return <Navigate replace state={{ from: location }} to="/onboarding" />;
     }
 
     return <Outlet />;
 }
 
-export function shouldRedirectToRuntimeOnboarding(
-    status: AgentRuntimeConnectionStatus,
-    pathname = ''
-) {
+export function shouldRedirectToRuntimeOnboarding(input: SetupGateState, pathname = '') {
     if (pathname === '/dashboard/chat-layout-preview') {
         return false;
     }
 
-    return status === 'unconfigured' || status === 'version-mismatch';
+    if (input.status === 'checking' || input.status === 'error') {
+        return false;
+    }
+
+    return !input.hasConfiguredRuntime;
+}
+
+interface SetupGateState {
+    hasConfiguredRuntime: boolean;
+    status: RuntimeConnectionStatus;
 }

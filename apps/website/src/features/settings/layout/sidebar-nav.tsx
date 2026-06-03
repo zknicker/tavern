@@ -8,11 +8,18 @@ import {
     SidebarMenuButton,
     SidebarMenuItem,
 } from '../../../components/ui/sidebar.tsx';
+import {
+    formatCapabilityDisabledReason,
+    settingsCapabilityRequirements,
+    useCapability,
+} from '../../../hooks/connections/use-capability.ts';
 import { settingsNavItems, settingsNavSections } from './navigation.ts';
 
 const settingsNavItemsById = new Map(settingsNavItems.map((item) => [item.id, item]));
 
 export function SettingsSidebarNav() {
+    const capability = useCapability();
+
     return (
         <aside className="flex min-h-0 w-[260px] shrink-0 flex-col border-border/60 border-r bg-transparent">
             {settingsNavSections.map((section) => (
@@ -27,26 +34,50 @@ export function SettingsSidebarNav() {
                                     return null;
                                 }
 
+                                const gate = capability(settingsCapabilityRequirements[item.id]);
+                                const disabledReason = gate.healthy
+                                    ? null
+                                    : formatCapabilityDisabledReason(gate);
+
                                 return (
                                     <SidebarMenuItem key={item.id}>
-                                        <NavLink className="contents" to={item.to}>
-                                            {({ isActive }) => (
-                                                <SidebarMenuButton
-                                                    isActive={isActive}
-                                                    render={<div />}
-                                                >
-                                                    <Icon
-                                                        aria-hidden="true"
-                                                        className="shrink-0"
-                                                        icon={item.icon}
-                                                        size={18}
-                                                    />
-                                                    <span className="min-w-0 truncate">
-                                                        {item.label}
-                                                    </span>
-                                                </SidebarMenuButton>
-                                            )}
-                                        </NavLink>
+                                        {gate.healthy ? (
+                                            <NavLink className="contents" to={item.to}>
+                                                {({ isActive }) => (
+                                                    <SidebarMenuButton
+                                                        isActive={isActive}
+                                                        render={<div />}
+                                                    >
+                                                        <Icon
+                                                            aria-hidden="true"
+                                                            className="shrink-0"
+                                                            icon={item.icon}
+                                                            size={18}
+                                                        />
+                                                        <span className="min-w-0 truncate">
+                                                            {item.label}
+                                                        </span>
+                                                    </SidebarMenuButton>
+                                                )}
+                                            </NavLink>
+                                        ) : (
+                                            <SidebarMenuButton
+                                                className="w-fit max-w-full"
+                                                disabled
+                                                isActive={false}
+                                                tooltip={disabledReason ?? item.label}
+                                            >
+                                                <Icon
+                                                    aria-hidden="true"
+                                                    className="shrink-0"
+                                                    icon={item.icon}
+                                                    size={18}
+                                                />
+                                                <span className="min-w-0 truncate">
+                                                    {item.label}
+                                                </span>
+                                            </SidebarMenuButton>
+                                        )}
                                     </SidebarMenuItem>
                                 );
                             })}

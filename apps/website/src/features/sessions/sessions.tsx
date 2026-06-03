@@ -2,9 +2,9 @@ import * as React from 'react';
 import { useAgentAvatarDirectory } from '../../hooks/agents/use-agent-avatar-directory.ts';
 import { useAgentListSuspense } from '../../hooks/agents/use-agent-list.ts';
 import {
-    toAgentRuntimePageConnectionState,
-    useAgentRuntimeConnection,
-} from '../../hooks/connections/use-agent-runtime-connection.ts';
+    toRuntimePageConnectionState,
+    useRuntimeConnection,
+} from '../../hooks/connections/use-runtime-connection.ts';
 import { useSessionListSuspense } from '../../hooks/sessions/use-session-list.ts';
 import { GridPageSkeleton } from '../shell/page-skeletons.tsx';
 import { useLayoutContext } from '../shell/use-layout-context.ts';
@@ -22,7 +22,7 @@ export function Sessions() {
 function SessionsContent() {
     const { navigateToSettings } = useLayoutContext();
     const [agents] = useAgentListSuspense();
-    const agentRuntimeConnection = useAgentRuntimeConnection();
+    const runtimeConnection = useRuntimeConnection();
     const [sessionsData] = useSessionListSuspense();
     const sessions = React.useMemo(
         () => buildSessionList(agents.agents, sessionsData.sessions),
@@ -33,7 +33,7 @@ function SessionsContent() {
     return (
         <SessionsList
             avatarDirectory={avatarDirectory}
-            connectionState={toAgentRuntimePageConnectionState(agentRuntimeConnection.status)}
+            connectionState={toRuntimePageConnectionState(runtimeConnection.status)}
             onNavigateToSettings={navigateToSettings}
             sessions={sessions}
         />

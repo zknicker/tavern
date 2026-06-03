@@ -14,9 +14,9 @@ import { Separator } from '../../../components/ui/separator.tsx';
 import { SettingsRow } from '../../../components/ui/settings-row.tsx';
 import { Textarea } from '../../../components/ui/textarea.tsx';
 import {
-    toAgentRuntimePageConnectionState,
-    useAgentRuntimeConnection,
-} from '../../../hooks/connections/use-agent-runtime-connection.ts';
+    toRuntimePageConnectionState,
+    useRuntimeConnection,
+} from '../../../hooks/connections/use-runtime-connection.ts';
 import {
     useCortexSchema,
     useCortexSettings,
@@ -31,7 +31,7 @@ import type {
     CortexStatusOutput,
 } from '../../../lib/trpc.tsx';
 
-type ConnectionStatus = ReturnType<typeof toAgentRuntimePageConnectionState>;
+type ConnectionStatus = ReturnType<typeof toRuntimePageConnectionState>;
 type CortexSettings = NonNullable<CortexSettingsOutput>;
 type CortexSchema = NonNullable<CortexSchemaOutput>;
 type CortexStatus = NonNullable<CortexStatusOutput>;
@@ -56,7 +56,7 @@ const recallModeOptions: Array<{
 ];
 
 function MemoriesSettingsContent() {
-    const agentRuntimeConnection = useAgentRuntimeConnection();
+    const runtimeConnection = useRuntimeConnection();
     const settingsQuery = useCortexSettings();
     const schemaQuery = useCortexSchema();
     const statusQuery = useCortexStatus();
@@ -64,11 +64,11 @@ function MemoriesSettingsContent() {
     const saveSettingsMutation = useSaveCortexSettings();
     const runJobMutation = useRunCortexJob();
     const settings = settingsQuery.data ?? null;
-    const connectionStatus = toAgentRuntimePageConnectionState(agentRuntimeConnection.status);
+    const connectionStatus = toRuntimePageConnectionState(runtimeConnection.status);
     const isLoading =
         settingsQuery.isPending ||
-        agentRuntimeConnection.status === 'checking' ||
-        agentRuntimeConnection.status === 'error';
+        runtimeConnection.status === 'checking' ||
+        runtimeConnection.status === 'error';
     const embeddingModel = settings?.embedding.model ?? defaultEmbeddingModel;
     const recallMode = settings?.recall.mode ?? defaultRecallMode;
 

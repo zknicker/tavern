@@ -222,7 +222,7 @@ export function PromptInputSubmit({
     const button = (
         <Button
             aria-label={label}
-            className={className}
+            className={cn('cursor-default disabled:cursor-default', className)}
             disabled={isDisabled}
             size={size}
             type="submit"
@@ -238,7 +238,9 @@ export function PromptInputSubmit({
 
     return (
         <Tooltip>
-            <TooltipTrigger render={<span className="inline-flex" />}>{button}</TooltipTrigger>
+            <TooltipTrigger render={<span className="inline-flex cursor-default" />}>
+                {button}
+            </TooltipTrigger>
             <TooltipContent>{tooltip}</TooltipContent>
         </Tooltip>
     );

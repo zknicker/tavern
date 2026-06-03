@@ -1,7 +1,7 @@
 import * as React from 'react';
 import type { AgentRuntimeConnectionOutput } from '../../lib/trpc.tsx';
 import { trpc } from '../../lib/trpc.tsx';
-import { useAgentRuntimeConnection } from '../connections/use-agent-runtime-connection.ts';
+import { useRuntimeConnection } from '../connections/use-runtime-connection.ts';
 import { type DesktopUpdateStatus, useDesktopUpdate } from './use-desktop-update.ts';
 
 type RuntimeConnection = NonNullable<AgentRuntimeConnectionOutput>;
@@ -9,6 +9,8 @@ type RuntimeConnection = NonNullable<AgentRuntimeConnectionOutput>;
 export type TavernUpdateStatus =
     | { phase: 'unsupported'; detail: string }
     | { phase: 'idle'; detail: string }
+    | { phase: 'app-update-required'; detail: string }
+    | { phase: 'runtime-disconnected'; detail: string }
     | { phase: 'available'; detail: string; version: string }
     | { phase: 'checking'; detail: string }
     | { phase: 'staging-runtime'; detail: string; version: string }
@@ -20,14 +22,18 @@ export type TavernUpdateStatus =
 
 export function useTavernUpdate() {
     const utils = trpc.useUtils();
-    const runtimeConnection = useAgentRuntimeConnection();
+    const runtimeConnection = useRuntimeConnection();
     const desktopUpdate = useDesktopUpdate();
-    const needsRuntimeUpdate =
-        runtimeConnection.status === 'version-mismatch' &&
-        runtimeConnection.connection !== null &&
-        getRuntimeVersionMismatchKind(runtimeConnection.connection) === 'runtime-needs-update';
+    const versionMismatchKind =
+        runtimeConnection.status === 'version-mismatch' && runtimeConnection.connection !== null
+            ? getRuntimeVersionMismatchKind(runtimeConnection.connection)
+            : null;
+    const appNeedsUpdate = versionMismatchKind === 'app-needs-update';
+    const needsRuntimeUpdate = versionMismatchKind === 'runtime-needs-update';
+    const isRuntimeDisconnected =
+        runtimeConnection.status === 'error' || runtimeConnection.status === 'unreachable';
     const runtimeUpdateStatus = trpc.agentRuntime.updateStatus.useQuery(undefined, {
-        enabled: Boolean(runtimeConnection.connection?.enabled),
+        enabled: needsRuntimeUpdate,
         refetchInterval: (query) =>
             query.state.data?.phase === 'installing' || query.state.data?.phase === 'restarting'
                 ? 1500
@@ -50,18 +56,26 @@ export function useTavernUpdate() {
 
     const status = getTavernUpdateStatus({
         desktopUpdateStatus: desktopUpdate.status,
+        appNeedsUpdate,
         finalRestartPhase,
+        isRuntimeDisconnected,
         needsRuntimeUpdate,
         runtimeConnection: runtimeConnection.connection,
-        runtimeUpdateError:
-            runtimeUpdateStatus.error?.message ??
-            startRuntimeUpdate.error?.message ??
-            restartRuntime.error?.message ??
-            null,
+        runtimeUpdateError: needsRuntimeUpdate
+            ? (runtimeUpdateStatus.error?.message ??
+              startRuntimeUpdate.error?.message ??
+              restartRuntime.error?.message ??
+              null)
+            : null,
         runtimeUpdateStatus: runtimeUpdateStatus.data ?? null,
     });
 
     const updateAndRestart = React.useCallback(async () => {
+        if (appNeedsUpdate) {
+            await desktopUpdate.updateAndRestart();
+            return;
+        }
+
         if (needsRuntimeUpdate) {
             if (runtimeUpdateStatus.data?.phase !== 'staged') {
                 await startRuntimeUpdate.mutateAsync();
@@ -99,6 +113,7 @@ export function useTavernUpdate() {
         setFinalRestartPhase('idle');
         await utils.agentRuntime.get.invalidate();
     }, [
+        appNeedsUpdate,
         desktopUpdate,
         needsRuntimeUpdate,
         restartRuntime,
@@ -116,9 +131,11 @@ export function useTavernUpdate() {
     };
 }
 
-function getTavernUpdateStatus(input: {
+export function getTavernUpdateStatus(input: {
     desktopUpdateStatus: DesktopUpdateStatus;
+    appNeedsUpdate: boolean;
     finalRestartPhase: 'idle' | 'runtime' | 'app';
+    isRuntimeDisconnected: boolean;
     needsRuntimeUpdate: boolean;
     runtimeConnection: AgentRuntimeConnectionOutput;
     runtimeUpdateError: null | string;
@@ -149,11 +166,50 @@ function getTavernUpdateStatus(input: {
         };
     }
 
+    const desktopStatus = fromDesktopUpdateStatus(input.desktopUpdateStatus);
+    if (input.appNeedsUpdate) {
+        if (
+            desktopStatus.phase !== 'idle' &&
+            desktopStatus.phase !== 'unsupported' &&
+            desktopStatus.phase !== 'runtime-disconnected'
+        ) {
+            return desktopStatus.phase === 'ready'
+                ? {
+                      ...desktopStatus,
+                      detail: 'Tavern update ready. Restart Tavern to reconnect to this Runtime.',
+                  }
+                : desktopStatus;
+        }
+
+        return {
+            detail: 'This Tavern app is not compatible with the connected Runtime. Install the latest Tavern update to continue.',
+            phase: 'app-update-required',
+        };
+    }
+
+    if (
+        input.isRuntimeDisconnected &&
+        desktopStatus.phase !== 'idle' &&
+        desktopStatus.phase !== 'unsupported'
+    ) {
+        return desktopStatus;
+    }
+
+    if (input.isRuntimeDisconnected) {
+        return {
+            detail: 'Tavern Runtime is disconnected.',
+            phase: 'runtime-disconnected',
+        };
+    }
+
     if (input.needsRuntimeUpdate) {
         if (input.runtimeUpdateStatus?.phase === 'failed') {
             return {
-                detail: input.runtimeUpdateStatus.message ?? 'Runtime update failed.',
-                phase: 'failed',
+                detail:
+                    input.runtimeUpdateStatus.message ??
+                    `Runtime ${getRuntimeTargetVersion(input.runtimeConnection)} could not be staged. Click to try again.`,
+                phase: 'available',
+                version: getRuntimeTargetVersion(input.runtimeConnection),
             };
         }
 
@@ -192,7 +248,7 @@ function getTavernUpdateStatus(input: {
         };
     }
 
-    return fromDesktopUpdateStatus(input.desktopUpdateStatus);
+    return desktopStatus;
 }
 
 function fromDesktopUpdateStatus(

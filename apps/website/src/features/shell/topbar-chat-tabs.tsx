@@ -19,6 +19,7 @@ import { Menu, MenuItem, MenuPopup, MenuTrigger } from '../../components/ui/menu
 import { Button } from '../../components/ui/primitives/button.tsx';
 import { Spinner } from '../../components/ui/spinner.tsx';
 import { TabsSubtle, TabsSubtleItem, TabsSubtleList } from '../../components/ui/tabs-subtle.tsx';
+import { Tooltip, TooltipContent, TooltipTrigger } from '../../components/ui/tooltip.tsx';
 import type { ChatTimelineState } from '../../hooks/chats/chat-timeline-state.ts';
 import { useChatArchive } from '../../hooks/chats/use-chat-archive.ts';
 import { getChatDraftRouteState } from '../../hooks/chats/use-chat-draft-launch.ts';
@@ -29,6 +30,12 @@ import { useChatStartDrafts } from '../../hooks/chats/use-chat-start-drafts.tsx'
 import { useChatTabAppearance } from '../../hooks/chats/use-chat-tab-appearance.ts';
 import { useChatUpdate } from '../../hooks/chats/use-chat-update.ts';
 import { useChatRuntimeTimelineState } from '../../hooks/chats/use-timeline-context.tsx';
+import {
+    formatCapabilityDisabledReason,
+    newChatCapabilityRequirements,
+    routeTabCapabilityRequirements,
+    useCapability,
+} from '../../hooks/connections/use-capability.ts';
 import type { RouteTab } from '../../hooks/dashboard/use-route-tab.ts';
 import { routeTabs } from '../../hooks/dashboard/use-route-tab.ts';
 import { markChatTiming } from '../../lib/chat-timing.ts';
@@ -61,6 +68,7 @@ export function TopbarChatTabs({
 }) {
     const location = useLocation();
     const navigate = useNavigate();
+    const capability = useCapability();
     const chatQuery = useChatList();
     const drafts = useChatStartDrafts();
     const updateChat = useChatUpdate();
@@ -228,11 +236,15 @@ export function TopbarChatTabs({
                     aria-label="Primary"
                     className="scrollbar-hidden min-w-0 max-w-full shrink overflow-x-auto overscroll-x-contain"
                     onValueChange={(value) => {
-                        setSelectedTabValue(value);
-
                         const routeTab = parseRouteTabValue(value);
 
                         if (routeTab) {
+                            if (!capability(routeTabCapabilityRequirements[routeTab]).healthy) {
+                                setSelectedTabValue(activeTabValue ?? '');
+                                return;
+                            }
+
+                            setSelectedTabValue(value);
                             onSelectRouteTab(routeTab);
                             return;
                         }
@@ -240,6 +252,7 @@ export function TopbarChatTabs({
                         const draftId = parseDraftTabValue(value);
 
                         if (draftId) {
+                            setSelectedTabValue(value);
                             const draft = draftChats.find((entry) => entry.id === draftId);
 
                             if (draft) {
@@ -252,6 +265,7 @@ export function TopbarChatTabs({
                         }
 
                         if (getSelectedChat(value, topbarChats.allChats)) {
+                            setSelectedTabValue(value);
                             void navigate(buildChatPath(value));
                         }
                     }}
@@ -259,13 +273,7 @@ export function TopbarChatTabs({
                 >
                     <TabsSubtleList className="gap-1 overflow-visible">
                         {routeTabs.map((tab) => (
-                            <TabsSubtleItem
-                                icon={getRouteTabIcon(tab.id)}
-                                iconNode={getRouteTabIconNode(tab.id)}
-                                key={tab.id}
-                                label={tab.label}
-                                value={getRouteTabValue(tab.id)}
-                            />
+                            <TopbarRouteTab key={tab.id} tab={tab.id} />
                         ))}
                         <div
                             aria-hidden="true"
@@ -406,7 +414,7 @@ export function TopbarAllChatsMenuButton() {
                     />
                 }
             >
-                <Icon aria-hidden="true" className="size-4.5" icon={MoreHorizontalIcon} size={18} />
+                <Icon aria-hidden="true" className="size-5.5" icon={MoreHorizontalIcon} size={22} />
             </MenuTrigger>
             <MenuPopup align="end" className="w-80">
                 {chats.length > 0 ? (
@@ -442,17 +450,48 @@ export function TopbarAllChatsMenuButton() {
 }
 
 export function TopbarNewChatButton() {
+    const capability = useCapability();
+    const gate = capability(newChatCapabilityRequirements);
+    const disabledReason = gate.healthy ? null : formatCapabilityDisabledReason(gate);
+
     return (
         <Button
             aria-label="New chat"
             className="no-drag size-7 rounded-md text-muted-foreground/70 hover:text-foreground data-pressed:text-foreground [&_svg]:opacity-70 hover:[&_svg]:opacity-90"
-            render={<NavLink to="/dashboard/overview" />}
+            disabled={!gate.healthy}
+            render={gate.healthy ? <NavLink to="/dashboard/overview" /> : undefined}
             size="icon-sm"
-            title="New chat"
+            title={disabledReason ?? 'New chat'}
             variant="ghost"
         >
             <Icon aria-hidden="true" className="size-4" icon={PlusSignIcon} size={16} />
         </Button>
+    );
+}
+
+function TopbarRouteTab({ tab }: { tab: RouteTab }) {
+    const capability = useCapability();
+    const gate = capability(routeTabCapabilityRequirements[tab]);
+    const disabledReason = gate.healthy ? null : formatCapabilityDisabledReason(gate);
+    const item = (
+        <TabsSubtleItem
+            disabled={!gate.healthy}
+            icon={getRouteTabIcon(tab)}
+            iconNode={getRouteTabIconNode(tab)}
+            label={routeTabs.find((entry) => entry.id === tab)?.label ?? tab}
+            value={getRouteTabValue(tab)}
+        />
+    );
+
+    if (!disabledReason) {
+        return item;
+    }
+
+    return (
+        <Tooltip>
+            <TooltipTrigger render={<span className="inline-flex" />}>{item}</TooltipTrigger>
+            <TooltipContent side="bottom">{disabledReason}</TooltipContent>
+        </Tooltip>
     );
 }
 

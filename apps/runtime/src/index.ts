@@ -2,6 +2,7 @@ import { spawnSync } from 'node:child_process';
 import path from 'node:path';
 import runtimePackage from '../package.json';
 import { DATA_DIR } from './config';
+import { ensureCortexFilesystem } from './cortex/filesystem';
 import { ensureCortexSchema } from './cortex/schema';
 import { initDb } from './db/connection';
 import { ensureRuntimeSchema } from './db/schema';
@@ -95,6 +96,7 @@ async function main(): Promise<void> {
     const db = initDb(dbPath);
     ensureRuntimeSchema(db);
     ensureCortexSchema(db);
+    ensureCortexFilesystem();
     ensureRuntimeJobsSchema(db);
     ensureWorkspaceInstructionSchema(db);
     log.info('Runtime DB ready', { path: dbPath });

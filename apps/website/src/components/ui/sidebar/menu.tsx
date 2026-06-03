@@ -31,7 +31,7 @@ export function SidebarMenuItem({ className, ...props }: React.ComponentProps<'l
 }
 
 const sidebarMenuButtonVariants = cva(
-    'peer/menu-button group/menu-button flex w-full cursor-default items-center gap-2 overflow-hidden rounded-lg px-2 py-1 text-left font-medium text-sidebar-foreground text-sm outline-hidden ring-sidebar-ring hover:bg-sidebar-accent hover:text-sidebar-accent-foreground focus-visible:ring-2 active:bg-sidebar-accent active:text-sidebar-accent-foreground disabled:pointer-events-none disabled:opacity-50 group-has-data-[sidebar=menu-action]/menu-item:pr-8 aria-disabled:pointer-events-none aria-disabled:opacity-50 data-active:bg-[var(--sidebar-accent-active)] data-active:text-sidebar-accent-foreground group-data-[collapsible=icon]:size-9! group-data-[collapsible=icon]:p-2.5! [&>span:last-child]:truncate [&_svg]:size-4.5 [&_svg]:shrink-0',
+    'peer/menu-button group/menu-button flex w-full cursor-default items-center gap-2 overflow-hidden rounded-lg px-2 py-1 text-left font-medium text-sidebar-foreground text-sm outline-hidden ring-sidebar-ring hover:bg-sidebar-accent hover:text-sidebar-accent-foreground focus-visible:ring-2 active:bg-sidebar-accent active:text-sidebar-accent-foreground disabled:pointer-events-none disabled:opacity-50 group-has-data-[sidebar=menu-action]/menu-item:pr-8 data-active:bg-[var(--sidebar-accent-active)] data-active:text-sidebar-accent-foreground data-disabled:opacity-50 data-disabled:active:bg-transparent data-disabled:hover:bg-transparent data-disabled:hover:text-sidebar-foreground group-data-[collapsible=icon]:size-9! group-data-[collapsible=icon]:p-2.5! [&>span:last-child]:truncate [&_svg]:size-4.5 [&_svg]:shrink-0',
     {
         defaultVariants: {
             size: 'default',
@@ -59,17 +59,30 @@ export function SidebarMenuButton({
     size = 'default',
     tooltip,
     className,
+    disabled,
+    onClick,
+    tabIndex,
     ...props
 }: useRender.ComponentProps<'button'> &
     React.ComponentProps<'button'> & {
         isActive?: boolean;
         tooltip?: string | React.ComponentProps<typeof TooltipContent>;
     } & VariantProps<typeof sidebarMenuButtonVariants>) {
+    const renderTooltipDisabledState = Boolean(disabled && tooltip);
     const button = useRender({
         defaultTagName: 'button',
         props: mergeProps<'button'>(
             {
+                'aria-disabled': renderTooltipDisabledState ? true : undefined,
                 className: cn(sidebarMenuButtonVariants({ variant, size }), className),
+                disabled: renderTooltipDisabledState ? undefined : disabled,
+                onClick: renderTooltipDisabledState
+                    ? (event) => {
+                          event.preventDefault();
+                          event.stopPropagation();
+                      }
+                    : onClick,
+                tabIndex: renderTooltipDisabledState ? -1 : tabIndex,
                 type: render ? undefined : 'button',
             },
             props
@@ -80,6 +93,7 @@ export function SidebarMenuButton({
             sidebar: 'menu-button',
             size,
             active: isActive,
+            disabled: renderTooltipDisabledState,
         },
     });
 
@@ -92,7 +106,14 @@ export function SidebarMenuButton({
     return (
         <Tooltip>
             {button}
-            <TooltipContent align="center" side="right" {...content} />
+            <TooltipContent
+                align="start"
+                collisionAvoidance={{ align: 'none', fallbackAxisSide: 'none', side: 'flip' }}
+                collisionPadding={8}
+                side="right"
+                sideOffset={4}
+                {...content}
+            />
         </Tooltip>
     );
 }

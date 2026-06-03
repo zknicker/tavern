@@ -126,7 +126,8 @@ Do not raise `tavern.runtime.minimumVersion` when every answer is no. Examples:
 The Tavern updater has one visible product flow:
 
 1. Show the topbar updater control when an app update is available, Runtime must
-   be staged, a stage/download/restart is active, or the update failed.
+   be staged, a stage/download/restart is active, or the configured Runtime is
+   disconnected.
 2. Stage Runtime with `brew update && brew upgrade tavern-runtime`. Do not
    restart Runtime during staging.
 3. Download the desktop update.
@@ -136,6 +137,8 @@ The Tavern updater has one visible product flow:
 
 Do not reintroduce a separate Runtime update wizard or fake progress checklist.
 Runtime install progress is phase-based unless Runtime owns real byte progress.
+Do not use the updater control as a generic failure surface. Runtime connection
+failures link to Runtime settings, where the full connection error is shown.
 
 ## Homebrew Tap
 

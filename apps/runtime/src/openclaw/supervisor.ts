@@ -101,8 +101,10 @@ export async function startOpenClawForRuntime(): Promise<ManagedOpenClawHandle> 
                 }
 
                 markManagedOpenClawGatewayReady();
-                publishGatewayCapabilitiesUpdated();
-                syncManagedOpenClawSnapshotsInBackground('gateway-ready');
+                publishGatewayReadyCapabilitiesUpdated();
+                void syncManagedOpenClawSnapshotsInBackground('gateway-ready').finally(() => {
+                    publishOpenClawSnapshotCapabilitiesUpdated();
+                });
             })
             .catch((err) => {
                 if (stopping || child !== gateway) {
@@ -174,6 +176,14 @@ interface ManagedGatewayHandoff {
 
 function publishGatewayCapabilitiesUpdated() {
     publishCapabilitiesUpdated(['gateway', 'memory', 'models', 'skills']);
+}
+
+function publishGatewayReadyCapabilitiesUpdated() {
+    publishCapabilitiesUpdated(['gateway', 'memory']);
+}
+
+function publishOpenClawSnapshotCapabilitiesUpdated() {
+    publishCapabilitiesUpdated(['models', 'skills']);
 }
 
 function publishCapabilityUpdated(capability: AgentRuntimeCapabilityHealthId) {

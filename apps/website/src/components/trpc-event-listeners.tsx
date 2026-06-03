@@ -1,11 +1,11 @@
 import { useAgentEvents } from '../hooks/agents/use-agent-events.ts';
 import { useChatEvents } from '../hooks/chats/use-chat-events.ts';
 import { useChatTurnEvents } from '../hooks/chats/use-chat-turn-events.ts';
-import {
-    useAgentRuntimeCapabilityEvents,
-    useAgentRuntimeConnectionEvents,
-} from '../hooks/connections/use-agent-runtime-connection-events.ts';
 import { useOpenRouterSettingsEvents } from '../hooks/connections/use-openrouter-settings-events.ts';
+import {
+    useRuntimeCapabilityEvents,
+    useRuntimeConnectionEvents,
+} from '../hooks/connections/use-runtime-events.ts';
 import { useCronEvents } from '../hooks/cron/use-cron-events.ts';
 import { useModelEvents } from '../hooks/models/use-model-events.ts';
 import { useUsageEvents } from '../hooks/models/use-usage-events.ts';
@@ -19,8 +19,8 @@ export function TrpcEventListeners() {
     useAgentEvents();
     useChatEvents();
     useChatTurnEvents();
-    useAgentRuntimeCapabilityEvents();
-    useAgentRuntimeConnectionEvents();
+    useRuntimeCapabilityEvents();
+    useRuntimeConnectionEvents();
     useCronEvents();
     useModelEvents();
     useOpenRouterSettingsEvents();

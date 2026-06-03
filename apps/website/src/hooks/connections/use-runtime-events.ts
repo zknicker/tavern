@@ -1,6 +1,6 @@
 import { trpc } from '../../lib/trpc.tsx';
 
-export function useAgentRuntimeConnectionEvents() {
+export function useRuntimeConnectionEvents() {
     const utils = trpc.useUtils();
 
     trpc.agentRuntime.onUpdate.useSubscription(undefined, {
@@ -10,7 +10,7 @@ export function useAgentRuntimeConnectionEvents() {
     });
 }
 
-export function useAgentRuntimeCapabilityEvents() {
+export function useRuntimeCapabilityEvents() {
     const utils = trpc.useUtils();
 
     trpc.agentRuntime.onCapabilityUpdated.useSubscription(undefined, {

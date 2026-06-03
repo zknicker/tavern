@@ -15,9 +15,9 @@ import { Separator } from '../../../components/ui/separator.tsx';
 import { SettingsRow } from '../../../components/ui/settings-row.tsx';
 import { usePrimaryAgent } from '../../../hooks/agents/use-agent-list.ts';
 import {
-    type AgentRuntimeConnectionStatus,
-    useAgentRuntimeConnection,
-} from '../../../hooks/connections/use-agent-runtime-connection.ts';
+    type RuntimeConnectionStatus,
+    useRuntimeConnection,
+} from '../../../hooks/connections/use-runtime-connection.ts';
 import { useModelList } from '../../../hooks/models/use-model-list.ts';
 import type { AgentListOutput, ModelListOutput } from '../../../lib/trpc.tsx';
 import { agentColorPresets } from '../../agents/agent-color-presets.ts';
@@ -32,7 +32,7 @@ import { AgentModelSection } from './model-section.tsx';
 
 export function AgentSettingsPage() {
     const primaryAgentQuery = usePrimaryAgent();
-    const agentRuntimeConnection = useAgentRuntimeConnection();
+    const runtimeConnection = useRuntimeConnection();
     const modelsQuery = useModelList();
     const { config, isLoading, isSaving } = useOpenClawSettingsDraft();
 
@@ -63,25 +63,25 @@ export function AgentSettingsPage() {
     return (
         <AgentSettingsContent
             agent={agent}
-            agentRuntimeStatus={agentRuntimeConnection.status}
             baseline={baseline}
             disabled={isSaving}
             modelOptions={modelsQuery.data?.models ?? []}
             modelSetting={modelSetting ?? null}
+            runtimeStatus={runtimeConnection.status}
         />
     );
 }
 
 function AgentSettingsContent({
     agent,
-    agentRuntimeStatus,
+    runtimeStatus,
     baseline,
     disabled,
     modelOptions,
     modelSetting,
 }: {
     agent: AgentListOutput['agents'][number];
-    agentRuntimeStatus: AgentRuntimeConnectionStatus;
+    runtimeStatus: RuntimeConnectionStatus;
     baseline: AgentSettingsDraft;
     disabled: boolean;
     modelOptions: ModelListOutput['models'];
@@ -247,7 +247,7 @@ function AgentSettingsContent({
 
             <MessagingPlatformsSection
                 agentId={agent.id}
-                agentRuntimeStatus={agentRuntimeStatus}
+                runtimeStatus={runtimeStatus}
                 title="Connections"
             />
         </div>

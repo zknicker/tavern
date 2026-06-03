@@ -1,5 +1,4 @@
 import { spawnSync } from 'node:child_process';
-import { createHash } from 'node:crypto';
 import net from 'node:net';
 import os from 'node:os';
 import path from 'node:path';
@@ -357,17 +356,13 @@ function resolveHomePath(value) {
     return path.resolve(value);
 }
 
-function createDevStackStatePaths(repositoryRoot) {
-    const stateRoot = path.join(os.homedir(), '.tavern', 'dev', hashRepositoryRoot(repositoryRoot));
+function createDevStackStatePaths() {
+    const stateRoot = path.join(os.homedir(), '.tavern', 'dev');
 
     return {
         databasePath: path.join(stateRoot, 'tavern.sqlite'),
         runtimeRoot: path.join(stateRoot, 'runtime'),
     };
-}
-
-function hashRepositoryRoot(repositoryRoot) {
-    return createHash('sha256').update(path.resolve(repositoryRoot)).digest('hex').slice(0, 12);
 }
 
 function shortenRepositoryPath(value, repositoryRoot) {

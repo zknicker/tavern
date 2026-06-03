@@ -1,7 +1,7 @@
 import * as React from 'react';
 import { BadgeDivider } from '../../../components/ui/badge-divider.tsx';
 import { usePrimaryAgent } from '../../../hooks/agents/use-agent-list.ts';
-import type { AgentRuntimeConnectionStatus } from '../../../hooks/connections/use-agent-runtime-connection.ts';
+import type { RuntimeConnectionStatus } from '../../../hooks/connections/use-runtime-connection.ts';
 import type { AgentListOutput } from '../../../lib/trpc.tsx';
 import { useOpenClawMessagingPlatformDraft } from '../openclaw-draft/use-messaging-platform-draft.ts';
 import { MessagingPlatformDetail } from './messaging-platform-detail.tsx';
@@ -50,12 +50,12 @@ function buildAgentOptions(agent: AgentListOutput['agents'][number] | null | und
 
 export function MessagingPlatformsSection({
     agentId,
-    agentRuntimeStatus,
+    runtimeStatus,
     subtext,
     title = 'Messaging Platforms',
 }: {
     agentId?: string;
-    agentRuntimeStatus: AgentRuntimeConnectionStatus;
+    runtimeStatus: RuntimeConnectionStatus;
     subtext?: string;
     title?: string;
 }) {
@@ -70,8 +70,8 @@ export function MessagingPlatformsSection({
         buildScopedEmptyBindingDraft(agentOptions, agentId)
     );
     const [drawerOpen, setDrawerOpen] = React.useState(false);
-    const isAgentRuntimeAvailable = agentRuntimeStatus === 'reachable';
-    const canEditBindings = isAgentRuntimeAvailable && hasConfig;
+    const isRuntimeAvailable = runtimeStatus === 'reachable';
+    const canEditBindings = isRuntimeAvailable && hasConfig;
     const discordBindings = React.useMemo(
         () =>
             bindings.filter(
@@ -125,12 +125,12 @@ export function MessagingPlatformsSection({
                 savePending={isSaving}
                 showAgentField={false}
             />
-            {!isAgentRuntimeAvailable && (
+            {!isRuntimeAvailable && (
                 <p className="mt-3 text-muted-foreground text-sm">
                     Start Tavern Runtime before managing platform bindings.
                 </p>
             )}
-            {isAgentRuntimeAvailable && !hasConfig && !isLoading ? (
+            {isRuntimeAvailable && !hasConfig && !isLoading ? (
                 <p className="mt-3 text-muted-foreground text-sm">
                     OpenClaw config has not synced yet. Wait for config sync before managing
                     platform bindings.

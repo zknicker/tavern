@@ -10,31 +10,23 @@ import { Icon } from '../../components/ui/icon.tsx';
 import { Button } from '../../components/ui/primitives/button.tsx';
 import { Field } from '../../components/ui/primitives/field.tsx';
 import { Input } from '../../components/ui/primitives/input.tsx';
-import { useAgentRuntimeConnection } from '../../hooks/connections/use-agent-runtime-connection.ts';
 import { useConnectAgentRuntime } from '../../hooks/connections/use-connect-agent-runtime.ts';
+import { useRuntimeConnection } from '../../hooks/connections/use-runtime-connection.ts';
 
 const tavernRuntimeUrlPlaceholder = 'http://127.0.0.1:18790';
-type RuntimeVersionMismatchKind = 'app-needs-update' | 'runtime-needs-update';
 
-type RuntimeConnection = ReturnType<typeof useAgentRuntimeConnection>['connection'];
-type RuntimeUpdateConnection = NonNullable<RuntimeConnection>;
+type RuntimeConnection = ReturnType<typeof useRuntimeConnection>['connection'];
 
 export function OnboardingPage() {
     const navigate = useNavigate();
-    const agentRuntimeConnection = useAgentRuntimeConnection();
-    const connection = agentRuntimeConnection.connection;
-    const isVersionMismatch = agentRuntimeConnection.status === 'version-mismatch';
-    const mismatchKind = connection ? getRuntimeVersionMismatchKind(connection) : null;
+    const runtimeConnection = useRuntimeConnection();
+    const connection = runtimeConnection.connection;
 
-    if (agentRuntimeConnection.status === 'checking') {
+    if (runtimeConnection.status === 'checking') {
         return <p className="p-6 text-muted-foreground text-sm">Loading Tavern Runtime…</p>;
     }
 
-    if (
-        !['error', 'unconfigured', 'unreachable', 'version-mismatch'].includes(
-            agentRuntimeConnection.status
-        )
-    ) {
+    if (connection?.enabled || !['error', 'unconfigured'].includes(runtimeConnection.status)) {
         return <Navigate replace to="/dashboard" />;
     }
 
@@ -47,11 +39,7 @@ export function OnboardingPage() {
                 <div className="grid w-full justify-items-center">
                     <div className="mb-7 grid max-w-[1040px] gap-4 text-center text-white">
                         <h1 className="max-w-full justify-self-center text-nowrap text-balance font-display font-semibold text-4xl text-white drop-shadow-[0_10px_28px_rgb(49_25_11_/_0.34)] [font-kerning:normal] [text-rendering:optimizeLegibility] sm:text-5xl">
-                            {isVersionMismatch
-                                ? mismatchKind === 'app-needs-update'
-                                    ? 'Update Tavern!'
-                                    : 'Time to update!'
-                                : 'Welcome in, traveler!'}
+                            Welcome in, traveler!
                         </h1>
                     </div>
                     <RuntimeConnectionCard
@@ -59,7 +47,6 @@ export function OnboardingPage() {
                         onConnect={() => {
                             navigate('/dashboard/overview');
                         }}
-                        status={agentRuntimeConnection.status}
                     />
                 </div>
             </div>
@@ -95,21 +82,15 @@ function OnboardingBackground() {
 
 function RuntimeConnectionCard({
     connection,
-    status,
     onConnect,
 }: {
     connection: RuntimeConnection;
-    status: ReturnType<typeof useAgentRuntimeConnection>['status'];
     onConnect: () => void;
 }) {
     return (
         <Card className="w-full max-w-[620px] rounded-[8px] border-white/42 bg-white/72 text-neutral-900 shadow-[0_26px_80px_rgb(17_24_39_/_0.24),inset_0_1px_rgb(255_255_255_/_0.72)] backdrop-blur-2xl">
             <CardContent className="px-8 py-7 sm:px-10 sm:py-9">
-                {status === 'version-mismatch' && connection ? (
-                    <RuntimeUpdatePanel connection={connection} />
-                ) : (
-                    <TavernRuntimeOnboardingForm connection={connection} onConnect={onConnect} />
-                )}
+                <TavernRuntimeOnboardingForm connection={connection} onConnect={onConnect} />
             </CardContent>
         </Card>
     );
@@ -231,81 +212,4 @@ function formatRuntimeConnectionError(message: string) {
     }
 
     return normalized || 'Check that Tavern Runtime is running and this computer can access it.';
-}
-
-function RuntimeUpdatePanel({ connection }: { connection: RuntimeUpdateConnection }) {
-    const mismatchKind = getRuntimeVersionMismatchKind(connection);
-    const isAppUpdateRequired = mismatchKind === 'app-needs-update';
-
-    return (
-        <div className="grid gap-5">
-            <div className="grid gap-4">
-                <p className="text-pretty text-[#5b4637] text-base leading-6">
-                    {isAppUpdateRequired
-                        ? 'Tavern is connected to a newer Runtime than this app supports. Use the update control in the top right to update Tavern.'
-                        : 'Tavern needs to stage a compatible Runtime before the dashboard opens. Use the update control in the top right to finish the update.'}
-                </p>
-                <div className="grid gap-2 rounded-[8px] border border-[#d8b98d]/70 bg-white/46 px-3 py-3 text-sm">
-                    <VersionRow label="Minimum" value={`v${connection.requiredRuntimeVersion}`} />
-                    <VersionRow
-                        label="Connected"
-                        value={
-                            connection.runtimeVersion ? `v${connection.runtimeVersion}` : 'Unknown'
-                        }
-                    />
-                    <VersionRow label="Runtime" value={connection.baseUrl} />
-                </div>
-            </div>
-            <p className="text-[#715a48] text-sm leading-6">
-                Runtime installs are staged first. Tavern restarts Runtime only after the update is
-                ready, then continues into the updated app when needed.
-            </p>
-        </div>
-    );
-}
-
-function getRuntimeVersionMismatchKind(
-    connection: RuntimeUpdateConnection | null
-): RuntimeVersionMismatchKind {
-    const comparison = compareRuntimeVersions(
-        connection?.runtimeVersion,
-        connection?.requiredRuntimeVersion
-    );
-    return comparison > 0 ? 'app-needs-update' : 'runtime-needs-update';
-}
-
-function compareRuntimeVersions(runtimeVersion?: null | string, appVersion?: null | string) {
-    if (!(runtimeVersion && appVersion)) {
-        return -1;
-    }
-
-    const runtimeParts = toVersionParts(runtimeVersion);
-    const appParts = toVersionParts(appVersion);
-    const maxLength = Math.max(runtimeParts.length, appParts.length);
-
-    for (let index = 0; index < maxLength; index += 1) {
-        const runtimePart = runtimeParts[index] ?? 0;
-        const appPart = appParts[index] ?? 0;
-        if (runtimePart !== appPart) {
-            return runtimePart > appPart ? 1 : -1;
-        }
-    }
-
-    return 0;
-}
-
-function toVersionParts(version: string) {
-    return version
-        .split(/[^\d]+/)
-        .filter(Boolean)
-        .map((part) => Number(part));
-}
-
-function VersionRow({ label, value }: { label: string; value: string }) {
-    return (
-        <div className="grid min-w-0 grid-cols-[7rem_minmax(0,1fr)] gap-3">
-            <span className="text-[#7a6656]">{label}</span>
-            <span className="truncate font-mono text-[#2a1b12]">{value}</span>
-        </div>
-    );
 }

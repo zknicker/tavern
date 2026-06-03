@@ -1,11 +1,11 @@
 import {
-    type AgentRuntimeConnectionStatus,
-    useAgentRuntimeConnection,
-} from '../../hooks/connections/use-agent-runtime-connection.ts';
+    type RuntimeConnectionStatus,
+    useRuntimeConnection,
+} from '../../hooks/connections/use-runtime-connection.ts';
 import type { AgentRuntimeConnectionOutput } from '../../lib/trpc.tsx';
 
 function getAgentRuntimeTitle(
-    status: AgentRuntimeConnectionStatus,
+    status: RuntimeConnectionStatus,
     connection: AgentRuntimeConnectionOutput
 ) {
     if (connection) {
@@ -24,7 +24,7 @@ function getAgentRuntimeTitle(
 }
 
 export function AgentRuntimeConnectionBadge() {
-    const { connection, status } = useAgentRuntimeConnection();
+    const { connection, status } = useRuntimeConnection();
     const isLive = status === 'reachable';
     const isChecking = status === 'checking';
 

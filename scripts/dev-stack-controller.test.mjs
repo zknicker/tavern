@@ -1,7 +1,40 @@
 import assert from 'node:assert/strict';
 import { EventEmitter } from 'node:events';
 import test from 'node:test';
-import { signalChildProcessGroup, waitForChildShutdown } from './dev-stack-controller.mjs';
+import {
+    DevStackController,
+    signalChildProcessGroup,
+    waitForChildShutdown,
+} from './dev-stack-controller.mjs';
+
+test('dev stack shutdown signals all managed processes before waiting in order', async () => {
+    const controller = new DevStackController({
+        mode: 'desktop-runtime',
+        ports: { serverPort: 80_800, websitePort: 31_000 },
+        repositoryRoot: process.cwd(),
+    });
+    const desktop = createManagedChildProcessStub(12_341, { autoExit: false });
+    const website = createManagedChildProcessStub(12_342);
+    const server = createManagedChildProcessStub(12_343);
+    const runtime = createManagedChildProcessStub(12_344);
+
+    controller.processes.set('desktop', desktop);
+    controller.processes.set('website', website);
+    controller.processes.set('server', server);
+    controller.processes.set('runtime', runtime);
+
+    const stopPromise = controller.stop(0);
+    await new Promise((resolve) => setImmediate(resolve));
+
+    assert.deepEqual(desktop.signals, ['SIGTERM']);
+    assert.deepEqual(website.signals, ['SIGTERM']);
+    assert.deepEqual(server.signals, ['SIGTERM']);
+    assert.deepEqual(runtime.signals, ['SIGTERM']);
+
+    desktop.exitCode = 0;
+    desktop.emit('exit', 0, null);
+    await stopPromise;
+});
 
 test('waitForChildShutdown waits after the shell exits until the process group is gone', async () => {
     const child = createChildProcessStub();
@@ -70,5 +103,23 @@ function createChildProcessStub() {
     child.off = child.removeListener.bind(child);
     child.pid = 12_345;
     child.signalCode = null;
+    return child;
+}
+
+function createManagedChildProcessStub(pid, options = {}) {
+    const child = new EventEmitter();
+    child.exitCode = null;
+    child.kill = (signal) => {
+        child.signals.push(signal);
+        if (options.autoExit !== false) {
+            child.signalCode = signal;
+            child.emit('exit', null, signal);
+        }
+        return true;
+    };
+    child.off = child.removeListener.bind(child);
+    child.pid = pid;
+    child.signalCode = null;
+    child.signals = [];
     return child;
 }

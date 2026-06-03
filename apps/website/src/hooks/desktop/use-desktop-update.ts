@@ -116,7 +116,9 @@ async function checkForDesktopUpdateTask({ install }: { install: boolean }) {
         await bridge.checkForUpdate();
 
         if (install) {
-            await installDesktopUpdateAndRestart();
+            await installCurrentDesktopUpdate({
+                unavailableMessage: 'No Tavern update is available to install.',
+            });
         }
     } catch (error) {
         setDesktopUpdateStatus({
@@ -134,6 +136,24 @@ async function installDesktopUpdateAndRestart() {
         return;
     }
 
+    if (currentStatus.phase === 'available' || currentStatus.phase === 'ready') {
+        await installCurrentDesktopUpdate({
+            unavailableMessage: 'No Tavern update is available to install.',
+        });
+        return;
+    }
+
+    await checkForDesktopUpdate({ install: true });
+}
+
+async function installCurrentDesktopUpdate(options?: { unavailableMessage?: string }) {
+    const bridge = getDesktopBridge();
+
+    if (!bridge) {
+        setDesktopUpdateStatus({ phase: 'unsupported' });
+        return;
+    }
+
     if (currentStatus.phase === 'ready') {
         setDesktopUpdateStatus({ phase: 'restarting', version: currentStatus.version });
         await bridge.restartForUpdate();
@@ -141,7 +161,12 @@ async function installDesktopUpdateAndRestart() {
     }
 
     if (currentStatus.phase !== 'available') {
-        await checkForDesktopUpdate({ install: true });
+        if (options?.unavailableMessage) {
+            setDesktopUpdateStatus({
+                message: options.unavailableMessage,
+                phase: 'error',
+            });
+        }
         return;
     }
 

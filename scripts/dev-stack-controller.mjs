@@ -387,10 +387,10 @@ export class DevStackController extends EventEmitter {
                 snapshot.phase = 'stopping';
             });
 
-            this.signalBackgroundProcesses('SIGTERM');
+            this.signalManagedProcesses('SIGTERM');
 
             for (const source of shutdownProcessOrder) {
-                await this.stopProcess(source);
+                await this.stopProcess(source, { signaled: true });
             }
 
             this.emit('exit', exitCode);
@@ -431,9 +431,14 @@ export class DevStackController extends EventEmitter {
             this.expectedProcessStops.add(source);
         }
 
-        const stopped = await waitForChildShutdown(child, () => {
-            signalChildProcessGroup(child, 'SIGTERM');
-        });
+        const stopped = await waitForChildShutdown(
+            child,
+            options.signaled
+                ? undefined
+                : () => {
+                      signalChildProcessGroup(child, 'SIGTERM');
+                  }
+        );
         this.expectedProcessStops.delete(source);
 
         if (!stopped) {

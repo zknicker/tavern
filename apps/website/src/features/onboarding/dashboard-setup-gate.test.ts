@@ -1,10 +1,10 @@
 import { describe, expect, test } from 'bun:test';
-import type { AgentRuntimeConnectionStatus } from '../../hooks/connections/use-agent-runtime-connection.ts';
+import type { RuntimeConnectionStatus } from '../../hooks/connections/use-runtime-connection.ts';
 import { shouldRedirectToRuntimeOnboarding } from './dashboard-setup-gate.tsx';
 
 describe('dashboard setup gate', () => {
     test('keeps runtime startup and reconnect states on the dashboard', () => {
-        const statuses: AgentRuntimeConnectionStatus[] = [
+        const statuses: RuntimeConnectionStatus[] = [
             'checking',
             'error',
             'reachable',
@@ -12,24 +12,58 @@ describe('dashboard setup gate', () => {
         ];
 
         for (const status of statuses) {
-            expect(shouldRedirectToRuntimeOnboarding(status)).toBe(false);
+            expect(
+                shouldRedirectToRuntimeOnboarding({
+                    hasConfiguredRuntime: true,
+                    status,
+                })
+            ).toBe(false);
         }
     });
 
-    test('shows onboarding for setup and version contract states', () => {
-        const statuses: AgentRuntimeConnectionStatus[] = ['unconfigured', 'version-mismatch'];
+    test('shows onboarding only when Runtime has not been configured', () => {
+        expect(
+            shouldRedirectToRuntimeOnboarding({
+                hasConfiguredRuntime: false,
+                status: 'unconfigured',
+            })
+        ).toBe(true);
 
-        for (const status of statuses) {
-            expect(shouldRedirectToRuntimeOnboarding(status)).toBe(true);
-        }
+        expect(
+            shouldRedirectToRuntimeOnboarding({
+                hasConfiguredRuntime: true,
+                status: 'unconfigured',
+            })
+        ).toBe(false);
+    });
+
+    test('keeps configured version contract states on the dashboard', () => {
+        expect(
+            shouldRedirectToRuntimeOnboarding({
+                hasConfiguredRuntime: true,
+                status: 'version-mismatch',
+            })
+        ).toBe(false);
     });
 
     test('keeps the static chat layout preview available without runtime setup', () => {
         expect(
-            shouldRedirectToRuntimeOnboarding('unconfigured', '/dashboard/chat-layout-preview')
+            shouldRedirectToRuntimeOnboarding(
+                {
+                    hasConfiguredRuntime: false,
+                    status: 'unconfigured',
+                },
+                '/dashboard/chat-layout-preview'
+            )
         ).toBe(false);
         expect(
-            shouldRedirectToRuntimeOnboarding('version-mismatch', '/dashboard/chat-layout-preview')
+            shouldRedirectToRuntimeOnboarding(
+                {
+                    hasConfiguredRuntime: false,
+                    status: 'version-mismatch',
+                },
+                '/dashboard/chat-layout-preview'
+            )
         ).toBe(false);
     });
 });

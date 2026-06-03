@@ -12,7 +12,7 @@ import {
     PromptInputTools,
 } from '../../components/ui/prompt-input.tsx';
 import { useChatDraftLaunch } from '../../hooks/chats/use-chat-draft-launch.ts';
-import { useAgentRuntimeCapability } from '../../hooks/connections/use-agent-runtime-capability.ts';
+import { useCapability } from '../../hooks/connections/use-capability.ts';
 import type { AgentListOutput } from '../../lib/trpc.tsx';
 import { cn } from '../../lib/utils.ts';
 import {
@@ -28,6 +28,7 @@ import {
 } from '../mentions/use-mention-composer.tsx';
 
 type Agent = AgentListOutput['agents'][number];
+const runtimeDisconnectedTooltip = 'Tavern Runtime is disconnected.';
 
 export function StartChatComposer({
     agent,
@@ -41,9 +42,9 @@ export function StartChatComposer({
     id?: string;
 }) {
     const launchChatDraft = useChatDraftLaunch();
-    const gatewayCapability = useAgentRuntimeCapability('gateway');
-    const mentionsCapability = useAgentRuntimeCapability('mentions');
-    const messagesCapability = useAgentRuntimeCapability('messages');
+    const gatewayCapability = useCapability('gateway');
+    const mentionsCapability = useCapability('mentions');
+    const messagesCapability = useCapability('messages');
     const [prompt, setPrompt] = React.useState('');
     const [mentions, setMentions] = React.useState<Mention[]>([]);
 
@@ -51,10 +52,7 @@ export function StartChatComposer({
     const canUseMentions = Boolean(agent && mentionsCapability.healthy);
     const isPromptReady = prompt.trim().length > 0 && agent !== null;
     const canSubmit = isPromptReady && canSendToRuntime;
-    const runtimeDisabledReason =
-        gatewayCapability.reason ??
-        messagesCapability.reason ??
-        'Tavern Runtime is not ready for sending.';
+    const runtimeDisabledReason = runtimeDisconnectedTooltip;
     const handleSubmit = React.useEffectEvent((event?: React.FormEvent<HTMLFormElement>) => {
         event?.preventDefault();
 
@@ -172,7 +170,7 @@ function getStartChatDisabledTooltip({
     runtimeReason: string;
 }) {
     if (!hasAgent) {
-        return 'Start Tavern Runtime to sync your agent.';
+        return 'Tavern Runtime is disconnected.';
     }
 
     if (!runtimeReady) {

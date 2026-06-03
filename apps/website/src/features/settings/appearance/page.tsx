@@ -47,8 +47,8 @@ export function AppearanceSettings() {
                                 type="button"
                             >
                                 <ThemePreview isActive={isActive} variant={option.id} />
-                                <div className="flex items-center justify-between gap-2 px-4 pt-3.5 pb-4">
-                                    <div className="flex min-w-0 items-center gap-2.5">
+                                <div className="flex items-center justify-between gap-2 px-4 py-3">
+                                    <div className="flex min-w-0 items-center gap-3">
                                         <Icon
                                             aria-hidden="true"
                                             className={cn(
@@ -57,7 +57,7 @@ export function AppearanceSettings() {
                                                     : 'text-muted-foreground group-hover:text-foreground'
                                             )}
                                             icon={option.icon}
-                                            size={18}
+                                            size={24}
                                         />
                                         <div className="min-w-0">
                                             <div
@@ -124,7 +124,7 @@ function ThemePreview({ isActive, variant }: { isActive: boolean; variant: Theme
     return (
         <div
             className={cn(
-                'relative aspect-[5/3] w-full overflow-hidden border-b',
+                'relative aspect-[16/7] w-full overflow-hidden border-b',
                 isActive ? 'border-brand-ring' : 'border-border'
             )}
         >
