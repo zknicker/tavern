@@ -1108,6 +1108,7 @@ export const agentRuntimeJobSlugSchema = z.enum([
     'cortex-signal',
     'cortex-sync',
     'refresh-runtime-capabilities',
+    'tavern-highlights',
 ]);
 
 export const agentRuntimeJobAvailabilitySchema = z.enum(['disabled', 'enabled']);
@@ -1179,6 +1180,44 @@ export const agentRuntimeJobListSchema = z.object({
 
 export const agentRuntimeRunJobSchema = z.object({
     jobId: z.string().trim().min(1),
+});
+
+export const agentRuntimeHighlightCategorySchema = z.enum([
+    'memory_saved',
+    'quest_finished',
+    'scheduled_run',
+    'tool_volume',
+    'trouble',
+]);
+
+export const agentRuntimeHighlightSourceRefSchema = z.object({
+    id: z.string().trim().min(1),
+    type: z.enum(['chatResponse', 'cortexAudit', 'cortexCapture', 'cronRun', 'responseActivity']),
+});
+
+export const agentRuntimeHighlightSchema = z.object({
+    category: agentRuntimeHighlightCategorySchema,
+    expiresAt: z.string().datetime(),
+    generatedAt: z.string().datetime(),
+    headline: z.string().trim().min(1),
+    id: z.string().trim().min(1),
+    metric: z.record(z.string(), z.unknown()).default({}),
+    receipt: z.string().trim().min(1),
+    sourceRefs: z.array(agentRuntimeHighlightSourceRefSchema).default([]),
+    windowEnd: z.string().datetime(),
+    windowStart: z.string().datetime(),
+});
+
+export const agentRuntimeHighlightFreshnessSchema = z.object({
+    generatedAt: z.string().datetime().nullable(),
+    nextRefreshAt: z.string().datetime().nullable(),
+    staleReason: z.string().trim().min(1).nullable(),
+    status: z.enum(['degraded', 'empty', 'fresh', 'stale']),
+});
+
+export const agentRuntimeHighlightListSchema = z.object({
+    freshness: agentRuntimeHighlightFreshnessSchema,
+    highlights: z.array(agentRuntimeHighlightSchema),
 });
 
 export const agentRuntimeSessionRoleSchema = z.enum(['main', 'worker']);
@@ -1888,6 +1927,11 @@ export type AgentRuntimeJobList = z.infer<typeof agentRuntimeJobListSchema>;
 export type AgentRuntimeJobSlug = z.infer<typeof agentRuntimeJobSlugSchema>;
 export type AgentRuntimeJobSummary = z.infer<typeof agentRuntimeJobSummarySchema>;
 export type AgentRuntimeRunJob = z.infer<typeof agentRuntimeRunJobSchema>;
+export type AgentRuntimeHighlight = z.infer<typeof agentRuntimeHighlightSchema>;
+export type AgentRuntimeHighlightCategory = z.infer<typeof agentRuntimeHighlightCategorySchema>;
+export type AgentRuntimeHighlightFreshness = z.infer<typeof agentRuntimeHighlightFreshnessSchema>;
+export type AgentRuntimeHighlightList = z.infer<typeof agentRuntimeHighlightListSchema>;
+export type AgentRuntimeHighlightSourceRef = z.infer<typeof agentRuntimeHighlightSourceRefSchema>;
 export type AgentRuntimeTurn = z.infer<typeof agentRuntimeTurnSchema>;
 export type AgentRuntimeTurnProgressStep = z.infer<typeof agentRuntimeTurnProgressStepSchema>;
 export type AgentRuntimeTurnCompletedEvent = z.infer<typeof agentRuntimeTurnCompletedEventSchema>;

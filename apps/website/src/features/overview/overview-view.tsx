@@ -7,6 +7,7 @@ interface OverviewViewProps {
     heading: string;
     jobCount: number;
     memoryCount: number;
+    receipt: null | string;
     sessionsCount: number;
     workerCount: number;
 }
@@ -16,6 +17,7 @@ export function OverviewView({
     heading,
     jobCount,
     memoryCount,
+    receipt,
     sessionsCount,
     workerCount,
 }: OverviewViewProps) {
@@ -27,6 +29,7 @@ export function OverviewView({
                         heading={heading}
                         jobCount={jobCount}
                         memoryCount={memoryCount}
+                        receipt={receipt}
                         sessionsCount={sessionsCount}
                         workerCount={workerCount}
                     />

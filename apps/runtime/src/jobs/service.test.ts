@@ -70,6 +70,7 @@ describe('Runtime jobs service', () => {
 
         expect(summaries.map((job) => job.slug)).toEqual([
             'refresh-runtime-capabilities',
+            'tavern-highlights',
             'cortex-generate-embeddings',
             'cortex-sync',
             'cortex-lint',

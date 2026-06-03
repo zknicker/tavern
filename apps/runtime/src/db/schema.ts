@@ -289,6 +289,26 @@ CREATE TABLE IF NOT EXISTS chat_artifacts (
 
 CREATE INDEX IF NOT EXISTS idx_chat_artifacts_chat_updated
   ON chat_artifacts(chat_id, updated_at, id);
+
+CREATE TABLE IF NOT EXISTS tavern_highlights (
+  id                 TEXT PRIMARY KEY,
+  category           TEXT NOT NULL,
+  headline           TEXT NOT NULL,
+  receipt            TEXT NOT NULL,
+  metric_json        TEXT NOT NULL DEFAULT '{}',
+  source_refs_json   TEXT NOT NULL DEFAULT '[]',
+  window_start       TEXT NOT NULL,
+  window_end         TEXT NOT NULL,
+  generated_at       TEXT NOT NULL,
+  expires_at         TEXT NOT NULL,
+  generator_version  INTEGER NOT NULL DEFAULT 1
+);
+
+CREATE INDEX IF NOT EXISTS idx_tavern_highlights_expires
+  ON tavern_highlights(expires_at, category);
+
+CREATE INDEX IF NOT EXISTS idx_tavern_highlights_generated
+  ON tavern_highlights(generated_at, category);
 `;
 
 export function ensureRuntimeSchema(db: Database): void {

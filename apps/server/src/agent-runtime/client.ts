@@ -18,6 +18,7 @@ import {
     type AgentRuntimeCron,
     type AgentRuntimeCronList,
     type AgentRuntimeCronRun,
+    type AgentRuntimeHighlightList,
     type AgentRuntimeInstallSkill,
     type AgentRuntimeJobDetail,
     type AgentRuntimeJobList,
@@ -69,6 +70,7 @@ import {
     agentRuntimeCronRunSchema,
     agentRuntimeCronSchema,
     agentRuntimeErrorSchema,
+    agentRuntimeHighlightListSchema,
     agentRuntimeInstallSkillSchema,
     agentRuntimeJobDetailSchema,
     agentRuntimeJobListSchema,
@@ -197,6 +199,7 @@ export interface TavernAgentRuntimeClient {
     listCortexPages(): Promise<CortexPageList>;
     listCronJobs(): Promise<AgentRuntimeCronList>;
     listCronRuns(jobId?: string): Promise<{ runs: AgentRuntimeCronRun[] }>;
+    listHighlights(): Promise<AgentRuntimeHighlightList>;
     listMacApps(options?: { limit?: number; query?: string }): Promise<AgentRuntimeMacAppList>;
     listRuntimeJobs(): Promise<AgentRuntimeJobList>;
     listSessionMessages(
@@ -546,6 +549,16 @@ class HttpTavernAgentRuntimeClient implements TavernAgentRuntimeClient {
         }
 
         return agentRuntimeJobListSchema.parse(await response.json());
+    }
+
+    async listHighlights() {
+        const response = await fetch(`${this.#baseUrl}${agentRuntimeRoutes.highlights}`);
+
+        if (!response.ok) {
+            await readErrorResponse(response);
+        }
+
+        return agentRuntimeHighlightListSchema.parse(await response.json());
     }
 
     async listCapabilities() {

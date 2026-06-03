@@ -36,6 +36,7 @@ export const agentRuntimeRoutes = {
     cronRuns: '/cron-runs',
     events: '/events',
     chatSocket: '/chat',
+    highlights: '/highlights',
     chatMessages: (chatId: string) => `/openclaw/chats/${chatId}/messages`,
     chats: '/openclaw/chats',
     cortexBacklinks: (slugOrId: string) =>

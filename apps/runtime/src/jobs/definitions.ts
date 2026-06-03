@@ -2,6 +2,7 @@ import type { AgentRuntimeJobSlug, CortexJobName } from '@tavern/api';
 import { runCortexJob } from '../cortex/jobs';
 import { createCortexVectorDatabase } from '../cortex/vector-db/native-vector-db';
 import { getDb } from '../db/connection';
+import { generateTavernHighlights } from '../highlights/highlights';
 import type { RuntimeJobDefinition } from './types';
 
 const hourMs = 60 * 60 * 1000;
@@ -29,6 +30,26 @@ export const runtimeCapabilitiesRefreshJob: RuntimeJobDefinition = {
         runOnStart: true,
     },
     slug: 'refresh-runtime-capabilities',
+};
+
+export const tavernHighlightsJob: RuntimeJobDefinition = {
+    concurrency: 1,
+    defaultInput: {},
+    description: 'Generates hourly Tavern homepage highlights from recent Runtime activity.',
+    disabledReason() {
+        return null;
+    },
+    displayName: 'Generate Tavern Highlights',
+    async run(context) {
+        const result = await generateTavernHighlights();
+        await context.log(`Generated ${result.highlights.length} active Tavern highlight(s).`);
+    },
+    schedule: {
+        everyMs: hourMs,
+        kind: 'interval',
+        runOnStart: true,
+    },
+    slug: 'tavern-highlights',
 };
 
 export const cortexGenerateEmbeddingsJob: RuntimeJobDefinition = {
@@ -100,6 +121,7 @@ export const cortexDreamJob = createCortexJob({
 
 export const runtimeJobDefinitions = [
     runtimeCapabilitiesRefreshJob,
+    tavernHighlightsJob,
     cortexGenerateEmbeddingsJob,
     cortexSyncJob,
     cortexLintJob,

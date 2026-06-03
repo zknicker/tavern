@@ -1,4 +1,5 @@
 import {
+    agentRuntimeHighlightListSchema,
     agentRuntimeMacAppListSchema,
     agentRuntimeMutationHeaders,
     agentRuntimeMutationOrigins,
@@ -13,6 +14,7 @@ import { handleRuntimeCapabilitiesRequest } from '../capabilities/routes';
 import { isRuntimeCapabilityHealthy } from '../capabilities/store';
 import { listCodexAppServerSkills, mergeOpenClawAndCodexSkills } from '../codex-app-server/skills';
 import { handleCortexRequest } from '../cortex/routes';
+import { listTavernHighlights } from '../highlights/highlights';
 import { handleRuntimeJobsRequest } from '../jobs/routes';
 import { listMacApps } from '../mac-apps/inventory';
 import {
@@ -57,6 +59,10 @@ export async function handleTavernRuntimeRequest(request: Request): Promise<Resp
                 }),
             })
         );
+    }
+
+    if (request.method === 'GET' && url.pathname === runtimeRoutes.highlights) {
+        return json(agentRuntimeHighlightListSchema.parse(listTavernHighlights()));
     }
 
     const cortexResponse = await handleCortexRequest(request);

@@ -10,6 +10,7 @@ export const runtimeJobSlugs = [
     'cortex-signal',
     'cortex-sync',
     'refresh-runtime-capabilities',
+    'tavern-highlights',
 ] as const;
 const allJobSlugs = [...jobSlugs, ...runtimeJobSlugs];
 

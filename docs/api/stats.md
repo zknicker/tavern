@@ -19,6 +19,7 @@ not require clients to parse logs or runtime internals.
 * Cost signals are explicit about provider, currency, and estimate status.
 * Runtime health is a freshness signal, not a gate for reading durable app data.
 * Aggregates point back to source records when useful.
+* Highlights are persisted projections over recent activity, not live UI math.
 * Realtime events can refresh stats, but reads are the source of truth.
 
 ## Surface
@@ -30,11 +31,17 @@ The API covers:
 * read spend estimates
 * read runtime health
 * read slow, failed, or expensive work signals
+* read short homepage highlights with a source-backed receipt
 
 ## Runtime Boundary
 
 Runtime and providers produce raw activity. Tavern turns that activity into
 app-visible usage, spend, and health views.
+
+Runtime generates homepage highlights on an hourly cadence. Each highlight
+belongs to one category, carries a short headline, and includes a receipt that
+points to the recent activity window behind it. Clients read the current
+highlight set and choose which one to show.
 
 ## Related Docs
 

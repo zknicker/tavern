@@ -2,17 +2,24 @@ export function OverviewHeader({
     heading,
     jobCount,
     memoryCount,
+    receipt,
     sessionsCount,
     workerCount,
 }: {
     heading: string;
     jobCount: number;
     memoryCount: number;
+    receipt: null | string;
     sessionsCount: number;
     workerCount: number;
 }) {
     return (
         <>
+            {receipt ? (
+                <p className="mx-auto mb-3 w-fit max-w-full rounded-full border border-border bg-muted/50 px-3 py-1 text-center text-muted-foreground text-xs">
+                    {receipt}
+                </p>
+            ) : null}
             <h1 className="text-center font-bold text-3xl text-foreground tracking-tight">
                 {heading}
             </h1>
