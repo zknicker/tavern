@@ -5,13 +5,7 @@ export function useOpenClawConfigEvents() {
 
     trpc.openClawConfig.onUpdate.useSubscription(undefined, {
         onData: () => {
-            void Promise.all([
-                utils.openClawConfig.get.invalidate(),
-                utils.agent.list.invalidate(),
-                utils.agent.primary.invalidate(),
-                utils.model.list.invalidate(),
-                utils.skill.list.invalidate(),
-            ]);
+            void utils.openClawConfig.get.invalidate();
         },
     });
 }

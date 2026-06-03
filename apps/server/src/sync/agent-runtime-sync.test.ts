@@ -195,6 +195,42 @@ test('syncAgentRuntimeAgents sends cleared workspace instructions', async () => 
     });
 });
 
+test('syncAgentRuntimeAgents refreshes workspace instruction names without a profile', async () => {
+    let savedInstructions: unknown = null;
+
+    await runtimeSync.syncAgentWorkspaceInstructions({
+        agents: [
+            {
+                avatar: null,
+                enabledSkillIds: [],
+                emoji: null,
+                id: 'main',
+                isAdmin: false,
+                name: 'Blippy',
+                primaryColor: null,
+                workspaceFolder: '/tmp/tavern-main',
+            },
+        ],
+        client: {
+            saveWorkspaceInstructions: async (_agentId: string, input: unknown) => {
+                savedInstructions = input;
+                return {
+                    agentId: 'main',
+                    renderedAt: '2026-05-19T20:00:00.000Z',
+                    sha256: 'workspace-instructions-sha',
+                    updatedAt: '2026-05-19T20:00:00.000Z',
+                };
+            },
+        } as unknown as TavernAgentRuntimeClient,
+        runtimeId: 'openclaw-local',
+    });
+
+    assert.deepEqual(savedInstructions, {
+        agentName: 'Blippy',
+        workspaceDir: '/tmp/tavern-main',
+    });
+});
+
 function createSession(input: { chatId: string; key: string; lastActivityAt: string }) {
     return {
         agentId: 'main',

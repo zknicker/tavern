@@ -25,6 +25,10 @@ canonical chat server.
   presentation overlays, but it does not decide whether an agent exists.
 * **Runtime integration stays behind adapters.** OpenClaw Gateway payloads and
   plugin-specific details do not leak into product domains.
+* **Settings save product intent.** App settings call narrow tRPC mutations such
+  as agent name, model, thinking default, and messaging binding updates. The app
+  does not maintain a global OpenClaw config draft or send arbitrary config
+  JSON for user-facing settings.
 * **App storage is cache and settings.** App screens can cache runtime records
   and app-local settings, but runtime durable reads recover after the app has
   been closed.

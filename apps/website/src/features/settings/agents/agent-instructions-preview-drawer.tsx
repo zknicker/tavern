@@ -15,7 +15,13 @@ import { Button } from '../../../components/ui/primitives/button.tsx';
 import { Spinner } from '../../../components/ui/spinner.tsx';
 import { trpc } from '../../../lib/trpc.tsx';
 
-export function AgentInstructionsPreviewDrawer({ agentId }: { agentId: string }) {
+export function AgentInstructionsPreviewDrawer({
+    agentDisplayName,
+    agentId,
+}: {
+    agentDisplayName: string;
+    agentId: string;
+}) {
     const [isOpen, setIsOpen] = React.useState(false);
     const instructions = trpc.agent.instructions.useQuery(
         { agentId },
@@ -61,11 +67,28 @@ export function AgentInstructionsPreviewDrawer({ agentId }: { agentId: string })
                             className="min-h-[min(68vh,40rem)] rounded-lg border border-border/50"
                             filePath="AGENTS.md"
                             readOnly
-                            value={instructions.data?.content ?? ''}
+                            value={applyAgentDisplayNameToInstructions(
+                                instructions.data?.content ?? '',
+                                agentDisplayName
+                            )}
                         />
                     )}
                 </DrawerPanel>
             </DrawerPopup>
         </Drawer>
     );
+}
+
+const tavernManagedAgentLinePattern = /^You are .+?, a Tavern-managed agent\.$/mu;
+
+export function applyAgentDisplayNameToInstructions(content: string, agentDisplayName: string) {
+    const name = agentDisplayName.trim();
+
+    if (!name) {
+        return content;
+    }
+
+    return content.replace(tavernManagedAgentLinePattern, () => {
+        return `You are ${name}, a Tavern-managed agent.`;
+    });
 }

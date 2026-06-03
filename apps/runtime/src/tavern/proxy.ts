@@ -1,7 +1,24 @@
-import type { AgentRuntimeCreateMessage } from '@tavern/api';
-import { agentRuntimeRoutes } from '@tavern/api';
+import {
+    type AgentRuntimeCreateMessage,
+    agentRuntimeDeleteDiscordBindingSchema,
+    agentRuntimeRoutes,
+    agentRuntimeSaveDiscordBindingSchema,
+    agentRuntimeUpdateAgentModelSchema,
+    agentRuntimeUpdateAgentNameSchema,
+    agentRuntimeUpdateAgentThinkingDefaultSchema,
+} from '@tavern/api';
 
 import { listCodexAppServerSkills, mergeOpenClawAndCodexSkills } from '../codex-app-server/skills';
+import { syncManagedOpenClawSnapshotsInBackground } from '../openclaw/agent-sync';
+import {
+    applyOpenClawConfigMutation,
+    deleteDiscordBindingConfig,
+    updateAgentModelConfig,
+    updateAgentNameConfig,
+    updateAgentThinkingDefaultConfig,
+    upsertDiscordBindingConfig,
+} from '../openclaw/config-mutations';
+import { readDiscordBindings } from '../openclaw/discord-bindings';
 import { createLocalOpenClawClient } from '../openclaw/local-client';
 import { sendTavernChannelMessage } from './channel-relay';
 import { json } from './http';
@@ -42,6 +59,9 @@ async function dispatch(context: RouteContext) {
     if (method === 'GET' && segments[0] === 'agents') {
         return await dispatchAgentGet(context, segments);
     }
+    if (method === 'PATCH' && segments[0] === 'agents' && segments[1]) {
+        return await dispatchAgentConfigMutation(context, segments);
+    }
     if (method === 'DELETE' && segments[0] === 'agents' && segments[1]) {
         return await client.deleteAgent(segments[1]);
     }
@@ -52,7 +72,9 @@ async function dispatch(context: RouteContext) {
         return await client.getOpenClawConfig();
     }
     if (method === 'PUT' && url.pathname === agentRuntimeRoutes.openClawConfig) {
-        return await client.applyOpenClawConfig(await readJson(request));
+        const snapshot = await client.applyOpenClawConfig(await readJson(request));
+        void syncManagedOpenClawSnapshotsInBackground('config.apply');
+        return snapshot;
     }
     if (url.pathname.startsWith('/model-access')) {
         return await dispatchModelAccess(context);
@@ -90,6 +112,43 @@ async function dispatchAgentGet(context: RouteContext, segments: string[]) {
     if (segments[2] === 'files' && segments[3]) {
         return await client.getAgentFile(agentId, segments[3]);
     }
+    return undefined;
+}
+
+async function dispatchAgentConfigMutation(context: RouteContext, segments: string[]) {
+    const { client, request } = context;
+    const agentId = segments[1];
+    if (!agentId) {
+        return undefined;
+    }
+
+    if (segments[2] === 'name') {
+        const input = agentRuntimeUpdateAgentNameSchema.parse(await readJson(request));
+        const snapshot = await applyOpenClawConfigMutation(client, {
+            update: (config) => updateAgentNameConfig(config, agentId, input),
+        });
+        void syncManagedOpenClawSnapshotsInBackground('agent-name-update');
+        return snapshot;
+    }
+
+    if (segments[2] === 'model') {
+        const input = agentRuntimeUpdateAgentModelSchema.parse(await readJson(request));
+        const snapshot = await applyOpenClawConfigMutation(client, {
+            update: (config) => updateAgentModelConfig(config, agentId, input),
+        });
+        void syncManagedOpenClawSnapshotsInBackground('agent-model-update');
+        return snapshot;
+    }
+
+    if (segments[2] === 'thinking-default') {
+        const input = agentRuntimeUpdateAgentThinkingDefaultSchema.parse(await readJson(request));
+        const snapshot = await applyOpenClawConfigMutation(client, {
+            update: (config) => updateAgentThinkingDefaultConfig(config, agentId, input),
+        });
+        void syncManagedOpenClawSnapshotsInBackground('agent-thinking-default-update');
+        return snapshot;
+    }
+
     return undefined;
 }
 
@@ -157,6 +216,43 @@ async function dispatchChats({ client, request, url }: RouteContext, segments: s
     }
     if (request.method === 'POST' && url.pathname === agentRuntimeRoutes.bindings) {
         return await client.upsertBinding(await readJson(request));
+    }
+    if (request.method === 'GET' && url.pathname === agentRuntimeRoutes.discordBindings) {
+        const snapshot = await client.getOpenClawConfig();
+        return {
+            bindings: readDiscordBindings(snapshot.config),
+        };
+    }
+    if (request.method === 'POST' && url.pathname === agentRuntimeRoutes.discordBindings) {
+        const input = agentRuntimeSaveDiscordBindingSchema.parse(await readJson(request));
+        const snapshot = await applyOpenClawConfigMutation(client, {
+            update: (config) => upsertDiscordBindingConfig(config, input),
+        });
+        void syncManagedOpenClawSnapshotsInBackground('discord-binding-save');
+        return snapshot;
+    }
+    if (segments[0] === 'bindings' && segments[1] === 'discord' && segments[2]) {
+        if (request.method === 'PUT') {
+            const input = agentRuntimeSaveDiscordBindingSchema.parse(await readJson(request));
+            const snapshot = await applyOpenClawConfigMutation(client, {
+                update: (config) =>
+                    upsertDiscordBindingConfig(config, {
+                        ...input,
+                        bindingId: segments[2],
+                    }),
+            });
+            void syncManagedOpenClawSnapshotsInBackground('discord-binding-save');
+            return snapshot;
+        }
+
+        if (request.method === 'DELETE') {
+            const input = agentRuntimeDeleteDiscordBindingSchema.parse(await readJson(request));
+            const snapshot = await applyOpenClawConfigMutation(client, {
+                update: (config) => deleteDiscordBindingConfig(config, segments[2], input),
+            });
+            void syncManagedOpenClawSnapshotsInBackground('discord-binding-delete');
+            return snapshot;
+        }
     }
     if (segments[0] === 'bindings' && segments[1] && request.method === 'DELETE') {
         return await client.deleteBinding(segments[1]);

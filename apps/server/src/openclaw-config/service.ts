@@ -96,10 +96,7 @@ export async function applyOpenClawConfig(input: unknown) {
             runtimeId: runtime.id,
             snapshot,
         });
-        await syncRuntimeAgents();
         emitOpenClawConfigUpdated();
-        emitModelUpdated();
-        emitAgentInvalidationCascade();
     } finally {
         client.close();
     }

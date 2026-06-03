@@ -23,6 +23,7 @@ export function MessagingPlatformDetail({
     isLoading,
     isAgentRuntimeAvailable,
     onDraftChange,
+    onDraftBlur,
     onDrawerOpenChange,
     onEditBinding,
     onNewBinding,
@@ -39,6 +40,7 @@ export function MessagingPlatformDetail({
     isLoading: boolean;
     isAgentRuntimeAvailable: boolean;
     onDraftChange: React.Dispatch<React.SetStateAction<BindingDraft>>;
+    onDraftBlur: () => Promise<void>;
     onDrawerOpenChange: (open: boolean) => void;
     onEditBinding: (binding: MessagingBinding) => void;
     onNewBinding: () => void;
@@ -79,6 +81,7 @@ export function MessagingPlatformDetail({
                 bindingDraft={bindingDraft}
                 drawerOpen={drawerOpen}
                 isAgentRuntimeAvailable={isAgentRuntimeAvailable}
+                onDraftBlur={onDraftBlur}
                 onDraftChange={onDraftChange}
                 onDrawerOpenChange={onDrawerOpenChange}
                 saveBinding={saveBinding}

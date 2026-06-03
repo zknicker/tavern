@@ -18,6 +18,11 @@ executor.
   state. It starts managed OpenClaw, applies Tavern-owned config, carries
   runtime events, stores runtime settings, owns Cortex storage, and exposes
   Tavern tools to agents.
+* **Runtime owns managed OpenClaw config mutations.** User-facing settings enter
+  Runtime as domain updates, such as agent name, selected model, thinking
+  default, or Discord binding changes. Runtime translates those updates into the
+  current OpenClaw config, applies the config through Gateway, refreshes stored
+  snapshots, and emits focused runtime events.
 * **OpenClaw owns execution.** Agents, sessions, turns, transcripts, files,
   tools, model calls, prompt-time context management, and native OpenClaw config
   behavior remain OpenClaw-owned.

@@ -13,6 +13,9 @@ export const agentRuntimeRoutes = {
     agentFile: (agentId: string, path: string) =>
         `/agents/${agentId}/files/${encodeURIComponent(path)}`,
     agentFiles: (agentId: string) => `/agents/${agentId}/files`,
+    agentModel: (id: string) => `/agents/${id}/model`,
+    agentName: (id: string) => `/agents/${id}/name`,
+    agentThinkingDefault: (id: string) => `/agents/${id}/thinking-default`,
     agents: '/agents',
     capabilities: '/capabilities',
     capability: (id: string) => `/capabilities/${encodeURIComponent(id)}`,
@@ -59,6 +62,8 @@ export const agentRuntimeRoutes = {
     models: '/models',
     binding: (id: string) => `/bindings/${id}`,
     bindings: '/bindings',
+    discordBinding: (id: string) => `/bindings/discord/${encodeURIComponent(id)}`,
+    discordBindings: '/bindings/discord',
     skillInstall: '/skills/install',
     skill: (id: string) => `/skills/${id}`,
     skillConfig: (id: string) => `/skills/${id}/config`,

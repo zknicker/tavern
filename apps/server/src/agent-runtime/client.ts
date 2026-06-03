@@ -18,6 +18,8 @@ import {
     type AgentRuntimeCron,
     type AgentRuntimeCronList,
     type AgentRuntimeCronRun,
+    type AgentRuntimeDeleteDiscordBinding,
+    type AgentRuntimeDiscordBinding,
     type AgentRuntimeHighlightList,
     type AgentRuntimeInstallSkill,
     type AgentRuntimeJobDetail,
@@ -33,6 +35,7 @@ import {
     type AgentRuntimeRunCron,
     type AgentRuntimeRunJob,
     type AgentRuntimeSaveAgentFile,
+    type AgentRuntimeSaveDiscordBinding,
     type AgentRuntimeSaveOpenRouterSettings,
     type AgentRuntimeSaveWorkspaceInstructions,
     type AgentRuntimeSessionGraph,
@@ -44,6 +47,9 @@ import {
     type AgentRuntimeSkill,
     type AgentRuntimeSkillSummary,
     type AgentRuntimeUpdate,
+    type AgentRuntimeUpdateAgentModel,
+    type AgentRuntimeUpdateAgentName,
+    type AgentRuntimeUpdateAgentThinkingDefault,
     type AgentRuntimeUpdateCron,
     type AgentRuntimeUpsertBinding,
     type AgentRuntimeWorkspaceInstructions,
@@ -69,6 +75,8 @@ import {
     agentRuntimeCronRunListSchema,
     agentRuntimeCronRunSchema,
     agentRuntimeCronSchema,
+    agentRuntimeDeleteDiscordBindingSchema,
+    agentRuntimeDiscordBindingListSchema,
     agentRuntimeErrorSchema,
     agentRuntimeHighlightListSchema,
     agentRuntimeInstallSkillSchema,
@@ -88,6 +96,7 @@ import {
     agentRuntimeRunCronSchema,
     agentRuntimeRunJobSchema,
     agentRuntimeSaveAgentFileSchema,
+    agentRuntimeSaveDiscordBindingSchema,
     agentRuntimeSaveOpenRouterSettingsSchema,
     agentRuntimeSaveWorkspaceInstructionsSchema,
     agentRuntimeSessionGraphSchema,
@@ -98,6 +107,9 @@ import {
     agentRuntimeSessionResyncSchema,
     agentRuntimeSkillListSchema,
     agentRuntimeSkillSchema,
+    agentRuntimeUpdateAgentModelSchema,
+    agentRuntimeUpdateAgentNameSchema,
+    agentRuntimeUpdateAgentThinkingDefaultSchema,
     agentRuntimeUpdateCronSchema,
     agentRuntimeUpdateSchema,
     agentRuntimeUpsertBindingSchema,
@@ -168,6 +180,10 @@ export interface TavernAgentRuntimeClient {
     deleteAgent(agentId: string): Promise<AgentRuntimeArchiveAgent>;
     deleteBinding(bindingId: string): Promise<AgentRuntimeArchiveBinding>;
     deleteCronJob(jobId: string): Promise<AgentRuntimeArchiveCron>;
+    deleteDiscordBinding(
+        bindingId: string,
+        input: AgentRuntimeDeleteDiscordBinding
+    ): Promise<AgentRuntimeOpenClawConfigSnapshot>;
     deleteOpenRouterSettings(): Promise<AgentRuntimeOpenRouterSettings>;
     deleteSkill(skillId: string): Promise<AgentRuntimeArchiveSkill>;
     editCortexPage(input: CortexEditPageInput): Promise<CortexEditPageResult>;
@@ -199,6 +215,7 @@ export interface TavernAgentRuntimeClient {
     listCortexPages(): Promise<CortexPageList>;
     listCronJobs(): Promise<AgentRuntimeCronList>;
     listCronRuns(jobId?: string): Promise<{ runs: AgentRuntimeCronRun[] }>;
+    listDiscordBindings(): Promise<{ bindings: AgentRuntimeDiscordBinding[] }>;
     listHighlights(): Promise<AgentRuntimeHighlightList>;
     listMacApps(options?: { limit?: number; query?: string }): Promise<AgentRuntimeMacAppList>;
     listRuntimeJobs(): Promise<AgentRuntimeJobList>;
@@ -231,6 +248,9 @@ export interface TavernAgentRuntimeClient {
     ): Promise<AgentRuntimeAgentFileContent>;
     saveCortexSchema(input: CortexSaveSchemaInput): Promise<CortexSchemaRecord>;
     saveCortexSettings(input: CortexSaveSettings): Promise<CortexSettings>;
+    saveDiscordBinding(
+        input: AgentRuntimeSaveDiscordBinding
+    ): Promise<AgentRuntimeOpenClawConfigSnapshot>;
     saveOpenRouterSettings(
         input: AgentRuntimeSaveOpenRouterSettings
     ): Promise<AgentRuntimeOpenRouterSettings>;
@@ -240,6 +260,18 @@ export interface TavernAgentRuntimeClient {
     ): Promise<AgentRuntimeWorkspaceInstructions>;
     searchCortex(input: CortexSearchInput): Promise<CortexSearchResult>;
     startUpdate(input?: { targetVersion?: null | string }): Promise<AgentRuntimeUpdate>;
+    updateAgentModel(
+        agentId: string,
+        input: AgentRuntimeUpdateAgentModel
+    ): Promise<AgentRuntimeOpenClawConfigSnapshot>;
+    updateAgentName(
+        agentId: string,
+        input: AgentRuntimeUpdateAgentName
+    ): Promise<AgentRuntimeOpenClawConfigSnapshot>;
+    updateAgentThinkingDefault(
+        agentId: string,
+        input: AgentRuntimeUpdateAgentThinkingDefault
+    ): Promise<AgentRuntimeOpenClawConfigSnapshot>;
     updateCronJob(jobId: string, input: AgentRuntimeUpdateCron): Promise<AgentRuntimeCron>;
     upsertAgent(input: AgentRuntimeCreateAgent): Promise<AgentRuntimeAgent>;
     upsertBinding(input: AgentRuntimeUpsertBinding): Promise<AgentRuntimeBinding>;
@@ -883,6 +915,66 @@ class HttpTavernAgentRuntimeClient implements TavernAgentRuntimeClient {
         return agentRuntimeOpenClawConfigSnapshotSchema.parse(await response.json());
     }
 
+    async updateAgentName(agentId: string, input: AgentRuntimeUpdateAgentName) {
+        const payload = agentRuntimeUpdateAgentNameSchema.parse(input);
+        const response = await fetch(`${this.#baseUrl}${agentRuntimeRoutes.agentName(agentId)}`, {
+            body: JSON.stringify(payload),
+            headers: {
+                'content-type': 'application/json',
+                [agentRuntimeMutationHeaders.origin]: agentRuntimeMutationOrigins.tavern,
+            },
+            method: 'PATCH',
+        });
+
+        if (!response.ok) {
+            await readErrorResponse(response);
+        }
+
+        return agentRuntimeOpenClawConfigSnapshotSchema.parse(await response.json());
+    }
+
+    async updateAgentModel(agentId: string, input: AgentRuntimeUpdateAgentModel) {
+        const payload = agentRuntimeUpdateAgentModelSchema.parse(input);
+        const response = await fetch(`${this.#baseUrl}${agentRuntimeRoutes.agentModel(agentId)}`, {
+            body: JSON.stringify(payload),
+            headers: {
+                'content-type': 'application/json',
+                [agentRuntimeMutationHeaders.origin]: agentRuntimeMutationOrigins.tavern,
+            },
+            method: 'PATCH',
+        });
+
+        if (!response.ok) {
+            await readErrorResponse(response);
+        }
+
+        return agentRuntimeOpenClawConfigSnapshotSchema.parse(await response.json());
+    }
+
+    async updateAgentThinkingDefault(
+        agentId: string,
+        input: AgentRuntimeUpdateAgentThinkingDefault
+    ) {
+        const payload = agentRuntimeUpdateAgentThinkingDefaultSchema.parse(input);
+        const response = await fetch(
+            `${this.#baseUrl}${agentRuntimeRoutes.agentThinkingDefault(agentId)}`,
+            {
+                body: JSON.stringify(payload),
+                headers: {
+                    'content-type': 'application/json',
+                    [agentRuntimeMutationHeaders.origin]: agentRuntimeMutationOrigins.tavern,
+                },
+                method: 'PATCH',
+            }
+        );
+
+        if (!response.ok) {
+            await readErrorResponse(response);
+        }
+
+        return agentRuntimeOpenClawConfigSnapshotSchema.parse(await response.json());
+    }
+
     async getModelAccess() {
         const response = await fetch(`${this.#baseUrl}${agentRuntimeRoutes.modelAccess}`);
 
@@ -1065,6 +1157,27 @@ class HttpTavernAgentRuntimeClient implements TavernAgentRuntimeClient {
         return agentRuntimeBindingSchema.parse(await response.json());
     }
 
+    async saveDiscordBinding(input: AgentRuntimeSaveDiscordBinding) {
+        const payload = agentRuntimeSaveDiscordBindingSchema.parse(input);
+        const url = payload.bindingId
+            ? agentRuntimeRoutes.discordBinding(payload.bindingId)
+            : agentRuntimeRoutes.discordBindings;
+        const response = await fetch(`${this.#baseUrl}${url}`, {
+            body: JSON.stringify(payload),
+            headers: {
+                'content-type': 'application/json',
+                [agentRuntimeMutationHeaders.origin]: agentRuntimeMutationOrigins.tavern,
+            },
+            method: payload.bindingId ? 'PUT' : 'POST',
+        });
+
+        if (!response.ok) {
+            await readErrorResponse(response);
+        }
+
+        return agentRuntimeOpenClawConfigSnapshotSchema.parse(await response.json());
+    }
+
     async listBindings() {
         const response = await fetch(`${this.#baseUrl}${agentRuntimeRoutes.bindings}`);
 
@@ -1073,6 +1186,16 @@ class HttpTavernAgentRuntimeClient implements TavernAgentRuntimeClient {
         }
 
         return agentRuntimeBindingListSchema.parse(await response.json());
+    }
+
+    async listDiscordBindings() {
+        const response = await fetch(`${this.#baseUrl}${agentRuntimeRoutes.discordBindings}`);
+
+        if (!response.ok) {
+            await readErrorResponse(response);
+        }
+
+        return agentRuntimeDiscordBindingListSchema.parse(await response.json());
     }
 
     async deleteBinding(bindingId: string) {
@@ -1085,6 +1208,27 @@ class HttpTavernAgentRuntimeClient implements TavernAgentRuntimeClient {
         }
 
         return agentRuntimeArchiveBindingSchema.parse(await response.json());
+    }
+
+    async deleteDiscordBinding(bindingId: string, input: AgentRuntimeDeleteDiscordBinding) {
+        const payload = agentRuntimeDeleteDiscordBindingSchema.parse(input);
+        const response = await fetch(
+            `${this.#baseUrl}${agentRuntimeRoutes.discordBinding(bindingId)}`,
+            {
+                body: JSON.stringify(payload),
+                headers: {
+                    'content-type': 'application/json',
+                    [agentRuntimeMutationHeaders.origin]: agentRuntimeMutationOrigins.tavern,
+                },
+                method: 'DELETE',
+            }
+        );
+
+        if (!response.ok) {
+            await readErrorResponse(response);
+        }
+
+        return agentRuntimeOpenClawConfigSnapshotSchema.parse(await response.json());
     }
 
     async listSessions() {

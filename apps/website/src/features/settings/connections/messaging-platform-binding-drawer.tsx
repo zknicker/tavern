@@ -25,6 +25,7 @@ export function MessagingPlatformBindingDrawer({
     drawerOpen,
     isAgentRuntimeAvailable,
     onDraftChange,
+    onDraftBlur,
     onDrawerOpenChange,
     saveBinding,
     savePending,
@@ -35,6 +36,7 @@ export function MessagingPlatformBindingDrawer({
     drawerOpen: boolean;
     isAgentRuntimeAvailable: boolean;
     onDraftChange: React.Dispatch<React.SetStateAction<BindingDraft>>;
+    onDraftBlur: () => Promise<void>;
     onDrawerOpenChange: (open: boolean) => void;
     saveBinding: () => Promise<void>;
     savePending: boolean;
@@ -56,9 +58,14 @@ export function MessagingPlatformBindingDrawer({
             <DrawerPopup className="max-w-[600px] sm:w-[600px]" showCloseButton variant="inset">
                 <Form
                     className="flex min-h-0 flex-1 flex-col gap-0"
+                    onBlur={() => {
+                        if (bindingDraft.id) {
+                            void onDraftBlur().catch(() => undefined);
+                        }
+                    }}
                     onSubmit={(event) => {
                         event.preventDefault();
-                        if (canSave) {
+                        if (!bindingDraft.id && canSave) {
                             void saveBinding();
                         }
                     }}
@@ -108,16 +115,28 @@ export function MessagingPlatformBindingDrawer({
                         />
                     </DrawerPanel>
                     <DrawerFooter>
-                        <Button
-                            onClick={() => onDrawerOpenChange(false)}
-                            type="button"
-                            variant="secondary"
-                        >
-                            Cancel
-                        </Button>
-                        <Button disabled={!canSave} loading={savePending} type="submit">
-                            {bindingDraft.id ? 'Save changes' : 'Add binding'}
-                        </Button>
+                        {bindingDraft.id ? (
+                            <Button
+                                loading={savePending}
+                                onClick={() => onDrawerOpenChange(false)}
+                                type="button"
+                            >
+                                Done
+                            </Button>
+                        ) : (
+                            <>
+                                <Button
+                                    onClick={() => onDrawerOpenChange(false)}
+                                    type="button"
+                                    variant="secondary"
+                                >
+                                    Cancel
+                                </Button>
+                                <Button disabled={!canSave} loading={savePending} type="submit">
+                                    Add binding
+                                </Button>
+                            </>
+                        )}
                     </DrawerFooter>
                 </Form>
             </DrawerPopup>

@@ -18,11 +18,7 @@ import {
     thinkingOptions,
 } from '../../../components/ui/thinking-shared.ts';
 import type { ModelListOutput } from '../../../lib/trpc.tsx';
-import type {
-    AgentModelDraft,
-    OpenClawHarness,
-    ThinkingLevelValue,
-} from '../openclaw-draft/types.ts';
+import type { AgentModelDraft, OpenClawHarness, ThinkingLevelValue } from './types.ts';
 
 type Model = ModelListOutput['models'][number];
 type ModelChoice = ReturnType<typeof listModelChoices>[number];

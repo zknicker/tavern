@@ -269,14 +269,14 @@ export async function syncAgentWorkspaceInstructions(input: {
 
     for (const agent of input.agents) {
         const profile = profilesByAgentId.get(agent.id);
-        if (!profile) {
+        if (!agent.workspaceFolder) {
             continue;
         }
 
         try {
             await input.client.saveWorkspaceInstructions(agent.id, {
                 agentName: agent.name,
-                userInstructions: profile.userInstructions,
+                ...(profile ? { userInstructions: profile.userInstructions } : {}),
                 workspaceDir: agent.workspaceFolder,
             });
         } catch (error) {

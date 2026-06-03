@@ -169,6 +169,8 @@ export const agentRuntimeThinkingLevelSchema = z.enum([
     'max',
 ]);
 
+const agentRuntimeJsonRecordSchema = z.record(z.string(), z.unknown());
+
 export const agentRuntimeOpenClawConfigSchema = z.record(z.string(), z.unknown());
 
 export const agentRuntimeOpenClawConfigSnapshotSchema = z.object({
@@ -182,6 +184,103 @@ export const agentRuntimeOpenClawConfigSnapshotSchema = z.object({
 export const agentRuntimeApplyOpenClawConfigSchema = z.object({
     baseHash: z.string().trim().min(1),
     config: agentRuntimeOpenClawConfigSchema,
+});
+
+const agentRuntimeOpenClawConfigMutationSchema = z.object({});
+
+export const agentRuntimeUpdateAgentNameSchema = agentRuntimeOpenClawConfigMutationSchema.extend({
+    name: z.string().trim().min(1),
+});
+
+export const agentRuntimeUpdateAgentModelSchema = agentRuntimeOpenClawConfigMutationSchema.extend({
+    model: agentRuntimeOpenClawModelNameSchema,
+});
+
+export const agentRuntimeUpdateAgentThinkingDefaultSchema =
+    agentRuntimeOpenClawConfigMutationSchema.extend({
+        thinkingDefault: agentRuntimeThinkingLevelSchema.nullable(),
+    });
+
+export const agentRuntimeDiscordAllowBotsSchema = z.union([z.boolean(), z.literal('mentions')]);
+
+export const agentRuntimeDiscordGroupPolicySchema = z.enum(['open', 'allowlist', 'disabled']);
+export const agentRuntimeInboundModeSchema = z.enum(['active', 'mention-only', 'observe']);
+export const agentRuntimeDiscordReplyToModeSchema = z.enum(['off', 'first', 'all']);
+
+export const agentRuntimeDiscordBindingGuildSchema = z.object({
+    channelIds: z.array(z.string().trim().min(1)).default([]),
+    id: z.string().trim().min(1),
+    ignoreOtherMentions: z.boolean(),
+    requireMention: z.boolean(),
+});
+
+export const agentRuntimeSaveDiscordBindingSchema = agentRuntimeOpenClawConfigMutationSchema.extend(
+    {
+        accountId: z.string().trim().min(1).optional(),
+        agentId: z.string().trim().min(1),
+        allowBots: agentRuntimeDiscordAllowBotsSchema,
+        bindingId: z.string().trim().min(1).optional(),
+        enabled: z.boolean(),
+        groupPolicy: agentRuntimeDiscordGroupPolicySchema,
+        guilds: z.array(agentRuntimeDiscordBindingGuildSchema).default([]),
+        inboundMode: agentRuntimeInboundModeSchema,
+        match: z
+            .object({
+                dmUserIds: z.array(z.string().trim().min(1)).default([]),
+                parentChannelIds: z.array(z.string().trim().min(1)).default([]),
+            })
+            .default({
+                dmUserIds: [],
+                parentChannelIds: [],
+            }),
+        mentionPatterns: z.array(z.string().trim().min(1)).default([]),
+        metadata: agentRuntimeJsonRecordSchema.default({}),
+        name: z.string().trim().min(1),
+        replyToMode: agentRuntimeDiscordReplyToModeSchema,
+        token: z.string().trim().min(1).nullable().optional(),
+    }
+);
+
+export const agentRuntimeDeleteDiscordBindingSchema = agentRuntimeOpenClawConfigMutationSchema;
+
+export const agentRuntimeDiscordBindingStatusSchema = z.enum(['configured', 'disabled', 'error']);
+export const agentRuntimeDiscordTokenSourceSchema = z.enum([
+    'missing',
+    'plaintext',
+    'redacted',
+    'secret-ref',
+]);
+
+export const agentRuntimeDiscordBindingMatchSchema = z.object({
+    channelIds: z.array(z.string().trim().min(1)).default([]),
+    dmUserIds: z.array(z.string().trim().min(1)).default([]),
+    guildIds: z.array(z.string().trim().min(1)).default([]),
+    parentChannelIds: z.array(z.string().trim().min(1)).default([]),
+});
+
+export const agentRuntimeDiscordBindingSchema = z.object({
+    accountId: z.string().trim().min(1),
+    agentId: z.string().trim().min(1),
+    allowBots: agentRuntimeDiscordAllowBotsSchema,
+    enabled: z.boolean(),
+    groupPolicy: agentRuntimeDiscordGroupPolicySchema,
+    guilds: z.array(agentRuntimeDiscordBindingGuildSchema).default([]),
+    id: z.string().trim().min(1),
+    inboundMode: agentRuntimeInboundModeSchema,
+    match: agentRuntimeDiscordBindingMatchSchema,
+    mentionPatterns: z.array(z.string().trim().min(1)).default([]),
+    metadata: agentRuntimeJsonRecordSchema,
+    name: z.string().trim().min(1),
+    platform: z.literal('discord'),
+    replyToMode: agentRuntimeDiscordReplyToModeSchema,
+    status: agentRuntimeDiscordBindingStatusSchema,
+    statusMessage: z.string().trim().min(1).nullable(),
+    tokenConfigured: z.boolean(),
+    tokenSource: agentRuntimeDiscordTokenSourceSchema,
+});
+
+export const agentRuntimeDiscordBindingListSchema = z.object({
+    bindings: z.array(agentRuntimeDiscordBindingSchema),
 });
 
 export const agentRuntimeAgentSchema = z.object({
@@ -380,10 +479,6 @@ export const agentRuntimeChatBindingSchema = z.object({
 });
 
 export const agentRuntimeChatScopeSchema = z.enum(['channel', 'dm', 'group', 'topic']).nullable();
-
-export const agentRuntimeInboundModeSchema = z.enum(['active', 'mention-only', 'observe']);
-
-const agentRuntimeJsonRecordSchema = z.record(z.string(), z.unknown());
 
 export const agentRuntimeDiscordChatSourceRecordSchema = z.object({
     chatType: z.string().trim().min(1).nullable(),
@@ -1865,6 +1960,17 @@ export type AgentRuntimeOpenClawConfigSnapshot = z.infer<
     typeof agentRuntimeOpenClawConfigSnapshotSchema
 >;
 export type AgentRuntimeApplyOpenClawConfig = z.infer<typeof agentRuntimeApplyOpenClawConfigSchema>;
+export type AgentRuntimeUpdateAgentName = z.infer<typeof agentRuntimeUpdateAgentNameSchema>;
+export type AgentRuntimeUpdateAgentModel = z.infer<typeof agentRuntimeUpdateAgentModelSchema>;
+export type AgentRuntimeUpdateAgentThinkingDefault = z.infer<
+    typeof agentRuntimeUpdateAgentThinkingDefaultSchema
+>;
+export type AgentRuntimeSaveDiscordBinding = z.infer<typeof agentRuntimeSaveDiscordBindingSchema>;
+export type AgentRuntimeDeleteDiscordBinding = z.infer<
+    typeof agentRuntimeDeleteDiscordBindingSchema
+>;
+export type AgentRuntimeDiscordBinding = z.infer<typeof agentRuntimeDiscordBindingSchema>;
+export type AgentRuntimeDiscordBindingList = z.infer<typeof agentRuntimeDiscordBindingListSchema>;
 export type AgentRuntimeModelCatalogEntry = z.infer<typeof agentRuntimeModelCatalogEntrySchema>;
 export type AgentRuntimeModels = z.infer<typeof agentRuntimeModelsSchema>;
 export type AgentRuntimeSkillFile = z.infer<typeof agentRuntimeSkillFileSchema>;

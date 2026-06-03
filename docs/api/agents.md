@@ -28,6 +28,9 @@ with user-authored instructions, model, tool, memory, and skill policy.
   Runtime-hosted agent API. They are rendered into the managed OpenClaw
   `AGENTS.md` after Tavern policy and before agent-authored notes; clients do
   not edit the workspace file directly.
+* OpenClaw-backed settings use narrow domain mutations. Clients update agent
+  name, model, thinking default, and messaging bindings through agent and
+  messaging APIs instead of editing or saving OpenClaw config JSON.
 * Agent notes are DB-backed and agent-owned. They are updated through Tavern
   workspace tools, not through the first-pass user-facing agent settings UI.
 * Runtime execution state is not required just to list agents.

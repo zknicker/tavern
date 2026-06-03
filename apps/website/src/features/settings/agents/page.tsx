@@ -19,33 +19,23 @@ import {
     useRuntimeConnection,
 } from '../../../hooks/connections/use-runtime-connection.ts';
 import { useModelList } from '../../../hooks/models/use-model-list.ts';
-import type { AgentListOutput, ModelListOutput } from '../../../lib/trpc.tsx';
+import { withSavingToast } from '../../../lib/saving-toast.ts';
+import { type AgentListOutput, type ModelListOutput, trpc } from '../../../lib/trpc.tsx';
 import { agentColorPresets } from '../../agents/agent-color-presets.ts';
 import { MissingAgentState } from '../../agents/missing-agent-state.tsx';
 import { useAgentProfileUpdate } from '../../agents/use-agent-profile-update.ts';
 import { MessagingPlatformsSection } from '../connections/messaging-platform-section.tsx';
-import { useOpenClawAgentDraft } from '../openclaw-draft/agent-draft.ts';
-import { useOpenClawSettingsDraft } from '../openclaw-draft/provider.tsx';
-import type { AgentSettingsDraft } from '../openclaw-draft/types.ts';
 import { AgentInstructionsPreviewDrawer } from './agent-instructions-preview-drawer.tsx';
 import { AgentModelSection } from './model-section.tsx';
+import type { AgentModelDraft, AgentSettingsDraft } from './types.ts';
 
 export function AgentSettingsPage() {
     const primaryAgentQuery = usePrimaryAgent();
     const runtimeConnection = useRuntimeConnection();
     const modelsQuery = useModelList();
-    const { config, isLoading, isSaving } = useOpenClawSettingsDraft();
 
-    if (primaryAgentQuery.isPending || modelsQuery.isPending || isLoading) {
+    if (primaryAgentQuery.isPending || modelsQuery.isPending) {
         return <p className="text-muted-foreground text-sm">Loading agent settings...</p>;
-    }
-
-    if (!config) {
-        return (
-            <p className="text-muted-foreground text-sm">
-                Runtime config has not synced yet. Start Tavern Runtime, then wait for config sync.
-            </p>
-        );
     }
 
     const agent = primaryAgentQuery.data?.agent ?? null;
@@ -64,7 +54,6 @@ export function AgentSettingsPage() {
         <AgentSettingsContent
             agent={agent}
             baseline={baseline}
-            disabled={isSaving}
             modelOptions={modelsQuery.data?.models ?? []}
             modelSetting={modelSetting ?? null}
             runtimeStatus={runtimeConnection.status}
@@ -76,26 +65,49 @@ function AgentSettingsContent({
     agent,
     runtimeStatus,
     baseline,
-    disabled,
     modelOptions,
     modelSetting,
 }: {
     agent: AgentListOutput['agents'][number];
     runtimeStatus: RuntimeConnectionStatus;
     baseline: AgentSettingsDraft;
-    disabled: boolean;
     modelOptions: ModelListOutput['models'];
     modelSetting: ModelListOutput['agents'][number] | null;
 }) {
-    const { draft, update } = useOpenClawAgentDraft({
-        agent,
-        baseline,
-        modelOptions,
-    });
+    const utils = trpc.useUtils();
     const saveAgentProfile = useAgentProfileUpdate();
+    const updateName = trpc.agent.updateName.useMutation({
+        onSuccess: async () => {
+            await Promise.all([utils.agent.list.invalidate(), utils.agent.primary.invalidate()]);
+        },
+    });
+    const updateModel = trpc.agent.updateModel.useMutation({
+        onSuccess: async () => {
+            await Promise.all([
+                utils.agent.list.invalidate(),
+                utils.agent.primary.invalidate(),
+                utils.model.list.invalidate(),
+            ]);
+        },
+    });
+    const updateThinkingDefault = trpc.agent.updateThinkingDefault.useMutation({
+        onSuccess: async () => {
+            await Promise.all([utils.agent.list.invalidate(), utils.model.list.invalidate()]);
+        },
+    });
     const savedUserInstructions = agent.userInstructions;
+    const [displayName, setDisplayName] = useState(baseline.profile.displayName);
     const [instructionsDraft, setInstructionsDraft] = useState(savedUserInstructions);
     const previousSavedUserInstructionsRef = useRef(savedUserInstructions);
+    const draft = {
+        ...baseline,
+        profile: {
+            ...baseline.profile,
+            displayName,
+        },
+    };
+    const isSavingAgentConfig =
+        updateName.isPending || updateModel.isPending || updateThinkingDefault.isPending;
 
     useEffect(() => {
         const previousSavedUserInstructions = previousSavedUserInstructionsRef.current;
@@ -110,9 +122,9 @@ function AgentSettingsContent({
         );
     }, [savedUserInstructions]);
 
-    if (!draft) {
-        return <p className="text-muted-foreground text-sm">Loading agent settings...</p>;
-    }
+    useEffect(() => {
+        setDisplayName(baseline.profile.displayName);
+    }, [baseline.profile.displayName]);
 
     const instructionsChanged = instructionsDraft !== savedUserInstructions;
     const isSavingInstructions =
@@ -131,18 +143,31 @@ function AgentSettingsContent({
                     <Card className="overflow-hidden p-0">
                         <SettingsRow title="Display name">
                             <Input
-                                disabled={disabled}
+                                disabled={isSavingAgentConfig}
                                 id="agent-display-name"
                                 name="agent-display-name"
-                                onChange={(event) =>
-                                    update((current) => ({
-                                        ...current,
-                                        profile: {
-                                            ...current.profile,
-                                            displayName: event.target.value,
-                                        },
-                                    }))
-                                }
+                                onBlur={() => {
+                                    const nextName = displayName.trim() || agent.id;
+
+                                    if (nextName === baseline.profile.displayName) {
+                                        return;
+                                    }
+
+                                    void withSavingToast(() =>
+                                        updateName.mutateAsync({
+                                            agentId: agent.id,
+                                            name: nextName,
+                                        })
+                                    ).catch(() => undefined);
+                                }}
+                                onChange={(event) => {
+                                    setDisplayName(event.target.value);
+                                }}
+                                onKeyDown={(event) => {
+                                    if (event.key === 'Enter') {
+                                        event.currentTarget.blur();
+                                    }
+                                }}
                                 placeholder={agent.id}
                                 value={draft.profile.displayName}
                             />
@@ -198,7 +223,7 @@ function AgentSettingsContent({
                 <CardFrame>
                     <Card className="relative h-[400px] overflow-hidden p-0">
                         <SimpleCodeEditor
-                            disabled={disabled || isSavingInstructions}
+                            disabled={isSavingInstructions}
                             filePath="AGENTS.md"
                             onChange={setInstructionsDraft}
                             placeholder="Write the agent's role, personality, operating rules, output protocol, and stop rules."
@@ -207,7 +232,10 @@ function AgentSettingsContent({
                     </Card>
                 </CardFrame>
                 <div className="mt-3 flex flex-wrap items-center justify-end gap-2">
-                    <AgentInstructionsPreviewDrawer agentId={agent.id} />
+                    <AgentInstructionsPreviewDrawer
+                        agentDisplayName={draft.profile.displayName}
+                        agentId={agent.id}
+                    />
                     <Button
                         disabled={!instructionsChanged || saveAgentProfile.isPending}
                         loading={isSavingInstructions}
@@ -233,13 +261,25 @@ function AgentSettingsContent({
             </section>
 
             <AgentModelSection
-                disabled={disabled}
+                disabled={isSavingAgentConfig}
                 modelOptions={modelOptions}
                 onChange={(model) =>
-                    update((current) => ({
-                        ...current,
-                        model,
-                    }))
+                    void withSavingToast(() =>
+                        saveAgentModel({
+                            current: draft.model,
+                            model,
+                            updateModel: (openClawModelNameId) =>
+                                updateModel.mutateAsync({
+                                    agentId: agent.id,
+                                    openClawModelNameId,
+                                }),
+                            updateThinkingDefault: (thinkingDefault) =>
+                                updateThinkingDefault.mutateAsync({
+                                    agentId: agent.id,
+                                    thinkingDefault,
+                                }),
+                        })
+                    ).catch(() => undefined)
                 }
                 syncError={modelSetting?.syncError ?? null}
                 value={draft.model}
@@ -252,6 +292,30 @@ function AgentSettingsContent({
             />
         </div>
     );
+}
+
+async function saveAgentModel(input: {
+    current: AgentModelDraft | null;
+    model: AgentModelDraft | null;
+    updateModel: (openClawModelNameId: string) => Promise<unknown>;
+    updateThinkingDefault: (
+        thinkingDefault: AgentModelDraft['thinkingDefault']
+    ) => Promise<unknown>;
+}) {
+    const jobs: Promise<unknown>[] = [];
+
+    if (
+        input.model?.openClawModelNameId &&
+        input.model.openClawModelNameId !== input.current?.openClawModelNameId
+    ) {
+        jobs.push(input.updateModel(input.model.openClawModelNameId));
+    }
+
+    if (input.model?.thinkingDefault !== input.current?.thinkingDefault) {
+        jobs.push(input.updateThinkingDefault(input.model?.thinkingDefault ?? null));
+    }
+
+    await Promise.all(jobs);
 }
 
 function AgentColorOption({ color, label }: { color: string; label: string }) {
