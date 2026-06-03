@@ -2,10 +2,11 @@ import { baseKeymap } from 'prosemirror-commands';
 import { history } from 'prosemirror-history';
 import { keymap } from 'prosemirror-keymap';
 import { DOMParser, Fragment, type Node as ProseMirrorNode, Schema } from 'prosemirror-model';
-import { EditorState, TextSelection } from 'prosemirror-state';
+import { AllSelection, EditorState, TextSelection } from 'prosemirror-state';
 import { EditorView, type NodeView } from 'prosemirror-view';
 import * as React from 'react';
 import { createRoot, type Root } from 'react-dom/client';
+import { isSelectAllShortcut } from '../../lib/select-all.ts';
 import { cn } from '../../lib/utils.ts';
 import { MentionChip } from './mention-chip.tsx';
 import { getActiveMentionQuery } from './mention-text.ts';
@@ -64,10 +65,6 @@ export function MentionEditor({
     );
 
     React.useEffect(() => {
-        valueRef.current = value;
-    }, [value]);
-
-    React.useEffect(() => {
         onActiveQueryChangeRef.current = onActiveQueryChange;
         onChangeRef.current = onChange;
         onFocusRef.current = onFocus;
@@ -118,7 +115,16 @@ export function MentionEditor({
                     );
                     return false;
                 },
-                keydown: (_view, event) => onKeyDownRef.current(event),
+                keydown: (view, event) => {
+                    if (isSelectAllShortcut(event)) {
+                        event.preventDefault();
+                        event.stopPropagation();
+                        view.dispatch(view.state.tr.setSelection(new AllSelection(view.state.doc)));
+                        return true;
+                    }
+
+                    return onKeyDownRef.current(event);
+                },
             },
             nodeViews: {
                 mention: (node) => new MentionNodeView(node),

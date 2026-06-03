@@ -4,6 +4,12 @@ import { useLocation } from 'react-router-dom';
 import { Icon } from '../../components/ui/icon.tsx';
 import { Button } from '../../components/ui/primitives/button.tsx';
 import type { ChatActiveReply, ChatTurnFailure } from '../../hooks/chats/chat-timeline-state.ts';
+import {
+    isEditableSelectAllTarget,
+    isSelectAllShortcut,
+    selectElementContents,
+    shouldKeepPointerFocus,
+} from '../../lib/select-all.ts';
 import type { ChatLogOutput } from '../../lib/trpc.tsx';
 import { ChatTimeline } from './chat-timeline.tsx';
 import { getChatTimelineFollowKey } from './chat-timeline-follow-key.ts';
@@ -77,6 +83,25 @@ export function ChatDetailFrame({
 
         fetchPreviousPage?.();
     };
+    const handleViewportKeyDown = (event: React.KeyboardEvent<HTMLDivElement>) => {
+        if (
+            !isSelectAllShortcut(event) ||
+            isEditableSelectAllTarget(event.target) ||
+            !selectElementContents(chatScroll.contentRef.current)
+        ) {
+            return;
+        }
+
+        event.preventDefault();
+        event.stopPropagation();
+    };
+    const handleViewportMouseDown = (event: React.MouseEvent<HTMLDivElement>) => {
+        if (shouldKeepPointerFocus(event.target)) {
+            return;
+        }
+
+        event.currentTarget.focus({ preventScroll: true });
+    };
 
     return (
         <div className="flex min-h-0 flex-1 flex-col">
@@ -88,10 +113,14 @@ export function ChatDetailFrame({
             </div>
 
             <div className="relative min-h-0 flex-1">
+                {/* biome-ignore lint/a11y/noStaticElementInteractions lint/a11y/noNoninteractiveElementInteractions: The transcript viewport owns focus so Cmd+A selects transcript text without including the composer. */}
                 <div
                     className="h-full min-h-0 overflow-y-auto px-6 py-4"
+                    onKeyDown={handleViewportKeyDown}
+                    onMouseDown={handleViewportMouseDown}
                     onScroll={handleScroll}
                     ref={chatScroll.viewportRef}
+                    tabIndex={-1}
                 >
                     <div
                         className="mx-auto min-h-full w-full max-w-[46rem]"
