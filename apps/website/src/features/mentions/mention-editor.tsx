@@ -1,4 +1,4 @@
-import { baseKeymap } from 'prosemirror-commands';
+import { baseKeymap, splitBlock } from 'prosemirror-commands';
 import { history } from 'prosemirror-history';
 import { keymap } from 'prosemirror-keymap';
 import { DOMParser, Fragment, type Node as ProseMirrorNode, Schema } from 'prosemirror-model';
@@ -123,6 +123,10 @@ export function MentionEditor({
                         return true;
                     }
 
+                    if (handleLineBreakKeyDown(view, event)) {
+                        return true;
+                    }
+
                     return onKeyDownRef.current(event);
                 },
             },
@@ -174,6 +178,12 @@ export function MentionEditor({
             <div ref={editorRef} />
         </div>
     );
+}
+
+export function isMentionEditorLineBreakShortcut(
+    event: Pick<KeyboardEvent, 'isComposing' | 'key' | 'metaKey'>
+) {
+    return event.key === 'Enter' && event.metaKey && !event.isComposing;
 }
 
 const mentionSchema = new Schema({
@@ -310,6 +320,15 @@ function insertMentionOption(view: EditorView | null, option: MentionOption) {
 
     view.dispatch(transaction);
     view.focus();
+}
+
+function handleLineBreakKeyDown(view: EditorView, event: KeyboardEvent) {
+    if (!isMentionEditorLineBreakShortcut(event)) {
+        return false;
+    }
+
+    event.preventDefault();
+    return splitBlock(view.state, view.dispatch, view);
 }
 
 function optionQueryLength(activeQuery: ActiveMentionQuery) {

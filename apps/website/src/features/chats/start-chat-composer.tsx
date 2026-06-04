@@ -26,6 +26,7 @@ import {
     MentionComposerPicker,
     useMentionComposer,
 } from '../mentions/use-mention-composer.tsx';
+import { handleChatComposerKeyDown } from './chat-composer-keyboard.ts';
 
 type Agent = AgentListOutput['agents'][number];
 const runtimeDisconnectedTooltip = 'Tavern Runtime is disconnected.';
@@ -122,6 +123,16 @@ export function StartChatComposer({
                         id={promptId}
                         name="start-chat"
                         onChange={(event) => setPrompt(event.target.value)}
+                        onKeyDown={(event) =>
+                            handleChatComposerKeyDown({
+                                event,
+                                onSubmit: () => {
+                                    handleSubmit();
+                                },
+                                onValueChange: setPrompt,
+                                value: prompt,
+                            })
+                        }
                         placeholder={placeholder}
                         rows={1}
                         value={prompt}

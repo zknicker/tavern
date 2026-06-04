@@ -68,6 +68,24 @@ test('keeps mention chips editable in common composer flows', async ({ page }) =
     await expect(composer).toHaveText('Use @gh');
 });
 
+test('inserts a newline on Cmd+Enter in the mention composer', async ({ page }) => {
+    await page.goto('/dashboard/overview');
+
+    const composer = page.locator('#home-prompt');
+    await composer.click();
+    await composer.pressSequentially('first');
+    await page.keyboard.press('Meta+Enter');
+    await composer.pressSequentially('second');
+
+    await expect
+        .poll(() =>
+            composer.evaluate((element) =>
+                element instanceof HTMLTextAreaElement ? element.value : element.innerText
+            )
+        )
+        .toBe('first\nsecond');
+});
+
 test('scrolls the mention popover to keep keyboard selection visible', async ({ page }) => {
     await page.goto('/dashboard/overview');
 
