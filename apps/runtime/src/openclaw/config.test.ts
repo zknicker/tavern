@@ -26,6 +26,11 @@ describe('buildManagedOpenClawConfig', () => {
                     models: {
                         'openai/gpt-5.5': {},
                     },
+                    promptOverlays: {
+                        gpt5: {
+                            personality: 'off',
+                        },
+                    },
                     sandbox: {
                         backend: 'none',
                         mode: 'off',
@@ -78,9 +83,6 @@ describe('buildManagedOpenClawConfig', () => {
                         enabled: true,
                     },
                     openai: {
-                        config: {
-                            personality: 'friendly',
-                        },
                         enabled: true,
                     },
                 },

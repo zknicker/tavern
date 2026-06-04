@@ -161,6 +161,11 @@ export function buildManagedOpenClawConfig(input: {
                 models: {
                     [primaryModel]: modelConfig,
                 },
+                promptOverlays: {
+                    gpt5: {
+                        personality: 'off',
+                    },
+                },
                 sandbox: {
                     backend: 'none',
                     mode: 'off',
@@ -262,9 +267,6 @@ export function buildManagedOpenClawConfig(input: {
                     enabled: true,
                 },
                 openai: {
-                    config: {
-                        personality: 'friendly',
-                    },
                     enabled: true,
                 },
             },
