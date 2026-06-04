@@ -19,6 +19,8 @@ import {
     cortexSettingsSchema,
     cortexStatusSchema,
 } from '@tavern/api';
+import { publishCapabilityUpdated } from '../capabilities/events';
+import { refreshRuntimeCapabilities } from '../capabilities/store';
 import { getDb } from '../db/connection';
 import { requestRuntimeJobRun } from '../jobs/request';
 import { json, notFound } from '../tavern/http';
@@ -53,6 +55,8 @@ export async function handleCortexRequest(request: Request): Promise<Response | 
     if (request.method === 'PUT' && url.pathname === agentRuntimeRoutes.cortexSettings) {
         const input = cortexSaveSettingsSchema.parse(await readJson(request));
         const settings = saveCortexSettings(db, input);
+        await refreshRuntimeCapabilities({ ids: ['embeddingModel'] });
+        publishCapabilityUpdated('embeddingModel');
         requestRuntimeJobRun('cortex-generate-embeddings', { trigger: 'write' });
         return json(cortexSettingsSchema.parse(settings));
     }

@@ -13,6 +13,7 @@ export function useSaveCortexSettings() {
     const utils = trpc.useUtils();
     return trpc.cortex.saveSettings.useMutation({
         onSuccess: () => {
+            utils.agentRuntime.get.invalidate();
             utils.cortex.settings.invalidate();
             utils.cortex.status.invalidate();
         },

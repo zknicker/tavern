@@ -6,7 +6,7 @@ import {
     agentRuntimeRoutes,
 } from '@tavern/api';
 import { json, notFound } from '../tavern/http';
-import { publishRuntimeEvent } from '../tavern/runtime-events';
+import { publishCapabilityUpdated } from './events';
 import { getRuntimeCapabilities, getRuntimeCapability, refreshRuntimeCapabilities } from './store';
 
 export async function handleRuntimeCapabilitiesRequest(request: Request): Promise<Response | null> {
@@ -63,11 +63,7 @@ export async function handleRuntimeCapabilitiesRequest(request: Request): Promis
 
 function publishCapabilityRefreshes<T extends { id: string }>(capabilities: T[]): T[] {
     for (const capability of capabilities) {
-        publishRuntimeEvent({
-            capability: capability.id,
-            timestamp: new Date().toISOString(),
-            type: 'capability.updated',
-        });
+        publishCapabilityUpdated(agentRuntimeCapabilityHealthIdSchema.parse(capability.id));
     }
     return capabilities;
 }
