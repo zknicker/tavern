@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented in this file.
 
+## v1.2.6 - 2026-06-03
+
+- Added sharper Tavern overview copy on the home screen.
+- Fixed composer newlines so Command-Enter inserts a line break instead of submitting the draft.
+- Fixed chat transcript focus and return-scroll behavior so recent messages stay in view without stealing focus.
+- Fixed Runtime capability refresh after Cortex embedding settings changes.
+- Fixed managed OpenClaw startup so Tavern disables the GPT-5 personality overlay.
+
 ## v1.2.5 - 2026-06-03
 
 - Fixed signed desktop releases failing to start after the edit context menu sidecar was omitted from the Electron app bundle.
