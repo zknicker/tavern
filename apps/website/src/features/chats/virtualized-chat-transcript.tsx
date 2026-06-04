@@ -10,6 +10,7 @@ import {
 import { TranscriptEntryRow } from './chat-transcript-rows.tsx';
 
 const initialScrollToEndFrames = 12;
+const previousPageScrollThreshold = 160;
 
 export function VirtualizedChatTranscript({
     activeReply,
@@ -47,18 +48,33 @@ export function VirtualizedChatTranscript({
     const firstEntryIndex = virtualItems.find((item) => rows[item.index]?.kind === 'entry')?.index;
 
     React.useEffect(() => {
+        const viewport = scrollViewportRef.current;
+
+        if (!(viewport && fetchPreviousPage)) {
+            return;
+        }
+
         if (
-            firstEntryIndex === undefined ||
-            firstEntryIndex > (hiddenCount > 0 ? 3 : 2) ||
-            !hasPreviousPage ||
-            isFetchingPreviousPage ||
-            !fetchPreviousPage
+            !shouldLoadPreviousVirtualizedChatPage({
+                firstEntryIndex,
+                hasHiddenCount: hiddenCount > 0,
+                hasPreviousPage,
+                isFetchingPreviousPage,
+                scrollTop: viewport.scrollTop,
+            })
         ) {
             return;
         }
 
         fetchPreviousPage();
-    }, [fetchPreviousPage, firstEntryIndex, hasPreviousPage, hiddenCount, isFetchingPreviousPage]);
+    }, [
+        fetchPreviousPage,
+        firstEntryIndex,
+        hasPreviousPage,
+        hiddenCount,
+        isFetchingPreviousPage,
+        scrollViewportRef,
+    ]);
 
     React.useLayoutEffect(() => {
         if (!(initialScrollKey && rows.length > 0)) {
@@ -124,4 +140,30 @@ export function VirtualizedChatTranscript({
             })}
         </div>
     );
+}
+
+export function shouldLoadPreviousVirtualizedChatPage({
+    firstEntryIndex,
+    hasHiddenCount,
+    hasPreviousPage,
+    isFetchingPreviousPage,
+    scrollTop,
+}: {
+    firstEntryIndex?: number;
+    hasHiddenCount: boolean;
+    hasPreviousPage: boolean;
+    isFetchingPreviousPage: boolean;
+    scrollTop: number;
+}) {
+    if (
+        firstEntryIndex === undefined ||
+        firstEntryIndex > (hasHiddenCount ? 3 : 2) ||
+        scrollTop > previousPageScrollThreshold ||
+        !hasPreviousPage ||
+        isFetchingPreviousPage
+    ) {
+        return false;
+    }
+
+    return true;
 }
