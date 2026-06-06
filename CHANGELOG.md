@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file.
 
+## v1.2.9 - 2026-06-06
+
+- Fixed Tavern Runtime startup from Homebrew installs by installing the PGlite assets required by Cortex.
+- Raised the required Runtime floor to 1.2.9 so the app stages the fixed Runtime package.
+
 ## v1.2.8 - 2026-06-06
 
 - Fixed desktop backend startup when the configured Tavern Runtime is temporarily unavailable while model access jobs initialize.
