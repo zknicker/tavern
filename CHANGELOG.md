@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented in this file.
 
+## v1.2.7 - 2026-06-06
+
+- Added the GBrain-aligned Cortex stack with PGlite storage, Cortex CLI commands, OpenClaw Cortex skills, source ingestion, imports, recall, embeddings, schema additions, page history, and revert.
+- Added Cortex background jobs for chat ingestion, Dream reports, embedding generation, and index repair, with health surfaced through Runtime capabilities and Memories settings.
+- Added Tavern Vault-backed model access for Codex, OpenAI API, and OpenRouter, including configurable Cortex models for embedding, query expansion, Dream, chat ingestion, OCR, and transcription.
+- Updated Cortex docs, API contracts, Runtime release packaging, and smoke tests for the new Runtime-owned Cortex architecture.
+- Raised the required Runtime floor to 1.2.7 for the new Cortex API, storage, job, CLI, and plugin contracts.
+
 ## v1.2.6 - 2026-06-03
 
 - Added sharper Tavern overview copy on the home screen.
