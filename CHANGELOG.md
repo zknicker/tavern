@@ -2,6 +2,10 @@
 
 All notable changes to this project will be documented in this file.
 
+## v1.2.8 - 2026-06-06
+
+- Fixed desktop backend startup when the configured Tavern Runtime is temporarily unavailable while model access jobs initialize.
+
 ## v1.2.7 - 2026-06-06
 
 - Added the GBrain-aligned Cortex stack with PGlite storage, Cortex CLI commands, OpenClaw Cortex skills, source ingestion, imports, recall, embeddings, schema additions, page history, and revert.
