@@ -172,6 +172,11 @@ The tarball contains:
 ```txt
 bin/tavern-runtime
 bin/tavern
+bin/initdb.wasm
+bin/pg_trgm.tar.gz
+bin/pglite.data
+bin/pglite.wasm
+bin/vector.tar.gz
 share/tavern/openclaw-plugins/
 share/tavern/node_modules/@tavern/sdk/
 ```

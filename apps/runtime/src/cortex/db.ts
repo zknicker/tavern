@@ -142,7 +142,9 @@ function resolvePgliteAssetDirectory(): string {
     const candidates = [
         path.dirname(fileURLToPath(import.meta.url)),
         process.argv[1] ? path.dirname(path.resolve(process.argv[1])) : null,
+        process.argv[1] ? realPathDir(path.resolve(process.argv[1])) : null,
         path.dirname(process.execPath),
+        realPathDir(process.execPath),
     ];
 
     for (const candidate of candidates) {
@@ -152,6 +154,14 @@ function resolvePgliteAssetDirectory(): string {
     }
 
     return path.dirname(require.resolve('@electric-sql/pglite'));
+}
+
+function realPathDir(filePath: string): string | null {
+    try {
+        return path.dirname(fs.realpathSync(filePath));
+    } catch {
+        return null;
+    }
 }
 
 class PgliteCortexDatabase implements CortexDatabase {
