@@ -1,4 +1,4 @@
-import { z } from 'zod';
+import * as z from 'zod';
 import { loadCodexCredentials } from './credentials.ts';
 import { CodexUsageAuthError, CodexUsageParseError, CodexUsageRequestError } from './errors.ts';
 import type {

@@ -9,6 +9,7 @@ import { createCuratedProviderInventory, sortModels } from './provider-inventory
 const providerCacheIds = {
     claude: 'model-inventory-claude',
     codex: 'model-inventory-codex',
+    openai: 'model-inventory-openai',
     openrouter: 'model-inventory-openrouter',
 } as const satisfies Record<ModelProviderId, Parameters<typeof loadCachedDocument>[0]>;
 
@@ -20,10 +21,24 @@ export async function loadProviderInventory(provider: ModelProviderId) {
         );
 
         if (snapshot) {
-            return {
+            const curated = createCuratedProviderInventory(provider);
+            const merged = {
                 ...snapshot,
-                models: sortModels(snapshot.models),
+                models: sortModels([
+                    ...snapshot.models.filter(
+                        (model) =>
+                            !curated.models.some((curatedModel) => curatedModel.ref === model.ref)
+                    ),
+                    ...curated.models,
+                ]),
             };
+            if (JSON.stringify(merged.models) !== JSON.stringify(sortModels(snapshot.models))) {
+                await saveProviderInventory({
+                    ...merged,
+                    syncedAt: new Date().toISOString(),
+                });
+            }
+            return merged;
         }
     } catch (_error) {
         await deleteProviderInventory(provider);

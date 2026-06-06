@@ -4,7 +4,7 @@ Tavern memory lifecycle is Cortex page lifecycle.
 
 There is no separate durable memory pool, promotion queue, or memory-record
 ranking system. Durable memory lives as Cortex pages, timeline entries, links,
-tags, observations, source metadata, embeddings, audit events, and maintenance
+tags, observations, source metadata, embeddings, audit events, and repair
 state.
 
 ## Context Management Boundary
@@ -27,7 +27,7 @@ available and inspectable:
 Cortex owns durable memory and knowledge.
 
 New durable knowledge enters Cortex through explicit capture, page edits,
-source imports, agent observations, or maintenance repair. A write can update a
+source imports, agent observations, or derived-state repair. A write can update a
 page's compiled truth, append timeline evidence, create or repair links, update
 tags, attach citations, and refresh chunks and embeddings.
 
@@ -57,7 +57,7 @@ separate prompt-block list.
 
 ## Maintenance
 
-Cortex maintenance keeps the durable brain usable.
+Cortex repair keeps the durable brain usable.
 
 Maintenance can:
 
@@ -69,5 +69,5 @@ Maintenance can:
 * mark stale or conflicting knowledge
 * report failed captures and recall errors
 
-OpenClaw cron is not the scheduler of record for Cortex maintenance. Tavern
+OpenClaw cron is not the scheduler of record for Cortex repair. Tavern
 Runtime jobs own it.

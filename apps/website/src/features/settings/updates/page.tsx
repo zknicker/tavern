@@ -39,6 +39,7 @@ export function UpdatesSettings() {
                         className="md:items-start"
                         description="Tavern will update both your app and the connected runtime automatically."
                         title="Update"
+                        trailingWidth="intrinsic"
                     >
                         <div className="flex min-w-0 flex-col gap-2">
                             <div className="flex shrink-0 items-center gap-2 md:justify-end">

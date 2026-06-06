@@ -21,7 +21,7 @@ reads, soft deletes, automations, deliveries, and the product timeline.
 | Runtime schema | `apps/runtime/src/db/schema.ts` | Runtime SQLite schema and fresh setup |
 | Runtime chat store | `apps/runtime/src/tavern/chat-api/` | OpenAPI-backed chat, message, response, activity, artifact, delivery, read, and event store |
 | Runtime channel outbox | `apps/runtime/src/tavern/channel-store.ts` | Tavern Messenger plugin ingress queue and accepted-message receipt state |
-| Runtime Cortex store | `apps/runtime/src/cortex/` | Proposed Runtime-owned GBrain-style page, chunk, link, embedding, audit, and maintenance store |
+| Cortex PGLite store | `apps/runtime/src/cortex/` | Runtime-owned GBrain-style page, chunk, link, embedding, audit, and repair store |
 | Runtime chat tests | `apps/runtime/src/tavern/chat-api-store.test.ts` | Contract, identity, sequence, event, read, and route behavior |
 | App schema | `apps/server/src/db/bootstrap.ts` | App SQLite fresh setup |
 | App Drizzle schema | `apps/server/src/db/schema/` | Typed app cache and synced runtime tables |
@@ -34,7 +34,7 @@ reads, soft deletes, automations, deliveries, and the product timeline.
 | --- | --- | --- |
 | Runtime SQLite | Tavern Runtime | Canonical chat model, automation delivery, channel ingress, cursor-backed events, read markers, runtime metadata |
 | App SQLite | Tavern App | Client cache, app-local settings, and presentation state |
-| Runtime Cortex store | Tavern Runtime | Cortex pages, chunks, links, files, citations, timelines, audit, telemetry, embeddings, and maintenance state |
+| Runtime Cortex store | Tavern Runtime | Cortex pages, chunks, links, files, citations, timelines, audit, telemetry, embeddings, and repair state |
 | OpenClaw state | OpenClaw | Sessions, turns, tools, model calls, transcripts, and files |
 
 Runtime SQLite is the product source of truth for chat. App SQLite can cache for
@@ -74,6 +74,7 @@ Cortex ids use Tavern product identity:
 
 | Prefix | Entity |
 | --- | --- |
+| `ctxs_` | Cortex source |
 | `ctxp_` | Cortex page |
 | `ctxc_` | Cortex chunk |
 | `ctxl_` | Cortex link |
@@ -466,35 +467,53 @@ canonical chat history.
 
 ## Cortex Tables
 
-Tavern Runtime owns Cortex storage. OpenClaw prompt-time context management is
-separate from Tavern-owned durable Cortex knowledge and memory.
+Tavern Runtime owns Cortex storage in a separate embedded Postgres-compatible
+PGLite database. OpenClaw prompt-time context management is separate from
+Tavern-owned durable Cortex knowledge and memory.
 
 ```text
 cortex_sources
 cortex_pages
+cortex_page_versions
+cortex_page_aliases
+cortex_claims
 cortex_chunks
+cortex_encodings
 cortex_links
 cortex_files
 cortex_citations
+cortex_captures
+cortex_jobs
 cortex_timeline_entries
 cortex_audit_events
+cortex_chat_ingestion_cursors
 cortex_telemetry_events
+cortex_settings
+cortex_schemas
 ```
 
 Rules:
 
 * Cortex pages are wiki-style intelligence pages with stable ids,
-  source-scoped slugs, compiled truth, timelines, frontmatter, and source
-  metadata.
-* Cortex chunks are derived from pages and carry embedding metadata. Capture and
-  recall require current embeddings; page reads do not.
+  globally unique slugs, compiled truth, timelines, frontmatter, and source
+  metadata. `cortex_sources` records provenance and file/chat/input origins
+  from managed markdown sync and source ingest; it is not a separate page
+  namespace today.
+* Cortex page versions are immutable page snapshots recorded on managed
+  markdown projection. Revert applies a prior snapshot as a new page edit.
+* Cortex chunks are derived from pages. Embeddings live in the Cortex DB as
+  `vector` values, not in a separate LanceDB sidecar. Capture and recall require
+  current embeddings; page reads do not.
 * Cortex timelines store append-only evidence rather than duplicating chat
   history.
 * Cortex links connect pages, participants, chats, messages, sessions, files,
   citations, and related observations.
-* Audit and telemetry records make capture, recall, maintenance, embedding
+* Audit and telemetry records make capture, recall, repair, embedding
   repair, and failures inspectable.
-* Markdown wiki files and search indexes are derived state.
+* Markdown wiki files are the editable page surface. Text and vector search
+  indexes live inside the Cortex PGLite database.
+* Source ingest writes canonical source pages first, then lets sync project
+  rows, chunks, source refs, timeline evidence, audit, and stale embeddings.
 
 ## Transaction Rules
 

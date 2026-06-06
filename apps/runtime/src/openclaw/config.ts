@@ -30,6 +30,7 @@ const noBundledSkillAllowlist = ['__tavern_no_bundled_openclaw_skills__'];
 export interface ManagedOpenClawRuntimeConfig {
     configDir: string;
     configPath: string;
+    cortexPluginPath: string | null;
     gatewayPort: number;
     gatewayToken: string;
     gatewayUrl: string;
@@ -105,6 +106,7 @@ export async function prepareManagedOpenClawConfig(input?: {
     return {
         configDir,
         configPath,
+        cortexPluginPath,
         gatewayPort,
         gatewayToken,
         gatewayUrl: `ws://127.0.0.1:${gatewayPort}`,
@@ -335,6 +337,9 @@ const defaultAgentToolNames = [
     'cortex_search',
     'cortex_get_page',
     'cortex_capture',
+    'cortex_edit',
+    'cortex_ingest',
+    'cortex_import',
     'cortex_recall',
     'cortex_list_backlinks',
     'workspace_notes_read',

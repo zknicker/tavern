@@ -15,7 +15,7 @@ const envConfig = readEnvFile([
     'TAVERN_OPENCLAW_VERSION',
     'TAVERN_OPENCLAW_WORKSPACE_PLUGIN_DEPLOY_PATH',
     'TAVERN_OPENCLAW_WORKSPACE_PLUGIN_PATH',
-    'TAVERN_CORTEX_VECTOR_PATH',
+    'TAVERN_CORTEX_DATABASE_PATH',
     'TAVERN_RUNTIME_HOST',
     'TAVERN_RUNTIME_PORT',
     'TAVERN_RUNTIME_ROOT',
@@ -77,5 +77,8 @@ export function getRuntimePort(): string {
 }
 
 export function readConfigValue(key: string): string | null {
-    return process.env[key]?.trim() || envConfig[key]?.trim() || null;
+    if (process.env[key] !== undefined) {
+        return process.env[key]?.trim() || null;
+    }
+    return envConfig[key]?.trim() || null;
 }

@@ -19,31 +19,49 @@ import {
 } from '../../../hooks/connections/use-runtime-connection.ts';
 import {
     useCortexSchema,
+    useCortexSchemaAdditions,
     useCortexSettings,
     useCortexStatus,
-    useRunCortexJob,
     useSaveCortexSchema,
     useSaveCortexSettings,
 } from '../../../hooks/cortex/use-cortex-settings.ts';
+import { useJobRun } from '../../../hooks/jobs/use-job-run.ts';
+import { useModelInventory } from '../../../hooks/models/use-model-inventory.ts';
 import type {
+    CortexSchemaAdditionsOutput,
     CortexSchemaOutput,
     CortexSettingsOutput,
     CortexStatusOutput,
+    ModelInventoryOutput,
 } from '../../../lib/trpc.tsx';
 
 type ConnectionStatus = ReturnType<typeof toRuntimePageConnectionState>;
 type CortexSettings = NonNullable<CortexSettingsOutput>;
 type CortexSchema = NonNullable<CortexSchemaOutput>;
+type CortexSchemaAdditionsData = NonNullable<CortexSchemaAdditionsOutput>;
 type CortexStatus = NonNullable<CortexStatusOutput>;
 type CortexEmbeddingModel = CortexSettings['embedding']['model'];
+type CortexEmbeddingModelRef = CortexSettings['models']['embedding'];
+type CortexChatModelRef = CortexSettings['models']['queryExpansion'];
+type CortexGeneralModelRef = CortexSettings['models']['chatIngestion'];
 type CortexRecallMode = CortexSettings['recall']['mode'];
+type ModelInventory = NonNullable<ModelInventoryOutput>;
+type ModelCapability =
+    ModelInventory['providers'][number]['models'][number]['capabilities'][number];
+type ModelProviderId = ModelInventory['providers'][number]['provider'];
 
-const embeddingModelOptions: Array<{ label: string; value: CortexEmbeddingModel }> = [
-    { label: 'text-embedding-3-small', value: 'text-embedding-3-small' },
-    { label: 'text-embedding-3-large', value: 'text-embedding-3-large' },
-];
+interface ModelOption<T extends string = string> {
+    label: string;
+    value: T;
+}
 
 const defaultEmbeddingModel: CortexEmbeddingModel = 'text-embedding-3-small';
+const defaultEmbeddingModelRef: CortexEmbeddingModelRef = 'openai/text-embedding-3-small';
+const defaultQueryExpansionModel: CortexChatModelRef = 'openrouter/google/gemini-2.5-flash-lite';
+const defaultChatIngestionModel: CortexChatModelRef = 'codex/gpt-5.5';
+const defaultDreamModel: CortexChatModelRef = 'codex/gpt-5.5';
+const defaultAudioTranscriptionModel: CortexGeneralModelRef = 'openai/whisper-1';
+const defaultOcrModel: CortexGeneralModelRef = 'openai/gpt-4o-mini';
 const defaultRecallMode: CortexRecallMode = 'balanced';
 
 const recallModeOptions: Array<{
@@ -58,41 +76,65 @@ const recallModeOptions: Array<{
 function MemoriesSettingsContent() {
     const runtimeConnection = useRuntimeConnection();
     const settingsQuery = useCortexSettings();
+    const inventoryQuery = useModelInventory();
     const schemaQuery = useCortexSchema();
+    const schemaAdditionsQuery = useCortexSchemaAdditions();
     const statusQuery = useCortexStatus();
     const saveSchemaMutation = useSaveCortexSchema();
     const saveSettingsMutation = useSaveCortexSettings();
-    const runJobMutation = useRunCortexJob();
+    const runJobMutation = useJobRun();
     const settings = settingsQuery.data ?? null;
     const connectionStatus = toRuntimePageConnectionState(runtimeConnection.status);
     const isLoading =
         settingsQuery.isPending ||
+        inventoryQuery.isPending ||
         runtimeConnection.status === 'checking' ||
         runtimeConnection.status === 'error';
     const embeddingModel = settings?.embedding.model ?? defaultEmbeddingModel;
+    const embeddingModelRef = settings?.models.embedding ?? defaultEmbeddingModelRef;
+    const queryExpansionModel = settings?.models.queryExpansion ?? defaultQueryExpansionModel;
+    const chatIngestionModel = settings?.models.chatIngestion ?? defaultChatIngestionModel;
+    const dreamModel = settings?.models.dream ?? defaultDreamModel;
+    const audioTranscriptionModel =
+        settings?.models.audioTranscription ?? defaultAudioTranscriptionModel;
+    const ocrModel = settings?.models.ocr ?? defaultOcrModel;
     const recallMode = settings?.recall.mode ?? defaultRecallMode;
 
     return (
         <div>
-            <BadgeDivider className="pb-4">Cortex Configuration</BadgeDivider>
+            <BadgeDivider className="pb-4">Models</BadgeDivider>
             <CortexConfigurationGrid
+                audioTranscriptionModel={audioTranscriptionModel}
+                chatIngestionModel={chatIngestionModel}
                 connectionStatus={connectionStatus}
-                embeddingModel={embeddingModel}
+                dreamModel={dreamModel}
+                embeddingModelRef={embeddingModelRef}
+                inventory={inventoryQuery.data ?? null}
                 isLoading={isLoading}
-                onSaveApiKey={(apiKey) => {
-                    return saveSettingsMutation.mutateAsync({
+                ocrModel={ocrModel}
+                onSaveEmbeddingModel={(modelRef) => {
+                    saveSettingsMutation.mutate({
                         embedding: {
-                            apiKey,
-                            model: embeddingModel,
+                            model: modelRef.split('/').at(-1) as CortexEmbeddingModel,
+                            modelRef,
                             provider: 'openai',
+                        },
+                        models: {
+                            ...settings?.models,
+                            embedding: modelRef,
                         },
                     });
                 }}
-                onSaveEmbeddingModel={(model) => {
+                onSaveModel={(key, modelRef) => {
                     saveSettingsMutation.mutate({
                         embedding: {
-                            model,
+                            model: embeddingModel,
+                            modelRef: embeddingModelRef,
                             provider: 'openai',
+                        },
+                        models: {
+                            ...settings?.models,
+                            [key]: modelRef,
                         },
                     });
                 }}
@@ -100,22 +142,32 @@ function MemoriesSettingsContent() {
                     saveSettingsMutation.mutate({
                         embedding: {
                             model: embeddingModel,
+                            modelRef: embeddingModelRef,
                             provider: 'openai',
                         },
+                        models: settings?.models,
                         recall: {
                             mode,
                         },
                     });
                 }}
+                queryExpansionModel={queryExpansionModel}
                 recallMode={recallMode}
-                saveError={saveSettingsMutation.error?.message ?? null}
                 savePending={saveSettingsMutation.isPending}
-                settings={settings}
             />
             <CortexHealthCards
-                onRunJob={(job) => runJobMutation.mutate(job)}
-                pendingJob={runJobMutation.isPending ? runJobMutation.variables : null}
+                onRunJob={(slug) =>
+                    runJobMutation.mutate({
+                        payload: slug === 'cortex-generate-embeddings' ? { stale: true } : {},
+                        slug,
+                    })
+                }
+                pendingJob={runJobMutation.isPending ? runJobMutation.variables?.slug : null}
                 status={statusQuery.data ?? null}
+            />
+            <CortexSchemaAdditions
+                additions={schemaAdditionsQuery.data?.additions ?? []}
+                error={schemaAdditionsQuery.error?.message ?? null}
             />
             <CortexSchemaEditor
                 disabled={connectionStatus !== 'reachable' || schemaQuery.isPending}
@@ -128,13 +180,64 @@ function MemoriesSettingsContent() {
     );
 }
 
+export function CortexSchemaAdditions({
+    additions,
+    error,
+}: {
+    additions: CortexSchemaAdditionsData['additions'];
+    error: string | null;
+}) {
+    if (additions.length === 0 && !error) {
+        return null;
+    }
+    return (
+        <div className="mt-4">
+            <BadgeDivider className="pb-4">Schema Additions</BadgeDivider>
+            {error ? <div className="text-error text-xs">{error}</div> : null}
+            {additions.length > 0 ? (
+                <div className="grid gap-2 md:grid-cols-2">
+                    {additions.map((addition) => (
+                        <CardFrame key={addition.id}>
+                            <Card className="space-y-2 p-3">
+                                <div className="flex items-start justify-between gap-3">
+                                    <div className="min-w-0">
+                                        <div className="truncate font-medium text-sm">
+                                            {addition.name}
+                                        </div>
+                                        <div className="text-muted-foreground text-xs">
+                                            {addition.reason}
+                                        </div>
+                                    </div>
+                                    <span className="shrink-0 rounded border px-2 py-0.5 text-xs">
+                                        {formatSchemaAdditionKind(addition.kind)}
+                                    </span>
+                                </div>
+                                {Object.keys(addition.example).length > 0 ? (
+                                    <div className="truncate text-muted-foreground text-xs">
+                                        {formatSchemaAdditionExample(addition.example)}
+                                    </div>
+                                ) : null}
+                                <div className="text-muted-foreground text-xs">
+                                    {addition.usageCount} usage
+                                </div>
+                            </Card>
+                        </CardFrame>
+                    ))}
+                </div>
+            ) : null}
+        </div>
+    );
+}
+
 function CortexHealthCards({
     onRunJob,
     pendingJob,
     status,
 }: {
-    onRunJob: (job: 'generate-embeddings' | 'maintenance' | 'sync') => void;
-    pendingJob: 'dream' | 'generate-embeddings' | 'lint' | 'maintenance' | 'signal' | 'sync' | null;
+    onRunJob: (
+        job: 'cortex-generate-embeddings' | 'cortex-repair-derived-state' | 'cortex-sync'
+    ) => void;
+    pendingJob: string | null;
     status: CortexStatus | null;
 }) {
     const recommendations = status?.recommendations ?? [];
@@ -143,7 +246,7 @@ function CortexHealthCards({
     }
     return (
         <div className="mt-4">
-            <BadgeDivider className="pb-4">Cortex Health</BadgeDivider>
+            <BadgeDivider className="pb-4">Health</BadgeDivider>
             <div className="grid gap-2 md:grid-cols-2">
                 {recommendations.map((recommendation) => (
                     <CardFrame key={`${recommendation.kind}:${recommendation.action}`}>
@@ -190,14 +293,14 @@ function CortexHealthCards({
 
 function toRunnableCortexJob(
     action: CortexStatus['recommendations'][number]['action']
-): 'generate-embeddings' | 'maintenance' | 'sync' | null {
+): 'cortex-generate-embeddings' | 'cortex-repair-derived-state' | 'cortex-sync' | null {
     switch (action) {
         case 'run-cortex-generate-embeddings':
-            return 'generate-embeddings';
-        case 'run-cortex-maintenance':
-            return 'maintenance';
+            return 'cortex-generate-embeddings';
+        case 'run-cortex-repair-derived-state':
+            return 'cortex-repair-derived-state';
         case 'run-cortex-sync':
-            return 'sync';
+            return 'cortex-sync';
         default:
             return null;
     }
@@ -208,60 +311,103 @@ export function MemoriesSettings() {
 }
 
 function CortexConfigurationGrid({
+    audioTranscriptionModel,
     connectionStatus,
-    embeddingModel,
+    dreamModel,
+    embeddingModelRef,
+    inventory,
     isLoading,
-    onSaveApiKey,
     onSaveEmbeddingModel,
+    onSaveModel,
     onSaveRecallMode,
+    ocrModel,
+    queryExpansionModel,
     recallMode,
-    saveError,
     savePending,
-    settings,
+    chatIngestionModel,
 }: {
+    audioTranscriptionModel: CortexGeneralModelRef;
     connectionStatus: ConnectionStatus;
-    embeddingModel: CortexEmbeddingModel;
+    dreamModel: CortexChatModelRef;
+    embeddingModelRef: CortexEmbeddingModelRef;
+    inventory: ModelInventory | null;
     isLoading: boolean;
-    onSaveApiKey: (apiKey: string) => Promise<unknown>;
-    onSaveEmbeddingModel: (model: CortexEmbeddingModel) => void;
+    onSaveEmbeddingModel: (model: CortexEmbeddingModelRef) => void;
+    onSaveModel: (
+        key: 'audioTranscription' | 'chatIngestion' | 'dream' | 'ocr' | 'queryExpansion',
+        model: CortexGeneralModelRef
+    ) => void;
     onSaveRecallMode: (mode: CortexRecallMode) => void;
+    ocrModel: CortexGeneralModelRef;
+    queryExpansionModel: CortexChatModelRef;
     recallMode: CortexRecallMode;
-    saveError: string | null;
     savePending: boolean;
-    settings: CortexSettings | null;
+    chatIngestionModel: CortexChatModelRef;
 }) {
     const unavailable = getUnavailableValue(connectionStatus, isLoading);
+    const embeddingOptions = listModelOptionsByCapability(
+        inventory,
+        'embedding',
+        embeddingModelRef
+    ) as ModelOption<CortexEmbeddingModelRef>[];
+    const queryExpansionOptions = listModelOptionsByProviderCapability(
+        inventory,
+        'openrouter',
+        'general',
+        queryExpansionModel
+    ) as ModelOption<CortexChatModelRef>[];
+    const chatIngestionOptions = listModelOptionsByProviderCapability(
+        inventory,
+        'codex',
+        'general',
+        chatIngestionModel
+    ) as ModelOption<CortexChatModelRef>[];
+    const dreamOptions = listModelOptionsByProviderCapability(
+        inventory,
+        'codex',
+        'general',
+        dreamModel
+    ) as ModelOption<CortexChatModelRef>[];
+    const audioTranscriptionOptions = listModelOptionsByProviderCapability(
+        inventory,
+        'openai',
+        'audio-transcription',
+        audioTranscriptionModel
+    ) as ModelOption<CortexGeneralModelRef>[];
+    const ocrOptions = listModelOptionsByProviderCapability(
+        inventory,
+        'openai',
+        'vision',
+        ocrModel
+    ) as ModelOption<CortexGeneralModelRef>[];
 
     return (
         <CardFrame>
             <Card className="overflow-hidden p-0">
-                <OpenAiKeyRow
-                    connectionStatus={connectionStatus}
-                    onSave={onSaveApiKey}
-                    saveError={saveError}
-                    savePending={savePending}
-                    settings={settings}
-                />
-                <Separator />
-                <SettingsRow title="Embedding model">
+                <SettingsRow
+                    description="Finds related memories through semantic search."
+                    title="Embedding model"
+                >
                     {unavailable ? (
                         <Input disabled value={unavailable} />
                     ) : (
                         <Select
                             disabled={savePending}
                             onValueChange={(nextValue) => {
-                                const model = toEmbeddingModel(nextValue);
-                                if (model) {
-                                    onSaveEmbeddingModel(model);
+                                const modelRef = toEmbeddingModelRef(nextValue);
+                                if (modelRef) {
+                                    onSaveEmbeddingModel(modelRef);
                                 }
                             }}
-                            value={embeddingModel}
+                            value={embeddingModelRef}
                         >
                             <SelectTrigger>
-                                <SelectValue>{embeddingModel}</SelectValue>
+                                <SelectValue>
+                                    {formatModelOption(embeddingModelRef, embeddingOptions)}
+                                </SelectValue>
                             </SelectTrigger>
                             <SelectContent>
-                                {embeddingModelOptions.map((option) => (
+                                {embeddingOptions.map((option) => (
                                     <SelectItem key={option.value} value={option.value}>
                                         {option.label}
                                     </SelectItem>
@@ -271,7 +417,60 @@ function CortexConfigurationGrid({
                     )}
                 </SettingsRow>
                 <Separator />
-                <SettingsRow title="Default read budget">
+                <ModelSelectRow
+                    description="Rewrites searches to recover more relevant memories."
+                    disabled={savePending}
+                    label="Query expansion model"
+                    onSave={(model) => onSaveModel('queryExpansion', model)}
+                    options={queryExpansionOptions}
+                    unavailable={unavailable}
+                    value={queryExpansionModel}
+                />
+                <Separator />
+                <ModelSelectRow
+                    description="Detects facts and preferences worth remembering."
+                    disabled={savePending}
+                    label="Chat ingestion model"
+                    onSave={(model) => onSaveModel('chatIngestion', model)}
+                    options={chatIngestionOptions}
+                    unavailable={unavailable}
+                    value={chatIngestionModel}
+                />
+                <Separator />
+                <ModelSelectRow
+                    description="Consolidates memories and repairs knowledge overnight."
+                    disabled={savePending}
+                    label="Dream model"
+                    onSave={(model) => onSaveModel('dream', model)}
+                    options={dreamOptions}
+                    unavailable={unavailable}
+                    value={dreamModel}
+                />
+                <Separator />
+                <ModelSelectRow
+                    description="Transcribes audio and video before source import."
+                    disabled={savePending}
+                    label="Audio transcription model"
+                    onSave={(model) => onSaveModel('audioTranscription', model)}
+                    options={audioTranscriptionOptions}
+                    unavailable={unavailable}
+                    value={audioTranscriptionModel}
+                />
+                <Separator />
+                <ModelSelectRow
+                    description="Extracts text from screenshots and images."
+                    disabled={savePending}
+                    label="OCR model"
+                    onSave={(model) => onSaveModel('ocr', model)}
+                    options={ocrOptions}
+                    unavailable={unavailable}
+                    value={ocrModel}
+                />
+                <Separator />
+                <SettingsRow
+                    description="Controls how much memory agents read by default."
+                    title="Default read budget"
+                >
                     {unavailable ? (
                         <Input disabled value={unavailable} />
                     ) : (
@@ -303,48 +502,50 @@ function CortexConfigurationGrid({
     );
 }
 
-function OpenAiKeyRow({
-    connectionStatus,
+function ModelSelectRow({
+    description,
+    disabled,
+    label,
     onSave,
-    saveError,
-    savePending,
-    settings,
+    options,
+    unavailable,
+    value,
 }: {
-    connectionStatus: ConnectionStatus;
-    onSave: (apiKey: string) => Promise<unknown>;
-    saveError: string | null;
-    savePending: boolean;
-    settings: CortexSettings | null;
+    description: string;
+    disabled: boolean;
+    label: string;
+    onSave: (model: CortexGeneralModelRef) => void;
+    options: ModelOption<CortexGeneralModelRef>[];
+    unavailable: string | null;
+    value: CortexGeneralModelRef;
 }) {
-    const [apiKey, setApiKey] = React.useState('');
-    React.useEffect(() => {
-        setApiKey(settings?.embedding.apiKey ?? '');
-    }, [settings?.embedding.apiKey]);
-
-    const trimmedApiKey = apiKey.trim();
-    const canSaveApiKey =
-        connectionStatus === 'reachable' &&
-        trimmedApiKey.startsWith('sk-') &&
-        !trimmedApiKey.startsWith('sk-ant-') &&
-        !trimmedApiKey.startsWith('sk-or-');
-    const savedApiKey = settings?.embedding.apiKey ?? '';
-
     return (
-        <SettingsRow error={saveError} title="OpenAI API key">
-            <Input
-                autoComplete="off"
-                className="font-mono text-xs"
-                disabled={savePending}
-                onBlur={() => {
-                    if (canSaveApiKey && trimmedApiKey !== savedApiKey) {
-                        void onSave(trimmedApiKey);
-                    }
-                }}
-                onChange={(event) => setApiKey(event.target.value)}
-                placeholder="sk-..."
-                type="text"
-                value={apiKey}
-            />
+        <SettingsRow description={description} title={label}>
+            {unavailable ? (
+                <Input disabled value={unavailable} />
+            ) : (
+                <Select
+                    disabled={disabled}
+                    onValueChange={(nextValue) => {
+                        const model = toChatModelRef(nextValue, options);
+                        if (model) {
+                            onSave(model);
+                        }
+                    }}
+                    value={value}
+                >
+                    <SelectTrigger>
+                        <SelectValue>{formatModelOption(value, options)}</SelectValue>
+                    </SelectTrigger>
+                    <SelectContent>
+                        {options.map((option) => (
+                            <SelectItem key={option.value} value={option.value}>
+                                {option.label}
+                            </SelectItem>
+                        ))}
+                    </SelectContent>
+                </Select>
+            )}
         </SettingsRow>
     );
 }
@@ -372,7 +573,7 @@ function CortexSchemaEditor({
 
     return (
         <div className="mt-4">
-            <BadgeDivider className="pb-4">Cortex Schema</BadgeDivider>
+            <BadgeDivider className="pb-4">Schema</BadgeDivider>
             <CardFrame>
                 <Card className="overflow-hidden p-0">
                     <SettingsRow
@@ -437,9 +638,63 @@ function CortexSchemaEditor({
     );
 }
 
-function toEmbeddingModel(value: string | null): CortexEmbeddingModel | null {
-    return embeddingModelOptions.some((option) => option.value === value)
-        ? (value as CortexEmbeddingModel)
+function listModelOptionsByCapability(
+    inventory: ModelInventory | null,
+    capability: ModelCapability,
+    currentValue: string
+): ModelOption[] {
+    return listModelOptions(inventory, capability, currentValue);
+}
+
+function listModelOptionsByProviderCapability(
+    inventory: ModelInventory | null,
+    providerId: ModelProviderId,
+    capability: ModelCapability,
+    currentValue: string
+): ModelOption[] {
+    return listModelOptions(inventory, capability, currentValue, providerId);
+}
+
+function listModelOptions(
+    inventory: ModelInventory | null,
+    capability: ModelCapability,
+    currentValue: string,
+    providerId?: ModelProviderId
+): ModelOption[] {
+    const options =
+        inventory?.providers
+            .filter((provider) => !providerId || provider.provider === providerId)
+            .flatMap((provider) =>
+                provider.models
+                    .filter((model) => model.capabilities.includes(capability))
+                    .map((model) => ({
+                        label: `${provider.displayName} ${model.displayName}`,
+                        value: model.ref,
+                    }))
+            )
+            .sort((left, right) => left.label.localeCompare(right.label)) ?? [];
+
+    return options.some((option) => option.value === currentValue)
+        ? options
+        : [
+              ...options,
+              {
+                  label: currentValue,
+                  value: currentValue,
+              },
+          ];
+}
+
+function toEmbeddingModelRef(value: string | null): CortexEmbeddingModelRef | null {
+    return value === defaultEmbeddingModelRef ? value : null;
+}
+
+function toChatModelRef(
+    value: string | null,
+    options: ModelOption<CortexGeneralModelRef>[]
+): CortexGeneralModelRef | null {
+    return options.some((option) => option.value === value)
+        ? (value as CortexGeneralModelRef)
         : null;
 }
 
@@ -453,6 +708,10 @@ function formatRecallMode(mode: CortexRecallMode) {
     return recallModeOptions.find((option) => option.value === mode)?.label ?? mode;
 }
 
+function formatModelOption<T extends string>(model: T, options: ModelOption<T>[]) {
+    return options.find((option) => option.value === model)?.label ?? model;
+}
+
 function formatRecommendationAction(action: CortexStatus['recommendations'][number]['action']) {
     switch (action) {
         case 'configure-embeddings':
@@ -461,11 +720,28 @@ function formatRecommendationAction(action: CortexStatus['recommendations'][numb
             return 'Inspect lint';
         case 'run-cortex-generate-embeddings':
             return 'Generate embeddings';
-        case 'run-cortex-maintenance':
-            return 'Run maintenance';
+        case 'run-cortex-repair-derived-state':
+            return 'Repair derived state';
         case 'run-cortex-sync':
             return 'Run sync';
     }
+}
+
+function formatSchemaAdditionKind(
+    kind: CortexSchemaAdditionsData['additions'][number]['kind']
+): string {
+    switch (kind) {
+        case 'link-type':
+            return 'Link type';
+        case 'page-type':
+            return 'Page type';
+    }
+}
+
+function formatSchemaAdditionExample(example: Record<string, unknown>): string {
+    return Object.entries(example)
+        .map(([key, value]) => `${key}: ${String(value)}`)
+        .join(' · ');
 }
 
 function getUnavailableValue(connectionStatus: ConnectionStatus, isLoading: boolean) {

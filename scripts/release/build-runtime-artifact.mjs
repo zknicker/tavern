@@ -34,6 +34,7 @@ const main = async () => {
         '--outfile',
         path.join(stageRoot, 'bin', 'tavern'),
     ]);
+    run('node', ['apps/runtime/scripts/copy-pglite-assets.mjs', path.join(stageRoot, 'bin')]);
     await fs.copyFile(
         path.join(stageRoot, 'bin', 'tavern'),
         path.join(stageRoot, 'bin', 'tavern-runtime')

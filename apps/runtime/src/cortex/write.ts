@@ -4,9 +4,9 @@ import type {
     CortexPage,
     CortexSourceRef,
 } from '@tavern/api';
-import type { Database } from '../db/sqlite';
-import { namedParams } from '../db/sqlite';
 import { writeCortexAudit } from './audit';
+import { getActiveCortexSchema } from './cortex-schema';
+import type { CortexDatabase } from './db';
 import { createCortexId, hashText, slugifyCortexTitle } from './ids';
 import { writeCanonicalCortexMarkdownDraft } from './markdown-file';
 import { findPageRow, getCortexPage, toPage } from './read';
@@ -18,23 +18,29 @@ import {
     sourceRefFromCapture,
     type TimelineRow,
 } from './rows';
+import { addCortexSchemaTerm } from './schema-additions';
 import { syncCortexMarkdown } from './sync';
 
-export function captureCortex(db: Database, input: CortexCaptureInput): CortexCaptureResult {
+export async function captureCortex(
+    db: CortexDatabase,
+    input: CortexCaptureInput
+): Promise<CortexCaptureResult> {
     const now = nowIso();
     const sourceRefs = [sourceRefFromCapture(input)];
+    await ensureCapturePageType(db, input, sourceRefs);
+    const normalizedInput = input;
     const captureKey = hashText(
         JSON.stringify({
             sourceRefs,
-            title: input.title,
+            title: normalizedInput.title,
             type: input.type,
         })
     );
-    const existingCapture = findCapture(db, captureKey);
+    const existingCapture = await findCapture(db, captureKey);
     if (existingCapture?.status === 'success') {
-        const pageRow = findPageRow(db, existingCapture.pageId);
-        if (pageRow && isSameCaptureContent(pageRow, input)) {
-            const page = getCortexPage(db, existingCapture.pageId);
+        const pageRow = await findPageRow(db, existingCapture.pageId);
+        if (pageRow && isSameCaptureContent(pageRow, normalizedInput)) {
+            const page = await getCortexPage(db, existingCapture.pageId);
             if (!page) {
                 throw new Error('Cortex capture points at a missing page.');
             }
@@ -42,35 +48,59 @@ export function captureCortex(db: Database, input: CortexCaptureInput): CortexCa
         }
     }
 
-    const page = writePageMarkdownThenProject(db, input, sourceRefs, now);
-    const auditId = writeCortexAudit(db, {
+    const page = await writePageMarkdownThenProject(db, normalizedInput, sourceRefs, now);
+    const auditId = await writeCortexAudit(db, {
         kind: 'capture',
         recordRefs: [page.id],
         sourceRefs,
         status: 'success',
         summary: `Captured ${page.title}.`,
     });
-    upsertCapture(db, captureKey, page.id, auditId, sourceRefs, now);
+    await upsertCapture(db, captureKey, page.id, auditId, sourceRefs, now);
     return { auditId, page };
 }
 
-function writePageMarkdownThenProject(
-    db: Database,
+async function ensureCapturePageType(
+    db: CortexDatabase,
+    input: CortexCaptureInput,
+    sourceRefs: CortexSourceRef[]
+): Promise<void> {
+    const schema = await getActiveCortexSchema(db);
+    if (schema.pageTypes.includes(input.type)) {
+        return;
+    }
+    await addCortexSchemaTerm(db, {
+        example: {
+            title: input.title,
+        },
+        kind: 'page-type',
+        name: input.type,
+        reason: `A Cortex capture introduced page type "${input.type}".`,
+        sourceRefs,
+    });
+}
+
+async function writePageMarkdownThenProject(
+    db: CortexDatabase,
     input: CortexCaptureInput,
     sourceRefs: CortexSourceRef[],
     now: string
-): CortexPage {
+): Promise<CortexPage> {
     const slug = slugifyCortexTitle(input.title);
-    const existing = findPageRow(db, slug);
+    const existing = await findPageRow(db, slug);
     const id = existing?.id ?? createCortexId('ctxp');
     const compiledTruth = input.content.trim();
-    const frontmatter = { aliases: [], scope: memoryScopeFromCapture(input), tags: input.tags };
+    const frontmatter = {
+        aliases: [],
+        scope: memoryScopeFromCapture(input),
+        tags: input.tags,
+    };
     const existingSourceRefs = existing
         ? readJsonArray<CortexSourceRef>(existing.source_refs_json)
         : [];
     const allSourceRefs = uniqueSourceRefs([...existingSourceRefs, ...sourceRefs]);
     const timeline = [
-        ...listTimelineDrafts(db, existing?.id),
+        ...(await listTimelineDrafts(db, existing?.id)),
         { body: `Captured: ${input.title}`, createdAt: now, sourceRefs },
     ];
     writeCanonicalCortexMarkdownDraft({
@@ -88,17 +118,17 @@ function writePageMarkdownThenProject(
         type: input.type,
         updatedAt: now,
     });
-    syncCortexMarkdown(db);
-    const page = findPageRow(db, id) ?? findPageRow(db, slug);
+    await syncCortexMarkdown(db);
+    const page = (await findPageRow(db, id)) ?? (await findPageRow(db, slug));
     if (!page) {
         throw new Error('Cortex markdown projection did not return a page.');
     }
-    replaceClaims(db, page.id, input, sourceRefs, now);
-    return toPage(db, findPageRow(db, id) ?? page);
+    await replaceClaims(db, page.id, input, sourceRefs, now);
+    return await toPage(db, (await findPageRow(db, id)) ?? page);
 }
 
 function isSameCaptureContent(
-    pageRow: NonNullable<ReturnType<typeof findPageRow>>,
+    pageRow: NonNullable<Awaited<ReturnType<typeof findPageRow>>>,
     input: CortexCaptureInput
 ): boolean {
     const frontmatter = readJsonRecord(pageRow.frontmatter_json);
@@ -117,13 +147,23 @@ function sameStringSet(left: string[], right: string[]): boolean {
 }
 
 function replaceClaims(
-    db: Database,
+    db: CortexDatabase,
     pageId: string,
     input: CortexCaptureInput,
     sourceRefs: CortexSourceRef[],
     now: string
-): void {
-    db.prepare('DELETE FROM cortex_claims WHERE page_id = ?').run(pageId);
+): Promise<void> {
+    return replaceClaimsAsync(db, pageId, input, sourceRefs, now);
+}
+
+async function replaceClaimsAsync(
+    db: CortexDatabase,
+    pageId: string,
+    input: CortexCaptureInput,
+    sourceRefs: CortexSourceRef[],
+    now: string
+): Promise<void> {
+    await db.prepare('DELETE FROM cortex_claims WHERE page_id = ?').run(pageId);
     const sentences = input.content
         .split(/(?<=[.!?])\s+/u)
         .map((sentence) => sentence.trim())
@@ -131,12 +171,13 @@ function replaceClaims(
         .slice(0, 20);
 
     for (const sentence of sentences) {
-        db.prepare(
-            `INSERT INTO cortex_claims
+        await db
+            .prepare(
+                `INSERT INTO cortex_claims
              (id, page_id, subject, predicate, value, confidence, status, source_refs_json, created_at, updated_at)
              VALUES ($id, $pageId, $subject, 'states', $value, 0.6, 'active', $sourceRefs, $createdAt, $updatedAt)`
-        ).run(
-            namedParams({
+            )
+            .run({
                 createdAt: now,
                 id: createCortexId('ctxcl'),
                 pageId,
@@ -144,56 +185,66 @@ function replaceClaims(
                 subject: input.title,
                 updatedAt: now,
                 value: sentence,
-            })
-        );
+            });
     }
 }
 
 function upsertCapture(
-    db: Database,
+    db: CortexDatabase,
     captureKey: string,
     pageId: string,
     auditId: string,
     sourceRefs: CortexSourceRef[],
     now: string
-): void {
-    db.prepare(
-        `INSERT INTO cortex_captures
+): Promise<void> {
+    return upsertCaptureAsync(db, captureKey, pageId, auditId, sourceRefs, now);
+}
+
+async function upsertCaptureAsync(
+    db: CortexDatabase,
+    captureKey: string,
+    pageId: string,
+    auditId: string,
+    sourceRefs: CortexSourceRef[],
+    now: string
+): Promise<void> {
+    await db
+        .prepare(
+            `INSERT INTO cortex_captures
          (id, capture_key, status, source_refs_json, output_refs_json, attempts, created_at, updated_at)
          VALUES ($id, $captureKey, 'success', $sourceRefs, $outputRefs, 1, $createdAt, $updatedAt)
          ON CONFLICT(capture_key) DO UPDATE SET
             status = 'success',
             output_refs_json = excluded.output_refs_json,
-            attempts = attempts + 1,
+            attempts = cortex_captures.attempts + 1,
             updated_at = excluded.updated_at`
-    ).run(
-        namedParams({
+        )
+        .run({
             captureKey,
             createdAt: now,
             id: createCortexId('ctxcap'),
             outputRefs: JSON.stringify([{ auditId, id: pageId, kind: 'page' }]),
             sourceRefs: JSON.stringify(sourceRefs),
             updatedAt: now,
-        })
-    );
+        });
 }
 
-function listTimelineDrafts(
-    db: Database,
+async function listTimelineDrafts(
+    db: CortexDatabase,
     pageId: string | undefined
-): Array<{ body: string; createdAt: string; sourceRefs: CortexSourceRef[] }> {
+): Promise<Array<{ body: string; createdAt: string; sourceRefs: CortexSourceRef[] }>> {
     if (!pageId) {
         return [];
     }
     return (
-        db
+        await db
             .prepare(
                 `SELECT body, created_at, source_refs_json
                  FROM cortex_timeline_entries
                  WHERE page_id = ?
                  ORDER BY created_at ASC`
             )
-            .all(pageId) as TimelineRow[]
+            .all<TimelineRow>(pageId)
     ).map((row) => ({
         body: row.body,
         createdAt: row.created_at,
@@ -231,19 +282,22 @@ function memoryScopeFromCapture(input: CortexCaptureInput): Record<string, strin
     );
 }
 
-function findCapture(db: Database, captureKey: string): CaptureLookup {
-    const row = db
+async function findCapture(db: CortexDatabase, captureKey: string): Promise<CaptureLookup> {
+    const row = await db
         .prepare(
             `SELECT status, output_refs_json
              FROM cortex_captures
              WHERE capture_key = ?
              LIMIT 1`
         )
-        .get(captureKey) as { output_refs_json: string; status: string } | null;
+        .get<{ output_refs_json: string; status: string }>(captureKey);
     if (!row) {
         return null;
     }
-    const refs = JSON.parse(row.output_refs_json) as Array<{ auditId?: string; id?: string }>;
+    const refs = JSON.parse(row.output_refs_json) as Array<{
+        auditId?: string;
+        id?: string;
+    }>;
     return {
         auditId: refs[0]?.auditId ?? '',
         pageId: refs[0]?.id ?? '',

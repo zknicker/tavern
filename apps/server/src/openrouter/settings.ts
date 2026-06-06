@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { createConfiguredAgentRuntimeClient } from '../agent-runtime/configured-client.ts';
 import {
     deleteTavernVaultSecret,
     getTavernVaultSecret,
@@ -20,6 +21,11 @@ export interface OpenRouterSettings {
 }
 
 export async function getOpenRouterSettings(): Promise<OpenRouterSettings | null> {
+    const runtimeSettings = await getRuntimeOpenRouterSettings();
+    if (runtimeSettings) {
+        return runtimeSettings;
+    }
+
     const stored = await getTavernVaultSecret({
         id: tavernVaultSecretIds.openRouterSettings,
         schema: openRouterSecretSchema,
@@ -39,6 +45,23 @@ export async function saveOpenRouterSettings(input: {
     apiKey?: string | null;
     managementApiKey?: string | null;
 }): Promise<OpenRouterSettings | null> {
+    const client = createConfiguredAgentRuntimeClient();
+    if (client) {
+        try {
+            const payload = {
+                ...(input.apiKey?.trim() ? { apiKey: input.apiKey.trim() } : {}),
+                ...(input.managementApiKey?.trim()
+                    ? { managementApiKey: input.managementApiKey.trim() }
+                    : {}),
+            };
+            return Object.keys(payload).length > 0
+                ? await client.saveOpenRouterSettings(payload)
+                : await client.getOpenRouterSettings();
+        } finally {
+            client.close();
+        }
+    }
+
     const current = await getTavernVaultSecret({
         id: tavernVaultSecretIds.openRouterSettings,
         schema: openRouterSecretSchema,
@@ -69,6 +92,15 @@ export async function saveOpenRouterSettings(input: {
 }
 
 export async function deleteOpenRouterSettings(): Promise<OpenRouterSettings> {
+    const client = createConfiguredAgentRuntimeClient();
+    if (client) {
+        try {
+            return await client.deleteOpenRouterSettings();
+        } finally {
+            client.close();
+        }
+    }
+
     await deleteTavernVaultSecret(tavernVaultSecretIds.openRouterSettings);
 
     return toOpenRouterSettings({
@@ -78,6 +110,18 @@ export async function deleteOpenRouterSettings(): Promise<OpenRouterSettings> {
         },
         updatedAt: null,
     });
+}
+
+async function getRuntimeOpenRouterSettings(): Promise<OpenRouterSettings | null> {
+    const client = createConfiguredAgentRuntimeClient();
+    if (!client) {
+        return null;
+    }
+    try {
+        return await client.getOpenRouterSettings();
+    } finally {
+        client.close();
+    }
 }
 
 function toOpenRouterSettings(input: {

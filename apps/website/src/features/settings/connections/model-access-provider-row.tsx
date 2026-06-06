@@ -4,12 +4,17 @@ import { Icon } from '../../../components/ui/icon.tsx';
 import { FieldError } from '../../../components/ui/primitives/field.tsx';
 import { SettingsItem } from '../../../components/ui/settings-row.tsx';
 import type { ModelAccessOutput } from '../../../lib/trpc.tsx';
-import { ProviderConnectionDescription } from './provider-connection-description.tsx';
+import {
+    ProviderConnectionDescription,
+    ProviderConnectionDetail,
+    ProviderConnectionStatus,
+} from './provider-connection-description.tsx';
 
 interface ModelAccessProviderRowProps {
     children: ReactNode;
     color: string;
     description: string;
+    descriptionPlacement?: 'left' | 'right';
     error?: string | null;
     icon: IconSvgElement;
     label: string;
@@ -21,6 +26,7 @@ export function ModelAccessProviderRow({
     children,
     color,
     description,
+    descriptionPlacement = 'left',
     error = null,
     icon,
     label,
@@ -41,15 +47,28 @@ export function ModelAccessProviderRow({
                 </span>
                 <div className="min-w-0 space-y-0.5">
                     <h3 className="truncate font-medium text-foreground text-sm">{label}</h3>
-                    <ProviderConnectionDescription
-                        description={description}
-                        state={state}
-                        target={target}
-                    />
+                    {descriptionPlacement === 'left' ? (
+                        <ProviderConnectionDescription
+                            description={description}
+                            state={state}
+                            target={target}
+                        />
+                    ) : (
+                        <ProviderConnectionStatus state={state} />
+                    )}
                 </div>
             </div>
 
             <div className="min-w-0 space-y-2 md:w-full md:justify-self-end">
+                {descriptionPlacement === 'right' ? (
+                    <div className="md:text-right">
+                        <ProviderConnectionDetail
+                            description={description}
+                            state={state}
+                            target={target}
+                        />
+                    </div>
+                ) : null}
                 <div className="flex justify-start gap-2 md:justify-end">{children}</div>
                 {error ? <FieldError>{error}</FieldError> : null}
             </div>

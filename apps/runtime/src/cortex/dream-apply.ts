@@ -1,7 +1,6 @@
 import type { CortexSourceRef } from '@tavern/api';
-import type { Database } from '../db/sqlite';
-import { namedParams } from '../db/sqlite';
 import { getActiveCortexSchema, isKnownCortexLinkType } from './cortex-schema';
+import type { CortexDatabase } from './db';
 import type {
     DreamApplyResult,
     DreamCitation,
@@ -18,10 +17,11 @@ import { createCortexId, hashText, slugifyCortexTitle } from './ids';
 import { writeCanonicalCortexMarkdownDraft } from './markdown-file';
 import { findPageRow } from './read';
 import { nowIso, readJsonArray, readJsonRecord, type TimelineRow } from './rows';
+import { addCortexSchemaTerm } from './schema-additions';
 import { syncCortexMarkdown } from './sync';
 
-export function applyDreamProposal(
-    db: Database,
+export async function applyDreamProposal(
+    db: CortexDatabase,
     input: {
         model: string;
         origin?: {
@@ -34,40 +34,53 @@ export function applyDreamProposal(
         proposal: DreamProposal;
         sourceRange: DreamSourceRange;
     }
-): DreamApplyResult {
+): Promise<DreamApplyResult> {
     const now = nowIso();
     const origin = input.origin ?? {
         frontmatterKey: 'dream',
         relationshipSourceLocation: 'dream',
         tag: 'dream',
     };
-    const schema = getActiveCortexSchema(db);
+    const schema = await getActiveCortexSchema(db);
     const warnings: DreamWarning[] = [...input.proposal.warnings];
     const noops: DreamNoop[] = [...input.proposal.noops];
     const touchedPageIds = new Set<string>();
     const pageWriteSlugs = new Set<string>();
-    const relationships = input.proposal.relationships.filter((relationship) => {
-        if (isKnownCortexLinkType(schema, relationship.linkKind)) {
-            return true;
+    const relationships: DreamRelationship[] = [];
+    for (const relationship of input.proposal.relationships) {
+        if (!isKnownCortexLinkType(schema, relationship.linkKind)) {
+            await addCortexSchemaTerm(db, {
+                example: {
+                    sourceSlug: relationship.fromSlug,
+                    targetSlug: relationship.targetSlug,
+                },
+                kind: 'link-type',
+                name: relationship.linkKind,
+                reason: `Cortex Dream introduced link type "${relationship.linkKind}".`,
+                sourceRefs: input.sourceRange.sourceRefs,
+            });
         }
-        warnings.push({
-            message: `Skipped relationship ${relationship.fromSlug} -> ${relationship.targetSlug}: unknown link type ${relationship.linkKind}.`,
-        });
-        return false;
-    });
+        relationships.push(relationship);
+    }
 
-    upsertSourceRefs(db, input.sourceRange.sourceRefs, now);
+    await upsertSourceRefs(db, input.sourceRange.sourceRefs, now);
 
     for (const pageWrite of input.proposal.pageWrites) {
         const normalized = normalizePageWrite(pageWrite);
         if (!schema.pageTypes.includes(normalized.type)) {
-            warnings.push({
-                message: `Skipped ${normalized.slug}: unknown page type ${normalized.type}.`,
+            await addCortexSchemaTerm(db, {
+                example: {
+                    slug: normalized.slug,
+                    title: normalized.title,
+                },
+                kind: 'page-type',
+                name: normalized.type,
+                reason: `Cortex Dream introduced page type "${normalized.type}".`,
+                sourceRefs: input.sourceRange.sourceRefs,
             });
-            continue;
         }
         if (normalized.action === 'archive') {
-            const archived = archivePage(db, normalized.slug, now);
+            const archived = await archivePage(db, normalized.slug, now);
             if (archived) {
                 touchedPageIds.add(archived);
             }
@@ -75,7 +88,7 @@ export function applyDreamProposal(
         }
         pageWriteSlugs.add(normalized.slug);
         touchedPageIds.add(
-            writeDreamPage(
+            await writeDreamPage(
                 db,
                 normalized,
                 input.proposal.timelineEntries,
@@ -87,7 +100,7 @@ export function applyDreamProposal(
         );
     }
 
-    writeStandaloneRelationshipPages(
+    await writeStandaloneRelationshipPages(
         db,
         relationships,
         origin,
@@ -96,17 +109,17 @@ export function applyDreamProposal(
         now
     );
 
-    syncCortexMarkdown(db);
+    await syncCortexMarkdown(db);
 
     for (const observation of input.proposal.observations) {
-        const page = findPageRow(db, observation.pageSlug);
+        const page = await findPageRow(db, observation.pageSlug);
         if (!page) {
             warnings.push({
                 message: `Skipped observation for missing page ${observation.pageSlug}.`,
             });
             continue;
         }
-        upsertObservation(db, page.id, observation, input.sourceRange.sourceRefs, now);
+        await upsertObservation(db, page.id, observation, input.sourceRange.sourceRefs, now);
         touchedPageIds.add(page.id);
     }
 
@@ -115,7 +128,7 @@ export function applyDreamProposal(
         if (pageWriteSlugs.has(fromSlug)) {
             continue;
         }
-        const page = findPageRow(db, fromSlug);
+        const page = await findPageRow(db, fromSlug);
         if (page) {
             touchedPageIds.add(page.id);
             continue;
@@ -126,14 +139,16 @@ export function applyDreamProposal(
     }
 
     for (const citation of input.proposal.citations) {
-        const citationId = insertCitation(db, citation, input.sourceRange.sourceRefs, now);
+        const citationId = await insertCitation(db, citation, input.sourceRange.sourceRefs, now);
         if (citationId) {
-            const page = findPageRow(db, citation.pageSlug);
+            const page = await findPageRow(db, citation.pageSlug);
             if (page) {
                 touchedPageIds.add(page.id);
             }
         } else {
-            warnings.push({ message: `Skipped citation for missing page ${citation.pageSlug}.` });
+            warnings.push({
+                message: `Skipped citation for missing page ${citation.pageSlug}.`,
+            });
         }
     }
 
@@ -166,16 +181,16 @@ function normalizePageWrite(pageWrite: DreamPageWrite): Required<
     };
 }
 
-function writeDreamPage(
-    db: Database,
+async function writeDreamPage(
+    db: CortexDatabase,
     pageWrite: ReturnType<typeof normalizePageWrite>,
     timelineEntries: DreamTimelineEntry[],
     relationships: DreamRelationship[],
     origin: { frontmatterKey: string; tag: string },
     sourceRange: DreamSourceRange,
     now: string
-): string {
-    const existing = findPageRow(db, pageWrite.slug);
+): Promise<string> {
+    const existing = await findPageRow(db, pageWrite.slug);
     const id = existing?.id ?? createCortexId('ctxp');
     const existingFrontmatter = existing ? readJsonRecord(existing.frontmatter_json) : {};
     const existingSourceRefs = existing
@@ -183,7 +198,7 @@ function writeDreamPage(
         : [];
     const sourceRefs = uniqueSourceRefs([...existingSourceRefs, ...sourceRange.sourceRefs]);
     const timeline = [
-        ...listTimelineDrafts(db, existing?.id),
+        ...(await listTimelineDrafts(db, existing?.id)),
         ...timelineEntries
             .filter((entry) => slugifyCortexTitle(entry.pageSlug) === pageWrite.slug)
             .map((entry) => ({
@@ -231,14 +246,14 @@ function writeDreamPage(
     return id;
 }
 
-function writeStandaloneRelationshipPages(
-    db: Database,
+async function writeStandaloneRelationshipPages(
+    db: CortexDatabase,
     relationships: DreamRelationship[],
     origin: { frontmatterKey: string; tag: string },
     sourceRange: DreamSourceRange,
     pageWriteSlugs: Set<string>,
     now: string
-): void {
+): Promise<void> {
     const fromSlugs = uniqueStrings(
         relationships
             .map((relationship) => slugifyCortexTitle(relationship.fromSlug))
@@ -246,7 +261,7 @@ function writeStandaloneRelationshipPages(
     );
 
     for (const slug of fromSlugs) {
-        const page = findPageRow(db, slug);
+        const page = await findPageRow(db, slug);
         if (!page) {
             continue;
         }
@@ -277,7 +292,7 @@ function writeStandaloneRelationshipPages(
             sourceRefs,
             status: page.status,
             tags: uniqueStrings([...readStringArray(existingFrontmatter.tags), origin.tag]),
-            timeline: listTimelineDrafts(db, page.id),
+            timeline: await listTimelineDrafts(db, page.id),
             title: page.title,
             type: page.type,
             updatedAt: now,
@@ -304,8 +319,8 @@ function mergeRelationshipFrontmatter(
     return next;
 }
 
-function archivePage(db: Database, slug: string, now: string): string | null {
-    const page = findPageRow(db, slug);
+async function archivePage(db: CortexDatabase, slug: string, now: string): Promise<string | null> {
+    const page = await findPageRow(db, slug);
     if (!page) {
         return null;
     }
@@ -320,33 +335,36 @@ function archivePage(db: Database, slug: string, now: string): string | null {
         sourceRefs: readJsonArray<CortexSourceRef>(page.source_refs_json),
         status: 'archived',
         tags: readStringArray(frontmatter.tags),
-        timeline: listTimelineDrafts(db, page.id),
+        timeline: await listTimelineDrafts(db, page.id),
         title: page.title,
         type: page.type,
         updatedAt: now,
     });
-    db.prepare(
-        `UPDATE cortex_pages
+    await db
+        .prepare(
+            `UPDATE cortex_pages
          SET status = 'archived',
              updated_at = $updatedAt
          WHERE id = $id`
-    ).run(namedParams({ id: page.id, updatedAt: now }));
+        )
+        .run({ id: page.id, updatedAt: now });
     return page.id;
 }
 
-function upsertObservation(
-    db: Database,
+async function upsertObservation(
+    db: CortexDatabase,
     pageId: string,
     observation: DreamObservation,
     sourceRefs: CortexSourceRef[],
     now: string
-): void {
+): Promise<void> {
     const valueHash = hashText(
         `${pageId}:${observation.subject}:${observation.predicate ?? 'states'}:${observation.value}`
     );
     const id = `ctxcl_${valueHash.slice(0, 24)}`;
-    db.prepare(
-        `INSERT INTO cortex_claims
+    await db
+        .prepare(
+            `INSERT INTO cortex_claims
          (id, page_id, subject, predicate, value, confidence, status, source_refs_json, created_at, updated_at)
          VALUES ($id, $pageId, $subject, $predicate, $value, $confidence, $status, $sourceRefs, $createdAt, $updatedAt)
          ON CONFLICT(id) DO UPDATE SET
@@ -354,8 +372,8 @@ function upsertObservation(
            status = excluded.status,
            source_refs_json = excluded.source_refs_json,
            updated_at = excluded.updated_at`
-    ).run(
-        namedParams({
+        )
+        .run({
             confidence: observation.confidence ?? 0.7,
             createdAt: now,
             id,
@@ -366,77 +384,82 @@ function upsertObservation(
             subject: observation.subject,
             updatedAt: now,
             value: observation.value,
-        })
-    );
+        });
 }
 
-function upsertSourceRefs(db: Database, sourceRefs: CortexSourceRef[], now: string): void {
+async function upsertSourceRefs(
+    db: CortexDatabase,
+    sourceRefs: CortexSourceRef[],
+    now: string
+): Promise<void> {
     for (const sourceRef of sourceRefs) {
-        db.prepare(
-            `INSERT INTO cortex_sources
+        await db
+            .prepare(
+                `INSERT INTO cortex_sources
              (id, kind, locator, hash, metadata_json, created_at, updated_at)
              VALUES ($id, $kind, $locator, $hash, '{}', $createdAt, $updatedAt)
              ON CONFLICT(kind, locator) DO UPDATE SET updated_at = excluded.updated_at`
-        ).run(
-            namedParams({
+            )
+            .run({
                 createdAt: now,
                 hash: hashText(`${sourceRef.kind}:${sourceRef.locator ?? ''}`),
                 id: sourceRef.id,
                 kind: sourceRef.kind,
                 locator: sourceRef.locator,
                 updatedAt: now,
-            })
-        );
+            });
     }
 }
 
-function insertCitation(
-    db: Database,
+async function insertCitation(
+    db: CortexDatabase,
     citation: DreamCitation,
     sourceRefs: CortexSourceRef[],
     now: string
-): string | null {
-    const page = findPageRow(db, citation.pageSlug);
+): Promise<string | null> {
+    const page = await findPageRow(db, citation.pageSlug);
     if (!page) {
         return null;
     }
     const sourceId = sourceRefs[0]?.id ?? null;
     const id = `ctxcite_${hashText(`${page.id}:${citation.locator}:${citation.quote ?? ''}`).slice(0, 24)}`;
-    db.prepare(
-        `INSERT INTO cortex_citations
+    await db
+        .prepare(
+            `INSERT INTO cortex_citations
          (id, page_id, source_id, file_id, locator, quote, metadata_json, created_at)
          VALUES ($id, $pageId, $sourceId, NULL, $locator, $quote, $metadata, $createdAt)
          ON CONFLICT(id) DO NOTHING`
-    ).run(
-        namedParams({
+        )
+        .run({
             createdAt: now,
             id,
             locator: citation.locator,
-            metadata: JSON.stringify({ sourceRefIds: sourceRefs.map((ref) => ref.id) }),
+            metadata: JSON.stringify({
+                sourceRefIds: sourceRefs.map((ref) => ref.id),
+            }),
             pageId: page.id,
             quote: citation.quote ?? null,
             sourceId,
-        })
-    );
+        });
     return id;
 }
 
-function listTimelineDrafts(
-    db: Database,
+async function listTimelineDrafts(
+    db: CortexDatabase,
     pageId: string | undefined
-): Array<{ body: string; createdAt: string; sourceRefs: CortexSourceRef[] }> {
+): Promise<Array<{ body: string; createdAt: string; sourceRefs: CortexSourceRef[] }>> {
     if (!pageId) {
         return [];
     }
     return (
-        db
+        await db
             .prepare(
                 `SELECT body, created_at, source_refs_json
                  FROM cortex_timeline_entries
                  WHERE page_id = ?
                  ORDER BY created_at ASC`
             )
-            .all(pageId) as TimelineRow[]
+            .all<TimelineRow>(pageId)
     ).map((row) => ({
         body: row.body,
         createdAt: row.created_at,

@@ -1,7 +1,7 @@
 ---
 summary: Knowledgebase API for pages, files, citations, backlinks, agent-authored notes, attribution, and memory boundaries.
 read_when:
-  - changing Cortex page, file, citation, link, recall, or maintenance APIs
+  - changing Cortex page, file, citation, link, recall, or repair APIs
   - changing how agents create durable Cortex working material
 ---
 
@@ -25,15 +25,20 @@ chunks, embeddings, timelines, audit records, and telemetry.
   the source.
 * Page reads include a small memory-health summary: chunk coverage, current
   embeddings, stale or missing embeddings, active model, and last indexed time.
-* Vector recall uses a Runtime-owned vector database as rebuildable derived
+* Vector recall uses Cortex PGLite `vector` columns as rebuildable derived
   state. Plain page reads and lexical search can remain available when vector
   recall is degraded.
 * Runtime requests embedding generation after Cortex writes. Runtime `/jobs`
-  exposes the Generate Cortex Embeddings job on a 15-minute cadence so app
-  surfaces can show runs, failures, and audit history without owning Cortex
-  maintenance.
-* Audit records track page writes, captures, recalls, maintenance, embedding
-  repair, and failures.
+  exposes the Generate Cortex Embeddings job on a 15-minute cadence. The job is
+  stale-only by default and accepts `stale: true` explicitly so clients request
+  incremental repair instead of full regeneration.
+* Source ingest registers normalized source text with provenance, writes a
+  Cortex source page, and indexes it through the same page/chunk/embed path.
+* Audit records track page writes, captures, recalls, repair, embedding
+  repair, source ingest, Dream review, and failures.
+* Dream reports are structured records for daily consolidation runs, with phase
+  summaries, before/after health, notable items, warnings, noops, and model/cost
+  metadata.
 
 ## Surface
 
@@ -43,18 +48,21 @@ The API covers:
 * get a page by id or slug
 * create or update a page
 * delete or archive a page
+* list page versions and revert a page to a prior version
 * attach files and citations
 * link related pages
 * list backlinks
 * capture notes, facts, evidence, decisions, or observations into Cortex
+* ingest normalized source-backed text into Cortex
 * recall relevant Cortex pages by query
-* trigger or inspect Cortex maintenance
+* trigger or inspect Cortex repair
 * inspect audit records, telemetry, and timestamps
+* list Cortex Dream reports
 
 ## Memory Boundary
 
 Knowledgebase is the human browsing API for Cortex. Memory APIs inspect Cortex
-capture, recall, provenance, and maintenance. Context-management surfaces
+capture, recall, provenance, and repair. Context-management surfaces
 inspect prompt-time continuity separately.
 
 ## Related Docs

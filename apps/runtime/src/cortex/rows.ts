@@ -37,7 +37,6 @@ export interface ClaimRow {
 export interface ChunkEncodingRow {
     page_id: string;
     score_text: string;
-    vector_json: string | null;
 }
 
 export interface LinkRow {

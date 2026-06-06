@@ -16,7 +16,7 @@ function MemoryContent() {
                 <h1 className="font-semibold text-2xl tracking-tight">Memory</h1>
                 <p className="mt-2 text-muted-foreground text-sm leading-6">
                     Memory is inspectable Cortex state: pages, sources, links, chunks, encodings,
-                    recall audit, and maintenance runs.
+                    recall audit, and repair runs.
                 </p>
             </div>
 

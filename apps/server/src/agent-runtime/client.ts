@@ -29,13 +29,16 @@ import {
     type AgentRuntimeMessageAccepted,
     type AgentRuntimeModelAccess,
     type AgentRuntimeModels,
+    type AgentRuntimeOpenAiSettings,
     type AgentRuntimeOpenClawConfigSnapshot,
     type AgentRuntimeOpenRouterSettings,
     type AgentRuntimeRenderedWorkspaceInstructions,
     type AgentRuntimeRunCron,
     type AgentRuntimeRunJob,
+    type AgentRuntimeRunJobInput,
     type AgentRuntimeSaveAgentFile,
     type AgentRuntimeSaveDiscordBinding,
+    type AgentRuntimeSaveOpenAiSettings,
     type AgentRuntimeSaveOpenRouterSettings,
     type AgentRuntimeSaveWorkspaceInstructions,
     type AgentRuntimeSessionGraph,
@@ -89,14 +92,17 @@ import {
     agentRuntimeModelsSchema,
     agentRuntimeMutationHeaders,
     agentRuntimeMutationOrigins,
+    agentRuntimeOpenAiSettingsSchema,
     agentRuntimeOpenClawConfigSnapshotSchema,
     agentRuntimeOpenRouterSettingsSchema,
     agentRuntimeRenderedWorkspaceInstructionsSchema,
     agentRuntimeRoutes,
     agentRuntimeRunCronSchema,
+    agentRuntimeRunJobInputSchema,
     agentRuntimeRunJobSchema,
     agentRuntimeSaveAgentFileSchema,
     agentRuntimeSaveDiscordBindingSchema,
+    agentRuntimeSaveOpenAiSettingsSchema,
     agentRuntimeSaveOpenRouterSettingsSchema,
     agentRuntimeSaveWorkspaceInstructionsSchema,
     agentRuntimeSessionGraphSchema,
@@ -117,16 +123,16 @@ import {
     type CortexBacklinkList,
     type CortexCaptureInput,
     type CortexCaptureResult,
+    type CortexDreamReportList,
     type CortexEditPageInput,
     type CortexEditPageResult,
-    type CortexJobName,
-    type CortexJobRun,
     type CortexPage,
     type CortexPageList,
     type CortexRecallInput,
     type CortexRecallResult,
     type CortexSaveSchemaInput,
     type CortexSaveSettings,
+    type CortexSchemaAdditionList,
     type CortexSchemaRecord,
     type CortexSearchInput,
     type CortexSearchResult,
@@ -135,15 +141,16 @@ import {
     cortexBacklinkListSchema,
     cortexCaptureInputSchema,
     cortexCaptureResultSchema,
+    cortexDreamReportListSchema,
     cortexEditPageInputSchema,
     cortexEditPageResultSchema,
-    cortexJobRunSchema,
     cortexPageListSchema,
     cortexPageSchema,
     cortexRecallInputSchema,
     cortexRecallResultSchema,
     cortexSaveSchemaInputSchema,
     cortexSaveSettingsSchema,
+    cortexSchemaAdditionListSchema,
     cortexSchemaRecordSchema,
     cortexSearchInputSchema,
     cortexSearchResultSchema,
@@ -184,6 +191,7 @@ export interface TavernAgentRuntimeClient {
         bindingId: string,
         input: AgentRuntimeDeleteDiscordBinding
     ): Promise<AgentRuntimeOpenClawConfigSnapshot>;
+    deleteOpenAiSettings(): Promise<AgentRuntimeOpenAiSettings>;
     deleteOpenRouterSettings(): Promise<AgentRuntimeOpenRouterSettings>;
     deleteSkill(skillId: string): Promise<AgentRuntimeArchiveSkill>;
     editCortexPage(input: CortexEditPageInput): Promise<CortexEditPageResult>;
@@ -192,11 +200,13 @@ export interface TavernAgentRuntimeClient {
     getCapability(id: AgentRuntimeCapabilityHealthId): Promise<AgentRuntimeCapabilityHealth>;
     getCortexPage(slugOrId: string): Promise<CortexPage | null>;
     getCortexSchema(): Promise<CortexSchemaRecord>;
+    getCortexSchemaAdditions(): Promise<CortexSchemaAdditionList>;
     getCortexSettings(): Promise<CortexSettings>;
     getCortexStatus(): Promise<CortexStatus>;
     getCronJob(jobId: string): Promise<AgentRuntimeCron>;
     getModelAccess(): Promise<AgentRuntimeModelAccess>;
     getModels(): Promise<AgentRuntimeModels>;
+    getOpenAiSettings(): Promise<AgentRuntimeOpenAiSettings>;
     getOpenClawConfig(): Promise<AgentRuntimeOpenClawConfigSnapshot>;
     getOpenRouterSettings(): Promise<AgentRuntimeOpenRouterSettings>;
     getRuntimeJob(slug: AgentRuntimeJobSlug): Promise<AgentRuntimeJobDetail | null>;
@@ -212,6 +222,7 @@ export interface TavernAgentRuntimeClient {
     listCapabilities(): Promise<AgentRuntimeCapabilityHealthList>;
     listChats(): Promise<{ chats: AgentRuntimeChat[] }>;
     listCortexBacklinks(slugOrId: string): Promise<CortexBacklinkList>;
+    listCortexDreamReports(options?: { limit?: number }): Promise<CortexDreamReportList>;
     listCortexPages(): Promise<CortexPageList>;
     listCronJobs(): Promise<AgentRuntimeCronList>;
     listCronRuns(jobId?: string): Promise<{ runs: AgentRuntimeCronRun[] }>;
@@ -238,9 +249,11 @@ export interface TavernAgentRuntimeClient {
     refreshCapability(id: AgentRuntimeCapabilityHealthId): Promise<AgentRuntimeCapabilityHealth>;
     restartForUpdate(): Promise<AgentRuntimeUpdate>;
     resyncSession(sessionKey: string): Promise<AgentRuntimeSessionResync>;
-    runCortexJob(job: CortexJobName): Promise<CortexJobRun>;
     runCronJob(jobId: string, input?: AgentRuntimeRunCron): Promise<AgentRuntimeCronRun>;
-    runRuntimeJob(slug: AgentRuntimeJobSlug): Promise<AgentRuntimeRunJob>;
+    runRuntimeJob(
+        slug: AgentRuntimeJobSlug,
+        input?: AgentRuntimeRunJobInput
+    ): Promise<AgentRuntimeRunJob>;
     saveAgentFile(
         agentId: string,
         path: string,
@@ -251,6 +264,7 @@ export interface TavernAgentRuntimeClient {
     saveDiscordBinding(
         input: AgentRuntimeSaveDiscordBinding
     ): Promise<AgentRuntimeOpenClawConfigSnapshot>;
+    saveOpenAiSettings(input: AgentRuntimeSaveOpenAiSettings): Promise<AgentRuntimeOpenAiSettings>;
     saveOpenRouterSettings(
         input: AgentRuntimeSaveOpenRouterSettings
     ): Promise<AgentRuntimeOpenRouterSettings>;
@@ -694,11 +708,14 @@ class HttpTavernAgentRuntimeClient implements TavernAgentRuntimeClient {
         return agentRuntimeJobDetailSchema.parse(await response.json());
     }
 
-    async runRuntimeJob(slug: AgentRuntimeJobSlug) {
+    async runRuntimeJob(slug: AgentRuntimeJobSlug, input?: AgentRuntimeRunJobInput) {
+        const body = input ? agentRuntimeRunJobInputSchema.parse(input) : null;
         const response = await fetch(
             `${this.#baseUrl}${agentRuntimeRoutes.jobRun(agentRuntimeJobSlugSchema.parse(slug))}`,
             {
+                body: body ? JSON.stringify(body) : undefined,
                 headers: {
+                    ...(body ? { 'content-type': 'application/json' } : {}),
                     [agentRuntimeMutationHeaders.origin]: agentRuntimeMutationOrigins.tavern,
                 },
                 method: 'POST',
@@ -778,6 +795,16 @@ class HttpTavernAgentRuntimeClient implements TavernAgentRuntimeClient {
         return cortexSchemaRecordSchema.parse(await response.json());
     }
 
+    async getCortexSchemaAdditions(): Promise<CortexSchemaAdditionList> {
+        const response = await fetch(`${this.#baseUrl}${agentRuntimeRoutes.cortexSchemaAdditions}`);
+
+        if (!response.ok) {
+            await readErrorResponse(response);
+        }
+
+        return cortexSchemaAdditionListSchema.parse(await response.json());
+    }
+
     async listCortexPages() {
         const response = await fetch(`${this.#baseUrl}${agentRuntimeRoutes.cortexPages}`);
 
@@ -786,6 +813,20 @@ class HttpTavernAgentRuntimeClient implements TavernAgentRuntimeClient {
         }
 
         return cortexPageListSchema.parse(await response.json());
+    }
+
+    async listCortexDreamReports(options: { limit?: number } = {}) {
+        const url = new URL(`${this.#baseUrl}${agentRuntimeRoutes.cortexDreamReports}`);
+        if (options.limit !== undefined) {
+            url.searchParams.set('limit', String(options.limit));
+        }
+        const response = await fetch(url);
+
+        if (!response.ok) {
+            await readErrorResponse(response);
+        }
+
+        return cortexDreamReportListSchema.parse(await response.json());
     }
 
     async getCortexPage(slugOrId: string) {
@@ -863,18 +904,6 @@ class HttpTavernAgentRuntimeClient implements TavernAgentRuntimeClient {
         }
 
         return cortexBacklinkListSchema.parse(await response.json());
-    }
-
-    async runCortexJob(job: CortexJobName) {
-        const response = await fetch(`${this.#baseUrl}${agentRuntimeRoutes.cortexJobRun(job)}`, {
-            method: 'POST',
-        });
-
-        if (!response.ok) {
-            await readErrorResponse(response);
-        }
-
-        return cortexJobRunSchema.parse(await response.json());
     }
 
     async getModels() {
@@ -995,6 +1024,57 @@ class HttpTavernAgentRuntimeClient implements TavernAgentRuntimeClient {
         }
 
         return agentRuntimeOpenRouterSettingsSchema.parse(await response.json());
+    }
+
+    async getOpenAiSettings() {
+        const response = await fetch(
+            `${this.#baseUrl}${agentRuntimeRoutes.modelAccessOpenAiSettings}`
+        );
+
+        if (!response.ok) {
+            await readErrorResponse(response);
+        }
+
+        return agentRuntimeOpenAiSettingsSchema.parse(await response.json());
+    }
+
+    async saveOpenAiSettings(input: AgentRuntimeSaveOpenAiSettings) {
+        const payload = agentRuntimeSaveOpenAiSettingsSchema.parse(input);
+        const response = await fetch(
+            `${this.#baseUrl}${agentRuntimeRoutes.modelAccessOpenAiSettings}`,
+            {
+                body: JSON.stringify(payload),
+                headers: {
+                    'content-type': 'application/json',
+                    [agentRuntimeMutationHeaders.origin]: agentRuntimeMutationOrigins.tavern,
+                },
+                method: 'PUT',
+            }
+        );
+
+        if (!response.ok) {
+            await readErrorResponse(response);
+        }
+
+        return agentRuntimeOpenAiSettingsSchema.parse(await response.json());
+    }
+
+    async deleteOpenAiSettings() {
+        const response = await fetch(
+            `${this.#baseUrl}${agentRuntimeRoutes.modelAccessOpenAiSettings}`,
+            {
+                headers: {
+                    [agentRuntimeMutationHeaders.origin]: agentRuntimeMutationOrigins.tavern,
+                },
+                method: 'DELETE',
+            }
+        );
+
+        if (!response.ok) {
+            await readErrorResponse(response);
+        }
+
+        return agentRuntimeOpenAiSettingsSchema.parse(await response.json());
     }
 
     async saveOpenRouterSettings(input: AgentRuntimeSaveOpenRouterSettings) {

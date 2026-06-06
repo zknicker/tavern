@@ -10,6 +10,7 @@ import { mentionRouter } from './mention/router.ts';
 import { messagingPlatformRouter } from './messaging-platform/router.ts';
 import { modelRouter } from './model/router.ts';
 import { modelAccessRouter } from './model-access/router.ts';
+import { openAiSettingsRouter } from './openai-settings/router.ts';
 import { openClawConfigRouter } from './openclaw-config/router.ts';
 import { openRouterSettingsRouter } from './openrouter-settings/router.ts';
 import { participantRouter } from './participant/router.ts';
@@ -32,6 +33,7 @@ export const appRouter = createRouter({
     messagingPlatform: messagingPlatformRouter,
     modelAccess: modelAccessRouter,
     model: modelRouter,
+    openAiSettings: openAiSettingsRouter,
     openClawConfig: openClawConfigRouter,
     openRouterSettings: openRouterSettingsRouter,
     participant: participantRouter,

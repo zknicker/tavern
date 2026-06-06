@@ -14,6 +14,8 @@ This folder holds Playwright coverage for user-facing dashboard behavior.
     managed OpenClaw Gateway
   - do not start the mock provider or the pinned temp Gateway
   - use this only for regressions that need the real local OpenClaw contract or channel behavior
+  - use `bun run --filter @tavern/website smoke:cortex-agent-lookup` for the focused Cortex
+    brain-first lookup smoke
   - print timing evidence for manual review, but do not make normal CI depend on live model latency
 - Keep tests user-shaped: drive setup through the UI or real runtime contracts, then assert on
   visible behavior over time.

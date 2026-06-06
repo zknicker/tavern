@@ -27,12 +27,17 @@ export interface RuntimeJobContext {
     trigger: RuntimeJobTrigger;
 }
 
+export interface RuntimeJobInputSchema {
+    parse(input: unknown): Record<string, unknown>;
+}
+
 export interface RuntimeJobDefinition {
     concurrency: number;
     defaultInput: Record<string, unknown>;
     description: string;
     disabledReason(): Promise<string | null> | string | null;
     displayName: string;
+    inputSchema: RuntimeJobInputSchema;
     requiredCapabilities?: AgentRuntimeCapabilityHealthId[];
     run(context: RuntimeJobContext): Promise<void>;
     schedule: RuntimeJobSchedule;

@@ -20,6 +20,9 @@ flowchart LR
     appdb[(App SQLite<br/>cache + settings)]
     runtime[Tavern Runtime<br/>chat server + tools + managed services]
     runtimedb[(Runtime SQLite<br/>chat + events + execution state)]
+    cortexdb[(Cortex PGLite<br/>pages + graph + vectors)]
+    cortex[Cortex<br/>wiki + graph + recall]
+    cortexwiki[(Cortex markdown wiki<br/>derived pages)]
     openclaw[OpenClaw<br/>sessions + turns + tools + transcripts]
     openclawstate[(OpenClaw state<br/>native execution store)]
 
@@ -28,6 +31,9 @@ flowchart LR
     api --> runtime
     app --> appdb
     runtime --> runtimedb
+    runtime --> cortex
+    cortex --> cortexdb
+    cortex --> cortexwiki
     runtime --> openclaw
     openclaw --> openclawstate
     openclaw --> runtime
@@ -48,10 +54,16 @@ flowchart LR
 * **App SQLite** stores client cache, app-local settings, and presentation state.
 * **Tavern Runtime** stores canonical chat state, responses, activity,
   artifacts, starts managed OpenClaw, applies Tavern-owned config, runs
-  automations, carries runtime events, and exposes Tavern tools to agents.
+  automations, carries runtime events, owns Cortex, and exposes Tavern tools to
+  agents.
 * **Runtime SQLite** stores chats, messages, responses, activity, artifacts,
-  participants, events, reads, channel ingress, execution evidence, Cortex
-  records, and runtime metadata.
+  participants, events, reads, channel ingress, execution evidence, and runtime
+  metadata.
+* **Cortex** is the Runtime-owned durable knowledge and memory system. Its
+  canonical records live in a separate embedded Postgres-compatible PGLite
+  database under the Runtime root. Markdown wiki files are the editable page
+  surface and project into that database; vector embeddings live in the Cortex
+  DB through `pgvector`/PGLite `vector`.
 * **OpenClaw** owns agent execution: sessions, turns, model calls, tools, files,
   and native transcripts.
 
@@ -61,6 +73,10 @@ flowchart LR
 * Runtime SQLite is the durable source for chats, messages, responses, activity,
   artifacts, participants, events, reads, automation delivery, channel ingress,
   accepted message identity, execution evidence, and runtime metadata.
+* Cortex stores pages, sources, claims, timelines, links, chunks, vector
+  encodings, captures, jobs, settings, schemas, audit events, and chat ingestion cursors
+  in `~/.tavern/runtime/cortex/cortex.pglite` by default. The markdown wiki is
+  rebuildable from that state plus page source material.
 * App SQLite is a client cache and app-local settings store.
 * OpenClaw stores native execution state.
 * Tavern maps OpenClaw execution into Tavern messages, responses, artifacts,

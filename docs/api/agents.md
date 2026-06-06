@@ -28,6 +28,9 @@ with user-authored instructions, model, tool, memory, and skill policy.
   Runtime-hosted agent API. They are rendered into the managed OpenClaw
   `AGENTS.md` after Tavern policy and before agent-authored notes; clients do
   not edit the workspace file directly.
+* Tavern policy includes Cortex brain-first lookup guidance. Managed agents
+  check Cortex before external lookup when durable user, project, or prior
+  decision context may already exist.
 * OpenClaw-backed settings use narrow domain mutations. Clients update agent
   name, model, thinking default, and messaging bindings through agent and
   messaging APIs instead of editing or saving OpenClaw config JSON.

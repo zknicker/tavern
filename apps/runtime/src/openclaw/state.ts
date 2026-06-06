@@ -1,9 +1,11 @@
 interface ManagedOpenClawState {
+    cortexPluginPath: string | null;
     gatewayReady: boolean;
     tavernPluginPath: string | null;
 }
 
 const state: ManagedOpenClawState = {
+    cortexPluginPath: null,
     tavernPluginPath: null,
     gatewayReady: false,
 };
@@ -15,6 +17,12 @@ export function getManagedOpenClawState() {
 export function markTavernPluginInstalled(pluginPath: string | null) {
     const changed = state.tavernPluginPath !== pluginPath;
     state.tavernPluginPath = pluginPath;
+    return changed;
+}
+
+export function markCortexPluginInstalled(pluginPath: string | null) {
+    const changed = state.cortexPluginPath !== pluginPath;
+    state.cortexPluginPath = pluginPath;
     return changed;
 }
 

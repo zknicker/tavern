@@ -1,17 +1,17 @@
-import { loadCodexCredentials } from '@tavern/codex-usage/credentials';
+import { loadVaultBackedCodexCredentials } from '../model-access/codex-settings';
 import { estimateDreamCostUsd, readResponseText, readTokenCounts } from './dream';
 import type { DreamContextPage, DreamSourceRange } from './dream-types';
 
-export const codexSignalResponsesUrl = 'https://chatgpt.com/backend-api/codex/responses';
+export const codexChatIngestionResponsesUrl = 'https://chatgpt.com/backend-api/codex/responses';
 
-export function buildSignalReviewPrompt(input: {
+export function buildChatIngestionReviewPrompt(input: {
     contextPages: DreamContextPage[];
     linkTypes: string[];
     pageTypes: string[];
     sourceRange: DreamSourceRange;
 }): string {
     return [
-        'You are running Tavern Cortex Signal.',
+        'You are running Tavern Cortex Chat Ingestion.',
         'Review this single-chat backlog batch for durable memory. This is near-real-time capture, not broad consolidation.',
         'Analyze only the provided new messages. Do not recreate facts from prior conversation context that is not present.',
         'Capture original user thinking first, then durable entities, preferences, decisions, corrections, facts, tasks, events, and relationships.',
@@ -19,6 +19,8 @@ export function buildSignalReviewPrompt(input: {
         'No-op operational chatter, transient execution status, acknowledgements, secrets, credentials, and broad summaries.',
         'Preserve source provenance with message-id locators. Avoid duplicate pages and duplicate facts.',
         'If new information contradicts older context, preserve both pieces of evidence and use contradicted/superseded observations or contradicts relationships.',
+        'Create new pages only for durable subjects likely to be useful again. If durable but no subject page fits, write a note page with a clear title.',
+        'Include relationships whenever reviewed material connects two Cortex pages. Do not invent facts or relationships that are not grounded in the source range or existing context.',
         'Return JSON only with this shape:',
         JSON.stringify({
             citations: [
@@ -43,7 +45,7 @@ export function buildSignalReviewPrompt(input: {
                     compiledTruth: 'current best understanding',
                     frontmatter: {},
                     slug: 'page-slug',
-                    tags: ['signal'],
+                    tags: ['chat-ingestion'],
                     title: 'Page Title',
                     type: input.pageTypes.join('|'),
                 },
@@ -71,7 +73,7 @@ export function buildSignalReviewPrompt(input: {
     ].join('\n\n');
 }
 
-export async function reviewSignalBatchWithModel(input: {
+export async function reviewChatIngestionBatchWithModel(input: {
     model: string;
     prompt: string;
 }): Promise<{
@@ -81,20 +83,20 @@ export async function reviewSignalBatchWithModel(input: {
     requestId: string | null;
     tokenCounts: Record<string, unknown> | null;
 }> {
-    const credentials = await loadSignalCodexCredentials();
+    const credentials = await loadChatIngestionCodexCredentials();
     const startedAt = performance.now();
-    const response = await fetch(codexSignalResponsesUrl, {
+    const response = await fetch(codexChatIngestionResponsesUrl, {
         body: JSON.stringify({
             input: [{ content: input.prompt, role: 'user' }],
             model: input.model,
             store: false,
             text: { format: { type: 'json_object' } },
         }),
-        headers: buildCodexSignalHeaders(credentials.credentials),
+        headers: buildCodexChatIngestionHeaders(credentials.credentials),
         method: 'POST',
     });
     if (!response.ok) {
-        throw new Error(await formatSignalReviewError(response));
+        throw new Error(await formatChatIngestionReviewError(response));
     }
     const body = await response.json();
     const tokenCounts = readTokenCounts(body);
@@ -107,33 +109,33 @@ export async function reviewSignalBatchWithModel(input: {
     };
 }
 
-async function formatSignalReviewError(response: Response): Promise<string> {
+async function formatChatIngestionReviewError(response: Response): Promise<string> {
     const body = (await response.json().catch(() => null)) as {
         error?: { message?: unknown };
     } | null;
     const message = typeof body?.error?.message === 'string' ? body.error.message : null;
     return message
-        ? `Cortex Signal model review failed (${response.status}): ${message}`
-        : `Cortex Signal model review failed (${response.status}).`;
+        ? `Cortex Chat Ingestion model review failed (${response.status}): ${message}`
+        : `Cortex Chat Ingestion model review failed (${response.status}).`;
 }
 
-type CodexCredentials = NonNullable<Awaited<ReturnType<typeof loadCodexCredentials>>>;
+type CodexCredentials = NonNullable<Awaited<ReturnType<typeof loadVaultBackedCodexCredentials>>>;
 
-async function loadSignalCodexCredentials(): Promise<CodexCredentials> {
+async function loadChatIngestionCodexCredentials(): Promise<CodexCredentials> {
     try {
-        const credentials = await loadCodexCredentials({ environment: process.env });
+        const credentials = await loadVaultBackedCodexCredentials();
         if (!credentials) {
             throw new Error('missing Codex OAuth credentials');
         }
         return credentials;
     } catch (error) {
-        throw new Error('Codex OAuth credentials are required for Cortex Signal.', {
+        throw new Error('Codex OAuth credentials are required for Cortex Chat Ingestion.', {
             cause: error,
         });
     }
 }
 
-function buildCodexSignalHeaders(credentials: {
+function buildCodexChatIngestionHeaders(credentials: {
     accessToken: string;
     accountId: string | null;
 }): Headers {
@@ -142,7 +144,7 @@ function buildCodexSignalHeaders(credentials: {
         authorization: `Bearer ${credentials.accessToken}`,
         'content-type': 'application/json',
         'OpenAI-Beta': 'responses=experimental',
-        originator: 'tavern-cortex-signal',
+        originator: 'tavern-cortex-chat-ingestion',
         'User-Agent': 'tavern-runtime',
     });
     if (credentials.accountId) {

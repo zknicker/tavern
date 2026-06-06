@@ -4,21 +4,21 @@ import {
     type CortexSchemaValidationIssue,
     defaultCortexSchema,
 } from '@tavern/api';
-import type { Database } from '../db/sqlite';
-import { namedParams } from '../db/sqlite';
 import { writeCortexAudit } from './audit';
+import type { CortexDatabase } from './db';
 import { createCortexId } from './ids';
 import { nowIso, readJsonRecord } from './rows';
+import { applyCortexSchemaAdditions } from './schema-additions';
 
 export type { CortexSchemaDefinition } from '@tavern/api';
 
-export function getActiveCortexSchema(db: Database): CortexSchemaDefinition {
-    return getActiveCortexSchemaRecord(db).schema;
+export async function getActiveCortexSchema(db: CortexDatabase): Promise<CortexSchemaDefinition> {
+    return (await getActiveCortexSchemaRecord(db)).schema;
 }
 
-export function getActiveCortexSchemaRecord(db: Database): CortexSchemaRecord {
-    ensureDefaultCortexSchema(db);
-    const row = db
+export async function getActiveCortexSchemaRecord(db: CortexDatabase): Promise<CortexSchemaRecord> {
+    await ensureDefaultCortexSchema(db);
+    const row = await db
         .prepare(
             `SELECT id, schema_json, status, created_at, updated_at
              FROM cortex_schemas
@@ -26,65 +26,81 @@ export function getActiveCortexSchemaRecord(db: Database): CortexSchemaRecord {
              ORDER BY updated_at DESC
              LIMIT 1`
         )
-        .get() as {
-        created_at: string;
-        id: string;
-        schema_json: string;
-        status: 'active' | 'archived';
-        updated_at: string;
-    } | null;
+        .get<{
+            created_at: string;
+            id: string;
+            schema_json: string;
+            status: 'active' | 'archived';
+            updated_at: string;
+        }>();
     if (!row) {
         const now = nowIso();
+        const schema = await applyCortexSchemaAdditions(db, defaultCortexSchema);
         return {
             createdAt: now,
             id: 'ctxschema_default',
-            schema: defaultCortexSchema,
+            schema,
             status: 'active',
             updatedAt: now,
             validation: [],
         };
     }
-    return toCortexSchemaRecord(row);
+    const record = await toCortexSchemaRecord(row);
+    return {
+        ...record,
+        schema: await applyCortexSchemaAdditions(db, record.schema),
+    };
 }
 
 export function saveActiveCortexSchema(
-    db: Database,
+    db: CortexDatabase,
     schema: CortexSchemaDefinition
-): CortexSchemaRecord {
+): Promise<CortexSchemaRecord> {
+    return saveActiveCortexSchemaAsync(db, schema);
+}
+
+async function saveActiveCortexSchemaAsync(
+    db: CortexDatabase,
+    schema: CortexSchemaDefinition
+): Promise<CortexSchemaRecord> {
     const now = nowIso();
     const normalized = normalizeSchema(schema);
-    const validation = validateCortexSchemaUpdate(db, normalized);
+    const validation = await validateCortexSchemaUpdate(db, normalized);
     const error = validation.find((issue) => issue.severity === 'error');
     if (error) {
         throw new Error(error.message);
     }
-    const active = getActiveCortexSchemaRecord(db);
+    const active = await getActiveCortexSchemaRecord(db);
     const nextSchema = { ...normalized, version: active.schema.version + 1 };
-    db.prepare(
-        "UPDATE cortex_schemas SET status = 'archived', updated_at = ? WHERE status = 'active'"
-    ).run(now);
-    db.prepare(
-        `UPDATE cortex_schemas
+    await db
+        .prepare(
+            "UPDATE cortex_schemas SET status = 'archived', updated_at = ? WHERE status = 'active'"
+        )
+        .run(now);
+    await db
+        .prepare(
+            `UPDATE cortex_schemas
          SET name = name || '@' || id
          WHERE status = 'archived'
            AND name = $name`
-    ).run(namedParams({ name: nextSchema.name }));
-    db.prepare(
-        `INSERT INTO cortex_schemas
+        )
+        .run({ name: nextSchema.name });
+    await db
+        .prepare(
+            `INSERT INTO cortex_schemas
          (id, name, version, schema_json, status, created_at, updated_at)
          VALUES ($id, $name, $version, $schemaJson, 'active', $createdAt, $updatedAt)`
-    ).run(
-        namedParams({
+        )
+        .run({
             createdAt: now,
             id: createCortexId('ctxschema'),
             name: nextSchema.name,
             schemaJson: JSON.stringify(nextSchema),
             updatedAt: now,
             version: nextSchema.version,
-        })
-    );
-    const record = getActiveCortexSchemaRecord(db);
-    writeCortexAudit(db, {
+        });
+    const record = await getActiveCortexSchemaRecord(db);
+    await writeCortexAudit(db, {
         kind: 'schema.update',
         recordRefs: [record.id],
         sourceRefs: [],
@@ -98,22 +114,22 @@ export function isKnownCortexLinkType(schema: CortexSchemaDefinition, linkType: 
     return schema.linkTypes.some((type) => type.name === linkType);
 }
 
-function ensureDefaultCortexSchema(db: Database): void {
+async function ensureDefaultCortexSchema(db: CortexDatabase): Promise<void> {
     const now = nowIso();
-    db.prepare(
-        `INSERT INTO cortex_schemas
+    await db
+        .prepare(
+            `INSERT INTO cortex_schemas
          (id, name, version, schema_json, status, created_at, updated_at)
          VALUES ('ctxschema_default', $name, $version, $schemaJson, 'active', $createdAt, $updatedAt)
          ON CONFLICT(id) DO NOTHING`
-    ).run(
-        namedParams({
+        )
+        .run({
             createdAt: now,
             name: defaultCortexSchema.name,
             schemaJson: JSON.stringify(defaultCortexSchema),
             updatedAt: now,
             version: defaultCortexSchema.version,
-        })
-    );
+        });
 }
 
 function toCortexSchemaRecord(row: {
@@ -134,9 +150,16 @@ function toCortexSchemaRecord(row: {
 }
 
 export function validateCortexSchemaUpdate(
-    db: Database,
+    db: CortexDatabase,
     schema: CortexSchemaDefinition
-): CortexSchemaValidationIssue[] {
+): Promise<CortexSchemaValidationIssue[]> {
+    return validateCortexSchemaUpdateAsync(db, schema);
+}
+
+async function validateCortexSchemaUpdateAsync(
+    db: CortexDatabase,
+    schema: CortexSchemaDefinition
+): Promise<CortexSchemaValidationIssue[]> {
     const normalized = normalizeSchema(schema);
     const knownLinkTypes = new Set(normalized.linkTypes.map((type) => type.name));
     const issues: CortexSchemaValidationIssue[] = [];
@@ -151,9 +174,9 @@ export function validateCortexSchemaUpdate(
             });
         }
     }
-    const activeLinkTypes = db
+    const activeLinkTypes = await db
         .prepare('SELECT link_kind, COUNT(*) AS count FROM cortex_links GROUP BY link_kind')
-        .all() as Array<{ count: number; link_kind: string }>;
+        .all<{ count: number; link_kind: string }>();
     for (const row of activeLinkTypes) {
         if (!knownLinkTypes.has(row.link_kind)) {
             issues.push({

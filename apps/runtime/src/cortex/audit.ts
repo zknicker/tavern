@@ -1,11 +1,10 @@
 import type { CortexSourceRef } from '@tavern/api';
-import type { Database } from '../db/sqlite';
-import { namedParams } from '../db/sqlite';
+import type { CortexDatabase } from './db';
 import { createCortexId } from './ids';
 import { nowIso } from './rows';
 
-export function writeCortexAudit(
-    db: Database,
+export async function writeCortexAudit(
+    db: CortexDatabase,
     input: {
         kind: string;
         recordRefs: string[];
@@ -14,14 +13,15 @@ export function writeCortexAudit(
         status: 'error' | 'skipped' | 'success';
         summary: string;
     }
-): string {
+): Promise<string> {
     const id = createCortexId('ctxa');
-    db.prepare(
-        `INSERT INTO cortex_audit_events
+    await db
+        .prepare(
+            `INSERT INTO cortex_audit_events
          (id, kind, status, record_refs_json, source_refs_json, metadata_json, summary, created_at)
          VALUES ($id, $kind, $status, $recordRefs, $sourceRefs, $metadata, $summary, $createdAt)`
-    ).run(
-        namedParams({
+        )
+        .run({
             createdAt: nowIso(),
             id,
             kind: input.kind,
@@ -30,7 +30,6 @@ export function writeCortexAudit(
             sourceRefs: JSON.stringify(input.sourceRefs),
             status: input.status,
             summary: input.summary,
-        })
-    );
+        });
     return id;
 }

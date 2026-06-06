@@ -1,6 +1,7 @@
 import type { AgentRuntimeCronRun } from '@tavern/api';
 import { afterEach, beforeEach, describe, expect, test } from 'vitest';
-import { ensureCortexSchema } from '../cortex/schema';
+import { ensureCortexRuntimeBootstrap } from '../cortex/bootstrap';
+import { closeCortexDb, getCortexDb, initTestCortexDb } from '../cortex/db';
 import { closeDb, initTestDb } from '../db/connection';
 import { ensureRuntimeSchema } from '../db/schema';
 import type { Database } from '../db/sqlite';
@@ -10,20 +11,22 @@ import { generateTavernHighlights, listTavernHighlights } from './highlights';
 describe('Tavern highlights', () => {
     let db: Database;
 
-    beforeEach(() => {
+    beforeEach(async () => {
         db = initTestDb();
         ensureRuntimeSchema(db);
-        ensureCortexSchema(db);
+        await initTestCortexDb();
+        await ensureCortexRuntimeBootstrap(getCortexDb());
     });
 
-    afterEach(() => {
+    afterEach(async () => {
         closeDb();
+        await closeCortexDb();
     });
 
     test('persists one current highlight per applicable category', async () => {
         const now = new Date('2026-06-03T18:25:00.000Z');
         seedRecentActivity(db);
-        seedMemoryEvent(db);
+        await seedMemoryEvent();
 
         const result = await generateTavernHighlights({
             cronRuns: [cronRun()],
@@ -216,23 +219,33 @@ function seedRecentActivity(db: Database) {
     }
 }
 
-function seedMemoryEvent(db: Database) {
-    db.prepare(
-        `INSERT INTO cortex_audit_events (
+async function seedMemoryEvent() {
+    await getCortexDb()
+        .prepare(
+            `INSERT INTO cortex_audit_events (
             id,
             kind,
             status,
+            actor_json,
+            record_refs_json,
+            source_refs_json,
             summary,
+            metadata_json,
             created_at
         )
         VALUES (
             'aud_memory',
             'capture',
             'success',
+            '{}',
+            '[]',
+            '[]',
             'Zach loves to talk about pizza.',
+            '{}',
             '2026-06-03T18:15:00.000Z'
         )`
-    ).run();
+        )
+        .run();
 }
 
 function cronRun(): AgentRuntimeCronRun {

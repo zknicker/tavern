@@ -12,6 +12,7 @@ interface SettingsRowProps {
     description?: React.ReactNode;
     error?: string | null;
     title: React.ReactNode;
+    trailingWidth?: 'default' | 'intrinsic';
 }
 
 type SettingsValueProps = React.ComponentProps<'div'>;
@@ -40,11 +41,15 @@ export function SettingsRow({
     description,
     error = null,
     title,
+    trailingWidth = 'default',
 }: SettingsRowProps) {
     return (
         <div
             className={cn(
-                'grid gap-3 py-3.5 md:grid-cols-[minmax(10rem,1fr)_minmax(18rem,32rem)] md:items-center md:gap-6',
+                'grid gap-3 py-3.5 md:items-center md:gap-6',
+                trailingWidth === 'default'
+                    ? 'md:grid-cols-[minmax(10rem,1fr)_minmax(18rem,32rem)]'
+                    : 'md:grid-cols-[minmax(0,1fr)_auto]',
                 density === 'default' ? 'ps-5 pe-3.5' : 'px-3.5',
                 className
             )}

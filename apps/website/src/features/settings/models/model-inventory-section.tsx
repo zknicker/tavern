@@ -33,6 +33,16 @@ import { listModelProviderConfigs } from '../../../lib/model-provider-config.ts'
 import type { ModelInventoryOutput } from '../../../lib/trpc.tsx';
 import { InventoryModelCard } from './inventory-model-card.tsx';
 
+type ModelCapability =
+    ModelInventoryOutput['providers'][number]['models'][number]['capabilities'][number];
+
+const capabilityOptions = [
+    { label: 'General', value: 'general' },
+    { label: 'Embedding', value: 'embedding' },
+    { label: 'Vision', value: 'vision' },
+    { label: 'Audio transcription', value: 'audio-transcription' },
+] as const satisfies ReadonlyArray<{ label: string; value: ModelCapability }>;
+
 export function ModelInventorySection() {
     const inventoryQuery = useModelInventory();
     const deleteMutation = useDeleteCatalogModel();
@@ -139,9 +149,10 @@ function AddCatalogModelDialog({
     const addMutation = useAddCatalogModel();
     const providerOptions = listModelProviderConfigs();
     const [provider, setProvider] = React.useState(providerOptions[0]?.configName ?? 'codex');
+    const [capabilities, setCapabilities] = React.useState<ModelCapability[]>(['general']);
     const [modelId, setModelId] = React.useState('');
     const trimmedModelId = modelId.trim();
-    const canAdd = trimmedModelId.length > 0 && !addMutation.isPending;
+    const canAdd = trimmedModelId.length > 0 && capabilities.length > 0 && !addMutation.isPending;
 
     const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
         event.preventDefault();
@@ -152,12 +163,14 @@ function AddCatalogModelDialog({
 
         addMutation.mutate(
             {
+                capabilities,
                 modelId: trimmedModelId,
                 provider: provider as ModelInventoryOutput['providers'][number]['provider'],
             },
             {
                 onSuccess: () => {
                     setModelId('');
+                    setCapabilities(['general']);
                     onOpenChange(false);
                 },
             }
@@ -219,6 +232,36 @@ function AddCatalogModelDialog({
                             />
                         </Field>
 
+                        <Field>
+                            <FieldLabel>Capabilities</FieldLabel>
+                            <div className="flex flex-wrap gap-2">
+                                {capabilityOptions.map((option) => {
+                                    const selected = capabilities.includes(option.value);
+
+                                    return (
+                                        <button
+                                            aria-pressed={selected}
+                                            className="rounded-md border border-input px-2.5 py-1.5 font-medium text-sm transition-colors hover:bg-accent data-[selected=true]:bg-input/64"
+                                            data-selected={selected}
+                                            key={option.value}
+                                            onClick={() =>
+                                                setCapabilities((current) =>
+                                                    selected
+                                                        ? current.filter(
+                                                              (value) => value !== option.value
+                                                          )
+                                                        : [...current, option.value]
+                                                )
+                                            }
+                                            type="button"
+                                        >
+                                            {option.label}
+                                        </button>
+                                    );
+                                })}
+                            </div>
+                        </Field>
+
                         {addMutation.error?.message ? (
                             <Alert variant="error">
                                 <Icon icon={AlertCircleIcon} />
@@ -250,8 +293,18 @@ function matchesSearch(
         return true;
     }
 
-    return [model.displayName, model.ref, model.description ?? ''].some((value) =>
-        value.toLowerCase().includes(normalizedSearch)
+    return [
+        model.displayName,
+        model.ref,
+        model.description ?? '',
+        ...model.capabilities.map(formatModelCapability),
+    ].some((value) => value.toLowerCase().includes(normalizedSearch));
+}
+
+function formatModelCapability(capability: ModelCapability) {
+    return (
+        capabilityOptions.find((option) => option.value === capability)?.label ??
+        capability.replaceAll('-', ' ')
     );
 }
 

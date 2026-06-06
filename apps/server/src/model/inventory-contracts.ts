@@ -3,8 +3,15 @@ import { z } from 'zod';
 
 export const modelProviderIdSchema = agentRuntimeModelProviderIdSchema;
 export const modelProviderStateSchema = z.enum(['connected', 'not-configured']);
+export const modelCapabilitySchema = z.enum([
+    'audio-transcription',
+    'embedding',
+    'general',
+    'vision',
+]);
 
 export const modelInventorySnapshotRecordSchema = z.object({
+    capabilities: z.array(modelCapabilitySchema).default(['general']),
     contextWindow: z.number().int().positive().nullable(),
     description: z.string().trim().min(1).nullable(),
     displayName: z.string().trim().min(1),
@@ -42,6 +49,7 @@ export const modelInventorySchema = z.object({
 });
 
 export const addCatalogModelInputSchema = z.object({
+    capabilities: z.array(modelCapabilitySchema).min(1).default(['general']),
     modelId: z.string().trim().min(1),
     provider: modelProviderIdSchema,
 });
@@ -56,5 +64,6 @@ export type ModelInventoryRecord = z.infer<typeof modelInventoryRecordSchema>;
 export type ModelInventorySnapshotRecord = z.infer<typeof modelInventorySnapshotRecordSchema>;
 export type ModelInventorySnapshot = z.infer<typeof modelInventorySnapshotSchema>;
 export type ModelProviderId = AgentRuntimeModelProviderId;
+export type ModelCapability = z.infer<typeof modelCapabilitySchema>;
 export type AddCatalogModelInput = z.infer<typeof addCatalogModelInputSchema>;
 export type DeleteCatalogModelInput = z.infer<typeof deleteCatalogModelInputSchema>;

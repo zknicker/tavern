@@ -99,7 +99,11 @@ export async function addCatalogModel(input: unknown) {
         });
     }
 
-    const model = createCatalogInventoryRecord(parsed);
+    const model = createCatalogInventoryRecord({
+        capabilities: parsed.capabilities,
+        modelId: parsed.modelId,
+        provider: parsed.provider,
+    });
     const snapshot = await loadProviderInventory(parsed.provider);
 
     if (snapshot.models.some((candidate) => candidate.ref === model.ref)) {

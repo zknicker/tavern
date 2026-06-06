@@ -28,6 +28,10 @@ needs explicit trust.
 Secrets belong in Tavern-owned storage such as Tavern Vault or generated runtime
 config.
 
+Runtime-owned secrets that power Runtime features live in Runtime Tavern Vault.
+OpenRouter model access is stored behind `/model-access/openrouter`, then reused
+by managed OpenClaw configuration and Cortex query expansion.
+
 Do not put secrets in:
 
 * docs

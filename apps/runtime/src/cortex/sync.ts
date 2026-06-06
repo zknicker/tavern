@@ -1,10 +1,10 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import type { CortexSourceRef } from '@tavern/api';
-import type { Database } from '../db/sqlite';
-import { namedParams } from '../db/sqlite';
+import type { CortexDatabase } from './db';
 import { refreshDerivedPageState } from './derive';
 import { createCortexId, hashText, slugifyCortexTitle } from './ids';
+import { recordCortexPageVersion } from './page-versions';
 import { resolveCortexWikiPath } from './read';
 import { nowIso, type PageRow, readStringArray } from './rows';
 
@@ -12,10 +12,10 @@ export interface CortexSyncResult {
     pagesSynced: number;
 }
 
-export function syncCortexMarkdown(
-    db: Database,
+export async function syncCortexMarkdown(
+    db: CortexDatabase,
     rootPath = resolveCortexWikiPath()
-): CortexSyncResult {
+): Promise<CortexSyncResult> {
     if (!fs.existsSync(rootPath)) {
         return { pagesSynced: 0 };
     }
@@ -23,7 +23,7 @@ export function syncCortexMarkdown(
     let pagesSynced = 0;
     for (const filePath of listMarkdownFiles(rootPath)) {
         const parsed = parseCortexMarkdownFile(rootPath, filePath);
-        upsertMarkdownPage(db, parsed, now);
+        await upsertMarkdownPage(db, parsed, now);
         pagesSynced += 1;
     }
     return { pagesSynced };
@@ -50,37 +50,40 @@ interface TimelineDraft {
     sourceRefs: CortexSourceRef[];
 }
 
-function upsertMarkdownPage(db: Database, page: ParsedMarkdownPage, now: string): void {
+async function upsertMarkdownPage(
+    db: CortexDatabase,
+    page: ParsedMarkdownPage,
+    now: string
+): Promise<void> {
     const sourceRefs = page.sourceRefs.length > 0 ? page.sourceRefs : [page.sourceRef];
     const registeredSourceRefs = uniqueSourceRefs([page.sourceRef, ...sourceRefs]);
     for (const sourceRef of registeredSourceRefs) {
-        upsertSource(db, sourceRef, now);
+        await upsertSource(db, sourceRef, now);
     }
     const frontmatterId =
         typeof page.frontmatter.id === 'string' && page.frontmatter.id.trim()
             ? page.frontmatter.id.trim()
             : null;
-    const existingBySlug = db
+    const existingBySlug = await db
         .prepare('SELECT id, created_at FROM cortex_pages WHERE slug = ? LIMIT 1')
-        .get(page.slug) as { created_at: string; id: string } | null;
+        .get<{ created_at: string; id: string }>(page.slug);
     const existingById = frontmatterId
-        ? (db
+        ? await db
               .prepare('SELECT id, slug, created_at FROM cortex_pages WHERE id = ? LIMIT 1')
-              .get(frontmatterId) as { created_at: string; id: string; slug: string } | null)
+              .get<{ created_at: string; id: string; slug: string }>(frontmatterId)
         : null;
     if (!(existingBySlug || !existingById || existingById.slug === page.slug)) {
-        db.prepare('UPDATE cortex_pages SET slug = ?, updated_at = ? WHERE id = ?').run(
-            page.slug,
-            now,
-            existingById.id
-        );
+        await db
+            .prepare('UPDATE cortex_pages SET slug = ?, updated_at = ? WHERE id = ?')
+            .run(page.slug, now, existingById.id);
     }
     const existing = existingBySlug ?? existingById;
     const id = frontmatterId ?? existing?.id ?? createCortexId('ctxp');
     const uniqueRefs = uniqueSourceRefs(sourceRefs);
 
-    db.prepare(
-        `INSERT INTO cortex_pages
+    await db
+        .prepare(
+            `INSERT INTO cortex_pages
          (id, slug, title, type, status, compiled_truth, body, frontmatter_json,
           source_refs_json, content_hash, created_at, updated_at)
          VALUES ($id, $slug, $title, $type, $status, $compiledTruth, $body,
@@ -96,8 +99,8 @@ function upsertMarkdownPage(db: Database, page: ParsedMarkdownPage, now: string)
            content_hash = excluded.content_hash,
            updated_at = excluded.updated_at,
            deleted_at = NULL`
-    ).run(
-        namedParams({
+        )
+        .run({
             body: page.body,
             compiledTruth: page.compiledTruth,
             contentHash: page.contentHash,
@@ -110,34 +113,39 @@ function upsertMarkdownPage(db: Database, page: ParsedMarkdownPage, now: string)
             title: page.title,
             type: page.type,
             updatedAt: now,
-        })
-    );
+        });
 
-    const row = db.prepare('SELECT * FROM cortex_pages WHERE slug = ? LIMIT 1').get(page.slug);
+    const row = await db
+        .prepare('SELECT * FROM cortex_pages WHERE slug = ? LIMIT 1')
+        .get<PageRow>(page.slug);
     if (row) {
-        const pageRow = row as PageRow;
-        replaceAliases(db, pageRow.id, page.aliases, page.slug, now);
-        replaceTimeline(db, pageRow.id, page.timeline);
-        refreshDerivedPageState(db, pageRow, now);
+        await replaceAliases(db, row.id, page.aliases, page.slug, now);
+        await replaceTimeline(db, row.id, page.timeline);
+        await refreshDerivedPageState(db, row, now);
+        await recordCortexPageVersion(db, row, now);
     }
 }
 
-function upsertSource(db: Database, sourceRef: CortexSourceRef, now: string): void {
-    db.prepare(
-        `INSERT INTO cortex_sources
+async function upsertSource(
+    db: CortexDatabase,
+    sourceRef: CortexSourceRef,
+    now: string
+): Promise<void> {
+    await db
+        .prepare(
+            `INSERT INTO cortex_sources
          (id, kind, locator, hash, metadata_json, created_at, updated_at)
          VALUES ($id, $kind, $locator, $hash, '{}', $createdAt, $updatedAt)
          ON CONFLICT(kind, locator) DO UPDATE SET updated_at = excluded.updated_at`
-    ).run(
-        namedParams({
+        )
+        .run({
             createdAt: now,
             hash: hashText(`${sourceRef.kind}:${sourceRef.locator ?? ''}`),
             id: sourceRef.id,
             kind: sourceRef.kind,
             locator: sourceRef.locator,
             updatedAt: now,
-        })
-    );
+        });
 }
 
 function parseCortexMarkdownFile(rootPath: string, filePath: string): ParsedMarkdownPage {
@@ -171,26 +179,36 @@ function parseCortexMarkdownFile(rootPath: string, filePath: string): ParsedMark
 }
 
 function replaceAliases(
-    db: Database,
+    db: CortexDatabase,
     pageId: string,
     aliases: string[],
     pageSlug: string,
     now: string
-): void {
-    db.prepare('DELETE FROM cortex_page_aliases WHERE page_id = ?').run(pageId);
+): Promise<void> {
+    return replaceAliasesAsync(db, pageId, aliases, pageSlug, now);
+}
+
+async function replaceAliasesAsync(
+    db: CortexDatabase,
+    pageId: string,
+    aliases: string[],
+    pageSlug: string,
+    now: string
+): Promise<void> {
+    await db.prepare('DELETE FROM cortex_page_aliases WHERE page_id = ?').run(pageId);
     for (const alias of uniqueAliases(aliases, pageSlug)) {
-        db.prepare(
-            `INSERT INTO cortex_page_aliases
+        await db
+            .prepare(
+                `INSERT INTO cortex_page_aliases
              (id, page_id, alias, created_at)
              VALUES ($id, $pageId, $alias, $createdAt)`
-        ).run(
-            namedParams({
+            )
+            .run({
                 alias,
                 createdAt: now,
                 id: createCortexId('ctxa'),
                 pageId,
-            })
-        );
+            });
     }
 }
 
@@ -209,23 +227,35 @@ function readPageStatus(value: unknown): 'active' | 'archived' | 'deleted' | 'st
     return value === 'archived' || value === 'deleted' || value === 'stale' ? value : 'active';
 }
 
-function replaceTimeline(db: Database, pageId: string, timeline: TimelineDraft[]): void {
-    db.prepare('DELETE FROM cortex_timeline_entries WHERE page_id = ?').run(pageId);
-    timeline.forEach((entry, index) => {
-        db.prepare(
-            `INSERT INTO cortex_timeline_entries
+function replaceTimeline(
+    db: CortexDatabase,
+    pageId: string,
+    timeline: TimelineDraft[]
+): Promise<void> {
+    return replaceTimelineAsync(db, pageId, timeline);
+}
+
+async function replaceTimelineAsync(
+    db: CortexDatabase,
+    pageId: string,
+    timeline: TimelineDraft[]
+): Promise<void> {
+    await db.prepare('DELETE FROM cortex_timeline_entries WHERE page_id = ?').run(pageId);
+    for (const [index, entry] of timeline.entries()) {
+        await db
+            .prepare(
+                `INSERT INTO cortex_timeline_entries
              (id, page_id, body, source_refs_json, created_at)
              VALUES ($id, $pageId, $body, $sourceRefs, $createdAt)`
-        ).run(
-            namedParams({
+            )
+            .run({
                 body: entry.body,
                 createdAt: entry.createdAt,
                 id: `ctxt_${hashText(`${pageId}:${entry.createdAt}:${index}:${entry.body}`).slice(0, 24)}`,
                 pageId,
                 sourceRefs: JSON.stringify(entry.sourceRefs),
-            })
-        );
-    });
+            });
+    }
 }
 
 function uniqueSourceRefs(sourceRefs: CortexSourceRef[]): CortexSourceRef[] {
@@ -308,6 +338,9 @@ function listMarkdownFiles(rootPath: string): string[] {
     for (const entry of fs.readdirSync(rootPath, { withFileTypes: true })) {
         const fullPath = path.join(rootPath, entry.name);
         if (entry.isDirectory()) {
+            if (entry.name === '.raw') {
+                continue;
+            }
             files.push(...listMarkdownFiles(fullPath));
         } else if (entry.isFile() && entry.name.endsWith('.md')) {
             files.push(fullPath);

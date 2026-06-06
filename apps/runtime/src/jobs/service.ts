@@ -32,9 +32,12 @@ export async function getRuntimeJob(slug: AgentRuntimeJobSlug): Promise<AgentRun
     };
 }
 
-export async function runRuntimeJob(slug: AgentRuntimeJobSlug): Promise<AgentRuntimeRunJob> {
+export async function runRuntimeJob(
+    slug: AgentRuntimeJobSlug,
+    input?: Record<string, unknown>
+): Promise<AgentRuntimeRunJob> {
     ensureRuntimeJobRegistered(slug);
-    const jobId = await enqueueRuntimeJob(slug, { trigger: 'manual' });
+    const jobId = await enqueueRuntimeJob(slug, { input, trigger: 'manual' });
     return { jobId };
 }
 

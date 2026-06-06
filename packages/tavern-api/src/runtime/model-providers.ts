@@ -1,6 +1,11 @@
 import * as z from 'zod';
 
-export const agentRuntimeModelProviderIdSchema = z.enum(['claude', 'codex', 'openrouter']);
+export const agentRuntimeModelProviderIdSchema = z.enum([
+    'claude',
+    'codex',
+    'openai',
+    'openrouter',
+]);
 export const modelExecutionProviderSchema = z.enum(['claude', 'codex', 'opencode']);
 export const agentRuntimeModelProviderIds = agentRuntimeModelProviderIdSchema.options;
 
@@ -29,6 +34,12 @@ export const agentRuntimeModelProviderCapabilities = {
         supportsChatRouting: true,
         supportsMemory: true,
         supportsSubAgentRouting: true,
+    },
+    openai: {
+        executionProvider: null,
+        supportsChatRouting: false,
+        supportsMemory: true,
+        supportsSubAgentRouting: false,
     },
     openrouter: {
         executionProvider: null,

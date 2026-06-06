@@ -25,6 +25,8 @@ export const runtimeModelAccessSchema = contracts.agentRuntimeModelAccessSchema;
 export const runtimeOpenRouterSettingsSchema = contracts.agentRuntimeOpenRouterSettingsSchema;
 export const runtimeSaveOpenRouterSettingsSchema =
     contracts.agentRuntimeSaveOpenRouterSettingsSchema;
+export const runtimeOpenAiSettingsSchema = contracts.agentRuntimeOpenAiSettingsSchema;
+export const runtimeSaveOpenAiSettingsSchema = contracts.agentRuntimeSaveOpenAiSettingsSchema;
 export const runtimeAgentSchema = contracts.agentRuntimeAgentSchema;
 export const runtimeAgentListSchema = contracts.agentRuntimeAgentListSchema;
 export const runtimeArchiveAgentSchema = contracts.agentRuntimeArchiveAgentSchema;
@@ -176,7 +178,10 @@ export type RuntimeModelAccess = contracts.AgentRuntimeModelAccess;
 export type RuntimeModelAccessId = contracts.AgentRuntimeModelAccessId;
 export type RuntimeModelAccessState = contracts.AgentRuntimeModelAccessState;
 export type RuntimeModelAccessStatus = contracts.AgentRuntimeModelAccessStatus;
+export type RuntimeOpenAiSettings = contracts.AgentRuntimeOpenAiSettings;
+export type RuntimeSaveOpenAiSettings = contracts.AgentRuntimeSaveOpenAiSettings;
 export type RuntimeOpenRouterSettings = contracts.AgentRuntimeOpenRouterSettings;
+export type RuntimeSaveOpenRouterSettings = contracts.AgentRuntimeSaveOpenRouterSettings;
 export type RuntimeModelCatalogEntry = contracts.AgentRuntimeModelCatalogEntry;
 export type RuntimeModels = contracts.AgentRuntimeModels;
 export type RuntimeSkillFile = contracts.AgentRuntimeSkillFile;
@@ -188,7 +193,6 @@ export type RuntimeSkillSummary = contracts.AgentRuntimeSkillSummary;
 export type RuntimeSkillUpdatedEvent = contracts.AgentRuntimeSkillUpdatedEvent;
 export type RuntimeWorkspaceInstructionsUpdatedEvent =
     contracts.AgentRuntimeWorkspaceInstructionsUpdatedEvent;
-export type RuntimeSaveOpenRouterSettings = contracts.AgentRuntimeSaveOpenRouterSettings;
 export type RuntimeSession = contracts.AgentRuntimeSession;
 export type RuntimeSessionList = contracts.AgentRuntimeSessionList;
 export type RuntimeSessionLink = contracts.AgentRuntimeSessionLink;

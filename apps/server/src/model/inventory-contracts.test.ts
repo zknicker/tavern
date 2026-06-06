@@ -1,5 +1,6 @@
 import { expect, test } from 'bun:test';
 import {
+    modelCapabilitySchema,
     modelInventoryProviderSchema,
     modelInventorySnapshotSchema,
 } from './inventory-contracts.ts';
@@ -23,6 +24,7 @@ test('modelInventorySnapshotSchema accepts cached provider records without usage
     ).toEqual({
         models: [
             {
+                capabilities: ['general'],
                 contextWindow: null,
                 description: null,
                 displayName: 'GPT-5.4',
@@ -36,6 +38,11 @@ test('modelInventorySnapshotSchema accepts cached provider records without usage
     });
 });
 
+test('modelCapabilitySchema accepts import processor capabilities', () => {
+    expect(modelCapabilitySchema.parse('audio-transcription')).toBe('audio-transcription');
+    expect(modelCapabilitySchema.parse('vision')).toBe('vision');
+});
+
 test('modelInventoryProviderSchema still requires usage labels on the live API shape', () => {
     expect(() =>
         modelInventoryProviderSchema.parse({
@@ -43,6 +50,7 @@ test('modelInventoryProviderSchema still requires usage labels on the live API s
             isConnected: true,
             models: [
                 {
+                    capabilities: ['general'],
                     contextWindow: null,
                     canDelete: false,
                     description: null,

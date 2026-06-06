@@ -3,6 +3,7 @@ import {
     agentRuntimeJobListSchema,
     agentRuntimeJobSlugSchema,
     agentRuntimeRoutes,
+    agentRuntimeRunJobInputSchema,
     agentRuntimeRunJobSchema,
 } from '@tavern/api';
 import { json, notFound } from '../tavern/http';
@@ -30,8 +31,15 @@ export async function handleRuntimeJobsRequest(request: Request): Promise<Respon
         if (!parsed.success) {
             return notFound();
         }
-        return json(agentRuntimeRunJobSchema.parse(await runRuntimeJob(parsed.data)));
+        const input = agentRuntimeRunJobInputSchema.parse(await readJson(request));
+        return json(
+            agentRuntimeRunJobSchema.parse(await runRuntimeJob(parsed.data, input.payload))
+        );
     }
 
     return null;
+}
+
+async function readJson(request: Request): Promise<unknown> {
+    return await request.json().catch(() => ({}));
 }

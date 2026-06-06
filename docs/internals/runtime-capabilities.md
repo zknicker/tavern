@@ -18,6 +18,11 @@ Capabilities are a readiness primitive. Jobs, micro-features, and whole app
 pages can use capability health to decide whether a feature is available,
 degraded, or blocked.
 
+Capabilities are not quality scores. Domain freshness, repair backlog, and
+content quality belong to the domain status API. For Cortex, stale embeddings,
+unresolved links, missing chunks, stale compiled truth, failed reviews, and
+recommendations belong to `/cortex/status`, not Runtime capability health.
+
 The app only renders capability state. It does not decide whether a Runtime
 capability is healthy.
 
@@ -198,7 +203,11 @@ integration points, and external dependencies.
 | `gateway` | Runtime owns a ready managed OpenClaw Gateway process. |
 | `memory` | Managed OpenClaw Gateway is ready and memory state can be refreshed. |
 | `mentions` | Runtime can expose mention/search hooks used by Tavern tools. |
-| `cortexDatabase` | Cortex SQLite schema exists and is usable. Empty Cortex stores are still healthy. |
+| `cortexAgentTools` | Managed OpenClaw is ready and the Cortex plugin declares every expected agent tool. |
+| `cortexDatabase` | Cortex PGLite schema exists and is usable. Empty Cortex stores are still healthy. |
+| `cortexImportProcessors` | Runtime has the hard dependencies needed for rich Cortex imports such as fetch, OCR, and transcription. |
+| `cortexJobs` | Runtime registered the Cortex job queues required for sync, lint, repair, embeddings, chat ingestion, and Dream. |
+| `cortexModelAccess` | Runtime has credentials for the providers configured in Cortex model settings. |
 | `cortexWiki` | The Cortex wiki path can be read and written, or its parent path can host an empty wiki. |
 | `embeddingModel` | Cortex embedding settings are usable and recent embedding failures do not indicate auth or quota failure. |
 | `models` | Runtime can serve the current model inventory. If Gateway is down, cached inventory is degraded. |

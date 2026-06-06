@@ -8,8 +8,10 @@ describe('jobSlugSchema', () => {
         );
         expect(jobSlugSchema.parse('cortex-sync')).toBe('cortex-sync');
         expect(jobSlugSchema.parse('cortex-lint')).toBe('cortex-lint');
-        expect(jobSlugSchema.parse('cortex-maintenance')).toBe('cortex-maintenance');
-        expect(jobSlugSchema.parse('cortex-signal')).toBe('cortex-signal');
+        expect(jobSlugSchema.parse('cortex-repair-derived-state')).toBe(
+            'cortex-repair-derived-state'
+        );
+        expect(jobSlugSchema.parse('cortex-chat-ingestion')).toBe('cortex-chat-ingestion');
         expect(jobSlugSchema.parse('cortex-dream')).toBe('cortex-dream');
         expect(jobSlugSchema.parse('refresh-runtime-capabilities')).toBe(
             'refresh-runtime-capabilities'

@@ -10,10 +10,27 @@
       "cortex_search",
       "cortex_get_page",
       "cortex_capture",
+      "cortex_edit",
+      "cortex_ingest",
+      "cortex_import",
       "cortex_recall",
       "cortex_list_backlinks"
     ]
   },
+  "skills": [
+    "skills/cortex-query",
+    "skills/cortex-capture",
+    "skills/cortex-ingest",
+    "skills/cortex-idea-ingest",
+    "skills/cortex-media-ingest",
+    "skills/cortex-enrich",
+    "skills/cortex-source-enrich",
+    "skills/cortex-organize",
+    "skills/cortex-schema",
+    "skills/cortex-citation-fixer",
+    "skills/cortex-frontmatter-guard",
+    "skills/cortex-taxonomist"
+  ],
   "configSchema": {
     "type": "object",
     "additionalProperties": false,

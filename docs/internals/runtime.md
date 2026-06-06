@@ -110,7 +110,7 @@ Cortex pages are Runtime-owned durable knowledge and memory. OpenClaw
 context management for turns remains separate from Cortex memory. Tavern
 reports these as separate readiness surfaces so users can tell whether
 prompt-time context management is ready and whether Cortex capture, recall,
-embeddings, and maintenance are ready.
+embeddings, and repair are ready.
 
 Memory and Cortex product contracts live in [Memories](../../specs/memories.md)
 and [Cortex](../../specs/cortex.md).
@@ -150,8 +150,8 @@ health and exposes it through the Admin API. Jobs and app surfaces can use
 capability health to decide whether dependent functionality is available. The
 app renders capability health; it does not own Runtime capability checks.
 
-Cortex maintenance does not sync from OpenClaw. Runtime-owned maintenance owns
-capture, embedding repair, timeline and link maintenance, and Cortex audit
+Cortex repair does not sync from OpenClaw. Runtime-owned repair owns
+capture, embedding repair, timeline and link repair, and Cortex audit
 output.
 
 ## Boundaries

@@ -1,4 +1,4 @@
-import type { Database } from '../db/sqlite';
+import type { CortexDatabase } from './db';
 import { getCortexEmbeddingConfig } from './settings';
 
 export interface CortexEmbedding {
@@ -8,8 +8,11 @@ export interface CortexEmbedding {
     vector: number[];
 }
 
-export async function embedCortexText(db: Database, text: string): Promise<CortexEmbedding | null> {
-    const config = getCortexEmbeddingConfig(db);
+export async function embedCortexText(
+    db: CortexDatabase,
+    text: string
+): Promise<CortexEmbedding | null> {
+    const config = await getCortexEmbeddingConfig(db);
     if (!config.apiKey) {
         return null;
     }

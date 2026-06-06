@@ -1,5 +1,7 @@
 import type {
     CortexBacklinkList,
+    CortexGraphDirection,
+    CortexGraphTraversal,
     CortexPage,
     CortexPageList,
     CortexRecallInput,
@@ -11,21 +13,21 @@ import type {
     CortexSourceRef,
     CortexStatus,
 } from '@tavern/api';
-import { DATA_DIR, RUNTIME_ROOT } from '../config';
-import { hasTable } from '../db/connection';
-import type { Database } from '../db/sqlite';
-import { namedParams } from '../db/sqlite';
+import { RUNTIME_ROOT } from '../config';
 import { writeCortexAudit } from './audit';
+import type { CortexDatabase } from './db';
+import { resolveCortexDatabasePath } from './db';
 import { embedCortexText } from './encoding';
 import { type CortexIssue, type CortexIssueKind, detectCortexIssues } from './lint';
+import { expandCortexRecallQuery } from './query-expansion';
 import {
-    type ChunkEncodingRow,
     type ClaimRow,
     type LinkRow,
     normalizePageLookup,
     type PageRow,
     readJsonArray,
     readJsonRecord,
+    readStringArray,
     scoreLexical,
     snippet,
     type TimelineRow,
@@ -34,17 +36,15 @@ import {
     toPageSummary,
 } from './rows';
 import { getCortexSettings } from './settings';
-import type { CortexVectorDatabase } from './vector-db/types';
 
 export const cortexWikiPath = `${RUNTIME_ROOT}/cortex/wiki`;
-export const cortexDatabasePath = `${DATA_DIR}/runtime.db`;
 
 export function resolveCortexWikiPath() {
     return process.env.TAVERN_CORTEX_WIKI_PATH?.trim() || cortexWikiPath;
 }
 
-export function listCortexPages(db: Database, limit = 100): CortexPageList {
-    const rows = db
+export async function listCortexPages(db: CortexDatabase, limit = 100): Promise<CortexPageList> {
+    const rows = await db
         .prepare(
             `SELECT id, slug, title, type, status, frontmatter_json, updated_at
              FROM cortex_pages
@@ -52,68 +52,93 @@ export function listCortexPages(db: Database, limit = 100): CortexPageList {
              ORDER BY updated_at DESC
              LIMIT ?`
         )
-        .all(limit) as PageRow[];
+        .all<PageRow>(limit);
     return {
-        pages: rows.map((row) => ({ ...toPageSummary(row), links: listPageLinks(db, row.id) })),
+        pages: await Promise.all(
+            rows.map(async (row) => ({
+                ...toPageSummary(row),
+                links: await listPageLinks(db, row.id),
+            }))
+        ),
     };
 }
 
-export function getCortexPage(db: Database, slugOrId: string): CortexPage | null {
-    const row = findPageRow(db, slugOrId);
-    return row ? toPage(db, row) : null;
+export async function getCortexPage(
+    db: CortexDatabase,
+    slugOrId: string
+): Promise<CortexPage | null> {
+    const row = await findPageRow(db, slugOrId);
+    return row ? await toPage(db, row) : null;
 }
 
 export async function searchCortex(
-    db: Database,
-    input: CortexSearchInput,
-    vectorDatabase: CortexVectorDatabase
+    db: CortexDatabase,
+    input: CortexSearchInput
 ): Promise<CortexSearchResult> {
+    const limit = input.limit ?? 10;
+    const offset = input.offset ?? 0;
+    const explain = input.explain ?? false;
     const queryTerms = tokenize(input.query);
-    const rows = db
+    const normalizedQuery = normalizePageLookup(input.query);
+    const rows = await db
         .prepare(
             `SELECT p.id AS page_id,
                     p.frontmatter_json,
-                    p.title || ' ' || p.slug || ' ' || p.compiled_truth || ' ' || p.body AS score_text,
-                    c.text_hash,
-                    e.input_text_hash
+                    p.slug,
+                    p.title,
+                    p.title || ' ' || p.slug || ' ' || p.compiled_truth || ' ' || p.body AS score_text
              FROM cortex_pages p
-             LEFT JOIN cortex_chunks c ON c.page_id = p.id
-             LEFT JOIN cortex_encodings e ON e.chunk_id = c.id
              WHERE p.deleted_at IS NULL
                AND p.status IN ('active', 'stale')`
         )
-        .all() as SearchRow[];
-    const scores = new Map<string, number>();
+        .all<SearchRow>();
+    const scores = new Map<string, SearchScore>();
     let vectorDegradedReason: string | null = null;
 
     for (const row of rows) {
         if (!matchesScope(row.frontmatter_json, input.scope)) {
             continue;
         }
+        const frontmatter = readJsonRecord(row.frontmatter_json);
+        const aliases = readStringArray(frontmatter.aliases);
+        const matchedAliases = aliases.filter((alias) => slugifyAlias(alias) === normalizedQuery);
         const lexical = scoreLexical(row.score_text, queryTerms);
-        scores.set(row.page_id, Math.max(scores.get(row.page_id) ?? 0, lexical));
+        const titleMatched = titleMatches(`${row.title} ${row.slug}`, input.query);
+        const aliasScore = matchedAliases.length > 0 ? queryTerms.length || 1 : 0;
+        const lexicalScore = Math.max(lexical, aliasScore);
+        scores.set(row.page_id, {
+            finalScore: lexicalScore,
+            lexicalScore,
+            matchedAliases,
+            titleMatched,
+            vectorScore: null,
+        });
     }
 
     try {
         const queryEmbedding = await embedCortexText(db, input.query);
         if (queryEmbedding) {
-            const vectorHits = await vectorDatabase.search({
+            const vectorHits = await searchCortexVectors(db, {
                 dimensions: queryEmbedding.dimensions,
-                limit: Math.max(input.limit * 4, input.limit),
+                limit: Math.max((offset + limit) * 4, limit),
                 model: queryEmbedding.model,
                 provider: queryEmbedding.provider,
                 vector: queryEmbedding.vector,
             });
 
             for (const hit of vectorHits) {
-                if (!isCurrentVectorHit(db, hit.chunkId, hit.textHash)) {
-                    continue;
-                }
-                const page = findPageRow(db, hit.pageId);
+                const page = await findPageRow(db, hit.pageId);
                 if (!(page && matchesScope(page.frontmatter_json, input.scope))) {
                     continue;
                 }
-                scores.set(hit.pageId, Math.max(scores.get(hit.pageId) ?? 0, hit.score));
+                const existing = scores.get(hit.pageId);
+                scores.set(hit.pageId, {
+                    finalScore: Math.max(existing?.finalScore ?? 0, hit.score),
+                    lexicalScore: existing?.lexicalScore ?? 0,
+                    matchedAliases: existing?.matchedAliases ?? [],
+                    titleMatched: existing?.titleMatched ?? false,
+                    vectorScore: Math.max(existing?.vectorScore ?? 0, hit.score),
+                });
             }
         }
     } catch (error) {
@@ -121,39 +146,186 @@ export async function searchCortex(
         // Lexical search remains available when the derived vector index is degraded.
     }
 
-    const hits = Array.from(scores.entries())
-        .filter(([, score]) => score > 0)
-        .sort((left, right) => right[1] - left[1])
-        .slice(0, input.limit)
-        .flatMap(([pageId, score]) => {
-            const page = findPageRow(db, pageId);
-            return page
-                ? [{ page: toPageSummary(page), score, snippet: snippet(page, queryTerms) }]
-                : [];
-        });
+    const scoredPages = Array.from(scores.entries())
+        .filter(([, score]) => score.finalScore > 0)
+        .sort((left, right) => right[1].finalScore - left[1].finalScore);
+    const pagedPages = scoredPages.slice(offset, offset + limit);
+    const hits: CortexSearchResult['hits'] = [];
+    for (const [index, [pageId, score]] of pagedPages.entries()) {
+        const page = await findPageRow(db, pageId);
+        if (page) {
+            hits.push({
+                diagnostics: explain
+                    ? buildSearchDiagnostics({
+                          normalizedQuery,
+                          page,
+                          queryTerms,
+                          rank: offset + index + 1,
+                          score,
+                      })
+                    : undefined,
+                page: toPageSummary(page),
+                score: score.finalScore,
+                snippet: snippet(page, queryTerms),
+            });
+        }
+    }
 
-    return { hits, query: input.query, vectorDegradedReason };
+    return {
+        diagnostics: explain
+            ? {
+                  explain: true,
+                  limit,
+                  offset,
+                  returnedCount: hits.length,
+                  totalHitCount: scoredPages.length,
+              }
+            : undefined,
+        hits,
+        limit,
+        offset,
+        query: input.query,
+        vectorDegradedReason,
+    };
 }
 
-type SearchRow = ChunkEncodingRow & {
+interface SearchRow {
     frontmatter_json: string;
-    input_text_hash: string | null;
-    text_hash: string | null;
-};
+    page_id: string;
+    score_text: string;
+    slug: string;
+    title: string;
+}
+
+interface SearchScore {
+    finalScore: number;
+    lexicalScore: number;
+    matchedAliases: string[];
+    titleMatched: boolean;
+    vectorScore: number | null;
+}
+
+function buildSearchDiagnostics(input: {
+    normalizedQuery: string;
+    page: PageRow;
+    queryTerms: string[];
+    rank: number;
+    score: SearchScore;
+}): NonNullable<CortexSearchResult['hits'][number]['diagnostics']> {
+    const evidence: NonNullable<CortexSearchResult['hits'][number]['diagnostics']>['evidence'] = [];
+    if (input.score.lexicalScore > 0) {
+        evidence.push('lexical');
+    }
+    if (input.score.vectorScore !== null && input.score.vectorScore > 0) {
+        evidence.push('vector');
+    }
+    if (input.score.titleMatched) {
+        evidence.push('title');
+    }
+    if (input.score.matchedAliases.length > 0) {
+        evidence.push('alias');
+    }
+    return {
+        createSafety: resolveCreateSafety(input),
+        evidence,
+        finalScore: input.score.finalScore,
+        lexicalScore: input.score.lexicalScore,
+        matchedAliases: input.score.matchedAliases,
+        rank: input.rank,
+        vectorScore: input.score.vectorScore,
+    };
+}
+
+function resolveCreateSafety(input: {
+    normalizedQuery: string;
+    page: PageRow;
+    queryTerms: string[];
+    score: SearchScore;
+}): NonNullable<CortexSearchResult['hits'][number]['diagnostics']>['createSafety'] {
+    if (
+        input.page.slug === input.normalizedQuery ||
+        input.score.matchedAliases.length > 0 ||
+        input.score.titleMatched
+    ) {
+        return 'exists';
+    }
+    return input.queryTerms.length > 0 && input.score.lexicalScore >= input.queryTerms.length
+        ? 'probable'
+        : 'unknown';
+}
+
+function titleMatches(text: string, query: string): boolean {
+    const normalizedText = text.toLowerCase();
+    const normalizedQuery = query.trim().toLowerCase();
+    return normalizedQuery.length > 0 && normalizedText.includes(normalizedQuery);
+}
+
+function slugifyAlias(value: string): string {
+    return normalizePageLookup(value);
+}
+
+interface VectorHit {
+    chunkId: string;
+    pageId: string;
+    score: number;
+    textHash: string;
+}
 
 type CortexSearchScope = NonNullable<CortexSearchInput['scope']>;
 
-function isCurrentVectorHit(db: Database, chunkId: string, textHash: string): boolean {
-    const row = db
+async function searchCortexVectors(
+    db: CortexDatabase,
+    input: {
+        dimensions: number;
+        limit: number;
+        model: string;
+        provider: string;
+        vector: number[];
+    }
+): Promise<VectorHit[]> {
+    const rows = await db
         .prepare(
-            `SELECT c.text_hash, e.input_text_hash
-             FROM cortex_chunks c
-             JOIN cortex_encodings e ON e.chunk_id = c.id
-             WHERE c.id = ?
-             LIMIT 1`
+            `SELECT c.id AS chunkId,
+                    c.page_id AS pageId,
+                    c.text_hash AS textHash,
+                    1 - (e.embedding <=> $vector) AS score
+             FROM cortex_encodings e
+             JOIN cortex_chunks c ON c.id = e.chunk_id
+             WHERE e.provider = $provider
+               AND e.model = $model
+               AND e.dimensions = $dimensions
+               AND e.input_text_hash = c.text_hash
+               AND e.embedding IS NOT NULL
+             ORDER BY e.embedding <=> $vector ASC
+             LIMIT $limit`
         )
-        .get(chunkId) as { input_text_hash: string; text_hash: string } | null;
-    return Boolean(row && row.text_hash === textHash && row.input_text_hash === row.text_hash);
+        .all<{
+            chunkid?: string;
+            chunkId?: string;
+            pageid?: string;
+            pageId?: string;
+            score: number;
+            texthash?: string;
+            textHash?: string;
+        }>({
+            dimensions: input.dimensions,
+            limit: input.limit,
+            model: input.model,
+            provider: input.provider,
+            vector: vectorLiteral(input.vector),
+        });
+    return rows.flatMap((row) => {
+        const chunkId = row.chunkId ?? row.chunkid;
+        const pageId = row.pageId ?? row.pageid;
+        const textHash = row.textHash ?? row.texthash;
+        return chunkId && pageId && textHash
+            ? [{ chunkId, pageId, score: row.score, textHash }]
+            : [];
+    });
+}
+
+function vectorLiteral(vector: number[]): string {
+    return `[${vector.join(',')}]`;
 }
 
 function matchesScope(frontmatterJson: string, scope: CortexSearchInput['scope']): boolean {
@@ -185,13 +357,12 @@ function toRecord(value: unknown): Record<string, unknown> {
 }
 
 export async function recallCortex(
-    db: Database,
-    input: CortexRecallInput,
-    vectorDatabase: CortexVectorDatabase
+    db: CortexDatabase,
+    input: CortexRecallInput
 ): Promise<CortexRecallResult> {
-    const mode = input.mode ?? getCortexSettings(db).recall.mode;
-    const recall = await runRecallSearch(db, input, mode, vectorDatabase);
-    const auditId = writeCortexAudit(db, {
+    const mode = input.mode ?? (await getCortexSettings(db)).recall.mode;
+    const recall = await runRecallSearch(db, input, mode);
+    const auditId = await writeCortexAudit(db, {
         kind: 'recall',
         metadata: {
             effectiveMode: mode,
@@ -209,10 +380,12 @@ export async function recallCortex(
     });
     return {
         auditId,
-        hits: recall.result.hits.map((hit) => ({
-            ...hit,
-            evidence: getCortexPage(db, hit.page.id)?.sourceRefs ?? [],
-        })),
+        hits: await Promise.all(
+            recall.result.hits.map(async (hit) => ({
+                ...hit,
+                evidence: (await getCortexPage(db, hit.page.id))?.sourceRefs ?? [],
+            }))
+        ),
         mode,
         query: recall.result.query,
         requestedMode: input.mode ?? null,
@@ -238,19 +411,18 @@ function estimateRecallPayload(result: CortexSearchResult) {
 }
 
 async function runRecallSearch(
-    db: Database,
+    db: CortexDatabase,
     input: CortexRecallInput,
-    mode: CortexRecallResult['mode'],
-    vectorDatabase: CortexVectorDatabase
+    mode: CortexRecallResult['mode']
 ): Promise<{ expandedQueries: string[]; result: CortexSearchResult }> {
     if (mode !== 'tokenmax') {
         return {
             expandedQueries: [],
-            result: await searchCortex(db, resolveRecallSearchInput(input, mode), vectorDatabase),
+            result: await searchCortex(db, resolveRecallSearchInput(input, mode)),
         };
     }
 
-    return searchCortexTokenmax(db, resolveRecallSearchInput(input, mode), vectorDatabase);
+    return searchCortexTokenmax(db, resolveRecallSearchInput(input, mode));
 }
 
 function resolveRecallSearchInput(
@@ -270,24 +442,23 @@ const recallModeLimits: Record<CortexRecallResult['mode'], number> = {
 };
 
 async function searchCortexTokenmax(
-    db: Database,
-    input: CortexSearchInput,
-    vectorDatabase: CortexVectorDatabase
+    db: CortexDatabase,
+    input: CortexSearchInput
 ): Promise<{ expandedQueries: string[]; result: CortexSearchResult }> {
     const limit = input.limit ?? recallModeLimits.tokenmax;
-    const primary = await searchCortex(db, { ...input, limit: 50 }, vectorDatabase);
-    const expandedQueries = buildTokenmaxExpandedQueries(db, input.query, primary.hits);
+    const primary = await searchCortex(db, { ...input, limit: 50 });
+    const expandedQueries = await buildTokenmaxExpandedQueries(db, input.query, primary.hits);
     const merged = new Map<string, CortexSearchResult['hits'][number]>();
     let vectorDegradedReason = primary.vectorDegradedReason;
 
     mergeSearchHits(merged, primary.hits, 1);
     for (const query of expandedQueries) {
-        const expanded = await searchCortex(db, { ...input, limit: 50, query }, vectorDatabase);
+        const expanded = await searchCortex(db, { ...input, limit: 50, query });
         vectorDegradedReason ??= expanded.vectorDegradedReason;
         mergeSearchHits(merged, expanded.hits, 0.8);
     }
 
-    addTokenmaxGraphHits(db, merged, input, primary.hits);
+    await addTokenmaxGraphHits(db, merged, input, primary.hits);
 
     const hits = Array.from(merged.values())
         .sort((left, right) => right.score - left.score)
@@ -297,6 +468,8 @@ async function searchCortexTokenmax(
         expandedQueries,
         result: {
             hits,
+            limit,
+            offset: input.offset ?? 0,
             query: input.query,
             vectorDegradedReason,
         },
@@ -318,15 +491,29 @@ function mergeSearchHits(
     }
 }
 
-function buildTokenmaxExpandedQueries(
-    db: Database,
+async function buildTokenmaxExpandedQueries(
+    db: CortexDatabase,
     query: string,
     hits: CortexSearchResult['hits']
-): string[] {
+): Promise<string[]> {
+    const settings = await getCortexSettings(db);
+    const modelQueries = await expandCortexRecallQuery({
+        hits,
+        modelRef: settings.models.queryExpansion,
+        query,
+    }).catch(() => []);
     const terms = new Set(tokenize(query));
-    const expansions: string[] = [];
+    const expansions: string[] = [...modelQueries];
+    for (const modelQuery of modelQueries) {
+        for (const term of tokenize(modelQuery)) {
+            terms.add(term);
+        }
+    }
+    if (expansions.length >= 3) {
+        return expansions.slice(0, 3);
+    }
     for (const hit of hits.slice(0, 5)) {
-        const page = getCortexPage(db, hit.page.id);
+        const page = await getCortexPage(db, hit.page.id);
         if (!page) {
             continue;
         }
@@ -351,38 +538,42 @@ function buildTokenmaxExpandedQueries(
             break;
         }
     }
-    return expansions;
+    return expansions.slice(0, 3);
 }
 
-function addTokenmaxGraphHits(
-    db: Database,
+async function addTokenmaxGraphHits(
+    db: CortexDatabase,
     merged: Map<string, CortexSearchResult['hits'][number]>,
     input: CortexSearchInput,
     seedHits: CortexSearchResult['hits']
-): void {
+): Promise<void> {
     const seedIds = seedHits.slice(0, 12).map((hit) => hit.page.id);
     if (seedIds.length === 0) {
         return;
     }
     const seedScores = new Map(seedHits.map((hit) => [hit.page.id, hit.score]));
-    const rows = db
+    const rows = await db
         .prepare(
             `SELECT from_page_id, target_page_id, target_slug, link_kind
              FROM cortex_links
              WHERE from_page_id IN (${seedIds.map(() => '?').join(',')})
                 OR target_page_id IN (${seedIds.map(() => '?').join(',')})`
         )
-        .all(...seedIds, ...seedIds) as Array<{
-        from_page_id: string;
-        link_kind: string;
-        target_page_id: string | null;
-        target_slug: string;
-    }>;
+        .all<{
+            from_page_id: string;
+            link_kind: string;
+            target_page_id: string | null;
+            target_slug: string;
+        }>(...seedIds, ...seedIds);
 
     const queryTerms = tokenize(input.query);
     for (const row of rows) {
         const candidates = [
-            { anchorId: row.from_page_id, pageId: row.target_page_id, slug: row.target_slug },
+            {
+                anchorId: row.from_page_id,
+                pageId: row.target_page_id,
+                slug: row.target_slug,
+            },
             { anchorId: row.target_page_id, pageId: row.from_page_id, slug: null },
         ];
         for (const candidate of candidates) {
@@ -390,9 +581,9 @@ function addTokenmaxGraphHits(
                 continue;
             }
             const page = candidate.pageId
-                ? findPageRow(db, candidate.pageId)
+                ? await findPageRow(db, candidate.pageId)
                 : candidate.slug
-                  ? findPageRow(db, candidate.slug)
+                  ? await findPageRow(db, candidate.slug)
                   : null;
             if (!isGraphRecallCandidate(page, input.scope)) {
                 continue;
@@ -438,53 +629,286 @@ function graphWeight(linkKind: string): number {
     }
 }
 
-export function listCortexBacklinks(db: Database, target: string): CortexBacklinkList {
-    const links = db
+export async function listCortexBacklinks(
+    db: CortexDatabase,
+    target: string
+): Promise<CortexBacklinkList> {
+    const links = await db
         .prepare(
             `SELECT id, from_page_id, target_slug, target_page_id, heading, label, link_kind, source_location
              FROM cortex_links
              WHERE target_slug = ? OR target_page_id = ?
              ORDER BY created_at DESC`
         )
-        .all(normalizePageLookup(target), target) as LinkRow[];
+        .all<LinkRow>(normalizePageLookup(target), target);
     return { links: links.map(toLink), target };
 }
 
-export async function getCortexStatus(
-    db: Database,
-    vectorDatabase: CortexVectorDatabase
-): Promise<CortexStatus> {
-    const cortexSettings = getCortexSettings(db);
-    const issues = detectCortexIssues(db);
+export async function traverseCortexGraph(
+    db: CortexDatabase,
+    input: {
+        depth?: number;
+        direction?: CortexGraphDirection;
+        root: string;
+        type?: string | null;
+    }
+): Promise<CortexGraphTraversal> {
+    const depth = Math.max(1, Math.min(10, input.depth ?? 5));
+    const direction = input.direction ?? 'out';
+    const root = normalizeGraphRoot(input.root);
+    const type = input.type?.trim() || null;
+    const paths =
+        direction === 'out'
+            ? await traverseOutboundGraph(db, root, depth, type)
+            : direction === 'in'
+              ? await traverseInboundGraph(db, root, depth, type)
+              : await traverseBidirectionalGraph(db, root, depth, type);
+
     return {
-        auditCount: count(db, 'cortex_audit_events'),
-        captureCount: count(db, 'cortex_captures'),
-        chunkCount: count(db, 'cortex_chunks'),
-        claimCount: count(db, 'cortex_claims'),
-        databasePath: cortexDatabasePath,
+        depth,
+        direction,
+        paths: dedupeGraphPaths(paths),
+        root,
+        type,
+    };
+}
+
+function normalizeGraphRoot(root: string): string {
+    const trimmed = root.trim();
+    return trimmed.startsWith('ctxp_') ? trimmed : normalizePageLookup(trimmed);
+}
+
+export async function getCortexStatus(db: CortexDatabase): Promise<CortexStatus> {
+    const cortexSettings = await getCortexSettings(db);
+    const issues = await detectCortexIssues(db);
+    return {
+        auditCount: await count(db, 'cortex_audit_events'),
+        captureCount: await count(db, 'cortex_captures'),
+        chunkCount: await count(db, 'cortex_chunks'),
+        claimCount: await count(db, 'cortex_claims'),
+        databasePath: resolveCortexDatabasePath(),
         encoding: {
-            currentCount: currentEncodingCount(db, cortexSettings.embedding),
+            currentCount: await currentEncodingCount(db, cortexSettings.embedding),
             dimensions: cortexSettings.embedding.dimensions,
             model: cortexSettings.embedding.model,
             provider: cortexSettings.embedding.provider,
-            staleCount: staleEncodingCount(db, cortexSettings.embedding),
-            totalCount: count(db, 'cortex_encodings'),
+            staleCount: await staleEncodingCount(db, cortexSettings.embedding),
+            totalCount: await count(db, 'cortex_encodings'),
         },
-        jobRuns: listRecentJobRuns(db),
-        lastCaptureAt: lastAuditAt(db, 'capture'),
-        lastRecallAt: lastAuditAt(db, 'recall'),
-        lastMaintenanceAt: lastAuditAt(db, 'job.maintenance'),
-        linkCount: count(db, 'cortex_links'),
-        pageCount: count(db, 'cortex_pages'),
+        jobRuns: await listRecentJobRuns(db),
+        lastCaptureAt: await lastAuditAt(db, 'capture'),
+        lastRecallAt: await lastAuditAt(db, 'recall'),
+        lastRepairAt: await lastAuditAt(db, 'job.repair-derived-state'),
+        linkCount: await count(db, 'cortex_links'),
+        pageCount: await count(db, 'cortex_pages'),
         recommendations: buildCortexRecommendations(
             issues,
             cortexSettings.embedding.apiKeyConfigured
         ),
-        sourceCount: count(db, 'cortex_sources'),
-        timelineEntryCount: count(db, 'cortex_timeline_entries'),
-        vectorIndex: await withEmbeddingDegradedReason(db, vectorDatabase),
+        sourceCount: await count(db, 'cortex_sources'),
+        timelineEntryCount: await count(db, 'cortex_timeline_entries'),
+        vectorIndex: await getVectorIndexStatus(db, cortexSettings),
         wikiPath: resolveCortexWikiPath(),
     };
+}
+
+type GraphPathRow = CortexGraphTraversal['paths'][number];
+
+async function traverseOutboundGraph(
+    db: CortexDatabase,
+    root: string,
+    depth: number,
+    type: string | null
+): Promise<GraphPathRow[]> {
+    const rows = await db.query<{
+        context: string | null;
+        depth: number;
+        fromslug: string;
+        fromSlug: string;
+        linkkind: string;
+        linkKind: string;
+        toslug: string;
+        toSlug: string;
+    }>(
+        `WITH RECURSIVE walk AS (
+           SELECT p.id, p.slug, 0::int AS depth, ARRAY[p.id] AS visited
+           FROM cortex_pages p
+           WHERE p.deleted_at IS NULL
+             AND (p.slug = $1 OR p.id = $1)
+           UNION ALL
+           SELECT target.id, target.slug, w.depth + 1, w.visited || target.id
+           FROM walk w
+           JOIN cortex_links l ON l.from_page_id = w.id
+           JOIN cortex_pages target
+             ON target.deleted_at IS NULL
+            AND (target.id = l.target_page_id OR target.slug = l.target_slug)
+           WHERE w.depth < $2
+             AND NOT (target.id = ANY(w.visited))
+             AND ($3::text IS NULL OR l.link_kind = $3)
+         )
+         SELECT w.slug AS "fromSlug",
+                target.slug AS "toSlug",
+                l.link_kind AS "linkKind",
+                COALESCE(l.label, l.heading, l.source_location, '') AS context,
+                w.depth + 1 AS depth
+         FROM walk w
+         JOIN cortex_links l ON l.from_page_id = w.id
+         JOIN cortex_pages target
+           ON target.deleted_at IS NULL
+          AND (target.id = l.target_page_id OR target.slug = l.target_slug)
+         WHERE w.depth < $2
+           AND ($3::text IS NULL OR l.link_kind = $3)
+         ORDER BY depth, "fromSlug", "toSlug"`,
+        [root, depth, type]
+    );
+    return rows.map(toGraphPath);
+}
+
+async function traverseInboundGraph(
+    db: CortexDatabase,
+    root: string,
+    depth: number,
+    type: string | null
+): Promise<GraphPathRow[]> {
+    const rows = await db.query<{
+        context: string | null;
+        depth: number;
+        fromslug: string;
+        fromSlug: string;
+        linkkind: string;
+        linkKind: string;
+        toslug: string;
+        toSlug: string;
+    }>(
+        `WITH RECURSIVE walk AS (
+           SELECT p.id, p.slug, 0::int AS depth, ARRAY[p.id] AS visited
+           FROM cortex_pages p
+           WHERE p.deleted_at IS NULL
+             AND (p.slug = $1 OR p.id = $1)
+           UNION ALL
+           SELECT source.id, source.slug, w.depth + 1, w.visited || source.id
+           FROM walk w
+           JOIN cortex_links l
+             ON l.target_page_id = w.id OR l.target_slug = w.slug
+           JOIN cortex_pages source
+             ON source.deleted_at IS NULL
+            AND source.id = l.from_page_id
+           WHERE w.depth < $2
+             AND NOT (source.id = ANY(w.visited))
+             AND ($3::text IS NULL OR l.link_kind = $3)
+         )
+         SELECT source.slug AS "fromSlug",
+                w.slug AS "toSlug",
+                l.link_kind AS "linkKind",
+                COALESCE(l.label, l.heading, l.source_location, '') AS context,
+                w.depth + 1 AS depth
+         FROM walk w
+         JOIN cortex_links l
+           ON l.target_page_id = w.id OR l.target_slug = w.slug
+         JOIN cortex_pages source
+           ON source.deleted_at IS NULL
+          AND source.id = l.from_page_id
+         WHERE w.depth < $2
+           AND ($3::text IS NULL OR l.link_kind = $3)
+         ORDER BY depth, "fromSlug", "toSlug"`,
+        [root, depth, type]
+    );
+    return rows.map(toGraphPath);
+}
+
+async function traverseBidirectionalGraph(
+    db: CortexDatabase,
+    root: string,
+    depth: number,
+    type: string | null
+): Promise<GraphPathRow[]> {
+    const rows = await db.query<{
+        context: string | null;
+        depth: number;
+        fromslug: string;
+        fromSlug: string;
+        linkkind: string;
+        linkKind: string;
+        toslug: string;
+        toSlug: string;
+    }>(
+        `WITH RECURSIVE walk AS (
+           SELECT p.id, p.slug, 0::int AS depth, ARRAY[p.id] AS visited
+           FROM cortex_pages p
+           WHERE p.deleted_at IS NULL
+             AND (p.slug = $1 OR p.id = $1)
+           UNION ALL
+           SELECT neighbor.id, neighbor.slug, w.depth + 1, w.visited || neighbor.id
+           FROM walk w
+           JOIN cortex_links l
+             ON l.from_page_id = w.id OR l.target_page_id = w.id OR l.target_slug = w.slug
+           JOIN cortex_pages neighbor
+             ON neighbor.deleted_at IS NULL
+            AND neighbor.id = CASE
+                  WHEN l.from_page_id = w.id THEN COALESCE(l.target_page_id, neighbor.id)
+                  ELSE l.from_page_id
+                END
+            AND (
+                  (l.from_page_id = w.id AND (neighbor.id = l.target_page_id OR neighbor.slug = l.target_slug))
+                  OR ((l.target_page_id = w.id OR l.target_slug = w.slug) AND neighbor.id = l.from_page_id)
+                )
+           WHERE w.depth < $2
+             AND NOT (neighbor.id = ANY(w.visited))
+             AND ($3::text IS NULL OR l.link_kind = $3)
+         )
+         SELECT source.slug AS "fromSlug",
+                target.slug AS "toSlug",
+                l.link_kind AS "linkKind",
+                COALESCE(l.label, l.heading, l.source_location, '') AS context,
+                w.depth + 1 AS depth
+         FROM walk w
+         JOIN cortex_links l
+           ON l.from_page_id = w.id OR l.target_page_id = w.id OR l.target_slug = w.slug
+         JOIN cortex_pages source
+           ON source.deleted_at IS NULL
+          AND source.id = l.from_page_id
+         JOIN cortex_pages target
+           ON target.deleted_at IS NULL
+          AND (target.id = l.target_page_id OR target.slug = l.target_slug)
+         WHERE w.depth < $2
+           AND ($3::text IS NULL OR l.link_kind = $3)
+         ORDER BY depth, "fromSlug", "toSlug"`,
+        [root, depth, type]
+    );
+    return rows.map(toGraphPath);
+}
+
+function toGraphPath(row: {
+    context: string | null;
+    depth: number;
+    fromslug: string;
+    fromSlug: string;
+    linkkind: string;
+    linkKind: string;
+    toslug: string;
+    toSlug: string;
+}): GraphPathRow {
+    return {
+        context: row.context ?? '',
+        depth: Number(row.depth),
+        fromSlug: row.fromSlug ?? row.fromslug,
+        linkKind: row.linkKind ?? row.linkkind,
+        toSlug: row.toSlug ?? row.toslug,
+    };
+}
+
+function dedupeGraphPaths(paths: GraphPathRow[]): GraphPathRow[] {
+    const seen = new Set<string>();
+    const deduped: GraphPathRow[] = [];
+    for (const path of paths) {
+        const key = `${path.fromSlug}|${path.toSlug}|${path.linkKind}|${path.depth}`;
+        if (seen.has(key)) {
+            continue;
+        }
+        seen.add(key);
+        deduped.push(path);
+    }
+    return deduped;
 }
 
 function buildCortexRecommendations(
@@ -500,7 +924,7 @@ function buildCortexRecommendations(
     };
 
     add('unresolved-link', {
-        action: 'run-cortex-maintenance',
+        action: 'run-cortex-repair-derived-state',
         severity: 'warning',
         summary: 'Some Cortex links do not resolve to pages.',
     });
@@ -508,6 +932,16 @@ function buildCortexRecommendations(
         action: 'inspect-lint',
         severity: 'error',
         summary: 'Some Cortex links use relationship types outside the active schema.',
+    });
+    add('invalid-page-type', {
+        action: 'inspect-lint',
+        severity: 'error',
+        summary: 'Some Cortex pages use page types outside the active schema.',
+    });
+    add('duplicate-page', {
+        action: 'inspect-lint',
+        severity: 'warning',
+        summary: 'Some Cortex pages may duplicate another page.',
     });
     add('unsourced-page', {
         action: 'inspect-lint',
@@ -519,18 +953,33 @@ function buildCortexRecommendations(
         severity: 'info',
         summary: 'Some sourced Cortex pages do not have citation rows.',
     });
+    add('broken-citation', {
+        action: 'inspect-lint',
+        severity: 'error',
+        summary: 'Some Cortex citations point at missing records.',
+    });
     add('without-timeline', {
         action: 'run-cortex-sync',
         severity: 'warning',
         summary: 'Some Cortex pages do not have timeline evidence.',
+    });
+    add('stale-page', {
+        action: 'inspect-lint',
+        severity: 'warning',
+        summary: 'Some Cortex pages need compiled truth refreshed from newer evidence.',
     });
     add('orphan-page', {
         action: 'inspect-lint',
         severity: 'info',
         summary: 'Some Cortex pages are not connected to the graph.',
     });
+    add('missing-cross-reference', {
+        action: 'inspect-lint',
+        severity: 'warning',
+        summary: 'Some Cortex pages mention known pages without graph links.',
+    });
     add('missing-chunks', {
-        action: 'run-cortex-maintenance',
+        action: 'run-cortex-repair-derived-state',
         severity: 'warning',
         summary: 'Some Cortex pages are missing derived chunks.',
     });
@@ -549,10 +998,10 @@ function buildCortexRecommendations(
         severity: 'error',
         summary: 'Some Cortex Dream reviews failed.',
     });
-    add('failed-signal', {
+    add('failed-chat-ingestion', {
         action: 'inspect-lint',
         severity: 'error',
-        summary: 'Some Cortex Signal reviews failed.',
+        summary: 'Some Cortex Chat Ingestion reviews failed.',
     });
 
     if (!embeddingConfigured) {
@@ -568,27 +1017,25 @@ function buildCortexRecommendations(
     return recommendations;
 }
 
-async function withEmbeddingDegradedReason(
-    db: Database,
-    vectorDatabase: CortexVectorDatabase
+async function getVectorIndexStatus(
+    db: CortexDatabase,
+    settings: CortexSettings
 ): Promise<CortexStatus['vectorIndex']> {
-    const status = await vectorDatabase.status();
-    if (status.degradedReason) {
-        return status;
-    }
-    if (!getCortexSettings(db).embedding.apiKeyConfigured) {
-        return {
-            ...status,
-            degradedReason: 'OpenAI API key is not configured.',
-        };
-    }
-    return status;
+    return {
+        backend: 'pglite-vector',
+        degradedReason: settings.embedding.apiKeyConfigured
+            ? null
+            : 'OpenAI API key is not configured.',
+        indexedCount: await currentEncodingCount(db, settings.embedding),
+        path: resolveCortexDatabasePath(),
+        table: 'cortex_encodings',
+    };
 }
 
-export function findPageRow(db: Database, slugOrId: string): PageRow | null {
+export async function findPageRow(db: CortexDatabase, slugOrId: string): Promise<PageRow | null> {
     const slug = normalizePageLookup(slugOrId);
     return (
-        (db
+        (await db
             .prepare(
                 `SELECT *
              FROM cortex_pages
@@ -597,28 +1044,31 @@ export function findPageRow(db: Database, slugOrId: string): PageRow | null {
                     OR id = (SELECT page_id FROM cortex_page_aliases WHERE alias = $input OR alias = $slug LIMIT 1))
              LIMIT 1`
             )
-            .get({ $input: slugOrId, $slug: slug }) as PageRow | null) ?? null
+            .get<PageRow>({ input: slugOrId, slug })) ?? null
     );
 }
 
-export function toPage(db: Database, row: PageRow): CortexPage {
+export async function toPage(db: CortexDatabase, row: PageRow): Promise<CortexPage> {
     return {
         ...toPageSummary(row),
         body: row.body,
-        claims: listClaims(db, row.id),
+        claims: await listClaims(db, row.id),
         compiledTruth: row.compiled_truth,
         createdAt: row.created_at,
         frontmatter: readJsonRecord(row.frontmatter_json),
-        indexing: getPageIndexing(db, row.id),
-        links: listPageLinks(db, row.id),
+        indexing: await getPageIndexing(db, row.id),
+        links: await listPageLinks(db, row.id),
         sourceRefs: readJsonArray<CortexSourceRef>(row.source_refs_json),
-        timeline: listTimeline(db, row.id),
+        timeline: await listTimeline(db, row.id),
     };
 }
 
-function getPageIndexing(db: Database, pageId: string): CortexPage['indexing'] {
-    const embedding = getCortexSettings(db).embedding;
-    const row = db
+async function getPageIndexing(
+    db: CortexDatabase,
+    pageId: string
+): Promise<CortexPage['indexing']> {
+    const embedding = (await getCortexSettings(db)).embedding;
+    const row = await db
         .prepare(
             `SELECT COUNT(c.id) AS chunkCount,
                     SUM(CASE WHEN e.id IS NOT NULL AND e.input_text_hash = c.text_hash THEN 1 ELSE 0 END) AS currentEmbeddingCount,
@@ -633,24 +1083,27 @@ function getPageIndexing(db: Database, pageId: string): CortexPage['indexing'] {
               AND e.dimensions = $dimensions
              WHERE c.page_id = $pageId`
         )
-        .get(
-            namedParams({
-                dimensions: embedding.dimensions,
-                model: embedding.model,
-                pageId,
-                provider: embedding.provider,
-            })
-        ) as {
-        chunkCount: number;
-        currentEmbeddingCount: number | null;
-        lastEmbeddedAt: string | null;
-        missingEmbeddingCount: number | null;
-        staleEmbeddingCount: number | null;
-    };
-    const chunkCount = row.chunkCount;
-    const currentEmbeddingCount = row.currentEmbeddingCount ?? 0;
-    const missingEmbeddingCount = row.missingEmbeddingCount ?? 0;
-    const staleEmbeddingCount = row.staleEmbeddingCount ?? 0;
+        .get<{
+            chunkcount?: number;
+            chunkCount: number;
+            currentembeddingcount?: number | null;
+            currentEmbeddingCount: number | null;
+            lastembeddedat?: string | null;
+            lastEmbeddedAt: string | null;
+            missingembeddingcount?: number | null;
+            missingEmbeddingCount: number | null;
+            staleembeddingcount?: number | null;
+            staleEmbeddingCount: number | null;
+        }>({
+            dimensions: embedding.dimensions,
+            model: embedding.model,
+            pageId,
+            provider: embedding.provider,
+        });
+    const chunkCount = row?.chunkCount ?? row?.chunkcount ?? 0;
+    const currentEmbeddingCount = row?.currentEmbeddingCount ?? row?.currentembeddingcount ?? 0;
+    const missingEmbeddingCount = row?.missingEmbeddingCount ?? row?.missingembeddingcount ?? 0;
+    const staleEmbeddingCount = row?.staleEmbeddingCount ?? row?.staleembeddingcount ?? 0;
     const status =
         chunkCount === 0
             ? 'not-indexed'
@@ -663,22 +1116,22 @@ function getPageIndexing(db: Database, pageId: string): CortexPage['indexing'] {
         currentEmbeddingCount,
         embeddingModel: embedding.model,
         embeddingProvider: embedding.provider,
-        lastEmbeddedAt: row.lastEmbeddedAt,
+        lastEmbeddedAt: row?.lastEmbeddedAt ?? row?.lastembeddedat ?? null,
         missingEmbeddingCount,
         staleEmbeddingCount,
         status,
     };
 }
 
-function listClaims(db: Database, pageId: string): CortexPage['claims'] {
-    const rows = db
+async function listClaims(db: CortexDatabase, pageId: string): Promise<CortexPage['claims']> {
+    const rows = await db
         .prepare(
             `SELECT id, page_id, subject, predicate, value, confidence, status, source_refs_json, supersedes_claim_id
              FROM cortex_claims
              WHERE page_id = ?
              ORDER BY created_at ASC`
         )
-        .all(pageId) as ClaimRow[];
+        .all<ClaimRow>(pageId);
     return rows.map((row) => ({
         confidence: row.confidence,
         id: row.id,
@@ -692,15 +1145,15 @@ function listClaims(db: Database, pageId: string): CortexPage['claims'] {
     }));
 }
 
-function listTimeline(db: Database, pageId: string): CortexPage['timeline'] {
-    const rows = db
+async function listTimeline(db: CortexDatabase, pageId: string): Promise<CortexPage['timeline']> {
+    const rows = await db
         .prepare(
             `SELECT id, body, source_refs_json, created_at
              FROM cortex_timeline_entries
              WHERE page_id = ?
              ORDER BY created_at ASC`
         )
-        .all(pageId) as TimelineRow[];
+        .all<TimelineRow>(pageId);
     return rows.map((row) => ({
         body: row.body,
         createdAt: row.created_at,
@@ -709,25 +1162,32 @@ function listTimeline(db: Database, pageId: string): CortexPage['timeline'] {
     }));
 }
 
-function listPageLinks(db: Database, pageId: string) {
-    const rows = db
+async function listPageLinks(db: CortexDatabase, pageId: string) {
+    const rows = await db
         .prepare(
             `SELECT id, from_page_id, target_slug, target_page_id, heading, label, link_kind, source_location
              FROM cortex_links
              WHERE from_page_id = ?
              ORDER BY created_at ASC`
         )
-        .all(pageId) as LinkRow[];
+        .all<LinkRow>(pageId);
     return rows.map(toLink);
 }
 
-function count(db: Database, table: string): number {
-    return (db.prepare(`SELECT COUNT(*) AS count FROM ${table}`).get() as { count: number }).count;
+async function count(db: CortexDatabase, table: string): Promise<number> {
+    return (
+        (await db.prepare(`SELECT COUNT(*) AS count FROM ${table}`).get<{ count: number }>()) ?? {
+            count: 0,
+        }
+    ).count;
 }
 
-function currentEncodingCount(db: Database, embedding: CortexSettings['embedding']): number {
+async function currentEncodingCount(
+    db: CortexDatabase,
+    embedding: CortexSettings['embedding']
+): Promise<number> {
     return (
-        db
+        (await db
             .prepare(
                 `SELECT COUNT(*) AS count
              FROM cortex_encodings e
@@ -737,13 +1197,18 @@ function currentEncodingCount(db: Database, embedding: CortexSettings['embedding
                AND e.dimensions = ?
                AND e.input_text_hash = c.text_hash`
             )
-            .get(embedding.provider, embedding.model, embedding.dimensions) as { count: number }
+            .get<{ count: number }>(embedding.provider, embedding.model, embedding.dimensions)) ?? {
+            count: 0,
+        }
     ).count;
 }
 
-function staleEncodingCount(db: Database, embedding: CortexSettings['embedding']): number {
+async function staleEncodingCount(
+    db: CortexDatabase,
+    embedding: CortexSettings['embedding']
+): Promise<number> {
     return (
-        db
+        (await db
             .prepare(
                 `SELECT COUNT(*) AS count
              FROM cortex_encodings e
@@ -753,12 +1218,14 @@ function staleEncodingCount(db: Database, embedding: CortexSettings['embedding']
                 OR e.dimensions != ?
                 OR e.input_text_hash != c.text_hash`
             )
-            .get(embedding.provider, embedding.model, embedding.dimensions) as { count: number }
+            .get<{ count: number }>(embedding.provider, embedding.model, embedding.dimensions)) ?? {
+            count: 0,
+        }
     ).count;
 }
 
-function lastAuditAt(db: Database, kind: string): string | null {
-    const row = db
+async function lastAuditAt(db: CortexDatabase, kind: string): Promise<string | null> {
+    const row = await db
         .prepare(
             `SELECT created_at
              FROM cortex_audit_events
@@ -766,72 +1233,55 @@ function lastAuditAt(db: Database, kind: string): string | null {
              ORDER BY created_at DESC
              LIMIT 1`
         )
-        .get(kind) as { created_at: string } | null;
+        .get<{ created_at: string }>(kind);
     return row?.created_at ?? null;
 }
 
-function listRecentJobRuns(db: Database): CortexStatus['jobRuns'] {
-    if (!hasTable(db, 'runtime_job_runs')) {
-        return [];
-    }
-    const rows = db
+async function listRecentJobRuns(db: CortexDatabase): Promise<CortexStatus['jobRuns']> {
+    const rows = await db
         .prepare(
-            `SELECT job_slug, state, error, logs_json, created_at, finished_at, updated_at
-             FROM runtime_job_runs
-             WHERE job_slug IN (
-               'cortex-sync',
-               'cortex-generate-embeddings',
-               'cortex-lint',
-               'cortex-maintenance',
-               'cortex-signal',
-               'cortex-dream'
-             )
+            `SELECT kind, status, summary, created_at
+             FROM cortex_audit_events
+             WHERE kind LIKE 'job.%'
              ORDER BY created_at DESC
              LIMIT 10`
         )
-        .all() as Array<{
-        created_at: string;
-        error: string | null;
-        finished_at: string | null;
-        job_slug: string;
-        logs_json: string;
-        state: string;
-        updated_at: string;
-    }>;
+        .all<{
+            created_at: string;
+            kind: string;
+            status: 'error' | 'skipped' | 'success';
+            summary: string;
+        }>();
     return rows.map((row) => ({
-        auditId: `runtime:${row.job_slug}:${row.created_at}`,
-        completedAt: row.finished_at ?? row.updated_at ?? row.created_at,
-        job: toCortexJobName(row.job_slug),
-        status:
-            row.state === 'failed' ? 'error' : row.state === 'completed' ? 'success' : 'skipped',
-        summary: row.error ?? latestLog(row.logs_json) ?? `${row.job_slug} ${row.state}`,
+        auditId: `audit:${row.kind}:${row.created_at}`,
+        completedAt: row.created_at,
+        job: toCortexJobName(row.kind.replace(/^job\./u, '')),
+        status: row.status,
+        summary: row.summary,
     }));
 }
 
 function toCortexJobName(jobSlug: string): CortexStatus['jobRuns'][number]['job'] {
     switch (jobSlug) {
+        case 'sync':
         case 'cortex-sync':
             return 'sync';
+        case 'generate-embeddings':
         case 'cortex-generate-embeddings':
             return 'generate-embeddings';
+        case 'lint':
         case 'cortex-lint':
             return 'lint';
-        case 'cortex-maintenance':
-            return 'maintenance';
-        case 'cortex-signal':
-            return 'signal';
+        case 'repair-derived-state':
+        case 'cortex-repair-derived-state':
+            return 'repair-derived-state';
+        case 'cortex-chat-ingestion':
+        case 'chat-ingestion':
+            return 'chat-ingestion';
+        case 'dream':
         case 'cortex-dream':
             return 'dream';
         default:
             return 'lint';
-    }
-}
-
-function latestLog(logsJson: string): string | null {
-    try {
-        const logs = JSON.parse(logsJson) as unknown;
-        return Array.isArray(logs) && typeof logs.at(-1) === 'string' ? logs.at(-1) : null;
-    } catch {
-        return null;
     }
 }

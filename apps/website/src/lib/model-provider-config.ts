@@ -1,7 +1,7 @@
 import type { IconSvgElement } from '@hugeicons/react';
 import { Atom02Icon, ChatGptIcon, Globe02Icon } from '@hugeicons-pro/core-stroke-rounded';
 
-export type ModelAccessId = 'codex';
+export type ModelAccessId = 'codex' | 'openai' | 'openrouter';
 
 export interface ModelConfig {
     displayName: string;
@@ -54,8 +54,27 @@ const configuredModelProviders = [
         },
     },
     {
+        accessDisplayName: 'OpenAI API',
+        accessId: 'openai',
+        color: '#10A37F',
+        configName: 'openai',
+        displayName: 'OpenAI',
+        icon: ChatGptIcon,
+        models: {
+            'gpt-4o-mini': {
+                displayName: 'GPT-4o Mini',
+            },
+            'text-embedding-3-small': {
+                displayName: 'Text Embedding 3 Small',
+            },
+            'whisper-1': {
+                displayName: 'Whisper',
+            },
+        },
+    },
+    {
         accessDisplayName: 'OpenRouter',
-        accessId: null,
+        accessId: 'openrouter',
         color: '#8B5CF6',
         configName: 'openrouter',
         displayName: 'OpenRouter',

@@ -9,6 +9,7 @@ test('InventoryModelCard renders a tooltip trigger for usage-locked delete actio
             isDeleting={false}
             model={{
                 canDelete: false,
+                capabilities: ['general'],
                 contextWindow: 200_000,
                 description: null,
                 displayName: 'GPT-5.4',

@@ -19,7 +19,7 @@ OpenClaw context management for active turns is not Tavern memory.
 
 ## Contract
 
-* Memory status reports Cortex capture, recall, embedding, and maintenance
+* Memory status reports Cortex capture, recall, embedding, and derived-state repair
   readiness.
 * Context-management status reports whether managed OpenClaw prompt-time
   continuity is available.
@@ -37,7 +37,8 @@ OpenClaw context management for active turns is not Tavern memory.
 Memory inspection reads:
 
 * Cortex status for storage paths, page/source/link/chunk counts, encoding
-  coverage, maintenance runs, and recent capture, recall, and repair activity
+  coverage, repair runs, and recent capture, recall, and repair activity
+* Cortex schema additions for page or link types introduced during agent writes
 * Cortex pages for compiled truth, timeline evidence, links, claims, and source
   references
 * Cortex recall results and audit ids for prompt-time memory usage
@@ -45,30 +46,35 @@ Memory inspection reads:
 
 There is no standalone memory model-slot configuration. The old persistence,
 working, knowledge, and dream model slots belonged to a retired memory design.
-Current Cortex capture, recall, indexing, and maintenance settings belong under
+Current Cortex capture, recall, indexing, and repair settings belong under
 Cortex contracts when they exist.
 
 The current Cortex implementation exposes storage, tools, deterministic claim
 splitting, canonical markdown-backed captures and page edits, archive/merge/split
 lifecycle actions, hybrid lexical/vector recall with OpenAI embeddings when
-configured, tokenmax recall expansion across page metadata and graph neighbors,
-status recommendations from lint findings, and job status. Cortex Signal and
-Cortex Dream use Codex OAuth credentials for source review when
-`~/.codex/auth.json` or `CODEX_HOME` is available, with
-`TAVERN_CORTEX_SIGNAL_MODEL` and `TAVERN_CORTEX_DREAM_MODEL` as optional model
-overrides. Signal reviews per-chat message backlog every few minutes; Dream
-consolidates recent chats later. Both apply structured page writes,
-observations, relationships, timeline entries, citations, noops, and warnings,
-with source-hash, model-call metadata, and token usage when returned by the
-Codex route. Without Codex auth, the Runtime job capability gate disables
-`cortex-signal` and `cortex-dream`. Non-chat Dream source coverage remains
-future work.
+configured, tokenmax recall expansion through Runtime OpenRouter model access
+plus page metadata and graph neighbors, status recommendations from lint
+findings, and job status. Cortex Chat Ingestion and Cortex Dream use Codex OAuth
+credentials for source review when
+`~/.codex/auth.json` or `CODEX_HOME` is available, with models selected through
+Memory settings. Chat Ingestion reviews per-chat message backlog every few
+minutes. Dream consolidates existing Cortex pages, recent audit evidence, source
+refs, and lint findings daily. Both apply structured page writes, observations,
+relationships, timeline entries, citations, noops, and warnings, with
+source-hash, model-call metadata, and token usage when returned by the Codex
+route. Without Codex auth, the Runtime job capability gate disables
+`cortex-chat-ingestion` and `cortex-dream`.
+
+Schema additions are runtime schema terms, not source-controlled defaults. When
+capture, page edit, or Dream introduces a new page or link type, Runtime stores
+that term in Cortex, includes it in the effective active schema, writes an audit
+event, and exposes the term with usage counts for later cleanup.
 
 ## Agent Boundary
 
 Agents use memory through explicit tools:
 
-* Cortex tools for durable capture, page reads, recall, and maintenance.
+* Cortex tools for durable capture, page reads, recall, and repair.
 * Context-management tools and status for prompt-time continuity when the active
   turn needs it.
 

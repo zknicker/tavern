@@ -15,7 +15,11 @@ export const agentRuntimeCapabilitySchema = z.enum([
     'cron',
     'cronRuns',
     'codexOAuth',
+    'cortexAgentTools',
     'cortexDatabase',
+    'cortexImportProcessors',
+    'cortexJobs',
+    'cortexModelAccess',
     'cortexWiki',
     'embeddingModel',
     'events',
@@ -108,7 +112,7 @@ export const agentRuntimeAgentBindingSchema = z.object({
     agentId: z.string().trim().min(1),
 });
 
-export const agentRuntimeModelAccessIdSchema = z.enum(['codex']);
+export const agentRuntimeModelAccessIdSchema = z.enum(['codex', 'openai', 'openrouter']);
 export const agentRuntimeModelAccessStateSchema = z.enum(['error', 'live', 'needs-auth']);
 
 export const agentRuntimeModelAccessStatusSchema = z.object({
@@ -138,6 +142,16 @@ export const agentRuntimeOpenRouterSettingsSchema = z.object({
     hasManagementApiKey: z.boolean(),
     managementApiKey: z.string(),
     updatedAt: z.string().datetime().nullable(),
+});
+
+export const agentRuntimeOpenAiSettingsSchema = z.object({
+    apiKey: z.string(),
+    hasApiKey: z.boolean(),
+    updatedAt: z.string().datetime().nullable(),
+});
+
+export const agentRuntimeSaveOpenAiSettingsSchema = z.object({
+    apiKey: z.string().trim().refine(isOpenAiApiKey, 'Enter an OpenAI API key.'),
 });
 
 export const agentRuntimeSaveOpenRouterSettingsSchema = z
@@ -643,11 +657,11 @@ export const agentRuntimeModelsSchema = z.object({
 });
 
 export const cortexJobNameSchema = z.enum([
+    'chat-ingestion',
     'dream',
     'generate-embeddings',
     'lint',
-    'maintenance',
-    'signal',
+    'repair-derived-state',
     'sync',
 ]);
 
@@ -660,6 +674,13 @@ export const cortexEmbeddingModelSchema = z.enum([
     'text-embedding-3-small',
     'text-embedding-3-large',
 ]);
+
+export const cortexEmbeddingModelRefSchema = z.enum(['openai/text-embedding-3-small']);
+export const cortexChatModelRefSchema = z
+    .string()
+    .trim()
+    .min(1)
+    .regex(/^[a-z0-9][a-z0-9-]*\/[A-Za-z0-9._:/-]+$/u, 'Enter a provider/model ref.');
 
 export const cortexSourceRefSchema = z.object({
     id: z.string().trim().min(1),
@@ -704,6 +725,32 @@ export const cortexSchemaRecordSchema = z.object({
 
 export const cortexSaveSchemaInputSchema = z.object({
     schema: cortexSchemaDefinitionSchema,
+});
+
+export const cortexSchemaAdditionKindSchema = z.enum(['link-type', 'page-type']);
+
+export const cortexSchemaAdditionSchema = z.object({
+    createdAt: z.string().datetime(),
+    example: z.record(z.string(), z.unknown()).default({}),
+    id: z.string().trim().min(1),
+    kind: cortexSchemaAdditionKindSchema,
+    name: z.string().trim().min(1),
+    reason: z.string().trim().min(1),
+    sourceRefs: z.array(cortexSourceRefSchema).default([]),
+    updatedAt: z.string().datetime(),
+    usageCount: z.number().int().nonnegative(),
+});
+
+export const cortexSchemaAdditionListSchema = z.object({
+    additions: z.array(cortexSchemaAdditionSchema),
+});
+
+export const cortexAddSchemaTermInputSchema = z.object({
+    example: z.record(z.string(), z.unknown()).default({}),
+    kind: cortexSchemaAdditionKindSchema,
+    name: z.string().trim().min(1),
+    reason: z.string().trim().min(1),
+    sourceRefs: z.array(cortexSourceRefSchema).default([]),
 });
 
 export const cortexPageSummarySchema = z.object({
@@ -776,6 +823,14 @@ export const cortexPageEditClaimInputSchema = z.object({
     value: z.string().trim().min(1),
 });
 
+export const cortexPageEditTimelineEntryInputSchema = z.union([
+    z.string().trim().min(1),
+    z.object({
+        body: z.string().trim().min(1),
+        createdAt: z.string().datetime(),
+    }),
+]);
+
 const cortexPageEditBaseSchema = z.object({
     source: cortexPageWriteSourceSchema,
     summary: z.string().trim().min(1).optional(),
@@ -792,13 +847,18 @@ export const cortexUpsertPageInputSchema = cortexPageEditBaseSchema.extend({
     slug: z.string().trim().min(1).optional(),
     status: cortexPageStatusSchema.optional(),
     tags: z.array(z.string().trim().min(1)).optional(),
-    timelineEntries: z.array(z.string().trim().min(1)).optional(),
+    timelineEntries: z.array(cortexPageEditTimelineEntryInputSchema).optional(),
     title: z.string().trim().min(1),
     type: cortexPageTypeSchema.default('note'),
 });
 
 export const cortexArchivePageInputSchema = cortexPageEditBaseSchema.extend({
     action: z.literal('archive'),
+    slugOrId: z.string().trim().min(1),
+});
+
+export const cortexDeletePageInputSchema = cortexPageEditBaseSchema.extend({
+    action: z.literal('delete'),
     slugOrId: z.string().trim().min(1),
 });
 
@@ -821,6 +881,7 @@ export const cortexNoopPageInputSchema = cortexPageEditBaseSchema.extend({
 
 export const cortexEditPageInputSchema = z.discriminatedUnion('action', [
     cortexArchivePageInputSchema,
+    cortexDeletePageInputSchema,
     cortexMergePageInputSchema,
     cortexNoopPageInputSchema,
     cortexSplitPageInputSchema,
@@ -857,6 +918,36 @@ export const cortexEditPageResultSchema = z.object({
     pages: z.array(cortexPageSchema),
 });
 
+export const cortexPageVersionSummarySchema = z.object({
+    contentHash: z.string(),
+    createdAt: z.string().datetime(),
+    id: z.string().trim().min(1),
+    pageId: z.string().trim().min(1),
+    pageUpdatedAt: z.string().datetime(),
+    slug: z.string().trim().min(1),
+    status: cortexPageStatusSchema,
+    title: z.string().trim().min(1),
+    type: cortexPageTypeSchema,
+    versionNumber: z.number().int().positive(),
+});
+
+export const cortexPageVersionSchema = cortexPageVersionSummarySchema.extend({
+    body: z.string(),
+    compiledTruth: z.string(),
+    frontmatter: z.record(z.string(), z.unknown()).default({}),
+    sourceRefs: z.array(cortexSourceRefSchema).default([]),
+});
+
+export const cortexPageVersionListSchema = z.object({
+    slug: z.string().trim().min(1),
+    versions: z.array(cortexPageVersionSummarySchema),
+});
+
+export const cortexRevertPageInputSchema = z.object({
+    source: cortexPageWriteSourceSchema,
+    versionId: z.string().trim().min(1),
+});
+
 export const cortexPageListSchema = z.object({
     pages: z.array(
         cortexPageSummarySchema.extend({
@@ -866,7 +957,9 @@ export const cortexPageListSchema = z.object({
 });
 
 export const cortexSearchInputSchema = z.object({
+    explain: z.boolean().default(false),
     limit: z.number().int().positive().max(50).default(10),
+    offset: z.number().int().nonnegative().default(0),
     query: z.string().trim().min(1),
     scope: z
         .object({
@@ -878,14 +971,36 @@ export const cortexSearchInputSchema = z.object({
         .optional(),
 });
 
+export const cortexSearchHitDiagnosticsSchema = z.object({
+    createSafety: z.enum(['exists', 'probable', 'unknown']),
+    evidence: z.array(z.enum(['alias', 'lexical', 'title', 'vector'])).default([]),
+    finalScore: z.number().nonnegative(),
+    lexicalScore: z.number().nonnegative(),
+    matchedAliases: z.array(z.string().trim().min(1)).default([]),
+    rank: z.number().int().positive(),
+    vectorScore: z.number().nonnegative().nullable(),
+});
+
 export const cortexSearchHitSchema = z.object({
+    diagnostics: cortexSearchHitDiagnosticsSchema.optional(),
     page: cortexPageSummarySchema,
     score: z.number().nonnegative(),
     snippet: z.string().default(''),
 });
 
 export const cortexSearchResultSchema = z.object({
+    diagnostics: z
+        .object({
+            explain: z.boolean(),
+            limit: z.number().int().positive(),
+            offset: z.number().int().nonnegative(),
+            returnedCount: z.number().int().nonnegative(),
+            totalHitCount: z.number().int().nonnegative(),
+        })
+        .optional(),
     hits: z.array(cortexSearchHitSchema),
+    limit: z.number().int().positive().default(10),
+    offset: z.number().int().nonnegative().default(0),
     query: z.string().trim().min(1),
     vectorDegradedReason: z.string().nullable().default(null),
 });
@@ -935,9 +1050,92 @@ export const cortexCaptureResultSchema = z.object({
     page: cortexPageSchema,
 });
 
+export const cortexIngestInputSchema = z.object({
+    actor: cortexPageWriteSourceSchema.optional(),
+    content: z.string().trim().min(1),
+    kind: z.string().trim().min(1),
+    locator: z.string().trim().min(1).optional(),
+    metadata: z.record(z.string(), z.unknown()).default({}),
+    tags: z.array(z.string().trim().min(1)).default([]),
+    title: z.string().trim().min(1).optional(),
+    type: cortexPageTypeSchema.default('source'),
+});
+
+export const cortexIngestResultSchema = z.object({
+    auditId: z.string().trim().min(1),
+    page: cortexPageSchema,
+    sourceRef: cortexSourceRefSchema,
+});
+
+export const cortexImportKindSchema = z.enum([
+    'article',
+    'audio',
+    'book',
+    'document',
+    'image',
+    'pdf',
+    'podcast',
+    'repo',
+    'screenshot',
+    'transcript',
+    'video',
+    'x-post',
+]);
+
+export const cortexImportFileSchema = z.object({
+    hash: z.string().trim().min(1),
+    id: z.string().trim().min(1),
+    mediaType: z.string().trim().min(1).nullable(),
+    metadata: z.record(z.string(), z.unknown()).default({}),
+    path: z.string().trim().min(1),
+});
+
+export const cortexImportInputSchema = z
+    .object({
+        actor: cortexPageWriteSourceSchema.optional(),
+        content: z.string().trim().min(1).optional(),
+        kind: cortexImportKindSchema,
+        locator: z.string().trim().min(1).optional(),
+        mediaType: z.string().trim().min(1).optional(),
+        metadata: z.record(z.string(), z.unknown()).default({}),
+        rawContentBase64: z.string().trim().min(1).optional(),
+        rawFileName: z.string().trim().min(1).optional(),
+        tags: z.array(z.string().trim().min(1)).default([]),
+        title: z.string().trim().min(1).optional(),
+        type: cortexPageTypeSchema.optional(),
+    })
+    .refine(
+        (input) => Boolean(input.content || input.locator || input.rawContentBase64),
+        'Provide content, locator, or rawContentBase64.'
+    );
+
+export const cortexImportResultSchema = cortexIngestResultSchema.extend({
+    files: z.array(cortexImportFileSchema).default([]),
+    importKind: cortexImportKindSchema,
+    normalizedContent: z.string().trim().min(1),
+});
+
 export const cortexBacklinkListSchema = z.object({
     links: z.array(cortexLinkSchema),
     target: z.string().trim().min(1),
+});
+
+export const cortexGraphDirectionSchema = z.enum(['both', 'in', 'out']);
+
+export const cortexGraphPathSchema = z.object({
+    context: z.string().default(''),
+    depth: z.number().int().positive(),
+    fromSlug: z.string().trim().min(1),
+    linkKind: z.string().trim().min(1),
+    toSlug: z.string().trim().min(1),
+});
+
+export const cortexGraphTraversalSchema = z.object({
+    depth: z.number().int().positive(),
+    direction: cortexGraphDirectionSchema,
+    paths: z.array(cortexGraphPathSchema),
+    root: z.string().trim().min(1),
+    type: z.string().trim().min(1).nullable().default(null),
 });
 
 export const cortexJobRunSchema = z.object({
@@ -948,12 +1146,76 @@ export const cortexJobRunSchema = z.object({
     summary: z.string().trim().min(1),
 });
 
+export const cortexDreamReportStatusSchema = z.enum(['error', 'running', 'skipped', 'success']);
+
+export const cortexDreamReportItemKindSchema = z.enum([
+    'citation-added',
+    'health',
+    'issue-fixed',
+    'issue-remaining',
+    'noop',
+    'page-created',
+    'page-updated',
+    'pattern-created',
+    'phase',
+    'relationship-added',
+    'summary',
+    'warning',
+]);
+
+export const cortexDreamReportHealthSchema = z.object({
+    counts: z.record(z.string(), z.number().int().nonnegative()).default({}),
+    issueCount: z.number().int().nonnegative(),
+    score: z.number().int().min(0).max(100),
+});
+
+export const cortexDreamReportPhaseSchema = z.object({
+    durationMs: z.number().int().nonnegative().nullable().default(null),
+    metadata: z.record(z.string(), z.unknown()).default({}),
+    name: z.string().trim().min(1),
+    status: z.enum(['error', 'skipped', 'success']),
+    summary: z.string().trim().min(1),
+});
+
+export const cortexDreamReportItemSchema = z.object({
+    createdAt: z.string().datetime(),
+    id: z.string().trim().min(1),
+    kind: cortexDreamReportItemKindSchema,
+    metadata: z.record(z.string(), z.unknown()).default({}),
+    pageId: z.string().trim().min(1).nullable().default(null),
+    pageSlug: z.string().trim().min(1).nullable().default(null),
+    summary: z.string().trim().min(1),
+    title: z.string().trim().min(1),
+});
+
+export const cortexDreamReportSchema = z.object({
+    completedAt: z.string().datetime().nullable().default(null),
+    durationMs: z.number().int().nonnegative().nullable().default(null),
+    estimatedCostUsd: z.number().nonnegative().nullable().default(null),
+    healthAfter: cortexDreamReportHealthSchema.nullable().default(null),
+    healthBefore: cortexDreamReportHealthSchema.nullable().default(null),
+    id: z.string().trim().min(1),
+    items: z.array(cortexDreamReportItemSchema).default([]),
+    model: z.string().trim().min(1).nullable().default(null),
+    noops: z.array(z.string()).default([]),
+    phases: z.array(cortexDreamReportPhaseSchema).default([]),
+    provider: z.string().trim().min(1).nullable().default(null),
+    startedAt: z.string().datetime(),
+    status: cortexDreamReportStatusSchema,
+    summary: z.string().trim().min(1),
+    warnings: z.array(z.string()).default([]),
+});
+
+export const cortexDreamReportListSchema = z.object({
+    reports: z.array(cortexDreamReportSchema),
+});
+
 export const cortexRecommendationSchema = z.object({
     action: z.enum([
         'configure-embeddings',
         'inspect-lint',
         'run-cortex-generate-embeddings',
-        'run-cortex-maintenance',
+        'run-cortex-repair-derived-state',
         'run-cortex-sync',
     ]),
     count: z.number().int().nonnegative(),
@@ -969,8 +1231,17 @@ export const cortexSettingsSchema = z.object({
         apiKeySource: z.enum(['environment', 'runtime-settings']).nullable(),
         dimensions: z.number().int().positive(),
         model: cortexEmbeddingModelSchema,
+        modelRef: cortexEmbeddingModelRefSchema,
         provider: cortexEmbeddingProviderSchema,
         updatedAt: z.string().datetime().nullable(),
+    }),
+    models: z.object({
+        audioTranscription: cortexChatModelRefSchema,
+        chatIngestion: cortexChatModelRefSchema,
+        dream: cortexChatModelRefSchema,
+        embedding: cortexEmbeddingModelRefSchema,
+        ocr: cortexChatModelRefSchema,
+        queryExpansion: cortexChatModelRefSchema,
     }),
     recall: z.object({
         mode: cortexRecallModeSchema,
@@ -987,8 +1258,19 @@ export const cortexSaveSettingsSchema = z.object({
             .refine(isOpenAiApiKey, 'Enter an OpenAI API key.')
             .optional(),
         model: cortexEmbeddingModelSchema.default('text-embedding-3-small'),
+        modelRef: cortexEmbeddingModelRefSchema.optional(),
         provider: cortexEmbeddingProviderSchema.default('openai'),
     }),
+    models: z
+        .object({
+            audioTranscription: cortexChatModelRefSchema.optional(),
+            chatIngestion: cortexChatModelRefSchema.optional(),
+            dream: cortexChatModelRefSchema.optional(),
+            embedding: cortexEmbeddingModelRefSchema.optional(),
+            ocr: cortexChatModelRefSchema.optional(),
+            queryExpansion: cortexChatModelRefSchema.optional(),
+        })
+        .optional(),
     recall: z
         .object({
             mode: cortexRecallModeSchema.default('balanced'),
@@ -1013,7 +1295,7 @@ export const cortexStatusSchema = z.object({
     jobRuns: z.array(cortexJobRunSchema).default([]),
     lastCaptureAt: z.string().datetime().nullable(),
     lastRecallAt: z.string().datetime().nullable(),
-    lastMaintenanceAt: z.string().datetime().nullable(),
+    lastRepairAt: z.string().datetime().nullable(),
     linkCount: z.number().int().nonnegative(),
     pageCount: z.number().int().nonnegative(),
     recommendations: z.array(cortexRecommendationSchema).default([]),
@@ -1199,8 +1481,8 @@ export const agentRuntimeJobSlugSchema = z.enum([
     'cortex-dream',
     'cortex-generate-embeddings',
     'cortex-lint',
-    'cortex-maintenance',
-    'cortex-signal',
+    'cortex-repair-derived-state',
+    'cortex-chat-ingestion',
     'cortex-sync',
     'refresh-runtime-capabilities',
     'tavern-highlights',
@@ -1272,6 +1554,12 @@ export const agentRuntimeJobDetailSchema = agentRuntimeJobSummarySchema.extend({
 export const agentRuntimeJobListSchema = z.object({
     jobs: z.array(agentRuntimeJobSummarySchema),
 });
+
+export const agentRuntimeRunJobInputSchema = z
+    .object({
+        payload: z.record(z.string(), z.unknown()).optional(),
+    })
+    .default({});
 
 export const agentRuntimeRunJobSchema = z.object({
     jobId: z.string().trim().min(1),
@@ -1922,26 +2210,49 @@ export type AgentRuntimeBindingList = z.infer<typeof agentRuntimeBindingListSche
 export type AgentRuntimeBindingMatch = z.infer<typeof agentRuntimeBindingMatchSchema>;
 export type PlatformBindingStatus = z.infer<typeof agentRuntimeBindingStatusSchema>;
 export type CortexBacklinkList = z.infer<typeof cortexBacklinkListSchema>;
+export type CortexAddSchemaTermInput = z.infer<typeof cortexAddSchemaTermInputSchema>;
 export type CortexCaptureInput = z.infer<typeof cortexCaptureInputSchema>;
 export type CortexCaptureResult = z.infer<typeof cortexCaptureResultSchema>;
+export type CortexIngestInput = z.input<typeof cortexIngestInputSchema>;
+export type CortexIngestResult = z.infer<typeof cortexIngestResultSchema>;
+export type CortexImportFile = z.infer<typeof cortexImportFileSchema>;
+export type CortexImportInput = z.input<typeof cortexImportInputSchema>;
+export type CortexImportKind = z.infer<typeof cortexImportKindSchema>;
+export type CortexImportResult = z.infer<typeof cortexImportResultSchema>;
 export type CortexClaim = z.infer<typeof cortexClaimSchema>;
 export type CortexEditPageInput = z.infer<typeof cortexEditPageInputSchema>;
 export type CortexEditPageResult = z.infer<typeof cortexEditPageResultSchema>;
+export type CortexGraphDirection = z.infer<typeof cortexGraphDirectionSchema>;
+export type CortexGraphPath = z.infer<typeof cortexGraphPathSchema>;
+export type CortexGraphTraversal = z.infer<typeof cortexGraphTraversalSchema>;
+export type CortexDreamReport = z.infer<typeof cortexDreamReportSchema>;
+export type CortexDreamReportHealth = z.infer<typeof cortexDreamReportHealthSchema>;
+export type CortexDreamReportItem = z.infer<typeof cortexDreamReportItemSchema>;
+export type CortexDreamReportItemKind = z.infer<typeof cortexDreamReportItemKindSchema>;
+export type CortexDreamReportList = z.infer<typeof cortexDreamReportListSchema>;
+export type CortexDreamReportPhase = z.infer<typeof cortexDreamReportPhaseSchema>;
+export type CortexDreamReportStatus = z.infer<typeof cortexDreamReportStatusSchema>;
 export type CortexJobName = z.infer<typeof cortexJobNameSchema>;
 export type CortexJobRun = z.infer<typeof cortexJobRunSchema>;
 export type CortexLink = z.infer<typeof cortexLinkSchema>;
 export type CortexPage = z.infer<typeof cortexPageSchema>;
 export type CortexPageList = z.infer<typeof cortexPageListSchema>;
 export type CortexPageSummary = z.infer<typeof cortexPageSummarySchema>;
-export type CortexRecallInput = z.infer<typeof cortexRecallInputSchema>;
+export type CortexPageVersion = z.infer<typeof cortexPageVersionSchema>;
+export type CortexPageVersionList = z.infer<typeof cortexPageVersionListSchema>;
+export type CortexRecallInput = z.input<typeof cortexRecallInputSchema>;
 export type CortexRecallResult = z.infer<typeof cortexRecallResultSchema>;
 export type CortexRecommendation = z.infer<typeof cortexRecommendationSchema>;
+export type CortexRevertPageInput = z.infer<typeof cortexRevertPageInputSchema>;
 export type CortexSaveSettings = z.infer<typeof cortexSaveSettingsSchema>;
 export type CortexSaveSchemaInput = z.infer<typeof cortexSaveSchemaInputSchema>;
+export type CortexSchemaAddition = z.infer<typeof cortexSchemaAdditionSchema>;
+export type CortexSchemaAdditionKind = z.infer<typeof cortexSchemaAdditionKindSchema>;
+export type CortexSchemaAdditionList = z.infer<typeof cortexSchemaAdditionListSchema>;
 export type CortexSchemaDefinition = z.infer<typeof cortexSchemaDefinitionSchema>;
 export type CortexSchemaRecord = z.infer<typeof cortexSchemaRecordSchema>;
 export type CortexSchemaValidationIssue = z.infer<typeof cortexSchemaValidationIssueSchema>;
-export type CortexSearchInput = z.infer<typeof cortexSearchInputSchema>;
+export type CortexSearchInput = z.input<typeof cortexSearchInputSchema>;
 export type CortexSearchResult = z.infer<typeof cortexSearchResultSchema>;
 export type CortexSettings = z.infer<typeof cortexSettingsSchema>;
 export type CortexSourceRef = z.infer<typeof cortexSourceRefSchema>;
@@ -1952,6 +2263,8 @@ export type AgentRuntimeModelAccess = z.infer<typeof agentRuntimeModelAccessSche
 export type AgentRuntimeModelAccessId = z.infer<typeof agentRuntimeModelAccessIdSchema>;
 export type AgentRuntimeModelAccessState = z.infer<typeof agentRuntimeModelAccessStateSchema>;
 export type AgentRuntimeModelAccessStatus = z.infer<typeof agentRuntimeModelAccessStatusSchema>;
+export type AgentRuntimeOpenAiSettings = z.infer<typeof agentRuntimeOpenAiSettingsSchema>;
+export type AgentRuntimeSaveOpenAiSettings = z.infer<typeof agentRuntimeSaveOpenAiSettingsSchema>;
 export type AgentRuntimeOpenRouterSettings = z.infer<typeof agentRuntimeOpenRouterSettingsSchema>;
 export type AgentRuntimeOpenClawHarness = z.infer<typeof agentRuntimeOpenClawHarnessSchema>;
 export type AgentRuntimeOpenClawModelName = z.infer<typeof agentRuntimeOpenClawModelNameSchema>;
@@ -2032,6 +2345,7 @@ export type AgentRuntimeJobDetail = z.infer<typeof agentRuntimeJobDetailSchema>;
 export type AgentRuntimeJobList = z.infer<typeof agentRuntimeJobListSchema>;
 export type AgentRuntimeJobSlug = z.infer<typeof agentRuntimeJobSlugSchema>;
 export type AgentRuntimeJobSummary = z.infer<typeof agentRuntimeJobSummarySchema>;
+export type AgentRuntimeRunJobInput = z.infer<typeof agentRuntimeRunJobInputSchema>;
 export type AgentRuntimeRunJob = z.infer<typeof agentRuntimeRunJobSchema>;
 export type AgentRuntimeHighlight = z.infer<typeof agentRuntimeHighlightSchema>;
 export type AgentRuntimeHighlightCategory = z.infer<typeof agentRuntimeHighlightCategorySchema>;

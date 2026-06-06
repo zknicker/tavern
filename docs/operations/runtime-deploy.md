@@ -17,6 +17,15 @@ Keep the CLI small:
 
 ```bash
 tavern serve
+tavern cortex capture "my fun memory"
+tavern cortex get my-fun-memory
+tavern cortex put my-fun-memory --stdin
+tavern cortex graph-query my-fun-memory --depth 2
+tavern cortex search "theme across project notes"
+tavern cortex recall "what should I know before replying?"
+tavern cortex embed --stale
+tavern cortex stats
+tavern cortex status
 tavern update
 tavern restart
 tavern --version
@@ -27,6 +36,13 @@ tavern --help
 WebSocket API, Runtime storage, managed OpenClaw, first-party OpenClaw plugin
 sync, Cortex, and Runtime jobs. It logs to stdout and stderr, and exits on
 `SIGINT` or `SIGTERM`.
+
+`cortex` commands are thin CLI clients for the managed Runtime. They require a
+running Runtime and use `TAVERN_RUNTIME_URL`, or `http://127.0.0.1:18790` by
+default. See [Cortex CLI](cortex-cli.md) for the full Cortex command reference.
+`tavern cortex embed --stale` runs the same
+`cortex-generate-embeddings` Runtime job used by the app and waits for it to
+finish.
 
 `tavern` is the preferred CLI. `tavern-runtime` remains as a compatibility
 alias.

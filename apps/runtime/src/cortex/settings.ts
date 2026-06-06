@@ -1,28 +1,55 @@
 import type { CortexSaveSettings, CortexSettings } from '@tavern/api';
 import { readConfigValue } from '../config';
-import type { Database } from '../db/sqlite';
-import { namedParams } from '../db/sqlite';
+import {
+    getOpenAiApiKey,
+    getOpenAiSettings,
+    saveOpenAiSettings,
+} from '../model-access/openai-settings';
+import type { CortexDatabase } from './db';
 import { nowIso, readJsonRecord } from './rows';
 
 export const cortexEmbeddingProvider = 'openai';
 export const defaultCortexEmbeddingModel = 'text-embedding-3-small';
+export const defaultCortexEmbeddingModelRef = 'openai/text-embedding-3-small';
+export const defaultCortexQueryExpansionModelRef = 'openrouter/google/gemini-2.5-flash-lite';
+export const defaultCortexDreamModelRef = 'codex/gpt-5.5';
+export const defaultCortexChatIngestionModelRef = 'codex/gpt-5.5';
+export const defaultCortexAudioTranscriptionModelRef = 'openai/whisper-1';
+export const defaultCortexOcrModelRef = 'openai/gpt-4o-mini';
 export const defaultCortexRecallMode = 'balanced';
 
 const embeddingSettingsKey = 'embedding';
+const modelsSettingsKey = 'models';
 const recallSettingsKey = 'recall';
 
 type CortexEmbeddingModel = CortexSettings['embedding']['model'];
 type CortexRecallMode = CortexSettings['recall']['mode'];
+type CortexModelProvider = 'codex' | 'openai' | 'openrouter';
 
 const cortexEmbeddingDimensionsByModel: Record<CortexEmbeddingModel, number> = {
     'text-embedding-3-large': 3072,
     'text-embedding-3-small': 1536,
 };
 
+export const cortexEmbeddingVectorDimensions = getCortexEmbeddingDimensions(
+    defaultCortexEmbeddingModel
+);
+
 interface StoredEmbeddingSettings {
     apiKey?: string;
     model?: string;
+    modelRef?: string;
     provider?: string;
+    updatedAt?: string;
+}
+
+interface StoredModelSettings {
+    audioTranscription?: string;
+    chatIngestion?: string;
+    dream?: string;
+    embedding?: string;
+    ocr?: string;
+    queryExpansion?: string;
     updatedAt?: string;
 }
 
@@ -31,22 +58,55 @@ interface StoredRecallSettings {
     updatedAt?: string;
 }
 
-export function getCortexSettings(db: Database): CortexSettings {
-    const storedEmbedding = readStoredEmbeddingSettings(db);
-    const storedRecall = readStoredRecallSettings(db);
+export async function getCortexSettings(db: CortexDatabase): Promise<CortexSettings> {
+    const storedEmbedding = await readStoredEmbeddingSettings(db);
+    const storedModels = await readStoredModelSettings(db);
+    const storedRecall = await readStoredRecallSettings(db);
     const envApiKey = readConfigValue('OPENAI_API_KEY');
-    const storedApiKey = storedEmbedding.apiKey?.trim() || null;
-    const model = normalizeCortexEmbeddingModel(storedEmbedding.model);
+    const vaultSettings = readOpenAiSettingsOrEmpty();
+    const modelRef = normalizeCortexEmbeddingModelRef(
+        storedModels.embedding ?? storedEmbedding.modelRef
+    );
+    const model = modelFromEmbeddingRef(modelRef);
 
     return {
         embedding: {
-            apiKey: envApiKey ?? storedApiKey,
-            apiKeyConfigured: Boolean(envApiKey || storedApiKey),
-            apiKeySource: envApiKey ? 'environment' : storedApiKey ? 'runtime-settings' : null,
+            apiKey: null,
+            apiKeyConfigured: Boolean(envApiKey || vaultSettings.hasApiKey),
+            apiKeySource: envApiKey
+                ? 'environment'
+                : vaultSettings.hasApiKey
+                  ? 'runtime-settings'
+                  : null,
             dimensions: getCortexEmbeddingDimensions(model),
             model,
+            modelRef,
             provider: cortexEmbeddingProvider,
             updatedAt: storedEmbedding.updatedAt ?? null,
+        },
+        models: {
+            audioTranscription: normalizeRunnableModelRef(
+                storedModels.audioTranscription,
+                defaultCortexAudioTranscriptionModelRef,
+                'openai'
+            ),
+            dream: normalizeRunnableModelRef(
+                storedModels.dream,
+                defaultCortexDreamModelRef,
+                'codex'
+            ),
+            embedding: modelRef,
+            ocr: normalizeRunnableModelRef(storedModels.ocr, defaultCortexOcrModelRef, 'openai'),
+            queryExpansion: normalizeRunnableModelRef(
+                storedModels.queryExpansion,
+                defaultCortexQueryExpansionModelRef,
+                'openrouter'
+            ),
+            chatIngestion: normalizeRunnableModelRef(
+                storedModels.chatIngestion,
+                defaultCortexChatIngestionModelRef,
+                'codex'
+            ),
         },
         recall: {
             mode: normalizeCortexRecallMode(storedRecall.mode),
@@ -55,35 +115,95 @@ export function getCortexSettings(db: Database): CortexSettings {
     };
 }
 
-export function resolveCortexEmbeddingApiKey(db: Database): string | null {
-    return (
-        readConfigValue('OPENAI_API_KEY') ?? readStoredEmbeddingSettings(db).apiKey?.trim() ?? null
-    );
+export async function resolveCortexEmbeddingApiKey(_db: CortexDatabase): Promise<string | null> {
+    return await resolveCortexOpenAiApiKey();
 }
 
-export function getCortexEmbeddingConfig(db: Database) {
-    const settings = getCortexSettings(db).embedding;
+export async function resolveCortexOpenAiApiKey(): Promise<string | null> {
+    return readConfigValue('OPENAI_API_KEY') ?? getOpenAiApiKey();
+}
+
+export async function getCortexEmbeddingConfig(db: CortexDatabase) {
+    const settings = (await getCortexSettings(db)).embedding;
     return {
-        apiKey: resolveCortexEmbeddingApiKey(db),
+        apiKey: await resolveCortexEmbeddingApiKey(db),
         dimensions: settings.dimensions,
         model: settings.model,
         provider: settings.provider,
     };
 }
 
-export function saveCortexSettings(db: Database, input: CortexSaveSettings): CortexSettings {
+export async function saveCortexSettings(
+    db: CortexDatabase,
+    input: CortexSaveSettings
+): Promise<CortexSettings> {
+    if (input.embedding.model === 'text-embedding-3-large') {
+        throw new Error(
+            `Cortex PGLite is initialized for ${cortexEmbeddingVectorDimensions}-dimension embeddings. text-embedding-3-large uses ${getCortexEmbeddingDimensions('text-embedding-3-large')} dimensions.`
+        );
+    }
+    const embeddingModelRef = normalizeCortexEmbeddingModelRef(
+        input.models?.embedding ?? input.embedding.modelRef ?? `openai/${input.embedding.model}`
+    );
+    const embeddingModel = modelFromEmbeddingRef(embeddingModelRef);
+    const dimensions = getCortexEmbeddingDimensions(embeddingModel);
+    if (dimensions !== cortexEmbeddingVectorDimensions) {
+        throw new Error(
+            `Cortex PGLite is initialized for ${cortexEmbeddingVectorDimensions}-dimension embeddings. ${embeddingModel} uses ${dimensions} dimensions.`
+        );
+    }
+
     const timestamp = nowIso();
-    const current = readStoredEmbeddingSettings(db);
+    const current = await readStoredEmbeddingSettings(db);
+    const currentModels = await readStoredModelSettings(db);
+    if (input.embedding.apiKey) {
+        saveOpenAiSettings({ apiKey: input.embedding.apiKey });
+    }
     const next: StoredEmbeddingSettings = {
-        apiKey: input.embedding.apiKey ?? current.apiKey,
-        model: input.embedding.model,
+        apiKey: current.apiKey,
+        model: embeddingModel,
+        modelRef: embeddingModelRef,
         provider: cortexEmbeddingProvider,
         updatedAt: timestamp,
     };
 
-    writeSetting(db, embeddingSettingsKey, next, timestamp);
+    await writeSetting(db, embeddingSettingsKey, next, timestamp);
+    await writeSetting(
+        db,
+        modelsSettingsKey,
+        {
+            audioTranscription: normalizeRunnableModelRef(
+                input.models?.audioTranscription ?? currentModels.audioTranscription,
+                defaultCortexAudioTranscriptionModelRef,
+                'openai'
+            ),
+            dream: normalizeRunnableModelRef(
+                input.models?.dream ?? currentModels.dream,
+                defaultCortexDreamModelRef,
+                'codex'
+            ),
+            embedding: embeddingModelRef,
+            ocr: normalizeRunnableModelRef(
+                input.models?.ocr ?? currentModels.ocr,
+                defaultCortexOcrModelRef,
+                'openai'
+            ),
+            queryExpansion: normalizeRunnableModelRef(
+                input.models?.queryExpansion ?? currentModels.queryExpansion,
+                defaultCortexQueryExpansionModelRef,
+                'openrouter'
+            ),
+            chatIngestion: normalizeRunnableModelRef(
+                input.models?.chatIngestion ?? currentModels.chatIngestion,
+                defaultCortexChatIngestionModelRef,
+                'codex'
+            ),
+            updatedAt: timestamp,
+        },
+        timestamp
+    );
     if (input.recall) {
-        writeSetting(
+        await writeSetting(
             db,
             recallSettingsKey,
             {
@@ -94,7 +214,45 @@ export function saveCortexSettings(db: Database, input: CortexSaveSettings): Cor
         );
     }
 
-    return getCortexSettings(db);
+    return await getCortexSettings(db);
+}
+
+export async function ensureDefaultCortexSettings(db: CortexDatabase): Promise<void> {
+    const timestamp = nowIso();
+    await writeDefaultSetting(
+        db,
+        embeddingSettingsKey,
+        {
+            model: defaultCortexEmbeddingModel,
+            modelRef: defaultCortexEmbeddingModelRef,
+            provider: cortexEmbeddingProvider,
+            updatedAt: timestamp,
+        },
+        timestamp
+    );
+    await writeDefaultSetting(
+        db,
+        modelsSettingsKey,
+        {
+            audioTranscription: defaultCortexAudioTranscriptionModelRef,
+            dream: defaultCortexDreamModelRef,
+            embedding: defaultCortexEmbeddingModelRef,
+            ocr: defaultCortexOcrModelRef,
+            queryExpansion: defaultCortexQueryExpansionModelRef,
+            chatIngestion: defaultCortexChatIngestionModelRef,
+            updatedAt: timestamp,
+        },
+        timestamp
+    );
+    await writeDefaultSetting(
+        db,
+        recallSettingsKey,
+        {
+            mode: defaultCortexRecallMode,
+            updatedAt: timestamp,
+        },
+        timestamp
+    );
 }
 
 export function getCortexEmbeddingDimensions(model: CortexEmbeddingModel) {
@@ -107,16 +265,52 @@ function normalizeCortexEmbeddingModel(value: string | undefined): CortexEmbeddi
         : defaultCortexEmbeddingModel;
 }
 
+function readOpenAiSettingsOrEmpty() {
+    try {
+        return getOpenAiSettings();
+    } catch {
+        return {
+            apiKey: '',
+            hasApiKey: false,
+            updatedAt: null,
+        };
+    }
+}
+
+function normalizeCortexEmbeddingModelRef(
+    value: string | undefined
+): typeof defaultCortexEmbeddingModelRef {
+    return value === defaultCortexEmbeddingModelRef ? value : defaultCortexEmbeddingModelRef;
+}
+
+function modelFromEmbeddingRef(value: string): CortexEmbeddingModel {
+    return normalizeCortexEmbeddingModel(value.split('/').at(-1));
+}
+
+function normalizeChatModelRef(value: string | undefined, fallback: string) {
+    const trimmed = value?.trim();
+    return trimmed && /^[a-z0-9][a-z0-9-]*\/[A-Za-z0-9._:/-]+$/u.test(trimmed) ? trimmed : fallback;
+}
+
+function normalizeRunnableModelRef(
+    value: string | undefined,
+    fallback: string,
+    provider: CortexModelProvider
+) {
+    const normalized = normalizeChatModelRef(value, fallback);
+    return normalized.startsWith(`${provider}/`) ? normalized : fallback;
+}
+
 function normalizeCortexRecallMode(value: string | undefined): CortexRecallMode {
     return value === 'conservative' || value === 'balanced' || value === 'tokenmax'
         ? value
         : defaultCortexRecallMode;
 }
 
-function readStoredEmbeddingSettings(db: Database): StoredEmbeddingSettings {
-    const row = db
+async function readStoredEmbeddingSettings(db: CortexDatabase): Promise<StoredEmbeddingSettings> {
+    const row = await db
         .prepare('SELECT value_json, updated_at FROM cortex_settings WHERE key = ?')
-        .get(embeddingSettingsKey) as { updated_at: string; value_json: string } | null;
+        .get<{ updated_at: string; value_json: string }>(embeddingSettingsKey);
     if (!row) {
         return {};
     }
@@ -125,15 +319,37 @@ function readStoredEmbeddingSettings(db: Database): StoredEmbeddingSettings {
     return {
         apiKey: typeof value.apiKey === 'string' ? value.apiKey : undefined,
         model: typeof value.model === 'string' ? value.model : undefined,
+        modelRef: typeof value.modelRef === 'string' ? value.modelRef : undefined,
         provider: typeof value.provider === 'string' ? value.provider : undefined,
         updatedAt: row.updated_at,
     };
 }
 
-function readStoredRecallSettings(db: Database): StoredRecallSettings {
-    const row = db
+async function readStoredModelSettings(db: CortexDatabase): Promise<StoredModelSettings> {
+    const row = await db
         .prepare('SELECT value_json, updated_at FROM cortex_settings WHERE key = ?')
-        .get(recallSettingsKey) as { updated_at: string; value_json: string } | null;
+        .get<{ updated_at: string; value_json: string }>(modelsSettingsKey);
+    if (!row) {
+        return {};
+    }
+
+    const value = readJsonRecord(row.value_json);
+    return {
+        audioTranscription:
+            typeof value.audioTranscription === 'string' ? value.audioTranscription : undefined,
+        dream: typeof value.dream === 'string' ? value.dream : undefined,
+        chatIngestion: typeof value.chatIngestion === 'string' ? value.chatIngestion : undefined,
+        embedding: typeof value.embedding === 'string' ? value.embedding : undefined,
+        ocr: typeof value.ocr === 'string' ? value.ocr : undefined,
+        queryExpansion: typeof value.queryExpansion === 'string' ? value.queryExpansion : undefined,
+        updatedAt: row.updated_at,
+    };
+}
+
+async function readStoredRecallSettings(db: CortexDatabase): Promise<StoredRecallSettings> {
+    const row = await db
+        .prepare('SELECT value_json, updated_at FROM cortex_settings WHERE key = ?')
+        .get<{ updated_at: string; value_json: string }>(recallSettingsKey);
     if (!row) {
         return {};
     }
@@ -145,18 +361,42 @@ function readStoredRecallSettings(db: Database): StoredRecallSettings {
     };
 }
 
-function writeSetting(db: Database, key: string, value: object, updatedAt: string): void {
-    db.prepare(
-        `INSERT INTO cortex_settings (key, value_json, updated_at)
+async function writeSetting(
+    db: CortexDatabase,
+    key: string,
+    value: object,
+    updatedAt: string
+): Promise<void> {
+    await db
+        .prepare(
+            `INSERT INTO cortex_settings (key, value_json, updated_at)
          VALUES ($key, $valueJson, $updatedAt)
          ON CONFLICT(key) DO UPDATE SET
            value_json = excluded.value_json,
            updated_at = excluded.updated_at`
-    ).run(
-        namedParams({
+        )
+        .run({
             key,
             updatedAt,
             valueJson: JSON.stringify(value),
-        })
-    );
+        });
+}
+
+async function writeDefaultSetting(
+    db: CortexDatabase,
+    key: string,
+    value: object,
+    updatedAt: string
+): Promise<void> {
+    await db
+        .prepare(
+            `INSERT INTO cortex_settings (key, value_json, updated_at)
+         VALUES ($key, $valueJson, $updatedAt)
+         ON CONFLICT(key) DO NOTHING`
+        )
+        .run({
+            key,
+            updatedAt,
+            valueJson: JSON.stringify(value),
+        });
 }

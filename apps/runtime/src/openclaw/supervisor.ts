@@ -14,6 +14,7 @@ import { ensureManagedOpenClawPlugins, resolveManagedOpenClawInstall } from './i
 import { createLocalOpenClawClient } from './local-client';
 import { buildOpenClawLaunchCommand } from './sandbox';
 import {
+    markCortexPluginInstalled,
     markManagedOpenClawGatewayReady,
     markManagedOpenClawGatewayStopped,
     markTavernPluginInstalled,
@@ -33,6 +34,9 @@ export async function startOpenClawForRuntime(): Promise<ManagedOpenClawHandle> 
     await ensureManagedOpenClawPlugins(install, runtimeConfig.pluginInstallSpecs);
     if (markTavernPluginInstalled(runtimeConfig.pluginPath)) {
         publishCapabilityUpdated('tavernPlugin');
+    }
+    if (markCortexPluginInstalled(runtimeConfig.cortexPluginPath)) {
+        publishCapabilityUpdated('cortexAgentTools');
     }
     const launchCommand = await buildOpenClawLaunchCommand(install.binPath, {
         installPath: install.packageRoot,
@@ -175,11 +179,11 @@ interface ManagedGatewayHandoff {
 }
 
 function publishGatewayCapabilitiesUpdated() {
-    publishCapabilitiesUpdated(['gateway', 'memory', 'models', 'skills']);
+    publishCapabilitiesUpdated(['gateway', 'memory', 'models', 'skills', 'cortexAgentTools']);
 }
 
 function publishGatewayReadyCapabilitiesUpdated() {
-    publishCapabilitiesUpdated(['gateway', 'memory']);
+    publishCapabilitiesUpdated(['gateway', 'memory', 'cortexAgentTools']);
 }
 
 function publishOpenClawSnapshotCapabilitiesUpdated() {

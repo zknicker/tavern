@@ -23,6 +23,7 @@ test('addCatalogModel stores a new curated catalog model', async () => {
     ).mockResolvedValue();
 
     await addCatalogModel({
+        capabilities: ['general'],
         modelId: 'moonshotai/kimi-k2.5',
         provider: 'openrouter',
     });
@@ -33,6 +34,7 @@ test('addCatalogModel stores a new curated catalog model', async () => {
         savedSnapshot?.models.some(
             (model) =>
                 model.ref === 'openrouter/moonshotai/kimi-k2.5' &&
+                model.capabilities.includes('general') &&
                 model.displayName === 'Moonshotai Kimi K2.5'
         ),
         true
@@ -92,6 +94,7 @@ function createSnapshot(
 ): ModelInventorySnapshot {
     return {
         models: (modelsByProvider[provider] ?? []).map((model) => ({
+            capabilities: ['general'],
             contextWindow: null,
             description: null,
             displayName: model.displayName,

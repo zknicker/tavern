@@ -17,6 +17,9 @@ import { handleCortexRequest } from '../cortex/routes';
 import { listTavernHighlights } from '../highlights/highlights';
 import { handleRuntimeJobsRequest } from '../jobs/routes';
 import { listMacApps } from '../mac-apps/inventory';
+import { handleModelAccessRequest } from '../model-access/model-access';
+import { handleOpenAiSettingsRequest } from '../model-access/openai-settings';
+import { handleOpenRouterSettingsRequest } from '../model-access/openrouter-settings';
 import {
     previewManagedOpenClawSessions,
     refreshManagedOpenClawModelsInBackground,
@@ -73,6 +76,21 @@ export async function handleTavernRuntimeRequest(request: Request): Promise<Resp
     const jobsResponse = await handleRuntimeJobsRequest(request);
     if (jobsResponse) {
         return jobsResponse;
+    }
+
+    const modelAccessResponse = await handleModelAccessRequest(request);
+    if (modelAccessResponse) {
+        return modelAccessResponse;
+    }
+
+    const openAiSettingsResponse = await handleOpenAiSettingsRequest(request);
+    if (openAiSettingsResponse) {
+        return openAiSettingsResponse;
+    }
+
+    const openRouterSettingsResponse = await handleOpenRouterSettingsRequest(request);
+    if (openRouterSettingsResponse) {
+        return openRouterSettingsResponse;
     }
 
     const capabilitiesResponse = await handleRuntimeCapabilitiesRequest(request);

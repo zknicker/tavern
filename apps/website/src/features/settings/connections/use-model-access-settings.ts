@@ -1,7 +1,10 @@
 import * as React from 'react';
+import { useDeleteOpenAiSettings } from '../../../hooks/connections/use-delete-openai-settings.ts';
 import { useDeleteOpenRouterSettings } from '../../../hooks/connections/use-delete-openrouter-settings.ts';
 import { useModelAccess } from '../../../hooks/connections/use-model-access.ts';
+import { useOpenAiSettings } from '../../../hooks/connections/use-openai-settings.ts';
 import { useOpenRouterSettings } from '../../../hooks/connections/use-openrouter-settings.ts';
+import { useSaveOpenAiSettings } from '../../../hooks/connections/use-save-openai-settings.ts';
 import { useSaveOpenRouterSettings } from '../../../hooks/connections/use-save-openrouter-settings.ts';
 
 interface OpenRouterFormState {
@@ -16,10 +19,25 @@ const emptyOpenRouterFormState: OpenRouterFormState = {
 
 export function useModelAccessSettings() {
     const modelAccessQuery = useModelAccess();
-    const settingsQuery = useOpenRouterSettings();
+    const openAiSettingsQuery = useOpenAiSettings();
+    const openRouterSettingsQuery = useOpenRouterSettings();
+    const [openAiFormState, setOpenAiFormState] = React.useState({ apiKey: '' });
     const [formState, setFormState] = React.useState<OpenRouterFormState>(emptyOpenRouterFormState);
+    const saveOpenAiMutation = useSaveOpenAiSettings();
+    const deleteOpenAiMutation = useDeleteOpenAiSettings();
     const saveMutation = useSaveOpenRouterSettings();
     const deleteMutation = useDeleteOpenRouterSettings();
+
+    const saveOpenAiKey = (state: { apiKey: string }) => {
+        const apiKey = state.apiKey.trim();
+        setOpenAiFormState({ apiKey: '' });
+        saveOpenAiMutation.mutate({ apiKey });
+    };
+
+    const deleteOpenAiKey = () => {
+        setOpenAiFormState({ apiKey: '' });
+        deleteOpenAiMutation.mutate();
+    };
 
     const saveOpenRouterKeys = (state: OpenRouterFormState) => {
         const next = {
@@ -44,10 +62,16 @@ export function useModelAccessSettings() {
             ([] as NonNullable<typeof modelAccessQuery.data>['providers']),
         modelAccessQuery,
         formState,
+        openAiFormState,
+        openAiSettingsQuery,
         deleteMutation,
+        deleteOpenAiKey,
+        deleteOpenAiMutation,
         deleteOpenRouterKeys,
+        saveOpenAiKey,
+        saveOpenAiMutation,
         saveMutation,
         saveOpenRouterKeys,
-        settingsQuery,
+        settingsQuery: openRouterSettingsQuery,
     };
 }

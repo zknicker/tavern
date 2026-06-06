@@ -3,6 +3,7 @@ import type { CortexSourceRef } from '@tavern/api';
 export interface CortexDreamResult {
     captured: number;
     modelReviewed: boolean;
+    reportId?: string;
     reviewed: number;
 }
 
@@ -17,6 +18,7 @@ export interface DreamMessageRow {
 
 export interface DreamSourceRange {
     captureKey: string;
+    itemCount?: number;
     messageIds: string[];
     sourceHash: string;
     sourceRefs: CortexSourceRef[];

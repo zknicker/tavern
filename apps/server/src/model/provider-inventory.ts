@@ -1,7 +1,9 @@
 import { parseAgentRuntimeModelRef } from '@tavern/api';
 import { listModelAccessStatuses } from '../model-access/service.ts';
+import { getOpenAiSettings } from '../openai/settings.ts';
 import { getOpenRouterSettings } from '../openrouter/settings.ts';
 import {
+    type ModelCapability,
     type ModelInventorySnapshot,
     type ModelInventorySnapshotRecord,
     type ModelProviderId,
@@ -10,28 +12,38 @@ import {
 
 export const modelInventoryProviders = [
     'codex',
+    'openai',
     'openrouter',
 ] as const satisfies readonly ModelProviderId[];
 type CatalogModelProviderId = (typeof modelInventoryProviders)[number];
 
 const providerDisplayNames = {
     codex: 'Codex',
+    openai: 'OpenAI',
     openrouter: 'OpenRouter',
 } as const satisfies Record<CatalogModelProviderId, string>;
 
 const curatedModels = {
     codex: [
-        ['gpt-5.5', 'GPT-5.5', 400_000],
-        ['gpt-5.4', 'GPT-5.4', null],
-        ['gpt-5.4-mini', 'GPT-5.4 Mini', null],
-        ['gpt-5.3-codex', 'GPT-5.3 Codex', null],
-        ['gpt-5.3-codex-spark', 'GPT-5.3 Codex Spark', null],
-        ['gpt-5.2', 'GPT-5.2', null],
+        ['gpt-5.5', 'GPT-5.5', 400_000, ['general']],
+        ['gpt-5.4', 'GPT-5.4', null, ['general']],
+        ['gpt-5.4-mini', 'GPT-5.4 Mini', null, ['general']],
+        ['gpt-5.3-codex', 'GPT-5.3 Codex', null, ['general']],
+        ['gpt-5.3-codex-spark', 'GPT-5.3 Codex Spark', null, ['general']],
+        ['gpt-5.2', 'GPT-5.2', null, ['general']],
     ],
-    openrouter: [['moonshotai/kimi-k2.5', 'Kimi K2.5', 262_144]],
+    openai: [
+        ['gpt-4o-mini', 'GPT-4o Mini', 128_000, ['general', 'vision']],
+        ['text-embedding-3-small', 'Text Embedding 3 Small', null, ['embedding']],
+        ['whisper-1', 'Whisper', null, ['audio-transcription']],
+    ],
+    openrouter: [
+        ['google/gemini-2.5-flash-lite', 'Gemini 2.5 Flash Lite', null, ['general']],
+        ['moonshotai/kimi-k2.5', 'Kimi K2.5', 262_144, ['general']],
+    ],
 } as const satisfies Record<
     CatalogModelProviderId,
-    readonly (readonly [string, string, number | null])[]
+    readonly (readonly [string, string, number | null, readonly ModelCapability[]])[]
 >;
 
 export type ModelProviderConnections = Record<
@@ -49,6 +61,7 @@ export function getModelProviderDisplayName(provider: ModelProviderId) {
 }
 
 export function createCatalogInventoryRecord(input: {
+    capabilities?: readonly ModelCapability[] | null;
     contextWindow?: number | null;
     displayName?: string | null;
     modelId: string;
@@ -57,6 +70,7 @@ export function createCatalogInventoryRecord(input: {
     const modelId = input.modelId.trim();
 
     return {
+        capabilities: input.capabilities?.length ? [...input.capabilities] : ['general'],
         contextWindow: input.contextWindow ?? null,
         description: null,
         displayName: input.displayName?.trim() || titleizeModelId(modelId),
@@ -72,8 +86,9 @@ export function createCuratedProviderInventory(provider: ModelProviderId): Model
 
     return modelInventorySnapshotSchema.parse({
         models: sortModels(
-            models.map(([modelId, displayName, contextWindow]) =>
+            models.map(([modelId, displayName, contextWindow, capabilities]) =>
                 createCatalogInventoryRecord({
+                    capabilities,
                     contextWindow,
                     displayName,
                     modelId,
@@ -87,8 +102,9 @@ export function createCuratedProviderInventory(provider: ModelProviderId): Model
 }
 
 export async function listModelProviderConnections(): Promise<ModelProviderConnections> {
-    const [modelAccessStatuses, openRouterSettings] = await Promise.all([
+    const [modelAccessStatuses, openAiSettings, openRouterSettings] = await Promise.all([
         listModelAccessStatuses(),
+        getOpenAiSettings(),
         getOpenRouterSettings(),
     ]);
     const codexStatus = modelAccessStatuses.find((status) => status.id === 'codex') ?? null;
@@ -99,6 +115,12 @@ export async function listModelProviderConnections(): Promise<ModelProviderConne
             stateMessage:
                 codexStatus?.description ??
                 'Codex availability could not be read from the runtime.',
+        },
+        openai: {
+            isConnected: Boolean(openAiSettings?.hasApiKey),
+            stateMessage: openAiSettings?.hasApiKey
+                ? 'Connected to Tavern Vault'
+                : 'Add an OpenAI API key to use OpenAI models.',
         },
         openrouter: {
             isConnected: Boolean(openRouterSettings?.hasApiKey),

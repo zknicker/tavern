@@ -24,6 +24,10 @@ export function useCortexSchema() {
     return trpc.cortex.schema.useQuery(undefined, queryPolicy.agentRuntimeSnapshot);
 }
 
+export function useCortexSchemaAdditions() {
+    return trpc.cortex.schemaAdditions.useQuery(undefined, queryPolicy.agentRuntimeSnapshot);
+}
+
 export function useSaveCortexSchema() {
     const utils = trpc.useUtils();
     return trpc.cortex.saveSchema.useMutation({
@@ -31,16 +35,6 @@ export function useSaveCortexSchema() {
             utils.cortex.schema.invalidate();
             utils.cortex.list.invalidate();
             utils.cortex.status.invalidate();
-        },
-    });
-}
-
-export function useRunCortexJob() {
-    const utils = trpc.useUtils();
-    return trpc.cortex.runJob.useMutation({
-        onSuccess: () => {
-            utils.cortex.status.invalidate();
-            utils.cortex.list.invalidate();
         },
     });
 }

@@ -3,6 +3,7 @@ import type {
     AgentRuntimeHighlightCategory,
     AgentRuntimeHighlightSourceRef,
 } from '@tavern/api';
+import { type CortexDatabase, getCortexDb } from '../cortex/db';
 import type { Database } from '../db/sqlite';
 import { namedParams } from '../db/sqlite';
 import { createLocalOpenClawClient } from '../openclaw/local-client';
@@ -31,6 +32,7 @@ interface TroubleRow {
 }
 
 export async function buildHighlightCandidates(input: {
+    cortexDb?: CortexDatabase;
     cronRuns?: AgentRuntimeCronRun[];
     db: Database;
     now: Date;
@@ -41,7 +43,7 @@ export async function buildHighlightCandidates(input: {
         buildQuestFinishedHighlight(input),
         buildTroubleHighlight(input),
         await buildScheduledRunHighlight(input),
-        buildMemorySavedHighlight(input),
+        await buildMemorySavedHighlight({ ...input, cortexDb: input.cortexDb ?? getCortexDb() }),
     ];
 
     return candidates.filter((candidate): candidate is HighlightCandidate => Boolean(candidate));
@@ -225,28 +227,41 @@ async function buildScheduledRunHighlight(input: {
     });
 }
 
-function buildMemorySavedHighlight(input: {
+async function buildMemorySavedHighlight(input: {
+    cortexDb: CortexDatabase;
     db: Database;
     now: Date;
     slotStart: Date;
-}): HighlightCandidate | null {
+}): Promise<HighlightCandidate | null> {
     const windowStart = new Date(input.now.getTime() - recentWindowMs);
-    const row = input.db
+    const rows = await input.cortexDb
         .prepare(
             `SELECT id, kind, summary, created_at, 'cortexAudit' AS type
              FROM cortex_audit_events
              WHERE status = 'success'
-               AND kind IN ('capture', 'dream.review', 'signal.review', 'page.archive', 'page.merge', 'page.split', 'page.upsert')
-               AND created_at >= $windowStart
-             UNION ALL
-             SELECT id, 'capture' AS kind, COALESCE(error_message, 'Cortex captured new lore.') AS summary, updated_at AS created_at, 'cortexCapture' AS type
+               AND kind IN ('capture', 'dream.review', 'chat_ingestion.review', 'page.archive', 'page.merge', 'page.split', 'page.upsert')
+               AND created_at >= $windowStart`
+        )
+        .all<MemoryRow>({
+            windowStart: windowStart.toISOString(),
+        });
+    const captureRows = await input.cortexDb
+        .prepare(
+            `SELECT id,
+                    'capture' AS kind,
+                    COALESCE(error_message, 'Cortex captured new lore.') AS summary,
+                    updated_at AS created_at,
+                    'cortexCapture' AS type
              FROM cortex_captures
              WHERE status = 'success'
-               AND updated_at >= $windowStart
-             ORDER BY created_at DESC
-             LIMIT 1`
+               AND updated_at >= $windowStart`
         )
-        .get(namedParams({ windowStart: windowStart.toISOString() })) as MemoryRow | null;
+        .all<MemoryRow>({
+            windowStart: windowStart.toISOString(),
+        });
+    const row = [...rows, ...captureRows].sort((left, right) =>
+        right.created_at.localeCompare(left.created_at)
+    )[0];
 
     if (!row) {
         return null;

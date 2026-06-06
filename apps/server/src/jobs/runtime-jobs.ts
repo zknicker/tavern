@@ -40,10 +40,13 @@ export async function getRuntimeJobDetail(slug: AgentRuntimeJobSlug): Promise<Jo
     }
 }
 
-export async function runRuntimeJob(slug: AgentRuntimeJobSlug) {
+export async function runRuntimeJob(
+    slug: AgentRuntimeJobSlug,
+    payload: Record<string, unknown> | undefined
+) {
     const client = requireRuntimeClient();
     try {
-        return await client.runRuntimeJob(slug);
+        return await client.runRuntimeJob(slug, payload ? { payload } : undefined);
     } finally {
         client.close();
     }

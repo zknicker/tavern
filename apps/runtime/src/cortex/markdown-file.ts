@@ -64,3 +64,10 @@ export function writeCanonicalCortexMarkdownDraft(input: {
     );
     return markdownPath;
 }
+
+export function deleteCanonicalCortexMarkdownDraft(slug: string): void {
+    const markdownPath = path.join(resolveCortexWikiPath(), `${slug}.md`);
+    if (fs.existsSync(markdownPath)) {
+        fs.unlinkSync(markdownPath);
+    }
+}

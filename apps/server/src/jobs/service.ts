@@ -201,7 +201,7 @@ export async function listRecentRuns() {
 
 export async function runJob(slug: JobSlug, payload: Record<string, unknown> | undefined) {
     if (isRuntimeJobSlug(slug)) {
-        return await runRuntimeJob(slug);
+        return await runRuntimeJob(slug, payload);
     }
 
     const binding = await getJobBinding(slug);

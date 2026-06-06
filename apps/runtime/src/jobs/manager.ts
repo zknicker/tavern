@@ -26,7 +26,10 @@ interface RuntimeJobBinding {
 }
 
 export interface RuntimeJobsManager {
-    enqueue(slug: AgentRuntimeJobSlug, options: { trigger: RuntimeJobTrigger }): Promise<string>;
+    enqueue(
+        slug: AgentRuntimeJobSlug,
+        options: { input?: Record<string, unknown>; trigger: RuntimeJobTrigger }
+    ): Promise<string>;
     getBinding(slug: AgentRuntimeJobSlug): RuntimeJobBinding | null;
     stop(): Promise<void>;
 }
@@ -60,7 +63,10 @@ export async function startRuntimeJobsManager(
     }
 
     const manager = {
-        async enqueue(slug: AgentRuntimeJobSlug, options: { trigger: RuntimeJobTrigger }) {
+        async enqueue(
+            slug: AgentRuntimeJobSlug,
+            options: { input?: Record<string, unknown>; trigger: RuntimeJobTrigger }
+        ) {
             return await enqueueRuntimeJob(slug, options);
         },
         getBinding(slug: AgentRuntimeJobSlug) {
@@ -104,7 +110,7 @@ export function getRuntimeJobBinding(slug: AgentRuntimeJobSlug): RuntimeJobBindi
 
 export async function enqueueRuntimeJob(
     slug: AgentRuntimeJobSlug,
-    options: { trigger: RuntimeJobTrigger }
+    options: { input?: Record<string, unknown>; trigger: RuntimeJobTrigger }
 ): Promise<string> {
     const binding = bindings.get(slug);
     if (!binding) {
@@ -114,8 +120,11 @@ export async function enqueueRuntimeJob(
     if (disabledReason) {
         throw new Error(disabledReason);
     }
+    const input = binding.definition.inputSchema.parse(
+        options.input ?? binding.definition.defaultInput
+    );
     const job = await binding.queue.add(binding.definition.displayName, {
-        input: binding.definition.defaultInput,
+        input,
         trigger: options.trigger,
     });
     recordRuntimeJobQueued(binding.definition, job, options.trigger);
@@ -133,8 +142,9 @@ async function processRuntimeJob(
             throw new UnrecoverableError(disabledReason);
         }
         await job.updateProgress(10, 'running');
+        const input = definition.inputSchema.parse(job.data?.input ?? definition.defaultInput);
         await definition.run({
-            input: job.data?.input ?? definition.defaultInput,
+            input,
             log: async (message) => {
                 await job.log(message);
             },
@@ -205,14 +215,19 @@ function createWorker(binding: Omit<RuntimeJobBinding, 'worker'>) {
 }
 
 async function syncScheduledRuntimeJob(binding: RuntimeJobBinding): Promise<void> {
-    return await syncScheduledRuntimeJobWithOptions(binding, { runOnStart: true });
+    return await syncScheduledRuntimeJobWithOptions(binding, {
+        refreshCapabilities: true,
+        runOnStart: true,
+    });
 }
 
 async function syncScheduledRuntimeJobWithOptions(
     binding: RuntimeJobBinding,
-    options: { runOnStart: boolean }
+    options: { refreshCapabilities?: boolean; runOnStart: boolean }
 ): Promise<void> {
-    const disabledReason = await getRuntimeJobDisabledReason(binding.definition);
+    const disabledReason = await getRuntimeJobDisabledReason(binding.definition, {
+        onlyDue: !(options.refreshCapabilities ?? false),
+    });
     if (disabledReason) {
         await binding.queue.removeJobScheduler(binding.definition.slug);
         log.info('Runtime job disabled', {
@@ -301,7 +316,21 @@ export function ensureRuntimeJobRegistered(slug: AgentRuntimeJobSlug): RuntimeJo
     return getRuntimeJobDefinition(slug);
 }
 
-export async function getRuntimeJobDisabledReason(definition: RuntimeJobDefinition) {
+export async function reconcileRuntimeJobSchedules(
+    options: { refreshCapabilities?: boolean } = {}
+): Promise<void> {
+    for (const binding of bindings.values()) {
+        await syncScheduledRuntimeJobWithOptions(binding, {
+            refreshCapabilities: options.refreshCapabilities ?? false,
+            runOnStart: false,
+        });
+    }
+}
+
+export async function getRuntimeJobDisabledReason(
+    definition: RuntimeJobDefinition,
+    options: { onlyDue?: boolean } = {}
+) {
     const explicitReason = await definition.disabledReason();
     if (explicitReason) {
         return explicitReason;
@@ -311,7 +340,7 @@ export async function getRuntimeJobDisabledReason(definition: RuntimeJobDefiniti
     }
     await refreshRuntimeCapabilities({
         ids: definition.requiredCapabilities,
-        onlyDue: true,
+        onlyDue: options.onlyDue ?? true,
     });
     return getCapabilityDisabledReason(definition.requiredCapabilities);
 }

@@ -1,9 +1,9 @@
 import { spawnSync } from 'node:child_process';
 import path from 'node:path';
-import runtimePackage from '../package.json';
+import { parseCli, printHelp, runCortexCli } from './cli';
 import { DATA_DIR } from './config';
-import { ensureCortexFilesystem } from './cortex/filesystem';
-import { ensureCortexSchema } from './cortex/schema';
+import { ensureCortexRuntimeBootstrap } from './cortex/bootstrap';
+import { closeCortexDb, initCortexDb } from './cortex/db';
 import { initDb } from './db/connection';
 import { ensureRuntimeSchema } from './db/schema';
 import { type RuntimeJobsManager, startRuntimeJobsManager } from './jobs/manager';
@@ -18,51 +18,6 @@ let openClaw: ManagedOpenClawHandle | null = null;
 let runtimeJobs: RuntimeJobsManager | null = null;
 let openClawStartup: Promise<ManagedOpenClawHandle> | null = null;
 let shuttingDown = false;
-
-function printHelp(): void {
-    console.log(`Tavern Runtime ${runtimePackage.version}
-
-Usage:
-  tavern serve
-  tavern update
-  tavern restart
-  tavern --version
-  tavern --help
-
-Commands:
-  serve        Run the foreground Tavern Runtime server.
-  update       Stage a Runtime upgrade through Homebrew without restarting the service.
-  restart      Restart the Homebrew tavern-runtime service.
-
-Environment:
-  TAVERN_RUNTIME_HOST   Bind host. Defaults to 127.0.0.1.
-  TAVERN_RUNTIME_PORT   Bind port. Defaults to 18790.
-  TAVERN_RUNTIME_ROOT   Runtime data root. Defaults to ~/.tavern/runtime.`);
-}
-
-function resolveCommand(args: string[]): 'help' | 'restart' | 'serve' | 'update' | 'version' {
-    const [command] = args;
-
-    if (!command || command === 'serve') {
-        return 'serve';
-    }
-
-    if (command === '--help' || command === '-h' || command === 'help') {
-        return 'help';
-    }
-
-    if (command === '--version' || command === '-v' || command === 'version') {
-        return 'version';
-    }
-
-    if (command === 'update' || command === 'restart') {
-        return command;
-    }
-
-    console.error(`Unknown command: ${command}`);
-    printHelp();
-    process.exit(1);
-}
 
 function runBrew(args: string[]): void {
     const result = spawnSync('brew', args, {
@@ -94,9 +49,9 @@ async function main(): Promise<void> {
 
     const dbPath = path.join(DATA_DIR, 'runtime.db');
     const db = initDb(dbPath);
+    const cortexDb = await initCortexDb();
     ensureRuntimeSchema(db);
-    ensureCortexSchema(db);
-    ensureCortexFilesystem();
+    await ensureCortexRuntimeBootstrap(cortexDb);
     ensureRuntimeJobsSchema(db);
     ensureWorkspaceInstructionSchema(db);
     log.info('Runtime DB ready', { path: dbPath });
@@ -138,6 +93,9 @@ async function shutdown(signal: string): Promise<void> {
     log.info('Stopping Runtime server');
     runtimeServer?.stop();
     log.info('Runtime server stopped');
+    log.info('Closing Cortex DB');
+    await closeCortexDb();
+    log.info('Cortex DB closed');
     const handle = openClaw ?? (await openClawStartup?.catch(() => null));
     if (handle) {
         log.info('Waiting for managed OpenClaw Gateway to stop');
@@ -149,16 +107,30 @@ async function shutdown(signal: string): Promise<void> {
     process.exit(0);
 }
 
-const command = resolveCommand(process.argv.slice(2));
+let cli: ReturnType<typeof parseCli>;
+try {
+    cli = parseCli(process.argv.slice(2));
+} catch (error) {
+    console.error(error instanceof Error ? error.message : String(error));
+    printHelp();
+    process.exit(1);
+}
+const command = cli.command;
 
 if (command === 'help') {
     printHelp();
 } else if (command === 'version') {
-    console.log(runtimePackage.version);
+    const runtimePackage = await import('../package.json');
+    console.log(runtimePackage.default.version);
 } else if (command === 'update') {
     updateRuntime();
 } else if (command === 'restart') {
     restartRuntime();
+} else if (cli.rest[0] === 'cortex') {
+    runCortexCli(cli.rest.slice(1)).catch((err) => {
+        console.error(err instanceof Error ? err.message : String(err));
+        process.exit(1);
+    });
 } else {
     process.on('SIGTERM', () => {
         void shutdown('SIGTERM');

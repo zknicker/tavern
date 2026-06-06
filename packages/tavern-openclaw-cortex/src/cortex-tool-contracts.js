@@ -6,13 +6,33 @@ export const CORTEX_PAGE_TYPES = [
     'brand',
     'campaign',
     'customer-segment',
-    'supplier',
+    'niche',
+    'listing',
+    'design',
+    'collection',
+    'marketplace',
+    'production-partner',
     'platform',
     'tool',
     'asset',
+    'source',
+    'content',
+    'podcast',
+    'x-post',
+    'takeaway',
+    'investment',
+    'trade',
+    'thesis',
+    'event',
     'decision',
     'task',
+    'reminder',
+    'automation',
+    'workflow',
+    'agent',
     'metric',
+    'fact',
+    'preference',
     'idea',
     'note',
 ];
@@ -23,8 +43,39 @@ export const TAVERN_CORTEX_TOOL_NAMES = [
     'cortex_search',
     'cortex_get_page',
     'cortex_capture',
+    'cortex_edit',
+    'cortex_ingest',
+    'cortex_import',
     'cortex_recall',
     'cortex_list_backlinks',
+];
+
+export const CORTEX_IMPORT_KINDS = [
+    'article',
+    'audio',
+    'book',
+    'document',
+    'image',
+    'pdf',
+    'podcast',
+    'repo',
+    'screenshot',
+    'transcript',
+    'video',
+    'x-post',
+];
+
+export const CORTEX_INGEST_KINDS = [
+    'article',
+    'book',
+    'document',
+    'idea',
+    'podcast',
+    'repo',
+    'source',
+    'transcript',
+    'video',
+    'x-post',
 ];
 
 export function objectSchema(properties) {
@@ -71,5 +122,13 @@ export function arraySchema(items, description) {
         description,
         items,
         type: 'array',
+    };
+}
+
+export function recordSchema(description) {
+    return {
+        additionalProperties: true,
+        description,
+        type: 'object',
     };
 }

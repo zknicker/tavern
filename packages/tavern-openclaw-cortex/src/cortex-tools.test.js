@@ -94,6 +94,8 @@ describe('Tavern Cortex OpenClaw tools', () => {
 
         expect(captureType.type).toBe('string');
         expect(captureType.description).toContain('product');
+        expect(captureType.description).toContain('niche');
+        expect(captureType.description).toContain('production-partner');
         expect(captureType.description).toContain('campaign');
         expect(captureType.description).toContain('metric');
     });
@@ -139,6 +141,216 @@ describe('Tavern Cortex OpenClaw tools', () => {
                 },
                 method: 'POST',
                 url: 'http://runtime.test/cortex/capture',
+            },
+        ]);
+    });
+
+    it('edits Cortex pages through the Tavern runtime API', async () => {
+        const requests = [];
+        const tools = registerTools({
+            fetch: mock(async (url, init) => {
+                requests.push({
+                    body: JSON.parse(String(init.body)),
+                    method: init.method,
+                    url: String(url),
+                });
+                return jsonResponse({
+                    auditId: 'ctxa_1',
+                    pages: [
+                        {
+                            body: 'Useful source body.',
+                            claims: [],
+                            compiledTruth: 'Useful source truth.',
+                            createdAt: '2026-01-01T00:00:00.000Z',
+                            frontmatter: {},
+                            id: 'ctxp_1',
+                            indexing: {
+                                chunkCount: 0,
+                                currentEmbeddingCount: 0,
+                                embeddingModel: 'text-embedding-3-small',
+                                embeddingProvider: 'openai',
+                                lastEmbeddedAt: null,
+                                missingEmbeddingCount: 0,
+                                staleEmbeddingCount: 0,
+                                status: 'not-indexed',
+                            },
+                            links: [],
+                            slug: 'useful-source',
+                            sourceRefs: [],
+                            status: 'active',
+                            timeline: [],
+                            title: 'Useful Source',
+                            type: 'source',
+                            updatedAt: '2026-01-01T00:00:00.000Z',
+                        },
+                    ],
+                });
+            }),
+        });
+
+        await tools.get('cortex_edit').execute('call_1', {
+            action: 'upsert',
+            body: 'Useful source body.',
+            compiledTruth: 'Useful source truth.',
+            links: [{ linkKind: 'mentions', targetSlug: 'shopjoyhaus' }],
+            summary: 'Enriched source page.',
+            tags: ['source'],
+            title: 'Useful Source',
+            type: 'source',
+        });
+
+        expect(requests).toEqual([
+            {
+                body: {
+                    action: 'upsert',
+                    aliases: [],
+                    body: 'Useful source body.',
+                    claims: [],
+                    compiledTruth: 'Useful source truth.',
+                    frontmatter: {},
+                    links: [{ linkKind: 'mentions', targetSlug: 'shopjoyhaus' }],
+                    source: {
+                        actorId: 'openclaw-agent',
+                        actorKind: 'agent',
+                    },
+                    summary: 'Enriched source page.',
+                    tags: ['source'],
+                    timelineEntries: [],
+                    title: 'Useful Source',
+                    type: 'source',
+                },
+                method: 'POST',
+                url: 'http://runtime.test/cortex/edit',
+            },
+        ]);
+    });
+
+    it('ingests normalized source text through the Tavern runtime API', async () => {
+        const requests = [];
+        const tools = registerTools({
+            fetch: mock(async (url, init) => {
+                requests.push({
+                    body: JSON.parse(String(init.body)),
+                    method: init.method,
+                    url: String(url),
+                });
+                return jsonResponse({
+                    auditId: 'ctxa_1',
+                    page: {
+                        id: 'ctxp_1',
+                        slug: 'article-source',
+                        title: 'Article Source',
+                    },
+                    sourceRef: {
+                        id: 'ctxs_1',
+                        kind: 'article',
+                        locator: 'https://example.com/article',
+                    },
+                });
+            }),
+        });
+
+        await tools.get('cortex_ingest').execute('call_1', {
+            content: 'Durable source text.',
+            kind: 'article',
+            locator: 'https://example.com/article',
+            metadata: {
+                author: 'A Writer',
+            },
+            tags: ['source'],
+            title: 'Article Source',
+            type: 'source',
+        });
+
+        expect(requests).toEqual([
+            {
+                body: {
+                    actor: {
+                        actorId: 'openclaw-agent',
+                        actorKind: 'agent',
+                    },
+                    content: 'Durable source text.',
+                    kind: 'article',
+                    locator: 'https://example.com/article',
+                    metadata: {
+                        author: 'A Writer',
+                    },
+                    tags: ['source'],
+                    title: 'Article Source',
+                    type: 'source',
+                },
+                method: 'POST',
+                url: 'http://runtime.test/cortex/ingest',
+            },
+        ]);
+    });
+
+    it('imports media sources through the Tavern runtime API', async () => {
+        const requests = [];
+        const tools = registerTools({
+            fetch: mock(async (url, init) => {
+                requests.push({
+                    body: JSON.parse(String(init.body)),
+                    method: init.method,
+                    url: String(url),
+                });
+                return jsonResponse({
+                    auditId: 'ctxa_1',
+                    files: [
+                        {
+                            hash: 'sha256',
+                            id: 'ctxf_1',
+                            mediaType: 'audio/mpeg',
+                            metadata: {},
+                            path: '.raw/podcast-source/podcast.mp3',
+                        },
+                    ],
+                    importKind: 'podcast',
+                    normalizedContent: 'Transcript text.',
+                    page: {
+                        id: 'ctxp_1',
+                        slug: 'podcast-source',
+                        title: 'Podcast Source',
+                    },
+                    sourceRef: {
+                        id: 'ctxs_1',
+                        kind: 'podcast',
+                        locator: 'fixture:podcast',
+                    },
+                });
+            }),
+        });
+
+        await tools.get('cortex_import').execute('call_1', {
+            kind: 'podcast',
+            locator: 'fixture:podcast',
+            mediaType: 'audio/mpeg',
+            rawContentBase64: 'YXVkaW8=',
+            rawFileName: 'podcast.mp3',
+            tags: ['source'],
+            title: 'Podcast Source',
+            type: 'podcast',
+        });
+
+        expect(requests).toEqual([
+            {
+                body: {
+                    actor: {
+                        actorId: 'openclaw-agent',
+                        actorKind: 'agent',
+                    },
+                    kind: 'podcast',
+                    locator: 'fixture:podcast',
+                    mediaType: 'audio/mpeg',
+                    metadata: {},
+                    rawContentBase64: 'YXVkaW8=',
+                    rawFileName: 'podcast.mp3',
+                    tags: ['source'],
+                    title: 'Podcast Source',
+                    type: 'podcast',
+                },
+                method: 'POST',
+                url: 'http://runtime.test/cortex/import',
             },
         ]);
     });

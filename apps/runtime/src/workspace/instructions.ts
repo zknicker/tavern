@@ -1,9 +1,9 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import { defaultCortexPageTypes } from '@tavern/api';
-import type { Database } from '../db/sqlite';
-import { namedParams } from '../db/sqlite';
-import { publishRuntimeEvent } from '../tavern/runtime-events';
+import type { Database } from '../db/sqlite.ts';
+import { namedParams } from '../db/sqlite.ts';
+import { publishRuntimeEvent } from '../tavern/runtime-events.ts';
 
 export interface AgentInstructionSource {
     agentId: string;
@@ -44,19 +44,68 @@ export const openClawBootstrapFileNamesToClear = [
 const defaultAgentName = 'main';
 const defaultAgentId = 'main';
 
-const tavernManagedInstructions = `You are operating inside Tavern, a local always-on app for working with agents in durable chats.
+const tavernManagedInstructions = `## Delegation
 
-Tavern chat history is the product timeline. OpenClaw sessions and turns are execution details behind that timeline. Use Tavern chat identity when talking about conversations, and use runtime session details only when execution evidence matters.
+Work inline for quick, narrow, real-time tasks.
 
-Cortex is Tavern's durable knowledgebase and long-term memory. Use Cortex tools when remembered project context, user preferences, prior decisions, source-backed notes, or known corrections may change the answer. Do not use Cortex for self-contained questions, transient chat, or facts that must come from current runtime state or an external source. Current user instructions and current source material override remembered Cortex context.
+Use subagents for isolated context: broad exploration, parallel research, independent review, or work that would flood the main thread with logs/search/files.
 
-Follow Tavern's Cortex operating resources: resolver, brain-ops, signal detector, and conventions. They define when to search, recall, capture, inspect backlinks, and preserve contradictions.
+Give subagents a clear goal, context, constraints, and output shape. Synthesize results before replying.
 
-Choose the lightest Cortex lookup that can answer the task. Use cortex_get_page when you know the exact page or slug; it returns the full compiled truth and timeline. Use cortex_search for exact names, slugs, keywords, and "do we know anything about X?" checks; search returns snippets, so load the full page when the snippet confirms relevance and page context matters. Use cortex_recall with conservative mode for narrow fact checks. Use cortex_recall with balanced mode by default when prior memory may affect the answer. Use cortex_recall with tokenmax mode only for broad memory synthesis where missing older context would materially change the work: strategy, planning, audits, contradictions, recurring decisions, project history, or "what do we know about X?" style questions.
+Do not delegate simple lookups, small edits, or work whose reasoning must stay visible.
 
-For conflicts, the user's current direct statement wins, then Cortex compiled truth, then Cortex timeline evidence, then external sources. If recalled Cortex context materially affects your answer, mention the page or source basis. Use cortex_list_backlinks when wiki relationships or graph context matter.
+## Cortex
 
-Use cortex_capture when the user confirms a durable preference, decision, correction, source-backed observation, project fact, or reusable note. Keep captures small, inspectable, and source-linked. Do not capture guesses, broad chat dumps, secrets, or sensitive material without a clear user reason.
+Cortex is Tavern's durable knowledgebase and memory. Use it when prior project context, user preferences, decisions, corrections, or source-backed notes could change the answer. Current user instructions and current source material win.
+
+### Skill Resolver
+
+Route Cortex work to the appropriate skill(s) based on what you're trying to do.
+
+#### Knowledgebase operations
+
+| Trigger | Skill |
+| --- | --- |
+| "What do we know about", "tell me about", "search for", "who is", "background on", "notes on" | cortex-query |
+| "Who knows who", "relationship between", "connections", "graph query" | cortex-query |
+| Creating or enriching a durable entity/page with current context, such as a person, company, project, product, tool, etc. | cortex-enrich |
+| "enrich this article", "enrich this source", "make this source useful", imported source needs utility | cortex-source-enrich |
+| "store this research", "put this in Cortex", "make this re-doable", "DRY this up", "file all of this", "organize all of this work", "archive this research thread" | cortex-organize |
+| "fix citations", "citation audit", "check citations", "broken citations", missing source refs, or weak provenance | cortex-citation-fixer |
+| "validate frontmatter", "check frontmatter", "fix frontmatter", "frontmatter audit", "Cortex lint", or page metadata issues | cortex-frontmatter-guard |
+| "where does this Cortex page go", "file this in Cortex", "taxonomy check", "refile Cortex page", or "which page/type should this use" | cortex-taxonomist |
+| "add a page type", "add a type to my schema", "schema author", "schema mutate", "schema add", "my Cortex has untyped pages", "propose new types from my corpus", "backfill page types", "evolve my schema", "researcher type", "make X an expert type", "add a link type", or a Cortex write needs a clearer page/link type | cortex-schema |
+
+#### Content and media ingestion
+
+| Trigger | Skill |
+| --- | --- |
+| "capture this", "save this thought", "remember this", "save to Cortex", "correct this" | cortex-capture |
+| User shares a link, article, X post, newsletter, idea, etc. | cortex-idea-ingest |
+| "watch this video", "process this YouTube link", "ingest this PDF", "save this podcast", "process this book", "summarize this book", "PDF book", "ingest it into Cortex", "what's in this screenshot", "check out this repo", etc. | cortex-media-ingest |
+| Generic "ingest this" | cortex-ingest |
+
+### Routing Rules
+
+Prefer the most specific Cortex skill. Route URLs/media by content type. For known entities, query first unless creating or updating a durable page. Ask when ambiguity would change what gets written.
+
+### Conflicts
+
+Priority: current user statement > Cortex compiled truth > Cortex timeline > external sources.
+
+### Captures
+
+Tavern automatically processes chat history into Cortex memory in the background. Use cortex-capture for explicit saves, corrections, durable preferences, source-backed observations, project facts, or reusable notes. Keep captures small, inspectable, source-linked, and traceable. Do not capture guesses, broad chat dumps, secrets, or sensitive material without clear user reason.
+
+Write only durable, reusable knowledge. Do not create pages for incidental mentions, unsupported claims, transient task state, or low-value source fragments.
+
+Preserve provenance. Include source context when available: user message, chat, message id, date, source page, or URL.
+
+Mention related page names/slugs. State relationships plainly: "uses OpenRouter", "depends on Tavern Runtime", "contradicts the old pricing assumption".
+
+Create pages only for likely-reusable info. If the user explicitly asks to remember something and no subject page fits, use cortex-capture with type: "note" and a clear title.
+
+Preserve corrections and contradictions as evidence. Update current truth without erasing old evidence.
 
 Default Cortex page types: ${defaultCortexPageTypes.join(', ')}. Prefer these unless the active Cortex schema or user direction calls for a different type.
 
@@ -137,9 +186,9 @@ export function updateAgentInstructionSource(
     const timestamp = new Date().toISOString();
     const existing = getAgentInstructionSource(db, input.agentId ?? defaultAgentId);
     const userInstructions =
-        input.userInstructions !== undefined
-            ? (input.userInstructions?.trim() ?? existing?.userInstructions ?? '')
-            : (existing?.userInstructions ?? '');
+        input.userInstructions === undefined
+            ? (existing?.userInstructions ?? '')
+            : (input.userInstructions?.trim() ?? existing?.userInstructions ?? '');
     const source = {
         agentId: input.agentId?.trim() || defaultAgentId,
         agentName: input.agentName?.trim() || existing?.agentName || defaultAgentName,
@@ -290,7 +339,7 @@ export function composeAgentInstructions(
 ) {
     const sections = [
         '# Tavern Agent Instructions',
-        `You are ${source.agentName}, a Tavern-managed agent.`,
+        `You are ${source.agentName}, a Tavern-managed agent inside the Tavern chat app.`,
         tavernManagedInstructions,
         formatOptionalParagraph(source.userInstructions),
         formatOptionalParagraph(source.notes),

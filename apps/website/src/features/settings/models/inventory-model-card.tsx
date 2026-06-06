@@ -57,6 +57,11 @@ export function InventoryModelCard({
                         {formatContextWindow(model.contextWindow)}
                     </Badge>
                 ) : null}
+                {model.capabilities.map((capability) => (
+                    <Badge key={capability} size="sm" variant="subtle">
+                        {formatModelCapability(capability)}
+                    </Badge>
+                ))}
             </div>
         </Card>
     );
@@ -124,4 +129,8 @@ function formatContextWindow(value: number) {
     }
 
     return `${value} context`;
+}
+
+function formatModelCapability(value: string) {
+    return value.replaceAll('-', ' ');
 }

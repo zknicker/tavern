@@ -90,12 +90,12 @@ export const settingsNavItems = [
 export const settingsNavSections = [
     {
         id: 'general',
-        itemIds: ['agent-runtime', 'participants', 'appearance', 'updates'],
+        itemIds: ['agent-runtime', 'participants', 'appearance', 'updates', 'models'],
         label: 'General',
     },
     {
         id: 'agent',
-        itemIds: ['agent', 'models', 'skills', 'memories'],
+        itemIds: ['agent', 'skills', 'memories'],
         label: 'Agent',
     },
     {

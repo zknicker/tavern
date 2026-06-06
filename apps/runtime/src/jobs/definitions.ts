@@ -1,9 +1,51 @@
 import type { AgentRuntimeJobSlug, CortexJobName } from '@tavern/api';
+import { getCortexDb } from '../cortex/db';
 import { runCortexJob } from '../cortex/jobs';
-import { createCortexVectorDatabase } from '../cortex/vector-db/native-vector-db';
-import { getDb } from '../db/connection';
 import { generateTavernHighlights } from '../highlights/highlights';
 import type { RuntimeJobDefinition } from './types';
+
+const emptyRuntimeJobInputSchema = {
+    parse(input: unknown) {
+        const record = readRuntimeJobInputRecord(input);
+        const keys = Object.keys(record);
+        if (keys.length > 0) {
+            throw new Error(`Unexpected Runtime job input field: ${keys[0]}`);
+        }
+        return {};
+    },
+};
+
+const cortexGenerateEmbeddingsInputSchema = {
+    parse(input: unknown) {
+        const record = readRuntimeJobInputRecord(input);
+        const keys = Object.keys(record);
+        const unexpectedKey = keys.find((key) => key !== 'stale');
+        if (unexpectedKey) {
+            throw new Error(`Unexpected Runtime job input field: ${unexpectedKey}`);
+        }
+        const stale = record.stale ?? true;
+        if (typeof stale !== 'boolean') {
+            throw new Error('Runtime job input field "stale" must be a boolean.');
+        }
+        return { stale };
+    },
+};
+
+const cortexMaintenanceInputSchema = {
+    parse(input: unknown) {
+        const record = readRuntimeJobInputRecord(input);
+        const keys = Object.keys(record);
+        const unexpectedKey = keys.find((key) => key !== 'dryRun');
+        if (unexpectedKey) {
+            throw new Error(`Unexpected Runtime job input field: ${unexpectedKey}`);
+        }
+        const dryRun = record.dryRun ?? false;
+        if (typeof dryRun !== 'boolean') {
+            throw new Error('Runtime job input field "dryRun" must be a boolean.');
+        }
+        return { dryRun };
+    },
+};
 
 const hourMs = 60 * 60 * 1000;
 const dayMs = 24 * hourMs;
@@ -19,9 +61,12 @@ export const runtimeCapabilitiesRefreshJob: RuntimeJobDefinition = {
         return null;
     },
     displayName: 'Refresh Runtime Capabilities',
+    inputSchema: emptyRuntimeJobInputSchema,
     async run(context) {
         const { refreshRuntimeCapabilities } = await import('../capabilities/store');
+        const { reconcileRuntimeJobSchedules } = await import('./manager');
         const capabilities = await refreshRuntimeCapabilities({ onlyDue: true });
+        await reconcileRuntimeJobSchedules();
         await context.log(`Refreshed ${capabilities.length} Runtime capability health row(s).`);
     },
     schedule: {
@@ -40,6 +85,7 @@ export const tavernHighlightsJob: RuntimeJobDefinition = {
         return null;
     },
     displayName: 'Generate Tavern Highlights',
+    inputSchema: emptyRuntimeJobInputSchema,
     async run(context) {
         const result = await generateTavernHighlights();
         await context.log(`Generated ${result.highlights.length} active Tavern highlight(s).`);
@@ -54,19 +100,19 @@ export const tavernHighlightsJob: RuntimeJobDefinition = {
 
 export const cortexGenerateEmbeddingsJob: RuntimeJobDefinition = {
     concurrency: 1,
-    defaultInput: {},
+    defaultInput: { stale: true },
     description: 'Generates embeddings for missing or stale Cortex chunks.',
     disabledReason() {
         return null;
     },
     displayName: 'Generate Cortex Embeddings',
+    inputSchema: cortexGenerateEmbeddingsInputSchema,
     requiredCapabilities: ['embeddingModel'],
     async run(context) {
-        const run = await runCortexJob(
-            getDb(),
-            'generate-embeddings',
-            createCortexVectorDatabase()
-        );
+        const input = cortexGenerateEmbeddingsInputSchema.parse(context.input);
+        const run = await runCortexJob(getCortexDb(), 'generate-embeddings', {
+            stale: input.stale,
+        });
         await context.log(run.summary);
     },
     schedule: {
@@ -78,10 +124,11 @@ export const cortexGenerateEmbeddingsJob: RuntimeJobDefinition = {
 };
 
 export const cortexSyncJob = createCortexJob({
-    description: 'Syncs canonical Cortex markdown into the SQLite projection.',
+    description: 'Syncs canonical Cortex markdown into the PGLite projection.',
     displayName: 'Sync Cortex',
     everyMs: dayMs,
     job: 'sync',
+    runOnStart: true,
     slug: 'cortex-sync',
 });
 
@@ -93,21 +140,22 @@ export const cortexLintJob = createCortexJob({
     slug: 'cortex-lint',
 });
 
-export const cortexMaintenanceJob = createCortexJob({
+export const cortexRepairDerivedStateJob = createCortexJob({
     description: 'Repairs deterministic Cortex derived links, chunks, and orphan rows.',
-    displayName: 'Cortex Maintenance',
+    displayName: 'Repair Cortex Derived State',
     everyMs: dayMs,
-    job: 'maintenance',
-    slug: 'cortex-maintenance',
+    inputSchema: cortexMaintenanceInputSchema,
+    job: 'repair-derived-state',
+    slug: 'cortex-repair-derived-state',
 });
 
-export const cortexSignalJob = createCortexJob({
+export const cortexChatIngestionJob = createCortexJob({
     description: 'Reviews per-chat message backlog and captures durable Cortex memory.',
-    displayName: 'Cortex Signal',
+    displayName: 'Cortex Chat Ingestion',
     everyMs: fiveMinutesMs,
-    job: 'signal',
+    job: 'chat-ingestion',
     requiredCapabilities: ['codexOAuth'],
-    slug: 'cortex-signal',
+    slug: 'cortex-chat-ingestion',
 });
 
 export const cortexDreamJob = createCortexJob({
@@ -125,8 +173,8 @@ export const runtimeJobDefinitions = [
     cortexGenerateEmbeddingsJob,
     cortexSyncJob,
     cortexLintJob,
-    cortexMaintenanceJob,
-    cortexSignalJob,
+    cortexRepairDerivedStateJob,
+    cortexChatIngestionJob,
     cortexDreamJob,
 ] as const;
 
@@ -138,12 +186,21 @@ export function getRuntimeJobDefinition(slug: RuntimeJobDefinition['slug']): Run
     return definition;
 }
 
+function readRuntimeJobInputRecord(input: unknown): Record<string, unknown> {
+    if (!input || typeof input !== 'object' || Array.isArray(input)) {
+        throw new Error('Runtime job input must be an object.');
+    }
+    return input as Record<string, unknown>;
+}
+
 function createCortexJob(input: {
     description: string;
     displayName: string;
     everyMs: number;
+    inputSchema?: RuntimeJobDefinition['inputSchema'];
     job: CortexJobName;
     requiredCapabilities?: RuntimeJobDefinition['requiredCapabilities'];
+    runOnStart?: boolean;
     slug: AgentRuntimeJobSlug;
 }): RuntimeJobDefinition {
     return {
@@ -154,15 +211,21 @@ function createCortexJob(input: {
             return null;
         },
         displayName: input.displayName,
+        inputSchema: input.inputSchema ?? emptyRuntimeJobInputSchema,
         requiredCapabilities: input.requiredCapabilities,
         async run(context) {
-            const run = await runCortexJob(getDb(), input.job, createCortexVectorDatabase());
+            const parsed = (input.inputSchema ?? emptyRuntimeJobInputSchema).parse(
+                context.input
+            ) as Record<string, unknown>;
+            const run = await runCortexJob(getCortexDb(), input.job, {
+                dryRun: typeof parsed.dryRun === 'boolean' ? parsed.dryRun : undefined,
+            });
             await context.log(run.summary);
         },
         schedule: {
             everyMs: input.everyMs,
             kind: 'interval',
-            runOnStart: false,
+            runOnStart: input.runOnStart ?? false,
         },
         slug: input.slug,
     };

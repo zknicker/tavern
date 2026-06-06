@@ -26,7 +26,11 @@ const capabilityLabels = {
     chats: 'Chats',
     codexOAuth: 'Codex OAuth',
     computerUse: 'Computer Use',
+    cortexAgentTools: 'Cortex Agent Tools',
     cortexDatabase: 'Cortex Database',
+    cortexImportProcessors: 'Cortex Import Processors',
+    cortexJobs: 'Cortex Jobs',
+    cortexModelAccess: 'Cortex Model Access',
     cortexWiki: 'Cortex Wiki',
     cron: 'Cron',
     cronRuns: 'Cron Runs',
@@ -53,7 +57,7 @@ export const settingsCapabilityRequirements = {
     agent: ['status', 'agents'],
     appearance: [],
     jobs: ['status', 'tasks', 'cron', 'cronRuns'],
-    memories: ['status', 'memory', 'cortexDatabase', 'cortexWiki'],
+    memories: ['status', 'cortexDatabase', 'cortexWiki'],
     models: ['status', 'models'],
     participants: [],
     sessions: ['status', 'sessions', 'sessionEvents'],
@@ -63,7 +67,7 @@ export const settingsCapabilityRequirements = {
 } as const satisfies Record<string, readonly RuntimeCapabilityId[]>;
 
 export const routeTabCapabilityRequirements = {
-    cortex: ['status', 'cortexDatabase', 'cortexWiki', 'knowledgebase', 'memory'],
+    cortex: ['status', 'cortexDatabase', 'cortexWiki', 'knowledgebase'],
     cron: ['status', 'tasks', 'cron', 'cronRuns'],
     overview: [],
 } as const satisfies Record<RouteTab, readonly RuntimeCapabilityId[]>;

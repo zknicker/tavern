@@ -4,7 +4,7 @@ Memory in Tavern is Cortex.
 
 Tavern does not have two memory systems. Cortex is the durable memory system:
 compiled truth, timelines, pages, embeddings, links, observations, capture
-output, recall audit, and maintenance state.
+output, recall audit, and repair state.
 
 Managed Tavern OpenClaw does not use Lossless Claw. Prompt-time context is
 separate from Tavern memory, and durable memory lives in Cortex.
@@ -49,7 +49,7 @@ The Memory page shows:
 * appended timeline evidence
 * Cortex recall results returned to agents
 * failed captures and recall errors
-* stale embeddings and maintenance state
+* stale embeddings and repair state
 * prompt-facing context or bulletin previews when available
 * context-management readiness when prompt-time continuity affects memory use
 

@@ -121,6 +121,59 @@ message such as `Codex smoke <timestamp>: <purpose>`, record the created chat
 ids, and delete only those chats before finishing. If cleanup fails, report the
 exact chat ids or titles left behind.
 
+## Live Provider Smoke
+
+Live provider tests are opt-in. They are not part of normal CI or default local
+test lanes because they spend provider credits and depend on local tools,
+network, and account state.
+
+Cortex source import has a live OpenAI smoke lane:
+
+```sh
+bun run --filter @tavern/runtime smoke:cortex-verify
+bun run --filter @tavern/runtime smoke:cortex-import
+```
+
+Additional live lanes:
+
+```sh
+bun run --filter @tavern/runtime smoke:cortex-real-import
+bun run --filter @tavern/website smoke:cortex-agent-lookup
+```
+
+Runtime source-import smoke requirements:
+
+* `OPENAI_API_KEY` in the local ignored `.env` file or Runtime process
+  environment.
+* macOS `say` for generating a tiny speech sample.
+* `ffmpeg` for converting the speech sample to WAV.
+* ImageMagick `convert` for generating an OCR image.
+
+The agent lookup lane requires local managed OpenClaw with working Codex auth.
+
+The smoke test creates a temporary Cortex database and wiki, generates a tiny
+text PDF, a PNG with visible text, and a WAV speech sample, then imports each
+through the real Cortex source import path. The PDF proves local extraction; the
+PNG and WAV call real OpenAI OCR and transcription. Assertions verify that
+Cortex pages, source refs, raw file refs, normalized content, and model metadata
+are written as expected.
+
+The verify lane writes a W3C-cited accessibility knowledge page into a temporary
+Cortex wiki, syncs it into PGLite, generates real OpenAI embeddings, edits the
+markdown, syncs again, and proves search plus recall return the updated page. It
+can write input/output JSON by setting `TAVERN_CORTEX_VERIFY_SMOKE_OUTPUT`.
+
+The agent lookup lane runs the live OpenClaw e2e harness, seeds a unique Cortex
+page through Runtime, asks the agent about that unique fact in chat, and verifies
+the OpenClaw trajectory used `cortex_recall`, `cortex_search`, or
+`cortex_get_page` before the answer.
+
+The real-source lane downloads a NASA podcast MP3, a Wikimedia Commons
+infographic PNG, and a W3C sample PDF into a temporary directory. It trims the
+podcast to a 10 second WAV clip, imports all three sources, and verifies the
+distilled Cortex pages contain expected text from the real sources. It can write
+a JSON summary by setting `TAVERN_CORTEX_LIVE_REAL_SMOKE_OUTPUT`.
+
 ## Keeping Suites Current
 
 * Add tests with the feature or bug fix, not in a later cleanup.

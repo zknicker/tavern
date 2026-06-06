@@ -8,14 +8,14 @@ interface CodexCredentialRowProps {
 
 export function CodexCredentialRow({ access }: CodexCredentialRowProps) {
     const providerConfig = getModelProviderConfigFromAccessId('codex');
-    const label = providerConfig.accessDisplayName;
 
     return (
         <ModelAccessProviderRow
             color={providerConfig.color}
             description={access.description}
+            descriptionPlacement="right"
             icon={providerConfig.icon}
-            label={label}
+            label={providerConfig.accessDisplayName}
             state={access.state}
         >
             {null}

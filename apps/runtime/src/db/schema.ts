@@ -7,6 +7,13 @@ CREATE TABLE IF NOT EXISTS runtime_metadata (
   updated_at TEXT NOT NULL
 );
 
+CREATE TABLE IF NOT EXISTS tavern_vault_secrets (
+  id          TEXT PRIMARY KEY,
+  secret_json TEXT NOT NULL,
+  created_at  TEXT NOT NULL,
+  updated_at  TEXT NOT NULL
+);
+
 CREATE TABLE IF NOT EXISTS runtime_capabilities (
   id                TEXT PRIMARY KEY,
   display_name      TEXT NOT NULL,

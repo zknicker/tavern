@@ -1,7 +1,6 @@
 import {
     cortexCaptureInputSchema,
     cortexEditPageInputSchema,
-    cortexJobNameSchema,
     cortexRecallInputSchema,
     cortexSaveSchemaInputSchema,
     cortexSaveSettingsSchema,
@@ -13,12 +12,13 @@ import {
     editCortexPage,
     getCortexPage,
     getCortexSchema,
+    getCortexSchemaAdditions,
     getCortexSettings,
     getCortexStatus,
     listCortexBacklinks,
+    listCortexDreamReports,
     listCortexPages,
     recallCortex,
-    runCortexJob,
     saveCortexSchema,
     saveCortexSettings,
     searchCortex,
@@ -39,10 +39,12 @@ export const cortexRouter = createRouter({
         .input(z.object({ slugOrId: z.string().trim().min(1) }))
         .query(({ input }) => getCortexPage(input.slugOrId)),
     list: publicProcedure.query(() => listCortexPages()),
+    dreamReports: publicProcedure
+        .input(z.object({ limit: z.number().int().positive().max(100).optional() }).optional())
+        .query(({ input }) => listCortexDreamReports(input ?? {})),
     recall: publicProcedure
         .input(cortexRecallInputSchema)
         .mutation(({ input }) => recallCortex(input)),
-    runJob: publicProcedure.input(cortexJobNameSchema).mutation(({ input }) => runCortexJob(input)),
     saveSchema: publicProcedure
         .input(cortexSaveSchemaInputSchema)
         .mutation(({ input }) => saveCortexSchema(input)),
@@ -50,6 +52,7 @@ export const cortexRouter = createRouter({
         .input(cortexSaveSettingsSchema)
         .mutation(({ input }) => saveCortexSettings(input)),
     schema: publicProcedure.query(() => getCortexSchema()),
+    schemaAdditions: publicProcedure.query(() => getCortexSchemaAdditions()),
     search: publicProcedure
         .input(cortexSearchInputSchema)
         .query(({ input }) => searchCortex(input)),

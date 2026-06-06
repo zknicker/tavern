@@ -1,7 +1,6 @@
 import type {
     CortexCaptureInput,
     CortexEditPageInput,
-    CortexJobName,
     CortexRecallInput,
     CortexSaveSchemaInput,
     CortexSaveSettings,
@@ -49,10 +48,23 @@ export async function saveCortexSchema(
     return await requireRuntimeClient(client).saveCortexSchema(input);
 }
 
+export async function getCortexSchemaAdditions(
+    client: TavernAgentRuntimeClient | null = createConfiguredAgentRuntimeClient()
+) {
+    return client ? await client.getCortexSchemaAdditions() : { additions: [] };
+}
+
 export async function listCortexPages(
     client: TavernAgentRuntimeClient | null = createConfiguredAgentRuntimeClient()
 ) {
     return client ? await client.listCortexPages() : { pages: [] };
+}
+
+export async function listCortexDreamReports(
+    input: { limit?: number } = {},
+    client: TavernAgentRuntimeClient | null = createConfiguredAgentRuntimeClient()
+) {
+    return client ? await client.listCortexDreamReports(input) : { reports: [] };
 }
 
 export async function getCortexPage(
@@ -80,7 +92,9 @@ export async function searchCortex(
     input: CortexSearchInput,
     client: TavernAgentRuntimeClient | null = createConfiguredAgentRuntimeClient()
 ) {
-    return client ? await client.searchCortex(input) : { hits: [], query: input.query };
+    return client
+        ? await client.searchCortex(input)
+        : { hits: [], limit: input.limit ?? 10, offset: input.offset ?? 0, query: input.query };
 }
 
 export async function recallCortex(
@@ -95,11 +109,4 @@ export async function listCortexBacklinks(
     client: TavernAgentRuntimeClient | null = createConfiguredAgentRuntimeClient()
 ) {
     return client ? await client.listCortexBacklinks(slugOrId) : { links: [], target: slugOrId };
-}
-
-export async function runCortexJob(
-    job: CortexJobName,
-    client: TavernAgentRuntimeClient | null = createConfiguredAgentRuntimeClient()
-) {
-    return await requireRuntimeClient(client).runCortexJob(job);
 }

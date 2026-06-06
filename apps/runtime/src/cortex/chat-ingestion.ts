@@ -1,59 +1,62 @@
 import type { Database } from '../db/sqlite';
 import { writeCortexAudit } from './audit';
+import {
+    advanceChatIngestionCursor,
+    type ChatIngestionChatRow,
+    type ChatIngestionMessageRow,
+    findChatIngestionReviewAudit,
+    isOperationalMessage,
+    listChatIngestionChats,
+    listChatIngestionMessages,
+    sourceRefFromMessage,
+} from './chat-ingestion-cursor';
+import {
+    buildChatIngestionReviewPrompt,
+    codexChatIngestionResponsesUrl,
+    reviewChatIngestionBatchWithModel,
+} from './chat-ingestion-review';
 import { getActiveCortexSchema } from './cortex-schema';
+import type { CortexDatabase } from './db';
 import { findDreamContextPages, parseDreamReviewResponse } from './dream';
 import { applyDreamProposal } from './dream-apply';
 import type { DreamSourceRange } from './dream-types';
 import { hashText } from './ids';
 import { buildCortexLlmAuditMetadata } from './llm-audit';
 import { nowIso } from './rows';
-import {
-    advanceSignalCursor,
-    findSignalReviewAudit,
-    isOperationalMessage,
-    listSignalChats,
-    listSignalMessages,
-    type SignalChatRow,
-    type SignalMessageRow,
-    sourceRefFromMessage,
-} from './signal-cursor';
-import {
-    buildSignalReviewPrompt,
-    codexSignalResponsesUrl,
-    reviewSignalBatchWithModel,
-} from './signal-review';
+import { getCortexSettings } from './settings';
 
-const defaultCortexSignalModel = 'gpt-5.5';
-
-export interface CortexSignalResult {
+export interface CortexChatIngestionResult {
     captured: number;
     chatsReviewed: number;
     modelReviewed: boolean;
     reviewed: number;
 }
 
-export async function runCortexSignal(db: Database): Promise<CortexSignalResult> {
-    const chats = listSignalChats(db);
+export async function runCortexChatIngestion(
+    runtimeDb: Database,
+    cortexDb: CortexDatabase
+): Promise<CortexChatIngestionResult> {
+    const chats = await listChatIngestionChats(runtimeDb, cortexDb);
     if (chats.length === 0) {
-        writeCortexAudit(db, {
-            kind: 'signal.review',
+        await writeCortexAudit(cortexDb, {
+            kind: 'chat_ingestion.review',
             metadata: {},
             recordRefs: [],
             sourceRefs: [],
             status: 'skipped',
-            summary: 'No new chat messages to review for Cortex Signal.',
+            summary: 'No new chat messages to review for Cortex Chat Ingestion.',
         });
         return { captured: 0, chatsReviewed: 0, modelReviewed: false, reviewed: 0 };
     }
 
-    const result: CortexSignalResult = {
+    const result: CortexChatIngestionResult = {
         captured: 0,
         chatsReviewed: 0,
         modelReviewed: false,
         reviewed: 0,
     };
     for (const chat of chats) {
-        const batchResult = await processSignalChat(db, chat);
+        const batchResult = await processChatIngestionChat(runtimeDb, cortexDb, chat);
         result.captured += batchResult.captured;
         result.chatsReviewed += batchResult.chatsReviewed;
         result.modelReviewed ||= batchResult.modelReviewed;
@@ -62,8 +65,12 @@ export async function runCortexSignal(db: Database): Promise<CortexSignalResult>
     return result;
 }
 
-async function processSignalChat(db: Database, chat: SignalChatRow): Promise<CortexSignalResult> {
-    const rows = listSignalMessages(db, chat);
+async function processChatIngestionChat(
+    runtimeDb: Database,
+    cortexDb: CortexDatabase,
+    chat: ChatIngestionChatRow
+): Promise<CortexChatIngestionResult> {
+    const rows = listChatIngestionMessages(runtimeDb, chat);
     const lastRow = rows.at(-1);
     if (!lastRow) {
         return { captured: 0, chatsReviewed: 0, modelReviewed: false, reviewed: 0 };
@@ -71,15 +78,15 @@ async function processSignalChat(db: Database, chat: SignalChatRow): Promise<Cor
 
     const meaningfulRows = rows.filter((row) => !isOperationalMessage(row.content));
     if (meaningfulRows.length === 0) {
-        advanceSignalCursor(db, {
+        await advanceChatIngestionCursor(cortexDb, {
             chatId: chat.chat_id,
             lastMessageId: lastRow.id,
             lastProcessedAt: nowIso(),
             lastSequence: lastRow.sequence,
             sourceHash: null,
         });
-        writeCortexAudit(db, {
-            kind: 'signal.review',
+        await writeCortexAudit(cortexDb, {
+            kind: 'chat_ingestion.review',
             metadata: {
                 chatId: chat.chat_id,
                 messageIds: rows.map((row) => row.id),
@@ -89,7 +96,7 @@ async function processSignalChat(db: Database, chat: SignalChatRow): Promise<Cor
             recordRefs: [],
             sourceRefs: rows.map(sourceRefFromMessage),
             status: 'skipped',
-            summary: `Cortex Signal skipped ${rows.length} operational chat message(s).`,
+            summary: `Cortex Chat Ingestion skipped ${rows.length} operational chat message(s).`,
         });
         return {
             captured: 0,
@@ -99,9 +106,9 @@ async function processSignalChat(db: Database, chat: SignalChatRow): Promise<Cor
         };
     }
 
-    const sourceRange = buildSignalSourceRange(chat, meaningfulRows);
-    if (findSignalReviewAudit(db, sourceRange.sourceHash)) {
-        advanceSignalCursor(db, {
+    const sourceRange = buildChatIngestionSourceRange(chat, meaningfulRows);
+    if (await findChatIngestionReviewAudit(cortexDb, sourceRange.sourceHash)) {
+        await advanceChatIngestionCursor(cortexDb, {
             chatId: chat.chat_id,
             lastMessageId: lastRow.id,
             lastProcessedAt: nowIso(),
@@ -116,13 +123,10 @@ async function processSignalChat(db: Database, chat: SignalChatRow): Promise<Cor
         };
     }
 
-    const model =
-        process.env.TAVERN_CORTEX_SIGNAL_MODEL?.trim() ||
-        process.env.TAVERN_CORTEX_DREAM_MODEL?.trim() ||
-        defaultCortexSignalModel;
-    const contextPages = findDreamContextPages(db, sourceRange.text);
-    const activeSchema = getActiveCortexSchema(db);
-    const prompt = buildSignalReviewPrompt({
+    const model = parseModelRef((await getCortexSettings(cortexDb)).models.chatIngestion).model;
+    const contextPages = await findDreamContextPages(cortexDb, sourceRange.text);
+    const activeSchema = await getActiveCortexSchema(cortexDb);
+    const prompt = buildChatIngestionReviewPrompt({
         contextPages,
         linkTypes: activeSchema.linkTypes.map((type) => type.name),
         pageTypes: activeSchema.pageTypes,
@@ -137,22 +141,22 @@ async function processSignalChat(db: Database, chat: SignalChatRow): Promise<Cor
         tokenCounts: Record<string, unknown> | null;
     };
     try {
-        review = await reviewSignalBatchWithModel({ model, prompt });
+        review = await reviewChatIngestionBatchWithModel({ model, prompt });
         const proposal = parseDreamReviewResponse(review.outputText);
-        const applied = applyDreamProposal(db, {
+        const applied = await applyDreamProposal(cortexDb, {
             model,
             origin: {
-                frontmatterKey: 'signal',
-                relationshipSourceLocation: 'signal',
-                tag: 'signal',
+                frontmatterKey: 'chat_ingestion',
+                relationshipSourceLocation: 'chat_ingestion',
+                tag: 'chat-ingestion',
             },
             outputHash: hashText(review.outputText),
             promptHash,
             proposal,
             sourceRange,
         });
-        writeCortexAudit(db, {
-            kind: 'signal.review',
+        await writeCortexAudit(cortexDb, {
+            kind: 'chat_ingestion.review',
             metadata: buildCortexLlmAuditMetadata({
                 estimatedCostUsd: review.estimatedCostUsd,
                 extra: {
@@ -170,16 +174,16 @@ async function processSignalChat(db: Database, chat: SignalChatRow): Promise<Cor
                 promptHash: applied.promptHash,
                 provider: 'codex',
                 requestId: review.requestId,
-                route: codexSignalResponsesUrl,
+                route: codexChatIngestionResponsesUrl,
                 sourceHash: sourceRange.sourceHash,
                 tokenCounts: review.tokenCounts,
             }),
             recordRefs: applied.pageIds,
             sourceRefs: sourceRange.sourceRefs,
             status: 'success',
-            summary: `Cortex Signal reviewed ${meaningfulRows.length} message(s) in ${chat.title} and touched ${applied.pagesTouched} page(s).`,
+            summary: `Cortex Chat Ingestion reviewed ${meaningfulRows.length} message(s) in ${chat.title} and touched ${applied.pagesTouched} page(s).`,
         });
-        advanceSignalCursor(db, {
+        await advanceChatIngestionCursor(cortexDb, {
             chatId: chat.chat_id,
             lastMessageId: lastRow.id,
             lastProcessedAt: nowIso(),
@@ -193,8 +197,8 @@ async function processSignalChat(db: Database, chat: SignalChatRow): Promise<Cor
             reviewed: meaningfulRows.length,
         };
     } catch (error) {
-        writeCortexAudit(db, {
-            kind: 'signal.review',
+        await writeCortexAudit(cortexDb, {
+            kind: 'chat_ingestion.review',
             metadata: buildCortexLlmAuditMetadata({
                 extra: {
                     chatId: chat.chat_id,
@@ -205,7 +209,7 @@ async function processSignalChat(db: Database, chat: SignalChatRow): Promise<Cor
                 model,
                 promptHash,
                 provider: 'codex',
-                route: codexSignalResponsesUrl,
+                route: codexChatIngestionResponsesUrl,
                 sourceHash: sourceRange.sourceHash,
             }),
             recordRefs: [],
@@ -217,7 +221,18 @@ async function processSignalChat(db: Database, chat: SignalChatRow): Promise<Cor
     }
 }
 
-function buildSignalSourceRange(chat: SignalChatRow, rows: SignalMessageRow[]): DreamSourceRange {
+function parseModelRef(modelRef: string) {
+    const separatorIndex = modelRef.indexOf('/');
+    return {
+        model: separatorIndex >= 0 ? modelRef.slice(separatorIndex + 1) : modelRef,
+        provider: separatorIndex >= 0 ? modelRef.slice(0, separatorIndex) : 'codex',
+    };
+}
+
+function buildChatIngestionSourceRange(
+    chat: ChatIngestionChatRow,
+    rows: ChatIngestionMessageRow[]
+): DreamSourceRange {
     const text = rows
         .map(
             (row) =>

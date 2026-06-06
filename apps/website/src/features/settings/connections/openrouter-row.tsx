@@ -201,5 +201,5 @@ function getOpenRouterDescription(isLoading: boolean) {
         return 'Loading OpenRouter keys.';
     }
 
-    return 'Add an OpenRouter API key.';
+    return '';
 }

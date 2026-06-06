@@ -1,111 +1,253 @@
-import type { CortexSourceRef } from '@tavern/api';
-import { loadCodexCredentials } from '@tavern/codex-usage/credentials';
+import type { CortexDreamReportHealth, CortexDreamReportPhase, CortexSourceRef } from '@tavern/api';
 import type { Database } from '../db/sqlite';
-import { namedParams } from '../db/sqlite';
+import { loadVaultBackedCodexCredentials } from '../model-access/codex-settings';
 import { writeCortexAudit } from './audit';
-import { sourceRefFromChatMessage } from './chat-source-ref';
+import type { CortexDatabase } from './db';
 import { applyDreamProposal } from './dream-apply';
+import {
+    addCortexDreamReportItem,
+    finishCortexDreamReport,
+    startCortexDreamReport,
+} from './dream-report';
 import type {
     CortexDreamResult,
     DreamContextPage,
-    DreamMessageRow,
     DreamNoop,
     DreamProposal,
     DreamSourceRange,
     DreamWarning,
 } from './dream-types';
+import { generateStaleCortexEmbeddings } from './embeddings';
 import { hashText, slugifyCortexTitle } from './ids';
+import {
+    type CortexIssue,
+    detectCortexIssues,
+    summarizeCortexHealth,
+    summarizeCortexIssues,
+} from './lint';
 import { buildCortexLlmAuditMetadata } from './llm-audit';
 import { getCortexPage } from './read';
-import { type PageRow, readJsonRecord, scoreLexical, tokenize } from './rows';
+import { runCortexRepairDerivedState } from './repair-derived-state';
+import { type PageRow, readJsonArray, readJsonRecord, scoreLexical, tokenize } from './rows';
+import { getCortexSettings } from './settings';
+import { syncCortexMarkdown } from './sync';
 
-const defaultCortexDreamModel = 'gpt-5.5';
 const codexResponsesUrl = 'https://chatgpt.com/backend-api/codex/responses';
 
-export async function runCortexDream(db: Database): Promise<CortexDreamResult> {
-    const rows = listDreamMessages(db);
-    if (rows.length === 0) {
-        writeSkippedDreamAudit(db, 'No new chat messages to review.');
-        return { captured: 0, modelReviewed: false, reviewed: 0 };
-    }
-
-    const sourceRange = buildDreamSourceRange(rows);
-    const existingAudit = findDreamReviewAudit(db, sourceRange.sourceHash);
-    if (existingAudit) {
-        return { captured: 0, modelReviewed: false, reviewed: rows.length };
-    }
-
-    const model = process.env.TAVERN_CORTEX_DREAM_MODEL?.trim() || defaultCortexDreamModel;
-    const contextPages = findDreamContextPages(db, sourceRange.text);
-    const prompt = buildDreamReviewPrompt({ contextPages, sourceRange });
-    let review: {
-        estimatedCostUsd: number | null;
-        latencyMs: number;
-        outputText: string;
-        requestId: string | null;
-        tokenCounts: Record<string, unknown> | null;
-    };
+export async function runCortexDream(
+    _runtimeDb: Database,
+    cortexDb: CortexDatabase
+): Promise<CortexDreamResult> {
+    const modelRef = (await getCortexSettings(cortexDb)).models.dream;
+    const { model, provider } = parseModelRef(modelRef);
+    const phases: CortexDreamReportPhase[] = [];
+    let healthBefore: CortexDreamReportHealth | null = null;
+    const report = await startCortexDreamReport(cortexDb, {
+        healthBefore: null,
+        model,
+        provider,
+    });
     try {
-        review = await reviewDreamSourceRangeWithModel({ model, prompt });
-    } catch (error) {
-        writeCortexAudit(db, {
+        await runDreamPhase(phases, 'Sync', async () => {
+            const result = await syncCortexMarkdown(cortexDb);
+            return `Synced ${result.pagesSynced} Cortex page(s).`;
+        });
+
+        let issues: CortexIssue[] = [];
+        await runDreamPhase(phases, 'Health scan', async () => {
+            issues = await detectCortexIssues(cortexDb);
+            healthBefore = summarizeCortexHealth(issues);
+            return summarizeCortexIssues(issues);
+        });
+
+        await runDreamPhase(phases, 'Maintenance', async () => {
+            const result = await runCortexRepairDerivedState(cortexDb, {
+                now: new Date().toISOString(),
+            });
+            return result.summary;
+        });
+
+        const selection = await runDreamPhase(phases, 'Select work', async () => {
+            const range = await buildDreamConsolidationSourceRange(cortexDb, issues);
+            const pages = await findDreamContextPages(cortexDb, range.text);
+            return {
+                result: { contextPages: pages, sourceRange: range },
+                summary: `Selected ${dreamItemCount(range)} Cortex work item(s) and ${pages.length} context page(s).`,
+            };
+        });
+        const { contextPages, sourceRange } = selection;
+
+        if (dreamItemCount(sourceRange) === 0) {
+            await writeSkippedDreamAudit(
+                cortexDb,
+                'No Cortex changes or health issues to consolidate.'
+            );
+            await finishCortexDreamReport(cortexDb, report.id, {
+                healthAfter: healthBefore,
+                healthBefore,
+                noops: ['No Cortex changes or health issues to consolidate.'],
+                phases,
+                status: 'skipped',
+                summary: 'Dream skipped because Cortex had no consolidation work.',
+            });
+            return { captured: 0, modelReviewed: false, reportId: report.id, reviewed: 0 };
+        }
+
+        const existingAudit = await findDreamReviewAudit(cortexDb, sourceRange.sourceHash);
+        if (existingAudit) {
+            await finishCortexDreamReport(cortexDb, report.id, {
+                healthAfter: healthBefore,
+                healthBefore,
+                noops: ['Selected Cortex work already has a successful Dream review.'],
+                phases,
+                status: 'skipped',
+                summary: 'Dream skipped because the selected Cortex work was already reviewed.',
+            });
+            return {
+                captured: 0,
+                modelReviewed: false,
+                reportId: report.id,
+                reviewed: dreamItemCount(sourceRange),
+            };
+        }
+
+        const prompt = buildDreamReviewPrompt({ contextPages, sourceRange });
+        let review: {
+            estimatedCostUsd: number | null;
+            latencyMs: number;
+            outputText: string;
+            requestId: string | null;
+            tokenCounts: Record<string, unknown> | null;
+        };
+        try {
+            review = await reviewDreamSourceRangeWithModel({ model, prompt });
+        } catch (error) {
+            await writeCortexAudit(cortexDb, {
+                kind: 'dream.review',
+                metadata: buildCortexLlmAuditMetadata({
+                    extra: {
+                        captureKey: sourceRange.captureKey,
+                        reportId: report.id,
+                        workItemCount: dreamItemCount(sourceRange),
+                    },
+                    model,
+                    promptHash: hashText(prompt),
+                    provider,
+                    route: codexResponsesUrl,
+                    sourceHash: sourceRange.sourceHash,
+                }),
+                recordRefs: [],
+                sourceRefs: sourceRange.sourceRefs,
+                status: 'error',
+                summary: error instanceof Error ? error.message : String(error),
+            });
+            throw error;
+        }
+        const outputText = review.outputText;
+        const proposal = parseDreamReviewResponse(outputText);
+        const applied = await runDreamPhase(phases, 'Consolidate', async () => {
+            const result = await applyDreamProposal(cortexDb, {
+                model,
+                outputHash: hashText(outputText),
+                promptHash: hashText(prompt),
+                proposal,
+                sourceRange,
+            });
+            return {
+                result,
+                summary: `Touched ${result.pagesTouched} Cortex page(s), ${proposal.relationships.length} relationship(s), and ${proposal.timelineEntries.length} timeline entrie(s).`,
+            };
+        });
+
+        await writeDreamReportItems(cortexDb, report.id, proposal, applied.pageIds);
+
+        await runDreamPhase(phases, 'Post-write repair', async () => {
+            const sync = await syncCortexMarkdown(cortexDb);
+            const repair = await runCortexRepairDerivedState(cortexDb, {
+                now: new Date().toISOString(),
+            });
+            const embeddings = await generateStaleCortexEmbeddings(
+                cortexDb,
+                new Date().toISOString()
+            );
+            return `Synced ${sync.pagesSynced} page(s); ${repair.summary}; generated ${embeddings.length} embedding(s).`;
+        });
+
+        let finalIssues: CortexIssue[] = [];
+        await runDreamPhase(phases, 'Final health', async () => {
+            finalIssues = await detectCortexIssues(cortexDb);
+            return summarizeCortexIssues(finalIssues);
+        });
+
+        const healthAfter = summarizeCortexHealth(finalIssues);
+        await writeCortexAudit(cortexDb, {
             kind: 'dream.review',
             metadata: buildCortexLlmAuditMetadata({
                 extra: {
                     captureKey: sourceRange.captureKey,
-                    messageIds: sourceRange.messageIds,
+                    contextPages: contextPages.map((page) => page.slug),
+                    noops: applied.noops,
+                    reportId: report.id,
+                    warnings: applied.warnings,
+                    workItemCount: dreamItemCount(sourceRange),
                 },
+                latencyMs: review.latencyMs,
                 model,
-                promptHash: hashText(prompt),
-                provider: 'codex',
+                outputHash: applied.outputHash,
+                promptHash: applied.promptHash,
+                provider,
+                requestId: review.requestId,
                 route: codexResponsesUrl,
                 sourceHash: sourceRange.sourceHash,
+                tokenCounts: review.tokenCounts,
+                estimatedCostUsd: review.estimatedCostUsd,
             }),
-            recordRefs: [],
+            recordRefs: applied.pageIds,
             sourceRefs: sourceRange.sourceRefs,
+            status: 'success',
+            summary: `Dream consolidated ${dreamItemCount(sourceRange)} Cortex work item(s) and touched ${applied.pagesTouched} page(s).`,
+        });
+
+        await finishCortexDreamReport(cortexDb, report.id, {
+            estimatedCostUsd: review.estimatedCostUsd,
+            healthAfter,
+            healthBefore,
+            noops: applied.noops.map((noop) => noop.reason),
+            phases,
+            status: 'success',
+            summary: buildDreamReportSummary({
+                healthAfter,
+                healthBefore,
+                pagesTouched: applied.pagesTouched,
+                workItemCount: dreamItemCount(sourceRange),
+            }),
+            warnings: applied.warnings.map((warning) => warning.message),
+        });
+
+        return {
+            captured: applied.pagesTouched,
+            modelReviewed: true,
+            reportId: report.id,
+            reviewed: dreamItemCount(sourceRange),
+        };
+    } catch (error) {
+        await finishCortexDreamReport(cortexDb, report.id, {
+            healthAfter: healthBefore,
+            healthBefore,
+            phases,
             status: 'error',
             summary: error instanceof Error ? error.message : String(error),
         });
         throw error;
     }
-    const outputText = review.outputText;
-    const proposal = parseDreamReviewResponse(outputText);
-    const applied = applyDreamProposal(db, {
-        model,
-        outputHash: hashText(outputText),
-        promptHash: hashText(prompt),
-        proposal,
-        sourceRange,
-    });
+}
 
-    writeCortexAudit(db, {
-        kind: 'dream.review',
-        metadata: buildCortexLlmAuditMetadata({
-            extra: {
-                captureKey: sourceRange.captureKey,
-                contextPages: contextPages.map((page) => page.slug),
-                messageIds: sourceRange.messageIds,
-                noops: applied.noops,
-                warnings: applied.warnings,
-            },
-            latencyMs: review.latencyMs,
-            model,
-            outputHash: applied.outputHash,
-            promptHash: applied.promptHash,
-            provider: 'codex',
-            requestId: review.requestId,
-            route: codexResponsesUrl,
-            sourceHash: sourceRange.sourceHash,
-            tokenCounts: review.tokenCounts,
-            estimatedCostUsd: review.estimatedCostUsd,
-        }),
-        recordRefs: applied.pageIds,
-        sourceRefs: sourceRange.sourceRefs,
-        status: 'success',
-        summary: `Dream reviewed ${rows.length} message(s) and touched ${applied.pagesTouched} Cortex page(s).`,
-    });
-
-    return { captured: applied.pagesTouched, modelReviewed: true, reviewed: rows.length };
+function parseModelRef(modelRef: string) {
+    const separatorIndex = modelRef.indexOf('/');
+    return {
+        model: separatorIndex >= 0 ? modelRef.slice(separatorIndex + 1) : modelRef,
+        provider: separatorIndex >= 0 ? modelRef.slice(0, separatorIndex) : 'codex',
+    };
 }
 
 async function reviewDreamSourceRangeWithModel(input: { model: string; prompt: string }): Promise<{
@@ -149,9 +291,9 @@ async function reviewDreamSourceRangeWithModel(input: { model: string; prompt: s
     };
 }
 
-async function loadDreamCodexCredentials(): ReturnType<typeof loadCodexCredentials> {
+async function loadDreamCodexCredentials(): ReturnType<typeof loadVaultBackedCodexCredentials> {
     try {
-        return await loadCodexCredentials({ environment: process.env });
+        return await loadVaultBackedCodexCredentials();
     } catch (error) {
         throw new Error('Codex OAuth credentials are required for Cortex Dream.', {
             cause: error,
@@ -179,62 +321,118 @@ function buildCodexDreamHeaders(credentials: {
     return headers;
 }
 
-function listDreamMessages(db: Database): DreamMessageRow[] {
-    const cursor = findLatestDreamReviewedMessageCursor(db);
-    const condition = cursor
-        ? 'AND (created_at > $cursorCreatedAt OR (created_at = $cursorCreatedAt AND id > $cursorId))'
-        : '';
-    return db
-        .prepare(
-            `SELECT id, chat_id, author_id, role, content, created_at
-             FROM chat_messages
-             WHERE deleted_at IS NULL
-               AND content != ''
-               ${condition}
-             ORDER BY created_at ASC, id ASC
-             LIMIT $limit`
-        )
-        .all(
-            namedParams({
-                cursorCreatedAt: cursor?.createdAt ?? '',
-                cursorId: cursor?.id ?? '',
-                limit: 50,
-            })
-        ) as DreamMessageRow[];
-}
-
-function buildDreamSourceRange(rows: DreamMessageRow[]): DreamSourceRange {
-    const ordered = rows;
-    const text = ordered.map((row) => `[${row.role} ${row.id}] ${row.content}`).join('\n\n');
-    const sourceRefs = ordered.map(sourceRefFromMessage);
+async function buildDreamConsolidationSourceRange(
+    db: CortexDatabase,
+    issues: CortexIssue[]
+): Promise<DreamSourceRange> {
+    const pages = await listDreamCandidatePages(db);
+    const audits = await listDreamCandidateAudits(db);
+    const issueLines = issues.slice(0, 80).map((issue) => `- ${issue.kind}: ${issue.summary}`);
+    const pageLines = pages.map(
+        (page) =>
+            `## ${page.title} (${page.slug}, ${page.type})\nUpdated: ${page.updated_at}\nCompiled truth:\n${truncateText(
+                page.compiled_truth || page.body,
+                1500
+            )}\nBody:\n${truncateText(page.body, 1200)}`
+    );
+    const auditLines = audits.map(
+        (audit) =>
+            `- ${audit.kind} ${audit.status} ${audit.created_at}: ${audit.summary} ${truncateText(
+                audit.metadata_json,
+                500
+            )}`
+    );
+    const text = [
+        '# Cortex health issues',
+        issueLines.length ? issueLines.join('\n') : 'No lint issues.',
+        '',
+        '# Recent Cortex pages',
+        pageLines.length ? pageLines.join('\n\n') : 'No recent pages.',
+        '',
+        '# Recent Cortex audit evidence',
+        auditLines.length ? auditLines.join('\n') : 'No recent audit events.',
+    ].join('\n');
+    const sourceRefs = uniqueSourceRefs(pages.flatMap((page) => readPageSourceRefs(page)));
     const sourceHash = hashText(text);
     return {
         captureKey: hashText(
-            JSON.stringify({ messageIds: ordered.map((row) => row.id), sourceHash })
+            JSON.stringify({
+                auditIds: audits.map((audit) => audit.id),
+                issueCount: issues.length,
+                pageIds: pages.map((page) => page.id),
+                sourceHash,
+            })
         ),
-        messageIds: ordered.map((row) => row.id),
+        itemCount: pages.length + audits.length + issues.length,
+        messageIds: [],
         sourceHash,
         sourceRefs,
         text,
     };
 }
 
-function sourceRefFromMessage(row: DreamMessageRow): CortexSourceRef {
-    return sourceRefFromChatMessage(row);
+async function listDreamCandidatePages(db: CortexDatabase): Promise<PageRow[]> {
+    return await db
+        .prepare(
+            `SELECT *
+             FROM cortex_pages
+             WHERE deleted_at IS NULL
+               AND status IN ('active', 'stale')
+             ORDER BY updated_at DESC
+             LIMIT 24`
+        )
+        .all<PageRow>();
 }
 
-export function findDreamContextPages(db: Database, text: string): DreamContextPage[] {
+async function listDreamCandidateAudits(db: CortexDatabase): Promise<
+    Array<{
+        created_at: string;
+        id: string;
+        kind: string;
+        metadata_json: string;
+        status: string;
+        summary: string;
+    }>
+> {
+    return await db
+        .prepare(
+            `SELECT id, kind, status, summary, metadata_json, created_at
+             FROM cortex_audit_events
+             WHERE kind != 'dream.review'
+             ORDER BY created_at DESC
+             LIMIT 40`
+        )
+        .all<{
+            created_at: string;
+            id: string;
+            kind: string;
+            metadata_json: string;
+            status: string;
+            summary: string;
+        }>();
+}
+
+function readPageSourceRefs(page: Pick<PageRow, 'source_refs_json'>): CortexSourceRef[] {
+    return readJsonArray<CortexSourceRef>(page.source_refs_json).filter(
+        (ref) => typeof ref.id === 'string' && typeof ref.kind === 'string'
+    );
+}
+
+export async function findDreamContextPages(
+    db: CortexDatabase,
+    text: string
+): Promise<DreamContextPage[]> {
     const terms = tokenize(text).slice(0, 80);
-    const rows = db
+    const rows = await db
         .prepare(
             `SELECT *
              FROM cortex_pages
              WHERE deleted_at IS NULL
                AND status IN ('active', 'stale')`
         )
-        .all() as PageRow[];
+        .all<PageRow>();
 
-    return rows
+    const ranked = rows
         .map((row) => ({
             row,
             score: scoreLexical(
@@ -244,21 +442,23 @@ export function findDreamContextPages(db: Database, text: string): DreamContextP
         }))
         .filter((entry) => entry.score > 0)
         .sort((left, right) => right.score - left.score)
-        .slice(0, 8)
-        .map(({ row }) => {
-            const page = getCortexPage(db, row.id);
-            return {
-                compiledTruth: row.compiled_truth,
-                links:
-                    page?.links.map((link) => ({
-                        linkKind: link.linkKind,
-                        targetSlug: link.targetSlug,
-                    })) ?? [],
-                slug: row.slug,
-                title: row.title,
-                type: row.type,
-            };
+        .slice(0, 8);
+    const contextPages: DreamContextPage[] = [];
+    for (const { row } of ranked) {
+        const page = await getCortexPage(db, row.id);
+        contextPages.push({
+            compiledTruth: row.compiled_truth,
+            links:
+                page?.links.map((link) => ({
+                    linkKind: link.linkKind,
+                    targetSlug: link.targetSlug,
+                })) ?? [],
+            slug: row.slug,
+            title: row.title,
+            type: row.type,
         });
+    }
+    return contextPages;
 }
 
 function buildDreamReviewPrompt(input: {
@@ -266,15 +466,19 @@ function buildDreamReviewPrompt(input: {
     sourceRange: DreamSourceRange;
 }): string {
     return [
-        'You are running Tavern Cortex Dream.',
-        'Convert bounded source material into durable Cortex updates.',
-        'Do entity sweep, citation hygiene, memory consolidation, conversation synthesis, and cross-session pattern detection.',
+        'You are running Tavern Cortex Dream: a daily consolidation pass over the existing Cortex knowledgebase.',
+        'Review bounded Cortex pages, audit evidence, and health findings. Produce durable updates that improve the knowledgebase.',
+        'Do entity sweep, citation hygiene, memory consolidation, relationship repair, stale-truth repair, and cross-session pattern detection.',
         'Use existing context pages when possible. Avoid duplicate pages.',
         'Every useful claim must preserve source provenance through timeline entries, observations, and citations.',
         'Return JSON only with this shape:',
         JSON.stringify({
             citations: [
-                { locator: 'message-id-or-range', pageSlug: 'page-slug', quote: 'short quote' },
+                {
+                    locator: 'message-id-or-range',
+                    pageSlug: 'page-slug',
+                    quote: 'short quote',
+                },
             ],
             noops: [{ reason: 'why reviewed material was not captured' }],
             observations: [
@@ -318,15 +522,142 @@ function buildDreamReviewPrompt(input: {
             warnings: [{ message: 'ambiguity or conflict' }],
         }),
         'Rules:',
-        '- Only capture durable business facts, preferences, decisions, reusable project context, relationships, corrections, and recurring patterns.',
+        '- Only write durable business facts, preferences, decisions, reusable project context, relationships, corrections, and recurring patterns.',
         '- Do not capture secrets, credentials, transient execution chatter, or broad summaries.',
-        '- Use generic page/link types from the schema. If unsure, use note + mentions or emit a warning/noop.',
+        '- Pattern detection should create or update pattern pages when there is source-backed repeated behavior.',
+        '- Use generic page/link types from the schema. If a better page/link type is needed, use it; Runtime will register it as a Cortex schema addition.',
         '- compiledTruth is the current best understanding. timelineEntries are append-only evidence.',
+        '- Create new pages only for durable subjects likely to be useful again. If durable but no subject page fits, write a note page with a clear title.',
+        '- Include relationships whenever reviewed material connects two Cortex pages. Do not invent facts or relationships that are not grounded in the source range or existing context.',
+        '- Prefer improving existing pages over duplicating source pages.',
         '',
         `Existing Cortex context:\n${JSON.stringify(input.contextPages)}`,
         '',
         `Source range:\n${input.sourceRange.text}`,
     ].join('\n\n');
+}
+
+async function runDreamPhase<T>(
+    phases: CortexDreamReportPhase[],
+    name: string,
+    callback: () => Promise<T | { result: T; summary: string } | string>
+): Promise<T> {
+    const started = performance.now();
+    try {
+        const value = await callback();
+        const { result, summary } = normalizeDreamPhaseResult<T>(value);
+        phases.push({
+            durationMs: Math.max(0, Math.round(performance.now() - started)),
+            metadata: {},
+            name,
+            status: 'success',
+            summary,
+        });
+        return result;
+    } catch (error) {
+        phases.push({
+            durationMs: Math.max(0, Math.round(performance.now() - started)),
+            metadata: {},
+            name,
+            status: 'error',
+            summary: error instanceof Error ? error.message : String(error),
+        });
+        throw error;
+    }
+}
+
+function normalizeDreamPhaseResult<T>(value: T | { result: T; summary: string } | string): {
+    result: T;
+    summary: string;
+} {
+    if (typeof value === 'string') {
+        return { result: value as T, summary: value };
+    }
+    if (value && typeof value === 'object' && 'result' in value && 'summary' in value) {
+        return value as { result: T; summary: string };
+    }
+    return { result: value as T, summary: 'Completed.' };
+}
+
+async function writeDreamReportItems(
+    db: CortexDatabase,
+    reportId: string,
+    proposal: DreamProposal,
+    pageIds: string[]
+): Promise<void> {
+    for (const pageWrite of proposal.pageWrites) {
+        const slug = slugifyCortexTitle(pageWrite.slug || pageWrite.title);
+        await addCortexDreamReportItem(db, reportId, {
+            kind:
+                pageWrite.type === 'pattern' || pageWrite.tags?.includes('pattern')
+                    ? 'pattern-created'
+                    : pageWrite.action === 'archive'
+                      ? 'page-updated'
+                      : pageIds.length > 0
+                        ? 'page-updated'
+                        : 'page-created',
+            metadata: {
+                action: pageWrite.action ?? 'upsert',
+                type: pageWrite.type ?? 'note',
+            },
+            pageSlug: slug,
+            summary: pageWrite.compiledTruth,
+            title: pageWrite.title,
+        });
+    }
+    for (const relationship of proposal.relationships) {
+        await addCortexDreamReportItem(db, reportId, {
+            kind: 'relationship-added',
+            metadata: {
+                fromSlug: relationship.fromSlug,
+                linkKind: relationship.linkKind,
+                targetSlug: relationship.targetSlug,
+            },
+            pageSlug: slugifyCortexTitle(relationship.fromSlug),
+            summary: `${relationship.fromSlug} ${relationship.linkKind} ${relationship.targetSlug}.`,
+            title: relationship.label || relationship.linkKind,
+        });
+    }
+    for (const citation of proposal.citations) {
+        await addCortexDreamReportItem(db, reportId, {
+            kind: 'citation-added',
+            metadata: {
+                locator: citation.locator,
+                quote: citation.quote ?? null,
+            },
+            pageSlug: citation.pageSlug,
+            summary: `Added citation from ${citation.locator}.`,
+            title: citation.pageSlug,
+        });
+    }
+    for (const warning of proposal.warnings) {
+        await addCortexDreamReportItem(db, reportId, {
+            kind: 'warning',
+            summary: warning.message,
+            title: 'Warning',
+        });
+    }
+    for (const noop of proposal.noops) {
+        await addCortexDreamReportItem(db, reportId, {
+            kind: 'noop',
+            summary: noop.reason,
+            title: 'No-op',
+        });
+    }
+}
+
+function buildDreamReportSummary(input: {
+    healthAfter: CortexDreamReportHealth;
+    healthBefore: CortexDreamReportHealth | null;
+    pagesTouched: number;
+    workItemCount: number;
+}): string {
+    const before = input.healthBefore?.score ?? input.healthAfter.score;
+    return `Reviewed ${input.workItemCount} Cortex work item(s), touched ${input.pagesTouched} page(s), and moved health ${before} -> ${input.healthAfter.score}.`;
+}
+
+function dreamItemCount(sourceRange: DreamSourceRange): number {
+    return sourceRange.itemCount ?? 0;
 }
 
 export function parseDreamReviewResponse(text: string): DreamProposal {
@@ -414,8 +745,11 @@ export function parseDreamReviewResponse(text: string): DreamProposal {
     };
 }
 
-function findDreamReviewAudit(db: Database, sourceHash: string): string | null {
-    const rows = db
+async function findDreamReviewAudit(
+    db: CortexDatabase,
+    sourceHash: string
+): Promise<string | null> {
+    const rows = await db
         .prepare(
             `SELECT id, metadata_json
              FROM cortex_audit_events
@@ -424,7 +758,7 @@ function findDreamReviewAudit(db: Database, sourceHash: string): string | null {
              ORDER BY created_at DESC
              LIMIT 200`
         )
-        .all() as Array<{ id: string; metadata_json: string }>;
+        .all<{ id: string; metadata_json: string }>();
     for (const row of rows) {
         if (readJsonRecord(row.metadata_json).sourceHash === sourceHash) {
             return row.id;
@@ -433,43 +767,8 @@ function findDreamReviewAudit(db: Database, sourceHash: string): string | null {
     return null;
 }
 
-function findLatestDreamReviewedMessageCursor(
-    db: Database
-): { createdAt: string; id: string } | null {
-    const rows = db
-        .prepare(
-            `SELECT metadata_json
-             FROM cortex_audit_events
-             WHERE kind = 'dream.review'
-               AND status = 'success'
-             ORDER BY created_at DESC
-             LIMIT 20`
-        )
-        .all() as Array<{ metadata_json: string }>;
-    for (const row of rows) {
-        const messageIds = readStringArray(readJsonRecord(row.metadata_json).messageIds);
-        if (messageIds.length === 0) {
-            continue;
-        }
-        const placeholders = messageIds.map(() => '?').join(',');
-        const latest = db
-            .prepare(
-                `SELECT id, created_at AS createdAt
-                 FROM chat_messages
-                 WHERE id IN (${placeholders})
-                 ORDER BY created_at DESC, id DESC
-                 LIMIT 1`
-            )
-            .get(...messageIds) as { createdAt: string | null; id: string } | null;
-        if (latest?.createdAt && latest.id) {
-            return { createdAt: latest.createdAt, id: latest.id };
-        }
-    }
-    return null;
-}
-
-function writeSkippedDreamAudit(db: Database, summary: string): void {
-    writeCortexAudit(db, {
+async function writeSkippedDreamAudit(db: CortexDatabase, summary: string): Promise<void> {
+    await writeCortexAudit(db, {
         kind: 'dream.review',
         metadata: {},
         recordRefs: [],
@@ -585,4 +884,25 @@ function readObservationStatus(value: unknown): 'active' | 'contradicted' | 'sta
     return value === 'contradicted' || value === 'stale' || value === 'superseded'
         ? value
         : 'active';
+}
+
+function uniqueSourceRefs(refs: CortexSourceRef[]): CortexSourceRef[] {
+    const seen = new Set<string>();
+    const unique: CortexSourceRef[] = [];
+    for (const ref of refs) {
+        const key = `${ref.id}:${ref.kind}:${ref.locator ?? ''}`;
+        if (seen.has(key)) {
+            continue;
+        }
+        seen.add(key);
+        unique.push(ref);
+    }
+    return unique;
+}
+
+function truncateText(value: string, maxLength: number): string {
+    if (value.length <= maxLength) {
+        return value;
+    }
+    return `${value.slice(0, maxLength - 20)}\n[truncated]`;
 }

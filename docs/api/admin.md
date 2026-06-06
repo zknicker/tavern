@@ -44,6 +44,15 @@ capabilities. It is not a second product API.
 | OpenClaw chat projections | `/openclaw/chats`, `/openclaw/chats/{chatId}/messages` |
 | Runtime chat relay | websocket `/chat` |
 
+`POST /jobs/{slug}/run` is the single manual job-run interface. Runtime job
+definitions own their payload schema and default input. Cortex embedding repair
+uses the `cortex-generate-embeddings` Runtime job with `{ "stale": true }` when
+clients want explicit incremental indexing.
+
+`/model-access/openrouter` reads and writes OpenRouter credentials in Runtime
+Tavern Vault. Runtime-owned features such as Cortex recall can use that key
+without reaching into app storage or OpenClaw internals.
+
 ## Contract Source
 
 | Source | Owns |

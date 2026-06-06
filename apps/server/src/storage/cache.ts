@@ -7,6 +7,7 @@ export const cachedDocumentIdSchema = z.enum([
     'memory-graph',
     'model-inventory-claude',
     'model-inventory-codex',
+    'model-inventory-openai',
     'model-inventory-openrouter',
 ]);
 

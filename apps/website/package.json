@@ -31,6 +31,7 @@
     "test:e2e:debug": "bun e2e/run-playwright.ts --debug",
     "test:e2e:headed": "bun e2e/run-playwright.ts --headed",
     "test:e2e:live-openclaw": "bun e2e/run-playwright-live-openclaw.ts",
+    "smoke:cortex-agent-lookup": "bun e2e/run-playwright-live-openclaw.ts e2e/live/cortex-agent-lookup.spec.ts",
     "test:e2e:screenshot": "bun e2e/run-playwright.ts --screenshot on",
     "test:e2e:screenshot-failures": "bun e2e/run-playwright.ts --screenshot only-on-failure",
     "test:e2e:ui": "bun e2e/run-playwright.ts --ui",

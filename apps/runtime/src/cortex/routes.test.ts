@@ -8,8 +8,9 @@ import { closeDb, initTestDb } from '../db/connection';
 import { ensureRuntimeSchema } from '../db/schema';
 import { ensureRuntimeJobsSchema } from '../jobs/schema';
 import { subscribeToRuntimeEvents } from '../tavern/runtime-events';
+import { ensureCortexRuntimeBootstrap } from './bootstrap';
+import { closeCortexDb, getCortexDb, initTestCortexDb } from './db';
 import { handleCortexRequest } from './routes';
-import { ensureCortexSchema } from './schema';
 
 describe('Cortex routes', () => {
     let runtimeRoot: string;
@@ -28,13 +29,15 @@ describe('Cortex routes', () => {
 
         const db = initTestDb();
         ensureRuntimeSchema(db);
-        ensureCortexSchema(db);
         ensureRuntimeJobsSchema(db);
+        await initTestCortexDb();
+        await ensureCortexRuntimeBootstrap(getCortexDb());
     });
 
     afterEach(async () => {
         vi.restoreAllMocks();
         closeDb();
+        await closeCortexDb();
         process.env.CODEX_HOME = undefined;
         process.env.PATH = originalPath;
         process.env.TAVERN_CORTEX_WIKI_PATH = undefined;

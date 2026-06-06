@@ -18,32 +18,35 @@ of wiki links, backlinks, files, citations, tags, search, and graph navigation.
 * **Wiki pages.** Durable Cortex pages with titles, slugs, frontmatter,
   compiled truth, timelines, body content, and `[[wiki links]]`.
 * **Search and recall.** Users and agents can search Cortex through hybrid text
-  and vector-backed retrieval. Tavern stores the vector index in LanceDB as
-  rebuildable derived state.
+  and vector-backed retrieval. Tavern stores embeddings in the Cortex PGLite
+  database using Postgres-compatible vector search.
+* **Version history.** Page snapshots can be inspected and reverted without
+  losing the revert event.
+* **Source ingest.** Bounded source text can enter Cortex with provenance and
+  normal search, recall, and embedding coverage.
 * **Backlinks and graph navigation.** Related pages are discoverable through
   links, tags, types, and source relationships.
 * **Files and citations.** Source material keeps attachment, citation, and
   provenance metadata.
 * **Agent-authored notes and edits.** Agents can capture, edit, archive, merge,
   split, and link Cortex material with audit.
-* **Health and maintenance.** Embedding coverage, failed captures, stale chunks,
-  health recommendations, and maintenance audit are visible.
+* **Health and repair.** Embedding coverage, failed captures, stale chunks,
+  health recommendations, and repair audit are visible.
 
 ## Contract
 
 Knowledgebase identity is Cortex identity. Page ids are canonical. Slugs are
-source-scoped lookup keys. Markdown files are canonical page content; Runtime
-SQLite is the projection for ids, embeddings, links, audit, and maintenance.
+globally unique lookup keys. Markdown files are the editable page surface; the
+Cortex PGLite database stores ids, embeddings, links, audit, and repair state.
 
-Knowledgebase writes are Cortex writes. Agent-authored notes are attributable to
-the user, agent, runtime job, chat, message, session, turn, file, URL, or
-citation that produced them.
+Knowledgebase writes are Cortex writes. Agent-authored notes and ingested source
+pages are attributable to the user, agent, runtime job, chat, message, session,
+turn, file, URL, connector payload, or citation that produced them.
 
 Cortex pages, sources, links, claims, timelines, chunks, audit, and job state
-project from markdown into Runtime SQLite. LanceDB owns only the derived vector
-index for chunk retrieval. If the vector database is unavailable, plain page
-reads and lexical search can remain healthy while Cortex reports degraded vector
-recall.
+project from markdown into the Cortex PGLite database. If embeddings are not
+configured, plain page reads and lexical search can remain healthy while Cortex
+reports degraded vector recall.
 
 ## Boundary
 
