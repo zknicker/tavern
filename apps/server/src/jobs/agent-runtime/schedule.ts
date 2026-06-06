@@ -2,7 +2,7 @@ import { emitJobsUpdated } from '../../api/invalidation-events.ts';
 import { emitStartupJobEvent } from '../../startup-events.ts';
 import { formatDurationMs, logStartupEvent } from '../../startup-log.ts';
 import { getStalePendingRunIds, hasRecentIntervalRun } from '../interval-schedule.ts';
-import type { QueueBinding } from './shared.ts';
+import { formatError, type QueueBinding } from './shared.ts';
 
 function getStartupJobLabel(binding: QueueBinding) {
     return binding.definition.displayName;
@@ -70,7 +70,7 @@ export async function syncScheduledJob(
         return;
     }
 
-    if (!(await binding.definition.isEnabled())) {
+    if (!(await isJobEnabled(binding))) {
         const scheduler = await binding.queue.getJobScheduler(binding.definition.slug);
         const clearedPendingRuns = await clearPendingRuns(binding);
 
@@ -155,4 +155,21 @@ export async function refreshJobSchedule(
 ) {
     await syncScheduledJob(binding, options);
     emitJobsUpdated();
+}
+
+async function isJobEnabled(binding: QueueBinding): Promise<boolean> {
+    try {
+        return await binding.definition.isEnabled();
+    } catch (error) {
+        logStartupEvent(
+            '⚠️',
+            `${getStartupJobLabel(binding)} · enablement check failed · treating as disabled`,
+            'warning'
+        );
+        console.warn(
+            `[tavern] job enablement check failed (${binding.definition.slug})`,
+            formatError(error)
+        );
+        return false;
+    }
 }

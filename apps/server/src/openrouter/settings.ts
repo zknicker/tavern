@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { AgentRuntimeRequestError } from '../agent-runtime/client.ts';
 import { createConfiguredAgentRuntimeClient } from '../agent-runtime/configured-client.ts';
 import {
     deleteTavernVaultSecret,
@@ -119,6 +120,14 @@ async function getRuntimeOpenRouterSettings(): Promise<OpenRouterSettings | null
     }
     try {
         return await client.getOpenRouterSettings();
+    } catch (error) {
+        if (
+            error instanceof AgentRuntimeRequestError &&
+            (error.retryable || error.status === 404)
+        ) {
+            return null;
+        }
+        throw error;
     } finally {
         client.close();
     }

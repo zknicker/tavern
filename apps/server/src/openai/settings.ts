@@ -1,4 +1,5 @@
 import type { AgentRuntimeOpenAiSettings } from '@tavern/api';
+import { AgentRuntimeRequestError } from '../agent-runtime/client.ts';
 import { createConfiguredAgentRuntimeClient } from '../agent-runtime/configured-client.ts';
 
 export type OpenAiSettings = AgentRuntimeOpenAiSettings;
@@ -10,6 +11,14 @@ export async function getOpenAiSettings(): Promise<OpenAiSettings | null> {
     }
     try {
         return await client.getOpenAiSettings();
+    } catch (error) {
+        if (
+            error instanceof AgentRuntimeRequestError &&
+            (error.retryable || error.status === 404)
+        ) {
+            return null;
+        }
+        throw error;
     } finally {
         client.close();
     }
