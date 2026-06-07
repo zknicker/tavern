@@ -2,7 +2,6 @@ import type { AgentRuntimeConnectionOutput } from '../../../lib/trpc.tsx';
 
 type RuntimeConnection = NonNullable<AgentRuntimeConnectionOutput>;
 type RuntimeCapability = RuntimeConnection['capabilities'][number];
-type CapabilityState = RuntimeCapability['state'];
 type CapabilityId = RuntimeCapability['capability'];
 type CapabilityCategoryId =
     | 'agentWork'
@@ -81,6 +80,44 @@ const capabilityCategories: Partial<Record<CapabilityId, CapabilityCategoryId>> 
     tavernPlugin: 'runtimeCore',
 };
 
+const capabilityDisplayOrder: CapabilityId[] = [
+    'status',
+    'gateway',
+    'tavernPlugin',
+    'codexOAuth',
+    'agents',
+    'agentTurns',
+    'agentFiles',
+    'computerUse',
+    'tasks',
+    'chats',
+    'messages',
+    'sessions',
+    'chatTargets',
+    'mentions',
+    'sessionEvents',
+    'cortexDatabase',
+    'cortexWiki',
+    'knowledgebase',
+    'cortexAgentTools',
+    'cortexImportProcessors',
+    'cortexJobs',
+    'cortexModelAccess',
+    'embeddingModel',
+    'memory',
+    'models',
+    'skills',
+    'skillMaterialization',
+    'cron',
+    'cronRuns',
+    'events',
+    'logs',
+];
+
+const capabilityDisplayRank = new Map(
+    capabilityDisplayOrder.map((capability, index) => [capability, index] as const)
+);
+
 const requiredCapabilities = new Set<CapabilityId>([
     'agents',
     'chats',
@@ -105,20 +142,6 @@ const supportingCapabilities = new Set<CapabilityId>([
     'sessionEvents',
     'tasks',
 ]);
-
-const criticalityRank: Record<CapabilityCriticality, number> = {
-    required: 0,
-    primary: 1,
-    supporting: 2,
-};
-
-const stateRank: Record<CapabilityState, number> = {
-    unavailable: 0,
-    unauthorized: 1,
-    degraded: 2,
-    unknown: 3,
-    healthy: 4,
-};
 
 export function getCapabilityLabel(capability: RuntimeCapability) {
     return capabilityLabels[capability.capability] ?? capability.capability;
@@ -160,14 +183,16 @@ function getCapabilityCategory(capability: RuntimeCapability): CapabilityCategor
 }
 
 function compareCapabilities(a: CapabilityView, b: CapabilityView) {
-    const criticality = criticalityRank[a.criticality] - criticalityRank[b.criticality];
-    if (criticality !== 0) {
-        return criticality;
+    const aRank = capabilityDisplayRank.get(a.item.capability);
+    const bRank = capabilityDisplayRank.get(b.item.capability);
+    if (aRank !== undefined && bRank !== undefined && aRank !== bRank) {
+        return aRank - bRank;
     }
-
-    const state = stateRank[a.item.state] - stateRank[b.item.state];
-    if (state !== 0) {
-        return state;
+    if (aRank !== undefined) {
+        return -1;
+    }
+    if (bRank !== undefined) {
+        return 1;
     }
 
     return a.label.localeCompare(b.label);

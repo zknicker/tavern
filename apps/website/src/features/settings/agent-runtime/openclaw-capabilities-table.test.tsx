@@ -4,7 +4,7 @@ import { renderToStaticMarkup } from 'react-dom/server';
 import { OpenClawCapabilitiesSummary } from './openclaw-capabilities-table.tsx';
 
 function capability(input: {
-    capability: 'gateway' | 'logs' | 'models' | 'skills';
+    capability: 'codexOAuth' | 'gateway' | 'logs' | 'models' | 'skills' | 'status' | 'tavernPlugin';
     state?: 'degraded' | 'healthy' | 'unknown' | 'unavailable';
 }) {
     return {
@@ -64,4 +64,26 @@ test('OpenClawCapabilitiesSummary groups by category', () => {
     assert.ok(markup.indexOf('Skills &amp; models') < markup.indexOf('Operations'));
     assert.doesNotMatch(markup, /Required/);
     assert.doesNotMatch(markup, /Supporting/);
+});
+
+test('OpenClawCapabilitiesSummary keeps static order when capability health changes', () => {
+    const renderRuntimeCore = (gatewayState: 'healthy' | 'unavailable') =>
+        renderToStaticMarkup(
+            <OpenClawCapabilitiesSummary
+                capabilities={[
+                    capability({ capability: 'codexOAuth' }),
+                    capability({ capability: 'gateway', state: gatewayState }),
+                    capability({ capability: 'status' }),
+                    capability({ capability: 'tavernPlugin' }),
+                ]}
+            />
+        );
+    const unavailableMarkup = renderRuntimeCore('unavailable');
+    const healthyMarkup = renderRuntimeCore('healthy');
+
+    for (const markup of [unavailableMarkup, healthyMarkup]) {
+        assert.ok(markup.indexOf('status') < markup.indexOf('gateway'));
+        assert.ok(markup.indexOf('gateway') < markup.indexOf('tavernPlugin'));
+        assert.ok(markup.indexOf('tavernPlugin') < markup.indexOf('codexOAuth'));
+    }
 });

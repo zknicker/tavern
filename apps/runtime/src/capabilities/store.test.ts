@@ -6,6 +6,7 @@ import { ensureCortexRuntimeBootstrap } from '../cortex/bootstrap';
 import { closeCortexDb, getCortexDb, initTestCortexDb } from '../cortex/db';
 import { closeDb, initTestDb } from '../db/connection';
 import { ensureRuntimeSchema } from '../db/schema';
+import { runtimeCapabilitiesRefreshJob } from '../jobs/definitions';
 import { startRuntimeJobsManager } from '../jobs/manager';
 import { ensureRuntimeJobsSchema } from '../jobs/schema';
 import {
@@ -15,6 +16,7 @@ import {
 } from '../openclaw/state';
 import { replaceStoredOpenClawModels } from '../tavern/openclaw-snapshots-store';
 import { handleTavernRuntimeRequest } from '../tavern/router';
+import { subscribeToRuntimeEvents } from '../tavern/runtime-events';
 import { getRuntimeCapability, listRuntimeCapabilities, refreshRuntimeCapabilities } from './store';
 
 describe('Runtime capabilities store', () => {
@@ -95,6 +97,28 @@ describe('Runtime capabilities store', () => {
             reason: 'Capability has not been checked yet.',
             state: 'unknown',
         });
+    });
+
+    test('scheduled Runtime capability refresh publishes update events for written rows', async () => {
+        const events: string[] = [];
+        const unsubscribe = subscribeToRuntimeEvents((event) => {
+            if (event.type === 'capability.updated') {
+                events.push(event.capability);
+            }
+        });
+
+        try {
+            await runtimeCapabilitiesRefreshJob.run({
+                input: {},
+                log: async () => undefined,
+                trigger: 'manual',
+            });
+        } finally {
+            unsubscribe();
+        }
+
+        expect(events).toContain('gateway');
+        expect(events).toContain('status');
     });
 
     test('records empty Cortex database and wiki capabilities as healthy', async () => {

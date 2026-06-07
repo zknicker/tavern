@@ -120,7 +120,9 @@ refresh-runtime-capabilities
 
 The job runs on startup and on a short interval. It evaluates every Runtime
 capability whose refresh policy is due and writes one health row per
-capability.
+capability. When the job writes a capability row, Runtime emits the same
+`capability.updated` event used by manual refreshes so the app refetches without
+operator action.
 
 Each capability definition owns its refresh policy:
 
@@ -219,7 +221,7 @@ The Runtime settings page reads Runtime capability health and renders:
 
 * one row per expected Runtime capability,
 * capability groups by product category,
-* criticality ordering so required surfaces sort before supporting checks,
+* stable row order inside each category,
 * a status color from `state`,
 * the last check time,
 * the `reason` inline or in the row detail for non-healthy capabilities.

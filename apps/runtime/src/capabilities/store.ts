@@ -12,6 +12,7 @@ import {
     type RuntimeCapabilityCheckResult,
     runtimeCapabilityDefinitions,
 } from './definitions';
+import { publishCapabilityUpdated } from './events';
 
 interface RuntimeCapabilityRow {
     checked_at: string | null;
@@ -92,9 +93,13 @@ export function isRuntimeCapabilityHealthy(id: AgentRuntimeCapabilityHealthId): 
 export async function refreshRuntimeCapabilities(input?: {
     ids?: AgentRuntimeCapabilityHealthId[];
     onlyDue?: boolean;
+    publishUpdated?: boolean;
 }): Promise<AgentRuntimeCapabilityHealth[]> {
     const ids = input?.ids ?? runtimeCapabilityDefinitions.map((definition) => definition.id);
     const refreshed: AgentRuntimeCapabilityHealth[] = [];
+    const previousUpdatedAtById = input?.publishUpdated
+        ? new Map(ids.map((id) => [id, getRuntimeCapability(id).updatedAt] as const))
+        : null;
 
     for (const id of ids) {
         const definition = getRuntimeCapabilityDefinition(id);
@@ -103,7 +108,11 @@ export async function refreshRuntimeCapabilities(input?: {
             continue;
         }
         const result = await definition.check();
-        refreshed.push(saveRuntimeCapabilityResult(id, result));
+        const capability = saveRuntimeCapabilityResult(id, result);
+        refreshed.push(capability);
+        if (previousUpdatedAtById && previousUpdatedAtById.get(id) !== capability.updatedAt) {
+            publishCapabilityUpdated(id);
+        }
     }
 
     return refreshed;

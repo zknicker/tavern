@@ -46,10 +46,12 @@ export function TabsSubtleList({
 
 export function TabsSubtleItem({
     className,
+    disabled,
     icon,
     iconNode,
     iconOnly = false,
     label,
+    tabIndex,
     children,
     ...props
 }: TabsPrimitive.Tab.Props & {
@@ -62,11 +64,13 @@ export function TabsSubtleItem({
         <TabsPrimitive.Tab
             aria-label={iconOnly ? label : undefined}
             className={cn(
-                'no-drag group relative z-10 flex h-7 shrink-0 cursor-pointer items-center justify-center gap-1 whitespace-nowrap rounded-lg bg-transparent px-2 font-medium text-primary text-sm outline-none transition-colors duration-150 ease-out before:pointer-events-none before:absolute before:inset-0 before:z-0 before:rounded-lg before:bg-[var(--topbar-tab-hover)] before:opacity-0 before:transition-opacity before:duration-150 before:ease-out hover:text-primary hover:before:opacity-100 focus-visible:ring-2 focus-visible:ring-ring disabled:pointer-events-none disabled:cursor-default disabled:opacity-50 disabled:hover:before:opacity-0 data-disabled:pointer-events-none data-disabled:cursor-default data-active:bg-transparent data-active:text-primary data-disabled:opacity-50 data-active:before:bg-[var(--topbar-tab-active)] data-disabled:hover:before:opacity-0 [&>*]:relative [&>*]:z-10 [&_svg]:pointer-events-none [&_svg]:shrink-0',
+                'no-drag group relative z-10 flex h-7 shrink-0 cursor-pointer items-center justify-center gap-1 whitespace-nowrap rounded-lg bg-transparent px-2 font-medium text-primary text-sm outline-none transition-colors duration-150 ease-out before:pointer-events-none before:absolute before:inset-0 before:z-0 before:rounded-lg before:bg-[var(--topbar-tab-hover)] before:opacity-0 before:transition-opacity before:duration-150 before:ease-out hover:text-primary hover:before:opacity-100 focus-visible:inset-ring-2 focus-visible:inset-ring-ring disabled:pointer-events-none disabled:cursor-default disabled:opacity-50 disabled:hover:before:opacity-0 data-disabled:pointer-events-none data-disabled:cursor-default data-active:bg-transparent data-active:text-primary data-disabled:opacity-50 data-active:before:bg-[var(--topbar-tab-active)] data-disabled:hover:before:opacity-0 [&>*]:relative [&>*]:z-10 [&_svg]:pointer-events-none [&_svg]:shrink-0',
                 iconOnly && 'w-8 px-0',
                 className
             )}
             data-slot="tabs-subtle-item"
+            disabled={disabled}
+            tabIndex={disabled ? undefined : (tabIndex ?? 0)}
             {...props}
         >
             {iconNode ?? null}
