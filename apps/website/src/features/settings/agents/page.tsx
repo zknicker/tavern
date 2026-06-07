@@ -1,8 +1,6 @@
-import { useEffect, useRef, useState } from 'react';
-import { SimpleCodeEditor } from '../../../components/code-editor/simple-code-editor.tsx';
+import { useEffect, useState } from 'react';
 import { BadgeDivider } from '../../../components/ui/badge-divider.tsx';
 import { Card, CardFrame } from '../../../components/ui/card.tsx';
-import { Button } from '../../../components/ui/primitives/button.tsx';
 import { Input } from '../../../components/ui/primitives/input.tsx';
 import {
     Select,
@@ -25,7 +23,6 @@ import { agentColorPresets } from '../../agents/agent-color-presets.ts';
 import { MissingAgentState } from '../../agents/missing-agent-state.tsx';
 import { useAgentProfileUpdate } from '../../agents/use-agent-profile-update.ts';
 import { MessagingPlatformsSection } from '../connections/messaging-platform-section.tsx';
-import { AgentInstructionsPreviewDrawer } from './agent-instructions-preview-drawer.tsx';
 import { AgentModelSection } from './model-section.tsx';
 import type { AgentModelDraft, AgentSettingsDraft } from './types.ts';
 
@@ -95,10 +92,7 @@ function AgentSettingsContent({
             await Promise.all([utils.agent.list.invalidate(), utils.model.list.invalidate()]);
         },
     });
-    const savedUserInstructions = agent.userInstructions;
     const [displayName, setDisplayName] = useState(baseline.profile.displayName);
-    const [instructionsDraft, setInstructionsDraft] = useState(savedUserInstructions);
-    const previousSavedUserInstructionsRef = useRef(savedUserInstructions);
     const draft = {
         ...baseline,
         profile: {
@@ -110,25 +104,9 @@ function AgentSettingsContent({
         updateName.isPending || updateModel.isPending || updateThinkingDefault.isPending;
 
     useEffect(() => {
-        const previousSavedUserInstructions = previousSavedUserInstructionsRef.current;
-
-        if (previousSavedUserInstructions === savedUserInstructions) {
-            return;
-        }
-
-        previousSavedUserInstructionsRef.current = savedUserInstructions;
-        setInstructionsDraft((current) =>
-            current === previousSavedUserInstructions ? savedUserInstructions : current
-        );
-    }, [savedUserInstructions]);
-
-    useEffect(() => {
         setDisplayName(baseline.profile.displayName);
     }, [baseline.profile.displayName]);
 
-    const instructionsChanged = instructionsDraft !== savedUserInstructions;
-    const isSavingInstructions =
-        saveAgentProfile.isPending && saveAgentProfile.variables?.userInstructions !== undefined;
     const selectedColor = agent.effectivePrimaryColor;
     const selectedColorPreset =
         agentColorPresets.find(
@@ -216,48 +194,6 @@ function AgentSettingsContent({
                         </SettingsRow>
                     </Card>
                 </CardFrame>
-            </section>
-
-            <section>
-                <BadgeDivider className="pb-4">Instructions</BadgeDivider>
-                <CardFrame>
-                    <Card className="relative h-[400px] overflow-hidden p-0">
-                        <SimpleCodeEditor
-                            disabled={isSavingInstructions}
-                            filePath="AGENTS.md"
-                            onChange={setInstructionsDraft}
-                            placeholder="Write the agent's role, personality, operating rules, output protocol, and stop rules."
-                            value={instructionsDraft}
-                        />
-                    </Card>
-                </CardFrame>
-                <div className="mt-3 flex flex-wrap items-center justify-end gap-2">
-                    <AgentInstructionsPreviewDrawer
-                        agentDisplayName={draft.profile.displayName}
-                        agentId={agent.id}
-                    />
-                    <Button
-                        disabled={!instructionsChanged || saveAgentProfile.isPending}
-                        loading={isSavingInstructions}
-                        onClick={() =>
-                            saveAgentProfile.mutate(
-                                {
-                                    agentId: agent.id,
-                                    userInstructions: instructionsDraft,
-                                },
-                                {
-                                    onSuccess: ({ agent: savedAgent }) => {
-                                        previousSavedUserInstructionsRef.current =
-                                            savedAgent.userInstructions;
-                                        setInstructionsDraft(savedAgent.userInstructions);
-                                    },
-                                }
-                            )
-                        }
-                    >
-                        Save
-                    </Button>
-                </div>
             </section>
 
             <AgentModelSection

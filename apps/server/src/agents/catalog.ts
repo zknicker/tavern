@@ -393,22 +393,6 @@ export async function saveCatalogAgentProfile(input: {
         throw new Error(`Failed to save profile for agent "${input.agentId}".`);
     }
 
-    if (input.userInstructions !== undefined) {
-        const instructionAgent = agentRecord ?? runtimeAgentRead?.agent ?? null;
-        await syncAgentWorkspaceInstructions(
-            {
-                id: input.agentId,
-                name: instructionAgent?.name ?? input.agentId,
-                runtimeId,
-                workspaceFolder: instructionAgent?.workspaceFolder ?? null,
-            },
-            profile,
-            runtimeAgentRead?.client ?? null
-        ).catch((error) => {
-            console.warn('[tavern] failed to sync agent workspace instructions', error);
-        });
-    }
-
     const agent = agentRecord
         ? toAgent(agentRecord, profile)
         : runtimeAgentRead
@@ -543,26 +527,4 @@ function toAgentFromAgentRuntimeAgent(input: {
         updatedAt: input.profile?.updatedAt ?? fallbackAgentUpdatedAt,
         userInstructions: input.profile?.userInstructions ?? '',
     };
-}
-
-async function syncAgentWorkspaceInstructions(
-    agent: {
-        id: string;
-        name: string;
-        runtimeId: string;
-        workspaceFolder: string | null;
-    },
-    profile: agentProfileStore.AgentProfile,
-    client?: TavernAgentRuntimeClient | null
-) {
-    if (!agent.workspaceFolder) {
-        throw new Error(`No workspace folder is available for agent "${agent.id}".`);
-    }
-
-    const runtimeClient = client ?? (await createClientForRuntimeId(agent.runtimeId));
-    await runtimeClient.saveWorkspaceInstructions(agent.id, {
-        agentName: agent.name,
-        userInstructions: profile.userInstructions,
-        workspaceDir: agent.workspaceFolder,
-    });
 }

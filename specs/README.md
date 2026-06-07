@@ -36,8 +36,8 @@ directly.
 - `mentions.md`: `@` references in composers, their metadata, and their runtime effects.
 - `jobs.md`, `workers.md`, `models.md`, `skills.md`, `tools.md`, `catalog.md`, `activity-log.md`:
   focused product surfaces.
-- `workspace.md`: managed OpenClaw workspace instructions, generated
-  `AGENTS.md`, user-authored instructions, and agent notes.
+- `workspace.md`: managed OpenClaw workspace bootstrap files and user-authored
+  personality instructions.
 
 ## Memory Specs
 

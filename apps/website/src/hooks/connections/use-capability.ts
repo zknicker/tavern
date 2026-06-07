@@ -55,14 +55,19 @@ const capabilityLabels = {
 export const settingsCapabilityRequirements = {
     'agent-runtime': [],
     agent: ['status', 'agents'],
+    'agents-md': ['status', 'agents', 'agentFiles'],
     appearance: [],
+    'identity-md': ['status', 'agents', 'agentFiles'],
     jobs: ['status', 'tasks', 'cron', 'cronRuns'],
     memories: ['status', 'cortexDatabase', 'cortexWiki'],
     models: ['status', 'models'],
     participants: [],
     sessions: ['status', 'sessions', 'sessionEvents'],
     skills: ['status', 'skills', 'skillMaterialization'],
+    'soul-md': ['status', 'agents', 'agentFiles'],
     stats: ['status'],
+    'tools-md': ['status', 'agents', 'agentFiles'],
+    'user-md': ['status', 'agents', 'agentFiles'],
     updates: [],
 } as const satisfies Record<string, readonly RuntimeCapabilityId[]>;
 

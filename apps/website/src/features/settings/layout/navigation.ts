@@ -53,8 +53,38 @@ export const settingsNavItems = [
     {
         icon: FileEditIcon,
         id: 'agent',
-        label: 'Instructions',
+        label: 'Agent',
         to: '/dashboard/settings/agent',
+    },
+    {
+        icon: FileEditIcon,
+        id: 'agents-md',
+        label: 'AGENTS.md',
+        to: '/dashboard/settings/agents-md',
+    },
+    {
+        icon: FileEditIcon,
+        id: 'soul-md',
+        label: 'SOUL.md',
+        to: '/dashboard/settings/soul-md',
+    },
+    {
+        icon: FileEditIcon,
+        id: 'tools-md',
+        label: 'TOOLS.md',
+        to: '/dashboard/settings/tools-md',
+    },
+    {
+        icon: FileEditIcon,
+        id: 'identity-md',
+        label: 'IDENTITY.md',
+        to: '/dashboard/settings/identity-md',
+    },
+    {
+        icon: FileEditIcon,
+        id: 'user-md',
+        label: 'USER.md',
+        to: '/dashboard/settings/user-md',
     },
     {
         icon: ZapIcon,
@@ -95,7 +125,16 @@ export const settingsNavSections = [
     },
     {
         id: 'agent',
-        itemIds: ['agent', 'skills', 'memories'],
+        itemIds: [
+            'agent',
+            'agents-md',
+            'soul-md',
+            'tools-md',
+            'identity-md',
+            'user-md',
+            'skills',
+            'memories',
+        ],
         label: 'Agent',
     },
     {

@@ -100,17 +100,19 @@ rather than broadening the default silently.
 Tavern Runtime owns the managed OpenClaw workspace under
 `~/.tavern/runtime/openclaw/run/workspace`.
 
-Runtime renders one generated `AGENTS.md` for Tavern-managed agents. That file combines
-repo-managed Tavern instructions, the DB-backed user-authored instructions block, and DB-backed
-agent-authored notes. Runtime leaves the other OpenClaw bootstrap markdown files blank or unused
-for managed Tavern agents.
+Runtime seeds OpenClaw bootstrap files for Tavern-managed agents:
+`AGENTS.md`, `SOUL.md`, `TOOLS.md`, `IDENTITY.md`, and `USER.md`. Tavern operating policy renders
+into `AGENTS.md`; `SOUL.md` and `IDENTITY.md` are static defaults that become directly editable
+workspace files; tool and user context render into their matching OpenClaw files. Runtime leaves
+optional bootstrap files such as `HEARTBEAT.md`, `BOOTSTRAP.md`, `MEMORY.md`, and `ROLE.md` blank.
 
-Agents do not edit the generated `AGENTS.md` directly. Agent-authored notes are updated through
-Tavern workspace tools, then Runtime renders them into the generated file on boot, config sync, or
-instruction source changes.
+Agents and users can edit the workspace markdown files directly. Runtime leaves existing files
+intact on normal boot/config sync, replacing only missing files or legacy generated files. Settings
+-> Instructions edits `SOUL.md` and `IDENTITY.md` directly through the Runtime agent file API.
 
-The `tavern-workspace` OpenClaw plugin owns generated workspace-file policy, agent notes tools, and
-file-protection hooks. See [Workspace](../workspace.md) for the full contract.
+The `tavern-workspace` OpenClaw plugin is reserved for future workspace integration. It does not
+expose agent-notes tools or file-protection hooks. See [Workspace](../workspace.md) for the full
+contract.
 
 ## Required Mapping
 

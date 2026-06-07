@@ -1,11 +1,9 @@
 import { getDb } from '../db/connection';
 import { json } from '../tavern/http';
 import {
-    getAgentInstructionSource,
     readRenderedAgentInstructions,
     renderAgentInstructions,
     updateAgentInstructionSource,
-    updateAgentNotes,
 } from './instructions';
 
 export async function handleWorkspaceRequest(request: Request): Promise<Response | null> {
@@ -18,33 +16,6 @@ export async function handleWorkspaceRequest(request: Request): Promise<Response
 
     const agentId = segments[2];
 
-    if (request.method === 'GET' && segments[3] === 'notes') {
-        const source = getAgentInstructionSource(getDb(), agentId);
-        return json({
-            agentId,
-            notes: source?.notes ?? '',
-            updatedAt: source?.updatedAt ?? null,
-        });
-    }
-
-    if (request.method === 'PUT' && segments[3] === 'notes') {
-        const body = await readJson(request);
-        const source = updateAgentNotes(getDb(), {
-            agentId,
-            notes: readRequiredString(body.notes, 'notes'),
-            workspaceDir: readOptionalString(body.workspaceDir),
-        });
-        const rendered = await renderAgentInstructions(getDb(), agentId);
-
-        return json({
-            agentId: source.agentId,
-            notes: source.notes,
-            renderedAt: rendered.renderedAt,
-            sha256: rendered.sha256,
-            updatedAt: source.updatedAt,
-        });
-    }
-
     if (request.method === 'GET' && segments[3] === 'instructions') {
         const rendered = await readRenderedAgentInstructions(getDb(), agentId);
         return json(rendered);
@@ -55,7 +26,6 @@ export async function handleWorkspaceRequest(request: Request): Promise<Response
         const source = updateAgentInstructionSource(getDb(), {
             agentId,
             agentName: readOptionalString(body.agentName),
-            userInstructions: readOptionalString(body.userInstructions),
             workspaceDir: readString(body.workspaceDir, 'workspaceDir'),
         });
         const rendered = await renderAgentInstructions(getDb(), agentId);
@@ -82,13 +52,6 @@ function readString(value: unknown, label: string) {
         throw new Error(`${label} is required.`);
     }
     return text;
-}
-
-function readRequiredString(value: unknown, label: string) {
-    if (typeof value !== 'string') {
-        throw new Error(`${label} is required.`);
-    }
-    return value.trim();
 }
 
 function readOptionalString(value: unknown) {

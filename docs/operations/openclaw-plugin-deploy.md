@@ -23,8 +23,7 @@ During startup, Runtime builds and syncs:
 
 * `packages/tavern-openclaw-messenger` for Tavern chat/channel delivery.
 * `packages/tavern-openclaw-cortex` for Cortex agent tools.
-* `packages/tavern-openclaw-workspace` for generated workspace instructions,
-  agent notes tools, and generated-file guards.
+* `packages/tavern-openclaw-workspace` for future workspace integration.
 
 OpenClaw launches with all managed plugin paths in the generated config.
 

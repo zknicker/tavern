@@ -2,7 +2,7 @@
 summary: Cortex agent operating resources for search, recall, capture, and contradiction handling.
 read_when:
   - changing Cortex agent instructions, recall behavior, capture rules, or maintenance workflows
-  - changing generated AGENTS.md Cortex guidance
+  - changing OpenClaw workspace bootstrap Cortex guidance
 ---
 
 # Cortex Agent Resources
@@ -17,7 +17,7 @@ change the answer. Current user instructions and current source material win.
 
 ## Resolver
 
-Generated AGENTS.md routes agents to Cortex skills. Skill files own tool
+Generated `AGENTS.md` routes agents to Cortex skills. Skill files own tool
 selection.
 
 Route Cortex work to the appropriate skill(s) based on what the agent is trying

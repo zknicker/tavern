@@ -18,10 +18,12 @@ export function useAgentEvents() {
 
             if (!agentId) {
                 void utils.agent.instructions.invalidate(undefined, { exact: false });
+                void utils.agent.workspaceFile.invalidate(undefined, { exact: false });
                 return;
             }
 
             void utils.agent.instructions.invalidate({ agentId });
+            void utils.agent.workspaceFile.invalidate(undefined, { exact: false });
         },
     });
 }

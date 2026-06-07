@@ -1,5 +1,6 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { defaultCortexPageTypes } from '@tavern/api';
 import type { Database } from '../db/sqlite.ts';
 import { namedParams } from '../db/sqlite.ts';
@@ -8,7 +9,6 @@ import { publishRuntimeEvent } from '../tavern/runtime-events.ts';
 export interface AgentInstructionSource {
     agentId: string;
     agentName: string;
-    notes: string;
     updatedAt: string;
     userInstructions: string;
     workspaceDir: string;
@@ -16,7 +16,14 @@ export interface AgentInstructionSource {
 
 export interface AgentInstructionRenderResult {
     content: string;
+    files: AgentWorkspaceRenderedFile[];
     renderedAt: string;
+    sha256: string;
+}
+
+export interface AgentWorkspaceRenderedFile {
+    content: string;
+    path: string;
     sha256: string;
 }
 
@@ -30,86 +37,23 @@ export interface AgentInstructionReadResult {
 }
 
 export const generatedInstructionFileName = 'AGENTS.md';
+export const generatedWorkspaceFileNames = [
+    'AGENTS.md',
+    'SOUL.md',
+    'TOOLS.md',
+    'IDENTITY.md',
+    'USER.md',
+] as const;
 export const openClawBootstrapFileNamesToClear = [
     'BOOTSTRAP.md',
     'HEARTBEAT.md',
-    'IDENTITY.md',
     'MEMORY.md',
     'ROLE.md',
-    'SOUL.md',
-    'TOOLS.md',
-    'USER.md',
 ] as const;
 
 const defaultAgentName = 'main';
 const defaultAgentId = 'main';
-
-const tavernManagedInstructions = `## Delegation
-
-Work inline for quick, narrow, real-time tasks.
-
-Use subagents for isolated context: broad exploration, parallel research, independent review, or work that would flood the main thread with logs/search/files.
-
-Give subagents a clear goal, context, constraints, and output shape. Synthesize results before replying.
-
-Do not delegate simple lookups, small edits, or work whose reasoning must stay visible.
-
-## Cortex
-
-Cortex is Tavern's durable knowledgebase and memory. Use it when prior project context, user preferences, decisions, corrections, or source-backed notes could change the answer. Current user instructions and current source material win.
-
-### Skill Resolver
-
-Route Cortex work to the appropriate skill(s) based on what you're trying to do.
-
-#### Knowledgebase operations
-
-| Trigger | Skill |
-| --- | --- |
-| "What do we know about", "tell me about", "search for", "who is", "background on", "notes on" | cortex-query |
-| "Who knows who", "relationship between", "connections", "graph query" | cortex-query |
-| Creating or enriching a durable entity/page with current context, such as a person, company, project, product, tool, etc. | cortex-enrich |
-| "enrich this article", "enrich this source", "make this source useful", imported source needs utility | cortex-source-enrich |
-| "store this research", "put this in Cortex", "make this re-doable", "DRY this up", "file all of this", "organize all of this work", "archive this research thread" | cortex-organize |
-| "fix citations", "citation audit", "check citations", "broken citations", missing source refs, or weak provenance | cortex-citation-fixer |
-| "validate frontmatter", "check frontmatter", "fix frontmatter", "frontmatter audit", "Cortex lint", or page metadata issues | cortex-frontmatter-guard |
-| "where does this Cortex page go", "file this in Cortex", "taxonomy check", "refile Cortex page", or "which page/type should this use" | cortex-taxonomist |
-| "add a page type", "add a type to my schema", "schema author", "schema mutate", "schema add", "my Cortex has untyped pages", "propose new types from my corpus", "backfill page types", "evolve my schema", "researcher type", "make X an expert type", "add a link type", or a Cortex write needs a clearer page/link type | cortex-schema |
-
-#### Content and media ingestion
-
-| Trigger | Skill |
-| --- | --- |
-| "capture this", "save this thought", "remember this", "save to Cortex", "correct this" | cortex-capture |
-| User shares a link, article, X post, newsletter, idea, etc. | cortex-idea-ingest |
-| "watch this video", "process this YouTube link", "ingest this PDF", "save this podcast", "process this book", "summarize this book", "PDF book", "ingest it into Cortex", "what's in this screenshot", "check out this repo", etc. | cortex-media-ingest |
-| Generic "ingest this" | cortex-ingest |
-
-### Routing Rules
-
-Prefer the most specific Cortex skill. Route URLs/media by content type. For known entities, query first unless creating or updating a durable page. Ask when ambiguity would change what gets written.
-
-### Conflicts
-
-Priority: current user statement > Cortex compiled truth > Cortex timeline > external sources.
-
-### Captures
-
-Tavern automatically processes chat history into Cortex memory in the background. Use cortex-capture for explicit saves, corrections, durable preferences, source-backed observations, project facts, or reusable notes. Keep captures small, inspectable, source-linked, and traceable. Do not capture guesses, broad chat dumps, secrets, or sensitive material without clear user reason.
-
-Write only durable, reusable knowledge. Do not create pages for incidental mentions, unsupported claims, transient task state, or low-value source fragments.
-
-Preserve provenance. Include source context when available: user message, chat, message id, date, source page, or URL.
-
-Mention related page names/slugs. State relationships plainly: "uses OpenRouter", "depends on Tavern Runtime", "contradicts the old pricing assumption".
-
-Create pages only for likely-reusable info. If the user explicitly asks to remember something and no subject page fits, use cortex-capture with type: "note" and a clear title.
-
-Preserve corrections and contradictions as evidence. Update current truth without erasing old evidence.
-
-Default Cortex page types: ${defaultCortexPageTypes.join(', ')}. Prefer these unless the active Cortex schema or user direction calls for a different type.
-
-This AGENTS.md file is generated by Tavern. Do not edit it directly. To update your own durable operating notes, use the Tavern workspace notes tools.`;
+const seedDefaultsDir = path.join(path.dirname(fileURLToPath(import.meta.url)), 'seed-defaults');
 
 export function ensureWorkspaceInstructionSchema(db: Database) {
     db.exec(`
@@ -118,7 +62,6 @@ CREATE TABLE IF NOT EXISTS workspace_agent_instructions (
   agent_name TEXT NOT NULL,
   workspace_dir TEXT NOT NULL,
   user_instructions TEXT NOT NULL DEFAULT '',
-  notes TEXT NOT NULL DEFAULT '',
   rendered_hash TEXT,
   rendered_at TEXT,
   created_at TEXT NOT NULL,
@@ -147,7 +90,7 @@ export function getAgentInstructionSource(
 ): AgentInstructionSource | null {
     const row = db
         .prepare(
-            `SELECT agent_id, agent_name, workspace_dir, user_instructions, notes, updated_at
+            `SELECT agent_id, agent_name, workspace_dir, user_instructions, updated_at
              FROM workspace_agent_instructions
              WHERE agent_id = ?`
         )
@@ -155,7 +98,6 @@ export function getAgentInstructionSource(
         | {
               agent_id: string;
               agent_name: string;
-              notes: string;
               updated_at: string;
               user_instructions: string;
               workspace_dir: string;
@@ -166,7 +108,6 @@ export function getAgentInstructionSource(
         ? {
               agentId: row.agent_id,
               agentName: row.agent_name,
-              notes: row.notes,
               updatedAt: row.updated_at,
               userInstructions: row.user_instructions,
               workspaceDir: row.workspace_dir,
@@ -192,16 +133,15 @@ export function updateAgentInstructionSource(
     const source = {
         agentId: input.agentId?.trim() || defaultAgentId,
         agentName: input.agentName?.trim() || existing?.agentName || defaultAgentName,
-        notes: existing?.notes ?? '',
         userInstructions,
         workspaceDir: input.workspaceDir,
     };
 
     db.prepare(
         `INSERT INTO workspace_agent_instructions (
-            agent_id, agent_name, workspace_dir, user_instructions, notes, created_at, updated_at
+            agent_id, agent_name, workspace_dir, user_instructions, created_at, updated_at
         ) VALUES (
-            $agentId, $agentName, $workspaceDir, $userInstructions, $notes, $timestamp, $timestamp
+            $agentId, $agentName, $workspaceDir, $userInstructions, $timestamp, $timestamp
         )
         ON CONFLICT(agent_id) DO UPDATE SET
             agent_name = excluded.agent_name,
@@ -212,7 +152,6 @@ export function updateAgentInstructionSource(
         namedParams({
             agentId: source.agentId,
             agentName: source.agentName,
-            notes: source.notes,
             timestamp,
             userInstructions: source.userInstructions,
             workspaceDir: source.workspaceDir,
@@ -222,47 +161,11 @@ export function updateAgentInstructionSource(
     return getAgentInstructionSource(db, source.agentId) as AgentInstructionSource;
 }
 
-export function updateAgentNotes(
+export async function renderAgentInstructions(
     db: Database,
-    input: {
-        agentId?: string | null;
-        notes: string;
-        workspaceDir?: string | null;
-    }
+    agentId = defaultAgentId,
+    options: { overwrite?: boolean } = {}
 ) {
-    const timestamp = new Date().toISOString();
-    const agentId = input.agentId?.trim() || defaultAgentId;
-    const existing = getAgentInstructionSource(db, agentId);
-    const workspaceDir = input.workspaceDir?.trim() || existing?.workspaceDir;
-
-    if (!workspaceDir) {
-        throw new Error(`No managed workspace is registered for agent "${agentId}".`);
-    }
-
-    db.prepare(
-        `INSERT INTO workspace_agent_instructions (
-            agent_id, agent_name, workspace_dir, user_instructions, notes, created_at, updated_at
-        ) VALUES (
-            $agentId, $agentName, $workspaceDir, $userInstructions, $notes, $timestamp, $timestamp
-        )
-        ON CONFLICT(agent_id) DO UPDATE SET
-            notes = excluded.notes,
-            updated_at = excluded.updated_at`
-    ).run(
-        namedParams({
-            agentId,
-            agentName: existing?.agentName ?? defaultAgentName,
-            notes: normalizeNotes(input.notes),
-            timestamp,
-            userInstructions: existing?.userInstructions ?? '',
-            workspaceDir,
-        })
-    );
-
-    return getAgentInstructionSource(db, agentId) as AgentInstructionSource;
-}
-
-export async function renderAgentInstructions(db: Database, agentId = defaultAgentId) {
     const source = getAgentInstructionSource(db, agentId);
 
     if (!source) {
@@ -270,12 +173,24 @@ export async function renderAgentInstructions(db: Database, agentId = defaultAge
     }
 
     const renderedAt = new Date().toISOString();
-    const content = composeAgentInstructions(source);
-    const sha256 = await hashText(content);
-    const agentsPath = path.join(source.workspaceDir, generatedInstructionFileName);
-
+    const files = await composeAgentWorkspaceFiles(source);
+    const agentsFile = files.find((file) => file.path === generatedInstructionFileName);
+    if (!agentsFile) {
+        throw new Error('Generated workspace instructions are missing AGENTS.md.');
+    }
     await fs.mkdir(source.workspaceDir, { recursive: true });
-    await fs.writeFile(agentsPath, content, { mode: 0o600 });
+    await clearOpenClawBootstrapFiles(source.workspaceDir);
+    await Promise.all(files.map((file) => writeWorkspaceFile(source.workspaceDir, file, options)));
+    const content = await fs.readFile(
+        path.join(source.workspaceDir, generatedInstructionFileName),
+        {
+            encoding: 'utf8',
+        }
+    );
+    const sha256 = await hashText(content);
+    const renderedFiles = files.map((file) =>
+        file.path === generatedInstructionFileName ? { ...file, content, sha256 } : file
+    );
     db.prepare(
         `UPDATE workspace_agent_instructions
          SET rendered_at = $renderedAt, rendered_hash = $sha256, updated_at = $renderedAt
@@ -290,7 +205,12 @@ export async function renderAgentInstructions(db: Database, agentId = defaultAge
         type: 'workspace.instructions.updated',
     });
 
-    return { content, renderedAt, sha256 } satisfies AgentInstructionRenderResult;
+    return {
+        content,
+        files: renderedFiles,
+        renderedAt,
+        sha256,
+    } satisfies AgentInstructionRenderResult;
 }
 
 export async function readRenderedAgentInstructions(db: Database, agentId = defaultAgentId) {
@@ -334,27 +254,112 @@ export async function clearOpenClawBootstrapFiles(workspaceDir: string) {
     );
 }
 
-export function composeAgentInstructions(
-    source: Pick<AgentInstructionSource, 'agentName' | 'notes' | 'userInstructions'>
+export async function composeAgentWorkspaceFiles(
+    source: Pick<AgentInstructionSource, 'agentName' | 'userInstructions'>
 ) {
-    const sections = [
-        '# Tavern Agent Instructions',
-        `You are ${source.agentName}, a Tavern-managed agent inside the Tavern chat app.`,
-        tavernManagedInstructions,
-        formatOptionalParagraph(source.userInstructions),
-        formatOptionalParagraph(source.notes),
-    ].filter((section): section is string => Boolean(section));
+    const definitions = [
+        {
+            content: await composeAgentInstructions(source),
+            path: 'AGENTS.md',
+        },
+        {
+            content: await composeAgentSoul(source),
+            path: 'SOUL.md',
+        },
+        {
+            content: await composeAgentTools(),
+            path: 'TOOLS.md',
+        },
+        {
+            content: await composeAgentIdentity(source),
+            path: 'IDENTITY.md',
+        },
+        {
+            content: await composeAgentUser(),
+            path: 'USER.md',
+        },
+    ];
 
-    return `${sections.join('\n\n')}\n`;
+    return Promise.all(
+        definitions.map(async (file) => ({
+            ...file,
+            sha256: await hashText(file.content),
+        }))
+    );
 }
 
-function formatOptionalParagraph(value: string) {
-    const normalized = value.trim();
-    return normalized.length > 0 ? normalized : null;
+export function composeAgentInstructions(
+    source: Pick<AgentInstructionSource, 'agentName' | 'userInstructions'>
+) {
+    return renderMarkdownSeed('agents.md', {
+        agentName: source.agentName,
+        defaultCortexPageTypes: defaultCortexPageTypes.join(', '),
+    });
 }
 
-function normalizeNotes(value: string) {
-    return value.trim().slice(0, 20_000);
+function composeAgentSoul(source: Pick<AgentInstructionSource, 'agentName'>) {
+    return renderMarkdownSeed('soul.md', {
+        agentName: source.agentName,
+    });
+}
+
+function composeAgentTools() {
+    return renderMarkdownSeed('tools.md', {});
+}
+
+function composeAgentIdentity(source: Pick<AgentInstructionSource, 'agentName'>) {
+    return renderMarkdownSeed('identity.md', {
+        agentName: source.agentName,
+    });
+}
+
+function composeAgentUser() {
+    return renderMarkdownSeed('user.md', {});
+}
+
+async function renderMarkdownSeed(fileName: string, values: Record<string, string | null>) {
+    const template = await fs.readFile(path.join(seedDefaultsDir, fileName), 'utf8');
+    const content = template
+        .replace(/\{\{([a-zA-Z0-9_]+)\}\}/gu, (match, key: string) => {
+            if (!(key in values)) {
+                return match;
+            }
+            return values[key] ?? '';
+        })
+        .replace(/\n{3,}/gu, '\n\n')
+        .trimEnd();
+    const unresolved = content.match(/\{\{[a-zA-Z0-9_]+\}\}/u);
+    if (unresolved) {
+        throw new Error(`Unresolved placeholder ${unresolved[0]} in ${fileName}.`);
+    }
+    return `${content}\n`;
+}
+
+async function writeWorkspaceFile(
+    workspaceDir: string,
+    file: AgentWorkspaceRenderedFile,
+    options: { overwrite?: boolean }
+) {
+    const filePath = path.join(workspaceDir, file.path);
+    if (!(await shouldWriteWorkspaceFile(filePath, options))) {
+        return;
+    }
+    await fs.writeFile(filePath, file.content, { mode: 0o600 });
+}
+
+async function shouldWriteWorkspaceFile(filePath: string, options: { overwrite?: boolean }) {
+    if (options.overwrite) {
+        return true;
+    }
+    try {
+        const existing = await fs.readFile(filePath, 'utf8');
+        return (
+            existing.includes('This file is generated by Tavern.') ||
+            existing.includes('workspace notes tools')
+        );
+    } catch {
+        return true;
+    }
 }
 
 async function hashText(value: string) {

@@ -1,12 +1,12 @@
 {
   "id": "tavern-workspace",
   "name": "Tavern Workspace",
-  "description": "First-party Tavern managed workspace tools and policy for OpenClaw agents.",
+  "description": "First-party Tavern workspace integration for OpenClaw agents.",
   "activation": {
     "onStartup": true
   },
   "contracts": {
-    "tools": ["workspace_notes_read", "workspace_notes_update"]
+    "tools": []
   },
   "configSchema": {
     "type": "object",

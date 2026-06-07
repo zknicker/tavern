@@ -342,8 +342,6 @@ const defaultAgentToolNames = [
     'cortex_import',
     'cortex_recall',
     'cortex_list_backlinks',
-    'workspace_notes_read',
-    'workspace_notes_update',
 ];
 
 function createGatewayToken() {

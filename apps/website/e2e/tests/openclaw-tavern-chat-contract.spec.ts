@@ -61,22 +61,16 @@ test('preserves Tavern chat session routing and renders one final reply', async 
     }
 });
 
-test('injects Tavern generated AGENTS.md without OpenClaw bootstrap companion files', async ({
-    page,
-}) => {
+test('injects Tavern generated OpenClaw bootstrap files', async ({ page }) => {
     test.setTimeout(120_000);
 
     const runtimeUrl = requireRuntimeUrl();
-    const userInstructionMarker = `QA_USER_INSTRUCTIONS_${Date.now()}`;
-    const agentNoteMarker = `QA_AGENT_NOTES_${Date.now()}`;
-    const prompt = `Generated AGENTS prompt inspection check ${Date.now()}.`;
+    const prompt = `Generated bootstrap prompt inspection check ${Date.now()}.`;
     const capture = await startOpenClawGatewayCapture('generated-agents-prompt');
 
     await saveWorkspaceInstructions({
         agentName: 'main',
-        notes: `Agent-authored note marker: ${agentNoteMarker}`,
         runtimeUrl,
-        userInstructions: `User-authored instructions marker: ${userInstructionMarker}`,
         workspaceDir: getManagedWorkspaceDir(),
     });
 
@@ -95,21 +89,26 @@ test('injects Tavern generated AGENTS.md without OpenClaw bootstrap companion fi
         const sessionKey = readSessionKey(sessionEvent);
 
         if (!sessionKey) {
-            throw new Error('Expected generated AGENTS e2e turn to have an OpenClaw session key.');
+            throw new Error(
+                'Expected generated bootstrap e2e turn to have an OpenClaw session key.'
+            );
         }
 
         const fullText = await waitForCompiledSystemPrompt(sessionKey);
 
-        expect(fullText).toContain('# Tavern Agent Instructions');
-        expect(fullText).toContain('Tavern chat history is the product timeline');
-        expect(fullText).toContain("Follow Tavern's Cortex operating resources");
-        expect(fullText).toContain('Use cortex_recall with tokenmax mode only');
-        expect(fullText).toContain('Default Cortex page types:');
-        expect(fullText).toContain(userInstructionMarker);
-        expect(fullText).toContain(agentNoteMarker);
-        expect(fullText).not.toContain('# SOUL.md - Who You Are');
-        expect(fullText).not.toContain('# TOOLS.md - Local Notes');
-        expect(fullText).not.toContain('# IDENTITY.md - Who Am I?');
+        expect(fullText).toContain('# AGENTS.md - The Workspace');
+        expect(fullText).toContain(
+            'Operating doctrine lives here. Personality lives in `SOUL.md`.'
+        );
+        expect(fullText).toContain('Page types:');
+        expect(fullText).toContain('# SOUL.md - Who I Am');
+        expect(fullText).toContain('I am main.');
+        expect(fullText).toContain('# TOOLS.md - Local Tool Notes');
+        expect(fullText).toContain(
+            'Use Tavern message read/search for canonical Tavern chat history.'
+        );
+        expect(fullText).toContain('# IDENTITY.md - Who Am I?');
+        expect(fullText).toContain('# USER.md - About Your Human');
         expect(fullText).not.toContain('Missing file: SOUL.md');
         expect(fullText).not.toContain('Missing file: TOOLS.md');
         expect(fullText).not.toContain('Missing file: IDENTITY.md');
@@ -344,18 +343,12 @@ function requireRuntimeUrl() {
 
 async function saveWorkspaceInstructions(input: {
     agentName: string;
-    notes: string;
     runtimeUrl: string;
-    userInstructions: string;
     workspaceDir: string;
 }) {
     await putRuntimeJson(`${input.runtimeUrl}/workspace/agents/main/instructions`, {
         agentName: input.agentName,
-        userInstructions: input.userInstructions,
         workspaceDir: input.workspaceDir,
-    });
-    await putRuntimeJson(`${input.runtimeUrl}/workspace/agents/main/notes`, {
-        notes: input.notes,
     });
 }
 

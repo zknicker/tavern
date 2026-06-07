@@ -14,6 +14,7 @@ import { saveAgentToolsProcedure } from './save-tools.ts';
 import { updateAgentModelProcedure } from './update-model.ts';
 import { updateAgentNameProcedure } from './update-name.ts';
 import { updateAgentThinkingDefaultProcedure } from './update-thinking-default.ts';
+import { getAgentWorkspaceFile, saveAgentWorkspaceFile } from './workspace-file.ts';
 
 export const agentRouter = createRouter({
     activity: listAgentActivityRoute,
@@ -30,7 +31,9 @@ export const agentRouter = createRouter({
     saveProfile: saveAgentProfile,
     saveSkills: saveAgentSkillsProcedure,
     saveTools: saveAgentToolsProcedure,
+    saveWorkspaceFile: saveAgentWorkspaceFile,
     updateModel: updateAgentModelProcedure,
     updateName: updateAgentNameProcedure,
     updateThinkingDefault: updateAgentThinkingDefaultProcedure,
+    workspaceFile: getAgentWorkspaceFile,
 });

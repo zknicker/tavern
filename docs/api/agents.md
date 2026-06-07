@@ -24,18 +24,15 @@ with user-authored instructions, model, tool, memory, and skill policy.
 * Model availability comes from Runtime capabilities and config reads. Clients
   read it through agent and model capabilities.
 * Tool and skill controls are inspectable before a run starts.
-* User-authored instructions are a Tavern-owned setting stored through the
-  Runtime-hosted agent API. They are rendered into the managed OpenClaw
-  `AGENTS.md` after Tavern policy and before agent-authored notes; clients do
-  not edit the workspace file directly.
+* Settings exposes each managed OpenClaw workspace markdown file directly:
+  `AGENTS.md`, `SOUL.md`, `TOOLS.md`, `IDENTITY.md`, and `USER.md`.
+  These files are workspace state, not agent profile fields.
 * Tavern policy includes Cortex brain-first lookup guidance. Managed agents
   check Cortex before external lookup when durable user, project, or prior
   decision context may already exist.
 * OpenClaw-backed settings use narrow domain mutations. Clients update agent
   name, model, thinking default, and messaging bindings through agent and
   messaging APIs instead of editing or saving OpenClaw config JSON.
-* Agent notes are DB-backed and agent-owned. They are updated through Tavern
-  workspace tools, not through the first-pass user-facing agent settings UI.
 * Runtime execution state is not required just to list agents.
 
 ## Surface
@@ -51,7 +48,8 @@ The API covers:
 * read and update tool policy
 * read and update memory policy
 * read and update skill assignment
-* read generated instruction status when exposed for diagnostics
+* read and update managed workspace markdown files
+* read workspace instruction status when exposed for diagnostics
 
 ## Runtime Boundary
 

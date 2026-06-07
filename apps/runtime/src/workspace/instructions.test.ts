@@ -8,13 +8,14 @@ import { subscribeToRuntimeEvents } from '../tavern/runtime-events';
 import {
     clearOpenClawBootstrapFiles,
     composeAgentInstructions,
+    composeAgentWorkspaceFiles,
     generatedInstructionFileName,
+    generatedWorkspaceFileNames,
     getAgentInstructionSource,
     openClawBootstrapFileNamesToClear,
     readRenderedAgentInstructions,
     renderAgentInstructions,
     updateAgentInstructionSource,
-    updateAgentNotes,
 } from './instructions';
 import { handleWorkspaceRequest } from './routes';
 
@@ -31,125 +32,82 @@ describe('workspace instructions', () => {
         await rm(workspaceDir, { force: true, recursive: true });
     });
 
-    test('renders generated AGENTS.md from user instructions and agent notes', async () => {
+    test('seeds OpenClaw workspace files from templates', async () => {
         const db = getDb();
         updateAgentInstructionSource(db, {
             agentId: 'planner',
             agentName: 'Planner',
-            userInstructions: 'Speak plainly.',
+            userInstructions: 'Speak plainly.\nPreserve Blippy voice.',
             workspaceDir,
-        });
-        updateAgentNotes(db, {
-            agentId: 'planner',
-            notes: 'Prefer Cortex recall for prior project decisions.',
         });
 
         const result = await renderAgentInstructions(db, 'planner');
-        const content = await readFile(
-            path.join(workspaceDir, generatedInstructionFileName),
-            'utf8'
+        const files = Object.fromEntries(
+            await Promise.all(
+                generatedWorkspaceFileNames.map(async (fileName) => [
+                    fileName,
+                    await readFile(path.join(workspaceDir, fileName), 'utf8'),
+                ])
+            )
         );
 
         expect(result.sha256).toMatch(/^[a-f0-9]{64}$/u);
-        expect(content).toContain(
-            'You are Planner, a Tavern-managed agent inside the Tavern chat app.'
+        expect(result.files.map((file) => file.path)).toEqual([...generatedWorkspaceFileNames]);
+        expect(files['AGENTS.md']).toContain('# AGENTS.md - The Workspace');
+        expect(files['AGENTS.md']).toContain('## Session Startup');
+        expect(files['AGENTS.md']).toContain('## Memory (Cortex)');
+        expect(files['AGENTS.md']).toContain('Cortex is durable, wiki-style memory');
+        expect(files['AGENTS.md']).toContain('### Knowledgebase Operation Skills');
+        expect(files['AGENTS.md']).toContain('"What do we know about", "tell me about"');
+        expect(files['AGENTS.md']).toContain('cortex-schema');
+        expect(files['AGENTS.md']).toContain('cortex-media-ingest');
+        expect(files['AGENTS.md']).toContain('### Skill Routing Rules');
+        expect(files['AGENTS.md']).toContain('known entities, query first');
+        expect(files['AGENTS.md']).toContain('Page types:');
+        expect(files['AGENTS.md']).not.toContain('Preserve Blippy voice.');
+
+        expect(files['SOUL.md']).toContain('# SOUL.md - Who I Am');
+        expect(files['SOUL.md']).toContain('I am Planner.');
+        expect(files['SOUL.md']).toContain('## Core');
+        expect(files['SOUL.md']).toContain('## How I Talk');
+        expect(files['SOUL.md']).toContain('## Boundaries');
+        expect(files['SOUL.md']).not.toContain('## Tavern Personality');
+        expect(files['SOUL.md']).not.toContain('Speak plainly');
+        expect(files['SOUL.md']).not.toContain('Prefer Cortex recall');
+
+        expect(files['TOOLS.md']).toContain('# TOOLS.md - Local Tool Notes');
+        expect(files['TOOLS.md']).toContain('Skills define how tools work.');
+        expect(files['TOOLS.md']).toContain('## Tavern');
+        expect(files['TOOLS.md']).toContain(
+            'Use Tavern message read/search for canonical Tavern chat history.'
         );
-        expect(content).not.toContain('OpenClaw sessions and turns are execution evidence');
-        expect(content).toContain('## Delegation');
-        expect(content).toContain('Work inline for quick, narrow, real-time tasks.');
-        expect(content).toContain('Use subagents for isolated context');
-        expect(content).toContain('broad exploration, parallel research, independent review');
-        expect(content).toContain('flood the main thread with logs/search/files');
-        expect(content).toContain('Give subagents a clear goal, context, constraints');
-        expect(content).toContain('Synthesize results before replying');
-        expect(content).toContain('Do not delegate simple lookups, small edits');
-        expect(content).toContain('## Cortex');
-        expect(content).toContain('Cortex is Tavern');
-        expect(content).toContain('durable knowledgebase and memory');
-        expect(content).toContain('prior project context');
-        expect(content).not.toContain('### Knowledge Lookup Tools');
-        expect(content).not.toContain('cortex_get_page: exact page/slug');
-        expect(content).not.toContain('cortex_recall tokenmax: broad synthesis only');
-        expect(content).toContain('### Skill Resolver');
-        expect(content).toContain('Route Cortex work to the appropriate skill');
-        expect(content).not.toContain('#### Always-on');
-        expect(content).not.toContain('Every inbound message');
-        expect(content).not.toContain('Cortex Chat Ingestion and Cortex Dream handle background');
-        expect(content).toContain('#### Knowledgebase operations');
-        expect(content).toContain('"What do we know about", "tell me about"');
-        expect(content).toContain('"Who knows who", "relationship between"');
-        expect(content).toContain('Creating or enriching a durable entity/page');
-        expect(content).toContain('person, company, project, product, tool, etc.');
-        expect(content).toContain('cortex-enrich');
-        expect(content).toContain('"enrich this article", "enrich this source"');
-        expect(content).toContain('cortex-source-enrich');
-        expect(content).toContain('"store this research", "put this in Cortex"');
-        expect(content).toContain('cortex-organize');
-        expect(content).toContain('"fix citations", "citation audit", "check citations"');
-        expect(content).toContain('weak provenance');
-        expect(content).toContain('cortex-citation-fixer');
-        expect(content).toContain('"validate frontmatter", "check frontmatter"');
-        expect(content).toContain('"Cortex lint", or page metadata issues');
-        expect(content).toContain('cortex-frontmatter-guard');
-        expect(content).toContain('"where does this Cortex page go", "file this in Cortex"');
-        expect(content).toContain('"refile Cortex page"');
-        expect(content).toContain('"which page/type should this use"');
-        expect(content).toContain('cortex-taxonomist');
-        expect(content).toContain('"add a page type", "add a type to my schema"');
-        expect(content).toContain('"schema author", "schema mutate", "schema add"');
-        expect(content).toContain('"my Cortex has untyped pages"');
-        expect(content).toContain('"propose new types from my corpus"');
-        expect(content).toContain('"backfill page types", "evolve my schema"');
-        expect(content).toContain('"researcher type", "make X an expert type"');
-        expect(content).toContain('"add a link type"');
-        expect(content).toContain('clearer page/link type');
-        expect(content).toContain('cortex-schema');
-        expect(content).toContain('#### Content and media ingestion');
-        expect(content).toContain('"capture this", "save this thought"');
-        expect(content).toContain('cortex-capture');
-        expect(content).toContain('User shares a link, article, X post, newsletter, idea, etc.');
-        expect(content).toContain('cortex-idea-ingest');
-        expect(content).toContain('"watch this video", "process this YouTube link"');
-        expect(content).toContain('check out this repo", etc.');
-        expect(content).toContain('cortex-media-ingest');
-        expect(content).toContain('Generic "ingest this"');
-        expect(content).toContain('### Routing Rules');
-        expect(content).toContain('Prefer the most specific Cortex skill');
-        expect(content).toContain('Route URLs/media by content type');
-        expect(content).toContain(
-            'For known entities, query first unless creating or updating a durable page'
+        expect(files['TOOLS.md']).toContain(
+            'Use OpenClaw session tools for execution transcript evidence.'
         );
-        expect(content).toContain('Ask when ambiguity would change what gets written');
-        expect(content).not.toContain('#### Maintenance and synthesis');
-        expect(content).not.toContain('"Run dream", "process today');
-        expect(content).not.toContain('"Brain health"');
-        expect(content).not.toContain('Cortex Generate Embeddings job');
-        expect(content).not.toContain('If two skills match, read both');
-        expect(content).not.toContain('Chain only when each step adds lasting value');
-        expect(content).not.toContain('### Tools');
-        expect(content).not.toContain('Skills route the work. Tools execute it');
-        expect(content).not.toContain(
-            'Exact title, slug, keyword, or existence check: cortex_search'
+        expect(files['TOOLS.md']).toContain(
+            'Edit `AGENTS.md`, `SOUL.md`, `TOOLS.md`, `IDENTITY.md`, or `USER.md` directly'
         );
-        expect(content).not.toContain('Semantic memory lookup: cortex_recall');
-        expect(content).not.toContain('Backlinks or relationship graph: cortex_list_backlinks');
-        expect(content).toContain('### Conflicts');
-        expect(content).toContain('Priority: current user statement');
-        expect(content).toContain('### Captures');
-        expect(content).toContain('Tavern automatically processes chat history into Cortex memory');
-        expect(content).toContain('Use cortex-capture for explicit saves');
-        expect(content).toContain('Keep captures small, inspectable, source-linked');
-        expect(content).toContain('Write only durable, reusable knowledge');
-        expect(content).toContain('incidental mentions, unsupported claims');
-        expect(content).toContain('transient task state, or low-value source fragments');
-        expect(content).not.toContain('Background chat memory belongs to Cortex Chat Ingestion');
-        expect(content).toContain('Preserve provenance');
-        expect(content).toContain('Mention related page names/slugs');
-        expect(content).toContain('use cortex-capture with type: "note"');
-        expect(content).toContain('Preserve corrections and contradictions as evidence');
-        expect(content).toContain('Default Cortex page types:');
-        expect(content).toContain('Speak plainly.');
-        expect(content).toContain('Prefer Cortex recall');
+        expect(files['TOOLS.md']).not.toContain('workspace_notes');
+
+        expect(files['IDENTITY.md']).toContain('# IDENTITY.md - Who Am I?');
+        expect(files['IDENTITY.md']).toContain('- **Name:** Planner');
+        expect(files['IDENTITY.md']).toContain('- **Role:** Tavern agent');
+        expect(files['IDENTITY.md']).toContain('default identity seed');
+
+        expect(files['USER.md']).toContain('# USER.md - About Your Human');
+        expect(files['USER.md']).toContain('Preferred name: Zach.');
+        expect(files['USER.md']).toContain('direct, answer-first communication');
+
+        expect(files['AGENTS.md']).not.toContain('seeded by Tavern');
+        expect(files['USER.md']).not.toContain('seeded by Tavern');
+        expect(files['TOOLS.md']).not.toContain('seeded by Tavern');
+        expect(files['SOUL.md']).not.toContain('seeded by Tavern');
+        expect(files['IDENTITY.md']).not.toContain('seeded by Tavern');
+        await Promise.all(
+            openClawBootstrapFileNamesToClear.map((fileName) =>
+                expect(readFile(path.join(workspaceDir, fileName), 'utf8')).resolves.toBe('')
+            )
+        );
     });
 
     test('emits an AGENTS.md update event when rendered instructions are written', async () => {
@@ -180,17 +138,13 @@ describe('workspace instructions', () => {
         }
     });
 
-    test('preserves notes when user instructions change', () => {
+    test('preserves user instructions when agent settings change', () => {
         const db = getDb();
         updateAgentInstructionSource(db, {
             agentId: 'planner',
             agentName: 'Planner',
             userInstructions: 'First instructions.',
             workspaceDir,
-        });
-        updateAgentNotes(db, {
-            agentId: 'planner',
-            notes: 'Durable agent note.',
         });
         updateAgentInstructionSource(db, {
             agentId: 'planner',
@@ -199,7 +153,6 @@ describe('workspace instructions', () => {
         });
 
         expect(getAgentInstructionSource(db, 'planner')).toMatchObject({
-            notes: 'Durable agent note.',
             userInstructions: 'Second instructions.',
         });
     });
@@ -212,10 +165,6 @@ describe('workspace instructions', () => {
             userInstructions: 'Saved instructions.',
             workspaceDir,
         });
-        updateAgentNotes(db, {
-            agentId: 'planner',
-            notes: 'Durable agent note.',
-        });
 
         const rendered = await renderAgentInstructions(db, 'planner');
         const read = await readRenderedAgentInstructions(db, 'planner');
@@ -226,11 +175,11 @@ describe('workspace instructions', () => {
             renderedAt: rendered.renderedAt,
             sha256: rendered.sha256,
         });
-        expect(read.content).toContain(
-            'You are Planner, a Tavern-managed agent inside the Tavern chat app.'
+        expect(read.content).toContain('# AGENTS.md - The Workspace');
+        expect(read.content).not.toContain('Saved instructions.');
+        await expect(readFile(path.join(workspaceDir, 'SOUL.md'), 'utf8')).resolves.not.toContain(
+            'Saved instructions.'
         );
-        expect(read.content).toContain('Saved instructions.');
-        expect(read.content).toContain('Durable agent note.');
     });
 
     test('instructions route returns the rendered AGENTS.md file', async () => {
@@ -250,7 +199,39 @@ describe('workspace instructions', () => {
 
         expect(response?.status).toBe(200);
         expect(body.path).toBe(generatedInstructionFileName);
-        expect(body.content).toContain('Saved instructions.');
+        expect(body.content).toContain('# AGENTS.md - The Workspace');
+        expect(body.content).not.toContain('Saved instructions.');
+    });
+
+    test('instructions route preserves direct workspace file edits', async () => {
+        const db = getDb();
+        updateAgentInstructionSource(db, {
+            agentId: 'planner',
+            agentName: 'Planner',
+            userInstructions: 'Old instructions.',
+            workspaceDir,
+        });
+        await renderAgentInstructions(db, 'planner');
+        await writeFile(path.join(workspaceDir, 'AGENTS.md'), '# AGENTS.md\n\nDirect edit.\n');
+
+        const response = await handleWorkspaceRequest(
+            new Request('http://runtime.test/workspace/agents/planner/instructions', {
+                body: JSON.stringify({
+                    agentName: 'Planner',
+                    userInstructions: 'New instructions.',
+                    workspaceDir,
+                }),
+                method: 'PUT',
+            })
+        );
+
+        expect(response?.status).toBe(200);
+        await expect(readFile(path.join(workspaceDir, 'AGENTS.md'), 'utf8')).resolves.toBe(
+            '# AGENTS.md\n\nDirect edit.\n'
+        );
+        await expect(readFile(path.join(workspaceDir, 'SOUL.md'), 'utf8')).resolves.not.toContain(
+            'New instructions.'
+        );
     });
 
     test('preserves an explicit empty user instructions update', () => {
@@ -272,58 +253,94 @@ describe('workspace instructions', () => {
         });
     });
 
-    test('notes route accepts an explicit empty update', async () => {
+    test('normal render does not overwrite direct workspace file edits', async () => {
         const db = getDb();
         updateAgentInstructionSource(db, {
             agentId: 'planner',
             agentName: 'Planner',
-            userInstructions: 'First instructions.',
+            userInstructions: 'Initial soul.',
             workspaceDir,
         });
-        updateAgentNotes(db, {
-            agentId: 'planner',
-            notes: 'Temporary operating note.',
-        });
-
-        const response = await handleWorkspaceRequest(
-            new Request('http://runtime.test/workspace/agents/planner/notes', {
-                body: JSON.stringify({ notes: '' }),
-                method: 'PUT',
-            })
+        await renderAgentInstructions(db, 'planner');
+        await writeFile(
+            path.join(workspaceDir, generatedInstructionFileName),
+            '# AGENTS.md\n\nDirect agent edit.\n'
         );
 
-        expect(response?.status).toBe(200);
-        expect(getAgentInstructionSource(db, 'planner')).toMatchObject({
-            notes: '',
-        });
+        const rerendered = await renderAgentInstructions(db, 'planner');
+        const read = await readRenderedAgentInstructions(db, 'planner');
+
         await expect(
             readFile(path.join(workspaceDir, generatedInstructionFileName), 'utf8')
-        ).resolves.not.toContain('Temporary operating note.');
+        ).resolves.toBe('# AGENTS.md\n\nDirect agent edit.\n');
+        expect(rerendered.content).toBe('# AGENTS.md\n\nDirect agent edit.\n');
+        expect(read.content).toBe(rerendered.content);
+        expect(read.sha256).toBe(rerendered.sha256);
     });
 
-    test('composition omits empty optional sections', () => {
+    test('normal render replaces legacy generated workspace files once', async () => {
+        const db = getDb();
+        updateAgentInstructionSource(db, {
+            agentId: 'planner',
+            agentName: 'Planner',
+            userInstructions: 'Initial soul.',
+            workspaceDir,
+        });
+        await writeFile(
+            path.join(workspaceDir, generatedInstructionFileName),
+            'This file is generated by Tavern. Use Tavern workspace notes tools.\n'
+        );
+
+        await renderAgentInstructions(db, 'planner');
+
+        await expect(
+            readFile(path.join(workspaceDir, generatedInstructionFileName), 'utf8')
+        ).resolves.toContain('# AGENTS.md - The Workspace');
+    });
+
+    test('composition omits empty optional sections', async () => {
         expect(
-            composeAgentInstructions({
+            await composeAgentInstructions({
                 agentName: 'Planner',
-                notes: '',
                 userInstructions: '',
             })
         ).not.toContain('\n\n\n');
     });
 
-    test('clears OpenClaw bootstrap files owned by Tavern AGENTS.md composition', async () => {
+    test('composition emits OpenClaw bootstrap bundle with generic workspace seed files', async () => {
+        const files = await composeAgentWorkspaceFiles({
+            agentName: 'Planner',
+            userInstructions: 'Custom Blippy personality.',
+        });
+
+        expect(files.map((file) => file.path)).toEqual([...generatedWorkspaceFileNames]);
+        expect(files.find((file) => file.path === 'SOUL.md')?.content).toContain('I am Planner.');
+        expect(files.find((file) => file.path === 'SOUL.md')?.content).not.toContain(
+            'Custom Blippy personality.'
+        );
+    });
+
+    test('clears optional OpenClaw bootstrap files without clearing generated files', async () => {
         await Promise.all(
             openClawBootstrapFileNamesToClear.map((fileName) =>
                 writeFile(path.join(workspaceDir, fileName), 'legacy bootstrap')
             )
         );
-        await writeFile(path.join(workspaceDir, generatedInstructionFileName), 'managed');
+        await Promise.all(
+            generatedWorkspaceFileNames.map((fileName) =>
+                writeFile(path.join(workspaceDir, fileName), `managed ${fileName}`)
+            )
+        );
 
         await clearOpenClawBootstrapFiles(workspaceDir);
 
-        await expect(
-            readFile(path.join(workspaceDir, generatedInstructionFileName), 'utf8')
-        ).resolves.toBe('managed');
+        await Promise.all(
+            generatedWorkspaceFileNames.map((fileName) =>
+                expect(readFile(path.join(workspaceDir, fileName), 'utf8')).resolves.toBe(
+                    `managed ${fileName}`
+                )
+            )
+        );
         await Promise.all(
             openClawBootstrapFileNamesToClear.map((fileName) =>
                 expect(readFile(path.join(workspaceDir, fileName), 'utf8')).resolves.toBe('')

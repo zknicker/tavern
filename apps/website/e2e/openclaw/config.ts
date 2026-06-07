@@ -31,8 +31,6 @@ const e2eAgentToolNames = [
     'cortex_capture',
     'cortex_recall',
     'cortex_list_backlinks',
-    'workspace_notes_read',
-    'workspace_notes_update',
 ];
 
 interface OpenClawE2eConfigInput {

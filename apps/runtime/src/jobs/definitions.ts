@@ -65,7 +65,10 @@ export const runtimeCapabilitiesRefreshJob: RuntimeJobDefinition = {
     async run(context) {
         const { refreshRuntimeCapabilities } = await import('../capabilities/store');
         const { reconcileRuntimeJobSchedules } = await import('./manager');
-        const capabilities = await refreshRuntimeCapabilities({ onlyDue: true });
+        const capabilities = await refreshRuntimeCapabilities({
+            onlyDue: true,
+            publishUpdated: true,
+        });
         await reconcileRuntimeJobSchedules();
         await context.log(`Refreshed ${capabilities.length} Runtime capability health row(s).`);
     },

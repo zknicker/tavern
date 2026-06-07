@@ -250,11 +250,13 @@ target appears in the top result window.
 GBrain's `brain-ops` skill defines brain-first lookup, read-enrich-write,
 source authority, and non-blocking enrichment as the default agent behavior.
 
-Tavern mapping: **done** in generated `AGENTS.md` and Cortex agent resources.
-Agents use Cortex when a message depends on context not already present in the
-conversation, choose the lightest Cortex tool that fits, ask or use live sources
-when Cortex does not resolve the ambiguity, and use inline `cortex_capture` only
-when the user asks to remember, save, or correct durable information.
+Tavern mapping: **done** in OpenClaw workspace bootstrap files and Cortex agent
+resources. `AGENTS.md` owns Cortex operating policy; editable `SOUL.md` owns the
+agent personality. Agents use Cortex when a
+message depends on context not already present in the conversation, choose the
+lightest Cortex tool that fits, ask or use live sources when Cortex does not
+resolve the ambiguity, and use inline `cortex_capture` only when the user asks
+to remember, save, or correct durable information.
 
 Intentional translation: GBrain asks the agent to write on every inbound signal.
 Tavern routes ambient writes through `cortex-chat-ingestion` and `cortex-dream`
@@ -265,7 +267,7 @@ so normal answers are not blocked by enrichment work.
 GBrain's convention docs define mandatory citations, brain-first lookup,
 back-linking, notability gates, and source/brain routing.
 
-Tavern mapping: **done** in generated `AGENTS.md`, Cortex agent resources, and
+Tavern mapping: **done** in `AGENTS.md`, Cortex agent resources, and
 model-backed Cortex job prompts. Agents preserve provenance on Cortex writes,
 mention related Cortex page names or slugs so links can be reconciled, use
 `type: "note"` for explicit remember requests with no matching subject page,

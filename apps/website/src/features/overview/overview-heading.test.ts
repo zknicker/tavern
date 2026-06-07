@@ -14,21 +14,21 @@ const idleState = {
 
 describe('buildOverviewHeading', () => {
     test('reflects the exact hour for an idle tavern', () => {
-        expect(overviewIdleHourPhrases[9]).toContain(
+        expect([...overviewIdleHourPhrases[9]] as string[]).toContain(
             buildOverviewHeading({
                 ...idleState,
                 now: new Date('2026-06-03T09:00:00'),
             })
         );
 
-        expect(overviewIdleHourPhrases[12]).toContain(
+        expect([...overviewIdleHourPhrases[12]] as string[]).toContain(
             buildOverviewHeading({
                 ...idleState,
                 now: new Date('2026-06-03T12:00:00'),
             })
         );
 
-        expect(overviewIdleHourPhrases[22]).toContain(
+        expect([...overviewIdleHourPhrases[22]] as string[]).toContain(
             buildOverviewHeading({
                 ...idleState,
                 now: new Date('2026-06-03T22:00:00'),
