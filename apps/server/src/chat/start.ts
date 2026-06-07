@@ -23,6 +23,7 @@ export async function startTavernChat(input: StartChatInput) {
     const created = await createTavernChat({
         agentIds: parsed.agentId ? [parsed.agentId] : undefined,
         displayName: buildChatDisplayName(parsed.content),
+        displayNameSource: 'generated',
     });
     const accepted = await sendTavernChatMessage({
         agentId: parsed.agentId,

@@ -20,6 +20,7 @@ import {
     listMessages,
     listResponses,
     markRead,
+    searchMessages,
     upsertArtifact,
     upsertResponse,
     upsertResponseActivity,
@@ -81,6 +82,16 @@ async function route(request: Request, url: URL): Promise<Response> {
             );
             return json(receipt, receipt.idempotent ? 200 : 201);
         }
+    }
+
+    const chatMessageSearchMatch = url.pathname.match(/^\/api\/chats\/([^/]+)\/messages\/search$/u);
+    if (chatMessageSearchMatch && request.method === 'GET') {
+        return json(
+            searchMessages(decodeURIComponent(chatMessageSearchMatch[1]), {
+                limit: numberParam(url, 'limit'),
+                query: url.searchParams.get('query') ?? '',
+            })
+        );
     }
 
     const chatResponsesMatch = url.pathname.match(/^\/api\/chats\/([^/]+)\/responses$/u);

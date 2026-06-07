@@ -14,7 +14,7 @@ import {
     markTavernInboundMessageAccepted,
     persistTavernInboundMessage,
 } from './channel-store';
-import { createMessage, upsertResponse } from './chat-api';
+import { createMessage, getChat, upsertResponse } from './chat-api';
 import { createAgentParticipantId } from './chat-api/ids';
 
 const defaultAccountId = 'default';
@@ -80,17 +80,12 @@ export async function sendTavernChannelMessage(
         nonce: payload.message.nonce,
         role: 'user',
     });
+    const chat = getChat(chatId);
     const persisted = persistTavernInboundMessage({
         accountId: defaultAccountId,
         agentId: payload.agent.agentId,
         chatId,
-        conversation: {
-            id: chatId,
-            kind: 'channel',
-            label: chatId,
-            parentId: null,
-            threadRootId: null,
-        },
+        conversation: buildTavernChannelConversation(chatId, chat?.metadata ?? {}, chat?.pinned),
         cursor: messageReceipt.cursor,
         messageId: messageReceipt.message.id,
         requestId,
@@ -127,6 +122,35 @@ export async function sendTavernChannelMessage(
         sessionKey: persisted.sessionKey,
         status: 'accepted',
     });
+}
+
+function buildTavernChannelConversation(
+    chatId: string,
+    metadata: Record<string, unknown>,
+    pinned = false
+) {
+    const tavern =
+        metadata.tavern && typeof metadata.tavern === 'object' && !Array.isArray(metadata.tavern)
+            ? (metadata.tavern as Record<string, unknown>)
+            : {};
+    const displayName = readNonEmptyString(tavern.displayName);
+    const displayNameSource = tavern.displayNameSource === 'explicit' ? 'explicit' : 'generated';
+    const label = pinned || displayNameSource === 'explicit' ? displayName : null;
+    const groupSystemPrompt = pinned ? readNonEmptyString(tavern.groupSystemPrompt) : null;
+
+    return {
+        id: chatId,
+        kind: 'channel' as const,
+        label,
+        ...(label ? { groupChannel: label, groupSubject: label } : {}),
+        ...(groupSystemPrompt ? { groupSystemPrompt } : {}),
+        parentId: null,
+        threadRootId: null,
+    };
+}
+
+function readNonEmptyString(value: unknown) {
+    return typeof value === 'string' && value.trim() ? value.trim() : null;
 }
 
 function handleClientFrame(value: unknown) {

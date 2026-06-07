@@ -140,6 +140,10 @@ The channel plugin:
 * reject missing or malformed chat ids at the plugin boundary
 * derive the OpenClaw session route through `buildChannelOutboundSessionRoute`
 * keep the Tavern chat id as the route peer id and conversation id
+* expose Tavern chats through the OpenClaw directory adapter so `#general` and
+  chat titles resolve to Runtime chat ids
+* expose `read` and `search` on OpenClaw's shared message tool against Tavern
+  Runtime chat history
 
 Do not derive OpenClaw session keys from opaque UI state. The Tavern app selects
 the runtime session key for the agent and chat. The plugin verifies
@@ -172,6 +176,16 @@ OpenClaw's queue tunables at their native defaults. Mid-turn Tavern messages
 therefore steer the active OpenClaw run when the runtime can accept steering,
 and fall back to OpenClaw's normal later-turn behavior when it cannot.
 
+The shared message tool reads Tavern chat history through Runtime:
+
+* `message action=read` returns canonical messages from
+  `/api/chats/{chat_id}/messages` with bounded latest, `before`, `after`, and
+  `around` windows.
+* `message action=search` returns keyword matches from
+  `/api/chats/{chat_id}/messages/search`.
+* `sessions_history` remains OpenClaw execution transcript evidence, not Tavern
+  product chat history.
+
 Both final-delivery paths must classify OpenClaw runtime notices before writing
 assistant deliveries. OpenClaw can send verbose notices such as `🧭 New session:
 <session-id>` through either the turn delivery adapter or the channel message
@@ -198,6 +212,20 @@ The context keeps the core fact domains separate:
 * `reply`: Tavern chat delivery route
 * `message`: user-visible text and accepted message identity
 * `extra`: Tavern metadata that must survive transcript mapping
+
+Runtime attaches a bounded window of recent canonical Tavern messages to the
+inbound relay frame. The plugin passes that window as OpenClaw inbound history
+so agents get Discord-style recent context without reading transcript history.
+
+Runtime also passes Tavern chat context using OpenClaw's channel fields:
+
+* `ConversationLabel`, `GroupSubject`, and `GroupChannel` are set only for
+  pinned chats or explicitly renamed chats.
+* Generated temporary chat titles are not sent as conversation labels.
+* `GroupSystemPrompt` is set from `metadata.tavern.groupSystemPrompt` only while
+  the Tavern chat is pinned.
+* `OriginatingTo` and `To` remain `chat:<tavern-chat-id>` so tools can target
+  the current chat without treating raw ids as human labels.
 
 Use `runPrepared` only if Tavern owns a complex local dispatcher that cannot be
 expressed as a delivery adapter. Current Tavern behavior fits `runAssembled`.

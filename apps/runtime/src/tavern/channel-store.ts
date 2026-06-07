@@ -1,13 +1,16 @@
 import type {
     TavernChannelConversation,
+    TavernChannelHistoryEntry,
     TavernChannelInboundMessage,
     TavernChatMessage,
 } from '@tavern/api';
 import { getDb } from '../db/connection';
 import type { Database } from '../db/sqlite';
 import { namedParams, optionalRow } from '../db/sqlite';
-import { getMessage } from './chat-api';
+import { getChat, getMessage, listRecentMessagesBefore } from './chat-api';
 import { createRunId } from './chat-api/ids';
+
+const recentHistoryLimit = 20;
 
 export interface PersistInboundMessageInput {
     accountId: string;
@@ -90,7 +93,7 @@ export function persistTavernInboundMessage(
         return {
             acceptedAt,
             cursor,
-            frame: buildInboundFrame({ conversation: input.conversation, message, row }),
+            frame: buildInboundFrame({ conversation: input.conversation, db, message, row }),
             messageId: message.id,
             runId,
             sequence: message.sequence,
@@ -123,13 +126,7 @@ export function listPendingTavernInboundMessages(
                     accountId: row.account_id,
                     agentId: row.agent_id,
                     chatId: row.chat_id,
-                    conversation: {
-                        id: row.chat_id,
-                        kind: row.conversation_kind,
-                        label: row.chat_id,
-                        parentId: null,
-                        threadRootId: null,
-                    },
+                    conversation: buildStoredConversation(row.chat_id, row.conversation_kind, db),
                     cursor: row.cursor,
                     messageId: row.message_id,
                     requestId: row.request_id,
@@ -167,6 +164,38 @@ function findExistingInbound(input: PersistInboundMessageInput, db: Database): O
     return null;
 }
 
+function buildStoredConversation(
+    chatId: string,
+    kind: TavernChannelConversation['kind'],
+    db: Database
+): TavernChannelConversation {
+    const chat = getChat(chatId, db);
+    const tavern =
+        chat?.metadata.tavern &&
+        typeof chat.metadata.tavern === 'object' &&
+        !Array.isArray(chat.metadata.tavern)
+            ? (chat.metadata.tavern as Record<string, unknown>)
+            : {};
+    const displayName = readNonEmptyString(tavern.displayName);
+    const displayNameSource = tavern.displayNameSource === 'explicit' ? 'explicit' : 'generated';
+    const label = chat?.pinned || displayNameSource === 'explicit' ? displayName : null;
+    const groupSystemPrompt = chat?.pinned ? readNonEmptyString(tavern.groupSystemPrompt) : null;
+
+    return {
+        id: chatId,
+        kind,
+        label,
+        ...(label ? { groupChannel: label, groupSubject: label } : {}),
+        ...(groupSystemPrompt ? { groupSystemPrompt } : {}),
+        parentId: null,
+        threadRootId: null,
+    };
+}
+
+function readNonEmptyString(value: unknown) {
+    return typeof value === 'string' && value.trim() ? value.trim() : null;
+}
+
 function assertSameInbound(input: PersistInboundMessageInput, row: OutboxRow): void {
     if (
         row.chat_id !== input.chatId ||
@@ -193,6 +222,7 @@ function rowToPersistedInbound(
                 ...input.conversation,
                 kind: row.conversation_kind,
             },
+            db,
             message,
             row,
         }),
@@ -205,6 +235,7 @@ function rowToPersistedInbound(
 
 function buildInboundFrame(input: {
     conversation: TavernChannelConversation;
+    db: Database;
     message: TavernChatMessage;
     row: OutboxRow;
 }): TavernChannelInboundMessage {
@@ -231,6 +262,14 @@ function buildInboundFrame(input: {
             threadRootId: input.message.thread_root_id ?? input.message.id,
             timestamp: input.message.created_at,
         },
+        recentMessages: listRecentMessagesBefore(
+            input.message.chat_id,
+            {
+                beforeSequence: input.message.sequence,
+                limit: recentHistoryLimit,
+            },
+            input.db
+        ).map(messageToHistoryEntry),
         requestId: input.row.request_id,
         sessionKey: input.row.session_key,
         turnId: input.row.run_id,
@@ -261,4 +300,13 @@ function getMessageOrThrow(messageId: string, db: Database = getDb()): TavernCha
 
 function messageText(message: TavernChatMessage) {
     return message.content;
+}
+
+function messageToHistoryEntry(message: TavernChatMessage): TavernChannelHistoryEntry {
+    return {
+        body: messageText(message),
+        messageId: message.id,
+        sender: message.author.label ?? message.author.id,
+        timestamp: Date.parse(message.created_at),
+    };
 }

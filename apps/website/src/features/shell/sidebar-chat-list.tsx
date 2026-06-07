@@ -19,6 +19,7 @@ import { useChatList } from '../../hooks/chats/use-chat-list.ts';
 import { useChatPin } from '../../hooks/chats/use-chat-pin.ts';
 import type { ChatStartDraft } from '../../hooks/chats/use-chat-start-drafts.tsx';
 import { useChatStartDrafts } from '../../hooks/chats/use-chat-start-drafts.tsx';
+import { useChatSystemPrompt } from '../../hooks/chats/use-chat-system-prompt.ts';
 import { useChatUpdate } from '../../hooks/chats/use-chat-update.ts';
 import { useChatRuntimeTimelineState } from '../../hooks/chats/use-timeline-context.tsx';
 import {
@@ -34,6 +35,7 @@ import {
     getErrorMessage,
     SidebarChatContextMenu,
     SidebarChatRenameDialog,
+    SidebarChatSystemPromptDialog,
 } from './sidebar-chat-actions.tsx';
 
 const sidebarChatLimit = 8;
@@ -48,7 +50,10 @@ export function AppSidebarChatList() {
     const updateChat = useChatUpdate();
     const archiveChat = useChatArchive();
     const pinChat = useChatPin();
+    const systemPrompt = useChatSystemPrompt();
     const [renamingChat, setRenamingChat] = React.useState<ChatListItem | null>(null);
+    const [editingSystemPromptChat, setEditingSystemPromptChat] =
+        React.useState<ChatListItem | null>(null);
     const sidebarChats = React.useMemo(
         () => buildSidebarChatGroups(buildChatList(chatQuery.data)),
         [chatQuery.data]
@@ -152,6 +157,10 @@ export function AppSidebarChatList() {
                                             void archiveConfirmation.confirm(selectedChat);
                                         }}
                                         onConfirmArchive={() => archiveConfirmation.request(chat)}
+                                        onEditSystemPrompt={(selectedChat) => {
+                                            systemPrompt.reset();
+                                            setEditingSystemPromptChat(selectedChat);
+                                        }}
                                         onPinChange={(selectedChat, pinned) => {
                                             void pinSidebarChat(selectedChat, pinned);
                                         }}
@@ -218,6 +227,10 @@ export function AppSidebarChatList() {
                                         void archiveConfirmation.confirm(selectedChat);
                                     }}
                                     onConfirmArchive={() => archiveConfirmation.request(chat)}
+                                    onEditSystemPrompt={(selectedChat) => {
+                                        systemPrompt.reset();
+                                        setEditingSystemPromptChat(selectedChat);
+                                    }}
                                     onPinChange={(selectedChat, pinned) => {
                                         void pinSidebarChat(selectedChat, pinned);
                                     }}
@@ -251,6 +264,29 @@ export function AppSidebarChatList() {
                     });
 
                     setRenamingChat(null);
+                }}
+            />
+            <SidebarChatSystemPromptDialog
+                chat={editingSystemPromptChat}
+                errorMessage={systemPrompt.error?.message ?? null}
+                isPending={systemPrompt.isPending}
+                onClose={() => {
+                    if (!systemPrompt.isPending) {
+                        systemPrompt.reset();
+                        setEditingSystemPromptChat(null);
+                    }
+                }}
+                onSubmit={async (nextSystemPrompt) => {
+                    if (!editingSystemPromptChat) {
+                        return;
+                    }
+
+                    await systemPrompt.mutateAsync({
+                        chatId: editingSystemPromptChat.id,
+                        systemPrompt: nextSystemPrompt,
+                    });
+
+                    setEditingSystemPromptChat(null);
                 }}
             />
         </>
@@ -305,6 +341,7 @@ function SidebarRecentChatItem({
     onArchive,
     onCommitInlineArchive,
     onConfirmArchive,
+    onEditSystemPrompt,
     onPinChange,
     onRename,
 }: {
@@ -315,6 +352,7 @@ function SidebarRecentChatItem({
     onArchive: (chat: ChatListItem) => void;
     onCommitInlineArchive: (chat: ChatListItem) => void;
     onConfirmArchive: () => void;
+    onEditSystemPrompt: (chat: ChatListItem) => void;
     onPinChange: (chat: ChatListItem, pinned: boolean) => void;
     onRename: (chat: ChatListItem) => void;
 }) {
@@ -328,6 +366,7 @@ function SidebarRecentChatItem({
             <SidebarChatContextMenu
                 chat={chat}
                 onArchive={onArchive}
+                onEditSystemPrompt={onEditSystemPrompt}
                 onPinChange={onPinChange}
                 onRename={onRename}
             >

@@ -11,6 +11,21 @@ export function createTavernPluginApi({ baseUrl, fetch } = {}) {
     });
 
     return {
+        async getChat(chatId) {
+            return client.chat.get(chatId);
+        },
+        async listChats(input = {}) {
+            return client.chat.list(input);
+        },
+        async listMessages(chatId, input = {}) {
+            return client.chat.messages(chatId, input);
+        },
+        async getMessage(messageId) {
+            return client.message.get(messageId);
+        },
+        async searchMessages(chatId, input) {
+            return client.chat.searchMessages(chatId, input);
+        },
         async createDelivery(input) {
             const delivery = await client.chat.createDelivery(input.chatId, {
                 agent_id: agentParticipantId(input.agentId),

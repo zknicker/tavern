@@ -30,7 +30,7 @@ happen, and keep the durable timeline as context.
   menu can reopen any non-archived chat.
 * **Pinned chats.** Users can pin durable chats as focus-area homes. Pinned
   chats stay in the tab strip, survive app restarts, and can carry a custom
-  tab color.
+  tab color and chat-specific agent instructions.
 * **Offline catch-up.** Tavern Runtime keeps chat history while the app is
   closed; the app reloads from durable rows and refetches on reconnect.
 * **Mid-turn steering.** The chat composer stays available while an agent turn
@@ -82,7 +82,8 @@ Pinned chat state is durable Tavern Runtime chat state. It survives app
 reinstall and syncs through the normal chat list/detail reads. Pinning changes
 tab grouping only; it does not change chat membership, message ordering,
 response delivery, or archive behavior. Pinned tab color is durable Tavern chat
-metadata.
+metadata. Pinned chats can also carry trusted system prompt text that Tavern
+passes to OpenClaw for that chat.
 
 ## Contract
 

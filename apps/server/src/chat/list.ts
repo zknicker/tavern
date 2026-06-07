@@ -409,6 +409,7 @@ export async function listChatDetails(options?: { includeExternal?: boolean }) {
                 scope: resolveChatScope(identity.target),
                 sessionCount: chatSessions.length,
                 source,
+                systemPrompt: readRuntimeChatSystemPrompt(agentRuntimeChat),
                 tabAppearance: readRuntimeChatTabAppearance(agentRuntimeChat),
                 target: identity.target,
                 targetParticipant,
@@ -443,6 +444,7 @@ function toChatListItem(chat: Chat) {
         scope: chat.scope,
         sessionCount: chat.sessionCount,
         source: chat.source,
+        systemPrompt: chat.systemPrompt,
         tabAppearance: chat.tabAppearance,
         targetParticipant: chat.targetParticipant,
         title: chat.title,
@@ -614,4 +616,14 @@ function readRuntimeChatTabAppearance(runtimeChat: ParsedRuntimeChat | null) {
             ? tabAppearance.color
             : null;
     return { color };
+}
+
+function readRuntimeChatSystemPrompt(runtimeChat: ParsedRuntimeChat | null) {
+    const tavern =
+        typeof runtimeChat?.metadata.tavern === 'object' && runtimeChat.metadata.tavern !== null
+            ? (runtimeChat.metadata.tavern as Record<string, unknown>)
+            : null;
+    const systemPrompt = tavern?.groupSystemPrompt;
+
+    return typeof systemPrompt === 'string' && systemPrompt.trim() ? systemPrompt.trim() : null;
 }

@@ -30,7 +30,8 @@ executor.
   to agents and session keys, writes durable Tavern messages, and then dispatches
   accepted work through the relay. The relay references existing Runtime chat
   and message ids; it does not create chats, repair chats, or write chat-level
-  Tavern metadata.
+  Tavern metadata. Relay frames include a bounded recent window of canonical
+  Runtime messages so OpenClaw gets chat context without reading transcripts.
 * **Tavern App owns presentation.** The app reads runtime chat history, caches
   what it needs, and renders chats, activity, settings, memory inspection, the
   Cortex wiki, automations, skills, and stats.
@@ -70,8 +71,8 @@ directory before launching OpenClaw:
 
 * `packages/tavern-openclaw-messenger` owns Tavern chat/channel delivery.
 * `packages/tavern-openclaw-cortex` owns Cortex agent tools.
-* `packages/tavern-openclaw-workspace` owns managed workspace instructions,
-  generated-file protection, and agent notes tools.
+* `packages/tavern-openclaw-workspace` is reserved for future workspace
+  integration.
 
 Plugin lifecycle details live in
 [../operations/openclaw-plugin-deploy.md](../operations/openclaw-plugin-deploy.md).
@@ -80,20 +81,23 @@ Plugin architecture lives in
 
 ## Managed Workspace
 
-Runtime writes a generated `AGENTS.md` into the managed OpenClaw workspace. The
-file combines Tavern-managed instructions, the user's agent instructions block,
-and agent-authored notes stored by Tavern. Other OpenClaw bootstrap markdown
-files stay blank or unused for managed Tavern agents.
+Runtime seeds OpenClaw bootstrap files into the managed workspace:
+`AGENTS.md`, `SOUL.md`, `TOOLS.md`, `IDENTITY.md`, and `USER.md`. These files
+are volatile agent workspace state. The repo carries only generic lower-case
+seed defaults under `apps/runtime/src/workspace/seed-defaults/`, which Runtime
+uses when a workspace file is missing or still has a legacy generated marker.
+Runtime substitutes only narrow dynamic values such as Cortex page types and
+agent name while seeding.
 
-Runtime clears legacy companion bootstrap files from the managed workspace
-before rendering `AGENTS.md`. Empty files are intentional: OpenClaw skips blank
-bootstrap files but may inject marker lines for missing ones. Tavern leaves
-OpenClaw bootstrap injection enabled, and Tavern chat turns use full bootstrap
-context so generated `AGENTS.md` reaches turns.
+Runtime leaves optional companion files such as `HEARTBEAT.md`, `BOOTSTRAP.md`,
+`MEMORY.md`, and `ROLE.md` present but blank. Blank files avoid missing-file
+markers without enabling bootstrap behavior Tavern does not own.
 
-Agents update their notes through Tavern workspace tools instead of editing
-`AGENTS.md` directly. Runtime regenerates the file on boot, config sync, and
-instruction source changes.
+Existing workspace files are editable by agents and users. Runtime leaves them
+intact on normal boot/config sync, replacing only missing files or legacy
+generated files that still carry the old generated/workspace-notes marker.
+Settings exposes each markdown file as its own page and saves through the
+Runtime agent file API.
 
 ## Persistence
 

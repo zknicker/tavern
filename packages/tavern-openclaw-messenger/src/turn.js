@@ -114,7 +114,7 @@ async function runTavernTurn({ context, input, runId, runtime, startedAt }) {
         conversation: {
             kind: input.conversationKind,
             id: input.chatId,
-            label: input.chatId,
+            label: input.conversationLabel,
             nativeChannelId: input.chatId,
             routePeer: {
                 kind: 'channel',
@@ -139,6 +139,10 @@ async function runTavernTurn({ context, input, runId, runtime, startedAt }) {
             },
         },
         extra: {
+            ...(input.conversationLabel ? { ConversationLabel: input.conversationLabel } : {}),
+            ...(input.groupSubject ? { GroupSubject: input.groupSubject } : {}),
+            ...(input.groupChannel ? { GroupChannel: input.groupChannel } : {}),
+            ...(input.groupSystemPrompt ? { GroupSystemPrompt: input.groupSystemPrompt } : {}),
             TavernMessageMetadata: acceptedMetadata,
         },
         message: {
@@ -685,6 +689,35 @@ function readReasoningSignatureSummary(value) {
     }
 }
 
+function readRecentMessages(value) {
+    if (!Array.isArray(value)) {
+        return undefined;
+    }
+
+    return value
+        .map((entry) => {
+            if (!entry || typeof entry !== 'object') {
+                return null;
+            }
+
+            const body = readString(entry.body);
+            if (!body) {
+                return null;
+            }
+
+            return {
+                body,
+                messageId: readString(entry.messageId) ?? undefined,
+                sender: readString(entry.sender) ?? undefined,
+                timestamp:
+                    typeof entry.timestamp === 'number' && Number.isFinite(entry.timestamp)
+                        ? entry.timestamp
+                        : undefined,
+            };
+        })
+        .filter(Boolean);
+}
+
 function parseTavernRelayInbound(event) {
     const message = event.message ?? {};
     const conversation = event.conversation ?? {};
@@ -704,11 +737,15 @@ function parseTavernRelayInbound(event) {
         text: requireString(message.text, 'message.text'),
         threadRootId: readString(message.threadRootId),
         turnId: readString(event.turnId),
+        conversationLabel: readString(conversation.label),
+        groupChannel: readString(conversation.groupChannel),
+        groupSubject: readString(conversation.groupSubject),
+        groupSystemPrompt: readString(conversation.groupSystemPrompt),
         sender: {
             id: readString(message.senderId) ?? 'tavern-user',
             name: readString(message.senderName) ?? 'Tavern',
         },
-        recentMessages: undefined,
+        recentMessages: readRecentMessages(event.recentMessages),
     };
 }
 

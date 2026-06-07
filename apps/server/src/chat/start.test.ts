@@ -39,6 +39,7 @@ test('startTavernChat stores the deterministic Tavern chat name', async () => {
             {
                 agentIds: ['claw'],
                 displayName: 'Hey!',
+                displayNameSource: 'generated',
             },
         ],
     ]);
@@ -75,6 +76,7 @@ test('startTavernChat can defer agent resolution to chat creation', async () => 
             {
                 agentIds: undefined,
                 displayName: 'Hey!',
+                displayNameSource: 'generated',
             },
         ],
     ]);

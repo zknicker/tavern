@@ -60,6 +60,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/chats/{chat_id}/messages/search": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Search chat messages by text. */
+        get: operations["searchChatMessages"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/chats/{chat_id}/deliveries": {
         parameters: {
             query?: never;
@@ -675,6 +692,32 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ChatMessageReceipt"];
+                };
+            };
+            default: components["responses"]["Error"];
+        };
+    };
+    searchChatMessages: {
+        parameters: {
+            query: {
+                query: string;
+                limit?: components["parameters"]["Limit"];
+            };
+            header?: never;
+            path: {
+                chat_id: components["parameters"]["ChatId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Matching messages ordered by descending sequence. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ListMessagesResponse"];
                 };
             };
             default: components["responses"]["Error"];

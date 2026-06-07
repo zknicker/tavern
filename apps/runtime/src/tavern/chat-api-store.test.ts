@@ -14,6 +14,7 @@ import {
     listMessages,
     listResponses,
     markRead,
+    searchMessages,
     subscribeToTavernApiEvents,
     upsertArtifact,
     upsertResponse,
@@ -118,6 +119,20 @@ describe('Tavern Runtime Chat API store', () => {
         expect(receipt.message.role).toBe('assistant');
         expect(listMessages('cht_1').messages).toHaveLength(1);
         expect(listEvents().events.at(-1)?.type).toBe('message.delivered');
+    });
+
+    it('searches canonical chat messages by content within one chat', () => {
+        createChat({ id: 'cht_1' });
+        createChat({ id: 'cht_2' });
+        createMessage('cht_1', messageInput('msg_1', 'nonce_1', 'podcast note'));
+        createMessage('cht_1', messageInput('msg_2', 'nonce_2', 'finance note'));
+        createMessage('cht_1', messageInput('msg_3', 'nonce_3', 'Podcast follow-up'));
+        createMessage('cht_2', messageInput('msg_4', 'nonce_4', 'podcast in another chat'));
+
+        expect(searchMessages('cht_1', { limit: 10, query: 'podcast' }).messages).toMatchObject([
+            { id: 'msg_3', sequence: 3 },
+            { id: 'msg_1', sequence: 1 },
+        ]);
     });
 
     it('links repeated assistant delivery receipts to the existing durable message', () => {
@@ -492,6 +507,34 @@ describe('Tavern Runtime Chat API routes', () => {
             id: 'act_1',
             response_id: 'rsp_1',
             title: 'Using tool',
+        });
+    });
+
+    it('searches durable messages through the chat API route', async () => {
+        await handleTavernRuntimeRequest(jsonRequest('POST', '/api/chats', { id: 'cht_1' }));
+        await handleTavernRuntimeRequest(
+            jsonRequest(
+                'POST',
+                '/api/chats/cht_1/messages',
+                messageInput('msg_1', 'nonce_1', 'save this podcast takeaway')
+            )
+        );
+        await handleTavernRuntimeRequest(
+            jsonRequest(
+                'POST',
+                '/api/chats/cht_1/messages',
+                messageInput('msg_2', 'nonce_2', 'unrelated note')
+            )
+        );
+
+        const response = await handleTavernRuntimeRequest(
+            getRequest('/api/chats/cht_1/messages/search?query=podcast&limit=5')
+        );
+
+        expect(response.status).toBe(200);
+        await expect(response.json()).resolves.toMatchObject({
+            messages: [{ id: 'msg_1', content: 'save this podcast takeaway', sequence: 1 }],
+            next_sequence: null,
         });
     });
 

@@ -10,13 +10,11 @@ const databasePath = join(directory, 'test.sqlite');
 
 process.env.DATABASE_PATH = databasePath;
 
-const [{ ensureDatabaseSchema }, { databaseClient }, runtimeSync, agentProfileStorage] =
-    await Promise.all([
-        import('../db/bootstrap.ts'),
-        import('../db/index.ts'),
-        import('./agent-runtime-sync.ts'),
-        import('../storage/agent-profiles.ts'),
-    ]);
+const [{ ensureDatabaseSchema }, { databaseClient }, runtimeSync] = await Promise.all([
+    import('../db/bootstrap.ts'),
+    import('../db/index.ts'),
+    import('./agent-runtime-sync.ts'),
+]);
 
 ensureDatabaseSchema();
 
@@ -152,14 +150,8 @@ test('syncAgentRuntimeSessionMessages reads accepted Tavern prompts by stable me
     );
 });
 
-test('syncAgentRuntimeAgents sends cleared workspace instructions', async () => {
+test('syncAgentRuntimeAgents does not overwrite workspace file content from profile instructions', async () => {
     let savedInstructions: unknown = null;
-
-    await agentProfileStorage.saveAgentProfile({
-        agentId: 'planner',
-        runtimeId: 'openclaw-local',
-        userInstructions: '',
-    });
 
     await runtimeSync.syncAgentWorkspaceInstructions({
         agents: [
@@ -190,7 +182,6 @@ test('syncAgentRuntimeAgents sends cleared workspace instructions', async () => 
 
     assert.deepEqual(savedInstructions, {
         agentName: 'Planner',
-        userInstructions: '',
         workspaceDir: '/tmp/tavern-planner',
     });
 });

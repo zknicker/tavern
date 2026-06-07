@@ -362,7 +362,6 @@ export const agentRuntimeSaveAgentFileSchema = z.object({
 
 export const agentRuntimeSaveWorkspaceInstructionsSchema = z.object({
     agentName: z.string().trim().min(1).optional(),
-    userInstructions: z.string().optional(),
     workspaceDir: z.string().trim().min(1),
 });
 
@@ -1848,6 +1847,9 @@ export const agentRuntimeMessageAcceptedSchema = z.object({
 });
 
 export const tavernChannelConversationSchema = z.object({
+    groupChannel: z.string().trim().min(1).nullable().optional(),
+    groupSubject: z.string().trim().min(1).nullable().optional(),
+    groupSystemPrompt: z.string().trim().min(1).nullable().optional(),
     id: z.string().trim().min(1),
     kind: z.enum(['channel', 'dm', 'thread']),
     label: z.string().trim().min(1).nullable(),
@@ -1875,6 +1877,13 @@ export const tavernChannelMessageSchema = z.object({
     timestamp: z.string().datetime(),
 });
 
+export const tavernChannelHistoryEntrySchema = z.object({
+    body: z.string(),
+    messageId: z.string().trim().min(1).optional(),
+    sender: z.string().trim().min(1).optional(),
+    timestamp: z.number().int().nonnegative().optional(),
+});
+
 export const tavernChannelInboundMessageSchema = z.object({
     accountId: z.string().trim().min(1),
     agentId: z.string().trim().min(1),
@@ -1882,6 +1891,7 @@ export const tavernChannelInboundMessageSchema = z.object({
     cursor: z.number().int().nonnegative(),
     kind: z.literal('inbound-message'),
     message: tavernChannelMessageSchema,
+    recentMessages: z.array(tavernChannelHistoryEntrySchema).default([]),
     requestId: z.string().trim().min(1),
     sessionKey: z.string().trim().min(1),
     turnId: z.string().trim().min(1).optional(),
@@ -2334,6 +2344,7 @@ export type AgentRuntimeThinkingLevel = z.infer<typeof agentRuntimeThinkingLevel
 export type AgentRuntimeCreateMessage = z.infer<typeof agentRuntimeCreateMessageSchema>;
 export type AgentRuntimeMessageAccepted = z.infer<typeof agentRuntimeMessageAcceptedSchema>;
 export type TavernChannelConversation = z.infer<typeof tavernChannelConversationSchema>;
+export type TavernChannelHistoryEntry = z.infer<typeof tavernChannelHistoryEntrySchema>;
 export type TavernChannelMessage = z.infer<typeof tavernChannelMessageSchema>;
 export type TavernChannelInboundMessage = z.infer<typeof tavernChannelInboundMessageSchema>;
 export type TavernChannelClientFrame = z.infer<typeof tavernChannelClientFrameSchema>;

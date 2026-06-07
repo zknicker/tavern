@@ -38,6 +38,7 @@ GET    /api/chats?cursor=&limit=
 POST   /api/chats
 GET    /api/chats/{chat_id}
 GET    /api/chats/{chat_id}/messages?after_sequence=&before_sequence=&limit=
+GET    /api/chats/{chat_id}/messages/search?query=&limit=
 GET    /api/chats/{chat_id}/responses?after_sequence=&limit=
 GET    /api/chats/{chat_id}/activity/{activity_id}
 POST   /api/chats/{chat_id}/messages
@@ -69,6 +70,8 @@ The Tavern app keeps list and detail reads separate:
 * `chat.setPinned` changes one chat's durable pinned state.
 * `chat.updateTabAppearance` changes the durable color metadata for a pinned
   Tavern chat tab.
+* `chat.updateSystemPrompt` changes trusted chat-specific agent instructions
+  for a pinned Tavern chat. Empty text clears the prompt.
 * `chat.log.list` returns paged durable timeline rows for one chat, including
   messages, responses, running and completed activity, and renderable artifacts.
 
@@ -76,8 +79,8 @@ Invalidate `chat.list` when membership or list ordering can change. Invalidate
 `chat.get` when one chat's detail fields can change. Response and activity
 events update the app timeline by stable ids. Durable log invalidation belongs
 when messages, responses, activity, or artifacts are persisted.
-Pinned state and pinned tab color changes invalidate `chat.list` and the changed
-`chat.get` record.
+Pinned state, pinned tab color, and pinned system prompt changes invalidate
+`chat.list` and the changed `chat.get` record.
 
 Live turn progress updates the visible `chat.log.list` cache by activity id.
 The eventual durable read returns the same row ids, so running activity becomes
@@ -163,8 +166,20 @@ Rules:
 * Message `content` and optional `attachment` are hydrated with the row.
 * Authors are hydrated enough for clients to render without a second lookup.
 
+`GET /api/chats/{chat_id}/messages/search` returns matching durable messages
+from that chat. Search is case-insensitive keyword search over canonical message
+content and returns newest matches first.
+
 Runtime sessions can have their own sequence domains. Preserve runtime sequence
 in metadata or source fields; never use it as the Tavern timeline cursor.
+
+## Chat Instructions
+
+Pinned Tavern chats can carry trusted chat-specific instructions in
+`metadata.tavern.groupSystemPrompt`. Tavern sends that value to OpenClaw as
+`GroupSystemPrompt` only while the chat is pinned. Generated temporary chat
+titles do not become `ConversationLabel` or `GroupSubject`; pinned chats and
+explicitly renamed chats may use their display name as the conversation label.
 
 ## Deliveries
 

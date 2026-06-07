@@ -45,6 +45,7 @@ function createChat(overrides: Partial<ChatListItem> = {}): ChatListItem {
         searchText: 'tavern chat',
         sessionCount: 1,
         source: { kind: 'tavern', label: 'Tavern' },
+        systemPrompt: null,
         tabAppearance: { color: null },
         targetParticipant: null,
         title: 'Tavern chat',

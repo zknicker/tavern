@@ -16,6 +16,7 @@ import { setChatPinnedRoute } from './set-pinned.ts';
 import { startChatRoute } from './start.ts';
 import { getChatToolRoute } from './tool-get.ts';
 import { updateChatRoute } from './update.ts';
+import { updateChatSystemPromptRoute } from './update-system-prompt.ts';
 import { updateChatTabAppearanceRoute } from './update-tab-appearance.ts';
 
 export const chatRouter = createRouter({
@@ -40,5 +41,6 @@ export const chatRouter = createRouter({
     setPinned: setChatPinnedRoute,
     start: startChatRoute,
     updateTabAppearance: updateChatTabAppearanceRoute,
+    updateSystemPrompt: updateChatSystemPromptRoute,
     update: updateChatRoute,
 });

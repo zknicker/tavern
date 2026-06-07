@@ -66,6 +66,8 @@ export const chatTabAppearanceSchema = z.object({
         .nullable(),
 });
 
+export const chatSystemPromptSchema = z.string().trim().max(8000).nullable();
+
 export const chatSourceSchema = z.object({
     kind: z.enum(chatSourceKinds),
     label: z.string().trim().min(1),
@@ -91,6 +93,7 @@ export const chatSchema = z.object({
     scope: chatScopeSchema,
     sessionCount: z.number().int().nonnegative(),
     source: chatSourceSchema,
+    systemPrompt: chatSystemPromptSchema,
     tabAppearance: chatTabAppearanceSchema,
     target: z.string().nullable(),
     targetParticipant: chatTargetParticipantSchema,
@@ -116,6 +119,7 @@ export const chatListItemSchema = chatSchema.pick({
     scope: true,
     sessionCount: true,
     source: true,
+    systemPrompt: true,
     tabAppearance: true,
     targetParticipant: true,
     title: true,
@@ -173,6 +177,11 @@ export const updateChatTabAppearanceInputSchema = z.object({
     color: chatTabAppearanceSchema.shape.color,
 });
 
+export const updateChatSystemPromptInputSchema = z.object({
+    chatId: z.string().trim().min(1),
+    systemPrompt: chatSystemPromptSchema,
+});
+
 export const archiveChatResultSchema = z.object({
     archived: z.literal(true),
     chatId: z.string().trim().min(1),
@@ -186,6 +195,11 @@ export const setChatPinnedResultSchema = z.object({
 export const updateChatTabAppearanceResultSchema = z.object({
     chatId: z.string().trim().min(1),
     tabAppearance: chatTabAppearanceSchema,
+});
+
+export const updateChatSystemPromptResultSchema = z.object({
+    chatId: z.string().trim().min(1),
+    systemPrompt: chatSystemPromptSchema,
 });
 
 export const sendChatMessageInputSchema = z.object({
@@ -244,5 +258,7 @@ export type SetChatPinnedInput = z.infer<typeof setChatPinnedInputSchema>;
 export type SetChatPinnedResult = z.infer<typeof setChatPinnedResultSchema>;
 export type UpdateChatTabAppearanceInput = z.infer<typeof updateChatTabAppearanceInputSchema>;
 export type UpdateChatTabAppearanceResult = z.infer<typeof updateChatTabAppearanceResultSchema>;
+export type UpdateChatSystemPromptInput = z.infer<typeof updateChatSystemPromptInputSchema>;
+export type UpdateChatSystemPromptResult = z.infer<typeof updateChatSystemPromptResultSchema>;
 export type SendChatMessageInput = z.infer<typeof sendChatMessageInputSchema>;
 export type SendChatMessageResult = z.infer<typeof sendChatMessageResultSchema>;

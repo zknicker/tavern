@@ -16,8 +16,12 @@ interface TavernChatMetadata {
     agentIds: string[];
     archived: boolean;
     displayName: string;
+    displayNameSource: TavernChatDisplayNameSource;
+    groupSystemPrompt: string | null;
     tabAppearance: TavernChatTabAppearance;
 }
+
+export type TavernChatDisplayNameSource = 'explicit' | 'generated';
 
 export interface TavernChatTabAppearance {
     color: string | null;
@@ -77,6 +81,7 @@ export async function getRuntimeChatRecord(chatId: string) {
 export async function createRuntimeTavernChat(input: {
     agentIds: string[];
     displayName: string;
+    displayNameSource: TavernChatDisplayNameSource;
     id: string;
 }) {
     const { client } = await requireRuntimeChatClient();
@@ -86,6 +91,8 @@ export async function createRuntimeTavernChat(input: {
             agentIds: input.agentIds,
             archived: false,
             displayName: input.displayName,
+            displayNameSource: input.displayNameSource,
+            groupSystemPrompt: null,
             id: input.id,
             tabAppearance: emptyTabAppearance(),
         }),
@@ -103,9 +110,7 @@ export async function updateRuntimeTavernChat(input: {
     const current = await getTavernChatOrNull(client, input.id);
     const archived = current ? readTavernChatMetadata(current).archived : false;
     const pinned = current?.pinned ?? false;
-    const tabAppearance = current
-        ? readTavernChatMetadata(current).tabAppearance
-        : emptyTabAppearance();
+    const metadata = current ? readTavernChatMetadata(current) : null;
 
     await client.chat.create({
         id: input.id,
@@ -113,8 +118,10 @@ export async function updateRuntimeTavernChat(input: {
             agentIds: input.agentIds,
             archived,
             displayName: input.displayName,
+            displayNameSource: 'explicit',
+            groupSystemPrompt: metadata?.groupSystemPrompt ?? null,
             id: input.id,
-            tabAppearance,
+            tabAppearance: metadata?.tabAppearance ?? emptyTabAppearance(),
         }),
         pinned,
         title: input.displayName,
@@ -136,6 +143,8 @@ export async function archiveRuntimeTavernChat(chatId: string) {
             agentIds: metadata.agentIds,
             archived: true,
             displayName: metadata.displayName,
+            displayNameSource: metadata.displayNameSource,
+            groupSystemPrompt: metadata.groupSystemPrompt,
             id: chatId,
             tabAppearance: metadata.tabAppearance,
         }),
@@ -178,8 +187,38 @@ export async function updateRuntimeTavernChatTabAppearance(input: {
             agentIds: metadata.agentIds,
             archived: metadata.archived,
             displayName: metadata.displayName,
+            displayNameSource: metadata.displayNameSource,
+            groupSystemPrompt: metadata.groupSystemPrompt,
             id: input.chatId,
             tabAppearance: input.tabAppearance,
+        }),
+        pinned: current.pinned,
+        title: current.title,
+    });
+}
+
+export async function updateRuntimeTavernChatSystemPrompt(input: {
+    chatId: string;
+    systemPrompt: string | null;
+}) {
+    const { client } = await requireRuntimeChatClient();
+    const current = await getTavernChatOrNull(client, input.chatId);
+
+    if (!current) {
+        throw new Error(`No Tavern chat named "${input.chatId}" exists.`);
+    }
+
+    const metadata = readTavernChatMetadata(current);
+    await client.chat.create({
+        id: input.chatId,
+        metadata: buildRuntimeTavernChatMetadata({
+            agentIds: metadata.agentIds,
+            archived: metadata.archived,
+            displayName: metadata.displayName,
+            displayNameSource: metadata.displayNameSource,
+            groupSystemPrompt: input.systemPrompt,
+            id: input.chatId,
+            tabAppearance: metadata.tabAppearance,
         }),
         pinned: current.pinned,
         title: current.title,
@@ -288,6 +327,8 @@ function tavernChatToRuntimeChat(chat: TavernChat): AgentRuntimeChat {
             tavern: {
                 ...metadata,
                 archived: metadata.archived,
+                displayNameSource: metadata.displayNameSource,
+                groupSystemPrompt: metadata.groupSystemPrompt,
                 tabAppearance: metadata.tabAppearance,
             },
         },
@@ -331,11 +372,18 @@ function readTavernChatMetadata(chat: TavernChat): TavernChatMetadata {
         ? tavern.agentIds.filter((agentId): agentId is string => typeof agentId === 'string')
         : [];
     const displayName = typeof tavern.displayName === 'string' ? tavern.displayName : chat.id;
+    const displayNameSource = tavern.displayNameSource === 'explicit' ? 'explicit' : 'generated';
+    const groupSystemPrompt =
+        typeof tavern.groupSystemPrompt === 'string' && tavern.groupSystemPrompt.trim()
+            ? tavern.groupSystemPrompt.trim()
+            : null;
 
     return {
         agentIds,
         archived: tavern.archived === true,
         displayName,
+        displayNameSource,
+        groupSystemPrompt,
         tabAppearance: readTavernChatTabAppearance(tavern.tabAppearance),
     };
 }
@@ -344,6 +392,8 @@ function buildRuntimeTavernChatMetadata(input: {
     agentIds: string[];
     archived: boolean;
     displayName: string;
+    displayNameSource: TavernChatDisplayNameSource;
+    groupSystemPrompt: string | null;
     id: string;
     tabAppearance: TavernChatTabAppearance;
 }) {
@@ -356,6 +406,8 @@ function buildRuntimeTavernChatMetadata(input: {
             agentIds: input.agentIds,
             archived: input.archived,
             displayName: input.displayName,
+            displayNameSource: input.displayNameSource,
+            ...(input.groupSystemPrompt ? { groupSystemPrompt: input.groupSystemPrompt } : {}),
             tabAppearance: input.tabAppearance,
         },
     };

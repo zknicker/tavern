@@ -23,7 +23,9 @@ import {
 } from '../../components/ui/dialog.tsx';
 import { Icon } from '../../components/ui/icon.tsx';
 import { Button } from '../../components/ui/primitives/button.tsx';
+import { Form } from '../../components/ui/primitives/form.tsx';
 import { Input } from '../../components/ui/primitives/input.tsx';
+import { Textarea } from '../../components/ui/textarea.tsx';
 import { cn } from '../../lib/utils.ts';
 import type { ChatListItem } from '../chats/chat-list-data.ts';
 import { pinnedTabColorOptions } from './pinned-tab-options.ts';
@@ -36,6 +38,7 @@ interface SidebarChatContextMenuProps {
     onArchive: (chat: ChatListItem) => void;
     onCloseTab?: (chat: ChatListItem) => void;
     onCustomizeColor?: (chat: ChatListItem, color: string | null) => void;
+    onEditSystemPrompt?: (chat: ChatListItem) => void;
     onPinChange: (chat: ChatListItem, pinned: boolean) => void;
     onRename: (chat: ChatListItem) => void;
     triggerClassName?: string;
@@ -47,11 +50,13 @@ export function SidebarChatContextMenu({
     onArchive,
     onCloseTab,
     onCustomizeColor,
+    onEditSystemPrompt,
     onPinChange,
     onRename,
     triggerClassName,
 }: SidebarChatContextMenuProps) {
     const canCustomizePinnedTab = chat.isPinned && onCustomizeColor;
+    const canEditSystemPrompt = canEditSidebarChatSystemPrompt(chat) && onEditSystemPrompt;
     const canCloseTab = onCloseTab && !chat.isPinned;
 
     return (
@@ -103,6 +108,12 @@ export function SidebarChatContextMenu({
                         </ContextMenuSubPopup>
                     </ContextMenuSub>
                 ) : null}
+                {canEditSystemPrompt ? (
+                    <ContextMenuItem onClick={() => onEditSystemPrompt(chat)}>
+                        <Icon className={contextMenuIconClassName} icon={PencilEdit02Icon} />
+                        Instructions
+                    </ContextMenuItem>
+                ) : null}
                 <ContextMenuSeparator />
                 {canCloseTab ? (
                     <ContextMenuItem onClick={() => onCloseTab(chat)}>
@@ -116,6 +127,101 @@ export function SidebarChatContextMenu({
                 </ContextMenuItem>
             </ContextMenuPopup>
         </ContextMenu>
+    );
+}
+
+interface SidebarChatSystemPromptDialogProps {
+    chat: ChatListItem | null;
+    errorMessage: string | null;
+    isPending: boolean;
+    onClose: () => void;
+    onSubmit: (systemPrompt: string | null) => Promise<void>;
+}
+
+export function SidebarChatSystemPromptDialog({
+    chat,
+    errorMessage,
+    isPending,
+    onClose,
+    onSubmit,
+}: SidebarChatSystemPromptDialogProps) {
+    return (
+        <Dialog onOpenChange={(open) => !open && onClose()} open={chat !== null}>
+            <DialogContent className="max-w-lg" showCloseButton={false}>
+                {chat ? (
+                    <SidebarChatSystemPromptForm
+                        errorMessage={errorMessage}
+                        initialSystemPrompt={chat.systemPrompt ?? ''}
+                        isPending={isPending}
+                        key={chat.id}
+                        onClose={onClose}
+                        onSubmit={onSubmit}
+                    />
+                ) : null}
+            </DialogContent>
+        </Dialog>
+    );
+}
+
+interface SidebarChatSystemPromptFormProps {
+    errorMessage: string | null;
+    initialSystemPrompt: string;
+    isPending: boolean;
+    onClose: () => void;
+    onSubmit: (systemPrompt: string | null) => Promise<void>;
+}
+
+function SidebarChatSystemPromptForm({
+    errorMessage,
+    initialSystemPrompt,
+    isPending,
+    onClose,
+    onSubmit,
+}: SidebarChatSystemPromptFormProps) {
+    const [systemPrompt, setSystemPrompt] = React.useState(initialSystemPrompt);
+    const handleSubmit = React.useEffectEvent(async (event: React.FormEvent<HTMLFormElement>) => {
+        event.preventDefault();
+
+        if (isPending) {
+            return;
+        }
+
+        await onSubmit(normalizeSidebarChatSystemPrompt(systemPrompt));
+    });
+
+    return (
+        <Form className="contents" onSubmit={handleSubmit}>
+            <DialogHeader className="pe-6">
+                <DialogTitle>Chat instructions</DialogTitle>
+                <DialogDescription>
+                    Set trusted instructions the agent should follow in this pinned chat.
+                </DialogDescription>
+            </DialogHeader>
+            <DialogPanel className="grid gap-3">
+                <div className="pt-1">
+                    <Textarea
+                        autoFocus
+                        onChange={(event) => setSystemPrompt(event.target.value)}
+                        placeholder="Keep replies concise and focus on launch planning."
+                        textareaClassName="min-h-40 resize-y"
+                        value={systemPrompt}
+                    />
+                </div>
+                {errorMessage ? (
+                    <div className="rounded-lg border border-error/20 bg-error/5 px-3 py-2 text-error text-sm">
+                        {errorMessage}
+                    </div>
+                ) : null}
+            </DialogPanel>
+            <DialogFooter>
+                <Button onClick={onClose} size="sm" type="button" variant="ghost">
+                    Cancel
+                </Button>
+                <Button disabled={isPending} loading={isPending} size="sm" type="submit">
+                    Save
+                </Button>
+            </DialogFooter>
+        </Form>
     );
 }
 
@@ -182,18 +288,20 @@ function SidebarChatRenameForm({
     });
 
     return (
-        <form onSubmit={handleSubmit}>
+        <Form className="contents" onSubmit={handleSubmit}>
             <DialogHeader className="pe-6">
                 <DialogTitle>Rename chat</DialogTitle>
                 <DialogDescription>Choose a short name for the sidebar.</DialogDescription>
             </DialogHeader>
             <DialogPanel className="grid gap-3">
-                <Input
-                    autoFocus
-                    onChange={(event) => setDisplayName(event.target.value)}
-                    onFocus={(event) => event.currentTarget.select()}
-                    value={displayName}
-                />
+                <div className="pt-1">
+                    <Input
+                        autoFocus
+                        onChange={(event) => setDisplayName(event.target.value)}
+                        onFocus={(event) => event.currentTarget.select()}
+                        value={displayName}
+                    />
+                </div>
                 {errorMessage ? (
                     <div className="rounded-lg border border-error/20 bg-error/5 px-3 py-2 text-error text-sm">
                         {errorMessage}
@@ -208,12 +316,22 @@ function SidebarChatRenameForm({
                     Save
                 </Button>
             </DialogFooter>
-        </form>
+        </Form>
     );
 }
 
 export function canRenameSidebarChat(chat: Pick<ChatListItem, 'boundAgentIds'>) {
     return chat.boundAgentIds.length === 1;
+}
+
+export function canEditSidebarChatSystemPrompt(chat: Pick<ChatListItem, 'isPinned' | 'type'>) {
+    return chat.isPinned && chat.type === 'tavern';
+}
+
+export function normalizeSidebarChatSystemPrompt(systemPrompt: string) {
+    const trimmedSystemPrompt = systemPrompt.trim();
+
+    return trimmedSystemPrompt.length > 0 ? trimmedSystemPrompt : null;
 }
 
 export function getErrorMessage(error: unknown) {

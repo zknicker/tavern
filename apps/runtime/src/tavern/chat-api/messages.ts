@@ -66,6 +66,66 @@ export function listMessages(
     };
 }
 
+export function listRecentMessagesBefore(
+    chatId: string,
+    input: { beforeSequence: number; limit?: number },
+    db: Database = getDb()
+): TavernChatMessage[] {
+    const limit = clampLimit(input.limit);
+    const rows = db
+        .prepare(
+            `SELECT *
+             FROM chat_messages
+             WHERE chat_id = $chatId
+               AND sequence < $beforeSequence
+             ORDER BY sequence DESC
+             LIMIT $limit`
+        )
+        .all(
+            namedParams({
+                beforeSequence: input.beforeSequence,
+                chatId,
+                limit,
+            })
+        ) as MessageRow[];
+
+    return rows.reverse().map((row) => rowToMessage(row, db));
+}
+
+export function searchMessages(
+    chatId: string,
+    input: { limit?: number; query: string },
+    db: Database = getDb()
+): TavernListMessagesResponse {
+    const query = input.query.trim();
+    if (!query) {
+        throw new Error('Message search query is required.');
+    }
+
+    const limit = clampLimit(input.limit);
+    const rows = db
+        .prepare(
+            `SELECT *
+             FROM chat_messages
+             WHERE chat_id = $chatId
+               AND instr(lower(content), lower($query)) > 0
+             ORDER BY sequence DESC
+             LIMIT $limit`
+        )
+        .all(
+            namedParams({
+                chatId,
+                limit,
+                query,
+            })
+        ) as MessageRow[];
+
+    return {
+        messages: rows.map((row) => rowToMessage(row, db)),
+        next_sequence: null,
+    };
+}
+
 export function getMessage(id: string, db: Database = getDb()): TavernChatMessage | null {
     const row = optionalRow(
         db

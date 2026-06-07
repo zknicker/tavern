@@ -169,6 +169,18 @@ class TavernChatClient {
         );
     }
 
+    searchMessages(chatId: string, input: { limit?: number; query: string }) {
+        return this.#client.request<TavernListMessagesResponse>(
+            `/api/chats/${encodeURIComponent(chatId)}/messages/search`,
+            {
+                query: {
+                    limit: input.limit,
+                    query: input.query,
+                },
+            }
+        );
+    }
+
     responses(chatId: string, input: { afterSequence?: number; limit?: number } = {}) {
         return this.#client.request<TavernListResponsesResponse>(
             `/api/chats/${encodeURIComponent(chatId)}/responses`,

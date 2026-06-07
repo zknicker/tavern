@@ -23,6 +23,7 @@ mock.module('openclaw/plugin-sdk/channel-plugin-common', () => ({
 
 const { tavernChannelPlugin, buildTavernOutboundSessionRoute } = await import('./channel.js');
 const { tavernMessageAdapter, registerTavernDeliveryContext } = await import('./outbound.js');
+const { createTavernDirectoryAdapter, createTavernMessageActions } = await import('./actions.js');
 
 describe('Tavern Messenger channel routing', () => {
     it('advertises Tavern chats as channel-only chats', () => {
@@ -127,6 +128,147 @@ describe('Tavern Messenger channel routing', () => {
         } finally {
             unregister();
         }
+    });
+
+    it('advertises Tavern history actions and prompt hints for the shared message tool', () => {
+        const actions = tavernChannelPlugin.base.actions;
+
+        expect(actions.describeMessageTool().actions).toEqual(['send', 'read', 'search']);
+        expect(actions.resolveExecutionMode({ action: 'read' })).toBe('gateway');
+        expect(actions.resolveExecutionMode({ action: 'search' })).toBe('gateway');
+        expect(actions.resolveExecutionMode({ action: 'send' })).toBe('local');
+        expect(tavernChannelPlugin.base.agentPrompt.messageToolHints().join('\n')).toContain(
+            'send`, `read`, and `search`'
+        );
+    });
+
+    it('reads latest Tavern chat history from canonical messages', async () => {
+        const api = createHistoryApi();
+        const actions = createTavernMessageActions({ getApi: () => api });
+
+        const result = await actions.handleAction({
+            action: 'read',
+            params: { limit: 5, target: 'chat:cht_1' },
+            toolContext: {},
+        });
+
+        expect(result.details.messages).toEqual([{ id: 'msg_25', sequence: 25 }]);
+        expect(api.getChat).toHaveBeenCalledWith('cht_1');
+        expect(api.listMessages).toHaveBeenCalledWith('cht_1', {
+            afterSequence: 25,
+            limit: 5,
+        });
+    });
+
+    it('reads Tavern chat history before, after, and around message cursors', async () => {
+        const api = createHistoryApi();
+        const actions = createTavernMessageActions({ getApi: () => api });
+
+        await actions.handleAction({
+            action: 'read',
+            params: { before: 'msg_7', limit: 3, target: 'cht_1' },
+            toolContext: {},
+        });
+        await actions.handleAction({
+            action: 'read',
+            params: { after: 'msg_4', limit: 2, target: 'cht_1' },
+            toolContext: {},
+        });
+        await actions.handleAction({
+            action: 'read',
+            params: { around: 10, limit: 4, target: 'cht_1' },
+            toolContext: {},
+        });
+
+        expect(api.getMessage.mock.calls.map((call) => call[0])).toEqual(['msg_7', 'msg_4']);
+        expect(api.listMessages.mock.calls).toEqual([
+            [
+                'cht_1',
+                {
+                    afterSequence: 3,
+                    beforeSequence: 7,
+                    limit: 3,
+                },
+            ],
+            ['cht_1', { afterSequence: 4, limit: 2 }],
+            ['cht_1', { afterSequence: 7, limit: 4 }],
+        ]);
+    });
+
+    it('searches Tavern chat history through the canonical chat API', async () => {
+        const api = createHistoryApi();
+        const actions = createTavernMessageActions({ getApi: () => api });
+
+        const result = await actions.handleAction({
+            action: 'search',
+            params: { limit: 2, query: 'podcast', target: 'chat:cht_1' },
+            toolContext: {},
+        });
+
+        expect(api.searchMessages).toHaveBeenCalledWith('cht_1', {
+            limit: 2,
+            query: 'podcast',
+        });
+        expect(result.details).toMatchObject({
+            messages: [{ id: 'msg_search_1', sequence: 9 }],
+            ok: true,
+        });
+    });
+
+    it('resolves named Tavern chat targets for history actions', async () => {
+        const api = createHistoryApi();
+        const actions = createTavernMessageActions({ getApi: () => api });
+
+        await actions.handleAction({
+            action: 'search',
+            params: { query: 'launch', target: '#general' },
+            toolContext: {},
+        });
+
+        expect(api.listChats).toHaveBeenCalledWith({ limit: 500 });
+        expect(api.searchMessages).toHaveBeenCalledWith('cht_1', {
+            limit: 20,
+            query: 'launch',
+        });
+    });
+
+    it('lists Tavern chats through the OpenClaw directory adapter', async () => {
+        const api = {
+            listChats: mock(async () => ({
+                chats: [
+                    {
+                        id: 'cht_general',
+                        last_message_sequence: 12,
+                        pinned: true,
+                        title: '#general',
+                    },
+                    {
+                        id: 'cht_random',
+                        last_message_sequence: 1,
+                        pinned: false,
+                        title: 'random',
+                    },
+                ],
+            })),
+        };
+        const directory = createTavernDirectoryAdapter({ getApi: () => api });
+
+        const groups = await directory.listGroups({ query: '#general' });
+
+        expect(api.listChats).toHaveBeenCalledWith({ limit: 500 });
+        expect(groups).toEqual([
+            {
+                handle: '#general',
+                id: 'cht_general',
+                kind: 'channel',
+                name: '#general',
+                rank: 1,
+                raw: {
+                    lastMessageSequence: 12,
+                    pinned: true,
+                },
+            },
+        ]);
     });
 
     it('uses the registered delivery context when OpenClaw omits send context', async () => {
@@ -238,3 +380,32 @@ describe('Tavern Messenger channel routing', () => {
         }
     });
 });
+
+function createHistoryApi() {
+    return {
+        getChat: mock(async () => ({ id: 'cht_1', last_message_sequence: 30 })),
+        getMessage: mock(async (id) => ({
+            chat_id: 'cht_1',
+            id,
+            sequence: Number(id.replace('msg_', '')),
+        })),
+        listChats: mock(async () => ({
+            chats: [
+                {
+                    id: 'cht_1',
+                    last_message_sequence: 30,
+                    pinned: true,
+                    title: '#general',
+                },
+            ],
+        })),
+        listMessages: mock(async (_chatId, input) => ({
+            messages: [{ id: `msg_${input.afterSequence}`, sequence: input.afterSequence }],
+            next_sequence: null,
+        })),
+        searchMessages: mock(async () => ({
+            messages: [{ id: 'msg_search_1', sequence: 9 }],
+            next_sequence: null,
+        })),
+    };
+}

@@ -27,6 +27,7 @@ import { useChatList } from '../../hooks/chats/use-chat-list.ts';
 import { useChatPin } from '../../hooks/chats/use-chat-pin.ts';
 import type { ChatStartDraft } from '../../hooks/chats/use-chat-start-drafts.tsx';
 import { useChatStartDrafts } from '../../hooks/chats/use-chat-start-drafts.tsx';
+import { useChatSystemPrompt } from '../../hooks/chats/use-chat-system-prompt.ts';
 import { useChatTabAppearance } from '../../hooks/chats/use-chat-tab-appearance.ts';
 import { useChatUpdate } from '../../hooks/chats/use-chat-update.ts';
 import { useChatRuntimeTimelineState } from '../../hooks/chats/use-timeline-context.tsx';
@@ -49,6 +50,7 @@ import {
     getErrorMessage,
     SidebarChatContextMenu,
     SidebarChatRenameDialog,
+    SidebarChatSystemPromptDialog,
 } from './sidebar-chat-actions.tsx';
 import {
     buildSidebarChatGroups,
@@ -74,8 +76,11 @@ export function TopbarChatTabs({
     const updateChat = useChatUpdate();
     const archiveChat = useChatArchive();
     const pinChat = useChatPin();
+    const systemPrompt = useChatSystemPrompt();
     const tabAppearance = useChatTabAppearance();
     const [renamingChat, setRenamingChat] = React.useState<ChatListItem | null>(null);
+    const [editingSystemPromptChat, setEditingSystemPromptChat] =
+        React.useState<ChatListItem | null>(null);
     const [openChatIds, setOpenChatIds] = useOpenChatTabIds();
     const topbarChats = React.useMemo(
         () => buildSidebarChatGroups(buildChatList(chatQuery.data)),
@@ -298,6 +303,10 @@ export function TopbarChatTabs({
                                     tabAppearance.reset();
                                     void setPinnedTabColor(selectedChat, color);
                                 }}
+                                onEditSystemPrompt={(selectedChat) => {
+                                    systemPrompt.reset();
+                                    setEditingSystemPromptChat(selectedChat);
+                                }}
                                 onPinChange={(selectedChat, pinned) => {
                                     void pinTopbarChat(selectedChat, pinned);
                                 }}
@@ -340,6 +349,10 @@ export function TopbarChatTabs({
                                     tabAppearance.reset();
                                     void setPinnedTabColor(selectedChat, color);
                                 }}
+                                onEditSystemPrompt={(selectedChat) => {
+                                    systemPrompt.reset();
+                                    setEditingSystemPromptChat(selectedChat);
+                                }}
                                 onPinChange={(selectedChat, pinned) => {
                                     void pinTopbarChat(selectedChat, pinned);
                                 }}
@@ -375,6 +388,29 @@ export function TopbarChatTabs({
                     });
 
                     setRenamingChat(null);
+                }}
+            />
+            <SidebarChatSystemPromptDialog
+                chat={editingSystemPromptChat}
+                errorMessage={systemPrompt.error?.message ?? null}
+                isPending={systemPrompt.isPending}
+                onClose={() => {
+                    if (!systemPrompt.isPending) {
+                        systemPrompt.reset();
+                        setEditingSystemPromptChat(null);
+                    }
+                }}
+                onSubmit={async (nextSystemPrompt) => {
+                    if (!editingSystemPromptChat) {
+                        return;
+                    }
+
+                    await systemPrompt.mutateAsync({
+                        chatId: editingSystemPromptChat.id,
+                        systemPrompt: nextSystemPrompt,
+                    });
+
+                    setEditingSystemPromptChat(null);
                 }}
             />
         </>
@@ -532,6 +568,7 @@ function TopbarRecentChatTab({
     onArchive,
     onCloseTab,
     onCustomizeColor,
+    onEditSystemPrompt,
     onPinChange,
     onRename,
 }: {
@@ -541,6 +578,7 @@ function TopbarRecentChatTab({
     onArchive: (chat: ChatListItem) => void;
     onCloseTab: (chat: ChatListItem) => void;
     onCustomizeColor: (chat: ChatListItem, color: string | null) => void;
+    onEditSystemPrompt: (chat: ChatListItem) => void;
     onPinChange: (chat: ChatListItem, pinned: boolean) => void;
     onRename: (chat: ChatListItem) => void;
 }) {
@@ -556,6 +594,7 @@ function TopbarRecentChatTab({
             onArchive={onArchive}
             onCloseTab={onCloseTab}
             onCustomizeColor={onCustomizeColor}
+            onEditSystemPrompt={onEditSystemPrompt}
             onPinChange={onPinChange}
             onRename={onRename}
             triggerClassName="no-drag h-7 shrink-0 overflow-hidden"

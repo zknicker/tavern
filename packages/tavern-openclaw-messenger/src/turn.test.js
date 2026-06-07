@@ -169,7 +169,16 @@ async function dispatchInboundTavernMessage({ context, params, respond, runtime 
                 conversation: {
                     id: params.chatId,
                     kind: 'channel',
-                    label: params.chatId,
+                    label: params.conversation?.label ?? null,
+                    ...(params.conversation?.groupChannel
+                        ? { groupChannel: params.conversation.groupChannel }
+                        : {}),
+                    ...(params.conversation?.groupSubject
+                        ? { groupSubject: params.conversation.groupSubject }
+                        : {}),
+                    ...(params.conversation?.groupSystemPrompt
+                        ? { groupSystemPrompt: params.conversation.groupSystemPrompt }
+                        : {}),
                 },
                 kind: 'inbound-message',
                 message: {
@@ -183,6 +192,7 @@ async function dispatchInboundTavernMessage({ context, params, respond, runtime 
                     text: params.message.content ?? params.message.text,
                     timestamp: params.message.sentAt,
                 },
+                recentMessages: params.recentMessages,
                 requestId: params.message.id,
                 sessionKey: params.sessionKey,
                 turnId: params.turnId,
@@ -382,6 +392,121 @@ describe('Tavern Messenger turn handling', () => {
             },
             {
                 status: 'completed',
+            },
+        ]);
+    });
+
+    it('passes trusted Tavern conversation fields into OpenClaw context when supplied', async () => {
+        runPrepared.mockClear();
+        const response = {};
+
+        await dispatchInboundTavernMessage({
+            context: createTurnTestContext(),
+            params: {
+                agent: {
+                    agentId: 'blippy',
+                },
+                chatId: 'cht_220f46ed-2d7c-41dd-9d7e-d02691f1afc3',
+                conversation: {
+                    groupChannel: '#general',
+                    groupSubject: '#general',
+                    groupSystemPrompt: 'Keep this chat focused on Tavern work.',
+                    label: '#general',
+                },
+                message: {
+                    content: 'hello',
+                    id: 'msg_1',
+                    sentAt: '2026-05-04T12:00:00.000Z',
+                },
+                sender: {
+                    id: 'zach',
+                    name: 'Zach',
+                },
+                sessionKey: 'agent:blippy:tavern:channel:cht_220f46ed-2d7c-41dd-9d7e-d02691f1afc3',
+            },
+            respond: (ok, payload, error) => {
+                response.ok = ok;
+                response.payload = payload;
+                response.error = error;
+            },
+            runtime: createRuntime({ dispatchReplyWithBufferedBlockDispatcher, runPrepared }),
+        });
+
+        await waitForDispatch(runPrepared);
+
+        expect(response).toMatchObject({ ok: true });
+        expect(runPrepared.mock.calls[0][0].ctxPayload).toMatchObject({
+            ChatType: 'channel',
+            ConversationLabel: '#general',
+            GroupChannel: '#general',
+            GroupSubject: '#general',
+            GroupSystemPrompt: 'Keep this chat focused on Tavern work.',
+        });
+    });
+
+    it('passes recent Tavern chat history into OpenClaw inbound context', async () => {
+        runPrepared.mockClear();
+        dispatchReplyWithBufferedBlockDispatcher.mockClear();
+        nextDispatchResult = { counts: { final: 1 }, queuedFinal: false };
+
+        const response = {};
+        const context = createTurnTestContext();
+
+        await dispatchInboundTavernMessage({
+            context,
+            params: {
+                agent: {
+                    agentId: 'blippy',
+                },
+                chatId: 'cht_220f46ed-2d7c-41dd-9d7e-d02691f1afc3',
+                message: {
+                    content: 'continue',
+                    id: 'msg_3',
+                    sentAt: '2026-05-04T12:02:00.000Z',
+                },
+                recentMessages: [
+                    {
+                        body: 'first durable chat message',
+                        messageId: 'msg_1',
+                        sender: 'Zach',
+                        timestamp: Date.parse('2026-05-04T12:00:00.000Z'),
+                    },
+                    {
+                        body: 'second durable chat message',
+                        messageId: 'msg_2',
+                        sender: 'Blippy',
+                        timestamp: Date.parse('2026-05-04T12:01:00.000Z'),
+                    },
+                ],
+                sender: {
+                    id: 'zach',
+                    name: 'Zach',
+                },
+                sessionKey: 'agent:blippy:tavern:channel:cht_220f46ed-2d7c-41dd-9d7e-d02691f1afc3',
+            },
+            respond: (ok, payload, error) => {
+                response.ok = ok;
+                response.payload = payload;
+                response.error = error;
+            },
+            runtime: createRuntime({ dispatchReplyWithBufferedBlockDispatcher, runPrepared }),
+        });
+
+        await waitForDispatch(runPrepared);
+
+        expect(response).toMatchObject({ ok: true });
+        expect(runPrepared.mock.calls[0][0].ctxPayload.InboundHistory).toEqual([
+            {
+                body: 'first durable chat message',
+                messageId: 'msg_1',
+                sender: 'Zach',
+                timestamp: Date.parse('2026-05-04T12:00:00.000Z'),
+            },
+            {
+                body: 'second durable chat message',
+                messageId: 'msg_2',
+                sender: 'Blippy',
+                timestamp: Date.parse('2026-05-04T12:01:00.000Z'),
             },
         ]);
     });

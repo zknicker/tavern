@@ -25,6 +25,7 @@ export async function listAgentChats(input: { agentId: string }) {
                 scope: chat.scope,
                 sessionCount: chat.sessionCount,
                 source: chat.source,
+                systemPrompt: chat.systemPrompt,
                 tabAppearance: chat.tabAppearance,
                 targetParticipant: chat.targetParticipant,
                 title: chat.title,

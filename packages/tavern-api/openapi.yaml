@@ -131,6 +131,29 @@ paths:
                 $ref: '#/components/schemas/ChatMessageReceipt'
         default:
           $ref: '#/components/responses/Error'
+  /api/chats/{chat_id}/messages/search:
+    get:
+      operationId: searchChatMessages
+      tags: [Messages]
+      summary: Search chat messages by text.
+      parameters:
+        - $ref: '#/components/parameters/ChatId'
+        - name: query
+          in: query
+          required: true
+          schema:
+            type: string
+            minLength: 1
+        - $ref: '#/components/parameters/Limit'
+      responses:
+        '200':
+          description: Matching messages ordered by descending sequence.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ListMessagesResponse'
+        default:
+          $ref: '#/components/responses/Error'
   /api/chats/{chat_id}/deliveries:
     post:
       operationId: createChatDelivery

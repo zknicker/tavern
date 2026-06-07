@@ -10,8 +10,11 @@ import {
     setChatPinnedInputSchema,
     setChatPinnedResultSchema,
     type UpdateChatInput,
+    type UpdateChatSystemPromptInput,
     type UpdateChatTabAppearanceInput,
     updateChatInputSchema,
+    updateChatSystemPromptInputSchema,
+    updateChatSystemPromptResultSchema,
     updateChatTabAppearanceInputSchema,
     updateChatTabAppearanceResultSchema,
 } from './contracts.ts';
@@ -20,7 +23,9 @@ import {
     createRuntimeTavernChat,
     getRuntimeChatRecord,
     setRuntimeTavernChatPinned,
+    type TavernChatDisplayNameSource,
     updateRuntimeTavernChat,
+    updateRuntimeTavernChatSystemPrompt,
     updateRuntimeTavernChatTabAppearance,
 } from './runtime-chats.ts';
 import { createChatTiming } from './timing.ts';
@@ -64,7 +69,9 @@ async function resolveAgentRuntimeBindings(agentIds: string[] | undefined) {
     };
 }
 
-export async function createTavernChat(input: CreateChatInput) {
+export async function createTavernChat(
+    input: CreateChatInput & { displayNameSource?: TavernChatDisplayNameSource }
+) {
     const logTiming = createChatTiming('chat.create');
     const parsed = createChatInputSchema.parse(input);
     const agentIds = parsed.agentIds ? uniqueAgentIdsSchema.parse(parsed.agentIds) : undefined;
@@ -75,6 +82,7 @@ export async function createTavernChat(input: CreateChatInput) {
     await createRuntimeTavernChat({
         agentIds: binding.agentIds,
         displayName: parsed.displayName,
+        displayNameSource: input.displayNameSource ?? 'explicit',
         id: chatId,
     });
     logTiming('tavern.saveChatRecord', { chatId });
@@ -168,5 +176,32 @@ export async function updateTavernChatTabAppearance(input: UpdateChatTabAppearan
         tabAppearance: {
             color: parsed.color,
         },
+    });
+}
+
+export async function updateTavernChatSystemPrompt(input: UpdateChatSystemPromptInput) {
+    const parsed = updateChatSystemPromptInputSchema.parse(input);
+    const chat = await getRuntimeChatRecord(parsed.chatId);
+
+    if (!chat) {
+        throw new Error(`No Tavern chat named "${parsed.chatId}" exists.`);
+    }
+
+    if (chat.chat.platform !== 'tavern') {
+        throw new Error('Only Tavern chats can customize system prompts.');
+    }
+
+    if (!chat.isPinned) {
+        throw new Error('Only pinned chats can customize system prompts.');
+    }
+
+    await updateRuntimeTavernChatSystemPrompt({
+        chatId: parsed.chatId,
+        systemPrompt: parsed.systemPrompt,
+    });
+
+    return updateChatSystemPromptResultSchema.parse({
+        chatId: parsed.chatId,
+        systemPrompt: parsed.systemPrompt,
     });
 }

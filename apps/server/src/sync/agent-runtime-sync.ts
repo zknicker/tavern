@@ -16,7 +16,6 @@ import {
     emitSkillUpdated,
 } from '../api/invalidation-events.ts';
 import { syncChatParticipantsForRuntime } from '../participants/chat-participants.ts';
-import { listAgentProfiles } from '../storage/agent-profiles.ts';
 import {
     listReachableAgentRuntimeConnections,
     markAgentRuntimeConnectionSync,
@@ -264,11 +263,7 @@ export async function syncAgentWorkspaceInstructions(input: {
     log?: SyncLog;
     runtimeId: string;
 }) {
-    const profiles = await listAgentProfiles({ runtimeId: input.runtimeId });
-    const profilesByAgentId = new Map(profiles.map((profile) => [profile.agentId, profile]));
-
     for (const agent of input.agents) {
-        const profile = profilesByAgentId.get(agent.id);
         if (!agent.workspaceFolder) {
             continue;
         }
@@ -276,7 +271,6 @@ export async function syncAgentWorkspaceInstructions(input: {
         try {
             await input.client.saveWorkspaceInstructions(agent.id, {
                 agentName: agent.name,
-                ...(profile ? { userInstructions: profile.userInstructions } : {}),
                 workspaceDir: agent.workspaceFolder,
             });
         } catch (error) {

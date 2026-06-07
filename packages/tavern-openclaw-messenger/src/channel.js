@@ -11,6 +11,7 @@ import {
     resolveTavernAccount,
     TAVERN_CHANNEL_ID,
 } from './config.js';
+import { tavernAgentPrompt, tavernDirectoryAdapter, tavernMessageActions } from './actions.js';
 import { TAVERN_CHANNEL_META } from './meta.js';
 import { tavernMessageAdapter } from './outbound.js';
 import { startTavernGatewayAccount } from './runtime-relay.js';
@@ -71,6 +72,9 @@ export const tavernChannelPlugin = createChatChannelPlugin({
                 await startTavernGatewayAccount(ctx);
             },
         },
+        agentPrompt: tavernAgentPrompt,
+        directory: tavernDirectoryAdapter,
+        actions: tavernMessageActions,
         message: tavernMessageAdapter,
     },
 });
