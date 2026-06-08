@@ -18,7 +18,7 @@ import {
     thinkingOptions,
 } from '../../../components/ui/thinking-shared.ts';
 import type { ModelListOutput } from '../../../lib/trpc.tsx';
-import type { AgentModelDraft, OpenClawHarness, ThinkingLevelValue } from './types.ts';
+import type { AgentModelDraft, HermesHarness, ThinkingLevelValue } from './types.ts';
 
 type Model = ModelListOutput['models'][number];
 type ModelChoice = ReturnType<typeof listModelChoices>[number];
@@ -38,9 +38,8 @@ export function AgentModelSection({
     syncError: string | null;
     value: AgentModelDraft | null;
 }) {
-    const choices = listModelChoices(modelOptions, value);
-    const selectedChoice =
-        choices.find((choice) => choice.name.id === value?.openClawModelNameId) ?? null;
+    const choices = listModelChoices(modelOptions);
+    const selectedChoice = choices.find((choice) => choice.model.ref === value?.modelRef) ?? null;
     const selectedThinkingOptions = listThinkingOptionsForModelChoice(selectedChoice);
     const isDisabled = disabled;
 
@@ -52,17 +51,16 @@ export function AgentModelSection({
                     <SettingsRow title="Model">
                         <Select
                             disabled={isDisabled}
-                            onValueChange={(modelNameId) => {
+                            onValueChange={(modelRef) => {
                                 const nextChoice = choices.find(
-                                    (choice) => choice.name.id === modelNameId
+                                    (choice) => choice.model.ref === modelRef
                                 );
 
                                 onChange(
                                     nextChoice
                                         ? {
-                                              harness: nextChoice.name.harness,
-                                              modelId: nextChoice.model.ref,
-                                              openClawModelNameId: nextChoice.name.id,
+                                              harness: inferHarness(nextChoice.model.provider),
+                                              modelRef: nextChoice.model.ref,
                                               thinkingDefault: normalizeThinkingDefaultForChoice(
                                                   value?.thinkingDefault ?? null,
                                                   nextChoice
@@ -71,7 +69,7 @@ export function AgentModelSection({
                                         : null
                                 );
                             }}
-                            value={value?.openClawModelNameId ?? undefined}
+                            value={value?.modelRef ?? undefined}
                         >
                             <SelectTrigger className="h-auto min-h-12 py-2">
                                 <SelectValue
@@ -85,7 +83,7 @@ export function AgentModelSection({
                             </SelectTrigger>
                             <SelectContent>
                                 {choices.map((choice) => (
-                                    <SelectItem key={choice.name.id} value={choice.name.id}>
+                                    <SelectItem key={choice.model.ref} value={choice.model.ref}>
                                         <ModelChoiceLabel choice={choice} />
                                     </SelectItem>
                                 ))}
@@ -110,9 +108,10 @@ export function AgentModelSection({
                                     selectedChoice
                                         ? {
                                               ...(value ?? {
-                                                  harness: selectedChoice.name.harness,
-                                                  modelId: selectedChoice.model.ref,
-                                                  openClawModelNameId: selectedChoice.name.id,
+                                                  harness: inferHarness(
+                                                      selectedChoice.model.provider
+                                                  ),
+                                                  modelRef: selectedChoice.model.ref,
                                               }),
                                               thinkingDefault:
                                                   nextValue === inheritThinkingValue
@@ -133,7 +132,7 @@ export function AgentModelSection({
                                         description={
                                             getThinkingOption(value?.thinkingDefault ?? null)
                                                 ?.description ??
-                                            "Use the selected model's OpenClaw default."
+                                            "Use the selected model's Hermes default."
                                         }
                                         label={
                                             getThinkingOption(value?.thinkingDefault ?? null)
@@ -145,7 +144,7 @@ export function AgentModelSection({
                             <SelectContent>
                                 <SelectItem value={inheritThinkingValue}>
                                     <ThinkingSelectLabel
-                                        description="Use the selected model's OpenClaw default."
+                                        description="Use the selected model's Hermes default."
                                         label="Inherit"
                                     />
                                 </SelectItem>
@@ -171,7 +170,7 @@ function ModelChoiceLabel({ choice }: { choice: ModelChoice }) {
         <span className="block min-w-0">
             <span className="block truncate">{choice.model.name}</span>
             <span className="block truncate text-muted-foreground text-xs">
-                {choice.name.label}
+                {choice.model.provider}
             </span>
         </span>
     );
@@ -186,52 +185,24 @@ function ThinkingSelectLabel({ description, label }: { description: string; labe
     );
 }
 
-function listModelChoices(models: Model[], current?: AgentModelDraft | null) {
+function listModelChoices(models: Model[]) {
     return models
-        .flatMap((model) => {
-            const names = model.openClawNames ?? [];
-            const defaultNames = listDefaultOpenClawNames(model);
-            const currentName =
-                current?.modelId === model.ref
-                    ? names.find((name) => name.id === current.openClawModelNameId)
-                    : null;
-            const visibleNames =
-                currentName && !defaultNames.some((name) => name.id === currentName.id)
-                    ? [...defaultNames, currentName]
-                    : defaultNames;
-
-            return visibleNames.map((name) => ({
-                model,
-                name,
-            }));
-        })
+        .map((model) => ({ model }))
         .sort(
             (left, right) =>
                 left.model.name.localeCompare(right.model.name) ||
-                left.name.label.localeCompare(right.name.label)
+                left.model.provider.localeCompare(right.model.provider)
         );
 }
 
-function listDefaultOpenClawNames(model: Model) {
-    const names = model.openClawNames ?? [];
-    const preferred = names.filter((name) => name.isPreferred);
-
-    return preferred.length > 0 ? preferred : names.slice(0, 1);
-}
-
 export function selectModelChoice(models: Model[], current: AgentModelDraft | null) {
-    const choices = listModelChoices(models, current);
+    const choices = listModelChoices(models);
 
-    if (!current?.modelId) {
+    if (!current?.modelRef) {
         return choices[0] ?? null;
     }
 
-    return (
-        choices.find((choice) => choice.name.id === current.openClawModelNameId) ??
-        choices.find((choice) => choice.model.ref === current.modelId) ??
-        choices[0] ??
-        null
-    );
+    return choices.find((choice) => choice.model.ref === current.modelRef) ?? choices[0] ?? null;
 }
 
 export function listThinkingOptionsForModelChoice(choice: ModelChoice | null): ThinkingOption[] {
@@ -268,11 +239,11 @@ function listThinkingOptions(values: ThinkingLevelValue[]) {
 }
 
 function listExtraThinkingLevels(choice: ModelChoice): ThinkingLevelValue[] {
-    const model = choice.name.model.toLowerCase();
-    const provider = choice.name.provider.toLowerCase();
+    const model = choice.model.modelId.toLowerCase();
+    const provider = choice.model.provider.toLowerCase();
 
-    if (provider === 'openai') {
-        return supportsOpenAiXHigh(model, choice.name.harness) ? ['xhigh'] : [];
+    if (provider === 'openai-codex') {
+        return supportsOpenAiXHigh(model, inferHarness(choice.model.provider)) ? ['xhigh'] : [];
     }
 
     if (provider === 'anthropic') {
@@ -292,10 +263,14 @@ function listExtraThinkingLevels(choice: ModelChoice): ThinkingLevelValue[] {
     return [];
 }
 
-function supportsOpenAiXHigh(model: string, harness: OpenClawHarness) {
+function supportsOpenAiXHigh(model: string, harness: HermesHarness) {
     const codexModels = ['gpt-5.5', 'gpt-5.5-pro', 'gpt-5.4', 'gpt-5.4-pro'];
     const apiModels = [...codexModels, 'gpt-5.4-mini', 'gpt-5.4-nano', 'gpt-5.2'];
     const supportedModels = harness === 'codex' ? codexModels : apiModels;
 
     return supportedModels.some((supportedModel) => model === supportedModel);
+}
+
+function inferHarness(provider: string): HermesHarness {
+    return provider.toLowerCase() === 'openai-codex' ? 'codex' : 'pi';
 }

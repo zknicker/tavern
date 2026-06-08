@@ -46,7 +46,7 @@ export function buildSessionActivitySnapshot(input: {
     const toolCalls = new Map<string, SessionActivitySnapshot['toolCalls'][number]>();
 
     if (!sessionId) {
-        throw new Error(`Runtime session "${input.session.key}" is missing an OpenClaw sessionId.`);
+        throw new Error(`Runtime session "${input.session.key}" is missing an Hermes sessionId.`);
     }
 
     snapshot.runs.push({

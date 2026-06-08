@@ -130,14 +130,16 @@ export function ThinkingStep({
     return (
         <div
             className={cn(
-                'relative z-10 overflow-hidden motion-safe:animate-[chat-loading-indicator-in_260ms_cubic-bezier(0.23,1,0.32,1)_both]',
+                'relative z-10 overflow-hidden',
+                isActive &&
+                    'motion-safe:animate-[chat-loading-indicator-in_260ms_cubic-bezier(0.23,1,0.32,1)_both]',
                 className
             )}
             style={{ animationDelay: `${delay}s` }}
         >
-            <div className="flex gap-2.5 rounded-md px-2 py-1.5 hover:bg-muted">
+            <div className="flex gap-2.5 px-2 py-1.5">
                 <div className="flex w-4 shrink-0 flex-col items-center">
-                    <div>
+                    <div className="flex size-4 items-center justify-center">
                         {showIcon && icon ? (
                             <Icon
                                 className="size-4 text-muted-foreground"

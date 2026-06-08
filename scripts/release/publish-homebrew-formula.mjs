@@ -83,7 +83,6 @@ function renderFormula(input) {
     bin.install "bin/pglite.data"
     bin.install "bin/pglite.wasm"
     bin.install "bin/vector.tar.gz"
-    (share/"tavern").install "share/tavern/openclaw-plugins"
     (share/"tavern/node_modules/@tavern").install "share/tavern/node_modules/@tavern/sdk"
     (etc/"tavern").mkpath
     (var/"tavern/runtime").mkpath

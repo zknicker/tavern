@@ -1,7 +1,5 @@
 import net from 'node:net';
-import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { resolveE2eOpenClawInstallRoot } from './e2e-cache.ts';
 
 function getFreePort() {
     return new Promise<number>((resolve, reject) => {
@@ -31,36 +29,28 @@ function getFreePort() {
 }
 
 const websiteRoot = fileURLToPath(new URL('../', import.meta.url));
-const workspaceRoot = fileURLToPath(new URL('../../../', import.meta.url));
 const runId = `${Date.now()}-${Math.random().toString(16).slice(2, 8)}`;
-const [mockProviderPort, gatewayPort, runtimePort, serverPort, websitePort] = await Promise.all([
+const [hermesPort, hermesProviderPort, runtimePort, serverPort, websitePort] = await Promise.all([
     getFreePort(),
     getFreePort(),
     getFreePort(),
     getFreePort(),
     getFreePort(),
 ]);
-const gatewayToken = `tavern-e2e-${runId}`;
 const command = [process.execPath, 'x', 'playwright', 'test', ...process.argv.slice(2)];
 const env = {
     ...process.env,
     TAVERN_E2E_RUN_ID: runId,
-    TAVERN_MOCK_PROVIDER_PORT: `${mockProviderPort}`,
-    TAVERN_OPENCLAW_GATEWAY_PORT: `${gatewayPort}`,
-    TAVERN_OPENCLAW_INSTALL_ROOT: resolveE2eOpenClawInstallRoot(),
+    TAVERN_HERMES_API_KEY: 'tavern-e2e-mock-key',
+    TAVERN_HERMES_BASE_URL: `http://127.0.0.1:${hermesProviderPort}/v1`,
+    TAVERN_HERMES_MODEL: 'tavern-e2e-tools',
+    TAVERN_HERMES_PORT: `${hermesPort}`,
+    TAVERN_HERMES_PROVIDER: 'custom',
+    TAVERN_HERMES_PROVIDER_PORT: `${hermesProviderPort}`,
     TAVERN_RUNTIME_PORT: `${runtimePort}`,
     TAVERN_SERVER_PORT: `${serverPort}`,
     TAVERN_WEBSITE_PORT: `${websitePort}`,
     TAVERN_RUNTIME_URL: `http://127.0.0.1:${runtimePort}`,
-    TAVERN_OPENCLAW_TURN_EVENT_LOG: path.join(
-        workspaceRoot,
-        '.context',
-        'e2e',
-        runId,
-        'openclaw-turn-callbacks.jsonl'
-    ),
-    OPENCLAW_GATEWAY_TOKEN: gatewayToken,
-    OPENCLAW_GATEWAY_URL: `ws://127.0.0.1:${gatewayPort}`,
 };
 
 await runPreflight(env);

@@ -50,13 +50,12 @@ export function ChatMessageComposer({
 }) {
     const sendMessage = useChatSend();
     const gatewayCapability = useCapability('gateway');
-    const messagesCapability = useCapability('messages');
     const [agentId, setAgentId] = React.useState<string>(boundAgentIds[0] ?? '');
     const [content, setContent] = React.useState('');
     const [mentions, setMentions] = React.useState<Mention[]>([]);
     const isCompact = variant === 'compact';
     const trimmedContent = content.trim();
-    const canSendToRuntime = gatewayCapability.healthy && messagesCapability.healthy;
+    const canSendToRuntime = gatewayCapability.healthy;
     const runtimeDisabledReason = runtimeDisconnectedTooltip;
     const canSend =
         chatCanSend &&

@@ -66,7 +66,7 @@ export async function syncAgentRuntimeSession(input: {
     const sessions = (
         await withCapabilityStatus(
             {
-                capability: 'sessions',
+                capability: 'apiServer',
                 method: 'sessions.list',
                 runtimeId: input.runtimeId,
             },
@@ -96,7 +96,7 @@ export async function syncAgentRuntimeSessionMessages(input: {
 }) {
     const response = await withCapabilityStatus(
         {
-            capability: 'messages',
+            capability: 'apiServer',
             method: 'chat.history',
             runtimeId: input.runtimeId,
         },
@@ -231,7 +231,7 @@ async function syncAgentsForConnection(input: RuntimeSyncInput) {
     const agents = (
         await withCapabilityStatus(
             {
-                capability: 'agents',
+                capability: 'apiServer',
                 method: 'agents.list',
                 runtimeId: input.runtime.id,
             },
@@ -286,7 +286,7 @@ async function syncChatsForConnection(input: RuntimeSyncInput) {
     const chats = (
         await withCapabilityStatus(
             {
-                capability: 'chats',
+                capability: 'apiServer',
                 method: 'sessions.list',
                 runtimeId: input.runtime.id,
             },
@@ -313,7 +313,7 @@ async function syncSessionsForConnection(input: RuntimeSyncInput) {
     const sessions = (
         await withCapabilityStatus(
             {
-                capability: 'sessions',
+                capability: 'apiServer',
                 method: 'sessions.list',
                 runtimeId: input.runtime.id,
             },
@@ -358,7 +358,7 @@ async function syncCronForConnection(input: RuntimeSyncInput) {
     const summaries = (
         await withCapabilityStatus(
             {
-                capability: 'cron',
+                capability: 'apiServer',
                 method: 'cron.list',
                 runtimeId: input.runtime.id,
             },
@@ -367,7 +367,7 @@ async function syncCronForConnection(input: RuntimeSyncInput) {
     ).jobs;
     const jobs = await withCapabilityStatus(
         {
-            capability: 'cron',
+            capability: 'apiServer',
             method: 'cron.list',
             runtimeId: input.runtime.id,
         },
@@ -417,7 +417,7 @@ async function syncCronRunsForConnection(input: {
             input.jobs.map((job) => input.client.listCronRuns(job.id))
         );
         await recordCapabilitySuccess({
-            capability: 'cronRuns',
+            capability: 'apiServer',
             method: 'cron.runs',
             runtimeId: input.runtime.id,
         });
@@ -425,7 +425,7 @@ async function syncCronRunsForConnection(input: {
         return runLists.flatMap((response) => response.runs);
     } catch (error) {
         await recordCapabilityFailure({
-            capability: 'cronRuns',
+            capability: 'apiServer',
             error,
             method: 'cron.runs',
             runtimeId: input.runtime.id,

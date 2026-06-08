@@ -33,6 +33,7 @@ function timelineLog(state: ChatTimelineState): ChatLogOutput {
                   text: state.activeReply.text ?? '',
               }
             : null,
+        failedTurn: state.failedTurn,
         limit: Math.max(state.timeline.length + 1, 100),
         offset: 0,
         rows: state.timeline,

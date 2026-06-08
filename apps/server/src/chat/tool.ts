@@ -1,9 +1,9 @@
-import { TRPCError } from '@trpc/server';
 import { createTavernClient, type TavernResponseActivity } from '@tavern/sdk';
+import { TRPCError } from '@trpc/server';
+import { getActiveAgentRuntimeConnection } from '../storage/agent-runtime-connections.ts';
 import { buildToolActions } from '../tools/actions.ts';
 import { toolDetailSchema } from '../tools/contracts.ts';
 import { buildToolSummaryFromValues } from '../tools/summary.ts';
-import { getActiveAgentRuntimeConnection } from '../storage/agent-runtime-connections.ts';
 
 export async function getChatToolActivity(input: { activityId: string; chatId: string }) {
     const connection = await getActiveAgentRuntimeConnection();
@@ -33,7 +33,8 @@ function activityToToolDetail(activity: TavernResponseActivity) {
     const tool = readRecord(metadata.tool);
     const argumentsValue = Object.hasOwn(tool, 'arguments') ? tool.arguments : null;
     const resultValue = Object.hasOwn(tool, 'result') ? tool.result : null;
-    const toolName = readString(runtime.toolName) ?? readString(tool.name) ?? activityName(activity);
+    const toolName =
+        readString(runtime.toolName) ?? readString(tool.name) ?? activityName(activity);
     const toolCallId = readString(runtime.toolCallId);
 
     const toolCall = buildToolSummaryFromValues({

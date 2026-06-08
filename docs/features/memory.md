@@ -2,7 +2,7 @@
 summary: Memory feature for inspectable Cortex facts, preferences, capture, recall, provenance, and the context-management boundary.
 read_when:
   - changing Cortex memory inspection, recall, capture, or memory visibility
-  - changing the boundary between OpenClaw context management and Cortex memory
+  - changing the boundary between Hermes context management and Cortex memory
   - changing how users inspect capture, recall, compiled truth, or memory health
 ---
 
@@ -14,8 +14,8 @@ It does not define a second durable memory database. Durable memory is Cortex:
 the wiki, graph, compiled truth, timelines, pages, embeddings, links,
 observations, capture output, recall audit, and repair state.
 
-OpenClaw context management can help an active turn maintain bounded prompt
-continuity, but it is not Tavern memory. Managed Tavern OpenClaw does not use
+Hermes context management can help an active turn maintain bounded prompt
+continuity, but it is not Tavern memory. Managed Tavern Hermes does not use
 Lossless Claw. Runtime status and settings may show whether context management
 is healthy, but remembered facts live in Cortex.
 
@@ -31,7 +31,7 @@ is healthy, but remembered facts live in Cortex.
 * **Maintenance health.** Users can see stale embeddings, failed captures,
   orphan links, and recent repair runs.
 * **Schema additions.** Users can see agent-added memory types and usage counts.
-* **Context-management readiness.** Users can see whether managed OpenClaw has
+* **Context-management readiness.** Users can see whether managed Hermes has
   prompt-time continuity available.
 
 ## Contract
@@ -88,4 +88,4 @@ is documented separately because prompt assembly is not memory storage.
 
 See [Cortex](../../specs/cortex.md) for the durable brain model and
 [Memories](../../specs/memories.md) for the memory visibility contract. See
-[Context management](context-management.md) for the managed OpenClaw boundary.
+[Context management](context-management.md) for the managed Hermes boundary.

@@ -19,6 +19,7 @@ export async function listRuntimeChatRows(chatId: string): Promise<ChatLogPage['
 
 export async function listRuntimeChatTimeline(chatId: string): Promise<{
     activeReply: ChatLogPage['activeReply'];
+    failedTurn: ChatLogPage['failedTurn'];
     rows: ChatLogPage['rows'];
 } | null> {
     const connection = await getActiveAgentRuntimeConnection();
@@ -51,6 +52,7 @@ export async function listRuntimeChatTimeline(chatId: string): Promise<{
     const artifactRows = responsePage.artifacts.map(artifactToChatRow);
     const rows = [...messageRows, ...activityRows, ...artifactRows];
     const activeReply = activeReplyFromResponses(responsePage.responses);
+    const failedTurn = failedTurnFromResponses(responsePage.responses);
     const messageTimestampById = new Map(
         messageRows
             .filter(
@@ -85,6 +87,7 @@ export async function listRuntimeChatTimeline(chatId: string): Promise<{
 
     return {
         activeReply,
+        failedTurn,
         rows: sortedRows,
     };
 }
@@ -190,6 +193,14 @@ function activityToChatRows(
         return [];
     }
 
+    if (activity.kind === 'planning' || activity.kind === 'reasoning') {
+        return activityToThinkingRows(activity, response, finalReplyTextByRunId);
+    }
+
+    if (activity.kind === 'message') {
+        return activityToMessageRows(activity, response, actor);
+    }
+
     const toolMetadata = readRecord(activity.metadata.tool);
     const runtime = readRecord(activity.metadata.runtime);
     const toolName =
@@ -205,7 +216,10 @@ function activityToChatRows(
     const titledToolCall = {
         ...toolCall,
         label: activity.title,
-        summaryParts: activitySummaryParts(activity),
+        summaryParts:
+            toolCall.summaryParts.length > 0
+                ? toolCall.summaryParts
+                : activitySummaryParts(activity),
     };
 
     return [
@@ -221,6 +235,73 @@ function activityToChatRows(
             spawnedRelationships: [],
             startedAt: activity.started_at,
             toolCall: titledToolCall,
+        },
+    ];
+}
+
+function activityToMessageRows(
+    activity: TavernResponseActivity,
+    response: TavernChatResponse | null,
+    actor: { id: string; kind: 'agent' }
+): ChatLogPage['rows'] {
+    const content = activity.detail?.trim() || activity.summary?.trim() || '';
+
+    if (!content) {
+        return [];
+    }
+
+    return [
+        {
+            actor,
+            connectsToNext: false,
+            connectsToPrevious: false,
+            id: activity.id,
+            isFirstInGroup: true,
+            kind: 'message' as const,
+            message: {
+                actor,
+                content,
+                id: activity.id,
+                metadata: activity.metadata,
+                sender: actor.id,
+                senderType: 'agent' as const,
+                sourceSessionId: runtimeMetadataString(response, 'sessionId'),
+                sourceSessionKey: runtimeMetadataString(response, 'sessionKey') ?? '',
+                tavernAgentId: actor.id,
+                timestamp: activity.started_at,
+            },
+        },
+    ];
+}
+
+function activityToThinkingRows(
+    activity: TavernResponseActivity,
+    response: TavernChatResponse | null,
+    finalReplyTextByRunId: ReadonlyMap<string, string>
+): ChatLogPage['rows'] {
+    if (isFinalAssistantReplyStep(activity, response, finalReplyTextByRunId)) {
+        return [];
+    }
+
+    const text = activity.detail?.trim() || activity.summary?.trim() || '';
+
+    if (!text) {
+        return [];
+    }
+
+    return [
+        {
+            id: activity.id,
+            kind: 'system' as const,
+            systemKind: 'thinking' as const,
+            thinking: {
+                id: activity.id,
+                messageId: response?.response_message_id ?? activity.response_id,
+                sender: response?.participant_id ?? 'agt_unknown',
+                text,
+                timestamp: activity.started_at,
+            },
+            timestamp: activity.started_at,
         },
     ];
 }
@@ -382,6 +463,36 @@ function activeReplyFromResponses(
     };
 }
 
+export function failedTurnFromResponses(
+    responses: readonly TavernChatResponse[]
+): ChatLogPage['failedTurn'] {
+    const latestResponse = [...responses].sort(
+        (left, right) => Date.parse(right.updated_at) - Date.parse(left.updated_at)
+    );
+
+    if (!(latestResponse[0]?.status === 'failed' && !latestResponse[0].response_message_id)) {
+        return null;
+    }
+
+    const failedResponse = latestResponse[0];
+
+    return {
+        error:
+            runtimeMetadataString(failedResponse, 'error') ??
+            readString(failedResponse.metadata.error) ??
+            'Turn failed.',
+        turn: {
+            agentId:
+                runtimeMetadataString(failedResponse, 'agentId') ?? failedResponse.participant_id,
+            chatId: failedResponse.chat_id,
+            runId: runtimeMetadataString(failedResponse, 'runId') ?? failedResponse.id,
+            sessionKey: runtimeMetadataString(failedResponse, 'sessionKey') ?? failedResponse.id,
+            startedAt:
+                runtimeMetadataString(failedResponse, 'startedAt') ?? failedResponse.created_at,
+        },
+    };
+}
+
 function runtimeMetadataString(
     message: TavernChatMessage | TavernChatResponse | null,
     key: string
@@ -423,8 +534,15 @@ function rowTimestamp(
 
 function rowSortRank(row: ChatLogPage['rows'][number]) {
     if (row.kind === 'message') {
+        if (isActivityMessageRow(row)) {
+            return 1;
+        }
         return row.message.senderType === 'user' ? 0 : 2;
     }
 
     return 1;
+}
+
+function isActivityMessageRow(row: Extract<ChatLogPage['rows'][number], { kind: 'message' }>) {
+    return row.id.startsWith('act_');
 }

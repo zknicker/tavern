@@ -23,7 +23,7 @@ function MemoryContent() {
             <div>
                 <BadgeDivider
                     className="pb-4"
-                    subtext="Durable memory lives in Cortex. OpenClaw context management is prompt-time continuity, not a second memory store."
+                    subtext="Durable memory lives in Cortex. Hermes context management is prompt-time continuity, not a second memory store."
                 >
                     Cortex Memory
                 </BadgeDivider>

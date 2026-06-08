@@ -79,7 +79,7 @@ afterEach(() => {
     databaseClient.exec('DELETE FROM cron_jobs;');
 });
 
-test('runCronJob forwards the manual run request to OpenClaw', async () => {
+test('runCronJob forwards the manual run request to Hermes', async () => {
     await syncCronJobsForRuntime({
         jobs: [createAgentRuntimeCronJob()],
         runtimeId: 'runtime-1',
@@ -115,7 +115,7 @@ test('runCronJob forwards the manual run request to OpenClaw', async () => {
     assert.equal(emitCronUpdatedSpy.mock.calls.length, 1);
 });
 
-test('runCronJob rejects missing cron jobs before calling OpenClaw', async () => {
+test('runCronJob rejects missing cron jobs before calling Hermes', async () => {
     const runAgentRuntimeCronSpy = spyOn(agentRuntimeCron, 'runCronJob').mockResolvedValue(
         createAgentRuntimeCronRun()
     );

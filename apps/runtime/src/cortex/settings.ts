@@ -12,8 +12,8 @@ export const cortexEmbeddingProvider = 'openai';
 export const defaultCortexEmbeddingModel = 'text-embedding-3-small';
 export const defaultCortexEmbeddingModelRef = 'openai/text-embedding-3-small';
 export const defaultCortexQueryExpansionModelRef = 'openrouter/google/gemini-2.5-flash-lite';
-export const defaultCortexDreamModelRef = 'codex/gpt-5.5';
-export const defaultCortexChatIngestionModelRef = 'codex/gpt-5.5';
+export const defaultCortexDreamModelRef = 'openai-codex/gpt-5.5';
+export const defaultCortexChatIngestionModelRef = 'openai-codex/gpt-5.5';
 export const defaultCortexAudioTranscriptionModelRef = 'openai/whisper-1';
 export const defaultCortexOcrModelRef = 'openai/gpt-4o-mini';
 export const defaultCortexRecallMode = 'balanced';
@@ -24,7 +24,7 @@ const recallSettingsKey = 'recall';
 
 type CortexEmbeddingModel = CortexSettings['embedding']['model'];
 type CortexRecallMode = CortexSettings['recall']['mode'];
-type CortexModelProvider = 'codex' | 'openai' | 'openrouter';
+type CortexModelProvider = 'openai-codex' | 'openai' | 'openrouter';
 
 const cortexEmbeddingDimensionsByModel: Record<CortexEmbeddingModel, number> = {
     'text-embedding-3-large': 3072,
@@ -93,7 +93,7 @@ export async function getCortexSettings(db: CortexDatabase): Promise<CortexSetti
             dream: normalizeRunnableModelRef(
                 storedModels.dream,
                 defaultCortexDreamModelRef,
-                'codex'
+                'openai-codex'
             ),
             embedding: modelRef,
             ocr: normalizeRunnableModelRef(storedModels.ocr, defaultCortexOcrModelRef, 'openai'),
@@ -105,7 +105,7 @@ export async function getCortexSettings(db: CortexDatabase): Promise<CortexSetti
             chatIngestion: normalizeRunnableModelRef(
                 storedModels.chatIngestion,
                 defaultCortexChatIngestionModelRef,
-                'codex'
+                'openai-codex'
             ),
         },
         recall: {
@@ -180,7 +180,7 @@ export async function saveCortexSettings(
             dream: normalizeRunnableModelRef(
                 input.models?.dream ?? currentModels.dream,
                 defaultCortexDreamModelRef,
-                'codex'
+                'openai-codex'
             ),
             embedding: embeddingModelRef,
             ocr: normalizeRunnableModelRef(
@@ -196,7 +196,7 @@ export async function saveCortexSettings(
             chatIngestion: normalizeRunnableModelRef(
                 input.models?.chatIngestion ?? currentModels.chatIngestion,
                 defaultCortexChatIngestionModelRef,
-                'codex'
+                'openai-codex'
             ),
             updatedAt: timestamp,
         },

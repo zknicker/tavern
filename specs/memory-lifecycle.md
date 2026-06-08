@@ -9,16 +9,16 @@ state.
 
 ## Context Management Boundary
 
-OpenClaw owns the live execution context for turns.
+Hermes owns the live execution context for turns.
 
 Prompt-time context management helps the agent stay oriented during active
 work, but it is not Tavern memory.
 
-Tavern configures managed OpenClaw so this context-management layer is
+Tavern configures managed Hermes so this context-management layer is
 available and inspectable:
 
-* OpenClaw built-in memory is disabled for Tavern-managed runs.
-* Lossless Claw is not installed or enabled for managed Tavern OpenClaw.
+* Hermes built-in memory is disabled for Tavern-managed runs.
+* Lossless Claw is not installed or enabled for managed Tavern Hermes.
 * Tavern reports readiness when the Gateway exposes the required capability and
   the managed config matches Tavern's required context-management config.
 
@@ -69,5 +69,5 @@ Maintenance can:
 * mark stale or conflicting knowledge
 * report failed captures and recall errors
 
-OpenClaw cron is not the scheduler of record for Cortex repair. Tavern
+Hermes cron is not the scheduler of record for Cortex repair. Tavern
 Runtime jobs own it.

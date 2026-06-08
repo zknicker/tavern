@@ -1,4 +1,8 @@
 import * as React from 'react';
+import {
+    transcriptDisclosureAnchorEndEvent,
+    transcriptDisclosureAnchorStartEvent,
+} from './chat-transcript-scroll-anchor.ts';
 
 const bottomTolerance = 72;
 
@@ -20,6 +24,7 @@ export function useChatScroll({
     const viewportRef = React.useRef<HTMLDivElement | null>(null);
     const contentRef = React.useRef<HTMLDivElement | null>(null);
     const shouldFollowRef = React.useRef(true);
+    const disclosureAnchorActiveRef = React.useRef(false);
     const [isAtBottom, setIsAtBottom] = React.useState(true);
 
     const scrollToBottom = React.useCallback((behavior: ScrollBehavior = 'smooth') => {
@@ -86,7 +91,7 @@ export function useChatScroll({
         }
 
         const observer = new ResizeObserver(() => {
-            if (shouldFollowRef.current) {
+            if (shouldFollowRef.current && !disclosureAnchorActiveRef.current) {
                 scrollToBottom('auto');
             }
         });
@@ -95,6 +100,37 @@ export function useChatScroll({
 
         return () => observer.disconnect();
     }, [enabled, followResizes, scrollToBottom]);
+
+    React.useEffect(() => {
+        if (!enabled) {
+            return;
+        }
+
+        const handleAnchorStart = () => {
+            disclosureAnchorActiveRef.current = true;
+        };
+        const handleAnchorEnd = () => {
+            disclosureAnchorActiveRef.current = false;
+
+            const viewport = viewportRef.current;
+
+            if (!viewport) {
+                return;
+            }
+
+            const nextIsAtBottom = isNearBottom(viewport);
+            shouldFollowRef.current = nextIsAtBottom;
+            setIsAtBottom(nextIsAtBottom);
+        };
+
+        window.addEventListener(transcriptDisclosureAnchorStartEvent, handleAnchorStart);
+        window.addEventListener(transcriptDisclosureAnchorEndEvent, handleAnchorEnd);
+
+        return () => {
+            window.removeEventListener(transcriptDisclosureAnchorStartEvent, handleAnchorStart);
+            window.removeEventListener(transcriptDisclosureAnchorEndEvent, handleAnchorEnd);
+        };
+    }, [enabled]);
 
     return {
         contentRef,

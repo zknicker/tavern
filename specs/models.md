@@ -16,41 +16,37 @@ choices.
 
 - Tavern Runtime is canonical for provider credentials, Tavern Vault state, the enabled model
   catalog, and Tavern-owned memory model settings.
-- Runtime agents have per-agent execution model settings in OpenClaw config. Tavern product
+- Runtime agents have per-agent execution model settings in Hermes config. Tavern product
   settings expose the primary agent's execution model while preserving per-agent settings
   internally.
-- OpenClaw execution runtime selection is model-scoped. Tavern writes
+- Hermes execution runtime selection is model-scoped. Tavern writes
   `agents.list[].models["provider/model"].agentRuntime.id` alongside the selected
   `agents.list[].model.primary`; it does not write whole-agent runtime pins.
 - Tavern does not have a global default execution model. Model routing should be configured at the
   agent level or by the Tavern-owned surface that uses the model.
-- Tavern may transport Tavern Vault credentials or enabled model facts to OpenClaw later, but
+- Tavern may transport Tavern Vault credentials or enabled model facts to Hermes later, but
   Tavern Vault remains the source of truth.
 
 ## Provider Access
 
 - OpenRouter credentials entered in the Tavern app stay in Tavern Vault.
-- Tavern-owned provider credentials stay in Tavern. OpenClaw receives only the generated managed
+- Tavern-owned provider credentials stay in Tavern. Hermes receives only the generated managed
   runtime config that Tavern chooses to materialize.
 - Codex OAuth uses the local Codex auth file as the credential source. Runtime owns the Tavern
   profile/model record and reads `~/.codex/auth.json` for access state and usage, while Codex and
-  OpenClaw continue to refresh that shared local auth.
-- OpenClaw should not be treated as the authoritative credential store for Tavern-configured
-  model providers.
-- Tavern may later display transport/sync status showing whether OpenClaw has received the
-  credentials it needs.
+  Hermes continue to refresh that shared local auth.
+- Hermes is the authoritative model provider configuration surface for agent execution.
+- Tavern may display transport/sync status showing whether Hermes has the credentials it needs.
 
 ## Catalog
 
-- Tavern may maintain a curated local catalog for UI presentation.
-- The enabled model catalog is Tavern-owned.
-- Catalog records are not proof that OpenClaw has received credential material.
-- The agent model route picker should show enabled Tavern models that are valid for agent
-  execution.
+- Tavern displays Hermes model options as a read-only inventory.
+- Runtime model rows are not a separate source of truth.
+- The agent model route picker should show Hermes models that are valid for agent execution.
 
 ## UI
 
-- `Settings -> Models` edits Tavern Vault credentials and the Tavern-owned model catalog.
-- Agent model edits live under OpenClaw Settings as top-level agent settings entries. They
-  participate in the shared OpenClaw config draft and save/discard flow.
-- Memory model settings belong to Tavern Runtime memory, not OpenClaw.
+- `Settings -> Models` edits Tavern Vault credentials and shows Hermes model options.
+- Agent model edits live under Hermes Settings as top-level agent settings entries. They
+  participate in the shared Hermes config draft and save/discard flow.
+- Memory model settings belong to Tavern Runtime memory, not Hermes.

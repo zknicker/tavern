@@ -58,7 +58,11 @@ function chatEventToRuntimeEvents(event: TavernChatEvent): PersistedRuntimeEvent
                 {
                     cursor: Number(event.cursor),
                     event: {
-                        error: event.response.summary ?? 'Turn failed.',
+                        error:
+                            metadataRuntimeString(event.response.metadata, 'error') ??
+                            metadataString(event.response.metadata, 'error') ??
+                            event.response.summary ??
+                            'Turn failed.',
                         timestamp: event.created_at,
                         turn: responseToTurn(event.response),
                         type: 'turn.failed',
@@ -294,5 +298,10 @@ function metadataRuntimeString(metadata: Record<string, unknown>, key: string) {
     }
 
     const value = (runtime as Record<string, unknown>)[key];
+    return typeof value === 'string' ? value : null;
+}
+
+function metadataString(metadata: Record<string, unknown>, key: string) {
+    const value = metadata[key];
     return typeof value === 'string' ? value : null;
 }

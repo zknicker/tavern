@@ -2,7 +2,7 @@
 summary: Memory API for inspectable Cortex facts, user review, scoping, attribution, prompt usage, and deletion behavior.
 read_when:
   - changing memory visibility or Cortex inspection APIs
-  - changing the boundary between OpenClaw context management and Cortex memory
+  - changing the boundary between Hermes context management and Cortex memory
   - changing how agents or users inspect capture, recall, or prompt memory
 ---
 
@@ -15,13 +15,13 @@ a separate `memory` tRPC router or a separate memory settings object.
 
 It does not own a separate durable memory-record database. Durable agent memory
 lives in Cortex pages, timelines, links, embeddings, and audit records.
-OpenClaw context management for active turns is not Tavern memory.
+Hermes context management for active turns is not Tavern memory.
 
 ## Contract
 
 * Memory status reports Cortex capture, recall, embedding, and derived-state repair
   readiness.
-* Context-management status reports whether managed OpenClaw prompt-time
+* Context-management status reports whether managed Hermes prompt-time
   continuity is available.
 * Memory used in prompts is inspectable through Cortex recall results, Cortex
   page compiled truth, timeline evidence, and audit records.
@@ -42,7 +42,7 @@ Memory inspection reads:
 * Cortex pages for compiled truth, timeline evidence, links, claims, and source
   references
 * Cortex recall results and audit ids for prompt-time memory usage
-* managed OpenClaw context-management readiness, separate from Cortex memory
+* managed Hermes context-management readiness, separate from Cortex memory
 
 There is no standalone memory model-slot configuration. The old persistence,
 working, knowledge, and dream model slots belonged to a retired memory design.

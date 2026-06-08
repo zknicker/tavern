@@ -146,16 +146,7 @@ export function TimelineContextProvider({ children }: PropsWithChildren) {
             startTurn,
             updateReply,
         }),
-        [
-            clearTurn,
-            completeTurn,
-            failTurn,
-            patchProgress,
-            setLog,
-            setReply,
-            startTurn,
-            updateReply,
-        ]
+        [clearTurn, completeTurn, failTurn, patchProgress, setLog, setReply, startTurn, updateReply]
     );
 
     return React.createElement(

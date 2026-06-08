@@ -22,8 +22,8 @@ we work through them iteratively.
 - Keep user-facing names Tavern-native: Cortex, Tavern Vault, Runtime jobs, and
   Tavern settings.
 - Do not add `init`, `doctor`, migration, or shell-profile chores for users.
-- When a GBrain step depends on provider keys, route through Tavern Vault and the
-  model catalog unless there is a concrete reason to use environment variables.
+- When a GBrain step depends on provider keys, route through Tavern Vault and Runtime model settings
+  unless there is a concrete reason to use environment variables.
 
 ## Step 0: Agent Protocol
 
@@ -78,8 +78,8 @@ Tavern mapping: **done**. Tavern uses provider access rows in
 Intentional translation: Tavern does not ask users to edit shell profiles or
 `~/.gbrain/config.json`. Runtime-owned secrets live in Tavern Vault. `OPENAI_API_KEY`
 remains an operator fallback for Runtime OpenAI access, but the product path is
-Tavern Vault. Import transcription and OCR use Cortex model settings backed by
-model catalog capabilities rather than hardcoded model names.
+Tavern Vault. Import transcription and OCR use Cortex model settings backed by Hermes model options
+rather than hardcoded model names.
 
 Open question: GBrain now defaults to ZeroEntropy embedding and reranking.
 Tavern currently uses OpenAI embeddings plus hybrid recall and does not expose a
@@ -250,9 +250,9 @@ target appears in the top result window.
 GBrain's `brain-ops` skill defines brain-first lookup, read-enrich-write,
 source authority, and non-blocking enrichment as the default agent behavior.
 
-Tavern mapping: **done** in OpenClaw workspace bootstrap files and Cortex agent
-resources. `AGENTS.md` owns Cortex operating policy; editable `SOUL.md` owns the
-agent personality. Agents use Cortex when a
+Tavern mapping: **done** in managed Hermes workspace instructions and Cortex
+agent resources. `AGENTS.md` owns Cortex operating policy and agent notes.
+Agents use Cortex when a
 message depends on context not already present in the conversation, choose the
 lightest Cortex tool that fits, ask or use live sources when Cortex does not
 resolve the ambiguity, and use inline `cortex_capture` only when the user asks
@@ -284,13 +284,11 @@ GBrain's `query` skill defines brain-grounded answers through keyword search,
 semantic query, page reads, graph traversal, timeline evidence, citation
 propagation, gap flags, and conflict handling.
 
-Tavern mapping: **done** as the first-party OpenClaw plugin skill
-`cortex-query`. The Tavern Cortex plugin ships
-`skills/cortex-query/SKILL.md`, so the skill is available whenever the managed
-Cortex plugin is installed and enabled. The skill routes exact names to
-`cortex_search`, broader or ambiguous questions to `cortex_recall`, complete
-known subjects to `cortex_get_page`, and relationship questions to page links
-plus `cortex_list_backlinks`.
+Tavern mapping: **done** in generated `AGENTS.md`, Cortex agent resources, and
+Runtime Cortex tools. The guidance routes exact names to `cortex_search`,
+broader or ambiguous questions to `cortex_recall`, complete known subjects to
+`cortex_get_page`, and relationship questions to page links plus
+`cortex_list_backlinks`.
 
 Intentional translation: Tavern does not expose GBrain's `query`,
 `traverse_graph`, or `get_timeline` tool names to agents. Cortex page reads
@@ -305,12 +303,10 @@ GBrain's `capture` skill defines the simple human-facing save path for
 the lower-level write primitive and keeps single-thought capture separate from
 source, media, and article ingest.
 
-Tavern mapping: **done** as the first-party OpenClaw plugin skill
-`cortex-capture`. The Tavern Cortex plugin ships
-`skills/cortex-capture/SKILL.md`, so agents have an explicit skill for durable
-user-requested saves and corrections. The skill uses `cortex_capture` as the
-front door, with `cortex_search` and `cortex_get_page` available when updating a
-known subject.
+Tavern mapping: **done** in generated `AGENTS.md`, Cortex agent resources, and
+Runtime Cortex tools. Agents have explicit guidance for durable user-requested
+saves and corrections. `cortex_capture` is the front door, with
+`cortex_search` and `cortex_get_page` available when updating a known subject.
 
 Intentional translation: GBrain captures into `inbox/YYYY-MM-DD-*` through a
 CLI receipt path. Tavern captures through the Runtime API, writes into Cortex
@@ -324,8 +320,8 @@ GBrain's `ingest` skill is a router for content and media ingestion. It
 delegates to idea, media, and meeting-specific skills, then preserves raw source
 material, source citations, and entity links.
 
-Tavern mapping: **done** for the source-backed ingestion stack as first-party
-OpenClaw plugin skills:
+Tavern mapping: **done** for the source-backed ingestion stack through Runtime
+Cortex tools and generated agent guidance:
 
 - `cortex-ingest` routes generic source-backed content.
 - `cortex-idea-ingest` handles links, articles, X posts, newsletters, and user
@@ -506,7 +502,7 @@ The Runtime smoke writes a W3C-cited markdown knowledge page into a temporary
 Cortex wiki, syncs it into PGLite, generates real OpenAI embeddings, edits the
 markdown page, syncs again, and proves search plus recall return the updated
 content. The agent lookup smoke seeds a unique Cortex page, asks the live agent
-about that fact, and verifies the OpenClaw trajectory used a Cortex lookup tool
+about that fact, and verifies the Hermes trajectory used a Cortex lookup tool
 before the answer.
 
 Intentional translation: Tavern Updates owns app/runtime update verification,

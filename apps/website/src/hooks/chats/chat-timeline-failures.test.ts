@@ -20,7 +20,7 @@ function failureLog() {
                 isFirstInGroup: true,
                 kind: 'message' as const,
                 message: {
-                    content: 'OpenClaw turn failed: Docker is not running',
+                    content: 'Hermes turn failed: Docker is not running',
                     id: 'message-1',
                     metadata: {
                         tavern: {
@@ -31,7 +31,7 @@ function failureLog() {
                         isError: true,
                         stopReason: 'error',
                     },
-                    sender: 'OpenClaw',
+                    sender: 'Hermes',
                     senderType: 'system' as const,
                     sourceSessionId: null,
                     sourceSessionKey: 'session-1',

@@ -4,16 +4,16 @@ Tavern Runtime is the always-on chat server.
 
 The Mac app can close. Agents, automations, deliveries, and event history keep
 running. When the app reconnects, it reads runtime chat history and event
-cursors instead of reconstructing the product timeline from OpenClaw transcripts.
+cursors instead of reconstructing the product timeline from Hermes transcripts.
 
 ## Problem
 
-Tavern started as a local app wrapper over managed OpenClaw. That shape is
+Tavern started as a local app wrapper over managed Hermes. That shape is
 not enough for always-on agent work:
 
 * Automations need to create messages while the app is closed.
 * Agents need to post replies into chats while the app is closed.
-* Reconnect recovers from Tavern chat history, not from fuzzy OpenClaw
+* Reconnect recovers from Tavern chat history, not from fuzzy Hermes
   transcript mapping.
 * Websocket delivery can drop, but missed state must remain recoverable.
 
@@ -35,7 +35,7 @@ Tavern Runtime owns canonical chat state:
 Tavern App is the first-party client. It may cache data and keep presentation
 state, but it is not the durable chat server.
 
-OpenClaw is the execution engine. It owns sessions, turns, tools, model calls,
+Hermes is the execution engine. It owns sessions, turns, tools, model calls,
 files, and native transcripts. Those records are execution evidence linked to
 Tavern messages, not the product timeline.
 
@@ -62,7 +62,7 @@ automation_runs
 ```
 
 Cortex and search are runtime-owned product surfaces. Memory inspection and the
-Knowledgebase page read Cortex; context-management status reads OpenClaw
+Knowledgebase page read Cortex; context-management status reads Hermes
 prompt-time readiness. Table details live with those feature contracts.
 
 ## App Cache And Evidence
@@ -91,7 +91,7 @@ App tables are cache, settings, or runtime evidence:
 * Agent work is a durable response with ordered response activity.
 * Tool progress and results update the same durable activity rows by identity.
 * Code, images, files, diffs, documents, and charts are artifacts.
-* OpenClaw transcript rows link to Tavern messages and never replace them.
+* Hermes transcript rows link to Tavern messages and never replace them.
 * Soft deletes preserve sequence slots.
 * Reconnect recovers by runtime history and event cursor.
 * Content/timestamp duplicate detection is not allowed.
@@ -121,7 +121,7 @@ GET /api/events/ws
 
 OpenAPI lives in `packages/tavern-api/openapi.yaml`. Runtime handlers return
 that shape. `@tavern/sdk` wraps it for the app, automations, webhooks, managed
-OpenClaw, and tests.
+Hermes, and tests.
 
 ## Test Gates
 
@@ -129,7 +129,7 @@ OpenClaw, and tests.
 * Hard reload recovers one user message and one assistant reply from runtime
   chat history.
 * Websocket drop/reconnect recovers by event cursor and history read.
-* Final OpenClaw transcript sync cannot create a second user row.
+* Final Hermes transcript sync cannot create a second user row.
 * Automations can append chat messages while the app is closed.
 * Tool progress and reasoning summaries persist as response activity before the
   final reply.

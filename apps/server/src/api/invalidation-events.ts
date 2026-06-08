@@ -18,7 +18,7 @@ export const tavernEventNames = {
     jobsUpdated: 'jobs.updated',
     modelUpdated: 'model.updated',
     openRouterSettingsUpdated: 'open-router-settings.updated',
-    openClawConfigUpdated: 'openclaw-config.updated',
+    hermesConfigUpdated: 'hermes-config.updated',
     agentRuntimeCapabilityUpdated: 'agent-runtime-capability.updated',
     agentRuntimeUpdated: 'agent-runtime.updated',
     participantUpdated: 'participant.updated',
@@ -123,8 +123,8 @@ export function emitOpenRouterSettingsUpdated() {
     emitTavernEvent(tavernEventNames.openRouterSettingsUpdated);
 }
 
-export function emitOpenClawConfigUpdated() {
-    emitTavernEvent(tavernEventNames.openClawConfigUpdated);
+export function emitHermesConfigUpdated() {
+    emitTavernEvent(tavernEventNames.hermesConfigUpdated);
 }
 
 export function emitAgentRuntimeUpdated() {

@@ -35,7 +35,7 @@ sessions, and jobs.
 
 ## Runtime boundary
 
-OpenClaw owns native execution. Tavern Runtime owns the managed agent record,
+Hermes owns native execution. Tavern Runtime owns the managed agent record,
 available capabilities, and canonical chat state. Tavern App displays the
 managed agent through first-class Tavern APIs and keeps configuration surfaces
 global unless a per-agent control is explicitly reintroduced.

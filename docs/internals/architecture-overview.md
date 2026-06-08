@@ -1,7 +1,7 @@
 ---
-summary: Tavern architecture layers for App, API, SDK, Runtime, Runtime SQLite, App SQLite, OpenClaw execution, and event recovery.
+summary: Tavern architecture layers for App, API, SDK, Runtime, Runtime SQLite, App SQLite, Hermes execution, and event recovery.
 read_when:
-  - changing the boundary between Tavern App, Tavern Runtime, and OpenClaw
+  - changing the boundary between Tavern App, Tavern Runtime, and Hermes
   - changing realtime recovery, Runtime data flow, or managed runtime ownership
 ---
 
@@ -10,7 +10,7 @@ read_when:
 Tavern is an always-on local chat server plus a polished Mac client.
 
 Tavern Runtime owns the canonical chat server and local integration. Tavern App
-is the first-party client for that server. OpenClaw owns native agent execution.
+is the first-party client for that server. Hermes owns native agent execution.
 
 ```mermaid
 flowchart LR
@@ -23,8 +23,8 @@ flowchart LR
     cortexdb[(Cortex PGLite<br/>pages + graph + vectors)]
     cortex[Cortex<br/>wiki + graph + recall]
     cortexwiki[(Cortex markdown wiki<br/>derived pages)]
-    openclaw[OpenClaw<br/>sessions + turns + tools + transcripts]
-    openclawstate[(OpenClaw state<br/>native execution store)]
+    hermes[Hermes<br/>sessions + turns + tools + transcripts]
+    hermesstate[(Hermes state<br/>native execution store)]
 
     user --> app
     app --> api
@@ -34,9 +34,9 @@ flowchart LR
     runtime --> cortex
     cortex --> cortexdb
     cortex --> cortexwiki
-    runtime --> openclaw
-    openclaw --> openclawstate
-    openclaw --> runtime
+    runtime --> hermes
+    hermes --> hermesstate
+    hermes --> runtime
     runtime --> api
 ```
 
@@ -50,10 +50,10 @@ flowchart LR
   inspection, the Cortex wiki, automations, skills, stats, and settings. The
   runtime is the authoritative host for chat and execution-facing API state.
 * **TypeScript SDK** is a client wrapper around the Tavern API for bots,
-  webhooks, automations, managed OpenClaw, local tools, and other clients.
+  webhooks, automations, managed Hermes, local tools, and other clients.
 * **App SQLite** stores client cache, app-local settings, and presentation state.
 * **Tavern Runtime** stores canonical chat state, responses, activity,
-  artifacts, starts managed OpenClaw, applies Tavern-owned config, runs
+  artifacts, starts managed Hermes, applies Tavern-owned config, runs
   automations, carries runtime events, owns Cortex, and exposes Tavern tools to
   agents.
 * **Runtime SQLite** stores chats, messages, responses, activity, artifacts,
@@ -64,26 +64,27 @@ flowchart LR
   database under the Runtime root. Markdown wiki files are the editable page
   surface and project into that database; vector embeddings live in the Cortex
   DB through `pgvector`/PGLite `vector`.
-* **OpenClaw** owns agent execution: sessions, turns, model calls, tools, files,
+* **Hermes** owns agent execution: sessions, turns, model calls, tools, files,
   and native transcripts.
 
 ## State And Transport
 
-* `~/.tavern` is the local backup root for Tavern-owned state.
+* `~/.tavern-hermes/runtime` is the default backup root for Tavern-owned
+  Runtime state. `TAVERN_RUNTIME_ROOT` can point Runtime at another root.
 * Runtime SQLite is the durable source for chats, messages, responses, activity,
   artifacts, participants, events, reads, automation delivery, channel ingress,
   accepted message identity, execution evidence, and runtime metadata.
 * Cortex stores pages, sources, claims, timelines, links, chunks, vector
-  encodings, captures, jobs, settings, schemas, audit events, and chat ingestion cursors
-  in `~/.tavern/runtime/cortex/cortex.pglite` by default. The markdown wiki is
-  rebuildable from that state plus page source material.
+  encodings, captures, jobs, settings, schemas, audit events, and chat ingestion
+  cursors in `~/.tavern-hermes/runtime/cortex/cortex.pglite` by default. The
+  markdown wiki is rebuildable from that state plus page source material.
 * App SQLite is a client cache and app-local settings store.
-* OpenClaw stores native execution state.
-* Tavern maps OpenClaw execution into Tavern messages, responses, artifacts,
+* Hermes stores native execution state.
+* Tavern maps Hermes execution into Tavern messages, responses, artifacts,
   activity, and runtime evidence. It does not replace canonical Tavern chat
   history.
 * Runtime creates and updates Tavern chat records through the Chat API before
-  OpenClaw dispatch. The OpenClaw relay is transport only: it references
+  Hermes dispatch. The Hermes relay is transport only: it references
   existing chat and message ids, and it must not create chats or mutate
   Tavern-owned chat metadata.
 * Websocket events are notifications and freshness signals, not durable storage.

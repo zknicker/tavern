@@ -1,6 +1,6 @@
 import { agentRuntimeModelProviderIdSchema, parseAgentRuntimeModelRef } from '@tavern/api';
 import { z } from 'zod';
-import { openClawHarnessSchema } from './openclaw-mapping.ts';
+import { hermesHarnessSchema } from './hermes-mapping.ts';
 
 export const modelAvailabilitySchema = z.enum(['configured', 'available']);
 export const thinkingLevelSchema = z.enum([
@@ -38,19 +38,6 @@ export const modelSchema = z.object({
     id: z.string().min(1),
     modelId: z.string().min(1),
     name: z.string().min(1),
-    openClawNames: z
-        .array(
-            z.object({
-                available: z.boolean(),
-                harness: openClawHarnessSchema,
-                id: z.string().min(1),
-                isPreferred: z.boolean(),
-                label: z.string().min(1),
-                model: z.string().min(1),
-                provider: z.string().min(1),
-            })
-        )
-        .optional(),
     provider: agentRuntimeModelProviderIdSchema,
     ref: modelRefSchema,
     reasoning: z.boolean().nullable(),
@@ -65,9 +52,10 @@ export const modelSelectionSchema = z.object({
 export const agentModelSettingSchema = z.object({
     agentId: z.string().min(1),
     agentName: z.string().min(1),
-    harness: openClawHarnessSchema.nullable(),
-    modelId: modelRefSchema.nullable(),
-    openClawModelNameId: z.string().min(1).nullable(),
+    harness: hermesHarnessSchema.nullable(),
+    model: z.string().min(1).nullable(),
+    modelRef: modelRefSchema.nullable(),
+    provider: z.string().min(1).nullable(),
     syncError: z.string().nullable(),
     syncedAt: z.string().nullable(),
     effective: modelSelectionSchema,

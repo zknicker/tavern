@@ -5,7 +5,7 @@ session history sync, runtime events, reconnects, timeouts, and cron run paginat
 protect Tavern's sync-first model from duplicate messages, lost messages, stale overwrites, and
 event-loop regressions.
 
-The regression suite uses a contract-shaped mock agent runtime. It does not require real OpenClaw
+The regression suite uses a contract-shaped mock agent runtime. It does not require real Hermes
 and does not add mock-only product APIs to Tavern.
 
 ## Goals
@@ -19,9 +19,9 @@ and does not add mock-only product APIs to Tavern.
 
 ## Non-Goals
 
-- The suite does not replace mapper tests with sanitized OpenClaw payloads.
-- The suite does not test OpenClaw process management or local gateway startup.
-- The suite does not require a bundled OpenClaw runtime.
+- The suite does not replace mapper tests with sanitized Hermes payloads.
+- The suite does not test Hermes process management or local gateway startup.
+- The suite does not require a bundled Hermes runtime.
 - The suite does not depend on screenshots for low-level communication metrics.
 
 ## Test Boundary
@@ -151,7 +151,7 @@ offset, missing `nextOffset`, and partial page failure.
 Expected:
 
 - normal pagination imports all runs once
-- repeated offsets or missing `nextOffset` fail as `cronRuns` degradation
+- repeated offsets or missing `nextOffset` fail as `apiServer` degradation with cron-run context
 - cron job config remains available when only run history fails
 
 ### Partial Session History Failure
@@ -162,7 +162,7 @@ Expected:
 
 - other sessions continue syncing
 - failed session history remains unchanged
-- failure is attributed to `messages` or the concrete session history sync
+- failure is attributed to `apiServer` or the concrete session history sync
 
 ### Runtime Status Flap
 
@@ -179,7 +179,7 @@ Expected:
 - Scenario controls live in the website e2e mock runtime.
 - Metrics collection lives in the mock runtime, server test helpers, or a small comms runner.
 - Reports are written as machine-readable JSON plus a human-readable Markdown summary.
-- The runner can execute in CI without a real OpenClaw gateway.
+- The runner can execute in CI without a real Hermes gateway.
 - Scenario setup should prefer normal runtime contract routes over admin shortcuts.
 - Admin endpoints are limited to reset, scenario mode, event injection, and metrics reads.
 

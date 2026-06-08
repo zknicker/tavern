@@ -387,7 +387,7 @@ test('buildChatRows skips non-tool system messages', () => {
                 message: {
                     actor: null,
                     tavernAgentId: null,
-                    content: 'OpenClaw runtime status',
+                    content: 'Hermes runtime status',
                     id: 'system-status',
                     sender: 'system',
                     senderType: 'system',

@@ -33,18 +33,18 @@ test('syncAgentsForRuntime replaces missing config rows for one runtime only', a
             createAgent({ id: 'planner', name: 'Planner' }),
             createAgent({ id: 'writer', name: 'Writer' }),
         ],
-        runtimeId: 'openclaw-primary',
+        runtimeId: 'hermes-primary',
         syncedAt: firstSync,
     });
     await agentStorage.syncAgentsForRuntime({
         agents: [createAgent({ id: 'claw', name: 'Claw' })],
-        runtimeId: 'openclaw-main',
+        runtimeId: 'hermes-main',
         syncedAt: firstSync,
     });
 
     await agentStorage.syncAgentsForRuntime({
         agents: [createAgent({ id: 'planner', name: 'Planner Prime' })],
-        runtimeId: 'openclaw-primary',
+        runtimeId: 'hermes-primary',
         syncedAt: secondSync,
     });
 
@@ -59,22 +59,22 @@ test('syncAgentsForRuntime replaces missing config rows for one runtime only', a
     );
 });
 
-test('listAgents scopes rows to the active OpenClaw runtime', async () => {
+test('listAgents scopes rows to the active Hermes runtime', async () => {
     await agentStorage.syncAgentsForRuntime({
         agents: [createAgent({ id: 'planner', name: 'Planner' })],
-        runtimeId: 'openclaw-primary',
+        runtimeId: 'hermes-primary',
     });
     await agentStorage.syncAgentsForRuntime({
         agents: [createAgent({ id: 'claw', name: 'Claw' })],
-        runtimeId: 'openclaw-main',
+        runtimeId: 'hermes-main',
     });
     await connectionStorage.saveAgentRuntimeConnection({
-        baseUrl: 'wss://openclaw.example',
+        baseUrl: 'wss://hermes.example',
         enabled: true,
-        id: 'openclaw-main',
+        id: 'hermes-main',
         lastCheckedAt: '2026-05-05T12:00:00.000Z',
         lastError: null,
-        name: 'OpenClaw',
+        name: 'Hermes',
     });
 
     const agents = await agentStorage.listAgents();

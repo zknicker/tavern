@@ -104,7 +104,7 @@ Examples:
 * short-lived hover/debug state
 * app-only invalidation hints
 
-Tool progress, assistant preambles, and provider-exposed reasoning summaries
+Tool progress, assistant progress, and provider-exposed thinking summaries
 are not ephemeral notifications in Tavern chat. Runtime persists them as
 responses, response activity, or artifacts, then emits durable events.
 

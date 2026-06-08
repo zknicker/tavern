@@ -100,7 +100,8 @@ export async function syncSessionsForRuntime(input: {
                     spawnedBy: runtimeSession.parentSessionKey,
                     startedAt: runtimeSession.startedAt,
                     status: 'idle',
-                    updatedAt: runtimeSession.lastActivityAt ?? runtimeSession.startedAt ?? timestamp,
+                    updatedAt:
+                        runtimeSession.lastActivityAt ?? runtimeSession.startedAt ?? timestamp,
                 },
             });
     }

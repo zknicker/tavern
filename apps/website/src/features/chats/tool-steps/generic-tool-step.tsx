@@ -10,29 +10,34 @@ import * as React from 'react';
 import { SessionLinkButton } from '../../sessions/session-link-button.tsx';
 import { getSessionRelationshipName } from '../../sessions/session-relationship.ts';
 import { hasErrorStatus } from '../../sessions/tools/tool-ui.ts';
-import { ThinkingStep, ThinkingStepDetails } from '../thinking-steps.tsx';
-import { getToolTarget, InlineToolLabel, ToolDrawerLabel } from './tool-summary.tsx';
+import { ThinkingStepDetails } from '../thinking-steps.tsx';
+import {
+    getToolTarget,
+    InlineToolLabel,
+    ToolDrawerTrigger,
+    ToolTimelineStep,
+} from './tool-summary.tsx';
 import type { ToolStepRendererProps } from './types.ts';
 
 type StepIcon = HugeiconsIconProps['icon'];
 
-export function GenericToolStep({ chatId, index, isLast, row }: ToolStepRendererProps) {
+export function GenericToolStep({ chatId, isLast, row }: ToolStepRendererProps) {
     const [isOpen, setIsOpen] = React.useState(false);
-    const hasError = hasErrorStatus(row.toolCall.status);
+    const active = !(row.completedAt || hasErrorStatus(row.toolCall.status));
     const target = getToolTarget(row);
     const label = (
-        <ToolDrawerLabel chatId={chatId} isOpen={isOpen} onOpenChange={setIsOpen} row={row}>
+        <span className="inline-flex min-w-0 max-w-full items-center gap-1.5">
             <InlineToolLabel row={row} target={target} verb={getToolVerb(row, target)} />
-        </ToolDrawerLabel>
+            <ToolDrawerTrigger chatId={chatId} isOpen={isOpen} onOpenChange={setIsOpen} row={row} />
+        </span>
     );
 
     return (
-        <ThinkingStep
+        <ToolTimelineStep
+            active={active}
             icon={getToolIcon(row.toolCall.name)}
-            index={index}
             isLast={isLast}
             label={label}
-            status={hasError ? 'failed' : row.completedAt ? 'complete' : 'active'}
         >
             {row.spawnedRelationships.length > 0 ? (
                 <ThinkingStepDetails
@@ -55,7 +60,7 @@ export function GenericToolStep({ chatId, index, isLast, row }: ToolStepRenderer
                     </div>
                 </ThinkingStepDetails>
             ) : null}
-        </ThinkingStep>
+        </ToolTimelineStep>
     );
 }
 

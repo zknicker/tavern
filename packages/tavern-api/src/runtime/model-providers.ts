@@ -1,13 +1,16 @@
 import * as z from 'zod';
 
-export const agentRuntimeModelProviderIdSchema = z.enum([
+export const knownAgentRuntimeModelProviderIds = [
     'claude',
     'codex',
+    'custom',
     'openai',
     'openrouter',
-]);
+] as const;
+
+export const agentRuntimeModelProviderIdSchema = z.string().trim().min(1);
 export const modelExecutionProviderSchema = z.enum(['claude', 'codex', 'opencode']);
-export const agentRuntimeModelProviderIds = agentRuntimeModelProviderIdSchema.options;
+export const agentRuntimeModelProviderIds = knownAgentRuntimeModelProviderIds;
 
 export const agentRuntimeModelProviderCapabilitySchema = z.object({
     executionProvider: modelExecutionProviderSchema.nullable(),
@@ -35,6 +38,12 @@ export const agentRuntimeModelProviderCapabilities = {
         supportsMemory: true,
         supportsSubAgentRouting: true,
     },
+    custom: {
+        executionProvider: null,
+        supportsChatRouting: false,
+        supportsMemory: false,
+        supportsSubAgentRouting: false,
+    },
     openai: {
         executionProvider: null,
         supportsChatRouting: false,
@@ -47,4 +56,4 @@ export const agentRuntimeModelProviderCapabilities = {
         supportsMemory: true,
         supportsSubAgentRouting: false,
     },
-} as const satisfies Record<AgentRuntimeModelProviderId, AgentRuntimeModelProviderCapability>;
+} as const satisfies Record<string, AgentRuntimeModelProviderCapability>;

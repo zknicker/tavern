@@ -33,9 +33,9 @@ tavern --help
 ```
 
 `serve` runs the foreground Runtime process. It starts the Runtime HTTP and
-WebSocket API, Runtime storage, managed OpenClaw, first-party OpenClaw plugin
-sync, Cortex, and Runtime jobs. It logs to stdout and stderr, and exits on
-`SIGINT` or `SIGTERM`.
+WebSocket API, Runtime storage, managed Hermes dashboard/API/Gateway, Cortex,
+and Runtime jobs. It logs to stdout and stderr, and exits on `SIGINT` or
+`SIGTERM`.
 
 `cortex` commands are thin CLI clients for the managed Runtime. They require a
 running Runtime and use `TAVERN_RUNTIME_URL`, or `http://127.0.0.1:18790` by
@@ -60,7 +60,7 @@ Runtime updates are two-phase:
    ready, then waits for Runtime health before restarting the app when an app
    update is staged.
 
-This keeps OpenClaw-backed features online during download/install work and
+This keeps Hermes-backed features online during download/install work and
 prevents the old app from sitting against a newly restarted incompatible
 Runtime.
 
@@ -101,7 +101,8 @@ Runtime defaults to local-only binding:
 ```bash
 TAVERN_RUNTIME_HOST=127.0.0.1
 TAVERN_RUNTIME_PORT=18790
-TAVERN_RUNTIME_ROOT=~/.tavern/runtime
+TAVERN_RUNTIME_ROOT=~/.tavern-hermes/runtime
+TAVERN_HERMES_PORT=9119
 ```
 
 For a server that accepts app connections from another machine, set the host in
@@ -122,7 +123,8 @@ Tavern does not enforce a network topology. Operators can use LAN DNS,
 Tailscale, a reverse proxy, or another trusted network path.
 
 Change `TAVERN_RUNTIME_PORT` only when the app Runtime URL uses the same port.
-Managed OpenClaw keeps its own Gateway port, which defaults to `18789`.
+Managed Hermes dashboard, API, and Gateway share `TAVERN_HERMES_PORT`, which
+defaults to `9119`.
 
 ## Version Match
 
@@ -177,9 +179,9 @@ bin/pg_trgm.tar.gz
 bin/pglite.data
 bin/pglite.wasm
 bin/vector.tar.gz
-share/tavern/openclaw-plugins/
 share/tavern/node_modules/@tavern/sdk/
 ```
 
-The bundled plugin sources are synced into `~/.tavern/openclaw-plugins/` at
-Runtime startup, then linked to the managed OpenClaw install.
+Runtime resolves the Hermes CLI from `TAVERN_HERMES_BIN`, known installer paths,
+or `PATH`. Set `TAVERN_HERMES_BIN` in the Homebrew service environment when the
+service should use a specific Hermes install.

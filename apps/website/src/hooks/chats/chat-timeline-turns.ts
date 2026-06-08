@@ -1,6 +1,11 @@
 import { normalizeActiveReply } from './chat-timeline-reply.ts';
 import { applyReplySnapshot, isSameTurnFailure } from './chat-timeline-snapshots.ts';
-import type { ChatReplyUpdate, ChatTimelineState, ChatTurn } from './chat-timeline-types.ts';
+import type {
+    ChatReplyUpdate,
+    ChatTimeline,
+    ChatTimelineState,
+    ChatTurn,
+} from './chat-timeline-types.ts';
 
 export function startTimelineTurn(state: ChatTimelineState, turn: ChatTurn): ChatTimelineState {
     return {
@@ -78,19 +83,61 @@ export function completeTimelineTurn(
         turn: ChatTurn;
     }
 ): ChatTimelineState {
+    const timeline = completeLiveProgressRows(state.timeline, input);
+
     if (!state.activeReply || state.activeReply.runId !== input.turn.runId) {
         return state.activeTurn?.runId === input.turn.runId
             ? {
                   ...state,
                   activeTurn: null,
+                  timeline,
               }
-            : state;
+            : timeline === state.timeline
+              ? state
+              : { ...state, timeline };
     }
 
     return {
         ...state,
+        activeReply: {
+            ...state.activeReply,
+            completedAt: input.completedAt,
+            isThinking: false,
+        },
         activeTurn: null,
+        timeline,
     };
+}
+
+function completeLiveProgressRows(
+    timeline: ChatTimeline,
+    input: {
+        completedAt: string;
+        turn: ChatTurn;
+    }
+) {
+    let changed = false;
+    const rows = timeline.map((row) => {
+        if (
+            row.kind !== 'tool' ||
+            row.completedAt !== null ||
+            !isTurnActivityRow(row.id, input.turn.runId)
+        ) {
+            return row;
+        }
+
+        changed = true;
+        return {
+            ...row,
+            completedAt: input.completedAt,
+        };
+    });
+
+    return changed ? rows : timeline;
+}
+
+function isTurnActivityRow(rowId: string, runId: string) {
+    return rowId.startsWith(`act_${runId}_`) || rowId.startsWith(`act_${runId}-`);
 }
 
 export function failTimelineTurn(

@@ -177,7 +177,11 @@ export function formatWorkGroupHeader(items: ActivityItem[]) {
         formatCount(counts.other, 'Used', 'tool'),
     ].filter((part): part is string => Boolean(part));
 
-    return parts.length > 0 ? joinHeaderParts(parts) : 'Worked';
+    if (parts.length > 0) {
+        return joinHeaderParts(parts);
+    }
+
+    return counts.thinking > 0 ? 'Thinking' : 'Worked';
 }
 
 function isNarrationToolRow(row: TranscriptRow) {
@@ -187,6 +191,11 @@ function isNarrationToolRow(row: TranscriptRow) {
 function countWorkItems(items: ActivityItem[]) {
     return items.reduce(
         (counts, item) => {
+            if (item.row.kind === 'system' && item.row.systemKind === 'thinking') {
+                counts.thinking += 1;
+                return counts;
+            }
+
             if (item.row.kind !== 'tool') {
                 counts.other += 1;
                 return counts;
@@ -203,6 +212,13 @@ function countWorkItems(items: ActivityItem[]) {
             }
 
             if (
+                matchesAny(name, ['bash', 'command', 'exec', 'process', 'shell', 'terminal', 'zsh'])
+            ) {
+                counts.command += 1;
+                return counts;
+            }
+
+            if (
                 matchesAny(name, ['read', 'grep', 'search']) ||
                 matchesAny(text, ['read ', 'search'])
             ) {
@@ -210,15 +226,10 @@ function countWorkItems(items: ActivityItem[]) {
                 return counts;
             }
 
-            if (matchesAny(name, ['bash', 'command', 'exec', 'shell', 'zsh'])) {
-                counts.command += 1;
-                return counts;
-            }
-
             counts.other += 1;
             return counts;
         },
-        { command: 0, edit: 0, explore: 0, other: 0 }
+        { command: 0, edit: 0, explore: 0, other: 0, thinking: 0 }
     );
 }
 

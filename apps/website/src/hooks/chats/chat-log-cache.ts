@@ -3,8 +3,11 @@ import type { ChatTurn, ChatTurnProgressStep } from './chat-timeline-state.ts';
 
 type ChatLogRow = NonNullable<ChatLogOutput>['rows'][number];
 type ChatLogPage = NonNullable<ChatLogOutput>;
-type ChatLogInput = Omit<ChatLogPage, 'activeReply'> & Partial<Pick<ChatLogPage, 'activeReply'>>;
+type ChatLogInput = Omit<ChatLogPage, 'activeReply' | 'failedTurn'> &
+    Partial<Pick<ChatLogPage, 'activeReply' | 'failedTurn'>>;
+type MessageRow = Extract<ChatLogRow, { kind: 'message' }>;
 type ToolRow = Extract<ChatLogRow, { kind: 'tool' }>;
+type ThinkingRow = Extract<ChatLogRow, { kind: 'system'; systemKind: 'thinking' }>;
 
 export const defaultLiveChatLogLimit = 100;
 
@@ -22,13 +25,13 @@ export function patchChatLogWithProgress(
 
     const sourceLog = normalizeChatLog(log);
 
-    const row = progressStepToToolRow(input);
+    const row = progressStepToChatRow(input);
     const existingIndex = sourceLog.rows.findIndex((entry) => entry.id === row.id);
     const rows =
         existingIndex === -1
             ? [...sourceLog.rows, row]
             : sourceLog.rows.map((entry, index) =>
-                  index === existingIndex ? mergeToolRows(entry as ToolRow, row) : entry
+                  index === existingIndex ? mergeProgressRows(entry, row) : entry
               );
     const sortedRows = rows.sort(compareChatLogRows);
     const nextRows = trimRows(sortedRows, sourceLog.limit);
@@ -46,10 +49,87 @@ export function patchChatLogWithProgress(
 function normalizeChatLog(log: ChatLogInput): ChatLogPage {
     return {
         activeReply: log.activeReply ?? null,
+        failedTurn: log.failedTurn ?? null,
         limit: log.limit,
         offset: log.offset,
         rows: log.rows,
         total: log.total,
+    };
+}
+
+function progressStepToChatRow(input: {
+    step: ChatTurnProgressStep;
+    timestamp: string;
+    turn: ChatTurn;
+}): MessageRow | ThinkingRow | ToolRow {
+    if (input.step.kind === 'message') {
+        return progressStepToMessageRow(input);
+    }
+
+    if (input.step.kind === 'reasoning' || input.step.kind === 'plan') {
+        return progressStepToThinkingRow(input);
+    }
+
+    return progressStepToToolRow(input);
+}
+
+function progressStepToMessageRow(input: {
+    step: ChatTurnProgressStep;
+    timestamp: string;
+    turn: ChatTurn;
+}): MessageRow {
+    const id = progressActivityId(input.turn.runId, input.step.id);
+    const content = input.step.detail?.trim() || input.step.label;
+    const actor = {
+        id: input.turn.agentId,
+        kind: 'agent' as const,
+    };
+
+    return {
+        actor,
+        connectsToNext: false,
+        connectsToPrevious: false,
+        id,
+        isFirstInGroup: true,
+        kind: 'message',
+        message: {
+            actor,
+            content,
+            id,
+            metadata: {
+                runtime: {
+                    runId: input.turn.runId,
+                    sessionKey: input.turn.sessionKey,
+                    source: 'hermes',
+                },
+            },
+            sender: input.turn.agentId,
+            senderType: 'agent',
+            sourceSessionId: null,
+            sourceSessionKey: input.turn.sessionKey,
+            tavernAgentId: input.turn.agentId,
+            timestamp: input.timestamp,
+        },
+    };
+}
+
+function progressStepToThinkingRow(input: {
+    step: ChatTurnProgressStep;
+    timestamp: string;
+    turn: ChatTurn;
+}): ThinkingRow {
+    return {
+        id: progressActivityId(input.turn.runId, input.step.id),
+        kind: 'system',
+        systemKind: 'thinking',
+        thinking: {
+            id: progressActivityId(input.turn.runId, input.step.id),
+            messageId: input.turn.runId,
+            sender: input.turn.agentId,
+            text: input.step.detail ?? input.step.label,
+            timestamp: input.timestamp,
+        },
+        timestamp: input.timestamp,
     };
 }
 
@@ -84,6 +164,51 @@ function progressStepToToolRow(input: {
             status: input.step.status === 'failed' ? 'error' : null,
             summaryParts: target ? [target] : [],
         },
+    };
+}
+
+function mergeProgressRows(existing: ChatLogRow, next: MessageRow | ThinkingRow | ToolRow) {
+    if (existing.kind === 'message' && next.kind === 'message') {
+        return mergeMessageRows(existing, next);
+    }
+
+    if (existing.kind === 'tool' && next.kind === 'tool') {
+        return mergeToolRows(existing, next);
+    }
+
+    if (
+        existing.kind === 'system' &&
+        existing.systemKind === 'thinking' &&
+        next.kind === 'system' &&
+        next.systemKind === 'thinking'
+    ) {
+        return mergeThinkingRows(existing, next);
+    }
+
+    return next;
+}
+
+function mergeMessageRows(existing: MessageRow, next: MessageRow): MessageRow {
+    return {
+        ...next,
+        connectsToNext: existing.connectsToNext,
+        connectsToPrevious: existing.connectsToPrevious,
+        isFirstInGroup: existing.isFirstInGroup,
+        message: {
+            ...next.message,
+            timestamp: existing.message.timestamp || next.message.timestamp,
+        },
+    };
+}
+
+function mergeThinkingRows(existing: ThinkingRow, next: ThinkingRow): ThinkingRow {
+    return {
+        ...next,
+        thinking: {
+            ...next.thinking,
+            timestamp: existing.thinking.timestamp ?? next.thinking.timestamp,
+        },
+        timestamp: existing.timestamp ?? next.timestamp,
     };
 }
 
@@ -204,8 +329,15 @@ function rowTimestamp(row: ChatLogRow) {
 
 function rowSortRank(row: ChatLogRow) {
     if (row.kind === 'message') {
+        if (isActivityMessageRow(row)) {
+            return 1;
+        }
         return row.message.senderType === 'user' ? 0 : 2;
     }
 
     return 1;
+}
+
+function isActivityMessageRow(row: Extract<ChatLogRow, { kind: 'message' }>) {
+    return row.id.startsWith('act_');
 }

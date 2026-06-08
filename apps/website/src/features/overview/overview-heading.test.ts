@@ -12,28 +12,41 @@ const idleState = {
     workers: [],
 };
 
+function containsPhrase(phrases: readonly string[], phrase: string) {
+    return phrases.includes(phrase);
+}
+
 describe('buildOverviewHeading', () => {
     test('reflects the exact hour for an idle tavern', () => {
-        expect([...overviewIdleHourPhrases[9]] as string[]).toContain(
-            buildOverviewHeading({
-                ...idleState,
-                now: new Date('2026-06-03T09:00:00'),
-            })
-        );
+        expect(
+            containsPhrase(
+                overviewIdleHourPhrases[9],
+                buildOverviewHeading({
+                    ...idleState,
+                    now: new Date('2026-06-03T09:00:00'),
+                })
+            )
+        ).toBe(true);
 
-        expect([...overviewIdleHourPhrases[12]] as string[]).toContain(
-            buildOverviewHeading({
-                ...idleState,
-                now: new Date('2026-06-03T12:00:00'),
-            })
-        );
+        expect(
+            containsPhrase(
+                overviewIdleHourPhrases[12],
+                buildOverviewHeading({
+                    ...idleState,
+                    now: new Date('2026-06-03T12:00:00'),
+                })
+            )
+        ).toBe(true);
 
-        expect([...overviewIdleHourPhrases[22]] as string[]).toContain(
-            buildOverviewHeading({
-                ...idleState,
-                now: new Date('2026-06-03T22:00:00'),
-            })
-        );
+        expect(
+            containsPhrase(
+                overviewIdleHourPhrases[22],
+                buildOverviewHeading({
+                    ...idleState,
+                    now: new Date('2026-06-03T22:00:00'),
+                })
+            )
+        ).toBe(true);
     });
 
     test('uses completed quest copy for succeeded workers', () => {

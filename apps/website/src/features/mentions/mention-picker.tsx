@@ -33,7 +33,7 @@ export function MentionPicker({
         const option = optionRefs.current.get(activeIndex);
         const scrollContainer = scrollContainerRef.current;
 
-        if (!option || !scrollContainer) {
+        if (!(option && scrollContainer)) {
             return;
         }
 
@@ -117,8 +117,8 @@ export function MentionPicker({
                                         <span className="flex w-full min-w-0 items-center gap-1 leading-normal">
                                             <MentionAppearanceIcon
                                                 className="size-[15px] shrink-0 rounded-[3px] object-contain text-foreground"
-                                                iconDataUrl={appearance.iconDataUrl}
                                                 icon={appearance.icon}
+                                                iconDataUrl={appearance.iconDataUrl}
                                             />
                                             <span
                                                 className={cn(

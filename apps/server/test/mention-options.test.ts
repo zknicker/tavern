@@ -116,7 +116,7 @@ describe('buildMentionOptions', () => {
                             bundleId: 'net.imput.helium',
                             label: 'Helium',
                             running: true,
-                            usageCount: 18326,
+                            usageCount: 18_326,
                         },
                         {
                             bundleId: 'com.google.Chrome',
@@ -142,7 +142,7 @@ describe('buildMentionOptions', () => {
                     bundleId: 'net.imput.helium',
                     running: true,
                     source: 'local',
-                    usageCount: 18326,
+                    usageCount: 18_326,
                 },
                 projection: 'capability-reference',
                 sourceLabel: 'Mac app',
@@ -354,6 +354,8 @@ describe('buildMentionOptions', () => {
     });
 
     it('can list files from the server workspace', async () => {
+        const workspace = path.resolve(process.cwd(), '..', '..');
+
         expect(
             await buildMentionOptions({
                 codexPluginRoot: await createTempDir(),
@@ -361,11 +363,11 @@ describe('buildMentionOptions', () => {
                 limit: 10,
                 query: 'specs/mentions.md',
                 runtimeSkills: [],
-                workspaceFolder: process.cwd(),
+                workspaceFolder: workspace,
             })
         ).toContainEqual({
             description: 'specs',
-            id: path.join(process.cwd(), 'specs', 'mentions.md'),
+            id: path.join(workspace, 'specs', 'mentions.md'),
             insertText: 'specs/mentions.md',
             kind: 'file',
             label: 'specs/mentions.md',

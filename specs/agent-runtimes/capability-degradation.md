@@ -11,7 +11,7 @@ This spec models capability failures through Tavern Runtime.
 
 This is the first runtime reliability workstream. It should land before communication regression
 testing because the regression suite needs stable degradation states to assert failures such as
-`cronRuns` degraded, `models` unavailable, or `skills` unauthorized.
+`apiServer` degraded, `gateway` unavailable, `models` unavailable, or `skills` unauthorized.
 
 This work is a repeatable pattern across runtime-owned primitives and capability surfaces. The
 implementation should establish the pattern once, then apply it capability by capability. Do not
@@ -19,7 +19,7 @@ build one-off status handling for each page.
 
 ## Goals
 
-- Keep dashboard pages usable when OpenClaw is partially broken.
+- Keep dashboard pages usable when Hermes is partially broken.
 - Report which runtime capability failed instead of marking the whole runtime offline.
 - Preserve existing records when a sync path fails.
 - Make diagnostics and CI failures explain the affected runtime surface.
@@ -37,22 +37,23 @@ The first slice should still be small enough to land safely, but it should use t
 contracts, helpers, and API shape that the full implementation uses. A narrow slice is only a
 delivery strategy, not a different design.
 
-The best first slice is `status`, `models`, `skills`, and `cronRuns` because those surfaces prove
-the important cases:
+The Hermes slice is `dashboardServer`, `apiServer`, `gateway`, `models`, and `skills` because those
+surfaces prove the important managed Hermes cases:
 
-- runtime-wide reachability through `status`
-- optional or unsupported surface through `models`
-- user-visible config/list surface through `skills`
-- paginated observed history through `cronRuns`
+- dashboard process reachability through `/api/status`
+- authenticated REST API reachability through `/api/sessions`
+- Gateway event/send reachability through `/api/ws`
+- model inventory through `/api/model/options`
+- skill inventory through `/api/skills`
 
-After that, the same pattern should be applied to `agents`, `chats`, `sessions`, `messages`,
-`cron`, `events`, and `logs`.
+Tavern CRUD, synced chat records, cron records, mentions, and logs are not capability ids unless
+they depend on a distinct Runtime-owned service or Hermes probe.
 
 ## Deferred Scope
 
 These items are intentionally not part of the first slice:
 
-- channel, memory, or OpenClaw Doctor surfaces
+- channel, memory, or Hermes Doctor surfaces
 - copyable rich diagnostic bundles
 - page-specific warning banners
 - CI communication regression runner
@@ -60,9 +61,9 @@ These items are intentionally not part of the first slice:
 
 ## Non-Goals
 
-- Tavern App does not bundle, start, repair, or shell out to OpenClaw.
-- Tavern App does not read OpenClaw runtime state, gateway logs, or OpenClaw config files directly.
-- Tavern does not require every runtime to support every OpenClaw capability.
+- Tavern App does not bundle, start, repair, or shell out to Hermes.
+- Tavern App does not read Hermes runtime state, gateway logs, or Hermes config files directly.
+- Tavern does not require every runtime to support every Hermes capability.
 - Tavern does not hide malformed runtime responses behind compatibility fallbacks.
 
 ## Capability States
@@ -93,39 +94,28 @@ Each capability record includes:
 
 The app may show `reason`. Diagnostic copy/export may include `technicalMessage`.
 
-## OpenClaw Capabilities
+## Hermes Capabilities
 
-The OpenClaw adapter reports capability state for these surfaces:
+The Hermes adapter reports capability state for these surfaces:
 
-| Capability | OpenClaw surface | Primary Tavern impact |
+| Capability | Hermes surface | Primary Tavern impact |
 | --- | --- | --- |
-| `status` | `health`, `status` | Tavern Runtime health |
-| `tavernPlugin` | managed Tavern Messenger plugin install | Tavern-native chat delivery |
-| `computerUse` | Codex Computer Use MCP app inventory | Computer Use app mentions |
-| `agents` | `agents.list`, agent config/file methods | agents and agent settings |
-| `chats` | `sessions.list`, chat target mapping | chats and bindings |
-| `sessions` | `sessions.list`, `sessions.get` | session index and session detail |
-| `messages` | `chat.history` | durable chat/session history |
-| `cron` | `cron.list`, `cron.add`, `cron.update`, `cron.remove`, `cron.run` | cron job config and manual runs |
-| `cronRuns` | `cron.runs` | cron run history |
-| `skills` | `skills.status`, `skills.detail`, `skills.install` | skills list, preview, install |
-| `skillMaterialization` | local OpenClaw workspace probe | per-agent skill workspace setup |
-| `mentions` | `mention.list` | composer mention suggestions and metadata |
-| `models` | `models.list` | model inventory |
-| `memory` | memory verification | memory context |
-| `events` | gateway websocket events | freshness and live status |
-| `logs` | `logs.tail` when supported | runtime logs |
+| `dashboardServer` | `GET /api/status` | managed Hermes process visibility |
+| `apiServer` | `GET /api/sessions` | authenticated Hermes REST calls and Runtime sync |
+| `gateway` | `WS /api/ws` | Tavern chat sends and live Hermes events |
+| `models` | `GET /api/model/options` | model inventory |
+| `skills` | `GET /api/skills` | skill inventory |
 
-Future `channels` capabilities may be added when OpenClaw exposes stable gateway
+Future `channels` capabilities may be added when Hermes exposes stable gateway
 surfaces that Tavern can consume without local filesystem access.
 
-The first implementation slice covers `status`, `models`, `skills`, and `cronRuns`. The full table
-defines the target shape so later slices can add coverage without changing the capability vocabulary
-or storage model.
+The Runtime also reports Cortex and model-access capabilities that are independent of managed
+Hermes process reachability: `codexOAuth`, `cortexDatabase`, `cortexImportProcessors`,
+`cortexJobs`, `cortexModelAccess`, `cortexWiki`, and `embeddingModel`.
 
 ## Adapter Behavior
 
-The OpenClaw adapter owns raw runtime error classification.
+The Hermes adapter owns raw runtime error classification.
 
 - Unsupported RPC methods map to `unavailable`.
 - Auth, pairing, token, or permission failures map to `unauthorized`.
@@ -149,10 +139,10 @@ Tavern Runtime stores capability state alongside Runtime health and primitive sy
 The app backend reads this state through Runtime `/capabilities`; it does not run checks or store
 Runtime capability health locally.
 
-- A failed primitive sync updates that primitive's sync state only.
-- A failed `cronRuns` sync does not mark `cron` job config as failed.
-- A failed `messages` sync for one session does not delete previously synced messages.
-- A failed `skills` read does not block agents, chats, or cron from syncing.
+- A failed primitive sync updates that primitive's sync state only and records the narrow capability
+  when a Runtime-owned dependency caused the failure.
+- A failed `apiServer` sync does not delete previously synced sessions, messages, or cron records.
+- A failed `skills` read does not block already-synced agents, chats, or cron records from rendering.
 - Runtime edits still fail loudly when the capability needed for the edit is unavailable.
 - Product reads continue to return existing records with freshness and error metadata.
 
@@ -166,7 +156,7 @@ Current related tables:
 - `agent_runtime_connections` stores the Tavern Runtime endpoint plus coarse health fields such as
   `last_checked_at`, `last_error`, and `last_synced_at`.
 - `sync_state` stores primitive sync freshness keyed by `kind` and `id`. It answers questions such
-  as "did agent sync for this runtime succeed?" not "is the OpenClaw models capability available?"
+  as "did agent sync for this runtime succeed?" not "is the Hermes models capability available?"
 - Runtime-backed tables such as `agents`, `chats`, `session_runs`, `session_messages`, `cron_jobs`, and
   `cron_runs` store runtime-owned records and row-level sync timestamps.
 
@@ -174,7 +164,7 @@ Runtime owns a table shaped like `runtime_capabilities`:
 
 | Column | Purpose |
 | --- | --- |
-| `capability` | stable capability id such as `skills` or `cronRuns` |
+| `capability` | stable capability id such as `apiServer`, `gateway`, or `skills` |
 | `state` | `unknown`, `healthy`, `degraded`, `unavailable`, or `unauthorized` |
 | `checked_at` | latest check or observed failure time |
 | `last_healthy_at` | latest successful check time |
@@ -231,7 +221,7 @@ path. A polished dashboard view belongs to a later diagnostics workstream.
 2. Add the Runtime `runtime_capabilities` table and storage helpers.
 3. Add Runtime capability checks that convert dependency failures into typed capability failures.
 4. Expose the stored state through Runtime `/capabilities`.
-5. Wire the first slice: `status`, `models`, `skills`, and `cronRuns`.
+5. Wire the Hermes slice: `dashboardServer`, `apiServer`, `gateway`, `models`, and `skills`.
 6. Add Runtime, server client, and app rendering tests for the first slice.
 7. Repeat the same pattern across the remaining capability table.
 8. Add minimal app visibility only if the API path cannot otherwise be verified.
@@ -244,7 +234,8 @@ Adapter tests cover:
 - auth or pairing failure -> `unauthorized`
 - malformed list payload -> `degraded`
 - missing required id/timestamp/schedule -> mapper failure with capability attribution
-- `cron.runs` pagination errors -> `cronRuns` degradation
+- authenticated REST failures -> `apiServer` degradation
+- WebSocket open failures -> `gateway` degradation
 
 Server tests cover:
 
@@ -261,23 +252,24 @@ Website or e2e tests cover:
 
 The first-slice test set is smaller:
 
-- `models.list` unsupported -> `models: unavailable`
-- `skills.status` unauthorized -> `skills: unauthorized`
-- malformed `skills.status` payload -> `skills: degraded`
-- broken `cron.runs` pagination -> `cronRuns: degraded`
+- `/api/model/options` unsupported -> `models: unavailable`
+- `/api/skills` unauthorized -> `skills: unauthorized`
+- malformed `/api/skills` payload -> `skills: degraded`
+- `/api/sessions` transport failure -> `apiServer: unavailable`
+- `/api/ws` open failure -> `gateway: unavailable`
 - reachable runtime status with one degraded capability remains runtime `reachable`
 
 ## Acceptance Criteria
 
-- Tavern can represent "OpenClaw reachable, skills unavailable."
-- Tavern can represent "OpenClaw reachable, cron config healthy, cron run history degraded."
-- Malformed OpenClaw payloads fail narrowly and do not create fake records.
+- Tavern can represent "Hermes reachable, skills unavailable."
+- Tavern can represent "Hermes dashboard reachable, API unavailable, Gateway unavailable."
+- Malformed Hermes payloads fail narrowly and do not create fake records.
 - Runtime connection status, primitive sync state, and capability state are distinct.
 - The diagnostics surface has enough structured data to explain which capability failed and why.
 
 First-slice acceptance is narrower:
 
-- `status`, `models`, `skills`, and `cronRuns` expose capability state.
+- `dashboardServer`, `apiServer`, `gateway`, `models`, and `skills` expose capability state.
 - Unsupported, unauthorized, malformed, and timeout-like failures classify deterministically.
 - The server can return a reachable runtime with a degraded or unavailable first-slice capability.
 - Existing records are not deleted because a first-slice capability check fails.

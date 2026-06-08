@@ -65,7 +65,7 @@ test('unreachable saved Runtime keeps its URL without reporting a version mismat
     await storage.saveAgentRuntimeConnection({
         baseUrl: 'https://zachs-mac-mini.taila0b849.ts.net:18790',
         enabled: true,
-        id: 'tavern-openclaw-managed',
+        id: 'tavern-hermes-managed',
         isActive: true,
         lastCheckedAt: new Date().toISOString(),
         lastError: null,
@@ -111,7 +111,7 @@ test('Tavern Runtime environment override does not replace the saved Runtime URL
     await storage.saveAgentRuntimeConnection({
         baseUrl: 'https://zachs-mac-mini.example:18790',
         enabled: true,
-        id: 'tavern-openclaw-managed',
+        id: 'tavern-hermes-managed',
         isActive: true,
         lastCheckedAt: new Date().toISOString(),
         lastError: null,
@@ -119,7 +119,7 @@ test('Tavern Runtime environment override does not replace the saved Runtime URL
     });
 
     const connection = await agentRuntimeConnection.loadAgentRuntimeConnection();
-    const saved = await storage.getAgentRuntimeConnection('tavern-openclaw-managed');
+    const saved = await storage.getAgentRuntimeConnection('tavern-hermes-managed');
 
     assert.equal(connection?.source, 'environment');
     assert.equal(connection?.baseUrl, 'http://127.0.0.1:18790');

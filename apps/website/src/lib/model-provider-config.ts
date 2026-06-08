@@ -29,8 +29,8 @@ const configuredModelProviders = [
         accessDisplayName: 'Codex',
         accessId: 'codex',
         color: '#3B82F6',
-        configName: 'codex',
-        displayName: 'Codex',
+        configName: 'openai-codex',
+        displayName: 'OpenAI Codex',
         icon: ChatGptIcon,
         models: {
             'gpt-5.5': {

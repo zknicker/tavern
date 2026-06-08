@@ -9,19 +9,15 @@ import { ensureRuntimeSchema } from '../db/schema';
 import { runtimeCapabilitiesRefreshJob } from '../jobs/definitions';
 import { startRuntimeJobsManager } from '../jobs/manager';
 import { ensureRuntimeJobsSchema } from '../jobs/schema';
-import {
-    markCortexPluginInstalled,
-    markManagedOpenClawGatewayReady,
-    markManagedOpenClawGatewayStopped,
-} from '../openclaw/state';
-import { replaceStoredOpenClawModels } from '../tavern/openclaw-snapshots-store';
 import { handleTavernRuntimeRequest } from '../tavern/router';
 import { subscribeToRuntimeEvents } from '../tavern/runtime-events';
 import { getRuntimeCapability, listRuntimeCapabilities, refreshRuntimeCapabilities } from './store';
 
 describe('Runtime capabilities store', () => {
     let runtimeRoot: string;
+    let hermesMock: ReturnType<typeof Bun.serve> | null = null;
     const originalOpenAiApiKey = process.env.OPENAI_API_KEY;
+    const originalHermesPort = process.env.TAVERN_HERMES_PORT;
     const originalPath = process.env.PATH;
 
     beforeEach(async () => {
@@ -35,6 +31,7 @@ describe('Runtime capabilities store', () => {
         process.env.OPENAI_API_KEY = '';
         process.env.PATH = binPath;
         process.env.TAVERN_CORTEX_WIKI_PATH = path.join(runtimeRoot, 'cortex-wiki');
+        process.env.TAVERN_HERMES_PORT = '1';
         const db = initTestDb();
         ensureRuntimeSchema(db);
         ensureRuntimeJobsSchema(db);
@@ -44,12 +41,13 @@ describe('Runtime capabilities store', () => {
 
     afterEach(async () => {
         vi.restoreAllMocks();
-        markCortexPluginInstalled(null);
-        markManagedOpenClawGatewayStopped();
+        hermesMock?.stop(true);
+        hermesMock = null;
         closeDb();
         await closeCortexDb();
         process.env.CODEX_HOME = undefined;
         process.env.OPENAI_API_KEY = originalOpenAiApiKey;
+        process.env.TAVERN_HERMES_PORT = originalHermesPort;
         process.env.PATH = originalPath;
         process.env.TAVERN_CORTEX_WIKI_PATH = undefined;
         await rm(runtimeRoot, { force: true, recursive: true });
@@ -59,37 +57,18 @@ describe('Runtime capabilities store', () => {
         const capabilities = listRuntimeCapabilities();
 
         expect(capabilities.map((capability) => capability.id)).toEqual([
-            'agentFiles',
-            'agents',
-            'agentTurns',
-            'chats',
-            'chatTargets',
+            'apiServer',
             'codexOAuth',
-            'computerUse',
-            'cortexAgentTools',
             'cortexDatabase',
             'cortexImportProcessors',
             'cortexJobs',
             'cortexModelAccess',
             'cortexWiki',
-            'cron',
-            'cronRuns',
+            'dashboardServer',
             'embeddingModel',
-            'events',
             'gateway',
-            'knowledgebase',
-            'logs',
-            'memory',
-            'mentions',
-            'messages',
             'models',
-            'sessionEvents',
-            'sessions',
-            'skillMaterialization',
             'skills',
-            'status',
-            'tasks',
-            'tavernPlugin',
         ]);
         expect(getRuntimeCapability('embeddingModel')).toMatchObject({
             checkedAt: null,
@@ -118,7 +97,8 @@ describe('Runtime capabilities store', () => {
         }
 
         expect(events).toContain('gateway');
-        expect(events).toContain('status');
+        expect(events).toContain('apiServer');
+        expect(events).toContain('dashboardServer');
     });
 
     test('records empty Cortex database and wiki capabilities as healthy', async () => {
@@ -134,72 +114,6 @@ describe('Runtime capabilities store', () => {
         expect(getRuntimeCapability('cortexDatabase')).toMatchObject({
             healthy: true,
             state: 'healthy',
-        });
-    });
-
-    test('records Cortex agent tools as healthy when the managed plugin declares every tool', async () => {
-        const pluginPath = path.join(runtimeRoot, 'cortex-plugin');
-        await mkdir(pluginPath, { recursive: true });
-        await writeFile(
-            path.join(pluginPath, 'openclaw.plugin.json'),
-            JSON.stringify({
-                contracts: {
-                    tools: [
-                        'cortex_search',
-                        'cortex_get_page',
-                        'cortex_capture',
-                        'cortex_edit',
-                        'cortex_ingest',
-                        'cortex_import',
-                        'cortex_recall',
-                        'cortex_list_backlinks',
-                    ],
-                },
-            })
-        );
-        markManagedOpenClawGatewayReady();
-        markCortexPluginInstalled(pluginPath);
-
-        const [tools] = await refreshRuntimeCapabilities({
-            ids: ['cortexAgentTools'],
-        });
-
-        expect(tools).toMatchObject({
-            healthy: true,
-            id: 'cortexAgentTools',
-            metadata: {
-                available: 8,
-                expected: 8,
-                pluginPath,
-            },
-            state: 'healthy',
-        });
-    });
-
-    test('records Cortex agent tools unavailable when the managed plugin is incomplete', async () => {
-        const pluginPath = path.join(runtimeRoot, 'incomplete-cortex-plugin');
-        await mkdir(pluginPath, { recursive: true });
-        await writeFile(
-            path.join(pluginPath, 'openclaw.plugin.json'),
-            JSON.stringify({ contracts: { tools: ['cortex_search'] } })
-        );
-        markManagedOpenClawGatewayReady();
-        markCortexPluginInstalled(pluginPath);
-
-        const [tools] = await refreshRuntimeCapabilities({
-            ids: ['cortexAgentTools'],
-        });
-
-        expect(tools).toMatchObject({
-            healthy: false,
-            id: 'cortexAgentTools',
-            metadata: {
-                available: 1,
-                expected: 8,
-                missing: expect.arrayContaining(['cortex_capture', 'cortex_import']),
-            },
-            reason: 'Cortex plugin does not declare every expected tool.',
-            state: 'unavailable',
         });
     });
 
@@ -253,10 +167,10 @@ describe('Runtime capabilities store', () => {
             healthy: false,
             id: 'cortexModelAccess',
             metadata: {
-                missing: expect.arrayContaining(['codex', 'openai', 'openrouter']),
-                providers: ['codex', 'openai', 'openrouter'],
+                missing: expect.arrayContaining(['openai', 'openrouter']),
+                providers: ['openai', 'openai-codex', 'openrouter'],
             },
-            reason: 'Cortex model access is missing codex, openai, openrouter.',
+            reason: 'Cortex model access is missing openai, openrouter.',
             state: 'unavailable',
         });
     });
@@ -348,9 +262,9 @@ describe('Runtime capabilities store', () => {
         });
     });
 
-    test('marks Gateway-backed cached capabilities degraded when managed Gateway is down', async () => {
+    test('marks Hermes capabilities unavailable when managed Hermes is down', async () => {
         const capabilities = await refreshRuntimeCapabilities({
-            ids: ['gateway', 'memory', 'models', 'skills'],
+            ids: ['dashboardServer', 'apiServer', 'gateway', 'models', 'skills'],
         });
 
         expect(
@@ -359,18 +273,20 @@ describe('Runtime capabilities store', () => {
                 state: capability.state,
             }))
         ).toEqual([
+            { id: 'dashboardServer', state: 'unavailable' },
+            { id: 'apiServer', state: 'unavailable' },
             { id: 'gateway', state: 'unavailable' },
-            { id: 'memory', state: 'degraded' },
-            { id: 'models', state: 'degraded' },
-            { id: 'skills', state: 'degraded' },
+            { id: 'models', state: 'unavailable' },
+            { id: 'skills', state: 'unavailable' },
         ]);
     });
 
-    test('marks Gateway-backed capabilities healthy when managed Gateway is ready', async () => {
-        markManagedOpenClawGatewayReady();
+    test('marks Hermes capabilities healthy from dashboard, API, Gateway, model, and skill probes', async () => {
+        hermesMock = startHermesCapabilityMock();
+        process.env.TAVERN_HERMES_PORT = `${hermesMock.port}`;
 
         const capabilities = await refreshRuntimeCapabilities({
-            ids: ['gateway', 'memory', 'skills'],
+            ids: ['dashboardServer', 'apiServer', 'gateway', 'models', 'skills'],
         });
 
         expect(
@@ -379,34 +295,12 @@ describe('Runtime capabilities store', () => {
                 state: capability.state,
             }))
         ).toEqual([
+            { id: 'dashboardServer', state: 'healthy' },
+            { id: 'apiServer', state: 'healthy' },
             { id: 'gateway', state: 'healthy' },
-            { id: 'memory', state: 'healthy' },
+            { id: 'models', state: 'healthy' },
             { id: 'skills', state: 'healthy' },
         ]);
-    });
-
-    test('marks model inventory healthy when synced models exist', async () => {
-        markManagedOpenClawGatewayReady();
-        replaceStoredOpenClawModels({
-            models: {
-                models: [{ id: 'openai/gpt-5.5', label: 'GPT-5.5', provider: 'openai' }],
-                updatedAt: '2026-05-31T18:00:00.000Z',
-            },
-            syncedAt: '2026-05-31T18:00:00.000Z',
-        });
-
-        const [models] = await refreshRuntimeCapabilities({
-            ids: ['models'],
-        });
-
-        expect(models).toMatchObject({
-            healthy: true,
-            id: 'models',
-            metadata: {
-                models: 1,
-            },
-            state: 'healthy',
-        });
     });
 
     test('records embedding model health from Runtime-owned checks', async () => {
@@ -450,4 +344,52 @@ async function saveTestOpenAiKey() {
             method: 'PUT',
         })
     );
+}
+
+function startHermesCapabilityMock() {
+    return Bun.serve({
+        fetch(request, server) {
+            const url = new URL(request.url);
+            if (url.pathname === '/api/ws') {
+                if (server.upgrade(request)) {
+                    return;
+                }
+                return json({ detail: 'WebSocket upgrade failed' }, { status: 400 });
+            }
+            if (url.pathname === '/api/status' || url.pathname === '/health') {
+                return json({ ok: true, status: 'ok' });
+            }
+            if (url.pathname === '/api/sessions') {
+                return json({ sessions: [] });
+            }
+            if (url.pathname === '/api/model/options') {
+                return json({
+                    providers: [
+                        { models: ['gpt-5.4-mini'], name: 'openai-codex', slug: 'openai-codex' },
+                    ],
+                });
+            }
+            if (url.pathname === '/api/skills') {
+                return json({ skills: [{ id: 'agent-browser', name: 'Agent Browser' }] });
+            }
+            return json({ detail: 'not found' }, { status: 404 });
+        },
+        hostname: '127.0.0.1',
+        port: 0,
+        websocket: {
+            message() {
+                // Capability readiness only requires that Hermes accepts the Gateway socket.
+            },
+        },
+    });
+}
+
+function json(body: unknown, init?: ResponseInit) {
+    return new Response(JSON.stringify(body), {
+        ...init,
+        headers: {
+            'Content-Type': 'application/json',
+            ...init?.headers,
+        },
+    });
 }

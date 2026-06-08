@@ -31,8 +31,8 @@ export type MentionTone = (typeof mentionToneKeys)[number];
 
 export interface MentionAppearance {
     brandColor?: string;
-    iconDataUrl?: string;
     icon: MentionIconKey;
+    iconDataUrl?: string;
     label?: string;
     tone: MentionTone;
 }
@@ -122,7 +122,16 @@ export function MentionAppearanceIcon({
     icon: MentionIconKey;
 }) {
     if (iconDataUrl) {
-        return <img alt="" className={className} draggable={false} src={iconDataUrl} />;
+        return (
+            <img
+                alt=""
+                className={className}
+                draggable={false}
+                height={16}
+                src={iconDataUrl}
+                width={16}
+            />
+        );
     }
 
     return <Icon className={className} icon={mentionIconMap[icon]} />;

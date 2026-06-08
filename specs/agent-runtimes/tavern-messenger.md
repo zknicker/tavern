@@ -1,7 +1,7 @@
 # Tavern Messenger Runtime Channel
 
-Tavern Messenger is Tavern's first-party chat channel for OpenClaw. The channel is not ACP, a
-generic IDE bridge, or a fallback over OpenClaw's operator session APIs.
+Tavern Messenger is Tavern's first-party chat channel for Hermes. The channel is not ACP, a
+generic IDE bridge, or a fallback over Hermes's operator session APIs.
 
 ## Position
 
@@ -10,12 +10,12 @@ Tavern App
   -> Tavern API
   -> Tavern Runtime chat server
   -> Tavern Messenger channel/plugin
-  -> OpenClaw execution
+  -> Hermes execution
 ```
 
 Tavern App speaks Tavern API records such as `chat`, `message`, `event`, `session`, `turn`, and
-`tool`. Tavern Runtime owns the durable chat server and keeps OpenClaw Gateway payloads behind the
-OpenClaw adapter.
+`tool`. Tavern Runtime owns the durable chat server and keeps Hermes Gateway payloads behind the
+Hermes adapter.
 
 ## Architecture
 
@@ -24,20 +24,20 @@ flowchart LR
     subgraph Tavern["Tavern"]
         App["Tavern App<br/>first-party Mac client"]
         API["Tavern API<br/>chat, message, event APIs"]
-        Driver["Tavern Runtime<br/>chat server and managed OpenClaw relay"]
+        Driver["Tavern Runtime<br/>chat server and managed Hermes relay"]
         SDK["TypeScript SDK<br/>Tavern API client"]
         Store["Runtime SQLite<br/>chats, messages, events, delivery"]
     end
 
     subgraph Adapter["Runtime Adapter Package"]
-        OCAdapter["@tavern/openclaw-gateway-adapter"]
+        OCAdapter["@tavern/hermes-gateway-adapter"]
         Mapper["Gateway mappers<br/>parse, validate, rename, emit"]
     end
 
-    subgraph OpenClaw["OpenClaw"]
-        Gateway["OpenClaw Gateway<br/>RPC and event stream"]
+    subgraph Hermes["Hermes"]
+        Gateway["Hermes Gateway<br/>RPC and event stream"]
         Messenger["Tavern Messenger<br/>first-party channel/plugin"]
-        Runtime["OpenClaw execution<br/>sessions, turns, tools, history"]
+        Runtime["Hermes execution<br/>sessions, turns, tools, history"]
     end
 
     App -->|"send message + clientMessageId"| API
@@ -62,24 +62,24 @@ flowchart LR
 ```
 
 The fast lane is the accepted receipt plus SDK-backed activity writes. The durable lane is
-Runtime-owned chat state linked to OpenClaw history as execution evidence. The UI renders progress
+Runtime-owned chat state linked to Hermes history as execution evidence. The UI renders progress
 from Runtime activity while durable message history stays canonical.
 
 ## Model
 
-- One Tavern chat has exactly one bound OpenClaw agent.
+- One Tavern chat has exactly one bound Hermes agent.
 - One Tavern chat is one long-lived, single-threaded conversation.
 - Sends use text as the agent-facing prompt and may include Tavern-owned message metadata for
   presentation.
 - Tavern App does not choose an "active agent" inside a chat.
-- Tavern Runtime must install the Tavern Messenger plugin into managed OpenClaw before launch and
-  report that install as the `tavernPlugin` capability. Tavern chat send does not fall back to
+- Tavern Runtime must install the Tavern Messenger plugin into managed Hermes before launch.
+  Tavern chat send is gated by the managed Hermes `gateway` capability and does not fall back to
   `sessions.send`, `chat.send`, ACP, platform-specific targets, or Tavern-specific Gateway RPCs.
 
 Tavern Runtime accepts Tavern chat messages through Tavern API and relays private channel frames to
 the Tavern Messenger plugin.
 
-OpenClaw tool names exposed by Tavern-owned plugins must use provider-safe
+Hermes tool names exposed by Tavern-owned plugins must use provider-safe
 identifiers: letters, numbers, underscores, and hyphens only. Do not use dotted
 names such as `cortex.search`; Codex and provider tool APIs may reject them
 before a turn starts.
@@ -90,16 +90,16 @@ Tavern Messenger channel/plugin preserves first-party Tavern facts instead of fo
 reconstruct them from transport-specific labels.
 
 - Stable Tavern chat id.
-- OpenClaw session key for the chat's single bound agent. OpenClaw Tavern session keys must be
-  chat-specific, using `agent:<agent-id>:tavern:channel:<tavern-chat-id>`, with OpenClaw
+- Hermes session key for the chat's single bound agent. Hermes Tavern session keys must be
+  chat-specific, using `agent:<agent-id>:tavern:channel:<tavern-chat-id>`, with Hermes
   `chatType: "channel"` and `peer.kind: "channel"`. They must not collapse to the agent's `main`
   session through generic direct-message scoping.
-- OpenClaw session id when available. This is the current transcript identity for the session key,
+- Hermes session id when available. This is the current transcript identity for the session key,
   not the chat/session routing key. Tavern stores it as the session id while still using
   `sessionKey` for lookup and sends.
 - Client message id or idempotency key supplied by Tavern.
 - Optional message metadata supplied by Tavern, including `metadata.tavern.mentions`.
-- OpenClaw run, turn, message, and tool call ids when OpenClaw creates them.
+- Hermes run, turn, message, and tool call ids when Hermes creates them.
 - Participant ids, observed labels, and source identity facts.
 - Delivery metadata such as accepted, delivered, failed, active reply, approval, and tool state.
 - Timestamps supplied by the source event or runtime record.
@@ -108,18 +108,18 @@ If a required id, timestamp, actor, or session key is absent, the plugin or adap
 degraded capability or fails the mapping. It does not invent product identity.
 
 The channel/plugin must not publish a Tavern chat catalog. Tavern Runtime owns Tavern chat
-existence, bindings, durable messages, and labels. Tavern App owns presentation. OpenClaw Tavern
+existence, bindings, durable messages, and labels. Tavern App owns presentation. Hermes Tavern
 sessions are execution facts that attach to an existing Tavern chat; they are not a source for
 creating or renaming Tavern chats.
 
 ## Adapter Responsibilities
 
-The OpenClaw adapter maps Gateway payloads into Tavern API records and runtime evidence records.
+The Hermes adapter maps Gateway payloads into Tavern API records and runtime evidence records.
 
 - Do not require Tavern Messenger plugin methods for Tavern chat send or chat registry operations.
 - Validate required Tavern Messenger fields.
-- Normalize OpenClaw Gateway event names into runtime evidence invalidation records.
-- Do not map OpenClaw Tavern sessions into `AgentRuntimeChat` rows. Tavern chat rows come only from
+- Normalize Hermes Gateway event names into runtime evidence invalidation records.
+- Do not map Hermes Tavern sessions into `AgentRuntimeChat` rows. Tavern chat rows come only from
   Tavern-owned create/update flows.
 - Map external runtime-owned channel chats into runtime chat evidence rows with typed platform
   metadata.
@@ -134,13 +134,13 @@ labels or opaque ids, the Tavern Messenger channel contract is missing a field.
 ## Runtime Relay
 
 Tavern Runtime exposes a private local WebSocket at `/chat`. Tavern Messenger plugin connects to
-that relay from inside managed OpenClaw. Tavern API writes chat sends into Runtime, and Runtime
+that relay from inside managed Hermes. Tavern API writes chat sends into Runtime, and Runtime
 forwards them as `inbound-message` frames.
 
 The plugin maps responses and response activity through `@tavern/sdk` and the
 Tavern Chat API. Activity can include tool starts, tool results, command output,
 plan updates, assistant draft text, and provider-exposed reasoning summaries.
-Tavern renders it as visible response work; it is not an OpenClaw transcript row
+Tavern renders it as visible response work; it is not an Hermes transcript row
 and does not expose private reasoning content.
 
 Runtime WebSocket delivery is a notification path, not the source of truth. Tavern Runtime stores
@@ -154,7 +154,7 @@ response work from Runtime state.
 
 ## Message Metadata
 
-Tavern Messenger preserves Tavern-owned message metadata on the durable user message. OpenClaw may
+Tavern Messenger preserves Tavern-owned message metadata on the durable user message. Hermes may
 store the metadata, but it does not interpret `metadata.tavern`.
 
 Mentions use this shape:
@@ -193,7 +193,7 @@ Tavern does not wait for durable history sync before showing progress.
 3. Tavern Runtime creates or reuses the durable Tavern API message and cursor-backed
    `message.created` event.
 4. Tavern Runtime writes a private plugin outbox entry keyed by the durable message id, then relays
-   an `inbound-message` with the chat id, bound OpenClaw agent id, session key, message text,
+   an `inbound-message` with the chat id, bound Hermes agent id, session key, message text,
    message id, nonce, per-chat sequence, and optional message metadata.
 5. Tavern Messenger accepts the send and returns a run id through Runtime.
 6. Tavern Runtime exposes the accepted message through chat history so reload does not wait for
@@ -202,14 +202,14 @@ Tavern does not wait for durable history sync before showing progress.
    and completion state onto Tavern API responses and activity. Leaving and
    returning to a chat reads durable responses and activity from Runtime.
 8. Tavern Messenger persists the accepted Tavern message id, nonce, run id, session key, and
-   sequence into OpenClaw transcript history.
-9. OpenClaw transcript sync links execution evidence by stable Tavern ids. The accepted user row and
+   sequence into Hermes transcript history.
+9. Hermes transcript sync links execution evidence by stable Tavern ids. The accepted user row and
    final assistant delivery are already durable Tavern records, so final sync is a pure evidence
    upsert rather than content/timestamp deduplication.
 
 Optimistic rows are app-local presentation state. Accepted messages, responses,
 and response activity are recoverable Runtime state, but response activity is
-not a second OpenClaw transcript.
+not a second Hermes transcript.
 
 ## ACP
 

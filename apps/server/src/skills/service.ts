@@ -3,10 +3,7 @@ import { z } from 'zod';
 import type { TavernAgentRuntimeClient } from '../agent-runtime/client.ts';
 import { getAgentRuntimeSkill, listAgentRuntimeSkills } from '../agent-runtime/skills.ts';
 import { emitSkillInvalidationCascade } from '../api/invalidation-events.ts';
-import {
-    applyCurrentOpenClawConfigFixups,
-    getOpenClawConfigState,
-} from '../openclaw-config/service.ts';
+import { applyCurrentHermesConfigFixups, getHermesConfigState } from '../hermes-config/service.ts';
 import { getActiveAgentRuntimeConnection } from '../storage/agent-runtime-connections.ts';
 import {
     deleteTavernVaultSecret,
@@ -38,7 +35,7 @@ const skillSecretValueSchema = z.object({
 
 export async function listSkills(): Promise<SkillList> {
     const [configState, runtime] = await Promise.all([
-        getOpenClawConfigState(),
+        getHermesConfigState(),
         getActiveAgentRuntimeConnection(),
     ]);
     const skillRuntimeId = getSkillInventoryRuntimeId(runtime);
@@ -106,7 +103,7 @@ export async function saveSkillSecret(input: unknown) {
             value: parsed.value,
         },
     });
-    await applyCurrentOpenClawConfigFixups().catch(() => undefined);
+    await applyCurrentHermesConfigFixups().catch(() => undefined);
     void enqueueRuntimeSkillInventoryRefresh().catch(() => undefined);
     emitSkillInvalidationCascade();
 
@@ -127,7 +124,7 @@ export async function deleteSkillSecret(input: unknown) {
             skillPackageId: skill.id,
         })
     );
-    await applyCurrentOpenClawConfigFixups().catch(() => undefined);
+    await applyCurrentHermesConfigFixups().catch(() => undefined);
     void enqueueRuntimeSkillInventoryRefresh().catch(() => undefined);
     emitSkillInvalidationCascade();
 
@@ -238,7 +235,7 @@ function buildSkillSummary(skill: AgentRuntimeSkillSummary) {
 }
 
 function resolveSkillSurface(skill: AgentRuntimeSkillSummary): SkillDetail['surface'] {
-    return skill.runtimeSource?.toLowerCase().includes('codex') ? 'codex' : 'openclaw';
+    return skill.runtimeSource?.toLowerCase().includes('codex') ? 'codex' : 'hermes';
 }
 
 export function buildPluginSummaries(config: null | Record<string, unknown>): PluginSummary[] {
@@ -369,7 +366,7 @@ function resolvePluginSource(id: string, entry: Record<string, unknown>) {
     if (id === 'codex' || hasCodexNativePlugins(entry) || hasCodexComputerUse(entry)) {
         return 'Codex';
     }
-    return 'OpenClaw';
+    return 'Hermes';
 }
 
 function resolvePluginDescription(id: string, entry: Record<string, unknown>) {
@@ -388,7 +385,7 @@ function resolvePluginDescription(id: string, entry: Record<string, unknown>) {
             : 'Codex app-server harness and Codex-managed model access.';
     }
     if (id === 'memory-core') {
-        return 'OpenClaw memory capabilities.';
+        return 'Hermes memory capabilities.';
     }
     if (id === 'openai') {
         return 'OpenAI model and media provider capabilities.';

@@ -1,8 +1,8 @@
 ---
-summary: Durable chat API for messages, responses, activity, artifacts, receipts, reads, events, soft deletes, and OpenClaw metadata.
+summary: Durable chat API for messages, responses, activity, artifacts, receipts, reads, events, soft deletes, and Hermes metadata.
 read_when:
   - changing chat messages, responses, activity, artifacts, receipts, history, or timeline recovery
-  - changing how OpenClaw, bots, webhooks, or local tools send chat work into Tavern
+  - changing how Hermes, bots, webhooks, or local tools send chat work into Tavern
 ---
 
 # Chat API
@@ -28,7 +28,7 @@ Tavern Runtime is the durable source for chat objects.
 | `delivery` | Durable receipt | Runtime SQLite |
 | `event` | Recoverable notification | Runtime SQLite |
 
-App SQLite is a cache and presentation store. OpenClaw transcripts are execution
+App SQLite is a cache and presentation store. Hermes transcripts are execution
 evidence linked to Tavern messages.
 
 ## Endpoints
@@ -64,7 +64,7 @@ The Tavern app keeps list and detail reads separate:
   the sidebar and overview contract, not a full chat detail payload. List items
   include `hasActiveTurn` so compact views can show in-progress agent work
   without reading the full chat log. List items also include `isPinned` so the
-  app can render durable focus-area chats above recent chats. External OpenClaw
+  app can render durable focus-area chats above recent chats. External Hermes
   chat references belong to `agent.chats.list`, not the global Tavern chat list.
 * `chat.get` returns one full chat record by `chatId`.
 * `chat.setPinned` changes one chat's durable pinned state.
@@ -93,8 +93,8 @@ stays app-local until the final assistant message is persisted.
 system message before work starts.
 
 Messages have one text body and an optional durable attachment. Agent work such
-as reasoning summaries, tool calls, tool results, preambles, and progress belongs
-to `response` and `activity` records, not message body fields.
+as thinking summaries, tool calls, tool results, assistant progress, and status
+updates belongs to `response` and `activity` records, not message body fields.
 
 Request:
 
@@ -108,7 +108,7 @@ Request:
   "attachment": null,
   "metadata": {
     "runtime": {
-      "source": "openclaw",
+      "source": "hermes",
       "agentId": "main",
       "sessionKey": "agent:main:tavern:channel:..."
     }
@@ -176,10 +176,10 @@ in metadata or source fields; never use it as the Tavern timeline cursor.
 ## Chat Instructions
 
 Pinned Tavern chats can carry trusted chat-specific instructions in
-`metadata.tavern.groupSystemPrompt`. Tavern sends that value to OpenClaw as
-`GroupSystemPrompt` only while the chat is pinned. Generated temporary chat
-titles do not become `ConversationLabel` or `GroupSubject`; pinned chats and
-explicitly renamed chats may use their display name as the conversation label.
+`metadata.tavern.groupSystemPrompt`. Tavern passes that value through the Hermes
+turn adapter only while the chat is pinned. Generated temporary chat titles do
+not become durable execution labels; pinned chats and explicitly renamed chats
+may use their display name as the conversation label.
 
 ## Deliveries
 
@@ -203,7 +203,7 @@ Request:
   },
   "metadata": {
     "runtime": {
-      "source": "openclaw",
+      "source": "hermes",
       "agentId": "main",
       "sessionKey": "agent:main:tavern:channel:...",
       "sessionId": "...",
@@ -234,12 +234,12 @@ Activity is durable work performed as part of a response.
 
 A response is one participant's attempt to answer or act on a chat message. Most
 responses are authored by agents, but the Tavern noun stays chat-first:
-OpenClaw turns, runs, and transcript ids are runtime metadata on the response,
+Hermes turns, runs, and transcript ids are runtime metadata on the response,
 not the product identity.
 
 Activity can include:
 
-* planning and reasoning summaries
+* planning and thinking summaries
 * tool calls and tool results
 * commands
 * approvals
@@ -258,8 +258,8 @@ Common activity kinds:
 | Kind | Use |
 | --- | --- |
 | `planning` | Current plan or task list. |
-| `reasoning` | Provider-exposed reasoning summary. |
-| `message` | Assistant preamble or structured progress text before the final message. |
+| `reasoning` | Provider-exposed thinking summary. |
+| `message` | Assistant progress or structured status text before the final message. |
 | `tool_call` | Runtime tool work with stable tool identity. |
 | `tool_result` | Tool result material when it is represented separately. |
 | `command` | Shell-like command work when the runtime exposes it as a command. |
@@ -287,7 +287,7 @@ turn identity when their source item ids can repeat across turns.
   "artifact_ids": ["art_..."],
   "metadata": {
     "runtime": {
-      "source": "openclaw",
+      "source": "hermes",
       "sessionKey": "agent:main:tavern:channel:...",
       "turnId": "...",
       "toolCallId": "call_...",
@@ -373,9 +373,9 @@ durable chat reads.
 Soft delete sets `deleted_at`, keeps the row, and preserves the per-chat sequence
 slot so cursors remain stable. Hard delete is not part of the Chat API.
 
-## OpenClaw Metadata
+## Hermes Metadata
 
-OpenClaw identity stays in metadata:
+Hermes identity stays in metadata:
 
 ```text
 runtime.source
@@ -390,7 +390,7 @@ runtime.toolCallId
 runtime.toolName
 ```
 
-OpenClaw transcript sync upserts by stable Tavern ids when they are present.
+Hermes transcript sync upserts by stable Tavern ids when they are present.
 Transcript rows without Tavern identity remain execution evidence. Tavern links
 them through response and activity metadata when possible; they are not matched
 to existing Tavern messages by content or timestamp.
@@ -401,7 +401,7 @@ to existing Tavern messages by content or timestamp.
 * Content/timestamp duplicate detection.
 * Hidden chain-of-thought as message content or activity.
 * Runtime session sequence as the Tavern timeline cursor.
-* OpenClaw transcript rows as canonical chat history.
+* Hermes transcript rows as canonical chat history.
 
 ## Related Docs
 
@@ -409,4 +409,4 @@ to existing Tavern messages by content or timestamp.
 * [Data model](../internals/data-model.md)
 * [Chat feature](../features/chat.md)
 * [Tavern Runtime Chat Server](../../specs/runtime-chat-server.md)
-* [Tavern OpenClaw Messenger Plugin](../internals/tavern-openclaw-messenger-plugin.md)
+* [Tavern Hermes Runtime Adapter](../internals/tavern-hermes-runtime-adapter.md)

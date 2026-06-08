@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 import {
     listCodexAppServerSkills,
     mapCodexSkillsResult,
-    mergeOpenClawAndCodexSkills,
+    mergeHermesAndCodexSkills,
 } from './skills';
 
 describe('Codex app-server skills', () => {
@@ -41,8 +41,8 @@ describe('Codex app-server skills', () => {
         ]);
     });
 
-    it('keeps shared installed skills as OpenClaw rows', () => {
-        const merged = mergeOpenClawAndCodexSkills(
+    it('keeps shared installed skills as Hermes rows', () => {
+        const merged = mergeHermesAndCodexSkills(
             [
                 createSkill({
                     filePath: '/Users/me/.agents/skills/agent-browser/SKILL.md',

@@ -1,39 +1,21 @@
-import {
-    type AgentRuntimeCreateMessage,
-    agentRuntimeDeleteDiscordBindingSchema,
-    agentRuntimeRoutes,
-    agentRuntimeSaveDiscordBindingSchema,
-    agentRuntimeUpdateAgentModelSchema,
-    agentRuntimeUpdateAgentNameSchema,
-    agentRuntimeUpdateAgentThinkingDefaultSchema,
-} from '@tavern/api';
-
-import { listCodexAppServerSkills, mergeOpenClawAndCodexSkills } from '../codex-app-server/skills';
-import { syncManagedOpenClawSnapshotsInBackground } from '../openclaw/agent-sync';
-import {
-    applyOpenClawConfigMutation,
-    deleteDiscordBindingConfig,
-    updateAgentModelConfig,
-    updateAgentNameConfig,
-    updateAgentThinkingDefaultConfig,
-    upsertDiscordBindingConfig,
-} from '../openclaw/config-mutations';
-import { readDiscordBindings } from '../openclaw/discord-bindings';
-import { createLocalOpenClawClient } from '../openclaw/local-client';
+import { type AgentRuntimeCreateMessage, agentRuntimeRoutes } from '@tavern/api';
+import { listCodexAppServerSkills, mergeHermesAndCodexSkills } from '../codex-app-server/skills';
+import { unsupportedHermesSurface } from '../hermes/errors';
+import { createLocalHermesClient } from '../hermes/local-client';
 import { sendTavernChannelMessage } from './channel-relay';
 import { json } from './http';
 
-type LocalOpenClawClient = ReturnType<typeof createLocalOpenClawClient>;
+type LocalHermesClient = ReturnType<typeof createLocalHermesClient>;
 
 interface RouteContext {
-    client: LocalOpenClawClient;
+    client: LocalHermesClient;
     request: Request;
     url: URL;
 }
 
-export async function handleOpenClawProxyRequest(request: Request): Promise<Response | null> {
+export async function handleHermesProxyRequest(request: Request): Promise<Response | null> {
     const url = new URL(request.url);
-    const client = createLocalOpenClawClient();
+    const client = createLocalHermesClient();
 
     try {
         const payload = await dispatch({ client, request, url });
@@ -59,8 +41,25 @@ async function dispatch(context: RouteContext) {
     if (method === 'GET' && segments[0] === 'agents') {
         return await dispatchAgentGet(context, segments);
     }
+    if (method === 'PATCH' && segments[0] === 'agents' && segments[1] && segments[2] === 'name') {
+        return await client.updateAgentName(segments[1], await readJson(request));
+    }
+    if (method === 'PATCH' && segments[0] === 'agents' && segments[1] && segments[2] === 'model') {
+        return await client.updateAgentModel(segments[1], await readJson(request));
+    }
+    if (
+        method === 'PATCH' &&
+        segments[0] === 'agents' &&
+        segments[1] &&
+        segments[2] === 'thinking-default'
+    ) {
+        return await client.updateAgentThinkingDefault(segments[1], await readJson(request));
+    }
+    if (method === 'PATCH' && segments[0] === 'agents' && segments[1] && segments[2] === 'tools') {
+        return await client.updateAgentTools(segments[1], await readJson(request));
+    }
     if (method === 'PATCH' && segments[0] === 'agents' && segments[1]) {
-        return await dispatchAgentConfigMutation(context, segments);
+        return unsupportedPayload('Hermes agent setting');
     }
     if (method === 'DELETE' && segments[0] === 'agents' && segments[1]) {
         return await client.deleteAgent(segments[1]);
@@ -68,13 +67,11 @@ async function dispatch(context: RouteContext) {
     if (method === 'PUT' && isAgentFileRoute(segments) && segments[3]) {
         return await client.saveAgentFile(segments[1], segments[3], await readJson(request));
     }
-    if (method === 'GET' && url.pathname === agentRuntimeRoutes.openClawConfig) {
-        return await client.getOpenClawConfig();
+    if (method === 'GET' && url.pathname === agentRuntimeRoutes.hermesConfig) {
+        return await client.getHermesConfig();
     }
-    if (method === 'PUT' && url.pathname === agentRuntimeRoutes.openClawConfig) {
-        const snapshot = await client.applyOpenClawConfig(await readJson(request));
-        void syncManagedOpenClawSnapshotsInBackground('config.apply');
-        return snapshot;
+    if (method === 'PUT' && url.pathname === agentRuntimeRoutes.hermesConfig) {
+        return await client.applyHermesConfig(await readJson(request));
     }
     if (url.pathname.startsWith('/model-access')) {
         return await dispatchModelAccess(context);
@@ -85,13 +82,13 @@ async function dispatch(context: RouteContext) {
     if (url.pathname.startsWith('/skills')) {
         return await dispatchSkills(context, segments);
     }
-    if (url.pathname.startsWith('/openclaw/chats') || url.pathname.startsWith('/bindings')) {
+    if (url.pathname.startsWith('/hermes/chats') || url.pathname.startsWith('/bindings')) {
         return await dispatchChats(context, segments);
     }
     if (url.pathname.startsWith('/cron')) {
         return await dispatchCron(context, segments);
     }
-    if (url.pathname.startsWith('/openclaw/sessions')) {
+    if (url.pathname.startsWith('/hermes/sessions')) {
         return await dispatchSessions(context, segments);
     }
     return undefined;
@@ -112,43 +109,6 @@ async function dispatchAgentGet(context: RouteContext, segments: string[]) {
     if (segments[2] === 'files' && segments[3]) {
         return await client.getAgentFile(agentId, segments[3]);
     }
-    return undefined;
-}
-
-async function dispatchAgentConfigMutation(context: RouteContext, segments: string[]) {
-    const { client, request } = context;
-    const agentId = segments[1];
-    if (!agentId) {
-        return undefined;
-    }
-
-    if (segments[2] === 'name') {
-        const input = agentRuntimeUpdateAgentNameSchema.parse(await readJson(request));
-        const snapshot = await applyOpenClawConfigMutation(client, {
-            update: (config) => updateAgentNameConfig(config, agentId, input),
-        });
-        void syncManagedOpenClawSnapshotsInBackground('agent-name-update');
-        return snapshot;
-    }
-
-    if (segments[2] === 'model') {
-        const input = agentRuntimeUpdateAgentModelSchema.parse(await readJson(request));
-        const snapshot = await applyOpenClawConfigMutation(client, {
-            update: (config) => updateAgentModelConfig(config, agentId, input),
-        });
-        void syncManagedOpenClawSnapshotsInBackground('agent-model-update');
-        return snapshot;
-    }
-
-    if (segments[2] === 'thinking-default') {
-        const input = agentRuntimeUpdateAgentThinkingDefaultSchema.parse(await readJson(request));
-        const snapshot = await applyOpenClawConfigMutation(client, {
-            update: (config) => updateAgentThinkingDefaultConfig(config, agentId, input),
-        });
-        void syncManagedOpenClawSnapshotsInBackground('agent-thinking-default-update');
-        return snapshot;
-    }
-
     return undefined;
 }
 
@@ -183,12 +143,12 @@ async function dispatchModels({ client, request, url }: RouteContext) {
 async function dispatchSkills({ client, request, url }: RouteContext, segments: string[]) {
     if (request.method === 'GET' && url.pathname === agentRuntimeRoutes.skills) {
         const agentId = url.searchParams.get('agentId');
-        const [openClawSkills, codexSkills] = await Promise.all([
+        const [hermesSkills, codexSkills] = await Promise.all([
             client.listSkills(agentId ? { agentId } : undefined),
             listCodexAppServerSkills().catch(() => []),
         ]);
         return {
-            skills: mergeOpenClawAndCodexSkills(openClawSkills.skills, codexSkills),
+            skills: mergeHermesAndCodexSkills(hermesSkills.skills, codexSkills),
         };
     }
     if (request.method === 'POST' && url.pathname === agentRuntimeRoutes.skillInstall) {
@@ -218,46 +178,24 @@ async function dispatchChats({ client, request, url }: RouteContext, segments: s
         return await client.upsertBinding(await readJson(request));
     }
     if (request.method === 'GET' && url.pathname === agentRuntimeRoutes.discordBindings) {
-        const snapshot = await client.getOpenClawConfig();
-        return {
-            bindings: readDiscordBindings(snapshot.config),
-        };
+        return { bindings: [] };
     }
     if (request.method === 'POST' && url.pathname === agentRuntimeRoutes.discordBindings) {
-        const input = agentRuntimeSaveDiscordBindingSchema.parse(await readJson(request));
-        const snapshot = await applyOpenClawConfigMutation(client, {
-            update: (config) => upsertDiscordBindingConfig(config, input),
-        });
-        void syncManagedOpenClawSnapshotsInBackground('discord-binding-save');
-        return snapshot;
+        return unsupportedPayload('Hermes does not own Discord bindings.');
     }
-    if (segments[0] === 'bindings' && segments[1] === 'discord' && segments[2]) {
-        if (request.method === 'PUT') {
-            const input = agentRuntimeSaveDiscordBindingSchema.parse(await readJson(request));
-            const snapshot = await applyOpenClawConfigMutation(client, {
-                update: (config) =>
-                    upsertDiscordBindingConfig(config, {
-                        ...input,
-                        bindingId: segments[2],
-                    }),
-            });
-            void syncManagedOpenClawSnapshotsInBackground('discord-binding-save');
-            return snapshot;
-        }
-
-        if (request.method === 'DELETE') {
-            const input = agentRuntimeDeleteDiscordBindingSchema.parse(await readJson(request));
-            const snapshot = await applyOpenClawConfigMutation(client, {
-                update: (config) => deleteDiscordBindingConfig(config, segments[2], input),
-            });
-            void syncManagedOpenClawSnapshotsInBackground('discord-binding-delete');
-            return snapshot;
-        }
+    if (
+        segments[0] === 'bindings' &&
+        segments[1] === 'discord' &&
+        segments[2] &&
+        (request.method === 'PUT' || request.method === 'DELETE')
+    ) {
+        return unsupportedPayload('Hermes does not own Discord bindings.');
     }
     if (segments[0] === 'bindings' && segments[1] && request.method === 'DELETE') {
         return await client.deleteBinding(segments[1]);
     }
-    const chatId = segments[0] === 'openclaw' && segments[1] === 'chats' ? segments[2] : null;
+
+    const chatId = segments[0] === 'hermes' && segments[1] === 'chats' ? segments[2] : null;
     if (!chatId) {
         return undefined;
     }
@@ -272,6 +210,10 @@ async function dispatchChats({ client, request, url }: RouteContext, segments: s
 }
 
 function isTavernChannelMessage(input: AgentRuntimeCreateMessage) {
+    if (!input.target) {
+        return false;
+    }
+
     return (
         input.target.type === 'tavern' ||
         input.target.sessionKey?.includes(':tavern:channel:') === true
@@ -313,8 +255,17 @@ async function dispatchSessions({ client, request, url }: RouteContext, segments
     if (request.method === 'GET' && url.pathname === agentRuntimeRoutes.sessions) {
         return await client.listSessions();
     }
-    const sessionKey =
-        segments[0] === 'openclaw' && segments[1] === 'sessions' ? segments[2] : null;
+    if (request.method === 'GET' && url.pathname === agentRuntimeRoutes.sessionPreviews) {
+        const keys = url.searchParams.getAll('key');
+        const limit = url.searchParams.get('limit');
+        const maxChars = url.searchParams.get('maxChars');
+        return await client.listSessionPreviews({
+            keys,
+            ...(limit ? { limit: Number(limit) } : {}),
+            ...(maxChars ? { maxChars: Number(maxChars) } : {}),
+        });
+    }
+    const sessionKey = segments[0] === 'hermes' && segments[1] === 'sessions' ? segments[2] : null;
     if (!sessionKey) {
         return undefined;
     }
@@ -349,7 +300,7 @@ function isAgentFileRoute(segments: string[]) {
 function toRuntimeError(error: unknown) {
     return {
         code: readErrorCode(error),
-        message: error instanceof Error ? error.message : 'OpenClaw request failed.',
+        message: error instanceof Error ? error.message : 'Hermes request failed.',
         retryable: true,
     };
 }
@@ -360,5 +311,9 @@ function readErrorCode(error: unknown) {
         'code' in error &&
         typeof error.code === 'string'
         ? error.code
-        : 'openclaw_request_failed';
+        : 'hermes_request_failed';
+}
+
+function unsupportedPayload(message: string) {
+    return unsupportedHermesSurface(message);
 }

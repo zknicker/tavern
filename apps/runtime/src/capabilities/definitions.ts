@@ -13,15 +13,11 @@ import {
     getCortexSettings,
     resolveCortexOpenAiApiKey,
 } from '../cortex/settings';
+import { createLocalHermesClient } from '../hermes/local-client';
 import { listRuntimeJobRuns } from '../jobs/history';
 import { getRuntimeJobBinding } from '../jobs/manager';
 import { loadVaultBackedCodexCredentials } from '../model-access/codex-settings';
 import { getOpenRouterApiKey } from '../model-access/openrouter-settings';
-import { getManagedOpenClawState } from '../openclaw/state';
-import {
-    getStoredOpenClawModels,
-    getStoredOpenClawModelsSnapshotStatus,
-} from '../tavern/openclaw-snapshots-store';
 
 export interface RuntimeCapabilityCheckResult {
     metadata?: Record<string, unknown>;
@@ -41,16 +37,6 @@ export interface RuntimeCapabilityDefinition {
 }
 
 const minuteMs = 60 * 1000;
-const expectedCortexToolNames = [
-    'cortex_search',
-    'cortex_get_page',
-    'cortex_capture',
-    'cortex_edit',
-    'cortex_ingest',
-    'cortex_import',
-    'cortex_recall',
-    'cortex_list_backlinks',
-];
 const cortexJobSlugs = [
     'cortex-generate-embeddings',
     'cortex-sync',
@@ -61,12 +47,6 @@ const cortexJobSlugs = [
 ] as const;
 
 export const runtimeCapabilityDefinitions: RuntimeCapabilityDefinition[] = [
-    healthyCapability('agentFiles', 'agent files'),
-    healthyCapability('agentTurns', 'agent turns'),
-    healthyCapability('agents', 'agents'),
-    healthyCapability('chats', 'chats'),
-    healthyCapability('chatTargets', 'chat targets'),
-    healthyCapability('computerUse', 'computer use', 10 * minuteMs),
     {
         async check() {
             return await checkCodexModelAccessCapability();
@@ -75,17 +55,6 @@ export const runtimeCapabilityDefinitions: RuntimeCapabilityDefinition[] = [
         id: 'codexOAuth',
         refresh: {
             intervalMs: 15 * minuteMs,
-            runOnStart: true,
-        },
-    },
-    {
-        check() {
-            return checkCortexAgentToolsCapability();
-        },
-        displayName: 'Cortex agent tools',
-        id: 'cortexAgentTools',
-        refresh: {
-            intervalMs: 5 * minuteMs,
             runOnStart: true,
         },
     },
@@ -134,63 +103,52 @@ export const runtimeCapabilityDefinitions: RuntimeCapabilityDefinition[] = [
             runOnStart: true,
         },
     },
-    healthyCapability('cron', 'cron'),
-    healthyCapability('cronRuns', 'cron runs'),
-    healthyCapability('events', 'events'),
-    healthyCapability('knowledgebase', 'knowledgebase'),
-    healthyCapability('logs', 'logs'),
-    healthyCapability('mentions', 'mentions'),
-    healthyCapability('messages', 'messages'),
-    healthyCapability('sessionEvents', 'session events'),
-    healthyCapability('sessions', 'sessions'),
-    gatewayBackedCapability('skills', 'skills', 'Skill inventory may be stale.'),
-    healthyCapability('skillMaterialization', 'skill materialization'),
-    healthyCapability('status', 'runtime'),
-    healthyCapability('tasks', 'tasks'),
     {
-        check() {
-            const managedOpenClaw = getManagedOpenClawState();
-            return managedOpenClaw.tavernPluginPath
-                ? { state: 'healthy' }
-                : {
-                      reason: 'Managed OpenClaw has not installed the Tavern plugin.',
-                      state: 'unavailable',
-                  };
+        async check() {
+            return await checkManagedHermesCapability({
+                check: async (client) => {
+                    await client.getStatus();
+                },
+                metadata: { endpoint: '/api/status' },
+                unavailableReason: 'Managed Hermes dashboard server is not reachable.',
+            });
         },
-        displayName: 'tavernPlugin',
-        id: 'tavernPlugin',
+        displayName: 'Hermes dashboard server',
+        id: 'dashboardServer',
         refresh: {
             intervalMs: 5 * minuteMs,
             runOnStart: true,
         },
     },
     {
-        check() {
-            return getManagedOpenClawState().gatewayReady === false
-                ? {
-                      reason: 'Managed OpenClaw Gateway is not ready.',
-                      state: 'unavailable',
-                  }
-                : { state: 'healthy' };
+        async check() {
+            return await checkManagedHermesCapability({
+                check: async (client) => {
+                    await client.assertApiReady();
+                },
+                metadata: { endpoint: '/api/sessions' },
+                unavailableReason: 'Managed Hermes API server is not reachable.',
+            });
         },
-        displayName: 'gateway',
+        displayName: 'Hermes API server',
+        id: 'apiServer',
+        refresh: {
+            intervalMs: 5 * minuteMs,
+            runOnStart: true,
+        },
+    },
+    {
+        async check() {
+            return await checkManagedHermesCapability({
+                check: async (client) => {
+                    await client.assertGatewayReady();
+                },
+                metadata: { endpoint: '/api/ws' },
+                unavailableReason: 'Managed Hermes Gateway is not reachable.',
+            });
+        },
+        displayName: 'Hermes Gateway',
         id: 'gateway',
-        refresh: {
-            intervalMs: 5 * minuteMs,
-            runOnStart: true,
-        },
-    },
-    {
-        check() {
-            return getManagedOpenClawState().gatewayReady === false
-                ? {
-                      reason: 'Managed OpenClaw Gateway is not ready; memory may be stale.',
-                      state: 'degraded',
-                  }
-                : { state: 'healthy' };
-        },
-        displayName: 'memory',
-        id: 'memory',
         refresh: {
             intervalMs: 5 * minuteMs,
             runOnStart: true,
@@ -208,33 +166,14 @@ export const runtimeCapabilityDefinitions: RuntimeCapabilityDefinition[] = [
         },
     },
     {
-        check() {
-            if (getManagedOpenClawState().gatewayReady === false) {
-                return {
-                    reason: 'Managed OpenClaw Gateway is not ready; model inventory may be stale.',
-                    state: 'degraded',
-                };
-            }
-            const snapshot = getStoredOpenClawModelsSnapshotStatus();
-            const models = getStoredOpenClawModels();
-            if (hasUsableModelInventory(models)) {
-                return {
-                    metadata: {
-                        models: models.models.length,
-                    },
-                    state: 'healthy',
-                };
-            }
-
-            return snapshot.hasSnapshot
-                ? {
-                      reason: 'Runtime synced an empty model inventory.',
-                      state: 'degraded',
-                  }
-                : {
-                      reason: 'Runtime has not synced model inventory yet.',
-                      state: 'unknown',
-                  };
+        async check() {
+            return await checkManagedHermesCapability({
+                check: async (client) => {
+                    await client.getModels();
+                },
+                metadata: { endpoint: '/api/model/options' },
+                unavailableReason: 'Hermes model inventory is not reachable.',
+            });
         },
         displayName: 'models',
         id: 'models',
@@ -243,53 +182,24 @@ export const runtimeCapabilityDefinitions: RuntimeCapabilityDefinition[] = [
             runOnStart: true,
         },
     },
+    {
+        async check() {
+            return await checkManagedHermesCapability({
+                check: async (client) => {
+                    await client.listSkills();
+                },
+                metadata: { endpoint: '/api/skills' },
+                unavailableReason: 'Hermes skill inventory is not reachable.',
+            });
+        },
+        displayName: 'skills',
+        id: 'skills',
+        refresh: {
+            intervalMs: 5 * minuteMs,
+            runOnStart: true,
+        },
+    },
 ];
-
-function hasUsableModelInventory(models: { models: unknown[] }) {
-    return models.models.length > 0;
-}
-
-function healthyCapability(
-    id: AgentRuntimeCapabilityHealthId,
-    displayName: string,
-    intervalMs = 5 * minuteMs
-): RuntimeCapabilityDefinition {
-    return {
-        check() {
-            return { state: 'healthy' };
-        },
-        displayName,
-        id,
-        refresh: {
-            intervalMs,
-            runOnStart: true,
-        },
-    };
-}
-
-function gatewayBackedCapability(
-    id: AgentRuntimeCapabilityHealthId,
-    displayName: string,
-    degradedReason: string,
-    intervalMs = 5 * minuteMs
-): RuntimeCapabilityDefinition {
-    return {
-        check() {
-            return getManagedOpenClawState().gatewayReady === false
-                ? {
-                      reason: `Managed OpenClaw Gateway is not ready; ${degradedReason}`,
-                      state: 'degraded',
-                  }
-                : { state: 'healthy' };
-        },
-        displayName,
-        id,
-        refresh: {
-            intervalMs,
-            runOnStart: true,
-        },
-    };
-}
 
 function cortexDatabaseCapability(): RuntimeCapabilityDefinition {
     return {
@@ -367,58 +277,6 @@ function checkCortexWikiCapability(): RuntimeCapabilityCheckResult {
     } catch (error) {
         return {
             reason: 'Cortex wiki path is not readable and writable.',
-            state: 'unavailable',
-            technicalMessage: error instanceof Error ? error.message : String(error),
-        };
-    }
-}
-
-function checkCortexAgentToolsCapability(): RuntimeCapabilityCheckResult {
-    const managedOpenClaw = getManagedOpenClawState();
-    if (managedOpenClaw.gatewayReady === false) {
-        return {
-            reason: 'Managed OpenClaw Gateway is not ready.',
-            state: 'unavailable',
-        };
-    }
-    if (!managedOpenClaw.cortexPluginPath) {
-        return {
-            reason: 'Managed OpenClaw has not installed the Cortex plugin.',
-            state: 'unavailable',
-        };
-    }
-
-    try {
-        const manifestPath = path.join(managedOpenClaw.cortexPluginPath, 'openclaw.plugin.json');
-        const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8')) as {
-            contracts?: { tools?: unknown };
-        };
-        const tools = Array.isArray(manifest.contracts?.tools)
-            ? manifest.contracts.tools.filter((tool): tool is string => typeof tool === 'string')
-            : [];
-        const missing = expectedCortexToolNames.filter((tool) => !tools.includes(tool));
-        if (missing.length > 0) {
-            return {
-                metadata: {
-                    available: tools.length,
-                    expected: expectedCortexToolNames.length,
-                    missing,
-                },
-                reason: 'Cortex plugin does not declare every expected tool.',
-                state: 'unavailable',
-            };
-        }
-        return {
-            metadata: {
-                available: tools.length,
-                expected: expectedCortexToolNames.length,
-                pluginPath: managedOpenClaw.cortexPluginPath,
-            },
-            state: 'healthy',
-        };
-    } catch (error) {
-        return {
-            reason: 'Cortex plugin manifest could not be checked.',
             state: 'unavailable',
             technicalMessage: error instanceof Error ? error.message : String(error),
         };
@@ -524,6 +382,27 @@ async function checkCortexImportProcessorsCapability(): Promise<RuntimeCapabilit
 
 function uniqueModelProviders(refs: string[]): string[] {
     return Array.from(new Set(refs.map((ref) => ref.split('/')[0]).filter(Boolean))).sort();
+}
+
+async function checkManagedHermesCapability(input: {
+    check(client: ReturnType<typeof createLocalHermesClient>): Promise<void>;
+    metadata?: Record<string, unknown>;
+    unavailableReason: string;
+}): Promise<RuntimeCapabilityCheckResult> {
+    const client = createLocalHermesClient();
+    try {
+        await input.check(client);
+        return { metadata: input.metadata, state: 'healthy' };
+    } catch (error) {
+        return {
+            metadata: input.metadata,
+            reason: input.unavailableReason,
+            state: 'unavailable',
+            technicalMessage: error instanceof Error ? error.message : String(error),
+        };
+    } finally {
+        client.close();
+    }
 }
 
 export function getRuntimeCapabilityDefinition(id: AgentRuntimeCapabilityHealthId) {

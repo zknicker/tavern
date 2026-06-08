@@ -15,13 +15,14 @@ export async function getChatLogPage(input: {
     if (timeline === null) {
         return chatLogPageSchema.parse({
             activeReply: null,
+            failedTurn: null,
             limit: input.limit,
             rows: [],
             offset: 0,
             total: 0,
         });
     }
-    const { activeReply, rows } = timeline;
+    const { activeReply, failedTurn, rows } = timeline;
     const total = rows.length;
     const offset = resolveChatLogOffset({
         cursor: input.cursor,
@@ -33,6 +34,7 @@ export async function getChatLogPage(input: {
 
     return chatLogPageSchema.parse({
         activeReply,
+        failedTurn,
         limit: input.limit,
         rows: rows.slice(offset, offset + input.limit),
         offset,

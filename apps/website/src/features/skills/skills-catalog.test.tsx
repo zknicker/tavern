@@ -37,12 +37,12 @@ describe('skills catalog rows', () => {
                 createPlugin({
                     id: 'tavern-cortex',
                     name: 'Tavern Cortex',
-                    source: 'OpenClaw',
+                    source: 'Hermes',
                 }),
                 createPlugin({
                     id: 'tavern-workspace',
                     name: 'Tavern Workspace',
-                    source: 'OpenClaw',
+                    source: 'Hermes',
                 }),
             ],
             skills: [],
@@ -98,7 +98,7 @@ describe('skills catalog rows', () => {
                 createPlugin({
                     id: 'openai',
                     name: 'openai',
-                    source: 'OpenClaw',
+                    source: 'Hermes',
                 }),
             ],
             skills: [
@@ -165,7 +165,7 @@ function createSkill(
         },
         id,
         name,
-        surface: 'openclaw',
+        surface: 'hermes',
         updatedAt: null,
         usability: 'enabled',
         version: null,

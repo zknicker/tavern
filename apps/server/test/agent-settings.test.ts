@@ -43,7 +43,7 @@ test('saveCatalogAgentProfile saves color without requiring a runtime connection
                 workspaceFolder: 'blippy',
             },
         ],
-        runtimeId: 'openclaw-primary',
+        runtimeId: 'hermes-primary',
     });
 
     const agent = await saveCatalogAgentProfile({
@@ -69,7 +69,7 @@ test('saveCatalogAgentSettings persists skill enablement through runtime agent c
                 workspaceFolder: 'blippy',
             },
         ],
-        runtimeId: 'openclaw-primary',
+        runtimeId: 'hermes-primary',
     });
 
     let savedEnabledSkillIds: string[] | null = null;
@@ -183,7 +183,7 @@ test('saveCatalogAgentSettings leaves skills untouched for name-only saves', asy
                 workspaceFolder: 'blippy',
             },
         ],
-        runtimeId: 'openclaw-primary',
+        runtimeId: 'hermes-primary',
     });
 
     let savedEnabledSkillIds: string[] | undefined;

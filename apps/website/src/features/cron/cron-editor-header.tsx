@@ -48,7 +48,7 @@ export function CronEditorHeader({
                             title={
                                 canRunActions
                                     ? 'Delete automation'
-                                    : 'Connect OpenClaw to delete this automation'
+                                    : 'Connect Hermes to delete this automation'
                             }
                             type="button"
                             variant="destructive-outline"
@@ -60,9 +60,7 @@ export function CronEditorHeader({
                             loading={isRunning}
                             onClick={onRun}
                             title={
-                                canRunActions
-                                    ? 'Run now'
-                                    : 'Connect OpenClaw to run this automation'
+                                canRunActions ? 'Run now' : 'Connect Hermes to run this automation'
                             }
                             type="button"
                             variant="secondary"

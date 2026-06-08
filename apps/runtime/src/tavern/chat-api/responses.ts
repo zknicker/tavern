@@ -109,7 +109,7 @@ export function upsertResponse(
         publish(event);
         return { created: !existing, response };
     } catch (error) {
-        db.exec('ROLLBACK');
+        rollbackTransaction(db);
         throw error;
     }
 }
@@ -184,7 +184,7 @@ export function upsertResponseActivity(
         publish(event);
         return { activity, created: !existing };
     } catch (error) {
-        db.exec('ROLLBACK');
+        rollbackTransaction(db);
         throw error;
     }
 }
@@ -241,7 +241,7 @@ export function upsertArtifact(
         publish(event);
         return { artifact, created: !existing };
     } catch (error) {
-        db.exec('ROLLBACK');
+        rollbackTransaction(db);
         throw error;
     }
 }
@@ -425,6 +425,14 @@ function assertArtifactInputIds(chatId: string, input: TavernUpsertArtifactReque
 
 function terminalTime(status: TavernChatResponse['status'], now: string) {
     return status === 'completed' || status === 'failed' || status === 'cancelled' ? now : null;
+}
+
+function rollbackTransaction(db: Database) {
+    try {
+        db.exec('ROLLBACK');
+    } catch {
+        // Keep the original transaction failure visible.
+    }
 }
 
 function responseEventType(status: TavernChatResponse['status'], created: boolean) {

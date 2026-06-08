@@ -2,7 +2,7 @@ import {
     type AgentRuntimeAgent,
     type AgentRuntimeAgentFileContent,
     type AgentRuntimeAgentFileList,
-    type AgentRuntimeApplyOpenClawConfig,
+    type AgentRuntimeApplyHermesConfig,
     type AgentRuntimeArchiveAgent,
     type AgentRuntimeArchiveBinding,
     type AgentRuntimeArchiveCron,
@@ -20,6 +20,7 @@ import {
     type AgentRuntimeCronRun,
     type AgentRuntimeDeleteDiscordBinding,
     type AgentRuntimeDiscordBinding,
+    type AgentRuntimeHermesConfigSnapshot,
     type AgentRuntimeHighlightList,
     type AgentRuntimeInstallSkill,
     type AgentRuntimeJobDetail,
@@ -30,7 +31,6 @@ import {
     type AgentRuntimeModelAccess,
     type AgentRuntimeModels,
     type AgentRuntimeOpenAiSettings,
-    type AgentRuntimeOpenClawConfigSnapshot,
     type AgentRuntimeOpenRouterSettings,
     type AgentRuntimeRenderedWorkspaceInstructions,
     type AgentRuntimeRunCron,
@@ -53,6 +53,7 @@ import {
     type AgentRuntimeUpdateAgentModel,
     type AgentRuntimeUpdateAgentName,
     type AgentRuntimeUpdateAgentThinkingDefault,
+    type AgentRuntimeUpdateAgentTools,
     type AgentRuntimeUpdateCron,
     type AgentRuntimeUpsertBinding,
     type AgentRuntimeWorkspaceInstructions,
@@ -60,7 +61,7 @@ import {
     agentRuntimeAgentFileListSchema,
     agentRuntimeAgentListSchema,
     agentRuntimeAgentSchema,
-    agentRuntimeApplyOpenClawConfigSchema,
+    agentRuntimeApplyHermesConfigSchema,
     agentRuntimeArchiveAgentSchema,
     agentRuntimeArchiveBindingSchema,
     agentRuntimeArchiveCronSchema,
@@ -81,6 +82,7 @@ import {
     agentRuntimeDeleteDiscordBindingSchema,
     agentRuntimeDiscordBindingListSchema,
     agentRuntimeErrorSchema,
+    agentRuntimeHermesConfigSnapshotSchema,
     agentRuntimeHighlightListSchema,
     agentRuntimeInstallSkillSchema,
     agentRuntimeJobDetailSchema,
@@ -93,7 +95,6 @@ import {
     agentRuntimeMutationHeaders,
     agentRuntimeMutationOrigins,
     agentRuntimeOpenAiSettingsSchema,
-    agentRuntimeOpenClawConfigSnapshotSchema,
     agentRuntimeOpenRouterSettingsSchema,
     agentRuntimeRenderedWorkspaceInstructionsSchema,
     agentRuntimeRoutes,
@@ -116,6 +117,7 @@ import {
     agentRuntimeUpdateAgentModelSchema,
     agentRuntimeUpdateAgentNameSchema,
     agentRuntimeUpdateAgentThinkingDefaultSchema,
+    agentRuntimeUpdateAgentToolsSchema,
     agentRuntimeUpdateCronSchema,
     agentRuntimeUpdateSchema,
     agentRuntimeUpsertBindingSchema,
@@ -178,9 +180,9 @@ export class AgentRuntimeRequestError extends Error {
 }
 
 export interface TavernAgentRuntimeClient {
-    applyOpenClawConfig(
-        input: AgentRuntimeApplyOpenClawConfig
-    ): Promise<AgentRuntimeOpenClawConfigSnapshot>;
+    applyHermesConfig(
+        input: AgentRuntimeApplyHermesConfig
+    ): Promise<AgentRuntimeHermesConfigSnapshot>;
     captureCortex(input: CortexCaptureInput): Promise<CortexCaptureResult>;
     close(): void;
     createCronJob(input: AgentRuntimeCreateCron): Promise<AgentRuntimeCron>;
@@ -190,7 +192,7 @@ export interface TavernAgentRuntimeClient {
     deleteDiscordBinding(
         bindingId: string,
         input: AgentRuntimeDeleteDiscordBinding
-    ): Promise<AgentRuntimeOpenClawConfigSnapshot>;
+    ): Promise<AgentRuntimeHermesConfigSnapshot>;
     deleteOpenAiSettings(): Promise<AgentRuntimeOpenAiSettings>;
     deleteOpenRouterSettings(): Promise<AgentRuntimeOpenRouterSettings>;
     deleteSkill(skillId: string): Promise<AgentRuntimeArchiveSkill>;
@@ -204,10 +206,10 @@ export interface TavernAgentRuntimeClient {
     getCortexSettings(): Promise<CortexSettings>;
     getCortexStatus(): Promise<CortexStatus>;
     getCronJob(jobId: string): Promise<AgentRuntimeCron>;
+    getHermesConfig(): Promise<AgentRuntimeHermesConfigSnapshot>;
     getModelAccess(): Promise<AgentRuntimeModelAccess>;
     getModels(): Promise<AgentRuntimeModels>;
     getOpenAiSettings(): Promise<AgentRuntimeOpenAiSettings>;
-    getOpenClawConfig(): Promise<AgentRuntimeOpenClawConfigSnapshot>;
     getOpenRouterSettings(): Promise<AgentRuntimeOpenRouterSettings>;
     getRuntimeJob(slug: AgentRuntimeJobSlug): Promise<AgentRuntimeJobDetail | null>;
     getSessionGraph(sessionKey: string): Promise<AgentRuntimeSessionGraph>;
@@ -263,7 +265,7 @@ export interface TavernAgentRuntimeClient {
     saveCortexSettings(input: CortexSaveSettings): Promise<CortexSettings>;
     saveDiscordBinding(
         input: AgentRuntimeSaveDiscordBinding
-    ): Promise<AgentRuntimeOpenClawConfigSnapshot>;
+    ): Promise<AgentRuntimeHermesConfigSnapshot>;
     saveOpenAiSettings(input: AgentRuntimeSaveOpenAiSettings): Promise<AgentRuntimeOpenAiSettings>;
     saveOpenRouterSettings(
         input: AgentRuntimeSaveOpenRouterSettings
@@ -277,15 +279,19 @@ export interface TavernAgentRuntimeClient {
     updateAgentModel(
         agentId: string,
         input: AgentRuntimeUpdateAgentModel
-    ): Promise<AgentRuntimeOpenClawConfigSnapshot>;
+    ): Promise<AgentRuntimeHermesConfigSnapshot>;
     updateAgentName(
         agentId: string,
         input: AgentRuntimeUpdateAgentName
-    ): Promise<AgentRuntimeOpenClawConfigSnapshot>;
+    ): Promise<AgentRuntimeHermesConfigSnapshot>;
     updateAgentThinkingDefault(
         agentId: string,
         input: AgentRuntimeUpdateAgentThinkingDefault
-    ): Promise<AgentRuntimeOpenClawConfigSnapshot>;
+    ): Promise<AgentRuntimeHermesConfigSnapshot>;
+    updateAgentTools(
+        agentId: string,
+        input: AgentRuntimeUpdateAgentTools
+    ): Promise<AgentRuntimeHermesConfigSnapshot>;
     updateCronJob(jobId: string, input: AgentRuntimeUpdateCron): Promise<AgentRuntimeCron>;
     upsertAgent(input: AgentRuntimeCreateAgent): Promise<AgentRuntimeAgent>;
     upsertBinding(input: AgentRuntimeUpsertBinding): Promise<AgentRuntimeBinding>;
@@ -916,19 +922,19 @@ class HttpTavernAgentRuntimeClient implements TavernAgentRuntimeClient {
         return agentRuntimeModelsSchema.parse(await response.json());
     }
 
-    async getOpenClawConfig() {
-        const response = await fetch(`${this.#baseUrl}${agentRuntimeRoutes.openClawConfig}`);
+    async getHermesConfig() {
+        const response = await fetch(`${this.#baseUrl}${agentRuntimeRoutes.hermesConfig}`);
 
         if (!response.ok) {
             await readErrorResponse(response);
         }
 
-        return agentRuntimeOpenClawConfigSnapshotSchema.parse(await response.json());
+        return agentRuntimeHermesConfigSnapshotSchema.parse(await response.json());
     }
 
-    async applyOpenClawConfig(input: AgentRuntimeApplyOpenClawConfig) {
-        const payload = agentRuntimeApplyOpenClawConfigSchema.parse(input);
-        const response = await fetch(`${this.#baseUrl}${agentRuntimeRoutes.openClawConfig}`, {
+    async applyHermesConfig(input: AgentRuntimeApplyHermesConfig) {
+        const payload = agentRuntimeApplyHermesConfigSchema.parse(input);
+        const response = await fetch(`${this.#baseUrl}${agentRuntimeRoutes.hermesConfig}`, {
             body: JSON.stringify(payload),
             headers: {
                 'content-type': 'application/json',
@@ -941,7 +947,7 @@ class HttpTavernAgentRuntimeClient implements TavernAgentRuntimeClient {
             await readErrorResponse(response);
         }
 
-        return agentRuntimeOpenClawConfigSnapshotSchema.parse(await response.json());
+        return agentRuntimeHermesConfigSnapshotSchema.parse(await response.json());
     }
 
     async updateAgentName(agentId: string, input: AgentRuntimeUpdateAgentName) {
@@ -959,7 +965,7 @@ class HttpTavernAgentRuntimeClient implements TavernAgentRuntimeClient {
             await readErrorResponse(response);
         }
 
-        return agentRuntimeOpenClawConfigSnapshotSchema.parse(await response.json());
+        return agentRuntimeHermesConfigSnapshotSchema.parse(await response.json());
     }
 
     async updateAgentModel(agentId: string, input: AgentRuntimeUpdateAgentModel) {
@@ -977,7 +983,7 @@ class HttpTavernAgentRuntimeClient implements TavernAgentRuntimeClient {
             await readErrorResponse(response);
         }
 
-        return agentRuntimeOpenClawConfigSnapshotSchema.parse(await response.json());
+        return agentRuntimeHermesConfigSnapshotSchema.parse(await response.json());
     }
 
     async updateAgentThinkingDefault(
@@ -1001,7 +1007,25 @@ class HttpTavernAgentRuntimeClient implements TavernAgentRuntimeClient {
             await readErrorResponse(response);
         }
 
-        return agentRuntimeOpenClawConfigSnapshotSchema.parse(await response.json());
+        return agentRuntimeHermesConfigSnapshotSchema.parse(await response.json());
+    }
+
+    async updateAgentTools(agentId: string, input: AgentRuntimeUpdateAgentTools) {
+        const payload = agentRuntimeUpdateAgentToolsSchema.parse(input);
+        const response = await fetch(`${this.#baseUrl}${agentRuntimeRoutes.agentTools(agentId)}`, {
+            body: JSON.stringify(payload),
+            headers: {
+                'content-type': 'application/json',
+                [agentRuntimeMutationHeaders.origin]: agentRuntimeMutationOrigins.tavern,
+            },
+            method: 'PATCH',
+        });
+
+        if (!response.ok) {
+            await readErrorResponse(response);
+        }
+
+        return agentRuntimeHermesConfigSnapshotSchema.parse(await response.json());
     }
 
     async getModelAccess() {
@@ -1255,7 +1279,7 @@ class HttpTavernAgentRuntimeClient implements TavernAgentRuntimeClient {
             await readErrorResponse(response);
         }
 
-        return agentRuntimeOpenClawConfigSnapshotSchema.parse(await response.json());
+        return agentRuntimeHermesConfigSnapshotSchema.parse(await response.json());
     }
 
     async listBindings() {
@@ -1308,7 +1332,7 @@ class HttpTavernAgentRuntimeClient implements TavernAgentRuntimeClient {
             await readErrorResponse(response);
         }
 
-        return agentRuntimeOpenClawConfigSnapshotSchema.parse(await response.json());
+        return agentRuntimeHermesConfigSnapshotSchema.parse(await response.json());
     }
 
     async listSessions() {

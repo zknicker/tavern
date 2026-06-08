@@ -9,7 +9,7 @@ read_when:
 
 Tavern Runtime is the always-on chat server.
 
-OpenClaw is an agent runtime participating in Tavern chats. It owns sessions,
+Hermes is an agent runtime participating in Tavern chats. It owns sessions,
 turns, tools, model calls, files, and native transcripts. Tavern Runtime owns
 chats, messages, responses, activity, artifacts, participants, sequence, events,
 reads, soft deletes, automations, deliveries, and the product timeline.
@@ -20,13 +20,14 @@ reads, soft deletes, automations, deliveries, and the product timeline.
 | --- | --- | --- |
 | Runtime schema | `apps/runtime/src/db/schema.ts` | Runtime SQLite schema and fresh setup |
 | Runtime chat store | `apps/runtime/src/tavern/chat-api/` | OpenAPI-backed chat, message, response, activity, artifact, delivery, read, and event store |
-| Runtime channel outbox | `apps/runtime/src/tavern/channel-store.ts` | Tavern Messenger plugin ingress queue and accepted-message receipt state |
+| Runtime channel relay | `apps/runtime/src/tavern/channel-relay.ts` | Durable message acceptance and managed Hermes turn startup |
+| Runtime channel outbox | `apps/runtime/src/tavern/channel-store.ts` | Private relay queue and accepted-message receipt state for channel-style ingress |
 | Cortex PGLite store | `apps/runtime/src/cortex/` | Runtime-owned GBrain-style page, chunk, link, embedding, audit, and repair store |
 | Runtime chat tests | `apps/runtime/src/tavern/chat-api-store.test.ts` | Contract, identity, sequence, event, read, and route behavior |
 | App schema | `apps/server/src/db/bootstrap.ts` | App SQLite fresh setup |
 | App Drizzle schema | `apps/server/src/db/schema/` | Typed app cache and synced runtime tables |
 | Tavern API package | `packages/tavern-api/src/` | OpenAPI-generated and Zod-backed API contracts |
-| OpenClaw state | Managed OpenClaw store | Native execution and transcripts |
+| Hermes state | Managed Hermes store | Native execution and transcripts |
 
 ## Store Boundaries
 
@@ -35,18 +36,18 @@ reads, soft deletes, automations, deliveries, and the product timeline.
 | Runtime SQLite | Tavern Runtime | Canonical chat model, automation delivery, channel ingress, cursor-backed events, read markers, runtime metadata |
 | App SQLite | Tavern App | Client cache, app-local settings, and presentation state |
 | Runtime Cortex store | Tavern Runtime | Cortex pages, chunks, links, files, citations, timelines, audit, telemetry, embeddings, and repair state |
-| OpenClaw state | OpenClaw | Sessions, turns, tools, model calls, transcripts, and files |
+| Hermes state | Hermes | Sessions, turns, tools, model calls, transcripts, and files |
 
 Runtime SQLite is the product source of truth for chat. App SQLite can cache for
 fast UI, but reconnect and hard reload recover from Runtime history and cursors.
-OpenClaw transcripts are execution evidence linked to Tavern messages and stored
+Hermes transcripts are execution evidence linked to Tavern messages and stored
 through Tavern Runtime.
 
-The Tavern Messenger plugin has a small Runtime outbox. It stores only relay
-state: request id, durable message id, route, cursor, and plugin acceptance. It
-does not store message content, nonce, sequence, participants, or duplicate
-history. It references existing Runtime chat and message ids; it never creates
-chats or repairs chat metadata.
+The channel relay has a small Runtime outbox for channel-style ingress. It
+stores only relay state: request id, durable message id, route, cursor, and
+acceptance. It does not store message content, nonce, sequence, participants,
+or duplicate history. It references existing Runtime chat and message ids; it
+never creates chats or repairs chat metadata.
 
 ## IDs
 
@@ -67,7 +68,7 @@ Use semantic prefixes at the Tavern API boundary.
 | `rt_` | runtime connection |
 
 Read markers are scoped records, not standalone product ids.
-OpenClaw ids and runtime agent ids remain source ids. Store them in runtime
+Hermes ids and runtime agent ids remain source ids. Store them in runtime
 metadata or source fields, not as Tavern product ids unless Tavern minted them.
 
 Cortex ids use Tavern product identity:
@@ -100,8 +101,8 @@ tavern_highlights
 These tables live in Runtime SQLite and back the OpenAPI chat contract.
 
 `tavern_channel_outbox` also lives in Runtime SQLite, but it is not chat
-history. It is the private relay queue for the managed Tavern Messenger plugin
-and hydrates frames from existing `chats` and `chat_messages` rows.
+history. It is the private relay queue for channel-style ingress and hydrates
+frames from existing `chats` and `chat_messages` rows.
 
 `tavern_highlights` is a derived presentation cache. Runtime regenerates current
 homepage highlight receipts hourly from recent response activity, chat
@@ -142,7 +143,7 @@ chat_participants
   id                    TEXT PRIMARY KEY
   chat_id               TEXT NOT NULL
   kind                  TEXT NOT NULL        -- user, agent, system, external
-  source                TEXT NOT NULL        -- tavern, openclaw, discord, system
+  source                TEXT NOT NULL        -- tavern, hermes, discord, system
   source_id             TEXT
   profile_id            TEXT
   agent_id              TEXT
@@ -178,7 +179,7 @@ chat_messages
   content               TEXT NOT NULL
   attachment_json       TEXT
   nonce                 TEXT
-  source                TEXT NOT NULL        -- tavern, openclaw, automation, system
+  source                TEXT NOT NULL        -- tavern, hermes, automation, system
   request_id            TEXT
   delivery_id           TEXT
   run_id                TEXT
@@ -214,8 +215,8 @@ Rules:
 Message body fields are rendered content only. `content` stores the durable text
 body. `attachment_json` stores one optional message-attached file or media object.
 Hidden chain-of-thought is never message body content. Provider-exposed
-reasoning summaries, tool calls, tool results, preambles, and progress rows are
-response activity.
+thinking summaries, tool calls, tool results, assistant progress, and status
+rows are response activity.
 
 ## `chat_responses`
 
@@ -287,7 +288,7 @@ Rules:
 
 * Activity rows are statusful and updated in place as work progresses.
 * Activity ids are global and cannot move between chats or responses.
-* Tool calls, tool results, reasoning summaries, plans, approvals, and message
+* Tool calls, tool results, thinking summaries, plans, approvals, and message
   references are activity.
 * Runtime tool ids, tool names, arguments, results, and source facts live in
   `metadata_json`.
@@ -407,7 +408,7 @@ instead of creating another message row.
 
 ## Runtime Execution Evidence
 
-OpenClaw execution links to Tavern messages.
+Hermes execution links to Tavern messages.
 
 ```text
 runtime_sessions
@@ -427,7 +428,7 @@ runtime_turns
   response_message_id   TEXT
   agent_id              TEXT NOT NULL
   session_key           TEXT NOT NULL
-  openclaw_run_id       TEXT
+  hermes_run_id       TEXT
   status                TEXT NOT NULL
   started_at            TEXT
   finished_at           TEXT
@@ -438,7 +439,7 @@ runtime_transcript_messages
   message_id            TEXT
   session_key           TEXT NOT NULL
   session_id            TEXT
-  openclaw_message_id   TEXT
+  hermes_message_id   TEXT
   seq                   INTEGER
   role                  TEXT NOT NULL
   content_text          TEXT
@@ -460,7 +461,7 @@ runtime_tool_calls
   updated_at            TEXT NOT NULL
 ```
 
-OpenClaw transcript messages, tool calls, links, and artifacts are runtime
+Hermes transcript messages, tool calls, links, and artifacts are runtime
 evidence. Sync paths map user-visible work into responses, response activity,
 and artifacts by stable ids. They enrich the UI, but they do not replace
 canonical chat history.
@@ -468,7 +469,7 @@ canonical chat history.
 ## Cortex Tables
 
 Tavern Runtime owns Cortex storage in a separate embedded Postgres-compatible
-PGLite database. OpenClaw prompt-time context management is separate from
+PGLite database. Hermes prompt-time context management is separate from
 Tavern-owned durable Cortex knowledge and memory.
 
 ```text
@@ -582,7 +583,7 @@ transactional writes. Search indexes are derived state, not the source of truth.
 * Tavern Runtime chat history is canonical product state.
 * Chat pinned state is a first-class Runtime chat field, not app-local
   presentation state.
-* OpenClaw transcript history is runtime-owned evidence.
+* Hermes transcript history is runtime-owned evidence.
 * Runtime adapters preserve source ids and metadata without authoring final
   Tavern presentation.
 * Reconciliation uses ids, nonces, sequences, delivery ids, session keys, and

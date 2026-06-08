@@ -30,7 +30,7 @@ export function renderMentionText({
     );
 }
 
-function splitMentionText(content: string, mentions: readonly Mention[]) {
+export function splitMentionText(content: string, mentions: readonly Mention[]) {
     const normalized = normalizeMentions(content, mentions);
     const fragments: Array<
         { start: number; text: string; type: 'text' } | { mention: Mention; type: 'mention' }

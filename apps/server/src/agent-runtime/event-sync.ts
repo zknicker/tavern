@@ -144,7 +144,7 @@ export async function applyObservedAgentRuntimeEvent(
             emitObservedAgentRuntimeEvent(event);
             debugTurnEvent(event);
             void recordSteeredTurnNotice(event, connection).catch((error) => {
-                console.warn('[tavern] failed to record OpenClaw steering notice', error);
+                console.warn('[tavern] failed to record Hermes steering notice', error);
             });
             return;
         }
@@ -238,7 +238,7 @@ async function recordSteeredTurnNotice(
             notice,
             runId: event.turn.runId,
             sessionKey: event.turn.sessionKey,
-            source: 'openclaw',
+            source: 'hermes',
             startedAt: event.turn.startedAt,
         },
     };

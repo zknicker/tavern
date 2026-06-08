@@ -1,4 +1,3 @@
-import { OpenClawGatewayError, OpenClawUnsupportedError } from '@tavern/openclaw-gateway-adapter';
 import { z } from 'zod';
 import type {
     AgentRuntimeCapability,
@@ -72,7 +71,7 @@ export function classifyCapabilityFailure(error: unknown): CapabilityFailure {
     const message = readErrorMessage(error);
     const normalized = `${code} ${message}`.toLowerCase();
 
-    if (error instanceof OpenClawUnsupportedError || normalized.includes('unsupported')) {
+    if (normalized.includes('unsupported')) {
         return {
             errorCode: code || 'runtime_capability_unavailable',
             reason: 'This runtime does not expose the capability.',
@@ -132,7 +131,7 @@ export function classifyCapabilityFailure(error: unknown): CapabilityFailure {
 }
 
 function readErrorCode(error: unknown) {
-    if (error instanceof OpenClawGatewayError || error instanceof AgentRuntimeRequestError) {
+    if (error instanceof AgentRuntimeRequestError) {
         return error.code;
     }
 

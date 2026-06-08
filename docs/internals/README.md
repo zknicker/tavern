@@ -1,8 +1,8 @@
 ---
-summary: Internals index for Tavern architecture, app/runtime ownership, data model, frontend structure, React conventions, and plugin bridge.
+summary: Internals index for Tavern architecture, app/runtime ownership, data model, frontend structure, React conventions, and Hermes adapter behavior.
 read_when:
   - changing Tavern architecture, ownership boundaries, or implementation layout
-  - looking for app, runtime, data model, frontend, or plugin internals
+  - looking for app, runtime, data model, frontend, or Hermes adapter internals
 ---
 
 # Internals
@@ -18,4 +18,4 @@ Internals docs explain how Tavern is built. Product-facing behavior belongs in
 | Data model | [Data Model](data-model.md) |
 | Frontend structure | [Frontend Structure](frontend.md) |
 | React conventions | [React Conventions](react.md) |
-| Tavern Messenger plugin | [Tavern OpenClaw Messenger Plugin](tavern-openclaw-messenger-plugin.md) |
+| Hermes runtime adapter | [Tavern Hermes Runtime Adapter](tavern-hermes-runtime-adapter.md) |

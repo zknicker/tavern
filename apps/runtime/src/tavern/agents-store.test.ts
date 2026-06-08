@@ -1,45 +1,23 @@
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { closeDb, getDb, initTestDb } from '../db/connection.ts';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { HERMES_WORKSPACE } from '../config.ts';
+import { closeDb, initTestDb } from '../db/connection.ts';
 import { ensureRuntimeSchema } from '../db/schema.ts';
-import { replaceStoredAgents } from './agents-store.ts';
-import {
-    replaceStoredOpenClawSessionGraphs,
-    replaceStoredOpenClawSessionMessages,
-    replaceStoredOpenClawSessions,
-} from './openclaw-sessions-store.ts';
-import {
-    replaceStoredOpenClawChats,
-    replaceStoredOpenClawModels,
-    replaceStoredOpenClawSkills,
-} from './openclaw-snapshots-store.ts';
 import { handleTavernRuntimeRequest } from './router.ts';
 
-describe('Runtime agent store', () => {
+describe('Runtime agent and Hermes reads', () => {
+    const originalFetch = globalThis.fetch;
+
     beforeEach(() => {
         ensureRuntimeSchema(initTestDb());
+        globalThis.fetch = vi.fn(handleHermesFetch) as unknown as typeof fetch;
     });
 
     afterEach(() => {
+        globalThis.fetch = originalFetch;
         closeDb();
     });
 
-    it('serves agent list reads from Runtime storage', async () => {
-        replaceStoredAgents({
-            agents: [
-                {
-                    avatar: null,
-                    enabledSkillIds: ['browser'],
-                    emoji: null,
-                    id: 'main',
-                    isAdmin: false,
-                    name: 'main',
-                    primaryColor: null,
-                    workspaceFolder: '/tmp/main',
-                },
-            ],
-            syncedAt: '2026-05-26T20:00:00.000Z',
-        });
-
+    it('serves Hermes agent list reads through the runtime adapter', async () => {
         const response = await handleTavernRuntimeRequest(
             new Request('http://runtime.test/agents')
         );
@@ -49,334 +27,101 @@ describe('Runtime agent store', () => {
             agents: [
                 {
                     avatar: null,
-                    enabledSkillIds: ['browser'],
+                    enabledSkillIds: [],
                     emoji: null,
-                    id: 'main',
-                    isAdmin: false,
-                    name: 'main',
+                    hermesModelName: {
+                        harness: 'codex',
+                        model: 'gpt-5.5',
+                        provider: 'openai-codex',
+                    },
+                    id: 'agt_hermes',
+                    isAdmin: true,
+                    name: 'Hermes',
                     primaryColor: null,
-                    workspaceFolder: '/tmp/main',
+                    workspaceFolder: HERMES_WORKSPACE,
                 },
             ],
         });
     });
 
-    it('serves OpenClaw chat list reads from Runtime storage', async () => {
-        replaceStoredOpenClawChats({
-            chats: [
-                {
-                    bindingId: null,
-                    bindings: [{ agentId: 'main' }],
-                    id: 'runtime-chat-1',
-                    inboundMode: 'active',
-                    metadata: {},
-                    parentTarget: null,
-                    participants: [{ agentId: 'main', type: 'agent' }],
-                    platform: 'tavern',
-                    platformMetadata: null,
-                    requiresTrigger: false,
-                    scope: 'channel',
-                    target: null,
-                    trigger: null,
-                },
-            ],
-            syncedAt: '2026-05-26T20:00:00.000Z',
-        });
-
-        const response = await handleTavernRuntimeRequest(
-            new Request('http://runtime.test/openclaw/chats')
-        );
-
-        expect(response.status).toBe(200);
-        await expect(response.json()).resolves.toMatchObject({
-            chats: [{ id: 'runtime-chat-1' }],
-        });
-    });
-
-    it('serves OpenClaw session evidence reads from Runtime storage', async () => {
-        const session = {
-            agentId: 'main',
-            chatId: 'chat-1',
-            key: 'agent:main:tavern:channel:chat-1',
-            lastActivityAt: '2026-05-26T20:01:00.000Z',
-            messageCount: 1,
-            parentSessionKey: null,
-            platform: 'tavern',
-            sessionId: 'session-1',
-            sessionRole: 'main' as const,
-            startedAt: '2026-05-26T20:00:00.000Z',
-            title: 'Chat 1',
-        };
-        const message = {
-            agentId: 'main',
-            chatId: 'chat-1',
-            content: 'Ready.',
-            id: 'message-1',
-            metadata: null,
-            sender: 'main',
-            senderName: 'Main',
-            senderType: 'agent' as const,
-            sessionKey: session.key,
-            timestamp: '2026-05-26T20:01:00.000Z',
-        };
-
-        replaceStoredOpenClawSessions({
-            sessions: [session],
-            syncedAt: '2026-05-26T20:02:00.000Z',
-        });
-        replaceStoredOpenClawSessionMessages({
-            messagesBySessionKey: new Map([[session.key, [message]]]),
-            syncedAt: '2026-05-26T20:02:00.000Z',
-        });
-        replaceStoredOpenClawSessionGraphs({
-            graphs: [
-                {
-                    artifacts: [],
-                    links: [],
-                    messages: [message],
-                    rootSessionKey: session.key,
-                    sessions: [session],
-                    toolCalls: [],
-                },
-            ],
-            syncedAt: '2026-05-26T20:02:00.000Z',
-        });
+    it('serves Hermes sessions and evidence through the runtime adapter', async () => {
+        const sessionKey = 'session_1';
 
         const listResponse = await handleTavernRuntimeRequest(
-            new Request('http://runtime.test/openclaw/sessions')
+            new Request('http://runtime.test/hermes/sessions')
         );
         const messagesResponse = await handleTavernRuntimeRequest(
-            new Request(`http://runtime.test/openclaw/sessions/${session.key}/messages`)
+            new Request(`http://runtime.test/hermes/sessions/${sessionKey}/messages`)
         );
         const graphResponse = await handleTavernRuntimeRequest(
-            new Request(`http://runtime.test/openclaw/sessions/${session.key}/graph`)
+            new Request(`http://runtime.test/hermes/sessions/${sessionKey}/graph`)
         );
         const resyncResponse = await handleTavernRuntimeRequest(
-            new Request(`http://runtime.test/openclaw/sessions/${session.key}/resync`, {
+            new Request(`http://runtime.test/hermes/sessions/${sessionKey}/resync`, {
                 method: 'POST',
             })
         );
 
         expect(listResponse.status).toBe(200);
         await expect(listResponse.json()).resolves.toMatchObject({
-            sessions: [{ key: session.key }],
+            sessions: [{ key: sessionKey, platform: 'hermes' }],
         });
         expect(messagesResponse.status).toBe(200);
         await expect(messagesResponse.json()).resolves.toMatchObject({
-            messages: [{ id: 'message-1' }],
+            messages: [{ content: 'Ready.', id: `${sessionKey}:0`, sessionKey }],
         });
         expect(graphResponse.status).toBe(200);
         await expect(graphResponse.json()).resolves.toMatchObject({
-            messages: [{ id: 'message-1' }],
-            rootSessionKey: session.key,
+            messages: [{ content: 'Ready.' }],
+            rootSessionKey: sessionKey,
         });
         expect(resyncResponse.status).toBe(200);
         await expect(resyncResponse.json()).resolves.toEqual({
             resynced: true,
-            rootSessionKey: session.key,
-            sessionKey: session.key,
+            rootSessionKey: sessionKey,
+            sessionKey,
         });
     });
 
-    it('stores duplicate OpenClaw message ids under separate session keys', async () => {
-        const firstSession = {
-            agentId: 'main',
-            chatId: 'chat-1',
-            key: 'agent:main:tavern:channel:chat-1',
-            lastActivityAt: '2026-05-26T20:01:00.000Z',
-            messageCount: 1,
-            parentSessionKey: null,
-            platform: 'tavern',
-            sessionId: 'session-1',
-            sessionRole: 'main' as const,
-            startedAt: '2026-05-26T20:00:00.000Z',
-            title: 'Chat 1',
-        };
-        const secondSession = {
-            ...firstSession,
-            chatId: 'chat-2',
-            key: 'agent:main:tavern:channel:chat-2',
-            sessionId: 'session-2',
-            title: 'Chat 2',
-        };
-        const message = {
-            agentId: 'main',
-            chatId: 'chat-1',
-            content: 'Ready.',
-            id: 'message-1',
-            metadata: null,
-            sender: 'main',
-            senderName: 'Main',
-            senderType: 'agent' as const,
-            sessionKey: firstSession.key,
-            timestamp: '2026-05-26T20:01:00.000Z',
-        };
-
-        replaceStoredOpenClawSessions({
-            sessions: [firstSession, secondSession],
-            syncedAt: '2026-05-26T20:02:00.000Z',
-        });
-        replaceStoredOpenClawSessionMessages({
-            messagesBySessionKey: new Map([
-                [firstSession.key, [message]],
-                [
-                    secondSession.key,
-                    [
-                        {
-                            ...message,
-                            chatId: secondSession.chatId,
-                            sessionKey: secondSession.key,
-                        },
-                    ],
-                ],
-            ]),
-            syncedAt: '2026-05-26T20:02:00.000Z',
-        });
-
-        const firstResponse = await handleTavernRuntimeRequest(
-            new Request(`http://runtime.test/openclaw/sessions/${firstSession.key}/messages`)
-        );
-        const secondResponse = await handleTavernRuntimeRequest(
-            new Request(`http://runtime.test/openclaw/sessions/${secondSession.key}/messages`)
-        );
-
-        expect(firstResponse.status).toBe(200);
-        await expect(firstResponse.json()).resolves.toMatchObject({
-            messages: [{ id: 'message-1', sessionKey: firstSession.key }],
-        });
-        expect(secondResponse.status).toBe(200);
-        await expect(secondResponse.json()).resolves.toMatchObject({
-            messages: [{ id: 'message-1', sessionKey: secondSession.key }],
-        });
-    });
-
-    it('can update one OpenClaw session without pruning the snapshot', async () => {
-        const firstSession = {
-            agentId: 'main',
-            chatId: 'chat-1',
-            key: 'agent:main:tavern:channel:chat-1',
-            lastActivityAt: '2026-05-26T20:01:00.000Z',
-            messageCount: 1,
-            parentSessionKey: null,
-            platform: 'tavern',
-            sessionId: 'session-1',
-            sessionRole: 'main' as const,
-            startedAt: '2026-05-26T20:00:00.000Z',
-            title: 'Chat 1',
-        };
-        const secondSession = {
-            ...firstSession,
-            chatId: 'chat-2',
-            key: 'agent:main:tavern:channel:chat-2',
-            sessionId: 'session-2',
-            title: 'Chat 2',
-        };
-
-        replaceStoredOpenClawSessions({
-            sessions: [firstSession, secondSession],
-            syncedAt: '2026-05-26T20:02:00.000Z',
-        });
-        replaceStoredOpenClawSessions({
-            pruneMissing: false,
-            sessions: [{ ...firstSession, messageCount: 2 }],
-            syncedAt: '2026-05-26T20:03:00.000Z',
-        });
-
-        const response = await handleTavernRuntimeRequest(
-            new Request('http://runtime.test/openclaw/sessions')
-        );
-
-        expect(response.status).toBe(200);
-        const body = (await response.json()) as {
-            sessions: Array<{ key: string; messageCount: number }>;
-        };
-        expect(body.sessions).toEqual(
-            expect.arrayContaining([
-                expect.objectContaining({ key: firstSession.key, messageCount: 2 }),
-                expect.objectContaining({ key: secondSession.key, messageCount: 1 }),
-            ])
-        );
-    });
-
-    it('serves model reads from Runtime storage', async () => {
-        replaceStoredOpenClawModels({
-            models: {
-                models: [{ id: 'openai/gpt-5.5', label: 'GPT-5.5', provider: 'openai' }],
-                updatedAt: '2026-05-26T20:00:00.000Z',
-            },
-            syncedAt: '2026-05-26T20:00:00.000Z',
-        });
-
+    it('serves Hermes model reads through the runtime adapter', async () => {
         const response = await handleTavernRuntimeRequest(
             new Request('http://runtime.test/models')
         );
 
         expect(response.status).toBe(200);
         await expect(response.json()).resolves.toMatchObject({
-            models: [{ id: 'openai/gpt-5.5', label: 'GPT-5.5', provider: 'openai' }],
+            models: [{ id: 'openai-codex/gpt-5.5', label: 'gpt-5.5', provider: 'openai-codex' }],
         });
     });
 
-    it('invalidates stale OpenClaw model snapshots with the old shape', async () => {
-        const timestamp = '2026-05-26T20:00:00.000Z';
-        const db = getDb();
-        db.prepare(
-            `INSERT INTO openclaw_models_snapshot (
-                id,
-                raw_json,
-                last_synced_at,
-                created_at,
-                updated_at
-            )
-            VALUES ('default', ?, ?, ?, ?)`
-        ).run(
-            JSON.stringify({
-                agents: [],
-                configuredModels: [],
-                defaults: { fallbackModels: [], primaryModel: null },
-                updatedAt: timestamp,
-            }),
-            timestamp,
-            timestamp,
-            timestamp
-        );
-
+    it('applies Hermes model updates through the dashboard model API', async () => {
         const response = await handleTavernRuntimeRequest(
-            new Request('http://runtime.test/models')
+            new Request('http://runtime.test/agents/agt_hermes/model', {
+                body: JSON.stringify({
+                    model: {
+                        harness: 'codex',
+                        model: 'gpt-5.5',
+                        provider: 'openai-codex',
+                    },
+                }),
+                headers: { 'content-type': 'application/json' },
+                method: 'PATCH',
+            })
         );
 
         expect(response.status).toBe(200);
-        await expect(response.json()).resolves.toEqual({
-            models: [],
-            updatedAt: null,
+        await expect(response.json()).resolves.toMatchObject({
+            config: {
+                model: {
+                    default: 'gpt-5.5',
+                    provider: 'openai-codex',
+                },
+            },
+            valid: true,
         });
-        expect(
-            db.prepare("SELECT id FROM openclaw_models_snapshot WHERE id = 'default'").get()
-        ).toBeNull();
     });
 
-    it('serves skill list and detail reads from Runtime storage', async () => {
-        const skill = {
-            allowedTools: null,
-            configChecks: [],
-            contentMarkdown: 'Use the browser.',
-            description: 'Browser skill',
-            files: [],
-            id: 'browser',
-            install: [],
-            installSource: null,
-            missing: { anyBins: [], bins: [], config: [], env: [], os: [] },
-            name: 'Browser',
-            requirements: { anyBins: [], bins: [], config: [], env: [], os: [] },
-            source: 'builtin' as const,
-            updatedAt: '2026-05-26T20:00:00.000Z',
-        };
-        replaceStoredOpenClawSkills({
-            skillDetails: [skill],
-            skills: [skill],
-            syncedAt: '2026-05-26T20:00:00.000Z',
-        });
-
+    it('serves Hermes skill list and detail reads through the runtime adapter', async () => {
         const listResponse = await handleTavernRuntimeRequest(
             new Request('http://runtime.test/skills')
         );
@@ -390,37 +135,83 @@ describe('Runtime agent store', () => {
         });
         expect(detailResponse.status).toBe(200);
         await expect(detailResponse.json()).resolves.toMatchObject({
-            contentMarkdown: 'Use the browser.',
-            id: 'browser',
-        });
-    });
-
-    it('serves summary-only skills as empty detail records', async () => {
-        const skill = {
-            allowedTools: null,
-            configChecks: [],
-            description: 'Browser skill',
-            id: 'browser',
-            install: [],
-            missing: { anyBins: [], bins: [], config: [], env: [], os: [] },
-            name: 'Browser',
-            requirements: { anyBins: [], bins: [], config: [], env: [], os: [] },
-            source: 'builtin' as const,
-            updatedAt: '2026-05-26T20:00:00.000Z',
-        };
-        replaceStoredOpenClawSkills({
-            skills: [skill],
-            syncedAt: '2026-05-26T20:00:00.000Z',
-        });
-
-        const response = await handleTavernRuntimeRequest(
-            new Request('http://runtime.test/skills/browser/config')
-        );
-
-        expect(response.status).toBe(200);
-        await expect(response.json()).resolves.toMatchObject({
             contentMarkdown: '',
             id: 'browser',
         });
     });
 });
+
+function handleHermesFetch(input: string | URL | Request) {
+    const url = new URL(typeof input === 'string' || input instanceof URL ? input : input.url);
+
+    if (url.pathname === '/api/sessions') {
+        return jsonResponse({
+            data: [
+                {
+                    id: 'session_1',
+                    last_active: 1_779_828_060,
+                    message_count: 1,
+                    preview: 'Ready.',
+                    source: 'api_server',
+                    started_at: 1_779_828_000,
+                    title: 'Chat 1',
+                },
+            ],
+            object: 'list',
+        });
+    }
+
+    if (url.pathname === '/api/sessions/session_1/messages') {
+        return jsonResponse({
+            data: [
+                {
+                    content: 'Ready.',
+                    role: 'assistant',
+                    timestamp: 1_779_828_060,
+                },
+            ],
+            object: 'list',
+            session_id: 'session_1',
+        });
+    }
+
+    if (url.pathname === '/api/model/options') {
+        return jsonResponse({
+            providers: [
+                {
+                    models: ['gpt-5.5'],
+                    name: 'OpenAI Codex',
+                    slug: 'openai-codex',
+                },
+            ],
+        });
+    }
+
+    if (url.pathname === '/api/model/set') {
+        return jsonResponse({ ok: true, model: 'gpt-5.5', provider: 'openai-codex' });
+    }
+
+    if (url.pathname === '/api/skills') {
+        return jsonResponse({
+            skills: [
+                {
+                    description: 'Browser skill',
+                    enabled: true,
+                    id: 'browser',
+                    name: 'Browser',
+                },
+            ],
+        });
+    }
+
+    return jsonResponse({ error: 'not found' }, { status: 404 });
+}
+
+function jsonResponse(body: unknown, init?: ResponseInit) {
+    return Promise.resolve(
+        new Response(JSON.stringify(body), {
+            headers: { 'content-type': 'application/json' },
+            status: init?.status ?? 200,
+        })
+    );
+}

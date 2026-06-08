@@ -123,7 +123,8 @@ async function processChatIngestionChat(
         };
     }
 
-    const model = parseModelRef((await getCortexSettings(cortexDb)).models.chatIngestion).model;
+    const modelRef = parseModelRef((await getCortexSettings(cortexDb)).models.chatIngestion);
+    const model = modelRef.model;
     const contextPages = await findDreamContextPages(cortexDb, sourceRange.text);
     const activeSchema = await getActiveCortexSchema(cortexDb);
     const prompt = buildChatIngestionReviewPrompt({
@@ -172,7 +173,7 @@ async function processChatIngestionChat(
                 model,
                 outputHash: applied.outputHash,
                 promptHash: applied.promptHash,
-                provider: 'codex',
+                provider: modelRef.provider,
                 requestId: review.requestId,
                 route: codexChatIngestionResponsesUrl,
                 sourceHash: sourceRange.sourceHash,
@@ -208,7 +209,7 @@ async function processChatIngestionChat(
                 },
                 model,
                 promptHash,
-                provider: 'codex',
+                provider: modelRef.provider,
                 route: codexChatIngestionResponsesUrl,
                 sourceHash: sourceRange.sourceHash,
             }),
@@ -225,7 +226,7 @@ function parseModelRef(modelRef: string) {
     const separatorIndex = modelRef.indexOf('/');
     return {
         model: separatorIndex >= 0 ? modelRef.slice(separatorIndex + 1) : modelRef,
-        provider: separatorIndex >= 0 ? modelRef.slice(0, separatorIndex) : 'codex',
+        provider: separatorIndex >= 0 ? modelRef.slice(0, separatorIndex) : 'openai-codex',
     };
 }
 

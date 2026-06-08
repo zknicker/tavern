@@ -10,8 +10,8 @@ import {
 } from './agent-runtime-shared.ts';
 import { type SessionDetail, sessionDetailSchema, sessionMessagesPageSchema } from './contracts.ts';
 import { buildSessionLogEntries } from './log.ts';
-import { mergeToolCalls } from './tool-call-sync.ts';
 import { buildSessionThinking } from './thinking.ts';
+import { mergeToolCalls } from './tool-call-sync.ts';
 
 function mapAgentRuntimeArtifact(artifact: AgentRuntimeSessionArtifact) {
     return {

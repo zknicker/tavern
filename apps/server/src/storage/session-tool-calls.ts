@@ -5,9 +5,7 @@ import { sessionToolCallsTable } from '../db/schema.ts';
 
 export type SessionToolCall = AgentRuntimeSessionGraph['toolCalls'][number];
 
-export async function listSessionToolCalls(
-    sessionKeys: string[]
-): Promise<SessionToolCall[]> {
+export async function listSessionToolCalls(sessionKeys: string[]): Promise<SessionToolCall[]> {
     if (sessionKeys.length === 0) {
         return [];
     }

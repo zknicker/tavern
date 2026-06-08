@@ -6,9 +6,9 @@ import { Icon } from '../../components/ui/icon.tsx';
 import type { ChatLogOutput, SessionHistoryOutput } from '../../lib/trpc.tsx';
 import { cn } from '../../lib/utils.ts';
 import { readMentionsFromMetadata } from '../mentions/mention-metadata.ts';
-import { renderMentionText } from '../mentions/render-mention-text.tsx';
 import { CollapsibleText } from '../rows/collapsible-text.tsx';
 import { getMessageDisplay } from '../rows/message-display.ts';
+import { ChatInlineMarkdownText } from './chat-inline-markdown-text.tsx';
 
 type TranscriptMessage =
     | Extract<NonNullable<ChatLogOutput>['rows'][number], { kind: 'message' }>['message']
@@ -56,12 +56,10 @@ export function ChatTranscriptMessageContent({ message }: { message: TranscriptM
                     )}
                 >
                     <CollapsibleText className="text-foreground text-sm">
-                        {mentions.length > 0
-                            ? renderMentionText({
-                                  content: messageDisplay.content,
-                                  mentions,
-                              })
-                            : messageDisplay.content}
+                        <ChatInlineMarkdownText
+                            content={messageDisplay.content}
+                            mentions={mentions}
+                        />
                     </CollapsibleText>
                 </div>
             ) : null}

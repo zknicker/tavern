@@ -20,7 +20,7 @@ function emptyLog(): ChatLogOutput {
     };
 }
 
-test('progress patch inserts a durable activity row with the persisted activity id', () => {
+test('progress patch inserts assistant progress as a prose message row', () => {
     const log = patchChatLogWithProgress(emptyLog(), {
         step: {
             detail: 'I will run a timed shell check before the final reply.',
@@ -35,14 +35,13 @@ test('progress patch inserts a durable activity row with the persisted activity 
 
     expect(log?.rows).toHaveLength(1);
     expect(log?.rows[0]).toMatchObject({
-        completedAt: null,
         id: 'act_run-1_preamble-1',
-        kind: 'tool',
-        sessionKey: turn.sessionKey,
-        startedAt: '2026-05-22T19:00:01.000Z',
-        toolCall: {
-            name: 'message',
-            summaryParts: ['I will run a timed shell check before the final reply.'],
+        kind: 'message',
+        message: {
+            content: 'I will run a timed shell check before the final reply.',
+            senderType: 'agent',
+            sourceSessionKey: turn.sessionKey,
+            timestamp: '2026-05-22T19:00:01.000Z',
         },
     });
 });
@@ -108,7 +107,43 @@ test('progress patch updates an existing activity row without replacing its star
     });
 });
 
-test('progress patch keeps preamble and normalized OpenClaw tool activity stable through completion', () => {
+test('progress patch renders live reasoning as one thinking row instead of a tool row', () => {
+    const first = patchChatLogWithProgress(emptyLog(), {
+        step: {
+            detail: 'I should',
+            id: 'reasoning',
+            kind: 'reasoning',
+            label: 'Thinking',
+            status: 'active',
+        },
+        timestamp: '2026-05-22T19:00:01.000Z',
+        turn,
+    });
+    const second = patchChatLogWithProgress(first, {
+        step: {
+            detail: 'I should answer directly.',
+            id: 'reasoning',
+            kind: 'reasoning',
+            label: 'Thinking',
+            status: 'active',
+        },
+        timestamp: '2026-05-22T19:00:02.000Z',
+        turn,
+    });
+
+    expect(second?.total).toBe(1);
+    expect(second?.rows[0]).toMatchObject({
+        id: 'act_run-1_reasoning',
+        kind: 'system',
+        systemKind: 'thinking',
+        thinking: {
+            text: 'I should answer directly.',
+            timestamp: '2026-05-22T19:00:01.000Z',
+        },
+    });
+});
+
+test('progress patch keeps preamble and normalized Hermes tool activity stable through completion', () => {
     const withPreamble = patchChatLogWithProgress(emptyLog(), {
         step: {
             detail: 'I will run a timed shell check before the final reply.',
@@ -152,11 +187,10 @@ test('progress patch keeps preamble and normalized OpenClaw tool activity stable
         'act_run-1_call_mock_read_123',
     ]);
     expect(completed?.rows[0]).toMatchObject({
-        completedAt: null,
-        startedAt: '2026-05-22T19:00:01.000Z',
-        toolCall: {
-            name: 'message',
-            summaryParts: ['I will run a timed shell check before the final reply.'],
+        kind: 'message',
+        message: {
+            content: 'I will run a timed shell check before the final reply.',
+            sourceSessionKey: turn.sessionKey,
         },
     });
     expect(completed?.rows[1]).toMatchObject({

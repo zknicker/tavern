@@ -98,7 +98,7 @@ export async function sendTavernChatMessage(
                 agentId,
                 runtimeId: chatRecord.runtimeId,
                 sessionKey,
-                source: 'openclaw',
+                source: 'hermes',
             },
         },
         content: parsed.content,
@@ -107,8 +107,8 @@ export async function sendTavernChatMessage(
     });
     const accepted = await withCapabilityStatus(
         {
-            capability: 'messages',
-            method: 'messages.create',
+            capability: 'gateway',
+            method: 'gateway.prompt.submit',
             runtimeId: chatRecord.runtimeId,
         },
         async () =>

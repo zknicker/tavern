@@ -6,7 +6,7 @@ import type {
 import { type CortexDatabase, getCortexDb } from '../cortex/db';
 import type { Database } from '../db/sqlite';
 import { namedParams } from '../db/sqlite';
-import { createLocalOpenClawClient } from '../openclaw/local-client';
+import { createLocalHermesClient } from '../hermes/local-client';
 import { recentWindowMs, toolVolumeWindowMs } from './constants';
 import { formatAgo, formatCount, truncateReceipt } from './format';
 import { pickHeadline } from './phrases';
@@ -43,7 +43,10 @@ export async function buildHighlightCandidates(input: {
         buildQuestFinishedHighlight(input),
         buildTroubleHighlight(input),
         await buildScheduledRunHighlight(input),
-        await buildMemorySavedHighlight({ ...input, cortexDb: input.cortexDb ?? getCortexDb() }),
+        await buildMemorySavedHighlight({
+            ...input,
+            cortexDb: input.cortexDb ?? getCortexDb(),
+        }),
     ];
 
     return candidates.filter((candidate): candidate is HighlightCandidate => Boolean(candidate));
@@ -303,7 +306,7 @@ function createCandidate(input: {
 }
 
 async function listCronRunsOrEmpty(): Promise<AgentRuntimeCronRun[]> {
-    const client = createLocalOpenClawClient();
+    const client = createLocalHermesClient();
     try {
         return (await client.listCronRuns()).runs;
     } catch {

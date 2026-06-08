@@ -14,6 +14,10 @@ import {
     formatWorkGroupHeader,
     getActivityItemKey,
 } from './chat-transcript-activity-utils.ts';
+import {
+    dispatchTranscriptDisclosureAnchorEnd,
+    dispatchTranscriptDisclosureAnchorStart,
+} from './chat-transcript-scroll-anchor.ts';
 import { ThinkingSteps, ThinkingStepsContent, ThinkingStepsHeader } from './thinking-steps.tsx';
 
 export function WorkingLog({
@@ -36,11 +40,34 @@ export function WorkingLog({
     const isActive = status === 'active';
     const now = useNow(isActive && start !== null, start);
     const activeSeconds = isActive ? formatActiveActivitySeconds({ now, start }) : null;
-    const defaultOpen = isActive || hasNarration(items) || !showDurationHeader;
+    const thinkingOnly = isThinkingOnly(items);
+    const defaultOpen = isActive || (!thinkingOnly && (hasNarration(items) || !showDurationHeader));
+    const [open, setOpen] = React.useState(defaultOpen);
+    const disclosureAnchor = useDisclosureScrollAnchor();
+
+    React.useEffect(() => {
+        if (isActive) {
+            setOpen(true);
+            return;
+        }
+
+        if (thinkingOnly) {
+            setOpen(false);
+        }
+    }, [isActive, thinkingOnly]);
+
+    const handleOpenChange = (nextOpen: boolean) => {
+        setOpen(nextOpen);
+        disclosureAnchor.preserve();
+    };
 
     return (
-        <ThinkingSteps className="w-full max-w-[34rem]" defaultOpen={defaultOpen}>
-            <ThinkingStepsHeader>
+        <ThinkingSteps className="w-full max-w-[34rem]" onOpenChange={handleOpenChange} open={open}>
+            <ThinkingStepsHeader
+                onKeyDown={disclosureAnchor.captureFromKeyboard}
+                onPointerDown={disclosureAnchor.capture}
+                ref={disclosureAnchor.triggerRef}
+            >
                 {showDurationHeader ? (
                     isActive && activeSeconds ? (
                         <span>
@@ -70,6 +97,120 @@ export function WorkingLog({
             </ThinkingStepsContent>
         </ThinkingSteps>
     );
+}
+
+function useDisclosureScrollAnchor() {
+    const triggerRef = React.useRef<HTMLButtonElement | null>(null);
+    const anchorRef = React.useRef<{
+        frameId: number | null;
+        remainingFrames: number;
+        scrollParent: HTMLElement | null;
+        top: number;
+        trigger: HTMLButtonElement;
+    } | null>(null);
+
+    const capture = React.useCallback(() => {
+        const trigger = triggerRef.current;
+
+        if (!trigger) {
+            return;
+        }
+
+        if (anchorRef.current?.frameId !== null && anchorRef.current?.frameId !== undefined) {
+            cancelAnimationFrame(anchorRef.current.frameId);
+        }
+
+        anchorRef.current = {
+            frameId: null,
+            remainingFrames: disclosureAnchorFrames,
+            scrollParent: getScrollParent(trigger),
+            top: trigger.getBoundingClientRect().top,
+            trigger,
+        };
+        dispatchTranscriptDisclosureAnchorStart();
+    }, []);
+
+    const captureFromKeyboard = React.useCallback(
+        (event: React.KeyboardEvent<HTMLButtonElement>) => {
+            if (event.key === 'Enter' || event.key === ' ') {
+                capture();
+            }
+        },
+        [capture]
+    );
+
+    const preserve = React.useCallback(() => {
+        const anchor = anchorRef.current;
+
+        if (!anchor) {
+            return;
+        }
+
+        const preserveFrame = () => {
+            const currentAnchor = anchorRef.current;
+
+            if (!currentAnchor) {
+                return;
+            }
+
+            const nextTop = currentAnchor.trigger.getBoundingClientRect().top;
+            const delta = nextTop - currentAnchor.top;
+
+            if (Math.abs(delta) >= 0.5) {
+                if (currentAnchor.scrollParent) {
+                    currentAnchor.scrollParent.scrollTop += delta;
+                } else {
+                    window.scrollBy({ top: delta });
+                }
+            }
+
+            currentAnchor.remainingFrames -= 1;
+
+            if (currentAnchor.remainingFrames <= 0) {
+                anchorRef.current = null;
+                dispatchTranscriptDisclosureAnchorEnd();
+                return;
+            }
+
+            currentAnchor.frameId = requestAnimationFrame(preserveFrame);
+        };
+
+        anchor.frameId = requestAnimationFrame(preserveFrame);
+    }, []);
+
+    React.useEffect(
+        () => () => {
+            if (anchorRef.current?.frameId !== null && anchorRef.current?.frameId !== undefined) {
+                cancelAnimationFrame(anchorRef.current.frameId);
+            }
+
+            if (anchorRef.current) {
+                dispatchTranscriptDisclosureAnchorEnd();
+            }
+        },
+        []
+    );
+
+    return { capture, captureFromKeyboard, preserve, triggerRef };
+}
+
+const disclosureAnchorFrames = 14;
+
+function getScrollParent(element: HTMLElement): HTMLElement | null {
+    let parent = element.parentElement;
+
+    while (parent) {
+        const style = window.getComputedStyle(parent);
+        const canScroll = /(auto|scroll|overlay)/.test(style.overflowY);
+
+        if (canScroll && parent.scrollHeight > parent.clientHeight) {
+            return parent;
+        }
+
+        parent = parent.parentElement;
+    }
+
+    return null;
 }
 
 export function TurnWorkDisclosure({
@@ -136,7 +277,7 @@ function TurnWorkHeaderContent({
 function hasNarration(items: ActivityItem[]) {
     return items.some((item) => {
         if (item.row.kind === 'system') {
-            return item.row.systemKind === 'thinking';
+            return false;
         }
 
         if (item.row.kind !== 'tool') {
@@ -146,6 +287,13 @@ function hasNarration(items: ActivityItem[]) {
         const name = item.row.toolCall.name.trim().toLowerCase();
         return name === 'message' || name === 'reasoning';
     });
+}
+
+function isThinkingOnly(items: ActivityItem[]) {
+    return (
+        items.length > 0 &&
+        items.every((item) => item.row.kind === 'system' && item.row.systemKind === 'thinking')
+    );
 }
 
 function useNow(enabled: boolean, start: string | null) {

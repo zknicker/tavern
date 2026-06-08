@@ -1,5 +1,4 @@
 import { z } from 'zod';
-import { deleteOpenClawDiscordBinding } from '../../openclaw-settings/service.ts';
 import { publicProcedure } from '../trpc.ts';
 
 export const deleteMessagingBindingProcedure = publicProcedure
@@ -10,5 +9,7 @@ export const deleteMessagingBindingProcedure = publicProcedure
         })
     )
     .mutation(async ({ input }) => {
-        return await deleteOpenClawDiscordBinding(input);
+        throw new Error(
+            `Managed Hermes Discord binding edits are not available in Tavern yet: ${input.bindingId}.`
+        );
     });

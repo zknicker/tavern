@@ -39,11 +39,11 @@ function createModelList(): ModelListOutput {
                 availability: 'configured',
                 contextWindow: null,
                 framework: 'tavern',
-                id: 'codex/gpt-5.4',
+                id: 'openai-codex/gpt-5.4',
                 modelId: 'gpt-5.4',
                 name: 'GPT-5.4',
-                provider: 'codex',
-                ref: 'codex/gpt-5.4',
+                provider: 'openai-codex',
+                ref: 'openai-codex/gpt-5.4',
                 reasoning: null,
                 supportsChatRouting: true,
             },
@@ -68,8 +68,8 @@ test('buildChatRoutingConfiguredModelOptions keeps enabled routing providers onl
         {
             availability: 'configured',
             label: 'GPT-5.4',
-            provider: 'codex',
-            value: 'codex/gpt-5.4',
+            provider: 'openai-codex',
+            value: 'openai-codex/gpt-5.4',
         },
     ]);
 });

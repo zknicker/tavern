@@ -6,6 +6,7 @@ import { BadgeDivider } from '../../../components/ui/badge-divider.tsx';
 import { Icon } from '../../../components/ui/icon.tsx';
 import { SettingsRow } from '../../../components/ui/settings-row.tsx';
 import { Switch } from '../../../components/ui/switch.tsx';
+import { useChatThinkingDisplayPreference } from '../../../hooks/chats/use-chat-thinking-display-preference.ts';
 import { useChatVirtualizationPreference } from '../../../hooks/chats/use-chat-virtualization-preference.ts';
 import { cn } from '../../../lib/utils.ts';
 
@@ -22,6 +23,7 @@ const themeOptions: Array<{
 
 export function AppearanceSettings() {
     const { setTheme, theme } = useTheme();
+    const chatThinkingDisplay = useChatThinkingDisplayPreference();
     const chatVirtualization = useChatVirtualizationPreference();
 
     return (
@@ -102,6 +104,18 @@ export function AppearanceSettings() {
             <div>
                 <BadgeDivider className="pb-3">Chat Display</BadgeDivider>
                 <div className="overflow-hidden rounded-lg border border-border bg-card">
+                    <SettingsRow
+                        description="Display model thinking text inside chat transcripts."
+                        title="Show thinking text"
+                    >
+                        <div className="flex justify-start md:justify-end">
+                            <Switch
+                                aria-label="Show thinking text"
+                                checked={chatThinkingDisplay.enabled}
+                                onCheckedChange={chatThinkingDisplay.setEnabled}
+                            />
+                        </div>
+                    </SettingsRow>
                     <SettingsRow
                         description="Keep long chats smooth while scrolling."
                         title="Virtualize chat history"

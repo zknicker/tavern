@@ -5,20 +5,20 @@ import {
     modelInventorySnapshotSchema,
 } from './inventory-contracts.ts';
 
-test('modelInventorySnapshotSchema accepts cached provider records without usage labels', () => {
+test('modelInventorySnapshotSchema accepts Hermes provider records without usage labels', () => {
     expect(
         modelInventorySnapshotSchema.parse({
             models: [
                 {
                     contextWindow: null,
                     description: null,
-                    displayName: 'GPT-5.4',
-                    modelId: 'gpt-5.4',
-                    provider: 'codex',
-                    ref: 'codex/gpt-5.4',
+                    displayName: 'GPT-5.5',
+                    modelId: 'gpt-5.5',
+                    provider: 'openai-codex',
+                    ref: 'openai-codex/gpt-5.5',
                 },
             ],
-            provider: 'codex',
+            provider: 'openai-codex',
             syncedAt: '2026-04-22T17:00:00.000Z',
         })
     ).toEqual({
@@ -27,13 +27,13 @@ test('modelInventorySnapshotSchema accepts cached provider records without usage
                 capabilities: ['general'],
                 contextWindow: null,
                 description: null,
-                displayName: 'GPT-5.4',
-                modelId: 'gpt-5.4',
-                provider: 'codex',
-                ref: 'codex/gpt-5.4',
+                displayName: 'GPT-5.5',
+                modelId: 'gpt-5.5',
+                provider: 'openai-codex',
+                ref: 'openai-codex/gpt-5.5',
             },
         ],
-        provider: 'codex',
+        provider: 'openai-codex',
         syncedAt: '2026-04-22T17:00:00.000Z',
     });
 });
@@ -46,7 +46,7 @@ test('modelCapabilitySchema accepts import processor capabilities', () => {
 test('modelInventoryProviderSchema still requires usage labels on the live API shape', () => {
     expect(() =>
         modelInventoryProviderSchema.parse({
-            displayName: 'Codex',
+            displayName: 'Openai Codex',
             isConnected: true,
             models: [
                 {
@@ -54,16 +54,16 @@ test('modelInventoryProviderSchema still requires usage labels on the live API s
                     contextWindow: null,
                     canDelete: false,
                     description: null,
-                    displayName: 'GPT-5.4',
+                    displayName: 'GPT-5.5',
                     inUse: true,
-                    modelId: 'gpt-5.4',
-                    provider: 'codex',
-                    ref: 'codex/gpt-5.4',
+                    modelId: 'gpt-5.5',
+                    provider: 'openai-codex',
+                    ref: 'openai-codex/gpt-5.5',
                 },
             ],
-            provider: 'codex',
+            provider: 'openai-codex',
             state: 'connected',
-            stateMessage: 'Using Codex local auth.',
+            stateMessage: 'Available from Hermes.',
         })
     ).toThrow(/usageLabels/);
 });

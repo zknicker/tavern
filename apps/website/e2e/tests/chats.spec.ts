@@ -1,18 +1,11 @@
 import type { Page } from '@playwright/test';
 import { createTavernClient } from '@tavern/sdk';
-import {
-    type CapturedOpenClawGatewayEvent,
-    readCapturedGatewayChatId,
-    readCapturedGatewayReplyText,
-    startOpenClawGatewayCapture,
-} from '../openclaw/gateway-capture.ts';
 import { fillComposer } from '../support/composer.ts';
 import { expect, test } from '../support/test.ts';
 
 const optimisticVisibleLimitMs = 750;
-const finalRenderAfterGatewayLimitMs = 1500;
 
-test('runs a chat turn through OpenClaw and renders the assistant reply', async ({ page }) => {
+test('runs a chat turn through Hermes and renders the assistant reply', async ({ page }) => {
     const expectedReply = 'QA_CHAT_TURN_OK';
     await startChat(page, {
         expectedReply,
@@ -46,10 +39,8 @@ test('renders tool progress and the final reply for a tool-using turn', async ({
     await openWorkedActivity(page);
     await openFirstToolDetail(page);
 
-    await expect(page.getByText('Used', { exact: true }).first()).toBeVisible();
-    await expect(
-        page.getByText('read from QA_KICKOFF_TASK.md', { exact: true }).first()
-    ).toBeVisible();
+    await expect(page.getByText('Read', { exact: true }).first()).toBeVisible();
+    await expect(page.getByText(/QA_KICKOFF_TASK\.md/u).first()).toBeVisible();
     await expect(page.getByText('Tool details not available.')).toHaveCount(0);
     await expect(page.getByText('Arguments', { exact: true })).toBeVisible();
     await expect(page.getByText('Result', { exact: true })).toBeVisible();
@@ -92,6 +83,8 @@ test('renders durable artifacts after reload', async ({ page }) => {
 });
 
 test('renders durable response activity kinds after reload', async ({ page }) => {
+    await enableInlineThinking(page);
+
     const chatId = await startChat(page, {
         expectedReply: 'QA_ACTIVITY_KIND_BASELINE_OK',
         prompt: 'Activity kind baseline marker. Reply exactly `QA_ACTIVITY_KIND_BASELINE_OK`.',
@@ -107,10 +100,11 @@ test('renders durable response activity kinds after reload', async ({ page }) =>
     await page.reload();
 
     await openWorkedActivity(page);
-    await expect(page.getByRole('button', { name: /Planning diagnostic detail/u })).toBeVisible({
+    await openThinkingActivity(page);
+    await expect(page.getByText('Planning diagnostic detail', { exact: true })).toBeVisible({
         timeout: 15_000,
     });
-    await expect(page.getByRole('button', { name: /Reasoning diagnostic detail/u })).toBeVisible();
+    await expect(page.getByText('Thinking diagnostic detail', { exact: true })).toBeVisible();
     await expect(
         page.getByText('Assistant preamble diagnostic detail', { exact: true })
     ).toBeVisible();
@@ -149,7 +143,7 @@ async function upsertRuntimeActivityKinds(input: { chatId: string; runtimeUrl: s
     const startedAt = new Date().toISOString();
     const activity = [
         { id: 'act_e2e_planning', kind: 'planning', title: 'Planning diagnostic' },
-        { id: 'act_e2e_reasoning', kind: 'reasoning', title: 'Reasoning diagnostic' },
+        { id: 'act_e2e_reasoning', kind: 'reasoning', title: 'Thinking diagnostic' },
         { id: 'act_e2e_message', kind: 'message', title: 'Assistant preamble diagnostic' },
         { id: 'act_e2e_approval', kind: 'approval', title: 'Approval diagnostic' },
         { id: 'act_e2e_artifact', kind: 'artifact', title: 'Artifact diagnostic' },
@@ -189,7 +183,7 @@ async function upsertRuntimeActivityKinds(input: { chatId: string; runtimeUrl: s
     }
 }
 
-test('renders a failed turn as a top-level chat error', async ({ page }) => {
+test('renders a Hermes no-content turn as a no-reply diagnostic', async ({ page }) => {
     test.setTimeout(75_000);
 
     await page.goto('/dashboard/overview');
@@ -202,10 +196,15 @@ test('renders a failed turn as a top-level chat error', async ({ page }) => {
     await page.getByRole('button', { name: 'Start chat' }).click();
 
     await waitForRealChatRoute(page);
+    await page.reload();
 
-    const failure = page.getByRole('alert').filter({ hasText: 'Agent turn failed' });
-    await expect(failure).toBeVisible({ timeout: 60_000 });
-    await expect(failure).toContainText('OpenClaw turn ended before producing a reply.');
+    await expect(
+        transcriptParagraph(
+            page,
+            /No reply: the model returned empty content after retries and any fallback providers/u
+        )
+    ).toBeVisible({ timeout: 60_000 });
+    await expect(page.getByText('Model returned no content after all retries.')).toBeVisible();
     await expect(
         page.getByRole('button', { name: /Worked for .* Agent turn failed/i })
     ).toHaveCount(0);
@@ -217,63 +216,41 @@ test('new chat renders optimistic state, final reply, and hover metadata without
     test.setTimeout(90_000);
 
     await enableChatTiming(page);
-    const capture = await startOpenClawGatewayCapture('chat-latency-regression');
 
-    try {
-        await page.goto('/dashboard/overview');
+    await page.goto('/dashboard/overview');
 
-        const expectedReply = 'QA_CHAT_LATENCY_OK';
-        const prompt = `Latency regression marker. Reply exactly \`${expectedReply}\`.`;
-        await fillComposer(page, '#home-prompt', prompt);
-        await page.getByRole('button', { name: 'Start chat' }).click();
-        await page.mouse.move(1650, 390);
+    const expectedReply = 'QA_CHAT_LATENCY_OK';
+    const prompt = `Latency regression marker. Reply exactly \`${expectedReply}\`.`;
+    await fillComposer(page, '#home-prompt', prompt);
+    await page.getByRole('button', { name: 'Start chat' }).click();
+    await page.mouse.move(1650, 390);
 
-        const optimisticTiming = await waitForChatTiming(page, [
-            'optimistic-chat-visible',
-            'optimistic-sidebar-visible',
-            'optimistic-user-message-visible',
-            'submit',
-            'thinking-visible',
-        ]);
-        expectElapsedWithin(optimisticTiming, 'optimistic-chat-visible', optimisticVisibleLimitMs);
-        expectElapsedWithin(
-            optimisticTiming,
-            'optimistic-sidebar-visible',
-            optimisticVisibleLimitMs
-        );
-        expectElapsedWithin(
-            optimisticTiming,
-            'optimistic-user-message-visible',
-            optimisticVisibleLimitMs
-        );
-        expectElapsedWithin(optimisticTiming, 'thinking-visible', optimisticVisibleLimitMs);
+    const optimisticTiming = await waitForChatTiming(page, [
+        'optimistic-chat-visible',
+        'optimistic-sidebar-visible',
+        'optimistic-user-message-visible',
+        'submit',
+        'thinking-visible',
+    ]);
+    expectElapsedWithin(optimisticTiming, 'optimistic-chat-visible', optimisticVisibleLimitMs);
+    expectElapsedWithin(optimisticTiming, 'optimistic-sidebar-visible', optimisticVisibleLimitMs);
+    expectElapsedWithin(
+        optimisticTiming,
+        'optimistic-user-message-visible',
+        optimisticVisibleLimitMs
+    );
+    expectElapsedWithin(optimisticTiming, 'thinking-visible', optimisticVisibleLimitMs);
 
-        const chatId = normalizeGatewayChatId(await waitForRealChatRoute(page));
-        const finalEvent = await capture.waitForEvent(
-            (event) =>
-                readCapturedGatewayChatId(event) === chatId &&
-                readCapturedGatewayReplyText(event) === expectedReply &&
-                isVisibleFinalReplyEvent(event),
-            60_000
-        );
+    await waitForRealChatRoute(page);
+    const finalReply = transcriptParagraph(page, expectedReply);
+    await expect(finalReply).toBeVisible({ timeout: 10_000 });
+    await expect(finalReply).toHaveCount(1);
 
-        const finalReply = transcriptParagraph(page, expectedReply);
-        await expect(finalReply).toBeVisible({ timeout: 10_000 });
-        await expect(finalReply).toHaveCount(1);
+    await waitForChatTiming(page, ['final-message-visible']);
 
-        const finalTiming = await waitForChatTiming(page, ['final-message-visible']);
-        const finalEventAt = Date.parse(finalEvent.capturedAt);
-        const finalRenderLagMs =
-            finalTiming.marks['final-message-visible'].wallClockMs - finalEventAt;
-        expect(finalRenderLagMs).toBeLessThanOrEqual(finalRenderAfterGatewayLimitMs);
-
-        const metadata = await getAgentHoverMetadata(page);
-        if (metadata) {
-            expect(metadata.opacity).toBe('0');
-        }
-    } finally {
-        capture.snapshot('latency');
-        capture.close();
+    const metadata = await getAgentHoverMetadata(page);
+    if (metadata) {
+        expect(metadata.opacity).toBe('0');
     }
 });
 
@@ -329,8 +306,17 @@ async function openWorkedActivity(page: Page) {
     }
 }
 
+async function openThinkingActivity(page: Page) {
+    const activity = page.getByRole('button', { name: /^Thinking$/u }).first();
+    await expect(activity).toBeVisible();
+    if ((await activity.getAttribute('aria-expanded')) === 'false') {
+        await activity.click();
+    }
+}
+
 async function openFirstToolDetail(page: Page) {
-    const tool = page.getByRole('button', { name: /Used read from QA_KICKOFF_TASK\.md/i }).first();
+    await expect(page.getByText(/QA_KICKOFF_TASK\.md/u).first()).toBeVisible();
+    const tool = page.getByRole('button', { name: /Inspect read_file/i }).first();
     await expect(tool).toBeVisible();
     await tool.click();
 }
@@ -356,6 +342,12 @@ async function enableChatTiming(page: Page) {
             events: [],
             marks: {},
         };
+    });
+}
+
+async function enableInlineThinking(page: Page) {
+    await page.addInitScript(() => {
+        window.localStorage.setItem('tavern.chat.thinking-display.enabled', '1');
     });
 }
 
@@ -398,37 +390,6 @@ async function waitForRealChatRoute(page: Page) {
     }
 
     return chatId;
-}
-
-function normalizeGatewayChatId(chatId: string) {
-    const decoded = decodeURIComponent(chatId);
-
-    return decoded.split(':').at(-1) ?? decoded;
-}
-
-function isVisibleFinalReplyEvent(event: CapturedOpenClawGatewayEvent) {
-    if (event.event === 'session.message') {
-        return asRecord(asRecord(event.payload).message).role === 'assistant'
-            ? Boolean(readCapturedGatewayReplyText(event))
-            : false;
-    }
-
-    if (event.event !== 'chat') {
-        return false;
-    }
-
-    const payload = asRecord(event.payload);
-    const state = typeof payload.state === 'string' ? payload.state : null;
-
-    if (!(state === 'completed' || state === 'done' || state === 'final')) {
-        return false;
-    }
-
-    return Boolean(readCapturedGatewayReplyText(event));
-}
-
-function asRecord(value: unknown) {
-    return typeof value === 'object' && value !== null ? (value as Record<string, unknown>) : {};
 }
 
 async function getAgentHoverMetadata(page: Page) {

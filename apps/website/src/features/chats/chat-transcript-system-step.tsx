@@ -23,7 +23,6 @@ import { formatTimestamp } from '../../lib/format.ts';
 import { AccessEventLogEntry } from '../sessions/log/event-entry/access-entry.tsx';
 import { ArtifactLogEntry } from '../sessions/log/event-entry/artifact-entry.tsx';
 import { DeliveryLogEntry } from '../sessions/log/event-entry/delivery-entry.tsx';
-import { ThinkingLogEntry } from '../sessions/log/event-entry/thinking-entry.tsx';
 import type { TranscriptRow } from './chat-transcript-model.ts';
 import { ThinkingStep, ThinkingStepDetails } from './thinking-steps.tsx';
 
@@ -83,6 +82,7 @@ export function SystemStep({
             index={index}
             isLast={isLast}
             label={summary.label}
+            showIcon={summary.showIcon}
         >
             {body ? <ThinkingStepDetails summary="Details">{body}</ThinkingStepDetails> : null}
         </ThinkingStep>
@@ -111,7 +111,7 @@ function getSystemBody({
         case 'runtimeNotice':
             return null;
         case 'thinking':
-            return <ThinkingLogEntry entry={row} />;
+            return null;
     }
 }
 
@@ -119,6 +119,7 @@ function getSystemSummary(row: Extract<TranscriptRow, { kind: 'system' }>): {
     description?: string;
     icon: StepIcon;
     label: string;
+    showIcon?: boolean;
 } {
     switch (row.systemKind) {
         case 'accessEvent':
@@ -137,11 +138,34 @@ function getSystemSummary(row: Extract<TranscriptRow, { kind: 'system' }>): {
         }
         case 'thinking':
             return {
-                description: row.thinking.text,
+                ...parseThinkingSummary(row.thinking.text),
                 icon: BrainIcon,
-                label: 'Reasoning',
+                showIcon: false,
             };
     }
+}
+
+function parseThinkingSummary(text: string): {
+    description?: string;
+    label: string;
+} {
+    const trimmed = text.trim();
+    const titleMatch = /^\*\*([^*\n][^*\n]*?)\*\*\s*([\s\S]*)$/u.exec(trimmed);
+
+    if (!titleMatch) {
+        return {
+            description: trimmed || undefined,
+            label: 'Thinking',
+        };
+    }
+
+    const label = titleMatch[1]?.trim();
+    const description = titleMatch[2]?.trim();
+
+    return {
+        description: description || undefined,
+        label: label || 'Thinking',
+    };
 }
 
 function getRuntimeNoticeSummary(row: RuntimeNoticeRow): RuntimeNoticeSummary {
@@ -244,11 +268,11 @@ function RuntimeNoticeDrawer({
                     <div className="space-y-3">
                         <div className="space-y-1">
                             <h3 className="font-medium text-foreground text-sm">
-                                Raw OpenClaw notice
+                                Raw Hermes notice
                             </h3>
                             <p className="max-w-[58ch] text-pretty text-muted-foreground text-sm">
-                                Original OpenClaw text captured before Tavern rendered it as a
-                                runtime notice.
+                                Original Hermes text captured before Tavern rendered it as a runtime
+                                notice.
                             </p>
                         </div>
                         <div className="rounded-md border border-border/30 bg-muted/15 px-3 py-2">

@@ -40,6 +40,7 @@ test('startTavernChat creates a bound chat and sends the first message', async (
     assert.deepEqual(createSpy.mock.calls[0]?.[0], {
         agentIds: ['agent:planner'],
         displayName: 'Plan the spring launch and outline the next three moves.',
+        displayNameSource: 'generated',
     });
     assert.deepEqual(sendSpy.mock.calls[0]?.[0], {
         agentId: 'agent:planner',

@@ -2,17 +2,9 @@ import http from 'node:http';
 import type { Duplex } from 'node:stream';
 
 import { runtimeEventSchema, runtimeRoutes } from '@tavern/api';
-import { subscribeOpenClawAgentRuntimeEvents } from '@tavern/openclaw-gateway-adapter';
-import { WebSocket, WebSocketServer } from 'ws';
+import { type WebSocket, WebSocketServer } from 'ws';
 
 import { getRuntimeHost, getRuntimePort } from '../config';
-import {
-    recordManagedOpenClawSessionUpdate,
-    syncManagedOpenClawAgents,
-    syncManagedOpenClawSkills,
-} from '../openclaw/agent-sync';
-import { createLocalOpenClawGatewayOptions } from '../openclaw/local-client';
-import { getManagedOpenClawState } from '../openclaw/state';
 import { attachTavernChannelSocket, isTavernChannelSocketPath } from './channel-relay';
 import { subscribeToTavernApiEvents } from './chat-api';
 import { internalError, toFetchRequest, writeFetchResponse } from './http';
@@ -24,9 +16,6 @@ export interface TavernRuntimeServerHandle {
     stop(): void;
     url: URL;
 }
-
-const openClawReconnectDelayMs = 500;
-const openClawReconnectMaxDelayMs = 5000;
 
 function isEventsSocketPath(requestUrl: string | undefined) {
     if (!requestUrl) {
@@ -72,7 +61,6 @@ export function startTavernRuntimeServer(): TavernRuntimeServerHandle {
         noServer: true,
     });
     const unsubscribeBySocket = new WeakMap<object, () => void>();
-    const openClawEventRelay = createOpenClawEventRelay();
 
     server.on('upgrade', (request, socket: Duplex, head) => {
         if (
@@ -132,7 +120,6 @@ export function startTavernRuntimeServer(): TavernRuntimeServerHandle {
             }
         });
 
-        closeHandlers.push(openClawEventRelay.addSocket(socket));
         closeHandlers.push(
             subscribeToRuntimeEvents((event) => {
                 socket.send(JSON.stringify(runtimeEventSchema.parse(event)));
@@ -156,7 +143,6 @@ export function startTavernRuntimeServer(): TavernRuntimeServerHandle {
                 client.close();
             }
             wss.close();
-            openClawEventRelay.close();
             server.close();
         },
         url: new URL(`http://${normalizeHostForUrl(boundHost)}:${boundPort}`),
@@ -169,169 +155,4 @@ function normalizeHostForUrl(host: string) {
     }
 
     return host.includes(':') ? `[${host}]` : host;
-}
-
-function createOpenClawEventRelay() {
-    const sockets = new Set<WebSocket>();
-    let closed = false;
-    let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
-    let subscription: { close(): void } | null = null;
-    let reconnectDelayMs = openClawReconnectDelayMs;
-    let failedAttempts = 0;
-    let connecting = false;
-
-    const scheduleReconnect = () => {
-        if (closed || sockets.size === 0 || reconnectTimer) {
-            return;
-        }
-
-        reconnectTimer = setTimeout(() => {
-            reconnectTimer = null;
-            connect();
-        }, reconnectDelayMs);
-        reconnectDelayMs = Math.min(reconnectDelayMs * 2, openClawReconnectMaxDelayMs);
-    };
-
-    const connect = () => {
-        if (closed || sockets.size === 0 || connecting || subscription) {
-            return;
-        }
-
-        if (!getManagedOpenClawState().gatewayReady) {
-            scheduleReconnect();
-            return;
-        }
-
-        connecting = true;
-        void subscribeOpenClawAgentRuntimeEvents(
-            createLocalOpenClawGatewayOptions(),
-            (event) => {
-                if (event.type === 'agent.updated') {
-                    void syncManagedOpenClawAgents({ publishEvents: false })
-                        .catch((error) => {
-                            console.warn('[tavern-runtime] failed to sync agents for event', error);
-                        })
-                        .finally(() => {
-                            sendRuntimeEventToSockets(event, sockets);
-                        });
-                    return;
-                }
-
-                if (event.type === 'skill.updated' || event.type === 'skill.deleted') {
-                    void syncManagedOpenClawSkills({ publishEvents: false })
-                        .catch((error) => {
-                            console.warn('[tavern-runtime] failed to sync skills for event', error);
-                        })
-                        .finally(() => {
-                            sendRuntimeEventToSockets(event, sockets);
-                        });
-                    return;
-                }
-
-                if (event.type === 'session.updated') {
-                    try {
-                        recordManagedOpenClawSessionUpdate(event.session);
-                    } catch (error) {
-                        console.warn(
-                            '[tavern-runtime] failed to record session update event',
-                            error
-                        );
-                    }
-                    sendRuntimeEventToSockets(event, sockets);
-                    return;
-                }
-
-                if (
-                    event.type === 'session.invalidated' ||
-                    event.type === 'turn.completed' ||
-                    event.type === 'turn.failed'
-                ) {
-                    sendRuntimeEventToSockets(event, sockets);
-                    return;
-                }
-
-                sendRuntimeEventToSockets(event, sockets);
-            },
-            {
-                onClose: () => {
-                    subscription = null;
-                    scheduleReconnect();
-                },
-            }
-        )
-            .then((nextSubscription) => {
-                connecting = false;
-
-                if (closed || sockets.size === 0) {
-                    nextSubscription.close();
-                    return;
-                }
-
-                reconnectDelayMs = openClawReconnectDelayMs;
-                failedAttempts = 0;
-                subscription = nextSubscription;
-            })
-            .catch((error) => {
-                connecting = false;
-                logOpenClawEventReconnectFailure(error, failedAttempts);
-                failedAttempts += 1;
-                scheduleReconnect();
-            });
-    };
-
-    const close = () => {
-        closed = true;
-        if (reconnectTimer) {
-            clearTimeout(reconnectTimer);
-            reconnectTimer = null;
-        }
-        subscription?.close();
-        subscription = null;
-    };
-
-    return {
-        addSocket(socket: WebSocket) {
-            sockets.add(socket);
-            connect();
-
-            return () => {
-                sockets.delete(socket);
-
-                if (sockets.size === 0) {
-                    subscription?.close();
-                    subscription = null;
-                    if (reconnectTimer) {
-                        clearTimeout(reconnectTimer);
-                        reconnectTimer = null;
-                    }
-                    reconnectDelayMs = openClawReconnectDelayMs;
-                    failedAttempts = 0;
-                }
-            };
-        },
-        close,
-    };
-}
-
-function sendRuntimeEventToSockets(event: unknown, sockets: Set<WebSocket>) {
-    const payload = JSON.stringify(runtimeEventSchema.parse(event));
-
-    for (const socket of sockets) {
-        if (socket.readyState === WebSocket.OPEN) {
-            socket.send(payload);
-        }
-    }
-}
-
-function logOpenClawEventReconnectFailure(error: unknown, failedAttempts: number) {
-    if (failedAttempts === 0) {
-        console.warn('[tavern-runtime] OpenClaw events disconnected; retrying...', error);
-        return;
-    }
-
-    if (failedAttempts % 12 === 0) {
-        console.warn(
-            `[tavern-runtime] OpenClaw events still disconnected after ${failedAttempts + 1} attempts.`
-        );
-    }
 }

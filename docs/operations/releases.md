@@ -37,7 +37,7 @@ Before every release, inspect the changed files and choose one lane:
 | --- | --- | --- | --- |
 | App-only | UI, desktop shell, docs, app cache, app presentation, or any change that does not require a new Runtime behavior | unchanged | unchanged |
 | Compatible Runtime | Runtime bugfix or operational improvement that existing apps can keep using without new API behavior | bump with app release | unchanged |
-| Required Runtime | App depends on new Runtime API, storage, capability, event, job, managed OpenClaw behavior, or CLI behavior | bump with app release | bump to the release version |
+| Required Runtime | App depends on new Runtime API, storage, capability, event, job, managed Hermes behavior, or CLI behavior | bump with app release | bump to the release version |
 
 Default to **App-only** unless the app needs new Runtime behavior. Runtime
 updates are operator work; do not force one for a desktop-only patch.
@@ -87,8 +87,8 @@ tag, creates the GitHub Release, and updates the Homebrew tap formula.
   imply Runtime updates.
 * **Raise the floor when the app calls a new Runtime contract.** This includes
   new or changed Runtime API fields, capability ids, websocket events, durable
-  records, managed OpenClaw lifecycle behavior, Runtime CLI behavior, or
-  first-party plugin behavior that the app requires.
+  records, managed Hermes lifecycle behavior, Runtime CLI behavior, or
+  Hermes adapter behavior that the app requires.
 * **Keep compatible Runtime fixes optional.** If a Runtime patch improves
   reliability but old app builds keep working, publish the Runtime artifact
   without changing `tavern.runtime.minimumVersion`.
@@ -105,8 +105,8 @@ Raise `tavern.runtime.minimumVersion` when any answer is yes:
   error shape?
 * Does the app require a new Runtime capability id, health state, event, durable
   record, job, or storage invariant?
-* Does the app require new managed OpenClaw startup, plugin sync, Gateway, or
-  first-party plugin behavior?
+* Does the app require new managed Hermes startup, dashboard/API/Gateway,
+  model config, or adapter behavior?
 * Does the app require new Runtime CLI, Homebrew service, artifact layout, port,
   or environment behavior?
 * Would the new app fail, hide core functionality, corrupt state, or show a

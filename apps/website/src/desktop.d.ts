@@ -5,5 +5,3 @@ declare global {
         tavernDesktop?: TavernDesktopBridge;
     }
 }
-
-export {};

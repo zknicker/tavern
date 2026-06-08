@@ -1,9 +1,9 @@
 import { describe, expect, it } from 'bun:test';
+import type { MentionOption } from './mention-types.ts';
 import {
     filterMentionOptionsForQuery,
     selectMentionOptionsForQuery,
 } from './use-mention-options.ts';
-import type { MentionOption } from './mention-types.ts';
 
 describe('filterMentionOptionsForQuery', () => {
     it('does not render stale broad mention results for a narrower app query', () => {

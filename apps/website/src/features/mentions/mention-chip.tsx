@@ -42,8 +42,8 @@ export function MentionChip({
                     'size-[1.02em] shrink-0 object-contain opacity-90',
                     getMentionIconToneClassName(appearance.tone)
                 )}
-                iconDataUrl={appearance.iconDataUrl}
                 icon={appearance.icon}
+                iconDataUrl={appearance.iconDataUrl}
             />
             <span>{displayLabel}</span>
         </span>

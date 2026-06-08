@@ -2,24 +2,10 @@ import { spawnSync } from 'node:child_process';
 import net from 'node:net';
 import os from 'node:os';
 import path from 'node:path';
+import { resolveDevPorts } from './dev-ports.mjs';
 
-export const runtimeBaseUrl = 'http://127.0.0.1:18790';
 export const startupEventPrefix = 'TAVERN_STARTUP_EVENT ';
 const ansiPattern = /\u001B\[[0-9;?]*[ -/]*[@-~]/gu;
-const managedOpenClawPluginPackages = [
-    {
-        directory: 'tavern-openclaw-messenger',
-        packageName: '@zknicker/tavern-openclaw-messenger',
-    },
-    {
-        directory: 'tavern-openclaw-cortex',
-        packageName: '@zknicker/tavern-openclaw-cortex',
-    },
-    {
-        directory: 'tavern-openclaw-workspace',
-        packageName: '@zknicker/tavern-openclaw-workspace',
-    },
-];
 
 export function isRuntimeMode(mode) {
     return mode === 'web-runtime' || mode === 'desktop-runtime';
@@ -31,14 +17,23 @@ export function isDesktopMode(mode) {
 
 export function createDevStackEnvironment({
     baseEnvironment = process.env,
+    ports,
     repositoryRoot = process.cwd(),
 } = {}) {
-    const statePaths = createDevStackStatePaths(repositoryRoot);
+    const resolvedPorts = {
+        ...resolveDevPorts({ baseEnvironment, repositoryRoot }),
+        ...(ports ?? {}),
+    };
+    const statePaths = createDevStackStatePaths({ baseEnvironment, repositoryRoot });
 
     return {
         ...baseEnvironment,
         DATABASE_PATH: baseEnvironment.DATABASE_PATH ?? statePaths.databasePath,
+        TAVERN_HERMES_PORT: baseEnvironment.TAVERN_HERMES_PORT ?? resolvedPorts.hermesPort,
+        TAVERN_RUNTIME_PORT: baseEnvironment.TAVERN_RUNTIME_PORT ?? resolvedPorts.runtimePort,
         TAVERN_RUNTIME_ROOT: baseEnvironment.TAVERN_RUNTIME_ROOT ?? statePaths.runtimeRoot,
+        TAVERN_SERVER_PORT: baseEnvironment.TAVERN_SERVER_PORT ?? resolvedPorts.serverPort,
+        TAVERN_WEBSITE_PORT: baseEnvironment.TAVERN_WEBSITE_PORT ?? resolvedPorts.websitePort,
     };
 }
 
@@ -50,9 +45,10 @@ export function createDevStackConfig({
 }) {
     const hasRuntime = isRuntimeMode(mode);
     const isDesktop = isDesktopMode(mode);
-    const devEnvironment = createDevStackEnvironment({ baseEnvironment, repositoryRoot });
+    const devEnvironment = createDevStackEnvironment({ baseEnvironment, ports, repositoryRoot });
     const databasePath = resolveHomePath(devEnvironment.DATABASE_PATH);
     const runtimeRoot = resolveHomePath(devEnvironment.TAVERN_RUNTIME_ROOT);
+    const runtimeUrl = getRuntimeBaseUrl(devEnvironment);
 
     return {
         appOrigin: devEnvironment.APP_ORIGIN ?? `http://localhost:${ports.websitePort}`,
@@ -62,7 +58,7 @@ export function createDevStackConfig({
         jobsDatabasePath: shortenHomePath(deriveJobsDatabasePath(databasePath)),
         runtimeObserve: hasRuntime ? 'live ws' : 'disabled',
         runtimeRoot: shortenHomePath(runtimeRoot),
-        runtimeUrl: hasRuntime ? runtimeBaseUrl : 'disabled',
+        runtimeUrl: hasRuntime ? runtimeUrl : 'disabled',
         serverUrl: `http://localhost:${ports.serverPort}`,
         trigger: `@${devEnvironment.ASSISTANT_NAME ?? 'Tavern'}`,
         websiteUrl: `http://localhost:${ports.websitePort}`,
@@ -114,12 +110,15 @@ export async function waitForPort(port, host = '127.0.0.1', timeoutMs = 30_000) 
     throw new Error(`Timed out waiting for ${host}:${port}.`);
 }
 
-export async function waitForRuntimeReady(timeoutMs = 10 * 60 * 1000) {
+export async function waitForRuntimeReady(
+    runtimeUrl = getRuntimeBaseUrl(),
+    timeoutMs = 10 * 60 * 1000
+) {
     const deadline = Date.now() + timeoutMs;
 
     while (Date.now() < deadline) {
         try {
-            const response = await fetch(`${runtimeBaseUrl}/capabilities`);
+            const response = await fetch(`${runtimeUrl}/capabilities`);
             if (response.ok) {
                 const capabilities = await response.json();
                 if (capabilities?.health?.ok === true) {
@@ -133,44 +132,17 @@ export async function waitForRuntimeReady(timeoutMs = 10 * 60 * 1000) {
         await sleep(100);
     }
 
-    throw new Error(`Timed out waiting for Tavern Runtime readiness at ${runtimeBaseUrl}.`);
-}
-
-export function buildManagedOpenClawPlugin({ repositoryRoot }) {
-    for (const { packageName } of managedOpenClawPluginPackages) {
-        const result = spawnSync('bun', ['run', '--filter', packageName, 'build'], {
-            cwd: repositoryRoot,
-            encoding: 'utf8',
-        });
-
-        if (result.status === 0) {
-            continue;
-        }
-
-        const output = [result.stdout, result.stderr].filter(Boolean).join('\n').trim();
-        throw new Error(output || `Failed to build ${packageName}.`);
-    }
-}
-
-export function getManagedOpenClawPluginPackagePaths({ repositoryRoot }) {
-    return managedOpenClawPluginPackages.map((pluginPackage) => ({
-        ...pluginPackage,
-        path: path.join(repositoryRoot, 'packages', pluginPackage.directory),
-    }));
+    throw new Error(`Timed out waiting for Tavern Runtime readiness at ${runtimeUrl}.`);
 }
 
 export function assertDevStackPortsAvailable({ mode, ports, repositoryRoot }) {
     const hasRuntime = isRuntimeMode(mode);
+    const devEnvironment = createDevStackEnvironment({ ports, repositoryRoot });
     const definitions = [
         {
             enabled: hasRuntime,
             label: 'runtime',
-            port: 18_790,
-        },
-        {
-            enabled: hasRuntime,
-            label: 'managed OpenClaw Gateway',
-            port: Number.parseInt(process.env.TAVERN_OPENCLAW_GATEWAY_PORT ?? '18789', 10),
+            port: Number(devEnvironment.TAVERN_RUNTIME_PORT),
         },
         {
             enabled: true,
@@ -181,6 +153,11 @@ export function assertDevStackPortsAvailable({ mode, ports, repositoryRoot }) {
             enabled: true,
             label: 'website',
             port: Number(ports.websitePort),
+        },
+        {
+            enabled: hasRuntime,
+            label: 'managed Hermes',
+            port: Number(devEnvironment.TAVERN_HERMES_PORT),
         },
     ];
 
@@ -210,10 +187,7 @@ export function cleanupStaleProcesses({
 }) {
     const hasRuntime = isRuntimeMode(mode);
     const isDesktop = isDesktopMode(mode);
-    const managedOpenClawGatewayPort = Number.parseInt(
-        process.env.TAVERN_OPENCLAW_GATEWAY_PORT ?? '18789',
-        10
-    );
+    const devEnvironment = createDevStackEnvironment({ ports, repositoryRoot });
     const definitions = [
         {
             commandPattern: 'bun --watch src/index.ts',
@@ -231,18 +205,13 @@ export function cleanupStaleProcesses({
             commandPattern: 'bun --watch src/index.ts',
             cwd: path.join(repositoryRoot, 'apps', 'runtime'),
             enabled: hasRuntime,
-            port: 18_790,
+            port: Number(devEnvironment.TAVERN_RUNTIME_PORT),
         },
         {
-            commandPattern: null,
-            cwd: null,
+            commandPattern: 'hermes dashboard',
+            cwd: path.join(repositoryRoot, 'apps', 'runtime'),
             enabled: hasRuntime,
-            matches: (pid) =>
-                isOpenClawGatewayProcess(
-                    processTools.readProcessCommand(pid),
-                    managedOpenClawGatewayPort
-                ),
-            port: managedOpenClawGatewayPort,
+            port: Number(devEnvironment.TAVERN_HERMES_PORT),
         },
         {
             commandPattern: null,
@@ -281,10 +250,6 @@ export function cleanupStaleProcesses({
     }
 
     const uniqueProcessIds = [...new Set(staleProcessIds)];
-
-    if (hasRuntime && uniqueProcessIds.length > 0) {
-        processTools.stopGlobalOpenClawLaunchAgent();
-    }
 
     for (const pid of uniqueProcessIds) {
         processTools.killProcess(pid, 'SIGTERM');
@@ -356,13 +321,20 @@ function resolveHomePath(value) {
     return path.resolve(value);
 }
 
-function createDevStackStatePaths() {
-    const stateRoot = path.join(os.homedir(), '.tavern', 'dev');
+function createDevStackStatePaths({ baseEnvironment, repositoryRoot }) {
+    const stackId =
+        baseEnvironment.TAVERN_DEV_STACK_ID ??
+        `${path.basename(repositoryRoot)}-${hashString(repositoryRoot).slice(0, 8)}`;
+    const appStateRoot = path.join(os.homedir(), '.tavern-hermes', 'dev', stackId);
 
     return {
-        databasePath: path.join(stateRoot, 'tavern.sqlite'),
-        runtimeRoot: path.join(stateRoot, 'runtime'),
+        databasePath: path.join(appStateRoot, 'tavern.sqlite'),
+        runtimeRoot: path.join(appStateRoot, 'runtime'),
     };
+}
+
+export function getRuntimeBaseUrl(environment = process.env) {
+    return `http://127.0.0.1:${environment.TAVERN_RUNTIME_PORT ?? '18790'}`;
 }
 
 function shortenRepositoryPath(value, repositoryRoot) {
@@ -384,6 +356,14 @@ function deriveJobsDatabasePath(databasePath) {
 
     const parsed = path.parse(databasePath);
     return path.join(parsed.dir, `${parsed.name}.jobs${extension}`);
+}
+
+function hashString(value) {
+    let hash = 0;
+    for (let index = 0; index < value.length; index += 1) {
+        hash = Math.imul(31, hash) + value.charCodeAt(index);
+    }
+    return (hash >>> 0).toString(16).padStart(8, '0');
 }
 
 function sleep(durationMs) {
@@ -443,25 +423,11 @@ function readProcessParentId(pid) {
     return Number.isInteger(value) ? value : null;
 }
 
-function isOpenClawGatewayProcess(command, port) {
-    return (
-        command.includes('openclaw') &&
-        command.includes('gateway') &&
-        command.includes(String(port))
-    );
-}
-
 function isStaleTauriDesktopSidecar(command) {
     return (
         command.includes('/Applications/Tavern.app/Contents/MacOS/tavern-server') &&
         command.includes('--app-origin tauri://localhost')
     );
-}
-
-function stopGlobalOpenClawLaunchAgent() {
-    spawnSync('launchctl', ['remove', 'ai.openclaw.gateway'], {
-        stdio: 'ignore',
-    });
 }
 
 function waitForProcessExit(processIds) {
@@ -503,6 +469,5 @@ const defaultProcessTools = {
     readProcessCommand,
     readProcessParentId,
     readProcessWorkingDirectory,
-    stopGlobalOpenClawLaunchAgent,
     waitForProcessExit,
 };

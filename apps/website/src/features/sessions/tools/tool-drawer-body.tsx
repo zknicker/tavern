@@ -9,11 +9,7 @@ interface ToolDrawerBodyProps {
     queryError: boolean;
 }
 
-export function ToolDrawerBody({
-    details,
-    isPending,
-    queryError,
-}: ToolDrawerBodyProps) {
+export function ToolDrawerBody({ details, isPending, queryError }: ToolDrawerBodyProps) {
     return (
         <DrawerPanel className="space-y-5">
             {(details?.actions ?? []).map((action) => (

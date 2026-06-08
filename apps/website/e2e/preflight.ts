@@ -19,32 +19,11 @@ if (existsSync(chromium.executablePath())) {
     );
 }
 
-const [
-    { ensureManagedOpenClawPlugins, resolveManagedOpenClawInstall },
-    { resolveDefaultManagedOpenClawPluginInstallSpecs },
-] = await Promise.all([
-    import('../../runtime/src/openclaw/install.ts'),
-    import('../../runtime/src/openclaw/plugin-installs.ts'),
-]);
+await runStep('Build Tavern SDK', process.execPath, ['run', '--filter', '@tavern/sdk', 'build'], {
+    cwd: workspaceRoot,
+});
 
-console.log('[tavern-e2e] Resolving managed OpenClaw install...');
-const install = await resolveManagedOpenClawInstall();
-
-console.log(`[tavern-e2e] Managed OpenClaw ready: ${install.version}`);
-await ensureManagedOpenClawPlugins(
-    install,
-    resolveDefaultManagedOpenClawPluginInstallSpecs({
-        installRoot: install.installRoot,
-    })
-);
-console.log('[tavern-e2e] Managed OpenClaw plugin cache ready.');
-
-function runStep(
-    label: string,
-    command: string,
-    args: string[],
-    options: { cwd?: string } = {}
-) {
+function runStep(label: string, command: string, args: string[], options: { cwd?: string } = {}) {
     console.log(`[tavern-e2e] ${label}...`);
 
     return new Promise<void>((resolve, reject) => {

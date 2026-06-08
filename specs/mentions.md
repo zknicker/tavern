@@ -112,8 +112,8 @@ Default rendering is kind-based:
 | `image` | Image icon and path tone. |
 
 Known bundled skills and plugins may override only presentation. For example,
-OpenClaw's `github` skill can render as `GitHub` with a GitHub icon while it
-still serializes and projects as a `skill` mention. OpenClaw's `gh-issues`
+Hermes's `github` skill can render as `GitHub` with a GitHub icon while it
+still serializes and projects as a `skill` mention. Hermes's `gh-issues`
 skill can render as `GitHub Issues` with the same icon while retaining its
 exact runtime skill id.
 
@@ -205,7 +205,7 @@ and metadata, but stored metadata must keep the selected `kind`, `id`,
 ## Runtime Behavior
 
 Skills use `skill-context`. Tavern stores the structured mention and the
-OpenClaw Tavern Messenger projects selected skills into the agent-facing prompt
+Hermes Tavern Messenger projects selected skills into the agent-facing prompt
 as Codex-style skill context when the runtime exposes the skill.
 
 Example:
@@ -220,8 +220,8 @@ Example:
 
 Plugins and apps use `capability-reference` when they are already available in
 the runtime context. Tavern preserves the markdown and does not add a hidden
-reference block. Native Codex plugins follow OpenClaw's Codex harness contract:
-OpenClaw config determines which Codex tools are available for a Codex thread,
+reference block. Native Codex plugins follow Hermes's Codex harness contract:
+Hermes config determines which Codex tools are available for a Codex thread,
 and the model uses those tools from the visible prompt.
 
 Computer Use app autocomplete uses Tavern Runtime's local macOS app inventory.

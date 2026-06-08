@@ -6,6 +6,7 @@ import { CopyButton } from '../../components/ui/copy-button.tsx';
 import { Icon } from '../../components/ui/icon.tsx';
 import { useActorProfile } from '../../hooks/actors/use-actor.ts';
 import type { ChatActiveReply } from '../../hooks/chats/chat-timeline-state.ts';
+import { useChatThinkingDisplayPreference } from '../../hooks/chats/use-chat-thinking-display-preference.ts';
 import { useSessionDrawer } from '../../hooks/sessions/use-session-drawer.ts';
 import { formatShortTime } from '../../lib/format.ts';
 import { cn } from '../../lib/utils.ts';
@@ -25,6 +26,7 @@ import {
 import {
     type AgentItemSegment,
     getTranscriptItemKey,
+    getVisibleAgentItems,
     groupAgentItems,
 } from './chat-transcript-item-utils.ts';
 import { ChatTranscriptMessageContent } from './chat-transcript-message.tsx';
@@ -183,14 +185,19 @@ function AgentTurn({
     turnStartedAt?: string | null;
 }) {
     const actorProfile = useActorProfile(entry.actor);
+    const chatThinkingDisplay = useChatThinkingDisplayPreference();
+    const items = getVisibleAgentItems({
+        items: entry.items,
+        showThinkingText: chatThinkingDisplay.enabled,
+    });
     const displayName = actorProfile?.name ?? getTurnFallbackName(entry) ?? 'Agent';
     const showIdentity = layout.showAgentIdentity;
-    const lastMessage = getLastMessage(entry.items);
+    const lastMessage = getLastMessage(items);
     const turnCompletedAt = lastMessage?.timestamp ?? null;
-    const segments = groupAgentItems(entry.items);
-    const turnActive = isActiveTurn(entry.items, activeReply, lastMessage);
-    const activityItems = entry.items.filter(isActivityItem);
-    const hasWorkHeader = activityItems.length > 0 || entry.items.some(isAssistantNarrationItem);
+    const segments = groupAgentItems(items);
+    const turnActive = isActiveTurn(items, activeReply, lastMessage);
+    const activityItems = items.filter(isActivityItem);
+    const hasWorkHeader = activityItems.length > 0 || items.some(isAssistantNarrationItem);
     const activityEnd = getActivityEnd(activityItems);
     const workStart = getActivityStart(activityItems) ?? turnStartedAt ?? entry.timestamp;
     const workEnd = turnActive
@@ -247,13 +254,13 @@ function AgentTurn({
                                 start={workStart}
                                 status={turnActive ? 'active' : 'completed'}
                             >
-                                {workSegments.map((segment) => (
+                                {workSegments.map((segment, index) => (
                                     <AgentTurnSegment
                                         chatId={chatId}
                                         currentSessionKey={currentSessionKey}
                                         key={segment.key}
                                         segment={segment}
-                                        turnActive={turnActive}
+                                        turnActive={turnActive && index === workSegments.length - 1}
                                         turnCompletedAt={turnCompletedAt}
                                         turnStartedAt={turnStartedAt}
                                     />
@@ -487,7 +494,7 @@ function isActiveTurn(
     activeReply: ChatActiveReply | null,
     lastMessage: Extract<TranscriptRow, { kind: 'message' }>['message'] | null
 ) {
-    if (!(activeReply && lastMessage === null)) {
+    if (!(activeReply && lastMessage === null) || activeReply.completedAt) {
         return false;
     }
 

@@ -28,7 +28,7 @@ Runtime sessions preserve ongoing execution context across turns.
 - Tavern can inspect sessions through stable session snapshots and ordered session message
   snapshots.
 - Session snapshots distinguish `sessionKey`, the stable routing/reference key, from `sessionId`,
-  the runtime transcript identity. OpenClaw-backed Tavern sessions expose that transcript identity
+  the runtime transcript identity. Hermes-backed Tavern sessions expose that transcript identity
   as `session.id`.
 - Session message snapshots may include execution metadata such as model, provider, and token usage.
 - Tavern can observe live session and message updates through the runtime WebSocket event stream.

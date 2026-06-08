@@ -20,7 +20,7 @@ app access, channel behavior, or local capabilities when Tavern can verify and e
 - Product-facing skill and plugin selection applies to the agent.
 - Selecting a skill should affect only the agent's runtime access.
 - Enabling a plugin should affect only the agent's runtime config.
-- Tavern product APIs expose runtime-reported skills with source metadata. Managed OpenClaw
+- Tavern product APIs expose runtime-reported skills with source metadata. Managed Hermes
   bundled skills are blocked from prompt eligibility by Runtime config, not by a catalog filter.
 - Tavern product APIs may expose runtime plugins as plugin records with source metadata, usability,
   and runtime-provided diagnostic text.
@@ -30,17 +30,17 @@ app access, channel behavior, or local capabilities when Tavern can verify and e
 ## Ownership
 
 - Tavern is canonical for the agent's Tavern-side access choices and skill secrets.
-- OpenClaw remains canonical for runtime eligibility, dependency checks, prompt loading, and
+- Hermes remains canonical for runtime eligibility, dependency checks, prompt loading, and
   execution behavior.
 - Runtime-discovered skills remain owned by their source location. Tavern should not copy them into
-  a Tavern skill store or the OpenClaw workspace as part of this surface.
+  a Tavern skill store or the Hermes workspace as part of this surface.
 - Runtime plugins remain owned by their source runtime. Tavern owns only the user's Tavern-side
   enablement choice and the managed config needed to grant access.
-- OpenClaw plugins may provide skills, workflows, tools, channels, runtime behavior, or provider
+- Hermes plugins may provide skills, workflows, tools, channels, runtime behavior, or provider
   capabilities. Tavern presents only the agent-facing pieces on the Skills & Plugins settings page.
 - Native Codex plugins remain Codex app-server capabilities. Tavern may enable supported plugins
-  through OpenClaw Codex harness config, but it does not copy them into a Tavern skill store or the
-  OpenClaw workspace.
+  through Hermes Codex harness config, but it does not copy them into a Tavern skill store or the
+  Hermes workspace.
 
 ## Source Model
 
@@ -48,40 +48,40 @@ Tavern should preserve source identity instead of flattening everything into one
 
 ### Skill sources
 
-OpenClaw loads skills from these sources, with later entries taking precedence over earlier entries
+Hermes loads skills from these sources, with later entries taking precedence over earlier entries
 when names conflict:
 
 1. `skills.load.extraDirs`
-2. bundled OpenClaw skills
-3. `~/.openclaw/skills`
+2. bundled Hermes skills
+3. `~/.hermes/skills`
 4. `~/.agents/skills`
 5. `<workspace>/.agents/skills`
 6. `<workspace>/skills`
 
-Tavern should show the skill inventory OpenClaw reports. Tavern should not inject managed OpenClaw
-bundled skills into agent prompt context; Runtime owns the managed OpenClaw install and keeps
-bundled skills available to OpenClaw itself.
+Tavern should show the skill inventory Hermes reports. Tavern should not inject managed Hermes
+bundled skills into agent prompt context; Runtime owns the managed Hermes install and keeps
+bundled skills available to Hermes itself.
 
-OpenClaw plugin skills are a hybrid source. A plugin may list skill directories in
-`openclaw.plugin.json`; those skill directories load only when the plugin is enabled and currently
+Hermes plugin skills are a hybrid source. A plugin may list skill directories in
+`hermes.plugin.json`; those skill directories load only when the plugin is enabled and currently
 participate at low precedence. Tavern should show the owning plugin when a skill comes from a
 plugin.
 
 ### Plugin sources
 
-OpenClaw recognizes native plugins and compatible plugin bundles.
+Hermes recognizes native plugins and compatible plugin bundles.
 
-- Native plugins use `openclaw.plugin.json` plus a runtime module and can register tools, providers,
+- Native plugins use `hermes.plugin.json` plus a runtime module and can register tools, providers,
   channels, hooks, commands, routes, services, and other runtime surfaces.
 - Bundle plugins use Codex, Claude, or Cursor-compatible plugin layouts such as `.codex-plugin/`,
-  `.claude-plugin/`, or `.cursor-plugin/` and are mapped into OpenClaw plugin capabilities.
+  `.claude-plugin/`, or `.cursor-plugin/` and are mapped into Hermes plugin capabilities.
 
-OpenClaw discovers plugins in this order, with the first matching plugin id winning:
+Hermes discovers plugins in this order, with the first matching plugin id winning:
 
 1. `plugins.load.paths`
-2. workspace plugins under `<workspace>/.openclaw/<plugin-root>`
-3. global plugins under `~/.openclaw/<plugin-root>`
-4. bundled plugins shipped with OpenClaw
+2. workspace plugins under `<workspace>/.hermes/<plugin-root>`
+3. global plugins under `~/.hermes/<plugin-root>`
+4. bundled plugins shipped with Hermes
 
 Plugin enablement is governed by `plugins.enabled`, `plugins.allow`, `plugins.deny`,
 `plugins.entries.<id>.enabled`, plugin slots, bundled defaults, and plugin-owned surfaces named by
@@ -89,14 +89,14 @@ config. Tavern should preserve relevant diagnostics without turning every loader
 separate product state.
 
 Codex native plugins are a Codex harness source. Tavern should read availability from Codex
-app-server inventory when possible and project supported entries into OpenClaw Codex harness config.
+app-server inventory when possible and project supported entries into Hermes Codex harness config.
 Codex native plugins stay Codex-owned and are not represented as Tavern skills. Any Codex-only row
-shown in Tavern must be labeled as Codex-only so users do not mistake it for an OpenClaw prompt
+shown in Tavern must be labeled as Codex-only so users do not mistake it for an Hermes prompt
 skill.
 
-Codex Computer Use is special. OpenClaw's bundled `codex` plugin does not perform desktop actions
+Codex Computer Use is special. Hermes's bundled `codex` plugin does not perform desktop actions
 itself. It enables Codex app-server plugin support, finds or asks Codex app-server to install or
-re-enable the configured Codex Computer Use plugin when OpenClaw's bridge supports that path,
+re-enable the configured Codex Computer Use plugin when Hermes's bridge supports that path,
 reloads MCP servers, verifies that the `computer-use` MCP server exposes tools, and then lets Codex
 own native MCP tool calls during Codex-mode turns. Tavern's UI should explain this setup path, but
 it should not present a general Codex plugin install surface. If Computer Use is required and setup
@@ -108,25 +108,25 @@ cannot make the MCP server available, the Codex-mode turn should fail before the
 - Tavern should not require file materialization to show a skill or plugin in this surface.
 - When Tavern changes skill or plugin access, it should use supported runtime config paths instead
   of writing directly into discovered source directories.
-- OpenClaw reports `requirements`, `missing`, `configChecks`, `eligible`, and `install`; Tavern
+- Hermes reports `requirements`, `missing`, `configChecks`, `eligible`, and `install`; Tavern
   can show those as diagnostic details, but they are not separate product states.
-- Tavern Runtime launches managed OpenClaw with Seatbelt guardrails and generates OpenClaw config
+- Tavern Runtime launches managed Hermes with Seatbelt guardrails and generates Hermes config
   for the managed workspace.
-- Managed OpenClaw config sets `skills.allowBundled` to a Tavern sentinel allowlist with no real
+- Managed Hermes config sets `skills.allowBundled` to a Tavern sentinel allowlist with no real
   bundled skill ids so bundled skills do not appear in `<available_skills>`.
 - Tavern does not build or manage Docker sandbox images for individual agents.
-- Setup actions execute inside managed OpenClaw's Seatbelt process boundary when OpenClaw runs
+- Setup actions execute inside managed Hermes's Seatbelt process boundary when Hermes runs
   package-manager setup.
 - Skill environment values are stored per skill in Tavern Vault and should only be included in
   managed runtime config when Tavern intentionally grants them.
 - A Codex harness session should receive only the native Codex plugins enabled for the acting agent
-  and supported by the installed OpenClaw Codex bridge.
+  and supported by the installed Hermes Codex bridge.
 - Tavern reads Codex plugin availability from Codex app-server inventory when possible. Local Codex
   config files are hints, not the final usability authority.
 - Tavern distinguishes native Codex plugin support from special runtime capabilities such as
   Computer Use. Computer Use is configured through its runtime-specific bridge, not as a normal
   `codexPlugins` entry.
-- `codexPlugins` entries are limited to plugin marketplaces supported by the installed OpenClaw
+- `codexPlugins` entries are limited to plugin marketplaces supported by the installed Hermes
   Codex bridge. Unsupported Codex desktop plugins remain visible as unsupported plugins when
   Tavern can observe them.
 - Existing Codex app-server threads keep their runtime binding. After changing Codex harness plugin
@@ -139,10 +139,10 @@ cannot make the MCP server available, the Codex-mode turn should fail before the
   Tavern.
 - Skill provenance is shown from source metadata, such as workspace, project, personal,
   managed/local, plugin-owned, or extra directory.
-- Plugin provenance is shown from its product source, such as OpenClaw, Codex, or Claude, not from
+- Plugin provenance is shown from its product source, such as Hermes, Codex, or Claude, not from
   raw marketplace paths by default.
 - Codex-only capabilities are explicitly labeled because they execute through the Codex harness
-  rather than OpenClaw skill prompt injection.
+  rather than Hermes skill prompt injection.
 - The detail header should show the skill or plugin name and description only.
 - Agent usability lives in the detail sidebar as enabled, disabled, or not usable. Runtime
   diagnostics can explain not usable, but they are not first-class product states.

@@ -325,10 +325,10 @@ function emptyFilterTitle(filter: CatalogFilter) {
 
 function emptyFilterDescription(filter: CatalogFilter) {
     if (filter === 'plugins') {
-        return 'Runtime plugin capabilities will appear here when OpenClaw reports them.';
+        return 'Runtime plugin capabilities will appear here when Hermes reports them.';
     }
     if (filter === 'skills') {
-        return 'Runtime-visible skills will appear here when OpenClaw reports them.';
+        return 'Runtime-visible skills will appear here when Hermes reports them.';
     }
     return 'No runtime-visible skills or plugins were found.';
 }
@@ -341,7 +341,7 @@ function CatalogCard({
     onOpenSkill: (skillId: string) => void;
 }) {
     const isSkill = item.kind === 'skill';
-    const canOpenSkill = isSkill && item.item.surface === 'openclaw';
+    const canOpenSkill = isSkill && item.item.surface === 'hermes';
     const isCodexOnly = isCodexOnlyCatalogItem(item);
 
     return (

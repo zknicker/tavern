@@ -52,7 +52,7 @@ describe('Cortex PGLite storage', () => {
     test('captures a source-backed page with claims, chunks, links, and audit', async () => {
         const store = createCortexHarness();
         const result = await store.capture({
-            content: 'Tavern Cortex stores durable memory. It links to [[openclaw]].',
+            content: 'Tavern Cortex stores durable memory. It links to [[hermes]].',
             source: {
                 actorId: 'user-1',
                 actorKind: 'user',
@@ -68,10 +68,10 @@ describe('Cortex PGLite storage', () => {
         expect(result.page.claims).toHaveLength(2);
         expect(result.page.links[0]).toMatchObject({
             targetPageId: null,
-            targetSlug: 'openclaw',
+            targetSlug: 'hermes',
         });
         expect((await store.listPages()).pages[0]?.links[0]).toMatchObject({
-            targetSlug: 'openclaw',
+            targetSlug: 'hermes',
         });
         expect(await store.status()).toMatchObject({
             auditCount: 1,
@@ -201,7 +201,7 @@ describe('Cortex PGLite storage', () => {
         const store = createCortexHarness();
 
         await applyDreamProposal(getCortexDb(), {
-            model: 'codex/gpt-5.5',
+            model: 'openai-codex/gpt-5.5',
             outputHash: 'output-hash',
             promptHash: 'prompt-hash',
             proposal: {
@@ -458,14 +458,14 @@ describe('Cortex PGLite storage', () => {
             models: {
                 chatIngestion: 'openrouter/google/gemini-2.5-flash-lite',
                 dream: 'openrouter/google/gemini-2.5-flash-lite',
-                ocr: 'codex/gpt-5.5',
-                queryExpansion: 'codex/gpt-5.5',
+                ocr: 'openai-codex/gpt-5.5',
+                queryExpansion: 'openai-codex/gpt-5.5',
             },
         });
 
         expect(settings.models).toMatchObject({
-            chatIngestion: 'codex/gpt-5.5',
-            dream: 'codex/gpt-5.5',
+            chatIngestion: 'openai-codex/gpt-5.5',
+            dream: 'openai-codex/gpt-5.5',
             ocr: 'openai/gpt-4o-mini',
             queryExpansion: 'openrouter/google/gemini-2.5-flash-lite',
         });

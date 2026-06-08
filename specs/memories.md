@@ -6,7 +6,7 @@ Tavern does not have two memory systems. Cortex is the durable memory system:
 compiled truth, timelines, pages, embeddings, links, observations, capture
 output, recall audit, and repair state.
 
-Managed Tavern OpenClaw does not use Lossless Claw. Prompt-time context is
+Managed Tavern Hermes does not use Lossless Claw. Prompt-time context is
 separate from Tavern memory, and durable memory lives in Cortex.
 
 The Memory product surface is the readable inspection and control surface for
@@ -14,19 +14,19 @@ durable Cortex memory.
 
 ## Context Management Boundary
 
-Managed OpenClaw keeps OpenClaw-native memory disabled. Tavern enforces that
-setup as part of managed OpenClaw config rather than treating it as
+Managed Hermes keeps Hermes-native memory disabled. Tavern enforces that
+setup as part of managed Hermes config rather than treating it as
 user-authored memory state.
 
-Tavern's managed OpenClaw memory config:
+Tavern's managed Hermes memory config:
 
 * sets `plugins.slots.memory` to `none`
 * removes stale managed memory plugin entries such as `lossless-claw`,
   `active-memory`, and `memory-core`
 
-The flat legacy `memory` runtime capability may still report this OpenClaw
-context-management readiness until the runtime capability is renamed. Product
-copy should describe it as context management, not memory.
+Hermes context-management readiness is not reported as a separate Runtime
+capability. Product copy should describe prompt-time context management, not
+memory, when it refers to Hermes-native state.
 
 ## Durable Memory
 
@@ -92,5 +92,5 @@ or every recent recall result.
 * Person context must not leak into unrelated participants.
 * Memory must stay bounded in prompt usage.
 * Cortex provenance must make remembered context inspectable.
-* OpenClaw context management and Cortex memory must remain separate readiness
+* Hermes context management and Cortex memory must remain separate readiness
   signals.

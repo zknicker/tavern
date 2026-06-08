@@ -1,5 +1,5 @@
 ---
-summary: Operations index for local development, test lanes, desktop releases, OpenClaw plugin lifecycle, and runtime upgrades.
+summary: Operations index for local development, test lanes, desktop releases, managed Hermes lifecycle, and runtime upgrades.
 read_when:
   - running, testing, releasing, or upgrading Tavern
   - looking for operational recipes and verification gates
@@ -16,5 +16,6 @@ to use, and the result to verify.
 | Testing | [Testing](testing.md) |
 | Cortex CLI | [Cortex CLI](cortex-cli.md) |
 | Cortex GBrain mapping | [Cortex GBrain Mapping](cortex-gbrain-mapping.md) |
+| Managed Hermes runtime | [Managed Hermes Runtime](hermes-managed-runtime.md) |
 | Release process and Homebrew tap | [Release Process](releases.md) |
 | Runtime deployment | [Runtime Deployment](runtime-deploy.md) |

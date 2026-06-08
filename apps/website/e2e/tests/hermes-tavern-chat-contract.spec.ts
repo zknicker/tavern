@@ -1,0 +1,356 @@
+import { fileURLToPath } from 'node:url';
+import type { Locator, Page } from '@playwright/test';
+import { fillComposer } from '../support/composer.ts';
+import { expect, test } from '../support/test.ts';
+
+test('preserves Tavern chat session routing and renders one final reply', async ({ page }) => {
+    test.setTimeout(120_000);
+
+    const expectedReply = `QA-TAVERN-CONTRACT-${Date.now()}`;
+
+    await page.goto('/dashboard/overview');
+
+    await fillComposer(
+        page,
+        '#home-prompt',
+        `Tavern Hermes marker check. Use exact marker: \`${expectedReply}\`.`
+    );
+    await page.getByRole('button', { name: 'Start chat' }).click();
+
+    const chatId = await waitForRealChatRoute(page);
+    const finalReply = transcriptParagraph(page, expectedReply);
+    await expect(finalReply).toBeVisible({ timeout: 45_000 });
+    await expect(page.getByLabel('Agent is thinking')).toHaveCount(0);
+    await expect(finalReply).toHaveCount(1);
+    await finalReply.hover();
+    await expect(page.getByText('custom', { exact: true }).first()).toBeVisible();
+    await expect(page.getByText('tavern-e2e-tools', { exact: true }).first()).toBeVisible();
+    expect(chatId).not.toBe('new');
+});
+
+test('stores Tavern generated AGENTS.md without runtime bootstrap companion files', async () => {
+    test.setTimeout(120_000);
+
+    const runtimeUrl = requireRuntimeUrl();
+
+    await saveWorkspaceInstructions({
+        agentName: 'main',
+        runtimeUrl,
+        workspaceDir: getManagedWorkspaceDir(),
+    });
+
+    const fullText = await getRuntimeInstructions(runtimeUrl);
+
+    expect(fullText).toContain('# Tavern Agent Instructions');
+    expect(fullText).toContain("Cortex is Tavern's durable knowledgebase and memory.");
+    expect(fullText).toContain('Prefer the most specific Cortex skill.');
+    expect(fullText).toContain('Default Cortex page types:');
+    expect(fullText).not.toContain('# SOUL.md - Who You Are');
+    expect(fullText).not.toContain('# TOOLS.md - Local Notes');
+    expect(fullText).not.toContain('# IDENTITY.md - Who Am I?');
+    expect(fullText).not.toContain('Missing file: SOUL.md');
+    expect(fullText).not.toContain('Missing file: TOOLS.md');
+    expect(fullText).not.toContain('Missing file: IDENTITY.md');
+});
+
+test('recovers accepted user message and active turn after hard reload', async ({ page }) => {
+    test.setTimeout(150_000);
+
+    const expectedReply = 'RECOVERED-SUBAGENT-OK';
+    const promptMarker = `Subagent recovery worker reload qa check ${Date.now()}`;
+    const prompt = `${promptMarker}. Reply exactly \`${expectedReply}\`.`;
+
+    await page.goto('/dashboard/overview');
+
+    await fillComposer(page, '#home-prompt', prompt);
+    await page.getByRole('button', { name: 'Start chat' }).click();
+
+    await waitForRealChatRoute(page);
+    await expectActiveTurnIndicator(page);
+
+    await page.reload();
+
+    await expect(userPromptParagraph(page, promptMarker)).toBeVisible({
+        timeout: 30_000,
+    });
+    await expectActiveTurnIndicator(page);
+    await expect(transcriptParagraph(page, expectedReply)).toBeVisible({
+        timeout: 90_000,
+    });
+});
+
+test('renders live tool progress before the final reply', async ({ page }) => {
+    test.setTimeout(240_000);
+
+    const expectedReply = `LIVE-TOOL-PROGRESS-${Date.now()}`;
+    const expectedProgress = 'I will inspect the workspace before running the command.';
+    const prompt = `Live tool progress qa check. Mid-turn progress qa. Run the slow QA command, then reply exactly \`${expectedReply}\`.`;
+
+    await page.goto('/dashboard/overview');
+
+    await fillComposer(page, '#home-prompt', prompt);
+    await page.getByRole('button', { name: 'Start chat' }).click();
+
+    await waitForRealChatRoute(page);
+
+    const finalReply = transcriptParagraph(page, expectedReply);
+    await expect(finalReply).toHaveCount(0);
+
+    const liveActivity = page.getByRole('button', { name: /Work(?:ing|ed) for/i });
+    await expect(liveActivity).toBeVisible({ timeout: 30_000 });
+    await expect(transcriptParagraph(page, expectedProgress)).toBeVisible({ timeout: 90_000 });
+
+    const liveToolEvidence = page
+        .getByText(/QA_KICKOFF_TASK\.md|exec|run sleep 4|command sleep 4/i)
+        .first();
+    await expect(liveToolEvidence).toBeVisible({ timeout: 90_000 });
+    await expect(page.getByRole('button', { name: /Work(?:ing|ed) for/i })).toHaveCount(1);
+    await expect(page.getByText(/Ran 1 command/i)).toHaveCount(1);
+
+    await expect(finalReply).toBeVisible({ timeout: 90_000 });
+
+    const completedActivity = page.getByRole('button', { name: /Worked for/i });
+    await expect(completedActivity).toBeVisible({ timeout: 30_000 });
+    await expect(page.getByRole('button', { name: /Work(?:ing|ed) for/i })).toHaveCount(1);
+    await expect(page.getByText(/Ran 1 command/i)).toHaveCount(1);
+    await openActivityIfClosed(completedActivity);
+    await expect(page.getByText(/QA_KICKOFF_TASK\.md|exec|run sleep 4/i).first()).toBeVisible({
+        timeout: 10_000,
+    });
+});
+
+test('renders provider-streamed assistant updates between Hermes tool groups', async ({ page }) => {
+    test.setTimeout(180_000);
+
+    const expectedReply = `MULTI-STAGE-PROGRESS-${Date.now()}`;
+    const firstUpdate = 'I will inspect the fixture first.';
+    const secondUpdate = 'I found the fixture and will verify it one more time.';
+    const prompt = `Multi-stage progress qa. Run two command checks, then reply exactly \`${expectedReply}\`.`;
+
+    await page.goto('/dashboard/overview');
+
+    await fillComposer(page, '#home-prompt', prompt);
+    await page.getByRole('button', { name: 'Start chat' }).click();
+
+    await waitForRealChatRoute(page);
+
+    await expect(transcriptParagraph(page, firstUpdate)).toBeVisible({ timeout: 90_000 });
+    await expect(page.getByText(/QA_KICKOFF_TASK\.md/i).first()).toBeVisible({ timeout: 90_000 });
+    await expect(transcriptParagraph(page, secondUpdate)).toBeVisible({ timeout: 90_000 });
+    await expect(transcriptParagraph(page, expectedReply)).toBeVisible({ timeout: 90_000 });
+
+    const activity = page.getByRole('button', { name: /Work(?:ing|ed) for/i });
+    await expect(activity).toHaveCount(1);
+    await openActivityIfClosed(activity);
+    const commandGroups = page.getByRole('button', { name: /Ran 1 command/i });
+    await expect(commandGroups).toHaveCount(2, { timeout: 10_000 });
+    await expectAbove(transcriptParagraph(page, firstUpdate), commandGroups.nth(0));
+    await expectAbove(commandGroups.nth(0), transcriptParagraph(page, secondUpdate));
+    await expectAbove(transcriptParagraph(page, secondUpdate), commandGroups.nth(1));
+    await expectAbove(commandGroups.nth(1), transcriptParagraph(page, expectedReply));
+});
+
+test('renders model thinking as separate activity blocks around tool work', async ({ page }) => {
+    test.setTimeout(120_000);
+
+    await enableInlineThinking(page);
+
+    await page.goto('/dashboard/overview');
+
+    await fillComposer(page, '#home-prompt', 'QA thinking visibility check max. Use 3 tools.');
+    await page.getByRole('button', { name: 'Start chat' }).click();
+
+    await waitForRealChatRoute(page);
+
+    await expect(page.getByText('THINKING-MAX-OK', { exact: true }).first()).toBeVisible({
+        timeout: 90_000,
+    });
+
+    await openActivityIfClosed(page.getByRole('button', { name: /Worked for/i }));
+    await expect(page.getByRole('button', { name: /^Thinking$/i })).toHaveCount(2, {
+        timeout: 10_000,
+    });
+    await expect(
+        page.getByRole('button', { name: /Explored 1 file|Ran \d+ commands?/i })
+    ).toBeVisible({
+        timeout: 10_000,
+    });
+    await page
+        .getByRole('button', { name: /^Thinking$/i })
+        .first()
+        .click();
+    await expect(
+        page.getByText(/I should show this reasoning summary in Tavern\./).first()
+    ).toBeVisible({ timeout: 10_000 });
+});
+
+test('preserves one user message and tool progress across repeated hard reloads', async ({
+    page,
+}) => {
+    test.setTimeout(180_000);
+
+    const expectedReply = 'Evidence snippet: # QA kickoff task';
+    const promptMarker = `Live tool progress qa check. Reload-heavy tool turn qa ${Date.now()}`;
+    const prompt = `${promptMarker}. Run the slow QA command, then reply exactly \`${expectedReply}\`.`;
+
+    await page.goto('/dashboard/overview');
+
+    await fillComposer(page, '#home-prompt', prompt);
+    await page.getByRole('button', { name: 'Start chat' }).click();
+
+    await waitForRealChatRoute(page);
+    await expect(page.getByRole('button', { name: /Working for/i })).toBeVisible({
+        timeout: 30_000,
+    });
+
+    await page.reload();
+    await expect(userPromptParagraph(page, promptMarker)).toBeVisible({
+        timeout: 30_000,
+    });
+    await expect(page.getByRole('button', { name: /Working for/i })).toBeVisible({
+        timeout: 30_000,
+    });
+
+    await page.reload();
+    await expect(userPromptParagraph(page, promptMarker)).toHaveCount(1, {
+        timeout: 30_000,
+    });
+    const activity = page.getByRole('button', { name: /Work(?:ing|ed) for/i });
+    await expect(activity).toBeVisible({ timeout: 60_000 });
+    await openActivityIfClosed(activity);
+    await expect(page.getByText(/QA_KICKOFF_TASK\.md/i).first()).toBeVisible({
+        timeout: 60_000,
+    });
+
+    await page.reload();
+    await expect(userPromptParagraph(page, promptMarker)).toHaveCount(1, {
+        timeout: 30_000,
+    });
+    const finalReply = transcriptParagraph(page, expectedReply);
+    await expect(finalReply).toBeVisible({
+        timeout: 90_000,
+    });
+    await expect(finalReply).toHaveCount(1);
+    await expect(page.getByLabel('Agent is thinking')).toBeHidden({ timeout: 30_000 });
+});
+
+async function waitForRealChatRoute(page: Page) {
+    await page.waitForURL((url) => /^\/dashboard\/chats\/(?!new$)[^/]+$/.test(url.pathname), {
+        timeout: 30_000,
+    });
+
+    const pathname = new URL(page.url()).pathname;
+    const chatId = pathname.split('/dashboard/chats/')[1] ?? null;
+
+    if (!chatId || chatId === 'new') {
+        throw new Error(`Expected a real chat route, received "${pathname}".`);
+    }
+
+    return decodeURIComponent(chatId);
+}
+
+async function openActivityIfClosed(activity: ReturnType<Page['getByRole']>) {
+    if ((await activity.getAttribute('aria-expanded')) === 'false') {
+        await activity.click();
+    }
+}
+
+async function enableInlineThinking(page: Page) {
+    await page.addInitScript(() => {
+        window.localStorage.setItem('tavern.chat.thinking-display.enabled', '1');
+    });
+}
+
+async function expectActiveTurnIndicator(page: Page) {
+    await expect(
+        page.getByRole('button', { name: /Working for/i }).or(page.getByLabel('Agent is thinking'))
+    ).toBeVisible({ timeout: 30_000 });
+}
+
+function transcriptParagraph(page: Page, text: string | RegExp) {
+    return page.locator('main p').filter({
+        hasText: typeof text === 'string' ? exactTextRegex(text) : text,
+    });
+}
+
+function userPromptParagraph(page: Page, marker: string) {
+    return page.locator('main p').filter({ hasText: marker });
+}
+
+function exactTextRegex(text: string) {
+    return new RegExp(`^${escapeRegExp(text)}$`);
+}
+
+async function expectAbove(upper: Locator, lower: Locator) {
+    const upperBox = await upper.first().boundingBox();
+    const lowerBox = await lower.first().boundingBox();
+
+    expect(upperBox).not.toBeNull();
+    expect(lowerBox).not.toBeNull();
+    expect((upperBox?.y ?? 0) + (upperBox?.height ?? 0)).toBeLessThanOrEqual(lowerBox?.y ?? 0);
+}
+
+function escapeRegExp(text: string) {
+    return text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+function asRecord(value: unknown) {
+    return typeof value === 'object' && value !== null ? (value as Record<string, unknown>) : {};
+}
+
+function getManagedWorkspaceDir() {
+    const runId = process.env.TAVERN_E2E_RUN_ID ?? 'default';
+    return fileURLToPath(
+        new URL(
+            `../../../../.context/e2e/${runId}/tavern-runtime/hermes/workspace`,
+            import.meta.url
+        )
+    );
+}
+
+function requireRuntimeUrl() {
+    const runtimeUrl = process.env.TAVERN_RUNTIME_URL;
+
+    if (!runtimeUrl) {
+        throw new Error('TAVERN_RUNTIME_URL is required for prompt inspection e2e coverage.');
+    }
+
+    return runtimeUrl;
+}
+
+async function saveWorkspaceInstructions(input: {
+    agentName: string;
+    runtimeUrl: string;
+    workspaceDir: string;
+}) {
+    await putRuntimeJson(`${input.runtimeUrl}/workspace/agents/main/instructions`, {
+        agentName: input.agentName,
+        workspaceDir: input.workspaceDir,
+    });
+}
+
+async function putRuntimeJson(url: string, body: Record<string, unknown>) {
+    const response = await fetch(url, {
+        body: JSON.stringify(body),
+        headers: { 'content-type': 'application/json' },
+        method: 'PUT',
+    });
+
+    if (!response.ok) {
+        throw new Error(`Runtime request failed (${response.status}): ${await response.text()}`);
+    }
+}
+
+async function getRuntimeInstructions(runtimeUrl: string) {
+    const response = await fetch(`${runtimeUrl}/workspace/agents/main/instructions`);
+    if (!response.ok) {
+        throw new Error(`Runtime request failed (${response.status}): ${await response.text()}`);
+    }
+
+    const body = asRecord(await response.json());
+    const content = body.content;
+    if (typeof content !== 'string') {
+        throw new Error('Expected Runtime instructions response content.');
+    }
+    return content;
+}

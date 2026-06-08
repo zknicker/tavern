@@ -6,7 +6,7 @@ import { AgentAvatar } from '../../components/ui/agent-avatar.tsx';
 import { Icon } from '../../components/ui/icon.tsx';
 import { usePrimaryAgentSuspense } from '../../hooks/agents/use-agent-list.ts';
 import { useMessagingPlatformListSuspense } from '../../hooks/connections/use-messaging-platform-list.ts';
-import { useOpenClawConfig } from '../../hooks/openclaw-config/use-openclaw-config.ts';
+import { useHermesConfig } from '../../hooks/hermes-config/use-hermes-config.ts';
 import { useSkillList } from '../../hooks/skills/use-skill-list.ts';
 import type { AgentListOutput, MessagingPlatformListOutput } from '../../lib/trpc.tsx';
 import { StartChatComposer } from '../chats/start-chat-composer.tsx';
@@ -21,7 +21,7 @@ import { MissingAgentState } from './missing-agent-state.tsx';
 export function AgentHome() {
     const [primaryAgent] = usePrimaryAgentSuspense();
     const [messagingPlatformData] = useMessagingPlatformListSuspense();
-    const openClawConfig = useOpenClawConfig();
+    const hermesConfig = useHermesConfig();
     const skillQuery = useSkillList();
     const agent = primaryAgent.agent;
 
@@ -36,7 +36,7 @@ export function AgentHome() {
     const enabledSkills = skills.filter((skill) => agent.enabledSkillIds.includes(skill.id));
     const toolPolicy = readAgentToolPolicyView({
         agentId: agent.id,
-        config: openClawConfig.data?.snapshot?.config,
+        config: hermesConfig.data?.snapshot?.config,
     });
 
     return (

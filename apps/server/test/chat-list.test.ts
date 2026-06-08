@@ -173,7 +173,7 @@ test('listChats hides archived Runtime-owned Tavern chats while synced sessions 
     );
 });
 
-test('agent chat list labels OpenClaw internal runtime sessions by source', async () => {
+test('agent chat list labels Hermes internal runtime sessions by source', async () => {
     await syncAgentsForRuntime({
         agents: [
             {
@@ -189,7 +189,7 @@ test('agent chat list labels OpenClaw internal runtime sessions by source', asyn
         ],
         runtimeId: 'runtime-1',
     });
-    const internalChatId = 'openclaw:internal:agent:main:cron:8300bbe8-7fb6-4ffb-aa7e-7f19005775c6';
+    const internalChatId = 'hermes:internal:agent:main:cron:8300bbe8-7fb6-4ffb-aa7e-7f19005775c6';
     runtimeChats = [
         {
             bindingId: null,
@@ -261,7 +261,7 @@ test('agent chat list keeps non-Tavern session-only runtime surfaces visible', a
         ],
         runtimeId: 'runtime-1',
     });
-    const internalChatId = 'openclaw:internal:agent:main:cron:session-only';
+    const internalChatId = 'hermes:internal:agent:main:cron:session-only';
 
     await syncSessionsForRuntime({
         runtimeId: 'runtime-1',
@@ -593,11 +593,11 @@ async function mockRuntimeFetch(input: RequestInfo | URL, init?: RequestInit) {
         });
     }
 
-    if (url.pathname === '/openclaw/chats' && request.method === 'GET') {
+    if (url.pathname === '/hermes/chats' && request.method === 'GET') {
         return Response.json({ chats: runtimeChats });
     }
 
-    if (url.pathname === '/openclaw/sessions' && request.method === 'GET') {
+    if (url.pathname === '/hermes/sessions' && request.method === 'GET') {
         return Response.json({
             sessions: (await listSessionRecords()).flatMap((record) => {
                 const session = parseSessionRecord(record);

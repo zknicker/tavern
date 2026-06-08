@@ -1,13 +1,10 @@
 import { expect, test } from 'bun:test';
-import { OpenClawGatewayError, OpenClawUnsupportedError } from '@tavern/openclaw-gateway-adapter';
 import { z } from 'zod';
 import { classifyCapabilityFailure } from './capability-status.ts';
 import { AgentRuntimeRequestError } from './client.ts';
 
 test('classifyCapabilityFailure maps unsupported runtime surfaces to unavailable', () => {
-    expect(
-        classifyCapabilityFailure(new OpenClawUnsupportedError('models.list unsupported'))
-    ).toMatchObject({
+    expect(classifyCapabilityFailure(new Error('models.list unsupported'))).toMatchObject({
         state: 'unavailable',
     });
 });
@@ -15,9 +12,11 @@ test('classifyCapabilityFailure maps unsupported runtime surfaces to unavailable
 test('classifyCapabilityFailure maps authorization failures to unauthorized', () => {
     expect(
         classifyCapabilityFailure(
-            new OpenClawGatewayError({
+            new AgentRuntimeRequestError({
                 code: 'unauthorized',
                 message: 'Unauthorized',
+                retryable: false,
+                status: 401,
             })
         )
     ).toMatchObject({

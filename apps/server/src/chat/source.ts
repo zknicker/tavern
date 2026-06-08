@@ -8,7 +8,7 @@ export const chatSourceKinds = [
     'cli',
     'subagent',
     'internal',
-    'openclaw',
+    'hermes',
 ] as const;
 
 export type ChatSourceKind = (typeof chatSourceKinds)[number];
@@ -25,7 +25,7 @@ const chatSourceLabels = {
     cron: 'Cron',
     discord: 'Discord',
     internal: 'System',
-    openclaw: 'OpenClaw',
+    hermes: 'Hermes',
     subagent: 'Subagent',
 } satisfies Record<ChatSourceKind, string>;
 
@@ -52,7 +52,7 @@ export function resolveChatSource(input: {
         return toChatSource('discord');
     }
 
-    if (isInternalOpenClawChat(input.identity, input.chatId)) {
+    if (isInternalHermesChat(input.identity, input.chatId)) {
         return toChatSource(
             normalizeRuntimeSource(input.runtimePlatform) ??
                 normalizeRuntimeSource(input.latestSessionPlatform) ??
@@ -61,7 +61,7 @@ export function resolveChatSource(input: {
         );
     }
 
-    return toChatSource(normalizeRuntimeSource(input.identity.type) ?? 'openclaw');
+    return toChatSource(normalizeRuntimeSource(input.identity.type) ?? 'hermes');
 }
 
 export function isRuntimeSessionSource(source: ChatSource) {
@@ -79,10 +79,10 @@ function toChatSource(kind: ChatSourceKind): ChatSource {
     };
 }
 
-function isInternalOpenClawChat(identity: ChatIdentity, chatId: string | null) {
+function isInternalHermesChat(identity: ChatIdentity, chatId: string | null) {
     return (
-        identity.type === 'openclaw' &&
-        (identity.target?.startsWith('internal:') || chatId?.startsWith('openclaw:internal:'))
+        identity.type === 'hermes' &&
+        (identity.target?.startsWith('internal:') || chatId?.startsWith('hermes:internal:'))
     );
 }
 

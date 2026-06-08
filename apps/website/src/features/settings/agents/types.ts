@@ -1,4 +1,4 @@
-export type OpenClawHarness = 'codex' | 'pi';
+export type HermesHarness = 'codex' | 'pi';
 export type ThinkingLevelValue =
     | 'off'
     | 'minimal'
@@ -16,9 +16,8 @@ export interface AgentProfileDraft {
 }
 
 export interface AgentModelDraft {
-    harness: OpenClawHarness;
-    modelId: string | null;
-    openClawModelNameId: string | null;
+    harness: HermesHarness;
+    modelRef: string | null;
     thinkingDefault: ThinkingLevelValue | null;
 }
 

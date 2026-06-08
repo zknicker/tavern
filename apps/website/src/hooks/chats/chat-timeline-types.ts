@@ -3,6 +3,7 @@ import type { ChatLogOutput } from '../../lib/trpc.tsx';
 export type ChatTimeline = NonNullable<ChatLogOutput>['rows'];
 export interface ChatActiveReply {
     agentId: string;
+    completedAt?: string | null;
     isThinking?: boolean;
     runId: string;
     sessionKey: string;

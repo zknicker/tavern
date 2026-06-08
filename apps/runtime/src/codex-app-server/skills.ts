@@ -82,16 +82,16 @@ function mapCodexSkill(skill: CodexSkillRecord): AgentRuntimeSkillSummary | null
     };
 }
 
-export function mergeOpenClawAndCodexSkills(
-    openClawSkills: AgentRuntimeSkillSummary[],
+export function mergeHermesAndCodexSkills(
+    hermesSkills: AgentRuntimeSkillSummary[],
     codexSkills: AgentRuntimeSkillSummary[]
 ) {
-    const openClawKeys = new Set(openClawSkills.flatMap(skillIdentityKeys));
+    const hermesKeys = new Set(hermesSkills.flatMap(skillIdentityKeys));
     const codexOnlySkills = codexSkills.filter(
-        (skill) => !skillIdentityKeys(skill).some((key) => openClawKeys.has(key))
+        (skill) => !skillIdentityKeys(skill).some((key) => hermesKeys.has(key))
     );
 
-    return dedupeSkills([...openClawSkills, ...codexOnlySkills]);
+    return dedupeSkills([...hermesSkills, ...codexOnlySkills]);
 }
 
 function dedupeSkills(skills: AgentRuntimeSkillSummary[]) {

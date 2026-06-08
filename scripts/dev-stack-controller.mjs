@@ -1,15 +1,12 @@
 import { spawn } from 'node:child_process';
 import { EventEmitter } from 'node:events';
-import fs from 'node:fs';
-import path from 'node:path';
 import readline from 'node:readline';
 import {
     assertDevStackPortsAvailable,
-    buildManagedOpenClawPlugin,
     cleanupStaleProcesses,
     createDevStackConfig,
     createDevStackEnvironment,
-    getManagedOpenClawPluginPackagePaths,
+    getRuntimeBaseUrl,
     isDesktopMode,
     isRuntimeMode,
     isSuppressedStartupLine,
@@ -25,7 +22,6 @@ const shutdownTimeoutMs = Number.parseInt(
     10
 );
 const processGroupShutdownPollMs = 50;
-const pluginRestartDebounceMs = 250;
 
 export class DevStackController extends EventEmitter {
     constructor({ mode, ports, repositoryRoot }) {
@@ -36,10 +32,6 @@ export class DevStackController extends EventEmitter {
         this.processes = new Map();
         this.backgroundProcesses = new Set();
         this.expectedProcessStops = new Set();
-        this.managedOpenClawPluginRestartPromise = null;
-        this.managedOpenClawPluginRestartQueued = false;
-        this.managedOpenClawPluginWatchers = [];
-        this.managedOpenClawPluginWatchTimer = null;
         this.isStopping = false;
         this.isSteadyState = false;
         this.stopPromise = null;
@@ -264,8 +256,10 @@ export class DevStackController extends EventEmitter {
         });
 
         const devStackEnvironment = createDevStackEnvironment({
+            ports: this.ports,
             repositoryRoot: this.repositoryRoot,
         });
+        const runtimeUrl = getRuntimeBaseUrl(devStackEnvironment);
         const startupUiEnv = {
             ...devStackEnvironment,
             TAVERN_STARTUP_UI: '1',
@@ -276,7 +270,7 @@ export class DevStackController extends EventEmitter {
         const serverEnv = hasRuntime
             ? {
                   ...startupUiEnv,
-                  TAVERN_RUNTIME_URL: 'http://127.0.0.1:18790',
+                  TAVERN_RUNTIME_URL: runtimeUrl,
               }
             : startupUiEnv;
         let websiteReadyPromise = null;
@@ -286,8 +280,8 @@ export class DevStackController extends EventEmitter {
             if (!websiteReadyPromise) {
                 this.spawnProcess(
                     'website',
-                    'cd apps/website && bun x vite --host 127.0.0.1',
-                    process.env
+                    `cd apps/website && bun x vite --host 127.0.0.1 --port ${this.ports.websitePort}`,
+                    startupUiEnv
                 );
                 websiteReadyPromise = waitForPort(Number(this.ports.websitePort)).then(() => {
                     this.update((snapshot) => {
@@ -298,10 +292,9 @@ export class DevStackController extends EventEmitter {
         };
 
         const getDesktopEnv = () => ({
-            ...process.env,
+            ...devStackEnvironment,
             TAVERN_DEV_STACK_HAS_RUNTIME: hasRuntime ? '1' : '0',
-            TAVERN_OPENCLAW_GATEWAY_PORT: process.env.TAVERN_OPENCLAW_GATEWAY_PORT ?? '18789',
-            TAVERN_RUNTIME_PORT: '18790',
+            TAVERN_RUNTIME_PORT: String(this.ports.runtimePort),
             TAVERN_SERVER_PORT: String(this.ports.serverPort),
             TAVERN_WEBSITE_PORT: String(this.ports.websitePort),
         });
@@ -324,10 +317,6 @@ export class DevStackController extends EventEmitter {
         };
 
         if (hasRuntime) {
-            this.addLog('runtime', 'building Tavern Messenger plugin');
-            buildManagedOpenClawPlugin({
-                repositoryRoot: this.repositoryRoot,
-            });
             this.spawnProcess(
                 'runtime',
                 'cd apps/runtime && bun --watch src/index.ts',
@@ -335,11 +324,10 @@ export class DevStackController extends EventEmitter {
             );
             startWebsite();
             startDesktopPrebuild();
-            await waitForRuntimeReady();
+            await waitForRuntimeReady(runtimeUrl);
             this.update((snapshot) => {
                 snapshot.processes.runtime.status = 'running';
             });
-            this.watchManagedOpenClawPluginPackages(startupUiEnv);
         }
 
         this.spawnProcess('server', serverCommand, serverEnv);
@@ -378,7 +366,6 @@ export class DevStackController extends EventEmitter {
         this.isStopping = true;
 
         this.stopPromise = (async () => {
-            this.closeManagedOpenClawPluginWatchers();
             this.addLog(
                 'tavern',
                 options.signal ? `shutdown requested (${options.signal})` : 'shutdown requested'
@@ -424,7 +411,7 @@ export class DevStackController extends EventEmitter {
         });
         this.addLog(
             source,
-            source === 'runtime' ? 'stopping; waiting for managed OpenClaw Gateway' : 'stopping'
+            source === 'runtime' ? 'stopping; waiting for managed Hermes' : 'stopping'
         );
 
         if (options.expected) {
@@ -456,141 +443,6 @@ export class DevStackController extends EventEmitter {
         });
     }
 
-    watchManagedOpenClawPluginPackages(runtimeEnv) {
-        if (this.managedOpenClawPluginWatchers.length > 0) {
-            return;
-        }
-
-        for (const pluginPackage of getManagedOpenClawPluginPackagePaths({
-            repositoryRoot: this.repositoryRoot,
-        })) {
-            try {
-                const watcher = fs.watch(
-                    pluginPackage.path,
-                    { recursive: true },
-                    (_eventType, fileName) => {
-                        const changedPath =
-                            typeof fileName === 'string'
-                                ? path.join(pluginPackage.path, fileName)
-                                : pluginPackage.path;
-
-                        if (shouldIgnorePluginWatchPath(changedPath)) {
-                            return;
-                        }
-
-                        this.queueManagedOpenClawPluginRestart(runtimeEnv, pluginPackage.directory);
-                    }
-                );
-                this.managedOpenClawPluginWatchers.push(watcher);
-            } catch (error) {
-                this.addLog(
-                    'runtime',
-                    `OpenClaw plugin watch unavailable for ${pluginPackage.directory}: ${formatError(error)}`
-                );
-            }
-        }
-
-        if (this.managedOpenClawPluginWatchers.length > 0) {
-            this.addLog('runtime', 'watching Tavern OpenClaw plugins');
-        }
-    }
-
-    closeManagedOpenClawPluginWatchers() {
-        if (this.managedOpenClawPluginWatchTimer) {
-            clearTimeout(this.managedOpenClawPluginWatchTimer);
-            this.managedOpenClawPluginWatchTimer = null;
-        }
-
-        for (const watcher of this.managedOpenClawPluginWatchers) {
-            watcher.close();
-        }
-
-        this.managedOpenClawPluginWatchers = [];
-    }
-
-    queueManagedOpenClawPluginRestart(runtimeEnv, changedPackage) {
-        if (this.isStopping) {
-            return;
-        }
-
-        this.managedOpenClawPluginRestartQueued = true;
-        if (this.managedOpenClawPluginWatchTimer) {
-            clearTimeout(this.managedOpenClawPluginWatchTimer);
-        }
-
-        this.managedOpenClawPluginWatchTimer = setTimeout(() => {
-            this.managedOpenClawPluginWatchTimer = null;
-            void this.restartManagedRuntimeForPluginChange(runtimeEnv, changedPackage);
-        }, pluginRestartDebounceMs);
-    }
-
-    async restartManagedRuntimeForPluginChange(runtimeEnv, changedPackage) {
-        if (this.managedOpenClawPluginRestartPromise) {
-            this.managedOpenClawPluginRestartQueued = true;
-            await this.managedOpenClawPluginRestartPromise;
-            return;
-        }
-
-        this.managedOpenClawPluginRestartQueued = false;
-        this.managedOpenClawPluginRestartPromise = this.runManagedRuntimePluginRestart(
-            runtimeEnv,
-            changedPackage
-        );
-
-        try {
-            await this.managedOpenClawPluginRestartPromise;
-        } finally {
-            this.managedOpenClawPluginRestartPromise = null;
-        }
-
-        if (this.managedOpenClawPluginRestartQueued && !this.isStopping) {
-            this.queueManagedOpenClawPluginRestart(runtimeEnv, 'queued plugin change');
-        }
-    }
-
-    async runManagedRuntimePluginRestart(runtimeEnv, changedPackage) {
-        if (this.isStopping) {
-            return;
-        }
-
-        this.addLog(
-            'runtime',
-            `Tavern OpenClaw plugin changed (${changedPackage}); rebuilding managed plugins`
-        );
-
-        try {
-            buildManagedOpenClawPlugin({
-                repositoryRoot: this.repositoryRoot,
-            });
-        } catch (error) {
-            this.addLog('runtime', `managed OpenClaw plugin rebuild failed: ${formatError(error)}`);
-            return;
-        }
-
-        if (this.isStopping) {
-            return;
-        }
-
-        this.addLog('runtime', 'managed plugins rebuilt; restarting Runtime to sync OpenClaw');
-        await this.stopProcess('runtime', { expected: true });
-
-        if (this.isStopping) {
-            return;
-        }
-
-        try {
-            this.spawnProcess('runtime', 'cd apps/runtime && bun --watch src/index.ts', runtimeEnv);
-            await waitForRuntimeReady();
-            this.update((snapshot) => {
-                snapshot.processes.runtime.status = 'running';
-            });
-            this.addLog('runtime', 'managed OpenClaw plugins synced');
-        } catch (error) {
-            this.addLog('runtime', `managed Runtime restart failed: ${formatError(error)}`);
-            void this.stop(1);
-        }
-    }
-
     maybeEnterSteadyState() {
         if (this.isSteadyState || !isStartupComplete(this.snapshot)) {
             return;
@@ -602,17 +454,6 @@ export class DevStackController extends EventEmitter {
         });
         this.emit('steady');
     }
-}
-
-function shouldIgnorePluginWatchPath(filePath) {
-    const parts = filePath.split(path.sep);
-    return parts.some((part) =>
-        ['.git', '.turbo', 'coverage', 'dist', 'node_modules'].includes(part)
-    );
-}
-
-function formatError(error) {
-    return error instanceof Error ? error.message : String(error);
 }
 
 export function signalChildProcessGroup(child, signal, killProcessGroup = process.kill) {

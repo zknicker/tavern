@@ -1,42 +1,17 @@
 import { AlertCircleIcon } from '@hugeicons/core-free-icons';
-import { Add01Icon } from '@hugeicons-pro/core-duotone-rounded';
 import * as React from 'react';
 import { Alert, AlertDescription } from '../../../components/ui/alert.tsx';
-import {
-    Dialog,
-    DialogClose,
-    DialogContent,
-    DialogDescription,
-    DialogFooter,
-    DialogHeader,
-    DialogPanel,
-    DialogTitle,
-} from '../../../components/ui/dialog.tsx';
 import { Icon } from '../../../components/ui/icon.tsx';
-import { Button } from '../../../components/ui/primitives/button.tsx';
-import { Field, FieldLabel } from '../../../components/ui/primitives/field.tsx';
-import { Form } from '../../../components/ui/primitives/form.tsx';
-import { Input } from '../../../components/ui/primitives/input.tsx';
 import { SearchInput } from '../../../components/ui/primitives/search-input.tsx';
-import {
-    Select,
-    SelectContent,
-    SelectItem,
-    SelectTrigger,
-    SelectValue,
-} from '../../../components/ui/select.tsx';
 import { Skeleton } from '../../../components/ui/skeleton.tsx';
-import { useAddCatalogModel } from '../../../hooks/models/use-add-catalog-model.ts';
-import { useDeleteCatalogModel } from '../../../hooks/models/use-delete-catalog-model.ts';
 import { useModelInventory } from '../../../hooks/models/use-model-inventory.ts';
-import { listModelProviderConfigs } from '../../../lib/model-provider-config.ts';
 import type { ModelInventoryOutput } from '../../../lib/trpc.tsx';
 import { InventoryModelCard } from './inventory-model-card.tsx';
 
 type ModelCapability =
     ModelInventoryOutput['providers'][number]['models'][number]['capabilities'][number];
 
-const capabilityOptions = [
+const capabilityLabels = [
     { label: 'General', value: 'general' },
     { label: 'Embedding', value: 'embedding' },
     { label: 'Vision', value: 'vision' },
@@ -45,9 +20,7 @@ const capabilityOptions = [
 
 export function ModelInventorySection() {
     const inventoryQuery = useModelInventory();
-    const deleteMutation = useDeleteCatalogModel();
     const [search, setSearch] = React.useState('');
-    const [addDialogOpen, setAddDialogOpen] = React.useState(false);
 
     if (inventoryQuery.isLoading) {
         return <ModelInventoryLoadingState />;
@@ -79,52 +52,21 @@ export function ModelInventorySection() {
 
     return (
         <div className="flex flex-col gap-4 pb-4">
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                <SearchInput
-                    aria-label="Search models"
-                    className="w-full flex-1"
-                    name="model-search"
-                    onChange={(event) => setSearch(event.target.value)}
-                    placeholder="Filter models..."
-                    size="lg"
-                    value={search}
-                />
-                <Button
-                    className="w-full sm:w-auto"
-                    onClick={() => setAddDialogOpen(true)}
-                    size="lg"
-                    type="button"
-                    variant="secondary"
-                >
-                    <Icon aria-hidden="true" className="opacity-100" icon={Add01Icon} />
-                    Add model
-                </Button>
-            </div>
-
-            {deleteMutation.error?.message ? (
-                <Alert variant="error">
-                    <Icon icon={AlertCircleIcon} />
-                    <AlertDescription>{deleteMutation.error.message}</AlertDescription>
-                </Alert>
-            ) : null}
+            <SearchInput
+                aria-label="Search models"
+                className="w-full"
+                name="model-search"
+                onChange={(event) => setSearch(event.target.value)}
+                placeholder="Filter models..."
+                size="lg"
+                value={search}
+            />
 
             {flatModels.length > 0 ? (
                 <ul className="grid list-none gap-3 p-0 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
                     {flatModels.map((model) => (
                         <li key={model.ref}>
-                            <InventoryModelCard
-                                isDeleting={
-                                    deleteMutation.isPending &&
-                                    deleteMutation.variables?.modelRef === model.ref
-                                }
-                                model={model}
-                                onDelete={() =>
-                                    deleteMutation.mutate({
-                                        modelRef: model.ref,
-                                    })
-                                }
-                                providerId={model.providerId}
-                            />
+                            <InventoryModelCard model={model} providerId={model.providerId} />
                         </li>
                     ))}
                 </ul>
@@ -133,153 +75,7 @@ export function ModelInventorySection() {
                     No models match this search.
                 </div>
             )}
-
-            <AddCatalogModelDialog onOpenChange={setAddDialogOpen} open={addDialogOpen} />
         </div>
-    );
-}
-
-function AddCatalogModelDialog({
-    onOpenChange,
-    open,
-}: {
-    onOpenChange: (open: boolean) => void;
-    open: boolean;
-}) {
-    const addMutation = useAddCatalogModel();
-    const providerOptions = listModelProviderConfigs();
-    const [provider, setProvider] = React.useState(providerOptions[0]?.configName ?? 'codex');
-    const [capabilities, setCapabilities] = React.useState<ModelCapability[]>(['general']);
-    const [modelId, setModelId] = React.useState('');
-    const trimmedModelId = modelId.trim();
-    const canAdd = trimmedModelId.length > 0 && capabilities.length > 0 && !addMutation.isPending;
-
-    const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
-        event.preventDefault();
-
-        if (!canAdd) {
-            return;
-        }
-
-        addMutation.mutate(
-            {
-                capabilities,
-                modelId: trimmedModelId,
-                provider: provider as ModelInventoryOutput['providers'][number]['provider'],
-            },
-            {
-                onSuccess: () => {
-                    setModelId('');
-                    setCapabilities(['general']);
-                    onOpenChange(false);
-                },
-            }
-        );
-    };
-
-    return (
-        <Dialog onOpenChange={onOpenChange} open={open}>
-            <DialogContent>
-                <DialogHeader>
-                    <DialogTitle>Add Model</DialogTitle>
-                    <DialogDescription>
-                        Add a provider model ID to the Tavern model catalog.
-                    </DialogDescription>
-                </DialogHeader>
-                <Form className="contents" onSubmit={handleSubmit}>
-                    <DialogPanel className="grid gap-4">
-                        <Field>
-                            <FieldLabel>Provider</FieldLabel>
-                            <Select
-                                onValueChange={(nextValue) => {
-                                    if (nextValue) {
-                                        setProvider(nextValue);
-                                    }
-                                }}
-                                value={provider}
-                            >
-                                <SelectTrigger>
-                                    <SelectValue>
-                                        {
-                                            providerOptions.find(
-                                                (option) => option.configName === provider
-                                            )?.displayName
-                                        }
-                                    </SelectValue>
-                                </SelectTrigger>
-                                <SelectContent>
-                                    {providerOptions.map((option) => (
-                                        <SelectItem
-                                            key={option.configName}
-                                            value={option.configName}
-                                        >
-                                            {option.displayName}
-                                        </SelectItem>
-                                    ))}
-                                </SelectContent>
-                            </Select>
-                        </Field>
-
-                        <Field>
-                            <FieldLabel htmlFor="catalog-model-id">Model ID</FieldLabel>
-                            <Input
-                                autoComplete="off"
-                                autoFocus
-                                id="catalog-model-id"
-                                onChange={(event) => setModelId(event.target.value)}
-                                placeholder="moonshotai/kimi-k2.5"
-                                value={modelId}
-                            />
-                        </Field>
-
-                        <Field>
-                            <FieldLabel>Capabilities</FieldLabel>
-                            <div className="flex flex-wrap gap-2">
-                                {capabilityOptions.map((option) => {
-                                    const selected = capabilities.includes(option.value);
-
-                                    return (
-                                        <button
-                                            aria-pressed={selected}
-                                            className="rounded-md border border-input px-2.5 py-1.5 font-medium text-sm transition-colors hover:bg-accent data-[selected=true]:bg-input/64"
-                                            data-selected={selected}
-                                            key={option.value}
-                                            onClick={() =>
-                                                setCapabilities((current) =>
-                                                    selected
-                                                        ? current.filter(
-                                                              (value) => value !== option.value
-                                                          )
-                                                        : [...current, option.value]
-                                                )
-                                            }
-                                            type="button"
-                                        >
-                                            {option.label}
-                                        </button>
-                                    );
-                                })}
-                            </div>
-                        </Field>
-
-                        {addMutation.error?.message ? (
-                            <Alert variant="error">
-                                <Icon icon={AlertCircleIcon} />
-                                <AlertDescription>{addMutation.error.message}</AlertDescription>
-                            </Alert>
-                        ) : null}
-                    </DialogPanel>
-                    <DialogFooter>
-                        <DialogClose render={<Button type="button" variant="ghost" />}>
-                            Cancel
-                        </DialogClose>
-                        <Button disabled={!canAdd} loading={addMutation.isPending} type="submit">
-                            Add model
-                        </Button>
-                    </DialogFooter>
-                </Form>
-            </DialogContent>
-        </Dialog>
     );
 }
 
@@ -303,7 +99,7 @@ function matchesSearch(
 
 function formatModelCapability(capability: ModelCapability) {
     return (
-        capabilityOptions.find((option) => option.value === capability)?.label ??
+        capabilityLabels.find((option) => option.value === capability)?.label ??
         capability.replaceAll('-', ' ')
     );
 }

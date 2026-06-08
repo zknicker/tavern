@@ -6,17 +6,17 @@ import { ensureCortexRuntimeBootstrap } from './cortex/bootstrap';
 import { closeCortexDb, initCortexDb } from './cortex/db';
 import { initDb } from './db/connection';
 import { ensureRuntimeSchema } from './db/schema';
+import { type ManagedHermesHandle, startHermesForRuntime } from './hermes/supervisor';
 import { type RuntimeJobsManager, startRuntimeJobsManager } from './jobs/manager';
 import { ensureRuntimeJobsSchema } from './jobs/schema';
 import { log } from './log';
-import { type ManagedOpenClawHandle, startOpenClawForRuntime } from './openclaw/supervisor';
 import { startTavernRuntimeServer } from './tavern/server';
 import { ensureWorkspaceInstructionSchema } from './workspace/instructions';
 
 let runtimeServer: ReturnType<typeof startTavernRuntimeServer> | null = null;
-let openClaw: ManagedOpenClawHandle | null = null;
+let hermes: ManagedHermesHandle | null = null;
 let runtimeJobs: RuntimeJobsManager | null = null;
-let openClawStartup: Promise<ManagedOpenClawHandle> | null = null;
+let hermesStartup: Promise<ManagedHermesHandle> | null = null;
 let shuttingDown = false;
 
 function runBrew(args: string[]): void {
@@ -60,26 +60,28 @@ async function main(): Promise<void> {
     runtimeServer = startTavernRuntimeServer();
     log.info('Tavern Runtime running', { url: runtimeServer.url.toString() });
 
-    openClawStartup = startOpenClawForRuntime()
+    hermesStartup = startHermesForRuntime()
         .then((handle) => {
-            openClaw = handle;
+            hermes = handle;
             if (shuttingDown) {
                 void handle.stop();
             }
             return handle;
         })
         .catch((err) => {
-            log.error('Managed OpenClaw Gateway startup failed', { err });
+            log.error('Managed Hermes API startup failed', { err });
             throw err;
         });
 
-    void openClawStartup.catch(() => undefined);
+    void hermesStartup.catch(() => undefined);
 }
 
 async function shutdown(signal: string): Promise<void> {
     if (shuttingDown) {
-        log.warn('Shutdown already in progress; forcing managed OpenClaw Gateway stop', { signal });
-        const handle = openClaw ?? (await openClawStartup?.catch(() => null));
+        log.warn('Shutdown already in progress; forcing managed Hermes API stop', {
+            signal,
+        });
+        const handle = hermes ?? (await hermesStartup?.catch(() => null));
         await handle?.stop({ force: true });
         process.exit(signal === 'SIGINT' ? 130 : 143);
         return;
@@ -96,13 +98,13 @@ async function shutdown(signal: string): Promise<void> {
     log.info('Closing Cortex DB');
     await closeCortexDb();
     log.info('Cortex DB closed');
-    const handle = openClaw ?? (await openClawStartup?.catch(() => null));
+    const handle = hermes ?? (await hermesStartup?.catch(() => null));
     if (handle) {
-        log.info('Waiting for managed OpenClaw Gateway to stop');
+        log.info('Waiting for managed Hermes API to stop');
     }
     await handle?.stop();
     if (handle) {
-        log.info('Managed OpenClaw Gateway stopped');
+        log.info('Managed Hermes API stopped');
     }
     process.exit(0);
 }

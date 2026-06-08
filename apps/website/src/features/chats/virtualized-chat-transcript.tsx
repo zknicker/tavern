@@ -8,6 +8,10 @@ import {
     type TranscriptRenderRow,
 } from './chat-transcript-row-model.ts';
 import { TranscriptEntryRow } from './chat-transcript-rows.tsx';
+import {
+    transcriptDisclosureAnchorEndEvent,
+    transcriptDisclosureAnchorStartEvent,
+} from './chat-transcript-scroll-anchor.ts';
 
 const initialScrollToEndFrames = 12;
 const previousPageScrollThreshold = 160;
@@ -37,6 +41,7 @@ export function VirtualizedChatTranscript({
     rows: TranscriptRenderRow[];
     scrollViewportRef: React.RefObject<HTMLDivElement | null>;
 }) {
+    const disclosureAnchorActiveRef = React.useRef(false);
     const virtualizer = useVirtualizer({
         count: rows.length,
         estimateSize: (index) => getEstimatedTranscriptRowSize(rows[index]),
@@ -44,8 +49,32 @@ export function VirtualizedChatTranscript({
         getScrollElement: () => scrollViewportRef.current,
         overscan: 8,
     });
+    virtualizer.shouldAdjustScrollPositionOnItemSizeChange = (item) => {
+        const viewport = scrollViewportRef.current;
+
+        return Boolean(
+            viewport && !disclosureAnchorActiveRef.current && item.start < viewport.scrollTop
+        );
+    };
     const virtualItems = virtualizer.getVirtualItems();
     const firstEntryIndex = virtualItems.find((item) => rows[item.index]?.kind === 'entry')?.index;
+
+    React.useEffect(() => {
+        const handleAnchorStart = () => {
+            disclosureAnchorActiveRef.current = true;
+        };
+        const handleAnchorEnd = () => {
+            disclosureAnchorActiveRef.current = false;
+        };
+
+        window.addEventListener(transcriptDisclosureAnchorStartEvent, handleAnchorStart);
+        window.addEventListener(transcriptDisclosureAnchorEndEvent, handleAnchorEnd);
+
+        return () => {
+            window.removeEventListener(transcriptDisclosureAnchorStartEvent, handleAnchorStart);
+            window.removeEventListener(transcriptDisclosureAnchorEndEvent, handleAnchorEnd);
+        };
+    }, []);
 
     React.useEffect(() => {
         const viewport = scrollViewportRef.current;
@@ -106,7 +135,10 @@ export function VirtualizedChatTranscript({
     }, [initialScrollKey, rows.length, virtualizer]);
 
     return (
-        <div className="relative w-full" style={{ height: `${virtualizer.getTotalSize()}px` }}>
+        <div
+            className="relative w-full [overflow-anchor:none]"
+            style={{ height: `${virtualizer.getTotalSize()}px` }}
+        >
             {virtualItems.map((virtualItem) => {
                 const row = rows[virtualItem.index];
 
@@ -116,7 +148,7 @@ export function VirtualizedChatTranscript({
 
                 return (
                     <div
-                        className="absolute top-0 left-0 w-full"
+                        className="absolute top-0 left-0 w-full [overflow-anchor:none]"
                         data-index={virtualItem.index}
                         key={virtualItem.key}
                         ref={virtualizer.measureElement}

@@ -1,0 +1,134 @@
+import type { AgentRuntimeConnectionOutput } from '../../../lib/trpc.tsx';
+
+type RuntimeConnection = NonNullable<AgentRuntimeConnectionOutput>;
+type RuntimeCapability = RuntimeConnection['capabilities'][number];
+type CapabilityId = RuntimeCapability['capability'];
+type CapabilityCategoryId = 'extensions' | 'knowledge' | 'runtimeCore';
+export type CapabilityCriticality = 'primary' | 'required' | 'supporting';
+
+export interface CapabilityView {
+    category: CapabilityCategory;
+    criticality: CapabilityCriticality;
+    item: RuntimeCapability;
+    label: string;
+}
+
+interface CapabilityCategory {
+    id: CapabilityCategoryId;
+    label: string;
+}
+
+const capabilityLabels: Partial<Record<CapabilityId, string>> = {
+    apiServer: 'Hermes API server',
+    cortexImportProcessors: 'Cortex import processors',
+    cortexJobs: 'Cortex jobs',
+    cortexModelAccess: 'Cortex model access',
+    dashboardServer: 'Hermes dashboard server',
+    embeddingModel: 'embedding model',
+    gateway: 'Hermes Gateway',
+};
+
+const categories: CapabilityCategory[] = [
+    { id: 'runtimeCore', label: 'Runtime core' },
+    { id: 'knowledge', label: 'Knowledge & memory' },
+    { id: 'extensions', label: 'Skills & models' },
+];
+
+const capabilityCategories: Partial<Record<CapabilityId, CapabilityCategoryId>> = {
+    apiServer: 'runtimeCore',
+    codexOAuth: 'runtimeCore',
+    cortexDatabase: 'knowledge',
+    cortexImportProcessors: 'knowledge',
+    cortexJobs: 'knowledge',
+    cortexModelAccess: 'knowledge',
+    cortexWiki: 'knowledge',
+    dashboardServer: 'runtimeCore',
+    embeddingModel: 'knowledge',
+    gateway: 'runtimeCore',
+    models: 'extensions',
+    skills: 'extensions',
+};
+
+const capabilityDisplayOrder: CapabilityId[] = [
+    'codexOAuth',
+    'apiServer',
+    'dashboardServer',
+    'gateway',
+    'cortexDatabase',
+    'cortexWiki',
+    'cortexImportProcessors',
+    'cortexJobs',
+    'cortexModelAccess',
+    'embeddingModel',
+    'models',
+    'skills',
+];
+
+const capabilityDisplayRank = new Map(
+    capabilityDisplayOrder.map((capability, index) => [capability, index] as const)
+);
+
+const requiredCapabilities = new Set<CapabilityId>([
+    'apiServer',
+    'dashboardServer',
+    'gateway',
+    'models',
+    'skills',
+]);
+
+const supportingCapabilities = new Set<CapabilityId>(['codexOAuth', 'cortexImportProcessors']);
+
+export function getCapabilityLabel(capability: RuntimeCapability) {
+    return capabilityLabels[capability.capability] ?? capability.capability;
+}
+
+export function groupCapabilities(capabilities: RuntimeConnection['capabilities']) {
+    const views = capabilities.map((item): CapabilityView => {
+        return {
+            category: getCapabilityCategory(item),
+            criticality: getCapabilityCriticality(item),
+            item,
+            label: getCapabilityLabel(item),
+        };
+    });
+
+    return categories
+        .map((category) => ({
+            category,
+            items: views
+                .filter((view) => view.category.id === category.id)
+                .sort(compareCapabilities),
+        }))
+        .filter((group) => group.items.length > 0);
+}
+
+function getCapabilityCriticality(capability: RuntimeCapability): CapabilityCriticality {
+    if (requiredCapabilities.has(capability.capability)) {
+        return 'required';
+    }
+    if (supportingCapabilities.has(capability.capability)) {
+        return 'supporting';
+    }
+    return 'primary';
+}
+
+function getCapabilityCategory(capability: RuntimeCapability): CapabilityCategory {
+    const categoryId = capabilityCategories[capability.capability] ?? 'operations';
+    return categories.find((category) => category.id === categoryId) ?? categories.at(-1)!;
+}
+
+function compareCapabilities(a: CapabilityView, b: CapabilityView) {
+    const aRank = capabilityDisplayRank.get(a.item.capability);
+    const bRank = capabilityDisplayRank.get(b.item.capability);
+    if (aRank !== undefined && bRank !== undefined && aRank !== bRank) {
+        return aRank - bRank;
+    }
+    if (aRank !== undefined) {
+        return -1;
+    }
+    if (bRank !== undefined) {
+        return 1;
+    }
+
+    return a.label.localeCompare(b.label);
+}

@@ -1,20 +1,20 @@
 # Runtime Data Flow
 
-Tavern Runtime owns the product data model that the Tavern App reads. OpenClaw is one execution
+Tavern Runtime owns the product data model that the Tavern App reads. Hermes is one execution
 participant: it runs agents, tools, sessions, and turns, then sends app-facing facts back through
 Runtime APIs and events when Tavern needs to render or inspect them later.
 
 ## Model
 
 - Tavern Runtime owns chats, messages, participants, events, reads, automations, deliveries,
-  runtime activity, memory, generated OpenClaw config inputs, and operational jobs.
+  runtime activity, memory, generated Hermes config inputs, and operational jobs.
 - Tavern App owns React Query cache, presentation state, profiles, participant links, optimistic UI,
   and app settings.
 - Tavern API / SDK exposes stable chat, realtime, automation, admin, Runtime control, memory, skill,
   stats, and integration contracts.
-- OpenClaw owns native agent execution, sessions, turns, transcripts, logs, agent files, tool calls,
+- Hermes owns native agent execution, sessions, turns, transcripts, logs, agent files, tool calls,
   model calls, context management, applied native config, and Gateway behavior.
-- Runtime persists any OpenClaw-produced data Tavern may render, inspect, recover, or navigate later.
+- Runtime persists any Hermes-produced data Tavern may render, inspect, recover, or navigate later.
 - Product screens read through focused Runtime-backed APIs such as `chat.list`, `chat.get`,
   `chat.log.list`, `session.list`, `cron.list`, `agent.list`, and participant/profile APIs.
 - React Query is the app cache. It is refreshed by write responses, exact cache updates, focused
@@ -38,12 +38,12 @@ Runtime APIs and events when Tavern needs to render or inspect them later.
 ## Runtime Records
 
 - Runtime records use stable product ids or stable source ids from the owning runtime/integration.
-- Runtime evidence rows include the managed OpenClaw namespace when the source is managed OpenClaw.
+- Runtime evidence rows include the managed Hermes namespace when the source is managed Hermes.
 - Runtime adapters normalize source-specific chat, participant, session, and tool facts before data
   reaches product records.
-- Tavern chat history is Runtime state. OpenClaw transcripts are execution evidence, not the product
+- Tavern chat history is Runtime state. Hermes transcripts are execution evidence, not the product
   timeline.
-- OpenClaw sessions and turns attach to Runtime-owned Tavern chats through stable session keys.
+- Hermes sessions and turns attach to Runtime-owned Tavern chats through stable session keys.
 - Tavern stores enough runtime evidence to keep the app useful across reloads and Runtime restarts.
 - Runtime connectivity is health/capability state, not a separate app-side data source.
 - Product screens compose Runtime records from focused APIs. If Runtime is offline, screens render
@@ -51,12 +51,12 @@ Runtime APIs and events when Tavern needs to render or inspect them later.
 
 ## Managed Config
 
-- Tavern Runtime generates managed OpenClaw config from Tavern-owned state.
-- If Runtime recreates OpenClaw state, it reapplies generated config before accepting work that
+- Tavern Runtime generates managed Hermes config from Tavern-owned state.
+- If Runtime recreates Hermes state, it reapplies generated config before accepting work that
   depends on that config.
 - Tavern preserves Tavern-owned overlays such as agent color and avatar presentation separately from
   runtime-native records.
-- Tavern does not treat OpenClaw config files as canonical product settings.
+- Tavern does not treat Hermes config files as canonical product settings.
 - Runtime-owned config saves call Runtime, persist the returned product state, and emit focused
   invalidation events for affected screens.
 
@@ -66,7 +66,7 @@ Runtime APIs and events when Tavern needs to render or inspect them later.
   worker activity, and recoverable response activity.
 - Observed history remains labeled with its source runtime/integration.
 - Observed history is upserted by stable source identifiers.
-- Observed history survives managed OpenClaw reinstall/reset when Runtime storage is preserved.
+- Observed history survives managed Hermes reinstall/reset when Runtime storage is preserved.
 - Runtime writes accepted messages, active responses, and response activity before notifying clients.
   A hard reload after send acceptance can recover the accepted user message, active response, and
   already observed activity even before the final assistant message exists.

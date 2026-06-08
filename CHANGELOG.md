@@ -13,7 +13,7 @@ All notable changes to this project will be documented in this file.
 
 ## v1.2.7 - 2026-06-06
 
-- Added the GBrain-aligned Cortex stack with PGlite storage, Cortex CLI commands, OpenClaw Cortex skills, source ingestion, imports, recall, embeddings, schema additions, page history, and revert.
+- Added the GBrain-aligned Cortex stack with PGlite storage, Cortex CLI commands, Hermes Cortex skills, source ingestion, imports, recall, embeddings, schema additions, page history, and revert.
 - Added Cortex background jobs for chat ingestion, Dream reports, embedding generation, and index repair, with health surfaced through Runtime capabilities and Memories settings.
 - Added Tavern Vault-backed model access for Codex, OpenAI API, and OpenRouter, including configurable Cortex models for embedding, query expansion, Dream, chat ingestion, OCR, and transcription.
 - Updated Cortex docs, API contracts, Runtime release packaging, and smoke tests for the new Runtime-owned Cortex architecture.
@@ -25,7 +25,7 @@ All notable changes to this project will be documented in this file.
 - Fixed composer newlines so Command-Enter inserts a line break instead of submitting the draft.
 - Fixed chat transcript focus and return-scroll behavior so recent messages stay in view without stealing focus.
 - Fixed Runtime capability refresh after Cortex embedding settings changes.
-- Fixed managed OpenClaw startup so Tavern disables the GPT-5 personality overlay.
+- Fixed managed Hermes startup so Tavern disables the GPT-5 personality overlay.
 
 ## v1.2.5 - 2026-06-03
 
@@ -37,7 +37,7 @@ All notable changes to this project will be documented in this file.
 
 - Added narrow Runtime-backed settings mutations for agent name, model, thinking default, and Discord bindings, and raised the required Runtime floor to 1.2.4.
 - Changed settings saves to use field-level autosave with saving/error toasts, while keeping agent instructions on explicit save.
-- Removed the app-managed OpenClaw config draft and global Settings save bar.
+- Removed the app-managed Hermes config draft and global Settings save bar.
 - Added Tavern homepage highlights.
 - Fixed desktop edit context menu behavior, chat select-all scoping, and update check result display.
 
@@ -46,7 +46,7 @@ All notable changes to this project will be documented in this file.
 - Added a unified desktop updater flow that stages required Runtime updates, downloads the app update, and waits for one user restart before cutting over.
 - Changed Runtime updates so `tavern update` stages the Homebrew package without restarting the running Runtime, while the app performs the Runtime restart only during final update restart.
 - Added Runtime update status and restart control APIs, and raised the required Runtime floor to 1.2.3 for this app release.
-- Fixed OpenClaw-backed send and cron controls so they gate on Runtime capability health and update when capability events arrive.
+- Fixed Hermes-backed send and cron controls so they gate on Runtime capability health and update when capability events arrive.
 - Fixed development stack shutdown so child process groups are cleaned up more reliably.
 - Polished chat prompt input composition, setup-state rendering, desktop update UI, and app corner styling.
 
@@ -67,7 +67,7 @@ All notable changes to this project will be documented in this file.
 - Added Settings -> Instructions for editing the managed agent's custom AGENTS.md block with a code editor and a generated AGENTS.md preview.
 - Added Runtime API and realtime updates for reading the current generated managed workspace instructions.
 - Simplified agent appearance settings, removed the Runtime JSON drawer, and replaced the agent avatar package with the app's built-in avatar UI.
-- Fixed agent model settings so explicit non-preferred OpenClaw harness routes are preserved when reading and saving settings.
+- Fixed agent model settings so explicit non-preferred Hermes harness routes are preserved when reading and saving settings.
 
 ## v1.1.15 - 2026-06-01
 
@@ -76,17 +76,17 @@ All notable changes to this project will be documented in this file.
 
 ## v1.1.14 - 2026-06-01
 
-- Added native Runtime notice rows for OpenClaw session and compaction notices, with an inspect drawer and regression coverage for both final delivery paths.
-- Fixed OpenClaw verbose runtime notices leaking into assistant replies.
-- Fixed managed OpenClaw plugin changes in the dev stack so plugin rebuilds are synced into the managed runtime.
+- Added native Runtime notice rows for Hermes session and compaction notices, with an inspect drawer and regression coverage for both final delivery paths.
+- Fixed Hermes verbose runtime notices leaking into assistant replies.
+- Fixed managed Hermes plugin changes in the dev stack so plugin rebuilds are synced into the managed runtime.
 - Fixed chat transcript scroll initialization in general chat.
 - Added last-activity times to the temporary chat menu and sorted those chats by creation time.
 - Refined dashboard shell tab styling.
 
 ## v1.1.13 - 2026-05-31
 
-- Simplified Runtime model inventory to match OpenClaw's model catalog shape and removed unused model policy writes.
-- Fixed model capability health so synced OpenClaw models report correctly and stale model snapshots self-heal.
+- Simplified Runtime model inventory to match Hermes's model catalog shape and removed unused model policy writes.
+- Fixed model capability health so synced Hermes models report correctly and stale model snapshots self-heal.
 - Reorganized Runtime capability sections and moved app/runtime versions into quieter metadata.
 - Fixed desktop dev startup by building the macOS app icon asset before launching Tauri.
 
@@ -110,7 +110,7 @@ All notable changes to this project will be documented in this file.
 ## v1.1.8 - 2026-05-30
 
 - Fixed Runtime skill inventory so missing Codex CLI support is handled through capability health instead of crashing Runtime.
-- Updated the Homebrew Runtime service environment so managed OpenClaw and Codex commands can find Homebrew-installed binaries.
+- Updated the Homebrew Runtime service environment so managed Hermes and Codex commands can find Homebrew-installed binaries.
 
 ## v1.1.7 - 2026-05-30
 
@@ -150,10 +150,10 @@ All notable changes to this project will be documented in this file.
 ## v1.1.0 - 2026-05-30
 
 - Added Cortex-backed memory and knowledgebase surfaces for durable project context, recall, and agent notes.
-- Moved canonical chat, response activity, and OpenClaw execution evidence into Tavern Runtime so chat history recovers cleanly across restarts.
+- Moved canonical chat, response activity, and Hermes execution evidence into Tavern Runtime so chat history recovers cleanly across restarts.
 - Added pinned chats, virtualized chat history, polished sidebar actions, and smoother Codex-style turn activity updates.
 - Added skills and plugins inventory, managed agent instructions through AGENTS files, and aligned the skill catalog with the managed runtime.
-- Updated managed OpenClaw to 2026.5.27 and removed stale Lossless Claw memory plugin wiring from the managed runtime config.
+- Updated managed Hermes to 2026.5.27 and removed stale Lossless Claw memory plugin wiring from the managed runtime config.
 - Hardened installs, dependency pins, Tauri dependencies, and local Codex model auth.
 
 ## v1.0.1 - 2026-05-09

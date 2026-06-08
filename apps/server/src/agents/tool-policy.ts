@@ -1,33 +1,16 @@
-import { applyOpenClawConfig } from '../openclaw-config/service.ts';
-import { getAgent as getAgentRecord } from '../storage/agents.ts';
-import { getOpenClawConfigSnapshot } from '../storage/openclaw-config-snapshots.ts';
+import { updateHermesAgentTools } from '../hermes-settings/service.ts';
+import { getAgent as getCatalogAgent } from './catalog.ts';
 import { buildAgentToolPolicy } from './tool-policy-defaults.ts';
 
 export async function saveAgentToolPolicy(input: { agentId: string; tools: string[] }) {
-    const agentRecord = await getAgentRecord(input.agentId);
+    const agent = await getCatalogAgent(input.agentId);
 
-    if (!agentRecord) {
+    if (!agent) {
         throw new Error(`No agent named "${input.agentId}" exists.`);
     }
 
-    const snapshot = await getOpenClawConfigSnapshot(agentRecord.runtimeId);
-    if (!snapshot) {
-        throw new Error('Runtime config has not synced yet.');
-    }
-
-    const config = JSON.parse(snapshot.configJson) as Record<string, unknown>;
     const tools = normalizeToolNames(input.tools);
-    const nextConfig = writeAgentTools(config, {
-        agentId: agentRecord.id,
-        agentName: agentRecord.name,
-        tools,
-    });
-
-    await applyOpenClawConfig({
-        baseHash: snapshot.hash,
-        config: nextConfig,
-        runtimeId: agentRecord.runtimeId,
-    });
+    await updateHermesAgentTools({ agentId: agent.id, tools });
 
     return { tools };
 }

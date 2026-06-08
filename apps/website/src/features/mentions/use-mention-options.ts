@@ -16,7 +16,6 @@ export function useMentionOptions({
     agents: AgentListOutput['agents'];
     query: string;
 }) {
-    const normalizedQuery = normalizeQuery(query);
     const debouncedPathQuery = useDebouncedValue(query, 150);
     const inventory = trpc.mention.inventory.useQuery(
         {

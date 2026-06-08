@@ -158,7 +158,7 @@ recall behavior.
 
 The `cortex-chat-ingestion` job reviews new Tavern chat messages and saves durable
 memory into Cortex with provenance. It is Runtime-owned because Tavern already
-stores canonical `chat_messages`; OpenClaw compaction does not affect chat
+stores canonical `chat_messages`; Hermes compaction does not affect chat
 ingestion.
 
 Chat ingestion is scoped per chat. Runtime stores one cursor per chat in
@@ -368,7 +368,7 @@ Cortex jobs keep the brain current, searchable, and trustworthy.
 | Cortex Chat Ingestion | Review per-chat message backlog every few minutes, extract durable memory proposals, update pages, append timeline evidence, extract claims and links, attach citations, advance per-chat cursors, and write audit. |
 | Cortex Dream | Consolidate recent Cortex pages, audit evidence, source refs, and lint findings; update pages, append timeline evidence, extract claims and links, attach citations, repair derived state, and write structured Dream reports. |
 
-Jobs are Tavern Runtime jobs. OpenClaw may trigger visible summaries or agent
+Jobs are Tavern Runtime jobs. Hermes may trigger visible summaries or agent
 work that uses Cortex, but Runtime is the store and execution owner. Runtime
 runs jobs through its Bunqueue-backed runner, stores run history in
 `runtime_job_runs`, and exposes `/jobs`, `/jobs/{slug}`, and
@@ -421,8 +421,8 @@ Cortex settings expose:
 
 * embedding model, defaulting to `openai/text-embedding-3-small`
 * query expansion model, defaulting to `openrouter/google/gemini-2.5-flash-lite`
-* Chat ingestion model, defaulting to `codex/gpt-5.5`
-* Dream model, defaulting to `codex/gpt-5.5`
+* Chat ingestion model, defaulting to `openai-codex/gpt-5.5`
+* Dream model, defaulting to `openai-codex/gpt-5.5`
 * recall budget mode, defaulting to `balanced`
 * active Cortex schema
 
@@ -460,7 +460,7 @@ knowledgebase store.
 | Area | Status | Current behavior |
 | --- | --- | --- |
 | Runtime store | Partial | Runtime owns Cortex PGLite tables, schema setup, page reads, captures, source import, source ingest, page edits, recall, status, and jobs. `cortex_capture`, `cortex_import`, `cortex_ingest`, and `cortex-edit` write canonical markdown first, then `cortex-sync` projects markdown into PGLite while preserving `source_refs`, timeline entries, raw files, citations, and page versions. |
-| Agent tools | Implemented | Managed OpenClaw exposes `cortex_search`, `cortex_get_page`, `cortex_capture`, `cortex_ingest`, `cortex_import`, `cortex_recall`, and `cortex_list_backlinks`. `cortex_recall` accepts explicit recall modes, `cortex_capture` accepts schema-defined page type strings, `cortex_import` imports source artifacts, and `cortex_ingest` writes normalized source text through Runtime. Runtime keeps Cortex status and job control as app/admin APIs. |
+| Agent tools | Implemented | Managed Hermes exposes `cortex_search`, `cortex_get_page`, `cortex_capture`, `cortex_ingest`, `cortex_import`, `cortex_recall`, and `cortex_list_backlinks`. `cortex_recall` accepts explicit recall modes, `cortex_capture` accepts schema-defined page type strings, `cortex_import` imports source artifacts, and `cortex_ingest` writes normalized source text through Runtime. Runtime keeps Cortex status and job control as app/admin APIs. |
 | Explicit capture | Partial | `cortex_capture` writes submitted content directly; it does not run model-backed review. |
 | Schema | Partial | Runtime stores versioned active Cortex schemas with page types, link types, and frontmatter mappings. Runtime and server expose get/save schema APIs, settings exposes a JSON schema editor, schema updates write Cortex audit, and schema saves report invalid mappings or removed active link kinds. |
 | Links | Partial | Runtime extracts wiki links, markdown links, bare slug refs, schema-defined frontmatter refs, and explicit edit/Dream relationships into typed page links. Deterministic context rules beyond schema validation are not implemented yet. |
@@ -504,7 +504,7 @@ Parity rules:
   Meetings, email, calendar, webhook, and archive ingestion are deferred or out
   of scope.
 * Do not add GBrain as a dependency. Cortex uses Tavern Runtime, Tavern API,
-  managed OpenClaw plugins, and Tavern app surfaces.
+  managed Hermes plugins, and Tavern app surfaces.
 
 ### GBrain Skillpack Map
 
@@ -564,7 +564,7 @@ mapping cell.
 | `get_chunks` | N/A for agents. Chunks are internal indexing state surfaced through page indexing health. |
 | `file_list`, `file_upload`, `file_url` | N/A for Cortex. Tavern file/workspace APIs own file handling. |
 | `submit_job`, `get_job`, `list_jobs`, `cancel_job`, `retry_job`, `get_job_progress`, `pause_job`, `resume_job`, `replay_job`, `send_job_message` | Tavern Runtime jobs list/detail/run/history. Non-run controls are N/A for Cortex-specific API today. |
-| `submit_agent` | N/A for Cortex. Tavern/OpenClaw owns agent execution. |
+| `submit_agent` | N/A for Cortex. Tavern/Hermes owns agent execution. |
 | `find_orphans` | Cortex lint orphan-page recommendation. |
 | `get_calibration_profile`, `get_recent_salience`, `find_anomalies`, `find_experts`, `find_trajectory`, `get_recent_transcripts` | N/A for Cortex today. These are GBrain analysis/eval tools, not core durable-memory operations. |
 | `find_contradictions` | Claim supersession, `contradicts` relationships, and lint/status hooks. Dedicated contradiction search is N/A today. |
@@ -587,7 +587,7 @@ mapping cell.
 | `extract`, `extract-ner`, `extract-conversation-facts`, `extract_facts`, `extract-takes-from-pages`, `extract-timeline-from-meetings` | `cortex-chat-ingestion` and `cortex-dream` structured extraction for chat. Other extractors are N/A until Tavern owns those source types. |
 | `backlinks` | Derived link/backlink refresh in sync and repair. |
 | `autopilot-cycle`, `synthesize`, `patterns`, `consolidate` | `cortex-dream` daily consolidation over Cortex pages, audit evidence, source refs, and lint findings. Broader autonomous planning is N/A today. |
-| `subagent`, `subagent_aggregator` | N/A for Cortex. Managed OpenClaw/multi-agent execution owns this. |
+| `subagent`, `subagent_aggregator` | N/A for Cortex. Managed Hermes/multi-agent execution owns this. |
 | `shell` | N/A. Not a Cortex feature. |
 | `ingest-capture` | `cortex_import`, `cortex_ingest`, `cortex_capture`, Chat Ingestion, and Dream writes. |
 | `reindex`, `contextual-reindex` | `cortex-sync`, `cortex-repair-derived-state`, and `cortex-generate-embeddings`. Contextual page reindex is N/A today. |

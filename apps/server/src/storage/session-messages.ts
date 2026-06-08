@@ -2,7 +2,7 @@ import type { AgentRuntimeSessionMessage } from '@tavern/api';
 import { asc, desc, eq, inArray } from 'drizzle-orm';
 import { db } from '../db/index.ts';
 import { sessionMessagesTable } from '../db/schema.ts';
-import { normalizeOpenClawModelIdentity } from '../model/openclaw-mapping.ts';
+import { normalizeHermesModelIdentity } from '../model/hermes-mapping.ts';
 import {
     type RuntimeParticipantSource,
     resolveRuntimeParticipantSourceIdentities,
@@ -42,10 +42,10 @@ export async function syncSessionMessagesForRuntime(input: {
         const sessionKey = runtimeSessionKey;
 
         for (const [index, message] of messages.entries()) {
-            const modelInfo = normalizeOpenClawModelIdentity({
-                harness: message.metadata?.openClawHarness ?? null,
-                model: message.metadata?.openClawModel ?? message.metadata?.model ?? null,
-                provider: message.metadata?.openClawProvider ?? message.metadata?.provider ?? null,
+            const modelInfo = normalizeHermesModelIdentity({
+                harness: message.metadata?.hermesHarness ?? null,
+                model: message.metadata?.hermesModel ?? message.metadata?.model ?? null,
+                provider: message.metadata?.hermesProvider ?? message.metadata?.provider ?? null,
             });
             const id = buildSessionMessageId({
                 messageId: message.id,
@@ -73,13 +73,12 @@ export async function syncSessionMessagesForRuntime(input: {
                     externalMessageId: message.id,
                     id,
                     model: modelInfo?.modelId ?? message.metadata?.model ?? null,
-                    openClawApi: message.metadata?.openClawApi ?? message.metadata?.api ?? null,
-                    openClawHarness: modelInfo?.openClawHarness ?? null,
-                    openClawModel:
-                        modelInfo?.openClawModel ?? message.metadata?.openClawModel ?? null,
-                    openClawModelNameId: modelInfo?.openClawModelNameId ?? null,
-                    openClawProvider:
-                        modelInfo?.openClawProvider ?? message.metadata?.openClawProvider ?? null,
+                    hermesApi: message.metadata?.hermesApi ?? message.metadata?.api ?? null,
+                    hermesHarness: modelInfo?.hermesHarness ?? null,
+                    hermesModel: modelInfo?.hermesModel ?? message.metadata?.hermesModel ?? null,
+                    hermesModelNameId: modelInfo?.hermesModelNameId ?? null,
+                    hermesProvider:
+                        modelInfo?.hermesProvider ?? message.metadata?.hermesProvider ?? null,
                     provider: modelInfo?.provider ?? message.metadata?.provider ?? null,
                     rawJson: JSON.stringify(message),
                     role: message.senderType,
@@ -103,15 +102,13 @@ export async function syncSessionMessagesForRuntime(input: {
                         canonicalModelId: modelInfo?.modelCatalogId ?? null,
                         contentText: message.content,
                         model: modelInfo?.modelId ?? message.metadata?.model ?? null,
-                        openClawApi: message.metadata?.openClawApi ?? message.metadata?.api ?? null,
-                        openClawHarness: modelInfo?.openClawHarness ?? null,
-                        openClawModel:
-                            modelInfo?.openClawModel ?? message.metadata?.openClawModel ?? null,
-                        openClawModelNameId: modelInfo?.openClawModelNameId ?? null,
-                        openClawProvider:
-                            modelInfo?.openClawProvider ??
-                            message.metadata?.openClawProvider ??
-                            null,
+                        hermesApi: message.metadata?.hermesApi ?? message.metadata?.api ?? null,
+                        hermesHarness: modelInfo?.hermesHarness ?? null,
+                        hermesModel:
+                            modelInfo?.hermesModel ?? message.metadata?.hermesModel ?? null,
+                        hermesModelNameId: modelInfo?.hermesModelNameId ?? null,
+                        hermesProvider:
+                            modelInfo?.hermesProvider ?? message.metadata?.hermesProvider ?? null,
                         provider: modelInfo?.provider ?? message.metadata?.provider ?? null,
                         rawJson: JSON.stringify(message),
                         role: message.senderType,

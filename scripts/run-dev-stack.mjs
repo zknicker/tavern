@@ -7,7 +7,7 @@ import { DevStackScreen } from './dev-stack-screen.mjs';
 function main() {
     const mode = process.argv[2] ?? 'web';
     const repositoryRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-    const ports = resolveDevPorts();
+    const ports = resolveDevPorts({ repositoryRoot });
     const controller = new DevStackController({ mode, ports, repositoryRoot });
     const screen = new DevStackScreen(controller);
     screen.start();

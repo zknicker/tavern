@@ -86,11 +86,7 @@ function ToolDrawerShell({
                     toolCall={details.toolCall}
                 />
             ) : null}
-            <ToolDrawerBody
-                details={details}
-                isPending={isPending}
-                queryError={queryError}
-            />
+            <ToolDrawerBody details={details} isPending={isPending} queryError={queryError} />
         </DrawerPopup>
     );
 }

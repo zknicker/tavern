@@ -38,7 +38,7 @@ The API covers:
 ## Runtime Boundary
 
 Tavern Runtime owns automation records, schedules, delivery targets, run
-history, and app-visible follow-up state. OpenClaw owns the native agent
+history, and app-visible follow-up state. Hermes owns the native agent
 execution that an automation triggers.
 
 ## Related Docs

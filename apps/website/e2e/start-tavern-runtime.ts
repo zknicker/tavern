@@ -8,28 +8,14 @@ const runtimeRoot = path.join(workspaceRoot, '.context', 'e2e', runId, 'tavern-r
 
 rmSync(runtimeRoot, { force: true, recursive: true });
 mkdirSync(runtimeRoot, { recursive: true });
-mkdirSync(path.join(runtimeRoot, 'openclaw', 'run', 'workspace'), { recursive: true });
+mkdirSync(path.join(runtimeRoot, 'hermes', 'workspace'), { recursive: true });
 writeFileSync(
-    path.join(runtimeRoot, 'openclaw', 'run', 'workspace', 'QA_KICKOFF_TASK.md'),
+    path.join(runtimeRoot, 'hermes', 'workspace', 'QA_KICKOFF_TASK.md'),
     '# QA kickoff task\n\nThis file exists so e2e tool-read tests can inspect a deterministic workspace fixture.\n'
 );
 
 process.env.TAVERN_RUNTIME_ROOT = runtimeRoot;
-process.env.TAVERN_OPENCLAW_PLUGIN_DEPLOY_PATH = path.join(
-    runtimeRoot,
-    'openclaw-plugins',
-    'tavern-openclaw-messenger'
-);
-process.env.TAVERN_OPENCLAW_CORTEX_PLUGIN_DEPLOY_PATH = path.join(
-    runtimeRoot,
-    'openclaw-plugins',
-    'tavern-openclaw-cortex'
-);
-process.env.TAVERN_OPENCLAW_WORKSPACE_PLUGIN_DEPLOY_PATH = path.join(
-    runtimeRoot,
-    'openclaw-plugins',
-    'tavern-openclaw-workspace'
-);
+process.env.TAVERN_HERMES_HOME = path.join(runtimeRoot, 'hermes', 'home');
 process.env.NODE_ENV = 'test';
 
 process.chdir(workspaceRoot);

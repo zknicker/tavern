@@ -9,6 +9,7 @@ import { type ChatLogOutput, trpc } from '../../lib/trpc.tsx';
 import { ArtifactLogEntry } from '../sessions/log/event-entry/artifact-entry.tsx';
 import { ToolDrawerBody } from '../sessions/tools/tool-drawer-body.tsx';
 import { ChatTranscript } from './chat-transcript.tsx';
+import { SystemStep } from './chat-transcript-system-step.tsx';
 import { ToolStep } from './tool-steps/registry.tsx';
 
 test('ChatTranscript renders hover message metadata and the session action', () => {
@@ -53,6 +54,40 @@ test('ChatTranscript renders hover message metadata and the session action', () 
     assert.match(markup, /aria-label="View session"/);
     assert.doesNotMatch(markup, /aria-label="Collapse message"/);
     assert.doesNotMatch(markup, /session 9f83ac/);
+});
+
+test('ChatTranscript renders constrained inline markdown in message text', () => {
+    const markup = renderTranscript([
+        {
+            actor: { id: 'tiny', kind: 'agent' },
+            connectsToNext: false,
+            connectsToPrevious: false,
+            id: 'message-markdown',
+            isFirstInGroup: true,
+            kind: 'message',
+            message: {
+                tavernAgentId: 'tiny',
+                content:
+                    '# Test\nI use **gpt-5.4-mini**, *carefully*, with `OPENAI_API_KEY`, [OpenAI](https://openai.com), www.example.com, <u>raw</u>, and [bad](javascript:alert(1)).',
+                id: 'message-markdown',
+                sender: 'Tiny',
+                senderType: 'agent',
+                sourceSessionId: null,
+                sourceSessionKey: '',
+                timestamp: '2026-03-31T15:00:00.000Z',
+            },
+        },
+    ]);
+
+    assert.match(markup, /# Test/);
+    assert.match(markup, /<strong class="font-semibold">gpt-5\.4-mini<\/strong>/);
+    assert.match(markup, /<em class="italic">carefully<\/em>/);
+    assert.match(markup, /<code class="[^"]*">OPENAI_API_KEY<\/code>/);
+    assert.match(markup, /href="https:\/\/openai\.com\/"/);
+    assert.match(markup, /href="https:\/\/www\.example\.com\/"/);
+    assert.match(markup, /&lt;u&gt;raw&lt;\/u&gt;/);
+    assert.doesNotMatch(markup, /<h1/);
+    assert.doesNotMatch(markup, /href="javascript:/);
 });
 
 test('ChatTranscript renders tool calls and agent responses through one surface', () => {
@@ -100,6 +135,99 @@ test('ChatTranscript renders tool calls and agent responses through one surface'
     assert.match(markup, /Done\./);
     assert.match(markup, /Worked/);
     assert.match(markup, /aria-expanded="true"/);
+});
+
+test('ChatTranscript hides reasoning by default', () => {
+    const markup = renderTranscript([
+        {
+            id: 'thinking-1',
+            kind: 'system',
+            systemKind: 'thinking',
+            thinking: {
+                id: 'thinking-1',
+                messageId: 'response-1',
+                sender: 'tiny',
+                text: 'I should greet the user directly.',
+                timestamp: '2026-03-31T15:00:00.000Z',
+            },
+            timestamp: '2026-03-31T15:00:00.000Z',
+        },
+    ]);
+
+    assert.doesNotMatch(markup, /Thinking/);
+    assert.doesNotMatch(markup, /I should greet the user directly\./);
+    assert.doesNotMatch(markup, /Details/);
+    assert.doesNotMatch(markup, /Inspect/);
+});
+
+test('SystemStep uses leading bold thinking text as the thinking step title', () => {
+    const markup = renderToStaticMarkup(
+        <SystemStep
+            index={0}
+            isLast
+            row={{
+                id: 'thinking-1',
+                kind: 'system',
+                systemKind: 'thinking',
+                thinking: {
+                    id: 'thinking-1',
+                    messageId: 'response-1',
+                    sender: 'tiny',
+                    text: '**Deciding on greeting approach** It seems I can answer directly.',
+                    timestamp: '2026-03-31T15:00:00.000Z',
+                },
+                timestamp: '2026-03-31T15:00:00.000Z',
+            }}
+        />
+    );
+
+    assert.match(markup, /Deciding on greeting approach/);
+    assert.match(markup, /It seems I can answer directly\./);
+    assert.doesNotMatch(markup, /\*\*Deciding on greeting approach\*\*/);
+    assert.doesNotMatch(markup, /<svg/u);
+});
+
+test('ChatTranscript keeps hidden thinking out of tool work headers', () => {
+    const markup = renderTranscript([
+        {
+            id: 'thinking-1',
+            kind: 'system',
+            systemKind: 'thinking',
+            thinking: {
+                id: 'thinking-1',
+                messageId: 'response-1',
+                sender: 'tiny',
+                text: 'I should inspect the workspace.',
+                timestamp: '2026-03-31T15:00:00.000Z',
+            },
+            timestamp: '2026-03-31T15:00:00.000Z',
+        },
+        {
+            actor: { id: 'tiny', kind: 'agent' },
+            completedAt: '2026-03-31T15:00:01.000Z',
+            connectsToNext: false,
+            connectsToPrevious: true,
+            id: 'tool-1',
+            isFirstInGroup: false,
+            kind: 'tool',
+            sessionKey: 'agent:tiny:session-1',
+            spawnedRelationships: [],
+            startedAt: '2026-03-31T15:00:00.500Z',
+            toolCall: {
+                callId: 'call-1',
+                facts: [],
+                label: 'command -v node',
+                name: 'exec',
+                status: 'completed',
+                summaryParts: ['command -v node'],
+            },
+        },
+    ]);
+
+    assert.doesNotMatch(markup, /Thinking/);
+    assert.match(markup, /Ran 1 command/);
+    assert.doesNotMatch(markup, /Thinking, ran 1 command/);
+    assert.doesNotMatch(markup, /Used 1 tool/);
 });
 
 test('ToolStep renders bash failures through the shell tool renderer', () => {

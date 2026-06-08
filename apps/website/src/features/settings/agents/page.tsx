@@ -204,10 +204,10 @@ function AgentSettingsContent({
                         saveAgentModel({
                             current: draft.model,
                             model,
-                            updateModel: (openClawModelNameId) =>
+                            updateModel: (modelRef) =>
                                 updateModel.mutateAsync({
                                     agentId: agent.id,
-                                    openClawModelNameId,
+                                    modelRef,
                                 }),
                             updateThinkingDefault: (thinkingDefault) =>
                                 updateThinkingDefault.mutateAsync({
@@ -233,18 +233,15 @@ function AgentSettingsContent({
 async function saveAgentModel(input: {
     current: AgentModelDraft | null;
     model: AgentModelDraft | null;
-    updateModel: (openClawModelNameId: string) => Promise<unknown>;
+    updateModel: (modelRef: string) => Promise<unknown>;
     updateThinkingDefault: (
         thinkingDefault: AgentModelDraft['thinkingDefault']
     ) => Promise<unknown>;
 }) {
     const jobs: Promise<unknown>[] = [];
 
-    if (
-        input.model?.openClawModelNameId &&
-        input.model.openClawModelNameId !== input.current?.openClawModelNameId
-    ) {
-        jobs.push(input.updateModel(input.model.openClawModelNameId));
+    if (input.model?.modelRef && input.model.modelRef !== input.current?.modelRef) {
+        jobs.push(input.updateModel(input.model.modelRef));
     }
 
     if (input.model?.thinkingDefault !== input.current?.thinkingDefault) {
@@ -274,8 +271,7 @@ function createAgentSettingsBaseline({
         model: modelSetting
             ? {
                   harness: modelSetting.harness ?? 'pi',
-                  modelId: modelSetting.modelId,
-                  openClawModelNameId: modelSetting.openClawModelNameId,
+                  modelRef: modelSetting.modelRef,
                   thinkingDefault: modelSetting.overrideThinkingDefault,
               }
             : null,

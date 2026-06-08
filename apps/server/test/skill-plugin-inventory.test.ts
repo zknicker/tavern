@@ -11,7 +11,7 @@ const { buildPluginSummaries, filterRuntimeVisibleSkills, mergeRuntimeSkillDetai
     '../src/skills/service.ts'
 );
 
-test('buildPluginSummaries projects agent-facing OpenClaw plugins', () => {
+test('buildPluginSummaries projects agent-facing Hermes plugins', () => {
     const plugins = buildPluginSummaries({
         channels: {
             discord: {},
@@ -65,7 +65,7 @@ test('buildPluginSummaries projects agent-facing OpenClaw plugins', () => {
             {
                 diagnostic: 'Plugin is allowed, but no configured plugin entry was found.',
                 id: 'missing-plugin',
-                source: 'OpenClaw',
+                source: 'Hermes',
                 usability: 'not_usable',
             },
         ]
@@ -99,7 +99,7 @@ test('filterRuntimeVisibleSkills hides skills blocked by runtime policy', () => 
             missing: { anyBins: [], bins: [], config: [], env: [], os: [] },
             name: 'github',
             requirements: { anyBins: [], bins: [], config: [], env: [], os: [] },
-            runtimeSource: 'openclaw-bundled',
+            runtimeSource: 'hermes-bundled',
             source: 'builtin',
             updatedAt: null,
         },
@@ -167,7 +167,7 @@ test('mergeRuntimeSkillDetail preserves live requirement metadata from status', 
             modelVisible: true,
             name: 'Google Workspace',
             requirements: summaryRequirements,
-            runtimeSource: 'openclaw-workspace',
+            runtimeSource: 'hermes-workspace',
             source: 'installed',
             updatedAt: '2026-05-19T00:00:00.000Z',
         }

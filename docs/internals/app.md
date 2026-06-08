@@ -23,11 +23,11 @@ canonical chat server.
 * **Agent records are runtime-owned.** Tavern App lists, reads, and edits agents
   through first-class Tavern APIs hosted by Runtime. App storage may keep
   presentation overlays, but it does not decide whether an agent exists.
-* **Runtime integration stays behind adapters.** OpenClaw Gateway payloads and
+* **Runtime integration stays behind adapters.** Hermes Gateway payloads and
   plugin-specific details do not leak into product domains.
 * **Settings save product intent.** App settings call narrow tRPC mutations such
   as agent name, model, thinking default, and messaging binding updates. The app
-  does not maintain a global OpenClaw config draft or send arbitrary config
+  does not maintain a global Hermes config draft or send arbitrary config
   JSON for user-facing settings.
 * **App storage is cache and settings.** App screens can cache runtime records
   and app-local settings, but runtime durable reads recover after the app has
@@ -56,10 +56,11 @@ connection exists in app storage, the app opens the dashboard even when Runtime
 is disconnected or version-mismatched. Runtime health, update, and capability
 problems surface inside the normal app shell.
 
-Runtime-owned transitions, such as managed OpenClaw Gateway readiness or Tavern
-plugin installation, emit `capability.updated` from Tavern Runtime. App-observed
-capability checks write through the capability status recorder, which emits the
-same app invalidation event when the persisted capability state changes.
+Runtime-owned transitions, such as managed Hermes dashboard/API/Gateway
+readiness or model/skill inventory refreshes, emit `capability.updated` from
+Tavern Runtime. App-observed capability checks write through the capability
+status recorder, which emits the same app invalidation event when the persisted
+capability state changes.
 
 Do not use broad startup refreshes or global polling to keep capability UI
 current. The flow is current query data plus capability-specific events.

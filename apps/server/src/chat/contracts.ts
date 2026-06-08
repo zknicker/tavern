@@ -235,8 +235,22 @@ export const chatLogActiveReplySchema = z
     })
     .nullable();
 
+export const chatLogTurnFailureSchema = z
+    .object({
+        error: z.string().trim().min(1),
+        turn: z.object({
+            agentId: z.string().trim().min(1),
+            chatId: z.string().trim().min(1),
+            runId: z.string().trim().min(1),
+            sessionKey: z.string().trim().min(1),
+            startedAt: z.string().datetime(),
+        }),
+    })
+    .nullable();
+
 export const chatLogPageSchema = z.object({
     activeReply: chatLogActiveReplySchema,
+    failedTurn: chatLogTurnFailureSchema.optional(),
     limit: z.number().int().positive(),
     rows: z.array(chatLogRowSchema),
     offset: z.number().int().nonnegative(),

@@ -4,26 +4,8 @@ import { listAgentCatalog } from '../agents/catalog.ts';
 import { getOpenRouterSettings } from '../openrouter/settings.ts';
 import { listConfiguredAgentRuntimeConnections } from '../storage/agent-runtime-connections.ts';
 import { listAgents as listAgentRecords, parseAgentRawJson } from '../storage/agents.ts';
-import {
-    listAgentModelSettings,
-    listModelCatalogRecords,
-    listOpenClawModelNameRecords,
-    listRuntimeModelAvailability,
-    seedModelCatalog,
-    syncRuntimeModelAvailability,
-} from '../storage/models.ts';
 import { modelListSchema } from './contracts.ts';
-import {
-    formatOpenClawModelName,
-    formatOpenClawModelNameId,
-    normalizeOpenClawModelIdentity,
-    type OpenClawHarness,
-    openClawModelNames,
-} from './openclaw-mapping.ts';
-
-function formatModelRef(input: { modelId: string; provider: string }) {
-    return `${input.provider}/${input.modelId}`;
-}
+import { formatHermesModelName, normalizeHermesModelIdentity } from './hermes-mapping.ts';
 
 function parseRuntimeModelCatalogEntry(input: { id: string; provider: null | string }) {
     const separatorIndex = input.id.indexOf('/');
@@ -41,121 +23,44 @@ function createEmptySelection() {
     };
 }
 
-async function refreshRuntimeModelAvailability() {
+async function buildModels() {
     const runtimes = await listConfiguredAgentRuntimeConnections();
+    const modelsByRef = new Map<string, ReturnType<typeof createHermesModel>>();
 
     for (const runtime of runtimes) {
+        const client = createAgentRuntimeClientForConnection(runtime);
         try {
-            const client = createAgentRuntimeClientForConnection(runtime);
-            try {
-                const models = await getAgentRuntimeModels(client, runtime.id);
+            const response = await getAgentRuntimeModels(client, runtime.id);
 
-                if (!models) {
+            for (const model of response?.models ?? []) {
+                const parsed = parseRuntimeModelCatalogEntry(model);
+
+                if (!parsed) {
                     continue;
                 }
 
-                const modelNameIds = models.models.flatMap((model) => {
-                    const parsed = parseRuntimeModelCatalogEntry(model);
-
-                    if (!parsed) {
-                        return [];
-                    }
-
-                    const canonical = normalizeOpenClawModelIdentity(parsed);
-
-                    if (canonical?.openClawModelNameId) {
-                        return [canonical.openClawModelNameId];
-                    }
-
-                    const modelCatalogId = `${parsed.provider}/${parsed.model}`;
-                    const matchingNames = openClawModelNames
-                        .filter((name) => name.modelCatalogId === modelCatalogId)
-                        .map((name) =>
-                            formatOpenClawModelNameId({
-                                harness: name.harness,
-                                model: name.openClawModel,
-                                provider: name.openClawProvider,
-                            })
-                        );
-
-                    if (matchingNames.length > 0) {
-                        return matchingNames;
-                    }
-
-                    return [];
-                });
-
-                await syncRuntimeModelAvailability({
-                    modelNameIds,
-                    runtimeId: runtime.id,
-                    source: 'models.list',
-                    status: 'available',
-                });
-            } finally {
-                client.close();
+                const ref = formatHermesModelName(parsed);
+                modelsByRef.set(
+                    ref,
+                    createHermesModel({
+                        availability: 'available',
+                        label: model.label ?? null,
+                        model: parsed.model,
+                        provider: parsed.provider,
+                    })
+                );
             }
-        } catch {
-            // Availability is a freshness hint. Existing catalog/settings stay renderable.
+        } finally {
+            client.close();
         }
     }
-}
 
-async function buildModels() {
-    await seedModelCatalog();
-    await refreshRuntimeModelAvailability();
-
-    const [catalog, openClawNames, runtimes] = await Promise.all([
-        listModelCatalogRecords(),
-        listOpenClawModelNameRecords(),
-        listConfiguredAgentRuntimeConnections(),
-    ]);
-    const availabilityRows = await listRuntimeModelAvailability(
-        runtimes.map((runtime) => runtime.id)
+    return [...modelsByRef.values()].sort(
+        (left, right) =>
+            left.name.localeCompare(right.name) ||
+            left.provider.localeCompare(right.provider) ||
+            left.modelId.localeCompare(right.modelId)
     );
-    const availableNameIds = new Set(
-        availabilityRows
-            .filter((row) => row.status === 'available')
-            .map((row) => row.openClawModelNameId)
-    );
-
-    return catalog
-        .map((model) => {
-            const ref = formatModelRef(model);
-            const names = openClawNames.filter((name) => name.modelCatalogId === model.id);
-
-            return {
-                availability: names.some((name) => availableNameIds.has(name.id))
-                    ? 'configured'
-                    : 'available',
-                contextWindow: model.contextWindow,
-                framework: 'tavern',
-                id: ref,
-                modelId: model.modelId,
-                name: model.displayName,
-                openClawNames: names.map((name) => ({
-                    available: availableNameIds.has(name.id),
-                    harness: name.harness as OpenClawHarness,
-                    id: name.id,
-                    isPreferred: name.isPreferred,
-                    label: formatOpenClawModelName({
-                        model: name.openClawModel,
-                        provider: name.openClawProvider,
-                    }),
-                    model: name.openClawModel,
-                    provider: name.openClawProvider,
-                })),
-                provider: model.provider,
-                reasoning: null,
-                ref,
-                supportsChatRouting: true,
-            };
-        })
-        .sort(
-            (left, right) =>
-                left.name.localeCompare(right.name) ||
-                left.provider.localeCompare(right.provider) ||
-                left.modelId.localeCompare(right.modelId)
-        );
 }
 
 async function buildAgentSettings() {
@@ -163,66 +68,35 @@ async function buildAgentSettings() {
     const agentRecordsById = new Map(
         agentRecords.map((agentRecord) => [agentRecord.id, agentRecord] as const)
     );
-    const settings = await listAgentModelSettings(agents.map((agent) => agent.id));
-    const settingsByAgentId = new Map(settings.map((setting) => [setting.agentId, setting]));
-
     return agents.map((agent) => {
-        const setting = settingsByAgentId.get(agent.id);
         const agentRecord = agentRecordsById.get(agent.id);
         const rawAgent = agentRecord ? parseAgentRawJson(agentRecord) : null;
-        const runtimeModelName = rawAgent?.openClawModelName ?? null;
+        const runtimeModelName = rawAgent?.hermesModelName ?? null;
         const runtimeThinkingDefault = rawAgent?.thinkingDefault ?? null;
         const runtimeModel = runtimeModelName
-            ? normalizeOpenClawModelIdentity({
+            ? normalizeHermesModelIdentity({
                   harness: runtimeModelName.harness,
                   model: runtimeModelName.model,
                   provider: runtimeModelName.provider,
               })
             : null;
-        const settingIsNewerThanRuntimeRecord =
-            setting?.syncedAt &&
-            agentRecord?.lastSyncedAt &&
-            new Date(setting.syncedAt).getTime() > new Date(agentRecord.lastSyncedAt).getTime();
-        const settingErrorIsCurrent =
-            setting?.syncError &&
-            agentRecord?.lastSyncedAt &&
-            new Date(setting.updatedAt).getTime() > new Date(agentRecord.lastSyncedAt).getTime();
-        const shouldPreferSetting = Boolean(settingIsNewerThanRuntimeRecord);
-        const selectedHarness = shouldPreferSetting
-            ? ((setting?.harness as OpenClawHarness | undefined) ?? runtimeModel?.openClawHarness)
-            : (runtimeModel?.openClawHarness ?? (setting?.harness as OpenClawHarness | undefined));
-        const selectedModelId = shouldPreferSetting
-            ? (setting?.modelCatalogId ?? runtimeModel?.modelCatalogId)
-            : (runtimeModel?.modelCatalogId ?? setting?.modelCatalogId);
-        const selectedOpenClawModelNameId = shouldPreferSetting
-            ? (setting?.openClawModelNameId ?? runtimeModel?.openClawModelNameId)
-            : (runtimeModel?.openClawModelNameId ?? setting?.openClawModelNameId);
-        const settingMatchesRuntime = Boolean(
-            setting &&
-                runtimeModel &&
-                setting.harness === runtimeModel.openClawHarness &&
-                setting.modelCatalogId === runtimeModel.modelCatalogId &&
-                setting.openClawModelNameId === runtimeModel.openClawModelNameId
-        );
 
         return {
             agentId: agent.id,
             agentName: agent.name,
             effective: createEmptySelection(),
             effectiveThinkingDefault: runtimeThinkingDefault,
-            harness: selectedHarness ?? null,
-            isOverridden: Boolean(setting ?? runtimeModel),
+            harness: runtimeModel?.hermesHarness ?? null,
+            isOverridden: Boolean(runtimeModel),
             isThinkingOverridden: runtimeThinkingDefault !== null,
-            modelId: selectedModelId ?? null,
-            openClawModelNameId: selectedOpenClawModelNameId ?? null,
+            model: runtimeModel?.modelId ?? null,
+            modelRef: runtimeModel?.modelCatalogId ?? null,
+            provider: runtimeModel?.provider ?? null,
             override: createEmptySelection(),
             overrideThinkingDefault: runtimeThinkingDefault,
             subAgentModel: null,
-            syncError:
-                settingMatchesRuntime || !(settingErrorIsCurrent || !runtimeModel)
-                    ? null
-                    : (setting?.syncError ?? null),
-            syncedAt: setting?.syncedAt ?? null,
+            syncError: null,
+            syncedAt: agentRecord?.lastSyncedAt ?? null,
         };
     });
 }
@@ -246,4 +120,26 @@ export async function listModels() {
         subAgentDefaultModel: null,
         subAgentThinkingLevel: null,
     });
+}
+
+function createHermesModel(input: {
+    availability: 'available' | 'configured';
+    label: string | null;
+    model: string;
+    provider: string;
+}) {
+    const ref = formatHermesModelName(input);
+
+    return {
+        availability: input.availability,
+        contextWindow: null,
+        framework: 'hermes',
+        id: ref,
+        modelId: input.model,
+        name: input.label?.trim() || input.model,
+        provider: input.provider,
+        reasoning: null,
+        ref,
+        supportsChatRouting: true,
+    };
 }

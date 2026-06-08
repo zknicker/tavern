@@ -9,8 +9,8 @@ read_when:
 
 Context management is the prompt-time continuity layer for active turns.
 
-Managed Tavern OpenClaw does not use Lossless Claw. It is incompatible with the
-Codex harness Tavern launches through managed OpenClaw, so Runtime strips stale
+Managed Tavern Hermes does not use Lossless Claw. It is incompatible with the
+Codex harness Tavern launches through managed Hermes, so Runtime strips stale
 `lossless-claw` config instead of installing or enabling that plugin.
 
 Memory means Cortex: the durable wiki, graph, capture, recall, timeline,
@@ -25,16 +25,16 @@ claims, links, embeddings, audit, and maintenance state.
   or long-term source of truth.
 * Cortex failures and context-engine failures are separate readiness signals.
 
-## Managed OpenClaw Setup
+## Managed Hermes Setup
 
-Tavern's managed OpenClaw config:
+Tavern's managed Hermes config:
 
 * sets `plugins.slots.memory` to `none`
 * strips stale `lossless-claw`, `active-memory`, and `memory-core` managed
   memory plugin entries
 
 The flat runtime capability should describe this as context-management
-readiness, even if the underlying OpenClaw slot or legacy capability name still
+readiness, even if the underlying Hermes slot or legacy capability name still
 contains `memory`.
 
 ## Relationship To Memory
@@ -44,7 +44,7 @@ own the remembered fact.
 
 When a user corrects memory, Tavern writes Cortex material. When an agent needs
 durable memory, it recalls Cortex. When an active turn needs continuity,
-OpenClaw manages bounded prompt context without Lossless Claw in the managed
+Hermes manages bounded prompt context without Lossless Claw in the managed
 Tavern runtime.
 
 ## Related Docs

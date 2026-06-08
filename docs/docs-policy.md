@@ -19,13 +19,13 @@ types, Runtime handlers, SDK wrapper, docs, then gates.
 
 This policy follows the documentation shape used by ClickClack:
 
-* [ClickClack docs README](https://github.com/openclaw/clickclack/blob/main/docs/README.md)
-* [Messages](https://github.com/openclaw/clickclack/blob/main/docs/features/messages.md)
-* [Realtime](https://github.com/openclaw/clickclack/blob/main/docs/features/realtime.md)
-* [TypeScript SDK](https://github.com/openclaw/clickclack/blob/main/docs/sdk.md)
-* [Data model](https://github.com/openclaw/clickclack/blob/main/docs/data-model.md)
-* [Architecture overview](https://github.com/openclaw/clickclack/blob/main/docs/architecture/overview.md)
-* [Releasing](https://github.com/openclaw/clickclack/blob/main/docs/releasing.md)
+* [ClickClack docs README](https://github.com/hermes/clickclack/blob/main/docs/README.md)
+* [Messages](https://github.com/hermes/clickclack/blob/main/docs/features/messages.md)
+* [Realtime](https://github.com/hermes/clickclack/blob/main/docs/features/realtime.md)
+* [TypeScript SDK](https://github.com/hermes/clickclack/blob/main/docs/sdk.md)
+* [Data model](https://github.com/hermes/clickclack/blob/main/docs/data-model.md)
+* [Architecture overview](https://github.com/hermes/clickclack/blob/main/docs/architecture/overview.md)
+* [Releasing](https://github.com/hermes/clickclack/blob/main/docs/releasing.md)
 
 ## North Star
 
@@ -81,7 +81,7 @@ names are `Chat`, `Agents`, `Memory`, `Knowledgebase`, `Cron automations`,
 `Skills`, `Stats`, `Pets and rewards`, and `TypeScript SDK + integrations`.
 
 Implementation nouns are not features. Avoid feature pages named `Frontend`,
-`Server`, `Sessions`, `Runtime records`, `OpenClaw plugin`, or `Runtime status`.
+`Server`, `Sessions`, `Runtime records`, `Hermes plugin`, or `Runtime status`.
 Those belong in internals, operations, or SDK pages.
 
 Use this template:
@@ -129,7 +129,7 @@ Use this shape:
   public chat, message, response, activity, artifact, read, delivery, event,
   and error shapes.
 * **Typed contracts for admin.** `packages/tavern-api/src/runtime/*`
-  owns health, status, managed OpenClaw, agents, sessions, cron, skills, models,
+  owns health, status, managed Hermes, agents, sessions, cron, skills, models,
   memory, files, and bindings.
 * **Runtime handlers.** Tavern Runtime implements the contract.
 * **SDK wrapper.** `@tavern/sdk` is the TypeScript client.
@@ -147,7 +147,7 @@ SDK docs:
 * **Include examples.** Tavern App, bot, webhook, automation, and local tool
   examples use the real SDK surface.
 
-OpenClaw is one runtime behind Tavern. Document it as an adapter or integration,
+Hermes is one runtime behind Tavern. Document it as an adapter or integration,
 not as the shape of the API itself.
 
 ## Internals Docs
@@ -161,7 +161,7 @@ Use internals docs for:
 * always-on runtime chat server behavior
 * database and runtime record layout
 * frontend structure
-* OpenClaw Gateway and plugin lifecycle
+* Hermes Gateway, managed runtime lifecycle, and adapter mapping
 * sync paths and recovery
 * testing architecture
 
@@ -178,7 +178,7 @@ Use operations docs for:
 * testing gates
 * release steps
 * runtime upgrades
-* plugin deployment
+* managed Hermes lifecycle and upgrade steps
 * local data reset or migration steps
 
 Each operations page states when to run it, commands to run, expected results,

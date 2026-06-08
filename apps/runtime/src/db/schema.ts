@@ -33,6 +33,7 @@ CREATE TABLE IF NOT EXISTS workspace_agent_instructions (
   agent_name    TEXT NOT NULL,
   workspace_dir TEXT NOT NULL,
   user_instructions TEXT NOT NULL DEFAULT '',
+  notes TEXT NOT NULL DEFAULT '',
   rendered_hash TEXT,
   rendered_at   TEXT,
   created_at    TEXT NOT NULL,
@@ -56,73 +57,6 @@ CREATE TABLE IF NOT EXISTS agents (
 
 CREATE INDEX IF NOT EXISTS idx_agents_name
   ON agents(name, id);
-
-CREATE TABLE IF NOT EXISTS openclaw_chats (
-  id             TEXT PRIMARY KEY,
-  raw_json       TEXT NOT NULL,
-  last_synced_at TEXT NOT NULL,
-  created_at     TEXT NOT NULL,
-  updated_at     TEXT NOT NULL
-);
-
-CREATE TABLE IF NOT EXISTS openclaw_models_snapshot (
-  id             TEXT PRIMARY KEY CHECK (id = 'default'),
-  raw_json       TEXT NOT NULL,
-  last_synced_at TEXT NOT NULL,
-  created_at     TEXT NOT NULL,
-  updated_at     TEXT NOT NULL
-);
-
-CREATE TABLE IF NOT EXISTS openclaw_skills (
-  id               TEXT PRIMARY KEY,
-  summary_json     TEXT NOT NULL,
-  detail_json      TEXT,
-  last_synced_at   TEXT NOT NULL,
-  detail_synced_at TEXT,
-  created_at       TEXT NOT NULL,
-  updated_at       TEXT NOT NULL
-);
-
-CREATE INDEX IF NOT EXISTS idx_openclaw_skills_name
-  ON openclaw_skills(id);
-
-CREATE TABLE IF NOT EXISTS openclaw_sessions (
-  session_key    TEXT PRIMARY KEY,
-  session_id     TEXT NOT NULL,
-  agent_id       TEXT NOT NULL,
-  chat_id        TEXT NOT NULL,
-  platform       TEXT NOT NULL,
-  raw_json       TEXT NOT NULL,
-  last_synced_at TEXT NOT NULL,
-  created_at     TEXT NOT NULL,
-  updated_at     TEXT NOT NULL
-);
-
-CREATE INDEX IF NOT EXISTS idx_openclaw_sessions_updated
-  ON openclaw_sessions(updated_at, session_key);
-
-CREATE INDEX IF NOT EXISTS idx_openclaw_sessions_chat
-  ON openclaw_sessions(chat_id, session_key);
-
-CREATE TABLE IF NOT EXISTS openclaw_session_messages (
-  id             TEXT PRIMARY KEY,
-  session_key    TEXT NOT NULL,
-  seq            INTEGER NOT NULL,
-  timestamp      TEXT NOT NULL,
-  raw_json       TEXT NOT NULL,
-  last_synced_at TEXT NOT NULL
-);
-
-CREATE INDEX IF NOT EXISTS idx_openclaw_session_messages_session
-  ON openclaw_session_messages(session_key, seq, id);
-
-CREATE TABLE IF NOT EXISTS openclaw_session_graphs (
-  session_key    TEXT PRIMARY KEY,
-  raw_json       TEXT NOT NULL,
-  last_synced_at TEXT NOT NULL,
-  created_at     TEXT NOT NULL,
-  updated_at     TEXT NOT NULL
-);
 
 CREATE TABLE IF NOT EXISTS tavern_channel_outbox (
   request_id        TEXT PRIMARY KEY,

@@ -19,12 +19,10 @@ const computerUsePluginUri = 'plugin://computer-use@openai-bundled';
 const inventoryTtlMs = 30_000;
 const inventoryFetchTimeoutMs = 2500;
 
-let cachedInventory:
-    | {
-          expiresAt: number;
-          inventory: ComputerUseAppInventory;
-      }
-    | null = null;
+let cachedInventory: {
+    expiresAt: number;
+    inventory: ComputerUseAppInventory;
+} | null = null;
 
 export function getComputerUsePluginUri() {
     return computerUsePluginUri;
@@ -106,10 +104,8 @@ function withTimeout<T>(promise: Promise<T>, timeoutMs: number, timeoutValue: T)
             resolve(timeoutValue);
         }, timeoutMs);
 
-        promise
-            .then(resolve, reject)
-            .finally(() => {
-                clearTimeout(timeout);
-            });
+        promise.then(resolve, reject).finally(() => {
+            clearTimeout(timeout);
+        });
     });
 }

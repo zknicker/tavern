@@ -1,6 +1,6 @@
-import type { OpenClawConfigOutput } from '../../lib/trpc.tsx';
+import type { HermesConfigOutput } from '../../lib/trpc.tsx';
 
-type OpenClawConfig = NonNullable<OpenClawConfigOutput['snapshot']>['config'];
+type HermesConfig = NonNullable<HermesConfigOutput['snapshot']>['config'];
 
 export interface AgentToolPolicyView {
     inheritedProfile: null | string;
@@ -72,7 +72,7 @@ const profileTools: Record<string, string[]> = {
 
 export function readAgentToolPolicyView(input: {
     agentId: string;
-    config: OpenClawConfig | null | undefined;
+    config: HermesConfig | null | undefined;
 }): AgentToolPolicyView {
     const agent = findAgentEntry(input.config, input.agentId);
     const agentToolsConfig = readRecord(agent?.tools);
@@ -103,7 +103,7 @@ export function readAgentToolPolicyView(input: {
     if (profile === 'full') {
         return {
             inheritedProfile: profile,
-            note: `OpenClaw ${sourceLabel} full profile is active. Editing converts this agent to explicit tools.`,
+            note: `Hermes ${sourceLabel} full profile is active. Editing converts this agent to explicit tools.`,
             tools: ['*', ...alsoAllow],
         };
     }
@@ -111,7 +111,7 @@ export function readAgentToolPolicyView(input: {
     if (profile && profileTools[profile]) {
         return {
             inheritedProfile: profile,
-            note: `OpenClaw ${sourceLabel} profile is active. Editing converts this agent to explicit tools.`,
+            note: `Hermes ${sourceLabel} profile is active. Editing converts this agent to explicit tools.`,
             tools: normalizeToolList(
                 [...profileTools[profile], ...alsoAllow].filter((tool) => !deny.has(tool))
             ),
@@ -122,7 +122,7 @@ export function readAgentToolPolicyView(input: {
         inheritedProfile: null,
         note:
             alsoAllow.length > 0
-                ? `OpenClaw ${sourceLabel} additive tools are active. Editing converts them to explicit tools.`
+                ? `Hermes ${sourceLabel} additive tools are active. Editing converts them to explicit tools.`
                 : null,
         tools: normalizeToolList(alsoAllow.filter((tool) => !deny.has(tool))),
     };
@@ -144,7 +144,7 @@ export function normalizeToolList(values: string[]) {
     return tools;
 }
 
-function findAgentEntry(config: OpenClawConfig | null | undefined, agentId: string) {
+function findAgentEntry(config: HermesConfig | null | undefined, agentId: string) {
     return readRecordArray(readRecord(config?.agents).list).find(
         (entry) => readString(entry.id) === agentId
     );

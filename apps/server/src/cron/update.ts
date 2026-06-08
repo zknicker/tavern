@@ -7,7 +7,7 @@ import { getAgent as getAgentRecord } from '../storage/agents.ts';
 import { getCronJobRecord, saveCronJobRecord } from '../storage/cron-jobs.ts';
 import { syncAgentRuntimeCron } from '../sync/agent-runtime-sync.ts';
 import { updateCronJobInputSchema } from './contracts.ts';
-import { buildOpenClawCronSchedule } from './schedule-config.ts';
+import { buildHermesCronSchedule } from './schedule-config.ts';
 
 export async function updateCronJob(input: unknown) {
     const parsed = updateCronJobInputSchema.parse(input);
@@ -54,7 +54,7 @@ export async function updateCronJob(input: unknown) {
             name: parsed.patch.name,
             payload: parsed.patch.payload,
             schedule: parsed.patch.scheduleConfig
-                ? buildOpenClawCronSchedule(parsed.patch.scheduleConfig)
+                ? buildHermesCronSchedule(parsed.patch.scheduleConfig)
                 : undefined,
             state: parsed.patch.state,
             wakeMode: parsed.patch.wakeMode,

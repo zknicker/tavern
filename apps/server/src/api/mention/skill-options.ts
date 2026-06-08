@@ -10,7 +10,8 @@ export async function listRuntimeSkillMentionOptions({
     agentId?: string;
     runtimeSkills?: RuntimeSkillList;
 }) {
-    const skills = runtimeSkills ?? (await listAgentRuntimeSkills(undefined, undefined, { agentId }));
+    const skills =
+        runtimeSkills ?? (await listAgentRuntimeSkills(undefined, undefined, { agentId }));
 
     return (skills ?? [])
         .filter((skill) => skill.disabled !== true)

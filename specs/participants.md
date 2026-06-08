@@ -3,7 +3,7 @@
 Tavern separates Tavern-owned people from runtime-observed identities.
 
 This keeps provider details out of product surfaces while avoiding fragile automatic merges across
-Discord, Slack, iMessage, Telegram, or OpenClaw.
+Discord, Slack, iMessage, Telegram, or Hermes.
 
 ## Model
 
@@ -40,7 +40,7 @@ renders the linked profile presentation while preserving the participant id as p
 
 ## Runtime Mapping
 
-The OpenClaw adapter normalizes provider-native data before Tavern stores it.
+The Hermes adapter normalizes provider-native data before Tavern stores it.
 
 Examples:
 

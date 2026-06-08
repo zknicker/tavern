@@ -5,7 +5,7 @@ info:
   summary: OpenAPI contract for Tavern Runtime chat and realtime clients.
   description: >
     Tavern API is the runtime-hosted contract for clients, bots, webhooks,
-    automations, managed OpenClaw, and tests. This first slice covers durable
+    automations, managed Hermes, and tests. This first slice covers durable
     chat state and realtime recovery.
 servers:
   - url: http://127.0.0.1:18790

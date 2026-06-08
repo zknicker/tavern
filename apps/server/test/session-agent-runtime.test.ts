@@ -85,11 +85,11 @@ function mockRuntimeChatFetch(chats = [runtimeTavernChat()]) {
             });
         }
 
-        if (url.pathname === '/openclaw/chats') {
+        if (url.pathname === '/hermes/chats') {
             return Response.json({ chats: [] });
         }
 
-        if (url.pathname === '/openclaw/sessions') {
+        if (url.pathname === '/hermes/sessions') {
             return Response.json({
                 sessions: (await listSessionRecords()).flatMap((record) => {
                     const session = parseSessionRecord(record);
@@ -121,7 +121,7 @@ function runtimeTavernChat() {
     };
 }
 
-test('session queries read bounded OpenClaw session history', async () => {
+test('session queries read bounded Hermes session history', async () => {
     mockRuntimeChatFetch();
     spyOn(agentRuntimeClient, 'createConfiguredAgentRuntimeClient').mockReturnValue({
         close: () => {},
@@ -524,11 +524,11 @@ test('session queries read bounded OpenClaw session history', async () => {
         }),
     } as never);
     await saveAgentRuntimeConnection({
-        baseUrl: 'http://openclaw.test',
+        baseUrl: 'http://hermes.test',
         id: 'runtime-1',
         lastCheckedAt: null,
         lastError: null,
-        name: 'OpenClaw',
+        name: 'Hermes',
     });
     await syncAgentsForRuntime({
         agents: [
@@ -725,7 +725,7 @@ test('session queries read bounded OpenClaw session history', async () => {
     });
 });
 
-test('session prompt reads live OpenClaw prompt inspection', async () => {
+test('session prompt reads live Hermes prompt inspection', async () => {
     spyOn(agentRuntimeClient, 'createConfiguredAgentRuntimeClient').mockReturnValue({
         close: () => {},
         getSessionPrompt: async (_sessionKey: string) => ({
@@ -738,7 +738,7 @@ test('session prompt reads live OpenClaw prompt inspection', async () => {
                     content: 'Base instructions',
                     id: 'base:agent-runtime',
                     kind: 'base',
-                    label: 'OpenClaw Base Instructions',
+                    label: 'Hermes Base Instructions',
                 },
                 {
                     content: '## Soul\n\nBe precise and calm.',
@@ -767,11 +767,11 @@ test('session prompt reads live OpenClaw prompt inspection', async () => {
         }),
     } as never);
     await saveAgentRuntimeConnection({
-        baseUrl: 'http://openclaw.test',
+        baseUrl: 'http://hermes.test',
         id: 'runtime-1',
         lastCheckedAt: null,
         lastError: null,
-        name: 'OpenClaw',
+        name: 'Hermes',
     });
     await syncSessionsForRuntime({
         runtimeId: 'runtime-1',
@@ -823,11 +823,11 @@ test('session summaries hydrate session id from the durable runtime column', asy
         }),
     } as never);
     await saveAgentRuntimeConnection({
-        baseUrl: 'http://openclaw.test',
+        baseUrl: 'http://hermes.test',
         id: 'runtime-1',
         lastCheckedAt: null,
         lastError: null,
-        name: 'OpenClaw',
+        name: 'Hermes',
     });
     await syncSessionsForRuntime({
         runtimeId: 'runtime-1',

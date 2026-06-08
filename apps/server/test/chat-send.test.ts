@@ -38,7 +38,7 @@ test('sendTavernChatMessage posts to Runtime', async () => {
             });
         }
 
-        if (url.pathname === '/openclaw/chats') {
+        if (url.pathname === '/hermes/chats') {
             return Response.json({ chats: [] });
         }
 
@@ -212,7 +212,7 @@ test('sendTavernChatMessage posts to Runtime', async () => {
         {
             body: null,
             method: 'GET',
-            path: '/openclaw/chats',
+            path: '/hermes/chats',
         },
         {
             body: null,
@@ -231,6 +231,8 @@ test('sendTavernChatMessage posts to Runtime', async () => {
                         agentIds: ['agent:planner'],
                         archived: false,
                         displayName: 'Planning',
+                        displayNameSource: 'generated',
+                        groupSystemPrompt: null,
                         tabAppearance: {
                             color: null,
                         },
@@ -250,7 +252,7 @@ test('sendTavernChatMessage posts to Runtime', async () => {
                         agentId: 'agent:planner',
                         runtimeId: 'runtime-1',
                         sessionKey: planningSessionKey,
-                        source: 'openclaw',
+                        source: 'hermes',
                     },
                 },
                 content: 'Plan the next launch.',

@@ -5,37 +5,18 @@ import { agentRuntimeModelProviderIdSchema } from './model-providers.js';
 export const agentRuntimeProtocolVersion = 1 as const;
 
 export const agentRuntimeCapabilitySchema = z.enum([
-    'tavernPlugin',
-    'agentTurns',
-    'agentFiles',
-    'agents',
-    'chats',
-    'chatTargets',
-    'computerUse',
-    'cron',
-    'cronRuns',
     'codexOAuth',
-    'cortexAgentTools',
     'cortexDatabase',
     'cortexImportProcessors',
     'cortexJobs',
     'cortexModelAccess',
     'cortexWiki',
+    'dashboardServer',
     'embeddingModel',
-    'events',
+    'apiServer',
     'gateway',
-    'knowledgebase',
-    'logs',
-    'memory',
-    'mentions',
-    'messages',
     'models',
-    'sessionEvents',
-    'sessions',
     'skills',
-    'skillMaterialization',
-    'status',
-    'tasks',
 ]);
 
 export const agentRuntimeCapabilityHealthIdSchema = agentRuntimeCapabilitySchema;
@@ -164,10 +145,11 @@ export const agentRuntimeSaveOpenRouterSettingsSchema = z
         'Enter an OpenRouter key.'
     );
 
-export const agentRuntimeOpenClawHarnessSchema = z.enum(['pi', 'codex']);
+export const agentRuntimeHermesHarnessSchema = z.enum(['pi', 'codex']);
 
-export const agentRuntimeOpenClawModelNameSchema = z.object({
-    harness: agentRuntimeOpenClawHarnessSchema,
+export const agentRuntimeHermesModelNameSchema = z.object({
+    baseUrl: z.string().trim().url().optional(),
+    harness: agentRuntimeHermesHarnessSchema,
     model: z.string().trim().min(1),
     provider: z.string().trim().min(1),
 });
@@ -185,35 +167,39 @@ export const agentRuntimeThinkingLevelSchema = z.enum([
 
 const agentRuntimeJsonRecordSchema = z.record(z.string(), z.unknown());
 
-export const agentRuntimeOpenClawConfigSchema = z.record(z.string(), z.unknown());
+export const agentRuntimeHermesConfigSchema = z.record(z.string(), z.unknown());
 
-export const agentRuntimeOpenClawConfigSnapshotSchema = z.object({
-    config: agentRuntimeOpenClawConfigSchema,
+export const agentRuntimeHermesConfigSnapshotSchema = z.object({
+    config: agentRuntimeHermesConfigSchema,
     hash: z.string().trim().min(1),
     issues: z.array(z.unknown()).default([]),
     raw: z.string().nullable(),
     valid: z.boolean().nullable(),
 });
 
-export const agentRuntimeApplyOpenClawConfigSchema = z.object({
+export const agentRuntimeApplyHermesConfigSchema = z.object({
     baseHash: z.string().trim().min(1),
-    config: agentRuntimeOpenClawConfigSchema,
+    config: agentRuntimeHermesConfigSchema,
 });
 
-const agentRuntimeOpenClawConfigMutationSchema = z.object({});
+const agentRuntimeHermesConfigMutationSchema = z.object({});
 
-export const agentRuntimeUpdateAgentNameSchema = agentRuntimeOpenClawConfigMutationSchema.extend({
+export const agentRuntimeUpdateAgentNameSchema = agentRuntimeHermesConfigMutationSchema.extend({
     name: z.string().trim().min(1),
 });
 
-export const agentRuntimeUpdateAgentModelSchema = agentRuntimeOpenClawConfigMutationSchema.extend({
-    model: agentRuntimeOpenClawModelNameSchema,
+export const agentRuntimeUpdateAgentModelSchema = agentRuntimeHermesConfigMutationSchema.extend({
+    model: agentRuntimeHermesModelNameSchema,
 });
 
 export const agentRuntimeUpdateAgentThinkingDefaultSchema =
-    agentRuntimeOpenClawConfigMutationSchema.extend({
+    agentRuntimeHermesConfigMutationSchema.extend({
         thinkingDefault: agentRuntimeThinkingLevelSchema.nullable(),
     });
+
+export const agentRuntimeUpdateAgentToolsSchema = agentRuntimeHermesConfigMutationSchema.extend({
+    tools: z.array(z.string().trim().min(1)),
+});
 
 export const agentRuntimeDiscordAllowBotsSchema = z.union([z.boolean(), z.literal('mentions')]);
 
@@ -228,34 +214,32 @@ export const agentRuntimeDiscordBindingGuildSchema = z.object({
     requireMention: z.boolean(),
 });
 
-export const agentRuntimeSaveDiscordBindingSchema = agentRuntimeOpenClawConfigMutationSchema.extend(
-    {
-        accountId: z.string().trim().min(1).optional(),
-        agentId: z.string().trim().min(1),
-        allowBots: agentRuntimeDiscordAllowBotsSchema,
-        bindingId: z.string().trim().min(1).optional(),
-        enabled: z.boolean(),
-        groupPolicy: agentRuntimeDiscordGroupPolicySchema,
-        guilds: z.array(agentRuntimeDiscordBindingGuildSchema).default([]),
-        inboundMode: agentRuntimeInboundModeSchema,
-        match: z
-            .object({
-                dmUserIds: z.array(z.string().trim().min(1)).default([]),
-                parentChannelIds: z.array(z.string().trim().min(1)).default([]),
-            })
-            .default({
-                dmUserIds: [],
-                parentChannelIds: [],
-            }),
-        mentionPatterns: z.array(z.string().trim().min(1)).default([]),
-        metadata: agentRuntimeJsonRecordSchema.default({}),
-        name: z.string().trim().min(1),
-        replyToMode: agentRuntimeDiscordReplyToModeSchema,
-        token: z.string().trim().min(1).nullable().optional(),
-    }
-);
+export const agentRuntimeSaveDiscordBindingSchema = agentRuntimeHermesConfigMutationSchema.extend({
+    accountId: z.string().trim().min(1).optional(),
+    agentId: z.string().trim().min(1),
+    allowBots: agentRuntimeDiscordAllowBotsSchema,
+    bindingId: z.string().trim().min(1).optional(),
+    enabled: z.boolean(),
+    groupPolicy: agentRuntimeDiscordGroupPolicySchema,
+    guilds: z.array(agentRuntimeDiscordBindingGuildSchema).default([]),
+    inboundMode: agentRuntimeInboundModeSchema,
+    match: z
+        .object({
+            dmUserIds: z.array(z.string().trim().min(1)).default([]),
+            parentChannelIds: z.array(z.string().trim().min(1)).default([]),
+        })
+        .default({
+            dmUserIds: [],
+            parentChannelIds: [],
+        }),
+    mentionPatterns: z.array(z.string().trim().min(1)).default([]),
+    metadata: agentRuntimeJsonRecordSchema.default({}),
+    name: z.string().trim().min(1),
+    replyToMode: agentRuntimeDiscordReplyToModeSchema,
+    token: z.string().trim().min(1).nullable().optional(),
+});
 
-export const agentRuntimeDeleteDiscordBindingSchema = agentRuntimeOpenClawConfigMutationSchema;
+export const agentRuntimeDeleteDiscordBindingSchema = agentRuntimeHermesConfigMutationSchema;
 
 export const agentRuntimeDiscordBindingStatusSchema = z.enum(['configured', 'disabled', 'error']);
 export const agentRuntimeDiscordTokenSourceSchema = z.enum([
@@ -304,7 +288,7 @@ export const agentRuntimeAgentSchema = z.object({
     id: z.string().trim().min(1),
     isAdmin: z.boolean(),
     name: z.string().trim().min(1),
-    openClawModelName: agentRuntimeOpenClawModelNameSchema.nullable().optional(),
+    hermesModelName: agentRuntimeHermesModelNameSchema.nullable().optional(),
     primaryColor: z.string().trim().min(1).nullable(),
     thinkingDefault: agentRuntimeThinkingLevelSchema.nullable().optional(),
     workspaceFolder: z.string().trim().min(1),
@@ -1696,10 +1680,10 @@ export const agentRuntimeMessageMetadataSchema = z
         inputTokens: z.number().int().nonnegative().nullable().optional(),
         isError: z.boolean().nullable().optional(),
         model: z.string().trim().min(1).optional(),
-        openClawApi: z.string().trim().min(1).optional(),
-        openClawHarness: z.enum(['pi', 'codex']).optional(),
-        openClawModel: z.string().trim().min(1).optional(),
-        openClawProvider: z.string().trim().min(1).optional(),
+        hermesApi: z.string().trim().min(1).optional(),
+        hermesHarness: z.enum(['pi', 'codex']).optional(),
+        hermesModel: z.string().trim().min(1).optional(),
+        hermesProvider: z.string().trim().min(1).optional(),
         outputTokens: z.number().int().nonnegative().nullable().optional(),
         parts: z.array(z.record(z.string(), z.unknown())).nullable().optional(),
         provider: agentRuntimeModelProviderIdSchema.optional(),
@@ -2276,18 +2260,19 @@ export type AgentRuntimeModelAccessStatus = z.infer<typeof agentRuntimeModelAcce
 export type AgentRuntimeOpenAiSettings = z.infer<typeof agentRuntimeOpenAiSettingsSchema>;
 export type AgentRuntimeSaveOpenAiSettings = z.infer<typeof agentRuntimeSaveOpenAiSettingsSchema>;
 export type AgentRuntimeOpenRouterSettings = z.infer<typeof agentRuntimeOpenRouterSettingsSchema>;
-export type AgentRuntimeOpenClawHarness = z.infer<typeof agentRuntimeOpenClawHarnessSchema>;
-export type AgentRuntimeOpenClawModelName = z.infer<typeof agentRuntimeOpenClawModelNameSchema>;
-export type AgentRuntimeOpenClawConfig = z.infer<typeof agentRuntimeOpenClawConfigSchema>;
-export type AgentRuntimeOpenClawConfigSnapshot = z.infer<
-    typeof agentRuntimeOpenClawConfigSnapshotSchema
+export type AgentRuntimeHermesHarness = z.infer<typeof agentRuntimeHermesHarnessSchema>;
+export type AgentRuntimeHermesModelName = z.infer<typeof agentRuntimeHermesModelNameSchema>;
+export type AgentRuntimeHermesConfig = z.infer<typeof agentRuntimeHermesConfigSchema>;
+export type AgentRuntimeHermesConfigSnapshot = z.infer<
+    typeof agentRuntimeHermesConfigSnapshotSchema
 >;
-export type AgentRuntimeApplyOpenClawConfig = z.infer<typeof agentRuntimeApplyOpenClawConfigSchema>;
+export type AgentRuntimeApplyHermesConfig = z.infer<typeof agentRuntimeApplyHermesConfigSchema>;
 export type AgentRuntimeUpdateAgentName = z.infer<typeof agentRuntimeUpdateAgentNameSchema>;
 export type AgentRuntimeUpdateAgentModel = z.infer<typeof agentRuntimeUpdateAgentModelSchema>;
 export type AgentRuntimeUpdateAgentThinkingDefault = z.infer<
     typeof agentRuntimeUpdateAgentThinkingDefaultSchema
 >;
+export type AgentRuntimeUpdateAgentTools = z.infer<typeof agentRuntimeUpdateAgentToolsSchema>;
 export type AgentRuntimeSaveDiscordBinding = z.infer<typeof agentRuntimeSaveDiscordBindingSchema>;
 export type AgentRuntimeDeleteDiscordBinding = z.infer<
     typeof agentRuntimeDeleteDiscordBindingSchema

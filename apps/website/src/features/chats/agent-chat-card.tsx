@@ -56,7 +56,7 @@ export function AgentChatCard({
                 {isTavernChat ? (
                     <TavernChatPreview chatId={chat.id} />
                 ) : (
-                    <OpenClawChatPreview chat={chat} />
+                    <HermesChatPreview chat={chat} />
                 )}
             </div>
         </>
@@ -107,7 +107,7 @@ function TavernChatPreview({ chatId }: { chatId: string }) {
     );
 }
 
-function OpenClawChatPreview({ chat }: { chat: ChatListItem }) {
+function HermesChatPreview({ chat }: { chat: ChatListItem }) {
     const sessionLabel =
         chat.sessionCount === 1
             ? '1 contributing session'

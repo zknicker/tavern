@@ -25,7 +25,7 @@ capability lives; keep route and feature folders for page assembly.
 * Promote shared chat, agent, memory, automation, or stats UI to the matching
   `components/<capability>` or `hooks/<capability>` folder.
 * Composer `@` autocomplete, mention badges, mention metadata reconciliation,
-  and transcript mention rendering belong to a general `mentions` capability,
+  and transcript mention rendering belong to the mentions product area,
   not a tool-specific feature. See [Mentions](../../specs/mentions.md).
 * Keep feature folders for page-specific orchestration and local state.
 * Move chat workflow orchestration, optimistic reconciliation, and event cache

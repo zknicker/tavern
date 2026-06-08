@@ -13,7 +13,7 @@ describe('Runtime capability gates', () => {
                 runtimeVersion: '1.2.1',
                 versionStatus: 'mismatched',
             }),
-            ['status', 'chats', 'messages']
+            ['apiServer', 'gateway']
         );
 
         expect(capability.healthy).toBe(false);
@@ -27,7 +27,7 @@ describe('Runtime capability gates', () => {
                 runtimeVersion: '1.2.3',
                 versionStatus: 'mismatched',
             }),
-            ['status', 'chats', 'messages']
+            ['apiServer', 'gateway']
         );
 
         expect(capability.healthy).toBe(false);
@@ -46,11 +46,7 @@ function createRuntimeConnection(
         appVersion: '1.2.2',
         authConfigured: false,
         baseUrl: 'http://127.0.0.1:18790',
-        capabilities: [
-            createCapability('status'),
-            createCapability('chats'),
-            createCapability('messages'),
-        ],
+        capabilities: [createCapability('apiServer'), createCapability('gateway')],
         enabled: true,
         id: 'runtime',
         isActive: true,
@@ -59,11 +55,7 @@ function createRuntimeConnection(
         lastSyncedAt: null,
         name: 'Tavern Runtime',
         requiredRuntimeVersion: '1.2.2',
-        runtimeCapabilities: [
-            createCapability('status'),
-            createCapability('chats'),
-            createCapability('messages'),
-        ],
+        runtimeCapabilities: [createCapability('apiServer'), createCapability('gateway')],
         runtimeVersion: '1.2.1',
         source: 'saved',
         versionStatus: 'compatible',

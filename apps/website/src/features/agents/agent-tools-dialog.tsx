@@ -73,15 +73,14 @@ export function AgentToolsDialog({
                 <DialogHeader>
                     <DialogTitle>Agent tools</DialogTitle>
                     <DialogDescription>
-                        Tools selected here are written to {agent.name}&apos;s OpenClaw agent
-                        config.
+                        Tools selected here are written to {agent.name}&apos;s Hermes agent config.
                     </DialogDescription>
                 </DialogHeader>
                 <DialogPanel className="grid gap-4">
                     {toolPolicy.inheritedProfile ? (
                         <p className="rounded-lg border border-border bg-muted/25 px-3 py-2 text-muted-foreground text-sm">
-                            Editing converts the OpenClaw {toolPolicy.inheritedProfile} profile to
-                            an explicit per-agent allowlist.
+                            Editing converts the Hermes {toolPolicy.inheritedProfile} profile to an
+                            explicit per-agent allowlist.
                         </p>
                     ) : null}
                     <div className="grid gap-2">

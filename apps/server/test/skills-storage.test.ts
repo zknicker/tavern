@@ -32,7 +32,7 @@ ensureDatabaseSchema();
 
 test.beforeEach(() => {
     databaseClient.exec('delete from agent_runtime_connections');
-    databaseClient.exec('delete from openclaw_config_snapshots');
+    databaseClient.exec('delete from hermes_config_snapshots');
     databaseClient.exec('delete from skills');
     databaseClient.exec("delete from sync_state where kind = 'skill'");
 });

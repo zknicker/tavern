@@ -44,13 +44,12 @@ export function StartChatComposer({
 }) {
     const launchChatDraft = useChatDraftLaunch();
     const gatewayCapability = useCapability('gateway');
-    const mentionsCapability = useCapability('mentions');
-    const messagesCapability = useCapability('messages');
+    const apiCapability = useCapability('apiServer');
     const [prompt, setPrompt] = React.useState('');
     const [mentions, setMentions] = React.useState<Mention[]>([]);
 
-    const canSendToRuntime = gatewayCapability.healthy && messagesCapability.healthy;
-    const canUseMentions = Boolean(agent && mentionsCapability.healthy);
+    const canSendToRuntime = gatewayCapability.healthy && apiCapability.healthy;
+    const canUseMentions = Boolean(agent);
     const isPromptReady = prompt.trim().length > 0 && agent !== null;
     const canSubmit = isPromptReady && canSendToRuntime;
     const runtimeDisabledReason = runtimeDisconnectedTooltip;

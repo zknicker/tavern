@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { updateOpenClawAgentName } from '../../openclaw-settings/service.ts';
+import { updateHermesAgentName } from '../../hermes-settings/service.ts';
 import { publicProcedure } from '../trpc.ts';
 
 export const updateAgentNameProcedure = publicProcedure
@@ -9,4 +9,4 @@ export const updateAgentNameProcedure = publicProcedure
             name: z.string().trim().min(1).max(80),
         })
     )
-    .mutation(async ({ input }) => await updateOpenClawAgentName(input));
+    .mutation(async ({ input }) => await updateHermesAgentName(input));

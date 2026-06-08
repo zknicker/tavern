@@ -14,7 +14,7 @@ mock.module('../src/agents/catalog.ts', () => ({
             id: 'main',
             name: 'Main',
             primaryColor: null,
-            runtimeId: 'tavern-openclaw-managed',
+            runtimeId: 'tavern-hermes-managed',
             updatedAt: '2026-05-18T12:00:00.000Z',
         },
     ]),
@@ -25,6 +25,7 @@ ensureDatabaseSchema();
 const { listRuntimeChatRows, listRuntimeChatTimeline } = await import(
     '../src/chat/runtime-chat-api.ts'
 );
+const { getChatLogPage } = await import('../src/chat/log.ts');
 const { getChatToolActivity } = await import('../src/chat/tool.ts');
 
 afterEach(() => {
@@ -169,6 +170,160 @@ test('listRuntimeChatRows maps Tavern API messages and keeps preamble/reasoning 
     });
 });
 
+test('listRuntimeChatTimeline accepts Hermes custom provider message metadata', async () => {
+    await saveAgentRuntimeConnection({
+        baseUrl: 'http://runtime.test',
+        enabled: true,
+        id: 'runtime-1',
+        isActive: true,
+        lastCheckedAt: '2026-05-18T12:00:00.000Z',
+        lastError: null,
+        name: 'Runtime',
+    });
+
+    globalThis.fetch = (async (input, init) => {
+        const request = new Request(input, init);
+        const url = new URL(request.url);
+
+        if (url.pathname === '/api/chats/cht_1/messages') {
+            return Response.json({
+                messages: [
+                    chatMessage({
+                        authorId: 'usr_owner',
+                        authorKind: 'user',
+                        authorLabel: 'You',
+                        content: 'Reply exactly QA_CUSTOM_PROVIDER_OK.',
+                        id: 'msg_user',
+                        role: 'user',
+                        sequence: 1,
+                    }),
+                    chatMessage({
+                        authorId: 'agt_main',
+                        authorKind: 'agent',
+                        authorLabel: null,
+                        content: 'QA_CUSTOM_PROVIDER_OK',
+                        id: 'msg_final',
+                        metadata: {
+                            hermesModel: 'tavern-e2e-tools',
+                            hermesProvider: 'custom',
+                            model: 'tavern-e2e-tools',
+                            provider: 'custom',
+                            runtime: {
+                                agentId: 'main',
+                                runId: 'run_1',
+                                sessionKey: 'session_1',
+                            },
+                            usage: { input: 16, output: 8, total: 24 },
+                        },
+                        role: 'assistant',
+                        sequence: 2,
+                    }),
+                ],
+            });
+        }
+
+        if (url.pathname === '/api/chats/cht_1/responses') {
+            return Response.json({
+                activity: [],
+                artifacts: [],
+                next_sequence: null,
+                responses: [],
+            });
+        }
+
+        throw new Error(`Unexpected Tavern API request: ${url.pathname}`);
+    }) as typeof fetch;
+
+    const timeline = await listRuntimeChatTimeline('cht_1');
+
+    expect(timeline?.rows.find((row) => row.id === 'msg_final')).toMatchObject({
+        kind: 'message',
+        message: {
+            content: 'QA_CUSTOM_PROVIDER_OK',
+            metadata: {
+                hermesProvider: 'custom',
+                provider: 'custom',
+            },
+        },
+    });
+});
+
+test('getChatLogPage preserves completed openai-codex Hermes provider metadata', async () => {
+    await saveAgentRuntimeConnection({
+        baseUrl: 'http://runtime.test',
+        enabled: true,
+        id: 'runtime-1',
+        isActive: true,
+        lastCheckedAt: '2026-05-18T12:00:00.000Z',
+        lastError: null,
+        name: 'Runtime',
+    });
+
+    globalThis.fetch = (async (input, init) => {
+        const request = new Request(input, init);
+        const url = new URL(request.url);
+
+        if (url.pathname === '/api/chats/cht_1/messages') {
+            return Response.json({
+                messages: [
+                    chatMessage({
+                        authorId: 'usr_owner',
+                        authorKind: 'user',
+                        authorLabel: 'You',
+                        content: 'Hello',
+                        id: 'msg_user',
+                        role: 'user',
+                        sequence: 1,
+                    }),
+                    chatMessage({
+                        authorId: 'agt_main',
+                        authorKind: 'agent',
+                        authorLabel: null,
+                        content: 'Hi.',
+                        id: 'msg_final',
+                        metadata: {
+                            hermesModel: 'gpt-5.5-codex',
+                            hermesProvider: 'openai-codex',
+                            model: 'gpt-5.5-codex',
+                            provider: 'openai-codex',
+                            runtime: {
+                                agentId: 'main',
+                                runId: 'run_1',
+                                sessionKey: 'session_1',
+                            },
+                        },
+                        role: 'assistant',
+                        sequence: 2,
+                    }),
+                ],
+            });
+        }
+
+        if (url.pathname === '/api/chats/cht_1/responses') {
+            return Response.json({
+                activity: [],
+                artifacts: [],
+                next_sequence: null,
+                responses: [],
+            });
+        }
+
+        throw new Error(`Unexpected Tavern API request: ${url.pathname}`);
+    }) as typeof fetch;
+
+    const page = await getChatLogPage({ id: 'cht_1', limit: 100 });
+
+    expect(page.rows.find((row) => row.id === 'msg_final')).toMatchObject({
+        kind: 'message',
+        message: {
+            metadata: {
+                hermesProvider: 'openai-codex',
+                provider: 'openai-codex',
+            },
+        },
+    });
+});
+
 test('listRuntimeChatRows maps Tavern API artifacts into chat timeline rows', async () => {
     await saveAgentRuntimeConnection({
         baseUrl: 'http://runtime.test',
@@ -201,7 +356,7 @@ test('listRuntimeChatRows maps Tavern API artifacts into chat timeline rows', as
                         id: 'art_report_1',
                         kind: 'document',
                         message_id: null,
-                        metadata: { runtime: { source: 'openclaw' } },
+                        metadata: { runtime: { source: 'hermes' } },
                         mime_type: 'text/markdown',
                         response_id: 'rsp_run_1',
                         title: 'Report',
@@ -243,7 +398,7 @@ test('listRuntimeChatRows maps Tavern API artifacts into chat timeline rows', as
                 payload: {
                     contentRef: 'file:///tmp/report.md',
                     contentText: '# Report',
-                    metadata: { runtime: { source: 'openclaw' } },
+                    metadata: { runtime: { source: 'hermes' } },
                     title: 'Report',
                 },
             },
@@ -425,7 +580,7 @@ test('listRuntimeChatRows preserves durable activity titles for tool rows', asyn
     ]);
 });
 
-test('listRuntimeChatRows includes running durable activity as active tool rows', async () => {
+test('listRuntimeChatRows includes running assistant message activity as prose rows', async () => {
     await saveAgentRuntimeConnection({
         baseUrl: 'http://runtime.test',
         enabled: true,
@@ -489,13 +644,12 @@ test('listRuntimeChatRows includes running durable activity as active tool rows'
 
     expect(rows).toMatchObject([
         {
-            completedAt: null,
             id: 'act_assistant_reply_1',
-            kind: 'tool',
-            toolCall: {
-                label: 'Assistant reply',
-                name: 'message',
-                summaryParts: ['I will run a timed shell check before the final reply.'],
+            kind: 'message',
+            message: {
+                content: 'I will run a timed shell check before the final reply.',
+                senderType: 'agent',
+                sourceSessionKey: 'session_1',
             },
         },
     ]);
@@ -721,6 +875,7 @@ function chatMessage(input: {
     authorLabel: string | null;
     content: string;
     id: string;
+    metadata?: Record<string, unknown>;
     role: 'assistant' | 'system' | 'user';
     sequence: number;
 }) {
@@ -738,7 +893,7 @@ function chatMessage(input: {
         deleted_at: null,
         delivery_id: input.role === 'assistant' ? 'del_1' : null,
         id: input.id,
-        metadata: {
+        metadata: input.metadata ?? {
             runtime: {
                 agentId: 'main',
                 runId: 'run_1',

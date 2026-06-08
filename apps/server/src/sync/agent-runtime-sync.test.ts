@@ -46,7 +46,7 @@ test('syncAgentRuntimeSession projects only the requested session', async () => 
                 };
             },
         },
-        runtimeId: 'openclaw-local',
+        runtimeId: 'hermes-local',
         sessionKey: 'agent:main:tavern:channel:second-chat',
         syncedAt: '2026-05-13T12:02:00.000Z',
     });
@@ -84,7 +84,7 @@ test('syncAgentRuntimeSessionMessagesWithRetry retries empty history', async () 
             },
         },
         retryDelaysMs: [1],
-        runtimeId: 'openclaw-local',
+        runtimeId: 'hermes-local',
         sessionKey,
     });
 
@@ -122,7 +122,7 @@ test('syncAgentRuntimeSessionMessages reads accepted Tavern prompts by stable me
                         }),
                         createMessage({
                             agentId: 'main',
-                            chatId: `openclaw:${sessionKey}`,
+                            chatId: `hermes:${sessionKey}`,
                             content: 'Reply.',
                             id: 'assistant-message',
                             sender: 'assistant',
@@ -135,7 +135,7 @@ test('syncAgentRuntimeSessionMessages reads accepted Tavern prompts by stable me
                 };
             },
         },
-        runtimeId: 'openclaw-local',
+        runtimeId: 'hermes-local',
         sessionKey,
     });
 
@@ -150,7 +150,7 @@ test('syncAgentRuntimeSessionMessages reads accepted Tavern prompts by stable me
     );
 });
 
-test('syncAgentRuntimeAgents does not overwrite workspace file content from profile instructions', async () => {
+test('syncAgentRuntimeAgents syncs managed workspace instructions', async () => {
     let savedInstructions: unknown = null;
 
     await runtimeSync.syncAgentWorkspaceInstructions({
@@ -177,7 +177,7 @@ test('syncAgentRuntimeAgents does not overwrite workspace file content from prof
                 };
             },
         } as unknown as TavernAgentRuntimeClient,
-        runtimeId: 'openclaw-local',
+        runtimeId: 'hermes-local',
     });
 
     assert.deepEqual(savedInstructions, {
@@ -213,7 +213,7 @@ test('syncAgentRuntimeAgents refreshes workspace instruction names without a pro
                 };
             },
         } as unknown as TavernAgentRuntimeClient,
-        runtimeId: 'openclaw-local',
+        runtimeId: 'hermes-local',
     });
 
     assert.deepEqual(savedInstructions, {

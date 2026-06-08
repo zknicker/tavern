@@ -1,23 +1,15 @@
-import { randomUUID } from 'node:crypto';
 import {
     type AgentRuntimeCreateMessage,
     type AgentRuntimeMessageAccepted,
     agentRuntimeCreateMessageSchema,
     agentRuntimeMessageAcceptedSchema,
     agentRuntimeRoutes,
-    type TavernChannelInboundMessage,
     tavernChannelClientFrameSchema,
 } from '@tavern/api';
-import { WebSocket } from 'ws';
-import {
-    listPendingTavernInboundMessages,
-    markTavernInboundMessageAccepted,
-    persistTavernInboundMessage,
-} from './channel-store';
-import { createMessage, getChat, upsertResponse } from './chat-api';
-import { createAgentParticipantId } from './chat-api/ids';
-
-const defaultAccountId = 'default';
+import type { WebSocket } from 'ws';
+import { createMessage, upsertResponse } from './chat-api';
+import { createAgentParticipantId, createRunId } from './chat-api/ids';
+import { runHermesTurn } from './hermes-turn-runner';
 
 const sockets = new Set<WebSocket>();
 
@@ -35,7 +27,6 @@ export function isTavernChannelSocketPath(requestUrl: string | undefined) {
 
 export function attachTavernChannelSocket(socket: WebSocket) {
     sockets.add(socket);
-    flushPendingInboundMessages(socket);
 
     socket.on('message', (data) => {
         try {
@@ -55,16 +46,18 @@ export async function sendTavernChannelMessage(
     const sessionKey = payload.target.sessionKey;
 
     if (!sessionKey) {
-        throw new Error('Tavern messages require a synced OpenClaw session key.');
+        throw new Error('Tavern messages require a synced Hermes session key.');
     }
     if (payload.target.type !== 'channel' && payload.target.type !== 'tavern') {
-        throw new Error('Tavern OpenClaw messenger currently supports only root chat messages.');
+        throw new Error('Tavern Hermes adapter currently supports only root chat messages.');
     }
     if (payload.message.parentMessageId || payload.message.threadRootId) {
-        throw new Error('Tavern OpenClaw messenger currently supports only root chat messages.');
+        throw new Error('Tavern Hermes adapter currently supports only root chat messages.');
     }
 
-    const requestId = randomUUID();
+    const acceptedAt = new Date().toISOString();
+    const runId = createRunId(payload.message.id);
+    const responseId = createResponseId(runId);
     const messageReceipt = createMessage(chatId, {
         author_id: 'usr_tavern',
         id: payload.message.id,
@@ -73,116 +66,63 @@ export async function sendTavernChannelMessage(
             runtime: {
                 agentId: payload.agent.agentId,
                 sessionKey,
-                source: 'openclaw',
+                source: 'hermes',
             },
         },
         content: payload.message.content,
         nonce: payload.message.nonce,
         role: 'user',
     });
-    const chat = getChat(chatId);
-    const persisted = persistTavernInboundMessage({
-        accountId: defaultAccountId,
-        agentId: payload.agent.agentId,
-        chatId,
-        conversation: buildTavernChannelConversation(chatId, chat?.metadata ?? {}, chat?.pinned),
-        cursor: messageReceipt.cursor,
-        messageId: messageReceipt.message.id,
-        requestId,
-        sessionKey,
-    });
     upsertResponse(chatId, {
-        id: createResponseId(persisted.runId),
+        id: responseId,
         metadata: {
             runtime: {
                 agentId: payload.agent.agentId,
-                messageId: persisted.messageId,
-                runId: persisted.runId,
+                messageId: messageReceipt.message.id,
+                runId,
                 sessionKey,
-                source: 'openclaw',
-                startedAt: persisted.acceptedAt,
+                source: 'hermes',
+                startedAt: acceptedAt,
             },
         },
         participant_id: createAgentParticipantId(payload.agent.agentId),
-        request_message_id: persisted.messageId,
+        request_message_id: messageReceipt.message.id,
         status: 'running',
     });
-    const socket = findOpenSocket();
-    if (socket) {
-        sendFrame(socket, persisted.frame);
-    }
+
+    void runHermesTurn({
+        agentId: payload.agent.agentId,
+        chatId,
+        content: payload.message.content,
+        requestMessageId: messageReceipt.message.id,
+        responseId,
+        runId,
+        sessionKey,
+    });
 
     return agentRuntimeMessageAcceptedSchema.parse({
-        acceptedAt: persisted.acceptedAt,
-        cursor: persisted.cursor,
-        messageId: persisted.messageId,
-        nonce: persisted.frame.message.nonce,
-        runId: persisted.runId,
-        sequence: persisted.sequence,
-        sessionKey: persisted.sessionKey,
+        acceptedAt,
+        cursor: Number(messageReceipt.cursor),
+        messageId: messageReceipt.message.id,
+        nonce: payload.message.nonce,
+        runId,
+        sequence: messageReceipt.message.sequence,
+        sessionKey,
         status: 'accepted',
     });
-}
-
-function buildTavernChannelConversation(
-    chatId: string,
-    metadata: Record<string, unknown>,
-    pinned = false
-) {
-    const tavern =
-        metadata.tavern && typeof metadata.tavern === 'object' && !Array.isArray(metadata.tavern)
-            ? (metadata.tavern as Record<string, unknown>)
-            : {};
-    const displayName = readNonEmptyString(tavern.displayName);
-    const displayNameSource = tavern.displayNameSource === 'explicit' ? 'explicit' : 'generated';
-    const label = pinned || displayNameSource === 'explicit' ? displayName : null;
-    const groupSystemPrompt = pinned ? readNonEmptyString(tavern.groupSystemPrompt) : null;
-
-    return {
-        id: chatId,
-        kind: 'channel' as const,
-        label,
-        ...(label ? { groupChannel: label, groupSubject: label } : {}),
-        ...(groupSystemPrompt ? { groupSystemPrompt } : {}),
-        parentId: null,
-        threadRootId: null,
-    };
-}
-
-function readNonEmptyString(value: unknown) {
-    return typeof value === 'string' && value.trim() ? value.trim() : null;
 }
 
 function handleClientFrame(value: unknown) {
     const frame = tavernChannelClientFrameSchema.parse(value);
 
     if (frame.kind === 'message-accepted') {
-        const accepted = agentRuntimeMessageAcceptedSchema.parse(frame.accepted);
-        markTavernInboundMessageAccepted(frame.requestId, accepted.acceptedAt);
+        agentRuntimeMessageAcceptedSchema.parse(frame.accepted);
         return;
     }
 
     if (frame.kind === 'runtime-log') {
         console.warn('[tavern-runtime] Tavern channel relay event', frame.event, frame.payload);
     }
-}
-
-function flushPendingInboundMessages(socket: WebSocket) {
-    for (const frame of listPendingTavernInboundMessages()) {
-        sendFrame(socket, frame);
-    }
-}
-
-function findOpenSocket() {
-    return [...sockets].find((candidate) => candidate.readyState === WebSocket.OPEN) ?? null;
-}
-
-function sendFrame(socket: WebSocket, frame: TavernChannelInboundMessage) {
-    socket.send(JSON.stringify(frame), (error) => {
-        if (error) {
-            console.warn('[tavern-runtime] failed to send Tavern channel frame', error);
-        }
-    });
 }
 
 function createResponseId(runId: string) {

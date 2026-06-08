@@ -19,7 +19,6 @@
     "@tavern/api": "workspace:*",
     "@tavern/claude-usage": "workspace:*",
     "@tavern/codex-usage": "workspace:*",
-    "@tavern/openclaw-gateway-adapter": "workspace:*",
     "@tavern/sdk": "workspace:*",
     "@trpc/server": "11.12.0",
     "bottleneck": "2.19.5",

@@ -19,65 +19,46 @@ export interface CapabilityView {
 
 const runtimeDisconnectedReason = 'Tavern Runtime is disconnected.';
 const capabilityLabels = {
-    agentFiles: 'Agent Files',
-    agentTurns: 'Agent Turns',
-    agents: 'Agents',
-    chatTargets: 'Chat Targets',
-    chats: 'Chats',
+    apiServer: 'Hermes API Server',
     codexOAuth: 'Codex OAuth',
-    computerUse: 'Computer Use',
-    cortexAgentTools: 'Cortex Agent Tools',
     cortexDatabase: 'Cortex Database',
     cortexImportProcessors: 'Cortex Import Processors',
     cortexJobs: 'Cortex Jobs',
     cortexModelAccess: 'Cortex Model Access',
     cortexWiki: 'Cortex Wiki',
-    cron: 'Cron',
-    cronRuns: 'Cron Runs',
+    dashboardServer: 'Hermes Dashboard Server',
     embeddingModel: 'Embedding Model',
-    events: 'Events',
-    gateway: 'Gateway',
-    knowledgebase: 'Knowledgebase',
-    logs: 'Logs',
-    memory: 'Memory',
-    mentions: 'Mentions',
-    messages: 'Messages',
+    gateway: 'Hermes Gateway',
     models: 'Models',
-    sessionEvents: 'Session Events',
-    sessions: 'Sessions',
-    skillMaterialization: 'Skill Materialization',
     skills: 'Skills',
-    status: 'Status',
-    tasks: 'Tasks',
-    tavernPlugin: 'Tavern Plugin',
 } satisfies Record<RuntimeCapabilityId, string>;
 
 export const settingsCapabilityRequirements = {
     'agent-runtime': [],
-    agent: ['status', 'agents'],
-    'agents-md': ['status', 'agents', 'agentFiles'],
+    agent: ['apiServer', 'models'],
+    'agents-md': [],
     appearance: [],
-    'identity-md': ['status', 'agents', 'agentFiles'],
-    jobs: ['status', 'tasks', 'cron', 'cronRuns'],
-    memories: ['status', 'cortexDatabase', 'cortexWiki'],
-    models: ['status', 'models'],
+    'identity-md': [],
+    jobs: [],
+    memories: ['cortexDatabase', 'cortexWiki'],
+    models: ['apiServer', 'models'],
     participants: [],
-    sessions: ['status', 'sessions', 'sessionEvents'],
-    skills: ['status', 'skills', 'skillMaterialization'],
-    'soul-md': ['status', 'agents', 'agentFiles'],
-    stats: ['status'],
-    'tools-md': ['status', 'agents', 'agentFiles'],
-    'user-md': ['status', 'agents', 'agentFiles'],
+    sessions: ['apiServer'],
+    skills: ['apiServer', 'skills'],
+    'soul-md': [],
+    stats: [],
+    'tools-md': [],
     updates: [],
+    'user-md': [],
 } as const satisfies Record<string, readonly RuntimeCapabilityId[]>;
 
 export const routeTabCapabilityRequirements = {
-    cortex: ['status', 'cortexDatabase', 'cortexWiki', 'knowledgebase'],
-    cron: ['status', 'tasks', 'cron', 'cronRuns'],
+    cortex: ['cortexDatabase', 'cortexWiki'],
+    cron: [],
     overview: [],
 } as const satisfies Record<RouteTab, readonly RuntimeCapabilityId[]>;
 
-export const newChatCapabilityRequirements = ['status', 'chats', 'messages', 'agents'] as const;
+export const newChatCapabilityRequirements = ['apiServer', 'gateway'] as const;
 
 export function getCapability(
     connection: AgentRuntimeConnectionOutput,

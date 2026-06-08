@@ -1,12 +1,6 @@
 import fs from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
-import {
-    recordCapabilityFailure,
-    recordCapabilityStatus,
-    recordCapabilitySuccess,
-} from '../../agent-runtime/capability-status.ts';
-import { getAgentRuntimeConnection } from '../../agent-runtime-connection/service.ts';
 import { publicProcedure } from '../trpc.ts';
 import {
     type ComputerUseAppInventory,
@@ -32,11 +26,6 @@ const codexBundledPluginRoot = path.join(
     'openai-bundled'
 );
 const codexBundledMarketplace = 'openai-bundled';
-const computerUseCapabilityMethod = 'computer-use.list-apps';
-const mentionCapabilityMethod = 'mention.list';
-const mentionCapabilitySuccessTtlMs = 30_000;
-let nextMentionCapabilitySuccessRecordAt = 0;
-let nextComputerUseCapabilityRecordAt = 0;
 
 export const listMentionOptionsProcedure = publicProcedure
     .input(listMentionOptionsInputSchema)
@@ -45,23 +34,15 @@ export const listMentionOptionsProcedure = publicProcedure
         const parsed = listMentionOptionsInputSchema.parse(input);
         const query = parsed?.query ?? '';
         const limit = parsed?.limit ?? 12;
-        try {
-            const computerUseAppInventory = await listComputerUseApps({ query });
-            const options = await buildMentionOptions({
-                agentId: parsed?.agentId,
-                computerUseAppInventory,
-                limit,
-                query,
-            });
+        const computerUseAppInventory = await listComputerUseApps({ query });
+        const options = await buildMentionOptions({
+            agentId: parsed?.agentId,
+            computerUseAppInventory,
+            limit,
+            query,
+        });
 
-            await recordComputerUseCapability(computerUseAppInventory);
-            await recordMentionCapabilitySuccess();
-
-            return { options, query };
-        } catch (error) {
-            await recordMentionCapabilityFailure(error);
-            throw error;
-        }
+        return { options, query };
     });
 
 export const listMentionInventoryProcedure = publicProcedure
@@ -71,22 +52,14 @@ export const listMentionInventoryProcedure = publicProcedure
         const parsed = listMentionInventoryInputSchema.parse(input);
         const limit = parsed?.limit ?? 120;
 
-        try {
-            const computerUseAppInventory = await listComputerUseApps();
-            const options = await buildMentionInventory({
-                agentId: parsed?.agentId,
-                computerUseAppInventory,
-                limit,
-            });
+        const computerUseAppInventory = await listComputerUseApps();
+        const options = await buildMentionInventory({
+            agentId: parsed?.agentId,
+            computerUseAppInventory,
+            limit,
+        });
 
-            await recordComputerUseCapability(computerUseAppInventory);
-            await recordMentionCapabilitySuccess();
-
-            return { options };
-        } catch (error) {
-            await recordMentionCapabilityFailure(error);
-            throw error;
-        }
+        return { options };
     });
 
 export const listMentionPathOptionsProcedure = publicProcedure
@@ -95,20 +68,13 @@ export const listMentionPathOptionsProcedure = publicProcedure
     .query(async ({ input }) => {
         const parsed = listMentionPathOptionsInputSchema.parse(input);
 
-        try {
-            const options = await listWorkspacePathMentionOptions({
-                agentId: parsed.agentId,
-                limit: parsed.limit,
-                query: parsed.query,
-            });
+        const options = await listWorkspacePathMentionOptions({
+            agentId: parsed.agentId,
+            limit: parsed.limit,
+            query: parsed.query,
+        });
 
-            await recordMentionCapabilitySuccess();
-
-            return { options, query: parsed.query };
-        } catch (error) {
-            await recordMentionCapabilityFailure(error);
-            throw error;
-        }
+        return { options, query: parsed.query };
     });
 
 export async function buildMentionOptions({
@@ -385,79 +351,4 @@ function titleizeName(name: string) {
         .filter(Boolean)
         .map((word) => `${word.slice(0, 1).toUpperCase()}${word.slice(1)}`)
         .join(' ');
-}
-
-async function recordMentionCapabilitySuccess() {
-    const now = Date.now();
-
-    if (now < nextMentionCapabilitySuccessRecordAt) {
-        return;
-    }
-
-    const connection = await getAgentRuntimeConnection();
-
-    if (!connection) {
-        return;
-    }
-
-    await recordCapabilitySuccess({
-        capability: 'mentions',
-        method: mentionCapabilityMethod,
-        runtimeId: connection.id,
-    });
-    nextMentionCapabilitySuccessRecordAt = now + mentionCapabilitySuccessTtlMs;
-}
-
-async function recordMentionCapabilityFailure(error: unknown) {
-    const connection = await getAgentRuntimeConnection();
-
-    if (!connection) {
-        return;
-    }
-
-    await recordCapabilityFailure({
-        capability: 'mentions',
-        error,
-        method: mentionCapabilityMethod,
-        runtimeId: connection.id,
-    });
-}
-
-async function recordComputerUseCapability(inventory: ComputerUseAppInventory) {
-    const now = Date.now();
-
-    if (now < nextComputerUseCapabilityRecordAt) {
-        return;
-    }
-
-    const connection = await getAgentRuntimeConnection();
-
-    if (!connection) {
-        return;
-    }
-
-    nextComputerUseCapabilityRecordAt = now + mentionCapabilitySuccessTtlMs;
-
-    if (inventory.status === 'ready') {
-        await recordCapabilitySuccess({
-            capability: 'computerUse',
-            method: computerUseCapabilityMethod,
-            runtimeId: connection.id,
-        });
-        return;
-    }
-
-    await recordCapabilityStatus({
-        capability: 'computerUse',
-        errorCode: 'computer_use_app_inventory_unavailable',
-        metadataJson: JSON.stringify({
-            entries: inventory.entries.length,
-            source: inventory.source,
-        }),
-        method: computerUseCapabilityMethod,
-        reason: 'Computer Use app inventory is unavailable.',
-        runtimeId: connection.id,
-        state: 'unavailable',
-        technicalMessage: `Computer Use app inventory source: ${inventory.source}.`,
-    });
 }

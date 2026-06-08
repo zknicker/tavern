@@ -1,11 +1,7 @@
 import { ArrowLeftRightIcon } from '@hugeicons/core-free-icons';
 import { cn } from '../../lib/utils.ts';
 import { Icon } from '../ui/icon.tsx';
-import {
-    getChatDisplayTitle,
-    isRuntimeDm,
-    resolveTavernChatName,
-} from './chat-display.ts';
+import { getChatDisplayTitle, isRuntimeDm, resolveTavernChatName } from './chat-display.ts';
 
 interface ChatTitleChat {
     conversationKind: 'channel' | 'direct' | 'group' | 'topic';

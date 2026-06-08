@@ -209,7 +209,7 @@ test('ChatCardHeader omits duplicate badges for system sessions', () => {
                 framework: 'agentRuntime',
                 hasActiveTurn: false,
                 hasActivity: true,
-                id: 'runtime:openclaw:internal:agent:main:main',
+                id: 'runtime:hermes:internal:agent:main:main',
                 isDisabled: true,
                 isEnabled: false,
                 isPinned: false,
@@ -221,7 +221,7 @@ test('ChatCardHeader omits duplicate badges for system sessions', () => {
                     lastActivityAt: '2026-05-08T18:10:15.508Z',
                     platform: 'webchat',
                     sessionKey: 'agent:main:main',
-                    title: 'openclaw-tui',
+                    title: 'hermes-tui',
                 },
                 participants: [],
                 agentRuntimeSync: null,
@@ -234,7 +234,7 @@ test('ChatCardHeader omits duplicate badges for system sessions', () => {
                 tabAppearance: { color: null },
                 targetParticipant: null,
                 title: 'System session',
-                type: 'openclaw',
+                type: 'hermes',
             }}
         />
     );

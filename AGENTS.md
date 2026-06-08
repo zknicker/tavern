@@ -12,14 +12,14 @@ Always-on Tavern guidance for AI coding assistants.
 
 ## Architecture Map
 
-Tavern has three first-party layers plus OpenClaw execution.
+Tavern has three first-party layers plus Hermes execution.
 
 | Layer | Owns |
 | --- | --- |
-| Tavern Runtime | Canonical chats, messages, participants, events, reads, automations, deliveries, runtime activity, Cortex storage, managed OpenClaw startup, and Tavern tools. |
+| Tavern Runtime | Canonical chats, messages, participants, events, reads, automations, deliveries, runtime activity, Cortex storage, managed Hermes startup, and Tavern tools. |
 | Tavern App | The Electron/React product surface, local presentation, app cache, profiles, participant links, app settings, optimistic UI, and tRPC client behavior. |
 | Tavern API / SDK | Stable contracts for chats, realtime, admin/runtime control, automations, Cortex, memory inspection, skills, stats, and external clients. |
-| OpenClaw | Native agent execution: agents, sessions, turns, transcripts, files, tools, model calls, context management, and Gateway behavior. |
+| Hermes | Native agent execution: agents, sessions, turns, transcripts, files, tools, model calls, context management, and Gateway behavior. |
 
 Use product nouns directly:
 
@@ -27,8 +27,8 @@ Use product nouns directly:
 - A `session` is one runtime agent's durable conversation or execution record inside a chat.
 - A `turn` is one execution inside a session.
 - Tavern chat history is canonical Tavern Runtime state.
-- OpenClaw transcripts are execution evidence, not the product timeline.
-- Cortex is Tavern's durable knowledge and memory store. Context management belongs to OpenClaw.
+- Hermes transcripts are execution evidence, not the product timeline.
+- Cortex is Tavern's durable knowledge and memory store. Context management belongs to Hermes.
 
 ## Docs Routing
 
@@ -89,9 +89,9 @@ so `docs:list` routes future agents correctly.
   to shared records when a focused query can expose that activity.
 - Keep optimistic chat rows app-local. Do not patch durable chat history to show optimistic rows.
 - Keep hooks granular and capability-first under `apps/website/src/hooks/<capability>`.
-- Runtime and managed OpenClaw feature gates must use Runtime capabilities as the singular
+- Runtime and managed Hermes feature gates must use Runtime capabilities as the singular
   readiness contract. Do not gate app behavior on app-local connection `lastError`, sync
-  timestamps, process guesses, or cached OpenClaw state. Add a Runtime capability when the
+  timestamps, process guesses, or cached Hermes state. Add a Runtime capability when the
   requirement is not represented. Prefer primitive capability gates such as `gateway` over
   umbrella feature names.
 - Prefer COSS UI components backed by Base UI for shared app primitives. Do not add new shadcn or
@@ -102,7 +102,7 @@ so `docs:list` routes future agents correctly.
 ## Runtime And Data
 
 - Runtime owns canonical chat records, durable events, activity state, Cortex storage, managed
-  OpenClaw startup, and runtime tools.
+  Hermes startup, and runtime tools.
 - App storage is cache, settings, profiles, local presentation state, and runtime evidence views.
 - Runtime adapters project Tavern primitives plus source facts. They must not author final Tavern
   presentation such as display names or fake chat workspace folders.
@@ -145,18 +145,19 @@ so `docs:list` routes future agents correctly.
 - Update `.env.example` when environment variables change.
 - If requirements are unclear, update the relevant spec and ask.
 
-## OpenClaw Work
+## Hermes Work
 
-- Tavern Runtime owns the local first-party plugin lifecycle for managed OpenClaw.
-- Dev stack startup builds `packages/tavern-openclaw-messenger`,
-  `packages/tavern-openclaw-cortex`, and `packages/tavern-openclaw-workspace`, then Runtime syncs
-  them into `/Users/zknicker/.tavern/openclaw-plugins/`.
-- Do not restart or deploy to the global `~/.openclaw` Gateway for local Tavern Runtime work; it
-  conflicts with the managed Gateway port.
-- For first-party OpenClaw plugin changes, run the normal runtime dev stack or
-  `bun run --filter @tavern/runtime build` to verify the plugin lifecycle.
-- For Gateway method, event, chat, session, or turn semantics, treat shipped OpenClaw web/operator
-  behavior as the contract. Use the installed method list, relevant `node_modules/openclaw/docs/web`
+- Tavern Runtime owns managed Hermes startup, model config, capability checks, and the Tavern
+  chat-to-Hermes adapter.
+- The current adapter lives in `apps/runtime/src/hermes/` and
+  `apps/runtime/src/tavern/hermes-turn-runner.ts`; there is no first-party Hermes plugin package in
+  `packages/`.
+- Do not restart or deploy to the global `~/.hermes` Gateway for local Tavern Runtime work; it
+  conflicts with managed dev ports and bypasses worktree-isolated state.
+- For managed Hermes changes, run the normal runtime dev stack or
+  `bun run --filter @tavern/runtime build` to verify Runtime startup and adapter code.
+- For Gateway method, event, chat, session, or turn semantics, treat shipped Hermes web/operator
+  behavior as the contract. Use the installed method list, relevant `node_modules/hermes/docs/web`
   docs, or targeted bundle inspection only when a concrete ambiguity remains.
 - When Tavern depends on a specific Gateway RPC, event shape, or delivery behavior, add or update a
   focused raw-frame or fixture-backed test. Do not rely on memory for event names or payload shape.

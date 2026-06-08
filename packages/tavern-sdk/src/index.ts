@@ -1,6 +1,6 @@
 export type {
-    TavernArtifact,
     TavernApiSchema,
+    TavernArtifact,
     TavernChat,
     TavernChatEvent,
     TavernChatMessage,

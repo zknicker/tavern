@@ -15,7 +15,7 @@ const emitChatUpdated = mock(() => undefined);
 const emitCronUpdated = mock(() => undefined);
 const emitJobsUpdated = mock(() => undefined);
 const emitModelUpdated = mock(() => undefined);
-const emitOpenClawConfigUpdated = mock(() => undefined);
+const emitHermesConfigUpdated = mock(() => undefined);
 const emitOpenRouterSettingsInvalidationCascade = mock(() => undefined);
 const emitOpenRouterSettingsUpdated = mock(() => undefined);
 const emitSessionUpdated = mock(() => undefined);
@@ -55,7 +55,7 @@ mock.module('../src/api/invalidation-events.ts', () => ({
     emitCronUpdated,
     emitJobsUpdated,
     emitModelUpdated,
-    emitOpenClawConfigUpdated,
+    emitHermesConfigUpdated,
     emitOpenRouterSettingsInvalidationCascade,
     emitOpenRouterSettingsUpdated,
     emitSessionUpdated,
@@ -107,7 +107,7 @@ beforeEach(async () => {
     emitCronUpdated.mockClear();
     emitJobsUpdated.mockClear();
     emitModelUpdated.mockClear();
-    emitOpenClawConfigUpdated.mockClear();
+    emitHermesConfigUpdated.mockClear();
     emitOpenRouterSettingsInvalidationCascade.mockClear();
     emitOpenRouterSettingsUpdated.mockClear();
     emitSessionUpdated.mockClear();

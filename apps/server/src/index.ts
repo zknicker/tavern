@@ -26,6 +26,7 @@ import {
     shortenHomePath,
 } from './startup-log.ts';
 import { listConfiguredAgentRuntimeConnections } from './storage/agent-runtime-connections.ts';
+import { syncAgentRuntimeAgents } from './sync/agent-runtime-sync.ts';
 
 async function start() {
     startOrphanExitWatch({
@@ -66,6 +67,11 @@ async function start() {
     }));
 
     await startJobsManager();
+    if (agentRuntimeReachable) {
+        await syncAgentRuntimeAgents().catch((error) => {
+            console.warn('[tavern] failed to sync runtime agents on startup', error);
+        });
+    }
 
     await app.listen({
         host: '0.0.0.0',

@@ -11,7 +11,7 @@ import { Input } from '../../../components/ui/primitives/input.tsx';
 import { SettingsItem, SettingsRow } from '../../../components/ui/settings-row.tsx';
 import { useConnectAgentRuntime } from '../../../hooks/connections/use-connect-agent-runtime.ts';
 import { type AgentRuntimeConnectionOutput, trpc } from '../../../lib/trpc.tsx';
-import { OpenClawCapabilitiesSummary } from './openclaw-capabilities-table.tsx';
+import { HermesCapabilitiesSummary } from './hermes-capabilities-table.tsx';
 
 interface AgentRuntimeSettingsPanelProps {
     runtime: AgentRuntimeConnectionOutput;
@@ -34,7 +34,7 @@ function CapabilitySection({
 }) {
     return (
         <div>
-            <OpenClawCapabilitiesSummary
+            <HermesCapabilitiesSummary
                 capabilities={capabilities}
                 emptyLabel={emptyLabel}
                 onCapabilityClick={onCapabilityClick}
@@ -137,7 +137,7 @@ function MissingRuntimeRow() {
             <h3 className="font-medium text-foreground text-sm">Tavern Runtime</h3>
             <p className="text-muted-foreground text-sm">
                 No managed runtime has reported status yet. Start Tavern through the desktop app or
-                the local dev stack so the server can discover the managed OpenClaw runtime.
+                the local dev stack so the server can discover the managed Hermes runtime.
             </p>
         </SettingsItem>
     );

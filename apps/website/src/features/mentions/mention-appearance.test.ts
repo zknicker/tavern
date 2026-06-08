@@ -17,7 +17,7 @@ describe('mention appearance', () => {
 
     it('resolves bundled GitHub skills to branded presentation', () => {
         const input = {
-            id: '/Users/zknicker/.tavern/runtime/openclaw/versions/2026.5.12/node_modules/openclaw/skills/github/SKILL.md',
+            id: '/Users/zknicker/.tavern/runtime/hermes/versions/2026.5.12/node_modules/hermes/skills/github/SKILL.md',
             kind: 'skill' as const,
             label: 'github',
         };
@@ -34,7 +34,7 @@ describe('mention appearance', () => {
     it('resolves specialized GitHub workflow skills without changing their kind', () => {
         expect(
             getMentionAppearance({
-                id: '/Users/zknicker/.tavern/runtime/openclaw/versions/2026.5.12/node_modules/openclaw/skills/gh-issues/SKILL.md',
+                id: '/Users/zknicker/.tavern/runtime/hermes/versions/2026.5.12/node_modules/hermes/skills/gh-issues/SKILL.md',
                 kind: 'skill',
                 label: 'gh-issues',
             })

@@ -17,7 +17,7 @@ even when local implementation details move between tRPC, HTTP routes, SQLite,
 runtime adapters, and app caches.
 
 ```text
-Tavern App, bot, webhook, automation, managed OpenClaw, or local tool
+Tavern App, bot, webhook, automation, managed Hermes, or local tool
   -> TypeScript SDK or app backend proxy
   -> Tavern API
   -> Tavern Runtime
@@ -32,7 +32,7 @@ cache, and shape data for React, but it does not define a separate product API.
   public HTTP chat, message, response, activity, artifact, read, delivery,
   event, and error shapes.
 * **Typed contracts for admin.** `packages/tavern-api/src/runtime/*`
-  owns health, status, managed OpenClaw, agents, sessions, cron, skills, models,
+  owns health, status, managed Hermes, agents, sessions, cron, skills, models,
   memory, files, and bindings.
 * **Runtime handlers.** Tavern Runtime returns Tavern API-shaped payloads.
 * **SDK wrapper.** `@tavern/sdk` wraps fetch and WebSocket calls with typed
@@ -61,12 +61,12 @@ cache, and shape data for React, but it does not define a separate product API.
 | --- | --- | --- |
 | OpenAPI contract | `packages/tavern-api/openapi.yaml` | Chat and realtime wire objects, operations, receipts, events, and errors |
 | Generated API types | `packages/tavern-api/src/generated/openapi.d.ts` | TypeScript contract generated from OpenAPI |
-| Admin routes | `packages/tavern-api/src/runtime/routes.ts` | Health, status, managed OpenClaw, and runtime control route names |
+| Admin routes | `packages/tavern-api/src/runtime/routes.ts` | Health, status, managed Hermes, and runtime control route names |
 | Admin schemas | `packages/tavern-api/src/runtime/contracts.ts` | Runtime-owned request and response schemas |
-| TypeScript SDK | `packages/tavern-sdk` | Typed client wrapper for Tavern App, bots, webhooks, automations, OpenClaw, and tests |
+| TypeScript SDK | `packages/tavern-sdk` | Typed client wrapper for Tavern App, bots, webhooks, automations, Hermes, and tests |
 | Tavern API docs | `docs/api/` | Capability behavior and invariants |
 | App routers | `apps/server/src/api/` | First-party app wrapper/proxy for Tavern API |
-| Runtime adapters | `apps/runtime/src/` | Mapping between Tavern chat state and OpenClaw execution |
+| Runtime adapters | `apps/runtime/src/` | Mapping between Tavern chat state and Hermes execution |
 
 Implementation files can move. API contracts stay organized around Tavern
 capabilities.
@@ -88,17 +88,17 @@ capabilities.
   messages, responses, activity, artifacts, agents, memory inspection, Cortex
   wiki pages, automations, skills, and stats.
 
-## OpenClaw Alignment
+## Hermes Alignment
 
-OpenClaw is one agent runtime behind Tavern.
+Hermes is one agent runtime behind Tavern.
 
-The Tavern OpenClaw Messenger plugin maps OpenClaw channel message, turn,
-ingress, and presentation signals onto Tavern API messages, responses, activity,
-and artifacts. It does not define a separate plugin-specific chat contract for
-the app.
+The Tavern Hermes Runtime adapter maps Hermes sessions, stream events, tool
+updates, assistant progress, thinking summaries, and final delivery onto
+Tavern API messages, responses, activity, and artifacts. It does not define a
+separate Hermes-specific chat contract for the app.
 
-Plugin architecture details live in
-[Tavern OpenClaw Messenger Plugin](../internals/tavern-openclaw-messenger-plugin.md).
+Adapter details live in
+[Tavern Hermes Runtime Adapter](../internals/tavern-hermes-runtime-adapter.md).
 
 ## Related Docs
 

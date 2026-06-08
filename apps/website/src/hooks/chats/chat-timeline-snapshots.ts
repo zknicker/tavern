@@ -16,7 +16,8 @@ import type {
 } from './chat-timeline-types.ts';
 
 type ChatLogPage = NonNullable<ChatLogOutput>;
-type ChatLogInput = Omit<ChatLogPage, 'activeReply'> & Partial<Pick<ChatLogPage, 'activeReply'>>;
+type ChatLogInput = Omit<ChatLogPage, 'activeReply' | 'failedTurn'> &
+    Partial<Pick<ChatLogPage, 'activeReply' | 'failedTurn'>>;
 
 export function emptyTimelineState(): ChatTimelineState {
     return {
@@ -38,15 +39,16 @@ export function applyLogSnapshot(
     }
 
     const snapshot = normalizeChatLog(log);
-    const hasTerminalMessage = hasTerminalReplyOrFailure({
-        activeReply: state.activeReply,
-        rows: snapshot.rows,
-    });
+    const hasTerminalMessage =
+        hasTerminalReplyOrFailure({
+            activeReply: state.activeReply,
+            rows: snapshot.rows,
+        }) || snapshot.failedTurn !== null;
     const nextActiveReply = hasTerminalMessage ? null : state.activeReply;
     const nextActiveTurn = hasTerminalMessage ? null : state.activeTurn;
-    const nextFailedTurn = hasFailureMessage(snapshot.rows, state.failedTurn)
-        ? null
-        : state.failedTurn;
+    const nextFailedTurn =
+        snapshot.failedTurn ??
+        (hasFailureMessage(snapshot.rows, state.failedTurn) ? null : state.failedTurn);
     const historyLoaded = true;
     const nextTimeline = hasTerminalMessage
         ? snapshot.rows
@@ -81,6 +83,7 @@ export function applyLogSnapshot(
 function normalizeChatLog(log: ChatLogInput): ChatLogPage {
     return {
         activeReply: log.activeReply ?? null,
+        failedTurn: log.failedTurn ?? null,
         limit: log.limit,
         offset: log.offset,
         rows: log.rows,
@@ -218,6 +221,9 @@ function rowTimestamp(row: ChatTimeline[number]) {
 
 function rowSortRank(row: ChatTimeline[number]) {
     if (row.kind === 'message') {
+        if (row.id.startsWith('act_')) {
+            return 1;
+        }
         return row.message.senderType === 'user' ? 0 : 2;
     }
 

@@ -16,8 +16,8 @@ execution state.
   memory, runtime health, sync state, generated config policy, and jobs.
 - Tavern App-owned domains include client cache, app settings, profiles, participant links, and
   presentation overlays.
-- OpenClaw domains include native execution sessions, turns, transcripts, logs, skills,
-  tools, model routing, channel bindings, and provider secrets unless OpenClaw explicitly delegates
+- Hermes domains include native execution sessions, turns, transcripts, logs, skills,
+  tools, model routing, channel bindings, and provider secrets unless Hermes explicitly delegates
   a domain to Tavern.
 
 ## Runtime Expectations

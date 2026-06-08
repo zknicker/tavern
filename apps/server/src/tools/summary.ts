@@ -34,6 +34,7 @@ const preferredResultKeys = [
     'streamLogPath',
     'message',
     'note',
+    'output',
 ] as const;
 
 const toolLabelByKey: Partial<Record<string, string>> = {
@@ -47,6 +48,7 @@ const toolLabelByKey: Partial<Record<string, string>> = {
     message: 'Message',
     mode: 'Mode',
     note: 'Note',
+    output: 'Output',
     path: 'Path',
     reason: 'Reason',
     pattern: 'Pattern',

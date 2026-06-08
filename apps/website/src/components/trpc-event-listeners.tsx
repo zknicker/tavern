@@ -7,9 +7,9 @@ import {
     useRuntimeConnectionEvents,
 } from '../hooks/connections/use-runtime-events.ts';
 import { useCronEvents } from '../hooks/cron/use-cron-events.ts';
+import { useHermesConfigEvents } from '../hooks/hermes-config/use-hermes-config-events.ts';
 import { useModelEvents } from '../hooks/models/use-model-events.ts';
 import { useUsageEvents } from '../hooks/models/use-usage-events.ts';
-import { useOpenClawConfigEvents } from '../hooks/openclaw-config/use-openclaw-config-events.ts';
 import { useParticipantEvents } from '../hooks/participants/use-participant-events.ts';
 import { useSessionEvents } from '../hooks/sessions/use-session-events.ts';
 import { useSkillEvents } from '../hooks/skills/use-events.ts';
@@ -24,7 +24,7 @@ export function TrpcEventListeners() {
     useCronEvents();
     useModelEvents();
     useOpenRouterSettingsEvents();
-    useOpenClawConfigEvents();
+    useHermesConfigEvents();
     useParticipantEvents();
     useSessionEvents();
     useSkillEvents();

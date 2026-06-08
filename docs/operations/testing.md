@@ -2,7 +2,7 @@
 summary: Testing strategy for choosing focused lanes, writing durable tests, keeping suites current, and avoiding unnecessary route or smoke coverage.
 read_when:
   - adding tests, changing runtime contracts, or choosing a verification lane
-  - changing OpenAPI, Runtime stores, SDK, app e2e, or OpenClaw contract behavior
+  - changing OpenAPI, Runtime stores, SDK, app e2e, or managed runtime contract behavior
 ---
 
 # Testing
@@ -38,8 +38,8 @@ commands you ran and anything you did not verify.
 | Runtime handler tests | Boot, process wiring, HTTP payload shape, event delivery, or route-owned error/auth/transport behavior. | Use the real Bun handler or a started local service only when the handler owns meaningful behavior. |
 | Contract/API/SDK gates | `packages/tavern-api`, OpenAPI, SDK client shape, generated types, or cross-boundary request/response contracts. | Run `@tavern/api check`, SDK tests/typecheck, and update docs with the product contract. |
 | App component/hook tests | React state rules, cache invalidation, optimistic UI, row models, filters, keyboard behavior, or rendering transforms. | Prefer hook/model/component tests before e2e. Use the `react-best-practices` skill for nontrivial React architecture. |
-| App e2e | Browser-level app contracts: navigation, reload recovery, websocket reconnect, full chat identity, user flows, or layout-critical behavior. | Use deterministic Playwright against isolated ports, isolated DBs/runtime dirs, managed Runtime, pinned OpenClaw, and mock provider. |
-| OpenClaw contract tests | Gateway RPCs, events, channel behavior, delivery semantics, managed config, plugin lifecycle, or capability degradation. | Verify against shipped OpenClaw method lists/docs/fixtures/raw frames. Do not rely on memory for event names or payloads. |
+| App e2e | Browser-level app contracts: navigation, reload recovery, websocket reconnect, full chat identity, user flows, or layout-critical behavior. | Use deterministic Playwright against isolated ports, isolated DBs/runtime dirs, managed Runtime, real managed Hermes, and a mock model provider. |
+| Runtime adapter tests | Hermes REST/SSE mapping, event projection, delivery semantics, managed lifecycle, or capability degradation. | Verify against Hermes API fixtures or the deterministic Hermes mock. Do not rely on memory for event names or payloads. |
 | Live/manual smoke | Real provider behavior, local environment diagnosis, or release confidence that deterministic lanes cannot cover. | Keep opt-in. Record temporary chat ids/titles and clean up only those records. |
 
 ## Lane Selection
@@ -55,8 +55,8 @@ Choose the smallest lane that proves the changed behavior.
   error mapping, streaming, or transport semantics.
 * **Frontend state or rendering rule:** prefer hook/model/component tests. Use
   e2e for browser-level contracts and real user flows.
-* **OpenClaw or Gateway semantics:** use shipped OpenClaw surfaces or raw-frame
-  fixtures for the exact behavior Tavern depends on.
+* **Hermes adapter semantics:** use Hermes-shaped fixtures or the deterministic
+  Hermes mock for the exact behavior Tavern depends on.
 
 ## Writing Tests
 
@@ -69,7 +69,7 @@ Choose the smallest lane that proves the changed behavior.
 * Assert user-visible or contract-visible outcomes: persisted rows, emitted
   events, returned JSON, cache state, rendered rows, or task transitions.
 * Do not write tests whose main assertion is that a spy was called.
-* Keep fixtures small and source-shaped. Use raw Gateway frames or captured
+* Keep fixtures small and source-shaped. Use raw adapter frames or captured
   provider payloads when the product depends on exact external shape.
 * For production bugs, add a focused regression at the boundary where the bug
   should have been impossible.
@@ -77,15 +77,19 @@ Choose the smallest lane that proves the changed behavior.
 ## App E2E
 
 Use Playwright against the real app frontend and app backend for end-to-end contracts.
-The deterministic lane must not point at a developer or production OpenClaw
+The deterministic lane must not point at a developer or production Hermes
 home. It should use isolated ports, isolated databases, isolated runtime dirs,
-managed Tavern Runtime, pinned OpenClaw Gateway, and the vendored mock provider.
+managed Tavern Runtime, real managed Hermes, and the e2e OpenAI-compatible
+model provider mock.
 
 Chat e2e should prove identity and recovery, not styling details:
 
 * accepted user message appears once
 * tool/progress activity appears before the final reply and remains after reload
-* assistant preamble and reasoning summaries appear when OpenClaw emits them
+* assistant progress updates appear before and between tool activity when Hermes
+  emits them
+* thinking text is persisted and appears only when the Appearance setting enables
+  inline thinking display
 * final assistant message appears once
 * reload and websocket reconnect recover without duplicates, missing rows, or
   ordering bugs
@@ -93,21 +97,18 @@ Chat e2e should prove identity and recovery, not styling details:
 * hover/debug metadata stays hidden unless the message surface is hovered
 
 The e2e wrapper runs preflight before Playwright starts service readiness
-timers. Preflight verifies Playwright Chromium and the managed OpenClaw
-package/plugin cache with visible terminal progress.
+timers. Preflight verifies Playwright Chromium and builds the SDK with visible
+terminal progress.
 
 Keep timing thresholds limited to deterministic mock-provider runs. Live
-OpenClaw smoke can print timing summaries, but should not fail normal CI on real
+Hermes smoke can print timing summaries, but should not fail normal CI on real
 model latency.
 
-## OpenClaw Contracts
+## Runtime Adapter Contracts
 
-When changing Gateway methods, events, channel behavior, or delivery semantics,
-verify against shipped OpenClaw surfaces:
-
-* `node_modules/openclaw/dist/server-methods-list-*.js`
-* relevant `node_modules/openclaw/docs/web/*`
-* targeted Gateway/runtime bundle inspection only for concrete ambiguities
+When changing Hermes routes, SSE events, chat behavior, or delivery semantics,
+verify against Hermes-shaped fixtures, the deterministic Hermes e2e mock, or the
+official Hermes app source when a concrete ambiguity remains.
 
 Add raw-frame or fixture-backed tests for behavior Tavern depends on.
 
@@ -149,7 +150,8 @@ Runtime source-import smoke requirements:
 * `ffmpeg` for converting the speech sample to WAV.
 * ImageMagick `convert` for generating an OCR image.
 
-The agent lookup lane requires local managed OpenClaw with working Codex auth.
+The agent lookup lane requires a local managed Hermes runtime with working model
+auth.
 
 The smoke test creates a temporary Cortex database and wiki, generates a tiny
 text PDF, a PNG with visible text, and a WAV speech sample, then imports each
@@ -163,10 +165,10 @@ Cortex wiki, syncs it into PGLite, generates real OpenAI embeddings, edits the
 markdown, syncs again, and proves search plus recall return the updated page. It
 can write input/output JSON by setting `TAVERN_CORTEX_VERIFY_SMOKE_OUTPUT`.
 
-The agent lookup lane runs the live OpenClaw e2e harness, seeds a unique Cortex
+The agent lookup lane runs the live runtime e2e harness, seeds a unique Cortex
 page through Runtime, asks the agent about that unique fact in chat, and verifies
-the OpenClaw trajectory used `cortex_recall`, `cortex_search`, or
-`cortex_get_page` before the answer.
+the runtime trajectory used `cortex_recall`, `cortex_search`, or `cortex_get_page`
+before the answer.
 
 The real-source lane downloads a NASA podcast MP3, a Wikimedia Commons
 infographic PNG, and a W3C sample PDF into a temporary directory. It trims the

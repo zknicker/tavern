@@ -8,11 +8,11 @@ import {
 } from './model-provider-config.ts';
 
 test('provider config normalizes known model providers for the app UI', () => {
-    expect(getModelProviderConfig('codex')).toMatchObject({
+    expect(getModelProviderConfig('openai-codex')).toMatchObject({
         accessDisplayName: 'Codex',
         color: '#3B82F6',
-        configName: 'codex',
-        displayName: 'Codex',
+        configName: 'openai-codex',
+        displayName: 'OpenAI Codex',
     });
 });
 
@@ -27,21 +27,21 @@ test('removed providers fall back to generic display metadata', () => {
 test('access ids resolve back to the same provider branding', () => {
     expect(getModelProviderConfigFromAccessId('codex')).toMatchObject({
         accessDisplayName: 'Codex',
-        configName: 'codex',
-        displayName: 'Codex',
+        configName: 'openai-codex',
+        displayName: 'OpenAI Codex',
     });
 });
 
-test('model config normalizes known model ids without repeating the provider label', () => {
+test('model config normalizes known Hermes model ids without repeating the provider label', () => {
     expect(
         getModelIdentityConfig({
-            fallbackName: 'Codex',
+            fallbackName: 'OpenAI Codex',
             modelId: 'gpt-5.4',
-            providerId: 'codex',
+            providerId: 'openai-codex',
         })
     ).toMatchObject({
         displayName: 'GPT-5.4',
-        ref: 'codex/gpt-5.4',
+        ref: 'openai-codex/gpt-5.4',
     });
 
     expect(
@@ -56,7 +56,7 @@ test('model option labels use the shared model display registry', () => {
     expect(
         formatModelOptionLabel({
             modelId: 'gpt-5.4-mini',
-            providerId: 'codex',
+            providerId: 'openai-codex',
         })
     ).toBe('GPT-5.4 Mini');
 });

@@ -151,7 +151,7 @@ test('applyLogSnapshot preserves live progress rows while the turn is active', (
     expect(next.totalRows).toBe(1);
 });
 
-test('patchTimelineProgress updates the same preamble and OpenClaw tool rows through completion', () => {
+test('patchTimelineProgress updates the same preamble and Hermes tool rows through completion', () => {
     const withPreamble = patchTimelineProgress(startTimelineTurn(emptyTimelineState(), turn), {
         step: {
             detail: 'I will inspect the workspace before replying.',
@@ -194,8 +194,11 @@ test('patchTimelineProgress updates the same preamble and OpenClaw tool rows thr
         'act_run-1_call_mock_read_123',
     ]);
     expect(completed.timeline[0]).toMatchObject({
-        completedAt: null,
-        startedAt: '2026-04-21T16:08:43.000Z',
+        kind: 'message',
+        message: {
+            content: 'I will inspect the workspace before replying.',
+            sourceSessionKey: 'session-1',
+        },
     });
     expect(completed.timeline[1]).toMatchObject({
         completedAt: '2026-04-21T16:08:48.000Z',
@@ -320,7 +323,33 @@ test('completeTimelineTurn keeps active reply visible while clearing active work
     });
 
     expect(completed.activeReply?.runId).toBe('run-1');
+    expect(completed.activeReply?.completedAt).toBe('2026-04-21T16:08:46.000Z');
+    expect(completed.activeReply?.isThinking).toBe(false);
     expect(completed.activeTurn).toBeNull();
+});
+
+test('completeTimelineTurn marks live progress rows complete', () => {
+    const running = patchTimelineProgress(startTimelineTurn(emptyTimelineState(), turn), {
+        step: {
+            id: 'call_read_1',
+            kind: 'tool',
+            label: 'read README.md',
+            status: 'active',
+            toolCallId: 'call_read_1',
+            toolName: 'read',
+        },
+        timestamp: '2026-04-21T16:08:43.000Z',
+        turn,
+    });
+    const completed = completeTimelineTurn(running, {
+        completedAt: '2026-04-21T16:08:46.000Z',
+        turn,
+    });
+
+    expect(completed.timeline[0]).toMatchObject({
+        completedAt: '2026-04-21T16:08:46.000Z',
+        id: 'act_run-1_call_read_1',
+    });
 });
 
 test('failTimelineTurn stores a failed turn marker', () => {

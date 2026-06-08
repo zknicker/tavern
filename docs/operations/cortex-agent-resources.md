@@ -2,7 +2,7 @@
 summary: Cortex agent operating resources for search, recall, capture, and contradiction handling.
 read_when:
   - changing Cortex agent instructions, recall behavior, capture rules, or maintenance workflows
-  - changing OpenClaw workspace bootstrap Cortex guidance
+  - changing managed Hermes workspace Cortex guidance
 ---
 
 # Cortex Agent Resources

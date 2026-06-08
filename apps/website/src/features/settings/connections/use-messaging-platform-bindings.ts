@@ -40,7 +40,7 @@ export function useMessagingPlatformBindings() {
     return {
         bindings,
         deleteBinding,
-        hasConfig: true,
+        hasConfig: false,
         isLoading: query.isPending,
         isSaving: saveMutation.isPending || deleteMutation.isPending,
         saveBinding,

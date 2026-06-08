@@ -23,13 +23,13 @@ Sessions are Tavern's per-agent execution records inside chats, backed by observ
 ## Session Identity
 
 - A session has a stable session key, title, platform, agent, runtime, and start time.
-- For OpenClaw-backed sessions, Tavern uses the OpenClaw `sessionKey` directly as the Tavern
+- For Hermes-backed sessions, Tavern uses the Hermes `sessionKey` directly as the Tavern
   session key. Tavern APIs that fetch, resync, route, or send to a session name this input
   `sessionKey`.
 - The session key is the durable conversation bucket and routing identity. It is not the session id.
-- For OpenClaw-backed sessions, Tavern `session.id` is the OpenClaw `sessionId`.
-- OpenClaw `sessionId` is the current transcript identity behind the key and may rotate when
-  OpenClaw starts a fresh transcript for `/new`, `/reset`, daily reset, or idle reset. Tavern stores
+- For Hermes-backed sessions, Tavern `session.id` is the Hermes `sessionId`.
+- Hermes `sessionId` is the current transcript identity behind the key and may rotate when
+  Hermes starts a fresh transcript for `/new`, `/reset`, daily reset, or idle reset. Tavern stores
   it as the session id and uses it for transcript attribution, not for routing.
 - Multiple sessions may participate in the same chat.
 - A session may have related runs, deliveries, child sessions, tools, and artifacts.

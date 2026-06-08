@@ -13,7 +13,7 @@ export function ModelsSettings() {
             </section>
 
             <section>
-                <BadgeDivider className="pb-4">Model Catalog</BadgeDivider>
+                <BadgeDivider className="pb-4">Available Models</BadgeDivider>
                 <ModelInventorySection />
             </section>
         </div>

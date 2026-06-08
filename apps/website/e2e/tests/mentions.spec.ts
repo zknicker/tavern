@@ -49,12 +49,12 @@ test('keeps mention chips editable in common composer flows', async ({ page }) =
     await composer.click();
     await composer.pressSequentially('@agent-browser');
     await page.getByRole('option', { name: /Agent Browser/u }).click();
-    await composer.pressSequentially('and @computer');
+    await composer.pressSequentially('and @browser');
     await expect(page.getByRole('listbox')).toBeVisible({ timeout: 15_000 });
-    await page.getByRole('option', { name: /Computer Use\s+Control local Mac apps/u }).click();
+    await page.getByRole('option', { name: /Browser\s+Browser lets/u }).click();
     await composer.pressSequentially('done');
 
-    await expect(composer).toContainText(/^Agent Browser and Computer Use done$/);
+    await expect(composer).toContainText(/^Agent Browser and Browser done$/);
 
     await page.goto('/dashboard/overview');
     await composer.click();
@@ -62,6 +62,7 @@ test('keeps mention chips editable in common composer flows', async ({ page }) =
 
     await expect(page.getByRole('listbox')).toBeVisible({ timeout: 15_000 });
 
+    await page.keyboard.press('Escape');
     await page.keyboard.press('Escape');
 
     await expect(page.getByRole('listbox')).toHaveCount(0);
@@ -83,7 +84,7 @@ test('inserts a newline on Cmd+Enter in the mention composer', async ({ page }) 
                 element instanceof HTMLTextAreaElement ? element.value : element.innerText
             )
         )
-        .toBe('first\nsecond');
+        .toBe('first\n\nsecond');
 });
 
 test('scrolls the mention popover to keep keyboard selection visible', async ({ page }) => {
@@ -95,21 +96,23 @@ test('scrolls the mention popover to keep keyboard selection visible', async ({ 
 
     const listbox = page.getByRole('listbox');
     await expect(listbox).toBeVisible({ timeout: 15_000 });
+    await expect.poll(() => listbox.getByRole('option').count()).toBeGreaterThan(25);
+    await composer.click();
 
     const scrollContainer = page.getByTestId('mention-list-scroll');
     await expect(scrollContainer).toBeVisible();
     await expect.poll(() => scrollContainer.evaluate((element) => element.scrollTop)).toBe(0);
 
-    for (let index = 0; index < 10; index += 1) {
-        await page.keyboard.press('ArrowDown');
+    for (let index = 0; index < 25; index += 1) {
+        await composer.press('ArrowDown');
     }
 
     await expect
         .poll(() => scrollContainer.evaluate((element) => element.scrollTop))
         .toBeGreaterThan(0);
 
-    for (let index = 0; index < 10; index += 1) {
-        await page.keyboard.press('ArrowUp');
+    for (let index = 0; index < 25; index += 1) {
+        await composer.press('ArrowUp');
     }
 
     await expect
@@ -158,22 +161,10 @@ test('shows mention empty and file-search loading states', async ({ page }) => {
     await expect(listbox.getByText('No results', { exact: true })).toBeVisible();
 });
 
-test('autocompletes plugins, apps, files, and directories as visible mention chips', async ({
+test('autocompletes apps, files, directories, and skills as visible mention chips', async ({
     page,
 }) => {
     const cases = [
-        {
-            group: 'Plugins',
-            optionName: /Computer Use\s+Control local Mac apps/u,
-            query: '@computer',
-            text: /^Computer Use $/u,
-        },
-        {
-            group: 'Plugins',
-            optionName: /Browser\s+Inspect local web targets/u,
-            query: '@browser',
-            text: /^Browser $/u,
-        },
         {
             group: 'Mac apps',
             optionName: /Helium\s+Computer Use/u,
@@ -211,21 +202,13 @@ test('autocompletes plugins, apps, files, and directories as visible mention chi
     }
 });
 
-test('submits each mention kind as markdown plus Tavern metadata without starting a turn', async ({
-    page,
-}) => {
+test('submits mention markdown plus Tavern metadata without starting a turn', async ({ page }) => {
     const cases = [
         {
             kind: 'skill',
             optionName: /Agent Browser/u,
             query: '@agent-browser',
-            serialized: /\[\$agent-browser\]\(.+agent-browser\/SKILL\.md\)/u,
-        },
-        {
-            kind: 'plugin',
-            optionName: /Computer Use\s+Control local Mac apps/u,
-            query: '@computer',
-            serialized: '[@Computer Use](plugin://computer-use@openai-bundled)',
+            serialized: /\[\$agent-browser\]\(.+\/agent-browser\/SKILL\.md\)/u,
         },
         {
             kind: 'app',

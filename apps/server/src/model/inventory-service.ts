@@ -1,148 +1,69 @@
-import { formatAgentRuntimeModelRef, parseAgentRuntimeModelRef } from '@tavern/api';
-import { TRPCError } from '@trpc/server';
-import { emitModelUpdated } from '../api/invalidation-events.ts';
-import { loadProviderInventory, saveProviderInventory } from './inventory-cache.ts';
-import {
-    addCatalogModelInputSchema,
-    deleteCatalogModelInputSchema,
-    type ModelInventory,
-    type ModelInventoryProvider,
-    type ModelProviderId,
-    modelInventorySchema,
-} from './inventory-contracts.ts';
-import {
-    createCatalogInventoryRecord,
-    getModelProviderDisplayName,
-    listModelProviderConnections,
-    modelInventoryProviders,
-    sortModels,
-} from './provider-inventory.ts';
-
-type CatalogModelProviderId = (typeof modelInventoryProviders)[number];
-
-function isCatalogModelProvider(provider: ModelProviderId): provider is CatalogModelProviderId {
-    return modelInventoryProviders.some((candidate) => candidate === provider);
-}
-
-function listRefsForProvider(modelRefs: Set<string>, provider: CatalogModelProviderId) {
-    return [...modelRefs].filter((modelRef) => modelRef.startsWith(`${provider}/`));
-}
-
-function createFallbackInventoryRecord(modelRef: string) {
-    const { modelId, provider } = parseAgentRuntimeModelRef(modelRef);
-
-    return createCatalogInventoryRecord({
-        modelId,
-        provider,
-    });
-}
-
-async function buildProviderInventory(input: {
-    inUseModelRefs: Set<string>;
-    provider: CatalogModelProviderId;
-    agentRuntimeConnections: Awaited<ReturnType<typeof listModelProviderConnections>>;
-    usageLabelsByModelRef: Map<string, string[]>;
-}) {
-    const snapshot = await loadProviderInventory(input.provider);
-    const connection = input.agentRuntimeConnections[input.provider];
-    const modelsByRef = new Map(snapshot.models.map((model) => [model.ref, model] as const));
-
-    for (const modelRef of listRefsForProvider(input.inUseModelRefs, input.provider)) {
-        if (!modelsByRef.has(modelRef)) {
-            modelsByRef.set(modelRef, createFallbackInventoryRecord(modelRef));
-        }
-    }
-
-    return {
-        displayName: getModelProviderDisplayName(input.provider),
-        isConnected: connection.isConnected,
-        models: sortModels([...modelsByRef.values()]).map((model) => {
-            const usageLabels = input.usageLabelsByModelRef.get(model.ref) ?? [];
-
-            return {
-                ...model,
-                canDelete: usageLabels.length === 0,
-                inUse: usageLabels.length > 0,
-                usageLabels,
-            };
-        }),
-        provider: input.provider,
-        state: connection.isConnected ? 'connected' : 'not-configured',
-        stateMessage: connection.stateMessage,
-    } satisfies ModelInventoryProvider;
-}
+import type { ModelInventory, ModelInventoryProvider } from './inventory-contracts.ts';
+import { modelInventorySchema } from './inventory-contracts.ts';
+import { listModels } from './service.ts';
 
 export async function listModelInventory(): Promise<ModelInventory> {
-    const agentRuntimeConnections = await listModelProviderConnections();
+    const models = (await listModels()).models.filter(
+        (model) => model.availability === 'available'
+    );
+    const providersById = new Map<string, ModelInventoryProvider>();
+
+    for (const model of models) {
+        const provider =
+            providersById.get(model.provider) ??
+            createInventoryProvider({
+                provider: model.provider,
+            });
+
+        provider.models.push({
+            canDelete: false,
+            capabilities: ['general'],
+            contextWindow: model.contextWindow,
+            description: null,
+            displayName: model.name,
+            inUse: false,
+            modelId: model.modelId,
+            provider: model.provider,
+            ref: model.ref,
+            usageLabels: [],
+        });
+        providersById.set(model.provider, provider);
+    }
 
     return modelInventorySchema.parse({
-        providers: await Promise.all(
-            modelInventoryProviders.map((provider) =>
-                buildProviderInventory({
-                    inUseModelRefs: new Set(),
-                    provider,
-                    agentRuntimeConnections,
-                    usageLabelsByModelRef: new Map(),
-                })
-            )
-        ),
+        providers: [...providersById.values()]
+            .map((provider) => ({
+                ...provider,
+                models: provider.models.sort(
+                    (left, right) =>
+                        left.displayName.localeCompare(right.displayName) ||
+                        left.ref.localeCompare(right.ref)
+                ),
+            }))
+            .sort(
+                (left, right) =>
+                    left.displayName.localeCompare(right.displayName) ||
+                    left.provider.localeCompare(right.provider)
+            ),
     });
 }
 
-export async function addCatalogModel(input: unknown) {
-    const parsed = addCatalogModelInputSchema.parse(input);
-
-    if (!isCatalogModelProvider(parsed.provider)) {
-        throw new TRPCError({
-            code: 'BAD_REQUEST',
-            message: `${parsed.provider} is not supported in the Tavern model catalog.`,
-        });
-    }
-
-    const model = createCatalogInventoryRecord({
-        capabilities: parsed.capabilities,
-        modelId: parsed.modelId,
-        provider: parsed.provider,
-    });
-    const snapshot = await loadProviderInventory(parsed.provider);
-
-    if (snapshot.models.some((candidate) => candidate.ref === model.ref)) {
-        throw new TRPCError({
-            code: 'CONFLICT',
-            message: `${formatAgentRuntimeModelRef(model)} is already in the Tavern model catalog.`,
-        });
-    }
-
-    await saveProviderInventory({
-        ...snapshot,
-        models: sortModels([...snapshot.models, model]),
-        syncedAt: new Date().toISOString(),
-    });
-    emitModelUpdated();
-
-    return await listModelInventory();
+function createInventoryProvider(input: { provider: string }): ModelInventoryProvider {
+    return {
+        displayName: formatProviderName(input.provider),
+        isConnected: true,
+        models: [],
+        provider: input.provider,
+        state: 'connected',
+        stateMessage: 'Available from Hermes.',
+    };
 }
 
-export async function deleteCatalogModel(input: unknown) {
-    const parsed = deleteCatalogModelInputSchema.parse(input);
-    const { provider } = parseAgentRuntimeModelRef(parsed.modelRef);
-    const inventory = await loadProviderInventory(provider);
-
-    const nextModels = inventory.models.filter((model) => model.ref !== parsed.modelRef);
-
-    if (nextModels.length === inventory.models.length) {
-        throw new TRPCError({
-            code: 'NOT_FOUND',
-            message: `${parsed.modelRef} is not in the Tavern model catalog.`,
-        });
-    }
-
-    await saveProviderInventory({
-        ...inventory,
-        models: nextModels,
-        syncedAt: new Date().toISOString(),
-    });
-    emitModelUpdated();
-
-    return await listModelInventory();
+function formatProviderName(provider: string) {
+    return provider
+        .trim()
+        .split(/[-_/]+/gu)
+        .filter(Boolean)
+        .map((segment) => segment[0]?.toUpperCase() + segment.slice(1))
+        .join(' ');
 }

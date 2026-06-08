@@ -1,5 +1,5 @@
-import type { TranscriptItem } from './chat-transcript-model.ts';
 import { isAssistantNarrationItem } from './chat-transcript-activity-utils.ts';
+import type { TranscriptItem } from './chat-transcript-model.ts';
 
 export type AgentItemSegment =
     | { item: TranscriptItem; key: string; kind: 'item' }
@@ -8,21 +8,52 @@ export type AgentItemSegment =
 export function groupAgentItems(items: TranscriptItem[]) {
     const segments: AgentItemSegment[] = [];
     let activityItems: TranscriptItem[] = [];
+    let activityGroupKey: string | null = null;
 
     for (const item of items) {
         if (isTranscriptActivityItem(item)) {
+            const nextGroupKind = getActivityGroupKind(item);
+            if (activityGroupKey && activityGroupKey !== nextGroupKind) {
+                flushActivitySegment(segments, activityItems);
+                activityItems = [];
+            }
             activityItems.push(item);
+            activityGroupKey = nextGroupKind;
             continue;
         }
 
         flushActivitySegment(segments, activityItems);
         activityItems = [];
+        activityGroupKey = null;
         segments.push({ item, key: getTranscriptItemKey(item), kind: 'item' });
     }
 
     flushActivitySegment(segments, activityItems);
 
     return segments;
+}
+
+export function getVisibleAgentItems(input: {
+    items: TranscriptItem[];
+    showThinkingText: boolean;
+}) {
+    if (input.showThinkingText) {
+        return input.items;
+    }
+
+    return input.items.filter((item) => !isThinkingItem(item));
+}
+
+function getActivityGroupKind(item: TranscriptItem) {
+    if (item.kind === 'row' && item.row.kind === 'system' && item.row.systemKind === 'thinking') {
+        return 'thinking';
+    }
+
+    return 'work';
+}
+
+function isThinkingItem(item: TranscriptItem) {
+    return item.kind === 'row' && item.row.kind === 'system' && item.row.systemKind === 'thinking';
 }
 
 function flushActivitySegment(segments: AgentItemSegment[], items: TranscriptItem[]) {
@@ -32,7 +63,7 @@ function flushActivitySegment(segments: AgentItemSegment[], items: TranscriptIte
 
     segments.push({
         items,
-        key: `activity:${items.map(getTranscriptItemKey).join(':')}`,
+        key: `activity:${getActivityGroupKind(items[0])}:${getTranscriptItemKey(items[0])}`,
         kind: 'activity',
     });
 }

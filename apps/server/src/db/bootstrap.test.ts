@@ -52,27 +52,31 @@ function listExpectedSchemaTables() {
         .sort((left, right) => left.localeCompare(right));
 }
 
+async function runBootstrapAgainst(db: Database) {
+    const originalExec = Database.prototype.exec;
+
+    try {
+        Database.prototype.exec = function exec(
+            this: Database,
+            sql: string,
+            ...bindings: unknown[]
+        ) {
+            return Reflect.apply(originalExec as (...args: unknown[]) => unknown, db, [
+                sql,
+                ...bindings,
+            ]);
+        } as typeof Database.prototype.exec;
+
+        const { ensureDatabaseSchema } = await import('./bootstrap.ts');
+        ensureDatabaseSchema();
+    } finally {
+        Database.prototype.exec = originalExec;
+    }
+}
+
 test('ensureDatabaseSchema creates the current Tavern schema without obsolete tables', async () => {
     await withTempDatabase(async (db) => {
-        const originalExec = Database.prototype.exec;
-
-        try {
-            Database.prototype.exec = function exec(
-                this: Database,
-                sql: string,
-                ...bindings: unknown[]
-            ) {
-                return Reflect.apply(originalExec as (...args: unknown[]) => unknown, db, [
-                    sql,
-                    ...bindings,
-                ]);
-            } as typeof Database.prototype.exec;
-
-            const { ensureDatabaseSchema } = await import('./bootstrap.ts');
-            ensureDatabaseSchema();
-        } finally {
-            Database.prototype.exec = originalExec;
-        }
+        await runBootstrapAgainst(db);
 
         const tables = listUserTables(db);
         const actualTableNames: string[] = tables.map((table) => table.name);

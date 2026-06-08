@@ -9,12 +9,6 @@ import { fail, readJson, repoRoot } from './release-utils.mjs';
 
 const artifactRoot = path.join(repoRoot, 'apps', 'website', 'electron-dist');
 const runtimeArtifactDir = path.join(artifactRoot, 'runtime');
-const pluginPackages = [
-    'tavern-openclaw-messenger',
-    'tavern-openclaw-cortex',
-    'tavern-openclaw-workspace',
-];
-
 const main = async () => {
     const version = await readReleaseVersion();
     const targetTriple = readTargetTriple();
@@ -69,15 +63,7 @@ function readTargetTriple() {
 }
 
 async function stageRuntimePackages(stageRoot) {
-    const pluginRoot = path.join(stageRoot, 'share', 'tavern', 'openclaw-plugins');
     const nodeModulesRoot = path.join(stageRoot, 'share', 'tavern', 'node_modules');
-
-    for (const packageName of pluginPackages) {
-        await copyPackage(
-            path.join(repoRoot, 'packages', packageName),
-            path.join(pluginRoot, packageName)
-        );
-    }
 
     await copyPackage(
         path.join(repoRoot, 'packages', 'tavern-sdk'),

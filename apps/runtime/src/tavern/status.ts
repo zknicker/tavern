@@ -6,7 +6,7 @@ function getRuntimeName() {
     return process.env.TAVERN_RUNTIME_NAME?.trim() || 'Tavern Runtime';
 }
 
-const managedOpenClawRuntimeId = 'tavern-openclaw-managed';
+const managedHermesRuntimeId = 'tavern-hermes-managed';
 
 export function getRuntimeHealth(): RuntimeHealth {
     return {
@@ -18,7 +18,7 @@ export function getRuntimeHealth(): RuntimeHealth {
 
 export function getRuntimeInfo(): RuntimeInfo {
     return {
-        agentRuntimeId: managedOpenClawRuntimeId,
+        agentRuntimeId: managedHermesRuntimeId,
         name: getRuntimeName(),
         protocolVersion: runtimeProtocolVersion,
         version: process.env.TAVERN_RUNTIME_VERSION?.trim() || runtimePackage.version,

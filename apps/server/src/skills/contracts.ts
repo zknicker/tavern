@@ -31,7 +31,7 @@ export const deleteSkillSecretInputSchema = z.object({
 
 export const skillDependencyStateSchema = z.enum(['missing', 'ready', 'unknown']);
 export const skillPluginUsabilitySchema = z.enum(['disabled', 'enabled', 'not_usable']);
-export const skillRuntimeSurfaceSchema = z.enum(['codex', 'openclaw']);
+export const skillRuntimeSurfaceSchema = z.enum(['codex', 'hermes']);
 
 export const skillSetupCommandSchema = z.object({
     bins: z.array(z.string().min(1)),

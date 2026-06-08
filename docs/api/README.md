@@ -9,9 +9,9 @@ read_when:
 
 The Tavern API is `@tavern/api`-defined, Runtime-hosted, and SDK-wrapped.
 
-Tavern App, bots, webhooks, automations, managed OpenClaw, local tools, and
+Tavern App, bots, webhooks, automations, managed Hermes, local tools, and
 tests use this surface instead of reading app caches, runtime tables, or
-OpenClaw state.
+Hermes state.
 
 Tavern's shape is clear:
 

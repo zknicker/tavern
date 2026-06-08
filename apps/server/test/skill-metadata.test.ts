@@ -2,7 +2,7 @@ import { test } from 'bun:test';
 import assert from 'node:assert/strict';
 import { readSkillInstallOptions, readSkillSecretEnvNames } from '../src/skills/metadata.ts';
 
-test('readSkillSecretEnvNames supports OpenClaw and Clawdbot metadata', () => {
+test('readSkillSecretEnvNames supports Hermes and Clawdbot metadata', () => {
     assert.deepEqual(
         readSkillSecretEnvNames({
             clawdbot: {
@@ -11,7 +11,7 @@ test('readSkillSecretEnvNames supports OpenClaw and Clawdbot metadata', () => {
                     env: ['LINEAR_API_KEY', 'GITHUB_TOKEN'],
                 },
             },
-            openclaw: {
+            hermes: {
                 primaryEnv: 'OPENAI_API_KEY',
                 requires: {
                     env: ['ANTHROPIC_API_KEY'],
@@ -25,7 +25,7 @@ test('readSkillSecretEnvNames supports OpenClaw and Clawdbot metadata', () => {
 test('readSkillInstallOptions preserves sandbox install metadata', () => {
     assert.deepEqual(
         readSkillInstallOptions({
-            openclaw: {
+            hermes: {
                 install: [
                     {
                         bins: ['tsx'],

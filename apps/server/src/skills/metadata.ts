@@ -74,7 +74,7 @@ export function parseSkillMetadataJson(value: string): SkillMetadataMap | null {
 
 function readSkillRuntimeMetadata(metadata: SkillMetadataMap | null) {
     const root = readRecord(metadata);
-    const entries = [readRecord(root?.openclaw), readRecord(root?.clawdbot)].filter(
+    const entries = [readRecord(root?.hermes), readRecord(root?.clawdbot)].filter(
         (entry): entry is Record<string, unknown> => Boolean(entry)
     );
 

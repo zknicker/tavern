@@ -1,7 +1,4 @@
-import { randomUUID } from 'node:crypto';
-import { agentRuntimeSaveDiscordBindingSchema } from '@tavern/api';
 import { z } from 'zod';
-import { saveOpenClawDiscordBinding } from '../../openclaw-settings/service.ts';
 import { publicProcedure } from '../trpc.ts';
 
 const saveMessagingBindingInputSchema = z.object({
@@ -48,27 +45,5 @@ export const saveMessagingBindingProcedure = publicProcedure
             throw new Error(`Unsupported messaging platform "${input.platform}".`);
         }
 
-        return await saveOpenClawDiscordBinding(
-            agentRuntimeSaveDiscordBindingSchema.parse({
-                accountId: input.accountId || undefined,
-                agentId: input.agentId,
-                allowBots: input.allowBots,
-                bindingId: input.bindingId ?? input.id ?? `discord:${randomUUID()}`,
-                enabled: input.enabled ?? true,
-                groupPolicy: input.groupPolicy,
-                guilds: input.guilds,
-                inboundMode: input.inboundMode ?? 'active',
-                match: input.match
-                    ? {
-                          dmUserIds: input.match.dmUserIds,
-                          parentChannelIds: input.match.parentChannelIds,
-                      }
-                    : undefined,
-                mentionPatterns: input.mentionPatterns,
-                metadata: input.metadata ?? {},
-                name: input.name,
-                replyToMode: input.replyToMode,
-                token: input.token || null,
-            })
-        );
+        throw new Error('Managed Hermes Discord binding edits are not available in Tavern yet.');
     });

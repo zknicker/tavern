@@ -74,7 +74,7 @@ const previews = [
     {
         chat: chatActors({ agents: ['Atlas'], humans: ['You'] }),
         rows: rows([
-            user('You', 'Make the OpenClaw activity stream feel like Codex App.'),
+            user('You', 'Make the Hermes activity stream feel like Codex App.'),
             narration(
                 'Atlas',
                 'I’ll first split visible assistant progress updates from tool activity, then I’ll keep command and file work grouped between those updates.'
@@ -105,7 +105,11 @@ const previews = [
                 id: 'edit-files',
                 label: 'Edited 3 files',
                 name: 'patch',
-                summaryParts: ['chat-transcript-turn.tsx', 'working-log.tsx', 'chat-layout-preview-page.tsx'],
+                summaryParts: [
+                    'chat-transcript-turn.tsx',
+                    'working-log.tsx',
+                    'chat-layout-preview-page.tsx',
+                ],
             }),
             narration(
                 'Atlas',
@@ -122,7 +126,7 @@ const previews = [
                 'Implemented the Codex-style transcript layout. Visible progress updates render as assistant text, and the work rows between them stay grouped by phase.'
             ),
         ]),
-        title: 'OpenClaw activity turn',
+        title: 'Hermes activity turn',
     },
 ];
 

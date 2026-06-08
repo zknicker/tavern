@@ -40,44 +40,6 @@ const schemaStatements = [
         ON agents (runtime_id);`,
     `CREATE INDEX IF NOT EXISTS agents_last_synced_at_idx
         ON agents (last_synced_at);`,
-    `CREATE TABLE IF NOT EXISTS model_catalog (
-        id TEXT PRIMARY KEY NOT NULL,
-        provider TEXT NOT NULL,
-        model_id TEXT NOT NULL,
-        display_name TEXT NOT NULL,
-        context_window INTEGER,
-        created_at TEXT NOT NULL,
-        updated_at TEXT NOT NULL
-    );`,
-    `CREATE UNIQUE INDEX IF NOT EXISTS model_catalog_provider_model_idx
-        ON model_catalog (provider, model_id);`,
-    `CREATE TABLE IF NOT EXISTS openclaw_model_names (
-        id TEXT PRIMARY KEY NOT NULL,
-        model_catalog_id TEXT NOT NULL,
-        harness TEXT NOT NULL,
-        openclaw_provider TEXT NOT NULL,
-        openclaw_model TEXT NOT NULL,
-        is_preferred INTEGER NOT NULL DEFAULT 0,
-        created_at TEXT NOT NULL,
-        updated_at TEXT NOT NULL
-    );`,
-    `CREATE INDEX IF NOT EXISTS openclaw_model_names_model_catalog_idx
-        ON openclaw_model_names (model_catalog_id);`,
-    `CREATE UNIQUE INDEX IF NOT EXISTS openclaw_model_names_name_idx
-        ON openclaw_model_names (harness, openclaw_provider, openclaw_model);`,
-    `CREATE TABLE IF NOT EXISTS runtime_model_availability (
-        id TEXT PRIMARY KEY NOT NULL,
-        runtime_id TEXT NOT NULL,
-        openclaw_model_name_id TEXT NOT NULL,
-        status TEXT NOT NULL,
-        source TEXT NOT NULL,
-        last_checked_at TEXT NOT NULL,
-        details_json TEXT
-    );`,
-    `CREATE INDEX IF NOT EXISTS runtime_model_availability_model_name_idx
-        ON runtime_model_availability (openclaw_model_name_id);`,
-    `CREATE UNIQUE INDEX IF NOT EXISTS runtime_model_availability_runtime_model_idx
-        ON runtime_model_availability (runtime_id, openclaw_model_name_id);`,
     `CREATE TABLE IF NOT EXISTS skills (
         runtime_id TEXT NOT NULL,
         id TEXT NOT NULL,
@@ -87,20 +49,7 @@ const schemaStatements = [
         PRIMARY KEY (runtime_id, id)
     );`,
     'CREATE INDEX IF NOT EXISTS skills_runtime_idx ON skills (runtime_id);',
-    `CREATE TABLE IF NOT EXISTS agent_model_settings (
-        agent_id TEXT PRIMARY KEY NOT NULL,
-        model_catalog_id TEXT NOT NULL,
-        openclaw_model_name_id TEXT NOT NULL,
-        harness TEXT NOT NULL,
-        synced_at TEXT,
-        sync_error TEXT,
-        updated_at TEXT NOT NULL
-    );`,
-    `CREATE INDEX IF NOT EXISTS agent_model_settings_model_catalog_idx
-        ON agent_model_settings (model_catalog_id);`,
-    `CREATE INDEX IF NOT EXISTS agent_model_settings_openclaw_model_name_idx
-        ON agent_model_settings (openclaw_model_name_id);`,
-    `CREATE TABLE IF NOT EXISTS openclaw_config_snapshots (
+    `CREATE TABLE IF NOT EXISTS hermes_config_snapshots (
         runtime_id TEXT PRIMARY KEY NOT NULL,
         hash TEXT NOT NULL,
         raw TEXT NOT NULL,
@@ -408,11 +357,11 @@ const schemaStatements = [
         provider TEXT,
         model TEXT,
         canonical_model_id TEXT,
-        openclaw_api TEXT,
-        openclaw_harness TEXT,
-        openclaw_model TEXT,
-        openclaw_model_name_id TEXT,
-        openclaw_provider TEXT,
+        hermes_api TEXT,
+        hermes_harness TEXT,
+        hermes_model TEXT,
+        hermes_model_name_id TEXT,
+        hermes_provider TEXT,
         stop_reason TEXT,
         usage_json TEXT,
         timestamp TEXT,
@@ -570,7 +519,10 @@ function runSchemaStatements(filter: (statement: string) => boolean) {
 }
 
 export function ensureDatabaseSchema() {
-    runSchemaStatements((statement) => !statement.startsWith('CREATE INDEX'));
+    runSchemaStatements((statement) => statement.startsWith('PRAGMA'));
+    runSchemaStatements(
+        (statement) => !(statement.startsWith('PRAGMA') || statement.startsWith('CREATE INDEX'))
+    );
     runSchemaStatements((statement) => statement.startsWith('CREATE INDEX'));
     migrateAgentProfilesUserInstructions();
 }

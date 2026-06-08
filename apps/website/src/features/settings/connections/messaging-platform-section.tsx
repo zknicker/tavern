@@ -169,8 +169,7 @@ export function MessagingPlatformsSection({
             )}
             {isRuntimeAvailable && !hasConfig && !isLoading ? (
                 <p className="mt-3 text-muted-foreground text-sm">
-                    OpenClaw config has not synced yet. Wait for config sync before managing
-                    platform bindings.
+                    Managed Hermes Discord binding edits are not available in Tavern yet.
                 </p>
             ) : null}
         </div>

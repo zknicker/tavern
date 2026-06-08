@@ -4,7 +4,8 @@ const sessionRailMaxGapMs = 5 * 60 * 1000;
 
 type ChatLogRow = NonNullable<ChatLogOutput>['rows'][number];
 type ChatLogPage = NonNullable<ChatLogOutput>;
-type ChatLogInput = Omit<ChatLogPage, 'activeReply'> & Partial<Pick<ChatLogPage, 'activeReply'>>;
+type ChatLogInput = Omit<ChatLogPage, 'activeReply' | 'failedTurn'> &
+    Partial<Pick<ChatLogPage, 'activeReply' | 'failedTurn'>>;
 type ChatMessageRow = Extract<ChatLogRow, { kind: 'message' }>;
 
 export interface ChatTimelineMessage {
@@ -122,6 +123,7 @@ function buildUserMessageRow(input: {
 function createEmptyLog(limit: number): ChatLogPage {
     return {
         activeReply: null,
+        failedTurn: null,
         limit,
         offset: 0,
         rows: [],
@@ -227,6 +229,7 @@ export function getLoggedTimelineMessageIds(
 function normalizeChatLog(log: ChatLogInput): ChatLogPage {
     return {
         activeReply: log.activeReply ?? null,
+        failedTurn: log.failedTurn ?? null,
         limit: log.limit,
         offset: log.offset,
         rows: log.rows,

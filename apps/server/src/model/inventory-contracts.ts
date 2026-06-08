@@ -1,7 +1,5 @@
-import { type AgentRuntimeModelProviderId, agentRuntimeModelProviderIdSchema } from '@tavern/api';
 import { z } from 'zod';
 
-export const modelProviderIdSchema = agentRuntimeModelProviderIdSchema;
 export const modelProviderStateSchema = z.enum(['connected', 'not-configured']);
 export const modelCapabilitySchema = z.enum([
     'audio-transcription',
@@ -16,7 +14,7 @@ export const modelInventorySnapshotRecordSchema = z.object({
     description: z.string().trim().min(1).nullable(),
     displayName: z.string().trim().min(1),
     modelId: z.string().trim().min(1),
-    provider: modelProviderIdSchema,
+    provider: z.string().trim().min(1),
     ref: z.string().trim().min(1),
 });
 
@@ -26,7 +24,7 @@ export const modelInventoryRecordSchema = modelInventorySnapshotRecordSchema.ext
 
 export const modelInventorySnapshotSchema = z.object({
     models: z.array(modelInventorySnapshotRecordSchema),
-    provider: modelProviderIdSchema,
+    provider: z.string().trim().min(1),
     syncedAt: z.string().datetime(),
 });
 
@@ -39,7 +37,7 @@ export const modelInventoryProviderSchema = z.object({
             inUse: z.boolean(),
         })
     ),
-    provider: modelProviderIdSchema,
+    provider: z.string().trim().min(1),
     state: modelProviderStateSchema,
     stateMessage: z.string().trim().min(1),
 });
@@ -48,22 +46,9 @@ export const modelInventorySchema = z.object({
     providers: z.array(modelInventoryProviderSchema),
 });
 
-export const addCatalogModelInputSchema = z.object({
-    capabilities: z.array(modelCapabilitySchema).min(1).default(['general']),
-    modelId: z.string().trim().min(1),
-    provider: modelProviderIdSchema,
-});
-
-export const deleteCatalogModelInputSchema = z.object({
-    modelRef: z.string().trim().min(1),
-});
-
 export type ModelInventory = z.infer<typeof modelInventorySchema>;
 export type ModelInventoryProvider = z.infer<typeof modelInventoryProviderSchema>;
 export type ModelInventoryRecord = z.infer<typeof modelInventoryRecordSchema>;
 export type ModelInventorySnapshotRecord = z.infer<typeof modelInventorySnapshotRecordSchema>;
 export type ModelInventorySnapshot = z.infer<typeof modelInventorySnapshotSchema>;
-export type ModelProviderId = AgentRuntimeModelProviderId;
 export type ModelCapability = z.infer<typeof modelCapabilitySchema>;
-export type AddCatalogModelInput = z.infer<typeof addCatalogModelInputSchema>;
-export type DeleteCatalogModelInput = z.infer<typeof deleteCatalogModelInputSchema>;

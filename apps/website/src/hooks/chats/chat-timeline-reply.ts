@@ -47,6 +47,7 @@ export function isSameActiveReply(left: ChatActiveReply | null, right: ChatActiv
 
     return (
         left.agentId === right.agentId &&
+        (left.completedAt ?? null) === (right.completedAt ?? null) &&
         (left.isThinking ?? true) === (right.isThinking ?? true) &&
         left.runId === right.runId &&
         left.sessionKey === right.sessionKey &&
@@ -84,6 +85,7 @@ export function mergeActiveReplySnapshot(
             current.isThinking === false && incoming.isThinking !== false
                 ? false
                 : incoming.isThinking,
+        completedAt: incoming.completedAt ?? current.completedAt ?? null,
         text: incomingText.length === 0 && currentText.length > 0 ? currentText : incomingText,
     };
 }

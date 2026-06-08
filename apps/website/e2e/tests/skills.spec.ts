@@ -1,7 +1,7 @@
 import { expect, test } from '../support/test.ts';
 
 test('lists product-visible skills and plugins catalog rows', async ({ page }) => {
-    await page.goto('/dashboard/skills');
+    await page.goto('/dashboard/settings/skills');
 
     await expect(page.getByPlaceholder('Search skills and plugins...')).toBeVisible();
     await expect(page.getByRole('tab', { name: /All/u })).toBeVisible();

@@ -1,10 +1,10 @@
 import { describe, expect, test } from 'bun:test';
-import { buildOpenClawCronSchedule, cronScheduleConfigSchema } from './schedule-config.ts';
+import { buildHermesCronSchedule, cronScheduleConfigSchema } from './schedule-config.ts';
 
-describe('buildOpenClawCronSchedule', () => {
-    test('maps interval configs to OpenClaw every schedules', () => {
+describe('buildHermesCronSchedule', () => {
+    test('maps interval configs to Hermes every schedules', () => {
         expect(
-            buildOpenClawCronSchedule({
+            buildHermesCronSchedule({
                 everyMs: 300_000,
                 kind: 'interval',
             })
@@ -16,7 +16,7 @@ describe('buildOpenClawCronSchedule', () => {
 
     test('maps daily configs to cron expressions', () => {
         expect(
-            buildOpenClawCronSchedule({
+            buildHermesCronSchedule({
                 kind: 'daily',
                 time: '09:15',
                 tz: 'America/New_York',
@@ -30,7 +30,7 @@ describe('buildOpenClawCronSchedule', () => {
 
     test('maps weekday configs to Monday through Friday cron expressions', () => {
         expect(
-            buildOpenClawCronSchedule({
+            buildHermesCronSchedule({
                 kind: 'weekdays',
                 time: '08:00',
             })
@@ -42,7 +42,7 @@ describe('buildOpenClawCronSchedule', () => {
 
     test('maps weekly configs to the selected day and time', () => {
         expect(
-            buildOpenClawCronSchedule({
+            buildHermesCronSchedule({
                 dayOfWeek: 1,
                 kind: 'weekly',
                 time: '16:30',
@@ -55,7 +55,7 @@ describe('buildOpenClawCronSchedule', () => {
 
     test('maps custom configs to trimmed cron expressions', () => {
         expect(
-            buildOpenClawCronSchedule({
+            buildHermesCronSchedule({
                 expr: '  0 7 * * *  ',
                 kind: 'custom',
                 tz: 'UTC',

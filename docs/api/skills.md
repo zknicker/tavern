@@ -13,7 +13,7 @@ instruction packages and the runtime plugins an agent can use.
 Skills are inspectable runtime-visible instruction packages with setup metadata,
 secrets, source state, and readiness.
 
-Plugins are runtime-backed capabilities such as OpenClaw plugins, native Codex
+Plugins are runtime-backed capabilities such as Hermes plugins, native Codex
 plugins, Computer Use, and compatible workflow plugins. They are not skill rows
 unless the runtime exposes them as skills with instructions.
 
@@ -24,7 +24,7 @@ unless the runtime exposes them as skills with instructions.
 * Secret requirements are declared without exposing secret values.
 * Setup requirements and source state are visible.
 * A skill can be visible without being ready.
-* Skill rows include a runtime surface so clients can distinguish OpenClaw
+* Skill rows include a runtime surface so clients can distinguish Hermes
   skills from Codex-only harness skills.
 * Plugin ids are stable within their source runtime and include source metadata.
 * Plugin usability separates the user's enablement choice from whether the
@@ -38,7 +38,7 @@ The API covers:
 
 * list visible skills
 * get a skill
-* distinguish OpenClaw and Codex-only runtime surfaces
+* distinguish Hermes and Codex-only runtime surfaces
 * read setup requirements
 * read and update secret bindings
 * list runtime plugins visible to Tavern
@@ -54,17 +54,17 @@ Skill list reads return the latest Runtime SQLite skill inventory snapshot.
 Runtime refreshes that snapshot on startup, every 15 minutes, and after
 skill-related writes. The refresh job emits the skill update event only when
 the stored inventory changes, so the app can refetch without blocking settings
-navigation on live OpenClaw discovery.
+navigation on live Hermes discovery.
 
-Managed OpenClaw bundled skills stay available to OpenClaw itself, but Tavern
+Managed Hermes bundled skills stay available to Hermes itself, but Tavern
 configures `skills.allowBundled` to a Tavern sentinel allowlist with no real
 bundled skill ids, so bundled skills are not eligible for agent prompt
-injection. The Skills & Plugins API hides skills OpenClaw reports as blocked by
+injection. The Skills & Plugins API hides skills Hermes reports as blocked by
 runtime allowlist policy.
 
 Plugins remain runtime-owned. Tavern stores the user's enablement choice and
 projects supported plugin config into managed runtime config. For native Codex
-skills and plugins, Tavern reads Codex app-server inventory and OpenClaw Codex
+skills and plugins, Tavern reads Codex app-server inventory and Hermes Codex
 harness config rather than copying code into the Tavern skill store. Codex-only
 capabilities remain labeled as Codex-only in client inventory.
 

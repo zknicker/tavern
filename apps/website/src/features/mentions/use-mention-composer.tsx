@@ -39,6 +39,7 @@ export function useMentionComposer({
 }) {
     const utils = trpc.useUtils();
     const editorRef = React.useRef<MentionEditorHandle | null>(null);
+    const dismissedQueryRef = React.useRef<ActiveMentionQuery | null>(null);
     const [mentions, setMentions] = React.useState<Mention[]>([]);
     const [activeQuery, setActiveQuery] = React.useState<ActiveMentionQuery | null>(null);
     const [activeIndex, setActiveIndex] = React.useState(0);
@@ -92,6 +93,7 @@ export function useMentionComposer({
     }
 
     function handleMentionSelect(option: MentionOption) {
+        dismissedQueryRef.current = null;
         editorRef.current?.insertMention(option);
     }
 
@@ -100,6 +102,17 @@ export function useMentionComposer({
     }
 
     function handlePickerKeyDown(event: KeyboardEvent) {
+        if (event.key === 'Escape') {
+            if (!(activeQuery || dismissedQueryRef.current)) {
+                return false;
+            }
+
+            event.preventDefault();
+            dismissedQueryRef.current = activeQuery ?? dismissedQueryRef.current;
+            setActiveQuery(null);
+            return true;
+        }
+
         if (visibleMentionOptions.length === 0) {
             return false;
         }
@@ -124,13 +137,23 @@ export function useMentionComposer({
             return true;
         }
 
-        if (event.key === 'Escape') {
-            event.preventDefault();
+        return false;
+    }
+
+    function handleActiveQueryChange(query: ActiveMentionQuery | null) {
+        if (!query) {
+            dismissedQueryRef.current = null;
             setActiveQuery(null);
-            return true;
+            return;
         }
 
-        return false;
+        if (isSameMentionQuery(query, dismissedQueryRef.current)) {
+            setActiveQuery(null);
+            return;
+        }
+
+        dismissedQueryRef.current = null;
+        setActiveQuery(query);
     }
 
     function handleSubmitKeyDown(event: KeyboardEvent) {
@@ -153,11 +176,20 @@ export function useMentionComposer({
         hasQuery: Boolean(activeQuery),
         isPathSearchActive: mentionOptionsState.isPathSearchActive,
         isPathSearchLoading: mentionOptionsState.isPathSearchLoading,
-        onActiveQueryChange: setActiveQuery,
+        onActiveQueryChange: handleActiveQueryChange,
         options: visibleMentionOptions,
         prefetchMentionOptions,
         value: content,
     } satisfies MentionComposerState;
+}
+
+function isSameMentionQuery(left: ActiveMentionQuery, right: ActiveMentionQuery | null) {
+    return (
+        right !== null &&
+        left.end === right.end &&
+        left.query === right.query &&
+        left.start === right.start
+    );
 }
 
 export function MentionComposerEditor({
