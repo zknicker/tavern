@@ -1,9 +1,12 @@
 ---
-summary: Managed Hermes runtime workflow for local startup, state isolation, model config, capability checks, and verification.
+summary: Managed Hermes runtime workflow for engine resolution and bootstrap install, local startup, state isolation, model config, capability checks, and cold-start verification.
 read_when:
   - running or debugging managed Hermes in local Tavern development
+  - changing how Runtime resolves, installs, bootstraps, or pins the Hermes engine binary
+  - changing the tavern engine CLI, TAVERN_HERMES_ALLOW_SYSTEM, TAVERN_HERMES_AUTO_INSTALL, or the bundled installer
   - changing Hermes startup, dashboard ports, model provider config, Codex auth sync, or Runtime capability checks
   - verifying that multiple Tavern worktrees can run managed Hermes simultaneously
+  - cold-start testing a real engine install or the no-co-opt / version-pin guarantees
 ---
 
 # Managed Hermes Runtime

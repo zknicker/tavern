@@ -3,6 +3,7 @@ summary: Local development workflow for managed dev stack startup, Hermes runtim
 read_when:
   - running Tavern locally or changing managed runtime development workflow
   - changing local stack startup, ports, or developer verification
+  - changing the dev-stack Hermes engine defaults (TAVERN_HERMES_ALLOW_SYSTEM, TAVERN_HERMES_AUTO_INSTALL)
 ---
 
 # Development

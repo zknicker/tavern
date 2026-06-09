@@ -160,12 +160,21 @@ so `docs:list` routes future agents correctly.
 - The current adapter lives in `apps/runtime/src/hermes/` and
   `apps/runtime/src/tavern/hermes-turn-runner.ts`; there is no first-party Hermes plugin package in
   `packages/`.
+- Runtime acquires the engine binary, not just its lifecycle. It resolves `TAVERN_HERMES_BIN`, then
+  a pinned managed install under `~/.tavern/engine/<pin>`, then (only with
+  `TAVERN_HERMES_ALLOW_SYSTEM`) a system install, and bootstraps the pinned engine when none is
+  found. Production runs the pin and ignores a host's own Hermes; the dev stack sets
+  `TAVERN_HERMES_ALLOW_SYSTEM=1`/`TAVERN_HERMES_AUTO_INSTALL=0` to reuse the machine's Hermes. See
+  [hermes-managed-runtime](docs/operations/hermes-managed-runtime.md) for resolution tiers, the
+  `tavern engine` CLI, the pin in `apps/runtime/src/hermes/engine.ts`, and cold-start verification.
 - Do not restart or deploy to the global `~/.hermes` Gateway for local Tavern Runtime work; it
   conflicts with managed dev ports and bypasses worktree-isolated state.
 - For managed Hermes changes, run the normal runtime dev stack or
   `bun run --filter @tavern/runtime build` to verify Runtime startup and adapter code.
 - For Gateway method, event, chat, session, or turn semantics, treat shipped Hermes web/operator
-  behavior as the contract. Use the installed method list, relevant `node_modules/hermes/docs/web`
-  docs, or targeted bundle inspection only when a concrete ambiguity remains.
+  behavior as the contract. Hermes is not an npm package; inspect the installed engine source at the
+  resolved engine path (`tavern engine status` shows it — `~/.tavern/engine/<pin>/hermes-agent` for a
+  managed install, `~/.hermes/hermes-agent` for a system install) only when a concrete ambiguity
+  remains.
 - When Tavern depends on a specific Gateway RPC, event shape, or delivery behavior, add or update a
   focused raw-frame or fixture-backed test. Do not rely on memory for event names or payload shape.

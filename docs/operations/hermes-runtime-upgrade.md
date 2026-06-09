@@ -1,8 +1,9 @@
 ---
-summary: Managed Hermes upgrade workflow for CLI changes, generated config, model-provider setup, adapter mappings, state rules, runtime namespace, and verification gates.
+summary: Managed Hermes upgrade workflow for bumping the engine pin and installer snapshot, generated config, model-provider setup, adapter mappings, state rules, runtime namespace, and verification gates.
 read_when:
-  - upgrading the managed Hermes CLI Tavern Runtime launches
+  - upgrading the Hermes engine Tavern Runtime launches (bumping the pin + installer snapshot)
   - changing managed Hermes state, generated config, model setup, adapter mapping, or upgrade verification
+  - cleaning up old engine installs under ~/.tavern/engine after a pin bump
 ---
 
 # Hermes Runtime Upgrade

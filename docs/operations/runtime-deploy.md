@@ -3,6 +3,7 @@ summary: Production Tavern Runtime deployment for a Mac mini using the runtime C
 read_when:
   - deploying Tavern Runtime to a Mac mini or always-on host
   - changing runtime CLI commands, Homebrew service packaging, runtime host/port defaults, or app runtime URL setup
+  - changing how a deployed host acquires the Hermes engine (managed install, bootstrap, version pin, or the no-co-opt guarantee)
   - separating Tavern desktop app releases from Tavern Runtime releases
 ---
 
