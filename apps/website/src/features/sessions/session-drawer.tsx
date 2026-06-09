@@ -1,4 +1,10 @@
-import { Drawer, DrawerPanel, DrawerPopup } from '../../components/ui/drawer.tsx';
+import {
+    Drawer,
+    DrawerHeader,
+    DrawerPanel,
+    DrawerPopup,
+    DrawerTitle,
+} from '../../components/ui/drawer.tsx';
 import { useAgentAvatarDirectory } from '../../hooks/agents/use-agent-avatar-directory.ts';
 import { useAgentList } from '../../hooks/agents/use-agent-list.ts';
 import { useSessionDrawer } from '../../hooks/sessions/use-session-drawer.ts';
@@ -18,6 +24,7 @@ export function SessionDrawerHost() {
 
     const rows = sessionHistoryQuery.data?.rows ?? [];
     const totalRows = sessionHistoryQuery.data?.total ?? 0;
+    const sessionMissing = sessionHistoryQuery.isSuccess && !sessionMetadata;
     const agentName =
         agents.find((agent) => agent.id === sessionMetadata?.agentId)?.name ??
         sessionMetadata?.agentId ??
@@ -45,6 +52,8 @@ export function SessionDrawerHost() {
                         }}
                         sessionKey={sessionKey ?? ''}
                     />
+                ) : sessionKey ? (
+                    <SessionDrawerFallbackHeader sessionKey={sessionKey} />
                 ) : null}
                 <DrawerPanel className="flex min-h-0 flex-1 flex-col p-0" scrollable={false}>
                     {sessionMetadata ? (
@@ -70,13 +79,22 @@ export function SessionDrawerHost() {
                     ) : null}
                     <SessionCardBody
                         currentSessionKey={sessionKey ?? ''}
-                        error={Boolean(sessionError)}
-                        isPending={!sessionMetadata || sessionHistoryQuery.isPending}
+                        error={Boolean(sessionError) || sessionMissing}
+                        isPending={sessionHistoryQuery.isPending}
                         rows={rows}
                         totalRows={totalRows}
                     />
                 </DrawerPanel>
             </DrawerPopup>
         </Drawer>
+    );
+}
+
+function SessionDrawerFallbackHeader({ sessionKey }: { sessionKey: string }) {
+    return (
+        <DrawerHeader>
+            <DrawerTitle>Session logs</DrawerTitle>
+            <p className="truncate font-mono text-muted-foreground text-sm">{sessionKey}</p>
+        </DrawerHeader>
     );
 }

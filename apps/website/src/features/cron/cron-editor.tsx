@@ -4,11 +4,13 @@ import { BadgeDivider } from '../../components/ui/badge-divider.tsx';
 import { Card } from '../../components/ui/card.tsx';
 import { useCronCreate } from '../../hooks/cron/use-cron-create.ts';
 import { useCronDelete } from '../../hooks/cron/use-cron-delete.ts';
+import { useCronDeliveryTargets } from '../../hooks/cron/use-cron-delivery-targets.ts';
 import { useCronGet } from '../../hooks/cron/use-cron-get.ts';
 import { useCronRun } from '../../hooks/cron/use-cron-run.ts';
 import { useCronRuns } from '../../hooks/cron/use-cron-runs.ts';
 import { useCronUpdate } from '../../hooks/cron/use-cron-update.ts';
-import type { CronGetOutput } from '../../lib/trpc.tsx';
+import { useOptimisticCronRuns } from '../../hooks/cron/use-optimistic-cron-runs.ts';
+import type { CronDeliveryTargetsOutput, CronGetOutput } from '../../lib/trpc.tsx';
 import { CronDeleteDialog } from './cron-delete-dialog.tsx';
 import { CronEditorHeader } from './cron-editor-header.tsx';
 import { CronEditorPageForm } from './cron-editor-page-form.tsx';
@@ -18,6 +20,7 @@ import { CronRunsDrawer } from './cron-runs-drawer.tsx';
 import { MissingCronJobCard } from './missing-cron-job-card.tsx';
 
 type CronJob = CronGetOutput['job'];
+type CronDeliveryTarget = CronDeliveryTargetsOutput['targets'][number];
 
 export function shouldRenderCronEditorPageForm(input: {
     isLoading: boolean;
@@ -38,6 +41,12 @@ export function CronEditor() {
     const updateMutation = useCronUpdate();
     const job = isNew ? null : (cronJobQuery.data?.job ?? null);
     const cronRunsQuery = useCronRuns(job ? { jobId: job.id, limit: 20 } : null);
+    const deliveryTargetsQuery = useCronDeliveryTargets();
+    const deliveryDestinationLabel = getCronDeliveryDestinationLabel(
+        job,
+        deliveryTargetsQuery.data?.targets ?? []
+    );
+    const optimisticCronRuns = useOptimisticCronRuns(job, cronRunsQuery.data?.runs ?? []);
     const isMissingJob = !isNew && cronJobQuery.status === 'success' && !job;
     const isPending = createMutation.isPending || updateMutation.isPending;
     const canEdit = !isMissingJob;
@@ -73,10 +82,16 @@ export function CronEditor() {
                         return;
                     }
 
-                    void runMutation.mutateAsync({
-                        jobId: job.id,
-                        mode: 'force',
-                    });
+                    const optimisticRunId = optimisticCronRuns.recordManualRun();
+
+                    void runMutation
+                        .mutateAsync({
+                            jobId: job.id,
+                            mode: 'force',
+                        })
+                        .catch(() => {
+                            optimisticCronRuns.markManualRunFailed(optimisticRunId);
+                        });
                 }}
             />
 
@@ -122,13 +137,14 @@ export function CronEditor() {
             )}
 
             <CronRunsDrawer
+                deliveryDestinationLabel={deliveryDestinationLabel}
                 isOpen={runsDrawerOpen}
                 isPending={cronRunsQuery.isPending}
                 jobName={job?.name ?? null}
                 onClose={() => {
                     setRunsDrawerOpen(false);
                 }}
-                runs={cronRunsQuery.data?.runs ?? []}
+                runs={optimisticCronRuns.runs}
             />
 
             <CronDeleteDialog
@@ -155,4 +171,16 @@ export function CronEditor() {
             />
         </div>
     );
+}
+
+function getCronDeliveryDestinationLabel(
+    job: CronJob | null,
+    targets: CronDeliveryTarget[]
+): string | null {
+    const deliveryChatId = job?.delivery?.chatId.trim();
+    if (!deliveryChatId) {
+        return null;
+    }
+
+    return targets.find((target) => target.chatId === deliveryChatId)?.label ?? deliveryChatId;
 }

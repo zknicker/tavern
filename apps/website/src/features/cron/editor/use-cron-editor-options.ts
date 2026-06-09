@@ -1,6 +1,5 @@
 import * as React from 'react';
-import { queryPolicy } from '../../../lib/query-policy.ts';
-import { trpc } from '../../../lib/trpc.tsx';
+import { useCronDeliveryTargetsSuspense } from '../../../hooks/cron/use-cron-delivery-targets.ts';
 
 export interface CronEditorSelectOption {
     label: string;
@@ -62,10 +61,7 @@ export function buildDeliveryChatOptions(
 }
 
 export function useCronEditorOptions(input: { currentDeliveryChatId: string }) {
-    const [deliveryTargets] = trpc.cron.deliveryTargets.useSuspenseQuery(
-        undefined,
-        queryPolicy.localConfig
-    );
+    const [deliveryTargets] = useCronDeliveryTargetsSuspense();
 
     return React.useMemo(
         () => ({
