@@ -36,6 +36,7 @@ export async function runHermesTurn(input: {
     const progressMessages: string[] = [];
     let reasoningSegment: ReasoningSegment | null = null;
     let reasoningSegmentIndex = 0;
+    const completedReasoningMessages: string[] = [];
     const activeTurn = { sessionId: null as string | null };
     activeHermesTurns.set(input.runId, activeTurn);
 
@@ -52,8 +53,11 @@ export async function runHermesTurn(input: {
             sessionKey: input.sessionKey,
             title: input.chatId,
         })) {
-            if (event.event !== 'reasoning.delta') {
-                completeReasoningSegment(input, reasoningSegment);
+            if (!isReasoningEvent(event.event)) {
+                collectCompletedReasoning(
+                    completedReasoningMessages,
+                    completeReasoningSegment(input, reasoningSegment)
+                );
                 reasoningSegment = null;
             }
 
@@ -73,6 +77,7 @@ export async function runHermesTurn(input: {
                 }
                 publishRuntimeEvent({
                     delta,
+                    isThinking: false,
                     text: assistantContent,
                     timestamp: new Date().toISOString(),
                     turn,
@@ -140,10 +145,27 @@ export async function runHermesTurn(input: {
             }
 
             if (event.event === 'assistant.completed') {
-                assistantContent = removeProgressMessages(
-                    readString(event.data.content) || assistantContent,
-                    progressMessages
-                );
+                const completedContent = readString(event.data.content) || assistantContent;
+                const completedReasoning = readString(event.data.reasoning);
+                const deliveredContent = removeProgressMessages(completedContent, progressMessages);
+                if (
+                    completedReasoning &&
+                    !isSameProgressText(completedReasoning, deliveredContent) &&
+                    !hasCompletedReasoning(completedReasoning, completedReasoningMessages)
+                ) {
+                    reasoningSegmentIndex += 1;
+                    const finalReasoning = {
+                        content: completedReasoning,
+                        index: reasoningSegmentIndex,
+                        startedAt: new Date().toISOString(),
+                    };
+                    recordReasoningProgress(input, turn, finalReasoning, 'message.complete');
+                    collectCompletedReasoning(
+                        completedReasoningMessages,
+                        completeReasoningSegment(input, finalReasoning, 'message.complete')
+                    );
+                }
+                assistantContent = deliveredContent;
                 assistantMessageId = readString(event.data.message_id);
                 modelContext = mergeModelContext(modelContext, event.data);
             }
@@ -152,7 +174,10 @@ export async function runHermesTurn(input: {
                 throw new Error(readString(event.data.message) || 'Hermes stream failed.');
             }
         }
-        completeReasoningSegment(input, reasoningSegment);
+        collectCompletedReasoning(
+            completedReasoningMessages,
+            completeReasoningSegment(input, reasoningSegment)
+        );
         reasoningSegment = null;
 
         if (!assistantContent.trim()) {
@@ -364,7 +389,8 @@ function recordAssistantProgressMessage(
 function recordReasoningProgress(
     input: HermesTurnInput,
     turn: HermesTurn,
-    segment: ReasoningSegment
+    segment: ReasoningSegment,
+    sourceEvent = 'reasoning.delta'
 ) {
     if (!segment.content.trim()) {
         return;
@@ -377,7 +403,7 @@ function recordReasoningProgress(
         detail: segment.content,
         id,
         kind: 'reasoning',
-        metadata: { event: 'reasoning.delta', runtime: runtimeMetadata(input) },
+        metadata: { event: sourceEvent, runtime: runtimeMetadata(input) },
         started_at: segment.startedAt,
         status: 'running',
         title: label,
@@ -390,9 +416,13 @@ function recordReasoningProgress(
     });
 }
 
-function completeReasoningSegment(input: HermesTurnInput, segment: ReasoningSegment | null) {
+function completeReasoningSegment(
+    input: HermesTurnInput,
+    segment: ReasoningSegment | null,
+    sourceEvent = 'reasoning.delta'
+) {
     if (!segment?.content.trim()) {
-        return;
+        return null;
     }
 
     upsertResponseActivity(input.chatId, input.responseId, {
@@ -400,11 +430,12 @@ function completeReasoningSegment(input: HermesTurnInput, segment: ReasoningSegm
         detail: segment.content,
         id: createActivityId(input.runId, `thinking_${segment.index}`),
         kind: 'reasoning',
-        metadata: { event: 'reasoning.delta', runtime: runtimeMetadata(input) },
+        metadata: { event: sourceEvent, runtime: runtimeMetadata(input) },
         started_at: segment.startedAt,
         status: 'completed',
         title: 'Thinking',
     });
+    return segment.content;
 }
 
 function recordToolLifecycle(input: HermesTurnInput, turn: HermesTurn, event: HermesEvent) {
@@ -610,6 +641,10 @@ function isToolLifecycleEvent(event: string) {
     return event === 'tool.started' || event === 'tool.completed' || event === 'tool.failed';
 }
 
+function isReasoningEvent(event: string) {
+    return event === 'reasoning.delta';
+}
+
 function createAssistantMessageId(runId: string, hermesMessageId: string | null) {
     return `msg_${sanitizeId(hermesMessageId ?? `${runId}_assistant`)}`;
 }
@@ -636,6 +671,12 @@ function collectProgressMessage(messages: string[], message: string | null) {
     }
 }
 
+function collectCompletedReasoning(messages: string[], message: string | null) {
+    if (message) {
+        messages.push(message);
+    }
+}
+
 function removeProgressMessages(value: string, progressMessages: string[]) {
     let next = value;
 
@@ -655,6 +696,24 @@ function removeProgressPrefix(value: string, prefix: string) {
     }
 
     return normalizedValue.slice(normalizedPrefix.length).trimStart();
+}
+
+function isSameProgressText(left: string, right: string) {
+    const normalizedLeft = normalizeProgressText(left);
+    const normalizedRight = normalizeProgressText(right);
+
+    return Boolean(normalizedLeft && normalizedLeft === normalizedRight);
+}
+
+function hasCompletedReasoning(content: string, completedMessages: string[]) {
+    return (
+        completedMessages.some((message) => isSameProgressText(content, message)) ||
+        isSameProgressText(content, completedMessages.join('\n'))
+    );
+}
+
+function normalizeProgressText(value: string) {
+    return value.replace(/\s+/g, ' ').trim();
 }
 
 function sanitizeId(value: string) {

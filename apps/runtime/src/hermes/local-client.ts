@@ -695,6 +695,7 @@ export class LocalHermesClient extends LocalHermesUnsupportedSurfaces {
                         content: readString(event.payload, ['text']) ?? '',
                         message_id: readString(event.payload, ['message_id', 'id']),
                         model: readString(event.payload, ['model']),
+                        reasoning: readString(event.payload, ['reasoning', 'thinking']),
                         status: readString(event.payload, ['status']),
                         usage: event.payload.usage ?? null,
                     },

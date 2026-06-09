@@ -265,6 +265,104 @@ describe('LocalHermesClient session routing', () => {
             },
         ]);
     });
+
+    it('maps Hermes visible and reasoning gateway events into separate adapter stream events', async () => {
+        server = new WebSocketServer({ host: '127.0.0.1', port: await getFreePort() });
+        server.on('connection', (socket) => {
+            socket.on('message', (message) => {
+                const request = JSON.parse(message.toString()) as {
+                    id: string;
+                    method: string;
+                    params?: Record<string, unknown>;
+                };
+                const params = request.params ?? {};
+
+                if (request.method === 'session.create') {
+                    socket.send(
+                        JSON.stringify({
+                            id: request.id,
+                            jsonrpc: '2.0',
+                            result: {
+                                session_id: 'live-created',
+                                stored_session_id: 'stored-session',
+                            },
+                        })
+                    );
+                    return;
+                }
+
+                socket.send(JSON.stringify({ id: request.id, jsonrpc: '2.0', result: {} }));
+                if (request.method === 'prompt.submit') {
+                    for (const event of [
+                        {
+                            payload: { text: 'checking context' },
+                            type: 'message.delta',
+                        },
+                        {
+                            payload: { kind: 'process', text: 'running checks' },
+                            type: 'status.update',
+                        },
+                        {
+                            payload: { text: 'first thought' },
+                            type: 'reasoning.delta',
+                        },
+                        {
+                            payload: { reasoning: 'fallback thought', text: 'done' },
+                            type: 'message.complete',
+                        },
+                    ]) {
+                        socket.send(
+                            `${JSON.stringify({
+                                jsonrpc: '2.0',
+                                method: 'event',
+                                params: {
+                                    ...event,
+                                    session_id: params.session_id,
+                                },
+                            })}\n`
+                        );
+                    }
+                }
+            });
+        });
+
+        await new Promise<void>((resolve) => server?.once('listening', () => resolve()));
+        const address = server.address();
+        if (!(address && typeof address === 'object')) {
+            throw new Error('Test WebSocket server did not bind a port.');
+        }
+
+        const { LocalHermesClient } = await import('./local-client');
+        const client = new LocalHermesClient({
+            baseUrl: `http://127.0.0.1:${address.port}`,
+            token: null,
+        });
+
+        const events = await collect(
+            client.streamChat({ content: 'think', sessionKey: 'agent:main:tavern:cht_1' })
+        );
+        client.close();
+
+        expect(events).toEqual([
+            { data: { delta: 'checking context' }, event: 'assistant.delta' },
+            {
+                data: { delta: 'running checks', kind: 'process', source_event: 'status.update' },
+                event: 'assistant.status',
+            },
+            { data: { delta: 'first thought' }, event: 'reasoning.delta' },
+            {
+                data: {
+                    content: 'done',
+                    message_id: null,
+                    model: null,
+                    reasoning: 'fallback thought',
+                    status: null,
+                    usage: null,
+                },
+                event: 'assistant.completed',
+            },
+        ]);
+    });
 });
 
 describe('LocalHermesClient adapter-owned state', () => {
@@ -633,6 +731,14 @@ async function drain(generator: AsyncGenerator<unknown>) {
     for await (const _event of generator) {
         // Consume the stream.
     }
+}
+
+async function collect<T>(generator: AsyncGenerator<T>) {
+    const events: T[] = [];
+    for await (const event of generator) {
+        events.push(event);
+    }
+    return events;
 }
 
 async function getFreePort() {

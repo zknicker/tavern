@@ -86,16 +86,25 @@ Hermes stream events become Tavern rows by stable ids.
 | `tool.progress` with a tool id | Running `tool_call` response activity. |
 | `tool.progress` without a tool id | `message` response activity so status prose does not masquerade as a tool. |
 | `tool.started` / `tool.completed` / `tool.failed` | Upserted `tool_call` activity keyed by normalized tool call id. |
-| `assistant.completed` | Final assistant message content and optional model/provider/usage metadata. |
+| `assistant.completed` | Final assistant message content and optional model/provider/usage metadata. If Hermes includes distinct final reasoning, Runtime stores it as completed `Thinking` activity. |
 | `error` | Failed response with Runtime event and failure metadata. |
+
+Visible assistant preambles and intra-turn updates are `message` response
+activity. They render in the transcript like assistant narration and are not
+controlled by the Appearance setting for model thinking text.
+
+Model-internal reasoning is `reasoning` response activity titled `Thinking`.
+Those rows are execution evidence and are hidden from the main chat transcript
+by default. Appearance settings can show them without changing the stored
+activity.
 
 Assistant progress text is not duplicated into the final assistant message. When
 Hermes includes already-flushed progress text in the completed content, Runtime
 strips those progress prefixes before delivery.
 
-Reasoning is persisted as execution evidence, but Tavern App hides inline
-thinking text by default. Appearance settings can show it in the main chat
-transcript.
+Hermes can emit `assistant.completed.reasoning` with the final assistant reply
+text instead of true reasoning. Runtime drops those duplicates so the final
+answer does not appear again as `Thinking`.
 
 ## Durable Identity
 
