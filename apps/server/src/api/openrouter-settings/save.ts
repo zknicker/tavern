@@ -2,10 +2,7 @@ import { z } from 'zod';
 import { refreshJobSchedule } from '../../jobs/manager.ts';
 import { saveOpenRouterSettings } from '../../openrouter/settings.ts';
 import { deleteOpenRouterUsageOverview } from '../../storage/provider-usage.ts';
-import {
-    emitModelUpdated,
-    emitOpenRouterSettingsInvalidationCascade,
-} from '../invalidation-events.ts';
+import { emitOpenRouterSettingsInvalidationCascade } from '../invalidation-events.ts';
 import { publicProcedure } from '../trpc.ts';
 import { toOpenRouterSettingsOutput } from './shared.ts';
 
@@ -43,7 +40,6 @@ export const saveOpenRouterSettingsProcedure = publicProcedure
             await refreshJobSchedule('sync-openrouter-usage');
         }
         emitOpenRouterSettingsInvalidationCascade();
-        emitModelUpdated();
 
         return toOpenRouterSettingsOutput(settings);
     });

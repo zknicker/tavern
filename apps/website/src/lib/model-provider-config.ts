@@ -1,5 +1,11 @@
 import type { IconSvgElement } from '@hugeicons/react';
-import { Atom02Icon, ChatGptIcon, Globe02Icon } from '@hugeicons-pro/core-stroke-rounded';
+import { Atom02Icon } from '@hugeicons-pro/core-stroke-rounded';
+import type { ModelProviderLogoSource } from '../components/badges/model-provider-logo.tsx';
+import {
+    configuredModelProviders,
+    logoModelProviderPresets,
+    providerConfigAliasIds,
+} from './model-provider-presets.ts';
 
 export type ModelAccessId = 'codex' | 'openai' | 'openrouter';
 
@@ -10,6 +16,7 @@ export interface ModelProviderConfig {
     configName: string;
     displayName: string;
     icon: IconSvgElement;
+    logo?: ModelProviderLogoSource;
 }
 
 export interface ModelIdentityConfig {
@@ -19,36 +26,24 @@ export interface ModelIdentityConfig {
     ref: string;
 }
 
-const configuredModelProviders = [
-    {
-        accessDisplayName: 'Codex',
-        accessId: 'codex',
-        color: '#3B82F6',
-        configName: 'openai-codex',
-        displayName: 'OpenAI Codex',
-        icon: ChatGptIcon,
-    },
-    {
-        accessDisplayName: 'OpenAI API',
-        accessId: 'openai',
-        color: '#10A37F',
-        configName: 'openai',
-        displayName: 'OpenAI',
-        icon: ChatGptIcon,
-    },
-    {
-        accessDisplayName: 'OpenRouter',
-        accessId: 'openrouter',
-        color: '#8B5CF6',
-        configName: 'openrouter',
-        displayName: 'OpenRouter',
-        icon: Globe02Icon,
-    },
-] as const satisfies readonly ModelProviderConfig[];
-
 const providerConfigByName = new Map<string, ModelProviderConfig>(
     configuredModelProviders.map((provider) => [provider.configName, provider] as const)
 );
+providerConfigByName.set('openai', getRequiredProviderConfig('openai-api'));
+
+for (const [configName, displayName, color, logo] of logoModelProviderPresets) {
+    providerConfigByName.set(
+        configName,
+        createLogoProviderConfig(configName, displayName, color, logo)
+    );
+}
+providerConfigByName.set('github-copilot-acp', getRequiredProviderConfig('github-copilot'));
+providerConfigByName.set('copilot', getRequiredProviderConfig('github-copilot'));
+
+const providerConfigAliases = providerConfigAliasIds.map(({ aliases, providerId }) => ({
+    aliases,
+    provider: getRequiredProviderConfig(providerId),
+}));
 
 const providerConfigByAccessId = new Map<ModelAccessId, ModelProviderConfig>(
     configuredModelProviders.flatMap((provider) =>
@@ -57,7 +52,11 @@ const providerConfigByAccessId = new Map<ModelAccessId, ModelProviderConfig>(
 );
 
 export function getModelProviderConfig(providerId: string): ModelProviderConfig {
-    return providerConfigByName.get(providerId) ?? createFallbackModelProvider(providerId);
+    return (
+        providerConfigByName.get(providerId) ??
+        getAliasedModelProviderConfig(providerId) ??
+        createFallbackModelProvider(providerId)
+    );
 }
 
 export function getModelProviderConfigFromAccessId(accessId: ModelAccessId): ModelProviderConfig {
@@ -113,6 +112,51 @@ function createFallbackModelProvider(providerId: string): ModelProviderConfig {
     };
 }
 
+function getAliasedModelProviderConfig(providerId: string): ModelProviderConfig | null {
+    const normalizedProviderId = normalizeProviderIdentifier(providerId);
+
+    for (const { aliases, provider } of providerConfigAliases) {
+        if (
+            aliases.some((alias) => {
+                const normalizedAlias = normalizeProviderIdentifier(alias);
+                return (
+                    normalizedProviderId === normalizedAlias ||
+                    normalizedProviderId.startsWith(`${normalizedAlias}-`)
+                );
+            })
+        ) {
+            return provider;
+        }
+    }
+
+    return null;
+}
+
+function createLogoProviderConfig(
+    configName: string,
+    displayName: string,
+    color: string,
+    logo: ModelProviderLogoSource
+): ModelProviderConfig {
+    return {
+        accessDisplayName: displayName,
+        accessId: null,
+        color,
+        configName,
+        displayName,
+        icon: Atom02Icon,
+        logo,
+    };
+}
+
+function getRequiredProviderConfig(providerId: string): ModelProviderConfig {
+    const provider = providerConfigByName.get(providerId);
+    if (!provider) {
+        throw new Error(`Missing model provider config for ${providerId}.`);
+    }
+    return provider;
+}
+
 function normalizeFallbackModelName(
     fallbackName: string | null | undefined,
     providerDisplayName: string
@@ -146,6 +190,12 @@ function splitModelRef(value: string) {
 
 function normalizeText(value: string) {
     return value.trim().toLowerCase();
+}
+
+function normalizeProviderIdentifier(value: string) {
+    return normalizeText(value)
+        .replace(/[^a-z0-9]+/gu, '-')
+        .replace(/^-|-$/gu, '');
 }
 
 function titleizeIdentifier(value: string) {

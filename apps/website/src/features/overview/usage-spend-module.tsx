@@ -1,7 +1,13 @@
 import { AiAudioIcon } from '@hugeicons-pro/core-stroke-rounded';
+import * as React from 'react';
 import { Bar, BarChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card.tsx';
 import { Icon } from '../../components/ui/icon.tsx';
+import { Button } from '../../components/ui/primitives/button.tsx';
+import { Field, FieldDescription, FieldError } from '../../components/ui/primitives/field.tsx';
+import { Form } from '../../components/ui/primitives/form.tsx';
+import { Input } from '../../components/ui/primitives/input.tsx';
+import { useSaveOpenRouterSettings } from '../../hooks/connections/use-save-openrouter-settings.ts';
 import type { LiveUsageOutput } from '../../lib/trpc.tsx';
 import { UsageSpendSummary } from './usage-spend-summary.tsx';
 import { UsageSpendTooltip } from './usage-spend-tooltip.tsx';
@@ -25,6 +31,9 @@ const keyColors = [
 export function UsageSpendModule({ liveUsage }: UsageSpendModuleProps) {
     const { chartData, emptyChartMessage, grandTotal, hasChart, keyStats, keys } =
         useUsageSpend(liveUsage);
+    const needsManagementKey =
+        liveUsage?.openRouter.overview.status === 'unconfigured' ||
+        liveUsage?.openRouter.error?.code === 'auth';
 
     if (!hasChart) {
         return (
@@ -37,7 +46,11 @@ export function UsageSpendModule({ liveUsage }: UsageSpendModuleProps) {
                 </CardHeader>
                 <CardContent className="p-4">
                     <div className="flex h-52 items-center justify-center">
-                        <p className="text-muted-foreground text-sm">{emptyChartMessage}</p>
+                        {needsManagementKey ? (
+                            <OpenRouterManagementKeyForm />
+                        ) : (
+                            <p className="text-muted-foreground text-sm">{emptyChartMessage}</p>
+                        )}
                     </div>
                 </CardContent>
             </Card>
@@ -101,6 +114,51 @@ export function UsageSpendModule({ liveUsage }: UsageSpendModuleProps) {
             </CardContent>
             <UsageSpendSummary grandTotal={grandTotal} stats={keyStats} />
         </Card>
+    );
+}
+
+function OpenRouterManagementKeyForm() {
+    const [managementApiKey, setManagementApiKey] = React.useState('');
+    const saveSettings = useSaveOpenRouterSettings({
+        onSuccess: () => setManagementApiKey(''),
+    });
+
+    const handleSubmit = React.useEffectEvent((event: React.FormEvent<HTMLFormElement>) => {
+        event.preventDefault();
+        saveSettings.mutate({
+            apiKey: null,
+            managementApiKey,
+        });
+    });
+
+    return (
+        <Form className="w-full max-w-md gap-3" onSubmit={handleSubmit}>
+            <Field>
+                <Input
+                    aria-label="OpenRouter management key"
+                    autoComplete="off"
+                    onChange={(event) => setManagementApiKey(event.currentTarget.value)}
+                    placeholder="OpenRouter management key"
+                    type="password"
+                    value={managementApiKey}
+                />
+                <FieldDescription>
+                    Add a management key to sync OpenRouter account activity.
+                </FieldDescription>
+                {saveSettings.error ? <FieldError>{saveSettings.error.message}</FieldError> : null}
+            </Field>
+            <div className="flex justify-end">
+                <Button
+                    disabled={!managementApiKey.trim()}
+                    loading={saveSettings.isPending}
+                    size="sm"
+                    type="submit"
+                    variant="secondary"
+                >
+                    Save key
+                </Button>
+            </div>
+        </Form>
     );
 }
 

@@ -11,8 +11,13 @@ Stats turn runtime and provider activity into something users can scan.
 
 ## In the box
 
-* **Usage.** Show Codex and OpenRouter activity over time.
-* **Spend.** Surface cost signals where providers expose them.
+* **Connected sources.** Show stats only for Hermes providers that are connected
+  and have a Tavern-supported stats source.
+* **Usage.** Show Codex limits and OpenRouter account activity when those
+  providers are connected.
+* **Spend.** Surface cost signals where providers expose them. OpenRouter spend
+  requires an account management key because the inference API key is not enough
+  to read account activity.
 * **Runtime health.** Show whether the agent runtime is connected and working.
 * **Operational clues.** Help users understand slow, failed, or expensive work.
 * **Homepage highlights.** Rotate short tavern headlines backed by recent

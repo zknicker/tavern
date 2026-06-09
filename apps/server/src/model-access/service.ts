@@ -1,4 +1,11 @@
-import type { AgentRuntimeModelAccessStatus } from '@tavern/api';
+import type {
+    AgentRuntimeCancelModelProviderOAuth,
+    AgentRuntimeModelAccessStatus,
+    AgentRuntimePollModelProviderOAuth,
+    AgentRuntimeSaveModelProviderApiKey,
+    AgentRuntimeStartModelProviderOAuth,
+    AgentRuntimeSubmitModelProviderOAuth,
+} from '@tavern/api';
 import {
     CodexUsageParseError,
     decodeCodexAccessTokenMetadata,
@@ -33,6 +40,71 @@ export async function listModelAccessStatuses(): Promise<ModelAccessStatus[]> {
 
     try {
         return (await client.getModelAccess()).providers;
+    } finally {
+        client.close();
+    }
+}
+
+export async function saveModelProviderApiKey(input: AgentRuntimeSaveModelProviderApiKey) {
+    const client = createConfiguredAgentRuntimeClient();
+    if (!client) {
+        throw new Error('Tavern Runtime is not connected.');
+    }
+
+    try {
+        return await client.saveModelProviderApiKey(input);
+    } finally {
+        client.close();
+    }
+}
+
+export async function startModelProviderOAuth(input: AgentRuntimeStartModelProviderOAuth) {
+    const client = createConfiguredAgentRuntimeClient();
+    if (!client) {
+        throw new Error('Tavern Runtime is not connected.');
+    }
+
+    try {
+        return await client.startModelProviderOAuth(input);
+    } finally {
+        client.close();
+    }
+}
+
+export async function pollModelProviderOAuth(input: AgentRuntimePollModelProviderOAuth) {
+    const client = createConfiguredAgentRuntimeClient();
+    if (!client) {
+        throw new Error('Tavern Runtime is not connected.');
+    }
+
+    try {
+        return await client.pollModelProviderOAuth(input);
+    } finally {
+        client.close();
+    }
+}
+
+export async function cancelModelProviderOAuth(input: AgentRuntimeCancelModelProviderOAuth) {
+    const client = createConfiguredAgentRuntimeClient();
+    if (!client) {
+        throw new Error('Tavern Runtime is not connected.');
+    }
+
+    try {
+        return await client.cancelModelProviderOAuth(input);
+    } finally {
+        client.close();
+    }
+}
+
+export async function submitModelProviderOAuth(input: AgentRuntimeSubmitModelProviderOAuth) {
+    const client = createConfiguredAgentRuntimeClient();
+    if (!client) {
+        throw new Error('Tavern Runtime is not connected.');
+    }
+
+    try {
+        return await client.submitModelProviderOAuth(input);
     } finally {
         client.close();
     }

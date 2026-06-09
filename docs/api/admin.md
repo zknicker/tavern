@@ -39,7 +39,7 @@ capabilities. It is not a second product API.
 | Jobs | `/jobs`, `/jobs/{slug}`, `/jobs/{slug}/run` |
 | Cron | `/cron-jobs`, `/cron-jobs/{id}`, `/cron-jobs/{id}/run`, `/cron-jobs/{id}/runs`, `/cron-runs`, `/cron-runs/{id}` |
 | Skills | `/skills`, `/skills/{id}`, `/skills/{id}/config` |
-| Cortex, models, and access | `/cortex/status`, `/cortex/topics`, `/cortex/pages`, `/cortex/search`, `/models`, `/model-access`, `/model-access/openrouter` |
+| Cortex, models, and access | `/cortex/status`, `/cortex/topics`, `/cortex/pages`, `/cortex/search`, `/models`, `/model-access`, `/model-access/api-key`, `/model-access/oauth/{providerId}/start`, `/model-access/oauth/{providerId}/poll/{sessionId}`, `/model-access/oauth/{providerId}/submit`, `/model-access/oauth/sessions/{sessionId}`, `/model-access/openrouter` |
 | Platform bindings | `/bindings`, `/bindings/{id}` |
 | Hermes chat projections | `/hermes/chats`, `/hermes/chats/{chatId}/messages` |
 | Runtime chat relay | websocket `/chat` |
@@ -49,9 +49,12 @@ definitions own their payload schema and default input. Cortex wiki maintenance
 is not a built-in Runtime job; scheduled wiki work belongs in Tasks and runtime
 crons.
 
-`/model-access/openrouter` reads and writes OpenRouter credentials in Runtime
-Tavern Vault. Runtime-owned features use that key without reaching into app
-storage or Hermes internals.
+`/model-access/api-key` writes provider API keys through the managed Hermes
+environment API. `/model-access/oauth/{providerId}/start` starts the
+provider's Hermes-owned OAuth flow and returns either an auth URL or
+device-code instructions. Provider model credentials are Hermes-owned.
+Telemetry-only credentials, such as the OpenRouter management key used by
+Stats, live with the feature that reads that telemetry.
 
 ## Contract Source
 

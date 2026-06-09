@@ -5,8 +5,10 @@ import {
     agentRuntimeRoutes,
     agentRuntimeSaveOpenRouterSettingsSchema,
 } from '@tavern/api';
+import { readConfigValue } from '../config';
 import { getDb } from '../db/connection';
 import { namedParams } from '../db/sqlite';
+import { readManagedHermesEnvValue } from '../hermes/env';
 import { log } from '../log';
 import { json } from '../tavern/http';
 
@@ -61,6 +63,14 @@ export function getOpenRouterApiKey(): string | null {
     } catch {
         return null;
     }
+}
+
+export async function resolveOpenRouterApiKey(): Promise<string | null> {
+    return (
+        readConfigValue('OPENROUTER_API_KEY') ??
+        (await readManagedHermesEnvValue('OPENROUTER_API_KEY')) ??
+        getOpenRouterApiKey()
+    );
 }
 
 function saveOpenRouterSettings(

@@ -27,6 +27,15 @@ export const agentRuntimeRoutes = {
     updateStatus: '/update/status',
     macApps: '/mac-apps',
     modelAccess: '/model-access',
+    modelAccessApiKey: '/model-access/api-key',
+    modelAccessOAuthCancel: (sessionId: string) =>
+        `/model-access/oauth/sessions/${encodeURIComponent(sessionId)}`,
+    modelAccessOAuthPoll: (providerId: string, sessionId: string) =>
+        `/model-access/oauth/${encodeURIComponent(providerId)}/poll/${encodeURIComponent(sessionId)}`,
+    modelAccessOAuthStart: (providerId: string) =>
+        `/model-access/oauth/${encodeURIComponent(providerId)}/start`,
+    modelAccessOAuthSubmit: (providerId: string) =>
+        `/model-access/oauth/${encodeURIComponent(providerId)}/submit`,
     modelAccessOpenAiSettings: '/model-access/openai',
     modelAccessOpenRouterSettings: '/model-access/openrouter',
     job: (slug: string) => `/jobs/${encodeURIComponent(slug)}`,

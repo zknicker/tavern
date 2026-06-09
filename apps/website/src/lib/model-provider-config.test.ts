@@ -16,6 +16,29 @@ test('provider config normalizes known model providers for the app UI', () => {
     });
 });
 
+test('provider config resolves branded Hermes provider variants to SVGL logos', () => {
+    expect(getModelProviderConfig('xai')).toMatchObject({
+        configName: 'xai',
+        displayName: 'xAI',
+        logo: {
+            dark: 'https://svgl.app/library/xai_dark.svg',
+            light: 'https://svgl.app/library/xai_light.svg',
+        },
+    });
+    expect(getModelProviderConfig('xai-grok-oauth')).toMatchObject({
+        configName: 'xai',
+        displayName: 'xAI',
+    });
+    expect(getModelProviderConfig('qwen-oauth-portal')).toMatchObject({
+        configName: 'qwen',
+        displayName: 'Qwen',
+        logo: {
+            dark: 'https://svgl.app/library/qwen_dark.svg',
+            light: 'https://svgl.app/library/qwen_light.svg',
+        },
+    });
+});
+
 test('removed providers fall back to generic display metadata', () => {
     expect(getModelProviderConfig('claude')).toMatchObject({
         accessId: null,

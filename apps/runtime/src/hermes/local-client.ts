@@ -3,12 +3,15 @@ import path from 'node:path';
 import {
     type AgentRuntimeAgentFileContent,
     type AgentRuntimeAgentFileList,
+    type AgentRuntimeCancelModelProviderOAuth,
     type AgentRuntimeCreateAgent,
     type AgentRuntimeCreateCron,
     type AgentRuntimeCron,
     type AgentRuntimeCronRun,
     type AgentRuntimeModels,
+    type AgentRuntimePollModelProviderOAuth,
     type AgentRuntimeRunCron,
+    type AgentRuntimeSaveModelProviderApiKey,
     type AgentRuntimeSessionGraph,
     type AgentRuntimeSessionMessageAttachment,
     type AgentRuntimeSessionMessageList,
@@ -16,6 +19,8 @@ import {
     type AgentRuntimeSessionPrompt,
     type AgentRuntimeSessionResync,
     type AgentRuntimeSkillSummary,
+    type AgentRuntimeStartModelProviderOAuth,
+    type AgentRuntimeSubmitModelProviderOAuth,
     type AgentRuntimeToolset,
     type AgentRuntimeUpdateAgentModel,
     type AgentRuntimeUpdateAgentName,
@@ -25,16 +30,26 @@ import {
     type AgentRuntimeUpdateToolsetEnabled,
     agentRuntimeAgentListSchema,
     agentRuntimeAgentSchema,
+    agentRuntimeCancelModelProviderOAuthSchema,
     agentRuntimeCronListSchema,
     agentRuntimeCronRunSchema,
     agentRuntimeCronSchema,
     agentRuntimeHermesConfigSnapshotSchema,
+    agentRuntimeModelProviderApiKeyResultSchema,
+    agentRuntimeModelProviderOAuthCancelSchema,
+    agentRuntimeModelProviderOAuthPollSchema,
+    agentRuntimeModelProviderOAuthStartSchema,
+    agentRuntimeModelProviderOAuthSubmitSchema,
     agentRuntimeModelsSchema,
+    agentRuntimePollModelProviderOAuthSchema,
+    agentRuntimeSaveModelProviderApiKeySchema,
     agentRuntimeSessionGraphSchema,
     agentRuntimeSessionListSchema,
     agentRuntimeSessionMessageListSchema,
     agentRuntimeSessionPreviewListSchema,
     agentRuntimeSessionResyncSchema,
+    agentRuntimeStartModelProviderOAuthSchema,
+    agentRuntimeSubmitModelProviderOAuthSchema,
 } from '@tavern/api';
 import {
     getRuntimePort,
@@ -459,21 +474,99 @@ export class LocalHermesClient extends LocalHermesUnsupportedSurfaces {
     }
 
     async getModels(): Promise<AgentRuntimeModels> {
-        const response = await this.#http.get('/api/model/options');
+        const [response, envResponse, oauthResponse] = await Promise.all([
+            this.#http.get('/api/model/options'),
+            this.#http.get('/api/env').catch(() => ({})),
+            this.#http.get('/api/providers/oauth').catch(() => ({})),
+        ]);
         const providers = readArray(response, ['providers']);
+        const oauthFlowsByProvider = new Map(
+            readArray(oauthResponse, ['providers']).flatMap((provider) => {
+                const record = asRecord(provider);
+                const providerId = readString(record, ['id']);
+                const flow = readOAuthFlow(readString(record, ['flow']));
+                return providerId && flow ? [[providerId, flow] as const] : [];
+            })
+        );
         const models = providers.flatMap((provider) => {
-            const record = provider && typeof provider === 'object' ? provider : {};
-            const providerId = readString(record as Record<string, unknown>, ['slug', 'name']);
-            return readStringArray((record as Record<string, unknown>).models).map((model) => ({
+            const record = asRecord(provider);
+            const providerId = readString(record, ['slug', 'name']);
+            return readStringArray(record.models).map((model) => ({
                 id: providerId ? `${providerId}/${model}` : model,
                 label: model,
                 provider: providerId,
             }));
         });
         return agentRuntimeModelsSchema.parse({
+            apiKeyOptions: mapHermesProviderApiKeyOptions(envResponse),
             models,
+            providers: providers.map((provider) => {
+                const record = asRecord(provider);
+                const providerId = readString(record, ['slug', 'name']);
+                const models = readStringArray(record.models);
+                return {
+                    authenticated: record.authenticated === false ? false : models.length > 0,
+                    authType: readString(record, ['auth_type']),
+                    id: providerId || 'unknown',
+                    keyEnv: readString(record, ['key_env']),
+                    label: readString(record, ['name', 'slug']) || providerId || 'Unknown provider',
+                    modelCount: readProviderNumber(record, 'total_models') ?? models.length,
+                    oauthFlow: providerId ? (oauthFlowsByProvider.get(providerId) ?? null) : null,
+                    warning: readString(record, ['warning']),
+                };
+            }),
             updatedAt: new Date().toISOString(),
         });
+    }
+
+    async saveModelProviderApiKey(input: AgentRuntimeSaveModelProviderApiKey) {
+        const payload = agentRuntimeSaveModelProviderApiKeySchema.parse(input);
+        await this.#http.putJson('/api/env', {
+            key: payload.keyEnv,
+            value: payload.apiKey,
+        });
+        return agentRuntimeModelProviderApiKeyResultSchema.parse({ ok: true });
+    }
+
+    async startModelProviderOAuth(input: AgentRuntimeStartModelProviderOAuth) {
+        const payload = agentRuntimeStartModelProviderOAuthSchema.parse(input);
+        const response = await this.#http.postJson(
+            `/api/providers/oauth/${encodeURIComponent(payload.providerId)}/start`,
+            {}
+        );
+        return agentRuntimeModelProviderOAuthStartSchema.parse(
+            normalizeOAuthStartResponse(response)
+        );
+    }
+
+    async pollModelProviderOAuth(input: AgentRuntimePollModelProviderOAuth) {
+        const payload = agentRuntimePollModelProviderOAuthSchema.parse(input);
+        const response = await this.#http.get(
+            `/api/providers/oauth/${encodeURIComponent(payload.providerId)}/poll/${encodeURIComponent(payload.sessionId)}`
+        );
+        return agentRuntimeModelProviderOAuthPollSchema.parse(normalizeOAuthPollResponse(response));
+    }
+
+    async submitModelProviderOAuth(input: AgentRuntimeSubmitModelProviderOAuth) {
+        const payload = agentRuntimeSubmitModelProviderOAuthSchema.parse(input);
+        const response = await this.#http.postJson(
+            `/api/providers/oauth/${encodeURIComponent(payload.providerId)}/submit`,
+            {
+                code: payload.code,
+                session_id: payload.sessionId,
+            }
+        );
+        return agentRuntimeModelProviderOAuthSubmitSchema.parse(
+            normalizeOAuthSubmitResponse(response)
+        );
+    }
+
+    async cancelModelProviderOAuth(input: AgentRuntimeCancelModelProviderOAuth) {
+        const payload = agentRuntimeCancelModelProviderOAuthSchema.parse(input);
+        const response = await this.#http.deleteJson(
+            `/api/providers/oauth/sessions/${encodeURIComponent(payload.sessionId)}`
+        );
+        return agentRuntimeModelProviderOAuthCancelSchema.parse(response);
     }
 
     async listSkills(_options?: {
@@ -1100,6 +1193,129 @@ function readHermesBaseUrl() {
     const host = readConfigValue('TAVERN_HERMES_HOST') ?? defaultHermesHost;
     const port = readConfigValue('TAVERN_HERMES_PORT') ?? defaultHermesPort;
     return `http://${host}:${port}`;
+}
+
+function readProviderNumber(record: Record<string, unknown>, key: string) {
+    const value = record[key];
+    return typeof value === 'number' && Number.isFinite(value) ? value : null;
+}
+
+function mapHermesProviderApiKeyOptions(value: unknown) {
+    const envVars = asRecord(value);
+    return Object.entries(envVars)
+        .flatMap(([envKey, rawInfo]) => {
+            const info = asRecord(rawInfo);
+            if (readString(info, ['category']) !== 'provider') {
+                return [];
+            }
+            if (info.is_password !== true) {
+                return [];
+            }
+            if (!/(?:API_KEY|TOKEN)$/u.test(envKey)) {
+                return [];
+            }
+
+            return [
+                {
+                    description: readString(info, ['description']),
+                    docsUrl: readUrlString(info, 'url'),
+                    envKey,
+                    isSet: info.is_set === true,
+                    label: formatProviderEnvLabel(envKey),
+                    providerHint: normalizeProviderHint(envKey),
+                },
+            ];
+        })
+        .sort(
+            (left, right) =>
+                left.label.localeCompare(right.label) || left.envKey.localeCompare(right.envKey)
+        );
+}
+
+function readUrlString(record: Record<string, unknown>, key: string) {
+    const value = readString(record, [key]);
+    if (!value) {
+        return null;
+    }
+    try {
+        return new URL(value).toString();
+    } catch {
+        return null;
+    }
+}
+
+function formatProviderEnvLabel(envKey: string) {
+    const base = envKey
+        .replace(/_(?:GITHUB_TOKEN|API_KEY|TOKEN)$/u, '')
+        .replace(/^HF$/u, 'HUGGINGFACE')
+        .replace(/_/gu, ' ')
+        .toLowerCase();
+    return base.replace(/\b\w/gu, (match) => match.toUpperCase());
+}
+
+function normalizeProviderHint(envKey: string) {
+    const hint = envKey
+        .replace(/_(?:GITHUB_TOKEN|API_KEY|TOKEN)$/u, '')
+        .trim()
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/gu, '-')
+        .replace(/^-|-$/gu, '');
+    return hint || null;
+}
+
+function normalizeOAuthStartResponse(value: unknown) {
+    const record = asRecord(value);
+    const flow = readString(record, ['flow']);
+    const base = {
+        expiresIn: readProviderNumber(record, 'expires_in') ?? 1,
+        flow,
+        sessionId: readString(record, ['session_id']) ?? '',
+    };
+
+    if (flow === 'device_code') {
+        return {
+            ...base,
+            pollInterval: readProviderNumber(record, 'poll_interval') ?? 5,
+            userCode: readString(record, ['user_code']) ?? '',
+            verificationUrl: readString(record, ['verification_url']) ?? '',
+        };
+    }
+
+    return {
+        ...base,
+        authUrl: readString(record, ['auth_url']) ?? '',
+    };
+}
+
+function readOAuthFlow(value: string | null) {
+    switch (value) {
+        case 'device_code':
+        case 'external':
+        case 'loopback':
+        case 'pkce':
+            return value;
+        default:
+            return null;
+    }
+}
+
+function normalizeOAuthPollResponse(value: unknown) {
+    const record = asRecord(value);
+    return {
+        errorMessage: readString(record, ['error_message']) ?? null,
+        expiresAt: readProviderNumber(record, 'expires_at'),
+        sessionId: readString(record, ['session_id']) ?? '',
+        status: readString(record, ['status']) ?? 'error',
+    };
+}
+
+function normalizeOAuthSubmitResponse(value: unknown) {
+    const record = asRecord(value);
+    return {
+        message: readString(record, ['message']) ?? null,
+        ok: Boolean(record.ok),
+        status: readString(record, ['status']) ?? 'error',
+    };
 }
 
 function resolveEditableHermesAgentFile(filePath: string) {

@@ -1,36 +1,67 @@
+import { getAgentRuntimeModels } from '../agent-runtime/models.ts';
 import type { ModelInventory, ModelInventoryProvider } from './inventory-contracts.ts';
 import { modelInventorySchema } from './inventory-contracts.ts';
-import { listModels } from './service.ts';
 
 export async function listModelInventory(): Promise<ModelInventory> {
-    const models = (await listModels()).models.filter(
-        (model) => model.availability === 'available'
-    );
+    const response = await getAgentRuntimeModels();
+    const models = response?.models ?? [];
+    const runtimeProviders = response?.providers ?? [];
     const providersById = new Map<string, ModelInventoryProvider>();
 
-    for (const model of models) {
-        const provider =
-            providersById.get(model.provider) ??
+    for (const provider of runtimeProviders) {
+        providersById.set(
+            provider.id,
             createInventoryProvider({
-                provider: model.provider,
+                authType: provider.authType,
+                isConnected: provider.authenticated,
+                keyEnv: provider.keyEnv,
+                label: provider.label,
+                oauthFlow: provider.oauthFlow,
+                provider: provider.id,
+                warning: provider.warning,
+            })
+        );
+    }
+
+    for (const model of models) {
+        const parsed = parseRuntimeModel(model);
+        if (!parsed) {
+            continue;
+        }
+        const provider =
+            providersById.get(parsed.provider) ??
+            createInventoryProvider({
+                authType: null,
+                isConnected: true,
+                keyEnv: null,
+                label: null,
+                oauthFlow: null,
+                provider: parsed.provider,
+                warning: null,
             });
+
+        if (!provider.isConnected) {
+            providersById.set(parsed.provider, provider);
+            continue;
+        }
 
         provider.models.push({
             canDelete: false,
             capabilities: ['general'],
-            contextWindow: model.contextWindow,
+            contextWindow: null,
             description: null,
-            displayName: model.name,
+            displayName: model.label?.trim() || parsed.modelId,
             inUse: false,
-            modelId: model.modelId,
-            provider: model.provider,
-            ref: model.ref,
+            modelId: parsed.modelId,
+            provider: parsed.provider,
+            ref: parsed.ref,
             usageLabels: [],
         });
-        providersById.set(model.provider, provider);
+        providersById.set(parsed.provider, provider);
     }
 
     return modelInventorySchema.parse({
+        apiKeyOptions: response?.apiKeyOptions ?? [],
         providers: [...providersById.values()]
             .map((provider) => ({
                 ...provider,
@@ -48,15 +79,82 @@ export async function listModelInventory(): Promise<ModelInventory> {
     });
 }
 
-function createInventoryProvider(input: { provider: string }): ModelInventoryProvider {
+function parseRuntimeModel(input: { id: string; provider: string | null }) {
+    const separatorIndex = input.id.indexOf('/');
+    const provider =
+        input.provider ?? (separatorIndex > 0 ? input.id.slice(0, separatorIndex) : null);
+    if (!provider) {
+        return null;
+    }
+    const modelId = separatorIndex > 0 ? input.id.slice(separatorIndex + 1) : input.id;
     return {
-        displayName: formatProviderName(input.provider),
-        isConnected: true,
+        modelId,
+        provider,
+        ref: `${provider}/${modelId}`,
+    };
+}
+
+function createInventoryProvider(input: {
+    authType: string | null;
+    isConnected: boolean;
+    keyEnv: string | null;
+    label: string | null;
+    oauthFlow: string | null;
+    provider: string;
+    warning: string | null;
+}): ModelInventoryProvider {
+    const keyEnv = input.keyEnv ?? extractProviderKeyEnv(input.warning);
+    const authAction = getAuthAction(input.authType, input.oauthFlow, keyEnv);
+    return {
+        authAction,
+        authType: input.authType,
+        connectionDetail: input.isConnected ? null : input.warning,
+        displayName: input.label?.trim() || formatProviderName(input.provider),
+        isConnected: input.isConnected,
+        keyEnv,
         models: [],
         provider: input.provider,
-        state: 'connected',
-        stateMessage: 'Available from Hermes.',
+        state: input.isConnected ? 'connected' : 'not-configured',
+        stateMessage: input.isConnected ? 'Connected' : getDisconnectedMessage(authAction),
     };
+}
+
+function getAuthAction(authType: string | null, oauthFlow: string | null, keyEnv: string | null) {
+    if (oauthFlow === 'external' || (authType === 'oauth_external' && !oauthFlow)) {
+        return 'external' as const;
+    }
+    if (authType?.startsWith('oauth') || oauthFlow) {
+        return 'oauth' as const;
+    }
+    if (authType === 'api_key' && keyEnv) {
+        return 'api-key' as const;
+    }
+    if (authType === 'external_process') {
+        return 'external' as const;
+    }
+    if (authType === 'aws_sdk') {
+        return 'system' as const;
+    }
+    return null;
+}
+
+function getDisconnectedMessage(authAction: ReturnType<typeof getAuthAction>) {
+    switch (authAction) {
+        case 'api-key':
+            return 'Add API key';
+        case 'oauth':
+            return 'Sign in';
+        case 'external':
+            return 'External setup required';
+        case 'system':
+            return 'System credentials required';
+        default:
+            return 'Not configured';
+    }
+}
+
+function extractProviderKeyEnv(warning: string | null) {
+    return warning?.match(/\b[A-Z][A-Z0-9_]*_API_KEY\b/u)?.[0] ?? null;
 }
 
 function formatProviderName(provider: string) {

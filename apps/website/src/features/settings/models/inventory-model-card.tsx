@@ -30,6 +30,7 @@ export function InventoryModelCard({ model, providerId }: InventoryModelCardProp
                     color={providerConfig.color}
                     icon={providerConfig.icon}
                     label={providerConfig.displayName}
+                    logo={providerConfig.logo}
                     size="sm"
                 />
                 {model.contextWindow ? (

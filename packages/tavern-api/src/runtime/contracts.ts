@@ -102,6 +102,73 @@ export const agentRuntimeModelAccessSchema = z.object({
     providers: z.array(agentRuntimeModelAccessStatusSchema),
 });
 
+export const agentRuntimeSaveModelProviderApiKeySchema = z.object({
+    apiKey: z.string().trim().min(1, 'Enter an API key.'),
+    keyEnv: z.string().trim().min(1),
+});
+
+export const agentRuntimeModelProviderApiKeyResultSchema = z.object({
+    ok: z.boolean(),
+});
+
+export const agentRuntimeModelProviderOAuthCancelSchema = z.object({
+    ok: z.boolean(),
+});
+
+export const agentRuntimeStartModelProviderOAuthSchema = z.object({
+    providerId: z.string().trim().min(1),
+});
+
+export const agentRuntimePollModelProviderOAuthSchema = z.object({
+    providerId: z.string().trim().min(1),
+    sessionId: z.string().trim().min(1),
+});
+
+export const agentRuntimeCancelModelProviderOAuthSchema = z.object({
+    sessionId: z.string().trim().min(1),
+});
+
+export const agentRuntimeSubmitModelProviderOAuthSchema =
+    agentRuntimePollModelProviderOAuthSchema.extend({
+        code: z.string().trim().min(1, 'Enter the authorization code.'),
+    });
+
+export const agentRuntimeModelProviderOAuthStartSchema = z.union([
+    z.object({
+        authUrl: z.string().url(),
+        expiresIn: z.number().int().positive(),
+        flow: z.literal('pkce'),
+        sessionId: z.string().trim().min(1),
+    }),
+    z.object({
+        expiresIn: z.number().int().positive(),
+        flow: z.literal('device_code'),
+        pollInterval: z.number().int().positive(),
+        sessionId: z.string().trim().min(1),
+        userCode: z.string().trim().min(1),
+        verificationUrl: z.string().url(),
+    }),
+    z.object({
+        authUrl: z.string().url(),
+        expiresIn: z.number().int().positive(),
+        flow: z.literal('loopback'),
+        sessionId: z.string().trim().min(1),
+    }),
+]);
+
+export const agentRuntimeModelProviderOAuthPollSchema = z.object({
+    errorMessage: z.string().trim().min(1).nullable(),
+    expiresAt: z.number().nullable(),
+    sessionId: z.string().trim().min(1),
+    status: z.enum(['approved', 'denied', 'error', 'expired', 'pending']),
+});
+
+export const agentRuntimeModelProviderOAuthSubmitSchema = z.object({
+    message: z.string().trim().min(1).nullable(),
+    ok: z.boolean(),
+    status: z.enum(['approved', 'denied', 'error', 'expired', 'pending']),
+});
+
 const agentRuntimeOpenRouterKeySchema = z
     .string()
     .trim()
@@ -640,8 +707,46 @@ export const agentRuntimeModelCatalogEntrySchema = z.object({
     provider: z.string().trim().min(1).nullable(),
 });
 
+export const agentRuntimeModelProviderAuthTypeSchema = z.enum([
+    'api_key',
+    'aws_sdk',
+    'external_process',
+    'oauth_device_code',
+    'oauth_external',
+    'oauth_minimax',
+]);
+
+export const agentRuntimeModelProviderOAuthFlowSchema = z.enum([
+    'device_code',
+    'external',
+    'loopback',
+    'pkce',
+]);
+
+export const agentRuntimeModelProviderEntrySchema = z.object({
+    authenticated: z.boolean(),
+    authType: agentRuntimeModelProviderAuthTypeSchema.nullable(),
+    id: z.string().trim().min(1),
+    keyEnv: z.string().trim().min(1).nullable(),
+    label: z.string().trim().min(1),
+    modelCount: z.number().int().nonnegative(),
+    oauthFlow: agentRuntimeModelProviderOAuthFlowSchema.nullable().default(null),
+    warning: z.string().trim().min(1).nullable(),
+});
+
+export const agentRuntimeModelProviderApiKeyOptionSchema = z.object({
+    description: z.string().trim().min(1).nullable(),
+    docsUrl: z.string().url().nullable(),
+    envKey: z.string().trim().min(1),
+    isSet: z.boolean(),
+    label: z.string().trim().min(1),
+    providerHint: z.string().trim().min(1).nullable(),
+});
+
 export const agentRuntimeModelsSchema = z.object({
+    apiKeyOptions: z.array(agentRuntimeModelProviderApiKeyOptionSchema).default([]),
     models: z.array(agentRuntimeModelCatalogEntrySchema),
+    providers: z.array(agentRuntimeModelProviderEntrySchema).default([]),
     updatedAt: z.string().datetime().nullable(),
 });
 
@@ -1677,6 +1782,33 @@ export type AgentRuntimeModelAccess = z.infer<typeof agentRuntimeModelAccessSche
 export type AgentRuntimeModelAccessId = z.infer<typeof agentRuntimeModelAccessIdSchema>;
 export type AgentRuntimeModelAccessState = z.infer<typeof agentRuntimeModelAccessStateSchema>;
 export type AgentRuntimeModelAccessStatus = z.infer<typeof agentRuntimeModelAccessStatusSchema>;
+export type AgentRuntimeSaveModelProviderApiKey = z.infer<
+    typeof agentRuntimeSaveModelProviderApiKeySchema
+>;
+export type AgentRuntimeStartModelProviderOAuth = z.infer<
+    typeof agentRuntimeStartModelProviderOAuthSchema
+>;
+export type AgentRuntimePollModelProviderOAuth = z.infer<
+    typeof agentRuntimePollModelProviderOAuthSchema
+>;
+export type AgentRuntimeCancelModelProviderOAuth = z.infer<
+    typeof agentRuntimeCancelModelProviderOAuthSchema
+>;
+export type AgentRuntimeSubmitModelProviderOAuth = z.infer<
+    typeof agentRuntimeSubmitModelProviderOAuthSchema
+>;
+export type AgentRuntimeModelProviderOAuthStart = z.infer<
+    typeof agentRuntimeModelProviderOAuthStartSchema
+>;
+export type AgentRuntimeModelProviderOAuthPoll = z.infer<
+    typeof agentRuntimeModelProviderOAuthPollSchema
+>;
+export type AgentRuntimeModelProviderOAuthCancel = z.infer<
+    typeof agentRuntimeModelProviderOAuthCancelSchema
+>;
+export type AgentRuntimeModelProviderOAuthSubmit = z.infer<
+    typeof agentRuntimeModelProviderOAuthSubmitSchema
+>;
 export type AgentRuntimeOpenAiSettings = z.infer<typeof agentRuntimeOpenAiSettingsSchema>;
 export type AgentRuntimeSaveOpenAiSettings = z.infer<typeof agentRuntimeSaveOpenAiSettingsSchema>;
 export type AgentRuntimeOpenRouterSettings = z.infer<typeof agentRuntimeOpenRouterSettingsSchema>;

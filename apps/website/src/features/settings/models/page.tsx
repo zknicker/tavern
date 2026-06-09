@@ -5,12 +5,7 @@ import { ModelInventorySection } from './model-inventory-section.tsx';
 export function ModelsSettings() {
     return (
         <div className="grid gap-10">
-            <section>
-                <BadgeDivider className="pb-4" subtext="API keys and credentials.">
-                    Model Providers
-                </BadgeDivider>
-                <ModelAccessSettings />
-            </section>
+            <ModelAccessSettings />
 
             <section>
                 <BadgeDivider className="pb-4">Available Models</BadgeDivider>

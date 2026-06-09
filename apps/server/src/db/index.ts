@@ -37,6 +37,7 @@ const {
     profilesTable,
     syncStateTable,
     telemetryIngestCursorsTable,
+    usageSourceSettingsTable,
 } = schemaTables;
 
 const databasePath = resolve(env.DATABASE_PATH);
@@ -77,6 +78,7 @@ const schema = {
     skillsTable,
     agentRuntimeConnectionsTable,
     telemetryIngestCursorsTable,
+    usageSourceSettingsTable,
 };
 
 export const db = drizzle(client, { schema });

@@ -25,12 +25,13 @@ needs explicit trust.
 
 ## Secrets
 
-Secrets belong in Tavern-owned storage such as Tavern Vault or generated runtime
-config.
+Model provider credentials belong to Hermes-managed provider configuration.
+Tavern does not keep a separate model-provider credential store for providers
+that Hermes manages.
 
-Runtime-owned secrets that power Runtime features live in Runtime Tavern Vault.
-OpenRouter model access is stored behind `/model-access/openrouter`, then reused
-by managed Hermes configuration and Cortex query expansion.
+Telemetry-only credentials belong to the feature that reads the telemetry. For
+example, OpenRouter account activity uses a management key stored as Stats
+source settings because that key is not the same as the Hermes inference key.
 
 Do not put secrets in:
 

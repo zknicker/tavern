@@ -92,7 +92,7 @@ describe('managed Hermes model config', () => {
         );
     });
 
-    it('clears stale provider keys from the managed Hermes env file', async () => {
+    it('preserves provider keys already saved in the managed Hermes env file', async () => {
         const directory = await fs.mkdtemp(path.join(os.tmpdir(), 'tavern-hermes-env-'));
         const envPath = path.join(directory, '.env');
         await fs.writeFile(
@@ -115,15 +115,14 @@ describe('managed Hermes model config', () => {
         });
 
         const env = await fs.readFile(envPath, 'utf8');
-        expect(env).not.toContain('OPENAI_API_KEY');
+        expect(env).toContain('OPENAI_API_KEY="old-openai"');
         expect(env).toContain('OPENROUTER_API_KEY="new-openrouter"');
         expect(env).toContain('KEEP_ME="still-here"');
     });
 
-    it('removes the managed Hermes env file when no entries remain', async () => {
+    it('removes the managed Hermes env file when no entries exist', async () => {
         const directory = await fs.mkdtemp(path.join(os.tmpdir(), 'tavern-hermes-env-'));
         const envPath = path.join(directory, '.env');
-        await fs.writeFile(envPath, 'OPENAI_API_KEY="old-openai"\n');
 
         await mergeHermesEnvFile(envPath, {
             apiKey: null,

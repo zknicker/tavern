@@ -48,13 +48,13 @@ export function BadgeDivider({
                 <>
                     {label}
                     {inlineSubtext}
-                    {action}
                     {separator}
+                    {action}
                 </>
             ) : (
                 <>
-                    {separator}
                     {action}
+                    {separator}
                     {inlineSubtext}
                     {label}
                 </>

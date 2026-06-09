@@ -6,6 +6,7 @@ import { loadVaultBackedCodexCredentials } from '../model-access/codex-settings'
 import { getOpenAiApiKey } from '../model-access/openai-settings';
 import { getOpenRouterApiKey } from '../model-access/openrouter-settings';
 import { syncHermesCodexAuth } from './auth-store';
+import { quoteEnvValue, readEnvEntries, readManagedHermesEnvValue } from './env';
 import { prepareManagedLlmWikiIntegration } from './llm-wiki';
 import { ensureManagedMnemosynePackage, ensureManagedMnemosynePlugin } from './mnemosyne';
 import { tavernMessengerPluginName } from './tavern-messenger-plugin';
@@ -24,8 +25,14 @@ interface ManagedHermesModelConfigInput {
 }
 
 export async function resolveManagedHermesModelConfig(): Promise<HermesModelConfig> {
-    const openRouterApiKey = readConfigValue('OPENROUTER_API_KEY') ?? getOpenRouterApiKey();
-    const openAiApiKey = readConfigValue('OPENAI_API_KEY') ?? getOpenAiApiKey();
+    const openRouterApiKey =
+        readConfigValue('OPENROUTER_API_KEY') ??
+        (await readManagedHermesEnvValue('OPENROUTER_API_KEY')) ??
+        getOpenRouterApiKey();
+    const openAiApiKey =
+        readConfigValue('OPENAI_API_KEY') ??
+        (await readManagedHermesEnvValue('OPENAI_API_KEY')) ??
+        getOpenAiApiKey();
     const explicitProvider = readConfigValue('TAVERN_HERMES_PROVIDER');
     const explicitModel = readConfigValue('TAVERN_HERMES_MODEL');
     const explicitBaseUrl = readConfigValue('TAVERN_HERMES_BASE_URL');
@@ -112,13 +119,9 @@ export async function mergeHermesEnvFile(filePath: string, config: HermesModelCo
 
     if (config.openAiApiKey) {
         entries.set('OPENAI_API_KEY', config.openAiApiKey);
-    } else {
-        entries.delete('OPENAI_API_KEY');
     }
     if (config.openRouterApiKey) {
         entries.set('OPENROUTER_API_KEY', config.openRouterApiKey);
-    } else {
-        entries.delete('OPENROUTER_API_KEY');
     }
 
     if (entries.size === 0) {
@@ -133,37 +136,6 @@ export async function mergeHermesEnvFile(filePath: string, config: HermesModelCo
         { mode: 0o600 }
     );
     await fs.chmod(filePath, 0o600).catch(() => undefined);
-}
-
-function readEnvEntries(raw: string) {
-    const entries = new Map<string, string>();
-    for (const line of raw.split('\n')) {
-        const trimmed = line.trim();
-        if (!(trimmed && !trimmed.startsWith('#'))) {
-            continue;
-        }
-        const separator = trimmed.indexOf('=');
-        if (separator <= 0) {
-            continue;
-        }
-        entries.set(trimmed.slice(0, separator), unquoteEnvValue(trimmed.slice(separator + 1)));
-    }
-    return entries;
-}
-
-function quoteEnvValue(value: string) {
-    return JSON.stringify(value);
-}
-
-function unquoteEnvValue(value: string) {
-    const trimmed = value.trim();
-    if (
-        (trimmed.startsWith('"') && trimmed.endsWith('"')) ||
-        (trimmed.startsWith("'") && trimmed.endsWith("'"))
-    ) {
-        return trimmed.slice(1, -1);
-    }
-    return trimmed;
 }
 
 function ensurePluginEnabled(doc: ReturnType<typeof parseDocument>, pluginName: string) {

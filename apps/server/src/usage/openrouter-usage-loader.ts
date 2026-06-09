@@ -24,7 +24,7 @@ export async function loadOpenRouterActivity(capturedAt: Date): Promise<LiveUsag
             error: null,
             overview: createEmptyOpenRouterActivityOverview(
                 'unconfigured',
-                'Add an OpenRouter management key on the AI Providers page to load account activity.',
+                'Add an OpenRouter management key to load account activity.',
                 capturedAt
             ),
             status: 'ok',

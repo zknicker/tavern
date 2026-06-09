@@ -118,6 +118,37 @@ async function dispatchModelAccess({ client, request, url }: RouteContext) {
     if (request.method === 'GET' && url.pathname === agentRuntimeRoutes.modelAccess) {
         return await client.getModelAccess();
     }
+    if (request.method === 'PUT' && url.pathname === agentRuntimeRoutes.modelAccessApiKey) {
+        return await client.saveModelProviderApiKey(await readJson(request));
+    }
+    const oauthCancelMatch = url.pathname.match(/^\/model-access\/oauth\/sessions\/([^/]+)$/u);
+    if (request.method === 'DELETE' && oauthCancelMatch?.[1]) {
+        return await client.cancelModelProviderOAuth({
+            sessionId: decodeURIComponent(oauthCancelMatch[1]),
+        });
+    }
+    const oauthStartMatch = url.pathname.match(/^\/model-access\/oauth\/([^/]+)\/start$/u);
+    if (request.method === 'POST' && oauthStartMatch?.[1]) {
+        return await client.startModelProviderOAuth({
+            providerId: decodeURIComponent(oauthStartMatch[1]),
+        });
+    }
+    const oauthPollMatch = url.pathname.match(/^\/model-access\/oauth\/([^/]+)\/poll\/([^/]+)$/u);
+    if (request.method === 'GET' && oauthPollMatch?.[1] && oauthPollMatch[2]) {
+        return await client.pollModelProviderOAuth({
+            providerId: decodeURIComponent(oauthPollMatch[1]),
+            sessionId: decodeURIComponent(oauthPollMatch[2]),
+        });
+    }
+    const oauthSubmitMatch = url.pathname.match(/^\/model-access\/oauth\/([^/]+)\/submit$/u);
+    if (request.method === 'POST' && oauthSubmitMatch?.[1]) {
+        const payload = (await readJson(request)) as { code?: unknown; sessionId?: unknown };
+        return await client.submitModelProviderOAuth({
+            code: String(payload.code ?? ''),
+            providerId: decodeURIComponent(oauthSubmitMatch[1]),
+            sessionId: String(payload.sessionId ?? ''),
+        });
+    }
     if (url.pathname === agentRuntimeRoutes.modelAccessOpenRouterSettings) {
         if (request.method === 'GET') {
             return await client.getOpenRouterSettings();

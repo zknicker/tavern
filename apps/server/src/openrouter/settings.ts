@@ -1,16 +1,23 @@
 import { z } from 'zod';
-import { AgentRuntimeRequestError } from '../agent-runtime/client.ts';
-import { createConfiguredAgentRuntimeClient } from '../agent-runtime/configured-client.ts';
 import {
     deleteTavernVaultSecret,
     getTavernVaultSecret,
-    saveTavernVaultSecret,
     tavernVaultSecretIds,
 } from '../storage/tavern-vault.ts';
+import {
+    deleteUsageSourceSettings,
+    getUsageSourceSettings,
+    saveUsageSourceSettings,
+    usageSourceSettingIds,
+} from '../storage/usage-source-settings.ts';
 
-const openRouterSecretSchema = z.object({
-    apiKey: z.string(),
+const openRouterStatsSettingsSchema = z.object({
     managementApiKey: z.string(),
+});
+
+const legacyOpenRouterSettingsSchema = z.object({
+    apiKey: z.string().optional(),
+    managementApiKey: z.string().optional(),
 });
 
 export interface OpenRouterSettings {
@@ -22,70 +29,45 @@ export interface OpenRouterSettings {
 }
 
 export async function getOpenRouterSettings(): Promise<OpenRouterSettings | null> {
-    const runtimeSettings = await getRuntimeOpenRouterSettings();
-    if (runtimeSettings) {
-        return runtimeSettings;
-    }
-
-    const stored = await getTavernVaultSecret({
-        id: tavernVaultSecretIds.openRouterSettings,
-        schema: openRouterSecretSchema,
+    const stored = await getUsageSourceSettings({
+        id: usageSourceSettingIds.openRouter,
+        schema: openRouterStatsSettingsSchema,
     });
 
-    if (!stored) {
-        return null;
+    if (stored) {
+        return toOpenRouterSettings({
+            settings: stored.settings,
+            updatedAt: stored.updatedAt,
+        });
     }
 
-    return toOpenRouterSettings({
-        secret: stored.secret,
-        updatedAt: stored.updatedAt,
-    });
+    return await migrateLegacyOpenRouterSettings();
 }
 
 export async function saveOpenRouterSettings(input: {
     apiKey?: string | null;
     managementApiKey?: string | null;
 }): Promise<OpenRouterSettings | null> {
-    const client = createConfiguredAgentRuntimeClient();
-    if (client) {
-        try {
-            const payload = {
-                ...(input.apiKey?.trim() ? { apiKey: input.apiKey.trim() } : {}),
-                ...(input.managementApiKey?.trim()
-                    ? { managementApiKey: input.managementApiKey.trim() }
-                    : {}),
-            };
-            return Object.keys(payload).length > 0
-                ? await client.saveOpenRouterSettings(payload)
-                : await client.getOpenRouterSettings();
-        } finally {
-            client.close();
-        }
-    }
-
-    const current = await getTavernVaultSecret({
-        id: tavernVaultSecretIds.openRouterSettings,
-        schema: openRouterSecretSchema,
+    const current = await getUsageSourceSettings({
+        id: usageSourceSettingIds.openRouter,
+        schema: openRouterStatsSettingsSchema,
     });
-    const apiKey = input.apiKey?.trim() || current?.secret.apiKey || '';
     const managementApiKey =
-        input.managementApiKey?.trim() || current?.secret.managementApiKey || '';
+        input.managementApiKey?.trim() || current?.settings.managementApiKey || '';
 
-    if (!(apiKey || managementApiKey)) {
+    if (!managementApiKey) {
         return await getOpenRouterSettings();
     }
 
-    const saved = await saveTavernVaultSecret({
-        id: tavernVaultSecretIds.openRouterSettings,
-        secret: {
-            apiKey,
+    const saved = await saveUsageSourceSettings({
+        id: usageSourceSettingIds.openRouter,
+        settings: {
             managementApiKey,
         },
     });
 
     return toOpenRouterSettings({
-        secret: {
-            apiKey,
+        settings: {
             managementApiKey,
         },
         updatedAt: saved.updatedAt,
@@ -93,55 +75,55 @@ export async function saveOpenRouterSettings(input: {
 }
 
 export async function deleteOpenRouterSettings(): Promise<OpenRouterSettings> {
-    const client = createConfiguredAgentRuntimeClient();
-    if (client) {
-        try {
-            return await client.deleteOpenRouterSettings();
-        } finally {
-            client.close();
-        }
-    }
-
-    await deleteTavernVaultSecret(tavernVaultSecretIds.openRouterSettings);
+    await Promise.all([
+        deleteUsageSourceSettings(usageSourceSettingIds.openRouter),
+        deleteTavernVaultSecret(tavernVaultSecretIds.openRouterSettings),
+    ]);
 
     return toOpenRouterSettings({
-        secret: {
-            apiKey: '',
+        settings: {
             managementApiKey: '',
         },
         updatedAt: null,
     });
 }
 
-async function getRuntimeOpenRouterSettings(): Promise<OpenRouterSettings | null> {
-    const client = createConfiguredAgentRuntimeClient();
-    if (!client) {
-        return null;
-    }
-    try {
-        return await client.getOpenRouterSettings();
-    } catch (error) {
-        if (
-            error instanceof AgentRuntimeRequestError &&
-            (error.retryable || error.status === 404)
-        ) {
-            return null;
-        }
-        throw error;
-    } finally {
-        client.close();
-    }
-}
-
 function toOpenRouterSettings(input: {
-    secret: z.infer<typeof openRouterSecretSchema>;
+    settings: z.infer<typeof openRouterStatsSettingsSchema>;
     updatedAt: null | string;
 }): OpenRouterSettings {
     return {
-        apiKey: input.secret.apiKey,
-        hasApiKey: input.secret.apiKey.length > 0,
-        hasManagementApiKey: input.secret.managementApiKey.length > 0,
-        managementApiKey: input.secret.managementApiKey,
+        apiKey: '',
+        hasApiKey: false,
+        hasManagementApiKey: input.settings.managementApiKey.length > 0,
+        managementApiKey: input.settings.managementApiKey,
         updatedAt: input.updatedAt,
     };
+}
+
+async function migrateLegacyOpenRouterSettings(): Promise<OpenRouterSettings | null> {
+    const legacy = await getTavernVaultSecret({
+        id: tavernVaultSecretIds.openRouterSettings,
+        schema: legacyOpenRouterSettingsSchema,
+    });
+    const managementApiKey = legacy?.secret.managementApiKey?.trim() ?? '';
+
+    if (!managementApiKey) {
+        return null;
+    }
+
+    const saved = await saveUsageSourceSettings({
+        id: usageSourceSettingIds.openRouter,
+        settings: {
+            managementApiKey,
+        },
+    });
+    await deleteTavernVaultSecret(tavernVaultSecretIds.openRouterSettings);
+
+    return toOpenRouterSettings({
+        settings: {
+            managementApiKey,
+        },
+        updatedAt: saved.updatedAt,
+    });
 }

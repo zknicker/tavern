@@ -5,6 +5,7 @@ import { Icon } from '../../components/ui/icon.tsx';
 import { Progress } from '../../components/ui/progress.tsx';
 import { Skeleton } from '../../components/ui/skeleton.tsx';
 import { useLiveUsageSuspense } from '../../hooks/models/use-live-usage.ts';
+import { useModelInventorySuspense } from '../../hooks/models/use-model-inventory.ts';
 import { formatTimestamp } from '../../lib/format.ts';
 import type { LiveUsageOutput } from '../../lib/trpc.tsx';
 import { UsageSpendModule } from './usage-spend-module.tsx';
@@ -13,19 +14,31 @@ const usageAccent = 'var(--color-brand)';
 
 export function UsageModules() {
     const [liveUsage] = useLiveUsageSuspense();
+    const [inventory] = useModelInventorySuspense();
+    const connectedProviders = new Set(
+        inventory.providers
+            .filter((provider) => provider.isConnected)
+            .map((provider) => provider.provider)
+    );
+    const showCodex = connectedProviders.has('openai-codex');
+    const showOpenRouter = connectedProviders.has('openrouter');
 
     return (
         <div className="grid gap-3">
-            <UsageCard
-                accent={usageAccent}
-                icon={ChatGptIcon}
-                state={liveUsage?.codex}
-                title="Codex"
-                windowIds={['current-session', 'current-week']}
-                windowLabels={['5h limit', 'Weekly limit']}
-            />
+            {showCodex ? (
+                <UsageCard
+                    accent={usageAccent}
+                    icon={ChatGptIcon}
+                    state={liveUsage?.codex}
+                    title="Codex"
+                    windowIds={['current-session', 'current-week']}
+                    windowLabels={['5h limit', 'Weekly limit']}
+                />
+            ) : null}
 
-            <UsageSpendModule liveUsage={liveUsage} />
+            {showOpenRouter ? <UsageSpendModule liveUsage={liveUsage} /> : null}
+
+            {showCodex || showOpenRouter ? null : <NoSupportedUsageSources />}
         </div>
     );
 }
@@ -36,6 +49,18 @@ export function UsageModulesSkeleton() {
             <Skeleton className="h-28 w-full rounded-xl" />
             <Skeleton className="h-72 w-full rounded-xl" />
         </div>
+    );
+}
+
+function NoSupportedUsageSources() {
+    return (
+        <Card>
+            <CardContent className="p-4">
+                <div className="text-muted-foreground text-sm">
+                    Connect a supported Hermes provider to show usage stats.
+                </div>
+            </CardContent>
+        </Card>
     );
 }
 

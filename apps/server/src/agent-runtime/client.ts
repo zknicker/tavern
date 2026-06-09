@@ -7,6 +7,7 @@ import {
     type AgentRuntimeArchiveBinding,
     type AgentRuntimeArchiveCron,
     type AgentRuntimeBinding,
+    type AgentRuntimeCancelModelProviderOAuth,
     type AgentRuntimeCapabilityHealth,
     type AgentRuntimeCapabilityHealthId,
     type AgentRuntimeCapabilityHealthList,
@@ -30,12 +31,14 @@ import {
     type AgentRuntimeModels,
     type AgentRuntimeOpenAiSettings,
     type AgentRuntimeOpenRouterSettings,
+    type AgentRuntimePollModelProviderOAuth,
     type AgentRuntimeRenderedWorkspaceInstructions,
     type AgentRuntimeRunCron,
     type AgentRuntimeRunJob,
     type AgentRuntimeRunJobInput,
     type AgentRuntimeSaveAgentFile,
     type AgentRuntimeSaveDiscordBinding,
+    type AgentRuntimeSaveModelProviderApiKey,
     type AgentRuntimeSaveOpenAiSettings,
     type AgentRuntimeSaveOpenRouterSettings,
     type AgentRuntimeSaveWorkspaceInstructions,
@@ -47,8 +50,10 @@ import {
     type AgentRuntimeSessionResync,
     type AgentRuntimeSkill,
     type AgentRuntimeSkillSummary,
+    type AgentRuntimeStartModelProviderOAuth,
     type AgentRuntimeStopTurn,
     type AgentRuntimeStopTurnResult,
+    type AgentRuntimeSubmitModelProviderOAuth,
     type AgentRuntimeToolset,
     type AgentRuntimeToolsetList,
     type AgentRuntimeUpdate,
@@ -71,6 +76,7 @@ import {
     agentRuntimeArchiveCronSchema,
     agentRuntimeBindingListSchema,
     agentRuntimeBindingSchema,
+    agentRuntimeCancelModelProviderOAuthSchema,
     agentRuntimeCapabilityHealthIdSchema,
     agentRuntimeCapabilityHealthListSchema,
     agentRuntimeCapabilityHealthSchema,
@@ -93,11 +99,16 @@ import {
     agentRuntimeMacAppListSchema,
     agentRuntimeMessageAcceptedSchema,
     agentRuntimeModelAccessSchema,
+    agentRuntimeModelProviderOAuthCancelSchema,
+    agentRuntimeModelProviderOAuthPollSchema,
+    agentRuntimeModelProviderOAuthStartSchema,
+    agentRuntimeModelProviderOAuthSubmitSchema,
     agentRuntimeModelsSchema,
     agentRuntimeMutationHeaders,
     agentRuntimeMutationOrigins,
     agentRuntimeOpenAiSettingsSchema,
     agentRuntimeOpenRouterSettingsSchema,
+    agentRuntimePollModelProviderOAuthSchema,
     agentRuntimeRenderedWorkspaceInstructionsSchema,
     agentRuntimeRoutes,
     agentRuntimeRunCronSchema,
@@ -105,6 +116,7 @@ import {
     agentRuntimeRunJobSchema,
     agentRuntimeSaveAgentFileSchema,
     agentRuntimeSaveDiscordBindingSchema,
+    agentRuntimeSaveModelProviderApiKeySchema,
     agentRuntimeSaveOpenAiSettingsSchema,
     agentRuntimeSaveOpenRouterSettingsSchema,
     agentRuntimeSaveWorkspaceInstructionsSchema,
@@ -116,8 +128,10 @@ import {
     agentRuntimeSessionResyncSchema,
     agentRuntimeSkillListSchema,
     agentRuntimeSkillSchema,
+    agentRuntimeStartModelProviderOAuthSchema,
     agentRuntimeStopTurnResultSchema,
     agentRuntimeStopTurnSchema,
+    agentRuntimeSubmitModelProviderOAuthSchema,
     agentRuntimeToolsetListSchema,
     agentRuntimeToolsetSchema,
     agentRuntimeUpdateAgentModelSchema,
@@ -169,6 +183,7 @@ export interface TavernAgentRuntimeClient {
     applyHermesConfig(
         input: AgentRuntimeApplyHermesConfig
     ): Promise<AgentRuntimeHermesConfigSnapshot>;
+    cancelModelProviderOAuth(input: AgentRuntimeCancelModelProviderOAuth): Promise<unknown>;
     close(): void;
     createCronJob(input: AgentRuntimeCreateCron): Promise<AgentRuntimeCron>;
     deleteAgent(agentId: string): Promise<AgentRuntimeArchiveAgent>;
@@ -225,6 +240,7 @@ export interface TavernAgentRuntimeClient {
         options?: AgentRuntimeListSkillsOptions
     ): Promise<{ skills: AgentRuntimeSkillSummary[] }>;
     listToolsets(): Promise<AgentRuntimeToolsetList>;
+    pollModelProviderOAuth(input: AgentRuntimePollModelProviderOAuth): Promise<unknown>;
     postMessage(
         chatId: string,
         input: AgentRuntimeCreateMessage
@@ -245,6 +261,7 @@ export interface TavernAgentRuntimeClient {
     saveDiscordBinding(
         input: AgentRuntimeSaveDiscordBinding
     ): Promise<AgentRuntimeHermesConfigSnapshot>;
+    saveModelProviderApiKey(input: AgentRuntimeSaveModelProviderApiKey): Promise<{ ok: boolean }>;
     saveOpenAiSettings(input: AgentRuntimeSaveOpenAiSettings): Promise<AgentRuntimeOpenAiSettings>;
     saveOpenRouterSettings(
         input: AgentRuntimeSaveOpenRouterSettings
@@ -254,8 +271,10 @@ export interface TavernAgentRuntimeClient {
         input: AgentRuntimeSaveWorkspaceInstructions
     ): Promise<AgentRuntimeWorkspaceInstructions>;
     searchCortex(input: CortexSearchInput): Promise<CortexSearchResult>;
+    startModelProviderOAuth(input: AgentRuntimeStartModelProviderOAuth): Promise<unknown>;
     startUpdate(input?: { targetVersion?: null | string }): Promise<AgentRuntimeUpdate>;
     stopChatTurn(chatId: string, input: AgentRuntimeStopTurn): Promise<AgentRuntimeStopTurnResult>;
+    submitModelProviderOAuth(input: AgentRuntimeSubmitModelProviderOAuth): Promise<unknown>;
     updateAgentModel(
         agentId: string,
         input: AgentRuntimeUpdateAgentModel
@@ -923,6 +942,98 @@ class HttpTavernAgentRuntimeClient implements TavernAgentRuntimeClient {
         }
 
         return agentRuntimeModelAccessSchema.parse(await response.json());
+    }
+
+    async saveModelProviderApiKey(input: AgentRuntimeSaveModelProviderApiKey) {
+        const payload = agentRuntimeSaveModelProviderApiKeySchema.parse(input);
+        const response = await fetch(`${this.#baseUrl}${agentRuntimeRoutes.modelAccessApiKey}`, {
+            body: JSON.stringify(payload),
+            headers: {
+                'content-type': 'application/json',
+                [agentRuntimeMutationHeaders.origin]: agentRuntimeMutationOrigins.tavern,
+            },
+            method: 'PUT',
+        });
+
+        if (!response.ok) {
+            await readErrorResponse(response);
+        }
+
+        return { ok: true };
+    }
+
+    async startModelProviderOAuth(input: AgentRuntimeStartModelProviderOAuth) {
+        const payload = agentRuntimeStartModelProviderOAuthSchema.parse(input);
+        const response = await fetch(
+            `${this.#baseUrl}${agentRuntimeRoutes.modelAccessOAuthStart(payload.providerId)}`,
+            {
+                body: JSON.stringify({}),
+                headers: {
+                    'content-type': 'application/json',
+                    [agentRuntimeMutationHeaders.origin]: agentRuntimeMutationOrigins.tavern,
+                },
+                method: 'POST',
+            }
+        );
+
+        if (!response.ok) {
+            await readErrorResponse(response);
+        }
+
+        return agentRuntimeModelProviderOAuthStartSchema.parse(await response.json());
+    }
+
+    async pollModelProviderOAuth(input: AgentRuntimePollModelProviderOAuth) {
+        const payload = agentRuntimePollModelProviderOAuthSchema.parse(input);
+        const response = await fetch(
+            `${this.#baseUrl}${agentRuntimeRoutes.modelAccessOAuthPoll(payload.providerId, payload.sessionId)}`
+        );
+
+        if (!response.ok) {
+            await readErrorResponse(response);
+        }
+
+        return agentRuntimeModelProviderOAuthPollSchema.parse(await response.json());
+    }
+
+    async submitModelProviderOAuth(input: AgentRuntimeSubmitModelProviderOAuth) {
+        const payload = agentRuntimeSubmitModelProviderOAuthSchema.parse(input);
+        const response = await fetch(
+            `${this.#baseUrl}${agentRuntimeRoutes.modelAccessOAuthSubmit(payload.providerId)}`,
+            {
+                body: JSON.stringify(payload),
+                headers: {
+                    'content-type': 'application/json',
+                    [agentRuntimeMutationHeaders.origin]: agentRuntimeMutationOrigins.tavern,
+                },
+                method: 'POST',
+            }
+        );
+
+        if (!response.ok) {
+            await readErrorResponse(response);
+        }
+
+        return agentRuntimeModelProviderOAuthSubmitSchema.parse(await response.json());
+    }
+
+    async cancelModelProviderOAuth(input: AgentRuntimeCancelModelProviderOAuth) {
+        const payload = agentRuntimeCancelModelProviderOAuthSchema.parse(input);
+        const response = await fetch(
+            `${this.#baseUrl}${agentRuntimeRoutes.modelAccessOAuthCancel(payload.sessionId)}`,
+            {
+                headers: {
+                    [agentRuntimeMutationHeaders.origin]: agentRuntimeMutationOrigins.tavern,
+                },
+                method: 'DELETE',
+            }
+        );
+
+        if (!response.ok) {
+            await readErrorResponse(response);
+        }
+
+        return agentRuntimeModelProviderOAuthCancelSchema.parse(await response.json());
     }
 
     async getOpenRouterSettings() {

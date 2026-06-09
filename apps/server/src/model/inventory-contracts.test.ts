@@ -46,8 +46,12 @@ test('modelCapabilitySchema accepts import processor capabilities', () => {
 test('modelInventoryProviderSchema still requires usage labels on the live API shape', () => {
     expect(() =>
         modelInventoryProviderSchema.parse({
+            authAction: null,
+            authType: null,
+            connectionDetail: null,
             displayName: 'Openai Codex',
             isConnected: true,
+            keyEnv: null,
             models: [
                 {
                     capabilities: ['general'],
@@ -63,7 +67,7 @@ test('modelInventoryProviderSchema still requires usage labels on the live API s
             ],
             provider: 'openai-codex',
             state: 'connected',
-            stateMessage: 'Available from Hermes.',
+            stateMessage: 'Connected',
         })
     ).toThrow(/usageLabels/);
 });

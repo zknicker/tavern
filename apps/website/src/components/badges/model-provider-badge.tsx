@@ -2,12 +2,13 @@ import type { IconSvgElement } from '@hugeicons/react';
 import type { ComponentPropsWithoutRef } from 'react';
 import { cn } from '../../lib/utils.ts';
 import { Badge, type BadgeProps } from '../ui/badge.tsx';
-import { Icon } from '../ui/icon.tsx';
+import { ModelProviderLogo, type ModelProviderLogoSource } from './model-provider-logo.tsx';
 
 export interface ModelProviderBadgeProps extends ComponentPropsWithoutRef<'span'> {
     color: string;
     icon: IconSvgElement;
     label: string;
+    logo?: ModelProviderLogoSource | null;
     size?: BadgeProps['size'];
 }
 
@@ -16,6 +17,7 @@ export function ModelProviderBadge({
     color,
     icon,
     label,
+    logo,
     size = 'default',
     style,
     ...props
@@ -33,7 +35,13 @@ export function ModelProviderBadge({
             variant="secondary"
             {...props}
         >
-            <Icon className="shrink-0" icon={icon} />
+            <ModelProviderLogo
+                className="bg-transparent"
+                color={color}
+                fallbackIcon={icon}
+                iconClassName="size-3.5"
+                logo={logo}
+            />
             <span className="min-w-0 truncate">{label}</span>
         </Badge>
     );

@@ -81,6 +81,12 @@ const schemaStatements = [
         created_at TEXT NOT NULL,
         updated_at TEXT NOT NULL
     );`,
+    `CREATE TABLE IF NOT EXISTS usage_source_settings (
+        id TEXT PRIMARY KEY NOT NULL,
+        settings_json TEXT NOT NULL,
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL
+    );`,
     `CREATE TABLE IF NOT EXISTS job_executions (
         id TEXT PRIMARY KEY NOT NULL,
         job_slug TEXT NOT NULL,
