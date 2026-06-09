@@ -90,7 +90,7 @@ async function buildAgentSettings() {
             isOverridden: Boolean(runtimeModel),
             isThinkingOverridden: runtimeThinkingDefault !== null,
             model: runtimeModel?.modelId ?? null,
-            modelRef: runtimeModel?.modelCatalogId ?? null,
+            modelRef: runtimeModel?.modelRef ?? null,
             provider: runtimeModel?.provider ?? null,
             override: createEmptySelection(),
             overrideThinkingDefault: runtimeThinkingDefault,

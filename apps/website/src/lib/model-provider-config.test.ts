@@ -32,7 +32,7 @@ test('access ids resolve back to the same provider branding', () => {
     });
 });
 
-test('model config normalizes known Hermes model ids without repeating the provider label', () => {
+test('model config uses Hermes labels without repeating the provider label', () => {
     expect(
         getModelIdentityConfig({
             fallbackName: 'OpenAI Codex',
@@ -40,23 +40,23 @@ test('model config normalizes known Hermes model ids without repeating the provi
             providerId: 'openai-codex',
         })
     ).toMatchObject({
-        displayName: 'GPT-5.4',
+        displayName: 'gpt-5.4',
         ref: 'openai-codex/gpt-5.4',
     });
 
     expect(
         getModelIdentityConfigFromRef('openrouter/moonshotai/kimi-k2.5', 'MoonshotAI: Kimi K2.5')
     ).toMatchObject({
-        displayName: 'Kimi K2.5',
+        displayName: 'MoonshotAI: Kimi K2.5',
         ref: 'openrouter/moonshotai/kimi-k2.5',
     });
 });
 
-test('model option labels use the shared model display registry', () => {
+test('model option labels fall back to model ids when Hermes metadata is missing', () => {
     expect(
         formatModelOptionLabel({
             modelId: 'gpt-5.4-mini',
             providerId: 'openai-codex',
         })
-    ).toBe('GPT-5.4 Mini');
+    ).toBe('gpt-5.4-mini');
 });

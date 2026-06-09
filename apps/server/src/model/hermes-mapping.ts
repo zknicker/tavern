@@ -8,8 +8,8 @@ export interface CanonicalHermesModel {
     hermesModel: string;
     hermesModelNameId: string;
     hermesProvider: string;
-    modelCatalogId: string;
     modelId: string;
+    modelRef: string;
     provider: string;
 }
 
@@ -56,8 +56,8 @@ export function normalizeHermesModelIdentity(input: {
         hermesModel: model,
         hermesModelNameId: formatHermesModelNameId({ model, provider }),
         hermesProvider: provider,
-        modelCatalogId: formatHermesModelName({ model, provider }),
         modelId: model,
+        modelRef: formatHermesModelName({ model, provider }),
         provider,
     };
 }

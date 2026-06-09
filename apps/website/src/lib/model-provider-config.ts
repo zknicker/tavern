@@ -3,10 +3,6 @@ import { Atom02Icon, ChatGptIcon, Globe02Icon } from '@hugeicons-pro/core-stroke
 
 export type ModelAccessId = 'codex' | 'openai' | 'openrouter';
 
-export interface ModelConfig {
-    displayName: string;
-}
-
 export interface ModelProviderConfig {
     accessDisplayName: string;
     accessId: ModelAccessId | null;
@@ -14,7 +10,6 @@ export interface ModelProviderConfig {
     configName: string;
     displayName: string;
     icon: IconSvgElement;
-    models: Record<string, ModelConfig>;
 }
 
 export interface ModelIdentityConfig {
@@ -32,26 +27,6 @@ const configuredModelProviders = [
         configName: 'openai-codex',
         displayName: 'OpenAI Codex',
         icon: ChatGptIcon,
-        models: {
-            'gpt-5.5': {
-                displayName: 'GPT-5.5',
-            },
-            'gpt-5.4': {
-                displayName: 'GPT-5.4',
-            },
-            'gpt-5.4-mini': {
-                displayName: 'GPT-5.4 Mini',
-            },
-            'gpt-5.3-codex': {
-                displayName: 'GPT-5.3 Codex',
-            },
-            'gpt-5.3-codex-spark': {
-                displayName: 'GPT-5.3 Codex Spark',
-            },
-            'gpt-5.2': {
-                displayName: 'GPT-5.2',
-            },
-        },
     },
     {
         accessDisplayName: 'OpenAI API',
@@ -60,17 +35,6 @@ const configuredModelProviders = [
         configName: 'openai',
         displayName: 'OpenAI',
         icon: ChatGptIcon,
-        models: {
-            'gpt-4o-mini': {
-                displayName: 'GPT-4o Mini',
-            },
-            'text-embedding-3-small': {
-                displayName: 'Text Embedding 3 Small',
-            },
-            'whisper-1': {
-                displayName: 'Whisper',
-            },
-        },
     },
     {
         accessDisplayName: 'OpenRouter',
@@ -79,11 +43,6 @@ const configuredModelProviders = [
         configName: 'openrouter',
         displayName: 'OpenRouter',
         icon: Globe02Icon,
-        models: {
-            'moonshotai/kimi-k2.5': {
-                displayName: 'Kimi K2.5',
-            },
-        },
     },
 ] as const satisfies readonly ModelProviderConfig[];
 
@@ -96,10 +55,6 @@ const providerConfigByAccessId = new Map<ModelAccessId, ModelProviderConfig>(
         provider.accessId ? [[provider.accessId, provider] as const] : []
     )
 );
-
-export function listModelProviderConfigs(): ModelProviderConfig[] {
-    return [...configuredModelProviders];
-}
 
 export function getModelProviderConfig(providerId: string): ModelProviderConfig {
     return providerConfigByName.get(providerId) ?? createFallbackModelProvider(providerId);
@@ -115,11 +70,10 @@ export function getModelIdentityConfig(input: {
     providerId: string;
 }): ModelIdentityConfig {
     const provider = getModelProviderConfig(input.providerId);
-    const config = provider.models[input.modelId];
     const fallbackName = normalizeFallbackModelName(input.fallbackName, provider.displayName);
 
     return {
-        displayName: config?.displayName ?? fallbackName ?? input.modelId,
+        displayName: fallbackName ?? input.modelId,
         modelId: input.modelId,
         provider,
         ref: input.providerId ? `${input.providerId}/${input.modelId}` : input.modelId,
@@ -156,7 +110,6 @@ function createFallbackModelProvider(providerId: string): ModelProviderConfig {
         configName: providerId,
         displayName: label,
         icon: Atom02Icon,
-        models: {},
     };
 }
 
