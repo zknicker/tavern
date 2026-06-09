@@ -79,28 +79,32 @@ const Table = forwardRef<HTMLTableElement, TableProps>(
                     <AnimatePresence>
                         {activeRect ? (
                             <motion.div
-                                animate={{
-                                    opacity: 1,
-                                    top: activeRect.top,
-                                    left: activeRect.left,
-                                    width: activeRect.width,
-                                    height: activeRect.height,
-                                }}
-                                className="pointer-events-none absolute bg-hover"
+                                className="pointer-events-none absolute inset-0 overflow-hidden"
                                 exit={{ opacity: 0, transition: { duration: 0.06 } }}
-                                initial={{
-                                    opacity: 0,
-                                    top: activeRect.top,
-                                    left: activeRect.left,
-                                    width: activeRect.width,
-                                    height: activeRect.height,
-                                }}
                                 key={sessionRef.current}
-                                transition={{
-                                    ...springs.fast,
-                                    opacity: { duration: 0.08 },
-                                }}
-                            />
+                            >
+                                <motion.div
+                                    animate={{
+                                        opacity: 1,
+                                        top: activeRect.top,
+                                        left: activeRect.left,
+                                        width: activeRect.width,
+                                        height: activeRect.height,
+                                    }}
+                                    className="absolute bg-hover"
+                                    initial={{
+                                        opacity: 0,
+                                        top: activeRect.top,
+                                        left: activeRect.left,
+                                        width: activeRect.width,
+                                        height: activeRect.height,
+                                    }}
+                                    transition={{
+                                        ...springs.fast,
+                                        opacity: { duration: 0.08 },
+                                    }}
+                                />
+                            </motion.div>
                         ) : null}
                     </AnimatePresence>
                     <table

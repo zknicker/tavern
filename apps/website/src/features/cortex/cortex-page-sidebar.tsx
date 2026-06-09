@@ -1,74 +1,145 @@
-import { File01Icon } from '@hugeicons-pro/core-stroke-rounded';
+import {
+    ArrowDown01Icon,
+    ArrowRight01Icon,
+    File01Icon,
+    Folder01Icon,
+} from '@hugeicons-pro/core-stroke-rounded';
+import * as React from 'react';
 import { Icon } from '../../components/ui/icon.tsx';
-import { SidebarMenu, SidebarMenuButton, SidebarMenuItem } from '../../components/ui/sidebar.tsx';
-import type { CortexPageNode, CortexTopicNode } from './types.ts';
-import { pageKey } from './utils.ts';
+import { SidebarMenu, SidebarMenuItem } from '../../components/ui/sidebar.tsx';
+import { cn } from '../../lib/utils.ts';
+import type { CortexPageNode } from './types.ts';
+import { buildCortexPageTree, type CortexPageTreeNode, getCortexDirectoryIds } from './utils.ts';
 
 export function CortexPageSidebar({
     onSelect,
-    onTopicChange,
     pages,
     selectedPageKey,
-    selectedTopic,
-    topics,
 }: {
     onSelect: (page: CortexPageNode) => void;
-    onTopicChange: (topic: string | null) => void;
     pages: CortexPageNode[];
     selectedPageKey: string | null;
-    selectedTopic: string | null;
-    topics: CortexTopicNode[];
 }) {
+    const tree = React.useMemo(
+        () => buildCortexPageTree(pages, { includeTopicRoot: true }),
+        [pages]
+    );
+    const directoryIds = React.useMemo(() => getCortexDirectoryIds(tree), [tree]);
+    const [collapsedDirectoryIds, setCollapsedDirectoryIds] = React.useState<Set<string>>(
+        () => new Set()
+    );
+
+    React.useEffect(() => {
+        setCollapsedDirectoryIds((current) => {
+            const next = new Set([...current].filter((id) => directoryIds.includes(id)));
+            return next.size === current.size ? current : next;
+        });
+    }, [directoryIds]);
+
+    function toggleDirectory(id: string) {
+        setCollapsedDirectoryIds((current) => {
+            const next = new Set(current);
+            if (next.has(id)) {
+                next.delete(id);
+            } else {
+                next.add(id);
+            }
+            return next;
+        });
+    }
+
     return (
         <aside className="flex min-h-0 w-[300px] shrink-0 flex-col border-border/60 border-r bg-transparent">
-            <div className="space-y-3 px-5 pt-4 pb-3">
-                <div className="font-medium text-[var(--nav-section-label)] text-caption">
-                    Topics
-                </div>
-                <select
-                    className="h-8 w-full rounded-md border bg-background px-2 text-sm"
-                    onChange={(event) => onTopicChange(event.target.value || null)}
-                    value={selectedTopic ?? ''}
-                >
-                    <option value="">All topics</option>
-                    {topics.map((topic) => (
-                        <option key={topic.slug} value={topic.slug}>
-                            {topic.title}
-                            {topic.archived ? ' (archived)' : ''}
-                        </option>
-                    ))}
-                </select>
-            </div>
-            <div className="px-5 pt-2 pb-3 font-medium text-[var(--nav-section-label)] text-caption">
-                Pages
-            </div>
             {pages.length === 0 ? (
                 <div className="px-5 py-2 text-muted-foreground text-sm">No wiki pages found.</div>
             ) : (
-                <div className="min-h-0 flex-1 overflow-auto px-3 pb-4">
+                <div className="min-h-0 flex-1 overflow-auto px-3 pt-4 pb-4">
                     <SidebarMenu>
-                        {pages.map((page) => (
-                            <SidebarMenuItem key={pageKey(page)}>
-                                <SidebarMenuButton
-                                    isActive={pageKey(page) === selectedPageKey}
-                                    onClick={() => onSelect(page)}
-                                >
-                                    <Icon
-                                        aria-hidden="true"
-                                        className="shrink-0"
-                                        icon={File01Icon}
-                                        size={18}
-                                    />
-                                    <span className="min-w-0 flex-1 truncate">{page.title}</span>
-                                    <span className="shrink-0 text-muted-foreground text-xs">
-                                        {page.section}
-                                    </span>
-                                </SidebarMenuButton>
-                            </SidebarMenuItem>
-                        ))}
+                        <CortexTreeNodes
+                            collapsedDirectoryIds={collapsedDirectoryIds}
+                            nodes={tree}
+                            onSelect={onSelect}
+                            onToggleDirectory={toggleDirectory}
+                            selectedPageKey={selectedPageKey}
+                        />
                     </SidebarMenu>
                 </div>
             )}
         </aside>
     );
+}
+
+function CortexTreeNodes({
+    collapsedDirectoryIds,
+    depth = 0,
+    nodes,
+    onSelect,
+    onToggleDirectory,
+    selectedPageKey,
+}: {
+    collapsedDirectoryIds: Set<string>;
+    depth?: number;
+    nodes: CortexPageTreeNode[];
+    onSelect: (page: CortexPageNode) => void;
+    onToggleDirectory: (id: string) => void;
+    selectedPageKey: string | null;
+}) {
+    return nodes.map((node) => {
+        if (node.kind === 'directory') {
+            const collapsed = collapsedDirectoryIds.has(node.id);
+            return (
+                <React.Fragment key={node.id}>
+                    <SidebarMenuItem>
+                        <button
+                            aria-expanded={!collapsed}
+                            className="flex h-7 w-full cursor-default items-center gap-1.5 rounded-md px-2 text-left font-medium text-sidebar-foreground text-sm outline-hidden hover:bg-sidebar-accent hover:text-sidebar-accent-foreground focus-visible:ring-2 focus-visible:ring-sidebar-ring"
+                            onClick={() => onToggleDirectory(node.id)}
+                            style={{ paddingLeft: `${0.5 + depth * 0.875}rem` }}
+                            type="button"
+                        >
+                            <Icon
+                                aria-hidden="true"
+                                className="size-3.5 shrink-0 text-muted-foreground"
+                                icon={collapsed ? ArrowRight01Icon : ArrowDown01Icon}
+                            />
+                            <Icon
+                                aria-hidden="true"
+                                className="size-4 shrink-0"
+                                icon={Folder01Icon}
+                            />
+                            <span className="min-w-0 flex-1 truncate">{node.name}</span>
+                        </button>
+                    </SidebarMenuItem>
+                    {collapsed ? null : (
+                        <CortexTreeNodes
+                            collapsedDirectoryIds={collapsedDirectoryIds}
+                            depth={depth + 1}
+                            nodes={node.children}
+                            onSelect={onSelect}
+                            onToggleDirectory={onToggleDirectory}
+                            selectedPageKey={selectedPageKey}
+                        />
+                    )}
+                </React.Fragment>
+            );
+        }
+
+        return (
+            <SidebarMenuItem key={node.id}>
+                <button
+                    className={cn(
+                        'flex h-7 w-full cursor-default items-center gap-2 overflow-hidden rounded-md px-2 text-left font-medium text-sidebar-foreground text-sm outline-hidden hover:bg-sidebar-accent hover:text-sidebar-accent-foreground focus-visible:ring-2 focus-visible:ring-sidebar-ring active:bg-sidebar-accent active:text-sidebar-accent-foreground',
+                        node.id === selectedPageKey &&
+                            'bg-[var(--sidebar-accent-active)] text-sidebar-accent-foreground'
+                    )}
+                    onClick={() => onSelect(node.page)}
+                    style={{ paddingLeft: `${1.375 + depth * 0.875}rem` }}
+                    type="button"
+                >
+                    <Icon aria-hidden="true" className="size-4 shrink-0" icon={File01Icon} />
+                    <span className="min-w-0 flex-1 truncate">{node.name}</span>
+                </button>
+            </SidebarMenuItem>
+        );
+    });
 }

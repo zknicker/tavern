@@ -1,13 +1,6 @@
-import type { ReactNode } from 'react';
-import { Frame } from '../../components/ui/frame.tsx';
-import {
-    Table,
-    TableBody,
-    TableCell,
-    TableHead,
-    TableHeader,
-    TableRow,
-} from '../../components/ui/table.tsx';
+import { BadgeDivider } from '../../components/ui/badge-divider.tsx';
+import { Table, TableBody, TableCell, TableRow } from '../../components/ui/table.tsx';
+import { CortexMarkdownViewer } from './cortex-markdown-viewer.tsx';
 import type { CortexPageDetail } from './types.ts';
 import { formatTimestamp } from './utils.ts';
 
@@ -28,19 +21,18 @@ export function CortexDocumentPane({
         );
     }
 
+    const bodyOwnsTitle = /^#{1,6}\s+/u.test(page.body.trimStart());
+
     return (
         <div className="flex h-full min-h-0 flex-col">
             <article className="min-h-0 flex-1 overflow-auto px-6 pt-6 pb-10">
                 <div className="w-full">
-                    <h1 className="text-pretty font-semibold text-2xl tracking-tight">
-                        {page.title}
-                    </h1>
-                    <div className="mt-4 flex flex-wrap gap-1.5">
-                        <MetaPill>{page.topic}</MetaPill>
-                        <MetaPill>{page.section}</MetaPill>
-                        {page.archived ? <MetaPill>archived</MetaPill> : null}
-                    </div>
-                    <DocumentBody value={page.body} />
+                    {bodyOwnsTitle ? null : (
+                        <h1 className="text-pretty font-semibold text-2xl tracking-tight">
+                            {page.title}
+                        </h1>
+                    )}
+                    <DocumentBody page={page} />
                     <PageDetails page={page} />
                 </div>
             </article>
@@ -48,54 +40,46 @@ export function CortexDocumentPane({
     );
 }
 
-function MetaPill({ children }: { children: ReactNode }) {
+function DocumentBody({ page }: { page: CortexPageDetail }) {
     return (
-        <span className="rounded-md border bg-background px-1.5 py-0.5 text-muted-foreground text-xs">
-            {children}
-        </span>
-    );
-}
-
-function DocumentBody({ value }: { value: string }) {
-    return (
-        <div className="mt-8 whitespace-pre-wrap break-words text-foreground text-sm leading-6">
-            {value || 'No body content.'}
+        <div className="mt-1">
+            <CortexMarkdownViewer value={page.body} />
         </div>
     );
 }
 
 function PageDetails({ page }: { page: CortexPageDetail }) {
+    const rows = [
+        ['Topic', page.topic],
+        ['Path', page.path],
+        ['Section', page.section],
+        ['Updated', formatTimestamp(page.updatedAt)],
+        ['Size', `${page.size.toLocaleString()} bytes`],
+        ['Wiki path', page.wikiPath],
+        ['Links', page.links.map((link) => link.target).join(', ') || 'None'],
+    ];
+
     return (
-        <div className="mt-12 border-t pt-8">
-            <h2 className="font-medium text-base">File</h2>
-            <Frame className="mt-3 w-full">
-                <Table variant="card">
-                    <TableHeader>
-                        <TableRow>
-                            <TableHead>Field</TableHead>
-                            <TableHead>Value</TableHead>
-                        </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                        {[
-                            ['Topic', page.topic],
-                            ['Path', page.path],
-                            ['Section', page.section],
-                            ['Updated', formatTimestamp(page.updatedAt)],
-                            ['Size', `${page.size.toLocaleString()} bytes`],
-                            ['Wiki path', page.wikiPath],
-                            ['Links', page.links.map((link) => link.target).join(', ') || 'None'],
-                        ].map(([field, value]) => (
+        <div className="mt-12">
+            <div className="-mx-3">
+                <BadgeDivider>File Metadata</BadgeDivider>
+            </div>
+            <div className="-mx-3 mt-3">
+                <Table className="table-fixed">
+                    <TableBody className="[&_tr:last-child]:border-b-0">
+                        {rows.map(([field, value]) => (
                             <TableRow key={field}>
-                                <TableCell className="font-medium">{field}</TableCell>
-                                <TableCell className="whitespace-normal break-words leading-5">
+                                <TableCell className="w-28 whitespace-nowrap text-muted-foreground">
+                                    {field}
+                                </TableCell>
+                                <TableCell className="whitespace-normal break-words text-foreground leading-5">
                                     {value}
                                 </TableCell>
                             </TableRow>
                         ))}
                     </TableBody>
                 </Table>
-            </Frame>
+            </div>
         </div>
     );
 }

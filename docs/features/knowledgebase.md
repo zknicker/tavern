@@ -21,6 +21,8 @@ librarian, lessons, output, inventory, datasets, and archive workflows.
 * **Markdown pages.** Cortex reads `_index.md`, `config.md`, `log.md`, and
   pages under `wiki/`, `raw/`, `inventory/`, `datasets/`, `output/`, and
   `inbox/`.
+* **File browsing.** Cortex shows pages in their wiki directory tree and opens
+  Markdown in a read-only document preview.
 * **Backlinks.** Cortex parses `[[wikilinks]]` from Markdown and shows inbound
   references.
 * **Search.** Cortex performs lightweight filename, title, and body search over
