@@ -1,5 +1,5 @@
 import { setTimeout as delay } from 'node:timers/promises';
-import type { AgentRuntimeAgent, AgentRuntimeCron, AgentRuntimeCronRun } from '@tavern/api';
+import type { AgentRuntimeAgent, AgentRuntimeCron } from '@tavern/api';
 import {
     recordCapabilityFailure,
     recordCapabilitySuccess,
@@ -15,14 +15,15 @@ import {
     emitSessionUpdated,
     emitSkillUpdated,
 } from '../api/invalidation-events.ts';
+import { toCronRunInsert } from '../cron/runtime-run-record.ts';
 import { syncChatParticipantsForRuntime } from '../participants/chat-participants.ts';
 import {
     listReachableAgentRuntimeConnections,
     markAgentRuntimeConnectionSync,
 } from '../storage/agent-runtime-connections.ts';
 import { syncAgentsForRuntime } from '../storage/agents.ts';
-import { buildCronJobId, syncCronJobsForRuntime } from '../storage/cron-jobs.ts';
-import { upsertCronRuns } from '../storage/cron-runs.ts';
+import { syncCronJobsForRuntime } from '../storage/cron-jobs.ts';
+import { reconcileSyntheticCronTriggerRuns, upsertCronRuns } from '../storage/cron-runs.ts';
 import type { SyncPrimitiveKind } from './contracts.ts';
 import { savePrimitiveSyncState } from './primitive-sync-state.ts';
 
@@ -388,20 +389,25 @@ async function syncCronForConnection(input: RuntimeSyncInput) {
 
     await upsertCronRuns(
         runs.map((run) =>
-            mapCronRunRecord({
-                jobs: fullJobs,
+            toCronRunInsert({
+                job: fullJobs.find((candidate) => candidate.id === run.jobId),
                 run,
                 runtimeId: input.runtime.id,
                 syncedAt,
             })
         )
     );
+    const reconciliation = await reconcileSyntheticCronTriggerRuns({
+        runtimeId: input.runtime.id,
+        staleBefore: new Date(Date.now() - 10 * 60 * 1000).toISOString(),
+        syncedAt,
+    });
     await input.log?.(
-        `Synced ${jobResult.synced} cron jobs and ${runs.length} cron runs from ${input.runtime.name}; deleted ${jobResult.deleted} missing cron jobs.`
+        `Synced ${jobResult.synced} cron jobs and ${runs.length} cron runs from ${input.runtime.name}; deleted ${jobResult.deleted} missing cron jobs; reconciled ${reconciliation.deleted} trigger acknowledgements.`
     );
 
     return {
-        deleted: jobResult.deleted,
+        deleted: jobResult.deleted + reconciliation.deleted,
         synced: jobResult.synced + runs.length,
     };
 }
@@ -435,53 +441,6 @@ async function syncCronRunsForConnection(input: {
 
         return [];
     }
-}
-
-function mapCronRunRecord(input: {
-    jobs: AgentRuntimeCron[];
-    run: AgentRuntimeCronRun;
-    runtimeId: string;
-    syncedAt: string;
-}) {
-    const job = input.jobs.find((candidate) => candidate.id === input.run.jobId);
-    const runtimeSessionKey = input.run.sessionKey ?? input.run.id;
-    const localSessionKey = runtimeSessionKey;
-
-    return {
-        agentId: job?.agentId ?? null,
-        deliveryStatus: input.run.deliveryStatus,
-        durationMs: resolveDurationMs(input.run),
-        error: input.run.executionErrorMessage,
-        jobId: buildCronJobId({
-            runtimeCronJobId: input.run.jobId,
-        }),
-        providerJobId: input.run.jobId,
-        runAt: input.run.scheduledFor,
-        runtimeId: input.runtimeId,
-        runtimeRunId: input.run.id,
-        runtimeSessionKey,
-        sessionId: input.run.sessionId ?? input.run.id,
-        sessionKey: localSessionKey,
-        status: input.run.status,
-        summary: input.run.summary,
-        syncedAt: input.syncedAt,
-        trigger: input.run.trigger,
-    };
-}
-
-function resolveDurationMs(run: AgentRuntimeCronRun) {
-    if (!(run.startedAt && run.finishedAt)) {
-        return null;
-    }
-
-    const startedAt = Date.parse(run.startedAt);
-    const finishedAt = Date.parse(run.finishedAt);
-
-    if (Number.isNaN(startedAt) || Number.isNaN(finishedAt)) {
-        return null;
-    }
-
-    return Math.max(0, finishedAt - startedAt);
 }
 
 function emitForPrimitive(kind: SyncPrimitiveKind) {

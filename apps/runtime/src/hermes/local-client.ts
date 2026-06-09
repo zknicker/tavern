@@ -1,4 +1,3 @@
-import { randomUUID } from 'node:crypto';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import {
@@ -26,7 +25,6 @@ import {
     agentRuntimeAgentListSchema,
     agentRuntimeAgentSchema,
     agentRuntimeCronListSchema,
-    agentRuntimeCronRunListSchema,
     agentRuntimeCronRunSchema,
     agentRuntimeCronSchema,
     agentRuntimeHermesConfigSnapshotSchema,
@@ -257,168 +255,115 @@ export class LocalHermesClient extends LocalHermesUnsupportedSurfaces {
     }
 
     async createCronJob(input: AgentRuntimeCreateCron): Promise<AgentRuntimeCron> {
-        if (input.enabled ?? true) {
-            throw unsupportedHermesSurface('Hermes scheduled cron execution');
+        const created = await this.#http.postJson('/api/cron/jobs', {
+            deliver: toHermesCronDeliver(input.delivery ?? null),
+            name: input.name,
+            prompt: toHermesCronPrompt(input),
+            schedule: toHermesCronSchedule(input.schedule),
+        });
+        const job = mapHermesCronJob(created, input);
+
+        if (input.enabled === false) {
+            const paused = await this.#http.postJson(
+                `/api/cron/jobs/${encodeURIComponent(job.id)}/pause`,
+                {}
+            );
+            return mapHermesCronJob(paused, input);
         }
 
-        const now = new Date().toISOString();
-        const job = agentRuntimeCronSchema.parse({
-            agentId: input.agentId ?? null,
-            createdAt: now,
-            deleteAfterRun: input.deleteAfterRun ?? false,
-            delivery: input.delivery ?? null,
-            description: input.description ?? null,
-            enabled: input.enabled ?? true,
-            id: input.id,
-            name: input.name,
-            payload: input.payload,
-            schedule: input.schedule,
-            state: {},
-            updatedAt: now,
-            wakeMode: input.wakeMode,
-        });
-        await updateHermesAdapterState((state) => ({
-            ...state,
-            cronJobs: [...(state.cronJobs ?? []).filter((existing) => existing.id !== job.id), job],
-        }));
         return job;
     }
 
     async updateCronJob(jobId: string, input: AgentRuntimeUpdateCron): Promise<AgentRuntimeCron> {
-        if (input.enabled === true) {
-            throw unsupportedHermesSurface('Hermes scheduled cron execution');
+        const updates = toHermesCronUpdates(input);
+        let updated: unknown =
+            Object.keys(updates).length > 0
+                ? await this.#http.putJson(`/api/cron/jobs/${encodeURIComponent(jobId)}`, {
+                      updates,
+                  })
+                : await this.#http.get(`/api/cron/jobs/${encodeURIComponent(jobId)}`);
+
+        if (input.enabled === false) {
+            updated = await this.#http.postJson(
+                `/api/cron/jobs/${encodeURIComponent(jobId)}/pause`,
+                {}
+            );
+        } else if (input.enabled === true) {
+            updated = await this.#http.postJson(
+                `/api/cron/jobs/${encodeURIComponent(jobId)}/resume`,
+                {}
+            );
         }
 
-        let updated: AgentRuntimeCron | null = null;
-        await updateHermesAdapterState((state) => {
-            const cronJobs = state.cronJobs ?? [];
-            const existing = cronJobs.find((job) => job.id === jobId);
-            if (!existing) {
-                throw unsupportedHermesSurface(`Hermes cron job "${jobId}"`);
-            }
-            updated = agentRuntimeCronSchema.parse({
-                ...existing,
-                ...input,
-                state: {
-                    ...existing.state,
-                    ...(input.state ?? {}),
-                },
-                updatedAt: new Date().toISOString(),
-            });
-            return {
-                ...state,
-                cronJobs: cronJobs.map((job) => (job.id === jobId ? (updated ?? job) : job)),
-            };
-        });
-        return updated ?? unsupportedHermesSurface(`Hermes cron job "${jobId}"`);
+        return mapHermesCronJob(updated, input);
     }
 
     async deleteCronJob(jobId: string) {
-        await updateHermesAdapterState((state) => ({
-            ...state,
-            cronJobs: (state.cronJobs ?? []).filter((job) => job.id !== jobId),
-        }));
+        await this.#http.deleteJson(`/api/cron/jobs/${encodeURIComponent(jobId)}`);
         return { archived: true as const, id: jobId };
     }
 
     async getCronJob(jobId: string): Promise<AgentRuntimeCron> {
-        const job = (await readHermesAdapterState()).cronJobs?.find(
-            (candidate) => candidate.id === jobId
-        );
-        if (!job) {
-            throw unsupportedHermesSurface(`Hermes cron job "${jobId}"`);
-        }
-        return agentRuntimeCronSchema.parse(job);
+        const job = await this.#http.get(`/api/cron/jobs/${encodeURIComponent(jobId)}`);
+        return mapHermesCronJob(job);
     }
 
     async listCronJobs() {
-        const jobs = (await readHermesAdapterState()).cronJobs ?? [];
+        const jobs = readArray(await this.#http.get('/api/cron/jobs'), ['jobs', 'data']);
         return agentRuntimeCronListSchema.parse({
-            jobs: jobs.map(
-                ({ agentId, description, enabled, id, name, schedule, state, updatedAt }) => ({
-                    agentId,
-                    description,
-                    enabled,
-                    id,
-                    name,
-                    schedule,
-                    state,
-                    updatedAt,
-                })
-            ),
+            jobs: jobs.map((job) => {
+                const mapped = mapHermesCronJob(job);
+                return {
+                    agentId: mapped.agentId,
+                    description: mapped.description,
+                    enabled: mapped.enabled,
+                    id: mapped.id,
+                    name: mapped.name,
+                    schedule: mapped.schedule,
+                    state: mapped.state,
+                    updatedAt: mapped.updatedAt,
+                };
+            }),
         });
     }
 
     async runCronJob(jobId: string, input?: AgentRuntimeRunCron): Promise<AgentRuntimeCronRun> {
-        const job = await this.getCronJob(jobId);
-        const runId = `run_${randomUUID()}`;
         const startedAt = new Date().toISOString();
-        const sessionKey = `agent:${job.agentId ?? defaultHermesAgentId}:cron:${jobId}:${runId}`;
-        const runBase = {
-            id: runId,
+        await this.#http.postJson(`/api/cron/jobs/${encodeURIComponent(jobId)}/trigger`, {});
+        const job = await this.getCronJob(jobId);
+
+        return agentRuntimeCronRunSchema.parse({
+            deliveryError: null,
+            deliveryStatus: job.delivery ? 'pending' : 'not_applicable',
+            executionErrorCode: null,
+            executionErrorMessage: null,
+            finishedAt: null,
+            id: `trigger_${sanitizeCronRunId(jobId)}_${Date.now()}`,
             jobId,
             scheduledFor: startedAt,
+            sessionId: null,
+            sessionKey: null,
             startedAt,
+            status: input?.mode === 'enqueue' ? 'queued' : 'running',
+            summary: `Hermes queued ${input?.mode ?? 'force'} cron run.`,
             trigger: 'manual',
-        } as const;
-
-        let run: AgentRuntimeCronRun;
-        try {
-            const prompt = buildCronPrompt(job, input);
-            let summary: string | null = null;
-            for await (const event of this.streamChat({
-                content: prompt,
-                sessionKey,
-                title: job.name,
-            })) {
-                if (event.event === 'assistant.completed') {
-                    summary = truncate(readString(asRecord(event.data), ['content']) ?? '', 500);
-                }
-                if (event.event === 'error') {
-                    throw new Error(
-                        readString(asRecord(event.data), ['message']) ?? 'Hermes cron run failed.'
-                    );
-                }
-            }
-            const mapping = await getHermesSessionMapping(sessionKey);
-            run = agentRuntimeCronRunSchema.parse({
-                ...runBase,
-                deliveryError: job.delivery
-                    ? 'Managed Hermes cron delivery into Tavern chats is not implemented.'
-                    : null,
-                deliveryStatus: job.delivery ? 'failed' : 'not_applicable',
-                executionErrorCode: null,
-                executionErrorMessage: null,
-                finishedAt: new Date().toISOString(),
-                sessionId: mapping?.hermesSessionKey ?? sessionKey,
-                sessionKey,
-                status: 'success',
-                summary: summary || `Hermes completed ${input?.mode ?? 'force'} cron run.`,
-            });
-        } catch (error) {
-            run = agentRuntimeCronRunSchema.parse({
-                ...runBase,
-                deliveryError: job.delivery ? 'Cron execution failed before delivery.' : null,
-                deliveryStatus: job.delivery ? 'failed' : 'not_applicable',
-                executionErrorCode: 'execution_failed',
-                executionErrorMessage:
-                    error instanceof Error ? error.message : 'Hermes cron run failed.',
-                finishedAt: new Date().toISOString(),
-                sessionId: null,
-                sessionKey,
-                status: 'error',
-                summary: 'Hermes cron run failed.',
-            });
-        }
-        await recordCronRun({ jobId, run });
-        return run;
+        });
     }
 
     async listCronRuns(jobId?: string) {
-        const runs = (await readHermesAdapterState()).cronRuns ?? [];
-        return agentRuntimeCronRunListSchema.parse({
-            runs: jobId ? runs.filter((run) => run.jobId === jobId) : runs,
-        });
+        if (!jobId) {
+            return { runs: [] };
+        }
+
+        const response = await this.#http.get(
+            `/api/cron/jobs/${encodeURIComponent(jobId)}/runs?limit=100`
+        );
+        const runs = readArray(response, ['runs', 'data']).map((run) =>
+            mapHermesCronRun(jobId, run)
+        );
+        return {
+            runs,
+        };
     }
 
     async listSessions() {
@@ -818,56 +763,219 @@ function toInvalidHermesConfigSnapshot(input: { config: Record<string, unknown>;
     });
 }
 
-async function recordCronRun(input: { jobId: string; run: AgentRuntimeCronRun }) {
-    const finishedAtMs = input.run.finishedAt ? Date.parse(input.run.finishedAt) : Date.now();
-    const startedAtMs = input.run.startedAt ? Date.parse(input.run.startedAt) : finishedAtMs;
-    const durationMs = Number.isFinite(finishedAtMs - startedAtMs)
-        ? Math.max(0, finishedAtMs - startedAtMs)
-        : undefined;
-
-    await updateHermesAdapterState((state) => ({
-        ...state,
-        cronJobs: (state.cronJobs ?? []).map((candidate) =>
-            candidate.id === input.jobId
-                ? {
-                      ...candidate,
-                      state: {
-                          ...candidate.state,
-                          ...(durationMs === undefined ? {} : { lastDurationMs: durationMs }),
-                          ...(input.run.deliveryError
-                              ? { lastDeliveryError: input.run.deliveryError }
-                              : {}),
-                          ...(input.run.deliveryStatus
-                              ? { lastDeliveryStatus: input.run.deliveryStatus }
-                              : {}),
-                          ...(input.run.executionErrorCode
-                              ? { lastErrorCode: input.run.executionErrorCode }
-                              : {}),
-                          ...(input.run.executionErrorMessage
-                              ? { lastErrorMessage: input.run.executionErrorMessage }
-                              : {}),
-                          lastRunAtMs: finishedAtMs,
-                          lastRunStatus: input.run.status,
-                          lastStatus: input.run.status,
-                      },
-                      updatedAt: input.run.finishedAt ?? new Date().toISOString(),
-                  }
-                : candidate
-        ),
-        cronRuns: [input.run, ...(state.cronRuns ?? [])],
-    }));
+function toHermesCronPrompt(input: Pick<AgentRuntimeCreateCron, 'payload'>) {
+    if (input.payload.kind === 'agentTurn') {
+        return input.payload.message;
+    }
+    if (input.payload.kind === 'systemEvent') {
+        return input.payload.text;
+    }
+    throw unsupportedHermesSurface('Hermes cron payload');
 }
 
-function buildCronPrompt(job: AgentRuntimeCron, input?: AgentRuntimeRunCron) {
-    if (job.payload.kind === 'agentTurn') {
-        return job.payload.message;
+function toHermesCronSchedule(schedule: AgentRuntimeCron['schedule']) {
+    if (schedule.kind === 'at') {
+        return schedule.at;
+    }
+    if (schedule.kind === 'cron') {
+        return schedule.expr;
     }
 
-    if (job.payload.kind === 'systemEvent') {
-        return job.payload.text;
-    }
+    const minutes = Math.max(1, Math.round(schedule.everyMs / 60_000));
+    return `every ${minutes}m`;
+}
 
-    throw unsupportedHermesSurface(`Hermes cron payload for ${input?.mode ?? 'force'} run`);
+function toHermesCronDeliver(delivery: AgentRuntimeCron['delivery']) {
+    return delivery ? `tavern:${delivery.chatId}` : 'local';
+}
+
+type CronFallback = Partial<AgentRuntimeCreateCron> & Partial<AgentRuntimeUpdateCron>;
+
+function toHermesCronUpdates(input: AgentRuntimeUpdateCron) {
+    return {
+        ...(input.delivery !== undefined ? { deliver: toHermesCronDeliver(input.delivery) } : {}),
+        ...(input.name ? { name: input.name } : {}),
+        ...(input.payload ? { prompt: toHermesCronPrompt({ payload: input.payload }) } : {}),
+        ...(input.schedule ? { schedule: toHermesCronSchedule(input.schedule) } : {}),
+    };
+}
+
+function mapHermesCronJob(value: unknown, fallback: CronFallback = {}): AgentRuntimeCron {
+    const record = asRecord(value);
+    const now = new Date().toISOString();
+    const id = readString(record, ['id']) ?? readString(record, ['name']) ?? 'hermes-cron-job';
+    const prompt = readString(record, ['prompt']) ?? fallbackPrompt(fallback) ?? '';
+    const schedule = mapHermesCronSchedule(record.schedule, fallback.schedule);
+    const lastRunAtMs = isoMs(readString(record, ['last_run_at']));
+    const nextRunAtMs = isoMs(readString(record, ['next_run_at']));
+    const lastError = readString(record, ['last_error']);
+    const lastDeliveryError = readString(record, ['last_delivery_error']);
+    const enabled =
+        readBooleanValue(record.enabled, true) && readString(record, ['state']) !== 'paused';
+
+    return agentRuntimeCronSchema.parse({
+        agentId: fallback.agentId ?? defaultHermesAgentId,
+        createdAt: readIso(record, ['created_at']) ?? now,
+        deleteAfterRun: readRepeatTimes(record.repeat) === 1,
+        delivery:
+            mapHermesCronDelivery(readString(record, ['deliver']) ?? null) ??
+            fallback.delivery ??
+            null,
+        description: fallback.description ?? null,
+        enabled,
+        id,
+        name: readString(record, ['name']) ?? fallback.name ?? id,
+        payload:
+            fallback.payload ??
+            ({
+                kind: 'agentTurn',
+                message: prompt || readString(record, ['name']) || id,
+            } as const),
+        schedule,
+        state: {
+            ...(lastDeliveryError
+                ? { lastDeliveryError, lastDeliveryStatus: 'failed' as const }
+                : {}),
+            ...(lastError
+                ? { lastErrorCode: 'execution_failed' as const, lastErrorMessage: lastError }
+                : {}),
+            ...(lastRunAtMs ? { lastRunAtMs } : {}),
+            ...(readString(record, ['last_status'])
+                ? {
+                      lastRunStatus: mapHermesCronStatus(readString(record, ['last_status'])),
+                      lastStatus: mapHermesCronStatus(readString(record, ['last_status'])),
+                  }
+                : {}),
+            ...(nextRunAtMs ? { nextRunAtMs } : {}),
+        },
+        updatedAt:
+            readIso(record, ['updated_at']) ??
+            readIso(record, ['created_at']) ??
+            readIso(record, ['next_run_at']) ??
+            now,
+        wakeMode: fallback.wakeMode ?? 'now',
+    });
+}
+
+function mapHermesCronRun(jobId: string, value: unknown): AgentRuntimeCronRun {
+    const record = asRecord(value);
+    const sessionId = readString(record, ['id', 'session_id']) ?? `cron_${jobId}`;
+    const startedAt = unixOrIsoToIso(record.started_at) ?? unixOrIsoToIso(record.last_active);
+    const finishedAt = unixOrIsoToIso(record.ended_at);
+    const active = finishedAt === null;
+
+    return agentRuntimeCronRunSchema.parse({
+        deliveryError: null,
+        deliveryStatus: 'delivered',
+        executionErrorCode: null,
+        executionErrorMessage: null,
+        finishedAt,
+        id: sessionId,
+        jobId,
+        scheduledFor: startedAt ?? new Date().toISOString(),
+        sessionId,
+        sessionKey: sessionId,
+        startedAt,
+        status: active ? 'running' : 'success',
+        summary: readString(record, ['preview', 'title']) ?? null,
+        trigger: 'schedule',
+    });
+}
+
+function mapHermesCronDelivery(deliver: string | null) {
+    if (!deliver || deliver === 'local') {
+        return null;
+    }
+    if (deliver.startsWith('tavern:')) {
+        const chatId = deliver.slice('tavern:'.length).trim();
+        return chatId ? { chatId } : null;
+    }
+    return null;
+}
+
+function mapHermesCronSchedule(
+    value: unknown,
+    fallback?: AgentRuntimeCron['schedule']
+): AgentRuntimeCron['schedule'] {
+    const record = asRecord(value);
+    const kind = readString(record, ['kind']);
+    if (kind === 'interval') {
+        const minutes = readNumberValue(record.minutes) ?? 1;
+        return { everyMs: Math.max(1, minutes) * 60_000, kind: 'every' };
+    }
+    if (kind === 'once') {
+        return { at: readString(record, ['run_at']) ?? new Date().toISOString(), kind: 'at' };
+    }
+    if (kind === 'cron') {
+        return { expr: readString(record, ['expr']) ?? '* * * * *', kind: 'cron' };
+    }
+    if (fallback) {
+        return fallback;
+    }
+    const scheduleText = typeof value === 'string' ? value.trim() : '';
+    return scheduleText ? { expr: scheduleText, kind: 'cron' } : { everyMs: 60_000, kind: 'every' };
+}
+
+function fallbackPrompt(fallback: CronFallback) {
+    return fallback.payload ? toHermesCronPrompt({ payload: fallback.payload }) : null;
+}
+
+function readRepeatTimes(value: unknown) {
+    const repeat = asRecord(value);
+    return readNumberValue(repeat.times);
+}
+
+function readBooleanValue(value: unknown, fallback: boolean) {
+    return typeof value === 'boolean' ? value : fallback;
+}
+
+function readNumberValue(value: unknown) {
+    return typeof value === 'number' && Number.isFinite(value) ? value : null;
+}
+
+function readIso(record: Record<string, unknown>, keys: string[]) {
+    const value = readString(record, keys);
+    return value && Number.isFinite(Date.parse(value))
+        ? new Date(Date.parse(value)).toISOString()
+        : null;
+}
+
+function isoMs(value: string | null) {
+    if (!value) {
+        return null;
+    }
+    const ms = Date.parse(value);
+    return Number.isFinite(ms) ? ms : null;
+}
+
+function unixOrIsoToIso(value: unknown) {
+    if (typeof value === 'number' && Number.isFinite(value)) {
+        return new Date(value * 1000).toISOString();
+    }
+    if (typeof value === 'string' && Number.isFinite(Date.parse(value))) {
+        return new Date(Date.parse(value)).toISOString();
+    }
+    return null;
+}
+
+function mapHermesCronStatus(value: string | null) {
+    if (value === 'failed' || value === 'error') {
+        return 'error';
+    }
+    if (value === 'running') {
+        return 'running';
+    }
+    if (value === 'skipped') {
+        return 'skipped';
+    }
+    if (value === 'queued') {
+        return 'queued';
+    }
+    return 'success';
+}
+
+function sanitizeCronRunId(value: string) {
+    return value.replace(/[^A-Za-z0-9_-]/g, '_');
 }
 
 function readHermesBaseUrl() {

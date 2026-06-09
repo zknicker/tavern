@@ -14,11 +14,13 @@ describe('LocalHermesClient session routing', () => {
         runtimeRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'tavern-hermes-client-'));
         process.env.TAVERN_RUNTIME_ROOT = runtimeRoot;
         vi.resetModules();
+        await initRuntimeTestDb();
     });
 
     afterEach(async () => {
         server?.close();
         server = null;
+        await closeRuntimeTestDb();
         if (originalRuntimeRoot === undefined) {
             process.env.TAVERN_RUNTIME_ROOT = undefined;
         } else {
@@ -129,20 +131,19 @@ describe('LocalHermesClient session routing', () => {
 describe('LocalHermesClient adapter-owned state', () => {
     const originalRuntimeRoot = process.env.TAVERN_RUNTIME_ROOT;
     let runtimeRoot: string;
-    let gatewayServer: WebSocketServer | null = null;
     let httpServer: ReturnType<typeof Bun.serve> | null = null;
 
     beforeEach(async () => {
         runtimeRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'tavern-hermes-state-'));
         process.env.TAVERN_RUNTIME_ROOT = runtimeRoot;
         vi.resetModules();
+        await initRuntimeTestDb();
     });
 
     afterEach(async () => {
-        gatewayServer?.close();
-        gatewayServer = null;
         httpServer?.stop(true);
         httpServer = null;
+        await closeRuntimeTestDb();
         if (originalRuntimeRoot === undefined) {
             process.env.TAVERN_RUNTIME_ROOT = undefined;
         } else {
@@ -343,68 +344,91 @@ describe('LocalHermesClient adapter-owned state', () => {
         });
     });
 
-    it('persists adapter cron records for create, update, list, run, and delete', async () => {
-        gatewayServer = new WebSocketServer({ host: '127.0.0.1', port: await getFreePort() });
-        gatewayServer.on('connection', (socket) => {
-            socket.on('message', (message) => {
-                const request = JSON.parse(message.toString()) as {
-                    id: string;
-                    method: string;
-                    params?: Record<string, unknown>;
-                };
-                if (request.method === 'session.create') {
-                    socket.send(
-                        JSON.stringify({
-                            id: request.id,
-                            jsonrpc: '2.0',
-                            result: {
-                                session_id: 'cron-live',
-                                stored_session_id: 'cron-stored',
-                            },
-                        })
-                    );
-                    return;
+    it('uses Hermes Cron API for create, update, list, run, and delete', async () => {
+        const requests: Array<{ body: unknown; method: string; pathname: string }> = [];
+        let jobDeleted = false;
+        let job = {
+            created_at: '2026-06-08T10:00:00.000Z',
+            deliver: 'tavern:cht_cron',
+            enabled: true,
+            id: 'hermes_job_1',
+            name: 'Daily check',
+            next_run_at: '2026-06-08T10:01:00.000Z',
+            prompt: 'check in',
+            schedule: { kind: 'interval', minutes: 1 },
+            state: 'scheduled',
+        };
+
+        httpServer = Bun.serve({
+            fetch: async (request) => {
+                const url = new URL(request.url);
+                const body =
+                    request.method === 'GET' ? null : await request.json().catch(() => null);
+                requests.push({ body, method: request.method, pathname: url.pathname });
+
+                if (request.method === 'POST' && url.pathname === '/api/cron/jobs') {
+                    job = { ...job, ...(body as Record<string, unknown>) };
+                    return Response.json(job);
                 }
-                socket.send(JSON.stringify({ id: request.id, jsonrpc: '2.0', result: {} }));
-                if (request.method === 'prompt.submit') {
-                    socket.send(
-                        `${JSON.stringify({
-                            jsonrpc: '2.0',
-                            method: 'event',
-                            params: {
-                                payload: { text: 'cron completed' },
-                                session_id: request.params?.session_id,
-                                type: 'message.complete',
-                            },
-                        })}\n`
-                    );
+                if (request.method === 'PUT' && url.pathname === '/api/cron/jobs/hermes_job_1') {
+                    const updates = ((body as { updates?: Record<string, unknown> })?.updates ??
+                        {}) as Record<string, unknown> | undefined;
+                    job = { ...job, ...(updates ?? {}) };
+                    return Response.json(job);
                 }
-            });
+                if (
+                    request.method === 'POST' &&
+                    url.pathname === '/api/cron/jobs/hermes_job_1/pause'
+                ) {
+                    job = { ...job, enabled: false, state: 'paused' };
+                    return Response.json(job);
+                }
+                if (
+                    request.method === 'POST' &&
+                    url.pathname === '/api/cron/jobs/hermes_job_1/trigger'
+                ) {
+                    return Response.json({ ok: true });
+                }
+                if (request.method === 'GET' && url.pathname === '/api/cron/jobs/hermes_job_1') {
+                    return Response.json(job);
+                }
+                if (request.method === 'GET' && url.pathname === '/api/cron/jobs') {
+                    return Response.json(jobDeleted ? [] : [job]);
+                }
+                if (
+                    request.method === 'GET' &&
+                    url.pathname === '/api/cron/jobs/hermes_job_1/runs'
+                ) {
+                    return Response.json({
+                        runs: [
+                            {
+                                ended_at: 1_780_000_060,
+                                id: 'cron_hermes_job_1_1780000000',
+                                last_active: 1_780_000_060,
+                                preview: 'cron completed',
+                                started_at: 1_780_000_000,
+                            },
+                        ],
+                    });
+                }
+                if (request.method === 'DELETE' && url.pathname === '/api/cron/jobs/hermes_job_1') {
+                    jobDeleted = true;
+                    return Response.json({ ok: true });
+                }
+                return new Response('not found', { status: 404 });
+            },
+            port: 0,
         });
-        await new Promise<void>((resolve) => gatewayServer?.once('listening', () => resolve()));
-        const address = gatewayServer.address();
-        if (!(address && typeof address === 'object')) {
-            throw new Error('Test WebSocket server did not bind a port.');
-        }
 
         const { LocalHermesClient } = await import('./local-client');
         const client = new LocalHermesClient({
-            baseUrl: `http://127.0.0.1:${address.port}`,
+            baseUrl: `http://127.0.0.1:${httpServer.port}`,
             token: null,
         });
 
-        await expect(
-            client.createCronJob({
-                agentId: 'agt_hermes',
-                id: 'cron_enabled',
-                name: 'Enabled schedule',
-                payload: { kind: 'agentTurn', message: 'check in' },
-                schedule: { everyMs: 60_000, kind: 'every' },
-                wakeMode: 'now',
-            })
-        ).rejects.toThrow('Hermes scheduled cron execution');
-        await client.createCronJob({
+        const created = await client.createCronJob({
             agentId: 'agt_hermes',
+            delivery: { chatId: 'cht_cron' },
             enabled: false,
             id: 'cron_1',
             name: 'Daily check',
@@ -412,31 +436,59 @@ describe('LocalHermesClient adapter-owned state', () => {
             schedule: { everyMs: 60_000, kind: 'every' },
             wakeMode: 'now',
         });
-        await client.updateCronJob('cron_1', {
+        const jobId = created.id;
+        await client.updateCronJob(jobId, {
             enabled: false,
             name: 'Paused daily check',
         });
         const listed = await client.listCronJobs();
-        const run = await client.runCronJob('cron_1');
-        const runs = await client.listCronRuns('cron_1');
-        const deleted = await client.deleteCronJob('cron_1');
+        const run = await client.runCronJob(jobId);
+        const runs = await client.listCronRuns(jobId);
+        const deletedResult = await client.deleteCronJob(jobId);
 
+        expect(created).toMatchObject({
+            delivery: { chatId: 'cht_cron' },
+            id: 'hermes_job_1',
+            name: 'Daily check',
+        });
         expect(listed.jobs).toHaveLength(1);
         expect(listed.jobs[0]).toMatchObject({
             enabled: false,
-            id: 'cron_1',
+            id: 'hermes_job_1',
             name: 'Paused daily check',
         });
         expect(run).toMatchObject({
-            jobId: 'cron_1',
-            sessionId: 'cron-stored',
-            status: 'success',
-            summary: 'cron completed',
+            jobId,
+            status: 'running',
             trigger: 'manual',
         });
         expect(runs.runs).toHaveLength(1);
-        expect(deleted).toEqual({ archived: true, id: 'cron_1' });
+        expect(runs.runs[0]).toMatchObject({
+            jobId,
+            sessionId: 'cron_hermes_job_1_1780000000',
+            status: 'success',
+            summary: 'cron completed',
+        });
+        expect(deletedResult).toEqual({ archived: true, id: jobId });
         await expect(client.listCronJobs()).resolves.toMatchObject({ jobs: [] });
+        expect(requests.slice(0, 3)).toMatchObject([
+            {
+                body: {
+                    deliver: 'tavern:cht_cron',
+                    name: 'Daily check',
+                    prompt: 'check in',
+                    schedule: 'every 1m',
+                },
+                method: 'POST',
+                pathname: '/api/cron/jobs',
+            },
+            { method: 'POST', pathname: '/api/cron/jobs/hermes_job_1/pause' },
+            {
+                body: { updates: { name: 'Paused daily check' } },
+                method: 'PUT',
+                pathname: '/api/cron/jobs/hermes_job_1',
+            },
+        ]);
     });
 });
 
@@ -460,4 +512,17 @@ async function getFreePort() {
         throw new Error('Could not allocate a test port.');
     }
     return address.port;
+}
+
+async function initRuntimeTestDb() {
+    const [{ initTestDb }, { ensureRuntimeSchema }] = await Promise.all([
+        import('../db/connection'),
+        import('../db/schema'),
+    ]);
+    ensureRuntimeSchema(initTestDb());
+}
+
+async function closeRuntimeTestDb() {
+    const { closeDb } = await import('../db/connection');
+    closeDb();
 }

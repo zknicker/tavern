@@ -173,6 +173,7 @@ export const cronRunSchema = z.object({
     jobId: z.string().min(1),
     providerJobId: z.string().min(1).nullable().default(null),
     runAt: z.string().datetime(),
+    runtimeSessionKey: z.string().min(1).nullable(),
     sessionId: z.string().min(1),
     sessionKey: z.string().min(1),
     status: cronRunStatusSchema.nullable(),

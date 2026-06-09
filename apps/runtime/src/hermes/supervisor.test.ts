@@ -60,6 +60,14 @@ describe('managed Hermes supervisor', () => {
 
         expect(() => resolveHermesBinary()).toThrow(/requires the Hermes CLI/u);
     });
+
+    it('enables the Hermes dashboard cron ticker for managed launches', async () => {
+        const { buildHermesDashboardEnv } = await import('./supervisor');
+
+        expect(buildHermesDashboardEnv()).toMatchObject({
+            HERMES_DESKTOP: '1',
+        });
+    });
 });
 
 function restoreEnv(name: string, value: string | undefined) {

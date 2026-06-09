@@ -6,6 +6,7 @@ import { loadVaultBackedCodexCredentials } from '../model-access/codex-settings'
 import { getOpenAiApiKey } from '../model-access/openai-settings';
 import { getOpenRouterApiKey } from '../model-access/openrouter-settings';
 import { syncHermesCodexAuth } from './auth-store';
+import { tavernMessengerPluginName } from './tavern-messenger-plugin';
 
 interface HermesModelConfig {
     apiKey: string | null;
@@ -85,6 +86,7 @@ export async function mergeHermesConfigFile(filePath: string, config: HermesMode
     } else {
         doc.deleteIn(['model', 'api_key']);
     }
+    ensurePluginEnabled(doc, tavernMessengerPluginName());
 
     await fs.mkdir(path.dirname(filePath), { recursive: true });
     await fs.writeFile(filePath, doc.toString(), { mode: 0o600 });
@@ -148,4 +150,17 @@ function unquoteEnvValue(value: string) {
         return trimmed.slice(1, -1);
     }
     return trimmed;
+}
+
+function ensurePluginEnabled(doc: ReturnType<typeof parseDocument>, pluginName: string) {
+    const enabled = (doc.toJS() as { plugins?: { enabled?: unknown } } | null)?.plugins?.enabled;
+    const values = Array.isArray(enabled)
+        ? enabled.filter((item): item is string => typeof item === 'string')
+        : [];
+
+    if (values.includes(pluginName)) {
+        return;
+    }
+
+    doc.setIn(['plugins', 'enabled'], [...values, pluginName]);
 }

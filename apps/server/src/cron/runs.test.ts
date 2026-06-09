@@ -1,4 +1,4 @@
-import { afterEach, expect, mock, test } from 'bun:test';
+import { afterEach, expect, mock, spyOn, test } from 'bun:test';
 import { mkdtempSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -8,13 +8,19 @@ const databasePath = join(directory, 'test.sqlite');
 
 process.env.DATABASE_PATH = databasePath;
 
-const [{ ensureDatabaseSchema }, { databaseClient }, { upsertCronRuns }, { listCronRuns }] =
-    await Promise.all([
-        import('../db/bootstrap.ts'),
-        import('../db/index.ts'),
-        import('../storage/cron-runs.ts'),
-        import('./runs.ts'),
-    ]);
+const [
+    { ensureDatabaseSchema },
+    { databaseClient },
+    { reconcileSyntheticCronTriggerRuns, upsertCronRuns },
+    agentRuntimeSync,
+    { listCronRuns },
+] = await Promise.all([
+    import('../db/bootstrap.ts'),
+    import('../db/index.ts'),
+    import('../storage/cron-runs.ts'),
+    import('../sync/agent-runtime-sync.ts'),
+    import('./runs.ts'),
+]);
 
 ensureDatabaseSchema();
 
@@ -24,6 +30,9 @@ afterEach(() => {
 });
 
 test('listCronRuns returns mapped runs and honors the limit', async () => {
+    const syncSpy = spyOn(agentRuntimeSync, 'syncAgentRuntimeCron').mockImplementation(
+        async () => []
+    );
     await upsertCronRuns([
         {
             agentId: null,
@@ -53,7 +62,7 @@ test('listCronRuns returns mapped runs and honors the limit', async () => {
             runAt: '2026-04-16T11:01:00.000Z',
             runtimeId: 'runtime-1',
             runtimeRunId: 'run-1',
-            runtimeSessionKey: 'run-1',
+            runtimeSessionKey: null,
             sessionId: 'run-1',
             sessionKey: 'run-1',
             status: 'error',
@@ -70,6 +79,94 @@ test('listCronRuns returns mapped runs and honors the limit', async () => {
 
     expect(result.runs).toHaveLength(1);
     expect(result.runs[0]?.id).toBe('agent:planner:cron:standup:2');
+    expect(result.runs[0]?.finishedAt).toBe('2026-04-16T12:02:25.000Z');
     expect(result.runs[0]?.sessionKey).toBe('agent:planner:cron:standup:2');
     expect(result.runs[0]?.trigger).toBe('manual');
+    expect(syncSpy).toHaveBeenCalledTimes(1);
+});
+
+test('listCronRuns hides session drill-through until a runtime session exists', async () => {
+    await upsertCronRuns([
+        {
+            agentId: null,
+            deliveryStatus: 'pending',
+            durationMs: null,
+            error: null,
+            jobId: 'cron:standup',
+            providerJobId: 'run-queued',
+            runAt: '2026-04-16T12:01:00.000Z',
+            runtimeId: 'runtime-1',
+            runtimeRunId: 'run-queued',
+            runtimeSessionKey: null,
+            sessionId: 'run-queued',
+            sessionKey: 'run-queued',
+            status: 'running',
+            summary: 'Queued.',
+            syncedAt: '2026-04-16T12:02:00.000Z',
+            trigger: 'manual',
+        },
+    ]);
+
+    const result = await listCronRuns({
+        jobId: 'cron:standup',
+        limit: 1,
+    });
+
+    expect(result.runs[0]?.id).toBe('run-queued');
+    expect(result.runs[0]?.sessionKey).toBeNull();
+});
+
+test('reconcileSyntheticCronTriggerRuns removes trigger acknowledgements with real runs', async () => {
+    await upsertCronRuns([
+        {
+            agentId: null,
+            deliveryStatus: 'pending',
+            durationMs: null,
+            error: null,
+            jobId: 'cron:standup',
+            providerJobId: 'trigger_cron_standup_1780000000000',
+            runAt: '2026-04-16T12:01:00.000Z',
+            runtimeId: 'runtime-1',
+            runtimeRunId: 'trigger_cron_standup_1780000000000',
+            runtimeSessionKey: null,
+            sessionId: 'trigger_cron_standup_1780000000000',
+            sessionKey: 'trigger_cron_standup_1780000000000',
+            status: 'running',
+            summary: 'Hermes queued force cron run.',
+            syncedAt: '2026-04-16T12:01:00.000Z',
+            trigger: 'manual',
+        },
+        {
+            agentId: null,
+            deliveryStatus: 'delivered',
+            durationMs: 4000,
+            error: null,
+            jobId: 'cron:standup',
+            providerJobId: 'cron_standup_20260416_120102',
+            runAt: '2026-04-16T12:01:02.000Z',
+            runtimeId: 'runtime-1',
+            runtimeRunId: 'cron_standup_20260416_120102',
+            runtimeSessionKey: 'cron_standup_20260416_120102',
+            sessionId: 'cron_standup_20260416_120102',
+            sessionKey: 'cron_standup_20260416_120102',
+            status: 'success',
+            summary: 'Posted update.',
+            syncedAt: '2026-04-16T12:01:06.000Z',
+            trigger: 'schedule',
+        },
+    ]);
+
+    const result = await reconcileSyntheticCronTriggerRuns({
+        runtimeId: 'runtime-1',
+        staleBefore: '2026-04-16T12:11:00.000Z',
+        syncedAt: '2026-04-16T12:11:00.000Z',
+    });
+
+    const runs = await listCronRuns({
+        jobId: 'cron:standup',
+        limit: 10,
+    });
+
+    expect(result.deleted).toBe(1);
+    expect(runs.runs.map((run) => run.id)).toEqual(['cron_standup_20260416_120102']);
 });

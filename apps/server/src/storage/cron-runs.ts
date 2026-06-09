@@ -1,6 +1,6 @@
 import { and, desc, eq, or, sql } from 'drizzle-orm';
 import { cronRunSchema } from '../cron/contracts.ts';
-import { db } from '../db/index.ts';
+import { databaseClient, db } from '../db/index.ts';
 import { type CronRunInsert, cronRunsTable } from '../db/schema.ts';
 import { getActiveRuntimeId } from './agent-runtime-connections.ts';
 
@@ -93,6 +93,67 @@ export async function upsertCronRuns(records: CronRunInsert[]) {
                 trigger: sqlExcluded('trigger'),
             },
         });
+}
+
+export async function reconcileSyntheticCronTriggerRuns(input: {
+    runtimeId: string;
+    staleBefore: string;
+    syncedAt: string;
+}) {
+    const deleted = databaseClient
+        .prepare(
+            `DELETE FROM cron_runs AS manual
+             WHERE manual.runtime_id = $runtimeId
+               AND manual.trigger = 'manual'
+               AND manual.session_key LIKE 'trigger_%'
+               AND EXISTS (
+                 SELECT 1
+                 FROM cron_runs AS actual
+                 WHERE actual.runtime_id = manual.runtime_id
+                   AND actual.job_id = manual.job_id
+                   AND actual.trigger != 'manual'
+                   AND actual.session_key NOT LIKE 'trigger_%'
+                   AND actual.run_at >= manual.run_at
+               )`
+        )
+        .run({ $runtimeId: input.runtimeId });
+
+    const failed = databaseClient
+        .prepare(
+            `UPDATE cron_runs AS manual
+             SET status = 'error',
+                 delivery_status = CASE
+                   WHEN manual.delivery_status = 'pending' THEN 'failed'
+                   ELSE manual.delivery_status
+                 END,
+                 error = COALESCE(manual.error, 'Hermes accepted the manual trigger, but no execution appeared.'),
+                 summary = 'Hermes accepted the manual trigger, but no execution appeared.',
+                 synced_at = $syncedAt
+             WHERE manual.runtime_id = $runtimeId
+               AND manual.trigger = 'manual'
+               AND manual.session_key LIKE 'trigger_%'
+               AND manual.status IN ('queued', 'running')
+               AND manual.run_at < $staleBefore
+               AND NOT EXISTS (
+                 SELECT 1
+                 FROM cron_runs AS actual
+                 WHERE actual.runtime_id = manual.runtime_id
+                   AND actual.job_id = manual.job_id
+                   AND actual.trigger != 'manual'
+                   AND actual.session_key NOT LIKE 'trigger_%'
+                   AND actual.run_at >= manual.run_at
+               )`
+        )
+        .run({
+            $runtimeId: input.runtimeId,
+            $staleBefore: input.staleBefore,
+            $syncedAt: input.syncedAt,
+        });
+
+    return {
+        deleted: deleted.changes,
+        failed: failed.changes,
+    };
 }
 
 function sqlExcluded<TKey extends keyof CronRunInsert>(column: TKey) {

@@ -429,6 +429,40 @@ describe('Tavern Runtime Chat API store', () => {
         expect(readerEvents).toEqual(['message.created', 'chat.read']);
         expect(otherEvents).toEqual(['message.created']);
     });
+
+    it('keeps durable writes successful when a live event subscriber fails', () => {
+        const unsubscribe = subscribeToTavernApiEvents(() => {
+            throw new Error('subscriber failed');
+        });
+
+        try {
+            createChat({ id: 'cht_1' });
+            const receipt = createDelivery('cht_1', {
+                agent_id: 'agt_1',
+                id: 'del_1',
+                message: {
+                    ...messageInput('msg_agt_1', undefined, 'done'),
+                    author_id: 'agt_1',
+                    metadata: {
+                        runtime: {
+                            agentId: 'agt_1',
+                            runId: 'run_1',
+                            sessionKey: 'session_1',
+                            source: 'test',
+                        },
+                    },
+                    role: 'assistant',
+                },
+                turn_id: 'run_1',
+            });
+
+            expect(receipt.message.id).toBe('msg_agt_1');
+            expect(listMessages('cht_1').messages).toHaveLength(1);
+            expect(listEvents().events.at(-1)?.type).toBe('message.delivered');
+        } finally {
+            unsubscribe();
+        }
+    });
 });
 
 describe('Tavern Runtime Chat API routes', () => {

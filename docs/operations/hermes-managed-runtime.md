@@ -29,6 +29,10 @@ Runtime resolves the Hermes binary from `TAVERN_HERMES_BIN`, known install
 paths, or `PATH`. If no executable is found, startup reports a managed-Hermes
 setup error instead of spawning a missing command in a loop.
 
+Runtime sets `HERMES_DESKTOP=1` for the managed dashboard process. Hermes uses
+that flag to start the dashboard cron ticker; without it, cron jobs can be
+created and manually triggered, but interval jobs do not fire on schedule.
+
 ## State And Ports
 
 Normal Runtime state defaults to:

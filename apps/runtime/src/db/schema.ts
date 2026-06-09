@@ -58,6 +58,13 @@ CREATE TABLE IF NOT EXISTS agents (
 CREATE INDEX IF NOT EXISTS idx_agents_name
   ON agents(name, id);
 
+CREATE TABLE IF NOT EXISTS hermes_session_mappings (
+  tavern_session_key TEXT PRIMARY KEY,
+  hermes_session_key TEXT NOT NULL,
+  created_at         TEXT NOT NULL,
+  updated_at         TEXT NOT NULL
+);
+
 CREATE TABLE IF NOT EXISTS tavern_channel_outbox (
   request_id        TEXT PRIMARY KEY,
   message_id        TEXT NOT NULL UNIQUE,

@@ -16,14 +16,18 @@ and then runs a managed Hermes turn. Hermes owns the native session, tools,
 model provider calls, files, and transcript. Tavern owns durable chat messages,
 responses, response activity, deliveries, events, and presentation settings.
 
-There is no first-party Hermes plugin package in this worktree. The adapter is
-Runtime code:
+There is no standalone first-party Hermes plugin package in this worktree. The
+adapter is Runtime code, and Runtime writes the managed Tavern Messenger
+platform plugin into the managed Hermes home during startup:
 
 | Source | Owns |
 | --- | --- |
 | `apps/runtime/src/hermes/supervisor.ts` | Managed `hermes dashboard --no-open` lifecycle. |
 | `apps/runtime/src/hermes/local-client.ts` | Hermes dashboard REST, Gateway, sessions, models, skills, and SSE client. |
+| `apps/runtime/src/hermes/session-map.ts` | Tavern session key to Hermes stored-session key mapping in Runtime SQLite. |
+| `apps/runtime/src/hermes/tavern-messenger-plugin.ts` | Managed Hermes platform plugin files for Tavern cron delivery. |
 | `apps/runtime/src/tavern/channel-relay.ts` | Durable user-message acceptance and response creation. |
+| `apps/runtime/src/tavern/cron-delivery.ts` | Private Runtime endpoint that writes Hermes cron output as Tavern deliveries. |
 | `apps/runtime/src/tavern/hermes-turn-runner.ts` | Hermes stream event mapping into Tavern responses, activity, delivery, and turn events. |
 | `apps/runtime/src/hermes/model-config.ts` | Managed Hermes model/provider config and Codex auth sync. |
 
@@ -94,6 +98,25 @@ runtime.toolName
 Activity ids include the Tavern run id plus the Hermes item or tool key so tool
 updates replace the same row instead of remounting the transcript.
 
+Tavern session routing stores `tavernSessionKey -> hermesSessionKey` in Runtime
+SQLite. Runtime does not write `tavern-session-map.json` under the Hermes home;
+the managed Hermes home is execution state, not Tavern routing state.
+
+## Cron Delivery
+
+Tavern cron configuration uses Hermes's Cron HTTP API. Runtime maps Tavern cron
+requests to `/api/cron/jobs`, `/api/cron/jobs/{id}`, pause/resume, trigger, and
+run-history endpoints. Hermes remains canonical for schedule execution and run
+history.
+
+Cron delivery to a Tavern chat uses Hermes platform delivery, not Hermes source
+patches. Runtime installs the `tavern-messenger-platform` plugin into managed
+Hermes and enables it in managed `config.yaml`. Tavern cron jobs with a chat
+destination send `deliver: "tavern:<chatId>"`; Hermes calls the plugin's live
+adapter or standalone sender, and the plugin posts to Runtime
+`POST /cron/deliveries`. Runtime then creates a Tavern `message.delivered`
+receipt in the target chat.
+
 ## Model Provider Boundary
 
 Production Runtime configures managed Hermes with a real provider. Local e2e
@@ -115,7 +138,7 @@ storage, app cache, and browser rendering on live code.
 ## What Is Intentionally Missing
 
 * A Tavern-owned Hermes transcript store as product history.
-* A first-party Hermes plugin package in `packages/`.
+* A standalone first-party Hermes plugin package in `packages/`.
 * App-side Hermes Gateway calls.
 * Mocking the whole Hermes stack in app e2e.
 * Hidden chain-of-thought as message content.

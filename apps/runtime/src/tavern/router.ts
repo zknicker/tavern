@@ -20,6 +20,7 @@ import { handleOpenAiSettingsRequest } from '../model-access/openai-settings';
 import { handleOpenRouterSettingsRequest } from '../model-access/openrouter-settings';
 import { handleWorkspaceRequest } from '../workspace/routes';
 import { handleTavernApiRequest } from './chat-api-router';
+import { deliverHermesCronToTavernChat } from './cron-delivery';
 import { forbidden, json, notFound, readJson } from './http';
 import { handleHermesProxyRequest } from './proxy';
 import { listProjectedTavernRuntimeEvents } from './runtime-event-projection';
@@ -46,6 +47,20 @@ export async function handleTavernRuntimeRequest(request: Request): Promise<Resp
 
     if (request.method === 'GET' && url.pathname === runtimeRoutes.highlights) {
         return json(agentRuntimeHighlightListSchema.parse(listTavernHighlights()));
+    }
+
+    if (request.method === 'POST' && url.pathname === '/cron/deliveries') {
+        const receipt = deliverHermesCronToTavernChat(await readJson(request));
+        return json(
+            {
+                chat_id: receipt.message.chat_id,
+                cursor: receipt.cursor,
+                idempotent: receipt.idempotent,
+                message_id: receipt.message.id,
+                success: true,
+            },
+            receipt.idempotent ? 200 : 201
+        );
     }
 
     const cortexResponse = await handleCortexRequest(request);

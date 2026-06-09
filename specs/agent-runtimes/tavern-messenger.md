@@ -152,6 +152,26 @@ Runtime over HTTP or websocket replay using a cursor. If a websocket
 notification is missed, hard reload reconstructs the accepted user message and
 response work from Runtime state.
 
+## Cron Delivery
+
+Tavern Messenger also registers as a Hermes platform named `tavern`. That makes
+Hermes cron jobs able to use `deliver=tavern:<chat-id>` without modifying
+Hermes source.
+
+For cron output, the plugin is a sender rather than a chat catalog or timeline
+owner:
+
+1. Tavern Runtime creates or edits the cron job through Hermes's Cron HTTP API.
+2. The Tavern destination chat is encoded as `deliver: "tavern:<chatId>"`.
+3. Hermes executes the cron job and calls the Tavern platform adapter or its
+   standalone sender.
+4. The plugin posts the assistant output to Runtime `POST /cron/deliveries`.
+5. Runtime validates the target Tavern chat and writes the assistant message
+   through the normal Tavern delivery receipt path.
+
+Cron delivery must not create Tavern chats from Hermes data. If the target
+`cht_...` record is missing, delivery fails instead of inventing a chat.
+
 ## Message Metadata
 
 Tavern Messenger preserves Tavern-owned message metadata on the durable user message. Hermes may

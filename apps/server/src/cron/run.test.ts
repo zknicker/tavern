@@ -17,6 +17,9 @@ const [
     { databaseClient },
     { saveAgentRuntimeConnection },
     { syncCronJobsForRuntime },
+    agentRuntimeSync,
+    { getCronJob },
+    { listCronRuns },
     { runCronJob },
 ] = await Promise.all([
     import('../agent-runtime/cron.ts'),
@@ -25,6 +28,9 @@ const [
     import('../db/index.ts'),
     import('../storage/agent-runtime-connections.ts'),
     import('../storage/cron-jobs.ts'),
+    import('../sync/agent-runtime-sync.ts'),
+    import('./list.ts'),
+    import('./runs.ts'),
     import('./run.ts'),
 ]);
 
@@ -73,10 +79,22 @@ function createAgentRuntimeCronRun() {
     };
 }
 
+function createSyntheticTriggerRun() {
+    return {
+        ...createAgentRuntimeCronRun(),
+        id: 'trigger_cron_daily-standup_1780000000000',
+        sessionId: null,
+        sessionKey: null,
+        status: 'running' as const,
+        summary: 'Hermes queued force cron run.',
+    };
+}
+
 afterEach(() => {
     mock.restore();
-    databaseClient.exec('DELETE FROM agent_runtime_connections;');
+    databaseClient.exec('DELETE FROM cron_runs;');
     databaseClient.exec('DELETE FROM cron_jobs;');
+    databaseClient.exec('DELETE FROM agent_runtime_connections;');
 });
 
 test('runCronJob forwards the manual run request to Hermes', async () => {
@@ -98,6 +116,14 @@ test('runCronJob forwards the manual run request to Hermes', async () => {
     const emitCronUpdatedSpy = spyOn(invalidationEvents, 'emitCronUpdated').mockImplementation(
         () => undefined
     );
+    spyOn(agentRuntimeSync, 'syncAgentRuntimeCron').mockResolvedValue([
+        {
+            deleted: 0,
+            runtimeId: 'runtime-1',
+            runtimeName: 'Runtime 1',
+            synced: 0,
+        },
+    ]);
 
     const result = await runCronJob({
         jobId: 'cron:daily-standup',
@@ -112,7 +138,56 @@ test('runCronJob forwards the manual run request to Hermes', async () => {
         'cron:daily-standup',
         { mode: 'enqueue' },
     ]);
+    const runs = await listCronRuns({
+        jobId: 'cron:daily-standup',
+    });
+    assert.equal(runs.runs.length, 1);
+    assert.equal(runs.runs[0]?.id, 'run:daily-standup');
+    assert.equal(runs.runs[0]?.sessionKey, null);
+    assert.equal(runs.runs[0]?.trigger, 'manual');
+    assert.equal(runs.runs[0]?.status, 'queued');
+
+    const loaded = await getCronJob({
+        jobId: 'cron:daily-standup',
+    });
+    assert.equal(loaded.job?.state.lastRunAtMs, Date.parse('2026-04-16T09:00:00.000Z'));
+    assert.equal(loaded.job?.state.lastRunStatus, 'queued');
     assert.equal(emitCronUpdatedSpy.mock.calls.length, 1);
+});
+
+test('runCronJob does not persist Hermes trigger acknowledgements as run history', async () => {
+    await syncCronJobsForRuntime({
+        jobs: [createAgentRuntimeCronJob()],
+        runtimeId: 'runtime-1',
+    });
+    await saveAgentRuntimeConnection({
+        auth: null,
+        baseUrl: 'http://localhost:1234',
+        id: 'runtime-1',
+        lastCheckedAt: '2026-05-05T19:00:00.000Z',
+        lastError: null,
+        name: 'Runtime 1',
+    });
+    spyOn(agentRuntimeCron, 'runCronJob').mockResolvedValue(createSyntheticTriggerRun());
+    spyOn(invalidationEvents, 'emitCronUpdated').mockImplementation(() => undefined);
+    spyOn(agentRuntimeSync, 'syncAgentRuntimeCron').mockResolvedValue([
+        {
+            deleted: 0,
+            runtimeId: 'runtime-1',
+            runtimeName: 'Runtime 1',
+            synced: 0,
+        },
+    ]);
+
+    await runCronJob({
+        jobId: 'cron:daily-standup',
+        mode: 'force',
+    });
+
+    const runs = await listCronRuns({
+        jobId: 'cron:daily-standup',
+    });
+    assert.equal(runs.runs.length, 0);
 });
 
 test('runCronJob rejects missing cron jobs before calling Hermes', async () => {

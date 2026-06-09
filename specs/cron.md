@@ -14,6 +14,10 @@ Cron jobs are runtime-owned scheduled producers of work surfaced in Tavern.
 - Delivery is optional. A cron job without a destination remains a valid job.
 - Cron job configuration is inspectable independently from run history.
 - The owning runtime remains canonical for cron configuration and execution.
+- In managed Hermes mode, Tavern Runtime uses Hermes's Cron HTTP API for cron
+  create, update, pause/resume, trigger, delete, list, and run-history reads.
+- Managed Hermes startup enables Hermes's dashboard cron ticker, so interval
+  and cron-expression jobs fire without a separate global Hermes gateway.
 
 ## Editing
 
@@ -30,6 +34,9 @@ Cron jobs are runtime-owned scheduled producers of work surfaced in Tavern.
 
 - Every cron execution is represented as its own run.
 - Cron run history is observed runtime history.
+- A manual trigger acknowledgement is not durable run history. Tavern may show
+  a local pending row immediately after Run Now, but it disappears on navigation
+  and is replaced only by an observed runtime execution.
 - A person can inspect historical runs without those runs collapsing into one generic
   latest session.
 - Cron runs show status, timing, summary, errors, and related downstream interactions when
@@ -43,4 +50,8 @@ Cron jobs are runtime-owned scheduled producers of work surfaced in Tavern.
 - If a cron run posted to a destination session, that delivery is visible from the cron run.
 - Agent-authored cron delivery appears in the chosen destination chat as the agent when the
   runtime supports destination delivery.
+- In managed Hermes mode, Tavern chat delivery uses Hermes platform delivery
+  with `deliver=tavern:<chat-id>`. The Tavern Messenger platform plugin posts
+  the resulting message to Runtime, and Runtime writes the canonical Tavern
+  delivery receipt.
 - A person can navigate from a cron run to related session activity quickly.

@@ -15,13 +15,14 @@ import {
 } from '../config';
 import { log } from '../log';
 import { publishRuntimeEvent } from '../tavern/runtime-events';
-import { createLocalHermesClient } from './local-client';
+import { buildRuntimeApiBaseUrl, createLocalHermesClient } from './local-client';
 import { prepareManagedHermesModelConfig, resolveManagedHermesModelConfig } from './model-config';
 import {
     markManagedHermesApiReady,
     markManagedHermesApiStopped,
     markManagedHermesHome,
 } from './state';
+import { ensureTavernMessengerPlugin } from './tavern-messenger-plugin';
 
 export interface ManagedHermesHandle {
     stop(options?: { force?: boolean }): Promise<void>;
@@ -30,6 +31,7 @@ export interface ManagedHermesHandle {
 export async function startHermesForRuntime(): Promise<ManagedHermesHandle> {
     await fs.mkdir(HERMES_HOME, { recursive: true });
     await fs.mkdir(HERMES_ROOT, { recursive: true });
+    await ensureTavernMessengerPlugin();
     await prepareManagedHermesModelConfig();
     if (markManagedHermesHome(HERMES_HOME)) {
         publishCapabilityUpdated('dashboardServer');
@@ -164,14 +166,20 @@ function spawnHermesDashboard(input: { host: string; port: number }) {
         command,
         ['dashboard', '--no-open', '--host', input.host, '--port', `${input.port}`],
         {
-            env: {
-                ...process.env,
-                HERMES_DASHBOARD_SESSION_TOKEN,
-                HERMES_HOME,
-            },
+            env: buildHermesDashboardEnv(),
             stdio: ['ignore', 'inherit', 'inherit'],
         }
     );
+}
+
+export function buildHermesDashboardEnv() {
+    return {
+        ...process.env,
+        HERMES_DESKTOP: '1',
+        HERMES_DASHBOARD_SESSION_TOKEN,
+        HERMES_HOME,
+        TAVERN_RUNTIME_URL: buildRuntimeApiBaseUrl(),
+    };
 }
 
 export function resolveHermesBinary(): string {

@@ -2,6 +2,7 @@ import type { TavernChatEvent } from '@tavern/api';
 import { getDb } from '../../db/connection';
 import type { Database } from '../../db/sqlite';
 import { namedParams, optionalRow } from '../../db/sqlite';
+import { log } from '../../log';
 import { createEventId } from './ids';
 import { clampLimit } from './limits';
 import type { EventRow } from './types';
@@ -117,7 +118,11 @@ export function currentCursor(db: Database) {
 export function publish(event: TavernChatEvent) {
     for (const [subscriber, options] of subscribers) {
         if (canReadEvent(event, options.recipientId)) {
-            subscriber(event);
+            try {
+                subscriber(event);
+            } catch (error) {
+                log.warn('Tavern API event subscriber failed', { cursor: event.cursor, error });
+            }
         }
     }
 }

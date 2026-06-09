@@ -62,6 +62,18 @@ export class HermesHttp {
         return contentType.includes('application/json') ? ((await response.json()) as unknown) : {};
     }
 
+    async deleteJson(pathname: string) {
+        const response = await fetch(`${this.#baseUrl}${pathname}`, {
+            headers: this.#headers(),
+            method: 'DELETE',
+        });
+        if (!response.ok && response.status !== 409) {
+            throw await hermesFetchError(response);
+        }
+        const contentType = response.headers.get('content-type') ?? '';
+        return contentType.includes('application/json') ? ((await response.json()) as unknown) : {};
+    }
+
     async *streamPost(
         pathname: string,
         body: unknown,

@@ -2,9 +2,11 @@ import { TRPCError } from '@trpc/server';
 import { requireConfiguredAgentRuntimeClientForRuntimeId } from '../agent-runtime/configured-client.ts';
 import * as agentRuntimeCron from '../agent-runtime/cron.ts';
 import { emitCronUpdated } from '../api/invalidation-events.ts';
-import { getCronJobRecord } from '../storage/cron-jobs.ts';
+import { getCronJobRecord, parseCronJobRawJson } from '../storage/cron-jobs.ts';
+import { upsertCronRuns } from '../storage/cron-runs.ts';
 import { syncAgentRuntimeCron } from '../sync/agent-runtime-sync.ts';
 import { runCronJobInputSchema } from './contracts.ts';
+import { toCronRunInsert } from './runtime-run-record.ts';
 
 export async function runCronJob(input: unknown) {
     const parsed = runCronJobInputSchema.parse(input);
@@ -19,13 +21,24 @@ export async function runCronJob(input: unknown) {
 
     const runtimeClient = await requireConfiguredAgentRuntimeClientForRuntimeId(job.runtimeId);
 
-    await agentRuntimeCron.runCronJob(
+    const run = await agentRuntimeCron.runCronJob(
         job.runtimeCronJobId,
         {
             mode: parsed.mode,
         },
         runtimeClient
     );
+    const syncedAt = new Date().toISOString();
+    if (!isSyntheticCronTriggerRun(run)) {
+        await upsertCronRuns([
+            toCronRunInsert({
+                job: parseCronJobRawJson(job),
+                run,
+                runtimeId: job.runtimeId,
+                syncedAt,
+            }),
+        ]);
+    }
     void syncAgentRuntimeCron().catch((error) => {
         console.warn('[tavern] failed to refresh cron records after run', error);
     });
@@ -36,4 +49,12 @@ export async function runCronJob(input: unknown) {
         success: true as const,
         synced: true,
     };
+}
+
+function isSyntheticCronTriggerRun(run: {
+    id: string;
+    sessionId: null | string;
+    sessionKey: null | string;
+}) {
+    return run.id.startsWith('trigger_') && run.sessionId === null && run.sessionKey === null;
 }
