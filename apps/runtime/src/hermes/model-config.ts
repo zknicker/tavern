@@ -7,6 +7,7 @@ import { getOpenAiApiKey } from '../model-access/openai-settings';
 import { getOpenRouterApiKey } from '../model-access/openrouter-settings';
 import { syncHermesCodexAuth } from './auth-store';
 import { prepareManagedLlmWikiIntegration } from './llm-wiki';
+import { ensureManagedMnemosynePackage, ensureManagedMnemosynePlugin } from './mnemosyne';
 import { tavernMessengerPluginName } from './tavern-messenger-plugin';
 
 interface HermesModelConfig {
@@ -16,6 +17,10 @@ interface HermesModelConfig {
     openAiApiKey: string | null;
     openRouterApiKey: string | null;
     provider: string;
+}
+
+interface ManagedHermesModelConfigInput {
+    hermesBinary?: string;
 }
 
 export async function resolveManagedHermesModelConfig(): Promise<HermesModelConfig> {
@@ -59,7 +64,9 @@ export async function resolveManagedHermesModelConfig(): Promise<HermesModelConf
     };
 }
 
-export async function prepareManagedHermesModelConfig(): Promise<HermesModelConfig> {
+export async function prepareManagedHermesModelConfig(
+    input: ManagedHermesModelConfigInput = {}
+): Promise<HermesModelConfig> {
     const config = await resolveManagedHermesModelConfig();
     await fs.mkdir(HERMES_HOME, { recursive: true });
     await mergeHermesConfigFile(path.join(HERMES_HOME, 'config.yaml'), config);
@@ -69,6 +76,10 @@ export async function prepareManagedHermesModelConfig(): Promise<HermesModelConf
         await loadVaultBackedCodexCredentials().catch(() => null)
     );
     await prepareManagedLlmWikiIntegration();
+    await ensureManagedMnemosynePlugin();
+    if (input.hermesBinary) {
+        await ensureManagedMnemosynePackage({ hermesBinary: input.hermesBinary });
+    }
     return config;
 }
 
@@ -88,6 +99,7 @@ export async function mergeHermesConfigFile(filePath: string, config: HermesMode
     } else {
         doc.deleteIn(['model', 'api_key']);
     }
+    ensureMnemosyneMemoryProvider(doc);
     ensurePluginEnabled(doc, tavernMessengerPluginName());
 
     await fs.mkdir(path.dirname(filePath), { recursive: true });
@@ -165,4 +177,10 @@ function ensurePluginEnabled(doc: ReturnType<typeof parseDocument>, pluginName: 
     }
 
     doc.setIn(['plugins', 'enabled'], [...values, pluginName]);
+}
+
+function ensureMnemosyneMemoryProvider(doc: ReturnType<typeof parseDocument>) {
+    doc.setIn(['memory', 'provider'], 'mnemosyne');
+    doc.setIn(['memory', 'memory_enabled'], false);
+    doc.setIn(['memory', 'user_profile_enabled'], false);
 }

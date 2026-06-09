@@ -1,7 +1,10 @@
 import type { HermesConfigFixup } from './types.ts';
 
 export const requiredHermesMemoryConfig = {
+    memoryEnabled: false,
+    provider: 'mnemosyne',
     memorySlot: 'none',
+    userProfileEnabled: false,
 } as const;
 
 export const enforceMemoryFixup: HermesConfigFixup = {
@@ -33,6 +36,12 @@ export function enforceHermesMemoryConfig(config: Record<string, unknown>) {
 
     return {
         ...config,
+        memory: {
+            ...readRecord(config.memory),
+            memory_enabled: requiredHermesMemoryConfig.memoryEnabled,
+            provider: requiredHermesMemoryConfig.provider,
+            user_profile_enabled: requiredHermesMemoryConfig.userProfileEnabled,
+        },
         plugins: {
             ...hermesPlugins,
             allow,
@@ -49,8 +58,12 @@ export function isHermesMemoryConfigReady(config: Record<string, unknown>) {
     const plugins = readRecord(config.plugins);
     const slots = readRecord(plugins.slots);
     const entries = readRecord(plugins.entries);
+    const memory = readRecord(config.memory);
 
     return (
+        memory.provider === requiredHermesMemoryConfig.provider &&
+        memory.memory_enabled === requiredHermesMemoryConfig.memoryEnabled &&
+        memory.user_profile_enabled === requiredHermesMemoryConfig.userProfileEnabled &&
         slots.memory === requiredHermesMemoryConfig.memorySlot &&
         !Object.keys(entries).some((pluginId) => removedMemoryPluginIds.has(pluginId)) &&
         !readStringArray(plugins.allow).some((pluginId) => removedMemoryPluginIds.has(pluginId))

@@ -96,6 +96,24 @@ The wiki hub defaults to `TAVERN_RUNTIME_ROOT/wiki`. Operators can override it
 with `TAVERN_WIKI_HUB_PATH` or `TAVERN_CORTEX_WIKI_PATH`. Runtime creates the
 hub skeleton and passes the resolved path to Hermes as `TAVERN_WIKI_HUB_PATH`.
 
+## Managed Memory Provider
+
+Runtime configures managed Hermes to use the Mnemosyne memory provider:
+
+```yaml
+memory:
+  provider: mnemosyne
+  memory_enabled: false
+  user_profile_enabled: false
+```
+
+Runtime also materializes a managed `HERMES_HOME/plugins/mnemosyne` discovery
+shim and provisions `mnemosyne-hermes` into the Hermes Python environment before
+starting the dashboard. Release artifacts carry a bundled Mnemosyne wheelhouse
+under `runtime-assets/python/mnemosyne`; source runs fall back to the Python
+package index when the wheelhouse is absent. Operators do not run `pip`,
+`pipx`, or `hermes memory setup` for the managed instance.
+
 ## Capability Checks
 
 Managed Hermes readiness is split into primitive Runtime capabilities:

@@ -81,6 +81,11 @@ artifacts and Runtime tarballs to `TAVERN_RELEASE_S3_URI`, verifies each S3
 object is visible, commits release metadata, pushes `main`, pushes the version
 tag, creates the GitHub Release, and updates the Homebrew tap formula.
 
+Runtime artifacts include the managed Mnemosyne Python wheelhouse under
+`runtime-assets/python/mnemosyne`. The runtime artifact build downloads those
+wheels before packaging so managed Hermes memory works without operator Python
+setup.
+
 ## Compatibility Floor Rules
 
 * **Do not raise the floor for desktop-only work.** App version bumps do not

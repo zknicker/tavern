@@ -32,8 +32,9 @@ export interface ManagedHermesHandle {
 export async function startHermesForRuntime(): Promise<ManagedHermesHandle> {
     await fs.mkdir(HERMES_HOME, { recursive: true });
     await fs.mkdir(HERMES_ROOT, { recursive: true });
+    const hermesBinary = resolveHermesBinary();
     await ensureTavernMessengerPlugin();
-    await prepareManagedHermesModelConfig();
+    await prepareManagedHermesModelConfig({ hermesBinary });
     if (markManagedHermesHome(HERMES_HOME)) {
         publishCapabilityUpdated('dashboardServer');
     }
@@ -59,7 +60,7 @@ export async function startHermesForRuntime(): Promise<ManagedHermesHandle> {
 
         let nextChild: ChildProcess;
         try {
-            nextChild = spawnHermesDashboard({ host, port });
+            nextChild = spawnHermesDashboard({ command: hermesBinary, host, port });
         } catch (err) {
             markManagedHermesApiStopped();
             publishGatewayCapabilitiesUpdated();
@@ -146,10 +147,9 @@ export async function startHermesForRuntime(): Promise<ManagedHermesHandle> {
     };
 }
 
-function spawnHermesDashboard(input: { host: string; port: number }) {
-    const command = resolveHermesBinary();
+function spawnHermesDashboard(input: { command: string; host: string; port: number }) {
     return spawn(
-        command,
+        input.command,
         ['dashboard', '--no-open', '--host', input.host, '--port', `${input.port}`],
         {
             env: buildHermesDashboardEnv(),

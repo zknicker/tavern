@@ -9,6 +9,7 @@ import { fail, readJson, repoRoot } from './release-utils.mjs';
 
 const artifactRoot = path.join(repoRoot, 'apps', 'website', 'electron-dist');
 const runtimeArtifactDir = path.join(artifactRoot, 'runtime');
+const mnemosynePackageSpec = 'mnemosyne-hermes==0.1.5';
 const main = async () => {
     const version = await readReleaseVersion();
     const targetTriple = readTargetTriple();
@@ -72,11 +73,11 @@ async function stageRuntimePackages(stageRoot) {
 }
 
 async function stageRuntimeAssets(stageRoot) {
-    await fs.cp(
-        path.join(repoRoot, 'apps', 'runtime', 'assets'),
-        path.join(stageRoot, 'share', 'tavern', 'runtime-assets'),
-        { recursive: true }
-    );
+    const runtimeAssetsRoot = path.join(stageRoot, 'share', 'tavern', 'runtime-assets');
+    await fs.cp(path.join(repoRoot, 'apps', 'runtime', 'assets'), runtimeAssetsRoot, {
+        recursive: true,
+    });
+    await stageMnemosyneWheelhouse(path.join(runtimeAssetsRoot, 'python', 'mnemosyne'));
 }
 
 async function copyPackage(sourcePath, targetPath) {
@@ -96,6 +97,19 @@ function run(command, args) {
         env: process.env,
         stdio: 'inherit',
     });
+}
+
+async function stageMnemosyneWheelhouse(wheelhousePath) {
+    await fs.mkdir(wheelhousePath, { recursive: true });
+    run(process.env.PYTHON ?? 'python3', [
+        '-m',
+        'pip',
+        'download',
+        '--only-binary=:all:',
+        '--dest',
+        wheelhousePath,
+        mnemosynePackageSpec,
+    ]);
 }
 
 async function sha256File(filePath) {

@@ -49,6 +49,11 @@ describe('enforceHermesMemoryConfig', () => {
                 other: 'keep',
             },
         });
+        expect(config.memory as unknown).toEqual({
+            memory_enabled: false,
+            provider: 'mnemosyne',
+            user_profile_enabled: false,
+        });
         expect(isHermesMemoryConfigReady(config)).toBe(true);
     });
 
@@ -69,6 +74,11 @@ describe('enforceHermesMemoryConfig', () => {
                         memory: 'none',
                     },
                 },
+                memory: {
+                    memory_enabled: false,
+                    provider: 'mnemosyne',
+                    user_profile_enabled: false,
+                },
             })
         ).toBe(false);
     });
@@ -85,6 +95,28 @@ describe('enforceHermesMemoryConfig', () => {
                     allow: ['lossless-claw', 'other-plugin'],
                     slots: {
                         contextEngine: 'lossless-claw',
+                        memory: 'none',
+                    },
+                },
+                memory: {
+                    memory_enabled: false,
+                    provider: 'mnemosyne',
+                    user_profile_enabled: false,
+                },
+            })
+        ).toBe(false);
+    });
+
+    test('reports missing Mnemosyne provider as not ready', () => {
+        expect(
+            isHermesMemoryConfigReady({
+                memory: {
+                    memory_enabled: false,
+                    provider: '',
+                    user_profile_enabled: false,
+                },
+                plugins: {
+                    slots: {
                         memory: 'none',
                     },
                 },

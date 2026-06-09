@@ -79,6 +79,12 @@ they are part of Tavern's product contract. llm-wiki is the current example:
 Runtime bundles the upstream workflow package as the `wiki` managed Hermes skill
 so Tasks, crons, and normal agent turns can invoke wiki work.
 
+Managed memory providers are not Tavern skills. Runtime configures Hermes to
+select the `mnemosyne` memory provider and writes the provider discovery shim
+under managed `HERMES_HOME/plugins/mnemosyne`. Runtime provisions the packaged
+provider dependency for the managed instance; Hermes still owns memory-provider
+activation and tool injection.
+
 Plugins stay owned by the runtime that exposes them. Hermes plugins may add
 skills, workflows, tools, channels, or runtime behavior. Codex native plugins
 remain Codex app-server capabilities surfaced through the Hermes Codex

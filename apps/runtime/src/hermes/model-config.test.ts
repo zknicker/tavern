@@ -4,6 +4,7 @@ import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { parseDocument } from 'yaml';
 import { syncHermesCodexAuth } from './auth-store';
+import { ensureManagedMnemosynePlugin } from './mnemosyne';
 import { mergeHermesConfigFile, mergeHermesEnvFile } from './model-config';
 
 describe('managed Hermes model config', () => {
@@ -37,6 +38,9 @@ describe('managed Hermes model config', () => {
         expect(doc.getIn(['model', 'provider'])).toBe('openai-codex');
         expect(doc.getIn(['model', 'base_url'])).toBeUndefined();
         expect(doc.getIn(['model', 'api_key'])).toBeUndefined();
+        expect(doc.getIn(['memory', 'provider'])).toBe('mnemosyne');
+        expect(doc.getIn(['memory', 'memory_enabled'])).toBe(false);
+        expect(doc.getIn(['memory', 'user_profile_enabled'])).toBe(false);
     });
 
     it('writes a custom provider base URL for local Hermes e2e runs', async () => {
@@ -57,6 +61,35 @@ describe('managed Hermes model config', () => {
         expect(doc.getIn(['model', 'provider'])).toBe('custom');
         expect(doc.getIn(['model', 'base_url'])).toBe('http://127.0.0.1:44080/v1');
         expect(doc.getIn(['model', 'api_key'])).toBe('tavern-e2e-mock-key');
+        expect(doc.getIn(['memory', 'provider'])).toBe('mnemosyne');
+    });
+
+    it('materializes the managed Mnemosyne provider shim', async () => {
+        const directory = await fs.mkdtemp(path.join(os.tmpdir(), 'tavern-mnemosyne-'));
+
+        const integration = await ensureManagedMnemosynePlugin({ hermesHome: directory });
+
+        expect(integration.managed).toBe(true);
+        await expect(
+            fs.readFile(path.join(integration.pluginPath, '__init__.py'), 'utf8')
+        ).resolves.toContain('MnemosyneMemoryProvider');
+        await expect(
+            fs.readFile(path.join(integration.pluginPath, 'plugin.yaml'), 'utf8')
+        ).resolves.toContain('mnemosyne-hermes');
+    });
+
+    it('preserves an existing unmanaged Mnemosyne plugin', async () => {
+        const directory = await fs.mkdtemp(path.join(os.tmpdir(), 'tavern-mnemosyne-'));
+        const pluginPath = path.join(directory, 'plugins', 'mnemosyne');
+        await fs.mkdir(pluginPath, { recursive: true });
+        await fs.writeFile(path.join(pluginPath, '__init__.py'), 'custom plugin');
+
+        const integration = await ensureManagedMnemosynePlugin({ hermesHome: directory });
+
+        expect(integration.managed).toBe(false);
+        await expect(fs.readFile(path.join(pluginPath, '__init__.py'), 'utf8')).resolves.toBe(
+            'custom plugin'
+        );
     });
 
     it('clears stale provider keys from the managed Hermes env file', async () => {
