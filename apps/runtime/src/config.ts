@@ -8,6 +8,7 @@ import { isValidTimezone } from './timezone.ts';
 
 const envConfig = readEnvFile([
     'HERMES_HOME',
+    'TAVERN_HERMES_ALLOW_SYSTEM',
     'TAVERN_HERMES_AUTO_INSTALL',
     'TAVERN_HERMES_BIN',
     'TAVERN_HERMES_BRANCH',

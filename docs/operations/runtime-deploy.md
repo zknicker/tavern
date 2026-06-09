@@ -187,9 +187,23 @@ share/tavern/runtime-assets/
 
 `runtime-assets/` carries the bundled Hermes installer snapshot and the
 Mnemosyne Python wheelhouse, so first-run engine setup needs no operator
-Python or Hermes work. Runtime resolves the Hermes CLI from
-`TAVERN_HERMES_BIN`, the managed engine at `~/.tavern/engine/<pin>/`, known
-installer paths, or `PATH`, and bootstraps the pinned engine when nothing is
-found. Set `TAVERN_HERMES_BIN` in the Homebrew service environment when the
-service should use a specific Hermes install, or
-`TAVERN_HERMES_AUTO_INSTALL=0` to forbid bootstrap.
+Python or Hermes work.
+
+By default, production **runs the pinned engine and ignores any Hermes already
+on the host** — a user's `~/.local/bin/hermes`, `~/.hermes`, shell config, and
+Hermes venv are never read, modified, or executed. Runtime resolves
+`TAVERN_HERMES_BIN` first, then the managed engine at `~/.tavern/engine/<pin>/`,
+and bootstraps the pinned engine when neither is present. This guarantees the
+deployment runs the supported Hermes version.
+
+Escape hatches: set `TAVERN_HERMES_BIN` in the Homebrew service environment to
+run a specific install; set `TAVERN_HERMES_ALLOW_SYSTEM=1` to let resolution use
+a system Hermes install instead of the managed engine; set
+`TAVERN_HERMES_AUTO_INSTALL=0` to forbid bootstrap (startup then fails loudly if
+no engine is available rather than downloading).
+
+Disk note: on a host that already has Hermes, the managed engine is a second,
+Tavern-owned install under `~/.tavern/engine/<pin>/` (repo + venv + bundled
+node, ~1GB+). That duplication is the cost of the version guarantee. Use
+`TAVERN_HERMES_ALLOW_SYSTEM=1` if you would rather reuse the host's install and
+accept that Tavern no longer pins the version.

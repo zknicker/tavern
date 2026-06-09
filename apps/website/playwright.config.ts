@@ -55,6 +55,7 @@ function buildWebServers() {
                 `TAVERN_HERMES_PROVIDER=${hermesProvider}`,
                 `TAVERN_HERMES_TOKEN=${hermesToken}`,
                 // e2e must never download an engine; resolve the dev machine's Hermes.
+                'TAVERN_HERMES_ALLOW_SYSTEM=1',
                 'TAVERN_HERMES_AUTO_INSTALL=0',
                 'bun e2e/start-tavern-runtime.ts',
             ].join(' '),

@@ -46,9 +46,11 @@ Set `TAVERN_HERMES_HOME`, `TAVERN_HERMES_BIN`, `TAVERN_HERMES_HOST`,
 `TAVERN_HERMES_PORT`, or `TAVERN_HERMES_TOKEN` when a dev run should use a
 specific Hermes install or dashboard process.
 
-The dev stack sets `TAVERN_HERMES_AUTO_INSTALL=0` by default: dev runs resolve
-the machine's existing Hermes install and never download a managed engine.
-Set `TAVERN_HERMES_AUTO_INSTALL=1` on a dev machine without Hermes to let
+The dev stack sets `TAVERN_HERMES_ALLOW_SYSTEM=1` and
+`TAVERN_HERMES_AUTO_INSTALL=0` by default: dev runs resolve the machine's
+existing Hermes install and never download a managed engine. (Production does
+the opposite — it ignores system installs and runs the pinned managed engine.)
+On a dev machine without Hermes, set `TAVERN_HERMES_AUTO_INSTALL=1` to let
 Runtime bootstrap the pinned engine into `~/.tavern/engine/` once, shared
 across worktrees.
 

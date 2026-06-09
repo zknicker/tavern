@@ -25,11 +25,13 @@ Runtime launches:
 hermes dashboard --no-open --host 127.0.0.1 --port <TAVERN_HERMES_PORT>
 ```
 
-Runtime resolves the Hermes binary in four tiers:
+Runtime resolves the Hermes binary in tiers:
 
 1. `TAVERN_HERMES_BIN` (explicit operator override; fails loudly when broken).
 2. The Tavern-managed engine install at `~/.tavern/engine/<pin>/`.
-3. Existing system installs: `~/.local/bin/hermes`, Homebrew paths, then `PATH`.
+3. System installs (`~/.local/bin/hermes`, Homebrew paths, then `PATH`) **only
+   when `TAVERN_HERMES_ALLOW_SYSTEM` is set**. By default this tier is skipped:
+   Tavern ignores a user's own Hermes so production runs the supported pin.
 4. Bootstrap: Runtime installs the pinned engine itself using a bundled
    snapshot of the official Hermes installer (lean flags: `--non-interactive
    --skip-setup --no-skills --skip-browser`). The pin lives in
@@ -38,13 +40,28 @@ Runtime resolves the Hermes binary in four tiers:
    through the `~/.tavern/engine/.install-lock` cross-process lock, and
    installer output streams into the runtime log.
 
-`TAVERN_HERMES_AUTO_INSTALL=0` disables tier 4 and reports a managed-Hermes
-setup error instead. The dev stack sets it by default so `bun run dev` uses
-one shared system Hermes across worktrees and never downloads an engine;
-production (Homebrew service) leaves bootstrap enabled. While a bootstrap is
-running, the managed Hermes capabilities report "Tavern is setting up the
-agent engine" instead of generic unavailability. Use `tavern engine status`
-to inspect which tier resolved.
+Two independent flags control the lower tiers:
+
+* `TAVERN_HERMES_ALLOW_SYSTEM` — may resolution use a system install (tier 3)?
+  Off by default (production runs the pin); the dev stack and e2e set it to `1`.
+* `TAVERN_HERMES_AUTO_INSTALL` — may Runtime bootstrap-install (tier 4)? On by
+  default; the dev stack sets it to `0`.
+
+So production defaults to `BIN → managed → bootstrap` and never reads or
+modifies a user's Hermes. Dev (`ALLOW_SYSTEM=1`, `AUTO_INSTALL=0`) prefers the
+managed engine if present, else a system install, and never downloads. When
+neither flag's tier applies and nothing is installed, startup reports a
+managed-Hermes setup error naming all three remedies. While a bootstrap is
+running, the managed Hermes capabilities report "Tavern is setting up the agent
+engine". Use `tavern engine status` to see which tier resolved and whether
+system installs are allowed.
+
+The bootstrap installer runs with a sandboxed `HOME`
+(`~/.tavern/engine/<pin>/.install-home`) because the official installer writes
+a `~/.local/bin/hermes` launcher and edits shell rc files from `$HOME`,
+ignoring `--dir`. The sandbox contains those writes; a managed install touches
+nothing outside `~/.tavern`. Tavern execs the engine's venv binary directly and
+never uses the launcher.
 
 Runtime sets `HERMES_DESKTOP=1` for the managed dashboard process. Hermes uses
 that flag to start the dashboard cron ticker; without it, cron jobs can be

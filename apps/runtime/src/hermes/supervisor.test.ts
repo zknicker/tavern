@@ -6,6 +6,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 describe('managed Hermes binary resolution', () => {
     const originalHome = process.env.HOME;
     const originalHermesBin = process.env.TAVERN_HERMES_BIN;
+    const originalAllowSystem = process.env.TAVERN_HERMES_ALLOW_SYSTEM;
     const originalPath = process.env.PATH;
     const originalRuntimeRoot = process.env.TAVERN_RUNTIME_ROOT;
     let home: string;
@@ -16,6 +17,7 @@ describe('managed Hermes binary resolution', () => {
         process.env.PATH = '/usr/bin:/bin';
         process.env.TAVERN_RUNTIME_ROOT = path.join(home, 'runtime');
         process.env.TAVERN_HERMES_BIN = undefined;
+        process.env.TAVERN_HERMES_ALLOW_SYSTEM = undefined;
         vi.resetModules();
     });
 
@@ -23,18 +25,28 @@ describe('managed Hermes binary resolution', () => {
         restoreEnv('HOME', originalHome);
         restoreEnv('PATH', originalPath);
         restoreEnv('TAVERN_HERMES_BIN', originalHermesBin);
+        restoreEnv('TAVERN_HERMES_ALLOW_SYSTEM', originalAllowSystem);
         restoreEnv('TAVERN_RUNTIME_ROOT', originalRuntimeRoot);
         vi.resetModules();
         await fs.rm(home, { force: true, recursive: true });
     });
 
-    it('resolves the official installer binary outside shell PATH', async () => {
+    it('resolves a system install when system installs are allowed', async () => {
+        process.env.TAVERN_HERMES_ALLOW_SYSTEM = '1';
         const binaryPath = path.join(home, '.local', 'bin', 'hermes');
         await writeExecutable(binaryPath);
 
         const { resolveInstalledHermesBinary } = await import('./bootstrap');
 
         expect(resolveInstalledHermesBinary()).toEqual({ binaryPath, tier: 'system' });
+    });
+
+    it('ignores a system install by default (production guarantees the pin)', async () => {
+        await writeExecutable(path.join(home, '.local', 'bin', 'hermes'));
+
+        const { resolveInstalledHermesBinary } = await import('./bootstrap');
+
+        expect(resolveInstalledHermesBinary()).toBeNull();
     });
 
     it('expands a configured Hermes binary path', async () => {
@@ -49,6 +61,7 @@ describe('managed Hermes binary resolution', () => {
     });
 
     it('prefers the Tavern-managed engine install over system installs', async () => {
+        process.env.TAVERN_HERMES_ALLOW_SYSTEM = '1';
         const systemBinary = path.join(home, '.local', 'bin', 'hermes');
         await writeExecutable(systemBinary);
 

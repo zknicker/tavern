@@ -45,6 +45,14 @@ That launches Tavern Runtime, managed Hermes, the app backend, and the website
 dev server. Runtime runs `hermes dashboard --no-open` and stores managed Hermes
 state under the dev stack's worktree-isolated Runtime root by default.
 
+Runtime owns the Hermes engine binary, not just its lifecycle: it resolves an
+explicit `TAVERN_HERMES_BIN`, then a pinned managed engine under
+`~/.tavern/engine/<pin>/`, then (only with `TAVERN_HERMES_ALLOW_SYSTEM`) a system
+install, and bootstraps the pinned engine when none is found. Production runs the
+pinned engine and ignores a host's own Hermes; the dev stack opts into the system
+install. See [Managed Hermes Runtime](../operations/hermes-managed-runtime.md) for
+the resolution tiers, flags, and the sandboxed installer.
+
 Key paths:
 
 ```txt

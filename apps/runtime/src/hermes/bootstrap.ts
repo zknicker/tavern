@@ -9,6 +9,7 @@ import { withEngineInstallLock } from './bootstrap-lock';
 import {
     engineBinaryPath,
     engineInstallDir,
+    enginePinDirName,
     engineRoot,
     type HermesEnginePin,
     hermesInstallerUrl,
@@ -23,6 +24,7 @@ const installerTimeoutMs = 20 * 60 * 1000;
 
 export type InstallerRunner = (input: {
     args: string[];
+    homeDir: string;
     onLine: (line: string) => void;
     scriptPath: string;
 }) => Promise<void>;
@@ -42,9 +44,11 @@ export interface ResolvedHermesBinary {
 }
 
 /**
- * Resolution order: explicit TAVERN_HERMES_BIN, the Tavern-managed engine
- * install for the resolved pin, then existing system installs. Returns null
- * when nothing is installed; bootstrap is the caller's fallback.
+ * Resolution order: explicit TAVERN_HERMES_BIN, then the Tavern-managed engine
+ * install for the resolved pin. System installs are consulted only when
+ * TAVERN_HERMES_ALLOW_SYSTEM is set; by default Tavern ignores a user's own
+ * Hermes so production runs the supported pin. Returns null when nothing
+ * resolves; bootstrap is the caller's fallback.
  */
 export function resolveInstalledHermesBinary(): ResolvedHermesBinary | null {
     const configured = readConfigValue('TAVERN_HERMES_BIN');
@@ -62,6 +66,10 @@ export function resolveInstalledHermesBinary(): ResolvedHermesBinary | null {
     const managedBinary = engineBinaryPath(pin);
     if (readEngineMarker(pin) && isExecutableFile(managedBinary)) {
         return { binaryPath: managedBinary, tier: 'managed' };
+    }
+
+    if (!isSystemInstallAllowed()) {
+        return null;
     }
 
     const homeDir = process.env.HOME || os.homedir();
@@ -90,8 +98,9 @@ export async function ensureHermesBinary(
     if (!(options.forceInstall || isAutoInstallEnabled())) {
         throw managedHermesSetupError(
             'The agent engine is not installed and automatic setup is disabled ' +
-                '(TAVERN_HERMES_AUTO_INSTALL=0). Set TAVERN_HERMES_BIN to an existing install ' +
-                'or run "tavern engine install".'
+                '(TAVERN_HERMES_AUTO_INSTALL=0). Run "tavern engine install", set ' +
+                'TAVERN_HERMES_BIN to an existing install, or set ' +
+                'TAVERN_HERMES_ALLOW_SYSTEM=1 to use a system Hermes install.'
         );
     }
 
@@ -122,6 +131,13 @@ export async function bootstrapManagedHermes(options: EnsureHermesBinaryOptions 
         const onLine =
             options.onInstallerLine ??
             ((line: string) => log.info('Agent engine installer', { line }));
+        // The bundled installer writes a ~/.local/bin/hermes launcher and edits
+        // shell rc files from $HOME, ignoring --dir. Point HOME at a throwaway
+        // dir so those writes never touch the user's real install or shell
+        // config; Tavern execs the venv binary directly and never needs the
+        // launcher.
+        const homeDir = path.join(engineRoot(), enginePinDirName(pin), '.install-home');
+        await fs.mkdir(homeDir, { recursive: true });
         options.onPhase?.('installing');
         log.info('Installing the managed agent engine', {
             installDir: engineInstallDir(pin),
@@ -130,7 +146,7 @@ export async function bootstrapManagedHermes(options: EnsureHermesBinaryOptions 
         });
 
         const run = options.runInstaller ?? runInstallerProcess;
-        await run({ args, onLine, scriptPath: installer.scriptPath });
+        await run({ args, homeDir, onLine, scriptPath: installer.scriptPath });
 
         if (!isExecutableFile(engineBinaryPath(pin))) {
             throw managedHermesSetupError(
@@ -146,6 +162,8 @@ export async function bootstrapManagedHermes(options: EnsureHermesBinaryOptions 
             installerSource: installer.source,
             ref: pin.ref,
         });
+        // Keep the sandbox HOME on failure for debugging; drop it on success.
+        await fs.rm(homeDir, { force: true, recursive: true }).catch(() => undefined);
         options.onPhase?.('installed');
     });
 }
@@ -169,6 +187,11 @@ export function buildHermesInstallArgs(input: { hermesHome: string; pin: HermesE
 function isAutoInstallEnabled() {
     const configured = readConfigValue('TAVERN_HERMES_AUTO_INSTALL');
     return !(configured === '0' || configured === 'false');
+}
+
+export function isSystemInstallAllowed() {
+    const configured = readConfigValue('TAVERN_HERMES_ALLOW_SYSTEM');
+    return configured === '1' || configured === 'true';
 }
 
 function assertGitAvailable() {
@@ -210,12 +233,13 @@ async function resolveInstallerScript(): Promise<{
 
 function runInstallerProcess(input: {
     args: string[];
+    homeDir: string;
     onLine: (line: string) => void;
     scriptPath: string;
 }): Promise<void> {
     return new Promise((resolve, reject) => {
         const child = spawn('bash', [input.scriptPath, ...input.args], {
-            env: process.env,
+            env: { ...process.env, HOME: input.homeDir },
             stdio: ['ignore', 'pipe', 'pipe'],
         });
 

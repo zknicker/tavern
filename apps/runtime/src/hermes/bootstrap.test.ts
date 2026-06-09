@@ -7,6 +7,7 @@ describe('managed Hermes bootstrap', () => {
     const originalHome = process.env.HOME;
     const originalPath = process.env.PATH;
     const originalAutoInstall = process.env.TAVERN_HERMES_AUTO_INSTALL;
+    const originalAllowSystem = process.env.TAVERN_HERMES_ALLOW_SYSTEM;
     const originalHermesBin = process.env.TAVERN_HERMES_BIN;
     const originalCommit = process.env.TAVERN_HERMES_COMMIT;
     let home: string;
@@ -16,6 +17,7 @@ describe('managed Hermes bootstrap', () => {
         process.env.HOME = home;
         process.env.PATH = path.join(home, 'empty-bin');
         process.env.TAVERN_HERMES_AUTO_INSTALL = undefined;
+        process.env.TAVERN_HERMES_ALLOW_SYSTEM = undefined;
         process.env.TAVERN_HERMES_BIN = undefined;
         process.env.TAVERN_HERMES_COMMIT = undefined;
         vi.resetModules();
@@ -25,6 +27,7 @@ describe('managed Hermes bootstrap', () => {
         restoreEnv('HOME', originalHome);
         restoreEnv('PATH', originalPath);
         restoreEnv('TAVERN_HERMES_AUTO_INSTALL', originalAutoInstall);
+        restoreEnv('TAVERN_HERMES_ALLOW_SYSTEM', originalAllowSystem);
         restoreEnv('TAVERN_HERMES_BIN', originalHermesBin);
         restoreEnv('TAVERN_HERMES_COMMIT', originalCommit);
         vi.resetModules();
@@ -60,7 +63,8 @@ describe('managed Hermes bootstrap', () => {
         );
     });
 
-    it('returns an existing system binary without installing', async () => {
+    it('returns an existing system binary without installing when system installs are allowed', async () => {
+        process.env.TAVERN_HERMES_ALLOW_SYSTEM = '1';
         const systemBinary = path.join(home, '.local', 'bin', 'hermes');
         await writeExecutable(systemBinary);
         const runInstaller = vi.fn();
@@ -70,6 +74,25 @@ describe('managed Hermes bootstrap', () => {
 
         expect(resolved).toEqual({ binaryPath: systemBinary, tier: 'system' });
         expect(runInstaller).not.toHaveBeenCalled();
+    });
+
+    it('ignores system installs by default and installs the managed engine', async () => {
+        await writeExecutable(path.join(home, '.local', 'bin', 'hermes'));
+
+        const { ensureHermesBinary, resolveInstalledHermesBinary } = await import('./bootstrap');
+        const { engineBinaryPath, resolveHermesPin } = await import('./engine');
+        const pin = resolveHermesPin();
+
+        // System binary present but not allowed → not resolved.
+        expect(resolveInstalledHermesBinary()).toBeNull();
+
+        const resolved = await ensureHermesBinary({
+            runInstaller: async () => {
+                await writeExecutable(engineBinaryPath(pin));
+            },
+        });
+
+        expect(resolved).toEqual({ binaryPath: engineBinaryPath(pin), tier: 'managed' });
     });
 
     it('installs the managed engine when nothing is found, then resolves it', async () => {
@@ -93,7 +116,8 @@ describe('managed Hermes bootstrap', () => {
         });
     });
 
-    it('force-installs the managed engine even when a system binary exists', async () => {
+    it('force-installs the managed engine even when an allowed system binary exists', async () => {
+        process.env.TAVERN_HERMES_ALLOW_SYSTEM = '1';
         await writeExecutable(path.join(home, '.local', 'bin', 'hermes'));
 
         const { ensureHermesBinary } = await import('./bootstrap');
@@ -108,6 +132,25 @@ describe('managed Hermes bootstrap', () => {
         });
 
         expect(resolved.tier).toBe('managed');
+    });
+
+    it('passes a sandboxed HOME under the engine root to the installer', async () => {
+        const { ensureHermesBinary } = await import('./bootstrap');
+        const { engineBinaryPath, engineRoot, resolveHermesPin } = await import('./engine');
+        const pin = resolveHermesPin();
+        let observedHome: string | null = null;
+
+        await ensureHermesBinary({
+            runInstaller: async (input) => {
+                observedHome = input.homeDir;
+                await writeExecutable(engineBinaryPath(pin));
+            },
+        });
+
+        expect(observedHome).not.toBeNull();
+        expect(observedHome).toMatch(/[/\\]\.install-home$/);
+        expect((observedHome as unknown as string).startsWith(engineRoot())).toBe(true);
+        expect(observedHome).not.toBe(home);
     });
 
     it('fails with a setup error when the installer leaves no executable binary', async () => {
@@ -131,6 +174,21 @@ describe('managed Hermes bootstrap', () => {
         await expect(ensureHermesBinary({ runInstaller })).rejects.toMatchObject({
             code: 'managed_hermes_setup',
             message: expect.stringContaining('automatic setup is disabled'),
+        });
+        expect(runInstaller).not.toHaveBeenCalled();
+    });
+
+    it('error names ALLOW_SYSTEM when auto-install is off and a system install exists', async () => {
+        process.env.TAVERN_HERMES_AUTO_INSTALL = '0';
+        await writeExecutable(path.join(home, '.local', 'bin', 'hermes'));
+        vi.resetModules();
+        const runInstaller = vi.fn();
+
+        const { ensureHermesBinary } = await import('./bootstrap');
+
+        await expect(ensureHermesBinary({ runInstaller })).rejects.toMatchObject({
+            code: 'managed_hermes_setup',
+            message: expect.stringContaining('TAVERN_HERMES_ALLOW_SYSTEM'),
         });
         expect(runInstaller).not.toHaveBeenCalled();
     });

@@ -82,9 +82,17 @@ script (`install.sh`), which owns Hermes's own Python/Node/tool dependencies.
   (`--dir`, `--commit`, `--non-interactive`, `--skip-setup`, `--no-skills`,
   `--skip-browser`), guarded by a cross-process lock shared across worktrees.
 - Binary resolution order: explicit `TAVERN_HERMES_BIN`, then the managed engine install,
-  then existing system installs (`~/.local/bin/hermes`, Homebrew paths, `PATH`), then
-  bootstrap. `TAVERN_HERMES_AUTO_INSTALL=0` disables bootstrap; the dev stack sets it so
-  local development uses one shared system Hermes instead of downloading per machine.
+  then bootstrap. System installs (`~/.local/bin/hermes`, Homebrew paths, `PATH`)
+  participate only when `TAVERN_HERMES_ALLOW_SYSTEM` is set, inserted between the managed
+  and bootstrap tiers. By default Runtime ignores a user's own Hermes so the deployment
+  runs the supported pin and never co-opts an existing install. `TAVERN_HERMES_AUTO_INSTALL=0`
+  disables bootstrap. The dev stack sets `ALLOW_SYSTEM=1` and `AUTO_INSTALL=0` so local
+  development reuses one shared system Hermes instead of downloading per machine.
+- The bootstrap installer runs with a sandboxed `HOME` under
+  `~/.tavern/engine/<pin>/.install-home`. The bundled installer writes a `~/.local/bin/hermes`
+  launcher and edits shell rc files from `$HOME` even when `--dir` is set, so the sandbox is
+  required: a managed install must not modify `~/.local/bin`, shell rc files, or `~/.hermes`.
+  Runtime execs the engine's venv binary directly and never uses the launcher.
 - Runtime writes generated Hermes config, state, and the default workspace under
   `~/.tavern/runtime/hermes/` (`home` and `workspace`); managed `HERMES_HOME` keeps
   Tavern's instance isolated from any user-operated `~/.hermes` install.

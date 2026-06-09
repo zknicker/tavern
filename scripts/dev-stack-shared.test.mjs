@@ -86,6 +86,8 @@ test('createDevStackEnvironment uses shared dev state outside packaged app state
     assert.equal(environment.TAVERN_RUNTIME_PORT, '42002');
     assert.equal(environment.TAVERN_SERVER_PORT, '42001');
     assert.equal(environment.TAVERN_WEBSITE_PORT, '42000');
+    assert.equal(environment.TAVERN_HERMES_ALLOW_SYSTEM, '1');
+    assert.equal(environment.TAVERN_HERMES_AUTO_INSTALL, '0');
     assert.notEqual(environment.DATABASE_PATH, path.join(os.homedir(), '.tavern', 'tavern.sqlite'));
     assert.notEqual(
         environment.DATABASE_PATH,
@@ -119,6 +121,15 @@ test('createDevStackEnvironment preserves explicit state overrides', () => {
     assert.equal(environment.TAVERN_HERMES_PORT, '39119');
     assert.equal(environment.TAVERN_RUNTIME_PORT, '39190');
     assert.equal(environment.TAVERN_RUNTIME_ROOT, '/tmp/tavern-runtime');
+});
+
+test('createDevStackEnvironment respects an explicit ALLOW_SYSTEM override', () => {
+    const environment = createDevStackEnvironment({
+        baseEnvironment: { TAVERN_HERMES_ALLOW_SYSTEM: '0' },
+        repositoryRoot: '/repo/tavern',
+    });
+
+    assert.equal(environment.TAVERN_HERMES_ALLOW_SYSTEM, '0');
 });
 
 test('cleanupStaleProcesses closes the old Tauri desktop app in desktop mode', () => {

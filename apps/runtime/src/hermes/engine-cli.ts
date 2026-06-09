@@ -2,6 +2,7 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import {
     ensureHermesBinary,
+    isSystemInstallAllowed,
     type ResolvedHermesBinary,
     resolveInstalledHermesBinary,
 } from './bootstrap';
@@ -35,12 +36,14 @@ export async function runEngineCli(args: string[]): Promise<void> {
 
 function showEngineStatus(json: boolean): void {
     const pin = resolveHermesPin();
+    const systemAllowed = isSystemInstallAllowed();
     const status = {
         engineRoot: engineRoot(),
         installedPins: listEnginePinDirs(),
         marker: readEngineMarker(pin),
         pin,
         resolved: resolveBinaryStatus(),
+        systemAllowed,
     };
 
     if (json) {
@@ -50,6 +53,11 @@ function showEngineStatus(json: boolean): void {
 
     console.log(`Pin: ${pin.ref} (${pin.kind}, from ${pin.source})`);
     console.log(`Engine root: ${status.engineRoot}`);
+    console.log(
+        systemAllowed
+            ? 'System installs: allowed (TAVERN_HERMES_ALLOW_SYSTEM)'
+            : 'System installs: ignored (set TAVERN_HERMES_ALLOW_SYSTEM=1 to use one)'
+    );
     if (status.resolved.error) {
         console.log(`Resolved: error — ${status.resolved.error}`);
     } else if (status.resolved.binary) {
