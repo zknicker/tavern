@@ -11,7 +11,6 @@ export const sessionMessageMetadataSchema = z
         model: z.string().trim().min(1).optional(),
         modelInfo: normalizedModelSchema.optional(),
         hermesApi: z.string().optional(),
-        hermesHarness: z.enum(['pi', 'codex']).optional(),
         hermesModel: z.string().optional(),
         hermesProvider: z.string().optional(),
         parts: z.array(z.record(z.string(), z.unknown())).optional(),

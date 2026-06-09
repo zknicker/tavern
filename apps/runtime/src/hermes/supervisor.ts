@@ -301,7 +301,6 @@ async function applyManagedHermesModelConfig(client: ReturnType<typeof createLoc
         .updateAgentModel('agt_hermes', {
             model: {
                 baseUrl: config.baseUrl ?? undefined,
-                harness: config.provider === 'openai-codex' ? 'codex' : 'pi',
                 model: config.model,
                 provider: config.provider,
             },

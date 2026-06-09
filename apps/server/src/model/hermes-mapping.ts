@@ -1,10 +1,4 @@
-import * as z from 'zod';
-
-export const hermesHarnessSchema = z.enum(['pi', 'codex']);
-export type HermesHarness = z.infer<typeof hermesHarnessSchema>;
-
 export interface CanonicalHermesModel {
-    hermesHarness: HermesHarness;
     hermesModel: string;
     hermesModelNameId: string;
     hermesProvider: string;
@@ -35,12 +29,7 @@ export function parseHermesModelRef(value: string) {
     };
 }
 
-export function inferHermesHarness(provider: string): HermesHarness {
-    return provider.trim().toLowerCase() === 'openai-codex' ? 'codex' : 'pi';
-}
-
 export function normalizeHermesModelIdentity(input: {
-    harness?: HermesHarness | null;
     model: string | null;
     provider: string | null;
 }): CanonicalHermesModel | null {
@@ -52,7 +41,6 @@ export function normalizeHermesModelIdentity(input: {
     }
 
     return {
-        hermesHarness: input.harness ?? inferHermesHarness(provider),
         hermesModel: model,
         hermesModelNameId: formatHermesModelNameId({ model, provider }),
         hermesProvider: provider,

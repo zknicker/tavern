@@ -30,7 +30,6 @@ describe('Runtime agent and Hermes reads', () => {
                     enabledSkillIds: [],
                     emoji: null,
                     hermesModelName: {
-                        harness: 'codex',
                         model: 'gpt-5.5',
                         provider: 'openai-codex',
                     },
@@ -99,7 +98,6 @@ describe('Runtime agent and Hermes reads', () => {
             new Request('http://runtime.test/agents/agt_hermes/model', {
                 body: JSON.stringify({
                     model: {
-                        harness: 'codex',
                         model: 'gpt-5.5',
                         provider: 'openai-codex',
                     },
@@ -121,22 +119,14 @@ describe('Runtime agent and Hermes reads', () => {
         });
     });
 
-    it('serves Hermes skill list and detail reads through the runtime adapter', async () => {
+    it('serves Hermes skill list reads through the runtime adapter', async () => {
         const listResponse = await handleTavernRuntimeRequest(
             new Request('http://runtime.test/skills')
-        );
-        const detailResponse = await handleTavernRuntimeRequest(
-            new Request('http://runtime.test/skills/browser/config')
         );
 
         expect(listResponse.status).toBe(200);
         await expect(listResponse.json()).resolves.toMatchObject({
             skills: expect.arrayContaining([expect.objectContaining({ id: 'browser' })]),
-        });
-        expect(detailResponse.status).toBe(200);
-        await expect(detailResponse.json()).resolves.toMatchObject({
-            contentMarkdown: '',
-            id: 'browser',
         });
     });
 });

@@ -18,7 +18,7 @@ import {
     thinkingOptions,
 } from '../../../components/ui/thinking-shared.ts';
 import type { ModelListOutput } from '../../../lib/trpc.tsx';
-import type { AgentModelDraft, HermesHarness, ThinkingLevelValue } from './types.ts';
+import type { AgentModelDraft, ThinkingLevelValue } from './types.ts';
 
 type Model = ModelListOutput['models'][number];
 type ModelChoice = ReturnType<typeof listModelChoices>[number];
@@ -59,12 +59,8 @@ export function AgentModelSection({
                                 onChange(
                                     nextChoice
                                         ? {
-                                              harness: inferHarness(nextChoice.model.provider),
                                               modelRef: nextChoice.model.ref,
-                                              thinkingDefault: normalizeThinkingDefaultForChoice(
-                                                  value?.thinkingDefault ?? null,
-                                                  nextChoice
-                                              ),
+                                              thinkingDefault: value?.thinkingDefault ?? null,
                                           }
                                         : null
                                 );
@@ -108,9 +104,6 @@ export function AgentModelSection({
                                     selectedChoice
                                         ? {
                                               ...(value ?? {
-                                                  harness: inferHarness(
-                                                      selectedChoice.model.provider
-                                                  ),
                                                   modelRef: selectedChoice.model.ref,
                                               }),
                                               thinkingDefault:
@@ -206,71 +199,5 @@ export function selectModelChoice(models: Model[], current: AgentModelDraft | nu
 }
 
 export function listThinkingOptionsForModelChoice(choice: ModelChoice | null): ThinkingOption[] {
-    if (!choice) {
-        return listThinkingOptions(['off', 'minimal', 'low', 'medium', 'high']);
-    }
-
-    return listThinkingOptions([
-        'off',
-        'minimal',
-        'low',
-        'medium',
-        'high',
-        ...listExtraThinkingLevels(choice),
-    ]);
-}
-
-function normalizeThinkingDefaultForChoice(
-    value: ThinkingLevelValue | null,
-    choice: ModelChoice | null
-) {
-    if (!value) {
-        return null;
-    }
-
-    return listThinkingOptionsForModelChoice(choice).some((option) => option.value === value)
-        ? value
-        : null;
-}
-
-function listThinkingOptions(values: ThinkingLevelValue[]) {
-    const allowed = new Set(values);
-    return thinkingOptions.filter((option) => allowed.has(option.value));
-}
-
-function listExtraThinkingLevels(choice: ModelChoice): ThinkingLevelValue[] {
-    const model = choice.model.modelId.toLowerCase();
-    const provider = choice.model.provider.toLowerCase();
-
-    if (provider === 'openai-codex') {
-        return supportsOpenAiXHigh(model, inferHarness(choice.model.provider)) ? ['xhigh'] : [];
-    }
-
-    if (provider === 'anthropic') {
-        if (/(?:^|[/.:])claude-opus-4[.-]7(?:$|[-.:/])/u.test(model)) {
-            return ['xhigh', 'adaptive', 'max'];
-        }
-
-        if (/claude-(?:opus|sonnet)-4(?:\.|-)6(?:$|[-.])/u.test(model)) {
-            return ['adaptive'];
-        }
-    }
-
-    if (provider === 'openrouter' && /(?:^|[/.:])deepseek[-_/]v?4(?:$|[-.:/])/u.test(model)) {
-        return ['xhigh'];
-    }
-
-    return [];
-}
-
-function supportsOpenAiXHigh(model: string, harness: HermesHarness) {
-    const codexModels = ['gpt-5.5', 'gpt-5.5-pro', 'gpt-5.4', 'gpt-5.4-pro'];
-    const apiModels = [...codexModels, 'gpt-5.4-mini', 'gpt-5.4-nano', 'gpt-5.2'];
-    const supportedModels = harness === 'codex' ? codexModels : apiModels;
-
-    return supportedModels.some((supportedModel) => model === supportedModel);
-}
-
-function inferHarness(provider: string): HermesHarness {
-    return provider.toLowerCase() === 'openai-codex' ? 'codex' : 'pi';
+    return choice ? thinkingOptions : [];
 }

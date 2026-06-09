@@ -1,6 +1,5 @@
 import { agentRuntimeModelProviderIdSchema, parseAgentRuntimeModelRef } from '@tavern/api';
 import { z } from 'zod';
-import { hermesHarnessSchema } from './hermes-mapping.ts';
 
 export const modelAvailabilitySchema = z.enum(['configured', 'available']);
 export const thinkingLevelSchema = z.enum([
@@ -52,7 +51,6 @@ export const modelSelectionSchema = z.object({
 export const agentModelSettingSchema = z.object({
     agentId: z.string().min(1),
     agentName: z.string().min(1),
-    harness: hermesHarnessSchema.nullable(),
     model: z.string().min(1).nullable(),
     modelRef: modelRefSchema.nullable(),
     provider: z.string().min(1).nullable(),

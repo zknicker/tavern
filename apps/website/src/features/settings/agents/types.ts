@@ -1,4 +1,3 @@
-export type HermesHarness = 'codex' | 'pi';
 export type ThinkingLevelValue =
     | 'off'
     | 'minimal'
@@ -16,7 +15,6 @@ export interface AgentProfileDraft {
 }
 
 export interface AgentModelDraft {
-    harness: HermesHarness;
     modelRef: string | null;
     thinkingDefault: ThinkingLevelValue | null;
 }

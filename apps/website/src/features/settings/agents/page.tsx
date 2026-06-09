@@ -270,7 +270,6 @@ function createAgentSettingsBaseline({
     return {
         model: modelSetting
             ? {
-                  harness: modelSetting.harness ?? 'pi',
                   modelRef: modelSetting.modelRef,
                   thinkingDefault: modelSetting.overrideThinkingDefault,
               }

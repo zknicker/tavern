@@ -87,10 +87,11 @@ activation and tool injection.
 
 Plugins stay owned by the runtime that exposes them. Hermes plugins may add
 skills, workflows, tools, channels, or runtime behavior. Codex native plugins
-remain Codex app-server capabilities surfaced through the Hermes Codex
-harness. Codex-only catalog rows must be labeled as Codex-only rather than
-presented as Hermes skills. Tavern does not copy runtime skills or plugins
-into `~/.tavern/skills` or describe plugins to the model as Tavern skills.
+remain Codex app-server capabilities surfaced through Hermes when its Codex
+app-server runtime is enabled. Codex-only catalog rows must be labeled as
+Codex-only rather than presented as Hermes skills. Tavern does not copy runtime
+skills or plugins into `~/.tavern/skills` or describe plugins to the model as
+Tavern skills.
 
 ## What is intentionally missing
 

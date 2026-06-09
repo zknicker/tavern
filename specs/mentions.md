@@ -220,9 +220,9 @@ Example:
 
 Plugins and apps use `capability-reference` when they are already available in
 the runtime context. Tavern preserves the markdown and does not add a hidden
-reference block. Native Codex plugins follow Hermes's Codex harness contract:
-Hermes config determines which Codex tools are available for a Codex thread,
-and the model uses those tools from the visible prompt.
+reference block. Native Codex plugins follow Hermes's Codex app-server runtime
+contract: Hermes config determines which Codex tools are available for a Codex
+thread, and the model uses those tools from the visible prompt.
 
 Computer Use app autocomplete uses Tavern Runtime's local macOS app inventory.
 The app server reads the inventory from Runtime; it does not enumerate local

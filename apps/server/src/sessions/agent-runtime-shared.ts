@@ -138,7 +138,6 @@ export function mapAgentRuntimeSessionMessage(
                       isError: message.metadata.isError ?? undefined,
                       model: message.metadata.model ?? undefined,
                       hermesApi: message.metadata.hermesApi ?? undefined,
-                      hermesHarness: message.metadata.hermesHarness ?? undefined,
                       hermesModel: message.metadata.hermesModel ?? undefined,
                       hermesProvider: message.metadata.hermesProvider ?? undefined,
                       outputTokens: message.metadata.outputTokens ?? undefined,

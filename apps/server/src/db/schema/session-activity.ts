@@ -51,7 +51,6 @@ export const sessionMessagesTable = sqliteTable(
         model: text('model'),
         canonicalModelId: text('canonical_model_id'),
         hermesApi: text('hermes_api'),
-        hermesHarness: text('hermes_harness'),
         hermesModel: text('hermes_model'),
         hermesModelNameId: text('hermes_model_name_id'),
         hermesProvider: text('hermes_provider'),

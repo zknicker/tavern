@@ -22,8 +22,11 @@ surfaces resolve the primary agent instead of asking the person to choose among 
 - Hermes agent config may include name, model route, tool policy, skill enablement,
   workspace, `AGENTS.md` workspace context, and `SOUL.md` identity.
 - Tavern exposes Hermes's per-agent `thinkingDefault` as the model effort setting. The allowed
-  values come from the selected Hermes harness and model profile. Hermes's `reasoningDefault`
-  controls reasoning visibility, not effort.
+  values are the Hermes effort enum: `off`, `minimal`, `low`, `medium`, `high`, `xhigh`,
+  `adaptive`, and `max`.
+- Tavern keeps the managed agent on Hermes's default runtime. Codex app-server runtime is a
+  Hermes opt-in through `model.openai_runtime: codex_app_server`, not a Tavern model-provider
+  inference.
 - Tavern reads and writes Hermes agent config through Hermes Gateway.
 - Tavern does not keep a competing canonical agent config store.
 - Tavern may keep local presentation overlays such as color, avatar style, pinned state, and local

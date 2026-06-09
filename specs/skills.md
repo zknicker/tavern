@@ -85,9 +85,10 @@ register tools, providers, channels, hooks, commands, routes, services, skills,
 and other runtime surfaces. Tavern should preserve relevant diagnostics without
 turning every loader reason into a separate product state.
 
-Codex native plugins are a Codex harness source. When Hermes exposes Codex-backed
-tools through toolsets or skills, Tavern presents those concrete surfaces.
-Tavern does not merge Codex app-server skills into the Hermes skill catalog.
+Codex native plugins are a Codex app-server runtime source. When Hermes exposes
+Codex-backed tools through toolsets or skills, Tavern presents those concrete
+surfaces. Tavern does not merge Codex app-server skills into the Hermes skill
+catalog.
 
 ## Runtime Behavior
 
@@ -112,8 +113,8 @@ Tavern does not merge Codex app-server skills into the Hermes skill catalog.
 - Tavern does not build or manage Docker sandbox images for individual agents.
 - Local Codex config files are hints, not the final toolset usability authority.
 - Existing Codex app-server threads keep their runtime binding. After changing
-  Codex harness tool access, the user should start a fresh chat/session before
-  expecting new tool state.
+  Codex app-server tool access, the user should start a fresh chat/session
+  before expecting new tool state.
 
 ## UI Model
 

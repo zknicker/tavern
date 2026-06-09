@@ -15,7 +15,7 @@ import {
     emitHermesConfigUpdated,
     emitModelUpdated,
 } from '../api/invalidation-events.ts';
-import { inferHermesHarness, parseHermesModelRef } from '../model/hermes-mapping.ts';
+import { parseHermesModelRef } from '../model/hermes-mapping.ts';
 import { syncAgentsForRuntime } from '../storage/agents.ts';
 import {
     getHermesConfigSnapshot,
@@ -48,7 +48,6 @@ export async function updateHermesAgentModel(input: { agentId: string; modelRef:
     try {
         const result = await client.updateAgentModel(input.agentId, {
             model: {
-                harness: inferHermesHarness(model.provider),
                 model: model.model,
                 provider: model.provider,
             },

@@ -923,7 +923,6 @@ function toHermesConfigSnapshot(input: {
                   model: {
                       ...(typeof baseUrl === 'string' && baseUrl ? { base_url: baseUrl } : {}),
                       default: input.model.model,
-                      harness: input.model.harness,
                       provider: input.model.provider,
                   },
               }

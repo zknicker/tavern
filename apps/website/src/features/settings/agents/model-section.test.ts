@@ -45,7 +45,6 @@ const models = [
 test('selectModelChoice preserves the selected Hermes model ref', () => {
     assert.equal(
         selectModelChoice(models, {
-            harness: 'pi',
             modelRef: 'openai-codex/gpt-5.5',
             thinkingDefault: null,
         })?.model.ref,
@@ -57,40 +56,17 @@ test('selectModelChoice chooses the first sorted model without a current selecti
     assert.equal(selectModelChoice(models, null)?.model.ref, 'anthropic/claude-opus-4-7');
 });
 
-test('listThinkingOptionsForModelChoice includes xhigh for Codex GPT-5.5', () => {
+test('listThinkingOptionsForModelChoice includes the Hermes effort enum for any selected model', () => {
     const choice = selectModelChoice(models, {
-        harness: 'codex',
         modelRef: 'openai-codex/gpt-5.5',
         thinkingDefault: null,
     });
     assert.deepEqual(
         listThinkingOptionsForModelChoice(choice).map((option) => option.value),
-        ['off', 'minimal', 'low', 'medium', 'high', 'xhigh']
-    );
-});
-
-test('listThinkingOptionsForModelChoice includes adaptive for Claude Sonnet 4.6', () => {
-    const choice = selectModelChoice(models, {
-        harness: 'pi',
-        modelRef: 'anthropic/claude-sonnet-4-6',
-        thinkingDefault: null,
-    });
-
-    assert.deepEqual(
-        listThinkingOptionsForModelChoice(choice).map((option) => option.value),
-        ['off', 'minimal', 'low', 'medium', 'high', 'adaptive']
-    );
-});
-
-test('listThinkingOptionsForModelChoice includes maximum options for Claude Opus 4.7', () => {
-    const choice = selectModelChoice(models, {
-        harness: 'pi',
-        modelRef: 'anthropic/claude-opus-4-7',
-        thinkingDefault: null,
-    });
-
-    assert.deepEqual(
-        listThinkingOptionsForModelChoice(choice).map((option) => option.value),
         ['off', 'minimal', 'low', 'medium', 'high', 'xhigh', 'adaptive', 'max']
     );
+});
+
+test('listThinkingOptionsForModelChoice returns no overrides without a selected model', () => {
+    assert.deepEqual(listThinkingOptionsForModelChoice(null), []);
 });

@@ -207,11 +207,8 @@ export const agentRuntimeSaveOpenRouterSettingsSchema = z
         'Enter an OpenRouter key.'
     );
 
-export const agentRuntimeHermesHarnessSchema = z.enum(['pi', 'codex']);
-
 export const agentRuntimeHermesModelNameSchema = z.object({
     baseUrl: z.string().trim().url().optional(),
-    harness: agentRuntimeHermesHarnessSchema,
     model: z.string().trim().min(1),
     provider: z.string().trim().min(1),
 });
@@ -1226,7 +1223,6 @@ export const agentRuntimeMessageMetadataSchema = z
         isError: z.boolean().nullable().optional(),
         model: z.string().trim().min(1).optional(),
         hermesApi: z.string().trim().min(1).optional(),
-        hermesHarness: z.enum(['pi', 'codex']).optional(),
         hermesModel: z.string().trim().min(1).optional(),
         hermesProvider: z.string().trim().min(1).optional(),
         outputTokens: z.number().int().nonnegative().nullable().optional(),
@@ -1812,7 +1808,6 @@ export type AgentRuntimeModelProviderOAuthSubmit = z.infer<
 export type AgentRuntimeOpenAiSettings = z.infer<typeof agentRuntimeOpenAiSettingsSchema>;
 export type AgentRuntimeSaveOpenAiSettings = z.infer<typeof agentRuntimeSaveOpenAiSettingsSchema>;
 export type AgentRuntimeOpenRouterSettings = z.infer<typeof agentRuntimeOpenRouterSettingsSchema>;
-export type AgentRuntimeHermesHarness = z.infer<typeof agentRuntimeHermesHarnessSchema>;
 export type AgentRuntimeHermesModelName = z.infer<typeof agentRuntimeHermesModelNameSchema>;
 export type AgentRuntimeHermesConfig = z.infer<typeof agentRuntimeHermesConfigSchema>;
 export type AgentRuntimeHermesConfigSnapshot = z.infer<

@@ -10,8 +10,8 @@ read_when:
 Context management is the prompt-time continuity layer for active turns.
 
 Managed Tavern Hermes does not use Lossless Claw. It is incompatible with the
-Codex harness Tavern launches through managed Hermes, so Runtime strips stale
-`lossless-claw` config instead of installing or enabling that plugin.
+Codex app-server runtime path, so Runtime strips stale `lossless-claw` config
+instead of installing or enabling that plugin.
 
 Memory means the llm-wiki hub that Cortex can browse. The durable facts live in
 plain Markdown topic wikis.

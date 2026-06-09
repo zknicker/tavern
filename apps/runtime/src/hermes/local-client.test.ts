@@ -314,7 +314,6 @@ describe('LocalHermesClient adapter-owned state', () => {
         await client.updateAgentThinkingDefault('agt_hermes', { thinkingDefault: 'medium' });
         await client.updateAgentModel('agt_hermes', {
             model: {
-                harness: 'codex',
                 model: 'gpt-5.5',
                 provider: 'openai-codex',
             },
@@ -324,7 +323,6 @@ describe('LocalHermesClient adapter-owned state', () => {
 
         expect(agents.agents[0]).toMatchObject({
             hermesModelName: {
-                harness: 'codex',
                 model: 'gpt-5.5',
                 provider: 'openai-codex',
             },

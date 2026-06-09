@@ -76,12 +76,15 @@ TAVERN_HERMES_API_KEY
 
 Without explicit provider/model values, Runtime prefers OpenRouter only when an
 OpenRouter key exists and no OpenAI key exists. Otherwise it defaults to the
-Codex harness:
+OpenAI Codex provider:
 
 ```text
 provider = openai-codex
 model    = CODEX_MODEL or gpt-5.4-mini
 ```
+
+Tavern applies this as Hermes's default runtime. It does not set
+`model.openai_runtime: codex_app_server`; that remains a Hermes opt-in.
 
 Runtime also syncs Vault-backed Codex OAuth material into managed Hermes
 `auth.json` when available.

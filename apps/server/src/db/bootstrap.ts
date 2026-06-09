@@ -364,7 +364,6 @@ const schemaStatements = [
         model TEXT,
         canonical_model_id TEXT,
         hermes_api TEXT,
-        hermes_harness TEXT,
         hermes_model TEXT,
         hermes_model_name_id TEXT,
         hermes_provider TEXT,

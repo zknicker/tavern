@@ -75,7 +75,6 @@ async function buildAgentSettings() {
         const runtimeThinkingDefault = rawAgent?.thinkingDefault ?? null;
         const runtimeModel = runtimeModelName
             ? normalizeHermesModelIdentity({
-                  harness: runtimeModelName.harness,
                   model: runtimeModelName.model,
                   provider: runtimeModelName.provider,
               })
@@ -86,7 +85,6 @@ async function buildAgentSettings() {
             agentName: agent.name,
             effective: createEmptySelection(),
             effectiveThinkingDefault: runtimeThinkingDefault,
-            harness: runtimeModel?.hermesHarness ?? null,
             isOverridden: Boolean(runtimeModel),
             isThinkingOverridden: runtimeThinkingDefault !== null,
             model: runtimeModel?.modelId ?? null,

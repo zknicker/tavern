@@ -19,9 +19,9 @@ choices.
 - Runtime agents have per-agent execution model settings in Hermes config. Tavern product
   settings expose the primary agent's execution model while preserving per-agent settings
   internally.
-- Hermes execution runtime selection is model-scoped. Tavern writes
-  `agents.list[].models["provider/model"].agentRuntime.id` alongside the selected
-  `agents.list[].model.primary`; it does not write whole-agent runtime pins.
+- Tavern writes the selected provider/model route through Hermes and leaves OpenAI runtime
+  selection at Hermes's default runtime. It does not infer Codex app-server runtime from
+  `openai-codex` models.
 - Tavern does not have a global default execution model. Model routing should be configured at the
   agent level or by the Tavern-owned surface that uses the model.
 - Tavern may transport Tavern Vault credentials or enabled model facts to Hermes later, but
@@ -43,6 +43,8 @@ choices.
 - Tavern displays Hermes model options as a read-only inventory.
 - Runtime model rows are not a separate source of truth.
 - The agent model route picker should show Hermes models that are valid for agent execution.
+- The agent thinking picker exposes Hermes's supported effort values directly instead of deriving
+  options from provider or model names.
 
 ## UI
 
