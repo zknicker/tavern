@@ -5,13 +5,7 @@ import { getAgentRuntimeConnection } from '../../storage/agent-runtime-connectio
 import { emitAgentInstructionsUpdated } from '../invalidation-events.ts';
 import { publicProcedure } from '../trpc.ts';
 
-const editableWorkspaceFileSchema = z.enum([
-    'AGENTS.md',
-    'SOUL.md',
-    'TOOLS.md',
-    'IDENTITY.md',
-    'USER.md',
-]);
+const editableWorkspaceFileSchema = z.enum(['AGENTS.md', 'SOUL.md']);
 
 const agentWorkspaceFileInputSchema = z.object({
     agentId: z.string().trim().min(1),

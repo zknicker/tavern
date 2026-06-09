@@ -8,38 +8,18 @@ import { withSavingToast } from '../../../lib/saving-toast.ts';
 import { trpc } from '../../../lib/trpc.tsx';
 import { MissingAgentState } from '../../agents/missing-agent-state.tsx';
 
-export type EditableAgentWorkspaceFile =
-    | 'AGENTS.md'
-    | 'SOUL.md'
-    | 'TOOLS.md'
-    | 'IDENTITY.md'
-    | 'USER.md';
+export type EditableAgentWorkspaceFile = 'AGENTS.md' | 'SOUL.md';
 
 export const editableAgentWorkspaceFiles = [
     {
-        description: 'Operating doctrine, memory routing, autonomy, and escalation rules.',
+        description: 'Workspace instructions, conventions, architecture, and project context.',
         label: 'AGENTS.md',
         path: 'AGENTS.md',
     },
     {
-        description: 'Voice, stance, tone, and behavioral boundaries.',
+        description: 'Hermes identity, voice, tone, and durable personality.',
         label: 'SOUL.md',
         path: 'SOUL.md',
-    },
-    {
-        description: 'Local tool routing, environment notes, and recovery rules.',
-        label: 'TOOLS.md',
-        path: 'TOOLS.md',
-    },
-    {
-        description: 'Name, avatar, role, and stable identity facts.',
-        label: 'IDENTITY.md',
-        path: 'IDENTITY.md',
-    },
-    {
-        description: 'Durable user context and collaboration preferences.',
-        label: 'USER.md',
-        path: 'USER.md',
     },
 ] as const satisfies ReadonlyArray<{
     description: string;

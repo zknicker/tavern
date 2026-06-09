@@ -64,16 +64,15 @@ responds and `/api/ws` accepts a WebSocket connection.
 
 ## Managed Workspace
 
-Runtime writes a generated `AGENTS.md` into the managed Hermes workspace. The
-file combines Tavern-managed instructions, the user's agent instructions block,
-and agent-authored notes stored by Tavern.
+Runtime exposes the Hermes-supported markdown files as agent files. `AGENTS.md`
+lives in the managed Hermes workspace and carries project/workspace context.
+`SOUL.md` lives in the managed Hermes home and carries identity, voice, and
+personality. Runtime seeds `AGENTS.md` when missing, then preserves user-saved
+file contents.
 
-Runtime clears legacy companion bootstrap files from the managed workspace
-before rendering `AGENTS.md`.
-
-Agents update their notes through Tavern workspace tools instead of editing
-`AGENTS.md` directly. Runtime regenerates the file on boot, config sync, and
-instruction source changes.
+Runtime clears unsupported legacy companion bootstrap files from the managed
+workspace when running the older generated-instructions path. It does not clear
+`SOUL.md`.
 
 ## Persistence
 

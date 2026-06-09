@@ -14,10 +14,10 @@ page or a sidebar Agents section.
 
 * **Single managed agent.** Tavern routes new work through the primary Runtime
   agent.
-* **Workspace instructions.** Settings exposes `AGENTS.md`, `SOUL.md`,
-  `TOOLS.md`, `IDENTITY.md`, and `USER.md` as separate editable pages. Runtime
-  seeds generic defaults for missing files and then treats the workspace files
-  as live agent state.
+* **Hermes markdown files.** Settings exposes the Hermes-supported markdown
+  files: `AGENTS.md` for managed workspace context and `SOUL.md` for the
+  managed Hermes home identity. Runtime seeds `AGENTS.md` only when missing and
+  treats user-saved file contents as live agent state.
 * **New chats.** Starting a direct chat belongs to the normal New Chat flow, not
   an agent landing page.
 * **Global tools and skills.** Per-agent tool policy and per-agent skill

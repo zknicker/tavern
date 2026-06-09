@@ -38,7 +38,6 @@ export const settingsCapabilityRequirements = {
     agent: ['apiServer', 'models'],
     'agents-md': [],
     appearance: [],
-    'identity-md': [],
     jobs: [],
     memories: ['cortexDatabase', 'cortexWiki'],
     models: ['apiServer', 'models'],
@@ -47,9 +46,7 @@ export const settingsCapabilityRequirements = {
     skills: ['apiServer', 'skills'],
     'soul-md': [],
     stats: [],
-    'tools-md': [],
     updates: [],
-    'user-md': [],
 } as const satisfies Record<string, readonly RuntimeCapabilityId[]>;
 
 export const routeTabCapabilityRequirements = {

@@ -1,8 +1,8 @@
 import { getDb } from '../db/connection';
 import { json } from '../tavern/http';
 import {
+    ensureAgentInstructionsFile,
     readRenderedAgentInstructions,
-    renderAgentInstructions,
     updateAgentInstructionSource,
 } from './instructions';
 
@@ -28,7 +28,7 @@ export async function handleWorkspaceRequest(request: Request): Promise<Response
             agentName: readOptionalString(body.agentName),
             workspaceDir: readString(body.workspaceDir, 'workspaceDir'),
         });
-        const rendered = await renderAgentInstructions(getDb(), agentId);
+        const rendered = await ensureAgentInstructionsFile(getDb(), agentId);
 
         return json({
             agentId: source.agentId,

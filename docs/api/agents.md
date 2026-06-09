@@ -25,10 +25,9 @@ with user-authored instructions, model, tool, memory, and skill policy.
   Clients read the stored snapshot and capability state instead of maintaining a
   Tavern-maintained list.
 * Tool and skill controls are inspectable before a run starts.
-* User-authored instructions are a Tavern-owned setting stored through the
-  Runtime-hosted agent API. They are rendered into the managed Hermes
-  `AGENTS.md` after Tavern policy and before agent-authored notes; clients do
-  not edit the workspace file directly.
+* User-authored markdown settings use Hermes-supported files. `AGENTS.md` is
+  managed workspace context. `SOUL.md` is managed Hermes home identity. Clients
+  save these files through the Runtime-hosted agent file API.
 * Tavern policy includes Cortex brain-first lookup guidance. Managed agents
   check Cortex before external lookup when durable user, project, or prior
   decision context may already exist.
@@ -47,7 +46,7 @@ The API covers:
 * get an agent
 * list an agent's Tavern and external runtime chat references
 * create or update agent settings
-* read and update user-authored instructions
+* read and update supported agent markdown files
 * read model choices and availability
 * read and update tool policy
 * read and update memory policy

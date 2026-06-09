@@ -297,36 +297,6 @@ export function createAppRouter() {
                                             ),
                                         },
                                         {
-                                            path: 'tools-md',
-                                            lazy: lazyRoute(
-                                                () =>
-                                                    import(
-                                                        './routes/dashboard/settings-tools-md-page.tsx'
-                                                    ),
-                                                'SettingsToolsMdPage'
-                                            ),
-                                        },
-                                        {
-                                            path: 'identity-md',
-                                            lazy: lazyRoute(
-                                                () =>
-                                                    import(
-                                                        './routes/dashboard/settings-identity-md-page.tsx'
-                                                    ),
-                                                'SettingsIdentityMdPage'
-                                            ),
-                                        },
-                                        {
-                                            path: 'user-md',
-                                            lazy: lazyRoute(
-                                                () =>
-                                                    import(
-                                                        './routes/dashboard/settings-user-md-page.tsx'
-                                                    ),
-                                                'SettingsUserMdPage'
-                                            ),
-                                        },
-                                        {
                                             path: 'memories',
                                             lazy: lazyRoute(
                                                 () =>

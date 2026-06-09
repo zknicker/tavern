@@ -206,6 +206,38 @@ describe('LocalHermesClient adapter-owned state', () => {
         });
     });
 
+    it('persists supported Hermes markdown files to their runtime locations', async () => {
+        const { HERMES_HOME, HERMES_WORKSPACE } = await import('../config');
+        const { LocalHermesClient } = await import('./local-client');
+        const client = new LocalHermesClient({
+            baseUrl: 'http://127.0.0.1:1',
+            token: null,
+        });
+
+        await client.saveAgentFile('agt_hermes', 'AGENTS.md', {
+            content: '# Workspace\n\nProject rules.',
+        });
+        await client.saveAgentFile('agt_hermes', 'SOUL.md', {
+            content: '# Soul\n\nSpeak plainly.',
+        });
+
+        await expect(fs.readFile(path.join(HERMES_WORKSPACE, 'AGENTS.md'), 'utf8')).resolves.toBe(
+            '# Workspace\n\nProject rules.'
+        );
+        await expect(fs.readFile(path.join(HERMES_HOME, 'SOUL.md'), 'utf8')).resolves.toBe(
+            '# Soul\n\nSpeak plainly.'
+        );
+        await expect(client.listAgentFiles('agt_hermes')).resolves.toMatchObject({
+            files: [
+                { mediaType: 'text/markdown', path: 'AGENTS.md' },
+                { mediaType: 'text/markdown', path: 'SOUL.md' },
+            ],
+        });
+        await expect(client.getAgentFile('agt_hermes', 'TOOLS.md')).rejects.toThrow(
+            'Hermes agent file "TOOLS.md"'
+        );
+    });
+
     it('persists adapter cron records for create, update, list, run, and delete', async () => {
         gatewayServer = new WebSocketServer({ host: '127.0.0.1', port: await getFreePort() });
         gatewayServer.on('connection', (socket) => {

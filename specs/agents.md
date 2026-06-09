@@ -20,7 +20,7 @@ surfaces resolve the primary agent instead of asking the person to choose among 
 
 - Hermes is canonical for execution config.
 - Hermes agent config may include name, model route, tool policy, skill enablement,
-  workspace, and persisted identity documents such as `SOUL.md`, `IDENTITY.md`, and `ROLE.md`.
+  workspace, `AGENTS.md` workspace context, and `SOUL.md` identity.
 - Tavern exposes Hermes's per-agent `thinkingDefault` as the model effort setting. The allowed
   values come from the selected Hermes harness and model profile. Hermes's `reasoningDefault`
   controls reasoning visibility, not effort.

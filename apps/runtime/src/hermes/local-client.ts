@@ -1,5 +1,9 @@
 import { randomUUID } from 'node:crypto';
+import fs from 'node:fs/promises';
+import path from 'node:path';
 import {
+    type AgentRuntimeAgentFileContent,
+    type AgentRuntimeAgentFileList,
     type AgentRuntimeCreateAgent,
     type AgentRuntimeCreateCron,
     type AgentRuntimeCron,
@@ -31,7 +35,13 @@ import {
     agentRuntimeSessionPreviewListSchema,
     agentRuntimeSessionResyncSchema,
 } from '@tavern/api';
-import { getRuntimePort, HERMES_DASHBOARD_SESSION_TOKEN, readConfigValue } from '../config';
+import {
+    getRuntimePort,
+    HERMES_DASHBOARD_SESSION_TOKEN,
+    HERMES_HOME,
+    HERMES_WORKSPACE,
+    readConfigValue,
+} from '../config';
 import { readHermesAdapterState, updateHermesAdapterState } from './adapter-state';
 import { defaultHermesAgentId, defaultHermesHost, defaultHermesPort } from './constants';
 import { unsupportedHermesSurface } from './errors';
@@ -55,6 +65,19 @@ import {
     saveHermesSessionMapping,
 } from './session-map';
 import { LocalHermesUnsupportedSurfaces } from './unsupported-surfaces';
+
+const editableHermesAgentFiles = [
+    {
+        mediaType: 'text/markdown',
+        path: 'AGENTS.md',
+        storagePath: path.join(HERMES_WORKSPACE, 'AGENTS.md'),
+    },
+    {
+        mediaType: 'text/markdown',
+        path: 'SOUL.md',
+        storagePath: path.join(HERMES_HOME, 'SOUL.md'),
+    },
+] as const;
 
 export function createLocalHermesClient() {
     return new LocalHermesClient({
@@ -129,6 +152,53 @@ export class LocalHermesClient extends LocalHermesUnsupportedSurfaces {
         }));
 
         return next;
+    }
+
+    async listAgentFiles(agentId: string): Promise<AgentRuntimeAgentFileList> {
+        await this.getAgentConfig(agentId);
+        return {
+            files: await Promise.all(
+                editableHermesAgentFiles.map(async (file) => {
+                    const stats = await readFileStats(file.storagePath);
+                    return {
+                        mediaType: file.mediaType,
+                        path: file.path,
+                        sizeBytes: stats?.size ?? 0,
+                        updatedAt: stats?.updatedAt ?? null,
+                    };
+                })
+            ),
+        };
+    }
+
+    async getAgentFile(agentId: string, filePath: string): Promise<AgentRuntimeAgentFileContent> {
+        await this.getAgentConfig(agentId);
+        const file = resolveEditableHermesAgentFile(filePath);
+        const stats = await readFileStats(file.storagePath);
+        return {
+            content: await fs.readFile(file.storagePath, 'utf8').catch(() => ''),
+            mediaType: file.mediaType,
+            path: file.path,
+            sizeBytes: stats?.size ?? 0,
+            updatedAt: stats?.updatedAt ?? null,
+        };
+    }
+
+    async saveAgentFile(
+        agentId: string,
+        filePath: string,
+        input: { content: string }
+    ): Promise<AgentRuntimeAgentFileContent> {
+        await this.getAgentConfig(agentId);
+        const file = resolveEditableHermesAgentFile(filePath);
+        await fs.mkdir(path.dirname(file.storagePath), { recursive: true });
+        await fs.writeFile(file.storagePath, input.content, { mode: 0o600 });
+        try {
+            await fs.chmod(file.storagePath, 0o600);
+        } catch {
+            // chmod is best-effort on non-POSIX filesystems.
+        }
+        return await this.getAgentFile(agentId, file.path);
     }
 
     async updateAgentName(_agentId: string, input: AgentRuntimeUpdateAgentName) {
@@ -768,6 +838,26 @@ function readHermesBaseUrl() {
     const host = readConfigValue('TAVERN_HERMES_HOST') ?? defaultHermesHost;
     const port = readConfigValue('TAVERN_HERMES_PORT') ?? defaultHermesPort;
     return `http://${host}:${port}`;
+}
+
+function resolveEditableHermesAgentFile(filePath: string) {
+    const file = editableHermesAgentFiles.find((candidate) => candidate.path === filePath);
+    if (!file) {
+        throw unsupportedHermesSurface(`Hermes agent file "${filePath}"`);
+    }
+    return file;
+}
+
+async function readFileStats(filePath: string) {
+    try {
+        const stats = await fs.stat(filePath);
+        return {
+            size: stats.size,
+            updatedAt: stats.mtime.toISOString(),
+        };
+    } catch {
+        return null;
+    }
 }
 
 function isMissingHermesSession(error: unknown) {

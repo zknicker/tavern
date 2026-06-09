@@ -3,13 +3,17 @@
 Tavern owns the managed Hermes workspace it creates for Tavern agents.
 
 The workspace is the prompt-facing home that Hermes loads for each agent
-session. Tavern keeps that surface simple: managed agents receive one generated
-`AGENTS.md` file instead of spreading stable instructions across `SOUL.md`,
-`TOOLS.md`, `MEMORY.md`, and other Hermes bootstrap files.
+session. Tavern exposes the Hermes-supported markdown files directly:
+
+* `AGENTS.md` lives in the managed Hermes workspace and carries workspace
+  instructions, project conventions, architecture, and operating context.
+* `SOUL.md` lives in the managed Hermes home and carries identity, voice, tone,
+  and durable personality. Hermes does not load `SOUL.md` from the working
+  directory.
 
 ## Instruction Sources
 
-The generated `AGENTS.md` is assembled from three Tavern-owned sources:
+The seeded `AGENTS.md` is assembled from three Tavern-owned sources:
 
 * **Tavern instructions.** Repo-managed markdown that explains how a Tavern
   agent should operate inside Tavern, including Cortex tool use and workspace
@@ -20,53 +24,47 @@ The generated `AGENTS.md` is assembled from three Tavern-owned sources:
 * **Agent notes.** Agent-authored operational notes stored by Tavern and updated
   through Tavern tools.
 
-The rendered file should read as one natural instruction document. Section
-boundaries are storage and ownership concerns; they should not make the prompt
-feel like a generated template.
+The seeded file should read as one natural instruction document. Once a user
+saves `AGENTS.md`, Runtime preserves that file as the source of truth.
 
 ## Runtime Behavior
 
-Runtime writes the generated `AGENTS.md` into the managed Hermes workspace on
-boot, config sync, and instruction source changes.
+Runtime seeds `AGENTS.md` into the managed Hermes workspace when it is missing.
+Config sync must not overwrite a user-saved `AGENTS.md`.
 
-Runtime leaves the other Hermes bootstrap markdown files blank or unused for
-managed Tavern agents. Hermes may still support those files, but Tavern does
-not rely on them for managed agent behavior.
+Runtime writes `SOUL.md` to managed `HERMES_HOME` through the agent file API.
+That is the location Hermes documents and loads for personality.
 
-Runtime clears known companion bootstrap files such as `SOUL.md`, `TOOLS.md`,
+Runtime clears unsupported legacy companion bootstrap files such as `TOOLS.md`,
 `IDENTITY.md`, `USER.md`, `HEARTBEAT.md`, `BOOTSTRAP.md`, `MEMORY.md`, and
-`ROLE.md` before rendering Tavern's generated `AGENTS.md`. The files are left
-present but empty so Hermes skips them without injecting missing-file marker
-lines. Runtime does not set `skipBootstrap`, because Tavern still relies on
-Hermes's bootstrap injection path for generated `AGENTS.md`. Tavern chat
-turns must not request lightweight bootstrap context.
+`ROLE.md` only when the older generated-instructions path runs. It does not
+clear `SOUL.md`.
 
-The generated file is not the source of truth. If it is missing, stale, or
-modified, Runtime regenerates it from the separate Tavern sources.
+User-saved `AGENTS.md` and `SOUL.md` content is source-of-truth file state.
+Runtime may seed missing files but must not regenerate over saved content.
 
 ## Agent Notes
 
-Agents do not edit `AGENTS.md` directly. When an agent needs to remember a
+Agents do not edit user-authored markdown files directly. When an agent needs to remember a
 durable operating note about itself, it uses Tavern workspace tools that update
-the DB-backed agent notes source. Runtime then renders those notes into the next
-generated `AGENTS.md`.
+the DB-backed agent notes source. Runtime can use those notes when seeding a
+missing `AGENTS.md`.
 
 Agent notes are for reusable operating guidance, not raw chat history, Cortex
 knowledge, secrets, or user-authored instruction settings.
 
 ## App Surfaces
 
-The Tavern app exposes the user-authored instructions block in agent settings.
-It is edited as a normal Tavern setting and saved to Tavern storage.
+The Tavern app exposes `AGENTS.md` and `SOUL.md` in agent settings. They are
+edited as normal Tavern settings and saved through Runtime's agent file API.
 
 The app does not need a first-pass editor for agent-authored notes. Notes are
 agent-owned and updated through Tavern workspace tools. The app may later show
 them as read-only diagnostics or expose explicit user controls such as clear or
 override.
 
-Generated `AGENTS.md` is not edited in the app as a normal agent file. If the
-app shows it, it should be read-only with status such as last rendered time,
-rendered hash, and whether Runtime believes the workspace file is current.
+The app does not expose unsupported legacy markdown files such as `TOOLS.md`,
+`IDENTITY.md`, `USER.md`, `MEMORY.md`, or `ROLE.md`.
 
 ## Tavern Workspace Plugin
 

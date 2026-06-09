@@ -8,6 +8,7 @@ import { subscribeToRuntimeEvents } from '../tavern/runtime-events';
 import {
     clearHermesBootstrapFiles,
     composeAgentInstructions,
+    ensureAgentInstructionsFile,
     generatedInstructionFileName,
     getAgentInstructionSource,
     hermesBootstrapFileNamesToClear,
@@ -253,6 +254,27 @@ describe('workspace instructions', () => {
         expect(body.content).toContain('Saved instructions.');
     });
 
+    test('workspace instruction sync preserves an existing AGENTS.md file', async () => {
+        const db = getDb();
+        await writeFile(
+            path.join(workspaceDir, generatedInstructionFileName),
+            '# Existing\n\nUser-edited instructions.'
+        );
+        updateAgentInstructionSource(db, {
+            agentId: 'planner',
+            agentName: 'Planner',
+            userInstructions: 'Generated instructions.',
+            workspaceDir,
+        });
+
+        const result = await ensureAgentInstructionsFile(db, 'planner');
+
+        expect(result.content).toBe('# Existing\n\nUser-edited instructions.');
+        await expect(
+            readFile(path.join(workspaceDir, generatedInstructionFileName), 'utf8')
+        ).resolves.toBe('# Existing\n\nUser-edited instructions.');
+    });
+
     test('preserves an explicit empty user instructions update', () => {
         const db = getDb();
         updateAgentInstructionSource(db, {
@@ -282,19 +304,23 @@ describe('workspace instructions', () => {
         ).not.toContain('\n\n\n');
     });
 
-    test('clears Hermes bootstrap files owned by Tavern AGENTS.md composition', async () => {
+    test('clears unsupported Hermes bootstrap files owned by Tavern AGENTS.md composition', async () => {
         await Promise.all(
             hermesBootstrapFileNamesToClear.map((fileName) =>
                 writeFile(path.join(workspaceDir, fileName), 'legacy bootstrap')
             )
         );
         await writeFile(path.join(workspaceDir, generatedInstructionFileName), 'managed');
+        await writeFile(path.join(workspaceDir, 'SOUL.md'), 'supported');
 
         await clearHermesBootstrapFiles(workspaceDir);
 
         await expect(
             readFile(path.join(workspaceDir, generatedInstructionFileName), 'utf8')
         ).resolves.toBe('managed');
+        await expect(readFile(path.join(workspaceDir, 'SOUL.md'), 'utf8')).resolves.toBe(
+            'supported'
+        );
         await Promise.all(
             hermesBootstrapFileNamesToClear.map((fileName) =>
                 expect(readFile(path.join(workspaceDir, fileName), 'utf8')).resolves.toBe('')

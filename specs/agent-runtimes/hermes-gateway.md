@@ -100,14 +100,12 @@ rather than broadening the default silently.
 Tavern Runtime owns the managed Hermes workspace under
 `~/.tavern/runtime/hermes/run/workspace`.
 
-Runtime renders one generated `AGENTS.md` for Tavern-managed agents. That file combines
-repo-managed Tavern instructions, the DB-backed user-authored instructions block, and DB-backed
-agent-authored notes. Runtime leaves the other Hermes bootstrap markdown files blank or unused
-for managed Tavern agents.
+Runtime exposes Hermes-supported markdown files for Tavern-managed agents. `AGENTS.md` is managed
+workspace context. `SOUL.md` is managed Hermes home identity. Runtime seeds `AGENTS.md` only when
+missing and does not overwrite user-saved file content during config sync.
 
-Agents do not edit the generated `AGENTS.md` directly. Agent-authored notes are updated through
-Tavern workspace tools, then Runtime renders them into the generated file on boot, config sync, or
-instruction source changes.
+Agents do not edit user-authored markdown files directly. Agent-authored notes are updated through
+Tavern workspace tools and may be used when Runtime seeds a missing `AGENTS.md`.
 
 The `tavern-workspace` Hermes plugin owns generated workspace-file policy, agent notes tools, and
 file-protection hooks. See [Workspace](../workspace.md) for the full contract.

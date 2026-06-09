@@ -69,24 +69,6 @@ export const settingsNavItems = [
         to: '/dashboard/settings/soul-md',
     },
     {
-        icon: FileEditIcon,
-        id: 'tools-md',
-        label: 'TOOLS.md',
-        to: '/dashboard/settings/tools-md',
-    },
-    {
-        icon: FileEditIcon,
-        id: 'identity-md',
-        label: 'IDENTITY.md',
-        to: '/dashboard/settings/identity-md',
-    },
-    {
-        icon: FileEditIcon,
-        id: 'user-md',
-        label: 'USER.md',
-        to: '/dashboard/settings/user-md',
-    },
-    {
         icon: ZapIcon,
         id: 'skills',
         label: 'Skills & Plugins',
@@ -125,16 +107,7 @@ export const settingsNavSections = [
     },
     {
         id: 'agent',
-        itemIds: [
-            'agent',
-            'agents-md',
-            'soul-md',
-            'tools-md',
-            'identity-md',
-            'user-md',
-            'skills',
-            'memories',
-        ],
+        itemIds: ['agent', 'agents-md', 'soul-md', 'skills', 'memories'],
         label: 'Agent',
     },
     {
