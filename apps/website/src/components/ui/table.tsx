@@ -1,132 +1,277 @@
-import type * as React from 'react';
+import { AnimatePresence, motion } from 'framer-motion';
+import {
+    Children,
+    type ComponentPropsWithoutRef,
+    type CSSProperties,
+    cloneElement,
+    createContext,
+    forwardRef,
+    type HTMLAttributes,
+    isValidElement,
+    type ReactElement,
+    type ReactNode,
+    type Ref,
+    type TdHTMLAttributes,
+    type ThHTMLAttributes,
+    useContext,
+    useEffect,
+    useMemo,
+    useRef,
+} from 'react';
+import { useProximityHover } from '../../hooks/use-proximity-hover.ts';
+import { fontWeights } from '../../lib/font-weight.ts';
+import { springs } from '../../lib/springs.ts';
 import { cn } from '../../lib/utils.ts';
 
-type TableProps = React.ComponentProps<'table'> & {
+interface TableContextValue {
+    activeIndex: number | null;
+    registerItem: (index: number, element: HTMLElement | null) => void;
+}
+
+const TableContext = createContext<TableContextValue | null>(null);
+
+type TableProps = ComponentPropsWithoutRef<'table'> & {
     variant?: 'default' | 'card';
 };
 
-export function Table({
-    className,
-    variant = 'default',
-    ...props
-}: TableProps): React.ReactElement {
-    return (
-        <div
-            className="relative w-full overflow-x-auto"
-            data-slot="table-container"
-            data-variant={variant}
-        >
-            <table
+const Table = forwardRef<HTMLTableElement, TableProps>(
+    ({ children, className, variant = 'default', ...props }, ref): ReactElement => {
+        const containerRef = useRef<HTMLDivElement>(null);
+        const { activeIndex, itemRects, sessionRef, handlers, registerItem, measureItems } =
+            useProximityHover(containerRef);
+
+        useEffect(() => {
+            measureItems();
+        }, [measureItems]);
+
+        useEffect(() => {
+            const container = containerRef.current;
+
+            if (!container) {
+                return;
+            }
+
+            container.addEventListener('mouseenter', handlers.onMouseEnter);
+            container.addEventListener('mousemove', handlers.onMouseMove);
+            container.addEventListener('mouseleave', handlers.onMouseLeave);
+
+            return () => {
+                container.removeEventListener('mouseenter', handlers.onMouseEnter);
+                container.removeEventListener('mousemove', handlers.onMouseMove);
+                container.removeEventListener('mouseleave', handlers.onMouseLeave);
+            };
+        }, [handlers.onMouseEnter, handlers.onMouseLeave, handlers.onMouseMove]);
+
+        const contextValue = useMemo(
+            () => ({ activeIndex, registerItem }),
+            [activeIndex, registerItem]
+        );
+        const activeRect = activeIndex === null ? null : itemRects[activeIndex];
+
+        return (
+            <TableContext.Provider value={contextValue}>
+                <div
+                    className="relative w-full overflow-x-auto"
+                    data-slot="table-container"
+                    data-variant={variant}
+                    ref={containerRef}
+                >
+                    <AnimatePresence>
+                        {activeRect ? (
+                            <motion.div
+                                animate={{
+                                    opacity: 1,
+                                    top: activeRect.top,
+                                    left: activeRect.left,
+                                    width: activeRect.width,
+                                    height: activeRect.height,
+                                }}
+                                className="pointer-events-none absolute bg-hover"
+                                exit={{ opacity: 0, transition: { duration: 0.06 } }}
+                                initial={{
+                                    opacity: 0,
+                                    top: activeRect.top,
+                                    left: activeRect.left,
+                                    width: activeRect.width,
+                                    height: activeRect.height,
+                                }}
+                                key={sessionRef.current}
+                                transition={{
+                                    ...springs.fast,
+                                    opacity: { duration: 0.08 },
+                                }}
+                            />
+                        ) : null}
+                    </AnimatePresence>
+                    <table
+                        className={cn('w-full caption-bottom border-collapse text-sm', className)}
+                        data-slot="table"
+                        ref={ref}
+                        {...props}
+                    >
+                        {children}
+                    </table>
+                </div>
+            </TableContext.Provider>
+        );
+    }
+);
+Table.displayName = 'Table';
+
+const TableHeader = forwardRef<HTMLTableSectionElement, HTMLAttributes<HTMLTableSectionElement>>(
+    ({ className, ...props }, ref): ReactElement => (
+        <thead className={className} data-slot="table-header" ref={ref} {...props} />
+    )
+);
+TableHeader.displayName = 'TableHeader';
+
+const TableBody = forwardRef<HTMLTableSectionElement, HTMLAttributes<HTMLTableSectionElement>>(
+    ({ children, className, ...props }, ref): ReactElement => (
+        <tbody className={className} data-slot="table-body" ref={ref} {...props}>
+            {assignRowIndexes(children)}
+        </tbody>
+    )
+);
+TableBody.displayName = 'TableBody';
+
+const TableFooter = forwardRef<HTMLTableSectionElement, HTMLAttributes<HTMLTableSectionElement>>(
+    ({ className, ...props }, ref): ReactElement => (
+        <tfoot
+            className={cn('border-border/60 border-t font-medium', className)}
+            data-slot="table-footer"
+            ref={ref}
+            {...props}
+        />
+    )
+);
+TableFooter.displayName = 'TableFooter';
+
+interface TableRowProps extends HTMLAttributes<HTMLTableRowElement> {
+    index?: number;
+}
+
+const TableRow = forwardRef<HTMLTableRowElement, TableRowProps>(
+    ({ index, className, style, ...props }, ref): ReactElement => {
+        const internalRef = useRef<HTMLTableRowElement>(null);
+        const context = useContext(TableContext);
+
+        useEffect(() => {
+            if (index === undefined || !context) {
+                return;
+            }
+
+            context.registerItem(index, internalRef.current);
+
+            return () => {
+                context.registerItem(index, null);
+            };
+        }, [context, index]);
+
+        const isBodyRow = index !== undefined;
+        const activeIndex = context?.activeIndex ?? null;
+        const hideBorder =
+            activeIndex !== null &&
+            ((isBodyRow && (index === activeIndex || index === activeIndex - 1)) ||
+                (!isBodyRow && activeIndex === 0));
+
+        return (
+            <tr
                 className={cn(
-                    'w-full caption-bottom in-data-[slot=frame]:border-separate in-data-[slot=frame]:border-spacing-0 text-sm',
+                    'group/row relative z-10 border-b transition-[border-color] duration-100 data-[state=selected]:bg-active',
+                    hideBorder ? 'border-transparent' : 'border-border/60',
+                    isBodyRow && activeIndex === index && 'is-active',
                     className
                 )}
-                data-slot="table"
+                data-proximity-index={index}
+                data-slot="table-row"
+                ref={(node) => {
+                    internalRef.current = node;
+                    assignRef(ref, node);
+                }}
+                style={withFontVariation(
+                    style,
+                    isBodyRow ? fontWeights.normal : fontWeights.semibold
+                )}
                 {...props}
             />
-        </div>
-    );
-}
+        );
+    }
+);
+TableRow.displayName = 'TableRow';
 
-export function TableHeader({
-    className,
-    ...props
-}: React.ComponentProps<'thead'>): React.ReactElement {
-    return (
-        <thead
-            className={cn(
-                '[&_tr]:border-b in-data-[slot=frame]:**:[th]:h-9 in-data-[slot=frame]:*:[tr]:border-none in-data-[slot=frame]:*:[tr]:hover:bg-transparent',
-                className
-            )}
-            data-slot="table-header"
-            {...props}
-        />
-    );
-}
-
-export function TableBody({
-    className,
-    ...props
-}: React.ComponentProps<'tbody'>): React.ReactElement {
-    return (
-        <tbody
-            className={cn(
-                'relative in-data-[slot=frame]:rounded-xl in-data-[slot=frame]:shadow-xs/5 before:pointer-events-none before:absolute before:inset-px not-in-data-[slot=frame]:before:hidden before:rounded-[calc(var(--radius-xl)-1px)] before:shadow-[0_1px_--theme(--color-black/4%)] dark:before:shadow-[0_-1px_--theme(--color-white/8%)] [&_tr:last-child]:border-0 in-data-[slot=frame]:*:[tr]:border-0 in-data-[slot=frame]:*:[tr]:*:[td]:border-b in-data-[slot=frame]:*:[tr]:*:[td]:bg-card in-data-[slot=frame]:*:[tr]:*:[td]:bg-clip-padding in-data-[slot=frame]:*:[tr]:first:*:[td]:first:rounded-ss-xl in-data-[slot=frame]:*:[tr]:*:[td]:first:border-s in-data-[slot=frame]:*:[tr]:first:*:[td]:border-t in-data-[slot=frame]:*:[tr]:last:*:[td]:last:rounded-ee-xl in-data-[slot=frame]:*:[tr]:*:[td]:last:border-e in-data-[slot=frame]:*:[tr]:first:*:[td]:last:rounded-se-xl in-data-[slot=frame]:*:[tr]:last:*:[td]:first:rounded-es-xl in-data-[slot=frame]:*:[tr]:hover:*:[td]:bg-transparent in-data-[slot=frame]:*:[tr]:data-[state=selected]:*:[td]:bg-muted/72',
-                className
-            )}
-            data-slot="table-body"
-            {...props}
-        />
-    );
-}
-
-export function TableFooter({
-    className,
-    ...props
-}: React.ComponentProps<'tfoot'>): React.ReactElement {
-    return (
-        <tfoot
-            className={cn(
-                'border-t in-data-[slot=frame]:border-none bg-muted/72 in-data-[slot=frame]:bg-transparent font-medium [&>tr]:last:border-b-0 in-data-[slot=frame]:*:[tr]:hover:bg-transparent',
-                className
-            )}
-            data-slot="table-footer"
-            {...props}
-        />
-    );
-}
-
-export function TableRow({ className, ...props }: React.ComponentProps<'tr'>): React.ReactElement {
-    return (
-        <tr
-            className={cn(
-                'border-b transition-colors hover:bg-muted/72 in-data-[slot=frame]:hover:bg-transparent data-[state=selected]:bg-muted/72 in-data-[slot=frame]:data-[state=selected]:bg-transparent',
-                className
-            )}
-            data-slot="table-row"
-            {...props}
-        />
-    );
-}
-
-export function TableHead({ className, ...props }: React.ComponentProps<'th'>): React.ReactElement {
-    return (
+const TableHead = forwardRef<HTMLTableCellElement, ThHTMLAttributes<HTMLTableCellElement>>(
+    ({ className, ...props }, ref): ReactElement => (
         <th
             className={cn(
-                'h-10 whitespace-nowrap px-2.5 text-left align-middle font-medium text-muted-foreground leading-none has-[[role=checkbox]]:w-px has-[[role=checkbox]]:pe-0',
+                'h-10 whitespace-nowrap px-3 py-2 text-left align-middle font-medium text-foreground leading-none has-[[role=checkbox]]:w-px has-[[role=checkbox]]:pe-0',
                 className
             )}
             data-slot="table-head"
+            ref={ref}
             {...props}
         />
-    );
-}
+    )
+);
+TableHead.displayName = 'TableHead';
 
-export function TableCell({ className, ...props }: React.ComponentProps<'td'>): React.ReactElement {
-    return (
+const TableCell = forwardRef<HTMLTableCellElement, TdHTMLAttributes<HTMLTableCellElement>>(
+    ({ className, ...props }, ref): ReactElement => (
         <td
             className={cn(
-                'whitespace-nowrap p-2.5 align-middle leading-none in-data-[slot=frame]:first:p-[calc(--spacing(2.5)-1px)] in-data-[slot=frame]:last:p-[calc(--spacing(2.5)-1px)] has-[[role=checkbox]]:pe-0',
+                'whitespace-nowrap px-3 py-2 align-middle text-muted-foreground leading-none transition-colors duration-100 group-[.is-active]/row:text-foreground has-[[role=checkbox]]:pe-0',
                 className
             )}
             data-slot="table-cell"
+            ref={ref}
             {...props}
         />
-    );
+    )
+);
+TableCell.displayName = 'TableCell';
+
+const TableCaption = forwardRef<HTMLTableCaptionElement, HTMLAttributes<HTMLTableCaptionElement>>(
+    ({ className, ...props }, ref): ReactElement => (
+        <caption
+            className={cn('mt-4 text-muted-foreground text-sm', className)}
+            data-slot="table-caption"
+            ref={ref}
+            {...props}
+        />
+    )
+);
+TableCaption.displayName = 'TableCaption';
+
+function assignRowIndexes(children: ReactNode): ReactNode {
+    return Children.map(children, (child, index) => {
+        if (!isValidElement<TableRowProps>(child) || child.type !== TableRow) {
+            return child;
+        }
+
+        return cloneElement(child, {
+            index: child.props.index ?? index,
+        });
+    });
 }
 
-export function TableCaption({
-    className,
-    ...props
-}: React.ComponentProps<'caption'>): React.ReactElement {
-    return (
-        <caption
-            className={cn(
-                'in-data-[slot=frame]:my-4 mt-4 text-muted-foreground text-sm',
-                className
-            )}
-            data-slot="table-caption"
-            {...props}
-        />
-    );
+function assignRef<T>(ref: Ref<T> | undefined, value: T): void {
+    if (typeof ref === 'function') {
+        ref(value);
+        return;
+    }
+
+    if (ref) {
+        ref.current = value;
+    }
 }
+
+function withFontVariation(
+    style: CSSProperties | undefined,
+    fontVariationSettings: string
+): CSSProperties {
+    return {
+        ...style,
+        fontVariationSettings,
+    };
+}
+
+export { Table, TableHeader, TableBody, TableFooter, TableRow, TableHead, TableCell, TableCaption };

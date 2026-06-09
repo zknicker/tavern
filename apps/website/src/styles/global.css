@@ -89,6 +89,8 @@
 
     --color-accent: var(--accent);
     --color-accent-foreground: var(--accent-foreground);
+    --color-hover: var(--hover);
+    --color-active: var(--active);
 
     --color-destructive: var(--destructive);
     --color-destructive-foreground: var(--destructive-foreground);
@@ -337,6 +339,8 @@
 
         --accent: --alpha(var(--color-white) / 4%);
         --accent-foreground: var(--color-neutral-100);
+        --hover: var(--nav-hover);
+        --active: var(--nav-active);
 
         --destructive: color-mix(in srgb, var(--color-red-500) 90%, var(--color-white));
         --destructive-foreground: var(--color-red-400);
@@ -439,6 +443,8 @@
 
         --accent: --alpha(var(--color-black) / 4%);
         --accent-foreground: var(--color-neutral-800);
+        --hover: var(--nav-hover);
+        --active: var(--nav-active);
 
         --destructive: var(--color-red-500);
         --destructive-foreground: var(--color-red-700);
