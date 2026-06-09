@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file.
 
+## v1.4.0 - 2026-06-09
+
+- Replaced the OpenClaw/Cortex stack with managed Hermes execution, the llm-wiki hub browser, and managed Hermes wiki skill.
+- Added Hermes-backed model provider settings, runtime skills and toolsets, cron delivery and run history, Tavern channel context tools, and editable managed agent workspace files.
+- Fixed managed agent model saves so Tavern no longer infers or persists a Codex runtime path from `openai-codex`; Hermes keeps its default runtime unless Hermes config explicitly opts into Codex app-server runtime.
+- Raised the required Runtime floor to 1.4.0 for the Hermes Gateway, model config, runtime skill, cron, workspace file, and llm-wiki contracts.
+
 ## v1.3.0 - 2026-06-09
 
 - Replaced the GBrain/PGlite Cortex stack with a read-only llm-wiki hub browser and managed Hermes wiki skill.
