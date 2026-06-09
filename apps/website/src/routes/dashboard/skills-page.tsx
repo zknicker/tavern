@@ -16,17 +16,17 @@ export function SkillsPage() {
     const toolsets = skillsQuery.data?.toolsets ?? [];
     const savingSkillIds = React.useMemo(
         () =>
-            setSkillEnabled.variables
+            setSkillEnabled.isPending && setSkillEnabled.variables
                 ? new Set([setSkillEnabled.variables.skillId])
                 : new Set<string>(),
-        [setSkillEnabled.variables]
+        [setSkillEnabled.isPending, setSkillEnabled.variables]
     );
     const savingToolsetIds = React.useMemo(
         () =>
-            setToolsetEnabled.variables
+            setToolsetEnabled.isPending && setToolsetEnabled.variables
                 ? new Set([setToolsetEnabled.variables.toolsetId])
                 : new Set<string>(),
-        [setToolsetEnabled.variables]
+        [setToolsetEnabled.isPending, setToolsetEnabled.variables]
     );
 
     if (skillsQuery.isPending && !skillsQuery.data) {
