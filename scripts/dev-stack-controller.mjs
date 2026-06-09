@@ -22,6 +22,7 @@ const shutdownTimeoutMs = Number.parseInt(
     10
 );
 const processGroupShutdownPollMs = 50;
+const serverDependencyPrebuildCommand = 'bun run --filter @tavern/sdk build';
 
 export class DevStackController extends EventEmitter {
     constructor({ mode, ports, repositoryRoot }) {
@@ -275,6 +276,19 @@ export class DevStackController extends EventEmitter {
             : startupUiEnv;
         let websiteReadyPromise = null;
         let desktopPrebuildPromise = null;
+        let serverDependencyPrebuildPromise = null;
+
+        const startServerDependencyPrebuild = () => {
+            if (!serverDependencyPrebuildPromise) {
+                serverDependencyPrebuildPromise = this.spawnBackgroundProcess(
+                    'server',
+                    serverDependencyPrebuildCommand,
+                    startupUiEnv
+                );
+            }
+
+            return serverDependencyPrebuildPromise;
+        };
 
         const startWebsite = () => {
             if (!websiteReadyPromise) {
@@ -323,11 +337,16 @@ export class DevStackController extends EventEmitter {
                 startupUiEnv
             );
             startWebsite();
+            startServerDependencyPrebuild();
             startDesktopPrebuild();
             await waitForRuntimeReady(runtimeUrl);
             this.update((snapshot) => {
                 snapshot.processes.runtime.status = 'running';
             });
+        }
+
+        if (!(await startServerDependencyPrebuild())) {
+            throw new Error('Failed to build server workspace dependencies.');
         }
 
         this.spawnProcess('server', serverCommand, serverEnv);
