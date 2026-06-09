@@ -14,10 +14,13 @@ Tavern Runtime records.
 
 ## Flow
 
-1. Pick the Hermes CLI version or installer source.
-2. Install or update Hermes outside Tavern. Set `TAVERN_HERMES_BIN` when the
-   Runtime service environment should use an explicit executable.
-3. Start the dev stack and confirm Runtime resolves the intended binary:
+1. Pick the target Hermes commit.
+2. Bump `hermesPinnedCommit` in `apps/runtime/src/hermes/engine.ts` and refresh
+   the bundled installer snapshot at `apps/runtime/assets/hermes/installer/`
+   (update its `SOURCE.md`). For local validation against a specific install,
+   set `TAVERN_HERMES_BIN` or `TAVERN_HERMES_COMMIT` instead of editing code.
+3. Start the dev stack and confirm Runtime resolves the intended binary
+   (`tavern engine status` shows the resolved tier and pin):
    ```bash
    bun run dev
    ```
@@ -73,13 +76,18 @@ keep projecting prompt hints itself or map mentions to Hermes's native support.
 
 ## State Rules
 
-* `~/.tavern-hermes/runtime` is the default Runtime root and backup unit.
-* `~/.tavern-hermes/runtime/hermes/home` is the default managed `HERMES_HOME`.
-* `~/.tavern-hermes/runtime/hermes/workspace` is the generated managed workspace.
-* `~/.tavern-hermes/runtime/data/runtime.db` is Tavern Runtime durable state.
+* `~/.tavern/engine/<pin>` holds managed engine installs, shared across
+  worktrees. There is no automatic cleanup; remove old pins with
+  `tavern engine clean` after a pin bump. A deployed host pre-stages the new
+  pin during `tavern update`; otherwise the first restart after a pin bump
+  installs the engine and takes longer.
+* `~/.tavern/runtime` is the default Runtime root and backup unit.
+* `~/.tavern/runtime/hermes/home` is the default managed `HERMES_HOME`.
+* `~/.tavern/runtime/hermes/workspace` is the generated managed workspace.
+* `~/.tavern/runtime/data/runtime.db` is Tavern Runtime durable state.
 * The llm-wiki hub is durable Cortex knowledge. Runtime resolves it from
   `TAVERN_WIKI_HUB_PATH`, `~/.config/llm-wiki/config.json`, or `~/wiki`.
-* Dev stack state is isolated under `~/.tavern-hermes/dev/<worktree-id>/`.
+* Dev stack state is isolated under `~/.tavern/dev/<worktree-id>/`.
 * Runtime-backed Hermes rows remain scoped to `tavern-hermes-managed`.
 
 Prefer regenerating Hermes config and workspace files over patching old files.

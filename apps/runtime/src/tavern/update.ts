@@ -34,7 +34,14 @@ export function startRuntimeUpdate(input?: { targetVersion?: null | string }) {
         targetVersion: input?.targetVersion ?? null,
     };
 
-    const child = spawn('sh', ['-lc', 'brew update && brew upgrade tavern-runtime'], {
+    // After staging, pre-install the staged Runtime's pinned agent engine with
+    // the staged binary (only it knows the new pin). Best-effort: a pre-stage
+    // failure must not fail staging — restart-time setup is the safety net.
+    const stageCommand =
+        'brew update && brew upgrade tavern-runtime && ' +
+        '{ "$(brew --prefix)/bin/tavern" engine install || ' +
+        'echo "agent engine pre-stage failed; the restart will install it"; }';
+    const child = spawn('sh', ['-lc', stageCommand], {
         env: process.env,
         stdio: 'ignore',
     });

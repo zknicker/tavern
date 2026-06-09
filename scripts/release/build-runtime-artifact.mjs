@@ -77,7 +77,19 @@ async function stageRuntimeAssets(stageRoot) {
     await fs.cp(path.join(repoRoot, 'apps', 'runtime', 'assets'), runtimeAssetsRoot, {
         recursive: true,
     });
+    await assertStagedFile(
+        path.join(runtimeAssetsRoot, 'hermes', 'installer', 'install.sh'),
+        'Hermes installer snapshot'
+    );
     await stageMnemosyneWheelhouse(path.join(runtimeAssetsRoot, 'python', 'mnemosyne'));
+}
+
+async function assertStagedFile(filePath, label) {
+    try {
+        await fs.access(filePath);
+    } catch {
+        throw new Error(`Runtime artifact is missing the ${label} at ${filePath}.`);
+    }
 }
 
 async function copyPackage(sourcePath, targetPath) {

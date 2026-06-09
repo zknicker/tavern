@@ -65,7 +65,7 @@ flowchart LR
 
 ## State And Transport
 
-* `~/.tavern-hermes/runtime` is the default backup root for Tavern-owned
+* `~/.tavern/runtime` is the default backup root for Tavern-owned
   Runtime state. `TAVERN_RUNTIME_ROOT` can point Runtime at another root.
 * Runtime SQLite is the durable source for chats, messages, responses, activity,
   artifacts, participants, events, reads, automation delivery, channel ingress,

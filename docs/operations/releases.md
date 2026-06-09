@@ -86,6 +86,12 @@ Runtime artifacts include the managed Mnemosyne Python wheelhouse under
 wheels before packaging so managed Hermes memory works without operator Python
 setup.
 
+Runtime artifacts also include the Hermes installer snapshot at
+`runtime-assets/hermes/installer/install.sh`; the build fails if it is
+missing. When a release bumps the Hermes engine pin
+(`apps/runtime/src/hermes/engine.ts`), refresh that snapshot in the same
+change (see its `SOURCE.md`).
+
 ## Compatibility Floor Rules
 
 * **Do not raise the floor for desktop-only work.** App version bumps do not

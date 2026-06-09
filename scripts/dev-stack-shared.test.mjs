@@ -76,11 +76,11 @@ test('createDevStackEnvironment uses shared dev state outside packaged app state
     assert.equal(environment.PATH, '/usr/bin');
     assert.equal(
         environment.DATABASE_PATH,
-        path.join(os.homedir(), '.tavern-hermes', 'dev', 'alpha', 'tavern.sqlite')
+        path.join(os.homedir(), '.tavern', 'dev', 'alpha', 'tavern.sqlite')
     );
     assert.equal(
         environment.TAVERN_RUNTIME_ROOT,
-        path.join(os.homedir(), '.tavern-hermes', 'dev', 'alpha', 'runtime')
+        path.join(os.homedir(), '.tavern', 'dev', 'alpha', 'runtime')
     );
     assert.equal(environment.TAVERN_HERMES_PORT, '42003');
     assert.equal(environment.TAVERN_RUNTIME_PORT, '42002');

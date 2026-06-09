@@ -26,7 +26,12 @@ describe('Runtime update', () => {
         });
         expect(spawnMock).toHaveBeenCalledWith(
             'sh',
-            ['-lc', 'brew update && brew upgrade tavern-runtime'],
+            [
+                '-lc',
+                expect.stringMatching(
+                    /^brew update && brew upgrade tavern-runtime && .*engine install/
+                ),
+            ],
             expect.objectContaining({
                 stdio: 'ignore',
             })

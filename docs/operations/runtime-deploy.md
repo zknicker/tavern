@@ -22,6 +22,9 @@ tavern cortex list --topic project-wiki
 tavern cortex get project-wiki wiki/index.md
 tavern cortex search "theme across project notes"
 tavern cortex status
+tavern engine status
+tavern engine install
+tavern engine clean
 tavern update
 tavern restart
 tavern --version
@@ -41,10 +44,18 @@ through llm-wiki skills launched from Tasks or Runtime crons.
 `tavern` is the preferred CLI. `tavern-runtime` remains as a compatibility
 alias.
 
+`engine` commands manage the Hermes engine that powers the assistant, without
+needing a running Runtime. `status` shows the resolved binary and which tier
+won (configured, managed, or system), the engine pin, and installed pins.
+`install` pre-provisions the pinned engine into `~/.tavern/engine/<pin>/`
+(idempotent; streams installer output). `clean` removes engine installs for
+other pins; `--all` removes every install.
+
 `update` shells out to Homebrew and stages the newest Runtime package without
-restarting the running service. `restart` restarts the Homebrew service and is
-the explicit cutover step. Use Homebrew directly for stop, logs, and boot
-persistence.
+restarting the running service, then best-effort pre-installs the staged
+Runtime's pinned engine so the cutover restart does not wait on an engine
+download. `restart` restarts the Homebrew service and is the explicit cutover
+step. Use Homebrew directly for stop, logs, and boot persistence.
 
 Runtime updates are two-phase:
 
@@ -60,7 +71,9 @@ Runtime.
 
 ## Homebrew Service
 
-On the Mac mini, install and run Runtime through Homebrew:
+On the Mac mini, installing Runtime through Homebrew is the only install step;
+the first start bootstraps the pinned Hermes engine automatically (git is the
+only prerequisite, provided by the macOS command line tools):
 
 ```bash
 brew install zknicker/tavern/tavern-runtime
@@ -95,7 +108,7 @@ Runtime defaults to local-only binding:
 ```bash
 TAVERN_RUNTIME_HOST=127.0.0.1
 TAVERN_RUNTIME_PORT=18790
-TAVERN_RUNTIME_ROOT=~/.tavern-hermes/runtime
+TAVERN_RUNTIME_ROOT=~/.tavern/runtime
 TAVERN_HERMES_PORT=9119
 ```
 
@@ -169,8 +182,14 @@ The tarball contains:
 bin/tavern-runtime
 bin/tavern
 share/tavern/node_modules/@tavern/sdk/
+share/tavern/runtime-assets/
 ```
 
-Runtime resolves the Hermes CLI from `TAVERN_HERMES_BIN`, known installer paths,
-or `PATH`. Set `TAVERN_HERMES_BIN` in the Homebrew service environment when the
-service should use a specific Hermes install.
+`runtime-assets/` carries the bundled Hermes installer snapshot and the
+Mnemosyne Python wheelhouse, so first-run engine setup needs no operator
+Python or Hermes work. Runtime resolves the Hermes CLI from
+`TAVERN_HERMES_BIN`, the managed engine at `~/.tavern/engine/<pin>/`, known
+installer paths, or `PATH`, and bootstraps the pinned engine when nothing is
+found. Set `TAVERN_HERMES_BIN` in the Homebrew service environment when the
+service should use a specific Hermes install, or
+`TAVERN_HERMES_AUTO_INSTALL=0` to forbid bootstrap.

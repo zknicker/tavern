@@ -25,9 +25,26 @@ Runtime launches:
 hermes dashboard --no-open --host 127.0.0.1 --port <TAVERN_HERMES_PORT>
 ```
 
-Runtime resolves the Hermes binary from `TAVERN_HERMES_BIN`, known install
-paths, or `PATH`. If no executable is found, startup reports a managed-Hermes
-setup error instead of spawning a missing command in a loop.
+Runtime resolves the Hermes binary in four tiers:
+
+1. `TAVERN_HERMES_BIN` (explicit operator override; fails loudly when broken).
+2. The Tavern-managed engine install at `~/.tavern/engine/<pin>/`.
+3. Existing system installs: `~/.local/bin/hermes`, Homebrew paths, then `PATH`.
+4. Bootstrap: Runtime installs the pinned engine itself using a bundled
+   snapshot of the official Hermes installer (lean flags: `--non-interactive
+   --skip-setup --no-skills --skip-browser`). The pin lives in
+   `apps/runtime/src/hermes/engine.ts`; `TAVERN_HERMES_COMMIT` or
+   `TAVERN_HERMES_BRANCH` override it. Concurrent startups share one install
+   through the `~/.tavern/engine/.install-lock` cross-process lock, and
+   installer output streams into the runtime log.
+
+`TAVERN_HERMES_AUTO_INSTALL=0` disables tier 4 and reports a managed-Hermes
+setup error instead. The dev stack sets it by default so `bun run dev` uses
+one shared system Hermes across worktrees and never downloads an engine;
+production (Homebrew service) leaves bootstrap enabled. While a bootstrap is
+running, the managed Hermes capabilities report "Tavern is setting up the
+agent engine" instead of generic unavailability. Use `tavern engine status`
+to inspect which tier resolved.
 
 Runtime sets `HERMES_DESKTOP=1` for the managed dashboard process. Hermes uses
 that flag to start the dashboard cron ticker; without it, cron jobs can be
@@ -38,14 +55,14 @@ created and manually triggered, but interval jobs do not fire on schedule.
 Normal Runtime state defaults to:
 
 ```text
-~/.tavern-hermes/runtime/
+~/.tavern/runtime/
 ```
 
 The dev stack uses worktree-isolated state:
 
 ```text
-~/.tavern-hermes/dev/<worktree-id>/tavern.sqlite
-~/.tavern-hermes/dev/<worktree-id>/runtime/
+~/.tavern/dev/<worktree-id>/tavern.sqlite
+~/.tavern/dev/<worktree-id>/runtime/
 ```
 
 The dev stack derives a stable four-port group from the worktree path:

@@ -21,8 +21,8 @@ website dev server.
 The dev stack uses worktree-isolated development state by default:
 
 ```txt
-~/.tavern-hermes/dev/<worktree-id>/tavern.sqlite
-~/.tavern-hermes/dev/<worktree-id>/runtime
+~/.tavern/dev/<worktree-id>/tavern.sqlite
+~/.tavern/dev/<worktree-id>/runtime
 ```
 
 The stack derives a stable port group from the worktree path. Website, server,
@@ -45,6 +45,12 @@ database or Runtime root.
 Set `TAVERN_HERMES_HOME`, `TAVERN_HERMES_BIN`, `TAVERN_HERMES_HOST`,
 `TAVERN_HERMES_PORT`, or `TAVERN_HERMES_TOKEN` when a dev run should use a
 specific Hermes install or dashboard process.
+
+The dev stack sets `TAVERN_HERMES_AUTO_INSTALL=0` by default: dev runs resolve
+the machine's existing Hermes install and never download a managed engine.
+Set `TAVERN_HERMES_AUTO_INSTALL=1` on a dev machine without Hermes to let
+Runtime bootstrap the pinned engine into `~/.tavern/engine/` once, shared
+across worktrees.
 
 ## Shutdown
 

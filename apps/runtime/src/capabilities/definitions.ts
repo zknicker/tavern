@@ -8,6 +8,7 @@ import type {
 } from '@tavern/api';
 import { getManagedLlmWikiPaths } from '../hermes/llm-wiki';
 import { createLocalHermesClient } from '../hermes/local-client';
+import { getManagedHermesState } from '../hermes/state';
 import { loadVaultBackedCodexCredentials } from '../model-access/codex-settings';
 import { resolveWikiConfig } from '../wiki/store';
 
@@ -201,6 +202,22 @@ async function checkManagedHermesCapability(input: {
     metadata?: Record<string, unknown>;
     unavailableReason: string;
 }): Promise<RuntimeCapabilityCheckResult> {
+    const bootstrap = getManagedHermesState().bootstrap;
+    if (bootstrap.phase === 'installing') {
+        return {
+            metadata: { ...input.metadata, bootstrap: 'installing' },
+            reason: 'Tavern is setting up the agent engine. First-time setup can take a few minutes.',
+            state: 'unavailable',
+        };
+    }
+    if (bootstrap.phase === 'failed') {
+        return {
+            metadata: { ...input.metadata, bootstrap: 'failed' },
+            reason: bootstrap.message ?? 'The agent engine could not be set up.',
+            state: 'unavailable',
+        };
+    }
+
     const client = createLocalHermesClient();
     try {
         await input.check(client);

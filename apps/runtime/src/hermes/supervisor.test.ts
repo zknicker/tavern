@@ -3,7 +3,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-describe('managed Hermes supervisor', () => {
+describe('managed Hermes binary resolution', () => {
     const originalHome = process.env.HOME;
     const originalHermesBin = process.env.TAVERN_HERMES_BIN;
     const originalPath = process.env.PATH;
@@ -30,35 +30,54 @@ describe('managed Hermes supervisor', () => {
 
     it('resolves the official installer binary outside shell PATH', async () => {
         const binaryPath = path.join(home, '.local', 'bin', 'hermes');
-        await fs.mkdir(path.dirname(binaryPath), { recursive: true });
-        await fs.writeFile(binaryPath, '#!/usr/bin/env bash\n');
-        await fs.chmod(binaryPath, 0o755);
+        await writeExecutable(binaryPath);
 
-        const { resolveHermesBinary } = await import('./supervisor');
+        const { resolveInstalledHermesBinary } = await import('./bootstrap');
 
-        expect(resolveHermesBinary()).toBe(binaryPath);
+        expect(resolveInstalledHermesBinary()).toEqual({ binaryPath, tier: 'system' });
     });
 
     it('expands a configured Hermes binary path', async () => {
         const binaryPath = path.join(home, '.hermes', 'bin', 'hermes');
-        await fs.mkdir(path.dirname(binaryPath), { recursive: true });
-        await fs.writeFile(binaryPath, '#!/usr/bin/env bash\n');
-        await fs.chmod(binaryPath, 0o755);
+        await writeExecutable(binaryPath);
         process.env.TAVERN_HERMES_BIN = '~/.hermes/bin/hermes';
         vi.resetModules();
 
-        const { resolveHermesBinary } = await import('./supervisor');
+        const { resolveInstalledHermesBinary } = await import('./bootstrap');
 
-        expect(resolveHermesBinary()).toBe(path.join(home, '.hermes', 'bin', 'hermes'));
+        expect(resolveInstalledHermesBinary()).toEqual({ binaryPath, tier: 'configured' });
     });
 
-    it('fails clearly when no Hermes binary is installed', async () => {
+    it('prefers the Tavern-managed engine install over system installs', async () => {
+        const systemBinary = path.join(home, '.local', 'bin', 'hermes');
+        await writeExecutable(systemBinary);
+
+        const engine = await import('./engine');
+        const pin = engine.resolveHermesPin();
+        const managedBinary = engine.engineBinaryPath(pin);
+        await writeExecutable(managedBinary);
+        engine.writeEngineMarker(pin, {
+            binaryPath: managedBinary,
+            installedAt: new Date().toISOString(),
+            installerSource: 'bundled-asset',
+            ref: pin.ref,
+        });
+
+        const { resolveInstalledHermesBinary } = await import('./bootstrap');
+
+        expect(resolveInstalledHermesBinary()).toEqual({
+            binaryPath: managedBinary,
+            tier: 'managed',
+        });
+    });
+
+    it('returns null when no Hermes binary is installed', async () => {
         process.env.PATH = path.join(home, 'empty-bin');
         vi.resetModules();
 
-        const { resolveHermesBinary } = await import('./supervisor');
+        const { resolveInstalledHermesBinary } = await import('./bootstrap');
 
-        expect(() => resolveHermesBinary()).toThrow(/agent engine is not installed/u);
+        expect(resolveInstalledHermesBinary()).toBeNull();
     });
 
     it('enables the Hermes dashboard cron ticker for managed launches', async () => {
@@ -68,7 +87,26 @@ describe('managed Hermes supervisor', () => {
             HERMES_DESKTOP: '1',
         });
     });
+
+    it('strips PYTHONPATH from the managed dashboard environment', async () => {
+        process.env.PYTHONPATH = '/somewhere/site-packages';
+        vi.resetModules();
+        try {
+            const { buildHermesDashboardEnv } = await import('./supervisor');
+
+            // spawn() omits env keys whose value is undefined.
+            expect(buildHermesDashboardEnv().PYTHONPATH).toBeUndefined();
+        } finally {
+            process.env.PYTHONPATH = undefined;
+        }
+    });
 });
+
+async function writeExecutable(filePath: string) {
+    await fs.mkdir(path.dirname(filePath), { recursive: true });
+    await fs.writeFile(filePath, '#!/usr/bin/env bash\n');
+    await fs.chmod(filePath, 0o755);
+}
 
 function restoreEnv(name: string, value: string | undefined) {
     if (value === undefined) {

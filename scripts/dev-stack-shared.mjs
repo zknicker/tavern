@@ -1,4 +1,5 @@
 import { spawnSync } from 'node:child_process';
+import fs from 'node:fs';
 import net from 'node:net';
 import os from 'node:os';
 import path from 'node:path';
@@ -29,6 +30,8 @@ export function createDevStackEnvironment({
     return {
         ...baseEnvironment,
         DATABASE_PATH: baseEnvironment.DATABASE_PATH ?? statePaths.databasePath,
+        // Dev stacks share one system Hermes; never download an engine per machine.
+        TAVERN_HERMES_AUTO_INSTALL: baseEnvironment.TAVERN_HERMES_AUTO_INSTALL ?? '0',
         TAVERN_HERMES_PORT: baseEnvironment.TAVERN_HERMES_PORT ?? resolvedPorts.hermesPort,
         TAVERN_RUNTIME_PORT: baseEnvironment.TAVERN_RUNTIME_PORT ?? resolvedPorts.runtimePort,
         TAVERN_RUNTIME_ROOT: baseEnvironment.TAVERN_RUNTIME_ROOT ?? statePaths.runtimeRoot,
@@ -325,12 +328,22 @@ function createDevStackStatePaths({ baseEnvironment, repositoryRoot }) {
     const stackId =
         baseEnvironment.TAVERN_DEV_STACK_ID ??
         `${path.basename(repositoryRoot)}-${hashString(repositoryRoot).slice(0, 8)}`;
-    const appStateRoot = path.join(os.homedir(), '.tavern-hermes', 'dev', stackId);
+    const appStateRoot = resolveDevStackStateRoot(stackId);
 
     return {
         databasePath: path.join(appStateRoot, 'tavern.sqlite'),
         runtimeRoot: path.join(appStateRoot, 'runtime'),
     };
+}
+
+function resolveDevStackStateRoot(stackId) {
+    const canonicalRoot = path.join(os.homedir(), '.tavern', 'dev', stackId);
+    const legacyRoot = path.join(os.homedir(), '.tavern-hermes', 'dev', stackId);
+    if (!fs.existsSync(canonicalRoot) && fs.existsSync(legacyRoot)) {
+        // Keep using existing per-stack state; move it with: mv ~/.tavern-hermes ~/.tavern
+        return legacyRoot;
+    }
+    return canonicalRoot;
 }
 
 export function getRuntimeBaseUrl(environment = process.env) {

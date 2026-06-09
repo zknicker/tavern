@@ -8,7 +8,10 @@ import { isValidTimezone } from './timezone.ts';
 
 const envConfig = readEnvFile([
     'HERMES_HOME',
+    'TAVERN_HERMES_AUTO_INSTALL',
     'TAVERN_HERMES_BIN',
+    'TAVERN_HERMES_BRANCH',
+    'TAVERN_HERMES_COMMIT',
     'TAVERN_HERMES_HOME',
     'TAVERN_HERMES_HOST',
     'TAVERN_HERMES_MODEL',
@@ -50,10 +53,23 @@ export function resolveConfiguredPath(configuredPath: string): string {
 function resolveRuntimeRoot(): string {
     const configuredRoot = process.env.TAVERN_RUNTIME_ROOT || envConfig.TAVERN_RUNTIME_ROOT;
     if (!(configuredRoot && configuredRoot.trim().length > 0)) {
-        return path.join(homeDir, '.tavern-hermes', 'runtime');
+        return resolveDefaultRuntimeRoot();
     }
 
     return resolveConfiguredPath(configuredRoot);
+}
+
+function resolveDefaultRuntimeRoot(): string {
+    const canonicalRoot = path.join(homeDir, '.tavern', 'runtime');
+    const legacyRoot = path.join(homeDir, '.tavern-hermes', 'runtime');
+    if (!fs.existsSync(path.join(homeDir, '.tavern')) && fs.existsSync(legacyRoot)) {
+        // One-line migration hint; Runtime never moves operator data itself.
+        console.warn(
+            `Tavern Runtime is using legacy state at ${legacyRoot}. Move it with: mv ~/.tavern-hermes ~/.tavern`
+        );
+        return legacyRoot;
+    }
+    return canonicalRoot;
 }
 
 export const RUNTIME_ROOT = resolveRuntimeRoot();

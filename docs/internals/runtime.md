@@ -48,8 +48,8 @@ state under the dev stack's worktree-isolated Runtime root by default.
 Key paths:
 
 ```txt
-~/.tavern-hermes/dev/<worktree-id>/runtime/data/runtime.db
-~/.tavern-hermes/dev/<worktree-id>/runtime/hermes/home/
+~/.tavern/dev/<worktree-id>/runtime/data/runtime.db
+~/.tavern/dev/<worktree-id>/runtime/hermes/home/
 ```
 
 The dev stack derives a stable port group from the worktree path and passes the
@@ -76,10 +76,10 @@ workspace when running the older generated-instructions path. It does not clear
 ## Persistence
 
 The Runtime root is the backup unit. It defaults to
-`~/.tavern-hermes/runtime` and contains Tavern's runtime chat database, Cortex,
+`~/.tavern/runtime` and contains Tavern's runtime chat database, Cortex,
 vault, managed skills, runtime settings, generated Hermes home/workspace, and
 projected Hermes execution evidence. The dev stack uses
-`~/.tavern-hermes/dev/<worktree-id>/runtime` by default.
+`~/.tavern/dev/<worktree-id>/runtime` by default.
 
 Tavern Runtime chat records are canonical. Hermes-owned execution records
 that Tavern renders, inspects, searches, or recovers are persisted in Tavern

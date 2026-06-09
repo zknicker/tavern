@@ -1,9 +1,6 @@
 import { type ChildProcess, spawn } from 'node:child_process';
-import fsSync from 'node:fs';
 import fs from 'node:fs/promises';
 import net from 'node:net';
-import os from 'node:os';
-import path from 'node:path';
 import type { AgentRuntimeCapabilityHealthId } from '@tavern/api';
 import { refreshRuntimeCapabilities } from '../capabilities/store';
 import {
@@ -11,17 +8,18 @@ import {
     HERMES_HOME,
     HERMES_ROOT,
     readConfigValue,
-    resolveConfiguredPath,
 } from '../config';
 import { log } from '../log';
 import { publishRuntimeEvent } from '../tavern/runtime-events';
-import { isManagedHermesSetupError, managedHermesSetupError } from './errors';
+import { ensureHermesBinary } from './bootstrap';
+import { isManagedHermesSetupError } from './errors';
 import { resolveManagedWikiHubPath } from './llm-wiki';
 import { buildRuntimeApiBaseUrl, createLocalHermesClient } from './local-client';
 import { prepareManagedHermesModelConfig, resolveManagedHermesModelConfig } from './model-config';
 import {
     markManagedHermesApiReady,
     markManagedHermesApiStopped,
+    markManagedHermesBootstrap,
     markManagedHermesHome,
 } from './state';
 import { ensureTavernMessengerPlugin } from './tavern-messenger-plugin';
@@ -148,16 +146,23 @@ export async function startHermesForRuntime(): Promise<ManagedHermesHandle> {
 
 async function prepareManagedHermesSetup(): Promise<string> {
     try {
-        const hermesBinary = resolveHermesBinary();
+        const resolved = await ensureHermesBinary({
+            onPhase: (phase) => {
+                markManagedHermesBootstrap(phase === 'installing' ? 'installing' : 'idle');
+                publishGatewayCapabilitiesUpdated();
+            },
+        });
         await ensureTavernMessengerPlugin();
-        await prepareManagedHermesModelConfig({ hermesBinary });
-        return hermesBinary;
+        await prepareManagedHermesModelConfig({ hermesBinary: resolved.binaryPath });
+        return resolved.binaryPath;
     } catch (err) {
+        const message = err instanceof Error ? err.message : String(err);
+        markManagedHermesBootstrap('failed', message);
         markManagedHermesApiStopped();
         publishGatewayCapabilitiesUpdated();
         log.error('Managed Hermes setup failed; cannot start dashboard', {
             setup: isManagedHermesSetupError(err),
-            hint: err instanceof Error ? err.message : String(err),
+            hint: message,
         });
         throw err;
     }
@@ -175,7 +180,7 @@ function spawnHermesDashboard(input: { command: string; host: string; port: numb
 }
 
 export function buildHermesDashboardEnv() {
-    return {
+    const env: Record<string, string | undefined> = {
         ...process.env,
         HERMES_DESKTOP: '1',
         HERMES_DASHBOARD_SESSION_TOKEN,
@@ -183,62 +188,11 @@ export function buildHermesDashboardEnv() {
         TAVERN_RUNTIME_URL: buildRuntimeApiBaseUrl(),
         TAVERN_WIKI_HUB_PATH: resolveManagedWikiHubPath(),
     };
-}
-
-export function resolveHermesBinary(): string {
-    const configured = readConfigValue('TAVERN_HERMES_BIN');
-    if (configured) {
-        const resolved = resolveConfiguredPath(configured);
-        if (!isExecutableFile(resolved)) {
-            throw managedHermesSetupError(
-                `The configured agent engine binary is not executable: ${resolved}`
-            );
-        }
-        return resolved;
-    }
-
-    const homeDir = process.env.HOME || os.homedir();
-    for (const candidate of [
-        path.join(homeDir, '.local', 'bin', 'hermes'),
-        '/opt/homebrew/bin/hermes',
-        '/usr/local/bin/hermes',
-    ]) {
-        if (isExecutableFile(candidate)) {
-            return candidate;
-        }
-    }
-
-    const pathCandidate = findExecutableOnPath('hermes');
-    if (pathCandidate) {
-        return pathCandidate;
-    }
-
-    throw managedHermesSetupError(
-        'The agent engine is not installed. Set TAVERN_HERMES_BIN to an existing engine install.'
-    );
-}
-
-function isExecutableFile(filePath: string) {
-    try {
-        fsSync.accessSync(filePath, fsSync.constants.X_OK);
-        return true;
-    } catch {
-        return false;
-    }
-}
-
-function findExecutableOnPath(binaryName: string) {
-    for (const directory of (process.env.PATH ?? '').split(path.delimiter)) {
-        if (!directory) {
-            continue;
-        }
-        const candidate = path.join(directory, binaryName);
-        if (isExecutableFile(candidate)) {
-            return candidate;
-        }
-    }
-
-    return null;
+    // The official launcher unsets PYTHONPATH before exec; mirror it because the
+    // managed engine binary is the venv executable, not the launcher wrapper.
+    // spawn() omits env keys whose value is undefined.
+    env.PYTHONPATH = undefined;
+    return env;
 }
 
 function publishGatewayCapabilitiesUpdated() {

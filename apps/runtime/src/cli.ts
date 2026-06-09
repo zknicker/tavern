@@ -40,7 +40,7 @@ export function parseCli(args: string[]): ParsedCli {
         return { command, rest };
     }
 
-    if (command === 'cortex') {
+    if (command === 'cortex' || command === 'engine') {
         return { command: 'serve', rest: [command, ...rest] };
     }
 
@@ -57,6 +57,9 @@ Usage:
   tavern cortex list [--topic <topic>] [--include-archived] [--json]
   tavern cortex get <topic> <path> [--json]
   tavern cortex search <query> [--topic <topic>] [--include-archived] [--json]
+  tavern engine status [--json]
+  tavern engine install
+  tavern engine clean [--all]
   tavern update
   tavern restart
   tavern --version
@@ -65,6 +68,7 @@ Usage:
 Commands:
   serve        Run the foreground Tavern Runtime server.
   cortex       Browse the llm-wiki hub through a running Tavern Runtime.
+  engine       Inspect, install, or clean the managed agent engine.
   update       Stage a Runtime upgrade through Homebrew without restarting the service.
   restart      Restart the Homebrew tavern-runtime service.
 

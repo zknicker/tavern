@@ -133,6 +133,12 @@ if (command === 'help') {
         console.error(err instanceof Error ? err.message : String(err));
         process.exit(1);
     });
+} else if (cli.rest[0] === 'engine') {
+    const { runEngineCli } = await import('./hermes/engine-cli');
+    runEngineCli(cli.rest.slice(1)).catch((err) => {
+        console.error(err instanceof Error ? err.message : String(err));
+        process.exit(1);
+    });
 } else {
     process.on('SIGTERM', () => {
         void shutdown('SIGTERM');
