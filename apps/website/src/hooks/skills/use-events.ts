@@ -8,7 +8,6 @@ export function useSkillEvents() {
             Promise.all([
                 utils.agent.list.invalidate(),
                 utils.agent.primary.invalidate(),
-                utils.skill.get.invalidate(),
                 utils.skill.list.invalidate(),
             ]).catch(() => undefined);
         },

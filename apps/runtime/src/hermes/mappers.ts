@@ -3,6 +3,7 @@ import type {
     AgentRuntimeSession,
     AgentRuntimeSessionMessage,
     AgentRuntimeSkillSummary,
+    AgentRuntimeToolset,
 } from '@tavern/api';
 import { HERMES_WORKSPACE } from '../config';
 import { defaultHermesAgentId } from './constants';
@@ -83,6 +84,20 @@ export function mapHermesSkill(value: unknown): AgentRuntimeSkillSummary {
         source: 'builtin',
         updatedAt: null,
         userInvocable: readBoolean(record, ['enabled']) ?? true,
+    };
+}
+
+export function mapHermesToolset(value: unknown): AgentRuntimeToolset {
+    const record = asRecord(value);
+    const name = readString(record, ['name']) ?? 'toolset';
+    return {
+        configured: readBoolean(record, ['configured']) ?? true,
+        description: readString(record, ['description']) ?? null,
+        enabled: readBoolean(record, ['enabled']) ?? false,
+        id: name,
+        label: readString(record, ['label']) ?? name,
+        name,
+        tools: readStringArray(record.tools),
     };
 }
 

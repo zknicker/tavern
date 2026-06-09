@@ -49,6 +49,19 @@ export class HermesHttp {
         return contentType.includes('application/json') ? ((await response.json()) as unknown) : {};
     }
 
+    async putJson(pathname: string, body: unknown) {
+        const response = await fetch(`${this.#baseUrl}${pathname}`, {
+            body: JSON.stringify(body),
+            headers: this.#headers(),
+            method: 'PUT',
+        });
+        if (!response.ok && response.status !== 409) {
+            throw await hermesFetchError(response);
+        }
+        const contentType = response.headers.get('content-type') ?? '';
+        return contentType.includes('application/json') ? ((await response.json()) as unknown) : {};
+    }
+
     async *streamPost(
         pathname: string,
         body: unknown,

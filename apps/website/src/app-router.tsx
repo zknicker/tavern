@@ -122,16 +122,6 @@ export function createAppRouter() {
                                     element: <Navigate replace to="/dashboard/settings/skills" />,
                                 },
                                 {
-                                    path: 'skills/:skillId',
-                                    lazy: lazyRoute(
-                                        () =>
-                                            import(
-                                                './routes/dashboard/legacy-skill-detail-redirect-page.tsx'
-                                            ),
-                                        'LegacySkillDetailRedirectPage'
-                                    ),
-                                },
-                                {
                                     path: 'events',
                                     element: <Navigate replace to="/dashboard/cortex" />,
                                 },
@@ -244,16 +234,6 @@ export function createAppRouter() {
                                             lazy: lazyRoute(
                                                 () => import('./routes/dashboard/skills-page.tsx'),
                                                 'SkillsPage'
-                                            ),
-                                        },
-                                        {
-                                            path: 'skills/:skillId',
-                                            lazy: lazyRoute(
-                                                () =>
-                                                    import(
-                                                        './routes/dashboard/skill-detail-page.tsx'
-                                                    ),
-                                                'SkillDetailPage'
                                             ),
                                         },
                                         {

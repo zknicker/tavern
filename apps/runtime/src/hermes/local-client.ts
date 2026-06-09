@@ -15,12 +15,14 @@ import {
     type AgentRuntimeSessionPreviewList,
     type AgentRuntimeSessionPrompt,
     type AgentRuntimeSessionResync,
-    type AgentRuntimeSkill,
     type AgentRuntimeSkillSummary,
+    type AgentRuntimeToolset,
     type AgentRuntimeUpdateAgentModel,
     type AgentRuntimeUpdateAgentName,
     type AgentRuntimeUpdateAgentThinkingDefault,
     type AgentRuntimeUpdateCron,
+    type AgentRuntimeUpdateSkillEnabled,
+    type AgentRuntimeUpdateToolsetEnabled,
     agentRuntimeAgentListSchema,
     agentRuntimeAgentSchema,
     agentRuntimeCronListSchema,
@@ -53,6 +55,7 @@ import {
     mapHermesMessage,
     mapHermesSession,
     mapHermesSkill,
+    mapHermesToolset,
     readArray,
     readString,
     readStringArray,
@@ -528,12 +531,45 @@ export class LocalHermesClient extends LocalHermesUnsupportedSurfaces {
         return { skills: readArray(response, ['skills', 'data', 'items']).map(mapHermesSkill) };
     }
 
-    async getSkillConfig(skillId: string): Promise<AgentRuntimeSkill> {
+    async listToolsets(): Promise<{ toolsets: AgentRuntimeToolset[] }> {
+        const response = await this.#http.get('/api/tools/toolsets');
+        return {
+            toolsets: readArray(response, ['toolsets', 'data', 'items']).map(mapHermesToolset),
+        };
+    }
+
+    async updateSkillEnabled(skillId: string, input: AgentRuntimeUpdateSkillEnabled) {
         const summary = (await this.listSkills()).skills.find((skill) => skill.id === skillId);
         if (!summary) {
             throw unsupportedHermesSurface(`Hermes skill "${skillId}"`);
         }
-        return { ...summary, contentMarkdown: '', files: [], installSource: null };
+        await this.#http.putJson('/api/skills/toggle', {
+            enabled: input.enabled,
+            name: summary.skillKey ?? summary.name,
+        });
+        return {
+            ...summary,
+            contentMarkdown: '',
+            disabled: !input.enabled,
+            files: [],
+            installSource: null,
+            userInvocable: input.enabled,
+        };
+    }
+
+    async updateToolsetEnabled(
+        toolsetId: string,
+        input: AgentRuntimeUpdateToolsetEnabled
+    ): Promise<AgentRuntimeToolset> {
+        await this.#http.putJson(`/api/tools/toolsets/${encodeURIComponent(toolsetId)}`, {
+            enabled: input.enabled,
+        });
+        const toolsets = await this.listToolsets();
+        const updated = toolsets.toolsets.find((toolset) => toolset.id === toolsetId);
+        if (!updated) {
+            throw unsupportedHermesSurface(`Hermes toolset "${toolsetId}"`);
+        }
+        return updated;
     }
 
     async getHermesConfig() {

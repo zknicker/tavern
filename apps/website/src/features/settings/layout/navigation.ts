@@ -71,7 +71,7 @@ export const settingsNavItems = [
     {
         icon: ZapIcon,
         id: 'skills',
-        label: 'Skills & Plugins',
+        label: 'Skills & Toolsets',
         to: '/dashboard/settings/skills',
     },
     {

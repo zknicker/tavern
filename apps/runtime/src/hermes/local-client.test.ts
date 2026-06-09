@@ -238,6 +238,111 @@ describe('LocalHermesClient adapter-owned state', () => {
         );
     });
 
+    it('toggles Hermes skills by runtime skill name', async () => {
+        const requests: Array<{ body: unknown; method: string; pathname: string }> = [];
+        httpServer = Bun.serve({
+            fetch: async (request) => {
+                const url = new URL(request.url);
+                if (request.method === 'GET' && url.pathname === '/api/skills') {
+                    return Response.json([
+                        {
+                            description: 'Reads pages.',
+                            enabled: true,
+                            name: 'browser',
+                        },
+                    ]);
+                }
+                if (request.method === 'PUT' && url.pathname === '/api/skills/toggle') {
+                    requests.push({
+                        body: await request.json(),
+                        method: request.method,
+                        pathname: url.pathname,
+                    });
+                    return Response.json({ enabled: false, name: 'browser', ok: true });
+                }
+                return new Response('not found', { status: 404 });
+            },
+            port: 0,
+        });
+
+        const { LocalHermesClient } = await import('./local-client');
+        const client = new LocalHermesClient({
+            baseUrl: `http://127.0.0.1:${httpServer.port}`,
+            token: null,
+        });
+
+        const updated = await client.updateSkillEnabled('browser', { enabled: false });
+
+        expect(requests).toEqual([
+            {
+                body: { enabled: false, name: 'browser' },
+                method: 'PUT',
+                pathname: '/api/skills/toggle',
+            },
+        ]);
+        expect(updated).toMatchObject({
+            disabled: true,
+            id: 'browser',
+            userInvocable: false,
+        });
+    });
+
+    it('toggles Hermes toolsets by runtime toolset name', async () => {
+        const requests: Array<{ body: unknown; method: string; pathname: string }> = [];
+        let enabled = true;
+        httpServer = Bun.serve({
+            fetch: async (request) => {
+                const url = new URL(request.url);
+                if (request.method === 'GET' && url.pathname === '/api/tools/toolsets') {
+                    return Response.json([
+                        {
+                            configured: true,
+                            description: 'Web tools.',
+                            enabled,
+                            label: 'Web',
+                            name: 'web',
+                            tools: ['search.web'],
+                        },
+                    ]);
+                }
+                if (request.method === 'PUT' && url.pathname === '/api/tools/toolsets/web') {
+                    const body = (await request.json()) as { enabled: boolean };
+                    enabled = body.enabled;
+                    requests.push({
+                        body,
+                        method: request.method,
+                        pathname: url.pathname,
+                    });
+                    return Response.json({ ok: true });
+                }
+                return new Response('not found', { status: 404 });
+            },
+            port: 0,
+        });
+
+        const { LocalHermesClient } = await import('./local-client');
+        const client = new LocalHermesClient({
+            baseUrl: `http://127.0.0.1:${httpServer.port}`,
+            token: null,
+        });
+
+        const updated = await client.updateToolsetEnabled('web', { enabled: false });
+
+        expect(requests).toEqual([
+            {
+                body: { enabled: false },
+                method: 'PUT',
+                pathname: '/api/tools/toolsets/web',
+            },
+        ]);
+        expect(updated).toMatchObject({
+            enabled: false,
+            id: 'web',
+            name: 'web',
+            tools: ['search.web'],
+        });
+    });
+
     it('persists adapter cron records for create, update, list, run, and delete', async () => {
         gatewayServer = new WebSocketServer({ host: '127.0.0.1', port: await getFreePort() });
         gatewayServer.on('connection', (socket) => {

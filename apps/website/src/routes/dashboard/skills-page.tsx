@@ -1,29 +1,33 @@
 import { AlertCircleIcon } from '@hugeicons/core-free-icons';
 import * as React from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Alert, AlertDescription } from '../../components/ui/alert.tsx';
 import { Icon } from '../../components/ui/icon.tsx';
 import { SkillsCatalog } from '../../features/skills/skills-catalog.tsx';
 import { SkillsPageSkeleton } from '../../features/skills/skills-page-skeleton.tsx';
+import { useSkillEnabledSet } from '../../hooks/skills/use-skill-enabled-set.ts';
 import { useSkillList } from '../../hooks/skills/use-skill-list.ts';
-
-const skillsBasePath = '/dashboard/settings/skills';
+import { useToolsetEnabledSet } from '../../hooks/skills/use-toolset-enabled-set.ts';
 
 export function SkillsPage() {
-    const navigate = useNavigate();
-    const [searchParams] = useSearchParams();
+    const setSkillEnabled = useSkillEnabledSet();
+    const setToolsetEnabled = useToolsetEnabledSet();
     const skillsQuery = useSkillList();
-    const plugins = skillsQuery.data?.plugins ?? [];
     const skills = skillsQuery.data?.skills ?? [];
-    const legacySkillId = searchParams.get('skill');
-
-    React.useEffect(() => {
-        if (!legacySkillId) {
-            return;
-        }
-
-        navigate(`${skillsBasePath}/${encodeURIComponent(legacySkillId)}`, { replace: true });
-    }, [legacySkillId, navigate]);
+    const toolsets = skillsQuery.data?.toolsets ?? [];
+    const savingSkillIds = React.useMemo(
+        () =>
+            setSkillEnabled.variables
+                ? new Set([setSkillEnabled.variables.skillId])
+                : new Set<string>(),
+        [setSkillEnabled.variables]
+    );
+    const savingToolsetIds = React.useMemo(
+        () =>
+            setToolsetEnabled.variables
+                ? new Set([setToolsetEnabled.variables.toolsetId])
+                : new Set<string>(),
+        [setToolsetEnabled.variables]
+    );
 
     if (skillsQuery.isPending && !skillsQuery.data) {
         return <SkillsPageSkeleton />;
@@ -32,11 +36,12 @@ export function SkillsPage() {
     return (
         <div>
             <SkillsCatalog
-                onOpenSkill={(skillId) => {
-                    navigate(`${skillsBasePath}/${encodeURIComponent(skillId)}`);
-                }}
-                plugins={plugins}
+                onSetSkillEnabled={(input) => setSkillEnabled.mutate(input)}
+                onSetToolsetEnabled={(input) => setToolsetEnabled.mutate(input)}
+                savingSkillIds={savingSkillIds}
+                savingToolsetIds={savingToolsetIds}
                 skills={skills}
+                toolsets={toolsets}
             />
 
             {skillsQuery.error ? (

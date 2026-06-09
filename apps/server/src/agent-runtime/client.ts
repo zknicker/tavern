@@ -6,7 +6,6 @@ import {
     type AgentRuntimeArchiveAgent,
     type AgentRuntimeArchiveBinding,
     type AgentRuntimeArchiveCron,
-    type AgentRuntimeArchiveSkill,
     type AgentRuntimeBinding,
     type AgentRuntimeCapabilityHealth,
     type AgentRuntimeCapabilityHealthId,
@@ -22,7 +21,6 @@ import {
     type AgentRuntimeDiscordBinding,
     type AgentRuntimeHermesConfigSnapshot,
     type AgentRuntimeHighlightList,
-    type AgentRuntimeInstallSkill,
     type AgentRuntimeJobDetail,
     type AgentRuntimeJobList,
     type AgentRuntimeJobSlug,
@@ -49,12 +47,16 @@ import {
     type AgentRuntimeSessionResync,
     type AgentRuntimeSkill,
     type AgentRuntimeSkillSummary,
+    type AgentRuntimeToolset,
+    type AgentRuntimeToolsetList,
     type AgentRuntimeUpdate,
     type AgentRuntimeUpdateAgentModel,
     type AgentRuntimeUpdateAgentName,
     type AgentRuntimeUpdateAgentThinkingDefault,
     type AgentRuntimeUpdateAgentTools,
     type AgentRuntimeUpdateCron,
+    type AgentRuntimeUpdateSkillEnabled,
+    type AgentRuntimeUpdateToolsetEnabled,
     type AgentRuntimeUpsertBinding,
     type AgentRuntimeWorkspaceInstructions,
     agentRuntimeAgentFileContentSchema,
@@ -65,7 +67,6 @@ import {
     agentRuntimeArchiveAgentSchema,
     agentRuntimeArchiveBindingSchema,
     agentRuntimeArchiveCronSchema,
-    agentRuntimeArchiveSkillSchema,
     agentRuntimeBindingListSchema,
     agentRuntimeBindingSchema,
     agentRuntimeCapabilityHealthIdSchema,
@@ -84,7 +85,6 @@ import {
     agentRuntimeErrorSchema,
     agentRuntimeHermesConfigSnapshotSchema,
     agentRuntimeHighlightListSchema,
-    agentRuntimeInstallSkillSchema,
     agentRuntimeJobDetailSchema,
     agentRuntimeJobListSchema,
     agentRuntimeJobSlugSchema,
@@ -114,12 +114,16 @@ import {
     agentRuntimeSessionResyncSchema,
     agentRuntimeSkillListSchema,
     agentRuntimeSkillSchema,
+    agentRuntimeToolsetListSchema,
+    agentRuntimeToolsetSchema,
     agentRuntimeUpdateAgentModelSchema,
     agentRuntimeUpdateAgentNameSchema,
     agentRuntimeUpdateAgentThinkingDefaultSchema,
     agentRuntimeUpdateAgentToolsSchema,
     agentRuntimeUpdateCronSchema,
     agentRuntimeUpdateSchema,
+    agentRuntimeUpdateSkillEnabledSchema,
+    agentRuntimeUpdateToolsetEnabledSchema,
     agentRuntimeUpsertBindingSchema,
     agentRuntimeWorkspaceInstructionsSchema,
     type CortexBacklinkList,
@@ -195,7 +199,6 @@ export interface TavernAgentRuntimeClient {
     ): Promise<AgentRuntimeHermesConfigSnapshot>;
     deleteOpenAiSettings(): Promise<AgentRuntimeOpenAiSettings>;
     deleteOpenRouterSettings(): Promise<AgentRuntimeOpenRouterSettings>;
-    deleteSkill(skillId: string): Promise<AgentRuntimeArchiveSkill>;
     editCortexPage(input: CortexEditPageInput): Promise<CortexEditPageResult>;
     getAgentConfig(agentId: string): Promise<AgentRuntimeAgent>;
     getAgentFile(agentId: string, path: string): Promise<AgentRuntimeAgentFileContent>;
@@ -214,10 +217,8 @@ export interface TavernAgentRuntimeClient {
     getRuntimeJob(slug: AgentRuntimeJobSlug): Promise<AgentRuntimeJobDetail | null>;
     getSessionGraph(sessionKey: string): Promise<AgentRuntimeSessionGraph>;
     getSessionPrompt(sessionKey: string): Promise<AgentRuntimeSessionPrompt | null>;
-    getSkillConfig(skillId: string): Promise<AgentRuntimeSkill>;
     getUpdateStatus(): Promise<AgentRuntimeUpdate>;
     getWorkspaceInstructions(agentId: string): Promise<AgentRuntimeRenderedWorkspaceInstructions>;
-    installSkill(input: AgentRuntimeInstallSkill): Promise<AgentRuntimeSkill>;
     listAgentFiles(agentId: string): Promise<AgentRuntimeAgentFileList>;
     listAgents(): Promise<{ agents: AgentRuntimeAgent[] }>;
     listBindings(): Promise<{ bindings: AgentRuntimeBinding[] }>;
@@ -243,6 +244,7 @@ export interface TavernAgentRuntimeClient {
     listSkills(
         options?: AgentRuntimeListSkillsOptions
     ): Promise<{ skills: AgentRuntimeSkillSummary[] }>;
+    listToolsets(): Promise<AgentRuntimeToolsetList>;
     postMessage(
         chatId: string,
         input: AgentRuntimeCreateMessage
@@ -293,6 +295,14 @@ export interface TavernAgentRuntimeClient {
         input: AgentRuntimeUpdateAgentTools
     ): Promise<AgentRuntimeHermesConfigSnapshot>;
     updateCronJob(jobId: string, input: AgentRuntimeUpdateCron): Promise<AgentRuntimeCron>;
+    updateSkillEnabled(
+        skillId: string,
+        input: AgentRuntimeUpdateSkillEnabled
+    ): Promise<AgentRuntimeSkill>;
+    updateToolsetEnabled(
+        toolsetId: string,
+        input: AgentRuntimeUpdateToolsetEnabled
+    ): Promise<AgentRuntimeToolset>;
     upsertAgent(input: AgentRuntimeCreateAgent): Promise<AgentRuntimeAgent>;
     upsertBinding(input: AgentRuntimeUpsertBinding): Promise<AgentRuntimeBinding>;
 }
@@ -1140,34 +1150,6 @@ class HttpTavernAgentRuntimeClient implements TavernAgentRuntimeClient {
         return agentRuntimeOpenRouterSettingsSchema.parse(await response.json());
     }
 
-    async installSkill(input: AgentRuntimeInstallSkill) {
-        const payload = agentRuntimeInstallSkillSchema.parse(input);
-        const response = await fetch(`${this.#baseUrl}${agentRuntimeRoutes.skillInstall}`, {
-            body: JSON.stringify(payload),
-            headers: {
-                'content-type': 'application/json',
-                [agentRuntimeMutationHeaders.origin]: agentRuntimeMutationOrigins.tavern,
-            },
-            method: 'POST',
-        });
-
-        if (!response.ok) {
-            await readErrorResponse(response);
-        }
-
-        return agentRuntimeSkillSchema.parse(await response.json());
-    }
-
-    async getSkillConfig(skillId: string) {
-        const response = await fetch(`${this.#baseUrl}${agentRuntimeRoutes.skillConfig(skillId)}`);
-
-        if (!response.ok) {
-            await readErrorResponse(response);
-        }
-
-        return agentRuntimeSkillSchema.parse(await response.json());
-    }
-
     async listSkills(options?: AgentRuntimeListSkillsOptions) {
         const url = new URL(`${this.#baseUrl}${agentRuntimeRoutes.skills}`);
         if (options?.agentId) {
@@ -1180,6 +1162,58 @@ class HttpTavernAgentRuntimeClient implements TavernAgentRuntimeClient {
         }
 
         return agentRuntimeSkillListSchema.parse(await response.json());
+    }
+
+    async listToolsets() {
+        const response = await fetch(`${this.#baseUrl}${agentRuntimeRoutes.toolsets}`);
+
+        if (!response.ok) {
+            await readErrorResponse(response);
+        }
+
+        return agentRuntimeToolsetListSchema.parse(await response.json());
+    }
+
+    async updateSkillEnabled(skillId: string, input: AgentRuntimeUpdateSkillEnabled) {
+        const payload = agentRuntimeUpdateSkillEnabledSchema.parse(input);
+        const response = await fetch(
+            `${this.#baseUrl}${agentRuntimeRoutes.skillEnabled(skillId)}`,
+            {
+                body: JSON.stringify(payload),
+                headers: {
+                    'content-type': 'application/json',
+                    [agentRuntimeMutationHeaders.origin]: agentRuntimeMutationOrigins.tavern,
+                },
+                method: 'PUT',
+            }
+        );
+
+        if (!response.ok) {
+            await readErrorResponse(response);
+        }
+
+        return agentRuntimeSkillSchema.parse(await response.json());
+    }
+
+    async updateToolsetEnabled(toolsetId: string, input: AgentRuntimeUpdateToolsetEnabled) {
+        const payload = agentRuntimeUpdateToolsetEnabledSchema.parse(input);
+        const response = await fetch(
+            `${this.#baseUrl}${agentRuntimeRoutes.toolsetEnabled(toolsetId)}`,
+            {
+                body: JSON.stringify(payload),
+                headers: {
+                    'content-type': 'application/json',
+                    [agentRuntimeMutationHeaders.origin]: agentRuntimeMutationOrigins.tavern,
+                },
+                method: 'PUT',
+            }
+        );
+
+        if (!response.ok) {
+            await readErrorResponse(response);
+        }
+
+        return agentRuntimeToolsetSchema.parse(await response.json());
     }
 
     async listMacApps(options?: { limit?: number; query?: string }) {
@@ -1200,21 +1234,6 @@ class HttpTavernAgentRuntimeClient implements TavernAgentRuntimeClient {
         }
 
         return agentRuntimeMacAppListSchema.parse(await response.json());
-    }
-
-    async deleteSkill(skillId: string) {
-        const response = await fetch(`${this.#baseUrl}${agentRuntimeRoutes.skill(skillId)}`, {
-            headers: {
-                [agentRuntimeMutationHeaders.origin]: agentRuntimeMutationOrigins.tavern,
-            },
-            method: 'DELETE',
-        });
-
-        if (!response.ok) {
-            await readErrorResponse(response);
-        }
-
-        return agentRuntimeArchiveSkillSchema.parse(await response.json());
     }
 
     async postMessage(chatId: string, input: AgentRuntimeCreateMessage) {

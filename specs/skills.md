@@ -1,55 +1,61 @@
-# Skills & Plugins
+# Skills & Toolsets
 
-Skills are reusable instruction packages that the runtime can expose to the agent.
+Skills are reusable instruction packages that Hermes can expose to the agent.
 
-The Skills & Plugins settings surface also shows runtime plugins. A plugin is not necessarily a
-Tavern skill. It is a runtime-owned package or capability that can add workflows, skills, tools,
-app access, channel behavior, or local capabilities when Tavern can verify and enable it.
+Toolsets are Hermes-owned groups of executable tools. A toolset is not a Tavern
+skill. It controls access to runtime tools such as browser, file, MCP, provider,
+or plugin-backed tool groups.
 
 ## Product Expectations
 
 - A skill has a stable identity from its source.
-- A skill contains instructions and may include supporting files such as scripts, references, or
-  assets.
-- Tavern shows skills from runtime-visible sources without owning their filesystem lifecycle.
-- A plugin has a stable product identity scoped by its runtime source.
-- Plugins appear beside skills on the Skills & Plugins settings page because both answer "what can the agent
-  do?" for users.
-- Plugin rows must be visibly distinct from skill rows. A runtime plugin, MCP server, or Codex app
-  is never labeled as a Tavern skill.
-- Product-facing skill and plugin selection applies to the agent.
-- Selecting a skill should affect only the agent's runtime access.
-- Enabling a plugin should affect only the agent's runtime config.
-- Tavern product APIs expose runtime-reported skills with source metadata. Managed Hermes
-  bundled skills are blocked from prompt eligibility by Runtime config, not by a catalog filter.
-- Tavern product APIs may expose runtime plugins as plugin records with source metadata, usability,
-  and runtime-provided diagnostic text.
-- Platform connections are not plugins. Messaging accounts and places where an agent exists, such
-  as Discord servers or channels, remain platform connections. Their route records remain bindings.
+- A skill contains instructions and may include supporting files such as scripts,
+  references, or assets.
+- Tavern shows runtime-visible skills without owning their filesystem lifecycle.
+- A toolset has a stable Hermes toolset name.
+- Toolsets appear beside skills on the Skills & Toolsets settings page because
+  both answer "what can the agent do?" for users.
+- Toolset rows must be visibly distinct from skill rows.
+- Product-facing skill and toolset selection applies to the agent.
+- Selecting a skill should affect only the agent's runtime skill access.
+- Enabling a toolset should affect only Hermes toolset enablement.
+- Tavern product APIs expose runtime-reported skills with source metadata.
+  Managed Hermes bundled skills are blocked from prompt eligibility by Runtime
+  config, not by a catalog filter.
+- Tavern product APIs expose Hermes toolsets as toolset records with configured
+  state, enabled state, tools, usability, and runtime-provided diagnostic text.
+- Plugins are source packages. They may provide tools, workflows, providers, or
+  skills, but they are not a separate product row unless Hermes exposes a
+  concrete skill or toolset for them.
+- Platform connections are not toolsets. Messaging accounts and places where an
+  agent exists, such as Discord servers or channels, remain platform
+  connections. Their route records remain bindings.
 
 ## Ownership
 
-- Tavern is canonical for the agent's Tavern-side access choices and skill secrets.
-- Hermes remains canonical for runtime eligibility, dependency checks, prompt loading, and
-  execution behavior.
-- Runtime-discovered skills remain owned by their source location. Tavern should not copy them into
-  a Tavern skill store or the Hermes workspace as part of this surface.
-- Runtime plugins remain owned by their source runtime. Tavern owns only the user's Tavern-side
-  enablement choice and the managed config needed to grant access.
-- Hermes plugins may provide skills, workflows, tools, channels, runtime behavior, or provider
-  capabilities. Tavern presents only the agent-facing pieces on the Skills & Plugins settings page.
-- Native Codex plugins remain Codex app-server capabilities. Tavern may enable supported plugins
-  through Hermes Codex harness config, but it does not copy them into a Tavern skill store or the
-  Hermes workspace.
+- Tavern is canonical for the agent's Tavern-side access choices.
+- Hermes remains canonical for runtime eligibility, dependency checks, prompt
+  loading, toolset state, and execution behavior.
+- Runtime-discovered skills remain owned by their source location. Tavern should
+  not copy them into a Tavern skill store or the Hermes workspace as part of this
+  surface.
+- Runtime toolsets remain owned by Hermes. Tavern owns only the user's
+  Tavern-side enablement request and the Runtime route that sends it to Hermes.
+- Hermes plugins may provide skills, workflows, tools, channels, runtime
+  behavior, or provider capabilities. Tavern presents only the agent-facing
+  skills and toolsets on the Skills & Toolsets settings page.
+- Native Codex plugins remain Codex app-server capabilities. Tavern does not
+  copy them into a Tavern skill store or the Hermes workspace.
 
 ## Source Model
 
-Tavern should preserve source identity instead of flattening everything into one package type.
+Tavern should preserve source identity instead of flattening everything into one
+package type.
 
 ### Skill sources
 
-Hermes loads skills from these sources, with later entries taking precedence over earlier entries
-when names conflict:
+Hermes loads skills from these sources, with later entries taking precedence over
+earlier entries when names conflict:
 
 1. `skills.load.extraDirs`
 2. bundled Hermes skills
@@ -58,107 +64,75 @@ when names conflict:
 5. `<workspace>/.agents/skills`
 6. `<workspace>/skills`
 
-Tavern should show the skill inventory Hermes reports. Tavern should not inject managed Hermes
-bundled skills into agent prompt context; Runtime owns the managed Hermes install and keeps
-bundled skills available to Hermes itself.
+Tavern should show the skill inventory Hermes reports. Tavern should not inject
+managed Hermes bundled skills into agent prompt context; Runtime owns the
+managed Hermes install and keeps bundled skills available to Hermes itself.
 
 Hermes plugin skills are a hybrid source. A plugin may list skill directories in
-`hermes.plugin.json`; those skill directories load only when the plugin is enabled and currently
-participate at low precedence. Tavern should show the owning plugin when a skill comes from a
-plugin.
+`hermes.plugin.json`; those skill directories load only when the plugin is
+enabled. Tavern should show the owning plugin when Hermes includes that source
+metadata.
 
-### Plugin sources
+### Toolset sources
 
-Hermes recognizes native plugins and compatible plugin bundles.
+Hermes reports toolsets from its runtime tool registry. Toolsets can come from
+Hermes native tools, MCP servers, providers, bridges, or plugins. Tavern should
+read the Hermes `/api/tools/toolsets` view through Runtime and should toggle a
+toolset through Hermes's toolset enablement route.
 
-- Native plugins use `hermes.plugin.json` plus a runtime module and can register tools, providers,
-  channels, hooks, commands, routes, services, and other runtime surfaces.
-- Bundle plugins use Codex, Claude, or Cursor-compatible plugin layouts such as `.codex-plugin/`,
-  `.claude-plugin/`, or `.cursor-plugin/` and are mapped into Hermes plugin capabilities.
+Hermes recognizes native plugins and compatible plugin bundles. Plugins can
+register tools, providers, channels, hooks, commands, routes, services, skills,
+and other runtime surfaces. Tavern should preserve relevant diagnostics without
+turning every loader reason into a separate product state.
 
-Hermes discovers plugins in this order, with the first matching plugin id winning:
-
-1. `plugins.load.paths`
-2. workspace plugins under `<workspace>/.hermes/<plugin-root>`
-3. global plugins under `~/.hermes/<plugin-root>`
-4. bundled plugins shipped with Hermes
-
-Plugin enablement is governed by `plugins.enabled`, `plugins.allow`, `plugins.deny`,
-`plugins.entries.<id>.enabled`, plugin slots, bundled defaults, and plugin-owned surfaces named by
-config. Tavern should preserve relevant diagnostics without turning every loader reason into a
-separate product state.
-
-Codex native plugins are a Codex harness source. Tavern should read availability from Codex
-app-server inventory when possible and project supported entries into Hermes Codex harness config.
-Codex native plugins stay Codex-owned and are not represented as Tavern skills. Any Codex-only row
-shown in Tavern must be labeled as Codex-only so users do not mistake it for an Hermes prompt
-skill.
-
-Codex Computer Use is special. Hermes's bundled `codex` plugin does not perform desktop actions
-itself. It enables Codex app-server plugin support, finds or asks Codex app-server to install or
-re-enable the configured Codex Computer Use plugin when Hermes's bridge supports that path,
-reloads MCP servers, verifies that the `computer-use` MCP server exposes tools, and then lets Codex
-own native MCP tool calls during Codex-mode turns. Tavern's UI should explain this setup path, but
-it should not present a general Codex plugin install surface. If Computer Use is required and setup
-cannot make the MCP server available, the Codex-mode turn should fail before the thread starts.
+Codex native plugins are a Codex harness source. When Hermes exposes Codex-backed
+tools through toolsets or skills, Tavern presents those concrete surfaces.
+Tavern does not merge Codex app-server skills into the Hermes skill catalog.
 
 ## Runtime Behavior
 
-- Tavern reads runtime-visible skills through the runtime's skill inventory surface.
-- Tavern should not require file materialization to show a skill or plugin in this surface.
-- When Tavern changes skill or plugin access, it should use supported runtime config paths instead
-  of writing directly into discovered source directories.
-- Hermes reports `requirements`, `missing`, `configChecks`, `eligible`, and `install`; Tavern
-  can show those as diagnostic details, but they are not separate product states.
-- Tavern Runtime launches managed Hermes with Seatbelt guardrails and generates Hermes config
-  for the managed workspace.
-- Managed Hermes config sets `skills.allowBundled` to a Tavern sentinel allowlist with no real
-  bundled skill ids so bundled skills do not appear in `<available_skills>`.
+- Tavern reads runtime-visible skills through the runtime's skill inventory
+  surface.
+- Tavern reads runtime toolsets through Runtime's managed Hermes proxy.
+- Tavern should not require file materialization to show a skill or toolset in
+  this surface.
+- When Tavern changes skill or toolset access, it should use supported runtime
+  routes instead of writing directly into discovered source directories.
+- Hermes reports `requirements`, `missing`, `configChecks`, `eligible`, and
+  `install` for skills; Tavern can show those as diagnostic details, but they
+  are not separate product states.
+- Hermes reports `enabled`, `configured`, `description`, and `tools` for
+  toolsets; Tavern can show those as diagnostic details, but they are not copied
+  into skill instructions.
+- Tavern Runtime launches managed Hermes with Seatbelt guardrails and generates
+  Hermes config for the managed workspace.
+- Managed Hermes config sets `skills.allowBundled` to a Tavern sentinel allowlist
+  with no real bundled skill ids so bundled skills do not appear in
+  `<available_skills>`.
 - Tavern does not build or manage Docker sandbox images for individual agents.
-- Setup actions execute inside managed Hermes's Seatbelt process boundary when Hermes runs
-  package-manager setup.
-- Skill environment values are stored per skill in Tavern Vault and should only be included in
-  managed runtime config when Tavern intentionally grants them.
-- A Codex harness session should receive only the native Codex plugins enabled for the acting agent
-  and supported by the installed Hermes Codex bridge.
-- Tavern reads Codex plugin availability from Codex app-server inventory when possible. Local Codex
-  config files are hints, not the final usability authority.
-- Tavern distinguishes native Codex plugin support from special runtime capabilities such as
-  Computer Use. Computer Use is configured through its runtime-specific bridge, not as a normal
-  `codexPlugins` entry.
-- `codexPlugins` entries are limited to plugin marketplaces supported by the installed Hermes
-  Codex bridge. Unsupported Codex desktop plugins remain visible as unsupported plugins when
-  Tavern can observe them.
-- Existing Codex app-server threads keep their runtime binding. After changing Codex harness plugin
-  config, the user should start a fresh chat/session before expecting new plugin state.
+- Local Codex config files are hints, not the final toolset usability authority.
+- Existing Codex app-server threads keep their runtime binding. After changing
+  Codex harness tool access, the user should start a fresh chat/session before
+  expecting new tool state.
 
 ## UI Model
 
-- The Skills list contains product-visible runtime skills.
-- The Skills & Plugins settings page contains a Plugins area for runtime-backed capabilities visible to
-  Tavern.
-- Skill provenance is shown from source metadata, such as workspace, project, personal,
-  managed/local, plugin-owned, or extra directory.
-- Plugin provenance is shown from its product source, such as Hermes, Codex, or Claude, not from
-  raw marketplace paths by default.
-- Codex-only capabilities are explicitly labeled because they execute through the Codex harness
-  rather than Hermes skill prompt injection.
-- The detail header should show the skill or plugin name and description only.
-- Agent usability lives in the detail sidebar as enabled, disabled, or not usable. Runtime
-  diagnostics can explain not usable, but they are not first-class product states.
-- Plugin detail shows enabled state, source identity, and runtime diagnostic text. It does not show
-  copied instructions unless the plugin exposes a concrete skill or workflow package to Tavern.
-- Dependency setup commands are shown only when structured skill metadata provides a setup option
-  Tavern knows how to translate. Tavern must not infer package-manager commands from a missing
-  binary name.
-- Skill secrets are managed on the skill detail page. The UI shows whether each declared
-  environment value is configured, but never reads saved secret values back from Tavern Vault.
-- Internal ids, source paths, and runtime config paths are debug details and should not be part of
-  the default hero or list presentation.
-- Native runtime details such as plugin ids, MCP server names, Codex marketplace names, and
-  generated config paths are debug details unless the user opens advanced status.
-- Marketplace, install, uninstall, and update flows are out of scope for the Skills & Plugins
-  surface.
+- The Skills tab contains product-visible runtime skills.
+- The Toolsets tab contains Hermes toolsets visible to Tavern.
+- Skill provenance is shown from source metadata, such as workspace, project,
+  personal, managed/local, plugin-owned, or extra directory.
+- Toolsets show enabled state, configured state, description, runtime diagnostic
+  text, and tool names when useful.
+- Skill and toolset rows are not clickable. The page is a catalog and enablement
+  surface, not a detail browser.
+- Agent usability lives in the row as enabled, disabled, or not usable. Runtime
+  diagnostics can explain not usable, but they are not first-class product
+  states.
+- Internal ids, source paths, runtime config paths, MCP server names, plugin ids,
+  and generated config paths are debug details unless the user opens advanced
+  status.
+- Marketplace, install, uninstall, and update flows are out of scope for the
+  Skills & Toolsets surface.
 
 ## Usability State
 
@@ -166,23 +140,26 @@ Tavern should keep the product state small:
 
 | State | Meaning |
 | --- | --- |
-| `enabled` | The user wants the agent to use the skill or plugin. |
-| `disabled` | The user does not want the agent to use the skill or plugin. |
+| `enabled` | The user wants the agent to use the skill or toolset. |
+| `disabled` | The user does not want the agent to use the skill or toolset. |
 | `not_usable` | The item is enabled, but the runtime reports that the agent cannot currently use it. |
 
-`not_usable` may include a runtime diagnostic code and message. Tavern should display useful text
-when available, but it should not own a normalized taxonomy for setup, auth, dependency, restart,
-policy, stale inventory, or marketplace failures.
+`not_usable` may include a runtime diagnostic code and message. Tavern should
+display useful text when available, but it should not own a normalized taxonomy
+for setup, auth, dependency, restart, policy, stale inventory, or marketplace
+failures.
 
 ## Failure Behavior
 
-- If Tavern cannot read runtime inventory, the page keeps the last observed records visible when
-  available and marks current usability as unknown through runtime diagnostic text.
-- Missing dependencies do not remove the item. Tavern keeps the selection visible and can show the
-  runtime's diagnostic text.
-- If a plugin is visible but unsupported by the current runtime bridge, Tavern keeps it visible
-  with runtime diagnostic text and does not present it as usable by the agent.
-- If a plugin requires app authentication, Tavern keeps the enablement visible and shows runtime
-  diagnostic text explaining why use is blocked.
-- If runtime inventory fails, Tavern surfaces the last observed plugin state with a stale or
-  unavailable diagnostic instead of inventing a product state.
+- If Tavern cannot read runtime inventory, the page keeps the last observed
+  records visible when available and marks current usability as unknown through
+  runtime diagnostic text.
+- Missing dependencies do not remove the item. Tavern keeps the selection
+  visible and can show the runtime's diagnostic text.
+- If a toolset is visible but unsupported by the current runtime bridge, Tavern
+  keeps it visible with runtime diagnostic text and does not present it as usable
+  by the agent.
+- If a toolset requires app authentication, Tavern keeps the enablement visible
+  and shows runtime diagnostic text explaining why use is blocked.
+- If runtime inventory fails, Tavern surfaces the last observed toolset state
+  with a stale or unavailable diagnostic instead of inventing a product state.

@@ -18,7 +18,7 @@ const [
     },
     { saveAgentRuntimeConnection },
     { isRuntimeSkillInventoryStale, runtimeSkillInventoryRefreshIntervalMs },
-    { getSkill, listSkills },
+    { listSkills },
 ] = await Promise.all([
     import('../src/db/bootstrap.ts'),
     import('../src/db/index.ts'),
@@ -45,7 +45,6 @@ test('skills storage stores runtime skill rows and reports content changes only'
                 allowedTools: null,
                 configChecks: [],
                 description: 'Reads pages.',
-                eligible: true,
                 id: 'browser',
                 install: [],
                 missing: { anyBins: [], bins: [], config: [], env: [], os: [] },
@@ -127,7 +126,6 @@ test('skill service ignores cached skill rows for disabled runtime connections',
     });
 
     assert.deepEqual((await listSkills()).skills, []);
-    assert.equal((await getSkill({ skillId: 'browser' })).skill, null);
 });
 
 test('skill service keeps cached skill rows for temporarily unhealthy runtimes', async () => {
@@ -161,7 +159,10 @@ test('skill service keeps cached skill rows for temporarily unhealthy runtimes',
     });
 
     assert.deepEqual(
-        (await listSkills()).skills.map((skill) => skill.id),
-        ['browser']
+        (await listSkills()).skills.map((skill) => ({
+            dependencyState: skill.dependencyState,
+            id: skill.id,
+        })),
+        [{ dependencyState: 'ready', id: 'browser' }]
     );
 });

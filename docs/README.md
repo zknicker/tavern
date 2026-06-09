@@ -65,7 +65,7 @@ manage businesses, complete knowledge work, and automate routine tasks.
 
 * **Agent chat.** Durable messages, responses, activity, artifacts, thinking
   summaries, and final replies in one timeline.
-* **Agents.** Model, tool, memory, skill, and plugin configuration for the
+* **Agents.** Model, tool, memory, skill, and toolset configuration for the
   people you actually work with in Tavern.
 * **Cortex.** A browsable linked markdown brain with pages, backlinks, files,
   citations, observations, canvas graph navigation, and agent-authored working
@@ -75,8 +75,7 @@ manage businesses, complete knowledge work, and automate routine tasks.
   maintenance health.
 * **Cron automations.** Scheduled agent work with run history, delivery targets,
   and clear follow-up state, even while the app is closed.
-* **Skills & Plugins.** Reusable instruction packages and runtime plugins from
-  Hermes, Codex, and compatible plugin bundles.
+* **Skills & Toolsets.** Reusable instruction packages and Hermes tool groups.
 * **Stats.** Usage, spend, runtime health, and operational signal without
   reading logs.
 * **Pets and rewards.** A playful layer for long-running agent work.
@@ -94,7 +93,7 @@ manage businesses, complete knowledge work, and automate routine tasks.
 | Context management | [Context management](features/context-management.md) |
 | Memory | [Memory](features/memory.md) |
 | Automations | [Automations](features/automations.md) |
-| Skills & Plugins | [Skills & Plugins](features/skills.md) |
+| Skills & Toolsets | [Skills & Toolsets](features/skills.md) |
 | Stats | [Stats](features/stats.md) |
 | Pets and rewards | [Pets and rewards](features/pets.md) |
 | TypeScript SDK + integrations | [TypeScript SDK](sdk.md) |

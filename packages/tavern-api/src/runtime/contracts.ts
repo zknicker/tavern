@@ -441,6 +441,24 @@ export const agentRuntimeSkillListSchema = z.object({
     skills: z.array(agentRuntimeSkillSummarySchema),
 });
 
+export const agentRuntimeToolsetSchema = z.object({
+    configured: z.boolean(),
+    description: z.string().nullable(),
+    enabled: z.boolean(),
+    id: z.string().trim().min(1),
+    label: z.string().trim().min(1),
+    name: z.string().trim().min(1),
+    tools: z.array(z.string().trim().min(1)).default([]),
+});
+
+export const agentRuntimeToolsetListSchema = z.object({
+    toolsets: z.array(agentRuntimeToolsetSchema),
+});
+
+export const agentRuntimeUpdateToolsetEnabledSchema = z.object({
+    enabled: z.boolean(),
+});
+
 export const agentRuntimeMacAppSchema = z.object({
     bundleId: z.string().trim().min(1).optional(),
     iconDataUrl: z.string().trim().min(1).optional(),
@@ -460,15 +478,8 @@ export const agentRuntimeSkillSchema = agentRuntimeSkillSummarySchema.extend({
     installSource: agentRuntimeSkillInstallSourceSchema.nullable(),
 });
 
-export const agentRuntimeInstallSkillSchema = z.object({
-    source: z.enum(['clawhub', 'github']).default('clawhub'),
-    spec: z.string().trim().min(1),
-    version: z.string().trim().min(1).nullable().optional(),
-});
-
-export const agentRuntimeArchiveSkillSchema = z.object({
-    archived: z.literal(true),
-    id: z.string().trim().min(1),
+export const agentRuntimeUpdateSkillEnabledSchema = z.object({
+    enabled: z.boolean(),
 });
 
 export const agentRuntimeChatBindingSchema = z.object({
@@ -2132,7 +2143,6 @@ export type AgentRuntimeAgentList = z.infer<typeof agentRuntimeAgentListSchema>;
 export type AgentRuntimeArchiveAgent = z.infer<typeof agentRuntimeArchiveAgentSchema>;
 export type AgentRuntimeArchiveBinding = z.infer<typeof agentRuntimeArchiveBindingSchema>;
 export type AgentRuntimeArchiveCron = z.infer<typeof agentRuntimeArchiveCronSchema>;
-export type AgentRuntimeArchiveSkill = z.infer<typeof agentRuntimeArchiveSkillSchema>;
 export type AgentRuntimeCapability = z.infer<typeof agentRuntimeCapabilitySchema>;
 export type AgentRuntimeCreateAgent = z.infer<typeof agentRuntimeCreateAgentSchema>;
 export type AgentRuntimeAgentFile = z.infer<typeof agentRuntimeAgentFileSchema>;
@@ -2294,11 +2304,16 @@ export type AgentRuntimeWorkspaceInstructions = z.infer<
 export type AgentRuntimeWorkspaceInstructionsUpdatedEvent = z.infer<
     typeof agentRuntimeWorkspaceInstructionsUpdatedEventSchema
 >;
-export type AgentRuntimeInstallSkill = z.infer<typeof agentRuntimeInstallSkillSchema>;
+export type AgentRuntimeUpdateSkillEnabled = z.infer<typeof agentRuntimeUpdateSkillEnabledSchema>;
 export type AgentRuntimeSkill = z.infer<typeof agentRuntimeSkillSchema>;
 export type AgentRuntimeSkillDeletedEvent = z.infer<typeof agentRuntimeSkillDeletedEventSchema>;
 export type AgentRuntimeSkillList = z.infer<typeof agentRuntimeSkillListSchema>;
 export type AgentRuntimeSkillSummary = z.infer<typeof agentRuntimeSkillSummarySchema>;
+export type AgentRuntimeToolset = z.infer<typeof agentRuntimeToolsetSchema>;
+export type AgentRuntimeToolsetList = z.infer<typeof agentRuntimeToolsetListSchema>;
+export type AgentRuntimeUpdateToolsetEnabled = z.infer<
+    typeof agentRuntimeUpdateToolsetEnabledSchema
+>;
 export type AgentRuntimeMacApp = z.infer<typeof agentRuntimeMacAppSchema>;
 export type AgentRuntimeMacAppList = z.infer<typeof agentRuntimeMacAppListSchema>;
 export type AgentRuntimeSkillUpdatedEvent = z.infer<typeof agentRuntimeSkillUpdatedEventSchema>;

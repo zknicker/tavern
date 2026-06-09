@@ -5,10 +5,9 @@ import {
     getCurrentConfiguredAgentRuntimeConnection,
 } from './configured-client.ts';
 
-export async function listAgentRuntimeSkills(
+export async function listAgentRuntimeToolsets(
     client: TavernAgentRuntimeClient | null = createConfiguredAgentRuntimeClient(),
-    runtimeId?: string | null,
-    options?: { agentId?: string }
+    runtimeId?: string | null
 ) {
     if (!client) {
         return null;
@@ -19,25 +18,17 @@ export async function listAgentRuntimeSkills(
         ? await withCapabilityStatus(
               {
                   capability: 'skills',
-                  method: 'skills.status',
+                  method: 'toolsets.status',
                   runtimeId: capabilityRuntimeId,
               },
-              async () => await client.listSkills(options)
+              async () => await client.listToolsets()
           )
-        : await client.listSkills(options);
-    return response.skills;
+        : await client.listToolsets();
+    return response.toolsets;
 }
 
-export async function listAgentRuntimeSkillIds(
-    client: TavernAgentRuntimeClient | null = createConfiguredAgentRuntimeClient(),
-    runtimeId?: string | null
-) {
-    const skills = await listAgentRuntimeSkills(client, runtimeId);
-    return skills?.map((skill) => skill.id) ?? null;
-}
-
-export async function setAgentRuntimeSkillEnabled(
-    skillId: string,
+export async function setAgentRuntimeToolsetEnabled(
+    toolsetId: string,
     input: { enabled: boolean },
     client: TavernAgentRuntimeClient | null = createConfiguredAgentRuntimeClient(),
     runtimeId?: string | null
@@ -51,10 +42,10 @@ export async function setAgentRuntimeSkillEnabled(
         ? await withCapabilityStatus(
               {
                   capability: 'skills',
-                  method: 'skills.update',
+                  method: 'toolsets.update',
                   runtimeId: capabilityRuntimeId,
               },
-              async () => await client.updateSkillEnabled(skillId, input)
+              async () => await client.updateToolsetEnabled(toolsetId, input)
           )
-        : await client.updateSkillEnabled(skillId, input);
+        : await client.updateToolsetEnabled(toolsetId, input);
 }

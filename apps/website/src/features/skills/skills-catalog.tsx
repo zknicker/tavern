@@ -5,12 +5,13 @@ import { BadgeDivider } from '../../components/ui/badge-divider.tsx';
 import { CardStack, CardStackItem } from '../../components/ui/card-stack.tsx';
 import { Icon } from '../../components/ui/icon.tsx';
 import { SearchInput } from '../../components/ui/primitives/search-input.tsx';
+import { Switch } from '../../components/ui/switch.tsx';
 import type { SkillListOutput } from '../../lib/trpc.tsx';
 import { cn } from '../../lib/utils.ts';
 import { EmptyState } from '../shell/empty-state.tsx';
 
 type SkillSummary = SkillListOutput['skills'][number];
-type PluginSummary = SkillListOutput['plugins'][number];
+type ToolsetSummary = SkillListOutput['toolsets'][number];
 type CatalogItem =
     | {
           item: SkillSummary;
@@ -18,22 +19,19 @@ type CatalogItem =
           name: string;
       }
     | {
-          item: PluginSummary;
-          kind: 'plugin';
+          item: ToolsetSummary;
+          kind: 'toolset';
           name: string;
       };
-type CatalogFilter = 'all' | 'plugins' | 'skills';
+type CatalogFilter = 'skills' | 'toolsets';
 
 const catalogFilters: Array<{
     id: CatalogFilter;
     label: string;
 }> = [
-    { id: 'all', label: 'All' },
     { id: 'skills', label: 'Skills' },
-    { id: 'plugins', label: 'Plugins' },
+    { id: 'toolsets', label: 'Toolsets' },
 ];
-
-const hiddenCatalogPluginIds = new Set(['tavern-cortex', 'tavern-workspace']);
 
 const prettyNameOverrides = new Map<string, string>([
     ['ai', 'AI'],
@@ -57,27 +55,34 @@ const prettyNameOverrides = new Map<string, string>([
 ]);
 
 export function SkillsCatalog({
-    onOpenSkill,
-    plugins,
+    onSetSkillEnabled,
+    onSetToolsetEnabled,
+    savingSkillIds = new Set(),
+    savingToolsetIds = new Set(),
     skills,
+    toolsets,
 }: {
-    onOpenSkill: (skillId: string) => void;
-    plugins: SkillListOutput['plugins'];
+    onSetSkillEnabled?: (input: { enabled: boolean; skillId: string }) => void;
+    onSetToolsetEnabled?: (input: { enabled: boolean; toolsetId: string }) => void;
+    savingSkillIds?: Set<string>;
+    savingToolsetIds?: Set<string>;
     skills: SkillListOutput['skills'];
+    toolsets: SkillListOutput['toolsets'];
 }) {
     const [search, setSearch] = React.useState('');
-    const [filter, setFilter] = React.useState<CatalogFilter>('all');
+    const [filter, setFilter] = React.useState<CatalogFilter>('skills');
     const deferredSearch = React.useDeferredValue(search);
-    const items = buildCatalogItems({ plugins, skills });
+    const items = buildCatalogItems({ skills, toolsets });
     const filteredItems = filterCatalogItemsByKind(items, filter);
     const visibleItems = filterCatalogItems(filteredItems, deferredSearch);
     const filterCounts = countCatalogFilters(items);
     const hasSearch = search.trim().length > 0;
+    const searchLabel = filter === 'toolsets' ? 'Search toolsets' : 'Search skills';
 
     return (
         <div className="grid gap-10">
             <section>
-                <BadgeDivider className="pb-4">Skills & Plugins</BadgeDivider>
+                <BadgeDivider className="pb-4">Skills & Toolsets</BadgeDivider>
                 <div className="grid gap-4">
                     <div className="flex flex-col gap-3 xl:flex-row xl:items-center">
                         <CatalogFilterTabs
@@ -86,11 +91,11 @@ export function SkillsCatalog({
                             value={filter}
                         />
                         <SearchInput
-                            aria-label="Search skills and plugins"
+                            aria-label={searchLabel}
                             className="w-full xl:ml-auto xl:max-w-xs"
                             name="skill-search"
                             onChange={(event) => setSearch(event.target.value)}
-                            placeholder="Search skills and plugins..."
+                            placeholder={`${searchLabel}...`}
                             value={search}
                         />
                     </div>
@@ -101,7 +106,10 @@ export function SkillsCatalog({
                                 <CatalogCard
                                     item={catalogItem}
                                     key={`${catalogItem.kind}:${catalogItem.item.id}`}
-                                    onOpenSkill={onOpenSkill}
+                                    onSetSkillEnabled={onSetSkillEnabled}
+                                    onSetToolsetEnabled={onSetToolsetEnabled}
+                                    savingSkillIds={savingSkillIds}
+                                    savingToolsetIds={savingToolsetIds}
                                 />
                             ))}
                         </CardStack>
@@ -110,7 +118,7 @@ export function SkillsCatalog({
                             className="py-16"
                             description={
                                 hasSearch
-                                    ? 'Try a different name, source, or description.'
+                                    ? 'Try a different name, tool, or description.'
                                     : emptyFilterDescription(filter)
                             }
                             title={hasSearch ? 'No matches' : emptyFilterTitle(filter)}
@@ -133,7 +141,7 @@ function CatalogFilterTabs({
 }) {
     return (
         <div
-            aria-label="Filter skills and plugins"
+            aria-label="Filter skills and toolsets"
             className="flex min-w-0 flex-wrap items-center gap-1 rounded-lg bg-muted/50 p-1"
             role="tablist"
         >
@@ -164,8 +172,8 @@ function CatalogFilterTabs({
 }
 
 export function buildCatalogItems(input: {
-    plugins: PluginSummary[];
     skills: SkillSummary[];
+    toolsets: ToolsetSummary[];
 }): CatalogItem[] {
     return [
         ...input.skills.map((skill) => ({
@@ -173,13 +181,11 @@ export function buildCatalogItems(input: {
             kind: 'skill' as const,
             name: formatCatalogName(skill.name),
         })),
-        ...input.plugins
-            .filter((plugin) => !hiddenCatalogPluginIds.has(plugin.id))
-            .map((plugin) => ({
-                item: plugin,
-                kind: 'plugin' as const,
-                name: formatCatalogName(plugin.name),
-            })),
+        ...input.toolsets.map((toolset) => ({
+            item: toolset,
+            kind: 'toolset' as const,
+            name: formatCatalogName(toolset.name),
+        })),
     ].sort((left, right) => left.name.localeCompare(right.name));
 }
 
@@ -197,63 +203,57 @@ export function filterCatalogItems(items: CatalogItem[], search: string) {
             catalogItem.item.description,
             catalogItem.item.diagnostic,
             catalogItem.item.id,
-            catalogItem.kind === 'skill' ? catalogItem.item.surface : null,
-            catalogItem.kind === 'plugin' ? catalogItem.item.source : null,
-            isCodexOnlyCatalogItem(catalogItem) ? 'codex only' : null,
+            catalogItem.kind === 'toolset' ? catalogItem.item.tools.join(' ') : null,
         ].some((value) => (value ?? '').toLowerCase().includes(normalizedSearch))
     );
 }
 
 function filterCatalogItemsByKind(items: CatalogItem[], filter: CatalogFilter) {
-    if (filter === 'all') {
-        return items;
-    }
-    if (filter === 'plugins') {
-        return items.filter((item) => item.kind === 'plugin');
-    }
-    return items.filter((item) => item.kind === 'skill');
+    return items.filter((item) => item.kind === (filter === 'toolsets' ? 'toolset' : 'skill'));
 }
 
 function countCatalogFilters(items: CatalogItem[]): Record<CatalogFilter, number> {
     return {
-        all: items.length,
-        plugins: items.filter((item) => item.kind === 'plugin').length,
         skills: items.filter((item) => item.kind === 'skill').length,
+        toolsets: items.filter((item) => item.kind === 'toolset').length,
     };
 }
 
 function isReadyItem(item: CatalogItem) {
     if (item.kind === 'skill') {
-        return item.item.dependencyState === 'ready';
+        return item.item.enabled && item.item.dependencyState === 'ready';
     }
-    return item.item.usability === 'enabled';
+    return item.item.enabled && item.item.usability === 'enabled';
 }
 
 function isSetupNeededItem(item: CatalogItem) {
     if (item.kind === 'skill') {
-        return item.item.dependencyState === 'missing';
+        return item.item.enabled && item.item.dependencyState === 'missing';
     }
-    return item.item.usability === 'not_usable';
+    return item.item.enabled && item.item.usability === 'not_usable';
 }
 
 function formatCatalogStatus(item: CatalogItem) {
     if (item.kind === 'skill') {
+        if (!item.item.enabled) {
+            return null;
+        }
         if (item.item.dependencyState === 'ready') {
-            return 'Ready';
+            return null;
         }
         if (item.item.dependencyState === 'unknown') {
-            return 'Checking';
+            return 'Unknown';
         }
         return (
             item.item.diagnostic ?? formatMissingRequirements(item.item.missing) ?? 'Needs setup'
         );
     }
 
-    if (item.item.usability === 'enabled') {
-        return 'Ready';
+    if (!item.item.enabled) {
+        return null;
     }
-    if (item.item.usability === 'disabled') {
-        return 'Off';
+    if (item.item.usability === 'enabled') {
+        return null;
     }
     return item.item.diagnostic ?? 'Needs setup';
 }
@@ -314,40 +314,57 @@ function formatCatalogNamePart(part: string) {
 }
 
 function emptyFilterTitle(filter: CatalogFilter) {
-    if (filter === 'plugins') {
-        return 'No plugins yet';
-    }
-    if (filter === 'skills') {
-        return 'No skills yet';
-    }
-    return 'No skills or plugins yet';
+    return filter === 'toolsets' ? 'No toolsets yet' : 'No skills yet';
 }
 
 function emptyFilterDescription(filter: CatalogFilter) {
-    if (filter === 'plugins') {
-        return 'Runtime plugin capabilities will appear here when Hermes reports them.';
+    if (filter === 'toolsets') {
+        return 'Runtime toolsets will appear here when Hermes reports them.';
     }
-    if (filter === 'skills') {
-        return 'Runtime-visible skills will appear here when Hermes reports them.';
-    }
-    return 'No runtime-visible skills or plugins were found.';
+    return 'Runtime-visible skills will appear here when Hermes reports them.';
 }
 
 function CatalogCard({
     item,
-    onOpenSkill,
+    onSetSkillEnabled,
+    onSetToolsetEnabled,
+    savingSkillIds,
+    savingToolsetIds,
 }: {
     item: CatalogItem;
-    onOpenSkill: (skillId: string) => void;
+    onSetSkillEnabled?: (input: { enabled: boolean; skillId: string }) => void;
+    onSetToolsetEnabled?: (input: { enabled: boolean; toolsetId: string }) => void;
+    savingSkillIds: Set<string>;
+    savingToolsetIds: Set<string>;
 }) {
     const isSkill = item.kind === 'skill';
-    const canOpenSkill = isSkill && item.item.surface === 'hermes';
-    const isCodexOnly = isCodexOnlyCatalogItem(item);
+    const savingSkill = isSkill && savingSkillIds.has(item.item.id);
+    const savingToolset = !isSkill && savingToolsetIds.has(item.item.id);
+    const status = formatCatalogStatus(item);
 
     return (
         <CardStackItem
-            onOpen={canOpenSkill ? () => onOpenSkill(item.item.id) : undefined}
-            openLabel={`Open ${item.name}`}
+            actions={
+                isSkill ? (
+                    <Switch
+                        aria-label={`${item.item.enabled ? 'Disable' : 'Enable'} ${item.name}`}
+                        checked={item.item.enabled}
+                        disabled={savingSkill || !onSetSkillEnabled}
+                        onCheckedChange={(checked) =>
+                            onSetSkillEnabled?.({ enabled: checked, skillId: item.item.id })
+                        }
+                    />
+                ) : (
+                    <Switch
+                        aria-label={`${item.item.enabled ? 'Disable' : 'Enable'} ${item.name}`}
+                        checked={item.item.enabled}
+                        disabled={savingToolset || !onSetToolsetEnabled}
+                        onCheckedChange={(checked) =>
+                            onSetToolsetEnabled?.({ enabled: checked, toolsetId: item.item.id })
+                        }
+                    />
+                )
+            }
         >
             <div className="flex size-7 shrink-0 items-center justify-center rounded-lg border border-border/70 bg-background text-muted-foreground">
                 <Icon className="size-4" icon={isSkill ? CubeIcon : PlugIcon} />
@@ -358,36 +375,26 @@ function CatalogCard({
                     <div className="flex min-w-0 items-center gap-2">
                         <p className="truncate font-medium text-foreground text-sm">{item.name}</p>
                         <Badge size="sm" variant="secondary">
-                            {isSkill ? 'Skill' : 'Plugin'}
+                            {isSkill ? 'Skill' : 'Toolset'}
                         </Badge>
-                        {isCodexOnly ? (
-                            <Badge size="sm" variant="info">
-                                Codex only
-                            </Badge>
-                        ) : null}
                     </div>
                     <p className="mt-1 truncate text-muted-foreground text-sm">
                         {item.item.description ?? item.item.id}
                     </p>
                 </div>
 
-                <div className="hidden shrink-0 items-center gap-3 text-muted-foreground text-sm md:flex">
-                    <Badge
-                        className="max-w-52 justify-start truncate"
-                        size="sm"
-                        variant={catalogStatusVariant(item)}
-                    >
-                        {formatCatalogStatus(item)}
-                    </Badge>
-                </div>
+                {status ? (
+                    <div className="hidden shrink-0 items-center gap-3 text-muted-foreground text-sm md:flex">
+                        <Badge
+                            className="max-w-52 justify-start truncate"
+                            size="sm"
+                            variant={catalogStatusVariant(item)}
+                        >
+                            {status}
+                        </Badge>
+                    </div>
+                ) : null}
             </div>
         </CardStackItem>
     );
-}
-
-function isCodexOnlyCatalogItem(item: CatalogItem) {
-    if (item.kind === 'skill') {
-        return item.item.surface === 'codex';
-    }
-    return item.item.source === 'Codex';
 }

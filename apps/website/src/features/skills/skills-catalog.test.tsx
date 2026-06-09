@@ -3,63 +3,31 @@ import type { SkillListOutput } from '../../lib/trpc.tsx';
 import { buildCatalogItems, filterCatalogItems, formatCatalogName } from './skills-catalog.tsx';
 
 describe('skills catalog rows', () => {
-    it('combines skills and plugins with stable type labels', () => {
+    it('combines skills and toolsets with stable type labels', () => {
         const items = buildCatalogItems({
-            plugins: [
-                createPlugin({
-                    id: 'codex',
-                    name: 'Codex',
-                    source: 'Codex',
-                }),
-            ],
             skills: [
                 createSkill({
                     id: 'browser',
                     name: 'Browser',
                 }),
             ],
+            toolsets: [
+                createToolset({
+                    id: 'web',
+                    name: 'Web',
+                    tools: ['browser.open'],
+                }),
+            ],
         });
 
         expect(items.map((item) => `${item.kind}:${item.item.id}`)).toEqual([
             'skill:browser',
-            'plugin:codex',
+            'toolset:web',
         ]);
     });
 
-    it('hides internal Tavern runtime plugins from the catalog', () => {
+    it('filters by toolset tools and skill description', () => {
         const items = buildCatalogItems({
-            plugins: [
-                createPlugin({
-                    id: 'codex',
-                    name: 'Codex',
-                    source: 'Codex',
-                }),
-                createPlugin({
-                    id: 'tavern-cortex',
-                    name: 'Tavern Cortex',
-                    source: 'Hermes',
-                }),
-                createPlugin({
-                    id: 'tavern-workspace',
-                    name: 'Tavern Workspace',
-                    source: 'Hermes',
-                }),
-            ],
-            skills: [],
-        });
-
-        expect(items.map((item) => item.item.id)).toEqual(['codex']);
-    });
-
-    it('filters by plugin source and skill description', () => {
-        const items = buildCatalogItems({
-            plugins: [
-                createPlugin({
-                    id: 'codex',
-                    name: 'Codex',
-                    source: 'Codex',
-                }),
-            ],
             skills: [
                 createSkill({
                     description: 'Reads files and pages.',
@@ -67,15 +35,23 @@ describe('skills catalog rows', () => {
                     name: 'Browser',
                 }),
             ],
+            toolsets: [
+                createToolset({
+                    id: 'web',
+                    name: 'Web',
+                    tools: ['search.web'],
+                }),
+            ],
         });
 
-        expect(filterCatalogItems(items, 'codex').map((item) => item.item.id)).toEqual(['codex']);
+        expect(filterCatalogItems(items, 'search.web').map((item) => item.item.id)).toEqual([
+            'web',
+        ]);
         expect(filterCatalogItems(items, 'pages').map((item) => item.item.id)).toEqual(['browser']);
     });
 
     it('filters by setup diagnostic text', () => {
         const items = buildCatalogItems({
-            plugins: [],
             skills: [
                 createSkill({
                     dependencyState: 'missing',
@@ -85,6 +61,7 @@ describe('skills catalog rows', () => {
                     usability: 'not_usable',
                 }),
             ],
+            toolsets: [],
         });
 
         expect(filterCatalogItems(items, 'bin op').map((item) => item.item.id)).toEqual([
@@ -94,17 +71,16 @@ describe('skills catalog rows', () => {
 
     it('formats catalog names for display and search', () => {
         const items = buildCatalogItems({
-            plugins: [
-                createPlugin({
-                    id: 'openai',
-                    name: 'openai',
-                    source: 'Hermes',
-                }),
-            ],
             skills: [
                 createSkill({
                     id: 'linear-cli',
                     name: 'linear-cli',
+                }),
+            ],
+            toolsets: [
+                createToolset({
+                    id: 'openai',
+                    name: 'openai',
                 }),
             ],
         });
@@ -115,30 +91,6 @@ describe('skills catalog rows', () => {
         expect(items.map((item) => item.name)).toEqual(['Linear CLI', 'OpenAI']);
         expect(filterCatalogItems(items, 'Linear CLI').map((item) => item.item.id)).toEqual([
             'linear-cli',
-        ]);
-    });
-
-    it('filters Codex-only catalog items by runtime surface label', () => {
-        const items = buildCatalogItems({
-            plugins: [
-                createPlugin({
-                    id: 'codex',
-                    name: 'Codex',
-                    source: 'Codex',
-                }),
-            ],
-            skills: [
-                createSkill({
-                    id: 'git',
-                    name: 'git',
-                    surface: 'codex',
-                }),
-            ],
-        });
-
-        expect(filterCatalogItems(items, 'codex only').map((item) => item.item.id)).toEqual([
-            'codex',
-            'git',
         ]);
     });
 });
@@ -156,6 +108,7 @@ function createSkill(
         dependencyState: 'ready',
         description: null,
         diagnostic: null,
+        enabled: true,
         missing: {
             anyBins: [],
             bins: [],
@@ -173,23 +126,22 @@ function createSkill(
     };
 }
 
-function createPlugin(
-    input: Partial<SkillListOutput['plugins'][number]> & {
+function createToolset(
+    input: Partial<SkillListOutput['toolsets'][number]> & {
         id: string;
         name: string;
-        source: string;
     }
-): SkillListOutput['plugins'][number] {
-    const { id, name, source, ...rest } = input;
+): SkillListOutput['toolsets'][number] {
+    const { id, name, ...rest } = input;
 
     return {
+        configured: true,
         description: null,
         diagnostic: null,
         enabled: true,
         id,
         name,
-        source,
-        updatedAt: null,
+        tools: [],
         usability: 'enabled',
         ...rest,
     };

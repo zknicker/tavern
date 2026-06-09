@@ -100,7 +100,6 @@ export type SessionMetadataOutput = SessionOutput['session'];
 export type SessionToolOutput = RouterOutput['session']['tool']['get'];
 export type SkillListOutput = RouterOutput['skill']['list'];
 export type SkillRuntimeListOutput = RouterOutput['skill']['runtimeList'];
-export type SkillGetOutput = RouterOutput['skill']['get'];
 export type SubAgentListOutput = RouterOutput['subAgent']['list'];
 export type WorkerListOutput = RouterOutput['worker']['list'];
 

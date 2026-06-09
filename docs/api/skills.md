@@ -1,75 +1,68 @@
 ---
-summary: Skills & Plugins API for skill inspection, runtime plugin usability, setup requirements, and secret bindings.
+summary: Skills & Toolsets API for skill catalog reads, skill enablement, runtime toolset enablement, and setup blocker metadata.
 read_when:
-  - changing skill inspection, secret, setup, runtime plugin, or agent access APIs
-  - changing how clients inspect reusable runtime abilities and runtime access
+  - changing skill catalog, setup blocker, runtime toolset, or agent access APIs
+  - changing how clients list reusable runtime abilities and runtime tool access
 ---
 
-# Skills & Plugins API
+# Skills & Toolsets API
 
-The Skills & Plugins API backs the Skills & Plugins settings page. It exposes reusable
-instruction packages and the runtime plugins an agent can use.
+The Skills & Toolsets API backs the Skills & Toolsets settings page. It exposes
+the runtime-visible instruction packages and tool groups configured in the
+managed Hermes instance.
 
-Skills are inspectable runtime-visible instruction packages with setup metadata,
-secrets, source state, and readiness.
+Skills are runtime instruction packages with setup blocker metadata and
+enablement state.
 
-Plugins are runtime-backed capabilities such as Hermes plugins, native Codex
-plugins, Computer Use, and compatible workflow plugins. They are not skill rows
-unless the runtime exposes them as skills with instructions.
+Toolsets are Hermes-owned groups of tools. They control which runtime tool
+groups are enabled for new sessions. A toolset is not a skill row unless Hermes
+also exposes a concrete skill for it.
 
 ## Contract
 
-* Skill ids are stable within their runtime source.
-* Users can inspect the instructions an agent receives.
-* Secret requirements are declared without exposing secret values.
+* Skill ids are stable within the runtime source.
 * Setup requirements and source state are visible.
-* A skill can be visible without being ready.
-* Skill rows include a runtime surface so clients can distinguish Hermes
-  skills from Codex-only harness skills.
-* Plugin ids are stable within their source runtime and include source metadata.
-* Plugin usability separates the user's enablement choice from whether the
-  runtime currently reports the plugin as usable.
-* Runtime plugin details are exposed as metadata for diagnostics, not as the
-  primary product model.
+* A skill can be visible while Runtime reports setup blockers.
+* Toolset ids are stable Hermes toolset names.
+* Toolset enablement separates the user's choice from whether Hermes reports the
+  toolset as configured and usable.
+* Runtime toolset details are exposed as metadata for diagnostics, not as copied
+  Tavern skill instructions.
 
 ## Surface
 
 The API covers:
 
 * list visible skills
-* get a skill
-* distinguish Hermes and Codex-only runtime surfaces
+* enable or disable runtime-managed Hermes skills
 * read setup requirements
-* read and update secret bindings
-* list runtime plugins visible to Tavern
-* enable or disable a supported plugin for the agent
+* list Hermes toolsets visible to Tavern
+* enable or disable a Hermes toolset
 * read runtime-provided usability and diagnostic text
 
 ## Runtime Boundary
 
-Tavern owns skill secrets. The runtime owns skill and plugin discovery,
-eligibility, and execution.
+Hermes owns skill discovery, toolset discovery, eligibility, dependency checks,
+prompt loading, and execution.
 
 Skill list reads return the latest Runtime SQLite skill inventory snapshot.
 Runtime refreshes that snapshot on startup, every 15 minutes, and after
-skill-related writes. The refresh job emits the skill update event only when
-the stored inventory changes, so the app can refetch without blocking settings
+skill-related writes. The refresh job emits the skill update event only when the
+stored inventory changes, so the app can refetch without blocking settings
 navigation on live Hermes discovery.
 
 Managed Hermes bundled skills stay available to Hermes itself, but Tavern
 configures `skills.allowBundled` to a Tavern sentinel allowlist with no real
 bundled skill ids, so bundled skills are not eligible for agent prompt
-injection. The Skills & Plugins API hides skills Hermes reports as blocked by
+injection. The Skills & Toolsets API hides skills Hermes reports as blocked by
 runtime allowlist policy.
 
-Plugins remain runtime-owned. Tavern stores the user's enablement choice and
-projects supported plugin config into managed runtime config. For native Codex
-skills and plugins, Tavern reads Codex app-server inventory and Hermes Codex
-harness config rather than copying code into the Tavern skill store. Codex-only
-capabilities remain labeled as Codex-only in client inventory.
+Toolsets remain Hermes-owned. Tavern reads them from Hermes and sends supported
+enablement changes back through Runtime. Codex app-server skills are not merged
+into the Tavern skill catalog.
 
 ## Related Docs
 
-* [Skills & Plugins feature](../features/skills.md)
+* [Skills & Toolsets feature](../features/skills.md)
 * [Agents API](agents.md)
 * [API overview](overview.md)

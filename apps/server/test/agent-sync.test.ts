@@ -25,14 +25,8 @@ function createAgentRuntimeClient(
         deleteCronJob: async () => {
             throw new Error('not used');
         },
-        deleteSkill: async () => {
-            throw new Error('not used');
-        },
         getAgentConfig: async (agentId) => byId.get(agentId) ?? null!,
         getCronJob: async () => {
-            throw new Error('not used');
-        },
-        getSkillConfig: async () => {
             throw new Error('not used');
         },
         getStatus: async () => {
@@ -69,9 +63,6 @@ function createAgentRuntimeClient(
             throw new Error('not used');
         },
         upsertAgent: async () => {
-            throw new Error('not used');
-        },
-        installSkill: async () => {
             throw new Error('not used');
         },
     };

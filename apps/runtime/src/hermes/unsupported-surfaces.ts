@@ -6,7 +6,6 @@ import type {
     AgentRuntimeArchiveAgent,
     AgentRuntimeArchiveBinding,
     AgentRuntimeArchiveCron,
-    AgentRuntimeArchiveSkill,
     AgentRuntimeBinding,
     AgentRuntimeChat,
     AgentRuntimeCreateAgent,
@@ -16,7 +15,6 @@ import type {
     AgentRuntimeCronList,
     AgentRuntimeCronRun,
     AgentRuntimeHermesConfigSnapshot,
-    AgentRuntimeInstallSkill,
     AgentRuntimeMessageAccepted,
     AgentRuntimeModelAccess,
     AgentRuntimeOpenRouterSettings,
@@ -127,14 +125,6 @@ export class LocalHermesUnsupportedSurfaces {
         _input: AgentRuntimeApplyHermesConfig
     ): Promise<AgentRuntimeHermesConfigSnapshot> {
         throw unsupportedHermesSurface('Hermes raw config mutation');
-    }
-
-    async installSkill(_input: AgentRuntimeInstallSkill) {
-        throw unsupportedHermesSurface('Hermes skill install');
-    }
-
-    async deleteSkill(skillId: string): Promise<AgentRuntimeArchiveSkill> {
-        return { archived: true, id: skillId };
     }
 
     async listBindings(): Promise<{ bindings: AgentRuntimeBinding[] }> {

@@ -1,5 +1,4 @@
 import { type AgentRuntimeCreateMessage, agentRuntimeRoutes } from '@tavern/api';
-import { listCodexAppServerSkills, mergeHermesAndCodexSkills } from '../codex-app-server/skills';
 import { unsupportedHermesSurface } from '../hermes/errors';
 import { createLocalHermesClient } from '../hermes/local-client';
 import { sendTavernChannelMessage } from './channel-relay';
@@ -82,6 +81,9 @@ async function dispatch(context: RouteContext) {
     if (url.pathname.startsWith('/skills')) {
         return await dispatchSkills(context, segments);
     }
+    if (url.pathname.startsWith('/toolsets')) {
+        return await dispatchToolsets(context, segments);
+    }
     if (url.pathname.startsWith('/hermes/chats') || url.pathname.startsWith('/bindings')) {
         return await dispatchChats(context, segments);
     }
@@ -143,26 +145,28 @@ async function dispatchModels({ client, request, url }: RouteContext) {
 async function dispatchSkills({ client, request, url }: RouteContext, segments: string[]) {
     if (request.method === 'GET' && url.pathname === agentRuntimeRoutes.skills) {
         const agentId = url.searchParams.get('agentId');
-        const [hermesSkills, codexSkills] = await Promise.all([
-            client.listSkills(agentId ? { agentId } : undefined),
-            listCodexAppServerSkills().catch(() => []),
-        ]);
-        return {
-            skills: mergeHermesAndCodexSkills(hermesSkills.skills, codexSkills),
-        };
-    }
-    if (request.method === 'POST' && url.pathname === agentRuntimeRoutes.skillInstall) {
-        return await client.installSkill(await readJson(request));
+        return await client.listSkills(agentId ? { agentId } : undefined);
     }
     const skillId = segments[1];
     if (!skillId) {
         return undefined;
     }
-    if (request.method === 'GET' && segments[2] === 'config') {
-        return await client.getSkillConfig(skillId);
+    if (request.method === 'PUT' && segments[2] === 'enabled') {
+        return await client.updateSkillEnabled(skillId, await readJson(request));
     }
-    if (request.method === 'DELETE' && segments.length === 2) {
-        return await client.deleteSkill(skillId);
+    return undefined;
+}
+
+async function dispatchToolsets({ client, request, url }: RouteContext, segments: string[]) {
+    if (request.method === 'GET' && url.pathname === agentRuntimeRoutes.toolsets) {
+        return await client.listToolsets();
+    }
+    const toolsetId = segments[1];
+    if (!toolsetId) {
+        return undefined;
+    }
+    if (request.method === 'PUT' && segments[2] === 'enabled') {
+        return await client.updateToolsetEnabled(toolsetId, await readJson(request));
     }
     return undefined;
 }
