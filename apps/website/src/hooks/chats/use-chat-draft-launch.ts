@@ -1,13 +1,16 @@
 import { useNavigate } from 'react-router-dom';
 import { buildNewChatDraftPath } from '../../features/chats/chat-path.ts';
 import { markChatTiming } from '../../lib/chat-timing.ts';
+import type { ChatMessageAttachmentInput } from '../../lib/trpc.tsx';
 import { useChatStartDrafts } from './use-chat-start-drafts.tsx';
 import { useChatTimelineStore } from './use-chat-timeline-store.tsx';
 
 interface LaunchChatDraftInput {
     agentId: string;
+    attachments?: ChatMessageAttachmentInput[];
     content: string;
     metadata?: Record<string, unknown>;
+    modelRef?: string;
 }
 
 interface ChatDraftRouteState {
@@ -25,6 +28,7 @@ export function useChatDraftLaunch() {
         markChatTiming('draft.created', { draftChatId: draft.id });
 
         timeline.addMessage({
+            attachments: draft.attachments,
             chatId: draft.id,
             content: draft.content,
             id: draft.clientMessageId,

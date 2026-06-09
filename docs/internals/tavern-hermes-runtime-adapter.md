@@ -16,6 +16,25 @@ and then runs a managed Hermes turn. Hermes owns the native session, tools,
 model provider calls, files, and transcript. Tavern owns durable chat messages,
 responses, response activity, deliveries, events, and presentation settings.
 
+Tavern follows the Hermes Desktop app as the north-star for managed Hermes chat
+behavior. The app composer remains Tavern-owned and compositional, but Runtime
+maps its controls onto managed Hermes surfaces:
+
+* file and image attachments are staged through Hermes Dashboard/Gateway
+  attachment APIs such as `file.attach`, `image.attach`, or `image.attach_bytes`
+  before `prompt.submit`
+* the agent-facing prompt includes Hermes-readable context refs such as
+  `@file:`, `@folder:`, `@url:`, and `@image:` after attachment staging
+* model inventory and default model selection come from managed Hermes config
+  and model APIs
+* session-scoped model changes use the same Hermes session model command path
+  the Desktop app uses, then Tavern records the selected model on the message or
+  response metadata
+* active-turn queueing is Tavern App state until the queued draft is dispatched
+  through Runtime
+* stopping an active turn calls the Desktop parity Gateway method
+  `session.interrupt` for the active managed Hermes session
+
 There is no standalone first-party Hermes plugin package in this worktree. The
 adapter is Runtime code, and Runtime writes the managed Tavern Messenger
 platform plugin into the managed Hermes home during startup:
@@ -39,11 +58,17 @@ Accepted Tavern messages are durable before model work starts.
    `sessionKey`.
 2. Runtime creates the Tavern user message.
 3. Runtime creates a running `chat_response` for the agent.
-4. Runtime starts `runHermesTurn(...)` with the existing `chatId`,
-   `requestMessageId`, `responseId`, `runId`, and `sessionKey`.
-5. Hermes streams turn events through Runtime.
-6. Runtime upserts durable response activity while work runs.
-7. Runtime creates the final assistant delivery and marks the response
+4. Runtime stages any message attachments into the managed Hermes session and
+   resolves Hermes-readable context refs. Tavern message records carry
+   attachment arrays.
+5. Runtime applies any session-scoped model choice through `slash.exec` with the
+   Hermes `/model` command.
+6. Runtime starts `runHermesTurn(...)` with the existing `chatId`,
+   `requestMessageId`, `responseId`, `runId`, `sessionKey`, resolved prompt
+   text, attachment metadata, and model metadata.
+7. Hermes streams turn events through Runtime.
+8. Runtime upserts durable response activity while work runs.
+9. Runtime creates the final assistant delivery and marks the response
    completed, or marks it failed.
 
 Duplicate ids and nonces reconcile through the normal Chat API. Runtime must not

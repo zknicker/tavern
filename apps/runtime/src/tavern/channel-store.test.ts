@@ -65,13 +65,15 @@ describe('Tavern channel store', () => {
 
     it('includes durable message attachments in inbound frames', () => {
         const persisted = persistMessage({
-            attachment: {
-                filename: 'notes.txt',
-                mediaType: 'text/plain',
-                path: '/tmp/notes.txt',
-                sizeBytes: 14,
-                type: 'file',
-            },
+            attachments: [
+                {
+                    filename: 'notes.txt',
+                    mediaType: 'text/plain',
+                    path: '/tmp/notes.txt',
+                    sizeBytes: 14,
+                    type: 'file',
+                },
+            ],
             id: 'msg_1',
             nonce: 'nonce-1',
             text: 'see attached',
@@ -382,7 +384,7 @@ describe('Tavern channel store', () => {
 });
 
 function persistMessage(input: {
-    attachment?: Record<string, unknown>;
+    attachments?: Record<string, unknown>[];
     id: string;
     nonce: string;
     text: string;
@@ -397,7 +399,7 @@ function persistMessage(input: {
                 sessionKey: 'session-1',
             },
         },
-        attachment: input.attachment,
+        attachments: input.attachments,
         content: input.text,
         nonce: input.nonce,
         role: 'user',

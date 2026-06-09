@@ -1,0 +1,141 @@
+import { Cancel01Icon } from '@hugeicons-pro/core-stroke-rounded';
+import { Icon } from '../../components/ui/icon.tsx';
+import type { ChatMessageAttachmentInput } from '../../lib/trpc.tsx';
+
+export type ChatComposerInlineAttachment = Extract<ChatMessageAttachmentInput, { type: 'inline' }>;
+
+export type ChatComposerAttachment = ChatMessageAttachmentInput;
+
+export async function readComposerAttachment(file: File): Promise<ChatComposerAttachment> {
+    const dataUrl = await readFileAsDataUrl(file);
+    const separator = dataUrl.indexOf(',');
+
+    if (separator < 0) {
+        throw new Error(`Could not read ${file.name}.`);
+    }
+
+    return {
+        dataBase64: dataUrl.slice(separator + 1),
+        filename: file.name,
+        mediaType: file.type || 'application/octet-stream',
+        sizeBytes: file.size,
+        type: 'inline',
+    };
+}
+
+export function ChatComposerAttachmentList({
+    attachments,
+    onRemove,
+}: {
+    attachments: readonly ChatComposerAttachment[];
+    onRemove: (index: number) => void;
+}) {
+    if (attachments.length === 0) {
+        return null;
+    }
+
+    return (
+        <div className="mx-1 mb-2 flex flex-wrap items-start gap-2">
+            {attachments.map((attachment, index) => (
+                <ChatComposerAttachmentPreview
+                    attachment={attachment}
+                    key={attachmentKey(attachment)}
+                    onRemove={() => onRemove(index)}
+                />
+            ))}
+        </div>
+    );
+}
+
+function ChatComposerAttachmentPreview({
+    attachment,
+    onRemove,
+}: {
+    attachment: ChatComposerAttachment;
+    onRemove: () => void;
+}) {
+    const isImage = attachment.type === 'inline' && attachment.mediaType.startsWith('image/');
+
+    return (
+        <div
+            className="group/tile relative size-20 shrink-0 cursor-default overflow-hidden rounded-xl border border-input bg-background shadow-xs"
+            title={`${attachment.filename} - ${attachmentDetail(attachment)}`}
+        >
+            {isImage ? (
+                <img
+                    alt=""
+                    className="size-full object-cover"
+                    height={80}
+                    src={`data:${attachment.mediaType};base64,${attachment.dataBase64}`}
+                    width={80}
+                />
+            ) : (
+                <div className="grid size-full place-items-center bg-muted/35 text-muted-foreground text-xs">
+                    {fileExtension(attachment.filename)}
+                </div>
+            )}
+            <button
+                aria-label={`Remove ${attachment.filename}`}
+                className="absolute top-1 right-1 flex size-5 cursor-pointer items-center justify-center rounded-full bg-neutral-900 text-white opacity-0 outline-none transition-opacity duration-80 hover:bg-neutral-900 focus-visible:opacity-100 focus-visible:ring-1 focus-visible:ring-ring group-hover/tile:opacity-100"
+                onClick={(event) => {
+                    event.stopPropagation();
+                    onRemove();
+                }}
+                type="button"
+            >
+                <Icon className="size-3" icon={Cancel01Icon} />
+            </button>
+        </div>
+    );
+}
+
+function attachmentKey(attachment: ChatComposerAttachment) {
+    if (attachment.type === 'inline') {
+        return `${attachment.type}:${attachment.filename}:${attachment.sizeBytes}:${attachment.dataBase64.slice(0, 24)}`;
+    }
+
+    return `${attachment.type}:${attachment.filename}:${attachment.path}`;
+}
+
+function attachmentDetail(attachment: ChatComposerAttachment) {
+    if (attachment.type === 'inline') {
+        return formatBytes(attachment.sizeBytes);
+    }
+
+    return attachment.sizeBytes === null || attachment.sizeBytes === undefined
+        ? (attachment.path ?? 'File')
+        : formatBytes(attachment.sizeBytes);
+}
+
+function readFileAsDataUrl(file: File) {
+    return new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onerror = () => reject(new Error(`Could not read ${file.name}.`));
+        reader.onload = () => {
+            if (typeof reader.result === 'string') {
+                resolve(reader.result);
+                return;
+            }
+
+            reject(new Error(`Could not read ${file.name}.`));
+        };
+        reader.readAsDataURL(file);
+    });
+}
+
+function fileExtension(filename: string) {
+    const extension = filename.split('.').pop()?.trim().slice(0, 4).toUpperCase();
+    return extension || 'FILE';
+}
+
+function formatBytes(value: number) {
+    if (value < 1024) {
+        return `${value} B`;
+    }
+
+    if (value < 1024 * 1024) {
+        return `${(value / 1024).toFixed(1)} KB`;
+    }
+
+    return `${(value / 1024 / 1024).toFixed(1)} MB`;
+}

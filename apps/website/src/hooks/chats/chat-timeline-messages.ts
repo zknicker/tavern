@@ -9,6 +9,7 @@ type ChatLogInput = Omit<ChatLogPage, 'activeReply' | 'failedTurn'> &
 type ChatMessageRow = Extract<ChatLogRow, { kind: 'message' }>;
 
 export interface ChatTimelineMessage {
+    attachments?: ChatMessageRow['message']['attachments'];
     content: string;
     id: string;
     metadata?: Record<string, unknown>;
@@ -91,6 +92,7 @@ function canConnectSessionRail(currentRow: ChatLogRow, adjacentRow: ChatLogRow |
 }
 
 function buildUserMessageRow(input: {
+    attachments?: ChatMessageRow['message']['attachments'];
     content: string;
     id: string;
     metadata?: Record<string, unknown>;
@@ -108,6 +110,7 @@ function buildUserMessageRow(input: {
         kind: 'message',
         message: {
             actor: null,
+            attachments: input.attachments,
             content: input.content,
             id: input.id,
             metadata: input.metadata,

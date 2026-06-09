@@ -1,6 +1,6 @@
 import * as z from 'zod';
 
-import { agentRuntimeModelProviderIdSchema } from './model-providers.js';
+import { agentRuntimeModelProviderIdSchema } from './model-providers.ts';
 
 export const agentRuntimeProtocolVersion = 1 as const;
 
@@ -1248,14 +1248,24 @@ export const chatTargetSchema = z.object({
 
 export const agentRuntimeCreateMessageSchema = z.object({
     agent: agentRuntimeAgentBindingSchema,
-    message: z.object({
-        content: z.string().trim().min(1),
-        id: z.string().trim().min(1),
-        metadata: agentRuntimeMessageMetadataSchema.optional(),
-        nonce: z.string().trim().min(1).optional(),
-        parentMessageId: z.string().trim().min(1).nullable().optional(),
-        threadRootId: z.string().trim().min(1).nullable().optional(),
-    }),
+    message: z
+        .object({
+            attachments: z.array(agentRuntimeSessionMessageAttachmentSchema).optional(),
+            content: z.string().trim(),
+            id: z.string().trim().min(1),
+            metadata: agentRuntimeMessageMetadataSchema.optional(),
+            modelRef: z.string().trim().min(1).optional(),
+            nonce: z.string().trim().min(1).optional(),
+            parentMessageId: z.string().trim().min(1).nullable().optional(),
+            threadRootId: z.string().trim().min(1).nullable().optional(),
+        })
+        .refine(
+            (message) => message.content.trim().length > 0 || Boolean(message.attachments?.length),
+            {
+                message: 'A runtime message requires text or attachments.',
+                path: ['content'],
+            }
+        ),
     target: chatTargetSchema,
 });
 
@@ -1268,6 +1278,15 @@ export const agentRuntimeMessageAcceptedSchema = z.object({
     sequence: z.number().int().positive().optional(),
     sessionKey: z.string().trim().min(1).nullable(),
     status: z.literal('accepted'),
+});
+
+export const agentRuntimeStopTurnSchema = z.object({
+    runId: z.string().trim().min(1),
+});
+
+export const agentRuntimeStopTurnResultSchema = z.object({
+    runId: z.string().trim().min(1),
+    stopped: z.boolean(),
 });
 
 export const tavernChannelConversationSchema = z.object({
@@ -1734,6 +1753,8 @@ export type AgentRuntimeSessionUpdatedEvent = z.infer<typeof agentRuntimeSession
 export type AgentRuntimeThinkingLevel = z.infer<typeof agentRuntimeThinkingLevelSchema>;
 export type AgentRuntimeCreateMessage = z.infer<typeof agentRuntimeCreateMessageSchema>;
 export type AgentRuntimeMessageAccepted = z.infer<typeof agentRuntimeMessageAcceptedSchema>;
+export type AgentRuntimeStopTurn = z.infer<typeof agentRuntimeStopTurnSchema>;
+export type AgentRuntimeStopTurnResult = z.infer<typeof agentRuntimeStopTurnResultSchema>;
 export type TavernChannelConversation = z.infer<typeof tavernChannelConversationSchema>;
 export type TavernChannelHistoryEntry = z.infer<typeof tavernChannelHistoryEntrySchema>;
 export type TavernChannelMessage = z.infer<typeof tavernChannelMessageSchema>;

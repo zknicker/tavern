@@ -8,8 +8,11 @@ import { sendTavernChatMessage } from './send.ts';
 
 const maxChatDisplayNameLength = 70;
 
-function buildChatDisplayName(content: string) {
-    const normalized = content.replace(/\s+/g, ' ').trim();
+function buildChatDisplayName(input: StartChatInput) {
+    const fallback = input.attachments?.[0]
+        ? `Attachment: ${input.attachments[0].filename}`
+        : 'New chat';
+    const normalized = (input.content || fallback).replace(/\s+/g, ' ').trim();
 
     if (normalized.length <= maxChatDisplayNameLength) {
         return normalized;
@@ -22,15 +25,17 @@ export async function startTavernChat(input: StartChatInput) {
     const parsed = startChatInputSchema.parse(input);
     const created = await createTavernChat({
         agentIds: parsed.agentId ? [parsed.agentId] : undefined,
-        displayName: buildChatDisplayName(parsed.content),
+        displayName: buildChatDisplayName(parsed),
         displayNameSource: 'generated',
     });
     const accepted = await sendTavernChatMessage({
         agentId: parsed.agentId,
+        ...(parsed.attachments?.length ? { attachments: parsed.attachments } : {}),
         chatId: created.chatId,
         ...(parsed.clientMessageId ? { clientMessageId: parsed.clientMessageId } : {}),
         content: parsed.content,
         ...(parsed.metadata ? { metadata: parsed.metadata } : {}),
+        ...(parsed.modelRef ? { modelRef: parsed.modelRef } : {}),
     });
 
     return sendChatMessageResultSchema.parse(accepted);

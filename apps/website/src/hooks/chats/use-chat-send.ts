@@ -12,8 +12,9 @@ export function useChatSend() {
         createChatSendMutationHandlers({
             chat: utils.chat,
             timelineMessage: {
-                add: ({ chatId, ...input }) => {
+                add: ({ attachments, chatId, ...input }) => {
                     timeline.addMessage({
+                        attachments,
                         ...input,
                         chatId,
                     });

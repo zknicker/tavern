@@ -1,7 +1,7 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { createWSClient, httpLink, loggerLink, splitLink, wsLink } from '@trpc/client';
 import { createTRPCReact } from '@trpc/react-query';
-import type { inferRouterOutputs } from '@trpc/server';
+import type { inferRouterInputs, inferRouterOutputs } from '@trpc/server';
 import * as React from 'react';
 import type { AppRouter } from '../../../server/src/api/router.ts';
 import { TrpcEventListeners } from '../components/trpc-event-listeners.tsx';
@@ -18,6 +18,7 @@ import { queryClientDefaultOptions } from './query-policy.ts';
 export const trpc = createTRPCReact<AppRouter>();
 
 type RouterOutput = inferRouterOutputs<AppRouter>;
+type RouterInput = inferRouterInputs<AppRouter>;
 
 export type AppRouterOutputs = RouterOutput;
 export type AgentOutput = RouterOutput['agent']['get'];
@@ -26,6 +27,9 @@ export type AgentChatListOutput = RouterOutput['agent']['chats']['list'];
 export type AgentListOutput = RouterOutput['agent']['list'];
 export type PrimaryAgentOutput = RouterOutput['agent']['primary'];
 export type ChatGetOutput = RouterOutput['chat']['get'];
+export type ChatMessageAttachmentInput = NonNullable<
+    RouterInput['chat']['send']['attachments']
+>[number];
 export type ChatListOutput = RouterOutput['chat']['list'];
 export type ChatLogOutput = RouterOutput['chat']['log']['list'];
 export type ChatToolOutput = RouterOutput['chat']['tool']['get'];

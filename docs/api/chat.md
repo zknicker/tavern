@@ -92,7 +92,7 @@ stays app-local until the final assistant message is persisted.
 `POST /api/chats/{chat_id}/messages` creates a durable user, assistant, or
 system message before work starts.
 
-Messages have one text body and an optional durable attachment. Agent work such
+Messages have one text body and durable attachments. Agent work such
 as thinking summaries, tool calls, tool results, assistant progress, and status
 updates belongs to `response` and `activity` records, not message body fields.
 
@@ -105,7 +105,7 @@ Request:
   "author_id": "usr_...",
   "role": "user",
   "content": "Run the report.",
-  "attachment": null,
+  "attachments": [],
   "metadata": {
     "runtime": {
       "source": "hermes",
@@ -134,7 +134,7 @@ Response:
     },
     "role": "user",
     "content": "Run the report.",
-    "attachment": null,
+    "attachments": [],
     "nonce": "client-send-...",
     "delivery_id": null,
     "parent_message_id": null,
@@ -163,7 +163,7 @@ Rules:
 * `after_sequence` and `before_sequence` are exclusive cursor windows.
 * `limit` is clamped by the server.
 * Soft-deleted messages keep their sequence slot.
-* Message `content` and optional `attachment` are hydrated with the row.
+* Message `content` and `attachments` are hydrated with the row.
 * Authors are hydrated enough for clients to render without a second lookup.
 
 `GET /api/chats/{chat_id}/messages/search` returns matching durable messages
@@ -198,7 +198,7 @@ Request:
     "author_id": "agt_...",
     "role": "assistant",
     "content": "Done.",
-    "attachment": null,
+    "attachments": [],
     "metadata": {}
   },
   "metadata": {

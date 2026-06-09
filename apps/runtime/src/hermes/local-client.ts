@@ -10,6 +10,7 @@ import {
     type AgentRuntimeModels,
     type AgentRuntimeRunCron,
     type AgentRuntimeSessionGraph,
+    type AgentRuntimeSessionMessageAttachment,
     type AgentRuntimeSessionMessageList,
     type AgentRuntimeSessionPreviewList,
     type AgentRuntimeSessionPrompt,
@@ -109,6 +110,12 @@ export class LocalHermesClient extends LocalHermesUnsupportedSurfaces {
 
     async assertGatewayReady() {
         await this.#gateway.connect();
+    }
+
+    async interruptLiveSession(sessionId: string) {
+        await this.#gateway.request('session.interrupt', {
+            session_id: sessionId,
+        });
     }
 
     async listAgents() {
@@ -540,7 +547,10 @@ export class LocalHermesClient extends LocalHermesUnsupportedSurfaces {
     }
 
     async *streamChat(input: {
+        attachments?: AgentRuntimeSessionMessageAttachment[];
         content: string;
+        modelRef?: string;
+        onLiveSessionId?: (sessionId: string) => void;
         sessionKey: string;
         title?: string | null;
         signal?: AbortSignal;
@@ -550,14 +560,23 @@ export class LocalHermesClient extends LocalHermesUnsupportedSurfaces {
         if (!liveSessionId) {
             throw new Error('Hermes did not create a live session.');
         }
+        input.onLiveSessionId?.(liveSessionId);
 
         const events = this.#gateway.events({
             sessionId: liveSessionId,
             signal: input.signal,
         });
+        if (input.modelRef) {
+            await this.#setSessionModel(liveSessionId, input.modelRef);
+        }
+        const promptText = await this.#buildPromptText({
+            attachments: input.attachments ?? [],
+            content: input.content,
+            sessionId: liveSessionId,
+        });
         await this.#gateway.request('prompt.submit', {
             session_id: liveSessionId,
-            text: input.content,
+            text: promptText,
         });
 
         for await (const event of events) {
@@ -663,6 +682,79 @@ export class LocalHermesClient extends LocalHermesUnsupportedSurfaces {
                 return;
             }
         }
+    }
+
+    async #setSessionModel(sessionId: string, modelRef: string) {
+        const model = parseHermesModelRef(modelRef);
+        await this.#gateway.request('slash.exec', {
+            command: `model ${model.model} --provider ${model.provider}`,
+            session_id: sessionId,
+        });
+    }
+
+    async #buildPromptText(input: {
+        attachments: AgentRuntimeSessionMessageAttachment[];
+        content: string;
+        sessionId: string;
+    }) {
+        const attachmentRefs: string[] = [];
+
+        for (const attachment of input.attachments) {
+            const ref = await this.#stageAttachment(input.sessionId, attachment);
+
+            if (ref) {
+                attachmentRefs.push(ref);
+            }
+        }
+
+        const content = input.content.trim();
+
+        if (attachmentRefs.length === 0) {
+            return content;
+        }
+
+        if (!content && attachmentRefs.some((ref) => ref.startsWith('@image:'))) {
+            return `${attachmentRefs.join('\n')}\n\nWhat do you see in this image?`;
+        }
+
+        return `${attachmentRefs.join('\n')}\n\n${content}`.trim();
+    }
+
+    async #stageAttachment(sessionId: string, attachment: AgentRuntimeSessionMessageAttachment) {
+        if (attachment.type === 'inline') {
+            if (attachment.mediaType.startsWith('image/')) {
+                const result = await this.#gateway.request('image.attach_bytes', {
+                    content_base64: attachment.dataBase64,
+                    filename: attachment.filename,
+                    session_id: sessionId,
+                });
+                return formatHermesAttachmentRef(
+                    'image',
+                    readStringFromUnknown(result, ['path', 'ref_text', 'label']) ??
+                        attachment.filename
+                );
+            }
+
+            const result = await this.#gateway.request('file.attach', {
+                data_url: `data:${attachment.mediaType};base64,${attachment.dataBase64}`,
+                name: attachment.filename,
+                session_id: sessionId,
+            });
+            return (
+                readStringFromUnknown(result, ['ref_text']) ??
+                formatHermesAttachmentRef('file', attachment.filename)
+            );
+        }
+
+        const result = await this.#gateway.request('file.attach', {
+            name: attachment.filename,
+            path: attachment.path,
+            session_id: sessionId,
+        });
+        return (
+            readStringFromUnknown(result, ['ref_text']) ??
+            formatHermesAttachmentRef('file', attachment.path)
+        );
     }
 
     override close() {
@@ -976,6 +1068,32 @@ function mapHermesCronStatus(value: string | null) {
 
 function sanitizeCronRunId(value: string) {
     return value.replace(/[^A-Za-z0-9_-]/g, '_');
+}
+
+function parseHermesModelRef(value: string) {
+    const trimmed = value.trim();
+    const separatorIndex = trimmed.indexOf('/');
+
+    if (separatorIndex <= 0 || separatorIndex === trimmed.length - 1) {
+        throw new Error(`Invalid Hermes model ref "${value}". Expected "<provider>/<model>".`);
+    }
+
+    return {
+        model: trimmed.slice(separatorIndex + 1).trim(),
+        provider: trimmed.slice(0, separatorIndex).trim(),
+    };
+}
+
+function readStringFromUnknown(value: unknown, keys: string[]) {
+    return value && typeof value === 'object'
+        ? readString(value as Record<string, unknown>, keys)
+        : undefined;
+}
+
+function formatHermesAttachmentRef(kind: 'file' | 'image', value: string) {
+    const trimmed = value.trim();
+    const formatted = /^[^\s`]+$/u.test(trimmed) ? trimmed : `\`${trimmed.replace(/`/g, '')}\``;
+    return `@${kind}:${formatted}`;
 }
 
 function readHermesBaseUrl() {

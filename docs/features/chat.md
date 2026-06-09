@@ -36,8 +36,15 @@ happen, and keep the durable timeline as context.
 * **Offline catch-up.** Tavern Runtime keeps chat history while the app is
   closed; the app reloads from durable rows and refetches on reconnect.
 * **Mid-turn steering.** The chat composer stays available while an agent turn
-  is running. Hermes owns active-run behavior and Tavern configures normal
-  mid-turn messages to steer the active run by default.
+  is running. Drafts entered during an active turn are queued for the same chat
+  and agent, then sent when the active response settles. Explicit steering and
+  stopping are separate controls.
+* **Composer context.** The composer keeps a compositional input shell with
+  tool, model, attachment, queue, and submit slots. Attachments and per-chat
+  model choices are Tavern controls backed by managed Hermes capabilities and
+  config, not direct app calls into Hermes internals.
+  Users can pick or drag files into the composer. Durable chat messages store
+  attachment arrays.
 
 ## Timeline inputs
 
@@ -74,9 +81,14 @@ and external runtime chat inventory.
 Runtime progress and reply events update response and activity rows by stable
 ids. They should not create a second volatile progress transcript.
 
-When Hermes accepts a mid-turn steer, Runtime records a `runtimeNotice`
-activity row. Tavern App renders it as a system row in the same notice style as
-runtime session and compaction notices.
+Queued composer drafts are app-local until dispatched. A queued draft does not
+create a durable Tavern message, response, Hermes session entry, or transcript
+row until Runtime accepts it through the normal send path. The queued draft
+keeps its selected agent, attachments, model override, content, and metadata.
+
+When Hermes accepts an explicit mid-turn steer, Runtime records a
+`runtimeNotice` activity row. Tavern App renders it as a system row in the same
+notice style as runtime session and compaction notices.
 
 ## Pinned chats
 

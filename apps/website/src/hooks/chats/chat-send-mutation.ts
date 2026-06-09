@@ -1,3 +1,5 @@
+import type { ChatMessageAttachmentInput } from '../../lib/trpc.tsx';
+
 export interface ChatSendMutationContext {
     timelineMessageId: string;
 }
@@ -31,6 +33,7 @@ export interface ChatSendMutationUtils {
     };
     timelineMessage: {
         add: (input: {
+            attachments?: ChatMessageAttachmentInput[];
             chatId: string;
             content: string;
             id: string;
@@ -60,6 +63,7 @@ export function createChatSendMutationHandlers(utils: ChatSendMutationUtils) {
     return {
         onMutate: async (input: {
             agentId?: string;
+            attachments?: ChatMessageAttachmentInput[];
             chatId: string;
             clientMessageId?: string;
             content: string;
@@ -68,6 +72,7 @@ export function createChatSendMutationHandlers(utils: ChatSendMutationUtils) {
             const timestamp = new Date().toISOString();
             const timelineMessageId = input.clientMessageId ?? `msg_${crypto.randomUUID()}`;
             utils.timelineMessage.add({
+                ...(input.attachments?.length ? { attachments: input.attachments } : {}),
                 chatId: input.chatId,
                 content: input.content,
                 id: timelineMessageId,

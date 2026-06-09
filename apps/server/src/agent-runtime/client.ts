@@ -47,6 +47,8 @@ import {
     type AgentRuntimeSessionResync,
     type AgentRuntimeSkill,
     type AgentRuntimeSkillSummary,
+    type AgentRuntimeStopTurn,
+    type AgentRuntimeStopTurnResult,
     type AgentRuntimeToolset,
     type AgentRuntimeToolsetList,
     type AgentRuntimeUpdate,
@@ -114,6 +116,8 @@ import {
     agentRuntimeSessionResyncSchema,
     agentRuntimeSkillListSchema,
     agentRuntimeSkillSchema,
+    agentRuntimeStopTurnResultSchema,
+    agentRuntimeStopTurnSchema,
     agentRuntimeToolsetListSchema,
     agentRuntimeToolsetSchema,
     agentRuntimeUpdateAgentModelSchema,
@@ -251,6 +255,7 @@ export interface TavernAgentRuntimeClient {
     ): Promise<AgentRuntimeWorkspaceInstructions>;
     searchCortex(input: CortexSearchInput): Promise<CortexSearchResult>;
     startUpdate(input?: { targetVersion?: null | string }): Promise<AgentRuntimeUpdate>;
+    stopChatTurn(chatId: string, input: AgentRuntimeStopTurn): Promise<AgentRuntimeStopTurnResult>;
     updateAgentModel(
         agentId: string,
         input: AgentRuntimeUpdateAgentModel
@@ -1123,6 +1128,29 @@ class HttpTavernAgentRuntimeClient implements TavernAgentRuntimeClient {
         }
 
         return agentRuntimeMessageAcceptedSchema.parse(await response.json());
+    }
+
+    async stopChatTurn(
+        chatId: string,
+        input: AgentRuntimeStopTurn
+    ): Promise<AgentRuntimeStopTurnResult> {
+        const payload = agentRuntimeStopTurnSchema.parse(input);
+        const response = await fetch(
+            `${this.#baseUrl}${agentRuntimeRoutes.chatTurnStop(chatId, payload.runId)}`,
+            {
+                body: JSON.stringify(payload),
+                headers: {
+                    'content-type': 'application/json',
+                },
+                method: 'POST',
+            }
+        );
+
+        if (!response.ok) {
+            await readErrorResponse(response);
+        }
+
+        return agentRuntimeStopTurnResultSchema.parse(await response.json());
     }
 
     async listChats() {

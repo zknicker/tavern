@@ -203,7 +203,7 @@ Rules:
 * Soft delete updates `status` and `deleted_at`; it keeps the row and sequence.
 
 Message body fields are rendered content only. `content` stores the durable text
-body. `attachment_json` stores one optional message-attached file or media object.
+body. `attachment_json` stores the durable attachment array for the message.
 Hidden chain-of-thought is never message body content. Provider-exposed
 thinking summaries, tool calls, tool results, assistant progress, and status
 rows are response activity.

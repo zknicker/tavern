@@ -202,7 +202,7 @@ beforeEach(async () => {
                         label: null,
                         metadata: {},
                     },
-                    attachment: null,
+                    attachments: [],
                     chat_id: tavernChatId,
                     content: record.message.content,
                     created_at: '2026-05-12T19:00:02.000Z',

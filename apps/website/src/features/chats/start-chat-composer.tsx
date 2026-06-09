@@ -1,11 +1,12 @@
-import { Plus } from '@hugeicons/core-free-icons';
 import * as React from 'react';
-import { Icon } from '../../components/ui/icon.tsx';
+import {
+    buildChatRoutingConfiguredModelOptions,
+    type ModelOptionItem,
+} from '../../components/ui/model-route-shared.ts';
 import {
     PromptInput,
     PromptInputActions,
     PromptInputBody,
-    PromptInputButton,
     PromptInputFooter,
     PromptInputSubmit,
     PromptInputTextarea,
@@ -13,6 +14,7 @@ import {
 } from '../../components/ui/prompt-input.tsx';
 import { useChatDraftLaunch } from '../../hooks/chats/use-chat-draft-launch.ts';
 import { useCapability } from '../../hooks/connections/use-capability.ts';
+import { useModelList } from '../../hooks/models/use-model-list.ts';
 import type { AgentListOutput } from '../../lib/trpc.tsx';
 import { cn } from '../../lib/utils.ts';
 import {
@@ -26,7 +28,13 @@ import {
     MentionComposerPicker,
     useMentionComposer,
 } from '../mentions/use-mention-composer.tsx';
+import {
+    type ChatComposerAttachment,
+    ChatComposerAttachmentList,
+    readComposerAttachment,
+} from './chat-composer-attachments.tsx';
 import { handleChatComposerKeyDown } from './chat-composer-keyboard.ts';
+import { ChatComposerAttachmentButton, ChatComposerModelSelector } from './chat-composer-tools.tsx';
 
 type Agent = AgentListOutput['agents'][number];
 const runtimeDisconnectedTooltip = 'Tavern Runtime is disconnected.';
@@ -45,12 +53,21 @@ export function StartChatComposer({
     const launchChatDraft = useChatDraftLaunch();
     const gatewayCapability = useCapability('gateway');
     const apiCapability = useCapability('apiServer');
+    const modelList = useModelList();
+    const fileInputRef = React.useRef<HTMLInputElement | null>(null);
+    const [attachments, setAttachments] = React.useState<ChatComposerAttachment[]>([]);
+    const [attachmentError, setAttachmentError] = React.useState<string | null>(null);
+    const [modelRef, setModelRef] = React.useState<string | null>(null);
     const [prompt, setPrompt] = React.useState('');
     const [mentions, setMentions] = React.useState<Mention[]>([]);
+    const modelOptions = React.useMemo(
+        () => buildChatRoutingConfiguredModelOptions(modelList.data),
+        [modelList.data]
+    );
 
     const canSendToRuntime = gatewayCapability.healthy && apiCapability.healthy;
     const canUseMentions = Boolean(agent);
-    const isPromptReady = prompt.trim().length > 0 && agent !== null;
+    const isPromptReady = (prompt.trim().length > 0 || attachments.length > 0) && agent !== null;
     const canSubmit = isPromptReady && canSendToRuntime;
     const runtimeDisabledReason = runtimeDisconnectedTooltip;
     const handleSubmit = React.useEffectEvent((event?: React.FormEvent<HTMLFormElement>) => {
@@ -72,13 +89,19 @@ export function StartChatComposer({
         );
         const submission = compileMentionSubmission(submittedPrompt, submittedMentions);
         const metadata = buildMentionMetadata(submission.mentions);
+        const submittedAttachments = attachments;
+        const submittedModelRef = modelRef ?? undefined;
 
         setPrompt('');
         setMentions([]);
+        setAttachments([]);
+        setAttachmentError(null);
         launchChatDraft({
             agentId: agent.id,
+            ...(submittedAttachments.length ? { attachments: submittedAttachments } : {}),
             content: submission.content.trim(),
             metadata,
+            ...(submittedModelRef ? { modelRef: submittedModelRef } : {}),
         });
     });
     const mentionComposer = useMentionComposer({
@@ -101,13 +124,65 @@ export function StartChatComposer({
             : 'Ask Tavern to investigate, summarize, or take the next step...'
         : 'Start Tavern Runtime to sync your agent.';
 
+    async function handleAttachmentInputChange(event: React.ChangeEvent<HTMLInputElement>) {
+        const files = [...(event.currentTarget.files ?? [])];
+        event.currentTarget.value = '';
+
+        if (files.length === 0) {
+            return;
+        }
+
+        await addSelectedAttachments(files);
+    }
+
+    function handleAttachmentDragOver(event: React.DragEvent<HTMLFormElement>) {
+        if (event.dataTransfer.types.includes('Files')) {
+            event.preventDefault();
+        }
+    }
+
+    function handleAttachmentDrop(event: React.DragEvent<HTMLFormElement>) {
+        const files = [...event.dataTransfer.files];
+
+        if (files.length === 0) {
+            return;
+        }
+
+        event.preventDefault();
+        void addSelectedAttachments(files);
+    }
+
+    async function addSelectedAttachments(files: File[]) {
+        try {
+            setAttachmentError(null);
+            const nextAttachments = await Promise.all(files.map(readComposerAttachment));
+            setAttachments((current) => [...current, ...nextAttachments]);
+        } catch (error) {
+            setAttachmentError(
+                error instanceof Error ? error.message : 'Could not read attachments.'
+            );
+        }
+    }
+
     return (
         <PromptInput
             className={cn(isAgentDensity ? 'p-0' : 'mt-8 w-full p-0', className)}
             contentClassName="max-w-none"
+            error={attachmentError}
+            onDragOver={handleAttachmentDragOver}
+            onDrop={handleAttachmentDrop}
             onSubmit={handleSubmit}
             onTextEditorFocus={canUseMentions ? mentionComposer.focusTextEditor : undefined}
         >
+            <ChatComposerAttachmentList
+                attachments={attachments}
+                onRemove={(index) => {
+                    setAttachments((current) =>
+                        current.filter((_, entryIndex) => entryIndex !== index)
+                    );
+                    setAttachmentError(null);
+                }}
+            />
             <PromptInputBody>
                 {canUseMentions ? (
                     <MentionComposerEditor
@@ -141,16 +216,25 @@ export function StartChatComposer({
             {canUseMentions ? <MentionComposerPicker composer={mentionComposer} /> : null}
             <PromptInputFooter>
                 <PromptInputTools>
-                    <PromptInputButton
-                        aria-label="Attach file"
-                        disabled
-                        size="icon"
-                        tooltip="Attachments are not available for sending yet."
-                        type="button"
-                        variant="ghost"
-                    >
-                        <Icon icon={Plus} />
-                    </PromptInputButton>
+                    <input
+                        className="sr-only"
+                        multiple
+                        onChange={(event) => {
+                            void handleAttachmentInputChange(event);
+                        }}
+                        ref={fileInputRef}
+                        type="file"
+                    />
+                    <ChatComposerAttachmentButton
+                        disabled={!canSendToRuntime}
+                        onClick={() => fileInputRef.current?.click()}
+                    />
+                    <ModelSelectorSlot
+                        disabled={!canSendToRuntime}
+                        modelOptions={modelOptions}
+                        modelRef={modelRef}
+                        onModelChange={setModelRef}
+                    />
                 </PromptInputTools>
                 <PromptInputActions>
                     <PromptInputSubmit
@@ -167,6 +251,31 @@ export function StartChatComposer({
                 </PromptInputActions>
             </PromptInputFooter>
         </PromptInput>
+    );
+}
+
+function ModelSelectorSlot({
+    disabled,
+    modelOptions,
+    modelRef,
+    onModelChange,
+}: {
+    disabled: boolean;
+    modelOptions: readonly ModelOptionItem[];
+    modelRef: string | null;
+    onModelChange: (modelRef: string | null) => void;
+}) {
+    if (modelOptions.length === 0) {
+        return null;
+    }
+
+    return (
+        <ChatComposerModelSelector
+            disabled={disabled}
+            modelOptions={modelOptions}
+            onModelChange={onModelChange}
+            value={modelRef}
+        />
     );
 }
 

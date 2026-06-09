@@ -64,7 +64,7 @@ test('sendTavernChatMessage posts to Runtime', async () => {
                     metadata: {},
                 },
                 chat_id: planningChatId,
-                attachment: null,
+                attachments: [],
                 content: body.content,
                 created_at: '2026-04-06T12:10:00.000Z',
                 deleted_at: null,

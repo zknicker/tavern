@@ -1,13 +1,18 @@
+import type { AgentRuntimeSessionMessageAttachment } from '@tavern/api';
 import { readConfigValue } from '../config';
 import { createLocalHermesClient } from '../hermes/local-client';
 import { createDelivery, upsertResponse, upsertResponseActivity } from './chat-api';
 import { createAgentParticipantId } from './chat-api/ids';
 import { publishRuntimeEvent } from './runtime-events';
 
+const activeHermesTurns = new Map<string, { sessionId: string | null }>();
+
 export async function runHermesTurn(input: {
     agentId: string;
+    attachments?: AgentRuntimeSessionMessageAttachment[];
     chatId: string;
     content: string;
+    modelRef?: string;
     requestMessageId: string;
     responseId: string;
     runId: string;
@@ -31,12 +36,19 @@ export async function runHermesTurn(input: {
     const progressMessages: string[] = [];
     let reasoningSegment: ReasoningSegment | null = null;
     let reasoningSegmentIndex = 0;
+    const activeTurn = { sessionId: null as string | null };
+    activeHermesTurns.set(input.runId, activeTurn);
 
     try {
         publishRuntimeEvent({ timestamp: startedAt, turn, type: 'turn.started' });
 
         for await (const event of client.streamChat({
+            attachments: input.attachments,
             content: input.content,
+            modelRef: input.modelRef,
+            onLiveSessionId: (sessionId) => {
+                activeTurn.sessionId = sessionId;
+            },
             sessionKey: input.sessionKey,
             title: input.chatId,
         })) {
@@ -159,6 +171,23 @@ export async function runHermesTurn(input: {
         completeReasoningSegment(input, reasoningSegment);
         reasoningSegment = null;
         failHermesTurn(input, participantId, error, turn);
+    } finally {
+        activeHermesTurns.delete(input.runId);
+        client.close();
+    }
+}
+
+export async function interruptHermesTurn(runId: string) {
+    const activeTurn = activeHermesTurns.get(runId);
+
+    if (!activeTurn?.sessionId) {
+        return false;
+    }
+
+    const client = createLocalHermesClient();
+    try {
+        await client.interruptLiveSession(activeTurn.sessionId);
+        return true;
     } finally {
         client.close();
     }

@@ -9,6 +9,7 @@ import {
     toolRowSchema,
     workerRowSchema,
 } from '../rows/contracts.ts';
+import { sessionMessageAttachmentSchema } from '../sessions/contracts/messages.ts';
 import { chatConversationKinds } from './conversation-kind.ts';
 import { chatSourceKinds } from './source.ts';
 
@@ -150,12 +151,19 @@ export const sendChatMessageMetadataSchema = z
     })
     .strict();
 
-export const startChatInputSchema = z.object({
-    agentId: z.string().trim().min(1).optional(),
-    clientMessageId: z.string().trim().min(1).optional(),
-    content: z.string().trim().min(1),
-    metadata: sendChatMessageMetadataSchema.optional(),
-});
+export const startChatInputSchema = z
+    .object({
+        agentId: z.string().trim().min(1).optional(),
+        attachments: z.array(sessionMessageAttachmentSchema).optional(),
+        clientMessageId: z.string().trim().min(1).optional(),
+        content: z.string().trim(),
+        metadata: sendChatMessageMetadataSchema.optional(),
+        modelRef: z.string().trim().min(1).optional(),
+    })
+    .refine((input) => input.content.trim().length > 0 || Boolean(input.attachments?.length), {
+        message: 'A chat message requires text or attachments.',
+        path: ['content'],
+    });
 
 export const updateChatInputSchema = z.object({
     agentIds: z.array(z.string().trim().min(1)).length(1),
@@ -202,13 +210,20 @@ export const updateChatSystemPromptResultSchema = z.object({
     systemPrompt: chatSystemPromptSchema,
 });
 
-export const sendChatMessageInputSchema = z.object({
-    agentId: z.string().trim().min(1).optional(),
-    chatId: z.string().trim().min(1),
-    clientMessageId: z.string().trim().min(1).optional(),
-    content: z.string().trim().min(1),
-    metadata: sendChatMessageMetadataSchema.optional(),
-});
+export const sendChatMessageInputSchema = z
+    .object({
+        agentId: z.string().trim().min(1).optional(),
+        attachments: z.array(sessionMessageAttachmentSchema).optional(),
+        chatId: z.string().trim().min(1),
+        clientMessageId: z.string().trim().min(1).optional(),
+        content: z.string().trim(),
+        metadata: sendChatMessageMetadataSchema.optional(),
+        modelRef: z.string().trim().min(1).optional(),
+    })
+    .refine((input) => input.content.trim().length > 0 || Boolean(input.attachments?.length), {
+        message: 'A chat message requires text or attachments.',
+        path: ['content'],
+    });
 
 export const sendChatMessageResultSchema = z.object({
     acceptedAt: z.string().datetime(),
@@ -217,6 +232,16 @@ export const sendChatMessageResultSchema = z.object({
     runId: z.string().trim().min(1),
     sessionKey: z.string().trim().min(1).nullable(),
     status: z.literal('accepted'),
+});
+
+export const stopChatTurnInputSchema = z.object({
+    chatId: z.string().trim().min(1),
+    runId: z.string().trim().min(1),
+});
+
+export const stopChatTurnResultSchema = z.object({
+    runId: z.string().trim().min(1),
+    stopped: z.boolean(),
 });
 
 export const chatLogMessageRowSchema = messageRowSchema;
@@ -276,3 +301,5 @@ export type UpdateChatSystemPromptInput = z.infer<typeof updateChatSystemPromptI
 export type UpdateChatSystemPromptResult = z.infer<typeof updateChatSystemPromptResultSchema>;
 export type SendChatMessageInput = z.infer<typeof sendChatMessageInputSchema>;
 export type SendChatMessageResult = z.infer<typeof sendChatMessageResultSchema>;
+export type StopChatTurnInput = z.infer<typeof stopChatTurnInputSchema>;
+export type StopChatTurnResult = z.infer<typeof stopChatTurnResultSchema>;

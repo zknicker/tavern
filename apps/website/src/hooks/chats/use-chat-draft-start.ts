@@ -41,9 +41,11 @@ export function useChatDraftStart(input: {
         startChat
             .mutateAsync({
                 agentId: routeDraft.agentId,
+                ...(routeDraft.attachments?.length ? { attachments: routeDraft.attachments } : {}),
                 clientMessageId: routeDraft.clientMessageId,
                 content: routeDraft.content,
                 metadata: routeDraft.metadata,
+                ...(routeDraft.modelRef ? { modelRef: routeDraft.modelRef } : {}),
             })
             .then((started) => {
                 logTiming('client.startChat', { chatId: started.chatId });

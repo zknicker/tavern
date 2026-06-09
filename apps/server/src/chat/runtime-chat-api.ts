@@ -156,12 +156,15 @@ function messageToChatRows(
 }
 
 function messageAttachments(message: TavernChatMessage) {
-    if (!message.attachment) {
+    if (message.attachments.length === 0) {
         return undefined;
     }
 
-    const result = sessionMessageAttachmentSchema.safeParse(message.attachment);
-    return result.success ? [result.data] : undefined;
+    const attachments = message.attachments.flatMap((attachment) => {
+        const result = sessionMessageAttachmentSchema.safeParse(attachment);
+        return result.success ? [result.data] : [];
+    });
+    return attachments.length > 0 ? attachments : undefined;
 }
 
 function activityToChatRows(

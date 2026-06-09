@@ -54,13 +54,15 @@ test('listRuntimeChatRows maps Tavern API messages and keeps preamble/reasoning 
             return Response.json({
                 messages: [
                     chatMessage({
-                        attachment: {
-                            filename: 'notes.txt',
-                            mediaType: 'text/plain',
-                            path: '/tmp/notes.txt',
-                            sizeBytes: 14,
-                            type: 'file',
-                        },
+                        attachments: [
+                            {
+                                filename: 'notes.txt',
+                                mediaType: 'text/plain',
+                                path: '/tmp/notes.txt',
+                                sizeBytes: 14,
+                                type: 'file',
+                            },
+                        ],
                         authorId: 'usr_owner',
                         authorKind: 'user',
                         authorLabel: 'You',
@@ -869,7 +871,7 @@ test('getChatToolActivity resolves durable response activity into tool details',
 });
 
 function chatMessage(input: {
-    attachment?: Record<string, unknown>;
+    attachments?: Record<string, unknown>[];
     authorId: string;
     authorKind: 'agent' | 'system' | 'user';
     authorLabel: string | null;
@@ -880,7 +882,7 @@ function chatMessage(input: {
     sequence: number;
 }) {
     return {
-        attachment: input.attachment ?? null,
+        attachments: input.attachments ?? [],
         author: {
             id: input.authorId,
             kind: input.authorKind,

@@ -182,9 +182,9 @@ export function insertMessage(
     ).run(
         namedParams({
             attachmentJson:
-                input.attachment === undefined || input.attachment === null
+                input.attachments === undefined || input.attachments.length === 0
                     ? null
-                    : JSON.stringify(input.attachment),
+                    : JSON.stringify(input.attachments),
             authorId,
             chatId,
             content: input.content,
@@ -244,9 +244,7 @@ export function findExistingMessage(
 function rowToMessage(row: MessageRow, db: Database): TavernChatMessage {
     const author = getParticipant(row.chat_id, row.author_id, db);
     return {
-        attachment: row.attachment_json
-            ? (JSON.parse(row.attachment_json) as Record<string, unknown>)
-            : null,
+        attachments: parseStoredAttachments(row.attachment_json),
         author,
         chat_id: row.chat_id,
         content: row.content,
@@ -328,10 +326,31 @@ function assertSameMessage(
         existing.author.id !== input.author_id ||
         existing.role !== input.role ||
         existing.content !== input.content ||
-        JSON.stringify(existing.attachment) !== JSON.stringify(input.attachment ?? null)
+        JSON.stringify(existing.attachments) !== JSON.stringify(input.attachments ?? [])
     ) {
         throw new Error('Tavern message id or nonce was already used for a different message.');
     }
+}
+
+function parseStoredAttachments(value: string | null): Record<string, unknown>[] {
+    if (!value) {
+        return [];
+    }
+
+    const parsed = JSON.parse(value) as unknown;
+
+    if (Array.isArray(parsed)) {
+        return parsed.filter(
+            (entry): entry is Record<string, unknown> =>
+                Boolean(entry) && typeof entry === 'object' && !Array.isArray(entry)
+        );
+    }
+
+    if (parsed && typeof parsed === 'object') {
+        return [parsed as Record<string, unknown>];
+    }
+
+    return [];
 }
 
 function nextMessageSequence(chatId: string, db: Database) {

@@ -1,8 +1,8 @@
 import { type AgentRuntimeCreateMessage, agentRuntimeRoutes } from '@tavern/api';
-import { unsupportedHermesSurface } from '../hermes/errors';
-import { createLocalHermesClient } from '../hermes/local-client';
-import { sendTavernChannelMessage } from './channel-relay';
-import { json } from './http';
+import { unsupportedHermesSurface } from '../hermes/errors.ts';
+import { createLocalHermesClient } from '../hermes/local-client.ts';
+import { sendTavernChannelMessage, stopTavernChannelTurn } from './channel-relay.ts';
+import { json } from './http.ts';
 
 type LocalHermesClient = ReturnType<typeof createLocalHermesClient>;
 
@@ -209,6 +209,14 @@ async function dispatchChats({ client, request, url }: RouteContext, segments: s
             return await sendTavernChannelMessage(chatId, input);
         }
         return await client.postMessage(chatId, input);
+    }
+    if (
+        request.method === 'POST' &&
+        segments[3] === 'turns' &&
+        segments[4] &&
+        segments[5] === 'stop'
+    ) {
+        return await stopTavernChannelTurn({ runId: segments[4] });
     }
     return undefined;
 }

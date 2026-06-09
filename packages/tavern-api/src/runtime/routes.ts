@@ -43,6 +43,8 @@ export const agentRuntimeRoutes = {
     chatSocket: '/chat',
     highlights: '/highlights',
     chatMessages: (chatId: string) => `/hermes/chats/${chatId}/messages`,
+    chatTurnStop: (chatId: string, runId: string) =>
+        `/hermes/chats/${encodeURIComponent(chatId)}/turns/${encodeURIComponent(runId)}/stop`,
     chats: '/hermes/chats',
     cortexBacklinks: (topic: string, pagePath: string) =>
         `/cortex/topics/${encodeURIComponent(topic)}/pages/${encodeURIComponent(pagePath)}/backlinks`,

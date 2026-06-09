@@ -293,7 +293,7 @@ export interface components {
             /** @enum {string} */
             role: "user" | "assistant" | "system";
             content: string;
-            attachment: components["schemas"]["JsonObject"] | null;
+            attachments: components["schemas"]["JsonObject"][];
             nonce: string | null;
             parent_message_id: components["schemas"]["MessageId"] | null;
             thread_root_id: components["schemas"]["MessageId"] | null;
@@ -308,7 +308,7 @@ export interface components {
             /** @enum {string} */
             role: "user" | "assistant" | "system";
             content: string;
-            attachment?: components["schemas"]["JsonObject"] | null;
+            attachments?: components["schemas"]["JsonObject"][];
             nonce?: string;
             parent_message_id?: components["schemas"]["MessageId"] | null;
             thread_root_id?: components["schemas"]["MessageId"] | null;

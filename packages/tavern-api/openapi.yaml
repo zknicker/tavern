@@ -574,7 +574,7 @@ components:
         - author
         - role
         - content
-        - attachment
+        - attachments
         - nonce
         - parent_message_id
         - thread_root_id
@@ -597,10 +597,10 @@ components:
           enum: [user, assistant, system]
         content:
           type: string
-        attachment:
-          oneOf:
-            - $ref: '#/components/schemas/JsonObject'
-            - type: 'null'
+        attachments:
+          type: array
+          items:
+            $ref: '#/components/schemas/JsonObject'
         nonce:
           type: [string, 'null']
         parent_message_id:
@@ -641,10 +641,10 @@ components:
           enum: [user, assistant, system]
         content:
           type: string
-        attachment:
-          oneOf:
-            - $ref: '#/components/schemas/JsonObject'
-            - type: 'null'
+        attachments:
+          type: array
+          items:
+            $ref: '#/components/schemas/JsonObject'
         nonce:
           type: string
         parent_message_id:

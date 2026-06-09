@@ -105,6 +105,7 @@ export function ChatCard({
             </div>
 
             <ChatMessageComposer
+                activeRunId={timeline.activeReply?.runId ?? null}
                 agentRuntimeSyncLabel={chat.agentRuntimeSyncLabel}
                 agents={agents}
                 boundAgentIds={chat.boundAgentIds}

@@ -4,12 +4,14 @@ import {
     agentRuntimeCreateMessageSchema,
     agentRuntimeMessageAcceptedSchema,
     agentRuntimeRoutes,
+    agentRuntimeStopTurnResultSchema,
+    agentRuntimeStopTurnSchema,
     tavernChannelClientFrameSchema,
 } from '@tavern/api';
 import type { WebSocket } from 'ws';
-import { createMessage, upsertResponse } from './chat-api';
-import { createAgentParticipantId, createRunId } from './chat-api/ids';
-import { runHermesTurn } from './hermes-turn-runner';
+import { createAgentParticipantId, createRunId } from './chat-api/ids.ts';
+import { createMessage, upsertResponse } from './chat-api/index.ts';
+import { interruptHermesTurn, runHermesTurn } from './hermes-turn-runner.ts';
 
 const sockets = new Set<WebSocket>();
 
@@ -65,10 +67,14 @@ export async function sendTavernChannelMessage(
             ...(payload.message.metadata ?? {}),
             runtime: {
                 agentId: payload.agent.agentId,
+                ...(payload.message.modelRef ? { modelRef: payload.message.modelRef } : {}),
                 sessionKey,
                 source: 'hermes',
             },
         },
+        ...(payload.message.attachments?.length
+            ? { attachments: payload.message.attachments }
+            : {}),
         content: payload.message.content,
         nonce: payload.message.nonce,
         role: 'user',
@@ -92,8 +98,10 @@ export async function sendTavernChannelMessage(
 
     void runHermesTurn({
         agentId: payload.agent.agentId,
+        attachments: payload.message.attachments ?? [],
         chatId,
         content: payload.message.content,
+        modelRef: payload.message.modelRef,
         requestMessageId: messageReceipt.message.id,
         responseId,
         runId,
@@ -109,6 +117,20 @@ export async function sendTavernChannelMessage(
         sequence: messageReceipt.message.sequence,
         sessionKey,
         status: 'accepted',
+    });
+}
+
+export async function stopTavernChannelTurn(input: { runId: string }) {
+    const payload = agentRuntimeStopTurnSchema.parse(input);
+    const stopped = await interruptHermesTurn(payload.runId);
+
+    if (!stopped) {
+        throw new Error(`No active Hermes turn found for run "${payload.runId}".`);
+    }
+
+    return agentRuntimeStopTurnResultSchema.parse({
+        runId: payload.runId,
+        stopped,
     });
 }
 

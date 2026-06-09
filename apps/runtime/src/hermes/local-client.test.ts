@@ -126,6 +126,145 @@ describe('LocalHermesClient session routing', () => {
             },
         ]);
     });
+
+    it('stages attachments and applies the session model before prompt.submit', async () => {
+        const requests: Array<{ method: string; params: Record<string, unknown> }> = [];
+
+        server = new WebSocketServer({ host: '127.0.0.1', port: await getFreePort() });
+        server.on('connection', (socket) => {
+            socket.on('message', (message) => {
+                const request = JSON.parse(message.toString()) as {
+                    id: string;
+                    method: string;
+                    params?: Record<string, unknown>;
+                };
+                const params = request.params ?? {};
+                requests.push({ method: request.method, params });
+
+                if (request.method === 'session.create') {
+                    socket.send(
+                        JSON.stringify({
+                            id: request.id,
+                            jsonrpc: '2.0',
+                            result: {
+                                session_id: 'live-created',
+                                stored_session_id: 'stored-session',
+                            },
+                        })
+                    );
+                    return;
+                }
+
+                if (request.method === 'image.attach_bytes') {
+                    socket.send(
+                        JSON.stringify({
+                            id: request.id,
+                            jsonrpc: '2.0',
+                            result: { path: '/workspace/cat.png' },
+                        })
+                    );
+                    return;
+                }
+
+                if (request.method === 'file.attach') {
+                    socket.send(
+                        JSON.stringify({
+                            id: request.id,
+                            jsonrpc: '2.0',
+                            result: { ref_text: '@file:/workspace/notes.pdf' },
+                        })
+                    );
+                    return;
+                }
+
+                socket.send(JSON.stringify({ id: request.id, jsonrpc: '2.0', result: {} }));
+                if (request.method === 'prompt.submit') {
+                    socket.send(
+                        `${JSON.stringify({
+                            jsonrpc: '2.0',
+                            method: 'event',
+                            params: {
+                                payload: { text: 'done' },
+                                session_id: params.session_id,
+                                type: 'message.complete',
+                            },
+                        })}\n`
+                    );
+                }
+            });
+        });
+
+        await new Promise<void>((resolve) => server?.once('listening', () => resolve()));
+        const address = server.address();
+        if (!(address && typeof address === 'object')) {
+            throw new Error('Test WebSocket server did not bind a port.');
+        }
+
+        const { LocalHermesClient } = await import('./local-client');
+        const client = new LocalHermesClient({
+            baseUrl: `http://127.0.0.1:${address.port}`,
+            token: null,
+        });
+
+        await drain(
+            client.streamChat({
+                attachments: [
+                    {
+                        dataBase64: 'aW1hZ2U=',
+                        filename: 'cat.png',
+                        mediaType: 'image/png',
+                        sizeBytes: 5,
+                        type: 'inline',
+                    },
+                    {
+                        dataBase64: 'cGRm',
+                        filename: 'notes.pdf',
+                        mediaType: 'application/pdf',
+                        sizeBytes: 3,
+                        type: 'inline',
+                    },
+                ],
+                content: 'summarize this',
+                modelRef: 'openai/gpt-5',
+                sessionKey: 'agent:main:tavern:cht_1',
+            })
+        );
+        client.close();
+
+        expect(requests).toEqual([
+            { method: 'session.create', params: { title: 'agent:main:tavern:cht_1' } },
+            {
+                method: 'slash.exec',
+                params: {
+                    command: 'model gpt-5 --provider openai',
+                    session_id: 'live-created',
+                },
+            },
+            {
+                method: 'image.attach_bytes',
+                params: {
+                    content_base64: 'aW1hZ2U=',
+                    filename: 'cat.png',
+                    session_id: 'live-created',
+                },
+            },
+            {
+                method: 'file.attach',
+                params: {
+                    data_url: 'data:application/pdf;base64,cGRm',
+                    name: 'notes.pdf',
+                    session_id: 'live-created',
+                },
+            },
+            {
+                method: 'prompt.submit',
+                params: {
+                    session_id: 'live-created',
+                    text: '@image:/workspace/cat.png\n@file:/workspace/notes.pdf\n\nsummarize this',
+                },
+            },
+        ]);
+    });
 });
 
 describe('LocalHermesClient adapter-owned state', () => {

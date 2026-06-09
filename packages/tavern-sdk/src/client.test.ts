@@ -22,7 +22,7 @@ describe('Tavern SDK client', () => {
                             metadata: {},
                         },
                         chat_id: 'cht_1',
-                        attachment: null,
+                        attachments: [],
                         content: 'hello',
                         created_at: '2026-05-17T00:00:00.000Z',
                         deleted_at: null,

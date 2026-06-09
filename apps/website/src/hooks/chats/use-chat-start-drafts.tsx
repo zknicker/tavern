@@ -1,17 +1,20 @@
 import type { PropsWithChildren } from 'react';
 import * as React from 'react';
+import type { ChatMessageAttachmentInput } from '../../lib/trpc.tsx';
 import { buildStartedChatDisplayName } from './chat-start-title.ts';
 
 export type ChatStartDraftStatus = 'queued' | 'creating' | 'reconciled' | 'error';
 
 export interface ChatStartDraft {
     agentId: string;
+    attachments?: ChatMessageAttachmentInput[];
     clientMessageId: string;
     content: string;
     createdAt: string;
     errorMessage: string | null;
     id: string;
     metadata?: Record<string, unknown>;
+    modelRef?: string;
     realAcceptedAt: string | null;
     realChatId: string | null;
     realRunId: string | null;
@@ -22,8 +25,10 @@ export interface ChatStartDraft {
 
 interface CreateChatStartDraftInput {
     agentId: string;
+    attachments?: ChatMessageAttachmentInput[];
     content: string;
     metadata?: Record<string, unknown>;
+    modelRef?: string;
 }
 
 interface ChatStartDraftContextValue {
@@ -49,20 +54,23 @@ export function ChatStartDraftProvider({ children }: PropsWithChildren) {
 
     const createDraft = React.useCallback((input: CreateChatStartDraftInput) => {
         const content = input.content.trim();
+        const titleContent = content || attachmentTitle(input.attachments);
         const draft: ChatStartDraft = {
             agentId: input.agentId,
+            ...(input.attachments?.length ? { attachments: input.attachments } : {}),
             clientMessageId: `msg_${crypto.randomUUID()}`,
             content,
             createdAt: new Date().toISOString(),
             errorMessage: null,
             id: `tavern-draft-chat:${crypto.randomUUID()}`,
             metadata: input.metadata,
+            ...(input.modelRef ? { modelRef: input.modelRef } : {}),
             realAcceptedAt: null,
             realChatId: null,
             realRunId: null,
             realSessionKey: null,
             status: 'queued',
-            title: buildStartedChatDisplayName(content),
+            title: buildStartedChatDisplayName(titleContent),
         };
 
         setDrafts((current) => ({
@@ -184,4 +192,11 @@ export function useChatStartDrafts() {
     }
 
     return context;
+}
+
+function attachmentTitle(attachments: readonly ChatMessageAttachmentInput[] | undefined) {
+    const firstAttachment = attachments?.[0];
+    return typeof firstAttachment?.filename === 'string'
+        ? `Attachment: ${firstAttachment.filename}`
+        : 'New chat';
 }

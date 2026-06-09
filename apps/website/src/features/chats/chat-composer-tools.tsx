@@ -1,6 +1,7 @@
 import { Plus } from '@hugeicons/core-free-icons';
 import { AgentAvatar } from '../../components/ui/agent-avatar.tsx';
 import { Icon } from '../../components/ui/icon.tsx';
+import type { ModelOptionItem } from '../../components/ui/model-route-shared.ts';
 import { PromptInputButton } from '../../components/ui/prompt-input.tsx';
 import {
     Select,
@@ -20,6 +21,30 @@ interface AgentOption {
     primaryColor: string;
 }
 
+export const defaultComposerModelValue = '__agent_default__';
+
+export function ChatComposerAttachmentButton({
+    disabled,
+    onClick,
+}: {
+    disabled?: boolean;
+    onClick: () => void;
+}) {
+    return (
+        <PromptInputButton
+            aria-label="Attach file"
+            disabled={disabled}
+            onClick={onClick}
+            size="icon-sm"
+            tooltip={disabled ? 'Attachments are not available right now.' : 'Attach file'}
+            type="button"
+            variant="ghost"
+        >
+            <Icon icon={Plus} />
+        </PromptInputButton>
+    );
+}
+
 export function ChatComposerAgentSelector({
     agentId,
     agents,
@@ -35,16 +60,6 @@ export function ChatComposerAgentSelector({
 
     return (
         <div className="flex min-w-0 items-center gap-2">
-            <PromptInputButton
-                aria-label="Attach file"
-                disabled
-                size="icon-sm"
-                tooltip="Attachments are not available for sending yet."
-                type="button"
-                variant="ghost"
-            >
-                <Icon icon={Plus} />
-            </PromptInputButton>
             {boundAgentIds.length > 1 ? (
                 <div className="min-w-0">
                     <Select
@@ -78,6 +93,44 @@ export function ChatComposerAgentSelector({
                 </div>
             ) : null}
         </div>
+    );
+}
+
+export function ChatComposerModelSelector({
+    disabled,
+    modelOptions,
+    onModelChange,
+    value,
+}: {
+    disabled?: boolean;
+    modelOptions: readonly ModelOptionItem[];
+    onModelChange: (modelRef: string | null) => void;
+    value: string | null;
+}) {
+    return (
+        <Select
+            disabled={disabled}
+            onValueChange={(nextValue) =>
+                onModelChange(nextValue === defaultComposerModelValue ? null : nextValue)
+            }
+            value={value ?? defaultComposerModelValue}
+        >
+            <SelectTrigger
+                aria-label="Choose model"
+                className="h-9 max-w-[11rem] rounded-full border-transparent bg-muted/75 px-3 shadow-none ring-1 ring-border/35 hover:bg-accent"
+                size="sm"
+            >
+                <SelectValue placeholder="Agent default" />
+            </SelectTrigger>
+            <SelectContent>
+                <SelectItem value={defaultComposerModelValue}>Agent default</SelectItem>
+                {modelOptions.map((model) => (
+                    <SelectItem key={model.value} value={model.value}>
+                        {model.label}
+                    </SelectItem>
+                ))}
+            </SelectContent>
+        </Select>
     );
 }
 
