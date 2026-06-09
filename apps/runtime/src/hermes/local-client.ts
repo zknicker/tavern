@@ -106,6 +106,8 @@ export function createLocalHermesClient() {
 export class LocalHermesClient extends LocalHermesUnsupportedSurfaces {
     readonly #gateway: HermesGateway;
     readonly #http: HermesHttp;
+    readonly #liveSessions = new Map<string, string>();
+    readonly #sessionTurnLocks = new Map<string, Promise<void>>();
 
     constructor(options: LocalHermesClientOptions) {
         super();
@@ -648,133 +650,121 @@ export class LocalHermesClient extends LocalHermesUnsupportedSurfaces {
         title?: string | null;
         signal?: AbortSignal;
     }): AsyncGenerator<HermesSseEvent> {
-        const session = await this.#openGatewaySession(input.sessionKey, input.title);
-        const liveSessionId = session.liveSessionId;
-        if (!liveSessionId) {
-            throw new Error('Hermes did not create a live session.');
-        }
-        input.onLiveSessionId?.(liveSessionId);
+        const releaseTurn = await this.#acquireSessionTurn(input.sessionKey, input.signal);
+        try {
+            const { events } = await this.#startGatewayTurn(input);
 
-        const events = this.#gateway.events({
-            sessionId: liveSessionId,
-            signal: input.signal,
-        });
-        if (input.modelRef) {
-            await this.#setSessionModel(liveSessionId, input.modelRef);
-        }
-        const promptText = await this.#buildPromptText({
-            attachments: input.attachments ?? [],
-            content: input.content,
-            sessionId: liveSessionId,
-        });
-        await this.#gateway.request('prompt.submit', {
-            session_id: liveSessionId,
-            text: promptText,
-        });
+            for await (const event of events) {
+                if (event.type === 'session.info') {
+                    yield {
+                        data: event.payload,
+                        event: 'session.info',
+                    };
+                    continue;
+                }
 
-        for await (const event of events) {
-            if (event.type === 'session.info') {
-                yield {
-                    data: event.payload,
-                    event: 'session.info',
-                };
-                continue;
+                if (event.type === 'message.delta') {
+                    yield {
+                        data: { delta: readString(event.payload, ['text']) ?? '' },
+                        event: 'assistant.delta',
+                    };
+                    continue;
+                }
+
+                if (event.type === 'message.complete') {
+                    yield {
+                        data: {
+                            content: readString(event.payload, ['text']) ?? '',
+                            message_id: readString(event.payload, ['message_id', 'id']),
+                            model: readString(event.payload, ['model']),
+                            reasoning: readString(event.payload, ['reasoning', 'thinking']),
+                            status: readString(event.payload, ['status']),
+                            usage: event.payload.usage ?? null,
+                        },
+                        event: 'assistant.completed',
+                    };
+                    return;
+                }
+
+                if (event.type === 'tool.start') {
+                    yield {
+                        data: {
+                            arguments: event.payload.args ?? {},
+                            preview: readString(event.payload, ['context', 'preview', 'args_text']),
+                            tool_call_id: readString(event.payload, ['tool_id', 'id', 'call_id']),
+                            tool_name: readString(event.payload, ['name', 'tool_name']) ?? 'tool',
+                        },
+                        event: 'tool.started',
+                    };
+                    continue;
+                }
+
+                if (event.type === 'tool.progress' || event.type === 'tool.generating') {
+                    yield {
+                        data: {
+                            delta: readString(event.payload, ['preview', 'text', 'context']) ?? '',
+                            source_event: event.type,
+                            tool_call_id: readString(event.payload, ['tool_id', 'id', 'call_id']),
+                            tool_name: readString(event.payload, ['name', 'tool_name']) ?? 'tool',
+                        },
+                        event: 'tool.progress',
+                    };
+                    continue;
+                }
+
+                if (event.type === 'tool.complete') {
+                    yield {
+                        data: {
+                            arguments: event.payload.args ?? {},
+                            preview: readString(event.payload, [
+                                'summary',
+                                'result_text',
+                                'preview',
+                            ]),
+                            result: event.payload.result_text ?? event.payload.result ?? null,
+                            tool_call_id: readString(event.payload, ['tool_id', 'id', 'call_id']),
+                            tool_name: readString(event.payload, ['name', 'tool_name']) ?? 'tool',
+                        },
+                        event: 'tool.completed',
+                    };
+                    continue;
+                }
+
+                if (event.type === 'reasoning.delta') {
+                    yield {
+                        data: {
+                            delta: readString(event.payload, ['text']) ?? '',
+                        },
+                        event: 'reasoning.delta',
+                    };
+                    continue;
+                }
+
+                if (event.type === 'status.update') {
+                    yield {
+                        data: {
+                            delta: readString(event.payload, ['text']) ?? '',
+                            kind: readString(event.payload, ['kind']) ?? 'status',
+                            source_event: event.type,
+                        },
+                        event: 'assistant.status',
+                    };
+                    continue;
+                }
+
+                if (event.type === 'error') {
+                    yield {
+                        data: {
+                            message:
+                                readString(event.payload, ['message']) ?? 'Hermes stream failed.',
+                        },
+                        event: 'error',
+                    };
+                    return;
+                }
             }
-
-            if (event.type === 'message.delta') {
-                yield {
-                    data: { delta: readString(event.payload, ['text']) ?? '' },
-                    event: 'assistant.delta',
-                };
-                continue;
-            }
-
-            if (event.type === 'message.complete') {
-                yield {
-                    data: {
-                        content: readString(event.payload, ['text']) ?? '',
-                        message_id: readString(event.payload, ['message_id', 'id']),
-                        model: readString(event.payload, ['model']),
-                        reasoning: readString(event.payload, ['reasoning', 'thinking']),
-                        status: readString(event.payload, ['status']),
-                        usage: event.payload.usage ?? null,
-                    },
-                    event: 'assistant.completed',
-                };
-                return;
-            }
-
-            if (event.type === 'tool.start') {
-                yield {
-                    data: {
-                        arguments: event.payload.args ?? {},
-                        preview: readString(event.payload, ['context', 'preview', 'args_text']),
-                        tool_call_id: readString(event.payload, ['tool_id', 'id', 'call_id']),
-                        tool_name: readString(event.payload, ['name', 'tool_name']) ?? 'tool',
-                    },
-                    event: 'tool.started',
-                };
-                continue;
-            }
-
-            if (event.type === 'tool.progress' || event.type === 'tool.generating') {
-                yield {
-                    data: {
-                        delta: readString(event.payload, ['preview', 'text', 'context']) ?? '',
-                        source_event: event.type,
-                        tool_call_id: readString(event.payload, ['tool_id', 'id', 'call_id']),
-                        tool_name: readString(event.payload, ['name', 'tool_name']) ?? 'tool',
-                    },
-                    event: 'tool.progress',
-                };
-                continue;
-            }
-
-            if (event.type === 'tool.complete') {
-                yield {
-                    data: {
-                        arguments: event.payload.args ?? {},
-                        preview: readString(event.payload, ['summary', 'result_text', 'preview']),
-                        result: event.payload.result_text ?? event.payload.result ?? null,
-                        tool_call_id: readString(event.payload, ['tool_id', 'id', 'call_id']),
-                        tool_name: readString(event.payload, ['name', 'tool_name']) ?? 'tool',
-                    },
-                    event: 'tool.completed',
-                };
-                continue;
-            }
-
-            if (event.type === 'reasoning.delta') {
-                yield {
-                    data: {
-                        delta: readString(event.payload, ['text']) ?? '',
-                    },
-                    event: 'reasoning.delta',
-                };
-                continue;
-            }
-
-            if (event.type === 'status.update') {
-                yield {
-                    data: {
-                        delta: readString(event.payload, ['text']) ?? '',
-                        kind: readString(event.payload, ['kind']) ?? 'status',
-                        source_event: event.type,
-                    },
-                    event: 'assistant.status',
-                };
-                continue;
-            }
-
-            if (event.type === 'error') {
-                yield {
-                    data: {
-                        message: readString(event.payload, ['message']) ?? 'Hermes stream failed.',
-                    },
-                    event: 'error',
-                };
-                return;
-            }
+        } finally {
+            releaseTurn();
         }
     }
 
@@ -851,11 +841,101 @@ export class LocalHermesClient extends LocalHermesUnsupportedSurfaces {
         );
     }
 
+    async #acquireSessionTurn(sessionKey: string, signal?: AbortSignal) {
+        if (signal?.aborted) {
+            throw createHermesTurnCancelledError();
+        }
+
+        const previous = this.#sessionTurnLocks.get(sessionKey) ?? Promise.resolve();
+        let releaseCurrent!: () => void;
+        const current = new Promise<void>((resolve) => {
+            releaseCurrent = resolve;
+        });
+        const queued = previous.catch(() => undefined).then(() => current);
+        this.#sessionTurnLocks.set(sessionKey, queued);
+        try {
+            await waitForSessionTurn(previous, signal);
+        } catch (error) {
+            releaseCurrent();
+            if (this.#sessionTurnLocks.get(sessionKey) === queued) {
+                this.#sessionTurnLocks.delete(sessionKey);
+            }
+            throw error;
+        }
+
+        let released = false;
+        return () => {
+            if (released) {
+                return;
+            }
+            released = true;
+            releaseCurrent();
+            if (this.#sessionTurnLocks.get(sessionKey) === queued) {
+                this.#sessionTurnLocks.delete(sessionKey);
+            }
+        };
+    }
+
     override close() {
         this.#gateway.close();
+        this.#liveSessions.clear();
+    }
+
+    async #startGatewayTurn(input: {
+        attachments?: AgentRuntimeSessionMessageAttachment[];
+        content: string;
+        modelRef?: string;
+        onLiveSessionId?: (sessionId: string) => void;
+        sessionKey: string;
+        title?: string | null;
+        signal?: AbortSignal;
+    }) {
+        let session = await this.#openGatewaySession(input.sessionKey, input.title);
+
+        for (let attempt = 0; attempt < 2; attempt += 1) {
+            const liveSessionId = session.liveSessionId;
+            assertHermesTurnNotCancelled(input.signal);
+            input.onLiveSessionId?.(liveSessionId);
+            const events = this.#gateway.events({
+                sessionId: liveSessionId,
+                signal: input.signal,
+            });
+
+            try {
+                if (input.modelRef) {
+                    await this.#setSessionModel(liveSessionId, input.modelRef);
+                }
+                assertHermesTurnNotCancelled(input.signal);
+                const promptText = await this.#buildPromptText({
+                    attachments: input.attachments ?? [],
+                    content: input.content,
+                    sessionId: liveSessionId,
+                });
+                assertHermesTurnNotCancelled(input.signal);
+                await this.#gateway.request('prompt.submit', {
+                    session_id: liveSessionId,
+                    text: promptText,
+                });
+                return { events, liveSessionId };
+            } catch (error) {
+                events.close();
+                this.#liveSessions.delete(input.sessionKey);
+                if (attempt > 0 || !isMissingHermesSession(error)) {
+                    throw error;
+                }
+                session = await this.#openGatewaySession(input.sessionKey, input.title);
+            }
+        }
+
+        throw new Error('Hermes did not start a live session.');
     }
 
     async #openGatewaySession(sessionKey: string, title?: string | null) {
+        const cachedLiveSessionId = this.#liveSessions.get(sessionKey);
+        if (cachedLiveSessionId) {
+            return { hermesSessionKey: cachedLiveSessionId, liveSessionId: cachedLiveSessionId };
+        }
+
         const mapped = await getHermesSessionMapping(sessionKey);
         if (mapped) {
             try {
@@ -871,6 +951,7 @@ export class LocalHermesClient extends LocalHermesUnsupportedSurfaces {
                 if (!liveSessionId) {
                     throw new Error('Hermes did not resume a live session.');
                 }
+                this.#liveSessions.set(sessionKey, liveSessionId);
                 return {
                     hermesSessionKey:
                         readString(resumed, ['resumed', 'session_key', 'stored_session_id']) ??
@@ -902,6 +983,7 @@ export class LocalHermesClient extends LocalHermesUnsupportedSurfaces {
             hermesSessionKey,
             tavernSessionKey: sessionKey,
         });
+        this.#liveSessions.set(sessionKey, liveSessionId);
         return { hermesSessionKey, liveSessionId };
     }
 
@@ -1340,6 +1422,45 @@ async function readFileStats(filePath: string) {
 
 function isMissingHermesSession(error: unknown) {
     return error instanceof Error && /session not found/iu.test(error.message);
+}
+
+function createHermesTurnCancelledError() {
+    return new Error('Hermes turn cancelled.');
+}
+
+function assertHermesTurnNotCancelled(signal?: AbortSignal) {
+    if (signal?.aborted) {
+        throw createHermesTurnCancelledError();
+    }
+}
+
+async function waitForSessionTurn(previous: Promise<void>, signal?: AbortSignal) {
+    if (!signal) {
+        await previous.catch(() => undefined);
+        return;
+    }
+
+    assertHermesTurnNotCancelled(signal);
+
+    await new Promise<void>((resolve, reject) => {
+        const cleanup = () => signal.removeEventListener('abort', abort);
+        const abort = () => {
+            cleanup();
+            reject(createHermesTurnCancelledError());
+        };
+
+        signal.addEventListener('abort', abort, { once: true });
+        void previous
+            .catch(() => undefined)
+            .then(() => {
+                cleanup();
+                if (signal.aborted) {
+                    reject(createHermesTurnCancelledError());
+                    return;
+                }
+                resolve();
+            });
+    });
 }
 
 export function buildRuntimeApiBaseUrl() {

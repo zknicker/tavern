@@ -13,7 +13,7 @@ import {
     PromptInputTools,
 } from '../../components/ui/prompt-input.tsx';
 import { useChatDraftLaunch } from '../../hooks/chats/use-chat-draft-launch.ts';
-import { useCapability } from '../../hooks/connections/use-capability.ts';
+import { runtimeUnhealthyTooltip, useCapability } from '../../hooks/connections/use-capability.ts';
 import { useModelList } from '../../hooks/models/use-model-list.ts';
 import type { AgentListOutput } from '../../lib/trpc.tsx';
 import { cn } from '../../lib/utils.ts';
@@ -37,7 +37,6 @@ import { handleChatComposerKeyDown } from './chat-composer-keyboard.ts';
 import { ChatComposerAttachmentButton, ChatComposerModelSelector } from './chat-composer-tools.tsx';
 
 type Agent = AgentListOutput['agents'][number];
-const runtimeDisconnectedTooltip = 'Tavern Runtime is disconnected.';
 
 export function StartChatComposer({
     agent,
@@ -69,7 +68,7 @@ export function StartChatComposer({
     const canUseMentions = Boolean(agent);
     const isPromptReady = (prompt.trim().length > 0 || attachments.length > 0) && agent !== null;
     const canSubmit = isPromptReady && canSendToRuntime;
-    const runtimeDisabledReason = runtimeDisconnectedTooltip;
+    const runtimeDisabledReason = runtimeUnhealthyTooltip;
     const handleSubmit = React.useEffectEvent((event?: React.FormEvent<HTMLFormElement>) => {
         event?.preventDefault();
 
@@ -289,7 +288,7 @@ function getStartChatDisabledTooltip({
     runtimeReason: string;
 }) {
     if (!hasAgent) {
-        return 'Tavern Runtime is disconnected.';
+        return runtimeUnhealthyTooltip;
     }
 
     if (!runtimeReady) {

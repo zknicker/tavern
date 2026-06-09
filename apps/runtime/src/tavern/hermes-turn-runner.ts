@@ -5,7 +5,15 @@ import { createDelivery, upsertResponse, upsertResponseActivity } from './chat-a
 import { createAgentParticipantId } from './chat-api/ids';
 import { publishRuntimeEvent } from './runtime-events';
 
-const activeHermesTurns = new Map<string, { sessionId: string | null }>();
+type HermesClient = ReturnType<typeof createLocalHermesClient>;
+
+const activeHermesTurns = new Map<
+    string,
+    { client: HermesClient; controller: AbortController; sessionId: string | null }
+>();
+let hermesTurnClient: HermesClient | null = null;
+const visibleAssistantStatusKinds = new Set(['compressing', 'goal', 'process', 'status']);
+const hiddenAssistantStatusDetails = new Set(['ready']);
 
 export async function runHermesTurn(input: {
     agentId: string;
@@ -18,7 +26,7 @@ export async function runHermesTurn(input: {
     runId: string;
     sessionKey: string;
 }) {
-    const client = createLocalHermesClient();
+    const client = getHermesTurnClient();
     const participantId = createAgentParticipantId(input.agentId);
     const startedAt = new Date().toISOString();
     const turn = {
@@ -37,7 +45,11 @@ export async function runHermesTurn(input: {
     let reasoningSegment: ReasoningSegment | null = null;
     let reasoningSegmentIndex = 0;
     const completedReasoningMessages: string[] = [];
-    const activeTurn = { sessionId: null as string | null };
+    const activeTurn = {
+        client,
+        controller: new AbortController(),
+        sessionId: null as string | null,
+    };
     activeHermesTurns.set(input.runId, activeTurn);
 
     try {
@@ -51,6 +63,7 @@ export async function runHermesTurn(input: {
                 activeTurn.sessionId = sessionId;
             },
             sessionKey: input.sessionKey,
+            signal: activeTurn.controller.signal,
             title: input.chatId,
         })) {
             if (!isReasoningEvent(event.event)) {
@@ -198,24 +211,37 @@ export async function runHermesTurn(input: {
         failHermesTurn(input, participantId, error, turn);
     } finally {
         activeHermesTurns.delete(input.runId);
-        client.close();
     }
 }
 
 export async function interruptHermesTurn(runId: string) {
     const activeTurn = activeHermesTurns.get(runId);
 
-    if (!activeTurn?.sessionId) {
+    if (!activeTurn) {
         return false;
     }
 
-    const client = createLocalHermesClient();
-    try {
-        await client.interruptLiveSession(activeTurn.sessionId);
+    if (!activeTurn.sessionId) {
+        activeTurn.controller.abort();
         return true;
-    } finally {
-        client.close();
     }
+
+    try {
+        await activeTurn.client.interruptLiveSession(activeTurn.sessionId);
+        activeTurn.controller.abort();
+        return true;
+    } catch (error) {
+        activeTurn.controller.abort();
+        console.warn('[tavern-runtime] Hermes turn interrupt failed', error);
+        return false;
+    }
+}
+
+export function closeHermesTurnClients() {
+    if (hermesTurnClient) {
+        hermesTurnClient.close();
+    }
+    hermesTurnClient = null;
 }
 
 interface HermesTurn {
@@ -250,6 +276,16 @@ interface HermesModelContext {
 }
 
 type HermesTurnInput = Parameters<typeof runHermesTurn>[0];
+
+function getHermesTurnClient() {
+    if (hermesTurnClient) {
+        return hermesTurnClient;
+    }
+
+    const client = createLocalHermesClient();
+    hermesTurnClient = client;
+    return client;
+}
 
 function recordToolProgress(input: HermesTurnInput, turn: HermesTurn, event: HermesEvent) {
     const toolCallId = readString(event.data.tool_call_id);
@@ -309,9 +345,14 @@ function recordAssistantStatus(input: HermesTurnInput, turn: HermesTurn, event: 
     if (!detail?.trim()) {
         return;
     }
+    const statusKind = readString(event.data.kind)?.toLowerCase() ?? 'status';
+    if (!shouldRecordAssistantStatus(statusKind, detail)) {
+        return;
+    }
 
     recordAssistantProgressMessage(input, turn, {
         detail,
+        metadata: { statusKind },
         source: readString(event.data.source_event) ?? event.event,
         title: 'Assistant update',
     });
@@ -343,6 +384,7 @@ function recordAssistantProgressMessage(
     output: {
         detail: string;
         idSuffix?: string;
+        metadata?: Record<string, unknown>;
         source: string;
         startedAt?: string;
         title: string;
@@ -366,6 +408,7 @@ function recordAssistantProgressMessage(
         kind: 'message',
         metadata: {
             event: output.source,
+            ...output.metadata,
             runtime: runtimeMetadata(input),
         },
         started_at: startedAt,
@@ -743,4 +786,11 @@ function readString(value: unknown) {
 
 function readNumber(value: unknown) {
     return typeof value === 'number' && Number.isFinite(value) && value >= 0 ? value : null;
+}
+
+function shouldRecordAssistantStatus(kind: string, detail: string) {
+    if (!visibleAssistantStatusKinds.has(kind)) {
+        return false;
+    }
+    return !hiddenAssistantStatusDetails.has(detail.trim().toLowerCase());
 }

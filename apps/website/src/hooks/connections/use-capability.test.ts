@@ -3,6 +3,8 @@ import type { AgentRuntimeConnectionOutput } from '../../lib/trpc.tsx';
 import {
     formatCapabilityDisabledReason,
     getCapability,
+    hermesCapabilityRequirements,
+    routeTabCapabilityRequirements,
     settingsCapabilityRequirements,
 } from './use-capability.ts';
 
@@ -36,6 +38,19 @@ describe('Runtime capability gates', () => {
 
     test('gates Memories settings on the wiki hub', () => {
         expect(settingsCapabilityRequirements.memories).toEqual(['cortexWiki']);
+    });
+
+    test('gates Stats settings on model inventory', () => {
+        expect(settingsCapabilityRequirements.stats).toEqual(['models']);
+    });
+
+    test('keeps workspace instruction files editable without Hermes capabilities', () => {
+        expect(settingsCapabilityRequirements['agents-md']).toEqual([]);
+        expect(settingsCapabilityRequirements['soul-md']).toEqual([]);
+    });
+
+    test('gates Tasks on managed Hermes capabilities', () => {
+        expect(routeTabCapabilityRequirements.cron).toEqual(hermesCapabilityRequirements);
     });
 });
 

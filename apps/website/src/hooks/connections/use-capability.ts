@@ -17,6 +17,8 @@ export interface CapabilityView {
     status: RuntimeCapabilityStatus | null;
 }
 
+export const runtimeUnhealthyTooltip =
+    'Runtime is not healthy. See Settings -> Tavern Runtime for more information.';
 const runtimeDisconnectedReason = 'Tavern Runtime is disconnected.';
 const capabilityLabels = {
     apiServer: 'Agent engine API',
@@ -40,13 +42,22 @@ export const settingsCapabilityRequirements = {
     sessions: ['apiServer'],
     skills: ['apiServer', 'skills'],
     'soul-md': [],
-    stats: [],
+    stats: ['models'],
     updates: [],
 } as const satisfies Record<string, readonly RuntimeCapabilityId[]>;
 
+export const hermesCapabilityRequirements = [
+    'apiServer',
+    'dashboardServer',
+    'gateway',
+    'models',
+    'skills',
+] as const satisfies readonly RuntimeCapabilityId[];
+
 export const routeTabCapabilityRequirements = {
     cortex: ['cortexWiki'],
-    cron: [],
+    // Tasks are hidden unless managed Hermes is fully ready because create/run actions execute through Hermes.
+    cron: hermesCapabilityRequirements,
     overview: [],
 } as const satisfies Record<RouteTab, readonly RuntimeCapabilityId[]>;
 

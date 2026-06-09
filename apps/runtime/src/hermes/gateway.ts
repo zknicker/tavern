@@ -28,7 +28,7 @@ export class HermesGateway {
     #nextId = 1;
     #opened: Promise<void> | null = null;
     readonly #pending = new Map<string, PendingRequest>();
-    readonly #queue = new AsyncQueue<HermesGatewayEvent>();
+    readonly #eventQueues = new Set<AsyncQueue<HermesGatewayEvent>>();
     #socket: WebSocket | null = null;
 
     constructor(options: HermesGatewayOptions) {
@@ -56,22 +56,57 @@ export class HermesGateway {
         return (await result) as T;
     }
 
-    async *events(options: { sessionId?: string | null; signal?: AbortSignal } = {}) {
-        while (!options.signal?.aborted) {
-            const event = await this.#queue.shift(options.signal);
-            if (!event) {
+    events(options: { sessionId?: string | null; signal?: AbortSignal } = {}) {
+        const queue = new AsyncQueue<HermesGatewayEvent>();
+        const eventQueues = this.#eventQueues;
+        let closed = false;
+        const close = () => {
+            if (closed) {
                 return;
             }
-            if (options.sessionId && event.sessionId !== options.sessionId) {
-                continue;
-            }
-            yield event;
+            closed = true;
+            eventQueues.delete(queue);
+            queue.close();
+        };
+        this.#eventQueues.add(queue);
+
+        return {
+            close,
+            async *[Symbol.asyncIterator]() {
+                try {
+                    while (!options.signal?.aborted) {
+                        const event = await queue.shift(options.signal);
+                        if (!event) {
+                            return;
+                        }
+                        if (options.sessionId && event.sessionId !== options.sessionId) {
+                            continue;
+                        }
+                        yield event;
+                    }
+                } finally {
+                    close();
+                }
+            },
+        };
+    }
+
+    #emitEvent(event: HermesGatewayEvent) {
+        for (const queue of this.#eventQueues) {
+            queue.push(event);
         }
+    }
+
+    #closeEventQueues() {
+        for (const queue of this.#eventQueues) {
+            queue.close();
+        }
+        this.#eventQueues.clear();
     }
 
     close() {
         this.#opened = null;
-        this.#queue.close();
+        this.#closeEventQueues();
         for (const request of this.#pending.values()) {
             request.reject(new Error('Hermes gateway connection closed'));
         }
@@ -117,7 +152,7 @@ export class HermesGateway {
                 const params = asRecord(message.params);
                 const type = readString(params.type) ?? '';
                 if (type) {
-                    this.#queue.push({
+                    this.#emitEvent({
                         payload: asRecord(params.payload),
                         sessionId: readString(params.session_id),
                         type,

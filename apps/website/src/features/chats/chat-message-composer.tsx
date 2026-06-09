@@ -16,7 +16,7 @@ import {
 } from '../../components/ui/prompt-input.tsx';
 import { useChatSend } from '../../hooks/chats/use-chat-send.ts';
 import { useChatStop } from '../../hooks/chats/use-chat-stop.ts';
-import { useCapability } from '../../hooks/connections/use-capability.ts';
+import { runtimeUnhealthyTooltip, useCapability } from '../../hooks/connections/use-capability.ts';
 import { useModelList } from '../../hooks/models/use-model-list.ts';
 import type { AgentListOutput } from '../../lib/trpc.tsx';
 import { cn } from '../../lib/utils.ts';
@@ -47,7 +47,6 @@ import {
 import type { ChatContextFullness } from './chat-context-fullness.ts';
 
 export type ChatMessageComposerVariant = 'compact' | 'detail';
-const runtimeDisconnectedTooltip = 'Tavern Runtime is disconnected.';
 
 export function ChatMessageComposer({
     agentRuntimeSyncLabel = null,
@@ -94,7 +93,7 @@ export function ChatMessageComposer({
     const trimmedContent = content.trim();
     const hasPayload = trimmedContent.length > 0 || attachments.length > 0;
     const canSendToRuntime = gatewayCapability.healthy;
-    const runtimeDisabledReason = runtimeDisconnectedTooltip;
+    const runtimeDisabledReason = runtimeUnhealthyTooltip;
     const isSendBlocked = sendMessage.isPending || isReplyActive;
     const canQueue =
         chatCanSend && canSendToRuntime && !isDisabled && agentId.length > 0 && hasPayload;

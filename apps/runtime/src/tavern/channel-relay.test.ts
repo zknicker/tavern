@@ -9,7 +9,9 @@ interface MockHermesEvent {
 
 const hermesClient = vi.hoisted(() => ({
     close: vi.fn(),
-    streamChat: vi.fn(async function* streamChat(): AsyncGenerator<MockHermesEvent> {
+    streamChat: vi.fn(async function* streamChat(_input?: {
+        signal?: AbortSignal;
+    }): AsyncGenerator<MockHermesEvent> {
         yield {
             data: {
                 model: 'tavern-e2e-tools',
@@ -33,8 +35,9 @@ vi.mock('../hermes/local-client', () => ({
     createLocalHermesClient: () => hermesClient,
 }));
 
-import { sendTavernChannelMessage } from './channel-relay';
+import { sendTavernChannelMessage, stopTavernChannelTurn } from './channel-relay';
 import { createChat, getChat, listMessages, listResponses } from './chat-api';
+import { closeHermesTurnClients } from './hermes-turn-runner';
 
 describe('Tavern Hermes channel relay', () => {
     beforeEach(() => {
@@ -43,6 +46,7 @@ describe('Tavern Hermes channel relay', () => {
     });
 
     afterEach(() => {
+        closeHermesTurnClients();
         closeDb();
     });
 
@@ -73,13 +77,97 @@ describe('Tavern Hermes channel relay', () => {
             status: 'accepted',
         });
         expect(listMessages('cht_1').messages.map((message) => message.id)).toEqual(['msg_1']);
-        expect(hermesClient.streamChat).toHaveBeenCalledWith(
-            expect.objectContaining({
-                content: 'hello',
-                sessionKey: 'session_1',
-                title: 'cht_1',
+        expect(hermesClient.streamChat).toHaveBeenCalledWith({
+            attachments: [],
+            content: 'hello',
+            modelRef: undefined,
+            onLiveSessionId: expect.any(Function),
+            sessionKey: 'session_1',
+            signal: expect.any(AbortSignal),
+            title: 'cht_1',
+        });
+        await waitForHermesTurn();
+    });
+
+    it('stops a queued Hermes turn before it has a live session id', async () => {
+        const releaseFirstTurn = deferred<void>();
+        const secondSignal: { current: AbortSignal | null } = { current: null };
+        hermesClient.streamChat
+            .mockImplementationOnce(async function* streamChat() {
+                await releaseFirstTurn.promise;
+                yield {
+                    data: { content: 'first done', message_id: 'hermes_msg_first' },
+                    event: 'assistant.completed',
+                };
             })
-        );
+            .mockImplementationOnce(async function* streamChat(input?: { signal?: AbortSignal }) {
+                secondSignal.current = input?.signal ?? null;
+                await new Promise<never>((_resolve, reject) => {
+                    input?.signal?.addEventListener(
+                        'abort',
+                        () => reject(new Error('Hermes turn cancelled.')),
+                        { once: true }
+                    );
+                });
+            });
+        createChat({ id: 'cht_1' });
+
+        await sendTavernChannelMessage('cht_1', {
+            agent: {
+                agentId: 'agt_1',
+            },
+            message: {
+                content: 'first',
+                id: 'msg_first',
+                nonce: 'nonce_first',
+            },
+            target: {
+                externalId: null,
+                sessionKey: 'session_1',
+                target: 'cht_1',
+                type: 'tavern',
+            },
+        });
+        const queued = await sendTavernChannelMessage('cht_1', {
+            agent: {
+                agentId: 'agt_1',
+            },
+            message: {
+                content: 'second',
+                id: 'msg_second',
+                nonce: 'nonce_second',
+            },
+            target: {
+                externalId: null,
+                sessionKey: 'session_1',
+                target: 'cht_1',
+                type: 'tavern',
+            },
+        });
+        await waitForHermesTurn();
+
+        await expect(stopTavernChannelTurn({ runId: queued.runId })).resolves.toEqual({
+            runId: queued.runId,
+            stopped: true,
+        });
+        const stoppedSignal = secondSignal.current;
+        if (!stoppedSignal) {
+            throw new Error('Queued turn did not receive an abort signal.');
+        }
+        expect(stoppedSignal.aborted).toBe(true);
+
+        releaseFirstTurn.resolve();
+        await waitForHermesTurn();
+        expect(listResponses('cht_1').responses).toMatchObject([
+            {
+                request_message_id: 'msg_first',
+                status: 'completed',
+            },
+            {
+                request_message_id: 'msg_second',
+                status: 'failed',
+            },
+        ]);
     });
 
     it('delivers the completed Hermes assistant message into Tavern history', async () => {
@@ -125,6 +213,7 @@ describe('Tavern Hermes channel relay', () => {
                 status: 'completed',
             },
         ]);
+        expect(hermesClient.close).not.toHaveBeenCalled();
     });
 
     it('stores the raw Hermes provider in Tavern message metadata', async () => {
@@ -483,6 +572,98 @@ describe('Tavern Hermes channel relay', () => {
         ]);
     });
 
+    it('records Hermes process statuses as response activity', async () => {
+        hermesClient.streamChat.mockImplementationOnce(async function* streamChat() {
+            yield {
+                data: {
+                    delta: 'Background process finished.',
+                    kind: 'process',
+                    source_event: 'status.update',
+                },
+                event: 'assistant.status',
+            };
+            yield {
+                data: { content: 'clean reply', message_id: 'hermes_msg_clean' },
+                event: 'assistant.completed',
+            };
+        });
+        createChat({ id: 'cht_1' });
+
+        await sendTavernChannelMessage('cht_1', {
+            agent: {
+                agentId: 'agt_1',
+            },
+            message: {
+                content: 'hello with process status',
+                id: 'msg_process_status',
+                nonce: 'nonce_process_status',
+            },
+            target: {
+                externalId: null,
+                sessionKey: 'session_1',
+                target: 'cht_1',
+                type: 'tavern',
+            },
+        });
+        await waitForHermesTurn();
+
+        expect(listResponses('cht_1').activity).toMatchObject([
+            {
+                detail: 'Background process finished.',
+                kind: 'message',
+                metadata: {
+                    event: 'status.update',
+                    statusKind: 'process',
+                },
+                title: 'Assistant update',
+            },
+        ]);
+    });
+
+    it('drops Hermes lifecycle notices from response activity', async () => {
+        hermesClient.streamChat.mockImplementationOnce(async function* streamChat() {
+            yield {
+                data: {
+                    delta: 'Codex gpt-5.5 caps context at 272K, so auto-compaction was raised to 85% (from 50%) to use more of the window before summarizing.\nOpt back out: hermes config set compression.codex_gpt55_autoraise false',
+                    kind: 'lifecycle',
+                    source_event: 'status.update',
+                },
+                event: 'assistant.status',
+            };
+            yield {
+                data: { delta: 'clean reply' },
+                event: 'assistant.delta',
+            };
+            yield {
+                data: { content: 'clean reply', message_id: 'hermes_msg_clean' },
+                event: 'assistant.completed',
+            };
+        });
+        createChat({ id: 'cht_1' });
+
+        await sendTavernChannelMessage('cht_1', {
+            agent: {
+                agentId: 'agt_1',
+            },
+            message: {
+                content: 'hello with notice',
+                id: 'msg_notice',
+                nonce: 'nonce_notice',
+            },
+            target: {
+                externalId: null,
+                sessionKey: 'session_1',
+                target: 'cht_1',
+                type: 'tavern',
+            },
+        });
+        await waitForHermesTurn();
+
+        const responses = listResponses('cht_1');
+        expect(responses.activity).toEqual([]);
+        expect(listMessages('cht_1').messages.at(-1)?.content).toBe('clean reply');
+    });
+
     it('requires Tavern Runtime to own the chat before relaying', async () => {
         await expect(
             sendTavernChannelMessage('cht_missing', {
@@ -555,4 +736,14 @@ describe('Tavern Hermes channel relay', () => {
 async function waitForHermesTurn() {
     await new Promise((resolve) => setTimeout(resolve, 0));
     await new Promise((resolve) => setTimeout(resolve, 0));
+}
+
+function deferred<T>() {
+    let resolve!: (value: T | PromiseLike<T>) => void;
+    let reject!: (reason?: unknown) => void;
+    const promise = new Promise<T>((promiseResolve, promiseReject) => {
+        resolve = promiseResolve;
+        reject = promiseReject;
+    });
+    return { promise, reject, resolve };
 }

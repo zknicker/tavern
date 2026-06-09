@@ -7,6 +7,7 @@ import { type WebSocket, WebSocketServer } from 'ws';
 import { getRuntimeHost, getRuntimePort } from '../config';
 import { attachTavernChannelSocket, isTavernChannelSocketPath } from './channel-relay';
 import { subscribeToTavernApiEvents } from './chat-api';
+import { closeHermesTurnClients } from './hermes-turn-runner';
 import { internalError, toFetchRequest, writeFetchResponse } from './http';
 import { handleTavernRuntimeRequest } from './router';
 import { listProjectedTavernRuntimeEvents } from './runtime-event-projection';
@@ -139,6 +140,7 @@ export function startTavernRuntimeServer(): TavernRuntimeServerHandle {
 
     return {
         stop() {
+            closeHermesTurnClients();
             for (const client of wss.clients as Set<WebSocket>) {
                 client.close();
             }

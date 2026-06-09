@@ -81,7 +81,7 @@ Hermes stream events become Tavern rows by stable ids.
 | Hermes event | Tavern projection |
 | --- | --- |
 | `assistant.delta` | Active reply text; flushed as `message` response activity when tool, status, or reasoning work interrupts it. |
-| `assistant.status` | `message` response activity titled `Assistant update`. |
+| `assistant.status` | `message` response activity titled `Assistant update` only for turn-progress status kinds. Runtime lifecycle notices are not chat activity. |
 | `reasoning.delta` | `reasoning` response activity titled `Thinking`. |
 | `tool.progress` with a tool id | Running `tool_call` response activity. |
 | `tool.progress` without a tool id | `message` response activity so status prose does not masquerade as a tool. |
@@ -105,6 +105,12 @@ strips those progress prefixes before delivery.
 Hermes can emit `assistant.completed.reasoning` with the final assistant reply
 text instead of true reasoning. Runtime drops those duplicates so the final
 answer does not appear again as `Thinking`.
+
+Hermes Gateway status events carry a `kind`. Tavern records status kinds that
+describe turn-visible work, such as process, goal, compression, or generic
+status progress. Lifecycle notices, readiness pings, warnings, and notification
+events are Runtime or Gateway UI signals, so they do not become response
+activity rows in the chat transcript.
 
 ## Durable Identity
 
@@ -135,6 +141,14 @@ updates replace the same row instead of remounting the transcript.
 Tavern session routing stores `tavernSessionKey -> hermesSessionKey` in Runtime
 SQLite. Runtime does not write `tavern-session-map.json` under the Hermes home;
 the managed Hermes home is execution state, not Tavern routing state.
+
+Runtime keeps a persistent Hermes Gateway client for chat turns, matching the
+Hermes Desktop pattern of a long-lived backend socket with events keyed by live
+`session_id`. Runtime caches the live Hermes `session_id` for each Tavern
+session key and submits follow-up turns directly to that live id. Runtime calls
+`session.resume` only when it has no live id, such as after a Gateway reconnect
+or Runtime restart, and then updates the live-id cache from the resume result.
+Runtime closes the cached Gateway client when the Tavern Runtime server stops.
 
 ## Cron Delivery
 
