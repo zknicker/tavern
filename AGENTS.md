@@ -12,7 +12,10 @@ Always-on Tavern guidance for AI coding assistants.
 
 ## Architecture Map
 
-Tavern has three first-party layers plus Hermes execution.
+Tavern has three first-party layers plus Hermes execution. Tavern is the product; Hermes
+is the agent engine behind it. Tavern Runtime manages the Hermes dependency — users
+install only Tavern and experience Hermes's abilities as the assistant's abilities, never
+Hermes's plumbing.
 
 | Layer | Owns |
 | --- | --- |
@@ -57,6 +60,10 @@ so `docs:list` routes future agents correctly.
 9. Prefer immutable patterns and explicit validation at boundaries.
 10. Handle edge cases and external failures explicitly; do not swallow errors.
 11. Keep comments, docs, and user-facing text short and in plain product language.
+    User-facing copy must not name Hermes; frame engine abilities as the agent's or
+    assistant's abilities ("agent engine" for technical surfaces). Internal identifiers,
+    env vars, API fields, and file names keep Hermes naming. The single permitted UI
+    mention is the "powered by Hermes" credit on the updates/about settings surface.
 12. Use concise product names. Avoid vague names such as `provider`, `manager`, `helper`, or `data`
     when a domain term exists.
 13. Use kebab-case file names.
@@ -148,7 +155,8 @@ so `docs:list` routes future agents correctly.
 ## Hermes Work
 
 - Tavern Runtime owns managed Hermes startup, model config, capability checks, and the Tavern
-  chat-to-Hermes adapter.
+  chat-to-Hermes adapter. Hermes is a managed Runtime dependency, not a user-facing product
+  surface; see Coding Rule 11 for the product-language boundary.
 - The current adapter lives in `apps/runtime/src/hermes/` and
   `apps/runtime/src/tavern/hermes-turn-runner.ts`; there is no first-party Hermes plugin package in
   `packages/`.

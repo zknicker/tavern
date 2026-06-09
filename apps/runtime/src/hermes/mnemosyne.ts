@@ -3,8 +3,9 @@ import { constants as fsConstants } from 'node:fs';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import { promisify } from 'node:util';
-import { HERMES_HOME, readConfigValue } from '../config';
+import { HERMES_HOME, readConfigValue, resolveConfiguredPath } from '../config';
 import { log } from '../log';
+import { managedHermesSetupError } from './errors';
 import { resolveRuntimeAssetsRoot } from './llm-wiki';
 import {
     managedMnemosyneMarker,
@@ -52,7 +53,14 @@ export async function ensureManagedMnemosynePlugin(input: ManagedMnemosyneInput 
 export async function ensureManagedMnemosynePackage(input: ManagedMnemosynePackageInput) {
     const pythonPath = await resolveHermesPythonPath(input.hermesBinary);
     if (!pythonPath) {
-        throw new Error(`Unable to resolve Hermes Python from ${input.hermesBinary}`);
+        const candidates = await collectHermesPythonCandidates(input.hermesBinary);
+        throw managedHermesSetupError(
+            [
+                "The agent engine's Python interpreter was not found, so agent memory cannot be set up.",
+                `Looked for an executable "python" at: ${candidates.join(', ') || '(no candidates)'}.`,
+                "Set TAVERN_HERMES_PYTHON_BIN to the engine's Python executable.",
+            ].join(' ')
+        );
     }
 
     if (await canImportMnemosynePackage(pythonPath)) {
@@ -78,33 +86,39 @@ export async function ensureManagedMnemosynePackage(input: ManagedMnemosynePacka
     });
 
     if (!(await canImportMnemosynePackage(pythonPath))) {
-        throw new Error('Managed Mnemosyne package installed but is not importable by Hermes.');
+        throw managedHermesSetupError(
+            `The agent memory package installed but is not importable by the engine's Python at ${pythonPath}.`
+        );
     }
 
     return { installed: true, pythonPath };
 }
 
 export async function resolveHermesPythonPath(hermesBinary: string) {
-    const candidates = [
-        path.join(path.dirname(hermesBinary), 'python'),
-        path.join(
-            path.dirname(await fs.realpath(hermesBinary).catch(() => hermesBinary)),
-            'python'
-        ),
-    ];
-
-    const wrappedHermes = await readHermesWrapperTarget(hermesBinary);
-    if (wrappedHermes) {
-        candidates.push(path.join(path.dirname(wrappedHermes), 'python'));
-    }
-
-    for (const candidate of unique(candidates)) {
+    for (const candidate of await collectHermesPythonCandidates(hermesBinary)) {
         if (await isExecutable(candidate)) {
             return candidate;
         }
     }
 
     return null;
+}
+
+async function collectHermesPythonCandidates(hermesBinary: string) {
+    const override = readConfigValue('TAVERN_HERMES_PYTHON_BIN');
+    const candidates = override ? [resolveConfiguredPath(override)] : [];
+
+    candidates.push(
+        path.join(path.dirname(hermesBinary), 'python'),
+        path.join(path.dirname(await fs.realpath(hermesBinary).catch(() => hermesBinary)), 'python')
+    );
+
+    const wrappedHermes = await readHermesWrapperTarget(hermesBinary);
+    if (wrappedHermes) {
+        candidates.push(path.join(path.dirname(wrappedHermes), 'python'));
+    }
+
+    return unique(candidates);
 }
 
 export function buildMnemosyneInstallArgs(input: {

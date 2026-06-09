@@ -89,6 +89,9 @@ export function UpdatesSettings() {
                     </SettingsRow>
                 </Card>
             </CardFrame>
+            <p className="px-3.5 pt-3 text-muted-foreground text-xs">
+                Agent execution powered by Hermes.
+            </p>
         </div>
     );
 }

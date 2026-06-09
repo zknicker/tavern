@@ -2,7 +2,7 @@ import fs from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { buildMnemosyneInstallArgs, resolveHermesPythonPath } from './mnemosyne';
+import { buildMnemosyneInstallArgs, resolveHermesPythonPath } from './mnemosyne.ts';
 
 describe('managed Mnemosyne provisioning', () => {
     it('resolves Hermes Python from a venv bin executable', async () => {
@@ -29,6 +29,31 @@ describe('managed Mnemosyne provisioning', () => {
         );
 
         await expect(resolveHermesPythonPath(launcherPath)).resolves.toBe(pythonPath);
+    });
+
+    it('prefers an explicit TAVERN_HERMES_PYTHON_BIN override over inference', async () => {
+        const directory = await fs.mkdtemp(path.join(os.tmpdir(), 'tavern-hermes-python-'));
+        const overridePython = path.join(directory, 'custom', 'python');
+        await writeExecutable(path.join(directory, 'bin', 'hermes'));
+        await writeExecutable(overridePython);
+
+        process.env.TAVERN_HERMES_PYTHON_BIN = overridePython;
+        try {
+            await expect(
+                resolveHermesPythonPath(path.join(directory, 'bin', 'hermes'))
+            ).resolves.toBe(overridePython);
+        } finally {
+            process.env.TAVERN_HERMES_PYTHON_BIN = undefined;
+        }
+    });
+
+    it('returns null when no Python interpreter is found', async () => {
+        const directory = await fs.mkdtemp(path.join(os.tmpdir(), 'tavern-hermes-python-'));
+        await writeExecutable(path.join(directory, 'bin', 'hermes'));
+
+        await expect(resolveHermesPythonPath(path.join(directory, 'bin', 'hermes'))).resolves.toBe(
+            null
+        );
     });
 
     it('prefers a bundled wheelhouse for package installation', () => {

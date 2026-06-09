@@ -60,10 +60,10 @@ export const runtimeCapabilityDefinitions: RuntimeCapabilityDefinition[] = [
                     await client.getStatus();
                 },
                 metadata: { endpoint: '/api/status' },
-                unavailableReason: 'Managed Hermes dashboard server is not reachable.',
+                unavailableReason: 'The agent engine is not running.',
             });
         },
-        displayName: 'Hermes dashboard server',
+        displayName: 'Agent engine',
         id: 'dashboardServer',
         refresh: {
             intervalMs: 5 * minuteMs,
@@ -77,10 +77,10 @@ export const runtimeCapabilityDefinitions: RuntimeCapabilityDefinition[] = [
                     await client.assertApiReady();
                 },
                 metadata: { endpoint: '/api/sessions' },
-                unavailableReason: 'Managed Hermes API server is not reachable.',
+                unavailableReason: 'The agent engine is not accepting requests.',
             });
         },
-        displayName: 'Hermes API server',
+        displayName: 'Agent engine API',
         id: 'apiServer',
         refresh: {
             intervalMs: 5 * minuteMs,
@@ -94,10 +94,10 @@ export const runtimeCapabilityDefinitions: RuntimeCapabilityDefinition[] = [
                     await client.assertGatewayReady();
                 },
                 metadata: { endpoint: '/api/ws' },
-                unavailableReason: 'Managed Hermes Gateway is not reachable.',
+                unavailableReason: 'The live connection to your agent is unavailable.',
             });
         },
-        displayName: 'Hermes Gateway',
+        displayName: 'Agent connection',
         id: 'gateway',
         refresh: {
             intervalMs: 5 * minuteMs,
@@ -111,10 +111,10 @@ export const runtimeCapabilityDefinitions: RuntimeCapabilityDefinition[] = [
                     await client.getModels();
                 },
                 metadata: { endpoint: '/api/model/options' },
-                unavailableReason: 'Hermes model inventory is not reachable.',
+                unavailableReason: "The assistant's model inventory is not reachable.",
             });
         },
-        displayName: 'models',
+        displayName: 'Models',
         id: 'models',
         refresh: {
             intervalMs: 5 * minuteMs,
@@ -128,10 +128,10 @@ export const runtimeCapabilityDefinitions: RuntimeCapabilityDefinition[] = [
                     await client.listSkills();
                 },
                 metadata: { endpoint: '/api/skills' },
-                unavailableReason: 'Hermes skill inventory is not reachable.',
+                unavailableReason: "The assistant's skill inventory is not reachable.",
             });
         },
-        displayName: 'skills',
+        displayName: 'Skills',
         id: 'skills',
         refresh: {
             intervalMs: 5 * minuteMs,
@@ -167,7 +167,7 @@ async function checkCortexWikiCapability(): Promise<RuntimeCapabilityCheckResult
                 ? { metadata: existingMetadata, state: 'healthy' }
                 : {
                       metadata: existingMetadata,
-                      reason: 'Managed wiki skill has not been prepared for Hermes.',
+                      reason: 'The managed wiki skill has not been prepared yet.',
                       state: 'degraded',
                   };
         }
@@ -175,7 +175,7 @@ async function checkCortexWikiCapability(): Promise<RuntimeCapabilityCheckResult
         fs.accessSync(path.dirname(wikiPath), fs.constants.R_OK | fs.constants.W_OK);
         return {
             metadata: { ...metadata, missing: true },
-            reason: skillReady ? null : 'Managed wiki skill has not been prepared for Hermes.',
+            reason: skillReady ? null : 'The managed wiki skill has not been prepared yet.',
             state: skillReady ? 'healthy' : 'degraded',
         };
     } catch (error) {

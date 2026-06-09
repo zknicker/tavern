@@ -58,7 +58,7 @@ describe('managed Hermes supervisor', () => {
 
         const { resolveHermesBinary } = await import('./supervisor');
 
-        expect(() => resolveHermesBinary()).toThrow(/requires the Hermes CLI/u);
+        expect(() => resolveHermesBinary()).toThrow(/agent engine is not installed/u);
     });
 
     it('enables the Hermes dashboard cron ticker for managed launches', async () => {

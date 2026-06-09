@@ -17,7 +17,7 @@ export const editableAgentWorkspaceFiles = [
         path: 'AGENTS.md',
     },
     {
-        description: 'Hermes identity, voice, tone, and durable personality.',
+        description: "Your agent's identity, voice, tone, and durable personality.",
         label: 'SOUL.md',
         path: 'SOUL.md',
     },

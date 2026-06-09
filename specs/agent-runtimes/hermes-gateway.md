@@ -23,15 +23,15 @@ runtime shutdown.
 
 ## Package
 
-`packages/hermes-gateway-adapter` owns the Hermes-specific adapter.
+The Hermes-specific adapter lives in `apps/runtime/src/hermes/` plus
+`apps/runtime/src/tavern/hermes-turn-runner.ts`. There is no first-party Hermes adapter
+package in `packages/`; promote to a package only when a second consumer exists.
 
-- `src/gateway/*` contains raw Hermes WebSocket RPC, auth, events, and error handling.
-- `src/agent-runtime/*` exposes Tavern runtime client behavior.
-- `src/mappers/<domain>/<operation>.ts` maps Hermes payloads into Tavern API and runtime
-  evidence records.
-- Mappers use one operation per file, such as `mappers/agents/list.ts`.
-- `src/platforms/<platform>/*` contains platform-specific interpretation for Hermes surfaces such
-  as Discord, Telegram, or Slack.
+- Raw Hermes HTTP/WebSocket RPC, auth, events, and error handling stay in the adapter
+  directory.
+- Mappers translate Hermes payloads into Tavern API and runtime evidence records.
+- Platform-specific interpretation for Hermes surfaces such as Discord stays behind the
+  adapter boundary.
 
 Hermes is the agent runtime. Discord is a platform inside that runtime. Tavern API and runtime
 evidence records must not expose Hermes/Discord parsing details such as `lastTo`, `origin.to`, or
@@ -61,39 +61,42 @@ the current time.
 ## Auth
 
 Tavern App stores only the Tavern Runtime endpoint. Tavern Runtime connects to the local managed
-Hermes Gateway at `ws://127.0.0.1:18789` as `gateway-client`/`backend`, authenticates with the
-generated local Gateway token, and does not send a device payload.
+Hermes dashboard/Gateway on `TAVERN_HERMES_PORT` (default `9119`, WebSocket at `/api/ws`),
+authenticates with the generated local dashboard session token, and does not send a device
+payload.
 
 Tavern Runtime generates supported token-authenticated loopback Gateway config. The app does not
 expose Hermes Gateway URLs, tokens, device identities, or pairing state.
 
 ## Managed Install
 
-Tavern Runtime always manages Hermes because Hermes Gateway RPCs, event shapes, Tavern
+Tavern Runtime manages Hermes because Hermes Gateway RPCs, event shapes, Tavern
 Messenger behavior, and session semantics are part of Tavern's compatibility envelope.
+Hermes is not an npm package; Tavern provisions it with the official Hermes installer
+script (`install.sh`), which owns Hermes's own Python/Node/tool dependencies.
 
-- The root Tavern repo pins the compatible `hermes` npm version.
-- Runtime startup resolves that version from `TAVERN_HERMES_VERSION`, then the root package pin,
-  then the runtime fallback constant.
-- Runtime installs `hermes@<version>` once into
-  `~/.tavern/runtime/hermes/versions/<version>` and reuses that npm cache across worktrees.
-- Runtime must not use a global Hermes install, a repo `node_modules/.bin/hermes`, a custom
-  local checkout, or an externally managed Gateway for normal Tavern Runtime operation.
+- The Runtime pins a compatible Hermes commit in `apps/runtime/src/hermes/` code.
+  `TAVERN_HERMES_COMMIT` or `TAVERN_HERMES_BRANCH` override the pin.
+- When no Hermes binary is available, Runtime bootstraps the pinned install once into
+  `~/.tavern/engine/<pin>/` using a bundled snapshot of the official installer
+  (`--dir`, `--commit`, `--non-interactive`, `--skip-setup`, `--no-skills`,
+  `--skip-browser`), guarded by a cross-process lock shared across worktrees.
+- Binary resolution order: explicit `TAVERN_HERMES_BIN`, then the managed engine install,
+  then existing system installs (`~/.local/bin/hermes`, Homebrew paths, `PATH`), then
+  bootstrap. `TAVERN_HERMES_AUTO_INSTALL=0` disables bootstrap; the dev stack sets it so
+  local development uses one shared system Hermes instead of downloading per machine.
 - Runtime writes generated Hermes config, state, and the default workspace under
-  `~/.tavern/runtime/hermes/run`.
-- Generated config pins Codex app-server runs to the local Codex OAuth profile when the profile can
-  be derived from Codex auth. `TAVERN_HERMES_CODEX_AUTH_PROFILE_ID` overrides that profile id.
-  Tavern does not copy Codex tokens into generated Hermes config.
+  `~/.tavern/runtime/hermes/` (`home` and `workspace`); managed `HERMES_HOME` keeps
+  Tavern's instance isolated from any user-operated `~/.hermes` install.
 - Runtime reports the stable id `tavern-hermes-managed` through Tavern Runtime status. This id is
   a runtime namespace and must not change when Hermes is reinstalled, reset, or upgraded.
 
-Managed Hermes requires macOS Seatbelt. Runtime startup must fail if `sandbox-exec` cannot launch
-the Gateway. Runtime launches Hermes as the current user with the normal user environment,
-including the user's `HOME`; Seatbelt is a guardrail, not container isolation. The current default
-policy blocks direct reads/writes for high-risk home secrets such as SSH, AWS, GnuPG, Kubernetes,
-keychain, and iCloud document paths while preserving normal local app behavior. If a channel needs
-additional host access, Runtime exposes that as an explicit capability or settings decision
-rather than broadening the default silently.
+Seatbelt sandboxing for the managed Hermes process is specified but not yet implemented:
+managed Hermes should launch under macOS Seatbelt with a default policy that blocks
+direct reads/writes for high-risk home secrets (SSH, AWS, GnuPG, Kubernetes, keychain,
+iCloud document paths) while preserving normal local app behavior. When a channel needs
+additional host access, Runtime exposes that as an explicit capability or settings
+decision rather than broadening the default silently.
 
 ## Managed Workspace
 

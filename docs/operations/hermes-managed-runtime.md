@@ -117,6 +117,13 @@ under `runtime-assets/python/mnemosyne`; source runs fall back to the Python
 package index when the wheelhouse is absent. Operators do not run `pip`,
 `pipx`, or `hermes memory setup` for the managed instance.
 
+Runtime resolves the Hermes Python interpreter from `TAVERN_HERMES_PYTHON_BIN`,
+then a `python` next to the resolved Hermes binary or its launcher target. When
+no interpreter is found, startup fails with a managed-Hermes setup error that
+lists the paths it tried and points to `TAVERN_HERMES_PYTHON_BIN`, instead of
+silently skipping memory setup. The same setup failure marks the managed Hermes
+Runtime capabilities unhealthy.
+
 ## Capability Checks
 
 Managed Hermes readiness is split into primitive Runtime capabilities:

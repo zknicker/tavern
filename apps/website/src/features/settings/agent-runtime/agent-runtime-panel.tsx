@@ -137,7 +137,7 @@ function MissingRuntimeRow() {
             <h3 className="font-medium text-foreground text-sm">Tavern Runtime</h3>
             <p className="text-muted-foreground text-sm">
                 No managed runtime has reported status yet. Start Tavern through the desktop app or
-                the local dev stack so the server can discover the managed Hermes runtime.
+                the local dev stack so the server can discover the managed agent runtime.
             </p>
         </SettingsItem>
     );

@@ -73,13 +73,13 @@ export function AgentToolsDialog({
                 <DialogHeader>
                     <DialogTitle>Agent tools</DialogTitle>
                     <DialogDescription>
-                        Tools selected here are written to {agent.name}&apos;s Hermes agent config.
+                        Tools selected here are written to {agent.name}&apos;s agent engine config.
                     </DialogDescription>
                 </DialogHeader>
                 <DialogPanel className="grid gap-4">
                     {toolPolicy.inheritedProfile ? (
                         <p className="rounded-lg border border-border bg-muted/25 px-3 py-2 text-muted-foreground text-sm">
-                            Editing converts the Hermes {toolPolicy.inheritedProfile} profile to an
+                            Editing converts the {toolPolicy.inheritedProfile} profile to an
                             explicit per-agent allowlist.
                         </p>
                     ) : null}

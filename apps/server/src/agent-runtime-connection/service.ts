@@ -123,6 +123,7 @@ function toAppCapabilityStatus(
     return {
         capability: capability.id,
         checkedAt: capability.checkedAt,
+        displayName: capability.displayName ?? null,
         errorCode: null,
         lastHealthyAt: capability.lastHealthyAt,
         metadataJson: JSON.stringify(capability.metadata),

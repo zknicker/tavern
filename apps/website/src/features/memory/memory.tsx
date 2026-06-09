@@ -23,7 +23,7 @@ function MemoryContent() {
             <div>
                 <BadgeDivider
                     className="pb-4"
-                    subtext="Cortex reads plain Markdown topic wikis. Hermes context management remains prompt-time continuity."
+                    subtext="Cortex reads plain Markdown topic wikis. The agent engine owns prompt-time context continuity."
                 >
                     Wiki Memory
                 </BadgeDivider>

@@ -124,8 +124,7 @@ export function AgentModelSection({
                                     <ThinkingSelectLabel
                                         description={
                                             getThinkingOption(value?.thinkingDefault ?? null)
-                                                ?.description ??
-                                            "Use the selected model's Hermes default."
+                                                ?.description ?? "Use the selected model's default."
                                         }
                                         label={
                                             getThinkingOption(value?.thinkingDefault ?? null)
@@ -137,7 +136,7 @@ export function AgentModelSection({
                             <SelectContent>
                                 <SelectItem value={inheritThinkingValue}>
                                     <ThinkingSelectLabel
-                                        description="Use the selected model's Hermes default."
+                                        description="Use the selected model's default."
                                         label="Inherit"
                                     />
                                 </SelectItem>

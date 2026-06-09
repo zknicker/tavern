@@ -22,6 +22,7 @@ export const agentRuntimeCapabilityStateSchema = z.enum([
 export const agentRuntimeCapabilityStatusSchema = z.object({
     capability: agentRuntimeCapabilitySchema,
     checkedAt: z.string().datetime().nullable(),
+    displayName: z.string().nullable().default(null),
     errorCode: z.string().nullable(),
     lastHealthyAt: z.string().datetime().nullable(),
     metadataJson: z.string().nullable(),

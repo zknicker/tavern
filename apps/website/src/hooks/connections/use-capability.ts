@@ -19,11 +19,11 @@ export interface CapabilityView {
 
 const runtimeDisconnectedReason = 'Tavern Runtime is disconnected.';
 const capabilityLabels = {
-    apiServer: 'Hermes API Server',
+    apiServer: 'Agent engine API',
     codexOAuth: 'Codex OAuth',
     cortexWiki: 'Cortex Wiki',
-    dashboardServer: 'Hermes Dashboard Server',
-    gateway: 'Hermes Gateway',
+    dashboardServer: 'Agent engine',
+    gateway: 'Agent connection',
     models: 'Models',
     skills: 'Skills',
 } satisfies Record<RuntimeCapabilityId, string>;

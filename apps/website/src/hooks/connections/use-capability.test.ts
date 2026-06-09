@@ -69,6 +69,7 @@ function createCapability(
     return {
         capability,
         checkedAt: '2026-06-03T00:00:00.000Z',
+        displayName: null,
         errorCode: null,
         lastHealthyAt: '2026-06-03T00:00:00.000Z',
         metadataJson: '{}',

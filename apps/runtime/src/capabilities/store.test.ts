@@ -93,7 +93,7 @@ describe('Runtime capabilities store', () => {
                 missing: true,
                 skillPath: expect.stringContaining('skills/wiki'),
             }),
-            reason: 'Managed wiki skill has not been prepared for Hermes.',
+            reason: 'The managed wiki skill has not been prepared yet.',
             state: 'degraded',
         });
     });
@@ -112,7 +112,7 @@ describe('Runtime capabilities store', () => {
                 metadata: expect.objectContaining({
                     writable: false,
                 }),
-                reason: 'Managed wiki skill has not been prepared for Hermes.',
+                reason: 'The managed wiki skill has not been prepared yet.',
                 state: 'degraded',
             });
         } finally {

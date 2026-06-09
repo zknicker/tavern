@@ -169,7 +169,7 @@ export function MessagingPlatformsSection({
             )}
             {isRuntimeAvailable && !hasConfig && !isLoading ? (
                 <p className="mt-3 text-muted-foreground text-sm">
-                    Managed Hermes Discord binding edits are not available in Tavern yet.
+                    Discord binding edits are not available in Tavern yet.
                 </p>
             ) : null}
         </div>

@@ -268,10 +268,10 @@ function RuntimeNoticeDrawer({
                     <div className="space-y-3">
                         <div className="space-y-1">
                             <h3 className="font-medium text-foreground text-sm">
-                                Raw Hermes notice
+                                Raw engine notice
                             </h3>
                             <p className="max-w-[58ch] text-pretty text-muted-foreground text-sm">
-                                Original Hermes text captured before Tavern rendered it as a runtime
+                                Original engine text captured before Tavern rendered it as a runtime
                                 notice.
                             </p>
                         </div>

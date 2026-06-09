@@ -53,7 +53,8 @@ export function ProviderApiKeyDialog({
                 <DialogHeader>
                     <DialogTitle>Add API Key</DialogTitle>
                     <DialogDescription>
-                        {description ?? `${label} credentials are saved to Hermes as ${keyEnv}.`}
+                        {description ??
+                            `${label} credentials are saved for your agent as ${keyEnv}.`}
                     </DialogDescription>
                 </DialogHeader>
 
@@ -121,7 +122,7 @@ export function ProviderInstructionsDialog({
                 <DialogHeader>
                     <DialogTitle>Set Up {provider?.displayName ?? 'Provider'}</DialogTitle>
                     <DialogDescription>
-                        Configure this provider in Hermes, then refresh Tavern models.
+                        Configure this provider for your agent, then refresh Tavern models.
                     </DialogDescription>
                 </DialogHeader>
 
@@ -175,7 +176,7 @@ export function ProviderOAuthDialog({
             <DialogContent>
                 <DialogHeader>
                     <DialogTitle>Sign In</DialogTitle>
-                    <DialogDescription>{label} sign-in started through Hermes.</DialogDescription>
+                    <DialogDescription>{label} sign-in started for your agent.</DialogDescription>
                 </DialogHeader>
 
                 {result?.flow === 'pkce' ? (

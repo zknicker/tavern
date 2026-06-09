@@ -319,9 +319,9 @@ function emptyFilterTitle(filter: CatalogFilter) {
 
 function emptyFilterDescription(filter: CatalogFilter) {
     if (filter === 'toolsets') {
-        return 'Runtime toolsets will appear here when Hermes reports them.';
+        return 'Runtime toolsets will appear here when the agent engine reports them.';
     }
-    return 'Runtime-visible skills will appear here when Hermes reports them.';
+    return 'Runtime-visible skills will appear here when the agent engine reports them.';
 }
 
 function CatalogCard({

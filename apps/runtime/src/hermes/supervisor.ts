@@ -15,6 +15,7 @@ import {
 } from '../config';
 import { log } from '../log';
 import { publishRuntimeEvent } from '../tavern/runtime-events';
+import { isManagedHermesSetupError, managedHermesSetupError } from './errors';
 import { resolveManagedWikiHubPath } from './llm-wiki';
 import { buildRuntimeApiBaseUrl, createLocalHermesClient } from './local-client';
 import { prepareManagedHermesModelConfig, resolveManagedHermesModelConfig } from './model-config';
@@ -32,9 +33,7 @@ export interface ManagedHermesHandle {
 export async function startHermesForRuntime(): Promise<ManagedHermesHandle> {
     await fs.mkdir(HERMES_HOME, { recursive: true });
     await fs.mkdir(HERMES_ROOT, { recursive: true });
-    const hermesBinary = resolveHermesBinary();
-    await ensureTavernMessengerPlugin();
-    await prepareManagedHermesModelConfig({ hermesBinary });
+    const hermesBinary = await prepareManagedHermesSetup();
     if (markManagedHermesHome(HERMES_HOME)) {
         publishCapabilityUpdated('dashboardServer');
     }
@@ -147,6 +146,23 @@ export async function startHermesForRuntime(): Promise<ManagedHermesHandle> {
     };
 }
 
+async function prepareManagedHermesSetup(): Promise<string> {
+    try {
+        const hermesBinary = resolveHermesBinary();
+        await ensureTavernMessengerPlugin();
+        await prepareManagedHermesModelConfig({ hermesBinary });
+        return hermesBinary;
+    } catch (err) {
+        markManagedHermesApiStopped();
+        publishGatewayCapabilitiesUpdated();
+        log.error('Managed Hermes setup failed; cannot start dashboard', {
+            setup: isManagedHermesSetupError(err),
+            hint: err instanceof Error ? err.message : String(err),
+        });
+        throw err;
+    }
+}
+
 function spawnHermesDashboard(input: { command: string; host: string; port: number }) {
     return spawn(
         input.command,
@@ -174,7 +190,9 @@ export function resolveHermesBinary(): string {
     if (configured) {
         const resolved = resolveConfiguredPath(configured);
         if (!isExecutableFile(resolved)) {
-            throw new Error(`Configured Hermes binary is not executable: ${resolved}`);
+            throw managedHermesSetupError(
+                `The configured agent engine binary is not executable: ${resolved}`
+            );
         }
         return resolved;
     }
@@ -195,8 +213,8 @@ export function resolveHermesBinary(): string {
         return pathCandidate;
     }
 
-    throw new Error(
-        'Managed Hermes requires the Hermes CLI. Install Hermes or set TAVERN_HERMES_BIN to an executable Hermes binary.'
+    throw managedHermesSetupError(
+        'The agent engine is not installed. Set TAVERN_HERMES_BIN to an existing engine install.'
     );
 }
 

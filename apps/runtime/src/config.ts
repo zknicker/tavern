@@ -3,8 +3,8 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 
-import { readEnvFile } from './env';
-import { isValidTimezone } from './timezone';
+import { readEnvFile } from './env.ts';
+import { isValidTimezone } from './timezone.ts';
 
 const envConfig = readEnvFile([
     'HERMES_HOME',
@@ -16,6 +16,7 @@ const envConfig = readEnvFile([
     'TAVERN_HERMES_BASE_URL',
     'TAVERN_HERMES_PORT',
     'TAVERN_HERMES_PROVIDER',
+    'TAVERN_HERMES_PYTHON_BIN',
     'TAVERN_HERMES_TOKEN',
     'TAVERN_MNEMOSYNE_PACKAGE_SPEC',
     'HERMES_DASHBOARD_SESSION_TOKEN',

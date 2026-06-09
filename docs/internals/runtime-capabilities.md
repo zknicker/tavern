@@ -61,6 +61,11 @@ Each capability has a stable id and one current health record.
 
 `healthy` is the simple interface. `state` and messages explain why.
 
+`displayName` and `reason` are product copy: they render directly in the app, so they use
+product vocabulary ("agent engine", "the assistant") and never name Hermes. Runtime is the
+single source for capability display names; the app renders `displayName` and falls back
+to the capability id.
+
 ## Ownership
 
 | Layer | Owns |

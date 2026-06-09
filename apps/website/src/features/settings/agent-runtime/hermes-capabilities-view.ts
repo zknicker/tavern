@@ -18,13 +18,6 @@ interface CapabilityCategory {
     label: string;
 }
 
-const capabilityLabels: Partial<Record<CapabilityId, string>> = {
-    apiServer: 'Hermes API server',
-    cortexWiki: 'Cortex wiki',
-    dashboardServer: 'Hermes dashboard server',
-    gateway: 'Hermes Gateway',
-};
-
 const categories: CapabilityCategory[] = [
     { id: 'runtimeCore', label: 'Runtime core' },
     { id: 'knowledge', label: 'Knowledge & memory' },
@@ -66,7 +59,7 @@ const requiredCapabilities = new Set<CapabilityId>([
 const supportingCapabilities = new Set<CapabilityId>(['codexOAuth']);
 
 export function getCapabilityLabel(capability: RuntimeCapability) {
-    return capabilityLabels[capability.capability] ?? capability.capability;
+    return capability.displayName ?? capability.capability;
 }
 
 export function groupCapabilities(capabilities: RuntimeConnection['capabilities']) {

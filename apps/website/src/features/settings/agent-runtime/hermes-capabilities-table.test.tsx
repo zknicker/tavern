@@ -5,11 +5,13 @@ import { HermesCapabilitiesSummary } from './hermes-capabilities-table.tsx';
 
 function capability(input: {
     capability: 'apiServer' | 'dashboardServer' | 'gateway' | 'models' | 'skills';
+    displayName?: string;
     state?: 'degraded' | 'healthy' | 'unknown' | 'unavailable';
 }) {
     return {
         capability: input.capability,
         checkedAt: '2026-05-28T12:00:00.000Z',
+        displayName: input.displayName ?? null,
         errorCode: null,
         lastHealthyAt: null,
         metadataJson: '{}',
@@ -29,6 +31,7 @@ test('HermesCapabilitiesSummary renders per-capability refresh actions', () => {
                 {
                     capability: 'cortexWiki',
                     checkedAt: '2026-05-28T12:00:00.000Z',
+                    displayName: 'Cortex wiki',
                     errorCode: null,
                     lastHealthyAt: null,
                     metadataJson: '{}',
@@ -64,4 +67,18 @@ test('HermesCapabilitiesSummary groups by category', () => {
     assert.ok(markup.indexOf('Runtime core') < markup.indexOf('Skills &amp; models'));
     assert.doesNotMatch(markup, /Required/);
     assert.doesNotMatch(markup, /Supporting/);
+});
+
+test('HermesCapabilitiesSummary prefers runtime display names and falls back to ids', () => {
+    const markup = renderToStaticMarkup(
+        <HermesCapabilitiesSummary
+            capabilities={[
+                capability({ capability: 'dashboardServer', displayName: 'Agent engine' }),
+                capability({ capability: 'gateway' }),
+            ]}
+        />
+    );
+
+    assert.match(markup, /Agent engine/);
+    assert.match(markup, /gateway/);
 });

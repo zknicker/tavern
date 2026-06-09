@@ -9,8 +9,20 @@ export async function hermesFetchError(response: Response) {
     return error;
 }
 
+export function managedHermesSetupError(message: string) {
+    const error = new Error(message) as Error & { code?: string };
+    error.code = 'managed_hermes_setup';
+    return error;
+}
+
+export function isManagedHermesSetupError(err: unknown): err is Error & { code: string } {
+    return err instanceof Error && (err as { code?: string }).code === 'managed_hermes_setup';
+}
+
 export function unsupportedHermesSurface(message: string): never {
-    const error = new Error(`${message} is not supported by the Hermes adapter yet.`) as Error & {
+    const error = new Error(
+        `${message} is not supported by the agent engine integration yet.`
+    ) as Error & {
         code?: string;
     };
     error.code = 'unsupported_hermes_surface';

@@ -57,7 +57,7 @@ function NoSupportedUsageSources() {
         <Card>
             <CardContent className="p-4">
                 <div className="text-muted-foreground text-sm">
-                    Connect a supported Hermes provider to show usage stats.
+                    Connect a supported model provider to show usage stats.
                 </div>
             </CardContent>
         </Card>
