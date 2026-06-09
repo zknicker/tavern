@@ -2,13 +2,6 @@ import type { AgentRuntimeHighlightCategory } from '@tavern/api';
 import { hourMs } from './constants';
 
 const headlines: Record<AgentRuntimeHighlightCategory, string[]> = {
-    memory_saved: [
-        'Fresh lore joined the shelves.',
-        'The archive whispers new lore.',
-        'New runes entered the ledger.',
-        'A bright page found home.',
-        'The shelves learned something useful.',
-    ],
     quest_finished: [
         'Fresh laurels hang by firelight.',
         'The guild celebrates clean work.',

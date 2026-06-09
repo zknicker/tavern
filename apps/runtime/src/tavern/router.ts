@@ -11,13 +11,13 @@ import {
     runtimeRoutes,
 } from '@tavern/api';
 import { handleRuntimeCapabilitiesRequest } from '../capabilities/routes';
-import { handleCortexRequest } from '../cortex/routes';
 import { listTavernHighlights } from '../highlights/highlights';
 import { handleRuntimeJobsRequest } from '../jobs/routes';
 import { listMacApps } from '../mac-apps/inventory';
 import { handleModelAccessRequest } from '../model-access/model-access';
 import { handleOpenAiSettingsRequest } from '../model-access/openai-settings';
 import { handleOpenRouterSettingsRequest } from '../model-access/openrouter-settings';
+import { handleCortexRequest } from '../wiki/routes';
 import { handleWorkspaceRequest } from '../workspace/routes';
 import { handleTavernApiRequest } from './chat-api-router';
 import { deliverHermesCronToTavernChat } from './cron-delivery';

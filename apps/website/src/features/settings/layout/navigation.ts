@@ -83,7 +83,7 @@ export const settingsNavItems = [
     {
         icon: Database02Icon,
         id: 'memories',
-        label: 'Memories',
+        label: 'Wiki',
         to: '/dashboard/settings/memories',
     },
     {

@@ -16,8 +16,8 @@ The distinction between the systems should stay explicit.
 
 - `activity log` is the timestamped event record of what happened.
 - `working memory` is the synthesized recent understanding built from the activity log.
-- Cortex stores long-term typed knowledge.
-- Cortex recall tiers change long-term recall and lifecycle behavior.
+- llm-wiki stores durable Markdown knowledge.
+- Tasks and crons own wiki maintenance behavior.
 
 The activity log remains queryable even after its contents have been synthesized into working
 memory. It is not consumed and discarded when a synthesis is produced.
@@ -35,7 +35,7 @@ Every activity event should preserve:
 - the owning agent and any relevant workspace, chat, session, task, or job context
 - the observed participant when one exists
 - the linked profile when one exists
-- the relevant capture or maintenance run identity when one exists
+- the relevant maintenance run identity when one exists
 - a one-line summary
 - optional detail
 - an importance level so recent synthesis can prioritize under token pressure

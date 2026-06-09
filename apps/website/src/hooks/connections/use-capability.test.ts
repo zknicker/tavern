@@ -34,8 +34,8 @@ describe('Runtime capability gates', () => {
         expect(formatCapabilityDisabledReason(capability)).toBe('Tavern update required.');
     });
 
-    test('keeps Memories settings reachable when the embedding model is degraded', () => {
-        expect(settingsCapabilityRequirements.memories).not.toContain('embeddingModel');
+    test('gates Memories settings on the wiki hub', () => {
+        expect(settingsCapabilityRequirements.memories).toEqual(['cortexWiki']);
     });
 });
 

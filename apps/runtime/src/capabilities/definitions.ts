@@ -6,18 +6,10 @@ import type {
     AgentRuntimeCapabilityHealthId,
     AgentRuntimeCapabilityHealthState,
 } from '@tavern/api';
-import { getCortexDb } from '../cortex/db';
-import { resolveCortexWikiPath } from '../cortex/read';
-import {
-    getCortexEmbeddingConfig,
-    getCortexSettings,
-    resolveCortexOpenAiApiKey,
-} from '../cortex/settings';
+import { getManagedLlmWikiPaths } from '../hermes/llm-wiki';
 import { createLocalHermesClient } from '../hermes/local-client';
-import { listRuntimeJobRuns } from '../jobs/history';
-import { getRuntimeJobBinding } from '../jobs/manager';
 import { loadVaultBackedCodexCredentials } from '../model-access/codex-settings';
-import { getOpenRouterApiKey } from '../model-access/openrouter-settings';
+import { resolveWikiConfig } from '../wiki/store';
 
 export interface RuntimeCapabilityCheckResult {
     metadata?: Record<string, unknown>;
@@ -37,14 +29,6 @@ export interface RuntimeCapabilityDefinition {
 }
 
 const minuteMs = 60 * 1000;
-const cortexJobSlugs = [
-    'cortex-generate-embeddings',
-    'cortex-sync',
-    'cortex-lint',
-    'cortex-repair-derived-state',
-    'cortex-chat-ingestion',
-    'cortex-dream',
-] as const;
 
 export const runtimeCapabilityDefinitions: RuntimeCapabilityDefinition[] = [
     {
@@ -58,43 +42,9 @@ export const runtimeCapabilityDefinitions: RuntimeCapabilityDefinition[] = [
             runOnStart: true,
         },
     },
-    cortexDatabaseCapability(),
     {
         async check() {
-            return await checkCortexImportProcessorsCapability();
-        },
-        displayName: 'Cortex import processors',
-        id: 'cortexImportProcessors',
-        refresh: {
-            intervalMs: 15 * minuteMs,
-            runOnStart: true,
-        },
-    },
-    {
-        check() {
-            return checkCortexJobsCapability();
-        },
-        displayName: 'Cortex jobs',
-        id: 'cortexJobs',
-        refresh: {
-            intervalMs: 5 * minuteMs,
-            runOnStart: true,
-        },
-    },
-    {
-        async check() {
-            return await checkCortexModelAccessCapability();
-        },
-        displayName: 'Cortex model access',
-        id: 'cortexModelAccess',
-        refresh: {
-            intervalMs: 15 * minuteMs,
-            runOnStart: true,
-        },
-    },
-    {
-        check() {
-            return checkCortexWikiCapability();
+            return await checkCortexWikiCapability();
         },
         displayName: 'Cortex wiki',
         id: 'cortexWiki',
@@ -156,17 +106,6 @@ export const runtimeCapabilityDefinitions: RuntimeCapabilityDefinition[] = [
     },
     {
         async check() {
-            return await checkEmbeddingModelCapability();
-        },
-        displayName: 'embedding model',
-        id: 'embeddingModel',
-        refresh: {
-            intervalMs: 15 * minuteMs,
-            runOnStart: true,
-        },
-    },
-    {
-        async check() {
             return await checkManagedHermesCapability({
                 check: async (client) => {
                     await client.getModels();
@@ -201,64 +140,17 @@ export const runtimeCapabilityDefinitions: RuntimeCapabilityDefinition[] = [
     },
 ];
 
-function cortexDatabaseCapability(): RuntimeCapabilityDefinition {
-    return {
-        async check() {
-            try {
-                const expectedTables = [
-                    'cortex_pages',
-                    'cortex_sources',
-                    'cortex_chunks',
-                    'cortex_links',
-                    'cortex_timeline_entries',
-                    'cortex_audit_events',
-                    'cortex_chat_ingestion_cursors',
-                ];
-                const missingTables: string[] = [];
-                for (const tableName of expectedTables) {
-                    if (!(await hasCortexTable(tableName))) {
-                        missingTables.push(tableName);
-                    }
-                }
-                if (missingTables.length > 0) {
-                    return {
-                        metadata: { missingTables },
-                        reason: 'Cortex database schema is incomplete.',
-                        state: 'unavailable',
-                    };
-                }
-                return { state: 'healthy' };
-            } catch (error) {
-                return {
-                    reason: 'Cortex database could not be checked.',
-                    state: 'unavailable',
-                    technicalMessage: error instanceof Error ? error.message : String(error),
-                };
-            }
-        },
-        displayName: 'Cortex database',
-        id: 'cortexDatabase',
-        refresh: {
-            intervalMs: 5 * minuteMs,
-            runOnStart: true,
-        },
+async function checkCortexWikiCapability(): Promise<RuntimeCapabilityCheckResult> {
+    const config = await resolveWikiConfig();
+    const wikiPath = config.hubPath;
+    const wikiIntegration = getManagedLlmWikiPaths();
+    const metadata = {
+        configSource: config.source,
+        skillPath: wikiIntegration.skillPath,
+        wikiPath,
     };
-}
-
-async function hasCortexTable(tableName: string): Promise<boolean> {
-    const row = await getCortexDb()
-        .prepare(
-            `SELECT COUNT(*) AS count
-             FROM pg_tables
-             WHERE schemaname = 'public' AND tablename = ?`
-        )
-        .get<{ count: number }>(tableName);
-    return (row?.count ?? 0) > 0;
-}
-
-function checkCortexWikiCapability(): RuntimeCapabilityCheckResult {
-    const wikiPath = resolveCortexWikiPath();
     try {
+        const skillReady = fs.existsSync(path.join(wikiIntegration.skillPath, 'SKILL.md'));
         if (fs.existsSync(wikiPath)) {
             const stat = fs.statSync(wikiPath);
             if (!stat.isDirectory()) {
@@ -268,120 +160,40 @@ function checkCortexWikiCapability(): RuntimeCapabilityCheckResult {
                     technicalMessage: wikiPath,
                 };
             }
-            fs.accessSync(wikiPath, fs.constants.R_OK | fs.constants.W_OK);
-            return { metadata: { wikiPath }, state: 'healthy' };
+            fs.accessSync(wikiPath, fs.constants.R_OK);
+            const writable = canAccess(wikiPath, fs.constants.W_OK);
+            const existingMetadata = { ...metadata, writable };
+            return skillReady
+                ? { metadata: existingMetadata, state: 'healthy' }
+                : {
+                      metadata: existingMetadata,
+                      reason: 'Managed wiki skill has not been prepared for Hermes.',
+                      state: 'degraded',
+                  };
         }
 
         fs.accessSync(path.dirname(wikiPath), fs.constants.R_OK | fs.constants.W_OK);
-        return { metadata: { missing: true, wikiPath }, state: 'healthy' };
+        return {
+            metadata: { ...metadata, missing: true },
+            reason: skillReady ? null : 'Managed wiki skill has not been prepared for Hermes.',
+            state: skillReady ? 'healthy' : 'degraded',
+        };
     } catch (error) {
         return {
-            reason: 'Cortex wiki path is not readable and writable.',
+            reason: 'Cortex wiki path is not readable.',
             state: 'unavailable',
             technicalMessage: error instanceof Error ? error.message : String(error),
         };
     }
 }
 
-function checkCortexJobsCapability(): RuntimeCapabilityCheckResult {
-    const missing = cortexJobSlugs.filter((slug) => !getRuntimeJobBinding(slug));
-    if (missing.length > 0) {
-        return {
-            metadata: {
-                expected: cortexJobSlugs.length,
-                missing,
-                registered: cortexJobSlugs.length - missing.length,
-            },
-            reason: 'Cortex Runtime jobs are not registered.',
-            state: 'unavailable',
-        };
-    }
-    return {
-        metadata: {
-            expected: cortexJobSlugs.length,
-            registered: cortexJobSlugs.length,
-        },
-        state: 'healthy',
-    };
-}
-
-async function checkCortexModelAccessCapability(): Promise<RuntimeCapabilityCheckResult> {
+function canAccess(targetPath: string, mode: number): boolean {
     try {
-        const settings = await getCortexSettings(getCortexDb());
-        const refs = {
-            audioTranscription: settings.models.audioTranscription,
-            chatIngestion: settings.models.chatIngestion,
-            dream: settings.models.dream,
-            ocr: settings.models.ocr,
-            queryExpansion: settings.models.queryExpansion,
-        };
-        const providers = uniqueModelProviders(Object.values(refs));
-        const missing: string[] = [];
-
-        if (providers.includes('codex')) {
-            const codex = await checkCodexModelAccessCapability();
-            if (codex.state !== 'healthy') {
-                missing.push('codex');
-            }
-        }
-        if (providers.includes('openai') && !(await resolveCortexOpenAiApiKey())) {
-            missing.push('openai');
-        }
-        if (providers.includes('openrouter') && !getOpenRouterApiKey()) {
-            missing.push('openrouter');
-        }
-
-        if (missing.length > 0) {
-            return {
-                metadata: { missing, providers, refs },
-                reason: `Cortex model access is missing ${missing.join(', ')}.`,
-                state: 'unavailable',
-            };
-        }
-
-        return {
-            metadata: { providers, refs },
-            state: 'healthy',
-        };
-    } catch (error) {
-        return {
-            reason: 'Cortex model access could not be checked.',
-            state: 'unavailable',
-            technicalMessage: error instanceof Error ? error.message : String(error),
-        };
+        fs.accessSync(targetPath, mode);
+        return true;
+    } catch {
+        return false;
     }
-}
-
-async function checkCortexImportProcessorsCapability(): Promise<RuntimeCapabilityCheckResult> {
-    const missing: string[] = [];
-    if (typeof fetch !== 'function') {
-        missing.push('fetch');
-    }
-    if (!(await resolveCortexOpenAiApiKey())) {
-        missing.push('openai');
-    }
-
-    if (missing.length > 0) {
-        return {
-            metadata: {
-                missing,
-                supportedKinds: ['article', 'audio', 'image', 'pdf', 'podcast', 'repo', 'video'],
-            },
-            reason: `Cortex rich import processors are missing ${missing.join(', ')}.`,
-            state: 'unavailable',
-        };
-    }
-
-    return {
-        metadata: {
-            supportedKinds: ['article', 'audio', 'image', 'pdf', 'podcast', 'repo', 'video'],
-        },
-        state: 'healthy',
-    };
-}
-
-function uniqueModelProviders(refs: string[]): string[] {
-    return Array.from(new Set(refs.map((ref) => ref.split('/')[0]).filter(Boolean))).sort();
 }
 
 async function checkManagedHermesCapability(input: {
@@ -469,127 +281,4 @@ function canRunCommand(command: string) {
     });
 
     return !result.error && result.status === 0;
-}
-
-async function checkEmbeddingModelCapability(): Promise<RuntimeCapabilityCheckResult> {
-    const settings = await getCortexEmbeddingConfig(getCortexDb());
-    if (!settings.apiKey) {
-        return {
-            reason: 'OpenAI API key is not configured for Cortex embeddings.',
-            state: 'unavailable',
-        };
-    }
-
-    const latestError = getLatestCortexEmbeddingError();
-    if (latestError) {
-        return {
-            reason: describeEmbeddingFailure(latestError),
-            state: 'degraded',
-            technicalMessage: latestError,
-        };
-    }
-
-    const modelCheck = await checkOpenAiModelVisibility({
-        apiKey: settings.apiKey,
-        model: settings.model,
-    });
-    if (!modelCheck.ok) {
-        return modelCheck;
-    }
-
-    return {
-        metadata: {
-            model: settings.model,
-            provider: settings.provider,
-            quotaVerified: false,
-        },
-        state: 'healthy',
-    };
-}
-
-function getLatestCortexEmbeddingError() {
-    const latestRun = listRuntimeJobRuns('cortex-generate-embeddings', 1)[0] ?? null;
-    return latestRun?.state === 'failed' ? latestRun.error?.trim() || null : null;
-}
-
-function describeEmbeddingFailure(error: string) {
-    if (error.includes('insufficient_quota')) {
-        return 'OpenAI embeddings are failing because the API project has insufficient quota.';
-    }
-    if (error.includes('429')) {
-        return 'OpenAI embeddings are failing because OpenAI returned 429. Check API quota or rate limits.';
-    }
-    return `OpenAI embeddings are failing: ${error}`;
-}
-
-async function checkOpenAiModelVisibility(input: { apiKey: string; model: string }) {
-    const response = await fetch('https://api.openai.com/v1/models', {
-        headers: {
-            Authorization: `Bearer ${input.apiKey}`,
-        },
-        signal: AbortSignal.timeout(3000),
-    });
-    const payload = await response.json().catch(() => null);
-
-    if (!response.ok) {
-        const message = extractOpenAiErrorMessage(payload);
-        const authFailure = response.status === 401 || response.status === 403;
-
-        return {
-            ok: false as const,
-            reason: authFailure
-                ? 'OpenAI API key could not be authenticated.'
-                : 'OpenAI embedding model visibility check failed.',
-            state: authFailure ? ('unauthorized' as const) : ('degraded' as const),
-            technicalMessage: message
-                ? `OpenAI model list check failed (${response.status}): ${message}`
-                : `OpenAI model list check failed (${response.status}).`,
-        };
-    }
-
-    if (!parseOpenAiModelIds(payload).has(input.model)) {
-        return {
-            ok: false as const,
-            reason: `${input.model} is not visible to this OpenAI API key.`,
-            state: 'degraded' as const,
-            technicalMessage: null,
-        };
-    }
-
-    return { ok: true as const };
-}
-
-function extractOpenAiErrorMessage(payload: unknown) {
-    if (
-        payload &&
-        typeof payload === 'object' &&
-        'error' in payload &&
-        payload.error &&
-        typeof payload.error === 'object' &&
-        'message' in payload.error &&
-        typeof payload.error.message === 'string'
-    ) {
-        return payload.error.message;
-    }
-
-    return null;
-}
-
-function parseOpenAiModelIds(payload: unknown) {
-    if (
-        !payload ||
-        typeof payload !== 'object' ||
-        !('data' in payload) ||
-        !Array.isArray(payload.data)
-    ) {
-        return new Set<string>();
-    }
-
-    return new Set(
-        payload.data.flatMap((model) =>
-            model && typeof model === 'object' && 'id' in model && typeof model.id === 'string'
-                ? [model.id]
-                : []
-        )
-    );
 }

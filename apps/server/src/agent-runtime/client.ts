@@ -127,41 +127,19 @@ import {
     agentRuntimeUpsertBindingSchema,
     agentRuntimeWorkspaceInstructionsSchema,
     type CortexBacklinkList,
-    type CortexCaptureInput,
-    type CortexCaptureResult,
-    type CortexDreamReportList,
-    type CortexEditPageInput,
-    type CortexEditPageResult,
     type CortexPage,
     type CortexPageList,
-    type CortexRecallInput,
-    type CortexRecallResult,
-    type CortexSaveSchemaInput,
-    type CortexSaveSettings,
-    type CortexSchemaAdditionList,
-    type CortexSchemaRecord,
     type CortexSearchInput,
     type CortexSearchResult,
-    type CortexSettings,
     type CortexStatus,
+    type CortexTopicList,
     cortexBacklinkListSchema,
-    cortexCaptureInputSchema,
-    cortexCaptureResultSchema,
-    cortexDreamReportListSchema,
-    cortexEditPageInputSchema,
-    cortexEditPageResultSchema,
     cortexPageListSchema,
     cortexPageSchema,
-    cortexRecallInputSchema,
-    cortexRecallResultSchema,
-    cortexSaveSchemaInputSchema,
-    cortexSaveSettingsSchema,
-    cortexSchemaAdditionListSchema,
-    cortexSchemaRecordSchema,
     cortexSearchInputSchema,
     cortexSearchResultSchema,
-    cortexSettingsSchema,
     cortexStatusSchema,
+    cortexTopicListSchema,
 } from '@tavern/api';
 import { z } from 'zod';
 
@@ -187,7 +165,6 @@ export interface TavernAgentRuntimeClient {
     applyHermesConfig(
         input: AgentRuntimeApplyHermesConfig
     ): Promise<AgentRuntimeHermesConfigSnapshot>;
-    captureCortex(input: CortexCaptureInput): Promise<CortexCaptureResult>;
     close(): void;
     createCronJob(input: AgentRuntimeCreateCron): Promise<AgentRuntimeCron>;
     deleteAgent(agentId: string): Promise<AgentRuntimeArchiveAgent>;
@@ -199,14 +176,10 @@ export interface TavernAgentRuntimeClient {
     ): Promise<AgentRuntimeHermesConfigSnapshot>;
     deleteOpenAiSettings(): Promise<AgentRuntimeOpenAiSettings>;
     deleteOpenRouterSettings(): Promise<AgentRuntimeOpenRouterSettings>;
-    editCortexPage(input: CortexEditPageInput): Promise<CortexEditPageResult>;
     getAgentConfig(agentId: string): Promise<AgentRuntimeAgent>;
     getAgentFile(agentId: string, path: string): Promise<AgentRuntimeAgentFileContent>;
     getCapability(id: AgentRuntimeCapabilityHealthId): Promise<AgentRuntimeCapabilityHealth>;
-    getCortexPage(slugOrId: string): Promise<CortexPage | null>;
-    getCortexSchema(): Promise<CortexSchemaRecord>;
-    getCortexSchemaAdditions(): Promise<CortexSchemaAdditionList>;
-    getCortexSettings(): Promise<CortexSettings>;
+    getCortexPage(input: { path: string; topic: string }): Promise<CortexPage | null>;
     getCortexStatus(): Promise<CortexStatus>;
     getCronJob(jobId: string): Promise<AgentRuntimeCron>;
     getHermesConfig(): Promise<AgentRuntimeHermesConfigSnapshot>;
@@ -224,9 +197,12 @@ export interface TavernAgentRuntimeClient {
     listBindings(): Promise<{ bindings: AgentRuntimeBinding[] }>;
     listCapabilities(): Promise<AgentRuntimeCapabilityHealthList>;
     listChats(): Promise<{ chats: AgentRuntimeChat[] }>;
-    listCortexBacklinks(slugOrId: string): Promise<CortexBacklinkList>;
-    listCortexDreamReports(options?: { limit?: number }): Promise<CortexDreamReportList>;
-    listCortexPages(): Promise<CortexPageList>;
+    listCortexBacklinks(input: { path: string; topic: string }): Promise<CortexBacklinkList>;
+    listCortexPages(input?: {
+        includeArchived?: boolean;
+        topic?: string | null;
+    }): Promise<CortexPageList>;
+    listCortexTopics(input?: { includeArchived?: boolean }): Promise<CortexTopicList>;
     listCronJobs(): Promise<AgentRuntimeCronList>;
     listCronRuns(jobId?: string): Promise<{ runs: AgentRuntimeCronRun[] }>;
     listDiscordBindings(): Promise<{ bindings: AgentRuntimeDiscordBinding[] }>;
@@ -249,7 +225,6 @@ export interface TavernAgentRuntimeClient {
         chatId: string,
         input: AgentRuntimeCreateMessage
     ): Promise<AgentRuntimeMessageAccepted>;
-    recallCortex(input: CortexRecallInput): Promise<CortexRecallResult>;
     refreshCapability(id: AgentRuntimeCapabilityHealthId): Promise<AgentRuntimeCapabilityHealth>;
     restartForUpdate(): Promise<AgentRuntimeUpdate>;
     resyncSession(sessionKey: string): Promise<AgentRuntimeSessionResync>;
@@ -263,8 +238,6 @@ export interface TavernAgentRuntimeClient {
         path: string,
         input: AgentRuntimeSaveAgentFile
     ): Promise<AgentRuntimeAgentFileContent>;
-    saveCortexSchema(input: CortexSaveSchemaInput): Promise<CortexSchemaRecord>;
-    saveCortexSettings(input: CortexSaveSettings): Promise<CortexSettings>;
     saveDiscordBinding(
         input: AgentRuntimeSaveDiscordBinding
     ): Promise<AgentRuntimeHermesConfigSnapshot>;
@@ -630,7 +603,7 @@ class HttpTavernAgentRuntimeClient implements TavernAgentRuntimeClient {
             await readErrorResponse(response);
         }
 
-        return agentRuntimeCapabilityHealthListSchema.parse(await response.json());
+        return parseAgentRuntimeCapabilityHealthList(await response.json());
     }
 
     async getCapability(id: AgentRuntimeCapabilityHealthId) {
@@ -755,74 +728,29 @@ class HttpTavernAgentRuntimeClient implements TavernAgentRuntimeClient {
         return cortexStatusSchema.parse(await response.json());
     }
 
-    async getCortexSettings() {
-        const response = await fetch(`${this.#baseUrl}${agentRuntimeRoutes.cortexSettings}`);
+    async listCortexTopics(input: { includeArchived?: boolean } = {}) {
+        const url = new URL(`${this.#baseUrl}${agentRuntimeRoutes.cortexTopics}`);
+        if (input.includeArchived) {
+            url.searchParams.set('includeArchived', 'true');
+        }
+        const response = await fetch(url);
 
         if (!response.ok) {
             await readErrorResponse(response);
         }
 
-        return cortexSettingsSchema.parse(await response.json());
+        return cortexTopicListSchema.parse(await response.json());
     }
 
-    async saveCortexSettings(input: CortexSaveSettings) {
-        const payload = cortexSaveSettingsSchema.parse(input);
-        const response = await fetch(`${this.#baseUrl}${agentRuntimeRoutes.cortexSettings}`, {
-            body: JSON.stringify(payload),
-            headers: {
-                'content-type': 'application/json',
-                [agentRuntimeMutationHeaders.origin]: agentRuntimeMutationOrigins.tavern,
-            },
-            method: 'PUT',
-        });
-
-        if (!response.ok) {
-            await readErrorResponse(response);
+    async listCortexPages(input: { includeArchived?: boolean; topic?: string | null } = {}) {
+        const url = new URL(`${this.#baseUrl}${agentRuntimeRoutes.cortexPages}`);
+        if (input.includeArchived) {
+            url.searchParams.set('includeArchived', 'true');
         }
-
-        return cortexSettingsSchema.parse(await response.json());
-    }
-
-    async getCortexSchema(): Promise<CortexSchemaRecord> {
-        const response = await fetch(`${this.#baseUrl}${agentRuntimeRoutes.cortexSchema}`);
-
-        if (!response.ok) {
-            await readErrorResponse(response);
+        if (input.topic) {
+            url.searchParams.set('topic', input.topic);
         }
-
-        return cortexSchemaRecordSchema.parse(await response.json());
-    }
-
-    async saveCortexSchema(input: CortexSaveSchemaInput): Promise<CortexSchemaRecord> {
-        const payload = cortexSaveSchemaInputSchema.parse(input);
-        const response = await fetch(`${this.#baseUrl}${agentRuntimeRoutes.cortexSchema}`, {
-            body: JSON.stringify(payload),
-            headers: {
-                'content-type': 'application/json',
-                [agentRuntimeMutationHeaders.origin]: agentRuntimeMutationOrigins.tavern,
-            },
-            method: 'PUT',
-        });
-
-        if (!response.ok) {
-            await readErrorResponse(response);
-        }
-
-        return cortexSchemaRecordSchema.parse(await response.json());
-    }
-
-    async getCortexSchemaAdditions(): Promise<CortexSchemaAdditionList> {
-        const response = await fetch(`${this.#baseUrl}${agentRuntimeRoutes.cortexSchemaAdditions}`);
-
-        if (!response.ok) {
-            await readErrorResponse(response);
-        }
-
-        return cortexSchemaAdditionListSchema.parse(await response.json());
-    }
-
-    async listCortexPages() {
-        const response = await fetch(`${this.#baseUrl}${agentRuntimeRoutes.cortexPages}`);
+        const response = await fetch(url);
 
         if (!response.ok) {
             await readErrorResponse(response);
@@ -831,22 +759,10 @@ class HttpTavernAgentRuntimeClient implements TavernAgentRuntimeClient {
         return cortexPageListSchema.parse(await response.json());
     }
 
-    async listCortexDreamReports(options: { limit?: number } = {}) {
-        const url = new URL(`${this.#baseUrl}${agentRuntimeRoutes.cortexDreamReports}`);
-        if (options.limit !== undefined) {
-            url.searchParams.set('limit', String(options.limit));
-        }
-        const response = await fetch(url);
-
-        if (!response.ok) {
-            await readErrorResponse(response);
-        }
-
-        return cortexDreamReportListSchema.parse(await response.json());
-    }
-
-    async getCortexPage(slugOrId: string) {
-        const response = await fetch(`${this.#baseUrl}${agentRuntimeRoutes.cortexPage(slugOrId)}`);
+    async getCortexPage(input: { path: string; topic: string }) {
+        const response = await fetch(
+            `${this.#baseUrl}${agentRuntimeRoutes.cortexPage(input.topic, input.path)}`
+        );
 
         if (response.status === 404) {
             return null;
@@ -858,42 +774,6 @@ class HttpTavernAgentRuntimeClient implements TavernAgentRuntimeClient {
         return cortexPageSchema.parse(await response.json());
     }
 
-    async captureCortex(input: CortexCaptureInput) {
-        const payload = cortexCaptureInputSchema.parse(input);
-        const response = await fetch(`${this.#baseUrl}${agentRuntimeRoutes.cortexCapture}`, {
-            body: JSON.stringify(payload),
-            headers: {
-                'content-type': 'application/json',
-                [agentRuntimeMutationHeaders.origin]: agentRuntimeMutationOrigins.tavern,
-            },
-            method: 'POST',
-        });
-
-        if (!response.ok) {
-            await readErrorResponse(response);
-        }
-
-        return cortexCaptureResultSchema.parse(await response.json());
-    }
-
-    async editCortexPage(input: CortexEditPageInput) {
-        const payload = cortexEditPageInputSchema.parse(input);
-        const response = await fetch(`${this.#baseUrl}${agentRuntimeRoutes.cortexEdit}`, {
-            body: JSON.stringify(payload),
-            headers: {
-                'content-type': 'application/json',
-                [agentRuntimeMutationHeaders.origin]: agentRuntimeMutationOrigins.tavern,
-            },
-            method: 'POST',
-        });
-
-        if (!response.ok) {
-            await readErrorResponse(response);
-        }
-
-        return cortexEditPageResultSchema.parse(await response.json());
-    }
-
     async searchCortex(input: CortexSearchInput) {
         return await this.postCortexQuery(
             agentRuntimeRoutes.cortexSearch,
@@ -902,17 +782,9 @@ class HttpTavernAgentRuntimeClient implements TavernAgentRuntimeClient {
         );
     }
 
-    async recallCortex(input: CortexRecallInput) {
-        return await this.postCortexQuery(
-            agentRuntimeRoutes.cortexRecall,
-            cortexRecallInputSchema.parse(input),
-            cortexRecallResultSchema
-        );
-    }
-
-    async listCortexBacklinks(slugOrId: string) {
+    async listCortexBacklinks(input: { path: string; topic: string }) {
         const response = await fetch(
-            `${this.#baseUrl}${agentRuntimeRoutes.cortexBacklinks(slugOrId)}`
+            `${this.#baseUrl}${agentRuntimeRoutes.cortexBacklinks(input.topic, input.path)}`
         );
 
         if (!response.ok) {
@@ -1456,4 +1328,38 @@ export function createAgentRuntimeClient(baseUrl: string): TavernAgentRuntimeCli
     return new HttpTavernAgentRuntimeClient({
         baseUrl,
     });
+}
+
+const legacyRuntimeCapabilityIds = new Set([
+    'cortexDatabase',
+    'cortexImportProcessors',
+    'cortexJobs',
+    'cortexModelAccess',
+    'embeddingModel',
+]);
+
+function parseAgentRuntimeCapabilityHealthList(input: unknown): AgentRuntimeCapabilityHealthList {
+    return agentRuntimeCapabilityHealthListSchema.parse(filterLegacyRuntimeCapabilities(input));
+}
+
+function filterLegacyRuntimeCapabilities(input: unknown): unknown {
+    if (!input || typeof input !== 'object' || Array.isArray(input)) {
+        return input;
+    }
+    const record = input as Record<string, unknown>;
+    if (!Array.isArray(record.capabilities)) {
+        return input;
+    }
+    return {
+        ...record,
+        capabilities: record.capabilities.filter((capability) => !isLegacyCapability(capability)),
+    };
+}
+
+function isLegacyCapability(input: unknown) {
+    if (!input || typeof input !== 'object' || Array.isArray(input)) {
+        return false;
+    }
+    const id = (input as Record<string, unknown>).id;
+    return typeof id === 'string' && legacyRuntimeCapabilityIds.has(id);
 }

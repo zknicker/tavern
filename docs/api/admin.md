@@ -39,19 +39,19 @@ capabilities. It is not a second product API.
 | Jobs | `/jobs`, `/jobs/{slug}`, `/jobs/{slug}/run` |
 | Cron | `/cron-jobs`, `/cron-jobs/{id}`, `/cron-jobs/{id}/run`, `/cron-jobs/{id}/runs`, `/cron-runs`, `/cron-runs/{id}` |
 | Skills | `/skills`, `/skills/{id}`, `/skills/{id}/config` |
-| Cortex, models, and access | `/cortex/settings`, `/cortex/status`, `/models`, `/model-access`, `/model-access/openrouter` |
+| Cortex, models, and access | `/cortex/status`, `/cortex/topics`, `/cortex/pages`, `/cortex/search`, `/models`, `/model-access`, `/model-access/openrouter` |
 | Platform bindings | `/bindings`, `/bindings/{id}` |
 | Hermes chat projections | `/hermes/chats`, `/hermes/chats/{chatId}/messages` |
 | Runtime chat relay | websocket `/chat` |
 
 `POST /jobs/{slug}/run` is the single manual job-run interface. Runtime job
-definitions own their payload schema and default input. Cortex embedding repair
-uses the `cortex-generate-embeddings` Runtime job with `{ "stale": true }` when
-clients want explicit incremental indexing.
+definitions own their payload schema and default input. Cortex wiki maintenance
+is not a built-in Runtime job; scheduled wiki work belongs in Tasks and runtime
+crons.
 
 `/model-access/openrouter` reads and writes OpenRouter credentials in Runtime
-Tavern Vault. Runtime-owned features such as Cortex recall can use that key
-without reaching into app storage or Hermes internals.
+Tavern Vault. Runtime-owned features use that key without reaching into app
+storage or Hermes internals.
 
 ## Contract Source
 

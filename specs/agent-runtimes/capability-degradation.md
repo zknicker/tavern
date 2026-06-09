@@ -109,9 +109,9 @@ The Hermes adapter reports capability state for these surfaces:
 Future `channels` capabilities may be added when Hermes exposes stable gateway
 surfaces that Tavern can consume without local filesystem access.
 
-The Runtime also reports Cortex and model-access capabilities that are independent of managed
-Hermes process reachability: `codexOAuth`, `cortexDatabase`, `cortexImportProcessors`,
-`cortexJobs`, `cortexModelAccess`, `cortexWiki`, and `embeddingModel`.
+The Runtime also reports Cortex and model-access capabilities that are
+independent of managed Hermes process reachability: `codexOAuth` and
+`cortexWiki`.
 
 ## Adapter Behavior
 

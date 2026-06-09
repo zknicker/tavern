@@ -3,13 +3,8 @@ import { connectionStateSchema } from '../contracts/shared.ts';
 
 export const agentRuntimeCapabilitySchema = z.enum([
     'codexOAuth',
-    'cortexDatabase',
-    'cortexImportProcessors',
-    'cortexJobs',
-    'cortexModelAccess',
     'cortexWiki',
     'dashboardServer',
-    'embeddingModel',
     'apiServer',
     'gateway',
     'models',

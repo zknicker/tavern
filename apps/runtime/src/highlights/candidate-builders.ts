@@ -3,12 +3,11 @@ import type {
     AgentRuntimeHighlightCategory,
     AgentRuntimeHighlightSourceRef,
 } from '@tavern/api';
-import { type CortexDatabase, getCortexDb } from '../cortex/db';
 import type { Database } from '../db/sqlite';
 import { namedParams } from '../db/sqlite';
 import { createLocalHermesClient } from '../hermes/local-client';
 import { recentWindowMs, toolVolumeWindowMs } from './constants';
-import { formatAgo, formatCount, truncateReceipt } from './format';
+import { formatAgo, formatCount } from './format';
 import { pickHeadline } from './phrases';
 import type { HighlightCandidate } from './types';
 
@@ -16,13 +15,6 @@ interface CountRow {
     agent_id: null | string;
     agent_name: null | string;
     count: number;
-}
-interface MemoryRow {
-    created_at: string;
-    id: string;
-    kind: string;
-    summary: string;
-    type: 'cortexAudit' | 'cortexCapture';
 }
 interface TroubleRow {
     id: string;
@@ -32,7 +24,6 @@ interface TroubleRow {
 }
 
 export async function buildHighlightCandidates(input: {
-    cortexDb?: CortexDatabase;
     cronRuns?: AgentRuntimeCronRun[];
     db: Database;
     now: Date;
@@ -43,10 +34,6 @@ export async function buildHighlightCandidates(input: {
         buildQuestFinishedHighlight(input),
         buildTroubleHighlight(input),
         await buildScheduledRunHighlight(input),
-        await buildMemorySavedHighlight({
-            ...input,
-            cortexDb: input.cortexDb ?? getCortexDb(),
-        }),
     ];
 
     return candidates.filter((candidate): candidate is HighlightCandidate => Boolean(candidate));
@@ -226,60 +213,6 @@ async function buildScheduledRunHighlight(input: {
         receipt: `${formatCount(recentRuns.length, 'scheduled quest')} ran in the past 3 hours.`,
         slotStart: input.slotStart,
         sourceRefs: recentRuns.slice(0, 5).map((run) => ({ id: run.id, type: 'cronRun' })),
-        windowStart,
-    });
-}
-
-async function buildMemorySavedHighlight(input: {
-    cortexDb: CortexDatabase;
-    db: Database;
-    now: Date;
-    slotStart: Date;
-}): Promise<HighlightCandidate | null> {
-    const windowStart = new Date(input.now.getTime() - recentWindowMs);
-    const rows = await input.cortexDb
-        .prepare(
-            `SELECT id, kind, summary, created_at, 'cortexAudit' AS type
-             FROM cortex_audit_events
-             WHERE status = 'success'
-               AND kind IN ('capture', 'dream.review', 'chat_ingestion.review', 'page.archive', 'page.merge', 'page.split', 'page.upsert')
-               AND created_at >= $windowStart`
-        )
-        .all<MemoryRow>({
-            windowStart: windowStart.toISOString(),
-        });
-    const captureRows = await input.cortexDb
-        .prepare(
-            `SELECT id,
-                    'capture' AS kind,
-                    COALESCE(error_message, 'Cortex captured new lore.') AS summary,
-                    updated_at AS created_at,
-                    'cortexCapture' AS type
-             FROM cortex_captures
-             WHERE status = 'success'
-               AND updated_at >= $windowStart`
-        )
-        .all<MemoryRow>({
-            windowStart: windowStart.toISOString(),
-        });
-    const row = [...rows, ...captureRows].sort((left, right) =>
-        right.created_at.localeCompare(left.created_at)
-    )[0];
-
-    if (!row) {
-        return null;
-    }
-
-    return createCandidate({
-        category: 'memory_saved',
-        metric: {
-            auditKind: row.kind,
-            summary: row.summary,
-        },
-        now: input.now,
-        receipt: `New lore stored: ${truncateReceipt(row.summary)}`,
-        slotStart: input.slotStart,
-        sourceRefs: [{ id: row.id, type: row.type }],
         windowStart,
     });
 }

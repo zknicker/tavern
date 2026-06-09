@@ -74,25 +74,25 @@ test('JobsSummarySection renders disabled job reasons inline', () => {
                         failed: 0,
                         waiting: 0,
                     },
-                    description: 'Generates embeddings for missing or stale Cortex chunks.',
-                    disabledReason: 'Required capability missing: embedding model.',
-                    displayName: 'Generate Cortex Embeddings',
+                    description: 'Refreshes Runtime capability health.',
+                    disabledReason: 'Runtime is paused.',
+                    displayName: 'Refresh Runtime Capabilities',
                     latestRun: null,
-                    queueName: 'cortex-generate-embeddings',
+                    queueName: 'refresh-runtime-capabilities',
                     schedule: {
                         everyMs: 900_000,
                         kind: 'interval',
                         nextRunAt: null,
                         runOnStart: true,
                     },
-                    slug: 'cortex-generate-embeddings',
+                    slug: 'refresh-runtime-capabilities',
                 },
             ]}
             onSelectJob={() => undefined}
         />
     );
 
-    assert.match(markup, /Generate Cortex Embeddings/);
+    assert.match(markup, /Refresh Runtime Capabilities/);
     assert.match(markup, /Disabled/);
-    assert.match(markup, /Required capability missing: embedding model/);
+    assert.match(markup, /Runtime is paused/);
 });

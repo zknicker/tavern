@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## v1.3.0 - 2026-06-09
+
+- Replaced the GBrain/PGlite Cortex stack with a read-only llm-wiki hub browser and managed Hermes wiki skill.
+- Updated Runtime packaging, Homebrew assets, capability checks, and docs for the llm-wiki hub.
+- Raised the required Runtime floor to 1.3.0 for the new Cortex API, wiki hub, and managed Hermes integration.
+
 ## v1.2.9 - 2026-06-06
 
 - Fixed Tavern Runtime startup from Homebrew installs by installing the PGlite assets required by Cortex.

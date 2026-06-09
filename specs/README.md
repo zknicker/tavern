@@ -41,21 +41,20 @@ directly.
 
 ## Memory Specs
 
-- `memories.md`: Cortex-backed durable memory, person memory, and memory
+- `memories.md`: llm-wiki durable knowledge, person memory, and memory
   inspection surfaces.
-- `memory-context.md`: bounded prompt-facing context assembled from Lossless
-  Claw context management, chat state, participants, and Cortex recall.
-- `memory-lifecycle.md`: Cortex page lifecycle, recall behavior, correction,
-  forgetting, and maintenance.
-- `memory-persistence.md`: Cortex capture, watermarks, and extraction pipeline.
+- `memory-context.md`: bounded prompt-facing context assembled from Hermes
+  context management, chat state, participants, and selected wiki material.
+- `memory-lifecycle.md`: llm-wiki lifecycle, correction, forgetting, and
+  maintenance through Tasks and crons.
+- `memory-persistence.md`: historical memory persistence design; do not extend
+  it for new wiki work.
 - `participant-knowledge.md`: participant/profile resolution and person-level
   knowledge.
 
 ## Cortex Specs
 
-- `cortex.md`: GBrain-style durable brain with pages, compiled truth, timelines,
-  chunks, embeddings, links, files, citations, recall, capture, maintenance,
-  and product surfaces.
+- `cortex.md`: llm-wiki-backed durable knowledge browser and Runtime contract.
 
 ## Runtime Specs
 

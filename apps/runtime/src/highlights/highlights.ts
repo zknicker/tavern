@@ -5,7 +5,6 @@ import {
     type AgentRuntimeHighlightList,
     agentRuntimeHighlightListSchema,
 } from '@tavern/api';
-import type { CortexDatabase } from '../cortex/db';
 import { getDb } from '../db/connection';
 import type { Database } from '../db/sqlite';
 import { namedParams } from '../db/sqlite';
@@ -19,7 +18,6 @@ import {
 } from './constants';
 
 interface GenerateHighlightsOptions {
-    cortexDb?: CortexDatabase;
     cronRuns?: AgentRuntimeCronRun[];
     db?: Database;
     now?: Date;
@@ -47,7 +45,6 @@ export async function generateTavernHighlights(
     const expiresAt = new Date(now.getTime() + highlightTtlMs).toISOString();
     const slotStart = getHourSlotStart(now);
     const candidates = await buildHighlightCandidates({
-        cortexDb: options.cortexDb,
         cronRuns: options.cronRuns,
         db,
         now,

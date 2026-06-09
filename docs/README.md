@@ -35,12 +35,11 @@ manage businesses, complete knowledge work, and automate routine tasks.
   turns, chat delivery, and event history keep moving.
 * **Hermes as agent runtime.** Sessions, turns, tools, model calls, files,
   and native transcripts stay execution-owned.
-* **Memory you can inspect.** Hermes handles prompt-time recall, while Tavern
-  shows the Cortex captures, timeline evidence, and recall results behind durable
-  agent memory.
-* **Cortex wiki included.** Give agents a linked markdown brain for durable
-  notes, files, citations, observations, embeddings, and working material instead
-  of stuffing everything into prompts.
+* **Memory you can inspect.** Hermes handles prompt-time context, while Tavern
+  shows the llm-wiki hub behind durable agent knowledge.
+* **Cortex wiki included.** Give agents a linked Markdown wiki for durable
+  notes, sources, compiled pages, inventory, datasets, outputs, and working
+  material instead of stuffing everything into prompts.
 * **Automations with a face.** Cron jobs, scheduled work, and background runs show
   up as first-class app objects, not invisible daemon trivia.
 * **Work that looks alive.** Tool calls, assistant progress, and final replies
@@ -67,12 +66,10 @@ manage businesses, complete knowledge work, and automate routine tasks.
   summaries, and final replies in one timeline.
 * **Agents.** Model, tool, memory, skill, and toolset configuration for the
   people you actually work with in Tavern.
-* **Cortex.** A browsable linked markdown brain with pages, backlinks, files,
-  citations, observations, canvas graph navigation, and agent-authored working
-  notes.
+* **Cortex.** A browsable llm-wiki hub with topics, Markdown pages, backlinks,
+  source folders, inventories, datasets, outputs, and agent-authored notes.
 * **Context management.** Prompt-time continuity for active Hermes turns.
-* **Memory.** Cortex capture, recall, timeline evidence, compiled truth, and
-  maintenance health.
+* **Memory.** llm-wiki hub readiness plus prompt-time context inspection.
 * **Cron automations.** Scheduled agent work with run history, delivery targets,
   and clear follow-up state, even while the app is closed.
 * **Skills & Toolsets.** Reusable instruction packages and Hermes tool groups.

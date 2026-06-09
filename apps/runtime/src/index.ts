@@ -1,9 +1,8 @@
 import { spawnSync } from 'node:child_process';
 import path from 'node:path';
+import { refreshRuntimeCapabilities } from './capabilities/store';
 import { parseCli, printHelp, runCortexCli } from './cli';
 import { DATA_DIR } from './config';
-import { ensureCortexRuntimeBootstrap } from './cortex/bootstrap';
-import { closeCortexDb, initCortexDb } from './cortex/db';
 import { initDb } from './db/connection';
 import { ensureRuntimeSchema } from './db/schema';
 import { type ManagedHermesHandle, startHermesForRuntime } from './hermes/supervisor';
@@ -49,9 +48,7 @@ async function main(): Promise<void> {
 
     const dbPath = path.join(DATA_DIR, 'runtime.db');
     const db = initDb(dbPath);
-    const cortexDb = await initCortexDb();
     ensureRuntimeSchema(db);
-    await ensureCortexRuntimeBootstrap(cortexDb);
     ensureRuntimeJobsSchema(db);
     ensureWorkspaceInstructionSchema(db);
     log.info('Runtime DB ready', { path: dbPath });
@@ -61,8 +58,14 @@ async function main(): Promise<void> {
     log.info('Tavern Runtime running', { url: runtimeServer.url.toString() });
 
     hermesStartup = startHermesForRuntime()
-        .then((handle) => {
+        .then(async (handle) => {
             hermes = handle;
+            await refreshRuntimeCapabilities({
+                ids: ['cortexWiki'],
+                publishUpdated: true,
+            }).catch((err) => {
+                log.warn('Managed wiki capability refresh failed after Hermes startup', { err });
+            });
             if (shuttingDown) {
                 void handle.stop();
             }
@@ -95,9 +98,6 @@ async function shutdown(signal: string): Promise<void> {
     log.info('Stopping Runtime server');
     runtimeServer?.stop();
     log.info('Runtime server stopped');
-    log.info('Closing Cortex DB');
-    await closeCortexDb();
-    log.info('Cortex DB closed');
     const handle = hermes ?? (await hermesStartup?.catch(() => null));
     if (handle) {
         log.info('Waiting for managed Hermes API to stop');

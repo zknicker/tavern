@@ -45,7 +45,7 @@ const settingsTabs: Array<{
     { id: 'appearance', label: 'Appearance', icon: PaintBrush01Icon },
     { id: 'sessions', label: 'Sessions', icon: ChatIcon },
     { id: 'models', label: 'Models', icon: AiBrain01Icon },
-    { id: 'memories', label: 'Memories', icon: Clock04Icon },
+    { id: 'memories', label: 'Wiki', icon: Clock04Icon },
     { id: 'jobs', label: 'Jobs', icon: Clock04Icon },
 ];
 

@@ -1,96 +1,54 @@
 # Memories
 
-Memory in Tavern is Cortex.
+Memory in Tavern is llm-wiki plus prompt-time context.
 
-Tavern does not have two memory systems. Cortex is the durable memory system:
-compiled truth, timelines, pages, embeddings, links, observations, capture
-output, recall audit, and repair state.
+Durable knowledge lives in the llm-wiki hub. Tavern Runtime exposes that hub
+through the Cortex API and Cortex tab, but it does not own a separate memory
+database.
 
 Managed Tavern Hermes does not use Lossless Claw. Prompt-time context is
-separate from Tavern memory, and durable memory lives in Cortex.
+separate from durable wiki knowledge.
 
-The Memory product surface is the readable inspection and control surface for
-durable Cortex memory.
+## Durable Knowledge
 
-## Context Management Boundary
-
-Managed Hermes keeps Hermes-native memory disabled. Tavern enforces that
-setup as part of managed Hermes config rather than treating it as
-user-authored memory state.
-
-Tavern's managed Hermes memory config:
-
-* sets `plugins.slots.memory` to `none`
-* removes stale managed memory plugin entries such as `lossless-claw`,
-  `active-memory`, and `memory-core`
-
-Hermes context-management readiness is not reported as a separate Runtime
-capability. Product copy should describe prompt-time context management, not
-memory, when it refers to Hermes-native state.
-
-## Durable Memory
-
-Cortex pages hold the current best understanding in compiled truth and preserve
-the evidence trail in timelines. Facts, preferences, decisions, identity,
-events, observations, goals, and tasks are represented as Cortex page types,
-frontmatter, tags, links, timeline entries, and source metadata.
+Wiki topics hold source material, compiled pages, inventories, datasets, inbox
+notes, and outputs as plain Markdown. Agents use llm-wiki skills to create and
+maintain those files.
 
 Tavern does not add a parallel `memory_records` table for normal memory. If a
-user corrects memory, Tavern edits or appends to Cortex. If a user forgets
-something, Tavern marks, rewrites, archives, or deletes the relevant Cortex
-material with audit history.
+user corrects memory, an agent edits the relevant wiki page. If a user forgets
+something, an agent archives, rewrites, or deletes the relevant wiki material.
 
 ## Memory Inspection
 
-The Memory page shows:
+The Memory page shows wiki readiness and counts. The Cortex page is the browsable
+wiki surface.
 
-* recent Cortex captures
-* compiled-truth changes
-* appended timeline evidence
-* Cortex recall results returned to agents
-* failed captures and recall errors
-* stale embeddings and repair state
-* prompt-facing context or bulletin previews when available
-* context-management readiness when prompt-time continuity affects memory use
-
-Memory inspection favors readable evidence over graph visualization as the
-primary experience.
+The inspection model favors readable Markdown over graph visualization,
+embedding settings, hidden repair queues, or generated schema controls.
 
 ## Person Memory
 
-Person memory uses Tavern participants and profiles before writing to Cortex.
+Person knowledge uses Tavern participants and profiles for identity, then stores
+durable facts in wiki pages when an agent intentionally writes them.
 
-1. Observe a structured source identity such as provider, account scope,
-   external user id, and display name.
-2. Resolve that source identity to an observed participant.
-3. Resolve manual profile links when present.
-4. Write person knowledge into Cortex with participant/profile provenance.
-5. Keep the observed participant as source evidence.
-
-This keeps one Discord room with many humans from collapsing into one sender
-label, and it lets one real person be linked across Tavern, Discord, Telegram,
-and other surfaces without unsafe automatic merges.
+Observed participant labels remain source evidence. Tavern does not merge
+people by display name, and wiki facts should cite the participant/profile source
+when identity matters.
 
 ## Prompt Continuity
 
-The prompt-facing bulletin is a rendered context output, not the memory store.
+Prompt-facing context is rendered from live state and selected source material.
+It can include stable identity context, recent activity, participant context,
+Hermes prompt-time context, and relevant wiki pages.
 
-It can include:
-
-* stable identity context
-* recent working memory synthesized from activity
-* activity map
-* participant context
-* relevant Cortex compiled truth or recall output
-
-The bulletin remains bounded. It must not become a dump of every hot Cortex page
-or every recent recall result.
+The prompt view remains bounded. It must not become a dump of every wiki page or
+every recent search result.
 
 ## Constraints
 
 * Memory must not cause one agent's context to bleed into another agent.
 * Person context must not leak into unrelated participants.
-* Memory must stay bounded in prompt usage.
-* Cortex provenance must make remembered context inspectable.
-* Hermes context management and Cortex memory must remain separate readiness
-  signals.
+* Prompt context must stay bounded.
+* Durable knowledge remains inspectable as Markdown.
+* Hermes context management and wiki readiness remain separate signals.

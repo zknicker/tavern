@@ -21,13 +21,8 @@ const runtimeDisconnectedReason = 'Tavern Runtime is disconnected.';
 const capabilityLabels = {
     apiServer: 'Hermes API Server',
     codexOAuth: 'Codex OAuth',
-    cortexDatabase: 'Cortex Database',
-    cortexImportProcessors: 'Cortex Import Processors',
-    cortexJobs: 'Cortex Jobs',
-    cortexModelAccess: 'Cortex Model Access',
     cortexWiki: 'Cortex Wiki',
     dashboardServer: 'Hermes Dashboard Server',
-    embeddingModel: 'Embedding Model',
     gateway: 'Hermes Gateway',
     models: 'Models',
     skills: 'Skills',
@@ -39,7 +34,7 @@ export const settingsCapabilityRequirements = {
     'agents-md': [],
     appearance: [],
     jobs: [],
-    memories: ['cortexDatabase', 'cortexWiki'],
+    memories: ['cortexWiki'],
     models: ['apiServer', 'models'],
     participants: [],
     sessions: ['apiServer'],
@@ -50,7 +45,7 @@ export const settingsCapabilityRequirements = {
 } as const satisfies Record<string, readonly RuntimeCapabilityId[]>;
 
 export const routeTabCapabilityRequirements = {
-    cortex: ['cortexDatabase', 'cortexWiki'],
+    cortex: ['cortexWiki'],
     cron: [],
     overview: [],
 } as const satisfies Record<RouteTab, readonly RuntimeCapabilityId[]>;

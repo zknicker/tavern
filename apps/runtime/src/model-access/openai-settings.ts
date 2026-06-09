@@ -131,11 +131,7 @@ async function readJson(request: Request): Promise<unknown> {
 
 async function refreshOpenAiDependentSchedules(): Promise<void> {
     try {
-        const { refreshRuntimeCapabilities } = await import('../capabilities/store');
         const { reconcileRuntimeJobSchedules } = await import('../jobs/manager');
-        await refreshRuntimeCapabilities({
-            ids: ['embeddingModel', 'cortexImportProcessors', 'cortexModelAccess'],
-        });
         await reconcileRuntimeJobSchedules();
     } catch (error) {
         log.warn('OpenAI model access changed, but capability refresh failed', { err: error });

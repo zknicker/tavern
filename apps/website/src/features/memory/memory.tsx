@@ -15,58 +15,44 @@ function MemoryContent() {
             <div className="max-w-3xl">
                 <h1 className="font-semibold text-2xl tracking-tight">Memory</h1>
                 <p className="mt-2 text-muted-foreground text-sm leading-6">
-                    Memory is inspectable Cortex state: pages, sources, links, chunks, encodings,
-                    recall audit, and repair runs.
+                    Memory is the llm-wiki hub Cortex can browse. Agent research, ingest, compile,
+                    audit, and maintenance work belongs in Tasks.
                 </p>
             </div>
 
             <div>
                 <BadgeDivider
                     className="pb-4"
-                    subtext="Durable memory lives in Cortex. Hermes context management is prompt-time continuity, not a second memory store."
+                    subtext="Cortex reads plain Markdown topic wikis. Hermes context management remains prompt-time continuity."
                 >
-                    Cortex Memory
+                    Wiki Memory
                 </BadgeDivider>
                 <CardFrame>
                     <Card className="overflow-hidden p-0">
-                        <SettingsRow title="Pages">
+                        <SettingsRow title="Active topics">
+                            <SettingsValue>{status?.topicCount ?? unavailable}</SettingsValue>
+                        </SettingsRow>
+                        <Separator />
+                        <SettingsRow title="Archived topics">
+                            <SettingsValue>
+                                {status?.archivedTopicCount ?? unavailable}
+                            </SettingsValue>
+                        </SettingsRow>
+                        <Separator />
+                        <SettingsRow title="Markdown pages">
                             <SettingsValue>{status?.pageCount ?? unavailable}</SettingsValue>
                         </SettingsRow>
                         <Separator />
-                        <SettingsRow title="Sources">
-                            <SettingsValue>{status?.sourceCount ?? unavailable}</SettingsValue>
+                        <SettingsRow title="Readable">
+                            <SettingsValue>{status?.readable ? 'Yes' : 'No'}</SettingsValue>
                         </SettingsRow>
                         <Separator />
-                        <SettingsRow title="Claims">
-                            <SettingsValue>{status?.claimCount ?? unavailable}</SettingsValue>
+                        <SettingsRow title="Writable">
+                            <SettingsValue>{status?.writable ? 'Yes' : 'No'}</SettingsValue>
                         </SettingsRow>
                         <Separator />
-                        <SettingsRow title="Links">
-                            <SettingsValue>{status?.linkCount ?? unavailable}</SettingsValue>
-                        </SettingsRow>
-                        <Separator />
-                        <SettingsRow title="Chunks">
-                            <SettingsValue>{status?.chunkCount ?? unavailable}</SettingsValue>
-                        </SettingsRow>
-                        <Separator />
-                        <SettingsRow title="Encodings">
-                            <SettingsValue>
-                                {status
-                                    ? `${status.encoding.currentCount} current / ${status.encoding.totalCount} total`
-                                    : unavailable}
-                            </SettingsValue>
-                        </SettingsRow>
-                        <Separator />
-                        <SettingsRow title="Vector database">
-                            <SettingsValue>
-                                {status
-                                    ? `${status.vectorIndex.backend} / ${status.vectorIndex.indexedCount} indexed chunk(s)`
-                                    : unavailable}
-                            </SettingsValue>
-                        </SettingsRow>
-                        <Separator />
-                        <SettingsRow title="Wiki path">
-                            <CodeSnippet lines={status?.wikiPath ?? unavailable} />
+                        <SettingsRow title="Hub path">
+                            <CodeSnippet lines={status?.hubPath ?? unavailable} />
                         </SettingsRow>
                     </Card>
                 </CardFrame>

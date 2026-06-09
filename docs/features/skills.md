@@ -74,6 +74,18 @@ Toolsets stay owned by Hermes. Tavern does not copy runtime tools or plugin
 packages into `~/.tavern/skills`, and it does not describe toolsets to the model
 as Tavern skills.
 
+Runtime-owned workflow packages can still be prepared as managed skills when
+they are part of Tavern's product contract. llm-wiki is the current example:
+Runtime bundles the upstream workflow package as the `wiki` managed Hermes skill
+so Tasks, crons, and normal agent turns can invoke wiki work.
+
+Plugins stay owned by the runtime that exposes them. Hermes plugins may add
+skills, workflows, tools, channels, or runtime behavior. Codex native plugins
+remain Codex app-server capabilities surfaced through the Hermes Codex
+harness. Codex-only catalog rows must be labeled as Codex-only rather than
+presented as Hermes skills. Tavern does not copy runtime skills or plugins
+into `~/.tavern/skills` or describe plugins to the model as Tavern skills.
+
 ## What is intentionally missing
 
 * Marketplace, install, uninstall, and update flows.

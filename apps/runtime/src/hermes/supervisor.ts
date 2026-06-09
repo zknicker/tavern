@@ -15,6 +15,7 @@ import {
 } from '../config';
 import { log } from '../log';
 import { publishRuntimeEvent } from '../tavern/runtime-events';
+import { resolveManagedWikiHubPath } from './llm-wiki';
 import { buildRuntimeApiBaseUrl, createLocalHermesClient } from './local-client';
 import { prepareManagedHermesModelConfig, resolveManagedHermesModelConfig } from './model-config';
 import {
@@ -45,29 +46,14 @@ export async function startHermesForRuntime(): Promise<ManagedHermesHandle> {
 
     const startDashboard = async (reason: 'initial' | 'restart') => {
         if (await isPortOpen(port)) {
-            const client = createLocalHermesClient();
-            try {
-                await client.getStatus();
-                await client.assertGatewayReady();
-                await applyManagedHermesModelConfig(client);
-                log.warn('Managed Hermes API port is already open; adopting existing process', {
-                    port,
-                    reason,
-                });
-                markManagedHermesApiReady();
-                publishGatewayCapabilitiesUpdated();
-            } catch (err) {
-                log.warn('Managed Hermes API port is already open but is not usable', {
-                    err,
-                    port,
-                    reason,
-                });
-                markManagedHermesApiStopped();
-                publishGatewayCapabilitiesUpdated();
-                scheduleRestart({ delayMs: 5000 });
-            } finally {
-                client.close();
-            }
+            log.warn('Managed Hermes API port is already open; not adopting existing process', {
+                port,
+                reason,
+                wikiHubPath: resolveManagedWikiHubPath(),
+            });
+            markManagedHermesApiStopped();
+            publishGatewayCapabilitiesUpdated();
+            scheduleRestart({ delayMs: 5000 });
             return;
         }
 
@@ -179,6 +165,7 @@ export function buildHermesDashboardEnv() {
         HERMES_DASHBOARD_SESSION_TOKEN,
         HERMES_HOME,
         TAVERN_RUNTIME_URL: buildRuntimeApiBaseUrl(),
+        TAVERN_WIKI_HUB_PATH: resolveManagedWikiHubPath(),
     };
 }
 

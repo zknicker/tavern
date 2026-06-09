@@ -8,7 +8,7 @@ export function filterPages(pages: CortexPageNode[], query: string) {
     }
 
     return pages.filter((page) =>
-        [page.title, page.slug, page.type, ...page.tags].join(' ').toLowerCase().includes(terms)
+        [page.title, page.topic, page.path, page.section].join(' ').toLowerCase().includes(terms)
     );
 }
 
@@ -19,10 +19,21 @@ export function formatTimestamp(value: string) {
     }).format(new Date(value));
 }
 
-export function resolveSelectedPage(list: CortexListOutput, selectedSlug: string | null) {
-    return list.pages.find((page) => page.slug === selectedSlug) ?? list.pages[0] ?? null;
+export function resolveSelectedPage(
+    list: CortexListOutput,
+    selected: { path: string; topic: string } | null
+) {
+    if (selected) {
+        const exact = list.pages.find(
+            (page) => page.path === selected.path && page.topic === selected.topic
+        );
+        if (exact) {
+            return exact;
+        }
+    }
+    return list.pages[0] ?? null;
 }
 
-export function countLinks(list: Pick<CortexListOutput, 'pages'>) {
-    return list.pages.reduce((count, page) => count + page.links.length, 0);
+export function pageKey(page: Pick<CortexPageNode, 'path' | 'topic'>) {
+    return `${page.topic}:${page.path}`;
 }

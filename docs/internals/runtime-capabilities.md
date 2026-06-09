@@ -18,10 +18,9 @@ Capabilities are a readiness primitive. Jobs, micro-features, and whole app
 pages can use capability health to decide whether a feature is available,
 degraded, or blocked.
 
-Capabilities are not quality scores. Domain freshness, repair backlog, and
-content quality belong to the domain status API. For Cortex, stale embeddings,
-unresolved links, missing chunks, stale compiled truth, failed reviews, and
-recommendations belong to `/cortex/status`, not Runtime capability health.
+Capabilities are not quality scores. Domain freshness, content quality, missing
+wiki topics, and broken wiki links belong to domain status APIs or future Tasks
+workflows, not Runtime capability health.
 
 The app only renders capability state. It does not decide whether a Runtime
 capability is healthy.
@@ -50,7 +49,7 @@ Each capability has a stable id and one current health record.
 
 | Field | Meaning |
 | --- | --- |
-| `id` | Stable capability id such as `apiServer`, `gateway`, or `embeddingModel`. |
+| `id` | Stable capability id such as `apiServer`, `gateway`, or `cortexWiki`. |
 | `displayName` | Human-readable name for settings and logs. |
 | `healthy` | `true` only when Runtime can use the capability now. |
 | `state` | `healthy`, `degraded`, `unavailable`, `unauthorized`, or `unknown`. |
@@ -133,10 +132,8 @@ refresh: {
 }
 ```
 
-Domain writes may explicitly request a named capability refresh. For example,
-saving Cortex embedding settings can request an immediate `embeddingModel`
-refresh. Runtime does not need a generic event subscription model for
-capabilities.
+Domain writes may explicitly request a named capability refresh. Runtime does
+not need a generic event subscription model for capabilities.
 
 Capability checks are bounded. A slow or failing dependency marks only that
 capability degraded; it does not block Runtime startup or unrelated checks.
@@ -146,7 +143,7 @@ capability degraded; it does not block Runtime startup or unrelated checks.
 Runtime jobs declare required capabilities in their job definition.
 
 ```ts
-requiredCapabilities: ["embeddingModel"]
+requiredCapabilities: ["gateway"]
 ```
 
 Before scheduling, startup enqueue, manual enqueue, or execution, the job runner
@@ -203,12 +200,7 @@ integration points, and external dependencies.
 | `dashboardServer` | Runtime can reach managed Hermes dashboard status at `/api/status`. |
 | `apiServer` | Runtime can make an authenticated managed Hermes REST API call. |
 | `gateway` | Runtime can open managed Hermes Gateway WebSocket `/api/ws`. |
-| `cortexDatabase` | Cortex PGLite schema exists and is usable. Empty Cortex stores are still healthy. |
-| `cortexImportProcessors` | Runtime has the hard dependencies needed for rich Cortex imports such as fetch, OCR, and transcription. |
-| `cortexJobs` | Runtime registered the Cortex job queues required for sync, lint, repair, embeddings, chat ingestion, and Dream. |
-| `cortexModelAccess` | Runtime has credentials for the providers configured in Cortex model settings. |
-| `cortexWiki` | The Cortex wiki path can be read and written, or its parent path can host an empty wiki. |
-| `embeddingModel` | Cortex embedding settings are usable and recent embedding failures do not indicate auth or quota failure. |
+| `cortexWiki` | The llm-wiki hub can be read and the managed Hermes `wiki` skill has been prepared. Runtime reports write access in capability metadata because wiki maintenance needs it, but read-only hubs remain browseable. |
 | `models` | Runtime can reach managed Hermes model inventory at `/api/model/options`. |
 | `skills` | Runtime can reach managed Hermes skill inventory at `/api/skills`. |
 

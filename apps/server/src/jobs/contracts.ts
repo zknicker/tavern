@@ -2,16 +2,7 @@ import { z } from 'zod';
 import { jobDefinitions } from '../../../../jobs/index.ts';
 
 const jobSlugs = jobDefinitions.map((definition) => definition.slug);
-export const runtimeJobSlugs = [
-    'cortex-dream',
-    'cortex-generate-embeddings',
-    'cortex-lint',
-    'cortex-repair-derived-state',
-    'cortex-chat-ingestion',
-    'cortex-sync',
-    'refresh-runtime-capabilities',
-    'tavern-highlights',
-] as const;
+export const runtimeJobSlugs = ['refresh-runtime-capabilities', 'tavern-highlights'] as const;
 const allJobSlugs = [...jobSlugs, ...runtimeJobSlugs];
 
 if (allJobSlugs.length === 0) {

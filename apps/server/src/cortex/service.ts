@@ -1,11 +1,4 @@
-import type {
-    CortexCaptureInput,
-    CortexEditPageInput,
-    CortexRecallInput,
-    CortexSaveSchemaInput,
-    CortexSaveSettings,
-    CortexSearchInput,
-} from '@tavern/api';
+import type { CortexSearchInput } from '@tavern/api';
 import type { TavernAgentRuntimeClient } from '../agent-runtime/client.ts';
 import { createConfiguredAgentRuntimeClient } from '../agent-runtime/configured-client.ts';
 
@@ -22,70 +15,25 @@ export async function getCortexStatus(
     return client ? await client.getCortexStatus() : null;
 }
 
-export async function getCortexSettings(
+export async function listCortexTopics(
+    input: { includeArchived?: boolean } = {},
     client: TavernAgentRuntimeClient | null = createConfiguredAgentRuntimeClient()
 ) {
-    return client ? await client.getCortexSettings() : null;
-}
-
-export async function saveCortexSettings(
-    input: CortexSaveSettings,
-    client: TavernAgentRuntimeClient | null = createConfiguredAgentRuntimeClient()
-) {
-    return await requireRuntimeClient(client).saveCortexSettings(input);
-}
-
-export async function getCortexSchema(
-    client: TavernAgentRuntimeClient | null = createConfiguredAgentRuntimeClient()
-) {
-    return client ? await client.getCortexSchema() : null;
-}
-
-export async function saveCortexSchema(
-    input: CortexSaveSchemaInput,
-    client: TavernAgentRuntimeClient | null = createConfiguredAgentRuntimeClient()
-) {
-    return await requireRuntimeClient(client).saveCortexSchema(input);
-}
-
-export async function getCortexSchemaAdditions(
-    client: TavernAgentRuntimeClient | null = createConfiguredAgentRuntimeClient()
-) {
-    return client ? await client.getCortexSchemaAdditions() : { additions: [] };
+    return client ? await client.listCortexTopics(input) : { hubPath: '', topics: [] };
 }
 
 export async function listCortexPages(
+    input: { includeArchived?: boolean; topic?: string | null } = {},
     client: TavernAgentRuntimeClient | null = createConfiguredAgentRuntimeClient()
 ) {
-    return client ? await client.listCortexPages() : { pages: [] };
-}
-
-export async function listCortexDreamReports(
-    input: { limit?: number } = {},
-    client: TavernAgentRuntimeClient | null = createConfiguredAgentRuntimeClient()
-) {
-    return client ? await client.listCortexDreamReports(input) : { reports: [] };
+    return client ? await client.listCortexPages(input) : { pages: [], topic: input.topic ?? null };
 }
 
 export async function getCortexPage(
-    slugOrId: string,
+    input: { path: string; topic: string },
     client: TavernAgentRuntimeClient | null = createConfiguredAgentRuntimeClient()
 ) {
-    return client ? await client.getCortexPage(slugOrId) : null;
-}
-
-export async function captureCortex(
-    input: CortexCaptureInput,
-    client: TavernAgentRuntimeClient | null = createConfiguredAgentRuntimeClient()
-) {
-    return await requireRuntimeClient(client).captureCortex(input);
-}
-
-export async function editCortexPage(
-    input: CortexEditPageInput,
-    client: TavernAgentRuntimeClient | null = createConfiguredAgentRuntimeClient()
-) {
-    return await requireRuntimeClient(client).editCortexPage(input);
+    return client ? await client.getCortexPage(input) : null;
 }
 
 export async function searchCortex(
@@ -94,19 +42,24 @@ export async function searchCortex(
 ) {
     return client
         ? await client.searchCortex(input)
-        : { hits: [], limit: input.limit ?? 10, offset: input.offset ?? 0, query: input.query };
-}
-
-export async function recallCortex(
-    input: CortexRecallInput,
-    client: TavernAgentRuntimeClient | null = createConfiguredAgentRuntimeClient()
-) {
-    return await requireRuntimeClient(client).recallCortex(input);
+        : {
+              hits: [],
+              limit: input.limit ?? 20,
+              offset: input.offset ?? 0,
+              query: input.query,
+              totalHitCount: 0,
+          };
 }
 
 export async function listCortexBacklinks(
-    slugOrId: string,
+    input: { path: string; topic: string },
     client: TavernAgentRuntimeClient | null = createConfiguredAgentRuntimeClient()
 ) {
-    return client ? await client.listCortexBacklinks(slugOrId) : { links: [], target: slugOrId };
+    return client
+        ? await client.listCortexBacklinks(input)
+        : { links: [], targetPath: input.path, topic: input.topic };
+}
+
+export async function requireCortexRuntime() {
+    return requireRuntimeClient(createConfiguredAgentRuntimeClient());
 }

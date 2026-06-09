@@ -78,11 +78,7 @@ function renderFormula(input) {
   def install
     bin.install "bin/tavern"
     bin.install "bin/tavern-runtime"
-    bin.install "bin/initdb.wasm"
-    bin.install "bin/pg_trgm.tar.gz"
-    bin.install "bin/pglite.data"
-    bin.install "bin/pglite.wasm"
-    bin.install "bin/vector.tar.gz"
+    (share/"tavern").install "share/tavern/runtime-assets"
     (share/"tavern/node_modules/@tavern").install "share/tavern/node_modules/@tavern/sdk"
     (etc/"tavern").mkpath
     (var/"tavern/runtime").mkpath

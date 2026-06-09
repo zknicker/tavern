@@ -1,7 +1,5 @@
 import type { AgentRuntimeCronRun } from '@tavern/api';
 import { afterEach, beforeEach, describe, expect, test } from 'vitest';
-import { ensureCortexRuntimeBootstrap } from '../cortex/bootstrap';
-import { closeCortexDb, getCortexDb, initTestCortexDb } from '../cortex/db';
 import { closeDb, initTestDb } from '../db/connection';
 import { ensureRuntimeSchema } from '../db/schema';
 import type { Database } from '../db/sqlite';
@@ -11,22 +9,18 @@ import { generateTavernHighlights, listTavernHighlights } from './highlights';
 describe('Tavern highlights', () => {
     let db: Database;
 
-    beforeEach(async () => {
+    beforeEach(() => {
         db = initTestDb();
         ensureRuntimeSchema(db);
-        await initTestCortexDb();
-        await ensureCortexRuntimeBootstrap(getCortexDb());
     });
 
-    afterEach(async () => {
+    afterEach(() => {
         closeDb();
-        await closeCortexDb();
     });
 
     test('persists one current highlight per applicable category', async () => {
         const now = new Date('2026-06-03T18:25:00.000Z');
         seedRecentActivity(db);
-        await seedMemoryEvent();
 
         const result = await generateTavernHighlights({
             cronRuns: [cronRun()],
@@ -40,7 +34,6 @@ describe('Tavern highlights', () => {
             status: 'fresh',
         });
         expect(result.highlights.map((highlight) => highlight.category).sort()).toEqual([
-            'memory_saved',
             'quest_finished',
             'scheduled_run',
             'tool_volume',
@@ -51,11 +44,6 @@ describe('Tavern highlights', () => {
         ).toMatchObject({
             receipt: 'Blippy completed 2 tool calls in the past 24 hours.',
         });
-        expect(
-            result.highlights.find((highlight) => highlight.category === 'memory_saved')
-        ).toMatchObject({
-            receipt: 'New lore stored: Zach loves to talk about pizza.',
-        });
 
         await generateTavernHighlights({
             cronRuns: [cronRun()],
@@ -63,7 +51,7 @@ describe('Tavern highlights', () => {
             now: new Date('2026-06-03T18:45:00.000Z'),
         });
 
-        expect(listTavernHighlights({ db, now }).highlights).toHaveLength(5);
+        expect(listTavernHighlights({ db, now }).highlights).toHaveLength(4);
     });
 
     test('marks runtime highlights stale when the generator has not refreshed', async () => {
@@ -217,35 +205,6 @@ function seedRecentActivity(db: Database) {
             })
         );
     }
-}
-
-async function seedMemoryEvent() {
-    await getCortexDb()
-        .prepare(
-            `INSERT INTO cortex_audit_events (
-            id,
-            kind,
-            status,
-            actor_json,
-            record_refs_json,
-            source_refs_json,
-            summary,
-            metadata_json,
-            created_at
-        )
-        VALUES (
-            'aud_memory',
-            'capture',
-            'success',
-            '{}',
-            '[]',
-            '[]',
-            'Zach loves to talk about pizza.',
-            '{}',
-            '2026-06-03T18:15:00.000Z'
-        )`
-        )
-        .run();
 }
 
 function cronRun(): AgentRuntimeCronRun {

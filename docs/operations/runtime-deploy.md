@@ -17,14 +17,10 @@ Keep the CLI small:
 
 ```bash
 tavern serve
-tavern cortex capture "my fun memory"
-tavern cortex get my-fun-memory
-tavern cortex put my-fun-memory --stdin
-tavern cortex graph-query my-fun-memory --depth 2
+tavern cortex topics
+tavern cortex list --topic project-wiki
+tavern cortex get project-wiki wiki/index.md
 tavern cortex search "theme across project notes"
-tavern cortex recall "what should I know before replying?"
-tavern cortex embed --stale
-tavern cortex stats
 tavern cortex status
 tavern update
 tavern restart
@@ -33,16 +29,14 @@ tavern --help
 ```
 
 `serve` runs the foreground Runtime process. It starts the Runtime HTTP and
-WebSocket API, Runtime storage, managed Hermes dashboard/API/Gateway, Cortex,
-and Runtime jobs. It logs to stdout and stderr, and exits on `SIGINT` or
-`SIGTERM`.
+WebSocket API, Runtime storage, managed Hermes dashboard/API/Gateway, Cortex
+wiki reads, and Runtime jobs. It logs to stdout and stderr, and exits on
+`SIGINT` or `SIGTERM`.
 
 `cortex` commands are thin CLI clients for the managed Runtime. They require a
 running Runtime and use `TAVERN_RUNTIME_URL`, or `http://127.0.0.1:18790` by
-default. See [Cortex CLI](cortex-cli.md) for the full Cortex command reference.
-`tavern cortex embed --stale` runs the same
-`cortex-generate-embeddings` Runtime job used by the app and waits for it to
-finish.
+default. They browse the resolved llm-wiki hub; writes and maintenance happen
+through llm-wiki skills launched from Tasks or Runtime crons.
 
 `tavern` is the preferred CLI. `tavern-runtime` remains as a compatibility
 alias.
@@ -174,11 +168,6 @@ The tarball contains:
 ```txt
 bin/tavern-runtime
 bin/tavern
-bin/initdb.wasm
-bin/pg_trgm.tar.gz
-bin/pglite.data
-bin/pglite.wasm
-bin/vector.tar.gz
 share/tavern/node_modules/@tavern/sdk/
 ```
 

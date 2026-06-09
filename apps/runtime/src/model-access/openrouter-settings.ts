@@ -146,10 +146,5 @@ async function readJson(request: Request): Promise<unknown> {
 }
 
 async function refreshOpenRouterDependentCapabilities(): Promise<void> {
-    try {
-        const { refreshRuntimeCapabilities } = await import('../capabilities/store');
-        await refreshRuntimeCapabilities({ ids: ['cortexModelAccess'] });
-    } catch (error) {
-        log.warn('OpenRouter model access changed, but capability refresh failed', { err: error });
-    }
+    log.info('OpenRouter model access changed.');
 }

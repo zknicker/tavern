@@ -27,13 +27,13 @@ test('HermesCapabilitiesSummary renders per-capability refresh actions', () => {
         <HermesCapabilitiesSummary
             capabilities={[
                 {
-                    capability: 'embeddingModel',
+                    capability: 'cortexWiki',
                     checkedAt: '2026-05-28T12:00:00.000Z',
                     errorCode: null,
                     lastHealthyAt: null,
                     metadataJson: '{}',
                     method: 'runtime.capabilities',
-                    reason: 'OpenAI API key is not configured for Cortex embeddings.',
+                    reason: 'Cortex wiki path is not readable and writable.',
                     runtimeId: 'runtime-1',
                     state: 'unavailable',
                     technicalMessage: null,
@@ -44,8 +44,8 @@ test('HermesCapabilitiesSummary renders per-capability refresh actions', () => {
         />
     );
 
-    assert.match(markup, /Refresh embedding model/);
-    assert.match(markup, /embedding model/);
+    assert.match(markup, /Refresh Cortex wiki/);
+    assert.match(markup, /Cortex wiki/);
 });
 
 test('HermesCapabilitiesSummary groups by category', () => {

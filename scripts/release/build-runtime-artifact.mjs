@@ -28,13 +28,13 @@ const main = async () => {
         '--outfile',
         path.join(stageRoot, 'bin', 'tavern'),
     ]);
-    run('node', ['apps/runtime/scripts/copy-pglite-assets.mjs', path.join(stageRoot, 'bin')]);
     await fs.copyFile(
         path.join(stageRoot, 'bin', 'tavern'),
         path.join(stageRoot, 'bin', 'tavern-runtime')
     );
 
     await stageRuntimePackages(stageRoot);
+    await stageRuntimeAssets(stageRoot);
     await fs.mkdir(runtimeArtifactDir, { recursive: true });
     run('tar', ['-czf', artifactPath, '-C', stageRoot, '.']);
     await fs.writeFile(checksumPath, `${await sha256File(artifactPath)}  ${artifactName}\n`);
@@ -68,6 +68,14 @@ async function stageRuntimePackages(stageRoot) {
     await copyPackage(
         path.join(repoRoot, 'packages', 'tavern-sdk'),
         path.join(nodeModulesRoot, '@tavern', 'sdk')
+    );
+}
+
+async function stageRuntimeAssets(stageRoot) {
+    await fs.cp(
+        path.join(repoRoot, 'apps', 'runtime', 'assets'),
+        path.join(stageRoot, 'share', 'tavern', 'runtime-assets'),
+        { recursive: true }
     );
 }
 

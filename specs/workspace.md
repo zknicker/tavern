@@ -78,8 +78,8 @@ It owns:
 * future Tavern-managed workspace files when those files are generated or
   policy-owned by Tavern
 
-It does not own chat delivery, Cortex recall/capture/search, skills, model
-settings, or Hermes runtime config.
+It does not own chat delivery, Cortex wiki browsing, skills, model settings, or
+Hermes runtime config.
 
 The plugin blocks direct tool writes to generated workspace files when Hermes
 can identify the target path. Runtime regeneration remains the backstop for

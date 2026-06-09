@@ -16,7 +16,7 @@ executor.
 * **Tavern Runtime owns chat and local integration.** It stores canonical chats,
   messages, participants, events, reads, automations, agents, and delivery
   state. It starts managed Hermes, carries runtime events, stores runtime
-  settings, owns Cortex storage, and exposes Tavern tools to agents.
+  settings, exposes Cortex wiki reads, and exposes Tavern tools to agents.
 * **Hermes owns execution.** Sessions, turns, messages, tools, model calls, and
   native Hermes runtime behavior remain Hermes-owned. Tavern stores projected
   execution evidence only where the product needs durable chat, activity,
@@ -49,7 +49,6 @@ Key paths:
 
 ```txt
 ~/.tavern-hermes/dev/<worktree-id>/runtime/data/runtime.db
-~/.tavern-hermes/dev/<worktree-id>/runtime/cortex/cortex.pglite
 ~/.tavern-hermes/dev/<worktree-id>/runtime/hermes/home/
 ```
 
@@ -87,11 +86,9 @@ that Tavern renders, inspects, searches, or recovers are persisted in Tavern
 Runtime storage as execution evidence. Hermes remains canonical for native
 execution behavior.
 
-Cortex pages are Runtime-owned durable knowledge and memory. Hermes
-context management for turns remains separate from Cortex memory. Tavern
-reports these as separate readiness surfaces so users can tell whether
-prompt-time context management is ready and whether Cortex capture, recall,
-embeddings, and repair are ready.
+Cortex is a Runtime read surface over the user's llm-wiki hub. Hermes context
+management for turns remains separate from durable wiki knowledge. Tavern
+reports wiki hub readiness separately from prompt-time context management.
 
 Memory and Cortex product contracts live in [Memories](../../specs/memories.md)
 and [Cortex](../../specs/cortex.md).
@@ -129,8 +126,8 @@ health and exposes it through the Admin API. Jobs and app surfaces can use
 capability health to decide whether dependent functionality is available. The
 app renders capability health; it does not own Runtime capability checks.
 
-Cortex repair does not sync from Hermes. Runtime-owned repair owns capture,
-embedding repair, timeline and link repair, and Cortex audit output.
+Cortex wiki maintenance does not sync from Hermes. Agents perform llm-wiki
+maintenance through Tasks and Runtime crons.
 
 ## Boundaries
 

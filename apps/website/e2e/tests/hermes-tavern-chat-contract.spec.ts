@@ -42,9 +42,9 @@ test('stores Tavern generated AGENTS.md without runtime bootstrap companion file
     const fullText = await getRuntimeInstructions(runtimeUrl);
 
     expect(fullText).toContain('# Tavern Agent Instructions');
-    expect(fullText).toContain("Cortex is Tavern's durable knowledgebase and memory.");
-    expect(fullText).toContain('Prefer the most specific Cortex skill.');
-    expect(fullText).toContain('Default Cortex page types:');
+    expect(fullText).toContain("Cortex is Tavern's browser for the llm-wiki hub.");
+    expect(fullText).toContain('Prefer the installed `wiki` skill for wiki work.');
+    expect(fullText).toContain("Keep llm-wiki's structure:");
     expect(fullText).not.toContain('# SOUL.md - Who You Are');
     expect(fullText).not.toContain('# TOOLS.md - Local Notes');
     expect(fullText).not.toContain('# IDENTITY.md - Who Am I?');

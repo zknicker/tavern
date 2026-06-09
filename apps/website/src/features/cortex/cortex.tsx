@@ -1,29 +1,59 @@
 import * as React from 'react';
-import { useCortexListSuspense } from '../../hooks/cortex/use-cortex-list.ts';
+import {
+    useCortexListSuspense,
+    useCortexTopicsSuspense,
+} from '../../hooks/cortex/use-cortex-list.ts';
 import { useCortexPage } from '../../hooks/cortex/use-cortex-page.ts';
 import { CortexDocumentPane } from './cortex-document-pane.tsx';
 import { CortexPageSidebar } from './cortex-page-sidebar.tsx';
-import { resolveSelectedPage } from './utils.ts';
+import type { CortexPageNode } from './types.ts';
+import { pageKey, resolveSelectedPage } from './utils.ts';
 
 export function Cortex() {
-    const [list] = useCortexListSuspense();
-    const [selectedSlug, setSelectedSlug] = React.useState<string | null>(null);
-    const selectedPage = resolveSelectedPage(list, selectedSlug);
-    const pageDetailQuery = useCortexPage(selectedPage?.slug ?? null);
+    const [selectedTopic, setSelectedTopic] = React.useState<string | null>(null);
+    const [selectedPage, setSelectedPage] = React.useState<{ path: string; topic: string } | null>(
+        null
+    );
+    const [topics] = useCortexTopicsSuspense();
+    const [list] = useCortexListSuspense({ topic: selectedTopic });
+    const pageNode = resolveSelectedPage(list, selectedPage);
+    const pageDetailQuery = useCortexPage(
+        pageNode ? { path: pageNode.path, topic: pageNode.topic } : null
+    );
 
     React.useEffect(() => {
-        if (!(selectedPage && selectedSlug)) {
-            setSelectedSlug(selectedPage?.slug ?? null);
+        if (
+            pageNode &&
+            (!selectedPage ||
+                pageNode.path !== selectedPage.path ||
+                pageNode.topic !== selectedPage.topic)
+        ) {
+            setSelectedPage({ path: pageNode.path, topic: pageNode.topic });
         }
-    }, [selectedPage, selectedSlug]);
+        if (!pageNode && selectedPage) {
+            setSelectedPage(null);
+        }
+    }, [pageNode, selectedPage]);
+
+    function handleSelect(page: CortexPageNode) {
+        setSelectedPage({ path: page.path, topic: page.topic });
+    }
+
+    function handleTopicChange(topic: string | null) {
+        setSelectedTopic(topic);
+        setSelectedPage(null);
+    }
 
     return (
         <div className="grid min-h-0 flex-1 bg-background">
-            <div className="grid min-h-0 grid-cols-[260px_minmax(0,1fr)] overflow-hidden">
+            <div className="grid min-h-0 grid-cols-[300px_minmax(0,1fr)] overflow-hidden">
                 <CortexPageSidebar
-                    onSelect={setSelectedSlug}
+                    onSelect={handleSelect}
+                    onTopicChange={handleTopicChange}
                     pages={list.pages}
-                    selectedSlug={selectedPage?.slug ?? null}
+                    selectedPageKey={pageNode ? pageKey(pageNode) : null}
+                    selectedTopic={selectedTopic}
+                    topics={topics.topics}
                 />
                 <main className="min-h-0 overflow-hidden">
                     <div className="h-full min-h-0">

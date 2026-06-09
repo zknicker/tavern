@@ -1,56 +1,56 @@
 ---
-summary: Knowledgebase feature for wiki pages, backlinks, collections, files, citations, agent notes, and durable project context.
+summary: Cortex feature for browsing llm-wiki topic wikis, Markdown articles, raw sources, inventory, datasets, outputs, and archives.
 read_when:
-  - changing Cortex pages, agent notes, source material, or document workflows
-  - changing wiki files, citations, links, backlinks, or collections
+  - changing Cortex wiki browsing, topic listing, Markdown reads, backlinks, or llm-wiki hub resolution
+  - changing how agents or users inspect llm-wiki files from Tavern
 ---
 
 # Cortex
 
-The Cortex page is Tavern's browsable wiki.
+Cortex is Tavern's browser for the user's llm-wiki hub.
 
-It is not a separate store from Cortex. It is the Obsidian-like product surface
-for Cortex pages: a left pane of markdown entities and a canvas knowledge graph
-of wiki links, backlinks, files, citations, tags, search, and graph navigation.
+The durable knowledge is plain Markdown. Tavern does not maintain a second
+Cortex database, vector index, schema registry, claim table, Dream job, or chat
+ingestion engine. llm-wiki owns research, ingest, compile, query, audit,
+librarian, lessons, output, inventory, datasets, and archive workflows.
 
-## In the box
+## In The Box
 
-* **Wiki pages.** Durable Cortex pages with titles, slugs, frontmatter,
-  compiled truth, timelines, body content, and `[[wiki links]]`.
-* **Search and recall.** Users and agents can search Cortex through hybrid text
-  and vector-backed retrieval. Tavern stores embeddings in the Cortex PGLite
-  database using Postgres-compatible vector search.
-* **Version history.** Page snapshots can be inspected and reverted without
-  losing the revert event.
-* **Source ingest.** Bounded source text can enter Cortex with provenance and
-  normal search, recall, and embedding coverage.
-* **Backlinks and graph navigation.** Related pages are discoverable through
-  links, tags, types, and source relationships.
-* **Files and citations.** Source material keeps attachment, citation, and
-  provenance metadata.
-* **Agent-authored notes and edits.** Agents can capture, edit, archive, merge,
-  split, and link Cortex material with audit.
-* **Health and repair.** Embedding coverage, failed captures, stale chunks,
-  health recommendations, and repair audit are visible.
+* **Topic wikis.** Cortex lists active and archived topic wikis from the
+  llm-wiki hub.
+* **Markdown pages.** Cortex reads `_index.md`, `config.md`, `log.md`, and
+  pages under `wiki/`, `raw/`, `inventory/`, `datasets/`, `output/`, and
+  `inbox/`.
+* **Backlinks.** Cortex parses `[[wikilinks]]` from Markdown and shows inbound
+  references.
+* **Search.** Cortex performs lightweight filename, title, and body search over
+  Markdown files.
+* **Status.** Cortex reports the resolved hub path, config source, topic counts,
+  page counts, and filesystem access.
 
 ## Contract
 
-Knowledgebase identity is Cortex identity. Page ids are canonical. Slugs are
-globally unique lookup keys. Markdown files are the editable page surface; the
-Cortex PGLite database stores ids, embeddings, links, audit, and repair state.
+Hub resolution follows llm-wiki:
 
-Knowledgebase writes are Cortex writes. Agent-authored notes and ingested source
-pages are attributable to the user, agent, runtime job, chat, message, session,
-turn, file, URL, connector payload, or citation that produced them.
+1. `TAVERN_WIKI_HUB_PATH` or `TAVERN_CORTEX_WIKI_PATH`
+2. `~/.config/llm-wiki/config.json`
+3. Runtime-managed `wiki/` under `TAVERN_RUNTIME_ROOT`
 
-Cortex pages, sources, links, claims, timelines, chunks, audit, and job state
-project from markdown into the Cortex PGLite database. If embeddings are not
-configured, plain page reads and lexical search can remain healthy while Cortex
-reports degraded vector recall.
+Topic wikis live under `topics/<slug>/`. Archived topics live under
+`topics/.archive/<slug>/`, appear as `.archive/<slug>` in Cortex APIs, and are
+hidden unless a caller explicitly includes archived topics.
+
+Runtime exposes a small read API. The App renders the Cortex tab from that API.
+Scheduled wiki work belongs to Tasks and Runtime crons, where agents can run the
+managed `wiki` skill.
+
+Runtime packages llm-wiki for managed Hermes. Startup copies the bundled
+workflow skill directory to `HERMES_HOME/skills/wiki` and passes the resolved
+hub path to the Hermes process.
 
 ## Boundary
 
-Cortex is the app surface for browsing durable knowledge and inspecting the
-source-linked material agents can recall.
+Cortex browses wiki files. It does not compile or maintain the wiki.
 
-See [Cortex](../../specs/cortex.md) for the durable brain model.
+Use llm-wiki for research, ingestion, compilation, auditing, librarian scans,
+lesson extraction, and generated outputs.

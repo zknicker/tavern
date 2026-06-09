@@ -6,6 +6,7 @@ import { loadVaultBackedCodexCredentials } from '../model-access/codex-settings'
 import { getOpenAiApiKey } from '../model-access/openai-settings';
 import { getOpenRouterApiKey } from '../model-access/openrouter-settings';
 import { syncHermesCodexAuth } from './auth-store';
+import { prepareManagedLlmWikiIntegration } from './llm-wiki';
 import { tavernMessengerPluginName } from './tavern-messenger-plugin';
 
 interface HermesModelConfig {
@@ -67,6 +68,7 @@ export async function prepareManagedHermesModelConfig(): Promise<HermesModelConf
         path.join(HERMES_HOME, 'auth.json'),
         await loadVaultBackedCodexCredentials().catch(() => null)
     );
+    await prepareManagedLlmWikiIntegration();
     return config;
 }
 

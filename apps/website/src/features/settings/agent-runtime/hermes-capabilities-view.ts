@@ -20,11 +20,8 @@ interface CapabilityCategory {
 
 const capabilityLabels: Partial<Record<CapabilityId, string>> = {
     apiServer: 'Hermes API server',
-    cortexImportProcessors: 'Cortex import processors',
-    cortexJobs: 'Cortex jobs',
-    cortexModelAccess: 'Cortex model access',
+    cortexWiki: 'Cortex wiki',
     dashboardServer: 'Hermes dashboard server',
-    embeddingModel: 'embedding model',
     gateway: 'Hermes Gateway',
 };
 
@@ -37,13 +34,8 @@ const categories: CapabilityCategory[] = [
 const capabilityCategories: Partial<Record<CapabilityId, CapabilityCategoryId>> = {
     apiServer: 'runtimeCore',
     codexOAuth: 'runtimeCore',
-    cortexDatabase: 'knowledge',
-    cortexImportProcessors: 'knowledge',
-    cortexJobs: 'knowledge',
-    cortexModelAccess: 'knowledge',
     cortexWiki: 'knowledge',
     dashboardServer: 'runtimeCore',
-    embeddingModel: 'knowledge',
     gateway: 'runtimeCore',
     models: 'extensions',
     skills: 'extensions',
@@ -54,12 +46,7 @@ const capabilityDisplayOrder: CapabilityId[] = [
     'apiServer',
     'dashboardServer',
     'gateway',
-    'cortexDatabase',
     'cortexWiki',
-    'cortexImportProcessors',
-    'cortexJobs',
-    'cortexModelAccess',
-    'embeddingModel',
     'models',
     'skills',
 ];
@@ -76,7 +63,7 @@ const requiredCapabilities = new Set<CapabilityId>([
     'skills',
 ]);
 
-const supportingCapabilities = new Set<CapabilityId>(['codexOAuth', 'cortexImportProcessors']);
+const supportingCapabilities = new Set<CapabilityId>(['codexOAuth']);
 
 export function getCapabilityLabel(capability: RuntimeCapability) {
     return capabilityLabels[capability.capability] ?? capability.capability;
@@ -113,7 +100,7 @@ function getCapabilityCriticality(capability: RuntimeCapability): CapabilityCrit
 }
 
 function getCapabilityCategory(capability: RuntimeCapability): CapabilityCategory {
-    const categoryId = capabilityCategories[capability.capability] ?? 'operations';
+    const categoryId = capabilityCategories[capability.capability] ?? 'runtimeCore';
     return categories.find((category) => category.id === categoryId) ?? categories.at(-1)!;
 }
 

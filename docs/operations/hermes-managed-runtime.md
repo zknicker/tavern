@@ -86,6 +86,16 @@ model    = CODEX_MODEL or gpt-5.4-mini
 Runtime also syncs Vault-backed Codex OAuth material into managed Hermes
 `auth.json` when available.
 
+## Managed Wiki Package
+
+Runtime packages the Tavern-adapted llm-wiki skill with managed Hermes. Before
+launch it copies the prompt-visible workflow skill directory to
+`HERMES_HOME/skills/wiki`.
+
+The wiki hub defaults to `TAVERN_RUNTIME_ROOT/wiki`. Operators can override it
+with `TAVERN_WIKI_HUB_PATH` or `TAVERN_CORTEX_WIKI_PATH`. Runtime creates the
+hub skeleton and passes the resolved path to Hermes as `TAVERN_WIKI_HUB_PATH`.
+
 ## Capability Checks
 
 Managed Hermes readiness is split into primitive Runtime capabilities:

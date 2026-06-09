@@ -1,14 +1,14 @@
 import { trpc } from '../../lib/trpc.tsx';
 
-export function useCortexPage(slugOrId: string | null) {
+export function useCortexPage(page: { path: string; topic: string } | null) {
     return trpc.cortex.get.useQuery(
-        { slugOrId: slugOrId ?? '' },
+        { path: page?.path ?? '', topic: page?.topic ?? '' },
         {
-            enabled: Boolean(slugOrId),
+            enabled: Boolean(page),
         }
     );
 }
 
-export function useCortexPageSuspense(slugOrId: string) {
-    return trpc.cortex.get.useSuspenseQuery({ slugOrId });
+export function useCortexPageSuspense(page: { path: string; topic: string }) {
+    return trpc.cortex.get.useSuspenseQuery(page);
 }
