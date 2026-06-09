@@ -1,6 +1,8 @@
 import { type ChildProcess, spawn } from 'node:child_process';
+import { existsSync } from 'node:fs';
 import fs from 'node:fs/promises';
 import net from 'node:net';
+import path from 'node:path';
 import type { AgentRuntimeCapabilityHealthId } from '@tavern/api';
 import { refreshRuntimeCapabilities } from '../capabilities/store';
 import {
@@ -192,6 +194,15 @@ export function buildHermesDashboardEnv() {
     // managed engine binary is the venv executable, not the launcher wrapper.
     // spawn() omits env keys whose value is undefined.
     env.PYTHONPATH = undefined;
+    // On a host with no system Node, the installer bundles Node under
+    // HERMES_HOME/node and symlinks it into ~/.local/bin — but that symlink is
+    // written into the throwaway install sandbox and discarded. Put the bundled
+    // Node on PATH so the managed dashboard resolves it regardless of how Hermes
+    // looks it up. No-op when the host has its own Node (dir absent).
+    const managedNodeBin = path.join(HERMES_HOME, 'node', 'bin');
+    if (existsSync(managedNodeBin)) {
+        env.PATH = `${managedNodeBin}${path.delimiter}${env.PATH ?? ''}`;
+    }
     return env;
 }
 

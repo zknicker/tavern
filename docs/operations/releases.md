@@ -92,6 +92,11 @@ missing. When a release bumps the Hermes engine pin
 (`apps/runtime/src/hermes/engine.ts`), refresh that snapshot in the same
 change (see its `SOURCE.md`).
 
+Before shipping a Runtime release that changes engine resolution, the bundled
+installer snapshot, or the pin, run the
+[cold-start verification](hermes-managed-runtime.md#cold-start-verification) —
+the automated lanes do not exercise a real bootstrap install.
+
 ## Compatibility Floor Rules
 
 * **Do not raise the floor for desktop-only work.** App version bumps do not

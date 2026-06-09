@@ -186,6 +186,46 @@ bun run --filter @tavern/website test:e2e -- tests/hermes-tavern-chat-contract.s
 For e2e contract work, use the default Playwright lane. It starts real managed
 Hermes and mocks only the model-provider HTTP endpoint.
 
+## Cold-Start Verification
+
+The unit and e2e lanes mock or reuse an existing Hermes; they do not exercise a
+real bootstrap install. Run this manual check before any release that changes
+engine resolution, the bundled installer snapshot, or the pin. It installs a
+real engine (~2 GB, several minutes) into a throwaway `HOME`, so it never
+touches your own install.
+
+```bash
+TMP=$(mktemp -d)
+# Decoy standing in for a user's existing install; must stay untouched.
+mkdir -p "$TMP/.local/bin"
+printf '#!/usr/bin/env bash\necho original\n' > "$TMP/.local/bin/hermes"
+chmod 755 "$TMP/.local/bin/hermes"
+printf '# original\n' > "$TMP/.zshrc"
+shasum "$TMP/.local/bin/hermes" "$TMP/.zshrc"   # record baseline
+
+cd apps/runtime
+HOME="$TMP" bun src/index.ts engine status      # expect: System installs: ignored
+HOME="$TMP" bun src/index.ts engine install     # real install into $TMP/.tavern
+HOME="$TMP" bun src/index.ts engine status      # expect: Resolved ... (managed)
+```
+
+Confirm:
+
+* The managed binary runs:
+  `"$TMP"/.tavern/engine/<pin>/hermes-agent/venv/bin/hermes --version`.
+* The decoy `"$TMP"/.local/bin/hermes` and `"$TMP"/.zshrc` checksums are
+  **unchanged** — the install never co-opts a user's launcher or shell config.
+
+**Node-less host check:** the bundled installer skips installing Node when the
+host already has one, so a machine with system Node does not exercise Node
+bundling. To verify the bundled-Node path, run the install where no `node` is on
+`PATH`, then start the runtime and confirm the dashboard reaches healthy.
+`buildHermesDashboardEnv` prepends `HERMES_HOME/node/bin` to `PATH` so the
+managed dashboard resolves the bundled Node; this check confirms that holds end
+to end.
+
+Clean up with `rm -rf "$TMP"`.
+
 ## Related Docs
 
 * [Development](development.md)

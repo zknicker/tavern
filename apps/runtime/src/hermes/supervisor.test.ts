@@ -101,6 +101,22 @@ describe('managed Hermes binary resolution', () => {
         });
     });
 
+    it('puts the bundled Node on PATH when the managed engine ships its own', async () => {
+        const nodeBin = path.join(home, 'runtime', 'hermes', 'home', 'node', 'bin');
+        await fs.mkdir(nodeBin, { recursive: true });
+        vi.resetModules();
+
+        const { buildHermesDashboardEnv } = await import('./supervisor');
+
+        expect(buildHermesDashboardEnv().PATH?.startsWith(`${nodeBin}${path.delimiter}`)).toBe(true);
+    });
+
+    it('leaves PATH alone when no bundled Node is present', async () => {
+        const { buildHermesDashboardEnv } = await import('./supervisor');
+
+        expect(buildHermesDashboardEnv().PATH).toBe(process.env.PATH);
+    });
+
     it('strips PYTHONPATH from the managed dashboard environment', async () => {
         process.env.PYTHONPATH = '/somewhere/site-packages';
         vi.resetModules();
