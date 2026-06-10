@@ -479,6 +479,56 @@ describe('Tavern Hermes channel relay', () => {
         ).toEqual([]);
     });
 
+    it('delivers a reply the gateway also echoes through the thinking channel', async () => {
+        // Trivial turns stream the reply, then mirror the same text through
+        // thinking.delta right before message.complete. The echo must not
+        // start a Thinking row or move the reply into the work log — doing
+        // so made the completion dedup strip the delivered reply to empty.
+        hermesClient.streamChat.mockImplementationOnce(async function* streamChat() {
+            yield { data: {}, event: 'assistant.composing' };
+            yield { data: { delta: '(o_o) processing...' }, event: 'reasoning.delta' };
+            yield { data: { delta: 'Hey! What can I help you with?' }, event: 'assistant.delta' };
+            yield { data: { delta: 'Hey! What can I help you with?' }, event: 'reasoning.delta' };
+            yield {
+                data: {
+                    content: 'Hey! What can I help you with?',
+                    message_id: 'hermes_msg_echo',
+                },
+                event: 'assistant.completed',
+            };
+        });
+        createChat({ id: 'cht_1' });
+
+        await sendTavernChannelMessage('cht_1', {
+            agent: {
+                agentId: 'agt_1',
+            },
+            message: {
+                content: 'hey',
+                id: 'msg_echo',
+                nonce: 'nonce_echo',
+            },
+            target: {
+                externalId: null,
+                sessionKey: 'session_1',
+                target: 'cht_1',
+                type: 'tavern',
+            },
+        });
+        await waitForHermesTurn();
+
+        expect(listResponses('cht_1').responses).toMatchObject([{ status: 'completed' }]);
+        expect(listMessages('cht_1').messages.at(-1)?.content).toBe(
+            'Hey! What can I help you with?'
+        );
+
+        const activity = listResponses('cht_1').activity;
+        expect(activity.filter((entry) => entry.kind === 'message')).toEqual([]);
+        expect(
+            activity.flatMap((entry) => (entry.kind === 'reasoning' ? [entry.detail] : []))
+        ).toEqual(['(o_o) processing...']);
+    });
+
     it('does not duplicate completed streamed reasoning with final aggregate reasoning', async () => {
         hermesClient.streamChat.mockImplementationOnce(async function* streamChat() {
             yield {

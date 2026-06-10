@@ -230,9 +230,18 @@ export async function runHermesTurn(input: {
             }
 
             if (event.event === 'reasoning.delta') {
-                flushAssistantToProgress();
                 const delta = readString(event.data.delta) ?? '';
                 if (!delta) {
+                    continue;
+                }
+                // The gateway mirrors the visible reply through the thinking
+                // channel right before message.complete. Recording the echo
+                // would duplicate the reply as a thinking row, and flushing
+                // on it would move the reply into the work log — the
+                // completion dedup then strips the delivered reply to empty.
+                // Reasoning never flushes narration; tool and status events
+                // own that boundary.
+                if (assistantSegment && isSameProgressText(delta, assistantSegment.content)) {
                     continue;
                 }
                 if (!reasoningSegment) {
@@ -261,8 +270,12 @@ export async function runHermesTurn(input: {
             }
 
             if (event.event === 'assistant.status') {
-                flushAssistantToProgress();
-                recordAssistantStatus(input, turn, event);
+                // Hidden statuses (e.g. "ready" at turn end) must not flush
+                // the in-flight reply segment into the work log.
+                if (isRecordableAssistantStatus(event)) {
+                    flushAssistantToProgress();
+                    recordAssistantStatus(input, turn, event);
+                }
                 continue;
             }
 
@@ -464,6 +477,17 @@ function recordToolProgress(input: HermesTurnInput, turn: HermesTurn, event: Her
         turn,
         type: 'turn.progress',
     });
+}
+
+function isRecordableAssistantStatus(event: HermesEvent) {
+    const detail = readString(event.data.delta);
+
+    if (!detail?.trim()) {
+        return false;
+    }
+
+    const statusKind = readString(event.data.kind)?.toLowerCase() ?? 'status';
+    return shouldRecordAssistantStatus(statusKind, detail);
 }
 
 function recordAssistantStatus(input: HermesTurnInput, turn: HermesTurn, event: HermesEvent) {
