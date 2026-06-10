@@ -111,6 +111,37 @@ describe('Hermes gateway activity recorder', () => {
         expect(lastProjectedStep()).toMatchObject({ kind: 'worker', status: 'completed' });
     });
 
+    it('preserves worker title and source facts across terse progress updates', () => {
+        const recorder = createGatewayActivityRecorder(context);
+
+        recorder.recordWorker({
+            depth: 1,
+            goal: 'Summarize the repo',
+            model: 'gpt-5',
+            source_event: 'subagent.start',
+            subagent_id: 'sub_1',
+        });
+        recorder.recordWorker({
+            source_event: 'subagent.tool',
+            subagent_id: 'sub_1',
+            text: 'Reading README.md',
+            tool_name: 'read_file',
+        });
+
+        const activity = findActivityByEvent('subagent.tool');
+        expect(activity).toMatchObject({
+            detail: 'Reading README.md',
+            title: 'Summarize the repo',
+        });
+        expect(activity?.metadata.subagent).toMatchObject({
+            depth: 1,
+            goal: 'Summarize the repo',
+            model: 'gpt-5',
+            subagentId: 'sub_1',
+            toolName: 'read_file',
+        });
+    });
+
     it('drops spawn-tree events without a stable subagent id', () => {
         const recorder = createGatewayActivityRecorder(context);
 
@@ -153,6 +184,50 @@ describe('Hermes gateway activity recorder', () => {
         const settled = getResponseActivity(pending?.id ?? '');
         expect(settled?.status).toBe('completed');
         expect(lastProjectedStep()).toMatchObject({ kind: 'approval', status: 'completed' });
+    });
+
+    it('keeps repeated identical approval prompts as separate FIFO activities', () => {
+        const recorder = createGatewayActivityRecorder(context);
+        const approval = {
+            command: 'rm -rf build',
+            description: 'Dangerous delete',
+            pattern_key: 'rm -rf',
+            pattern_keys: ['rm -rf'],
+        };
+
+        recorder.recordApproval(approval);
+        recorder.recordApproval(approval);
+
+        const approvals = projectedSteps().filter((step) => step.kind === 'approval');
+        expect(approvals).toHaveLength(2);
+        expect(approvals[0]?.id).not.toBe(approvals[1]?.id);
+
+        recorder.settleOldestApproval();
+        expect(getResponseActivity(approvals[0]?.id ?? '')?.status).toBe('completed');
+        expect(getResponseActivity(approvals[1]?.id ?? '')?.status).toBe('running');
+
+        recorder.settleOldestApproval();
+        expect(getResponseActivity(approvals[1]?.id ?? '')?.status).toBe('completed');
+    });
+
+    it('settles every queued approval after an approve-all response resumes', () => {
+        const recorder = createGatewayActivityRecorder(context);
+        const approval = {
+            command: 'rm -rf build',
+            description: 'Dangerous delete',
+            pattern_key: 'rm -rf',
+            pattern_keys: ['rm -rf'],
+        };
+
+        recorder.recordApproval(approval);
+        recorder.recordApproval(approval);
+
+        const approvals = projectedSteps().filter((step) => step.kind === 'approval');
+        recorder.settleOpenApprovals();
+
+        expect(getResponseActivity(approvals[0]?.id ?? '')?.status).toBe('completed');
+        expect(getResponseActivity(approvals[1]?.id ?? '')?.status).toBe('completed');
+        expect(recorder.hasOpenApproval()).toBe(false);
     });
 });
 

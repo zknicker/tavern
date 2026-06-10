@@ -21,6 +21,7 @@ const activeHermesTurns = new Map<
     {
         client: HermesClient;
         controller: AbortController;
+        settleAllApprovals: boolean;
         sessionId: string | null;
         sessionKey: string;
     }
@@ -62,6 +63,7 @@ export async function runHermesTurn(input: {
     const activeTurn = {
         client,
         controller: new AbortController(),
+        settleAllApprovals: false,
         sessionId: null as string | null,
         sessionKey: input.sessionKey,
     };
@@ -137,7 +139,12 @@ export async function runHermesTurn(input: {
             // The gateway emits no approval-resolution event; the stream
             // resuming is the resolution signal.
             if (gatewayActivities.hasOpenApproval() && isAgentResumedEvent(event.event)) {
-                gatewayActivities.settleOldestApproval();
+                if (activeTurn.settleAllApprovals) {
+                    gatewayActivities.settleOpenApprovals();
+                    activeTurn.settleAllApprovals = false;
+                } else {
+                    gatewayActivities.settleOldestApproval();
+                }
             }
 
             if (typingIndicated && !assistantSegment && isVisibleWorkEvent(event.event)) {
@@ -368,10 +375,16 @@ export async function respondToHermesApproval(
             continue;
         }
 
-        return await activeTurn.client.respondToLiveApproval(activeTurn.sessionId, {
-            all: input.all,
-            choice: input.choice,
-        });
+        activeTurn.settleAllApprovals = input.all === true;
+        try {
+            return await activeTurn.client.respondToLiveApproval(activeTurn.sessionId, {
+                all: input.all,
+                choice: input.choice,
+            });
+        } catch (error) {
+            activeTurn.settleAllApprovals = false;
+            throw error;
+        }
     }
 
     throw new Error(`No active turn is awaiting approval for session "${input.sessionKey}".`);

@@ -9,6 +9,7 @@ import { ThinkingStep } from './thinking-steps.tsx';
 
 export function ActivityStep({
     animateEnter = false,
+    canRespondToApproval = false,
     chatId,
     currentSessionKey,
     index,
@@ -16,6 +17,7 @@ export function ActivityStep({
     item,
 }: {
     animateEnter?: boolean;
+    canRespondToApproval?: boolean;
     chatId?: string;
     currentSessionKey?: string | null;
     index: number;
@@ -27,6 +29,7 @@ export function ActivityStep({
             return (
                 <ToolStep
                     animateEnter={animateEnter}
+                    canRespondToApproval={canRespondToApproval}
                     chatId={chatId}
                     index={index}
                     isLast={isLast}

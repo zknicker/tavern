@@ -9,7 +9,13 @@ import type { ToolStepRendererProps } from './types.ts';
 // A pending tool approval blocks the turn until answered, so the row carries
 // inline Approve/Deny actions. The runtime settles the row once the agent
 // resumes; until then the running shimmer marks the wait.
-export function ApprovalToolStep({ animateEnter, chatId, isLast, row }: ToolStepRendererProps) {
+export function ApprovalToolStep({
+    animateEnter,
+    canRespondToApproval = false,
+    chatId,
+    isLast,
+    row,
+}: ToolStepRendererProps) {
     const target = getToolTarget(row);
     const isPending = !(row.completedAt || hasErrorStatus(row.toolCall.status));
 
@@ -28,7 +34,7 @@ export function ApprovalToolStep({ animateEnter, chatId, isLast, row }: ToolStep
             }
             row={row}
         >
-            {isPending && chatId && row.sessionKey ? (
+            {isPending && canRespondToApproval && chatId && row.sessionKey ? (
                 <ApprovalActions chatId={chatId} sessionKey={row.sessionKey} />
             ) : null}
         </ToolTimelineStep>

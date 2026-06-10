@@ -1,4 +1,4 @@
-import { upsertResponseActivity } from './chat-api';
+import { getResponseActivity, upsertResponseActivity } from './chat-api';
 
 // Durable activity recording for gateway events that are not tool calls or
 // reasoning: agent notices (notification.show/clear), spawn-tree progress
@@ -30,6 +30,24 @@ interface OpenApproval {
 export function createGatewayActivityRecorder(context: GatewayActivityContext) {
     const openNotices = new Map<string, OpenNotice>();
     const openApprovals: OpenApproval[] = [];
+    let approvalIndex = 0;
+    const settleOldestApproval = () => {
+        const approval = openApprovals.shift();
+
+        if (!approval) {
+            return;
+        }
+
+        upsertResponseActivity(context.chatId, context.responseId, {
+            completed_at: new Date().toISOString(),
+            detail: approval.detail,
+            id: approval.id,
+            kind: 'approval',
+            metadata: { ...approval.metadata, event: 'approval.settled' },
+            status: 'completed',
+            title: 'Approval',
+        });
+    };
 
     return {
         clearNotice(data: Record<string, unknown>) {
@@ -60,10 +78,8 @@ export function createGatewayActivityRecorder(context: GatewayActivityContext) {
             const command = readString(data.command);
             const description = readString(data.description);
             const patternKey = readString(data.pattern_key);
-            const id = activityId(
-                context.runId,
-                `approval_${stableSuffix(`${patternKey ?? ''}|${command ?? description ?? ''}`)}`
-            );
+            approvalIndex += 1;
+            const id = activityId(context.runId, `approval_${approvalIndex}`);
             const detail = description ?? command;
             const metadata = {
                 approval: {
@@ -147,19 +163,23 @@ export function createGatewayActivityRecorder(context: GatewayActivityContext) {
             const failed = sourceStatus === 'failed' || sourceStatus === 'error';
             const summary = readString(data.summary);
             const goal = readString(data.goal);
+            const id = activityId(context.runId, `subagent_${subagentId}`);
+            const existing = getResponseActivity(id);
+            const previousSubagent = readRecord(existing?.metadata.subagent);
+            const nextSubagent = { ...previousSubagent, ...subagentFacts(data, subagentId) };
 
             upsertResponseActivity(context.chatId, context.responseId, {
                 ...(isTerminal ? { completed_at: new Date().toISOString() } : {}),
-                detail: summary ?? readString(data.text),
-                id: activityId(context.runId, `subagent_${subagentId}`),
+                detail: summary ?? readString(data.text) ?? existing?.detail,
+                id,
                 kind: 'custom',
                 metadata: {
                     event: sourceEvent,
                     runtime: runtimeMetadata(context),
-                    subagent: subagentFacts(data, subagentId),
+                    subagent: nextSubagent,
                 },
                 status: isTerminal ? (failed ? 'failed' : 'completed') : 'running',
-                title: goal ?? 'Worker task',
+                title: goal ?? existing?.title ?? 'Worker task',
             });
         },
 
@@ -167,21 +187,13 @@ export function createGatewayActivityRecorder(context: GatewayActivityContext) {
         // resumes. The first resumed-stream event settles the oldest pending
         // approval, matching the gateway's FIFO resolution order.
         settleOldestApproval() {
-            const approval = openApprovals.shift();
+            settleOldestApproval();
+        },
 
-            if (!approval) {
-                return;
+        settleOpenApprovals() {
+            while (openApprovals.length > 0) {
+                settleOldestApproval();
             }
-
-            upsertResponseActivity(context.chatId, context.responseId, {
-                completed_at: new Date().toISOString(),
-                detail: approval.detail,
-                id: approval.id,
-                kind: 'approval',
-                metadata: { ...approval.metadata, event: 'approval.settled' },
-                status: 'completed',
-                title: 'Approval',
-            });
         },
     };
 }
@@ -254,6 +266,12 @@ function readStringArray(value: unknown) {
 
     const items = value.filter((item): item is string => typeof item === 'string');
     return items.length > 0 ? items : null;
+}
+
+function readRecord(value: unknown) {
+    return value && typeof value === 'object' && !Array.isArray(value)
+        ? (value as Record<string, unknown>)
+        : {};
 }
 
 let warnedMissingSubagentId = false;

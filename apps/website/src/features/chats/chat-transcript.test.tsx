@@ -349,6 +349,21 @@ test('ToolStep shimmers running tool rows like the thinking indicator', () => {
     assert.match(markup, />Using</);
 });
 
+test('ChatTranscript exposes approval actions only on the oldest pending approval', () => {
+    const markup = renderTranscript(
+        [
+            pendingApprovalRow('approval-1', 'rm -rf build'),
+            pendingApprovalRow('approval-2', 'deploy production'),
+        ],
+        { chatId: 'cht_1' }
+    );
+
+    assert.equal(countMatches(markup, />Approve</g), 1);
+    assert.equal(countMatches(markup, />Deny</g), 1);
+    assert.match(markup, /rm -rf build/);
+    assert.match(markup, /deploy production/);
+});
+
 test('ToolStep keeps older tool rows inspectable when call id is missing', () => {
     const markup = renderToStaticMarkup(
         <ToolStep
@@ -994,7 +1009,7 @@ test('ChatTranscript keeps the thinking indicator visible while hidden reasoning
 
 type ChatRow = NonNullable<ChatLogOutput>['rows'][number];
 
-function renderTranscript(rows: ChatRow[]) {
+function renderTranscript(rows: ChatRow[], options: { chatId?: string } = {}) {
     const queryClient = new QueryClient({
         defaultOptions: {
             queries: {
@@ -1015,7 +1030,7 @@ function renderTranscript(rows: ChatRow[]) {
             <QueryClientProvider client={queryClient}>
                 <MemoryRouter>
                     <SessionDrawerProvider>
-                        <ChatTranscript activeReply={null} rows={rows} />
+                        <ChatTranscript activeReply={null} chatId={options.chatId} rows={rows} />
                     </SessionDrawerProvider>
                 </MemoryRouter>
             </QueryClientProvider>
@@ -1060,4 +1075,31 @@ function renderActiveTranscript(
             </QueryClientProvider>
         </trpc.Provider>
     );
+}
+
+function pendingApprovalRow(id: string, command: string): ChatRow {
+    return {
+        actor: { id: 'tiny', kind: 'agent' },
+        completedAt: null,
+        connectsToNext: false,
+        connectsToPrevious: false,
+        id,
+        isFirstInGroup: true,
+        kind: 'tool',
+        sessionKey: 'agent:tiny:session-1',
+        spawnedRelationships: [],
+        startedAt: '2026-03-31T15:00:00.000Z',
+        toolCall: {
+            callId: null,
+            facts: [],
+            label: command,
+            name: 'approval',
+            status: 'running',
+            summaryParts: [command],
+        },
+    };
+}
+
+function countMatches(value: string, pattern: RegExp) {
+    return [...value.matchAll(pattern)].length;
 }

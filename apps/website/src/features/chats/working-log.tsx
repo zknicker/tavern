@@ -7,6 +7,7 @@ import {
 } from '../../components/ui/collapsible.tsx';
 import { Icon } from '../../components/ui/icon.tsx';
 import { cn } from '../../lib/utils.ts';
+import { hasErrorStatus } from '../sessions/tools/tool-ui.ts';
 import { ActivityStep } from './chat-transcript-activity-step.tsx';
 import {
     type ActivityItem,
@@ -73,6 +74,7 @@ export function WorkingLog({
             : formatWorkGroupHeader(items)
         : null;
     const groupIcon = groupMode ? getWorkGroupIcon(items) : null;
+    const firstPendingApprovalId = findFirstPendingApprovalId(items);
 
     return (
         <ThinkingSteps
@@ -132,6 +134,7 @@ export function WorkingLog({
                 {items.map((item, index) => (
                     <ActivityStep
                         animateEnter={isActive}
+                        canRespondToApproval={item.row.id === firstPendingApprovalId}
                         chatId={chatId}
                         currentSessionKey={currentSessionKey}
                         index={index}
@@ -143,6 +146,18 @@ export function WorkingLog({
             </ThinkingStepsContent>
         </ThinkingSteps>
     );
+}
+
+function findFirstPendingApprovalId(items: ActivityItem[]) {
+    const item = items.find(
+        (candidate) =>
+            candidate.row.kind === 'tool' &&
+            candidate.row.toolCall.name.trim().toLowerCase() === 'approval' &&
+            !candidate.row.completedAt &&
+            !hasErrorStatus(candidate.row.toolCall.status)
+    );
+
+    return item?.row.id ?? null;
 }
 
 // Manual disclosure toggles anchor the trigger's viewport position through
@@ -234,7 +249,10 @@ export function TurnWorkDisclosure({
                     />
                 </span>
             </CollapsibleTrigger>
-            <CollapsiblePanel className="chat-collapsible-panel chat-collapsible-panel-turn" keepMounted>
+            <CollapsiblePanel
+                className="chat-collapsible-panel chat-collapsible-panel-turn"
+                keepMounted
+            >
                 {/* Spacing lives inside the animated panel so it collapses with
                     the height instead of vanishing in one frame at the end. */}
                 <div className="flex min-w-0 flex-col gap-4 pt-3.5">{children}</div>
