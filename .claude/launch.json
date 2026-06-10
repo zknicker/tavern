@@ -1,0 +1,41 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "dev-stack-web-runtime",
+      "runtimeExecutable": "bun",
+      "runtimeArgs": ["run", "dev:web:runtime"],
+      "port": 29072
+    },
+    {
+      "name": "dev-stack-web",
+      "runtimeExecutable": "bun",
+      "runtimeArgs": ["run", "dev:web"],
+      "port": 29072
+    },
+    {
+      "name": "dev-stack-desktop-runtime",
+      "runtimeExecutable": "bun",
+      "runtimeArgs": ["run", "dev"],
+      "port": 29072
+    },
+    {
+      "name": "website",
+      "runtimeExecutable": "bun",
+      "runtimeArgs": ["run", "--filter", "@tavern/website", "dev"],
+      "port": 3100
+    },
+    {
+      "name": "server",
+      "runtimeExecutable": "bun",
+      "runtimeArgs": ["run", "--filter", "@tavern/server", "dev"],
+      "port": 8080
+    },
+    {
+      "name": "runtime",
+      "runtimeExecutable": "bun",
+      "runtimeArgs": ["run", "--filter", "@tavern/runtime", "dev"],
+      "port": 18790
+    }
+  ]
+}
