@@ -193,7 +193,7 @@ export function TurnWorkDisclosure({
     return (
         <Collapsible className="flex min-w-0 flex-col" onOpenChange={setOpen} open={open}>
             <CollapsibleTrigger
-                className="group border-border/70 border-b pb-2 text-left font-medium text-[13px] text-muted-foreground leading-tight transition-colors hover:text-foreground"
+                className="group rounded-md border-border/70 border-b pb-2 text-left font-medium text-[13px] text-muted-foreground leading-tight transition-colors hover:text-foreground"
                 onKeyDown={disclosureAnchor.captureFromKeyboard}
                 onPointerDown={disclosureAnchor.capture}
                 ref={disclosureAnchor.triggerRef}

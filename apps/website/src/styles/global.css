@@ -729,4 +729,16 @@
     .dashboard-reference-theme {
         --content-card: var(--card);
     }
+
+    /* App-wide keyboard focus ring. One consistent treatment so every
+       focusable element matches instead of falling through to the browser's
+       default outline (the orange ring on ad-hoc buttons and disclosure
+       triggers). Components that need a bespoke focus look opt out with the
+       `outline-none` utility — utilities beat this base rule — and supply
+       their own ring: the Button primitive's box-shadow ring, the inset ring
+       on full-bleed tool rows, form fields' border-color focus. */
+    :focus-visible {
+        outline: 2px solid var(--color-ring);
+        outline-offset: 1px;
+    }
 }

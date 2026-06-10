@@ -201,6 +201,27 @@ Default interactive controls use modest radii:
 
 Do not use decorative gradient orbs, bokeh blobs, or ornamental SVG backgrounds in app surfaces.
 
+## Focus
+
+Keyboard focus is one consistent ring across the app. A global `:focus-visible`
+base rule (`apps/website/src/styles/global.css`) draws a 2px `--ring` outline at
+`1px` offset, so every focusable element matches without per-component work and
+nothing falls through to the browser's default outline.
+
+Opt out only when a control needs a bespoke focus look. Set the `outline-none`
+utility (it beats the base rule) and supply the alternative:
+
+- The Button primitive and most controls use a `focus-visible:ring-2
+  focus-visible:ring-ring` box-shadow ring with `ring-offset-1`.
+- Full-bleed rows inside an `overflow-hidden` or scrolling container (e.g. chat
+  tool rows) use the same ring but `ring-inset`, so it is not clipped and does
+  not bleed into stacked neighbors.
+- Form fields focus their border color rather than drawing a ring.
+
+Do not rely on `focus-within` to reveal hover affordances on a control that
+opens an overlay — focus returns to the trigger on close and the affordance
+sticks. Key such reveals to `focus-visible` (e.g. `group-has-focus-visible`).
+
 ## Components
 
 Start with `apps/website/src/components/ui` for every shared UI need. The most important primitives
