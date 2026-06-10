@@ -8,12 +8,14 @@ import { ToolStep } from './chat-transcript-tool-step.tsx';
 import { ThinkingStep } from './thinking-steps.tsx';
 
 export function ActivityStep({
+    animateEnter = false,
     chatId,
     currentSessionKey,
     index,
     isLast,
     item,
 }: {
+    animateEnter?: boolean;
     chatId?: string;
     currentSessionKey?: string | null;
     index: number;
@@ -22,12 +24,28 @@ export function ActivityStep({
 }) {
     switch (item.row.kind) {
         case 'tool':
-            return <ToolStep chatId={chatId} index={index} isLast={isLast} row={item.row} />;
+            return (
+                <ToolStep
+                    animateEnter={animateEnter}
+                    chatId={chatId}
+                    index={index}
+                    isLast={isLast}
+                    row={item.row}
+                />
+            );
         case 'worker':
-            return <WorkerStep index={index} isLast={isLast} row={item.row} />;
+            return (
+                <WorkerStep
+                    animateEnter={animateEnter}
+                    index={index}
+                    isLast={isLast}
+                    row={item.row}
+                />
+            );
         case 'system':
             return (
                 <SystemStep
+                    animateEnter={animateEnter}
                     currentSessionKey={currentSessionKey}
                     index={index}
                     isLast={isLast}
@@ -40,10 +58,12 @@ export function ActivityStep({
 }
 
 function WorkerStep({
+    animateEnter,
     index,
     isLast,
     row,
 }: {
+    animateEnter?: boolean;
     index: number;
     isLast: boolean;
     row: Extract<TranscriptRow, { kind: 'worker' }>;
@@ -54,6 +74,7 @@ function WorkerStep({
 
     return (
         <ThinkingStep
+            animateEnter={animateEnter}
             description={row.worker.detail}
             icon={PuzzleIcon}
             index={index}

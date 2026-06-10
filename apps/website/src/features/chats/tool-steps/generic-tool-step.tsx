@@ -6,38 +6,26 @@ import {
     FileSearchIcon,
     ToolsIcon,
 } from '@hugeicons-pro/core-stroke-rounded';
-import * as React from 'react';
 import { SessionLinkButton } from '../../sessions/session-link-button.tsx';
 import { getSessionRelationshipName } from '../../sessions/session-relationship.ts';
 import { hasErrorStatus } from '../../sessions/tools/tool-ui.ts';
 import { ThinkingStepDetails } from '../thinking-steps.tsx';
-import {
-    getToolTarget,
-    InlineToolLabel,
-    ToolDrawerTrigger,
-    ToolTimelineStep,
-} from './tool-summary.tsx';
+import { getToolTarget, InlineToolLabel, ToolTimelineStep } from './tool-summary.tsx';
 import type { ToolStepRendererProps } from './types.ts';
 
 type StepIcon = HugeiconsIconProps['icon'];
 
-export function GenericToolStep({ chatId, isLast, row }: ToolStepRendererProps) {
-    const [isOpen, setIsOpen] = React.useState(false);
-    const active = !(row.completedAt || hasErrorStatus(row.toolCall.status));
+export function GenericToolStep({ animateEnter, chatId, isLast, row }: ToolStepRendererProps) {
     const target = getToolTarget(row);
-    const label = (
-        <span className="inline-flex min-w-0 max-w-full items-center gap-1.5">
-            <InlineToolLabel row={row} target={target} verb={getToolVerb(row, target)} />
-            <ToolDrawerTrigger chatId={chatId} isOpen={isOpen} onOpenChange={setIsOpen} row={row} />
-        </span>
-    );
 
     return (
         <ToolTimelineStep
-            active={active}
+            animateEnter={animateEnter}
+            chatId={chatId}
             icon={getToolIcon(row.toolCall.name)}
             isLast={isLast}
-            label={label}
+            label={<InlineToolLabel row={row} target={target} verb={getToolVerb(row, target)} />}
+            row={row}
         >
             {row.spawnedRelationships.length > 0 ? (
                 <ThinkingStepDetails

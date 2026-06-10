@@ -1,6 +1,7 @@
 import type { ChatLogOutput } from '../../lib/trpc.tsx';
 import { hasLoggedTurnFailure } from './chat-timeline-failures.ts';
 import {
+    type ActiveReplyMergeOptions,
     hasAssistantReplyForActiveTurn,
     hasTerminalReplyOrFailure,
     isSameActiveReply,
@@ -93,11 +94,13 @@ function normalizeChatLog(log: ChatLogInput): ChatLogPage {
 
 export function applyReplySnapshot(
     state: ChatTimelineState,
-    activeReply: ChatActiveReply | null
+    activeReply: ChatActiveReply | null,
+    options: ActiveReplyMergeOptions = {}
 ): ChatTimelineState {
     const normalizedActiveReply = mergeActiveReplySnapshot(
         state.activeReply,
-        normalizeActiveReply(activeReply)
+        normalizeActiveReply(activeReply),
+        options
     );
     const nextActiveReply = (() => {
         if (hasAssistantReplyForActiveTurn(state.timeline, normalizedActiveReply)) {

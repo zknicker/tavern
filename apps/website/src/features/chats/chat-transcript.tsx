@@ -1,11 +1,13 @@
 import * as React from 'react';
 import type { ChatActiveReply, ChatTurnFailure } from '../../hooks/chats/chat-timeline-state.ts';
+import { useChatThinkingDisplayPreference } from '../../hooks/chats/use-chat-thinking-display-preference.ts';
 import { markChatTiming } from '../../lib/chat-timing.ts';
 import { SessionLogHiddenCount } from '../sessions/session-log-hidden-count.tsx';
 import {
     buildTranscriptEntries,
     type ConversationMessageLayout,
     type TranscriptRow,
+    transcriptEntryUsesActiveReply,
 } from './chat-transcript-model.ts';
 import { buildTranscriptRenderRows } from './chat-transcript-row-model.ts';
 import { TranscriptEntryRow } from './chat-transcript-rows.tsx';
@@ -43,14 +45,16 @@ export function ChatTranscript({
     rows: TranscriptRow[];
     scrollViewportRef?: React.RefObject<HTMLDivElement | null>;
 }) {
+    const chatThinkingDisplay = useChatThinkingDisplayPreference();
     const entries = React.useMemo(
         () =>
             buildTranscriptEntries({
                 activeReply,
                 failedTurn,
                 rows,
+                showThinkingText: chatThinkingDisplay.enabled,
             }),
-        [activeReply, failedTurn, rows]
+        [activeReply, chatThinkingDisplay.enabled, failedTurn, rows]
     );
     const transcriptRows = React.useMemo(
         () => buildTranscriptRenderRows(entries, hiddenCount),
@@ -115,7 +119,11 @@ export function ChatTranscript({
             {transcriptRows.map((row) =>
                 row.kind === 'entry' ? (
                     <TranscriptEntryRow
-                        activeReply={activeReply}
+                        activeReply={
+                            transcriptEntryUsesActiveReply(row.entry, activeReply)
+                                ? activeReply
+                                : null
+                        }
                         chatId={chatId}
                         conversationLayout={conversationLayout}
                         currentSessionKey={currentSessionKey}

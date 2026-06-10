@@ -1,27 +1,20 @@
 import { CommandLineIcon } from '@hugeicons-pro/core-stroke-rounded';
-import * as React from 'react';
 import { hasErrorStatus } from '../../sessions/tools/tool-ui.ts';
-import {
-    getToolFact,
-    getToolTarget,
-    InlineToolLabel,
-    ToolDrawerTrigger,
-    ToolTimelineStep,
-} from './tool-summary.tsx';
+import { getToolFact, getToolTarget, InlineToolLabel, ToolTimelineStep } from './tool-summary.tsx';
 import type { ToolStepRendererProps, ToolStepRow } from './types.ts';
 
-export function ShellToolStep({ chatId, isLast, row }: ToolStepRendererProps) {
-    const [isOpen, setIsOpen] = React.useState(false);
-    const active = !(row.completedAt || hasErrorStatus(row.toolCall.status));
-    const label = (
-        <span className="inline-flex min-w-0 max-w-full items-center gap-1.5">
-            <InlineToolLabel row={row} target={getShellTarget(row)} verb={getShellVerb(row)} />
-            <ToolDrawerTrigger chatId={chatId} isOpen={isOpen} onOpenChange={setIsOpen} row={row} />
-        </span>
-    );
-
+export function ShellToolStep({ animateEnter, chatId, isLast, row }: ToolStepRendererProps) {
     return (
-        <ToolTimelineStep active={active} icon={CommandLineIcon} isLast={isLast} label={label} />
+        <ToolTimelineStep
+            animateEnter={animateEnter}
+            chatId={chatId}
+            icon={CommandLineIcon}
+            isLast={isLast}
+            label={
+                <InlineToolLabel row={row} target={getShellTarget(row)} verb={getShellVerb(row)} />
+            }
+            row={row}
+        />
     );
 }
 

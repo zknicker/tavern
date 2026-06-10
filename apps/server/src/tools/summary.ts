@@ -37,6 +37,10 @@ const preferredResultKeys = [
     'output',
 ] as const;
 
+const shellToolNames = ['bash', 'command', 'exec', 'shell', 'terminal', 'zsh'] as const;
+
+const readToolNames = ['grep', 'read', 'search'] as const;
+
 const toolLabelByKey: Partial<Record<string, string>> = {
     agentId: 'Agent',
     childSessionKey: 'Session',
@@ -122,6 +126,73 @@ function buildToolFacts(
     return facts;
 }
 
+function matchesToolName(normalizedName: string, needles: readonly string[]) {
+    return needles.some((needle) => normalizedName === needle || normalizedName.includes(needle));
+}
+
+function getArgumentString(
+    argumentsValue: Record<string, unknown> | null,
+    keys: readonly string[]
+) {
+    for (const key of keys) {
+        const value = argumentsValue ? resolveToolValue(argumentsValue[key]) : null;
+
+        if (value) {
+            return value;
+        }
+    }
+
+    return null;
+}
+
+// Summary parts describe intent only: they are derived exclusively from the
+// tool arguments (never the result) so rows never leak output text.
+function buildSummaryParts(input: {
+    argumentsValue: Record<string, unknown> | null;
+    label: string | null;
+    name: string;
+}): string[] {
+    const normalizedName = input.name.trim().toLowerCase();
+
+    if (matchesToolName(normalizedName, shellToolNames)) {
+        const command = getArgumentString(input.argumentsValue, ['command']);
+
+        if (command) {
+            return [command];
+        }
+    }
+
+    if (matchesToolName(normalizedName, readToolNames)) {
+        const path = getArgumentString(input.argumentsValue, [
+            'path',
+            'file',
+            'file_path',
+            'filePath',
+        ]);
+        const pattern = getArgumentString(input.argumentsValue, ['pattern', 'query']);
+
+        if (path && pattern) {
+            return [`${pattern} in ${path}`];
+        }
+
+        if (path) {
+            return [path];
+        }
+
+        if (pattern) {
+            return [pattern];
+        }
+    }
+
+    const salient = getArgumentString(input.argumentsValue, preferredArgumentKeys);
+
+    if (salient) {
+        return [salient];
+    }
+
+    return input.label ? [input.label] : [];
+}
+
 function getToolCallPart(partsValue: unknown) {
     const parts = Array.isArray(partsValue) ? partsValue : [];
     return parts.find((part) => isRecord(part) && part.type === 'toolCall');
@@ -186,7 +257,18 @@ export function buildToolSummaryFromValues(input: {
         }
     }
 
-    const summaryParts = facts.slice(0, 3).map((fact) => fact.value);
+    const intentLabel = buildToolLabel({
+        argumentsValue,
+        facts: argumentFacts,
+        name: input.name,
+        resultValue: null,
+        status: null,
+    });
+    const summaryParts = buildSummaryParts({
+        argumentsValue,
+        label: intentLabel,
+        name: input.name,
+    });
     const label = buildToolLabel({
         argumentsValue,
         facts,

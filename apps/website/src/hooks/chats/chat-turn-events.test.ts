@@ -21,34 +21,16 @@ function createHandlers(input?: {
             },
         },
         chat: {
-            get: {
-                invalidate: async ({ chatId }: { chatId: string }) =>
-                    invalidatedQueries.push(`chat.get:${chatId}`),
-            },
             list: {
                 invalidate: async () => invalidatedQueries.push('chat.list'),
             },
             log: {
                 list: {
-                    invalidate: async () => invalidatedQueries.push('chat.log.list'),
                     patchProgress: ({ chatId, updater }) => {
                         input?.patchedProgress?.push(chatId);
                         input?.patchLog ? input.patchLog(updater) : updater(undefined);
                     },
                 },
-            },
-        },
-        session: {
-            get: {
-                invalidate: async () => invalidatedQueries.push('session.get'),
-            },
-            history: {
-                get: {
-                    invalidate: async () => invalidatedQueries.push('session.history.get'),
-                },
-            },
-            list: {
-                invalidate: async () => invalidatedQueries.push('session.list'),
             },
         },
         timeline: {
@@ -78,7 +60,7 @@ const turn = {
     startedAt: '2026-04-27T17:20:07.408Z',
 };
 
-test('turn completion preserves the handoff and invalidates transcript queries', async () => {
+test('turn completion preserves the handoff and refreshes live agent status only', async () => {
     const invalidatedQueries: string[] = [];
     const completedTurns: string[] = [];
     const handlers = createHandlers({
@@ -90,19 +72,10 @@ test('turn completion preserves the handoff and invalidates transcript queries',
     await Promise.resolve();
 
     expect(completedTurns).toEqual(['run-1']);
-    expect(invalidatedQueries).toEqual([
-        'agent.activity',
-        'chat.get:chat-1',
-        'chat.list',
-        'chat.log.list',
-        'session.get',
-        'session.history.get',
-        'session.list',
-        'worker.list',
-    ]);
+    expect(invalidatedQueries).toEqual(['agent.activity']);
 });
 
-test('duplicate turn completion events do not refetch transcript queries again', async () => {
+test('duplicate turn completion events do not refetch live status again', async () => {
     const invalidatedQueries: string[] = [];
     const completedTurns: string[] = [];
     const handlers = createHandlers({
@@ -115,16 +88,7 @@ test('duplicate turn completion events do not refetch transcript queries again',
     await Promise.resolve();
 
     expect(completedTurns).toEqual(['run-1']);
-    expect(invalidatedQueries).toEqual([
-        'agent.activity',
-        'chat.get:chat-1',
-        'chat.list',
-        'chat.log.list',
-        'session.get',
-        'session.history.get',
-        'session.list',
-        'worker.list',
-    ]);
+    expect(invalidatedQueries).toEqual(['agent.activity']);
 });
 
 test('turn start refreshes live status without refetching durable chat activity', async () => {
@@ -256,7 +220,7 @@ test('turn reply updates local timeline state without refetching live status', a
     expect(invalidatedQueries).toEqual([]);
 });
 
-test('turn failure marks the local timeline failed and invalidates transcript queries', async () => {
+test('turn failure marks the local timeline failed and refreshes live agent status only', async () => {
     const failedTurns: string[] = [];
     const invalidatedQueries: string[] = [];
     const handlers = createHandlers({
@@ -271,14 +235,5 @@ test('turn failure marks the local timeline failed and invalidates transcript qu
     await Promise.resolve();
 
     expect(failedTurns).toEqual(['run-1:Docker is not running']);
-    expect(invalidatedQueries).toEqual([
-        'agent.activity',
-        'chat.get:chat-1',
-        'chat.list',
-        'chat.log.list',
-        'session.get',
-        'session.history.get',
-        'session.list',
-        'worker.list',
-    ]);
+    expect(invalidatedQueries).toEqual(['agent.activity']);
 });

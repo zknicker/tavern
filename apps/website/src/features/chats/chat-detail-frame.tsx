@@ -88,7 +88,7 @@ export function ChatDetailFrame({
 
             <div className="relative min-h-0 flex-1">
                 <div
-                    className="h-full min-h-0 overflow-y-auto px-6 py-4"
+                    className="h-full min-h-0 overflow-y-auto px-6 py-4 [scrollbar-gutter:stable]"
                     onScroll={handleScroll}
                     ref={chatScroll.viewportRef}
                 >

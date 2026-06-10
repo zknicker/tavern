@@ -30,23 +30,24 @@ export function updateTimelineReply(
         return state;
     }
 
-    const existingText =
+    const existingReply =
         state.activeReply && state.activeReply.runId === update.turn.runId
-            ? (state.activeReply.text ?? '')
-            : '';
+            ? state.activeReply
+            : null;
+    const existingText = existingReply?.text ?? '';
     const nextText = update.replace
         ? update.text
         : update.text || (update.delta ? `${existingText}${update.delta}` : existingText);
     const nextReply = normalizeActiveReply({
         agentId: update.turn.agentId,
-        isThinking: update.isThinking,
+        isThinking: update.isThinking ?? existingReply?.isThinking,
         runId: update.turn.runId,
         sessionKey: update.turn.sessionKey,
         startedAt: update.turn.startedAt,
         text: nextText,
     });
 
-    const nextState = applyReplySnapshot(state, nextReply);
+    const nextState = applyReplySnapshot(state, nextReply, { authoritative: true });
 
     return {
         ...nextState,

@@ -134,7 +134,9 @@ test('ChatTranscript renders tool calls and agent responses through one surface'
 
     assert.match(markup, /Done\./);
     assert.match(markup, /Worked/);
-    assert.match(markup, /aria-expanded="true"/);
+    // Completed work starts collapsed; users expand it on demand.
+    assert.match(markup, /aria-expanded="false"/);
+    assert.doesNotMatch(markup, /aria-expanded="true"/);
 });
 
 test('ChatTranscript hides reasoning by default', () => {
@@ -225,8 +227,10 @@ test('ChatTranscript keeps hidden thinking out of tool work headers', () => {
     ]);
 
     assert.doesNotMatch(markup, /Thinking/);
-    assert.match(markup, /Ran 1 command/);
-    assert.doesNotMatch(markup, /Thinking, ran 1 command/);
+    // A lone tool step renders directly instead of a one-entry disclosure.
+    assert.doesNotMatch(markup, /Ran 1 command/);
+    assert.match(markup, /command -v node/);
+    assert.match(markup, />Used</);
     assert.doesNotMatch(markup, /Used 1 tool/);
 });
 
@@ -273,6 +277,74 @@ test('ToolStep renders bash failures through the shell tool renderer', () => {
     assert.doesNotMatch(markup, /command timed out/);
     assert.doesNotMatch(markup, /Status: timeout/);
     assert.doesNotMatch(markup, />Used</);
+});
+
+test('ToolStep renders completed verbs in neutral text and the whole row as the drawer trigger', () => {
+    const markup = renderToStaticMarkup(
+        <ToolStep
+            index={0}
+            isLast
+            row={{
+                actor: { id: 'tiny', kind: 'agent' },
+                completedAt: '2026-03-31T15:00:05.000Z',
+                connectsToNext: false,
+                connectsToPrevious: false,
+                id: 'tool-neutral',
+                isFirstInGroup: true,
+                kind: 'tool',
+                sessionKey: 'agent:tiny:session-1',
+                spawnedRelationships: [],
+                startedAt: '2026-03-31T15:00:00.000Z',
+                toolCall: {
+                    callId: null,
+                    facts: [],
+                    label: 'bash · date',
+                    name: 'bash',
+                    status: 'ok',
+                    summaryParts: ['date'],
+                },
+            }}
+        />
+    );
+
+    assert.doesNotMatch(markup, /text-success/);
+    assert.match(markup, /text-muted-foreground">Used</);
+    assert.match(markup, /aria-label="Inspect bash · date"[^>]*data-slot="drawer-trigger"/);
+    assert.match(markup, /cursor-pointer/);
+    assert.match(markup, /group-hover\/tool-step:opacity-100/);
+    assert.doesNotMatch(markup, /thinking-indicator-text/);
+});
+
+test('ToolStep shimmers running tool rows like the thinking indicator', () => {
+    const markup = renderToStaticMarkup(
+        <ToolStep
+            index={0}
+            isLast
+            row={{
+                actor: { id: 'tiny', kind: 'agent' },
+                completedAt: null,
+                connectsToNext: false,
+                connectsToPrevious: false,
+                id: 'tool-running',
+                isFirstInGroup: true,
+                kind: 'tool',
+                sessionKey: 'agent:tiny:session-1',
+                spawnedRelationships: [],
+                startedAt: '2026-03-31T15:00:00.000Z',
+                toolCall: {
+                    callId: null,
+                    facts: [],
+                    label: 'bash · sleep 4',
+                    name: 'bash',
+                    status: 'running',
+                    summaryParts: ['sleep 4'],
+                },
+            }}
+        />
+    );
+
+    assert.match(markup, /thinking-indicator-text/);
+    assert.match(markup, />Using</);
 });
 
 test('ToolStep keeps older tool rows inspectable when call id is missing', () => {
@@ -696,7 +768,7 @@ test('ChatTranscript shows active progress through the same thinking steps surfa
     assert.match(markup, /Using[\s\S]*Listing files/);
     assert.match(markup, /I found the files\. Next I will inspect the renderer\./);
     assert.match(markup, /Agent is thinking/);
-    assert.match(markup, /chat-loading-indicator-in/);
+    assert.match(markup, /chat-step-enter/);
     assert.doesNotMatch(markup, />Running</);
     assert.match(markup, /aria-expanded="true"/);
 });
@@ -822,6 +894,100 @@ test('ChatTranscript keeps live progress in working state when current steps are
 
     assert.match(markup, /Working for[\s\S]*>\d+s</);
     assert.doesNotMatch(markup, /Worked for/);
+});
+
+test('ChatTranscript keeps narration messages in the work log above later tools', () => {
+    const now = Date.now();
+    const markup = renderActiveTranscript(
+        {
+            agentId: 'tiny',
+            isThinking: true,
+            runId: 'run-1',
+            sessionKey: 'agent:tiny:session-1',
+            startedAt: new Date(now - 3000).toISOString(),
+            text: '',
+        },
+        [
+            {
+                actor: { id: 'tiny', kind: 'agent' },
+                connectsToNext: false,
+                connectsToPrevious: false,
+                id: 'act_run-1_message_1',
+                isFirstInGroup: true,
+                kind: 'message',
+                message: {
+                    tavernAgentId: 'tiny',
+                    content: 'I will inspect the workspace before replying.',
+                    id: 'act_run-1_message_1',
+                    metadata: { runtime: { runId: 'run-1', sessionKey: 'agent:tiny:session-1' } },
+                    sender: 'tiny',
+                    senderType: 'agent',
+                    sourceSessionId: null,
+                    sourceSessionKey: 'agent:tiny:session-1',
+                    timestamp: new Date(now - 2500).toISOString(),
+                },
+            },
+            {
+                actor: { id: 'tiny', kind: 'agent' },
+                completedAt: null,
+                connectsToNext: false,
+                connectsToPrevious: false,
+                id: 'act_run-1_call_1',
+                isFirstInGroup: true,
+                kind: 'tool',
+                sessionKey: 'agent:tiny:session-1',
+                spawnedRelationships: [],
+                startedAt: new Date(now - 1500).toISOString(),
+                toolCall: {
+                    callId: 'call_1',
+                    facts: [],
+                    label: 'Listing files',
+                    name: 'search_files',
+                    status: 'running',
+                    summaryParts: ['Listing files'],
+                },
+            },
+        ]
+    );
+    const narrationIndex = markup.indexOf('I will inspect the workspace before replying.');
+    const toolIndex = markup.indexOf('Listing files');
+
+    assert.match(markup, /Working for[\s\S]*>\d+s</);
+    assert.doesNotMatch(markup, /Worked for/);
+    assert.ok(narrationIndex >= 0 && toolIndex >= 0, 'narration and tool both render');
+    assert.ok(narrationIndex < toolIndex, 'narration renders above the tool that follows it');
+});
+
+test('ChatTranscript keeps the thinking indicator visible while hidden reasoning streams', () => {
+    const now = Date.now();
+    const markup = renderActiveTranscript(
+        {
+            agentId: 'tiny',
+            isThinking: true,
+            runId: 'run-1',
+            sessionKey: 'agent:tiny:session-1',
+            startedAt: new Date(now - 2000).toISOString(),
+            text: '',
+        },
+        [
+            {
+                id: 'act_run-1_thinking_1',
+                kind: 'system',
+                systemKind: 'thinking',
+                thinking: {
+                    id: 'act_run-1_thinking_1',
+                    messageId: 'run-1',
+                    sender: 'tiny',
+                    text: 'Considering which files matter.',
+                    timestamp: new Date(now - 1000).toISOString(),
+                },
+                timestamp: new Date(now - 1000).toISOString(),
+            },
+        ]
+    );
+
+    assert.match(markup, /Agent is thinking/);
+    assert.doesNotMatch(markup, /Considering which files matter\./);
 });
 
 type ChatRow = NonNullable<ChatLogOutput>['rows'][number];

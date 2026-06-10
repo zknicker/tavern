@@ -730,7 +730,15 @@ export class LocalHermesClient extends LocalHermesUnsupportedSurfaces {
                     continue;
                 }
 
-                if (event.type === 'reasoning.delta') {
+                // The gateway streams model thought through three channels:
+                // reasoning.delta and thinking.delta are incremental, and
+                // reasoning.available delivers one complete block for models
+                // that do not stream reasoning. All carry { text }.
+                if (
+                    event.type === 'reasoning.delta' ||
+                    event.type === 'thinking.delta' ||
+                    event.type === 'reasoning.available'
+                ) {
                     yield {
                         data: {
                             delta: readString(event.payload, ['text']) ?? '',
@@ -762,6 +770,8 @@ export class LocalHermesClient extends LocalHermesUnsupportedSurfaces {
                     };
                     return;
                 }
+
+                warnUnhandledGatewayEvent(event.type);
             }
         } finally {
             releaseTurn();
@@ -1422,6 +1432,19 @@ async function readFileStats(filePath: string) {
 
 function isMissingHermesSession(error: unknown) {
     return error instanceof Error && /session not found/iu.test(error.message);
+}
+
+const warnedGatewayEventTypes = new Set<string>();
+
+// Gateway event types we have no mapping for must be visible, not silently
+// dropped — unhandled types are how stream content goes missing.
+function warnUnhandledGatewayEvent(type: string) {
+    if (warnedGatewayEventTypes.has(type)) {
+        return;
+    }
+
+    warnedGatewayEventTypes.add(type);
+    console.warn(`[tavern-runtime] Unhandled Hermes gateway event type "${type}"`);
 }
 
 function createHermesTurnCancelledError() {

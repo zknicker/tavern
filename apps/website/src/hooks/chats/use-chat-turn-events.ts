@@ -15,11 +15,9 @@ export function useChatTurnEvents() {
     const handlers = createChatTurnEventHandlers({
         agent: utils.agent,
         chat: {
-            get: utils.chat.get,
             list: utils.chat.list,
             log: {
                 list: {
-                    invalidate: utils.chat.log.list.invalidate,
                     patchProgress: ({ chatId, updater }) => {
                         let matchedQuery = false;
 
@@ -54,7 +52,6 @@ export function useChatTurnEvents() {
                 },
             },
         },
-        session: utils.session,
         timeline: {
             clearTurn,
             completeTurn,

@@ -6,12 +6,14 @@ import {
     CollapsibleTrigger,
 } from '../../components/ui/collapsible.tsx';
 import { Icon } from '../../components/ui/icon.tsx';
+import { cn } from '../../lib/utils.ts';
 import { ActivityStep } from './chat-transcript-activity-step.tsx';
 import {
     type ActivityItem,
     formatActiveActivitySeconds,
     formatActivityHeader,
     formatWorkGroupHeader,
+    getActiveWorkLabel,
     getActivityItemKey,
 } from './chat-transcript-activity-utils.ts';
 import {
@@ -38,14 +40,21 @@ export function WorkingLog({
     status: 'active' | 'completed';
 }) {
     const isActive = status === 'active';
+    // Group mode (no duration header) renders Codex-style: collapsed by
+    // default with a live summary label while the group is executing.
+    const groupMode = !showDurationHeader;
     const now = useNow(isActive && start !== null, start);
     const activeSeconds = isActive ? formatActiveActivitySeconds({ now, start }) : null;
     const thinkingOnly = isThinkingOnly(items);
-    const defaultOpen = isActive || (!thinkingOnly && (hasNarration(items) || !showDurationHeader));
+    const defaultOpen = groupMode ? false : isActive || (!thinkingOnly && hasNarration(items));
     const [open, setOpen] = React.useState(defaultOpen);
     const disclosureAnchor = useDisclosureScrollAnchor();
 
     React.useEffect(() => {
+        if (groupMode) {
+            return;
+        }
+
         if (isActive) {
             setOpen(true);
             return;
@@ -54,38 +63,55 @@ export function WorkingLog({
         if (thinkingOnly) {
             setOpen(false);
         }
-    }, [isActive, thinkingOnly]);
+    }, [groupMode, isActive, thinkingOnly]);
 
     const handleOpenChange = (nextOpen: boolean) => {
         setOpen(nextOpen);
         disclosureAnchor.preserve();
     };
+    const groupLabel = groupMode
+        ? isActive
+            ? (getActiveWorkLabel(items) ?? 'Working')
+            : formatWorkGroupHeader(items)
+        : null;
 
     return (
-        <ThinkingSteps className="w-full max-w-[34rem]" onOpenChange={handleOpenChange} open={open}>
+        <ThinkingSteps
+            // Group mode: the trigger's py-1 click padding must not stack onto
+            // the surrounding 16px block rhythm.
+            className={cn('w-full max-w-[34rem]', groupMode && '-my-1')}
+            onOpenChange={handleOpenChange}
+            open={open}
+        >
             <ThinkingStepsHeader
                 onKeyDown={disclosureAnchor.captureFromKeyboard}
                 onPointerDown={disclosureAnchor.capture}
                 ref={disclosureAnchor.triggerRef}
             >
-                {showDurationHeader ? (
-                    isActive && activeSeconds ? (
-                        <span>
-                            Working for{' '}
-                            <span className="inline-block min-w-[2.2ch] text-left tabular-nums">
-                                {activeSeconds}
-                            </span>
+                {groupMode ? (
+                    <span
+                        className={cn(
+                            'inline-block max-w-[28rem] truncate align-bottom',
+                            isActive && 'thinking-indicator-text'
+                        )}
+                    >
+                        {groupLabel}
+                    </span>
+                ) : isActive && activeSeconds ? (
+                    <span>
+                        Working for{' '}
+                        <span className="inline-block min-w-[2.2ch] text-left tabular-nums">
+                            {activeSeconds}
                         </span>
-                    ) : (
-                        formatActivityHeader({ end, isActive, now, start })
-                    )
+                    </span>
                 ) : (
-                    formatWorkGroupHeader(items)
+                    formatActivityHeader({ end, isActive, now, start })
                 )}
             </ThinkingStepsHeader>
             <ThinkingStepsContent className={showDurationHeader ? undefined : 'pt-1'}>
                 {items.map((item, index) => (
                     <ActivityStep
+                        animateEnter={isActive}
                         chatId={chatId}
                         currentSessionKey={currentSessionKey}
                         index={index}
@@ -102,8 +128,8 @@ export function WorkingLog({
 function useDisclosureScrollAnchor() {
     const triggerRef = React.useRef<HTMLButtonElement | null>(null);
     const anchorRef = React.useRef<{
+        endAtMs: number;
         frameId: number | null;
-        remainingFrames: number;
         scrollParent: HTMLElement | null;
         top: number;
         trigger: HTMLButtonElement;
@@ -121,8 +147,8 @@ function useDisclosureScrollAnchor() {
         }
 
         anchorRef.current = {
+            endAtMs: performance.now() + disclosureAnchorDurationMs,
             frameId: null,
-            remainingFrames: disclosureAnchorFrames,
             scrollParent: getScrollParent(trigger),
             top: trigger.getBoundingClientRect().top,
             trigger,
@@ -164,9 +190,7 @@ function useDisclosureScrollAnchor() {
                 }
             }
 
-            currentAnchor.remainingFrames -= 1;
-
-            if (currentAnchor.remainingFrames <= 0) {
+            if (performance.now() >= currentAnchor.endAtMs) {
                 anchorRef.current = null;
                 dispatchTranscriptDisclosureAnchorEnd();
                 return;
@@ -194,7 +218,11 @@ function useDisclosureScrollAnchor() {
     return { capture, captureFromKeyboard, preserve, triggerRef };
 }
 
-const disclosureAnchorFrames = 14;
+// Time-based, NOT frame-based: frame counts halve on 120Hz displays, which
+// made the anchor expire mid-animation. Must outlast the
+// chat-collapsible-panel height transition (240ms) plus settle frames.
+const disclosureAnchorDurationMs = 420;
+const completedCollapseDelayMs = 650;
 
 function getScrollParent(element: HTMLElement): HTMLElement | null {
     let parent = element.parentElement;
@@ -224,9 +252,50 @@ export function TurnWorkDisclosure({
     start: string | null;
     status: 'active' | 'completed';
 }) {
+    const isActive = status === 'active';
+    // Open while the turn works; collapse once with an animation when it
+    // completes. The collapse waits a beat so the final reply finishes
+    // revealing and the completion refetch settles first — animating while
+    // the panel's contents are still changing reads as a stutter. Completed
+    // turns start collapsed so history reads the same way a finished live
+    // turn does. Users can re-open at any time.
+    const [open, setOpen] = React.useState(isActive);
+    const wasActiveRef = React.useRef(isActive);
+    // Manual toggles anchor the trigger so the panel expands downward even
+    // when the chat is bottomed out; the completion auto-collapse stays
+    // unanchored so bottom-follow keeps the reply pinned instead.
+    const disclosureAnchor = useDisclosureScrollAnchor();
+
+    React.useEffect(() => {
+        if (isActive) {
+            wasActiveRef.current = true;
+            setOpen(true);
+            return;
+        }
+
+        if (!wasActiveRef.current) {
+            return;
+        }
+
+        wasActiveRef.current = false;
+        const timer = window.setTimeout(() => setOpen(false), completedCollapseDelayMs);
+
+        return () => window.clearTimeout(timer);
+    }, [isActive]);
+
+    const handleOpenChange = (nextOpen: boolean) => {
+        setOpen(nextOpen);
+        disclosureAnchor.preserve();
+    };
+
     return (
-        <Collapsible className="flex min-w-0 flex-col gap-3.5" defaultOpen>
-            <CollapsibleTrigger className="group border-border/70 border-b pb-2 text-left font-medium text-[13px] text-muted-foreground leading-tight transition-colors hover:text-foreground">
+        <Collapsible className="flex min-w-0 flex-col" onOpenChange={handleOpenChange} open={open}>
+            <CollapsibleTrigger
+                className="group border-border/70 border-b pb-2 text-left font-medium text-[13px] text-muted-foreground leading-tight transition-colors hover:text-foreground"
+                onKeyDown={disclosureAnchor.captureFromKeyboard}
+                onPointerDown={disclosureAnchor.capture}
+                ref={disclosureAnchor.triggerRef}
+            >
                 <span className="inline-flex items-center gap-1.5">
                     <TurnWorkHeaderContent end={end} start={start} status={status} />
                     <Icon
@@ -236,8 +305,10 @@ export function TurnWorkDisclosure({
                     />
                 </span>
             </CollapsibleTrigger>
-            <CollapsiblePanel>
-                <div className="flex min-w-0 flex-col gap-4">{children}</div>
+            <CollapsiblePanel className="chat-collapsible-panel" keepMounted>
+                {/* Spacing lives inside the animated panel so it collapses with
+                    the height instead of vanishing in one frame at the end. */}
+                <div className="flex min-w-0 flex-col gap-4 pt-3.5">{children}</div>
             </CollapsiblePanel>
         </Collapsible>
     );

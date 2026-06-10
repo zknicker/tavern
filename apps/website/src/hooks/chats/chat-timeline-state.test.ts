@@ -363,6 +363,82 @@ test('failTimelineTurn stores a failed turn marker', () => {
     expect(failed.failedTurn).toEqual({ error: 'boom', turn });
 });
 
+test('updateTimelineReply replace resets streamed text without ending the turn', () => {
+    const streamed = updateTimelineReply(startTimelineTurn(emptyTimelineState(), turn), {
+        isThinking: false,
+        text: 'First narration segment',
+        turn,
+    });
+    const cleared = updateTimelineReply(streamed, {
+        isThinking: true,
+        replace: true,
+        text: '',
+        turn,
+    });
+
+    expect(cleared.activeReply).toMatchObject({
+        isThinking: true,
+        runId: 'run-1',
+        text: '',
+    });
+});
+
+test('applyLogSnapshot keeps the active reply when narration activity messages land', () => {
+    const streamed = updateTimelineReply(startTimelineTurn(emptyTimelineState(), turn), {
+        isThinking: false,
+        text: 'Looking into it',
+        turn,
+    });
+    const next = applyLogSnapshot(streamed, {
+        limit: 100,
+        offset: 0,
+        rows: [
+            {
+                actor: { id: 'claw', kind: 'agent' },
+                connectsToNext: false,
+                connectsToPrevious: false,
+                id: 'act_run-1_message_1',
+                isFirstInGroup: true,
+                kind: 'message',
+                message: {
+                    tavernAgentId: 'claw',
+                    content: 'First narration segment',
+                    id: 'act_run-1_message_1',
+                    metadata: { runtime: { runId: 'run-1', sessionKey: 'session-1' } },
+                    sender: 'claw',
+                    senderType: 'agent',
+                    sourceSessionId: null,
+                    sourceSessionKey: 'session-1',
+                    timestamp: '2026-04-21T16:08:44.000Z',
+                },
+            },
+        ],
+        total: 1,
+    });
+
+    expect(next.activeReply?.runId).toBe('run-1');
+    expect(next.activeReply?.text).toBe('Looking into it');
+});
+
+test('applyReplySnapshot does not regress streamed text from a stale snapshot', () => {
+    const streamed = updateTimelineReply(startTimelineTurn(emptyTimelineState(), turn), {
+        isThinking: false,
+        text: 'Long streamed answer',
+        turn,
+    });
+    const next = applyReplySnapshot(streamed, {
+        agentId: 'claw',
+        isThinking: true,
+        runId: 'run-1',
+        sessionKey: 'session-1',
+        startedAt: turn.startedAt,
+        text: 'Long',
+    });
+
+    expect(next.activeReply?.text).toBe('Long streamed answer');
+    expect(next.activeReply?.isThinking).toBe(false);
+});
+
 test('applyReplySnapshot does not restore thinking after the assistant message is visible', () => {
     const logged = applyLogSnapshot(emptyTimelineState(), {
         limit: 100,

@@ -3,6 +3,7 @@ import { useChatTool } from '../../../hooks/chats/use-chat-tool.ts';
 import { useSessionTool } from '../../../hooks/sessions/use-session-tool.ts';
 import type { ChatToolOutput, SessionToolOutput } from '../../../lib/trpc.tsx';
 import { ToolDrawerBody } from './tool-drawer-body.tsx';
+import { buildToolDrawerCall } from './tool-drawer-call.ts';
 import { ToolDrawerHeader } from './tool-drawer-header.tsx';
 
 type ToolDrawerProps = { isOpen: boolean } & (
@@ -79,13 +80,7 @@ function ToolDrawerShell({
 }) {
     return (
         <DrawerPopup className="max-w-xl" showCloseButton variant="inset">
-            {details ? (
-                <ToolDrawerHeader
-                    completedAt={details.completedAt}
-                    startedAt={details.startedAt}
-                    toolCall={details.toolCall}
-                />
-            ) : null}
+            {details ? <ToolDrawerHeader call={buildToolDrawerCall(details)} /> : null}
             <ToolDrawerBody details={details} isPending={isPending} queryError={queryError} />
         </DrawerPopup>
     );

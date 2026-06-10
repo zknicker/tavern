@@ -87,7 +87,7 @@ interface ThinkingStepsContentProps extends HTMLAttributes<HTMLDivElement> {
 
 export const ThinkingStepsContent = forwardRef<HTMLDivElement, ThinkingStepsContentProps>(
     ({ children, className, ...props }, ref) => (
-        <CollapsiblePanel>
+        <CollapsiblePanel className="chat-collapsible-panel" keepMounted>
             <div className={cn('flex flex-col', className)} ref={ref} {...props}>
                 {children}
             </div>
@@ -98,6 +98,7 @@ export const ThinkingStepsContent = forwardRef<HTMLDivElement, ThinkingStepsCont
 ThinkingStepsContent.displayName = 'ThinkingStepsContent';
 
 interface ThinkingStepProps {
+    animateEnter?: boolean;
     children?: ReactNode;
     className?: string;
     delay?: number;
@@ -111,6 +112,7 @@ interface ThinkingStepProps {
 }
 
 export function ThinkingStep({
+    animateEnter = false,
     children,
     className,
     delay = 0,
@@ -131,8 +133,7 @@ export function ThinkingStep({
         <div
             className={cn(
                 'relative z-10 overflow-hidden',
-                isActive &&
-                    'motion-safe:animate-[chat-loading-indicator-in_260ms_cubic-bezier(0.23,1,0.32,1)_both]',
+                animateEnter && 'chat-step-enter',
                 className
             )}
             style={{ animationDelay: `${delay}s` }}

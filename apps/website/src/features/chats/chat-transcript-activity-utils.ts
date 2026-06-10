@@ -168,6 +168,45 @@ export function getAssistantNarrationText(item: TranscriptItem) {
     return text.length > 0 ? text : null;
 }
 
+/**
+ * Live label for a collapsed work group: what the agent is doing right now,
+ * derived from the most recent still-running item.
+ */
+export function getActiveWorkLabel(items: ActivityItem[]) {
+    for (let index = items.length - 1; index >= 0; index -= 1) {
+        const item = items[index];
+
+        if (!(item && isActiveActivityItem(item))) {
+            continue;
+        }
+
+        if (item.row.kind === 'tool') {
+            const target =
+                item.row.toolCall.summaryParts.join(' ').trim() ||
+                item.row.toolCall.label?.trim() ||
+                item.row.toolCall.name;
+            const verb = matchesAny(item.row.toolCall.name.trim().toLowerCase(), [
+                'bash',
+                'command',
+                'exec',
+                'shell',
+                'terminal',
+                'zsh',
+            ])
+                ? 'Running'
+                : 'Using';
+
+            return `${verb} ${target}`;
+        }
+
+        if (item.row.kind === 'worker' && item.row.worker.title) {
+            return `Working on ${item.row.worker.title}`;
+        }
+    }
+
+    return null;
+}
+
 export function formatWorkGroupHeader(items: ActivityItem[]) {
     const counts = countWorkItems(items);
     const parts = [

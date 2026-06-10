@@ -15,7 +15,10 @@ export function useChatTimelinePage(input: { id: string; limit: number }) {
             ...queryPolicy.agentRuntimeSnapshot,
             getNextPageParam: (lastPage) => getNextChatLogCursor(lastPage),
             getPreviousPageParam: (firstPage) => getPreviousChatLogCursor(firstPage),
-            refetchOnMount: 'always',
+            // Refetch on mount only when invalidation events marked the log
+            // stale; an unconditional refetch duplicates the event-driven
+            // refresh model and reflows the timeline on every chat re-entry.
+            refetchOnMount: true,
         }
     );
     const logged = React.useMemo(() => mergeChatLogPages(query.data?.pages), [query.data?.pages]);

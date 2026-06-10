@@ -1,5 +1,5 @@
 import { isAssistantNarrationItem } from './chat-transcript-activity-utils.ts';
-import type { TranscriptItem } from './chat-transcript-model.ts';
+import type { TranscriptItem, TranscriptRow } from './chat-transcript-model.ts';
 
 export type AgentItemSegment =
     | { item: TranscriptItem; key: string; kind: 'item' }
@@ -78,7 +78,7 @@ export function isTranscriptActivityItem(item: TranscriptItem) {
 
 export function getTranscriptItemKey(item: TranscriptItem) {
     if (item.kind === 'activeReply') {
-        return `active-reply:${item.reply.runId}`;
+        return `reply:${item.reply.runId}`;
     }
 
     if (item.kind === 'activeStatus') {
@@ -89,5 +89,26 @@ export function getTranscriptItemKey(item: TranscriptItem) {
         return `failure:${item.failure.turn.runId}`;
     }
 
-    return item.row.id;
+    const replyRunId = getDurableReplyRunId(item.row);
+
+    return replyRunId ? `reply:${replyRunId}` : item.row.id;
+}
+
+// The streamed reply and the durable assistant message it becomes share one
+// key, so the reply slot keeps its identity when the turn completes instead
+// of remounting.
+function getDurableReplyRunId(row: TranscriptRow) {
+    if (row.kind !== 'message' || row.message.senderType !== 'agent' || row.id.startsWith('act_')) {
+        return null;
+    }
+
+    const runtime = row.message.metadata?.runtime;
+
+    if (!(runtime && typeof runtime === 'object' && !Array.isArray(runtime))) {
+        return null;
+    }
+
+    const runId = (runtime as Record<string, unknown>).runId;
+
+    return typeof runId === 'string' && runId.trim().length > 0 ? runId : null;
 }

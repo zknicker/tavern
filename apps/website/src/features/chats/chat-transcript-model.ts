@@ -47,6 +47,7 @@ export function buildTranscriptEntries(input: {
     activeReply: ChatActiveReply | null;
     failedTurn?: ChatTurnFailure | null;
     rows: TranscriptRow[];
+    showThinkingText?: boolean;
 }) {
     const items = buildTranscriptItems(input);
     const entries: TranscriptEntry[] = [];
@@ -90,6 +91,7 @@ function buildTranscriptItems(input: {
     activeReply: ChatActiveReply | null;
     failedTurn?: ChatTurnFailure | null;
     rows: TranscriptRow[];
+    showThinkingText?: boolean;
 }) {
     let lastActiveProgressRow: TranscriptRow | null = null;
     const items: TranscriptItem[] = input.rows.map((row) => {
@@ -108,7 +110,7 @@ function buildTranscriptItems(input: {
     if (
         input.activeReply &&
         activeReplyText.length === 0 &&
-        shouldShowActiveStatus(lastActiveProgressRow)
+        shouldShowActiveStatus(lastActiveProgressRow, input.showThinkingText !== false)
     ) {
         items.push({
             kind: 'activeStatus',
@@ -124,8 +126,27 @@ function buildTranscriptItems(input: {
     return items;
 }
 
-function shouldShowActiveStatus(lastProgressRow: TranscriptRow | null) {
-    return !lastProgressRow || isAssistantNarrationRow(lastProgressRow);
+function shouldShowActiveStatus(lastProgressRow: TranscriptRow | null, showThinkingText: boolean) {
+    if (!lastProgressRow || isAssistantNarrationRow(lastProgressRow)) {
+        return true;
+    }
+
+    // A thinking row hidden by the display preference must not suppress the
+    // status indicator, or the turn looks idle while the agent reasons.
+    return !showThinkingText && isThinkingRow(lastProgressRow);
+}
+
+function isThinkingRow(row: TranscriptRow) {
+    return row.kind === 'system' && row.systemKind === 'thinking';
+}
+
+/**
+ * Activity-backed message rows (act_ ids) are intra-turn narration projected
+ * from response activities. They belong to the work log and are never the
+ * turn's durable reply.
+ */
+export function isActivityBackedMessageRow(row: TranscriptRow) {
+    return row.kind === 'message' && row.id.startsWith('act_');
 }
 
 function isActiveProgressRow(row: TranscriptRow, activeReply: ChatActiveReply) {
@@ -275,6 +296,38 @@ function getActorKey(actor: TranscriptActor) {
         return `${actor.kind}:${actor.id}`;
     }
     return null;
+}
+
+/**
+ * Whether this entry's rendering can depend on the live reply. Streaming
+ * updates replace the activeReply object on every event, so list renderers
+ * pass it only to entries that can actually be active and let memoized
+ * historical rows skip the re-render.
+ */
+export function transcriptEntryUsesActiveReply(
+    entry: TranscriptEntry,
+    activeReply: ChatActiveReply | null
+) {
+    if (!activeReply || entry.kind !== 'turn' || entry.participant !== 'agent') {
+        return false;
+    }
+
+    if (entry.items.some((item) => item.kind === 'activeReply' || item.kind === 'activeStatus')) {
+        return true;
+    }
+
+    if (
+        entry.items.some(
+            (item) =>
+                item.kind === 'row' &&
+                item.row.kind === 'message' &&
+                !isActivityBackedMessageRow(item.row)
+        )
+    ) {
+        return false;
+    }
+
+    return entry.items.some((item) => getItemSessionKey(item) === activeReply.sessionKey);
 }
 
 export function getItemSessionKey(item: TranscriptItem) {

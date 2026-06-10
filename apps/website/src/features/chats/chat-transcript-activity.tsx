@@ -1,3 +1,4 @@
+import { ActivityStep } from './chat-transcript-activity-step.tsx';
 import {
     getActivityEnd,
     getActivityStart,
@@ -51,6 +52,23 @@ export function ChatTranscriptActivityGroup({
 
     if (activityItems.length === 0) {
         return null;
+    }
+
+    const singleItem = activityItems.length === 1 ? activityItems[0] : null;
+
+    // A disclosure wrapping a single tool row is redundant; render the step
+    // directly instead of a one-entry work log.
+    if (singleItem && singleItem.row.kind === 'tool') {
+        return (
+            <ActivityStep
+                animateEnter={isActive}
+                chatId={chatId}
+                currentSessionKey={currentSessionKey}
+                index={0}
+                isLast
+                item={singleItem}
+            />
+        );
     }
 
     return (

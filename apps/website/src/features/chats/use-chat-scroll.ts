@@ -6,7 +6,7 @@ import {
 
 const bottomTolerance = 72;
 
-function isNearBottom(container: HTMLElement) {
+export function isNearViewportBottom(container: HTMLElement) {
     return container.scrollHeight - container.scrollTop - container.clientHeight <= bottomTolerance;
 }
 
@@ -49,7 +49,7 @@ export function useChatScroll({
             return;
         }
 
-        const nextIsAtBottom = isNearBottom(viewport);
+        const nextIsAtBottom = isNearViewportBottom(viewport);
         shouldFollowRef.current = nextIsAtBottom;
         setIsAtBottom(nextIsAtBottom);
     }, []);
@@ -118,7 +118,7 @@ export function useChatScroll({
                 return;
             }
 
-            const nextIsAtBottom = isNearBottom(viewport);
+            const nextIsAtBottom = isNearViewportBottom(viewport);
             shouldFollowRef.current = nextIsAtBottom;
             setIsAtBottom(nextIsAtBottom);
         };

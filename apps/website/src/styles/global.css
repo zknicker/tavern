@@ -245,9 +245,45 @@
     [class*='desktop-update-indicator'] {
         animation: none !important;
     }
+
+    .chat-step-enter,
+    .chat-collapsible-panel {
+        transition: none !important;
+    }
 }
 
 @layer components {
+    /* Animated collapse/expand for chat work-log disclosures. Base UI sets
+       --collapsible-panel-height during transitions and `auto` at rest. */
+    .chat-collapsible-panel {
+        height: var(--collapsible-panel-height);
+        overflow: hidden;
+        transition: height 240ms cubic-bezier(0.33, 1, 0.68, 1);
+    }
+
+    /* The closed resting state must also be zero-height: any frame between
+       the ending style clearing and `hidden` applying would otherwise snap
+       the panel back to its measured height — a one-frame layout pop. */
+    .chat-collapsible-panel[data-starting-style],
+    .chat-collapsible-panel[data-ending-style],
+    .chat-collapsible-panel[data-closed] {
+        height: 0;
+    }
+
+    /* Enter transition for work-log steps. @starting-style runs once when the
+       element is inserted, so the animation is tied to appearance rather than
+       step status and cannot be skipped or cut short by status flips. */
+    .chat-step-enter {
+        transition:
+            opacity 240ms cubic-bezier(0.23, 1, 0.32, 1),
+            transform 240ms cubic-bezier(0.23, 1, 0.32, 1);
+
+        @starting-style {
+            opacity: 0;
+            transform: translateY(-3px) scale(0.96);
+        }
+    }
+
     .thinking-indicator-text {
         color: transparent;
         background: linear-gradient(

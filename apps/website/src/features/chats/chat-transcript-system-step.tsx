@@ -62,11 +62,13 @@ export function RuntimeNoticeEntry({ row }: { row: RuntimeNoticeRow }) {
 }
 
 export function SystemStep({
+    animateEnter,
     currentSessionKey,
     index,
     isLast,
     row,
 }: {
+    animateEnter?: boolean;
     currentSessionKey?: string | null;
     index: number;
     isLast: boolean;
@@ -77,6 +79,7 @@ export function SystemStep({
 
     return (
         <ThinkingStep
+            animateEnter={animateEnter}
             description={summary.description}
             icon={summary.icon}
             index={index}

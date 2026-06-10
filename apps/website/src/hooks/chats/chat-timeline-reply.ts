@@ -68,12 +68,28 @@ export function normalizeActiveReply(activeReply: ChatActiveReply | null): ChatA
     };
 }
 
+export interface ActiveReplyMergeOptions {
+    /**
+     * Live turn events own the reply verbatim, including resets to empty
+     * text. Snapshot merges (log refetches) must never regress streamed text.
+     */
+    authoritative?: boolean;
+}
+
 export function mergeActiveReplySnapshot(
     current: ChatActiveReply | null,
-    incoming: ChatActiveReply | null
+    incoming: ChatActiveReply | null,
+    options: ActiveReplyMergeOptions = {}
 ): ChatActiveReply | null {
     if (!(current && incoming) || current.runId !== incoming.runId) {
         return incoming;
+    }
+
+    if (options.authoritative) {
+        return {
+            ...incoming,
+            completedAt: incoming.completedAt ?? current.completedAt ?? null,
+        };
     }
 
     const currentText = current.text ?? '';
@@ -86,7 +102,7 @@ export function mergeActiveReplySnapshot(
                 ? false
                 : incoming.isThinking,
         completedAt: incoming.completedAt ?? current.completedAt ?? null,
-        text: incomingText.length === 0 && currentText.length > 0 ? currentText : incomingText,
+        text: incomingText.length >= currentText.length ? incomingText : currentText,
     };
 }
 
@@ -111,7 +127,10 @@ function hasDurableAssistantReply(rows: ChatTimeline, activeReply: ChatActiveRep
 }
 
 function isDurableReplyForActiveReply(row: ChatTimelineMessageRow, activeReply: ChatActiveReply) {
-    if (row.message.senderType !== 'agent') {
+    // Activity rows projected as messages (narration, progress updates) are
+    // work-log evidence, not the turn's durable reply. Matching them here
+    // would kill the streaming reply as soon as the agent narrates mid-turn.
+    if (row.message.senderType !== 'agent' || isActivityMessageRow(row)) {
         return false;
     }
 
@@ -173,6 +192,10 @@ function hasCompatibleSession(row: ChatTimelineMessageRow, activeReply: ChatActi
 
 function getMessageRuntimeRunId(row: ChatTimelineMessageRow) {
     return getRuntimeMetadataString(row.message.metadata, 'runId');
+}
+
+function isActivityMessageRow(row: ChatTimelineMessageRow) {
+    return row.id.startsWith('act_');
 }
 
 function getRuntimeMetadataString(

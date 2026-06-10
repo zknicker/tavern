@@ -4,6 +4,11 @@ import { createLocalHermesClient } from '../hermes/local-client';
 import { createDelivery, upsertResponse, upsertResponseActivity } from './chat-api';
 import { createAgentParticipantId } from './chat-api/ids';
 import { publishRuntimeEvent } from './runtime-events';
+import {
+    createTurnStreamThrottle,
+    turnActivityFlushIntervalMs,
+    turnReplyFlushIntervalMs,
+} from './turn-stream-throttle';
 
 type HermesClient = ReturnType<typeof createLocalHermesClient>;
 
@@ -51,6 +56,31 @@ export async function runHermesTurn(input: {
         sessionId: null as string | null,
     };
     activeHermesTurns.set(input.runId, activeTurn);
+    const stream = createTurnStreamThrottle();
+    // Both wrappers flush coalesced stream writes first so running-status
+    // writes always land before the segment's terminal write.
+    const completeReasoningToProgress = (sourceEvent?: string) => {
+        if (!reasoningSegment) {
+            return;
+        }
+        stream.flush();
+        collectCompletedReasoning(
+            completedReasoningMessages,
+            completeReasoningSegment(input, reasoningSegment, sourceEvent)
+        );
+        reasoningSegment = null;
+    };
+    const flushAssistantToProgress = () => {
+        if (!assistantSegment) {
+            return;
+        }
+        stream.flush();
+        collectProgressMessage(
+            progressMessages,
+            flushAssistantSegment(input, turn, assistantSegment)
+        );
+        assistantSegment = null;
+    };
 
     try {
         publishRuntimeEvent({ timestamp: startedAt, turn, type: 'turn.started' });
@@ -67,35 +97,40 @@ export async function runHermesTurn(input: {
             title: input.chatId,
         })) {
             if (!isReasoningEvent(event.event)) {
-                collectCompletedReasoning(
-                    completedReasoningMessages,
-                    completeReasoningSegment(input, reasoningSegment)
-                );
-                reasoningSegment = null;
+                completeReasoningToProgress();
             }
 
             if (event.event === 'assistant.delta') {
                 const delta = readString(event.data.delta) ?? '';
                 assistantContent += delta;
-                if (delta) {
-                    if (!assistantSegment) {
-                        assistantSegmentIndex += 1;
-                        assistantSegment = {
-                            content: '',
-                            index: assistantSegmentIndex,
-                            startedAt: new Date().toISOString(),
-                        };
-                    }
-                    assistantSegment.content += delta;
+                if (!delta) {
+                    continue;
                 }
-                publishRuntimeEvent({
-                    delta,
-                    isThinking: false,
-                    text: assistantContent,
-                    timestamp: new Date().toISOString(),
-                    turn,
-                    type: 'turn.replyUpdated',
-                });
+                if (!assistantSegment) {
+                    assistantSegmentIndex += 1;
+                    assistantSegment = {
+                        content: '',
+                        index: assistantSegmentIndex,
+                        startedAt: new Date().toISOString(),
+                    };
+                }
+                assistantSegment.content += delta;
+                stream.schedule(
+                    'reply',
+                    () => {
+                        publishRuntimeEvent({
+                            isThinking: false,
+                            // Segments after a narration flush begin with the
+                            // model's paragraph separator; leading newlines
+                            // render as blank space in the live reply.
+                            text: (assistantSegment?.content ?? '').trimStart(),
+                            timestamp: new Date().toISOString(),
+                            turn,
+                            type: 'turn.replyUpdated',
+                        });
+                    },
+                    turnReplyFlushIntervalMs
+                );
                 continue;
             }
 
@@ -105,21 +140,22 @@ export async function runHermesTurn(input: {
             }
 
             if (event.event === 'tool.progress') {
-                collectProgressMessage(
-                    progressMessages,
-                    flushAssistantSegment(input, turn, assistantSegment)
-                );
-                assistantSegment = null;
-                recordToolProgress(input, turn, event);
+                flushAssistantToProgress();
+                const toolCallId = readString(event.data.tool_call_id);
+                if (toolCallId) {
+                    stream.schedule(
+                        `tool:${toolCallId}`,
+                        () => recordToolProgress(input, turn, event),
+                        turnActivityFlushIntervalMs
+                    );
+                } else {
+                    recordToolProgress(input, turn, event);
+                }
                 continue;
             }
 
             if (event.event === 'reasoning.delta') {
-                collectProgressMessage(
-                    progressMessages,
-                    flushAssistantSegment(input, turn, assistantSegment)
-                );
-                assistantSegment = null;
+                flushAssistantToProgress();
                 const delta = readString(event.data.delta) ?? '';
                 if (!delta) {
                     continue;
@@ -132,32 +168,31 @@ export async function runHermesTurn(input: {
                         startedAt: new Date().toISOString(),
                     };
                 }
-                reasoningSegment.content += delta;
-                recordReasoningProgress(input, turn, reasoningSegment);
+                const segment = reasoningSegment;
+                segment.content += delta;
+                stream.schedule(
+                    `reasoning:${segment.index}`,
+                    () => recordReasoningProgress(input, turn, segment),
+                    turnActivityFlushIntervalMs
+                );
                 continue;
             }
 
             if (isToolLifecycleEvent(event.event)) {
-                collectProgressMessage(
-                    progressMessages,
-                    flushAssistantSegment(input, turn, assistantSegment)
-                );
-                assistantSegment = null;
+                flushAssistantToProgress();
+                stream.flush();
                 recordToolLifecycle(input, turn, event);
                 continue;
             }
 
             if (event.event === 'assistant.status') {
-                collectProgressMessage(
-                    progressMessages,
-                    flushAssistantSegment(input, turn, assistantSegment)
-                );
-                assistantSegment = null;
+                flushAssistantToProgress();
                 recordAssistantStatus(input, turn, event);
                 continue;
             }
 
             if (event.event === 'assistant.completed') {
+                stream.flush();
                 const completedContent = readString(event.data.content) || assistantContent;
                 const completedReasoning = readString(event.data.reasoning);
                 const deliveredContent = removeProgressMessages(completedContent, progressMessages);
@@ -187,11 +222,8 @@ export async function runHermesTurn(input: {
                 throw new Error(readString(event.data.message) || 'Hermes stream failed.');
             }
         }
-        collectCompletedReasoning(
-            completedReasoningMessages,
-            completeReasoningSegment(input, reasoningSegment)
-        );
-        reasoningSegment = null;
+        completeReasoningToProgress();
+        stream.flush();
 
         if (!assistantContent.trim()) {
             throw new Error('Hermes turn ended before producing a reply.');
@@ -206,6 +238,7 @@ export async function runHermesTurn(input: {
             modelContext
         );
     } catch (error) {
+        stream.flush();
         completeReasoningSegment(input, reasoningSegment);
         reasoningSegment = null;
         failHermesTurn(input, participantId, error, turn);
@@ -373,6 +406,16 @@ function flushAssistantSegment(
         source: 'message.delta',
         startedAt: segment.startedAt,
         title: 'Assistant update',
+    });
+    // The segment now lives in the work log as a narration row, so reset the
+    // live reply to keep the streamed text from showing twice.
+    publishRuntimeEvent({
+        isThinking: true,
+        replace: true,
+        text: '',
+        timestamp: new Date().toISOString(),
+        turn,
+        type: 'turn.replyUpdated',
     });
 
     return segment.content.trim();

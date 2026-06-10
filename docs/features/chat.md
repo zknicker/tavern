@@ -17,10 +17,15 @@ happen, and keep the durable timeline as context.
   status from queued through completion or failure.
 * **Activity.** Tool calls, thinking summaries, commands, approvals, snippets,
   and generated outputs render while work is happening and after completion.
-  Tool rows open the same detail drawer whenever the runtime exposes a tool call
-  id. Model thinking text is hidden from the main chat transcript by default;
-  Appearance settings can show it without changing the underlying runtime
-  evidence.
+  Tool rows label intent only (command, path, target — never results), stay
+  neutral when completed, turn red on failure, and shimmer while running.
+  Multi-step activity renders as collapsed groups whose header shows a live
+  summary of the current step while executing and a count summary when done;
+  a single tool renders as its own row without a group. Clicking anywhere on a
+  tool row opens a tool-aware inspect drawer (see
+  [Tool Presentation](../internals/tool-presentation.md)). Model thinking text
+  is hidden from the main chat transcript by default; Appearance settings can
+  show it without changing the underlying runtime evidence.
 * **Artifacts.** Code, images, files, diffs, documents, and charts render as
   durable outputs attached to messages or response activity.
 * **Receipts.** Message creation and assistant delivery are acknowledged by id.
@@ -80,6 +85,30 @@ and external runtime chat inventory.
 
 Runtime progress and reply events update response and activity rows by stable
 ids. They should not create a second volatile progress transcript.
+
+## Live turn presentation
+
+* The runtime coalesces stream writes: reply text publishes at most every
+  ~60ms and activity writes at most every ~200ms, with flushes at segment and
+  turn boundaries.
+* Streamed reply text reveals at a paced rate (capped, never snapping), keeps
+  revealing after the turn completes, and renders the same inline markdown as
+  the durable message so completion does not reflow.
+* The streamed reply and its durable message share one React key
+  (`reply:<runId>`), so the end-of-turn swap does not remount.
+* Intra-turn text segments move into the work log as narration rows when a
+  tool follows; only the live tail (status indicator or streaming text) and
+  the durable reply occupy the slot below the work disclosure.
+* The "Working for" timer counts from message send while live; completed turns
+  show the durable activity span ("Worked for").
+* The work disclosure is open while a turn runs and collapses with an
+  animation shortly after the response lands. Completed turns start collapsed.
+* Step enter animations are tied to DOM insertion during a live turn
+  (`@starting-style`), not to step status, so fast tools still animate and
+  history never replays.
+* One owner per scroll position at a time: the disclosure anchor during
+  toggles, bottom-follow at the bottom, virtualizer compensation only when
+  scrolled up into history.
 
 Queued composer drafts are app-local until dispatched. A queued draft does not
 create a durable Tavern message, response, Hermes session entry, or transcript

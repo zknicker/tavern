@@ -10,33 +10,16 @@ export interface ChatTurnEventUtils {
         };
     };
     chat: {
-        get: {
-            invalidate: (input: { chatId: string }) => Promise<unknown>;
-        };
         list: {
             invalidate: () => Promise<unknown>;
         };
         log: {
             list: {
-                invalidate: () => Promise<unknown>;
                 patchProgress: (input: {
                     chatId: string;
                     updater: (current: ChatLogOutput | undefined) => ChatLogOutput | undefined;
                 }) => void;
             };
-        };
-    };
-    session: {
-        get: {
-            invalidate: () => Promise<unknown>;
-        };
-        history: {
-            get: {
-                invalidate: () => Promise<unknown>;
-            };
-        };
-        list: {
-            invalidate: () => Promise<unknown>;
         };
     };
     timeline: {
@@ -67,17 +50,13 @@ export function createChatTurnEventHandlers(utils: ChatTurnEventUtils) {
         );
     };
 
-    const invalidateCompletedTurn = (chatId: string) => {
-        Promise.all([
-            utils.agent.activity.invalidate(),
-            utils.chat.get.invalidate({ chatId }),
-            utils.chat.list.invalidate(),
-            utils.chat.log.list.invalidate(),
-            utils.session.get.invalidate(),
-            utils.session.history.get.invalidate(),
-            utils.session.list.invalidate(),
-            utils.worker.list.invalidate(),
-        ]).catch(() => undefined);
+    // Chat, session, and worker refetches at turn completion ride the named
+    // invalidation events (chat.onUpdate, chat.log.onUpdate, session.onUpdate,
+    // worker.onUpdate). Invalidating them here as well doubles the refetch
+    // burst right as the final message swaps in. Live agent status is the one
+    // signal with no named event.
+    const invalidateCompletedTurn = () => {
+        utils.agent.activity.invalidate().catch(() => undefined);
     };
 
     return {
@@ -96,7 +75,7 @@ export function createChatTurnEventHandlers(utils: ChatTurnEventUtils) {
                 completedAt: new Date().toISOString(),
                 turn: _turn,
             });
-            invalidateCompletedTurn(_turn.chatId);
+            invalidateCompletedTurn();
         },
         onTurnFailed: (input: { error: string; turn: ChatTurn }) => {
             if (!rememberTerminalTurn(terminalTurnIds, `failed:${input.turn.runId}`)) {
@@ -113,7 +92,7 @@ export function createChatTurnEventHandlers(utils: ChatTurnEventUtils) {
                 error: input.error,
                 turn: input.turn,
             });
-            invalidateCompletedTurn(input.turn.chatId);
+            invalidateCompletedTurn();
         },
         onTurnProgress: (input: {
             step: ChatTurnProgressStep;

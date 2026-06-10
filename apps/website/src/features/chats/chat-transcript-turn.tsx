@@ -12,6 +12,7 @@ import { formatShortTime } from '../../lib/format.ts';
 import { cn } from '../../lib/utils.ts';
 import { getMessageSessionContext } from '../rows/message-context.ts';
 import { MessageContextBadges } from '../rows/message-context-badges.tsx';
+import { ChatInlineMarkdownText } from './chat-inline-markdown-text.tsx';
 import {
     ChatTranscriptActivity,
     ChatTranscriptActivityGroup,
@@ -36,9 +37,10 @@ import type {
     TranscriptItem,
     TranscriptRow,
 } from './chat-transcript-model.ts';
-import { getItemSessionKey } from './chat-transcript-model.ts';
+import { getItemSessionKey, isActivityBackedMessageRow } from './chat-transcript-model.ts';
 import { RuntimeNoticeEntry } from './chat-transcript-system-step.tsx';
 import { ThinkingIndicator, TypingIndicator } from './thinking-indicator.tsx';
+import { useRevealedText } from './use-revealed-text.ts';
 import { TurnWorkDisclosure } from './working-log.tsx';
 
 const rowClassName = 'relative w-full px-3 pt-1 pb-3';
@@ -197,9 +199,16 @@ function AgentTurn({
     const segments = groupAgentItems(items);
     const turnActive = isActiveTurn(items, activeReply, lastMessage);
     const activityItems = items.filter(isActivityItem);
-    const hasWorkHeader = activityItems.length > 0 || items.some(isAssistantNarrationItem);
+    const hasWorkHeader =
+        activityItems.length > 0 ||
+        items.some((item) => isAssistantNarrationItem(item) || isNarrationMessageItem(item));
     const activityEnd = getActivityEnd(activityItems);
-    const workStart = getActivityStart(activityItems) ?? turnStartedAt ?? entry.timestamp;
+    // While live, anchor the "Working for" timer to the turn start so it does
+    // not reset when the first tool activity lands. Completed turns keep the
+    // durable activity span.
+    const workStart = turnActive
+        ? (turnStartedAt ?? getActivityStart(activityItems) ?? entry.timestamp)
+        : (getActivityStart(activityItems) ?? turnStartedAt ?? entry.timestamp);
     const workEnd = turnActive
         ? null
         : activityEnd
@@ -247,7 +256,7 @@ function AgentTurn({
                             {displayName}
                         </div>
                     ) : null}
-                    <div className="flex min-w-0 flex-col gap-3.5">
+                    <div className="flex min-w-0 flex-col gap-4">
                         {hasWorkHeader ? (
                             <TurnWorkDisclosure
                                 end={workEnd}
@@ -330,12 +339,23 @@ function findFinalSegmentIndex(segments: AgentItemSegment[]) {
     return -1;
 }
 
+// Narration messages are work-log evidence; only the live tail (status
+// indicator or streaming text) and the durable reply may occupy the reply
+// slot below the work disclosure. Keeping the indicator in the same slot the
+// text streams into means the tail never vacates a row inside the work log.
 function isReplyOutcomeItem(item: TranscriptItem) {
     return (
         item.kind === 'activeReply' ||
+        item.kind === 'activeStatus' ||
         item.kind === 'failure' ||
-        (item.kind === 'row' && item.row.kind === 'message')
+        (item.kind === 'row' &&
+            item.row.kind === 'message' &&
+            !isActivityBackedMessageRow(item.row))
     );
+}
+
+function isNarrationMessageItem(item: TranscriptItem) {
+    return item.kind === 'row' && isActivityBackedMessageRow(item.row);
 }
 
 function UserTurnItem({ item }: { item: TranscriptItem }) {
@@ -399,9 +419,14 @@ function AssistantNarrationText({ item }: { item: TranscriptItem }) {
 }
 
 function ActiveReplyText({ item }: { item: Extract<TranscriptItem, { kind: 'activeReply' }> }) {
+    const revealedText = useRevealedText(
+        (item.reply.text ?? '').trimStart(),
+        !item.reply.completedAt
+    );
+
     return (
         <div className="whitespace-pre-wrap break-words text-foreground text-sm">
-            {item.reply.text}
+            <ChatInlineMarkdownText content={revealedText} />
         </div>
     );
 }
@@ -481,7 +506,11 @@ function getLastMessage(items: TranscriptItem[]) {
     for (let index = items.length - 1; index >= 0; index -= 1) {
         const item = items[index];
 
-        if (item?.kind === 'row' && item.row.kind === 'message') {
+        if (
+            item?.kind === 'row' &&
+            item.row.kind === 'message' &&
+            !isActivityBackedMessageRow(item.row)
+        ) {
             return item.row.message;
         }
     }

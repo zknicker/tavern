@@ -19,7 +19,14 @@ export function useChatEvents() {
     });
 
     trpc.chat.log.onUpdate.useSubscription(undefined, {
-        onData: () => {
+        onData: (event) => {
+            const chatId = readStringField(event, 'chatId');
+
+            if (chatId) {
+                void utils.chat.log.list.invalidate({ id: chatId });
+                return;
+            }
+
             void utils.chat.log.list.invalidate();
         },
     });

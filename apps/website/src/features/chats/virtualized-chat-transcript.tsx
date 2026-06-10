@@ -2,7 +2,10 @@ import { useVirtualizer } from '@tanstack/react-virtual';
 import * as React from 'react';
 import type { ChatActiveReply } from '../../hooks/chats/chat-timeline-state.ts';
 import { SessionLogHiddenCount } from '../sessions/session-log-hidden-count.tsx';
-import type { ConversationMessageLayout } from './chat-transcript-model.ts';
+import {
+    type ConversationMessageLayout,
+    transcriptEntryUsesActiveReply,
+} from './chat-transcript-model.ts';
 import {
     getEstimatedTranscriptRowSize,
     type TranscriptRenderRow,
@@ -12,6 +15,7 @@ import {
     transcriptDisclosureAnchorEndEvent,
     transcriptDisclosureAnchorStartEvent,
 } from './chat-transcript-scroll-anchor.ts';
+import { isNearViewportBottom } from './use-chat-scroll.ts';
 
 const initialScrollToEndFrames = 12;
 const previousPageScrollThreshold = 160;
@@ -52,9 +56,18 @@ export function VirtualizedChatTranscript({
     virtualizer.shouldAdjustScrollPositionOnItemSizeChange = (item) => {
         const viewport = scrollViewportRef.current;
 
-        return Boolean(
-            viewport && !disclosureAnchorActiveRef.current && item.start < viewport.scrollTop
-        );
+        if (!viewport || disclosureAnchorActiveRef.current) {
+            return false;
+        }
+
+        // When the user is at the bottom, the follow behavior owns the scroll
+        // position. Compensating here as well makes the two fight during
+        // animated collapses, which reads as a hitch in the final frames.
+        if (isNearViewportBottom(viewport)) {
+            return false;
+        }
+
+        return item.start < viewport.scrollTop;
     };
     const virtualItems = virtualizer.getVirtualItems();
     const firstEntryIndex = virtualItems.find((item) => rows[item.index]?.kind === 'entry')?.index;
@@ -160,7 +173,11 @@ export function VirtualizedChatTranscript({
                             <SessionLogHiddenCount hiddenCount={hiddenCount} />
                         ) : (
                             <TranscriptEntryRow
-                                activeReply={activeReply}
+                                activeReply={
+                                    transcriptEntryUsesActiveReply(row.entry, activeReply)
+                                        ? activeReply
+                                        : null
+                                }
                                 chatId={chatId}
                                 conversationLayout={conversationLayout}
                                 currentSessionKey={currentSessionKey}

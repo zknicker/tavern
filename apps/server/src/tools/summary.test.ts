@@ -54,6 +54,97 @@ test('buildToolSummaryFromValues marks error tool results consistently', () => {
     ]);
 });
 
+test('buildToolSummaryFromValues keeps shell output out of summaryParts', () => {
+    const summary = buildToolSummaryFromValues({
+        argumentsValue: {
+            command: 'sleep 4 && echo done',
+        },
+        callId: 'call-shell',
+        isError: false,
+        name: 'bash',
+        resultValue: {
+            output: 'done',
+            text: 'done',
+        },
+    });
+
+    assert.deepEqual(summary.summaryParts, ['sleep 4 && echo done']);
+});
+
+test('buildToolSummaryFromValues keeps multi-line shell output out of summaryParts', () => {
+    const summary = buildToolSummaryFromValues({
+        argumentsValue: {
+            command: 'date && whoami && ls | head -3',
+        },
+        callId: 'call-shell-2',
+        isError: false,
+        name: 'exec',
+        resultValue: {
+            text: 'Wed Jun 10 00:24:28 EDT 2026\nzknicker\nREADME.md',
+        },
+    });
+
+    assert.deepEqual(summary.summaryParts, ['date && whoami && ls | head -3']);
+    assert.equal(
+        summary.summaryParts.some((part) => part.includes('Wed Jun 10')),
+        false
+    );
+});
+
+test('buildToolSummaryFromValues summarizes search tools as pattern in path', () => {
+    const summary = buildToolSummaryFromValues({
+        argumentsValue: {
+            path: 'src/tools',
+            pattern: 'TODO',
+        },
+        callId: 'call-grep',
+        isError: false,
+        name: 'grep',
+        resultValue: {
+            message: 'src/tools/summary.ts:12 TODO tidy',
+        },
+    });
+
+    assert.deepEqual(summary.summaryParts, ['TODO in src/tools']);
+});
+
+test('buildToolSummaryFromValues summarizes search tools with only a pattern', () => {
+    const summary = buildToolSummaryFromValues({
+        argumentsValue: {
+            pattern: '*.test.ts',
+        },
+        callId: 'call-search',
+        isError: false,
+        name: 'search',
+        resultValue: {
+            output: 'summary.test.ts\nlabel.test.ts',
+        },
+    });
+
+    assert.deepEqual(summary.summaryParts, ['*.test.ts']);
+});
+
+test('buildToolSummaryFromValues keeps result text out of generic tool summaryParts', () => {
+    const summary = buildToolSummaryFromValues({
+        argumentsValue: {
+            target: '#general',
+        },
+        callId: 'call-message',
+        isError: false,
+        name: 'notify',
+        resultValue: {
+            message: 'delivered to 4 members',
+            output: 'ok',
+        },
+    });
+
+    assert.deepEqual(summary.summaryParts, ['#general']);
+    assert.equal(
+        summary.summaryParts.some((part) => part.includes('delivered') || part.includes('ok')),
+        false
+    );
+});
+
 test('buildToolSummaryFromValues marks timed out tool results consistently', () => {
     const summary = buildToolSummaryFromValues({
         argumentsValue: {
