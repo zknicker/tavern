@@ -91,6 +91,7 @@
     --color-accent-foreground: var(--accent-foreground);
     --color-hover: var(--hover);
     --color-active: var(--active);
+    --color-chat-log-row-hover: var(--chat-log-row-hover);
 
     --color-destructive: var(--destructive);
     --color-destructive-foreground: var(--destructive-foreground);
@@ -415,7 +416,7 @@
         --info-foreground: var(--color-blue-400);
         --info-bg: --alpha(var(--color-blue-500) / 10%);
         --info-border: --alpha(var(--color-blue-500) / 20%);
-        --chat-log-row-hover: --alpha(var(--color-white) / 5%);
+        --chat-log-row-hover: --alpha(var(--color-white) / 7%);
         --chat-log-session-badge-bg: --alpha(var(--color-blue-500) / 14%);
 
         --nav-hover: --alpha(var(--color-white) / 6%);
@@ -519,7 +520,7 @@
         --info-foreground: var(--color-blue-700);
         --info-bg: --alpha(var(--color-blue-500) / 11%);
         --info-border: --alpha(var(--color-blue-500) / 22%);
-        --chat-log-row-hover: --alpha(var(--color-black) / 3%);
+        --chat-log-row-hover: --alpha(var(--color-black) / 5%);
         --chat-log-session-badge-bg: var(--color-blue-50);
 
         --content-card: var(--card);
