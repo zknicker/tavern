@@ -227,8 +227,10 @@ test('ChatTranscript keeps hidden thinking out of tool work headers', () => {
     ]);
 
     assert.doesNotMatch(markup, /Thinking/);
-    // A lone tool step renders directly instead of a one-entry disclosure.
-    assert.doesNotMatch(markup, /Ran 1 command/);
+    // A lone tool renders inside the group drawer with a count summary
+    // header, so a second tool only retexts the header instead of
+    // restructuring the rows.
+    assert.match(markup, /Ran 1 command/);
     assert.match(markup, /command -v node/);
     assert.match(markup, />Used</);
     assert.doesNotMatch(markup, /Used 1 tool/);

@@ -1,4 +1,7 @@
 import type { TranscriptItem, TranscriptRow } from './chat-transcript-model.ts';
+import { resolveToolStepIcon, type ToolStepIcon } from './tool-steps/tool-step-icons.ts';
+
+const commandToolNames = ['bash', 'command', 'exec', 'shell', 'terminal', 'zsh'];
 
 export type ActivityItem = Exclude<
     TranscriptItem,
@@ -181,22 +184,20 @@ export function getActiveWorkLabel(items: ActivityItem[]) {
         }
 
         if (item.row.kind === 'tool') {
+            const name = item.row.toolCall.name.trim();
             const target =
                 item.row.toolCall.summaryParts.join(' ').trim() ||
                 item.row.toolCall.label?.trim() ||
-                item.row.toolCall.name;
-            const verb = matchesAny(item.row.toolCall.name.trim().toLowerCase(), [
-                'bash',
-                'command',
-                'exec',
-                'shell',
-                'terminal',
-                'zsh',
-            ])
-                ? 'Running'
-                : 'Using';
+                name;
+            const isCommand = matchesAny(name.toLowerCase(), commandToolNames);
 
-            return `${verb} ${target}`;
+            // A target that is just the tool's internal name is not intent;
+            // fall back to plain product phrasing instead of "Running terminal".
+            if (target.toLowerCase() === name.toLowerCase()) {
+                return isCommand ? 'Running a command' : `Using ${name}`;
+            }
+
+            return `${isCommand ? 'Running' : 'Using'} ${target}`;
         }
 
         if (item.row.kind === 'worker' && item.row.worker.title) {
@@ -207,20 +208,59 @@ export function getActiveWorkLabel(items: ActivityItem[]) {
     return null;
 }
 
-export function formatWorkGroupHeader(items: ActivityItem[]) {
+/**
+ * Count summary for a work group ("Ran 2 commands, searched web 1 time"), or
+ * null when the group has nothing countable yet.
+ */
+export function formatWorkGroupSummary(items: ActivityItem[]) {
     const counts = countWorkItems(items);
     const parts = [
         formatCount(counts.explore, 'Explored', 'file'),
         formatCount(counts.edit, 'Edited', 'file'),
         formatCount(counts.command, 'Ran', 'command'),
+        counts.web > 0 ? `Searched web ${counts.web} ${counts.web === 1 ? 'time' : 'times'}` : null,
         formatCount(counts.other, 'Used', 'tool'),
     ].filter((part): part is string => Boolean(part));
 
-    if (parts.length > 0) {
-        return joinHeaderParts(parts);
+    return parts.length > 0 ? joinHeaderParts(parts) : null;
+}
+
+export function formatWorkGroupHeader(items: ActivityItem[]) {
+    const summary = formatWorkGroupSummary(items);
+
+    if (summary) {
+        return summary;
     }
 
-    return counts.thinking > 0 ? 'Thinking' : 'Worked';
+    return countWorkItems(items).thinking > 0 ? 'Thinking' : 'Worked';
+}
+
+/**
+ * Icon for a collapsed work group header: the running tool's icon while
+ * work executes, the shared icon when every tool resolves to one kind, and
+ * the generic tools icon for mixed groups.
+ */
+export function getWorkGroupIcon(items: ActivityItem[]): ToolStepIcon | null {
+    const toolNames = items.flatMap((item) =>
+        item.row.kind === 'tool' && !isNarrationToolRow(item.row) ? [item.row.toolCall.name] : []
+    );
+
+    if (toolNames.length === 0) {
+        return null;
+    }
+
+    for (let index = items.length - 1; index >= 0; index -= 1) {
+        const item = items[index];
+
+        if (item && isActiveActivityItem(item) && item.row.kind === 'tool') {
+            return resolveToolStepIcon(item.row.toolCall.name);
+        }
+    }
+
+    const icons = new Set(toolNames.map((name) => resolveToolStepIcon(name)));
+    const [firstIcon] = icons;
+
+    return icons.size === 1 && firstIcon ? firstIcon : resolveToolStepIcon('tool');
 }
 
 function isNarrationToolRow(row: TranscriptRow) {
@@ -257,6 +297,11 @@ function countWorkItems(items: ActivityItem[]) {
                 return counts;
             }
 
+            if (name.includes('web')) {
+                counts.web += 1;
+                return counts;
+            }
+
             if (
                 matchesAny(name, ['read', 'grep', 'search']) ||
                 matchesAny(text, ['read ', 'search'])
@@ -268,7 +313,7 @@ function countWorkItems(items: ActivityItem[]) {
             counts.other += 1;
             return counts;
         },
-        { command: 0, edit: 0, explore: 0, other: 0, thinking: 0 }
+        { command: 0, edit: 0, explore: 0, other: 0, thinking: 0, web: 0 }
     );
 }
 

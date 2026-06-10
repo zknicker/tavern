@@ -84,7 +84,54 @@ export function buildTranscriptEntries(input: {
         });
     }
 
+    applyStableTurnEntryIds(entries);
+
     return entries;
+}
+
+// Agent turn entries are keyed by run identity when any item carries one, so
+// the entry (and the work disclosure inside it) keeps a single React identity
+// from the first live item through the durable refetch. Keying by the first
+// item alone remounts the whole turn when the leading item changes shape
+// across the live → durable swap.
+function applyStableTurnEntryIds(entries: TranscriptEntry[]) {
+    const usedIds = new Set<string>();
+
+    for (const entry of entries) {
+        if (entry.kind !== 'turn' || entry.participant !== 'agent') {
+            continue;
+        }
+
+        const runId = entry.items.map(getItemRunId).find((value) => value !== null);
+        const candidate = runId ? `turn:${runId}` : entry.id;
+
+        entry.id = usedIds.has(candidate) ? entry.id : candidate;
+        usedIds.add(entry.id);
+    }
+}
+
+function getItemRunId(item: TranscriptItem) {
+    if (item.kind === 'activeReply' || item.kind === 'activeStatus') {
+        return item.reply.runId;
+    }
+
+    if (item.kind === 'failure') {
+        return item.failure.turn.runId;
+    }
+
+    if (item.row.kind !== 'message') {
+        return null;
+    }
+
+    const runtime = item.row.message.metadata?.runtime;
+
+    if (!(runtime && typeof runtime === 'object' && !Array.isArray(runtime))) {
+        return null;
+    }
+
+    const runId = (runtime as Record<string, unknown>).runId;
+
+    return typeof runId === 'string' && runId.trim().length > 0 ? runId : null;
 }
 
 function buildTranscriptItems(input: {
@@ -93,29 +140,37 @@ function buildTranscriptItems(input: {
     rows: TranscriptRow[];
     showThinkingText?: boolean;
 }) {
+    // Once the turn's durable reply is in the rows, the live reply items are
+    // redundant: rendering both creates sibling segments with one `reply:`
+    // key, which restructures the turn (and replays animations) during the
+    // completion handoff.
+    const activeReply =
+        input.activeReply && !hasDurableReplyRow(input.rows, input.activeReply.runId)
+            ? input.activeReply
+            : null;
     let lastActiveProgressRow: TranscriptRow | null = null;
     const items: TranscriptItem[] = input.rows.map((row) => {
-        if (input.activeReply && isActiveProgressRow(row, input.activeReply)) {
+        if (activeReply && isActiveProgressRow(row, activeReply)) {
             lastActiveProgressRow = row;
         }
 
         return { kind: 'row', row };
     });
-    const activeReplyText = input.activeReply?.text?.trim() ?? '';
+    const activeReplyText = activeReply?.text?.trim() ?? '';
 
-    if (input.activeReply && activeReplyText.length > 0) {
-        items.push({ kind: 'activeReply', reply: input.activeReply });
+    if (activeReply && activeReplyText.length > 0) {
+        items.push({ kind: 'activeReply', reply: activeReply });
     }
 
     if (
-        input.activeReply &&
+        activeReply &&
         activeReplyText.length === 0 &&
         shouldShowActiveStatus(lastActiveProgressRow, input.showThinkingText !== false)
     ) {
         items.push({
             kind: 'activeStatus',
-            reply: input.activeReply,
-            status: input.activeReply.isThinking === false ? 'typing' : 'thinking',
+            reply: activeReply,
+            status: activeReply.isThinking === false ? 'typing' : 'thinking',
         });
     }
 
@@ -124,6 +179,16 @@ function buildTranscriptItems(input: {
     }
 
     return items;
+}
+
+function hasDurableReplyRow(rows: TranscriptRow[], runId: string) {
+    return rows.some(
+        (row) =>
+            row.kind === 'message' &&
+            row.message.senderType === 'agent' &&
+            !row.id.startsWith('act_') &&
+            getItemRunId({ kind: 'row', row }) === runId
+    );
 }
 
 function shouldShowActiveStatus(lastProgressRow: TranscriptRow | null, showThinkingText: boolean) {

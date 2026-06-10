@@ -276,17 +276,33 @@ function AgentTurn({
                                 ))}
                             </TurnWorkDisclosure>
                         ) : null}
-                        {(hasWorkHeader ? replySegments : segments).map((segment) => (
-                            <AgentTurnSegment
-                                chatId={chatId}
-                                currentSessionKey={currentSessionKey}
-                                key={segment.key}
-                                segment={segment}
-                                turnActive={turnActive}
-                                turnCompletedAt={turnCompletedAt}
-                                turnStartedAt={turnStartedAt}
-                            />
-                        ))}
+                        {(hasWorkHeader ? replySegments : segments).map((segment) =>
+                            // The status indicator narrates the work above
+                            // it, so it sits at the work log's step rhythm
+                            // instead of the reply slot's section gap.
+                            hasWorkHeader && isActiveStatusSegment(segment) ? (
+                                <div className="-mt-2.5" key={segment.key}>
+                                    <AgentTurnSegment
+                                        chatId={chatId}
+                                        currentSessionKey={currentSessionKey}
+                                        segment={segment}
+                                        turnActive={turnActive}
+                                        turnCompletedAt={turnCompletedAt}
+                                        turnStartedAt={turnStartedAt}
+                                    />
+                                </div>
+                            ) : (
+                                <AgentTurnSegment
+                                    chatId={chatId}
+                                    currentSessionKey={currentSessionKey}
+                                    key={segment.key}
+                                    segment={segment}
+                                    turnActive={turnActive}
+                                    turnCompletedAt={turnCompletedAt}
+                                    turnStartedAt={turnStartedAt}
+                                />
+                            )
+                        )}
                     </div>
                     {lastMessage ? (
                         <TranscriptHoverMeta includeContextBadges message={lastMessage} />
@@ -325,6 +341,10 @@ function AgentTurnSegment({
     ) : (
         <AgentTurnItem chatId={chatId} currentSessionKey={currentSessionKey} item={segment.item} />
     );
+}
+
+function isActiveStatusSegment(segment: AgentItemSegment) {
+    return segment.kind === 'item' && segment.item.kind === 'activeStatus';
 }
 
 function findFinalSegmentIndex(segments: AgentItemSegment[]) {

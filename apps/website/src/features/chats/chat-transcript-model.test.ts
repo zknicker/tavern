@@ -381,3 +381,125 @@ function runtimeNoticeRow(id: string): ChatRow {
         timestamp: '2026-05-11T16:00:01.500Z',
     };
 }
+
+const handoffRunId = 'run_handoff';
+const handoffSession = 'session-1';
+
+function handoffReply(text: string, isThinking = false) {
+    return {
+        agentId: 'agent-1',
+        isThinking,
+        runId: handoffRunId,
+        sessionKey: handoffSession,
+        startedAt: '2026-05-11T16:00:00.500Z',
+        text,
+    };
+}
+
+function runNarrationMessage(id: string, timestamp: string): ChatRow {
+    return {
+        actor: { id: 'agent-1', kind: 'agent' },
+        connectsToNext: false,
+        connectsToPrevious: false,
+        id,
+        isFirstInGroup: true,
+        kind: 'message',
+        message: {
+            actor: { id: 'agent-1', kind: 'agent' },
+            content: 'Tool call 1: weather check.',
+            id,
+            metadata: { runtime: { runId: handoffRunId, sessionKey: handoffSession } },
+            sender: 'Agent',
+            senderType: 'agent',
+            sourceSessionId: null,
+            sourceSessionKey: handoffSession,
+            tavernAgentId: 'agent-1',
+            timestamp,
+        },
+    };
+}
+
+function durableReplyRow(): ChatRow {
+    return {
+        actor: { id: 'agent-1', kind: 'agent' },
+        connectsToNext: false,
+        connectsToPrevious: false,
+        id: 'message-final',
+        isFirstInGroup: true,
+        kind: 'message',
+        message: {
+            actor: { id: 'agent-1', kind: 'agent' },
+            content: 'Done. Clouds check the window,',
+            id: 'message-final',
+            metadata: { runtime: { runId: handoffRunId, sessionKey: handoffSession } },
+            sender: 'Agent',
+            senderType: 'agent',
+            sourceSessionId: null,
+            sourceSessionKey: handoffSession,
+            tavernAgentId: 'agent-1',
+            timestamp: '2026-05-11T16:00:11.000Z',
+        },
+    };
+}
+
+test('agent turn entries keep one run-stable id from live streaming to durable rows', () => {
+    const streamingOnly = buildTranscriptEntries({
+        activeReply: handoffReply('', true),
+        rows: [userMessage('message-user', 'hi', false, false)],
+    });
+    const withWork = buildTranscriptEntries({
+        activeReply: handoffReply('', true),
+        rows: [
+            userMessage('message-user', 'hi', false, false),
+            runNarrationMessage('act_run_handoff_message_1', '2026-05-11T16:00:01.000Z'),
+            toolRow('act_run_handoff_tool_1', false, false),
+        ],
+    });
+    const settled = buildTranscriptEntries({
+        activeReply: null,
+        rows: [
+            userMessage('message-user', 'hi', false, false),
+            runNarrationMessage('act_run_handoff_message_1', '2026-05-11T16:00:01.000Z'),
+            toolRow('act_run_handoff_tool_1', false, false),
+            durableReplyRow(),
+        ],
+    });
+
+    const ids = [streamingOnly, withWork, settled].map(
+        (entries) =>
+            entries.find((entry) => entry.kind === 'turn' && entry.participant === 'agent')?.id
+    );
+
+    expect(ids).toEqual([`turn:${handoffRunId}`, `turn:${handoffRunId}`, `turn:${handoffRunId}`]);
+});
+
+test('the live reply item is suppressed once the durable reply row lands', () => {
+    const entries = buildTranscriptEntries({
+        activeReply: handoffReply('Done. Clouds check the window,'),
+        rows: [
+            userMessage('message-user', 'hi', false, false),
+            runNarrationMessage('act_run_handoff_message_1', '2026-05-11T16:00:01.000Z'),
+            durableReplyRow(),
+        ],
+    });
+    const agentTurn = entries.find(
+        (entry) => entry.kind === 'turn' && entry.participant === 'agent'
+    );
+    const itemKinds = agentTurn?.kind === 'turn' ? agentTurn.items.map((item) => item.kind) : [];
+
+    expect(itemKinds.filter((kind) => kind === 'activeReply')).toHaveLength(0);
+});
+
+test('agent turns split by a runtime notice keep unique entry ids', () => {
+    const entries = buildTranscriptEntries({
+        activeReply: null,
+        rows: [
+            runNarrationMessage('act_run_handoff_message_1', '2026-05-11T16:00:01.000Z'),
+            runtimeNoticeRow('notice-1'),
+            runNarrationMessage('act_run_handoff_message_2', '2026-05-11T16:00:08.000Z'),
+        ],
+    });
+    const turnIds = entries.filter((entry) => entry.kind === 'turn').map((entry) => entry.id);
+
+    expect(new Set(turnIds).size).toBe(turnIds.length);
+});

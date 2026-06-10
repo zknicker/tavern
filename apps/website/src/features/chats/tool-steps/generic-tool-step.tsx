@@ -1,19 +1,10 @@
-import type { HugeiconsIconProps } from '@hugeicons/react';
-import {
-    AiMagicIcon,
-    BrowserIcon,
-    FileEditIcon,
-    FileSearchIcon,
-    ToolsIcon,
-} from '@hugeicons-pro/core-stroke-rounded';
 import { SessionLinkButton } from '../../sessions/session-link-button.tsx';
 import { getSessionRelationshipName } from '../../sessions/session-relationship.ts';
 import { hasErrorStatus } from '../../sessions/tools/tool-ui.ts';
 import { ThinkingStepDetails } from '../thinking-steps.tsx';
+import { isEditTool, resolveToolStepIcon } from './tool-step-icons.ts';
 import { getToolTarget, InlineToolLabel, ToolTimelineStep } from './tool-summary.tsx';
 import type { ToolStepRendererProps } from './types.ts';
-
-type StepIcon = HugeiconsIconProps['icon'];
 
 export function GenericToolStep({ animateEnter, chatId, isLast, row }: ToolStepRendererProps) {
     const target = getToolTarget(row);
@@ -22,7 +13,7 @@ export function GenericToolStep({ animateEnter, chatId, isLast, row }: ToolStepR
         <ToolTimelineStep
             animateEnter={animateEnter}
             chatId={chatId}
-            icon={getToolIcon(row.toolCall.name)}
+            icon={resolveToolStepIcon(row.toolCall.name)}
             isLast={isLast}
             label={<InlineToolLabel row={row} target={target} verb={getToolVerb(row, target)} />}
             row={row}
@@ -87,32 +78,6 @@ function getToolVerb(row: ToolStepRendererProps['row'], target: string) {
     }
 
     return 'Used';
-}
-
-function getToolIcon(name: string): StepIcon {
-    const normalized = name.toLowerCase();
-
-    if (isEditTool(normalized)) {
-        return FileEditIcon;
-    }
-
-    if (matchesAny(normalized, ['read', 'grep', 'search', 'code'])) {
-        return FileSearchIcon;
-    }
-
-    if (normalized.includes('skill')) {
-        return AiMagicIcon;
-    }
-
-    if (matchesAny(normalized, ['browser', 'open', 'click'])) {
-        return BrowserIcon;
-    }
-
-    return ToolsIcon;
-}
-
-function isEditTool(normalizedName: string) {
-    return matchesAny(normalizedName, ['edit', 'write', 'patch', 'update']);
 }
 
 function matchesAny(value: string, needles: string[]) {

@@ -387,7 +387,16 @@ function toolTarget(step: ChatTurnProgressStep) {
         return detail ?? stripToolVerb(step.label);
     }
 
-    return stripToolVerb(step.label) ?? detail ?? step.label;
+    const stripped = stripToolVerb(step.label);
+    const toolName = step.toolName?.trim().toLowerCase();
+
+    // A label that is just the tool's internal name carries no intent; the
+    // detail (command or argument preview) is the real target.
+    if (detail && stripped && toolName && stripped.toLowerCase() === toolName) {
+        return detail;
+    }
+
+    return stripped ?? detail ?? step.label;
 }
 
 function stripToolVerb(label: string) {

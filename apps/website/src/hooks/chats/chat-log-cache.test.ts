@@ -293,3 +293,27 @@ test('progress patch renders an approval step as a pending approval tool row', (
         },
     });
 });
+
+test('progress patch prefers the command detail over a bare tool-name label', () => {
+    const log = patchChatLogWithProgress(emptyLog(), {
+        step: {
+            detail: "pwd && ls -la | sed -n '1,8p'",
+            id: 'tool-call-2',
+            kind: 'tool',
+            label: 'terminal',
+            status: 'active',
+            toolCallId: 'tool-call-2',
+            toolName: 'terminal',
+        },
+        timestamp: '2026-05-22T19:00:01.000Z',
+        turn,
+    });
+
+    expect(log?.rows[0]).toMatchObject({
+        kind: 'tool',
+        toolCall: {
+            name: 'terminal',
+            summaryParts: ["pwd && ls -la | sed -n '1,8p'"],
+        },
+    });
+});

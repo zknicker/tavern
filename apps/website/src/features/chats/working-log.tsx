@@ -15,11 +15,13 @@ import {
     formatWorkGroupHeader,
     getActiveWorkLabel,
     getActivityItemKey,
+    getWorkGroupIcon,
 } from './chat-transcript-activity-utils.ts';
 import { ThinkingSteps, ThinkingStepsContent, ThinkingStepsHeader } from './thinking-steps.tsx';
 import { useChatScrollControllerHandle } from './use-chat-scroll-controller.ts';
 
 export function WorkingLog({
+    animateEnter = false,
     chatId,
     currentSessionKey,
     end,
@@ -28,6 +30,7 @@ export function WorkingLog({
     start,
     status,
 }: {
+    animateEnter?: boolean;
     chatId?: string;
     currentSessionKey?: string | null;
     end: string | null;
@@ -37,8 +40,10 @@ export function WorkingLog({
     status: 'active' | 'completed';
 }) {
     const isActive = status === 'active';
-    // Group mode (no duration header) renders Codex-style: collapsed by
-    // default with a live summary label while the group is executing.
+    // Group mode (no duration header) renders Codex-style: a collapsed
+    // drawer that exists from the first step. The header carries the active
+    // tool's synopsis while work executes and the count summary at rest;
+    // only the text changes, never the structure.
     const groupMode = !showDurationHeader;
     const now = useNow(isActive && start !== null, start);
     const activeSeconds = isActive ? formatActiveActivitySeconds({ now, start }) : null;
@@ -64,31 +69,53 @@ export function WorkingLog({
 
     const groupLabel = groupMode
         ? isActive
-            ? (getActiveWorkLabel(items) ?? 'Working')
+            ? (getActiveWorkLabel(items) ?? formatWorkGroupHeader(items))
             : formatWorkGroupHeader(items)
         : null;
+    const groupIcon = groupMode ? getWorkGroupIcon(items) : null;
 
     return (
         <ThinkingSteps
-            // Group mode: the trigger's py-1 click padding must not stack onto
-            // the surrounding 16px block rhythm.
-            className={cn('w-full max-w-[34rem]', groupMode && '-my-1')}
+            // Group mode: the trigger's click padding must not stack onto the
+            // surrounding 16px block rhythm.
+            className={cn(
+                'w-full max-w-[34rem]',
+                groupMode && '-my-1.5',
+                groupMode && animateEnter && 'chat-step-enter'
+            )}
             onOpenChange={setOpen}
             open={open}
         >
             <ThinkingStepsHeader
+                className={
+                    groupMode
+                        ? 'w-full px-2 py-1.5 font-normal text-muted-foreground hover:bg-chat-log-row-hover hover:text-foreground'
+                        : undefined
+                }
                 onKeyDown={disclosureAnchor.captureFromKeyboard}
                 onPointerDown={disclosureAnchor.capture}
                 ref={disclosureAnchor.triggerRef}
+                wrapperClassName={groupMode ? 'w-full' : undefined}
             >
                 {groupMode ? (
-                    <span
-                        className={cn(
-                            'inline-block max-w-[28rem] truncate align-bottom',
-                            isActive && 'thinking-indicator-text'
-                        )}
-                    >
-                        {groupLabel}
+                    <span className="flex min-w-0 items-center gap-1.5">
+                        {groupIcon ? (
+                            <span className="flex size-4 shrink-0 items-center justify-center">
+                                <Icon
+                                    className="size-4 text-muted-foreground"
+                                    icon={groupIcon}
+                                    strokeWidth={1.5}
+                                />
+                            </span>
+                        ) : null}
+                        <span
+                            className={cn(
+                                'min-w-0 max-w-[28rem] truncate text-left',
+                                isActive && 'thinking-indicator-text'
+                            )}
+                        >
+                            {groupLabel}
+                        </span>
                     </span>
                 ) : isActive && activeSeconds ? (
                     <span>

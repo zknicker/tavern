@@ -19,10 +19,11 @@ happen, and keep the durable timeline as context.
   and generated outputs render while work is happening and after completion.
   Tool rows label intent only (command, path, target — never results), stay
   neutral when completed, turn red on failure, and shimmer while running.
-  Multi-step activity renders as collapsed groups whose header shows a live
-  summary of the current step while executing and a count summary when done;
-  a single tool renders as its own row without a group. Clicking anywhere on a
-  tool row opens a tool-aware inspect drawer (see
+  Every contiguous tool group renders as a collapsed work drawer from its
+  first step; the header shows the active tool's icon and synopsis while
+  executing and a count summary at rest ("Ran 2 commands, searched web 1
+  time"), so mid-turn growth only retexts the header. Expanding reveals the
+  tool rows; clicking a row opens the tool-aware inspect drawer (see
   [Tool Presentation](../internals/tool-presentation.md)). Model thinking text
   is hidden from the main chat transcript by default; Appearance settings can
   show it without changing the underlying runtime evidence.

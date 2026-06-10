@@ -35,9 +35,14 @@ custom presentation for a specific tool.
   failures; running rows shimmer (`thinking-indicator-text`).
 - **The whole row opens the drawer.** The step row is the drawer trigger; the
   magnifier icon is a hover hint, not the click target.
-- Single-tool activity groups render the step directly; the collapsed group
-  disclosure only appears for two or more steps
-  (`apps/website/src/features/chats/chat-transcript-activity.tsx`).
+- **Every contiguous tool group renders as a collapsed work drawer from its
+  first step** (`apps/website/src/features/chats/chat-transcript-activity.tsx`
+  → `WorkingLog` group mode). The header is permanent — while the group
+  executes it carries the active tool's icon and synopsis with the running
+  shimmer; at rest it carries the count summary ("Ran 2 commands, searched
+  web 1 time"). Growth retexts the header; it never restructures the rows.
+  Expanding the drawer reveals the individual tool rows, which remain the
+  inspect-drawer triggers.
 
 ## Adding custom presentation for a tool
 
