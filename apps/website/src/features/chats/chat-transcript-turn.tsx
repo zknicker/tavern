@@ -406,10 +406,13 @@ function AgentTurnItem({
     }
 
     if (item.kind === 'activeStatus') {
+        // The indicator's internal px-3 minus this margin lands its icon on
+        // the work log's px-2 icon grid, so the tail lines up with the rows
+        // it follows.
         return item.status === 'thinking' ? (
-            <ThinkingIndicator aria-label="Agent is thinking" className="-ml-3 text-sm" />
+            <ThinkingIndicator aria-label="Agent is thinking" className="-ml-1 text-sm" />
         ) : (
-            <TypingIndicator aria-label="Agent is typing" className="-ml-3 text-sm" />
+            <TypingIndicator aria-label="Agent is typing" className="-ml-1 text-sm" />
         );
     }
 

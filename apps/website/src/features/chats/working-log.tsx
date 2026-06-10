@@ -234,7 +234,7 @@ export function TurnWorkDisclosure({
                     />
                 </span>
             </CollapsibleTrigger>
-            <CollapsiblePanel className="chat-collapsible-panel" keepMounted>
+            <CollapsiblePanel className="chat-collapsible-panel chat-collapsible-panel-turn" keepMounted>
                 {/* Spacing lives inside the animated panel so it collapses with
                     the height instead of vanishing in one frame at the end. */}
                 <div className="flex min-w-0 flex-col gap-4 pt-3.5">{children}</div>
