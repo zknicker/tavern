@@ -9,7 +9,10 @@ import { ChatTimeline } from './chat-timeline.tsx';
 import { getChatTimelineFollowKey } from './chat-timeline-follow-key.ts';
 import { ChatTranscriptLoadingIndicator } from './chat-transcript-loading-indicator.tsx';
 import type { ConversationMessageLayout } from './chat-transcript-model.ts';
-import { useChatScroll } from './use-chat-scroll.ts';
+import {
+    ChatScrollControllerProvider,
+    useChatScrollController,
+} from './use-chat-scroll-controller.ts';
 
 export function ChatDetailFrame({
     activeReply,
@@ -55,14 +58,14 @@ export function ChatDetailFrame({
         failedTurn,
     });
     const initialScrollKey = isInitialTranscriptPending ? null : `${chatId}:${location.key}`;
-    const chatScroll = useChatScroll({
+    const chatScroll = useChatScrollController({
         enabled: !isInitialTranscriptPending && hasTimelineContent,
         followKey,
         initialScrollKey,
     });
+    // The scroll controller owns its own viewport listeners; this handler only
+    // drives the non-virtualized previous-page fetch.
     const handleScroll = () => {
-        chatScroll.handleScroll();
-
         const viewport = chatScroll.viewportRef.current;
 
         if (
@@ -78,70 +81,71 @@ export function ChatDetailFrame({
         fetchPreviousPage?.();
     };
     return (
-        <div className="flex min-h-0 flex-1 flex-col">
-            <div className="absolute top-3 left-1/2 z-10 -translate-x-1/2">
-                <ChatTranscriptLoadingIndicator
-                    className="shrink-0"
-                    visible={isInitialTranscriptPending}
-                />
-            </div>
+        <ChatScrollControllerProvider value={chatScroll.handle}>
+            <div className="flex min-h-0 flex-1 flex-col">
+                <div className="absolute top-3 left-1/2 z-10 -translate-x-1/2">
+                    <ChatTranscriptLoadingIndicator
+                        className="shrink-0"
+                        visible={isInitialTranscriptPending}
+                    />
+                </div>
 
-            <div className="relative min-h-0 flex-1">
-                <div
-                    className="h-full min-h-0 overflow-y-auto px-6 py-4 [scrollbar-gutter:stable]"
-                    onScroll={handleScroll}
-                    ref={chatScroll.viewportRef}
-                >
+                <div className="relative min-h-0 flex-1">
                     <div
-                        className="mx-auto min-h-full w-full max-w-[46rem]"
-                        ref={chatScroll.contentRef}
+                        className="h-full min-h-0 overflow-y-auto px-6 py-4 [scrollbar-gutter:stable]"
+                        onScroll={handleScroll}
+                        ref={chatScroll.viewportRef}
                     >
-                        {isInitialTranscriptPending ? null : error ? (
-                            <div className="px-2 py-4 text-muted-foreground text-sm">
-                                Unable to load this chat transcript right now.
-                            </div>
-                        ) : hasTimelineContent ? (
-                            <ChatTimeline
-                                activeReply={activeReply}
-                                animate={animateTimeline}
-                                chatId={chatId}
-                                conversationLayout={conversationLayout}
-                                failedTurn={failedTurn}
-                                fetchPreviousPage={fetchPreviousPage}
-                                hasPreviousPage={hasPreviousPage}
-                                initialScrollKey={initialScrollKey}
-                                isFetchingPreviousPage={isFetchingPreviousPage}
-                                rows={rows}
-                                scrollViewportRef={
-                                    enableVirtualization ? chatScroll.viewportRef : undefined
-                                }
-                                totalRows={totalRows}
-                            />
-                        ) : (
-                            <div className="px-2 py-4 text-muted-foreground text-sm">
-                                {emptyLabel}
-                            </div>
-                        )}
+                        <div
+                            className="mx-auto min-h-full w-full max-w-[46rem]"
+                            ref={chatScroll.contentRef}
+                        >
+                            {isInitialTranscriptPending ? null : error ? (
+                                <div className="px-2 py-4 text-muted-foreground text-sm">
+                                    Unable to load this chat transcript right now.
+                                </div>
+                            ) : hasTimelineContent ? (
+                                <ChatTimeline
+                                    activeReply={activeReply}
+                                    animate={animateTimeline}
+                                    chatId={chatId}
+                                    conversationLayout={conversationLayout}
+                                    failedTurn={failedTurn}
+                                    fetchPreviousPage={fetchPreviousPage}
+                                    hasPreviousPage={hasPreviousPage}
+                                    isFetchingPreviousPage={isFetchingPreviousPage}
+                                    rows={rows}
+                                    scrollViewportRef={
+                                        enableVirtualization ? chatScroll.viewportRef : undefined
+                                    }
+                                    totalRows={totalRows}
+                                />
+                            ) : (
+                                <div className="px-2 py-4 text-muted-foreground text-sm">
+                                    {emptyLabel}
+                                </div>
+                            )}
+                        </div>
                     </div>
                 </div>
+
+                {hasTimelineContent && !chatScroll.isAtBottom ? (
+                    <div className="pointer-events-none relative z-10 flex justify-center">
+                        <Button
+                            aria-label="Jump to latest message"
+                            className="pointer-events-auto -mt-11 rounded-full bg-background/92 shadow-black/10 shadow-lg backdrop-blur"
+                            onClick={() => chatScroll.scrollToBottom()}
+                            size="icon"
+                            type="button"
+                            variant="outline"
+                        >
+                            <Icon className="size-4" icon={ArrowDown01Icon} />
+                        </Button>
+                    </div>
+                ) : null}
+
+                {footer}
             </div>
-
-            {hasTimelineContent && !chatScroll.isAtBottom ? (
-                <div className="pointer-events-none relative z-10 flex justify-center">
-                    <Button
-                        aria-label="Jump to latest message"
-                        className="pointer-events-auto -mt-11 rounded-full bg-background/92 shadow-black/10 shadow-lg backdrop-blur"
-                        onClick={() => chatScroll.scrollToBottom()}
-                        size="icon"
-                        type="button"
-                        variant="outline"
-                    >
-                        <Icon className="size-4" icon={ArrowDown01Icon} />
-                    </Button>
-                </div>
-            ) : null}
-
-            {footer}
-        </div>
+        </ChatScrollControllerProvider>
     );
 }

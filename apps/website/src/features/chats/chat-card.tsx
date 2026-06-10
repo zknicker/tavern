@@ -10,7 +10,10 @@ import { ChatMessageComposer } from './chat-message-composer.tsx';
 import { ChatTimeline } from './chat-timeline.tsx';
 import { getChatTimelineFollowKey } from './chat-timeline-follow-key.ts';
 import { ChatTranscriptLoadingIndicator } from './chat-transcript-loading-indicator.tsx';
-import { useChatScroll } from './use-chat-scroll.ts';
+import {
+    ChatScrollControllerProvider,
+    useChatScrollController,
+} from './use-chat-scroll-controller.ts';
 
 const chatSummaryLimit = 20;
 
@@ -44,7 +47,7 @@ export function ChatCard({
         activeReply: timeline.activeReply,
         failedTurn: timeline.failedTurn,
     });
-    const chatScroll = useChatScroll({
+    const chatScroll = useChatScrollController({
         enabled: !isInitialTranscriptPending && hasTimelineContent,
         followKey,
     });
@@ -84,18 +87,19 @@ export function ChatCard({
 
             <div
                 className="scrollbar-hidden min-h-0 flex-1 overflow-y-auto overflow-x-hidden border-r-[3px] border-r-border/70"
-                onScroll={chatScroll.handleScroll}
                 ref={chatScroll.viewportRef}
             >
                 <div ref={chatScroll.contentRef}>
                     {isInitialTranscriptPending ? null : hasTimelineContent ? (
-                        <ChatTimeline
-                            activeReply={timeline.activeReply}
-                            animate
-                            failedTurn={timeline.failedTurn}
-                            rows={rows}
-                            totalRows={totalRows}
-                        />
+                        <ChatScrollControllerProvider value={chatScroll.handle}>
+                            <ChatTimeline
+                                activeReply={timeline.activeReply}
+                                animate
+                                failedTurn={timeline.failedTurn}
+                                rows={rows}
+                                totalRows={totalRows}
+                            />
+                        </ChatScrollControllerProvider>
                     ) : (
                         <div className="px-3 py-3 font-mono text-muted-foreground text-xs">
                             No synced messages for this chat yet.

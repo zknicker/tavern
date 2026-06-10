@@ -11,13 +11,8 @@ import {
     type TranscriptRenderRow,
 } from './chat-transcript-row-model.ts';
 import { TranscriptEntryRow } from './chat-transcript-rows.tsx';
-import {
-    transcriptDisclosureAnchorEndEvent,
-    transcriptDisclosureAnchorStartEvent,
-} from './chat-transcript-scroll-anchor.ts';
-import { isNearViewportBottom } from './use-chat-scroll.ts';
+import { useChatScrollControllerHandle } from './use-chat-scroll-controller.ts';
 
-const initialScrollToEndFrames = 12;
 const previousPageScrollThreshold = 160;
 
 export function VirtualizedChatTranscript({
@@ -28,7 +23,6 @@ export function VirtualizedChatTranscript({
     fetchPreviousPage,
     hasPreviousPage,
     hiddenCount,
-    initialScrollKey,
     isFetchingPreviousPage,
     rows,
     scrollViewportRef,
@@ -40,12 +34,11 @@ export function VirtualizedChatTranscript({
     fetchPreviousPage?: () => void;
     hasPreviousPage: boolean;
     hiddenCount: number;
-    initialScrollKey?: string | null;
     isFetchingPreviousPage: boolean;
     rows: TranscriptRenderRow[];
     scrollViewportRef: React.RefObject<HTMLDivElement | null>;
 }) {
-    const disclosureAnchorActiveRef = React.useRef(false);
+    const scrollController = useChatScrollControllerHandle();
     const virtualizer = useVirtualizer({
         count: rows.length,
         estimateSize: (index) => getEstimatedTranscriptRowSize(rows[index]),
@@ -53,41 +46,14 @@ export function VirtualizedChatTranscript({
         getScrollElement: () => scrollViewportRef.current,
         overscan: 8,
     });
-    virtualizer.shouldAdjustScrollPositionOnItemSizeChange = (item) => {
-        const viewport = scrollViewportRef.current;
-
-        if (!viewport || disclosureAnchorActiveRef.current) {
-            return false;
-        }
-
-        // When the user is at the bottom, the follow behavior owns the scroll
-        // position. Compensating here as well makes the two fight during
-        // animated collapses, which reads as a hitch in the final frames.
-        if (isNearViewportBottom(viewport)) {
-            return false;
-        }
-
-        return item.start < viewport.scrollTop;
-    };
+    // The scroll controller decides when item-resize compensation is safe:
+    // only while the user reads scrolled-up history. While following or
+    // anchored, the controller owns the position and compensating as well
+    // makes the two fight during animated collapses.
+    virtualizer.shouldAdjustScrollPositionOnItemSizeChange = (item) =>
+        scrollController ? scrollController.shouldVirtualizerAdjust(item.start) : false;
     const virtualItems = virtualizer.getVirtualItems();
     const firstEntryIndex = virtualItems.find((item) => rows[item.index]?.kind === 'entry')?.index;
-
-    React.useEffect(() => {
-        const handleAnchorStart = () => {
-            disclosureAnchorActiveRef.current = true;
-        };
-        const handleAnchorEnd = () => {
-            disclosureAnchorActiveRef.current = false;
-        };
-
-        window.addEventListener(transcriptDisclosureAnchorStartEvent, handleAnchorStart);
-        window.addEventListener(transcriptDisclosureAnchorEndEvent, handleAnchorEnd);
-
-        return () => {
-            window.removeEventListener(transcriptDisclosureAnchorStartEvent, handleAnchorStart);
-            window.removeEventListener(transcriptDisclosureAnchorEndEvent, handleAnchorEnd);
-        };
-    }, []);
 
     React.useEffect(() => {
         const viewport = scrollViewportRef.current;
@@ -117,35 +83,6 @@ export function VirtualizedChatTranscript({
         isFetchingPreviousPage,
         scrollViewportRef,
     ]);
-
-    React.useLayoutEffect(() => {
-        if (!(initialScrollKey && rows.length > 0)) {
-            return;
-        }
-
-        let frameCount = 0;
-        let animationFrame: number | null = null;
-
-        const scrollToInitialEnd = () => {
-            frameCount += 1;
-            virtualizer.scrollToIndex(rows.length - 1, {
-                align: 'end',
-                behavior: 'auto',
-            });
-
-            if (frameCount < initialScrollToEndFrames) {
-                animationFrame = requestAnimationFrame(scrollToInitialEnd);
-            }
-        };
-
-        scrollToInitialEnd();
-
-        return () => {
-            if (animationFrame !== null) {
-                cancelAnimationFrame(animationFrame);
-            }
-        };
-    }, [initialScrollKey, rows.length, virtualizer]);
 
     return (
         <div

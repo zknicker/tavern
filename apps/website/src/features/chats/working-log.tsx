@@ -16,11 +16,8 @@ import {
     getActiveWorkLabel,
     getActivityItemKey,
 } from './chat-transcript-activity-utils.ts';
-import {
-    dispatchTranscriptDisclosureAnchorEnd,
-    dispatchTranscriptDisclosureAnchorStart,
-} from './chat-transcript-scroll-anchor.ts';
 import { ThinkingSteps, ThinkingStepsContent, ThinkingStepsHeader } from './thinking-steps.tsx';
+import { useChatScrollControllerHandle } from './use-chat-scroll-controller.ts';
 
 export function WorkingLog({
     chatId,
@@ -65,10 +62,6 @@ export function WorkingLog({
         }
     }, [groupMode, isActive, thinkingOnly]);
 
-    const handleOpenChange = (nextOpen: boolean) => {
-        setOpen(nextOpen);
-        disclosureAnchor.preserve();
-    };
     const groupLabel = groupMode
         ? isActive
             ? (getActiveWorkLabel(items) ?? 'Working')
@@ -80,7 +73,7 @@ export function WorkingLog({
             // Group mode: the trigger's py-1 click padding must not stack onto
             // the surrounding 16px block rhythm.
             className={cn('w-full max-w-[34rem]', groupMode && '-my-1')}
-            onOpenChange={handleOpenChange}
+            onOpenChange={setOpen}
             open={open}
         >
             <ThinkingStepsHeader
@@ -125,36 +118,21 @@ export function WorkingLog({
     );
 }
 
+// Manual disclosure toggles anchor the trigger's viewport position through
+// the chat scroll controller, which owns scrollTop and releases the anchor
+// when the panel's height transition settles. No-op outside a chat scroll
+// area (session log, layout previews).
 function useDisclosureScrollAnchor() {
+    const controller = useChatScrollControllerHandle();
     const triggerRef = React.useRef<HTMLButtonElement | null>(null);
-    const anchorRef = React.useRef<{
-        endAtMs: number;
-        frameId: number | null;
-        scrollParent: HTMLElement | null;
-        top: number;
-        trigger: HTMLButtonElement;
-    } | null>(null);
 
     const capture = React.useCallback(() => {
         const trigger = triggerRef.current;
 
-        if (!trigger) {
-            return;
+        if (trigger) {
+            controller?.beginAnchor(trigger);
         }
-
-        if (anchorRef.current?.frameId !== null && anchorRef.current?.frameId !== undefined) {
-            cancelAnimationFrame(anchorRef.current.frameId);
-        }
-
-        anchorRef.current = {
-            endAtMs: performance.now() + disclosureAnchorDurationMs,
-            frameId: null,
-            scrollParent: getScrollParent(trigger),
-            top: trigger.getBoundingClientRect().top,
-            trigger,
-        };
-        dispatchTranscriptDisclosureAnchorStart();
-    }, []);
+    }, [controller]);
 
     const captureFromKeyboard = React.useCallback(
         (event: React.KeyboardEvent<HTMLButtonElement>) => {
@@ -165,81 +143,10 @@ function useDisclosureScrollAnchor() {
         [capture]
     );
 
-    const preserve = React.useCallback(() => {
-        const anchor = anchorRef.current;
-
-        if (!anchor) {
-            return;
-        }
-
-        const preserveFrame = () => {
-            const currentAnchor = anchorRef.current;
-
-            if (!currentAnchor) {
-                return;
-            }
-
-            const nextTop = currentAnchor.trigger.getBoundingClientRect().top;
-            const delta = nextTop - currentAnchor.top;
-
-            if (Math.abs(delta) >= 0.5) {
-                if (currentAnchor.scrollParent) {
-                    currentAnchor.scrollParent.scrollTop += delta;
-                } else {
-                    window.scrollBy({ top: delta });
-                }
-            }
-
-            if (performance.now() >= currentAnchor.endAtMs) {
-                anchorRef.current = null;
-                dispatchTranscriptDisclosureAnchorEnd();
-                return;
-            }
-
-            currentAnchor.frameId = requestAnimationFrame(preserveFrame);
-        };
-
-        anchor.frameId = requestAnimationFrame(preserveFrame);
-    }, []);
-
-    React.useEffect(
-        () => () => {
-            if (anchorRef.current?.frameId !== null && anchorRef.current?.frameId !== undefined) {
-                cancelAnimationFrame(anchorRef.current.frameId);
-            }
-
-            if (anchorRef.current) {
-                dispatchTranscriptDisclosureAnchorEnd();
-            }
-        },
-        []
-    );
-
-    return { capture, captureFromKeyboard, preserve, triggerRef };
+    return { capture, captureFromKeyboard, triggerRef };
 }
 
-// Time-based, NOT frame-based: frame counts halve on 120Hz displays, which
-// made the anchor expire mid-animation. Must outlast the
-// chat-collapsible-panel height transition (240ms) plus settle frames.
-const disclosureAnchorDurationMs = 420;
 const completedCollapseDelayMs = 650;
-
-function getScrollParent(element: HTMLElement): HTMLElement | null {
-    let parent = element.parentElement;
-
-    while (parent) {
-        const style = window.getComputedStyle(parent);
-        const canScroll = /(auto|scroll|overlay)/.test(style.overflowY);
-
-        if (canScroll && parent.scrollHeight > parent.clientHeight) {
-            return parent;
-        }
-
-        parent = parent.parentElement;
-    }
-
-    return null;
-}
 
 export function TurnWorkDisclosure({
     children,
@@ -283,13 +190,8 @@ export function TurnWorkDisclosure({
         return () => window.clearTimeout(timer);
     }, [isActive]);
 
-    const handleOpenChange = (nextOpen: boolean) => {
-        setOpen(nextOpen);
-        disclosureAnchor.preserve();
-    };
-
     return (
-        <Collapsible className="flex min-w-0 flex-col" onOpenChange={handleOpenChange} open={open}>
+        <Collapsible className="flex min-w-0 flex-col" onOpenChange={setOpen} open={open}>
             <CollapsibleTrigger
                 className="group border-border/70 border-b pb-2 text-left font-medium text-[13px] text-muted-foreground leading-tight transition-colors hover:text-foreground"
                 onKeyDown={disclosureAnchor.captureFromKeyboard}

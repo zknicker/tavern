@@ -106,9 +106,15 @@ ids. They should not create a second volatile progress transcript.
 * Step enter animations are tied to DOM insertion during a live turn
   (`@starting-style`), not to step status, so fast tools still animate and
   history never replays.
-* One owner per scroll position at a time: the disclosure anchor during
-  toggles, bottom-follow at the bottom, virtualizer compensation only when
-  scrolled up into history.
+* One scroll controller owns the viewport's scroll position
+  (`use-chat-scroll-controller.ts` over the pure mode machine in
+  `chat-scroll-mode.ts`): `following` pins the bottom on content growth,
+  `anchored` pins a disclosure trigger during manual toggles and releases when
+  the panel's height transition ends (time fallback under reduced motion), and
+  `free` leaves the user reading history with virtualizer compensation only
+  for items resizing above the viewport. User wheel or touch input cancels an
+  anchor. Deep components reach the controller through React context, never
+  window events.
 
 Queued composer drafts are app-local until dispatched. A queued draft does not
 create a durable Tavern message, response, Hermes session entry, or transcript
