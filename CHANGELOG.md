@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file.
 
+## v1.4.1 - 2026-06-10
+
+- Added managed engine bootstrap and production pin guarantees so Tavern Runtime acquires the bundled engine instead of relying on a host install.
+- Improved chat streaming, scroll anchoring, tool rows, tool drawers, focus rings, and Cortex Markdown browsing.
+- Fixed Hermes Gateway turn handling, progress event mapping, tool row focus/hover states, and sticky inspect controls.
+- Raised the required Runtime floor to 1.4.1 for the managed engine bootstrap, Gateway, and capability behavior in this release.
+
 ## v1.4.0 - 2026-06-09
 
 - Replaced the OpenClaw/Cortex stack with managed Hermes execution, the llm-wiki hub browser, and managed Hermes wiki skill.
