@@ -102,8 +102,9 @@ ids. They should not create a second volatile progress transcript.
   the durable reply occupy the slot below the work disclosure.
 * The "Working for" timer counts from message send while live; completed turns
   show the durable activity span ("Worked for").
-* The work disclosure is open while a turn runs and collapses with an
-  animation shortly after the response lands. Completed turns start collapsed.
+* The work disclosure is open while a turn runs tools or other visible work and
+  collapses with an animation as soon as the final response begins streaming.
+  Completed turns start collapsed.
 * Step enter animations are tied to DOM insertion during a live turn
   (`@starting-style`), not to step status, so fast tools still animate and
   history never replays.
@@ -144,9 +145,9 @@ that also patch live through `turn.progress` steps:
   waiting shimmer until the agent resumes; approving runs the command once,
   denying blocks it. An unanswered prompt times out engine-side and the turn
   continues as denied.
-* **Typing indicator.** The live tail flips Thinking → Typing when the engine
-  dispatches a message, and back to Thinking while visible work (reasoning,
-  tools) is still arriving before reply text streams.
+* **Turn indicator.** The live tail keeps the morphing Thinking indicator while
+  the turn is active and no reply text is streaming. Tool rows, reasoning rows,
+  and assistant status updates do not hide, replace, or remount that indicator.
 
 ## Pinned chats
 

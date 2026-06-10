@@ -18,7 +18,7 @@ export interface ConversationMessageLayout {
 
 export type TranscriptItem =
     | { kind: 'activeReply'; reply: ChatActiveReply }
-    | { kind: 'activeStatus'; reply: ChatActiveReply; status: 'thinking' | 'typing' }
+    | { kind: 'activeStatus'; reply: ChatActiveReply; status: 'thinking' }
     | { failure: ChatTurnFailure; kind: 'failure' }
     | { kind: 'row'; row: TranscriptRow };
 
@@ -167,12 +167,7 @@ function buildTranscriptItems(input: {
         input.activeReply && !hasDurableReplyRow(input.rows, input.activeReply.runId)
             ? input.activeReply
             : null;
-    let lastActiveProgressRow: TranscriptRow | null = null;
     const items: TranscriptItem[] = input.rows.map((row) => {
-        if (activeReply && isActiveProgressRow(row, activeReply)) {
-            lastActiveProgressRow = row;
-        }
-
         return { kind: 'row', row };
     });
     const activeReplyText = activeReply?.text?.trim() ?? '';
@@ -181,15 +176,11 @@ function buildTranscriptItems(input: {
         items.push({ kind: 'activeReply', reply: activeReply });
     }
 
-    if (
-        activeReply &&
-        activeReplyText.length === 0 &&
-        shouldShowActiveStatus(lastActiveProgressRow, input.showThinkingText !== false)
-    ) {
+    if (activeReply && activeReplyText.length === 0) {
         items.push({
             kind: 'activeStatus',
             reply: activeReply,
-            status: activeReply.isThinking === false ? 'typing' : 'thinking',
+            status: 'thinking',
         });
     }
 
@@ -210,20 +201,6 @@ function hasDurableReplyRow(rows: TranscriptRow[], runId: string) {
     );
 }
 
-function shouldShowActiveStatus(lastProgressRow: TranscriptRow | null, showThinkingText: boolean) {
-    if (!lastProgressRow || isAssistantNarrationRow(lastProgressRow)) {
-        return true;
-    }
-
-    // A thinking row hidden by the display preference must not suppress the
-    // status indicator, or the turn looks idle while the agent reasons.
-    return !showThinkingText && isThinkingRow(lastProgressRow);
-}
-
-function isThinkingRow(row: TranscriptRow) {
-    return row.kind === 'system' && row.systemKind === 'thinking';
-}
-
 /**
  * Activity-backed message rows (act_ ids) are intra-turn narration projected
  * from response activities. They belong to the work log and are never the
@@ -231,26 +208,6 @@ function isThinkingRow(row: TranscriptRow) {
  */
 export function isActivityBackedMessageRow(row: TranscriptRow) {
     return row.kind === 'message' && row.id.startsWith('act_');
-}
-
-function isActiveProgressRow(row: TranscriptRow, activeReply: ChatActiveReply) {
-    if (row.kind === 'message') {
-        return false;
-    }
-
-    const activeSessionKey = activeReply.sessionKey.trim();
-    const activeStartedAt = parseTimestamp(activeReply.startedAt);
-    const rowSessionKey = getRowSessionKey(row);
-
-    if (activeSessionKey && rowSessionKey && rowSessionKey !== activeSessionKey) {
-        return false;
-    }
-
-    return parseTimestamp(getRowTimestamp(row)) >= activeStartedAt;
-}
-
-function isAssistantNarrationRow(row: TranscriptRow) {
-    return row.kind === 'tool' && row.toolCall.name.trim().toLowerCase() === 'message';
 }
 
 function canAppendToTurn(
@@ -448,26 +405,6 @@ export function getItemTimestamp(item: TranscriptItem) {
 
     const { row } = item;
 
-    if (row.kind === 'message') {
-        return row.message.timestamp;
-    }
-
-    if (row.kind === 'tool' || row.kind === 'worker') {
-        return row.startedAt ?? row.completedAt;
-    }
-
-    return row.timestamp;
-}
-
-function getRowSessionKey(row: TranscriptRow) {
-    if (row.kind === 'tool' || row.kind === 'worker') {
-        return row.sessionKey?.trim() ?? '';
-    }
-
-    return '';
-}
-
-function getRowTimestamp(row: TranscriptRow) {
     if (row.kind === 'message') {
         return row.message.timestamp;
     }

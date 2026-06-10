@@ -769,8 +769,8 @@ export class LocalHermesClient extends LocalHermesUnsupportedSurfaces {
                     continue;
                 }
 
-                // Composing started: the reply indicator can flip from
-                // Thinking to Typing before the first delta lands.
+                // Composing started. Runtime keeps the visible turn status as
+                // in-progress until reply text or work events arrive.
                 if (event.type === 'message.start') {
                     yield { data: {}, event: 'assistant.composing' };
                     continue;

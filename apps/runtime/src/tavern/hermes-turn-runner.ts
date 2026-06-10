@@ -101,21 +101,6 @@ export async function runHermesTurn(input: {
         assistantSegment = null;
     };
 
-    // Typing indicator state: message.start flips Thinking → Typing, but the
-    // gateway emits it at turn dispatch, so visible work arriving afterwards
-    // (reasoning, tools) restores the Thinking indicator until text streams.
-    let typingIndicated = false;
-    const publishReplyIndicator = (isThinking: boolean) => {
-        typingIndicated = !isThinking;
-        publishRuntimeEvent({
-            isThinking,
-            text: '',
-            timestamp: new Date().toISOString(),
-            turn,
-            type: 'turn.replyUpdated',
-        });
-    };
-
     try {
         publishRuntimeEvent({ timestamp: startedAt, turn, type: 'turn.started' });
 
@@ -147,14 +132,7 @@ export async function runHermesTurn(input: {
                 }
             }
 
-            if (typingIndicated && !assistantSegment && isVisibleWorkEvent(event.event)) {
-                publishReplyIndicator(true);
-            }
-
             if (event.event === 'assistant.composing') {
-                if (!assistantSegment) {
-                    publishReplyIndicator(false);
-                }
                 continue;
             }
 
@@ -189,7 +167,6 @@ export async function runHermesTurn(input: {
                 }
                 if (!assistantSegment) {
                     assistantSegmentIndex += 1;
-                    typingIndicated = false;
                     assistantSegment = {
                         content: '',
                         index: assistantSegmentIndex,
@@ -864,19 +841,6 @@ function isReasoningEvent(event: string) {
 
 function isNoticeEvent(event: string) {
     return event === 'notice.shown' || event === 'notice.cleared';
-}
-
-// Work-log activity that means the agent is still working, not composing the
-// visible reply.
-function isVisibleWorkEvent(event: string) {
-    return (
-        event === 'reasoning.delta' ||
-        event === 'assistant.status' ||
-        event === 'approval.requested' ||
-        event === 'worker.progress' ||
-        isToolLifecycleEvent(event) ||
-        event === 'tool.progress'
-    );
 }
 
 // Events that prove the blocked agent thread resumed after an approval.

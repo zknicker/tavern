@@ -1,6 +1,15 @@
 import type { HugeiconsIconProps } from '@hugeicons/react';
 import { ArrowDown01Icon } from '@hugeicons-pro/core-stroke-rounded';
-import { forwardRef, type HTMLAttributes, type ReactNode } from 'react';
+import { motion, useReducedMotion } from 'framer-motion';
+import {
+    createContext,
+    forwardRef,
+    type HTMLAttributes,
+    type ReactNode,
+    useContext,
+    useMemo,
+    useState,
+} from 'react';
 import { Badge } from '../../components/ui/badge.tsx';
 import {
     Collapsible,
@@ -12,6 +21,21 @@ import { cn } from '../../lib/utils.ts';
 
 type StepStatus = 'active' | 'complete' | 'pending' | 'failed';
 type StepIcon = HugeiconsIconProps['icon'];
+
+const springs = {
+    drawer: {
+        bounce: 0,
+        duration: 0.22,
+        type: 'spring' as const,
+    },
+    slow: {
+        bounce: 0.15,
+        duration: 0.24,
+        type: 'spring' as const,
+    },
+};
+
+const ThinkingStepsOpenContext = createContext(false);
 
 interface ThinkingStepsProps extends HTMLAttributes<HTMLDivElement> {
     children: ReactNode;
@@ -33,18 +57,31 @@ export const ThinkingSteps = forwardRef<HTMLDivElement, ThinkingStepsProps>(
             ...props
         },
         ref
-    ) => (
-        <Collapsible
-            className={cn('w-80 max-w-full', className)}
-            defaultOpen={open === undefined ? defaultOpen : undefined}
-            onOpenChange={onOpenChange}
-            open={open}
-            ref={ref}
-            {...props}
-        >
-            {children}
-        </Collapsible>
-    )
+    ) => {
+        const [uncontrolledOpen, setUncontrolledOpen] = useState(defaultOpen);
+        const currentOpen = open ?? uncontrolledOpen;
+        const handleOpenChange = (nextOpen: boolean) => {
+            if (open === undefined) {
+                setUncontrolledOpen(nextOpen);
+            }
+
+            onOpenChange?.(nextOpen);
+        };
+
+        return (
+            <ThinkingStepsOpenContext.Provider value={currentOpen}>
+                <Collapsible
+                    className={cn('w-80 max-w-full', className)}
+                    onOpenChange={handleOpenChange}
+                    open={currentOpen}
+                    ref={ref}
+                    {...props}
+                >
+                    {children}
+                </Collapsible>
+            </ThinkingStepsOpenContext.Provider>
+        );
+    }
 );
 
 ThinkingSteps.displayName = 'ThinkingSteps';
@@ -86,13 +123,35 @@ interface ThinkingStepsContentProps extends HTMLAttributes<HTMLDivElement> {
 }
 
 export const ThinkingStepsContent = forwardRef<HTMLDivElement, ThinkingStepsContentProps>(
-    ({ children, className, ...props }, ref) => (
-        <CollapsiblePanel className="chat-collapsible-panel" keepMounted>
-            <div className={cn('flex flex-col', className)} ref={ref} {...props}>
-                {children}
-            </div>
-        </CollapsiblePanel>
-    )
+    ({ children, className, ...props }, ref) => {
+        const open = useContext(ThinkingStepsOpenContext);
+        const shouldReduceMotion = useReducedMotion();
+        const transition = useMemo(
+            () =>
+                shouldReduceMotion
+                    ? { duration: 0 }
+                    : {
+                          ...springs.drawer,
+                      },
+            [shouldReduceMotion]
+        );
+
+        return (
+            <motion.div
+                animate={{ height: open ? 'auto' : 0 }}
+                aria-hidden={!open}
+                className="overflow-hidden"
+                inert={open ? undefined : true}
+                initial={false}
+                onAnimationComplete={dispatchDisclosureAnimationEnd}
+                transition={transition}
+            >
+                <div className={cn('flex flex-col', className)} ref={ref} {...props}>
+                    {children}
+                </div>
+            </motion.div>
+        );
+    }
 );
 
 ThinkingStepsContent.displayName = 'ThinkingStepsContent';
@@ -123,6 +182,8 @@ export function ThinkingStep({
     showIcon = true,
     status = 'complete',
 }: ThinkingStepProps) {
+    const shouldReduceMotion = useReducedMotion();
+
     if (status === 'pending') {
         return null;
     }
@@ -130,60 +191,68 @@ export function ThinkingStep({
     const isActive = status === 'active';
 
     return (
-        <div
-            className={cn(
-                'relative z-10 overflow-hidden',
-                animateEnter && 'chat-step-enter',
-                className
-            )}
-            style={{ animationDelay: `${delay}s` }}
+        <motion.div
+            animate={{ height: 'auto' }}
+            className={cn('relative z-10 overflow-hidden', className)}
+            initial={animateEnter && !shouldReduceMotion ? { height: 0 } : false}
+            transition={shouldReduceMotion ? { duration: 0 } : springs.slow}
         >
-            <div className="flex gap-2.5 px-2 py-1.5">
-                <div className="flex w-4 shrink-0 flex-col items-center">
-                    <div className="flex size-4 items-center justify-center">
-                        {showIcon && icon ? (
-                            <Icon
-                                className="size-4 text-muted-foreground"
-                                icon={icon}
-                                strokeWidth={1.5}
-                            />
-                        ) : (
-                            <div className="flex size-4 items-center justify-center">
-                                <div
-                                    className={cn(
-                                        'size-2 rounded-full',
-                                        status === 'failed'
-                                            ? 'bg-destructive'
-                                            : isActive
-                                              ? 'bg-info shadow-[0_0_0_3px] shadow-info/12'
-                                              : 'bg-muted-foreground/60'
-                                    )}
+            <motion.div
+                animate={{ opacity: 1 }}
+                initial={animateEnter && !shouldReduceMotion ? { opacity: 0 } : false}
+                transition={{
+                    delay: shouldReduceMotion ? 0 : Math.max(delay, 0.08),
+                    duration: shouldReduceMotion ? 0 : 0.24,
+                    ease: 'easeOut',
+                }}
+            >
+                <div className="flex gap-2.5 px-2 py-1.5">
+                    <div className="flex w-4 shrink-0 flex-col items-center">
+                        <div className="flex size-4 items-center justify-center">
+                            {showIcon && icon ? (
+                                <Icon
+                                    className="size-4 text-muted-foreground"
+                                    icon={icon}
+                                    strokeWidth={1.5}
                                 />
-                            </div>
-                        )}
+                            ) : (
+                                <div className="flex size-4 items-center justify-center">
+                                    <div
+                                        className={cn(
+                                            'size-2 rounded-full',
+                                            status === 'failed'
+                                                ? 'bg-destructive'
+                                                : isActive
+                                                  ? 'bg-info shadow-[0_0_0_3px] shadow-info/12'
+                                                  : 'bg-muted-foreground/60'
+                                        )}
+                                    />
+                                </div>
+                            )}
+                        </div>
+                        {isLast ? null : <div className="mt-1 w-px flex-1 bg-border/60" />}
                     </div>
-                    {isLast ? null : <div className="mt-1 w-px flex-1 bg-border/60" />}
-                </div>
 
-                <div className="flex min-w-0 flex-1 flex-col gap-1">
-                    <span
-                        className={cn(
-                            'min-w-0 text-[13px] text-foreground leading-tight',
-                            isActive && 'thinking-indicator-text'
-                        )}
-                    >
-                        {label}
-                        {isActive && typeof label === 'string' ? '...' : null}
-                    </span>
-                    {description ? (
-                        <span className="min-w-0 text-[13px] text-muted-foreground leading-snug">
-                            {description}
+                    <div className="flex min-w-0 flex-1 flex-col gap-1">
+                        <span
+                            className={cn(
+                                'min-w-0 text-[13px] text-foreground leading-tight',
+                                isActive && 'thinking-indicator-text'
+                            )}
+                        >
+                            {label}
+                            {isActive && typeof label === 'string' ? '...' : null}
                         </span>
-                    ) : null}
-                    {children}
+                        {description ? (
+                            <span className="min-w-0 text-[13px] text-muted-foreground leading-snug">
+                                {description}
+                            </span>
+                        ) : null}
+                        {children}
+                    </div>
                 </div>
-            </div>
-        </div>
+            </motion.div>
+        </motion.div>
     );
 }
 
@@ -280,3 +349,7 @@ export type {
     ThinkingStepsHeaderProps,
     ThinkingStepsProps,
 };
+
+function dispatchDisclosureAnimationEnd() {
+    document.dispatchEvent(new CustomEvent('chat-disclosure-animation-end', { bubbles: true }));
+}

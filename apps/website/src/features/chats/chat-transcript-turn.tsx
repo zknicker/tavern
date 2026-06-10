@@ -39,7 +39,7 @@ import type {
 } from './chat-transcript-model.ts';
 import { getItemSessionKey, isActivityBackedMessageRow } from './chat-transcript-model.ts';
 import { RuntimeNoticeEntry } from './chat-transcript-system-step.tsx';
-import { ThinkingIndicator, TypingIndicator } from './thinking-indicator.tsx';
+import { ThinkingIndicator } from './thinking-indicator.tsx';
 import { useRevealedText } from './use-revealed-text.ts';
 import { TurnWorkDisclosure } from './working-log.tsx';
 
@@ -221,6 +221,15 @@ function AgentTurn({
             : segments;
     const replySegments =
         hasWorkHeader && finalSegmentIndex >= 0 ? [segments[finalSegmentIndex]] : [];
+    const activeReplyStarted =
+        turnActive &&
+        activeReply !== null &&
+        items.some(
+            (item) =>
+                item.kind === 'activeReply' &&
+                item.reply.runId === activeReply.runId &&
+                (item.reply.text ?? '').trim().length > 0
+        );
 
     return (
         <div
@@ -259,6 +268,7 @@ function AgentTurn({
                     <div className="flex min-w-0 flex-col gap-4">
                         {hasWorkHeader ? (
                             <TurnWorkDisclosure
+                                collapseForReply={activeReplyStarted}
                                 end={workEnd}
                                 start={workStart}
                                 status={turnActive ? 'active' : 'completed'}
@@ -409,11 +419,7 @@ function AgentTurnItem({
         // The indicator's internal px-3 minus this margin lands its icon on
         // the work log's px-2 icon grid, so the tail lines up with the rows
         // it follows.
-        return item.status === 'thinking' ? (
-            <ThinkingIndicator aria-label="Agent is thinking" className="-ml-1 text-sm" />
-        ) : (
-            <TypingIndicator aria-label="Agent is typing" className="-ml-1 text-sm" />
-        );
+        return <ThinkingIndicator aria-label="Agent is thinking" className="-ml-1 text-sm" />;
     }
 
     if (isAssistantNarrationItem(item)) {

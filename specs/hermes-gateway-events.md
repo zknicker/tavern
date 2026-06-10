@@ -14,9 +14,9 @@ Four items, in order:
 
 ## B1. `message.start` (trivial)
 
-Map in `local-client.ts` streamChat to a `turn.replyUpdated` yield with
-`isThinking: false, text: ''` so the chat indicator flips Thinking → Typing
-when composing starts instead of on the first delta.
+Map in `local-client.ts` streamChat as an internal composing signal. Tavern no
+longer renders a Typing state for empty replies; the live tail keeps the
+morphing Thinking indicator until reply text streams.
 
 ## B2. `notification.show` / `notification.clear` (small)
 
@@ -70,8 +70,8 @@ Per layer: apps/runtime vitest + tsc; apps/server bun test + tsc; apps/website
 ## Implementation notes (2026-06-10)
 
 * B1: `message.start` fires at turn dispatch, not at compose time, so the
-  runner flips Thinking → Typing on it and restores Thinking when visible
-  work (reasoning, tools, status) arrives before reply text streams.
+  runner ignores it for visible status. The tail stays Thinking until reply
+  text streams.
 * B2: notices record via `createGatewayActivityRecorder` with
   `metadata.runtime.notice` (the steered-notice projection contract);
   `notification.clear` completes the open activity by key.

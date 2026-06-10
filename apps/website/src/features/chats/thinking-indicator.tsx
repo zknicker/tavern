@@ -1,6 +1,4 @@
-import { TypeCursorIcon } from '@hugeicons-pro/core-stroke-rounded';
 import { forwardRef, type HTMLAttributes, useEffect, useState } from 'react';
-import { Icon } from '../../components/ui/icon.tsx';
 import { cn } from '../../lib/utils.ts';
 
 const circleA =
@@ -14,7 +12,7 @@ const words = ['Thinking', 'Planning', 'Refining'];
 const longestWord = words.reduce((current, word) =>
     current.length >= word.length ? current : word
 );
-const pathValues = [circleA, infinity, circleB, infinity, circleA].join(';');
+const pathValues = [infinity, circleA, infinity, circleB, infinity].join(';');
 const pathKeySplines = ['0.4 0 0.2 1', '0.4 0 0.2 1', '0.4 0 0.2 1', '0.4 0 0.2 1'].join(';');
 
 function usePrefersReducedMotion() {
@@ -67,7 +65,7 @@ export const ThinkingIndicator = forwardRef<HTMLOutputElement, HTMLAttributes<HT
                     strokeWidth={1.5}
                     viewBox="0 0 24 24"
                 >
-                    <path d={circleA}>
+                    <path d={infinity}>
                         {prefersReducedMotion ? null : (
                             <animate
                                 attributeName="d"
@@ -101,53 +99,3 @@ export const ThinkingIndicator = forwardRef<HTMLOutputElement, HTMLAttributes<HT
 );
 
 ThinkingIndicator.displayName = 'ThinkingIndicator';
-
-export const TypingIndicator = forwardRef<HTMLOutputElement, HTMLAttributes<HTMLOutputElement>>(
-    ({ className, ...props }, ref) => {
-        const [dotCount, setDotCount] = useState(1);
-        const prefersReducedMotion = usePrefersReducedMotion();
-
-        useEffect(() => {
-            if (prefersReducedMotion) {
-                return;
-            }
-
-            const interval = window.setInterval(() => {
-                setDotCount((current) => (current % 3) + 1);
-            }, 420);
-
-            return () => window.clearInterval(interval);
-        }, [prefersReducedMotion]);
-
-        const dots = '.'.repeat(dotCount);
-
-        return (
-            <output
-                aria-live="polite"
-                className={cn('flex w-fit items-center gap-2 px-3 py-2', className)}
-                ref={ref}
-                {...props}
-            >
-                <Icon
-                    aria-hidden={true}
-                    className="size-5 shrink-0 text-muted-foreground"
-                    icon={TypeCursorIcon}
-                    strokeWidth={1.6}
-                />
-                <span className="inline-grid overflow-hidden font-medium text-meta">
-                    <span
-                        aria-hidden={true}
-                        className="thinking-indicator-text invisible col-start-1 row-start-1"
-                    >
-                        Typing...
-                    </span>
-                    <span className="thinking-indicator-text thinking-indicator-word col-start-1 row-start-1">
-                        {`Typing${dots}`}
-                    </span>
-                </span>
-            </output>
-        );
-    }
-);
-
-TypingIndicator.displayName = 'TypingIndicator';

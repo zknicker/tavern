@@ -172,7 +172,7 @@ test('buildTranscriptEntries shows thinking status without a generic activity bl
     });
 });
 
-test('buildTranscriptEntries shows typing status without a generic activity block', () => {
+test('buildTranscriptEntries keeps empty non-thinking replies in thinking status', () => {
     const entries = buildTranscriptEntries({
         activeReply: {
             agentId: 'agent-1',
@@ -194,11 +194,11 @@ test('buildTranscriptEntries shows typing status without a generic activity bloc
     expect(entries[0].items.map((item) => item.kind)).toEqual(['activeStatus']);
     expect(entries[0].items[0]).toMatchObject({
         kind: 'activeStatus',
-        status: 'typing',
+        status: 'thinking',
     });
 });
 
-test('buildTranscriptEntries hides active thinking status after tool activity starts', () => {
+test('buildTranscriptEntries keeps active thinking status after tool activity starts', () => {
     const entries = buildTranscriptEntries({
         activeReply: {
             agentId: 'agent-1',
@@ -219,7 +219,7 @@ test('buildTranscriptEntries hides active thinking status after tool activity st
 
     expect(
         entries[0].items.map((item) => (item.kind === 'row' ? item.row.kind : item.kind))
-    ).toEqual(['tool']);
+    ).toEqual(['tool', 'activeStatus']);
 });
 
 test('buildTranscriptEntries keeps active thinking status after assistant narration', () => {

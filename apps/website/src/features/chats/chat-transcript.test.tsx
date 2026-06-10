@@ -680,7 +680,7 @@ test('ChatTranscript shows a thinking indicator instead of generic worked text w
     assert.doesNotMatch(markup, /Worked/);
 });
 
-test('ChatTranscript shows a typing indicator instead of generic worked text when no progress exists', () => {
+test('ChatTranscript keeps the thinking indicator for empty non-thinking replies', () => {
     const markup = renderActiveTranscript({
         agentId: 'tiny',
         isThinking: false,
@@ -690,7 +690,7 @@ test('ChatTranscript shows a typing indicator instead of generic worked text whe
         text: '',
     });
 
-    assert.match(markup, /Agent is typing/);
+    assert.match(markup, /Agent is thinking/);
     assert.doesNotMatch(markup, /Working/);
     assert.doesNotMatch(markup, /Worked/);
 });
@@ -832,7 +832,7 @@ test('ChatTranscript renders active tool progress as one-line status rows', () =
 
     assert.match(markup, /Using[\s\S]*bash/);
     assert.match(markup, /data-slot="drawer-trigger"/);
-    assert.doesNotMatch(markup, /Agent is thinking/);
+    assert.match(markup, /Agent is thinking/);
     assert.doesNotMatch(markup, />Running</);
     assert.doesNotMatch(markup, />start</);
 });

@@ -158,7 +158,7 @@ export function useChatScrollController({
 
     // The controller owns every viewport listener so no consumer can forget
     // one: scroll keeps the mode current, wheel/touch carry user intent, and
-    // transitionend ends anchors when the panel's height animation settles.
+    // disclosure animation completion ends anchors when panel height settles.
     React.useEffect(() => {
         const viewport = viewportRef.current;
 
@@ -198,17 +198,35 @@ export function useChatScrollController({
                 }
             });
         };
+        const handleDisclosureAnimationEnd = () => {
+            const anchor = anchorRef.current;
+
+            if (!anchor) {
+                return;
+            }
+
+            requestAnimationFrame(() => {
+                if (anchorRef.current === anchor) {
+                    endAnchor();
+                }
+            });
+        };
 
         viewport.addEventListener('scroll', handleScroll, { passive: true });
         viewport.addEventListener('wheel', handleUserScroll, { passive: true });
         viewport.addEventListener('touchmove', handleUserScroll, { passive: true });
         viewport.addEventListener('transitionend', handleTransitionEnd);
+        document.addEventListener('chat-disclosure-animation-end', handleDisclosureAnimationEnd);
 
         return () => {
             viewport.removeEventListener('scroll', handleScroll);
             viewport.removeEventListener('wheel', handleUserScroll);
             viewport.removeEventListener('touchmove', handleUserScroll);
             viewport.removeEventListener('transitionend', handleTransitionEnd);
+            document.removeEventListener(
+                'chat-disclosure-animation-end',
+                handleDisclosureAnimationEnd
+            );
         };
     }, [dispatch, endAnchor]);
 

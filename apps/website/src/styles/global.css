@@ -248,36 +248,18 @@
     }
 
     .chat-step-enter,
-    .chat-collapsible-panel {
+    .chat-turn-work-panel {
         transition: none !important;
     }
 }
 
 @layer components {
-    /* Animated collapse/expand for chat work-log disclosures. Base UI sets
-       --collapsible-panel-height during transitions and `auto` at rest. The
-       iOS drawer curve lands decisively and matches the side tool drawer;
-       easeOutCubic front-loaded then crawled, reading as a springy settle. */
-    .chat-collapsible-panel {
-        height: var(--collapsible-panel-height);
-        overflow: hidden;
-        transition: height 240ms cubic-bezier(0.32, 0.72, 0, 1);
-    }
-
-    /* The closed resting state must also be zero-height: any frame between
-       the ending style clearing and `hidden` applying would otherwise snap
-       the panel back to its measured height — a one-frame layout pop. */
-    .chat-collapsible-panel[data-starting-style],
-    .chat-collapsible-panel[data-ending-style],
-    .chat-collapsible-panel[data-closed] {
+    /* The turn-level work disclosure is measured manually so it does not
+       share Base UI's auto/closed handoff with the smaller tool drawers. */
+    .chat-turn-work-panel {
         height: 0;
-    }
-
-    /* The turn-level work disclosure closes a whole section, often over a
-       single remaining row; a slower close keeps it reading as a drawer
-       shutting instead of a row blinking out. */
-    .chat-collapsible-panel-turn {
-        transition-duration: 400ms;
+        overflow: hidden;
+        transition: height 320ms cubic-bezier(0.65, 0, 0.35, 1);
     }
 
     /* Enter transition for work-log steps. @starting-style runs once when the

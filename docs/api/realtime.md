@@ -107,7 +107,7 @@ under load and are not replayed after disconnect.
 
 Examples:
 
-* transient typing or thinking indicators
+* transient active-turn indicators
 * short-lived hover/debug state
 * app-only invalidation hints
 

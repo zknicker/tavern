@@ -1,10 +1,5 @@
 import { ArrowDown01Icon } from '@hugeicons-pro/core-stroke-rounded';
 import * as React from 'react';
-import {
-    Collapsible,
-    CollapsiblePanel,
-    CollapsibleTrigger,
-} from '../../components/ui/collapsible.tsx';
 import { Icon } from '../../components/ui/icon.tsx';
 import { cn } from '../../lib/utils.ts';
 import { hasErrorStatus } from '../sessions/tools/tool-ui.ts';
@@ -188,34 +183,97 @@ function useDisclosureScrollAnchor() {
     return { capture, captureFromKeyboard, triggerRef };
 }
 
-const completedCollapseDelayMs = 650;
-
 export function TurnWorkDisclosure({
     children,
+    collapseForReply = false,
     end,
     start,
     status,
 }: {
     children: React.ReactNode;
+    collapseForReply?: boolean;
     end: string | null;
     start: string | null;
     status: 'active' | 'completed';
 }) {
     const isActive = status === 'active';
-    // Open while the turn works; collapse once with an animation when it
-    // completes. The collapse waits a beat so the final reply finishes
-    // revealing and the completion refetch settles first — animating while
-    // the panel's contents are still changing reads as a stutter. Completed
-    // turns start collapsed so history reads the same way a finished live
-    // turn does. Users can re-open at any time.
-    const [open, setOpen] = React.useState(isActive);
+    // Open while the turn works; collapse as soon as the final reply begins
+    // streaming. Completed turns start collapsed so history reads the same
+    // way a finished live turn does. Users can re-open at any time.
+    const [open, setOpenState] = React.useState(isActive);
+    const [panelHeight, setPanelHeight] = React.useState(0);
+    const panelId = React.useId();
+    const panelContentRef = React.useRef<HTMLDivElement | null>(null);
+    const openRef = React.useRef(open);
+    const frameRef = React.useRef<number | null>(null);
+    const transitionTimerRef = React.useRef<number | null>(null);
+    const transitioningRef = React.useRef(false);
     const wasActiveRef = React.useRef(isActive);
+    const [transitioning, setTransitioning] = React.useState(false);
     // Manual toggles anchor the trigger so the panel expands downward even
     // when the chat is bottomed out; the completion auto-collapse stays
     // unanchored so bottom-follow keeps the reply pinned instead.
     const disclosureAnchor = useDisclosureScrollAnchor();
+    const scheduleHeightTransition = React.useCallback((nextHeight: number) => {
+        frameRef.current = requestAnimationFrame(() => {
+            frameRef.current = requestAnimationFrame(() => {
+                frameRef.current = null;
+                setPanelHeight(nextHeight);
+            });
+        });
+    }, []);
+    const finishPanelTransition = React.useCallback(() => {
+        transitioningRef.current = false;
+        setTransitioning(false);
+
+        if (transitionTimerRef.current !== null) {
+            window.clearTimeout(transitionTimerRef.current);
+            transitionTimerRef.current = null;
+        }
+    }, []);
+    const startPanelTransition = React.useCallback(() => {
+        transitioningRef.current = true;
+        setTransitioning(true);
+
+        if (transitionTimerRef.current !== null) {
+            window.clearTimeout(transitionTimerRef.current);
+        }
+
+        transitionTimerRef.current = window.setTimeout(finishPanelTransition, 380);
+    }, [finishPanelTransition]);
+    const setOpen = React.useCallback(
+        (nextOpen: boolean) => {
+            if (frameRef.current !== null) {
+                cancelAnimationFrame(frameRef.current);
+                frameRef.current = null;
+            }
+
+            const content = panelContentRef.current;
+            const measuredHeight = content?.scrollHeight ?? 0;
+            openRef.current = nextOpen;
+            startPanelTransition();
+
+            if (nextOpen) {
+                setOpenState(true);
+                setPanelHeight(0);
+                scheduleHeightTransition(panelContentRef.current?.scrollHeight ?? measuredHeight);
+                return;
+            }
+
+            setOpenState(false);
+            setPanelHeight(measuredHeight);
+            scheduleHeightTransition(0);
+        },
+        [scheduleHeightTransition, startPanelTransition]
+    );
 
     React.useEffect(() => {
+        if (collapseForReply) {
+            wasActiveRef.current = true;
+            setOpen(false);
+            return;
+        }
+
         if (isActive) {
             wasActiveRef.current = true;
             setOpen(true);
@@ -227,18 +285,81 @@ export function TurnWorkDisclosure({
         }
 
         wasActiveRef.current = false;
-        const timer = window.setTimeout(() => setOpen(false), completedCollapseDelayMs);
+        setOpen(false);
+    }, [collapseForReply, isActive, setOpen]);
 
-        return () => window.clearTimeout(timer);
-    }, [isActive]);
+    React.useEffect(
+        () => () => {
+            if (frameRef.current !== null) {
+                cancelAnimationFrame(frameRef.current);
+            }
+
+            if (transitionTimerRef.current !== null) {
+                window.clearTimeout(transitionTimerRef.current);
+            }
+        },
+        []
+    );
+
+    React.useLayoutEffect(() => {
+        const content = panelContentRef.current;
+
+        if (!(content && openRef.current)) {
+            return;
+        }
+
+        setPanelHeight(content.scrollHeight);
+    }, []);
+
+    React.useEffect(() => {
+        const content = panelContentRef.current;
+
+        if (!content || typeof ResizeObserver === 'undefined') {
+            return;
+        }
+
+        const observer = new ResizeObserver(() => {
+            if (openRef.current) {
+                setPanelHeight(content.scrollHeight);
+            }
+        });
+
+        observer.observe(content);
+
+        return () => observer.disconnect();
+    }, []);
+
+    const panelStyle = React.useMemo<React.CSSProperties>(
+        () => ({
+            height: `${panelHeight}px`,
+            transition: transitioning ? undefined : 'none',
+        }),
+        [panelHeight, transitioning]
+    );
+
+    const handlePanelTransitionEnd = React.useCallback(
+        (event: React.TransitionEvent<HTMLDivElement>) => {
+            if (event.target !== event.currentTarget || event.propertyName !== 'height') {
+                return;
+            }
+
+            finishPanelTransition();
+        },
+        [finishPanelTransition]
+    );
 
     return (
-        <Collapsible className="flex min-w-0 flex-col" onOpenChange={setOpen} open={open}>
-            <CollapsibleTrigger
+        <div className="flex min-w-0 flex-col">
+            <button
+                aria-controls={panelId}
+                aria-expanded={open}
                 className="group rounded-md border-border/70 border-b pb-2 text-left font-medium text-[13px] text-muted-foreground leading-tight transition-colors hover:text-foreground"
+                data-panel-open={open ? '' : undefined}
+                onClick={() => setOpen(!open)}
                 onKeyDown={disclosureAnchor.captureFromKeyboard}
                 onPointerDown={disclosureAnchor.capture}
                 ref={disclosureAnchor.triggerRef}
+                type="button"
             >
                 <span className="inline-flex items-center gap-1.5">
                     <TurnWorkHeaderContent end={end} start={start} status={status} />
@@ -248,16 +369,22 @@ export function TurnWorkDisclosure({
                         strokeWidth={1.7}
                     />
                 </span>
-            </CollapsibleTrigger>
-            <CollapsiblePanel
-                className="chat-collapsible-panel chat-collapsible-panel-turn"
-                keepMounted
+            </button>
+            <div
+                aria-hidden={!open}
+                className="chat-turn-work-panel"
+                id={panelId}
+                inert={open ? undefined : true}
+                onTransitionEnd={handlePanelTransitionEnd}
+                style={panelStyle}
             >
                 {/* Spacing lives inside the animated panel so it collapses with
                     the height instead of vanishing in one frame at the end. */}
-                <div className="flex min-w-0 flex-col gap-4 pt-3.5">{children}</div>
-            </CollapsiblePanel>
-        </Collapsible>
+                <div className="flex min-w-0 flex-col gap-4 pt-3.5" ref={panelContentRef}>
+                    {children}
+                </div>
+            </div>
+        </div>
     );
 }
 
