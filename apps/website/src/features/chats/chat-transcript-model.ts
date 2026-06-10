@@ -119,11 +119,30 @@ function getItemRunId(item: TranscriptItem) {
         return item.failure.turn.runId;
     }
 
-    if (item.row.kind !== 'message') {
-        return null;
+    if (item.row.kind === 'message') {
+        const fromMetadata = runtimeMetadataRunId(item.row.message.metadata);
+
+        if (fromMetadata) {
+            return fromMetadata;
+        }
     }
 
-    const runtime = item.row.message.metadata?.runtime;
+    // Tool, worker, and thinking rows carry no runtime metadata, but their
+    // activity ids embed the run id. Without this, the turn id flips between
+    // turn:<runId> and a row id whenever the live tail (the only other runId
+    // source) toggles, remounting the whole turn mid-stream.
+    return activityRowRunId(item.row.id);
+}
+
+const activityRunIdPattern =
+    /^act_(run_[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})_/;
+
+function activityRowRunId(id: string) {
+    return activityRunIdPattern.exec(id)?.[1] ?? null;
+}
+
+function runtimeMetadataRunId(metadata: Record<string, unknown> | null | undefined) {
+    const runtime = metadata?.runtime;
 
     if (!(runtime && typeof runtime === 'object' && !Array.isArray(runtime))) {
         return null;

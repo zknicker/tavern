@@ -503,3 +503,48 @@ test('agent turns split by a runtime notice keep unique entry ids', () => {
 
     expect(new Set(turnIds).size).toBe(turnIds.length);
 });
+
+test('turn id stays stable when the live tail toggles around tool-only items', () => {
+    const uuidRunId = 'run_3784febf-6024-47a3-a357-1d281a357f47';
+    const uuidTool: ChatRow = {
+        actor: { id: 'agent-1', kind: 'agent' },
+        completedAt: null,
+        connectsToNext: false,
+        connectsToPrevious: false,
+        id: `act_${uuidRunId}_call_1`,
+        isFirstInGroup: true,
+        kind: 'tool',
+        sessionKey: 'session-1',
+        spawnedRelationships: [],
+        startedAt: '2026-05-11T16:00:01.000Z',
+        toolCall: {
+            callId: 'call_1',
+            facts: [],
+            label: 'pwd',
+            name: 'terminal',
+            status: 'running',
+            summaryParts: ['pwd'],
+        },
+    };
+    const tailOnly = buildTranscriptEntries({
+        activeReply: {
+            agentId: 'agent-1',
+            isThinking: true,
+            runId: uuidRunId,
+            sessionKey: 'session-1',
+            startedAt: '2026-05-11T16:00:00.500Z',
+            text: '',
+        },
+        rows: [],
+    });
+    // While a tool runs, the live tail hides and tool rows are the only
+    // items — the id must not flip to a row key.
+    const toolOnly = buildTranscriptEntries({ activeReply: null, rows: [uuidTool] });
+
+    const ids = [tailOnly, toolOnly].map(
+        (entries) =>
+            entries.find((entry) => entry.kind === 'turn' && entry.participant === 'agent')?.id
+    );
+
+    expect(ids).toEqual([`turn:${uuidRunId}`, `turn:${uuidRunId}`]);
+});
