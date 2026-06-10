@@ -8,6 +8,9 @@ type ChatLogInput = Omit<ChatLogPage, 'activeReply' | 'failedTurn'> &
 type MessageRow = Extract<ChatLogRow, { kind: 'message' }>;
 type ToolRow = Extract<ChatLogRow, { kind: 'tool' }>;
 type ThinkingRow = Extract<ChatLogRow, { kind: 'system'; systemKind: 'thinking' }>;
+type NoticeRow = Extract<ChatLogRow, { kind: 'system'; systemKind: 'runtimeNotice' }>;
+type WorkerRow = Extract<ChatLogRow, { kind: 'worker' }>;
+type ProgressRow = MessageRow | NoticeRow | ThinkingRow | ToolRow | WorkerRow;
 
 export const defaultLiveChatLogLimit = 100;
 
@@ -61,13 +64,21 @@ function progressStepToChatRow(input: {
     step: ChatTurnProgressStep;
     timestamp: string;
     turn: ChatTurn;
-}): MessageRow | ThinkingRow | ToolRow {
+}): ProgressRow {
     if (input.step.kind === 'message') {
         return progressStepToMessageRow(input);
     }
 
     if (input.step.kind === 'reasoning' || input.step.kind === 'plan') {
         return progressStepToThinkingRow(input);
+    }
+
+    if (input.step.kind === 'notice') {
+        return progressStepToNoticeRow(input);
+    }
+
+    if (input.step.kind === 'worker') {
+        return progressStepToWorkerRow(input);
     }
 
     return progressStepToToolRow(input);
@@ -167,13 +178,94 @@ function progressStepToToolRow(input: {
     };
 }
 
-function mergeProgressRows(existing: ChatLogRow, next: MessageRow | ThinkingRow | ToolRow) {
+// Live placeholders until the durable rows land on the next chat log
+// refetch. Notice rows reuse the runtime-notice system row; worker rows
+// carry just enough of the worker shape for WorkerStep and live group
+// labels — identity facts the runtime did not send stay null.
+function progressStepToNoticeRow(input: {
+    step: ChatTurnProgressStep;
+    timestamp: string;
+    turn: ChatTurn;
+}): NoticeRow {
+    return {
+        id: progressActivityId(input.turn.runId, input.step.id),
+        kind: 'system',
+        runtimeNotice: {
+            compactionCount: null,
+            detail: null,
+            kind: 'status',
+            sessionId: null,
+            text: input.step.detail ?? input.step.label,
+            title: input.step.label,
+        },
+        systemKind: 'runtimeNotice',
+        timestamp: input.timestamp,
+    };
+}
+
+function progressStepToWorkerRow(input: {
+    step: ChatTurnProgressStep;
+    timestamp: string;
+    turn: ChatTurn;
+}): WorkerRow {
+    const id = progressActivityId(input.turn.runId, input.step.id);
+    const isRunning = input.step.status === 'active';
+
+    return {
+        actor: { id: input.turn.agentId, kind: 'agent' },
+        completedAt: isRunning ? null : input.timestamp,
+        connectsToNext: false,
+        connectsToPrevious: false,
+        id,
+        isFirstInGroup: true,
+        kind: 'worker',
+        sessionKey: input.turn.sessionKey,
+        startedAt: input.timestamp,
+        worker: {
+            agentId: input.turn.agentId,
+            agentName: input.turn.agentId,
+            chatTitle: null,
+            childSessionKey: null,
+            cleanupAfter: null,
+            createdAt: input.timestamp,
+            deliveryStatus: null,
+            description: null,
+            detail: input.step.detail ?? null,
+            endedAt: isRunning ? null : input.timestamp,
+            error: null,
+            executionMode: 'unknown',
+            id,
+            kind: 'subagent',
+            lastEventAt: input.timestamp,
+            notifyPolicy: null,
+            parentWorkerId: null,
+            progressSummary: input.step.detail ?? null,
+            requesterSessionKey: input.turn.sessionKey,
+            runId: input.turn.runId,
+            sessionKey: null,
+            source: 'agentRuntime',
+            sourceFlowId: null,
+            sourceId: id,
+            startedAt: input.timestamp,
+            status: input.step.status === 'failed' ? 'failed' : isRunning ? 'running' : 'succeeded',
+            syncedAt: input.timestamp,
+            terminalSummary: null,
+            title: input.step.label,
+        },
+    };
+}
+
+function mergeProgressRows(existing: ChatLogRow, next: ProgressRow) {
     if (existing.kind === 'message' && next.kind === 'message') {
         return mergeMessageRows(existing, next);
     }
 
     if (existing.kind === 'tool' && next.kind === 'tool') {
         return mergeToolRows(existing, next);
+    }
+
+    if (existing.kind === 'worker' && next.kind === 'worker') {
+        return mergeWorkerRows(existing, next);
     }
 
     if (
@@ -209,6 +301,21 @@ function mergeThinkingRows(existing: ThinkingRow, next: ThinkingRow): ThinkingRo
             timestamp: existing.thinking.timestamp ?? next.thinking.timestamp,
         },
         timestamp: existing.timestamp ?? next.timestamp,
+    };
+}
+
+function mergeWorkerRows(existing: WorkerRow, next: WorkerRow): WorkerRow {
+    return {
+        ...next,
+        completedAt: next.completedAt ?? existing.completedAt,
+        startedAt: existing.startedAt ?? next.startedAt,
+        worker: {
+            ...next.worker,
+            createdAt: existing.worker.createdAt,
+            detail: next.worker.detail ?? existing.worker.detail,
+            progressSummary: next.worker.progressSummary ?? existing.worker.progressSummary,
+            startedAt: existing.worker.startedAt ?? next.worker.startedAt,
+        },
     };
 }
 
@@ -271,7 +378,12 @@ function toolNameForStep(step: ChatTurnProgressStep) {
 function toolTarget(step: ChatTurnProgressStep) {
     const detail = step.detail?.trim();
 
-    if (step.kind === 'message' || step.kind === 'reasoning' || step.kind === 'plan') {
+    if (
+        step.kind === 'approval' ||
+        step.kind === 'message' ||
+        step.kind === 'reasoning' ||
+        step.kind === 'plan'
+    ) {
         return detail ?? stripToolVerb(step.label);
     }
 

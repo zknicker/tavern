@@ -75,6 +75,8 @@ export const agentRuntimeRoutes = {
     skills: '/skills',
     toolsetEnabled: (id: string) => `/toolsets/${encodeURIComponent(id)}/enabled`,
     toolsets: '/toolsets',
+    sessionApprovalRespond: (sessionKey: string) =>
+        `/hermes/sessions/${encodeURIComponent(sessionKey)}/approval`,
     sessionGraph: (sessionKey: string) => `/hermes/sessions/${sessionKey}/graph`,
     sessionMessages: (sessionKey: string) => `/hermes/sessions/${sessionKey}/messages`,
     sessionPrompt: (sessionKey: string) => `/hermes/sessions/${sessionKey}/prompt`,

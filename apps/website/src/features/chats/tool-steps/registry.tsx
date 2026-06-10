@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react';
+import { ApprovalToolStep } from './approval-tool-step.tsx';
 import { GenericToolStep } from './generic-tool-step.tsx';
 import { ShellToolStep } from './shell-tool-step.tsx';
 import type { ToolStepRendererProps } from './types.ts';
@@ -13,6 +14,7 @@ type ToolStepRenderer = (props: ToolStepRendererProps) => ReactNode;
 // features/sessions/tools/tool-drawer-registry.tsx. See
 // docs/internals/tool-presentation.md.
 const toolStepRenderers = {
+    approval: ApprovalToolStep,
     bash: ShellToolStep,
     command: ShellToolStep,
     exec: ShellToolStep,

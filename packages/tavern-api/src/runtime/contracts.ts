@@ -1390,6 +1390,17 @@ export const agentRuntimeStopTurnResultSchema = z.object({
     stopped: z.boolean(),
 });
 
+export const agentRuntimeApprovalChoiceSchema = z.enum(['once', 'session', 'always', 'deny']);
+
+export const agentRuntimeApprovalRespondSchema = z.object({
+    all: z.boolean().optional(),
+    choice: agentRuntimeApprovalChoiceSchema,
+});
+
+export const agentRuntimeApprovalRespondResultSchema = z.object({
+    resolved: z.number().int().nonnegative(),
+});
+
 export const tavernChannelConversationSchema = z.object({
     groupChannel: z.string().trim().min(1).nullable().optional(),
     groupSubject: z.string().trim().min(1).nullable().optional(),
@@ -1471,7 +1482,17 @@ export const agentRuntimeTurnProgressStatusSchema = z.enum(['active', 'completed
 export const agentRuntimeTurnProgressStepSchema = z.object({
     detail: z.string().trim().min(1).nullable().optional(),
     id: z.string().trim().min(1),
-    kind: z.enum(['approval', 'artifact', 'command', 'message', 'plan', 'reasoning', 'tool']),
+    kind: z.enum([
+        'approval',
+        'artifact',
+        'command',
+        'message',
+        'notice',
+        'plan',
+        'reasoning',
+        'tool',
+        'worker',
+    ]),
     label: z.string().trim().min(1),
     status: agentRuntimeTurnProgressStatusSchema,
     toolCallId: z.string().trim().min(1).nullable().optional(),
@@ -1882,6 +1903,11 @@ export type AgentRuntimeCreateMessage = z.infer<typeof agentRuntimeCreateMessage
 export type AgentRuntimeMessageAccepted = z.infer<typeof agentRuntimeMessageAcceptedSchema>;
 export type AgentRuntimeStopTurn = z.infer<typeof agentRuntimeStopTurnSchema>;
 export type AgentRuntimeStopTurnResult = z.infer<typeof agentRuntimeStopTurnResultSchema>;
+export type AgentRuntimeApprovalChoice = z.infer<typeof agentRuntimeApprovalChoiceSchema>;
+export type AgentRuntimeApprovalRespond = z.infer<typeof agentRuntimeApprovalRespondSchema>;
+export type AgentRuntimeApprovalRespondResult = z.infer<
+    typeof agentRuntimeApprovalRespondResultSchema
+>;
 export type TavernChannelConversation = z.infer<typeof tavernChannelConversationSchema>;
 export type TavernChannelHistoryEntry = z.infer<typeof tavernChannelHistoryEntrySchema>;
 export type TavernChannelMessage = z.infer<typeof tavernChannelMessageSchema>;

@@ -135,6 +135,27 @@ export class LocalHermesClient extends LocalHermesUnsupportedSurfaces {
         });
     }
 
+    // Answers a pending tool-approval prompt. choice mirrors the gateway
+    // contract: once | session | always | deny; all resolves every queued
+    // approval at once. Returns how many approvals were resolved.
+    async respondToLiveApproval(
+        sessionId: string,
+        input: { all?: boolean; choice: 'always' | 'deny' | 'once' | 'session' }
+    ) {
+        const result = await this.#gateway.request('approval.respond', {
+            all: input.all ?? false,
+            choice: input.choice,
+            session_id: sessionId,
+        });
+        const resolved =
+            result && typeof result === 'object'
+                ? (result as Record<string, unknown>).resolved
+                : null;
+        return {
+            resolved: typeof resolved === 'number' && Number.isFinite(resolved) ? resolved : 0,
+        };
+    }
+
     async listAgents() {
         const state = await readHermesAdapterState();
         return agentRuntimeAgentListSchema.parse({
@@ -744,6 +765,45 @@ export class LocalHermesClient extends LocalHermesUnsupportedSurfaces {
                             delta: readString(event.payload, ['text']) ?? '',
                         },
                         event: 'reasoning.delta',
+                    };
+                    continue;
+                }
+
+                // Composing started: the reply indicator can flip from
+                // Thinking to Typing before the first delta lands.
+                if (event.type === 'message.start') {
+                    yield { data: {}, event: 'assistant.composing' };
+                    continue;
+                }
+
+                // Agent notices (credits, recoverable warnings). show carries
+                // { text, level, kind, ttl_ms, key, id }; clear carries { key }.
+                if (event.type === 'notification.show' || event.type === 'notification.clear') {
+                    yield {
+                        data: { ...event.payload, source_event: event.type },
+                        event:
+                            event.type === 'notification.show' ? 'notice.shown' : 'notice.cleared',
+                    };
+                    continue;
+                }
+
+                // Spawn-tree progress (subagent.start/tool/complete). The
+                // payload is projected verbatim; the turn runner records the
+                // source facts and the server shapes worker rows from them.
+                if (event.type.startsWith('subagent.')) {
+                    yield {
+                        data: { ...event.payload, source_event: event.type },
+                        event: 'worker.progress',
+                    };
+                    continue;
+                }
+
+                // Tool-approval prompt; the agent thread is blocked until a
+                // client answers the approval.respond gateway RPC.
+                if (event.type === 'approval.request') {
+                    yield {
+                        data: { ...event.payload, source_event: event.type },
+                        event: 'approval.requested',
                     };
                     continue;
                 }

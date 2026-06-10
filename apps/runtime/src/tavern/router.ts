@@ -1,4 +1,6 @@
 import {
+    agentRuntimeApprovalRespondResultSchema,
+    agentRuntimeApprovalRespondSchema,
     agentRuntimeHighlightListSchema,
     agentRuntimeMacAppListSchema,
     agentRuntimeMutationHeaders,
@@ -21,6 +23,7 @@ import { handleCortexRequest } from '../wiki/routes';
 import { handleWorkspaceRequest } from '../workspace/routes';
 import { handleTavernApiRequest } from './chat-api-router';
 import { deliverHermesCronToTavernChat } from './cron-delivery';
+import { respondToHermesApproval } from './hermes-turn-runner';
 import { forbidden, json, notFound, readJson } from './http';
 import { handleHermesProxyRequest } from './proxy';
 import { listProjectedTavernRuntimeEvents } from './runtime-event-projection';
@@ -207,6 +210,15 @@ export async function handleTavernRuntimeRequest(request: Request): Promise<Resp
     if (hermesSessionKey && request.method === 'POST' && segments[3] === 'resync') {
         const response = await handleHermesProxyRequest(request);
         return response ?? notFound();
+    }
+
+    if (hermesSessionKey && request.method === 'POST' && segments[3] === 'approval') {
+        const payload = agentRuntimeApprovalRespondSchema.parse(await readJson(request));
+        return json(
+            agentRuntimeApprovalRespondResultSchema.parse(
+                await respondToHermesApproval({ ...payload, sessionKey: hermesSessionKey })
+            )
+        );
     }
 
     const proxyResponse = await handleHermesProxyRequest(request);

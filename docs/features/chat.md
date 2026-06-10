@@ -125,6 +125,28 @@ When Hermes accepts an explicit mid-turn steer, Runtime records a
 `runtimeNotice` activity row. Tavern App renders it as a system row in the same
 notice style as runtime session and compaction notices.
 
+Other engine gateway signals surface the same way — as durable activity rows
+that also patch live through `turn.progress` steps:
+
+* **Agent notices.** Engine notices (for example credit warnings) record as
+  `runtimeNotice` activities; a matching clear completes the row. They render
+  as the existing system notice rows, live and in history.
+* **Workers.** Spawn-tree progress records one activity per worker keyed by
+  the engine's stable worker id, with goal, model, status, token/cost rollups,
+  and file lists preserved as `metadata.subagent` source facts. The server
+  projects these as `worker` rows for the existing worker step; running
+  workers count toward live group labels ("Working on …"). Rollups stay in
+  metadata for Stats.
+* **Tool approvals.** A pending approval prompt records an `approval`
+  activity and renders as a tool row with inline Approve/Deny actions
+  (`chat.approval.respond` → Runtime → engine gateway). The row shows the
+  waiting shimmer until the agent resumes; approving runs the command once,
+  denying blocks it. An unanswered prompt times out engine-side and the turn
+  continues as denied.
+* **Typing indicator.** The live tail flips Thinking → Typing when the engine
+  dispatches a message, and back to Thinking while visible work (reasoning,
+  tools) is still arriving before reply text streams.
+
 ## Pinned chats
 
 Pinned chat state is durable Tavern Runtime chat state. It survives app

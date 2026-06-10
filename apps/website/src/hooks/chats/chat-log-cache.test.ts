@@ -203,3 +203,93 @@ test('progress patch keeps preamble and normalized Hermes tool activity stable t
         },
     });
 });
+
+test('progress patch inserts a notice step as a runtime-notice system row', () => {
+    const log = patchChatLogWithProgress(emptyLog(), {
+        step: {
+            detail: 'Credits low.',
+            id: 'run-1_notice_credits',
+            kind: 'notice',
+            label: 'Agent notice',
+            status: 'active',
+        },
+        timestamp: '2026-05-22T19:00:01.000Z',
+        turn,
+    });
+
+    expect(log?.rows).toHaveLength(1);
+    expect(log?.rows[0]).toMatchObject({
+        id: 'act_run-1_notice_credits',
+        kind: 'system',
+        runtimeNotice: {
+            kind: 'status',
+            text: 'Credits low.',
+            title: 'Agent notice',
+        },
+        systemKind: 'runtimeNotice',
+    });
+});
+
+test('progress patch tracks a worker step through running and completed states', () => {
+    const running = patchChatLogWithProgress(emptyLog(), {
+        step: {
+            id: 'run-1_subagent_sub_1',
+            kind: 'worker',
+            label: 'Summarize the repo',
+            status: 'active',
+        },
+        timestamp: '2026-05-22T19:00:01.000Z',
+        turn,
+    });
+    const completed = patchChatLogWithProgress(running, {
+        step: {
+            detail: 'Summarized 12 files.',
+            id: 'run-1_subagent_sub_1',
+            kind: 'worker',
+            label: 'Summarize the repo',
+            status: 'completed',
+        },
+        timestamp: '2026-05-22T19:00:09.000Z',
+        turn,
+    });
+
+    expect(completed?.rows).toHaveLength(1);
+    expect(completed?.rows[0]).toMatchObject({
+        completedAt: '2026-05-22T19:00:09.000Z',
+        id: 'act_run-1_subagent_sub_1',
+        kind: 'worker',
+        startedAt: '2026-05-22T19:00:01.000Z',
+        worker: {
+            detail: 'Summarized 12 files.',
+            kind: 'subagent',
+            status: 'succeeded',
+            title: 'Summarize the repo',
+        },
+    });
+});
+
+test('progress patch renders an approval step as a pending approval tool row', () => {
+    const log = patchChatLogWithProgress(emptyLog(), {
+        step: {
+            detail: 'Dangerous delete',
+            id: 'run-1_approval_1',
+            kind: 'approval',
+            label: 'Approval',
+            status: 'active',
+            toolName: 'approval',
+        },
+        timestamp: '2026-05-22T19:00:01.000Z',
+        turn,
+    });
+
+    expect(log?.rows).toHaveLength(1);
+    expect(log?.rows[0]).toMatchObject({
+        completedAt: null,
+        kind: 'tool',
+        sessionKey: turn.sessionKey,
+        toolCall: {
+            name: 'approval',
+            summaryParts: ['Dangerous delete'],
+        },
+    });
+});

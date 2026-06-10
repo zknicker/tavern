@@ -90,6 +90,13 @@ Chat events:
 Automation, memory inspection, Cortex wiki, skill, and stats events use the
 same durable event log when they affect client-visible Runtime state.
 
+Activity events project to live `turn.progress` steps for app patching. The
+step kind comes from the durable activity: `approval` activities project as
+`approval` steps, activities carrying `metadata.runtime.notice` project as
+`notice` steps, and activities carrying `metadata.subagent` source facts
+project as `worker` steps. The projected step id equals the activity id, so
+live rows and durable rows reconcile in place.
+
 Read events are private to the reader. Private events use `private` plus
 `recipients`, and Runtime filters them during event list and websocket delivery.
 

@@ -1,4 +1,5 @@
 import { createRouter } from '../trpc.ts';
+import { respondToChatApprovalRoute } from './approval-respond.ts';
 import { archiveChatRoute } from './archive.ts';
 import { createChatRoute } from './create.ts';
 import { getChatRoute } from './get.ts';
@@ -21,6 +22,9 @@ import { updateChatSystemPromptRoute } from './update-system-prompt.ts';
 import { updateChatTabAppearanceRoute } from './update-tab-appearance.ts';
 
 export const chatRouter = createRouter({
+    approval: createRouter({
+        respond: respondToChatApprovalRoute,
+    }),
     archive: archiveChatRoute,
     create: createChatRoute,
     get: getChatRoute,

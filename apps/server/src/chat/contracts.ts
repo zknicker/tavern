@@ -244,6 +244,16 @@ export const stopChatTurnResultSchema = z.object({
     stopped: z.boolean(),
 });
 
+export const respondToChatApprovalInputSchema = z.object({
+    chatId: z.string().trim().min(1),
+    choice: z.enum(['once', 'session', 'always', 'deny']),
+    sessionKey: z.string().trim().min(1),
+});
+
+export const respondToChatApprovalResultSchema = z.object({
+    resolved: z.number().int().nonnegative(),
+});
+
 export const chatLogMessageRowSchema = messageRowSchema;
 export const chatLogToolRowSchema = toolRowSchema;
 export const chatLogWorkerRowSchema = workerRowSchema;
@@ -303,3 +313,5 @@ export type SendChatMessageInput = z.infer<typeof sendChatMessageInputSchema>;
 export type SendChatMessageResult = z.infer<typeof sendChatMessageResultSchema>;
 export type StopChatTurnInput = z.infer<typeof stopChatTurnInputSchema>;
 export type StopChatTurnResult = z.infer<typeof stopChatTurnResultSchema>;
+export type RespondToChatApprovalInput = z.infer<typeof respondToChatApprovalInputSchema>;
+export type RespondToChatApprovalResult = z.infer<typeof respondToChatApprovalResultSchema>;

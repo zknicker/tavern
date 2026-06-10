@@ -15,7 +15,16 @@ export type ChatTimelineMessageRow = Extract<ChatTimeline[number], { kind: 'mess
 export interface ChatTurnProgressStep {
     detail?: string | null;
     id: string;
-    kind: 'approval' | 'artifact' | 'command' | 'message' | 'plan' | 'reasoning' | 'tool';
+    kind:
+        | 'approval'
+        | 'artifact'
+        | 'command'
+        | 'message'
+        | 'notice'
+        | 'plan'
+        | 'reasoning'
+        | 'tool'
+        | 'worker';
     label: string;
     status: 'active' | 'completed' | 'failed';
     toolCallId?: string | null;

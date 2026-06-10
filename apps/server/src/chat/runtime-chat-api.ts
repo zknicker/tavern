@@ -10,6 +10,7 @@ import { sessionMessageAttachmentSchema } from '../sessions/contracts/messages.t
 import { getActiveAgentRuntimeConnection } from '../storage/agent-runtime-connections.ts';
 import { buildToolSummaryFromValues } from '../tools/summary.ts';
 import type { ChatLogPage } from './contracts.ts';
+import { workerRowFromSubagentActivity } from './runtime-worker-rows.ts';
 
 export async function listRuntimeChatRows(chatId: string): Promise<ChatLogPage['rows'] | null> {
     const timeline = await listRuntimeChatTimeline(chatId);
@@ -45,9 +46,10 @@ export async function listRuntimeChatTimeline(chatId: string): Promise<{
             .map((message) => [runtimeMetadataString(message, 'runId'), messageText(message)])
             .filter((entry): entry is [string, string] => Boolean(entry[0]))
     );
+    const agentNamesById = new Map(agents.map((agent) => [agent.id, agent.name]));
     const messageRows = page.messages.flatMap((message) => messageToChatRows(message, agentsById));
     const activityRows = responsePage.activity.flatMap((activity) =>
-        activityToChatRows(activity, responsesById, finalReplyTextByRunId)
+        activityToChatRows(activity, responsesById, finalReplyTextByRunId, agentNamesById)
     );
     const artifactRows = responsePage.artifacts.map(artifactToChatRow);
     const rows = [...messageRows, ...activityRows, ...artifactRows];
@@ -170,7 +172,8 @@ function messageAttachments(message: TavernChatMessage) {
 function activityToChatRows(
     activity: TavernResponseActivity,
     responsesById: ReadonlyMap<string, TavernChatResponse>,
-    finalReplyTextByRunId: ReadonlyMap<string, string>
+    finalReplyTextByRunId: ReadonlyMap<string, string>,
+    agentNamesById: ReadonlyMap<string, string>
 ): ChatLogPage['rows'] {
     const response = responsesById.get(activity.response_id) ?? null;
     const sessionKey = runtimeMetadataString(response, 'sessionKey');
@@ -190,6 +193,17 @@ function activityToChatRows(
                 timestamp: activity.started_at,
             },
         ];
+    }
+
+    const workerRow = workerRowFromSubagentActivity({
+        activity,
+        actor,
+        agentName: agentNamesById.get(actor.id) ?? null,
+        sessionKey,
+    });
+
+    if (workerRow) {
+        return [workerRow];
     }
 
     if (!isRenderableActivity(activity, response, finalReplyTextByRunId)) {
@@ -416,7 +430,8 @@ function activitySummaryParts(activity: TavernResponseActivity) {
 
     if (
         detail &&
-        (activity.kind === 'message' ||
+        (activity.kind === 'approval' ||
+            activity.kind === 'message' ||
             activity.kind === 'reasoning' ||
             activity.kind === 'planning')
     ) {

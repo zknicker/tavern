@@ -71,6 +71,7 @@ function WorkerStep({
     const { openSession } = useSessionDrawer();
     const config = workerKindConfig[row.worker.kind];
     const relatedSessionKey = row.worker.childSessionKey ?? row.worker.sessionKey;
+    const status = workerStepStatus(row.worker.status);
 
     return (
         <ThinkingStep
@@ -90,7 +91,19 @@ function WorkerStep({
                     <span className="truncate text-muted-foreground">{row.worker.title}</span>
                 </button>
             }
-            status={row.worker.status === 'failed' ? 'failed' : 'complete'}
+            status={status}
         />
     );
+}
+
+function workerStepStatus(status: Extract<TranscriptRow, { kind: 'worker' }>['worker']['status']) {
+    if (status === 'failed' || status === 'timed_out') {
+        return 'failed' as const;
+    }
+
+    if (status === 'queued' || status === 'running' || status === 'waiting') {
+        return 'active' as const;
+    }
+
+    return 'complete' as const;
 }

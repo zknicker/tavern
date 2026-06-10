@@ -1,8 +1,12 @@
-import type { AgentRuntimeSessionMessageAttachment } from '@tavern/api';
+import type {
+    AgentRuntimeApprovalRespond,
+    AgentRuntimeSessionMessageAttachment,
+} from '@tavern/api';
 import { readConfigValue } from '../config';
 import { createLocalHermesClient } from '../hermes/local-client';
 import { createDelivery, upsertResponse, upsertResponseActivity } from './chat-api';
 import { createAgentParticipantId } from './chat-api/ids';
+import { createGatewayActivityRecorder } from './hermes-gateway-activities';
 import { publishRuntimeEvent } from './runtime-events';
 import {
     createTurnStreamThrottle,
@@ -14,7 +18,12 @@ type HermesClient = ReturnType<typeof createLocalHermesClient>;
 
 const activeHermesTurns = new Map<
     string,
-    { client: HermesClient; controller: AbortController; sessionId: string | null }
+    {
+        client: HermesClient;
+        controller: AbortController;
+        sessionId: string | null;
+        sessionKey: string;
+    }
 >();
 let hermesTurnClient: HermesClient | null = null;
 const visibleAssistantStatusKinds = new Set(['compressing', 'goal', 'process', 'status']);
@@ -54,9 +63,17 @@ export async function runHermesTurn(input: {
         client,
         controller: new AbortController(),
         sessionId: null as string | null,
+        sessionKey: input.sessionKey,
     };
     activeHermesTurns.set(input.runId, activeTurn);
     const stream = createTurnStreamThrottle();
+    const gatewayActivities = createGatewayActivityRecorder({
+        agentId: input.agentId,
+        chatId: input.chatId,
+        responseId: input.responseId,
+        runId: input.runId,
+        sessionKey: input.sessionKey,
+    });
     // Both wrappers flush coalesced stream writes first so running-status
     // writes always land before the segment's terminal write.
     const completeReasoningToProgress = (sourceEvent?: string) => {
@@ -82,6 +99,21 @@ export async function runHermesTurn(input: {
         assistantSegment = null;
     };
 
+    // Typing indicator state: message.start flips Thinking → Typing, but the
+    // gateway emits it at turn dispatch, so visible work arriving afterwards
+    // (reasoning, tools) restores the Thinking indicator until text streams.
+    let typingIndicated = false;
+    const publishReplyIndicator = (isThinking: boolean) => {
+        typingIndicated = !isThinking;
+        publishRuntimeEvent({
+            isThinking,
+            text: '',
+            timestamp: new Date().toISOString(),
+            turn,
+            type: 'turn.replyUpdated',
+        });
+    };
+
     try {
         publishRuntimeEvent({ timestamp: startedAt, turn, type: 'turn.started' });
 
@@ -96,8 +128,50 @@ export async function runHermesTurn(input: {
             signal: activeTurn.controller.signal,
             title: input.chatId,
         })) {
-            if (!isReasoningEvent(event.event)) {
+            // Notices arrive from a background poller and must not chop an
+            // in-flight reasoning segment.
+            if (!(isReasoningEvent(event.event) || isNoticeEvent(event.event))) {
                 completeReasoningToProgress();
+            }
+
+            // The gateway emits no approval-resolution event; the stream
+            // resuming is the resolution signal.
+            if (gatewayActivities.hasOpenApproval() && isAgentResumedEvent(event.event)) {
+                gatewayActivities.settleOldestApproval();
+            }
+
+            if (typingIndicated && !assistantSegment && isVisibleWorkEvent(event.event)) {
+                publishReplyIndicator(true);
+            }
+
+            if (event.event === 'assistant.composing') {
+                if (!assistantSegment) {
+                    publishReplyIndicator(false);
+                }
+                continue;
+            }
+
+            if (event.event === 'notice.shown') {
+                gatewayActivities.recordNotice(event.data);
+                continue;
+            }
+
+            if (event.event === 'notice.cleared') {
+                gatewayActivities.clearNotice(event.data);
+                continue;
+            }
+
+            if (event.event === 'worker.progress') {
+                flushAssistantToProgress();
+                recordWorkerProgress(gatewayActivities, stream, event);
+                continue;
+            }
+
+            if (event.event === 'approval.requested') {
+                flushAssistantToProgress();
+                stream.flush();
+                gatewayActivities.recordApproval(event.data);
+                continue;
             }
 
             if (event.event === 'assistant.delta') {
@@ -108,6 +182,7 @@ export async function runHermesTurn(input: {
                 }
                 if (!assistantSegment) {
                     assistantSegmentIndex += 1;
+                    typingIndicated = false;
                     assistantSegment = {
                         content: '',
                         index: assistantSegmentIndex,
@@ -268,6 +343,25 @@ export async function interruptHermesTurn(runId: string) {
         console.warn('[tavern-runtime] Hermes turn interrupt failed', error);
         return false;
     }
+}
+
+// Answers a pending tool-approval prompt for the session's active turn by
+// forwarding the choice to the engine gateway.
+export async function respondToHermesApproval(
+    input: AgentRuntimeApprovalRespond & { sessionKey: string }
+) {
+    for (const activeTurn of activeHermesTurns.values()) {
+        if (activeTurn.sessionKey !== input.sessionKey || !activeTurn.sessionId) {
+            continue;
+        }
+
+        return await activeTurn.client.respondToLiveApproval(activeTurn.sessionId, {
+            all: input.all,
+            choice: input.choice,
+        });
+    }
+
+    throw new Error(`No active turn is awaiting approval for session "${input.sessionKey}".`);
 }
 
 export function closeHermesTurnClients() {
@@ -729,6 +823,57 @@ function isToolLifecycleEvent(event: string) {
 
 function isReasoningEvent(event: string) {
     return event === 'reasoning.delta';
+}
+
+function isNoticeEvent(event: string) {
+    return event === 'notice.shown' || event === 'notice.cleared';
+}
+
+// Work-log activity that means the agent is still working, not composing the
+// visible reply.
+function isVisibleWorkEvent(event: string) {
+    return (
+        event === 'reasoning.delta' ||
+        event === 'assistant.status' ||
+        event === 'approval.requested' ||
+        event === 'worker.progress' ||
+        isToolLifecycleEvent(event) ||
+        event === 'tool.progress'
+    );
+}
+
+// Events that prove the blocked agent thread resumed after an approval.
+// Notices ride a background poller and spawned workers run on their own
+// threads, so neither implies the approval resolved.
+function isAgentResumedEvent(event: string) {
+    return !(
+        isNoticeEvent(event) ||
+        event === 'worker.progress' ||
+        event === 'approval.requested' ||
+        event === 'session.info'
+    );
+}
+
+// subagent.tool fires per worker tool call, so coalesce those per worker;
+// start/complete transitions write through immediately.
+function recordWorkerProgress(
+    gatewayActivities: ReturnType<typeof createGatewayActivityRecorder>,
+    stream: ReturnType<typeof createTurnStreamThrottle>,
+    event: HermesEvent
+) {
+    const subagentId = readString(event.data.subagent_id);
+
+    if (readString(event.data.source_event) === 'subagent.tool' && subagentId) {
+        stream.schedule(
+            `worker:${subagentId}`,
+            () => gatewayActivities.recordWorker(event.data),
+            turnActivityFlushIntervalMs
+        );
+        return;
+    }
+
+    stream.flush();
+    gatewayActivities.recordWorker(event.data);
 }
 
 function createAssistantMessageId(runId: string, hermesMessageId: string | null) {

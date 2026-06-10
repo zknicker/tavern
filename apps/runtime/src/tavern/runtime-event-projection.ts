@@ -194,7 +194,7 @@ function activityEventToRuntimeEvents(
         step: {
             detail: event.activity.detail,
             id: event.activity.id,
-            kind: activityKind(event.activity.kind),
+            kind: activityKind(event.activity),
             label: event.activity.title,
             status: activityStatus(event.activity.status, event.type),
             toolCallId: metadataRuntimeString(event.activity.metadata, 'toolCallId'),
@@ -251,7 +251,21 @@ function activityToTurn(
     };
 }
 
-function activityKind(kind: TavernResponseActivity['kind']) {
+function activityKind(activity: TavernResponseActivity) {
+    // Notice and worker activities are recorded as kind 'custom' with their
+    // discriminating source facts in metadata; the live step kind must match
+    // the durable row kind so the app patches the same presentation.
+    if (hasMetadataRecord(activity.metadata.runtime, 'notice')) {
+        return 'notice' as const;
+    }
+    if (isRecord(activity.metadata.subagent)) {
+        return 'worker' as const;
+    }
+
+    const kind = activity.kind;
+    if (kind === 'approval') {
+        return 'approval' as const;
+    }
     if (kind === 'reasoning') {
         return 'reasoning' as const;
     }
@@ -265,6 +279,14 @@ function activityKind(kind: TavernResponseActivity['kind']) {
         return 'message' as const;
     }
     return 'tool' as const;
+}
+
+function hasMetadataRecord(value: unknown, key: string) {
+    return isRecord(value) && isRecord(value[key]);
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+    return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
 }
 
 function activityStatus(

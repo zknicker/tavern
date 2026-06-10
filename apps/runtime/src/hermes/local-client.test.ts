@@ -731,6 +731,153 @@ describe('LocalHermesClient session routing', () => {
         ]);
     });
 
+    it('maps composing, notice, subagent, and approval gateway events', async () => {
+        server = new WebSocketServer({ host: '127.0.0.1', port: await getFreePort() });
+        server.on('connection', (socket) => {
+            socket.on('message', (message) => {
+                const request = JSON.parse(message.toString()) as {
+                    id: string;
+                    method: string;
+                    params?: Record<string, unknown>;
+                };
+                const params = request.params ?? {};
+
+                if (request.method === 'session.create') {
+                    socket.send(
+                        JSON.stringify({
+                            id: request.id,
+                            jsonrpc: '2.0',
+                            result: {
+                                session_id: 'live-created',
+                                stored_session_id: 'stored-session',
+                            },
+                        })
+                    );
+                    return;
+                }
+
+                socket.send(JSON.stringify({ id: request.id, jsonrpc: '2.0', result: {} }));
+                if (request.method === 'prompt.submit') {
+                    for (const event of [
+                        { payload: {}, type: 'message.start' },
+                        {
+                            payload: {
+                                id: 'ntc_1',
+                                key: 'credits',
+                                kind: 'credits',
+                                level: 'warning',
+                                text: 'Credits low.',
+                                ttl_ms: 60_000,
+                            },
+                            type: 'notification.show',
+                        },
+                        { payload: { key: 'credits' }, type: 'notification.clear' },
+                        {
+                            payload: {
+                                depth: 1,
+                                goal: 'Summarize the repo',
+                                subagent_id: 'sub_1',
+                                task_count: 2,
+                                task_index: 0,
+                            },
+                            type: 'subagent.start',
+                        },
+                        {
+                            payload: {
+                                command: 'rm -rf build',
+                                description: 'Dangerous delete',
+                                pattern_key: 'rm -rf',
+                                pattern_keys: ['rm -rf'],
+                            },
+                            type: 'approval.request',
+                        },
+                        { payload: { text: 'done' }, type: 'message.complete' },
+                    ]) {
+                        socket.send(
+                            `${JSON.stringify({
+                                jsonrpc: '2.0',
+                                method: 'event',
+                                params: {
+                                    ...event,
+                                    session_id: params.session_id,
+                                },
+                            })}\n`
+                        );
+                    }
+                }
+            });
+        });
+
+        await new Promise<void>((resolve) => server?.once('listening', () => resolve()));
+        const address = server.address();
+        if (!(address && typeof address === 'object')) {
+            throw new Error('Test WebSocket server did not bind a port.');
+        }
+
+        const { LocalHermesClient } = await import('./local-client');
+        const client = new LocalHermesClient({
+            baseUrl: `http://127.0.0.1:${address.port}`,
+            token: null,
+        });
+
+        const events = await collect(
+            client.streamChat({ content: 'work', sessionKey: 'agent:main:tavern:cht_1' })
+        );
+        client.close();
+
+        expect(events).toEqual([
+            { data: {}, event: 'assistant.composing' },
+            {
+                data: {
+                    id: 'ntc_1',
+                    key: 'credits',
+                    kind: 'credits',
+                    level: 'warning',
+                    source_event: 'notification.show',
+                    text: 'Credits low.',
+                    ttl_ms: 60_000,
+                },
+                event: 'notice.shown',
+            },
+            {
+                data: { key: 'credits', source_event: 'notification.clear' },
+                event: 'notice.cleared',
+            },
+            {
+                data: {
+                    depth: 1,
+                    goal: 'Summarize the repo',
+                    source_event: 'subagent.start',
+                    subagent_id: 'sub_1',
+                    task_count: 2,
+                    task_index: 0,
+                },
+                event: 'worker.progress',
+            },
+            {
+                data: {
+                    command: 'rm -rf build',
+                    description: 'Dangerous delete',
+                    pattern_key: 'rm -rf',
+                    pattern_keys: ['rm -rf'],
+                    source_event: 'approval.request',
+                },
+                event: 'approval.requested',
+            },
+            {
+                data: {
+                    content: 'done',
+                    message_id: null,
+                    model: null,
+                    reasoning: null,
+                    status: null,
+                    usage: null,
+                },
+                event: 'assistant.completed',
+            },
+        ]);
+    });
+
     it('maps Hermes visible and reasoning gateway events into separate adapter stream events', async () => {
         server = new WebSocketServer({ host: '127.0.0.1', port: await getFreePort() });
         server.on('connection', (socket) => {
