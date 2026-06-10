@@ -45,7 +45,7 @@ export function ToolTimelineStep({
                     render={
                         <button
                             aria-label={inspectLabel}
-                            className="flex w-full min-w-0 cursor-pointer items-center gap-1.5 rounded-md px-2 py-1.5 text-left hover:bg-muted/40"
+                            className="flex w-full min-w-0 cursor-pointer items-center gap-1.5 rounded-md px-2 py-1.5 text-left outline-none transition-colors hover:bg-muted/40 focus-visible:bg-muted/40 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset"
                             title={inspectLabel}
                             type="button"
                         />
@@ -64,7 +64,11 @@ export function ToolTimelineStep({
                     <span
                         aria-hidden
                         className={cn(
-                            'ml-0.5 flex shrink-0 items-center text-muted-foreground opacity-0 transition-opacity group-focus-within/tool-step:opacity-100 group-hover/tool-step:opacity-100',
+                            // Reveal on hover, on keyboard focus (focus-visible,
+                            // not focus-within — the latter sticks after the
+                            // drawer returns focus to the trigger on close), and
+                            // while the drawer is open.
+                            'ml-0.5 flex shrink-0 items-center text-muted-foreground opacity-0 transition-opacity group-hover/tool-step:opacity-100 group-has-focus-visible/tool-step:opacity-100',
                             isOpen && 'opacity-100'
                         )}
                     >

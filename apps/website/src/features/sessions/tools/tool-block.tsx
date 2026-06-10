@@ -67,7 +67,7 @@ export function ToolBlock({
                             <button
                                 aria-expanded={isOpen}
                                 className={cn(
-                                    'flex w-full items-center gap-2 overflow-hidden rounded-lg border px-3 py-2 text-left transition-colors',
+                                    'flex w-full items-center gap-2 overflow-hidden rounded-lg border px-3 py-2 text-left outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset',
                                     hasError
                                         ? 'border-red-500/12 bg-red-500/4 hover:bg-red-500/8'
                                         : 'border-border/45 bg-muted/25 hover:bg-muted/45'
