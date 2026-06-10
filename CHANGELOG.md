@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented in this file.
 
+## v1.4.2 - 2026-06-10
+
+- Added live work rows for engine notices, background workers, and tool approval requests in chat.
+- Fixed thinking and tool-only phases so delivered replies stay visible and live turn rows keep stable identities.
+- Improved work drawer motion, turn header stability, and chat scroll behavior during active turns.
+- Hardened approval response handling across Runtime and app chat APIs.
+- Raised the required Runtime floor to 1.4.2 for the approval, worker, and live activity contracts in this release.
+
 ## v1.4.1 - 2026-06-10
 
 - Added managed engine bootstrap and production pin guarantees so Tavern Runtime acquires the bundled engine instead of relying on a host install.
