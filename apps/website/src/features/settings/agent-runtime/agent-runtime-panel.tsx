@@ -149,8 +149,10 @@ function RuntimeUrlForm({ connection }: { connection: RuntimeConnection }) {
                                 content={
                                     <span>
                                         On the runtime host, run{' '}
-                                        <code className="font-mono">tavern token</code> to print the
-                                        pairing token, then paste it here.
+                                        <code className="rounded bg-white/10 px-1 py-0.5 font-mono text-[0.92em]">
+                                            tavern token
+                                        </code>{' '}
+                                        to print the pairing token, then paste it here.
                                     </span>
                                 }
                             >
