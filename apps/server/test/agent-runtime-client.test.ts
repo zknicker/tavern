@@ -9,6 +9,52 @@ afterEach(() => {
     globalThis.fetch = originalFetch;
 });
 
+test('client sends Authorization header when constructed with a token', async () => {
+    let capturedAuthorization: string | null | undefined;
+    const fetchMock = mock(async (_input: RequestInfo | URL, init?: RequestInit) => {
+        capturedAuthorization = (init?.headers as Record<string, string>)?.authorization;
+        return Response.json({
+            capabilities: [],
+            health: { ok: true, status: 'healthy', timestamp: new Date().toISOString() },
+            info: {
+                agentRuntimeId: 'runtime-1',
+                name: 'Tavern Runtime',
+                protocolVersion: 1,
+                version: '1.0.0',
+            },
+        });
+    });
+    globalThis.fetch = fetchMock as typeof fetch;
+
+    const client = createAgentRuntimeClient('http://runtime.test', { token: 'my-secret-token' });
+    await client.listCapabilities();
+
+    assert.equal(capturedAuthorization, 'Bearer my-secret-token');
+});
+
+test('client sends no Authorization header when constructed without a token', async () => {
+    let capturedAuthorization: string | null | undefined;
+    const fetchMock = mock(async (_input: RequestInfo | URL, init?: RequestInit) => {
+        capturedAuthorization = (init?.headers as Record<string, string>)?.authorization;
+        return Response.json({
+            capabilities: [],
+            health: { ok: true, status: 'healthy', timestamp: new Date().toISOString() },
+            info: {
+                agentRuntimeId: 'runtime-1',
+                name: 'Tavern Runtime',
+                protocolVersion: 1,
+                version: '1.0.0',
+            },
+        });
+    });
+    globalThis.fetch = fetchMock as typeof fetch;
+
+    const client = createAgentRuntimeClient('http://runtime.test');
+    await client.listCapabilities();
+
+    assert.equal(capturedAuthorization, undefined);
+});
+
 test('listCapabilities ignores legacy Cortex capability rows from older Runtimes', async () => {
     const now = new Date().toISOString();
     const fetchMock = mock(async (input: RequestInfo | URL) => {

@@ -167,6 +167,7 @@ import { z } from 'zod';
 
 const agentRuntimeClientOptionsSchema = z.object({
     baseUrl: z.string().url(),
+    token: z.string().trim().min(1).optional(),
 });
 
 export class AgentRuntimeRequestError extends Error {
@@ -328,6 +329,7 @@ export interface AgentRuntimeListSkillsOptions {
 
 interface AgentRuntimeClientOptions {
     baseUrl: string;
+    token?: string;
 }
 
 function trimTrailingSlash(value: string) {
@@ -357,10 +359,12 @@ async function readErrorResponse(response: Response) {
 
 class HttpTavernAgentRuntimeClient implements TavernAgentRuntimeClient {
     readonly #baseUrl: string;
+    readonly #authHeaders: Record<string, string>;
 
     constructor(options: AgentRuntimeClientOptions) {
         const parsed = agentRuntimeClientOptionsSchema.parse(options);
         this.#baseUrl = trimTrailingSlash(parsed.baseUrl);
+        this.#authHeaders = parsed.token ? { authorization: `Bearer ${parsed.token}` } : {};
     }
 
     close() {}
@@ -368,7 +372,7 @@ class HttpTavernAgentRuntimeClient implements TavernAgentRuntimeClient {
     async postCortexQuery<T>(route: string, input: unknown, schema: z.ZodType<T>): Promise<T> {
         const response = await fetch(`${this.#baseUrl}${route}`, {
             body: JSON.stringify(input),
-            headers: { 'content-type': 'application/json' },
+            headers: { ...this.#authHeaders, 'content-type': 'application/json' },
             method: 'POST',
         });
 
@@ -384,6 +388,7 @@ class HttpTavernAgentRuntimeClient implements TavernAgentRuntimeClient {
         const response = await fetch(`${this.#baseUrl}${agentRuntimeRoutes.agents}`, {
             body: JSON.stringify(payload),
             headers: {
+                ...this.#authHeaders,
                 'content-type': 'application/json',
                 [agentRuntimeMutationHeaders.origin]: agentRuntimeMutationOrigins.tavern,
             },
@@ -398,7 +403,9 @@ class HttpTavernAgentRuntimeClient implements TavernAgentRuntimeClient {
     }
 
     async getAgentConfig(agentId: string) {
-        const response = await fetch(`${this.#baseUrl}${agentRuntimeRoutes.agentConfig(agentId)}`);
+        const response = await fetch(`${this.#baseUrl}${agentRuntimeRoutes.agentConfig(agentId)}`, {
+            headers: this.#authHeaders,
+        });
 
         if (!response.ok) {
             await readErrorResponse(response);
@@ -408,7 +415,9 @@ class HttpTavernAgentRuntimeClient implements TavernAgentRuntimeClient {
     }
 
     async listAgentFiles(agentId: string) {
-        const response = await fetch(`${this.#baseUrl}${agentRuntimeRoutes.agentFiles(agentId)}`);
+        const response = await fetch(`${this.#baseUrl}${agentRuntimeRoutes.agentFiles(agentId)}`, {
+            headers: this.#authHeaders,
+        });
 
         if (!response.ok) {
             await readErrorResponse(response);
@@ -419,7 +428,8 @@ class HttpTavernAgentRuntimeClient implements TavernAgentRuntimeClient {
 
     async getAgentFile(agentId: string, path: string) {
         const response = await fetch(
-            `${this.#baseUrl}${agentRuntimeRoutes.agentFile(agentId, path)}`
+            `${this.#baseUrl}${agentRuntimeRoutes.agentFile(agentId, path)}`,
+            { headers: this.#authHeaders }
         );
 
         if (!response.ok) {
@@ -436,6 +446,7 @@ class HttpTavernAgentRuntimeClient implements TavernAgentRuntimeClient {
             {
                 body: JSON.stringify(payload),
                 headers: {
+                    ...this.#authHeaders,
                     'content-type': 'application/json',
                     [agentRuntimeMutationHeaders.origin]: agentRuntimeMutationOrigins.tavern,
                 },
@@ -457,6 +468,7 @@ class HttpTavernAgentRuntimeClient implements TavernAgentRuntimeClient {
             {
                 body: JSON.stringify(payload),
                 headers: {
+                    ...this.#authHeaders,
                     'content-type': 'application/json',
                     [agentRuntimeMutationHeaders.origin]: agentRuntimeMutationOrigins.tavern,
                 },
@@ -473,7 +485,8 @@ class HttpTavernAgentRuntimeClient implements TavernAgentRuntimeClient {
 
     async getWorkspaceInstructions(agentId: string) {
         const response = await fetch(
-            `${this.#baseUrl}${agentRuntimeRoutes.workspaceAgentInstructions(agentId)}`
+            `${this.#baseUrl}${agentRuntimeRoutes.workspaceAgentInstructions(agentId)}`,
+            { headers: this.#authHeaders }
         );
 
         if (!response.ok) {
@@ -484,7 +497,9 @@ class HttpTavernAgentRuntimeClient implements TavernAgentRuntimeClient {
     }
 
     async listAgents() {
-        const response = await fetch(`${this.#baseUrl}${agentRuntimeRoutes.agents}`);
+        const response = await fetch(`${this.#baseUrl}${agentRuntimeRoutes.agents}`, {
+            headers: this.#authHeaders,
+        });
 
         if (!response.ok) {
             await readErrorResponse(response);
@@ -496,6 +511,7 @@ class HttpTavernAgentRuntimeClient implements TavernAgentRuntimeClient {
     async deleteAgent(agentId: string) {
         const response = await fetch(`${this.#baseUrl}${agentRuntimeRoutes.agent(agentId)}`, {
             headers: {
+                ...this.#authHeaders,
                 [agentRuntimeMutationHeaders.origin]: agentRuntimeMutationOrigins.tavern,
             },
             method: 'DELETE',
@@ -513,6 +529,7 @@ class HttpTavernAgentRuntimeClient implements TavernAgentRuntimeClient {
         const response = await fetch(`${this.#baseUrl}${agentRuntimeRoutes.cronJobs}`, {
             body: JSON.stringify(payload),
             headers: {
+                ...this.#authHeaders,
                 'content-type': 'application/json',
                 [agentRuntimeMutationHeaders.origin]: agentRuntimeMutationOrigins.tavern,
             },
@@ -527,7 +544,9 @@ class HttpTavernAgentRuntimeClient implements TavernAgentRuntimeClient {
     }
 
     async getCronJob(jobId: string) {
-        const response = await fetch(`${this.#baseUrl}${agentRuntimeRoutes.cronJob(jobId)}`);
+        const response = await fetch(`${this.#baseUrl}${agentRuntimeRoutes.cronJob(jobId)}`, {
+            headers: this.#authHeaders,
+        });
 
         if (!response.ok) {
             await readErrorResponse(response);
@@ -537,7 +556,9 @@ class HttpTavernAgentRuntimeClient implements TavernAgentRuntimeClient {
     }
 
     async listCronJobs() {
-        const response = await fetch(`${this.#baseUrl}${agentRuntimeRoutes.cronJobs}`);
+        const response = await fetch(`${this.#baseUrl}${agentRuntimeRoutes.cronJobs}`, {
+            headers: this.#authHeaders,
+        });
 
         if (!response.ok) {
             await readErrorResponse(response);
@@ -548,7 +569,7 @@ class HttpTavernAgentRuntimeClient implements TavernAgentRuntimeClient {
 
     async listCronRuns(jobId?: string) {
         const route = jobId ? agentRuntimeRoutes.cronJobRuns(jobId) : agentRuntimeRoutes.cronRuns;
-        const response = await fetch(`${this.#baseUrl}${route}`);
+        const response = await fetch(`${this.#baseUrl}${route}`, { headers: this.#authHeaders });
 
         if (!response.ok) {
             await readErrorResponse(response);
@@ -562,6 +583,7 @@ class HttpTavernAgentRuntimeClient implements TavernAgentRuntimeClient {
         const response = await fetch(`${this.#baseUrl}${agentRuntimeRoutes.cronJob(jobId)}`, {
             body: JSON.stringify(payload),
             headers: {
+                ...this.#authHeaders,
                 'content-type': 'application/json',
                 [agentRuntimeMutationHeaders.origin]: agentRuntimeMutationOrigins.tavern,
             },
@@ -578,6 +600,7 @@ class HttpTavernAgentRuntimeClient implements TavernAgentRuntimeClient {
     async deleteCronJob(jobId: string) {
         const response = await fetch(`${this.#baseUrl}${agentRuntimeRoutes.cronJob(jobId)}`, {
             headers: {
+                ...this.#authHeaders,
                 [agentRuntimeMutationHeaders.origin]: agentRuntimeMutationOrigins.tavern,
             },
             method: 'DELETE',
@@ -595,6 +618,7 @@ class HttpTavernAgentRuntimeClient implements TavernAgentRuntimeClient {
         const response = await fetch(`${this.#baseUrl}${agentRuntimeRoutes.cronJobRun(jobId)}`, {
             body: JSON.stringify(payload),
             headers: {
+                ...this.#authHeaders,
                 'content-type': 'application/json',
                 [agentRuntimeMutationHeaders.origin]: agentRuntimeMutationOrigins.tavern,
             },
@@ -609,7 +633,9 @@ class HttpTavernAgentRuntimeClient implements TavernAgentRuntimeClient {
     }
 
     async listRuntimeJobs() {
-        const response = await fetch(`${this.#baseUrl}${agentRuntimeRoutes.jobs}`);
+        const response = await fetch(`${this.#baseUrl}${agentRuntimeRoutes.jobs}`, {
+            headers: this.#authHeaders,
+        });
 
         if (!response.ok) {
             await readErrorResponse(response);
@@ -619,7 +645,9 @@ class HttpTavernAgentRuntimeClient implements TavernAgentRuntimeClient {
     }
 
     async listHighlights() {
-        const response = await fetch(`${this.#baseUrl}${agentRuntimeRoutes.highlights}`);
+        const response = await fetch(`${this.#baseUrl}${agentRuntimeRoutes.highlights}`, {
+            headers: this.#authHeaders,
+        });
 
         if (!response.ok) {
             await readErrorResponse(response);
@@ -629,7 +657,9 @@ class HttpTavernAgentRuntimeClient implements TavernAgentRuntimeClient {
     }
 
     async listCapabilities() {
-        const response = await fetch(`${this.#baseUrl}${agentRuntimeRoutes.capabilities}`);
+        const response = await fetch(`${this.#baseUrl}${agentRuntimeRoutes.capabilities}`, {
+            headers: this.#authHeaders,
+        });
 
         if (!response.ok) {
             await readErrorResponse(response);
@@ -642,7 +672,8 @@ class HttpTavernAgentRuntimeClient implements TavernAgentRuntimeClient {
         const response = await fetch(
             `${this.#baseUrl}${agentRuntimeRoutes.capability(
                 agentRuntimeCapabilityHealthIdSchema.parse(id)
-            )}`
+            )}`,
+            { headers: this.#authHeaders }
         );
 
         if (!response.ok) {
@@ -659,6 +690,7 @@ class HttpTavernAgentRuntimeClient implements TavernAgentRuntimeClient {
             )}`,
             {
                 headers: {
+                    ...this.#authHeaders,
                     [agentRuntimeMutationHeaders.origin]: agentRuntimeMutationOrigins.tavern,
                 },
                 method: 'POST',
@@ -673,7 +705,9 @@ class HttpTavernAgentRuntimeClient implements TavernAgentRuntimeClient {
     }
 
     async getUpdateStatus(): Promise<AgentRuntimeUpdate> {
-        const response = await fetch(`${this.#baseUrl}${agentRuntimeRoutes.updateStatus}`);
+        const response = await fetch(`${this.#baseUrl}${agentRuntimeRoutes.updateStatus}`, {
+            headers: this.#authHeaders,
+        });
 
         if (!response.ok) {
             await readErrorResponse(response);
@@ -685,6 +719,7 @@ class HttpTavernAgentRuntimeClient implements TavernAgentRuntimeClient {
     async restartForUpdate(): Promise<AgentRuntimeUpdate> {
         const response = await fetch(`${this.#baseUrl}${agentRuntimeRoutes.updateRestart}`, {
             headers: {
+                ...this.#authHeaders,
                 [agentRuntimeMutationHeaders.origin]: agentRuntimeMutationOrigins.tavern,
             },
             method: 'POST',
@@ -701,6 +736,7 @@ class HttpTavernAgentRuntimeClient implements TavernAgentRuntimeClient {
         const response = await fetch(`${this.#baseUrl}${agentRuntimeRoutes.update}`, {
             body: JSON.stringify(input ?? {}),
             headers: {
+                ...this.#authHeaders,
                 'content-type': 'application/json',
                 [agentRuntimeMutationHeaders.origin]: agentRuntimeMutationOrigins.tavern,
             },
@@ -716,7 +752,8 @@ class HttpTavernAgentRuntimeClient implements TavernAgentRuntimeClient {
 
     async getRuntimeJob(slug: AgentRuntimeJobSlug) {
         const response = await fetch(
-            `${this.#baseUrl}${agentRuntimeRoutes.job(agentRuntimeJobSlugSchema.parse(slug))}`
+            `${this.#baseUrl}${agentRuntimeRoutes.job(agentRuntimeJobSlugSchema.parse(slug))}`,
+            { headers: this.#authHeaders }
         );
 
         if (response.status === 404) {
@@ -736,6 +773,7 @@ class HttpTavernAgentRuntimeClient implements TavernAgentRuntimeClient {
             {
                 body: body ? JSON.stringify(body) : undefined,
                 headers: {
+                    ...this.#authHeaders,
                     ...(body ? { 'content-type': 'application/json' } : {}),
                     [agentRuntimeMutationHeaders.origin]: agentRuntimeMutationOrigins.tavern,
                 },
@@ -751,7 +789,9 @@ class HttpTavernAgentRuntimeClient implements TavernAgentRuntimeClient {
     }
 
     async getCortexStatus() {
-        const response = await fetch(`${this.#baseUrl}${agentRuntimeRoutes.cortexStatus}`);
+        const response = await fetch(`${this.#baseUrl}${agentRuntimeRoutes.cortexStatus}`, {
+            headers: this.#authHeaders,
+        });
 
         if (!response.ok) {
             await readErrorResponse(response);
@@ -765,7 +805,7 @@ class HttpTavernAgentRuntimeClient implements TavernAgentRuntimeClient {
         if (input.includeArchived) {
             url.searchParams.set('includeArchived', 'true');
         }
-        const response = await fetch(url);
+        const response = await fetch(url, { headers: this.#authHeaders });
 
         if (!response.ok) {
             await readErrorResponse(response);
@@ -782,7 +822,7 @@ class HttpTavernAgentRuntimeClient implements TavernAgentRuntimeClient {
         if (input.topic) {
             url.searchParams.set('topic', input.topic);
         }
-        const response = await fetch(url);
+        const response = await fetch(url, { headers: this.#authHeaders });
 
         if (!response.ok) {
             await readErrorResponse(response);
@@ -793,7 +833,8 @@ class HttpTavernAgentRuntimeClient implements TavernAgentRuntimeClient {
 
     async getCortexPage(input: { path: string; topic: string }) {
         const response = await fetch(
-            `${this.#baseUrl}${agentRuntimeRoutes.cortexPage(input.topic, input.path)}`
+            `${this.#baseUrl}${agentRuntimeRoutes.cortexPage(input.topic, input.path)}`,
+            { headers: this.#authHeaders }
         );
 
         if (response.status === 404) {
@@ -816,7 +857,8 @@ class HttpTavernAgentRuntimeClient implements TavernAgentRuntimeClient {
 
     async listCortexBacklinks(input: { path: string; topic: string }) {
         const response = await fetch(
-            `${this.#baseUrl}${agentRuntimeRoutes.cortexBacklinks(input.topic, input.path)}`
+            `${this.#baseUrl}${agentRuntimeRoutes.cortexBacklinks(input.topic, input.path)}`,
+            { headers: this.#authHeaders }
         );
 
         if (!response.ok) {
@@ -827,7 +869,9 @@ class HttpTavernAgentRuntimeClient implements TavernAgentRuntimeClient {
     }
 
     async getModels() {
-        const response = await fetch(`${this.#baseUrl}${agentRuntimeRoutes.models}`);
+        const response = await fetch(`${this.#baseUrl}${agentRuntimeRoutes.models}`, {
+            headers: this.#authHeaders,
+        });
 
         if (!response.ok) {
             await readErrorResponse(response);
@@ -837,7 +881,9 @@ class HttpTavernAgentRuntimeClient implements TavernAgentRuntimeClient {
     }
 
     async getHermesConfig() {
-        const response = await fetch(`${this.#baseUrl}${agentRuntimeRoutes.hermesConfig}`);
+        const response = await fetch(`${this.#baseUrl}${agentRuntimeRoutes.hermesConfig}`, {
+            headers: this.#authHeaders,
+        });
 
         if (!response.ok) {
             await readErrorResponse(response);
@@ -851,6 +897,7 @@ class HttpTavernAgentRuntimeClient implements TavernAgentRuntimeClient {
         const response = await fetch(`${this.#baseUrl}${agentRuntimeRoutes.hermesConfig}`, {
             body: JSON.stringify(payload),
             headers: {
+                ...this.#authHeaders,
                 'content-type': 'application/json',
                 [agentRuntimeMutationHeaders.origin]: agentRuntimeMutationOrigins.tavern,
             },
@@ -869,6 +916,7 @@ class HttpTavernAgentRuntimeClient implements TavernAgentRuntimeClient {
         const response = await fetch(`${this.#baseUrl}${agentRuntimeRoutes.agentName(agentId)}`, {
             body: JSON.stringify(payload),
             headers: {
+                ...this.#authHeaders,
                 'content-type': 'application/json',
                 [agentRuntimeMutationHeaders.origin]: agentRuntimeMutationOrigins.tavern,
             },
@@ -887,6 +935,7 @@ class HttpTavernAgentRuntimeClient implements TavernAgentRuntimeClient {
         const response = await fetch(`${this.#baseUrl}${agentRuntimeRoutes.agentModel(agentId)}`, {
             body: JSON.stringify(payload),
             headers: {
+                ...this.#authHeaders,
                 'content-type': 'application/json',
                 [agentRuntimeMutationHeaders.origin]: agentRuntimeMutationOrigins.tavern,
             },
@@ -910,6 +959,7 @@ class HttpTavernAgentRuntimeClient implements TavernAgentRuntimeClient {
             {
                 body: JSON.stringify(payload),
                 headers: {
+                    ...this.#authHeaders,
                     'content-type': 'application/json',
                     [agentRuntimeMutationHeaders.origin]: agentRuntimeMutationOrigins.tavern,
                 },
@@ -929,6 +979,7 @@ class HttpTavernAgentRuntimeClient implements TavernAgentRuntimeClient {
         const response = await fetch(`${this.#baseUrl}${agentRuntimeRoutes.agentTools(agentId)}`, {
             body: JSON.stringify(payload),
             headers: {
+                ...this.#authHeaders,
                 'content-type': 'application/json',
                 [agentRuntimeMutationHeaders.origin]: agentRuntimeMutationOrigins.tavern,
             },
@@ -943,7 +994,9 @@ class HttpTavernAgentRuntimeClient implements TavernAgentRuntimeClient {
     }
 
     async getModelAccess() {
-        const response = await fetch(`${this.#baseUrl}${agentRuntimeRoutes.modelAccess}`);
+        const response = await fetch(`${this.#baseUrl}${agentRuntimeRoutes.modelAccess}`, {
+            headers: this.#authHeaders,
+        });
 
         if (!response.ok) {
             await readErrorResponse(response);
@@ -957,6 +1010,7 @@ class HttpTavernAgentRuntimeClient implements TavernAgentRuntimeClient {
         const response = await fetch(`${this.#baseUrl}${agentRuntimeRoutes.modelAccessApiKey}`, {
             body: JSON.stringify(payload),
             headers: {
+                ...this.#authHeaders,
                 'content-type': 'application/json',
                 [agentRuntimeMutationHeaders.origin]: agentRuntimeMutationOrigins.tavern,
             },
@@ -977,6 +1031,7 @@ class HttpTavernAgentRuntimeClient implements TavernAgentRuntimeClient {
             {
                 body: JSON.stringify({}),
                 headers: {
+                    ...this.#authHeaders,
                     'content-type': 'application/json',
                     [agentRuntimeMutationHeaders.origin]: agentRuntimeMutationOrigins.tavern,
                 },
@@ -994,7 +1049,8 @@ class HttpTavernAgentRuntimeClient implements TavernAgentRuntimeClient {
     async pollModelProviderOAuth(input: AgentRuntimePollModelProviderOAuth) {
         const payload = agentRuntimePollModelProviderOAuthSchema.parse(input);
         const response = await fetch(
-            `${this.#baseUrl}${agentRuntimeRoutes.modelAccessOAuthPoll(payload.providerId, payload.sessionId)}`
+            `${this.#baseUrl}${agentRuntimeRoutes.modelAccessOAuthPoll(payload.providerId, payload.sessionId)}`,
+            { headers: this.#authHeaders }
         );
 
         if (!response.ok) {
@@ -1011,6 +1067,7 @@ class HttpTavernAgentRuntimeClient implements TavernAgentRuntimeClient {
             {
                 body: JSON.stringify(payload),
                 headers: {
+                    ...this.#authHeaders,
                     'content-type': 'application/json',
                     [agentRuntimeMutationHeaders.origin]: agentRuntimeMutationOrigins.tavern,
                 },
@@ -1031,6 +1088,7 @@ class HttpTavernAgentRuntimeClient implements TavernAgentRuntimeClient {
             `${this.#baseUrl}${agentRuntimeRoutes.modelAccessOAuthCancel(payload.sessionId)}`,
             {
                 headers: {
+                    ...this.#authHeaders,
                     [agentRuntimeMutationHeaders.origin]: agentRuntimeMutationOrigins.tavern,
                 },
                 method: 'DELETE',
@@ -1046,7 +1104,8 @@ class HttpTavernAgentRuntimeClient implements TavernAgentRuntimeClient {
 
     async getOpenRouterSettings() {
         const response = await fetch(
-            `${this.#baseUrl}${agentRuntimeRoutes.modelAccessOpenRouterSettings}`
+            `${this.#baseUrl}${agentRuntimeRoutes.modelAccessOpenRouterSettings}`,
+            { headers: this.#authHeaders }
         );
 
         if (!response.ok) {
@@ -1058,7 +1117,8 @@ class HttpTavernAgentRuntimeClient implements TavernAgentRuntimeClient {
 
     async getOpenAiSettings() {
         const response = await fetch(
-            `${this.#baseUrl}${agentRuntimeRoutes.modelAccessOpenAiSettings}`
+            `${this.#baseUrl}${agentRuntimeRoutes.modelAccessOpenAiSettings}`,
+            { headers: this.#authHeaders }
         );
 
         if (!response.ok) {
@@ -1075,6 +1135,7 @@ class HttpTavernAgentRuntimeClient implements TavernAgentRuntimeClient {
             {
                 body: JSON.stringify(payload),
                 headers: {
+                    ...this.#authHeaders,
                     'content-type': 'application/json',
                     [agentRuntimeMutationHeaders.origin]: agentRuntimeMutationOrigins.tavern,
                 },
@@ -1094,6 +1155,7 @@ class HttpTavernAgentRuntimeClient implements TavernAgentRuntimeClient {
             `${this.#baseUrl}${agentRuntimeRoutes.modelAccessOpenAiSettings}`,
             {
                 headers: {
+                    ...this.#authHeaders,
                     [agentRuntimeMutationHeaders.origin]: agentRuntimeMutationOrigins.tavern,
                 },
                 method: 'DELETE',
@@ -1114,6 +1176,7 @@ class HttpTavernAgentRuntimeClient implements TavernAgentRuntimeClient {
             {
                 body: JSON.stringify(payload),
                 headers: {
+                    ...this.#authHeaders,
                     'content-type': 'application/json',
                     [agentRuntimeMutationHeaders.origin]: agentRuntimeMutationOrigins.tavern,
                 },
@@ -1133,6 +1196,7 @@ class HttpTavernAgentRuntimeClient implements TavernAgentRuntimeClient {
             `${this.#baseUrl}${agentRuntimeRoutes.modelAccessOpenRouterSettings}`,
             {
                 headers: {
+                    ...this.#authHeaders,
                     [agentRuntimeMutationHeaders.origin]: agentRuntimeMutationOrigins.tavern,
                 },
                 method: 'DELETE',
@@ -1151,7 +1215,7 @@ class HttpTavernAgentRuntimeClient implements TavernAgentRuntimeClient {
         if (options?.agentId) {
             url.searchParams.set('agentId', options.agentId);
         }
-        const response = await fetch(url);
+        const response = await fetch(url, { headers: this.#authHeaders });
 
         if (!response.ok) {
             await readErrorResponse(response);
@@ -1161,7 +1225,9 @@ class HttpTavernAgentRuntimeClient implements TavernAgentRuntimeClient {
     }
 
     async listToolsets() {
-        const response = await fetch(`${this.#baseUrl}${agentRuntimeRoutes.toolsets}`);
+        const response = await fetch(`${this.#baseUrl}${agentRuntimeRoutes.toolsets}`, {
+            headers: this.#authHeaders,
+        });
 
         if (!response.ok) {
             await readErrorResponse(response);
@@ -1177,6 +1243,7 @@ class HttpTavernAgentRuntimeClient implements TavernAgentRuntimeClient {
             {
                 body: JSON.stringify(payload),
                 headers: {
+                    ...this.#authHeaders,
                     'content-type': 'application/json',
                     [agentRuntimeMutationHeaders.origin]: agentRuntimeMutationOrigins.tavern,
                 },
@@ -1198,6 +1265,7 @@ class HttpTavernAgentRuntimeClient implements TavernAgentRuntimeClient {
             {
                 body: JSON.stringify(payload),
                 headers: {
+                    ...this.#authHeaders,
                     'content-type': 'application/json',
                     [agentRuntimeMutationHeaders.origin]: agentRuntimeMutationOrigins.tavern,
                 },
@@ -1223,7 +1291,7 @@ class HttpTavernAgentRuntimeClient implements TavernAgentRuntimeClient {
             url.searchParams.set('limit', String(options.limit));
         }
 
-        const response = await fetch(url);
+        const response = await fetch(url, { headers: this.#authHeaders });
 
         if (!response.ok) {
             await readErrorResponse(response);
@@ -1237,6 +1305,7 @@ class HttpTavernAgentRuntimeClient implements TavernAgentRuntimeClient {
         const response = await fetch(`${this.#baseUrl}${agentRuntimeRoutes.chatMessages(chatId)}`, {
             body: JSON.stringify(payload),
             headers: {
+                ...this.#authHeaders,
                 'content-type': 'application/json',
             },
             method: 'POST',
@@ -1259,6 +1328,7 @@ class HttpTavernAgentRuntimeClient implements TavernAgentRuntimeClient {
             {
                 body: JSON.stringify(payload),
                 headers: {
+                    ...this.#authHeaders,
                     'content-type': 'application/json',
                 },
                 method: 'POST',
@@ -1282,6 +1352,7 @@ class HttpTavernAgentRuntimeClient implements TavernAgentRuntimeClient {
             {
                 body: JSON.stringify(payload),
                 headers: {
+                    ...this.#authHeaders,
                     'content-type': 'application/json',
                 },
                 method: 'POST',
@@ -1296,7 +1367,9 @@ class HttpTavernAgentRuntimeClient implements TavernAgentRuntimeClient {
     }
 
     async listChats() {
-        const response = await fetch(`${this.#baseUrl}${agentRuntimeRoutes.chats}`);
+        const response = await fetch(`${this.#baseUrl}${agentRuntimeRoutes.chats}`, {
+            headers: this.#authHeaders,
+        });
 
         if (!response.ok) {
             await readErrorResponse(response);
@@ -1310,6 +1383,7 @@ class HttpTavernAgentRuntimeClient implements TavernAgentRuntimeClient {
         const response = await fetch(`${this.#baseUrl}${agentRuntimeRoutes.bindings}`, {
             body: JSON.stringify(payload),
             headers: {
+                ...this.#authHeaders,
                 'content-type': 'application/json',
             },
             method: 'POST',
@@ -1330,6 +1404,7 @@ class HttpTavernAgentRuntimeClient implements TavernAgentRuntimeClient {
         const response = await fetch(`${this.#baseUrl}${url}`, {
             body: JSON.stringify(payload),
             headers: {
+                ...this.#authHeaders,
                 'content-type': 'application/json',
                 [agentRuntimeMutationHeaders.origin]: agentRuntimeMutationOrigins.tavern,
             },
@@ -1344,7 +1419,9 @@ class HttpTavernAgentRuntimeClient implements TavernAgentRuntimeClient {
     }
 
     async listBindings() {
-        const response = await fetch(`${this.#baseUrl}${agentRuntimeRoutes.bindings}`);
+        const response = await fetch(`${this.#baseUrl}${agentRuntimeRoutes.bindings}`, {
+            headers: this.#authHeaders,
+        });
 
         if (!response.ok) {
             await readErrorResponse(response);
@@ -1354,7 +1431,9 @@ class HttpTavernAgentRuntimeClient implements TavernAgentRuntimeClient {
     }
 
     async listDiscordBindings() {
-        const response = await fetch(`${this.#baseUrl}${agentRuntimeRoutes.discordBindings}`);
+        const response = await fetch(`${this.#baseUrl}${agentRuntimeRoutes.discordBindings}`, {
+            headers: this.#authHeaders,
+        });
 
         if (!response.ok) {
             await readErrorResponse(response);
@@ -1365,6 +1444,7 @@ class HttpTavernAgentRuntimeClient implements TavernAgentRuntimeClient {
 
     async deleteBinding(bindingId: string) {
         const response = await fetch(`${this.#baseUrl}${agentRuntimeRoutes.binding(bindingId)}`, {
+            headers: this.#authHeaders,
             method: 'DELETE',
         });
 
@@ -1382,6 +1462,7 @@ class HttpTavernAgentRuntimeClient implements TavernAgentRuntimeClient {
             {
                 body: JSON.stringify(payload),
                 headers: {
+                    ...this.#authHeaders,
                     'content-type': 'application/json',
                     [agentRuntimeMutationHeaders.origin]: agentRuntimeMutationOrigins.tavern,
                 },
@@ -1397,7 +1478,9 @@ class HttpTavernAgentRuntimeClient implements TavernAgentRuntimeClient {
     }
 
     async listSessions() {
-        const response = await fetch(`${this.#baseUrl}${agentRuntimeRoutes.sessions}`);
+        const response = await fetch(`${this.#baseUrl}${agentRuntimeRoutes.sessions}`, {
+            headers: this.#authHeaders,
+        });
 
         if (!response.ok) {
             await readErrorResponse(response);
@@ -1416,7 +1499,7 @@ class HttpTavernAgentRuntimeClient implements TavernAgentRuntimeClient {
             url.searchParams.set('limit', String(options.limit));
         }
 
-        const response = await fetch(url);
+        const response = await fetch(url, { headers: this.#authHeaders });
 
         if (!response.ok) {
             await readErrorResponse(response);
@@ -1438,7 +1521,7 @@ class HttpTavernAgentRuntimeClient implements TavernAgentRuntimeClient {
             url.searchParams.set('maxChars', String(input.maxChars));
         }
 
-        const response = await fetch(url);
+        const response = await fetch(url, { headers: this.#authHeaders });
 
         if (!response.ok) {
             await readErrorResponse(response);
@@ -1449,7 +1532,8 @@ class HttpTavernAgentRuntimeClient implements TavernAgentRuntimeClient {
 
     async getSessionGraph(sessionKey: string) {
         const response = await fetch(
-            `${this.#baseUrl}${agentRuntimeRoutes.sessionGraph(sessionKey)}`
+            `${this.#baseUrl}${agentRuntimeRoutes.sessionGraph(sessionKey)}`,
+            { headers: this.#authHeaders }
         );
 
         if (!response.ok) {
@@ -1461,7 +1545,8 @@ class HttpTavernAgentRuntimeClient implements TavernAgentRuntimeClient {
 
     async getSessionPrompt(sessionKey: string) {
         const response = await fetch(
-            `${this.#baseUrl}${agentRuntimeRoutes.sessionPrompt(sessionKey)}`
+            `${this.#baseUrl}${agentRuntimeRoutes.sessionPrompt(sessionKey)}`,
+            { headers: this.#authHeaders }
         );
 
         if (response.status === 404) {
@@ -1480,6 +1565,7 @@ class HttpTavernAgentRuntimeClient implements TavernAgentRuntimeClient {
             `${this.#baseUrl}${agentRuntimeRoutes.sessionResync(sessionKey)}`,
             {
                 headers: {
+                    ...this.#authHeaders,
                     [agentRuntimeMutationHeaders.origin]: agentRuntimeMutationOrigins.tavern,
                 },
                 method: 'POST',
@@ -1494,9 +1580,13 @@ class HttpTavernAgentRuntimeClient implements TavernAgentRuntimeClient {
     }
 }
 
-export function createAgentRuntimeClient(baseUrl: string): TavernAgentRuntimeClient {
+export function createAgentRuntimeClient(
+    baseUrl: string,
+    options?: { token?: string }
+): TavernAgentRuntimeClient {
     return new HttpTavernAgentRuntimeClient({
         baseUrl,
+        token: options?.token,
     });
 }
 

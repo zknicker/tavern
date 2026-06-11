@@ -1,6 +1,7 @@
 import type { AgentRuntimeEvent } from '@tavern/api';
 import { agentRuntimeEventSchema, agentRuntimeRoutes } from '@tavern/api';
 import { WebSocket } from 'ws';
+import { parseAgentRuntimeConnectionAuth } from '../agent-runtime-connection/auth.ts';
 import type { TavernAgentRuntimeClient } from './client.ts';
 import { createAgentRuntimeClient } from './client.ts';
 
@@ -21,14 +22,19 @@ export interface AgentRuntimeEventSubscription {
 export function createAgentRuntimeClientForConnection(
     input: AgentRuntimeDriverConnection
 ): TavernAgentRuntimeClient {
-    return createAgentRuntimeClient(input.baseUrl);
+    const auth = parseAgentRuntimeConnectionAuth(input.authJson);
+    return createAgentRuntimeClient(input.baseUrl, { token: auth?.token });
 }
 
 export async function subscribeAgentRuntimeEventsForConnection(
     input: AgentRuntimeDriverConnection,
     observer: AgentRuntimeEventObserver
 ): Promise<AgentRuntimeEventSubscription> {
-    const socket = new WebSocket(toWebSocketUrl(input.baseUrl, agentRuntimeRoutes.events));
+    const auth = parseAgentRuntimeConnectionAuth(input.authJson);
+    const wsHeaders = auth?.token ? { authorization: `Bearer ${auth.token}` } : undefined;
+    const socket = new WebSocket(toWebSocketUrl(input.baseUrl, agentRuntimeRoutes.events), {
+        headers: wsHeaders,
+    });
 
     socket.on('message', (data) => {
         const parsedJson = parseJson(String(data));

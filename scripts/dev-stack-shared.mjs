@@ -1,4 +1,5 @@
 import { spawnSync } from 'node:child_process';
+import { randomBytes } from 'node:crypto';
 import fs from 'node:fs';
 import net from 'node:net';
 import os from 'node:os';
@@ -36,6 +37,10 @@ export function createDevStackEnvironment({
         TAVERN_HERMES_PORT: baseEnvironment.TAVERN_HERMES_PORT ?? resolvedPorts.hermesPort,
         TAVERN_RUNTIME_PORT: baseEnvironment.TAVERN_RUNTIME_PORT ?? resolvedPorts.runtimePort,
         TAVERN_RUNTIME_ROOT: baseEnvironment.TAVERN_RUNTIME_ROOT ?? statePaths.runtimeRoot,
+        // Generate a per-session dev token so the server can authenticate with the runtime.
+        // A stable env var overrides the generated one (e.g. for CI or reproducible setups).
+        TAVERN_RUNTIME_TOKEN:
+            baseEnvironment.TAVERN_RUNTIME_TOKEN ?? randomBytes(32).toString('base64url'),
         TAVERN_SERVER_PORT: baseEnvironment.TAVERN_SERVER_PORT ?? resolvedPorts.serverPort,
         TAVERN_WEBSITE_PORT: baseEnvironment.TAVERN_WEBSITE_PORT ?? resolvedPorts.websitePort,
     };

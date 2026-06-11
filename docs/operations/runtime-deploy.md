@@ -178,8 +178,19 @@ cutover.
 
 ## Trust Model
 
-Runtime auth is not enabled yet. Expose the Runtime URL only on a trusted
-network or behind operator-managed access control.
+Every non-health Runtime HTTP request and WebSocket upgrade requires a bearer
+token. Tavern Runtime generates the token on first start and writes it to
+`<runtime-root>/runtime-api-token` (mode 0600). The Tavern App reads the token
+from the connection record and sends it as `Authorization: Bearer <token>` on
+every request.
+
+**Override**: set `TAVERN_RUNTIME_TOKEN` in the Runtime process environment to
+use a fixed token instead of the file-backed one. Set the same value in the App
+Server environment as `TAVERN_RUNTIME_TOKEN` so the server can authenticate.
+The dev stack and e2e harness set a shared token automatically.
+
+The health route (`GET /health`) remains unauthenticated so the app can probe
+reachability before pairing.
 
 ## Release Artifact
 

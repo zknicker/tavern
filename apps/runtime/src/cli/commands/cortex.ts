@@ -6,7 +6,7 @@ import {
     cortexStatusSchema,
     cortexTopicListSchema,
 } from '@tavern/api';
-import { getRuntimePort } from '../../config.ts';
+import { getRuntimeApiToken, getRuntimePort } from '../../config.ts';
 import type { ParsedArgs } from '../parse.ts';
 import type { SubCommand } from '../subcommand.ts';
 import { errorBlock, writeJson } from '../ui.ts';
@@ -42,11 +42,28 @@ function resolveRuntimeUrl(args: ParsedArgs): string {
     );
 }
 
+function resolveAuthHeaders(): Record<string, string> {
+    try {
+        const token = getRuntimeApiToken();
+        return token ? { authorization: `Bearer ${token}` } : {};
+    } catch {
+        return {};
+    }
+}
+
 function defaultDeps(args: ParsedArgs): CortexDeps {
     const runtimeUrl = resolveRuntimeUrl(args);
+    const authHeaders = resolveAuthHeaders();
     return {
         runtimeUrl,
-        request: (route, init) => requestRuntimeJson(runtimeUrl, route, init),
+        request: (route, init) =>
+            requestRuntimeJson(runtimeUrl, route, {
+                ...init,
+                headers: {
+                    ...authHeaders,
+                    ...(init.headers as Record<string, string> | undefined),
+                },
+            }),
         write: (text) => process.stdout.write(text),
     };
 }

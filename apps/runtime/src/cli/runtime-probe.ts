@@ -4,7 +4,7 @@ import {
     agentRuntimeUpdateSchema,
 } from '@tavern/api';
 import type { z } from 'zod';
-import { getRuntimePort } from '../config';
+import { getRuntimeApiToken, getRuntimePort } from '../config';
 
 const PROBE_TIMEOUT_MS = 1500;
 
@@ -118,9 +118,19 @@ function probeJson(route: string, timeoutMs: number): Promise<unknown> {
     return probeJsonAt(localRuntimeUrl(), route, timeoutMs);
 }
 
+function resolveProbeAuthHeaders(): Record<string, string> {
+    try {
+        const token = getRuntimeApiToken();
+        return token ? { authorization: `Bearer ${token}` } : {};
+    } catch {
+        return {};
+    }
+}
+
 async function probeJsonAt(baseUrl: string, route: string, timeoutMs: number): Promise<unknown> {
     try {
         const response = await fetch(new URL(route, baseUrl), {
+            headers: resolveProbeAuthHeaders(),
             method: 'GET',
             signal: AbortSignal.timeout(timeoutMs),
         });

@@ -43,9 +43,10 @@ Do not put secrets in:
 
 ## Runtime Access
 
-The app talks to Tavern Runtime through the configured runtime URL and runtime
-credentials. Managed Hermes receives generated Gateway credentials from
-Tavern Runtime.
+The app talks to Tavern Runtime through the configured runtime URL and a bearer
+token. The Runtime generates a token on first start (`<runtime-root>/runtime-api-token`,
+mode 0600). Override with `TAVERN_RUNTIME_TOKEN`. The health route is unauthenticated.
+Managed Hermes receives generated Gateway credentials from Tavern Runtime.
 
 Clients use Tavern API or TypeScript SDK surfaces instead of reading local
 SQLite files, runtime stores, or Hermes state directly.

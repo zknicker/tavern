@@ -16,6 +16,7 @@ writeFileSync(
 
 process.env.TAVERN_RUNTIME_ROOT = runtimeRoot;
 process.env.TAVERN_HERMES_HOME = path.join(runtimeRoot, 'hermes', 'home');
+process.env.TAVERN_RUNTIME_TOKEN = process.env.TAVERN_RUNTIME_TOKEN ?? 'e2e-runtime-token';
 process.env.NODE_ENV = 'test';
 
 process.chdir(workspaceRoot);

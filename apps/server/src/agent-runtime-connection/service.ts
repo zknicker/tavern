@@ -26,6 +26,10 @@ function getAgentRuntimeEnvironmentBaseUrl() {
     return process.env.TAVERN_RUNTIME_URL?.trim() || null;
 }
 
+function getAgentRuntimeEnvironmentToken() {
+    return process.env.TAVERN_RUNTIME_TOKEN?.trim() || null;
+}
+
 function clearAgentRuntimeEnvironmentOverride() {
     process.env.TAVERN_RUNTIME_URL = undefined;
     clearEnvironmentAgentRuntimeConnection();
@@ -93,14 +97,21 @@ function toAgentRuntimeConnection(input: {
     };
 }
 
-async function getRuntimeOwnedStatus(input: { baseUrl: string; runtimeId: string }): Promise<{
+async function getRuntimeOwnedStatus(input: {
+    authJson?: null | string;
+    baseUrl: string;
+    runtimeId: string;
+}): Promise<{
     capabilities: AgentRuntimeConnection['capabilities'];
     lastError: null | string;
     runtimeVersion: null | string;
 }> {
     let client: ReturnType<typeof createAgentRuntimeClientForConnection> | null = null;
     try {
-        client = createAgentRuntimeClientForConnection({ baseUrl: input.baseUrl });
+        client = createAgentRuntimeClientForConnection({
+            authJson: input.authJson,
+            baseUrl: input.baseUrl,
+        });
         const { capabilities, info } = await client.listCapabilities();
         return {
             capabilities: capabilities.map((capability) =>
@@ -143,6 +154,7 @@ async function toSavedAgentRuntimeConnection(
         return null;
     }
     const runtimeStatus = await getRuntimeOwnedStatus({
+        authJson: record.authJson,
         baseUrl: record.baseUrl,
         runtimeId: record.id,
     });
@@ -175,11 +187,14 @@ export async function loadAgentRuntimeConnection() {
 
     if (environmentBaseUrl) {
         const checkedAt = new Date().toISOString();
+        const environmentToken = getAgentRuntimeEnvironmentToken();
+        const environmentAuth = environmentToken ? { token: environmentToken } : undefined;
         const checked = await checkAgentRuntimeConnection({
-            auth: undefined,
+            auth: environmentAuth,
             baseUrl: environmentBaseUrl,
         });
         const record = saveEnvironmentAgentRuntimeConnection({
+            auth: environmentAuth,
             baseUrl: checked.baseUrl,
             enabled: true,
             id: checked.capabilities.info.agentRuntimeId,
@@ -191,7 +206,7 @@ export async function loadAgentRuntimeConnection() {
 
         return toAgentRuntimeConnection({
             baseUrl: checked.baseUrl,
-            authConfigured: false,
+            authConfigured: environmentAuth !== undefined,
             enabled: true,
             id: record.id,
             isActive: true,
@@ -235,13 +250,16 @@ export async function getAgentRuntimeConnection() {
             getEnvironmentAgentRuntimeConnection() ?? (await getDefaultAgentRuntimeConnection());
         const runtimeId = environmentRecord?.id ?? agentRuntimeConnectionId;
         const runtimeStatus = await getRuntimeOwnedStatus({
+            authJson: environmentRecord?.authJson,
             baseUrl: environmentBaseUrl,
             runtimeId,
         });
 
         return toAgentRuntimeConnection({
             baseUrl: environmentBaseUrl,
-            authConfigured: false,
+            authConfigured: environmentRecord?.authJson
+                ? parseAgentRuntimeConnectionAuth(environmentRecord.authJson) !== null
+                : false,
             enabled: true,
             id: runtimeId,
             isActive: true,
@@ -286,7 +304,11 @@ export async function refreshAgentRuntimeCapability(input: {
         throw new Error('Tavern Runtime is not configured.');
     }
 
-    const client = createAgentRuntimeClientForConnection({ baseUrl: connection.baseUrl });
+    const record = await getDefaultAgentRuntimeConnection();
+    const client = createAgentRuntimeClientForConnection({
+        authJson: record?.authJson,
+        baseUrl: connection.baseUrl,
+    });
     try {
         const refreshed = await client.refreshCapability(capability);
         return toAppCapabilityStatus(refreshed, connection.id);
@@ -301,7 +323,11 @@ export async function startAgentRuntimeUpdate() {
         throw new Error('Tavern Runtime is not configured.');
     }
 
-    const client = createAgentRuntimeClientForConnection({ baseUrl: connection.baseUrl });
+    const record = await getDefaultAgentRuntimeConnection();
+    const client = createAgentRuntimeClientForConnection({
+        authJson: record?.authJson,
+        baseUrl: connection.baseUrl,
+    });
     try {
         return await client.startUpdate({ targetVersion: connection.requiredRuntimeVersion });
     } finally {
@@ -315,7 +341,11 @@ export async function getAgentRuntimeUpdateStatus() {
         throw new Error('Tavern Runtime is not configured.');
     }
 
-    const client = createAgentRuntimeClientForConnection({ baseUrl: connection.baseUrl });
+    const record = await getDefaultAgentRuntimeConnection();
+    const client = createAgentRuntimeClientForConnection({
+        authJson: record?.authJson,
+        baseUrl: connection.baseUrl,
+    });
     try {
         return await client.getUpdateStatus();
     } finally {
@@ -329,7 +359,11 @@ export async function restartAgentRuntimeForUpdate() {
         throw new Error('Tavern Runtime is not configured.');
     }
 
-    const client = createAgentRuntimeClientForConnection({ baseUrl: connection.baseUrl });
+    const record = await getDefaultAgentRuntimeConnection();
+    const client = createAgentRuntimeClientForConnection({
+        authJson: record?.authJson,
+        baseUrl: connection.baseUrl,
+    });
     try {
         return await client.restartForUpdate();
     } finally {

@@ -113,11 +113,10 @@ test('saveAgentRuntimeBinding posts Discord binding config to Runtime', async ()
 });
 
 test('listAgentRuntimeBindings uses the binding collection route', async () => {
-    const fetchSpy = spyOn(globalThis, 'fetch').mockImplementation(async (input, init) => {
+    const fetchSpy = spyOn(globalThis, 'fetch').mockImplementation(async (input, _init) => {
         const url = String(input);
 
         assert.equal(url, 'http://agent-runtime.test/bindings');
-        assert.equal(init, undefined);
 
         return new Response(
             JSON.stringify({
