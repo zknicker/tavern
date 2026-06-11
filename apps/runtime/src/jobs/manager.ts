@@ -254,8 +254,7 @@ async function syncScheduledRuntimeJobWithOptions(
         }
     );
 
-    const runNow =
-        binding.definition.schedule.runOnStart && (options.runOnStart || wasDisabled);
+    const runNow = binding.definition.schedule.runOnStart && (options.runOnStart || wasDisabled);
     if (runNow) {
         const jobId = await enqueueRuntimeJob(binding.definition.slug, { trigger: 'startup' });
         log.info('Runtime startup job queued', { jobId, slug: binding.definition.slug });
