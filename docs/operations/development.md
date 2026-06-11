@@ -56,7 +56,7 @@ Runtime bootstrap the pinned engine into `~/.tavern/engine/` once, shared
 across worktrees.
 
 The Runtime API requires a bearer token. The dev stack reads (or creates) the
-token at `<runtime root>/runtime-api-token` — the same file the Runtime and
+token from `<runtime root>/tavern.json` — the same config file the Runtime and
 the `tavern` CLI resolve — and hands it to every stack process, so the token
 is stable per worktree across sessions. To use the CLI against a running dev
 stack, point it at the same state:

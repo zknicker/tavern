@@ -141,16 +141,16 @@ test('createDevStackEnvironment respects an explicit ALLOW_SYSTEM override', () 
     assert.equal(environment.TAVERN_HERMES_ALLOW_SYSTEM, '0');
 });
 
-test('createDevStackEnvironment persists a runtime token under the runtime root', () => {
+test('createDevStackEnvironment persists a runtime token in tavern.json under the runtime root', () => {
     const runtimeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'tavern-dev-token-'));
-    const tokenPath = path.join(runtimeRoot, 'runtime-api-token');
+    const configPath = path.join(runtimeRoot, 'tavern.json');
 
     const first = createDevStackEnvironment({
         baseEnvironment: { TAVERN_RUNTIME_ROOT: runtimeRoot },
         repositoryRoot: '/repo/tavern',
     });
 
-    const persisted = fs.readFileSync(tokenPath, 'utf8').trim();
+    const persisted = JSON.parse(fs.readFileSync(configPath, 'utf8')).token;
     assert.equal(first.TAVERN_RUNTIME_TOKEN, persisted);
     assert.ok(persisted.length > 20, 'expected a generated token');
 
@@ -163,9 +163,12 @@ test('createDevStackEnvironment persists a runtime token under the runtime root'
     assert.equal(second.TAVERN_RUNTIME_TOKEN, persisted);
 });
 
-test('createDevStackEnvironment reads an existing runtime token file', () => {
+test('createDevStackEnvironment reads an existing token from tavern.json', () => {
     const runtimeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'tavern-dev-token-'));
-    fs.writeFileSync(path.join(runtimeRoot, 'runtime-api-token'), 'persisted-token\n');
+    fs.writeFileSync(
+        path.join(runtimeRoot, 'tavern.json'),
+        `${JSON.stringify({ operatorNote: 'keep me', token: 'persisted-token' })}\n`
+    );
 
     const environment = createDevStackEnvironment({
         baseEnvironment: { TAVERN_RUNTIME_ROOT: runtimeRoot },
@@ -173,6 +176,21 @@ test('createDevStackEnvironment reads an existing runtime token file', () => {
     });
 
     assert.equal(environment.TAVERN_RUNTIME_TOKEN, 'persisted-token');
+});
+
+test('createDevStackEnvironment preserves unknown tavern.json keys when generating a token', () => {
+    const runtimeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'tavern-dev-token-'));
+    const configPath = path.join(runtimeRoot, 'tavern.json');
+    fs.writeFileSync(configPath, `${JSON.stringify({ operatorNote: 'keep me' })}\n`);
+
+    const environment = createDevStackEnvironment({
+        baseEnvironment: { TAVERN_RUNTIME_ROOT: runtimeRoot },
+        repositoryRoot: '/repo/tavern',
+    });
+
+    const persisted = JSON.parse(fs.readFileSync(configPath, 'utf8'));
+    assert.equal(persisted.operatorNote, 'keep me');
+    assert.equal(environment.TAVERN_RUNTIME_TOKEN, persisted.token);
 });
 
 test('cleanupStaleProcesses closes the old Tauri desktop app in desktop mode', () => {

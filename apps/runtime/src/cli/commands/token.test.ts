@@ -47,12 +47,14 @@ describe('runTokenCommand', () => {
         // a token written to a temp file is read back identically on subsequent calls.
         const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'tavern-token-test-'));
         try {
-            const tokenFile = path.join(tmpDir, 'runtime-api-token');
+            const configFile = path.join(tmpDir, 'tavern.json');
             const persistedToken = 'persisted-token-stable-value';
-            fs.writeFileSync(tokenFile, `${persistedToken}\n`, { mode: 0o600 });
+            fs.writeFileSync(configFile, `${JSON.stringify({ token: persistedToken })}\n`, {
+                mode: 0o600,
+            });
 
             // Stub getToken to simulate the file-backed resolver returning the same value twice.
-            const fileToken = fs.readFileSync(tokenFile, 'utf8').trim();
+            const fileToken = String(JSON.parse(fs.readFileSync(configFile, 'utf8')).token).trim();
             const getToken = () => fileToken;
 
             const { captured: c1, deps: d1 } = harness({ getToken });

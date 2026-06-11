@@ -180,8 +180,8 @@ cutover.
 ## Trust Model
 
 Every non-health Runtime HTTP request and WebSocket upgrade requires a bearer
-token. Tavern Runtime generates the token on first start and writes it to
-`<runtime-root>/runtime-api-token` (mode 0600). The Tavern App reads the token
+token. Tavern Runtime generates the token on first start and stores it in the host
+config file `<runtime-root>/tavern.json` (`token` key, mode 0600). The Tavern App reads the token
 from the connection record and sends it as `Authorization: Bearer <token>` on
 every request.
 
@@ -208,8 +208,8 @@ to the app:
    **Settings → Tavern Runtime**, or during the onboarding flow when first
    connecting to a remote Runtime.
 
-The token is stable unless you rotate it manually or delete
-`<runtime-root>/runtime-api-token`. A URL-only re-save in the app does not
+The token is stable unless you rotate it manually by editing the `token` key
+in `<runtime-root>/tavern.json` (or deleting the file to regenerate). A URL-only re-save in the app does not
 clear a stored token; only entering a new token value changes it.
 
 ## Release Artifact

@@ -328,23 +328,37 @@ export function stripAnsi(value) {
     return value.replace(ansiPattern, '');
 }
 
-// Mirrors resolveRuntimeApiToken in apps/runtime/src/config.ts: read
-// <runtimeRoot>/runtime-api-token, or create it (base64url 32 bytes, mode 0600)
-// so the first dev-stack run and the runtime agree on the same persisted token.
+// Mirrors resolveRuntimeApiToken in apps/runtime/src/config.ts: read the token
+// from <runtimeRoot>/tavern.json, or create it (base64url 32 bytes, mode 0600,
+// unknown keys preserved) so the first dev-stack run and the runtime agree on
+// the same persisted token.
 function resolveRuntimeApiTokenFile(runtimeRoot) {
-    const tokenPath = path.join(runtimeRoot, 'runtime-api-token');
+    const configPath = path.join(runtimeRoot, 'tavern.json');
+    let config = {};
     try {
-        const existing = fs.readFileSync(tokenPath, 'utf8').trim();
-        if (existing) {
-            return existing;
+        const parsed = JSON.parse(fs.readFileSync(configPath, 'utf8'));
+        if (parsed === null || typeof parsed !== 'object' || Array.isArray(parsed)) {
+            throw new Error('expected a JSON object');
         }
-    } catch {
-        // First run creates the token below.
+        config = parsed;
+    } catch (error) {
+        if (error.code !== 'ENOENT') {
+            // Never clobber an operator-edited config file we cannot parse.
+            throw new Error(`Tavern Runtime config at ${configPath} is not valid JSON: ${error}`);
+        }
+        // First run creates the config below.
+    }
+
+    const existing = typeof config.token === 'string' ? config.token.trim() : '';
+    if (existing) {
+        return existing;
     }
 
     const token = randomBytes(32).toString('base64url');
-    fs.mkdirSync(path.dirname(tokenPath), { recursive: true });
-    fs.writeFileSync(tokenPath, `${token}\n`, { mode: 0o600 });
+    fs.mkdirSync(path.dirname(configPath), { recursive: true });
+    fs.writeFileSync(configPath, `${JSON.stringify({ ...config, token }, null, 2)}\n`, {
+        mode: 0o600,
+    });
     return token;
 }
 

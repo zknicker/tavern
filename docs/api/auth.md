@@ -44,8 +44,8 @@ Do not put secrets in:
 ## Runtime Access
 
 The app talks to Tavern Runtime through the configured runtime URL and a bearer
-token. The Runtime generates a token on first start (`<runtime-root>/runtime-api-token`,
-mode 0600). Override with `TAVERN_RUNTIME_TOKEN`. The health route is unauthenticated.
+token. The Runtime generates a token on first start and keeps it in its host config
+file (`<runtime-root>/tavern.json`, `token` key, mode 0600). Override with `TAVERN_RUNTIME_TOKEN`. The health route is unauthenticated.
 Managed Hermes receives generated Gateway credentials from Tavern Runtime.
 
 **Pairing**: when the Runtime host is remote, run `tavern token` on the host to

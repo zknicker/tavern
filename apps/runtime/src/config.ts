@@ -84,8 +84,6 @@ export const HERMES_HOME = resolveConfiguredPath(
         path.join(HERMES_ROOT, 'home')
 );
 export const HERMES_DASHBOARD_SESSION_TOKEN = resolveHermesDashboardSessionToken();
-// Eager constant for production use (token is stable per runtime root).
-export const RUNTIME_API_TOKEN = resolveRuntimeApiToken();
 
 function resolveHermesDashboardSessionToken(): string {
     const configured =
@@ -121,25 +119,58 @@ function resolveRuntimeApiToken(): string {
         return configured;
     }
 
-    const tokenPath = path.join(RUNTIME_ROOT, 'runtime-api-token');
-    try {
-        const existing = fs.readFileSync(tokenPath, 'utf8').trim();
-        if (existing) {
-            return existing;
-        }
-    } catch {
-        // First run creates the managed local token below.
+    const config = readTavernConfig();
+    const existing = typeof config.token === 'string' ? config.token.trim() : '';
+    if (existing) {
+        return existing;
     }
 
     const token = randomBytes(32).toString('base64url');
-    fs.mkdirSync(path.dirname(tokenPath), { recursive: true });
-    fs.writeFileSync(tokenPath, `${token}\n`, { mode: 0o600 });
+    writeTavernConfig({ ...config, token });
+    return token;
+}
+
+export function getTavernConfigPath(): string {
+    return path.join(RUNTIME_ROOT, 'tavern.json');
+}
+
+// tavern.json is the runtime host's config file (mode 0600 — it holds the API
+// token). Unknown keys are preserved on write so operator edits survive.
+function readTavernConfig(): Record<string, unknown> {
+    const configPath = getTavernConfigPath();
+    let content: string;
     try {
-        fs.chmodSync(tokenPath, 0o600);
+        content = fs.readFileSync(configPath, 'utf8');
+    } catch {
+        // First run creates the config on write.
+        return {};
+    }
+
+    try {
+        const parsed: unknown = JSON.parse(content);
+        if (parsed === null || typeof parsed !== 'object' || Array.isArray(parsed)) {
+            throw new Error('expected a JSON object');
+        }
+        return parsed as Record<string, unknown>;
+    } catch (error) {
+        // Never clobber an operator-edited config file we cannot parse.
+        throw new Error(
+            `Tavern Runtime config at ${configPath} is not valid JSON: ${
+                error instanceof Error ? error.message : String(error)
+            }`
+        );
+    }
+}
+
+function writeTavernConfig(config: Record<string, unknown>): void {
+    const configPath = getTavernConfigPath();
+    fs.mkdirSync(path.dirname(configPath), { recursive: true });
+    fs.writeFileSync(configPath, `${JSON.stringify(config, null, 2)}\n`, { mode: 0o600 });
+    try {
+        fs.chmodSync(configPath, 0o600);
     } catch {
         // chmod is best-effort on non-POSIX filesystems.
     }
-    return token;
 }
 
 function resolveConfigTimezone(): string {

@@ -20,8 +20,8 @@ function defaultDeps(): TokenDeps {
  * Tavern app. Plain output is the token itself (one line, script-friendly).
  * `--json` emits `{ "token": "..." }` for symmetry with other read commands.
  *
- * The token is read from `TAVERN_RUNTIME_TOKEN` env or the `runtime-api-token`
- * file under the runtime root (created on first call if absent).
+ * The token is read from `TAVERN_RUNTIME_TOKEN` env or the `token` key in
+ * `tavern.json` under the runtime root (created on first call if absent).
  */
 export async function runTokenCommand(
     args: ParsedArgs,

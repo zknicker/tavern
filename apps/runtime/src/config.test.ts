@@ -36,9 +36,78 @@ describe('runtime config paths', () => {
     });
 });
 
+describe('runtime API token (tavern.json)', () => {
+    const originalRuntimeRoot = process.env.TAVERN_RUNTIME_ROOT;
+    const originalToken = process.env.TAVERN_RUNTIME_TOKEN;
+    let runtimeRoot: string;
+    let configPath: string;
+
+    beforeEach(async () => {
+        runtimeRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'tavern-config-token-'));
+        configPath = path.join(runtimeRoot, 'tavern.json');
+        process.env.TAVERN_RUNTIME_ROOT = runtimeRoot;
+        // biome-ignore lint/performance/noDelete: assigning undefined to process.env coerces to the string "undefined"; delete is the only way to unset.
+        delete process.env.TAVERN_RUNTIME_TOKEN;
+        vi.resetModules();
+    });
+
+    afterEach(async () => {
+        restoreEnv('TAVERN_RUNTIME_ROOT', originalRuntimeRoot);
+        restoreEnv('TAVERN_RUNTIME_TOKEN', originalToken);
+        vi.resetModules();
+        await fs.rm(runtimeRoot, { force: true, recursive: true });
+    });
+
+    it('generates a token into tavern.json on first call and returns it on the next', async () => {
+        const config = await import('./config');
+
+        const token = config.getRuntimeApiToken();
+        const persisted = JSON.parse(await fs.readFile(configPath, 'utf8'));
+
+        expect(persisted.token).toBe(token);
+        expect(token.length).toBeGreaterThan(20);
+        expect(config.getRuntimeApiToken()).toBe(token);
+    });
+
+    it('reads an existing token from tavern.json', async () => {
+        await fs.writeFile(configPath, `${JSON.stringify({ token: 'persisted-token' })}\n`);
+        const config = await import('./config');
+
+        expect(config.getRuntimeApiToken()).toBe('persisted-token');
+    });
+
+    it('preserves unknown config keys when adding a token', async () => {
+        await fs.writeFile(configPath, `${JSON.stringify({ operatorNote: 'keep me' })}\n`);
+        const config = await import('./config');
+
+        const token = config.getRuntimeApiToken();
+        const persisted = JSON.parse(await fs.readFile(configPath, 'utf8'));
+
+        expect(persisted.operatorNote).toBe('keep me');
+        expect(persisted.token).toBe(token);
+    });
+
+    it('prefers the TAVERN_RUNTIME_TOKEN env override and leaves tavern.json alone', async () => {
+        process.env.TAVERN_RUNTIME_TOKEN = 'env-token';
+        vi.resetModules();
+        const config = await import('./config');
+
+        expect(config.getRuntimeApiToken()).toBe('env-token');
+        await expect(fs.access(configPath)).rejects.toThrow();
+    });
+
+    it('throws on unparseable tavern.json instead of clobbering it', async () => {
+        await fs.writeFile(configPath, '{ not json');
+        const config = await import('./config');
+
+        expect(() => config.getRuntimeApiToken()).toThrow(/not valid JSON/);
+        expect(await fs.readFile(configPath, 'utf8')).toBe('{ not json');
+    });
+});
+
 function restoreEnv(name: string, value: string | undefined) {
     if (value === undefined) {
-        process.env[name] = undefined;
+        delete process.env[name];
         return;
     }
 
