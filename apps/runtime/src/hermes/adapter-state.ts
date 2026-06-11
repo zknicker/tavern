@@ -10,6 +10,8 @@ import { HERMES_HOME } from '../config';
 
 interface HermesAdapterState {
     agent?: {
+        avatar?: null | string;
+        emoji?: null | string;
         enabledSkillIds?: string[];
         hermesModelName?: AgentRuntimeHermesModelName | null;
         name?: string;

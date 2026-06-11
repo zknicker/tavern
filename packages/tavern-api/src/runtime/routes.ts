@@ -9,6 +9,7 @@ export const agentRuntimeMutationOrigins = {
 
 export const agentRuntimeRoutes = {
     agent: (id: string) => `/agents/${id}`,
+    agentAppearance: (id: string) => `/agents/${id}/appearance`,
     agentConfig: (id: string) => `/agents/${id}/config`,
     agentFile: (agentId: string, path: string) =>
         `/agents/${agentId}/files/${encodeURIComponent(path)}`,

@@ -18,6 +18,7 @@ const hermesMock = vi.hoisted(() => ({
     listSessionPreviews: vi.fn(),
     listToolsets: vi.fn(),
     saveAgentFile: vi.fn(),
+    updateAgentAppearance: vi.fn(),
     updateAgentName: vi.fn(),
     updateSkillEnabled: vi.fn(),
     updateToolsetEnabled: vi.fn(),
@@ -76,6 +77,29 @@ describe('Hermes proxy routes', () => {
 
         expect(response?.status).toBe(200);
         expect(hermesMock.updateAgentName).toHaveBeenCalledWith('agt_hermes', { name: 'Hermes' });
+    });
+
+    it('routes Hermes agent appearance patches to the adapter', async () => {
+        hermesMock.updateAgentAppearance.mockResolvedValueOnce({
+            config: { agent: { avatar: 'HM', emoji: null } },
+            hash: 'agent-appearance:HM:',
+            issues: [],
+            raw: '{}',
+            valid: true,
+        });
+
+        const response = await handleHermesProxyRequest(
+            new Request('http://runtime.test/agents/agt_hermes/appearance', {
+                body: JSON.stringify({ avatar: 'HM', emoji: null }),
+                method: 'PATCH',
+            })
+        );
+
+        expect(response?.status).toBe(200);
+        expect(hermesMock.updateAgentAppearance).toHaveBeenCalledWith('agt_hermes', {
+            avatar: 'HM',
+            emoji: null,
+        });
     });
 
     it('returns the managed Hermes skill list without Codex inventory merging', async () => {

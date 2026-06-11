@@ -22,6 +22,7 @@ import {
     type AgentRuntimeStartModelProviderOAuth,
     type AgentRuntimeSubmitModelProviderOAuth,
     type AgentRuntimeToolset,
+    type AgentRuntimeUpdateAgentAppearance,
     type AgentRuntimeUpdateAgentModel,
     type AgentRuntimeUpdateAgentName,
     type AgentRuntimeUpdateAgentThinkingDefault,
@@ -192,6 +193,8 @@ export class LocalHermesClient extends LocalHermesUnsupportedSurfaces {
             ...state,
             agent: {
                 ...state.agent,
+                avatar: next.avatar,
+                emoji: next.emoji,
                 enabledSkillIds: next.enabledSkillIds,
                 name: next.name,
             },
@@ -258,6 +261,24 @@ export class LocalHermesClient extends LocalHermesUnsupportedSurfaces {
         return toHermesConfigSnapshot({
             agent: { name: input.name },
             hash: `agent-name:${input.name}`,
+        });
+    }
+
+    async updateAgentAppearance(_agentId: string, input: AgentRuntimeUpdateAgentAppearance) {
+        const appearance = {
+            ...(input.avatar !== undefined ? { avatar: input.avatar || null } : {}),
+            ...(input.emoji !== undefined ? { emoji: input.emoji || null } : {}),
+        };
+        await updateHermesAdapterState((state) => ({
+            ...state,
+            agent: {
+                ...state.agent,
+                ...appearance,
+            },
+        }));
+        return toHermesConfigSnapshot({
+            agent: appearance,
+            hash: `agent-appearance:${input.avatar ?? ''}:${input.emoji ?? ''}`,
         });
     }
 

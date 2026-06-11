@@ -19,8 +19,10 @@ with instruction files, model, execution, tool, memory, and skill policy.
 * Agent list and detail reads use synced Runtime records. Mounting an app screen
   must not contact Hermes Gateway or enqueue a background sync job just to
   discover agents.
-* Agent records expose display name, description, model policy, tool policy,
-  memory policy, skill selections, and availability.
+* Agent records expose display name, avatar glyph, description, model policy,
+  tool policy, memory policy, skill selections, and availability. The avatar is
+  a short glyph or emoji string; clients fall back to name initials when it is
+  unset.
 * Model availability comes from Hermes model options exposed through Runtime.
   Clients read the stored snapshot and capability state instead of maintaining a
   Tavern-maintained list.
@@ -35,8 +37,9 @@ with instruction files, model, execution, tool, memory, and skill policy.
   check Cortex before external lookup when durable user, project, or prior
   decision context may already exist.
 * Hermes-backed settings use narrow domain mutations. Clients update agent
-  name, model, thinking default, and messaging bindings through agent and
-  messaging APIs instead of editing or saving raw Hermes config JSON.
+  name, appearance (avatar and emoji), model, thinking default, and messaging
+  bindings through agent and messaging APIs instead of editing or saving raw
+  Hermes config JSON.
 * Execution settings — the model fallback chain and the agent timezone — are
   Runtime-stored and edited through the agent execution settings API. Saving
   rewrites the generated managed runtime config and restarts managed Hermes to

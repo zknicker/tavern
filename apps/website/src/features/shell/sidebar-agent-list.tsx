@@ -39,7 +39,7 @@ export function AppSidebarAgentList({ sidebarAgents }: { sidebarAgents: AgentRai
                             >
                                 <AgentAvatar
                                     active={isAvatarActive}
-                                    avatar={agent.name}
+                                    avatar={agent.avatar}
                                     backgroundColor={agent.primaryColor ?? '#64748b'}
                                     className="size-5"
                                     name={agent.name}

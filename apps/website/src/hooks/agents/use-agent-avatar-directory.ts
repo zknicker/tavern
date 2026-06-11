@@ -34,6 +34,11 @@ function fallbackAvatar(value: string) {
     return compact || '?';
 }
 
+export function resolveAgentGlyph(input: { avatar: string | null; name: string }): string {
+    const avatar = input.avatar?.trim();
+    return avatar || fallbackAvatar(input.name);
+}
+
 function fallbackColor(value: string) {
     const total = value.split('').reduce((sum, character) => sum + character.charCodeAt(0), 0);
     return fallbackPalette[total % fallbackPalette.length] ?? '#64748b';
@@ -47,7 +52,7 @@ export function useAgentAvatarDirectory(
 
         for (const agent of agents) {
             const resolved = {
-                avatar: fallbackAvatar(agent.name),
+                avatar: resolveAgentGlyph(agent),
                 backgroundColor: agent.effectivePrimaryColor,
                 displayName: agent.name ?? agent.id,
             } satisfies ResolvedAgentAvatar;

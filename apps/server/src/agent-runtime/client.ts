@@ -62,6 +62,7 @@ import {
     type AgentRuntimeToolset,
     type AgentRuntimeToolsetList,
     type AgentRuntimeUpdate,
+    type AgentRuntimeUpdateAgentAppearance,
     type AgentRuntimeUpdateAgentModel,
     type AgentRuntimeUpdateAgentName,
     type AgentRuntimeUpdateAgentThinkingDefault,
@@ -144,6 +145,7 @@ import {
     agentRuntimeSubmitModelProviderOAuthSchema,
     agentRuntimeToolsetListSchema,
     agentRuntimeToolsetSchema,
+    agentRuntimeUpdateAgentAppearanceSchema,
     agentRuntimeUpdateAgentModelSchema,
     agentRuntimeUpdateAgentNameSchema,
     agentRuntimeUpdateAgentThinkingDefaultSchema,
@@ -294,6 +296,10 @@ export interface TavernAgentRuntimeClient {
     startUpdate(input?: { targetVersion?: null | string }): Promise<AgentRuntimeUpdate>;
     stopChatTurn(chatId: string, input: AgentRuntimeStopTurn): Promise<AgentRuntimeStopTurnResult>;
     submitModelProviderOAuth(input: AgentRuntimeSubmitModelProviderOAuth): Promise<unknown>;
+    updateAgentAppearance(
+        agentId: string,
+        input: AgentRuntimeUpdateAgentAppearance
+    ): Promise<AgentRuntimeHermesConfigSnapshot>;
     updateAgentModel(
         agentId: string,
         input: AgentRuntimeUpdateAgentModel
@@ -932,6 +938,27 @@ class HttpTavernAgentRuntimeClient implements TavernAgentRuntimeClient {
             },
             method: 'PATCH',
         });
+
+        if (!response.ok) {
+            await readErrorResponse(response);
+        }
+
+        return agentRuntimeHermesConfigSnapshotSchema.parse(await response.json());
+    }
+
+    async updateAgentAppearance(agentId: string, input: AgentRuntimeUpdateAgentAppearance) {
+        const payload = agentRuntimeUpdateAgentAppearanceSchema.parse(input);
+        const response = await fetch(
+            `${this.#baseUrl}${agentRuntimeRoutes.agentAppearance(agentId)}`,
+            {
+                body: JSON.stringify(payload),
+                headers: {
+                    'content-type': 'application/json',
+                    [agentRuntimeMutationHeaders.origin]: agentRuntimeMutationOrigins.tavern,
+                },
+                method: 'PATCH',
+            }
+        );
 
         if (!response.ok) {
             await readErrorResponse(response);
