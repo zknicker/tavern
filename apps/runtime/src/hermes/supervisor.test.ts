@@ -122,7 +122,9 @@ describe('managed Hermes binary resolution', () => {
 
         const { buildHermesDashboardEnv } = await import('./supervisor');
 
-        expect(buildHermesDashboardEnv().PATH?.startsWith(`${nodeBin}${path.delimiter}`)).toBe(true);
+        expect(buildHermesDashboardEnv().PATH?.startsWith(`${nodeBin}${path.delimiter}`)).toBe(
+            true
+        );
     });
 
     it('leaves PATH alone when no bundled Node is present', async () => {
