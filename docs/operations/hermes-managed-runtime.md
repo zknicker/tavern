@@ -7,6 +7,7 @@ read_when:
   - changing Hermes startup, dashboard ports, model provider config, Codex auth sync, or Runtime capability checks
   - verifying that multiple Tavern worktrees can run managed Hermes simultaneously
   - cold-start testing a real engine install or the no-co-opt / version-pin guarantees
+  - upgrading the vendored llm-wiki skill package or changing managed wiki crons
 ---
 
 # Managed Hermes Runtime
@@ -158,6 +159,24 @@ launch it copies the prompt-visible workflow skill directory to
 The wiki hub defaults to `TAVERN_RUNTIME_ROOT/wiki`. Operators can override it
 with `TAVERN_WIKI_HUB_PATH` or `TAVERN_CORTEX_WIKI_PATH`. Runtime creates the
 hub skeleton and passes the resolved path to Hermes as `TAVERN_WIKI_HUB_PATH`.
+
+### Upgrading the vendored wiki skill
+
+The skill at `apps/runtime/assets/hermes/skills/wiki/` is a vendored snapshot
+of `nvk/llm-wiki` (`plugins/llm-wiki/skills/wiki`); the pinned upstream version
+lives in that directory's `TAVERN.md`. To bump it:
+
+1. Diff the upstream release against the vendored `SKILL.md` and `references/`.
+2. Re-apply the Tavern adaptations noted in `TAVERN.md`: `TAVERN_WIKI_HUB_PATH`
+   is the first hub source, and `/wiki` command examples read as natural
+   language shorthand for the same skill workflows.
+3. Update the version line in `TAVERN.md`.
+4. If upstream changed maintenance workflows or cadence, revisit the managed
+   default crons in `apps/runtime/src/hermes/managed-crons.ts` and their
+   prompts' `references/*.md` pointers.
+5. Run `bun run --filter @tavern/runtime test -- src/hermes/llm-wiki.test.ts
+   src/hermes/managed-crons.test.ts src/wiki` and start the dev stack to verify
+   skill sync.
 
 ## Managed Tavern Skill
 
