@@ -25,7 +25,13 @@ skill for all knowledge work).
 ## The Tavern API
 
 Tavern Runtime serves a local HTTP API at `$TAVERN_RUNTIME_URL` (loopback,
-trusted local owner). Reads are always safe. Use `curl` with JSON output.
+trusted local owner). Every call needs your runtime token:
+
+```sh
+AUTH="authorization: Bearer $TAVERN_RUNTIME_TOKEN"
+```
+
+Reads are always safe. Use `curl` with JSON output.
 
 Replying in the current conversation is just your normal answer — never an API
 call. Use the API to reach **other** chats or to inspect state.
@@ -33,9 +39,9 @@ call. Use the API to reach **other** chats or to inspect state.
 ### Chats and messages
 
 ```sh
-curl -s "$TAVERN_RUNTIME_URL/api/chats?limit=50"                      # list chats
-curl -s "$TAVERN_RUNTIME_URL/api/chats/<chat_id>/messages?limit=50"   # history
-curl -s "$TAVERN_RUNTIME_URL/api/chats/<chat_id>/messages/search?query=<text>"
+curl -s -H "$AUTH" "$TAVERN_RUNTIME_URL/api/chats?limit=50"                      # list chats
+curl -s -H "$AUTH" "$TAVERN_RUNTIME_URL/api/chats/<chat_id>/messages?limit=50"   # history
+curl -s -H "$AUTH" "$TAVERN_RUNTIME_URL/api/chats/<chat_id>/messages/search?query=<text>"
 ```
 
 ### Post a message into a chat
@@ -46,19 +52,19 @@ Pick a fresh `deliveryId` (repeat it to retry idempotently).
 
 ```sh
 curl -s -X POST "$TAVERN_RUNTIME_URL/cron/deliveries" \
-  -H 'content-type: application/json' \
+  -H "$AUTH" -H 'content-type: application/json' \
   -d '{"chatId":"cht_...","content":"...","deliveryId":"del_<unique>"}'
 ```
 
 ### Read your own configuration (read-only)
 
 ```sh
-curl -s "$TAVERN_RUNTIME_URL/agents"                # your record (name, avatar, skills)
-curl -s "$TAVERN_RUNTIME_URL/execution-settings"    # model fallbacks, timezone
-curl -s "$TAVERN_RUNTIME_URL/permission-settings"   # approval modes, command allowlist
-curl -s "$TAVERN_RUNTIME_URL/connectors"            # MCP servers (secrets masked)
-curl -s "$TAVERN_RUNTIME_URL/skills"                # available skills
-curl -s "$TAVERN_RUNTIME_URL/capabilities"          # runtime health
+curl -s -H "$AUTH" "$TAVERN_RUNTIME_URL/agents"                # your record (name, avatar, skills)
+curl -s -H "$AUTH" "$TAVERN_RUNTIME_URL/execution-settings"    # model fallbacks, timezone
+curl -s -H "$AUTH" "$TAVERN_RUNTIME_URL/permission-settings"   # approval modes, command allowlist
+curl -s -H "$AUTH" "$TAVERN_RUNTIME_URL/connectors"            # MCP servers (secrets masked)
+curl -s -H "$AUTH" "$TAVERN_RUNTIME_URL/skills"                # available skills
+curl -s -H "$AUTH" "$TAVERN_RUNTIME_URL/capabilities"          # runtime health
 ```
 
 Use these to answer "what model am I using?", "what are you allowed to run?",
@@ -94,6 +100,7 @@ direct the user to the exact place:
 - Never edit Tavern configuration files, the generated runtime config, or
   stored settings directly; settings changes go through the user.
 - Never read or echo secret values; connector and provider secrets are
-  intentionally masked.
+  intentionally masked. `$TAVERN_RUNTIME_TOKEN` is a credential too: send it
+  in headers, never print it.
 - Everything you post through the API is attributed to you and permanently
   visible in chat history — no hidden side channels.
