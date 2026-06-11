@@ -119,7 +119,9 @@ every Tavern-owned setting that lands in the file is a domain:
 Each domain only sets or deletes its own keys, so operator-managed keys
 elsewhere in the file survive every merge. Runtime storage is the source of
 truth and the YAML is always derived; settings changes rewrite the file and
-restart managed Hermes. Per-agent live settings (name, model, thinking,
+schedule a managed Hermes restart. Restarts are coalesced — a burst of saves
+produces one restart, debounced and deferred (bounded) while a chat turn is
+active (`apps/runtime/src/hermes/restart-coordinator.ts`). Per-agent live settings (name, model, thinking,
 appearance) are not config domains — they flow through the adapter state and
 engine API instead.
 

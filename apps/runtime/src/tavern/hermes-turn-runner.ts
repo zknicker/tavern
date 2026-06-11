@@ -367,6 +367,11 @@ export async function respondToHermesApproval(
     throw new Error(`No active turn is awaiting approval for session "${input.sessionKey}".`);
 }
 
+/** Whether any chat turn is currently dispatched to the engine. */
+export function hasActiveHermesTurns() {
+    return activeHermesTurns.size > 0;
+}
+
 export function closeHermesTurnClients() {
     if (hermesTurnClient) {
         hermesTurnClient.close();

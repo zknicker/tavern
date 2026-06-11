@@ -13,12 +13,14 @@ import {
     readConfigValue,
 } from '../config';
 import { log } from '../log';
+import { hasActiveHermesTurns } from '../tavern/hermes-turn-runner';
 import { publishRuntimeEvent } from '../tavern/runtime-events';
 import { ensureHermesBinary } from './bootstrap';
 import { isManagedHermesSetupError } from './errors';
 import { resolveManagedWikiHubPath } from './llm-wiki';
 import { buildRuntimeApiBaseUrl, createLocalHermesClient } from './local-client';
 import { prepareManagedHermesModelConfig, resolveManagedHermesModelConfig } from './model-config';
+import { createRestartCoordinator, type RestartCoordinator } from './restart-coordinator';
 import {
     markManagedHermesApiReady,
     markManagedHermesApiStopped,
@@ -31,15 +33,21 @@ export interface ManagedHermesHandle {
     stop(options?: { force?: boolean }): Promise<void>;
 }
 
-let activeRestartRequest: (() => boolean) | null = null;
+let activeRestartCoordinator: RestartCoordinator | null = null;
 
 /**
- * Restart the managed Hermes process so it picks up generated config changes.
- * Returns false when no managed Hermes supervisor is active (e.g. external
- * Hermes or tests); callers surface that as restart-not-scheduled.
+ * Schedule a managed Hermes restart so it picks up generated config changes.
+ * Requests are coalesced — a burst of settings saves produces one restart,
+ * deferred (bounded) while a chat turn is active. Returns false when no
+ * managed Hermes supervisor is active (e.g. external Hermes or tests);
+ * callers surface that as restart-not-scheduled.
  */
 export function requestManagedHermesRestart(): boolean {
-    return activeRestartRequest?.() ?? false;
+    if (!activeRestartCoordinator) {
+        return false;
+    }
+    activeRestartCoordinator.request();
+    return true;
 }
 
 export async function startHermesForRuntime(): Promise<ManagedHermesHandle> {
@@ -140,25 +148,28 @@ export async function startHermesForRuntime(): Promise<ManagedHermesHandle> {
 
     void startDashboard('initial');
 
-    activeRestartRequest = () => {
-        if (stopping) {
-            return false;
-        }
-        const current = child;
-        if (current) {
-            log.info('Restarting managed Hermes API to apply generated config');
-            // The exit handler observes stopping=false and schedules the restart.
-            void stopChild(current);
-            return true;
-        }
-        scheduleRestart();
-        return true;
-    };
+    activeRestartCoordinator = createRestartCoordinator({
+        hasActiveTurns: hasActiveHermesTurns,
+        restart: () => {
+            if (stopping) {
+                return;
+            }
+            const current = child;
+            if (current) {
+                log.info('Restarting managed Hermes API to apply generated config');
+                // The exit handler observes stopping=false and schedules the restart.
+                void stopChild(current);
+                return;
+            }
+            scheduleRestart();
+        },
+    });
 
     return {
         async stop(options?: { force?: boolean }) {
             stopping = true;
-            activeRestartRequest = null;
+            activeRestartCoordinator?.dispose();
+            activeRestartCoordinator = null;
             if (restartTimer) {
                 clearTimeout(restartTimer);
                 restartTimer = null;
