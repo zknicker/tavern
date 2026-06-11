@@ -2,6 +2,30 @@
 
 All notable changes to this project will be documented in this file.
 
+## v1.4.3 - 2026-06-10
+
+Runtime CLI and managed engine release. No app behavior changes; the Runtime
+floor stays at 1.4.2.
+
+- Added a revamped `tavern` CLI: banner with a live runtime status line on bare
+  `tavern`, registry-generated help with per-command and group help, did-you-mean
+  suggestions, and a 0/1/2 exit-code contract.
+- Added `tavern status`: one-screen host health with service state, running vs
+  installed version (including the staged-restart case), capability health with
+  reasons, and engine resolution; supports `--json` and `--runtime-url`.
+- Changed `tavern update` to report the true end state — it compares the staged
+  binary against the running Runtime and says when a restart is still required,
+  with `--restart` or a TTY prompt to cut over. `tavern restart` now waits for
+  Runtime health and confirms the new running version.
+- Changed cortex and engine commands to aligned output, per-subcommand
+  validation and help, and friendly unreachable-runtime errors.
+- Fixed the managed engine install stranding its Python interpreter when the
+  installer sandbox was cleaned up; interpreters now persist under the engine
+  pin, broken installs are detected and reinstalled, and agent memory setup
+  bootstraps pip in uv-created venvs.
+- Fixed the bundled Mnemosyne wheelhouse to target the pinned engine interpreter
+  (cp311 on macOS arm64) so agent memory installs offline on fresh hosts.
+
 ## v1.4.2 - 2026-06-10
 
 - Added live work rows for engine notices, background workers, and tool approval requests in chat.
