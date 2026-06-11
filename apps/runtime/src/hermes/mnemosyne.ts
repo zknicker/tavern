@@ -71,6 +71,8 @@ export async function ensureManagedMnemosynePackage(input: ManagedMnemosynePacka
     const wheelhousePath = await resolveMnemosyneWheelhousePath(input);
     const args = buildMnemosyneInstallArgs({ packageSpec, wheelhousePath });
 
+    await ensurePipAvailable(pythonPath);
+
     log.info('Installing managed Mnemosyne package for Hermes', {
         packageSpec,
         pythonPath,
@@ -146,6 +148,33 @@ async function hasUnmanagedPlugin(pluginPath: string) {
         .stat(marker)
         .then(() => true)
         .catch(() => false));
+}
+
+/**
+ * uv-created venvs ship without pip; the standalone interpreters they link
+ * still bundle ensurepip, so bootstrap pip in place before installing.
+ */
+async function ensurePipAvailable(pythonPath: string) {
+    const hasPip = await execFileAsync(pythonPath, ['-m', 'pip', '--version'], {
+        maxBuffer: 1024 * 128,
+        timeout: 30_000,
+    })
+        .then(() => true)
+        .catch(() => false);
+    if (hasPip) {
+        return;
+    }
+
+    log.info('Engine venv has no pip; bootstrapping it with ensurepip', { pythonPath });
+    await execFileAsync(pythonPath, ['-m', 'ensurepip', '--upgrade'], {
+        maxBuffer: 1024 * 1024,
+        timeout: 120_000,
+    }).catch((error) => {
+        throw managedHermesSetupError(
+            `The engine's Python at ${pythonPath} has no pip and ensurepip failed, so agent memory cannot be set up: ` +
+                `${error instanceof Error ? error.message : String(error)}`
+        );
+    });
 }
 
 async function canImportMnemosynePackage(pythonPath: string) {

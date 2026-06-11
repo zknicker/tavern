@@ -10,6 +10,9 @@ import { fail, readJson, repoRoot } from './release-utils.mjs';
 const artifactRoot = path.join(repoRoot, 'apps', 'website', 'electron-dist');
 const runtimeArtifactDir = path.join(artifactRoot, 'runtime');
 const mnemosynePackageSpec = 'mnemosyne-hermes==0.1.5';
+// Interpreter version of the pinned engine venv (see the engine pin in
+// apps/runtime/src/hermes/engine.ts); the wheelhouse must match its ABI.
+const enginePythonVersion = '3.11';
 const main = async () => {
     const version = await readReleaseVersion();
     const targetTriple = readTargetTriple();
@@ -113,11 +116,33 @@ function run(command, args) {
 
 async function stageMnemosyneWheelhouse(wheelhousePath) {
     await fs.mkdir(wheelhousePath, { recursive: true });
+    // Target the pinned engine's interpreter, not the release host's Python.
+    // The engine venv installs from this wheelhouse with --no-index, so wheels
+    // built for the wrong ABI (e.g. cp314 on a cp311 engine) brick agent
+    // memory setup on every deployed host.
+    const abis = [`cp${enginePythonVersion.replace('.', '')}`, 'abi3', 'none'];
+    const platforms = [
+        'macosx_11_0_arm64',
+        'macosx_12_0_arm64',
+        'macosx_13_0_arm64',
+        'macosx_14_0_arm64',
+        'macosx_15_0_arm64',
+        'macosx_10_9_universal2',
+        'macosx_10_12_universal2',
+        'macosx_10_15_universal2',
+        'macosx_11_0_universal2',
+    ];
     run(process.env.PYTHON ?? 'python3', [
         '-m',
         'pip',
         'download',
         '--only-binary=:all:',
+        '--python-version',
+        enginePythonVersion,
+        '--implementation',
+        'cp',
+        ...abis.flatMap((abi) => ['--abi', abi]),
+        ...platforms.flatMap((platform) => ['--platform', platform]),
         '--dest',
         wheelhousePath,
         mnemosynePackageSpec,
