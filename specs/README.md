@@ -36,8 +36,12 @@ directly.
 - `mentions.md`: `@` references in composers, their metadata, and their runtime effects.
 - `jobs.md`, `workers.md`, `models.md`, `skills.md`, `tools.md`, `catalog.md`, `activity-log.md`:
   focused product surfaces.
-- `workspace.md`: managed Hermes workspace instructions, generated
-  `AGENTS.md`, user-authored instructions, and agent notes.
+- `connectors.md`: user-configured MCP servers as a settings surface.
+- `permissions.md`: approval modes and the command allowlist.
+- `workspace.md`: managed Hermes workspace files, the Tavern-managed
+  `AGENTS.md` block, and user/agent-owned instruction content.
+- `tavern-skill.md`: the agent's product knowledge of and operational access
+  to Tavern.
 
 ## Memory Specs
 

@@ -38,6 +38,15 @@ choices.
 - Hermes is the authoritative model provider configuration surface for agent execution.
 - Tavern may display transport/sync status showing whether Hermes has the credentials it needs.
 
+## Fallbacks
+
+- The agent's execution model has an ordered fallback chain of provider/model routes used when the
+  primary route fails.
+- The fallback chain is a Tavern product setting edited beside the agent model picker, drawing from
+  the same model catalog.
+- Tavern Runtime is canonical for the chain and materializes it through generated managed runtime
+  config; Hermes applies it at execution time.
+
 ## Catalog
 
 - Tavern displays Hermes model options as a read-only inventory.
