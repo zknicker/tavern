@@ -72,6 +72,8 @@ describe('generated agent instructions', () => {
         expect(content).toContain('## Environment');
         expect(content).toContain('## Delegation');
         expect(content).toContain("Cortex is Tavern's durable knowledge store");
+        expect(content).toContain('Tavern maintains the wiki automatically');
+        expect(content).toContain('Never park wiki work on the user');
     });
 
     test('generation is deterministic and only writes on change', async () => {

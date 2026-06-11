@@ -78,7 +78,7 @@ Keep llm-wiki's structure:
 
 - \`raw/\` contains immutable source material.
 - \`wiki/\` contains compiled articles.
-- \`inventory/\` and \`datasets/\` track durable records and external data manifests.
+- \`inventory/\` is the wiki's todo queue: follow-up records with status and priority that Tavern processes automatically. \`datasets/\` tracks external data manifests.
 - \`output/\` contains reports, plans, decks, catalogs, and generated artifacts.
 - \`_index.md\`, \`config.md\`, and \`log.md\` keep each topic navigable.
 
@@ -94,7 +94,13 @@ Priority: current user statement > current source material > compiled wiki artic
 
 Preserve provenance. Put sources in \`raw/\`, synthesize in \`wiki/\`, and file deliverables in \`output/\`. Do not mutate raw source files after ingestion. Do not save secrets or broad chat dumps into the wiki without explicit user direction.
 
-Use Tasks or Runtime crons for scheduled wiki work. Do not invent hidden background Cortex maintenance.`;
+After changing wiki articles, repair the indexes, links, and backlinks your edits affected, and re-score changed articles in \`.librarian/scan-results.json\` where entries exist.
+
+### Maintenance
+
+Tavern maintains the wiki automatically in the background: new sources compile into articles, a weekly librarian scores and repairs, and inventory records are worked off one focused run at a time. Do not schedule wiki maintenance automations or invent hidden background maintenance of your own.
+
+When you notice wiki work beyond your current task — thin or single-source coverage, unverified claims, dedup candidates, sources worth ingesting — file it as a proposed inventory record per the wiki skill's \`references/inventory.md\` instead of chasing it; records are processed automatically. Never park wiki work on the user: \`owner: user\` is reserved for records the user authors themselves. If a record cannot be resolved, mark it \`blocked\` with the reason and lower the affected claims' confidence (or set \`verified: false\`) so answers hedge; the user corrects things in conversation.`;
 
 const generatedFileSection = `## This File Is Generated
 
