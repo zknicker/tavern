@@ -34,6 +34,7 @@ import {
     type AgentRuntimeModels,
     type AgentRuntimeOpenAiSettings,
     type AgentRuntimeOpenRouterSettings,
+    type AgentRuntimePermissionSettings,
     type AgentRuntimePollModelProviderOAuth,
     type AgentRuntimeRenderedWorkspaceInstructions,
     type AgentRuntimeRunCron,
@@ -46,6 +47,8 @@ import {
     type AgentRuntimeSaveModelProviderApiKey,
     type AgentRuntimeSaveOpenAiSettings,
     type AgentRuntimeSaveOpenRouterSettings,
+    type AgentRuntimeSavePermissionSettings,
+    type AgentRuntimeSavePermissionSettingsResult,
     type AgentRuntimeSaveWorkspaceInstructions,
     type AgentRuntimeSessionGraph,
     type AgentRuntimeSessionList,
@@ -117,6 +120,7 @@ import {
     agentRuntimeMutationOrigins,
     agentRuntimeOpenAiSettingsSchema,
     agentRuntimeOpenRouterSettingsSchema,
+    agentRuntimePermissionSettingsSchema,
     agentRuntimePollModelProviderOAuthSchema,
     agentRuntimeRenderedWorkspaceInstructionsSchema,
     agentRuntimeRoutes,
@@ -130,6 +134,8 @@ import {
     agentRuntimeSaveModelProviderApiKeySchema,
     agentRuntimeSaveOpenAiSettingsSchema,
     agentRuntimeSaveOpenRouterSettingsSchema,
+    agentRuntimeSavePermissionSettingsResultSchema,
+    agentRuntimeSavePermissionSettingsSchema,
     agentRuntimeSaveWorkspaceInstructionsSchema,
     agentRuntimeSessionGraphSchema,
     agentRuntimeSessionListSchema,
@@ -220,6 +226,7 @@ export interface TavernAgentRuntimeClient {
     getModels(): Promise<AgentRuntimeModels>;
     getOpenAiSettings(): Promise<AgentRuntimeOpenAiSettings>;
     getOpenRouterSettings(): Promise<AgentRuntimeOpenRouterSettings>;
+    getPermissionSettings(): Promise<AgentRuntimePermissionSettings>;
     getRuntimeJob(slug: AgentRuntimeJobSlug): Promise<AgentRuntimeJobDetail | null>;
     getSessionGraph(sessionKey: string): Promise<AgentRuntimeSessionGraph>;
     getSessionPrompt(sessionKey: string): Promise<AgentRuntimeSessionPrompt | null>;
@@ -287,6 +294,9 @@ export interface TavernAgentRuntimeClient {
     saveOpenRouterSettings(
         input: AgentRuntimeSaveOpenRouterSettings
     ): Promise<AgentRuntimeOpenRouterSettings>;
+    savePermissionSettings(
+        input: AgentRuntimeSavePermissionSettings
+    ): Promise<AgentRuntimeSavePermissionSettingsResult>;
     saveWorkspaceInstructions(
         agentId: string,
         input: AgentRuntimeSaveWorkspaceInstructions
@@ -1273,6 +1283,34 @@ class HttpTavernAgentRuntimeClient implements TavernAgentRuntimeClient {
         }
 
         return agentRuntimeSaveExecutionSettingsResultSchema.parse(await response.json());
+    }
+
+    async getPermissionSettings() {
+        const response = await fetch(`${this.#baseUrl}${agentRuntimeRoutes.permissionSettings}`);
+
+        if (!response.ok) {
+            await readErrorResponse(response);
+        }
+
+        return agentRuntimePermissionSettingsSchema.parse(await response.json());
+    }
+
+    async savePermissionSettings(input: AgentRuntimeSavePermissionSettings) {
+        const payload = agentRuntimeSavePermissionSettingsSchema.parse(input);
+        const response = await fetch(`${this.#baseUrl}${agentRuntimeRoutes.permissionSettings}`, {
+            body: JSON.stringify(payload),
+            headers: {
+                'content-type': 'application/json',
+                [agentRuntimeMutationHeaders.origin]: agentRuntimeMutationOrigins.tavern,
+            },
+            method: 'PUT',
+        });
+
+        if (!response.ok) {
+            await readErrorResponse(response);
+        }
+
+        return agentRuntimeSavePermissionSettingsResultSchema.parse(await response.json());
     }
 
     async listSkills(options?: AgentRuntimeListSkillsOptions) {

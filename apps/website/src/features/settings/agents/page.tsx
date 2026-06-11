@@ -11,8 +11,10 @@ import { MessagingPlatformsSection } from '../connections/messaging-platform-sec
 import { AgentAppearanceSection } from './appearance-section.tsx';
 import { AgentBehaviorSection } from './behavior-section.tsx';
 import { AgentModelSection } from './model-section.tsx';
+import { AgentPermissionsSection } from './permissions-section.tsx';
 import type { AgentModelDraft } from './types.ts';
 import { useAgentExecutionSettings } from './use-execution-settings.ts';
+import { useAgentPermissionSettings } from './use-permission-settings.ts';
 
 export function AgentSettingsPage() {
     const primaryAgentQuery = usePrimaryAgent();
@@ -71,6 +73,7 @@ function AgentSettingsContent({
         },
     });
     const executionSettings = useAgentExecutionSettings();
+    const permissionSettings = useAgentPermissionSettings();
     const isSavingAgentConfig = updateModel.isPending || updateThinkingDefault.isPending;
 
     return (
@@ -117,6 +120,28 @@ function AgentSettingsContent({
                     )
                 }
                 timezone={executionSettings.settings.timezone}
+            />
+
+            <AgentPermissionsSection
+                approvalMode={permissionSettings.settings.approvalMode}
+                automationApprovalMode={permissionSettings.settings.automationApprovalMode}
+                commandAllowlist={permissionSettings.settings.commandAllowlist}
+                disabled={permissionSettings.isSaving}
+                onApprovalModeChange={(approvalMode) =>
+                    void withSavingToast(() => permissionSettings.save({ approvalMode })).catch(
+                        () => undefined
+                    )
+                }
+                onAutomationApprovalModeChange={(automationApprovalMode) =>
+                    void withSavingToast(() =>
+                        permissionSettings.save({ automationApprovalMode })
+                    ).catch(() => undefined)
+                }
+                onCommandAllowlistChange={(next) =>
+                    void withSavingToast(() =>
+                        permissionSettings.save({ commandAllowlist: next })
+                    ).catch(() => undefined)
+                }
             />
 
             <MessagingPlatformsSection

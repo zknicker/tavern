@@ -11,6 +11,10 @@ import { getAgentInstructions } from './instructions.ts';
 import { listAgents } from './list.ts';
 import { onAgentInstructionsUpdate } from './on-instructions-update.ts';
 import { onAgentUpdate } from './on-update.ts';
+import {
+    getAgentPermissionSettingsProcedure,
+    saveAgentPermissionSettingsProcedure,
+} from './permission-settings.ts';
 import { getPrimaryAgentRoute } from './primary.ts';
 import { saveAgentProfile } from './save-profile.ts';
 import { saveAgentSkillsProcedure } from './save-skills.ts';
@@ -33,8 +37,10 @@ export const agentRouter = createRouter({
     list: listAgents,
     onInstructionsUpdate: onAgentInstructionsUpdate,
     onUpdate: onAgentUpdate,
+    permissionSettings: getAgentPermissionSettingsProcedure,
     primary: getPrimaryAgentRoute,
     saveExecutionSettings: saveAgentExecutionSettingsProcedure,
+    savePermissionSettings: saveAgentPermissionSettingsProcedure,
     saveProfile: saveAgentProfile,
     saveSkills: saveAgentSkillsProcedure,
     saveTools: saveAgentToolsProcedure,

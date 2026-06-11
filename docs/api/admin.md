@@ -33,7 +33,7 @@ capabilities. It is not a second product API.
 | Health and capabilities | `/health`, `/capabilities`, `/capabilities/{id}`, `/capabilities/{id}/refresh`, `/capabilities/refresh` |
 | Runtime update | `/update/status`, `/update`, `/update/restart` |
 | Runtime events | `/events`, websocket `/events` |
-| Managed Hermes | `/hermes-config`, `/execution-settings` |
+| Managed Hermes | `/hermes-config`, `/execution-settings`, `/permission-settings` |
 | Agents and files | `/agents`, `/agents/{id}`, `/agents/{id}/config`, `/agents/{id}/files`, `/agents/{id}/files/{path}` |
 | Sessions and execution evidence | `/hermes/sessions`, `/hermes/sessions/previews`, `/hermes/sessions/{sessionKey}/messages`, `/hermes/sessions/{sessionKey}/graph`, `/hermes/sessions/{sessionKey}/prompt`, `/hermes/sessions/{sessionKey}/resync` |
 | Jobs | `/jobs`, `/jobs/{slug}`, `/jobs/{slug}/run` |
@@ -53,6 +53,12 @@ crons.
 the model fallback chain and the agent timezone. Runtime stores the settings,
 rewrites the generated managed runtime config, and restarts managed Hermes to
 apply them; the PUT response reports whether a restart was scheduled.
+
+`/permission-settings` (GET/PUT) owns Tavern-stored permission policy: the
+tool and automation approval modes and the command allowlist. Runtime stores
+the policy, rewrites the generated managed runtime config, and restarts
+managed Hermes to apply it; live "always" approval answers persisted by the
+engine are imported into the visible allowlist.
 
 `/model-access/api-key` writes provider API keys through the managed Hermes
 environment API. `/model-access/oauth/{providerId}/start` starts the
