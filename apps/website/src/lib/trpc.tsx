@@ -33,8 +33,12 @@ export type ChatMessageAttachmentInput = NonNullable<
 export type ChatListOutput = RouterOutput['chat']['list'];
 export type ChatLogOutput = RouterOutput['chat']['log']['list'];
 export type ChatToolOutput = RouterOutput['chat']['tool']['get'];
+<<<<<<< HEAD
 export type ConnectorListOutput = RouterOutput['connector']['list'];
 export type ConnectorSaveInput = RouterInput['connector']['create'];
+=======
+export type CortexBacklinksOutput = RouterOutput['cortex']['backlinks'];
+>>>>>>> 95ab5b0d (feat: navigable wiki links and backlinks panel in Cortex)
 export type CortexListOutput = RouterOutput['cortex']['list'];
 export type CortexPageOutput = RouterOutput['cortex']['get'];
 export type CortexStatusOutput = RouterOutput['cortex']['status'];

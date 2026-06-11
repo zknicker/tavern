@@ -9,7 +9,15 @@ import {
 } from '../../components/ui/table.tsx';
 import { type MarkdownBlock, parseMarkdownBlocks } from './cortex-markdown-parser.ts';
 
-export function CortexMarkdownViewer({ value }: { value: string }) {
+export type CortexLinkNavigate = (target: string) => void;
+
+export function CortexMarkdownViewer({
+    onNavigate,
+    value,
+}: {
+    onNavigate?: CortexLinkNavigate;
+    value: string;
+}) {
     const blocks = parseMarkdownBlocks(value);
 
     if (blocks.length === 0) {
@@ -23,20 +31,34 @@ export function CortexMarkdownViewer({ value }: { value: string }) {
     return (
         <div className="space-y-4 text-foreground text-sm leading-6">
             {blocks.map((block) => (
-                <MarkdownBlockContent block={block} key={`${block.kind}:${block.startLine}`} />
+                <MarkdownBlockContent
+                    block={block}
+                    key={`${block.kind}:${block.startLine}`}
+                    onNavigate={onNavigate}
+                />
             ))}
         </div>
     );
 }
 
-function MarkdownBlockContent({ block }: { block: MarkdownBlock }) {
+function MarkdownBlockContent({
+    block,
+    onNavigate,
+}: {
+    block: MarkdownBlock;
+    onNavigate?: CortexLinkNavigate;
+}) {
     switch (block.kind) {
         case 'blockquote':
             return (
                 <blockquote className="border-border border-l-2 pl-3 text-muted-foreground">
                     {block.lines.map((line) => (
                         <p key={`${block.startLine}:quote:${line}`}>
-                            {renderInlineMarkdown(line, `${block.startLine}:quote:${line}`)}
+                            {renderInlineMarkdown(
+                                line,
+                                `${block.startLine}:quote:${line}`,
+                                onNavigate
+                            )}
                         </p>
                     ))}
                 </blockquote>
@@ -48,14 +70,18 @@ function MarkdownBlockContent({ block }: { block: MarkdownBlock }) {
                 </pre>
             );
         case 'heading':
-            return <MarkdownHeading block={block} />;
+            return <MarkdownHeading block={block} onNavigate={onNavigate} />;
         case 'list': {
             const List = block.ordered ? 'ol' : 'ul';
             return (
                 <List className="list-outside space-y-1 pl-5 marker:text-muted-foreground">
                     {block.items.map((item) => (
                         <li key={`${block.startLine}:item:${item}`}>
-                            {renderInlineMarkdown(item, `${block.startLine}:item:${item}`)}
+                            {renderInlineMarkdown(
+                                item,
+                                `${block.startLine}:item:${item}`,
+                                onNavigate
+                            )}
                         </li>
                     ))}
                 </List>
@@ -64,16 +90,26 @@ function MarkdownBlockContent({ block }: { block: MarkdownBlock }) {
         case 'paragraph':
             return (
                 <p className="whitespace-pre-wrap">
-                    {renderInlineMarkdown(block.lines.join('\n'), `${block.startLine}:paragraph`)}
+                    {renderInlineMarkdown(
+                        block.lines.join('\n'),
+                        `${block.startLine}:paragraph`,
+                        onNavigate
+                    )}
                 </p>
             );
         case 'table':
-            return <MarkdownTable block={block} />;
+            return <MarkdownTable block={block} onNavigate={onNavigate} />;
     }
 }
 
-function MarkdownHeading({ block }: { block: Extract<MarkdownBlock, { kind: 'heading' }> }) {
-    const content = renderInlineMarkdown(block.text, `${block.startLine}:heading`);
+function MarkdownHeading({
+    block,
+    onNavigate,
+}: {
+    block: Extract<MarkdownBlock, { kind: 'heading' }>;
+    onNavigate?: CortexLinkNavigate;
+}) {
+    const content = renderInlineMarkdown(block.text, `${block.startLine}:heading`, onNavigate);
 
     if (block.depth === 1) {
         return <h1 className="font-semibold text-2xl tracking-tight">{content}</h1>;
@@ -86,7 +122,13 @@ function MarkdownHeading({ block }: { block: Extract<MarkdownBlock, { kind: 'hea
     return <h3 className="pt-1 font-medium text-base">{content}</h3>;
 }
 
-function MarkdownTable({ block }: { block: Extract<MarkdownBlock, { kind: 'table' }> }) {
+function MarkdownTable({
+    block,
+    onNavigate,
+}: {
+    block: Extract<MarkdownBlock, { kind: 'table' }>;
+    onNavigate?: CortexLinkNavigate;
+}) {
     const [header, ...rows] = block.rows;
 
     return (
@@ -100,7 +142,11 @@ function MarkdownTable({ block }: { block: Extract<MarkdownBlock, { kind: 'table
                                     className="h-auto whitespace-normal px-3 py-2 leading-5"
                                     key={`${block.startLine}:h:${cell}`}
                                 >
-                                    {renderInlineMarkdown(cell, `${block.startLine}:h:${cell}`)}
+                                    {renderInlineMarkdown(
+                                        cell,
+                                        `${block.startLine}:h:${cell}`,
+                                        onNavigate
+                                    )}
                                 </TableHead>
                             ))}
                         </TableRow>
@@ -116,7 +162,8 @@ function MarkdownTable({ block }: { block: Extract<MarkdownBlock, { kind: 'table
                                 >
                                     {renderInlineMarkdown(
                                         cell,
-                                        `${block.startLine}:c:${row.join('|')}:${cell}`
+                                        `${block.startLine}:c:${row.join('|')}:${cell}`,
+                                        onNavigate
                                     )}
                                 </TableCell>
                             ))}
@@ -128,7 +175,11 @@ function MarkdownTable({ block }: { block: Extract<MarkdownBlock, { kind: 'table
     );
 }
 
-function renderInlineMarkdown(text: string, keyPrefix: string): React.ReactNode[] {
+function renderInlineMarkdown(
+    text: string,
+    keyPrefix: string,
+    onNavigate?: CortexLinkNavigate
+): React.ReactNode[] {
     const nodes: React.ReactNode[] = [];
     let cursor = 0;
 
@@ -147,7 +198,7 @@ function renderInlineMarkdown(text: string, keyPrefix: string): React.ReactNode[
             continue;
         }
 
-        nodes.push(renderInlineMatch(match, `${keyPrefix}:${cursor}`));
+        nodes.push(renderInlineMatch(match, `${keyPrefix}:${cursor}`, onNavigate));
         cursor = match.end;
     }
 
@@ -158,9 +209,9 @@ type InlineMatch =
     | { code: string; end: number; kind: 'code' }
     | { content: string; end: number; kind: 'emphasis' | 'strong' }
     | { end: number; href: string; kind: 'link'; label: string }
-    | { end: number; kind: 'wikiLink'; label: string };
+    | { end: number; kind: 'wikiLink'; label: string; target: string };
 
-function renderInlineMatch(match: InlineMatch, key: string) {
+function renderInlineMatch(match: InlineMatch, key: string, onNavigate?: CortexLinkNavigate) {
     switch (match.kind) {
         case 'code':
             return (
@@ -169,8 +220,18 @@ function renderInlineMatch(match: InlineMatch, key: string) {
                 </code>
             );
         case 'emphasis':
-            return <em key={key}>{renderInlineMarkdown(match.content, `${key}:em`)}</em>;
-        case 'link':
+            return (
+                <em key={key}>{renderInlineMarkdown(match.content, `${key}:em`, onNavigate)}</em>
+            );
+        case 'link': {
+            if (onNavigate && isWikiPageHref(match.href)) {
+                const href = match.href;
+                return (
+                    <PageLink key={key} onNavigate={() => onNavigate(href)}>
+                        {renderInlineMarkdown(match.label, `${key}:link`)}
+                    </PageLink>
+                );
+            }
             return (
                 <a
                     className="text-primary underline underline-offset-2 hover:text-primary/85"
@@ -179,22 +240,48 @@ function renderInlineMatch(match: InlineMatch, key: string) {
                     rel="noreferrer"
                     target="_blank"
                 >
-                    {renderInlineMarkdown(match.label, `${key}:link`)}
+                    {renderInlineMarkdown(match.label, `${key}:link`, onNavigate)}
                 </a>
             );
+        }
         case 'strong':
             return (
                 <strong className="font-semibold" key={key}>
-                    {renderInlineMarkdown(match.content, `${key}:strong`)}
+                    {renderInlineMarkdown(match.content, `${key}:strong`, onNavigate)}
                 </strong>
             );
-        case 'wikiLink':
+        case 'wikiLink': {
+            if (onNavigate) {
+                const target = match.target;
+                return (
+                    <PageLink key={key} onNavigate={() => onNavigate(target)}>
+                        {match.label}
+                    </PageLink>
+                );
+            }
             return (
                 <span className="rounded bg-muted px-1 py-0.5 font-mono text-[0.92em]" key={key}>
                     {match.label}
                 </span>
             );
+        }
     }
+}
+
+function PageLink({ children, onNavigate }: { children: React.ReactNode; onNavigate: () => void }) {
+    return (
+        <button
+            className="cursor-pointer text-primary underline underline-offset-2 hover:text-primary/85"
+            onClick={onNavigate}
+            type="button"
+        >
+            {children}
+        </button>
+    );
+}
+
+function isWikiPageHref(href: string) {
+    return href.endsWith('.md') && !/^[a-z][a-z0-9+.-]*:/iu.test(href) && !href.startsWith('/');
 }
 
 function matchInlineCode(text: string, cursor: number): InlineMatch | null {
@@ -246,6 +333,7 @@ function matchWikiLink(text: string, cursor: number): InlineMatch | null {
         end: end + 2,
         kind: 'wikiLink',
         label: raw.split('|').at(-1)?.trim() || raw,
+        target: raw.split('|')[0]?.split('#')[0]?.trim() || raw,
     };
 }
 

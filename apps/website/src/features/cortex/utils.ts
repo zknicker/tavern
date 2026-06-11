@@ -54,6 +54,61 @@ export function pageKey(page: Pick<CortexPageNode, 'path' | 'topic'>) {
     return `${page.topic}:${page.path}`;
 }
 
+/**
+ * Resolves a wiki link target — a `[[wikilink]]` slug or a relative `.md`
+ * path — to a known page. Same-topic matches win; cross-topic slug matches
+ * are the fallback so dual-links keep working across topic wikis.
+ */
+export function resolveCortexLinkTarget(
+    pages: CortexPageNode[],
+    currentPage: { path: string; topic: string },
+    target: string
+): CortexPageNode | null {
+    if (target.includes('/')) {
+        const resolvedPath = resolveRelativePagePath(currentPage.path, target);
+        const byPath = pages.find(
+            (page) => page.topic === currentPage.topic && page.path === resolvedPath
+        );
+        if (byPath) {
+            return byPath;
+        }
+    }
+
+    const slug = pageSlug(target);
+    return (
+        pages.find((page) => page.topic === currentPage.topic && pageSlug(page.path) === slug) ??
+        pages.find((page) => pageSlug(page.path) === slug) ??
+        null
+    );
+}
+
+function pageSlug(value: string) {
+    return (
+        value
+            .toLowerCase()
+            .replace(/\.md$/u, '')
+            .split('/')
+            .at(-1)
+            ?.replace(/[^a-z0-9]+/gu, '-')
+            .replace(/^-|-$/gu, '') ?? ''
+    );
+}
+
+function resolveRelativePagePath(fromPath: string, target: string) {
+    const base = fromPath.split('/').slice(0, -1);
+    for (const segment of target.split('/')) {
+        if (segment === '' || segment === '.') {
+            continue;
+        }
+        if (segment === '..') {
+            base.pop();
+            continue;
+        }
+        base.push(segment);
+    }
+    return base.join('/');
+}
+
 export function buildCortexPageTree(
     pages: CortexPageNode[],
     options: { includeTopicRoot: boolean }

@@ -23,8 +23,11 @@ librarian, lessons, output, inventory, datasets, and archive workflows.
   `inbox/`.
 * **File browsing.** Cortex shows pages in their wiki directory tree and opens
   Markdown in a read-only document preview.
-* **Backlinks.** Cortex parses `[[wikilinks]]` from Markdown and shows inbound
-  references.
+* **Backlinks.** Cortex derives inbound references from `[[wikilinks]]` and the
+  markdown half of llm-wiki dual-links, across topics, and shows them on each
+  page.
+* **Link navigation.** Wikilinks and relative page links open the target page
+  in the document pane.
 * **Search.** Cortex performs lightweight filename, title, and body search over
   Markdown files.
 * **Status.** Cortex reports the resolved hub path, config source, topic counts,

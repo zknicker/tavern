@@ -1,14 +1,20 @@
+import { Badge } from '../../components/ui/badge.tsx';
 import { BadgeDivider } from '../../components/ui/badge-divider.tsx';
 import { Table, TableBody, TableCell, TableRow } from '../../components/ui/table.tsx';
-import { CortexMarkdownViewer } from './cortex-markdown-viewer.tsx';
+import { useCortexBacklinks } from '../../hooks/cortex/use-cortex-backlinks.ts';
+import { type CortexLinkNavigate, CortexMarkdownViewer } from './cortex-markdown-viewer.tsx';
 import type { CortexPageDetail } from './types.ts';
 import { formatTimestamp } from './utils.ts';
 
 export function CortexDocumentPane({
     isLoading,
+    onNavigate,
+    onSelectPage,
     page,
 }: {
     isLoading: boolean;
+    onNavigate?: CortexLinkNavigate;
+    onSelectPage?: (page: { path: string; topic: string }) => void;
     page: CortexPageDetail | null;
 }) {
     if (!page) {
@@ -32,7 +38,9 @@ export function CortexDocumentPane({
                             {page.title}
                         </h1>
                     )}
-                    <DocumentBody page={page} />
+                    <PageSignals page={page} />
+                    <DocumentBody onNavigate={onNavigate} page={page} />
+                    <BacklinksPanel onSelectPage={onSelectPage} page={page} />
                     <PageDetails page={page} />
                 </div>
             </article>
@@ -40,12 +48,111 @@ export function CortexDocumentPane({
     );
 }
 
-function DocumentBody({ page }: { page: CortexPageDetail }) {
+function DocumentBody({
+    onNavigate,
+    page,
+}: {
+    onNavigate?: CortexLinkNavigate;
+    page: CortexPageDetail;
+}) {
     return (
         <div className="mt-1">
-            <CortexMarkdownViewer value={page.body} />
+            <CortexMarkdownViewer onNavigate={onNavigate} value={page.body} />
         </div>
     );
+}
+
+const confidenceVariants = {
+    high: 'success',
+    low: 'warning',
+    medium: 'info',
+} as const;
+
+function PageSignals({ page }: { page: CortexPageDetail }) {
+    const confidence = readFrontmatterString(page.frontmatter.confidence);
+    const volatility = readFrontmatterString(page.frontmatter.volatility);
+    const verified = readFrontmatterString(page.frontmatter.verified);
+    const tags = readFrontmatterList(page.frontmatter.tags);
+
+    if (!(confidence || volatility || verified) && tags.length === 0) {
+        return null;
+    }
+
+    return (
+        <div className="mt-2 flex flex-wrap items-center gap-1.5">
+            {confidence ? (
+                <Badge
+                    variant={
+                        confidenceVariants[confidence as keyof typeof confidenceVariants] ??
+                        'subtle'
+                    }
+                >
+                    {`Confidence: ${confidence}`}
+                </Badge>
+            ) : null}
+            {volatility ? <Badge variant="subtle">{`Volatility: ${volatility}`}</Badge> : null}
+            {verified ? <Badge variant="subtle">{`Verified ${verified}`}</Badge> : null}
+            {tags.map((tag) => (
+                <Badge key={tag} variant="secondary">
+                    {tag}
+                </Badge>
+            ))}
+        </div>
+    );
+}
+
+function BacklinksPanel({
+    onSelectPage,
+    page,
+}: {
+    onSelectPage?: (page: { path: string; topic: string }) => void;
+    page: CortexPageDetail;
+}) {
+    const backlinksQuery = useCortexBacklinks({ path: page.path, topic: page.topic });
+    const links = backlinksQuery.data?.links ?? [];
+
+    if (links.length === 0) {
+        return null;
+    }
+
+    return (
+        <div className="mt-12">
+            <div className="-mx-3">
+                <BadgeDivider>Backlinks</BadgeDivider>
+            </div>
+            <ul className="mt-3 space-y-1 text-sm">
+                {links.map((link) => (
+                    <li key={`${link.topic}:${link.fromPath}`}>
+                        <button
+                            className="cursor-pointer text-primary underline underline-offset-2 hover:text-primary/85"
+                            onClick={() =>
+                                onSelectPage?.({ path: link.fromPath, topic: link.topic })
+                            }
+                            type="button"
+                        >
+                            {link.fromTitle}
+                        </button>
+                        <span className="ml-2 text-muted-foreground">
+                            {link.topic === page.topic
+                                ? link.fromPath
+                                : `${link.topic}/${link.fromPath}`}
+                        </span>
+                    </li>
+                ))}
+            </ul>
+        </div>
+    );
+}
+
+function readFrontmatterString(value: unknown) {
+    return typeof value === 'string' && value.trim() ? value.trim() : null;
+}
+
+function readFrontmatterList(value: unknown) {
+    if (Array.isArray(value)) {
+        return value.filter((entry): entry is string => typeof entry === 'string');
+    }
+    return [];
 }
 
 function PageDetails({ page }: { page: CortexPageDetail }) {

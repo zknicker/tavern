@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import type { CortexPageNode } from './types.ts';
-import { buildCortexPageTree } from './utils.ts';
+import { buildCortexPageTree, resolveCortexLinkTarget } from './utils.ts';
 
 test('buildCortexPageTree groups pages by topic and path directories', () => {
     const pages = [
@@ -71,6 +71,40 @@ test('buildCortexPageTree omits topic roots for a selected topic', () => {
         },
         'config.md',
     ]);
+});
+
+test('resolveCortexLinkTarget resolves wikilink slugs in the current topic first', () => {
+    const pages = [
+        page({ path: 'wiki/alpha.md', title: 'Alpha', topic: 'main' }),
+        page({ path: 'wiki/alpha.md', title: 'Sibling Alpha', topic: 'sibling' }),
+        page({ path: 'wiki/concepts/beta-note.md', title: 'Beta', topic: 'main' }),
+    ];
+    const current = { path: 'wiki/gamma.md', topic: 'main' };
+
+    assert.equal(resolveCortexLinkTarget(pages, current, 'alpha')?.title, 'Alpha');
+    assert.equal(resolveCortexLinkTarget(pages, current, 'Beta Note')?.title, 'Beta');
+    assert.equal(resolveCortexLinkTarget(pages, current, 'missing'), null);
+});
+
+test('resolveCortexLinkTarget resolves relative markdown paths', () => {
+    const pages = [
+        page({ path: 'wiki/concepts/alpha.md', title: 'Alpha', topic: 'main' }),
+        page({ path: 'raw/articles/2026-01-01-source.md', title: 'Source', topic: 'main' }),
+    ];
+    const current = { path: 'wiki/topics/overview.md', topic: 'main' };
+
+    assert.equal(resolveCortexLinkTarget(pages, current, '../concepts/alpha.md')?.title, 'Alpha');
+    assert.equal(
+        resolveCortexLinkTarget(pages, current, '../../raw/articles/2026-01-01-source.md')?.title,
+        'Source'
+    );
+});
+
+test('resolveCortexLinkTarget falls back to other topics by slug', () => {
+    const pages = [page({ path: 'wiki/alpha.md', title: 'Sibling Alpha', topic: 'sibling' })];
+    const current = { path: 'wiki/gamma.md', topic: 'main' };
+
+    assert.equal(resolveCortexLinkTarget(pages, current, 'alpha')?.title, 'Sibling Alpha');
 });
 
 function page(input: Partial<CortexPageNode>): CortexPageNode {
