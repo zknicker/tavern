@@ -245,6 +245,58 @@ test('listChats ignores stale local Tavern chat rows without runtime backing', a
     assert.deepEqual(listedChats(result), []);
 });
 
+test('getChat result matches the corresponding listChatDetails entry for each active chat', async () => {
+    const chatBId = 'b1b1b1b1-0000-0000-0000-000000000001';
+    const chatCId = 'c2c2c2c2-0000-0000-0000-000000000002';
+
+    await seedPlanningChat({ includeSession: true });
+    tavernChats.push(
+        runtimeTavernChat({
+            agentIds: ['agent:planner'],
+            displayName: 'Chat B',
+            id: chatBId,
+            updatedAt: '2026-04-06T11:00:00.000Z',
+        })
+    );
+    tavernChats.push(
+        runtimeTavernChat({
+            agentIds: ['agent:planner'],
+            displayName: 'Chat C',
+            id: chatCId,
+            updatedAt: '2026-04-06T10:00:00.000Z',
+        })
+    );
+
+    const allDetails = await import('../src/chat/list.ts').then((m) =>
+        m.listChatDetails({ includeExternal: false })
+    );
+    const { chatSchema } = await import('../src/chat/contracts.ts');
+
+    for (const detail of allDetails) {
+        const viaSingle = await getChat({ chatId: detail.id });
+
+        assert.ok(viaSingle !== null, `getChat returned null for active chat ${detail.id}`);
+        assert.deepEqual(viaSingle, chatSchema.parse(detail));
+    }
+
+    assert.equal(allDetails.length, 3);
+});
+
+test('getChat returns null for an archived Tavern chat', async () => {
+    await seedPlanningChat({ includeSession: false });
+    await archiveTavernChat(planningChatId);
+
+    const result = await getChat({ chatId: planningChatId });
+
+    assert.equal(result, null);
+});
+
+test('getChat returns null for an unknown chat id and does not throw', async () => {
+    const result = await getChat({ chatId: 'does-not-exist' });
+
+    assert.equal(result, null);
+});
+
 test('agent chat list keeps non-Tavern session-only runtime surfaces visible', async () => {
     await syncAgentsForRuntime({
         agents: [

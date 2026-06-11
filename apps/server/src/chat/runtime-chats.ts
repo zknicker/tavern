@@ -28,6 +28,7 @@ export interface TavernChatTabAppearance {
 }
 
 export async function listRuntimeChatRecords(options?: {
+    chatId?: string;
     includeExternal?: boolean;
     includeArchived?: boolean;
 }): Promise<RuntimeChatRecord[]> {
@@ -37,8 +38,31 @@ export async function listRuntimeChatRecords(options?: {
         return [];
     }
 
-    const includeExternal = options?.includeExternal !== false;
     const tavernClient = createTavernClient({ baseUrl: connection.baseUrl });
+
+    if (options?.chatId) {
+        const chat = await getTavernChatOrNull(tavernClient, options.chatId);
+
+        if (!chat) {
+            return [];
+        }
+
+        const record: RuntimeChatRecord = {
+            chat: tavernChatToRuntimeChat(chat),
+            createdAt: chat.created_at,
+            isPinned: chat.pinned,
+            runtimeId: connection.id,
+            updatedAt: chat.updated_at,
+        };
+
+        if (!options.includeArchived && isArchivedTavernChat(record.chat)) {
+            return [];
+        }
+
+        return [record];
+    }
+
+    const includeExternal = options?.includeExternal !== false;
     const runtimeClient = includeExternal
         ? createAgentRuntimeClientForConnection(connection)
         : null;

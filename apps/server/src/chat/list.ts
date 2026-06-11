@@ -196,19 +196,20 @@ export async function listChats() {
 }
 
 export async function getChat(input: { chatId: string }) {
-    const chats = await listChatDetails({ includeExternal: false });
+    const chats = await listChatDetails({ chatId: input.chatId, includeExternal: false });
     const chat = chats.find((entry) => entry.id === input.chatId) ?? null;
 
     return chat ? chatSchema.parse(chat) : null;
 }
 
-export async function listChatDetails(options?: { includeExternal?: boolean }) {
+export async function listChatDetails(options?: { chatId?: string; includeExternal?: boolean }) {
     const includeExternal = options?.includeExternal ?? true;
     const [agents, participants, sessions, chatRecords] = await Promise.all([
         listAgents(),
         listParticipants(),
         listRuntimeSessions(),
         listRuntimeChatRecords({
+            chatId: options?.chatId,
             includeArchived: true,
             includeExternal,
         }),
