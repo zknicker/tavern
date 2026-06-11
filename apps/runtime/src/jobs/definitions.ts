@@ -80,6 +80,48 @@ export const syncManagedCronsJob: RuntimeJobDefinition = {
     slug: 'sync-managed-crons',
 };
 
+export const wikiCompileTriggerJob: RuntimeJobDefinition = {
+    concurrency: 1,
+    defaultInput: {},
+    description:
+        'Triggers the wiki upkeep automation early when uncompiled sources pile up or sit too long.',
+    disabledReason() {
+        return null;
+    },
+    displayName: 'Trigger Wiki Compile',
+    inputSchema: emptyRuntimeJobInputSchema,
+    requiredCapabilities: ['gateway'],
+    async run(context) {
+        const { createLocalHermesClient } = await import('../hermes/local-client');
+        const { runWikiCompileTrigger } = await import('../wiki/compile-pending');
+        const client = createLocalHermesClient();
+        try {
+            const outcome = await runWikiCompileTrigger(client);
+            if (outcome.kind === 'idle') {
+                await context.log('No topics need an early compile.');
+                return;
+            }
+            if (outcome.kind === 'skipped') {
+                await context.log(
+                    `Skipped early compile for ${outcome.topics.join(', ')}: ${describeCompileTriggerSkip(outcome.reason)}`
+                );
+                return;
+            }
+            await context.log(
+                `Triggered wiki upkeep early: uncompiled sources in ${outcome.topics.join(', ')}.`
+            );
+        } finally {
+            client.close();
+        }
+    },
+    schedule: {
+        everyMs: 15 * 60 * 1000,
+        kind: 'interval',
+        runOnStart: false,
+    },
+    slug: 'wiki-compile-trigger',
+};
+
 export const wikiHealthHistoryJob: RuntimeJobDefinition = {
     concurrency: 1,
     defaultInput: {},
@@ -127,6 +169,7 @@ export const runtimeJobDefinitions = [
     runtimeCapabilitiesRefreshJob,
     syncManagedCronsJob,
     tavernHighlightsJob,
+    wikiCompileTriggerJob,
     wikiHealthHistoryJob,
 ] as const;
 
@@ -136,6 +179,16 @@ export function getRuntimeJobDefinition(slug: RuntimeJobDefinition['slug']): Run
         throw new Error(`Unknown Runtime job: ${slug}`);
     }
     return definition;
+}
+
+function describeCompileTriggerSkip(reason: 'cooldown' | 'cron-missing' | 'cron-paused'): string {
+    if (reason === 'cron-missing') {
+        return 'the managed upkeep automation does not exist yet.';
+    }
+    if (reason === 'cron-paused') {
+        return 'the upkeep automation is paused.';
+    }
+    return 'upkeep ran recently or is still running.';
 }
 
 function readRuntimeJobInputRecord(input: unknown): Record<string, unknown> {

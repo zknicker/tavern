@@ -1230,6 +1230,7 @@ export const agentRuntimeJobSlugSchema = z.enum([
     'refresh-runtime-capabilities',
     'sync-managed-crons',
     'tavern-highlights',
+    'wiki-compile-trigger',
     'wiki-health-history',
 ]);
 

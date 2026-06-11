@@ -14,6 +14,8 @@ export interface ManagedCronDefinition {
     schedule: AgentRuntimeCron['schedule'];
 }
 
+export const wikiUpkeepCronName = 'Tavern: Wiki upkeep';
+
 /**
  * Default wiki maintenance crons, following the cadence llm-wiki prescribes:
  * incremental compile keeps new sources flowing into articles, lint repairs
@@ -24,7 +26,7 @@ export const managedCronDefinitions: ManagedCronDefinition[] = [
     {
         description:
             'Daily upkeep: compiles new wiki sources and works off proposed inventory follow-ups.',
-        name: 'Tavern: Wiki upkeep',
+        name: wikiUpkeepCronName,
         prompt: [
             'Use the wiki skill. For each active topic wiki in the hub (skip archived topics),',
             'check for raw sources that are not yet compiled, per the incremental compile',

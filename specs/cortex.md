@@ -101,7 +101,10 @@ Tavern ships managed default crons for the regular llm-wiki maintenance
 cadence: daily upkeep (incremental compile plus bounded inventory follow-ups),
 weekly `lint --fix`, and a weekly librarian scan that files judgment items as
 proposed inventory. Runtime reconciles them into Hermes once the hub has an
-active topic; see
+active topic. A 15-minute Runtime job (no agent run) counts uncompiled raw
+sources per topic and triggers upkeep early at 5+ pending sources or one
+sitting past a day, so fresh ingests become articles within the hour instead
+of waiting for the daily slot; see
 [Automations](../docs/features/automations.md#managed-automations).
 
 ## App Surface

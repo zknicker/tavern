@@ -37,6 +37,12 @@ maintenance cadence:
 * **Tavern: Wiki upkeep** — daily incremental compile of new raw sources, plus
   working off up to two proposed inventory follow-ups (research, dedup,
   candidate profiling). Records that need human judgment stay proposed.
+  A Runtime job also checks every 15 minutes for uncompiled raw sources —
+  counted from each topic's `log.md` order, no agent run — and triggers upkeep
+  early when a topic has 5 or more pending sources (llm-wiki's compile-nudge
+  threshold) or any source has sat uncompiled past a day. A settle window lets
+  batch ingests finish first, and a one-hour cooldown keeps triggers from
+  stacking. Pausing the upkeep automation also pauses early triggers.
 * **Tavern: Wiki lint** — weekly structural lint with auto-fix, including
   backlink repair.
 * **Tavern: Wiki librarian** — weekly staleness and quality pass. The scan is
