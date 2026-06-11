@@ -26,4 +26,8 @@ test('permission select saves optimistically without snapping back', async ({ pa
     await page.waitForTimeout(1500);
     await expect(approvalSelect).toContainText('Always allow');
     await expect(approvalSelect).toBeEnabled();
+
+    // Wait out the coordinated engine restart (toast resolves on completion)
+    // so later specs in the shared e2e stack start against a settled engine.
+    await expect(page.getByText('Settings applied')).toBeVisible({ timeout: 90_000 });
 });
