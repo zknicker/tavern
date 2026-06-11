@@ -105,7 +105,7 @@ function RuntimeUrlForm({ connection }: { connection: RuntimeConnection }) {
                 });
             }}
         >
-            <SettingsRow description="The runtime that powers agent work." title="Tavern Runtime">
+            <SettingsRow title="Tavern Runtime URL">
                 <div className="flex max-w-full flex-col gap-2 sm:flex-row sm:items-center sm:justify-end">
                     <Input
                         aria-label="Tavern Runtime URL"
@@ -132,7 +132,6 @@ function RuntimeUrlForm({ connection }: { connection: RuntimeConnection }) {
                 </div>
             </SettingsRow>
             <SettingsRow
-                description="Pairs the app with the runtime."
                 error={
                     connectMutation.error
                         ? isAuthError
@@ -140,7 +139,7 @@ function RuntimeUrlForm({ connection }: { connection: RuntimeConnection }) {
                             : errorMessage
                         : null
                 }
-                title="Runtime token"
+                title="Tavern Runtime Token"
             >
                 <Input
                     aria-label="Runtime token"
