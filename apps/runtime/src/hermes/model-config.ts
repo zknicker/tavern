@@ -12,6 +12,7 @@ import { type HermesModelDomain, mergeHermesGeneratedConfig } from './generated-
 import { prepareManagedLlmWikiIntegration } from './llm-wiki';
 import { ensureManagedMnemosynePackage, ensureManagedMnemosynePlugin } from './mnemosyne';
 import { resolveConfiguredPermissionsDomain } from './permission-settings';
+import { ensureManagedTavernSkill } from './tavern-skill';
 
 interface HermesModelConfig extends HermesModelDomain {
     openAiApiKey: string | null;
@@ -78,6 +79,7 @@ export async function prepareManagedHermesModelConfig(
         await loadVaultBackedCodexCredentials().catch(() => null)
     );
     await prepareManagedLlmWikiIntegration();
+    await ensureManagedTavernSkill();
     await ensureManagedMnemosynePlugin();
     if (input.hermesBinary) {
         await ensureManagedMnemosynePackage({ hermesBinary: input.hermesBinary });

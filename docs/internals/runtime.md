@@ -90,6 +90,12 @@ When a reconcile writes the file, Runtime also clears unsupported legacy
 companion bootstrap files from the managed workspace. It does not clear
 `SOUL.md`.
 
+The agent's operational access to Tavern ships as the managed `tavern` skill
+(`apps/runtime/src/hermes/tavern-skill.ts`): chat reads and searches, attributed
+deliveries into chats, read-only self-configuration lookups, and the settings
+map, all over the local Runtime API. The managed block points the agent at the
+skill; [tavern-skill.md](../../specs/tavern-skill.md) is the contract.
+
 ## Persistence
 
 The Runtime root is the backup unit. It defaults to

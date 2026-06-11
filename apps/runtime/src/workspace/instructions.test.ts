@@ -73,6 +73,7 @@ describe('workspace instructions', () => {
         expect(content).toContain('Preserve provenance');
         expect(content).toContain('## Maintaining These Files');
         expect(content).toContain('edit `SOUL.md`');
+        expect(content).toContain('use the `tavern` skill');
         expect(content).not.toContain('Tavern workspace notes tools');
     });
 

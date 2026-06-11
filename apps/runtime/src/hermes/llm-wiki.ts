@@ -159,7 +159,7 @@ async function writeIfMissing(filePath: string, content: string) {
     });
 }
 
-async function syncDirectory(source: string, target: string) {
+export async function syncDirectory(source: string, target: string) {
     await fs.rm(target, { force: true, recursive: true });
     await fs.mkdir(path.dirname(target), { recursive: true });
     await fs.cp(source, target, {
