@@ -125,6 +125,99 @@ describe('wiki store', () => {
         });
     });
 
+    test('parses block-list frontmatter values', async () => {
+        await writeTopicPage(
+            'project-notes',
+            'wiki/sourced.md',
+            [
+                '---',
+                'title: Sourced Article',
+                'sources:',
+                '  - raw/articles/2026-01-01-origin.md',
+                '  - raw/papers/2026-02-02-study.md',
+                'tags:',
+                '  - lattice-theory',
+                'summary: "Block list parsing check."',
+                '---',
+                '# Sourced',
+            ].join('\n')
+        );
+
+        await expect(
+            getCortexPage({ path: 'wiki/sourced.md', topic: 'project-notes' })
+        ).resolves.toMatchObject({
+            frontmatter: {
+                sources: ['raw/articles/2026-01-01-origin.md', 'raw/papers/2026-02-02-study.md'],
+                summary: 'Block list parsing check.',
+                tags: ['lattice-theory'],
+                title: 'Sourced Article',
+            },
+        });
+    });
+
+    test('derives backlinks from markdown dual-links across topics', async () => {
+        await writeTopicPage(
+            'project-notes',
+            'wiki/delta.md',
+            ['# Delta', '', 'See [[alpha|Alpha Page]] ([Alpha Page](../wiki/alpha.md)).'].join('\n')
+        );
+        await writeTopicPage(
+            'sibling-notes',
+            'wiki/observer.md',
+            [
+                '# Observer',
+                '',
+                'Cross-topic note on [Alpha Page](../../project-notes/wiki/alpha.md).',
+            ].join('\n')
+        );
+
+        const backlinks = await listCortexBacklinks({
+            path: 'wiki/alpha.md',
+            topic: 'project-notes',
+        });
+        const fromPages = backlinks.links.map((link) => `${link.topic}:${link.fromPath}`);
+
+        expect(fromPages).toContain('project-notes:wiki/delta.md');
+        expect(fromPages).toContain('sibling-notes:wiki/observer.md');
+        expect(fromPages.filter((entry) => entry === 'project-notes:wiki/delta.md')).toHaveLength(
+            1
+        );
+    });
+
+    test('matches frontmatter tags, aliases, and summary in search', async () => {
+        await writeTopicPage(
+            'project-notes',
+            'wiki/tagged.md',
+            [
+                '---',
+                'title: Tagged Article',
+                'tags: [quantum-lattice]',
+                'aliases: [QL Primer]',
+                'summary: "An overview of resonance cascades."',
+                '---',
+                '# Tagged',
+                '',
+                'Body without the search terms.',
+            ].join('\n')
+        );
+
+        await expect(
+            searchCortex({ limit: 10, offset: 0, query: 'quantum-lattice' })
+        ).resolves.toMatchObject({
+            hits: [{ page: { path: 'wiki/tagged.md' } }],
+            totalHitCount: 1,
+        });
+        await expect(
+            searchCortex({ limit: 10, offset: 0, query: 'ql primer' })
+        ).resolves.toMatchObject({ totalHitCount: 1 });
+        await expect(
+            searchCortex({ limit: 10, offset: 0, query: 'resonance cascades' })
+        ).resolves.toMatchObject({
+            hits: [{ snippet: expect.stringContaining('resonance cascades') }],
+            totalHitCount: 1,
+        });
+    });
+
     test('keeps active and archived topics distinct when slugs collide', async () => {
         const list = await listCortexPages({ includeArchived: true, topic: 'project-notes' });
         expect(list.pages).toEqual(

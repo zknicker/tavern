@@ -98,15 +98,20 @@ export async function searchCortex(input: CortexSearchInput): Promise<CortexSear
     const hits = pages
         .map((page) => {
             const titleScore = page.title.toLowerCase().includes(query) ? 5 : 0;
+            const tagScore = frontmatterListMatches(page.frontmatter.tags, query) ? 4 : 0;
+            const aliasScore = frontmatterListMatches(page.frontmatter.aliases, query) ? 4 : 0;
             const pathScore = page.path.toLowerCase().includes(query) ? 3 : 0;
+            const summary = readString(page.frontmatter.summary);
+            const summaryIndex = summary ? summary.toLowerCase().indexOf(query) : -1;
+            const summaryScore = summaryIndex >= 0 ? 2 : 0;
             const bodyIndex = page.body.toLowerCase().indexOf(query);
             const bodyScore = bodyIndex >= 0 ? 1 : 0;
-            const score = titleScore + pathScore + bodyScore;
+            const score = titleScore + tagScore + aliasScore + pathScore + summaryScore + bodyScore;
             return score > 0
                 ? {
                       page: toPageSummaryFromPage(page),
                       score,
-                      snippet: bodyIndex >= 0 ? snippet(page.body, bodyIndex) : '',
+                      snippet: buildSearchSnippet({ bodyIndex, page, summary, summaryIndex }),
                   }
                 : null;
         })
@@ -132,22 +137,29 @@ export async function listCortexBacklinks(input: {
     topic: string;
 }): Promise<CortexBacklinkList> {
     const target = normalizePageTarget(input.path);
-    const pages = await readPages({
-        includeArchived: true,
-        topic: input.topic,
-    });
-    const links = pages.flatMap((page) =>
-        extractWikiLinks(page.body)
-            .filter((link) => normalizePageTarget(link.target) === target)
-            .map((link) => ({
+    const pages = await readPages({ includeArchived: true });
+    const links = pages.flatMap((page) => {
+        if (page.topic === input.topic && normalizePageTarget(page.path) === target) {
+            return [];
+        }
+        const matched = extractLinkTargets(page.body).filter(
+            (link) => normalizePageTarget(link.target) === target
+        );
+        if (matched.length === 0) {
+            return [];
+        }
+        const [link] = matched;
+        return [
+            {
                 fromPath: page.path,
                 fromTitle: page.title,
                 label: link.label,
                 targetPath: input.path,
                 targetTopic: input.topic,
                 topic: page.topic,
-            }))
-    );
+            },
+        ];
+    });
 
     return { links, targetPath: input.path, topic: input.topic };
 }
@@ -329,14 +341,39 @@ function parseMarkdown(content: string) {
 
 function parseFrontmatter(value: string): Record<string, unknown> {
     const frontmatter: Record<string, unknown> = {};
-    for (const line of value.split('\n')) {
-        const match = /^([A-Za-z0-9_-]+):\s*(.*)$/u.exec(line);
+    const lines = value.split('\n');
+    for (let index = 0; index < lines.length; index += 1) {
+        const match = /^([A-Za-z0-9_-]+):\s*(.*)$/u.exec(lines[index]);
         if (!match) {
             continue;
         }
-        frontmatter[match[1]] = parseFrontmatterValue(match[2] ?? '');
+        const inlineValue = (match[2] ?? '').trim();
+        if (inlineValue) {
+            frontmatter[match[1]] = parseFrontmatterValue(inlineValue);
+            continue;
+        }
+        const { items, nextIndex } = readBlockListItems(lines, index + 1);
+        frontmatter[match[1]] = items ?? '';
+        index = nextIndex - 1;
     }
     return frontmatter;
+}
+
+function readBlockListItems(lines: string[], startIndex: number) {
+    const items: string[] = [];
+    let index = startIndex;
+    while (index < lines.length) {
+        const item = /^\s+-\s+(.*)$/u.exec(lines[index]);
+        if (!item) {
+            break;
+        }
+        const trimmed = (item[1] ?? '').trim().replace(/^["']|["']$/gu, '');
+        if (trimmed) {
+            items.push(trimmed);
+        }
+        index += 1;
+    }
+    return { items: items.length > 0 ? items : null, nextIndex: index };
 }
 
 function parseFrontmatterValue(value: string): unknown {
@@ -358,6 +395,22 @@ function extractWikiLinks(content: string): CortexPage['links'] {
             target: match[1]?.trim() ?? '',
         })
     );
+}
+
+/**
+ * Link targets for backlink derivation: `[[wikilinks]]` plus the markdown half
+ * of llm-wiki's dual-link convention (relative `.md` links).
+ */
+function extractLinkTargets(content: string): CortexPage['links'] {
+    const markdownLinks = Array.from(
+        content.matchAll(/(?<!\])\[([^\]]+)\]\(<?([^)#>\s]+\.md)(?:#[^)>]*)?>?\)/gu)
+    )
+        .filter((match) => !/^[a-z][a-z0-9+.-]*:/iu.test(match[2] ?? ''))
+        .map((match) => ({
+            label: match[1]?.trim() || null,
+            target: match[2]?.trim() ?? '',
+        }));
+    return [...extractWikiLinks(content), ...markdownLinks];
 }
 
 function sectionFromPath(relativePath: string): CortexPage['section'] {
@@ -416,6 +469,28 @@ function snippet(content: string, index: number) {
     const start = Math.max(0, index - 80);
     const end = Math.min(content.length, index + 180);
     return content.slice(start, end).replace(/\s+/gu, ' ').trim();
+}
+
+function frontmatterListMatches(value: unknown, query: string) {
+    const entries = Array.isArray(value) ? value : typeof value === 'string' ? [value] : [];
+    return entries.some(
+        (entry) => typeof entry === 'string' && entry.toLowerCase().includes(query)
+    );
+}
+
+function buildSearchSnippet(input: {
+    bodyIndex: number;
+    page: CortexPage;
+    summary: string | null;
+    summaryIndex: number;
+}) {
+    if (input.bodyIndex >= 0) {
+        return snippet(input.page.body, input.bodyIndex);
+    }
+    if (input.summary && input.summaryIndex >= 0) {
+        return snippet(input.summary, input.summaryIndex);
+    }
+    return '';
 }
 
 async function canAccess(targetPath: string, mode: number) {
