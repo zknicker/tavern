@@ -31,6 +31,7 @@ const envConfig = readEnvFile([
     'TAVERN_RUNTIME_HOST',
     'TAVERN_RUNTIME_PORT',
     'TAVERN_RUNTIME_ROOT',
+    'TAVERN_RUNTIME_TOKEN',
     'CODEX_MODEL',
     'OPENAI_API_KEY',
     'OPENROUTER_API_KEY',
@@ -83,6 +84,8 @@ export const HERMES_HOME = resolveConfiguredPath(
         path.join(HERMES_ROOT, 'home')
 );
 export const HERMES_DASHBOARD_SESSION_TOKEN = resolveHermesDashboardSessionToken();
+// Eager constant for production use (token is stable per runtime root).
+export const RUNTIME_API_TOKEN = resolveRuntimeApiToken();
 
 function resolveHermesDashboardSessionToken(): string {
     const configured =
@@ -92,6 +95,33 @@ function resolveHermesDashboardSessionToken(): string {
     }
 
     const tokenPath = path.join(HERMES_HOME, 'dashboard-session-token');
+    try {
+        const existing = fs.readFileSync(tokenPath, 'utf8').trim();
+        if (existing) {
+            return existing;
+        }
+    } catch {
+        // First run creates the managed local token below.
+    }
+
+    const token = randomBytes(32).toString('base64url');
+    fs.mkdirSync(path.dirname(tokenPath), { recursive: true });
+    fs.writeFileSync(tokenPath, `${token}\n`, { mode: 0o600 });
+    try {
+        fs.chmodSync(tokenPath, 0o600);
+    } catch {
+        // chmod is best-effort on non-POSIX filesystems.
+    }
+    return token;
+}
+
+function resolveRuntimeApiToken(): string {
+    const configured = readConfigValue('TAVERN_RUNTIME_TOKEN');
+    if (configured) {
+        return configured;
+    }
+
+    const tokenPath = path.join(RUNTIME_ROOT, 'runtime-api-token');
     try {
         const existing = fs.readFileSync(tokenPath, 'utf8').trim();
         if (existing) {
@@ -130,6 +160,11 @@ export const TIMEZONE = resolveConfigTimezone();
 
 export function getRuntimeHost(): string {
     return readConfigValue('TAVERN_RUNTIME_HOST') ?? '127.0.0.1';
+}
+
+export function getRuntimeApiToken(): string {
+    // Re-resolve on each call so test env overrides take effect after module import.
+    return resolveRuntimeApiToken();
 }
 
 export function getRuntimePort(): string {

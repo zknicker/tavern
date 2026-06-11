@@ -5,13 +5,18 @@ import { ensureRuntimeSchema } from '../db/schema.ts';
 import { createChat, createMessage } from './chat-api/index.ts';
 import { startTavernRuntimeServer, type TavernRuntimeServerHandle } from './server.ts';
 
-describe('Tavern Runtime websocket events', () => {
+const TEST_TOKEN = 'test-runtime-api-token';
+
+describe('Tavern Runtime HTTP auth', () => {
     let previousPort: string | undefined;
+    let previousToken: string | undefined;
     let server: TavernRuntimeServerHandle | null = null;
 
     beforeEach(() => {
         previousPort = process.env.TAVERN_RUNTIME_PORT;
+        previousToken = process.env.TAVERN_RUNTIME_TOKEN;
         process.env.TAVERN_RUNTIME_PORT = '0';
+        process.env.TAVERN_RUNTIME_TOKEN = TEST_TOKEN;
         ensureRuntimeSchema(initTestDb());
     });
 
@@ -19,11 +24,92 @@ describe('Tavern Runtime websocket events', () => {
         server?.stop();
         server = null;
         closeDb();
-        if (previousPort === undefined) {
-            process.env.TAVERN_RUNTIME_PORT = undefined;
-        } else {
-            process.env.TAVERN_RUNTIME_PORT = previousPort;
-        }
+        process.env.TAVERN_RUNTIME_PORT = previousPort === undefined ? undefined : previousPort;
+        process.env.TAVERN_RUNTIME_TOKEN = previousToken === undefined ? undefined : previousToken;
+    });
+
+    it('returns 401 for requests without a token', async () => {
+        server = startTavernRuntimeServer();
+        const response = await fetch(new URL('/capabilities', server.url));
+        expect(response.status).toBe(401);
+    });
+
+    it('returns 401 for requests with a wrong token', async () => {
+        server = startTavernRuntimeServer();
+        const response = await fetch(new URL('/capabilities', server.url), {
+            headers: { authorization: 'Bearer wrong-token' },
+        });
+        expect(response.status).toBe(401);
+    });
+
+    it('allows requests with the correct token', async () => {
+        server = startTavernRuntimeServer();
+        const response = await fetch(new URL('/capabilities', server.url), {
+            headers: { authorization: `Bearer ${TEST_TOKEN}` },
+        });
+        expect(response.status).toBe(200);
+    });
+
+    it('allows the health route without a token', async () => {
+        server = startTavernRuntimeServer();
+        const response = await fetch(new URL('/health', server.url));
+        expect(response.status).toBe(200);
+    });
+});
+
+describe('Tavern Runtime websocket auth', () => {
+    let previousPort: string | undefined;
+    let previousToken: string | undefined;
+    let server: TavernRuntimeServerHandle | null = null;
+
+    beforeEach(() => {
+        previousPort = process.env.TAVERN_RUNTIME_PORT;
+        previousToken = process.env.TAVERN_RUNTIME_TOKEN;
+        process.env.TAVERN_RUNTIME_PORT = '0';
+        process.env.TAVERN_RUNTIME_TOKEN = TEST_TOKEN;
+        ensureRuntimeSchema(initTestDb());
+    });
+
+    afterEach(() => {
+        server?.stop();
+        server = null;
+        closeDb();
+        process.env.TAVERN_RUNTIME_PORT = previousPort === undefined ? undefined : previousPort;
+        process.env.TAVERN_RUNTIME_TOKEN = previousToken === undefined ? undefined : previousToken;
+    });
+
+    it('rejects ws upgrade without a token', async () => {
+        server = startTavernRuntimeServer();
+        await expect(openSocket(new URL('/api/events/ws', server.url))).rejects.toThrow();
+    });
+
+    it('rejects ws upgrade with a wrong token', async () => {
+        server = startTavernRuntimeServer();
+        await expect(
+            openSocket(new URL('/api/events/ws', server.url), 'Bearer wrong-token')
+        ).rejects.toThrow();
+    });
+});
+
+describe('Tavern Runtime websocket events', () => {
+    let previousPort: string | undefined;
+    let previousToken: string | undefined;
+    let server: TavernRuntimeServerHandle | null = null;
+
+    beforeEach(() => {
+        previousPort = process.env.TAVERN_RUNTIME_PORT;
+        previousToken = process.env.TAVERN_RUNTIME_TOKEN;
+        process.env.TAVERN_RUNTIME_PORT = '0';
+        process.env.TAVERN_RUNTIME_TOKEN = TEST_TOKEN;
+        ensureRuntimeSchema(initTestDb());
+    });
+
+    afterEach(() => {
+        server?.stop();
+        server = null;
+        closeDb();
+        process.env.TAVERN_RUNTIME_PORT = previousPort === undefined ? undefined : previousPort;
+        process.env.TAVERN_RUNTIME_TOKEN = previousToken === undefined ? undefined : previousToken;
     });
 
     it('streams live app events without backfilling old events', async () => {
@@ -31,7 +117,10 @@ describe('Tavern Runtime websocket events', () => {
         createMessage('cht_1', messageInput('msg_1', 'first'));
         server = startTavernRuntimeServer();
 
-        const socket = await openSocket(new URL('/api/events/ws', server.url));
+        const socket = await openSocket(
+            new URL('/api/events/ws', server.url),
+            `Bearer ${TEST_TOKEN}`
+        );
         const messages: unknown[] = [];
         socket.on('message', (data) => messages.push(JSON.parse(String(data))));
 
@@ -52,7 +141,10 @@ describe('Tavern Runtime websocket events', () => {
         createMessage('cht_1', messageInput('msg_1', 'first'));
         server = startTavernRuntimeServer();
 
-        const socket = await openSocket(new URL('/api/events/ws', server.url));
+        const socket = await openSocket(
+            new URL('/api/events/ws', server.url),
+            `Bearer ${TEST_TOKEN}`
+        );
         const messages: unknown[] = [];
         socket.on('message', (data) => messages.push(JSON.parse(String(data))));
 
@@ -78,11 +170,16 @@ function messageInput(id: string, content: string) {
     };
 }
 
-function openSocket(url: URL) {
-    const socket = new WebSocket(url);
+function openSocket(url: URL, authorization?: string) {
+    const socket = new WebSocket(url, {
+        headers: authorization ? { authorization } : undefined,
+    });
     return new Promise<WebSocket>((resolve, reject) => {
         socket.once('open', () => resolve(socket));
         socket.once('error', reject);
+        socket.once('unexpected-response', (_req, res) => {
+            reject(new Error(`Unexpected response: ${res.statusCode}`));
+        });
     });
 }
 

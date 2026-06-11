@@ -1,17 +1,18 @@
+import { createHash, timingSafeEqual } from 'node:crypto';
 import http from 'node:http';
 import type { Duplex } from 'node:stream';
 
 import { runtimeEventSchema, runtimeRoutes } from '@tavern/api';
 import { type WebSocket, WebSocketServer } from 'ws';
 
-import { getRuntimeHost, getRuntimePort } from '../config';
-import { attachTavernChannelSocket, isTavernChannelSocketPath } from './channel-relay';
-import { subscribeToTavernApiEvents } from './chat-api';
-import { closeHermesTurnClients } from './hermes-turn-runner';
-import { internalError, toFetchRequest, writeFetchResponse } from './http';
-import { handleTavernRuntimeRequest } from './router';
-import { listProjectedTavernRuntimeEvents } from './runtime-event-projection';
-import { subscribeToRuntimeEvents } from './runtime-events';
+import { getRuntimeApiToken, getRuntimeHost, getRuntimePort } from '../config.ts';
+import { attachTavernChannelSocket, isTavernChannelSocketPath } from './channel-relay.ts';
+import { subscribeToTavernApiEvents } from './chat-api/index.ts';
+import { closeHermesTurnClients } from './hermes-turn-runner.ts';
+import { internalError, toFetchRequest, unauthorized, writeFetchResponse } from './http.ts';
+import { handleTavernRuntimeRequest } from './router.ts';
+import { listProjectedTavernRuntimeEvents } from './runtime-event-projection.ts';
+import { subscribeToRuntimeEvents } from './runtime-events.ts';
 
 export interface TavernRuntimeServerHandle {
     stop(): void;
@@ -42,12 +43,50 @@ function isTavernApiEventsSocketPath(requestUrl: string | undefined) {
     }
 }
 
+function hashToken(token: string): Buffer {
+    return createHash('sha256').update(token).digest();
+}
+
+function isBearerTokenValid(
+    authorizationHeader: string | undefined,
+    expectedToken: string
+): boolean {
+    if (!authorizationHeader?.startsWith('Bearer ')) {
+        return false;
+    }
+    const provided = authorizationHeader.slice(7);
+    try {
+        const providedHash = hashToken(provided);
+        const expectedHash = hashToken(expectedToken);
+        return timingSafeEqual(providedHash, expectedHash);
+    } catch {
+        return false;
+    }
+}
+
 export function startTavernRuntimeServer(): TavernRuntimeServerHandle {
     const port = Number(getRuntimePort());
     const host = getRuntimeHost();
+    const token = getRuntimeApiToken();
     const server = http.createServer(async (request, response) => {
         try {
             const fetchRequest = await toFetchRequest(request, `http://127.0.0.1:${port}`);
+            // Health route is unauthenticated so the app can probe reachability before pairing.
+            const isHealth =
+                new URL(fetchRequest.url).pathname === runtimeRoutes.health &&
+                fetchRequest.method === 'GET';
+            if (
+                !(
+                    isHealth ||
+                    isBearerTokenValid(
+                        fetchRequest.headers.get('authorization') ?? undefined,
+                        token
+                    )
+                )
+            ) {
+                await writeFetchResponse(unauthorized('Bearer token required.'), response);
+                return;
+            }
             const fetchResponse = await handleTavernRuntimeRequest(fetchRequest);
             await writeFetchResponse(fetchResponse, response);
         } catch (error) {
@@ -71,6 +110,12 @@ export function startTavernRuntimeServer(): TavernRuntimeServerHandle {
                 isTavernChannelSocketPath(request.url)
             )
         ) {
+            socket.destroy();
+            return;
+        }
+
+        if (!isBearerTokenValid(request.headers.authorization, token)) {
+            socket.write('HTTP/1.1 401 Unauthorized\r\n\r\n');
             socket.destroy();
             return;
         }
