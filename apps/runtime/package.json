@@ -9,7 +9,7 @@
   "scripts": {
     "build": "bun build src/index.ts --target bun --format esm --outdir dist",
     "start": "bun dist/index.js",
-    "dev": "bun --watch src/index.ts",
+    "dev": "bun --watch src/index.ts serve",
     "typecheck": "bunx tsc --noEmit",
     "format": "prettier --write \"src/**/*.ts\"",
     "format:fix": "prettier --write \"src/**/*.ts\"",
