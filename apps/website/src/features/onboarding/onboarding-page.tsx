@@ -8,7 +8,7 @@ import { AppShell, AppShellDragRegion } from '../../components/ui/app-shell.tsx'
 import { Card, CardContent } from '../../components/ui/card.tsx';
 import { Icon } from '../../components/ui/icon.tsx';
 import { Button } from '../../components/ui/primitives/button.tsx';
-import { Field } from '../../components/ui/primitives/field.tsx';
+import { Field, FieldDescription, FieldLabel } from '../../components/ui/primitives/field.tsx';
 import { Input } from '../../components/ui/primitives/input.tsx';
 import { useConnectAgentRuntime } from '../../hooks/connections/use-connect-agent-runtime.ts';
 import { useRuntimeConnection } from '../../hooks/connections/use-runtime-connection.ts';
@@ -104,16 +104,26 @@ function TavernRuntimeOnboardingForm({
     onConnect: () => void;
 }) {
     const runtimeUrlInputId = React.useId();
+    const runtimeTokenInputId = React.useId();
     const runtimeUrlErrorId = React.useId();
     const [baseUrl, setBaseUrl] = React.useState(connection?.baseUrl ?? '');
+    const [token, setToken] = React.useState('');
     const connectMutation = useConnectAgentRuntime({
         onSuccess: onConnect,
     });
     const errorMessage = connectMutation.error?.message ?? null;
-    const runtimeConnectionError = errorMessage
+    const isAuthError =
+        errorMessage !== null &&
+        (/401|unauthorized/i.test(errorMessage) || errorMessage.includes('Bearer token required'));
+    const displayErrorMessage = isAuthError
+        ? 'The runtime requires a token. Run `tavern token` on the runtime host and paste it here.'
+        : errorMessage
+          ? formatRuntimeConnectionError(errorMessage)
+          : null;
+    const runtimeConnectionError = displayErrorMessage
         ? {
-              message: formatRuntimeConnectionError(errorMessage),
-              title: 'Connection failed',
+              message: displayErrorMessage,
+              title: isAuthError ? 'Token required' : 'Connection failed',
           }
         : connection?.lastError
           ? {
@@ -134,7 +144,9 @@ function TavernRuntimeOnboardingForm({
                 if (!baseUrl.trim()) {
                     return;
                 }
+                const trimmedToken = token.trim();
                 connectMutation.mutate({
+                    auth: trimmedToken ? { token: trimmedToken } : undefined,
                     baseUrl: baseUrl.trim(),
                 });
             }}
@@ -171,6 +183,25 @@ function TavernRuntimeOnboardingForm({
                     </Button>
                 </div>
             </Field>
+
+            <Field>
+                <FieldLabel className="text-neutral-700" htmlFor={runtimeTokenInputId}>
+                    Runtime token
+                </FieldLabel>
+                <Input
+                    className="select-text border-white/60 bg-white/64 text-neutral-900 shadow-inner shadow-neutral-900/5 hover:border-white/80 hover:bg-white/82"
+                    id={runtimeTokenInputId}
+                    name="runtime-token"
+                    onChange={(event) => setToken(event.currentTarget.value)}
+                    size="lg"
+                    type="password"
+                    value={token}
+                />
+                <FieldDescription className="text-neutral-500">
+                    Run <code>tavern token</code> on the runtime host to get this.
+                </FieldDescription>
+            </Field>
+
             {runtimeConnectionError ? (
                 <RuntimeConnectionError
                     id={runtimeUrlErrorId}

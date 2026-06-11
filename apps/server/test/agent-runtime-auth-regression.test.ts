@@ -3,6 +3,9 @@
  * mark failure) on the environment connection record, and every sync client request must carry
  * the Authorization header when the connection has a token.
  *
+ * Also covers the saved-connection auth-wipe bug: a URL-only re-save (auth === undefined) must
+ * preserve the stored authJson; only an explicit null/empty auth clears it.
+ *
  * Covers the bug reported in: "Bearer token required." on startup agent sync when
  * TAVERN_RUNTIME_TOKEN is set via the environment.
  */
@@ -61,6 +64,91 @@ test('environment connection authJson is preserved after markAgentRuntimeConnect
     assert.equal(record.authJson, JSON.stringify({ token: 'test-token' }));
 
     clearEnvironmentAgentRuntimeConnection();
+});
+
+test('saved connection authJson is preserved after a URL-only re-save (auth === undefined)', async () => {
+    process.env.DATABASE_PATH = join(
+        mkdtempSync(join(tmpdir(), 'tavern-saved-auth-wipe-test-')),
+        'test.sqlite'
+    );
+
+    const [{ ensureDatabaseSchema }, { saveAgentRuntimeConnection, getAgentRuntimeConnection }] =
+        await Promise.all([
+            import('../src/db/bootstrap.ts'),
+            import('../src/storage/agent-runtime-connections.ts'),
+        ]);
+
+    ensureDatabaseSchema();
+
+    // Initial save with URL + token.
+    await saveAgentRuntimeConnection({
+        auth: { token: 'secret-saved-token' },
+        baseUrl: 'http://runtime.test',
+        id: 'saved-runtime-1',
+        isActive: true,
+        lastCheckedAt: new Date().toISOString(),
+        lastError: null,
+        name: 'Test Runtime',
+    });
+
+    // URL-only re-save (no auth field — simulates a status update or URL change with no token).
+    await saveAgentRuntimeConnection({
+        baseUrl: 'http://runtime.test',
+        id: 'saved-runtime-1',
+        isActive: true,
+        lastCheckedAt: new Date().toISOString(),
+        lastError: null,
+        name: 'Test Runtime',
+    });
+
+    const record = await getAgentRuntimeConnection('saved-runtime-1');
+    assert.ok(record, 'record should exist after re-save');
+    assert.equal(
+        record.authJson,
+        JSON.stringify({ token: 'secret-saved-token' }),
+        'authJson must be preserved when auth is omitted from the re-save'
+    );
+});
+
+test('saved connection authJson is cleared when auth is explicitly null', async () => {
+    process.env.DATABASE_PATH = join(
+        mkdtempSync(join(tmpdir(), 'tavern-saved-auth-clear-test-')),
+        'test.sqlite'
+    );
+
+    const [{ ensureDatabaseSchema }, { saveAgentRuntimeConnection, getAgentRuntimeConnection }] =
+        await Promise.all([
+            import('../src/db/bootstrap.ts'),
+            import('../src/storage/agent-runtime-connections.ts'),
+        ]);
+
+    ensureDatabaseSchema();
+
+    // Initial save with token.
+    await saveAgentRuntimeConnection({
+        auth: { token: 'to-be-cleared' },
+        baseUrl: 'http://runtime.test',
+        id: 'saved-runtime-2',
+        isActive: true,
+        lastCheckedAt: new Date().toISOString(),
+        lastError: null,
+        name: 'Test Runtime',
+    });
+
+    // Explicit clear (auth: null).
+    await saveAgentRuntimeConnection({
+        auth: null,
+        baseUrl: 'http://runtime.test',
+        id: 'saved-runtime-2',
+        isActive: true,
+        lastCheckedAt: new Date().toISOString(),
+        lastError: null,
+        name: 'Test Runtime',
+    });
+
+    const record = await getAgentRuntimeConnection('saved-runtime-2');
+    assert.ok(record, 'record should exist after explicit clear');
+    assert.equal(record.authJson, null, 'authJson must be null after explicit auth: null clear');
 });
 
 test('syncAgentRuntimeAgents sends Authorization header when environment connection has a token', async () => {

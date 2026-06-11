@@ -6,7 +6,12 @@ import { BadgeDivider } from '../../../components/ui/badge-divider.tsx';
 import { Card, CardFrame } from '../../../components/ui/card.tsx';
 import { Icon } from '../../../components/ui/icon.tsx';
 import { Button } from '../../../components/ui/primitives/button.tsx';
-import { Field, FieldError } from '../../../components/ui/primitives/field.tsx';
+import {
+    Field,
+    FieldDescription,
+    FieldError,
+    FieldLabel,
+} from '../../../components/ui/primitives/field.tsx';
 import { Input } from '../../../components/ui/primitives/input.tsx';
 import { SettingsItem, SettingsRow } from '../../../components/ui/settings-row.tsx';
 import { useConnectAgentRuntime } from '../../../hooks/connections/use-connect-agent-runtime.ts';
@@ -77,11 +82,19 @@ function RuntimeConnectionRow({ connection }: { connection: RuntimeConnection })
 }
 
 function RuntimeUrlForm({ connection }: { connection: RuntimeConnection }) {
-    const inputId = React.useId();
+    const urlInputId = React.useId();
+    const tokenInputId = React.useId();
     const [baseUrl, setBaseUrl] = React.useState(connection.baseUrl);
+    const [token, setToken] = React.useState('');
     const connectMutation = useConnectAgentRuntime();
     const trimmedBaseUrl = baseUrl.trim();
-    const hasChanged = trimmedBaseUrl !== connection.baseUrl;
+    const trimmedToken = token.trim();
+    const hasChanged = trimmedBaseUrl !== connection.baseUrl || trimmedToken.length > 0;
+    const isEnvironment = connection.source === 'environment';
+    const errorMessage = connectMutation.error?.message ?? null;
+    const isAuthError =
+        errorMessage !== null &&
+        (/401|unauthorized/i.test(errorMessage) || errorMessage.includes('Bearer token required'));
 
     React.useEffect(() => {
         setBaseUrl(connection.baseUrl);
@@ -95,7 +108,10 @@ function RuntimeUrlForm({ connection }: { connection: RuntimeConnection }) {
                 if (!(trimmedBaseUrl && hasChanged)) {
                     return;
                 }
-                connectMutation.mutate({ baseUrl: trimmedBaseUrl });
+                connectMutation.mutate({
+                    auth: trimmedToken ? { token: trimmedToken } : undefined,
+                    baseUrl: trimmedBaseUrl,
+                });
             }}
         >
             <Field>
@@ -103,8 +119,8 @@ function RuntimeUrlForm({ connection }: { connection: RuntimeConnection }) {
                     <Input
                         aria-label="Tavern Runtime URL"
                         className="font-mono md:flex-1"
-                        disabled={connectMutation.isPending || connection.source === 'environment'}
-                        id={inputId}
+                        disabled={connectMutation.isPending || isEnvironment}
+                        id={urlInputId}
                         name="runtime-url"
                         onChange={(event) => setBaseUrl(event.currentTarget.value)}
                         value={baseUrl}
@@ -114,18 +130,39 @@ function RuntimeUrlForm({ connection }: { connection: RuntimeConnection }) {
                         disabled={
                             !(trimmedBaseUrl && hasChanged) ||
                             connectMutation.isPending ||
-                            connection.source === 'environment'
+                            isEnvironment
                         }
                         loading={connectMutation.isPending}
                         type="submit"
                         variant="secondary"
                     >
-                        Save URL
+                        Save
                     </Button>
                 </div>
             </Field>
+            <Field>
+                <FieldLabel htmlFor={tokenInputId}>Runtime token</FieldLabel>
+                <Input
+                    disabled={connectMutation.isPending || isEnvironment}
+                    id={tokenInputId}
+                    name="runtime-token"
+                    onChange={(event) => setToken(event.currentTarget.value)}
+                    placeholder={
+                        connection.authConfigured && !trimmedToken ? 'Configured' : undefined
+                    }
+                    type="password"
+                    value={token}
+                />
+                <FieldDescription>
+                    Run <code>tavern token</code> on the runtime host to get this.
+                </FieldDescription>
+            </Field>
             {connectMutation.error ? (
-                <FieldError>{connectMutation.error.message}</FieldError>
+                <FieldError>
+                    {isAuthError
+                        ? 'The runtime requires a token. Run `tavern token` on the runtime host and paste it here.'
+                        : errorMessage}
+                </FieldError>
             ) : null}
         </form>
     );
