@@ -128,6 +128,7 @@ describe('wiki todo drain', () => {
         expect(prompt).toContain('status: blocked');
         expect(prompt).toContain('do not park work on the user');
         expect(prompt).toContain('Do not start any other inventory work');
+        expect(prompt).toContain('Re-score any articles you changed');
     });
 
     async function writeRecord(

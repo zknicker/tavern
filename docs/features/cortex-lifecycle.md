@@ -93,6 +93,10 @@ There is no human gate. A todo the agent can't finish gets blocked with its
 reason, and the affected claims get marked so answers hedge; if it matters,
 it surfaces in conversation and you settle it there.
 
+Scores stay current per run: compile and todo turns re-score the articles they
+changed in the scan results, so the health page reflects work as it lands. The
+weekly librarian remains the full re-baseline.
+
 ## Watching It Work
 
 The sidebar health card rolls everything into one state — healthy or hub

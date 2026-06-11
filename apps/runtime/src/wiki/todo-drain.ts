@@ -79,8 +79,9 @@ export function buildTodoDrainPrompt(todo: CortexTodo): string {
         'record body, and mark any affected article claims with lowered confidence or',
         'verified: false so answers hedge accordingly. Do not retry endlessly and do',
         'not park work on the user. Do not start any other inventory work; if you',
-        'notice new work, file it as its own proposed record. Finish with a one-line',
-        'summary.',
+        'notice new work, file it as its own proposed record. Re-score any articles you',
+        'changed in .librarian/scan-results.json per references/librarian.md, updating',
+        'their entries and the summary counts. Finish with a one-line summary.',
     ]
         .filter((line) => line !== null)
         .join(' ');
