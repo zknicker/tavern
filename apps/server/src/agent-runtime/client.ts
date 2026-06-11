@@ -836,7 +836,9 @@ class HttpTavernAgentRuntimeClient implements TavernAgentRuntimeClient {
     }
 
     async getCortexHealth() {
-        const response = await fetch(`${this.#baseUrl}${agentRuntimeRoutes.cortexHealth}`);
+        const response = await fetch(`${this.#baseUrl}${agentRuntimeRoutes.cortexHealth}`, {
+            headers: this.#authHeaders,
+        });
 
         if (!response.ok) {
             await readErrorResponse(response);
