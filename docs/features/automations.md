@@ -37,7 +37,9 @@ maintenance cadence:
 * **Tavern: Wiki compile** — daily incremental compile of new raw sources.
 * **Tavern: Wiki lint** — weekly structural lint with auto-fix, including
   backlink repair.
-* **Tavern: Wiki librarian** — monthly staleness and quality scan, report only.
+* **Tavern: Wiki librarian** — weekly staleness and quality scan, report only.
+  The scan is two-tier (cheap metadata pass, deep reads only for flagged or
+  hot-volatility articles), so cost tracks problem density, not wiki size.
 
 Wiki automations are created once the wiki hub has at least one active topic,
 so an empty hub does not burn scheduled agent turns.

@@ -49,7 +49,7 @@ export const managedCronDefinitions: ManagedCronDefinition[] = [
         schedule: { expr: '0 5 * * 1', kind: 'cron' },
     },
     {
-        description: 'Monthly librarian scan: scores article staleness and quality, report only.',
+        description: 'Weekly librarian scan: scores article staleness and quality, report only.',
         name: 'Tavern: Wiki librarian',
         prompt: [
             'Use the wiki skill. Run the librarian scan from references/librarian.md across',
@@ -58,7 +58,7 @@ export const managedCronDefinitions: ManagedCronDefinition[] = [
             'scanned wiki. Do not modify article content during the scan. If the hub has no',
             'active topic wikis, stop after a one-line summary.',
         ].join(' '),
-        schedule: { expr: '0 6 1 * *', kind: 'cron' },
+        schedule: { expr: '0 6 * * 6', kind: 'cron' },
     },
 ];
 

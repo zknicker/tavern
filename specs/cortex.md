@@ -98,7 +98,7 @@ llm-wiki. Tavern launches scheduled or repeated wiki work through Tasks and
 Runtime crons.
 
 Tavern ships managed default crons for the regular llm-wiki maintenance
-cadence: daily incremental compile, weekly `lint --fix`, and a monthly
+cadence: daily incremental compile, weekly `lint --fix`, and a weekly
 librarian scan. Runtime reconciles them into Hermes once the hub has an active
 topic; see [Automations](../docs/features/automations.md#managed-automations).
 
