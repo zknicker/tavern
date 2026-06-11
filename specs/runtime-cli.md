@@ -1,16 +1,9 @@
 # Tavern Runtime CLI
 
-Normative contract and implementation plan for the `tavern` CLI. The goal is a
-world-class runtime CLI: a clear banner, generated help, contextual help on
-incomplete commands, truthful update/restart flows, and consistent output —
-without a TUI.
-
-Current state (for orientation): hand-rolled parsing in `apps/runtime/src/cli.ts`,
-dispatch in `apps/runtime/src/index.ts`, engine subcommands in
-`apps/runtime/src/hermes/engine-cli.ts`. Bare `tavern` silently runs `serve`;
-bare `tavern engine` throws `Missing engine command.`; `tavern update` runs two
-brew calls blind and reports success even when the running service is still on
-the old version.
+Normative contract for the `tavern` CLI: a clear banner, generated help,
+contextual help on incomplete commands, truthful update/restart flows, and
+consistent output — without a TUI. The implementation lives in
+`apps/runtime/src/cli/`.
 
 ## Goals
 
@@ -248,56 +241,6 @@ interface CliCommand {
 keep the `serve` path (signal handlers, `main()`) where it is or behind
 `commands/serve.ts`. The `parseCli` hack that rewrites `cortex`/`engine` into
 `serve` + rest (`apps/runtime/src/cli.ts:43`) is deleted.
-
-## Implementation phases
-
-Each phase is a separate, reviewable PR. Run `bun run lint` and
-`bun run --filter @tavern/runtime build` plus the vitest suite per phase.
-
-### Phase 0 — truthful update/restart (ships alone; fixes the live bug)
-
-- [ ] `cli/brew.ts`, `cli/runtime-probe.ts`.
-- [ ] Rewrite `updateRuntime()` / `restartRuntime()` in `index.ts` per the
-      contract above (`--restart`, `--verbose`, `--no-wait`, version verdicts,
-      health polling, engine pre-stage parity).
-- [ ] Tests: version-comparison matrix (up-to-date / staged-not-restarted /
-      restart-success / restart-timeout / runtime-not-running) with mocked
-      brew + mocked fetch.
-
-### Phase 1 — framework, banner, generated help
-
-- [ ] `cli/registry.ts`, `cli/parse.ts`, `cli/help.ts`, `cli/ui.ts`,
-      `cli/main.ts`; migrate dispatch out of `index.ts`.
-- [ ] Bare `tavern` → banner + status line + command list. Add `serve` to
-      `apps/runtime/launchd/com.tavern.runtime.plist` in the same commit.
-- [ ] Group help for bare `tavern engine` / `tavern cortex` (exit 1).
-- [ ] `tavern help <command>` and `--help` everywhere; did-you-mean; exit-code
-      contract (0/1/2).
-- [ ] Tests: parse/registry units, help render snapshots, suggestion cases,
-      exit codes. Replace `cli.test.ts` cases that assert the old behavior.
-
-### Phase 2 — `tavern status`
-
-- [ ] `commands/status.ts` per the contract, including `--json` and partial
-      failure tolerance.
-- [ ] Tests: full-healthy, stale-process, runtime-down, capability-degraded
-      fixtures against mocked probes.
-
-### Phase 3 — migrate cortex/engine, output polish
-
-- [ ] Move cortex/engine commands onto the registry; aligned-column human
-      output instead of raw `\t`; uniform `--json`.
-- [ ] Friendly unreachable-runtime error with hint on all cortex commands.
-- [ ] Delete dead code in `cli.ts` (hand-written help string, `parseCli`
-      rewrites); keep `-v/--version` output byte-identical.
-
-### Phase 4 — docs
-
-- [ ] Update the CLI reference and update/restart flow in
-      `docs/operations/runtime-deploy.md` (frontmatter `read_when` already
-      covers CLI changes).
-- [ ] Touch `docs/operations/hermes-managed-runtime.md` only if engine command
-      output or flags changed.
 
 ## Acceptance criteria
 

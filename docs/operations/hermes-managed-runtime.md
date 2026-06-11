@@ -207,7 +207,7 @@ printf '# original\n' > "$TMP/.zshrc"
 shasum "$TMP/.local/bin/hermes" "$TMP/.zshrc"   # record baseline
 
 cd apps/runtime
-HOME="$TMP" bun src/index.ts engine status      # expect: System installs: ignored
+HOME="$TMP" bun src/index.ts engine status      # expect: System installs  ignored
 HOME="$TMP" bun src/index.ts engine install     # real install into $TMP/.tavern
 HOME="$TMP" bun src/index.ts engine status      # expect: Resolved ... (managed)
 ```

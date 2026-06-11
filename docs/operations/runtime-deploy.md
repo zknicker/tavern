@@ -17,7 +17,9 @@ configured Runtime URL.
 Keep the CLI small:
 
 ```bash
+tavern                 # banner, live runtime status line, command list
 tavern serve
+tavern status [--json] [--runtime-url <url>]
 tavern cortex topics
 tavern cortex list --topic project-wiki
 tavern cortex get project-wiki wiki/index.md
@@ -26,21 +28,37 @@ tavern cortex status
 tavern engine status
 tavern engine install
 tavern engine clean
-tavern update
-tavern restart
+tavern update [--restart] [--verbose]
+tavern restart [--no-wait]
 tavern --version
-tavern --help
+tavern help [command]
 ```
+
+Bare `tavern` does not start the server; it prints the banner, a one-line
+runtime status, and the command list. Help is generated from the command
+registry: `tavern help <command>` and `--help` work on every command, bare
+`tavern engine` / `tavern cortex` print group help, and unknown commands get
+a did-you-mean suggestion. Exit codes are `0` success, `1` operational
+failure, `2` usage error. Read commands support `--json`.
 
 `serve` runs the foreground Runtime process. It starts the Runtime HTTP and
 WebSocket API, Runtime storage, managed Hermes dashboard/API/Gateway, Cortex
 wiki reads, and Runtime jobs. It logs to stdout and stderr, and exits on
-`SIGINT` or `SIGTERM`.
+`SIGINT` or `SIGTERM`. The Homebrew service and the dev launchd plist invoke
+`tavern serve` explicitly.
+
+`status` is the one-screen host health view: Homebrew service state, the
+running Runtime version versus the installed binary version (including the
+"staged, run 'tavern restart'" case), capability health with reasons, and the
+resolved engine. With `--runtime-url` it inspects a remote Runtime; the
+local-only rows are then labeled `(local)` and the staged-binary hint is
+suppressed.
 
 `cortex` commands are thin CLI clients for the managed Runtime. They require a
 running Runtime and use `TAVERN_RUNTIME_URL`, or `http://127.0.0.1:18790` by
 default. They browse the resolved llm-wiki hub; writes and maintenance happen
-through llm-wiki skills launched from Tasks or Runtime crons.
+through llm-wiki skills launched from Tasks or Runtime crons. When the Runtime
+is unreachable they fail with a pointer to `tavern status`.
 
 `tavern` is the preferred CLI. `tavern-runtime` remains as a compatibility
 alias.
@@ -55,8 +73,14 @@ other pins; `--all` removes every install.
 `update` shells out to Homebrew and stages the newest Runtime package without
 restarting the running service, then best-effort pre-installs the staged
 Runtime's pinned engine so the cutover restart does not wait on an engine
-download. `restart` restarts the Homebrew service and is the explicit cutover
-step. Use Homebrew directly for stop, logs, and boot persistence.
+download. It always ends with a version verdict: it compares the staged binary
+version against the running Runtime and says explicitly when a restart is
+still required ("formula up to date" never implies the running process is).
+`--restart`, or a confirmation prompt on a TTY, cuts over immediately.
+`restart` restarts the Homebrew service, waits for Runtime health, and
+confirms the new running version; it never reports success without observing
+health (`--no-wait` skips the wait). Use Homebrew directly for stop, logs, and
+boot persistence.
 
 Runtime updates are two-phase:
 
