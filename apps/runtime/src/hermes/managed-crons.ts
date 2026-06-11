@@ -23,15 +23,21 @@ export interface ManagedCronDefinition {
 export const managedCronDefinitions: ManagedCronDefinition[] = [
     {
         description:
-            'Compiles newly ingested wiki sources into cross-linked articles every morning.',
-        name: 'Tavern: Wiki compile',
+            'Daily upkeep: compiles new wiki sources and works off proposed inventory follow-ups.',
+        name: 'Tavern: Wiki upkeep',
         prompt: [
             'Use the wiki skill. For each active topic wiki in the hub (skip archived topics),',
             'check for raw sources that are not yet compiled, per the incremental compile',
-            'workflow in references/compilation.md. If no topic wiki has uncompiled sources,',
-            'stop after a one-line summary. Otherwise compile the new sources into wiki',
+            'workflow in references/compilation.md. Compile any new sources into wiki',
             'articles: synthesize rather than copy, add bidirectional See Also dual-links,',
             'update the affected _index.md files, and append a log.md entry per wiki changed.',
+            'Then work off at most two proposed inventory records across the hub, highest',
+            'priority first, per references/inventory.md: complete next actions you can do',
+            'autonomously, such as researching thin or single-source coverage, resolving',
+            'dedup candidates, or profiling ingest candidates, and move their status',
+            'forward. Leave records that need human judgment — claim verification,',
+            'retractions, or paid or private access — as proposed. If there are no',
+            'uncompiled sources and no actionable inventory, stop after a one-line summary.',
         ].join(' '),
         schedule: { expr: '30 4 * * *', kind: 'cron' },
     },

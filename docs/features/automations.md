@@ -34,7 +34,9 @@ automations are removed. Pause state is preserved across reconciliation.
 The current managed set keeps the Cortex wiki healthy, following the llm-wiki
 maintenance cadence:
 
-* **Tavern: Wiki compile** — daily incremental compile of new raw sources.
+* **Tavern: Wiki upkeep** — daily incremental compile of new raw sources, plus
+  working off up to two proposed inventory follow-ups (research, dedup,
+  candidate profiling). Records that need human judgment stay proposed.
 * **Tavern: Wiki lint** — weekly structural lint with auto-fix, including
   backlink repair.
 * **Tavern: Wiki librarian** — weekly staleness and quality pass. The scan is
@@ -43,7 +45,8 @@ maintenance cadence:
   same run repairs mechanical findings via `lint --fix`, recompiles articles
   with newer uncompiled sources, and files judgment items (unverified claims,
   thin coverage, dedup candidates) as proposed inventory records — findings
-  become agent work, not reports to review.
+  become agent work, not reports to review. The daily upkeep automation
+  consumes that queue.
 
 Wiki automations are created once the wiki hub has at least one active topic,
 so an empty hub does not burn scheduled agent turns.
