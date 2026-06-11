@@ -105,7 +105,7 @@ export function AppearanceSettings() {
                 <BadgeDivider className="pb-3">Chat Display</BadgeDivider>
                 <div className="overflow-hidden rounded-lg border border-border bg-card">
                     <SettingsRow
-                        description="Display model thinking text inside chat transcripts."
+                        description="Show the model's reasoning in chats."
                         title="Show thinking text"
                     >
                         <div className="flex justify-start md:justify-end">

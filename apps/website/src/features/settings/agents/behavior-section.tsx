@@ -82,7 +82,7 @@ export function AgentBehaviorSection({
                     <Separator />
 
                     <SettingsRow
-                        description="How older conversation context is summarized."
+                        description="How older chat history gets summarized."
                         title="Context compression"
                     >
                         <Select
@@ -118,7 +118,7 @@ export function AgentBehaviorSection({
                             <Separator />
 
                             <SettingsRow
-                                description="Start compressing at this share of the context window."
+                                description="Start compressing past this much context."
                                 title="Compression threshold"
                             >
                                 <CompressionNumberInput

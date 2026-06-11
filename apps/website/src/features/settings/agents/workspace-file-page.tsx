@@ -13,13 +13,12 @@ export type EditableAgentWorkspaceFile = 'NOTES.md' | 'SOUL.md';
 
 export const editableAgentWorkspaceFiles = [
     {
-        description:
-            'Durable notes, instructions, and conventions — composed into the generated AGENTS.md.',
+        description: 'Notes and conventions, woven into AGENTS.md.',
         label: 'NOTES.md',
         path: 'NOTES.md',
     },
     {
-        description: "Your agent's identity, voice, tone, and durable personality.",
+        description: "Your agent's identity, voice, and personality.",
         label: 'SOUL.md',
         path: 'SOUL.md',
     },

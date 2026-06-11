@@ -90,10 +90,7 @@ export function AgentAppearanceSection({
 
                     <Separator />
 
-                    <SettingsRow
-                        description="Shown in the sidebar and chat. One or two characters or an emoji."
-                        title="Avatar"
-                    >
+                    <SettingsRow description="A character or two, or an emoji." title="Avatar">
                         <Input
                             disabled={isSaving}
                             id="agent-avatar"

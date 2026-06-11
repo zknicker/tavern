@@ -50,7 +50,7 @@ export function AgentPermissionsSection({
             <CardFrame>
                 <Card className="overflow-hidden p-0">
                     <SettingsRow
-                        description="What happens when the agent wants to run something risky."
+                        description="What to do when a tool call looks risky."
                         title="Tool approvals"
                     >
                         <ApprovalModeSelect
@@ -63,7 +63,7 @@ export function AgentPermissionsSection({
                     <Separator />
 
                     <SettingsRow
-                        description="Approvals for scheduled runs, which cannot wait for an answer."
+                        description="Scheduled runs can't pause to ask you."
                         title="Automation approvals"
                     >
                         <ApprovalModeSelect
@@ -76,7 +76,7 @@ export function AgentPermissionsSection({
                     <Separator />
 
                     <SettingsRow
-                        description="Commands the agent may run without asking. Answering a prompt with Always adds a rule here."
+                        description="Commands the agent may run without asking."
                         title="Command allowlist"
                     >
                         <CommandAllowlistEditor
@@ -209,7 +209,7 @@ function CommandAllowlistEditor({
                         commitDraft();
                     }
                 }}
-                placeholder="Add a command rule"
+                placeholder="Add a rule — answering Always adds one too"
                 value={draft}
             />
         </div>

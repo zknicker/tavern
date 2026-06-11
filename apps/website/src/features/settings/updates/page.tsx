@@ -37,7 +37,7 @@ export function UpdatesSettings() {
                 <Card className="overflow-hidden p-0">
                     <SettingsRow
                         className="md:items-start"
-                        description="Tavern will update both your app and the connected runtime automatically."
+                        description="The app and runtime update automatically."
                         title="Update"
                         trailingWidth="intrinsic"
                     >
