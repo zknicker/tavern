@@ -171,12 +171,12 @@ lives in that directory's `TAVERN.md`. To bump it:
    is the first hub source, and `/wiki` command examples read as natural
    language shorthand for the same skill workflows.
 3. Update the version line in `TAVERN.md`.
-4. If upstream changed maintenance workflows or cadence, revisit the managed
-   default crons in `apps/runtime/src/hermes/managed-crons.ts` and their
-   prompts' `references/*.md` pointers.
+4. If upstream changed maintenance workflows or cadence, revisit the wiki
+   pipeline run prompts in `apps/runtime/src/wiki/compile-run.ts`,
+   `librarian-run.ts`, and `todo-drain.ts` and their prompts'
+   `references/*.md` pointers.
 5. Run `bun run --filter @tavern/runtime test -- src/hermes/llm-wiki.test.ts
-   src/hermes/managed-crons.test.ts src/wiki` and start the dev stack to verify
-   skill sync.
+   src/wiki` and start the dev stack to verify skill sync.
 
 ## Managed Tavern Skill
 
