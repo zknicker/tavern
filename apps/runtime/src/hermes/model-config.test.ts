@@ -3,8 +3,8 @@ import os from 'node:os';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { syncHermesCodexAuth } from './auth-store';
-import { mergeHermesEnvFile } from './model-config';
 import { ensureManagedMnemosynePlugin } from './mnemosyne';
+import { mergeHermesEnvFile } from './model-config';
 
 const codexEnvConfig = {
     apiKey: null,

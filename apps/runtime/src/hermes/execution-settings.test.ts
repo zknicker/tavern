@@ -1,5 +1,4 @@
 import fs from 'node:fs/promises';
-import os from 'node:os';
 import path from 'node:path';
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 
@@ -14,7 +13,7 @@ const tempHermesHome = await vi.hoisted(async () => {
     return home;
 });
 
-import { closeDb, getDb, initTestDb } from '../db/connection';
+import { closeDb, initTestDb } from '../db/connection';
 import { ensureRuntimeSchema } from '../db/schema';
 import { getHermesExecutionSettings, handleExecutionSettingsRequest } from './execution-settings';
 
