@@ -34,11 +34,18 @@ async function main(): Promise<void> {
         .then(async (handle) => {
             hermes = handle;
             await refreshRuntimeCapabilities({
-                ids: ['cortexWiki'],
+                ids: ['cortexWiki', 'gateway'],
                 publishUpdated: true,
             }).catch((err) => {
                 log.warn('Managed wiki capability refresh failed after Hermes startup', { err });
             });
+            await runtimeJobs
+                ?.enqueue('sync-managed-crons', { trigger: 'startup' })
+                .catch((err) => {
+                    log.warn('Managed automation sync failed to queue after Hermes startup', {
+                        err,
+                    });
+                });
             if (shuttingDown) {
                 void handle.stop();
             }

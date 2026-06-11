@@ -42,6 +42,44 @@ export const runtimeCapabilitiesRefreshJob: RuntimeJobDefinition = {
     slug: 'refresh-runtime-capabilities',
 };
 
+export const syncManagedCronsJob: RuntimeJobDefinition = {
+    concurrency: 1,
+    defaultInput: {},
+    description:
+        'Keeps Tavern-managed default cron automations (wiki maintenance) in sync with their definitions.',
+    disabledReason() {
+        return null;
+    },
+    displayName: 'Sync Managed Automations',
+    inputSchema: emptyRuntimeJobInputSchema,
+    requiredCapabilities: ['gateway'],
+    async run(context) {
+        const { createLocalHermesClient } = await import('../hermes/local-client');
+        const { syncManagedCrons } = await import('../hermes/managed-crons');
+        const client = createLocalHermesClient();
+        try {
+            const result = await syncManagedCrons(client);
+            if (result.skippedReason === 'no-active-topics') {
+                await context.log(
+                    'Skipped managed automation creation: the wiki hub has no active topics yet.'
+                );
+                return;
+            }
+            await context.log(
+                `Managed automations in sync (${result.created.length} created, ${result.updated.length} updated, ${result.removed.length} removed).`
+            );
+        } finally {
+            client.close();
+        }
+    },
+    schedule: {
+        everyMs: hourMs,
+        kind: 'interval',
+        runOnStart: true,
+    },
+    slug: 'sync-managed-crons',
+};
+
 export const tavernHighlightsJob: RuntimeJobDefinition = {
     concurrency: 1,
     defaultInput: {},
@@ -63,7 +101,11 @@ export const tavernHighlightsJob: RuntimeJobDefinition = {
     slug: 'tavern-highlights',
 };
 
-export const runtimeJobDefinitions = [runtimeCapabilitiesRefreshJob, tavernHighlightsJob] as const;
+export const runtimeJobDefinitions = [
+    runtimeCapabilitiesRefreshJob,
+    syncManagedCronsJob,
+    tavernHighlightsJob,
+] as const;
 
 export function getRuntimeJobDefinition(slug: RuntimeJobDefinition['slug']): RuntimeJobDefinition {
     const definition = runtimeJobDefinitions.find((job) => job.slug === slug);

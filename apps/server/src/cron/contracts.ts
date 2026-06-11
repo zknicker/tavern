@@ -99,6 +99,7 @@ export const cronJobSummarySchema = z.object({
     description: z.string().nullable(),
     enabled: z.boolean(),
     id: z.string().min(1),
+    managed: z.boolean(),
     name: z.string().min(1),
     schedule: cronScheduleSchema,
     state: cronJobStateSchema,

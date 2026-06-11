@@ -7,6 +7,7 @@ interface CronEditorHeaderProps {
     canEdit: boolean;
     canRunActions: boolean;
     isDeleting: boolean;
+    isManaged: boolean;
     isNew: boolean;
     isPending: boolean;
     isRunning: boolean;
@@ -19,6 +20,7 @@ export function CronEditorHeader({
     canEdit,
     canRunActions,
     isDeleting,
+    isManaged,
     isNew,
     isPending,
     isRunning,
@@ -40,21 +42,23 @@ export function CronEditorHeader({
                         >
                             <Icon icon={Clock} />
                         </Button>
-                        <Button
-                            disabled={!canRunActions || isDeleting}
-                            loading={isDeleting}
-                            onClick={onDelete}
-                            size="icon"
-                            title={
-                                canRunActions
-                                    ? 'Delete automation'
-                                    : 'Agent engine offline — reconnect to delete this automation'
-                            }
-                            type="button"
-                            variant="destructive-outline"
-                        >
-                            <Icon icon={Trash2} />
-                        </Button>
+                        {isManaged ? null : (
+                            <Button
+                                disabled={!canRunActions || isDeleting}
+                                loading={isDeleting}
+                                onClick={onDelete}
+                                size="icon"
+                                title={
+                                    canRunActions
+                                        ? 'Delete automation'
+                                        : 'Agent engine offline — reconnect to delete this automation'
+                                }
+                                type="button"
+                                variant="destructive-outline"
+                            >
+                                <Icon icon={Trash2} />
+                            </Button>
+                        )}
                         <Button
                             disabled={!canRunActions || isRunning}
                             loading={isRunning}
@@ -72,19 +76,21 @@ export function CronEditorHeader({
                         </Button>
                     </>
                 )}
-                <Button disabled={isPending || !canEdit} form="cron-editor-form" type="submit">
-                    {isPending ? (
-                        'Saving...'
-                    ) : isNew ? (
-                        <>
-                            Create<span className="hidden sm:inline"> automation</span>
-                        </>
-                    ) : (
-                        <>
-                            Save<span className="hidden sm:inline"> changes</span>
-                        </>
-                    )}
-                </Button>
+                {isManaged ? null : (
+                    <Button disabled={isPending || !canEdit} form="cron-editor-form" type="submit">
+                        {isPending ? (
+                            'Saving...'
+                        ) : isNew ? (
+                            <>
+                                Create<span className="hidden sm:inline"> automation</span>
+                            </>
+                        ) : (
+                            <>
+                                Save<span className="hidden sm:inline"> changes</span>
+                            </>
+                        )}
+                    </Button>
+                )}
             </div>
         </AppShellContentHeader>
     );

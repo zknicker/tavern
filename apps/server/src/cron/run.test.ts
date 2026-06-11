@@ -45,6 +45,7 @@ function createAgentRuntimeCronJob() {
         description: 'Keep the team aligned.',
         enabled: true,
         id: 'cron:daily-standup',
+        managed: false,
         name: 'Daily standup',
         payload: {
             kind: 'agentTurn' as const,

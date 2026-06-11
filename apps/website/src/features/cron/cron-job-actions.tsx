@@ -55,24 +55,20 @@ export function CronJobActions({
                     disabled={false}
                     onClick={() => onEdit(job)}
                     size="icon-sm"
-                    title="Edit automation"
+                    title={job.managed ? 'View automation' : 'Edit automation'}
                     type="button"
                     variant="ghost"
                 >
                     <Icon className="size-4" icon={PencilEdit02Icon} />
                 </Button>
                 <Button
-                    disabled={!canEdit || isDeleting}
+                    disabled={!canEdit || isDeleting || job.managed}
                     loading={isDeleting}
                     onClick={() => {
                         void onDelete(job);
                     }}
                     size="icon-sm"
-                    title={
-                        canEdit
-                            ? 'Delete automation'
-                            : 'Start Tavern Runtime to delete this automation'
-                    }
+                    title={deleteTitle(canEdit, job.managed)}
                     type="button"
                     variant="ghost"
                 >
@@ -81,4 +77,11 @@ export function CronJobActions({
             </div>
         </div>
     );
+}
+
+function deleteTitle(canEdit: boolean, managed: boolean) {
+    if (managed) {
+        return 'Managed by Tavern — pause instead of deleting';
+    }
+    return canEdit ? 'Delete automation' : 'Start Tavern Runtime to delete this automation';
 }

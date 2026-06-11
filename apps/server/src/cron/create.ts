@@ -1,3 +1,5 @@
+import { isTavernManagedCronName } from '@tavern/api';
+import { TRPCError } from '@trpc/server';
 import { requireConfiguredAgentRuntimeClientForRuntimeId } from '../agent-runtime/configured-client.ts';
 import * as agentRuntimeCron from '../agent-runtime/cron.ts';
 import { requirePrimaryAgent } from '../agents/catalog.ts';
@@ -46,6 +48,14 @@ async function resolveCronRuntimeId(input: {
 
 export async function createCronJob(input: unknown) {
     const parsed = addCronJobParamsSchema.parse(input);
+
+    if (isTavernManagedCronName(parsed.name)) {
+        throw new TRPCError({
+            code: 'BAD_REQUEST',
+            message: 'Automation names starting with "Tavern: " are reserved.',
+        });
+    }
+
     const defaultAgent =
         parsed.payload.kind === 'agentTurn' && !parsed.agentId ? await requirePrimaryAgent() : null;
     const agentId = parsed.agentId ?? defaultAgent?.id;

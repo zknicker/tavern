@@ -108,6 +108,7 @@ export function buildCronList(cronJobs: CronListOutput['jobs'], runs: CronRunsOu
             id: job.id,
             job,
             lastRun: formatRelativeTime(lastRunAt),
+            managed: job.managed,
             name: job.name,
             schedule: formatCronSchedule(job.schedule, true),
             successRate: getResultLabel(job),

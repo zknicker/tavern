@@ -1,5 +1,6 @@
 import * as React from 'react';
 import { AgentAvatar } from '../../components/ui/agent-avatar.tsx';
+import { Badge } from '../../components/ui/badge.tsx';
 import { CardStack, CardStackItem } from '../../components/ui/card-stack.tsx';
 import type { DashboardAvatarDirectory } from '../../hooks/agents/use-agent-avatar-directory.ts';
 import { CronJobActions } from './cron-job-actions.tsx';
@@ -67,6 +68,11 @@ function CronJobCard({
 
                 <div className="flex min-w-0 flex-1 items-center gap-2">
                     <p className="truncate font-medium text-foreground text-sm">{job.name}</p>
+                    {job.managed ? (
+                        <Badge size="sm" title="Managed by Tavern" variant="subtle">
+                            Managed
+                        </Badge>
+                    ) : null}
                     <span className="hidden text-muted-foreground text-sm md:inline">·</span>
                     <span className="hidden min-w-0 truncate font-mono text-muted-foreground text-sm md:inline">
                         {job.schedule}

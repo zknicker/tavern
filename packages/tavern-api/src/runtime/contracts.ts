@@ -1069,11 +1069,23 @@ export const agentRuntimeCronScheduleSchema = z.union([
 
 export const agentRuntimeCronWakeModeSchema = z.enum(['next-heartbeat', 'now']);
 
+/**
+ * Tavern-managed default crons are identified by this reserved name prefix.
+ * The name is the only Tavern-authored field that round-trips through the
+ * agent engine's cron storage, so it doubles as the managed marker.
+ */
+export const tavernManagedCronNamePrefix = 'Tavern: ';
+
+export function isTavernManagedCronName(name: string) {
+    return name.startsWith(tavernManagedCronNamePrefix);
+}
+
 export const agentRuntimeCronSummarySchema = z.object({
     agentId: z.string().trim().min(1).nullable(),
     description: z.string().nullable(),
     enabled: z.boolean(),
     id: z.string().trim().min(1),
+    managed: z.boolean(),
     name: z.string().trim().min(1),
     schedule: agentRuntimeCronScheduleSchema,
     state: agentRuntimeCronStateSchema,
@@ -1154,6 +1166,7 @@ export const agentRuntimeRunCronSchema = z.object({
 
 export const agentRuntimeJobSlugSchema = z.enum([
     'refresh-runtime-capabilities',
+    'sync-managed-crons',
     'tavern-highlights',
 ]);
 

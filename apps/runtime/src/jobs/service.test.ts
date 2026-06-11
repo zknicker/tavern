@@ -20,6 +20,7 @@ describe('Runtime jobs service', () => {
 
         expect(jobs.map((job) => job.slug)).toEqual([
             'refresh-runtime-capabilities',
+            'sync-managed-crons',
             'tavern-highlights',
         ]);
         expect(jobs.some((job) => job.slug.startsWith('cortex-'))).toBe(false);
