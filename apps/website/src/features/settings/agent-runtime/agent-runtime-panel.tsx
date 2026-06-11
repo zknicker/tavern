@@ -6,12 +6,6 @@ import { BadgeDivider } from '../../../components/ui/badge-divider.tsx';
 import { Card, CardFrame } from '../../../components/ui/card.tsx';
 import { Icon } from '../../../components/ui/icon.tsx';
 import { Button } from '../../../components/ui/primitives/button.tsx';
-import {
-    Field,
-    FieldDescription,
-    FieldError,
-    FieldLabel,
-} from '../../../components/ui/primitives/field.tsx';
 import { Input } from '../../../components/ui/primitives/input.tsx';
 import { SettingsItem, SettingsRow } from '../../../components/ui/settings-row.tsx';
 import { useConnectAgentRuntime } from '../../../hooks/connections/use-connect-agent-runtime.ts';
@@ -60,9 +54,7 @@ function RuntimeConnectionRow({ connection }: { connection: RuntimeConnection })
 
     return (
         <SettingsItem className="p-0">
-            <SettingsRow description="The runtime that powers agent work." title="Tavern Runtime">
-                <RuntimeUrlForm connection={connection} />
-            </SettingsRow>
+            <RuntimeUrlForm connection={connection} />
             {connection.lastError ? null : (
                 <div className="border-border/60 border-t p-3.5">
                     <CapabilitySection
@@ -102,7 +94,6 @@ function RuntimeUrlForm({ connection }: { connection: RuntimeConnection }) {
 
     return (
         <form
-            className="grid gap-2"
             onSubmit={(event) => {
                 event.preventDefault();
                 if (!(trimmedBaseUrl && hasChanged)) {
@@ -114,7 +105,7 @@ function RuntimeUrlForm({ connection }: { connection: RuntimeConnection }) {
                 });
             }}
         >
-            <Field>
+            <SettingsRow description="The runtime that powers agent work." title="Tavern Runtime">
                 <div className="flex max-w-full flex-col gap-2 sm:flex-row sm:items-center sm:justify-end">
                     <Input
                         aria-label="Tavern Runtime URL"
@@ -139,31 +130,33 @@ function RuntimeUrlForm({ connection }: { connection: RuntimeConnection }) {
                         Save
                     </Button>
                 </div>
-            </Field>
-            <Field>
-                <FieldLabel htmlFor={tokenInputId}>Runtime token</FieldLabel>
+            </SettingsRow>
+            <SettingsRow
+                description="Pairs the app with the runtime."
+                error={
+                    connectMutation.error
+                        ? isAuthError
+                            ? 'The runtime requires a token. Run `tavern token` on the runtime host and paste it here.'
+                            : errorMessage
+                        : null
+                }
+                title="Runtime token"
+            >
                 <Input
+                    aria-label="Runtime token"
                     disabled={connectMutation.isPending || isEnvironment}
                     id={tokenInputId}
                     name="runtime-token"
                     onChange={(event) => setToken(event.currentTarget.value)}
                     placeholder={
-                        connection.authConfigured && !trimmedToken ? 'Configured' : undefined
+                        connection.authConfigured && !trimmedToken
+                            ? 'Configured'
+                            : 'Run `tavern token` on the runtime host'
                     }
                     type="password"
                     value={token}
                 />
-                <FieldDescription>
-                    Run <code>tavern token</code> on the runtime host to get this.
-                </FieldDescription>
-            </Field>
-            {connectMutation.error ? (
-                <FieldError>
-                    {isAuthError
-                        ? 'The runtime requires a token. Run `tavern token` on the runtime host and paste it here.'
-                        : errorMessage}
-                </FieldError>
-            ) : null}
+            </SettingsRow>
         </form>
     );
 }
