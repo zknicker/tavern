@@ -21,4 +21,7 @@ process.env.NODE_ENV = 'test';
 
 process.chdir(workspaceRoot);
 
+// The runtime entry dispatches on argv and only starts the server on the `serve` subcommand.
+process.argv = [process.argv[0] ?? 'bun', process.argv[1] ?? 'start-tavern-runtime.ts', 'serve'];
+
 await import('../../runtime/src/index.ts');
