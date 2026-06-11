@@ -1,7 +1,8 @@
-import { spawnSync } from 'node:child_process';
 import path from 'node:path';
 import { refreshRuntimeCapabilities } from './capabilities/store';
 import { parseCli, printHelp, runCortexCli } from './cli';
+import { runRestartCommand, runUpdateCommand } from './cli/maintenance-commands';
+import { parseRestartFlags, parseUpdateFlags, UsageError } from './cli/maintenance-flags';
 import { DATA_DIR } from './config';
 import { initDb } from './db/connection';
 import { ensureRuntimeSchema } from './db/schema';
@@ -17,31 +18,6 @@ let hermes: ManagedHermesHandle | null = null;
 let runtimeJobs: RuntimeJobsManager | null = null;
 let hermesStartup: Promise<ManagedHermesHandle> | null = null;
 let shuttingDown = false;
-
-function runBrew(args: string[]): void {
-    const result = spawnSync('brew', args, {
-        env: process.env,
-        stdio: 'inherit',
-    });
-
-    if (result.error) {
-        console.error(`brew ${args.join(' ')} failed: ${result.error.message}`);
-        process.exit(1);
-    }
-
-    if (result.status !== 0) {
-        process.exit(result.status ?? 1);
-    }
-}
-
-function updateRuntime(): void {
-    runBrew(['update']);
-    runBrew(['upgrade', 'tavern-runtime']);
-}
-
-function restartRuntime(): void {
-    runBrew(['services', 'restart', 'tavern-runtime']);
-}
 
 async function main(): Promise<void> {
     log.info('Tavern Runtime starting');
@@ -125,9 +101,29 @@ if (command === 'help') {
     const runtimePackage = await import('../package.json');
     console.log(runtimePackage.default.version);
 } else if (command === 'update') {
-    updateRuntime();
+    try {
+        const flags = parseUpdateFlags(cli.rest);
+        process.exit(await runUpdateCommand(flags));
+    } catch (error) {
+        if (error instanceof UsageError) {
+            console.error(error.message);
+            process.exit(2);
+        }
+        console.error(error instanceof Error ? error.message : String(error));
+        process.exit(1);
+    }
 } else if (command === 'restart') {
-    restartRuntime();
+    try {
+        const flags = parseRestartFlags(cli.rest);
+        process.exit(await runRestartCommand(flags));
+    } catch (error) {
+        if (error instanceof UsageError) {
+            console.error(error.message);
+            process.exit(2);
+        }
+        console.error(error instanceof Error ? error.message : String(error));
+        process.exit(1);
+    }
 } else if (cli.rest[0] === 'cortex') {
     runCortexCli(cli.rest.slice(1)).catch((err) => {
         console.error(err instanceof Error ? err.message : String(err));
