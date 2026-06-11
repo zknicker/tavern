@@ -11,3 +11,6 @@ apps/website/electron/generated-icons
 apps/website/electron/icons
 apps/website/electron/resources/bin
 apps/website/test-results
+
+# Claude Code preview launch config — generated per checkout by scripts/generate-claude-launch.mjs
+.claude/launch.json

@@ -55,6 +55,16 @@ On a dev machine without Hermes, set `TAVERN_HERMES_AUTO_INSTALL=1` to let
 Runtime bootstrap the pinned engine into `~/.tavern/engine/` once, shared
 across worktrees.
 
+## Claude Code Previews
+
+`.claude/launch.json` tells Claude Code's browser preview which port to attach
+to. It is gitignored, not committed, because the port is per-checkout. A
+`SessionStart` hook in `.claude/settings.json` runs
+`scripts/generate-claude-launch.mjs`, which writes the file from the same
+`resolveDevPorts` group the dev stack uses — so the preview always points at the
+website port that `bun run dev:web:runtime` actually binds. Nothing to do by
+hand; the file regenerates each session.
+
 ## Shutdown
 
 From the terminal, stop the dev stack with `Ctrl+C` or `kill -TERM <dev-stack-pid>`.
