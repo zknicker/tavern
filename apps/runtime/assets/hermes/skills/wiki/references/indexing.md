@@ -26,7 +26,7 @@ Before using any `_index.md`, check staleness:
 2. Count rows in the `_index.md` contents table
 3. If counts differ → index is stale → rebuild inline before proceeding
 
-If an optional layer such as `inventory/` or `datasets/` is completely absent,
+If an optional layer such as `todos/` or `datasets/` is completely absent,
 treat its count as 0 instead of creating a placeholder index during a read.
 
 ### Rebuild Inline
@@ -40,7 +40,7 @@ When an index is stale:
 5. Write the new `_index.md`
 6. Continue with the original operation
 
-### Write Operations (ingest, compile, research, inventory, dataset)
+### Write Operations (ingest, compile, research, todos, dataset)
 
 - Write the article/source file with correct frontmatter — this is the source of truth
 - Index updates are **best-effort** — update if convenient, but if skipped or if a concurrent session overwrites, no data is lost
@@ -92,7 +92,7 @@ But these updates are optional. If skipped (e.g., due to a crash or concurrent w
 The root `_index.md` statistics are derived from actual file counts, not manual tracking:
 - Sources: count .md files in `raw/` subdirectories (excluding `_index.md`)
 - Articles: count .md files in `wiki/` subdirectories (excluding `_index.md`)
-- Inventory records: count .md files in `inventory/` subdirectories (excluding `_index.md`), or 0 if `inventory/` is absent
+- Todo records: count .md files in `todos/` subdirectories (excluding `_index.md`), or 0 if `todos/` is absent
 - Dataset manifests: count `datasets/*/MANIFEST.md`, or 0 if `datasets/` is absent
 - Outputs: count .md files in `output/` (excluding `_index.md`)
 - Hub archived topics: count `HUB/topics/.archive/*/_index.md` or registry

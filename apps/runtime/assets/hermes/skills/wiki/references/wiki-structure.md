@@ -23,7 +23,7 @@ HUB/                               # resolved from ~/.config/llm-wiki/config.jso
 
 All content lives here. Init creates a core structure first; optional layers are
 created lazily when a command needs them. This keeps new wikis fast to create
-and avoids blank scaffolding for inventory, datasets, and generated sidecars
+and avoids blank scaffolding for todos, datasets, and generated sidecars
 that may never be used.
 
 ```
@@ -40,7 +40,7 @@ HUB/topics/<name>/
 ├── log.md                         # Topic-level activity log
 ├── inbox/                         # Drop zone for this topic
 │   └── .processed/
-├── inventory/                     # Lazy: durable tracking records (see inventory.md)
+├── todos/                     # Lazy: durable tracking records (see todos.md)
 │   ├── _index.md
 │   ├── items/                     # Physical/digital items, parts, tools, assets
 │   │   ├── _index.md
@@ -54,7 +54,7 @@ HUB/topics/<name>/
 │   ├── corpora/                   # Source collections, archives, datasets, forums
 │   │   ├── _index.md
 │   │   └── *.md
-│   └── views/                     # Derived chat/list views over inventory
+│   └── views/                     # Derived chat/list views over todo records
 │       ├── _index.md
 │       └── *.md
 ├── datasets/                      # Lazy: dataset manifests for large/external data
@@ -111,12 +111,12 @@ HUB/topics/<name>/
     └── *.md                       # Loose outputs (backward compatible)
 ```
 
-See [inventory.md](inventory.md) for inventory records, [datasets.md](datasets.md)
+See [todos.md](todos.md) for todo records, [datasets.md](datasets.md)
 for dataset manifests, and [projects.md](projects.md) for the full projects
 architecture (lifecycle, multi-membership, explicit `--project <slug>` scoping).
-Files under `inventory/views/` are derived list/table views. They are not
-inventory records and should not be treated as authoritative tracking state.
-Missing optional roots (`inventory/`, `datasets/`, `.obsidian/`, `.librarian/`,
+Files under `todos/views/` are derived list/table views. They are not
+todo records and should not be treated as authoritative tracking state.
+Missing optional roots (`todos/`, `datasets/`, `.obsidian/`, `.librarian/`,
 or `.audit/`) mean the layer has not been used yet.
 
 ## Local Wiki (--local flag)
@@ -202,7 +202,7 @@ Additionally includes:
 
 - Sources: N raw documents
 - Articles: N compiled wiki articles
-- Inventory records: N tracked items
+- Todo records: N tracked items
 - Datasets: N manifests
 - Outputs: N generated artifacts
 - Archived topics: N (hub index only)
@@ -212,7 +212,7 @@ Additionally includes:
 ## Quick Navigation
 
 - [All Sources](raw/_index.md)
-- [Inventory](inventory/_index.md) — include only when `inventory/` exists
+- [Todos](todos/_index.md) — include only when `todos/` exists
 - [Datasets](datasets/_index.md) — include only when `datasets/` exists
 - [Concepts](wiki/concepts/_index.md)
 - [Topics](wiki/topics/_index.md)
@@ -240,7 +240,7 @@ Append-only chronological activity log. Every wiki operation appends an entry. N
 
 Each entry: `## [YYYY-MM-DD] operation | Description`
 
-Operations: `init`, `ingest`, `ingest-collection`, `compile`, `query`, `lint`, `research`, `output`, `refresh`, `librarian`, `audit`, `plan`, `project`, `inventory`, `dataset`, `archive`, `ll`, `assess`
+Operations: `init`, `ingest`, `ingest-collection`, `compile`, `query`, `lint`, `research`, `output`, `refresh`, `librarian`, `audit`, `plan`, `project`, `todos`, `dataset`, `archive`, `ll`, `assess`
 
 Useful for: `grep "^## \[" log.md | tail -10` to see recent activity.
 
@@ -455,7 +455,7 @@ generated: YYYY-MM-DD
 
 - **Raw sources**: `YYYY-MM-DD-descriptive-slug.md` (date prefix for chronological order)
 - **Wiki articles**: `descriptive-slug.md` (no date — living documents)
-- **Inventory records**: `descriptive-slug.md` (no date — durable tracking state)
+- **Todo records**: `descriptive-slug.md` (no date — durable tracking state)
 - **Dataset manifests**: `datasets/descriptive-slug/MANIFEST.md`
 - **Output artifacts**: `{type}-{topic-slug}-{YYYY-MM-DD}.md`
 - All filenames: lowercase, hyphens for spaces, no special characters, max 60 chars

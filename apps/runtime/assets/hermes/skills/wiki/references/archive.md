@@ -12,7 +12,7 @@ Archive operates at the topic-wiki lifecycle level in v1:
   `HUB/topics/.archive/<slug>/`.
 - Project archive remains the existing `output/projects/.archive/<slug>/`
   workflow from `projects.md`.
-- Inventory and dataset archive remain their existing `status: archived`
+- Todo and dataset archive remain their existing `status: archived`
   frontmatter values.
 - Individual `raw/` or `wiki/` file archive is intentionally out of scope.
   Moving single source/article files breaks exact `sources:` references,
@@ -83,7 +83,7 @@ Archive is a context filter, not a deletion mechanism.
 | `research` | Ignore archived wikis; warn when an archived topic title strongly overlaps the requested topic |
 | `ingest` / `ingest-collection` | Do not route into archived wikis unless the user explicitly restores or forces archived access |
 | `compile` | Active wikis only by default; explicit archived target compiles inside archive but never makes it active |
-| `inventory`, `dataset`, `project`, `lessons-learned` | Reject archived targets unless explicitly included; distinguish topic archive from record/dataset/project archive states |
+| `todos`, `dataset`, `project`, `lessons-learned` | Reject archived targets unless explicitly included; distinguish topic archive from record/dataset/project archive states |
 | `output`, `plan`, `assess` | Ignore archived unless `--include-archived`; label archived-derived context clearly |
 | `init` / `--new-topic` | Treat archived slugs as collisions; restore or choose a new slug instead of creating an active duplicate |
 | `librarian` / `refresh` | Skip archived by default; archived material should not create freshness chores |
@@ -139,7 +139,7 @@ filesystem drift:
 ## Local Wikis
 
 Do not move project-local `.wiki/` directories in v1. A local wiki can still
-contain archived inventory records, dataset manifests, or projects, but topic
+contain archived todo records, dataset manifests, or projects, but topic
 archive is a hub-level lifecycle operation. If a local wiki needs to go quiet,
 the user can move/rename the project or register it in the hub and archive the
 registered topic later.

@@ -35,7 +35,7 @@ The Runtime API covers:
 * `POST /cortex/search`
 
 `GET /cortex/health` rolls up derived health: hub status (`state` is `healthy`
-or `degraded`), todos (inventory records projected with owner, status, and
+or `degraded`), todos (records projected with owner, status, and
 priority — records with `owner: user` are respected as user-authored and
 skipped by todo processing), todo processing state (running record, last and
 next run), maintenance run tiles for the compile, librarian, and todo jobs,

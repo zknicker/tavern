@@ -38,7 +38,7 @@ manage businesses, complete knowledge work, and automate routine tasks.
 * **Memory you can inspect.** Hermes handles prompt-time context, while Tavern
   shows the llm-wiki hub behind durable agent knowledge.
 * **Cortex wiki included.** Give agents a linked Markdown wiki for durable
-  notes, sources, compiled pages, inventory, datasets, outputs, and working
+  notes, sources, compiled pages, todos, datasets, outputs, and working
   material instead of stuffing everything into prompts.
 * **Automations with a face.** Cron jobs, scheduled work, and background runs show
   up as first-class app objects, not invisible daemon trivia.

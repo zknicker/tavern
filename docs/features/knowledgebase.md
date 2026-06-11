@@ -1,5 +1,5 @@
 ---
-summary: Cortex feature for browsing llm-wiki topic wikis, Markdown articles, raw sources, inventory, datasets, outputs, and archives.
+summary: Cortex feature for browsing llm-wiki topic wikis, Markdown articles, raw sources, todos, datasets, outputs, and archives.
 read_when:
   - changing Cortex wiki browsing, topic listing, Markdown reads, backlinks, or llm-wiki hub resolution
   - changing how agents or users inspect llm-wiki files from Tavern
@@ -14,14 +14,14 @@ flow — how material becomes compiled knowledge and stays healthy — see
 The durable knowledge is plain Markdown. Tavern does not maintain a second
 Cortex database, vector index, schema registry, claim table, Dream job, or chat
 ingestion engine. llm-wiki owns research, ingest, compile, query, audit,
-librarian, lessons, output, inventory, datasets, and archive workflows.
+librarian, lessons, output, todos, datasets, and archive workflows.
 
 ## In The Box
 
 * **Topic wikis.** Cortex lists active and archived topic wikis from the
   llm-wiki hub.
 * **Markdown pages.** Cortex reads `_index.md`, `config.md`, `log.md`, and
-  pages under `wiki/`, `raw/`, `inventory/`, `datasets/`, `output/`, and
+  pages under `wiki/`, `raw/`, `todos/`, `datasets/`, `output/`, and
   `inbox/`. The page tree stays pure knowledge: dot directories such as
   `.librarian/` and `.audit/` and archived outputs under `output/.archive/`
   never appear in listings or search. Report files remain readable by direct
@@ -38,7 +38,7 @@ librarian, lessons, output, inventory, datasets, and archive workflows.
 * **Status.** Cortex reports the resolved hub path, config source, topic counts,
   page counts, and filesystem access.
 * **Health.** A status card in the sidebar rolls up Cortex health: hub access,
-  the open todo count (llm-wiki inventory records), the latest librarian scan
+  the open todo count, the latest librarian scan
   per topic (structured data from `.librarian/scan-results.json`), and
   pipeline run state. Opening it shows the health page: run tiles for the
   compile, librarian, and todo jobs, the todo queue with per-record status,

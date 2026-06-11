@@ -67,10 +67,10 @@ export function getWikiTodoProcessing(db: Database = getDb()): CortexTodoProcess
 
 export function buildTodoDrainPrompt(todo: CortexTodo): string {
     return [
-        `Use the wiki skill. Work exactly one inventory record in the ${todo.topic} topic`,
+        `Use the wiki skill. Work exactly one todo record in the ${todo.topic} topic`,
         `wiki: ${todo.path} ("${todo.title}").`,
         todo.question ? `Its next action: ${todo.question}` : null,
-        'Complete that next action fully per references/inventory.md — research, ingest,',
+        'Complete that next action fully per references/todos.md — research, ingest,',
         'compile, dedup, or profile as the record calls for — then move its status',
         'forward, append a short outcome note to the record body, update its updated',
         'date, and append a log.md entry. If you cannot complete it — a source is',
@@ -78,7 +78,7 @@ export function buildTodoDrainPrompt(todo: CortexTodo): string {
         'something that does not exist yet — set status: blocked with the reason in the',
         'record body, and mark any affected article claims with lowered confidence or',
         'verified: false so answers hedge accordingly. Do not retry endlessly and do',
-        'not park work on the user. Do not start any other inventory work; if you',
+        'not park work on the user. Do not start any other todo work; if you',
         'notice new work, file it as its own proposed record. Re-score any articles you',
         'changed in .librarian/scan-results.json per references/librarian.md, updating',
         'their entries and the summary counts. Finish with a one-line summary.',

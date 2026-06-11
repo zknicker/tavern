@@ -10,11 +10,11 @@ There are two layers where this principle applies, each with its own rules:
 
 - **Mechanical layer (C11/C12/C13)** — raw-source and wiki-article placement and frontmatter schema. Fully auto-fixable because the canonical location and field shape are pure functions of frontmatter. No judgment required.
 - **Editorial layer (C8/C9)** — project grouping inside `output/projects/`. **Never auto-fixed** because "these files belong together" requires human sense-making. C9 surfaces candidates and emits ready-to-paste `/wiki:project new` + `/wiki:project add` blocks for the user to run.
-- **Inventory layer (C16)** — durable tracking records under `inventory/`.
-  Inventory is lazy: a completely absent inventory tree is a suggestion, not
+- **Todo layer (C16)** — durable tracking records under `todos/`.
+  Todos are lazy: a completely absent todo tree is a suggestion, not
   something to auto-populate with empty placeholders. Partially existing
-  inventory structure is repairable. Migrating old queue-like outputs into
-  inventory records is human-gated.
+  todo structure is repairable. Migrating old queue-like outputs into
+  todo records is human-gated.
 - **Dataset layer (C17)** — dataset manifests under `datasets/`.
   Datasets are lazy: a completely absent registry is a suggestion, not
   something to auto-populate with empty placeholders. Partially existing
@@ -28,11 +28,11 @@ There are two layers where this principle applies, each with its own rules:
 
 Concretely, when evolving the schema:
 
-- **Renamed a `raw/`, `wiki/`, `inventory/`, or `datasets/` directory?** Update the placement map in C11/C16/C17 and the allowlist in C12. Every existing wiki self-heals on the next lint.
+- **Renamed a `raw/`, `wiki/`, `todos/`, or `datasets/` directory?** Update the placement map in C11/C16/C17 and the allowlist in C12. Every existing wiki self-heals on the next lint.
 - **Renamed a frontmatter field?** Append an entry to C13's alias table (old → new). Never remove old aliases.
 - **Changed an enum value?** Add a value alias in C13. Never remove old values.
 - **Added a required field?** Add it to C2 and give it an inference rule (derive from body/filename) or a sane default.
-- **New directory under `raw/`, `wiki/`, `inventory/`, `datasets/`, or hub topic lifecycle paths?** Add it to C12/C19's allowlists and C11/C16/C17/C19's placement maps.
+- **New directory under `raw/`, `wiki/`, `todos/`, `datasets/`, or hub topic lifecycle paths?** Add it to C12/C19's allowlists and C11/C16/C17/C19's placement maps.
 - **New project-level structure or manifest rule?** Update C8 (and projects.md). Candidate heuristics go in C9.
 
 There is no `/wiki:migrate` command and there should never be one. Lint rules **are** the schema.
@@ -55,7 +55,7 @@ There is no `/wiki:migrate` command and there should never be one. Lint rules **
 
 - [ ] Master `_index.md` exists
 - [ ] `config.md` exists
-- [ ] Every existing wiki-managed subdirectory under `raw/`, `wiki/`, `inventory/`, and `datasets/` has `_index.md` where applicable. Optional lazy roots that are completely absent are not C1 failures.
+- [ ] Every existing wiki-managed subdirectory under `raw/`, `wiki/`, `todos/`, and `datasets/` has `_index.md` where applicable. Optional lazy roots that are completely absent are not C1 failures.
 - [ ] `output/` has `_index.md`
 - [ ] Every `.md` file (excluding `_index.md` and `config.md`) has valid YAML frontmatter delimited by `---`
 - [ ] Hub `topics/.archive/`, when present, contains only archived topic
@@ -85,7 +85,7 @@ There is no `/wiki:migrate` command and there should never be one. Lint rules **
 
 ### C4: Link Integrity (Warning)
 
-- [ ] All markdown links `[text](path)` in wiki articles and inventory records
+- [ ] All markdown links `[text](path)` in wiki articles and todo records
   resolve to existing local files when they are local paths
 - [ ] All "See Also" links are bidirectional (if A→B, then B→A)
 - [ ] All "Sources" links in wiki articles point to existing raw files. Links to paths with spaces should use angle-bracket markdown destinations, e.g. `[Title](<../../raw/articles/File Name.md>)`.
@@ -93,9 +93,9 @@ There is no `/wiki:migrate` command and there should never be one. Lint rules **
 ### C4b: Source Provenance (Warning)
 
 - [ ] All `sources:` entries in wiki article frontmatter point to existing raw files (no dangling references to deleted/retracted sources). Resolve entries with the Source Reference Resolution protocol in `wiki-structure.md`: parse the full YAML scalar/path, preserve whitespace, exact path first, then slug fallback. Never split on whitespace.
-- [ ] All local `sources:` entries in inventory record frontmatter point to
-  existing files under `raw/`, `wiki/`, `output/`, `datasets/`, or `inventory/`.
-  External URLs are allowed. Inventory provenance is operational state and must
+- [ ] All local `sources:` entries in todo record frontmatter point to
+  existing files under `raw/`, `wiki/`, `output/`, `datasets/`, or `todos/`.
+  External URLs are allowed. Todo provenance is operational state and must
   not be treated as factual evidence for compile/query/audit verdicts.
 - [ ] No `<!--RETRACTED-SOURCE-->` markers remain in article body (these should be resolved via `--recompile` or manual review)
 - [ ] No raw source file is referenced by zero wiki articles (orphan source — suggest compilation or removal)
@@ -214,7 +214,7 @@ A `raw/` or `wiki/` file's correct path is a pure function of its frontmatter. M
 
 ### C12: Unknown File Quarantine (Warning)
 
-Any file that is not in the canonical allowlist for its location is either a user mistake, a stale artifact from an older wiki version, or a legitimate new kind of thing that the schema hasn't caught up to. Lint surfaces it either way. Like C11, this is scoped to `raw/`, `wiki/`, `inventory/`, `datasets/`, and the wiki root — not `output/projects/` (C8 handles that).
+Any file that is not in the canonical allowlist for its location is either a user mistake, a stale artifact from an older wiki version, or a legitimate new kind of thing that the schema hasn't caught up to. Lint surfaces it either way. Like C11, this is scoped to `raw/`, `wiki/`, `todos/`, `datasets/`, and the wiki root — not `output/projects/` (C8 handles that).
 
 **Allowlists** (per location):
 
@@ -223,22 +223,22 @@ Any file that is not in the canonical allowlist for its location is either a use
 | HUB | `wikis.json`, `_index.md`, `log.md`, `topics/` |
 | `HUB/topics/` | active topic directories plus `.archive/` |
 | `HUB/topics/.archive/` | archived topic directories |
-| Topic wiki root | `_index.md`, `config.md`, `log.md`, `raw/`, `wiki/`, `inventory/`, `datasets/`, `output/`, `inbox/`, `.obsidian/`, `.librarian/`, `.audit/`, `.research-session.json`, `.thesis-session.json`, `.session-events.jsonl`, `.session-checkpoint.json` |
+| Topic wiki root | `_index.md`, `config.md`, `log.md`, `raw/`, `wiki/`, `todos/`, `datasets/`, `output/`, `inbox/`, `.obsidian/`, `.librarian/`, `.audit/`, `.research-session.json`, `.thesis-session.json`, `.session-events.jsonl`, `.session-checkpoint.json` |
 | `raw/` | `_index.md`, `articles/`, `papers/`, `repos/`, `notes/`, `data/` |
 | `wiki/` | `_index.md`, `concepts/`, `topics/`, `references/`, `theses/` |
-| `inventory/` | `_index.md`, `items/`, `candidates/`, `entities/`, `corpora/`, `views/` |
+| `todos/` | `_index.md`, `items/`, `candidates/`, `entities/`, `corpora/`, `views/` |
 | `datasets/` | `_index.md` + dataset slug directories |
 | `raw/<type>/` | `_index.md` + `*.md` files with valid frontmatter |
 | `wiki/<category>/` | `_index.md` + `*.md` files with valid frontmatter |
-| `inventory/{items,candidates,entities,corpora}/` | `_index.md` + `*.md` files with valid inventory record frontmatter |
-| `inventory/views/` | `_index.md` + derived `*.md` view files with lightweight view frontmatter |
+| `todos/{items,candidates,entities,corpora}/` | `_index.md` + `*.md` files with valid todo record frontmatter |
+| `todos/views/` | `_index.md` + derived `*.md` view files with lightweight view frontmatter |
 | `datasets/<slug>/` | `_index.md`, `MANIFEST.md`, `samples/`, `profiles/`, `queries/` |
 | `datasets/<slug>/{samples,profiles,queries}/` | `_index.md` + `*.md` notes |
 | `inbox/` | `.processed/`, `.unknown/`, user-dropped files |
 
 **Checks**:
 
-- [ ] Walk `raw/`, `wiki/`, `inventory/`, `datasets/`, and the wiki root. For each entry, check against the allowlist for that location.
+- [ ] Walk `raw/`, `wiki/`, `todos/`, `datasets/`, and the wiki root. For each entry, check against the allowlist for that location.
 - [ ] Flag unknown files and directories.
 - [ ] Skip `output/` — C8 and C9 own that subtree.
 
@@ -315,21 +315,21 @@ Flags wiki articles that lack the `volatility` field. New articles should always
 
 **Auto-fix**: Add `volatility: warm` as the safe default that puts the article into the standard monitoring cadence. Do not invent a `verified:` date unless verification was actually performed; use existing `updated:`/`verified:` dates only for freshness scoring.
 
-### C16: Inventory Structure and Migration Candidates (Suggestion)
+### C16: Todo Structure and Migration Candidates (Suggestion)
 
-Validates the optional-but-first-class `inventory/` layer. New or older wikis
+Validates the optional-but-first-class `todos/` layer. New or older wikis
 may lack this directory; that is a migration opportunity, not corruption, and
-lint should not create a blank inventory tree unless part of the layer already
+lint should not create a blank todo tree unless part of the layer already
 exists.
 
-- [ ] If `inventory/` is missing entirely, report "no inventory layer yet" as a suggestion.
-- [ ] If `inventory/` exists, it has `_index.md`.
-- [ ] If any inventory subdirectory exists, it has `_index.md`.
-- [ ] Inventory records under `inventory/items/`, `inventory/candidates/`,
-  `inventory/entities/`, and `inventory/corpora/` have valid frontmatter when present:
+- [ ] If `todos/` is missing entirely, report "no todo layer yet" as a suggestion.
+- [ ] If `todos/` exists, it has `_index.md`.
+- [ ] If any todo subdirectory exists, it has `_index.md`.
+- [ ] Todo records under `todos/items/`, `todos/candidates/`,
+  `todos/entities/`, and `todos/corpora/` have valid frontmatter when present:
   `title`, `kind`, `status`, `priority`, `created`, `updated`, `tags`,
   `summary`
-- [ ] Inventory view files under `inventory/views/` have lightweight view
+- [ ] Todo view files under `todos/views/` have lightweight view
   frontmatter when present: `title`, `view`, `updated`, `summary`
 - [ ] `kind` is one of: `item`, `ingest-candidate`, `entity`, `corpus`,
   `question`, `task`, `artifact`, `watch`
@@ -337,23 +337,23 @@ exists.
   `superseded`, `archived`
 - [ ] `priority` is one of: `p0`, `p1`, `p2`, `p3`, `p4`
 - [ ] Loose output artifacts that look like durable tracking records are
-  reported as inventory migration candidates. Heuristics: filename or title
+  reported as todo migration candidates. Heuristics: filename or title
   contains `queue`, `backlog`, `inventory`, `candidate`, `watch`, `sources`,
   `corpus`, or `dataset`; body has repeated URL/source/status/priority/next
   action tables.
 
 **Auto-fix**:
 
-- With `--fix`, repair missing indexes for an inventory layer or subdirectory
-  that already exists. Do not create `inventory/` when it is completely absent,
+- With `--fix`, repair missing indexes for a todo layer or subdirectory
+  that already exists. Do not create `todos/` when it is completely absent,
   and do not create empty category folders that are not needed by existing
   records.
-- With `--fix`, regenerate `inventory/views/_index.md` from saved view
-  frontmatter when `inventory/views/` exists, but do not fabricate saved views.
-- Never auto-convert output artifacts into inventory records. Report suggested
+- With `--fix`, regenerate `todos/views/_index.md` from saved view
+  frontmatter when `todos/views/` exists, but do not fabricate saved views.
+- Never auto-convert output artifacts into todo records. Report suggested
   commands such as:
-  `/wiki:inventory migrate-output output/ingest-queue-2026-05-03.md --kind ingest-candidate --dry-run`
-- When reporting candidates, include a short fit note: good inventory fit, too
+  `/wiki:todos migrate-output output/ingest-queue-2026-05-03.md --kind ingest-candidate --dry-run`
+- When reporting candidates, include a short fit note: good todo fit, too
   small and better left as query/ingest/raw note, or too large and better as a
   dataset manifest or collection ingest. For high-confidence pivots, show a
   sample record shape before suggesting `--apply`.
@@ -391,7 +391,7 @@ part of the layer already exists.
   that already exists. Do not create `datasets/` when it is completely absent,
   and do not create empty `samples/`, `profiles/`, or `queries/` folders until
   they are needed.
-- Never auto-convert output artifacts, raw data files, or inventory records into
+- Never auto-convert output artifacts, raw data files, or todo records into
   dataset manifests. Report suggested commands such as:
   `/wiki:dataset migrate-output output/bitcointalk-data-2026-05-03.md --dry-run`
 
@@ -482,8 +482,8 @@ Validates the hub-level archive lifecycle described in `archive.md`.
 | **C13** Older compiled article missing safe schema fields | Infer `category`, `summary`, `created`, `updated`, `tags` for theses, and `volatility` as described above |
 | **C14** Article below freshness score threshold | **Warn/Info only** — composite score below `freshness_threshold` (default 70). Report score breakdown and suggest `/wiki:refresh`. |
 | **C15** Missing volatility field | Add `volatility: warm` — safe default |
-| **C16** Missing inventory directories/indexes | Repair missing indexes for existing inventory directories; do not create a completely absent inventory tree or empty unused category folders |
-| **C16** Output looks like inventory | Warn only — suggest `/wiki:inventory migrate-output <path> --dry-run`; never auto-migrate |
+| **C16** Missing todo directories/indexes | Repair missing indexes for existing todo directories; do not create a completely absent todo tree or empty unused category folders |
+| **C16** Output looks like todos | Warn only — suggest `/wiki:todos migrate-output <path> --dry-run`; never auto-migrate |
 | **C17** Missing dataset registry directories/indexes | Repair missing indexes for existing dataset directories; do not create a completely absent dataset tree or empty unused sample/profile/query folders |
 | **C17** Output looks like a dataset manifest | Warn only — suggest `/wiki:dataset migrate-output <path> --dry-run`; never auto-migrate |
 | **C18** Compiled article missing sources | **Warn only** — surface with the suggested commands. Do not auto-add `compiled-from: conversation` (that's a provenance claim that requires human judgment) and do not auto-recompile (would synthesize fake sources). |
@@ -526,10 +526,10 @@ Validates the hub-level archive lifecycle described in `archive.md`.
 ### Project Candidates
 - [grouped suggestions, formatted as the candidate report block above]
 
-### Inventory
-- Inventory records: [count by kind/status]
-- Missing inventory structure created: [yes/no]
-- Output artifacts that look like inventory: [list with suggested migrate-output commands]
+### Todos
+- Todo records: [count by kind/status]
+- Missing todo structure created: [yes/no]
+- Output artifacts that look like todos: [list with suggested migrate-output commands]
 
 ### Datasets
 - Dataset manifests: [count by status/storage]

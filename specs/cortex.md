@@ -3,7 +3,7 @@
 Cortex is Tavern's llm-wiki browser.
 
 The source of truth is the user's llm-wiki hub: plain Markdown topic wikis with
-raw sources, compiled articles, inventory records, dataset manifests, outputs,
+raw sources, compiled articles, todo records, dataset manifests, outputs,
 indexes, config, logs, and archives. Tavern reads those files and presents them
 in the Cortex tab.
 
@@ -40,7 +40,7 @@ Tavern follows llm-wiki's layout:
 └── topics/
     ├── <topic>/
     │   ├── inbox/
-    │   ├── inventory/
+    │   ├── todos/
     │   ├── datasets/
     │   ├── raw/
     │   ├── wiki/
@@ -93,7 +93,7 @@ Runtime does not own:
 ## Workflows
 
 Research, ingestion, compilation, audit, librarian, lessons, generated outputs,
-inventory maintenance, dataset maintenance, and archive lifecycle run through
+todo maintenance, dataset maintenance, and archive lifecycle run through
 llm-wiki. Routine wiki maintenance is a pipeline drained by Runtime jobs — no
 crons, no human gate:
 
@@ -103,8 +103,8 @@ crons, no human gate:
   structural pass over changed wikis. Settle window and cooldown bound runs.
 * **Librarian job.** Weekly: scores staleness and quality, writes
   `.librarian/scan-results.json`, repairs mechanical findings, recompiles from
-  raw already on disk, and files outside-world work as inventory records.
-* **Todo job.** A 15-minute check drains inventory records one agent turn at a
+  raw already on disk, and files outside-world work as todo records.
+* **Todo job.** A 15-minute check drains todo records one agent turn at a
   time, spaced by a cooldown. A record the agent cannot finish is blocked with
   its reason and the affected claims marked low-confidence — work is never
   parked on the user; corrections happen in conversation. Records with

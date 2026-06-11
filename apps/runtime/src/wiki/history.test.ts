@@ -88,7 +88,7 @@ describe('wiki health history', () => {
 
     async function writeEscalation(file: string) {
         await writeTopicFile(
-            `inventory/${file}`,
+            `todos/${file}`,
             ['---', 'title: Needs a call', 'status: proposed', 'owner: user', '---'].join('\n')
         );
     }

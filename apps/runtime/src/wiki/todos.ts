@@ -18,7 +18,7 @@ export async function listWikiTodos(): Promise<CortexTodo[]> {
     try {
         const { pages } = await listCortexPages({});
         const records = pages.filter(
-            (page) => page.section === 'inventory' && !page.path.endsWith('_index.md')
+            (page) => page.section === 'todos' && !page.path.endsWith('_index.md')
         );
         const details = await Promise.all(
             records.map((page) => getCortexPage({ path: page.path, topic: page.topic }))

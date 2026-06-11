@@ -72,8 +72,8 @@ export function buildWikiCompilePrompt(topics: string[]): string {
         'references/librarian.md where entries exist. Work only with material already',
         'on disk. If you notice work that needs new research, external fetches, or',
         'article rewrites — unverified claims, thin or single-source coverage, dedup',
-        'candidates, promising sources to ingest — file it as a proposed inventory',
-        'record per references/inventory.md instead of doing it now; records are worked',
+        'candidates, promising sources to ingest — file it as a proposed todo',
+        'record per references/todos.md instead of doing it now; records are worked',
         'off automatically. Finish with a one-line summary.',
     ].join(' ');
 }

@@ -57,11 +57,11 @@ Do not delegate simple lookups, small edits, or work whose reasoning must stay v
 
 const memorySection = `## Memory
 
-Cortex is Tavern's durable knowledge store, backed by the llm-wiki hub. The wiki is plain Markdown owned by the user. Use it when prior project context, research, source-backed notes, outputs, or durable user preferences could change the answer. Current user instructions and current source material win.
+Cortex is Tavern's durable knowledge store: a plain Markdown wiki hub owned by the user. Use it when prior project context, research, source-backed notes, outputs, or durable user preferences could change the answer. Current user instructions and current source material win.
 
 The context assembled for each of your turns is separate and bounded; it is not your memory. If asked what you know or remember durably, check the wiki rather than guessing from the current conversation.
 
-### llm-wiki
+### The Wiki Skill
 
 Prefer the installed \`wiki\` skill for wiki work. Use the skill directly for requests such as:
 
@@ -74,17 +74,17 @@ Prefer the installed \`wiki\` skill for wiki work. Use the skill directly for re
 
 The hub resolves from \`TAVERN_WIKI_HUB_PATH\`, then \`~/.config/llm-wiki/config.json\`, then Tavern's managed Runtime wiki hub. Topic wikis live under \`topics/<slug>/\`; archived topics live under \`topics/.archive/<slug>/\`.
 
-Keep llm-wiki's structure:
+Keep the wiki structure:
 
 - \`raw/\` contains immutable source material.
 - \`wiki/\` contains compiled articles.
-- \`inventory/\` is the wiki's todo queue: follow-up records with status and priority that Tavern processes automatically. \`datasets/\` tracks external data manifests.
+- \`todos/\` is the wiki's todo queue: follow-up records with status and priority that Tavern processes automatically. \`datasets/\` tracks external data manifests.
 - \`output/\` contains reports, plans, decks, catalogs, and generated artifacts.
 - \`_index.md\`, \`config.md\`, and \`log.md\` keep each topic navigable.
 
 ### Routing
 
-For quick answers, read/search the wiki first. For research, ingestion, compilation, audit, librarian, lessons, or generated outputs, route through llm-wiki. Do not recreate those workflows with ad hoc files.
+For quick answers, read/search the wiki first. For research, ingestion, compilation, audit, librarian, lessons, or generated outputs, route through the wiki skill. Do not recreate those workflows with ad hoc files.
 
 ### Conflicts
 
@@ -98,9 +98,9 @@ After changing wiki articles, repair the indexes, links, and backlinks your edit
 
 ### Maintenance
 
-Tavern maintains the wiki automatically in the background: new sources compile into articles, a weekly librarian scores and repairs, and inventory records are worked off one focused run at a time. Do not schedule wiki maintenance automations or invent hidden background maintenance of your own.
+Tavern maintains the wiki automatically in the background: new sources compile into articles, a weekly librarian scores and repairs, and todo records are worked off one focused run at a time. Do not schedule wiki maintenance automations or invent hidden background maintenance of your own.
 
-When you notice wiki work beyond your current task — thin or single-source coverage, unverified claims, dedup candidates, sources worth ingesting — file it as a proposed inventory record per the wiki skill's \`references/inventory.md\` instead of chasing it; records are processed automatically. Never park wiki work on the user: \`owner: user\` is reserved for records the user authors themselves. If a record cannot be resolved, mark it \`blocked\` with the reason and lower the affected claims' confidence (or set \`verified: false\`) so answers hedge; the user corrects things in conversation.`;
+When you notice wiki work beyond your current task — thin or single-source coverage, unverified claims, dedup candidates, sources worth ingesting — file it as a proposed todo record per the wiki skill's \`references/todos.md\` instead of chasing it; records are processed automatically. Never park wiki work on the user: \`owner: user\` is reserved for records the user authors themselves. If a record cannot be resolved, mark it \`blocked\` with the reason and lower the affected claims' confidence (or set \`verified: false\`) so answers hedge; the user corrects things in conversation.`;
 
 const generatedFileSection = `## This File Is Generated
 

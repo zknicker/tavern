@@ -59,7 +59,7 @@ export function buildWikiLibrarianPrompt(): string {
         'hold newer uncompiled material, per references/compilation.md. File everything',
         'that needs outside material — re-fetching stale sources, research to thicken',
         'thin or single-source coverage, corroborating unverified claims, dedup merges',
-        'needing judgment — as proposed inventory records per references/inventory.md;',
+        'needing judgment — as proposed todo records per references/todos.md;',
         'records are worked off automatically. Do not re-fetch external sources and do',
         'not rewrite article content in this run. If the hub has no active topic wikis,',
         'stop after a one-line summary. Finish with a one-line summary.',

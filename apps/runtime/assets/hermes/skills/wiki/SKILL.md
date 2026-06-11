@@ -2,10 +2,10 @@
 name: wiki
 description: >
   LLM-compiled knowledge base manager for Tavern-managed Hermes. Use it to initialize, ingest,
-  import source collections, collect catalogs, track inventory, index datasets, archive old topics, compile, query, lint, audit, research, plan, and generate outputs from topic-scoped wikis.
+  import source collections, collect catalogs, track todos, index datasets, archive old topics, compile, query, lint, audit, research, plan, and generate outputs from topic-scoped wikis.
   Activates when the user mentions wiki workflows, knowledge-base management,
   ingestion, collection ingestion, import wiki, collect, catalog, curate,
-  find all, inventory, source queue,
+  find all, todos, source queue,
   candidate list, watch list, backlog, dataset, large data, data registry,
   dataset manifest, compilation, querying, linting, audit, research, librarian,
   scan quality, article quality, content review, output drift, provenance,
@@ -114,8 +114,8 @@ Choose the smallest workflow that matches the request, then load only the
 reference material you need for that workflow:
 
 - `ingest` and `ingest-collection` → `references/ingestion.md`
-- `collect` → `references/inventory.md` and `references/research-infrastructure.md`
-- `inventory` → `references/inventory.md`
+- `collect` → `references/todos.md` and `references/research-infrastructure.md`
+- `todos` → `references/todos.md`
 - `dataset` → `references/datasets.md`
 - `archive` → `references/archive.md`
 - `compile` → `references/compilation.md` and `references/indexing.md`
@@ -133,7 +133,7 @@ Collect requests create bounded catalogs of discoverable things: artifacts,
 examples, resources, entities, tools, media, memes, or source candidates. Infer
 scale and media policy, record aliases plus `found_in_context` provenance,
 deduplicate candidates, write a `type: collection` output at
-`output/collect-<slug>-YYYY-MM-DD.md`, then create inventory only when the list
+`output/collect-<slug>-YYYY-MM-DD.md`, then create todo records only when the list
 is small and durable enough; otherwise create or suggest one corpus record.
 Download and hash bounded public binary media into
 `output/assets/collect-<slug>/` by default for media-bearing collections, never
@@ -144,14 +144,14 @@ hosts hang on IPv6. Use kind-first topic slugs such as `memes-bitcoin`,
 across subjects. Never present "all" as exhaustive beyond the stated strategy
 and limit.
 
-Inventory is first-class operational state, not a silo. Ingest, collection, and
-collect workflows should suggest inventory when the user wants to track or
+Todos are first-class operational state, not a silo. Ingest, collection, and
+collect workflows should suggest todo records when the user wants to track or
 decide later.
-Dataset manifests should link to inventory records when next actions or
-acceptance state matter. Compile and query may surface inventory gaps, but
+Dataset manifests should link to todo records when next actions or
+acceptance state matter. Compile and query may surface todo gaps, but
 factual claims still need raw/wiki sources. Collect, research, audit,
 librarian, refresh, plan, output, and assess may propose durable follow-ups as
-inventory records, but larger pivots should start with a small sample preview.
+todo records, but larger pivots should start with a small sample preview.
 
 Keep the first response short and action-oriented. Read deeper references only
 after the user intent is clear or a write action is needed.

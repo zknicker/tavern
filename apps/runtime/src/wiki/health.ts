@@ -11,7 +11,7 @@ import { listWikiTodos, nextDrainableTodo } from './todos';
 
 /**
  * Health rollup for the Cortex tab: derived purely from facts — hub access,
- * todos (inventory records), latest librarian scans, and pipeline run state.
+ * todos (follow-up records), latest librarian scans, and pipeline run state.
  * The wiki files stay the source of truth; this is a projection.
  */
 export async function getCortexHealth(): Promise<CortexHealth> {

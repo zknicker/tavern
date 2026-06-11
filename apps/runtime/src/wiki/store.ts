@@ -33,7 +33,7 @@ interface MarkdownFile {
 const searchableSections = new Set<CortexPage['section']>([
     'wiki',
     'raw',
-    'inventory',
+    'todos',
     'datasets',
     'output',
     'inbox',
@@ -428,7 +428,7 @@ function sectionFromPath(relativePath: string): CortexPage['section'] {
     if (
         first === 'raw' ||
         first === 'wiki' ||
-        first === 'inventory' ||
+        first === 'todos' ||
         first === 'datasets' ||
         first === 'output' ||
         first === 'inbox'

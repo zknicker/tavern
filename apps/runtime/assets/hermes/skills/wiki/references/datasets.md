@@ -16,8 +16,8 @@ usable.
   reasonably live in the wiki.
 - `datasets/`: metadata and interface layer for data that should remain outside
   the wiki.
-- `inventory/`: tracking state for whether a dataset matters and what to do
-  next. Inventory records may point to dataset manifests.
+- `todos/`: tracking state for whether a dataset matters and what to do
+  next. Todo records may point to dataset manifests.
 - `output/`: generated deliverables. Legacy output artifacts that describe
   datasets may be migrated additively into dataset manifests.
 
@@ -31,10 +31,10 @@ Be opinionated about the boundary:
 - If the data is large, mutable, remote, sensitive, binary, compressed, or
   better queried in its native format, use a dataset manifest.
 - If the user mostly needs next actions or acceptance state for a corpus, create
-  or link an inventory record. The dataset manifest answers "where/how is the
-  data accessed"; inventory answers "why do we care and what happens next."
-- If a proposed dataset would become hundreds of inventory records, create one
-  dataset manifest plus one corpus inventory record and show that sample shape
+  or link a todo record. The dataset manifest answers "where/how is the
+  data accessed"; todos answer "why do we care and what happens next."
+- If a proposed dataset would become hundreds of todo records, create one
+  dataset manifest plus one corpus todo record and show that sample shape
   before asking to apply a larger pivot.
 
 ## Chat Views
@@ -63,7 +63,7 @@ Recommended chat views:
 | `schema` | dataset, schema status, formats, record count, latest profile | deciding what to profile next |
 | `locations` | dataset, storage, access, compact location pointer | finding where the data lives |
 
-If a dataset is linked from an inventory record, include the inventory next
+If a dataset is linked from a todo record, include the todo next
 action only when it can be read cheaply from the linked record frontmatter.
 
 ## Directory Layout
@@ -115,8 +115,8 @@ updated: YYYY-MM-DD
 tags: [bitcoin, bitcointalk, graph-dataset]
 summary: "External Bitcointalk graph dataset indexed by the bitcoin wiki."
 origin: output/bitcointalk-data-2026-05-03.md
-inventory:
-  - inventory/corpora/bitcointalk-archive.md
+todos:
+  - todos/corpora/bitcointalk-archive.md
 raw_sources:
   - raw/articles/2026-05-03-bitcointalk-data.md
 license: unknown
@@ -170,7 +170,7 @@ Recommended fields:
 - `size_bytes`
 - `record_count`
 - `origin`
-- `inventory`
+- `todos`
 - `raw_sources`
 - `license`
 - `access`
@@ -283,12 +283,12 @@ not write manifests.
 one or more `datasets/<slug>/MANIFEST.md` files and leaves the source output in
 place. It never copies the actual dataset into the wiki.
 
-### Inventory Linkage
+### Todos Linkage
 
-If an inventory record already tracks the same corpus/dataset, link both ways:
+If a todo record already tracks the same corpus/dataset, link both ways:
 
-- manifest frontmatter `inventory: [inventory/corpora/<slug>.md]`
-- inventory record `sources:` or body link to `datasets/<slug>/MANIFEST.md`
+- manifest frontmatter `todos: [todos/corpora/<slug>.md]`
+- todo record `sources:` or body link to `datasets/<slug>/MANIFEST.md`
 
 This linkage is optional during migration and should not block manifest creation.
 
@@ -304,5 +304,5 @@ corruption:
   `queries/` folders are fine until used.
 - Output artifacts that look like dataset manifests: suggestion with migration
   commands.
-- Lint must never auto-convert outputs, raw files, or inventory records into
+- Lint must never auto-convert outputs, raw files, or todo records into
   dataset manifests.

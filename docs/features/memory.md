@@ -21,7 +21,7 @@ Users can inspect:
 * active and archived topic counts
 * Markdown page counts
 * filesystem read/write health
-* topic pages, raw sources, inventory records, datasets, and outputs
+* topic pages, raw sources, todo records, datasets, and outputs
 
 ## Contract
 

@@ -36,20 +36,20 @@ describe('wiki todo drain', () => {
     });
 
     test('lists todos sorted open-first then by priority, skipping notes and indexes', async () => {
-        await writeRecord('coffee', 'inventory/_index.md', { title: 'Index' });
-        await writeRecord('coffee', 'inventory/note.md', { title: 'Just a note' });
-        await writeRecord('coffee', 'inventory/later.md', {
+        await writeRecord('coffee', 'todos/_index.md', { title: 'Index' });
+        await writeRecord('coffee', 'todos/note.md', { title: 'Just a note' });
+        await writeRecord('coffee', 'todos/later.md', {
             priority: 'p3',
             status: 'proposed',
             title: 'Low priority',
         });
-        await writeRecord('coffee', 'inventory/urgent.md', {
+        await writeRecord('coffee', 'todos/urgent.md', {
             next_action: 'Research corroborating sources.',
             priority: 'p0',
             status: 'proposed',
             title: 'Urgent',
         });
-        await writeRecord('coffee', 'inventory/finished.md', {
+        await writeRecord('coffee', 'todos/finished.md', {
             priority: 'p0',
             status: 'ingested',
             title: 'Finished',
@@ -62,7 +62,7 @@ describe('wiki todo drain', () => {
     });
 
     test('drains the top todo through one agent turn and records the time', async () => {
-        await writeRecord('coffee', 'inventory/urgent.md', {
+        await writeRecord('coffee', 'todos/urgent.md', {
             next_action: 'Research corroborating sources.',
             priority: 'p0',
             status: 'proposed',
@@ -74,17 +74,17 @@ describe('wiki todo drain', () => {
 
         expect(outcome).toEqual({
             kind: 'drained',
-            path: 'inventory/urgent.md',
+            path: 'todos/urgent.md',
             summary: 'Done: corroborated and ingested.',
             topic: 'coffee',
         });
         expect(client.prompts).toHaveLength(1);
-        expect(client.prompts[0]).toContain('inventory/urgent.md');
+        expect(client.prompts[0]).toContain('todos/urgent.md');
         expect(getWikiTodoProcessing(getDb()).lastRunAtMs).toBe(nowMs);
     });
 
     test('cools down between drains', async () => {
-        await writeRecord('coffee', 'inventory/urgent.md', {
+        await writeRecord('coffee', 'todos/urgent.md', {
             priority: 'p0',
             status: 'proposed',
             title: 'Urgent',
@@ -99,7 +99,7 @@ describe('wiki todo drain', () => {
     });
 
     test('skips todos parked on the user and idles when nothing is drainable', async () => {
-        await writeRecord('coffee', 'inventory/escalated.md', {
+        await writeRecord('coffee', 'todos/escalated.md', {
             next_action: 'Should I trust this source?',
             owner: 'user',
             status: 'proposed',
@@ -114,7 +114,7 @@ describe('wiki todo drain', () => {
     test('drain prompt works one record and includes the give-up rule', () => {
         const prompt = buildTodoDrainPrompt({
             owner: null,
-            path: 'inventory/urgent.md',
+            path: 'todos/urgent.md',
             priority: 'p0',
             question: 'Research corroborating sources.',
             status: 'proposed',
@@ -123,11 +123,11 @@ describe('wiki todo drain', () => {
             updatedAt: '2026-06-11T00:00:00.000Z',
         });
 
-        expect(prompt).toContain('exactly one inventory record');
-        expect(prompt).toContain('inventory/urgent.md');
+        expect(prompt).toContain('exactly one todo record');
+        expect(prompt).toContain('todos/urgent.md');
         expect(prompt).toContain('status: blocked');
         expect(prompt).toContain('do not park work on the user');
-        expect(prompt).toContain('Do not start any other inventory work');
+        expect(prompt).toContain('Do not start any other todo work');
         expect(prompt).toContain('Re-score any articles you changed');
     });
 

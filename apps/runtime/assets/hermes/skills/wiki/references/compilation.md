@@ -4,9 +4,9 @@
 
 Compilation transforms raw sources into wiki articles. This is the core "LLM compiler" operation — read sources and produce synthesized, cross-referenced knowledge articles.
 
-Inventory records are not compilation inputs. They can explain why a source was
+Todo records are not compilation inputs. They can explain why a source was
 ingested or what should happen next, but article facts must come from `raw/` and
-other cited wiki articles. If compilation satisfies an inventory next action,
+other cited wiki articles. If compilation satisfies a todo next action,
 report the suggested record update instead of silently changing tracking state.
 
 Archived topic wikis are not compilation inputs by default. If the target wiki

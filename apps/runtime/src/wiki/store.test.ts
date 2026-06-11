@@ -158,16 +158,16 @@ describe('wiki store', () => {
     test('parses frontmatter-only files with no trailing newline', async () => {
         await writeTopicPage(
             'project-notes',
-            'inventory/verify-claim.md',
+            'todos/verify-claim.md',
             ['---', 'title: Verify Claim', 'status: proposed', 'owner: user', '---'].join('\n')
         );
 
         await expect(
-            getCortexPage({ path: 'inventory/verify-claim.md', topic: 'project-notes' })
+            getCortexPage({ path: 'todos/verify-claim.md', topic: 'project-notes' })
         ).resolves.toMatchObject({
             body: '',
             frontmatter: { owner: 'user', status: 'proposed', title: 'Verify Claim' },
-            section: 'inventory',
+            section: 'todos',
         });
     });
 

@@ -135,7 +135,7 @@ describe('wiki compile pipeline', () => {
         });
         expect(client.prompts).toHaveLength(1);
         expect(client.prompts[0]).toContain('coffee');
-        expect(client.prompts[0]).toContain('file it as a proposed inventory');
+        expect(client.prompts[0]).toContain('file it as a proposed todo');
         expect(client.prompts[0]).toContain('re-score changed articles');
         expect(getWikiCompileStatus(getDb()).lastRunAtMs).toBe(nowMs);
     });

@@ -34,7 +34,7 @@ hub
 └── topics/<topic>/
     ├── raw/          immutable sources — what was ingested, verbatim
     ├── wiki/         compiled articles — synthesized, cross-linked, cited
-    ├── inventory/    the todo queue — follow-up records with status/priority
+    ├── todos/        the todo queue — follow-up records with status/priority
     ├── datasets/     indexed structured data
     ├── output/       generated deliverables
     ├── log.md        append-only activity log
@@ -108,7 +108,7 @@ scan per topic (per-article scores and flags), and trend charts.
 ```
 wiki files (source of truth)
   ├─► Cortex tab          browse, search, backlinks
-  ├─► inventory/ records  health page todo queue
+  ├─► todos/ records     health page todo queue
   ├─► .librarian/ scans   health page score table
   └─► hourly sampler ───► health history ───► trend charts
                           (derived, append-only, rebuildable)

@@ -905,11 +905,11 @@ export const cortexTopicListSchema = z.object({
 export const cortexPageSectionSchema = z.enum([
     'datasets',
     'inbox',
-    'inventory',
     'output',
     'raw',
     'reports',
     'root',
+    'todos',
     'wiki',
 ]);
 
