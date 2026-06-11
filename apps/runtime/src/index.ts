@@ -1,8 +1,6 @@
 import path from 'node:path';
 import { refreshRuntimeCapabilities } from './capabilities/store';
-import { parseCli, printHelp, runCortexCli } from './cli';
-import { runRestartCommand, runUpdateCommand } from './cli/maintenance-commands';
-import { parseRestartFlags, parseUpdateFlags, UsageError } from './cli/maintenance-flags';
+import { dispatch } from './cli/main';
 import { DATA_DIR } from './config';
 import { initDb } from './db/connection';
 import { ensureRuntimeSchema } from './db/schema';
@@ -85,57 +83,9 @@ async function shutdown(signal: string): Promise<void> {
     process.exit(0);
 }
 
-let cli: ReturnType<typeof parseCli>;
-try {
-    cli = parseCli(process.argv.slice(2));
-} catch (error) {
-    console.error(error instanceof Error ? error.message : String(error));
-    printHelp();
-    process.exit(1);
-}
-const command = cli.command;
+const result = await dispatch(process.argv.slice(2));
 
-if (command === 'help') {
-    printHelp();
-} else if (command === 'version') {
-    const runtimePackage = await import('../package.json');
-    console.log(runtimePackage.default.version);
-} else if (command === 'update') {
-    try {
-        const flags = parseUpdateFlags(cli.rest);
-        process.exit(await runUpdateCommand(flags));
-    } catch (error) {
-        if (error instanceof UsageError) {
-            console.error(error.message);
-            process.exit(2);
-        }
-        console.error(error instanceof Error ? error.message : String(error));
-        process.exit(1);
-    }
-} else if (command === 'restart') {
-    try {
-        const flags = parseRestartFlags(cli.rest);
-        process.exit(await runRestartCommand(flags));
-    } catch (error) {
-        if (error instanceof UsageError) {
-            console.error(error.message);
-            process.exit(2);
-        }
-        console.error(error instanceof Error ? error.message : String(error));
-        process.exit(1);
-    }
-} else if (cli.rest[0] === 'cortex') {
-    runCortexCli(cli.rest.slice(1)).catch((err) => {
-        console.error(err instanceof Error ? err.message : String(err));
-        process.exit(1);
-    });
-} else if (cli.rest[0] === 'engine') {
-    const { runEngineCli } = await import('./hermes/engine-cli');
-    runEngineCli(cli.rest.slice(1)).catch((err) => {
-        console.error(err instanceof Error ? err.message : String(err));
-        process.exit(1);
-    });
-} else {
+if (result.kind === 'serve') {
     process.on('SIGTERM', () => {
         void shutdown('SIGTERM');
     });
@@ -147,4 +97,6 @@ if (command === 'help') {
         log.fatal('Startup failed', { err });
         process.exit(1);
     });
+} else {
+    process.exit(result.code);
 }

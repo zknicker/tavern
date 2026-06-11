@@ -6,78 +6,11 @@ import {
     cortexStatusSchema,
     cortexTopicListSchema,
 } from '@tavern/api';
-import runtimePackage from '../package.json';
 import { getRuntimePort } from './config';
-
-type RuntimeCommand = 'help' | 'restart' | 'serve' | 'update' | 'version';
-
-interface ParsedCli {
-    command: RuntimeCommand;
-    rest: string[];
-}
 
 interface CortexCliOptions {
     json: boolean;
     runtimeUrl: string;
-}
-
-export function parseCli(args: string[]): ParsedCli {
-    const [command, ...rest] = args;
-
-    if (!command || command === 'serve') {
-        return { command: 'serve', rest };
-    }
-
-    if (command === '--help' || command === '-h' || command === 'help') {
-        return { command: 'help', rest };
-    }
-
-    if (command === '--version' || command === '-v' || command === 'version') {
-        return { command: 'version', rest };
-    }
-
-    if (command === 'update' || command === 'restart') {
-        return { command, rest };
-    }
-
-    if (command === 'cortex' || command === 'engine') {
-        return { command: 'serve', rest: [command, ...rest] };
-    }
-
-    throw new Error(`Unknown command: ${command}`);
-}
-
-export function printHelp(): void {
-    console.log(`Tavern Runtime ${runtimePackage.version}
-
-Usage:
-  tavern serve
-  tavern cortex status [--json]
-  tavern cortex topics [--include-archived] [--json]
-  tavern cortex list [--topic <topic>] [--include-archived] [--json]
-  tavern cortex get <topic> <path> [--json]
-  tavern cortex search <query> [--topic <topic>] [--include-archived] [--json]
-  tavern engine status [--json]
-  tavern engine install
-  tavern engine clean [--all]
-  tavern update
-  tavern restart
-  tavern --version
-  tavern --help
-
-Commands:
-  serve        Run the foreground Tavern Runtime server.
-  cortex       Browse the llm-wiki hub through a running Tavern Runtime.
-  engine       Inspect, install, or clean the managed agent engine.
-  update       Stage a Runtime upgrade through Homebrew without restarting the service.
-  restart      Restart the Homebrew tavern-runtime service.
-
-Environment:
-  TAVERN_RUNTIME_URL       Runtime API URL for CLI client commands.
-  TAVERN_WIKI_HUB_PATH     llm-wiki hub path. Falls back to ~/.config/llm-wiki/config.json, then ~/wiki.
-  TAVERN_RUNTIME_HOST      Bind host. Defaults to 127.0.0.1.
-  TAVERN_RUNTIME_PORT      Bind port. Defaults to 18790.
-  TAVERN_RUNTIME_ROOT      Runtime data root. Defaults to ~/.tavern/runtime.`);
 }
 
 export async function runCortexCli(args: string[]): Promise<void> {

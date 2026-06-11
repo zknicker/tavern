@@ -1,0 +1,102 @@
+import { afterEach, describe, expect, test, vi } from 'vitest';
+import { dispatch } from './main';
+
+const ANSI = /\[[0-9;]*m/g;
+
+function capture(stream: 'stdout' | 'stderr'): () => string {
+    const chunks: string[] = [];
+    vi.spyOn(process[stream], 'write').mockImplementation((chunk: unknown) => {
+        chunks.push(String(chunk));
+        return true;
+    });
+    return () => chunks.join('').replace(ANSI, '');
+}
+
+afterEach(() => {
+    vi.restoreAllMocks();
+});
+
+describe('dispatch', () => {
+    test('-v prints bare version, exit 0', async () => {
+        const read = capture('stdout');
+        const result = await dispatch(['-v']);
+        expect(result).toEqual({ kind: 'exit', code: 0 });
+        expect(read().trim()).toMatch(/^\d+\.\d+\.\d+$/);
+    });
+
+    test('--version matches -v', async () => {
+        const read = capture('stdout');
+        await dispatch(['--version']);
+        expect(read().trim()).toMatch(/^\d+\.\d+\.\d+$/);
+    });
+
+    test('version command prints bare version, exit 0', async () => {
+        const read = capture('stdout');
+        const result = await dispatch(['version']);
+        expect(result).toEqual({ kind: 'exit', code: 0 });
+        expect(read().trim()).toMatch(/^\d+\.\d+\.\d+$/);
+    });
+
+    test('serve → kind serve, no exit code', async () => {
+        const result = await dispatch(['serve']);
+        expect(result).toEqual({ kind: 'serve' });
+    });
+
+    test('serve --help → command help, exit 0 (does not start server)', async () => {
+        const read = capture('stdout');
+        const result = await dispatch(['serve', '--help']);
+        expect(result).toEqual({ kind: 'exit', code: 0 });
+        expect(read()).toContain('tavern serve');
+    });
+
+    test('unknown command → did-you-mean, exit 2', async () => {
+        const read = capture('stderr');
+        const result = await dispatch(['updte']);
+        expect(result).toEqual({ kind: 'exit', code: 2 });
+        const out = read();
+        expect(out).toContain("Unknown command 'updte'");
+        expect(out).toContain("Did you mean 'update'?");
+    });
+
+    test('unknown flag on a command → usage error prints help, exit 2', async () => {
+        const read = capture('stderr');
+        const result = await dispatch(['update', '--nope']);
+        expect(result).toEqual({ kind: 'exit', code: 2 });
+        const out = read();
+        expect(out).toContain('tavern update'); // command help printed
+        expect(out).toContain("Unknown flag '--nope'");
+    });
+
+    test('bare group engine → group help, exit 1', async () => {
+        const read = capture('stdout');
+        const result = await dispatch(['engine']);
+        expect(result).toEqual({ kind: 'exit', code: 1 });
+        expect(read()).toContain('tavern engine');
+    });
+
+    test('group --help → group help, exit 0', async () => {
+        const read = capture('stdout');
+        const result = await dispatch(['cortex', '--help']);
+        expect(result).toEqual({ kind: 'exit', code: 0 });
+        expect(read()).toContain('tavern cortex');
+    });
+
+    test('help update → per-command help, exit 0', async () => {
+        const read = capture('stdout');
+        const result = await dispatch(['help', 'update']);
+        expect(result).toEqual({ kind: 'exit', code: 0 });
+        expect(read()).toContain('Stage a Runtime upgrade through Homebrew');
+    });
+
+    test('bare tavern → banner + status + commands, exit 0, no serve', async () => {
+        vi.spyOn(globalThis, 'fetch').mockRejectedValue(new Error('unreachable'));
+        const read = capture('stdout');
+        const result = await dispatch([]);
+        expect(result).toEqual({ kind: 'exit', code: 0 });
+        const out = read();
+        expect(out).toContain('Tavern Runtime');
+        expect(out).toContain('Runtime not running');
+        expect(out).toContain('serve');
+        expect(out).toContain("Run 'tavern help <command>' for details.");
+    });
+});

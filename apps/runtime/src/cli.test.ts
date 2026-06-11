@@ -1,36 +1,7 @@
 import { describe, expect, test, vi } from 'vitest';
-import { parseCli, printHelp, runCortexCli } from './cli';
+import { runCortexCli } from './cli';
 
-describe('Tavern Runtime CLI', () => {
-    test('prints llm-wiki Cortex commands', () => {
-        const logSpy = vi.spyOn(console, 'log').mockImplementation(() => undefined);
-
-        printHelp();
-
-        const help = String(logSpy.mock.calls[0]?.[0] ?? '');
-        expect(help).toContain('tavern cortex topics');
-        expect(help).toContain('tavern cortex get <topic> <path>');
-        expect(help).toContain('TAVERN_WIKI_HUB_PATH');
-        expect(help).toContain('tavern engine status');
-        expect(help).toContain('tavern engine install');
-        expect(help).not.toContain('tavern cortex embed');
-    });
-
-    test('routes engine commands through the serve dispatcher', () => {
-        expect(parseCli(['engine', 'status', '--json'])).toEqual({
-            command: 'serve',
-            rest: ['engine', 'status', '--json'],
-        });
-        expect(parseCli(['engine', 'install'])).toEqual({
-            command: 'serve',
-            rest: ['engine', 'install'],
-        });
-    });
-
-    test('rejects unknown top-level commands', () => {
-        expect(() => parseCli(['enginee'])).toThrow(/Unknown command/);
-    });
-
+describe('Tavern Runtime Cortex CLI', () => {
     test('prints Cortex status from Runtime', async () => {
         const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce(
             jsonResponse({

@@ -20,7 +20,7 @@ export interface RuntimeProbe {
 
 export const runtimeProbe: RuntimeProbe = {
     async health() {
-        const data = await probeJson(agentRuntimeRoutes.health);
+        const data = await probeJson(agentRuntimeRoutes.health, PROBE_TIMEOUT_MS);
         if (!(data && typeof data === 'object')) {
             return false;
         }
@@ -28,7 +28,7 @@ export const runtimeProbe: RuntimeProbe = {
         return record.ok === true || record.status === 'healthy';
     },
     async currentVersion() {
-        const data = await probeJson(agentRuntimeRoutes.updateStatus);
+        const data = await probeJson(agentRuntimeRoutes.updateStatus, PROBE_TIMEOUT_MS);
         if (data === null) {
             return null;
         }
@@ -37,11 +37,25 @@ export const runtimeProbe: RuntimeProbe = {
     },
 };
 
-async function probeJson(route: string): Promise<unknown> {
+/**
+ * Fast running-version probe for bare `tavern` (~750 ms). Returns null when the
+ * runtime is unreachable or the timeout fires, so the banner falls back to
+ * "not running" instead of stalling.
+ */
+export async function probeRunningVersion(timeoutMs = 750): Promise<string | null> {
+    const data = await probeJson(agentRuntimeRoutes.updateStatus, timeoutMs);
+    if (data === null) {
+        return null;
+    }
+    const parsed = agentRuntimeUpdateSchema.safeParse(data);
+    return parsed.success ? parsed.data.currentVersion : null;
+}
+
+async function probeJson(route: string, timeoutMs: number): Promise<unknown> {
     try {
         const response = await fetch(new URL(route, localRuntimeUrl()), {
             method: 'GET',
-            signal: AbortSignal.timeout(PROBE_TIMEOUT_MS),
+            signal: AbortSignal.timeout(timeoutMs),
         });
         if (!response.ok) {
             return null;

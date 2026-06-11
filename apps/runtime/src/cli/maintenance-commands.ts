@@ -3,7 +3,8 @@ import { createInterface } from 'node:readline/promises';
 import { brew } from './brew';
 import { runRestartFlow } from './restart-flow';
 import { runtimeProbe } from './runtime-probe';
-import { type FlowLine, runUpdateFlow } from './update-flow';
+import { printFlowLines } from './ui';
+import { runUpdateFlow } from './update-flow';
 
 interface UpdateArgs {
     restart: boolean;
@@ -39,16 +40,6 @@ async function stageEngine(): Promise<boolean> {
     return !result.error && result.status === 0;
 }
 
-function printLines(lines: FlowLine[]): void {
-    for (const line of lines) {
-        if (line.stream === 'err') {
-            console.error(line.text);
-        } else {
-            console.log(line.text);
-        }
-    }
-}
-
 async function confirmRestart(): Promise<boolean> {
     if (!(process.stdin.isTTY && process.stdout.isTTY)) {
         return false;
@@ -67,20 +58,15 @@ export async function runUpdateCommand(args: UpdateArgs): Promise<number> {
         { brew, probe: runtimeProbe, stagedVersion, stageEngine },
         { restart: args.restart, verbose: args.verbose }
     );
-    printLines(result.lines);
+    printFlowLines(result.lines);
 
     const shouldRestart =
         result.shouldRestart ||
-        (result.exitCode === 0 && needsCutover(result.lines) && (await confirmRestart()));
+        (result.exitCode === 0 && result.needsCutover && (await confirmRestart()));
     if (shouldRestart) {
         return await runRestartCommand({ noWait: false });
     }
     return result.exitCode;
-}
-
-/** True when the verdict was "staged but still running old" (offer a cutover). */
-function needsCutover(lines: FlowLine[]): boolean {
-    return lines.some((line) => line.text.includes('runtime is still running'));
 }
 
 export async function runRestartCommand(args: RestartArgs): Promise<number> {
@@ -93,6 +79,6 @@ export async function runRestartCommand(args: RestartArgs): Promise<number> {
         },
         { noWait: args.noWait }
     );
-    printLines(result.lines);
+    printFlowLines(result.lines);
     return result.exitCode;
 }
