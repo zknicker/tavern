@@ -83,18 +83,13 @@ export function SubagentRows({
                             : inheritValue)
                     }
                 >
-                    <SelectTrigger className="h-auto min-h-12 py-2">
-                        <SelectValue
-                            className="min-w-0 flex-1 whitespace-normal"
-                            placeholder="Choose subagent model"
-                        >
-                            {selectedChoice ? (
-                                <SubagentModelLabel model={selectedChoice} />
-                            ) : (
-                                (subagentModel &&
-                                    `${subagentModel.provider}/${subagentModel.model}`) ||
-                                'Inherit primary model'
-                            )}
+                    <SelectTrigger>
+                        <SelectValue placeholder="Choose subagent model">
+                            {selectedChoice
+                                ? selectedChoice.name
+                                : (subagentModel &&
+                                      `${subagentModel.provider}/${subagentModel.model}`) ||
+                                  'Inherit primary model'}
                         </SelectValue>
                     </SelectTrigger>
                     <SelectContent>
@@ -121,13 +116,8 @@ export function SubagentRows({
                     }}
                     value={subagentEffort ?? inheritValue}
                 >
-                    <SelectTrigger className="h-auto min-h-12 py-2">
-                        <SelectValue
-                            className="min-w-0 flex-1 whitespace-normal"
-                            placeholder="Choose effort"
-                        >
-                            {effortLabel}
-                        </SelectValue>
+                    <SelectTrigger>
+                        <SelectValue placeholder="Choose effort">{effortLabel}</SelectValue>
                     </SelectTrigger>
                     <SelectContent>
                         <SelectItem value={inheritValue}>Inherit</SelectItem>

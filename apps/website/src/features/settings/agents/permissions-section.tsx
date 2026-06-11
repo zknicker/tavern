@@ -128,15 +128,8 @@ function ApprovalModeSelect({
             }}
             value={value}
         >
-            <SelectTrigger className="h-auto min-h-12 py-2">
-                <SelectValue className="min-w-0 flex-1 whitespace-normal">
-                    {selected ? (
-                        <ApprovalModeLabel
-                            description={selected.description}
-                            label={selected.label}
-                        />
-                    ) : undefined}
-                </SelectValue>
+            <SelectTrigger>
+                <SelectValue>{selected ? selected.label : undefined}</SelectValue>
             </SelectTrigger>
             <SelectContent>
                 {approvalModeOptions.map((option) => (

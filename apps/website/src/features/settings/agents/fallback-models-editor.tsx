@@ -86,10 +86,8 @@ export function FallbackModelsEditor({
                 }}
                 value=""
             >
-                <SelectTrigger className="h-auto min-h-12 py-2">
-                    <SelectValue className="min-w-0 flex-1 whitespace-normal">
-                        Add fallback
-                    </SelectValue>
+                <SelectTrigger>
+                    <SelectValue>Add fallback</SelectValue>
                 </SelectTrigger>
                 <SelectContent>
                     {choices.map((choice) => (

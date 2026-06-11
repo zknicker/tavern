@@ -87,14 +87,9 @@ export function AgentModelSection({
                             }}
                             value={value?.modelRef ?? undefined}
                         >
-                            <SelectTrigger className="h-auto min-h-12 py-2">
-                                <SelectValue
-                                    className="min-w-0 flex-1 whitespace-normal"
-                                    placeholder="Choose model"
-                                >
-                                    {selectedChoice ? (
-                                        <ModelChoiceLabel choice={selectedChoice} />
-                                    ) : undefined}
+                            <SelectTrigger>
+                                <SelectValue placeholder="Choose model">
+                                    {selectedChoice ? selectedChoice.model.name : undefined}
                                 </SelectValue>
                             </SelectTrigger>
                             <SelectContent>
@@ -136,21 +131,10 @@ export function AgentModelSection({
                             }
                             value={value?.thinkingDefault ?? inheritThinkingValue}
                         >
-                            <SelectTrigger className="h-auto min-h-12 py-2">
-                                <SelectValue
-                                    className="min-w-0 flex-1 whitespace-normal"
-                                    placeholder="Choose thinking"
-                                >
-                                    <ThinkingSelectLabel
-                                        description={
-                                            getThinkingOption(value?.thinkingDefault ?? null)
-                                                ?.description ?? "Use the selected model's default."
-                                        }
-                                        label={
-                                            getThinkingOption(value?.thinkingDefault ?? null)
-                                                ?.label ?? 'Inherit'
-                                        }
-                                    />
+                            <SelectTrigger>
+                                <SelectValue placeholder="Choose thinking">
+                                    {getThinkingOption(value?.thinkingDefault ?? null)?.label ??
+                                        'Inherit'}
                                 </SelectValue>
                             </SelectTrigger>
                             <SelectContent>
