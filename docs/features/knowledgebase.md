@@ -7,7 +7,9 @@ read_when:
 
 # Cortex
 
-Cortex is Tavern's browser for the user's llm-wiki hub.
+Cortex is Tavern's browser for the user's llm-wiki hub. For the end-to-end
+flow — how material becomes compiled knowledge and stays healthy — see
+[Cortex Lifecycle](cortex-lifecycle.md).
 
 The durable knowledge is plain Markdown. Tavern does not maintain a second
 Cortex database, vector index, schema registry, claim table, Dream job, or chat

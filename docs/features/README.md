@@ -16,6 +16,7 @@ implementation ownership, and runtime details live under
 | Chat | [Chat](chat.md) |
 | Agents | [Agents](agents.md) |
 | Cortex wiki and graph | [Cortex](knowledgebase.md) |
+| Cortex knowledge lifecycle | [Cortex Lifecycle](cortex-lifecycle.md) |
 | Context management | [Context management](context-management.md) |
 | Memory | [Memory](memory.md) |
 | Automations | [Automations](automations.md) |
