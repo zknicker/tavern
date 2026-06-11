@@ -33,7 +33,7 @@ capabilities. It is not a second product API.
 | Health and capabilities | `/health`, `/capabilities`, `/capabilities/{id}`, `/capabilities/{id}/refresh`, `/capabilities/refresh` |
 | Runtime update | `/update/status`, `/update`, `/update/restart` |
 | Runtime events | `/events`, websocket `/events` |
-| Managed Hermes | `/hermes-config` |
+| Managed Hermes | `/hermes-config`, `/execution-settings` |
 | Agents and files | `/agents`, `/agents/{id}`, `/agents/{id}/config`, `/agents/{id}/files`, `/agents/{id}/files/{path}` |
 | Sessions and execution evidence | `/hermes/sessions`, `/hermes/sessions/previews`, `/hermes/sessions/{sessionKey}/messages`, `/hermes/sessions/{sessionKey}/graph`, `/hermes/sessions/{sessionKey}/prompt`, `/hermes/sessions/{sessionKey}/resync` |
 | Jobs | `/jobs`, `/jobs/{slug}`, `/jobs/{slug}/run` |
@@ -48,6 +48,11 @@ capabilities. It is not a second product API.
 definitions own their payload schema and default input. Cortex wiki maintenance
 is not a built-in Runtime job; scheduled wiki work belongs in Tasks and runtime
 crons.
+
+`/execution-settings` (GET/PUT) owns Tavern-stored agent execution settings:
+the model fallback chain and the agent timezone. Runtime stores the settings,
+rewrites the generated managed runtime config, and restarts managed Hermes to
+apply them; the PUT response reports whether a restart was scheduled.
 
 `/model-access/api-key` writes provider API keys through the managed Hermes
 environment API. `/model-access/oauth/{providerId}/start` starts the

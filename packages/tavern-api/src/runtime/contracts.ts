@@ -213,6 +213,22 @@ export const agentRuntimeHermesModelNameSchema = z.object({
     provider: z.string().trim().min(1),
 });
 
+export const agentRuntimeExecutionSettingsSchema = z.object({
+    fallbackModels: z.array(agentRuntimeHermesModelNameSchema),
+    timezone: z.string().nullable(),
+    updatedAt: z.string().datetime().nullable(),
+});
+
+export const agentRuntimeSaveExecutionSettingsSchema = z.object({
+    fallbackModels: z.array(agentRuntimeHermesModelNameSchema).max(10).optional(),
+    timezone: z.string().trim().min(1).nullable().optional(),
+});
+
+export const agentRuntimeSaveExecutionSettingsResultSchema =
+    agentRuntimeExecutionSettingsSchema.extend({
+        restartScheduled: z.boolean(),
+    });
+
 export const agentRuntimeThinkingLevelSchema = z.enum([
     'off',
     'minimal',
@@ -1830,6 +1846,13 @@ export type AgentRuntimeOpenAiSettings = z.infer<typeof agentRuntimeOpenAiSettin
 export type AgentRuntimeSaveOpenAiSettings = z.infer<typeof agentRuntimeSaveOpenAiSettingsSchema>;
 export type AgentRuntimeOpenRouterSettings = z.infer<typeof agentRuntimeOpenRouterSettingsSchema>;
 export type AgentRuntimeHermesModelName = z.infer<typeof agentRuntimeHermesModelNameSchema>;
+export type AgentRuntimeExecutionSettings = z.infer<typeof agentRuntimeExecutionSettingsSchema>;
+export type AgentRuntimeSaveExecutionSettings = z.infer<
+    typeof agentRuntimeSaveExecutionSettingsSchema
+>;
+export type AgentRuntimeSaveExecutionSettingsResult = z.infer<
+    typeof agentRuntimeSaveExecutionSettingsResultSchema
+>;
 export type AgentRuntimeHermesConfig = z.infer<typeof agentRuntimeHermesConfigSchema>;
 export type AgentRuntimeHermesConfigSnapshot = z.infer<
     typeof agentRuntimeHermesConfigSnapshotSchema

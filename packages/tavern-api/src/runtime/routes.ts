@@ -38,6 +38,7 @@ export const agentRuntimeRoutes = {
         `/model-access/oauth/${encodeURIComponent(providerId)}/submit`,
     modelAccessOpenAiSettings: '/model-access/openai',
     modelAccessOpenRouterSettings: '/model-access/openrouter',
+    executionSettings: '/execution-settings',
     job: (slug: string) => `/jobs/${encodeURIComponent(slug)}`,
     jobRun: (slug: string) => `/jobs/${encodeURIComponent(slug)}/run`,
     jobs: '/jobs',

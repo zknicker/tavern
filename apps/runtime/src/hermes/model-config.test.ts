@@ -2,68 +2,20 @@ import fs from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { parseDocument } from 'yaml';
 import { syncHermesCodexAuth } from './auth-store';
+import { mergeHermesEnvFile } from './model-config';
 import { ensureManagedMnemosynePlugin } from './mnemosyne';
-import { mergeHermesConfigFile, mergeHermesEnvFile } from './model-config';
+
+const codexEnvConfig = {
+    apiKey: null,
+    baseUrl: null,
+    model: 'gpt-5.4-mini',
+    openAiApiKey: null,
+    openRouterApiKey: null,
+    provider: 'openai-codex',
+};
 
 describe('managed Hermes model config', () => {
-    it('preserves existing config while setting the main model route', async () => {
-        const directory = await fs.mkdtemp(path.join(os.tmpdir(), 'tavern-hermes-config-'));
-        const configPath = path.join(directory, 'config.yaml');
-        await fs.writeFile(
-            configPath,
-            [
-                'gateway:',
-                '  bind: loopback',
-                'model:',
-                '  default: old-model',
-                '  provider: old-provider',
-                '',
-            ].join('\n')
-        );
-
-        await mergeHermesConfigFile(configPath, {
-            apiKey: null,
-            baseUrl: null,
-            model: 'gpt-5.4-mini',
-            openAiApiKey: null,
-            openRouterApiKey: null,
-            provider: 'openai-codex',
-        });
-
-        const doc = parseDocument(await fs.readFile(configPath, 'utf8'));
-        expect(doc.getIn(['gateway', 'bind'])).toBe('loopback');
-        expect(doc.getIn(['model', 'default'])).toBe('gpt-5.4-mini');
-        expect(doc.getIn(['model', 'provider'])).toBe('openai-codex');
-        expect(doc.getIn(['model', 'base_url'])).toBeUndefined();
-        expect(doc.getIn(['model', 'api_key'])).toBeUndefined();
-        expect(doc.getIn(['memory', 'provider'])).toBe('mnemosyne');
-        expect(doc.getIn(['memory', 'memory_enabled'])).toBe(false);
-        expect(doc.getIn(['memory', 'user_profile_enabled'])).toBe(false);
-    });
-
-    it('writes a custom provider base URL for local Hermes e2e runs', async () => {
-        const directory = await fs.mkdtemp(path.join(os.tmpdir(), 'tavern-hermes-config-'));
-        const configPath = path.join(directory, 'config.yaml');
-
-        await mergeHermesConfigFile(configPath, {
-            apiKey: 'tavern-e2e-mock-key',
-            baseUrl: 'http://127.0.0.1:44080/v1',
-            model: 'tavern-e2e-tools',
-            openAiApiKey: null,
-            openRouterApiKey: null,
-            provider: 'custom',
-        });
-
-        const doc = parseDocument(await fs.readFile(configPath, 'utf8'));
-        expect(doc.getIn(['model', 'default'])).toBe('tavern-e2e-tools');
-        expect(doc.getIn(['model', 'provider'])).toBe('custom');
-        expect(doc.getIn(['model', 'base_url'])).toBe('http://127.0.0.1:44080/v1');
-        expect(doc.getIn(['model', 'api_key'])).toBe('tavern-e2e-mock-key');
-        expect(doc.getIn(['memory', 'provider'])).toBe('mnemosyne');
-    });
-
     it('materializes the managed Mnemosyne provider shim', async () => {
         const directory = await fs.mkdtemp(path.join(os.tmpdir(), 'tavern-mnemosyne-'));
 
@@ -106,10 +58,7 @@ describe('managed Hermes model config', () => {
         );
 
         await mergeHermesEnvFile(envPath, {
-            apiKey: null,
-            baseUrl: null,
-            model: 'gpt-5.4-mini',
-            openAiApiKey: null,
+            ...codexEnvConfig,
             openRouterApiKey: 'new-openrouter',
             provider: 'openrouter',
         });
@@ -124,14 +73,7 @@ describe('managed Hermes model config', () => {
         const directory = await fs.mkdtemp(path.join(os.tmpdir(), 'tavern-hermes-env-'));
         const envPath = path.join(directory, '.env');
 
-        await mergeHermesEnvFile(envPath, {
-            apiKey: null,
-            baseUrl: null,
-            model: 'gpt-5.4-mini',
-            openAiApiKey: null,
-            openRouterApiKey: null,
-            provider: 'openai-codex',
-        });
+        await mergeHermesEnvFile(envPath, codexEnvConfig);
 
         await expect(fs.stat(envPath)).rejects.toThrow();
     });

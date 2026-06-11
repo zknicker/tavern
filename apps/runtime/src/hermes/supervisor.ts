@@ -31,6 +31,17 @@ export interface ManagedHermesHandle {
     stop(options?: { force?: boolean }): Promise<void>;
 }
 
+let activeRestartRequest: (() => boolean) | null = null;
+
+/**
+ * Restart the managed Hermes process so it picks up generated config changes.
+ * Returns false when no managed Hermes supervisor is active (e.g. external
+ * Hermes or tests); callers surface that as restart-not-scheduled.
+ */
+export function requestManagedHermesRestart(): boolean {
+    return activeRestartRequest?.() ?? false;
+}
+
 export async function startHermesForRuntime(): Promise<ManagedHermesHandle> {
     await fs.mkdir(HERMES_HOME, { recursive: true });
     await fs.mkdir(HERMES_ROOT, { recursive: true });
@@ -129,9 +140,25 @@ export async function startHermesForRuntime(): Promise<ManagedHermesHandle> {
 
     void startDashboard('initial');
 
+    activeRestartRequest = () => {
+        if (stopping) {
+            return false;
+        }
+        const current = child;
+        if (current) {
+            log.info('Restarting managed Hermes API to apply generated config');
+            // The exit handler observes stopping=false and schedules the restart.
+            void stopChild(current);
+            return true;
+        }
+        scheduleRestart();
+        return true;
+    };
+
     return {
         async stop(options?: { force?: boolean }) {
             stopping = true;
+            activeRestartRequest = null;
             if (restartTimer) {
                 clearTimeout(restartTimer);
                 restartTimer = null;

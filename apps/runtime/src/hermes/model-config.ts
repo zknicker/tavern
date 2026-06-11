@@ -1,23 +1,19 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
-import { parseDocument } from 'yaml';
 import { HERMES_HOME, readConfigValue } from '../config';
 import { loadVaultBackedCodexCredentials } from '../model-access/codex-settings';
 import { getOpenAiApiKey } from '../model-access/openai-settings';
 import { getOpenRouterApiKey } from '../model-access/openrouter-settings';
 import { syncHermesCodexAuth } from './auth-store';
 import { quoteEnvValue, readEnvEntries, readManagedHermesEnvValue } from './env';
+import { getHermesExecutionSettings } from './execution-settings';
+import { type HermesModelDomain, mergeHermesGeneratedConfig } from './generated-config';
 import { prepareManagedLlmWikiIntegration } from './llm-wiki';
 import { ensureManagedMnemosynePackage, ensureManagedMnemosynePlugin } from './mnemosyne';
-import { tavernMessengerPluginName } from './tavern-messenger-plugin';
 
-interface HermesModelConfig {
-    apiKey: string | null;
-    baseUrl: null | string;
-    model: string;
+interface HermesModelConfig extends HermesModelDomain {
     openAiApiKey: string | null;
     openRouterApiKey: string | null;
-    provider: string;
 }
 
 interface ManagedHermesModelConfigInput {
@@ -76,7 +72,10 @@ export async function prepareManagedHermesModelConfig(
 ): Promise<HermesModelConfig> {
     const config = await resolveManagedHermesModelConfig();
     await fs.mkdir(HERMES_HOME, { recursive: true });
-    await mergeHermesConfigFile(path.join(HERMES_HOME, 'config.yaml'), config);
+    await mergeHermesGeneratedConfig(path.join(HERMES_HOME, 'config.yaml'), {
+        execution: getHermesExecutionSettings(),
+        model: config,
+    });
     await mergeHermesEnvFile(path.join(HERMES_HOME, '.env'), config);
     await syncHermesCodexAuth(
         path.join(HERMES_HOME, 'auth.json'),
@@ -90,28 +89,17 @@ export async function prepareManagedHermesModelConfig(
     return config;
 }
 
-export async function mergeHermesConfigFile(filePath: string, config: HermesModelConfig) {
-    const existing = await fs.readFile(filePath, 'utf8').catch(() => '');
-    const doc = parseDocument(existing || '{}');
-
-    doc.setIn(['model', 'default'], config.model);
-    doc.setIn(['model', 'provider'], config.provider);
-    if (config.baseUrl) {
-        doc.setIn(['model', 'base_url'], config.baseUrl);
-    } else {
-        doc.deleteIn(['model', 'base_url']);
-    }
-    if (config.apiKey) {
-        doc.setIn(['model', 'api_key'], config.apiKey);
-    } else {
-        doc.deleteIn(['model', 'api_key']);
-    }
-    ensureMnemosyneMemoryProvider(doc);
-    ensurePluginEnabled(doc, tavernMessengerPluginName());
-
-    await fs.mkdir(path.dirname(filePath), { recursive: true });
-    await fs.writeFile(filePath, doc.toString(), { mode: 0o600 });
-    await fs.chmod(filePath, 0o600).catch(() => undefined);
+/**
+ * Rewrite only the generated config file from current Runtime state. Used when
+ * a Tavern-owned config domain (e.g. execution settings) changes at runtime.
+ */
+export async function writeManagedHermesConfigFile(): Promise<void> {
+    const config = await resolveManagedHermesModelConfig();
+    await fs.mkdir(HERMES_HOME, { recursive: true });
+    await mergeHermesGeneratedConfig(path.join(HERMES_HOME, 'config.yaml'), {
+        execution: getHermesExecutionSettings(),
+        model: config,
+    });
 }
 
 export async function mergeHermesEnvFile(filePath: string, config: HermesModelConfig) {
@@ -136,23 +124,4 @@ export async function mergeHermesEnvFile(filePath: string, config: HermesModelCo
         { mode: 0o600 }
     );
     await fs.chmod(filePath, 0o600).catch(() => undefined);
-}
-
-function ensurePluginEnabled(doc: ReturnType<typeof parseDocument>, pluginName: string) {
-    const enabled = (doc.toJS() as { plugins?: { enabled?: unknown } } | null)?.plugins?.enabled;
-    const values = Array.isArray(enabled)
-        ? enabled.filter((item): item is string => typeof item === 'string')
-        : [];
-
-    if (values.includes(pluginName)) {
-        return;
-    }
-
-    doc.setIn(['plugins', 'enabled'], [...values, pluginName]);
-}
-
-function ensureMnemosyneMemoryProvider(doc: ReturnType<typeof parseDocument>) {
-    doc.setIn(['memory', 'provider'], 'mnemosyne');
-    doc.setIn(['memory', 'memory_enabled'], false);
-    doc.setIn(['memory', 'user_profile_enabled'], false);
 }
