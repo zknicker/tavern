@@ -221,11 +221,8 @@ export function AgentRuntimeSettingsPanel({
                         <Icon icon={AlertCircleIcon} />
                         <AlertTitle>Tavern Runtime is unreachable.</AlertTitle>
                         <AlertDescription>
-                            Check that this computer can reach {runtime.baseUrl}. If the Runtime is
-                            on another machine, verify the host, network, and credentials.
-                            <span className="mt-1 block font-mono text-xs">
-                                {runtime.lastError}
-                            </span>
+                            Tavern can&apos;t reach this Runtime URL. Check the address, port, and
+                            network.
                         </AlertDescription>
                         <AlertAction>
                             <Button
