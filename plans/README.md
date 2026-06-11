@@ -15,10 +15,10 @@ options are recorded here so a maintainer can request plans for them later.
 | Plan | Title | Priority | Effort | Depends on | Status |
 |------|-------|----------|--------|------------|--------|
 | 001  | Gate every deploy on typecheck, lint, and unit tests | P1 | S | — | REJECTED — operator call 2026-06-10: deep in dev, no CI gate wanted yet; revisit before release |
-| 002  | Bound chat event reads with SQL-side visibility and LIMIT | P1 | S | — | IN PROGRESS |
-| 003  | Require a bearer token on Runtime HTTP and WebSocket APIs | P1 | M | — | TODO |
-| 004  | Single-chat lookup path for getChat | P2 | M | — | IN PROGRESS |
-| 005  | Remove dead workspace packages | P3 | S | — | IN PROGRESS |
+| 002  | Bound chat event reads with SQL-side visibility and LIMIT | P1 | S | — | DONE (ee67ccfb, reviewed) |
+| 003  | Require a bearer token on Runtime HTTP and WebSocket APIs | P1 | M | — | IN PROGRESS |
+| 004  | Single-chat lookup path for getChat | P2 | M | — | IN PROGRESS (rewritten after first run STOPPED: heavy reads are runtime HTTP calls, not local SQL; now routes through existing `client.chat.get`) |
+| 005  | Remove dead workspace packages | P3 | S | — | DONE (6aeea01b, reviewed) |
 
 Status values: TODO | IN PROGRESS | DONE | BLOCKED (with one-line reason) |
 REJECTED (with one-line rationale).
