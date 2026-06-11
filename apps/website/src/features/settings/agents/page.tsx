@@ -108,12 +108,30 @@ function AgentSettingsContent({
                         executionSettings.save({ fallbackModels: next })
                     ).catch(() => undefined)
                 }
+                onSubagentEffortChange={(next) =>
+                    void withSavingToast(() =>
+                        executionSettings.save({ subagentEffort: next })
+                    ).catch(() => undefined)
+                }
+                onSubagentModelChange={(next) =>
+                    void withSavingToast(() =>
+                        executionSettings.save({ subagentModel: next })
+                    ).catch(() => undefined)
+                }
+                subagentEffort={executionSettings.settings.subagentEffort}
+                subagentModel={executionSettings.settings.subagentModel}
                 syncError={modelSetting?.syncError ?? null}
                 value={baseline}
             />
 
             <AgentBehaviorSection
+                compression={executionSettings.settings.compression}
                 disabled={executionSettings.isSaving}
+                onCompressionChange={(next) =>
+                    void withSavingToast(() => executionSettings.save({ compression: next })).catch(
+                        () => undefined
+                    )
+                }
                 onTimezoneChange={(next) =>
                     void withSavingToast(() => executionSettings.save({ timezone: next })).catch(
                         () => undefined
