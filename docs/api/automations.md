@@ -21,6 +21,9 @@ progress is activity.
 * Retry, failure, and cancellation states are visible.
 * Events notify clients that automation records or runs changed; reads recover
   the full state.
+* Automation reads carry `managed: true` for Tavern-managed defaults. Managed
+  automations accept pause/resume and manual runs; create, edit, and delete
+  requests are rejected, and the `Tavern: ` name prefix is reserved.
 
 ## Surface
 

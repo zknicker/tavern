@@ -44,7 +44,9 @@ hidden unless a caller explicitly includes archived topics.
 
 Runtime exposes a small read API. The App renders the Cortex tab from that API.
 Scheduled wiki work belongs to Tasks and Runtime crons, where agents can run the
-managed `wiki` skill.
+managed `wiki` skill. Tavern ships managed default crons for the regular
+llm-wiki maintenance cadence (compile, lint, librarian); see
+[Automations](automations.md#managed-automations).
 
 Runtime packages llm-wiki for managed Hermes. Startup copies the bundled
 workflow skill directory to `HERMES_HOME/skills/wiki` and passes the resolved
