@@ -42,6 +42,10 @@ const runtimeToken = process.env.TAVERN_RUNTIME_TOKEN ?? 'e2e-runtime-token';
 const env = {
     ...process.env,
     TAVERN_E2E_RUN_ID: runId,
+    // Same engine policy as the dev stack: reuse the machine's Hermes and
+    // never bootstrap-download a pinned engine in the middle of a test run.
+    TAVERN_HERMES_ALLOW_SYSTEM: process.env.TAVERN_HERMES_ALLOW_SYSTEM ?? '1',
+    TAVERN_HERMES_AUTO_INSTALL: process.env.TAVERN_HERMES_AUTO_INSTALL ?? '0',
     TAVERN_HERMES_API_KEY: 'tavern-e2e-mock-key',
     TAVERN_HERMES_BASE_URL: `http://127.0.0.1:${hermesProviderPort}/v1`,
     TAVERN_HERMES_MODEL: 'tavern-e2e-tools',
