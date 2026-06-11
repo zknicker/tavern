@@ -19,6 +19,7 @@ options are recorded here so a maintainer can request plans for them later.
 | 003  | Require a bearer token on Runtime HTTP and WebSocket APIs | P1 | M | — | DONE (6 commits ending 2d9a561b; reviewed, e2e-verified) |
 | 004  | Single-chat lookup path for getChat | P2 | M | — | DONE (7d4fc56e, reviewed; rewritten once — heavy reads are runtime HTTP calls, now routed through `client.chat.get`) |
 | 005  | Remove dead workspace packages | P3 | S | — | DONE (6aeea01b, reviewed) |
+| 006  | Token pairing UX: `tavern token` CLI + token fields in onboarding/settings | P1 | M | 003 | IN PROGRESS |
 
 Status values: TODO | IN PROGRESS | DONE | BLOCKED (with one-line reason) |
 REJECTED (with one-line rationale).
