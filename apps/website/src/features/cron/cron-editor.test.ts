@@ -13,7 +13,6 @@ function createJob() {
         description: 'Post a scheduled joke.',
         enabled: true,
         id: 'cron-1',
-        managed: false,
         name: 'Portal Joke',
         payload: {
             kind: 'agentTurn' as const,

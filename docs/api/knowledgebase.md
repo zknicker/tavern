@@ -34,16 +34,16 @@ The Runtime API covers:
 * `GET /cortex/topics/:topic/pages/:path/backlinks`
 * `POST /cortex/search`
 
-`GET /cortex/health` rolls up derived health: hub status, todos (inventory
-records projected with owner, status, and priority — `owner: user` plus
-`status: proposed` marks an escalation and drives `needs_attention`), todo
-processing state (running record, last and next run), the latest librarian
-scan per topic parsed from `.librarian/scan-results.json` — llm-wiki's
-machine-readable scan output — managed wiki cron run state, and health history.
-History is an append-only Runtime projection sampled hourly (on scan or
-escalation change, plus a daily heartbeat); it is derived and rebuildable, never
-authoritative. Unparseable scan files are skipped. Listings and search exclude
-dot directories.
+`GET /cortex/health` rolls up derived health: hub status (`state` is `healthy`
+or `degraded`), todos (inventory records projected with owner, status, and
+priority — records with `owner: user` are respected as user-authored and
+skipped by todo processing), todo processing state (running record, last and
+next run), maintenance run tiles for the compile, librarian, and todo jobs,
+the latest librarian scan per topic parsed from `.librarian/scan-results.json`
+— llm-wiki's machine-readable scan output — and health history. History is an
+append-only Runtime projection sampled hourly; it is derived and rebuildable,
+never authoritative. Unparseable scan files are skipped. Listings and search
+exclude dot directories.
 
 The tRPC app router exposes the same reads under `cortex.status`,
 `cortex.health`, `cortex.topics`, `cortex.list`, `cortex.get`,

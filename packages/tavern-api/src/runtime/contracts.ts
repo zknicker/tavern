@@ -1026,7 +1026,7 @@ export const cortexLibrarianScanSchema = z.object({
     updatedAt: z.string().datetime(),
 });
 
-export const cortexHealthStateSchema = z.enum(['degraded', 'healthy', 'needs_attention']);
+export const cortexHealthStateSchema = z.enum(['degraded', 'healthy']);
 
 export const agentRuntimeCronDeliverySchema = z.object({
     chatId: z.string().trim().min(1),
@@ -1046,12 +1046,11 @@ export const agentRuntimeExecutionErrorCodeSchema = z.enum([
     'control_plane_restarted',
 ]);
 
-export const cortexManagedRunSchema = z.object({
-    enabled: z.boolean(),
+export const cortexMaintenanceRunSchema = z.object({
     lastRunAtMs: z.number().int().nonnegative().nullable(),
-    lastRunStatus: agentRuntimeExecutionStatusSchema.nullable(),
     name: z.string().trim().min(1),
     nextRunAtMs: z.number().int().nonnegative().nullable(),
+    running: z.boolean(),
 });
 
 export const cortexHealthHistoryEntrySchema = z.object({
@@ -1068,7 +1067,7 @@ export const cortexHealthHistoryEntrySchema = z.object({
 
 export const cortexHealthSchema = z.object({
     history: z.array(cortexHealthHistoryEntrySchema),
-    runs: z.array(cortexManagedRunSchema),
+    runs: z.array(cortexMaintenanceRunSchema),
     scans: z.array(cortexLibrarianScanSchema),
     state: cortexHealthStateSchema,
     status: cortexStatusSchema,
@@ -1146,18 +1145,12 @@ export const agentRuntimeCronWakeModeSchema = z.enum(['next-heartbeat', 'now']);
  * The name is the only Tavern-authored field that round-trips through the
  * agent engine's cron storage, so it doubles as the managed marker.
  */
-export const tavernManagedCronNamePrefix = 'Tavern: ';
-
-export function isTavernManagedCronName(name: string) {
-    return name.startsWith(tavernManagedCronNamePrefix);
-}
 
 export const agentRuntimeCronSummarySchema = z.object({
     agentId: z.string().trim().min(1).nullable(),
     description: z.string().nullable(),
     enabled: z.boolean(),
     id: z.string().trim().min(1),
-    managed: z.boolean(),
     name: z.string().trim().min(1),
     schedule: agentRuntimeCronScheduleSchema,
     state: agentRuntimeCronStateSchema,
@@ -1238,10 +1231,10 @@ export const agentRuntimeRunCronSchema = z.object({
 
 export const agentRuntimeJobSlugSchema = z.enum([
     'refresh-runtime-capabilities',
-    'sync-managed-crons',
     'tavern-highlights',
-    'wiki-compile-trigger',
+    'wiki-compile',
     'wiki-health-history',
+    'wiki-librarian',
     'wiki-todo-drain',
 ]);
 
@@ -1327,7 +1320,6 @@ export const agentRuntimeHighlightCategorySchema = z.enum([
     'scheduled_run',
     'tool_volume',
     'trouble',
-    'wiki_attention',
 ]);
 
 export const agentRuntimeHighlightSourceRefSchema = z.object({
@@ -2038,7 +2030,7 @@ export type CortexHealthState = z.infer<typeof cortexHealthStateSchema>;
 export type CortexHealthHistoryEntry = z.infer<typeof cortexHealthHistoryEntrySchema>;
 export type CortexLibrarianArticle = z.infer<typeof cortexLibrarianArticleSchema>;
 export type CortexLibrarianScan = z.infer<typeof cortexLibrarianScanSchema>;
-export type CortexManagedRun = z.infer<typeof cortexManagedRunSchema>;
+export type CortexMaintenanceRun = z.infer<typeof cortexMaintenanceRunSchema>;
 export type CortexPage = z.infer<typeof cortexPageSchema>;
 export type CortexPageList = z.infer<typeof cortexPageListSchema>;
 export type CortexPageSection = z.infer<typeof cortexPageSectionSchema>;

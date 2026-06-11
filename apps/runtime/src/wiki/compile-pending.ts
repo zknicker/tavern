@@ -1,12 +1,10 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
-import type { AgentRuntimeCronList } from '@tavern/api';
-import { wikiUpkeepCronName } from '../hermes/managed-crons';
 import { listCortexTopics } from './store';
 
 const pendingCountThreshold = 5;
+const pendingAgeMs = 6 * 60 * 60 * 1000;
 const settleMs = 15 * 60 * 1000;
-const triggerCooldownMs = 60 * 60 * 1000;
 
 const logEntryPattern = /^## \[(?<date>\d{4}-\d{2}-\d{2})[^\]]*\] (?<op>[a-z-]+) \|(?<rest>.*)$/u;
 const rawPathPattern = /\((?<rawPath>raw\/[^()]+\.md)\)\s*$/u;
@@ -15,56 +13,9 @@ const ingestOps = new Set(['ingest', 'ingest-collection']);
 
 export interface PendingCompileTopic {
     newestPendingAtMs: null | number;
+    oldestPendingAtMs: null | number;
     pendingCount: number;
     topic: string;
-}
-
-export interface CompileTriggerClient {
-    listCronJobs(): Promise<AgentRuntimeCronList>;
-    runCronJob(jobId: string): Promise<unknown>;
-}
-
-export type CompileTriggerOutcome =
-    | { kind: 'idle' }
-    | { kind: 'skipped'; reason: 'cooldown' | 'cron-missing' | 'cron-paused'; topics: string[] }
-    | { kind: 'triggered'; topics: string[] };
-
-/**
- * Fires the wiki upkeep automation when uncompiled raw sources pile up —
- * llm-wiki's 5-source compile nudge. Smaller ingests wait for the daily upkeep
- * run, which bounds their delay already. The check itself is pure filesystem
- * work — the agent only runs when there is real compile work — and the
- * cooldown keeps one trigger from queueing several runs.
- */
-export async function runWikiCompileTrigger(
-    client: CompileTriggerClient,
-    nowMs: number = Date.now()
-): Promise<CompileTriggerOutcome> {
-    const pending = await listPendingCompileTopics();
-    const topics = pending
-        .filter((topic) => isCompileTriggerDue(topic, nowMs))
-        .map((topic) => topic.topic);
-    if (topics.length === 0) {
-        return { kind: 'idle' };
-    }
-
-    const { jobs } = await client.listCronJobs();
-    const upkeep = jobs.find((job) => job.managed && job.name === wikiUpkeepCronName);
-    if (!upkeep) {
-        return { kind: 'skipped', reason: 'cron-missing', topics };
-    }
-    if (!upkeep.enabled) {
-        return { kind: 'skipped', reason: 'cron-paused', topics };
-    }
-    const lastRunAtMs = upkeep.state.lastRunAtMs ?? null;
-    const busy =
-        upkeep.state.lastRunStatus === 'queued' || upkeep.state.lastRunStatus === 'running';
-    if (busy || (lastRunAtMs !== null && nowMs - lastRunAtMs < triggerCooldownMs)) {
-        return { kind: 'skipped', reason: 'cooldown', topics };
-    }
-
-    await client.runCronJob(upkeep.id);
-    return { kind: 'triggered', topics };
 }
 
 /**
@@ -81,16 +32,28 @@ export async function listPendingCompileTopics(): Promise<PendingCompileTopic[]>
     return results.filter((topic) => topic.pendingCount > 0);
 }
 
-export function isCompileTriggerDue(pending: PendingCompileTopic, nowMs: number): boolean {
-    if (pending.pendingCount < pendingCountThreshold) {
+/**
+ * Compile when a batch piles up (llm-wiki's 5-source nudge) or a straggler has
+ * waited past the age limit — small ingests batch, nothing waits forever. The
+ * settle window lets an in-flight ingest batch finish first.
+ */
+export function isCompileDue(pending: PendingCompileTopic, nowMs: number): boolean {
+    if (pending.pendingCount === 0) {
         return false;
     }
-    return pending.newestPendingAtMs === null || nowMs - pending.newestPendingAtMs >= settleMs;
+    if (pending.newestPendingAtMs !== null && nowMs - pending.newestPendingAtMs < settleMs) {
+        return false;
+    }
+    if (pending.pendingCount >= pendingCountThreshold) {
+        return true;
+    }
+    return pending.oldestPendingAtMs !== null && nowMs - pending.oldestPendingAtMs >= pendingAgeMs;
 }
 
 async function readPendingForTopic(slug: string, topicPath: string): Promise<PendingCompileTopic> {
     const empty: PendingCompileTopic = {
         newestPendingAtMs: null,
+        oldestPendingAtMs: null,
         pendingCount: 0,
         topic: slug,
     };
@@ -123,6 +86,7 @@ async function readPendingForTopic(slug: string, topicPath: string): Promise<Pen
     );
     return {
         newestPendingAtMs: Math.max(...timestamps),
+        oldestPendingAtMs: Math.min(...timestamps),
         pendingCount: pendingEntries.length,
         topic: slug,
     };

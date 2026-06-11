@@ -1,7 +1,5 @@
-import * as React from 'react';
 import { Badge } from '../../components/ui/badge.tsx';
 import { BadgeDivider } from '../../components/ui/badge-divider.tsx';
-import { Button } from '../../components/ui/primitives/button.tsx';
 import {
     Table,
     TableBody,
@@ -10,10 +8,6 @@ import {
     TableHeader,
     TableRow,
 } from '../../components/ui/table.tsx';
-import { Textarea } from '../../components/ui/textarea.tsx';
-import { usePrimaryAgent } from '../../hooks/agents/use-agent-list.ts';
-import { useChatDraftLaunch } from '../../hooks/chats/use-chat-draft-launch.ts';
-import { runtimeUnhealthyTooltip, useCapability } from '../../hooks/connections/use-capability.ts';
 import { formatRelativeTime } from '../../lib/format.ts';
 import type { CortexHealthOutput } from '../../lib/trpc.tsx';
 import { cn } from '../../lib/utils.ts';
@@ -30,10 +24,6 @@ const todoStatusLabels: Record<string, string> = {
     blocked: 'Blocked',
     proposed: 'Queued',
 };
-
-export function isUserTodo(todo: CortexTodo): boolean {
-    return todo.owner === 'user' && todo.status === 'proposed';
-}
 
 export function CortexHealthView({
     health,
@@ -52,10 +42,8 @@ export function CortexHealthView({
         );
     }
 
-    const userTodos = health.todos.filter(isUserTodo);
-    const agentTodos = health.todos.filter((todo) => !isUserTodo(todo));
-    const openTodos = agentTodos.filter((todo) => !doneTodoStatuses.has(todo.status));
-    const doneTodos = agentTodos.filter((todo) => doneTodoStatuses.has(todo.status)).slice(0, 5);
+    const openTodos = health.todos.filter((todo) => !doneTodoStatuses.has(todo.status));
+    const doneTodos = health.todos.filter((todo) => doneTodoStatuses.has(todo.status)).slice(0, 5);
 
     return (
         <div className="flex h-full min-h-0 flex-col">
@@ -73,21 +61,6 @@ export function CortexHealthView({
                     {health.runs.length > 0 ? <RunTiles runs={health.runs} /> : null}
 
                     <CortexHealthTrends history={health.history} />
-
-                    {userTodos.length > 0 ? (
-                        <section className="mt-8">
-                            <BadgeDivider>Needs your call</BadgeDivider>
-                            <div className="mt-3 space-y-3">
-                                {userTodos.map((todo) => (
-                                    <EscalationCard
-                                        key={`${todo.topic}:${todo.path}`}
-                                        onSelectPage={onSelectPage}
-                                        todo={todo}
-                                    />
-                                ))}
-                            </div>
-                        </section>
-                    ) : null}
 
                     {openTodos.length > 0 || doneTodos.length > 0 ? (
                         <TodoSection
@@ -371,7 +344,7 @@ function RunTiles({ runs }: { runs: CortexHealthData['runs'] }) {
         <div className="mt-4 grid grid-cols-2 gap-2 lg:grid-cols-3">
             {runs.map((run) => (
                 <div className="rounded-lg bg-muted/40 px-3 py-2.5" key={run.name}>
-                    <p className="text-muted-foreground text-sm">{shortRunName(run.name)}</p>
+                    <p className="text-muted-foreground text-sm">{run.name}</p>
                     <p className="mt-0.5 font-medium text-foreground text-sm">
                         {runStatusLine(run)}
                     </p>
@@ -381,92 +354,19 @@ function RunTiles({ runs }: { runs: CortexHealthData['runs'] }) {
     );
 }
 
-function EscalationCard({
-    onSelectPage,
-    todo,
-}: {
-    onSelectPage: (page: { path: string; topic: string }) => void;
-    todo: CortexTodo;
-}) {
-    const primaryAgentQuery = usePrimaryAgent();
-    const launchChatDraft = useChatDraftLaunch();
-    const gatewayCapability = useCapability('gateway');
-    const [decision, setDecision] = React.useState('');
-
-    const agent = primaryAgentQuery.data?.agent ?? null;
-    const canSend = decision.trim().length > 0 && agent !== null && gatewayCapability.healthy;
-
-    function handleResolve() {
-        if (!(agent && canSend)) {
-            return;
-        }
-        launchChatDraft({
-            agentId: agent.id,
-            content: buildEscalationPrompt(todo, decision.trim()),
-        });
-    }
-
-    return (
-        <div className="rounded-lg border border-border/70 bg-muted/25 p-4">
-            <button
-                className="cursor-pointer text-left font-medium text-foreground text-sm hover:underline"
-                onClick={() => onSelectPage({ path: todo.path, topic: todo.topic })}
-                type="button"
-            >
-                {todo.title}
-            </button>
-            {todo.question ? (
-                <p className="mt-1 text-muted-foreground text-sm">{todo.question}</p>
-            ) : null}
-            <Textarea
-                className="mt-3"
-                onChange={(event) => setDecision(event.target.value)}
-                placeholder="Your call — the agent applies it to the wiki."
-                rows={2}
-                value={decision}
-            />
-            <div className="mt-2 flex justify-end">
-                <Button
-                    disabled={!canSend}
-                    onClick={handleResolve}
-                    size="sm"
-                    title={gatewayCapability.healthy ? 'Resolve in chat' : runtimeUnhealthyTooltip}
-                    type="button"
-                >
-                    Resolve
-                </Button>
-            </div>
-        </div>
-    );
-}
-
-function buildEscalationPrompt(todo: CortexTodo, decision: string) {
-    return [
-        `Cortex escalation in the ${todo.topic} topic wiki (${todo.path}): ${todo.title}.`,
-        todo.question ? `Question: ${todo.question}` : null,
-        `My decision: ${decision}`,
-        '',
-        "Use the wiki skill to apply this: update the affected articles and the inventory record's status, set verified or owner fields as appropriate, and append log.md entries.",
-    ]
-        .filter((line) => line !== null)
-        .join('\n');
-}
-
 function formatCount(count: number, noun: string) {
     return `${count} ${noun}${count === 1 ? '' : 's'}`;
 }
 
-function shortRunName(name: string) {
-    return name.replace(/^Tavern: Wiki\s*/u, '').replace(/^\w/u, (c) => c.toUpperCase());
-}
-
-function runStatusLine(run: { lastRunAtMs: null | number; lastRunStatus: null | string }) {
-    if (!run.lastRunAtMs) {
-        return 'Not run yet';
+function runStatusLine(run: CortexHealthData['runs'][number]) {
+    if (run.running) {
+        return 'Running now';
     }
-    const when = formatRelativeTime(new Date(run.lastRunAtMs).toISOString());
-    if (run.lastRunStatus === 'error') {
-        return `Failed ${when}`;
+    if (run.lastRunAtMs) {
+        return `Ran ${formatRelativeTime(new Date(run.lastRunAtMs).toISOString())}`;
     }
-    return `Ran ${when}`;
+    if (run.nextRunAtMs) {
+        return `First run ~${formatClockTime(run.nextRunAtMs)}`;
+    }
+    return 'Not run yet';
 }

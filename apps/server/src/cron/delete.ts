@@ -1,4 +1,3 @@
-import { isTavernManagedCronName } from '@tavern/api';
 import { TRPCError } from '@trpc/server';
 import { requireConfiguredAgentRuntimeClientForRuntimeId } from '../agent-runtime/configured-client.ts';
 import * as agentRuntimeCron from '../agent-runtime/cron.ts';
@@ -13,14 +12,6 @@ export async function deleteCronJob(jobId: string) {
         throw new TRPCError({
             code: 'NOT_FOUND',
             message: 'Cron job not found.',
-        });
-    }
-
-    if (isTavernManagedCronName(job.name)) {
-        throw new TRPCError({
-            code: 'FORBIDDEN',
-            message:
-                'This automation is managed by Tavern and cannot be deleted. Pause it instead.',
         });
     }
 

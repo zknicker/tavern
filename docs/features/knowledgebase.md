@@ -38,16 +38,15 @@ librarian, lessons, output, inventory, datasets, and archive workflows.
 * **Status.** Cortex reports the resolved hub path, config source, topic counts,
   page counts, and filesystem access.
 * **Health.** A status card in the sidebar rolls up Cortex health: hub access,
-  todos (llm-wiki inventory records), the latest librarian scan per topic
-  (structured data from `.librarian/scan-results.json`), and managed
-  maintenance run state. Opening it shows the health page: todos waiting on
-  you render as question cards — answering spawns an agent chat that applies
-  the decision to the wiki — while the agent's own todos render as a queue
-  with processing state, next-run time, and recent completions. Below that,
-  per-article staleness and quality scores with flags, and trend charts of
-  average staleness, quality, and open escalations over time. Health is
-  derived purely from facts; the wiki files stay the source of truth, and
-  history is an append-only Runtime projection.
+  the open todo count (llm-wiki inventory records), the latest librarian scan
+  per topic (structured data from `.librarian/scan-results.json`), and
+  pipeline run state. Opening it shows the health page: run tiles for the
+  compile, librarian, and todo jobs, the todo queue with per-record status,
+  processing state, next-run time, and recent completions, per-article
+  staleness and quality scores with flags, and trend charts of average
+  staleness and quality over time. Health is derived purely from facts; the
+  wiki files stay the source of truth, and history is an append-only Runtime
+  projection.
 
 ## Contract
 
@@ -62,10 +61,9 @@ Topic wikis live under `topics/<slug>/`. Archived topics live under
 hidden unless a caller explicitly includes archived topics.
 
 Runtime exposes a small read API. The App renders the Cortex tab from that API.
-Scheduled wiki work belongs to Tasks and Runtime crons, where agents can run the
-managed `wiki` skill. Tavern ships managed default crons for the regular
-llm-wiki maintenance cadence (compile, lint, librarian); see
-[Automations](automations.md#managed-automations).
+Wiki maintenance runs as Runtime jobs that spawn agent turns with the managed
+`wiki` skill when the pipeline has work (compile, librarian, todos); see
+[Cortex Lifecycle](cortex-lifecycle.md).
 
 Runtime packages llm-wiki for managed Hermes. Startup copies the bundled
 workflow skill directory to `HERMES_HOME/skills/wiki` and passes the resolved

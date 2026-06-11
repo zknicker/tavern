@@ -4,13 +4,11 @@ import { cn } from '../../lib/utils.ts';
 const stateCopy = {
     degraded: 'Hub unreachable',
     healthy: 'Cortex healthy',
-    needs_attention: 'Needs your call',
 } as const;
 
 const stateDotClass = {
     degraded: 'bg-error',
     healthy: 'bg-success',
-    needs_attention: 'bg-warning',
 } as const;
 
 export function CortexHealthCard({
@@ -23,9 +21,10 @@ export function CortexHealthCard({
     onOpen: () => void;
 }) {
     const state = health?.state ?? 'healthy';
-    const escalationCount =
-        health?.todos.filter((todo) => todo.owner === 'user' && todo.status === 'proposed')
-            .length ?? 0;
+    const openTodoCount =
+        health?.todos.filter(
+            (todo) => !['archived', 'ingested', 'superseded'].includes(todo.status)
+        ).length ?? 0;
 
     return (
         <button
@@ -47,8 +46,8 @@ export function CortexHealthCard({
                     {stateCopy[state]}
                 </span>
                 <span className="block truncate text-muted-foreground text-sm">
-                    {escalationCount > 0
-                        ? `${escalationCount} todo${escalationCount === 1 ? '' : 's'} waiting on you`
+                    {openTodoCount > 0
+                        ? `${openTodoCount} todo${openTodoCount === 1 ? '' : 's'} queued`
                         : health
                           ? `${health.status.topicCount} topics · ${health.status.pageCount} pages`
                           : 'Checking…'}

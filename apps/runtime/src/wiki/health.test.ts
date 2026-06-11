@@ -38,7 +38,7 @@ describe('cortex health', () => {
         expect(health.status.topicCount).toBe(1);
     });
 
-    test('needs attention with escalations and surfaces the latest report', async () => {
+    test('surfaces todos and the latest report; user-owned records stay informational', async () => {
         await writeTopicFile(
             'project-notes',
             'inventory/verify-claim.md',
@@ -85,7 +85,7 @@ describe('cortex health', () => {
 
         const health = await getCortexHealth();
 
-        expect(health.state).toBe('needs_attention');
+        expect(health.state).toBe('healthy');
         expect(health.todos).toEqual([
             expect.objectContaining({
                 owner: 'user',

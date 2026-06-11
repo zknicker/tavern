@@ -1,25 +1,31 @@
 ---
-summary: How Cortex knowledge flows end to end — ingest to raw sources, compile to articles, scheduled maintenance, escalations, and the health surface.
+summary: How Cortex knowledge flows end to end — ingest to raw sources, compile to articles, librarian scoring, the todo pipeline, and the health surface.
 read_when:
   - understanding how knowledge enters, compiles, and stays healthy in Cortex
-  - changing wiki maintenance automations, the compile trigger, escalations, or the health surface
+  - changing the wiki maintenance jobs, todo pipeline, or the health surface
 ---
 
 # Cortex Lifecycle
 
 Cortex is the agent's durable knowledge: plain Markdown topic wikis. This is
 the loop — material in, compiled knowledge out, health maintained without
-report review.
+review or sign-off.
 
 Principles:
 
 * **Files are the source of truth.** Tavern's database holds only derived,
   rebuildable projections.
-* **The page tree stays pure knowledge.** Operational artifacts live in dot
-  directories, hidden from browsing and search.
-* **Maintenance is agent work.** Findings become wiki edits or queued
-  follow-ups, not reports.
-* **Escalation is a last resort.** Nothing pings chat uninvited.
+* **The wiki is a pipeline; jobs drain it.** Runtime jobs check for work every
+  15 minutes with cheap filesystem reads and run one focused agent turn only
+  when there is real work. No crons; time enters only as the librarian's
+  weekly rhythm.
+* **Maintenance is agent work.** Findings become wiki edits or queued todos —
+  never reports to review, never questions parked on the user. Uncertainty is
+  recorded in the data (confidence, `verified`), and you correct things in
+  conversation.
+* **Each run finishes its own job site.** Inline work is what is already on
+  disk plus mechanical repair; anything needing the outside world or rewrites
+  is filed as a todo.
 
 ## The Shape
 
@@ -28,7 +34,7 @@ hub
 └── topics/<topic>/
     ├── raw/          immutable sources — what was ingested, verbatim
     ├── wiki/         compiled articles — synthesized, cross-linked, cited
-    ├── inventory/    work queue — proposed follow-ups and escalations
+    ├── inventory/    the todo queue — follow-up records with status/priority
     ├── datasets/     indexed structured data
     ├── output/       generated deliverables
     ├── log.md        append-only activity log
@@ -44,10 +50,9 @@ you: "remember this" ──► agent ingests in the current turn
                       raw/ source file        ◄── full content, queryable
                        + log.md entry             immediately
                               │
-                              │ compile — the Wiki upkeep automation
-                              │   • daily at 4:30
-                              │   • sooner when 5+ sources are pending
-                              │     (a 15-minute Runtime check, no agent run)
+                              │ compile job — 15-minute check, runs when
+                              │   • 5+ sources are pending, or
+                              │   • one has waited ~6 hours
                               ▼
                    wiki/ articles — synthesized,
                    cross-linked, cited back to raw/
@@ -57,69 +62,49 @@ The ingest-to-compile gap barely costs recall: raw files hold full fetched
 content and are indexed immediately. Compiling adds what raw lacks — synthesis
 across sources, confidence ratings, links into existing articles.
 
-Net: research dumps compile within the hour; a stray source or two waits at
-most until the next morning. A settle window lets batch ingests finish first,
-a one-hour cooldown stops trigger stacking, and pausing upkeep pauses the
-trigger. Agent-driven research compiles inline in the same run.
+Net: research dumps compile within the hour; a stray source waits a few hours
+so small ingests batch. A settle window lets in-flight batches finish, a
+one-hour cooldown stops runs stacking, and each compile turn ends with a
+structural pass over the wikis it changed. Agent-driven research compiles
+inline in the same run.
 
 ## Staying Healthy
 
-Three managed automations, created once the hub has an active topic, drift-
-repaired hourly. Each compile or upkeep write ends with a structural pass over
-the wikis it touched, so damage heals in the run that caused it.
-
 ```
-weekly: Wiki lint            weekly: Wiki librarian         daily: Wiki upkeep
-│ deep structural pass:      │ scores staleness + quality   │ compiles new
-│ indexes, broken links,     │ repairs what is safe         │ sources, tidies
-│ missing backlinks          │ files judgment items         │ what it touched
-                             │   as todos ──┐
-                                            ▼
-                              todos (inventory/ records)
-                              worked one at a time: a 15-minute
-                              Runtime check runs one agent turn
-                              per open todo, spaced by a cooldown
+weekly: librarian job                     every 15 min: todo job
+│ scores every article                    │ queue empty? → free, no run
+│ (staleness + quality)                   │ otherwise: one agent turn works
+│ repairs what is mechanical              │ the top todo and stops
+│ recompiles from raw already on disk     │ (~45 min between turns)
+│ files outside-world work ──────────────►│
+│   as todos                              ▼
+                                  resolved, or blocked with the
+                                  reason + affected claims marked
+                                  low-confidence / unverified
 ```
 
-The librarian writes machine-readable scan results, then acts in the same run:
-mechanical fixes, recompiles where raw already holds newer material, and
-judgment items (unverified claims, thin coverage, dedup candidates) filed as
-todos. Todo processing drains that queue steadily — one focused agent run per
-record, nothing when it is empty — and a todo that keeps failing gets escalated
-or marked blocked instead of retrying forever.
+The do-vs-file litmus, for every run: **work with what's on disk inline;
+anything needing the outside world (fetches, research) or prose rewrites
+becomes a todo.** Detection is cheap and comprehensive; treatment is expensive
+and per-item — the queue is the buffer between them, and it gives each finding
+a durable record with attempt history instead of a slot in some giant run.
 
-## When The Agent Needs You
-
-```
-todo the agent cannot resolve autonomously
-(claim verification, retraction calls, paid or private access)
-                      │  last resort
-                      ▼
-         todo marked for you, with a
-         one-line question it can act on
-                      │
-                      ▼
-     Cortex health page card + homepage highlight
-                      │  you type a decision
-                      ▼
-     agent chat (not pinned) applies it to the wiki
-```
-
-The only human gate in the loop. An unanswered escalation blocks only its own
-record.
+There is no human gate. A todo the agent can't finish gets blocked with its
+reason, and the affected claims get marked so answers hedge; if it matters,
+it surfaces in conversation and you settle it there.
 
 ## Watching It Work
 
-The sidebar health card rolls everything into one state — healthy, needs your
-call, or hub unreachable. The health page behind it: your todos as question
-cards, the agent's todo queue with processing state and next-run time, recent
-completions, the latest librarian scan per topic (per-article scores and
-flags), automation run state, and trend charts.
+The sidebar health card rolls everything into one state — healthy or hub
+unreachable — with the open todo count. The health page behind it: pipeline
+run tiles (compile, librarian, todos — last run, running now, next run), the
+todo queue with per-record status and recent completions, the latest librarian
+scan per topic (per-article scores and flags), and trend charts.
 
 ```
 wiki files (source of truth)
   ├─► Cortex tab          browse, search, backlinks
-  ├─► todos               health page queue; yours become question cards
+  ├─► inventory/ records  health page todo queue
   ├─► .librarian/ scans   health page score table
   └─► hourly sampler ───► health history ───► trend charts
                           (derived, append-only, rebuildable)
@@ -130,13 +115,10 @@ wiki files (source of truth)
 | Work | Runs | Agent run? |
 | --- | --- | --- |
 | Ingest | in chat, on request | the current turn |
-| Compile check | every 15 minutes (Runtime job) | no — filesystem only |
-| Wiki upkeep | daily 4:30, sooner at 5+ pending sources | yes |
-| Todo processing | 15-minute check; one todo per run, ~45 min apart | one per open todo |
-| Wiki lint | weekly, Monday 5:00 | yes |
-| Wiki librarian | weekly, Saturday 6:00 | yes — cost tracks problem density |
-| Health history sampler | hourly (Runtime job) | no |
-| Automation reconciler | hourly and at startup (Runtime job) | no |
+| Compile | 15-min check; 5+ pending or one ~6h old | one per batch |
+| Todos | 15-min check; one record per run, ~45 min apart | one per open todo |
+| Librarian | weekly | yes — cost tracks problem density |
+| Health history sampler | hourly (no agent) | no |
 
 Audits, source refresh, research runs, outputs, dataset indexing, and topic
 archiving run on demand in chat.
@@ -144,6 +126,6 @@ archiving run on demand in chat.
 ## Related Docs
 
 * [Cortex](knowledgebase.md) — browsing, search, backlinks, hub resolution
-* [Automations](automations.md#managed-automations) — managed automation
-  contract and guardrails
+* [Automations](automations.md) — user automations; wiki maintenance is
+  Runtime jobs, not automations
 * [Cortex spec](../../specs/cortex.md) — normative design

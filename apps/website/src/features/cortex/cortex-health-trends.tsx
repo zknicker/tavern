@@ -22,13 +22,6 @@ const scoresConfig = {
     },
 } satisfies ChartConfig;
 
-const escalationsConfig = {
-    escalations: {
-        colors: { dark: ['#fbbf24'], light: ['#b45309'] },
-        label: 'Open escalations',
-    },
-} satisfies ChartConfig;
-
 export function CortexHealthTrends({ history }: { history: HistoryEntry[] }) {
     const data = buildTrendData(history);
     if (data.length < 2) {
@@ -36,56 +29,26 @@ export function CortexHealthTrends({ history }: { history: HistoryEntry[] }) {
     }
 
     return (
-        <div className="mt-4 grid grid-cols-1 gap-2 lg:grid-cols-2">
-            <div className="rounded-lg bg-muted/40 px-3 pt-2.5 pb-1">
-                <p className="text-muted-foreground text-sm">Staleness & quality</p>
-                <EvilLineChart
-                    className="mt-1 h-36 w-full"
-                    config={scoresConfig}
-                    data={data}
-                    xDataKey="day"
-                >
-                    <Grid />
-                    <XAxis dataKey="day" />
-                    <YAxis domain={[0, 100]} />
-                    <Tooltip />
-                    <Line
-                        curveType="monotone"
-                        dataKey="staleness"
-                        glowing
-                        lineProps={{ dot: false }}
-                    />
-                    <Line
-                        curveType="monotone"
-                        dataKey="quality"
-                        glowing
-                        lineProps={{ dot: false }}
-                    />
-                </EvilLineChart>
-            </div>
-            <div className="rounded-lg bg-muted/40 px-3 pt-2.5 pb-1">
-                <p className="text-muted-foreground text-sm">Open escalations</p>
-                <EvilLineChart
-                    className="mt-1 h-36 w-full"
-                    config={escalationsConfig}
-                    data={data}
-                    xDataKey="day"
-                >
-                    <Grid />
-                    <XAxis dataKey="day" />
-                    <YAxis allowDecimals={false} domain={[0, 'auto']} />
-                    <Tooltip />
-                    <Line curveType="stepAfter" dataKey="escalations" lineProps={{ dot: false }} />
-                </EvilLineChart>
-            </div>
+        <div className="mt-4 rounded-lg bg-muted/40 px-3 pt-2.5 pb-1">
+            <p className="text-muted-foreground text-sm">Staleness & quality</p>
+            <EvilLineChart
+                className="mt-1 h-36 w-full"
+                config={scoresConfig}
+                data={data}
+                xDataKey="day"
+            >
+                <Grid />
+                <XAxis dataKey="day" />
+                <YAxis domain={[0, 100]} />
+                <Tooltip />
+                <Line curveType="monotone" dataKey="staleness" glowing lineProps={{ dot: false }} />
+                <Line curveType="monotone" dataKey="quality" glowing lineProps={{ dot: false }} />
+            </EvilLineChart>
         </div>
     );
 }
 
-/**
- * One point per day: the last sample per topic that day, scores averaged
- * across topics, escalations summed.
- */
+/** One point per day: the last sample per topic that day, scores averaged across topics. */
 function buildTrendData(history: HistoryEntry[]) {
     const byDay = new Map<string, Map<string, HistoryEntry>>();
     for (const entry of history) {
@@ -107,7 +70,6 @@ function buildTrendData(history: HistoryEntry[]) {
                 .filter((value): value is number => value !== null);
             return {
                 day: formatDay(day),
-                escalations: entries.reduce((sum, entry) => sum + entry.escalationsOpen, 0),
                 quality: average(quality),
                 staleness: average(staleness),
             };

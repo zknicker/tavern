@@ -51,7 +51,6 @@ import {
     agentRuntimeSessionResyncSchema,
     agentRuntimeStartModelProviderOAuthSchema,
     agentRuntimeSubmitModelProviderOAuthSchema,
-    isTavernManagedCronName,
 } from '@tavern/api';
 import {
     getRuntimePort,
@@ -387,7 +386,6 @@ export class LocalHermesClient extends LocalHermesUnsupportedSurfaces {
                     description: mapped.description,
                     enabled: mapped.enabled,
                     id: mapped.id,
-                    managed: mapped.managed,
                     name: mapped.name,
                     schedule: mapped.schedule,
                     state: mapped.state,
@@ -1188,7 +1186,6 @@ function mapHermesCronJob(value: unknown, fallback: CronFallback = {}): AgentRun
         description: fallback.description ?? null,
         enabled,
         id,
-        managed: isTavernManagedCronName(name),
         name,
         payload:
             fallback.payload ??

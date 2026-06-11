@@ -15,7 +15,6 @@ describe('buildCronList', () => {
                 description: 'Daily standup',
                 enabled: true,
                 id: 'cron:standup',
-                managed: false,
                 name: 'Standup',
                 schedule: {
                     expr: '0 9 * * 1-5',
@@ -44,7 +43,6 @@ describe('buildCronList', () => {
                 description: 'Daily standup',
                 enabled: true,
                 id: 'cron:standup',
-                managed: false,
                 name: 'Standup',
                 schedule: {
                     expr: '0 9 * * 1-5',
@@ -67,7 +65,6 @@ describe('buildCronList', () => {
                 description: 'Daily standup',
                 enabled: true,
                 id: 'cron:standup',
-                managed: false,
                 name: 'Standup',
                 schedule: {
                     expr: '0 9 * * 1-5',
@@ -132,7 +129,6 @@ describe('buildCronList', () => {
                 description: 'Daily standup',
                 enabled: true,
                 id: 'cron:standup',
-                managed: false,
                 name: 'Standup',
                 schedule: {
                     expr: '0 9 * * 1-5',

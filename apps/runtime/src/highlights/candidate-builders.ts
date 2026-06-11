@@ -6,7 +6,6 @@ import type {
 import type { Database } from '../db/sqlite';
 import { namedParams } from '../db/sqlite';
 import { createLocalHermesClient } from '../hermes/local-client';
-import { isUserTodo, listWikiTodos } from '../wiki/todos';
 import { recentWindowMs, toolVolumeWindowMs } from './constants';
 import { formatAgo, formatCount } from './format';
 import { pickHeadline } from './phrases';
@@ -35,44 +34,9 @@ export async function buildHighlightCandidates(input: {
         buildQuestFinishedHighlight(input),
         buildTroubleHighlight(input),
         await buildScheduledRunHighlight(input),
-        await buildWikiAttentionHighlight(input),
     ];
 
     return candidates.filter((candidate): candidate is HighlightCandidate => Boolean(candidate));
-}
-
-/**
- * Surfaces wiki inventory follow-ups whose next action belongs to the user
- * (llm-wiki convention: `status: proposed` plus `owner: user`). The managed
- * wiki crons park human-gated work this way instead of nagging in chat.
- */
-async function buildWikiAttentionHighlight(input: {
-    now: Date;
-    slotStart: Date;
-}): Promise<HighlightCandidate | null> {
-    const followUps = (await listWikiTodos()).filter(isUserTodo);
-    if (followUps.length === 0) {
-        return null;
-    }
-
-    const topics = [...new Set(followUps.map((todo) => todo.topic))];
-
-    return createCandidate({
-        category: 'wiki_attention',
-        metric: {
-            count: followUps.length,
-            records: followUps.slice(0, 10).map((todo) => ({ path: todo.path, topic: todo.topic })),
-            topics,
-        },
-        now: input.now,
-        receipt: `${formatCount(followUps.length, 'wiki follow-up')} in ${formatCount(
-            topics.length,
-            'topic'
-        )} waiting on your call in Cortex.`,
-        slotStart: input.slotStart,
-        sourceRefs: [],
-        windowStart: input.slotStart,
-    });
 }
 
 function buildToolVolumeHighlight(input: {

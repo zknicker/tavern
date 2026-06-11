@@ -94,22 +94,24 @@ Runtime does not own:
 
 Research, ingestion, compilation, audit, librarian, lessons, generated outputs,
 inventory maintenance, dataset maintenance, and archive lifecycle run through
-llm-wiki. Tavern launches scheduled or repeated wiki work through Tasks and
-Runtime crons.
+llm-wiki. Routine wiki maintenance is a pipeline drained by Runtime jobs — no
+crons, no human gate:
 
-Tavern ships managed default crons for the regular llm-wiki maintenance
-cadence: daily upkeep (incremental compile plus a structural pass over changed
-wikis), weekly `lint --fix`, and a weekly librarian scan that files judgment
-items as proposed inventory. Runtime reconciles them into Hermes once the hub
-has an active topic. A 15-minute Runtime job (no agent run) counts uncompiled
-raw sources per topic and triggers upkeep at 5+ pending sources, so research
-dumps compile within the hour; smaller ingests wait for the daily run, which
-already bounds their delay to a day.
+* **Compile job.** A 15-minute filesystem check counts uncompiled raw sources
+  per topic from `log.md` order; at 5+ pending sources (or one waiting ~6
+  hours) it runs one agent turn that compiles them and finishes with a
+  structural pass over changed wikis. Settle window and cooldown bound runs.
+* **Librarian job.** Weekly: scores staleness and quality, writes
+  `.librarian/scan-results.json`, repairs mechanical findings, recompiles from
+  raw already on disk, and files outside-world work as inventory records.
+* **Todo job.** A 15-minute check drains inventory records one agent turn at a
+  time, spaced by a cooldown. A record the agent cannot finish is blocked with
+  its reason and the affected claims marked low-confidence — work is never
+  parked on the user; corrections happen in conversation. Records with
+  `owner: user` are treated as user-authored and skipped.
 
-Inventory records surface in the product as todos. A second 15-minute Runtime
-job drains them without a cron: one agent turn per open record, spaced by a
-cooldown, skipping records escalated to the user; see
-[Automations](../docs/features/automations.md#managed-automations).
+Inventory records surface in the product as todos; see
+[Cortex Lifecycle](../docs/features/cortex-lifecycle.md).
 
 ## App Surface
 
@@ -122,10 +124,9 @@ The Cortex tab shows:
 * file metadata
 * wikilinks and backlinks
 * active and archived topic coverage
-* a health card and health page: derived hub health, managed run state, the
-  latest librarian report per topic, the todo queue with processing state and
-  recent completions, and escalated-todo cards whose answers spawn an agent
-  chat that applies the decision to the wiki
+* a health card and health page: derived hub health, pipeline run state
+  (compile, librarian, todos), the latest librarian report per topic, the
+  todo queue with processing state and recent completions, and trend charts
 
 Settings and Memory show hub readiness and counts. They do not expose embedding
 or schema controls.

@@ -1,36 +1,72 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
-import type { CortexHealth, CortexLibrarianScan, CortexManagedRun } from '@tavern/api';
-import { createLocalHermesClient } from '../hermes/local-client';
+import type { CortexHealth, CortexLibrarianScan, CortexMaintenanceRun } from '@tavern/api';
 import { getRuntimeJobScheduleNextRunAt } from '../jobs/manager';
+import { getWikiCompileStatus } from './compile-run';
 import { listWikiHealthHistory } from './history';
+import { getWikiLibrarianStatus } from './librarian-run';
 import { getCortexStatus, listCortexTopics } from './store';
 import { getWikiTodoProcessing, todoDrainCooldownMs } from './todo-drain';
-import { isUserTodo, listWikiTodos, nextDrainableTodo } from './todos';
+import { listWikiTodos, nextDrainableTodo } from './todos';
 
 /**
  * Health rollup for the Cortex tab: derived purely from facts — hub access,
- * todos (inventory records), latest librarian scans, and managed cron run
- * state. The wiki files stay the source of truth; this is a projection.
+ * todos (inventory records), latest librarian scans, and pipeline run state.
+ * The wiki files stay the source of truth; this is a projection.
  */
 export async function getCortexHealth(): Promise<CortexHealth> {
     const status = await getCortexStatus();
-    const [todos, scans, runs] = await Promise.all([
+    const [todos, scans] = await Promise.all([
         status.readable ? listWikiTodos() : Promise.resolve([]),
         status.readable ? listLatestLibrarianScans() : Promise.resolve([]),
-        listManagedWikiRuns(),
     ]);
-    const needsUser = todos.some(isUserTodo);
+    const todoProcessing = await resolveTodoProcessing(todos);
 
     return {
         history: listWikiHealthHistory(),
-        runs,
+        runs: await listWikiMaintenanceRuns(todoProcessing),
         scans,
-        state: status.readable ? (needsUser ? 'needs_attention' : 'healthy') : 'degraded',
+        state: status.readable ? 'healthy' : 'degraded',
         status,
-        todoProcessing: await resolveTodoProcessing(todos),
+        todoProcessing,
         todos,
     };
+}
+
+/**
+ * One tile per pipeline stage. Compile and todos are condition-driven — their
+ * timestamps mark the last real agent run, not the last check — while the
+ * librarian carries the next scheduled pass.
+ */
+async function listWikiMaintenanceRuns(
+    todoProcessing: Awaited<ReturnType<typeof resolveTodoProcessing>>
+): Promise<CortexMaintenanceRun[]> {
+    const compile = getWikiCompileStatus();
+    const librarian = getWikiLibrarianStatus();
+    const librarianNextRunAt = await getRuntimeJobScheduleNextRunAt('wiki-librarian').catch(
+        () => null
+    );
+
+    return [
+        {
+            lastRunAtMs: compile.lastRunAtMs,
+            name: 'Compile',
+            nextRunAtMs: null,
+            running: compile.running,
+        },
+        {
+            lastRunAtMs: librarian.lastRunAtMs,
+            name: 'Librarian',
+            nextRunAtMs: librarianNextRunAt ? Date.parse(librarianNextRunAt) : null,
+            running: librarian.running,
+        },
+        {
+            lastRunAtMs: todoProcessing.lastRunAtMs,
+            name: 'Todos',
+            nextRunAtMs: todoProcessing.nextRunAtMs,
+            running: todoProcessing.runningPath !== null,
+        },
+    ];
 }
 
 async function resolveTodoProcessing(todos: Awaited<ReturnType<typeof listWikiTodos>>) {
@@ -108,27 +144,6 @@ function toLibrarianArticle(articlePath: string, value: unknown) {
 
 function worstScore(article: { qualityScore: null | number; stalenessScore: null | number }) {
     return Math.min(article.stalenessScore ?? 100, article.qualityScore ?? 100);
-}
-
-async function listManagedWikiRuns(): Promise<CortexManagedRun[]> {
-    const client = createLocalHermesClient();
-    try {
-        const { jobs } = await client.listCronJobs();
-        return jobs
-            .filter((job) => job.managed)
-            .map((job) => ({
-                enabled: job.enabled,
-                lastRunAtMs: job.state.lastRunAtMs ?? null,
-                lastRunStatus: job.state.lastRunStatus ?? null,
-                name: job.name,
-                nextRunAtMs: job.state.nextRunAtMs ?? null,
-            }))
-            .sort((left, right) => left.name.localeCompare(right.name));
-    } catch {
-        return [];
-    } finally {
-        client.close();
-    }
 }
 
 function readString(value: unknown) {

@@ -39,18 +39,11 @@ export function Overview() {
             jobCount={jobs.length}
             memoryCount={memoryCount}
             receipt={selectedHighlight?.receipt ?? null}
-            receiptTo={buildHighlightLink(selectedHighlight)}
+            receiptTo={null}
             sessionsCount={sessions.length}
             workerCount={workers.length}
         />
     );
-}
-
-function buildHighlightLink(highlight: HighlightListOutput['highlights'][number] | null) {
-    if (highlight?.category !== 'wiki_attention') {
-        return null;
-    }
-    return '/dashboard/cortex?view=health';
 }
 
 function pickLandingHighlight(highlights: HighlightListOutput['highlights']) {

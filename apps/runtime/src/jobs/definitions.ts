@@ -42,72 +42,35 @@ export const runtimeCapabilitiesRefreshJob: RuntimeJobDefinition = {
     slug: 'refresh-runtime-capabilities',
 };
 
-export const syncManagedCronsJob: RuntimeJobDefinition = {
+export const wikiCompileJob: RuntimeJobDefinition = {
     concurrency: 1,
     defaultInput: {},
     description:
-        'Keeps Tavern-managed default cron automations (wiki maintenance) in sync with their definitions.',
+        'Compiles pending wiki sources into articles when enough pile up or one waits too long.',
     disabledReason() {
         return null;
     },
-    displayName: 'Sync Managed Automations',
+    displayName: 'Compile Wiki Sources',
     inputSchema: emptyRuntimeJobInputSchema,
     requiredCapabilities: ['gateway'],
     async run(context) {
         const { createLocalHermesClient } = await import('../hermes/local-client');
-        const { syncManagedCrons } = await import('../hermes/managed-crons');
+        const { runWikiCompile } = await import('../wiki/compile-run');
         const client = createLocalHermesClient();
         try {
-            const result = await syncManagedCrons(client);
-            if (result.skippedReason === 'no-active-topics') {
-                await context.log(
-                    'Skipped managed automation creation: the wiki hub has no active topics yet.'
-                );
-                return;
-            }
-            await context.log(
-                `Managed automations in sync (${result.created.length} created, ${result.updated.length} updated, ${result.removed.length} removed).`
-            );
-        } finally {
-            client.close();
-        }
-    },
-    schedule: {
-        everyMs: hourMs,
-        kind: 'interval',
-        runOnStart: true,
-    },
-    slug: 'sync-managed-crons',
-};
-
-export const wikiCompileTriggerJob: RuntimeJobDefinition = {
-    concurrency: 1,
-    defaultInput: {},
-    description: 'Triggers the wiki upkeep automation when uncompiled sources pile up.',
-    disabledReason() {
-        return null;
-    },
-    displayName: 'Trigger Wiki Compile',
-    inputSchema: emptyRuntimeJobInputSchema,
-    requiredCapabilities: ['gateway'],
-    async run(context) {
-        const { createLocalHermesClient } = await import('../hermes/local-client');
-        const { runWikiCompileTrigger } = await import('../wiki/compile-pending');
-        const client = createLocalHermesClient();
-        try {
-            const outcome = await runWikiCompileTrigger(client);
+            const outcome = await runWikiCompile(client);
             if (outcome.kind === 'idle') {
-                await context.log('No topics have enough uncompiled sources.');
+                await context.log('No topics have compile-worthy pending sources.');
                 return;
             }
-            if (outcome.kind === 'skipped') {
+            if (outcome.kind === 'cooling') {
                 await context.log(
-                    `Skipped compile trigger for ${outcome.topics.join(', ')}: ${describeCompileTriggerSkip(outcome.reason)}`
+                    `Waiting out the cooldown; next compile runs after ${new Date(outcome.nextAtMs).toISOString()}.`
                 );
                 return;
             }
             await context.log(
-                `Triggered wiki upkeep: uncompiled sources piled up in ${outcome.topics.join(', ')}.`
+                `Compiled pending sources in ${outcome.topics.join(', ')}${outcome.summary ? `: ${outcome.summary}` : '.'}`
             );
         } finally {
             client.close();
@@ -118,7 +81,43 @@ export const wikiCompileTriggerJob: RuntimeJobDefinition = {
         kind: 'interval',
         runOnStart: false,
     },
-    slug: 'wiki-compile-trigger',
+    slug: 'wiki-compile',
+};
+
+export const wikiLibrarianJob: RuntimeJobDefinition = {
+    concurrency: 1,
+    defaultInput: {},
+    description:
+        'Weekly librarian pass: scores articles, repairs what is mechanical, files the rest as todos.',
+    disabledReason() {
+        return null;
+    },
+    displayName: 'Run Wiki Librarian',
+    inputSchema: emptyRuntimeJobInputSchema,
+    requiredCapabilities: ['gateway'],
+    async run(context) {
+        const { createLocalHermesClient } = await import('../hermes/local-client');
+        const { runWikiLibrarian } = await import('../wiki/librarian-run');
+        const client = createLocalHermesClient();
+        try {
+            const outcome = await runWikiLibrarian(client);
+            if (outcome.kind === 'no-topics') {
+                await context.log('Skipped librarian pass: the wiki hub has no active topics.');
+                return;
+            }
+            await context.log(
+                `Librarian pass finished${outcome.summary ? `: ${outcome.summary}` : '.'}`
+            );
+        } finally {
+            client.close();
+        }
+    },
+    schedule: {
+        everyMs: 7 * 24 * hourMs,
+        kind: 'interval',
+        runOnStart: false,
+    },
+    slug: 'wiki-librarian',
 };
 
 export const wikiTodoDrainJob: RuntimeJobDefinition = {
@@ -207,10 +206,10 @@ export const tavernHighlightsJob: RuntimeJobDefinition = {
 
 export const runtimeJobDefinitions = [
     runtimeCapabilitiesRefreshJob,
-    syncManagedCronsJob,
     tavernHighlightsJob,
-    wikiCompileTriggerJob,
+    wikiCompileJob,
     wikiHealthHistoryJob,
+    wikiLibrarianJob,
     wikiTodoDrainJob,
 ] as const;
 
@@ -220,16 +219,6 @@ export function getRuntimeJobDefinition(slug: RuntimeJobDefinition['slug']): Run
         throw new Error(`Unknown Runtime job: ${slug}`);
     }
     return definition;
-}
-
-function describeCompileTriggerSkip(reason: 'cooldown' | 'cron-missing' | 'cron-paused'): string {
-    if (reason === 'cron-missing') {
-        return 'the managed upkeep automation does not exist yet.';
-    }
-    if (reason === 'cron-paused') {
-        return 'the upkeep automation is paused.';
-    }
-    return 'upkeep ran recently or is still running.';
 }
 
 function readRuntimeJobInputRecord(input: unknown): Record<string, unknown> {

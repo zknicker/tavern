@@ -1,6 +1,12 @@
 import type { CortexTodo, CortexTodoProcessing } from '@tavern/api';
 import { getDb } from '../db/connection';
-import { type Database, namedParams } from '../db/sqlite';
+import type { Database } from '../db/sqlite';
+import {
+    readWikiRunTimestamp,
+    runWikiAgentTurn,
+    type WikiAgentClient,
+    writeWikiRunTimestamp,
+} from './agent-run';
 import { listWikiTodos, nextDrainableTodo } from './todos';
 
 export const todoDrainCooldownMs = 45 * 60 * 1000;
@@ -8,14 +14,6 @@ const todoDrainSessionKey = 'tavern-wiki-todos';
 const lastDrainKey = 'wiki_todo_last_drain_at';
 
 let runningTodo: { path: string; topic: string } | null = null;
-
-export interface TodoDrainClient {
-    streamChat(input: {
-        content: string;
-        sessionKey: string;
-        title?: null | string;
-    }): AsyncIterable<{ data?: unknown; event: string }>;
-}
 
 export type TodoDrainOutcome =
     | { kind: 'cooling'; nextAtMs: number }
@@ -29,7 +27,7 @@ export type TodoDrainOutcome =
  * one focused agent run at a time and an empty queue costs nothing.
  */
 export async function runWikiTodoDrain(
-    client: TodoDrainClient,
+    client: WikiAgentClient,
     db: Database = getDb(),
     nowMs: number = Date.now()
 ): Promise<TodoDrainOutcome> {
@@ -37,24 +35,20 @@ export async function runWikiTodoDrain(
     if (!todo) {
         return { kind: 'idle' };
     }
-    const lastRunAtMs = readLastDrainAtMs(db);
+    const lastRunAtMs = readWikiRunTimestamp(db, lastDrainKey);
     if (lastRunAtMs !== null && nowMs - lastRunAtMs < todoDrainCooldownMs) {
         return { kind: 'cooling', nextAtMs: lastRunAtMs + todoDrainCooldownMs };
     }
 
     runningTodo = { path: todo.path, topic: todo.topic };
     try {
-        let summary: null | string = null;
-        for await (const event of client.streamChat({
+        const summary = await runWikiAgentTurn(client, {
             content: buildTodoDrainPrompt(todo),
+            runName: 'todo',
             sessionKey: todoDrainSessionKey,
             title: 'Cortex todos',
-        })) {
-            if (event.event === 'assistant.completed') {
-                summary = readCompletedContent(event.data);
-            }
-        }
-        writeLastDrainAtMs(db, nowMs);
+        });
+        writeWikiRunTimestamp(db, lastDrainKey, nowMs);
         return { kind: 'drained', path: todo.path, summary, topic: todo.topic };
     } finally {
         runningTodo = null;
@@ -64,7 +58,7 @@ export async function runWikiTodoDrain(
 /** Processing state for the health surface; nextRunAtMs is filled in by the caller. */
 export function getWikiTodoProcessing(db: Database = getDb()): CortexTodoProcessing {
     return {
-        lastRunAtMs: readLastDrainAtMs(db),
+        lastRunAtMs: readWikiRunTimestamp(db, lastDrainKey),
         nextRunAtMs: null,
         runningPath: runningTodo?.path ?? null,
         runningTopic: runningTodo?.topic ?? null,
@@ -79,46 +73,15 @@ export function buildTodoDrainPrompt(todo: CortexTodo): string {
         'Complete that next action fully per references/inventory.md — research, ingest,',
         'compile, dedup, or profile as the record calls for — then move its status',
         'forward, append a short outcome note to the record body, update its updated',
-        'date, and append a log.md entry. If the record shows prior failed attempts or',
-        'the work needs the user (claim verification, retraction calls, paid or private',
-        'access), set owner: user with next_action rewritten as one short question, or',
-        'set status: blocked with the reason — do not retry endlessly. Do not start any',
-        'other inventory work. Finish with a one-line summary.',
+        'date, and append a log.md entry. If you cannot complete it — a source is',
+        'unreachable or paywalled, a claim cannot be corroborated, the work depends on',
+        'something that does not exist yet — set status: blocked with the reason in the',
+        'record body, and mark any affected article claims with lowered confidence or',
+        'verified: false so answers hedge accordingly. Do not retry endlessly and do',
+        'not park work on the user. Do not start any other inventory work; if you',
+        'notice new work, file it as its own proposed record. Finish with a one-line',
+        'summary.',
     ]
         .filter((line) => line !== null)
         .join(' ');
-}
-
-function readLastDrainAtMs(db: Database): null | number {
-    const row = db
-        .prepare('SELECT value FROM runtime_metadata WHERE key = $key')
-        .get(namedParams({ key: lastDrainKey })) as { value: string } | null;
-    if (!row) {
-        return null;
-    }
-    const parsed = Date.parse(row.value);
-    return Number.isNaN(parsed) ? null : parsed;
-}
-
-function writeLastDrainAtMs(db: Database, nowMs: number): void {
-    const timestamp = new Date(nowMs).toISOString();
-    db.prepare(
-        `INSERT INTO runtime_metadata (key, value, updated_at)
-         VALUES ($key, $value, $updatedAt)
-         ON CONFLICT(key) DO UPDATE SET
-            value = excluded.value,
-            updated_at = excluded.updated_at`
-    ).run(namedParams({ key: lastDrainKey, updatedAt: timestamp, value: timestamp }));
-}
-
-function readCompletedContent(data: unknown): null | string {
-    if (!data || typeof data !== 'object') {
-        return null;
-    }
-    const content = (data as { content?: unknown }).content;
-    if (typeof content !== 'string' || !content.trim()) {
-        return null;
-    }
-    const firstLine = content.trim().split('\n', 1)[0] ?? '';
-    return firstLine.slice(0, 300) || null;
 }

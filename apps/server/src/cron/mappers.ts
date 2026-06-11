@@ -1,8 +1,4 @@
-import {
-    type AgentRuntimeCron,
-    type AgentRuntimeCronRun,
-    isTavernManagedCronName,
-} from '@tavern/api';
+import type { AgentRuntimeCron, AgentRuntimeCronRun } from '@tavern/api';
 import {
     cronJobRunSchema,
     cronJobSchema,
@@ -13,7 +9,6 @@ import {
 export function mapCronJob(record: AgentRuntimeCron) {
     return cronJobSchema.parse({
         ...record,
-        managed: isTavernManagedCronName(record.name),
         syncedAt: record.updatedAt,
     });
 }
@@ -24,10 +19,7 @@ export function mapCronJobSummary(
         'agentId' | 'description' | 'enabled' | 'id' | 'name' | 'schedule' | 'state' | 'updatedAt'
     >
 ) {
-    return cronJobSummarySchema.parse({
-        ...record,
-        managed: isTavernManagedCronName(record.name),
-    });
+    return cronJobSummarySchema.parse(record);
 }
 
 export function createDefaultCronSyncState() {

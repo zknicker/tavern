@@ -49,8 +49,7 @@ export function CronEditor() {
     const optimisticCronRuns = useOptimisticCronRuns(job, cronRunsQuery.data?.runs ?? []);
     const isMissingJob = !isNew && cronJobQuery.status === 'success' && !job;
     const isPending = createMutation.isPending || updateMutation.isPending;
-    const isManaged = job?.managed ?? false;
-    const canEdit = !(isMissingJob || isManaged);
+    const canEdit = !isMissingJob;
     const shouldRenderForm = shouldRenderCronEditorPageForm({
         isLoading: cronJobQuery.isPending,
         isNew,
@@ -69,7 +68,6 @@ export function CronEditor() {
                 canEdit={canEdit}
                 canRunActions={Boolean(job)}
                 isDeleting={deleteMutation.isPending}
-                isManaged={isManaged}
                 isNew={isNew}
                 isPending={isPending}
                 isRunning={runMutation.isPending}
@@ -100,16 +98,6 @@ export function CronEditor() {
             {runMutation.error ? (
                 <div className="border-error/40 border-b bg-error-bg px-4 py-3">
                     <p className="text-error-foreground text-sm">{runMutation.error.message}</p>
-                </div>
-            ) : null}
-
-            {isManaged ? (
-                <div className="border-border border-b bg-muted/40 px-4 py-3">
-                    <p className="text-muted-foreground text-sm">
-                        This automation is managed by Tavern and keeps the Cortex wiki healthy. It
-                        can be paused, resumed, or run now, but its schedule and prompt cannot be
-                        edited.
-                    </p>
                 </div>
             ) : null}
 

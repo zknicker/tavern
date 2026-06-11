@@ -1,29 +1,28 @@
 import fs from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
-import type { AgentRuntimeCronList } from '@tavern/api';
 import { afterEach, beforeEach, describe, expect, test } from 'vitest';
-import {
-    type CompileTriggerClient,
-    isCompileTriggerDue,
-    listPendingCompileTopics,
-    runWikiCompileTrigger,
-} from './compile-pending';
+import { closeDb, getDb, initTestDb } from '../db/connection';
+import { ensureRuntimeSchema } from '../db/schema';
+import { isCompileDue, listPendingCompileTopics } from './compile-pending';
+import { getWikiCompileStatus, runWikiCompile, wikiCompileCooldownMs } from './compile-run';
 
 const nowMs = Date.parse('2026-06-11T12:00:00Z');
 const hourMs = 60 * 60 * 1000;
 
-describe('wiki compile trigger', () => {
+describe('wiki compile pipeline', () => {
     let hubPath: string;
     let previousHubPath: string | undefined;
 
     beforeEach(async () => {
+        ensureRuntimeSchema(initTestDb());
         previousHubPath = process.env.TAVERN_WIKI_HUB_PATH;
         hubPath = await fs.mkdtemp(path.join(os.tmpdir(), 'tavern-compile-pending-'));
         process.env.TAVERN_WIKI_HUB_PATH = hubPath;
     });
 
     afterEach(async () => {
+        closeDb();
         if (previousHubPath === undefined) {
             Reflect.deleteProperty(process.env, 'TAVERN_WIKI_HUB_PATH');
         } else {
@@ -55,6 +54,7 @@ describe('wiki compile trigger', () => {
         expect(pending).toEqual([
             {
                 newestPendingAtMs: nowMs - 2 * hourMs,
+                oldestPendingAtMs: nowMs - 3 * hourMs,
                 pendingCount: 2,
                 topic: 'coffee',
             },
@@ -74,99 +74,88 @@ describe('wiki compile trigger', () => {
         expect(await listPendingCompileTopics()).toEqual([]);
     });
 
-    test('falls back to the log entry date when the raw file is missing', async () => {
-        await writeTopicFile(
-            'coffee',
-            'log.md',
-            '## [2026-06-09] ingest | Gone (raw/articles/2026-06-09-gone.md)'
-        );
-
-        const pending = await listPendingCompileTopics();
-
-        expect(pending).toEqual([
-            {
-                newestPendingAtMs: Date.parse('2026-06-09T00:00:00Z'),
-                pendingCount: 1,
-                topic: 'coffee',
-            },
-        ]);
-    });
-
     test('topics without a log have nothing pending', async () => {
         await writeTopicFile('coffee', 'wiki/alpha.md', '# Alpha');
 
         expect(await listPendingCompileTopics()).toEqual([]);
     });
 
-    test('trigger decision: count threshold with a settle window', () => {
-        const base = { newestPendingAtMs: nowMs - hourMs };
+    test('compile is due on pile-up or straggler age, after the settle window', () => {
+        const settled = { newestPendingAtMs: nowMs - hourMs };
 
-        // A batch still settling never triggers, regardless of count.
+        // A batch still settling never compiles, regardless of count.
         expect(
-            isCompileTriggerDue(
+            isCompileDue(
                 {
                     newestPendingAtMs: nowMs - 5 * 60 * 1000,
+                    oldestPendingAtMs: nowMs - 8 * hourMs,
                     pendingCount: 9,
                     topic: 'coffee',
                 },
                 nowMs
             )
         ).toBe(false);
-        expect(isCompileTriggerDue({ ...base, pendingCount: 5, topic: 'coffee' }, nowMs)).toBe(
-            true
-        );
-        // Small ingests wait for the daily upkeep run.
-        expect(isCompileTriggerDue({ ...base, pendingCount: 4, topic: 'coffee' }, nowMs)).toBe(
-            false
-        );
+        // Pile-up rule.
+        expect(
+            isCompileDue(
+                { ...settled, oldestPendingAtMs: nowMs - hourMs, pendingCount: 5, topic: 'coffee' },
+                nowMs
+            )
+        ).toBe(true);
+        expect(
+            isCompileDue(
+                { ...settled, oldestPendingAtMs: nowMs - hourMs, pendingCount: 4, topic: 'coffee' },
+                nowMs
+            )
+        ).toBe(false);
+        // Straggler rule: one source waiting past the age limit compiles anyway.
+        expect(
+            isCompileDue(
+                {
+                    ...settled,
+                    oldestPendingAtMs: nowMs - 7 * hourMs,
+                    pendingCount: 1,
+                    topic: 'coffee',
+                },
+                nowMs
+            )
+        ).toBe(true);
     });
 
-    test('triggers the managed upkeep cron when a topic is due', async () => {
+    test('runs one compile turn for due topics and records the time', async () => {
         await seedDueTopic();
-        const client = fakeClient({ enabled: true, lastRunAtMs: nowMs - 2 * hourMs });
+        const client = fakeClient('Compiled 1 source into extraction.md.');
 
-        const outcome = await runWikiCompileTrigger(client, nowMs);
+        const outcome = await runWikiCompile(client, getDb(), nowMs);
 
-        expect(outcome).toEqual({ kind: 'triggered', topics: ['coffee'] });
-        expect(client.triggered).toEqual(['wiki-upkeep']);
+        expect(outcome).toEqual({
+            kind: 'compiled',
+            summary: 'Compiled 1 source into extraction.md.',
+            topics: ['coffee'],
+        });
+        expect(client.prompts).toHaveLength(1);
+        expect(client.prompts[0]).toContain('coffee');
+        expect(client.prompts[0]).toContain('file it as a proposed inventory record');
+        expect(getWikiCompileStatus(getDb()).lastRunAtMs).toBe(nowMs);
     });
 
-    test('skips when upkeep ran inside the cooldown window', async () => {
+    test('cools down between compile turns', async () => {
         await seedDueTopic();
-        const client = fakeClient({ enabled: true, lastRunAtMs: nowMs - 10 * 60 * 1000 });
+        const client = fakeClient('First.');
+        await runWikiCompile(client, getDb(), nowMs);
 
-        const outcome = await runWikiCompileTrigger(client, nowMs);
+        const outcome = await runWikiCompile(client, getDb(), nowMs + 60_000);
 
-        expect(outcome).toEqual({ kind: 'skipped', reason: 'cooldown', topics: ['coffee'] });
-        expect(client.triggered).toEqual([]);
+        expect(outcome).toEqual({ kind: 'cooling', nextAtMs: nowMs + wikiCompileCooldownMs });
+        expect(client.prompts).toHaveLength(1);
     });
 
-    test('skips when the user paused the upkeep cron', async () => {
-        await seedDueTopic();
-        const client = fakeClient({ enabled: false, lastRunAtMs: nowMs - 2 * hourMs });
-
-        const outcome = await runWikiCompileTrigger(client, nowMs);
-
-        expect(outcome).toEqual({ kind: 'skipped', reason: 'cron-paused', topics: ['coffee'] });
-        expect(client.triggered).toEqual([]);
-    });
-
-    test('skips when the managed upkeep cron does not exist yet', async () => {
-        await seedDueTopic();
-        const client = fakeClient(null);
-
-        const outcome = await runWikiCompileTrigger(client, nowMs);
-
-        expect(outcome).toEqual({ kind: 'skipped', reason: 'cron-missing', topics: ['coffee'] });
-        expect(client.triggered).toEqual([]);
-    });
-
-    test('idles without consulting the gateway when nothing is pending', async () => {
+    test('idles without an agent run when nothing is due', async () => {
         await writeTopicFile('coffee', 'wiki/alpha.md', '# Alpha');
-        const client = fakeClient(null);
+        const client = fakeClient('Should not run.');
 
-        expect(await runWikiCompileTrigger(client, nowMs)).toEqual({ kind: 'idle' });
-        expect(client.listed).toBe(false);
+        expect(await runWikiCompile(client, getDb(), nowMs)).toEqual({ kind: 'idle' });
+        expect(client.prompts).toHaveLength(0);
     });
 
     async function writeTopicFile(topic: string, relativePath: string, content: string) {
@@ -192,32 +181,14 @@ describe('wiki compile trigger', () => {
     }
 });
 
-function fakeClient(upkeep: { enabled: boolean; lastRunAtMs: number } | null) {
-    const jobs: AgentRuntimeCronList['jobs'] = upkeep
-        ? [
-              {
-                  agentId: null,
-                  description: null,
-                  enabled: upkeep.enabled,
-                  id: 'wiki-upkeep',
-                  managed: true,
-                  name: 'Tavern: Wiki upkeep',
-                  schedule: { expr: '30 4 * * *', kind: 'cron' },
-                  state: { lastRunAtMs: upkeep.lastRunAtMs, lastRunStatus: 'success' },
-                  updatedAt: '2026-06-11T00:00:00Z',
-              },
-          ]
-        : [];
-    const client: CompileTriggerClient & { listed: boolean; triggered: string[] } = {
-        listed: false,
-        triggered: [],
-        listCronJobs() {
-            client.listed = true;
-            return Promise.resolve({ jobs });
-        },
-        runCronJob(jobId: string) {
-            client.triggered.push(jobId);
-            return Promise.resolve();
+function fakeClient(reply: string) {
+    const client = {
+        prompts: [] as string[],
+        streamChat(input: { content: string; sessionKey: string; title?: null | string }) {
+            client.prompts.push(input.content);
+            return (async function* () {
+                yield { data: { content: reply }, event: 'assistant.completed' };
+            })();
         },
     };
     return client;

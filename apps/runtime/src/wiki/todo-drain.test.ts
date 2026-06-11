@@ -126,8 +126,8 @@ describe('wiki todo drain', () => {
         expect(prompt).toContain('exactly one inventory record');
         expect(prompt).toContain('inventory/urgent.md');
         expect(prompt).toContain('status: blocked');
-        expect(prompt).toContain('owner: user');
-        expect(prompt).toContain('Do not start any other inventory work.');
+        expect(prompt).toContain('do not park work on the user');
+        expect(prompt).toContain('Do not start any other inventory work');
     });
 
     async function writeRecord(

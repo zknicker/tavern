@@ -86,38 +86,6 @@ describe('Tavern highlights', () => {
         });
     });
 
-    test('surfaces user-owned wiki follow-ups as a highlight', async () => {
-        const now = new Date('2026-06-03T18:25:00.000Z');
-        await writeInventoryRecord(
-            'project-notes',
-            'verify-claim.md',
-            ['---', 'title: Verify launch claim', 'status: proposed', 'owner: user', '---'].join(
-                '\n'
-            )
-        );
-        await writeInventoryRecord(
-            'project-notes',
-            'agent-task.md',
-            ['---', 'title: Profile candidate', 'status: proposed', '---'].join('\n')
-        );
-
-        const result = await generateTavernHighlights({ cronRuns: [], db, now });
-        const highlight = result.highlights.find(
-            (candidate) => candidate.category === 'wiki_attention'
-        );
-
-        expect(highlight).toMatchObject({
-            metric: { count: 1, topics: ['project-notes'] },
-            receipt: '1 wiki follow-up in 1 topic waiting on your call in Cortex.',
-        });
-    });
-
-    async function writeInventoryRecord(topic: string, file: string, content: string) {
-        const filePath = path.join(hubPath, 'topics', topic, 'inventory', file);
-        await fs.mkdir(path.dirname(filePath), { recursive: true });
-        await fs.writeFile(filePath, content);
-    }
-
     test('records a fresh empty generation when no category applies', async () => {
         const now = new Date('2026-06-03T18:25:00.000Z');
 

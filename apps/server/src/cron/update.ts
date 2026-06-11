@@ -1,4 +1,3 @@
-import { isTavernManagedCronName } from '@tavern/api';
 import { TRPCError } from '@trpc/server';
 import { requireConfiguredAgentRuntimeClientForRuntimeId } from '../agent-runtime/configured-client.ts';
 import * as agentRuntimeCron from '../agent-runtime/cron.ts';
@@ -18,21 +17,6 @@ export async function updateCronJob(input: unknown) {
         throw new TRPCError({
             code: 'NOT_FOUND',
             message: 'Cron job not found.',
-        });
-    }
-
-    if (isTavernManagedCronName(job.name) && !isPauseResumeOnlyPatch(parsed.patch)) {
-        throw new TRPCError({
-            code: 'FORBIDDEN',
-            message:
-                'This automation is managed by Tavern. It can be paused or resumed, but not edited.',
-        });
-    }
-
-    if (parsed.patch.name && isTavernManagedCronName(parsed.patch.name)) {
-        throw new TRPCError({
-            code: 'BAD_REQUEST',
-            message: 'Automation names starting with "Tavern: " are reserved.',
         });
     }
 
@@ -90,9 +74,4 @@ export async function updateCronJob(input: unknown) {
         success: true as const,
         synced: true,
     };
-}
-
-function isPauseResumeOnlyPatch(patch: Record<string, unknown>) {
-    const keys = Object.keys(patch).filter((key) => patch[key] !== undefined);
-    return keys.length > 0 && keys.every((key) => key === 'enabled');
 }
