@@ -1,7 +1,5 @@
-import { AlertCircleIcon } from '@hugeicons/core-free-icons';
 import { InspectCodeIcon } from '@hugeicons-pro/core-stroke-rounded';
 import { AgentAvatar } from '../../components/ui/agent-avatar.tsx';
-import { Alert, AlertDescription, AlertTitle } from '../../components/ui/alert.tsx';
 import { CopyButton } from '../../components/ui/copy-button.tsx';
 import { Icon } from '../../components/ui/icon.tsx';
 import { useActorProfile } from '../../hooks/actors/use-actor.ts';
@@ -462,11 +460,11 @@ function ActiveReplyText({ item }: { item: Extract<TranscriptItem, { kind: 'acti
 
 function AgentTurnFailure({ item }: { item: Extract<TranscriptItem, { kind: 'failure' }> }) {
     return (
-        <Alert className="w-full max-w-[34rem]" variant="error">
-            <Icon icon={AlertCircleIcon} />
-            <AlertTitle>Agent turn failed</AlertTitle>
-            <AlertDescription>{item.failure.error}</AlertDescription>
-        </Alert>
+        <p className="max-w-[34rem] text-sm leading-5" role="alert">
+            <span aria-hidden className="mr-2 inline-block size-2 rounded-full bg-error" />
+            <span className="font-medium text-error-foreground">Turn failed</span>
+            <span className="text-muted-foreground"> · {item.failure.error}</span>
+        </p>
     );
 }
 
