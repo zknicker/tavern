@@ -1,7 +1,10 @@
 import cors from '@fastify/cors';
 import { fastifyTRPCPlugin } from '@trpc/server/adapters/fastify';
 import Fastify from 'fastify';
-import { startAgentRuntimeEventSync } from './agent-runtime/event-sync.ts';
+import {
+    refreshAgentRuntimeEventSync,
+    startAgentRuntimeEventSync,
+} from './agent-runtime/event-sync.ts';
 import {
     confirmAgentRuntimeConnection,
     getCurrentAgentRuntimeUrl,
@@ -99,11 +102,29 @@ async function start() {
     logStartupComplete('Tavern is ready');
 }
 
+const startupRuntimeConfirmRetryMs = 2000;
+const startupRuntimeConfirmAttempts = 30;
+
 async function refreshRuntimeAfterStartup() {
-    const agentRuntimeReachable = await confirmAgentRuntimeConnection().catch((error) => {
-        console.warn('[tavern] failed to refresh runtime capabilities', error);
-        return false;
-    });
+    // The runtime can still be booting when the server comes up (the dev
+    // stack and e2e harness start both processes in parallel), so keep
+    // confirming until it answers, then attach runtime event sync.
+    let agentRuntimeReachable = false;
+
+    for (let attempt = 0; attempt < startupRuntimeConfirmAttempts; attempt += 1) {
+        agentRuntimeReachable = await confirmAgentRuntimeConnection().catch((error) => {
+            console.warn('[tavern] failed to refresh runtime capabilities', error);
+            return false;
+        });
+
+        if (agentRuntimeReachable || !getCurrentAgentRuntimeUrl()) {
+            break;
+        }
+
+        await new Promise((resolve) => setTimeout(resolve, startupRuntimeConfirmRetryMs));
+    }
+
+    refreshAgentRuntimeEventSync();
     emitAgentRuntimeUpdated();
 
     if (!agentRuntimeReachable) {
