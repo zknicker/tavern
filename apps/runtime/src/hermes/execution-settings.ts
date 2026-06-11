@@ -52,7 +52,14 @@ export function getHermesExecutionSettings(): AgentRuntimeExecutionSettings {
         | undefined;
 
     if (!row) {
-        return { fallbackModels: [], timezone: null, updatedAt: null };
+        return {
+            compression: null,
+            fallbackModels: [],
+            subagentEffort: null,
+            subagentModel: null,
+            timezone: null,
+            updatedAt: null,
+        };
     }
 
     return parseStoredSettings(row.value, row.updated_at);
@@ -63,7 +70,12 @@ function saveHermesExecutionSettings(
 ): AgentRuntimeExecutionSettings {
     const current = getHermesExecutionSettings();
     const next = {
+        compression: input.compression === undefined ? current.compression : input.compression,
         fallbackModels: input.fallbackModels ?? current.fallbackModels,
+        subagentEffort:
+            input.subagentEffort === undefined ? current.subagentEffort : input.subagentEffort,
+        subagentModel:
+            input.subagentModel === undefined ? current.subagentModel : input.subagentModel,
         timezone: input.timezone === undefined ? current.timezone : input.timezone,
     };
 

@@ -18,12 +18,22 @@ export interface HermesModelDomain {
     provider: string;
 }
 
+interface HermesModelRef {
+    baseUrl?: string;
+    model: string;
+    provider: string;
+}
+
 export interface HermesExecutionDomain {
-    fallbackModels: {
-        baseUrl?: string;
-        model: string;
-        provider: string;
-    }[];
+    /** null = engine defaults; the compression keys are left untouched. */
+    compression: {
+        enabled: boolean;
+        protectLastMessages: number;
+        thresholdPercent: number;
+    } | null;
+    fallbackModels: HermesModelRef[];
+    subagentEffort: null | string;
+    subagentModel: HermesModelRef | null;
     timezone: string | null;
 }
 
@@ -112,6 +122,43 @@ function applyExecutionDomain(doc: GeneratedConfigDocument, execution: HermesExe
         doc.setIn(['timezone'], execution.timezone);
     } else {
         doc.deleteIn(['timezone']);
+    }
+
+    if (execution.subagentModel) {
+        doc.setIn(['delegation', 'model'], execution.subagentModel.model);
+        doc.setIn(['delegation', 'provider'], execution.subagentModel.provider);
+        if (execution.subagentModel.baseUrl) {
+            doc.setIn(['delegation', 'base_url'], execution.subagentModel.baseUrl);
+        } else {
+            deleteIfPresent(doc, ['delegation', 'base_url']);
+        }
+    } else {
+        deleteIfPresent(doc, ['delegation', 'model']);
+        deleteIfPresent(doc, ['delegation', 'provider']);
+        deleteIfPresent(doc, ['delegation', 'base_url']);
+    }
+
+    if (execution.subagentEffort) {
+        doc.setIn(['delegation', 'reasoning_effort'], execution.subagentEffort);
+    } else {
+        deleteIfPresent(doc, ['delegation', 'reasoning_effort']);
+    }
+
+    if (execution.compression) {
+        doc.setIn(['compression', 'enabled'], execution.compression.enabled);
+        doc.setIn(['compression', 'threshold'], execution.compression.thresholdPercent / 100);
+        doc.setIn(['compression', 'protect_last_n'], execution.compression.protectLastMessages);
+    } else {
+        deleteIfPresent(doc, ['compression', 'enabled']);
+        deleteIfPresent(doc, ['compression', 'threshold']);
+        deleteIfPresent(doc, ['compression', 'protect_last_n']);
+    }
+}
+
+/** deleteIn throws when an ancestor node is absent; guard nested deletes. */
+function deleteIfPresent(doc: GeneratedConfigDocument, path: string[]) {
+    if (doc.hasIn(path)) {
+        doc.deleteIn(path);
     }
 }
 

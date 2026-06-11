@@ -213,14 +213,38 @@ export const agentRuntimeHermesModelNameSchema = z.object({
     provider: z.string().trim().min(1),
 });
 
+export const agentRuntimeSubagentEffortSchema = z.enum([
+    'none',
+    'minimal',
+    'low',
+    'medium',
+    'high',
+    'xhigh',
+]);
+
+export const agentRuntimeCompressionSettingsSchema = z.object({
+    enabled: z.boolean(),
+    protectLastMessages: z.number().int().min(0).max(400),
+    thresholdPercent: z.number().int().min(10).max(95),
+});
+
 export const agentRuntimeExecutionSettingsSchema = z.object({
+    /** null = engine default; the compression keys are left untouched. */
+    compression: agentRuntimeCompressionSettingsSchema.nullable().default(null),
     fallbackModels: z.array(agentRuntimeHermesModelNameSchema),
+    /** null = subagents inherit the primary model. */
+    subagentModel: agentRuntimeHermesModelNameSchema.nullable().default(null),
+    /** null = subagents inherit the primary thinking effort. */
+    subagentEffort: agentRuntimeSubagentEffortSchema.nullable().default(null),
     timezone: z.string().nullable(),
     updatedAt: z.string().datetime().nullable(),
 });
 
 export const agentRuntimeSaveExecutionSettingsSchema = z.object({
+    compression: agentRuntimeCompressionSettingsSchema.nullable().optional(),
     fallbackModels: z.array(agentRuntimeHermesModelNameSchema).max(10).optional(),
+    subagentModel: agentRuntimeHermesModelNameSchema.nullable().optional(),
+    subagentEffort: agentRuntimeSubagentEffortSchema.nullable().optional(),
     timezone: z.string().trim().min(1).nullable().optional(),
 });
 
@@ -1950,6 +1974,8 @@ export type AgentRuntimeSaveOpenAiSettings = z.infer<typeof agentRuntimeSaveOpen
 export type AgentRuntimeOpenRouterSettings = z.infer<typeof agentRuntimeOpenRouterSettingsSchema>;
 export type AgentRuntimeHermesModelName = z.infer<typeof agentRuntimeHermesModelNameSchema>;
 export type AgentRuntimeExecutionSettings = z.infer<typeof agentRuntimeExecutionSettingsSchema>;
+export type AgentRuntimeSubagentEffort = z.infer<typeof agentRuntimeSubagentEffortSchema>;
+export type AgentRuntimeCompressionSettings = z.infer<typeof agentRuntimeCompressionSettingsSchema>;
 export type AgentRuntimeSaveExecutionSettings = z.infer<
     typeof agentRuntimeSaveExecutionSettingsSchema
 >;

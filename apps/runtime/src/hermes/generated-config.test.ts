@@ -5,7 +5,13 @@ import { describe, expect, it } from 'vitest';
 import { parseDocument } from 'yaml';
 import { mergeHermesGeneratedConfig } from './generated-config';
 
-const emptyExecution = { fallbackModels: [], timezone: null };
+const emptyExecution = {
+    compression: null,
+    fallbackModels: [],
+    subagentEffort: null,
+    subagentModel: null,
+    timezone: null,
+};
 const emptyConnectors = { servers: {}, staleIds: [] };
 const codexModel = {
     apiKey: null,
@@ -30,6 +36,7 @@ describe('generated Hermes config composer', () => {
         await mergeHermesGeneratedConfig(configPath, {
             connectors: emptyConnectors,
             execution: {
+                ...emptyExecution,
                 fallbackModels: [
                     { model: 'kimi-k2.5', provider: 'openrouter' },
                     { baseUrl: 'http://127.0.0.1:1234/v1', model: 'local', provider: 'custom' },
@@ -122,6 +129,7 @@ describe('generated Hermes config composer', () => {
         await mergeHermesGeneratedConfig(configPath, {
             connectors: emptyConnectors,
             execution: {
+                ...emptyExecution,
                 fallbackModels: [{ model: 'kimi-k2.5', provider: 'openrouter' }],
                 timezone: 'Europe/Berlin',
             },
@@ -139,6 +147,42 @@ describe('generated Hermes config composer', () => {
         const doc = await readConfig(configPath);
         expect(doc.has('fallback_providers')).toBe(false);
         expect(doc.has('timezone')).toBe(false);
+    });
+
+    it('writes subagent defaults and compression, and clears delegation when inherited', async () => {
+        const configPath = await tempConfigPath();
+        await mergeHermesGeneratedConfig(configPath, {
+            connectors: emptyConnectors,
+            execution: {
+                ...emptyExecution,
+                compression: { enabled: true, protectLastMessages: 30, thresholdPercent: 70 },
+                subagentEffort: 'high',
+                subagentModel: { model: 'claude-haiku-4-5', provider: 'anthropic' },
+            },
+            model: codexModel,
+            permissions: null,
+        });
+
+        const doc = await readConfig(configPath);
+        expect(doc.getIn(['delegation', 'model'])).toBe('claude-haiku-4-5');
+        expect(doc.getIn(['delegation', 'provider'])).toBe('anthropic');
+        expect(doc.getIn(['delegation', 'reasoning_effort'])).toBe('high');
+        expect(doc.getIn(['compression', 'enabled'])).toBe(true);
+        expect(doc.getIn(['compression', 'threshold'])).toBe(0.7);
+        expect(doc.getIn(['compression', 'protect_last_n'])).toBe(30);
+
+        await mergeHermesGeneratedConfig(configPath, {
+            connectors: emptyConnectors,
+            execution: emptyExecution,
+            model: codexModel,
+            permissions: null,
+        });
+
+        const cleared = await readConfig(configPath);
+        expect(cleared.getIn(['delegation', 'model'])).toBeUndefined();
+        expect(cleared.getIn(['delegation', 'reasoning_effort'])).toBeUndefined();
+        expect(cleared.getIn(['compression', 'enabled'])).toBeUndefined();
+        expect(cleared.getIn(['compression', 'threshold'])).toBeUndefined();
     });
 
     it('writes configured permissions with product-to-engine mode mapping', async () => {

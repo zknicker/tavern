@@ -27,11 +27,39 @@ describe('agent execution settings', () => {
         await fs.rm(path.join(tempHermesHome, 'config.yaml'), { force: true });
     });
 
-    test('defaults to no fallbacks and system timezone', () => {
+    test('defaults to inherit-everything settings', () => {
         expect(getHermesExecutionSettings()).toEqual({
+            compression: null,
             fallbackModels: [],
+            subagentEffort: null,
+            subagentModel: null,
             timezone: null,
             updatedAt: null,
+        });
+    });
+
+    test('persists subagent defaults and compression and writes engine keys', async () => {
+        await putSettings({
+            compression: { enabled: true, protectLastMessages: 40, thresholdPercent: 60 },
+            subagentEffort: 'medium',
+            subagentModel: { model: 'claude-haiku-4-5', provider: 'anthropic' },
+        });
+
+        expect(getHermesExecutionSettings()).toMatchObject({
+            compression: { enabled: true, protectLastMessages: 40, thresholdPercent: 60 },
+            subagentEffort: 'medium',
+            subagentModel: { model: 'claude-haiku-4-5', provider: 'anthropic' },
+        });
+
+        const config = await fs.readFile(path.join(tempHermesHome, 'config.yaml'), 'utf8');
+        expect(config).toContain('reasoning_effort: medium');
+        expect(config).toContain('threshold: 0.6');
+
+        await putSettings({ compression: null, subagentEffort: null, subagentModel: null });
+        expect(getHermesExecutionSettings()).toMatchObject({
+            compression: null,
+            subagentEffort: null,
+            subagentModel: null,
         });
     });
 
