@@ -2,6 +2,23 @@
 
 All notable changes to this project will be documented in this file.
 
+## v1.4.4 - 2026-06-11
+
+Runtime auth and pairing release. The Runtime floor is raised to 1.4.4 for the
+new bearer-token contract across Runtime HTTP, websocket, app sync, CLI, and
+agent execution paths.
+
+- Added required bearer-token auth to Runtime HTTP and websocket endpoints.
+- Added `tavern token` and app pairing fields so users can copy the Runtime
+  token into onboarding and Runtime settings.
+- Changed Runtime host configuration to use `tavern.json`, shared by the dev
+  stack, Runtime CLI, and local probes.
+- Fixed token propagation across chat sync, SDK clients, e2e helpers, managed
+  agent environment, and dev-stack health checks.
+- Improved chat history reads by pushing event visibility, limits, and
+  single-chat lookups into SQL.
+- Removed the dead Docker web-stack deploy path and unused legacy packages.
+
 ## v1.4.3 - 2026-06-10
 
 Runtime CLI and managed engine release. No app behavior changes; the Runtime
