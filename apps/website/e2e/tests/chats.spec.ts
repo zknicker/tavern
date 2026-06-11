@@ -113,8 +113,12 @@ test('renders durable response activity kinds after reload', async ({ page }) =>
     await expect(page.getByRole('button', { name: /Tool diagnostic/u })).toBeVisible();
 });
 
+function runtimeToken() {
+    return process.env.TAVERN_RUNTIME_TOKEN?.trim() || undefined;
+}
+
 async function upsertRuntimeArtifact(input: { chatId: string; runtimeUrl: string }) {
-    const client = createTavernClient({ baseUrl: input.runtimeUrl });
+    const client = createTavernClient({ baseUrl: input.runtimeUrl, token: runtimeToken() });
     const responsePage = await client.chat.responses(input.chatId, { limit: 50 });
     const responseId = responsePage.responses.at(-1)?.id;
 
@@ -132,7 +136,7 @@ async function upsertRuntimeArtifact(input: { chatId: string; runtimeUrl: string
 }
 
 async function upsertRuntimeActivityKinds(input: { chatId: string; runtimeUrl: string }) {
-    const client = createTavernClient({ baseUrl: input.runtimeUrl });
+    const client = createTavernClient({ baseUrl: input.runtimeUrl, token: runtimeToken() });
     const responsePage = await client.chat.responses(input.chatId, { limit: 50 });
     const responseId = responsePage.responses.at(-1)?.id;
 

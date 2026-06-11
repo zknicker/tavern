@@ -38,6 +38,7 @@ const [hermesPort, hermesProviderPort, runtimePort, serverPort, websitePort] = a
     getFreePort(),
 ]);
 const command = [process.execPath, 'x', 'playwright', 'test', ...process.argv.slice(2)];
+const runtimeToken = process.env.TAVERN_RUNTIME_TOKEN ?? 'e2e-runtime-token';
 const env = {
     ...process.env,
     TAVERN_E2E_RUN_ID: runId,
@@ -48,9 +49,10 @@ const env = {
     TAVERN_HERMES_PROVIDER: 'custom',
     TAVERN_HERMES_PROVIDER_PORT: `${hermesProviderPort}`,
     TAVERN_RUNTIME_PORT: `${runtimePort}`,
+    TAVERN_RUNTIME_TOKEN: runtimeToken,
+    TAVERN_RUNTIME_URL: `http://127.0.0.1:${runtimePort}`,
     TAVERN_SERVER_PORT: `${serverPort}`,
     TAVERN_WEBSITE_PORT: `${websitePort}`,
-    TAVERN_RUNTIME_URL: `http://127.0.0.1:${runtimePort}`,
 };
 
 await runPreflight(env);

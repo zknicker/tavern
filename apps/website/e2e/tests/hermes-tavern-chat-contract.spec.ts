@@ -329,10 +329,15 @@ async function saveWorkspaceInstructions(input: {
     });
 }
 
+function runtimeAuthHeaders(): HeadersInit {
+    const token = process.env.TAVERN_RUNTIME_TOKEN?.trim();
+    return token ? { authorization: `Bearer ${token}` } : {};
+}
+
 async function putRuntimeJson(url: string, body: Record<string, unknown>) {
     const response = await fetch(url, {
         body: JSON.stringify(body),
-        headers: { 'content-type': 'application/json' },
+        headers: { 'content-type': 'application/json', ...runtimeAuthHeaders() },
         method: 'PUT',
     });
 
@@ -342,7 +347,9 @@ async function putRuntimeJson(url: string, body: Record<string, unknown>) {
 }
 
 async function getRuntimeInstructions(runtimeUrl: string) {
-    const response = await fetch(`${runtimeUrl}/workspace/agents/main/instructions`);
+    const response = await fetch(`${runtimeUrl}/workspace/agents/main/instructions`, {
+        headers: runtimeAuthHeaders(),
+    });
     if (!response.ok) {
         throw new Error(`Runtime request failed (${response.status}): ${await response.text()}`);
     }
