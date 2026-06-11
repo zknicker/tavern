@@ -50,6 +50,26 @@ const serveCommand: CliCommand = {
     },
 };
 
+const statusCommand: CliCommand = {
+    name: 'status',
+    section: 'Status',
+    summary: 'Service, version, capability, and engine health',
+    usage: 'tavern status [--json] [--runtime-url <url>]',
+    flags: [
+        { name: '--json', description: 'Emit one JSON document' },
+        {
+            name: '--runtime-url',
+            valueName: '<url>',
+            description: 'Probe a specific Runtime URL (staged-binary hint is local-only)',
+        },
+    ],
+    examples: ['tavern status', 'tavern status --json'],
+    async run(args) {
+        const { runStatusCommand } = await import('./commands/status');
+        return await runStatusCommand(args);
+    },
+};
+
 const versionCommand: CliCommand = {
     name: 'version',
     section: 'Status',
@@ -163,6 +183,7 @@ const helpCommand: CliCommand = {
 /** Every registered command, in registration order. */
 export const COMMANDS: CliCommand[] = [
     serveCommand,
+    statusCommand,
     versionCommand,
     updateCommand,
     restartCommand,

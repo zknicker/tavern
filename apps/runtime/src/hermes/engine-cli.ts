@@ -1,11 +1,6 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
-import {
-    ensureHermesBinary,
-    isSystemInstallAllowed,
-    type ResolvedHermesBinary,
-    resolveInstalledHermesBinary,
-} from './bootstrap';
+import { ensureHermesBinary, isSystemInstallAllowed } from './bootstrap';
 import {
     enginePinDirName,
     engineRoot,
@@ -13,6 +8,7 @@ import {
     readEngineMarker,
     resolveHermesPin,
 } from './engine';
+import { resolveEngineStatus } from './engine-resolution';
 
 export async function runEngineCli(args: string[]): Promise<void> {
     const [command, ...rest] = args;
@@ -42,7 +38,7 @@ function showEngineStatus(json: boolean): void {
         installedPins: listEnginePinDirs(),
         marker: readEngineMarker(pin),
         pin,
-        resolved: resolveBinaryStatus(),
+        resolved: resolveEngineStatus(),
         systemAllowed,
     };
 
@@ -105,13 +101,5 @@ async function cleanEngineInstalls(all: boolean): Promise<void> {
     console.log(`Removed engine installs: ${removed.join(', ')}`);
     if (keep) {
         console.log(`Kept current pin: ${keep}`);
-    }
-}
-
-function resolveBinaryStatus(): { binary: ResolvedHermesBinary | null; error: null | string } {
-    try {
-        return { binary: resolveInstalledHermesBinary(), error: null };
-    } catch (err) {
-        return { binary: null, error: err instanceof Error ? err.message : String(err) };
     }
 }

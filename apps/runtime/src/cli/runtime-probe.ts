@@ -1,4 +1,9 @@
-import { agentRuntimeRoutes, agentRuntimeUpdateSchema } from '@tavern/api';
+import {
+    agentRuntimeCapabilityHealthListSchema,
+    agentRuntimeRoutes,
+    agentRuntimeUpdateSchema,
+} from '@tavern/api';
+import type { z } from 'zod';
 import { getRuntimePort } from '../config';
 
 const PROBE_TIMEOUT_MS = 1500;
@@ -9,6 +14,64 @@ const PROBE_TIMEOUT_MS = 1500;
  */
 export function localRuntimeUrl(): string {
     return `http://127.0.0.1:${getRuntimePort()}`;
+}
+
+/** Capability rows from GET /capabilities. */
+export type RuntimeCapability = z.infer<
+    typeof agentRuntimeCapabilityHealthListSchema
+>['capabilities'][number];
+
+/** A combined liveness + version + capability snapshot for `tavern status`. */
+export interface RuntimeSnapshot {
+    /** Capability rows, or null when the runtime is unreachable. */
+    capabilities: RuntimeCapability[] | null;
+    /** Health string ('healthy' | 'degraded' | 'starting'), or null. */
+    health: string | null;
+    /** True when any probe reached the runtime. */
+    reachable: boolean;
+    /** Running version from GET /update/status, or null. */
+    version: string | null;
+}
+
+/**
+ * Status-screen probe: gathers update status, health, and capabilities from a
+ * runtime URL (honoring TAVERN_RUNTIME_URL / --runtime-url). Tolerant: every
+ * sub-probe failure degrades to null rather than throwing, so a down runtime
+ * still yields a renderable snapshot.
+ */
+export async function probeRuntimeSnapshot(baseUrl: string): Promise<RuntimeSnapshot> {
+    const [update, health, caps] = await Promise.all([
+        probeJsonAt(baseUrl, agentRuntimeRoutes.updateStatus, PROBE_TIMEOUT_MS),
+        probeJsonAt(baseUrl, agentRuntimeRoutes.health, PROBE_TIMEOUT_MS),
+        probeJsonAt(baseUrl, agentRuntimeRoutes.capabilities, PROBE_TIMEOUT_MS),
+    ]);
+
+    const parsedUpdate = update === null ? null : agentRuntimeUpdateSchema.safeParse(update);
+    const version = parsedUpdate?.success ? parsedUpdate.data.currentVersion : null;
+
+    const healthStatus = readHealthStatus(health);
+
+    const parsedCaps =
+        caps === null ? null : agentRuntimeCapabilityHealthListSchema.safeParse(caps);
+    const capabilities = parsedCaps?.success ? parsedCaps.data.capabilities : null;
+
+    return {
+        version,
+        health: healthStatus,
+        capabilities,
+        reachable: update !== null || health !== null || caps !== null,
+    };
+}
+
+function readHealthStatus(data: unknown): string | null {
+    if (!(data && typeof data === 'object')) {
+        return null;
+    }
+    const record = data as Record<string, unknown>;
+    if (typeof record.status === 'string') {
+        return record.status;
+    }
+    return record.ok === true ? 'healthy' : null;
 }
 
 export interface RuntimeProbe {
@@ -51,9 +114,13 @@ export async function probeRunningVersion(timeoutMs = 750): Promise<string | nul
     return parsed.success ? parsed.data.currentVersion : null;
 }
 
-async function probeJson(route: string, timeoutMs: number): Promise<unknown> {
+function probeJson(route: string, timeoutMs: number): Promise<unknown> {
+    return probeJsonAt(localRuntimeUrl(), route, timeoutMs);
+}
+
+async function probeJsonAt(baseUrl: string, route: string, timeoutMs: number): Promise<unknown> {
     try {
-        const response = await fetch(new URL(route, localRuntimeUrl()), {
+        const response = await fetch(new URL(route, baseUrl), {
             method: 'GET',
             signal: AbortSignal.timeout(timeoutMs),
         });
