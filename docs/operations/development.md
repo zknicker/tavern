@@ -43,6 +43,11 @@ That example uses ports `43000` through `43003`. Set `DATABASE_PATH` or
 `TAVERN_RUNTIME_ROOT` explicitly when a dev run should use a specific app
 database or Runtime root.
 
+`.claude/launch.json` is gitignored and generated per checkout by a
+`SessionStart` hook (`dev-port --claude-launch`), so Claude Code previews use
+this checkout's real website port. The `dev-port` helper and the dev stack
+derive the same four-port group from the checkout path.
+
 Set `TAVERN_HERMES_HOME`, `TAVERN_HERMES_BIN`, `TAVERN_HERMES_HOST`,
 `TAVERN_HERMES_PORT`, or `TAVERN_HERMES_TOKEN` when a dev run should use a
 specific Hermes install or dashboard process.
