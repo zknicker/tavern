@@ -212,5 +212,8 @@ describe('runStatusCommand', () => {
         const text = captured.join('');
         expect(text).toContain('https://remote:18790');
         expect(text).not.toContain('staged, run');
+        // Local-only sections are labelled when the probed runtime is remote.
+        expect(text).toContain('Service (local)');
+        expect(text).toContain('Binary (local)');
     });
 });

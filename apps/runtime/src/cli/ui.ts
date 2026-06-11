@@ -1,5 +1,5 @@
-import runtimePackage from '../../package.json';
-import type { FlowLine } from './update-flow';
+import runtimePackage from '../../package.json' with { type: 'json' };
+import type { FlowLine } from './update-flow.ts';
 
 /** ANSI styling, gated on TTY + NO_COLOR. All CLI output routes through here. */
 
@@ -60,6 +60,43 @@ export function rows(entries: { left: string; right: string }[], indent = '  '):
     return entries
         .map((entry) => `${indent}${entry.left.padEnd(width)}  ${entry.right}`)
         .join('\n');
+}
+
+/**
+ * Aligned multi-column table. Each cell column is padded to its widest entry so
+ * values line up; the final column is left unpadded. Returns the joined block.
+ * Used for cortex topics/pages/search hits in place of raw `\t` joins.
+ */
+export function table(rowsOfCells: string[][], indent = '  '): string {
+    if (rowsOfCells.length === 0) {
+        return '';
+    }
+    const columns = rowsOfCells.reduce((max, cells) => Math.max(max, cells.length), 0);
+    const widths: number[] = [];
+    for (let col = 0; col < columns - 1; col++) {
+        widths[col] = rowsOfCells.reduce((max, cells) => Math.max(max, cells[col]?.length ?? 0), 0);
+    }
+    return rowsOfCells
+        .map((cells) =>
+            cells
+                .map((cell, col) => (col < columns - 1 ? cell.padEnd(widths[col]) : cell))
+                .join('  ')
+        )
+        .map((line) => `${indent}${line}`)
+        .join('\n');
+}
+
+/**
+ * The single JSON writer for `--json` commands. One pretty-printed document plus
+ * a trailing newline, never any ANSI regardless of TTY. All read commands route
+ * machine output through here so the shape stays uniform.
+ */
+export function writeJson(value: unknown, write: (text: string) => void = stdoutWrite): void {
+    write(`${JSON.stringify(value, null, 2)}\n`);
+}
+
+function stdoutWrite(text: string): void {
+    process.stdout.write(text);
 }
 
 export type StatusTone = 'healthy' | 'degraded' | 'off';

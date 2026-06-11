@@ -4,6 +4,7 @@ import { resolveEngineResolution } from '../../hermes/engine-resolution';
 import { type Brew, brew } from '../brew';
 import type { ParsedArgs } from '../parse';
 import { localRuntimeUrl, probeRuntimeSnapshot, type RuntimeSnapshot } from '../runtime-probe';
+import { writeJson } from '../ui';
 import { renderStatus, type StatusEngineSection, type StatusReport } from './status-render';
 
 /** Injectable I/O for `tavern status`, so tests supply fixtures for every edge. */
@@ -59,7 +60,7 @@ export async function runStatusCommand(
     };
 
     if (args.flags['--json']) {
-        deps.write(`${JSON.stringify(report, null, 2)}\n`);
+        writeJson(report, deps.write);
         return 0;
     }
 

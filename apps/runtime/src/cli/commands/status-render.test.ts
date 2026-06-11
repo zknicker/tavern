@@ -176,8 +176,11 @@ describe('renderStatus', () => {
             },
         });
         const text = render(report);
-        expect(text).toContain('Runtime  v1.4.0 · healthy · https://remote.example:18790');
+        expect(text).toContain('v1.4.0 · healthy · https://remote.example:18790');
         expect(text).not.toContain('staged, run');
-        expect(text).toContain('Binary   v1.4.2 · installed');
+        expect(text).toContain('· installed');
+        // Local-only sections gain a (local) label when the runtime is remote.
+        expect(text).toContain('Service (local)');
+        expect(text).toContain('Binary (local)');
     });
 });

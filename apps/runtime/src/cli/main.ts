@@ -62,9 +62,14 @@ async function runCommand(command: CliCommand, rest: string[]): Promise<number> 
     }
 }
 
-/** Groups (cortex/engine) parse only the leading --help; subcommands self-parse. */
+/**
+ * Groups (cortex/engine) print group help only for the bare group or a leading
+ * `--help`. Once a subcommand token is present (`cortex list --help`), the group
+ * defers to subcommand dispatch so the subcommand renders its own help.
+ */
 async function runGroup(command: CliCommand, rest: string[]): Promise<number> {
-    if (rest.length === 0 || wantsHelp(rest)) {
+    const first = rest[0];
+    if (rest.length === 0 || first === '--help' || first === '-h') {
         printGroupHelp(command, process.stdout);
         // Bare group → exit 1 (spec); explicit --help → exit 0.
         return rest.length === 0 ? 1 : 0;

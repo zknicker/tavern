@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, test, vi } from 'vitest';
-import { banner, colorEnabled, errorBlock, statusDot, ui } from './ui';
+import { banner, colorEnabled, errorBlock, statusDot, table, ui, writeJson } from './ui.ts';
 
 const fakeTty = { isTTY: true } as unknown as NodeJS.WriteStream;
 const fakePipe = { isTTY: false } as unknown as NodeJS.WriteStream;
@@ -47,6 +47,37 @@ describe('styling on non-TTY', () => {
         const block = errorBlock('boom', 'try again');
         expect(block).toContain('✗ boom');
         expect(block).toContain('↳ try again');
+    });
+});
+
+describe('table', () => {
+    test('pads inner columns to the widest cell, leaves the last unpadded', () => {
+        const out = table(
+            [
+                ['runtime', 'active', 'runtime'],
+                ['x', 'archived', 'old'],
+            ],
+            ''
+        );
+        const lines = out.split('\n');
+        // Column 0 padded to 'runtime' width (7) → 'x' becomes 'x      '.
+        expect(lines[1].startsWith('x      ')).toBe(true);
+        expect(out).not.toContain('\t');
+    });
+
+    test('empty input yields empty string', () => {
+        expect(table([])).toBe('');
+    });
+});
+
+describe('writeJson', () => {
+    test('writes one pretty document with trailing newline, no ANSI', () => {
+        let out = '';
+        writeJson({ a: 1, b: [2, 3] }, (text) => {
+            out = text;
+        });
+        expect(out).toBe(`${JSON.stringify({ a: 1, b: [2, 3] }, null, 2)}\n`);
+        expect(out).not.toMatch(/\[/);
     });
 });
 

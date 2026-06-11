@@ -58,11 +58,15 @@ export function renderStatus(report: StatusReport, options: RenderOptions): stri
 
 function renderHeaderRows(report: StatusReport, stream: NodeJS.WriteStream): string {
     const header = ui.bold(`Tavern Runtime v${report.binary.version}`, stream);
+    // Service and Binary always describe this box; label them when the probed
+    // Runtime is remote so the local rows next to a remote Runtime don't read
+    // as the same host.
+    const localTag = report.runtimeIsLocal ? '' : ' (local)';
     const body = rows(
         [
-            { left: 'Service', right: serviceLine(report.service) },
+            { left: `Service${localTag}`, right: serviceLine(report.service) },
             { left: 'Runtime', right: runtimeLine(report) },
-            { left: 'Binary', right: binaryLine(report) },
+            { left: `Binary${localTag}`, right: binaryLine(report) },
         ],
         '  '
     );

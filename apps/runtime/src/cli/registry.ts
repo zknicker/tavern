@@ -138,9 +138,11 @@ const cortexCommand: CliCommand = {
             printGroupHelp(cortexCommand, process.stdout);
             return 1;
         }
-        const { runCortexCli } = await import('../cli');
-        await runCortexCli(raw);
-        return 0;
+        const [{ CORTEX_SUBCOMMANDS }, { dispatchSubcommand }] = await Promise.all([
+            import('./commands/cortex'),
+            import('./subcommand'),
+        ]);
+        return await dispatchSubcommand('cortex', CORTEX_SUBCOMMANDS, raw);
     },
 };
 
@@ -161,9 +163,11 @@ const engineCommand: CliCommand = {
             printGroupHelp(engineCommand, process.stdout);
             return 1;
         }
-        const { runEngineCli } = await import('../hermes/engine-cli');
-        await runEngineCli(raw);
-        return 0;
+        const [{ ENGINE_SUBCOMMANDS }, { dispatchSubcommand }] = await Promise.all([
+            import('./commands/engine'),
+            import('./subcommand'),
+        ]);
+        return await dispatchSubcommand('engine', ENGINE_SUBCOMMANDS, raw);
     },
 };
 
