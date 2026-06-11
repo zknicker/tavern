@@ -55,6 +55,19 @@ On a dev machine without Hermes, set `TAVERN_HERMES_AUTO_INSTALL=1` to let
 Runtime bootstrap the pinned engine into `~/.tavern/engine/` once, shared
 across worktrees.
 
+The Runtime API requires a bearer token. The dev stack reads (or creates) the
+token at `<runtime root>/runtime-api-token` — the same file the Runtime and
+the `tavern` CLI resolve — and hands it to every stack process, so the token
+is stable per worktree across sessions. To use the CLI against a running dev
+stack, point it at the same state:
+
+```bash
+TAVERN_RUNTIME_ROOT=~/.tavern/dev/<worktree-id>/runtime \
+TAVERN_RUNTIME_PORT=<runtime port> bun apps/runtime/src/index.ts status
+```
+
+`TAVERN_RUNTIME_TOKEN` overrides the file for CI or reproducible setups.
+
 ## Claude Code Previews
 
 `.claude/launch.json` tells Claude Code's browser preview which port to attach

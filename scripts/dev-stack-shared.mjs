@@ -37,10 +37,14 @@ export function createDevStackEnvironment({
         TAVERN_HERMES_PORT: baseEnvironment.TAVERN_HERMES_PORT ?? resolvedPorts.hermesPort,
         TAVERN_RUNTIME_PORT: baseEnvironment.TAVERN_RUNTIME_PORT ?? resolvedPorts.runtimePort,
         TAVERN_RUNTIME_ROOT: baseEnvironment.TAVERN_RUNTIME_ROOT ?? statePaths.runtimeRoot,
-        // Generate a per-session dev token so the server can authenticate with the runtime.
-        // A stable env var overrides the generated one (e.g. for CI or reproducible setups).
+        // Use the runtime root's persisted token (same file the runtime and CLI
+        // resolve) so the server, runtime, and standalone `tavern` CLI runs all
+        // authenticate with one stable per-worktree token. Env override wins.
         TAVERN_RUNTIME_TOKEN:
-            baseEnvironment.TAVERN_RUNTIME_TOKEN ?? randomBytes(32).toString('base64url'),
+            baseEnvironment.TAVERN_RUNTIME_TOKEN ??
+            resolveRuntimeApiTokenFile(
+                resolveHomePath(baseEnvironment.TAVERN_RUNTIME_ROOT ?? statePaths.runtimeRoot)
+            ),
         TAVERN_SERVER_PORT: baseEnvironment.TAVERN_SERVER_PORT ?? resolvedPorts.serverPort,
         TAVERN_WEBSITE_PORT: baseEnvironment.TAVERN_WEBSITE_PORT ?? resolvedPorts.websitePort,
     };
@@ -322,6 +326,26 @@ export function isSuppressedStartupLine(source, line) {
 
 export function stripAnsi(value) {
     return value.replace(ansiPattern, '');
+}
+
+// Mirrors resolveRuntimeApiToken in apps/runtime/src/config.ts: read
+// <runtimeRoot>/runtime-api-token, or create it (base64url 32 bytes, mode 0600)
+// so the first dev-stack run and the runtime agree on the same persisted token.
+function resolveRuntimeApiTokenFile(runtimeRoot) {
+    const tokenPath = path.join(runtimeRoot, 'runtime-api-token');
+    try {
+        const existing = fs.readFileSync(tokenPath, 'utf8').trim();
+        if (existing) {
+            return existing;
+        }
+    } catch {
+        // First run creates the token below.
+    }
+
+    const token = randomBytes(32).toString('base64url');
+    fs.mkdirSync(path.dirname(tokenPath), { recursive: true });
+    fs.writeFileSync(tokenPath, `${token}\n`, { mode: 0o600 });
+    return token;
 }
 
 function resolveHomePath(value) {

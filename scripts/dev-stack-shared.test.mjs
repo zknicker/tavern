@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import test from 'node:test';
@@ -72,12 +73,15 @@ test('createDevStackEnvironment uses shared dev state outside packaged app state
             PATH: '/usr/bin',
             TAVERN_DEV_PORT_BASE: '42000',
             TAVERN_DEV_STACK_ID: 'alpha',
+            // Short-circuit token resolution so this test never touches ~/.tavern.
+            TAVERN_RUNTIME_TOKEN: 'env-token',
         },
         ports,
         repositoryRoot: '/repo/tavern',
     });
 
     assert.equal(environment.PATH, '/usr/bin');
+    assert.equal(environment.TAVERN_RUNTIME_TOKEN, 'env-token');
     assert.equal(
         environment.DATABASE_PATH,
         path.join(os.homedir(), '.tavern', 'dev', 'alpha', 'tavern.sqlite')
@@ -117,6 +121,7 @@ test('createDevStackEnvironment preserves explicit state overrides', () => {
             TAVERN_HERMES_PORT: '39119',
             TAVERN_RUNTIME_PORT: '39190',
             TAVERN_RUNTIME_ROOT: '/tmp/tavern-runtime',
+            TAVERN_RUNTIME_TOKEN: 'env-token',
         },
         repositoryRoot: '/repo/tavern',
     });
@@ -129,11 +134,45 @@ test('createDevStackEnvironment preserves explicit state overrides', () => {
 
 test('createDevStackEnvironment respects an explicit ALLOW_SYSTEM override', () => {
     const environment = createDevStackEnvironment({
-        baseEnvironment: { TAVERN_HERMES_ALLOW_SYSTEM: '0' },
+        baseEnvironment: { TAVERN_HERMES_ALLOW_SYSTEM: '0', TAVERN_RUNTIME_TOKEN: 'env-token' },
         repositoryRoot: '/repo/tavern',
     });
 
     assert.equal(environment.TAVERN_HERMES_ALLOW_SYSTEM, '0');
+});
+
+test('createDevStackEnvironment persists a runtime token under the runtime root', () => {
+    const runtimeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'tavern-dev-token-'));
+    const tokenPath = path.join(runtimeRoot, 'runtime-api-token');
+
+    const first = createDevStackEnvironment({
+        baseEnvironment: { TAVERN_RUNTIME_ROOT: runtimeRoot },
+        repositoryRoot: '/repo/tavern',
+    });
+
+    const persisted = fs.readFileSync(tokenPath, 'utf8').trim();
+    assert.equal(first.TAVERN_RUNTIME_TOKEN, persisted);
+    assert.ok(persisted.length > 20, 'expected a generated token');
+
+    // A second resolution (new dev-stack session, or a standalone CLI run
+    // against the same runtime root) must yield the same token.
+    const second = createDevStackEnvironment({
+        baseEnvironment: { TAVERN_RUNTIME_ROOT: runtimeRoot },
+        repositoryRoot: '/repo/tavern',
+    });
+    assert.equal(second.TAVERN_RUNTIME_TOKEN, persisted);
+});
+
+test('createDevStackEnvironment reads an existing runtime token file', () => {
+    const runtimeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'tavern-dev-token-'));
+    fs.writeFileSync(path.join(runtimeRoot, 'runtime-api-token'), 'persisted-token\n');
+
+    const environment = createDevStackEnvironment({
+        baseEnvironment: { TAVERN_RUNTIME_ROOT: runtimeRoot },
+        repositoryRoot: '/repo/tavern',
+    });
+
+    assert.equal(environment.TAVERN_RUNTIME_TOKEN, 'persisted-token');
 });
 
 test('cleanupStaleProcesses closes the old Tauri desktop app in desktop mode', () => {
