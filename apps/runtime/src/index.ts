@@ -9,6 +9,7 @@ import { type RuntimeJobsManager, startRuntimeJobsManager } from './jobs/manager
 import { ensureRuntimeJobsSchema } from './jobs/schema';
 import { log } from './log';
 import { startTavernRuntimeServer } from './tavern/server';
+import { recoverInterruptedChatResponses } from './tavern/turn-recovery';
 import { closeAgentNotesWatchers } from './workspace/notes-watcher';
 
 let runtimeServer: ReturnType<typeof startTavernRuntimeServer> | null = null;
@@ -25,6 +26,10 @@ async function main(): Promise<void> {
     ensureRuntimeSchema(db);
     ensureRuntimeJobsSchema(db);
     log.info('Runtime DB ready', { path: dbPath });
+    const recoveredTurns = recoverInterruptedChatResponses(db);
+    if (recoveredTurns > 0) {
+        log.info('Recovered interrupted chat responses', { count: recoveredTurns });
+    }
     runtimeJobs = await startRuntimeJobsManager();
 
     runtimeServer = startTavernRuntimeServer();
