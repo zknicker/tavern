@@ -148,8 +148,9 @@ function RuntimeUrlForm({ connection }: { connection: RuntimeConnection }) {
                             <Tooltip
                                 content={
                                     <span>
-                                        On the runtime host, run <code>tavern token</code> to print
-                                        the pairing token, then paste it here.
+                                        On the runtime host, run{' '}
+                                        <code className="font-mono">tavern token</code> to print the
+                                        pairing token, then paste it here.
                                     </span>
                                 }
                             >

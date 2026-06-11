@@ -107,7 +107,7 @@ export function TooltipContent({
             >
                 <TooltipPrimitive.Popup
                     className={cn(
-                        'relative flex h-(--popup-height,auto) w-(--popup-width,auto) origin-(--transform-origin) rounded-[var(--main-radius)] border border-white/8 bg-neutral-950 text-neutral-50 text-xs leading-4 shadow-black/30 shadow-lg outline-none transition-[opacity,transform,scale] duration-150 ease-out before:pointer-events-none before:absolute before:inset-0 before:rounded-[calc(var(--main-radius)-1px)] before:shadow-[0_-1px_--theme(--color-white/6%)] data-ending-style:scale-98 data-starting-style:scale-98 data-ending-style:opacity-0 data-starting-style:opacity-0 data-instant:duration-0',
+                        'relative flex h-(--popup-height,auto) w-(--popup-width,auto) max-w-72 origin-(--transform-origin) rounded-[var(--main-radius)] border border-white/8 bg-neutral-950 text-neutral-50 text-xs leading-4 shadow-black/30 shadow-lg outline-none transition-[opacity,transform,scale] duration-150 ease-out before:pointer-events-none before:absolute before:inset-0 before:rounded-[calc(var(--main-radius)-1px)] before:shadow-[0_-1px_--theme(--color-white/6%)] data-ending-style:scale-98 data-starting-style:scale-98 data-ending-style:opacity-0 data-starting-style:opacity-0 data-instant:duration-0',
                         className
                     )}
                     data-slot="tooltip-popup"
