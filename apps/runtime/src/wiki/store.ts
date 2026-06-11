@@ -37,8 +37,12 @@ const searchableSections = new Set<CortexPage['section']>([
     'datasets',
     'output',
     'inbox',
+    'reports',
     'root',
 ]);
+
+/** Agent-written trust reports stay browsable even though they live in dot dirs. */
+const reportDirectories = new Set(['.audit', '.librarian']);
 
 export async function getCortexStatus(): Promise<CortexStatus> {
     const config = await resolveWikiConfig();
@@ -239,7 +243,7 @@ async function walkMarkdown(root: string): Promise<string[]> {
     const entries = await fs.readdir(root, { withFileTypes: true }).catch(() => []);
     const files: string[] = [];
     for (const entry of entries) {
-        if (entry.name.startsWith('.') && entry.name !== '.archive') {
+        if (entry.name.startsWith('.') && !reportDirectories.has(entry.name)) {
             continue;
         }
         const entryPath = path.join(root, entry.name);
@@ -415,6 +419,9 @@ function extractLinkTargets(content: string): CortexPage['links'] {
 
 function sectionFromPath(relativePath: string): CortexPage['section'] {
     const [first] = relativePath.split(path.sep);
+    if (first && reportDirectories.has(first)) {
+        return 'reports';
+    }
     if (
         first === 'raw' ||
         first === 'wiki' ||

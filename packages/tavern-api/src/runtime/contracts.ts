@@ -908,6 +908,7 @@ export const cortexPageSectionSchema = z.enum([
     'inventory',
     'output',
     'raw',
+    'reports',
     'root',
     'wiki',
 ]);

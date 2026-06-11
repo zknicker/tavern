@@ -218,6 +218,24 @@ describe('wiki store', () => {
         });
     });
 
+    test('exposes audit and librarian reports, hides archived outputs', async () => {
+        await writeTopicPage('project-notes', '.librarian/REPORT.md', '# Librarian Report');
+        await writeTopicPage('project-notes', '.audit/REPORT.md', '# Audit Report');
+        await writeTopicPage('project-notes', 'output/.archive/old-output.md', '# Old Output');
+        await writeTopicPage('project-notes', 'output/current.md', '# Current Output');
+
+        const list = await listCortexPages({ topic: 'project-notes' });
+        const paths = list.pages.map((page) => page.path);
+
+        expect(paths).toContain('.librarian/REPORT.md');
+        expect(paths).toContain('.audit/REPORT.md');
+        expect(paths).toContain('output/current.md');
+        expect(paths).not.toContain('output/.archive/old-output.md');
+        expect(list.pages.find((page) => page.path === '.audit/REPORT.md')?.section).toBe(
+            'reports'
+        );
+    });
+
     test('keeps active and archived topics distinct when slugs collide', async () => {
         const list = await listCortexPages({ includeArchived: true, topic: 'project-notes' });
         expect(list.pages).toEqual(

@@ -20,7 +20,9 @@ librarian, lessons, output, inventory, datasets, and archive workflows.
   llm-wiki hub.
 * **Markdown pages.** Cortex reads `_index.md`, `config.md`, `log.md`, and
   pages under `wiki/`, `raw/`, `inventory/`, `datasets/`, `output/`, and
-  `inbox/`.
+  `inbox/`. Audit and librarian reports under `.audit/` and `.librarian/`
+  appear in the `reports` section. Archived outputs under `output/.archive/`
+  stay hidden.
 * **File browsing.** Cortex shows pages in their wiki directory tree and opens
   Markdown in a read-only document preview.
 * **Backlinks.** Cortex derives inbound references from `[[wikilinks]]` and the
