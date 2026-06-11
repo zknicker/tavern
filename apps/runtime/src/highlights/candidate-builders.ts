@@ -6,7 +6,7 @@ import type {
 import type { Database } from '../db/sqlite';
 import { namedParams } from '../db/sqlite';
 import { createLocalHermesClient } from '../hermes/local-client';
-import { getCortexPage, listCortexPages } from '../wiki/store';
+import { listWikiEscalationPages } from '../wiki/health';
 import { recentWindowMs, toolVolumeWindowMs } from './constants';
 import { formatAgo, formatCount } from './format';
 import { pickHeadline } from './phrases';
@@ -50,7 +50,7 @@ async function buildWikiAttentionHighlight(input: {
     now: Date;
     slotStart: Date;
 }): Promise<HighlightCandidate | null> {
-    const followUps = await listUserOwnedWikiFollowUps();
+    const followUps = await listWikiEscalationPages();
     if (followUps.length === 0) {
         return null;
     }
@@ -73,28 +73,6 @@ async function buildWikiAttentionHighlight(input: {
         sourceRefs: [],
         windowStart: input.slotStart,
     });
-}
-
-async function listUserOwnedWikiFollowUps() {
-    try {
-        const { pages } = await listCortexPages({});
-        const inventoryPages = pages.filter((page) => page.section === 'inventory');
-        const details = await Promise.all(
-            inventoryPages.map((page) => getCortexPage({ path: page.path, topic: page.topic }))
-        );
-        return details.filter(
-            (page): page is NonNullable<typeof page> =>
-                Boolean(page) &&
-                readFrontmatterValue(page?.frontmatter.status) === 'proposed' &&
-                readFrontmatterValue(page?.frontmatter.owner) === 'user'
-        );
-    } catch {
-        return [];
-    }
-}
-
-function readFrontmatterValue(value: unknown) {
-    return typeof value === 'string' ? value.trim().toLowerCase() : null;
 }
 
 function buildToolVolumeHighlight(input: {

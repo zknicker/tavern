@@ -65,6 +65,7 @@ export const agentRuntimeRoutes = {
         `/cortex/topics/${encodeURIComponent(topic)}/pages/${encodeURIComponent(pagePath)}/backlinks`,
     cortexPage: (topic: string, pagePath: string) =>
         `/cortex/topics/${encodeURIComponent(topic)}/pages/${encodeURIComponent(pagePath)}`,
+    cortexHealth: '/cortex/health',
     cortexPages: '/cortex/pages',
     cortexSearch: '/cortex/search',
     cortexStatus: '/cortex/status',

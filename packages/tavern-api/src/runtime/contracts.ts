@@ -987,6 +987,23 @@ export const cortexStatusSchema = z.object({
     writable: z.boolean(),
 });
 
+export const cortexEscalationSchema = z.object({
+    path: z.string().trim().min(1),
+    priority: z.string().nullable(),
+    question: z.string().nullable(),
+    title: z.string().trim().min(1),
+    topic: z.string().trim().min(1),
+    updatedAt: z.string().datetime(),
+});
+
+export const cortexLibrarianReportSchema = z.object({
+    body: z.string(),
+    topic: z.string().trim().min(1),
+    updatedAt: z.string().datetime(),
+});
+
+export const cortexHealthStateSchema = z.enum(['degraded', 'healthy', 'needs_attention']);
+
 export const agentRuntimeCronDeliverySchema = z.object({
     chatId: z.string().trim().min(1),
 });
@@ -1004,6 +1021,22 @@ export const agentRuntimeExecutionErrorCodeSchema = z.enum([
     'execution_failed',
     'control_plane_restarted',
 ]);
+
+export const cortexManagedRunSchema = z.object({
+    enabled: z.boolean(),
+    lastRunAtMs: z.number().int().nonnegative().nullable(),
+    lastRunStatus: agentRuntimeExecutionStatusSchema.nullable(),
+    name: z.string().trim().min(1),
+    nextRunAtMs: z.number().int().nonnegative().nullable(),
+});
+
+export const cortexHealthSchema = z.object({
+    escalations: z.array(cortexEscalationSchema),
+    reports: z.array(cortexLibrarianReportSchema),
+    runs: z.array(cortexManagedRunSchema),
+    state: cortexHealthStateSchema,
+    status: cortexStatusSchema,
+});
 
 export const agentRuntimeExecutionErrorSchema = z.object({
     code: agentRuntimeExecutionErrorCodeSchema,
@@ -1957,6 +1990,11 @@ export type AgentRuntimeBindingMatch = z.infer<typeof agentRuntimeBindingMatchSc
 export type PlatformBindingStatus = z.infer<typeof agentRuntimeBindingStatusSchema>;
 export type CortexBacklink = z.infer<typeof cortexBacklinkSchema>;
 export type CortexBacklinkList = z.infer<typeof cortexBacklinkListSchema>;
+export type CortexEscalation = z.infer<typeof cortexEscalationSchema>;
+export type CortexHealth = z.infer<typeof cortexHealthSchema>;
+export type CortexHealthState = z.infer<typeof cortexHealthStateSchema>;
+export type CortexLibrarianReport = z.infer<typeof cortexLibrarianReportSchema>;
+export type CortexManagedRun = z.infer<typeof cortexManagedRunSchema>;
 export type CortexPage = z.infer<typeof cortexPageSchema>;
 export type CortexPageList = z.infer<typeof cortexPageListSchema>;
 export type CortexPageSection = z.infer<typeof cortexPageSectionSchema>;

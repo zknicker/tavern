@@ -1,6 +1,7 @@
 import { cortexSearchInputSchema } from '@tavern/api';
 import { z } from 'zod';
 import {
+    getCortexHealth,
     getCortexPage,
     getCortexStatus,
     listCortexBacklinks,
@@ -17,6 +18,7 @@ export const cortexRouter = createRouter({
     get: publicProcedure
         .input(z.object({ path: z.string().trim().min(1), topic: z.string().trim().min(1) }))
         .query(({ input }) => getCortexPage(input)),
+    health: publicProcedure.query(() => getCortexHealth()),
     list: publicProcedure
         .input(
             z

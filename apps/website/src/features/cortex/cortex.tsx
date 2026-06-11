@@ -1,14 +1,18 @@
 import * as React from 'react';
 import { useSearchParams } from 'react-router-dom';
+import { useCortexHealth } from '../../hooks/cortex/use-cortex-health.ts';
 import { useCortexListSuspense } from '../../hooks/cortex/use-cortex-list.ts';
 import { useCortexPage } from '../../hooks/cortex/use-cortex-page.ts';
 import { CortexDocumentPane } from './cortex-document-pane.tsx';
+import { CortexHealthCard } from './cortex-health-card.tsx';
+import { CortexHealthView } from './cortex-health-view.tsx';
 import { CortexPageSidebar } from './cortex-page-sidebar.tsx';
 import type { CortexPageNode } from './types.ts';
 import { pageKey, resolveCortexLinkTarget, resolveSelectedPage } from './utils.ts';
 
 export function Cortex() {
     const [searchParams] = useSearchParams();
+    const [healthOpen, setHealthOpen] = React.useState(() => searchParams.get('view') === 'health');
     const [selectedPage, setSelectedPage] = React.useState<{ path: string; topic: string } | null>(
         () => {
             const topic = searchParams.get('topic');
@@ -17,9 +21,10 @@ export function Cortex() {
         }
     );
     const [list] = useCortexListSuspense();
+    const healthQuery = useCortexHealth();
     const pageNode = resolveSelectedPage(list, selectedPage);
     const pageDetailQuery = useCortexPage(
-        pageNode ? { path: pageNode.path, topic: pageNode.topic } : null
+        pageNode && !healthOpen ? { path: pageNode.path, topic: pageNode.topic } : null
     );
 
     React.useEffect(() => {
@@ -37,10 +42,12 @@ export function Cortex() {
     }, [pageNode, selectedPage]);
 
     function handleSelect(page: CortexPageNode) {
+        setHealthOpen(false);
         setSelectedPage({ path: page.path, topic: page.topic });
     }
 
     function handleSelectPage(page: { path: string; topic: string }) {
+        setHealthOpen(false);
         setSelectedPage(page);
     }
 
@@ -58,18 +65,33 @@ export function Cortex() {
         <div className="grid min-h-0 flex-1 bg-background">
             <div className="grid min-h-0 grid-cols-[300px_minmax(0,1fr)] overflow-hidden">
                 <CortexPageSidebar
+                    header={
+                        <CortexHealthCard
+                            health={healthQuery.data ?? null}
+                            isSelected={healthOpen}
+                            onOpen={() => setHealthOpen(true)}
+                        />
+                    }
                     onSelect={handleSelect}
                     pages={list.pages}
-                    selectedPageKey={pageNode ? pageKey(pageNode) : null}
+                    selectedPageKey={!healthOpen && pageNode ? pageKey(pageNode) : null}
                 />
                 <main className="min-h-0 overflow-hidden">
                     <div className="h-full min-h-0">
-                        <CortexDocumentPane
-                            isLoading={pageDetailQuery.isFetching}
-                            onNavigate={handleNavigate}
-                            onSelectPage={handleSelectPage}
-                            page={pageDetailQuery.data ?? null}
-                        />
+                        {healthOpen ? (
+                            <CortexHealthView
+                                health={healthQuery.data ?? null}
+                                isLoading={healthQuery.isPending}
+                                onSelectPage={handleSelectPage}
+                            />
+                        ) : (
+                            <CortexDocumentPane
+                                isLoading={pageDetailQuery.isFetching}
+                                onNavigate={handleNavigate}
+                                onSelectPage={handleSelectPage}
+                                page={pageDetailQuery.data ?? null}
+                            />
+                        )}
                     </div>
                 </main>
             </div>

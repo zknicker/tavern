@@ -2,7 +2,6 @@ import { Badge } from '../../components/ui/badge.tsx';
 import { BadgeDivider } from '../../components/ui/badge-divider.tsx';
 import { Table, TableBody, TableCell, TableRow } from '../../components/ui/table.tsx';
 import { useCortexBacklinks } from '../../hooks/cortex/use-cortex-backlinks.ts';
-import { CortexFollowUpPanel } from './cortex-follow-up-panel.tsx';
 import { type CortexLinkNavigate, CortexMarkdownViewer } from './cortex-markdown-viewer.tsx';
 import type { CortexPageDetail } from './types.ts';
 import { formatTimestamp } from './utils.ts';
@@ -40,7 +39,6 @@ export function CortexDocumentPane({
                         </h1>
                     )}
                     <PageSignals page={page} />
-                    <CortexFollowUpPanel page={page} />
                     <DocumentBody onNavigate={onNavigate} page={page} />
                     <BacklinksPanel onSelectPage={onSelectPage} page={page} />
                     <PageDetails page={page} />

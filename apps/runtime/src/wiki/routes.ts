@@ -1,6 +1,7 @@
 import {
     agentRuntimeRoutes,
     cortexBacklinkListSchema,
+    cortexHealthSchema,
     cortexPageListSchema,
     cortexPageSchema,
     cortexSearchInputSchema,
@@ -9,6 +10,7 @@ import {
     cortexTopicListSchema,
 } from '@tavern/api';
 import { json, notFound } from '../tavern/http';
+import { getCortexHealth } from './health';
 import {
     getCortexPage,
     getCortexStatus,
@@ -26,6 +28,10 @@ export async function handleCortexRequest(request: Request): Promise<Response | 
 
     if (request.method === 'GET' && url.pathname === agentRuntimeRoutes.cortexStatus) {
         return json(cortexStatusSchema.parse(await getCortexStatus()));
+    }
+
+    if (request.method === 'GET' && url.pathname === agentRuntimeRoutes.cortexHealth) {
+        return json(cortexHealthSchema.parse(await getCortexHealth()));
     }
 
     if (request.method === 'GET' && url.pathname === agentRuntimeRoutes.cortexTopics) {

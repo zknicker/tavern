@@ -12,10 +12,12 @@ import type { CortexPageNode } from './types.ts';
 import { buildCortexPageTree, type CortexPageTreeNode, getCortexDirectoryIds } from './utils.ts';
 
 export function CortexPageSidebar({
+    header,
     onSelect,
     pages,
     selectedPageKey,
 }: {
+    header?: React.ReactNode;
     onSelect: (page: CortexPageNode) => void;
     pages: CortexPageNode[];
     selectedPageKey: string | null;
@@ -50,6 +52,7 @@ export function CortexPageSidebar({
 
     return (
         <aside className="flex min-h-0 w-[300px] shrink-0 flex-col border-border/60 border-r bg-transparent">
+            {header}
             {pages.length === 0 ? (
                 <div className="px-5 py-2 text-muted-foreground text-sm">No wiki pages found.</div>
             ) : (

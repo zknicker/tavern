@@ -173,6 +173,7 @@ import {
     agentRuntimeUpsertBindingSchema,
     agentRuntimeWorkspaceInstructionsSchema,
     type CortexBacklinkList,
+    type CortexHealth,
     type CortexPage,
     type CortexPageList,
     type CortexSearchInput,
@@ -180,6 +181,7 @@ import {
     type CortexStatus,
     type CortexTopicList,
     cortexBacklinkListSchema,
+    cortexHealthSchema,
     cortexPageListSchema,
     cortexPageSchema,
     cortexSearchInputSchema,
@@ -229,6 +231,7 @@ export interface TavernAgentRuntimeClient {
     getAgentConfig(agentId: string): Promise<AgentRuntimeAgent>;
     getAgentFile(agentId: string, path: string): Promise<AgentRuntimeAgentFileContent>;
     getCapability(id: AgentRuntimeCapabilityHealthId): Promise<AgentRuntimeCapabilityHealth>;
+    getCortexHealth(): Promise<CortexHealth>;
     getCortexPage(input: { path: string; topic: string }): Promise<CortexPage | null>;
     getCortexStatus(): Promise<CortexStatus>;
     getCronJob(jobId: string): Promise<AgentRuntimeCron>;
@@ -830,6 +833,16 @@ class HttpTavernAgentRuntimeClient implements TavernAgentRuntimeClient {
         }
 
         return agentRuntimeRunJobSchema.parse(await response.json());
+    }
+
+    async getCortexHealth() {
+        const response = await fetch(`${this.#baseUrl}${agentRuntimeRoutes.cortexHealth}`);
+
+        if (!response.ok) {
+            await readErrorResponse(response);
+        }
+
+        return cortexHealthSchema.parse(await response.json());
     }
 
     async getCortexStatus() {

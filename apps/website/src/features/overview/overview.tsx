@@ -50,14 +50,7 @@ function buildHighlightLink(highlight: HighlightListOutput['highlights'][number]
     if (highlight?.category !== 'wiki_attention') {
         return null;
     }
-    const records = highlight.metric.records;
-    const first = Array.isArray(records) ? records[0] : null;
-    const topic = first && typeof first === 'object' ? (first as { topic?: unknown }).topic : null;
-    const path = first && typeof first === 'object' ? (first as { path?: unknown }).path : null;
-    if (typeof topic === 'string' && typeof path === 'string') {
-        return `/dashboard/cortex?topic=${encodeURIComponent(topic)}&path=${encodeURIComponent(path)}`;
-    }
-    return '/dashboard/cortex';
+    return '/dashboard/cortex?view=health';
 }
 
 function pickLandingHighlight(highlights: HighlightListOutput['highlights']) {

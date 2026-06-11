@@ -15,6 +15,12 @@ export async function getCortexStatus(
     return client ? await client.getCortexStatus() : null;
 }
 
+export async function getCortexHealth(
+    client: TavernAgentRuntimeClient | null = createConfiguredAgentRuntimeClient()
+) {
+    return client ? await client.getCortexHealth() : null;
+}
+
 export async function listCortexTopics(
     input: { includeArchived?: boolean } = {},
     client: TavernAgentRuntimeClient | null = createConfiguredAgentRuntimeClient()
