@@ -34,12 +34,12 @@ LLMs rebuild wrong without rationale. LLMs don't need a manifest format to read 
     │   │   │   └── ecc-crack-demo.py
     │   │   └── data/
     │   │       └── key-exposure-analysis.csv
-    │   ├── llm-wiki-roadmap/
+    │   ├── wiki-roadmap/
     │   │   └── WHY.md
     │   └── .archive/                   # archived projects live here
     │       └── old-thing/
     │           └── WHY.md
-    └── playbook-improving-llm-wiki-2026-04-08.md   # loose outputs still allowed
+    └── playbook-improving-the-wiki-2026-04-08.md   # loose outputs still allowed
 ```
 
 ## Rules

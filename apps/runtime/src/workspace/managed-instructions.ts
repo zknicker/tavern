@@ -72,7 +72,7 @@ Prefer the installed \`wiki\` skill for wiki work. Use the skill directly for re
 - audit an output or article
 - write a report, plan, catalog, or other output
 
-The hub resolves from \`TAVERN_WIKI_HUB_PATH\`, then \`~/.config/llm-wiki/config.json\`, then Tavern's managed Runtime wiki hub. Topic wikis live under \`topics/<slug>/\`; archived topics live under \`topics/.archive/<slug>/\`.
+The hub lives at \`TAVERN_WIKI_HUB_PATH\`, which Tavern sets for every run. Topic wikis live under \`topics/<slug>/\`; archived topics live under \`topics/.archive/<slug>/\`.
 
 Keep the wiki structure:
 
@@ -80,6 +80,7 @@ Keep the wiki structure:
 - \`wiki/\` contains compiled articles.
 - \`todos/\` is the wiki's todo queue: follow-up records with status and priority that Tavern processes automatically. \`datasets/\` tracks external data manifests.
 - \`output/\` contains reports, plans, decks, catalogs, and generated artifacts.
+- \`inbox/\` is a drop zone: files left there are ingested and compiled automatically.
 - \`_index.md\`, \`config.md\`, and \`log.md\` keep each topic navigable.
 
 ### Routing

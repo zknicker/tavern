@@ -35,6 +35,7 @@ hub
     ├── raw/          immutable sources — what was ingested, verbatim
     ├── wiki/         compiled articles — synthesized, cross-linked, cited
     ├── todos/        the todo queue — follow-up records with status/priority
+    ├── inbox/        drop zone — files left here get ingested automatically
     ├── datasets/     indexed structured data
     ├── output/       generated deliverables
     ├── log.md        append-only activity log
@@ -53,6 +54,8 @@ you: "remember this" ──► agent ingests in the current turn
                               │ compile job — 15-minute check, runs when
                               │   • 5+ sources are pending, or
                               │   • one has waited ~6 hours
+                              │ (inbox/ drops count as pending and get
+                              │  ingested first)
                               ▼
                    wiki/ articles — synthesized,
                    cross-linked, cited back to raw/
@@ -92,7 +95,10 @@ a durable record with attempt history instead of a slot in some giant run.
 
 There is no human gate. A todo the agent can't finish gets blocked with its
 reason, and the affected claims get marked so answers hedge; if it matters,
-it surfaces in conversation and you settle it there.
+it surfaces in conversation and you settle it there. Blocked records don't
+rot: the weekly librarian reviews them — retrying ones whose blocker likely
+cleared, deleting ones whose need was met another way, and keeping the truly
+stuck as the record of what was tried.
 
 Scores stay current per run: compile and todo turns re-score the articles they
 changed in the scan results, so the health page reflects work as it lands. The

@@ -51,26 +51,6 @@ describe('wiki store', () => {
         await fs.rm(hubPath, { force: true, recursive: true });
     });
 
-    test('reads legacy resolved_path llm-wiki config', async () => {
-        const homePath = await fs.mkdtemp(path.join(os.tmpdir(), 'tavern-wiki-home-'));
-        if (previousHubPath === undefined) {
-            unsetEnv('TAVERN_WIKI_HUB_PATH');
-        }
-
-        process.env.HOME = homePath;
-        await writeFile(path.join(hubPath, '_index.md'), '# Existing Hub\n');
-        await writeFile(
-            path.join(homePath, '.config', 'llm-wiki', 'config.json'),
-            JSON.stringify({ resolved_path: hubPath })
-        );
-
-        await expect(getCortexStatus()).resolves.toMatchObject({
-            configSource: 'config',
-            hubPath,
-        });
-        await fs.rm(homePath, { force: true, recursive: true });
-    });
-
     test('lists llm-wiki topics and pages', async () => {
         await expect(listCortexTopics()).resolves.toMatchObject({
             topics: [{ archived: false, slug: 'project-notes', title: 'Project Notes' }],

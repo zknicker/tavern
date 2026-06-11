@@ -55,8 +55,7 @@ Tavern follows llm-wiki's layout:
 Hub path resolution:
 
 1. `TAVERN_WIKI_HUB_PATH` or `TAVERN_CORTEX_WIKI_PATH`
-2. `~/.config/llm-wiki/config.json`
-3. Runtime-managed `wiki/` under `TAVERN_RUNTIME_ROOT`
+2. Runtime-managed `wiki/` under `TAVERN_RUNTIME_ROOT`
 
 Managed Hermes startup prepares the wiki skill package before launch:
 

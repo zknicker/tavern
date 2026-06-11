@@ -53,60 +53,6 @@ describe('managed llm-wiki integration', () => {
         }
     });
 
-    it('uses llm-wiki config before the managed Runtime hub', async () => {
-        const previousHome = process.env.HOME;
-        const previousHubPath = process.env.TAVERN_WIKI_HUB_PATH;
-        const previousCortexWikiPath = process.env.TAVERN_CORTEX_WIKI_PATH;
-        const directory = await fs.mkdtemp(path.join(os.tmpdir(), 'tavern-llm-wiki-home-'));
-        const configuredHub = path.join(directory, 'configured-hub');
-
-        try {
-            process.env.HOME = directory;
-            process.env.TAVERN_WIKI_HUB_PATH = undefined;
-            process.env.TAVERN_CORTEX_WIKI_PATH = undefined;
-            await writeFile(
-                path.join(directory, '.config', 'llm-wiki', 'config.json'),
-                JSON.stringify({ hub_path: configuredHub })
-            );
-
-            expect(resolveManagedWikiHubPath('/tmp/tavern-runtime')).toBe(configuredHub);
-        } finally {
-            restoreEnv('HOME', previousHome);
-            restoreEnv('TAVERN_WIKI_HUB_PATH', previousHubPath);
-            restoreEnv('TAVERN_CORTEX_WIKI_PATH', previousCortexWikiPath);
-            await fs.rm(directory, { force: true, recursive: true });
-        }
-    });
-
-    it('uses legacy resolved_path when the portable hub_path is unavailable', async () => {
-        const previousHome = process.env.HOME;
-        const previousHubPath = process.env.TAVERN_WIKI_HUB_PATH;
-        const previousCortexWikiPath = process.env.TAVERN_CORTEX_WIKI_PATH;
-        const directory = await fs.mkdtemp(path.join(os.tmpdir(), 'tavern-llm-wiki-home-'));
-        const resolvedHub = path.join(directory, 'resolved-hub');
-
-        try {
-            process.env.HOME = directory;
-            unsetEnv('TAVERN_WIKI_HUB_PATH');
-            unsetEnv('TAVERN_CORTEX_WIKI_PATH');
-            await writeFile(path.join(resolvedHub, '_index.md'), '# Existing Hub\n');
-            await writeFile(
-                path.join(directory, '.config', 'llm-wiki', 'config.json'),
-                JSON.stringify({
-                    hub_path: path.join(directory, 'missing-hub'),
-                    resolved_path: resolvedHub,
-                })
-            );
-
-            expect(resolveManagedWikiHubPath('/tmp/tavern-runtime')).toBe(resolvedHub);
-        } finally {
-            restoreEnv('HOME', previousHome);
-            restoreEnv('TAVERN_WIKI_HUB_PATH', previousHubPath);
-            restoreEnv('TAVERN_CORTEX_WIKI_PATH', previousCortexWikiPath);
-            await fs.rm(directory, { force: true, recursive: true });
-        }
-    });
-
     it('finds repo runtime assets from source execution', () => {
         const previousAssetsDir = process.env.TAVERN_RUNTIME_ASSETS_DIR;
         try {

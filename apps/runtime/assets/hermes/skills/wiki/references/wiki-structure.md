@@ -1,13 +1,13 @@
 # Wiki Directory Structure
 
-> **Configurable hub path**: The hub location is read from `~/.config/llm-wiki/config.json` (`hub_path` field preferred; `resolved_path` is a legacy fallback). If no config exists, `~/wiki/` is the fallback. Throughout this document, `HUB/` means "the resolved hub path". See [hub-resolution.md](hub-resolution.md) for the full resolution protocol (tilde expansion, space handling, iCloud paths).
+> **Hub path**: The hub location is `TAVERN_WIKI_HUB_PATH`, set by Tavern Runtime. Throughout this document, `HUB/` means "the resolved hub path". See [hub-resolution.md](hub-resolution.md).
 
 ## Hub (HUB/)
 
 The hub is lightweight — it has NO content directories. It only tracks topic wikis.
 
 ```
-HUB/                               # resolved from ~/.config/llm-wiki/config.json
+HUB/                               # resolved from TAVERN_WIKI_HUB_PATH
 ├── wikis.json                     # Registry of all topic wikis
 ├── _index.md                      # Lists topic wikis with stats
 ├── log.md                         # Global activity log
@@ -125,7 +125,7 @@ Same structure as above but rooted at `<project>/.wiki/` without `wikis.json` or
 
 ## Wiki Resolution Order
 
-When a command runs, first resolve the hub path (HUB) from `~/.config/llm-wiki/config.json` (see `hub-resolution.md`). Then resolve which wiki to use:
+When a command runs, first resolve the hub path (HUB) from `TAVERN_WIKI_HUB_PATH` (see `hub-resolution.md`). Then resolve which wiki to use:
 
 1. `--local` flag present → `<cwd>/.wiki/`
 2. `--wiki <name>` flag present → look up name in `HUB/wikis.json`; resolve `<HUB>`, leading `~`, absolute, and HUB-relative paths, and fall back to `HUB/topics/<name>` when a registry path is stale

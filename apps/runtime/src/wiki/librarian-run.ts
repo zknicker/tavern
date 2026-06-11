@@ -60,8 +60,12 @@ export function buildWikiLibrarianPrompt(): string {
         'that needs outside material — re-fetching stale sources, research to thicken',
         'thin or single-source coverage, corroborating unverified claims, dedup merges',
         'needing judgment — as proposed todo records per references/todos.md;',
-        'records are worked off automatically. Do not re-fetch external sources and do',
-        'not rewrite article content in this run. If the hub has no active topic wikis,',
-        'stop after a one-line summary. Finish with a one-line summary.',
+        'records are worked off automatically. Review blocked todo records: if the',
+        'blocker has likely cleared, set them back to proposed for a retry; if the',
+        'underlying need was met another way, log and delete them; otherwise leave',
+        'them blocked as the record of what was tried. Do not re-fetch external',
+        'sources and do not rewrite article content in this run. If the hub has no',
+        'active topic wikis, stop after a one-line summary. Finish with a one-line',
+        'summary.',
     ].join(' ');
 }

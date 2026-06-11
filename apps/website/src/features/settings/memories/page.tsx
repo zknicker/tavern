@@ -114,8 +114,6 @@ function formatAccess(status: Pick<WikiHubStatus, 'readable' | 'writable'>) {
 
 function formatConfigSource(source: WikiHubStatus['configSource']) {
     switch (source) {
-        case 'config':
-            return 'llm-wiki config';
         case 'environment':
             return 'Environment';
         case 'runtime':

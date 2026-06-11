@@ -11,11 +11,11 @@ import type {
     CortexTopicList,
 } from '@tavern/api';
 import { RUNTIME_ROOT, readConfigValue, resolveConfiguredPath } from '../config';
-import { resolveLlmWikiConfigHubPath, resolveManagedWikiHubPath } from '../hermes/llm-wiki';
+import { resolveManagedWikiHubPath } from '../hermes/llm-wiki';
 
 interface WikiConfig {
     hubPath: string;
-    source: 'config' | 'environment' | 'runtime';
+    source: 'environment' | 'runtime';
 }
 
 interface MarkdownFile {
@@ -176,11 +176,6 @@ export async function resolveWikiConfig(): Promise<WikiConfig> {
         readConfigValue('TAVERN_WIKI_HUB_PATH') ?? readConfigValue('TAVERN_CORTEX_WIKI_PATH');
     if (configured) {
         return { hubPath: resolveConfiguredPath(configured), source: 'environment' };
-    }
-
-    const configHubPath = resolveLlmWikiConfigHubPath();
-    if (configHubPath) {
-        return { hubPath: configHubPath, source: 'config' };
     }
 
     return { hubPath: resolveManagedWikiHubPath(RUNTIME_ROOT), source: 'runtime' };

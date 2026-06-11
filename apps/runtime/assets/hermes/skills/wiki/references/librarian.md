@@ -132,7 +132,7 @@ Range: 20 (worst possible — all 1s) to 100 (all 5s). Articles below 50 are sur
 
 ## Checkpoint Protocol
 
-The `.librarian/` directory lives inside each topic wiki (e.g., `~/wiki/topics/meta-llm-wiki/.librarian/`). Created on first scan.
+The `.librarian/` directory lives inside each topic wiki (e.g., `~/wiki/topics/coffee-brewing/.librarian/`). Created on first scan.
 
 ### checkpoint.json
 
@@ -141,7 +141,7 @@ Written after each article is scored. If the session drops, the next `scan` or `
 ```json
 {
   "scan_id": "2026-04-22T10:30:00Z",
-  "wiki": "meta-llm-wiki",
+  "wiki": "coffee-brewing",
   "passes": ["staleness", "quality"],
   "scope": "full",
   "threshold": 70,
@@ -169,7 +169,7 @@ The complete scan output. Source of truth for other skills.
 ```json
 {
   "scan_id": "2026-04-22T10:30:00Z",
-  "wiki": "meta-llm-wiki",
+  "wiki": "coffee-brewing",
   "completed_at": "2026-04-22T10:45:00Z",
   "passes": ["staleness", "quality"],
   "threshold": 70,

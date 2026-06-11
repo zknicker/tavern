@@ -979,7 +979,7 @@ export const cortexBacklinkListSchema = z.object({
 
 export const cortexStatusSchema = z.object({
     archivedTopicCount: z.number().int().nonnegative(),
-    configSource: z.enum(['config', 'environment', 'runtime']),
+    configSource: z.enum(['environment', 'runtime']),
     hubPath: z.string().trim().min(1),
     pageCount: z.number().int().nonnegative(),
     readable: z.boolean(),

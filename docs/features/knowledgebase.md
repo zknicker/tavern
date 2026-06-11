@@ -50,11 +50,10 @@ librarian, lessons, output, todos, datasets, and archive workflows.
 
 ## Contract
 
-Hub resolution follows llm-wiki:
+Hub resolution:
 
 1. `TAVERN_WIKI_HUB_PATH` or `TAVERN_CORTEX_WIKI_PATH`
-2. `~/.config/llm-wiki/config.json`
-3. Runtime-managed `wiki/` under `TAVERN_RUNTIME_ROOT`
+2. Runtime-managed `wiki/` under `TAVERN_RUNTIME_ROOT`
 
 Topic wikis live under `topics/<slug>/`. Archived topics live under
 `topics/.archive/<slug>/`, appear as `.archive/<slug>` in Cortex APIs, and are

@@ -17,8 +17,8 @@ The Knowledgebase API exposes read-only Cortex access to the llm-wiki hub.
 * Page bodies are Markdown file contents after light frontmatter parsing.
 * Backlinks are derived from `[[wikilinks]]`.
 * Search is lightweight title, path, and body matching.
-* `configSource` is `environment`, `config`, or `runtime`; `runtime` means
-  Tavern is using the managed Runtime wiki hub.
+* `configSource` is `environment` or `runtime`; `runtime` means Tavern is
+  using the managed Runtime wiki hub.
 * Writes, ingestion, compilation, audits, and maintenance are llm-wiki agent
   workflows launched through Tasks or Runtime crons.
 

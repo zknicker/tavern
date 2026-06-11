@@ -19,10 +19,11 @@ export interface PendingCompileTopic {
 }
 
 /**
- * Counts uncompiled raw sources per active topic from `log.md` order — the
- * append-only llm-wiki activity log. Ingest entries after the last compile (or
- * research, which compiles inline) entry are pending; timestamps come from the
- * ingested raw file's mtime, falling back to the log entry date.
+ * Counts unprocessed source material per active topic: uncompiled raw sources
+ * from `log.md` order — ingest entries after the last compile (or research,
+ * which compiles inline) entry — plus files dropped in `inbox/` that have not
+ * been ingested yet. Timestamps come from file mtimes, falling back to log
+ * entry dates.
  */
 export async function listPendingCompileTopics(): Promise<PendingCompileTopic[]> {
     const { topics } = await listCortexTopics();
@@ -67,19 +68,36 @@ async function readPendingForTopic(slug: string, topicPath: string): Promise<Pen
     const pendingEntries = entries
         .slice(lastCompileIndex + 1)
         .filter((entry) => ingestOps.has(entry.op));
-    if (pendingEntries.length === 0) {
+    const [logTimestamps, inboxTimestamps] = await Promise.all([
+        Promise.all(pendingEntries.map((entry) => readIngestTimestamp(topicPath, entry))),
+        listInboxTimestamps(topicPath),
+    ]);
+    const timestamps = [...logTimestamps, ...inboxTimestamps];
+    if (timestamps.length === 0) {
         return empty;
     }
 
-    const timestamps = await Promise.all(
-        pendingEntries.map((entry) => readIngestTimestamp(topicPath, entry))
-    );
     return {
         newestPendingAtMs: Math.max(...timestamps),
         oldestPendingAtMs: Math.min(...timestamps),
-        pendingCount: pendingEntries.length,
+        pendingCount: timestamps.length,
         topic: slug,
     };
+}
+
+/** Files dropped in `inbox/` count as pending sources until ingest sweeps them. */
+async function listInboxTimestamps(topicPath: string): Promise<number[]> {
+    try {
+        const inboxPath = path.join(topicPath, 'inbox');
+        const entries = await fs.readdir(inboxPath, { withFileTypes: true });
+        const files = entries.filter((entry) => entry.isFile() && !entry.name.startsWith('.'));
+        const stats = await Promise.all(
+            files.map((entry) => fs.stat(path.join(inboxPath, entry.name)))
+        );
+        return stats.map((stat) => stat.mtimeMs);
+    } catch {
+        return [];
+    }
 }
 
 async function readIngestTimestamp(topicPath: string, entry: WikiLogEntry): Promise<number> {

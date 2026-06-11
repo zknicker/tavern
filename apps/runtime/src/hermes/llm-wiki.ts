@@ -1,6 +1,5 @@
 import fsSync from 'node:fs';
 import fs from 'node:fs/promises';
-import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { HERMES_HOME, RUNTIME_ROOT, readConfigValue, resolveConfiguredPath } from '../config';
@@ -46,7 +45,7 @@ export function resolveManagedWikiHubPath(runtimeRoot = RUNTIME_ROOT) {
         return resolveConfiguredPath(configured);
     }
 
-    return resolveLlmWikiConfigHubPath() ?? path.join(runtimeRoot, 'wiki');
+    return path.join(runtimeRoot, 'wiki');
 }
 
 export function resolveRuntimeAssetsRoot() {
@@ -76,54 +75,6 @@ function resolveSourceAssetsRoot() {
         path.resolve(moduleDir, '..', '..', 'assets'),
     ];
     return candidates.find((candidate) => fsSync.existsSync(candidate)) ?? candidates.at(-1)!;
-}
-
-export function resolveLlmWikiConfigHubPath() {
-    const configPath = path.join(
-        process.env.HOME || os.homedir(),
-        '.config',
-        'llm-wiki',
-        'config.json'
-    );
-    try {
-        const parsed = JSON.parse(fsSync.readFileSync(configPath, 'utf8')) as Record<
-            string,
-            unknown
-        >;
-        const hubPath = readString(parsed.hub_path) ?? readString(parsed.hubPath);
-        const resolvedPath = readString(parsed.resolved_path) ?? readString(parsed.resolvedPath);
-        if (hubPath) {
-            const expandedHubPath = resolveConfiguredPath(hubPath);
-            if (canStatPath(expandedHubPath)) {
-                return expandedHubPath;
-            }
-            if (resolvedPath && hasInitializedHub(resolveConfiguredPath(resolvedPath))) {
-                return resolveConfiguredPath(resolvedPath);
-            }
-            return expandedHubPath;
-        }
-        return resolvedPath ? resolveConfiguredPath(resolvedPath) : null;
-    } catch {
-        return null;
-    }
-}
-
-function canStatPath(targetPath: string) {
-    try {
-        fsSync.statSync(targetPath);
-        return true;
-    } catch (error) {
-        const code = (error as NodeJS.ErrnoException).code;
-        return code === 'EACCES' || code === 'EPERM';
-    }
-}
-
-function hasInitializedHub(hubPath: string) {
-    return canStatPath(path.join(hubPath, '_index.md'));
-}
-
-function readString(value: unknown) {
-    return typeof value === 'string' && value.trim() ? value.trim() : null;
 }
 
 async function prepareManagedWikiHub(hubPath: string) {
