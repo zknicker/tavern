@@ -65,14 +65,16 @@ export function useEngineRestartToast() {
             void toastManager
                 .promise(promise, {
                     error: {
-                        description: 'Your settings will apply when it finishes.',
-                        title: 'The agent engine is still restarting',
+                        description: 'settings apply when the engine returns',
+                        title: 'Still restarting',
                     },
                     loading: {
-                        description: 'Restarting the agent engine…',
+                        description: 'restarting the agent engine…',
                         title: 'Applying settings',
                     },
-                    success: { title: 'Settings applied' },
+                    // Empty description: promise() merges options per phase, so
+                    // omitting it would leak the loading description into success.
+                    success: { description: '', title: 'Settings applied' },
                 })
                 .catch(() => undefined);
         },

@@ -89,8 +89,8 @@ export function DesktopUpdateIndicator({ placement = 'inline' }: DesktopUpdateIn
                                 }
 
                                 toastManager.add({
-                                    title: 'A Tavern Runtime update has begun downloading.',
-                                    type: 'success',
+                                    title: 'Runtime update downloading…',
+                                    type: 'info',
                                 });
                                 updateAndRestart().catch(() => undefined);
                             }}
