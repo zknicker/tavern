@@ -31,20 +31,27 @@ export function listEvents(
             `SELECT event_json
              FROM chat_events
              WHERE cursor > $afterCursor
-             ORDER BY cursor ASC`
+               AND (
+                 is_private = 0
+                 OR EXISTS (
+                   SELECT 1 FROM json_each(chat_events.recipients_json)
+                   WHERE json_each.value = $recipientId
+                 )
+               )
+             ORDER BY cursor ASC
+             LIMIT $limit`
         )
         .all(
             namedParams({
                 afterCursor: Number(input.afterCursor ?? 0),
+                limit: limit + 1,
+                recipientId: input.recipientId ?? null,
             })
         ) as EventRow[];
-    const visibleEvents = rows
-        .map((row) => JSON.parse(row.event_json) as TavernChatEvent)
-        .filter((event) => canReadEvent(event, input.recipientId));
-    const events = visibleEvents.slice(0, limit);
+    const events = rows.slice(0, limit).map((row) => JSON.parse(row.event_json) as TavernChatEvent);
     return {
         events,
-        next_cursor: visibleEvents.length > limit ? (events.at(-1)?.cursor ?? null) : null,
+        next_cursor: rows.length > limit ? (events.at(-1)?.cursor ?? null) : null,
     };
 }
 

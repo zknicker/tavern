@@ -994,6 +994,8 @@ export interface operations {
     listEvents: {
         parameters: {
             query?: {
+                /** @description Return events after this cursor (exclusive). Omit to read from the beginning. */
+                after_cursor?: string;
                 /** @description Include private events addressed to this recipient. */
                 recipient_id?: components["schemas"]["ParticipantId"];
                 limit?: components["parameters"]["Limit"];

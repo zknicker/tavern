@@ -20,6 +20,7 @@ import {
     upsertResponse,
     upsertResponseActivity,
 } from './chat-api';
+import { insertEvent } from './chat-api/events';
 import { handleTavernRuntimeRequest } from './router';
 
 describe('Tavern Runtime Chat API store', () => {
@@ -462,6 +463,90 @@ describe('Tavern Runtime Chat API store', () => {
         } finally {
             unsubscribe();
         }
+    });
+
+    it('listEvents visibility parity: public events visible to all, private events only to addressed recipient', () => {
+        const db = getDb();
+        createChat({ id: 'cht_1' });
+        insertEvent({ chatId: 'cht_1', event: 'message.created', payload: { label: 'pub1' } }, db);
+        insertEvent(
+            {
+                chatId: 'cht_1',
+                event: 'message.created',
+                payload: { label: 'priv-A' },
+                private: true,
+                recipients: ['A'],
+            },
+            db
+        );
+        insertEvent(
+            {
+                chatId: 'cht_1',
+                event: 'message.created',
+                payload: { label: 'priv-B' },
+                private: true,
+                recipients: ['B'],
+            },
+            db
+        );
+        insertEvent({ chatId: 'cht_1', event: 'message.created', payload: { label: 'pub2' } }, db);
+
+        const forA = listEvents({ recipientId: 'A' });
+        expect(forA.events).toHaveLength(3);
+        expect(forA.events.map((e) => (e as Record<string, unknown>).label)).toEqual([
+            'pub1',
+            'priv-A',
+            'pub2',
+        ]);
+
+        const forNone = listEvents({});
+        expect(forNone.events).toHaveLength(2);
+        expect(forNone.events.map((e) => (e as Record<string, unknown>).label)).toEqual([
+            'pub1',
+            'pub2',
+        ]);
+    });
+
+    it('listEvents limit and next_cursor: pages correctly across visible events', () => {
+        const db = getDb();
+        createChat({ id: 'cht_1' });
+        const limit = 3;
+        for (let i = 1; i <= limit + 2; i++) {
+            insertEvent({ chatId: 'cht_1', event: 'message.created', payload: { seq: i } }, db);
+        }
+
+        const page1 = listEvents({ limit });
+        expect(page1.events).toHaveLength(limit);
+        expect(page1.next_cursor).toBe(page1.events.at(-1)?.cursor ?? null);
+        expect(page1.next_cursor).not.toBeNull();
+
+        const page2 = listEvents({ limit, afterCursor: page1.next_cursor });
+        expect(page2.events).toHaveLength(2);
+        expect(page2.next_cursor).toBeNull();
+    });
+
+    it('listEvents private events do not consume the page: skipped in SQL, not counted against limit', () => {
+        const db = getDb();
+        createChat({ id: 'cht_1' });
+        for (let i = 0; i < 5; i++) {
+            insertEvent(
+                {
+                    chatId: 'cht_1',
+                    event: 'message.created',
+                    payload: { seq: i },
+                    private: true,
+                    recipients: ['other'],
+                },
+                db
+            );
+        }
+        for (let i = 0; i < 3; i++) {
+            insertEvent({ chatId: 'cht_1', event: 'message.created', payload: { seq: i } }, db);
+        }
+
+        const result = listEvents({ limit: 3 });
+        expect(result.events).toHaveLength(3);
+        expect(result.next_cursor).toBeNull();
     });
 });
 

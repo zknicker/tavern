@@ -369,6 +369,11 @@ paths:
       tags: [Realtime]
       summary: List recent durable events.
       parameters:
+        - name: after_cursor
+          in: query
+          description: Return events after this cursor (exclusive). Omit to read from the beginning.
+          schema:
+            type: string
         - name: recipient_id
           in: query
           description: Include private events addressed to this recipient.
