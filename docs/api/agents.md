@@ -11,7 +11,7 @@ The Agents API is for the workers users configure and talk to in Tavern.
 
 Agents are client-facing records. Runtime sessions and Hermes execution details
 can be attached as metadata, but the API exposes agents as named Tavern workers
-with user-authored instructions, model, tool, memory, and skill policy.
+with instruction files, model, execution, tool, memory, and skill policy.
 
 ## Contract
 
@@ -19,23 +19,28 @@ with user-authored instructions, model, tool, memory, and skill policy.
 * Agent list and detail reads use synced Runtime records. Mounting an app screen
   must not contact Hermes Gateway or enqueue a background sync job just to
   discover agents.
-* Agent records expose display name, description, user-authored instructions,
-  model policy, tool policy, memory policy, skill selections, and availability.
+* Agent records expose display name, description, model policy, tool policy,
+  memory policy, skill selections, and availability.
 * Model availability comes from Hermes model options exposed through Runtime.
   Clients read the stored snapshot and capability state instead of maintaining a
   Tavern-maintained list.
 * Tool and skill controls are inspectable before a run starts.
-* User-authored markdown settings use Hermes-supported files. `AGENTS.md` is
-  managed workspace context. `SOUL.md` is managed Hermes home identity. Clients
-  save these files through the Runtime-hosted agent file API.
+* Instruction settings use Hermes-supported markdown files. `AGENTS.md` is
+  managed workspace context and opens with a Tavern-managed block that Runtime
+  keeps current; everything outside the block is user- and agent-owned.
+  `SOUL.md` is managed Hermes home identity. Clients save these files through
+  the Runtime-hosted agent file API; saving `AGENTS.md` returns the reconciled
+  file.
 * Tavern policy includes Cortex brain-first lookup guidance. Managed agents
   check Cortex before external lookup when durable user, project, or prior
   decision context may already exist.
 * Hermes-backed settings use narrow domain mutations. Clients update agent
   name, model, thinking default, and messaging bindings through agent and
   messaging APIs instead of editing or saving raw Hermes config JSON.
-* Agent notes are DB-backed and agent-owned. They are updated through Tavern
-  workspace tools, not through the first-pass user-facing agent settings UI.
+* Execution settings — the model fallback chain and the agent timezone — are
+  Runtime-stored and edited through the agent execution settings API. Saving
+  rewrites the generated managed runtime config and restarts managed Hermes to
+  apply.
 * Runtime execution state is not required just to list agents.
 
 ## Surface
@@ -48,6 +53,7 @@ The API covers:
 * create or update agent settings
 * read and update supported agent markdown files
 * read model choices and availability
+* read and update execution settings (model fallbacks, timezone)
 * read and update tool policy
 * read and update memory policy
 * read and update skill assignment

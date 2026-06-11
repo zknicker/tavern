@@ -100,7 +100,12 @@ Set `TAVERN_DEV_STACK_ID` to choose the state directory name, or
 
 ## Model Config
 
-Runtime writes managed Hermes model config into `HERMES_HOME`.
+Runtime writes the generated managed Hermes config into `HERMES_HOME` as a
+domain-based merge (`apps/runtime/src/hermes/generated-config.ts`): the model
+route, Runtime-stored execution settings (model fallback chain, timezone),
+the memory provider, and required plugins. Each domain only sets or deletes
+its own keys, so operator-managed keys elsewhere in the file survive.
+Execution-setting changes rewrite the file and restart managed Hermes.
 
 Explicit env wins:
 

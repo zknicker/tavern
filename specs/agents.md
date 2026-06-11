@@ -35,6 +35,9 @@ surfaces resolve the primary agent instead of asking the person to choose among 
   agent record.
 - Tavern exposes subagent defaults — the model and effort used for delegated work — as agent-level
   settings materialized through generated managed runtime config.
+- Tavern exposes the agent timezone as a Runtime-stored execution setting (system default when
+  unset) materialized through generated managed runtime config; it governs schedules and
+  time-aware answers.
 - Hermes-native edits made outside Tavern refresh Tavern through sync and events.
 
 ## Relationships
