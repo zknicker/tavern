@@ -1,3 +1,4 @@
+import { onEngineRestart } from './agent/on-engine-restart.ts';
 import { onAgentInstructionsUpdate } from './agent/on-instructions-update.ts';
 import { onAgentUpdate } from './agent/on-update.ts';
 import { onAgentRuntimeCapabilityUpdated } from './agent-runtime/on-capability-updated.ts';
@@ -22,6 +23,7 @@ import { onWorkersUpdate } from './worker/on-update.ts';
 
 export const wsRouter = createRouter({
     agent: createRouter({
+        onEngineRestart,
         onInstructionsUpdate: onAgentInstructionsUpdate,
         onUpdate: onAgentUpdate,
     }),

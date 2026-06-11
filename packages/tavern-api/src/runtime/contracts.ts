@@ -1816,8 +1816,21 @@ export const agentRuntimeSessionUpdatedEventSchema = z.object({
     type: z.literal('session.updated'),
 });
 
+export const agentRuntimeEngineRestartPhaseSchema = z.enum([
+    'scheduled',
+    'restarting',
+    'completed',
+]);
+
+export const agentRuntimeEngineRestartEventSchema = z.object({
+    phase: agentRuntimeEngineRestartPhaseSchema,
+    timestamp: z.string().datetime(),
+    type: z.literal('engine.restart'),
+});
+
 export const agentRuntimeEventSchema = z.discriminatedUnion('type', [
     agentRuntimeAgentUpdatedEventSchema,
+    agentRuntimeEngineRestartEventSchema,
     agentRuntimeChatMessageAcceptedEventSchema,
     agentRuntimeChatReadEventSchema,
     agentRuntimeModelUpdatedEventSchema,
@@ -1888,6 +1901,7 @@ export type AgentRuntimeExecutionError = z.infer<typeof agentRuntimeExecutionErr
 export type AgentRuntimeExecutionErrorCode = z.infer<typeof agentRuntimeExecutionErrorCodeSchema>;
 export type AgentRuntimeExecutionStatus = z.infer<typeof agentRuntimeExecutionStatusSchema>;
 export type AgentRuntimeEvent = z.infer<typeof agentRuntimeEventSchema>;
+export type AgentRuntimeEngineRestartPhase = z.infer<typeof agentRuntimeEngineRestartPhaseSchema>;
 export type AgentRuntimeEventList = z.infer<typeof agentRuntimeEventListSchema>;
 export type AgentRuntimeEventType = z.infer<typeof agentRuntimeEventTypeSchema>;
 export type AgentRuntimeError = z.infer<typeof agentRuntimeErrorSchema>;

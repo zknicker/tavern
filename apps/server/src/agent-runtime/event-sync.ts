@@ -12,6 +12,7 @@ import {
     emitChatLogUpdated,
     emitChatUpdated,
     emitCronUpdated,
+    emitEngineRestartUpdated,
     emitModelUpdated,
     emitSessionUpdated,
     emitWorkersUpdated,
@@ -106,6 +107,11 @@ export async function applyObservedAgentRuntimeEvent(
                 console.warn('[tavern] failed to sync cron run event', error);
             });
             emitCronUpdated();
+            return;
+        }
+        case 'engine.restart': {
+            emitObservedAgentRuntimeEvent(event);
+            emitEngineRestartUpdated({ phase: event.phase });
             return;
         }
         case 'capability.updated': {

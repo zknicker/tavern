@@ -9,6 +9,7 @@ import {
 import { getAgent } from './get.ts';
 import { getAgentInstructions } from './instructions.ts';
 import { listAgents } from './list.ts';
+import { onEngineRestart } from './on-engine-restart.ts';
 import { onAgentInstructionsUpdate } from './on-instructions-update.ts';
 import { onAgentUpdate } from './on-update.ts';
 import {
@@ -35,6 +36,7 @@ export const agentRouter = createRouter({
     get: getAgent,
     instructions: getAgentInstructions,
     list: listAgents,
+    onEngineRestart,
     onInstructionsUpdate: onAgentInstructionsUpdate,
     onUpdate: onAgentUpdate,
     permissionSettings: getAgentPermissionSettingsProcedure,

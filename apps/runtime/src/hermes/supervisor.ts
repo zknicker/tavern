@@ -47,7 +47,16 @@ export function requestManagedHermesRestart(): boolean {
         return false;
     }
     activeRestartCoordinator.request();
+    publishEngineRestartPhase('scheduled');
     return true;
+}
+
+function publishEngineRestartPhase(phase: 'completed' | 'restarting' | 'scheduled') {
+    publishRuntimeEvent({
+        phase,
+        timestamp: new Date().toISOString(),
+        type: 'engine.restart',
+    });
 }
 
 export async function startHermesForRuntime(): Promise<ManagedHermesHandle> {
@@ -63,6 +72,7 @@ export async function startHermesForRuntime(): Promise<ManagedHermesHandle> {
     let child: ChildProcess | null = null;
     let stopping = false;
     let restartTimer: ReturnType<typeof setTimeout> | null = null;
+    let coordinatedRestartPending = false;
 
     const startDashboard = async (reason: 'initial' | 'restart') => {
         if (await isPortOpen(port)) {
@@ -100,6 +110,10 @@ export async function startHermesForRuntime(): Promise<ManagedHermesHandle> {
                 }
                 markManagedHermesApiReady();
                 publishGatewayCapabilitiesUpdated();
+                if (coordinatedRestartPending) {
+                    coordinatedRestartPending = false;
+                    publishEngineRestartPhase('completed');
+                }
             })
             .catch((err) => {
                 if (stopping || child !== nextChild) {
@@ -154,6 +168,8 @@ export async function startHermesForRuntime(): Promise<ManagedHermesHandle> {
             if (stopping) {
                 return;
             }
+            coordinatedRestartPending = true;
+            publishEngineRestartPhase('restarting');
             const current = child;
             if (current) {
                 log.info('Restarting managed Hermes API to apply generated config');

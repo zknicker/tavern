@@ -1,6 +1,7 @@
 import { useAgentEvents } from '../hooks/agents/use-agent-events.ts';
 import { useChatEvents } from '../hooks/chats/use-chat-events.ts';
 import { useChatTurnEvents } from '../hooks/chats/use-chat-turn-events.ts';
+import { useEngineRestartToast } from '../hooks/connections/use-engine-restart-toast.ts';
 import { useOpenRouterSettingsEvents } from '../hooks/connections/use-openrouter-settings-events.ts';
 import {
     useRuntimeCapabilityEvents,
@@ -19,6 +20,7 @@ export function TrpcEventListeners() {
     useAgentEvents();
     useChatEvents();
     useChatTurnEvents();
+    useEngineRestartToast();
     useRuntimeCapabilityEvents();
     useRuntimeConnectionEvents();
     useCronEvents();

@@ -15,6 +15,7 @@ export const tavernEventNames = {
     chatLogUpdated: 'chat.log.updated',
     chatUpdated: 'chat.updated',
     cronUpdated: 'cron.updated',
+    engineRestartUpdated: 'engine-restart.updated',
     jobsUpdated: 'jobs.updated',
     modelUpdated: 'model.updated',
     openRouterSettingsUpdated: 'open-router-settings.updated',
@@ -55,6 +56,13 @@ export async function* subscribeToTavernEvent(eventName: TavernEventName, signal
     for await (const [event] of iterator) {
         yield invalidationEventSchema.parse(event);
     }
+}
+
+export function emitEngineRestartUpdated(input: { phase: string }) {
+    emitTavernEvent(tavernEventNames.engineRestartUpdated, {
+        ...createInvalidationEvent(),
+        phase: input.phase,
+    });
 }
 
 export function emitAgentUpdated() {
