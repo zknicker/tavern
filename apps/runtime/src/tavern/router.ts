@@ -14,6 +14,7 @@ import {
 } from '@tavern/api';
 import { handleRuntimeCapabilitiesRequest } from '../capabilities/routes';
 import { handleExecutionSettingsRequest } from '../hermes/execution-settings';
+import { handlePermissionSettingsRequest } from '../hermes/permission-settings';
 import { listTavernHighlights } from '../highlights/highlights';
 import { handleRuntimeJobsRequest } from '../jobs/routes';
 import { listMacApps } from '../mac-apps/inventory';
@@ -95,6 +96,11 @@ export async function handleTavernRuntimeRequest(request: Request): Promise<Resp
     const executionSettingsResponse = await handleExecutionSettingsRequest(request);
     if (executionSettingsResponse) {
         return executionSettingsResponse;
+    }
+
+    const permissionSettingsResponse = await handlePermissionSettingsRequest(request);
+    if (permissionSettingsResponse) {
+        return permissionSettingsResponse;
     }
 
     const capabilitiesResponse = await handleRuntimeCapabilitiesRequest(request);

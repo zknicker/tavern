@@ -27,9 +27,17 @@ export interface HermesExecutionDomain {
     timezone: string | null;
 }
 
+export interface HermesPermissionsDomain {
+    approvalMode: 'allow' | 'ask' | 'deny';
+    automationApprovalMode: 'allow' | 'ask' | 'deny';
+    commandAllowlist: string[];
+}
+
 export interface HermesGeneratedConfigDomains {
     execution: HermesExecutionDomain;
     model: HermesModelDomain;
+    /** null = never configured in Tavern; the domain leaves the file untouched. */
+    permissions: HermesPermissionsDomain | null;
 }
 
 export async function mergeHermesGeneratedConfig(
@@ -41,6 +49,9 @@ export async function mergeHermesGeneratedConfig(
 
     applyModelDomain(doc, domains.model);
     applyExecutionDomain(doc, domains.execution);
+    if (domains.permissions) {
+        applyPermissionsDomain(doc, domains.permissions);
+    }
     applyMemoryDomain(doc);
     applyPluginsDomain(doc, tavernMessengerPluginName());
 
@@ -84,6 +95,24 @@ function applyExecutionDomain(doc: GeneratedConfigDocument, execution: HermesExe
         doc.setIn(['timezone'], execution.timezone);
     } else {
         doc.deleteIn(['timezone']);
+    }
+}
+
+/** Product mode "ask" maps to the engine's "manual". */
+function toEngineApprovalMode(mode: 'allow' | 'ask' | 'deny') {
+    return mode === 'ask' ? 'manual' : mode;
+}
+
+function applyPermissionsDomain(
+    doc: GeneratedConfigDocument,
+    permissions: HermesPermissionsDomain
+) {
+    doc.setIn(['approvals', 'mode'], toEngineApprovalMode(permissions.approvalMode));
+    doc.setIn(['approvals', 'cron_mode'], toEngineApprovalMode(permissions.automationApprovalMode));
+    if (permissions.commandAllowlist.length > 0) {
+        doc.setIn(['command_allowlist'], permissions.commandAllowlist);
+    } else {
+        doc.deleteIn(['command_allowlist']);
     }
 }
 

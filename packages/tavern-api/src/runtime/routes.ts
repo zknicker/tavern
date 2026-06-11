@@ -40,6 +40,7 @@ export const agentRuntimeRoutes = {
     modelAccessOpenAiSettings: '/model-access/openai',
     modelAccessOpenRouterSettings: '/model-access/openrouter',
     executionSettings: '/execution-settings',
+    permissionSettings: '/permission-settings',
     job: (slug: string) => `/jobs/${encodeURIComponent(slug)}`,
     jobRun: (slug: string) => `/jobs/${encodeURIComponent(slug)}/run`,
     jobs: '/jobs',

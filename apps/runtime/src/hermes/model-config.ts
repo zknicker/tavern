@@ -10,6 +10,7 @@ import { getHermesExecutionSettings } from './execution-settings';
 import { type HermesModelDomain, mergeHermesGeneratedConfig } from './generated-config';
 import { prepareManagedLlmWikiIntegration } from './llm-wiki';
 import { ensureManagedMnemosynePackage, ensureManagedMnemosynePlugin } from './mnemosyne';
+import { resolveConfiguredPermissionsDomain } from './permission-settings';
 
 interface HermesModelConfig extends HermesModelDomain {
     openAiApiKey: string | null;
@@ -75,6 +76,7 @@ export async function prepareManagedHermesModelConfig(
     await mergeHermesGeneratedConfig(path.join(HERMES_HOME, 'config.yaml'), {
         execution: getHermesExecutionSettings(),
         model: config,
+        permissions: await resolveConfiguredPermissionsDomain(),
     });
     await mergeHermesEnvFile(path.join(HERMES_HOME, '.env'), config);
     await syncHermesCodexAuth(
@@ -99,6 +101,7 @@ export async function writeManagedHermesConfigFile(): Promise<void> {
     await mergeHermesGeneratedConfig(path.join(HERMES_HOME, 'config.yaml'), {
         execution: getHermesExecutionSettings(),
         model: config,
+        permissions: await resolveConfiguredPermissionsDomain(),
     });
 }
 

@@ -229,6 +229,28 @@ export const agentRuntimeSaveExecutionSettingsResultSchema =
         restartScheduled: z.boolean(),
     });
 
+export const agentRuntimeApprovalModeSchema = z.enum(['allow', 'ask', 'deny']);
+
+const agentRuntimeCommandAllowlistSchema = z.array(z.string().trim().min(1).max(512)).max(200);
+
+export const agentRuntimePermissionSettingsSchema = z.object({
+    approvalMode: agentRuntimeApprovalModeSchema,
+    automationApprovalMode: agentRuntimeApprovalModeSchema,
+    commandAllowlist: agentRuntimeCommandAllowlistSchema,
+    updatedAt: z.string().datetime().nullable(),
+});
+
+export const agentRuntimeSavePermissionSettingsSchema = z.object({
+    approvalMode: agentRuntimeApprovalModeSchema.optional(),
+    automationApprovalMode: agentRuntimeApprovalModeSchema.optional(),
+    commandAllowlist: agentRuntimeCommandAllowlistSchema.optional(),
+});
+
+export const agentRuntimeSavePermissionSettingsResultSchema =
+    agentRuntimePermissionSettingsSchema.extend({
+        restartScheduled: z.boolean(),
+    });
+
 export const agentRuntimeThinkingLevelSchema = z.enum([
     'off',
     'minimal',
@@ -1858,6 +1880,14 @@ export type AgentRuntimeSaveExecutionSettings = z.infer<
 >;
 export type AgentRuntimeSaveExecutionSettingsResult = z.infer<
     typeof agentRuntimeSaveExecutionSettingsResultSchema
+>;
+export type AgentRuntimeApprovalMode = z.infer<typeof agentRuntimeApprovalModeSchema>;
+export type AgentRuntimePermissionSettings = z.infer<typeof agentRuntimePermissionSettingsSchema>;
+export type AgentRuntimeSavePermissionSettings = z.infer<
+    typeof agentRuntimeSavePermissionSettingsSchema
+>;
+export type AgentRuntimeSavePermissionSettingsResult = z.infer<
+    typeof agentRuntimeSavePermissionSettingsResultSchema
 >;
 export type AgentRuntimeHermesConfig = z.infer<typeof agentRuntimeHermesConfigSchema>;
 export type AgentRuntimeHermesConfigSnapshot = z.infer<

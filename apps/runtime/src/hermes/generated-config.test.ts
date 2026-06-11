@@ -35,6 +35,7 @@ describe('generated Hermes config composer', () => {
                 timezone: 'America/New_York',
             },
             model: codexModel,
+            permissions: null,
         });
 
         expect((await readConfig(configPath)).toJS()).toEqual({
@@ -75,6 +76,7 @@ describe('generated Hermes config composer', () => {
         await mergeHermesGeneratedConfig(configPath, {
             execution: emptyExecution,
             model: codexModel,
+            permissions: null,
         });
 
         const doc = await readConfig(configPath);
@@ -101,6 +103,7 @@ describe('generated Hermes config composer', () => {
                 model: 'tavern-e2e-tools',
                 provider: 'custom',
             },
+            permissions: null,
         });
 
         const doc = await readConfig(configPath);
@@ -118,16 +121,72 @@ describe('generated Hermes config composer', () => {
                 timezone: 'Europe/Berlin',
             },
             model: codexModel,
+            permissions: null,
         });
 
         await mergeHermesGeneratedConfig(configPath, {
             execution: emptyExecution,
             model: codexModel,
+            permissions: null,
         });
 
         const doc = await readConfig(configPath);
         expect(doc.has('fallback_providers')).toBe(false);
         expect(doc.has('timezone')).toBe(false);
+    });
+
+    it('writes configured permissions with product-to-engine mode mapping', async () => {
+        const configPath = await tempConfigPath();
+
+        await mergeHermesGeneratedConfig(configPath, {
+            execution: emptyExecution,
+            model: codexModel,
+            permissions: {
+                approvalMode: 'ask',
+                automationApprovalMode: 'allow',
+                commandAllowlist: ['rm -rf /tmp/scratch', 'git push --force'],
+            },
+        });
+
+        const doc = await readConfig(configPath);
+        expect(doc.getIn(['approvals', 'mode'])).toBe('manual');
+        expect(doc.getIn(['approvals', 'cron_mode'])).toBe('allow');
+        expect((doc.toJS() as { command_allowlist: string[] }).command_allowlist).toEqual([
+            'rm -rf /tmp/scratch',
+            'git push --force',
+        ]);
+    });
+
+    it('removes the allowlist key when cleared and leaves approvals untouched when unconfigured', async () => {
+        const configPath = await tempConfigPath();
+        await fs.writeFile(
+            configPath,
+            ['approvals:', '  mode: allow', 'command_allowlist:', '  - operator-entry', ''].join(
+                '\n'
+            )
+        );
+
+        await mergeHermesGeneratedConfig(configPath, {
+            execution: emptyExecution,
+            model: codexModel,
+            permissions: null,
+        });
+        const untouched = await readConfig(configPath);
+        expect(untouched.getIn(['approvals', 'mode'])).toBe('allow');
+        expect(untouched.has('command_allowlist')).toBe(true);
+
+        await mergeHermesGeneratedConfig(configPath, {
+            execution: emptyExecution,
+            model: codexModel,
+            permissions: {
+                approvalMode: 'deny',
+                automationApprovalMode: 'deny',
+                commandAllowlist: [],
+            },
+        });
+        const cleared = await readConfig(configPath);
+        expect(cleared.getIn(['approvals', 'mode'])).toBe('deny');
+        expect(cleared.has('command_allowlist')).toBe(false);
     });
 
     it('keeps an existing plugins list and appends the messenger plugin once', async () => {
@@ -140,10 +199,12 @@ describe('generated Hermes config composer', () => {
         await mergeHermesGeneratedConfig(configPath, {
             execution: emptyExecution,
             model: codexModel,
+            permissions: null,
         });
         await mergeHermesGeneratedConfig(configPath, {
             execution: emptyExecution,
             model: codexModel,
+            permissions: null,
         });
 
         const config = (await readConfig(configPath)).toJS() as {
