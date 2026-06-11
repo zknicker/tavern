@@ -1,7 +1,8 @@
 import type { CortexHealthHistoryEntry } from '@tavern/api';
 import { getDb } from '../db/connection';
 import { type Database, namedParams } from '../db/sqlite';
-import { listLatestLibrarianScans, listWikiEscalationPages } from './health';
+import { listLatestLibrarianScans } from './health';
+import { isUserTodo, listWikiTodos } from './todos';
 
 const heartbeatMs = 24 * 60 * 60 * 1000;
 const defaultHistoryLimit = 180;
@@ -27,14 +28,11 @@ export async function recordWikiHealthSamples(
     db: Database = getDb(),
     now: Date = new Date()
 ): Promise<number> {
-    const [scans, escalationPages] = await Promise.all([
-        listLatestLibrarianScans(),
-        listWikiEscalationPages(),
-    ]);
+    const [scans, todos] = await Promise.all([listLatestLibrarianScans(), listWikiTodos()]);
 
     const escalationsByTopic = new Map<string, number>();
-    for (const page of escalationPages) {
-        escalationsByTopic.set(page.topic, (escalationsByTopic.get(page.topic) ?? 0) + 1);
+    for (const todo of todos.filter(isUserTodo)) {
+        escalationsByTopic.set(todo.topic, (escalationsByTopic.get(todo.topic) ?? 0) + 1);
     }
 
     const topics = new Set<string>([

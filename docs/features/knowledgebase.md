@@ -38,14 +38,16 @@ librarian, lessons, output, inventory, datasets, and archive workflows.
 * **Status.** Cortex reports the resolved hub path, config source, topic counts,
   page counts, and filesystem access.
 * **Health.** A status card in the sidebar rolls up Cortex health: hub access,
-  open escalations, the latest librarian scan per topic (structured data from
-  `.librarian/scan-results.json`), and managed maintenance run state. Opening
-  it shows the health page with escalation cards — each card is a one-line
-  question with an input, and answering spawns an agent chat that applies the
-  decision to the wiki — plus per-article staleness and quality scores with
-  flags, and trend charts of average staleness, quality, and open escalations
-  over time. Health is derived purely from facts; the wiki files stay the
-  source of truth, and history is an append-only Runtime projection.
+  todos (llm-wiki inventory records), the latest librarian scan per topic
+  (structured data from `.librarian/scan-results.json`), and managed
+  maintenance run state. Opening it shows the health page: todos waiting on
+  you render as question cards — answering spawns an agent chat that applies
+  the decision to the wiki — while the agent's own todos render as a queue
+  with processing state, next-run time, and recent completions. Below that,
+  per-article staleness and quality scores with flags, and trend charts of
+  average staleness, quality, and open escalations over time. Health is
+  derived purely from facts; the wiki files stay the source of truth, and
+  history is an append-only Runtime projection.
 
 ## Contract
 

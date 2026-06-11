@@ -1,76 +1,49 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
-import type {
-    CortexEscalation,
-    CortexHealth,
-    CortexLibrarianScan,
-    CortexManagedRun,
-    CortexPage,
-} from '@tavern/api';
+import type { CortexHealth, CortexLibrarianScan, CortexManagedRun } from '@tavern/api';
 import { createLocalHermesClient } from '../hermes/local-client';
+import { getRuntimeJobScheduleNextRunAt } from '../jobs/manager';
 import { listWikiHealthHistory } from './history';
-import { getCortexPage, getCortexStatus, listCortexPages, listCortexTopics } from './store';
+import { getCortexStatus, listCortexTopics } from './store';
+import { getWikiTodoProcessing, todoDrainCooldownMs } from './todo-drain';
+import { isUserTodo, listWikiTodos, nextDrainableTodo } from './todos';
 
 /**
  * Health rollup for the Cortex tab: derived purely from facts — hub access,
- * escalation records, latest librarian scans, and managed cron run state.
- * The wiki files stay the source of truth; this is a read-only projection.
+ * todos (inventory records), latest librarian scans, and managed cron run
+ * state. The wiki files stay the source of truth; this is a projection.
  */
 export async function getCortexHealth(): Promise<CortexHealth> {
     const status = await getCortexStatus();
-    const [escalationPages, scans, runs] = await Promise.all([
-        status.readable ? listWikiEscalationPages() : Promise.resolve([]),
+    const [todos, scans, runs] = await Promise.all([
+        status.readable ? listWikiTodos() : Promise.resolve([]),
         status.readable ? listLatestLibrarianScans() : Promise.resolve([]),
         listManagedWikiRuns(),
     ]);
-    const escalations = escalationPages.map(toEscalation);
+    const needsUser = todos.some(isUserTodo);
 
     return {
-        escalations,
         history: listWikiHealthHistory(),
         runs,
         scans,
-        state: status.readable
-            ? escalations.length > 0
-                ? 'needs_attention'
-                : 'healthy'
-            : 'degraded',
+        state: status.readable ? (needsUser ? 'needs_attention' : 'healthy') : 'degraded',
         status,
+        todoProcessing: await resolveTodoProcessing(todos),
+        todos,
     };
 }
 
-/**
- * Inventory records parked on the user — llm-wiki convention `status:
- * proposed` plus `owner: user`. The managed wiki crons escalate this way only
- * as a last resort.
- */
-export async function listWikiEscalationPages(): Promise<CortexPage[]> {
-    try {
-        const { pages } = await listCortexPages({});
-        const inventoryPages = pages.filter((page) => page.section === 'inventory');
-        const details = await Promise.all(
-            inventoryPages.map((page) => getCortexPage({ path: page.path, topic: page.topic }))
-        );
-        return details.filter(
-            (page): page is NonNullable<typeof page> =>
-                Boolean(page) &&
-                readFrontmatterValue(page?.frontmatter.status) === 'proposed' &&
-                readFrontmatterValue(page?.frontmatter.owner) === 'user'
-        );
-    } catch {
-        return [];
+async function resolveTodoProcessing(todos: Awaited<ReturnType<typeof listWikiTodos>>) {
+    const processing = getWikiTodoProcessing();
+    if (processing.runningPath || !nextDrainableTodo(todos)) {
+        return processing;
     }
-}
-
-function toEscalation(page: CortexPage): CortexEscalation {
-    return {
-        path: page.path,
-        priority: readString(page.frontmatter.priority),
-        question: readString(page.frontmatter.next_action) ?? readString(page.frontmatter.summary),
-        title: page.title,
-        topic: page.topic,
-        updatedAt: page.updatedAt,
-    };
+    const jobNextRunAt = await getRuntimeJobScheduleNextRunAt('wiki-todo-drain').catch(() => null);
+    const jobNextRunAtMs = jobNextRunAt ? Date.parse(jobNextRunAt) : null;
+    const cooldownEndsAtMs =
+        processing.lastRunAtMs === null ? null : processing.lastRunAtMs + todoDrainCooldownMs;
+    const nextRunAtMs = Math.max(jobNextRunAtMs ?? 0, cooldownEndsAtMs ?? 0) || null;
+    return { ...processing, nextRunAtMs };
 }
 
 /**
@@ -156,10 +129,6 @@ async function listManagedWikiRuns(): Promise<CortexManagedRun[]> {
     } finally {
         client.close();
     }
-}
-
-function readFrontmatterValue(value: unknown) {
-    return typeof value === 'string' ? value.trim().toLowerCase() : null;
 }
 
 function readString(value: unknown) {

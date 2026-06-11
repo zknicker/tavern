@@ -34,9 +34,11 @@ The Runtime API covers:
 * `GET /cortex/topics/:topic/pages/:path/backlinks`
 * `POST /cortex/search`
 
-`GET /cortex/health` rolls up derived health: hub status, escalations
-(inventory records with `status: proposed` and `owner: user`), the latest
-librarian scan per topic parsed from `.librarian/scan-results.json` — llm-wiki's
+`GET /cortex/health` rolls up derived health: hub status, todos (inventory
+records projected with owner, status, and priority — `owner: user` plus
+`status: proposed` marks an escalation and drives `needs_attention`), todo
+processing state (running record, last and next run), the latest librarian
+scan per topic parsed from `.librarian/scan-results.json` — llm-wiki's
 machine-readable scan output — managed wiki cron run state, and health history.
 History is an append-only Runtime projection sampled hourly (on scan or
 escalation change, plus a daily heartbeat); it is derived and rebuildable, never

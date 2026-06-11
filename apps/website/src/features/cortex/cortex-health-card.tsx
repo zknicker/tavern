@@ -23,7 +23,9 @@ export function CortexHealthCard({
     onOpen: () => void;
 }) {
     const state = health?.state ?? 'healthy';
-    const escalationCount = health?.escalations.length ?? 0;
+    const escalationCount =
+        health?.todos.filter((todo) => todo.owner === 'user' && todo.status === 'proposed')
+            .length ?? 0;
 
     return (
         <button
@@ -46,7 +48,7 @@ export function CortexHealthCard({
                 </span>
                 <span className="block truncate text-muted-foreground text-sm">
                     {escalationCount > 0
-                        ? `${escalationCount} escalation${escalationCount === 1 ? '' : 's'} waiting`
+                        ? `${escalationCount} todo${escalationCount === 1 ? '' : 's'} waiting on you`
                         : health
                           ? `${health.status.topicCount} topics · ${health.status.pageCount} pages`
                           : 'Checking…'}

@@ -20,8 +20,20 @@ import { cn } from '../../lib/utils.ts';
 import { CortexHealthTrends } from './cortex-health-trends.tsx';
 
 type CortexHealthData = NonNullable<CortexHealthOutput>;
-type CortexEscalation = CortexHealthData['escalations'][number];
+type CortexTodo = CortexHealthData['todos'][number];
+type CortexTodoProcessing = CortexHealthData['todoProcessing'];
 type CortexLibrarianScan = CortexHealthData['scans'][number];
+
+const doneTodoStatuses = new Set(['ingested', 'superseded', 'archived']);
+const todoStatusLabels: Record<string, string> = {
+    active: 'In progress',
+    blocked: 'Blocked',
+    proposed: 'Queued',
+};
+
+export function isUserTodo(todo: CortexTodo): boolean {
+    return todo.owner === 'user' && todo.status === 'proposed';
+}
 
 export function CortexHealthView({
     health,
@@ -40,6 +52,11 @@ export function CortexHealthView({
         );
     }
 
+    const userTodos = health.todos.filter(isUserTodo);
+    const agentTodos = health.todos.filter((todo) => !isUserTodo(todo));
+    const openTodos = agentTodos.filter((todo) => !doneTodoStatuses.has(todo.status));
+    const doneTodos = agentTodos.filter((todo) => doneTodoStatuses.has(todo.status)).slice(0, 5);
+
     return (
         <div className="flex h-full min-h-0 flex-col">
             <article className="min-h-0 flex-1 overflow-auto px-6 pt-6 pb-10">
@@ -57,19 +74,28 @@ export function CortexHealthView({
 
                     <CortexHealthTrends history={health.history} />
 
-                    {health.escalations.length > 0 ? (
+                    {userTodos.length > 0 ? (
                         <section className="mt-8">
                             <BadgeDivider>Needs your call</BadgeDivider>
                             <div className="mt-3 space-y-3">
-                                {health.escalations.map((escalation) => (
+                                {userTodos.map((todo) => (
                                     <EscalationCard
-                                        escalation={escalation}
-                                        key={`${escalation.topic}:${escalation.path}`}
+                                        key={`${todo.topic}:${todo.path}`}
                                         onSelectPage={onSelectPage}
+                                        todo={todo}
                                     />
                                 ))}
                             </div>
                         </section>
+                    ) : null}
+
+                    {openTodos.length > 0 || doneTodos.length > 0 ? (
+                        <TodoSection
+                            doneTodos={doneTodos}
+                            onSelectPage={onSelectPage}
+                            openTodos={openTodos}
+                            processing={health.todoProcessing}
+                        />
                     ) : null}
 
                     {health.scans.map((scan) => (
@@ -80,16 +106,155 @@ export function CortexHealthView({
                         />
                     ))}
 
-                    {health.escalations.length === 0 && health.scans.length === 0 ? (
+                    {health.todos.length === 0 && health.scans.length === 0 ? (
                         <p className="mt-8 text-muted-foreground text-sm">
-                            Nothing needs attention. Scan results will appear here after the first
-                            librarian run.
+                            Nothing needs attention. Todos and scan results will appear here as the
+                            agent maintains the wiki.
                         </p>
                     ) : null}
                 </div>
             </article>
         </div>
     );
+}
+
+function TodoSection({
+    doneTodos,
+    onSelectPage,
+    openTodos,
+    processing,
+}: {
+    doneTodos: CortexTodo[];
+    onSelectPage: (page: { path: string; topic: string }) => void;
+    openTodos: CortexTodo[];
+    processing: CortexTodoProcessing;
+}) {
+    return (
+        <section className="mt-8">
+            <BadgeDivider subtext={todoCadenceLine(processing, openTodos.length)}>
+                Todos
+            </BadgeDivider>
+
+            {openTodos.length > 0 ? (
+                <div className="mt-3 overflow-hidden rounded-lg border border-border/70">
+                    <Table className="table-auto">
+                        <TableHeader>
+                            <TableRow className="bg-muted/25">
+                                <TableHead className="px-3 py-2">Todo</TableHead>
+                                <TableHead className="w-32 px-3 py-2">Topic</TableHead>
+                                <TableHead className="w-16 px-3 py-2">Priority</TableHead>
+                                <TableHead className="w-28 px-3 py-2">Status</TableHead>
+                                <TableHead className="w-24 px-3 py-2 text-right">Updated</TableHead>
+                            </TableRow>
+                        </TableHeader>
+                        <TableBody className="[&_tr:last-child]:border-b-0">
+                            {openTodos.map((todo) => (
+                                <TodoRow
+                                    isProcessing={
+                                        processing.runningPath === todo.path &&
+                                        processing.runningTopic === todo.topic
+                                    }
+                                    key={`${todo.topic}:${todo.path}`}
+                                    onSelectPage={onSelectPage}
+                                    todo={todo}
+                                />
+                            ))}
+                        </TableBody>
+                    </Table>
+                </div>
+            ) : null}
+
+            {doneTodos.length > 0 ? (
+                <div className="mt-3 space-y-1">
+                    {doneTodos.map((todo) => (
+                        <p
+                            className="text-muted-foreground text-sm"
+                            key={`${todo.topic}:${todo.path}`}
+                        >
+                            <span aria-hidden className="mr-1.5 text-success">
+                                ✓
+                            </span>
+                            <button
+                                className="cursor-pointer hover:underline"
+                                onClick={() => onSelectPage({ path: todo.path, topic: todo.topic })}
+                                type="button"
+                            >
+                                {todo.title}
+                            </button>{' '}
+                            · {formatRelativeTime(todo.updatedAt)}
+                        </p>
+                    ))}
+                </div>
+            ) : null}
+        </section>
+    );
+}
+
+function TodoRow({
+    isProcessing,
+    onSelectPage,
+    todo,
+}: {
+    isProcessing: boolean;
+    onSelectPage: (page: { path: string; topic: string }) => void;
+    todo: CortexTodo;
+}) {
+    return (
+        <TableRow>
+            <TableCell className="px-3 py-2">
+                <button
+                    className="cursor-pointer text-left text-foreground hover:underline"
+                    onClick={() => onSelectPage({ path: todo.path, topic: todo.topic })}
+                    type="button"
+                >
+                    {todo.title}
+                </button>
+                {todo.question ? (
+                    <p className="mt-0.5 text-muted-foreground text-xs">{todo.question}</p>
+                ) : null}
+            </TableCell>
+            <TableCell className="px-3 py-2 text-muted-foreground">{todo.topic}</TableCell>
+            <TableCell className="px-3 py-2 text-muted-foreground uppercase">
+                {todo.priority ?? '—'}
+            </TableCell>
+            <TableCell className="px-3 py-2">
+                {isProcessing ? (
+                    <span className="flex items-center gap-1.5 font-medium text-foreground">
+                        <span aria-hidden className="size-2 animate-pulse rounded-full bg-info" />
+                        Processing
+                    </span>
+                ) : todo.status === 'blocked' ? (
+                    <Badge size="sm" variant="warning">
+                        Blocked
+                    </Badge>
+                ) : (
+                    <span className="text-muted-foreground">
+                        {todoStatusLabels[todo.status] ?? todo.status}
+                    </span>
+                )}
+            </TableCell>
+            <TableCell className="px-3 py-2 text-right text-muted-foreground">
+                {formatRelativeTime(todo.updatedAt)}
+            </TableCell>
+        </TableRow>
+    );
+}
+
+function todoCadenceLine(processing: CortexTodoProcessing, openCount: number) {
+    if (processing.runningPath) {
+        return 'processing now';
+    }
+    if (openCount > 0 && processing.nextRunAtMs) {
+        return `worked one at a time · next ~${formatClockTime(processing.nextRunAtMs)}`;
+    }
+    if (openCount > 0) {
+        return 'worked one at a time, automatically';
+    }
+    return undefined;
+}
+
+function formatClockTime(ms: number) {
+    return new Date(ms).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
 }
 
 function LibrarianScanSection({
@@ -217,11 +382,11 @@ function RunTiles({ runs }: { runs: CortexHealthData['runs'] }) {
 }
 
 function EscalationCard({
-    escalation,
     onSelectPage,
+    todo,
 }: {
-    escalation: CortexEscalation;
     onSelectPage: (page: { path: string; topic: string }) => void;
+    todo: CortexTodo;
 }) {
     const primaryAgentQuery = usePrimaryAgent();
     const launchChatDraft = useChatDraftLaunch();
@@ -237,7 +402,7 @@ function EscalationCard({
         }
         launchChatDraft({
             agentId: agent.id,
-            content: buildEscalationPrompt(escalation, decision.trim()),
+            content: buildEscalationPrompt(todo, decision.trim()),
         });
     }
 
@@ -245,13 +410,13 @@ function EscalationCard({
         <div className="rounded-lg border border-border/70 bg-muted/25 p-4">
             <button
                 className="cursor-pointer text-left font-medium text-foreground text-sm hover:underline"
-                onClick={() => onSelectPage({ path: escalation.path, topic: escalation.topic })}
+                onClick={() => onSelectPage({ path: todo.path, topic: todo.topic })}
                 type="button"
             >
-                {escalation.title}
+                {todo.title}
             </button>
-            {escalation.question ? (
-                <p className="mt-1 text-muted-foreground text-sm">{escalation.question}</p>
+            {todo.question ? (
+                <p className="mt-1 text-muted-foreground text-sm">{todo.question}</p>
             ) : null}
             <Textarea
                 className="mt-3"
@@ -275,10 +440,10 @@ function EscalationCard({
     );
 }
 
-function buildEscalationPrompt(escalation: CortexEscalation, decision: string) {
+function buildEscalationPrompt(todo: CortexTodo, decision: string) {
     return [
-        `Cortex escalation in the ${escalation.topic} topic wiki (${escalation.path}): ${escalation.title}.`,
-        escalation.question ? `Question: ${escalation.question}` : null,
+        `Cortex escalation in the ${todo.topic} topic wiki (${todo.path}): ${todo.title}.`,
+        todo.question ? `Question: ${todo.question}` : null,
         `My decision: ${decision}`,
         '',
         "Use the wiki skill to apply this: update the affected articles and the inventory record's status, set verified or owner fields as appropriate, and append log.md entries.",

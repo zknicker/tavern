@@ -34,14 +34,13 @@ automations are removed. Pause state is preserved across reconciliation.
 The current managed set keeps the Cortex wiki healthy, following the llm-wiki
 maintenance cadence:
 
-* **Tavern: Wiki upkeep** — daily incremental compile of new raw sources, plus
-  working off up to two proposed inventory follow-ups (research, dedup,
-  candidate profiling). Records that need human judgment stay proposed.
-  A Runtime job also checks every 15 minutes for uncompiled raw sources —
-  counted from each topic's `log.md` order, no agent run — and triggers upkeep
-  when a topic reaches 5 pending sources (llm-wiki's compile-nudge threshold);
-  smaller ingests wait for the daily run, which already bounds their delay. A
-  settle window lets batch ingests finish first, and a one-hour cooldown keeps
+* **Tavern: Wiki upkeep** — daily incremental compile of new raw sources,
+  finishing with a structural pass over the wikis it changed. A Runtime job
+  also checks every 15 minutes for uncompiled raw sources — counted from each
+  topic's `log.md` order, no agent run — and triggers upkeep when a topic
+  reaches 5 pending sources (llm-wiki's compile-nudge threshold); smaller
+  ingests wait for the daily run, which already bounds their delay. A settle
+  window lets batch ingests finish first, and a one-hour cooldown keeps
   triggers from stacking. Pausing the upkeep automation also pauses the
   pending-source trigger.
 * **Tavern: Wiki lint** — weekly structural lint with auto-fix, including
@@ -51,16 +50,22 @@ maintenance cadence:
   articles), so cost tracks problem density, not wiki size. After scoring, the
   same run repairs mechanical findings via `lint --fix`, recompiles articles
   with newer uncompiled sources, and files judgment items (unverified claims,
-  thin coverage, dedup candidates) as proposed inventory records — findings
-  become agent work, not reports to review. The daily upkeep automation
-  consumes that queue.
+  thin coverage, dedup candidates) as todos — findings become agent work, not
+  reports to review.
 
-Escalation is a last resort. When no autonomous workflow can resolve a record
-(claim verification, retraction calls, paid or private access), the crons mark
-it with llm-wiki's `owner: user` convention and a one-line question. Escalations
-surface on the Cortex health page and as a homepage highlight; answering one
-spawns an agent chat that applies the decision to the wiki. Nothing pings chat
-uninvited, and everything else drains automatically.
+Todos (llm-wiki inventory records) are not drained by a cron. A Runtime job
+checks the queue every 15 minutes and runs one focused agent turn per open
+todo, spaced by a cooldown, so a deep queue drains steadily and an empty queue
+costs nothing. A todo that keeps failing is escalated or marked blocked rather
+than retried forever. The queue, processing state, and recent completions show
+on the Cortex health page.
+
+Escalation is a last resort. When no autonomous workflow can resolve a todo
+(claim verification, retraction calls, paid or private access), the agent marks
+it with llm-wiki's `owner: user` convention and a one-line question. Escalated
+todos surface on the Cortex health page and as a homepage highlight; answering
+one spawns an agent chat that applies the decision to the wiki. Nothing pings
+chat uninvited, and everything else drains automatically.
 
 Wiki automations are created once the wiki hub has at least one active topic,
 so an empty hub does not burn scheduled agent turns.

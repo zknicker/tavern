@@ -33,7 +33,8 @@ describe('cortex health', () => {
         const health = await getCortexHealth();
 
         expect(health.state).toBe('healthy');
-        expect(health.escalations).toEqual([]);
+        expect(health.todos).toEqual([]);
+        expect(health.todoProcessing.runningPath).toBeNull();
         expect(health.status.topicCount).toBe(1);
     });
 
@@ -85,13 +86,21 @@ describe('cortex health', () => {
         const health = await getCortexHealth();
 
         expect(health.state).toBe('needs_attention');
-        expect(health.escalations).toEqual([
+        expect(health.todos).toEqual([
             expect.objectContaining({
+                owner: 'user',
                 path: 'inventory/verify-claim.md',
                 priority: 'p1',
                 question: 'Confirm the claim, then set verified.',
+                status: 'proposed',
                 title: 'Verify the claim',
                 topic: 'project-notes',
+            }),
+            expect.objectContaining({
+                owner: null,
+                path: 'inventory/agent-task.md',
+                status: 'proposed',
+                title: 'Agent task',
             }),
         ]);
         expect(health.scans).toEqual([

@@ -121,6 +121,47 @@ export const wikiCompileTriggerJob: RuntimeJobDefinition = {
     slug: 'wiki-compile-trigger',
 };
 
+export const wikiTodoDrainJob: RuntimeJobDefinition = {
+    concurrency: 1,
+    defaultInput: {},
+    description: 'Works wiki todos one at a time: the agent completes the top record and stops.',
+    disabledReason() {
+        return null;
+    },
+    displayName: 'Process Wiki Todos',
+    inputSchema: emptyRuntimeJobInputSchema,
+    requiredCapabilities: ['gateway'],
+    async run(context) {
+        const { createLocalHermesClient } = await import('../hermes/local-client');
+        const { runWikiTodoDrain } = await import('../wiki/todo-drain');
+        const client = createLocalHermesClient();
+        try {
+            const outcome = await runWikiTodoDrain(client);
+            if (outcome.kind === 'idle') {
+                await context.log('No open todos to work.');
+                return;
+            }
+            if (outcome.kind === 'cooling') {
+                await context.log(
+                    `Waiting out the cooldown; next todo runs after ${new Date(outcome.nextAtMs).toISOString()}.`
+                );
+                return;
+            }
+            await context.log(
+                `Worked todo ${outcome.topic}/${outcome.path}${outcome.summary ? `: ${outcome.summary}` : '.'}`
+            );
+        } finally {
+            client.close();
+        }
+    },
+    schedule: {
+        everyMs: 15 * 60 * 1000,
+        kind: 'interval',
+        runOnStart: false,
+    },
+    slug: 'wiki-todo-drain',
+};
+
 export const wikiHealthHistoryJob: RuntimeJobDefinition = {
     concurrency: 1,
     defaultInput: {},
@@ -170,6 +211,7 @@ export const runtimeJobDefinitions = [
     tavernHighlightsJob,
     wikiCompileTriggerJob,
     wikiHealthHistoryJob,
+    wikiTodoDrainJob,
 ] as const;
 
 export function getRuntimeJobDefinition(slug: RuntimeJobDefinition['slug']): RuntimeJobDefinition {

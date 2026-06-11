@@ -6,7 +6,7 @@ import type {
 import type { Database } from '../db/sqlite';
 import { namedParams } from '../db/sqlite';
 import { createLocalHermesClient } from '../hermes/local-client';
-import { listWikiEscalationPages } from '../wiki/health';
+import { isUserTodo, listWikiTodos } from '../wiki/todos';
 import { recentWindowMs, toolVolumeWindowMs } from './constants';
 import { formatAgo, formatCount } from './format';
 import { pickHeadline } from './phrases';
@@ -50,18 +50,18 @@ async function buildWikiAttentionHighlight(input: {
     now: Date;
     slotStart: Date;
 }): Promise<HighlightCandidate | null> {
-    const followUps = await listWikiEscalationPages();
+    const followUps = (await listWikiTodos()).filter(isUserTodo);
     if (followUps.length === 0) {
         return null;
     }
 
-    const topics = [...new Set(followUps.map((page) => page.topic))];
+    const topics = [...new Set(followUps.map((todo) => todo.topic))];
 
     return createCandidate({
         category: 'wiki_attention',
         metric: {
             count: followUps.length,
-            records: followUps.slice(0, 10).map((page) => ({ path: page.path, topic: page.topic })),
+            records: followUps.slice(0, 10).map((todo) => ({ path: todo.path, topic: todo.topic })),
             topics,
         },
         now: input.now,

@@ -24,8 +24,7 @@ export const wikiUpkeepCronName = 'Tavern: Wiki upkeep';
  */
 export const managedCronDefinitions: ManagedCronDefinition[] = [
     {
-        description:
-            'Daily upkeep: compiles new wiki sources and works off proposed inventory follow-ups.',
+        description: 'Daily upkeep: compiles new wiki sources into articles.',
         name: wikiUpkeepCronName,
         prompt: [
             'Use the wiki skill. For each active topic wiki in the hub (skip archived topics),',
@@ -33,17 +32,9 @@ export const managedCronDefinitions: ManagedCronDefinition[] = [
             'workflow in references/compilation.md. Compile any new sources into wiki',
             'articles: synthesize rather than copy, add bidirectional See Also dual-links,',
             'update the affected _index.md files, and append a log.md entry per wiki changed.',
-            'Then work off at most two proposed inventory records across the hub, highest',
-            'priority first, per references/inventory.md: complete next actions you can do',
-            'autonomously, such as researching thin or single-source coverage, resolving',
-            'dedup candidates, or profiling ingest candidates, and move their status',
-            'forward. Skip records marked owner: user — those are already escalated.',
-            'Escalate to the user only as a last resort, after autonomous workflows cannot',
-            'resolve a record: claim verification, retraction calls, or paid or private',
-            'access. Escalate by leaving the record proposed with owner: user and a',
-            'next_action written as one short, direct question the user can answer in a',
-            'sentence. If there are no uncompiled sources and no actionable inventory, stop',
-            'after a one-line summary.',
+            'Finish with a quick structural pass over the wikis you changed: repair any',
+            'indexes, links, or backlinks your edits affected. If there are no uncompiled',
+            'sources, stop after a one-line summary.',
         ].join(' '),
         schedule: { expr: '30 4 * * *', kind: 'cron' },
     },
@@ -74,7 +65,7 @@ export const managedCronDefinitions: ManagedCronDefinition[] = [
             'material, per references/compilation.md. Record the remaining judgment items —',
             'unverified or low-confidence claims, thin or single-source coverage that needs',
             'research, and dedup candidates — as proposed inventory records per',
-            'references/inventory.md so the daily upkeep run works them off. Escalate to the',
+            'references/inventory.md; they are worked off automatically. Escalate to the',
             'user only as a last resort, when no autonomous workflow can resolve a record:',
             'claim verification, retraction calls, or paid or private access. Escalate by',
             'setting owner: user and a next_action written as one short, direct question the',

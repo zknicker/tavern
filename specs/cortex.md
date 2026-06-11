@@ -98,13 +98,17 @@ llm-wiki. Tavern launches scheduled or repeated wiki work through Tasks and
 Runtime crons.
 
 Tavern ships managed default crons for the regular llm-wiki maintenance
-cadence: daily upkeep (incremental compile plus bounded inventory follow-ups),
-weekly `lint --fix`, and a weekly librarian scan that files judgment items as
-proposed inventory. Runtime reconciles them into Hermes once the hub has an
-active topic. A 15-minute Runtime job (no agent run) counts uncompiled raw
-sources per topic and triggers upkeep at 5+ pending sources, so research dumps
-compile within the hour; smaller ingests wait for the daily run, which already
-bounds their delay to a day; see
+cadence: daily upkeep (incremental compile plus a structural pass over changed
+wikis), weekly `lint --fix`, and a weekly librarian scan that files judgment
+items as proposed inventory. Runtime reconciles them into Hermes once the hub
+has an active topic. A 15-minute Runtime job (no agent run) counts uncompiled
+raw sources per topic and triggers upkeep at 5+ pending sources, so research
+dumps compile within the hour; smaller ingests wait for the daily run, which
+already bounds their delay to a day.
+
+Inventory records surface in the product as todos. A second 15-minute Runtime
+job drains them without a cron: one agent turn per open record, spaced by a
+cooldown, skipping records escalated to the user; see
 [Automations](../docs/features/automations.md#managed-automations).
 
 ## App Surface
@@ -119,8 +123,9 @@ The Cortex tab shows:
 * wikilinks and backlinks
 * active and archived topic coverage
 * a health card and health page: derived hub health, managed run state, the
-  latest librarian report per topic, and escalation cards whose answers spawn
-  an agent chat that applies the decision to the wiki
+  latest librarian report per topic, the todo queue with processing state and
+  recent completions, and escalated-todo cards whose answers spawn an agent
+  chat that applies the decision to the wiki
 
 Settings and Memory show hub readiness and counts. They do not expose embedding
 or schema controls.

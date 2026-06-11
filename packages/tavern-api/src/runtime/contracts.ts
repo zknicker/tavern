@@ -987,13 +987,22 @@ export const cortexStatusSchema = z.object({
     writable: z.boolean(),
 });
 
-export const cortexEscalationSchema = z.object({
+export const cortexTodoSchema = z.object({
+    owner: z.string().nullable(),
     path: z.string().trim().min(1),
     priority: z.string().nullable(),
     question: z.string().nullable(),
+    status: z.string().trim().min(1),
     title: z.string().trim().min(1),
     topic: z.string().trim().min(1),
     updatedAt: z.string().datetime(),
+});
+
+export const cortexTodoProcessingSchema = z.object({
+    lastRunAtMs: z.number().int().nonnegative().nullable(),
+    nextRunAtMs: z.number().int().nonnegative().nullable(),
+    runningPath: z.string().nullable(),
+    runningTopic: z.string().nullable(),
 });
 
 export const cortexLibrarianArticleSchema = z.object({
@@ -1058,12 +1067,13 @@ export const cortexHealthHistoryEntrySchema = z.object({
 });
 
 export const cortexHealthSchema = z.object({
-    escalations: z.array(cortexEscalationSchema),
     history: z.array(cortexHealthHistoryEntrySchema),
     runs: z.array(cortexManagedRunSchema),
     scans: z.array(cortexLibrarianScanSchema),
     state: cortexHealthStateSchema,
     status: cortexStatusSchema,
+    todoProcessing: cortexTodoProcessingSchema,
+    todos: z.array(cortexTodoSchema),
 });
 
 export const agentRuntimeExecutionErrorSchema = z.object({
@@ -1232,6 +1242,7 @@ export const agentRuntimeJobSlugSchema = z.enum([
     'tavern-highlights',
     'wiki-compile-trigger',
     'wiki-health-history',
+    'wiki-todo-drain',
 ]);
 
 export const agentRuntimeJobAvailabilitySchema = z.enum(['disabled', 'enabled']);
@@ -2020,7 +2031,8 @@ export type AgentRuntimeBindingMatch = z.infer<typeof agentRuntimeBindingMatchSc
 export type PlatformBindingStatus = z.infer<typeof agentRuntimeBindingStatusSchema>;
 export type CortexBacklink = z.infer<typeof cortexBacklinkSchema>;
 export type CortexBacklinkList = z.infer<typeof cortexBacklinkListSchema>;
-export type CortexEscalation = z.infer<typeof cortexEscalationSchema>;
+export type CortexTodo = z.infer<typeof cortexTodoSchema>;
+export type CortexTodoProcessing = z.infer<typeof cortexTodoProcessingSchema>;
 export type CortexHealth = z.infer<typeof cortexHealthSchema>;
 export type CortexHealthState = z.infer<typeof cortexHealthStateSchema>;
 export type CortexHealthHistoryEntry = z.infer<typeof cortexHealthHistoryEntrySchema>;

@@ -24,6 +24,7 @@ describe('Runtime jobs service', () => {
             'tavern-highlights',
             'wiki-compile-trigger',
             'wiki-health-history',
+            'wiki-todo-drain',
         ]);
         expect(jobs.some((job) => job.slug.startsWith('cortex-'))).toBe(false);
     });

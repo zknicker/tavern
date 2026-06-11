@@ -65,29 +65,37 @@ trigger. Agent-driven research compiles inline in the same run.
 ## Staying Healthy
 
 Three managed automations, created once the hub has an active topic, drift-
-repaired hourly:
+repaired hourly. Each compile or upkeep write ends with a structural pass over
+the wikis it touched, so damage heals in the run that caused it.
 
 ```
 weekly: Wiki lint            weekly: Wiki librarian         daily: Wiki upkeep
-│ repairs structure,         │ scores staleness + quality   │ compiles new sources
-│ indexes, broken links,     │ repairs what is safe         │ works off up to two
-│ missing backlinks          │ files judgment items ───────►│ inventory records,
-                             │   as inventory/ records      │ highest priority first
+│ deep structural pass:      │ scores staleness + quality   │ compiles new
+│ indexes, broken links,     │ repairs what is safe         │ sources, tidies
+│ missing backlinks          │ files judgment items         │ what it touched
+                             │   as todos ──┐
+                                            ▼
+                              todos (inventory/ records)
+                              worked one at a time: a 15-minute
+                              Runtime check runs one agent turn
+                              per open todo, spaced by a cooldown
 ```
 
 The librarian writes machine-readable scan results, then acts in the same run:
 mechanical fixes, recompiles where raw already holds newer material, and
 judgment items (unverified claims, thin coverage, dedup candidates) filed as
-proposed inventory. Daily upkeep drains that queue.
+todos. Todo processing drains that queue steadily — one focused agent run per
+record, nothing when it is empty — and a todo that keeps failing gets escalated
+or marked blocked instead of retrying forever.
 
 ## When The Agent Needs You
 
 ```
-inventory record the agent cannot resolve autonomously
+todo the agent cannot resolve autonomously
 (claim verification, retraction calls, paid or private access)
                       │  last resort
                       ▼
-         record marked for you, with a
+         todo marked for you, with a
          one-line question it can act on
                       │
                       ▼
@@ -103,14 +111,15 @@ record.
 ## Watching It Work
 
 The sidebar health card rolls everything into one state — healthy, needs your
-call, or hub unreachable. The health page behind it: escalation cards, latest
-librarian scan per topic (per-article scores and flags), automation run state,
-trend charts.
+call, or hub unreachable. The health page behind it: your todos as question
+cards, the agent's todo queue with processing state and next-run time, recent
+completions, the latest librarian scan per topic (per-article scores and
+flags), automation run state, and trend charts.
 
 ```
 wiki files (source of truth)
   ├─► Cortex tab          browse, search, backlinks
-  ├─► escalation records  health cards + homepage highlight
+  ├─► todos               health page queue; yours become question cards
   ├─► .librarian/ scans   health page score table
   └─► hourly sampler ───► health history ───► trend charts
                           (derived, append-only, rebuildable)
@@ -123,6 +132,7 @@ wiki files (source of truth)
 | Ingest | in chat, on request | the current turn |
 | Compile check | every 15 minutes (Runtime job) | no — filesystem only |
 | Wiki upkeep | daily 4:30, sooner at 5+ pending sources | yes |
+| Todo processing | 15-minute check; one todo per run, ~45 min apart | one per open todo |
 | Wiki lint | weekly, Monday 5:00 | yes |
 | Wiki librarian | weekly, Saturday 6:00 | yes — cost tracks problem density |
 | Health history sampler | hourly (Runtime job) | no |
