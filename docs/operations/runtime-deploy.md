@@ -20,6 +20,7 @@ Keep the CLI small:
 tavern                 # banner, live runtime status line, command list
 tavern serve
 tavern status [--json] [--runtime-url <url>]
+tavern token [--json]
 tavern cortex topics
 tavern cortex list --topic project-wiki
 tavern cortex get project-wiki wiki/index.md
@@ -191,6 +192,25 @@ The dev stack and e2e harness set a shared token automatically.
 
 The health route (`GET /health`) remains unauthenticated so the app can probe
 reachability before pairing.
+
+### Pairing the app to a remote Runtime
+
+When the Runtime host is separate from the machine running the Tavern app (for
+example a Mac mini on Tailscale), pair them by copying the token from the host
+to the app:
+
+1. On the Runtime host, run:
+   ```bash
+   tavern token
+   ```
+   The command prints the current bearer token — the same value Runtime enforces.
+2. In the Tavern app, paste the token into the **Runtime token** field in
+   **Settings → Tavern Runtime**, or during the onboarding flow when first
+   connecting to a remote Runtime.
+
+The token is stable unless you rotate it manually or delete
+`<runtime-root>/runtime-api-token`. A URL-only re-save in the app does not
+clear a stored token; only entering a new token value changes it.
 
 ## Release Artifact
 

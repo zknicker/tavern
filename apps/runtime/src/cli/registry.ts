@@ -171,6 +171,19 @@ const engineCommand: CliCommand = {
     },
 };
 
+const tokenCommand: CliCommand = {
+    name: 'token',
+    section: 'Status',
+    summary: 'Print the Runtime API token for pairing the Tavern app',
+    usage: 'tavern token [--json]',
+    flags: [{ name: '--json', description: 'Emit one JSON document' }],
+    examples: ['tavern token', 'tavern token --json'],
+    async run(args) {
+        const { runTokenCommand } = await import('./commands/token');
+        return await runTokenCommand(args);
+    },
+};
+
 const helpCommand: CliCommand = {
     name: 'help',
     section: 'Status',
@@ -189,6 +202,7 @@ export const COMMANDS: CliCommand[] = [
     serveCommand,
     statusCommand,
     versionCommand,
+    tokenCommand,
     updateCommand,
     restartCommand,
     cortexCommand,
