@@ -685,7 +685,7 @@ export async function confirmAgentRuntimeConnection() {
     const record = await getDefaultAgentRuntimeConnection();
 
     if (!record?.enabled) {
-        return false;
+        return await confirmEnvironmentAgentRuntimeConnection();
     }
 
     try {
@@ -727,6 +727,26 @@ export async function confirmAgentRuntimeConnection() {
             connectionId: record.id,
             error,
         });
+        return false;
+    }
+}
+
+/**
+ * An environment-configured runtime has no connection record until its first
+ * successful status refresh seeds one, so the record-based confirm has nothing
+ * to probe at boot. Probe the environment config directly; success seeds the
+ * environment record, which also lets runtime event sync come up.
+ */
+async function confirmEnvironmentAgentRuntimeConnection() {
+    if (!getAgentRuntimeEnvironmentBaseUrl()) {
+        return false;
+    }
+
+    try {
+        const connection = await loadAgentRuntimeConnection();
+        return Boolean(connection && !connection.lastError);
+    } catch (error) {
+        console.warn('[tavern] failed to confirm environment runtime connection', error);
         return false;
     }
 }

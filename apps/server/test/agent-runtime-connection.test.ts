@@ -227,3 +227,58 @@ test('failed Runtime connect attempts still persist the configured URL', async (
     assert.equal(saved?.isActive, true);
     assert.equal(saved?.lastError, 'Runtime request failed with status 502.');
 });
+
+test('boot confirm seeds an environment Runtime that has no saved record', async () => {
+    process.env.DATABASE_PATH = join(
+        mkdtempSync(join(tmpdir(), 'tavern-agent-runtime-connection-test-')),
+        'test.sqlite'
+    );
+    process.env.TAVERN_RUNTIME_URL = 'http://127.0.0.1:18791';
+    const originalRuntimeToken = process.env.TAVERN_RUNTIME_TOKEN;
+    process.env.TAVERN_RUNTIME_TOKEN = 'env-token-123';
+    listCapabilities.mockImplementation(async () => ({
+        capabilities: [],
+        health: {
+            ok: true,
+            status: 'healthy',
+            timestamp: new Date().toISOString(),
+        },
+        info: {
+            agentRuntimeId: 'dev-runtime',
+            name: 'Dev Tavern Runtime',
+            protocolVersion: 1,
+            version: '1.2.1',
+        },
+    }));
+
+    const [{ ensureDatabaseSchema }, agentRuntimeConnection, storage] = await Promise.all([
+        import('../src/db/bootstrap.ts'),
+        import('../src/agent-runtime-connection/service.ts'),
+        import('../src/storage/agent-runtime-connections.ts'),
+    ]);
+
+    try {
+        await ensureDatabaseSchema();
+        // The db module caches the first test's database; disable any stored
+        // rows earlier tests left so this test exercises the no-record path.
+        await agentRuntimeConnection.clearAgentRuntimeConnection();
+
+        // Boot-style non-blocking load leaves no environment record behind.
+        await agentRuntimeConnection.loadAgentRuntimeConnection({ refreshStatus: false });
+        assert.equal((await storage.listReachableAgentRuntimeConnections()).length, 0);
+
+        // The post-boot confirm must probe the environment config and seed the
+        // record so runtime event sync has a reachable connection to attach to.
+        assert.equal(await agentRuntimeConnection.confirmAgentRuntimeConnection(), true);
+
+        const reachable = await storage.listReachableAgentRuntimeConnections();
+        assert.equal(reachable.length, 1);
+        assert.equal(reachable[0]?.baseUrl, 'http://127.0.0.1:18791');
+        assert.ok(reachable[0]?.authJson?.includes('env-token-123'));
+    } finally {
+        await agentRuntimeConnection.clearAgentRuntimeConnection({
+            clearEnvironmentOverride: true,
+        });
+        process.env.TAVERN_RUNTIME_TOKEN = originalRuntimeToken;
+    }
+});
