@@ -39,10 +39,25 @@ export function Overview() {
             jobCount={jobs.length}
             memoryCount={memoryCount}
             receipt={selectedHighlight?.receipt ?? null}
+            receiptTo={buildHighlightLink(selectedHighlight)}
             sessionsCount={sessions.length}
             workerCount={workers.length}
         />
     );
+}
+
+function buildHighlightLink(highlight: HighlightListOutput['highlights'][number] | null) {
+    if (highlight?.category !== 'wiki_attention') {
+        return null;
+    }
+    const records = highlight.metric.records;
+    const first = Array.isArray(records) ? records[0] : null;
+    const topic = first && typeof first === 'object' ? (first as { topic?: unknown }).topic : null;
+    const path = first && typeof first === 'object' ? (first as { path?: unknown }).path : null;
+    if (typeof topic === 'string' && typeof path === 'string') {
+        return `/dashboard/cortex?topic=${encodeURIComponent(topic)}&path=${encodeURIComponent(path)}`;
+    }
+    return '/dashboard/cortex';
 }
 
 function pickLandingHighlight(highlights: HighlightListOutput['highlights']) {

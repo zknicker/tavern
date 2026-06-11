@@ -1,4 +1,5 @@
 import * as React from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { useCortexListSuspense } from '../../hooks/cortex/use-cortex-list.ts';
 import { useCortexPage } from '../../hooks/cortex/use-cortex-page.ts';
 import { CortexDocumentPane } from './cortex-document-pane.tsx';
@@ -7,8 +8,13 @@ import type { CortexPageNode } from './types.ts';
 import { pageKey, resolveCortexLinkTarget, resolveSelectedPage } from './utils.ts';
 
 export function Cortex() {
+    const [searchParams] = useSearchParams();
     const [selectedPage, setSelectedPage] = React.useState<{ path: string; topic: string } | null>(
-        null
+        () => {
+            const topic = searchParams.get('topic');
+            const path = searchParams.get('path');
+            return topic && path ? { path, topic } : null;
+        }
     );
     const [list] = useCortexListSuspense();
     const pageNode = resolveSelectedPage(list, selectedPage);

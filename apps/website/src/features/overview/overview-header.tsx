@@ -1,8 +1,11 @@
+import { Link } from 'react-router-dom';
+
 export function OverviewHeader({
     heading,
     jobCount,
     memoryCount,
     receipt,
+    receiptTo,
     sessionsCount,
     workerCount,
 }: {
@@ -10,15 +13,24 @@ export function OverviewHeader({
     jobCount: number;
     memoryCount: number;
     receipt: null | string;
+    receiptTo?: null | string;
     sessionsCount: number;
     workerCount: number;
 }) {
+    const receiptClassName =
+        'mx-auto mb-3 block w-fit max-w-full rounded-full border border-border bg-muted/50 px-3 py-1 text-center text-muted-foreground text-xs';
+
     return (
         <>
-            {receipt ? (
-                <p className="mx-auto mb-3 w-fit max-w-full rounded-full border border-border bg-muted/50 px-3 py-1 text-center text-muted-foreground text-xs">
+            {receipt && receiptTo ? (
+                <Link
+                    className={`${receiptClassName} transition-colors hover:border-border-strong hover:text-foreground`}
+                    to={receiptTo}
+                >
                     {receipt}
-                </p>
+                </Link>
+            ) : receipt ? (
+                <p className={receiptClassName}>{receipt}</p>
             ) : null}
             <h1 className="text-center font-bold text-3xl text-foreground tracking-tight">
                 {heading}

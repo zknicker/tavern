@@ -61,6 +61,7 @@ async function buildWikiAttentionHighlight(input: {
         category: 'wiki_attention',
         metric: {
             count: followUps.length,
+            records: followUps.slice(0, 10).map((page) => ({ path: page.path, topic: page.topic })),
             topics,
         },
         now: input.now,
