@@ -6,6 +6,7 @@ import path from 'node:path';
 import type { AgentRuntimeCapabilityHealthId } from '@tavern/api';
 import { refreshRuntimeCapabilities } from '../capabilities/store';
 import {
+    getRuntimeApiToken,
     HERMES_DASHBOARD_SESSION_TOKEN,
     HERMES_HOME,
     HERMES_ROOT,
@@ -187,6 +188,7 @@ export function buildHermesDashboardEnv() {
         HERMES_DESKTOP: '1',
         HERMES_DASHBOARD_SESSION_TOKEN,
         HERMES_HOME,
+        TAVERN_RUNTIME_TOKEN: getRuntimeApiToken(),
         TAVERN_RUNTIME_URL: buildRuntimeApiBaseUrl(),
         TAVERN_WIKI_HUB_PATH: resolveManagedWikiHubPath(),
     };

@@ -103,6 +103,18 @@ describe('managed Hermes binary resolution', () => {
         });
     });
 
+    it('injects the runtime API token so the engine can authenticate delivery calls', async () => {
+        process.env.TAVERN_RUNTIME_TOKEN = 'test-token-abc';
+        vi.resetModules();
+        try {
+            const { buildHermesDashboardEnv } = await import('./supervisor');
+
+            expect(buildHermesDashboardEnv().TAVERN_RUNTIME_TOKEN).toBe('test-token-abc');
+        } finally {
+            process.env.TAVERN_RUNTIME_TOKEN = undefined;
+        }
+    });
+
     it('puts the bundled Node on PATH when the managed engine ships its own', async () => {
         const nodeBin = path.join(home, 'runtime', 'hermes', 'home', 'node', 'bin');
         await fs.mkdir(nodeBin, { recursive: true });
