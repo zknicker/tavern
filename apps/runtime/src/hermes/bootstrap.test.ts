@@ -88,7 +88,7 @@ describe('managed Hermes bootstrap', () => {
 
         const resolved = await ensureHermesBinary({
             runInstaller: async () => {
-                await writeExecutable(engineBinaryPath(pin));
+                await writeFakeEngineInstall(engineBinaryPath(pin));
             },
         });
 
@@ -104,7 +104,7 @@ describe('managed Hermes bootstrap', () => {
         const resolved = await ensureHermesBinary({
             onPhase: (phase) => phases.push(phase),
             runInstaller: async () => {
-                await writeExecutable(engineBinaryPath(pin));
+                await writeFakeEngineInstall(engineBinaryPath(pin));
             },
         });
 
@@ -127,7 +127,7 @@ describe('managed Hermes bootstrap', () => {
         const resolved = await ensureHermesBinary({
             forceInstall: true,
             runInstaller: async () => {
-                await writeExecutable(engineBinaryPath(pin));
+                await writeFakeEngineInstall(engineBinaryPath(pin));
             },
         });
 
@@ -143,7 +143,7 @@ describe('managed Hermes bootstrap', () => {
         await ensureHermesBinary({
             runInstaller: async (input) => {
                 observedHome = input.homeDir;
-                await writeExecutable(engineBinaryPath(pin));
+                await writeFakeEngineInstall(engineBinaryPath(pin));
             },
         });
 
@@ -151,6 +151,80 @@ describe('managed Hermes bootstrap', () => {
         expect(observedHome).toMatch(/[/\\]\.install-home$/);
         expect((observedHome as unknown as string).startsWith(engineRoot())).toBe(true);
         expect(observedHome).not.toBe(home);
+    });
+
+    it('passes a persistent interpreter dir that survives the sandbox-HOME cleanup', async () => {
+        const { ensureHermesBinary } = await import('./bootstrap');
+        const { engineBinaryPath, engineRoot, resolveHermesPin } = await import('./engine');
+        const pin = resolveHermesPin();
+        let observedPythonDir: string | null = null;
+        let observedHome: string | null = null;
+
+        await ensureHermesBinary({
+            runInstaller: async (input) => {
+                observedPythonDir = input.pythonInstallDir;
+                observedHome = input.homeDir;
+                await writeFakeEngineInstall(engineBinaryPath(pin));
+            },
+        });
+
+        expect(observedPythonDir).not.toBeNull();
+        expect(observedPythonDir).toMatch(/[/\\]uv-python$/);
+        expect((observedPythonDir as unknown as string).startsWith(engineRoot())).toBe(true);
+        // Interpreters must not live under the throwaway HOME that gets removed.
+        expect(
+            (observedPythonDir as unknown as string).startsWith(observedHome as unknown as string)
+        ).toBe(false);
+    });
+
+    it('treats a managed install with a dangling interpreter as broken and reinstalls it', async () => {
+        const { ensureHermesBinary, resolveInstalledHermesBinary } = await import('./bootstrap');
+        const { engineBinaryPath, resolveHermesPin, writeEngineMarker } = await import('./engine');
+        const pin = resolveHermesPin();
+
+        // A completed install whose interpreter target was deleted afterwards.
+        await writeExecutable(engineBinaryPath(pin));
+        const venvPython = path.join(path.dirname(engineBinaryPath(pin)), 'python');
+        await fs.symlink(path.join(home, 'missing-python'), venvPython);
+        writeEngineMarker(pin, {
+            binaryPath: engineBinaryPath(pin),
+            installedAt: new Date().toISOString(),
+            installerSource: 'bundled-asset',
+            ref: pin.ref,
+        });
+
+        expect(resolveInstalledHermesBinary()).toBeNull();
+
+        const resolved = await ensureHermesBinary({
+            runInstaller: async () => {
+                await fs.rm(venvPython, { force: true });
+                await writeFakeEngineInstall(engineBinaryPath(pin));
+            },
+        });
+
+        expect(resolved).toEqual({ binaryPath: engineBinaryPath(pin), tier: 'managed' });
+    });
+
+    it('fails the install when the venv interpreter does not resolve', async () => {
+        const { ensureHermesBinary } = await import('./bootstrap');
+        const { engineBinaryPath, readEngineMarker, resolveHermesPin } = await import('./engine');
+        const pin = resolveHermesPin();
+
+        await expect(
+            ensureHermesBinary({
+                runInstaller: async () => {
+                    await writeExecutable(engineBinaryPath(pin));
+                    // Dangling symlink, like a venv pointing at a deleted
+                    // uv-managed interpreter.
+                    const venvPython = path.join(path.dirname(engineBinaryPath(pin)), 'python');
+                    await fs.symlink(path.join(home, 'missing-python'), venvPython);
+                },
+            })
+        ).rejects.toMatchObject({
+            code: 'managed_hermes_setup',
+            message: expect.stringContaining('Python interpreter does not resolve'),
+        });
+        expect(readEngineMarker(pin)).toBeNull();
     });
 
     it('fails with a setup error when the installer leaves no executable binary', async () => {
@@ -197,6 +271,12 @@ describe('managed Hermes bootstrap', () => {
         await fs.mkdir(path.dirname(filePath), { recursive: true });
         await fs.writeFile(filePath, '#!/usr/bin/env bash\n');
         await fs.chmod(filePath, 0o755);
+    }
+
+    /** Fake a complete engine install: hermes binary plus a resolvable venv python. */
+    async function writeFakeEngineInstall(binaryPath: string) {
+        await writeExecutable(binaryPath);
+        await writeExecutable(path.join(path.dirname(binaryPath), 'python'));
     }
 });
 

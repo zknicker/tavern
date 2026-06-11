@@ -26,6 +26,7 @@ export type InstallerRunner = (input: {
     args: string[];
     homeDir: string;
     onLine: (line: string) => void;
+    pythonInstallDir: string;
     scriptPath: string;
 }) => Promise<void>;
 
@@ -63,9 +64,8 @@ export function resolveInstalledHermesBinary(): ResolvedHermesBinary | null {
     }
 
     const pin = resolveHermesPin();
-    const managedBinary = engineBinaryPath(pin);
-    if (readEngineMarker(pin) && isExecutableFile(managedBinary)) {
-        return { binaryPath: managedBinary, tier: 'managed' };
+    if (isManagedInstallHealthy(pin)) {
+        return { binaryPath: engineBinaryPath(pin), tier: 'managed' };
     }
 
     if (!isSystemInstallAllowed()) {
@@ -122,8 +122,9 @@ export async function bootstrapManagedHermes(options: EnsureHermesBinaryOptions 
     const installer = await resolveInstallerScript();
 
     await withEngineInstallLock(engineRoot(), async () => {
-        // Another process may have finished the install while we waited.
-        if (readEngineMarker(pin) && isExecutableFile(engineBinaryPath(pin))) {
+        // Another process may have finished the install while we waited. A
+        // marker with a broken interpreter does not count — reinstall it.
+        if (isManagedInstallHealthy(pin)) {
             return;
         }
 
@@ -137,7 +138,12 @@ export async function bootstrapManagedHermes(options: EnsureHermesBinaryOptions 
         // config; Tavern execs the venv binary directly and never needs the
         // launcher.
         const homeDir = path.join(engineRoot(), enginePinDirName(pin), '.install-home');
+        // uv downloads managed interpreters under $HOME by default and the venv
+        // symlinks its python there, so interpreters must live in a directory
+        // that survives the sandbox-HOME cleanup below.
+        const pythonInstallDir = path.join(engineRoot(), enginePinDirName(pin), 'uv-python');
         await fs.mkdir(homeDir, { recursive: true });
+        await fs.mkdir(pythonInstallDir, { recursive: true });
         options.onPhase?.('installing');
         log.info('Installing the managed agent engine', {
             installDir: engineInstallDir(pin),
@@ -146,7 +152,7 @@ export async function bootstrapManagedHermes(options: EnsureHermesBinaryOptions 
         });
 
         const run = options.runInstaller ?? runInstallerProcess;
-        await run({ args, homeDir, onLine, scriptPath: installer.scriptPath });
+        await run({ args, homeDir, onLine, pythonInstallDir, scriptPath: installer.scriptPath });
 
         if (!isExecutableFile(engineBinaryPath(pin))) {
             throw managedHermesSetupError(
@@ -155,6 +161,7 @@ export async function bootstrapManagedHermes(options: EnsureHermesBinaryOptions 
                     'and that git is installed, or set TAVERN_HERMES_BIN to an existing install.'
             );
         }
+        assertEngineInterpreterResolves(pin);
 
         writeEngineMarker(pin, {
             binaryPath: engineBinaryPath(pin),
@@ -166,6 +173,43 @@ export async function bootstrapManagedHermes(options: EnsureHermesBinaryOptions 
         await fs.rm(homeDir, { force: true, recursive: true }).catch(() => undefined);
         options.onPhase?.('installed');
     });
+}
+
+/**
+ * A managed install only counts when its marker, binary, and venv interpreter
+ * are all intact. The venv's python is a symlink (often into the uv
+ * interpreter store); a dangling link means every engine start fails later
+ * with a confusing missing-interpreter error, so treat that install as absent
+ * and let bootstrap reinstall it.
+ */
+function isManagedInstallHealthy(pin: HermesEnginePin): boolean {
+    return (
+        readEngineMarker(pin) !== null &&
+        isExecutableFile(engineBinaryPath(pin)) &&
+        engineInterpreterResolves(pin)
+    );
+}
+
+function engineInterpreterResolves(pin: HermesEnginePin): boolean {
+    try {
+        fsSync.realpathSync(engineVenvPythonPath(pin));
+        return true;
+    } catch {
+        return false;
+    }
+}
+
+function engineVenvPythonPath(pin: HermesEnginePin): string {
+    return path.join(engineInstallDir(pin), 'venv', 'bin', 'python');
+}
+
+function assertEngineInterpreterResolves(pin: HermesEnginePin): void {
+    if (!engineInterpreterResolves(pin)) {
+        throw managedHermesSetupError(
+            `The agent engine install finished but its Python interpreter does not resolve: ${engineVenvPythonPath(pin)}. ` +
+                'The interpreter the venv points at is missing.'
+        );
+    }
 }
 
 export function buildHermesInstallArgs(input: { hermesHome: string; pin: HermesEnginePin }) {
@@ -235,11 +279,16 @@ function runInstallerProcess(input: {
     args: string[];
     homeDir: string;
     onLine: (line: string) => void;
+    pythonInstallDir: string;
     scriptPath: string;
 }): Promise<void> {
     return new Promise((resolve, reject) => {
         const child = spawn('bash', [input.scriptPath, ...input.args], {
-            env: { ...process.env, HOME: input.homeDir },
+            env: {
+                ...process.env,
+                HOME: input.homeDir,
+                UV_PYTHON_INSTALL_DIR: input.pythonInstallDir,
+            },
             stdio: ['ignore', 'pipe', 'pipe'],
         });
 

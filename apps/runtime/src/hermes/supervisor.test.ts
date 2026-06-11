@@ -69,6 +69,8 @@ describe('managed Hermes binary resolution', () => {
         const pin = engine.resolveHermesPin();
         const managedBinary = engine.engineBinaryPath(pin);
         await writeExecutable(managedBinary);
+        // A managed install only resolves when its venv interpreter is intact.
+        await writeExecutable(path.join(path.dirname(managedBinary), 'python'));
         engine.writeEngineMarker(pin, {
             binaryPath: managedBinary,
             installedAt: new Date().toISOString(),
