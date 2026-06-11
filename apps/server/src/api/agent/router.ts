@@ -2,6 +2,10 @@ import { createRouter } from '../trpc.ts';
 import { listAgentActivityRoute } from './activity.ts';
 import { listAgentChatsRoute } from './chats-list.ts';
 import { deleteAgent } from './delete.ts';
+import {
+    getAgentExecutionSettingsProcedure,
+    saveAgentExecutionSettingsProcedure,
+} from './execution-settings.ts';
 import { getAgent } from './get.ts';
 import { getAgentInstructions } from './instructions.ts';
 import { listAgents } from './list.ts';
@@ -22,12 +26,14 @@ export const agentRouter = createRouter({
         list: listAgentChatsRoute,
     }),
     delete: deleteAgent,
+    executionSettings: getAgentExecutionSettingsProcedure,
     get: getAgent,
     instructions: getAgentInstructions,
     list: listAgents,
     onInstructionsUpdate: onAgentInstructionsUpdate,
     onUpdate: onAgentUpdate,
     primary: getPrimaryAgentRoute,
+    saveExecutionSettings: saveAgentExecutionSettingsProcedure,
     saveProfile: saveAgentProfile,
     saveSkills: saveAgentSkillsProcedure,
     saveTools: saveAgentToolsProcedure,

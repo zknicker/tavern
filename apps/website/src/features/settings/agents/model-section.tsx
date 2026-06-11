@@ -18,6 +18,7 @@ import {
     thinkingOptions,
 } from '../../../components/ui/thinking-shared.ts';
 import type { ModelListOutput } from '../../../lib/trpc.tsx';
+import { type FallbackModelEntry, FallbackModelsEditor } from './fallback-models-editor.tsx';
 import type { AgentModelDraft, ThinkingLevelValue } from './types.ts';
 
 type Model = ModelListOutput['models'][number];
@@ -27,14 +28,20 @@ const inheritThinkingValue = '__inherit__';
 
 export function AgentModelSection({
     disabled,
+    fallbackModels,
+    fallbacksDisabled,
     modelOptions,
     onChange,
+    onFallbacksChange,
     syncError,
     value,
 }: {
     disabled: boolean;
+    fallbackModels: FallbackModelEntry[];
+    fallbacksDisabled: boolean;
     modelOptions: Model[];
     onChange: (value: AgentModelDraft | null) => void;
+    onFallbacksChange: (next: FallbackModelEntry[]) => void;
     syncError: string | null;
     value: AgentModelDraft | null;
 }) {
@@ -150,6 +157,21 @@ export function AgentModelSection({
                                 ))}
                             </SelectContent>
                         </Select>
+                    </SettingsRow>
+
+                    <Separator />
+
+                    <SettingsRow
+                        description="Tried in order when the primary model fails."
+                        title="Fallback models"
+                    >
+                        <FallbackModelsEditor
+                            disabled={fallbacksDisabled}
+                            fallbackModels={fallbackModels}
+                            modelOptions={modelOptions}
+                            onChange={onFallbacksChange}
+                            primaryModelRef={value?.modelRef ?? null}
+                        />
                     </SettingsRow>
                 </Card>
             </CardFrame>

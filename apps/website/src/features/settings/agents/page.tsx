@@ -23,8 +23,10 @@ import { agentColorPresets } from '../../agents/agent-color-presets.ts';
 import { MissingAgentState } from '../../agents/missing-agent-state.tsx';
 import { useAgentProfileUpdate } from '../../agents/use-agent-profile-update.ts';
 import { MessagingPlatformsSection } from '../connections/messaging-platform-section.tsx';
+import { AgentBehaviorSection } from './behavior-section.tsx';
 import { AgentModelSection } from './model-section.tsx';
 import type { AgentModelDraft, AgentSettingsDraft } from './types.ts';
+import { useAgentExecutionSettings } from './use-execution-settings.ts';
 
 export function AgentSettingsPage() {
     const primaryAgentQuery = usePrimaryAgent();
@@ -92,6 +94,7 @@ function AgentSettingsContent({
             await Promise.all([utils.agent.list.invalidate(), utils.model.list.invalidate()]);
         },
     });
+    const executionSettings = useAgentExecutionSettings();
     const [displayName, setDisplayName] = useState(baseline.profile.displayName);
     const draft = {
         ...baseline,
@@ -198,6 +201,8 @@ function AgentSettingsContent({
 
             <AgentModelSection
                 disabled={isSavingAgentConfig}
+                fallbackModels={executionSettings.settings.fallbackModels}
+                fallbacksDisabled={executionSettings.isSaving}
                 modelOptions={modelOptions}
                 onChange={(model) =>
                     void withSavingToast(() =>
@@ -217,8 +222,23 @@ function AgentSettingsContent({
                         })
                     ).catch(() => undefined)
                 }
+                onFallbacksChange={(next) =>
+                    void withSavingToast(() =>
+                        executionSettings.save({ fallbackModels: next })
+                    ).catch(() => undefined)
+                }
                 syncError={modelSetting?.syncError ?? null}
                 value={draft.model}
+            />
+
+            <AgentBehaviorSection
+                disabled={executionSettings.isSaving}
+                onTimezoneChange={(next) =>
+                    void withSavingToast(() => executionSettings.save({ timezone: next })).catch(
+                        () => undefined
+                    )
+                }
+                timezone={executionSettings.settings.timezone}
             />
 
             <MessagingPlatformsSection

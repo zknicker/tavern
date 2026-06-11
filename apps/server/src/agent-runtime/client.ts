@@ -22,6 +22,7 @@ import {
     type AgentRuntimeCronRun,
     type AgentRuntimeDeleteDiscordBinding,
     type AgentRuntimeDiscordBinding,
+    type AgentRuntimeExecutionSettings,
     type AgentRuntimeHermesConfigSnapshot,
     type AgentRuntimeHighlightList,
     type AgentRuntimeJobDetail,
@@ -40,6 +41,8 @@ import {
     type AgentRuntimeRunJobInput,
     type AgentRuntimeSaveAgentFile,
     type AgentRuntimeSaveDiscordBinding,
+    type AgentRuntimeSaveExecutionSettings,
+    type AgentRuntimeSaveExecutionSettingsResult,
     type AgentRuntimeSaveModelProviderApiKey,
     type AgentRuntimeSaveOpenAiSettings,
     type AgentRuntimeSaveOpenRouterSettings,
@@ -95,6 +98,7 @@ import {
     agentRuntimeDeleteDiscordBindingSchema,
     agentRuntimeDiscordBindingListSchema,
     agentRuntimeErrorSchema,
+    agentRuntimeExecutionSettingsSchema,
     agentRuntimeHermesConfigSnapshotSchema,
     agentRuntimeHighlightListSchema,
     agentRuntimeJobDetailSchema,
@@ -120,6 +124,8 @@ import {
     agentRuntimeRunJobSchema,
     agentRuntimeSaveAgentFileSchema,
     agentRuntimeSaveDiscordBindingSchema,
+    agentRuntimeSaveExecutionSettingsResultSchema,
+    agentRuntimeSaveExecutionSettingsSchema,
     agentRuntimeSaveModelProviderApiKeySchema,
     agentRuntimeSaveOpenAiSettingsSchema,
     agentRuntimeSaveOpenRouterSettingsSchema,
@@ -206,6 +212,7 @@ export interface TavernAgentRuntimeClient {
     getCortexPage(input: { path: string; topic: string }): Promise<CortexPage | null>;
     getCortexStatus(): Promise<CortexStatus>;
     getCronJob(jobId: string): Promise<AgentRuntimeCron>;
+    getExecutionSettings(): Promise<AgentRuntimeExecutionSettings>;
     getHermesConfig(): Promise<AgentRuntimeHermesConfigSnapshot>;
     getModelAccess(): Promise<AgentRuntimeModelAccess>;
     getModels(): Promise<AgentRuntimeModels>;
@@ -270,6 +277,9 @@ export interface TavernAgentRuntimeClient {
     saveDiscordBinding(
         input: AgentRuntimeSaveDiscordBinding
     ): Promise<AgentRuntimeHermesConfigSnapshot>;
+    saveExecutionSettings(
+        input: AgentRuntimeSaveExecutionSettings
+    ): Promise<AgentRuntimeSaveExecutionSettingsResult>;
     saveModelProviderApiKey(input: AgentRuntimeSaveModelProviderApiKey): Promise<{ ok: boolean }>;
     saveOpenAiSettings(input: AgentRuntimeSaveOpenAiSettings): Promise<AgentRuntimeOpenAiSettings>;
     saveOpenRouterSettings(
@@ -1208,6 +1218,34 @@ class HttpTavernAgentRuntimeClient implements TavernAgentRuntimeClient {
         }
 
         return agentRuntimeOpenRouterSettingsSchema.parse(await response.json());
+    }
+
+    async getExecutionSettings() {
+        const response = await fetch(`${this.#baseUrl}${agentRuntimeRoutes.executionSettings}`);
+
+        if (!response.ok) {
+            await readErrorResponse(response);
+        }
+
+        return agentRuntimeExecutionSettingsSchema.parse(await response.json());
+    }
+
+    async saveExecutionSettings(input: AgentRuntimeSaveExecutionSettings) {
+        const payload = agentRuntimeSaveExecutionSettingsSchema.parse(input);
+        const response = await fetch(`${this.#baseUrl}${agentRuntimeRoutes.executionSettings}`, {
+            body: JSON.stringify(payload),
+            headers: {
+                'content-type': 'application/json',
+                [agentRuntimeMutationHeaders.origin]: agentRuntimeMutationOrigins.tavern,
+            },
+            method: 'PUT',
+        });
+
+        if (!response.ok) {
+            await readErrorResponse(response);
+        }
+
+        return agentRuntimeSaveExecutionSettingsResultSchema.parse(await response.json());
     }
 
     async listSkills(options?: AgentRuntimeListSkillsOptions) {
