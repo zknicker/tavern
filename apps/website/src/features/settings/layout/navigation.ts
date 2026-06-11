@@ -8,6 +8,7 @@ import {
     FileEditIcon,
     HourglassIcon,
     PaintBrush03Icon,
+    PlugSocketIcon,
     SystemUpdate01Icon,
     UserAccountIcon,
     ZapIcon,
@@ -75,6 +76,12 @@ export const settingsNavItems = [
         to: '/dashboard/settings/skills',
     },
     {
+        icon: PlugSocketIcon,
+        id: 'connectors',
+        label: 'Connectors',
+        to: '/dashboard/settings/connectors',
+    },
+    {
         icon: AiBrain01Icon,
         id: 'models',
         label: 'Models',
@@ -107,7 +114,7 @@ export const settingsNavSections = [
     },
     {
         id: 'agent',
-        itemIds: ['agent', 'agents-md', 'soul-md', 'skills', 'memories'],
+        itemIds: ['agent', 'agents-md', 'soul-md', 'skills', 'connectors', 'memories'],
         label: 'Agent',
     },
     {

@@ -35,6 +35,7 @@ export const settingsCapabilityRequirements = {
     agent: ['apiServer', 'models'],
     'agents-md': [],
     appearance: [],
+    connectors: ['apiServer'],
     jobs: [],
     memories: ['cortexWiki'],
     models: ['apiServer', 'models'],

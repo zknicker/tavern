@@ -14,12 +14,15 @@ import {
     type AgentRuntimeCapabilityHealthId,
     type AgentRuntimeCapabilityHealthList,
     type AgentRuntimeChat,
+    type AgentRuntimeConnectorList,
+    type AgentRuntimeConnectorTestResult,
     type AgentRuntimeCreateAgent,
     type AgentRuntimeCreateCron,
     type AgentRuntimeCreateMessage,
     type AgentRuntimeCron,
     type AgentRuntimeCronList,
     type AgentRuntimeCronRun,
+    type AgentRuntimeDeleteConnectorResult,
     type AgentRuntimeDeleteDiscordBinding,
     type AgentRuntimeDiscordBinding,
     type AgentRuntimeExecutionSettings,
@@ -41,6 +44,8 @@ import {
     type AgentRuntimeRunJob,
     type AgentRuntimeRunJobInput,
     type AgentRuntimeSaveAgentFile,
+    type AgentRuntimeSaveConnector,
+    type AgentRuntimeSaveConnectorResult,
     type AgentRuntimeSaveDiscordBinding,
     type AgentRuntimeSaveExecutionSettings,
     type AgentRuntimeSaveExecutionSettingsResult,
@@ -92,6 +97,8 @@ import {
     agentRuntimeCapabilityHealthListSchema,
     agentRuntimeCapabilityHealthSchema,
     agentRuntimeChatListSchema,
+    agentRuntimeConnectorListSchema,
+    agentRuntimeConnectorTestResultSchema,
     agentRuntimeCreateAgentSchema,
     agentRuntimeCreateCronSchema,
     agentRuntimeCreateMessageSchema,
@@ -99,6 +106,7 @@ import {
     agentRuntimeCronRunListSchema,
     agentRuntimeCronRunSchema,
     agentRuntimeCronSchema,
+    agentRuntimeDeleteConnectorResultSchema,
     agentRuntimeDeleteDiscordBindingSchema,
     agentRuntimeDiscordBindingListSchema,
     agentRuntimeErrorSchema,
@@ -128,6 +136,8 @@ import {
     agentRuntimeRunJobInputSchema,
     agentRuntimeRunJobSchema,
     agentRuntimeSaveAgentFileSchema,
+    agentRuntimeSaveConnectorResultSchema,
+    agentRuntimeSaveConnectorSchema,
     agentRuntimeSaveDiscordBindingSchema,
     agentRuntimeSaveExecutionSettingsResultSchema,
     agentRuntimeSaveExecutionSettingsSchema,
@@ -204,9 +214,11 @@ export interface TavernAgentRuntimeClient {
     ): Promise<AgentRuntimeHermesConfigSnapshot>;
     cancelModelProviderOAuth(input: AgentRuntimeCancelModelProviderOAuth): Promise<unknown>;
     close(): void;
+    createConnector(input: AgentRuntimeSaveConnector): Promise<AgentRuntimeSaveConnectorResult>;
     createCronJob(input: AgentRuntimeCreateCron): Promise<AgentRuntimeCron>;
     deleteAgent(agentId: string): Promise<AgentRuntimeArchiveAgent>;
     deleteBinding(bindingId: string): Promise<AgentRuntimeArchiveBinding>;
+    deleteConnector(id: string): Promise<AgentRuntimeDeleteConnectorResult>;
     deleteCronJob(jobId: string): Promise<AgentRuntimeArchiveCron>;
     deleteDiscordBinding(
         bindingId: string,
@@ -237,6 +249,7 @@ export interface TavernAgentRuntimeClient {
     listBindings(): Promise<{ bindings: AgentRuntimeBinding[] }>;
     listCapabilities(): Promise<AgentRuntimeCapabilityHealthList>;
     listChats(): Promise<{ chats: AgentRuntimeChat[] }>;
+    listConnectors(): Promise<AgentRuntimeConnectorList>;
     listCortexBacklinks(input: { path: string; topic: string }): Promise<CortexBacklinkList>;
     listCortexPages(input?: {
         includeArchived?: boolean;
@@ -306,6 +319,7 @@ export interface TavernAgentRuntimeClient {
     startUpdate(input?: { targetVersion?: null | string }): Promise<AgentRuntimeUpdate>;
     stopChatTurn(chatId: string, input: AgentRuntimeStopTurn): Promise<AgentRuntimeStopTurnResult>;
     submitModelProviderOAuth(input: AgentRuntimeSubmitModelProviderOAuth): Promise<unknown>;
+    testConnector(id: string): Promise<AgentRuntimeConnectorTestResult>;
     updateAgentAppearance(
         agentId: string,
         input: AgentRuntimeUpdateAgentAppearance
@@ -326,6 +340,10 @@ export interface TavernAgentRuntimeClient {
         agentId: string,
         input: AgentRuntimeUpdateAgentTools
     ): Promise<AgentRuntimeHermesConfigSnapshot>;
+    updateConnector(
+        id: string,
+        input: AgentRuntimeSaveConnector
+    ): Promise<AgentRuntimeSaveConnectorResult>;
     updateCronJob(jobId: string, input: AgentRuntimeUpdateCron): Promise<AgentRuntimeCron>;
     updateSkillEnabled(
         skillId: string,
@@ -1311,6 +1329,82 @@ class HttpTavernAgentRuntimeClient implements TavernAgentRuntimeClient {
         }
 
         return agentRuntimeSavePermissionSettingsResultSchema.parse(await response.json());
+    }
+
+    async listConnectors() {
+        const response = await fetch(`${this.#baseUrl}${agentRuntimeRoutes.connectors}`);
+
+        if (!response.ok) {
+            await readErrorResponse(response);
+        }
+
+        return agentRuntimeConnectorListSchema.parse(await response.json());
+    }
+
+    async createConnector(input: AgentRuntimeSaveConnector) {
+        const payload = agentRuntimeSaveConnectorSchema.parse(input);
+        const response = await fetch(`${this.#baseUrl}${agentRuntimeRoutes.connectors}`, {
+            body: JSON.stringify(payload),
+            headers: {
+                'content-type': 'application/json',
+                [agentRuntimeMutationHeaders.origin]: agentRuntimeMutationOrigins.tavern,
+            },
+            method: 'POST',
+        });
+
+        if (!response.ok) {
+            await readErrorResponse(response);
+        }
+
+        return agentRuntimeSaveConnectorResultSchema.parse(await response.json());
+    }
+
+    async updateConnector(id: string, input: AgentRuntimeSaveConnector) {
+        const payload = agentRuntimeSaveConnectorSchema.parse(input);
+        const response = await fetch(`${this.#baseUrl}${agentRuntimeRoutes.connector(id)}`, {
+            body: JSON.stringify(payload),
+            headers: {
+                'content-type': 'application/json',
+                [agentRuntimeMutationHeaders.origin]: agentRuntimeMutationOrigins.tavern,
+            },
+            method: 'PUT',
+        });
+
+        if (!response.ok) {
+            await readErrorResponse(response);
+        }
+
+        return agentRuntimeSaveConnectorResultSchema.parse(await response.json());
+    }
+
+    async deleteConnector(id: string) {
+        const response = await fetch(`${this.#baseUrl}${agentRuntimeRoutes.connector(id)}`, {
+            headers: {
+                [agentRuntimeMutationHeaders.origin]: agentRuntimeMutationOrigins.tavern,
+            },
+            method: 'DELETE',
+        });
+
+        if (!response.ok) {
+            await readErrorResponse(response);
+        }
+
+        return agentRuntimeDeleteConnectorResultSchema.parse(await response.json());
+    }
+
+    async testConnector(id: string) {
+        const response = await fetch(`${this.#baseUrl}${agentRuntimeRoutes.connectorTest(id)}`, {
+            headers: {
+                [agentRuntimeMutationHeaders.origin]: agentRuntimeMutationOrigins.tavern,
+            },
+            method: 'POST',
+        });
+
+        if (!response.ok) {
+            await readErrorResponse(response);
+        }
+
+        return agentRuntimeConnectorTestResultSchema.parse(await response.json());
     }
 
     async listSkills(options?: AgentRuntimeListSkillsOptions) {

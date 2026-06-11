@@ -34,6 +34,7 @@ capabilities. It is not a second product API.
 | Runtime update | `/update/status`, `/update`, `/update/restart` |
 | Runtime events | `/events`, websocket `/events` |
 | Managed Hermes | `/hermes-config`, `/execution-settings`, `/permission-settings` |
+| Connectors | `/connectors`, `/connectors/{id}`, `/connectors/{id}/test` |
 | Agents and files | `/agents`, `/agents/{id}`, `/agents/{id}/config`, `/agents/{id}/files`, `/agents/{id}/files/{path}` |
 | Sessions and execution evidence | `/hermes/sessions`, `/hermes/sessions/previews`, `/hermes/sessions/{sessionKey}/messages`, `/hermes/sessions/{sessionKey}/graph`, `/hermes/sessions/{sessionKey}/prompt`, `/hermes/sessions/{sessionKey}/resync` |
 | Jobs | `/jobs`, `/jobs/{slug}`, `/jobs/{slug}/run` |
@@ -59,6 +60,13 @@ tool and automation approval modes and the command allowlist. Runtime stores
 the policy, rewrites the generated managed runtime config, and restarts
 managed Hermes to apply it; live "always" approval answers persisted by the
 engine are imported into the visible allowlist.
+
+`/connectors` owns Tavern-stored MCP server records. Secret env and header
+values live in Tavern Vault and are materialized into the generated managed
+runtime config as `${ENV}` references backed by the managed env file; reads
+return only `{name, hasValue}` masks. Saves and deletes rewrite the generated
+config and restart managed Hermes. `POST /connectors/{id}/test` checks command
+resolution or URL reachability without touching the running engine.
 
 `/model-access/api-key` writes provider API keys through the managed Hermes
 environment API. `/model-access/oauth/{providerId}/start` starts the

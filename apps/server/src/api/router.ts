@@ -1,6 +1,7 @@
 import { agentRouter } from './agent/router.ts';
 import { agentRuntimeRouter } from './agent-runtime/router.ts';
 import { chatRouter } from './chat/router.ts';
+import { connectorRouter } from './connector/router.ts';
 import { cortexRouter } from './cortex/router.ts';
 import { cronRouter } from './cron/router.ts';
 import { hermesConfigRouter } from './hermes-config/router.ts';
@@ -24,6 +25,7 @@ import { workerRouter } from './worker/router.ts';
 export const appRouter = createRouter({
     agent: agentRouter,
     chat: chatRouter,
+    connector: connectorRouter,
     cron: cronRouter,
     highlight: highlightRouter,
     cortex: cortexRouter,

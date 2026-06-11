@@ -237,6 +237,16 @@ export function createAppRouter() {
                                             ),
                                         },
                                         {
+                                            path: 'connectors',
+                                            lazy: lazyRoute(
+                                                () =>
+                                                    import(
+                                                        './routes/dashboard/connectors-page.tsx'
+                                                    ),
+                                                'ConnectorsPage'
+                                            ),
+                                        },
+                                        {
                                             path: 'jobs',
                                             lazy: lazyRoute(
                                                 () =>
