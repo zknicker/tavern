@@ -1,9 +1,9 @@
 import { getDb } from '../db/connection';
 import { json } from '../tavern/http';
 import {
-    ensureAgentInstructionsFile,
     readRenderedAgentInstructions,
-    updateAgentInstructionSource,
+    reconcileAgentInstructions,
+    registerAgentWorkspace,
 } from './instructions';
 
 export async function handleWorkspaceRequest(request: Request): Promise<Response | null> {
@@ -23,17 +23,17 @@ export async function handleWorkspaceRequest(request: Request): Promise<Response
 
     if (request.method === 'PUT' && segments[3] === 'instructions') {
         const body = await readJson(request);
-        const source = updateAgentInstructionSource(getDb(), {
+        const source = registerAgentWorkspace(getDb(), {
             agentId,
             agentName: readOptionalString(body.agentName),
             workspaceDir: readString(body.workspaceDir, 'workspaceDir'),
         });
-        const rendered = await ensureAgentInstructionsFile(getDb(), agentId);
+        const reconciled = await reconcileAgentInstructions(getDb(), agentId);
 
         return json({
             agentId: source.agentId,
-            renderedAt: rendered.renderedAt,
-            sha256: rendered.sha256,
+            renderedAt: reconciled.renderedAt,
+            sha256: reconciled.sha256,
             updatedAt: source.updatedAt,
         });
     }

@@ -7,16 +7,16 @@ import { ensureRuntimeSchema } from '../db/schema';
 import { subscribeToRuntimeEvents } from '../tavern/runtime-events';
 import {
     clearHermesBootstrapFiles,
-    composeAgentInstructions,
-    ensureAgentInstructionsFile,
     generatedInstructionFileName,
-    getAgentInstructionSource,
+    getAgentWorkspaceSource,
     hermesBootstrapFileNamesToClear,
+    managedBlockEndMarker,
     readRenderedAgentInstructions,
-    renderAgentInstructions,
-    updateAgentInstructionSource,
-    updateAgentNotes,
+    reconcileAgentInstructions,
+    registerAgentWorkspace,
+    renderManagedInstructionBlock,
 } from './instructions';
+import { renderManagedInstructionContent } from './managed-instructions';
 import { handleWorkspaceRequest } from './routes';
 
 describe('workspace instructions', () => {
@@ -32,95 +32,66 @@ describe('workspace instructions', () => {
         await rm(workspaceDir, { force: true, recursive: true });
     });
 
-    test('renders generated AGENTS.md from user instructions and agent notes', async () => {
-        const db = getDb();
-        updateAgentInstructionSource(db, {
+    function registerPlanner() {
+        return registerAgentWorkspace(getDb(), {
             agentId: 'planner',
             agentName: 'Planner',
-            userInstructions: 'Speak plainly.',
             workspaceDir,
         });
-        updateAgentNotes(db, {
-            agentId: 'planner',
-            notes: 'Prefer llm-wiki for prior project decisions.',
-        });
+    }
 
-        const result = await renderAgentInstructions(db, 'planner');
-        const content = await readFile(
-            path.join(workspaceDir, generatedInstructionFileName),
-            'utf8'
-        );
+    async function readAgentsFile() {
+        return await readFile(path.join(workspaceDir, generatedInstructionFileName), 'utf8');
+    }
 
+    test('seeds a missing AGENTS.md with the managed block and user hint', async () => {
+        registerPlanner();
+
+        const result = await reconcileAgentInstructions(getDb(), 'planner');
+        const content = await readAgentsFile();
+
+        expect(result.written).toBe(true);
         expect(result.sha256).toMatch(/^[a-f0-9]{64}$/u);
-        expect(content).toContain(
-            'You are Planner, a Tavern-managed agent inside the Tavern chat app.'
-        );
-        expect(content).not.toContain('Hermes sessions and turns are execution evidence');
-        expect(content).toContain('## Delegation');
-        expect(content).toContain('Work inline for quick, narrow, real-time tasks.');
-        expect(content).toContain('Use subagents for isolated context');
-        expect(content).toContain('broad exploration, parallel research, independent review');
-        expect(content).toContain('flood the main thread with logs/search/files');
-        expect(content).toContain('Give subagents a clear goal, context, constraints');
-        expect(content).toContain('Synthesize results before replying');
-        expect(content).toContain('Do not delegate simple lookups, small edits');
-        expect(content).toContain('## Cortex');
-        expect(content).toContain("Cortex is Tavern's browser for the llm-wiki hub.");
-        expect(content).toContain('The wiki is plain Markdown owned by the user.');
-        expect(content).toContain('prior project context');
-        expect(content).toContain('### llm-wiki');
-        expect(content).toContain('Prefer the installed `wiki` skill for wiki work.');
-        expect(content).toContain('research a topic and compile findings');
-        expect(content).toContain('ingest a source');
-        expect(content).toContain('query existing wiki knowledge');
-        expect(content).toContain('audit an output or article');
-        expect(content).toContain('~/.config/llm-wiki/config.json');
-        expect(content).toContain('topics/<slug>/');
-        expect(content).toContain('topics/.archive/<slug>/');
-        expect(content).toContain('raw/');
-        expect(content).toContain('wiki/');
-        expect(content).toContain('inventory/');
-        expect(content).toContain('datasets/');
-        expect(content).toContain('output/');
-        expect(content).toContain('_index.md');
-        expect(content).toContain('config.md');
-        expect(content).toContain('log.md');
-        expect(content).toContain('### Routing');
-        expect(content).toContain('For quick answers, read/search the wiki first.');
-        expect(content).toContain('route through llm-wiki');
-        expect(content).toContain('### Conflicts');
-        expect(content).toContain('Priority: current user statement');
-        expect(content).toContain('### Writes');
-        expect(content).toContain('Preserve provenance');
-        expect(content).toContain('Do not save secrets or broad chat dumps');
-        expect(content).toContain('Use Tasks or Runtime crons for scheduled wiki work.');
-        expect(content).not.toContain('Cortex Chat Ingestion');
-        expect(content).not.toContain('Cortex Generate Embeddings job');
-        expect(content).toContain('Speak plainly.');
-        expect(content).toContain('Prefer llm-wiki');
+        expect(content).toBe(result.content);
+        expect(content).toMatch(/^<!-- tavern:managed v=[a-f0-9]{16} -->\n/u);
+        expect(content).toContain(managedBlockEndMarker);
+        expect(content).toContain('You are Planner, the resident agent of Tavern');
+        expect(content).toContain('Everything below is yours.');
     });
 
-    test('emits an AGENTS.md update event when rendered instructions are written', async () => {
-        const db = getDb();
+    test('managed content speaks product language and keeps memory guidance', () => {
+        const content = renderManagedInstructionContent('Planner');
+
+        expect(content).not.toMatch(/hermes/iu);
+        expect(content).toContain('## Environment');
+        expect(content).toContain('## Delegation');
+        expect(content).toContain('## Memory');
+        expect(content).toContain("Cortex is Tavern's durable knowledge store");
+        expect(content).toContain('Prefer the installed `wiki` skill for wiki work.');
+        expect(content).toContain('Priority: current user statement');
+        expect(content).toContain('Preserve provenance');
+        expect(content).toContain('## Maintaining These Files');
+        expect(content).toContain('edit `SOUL.md`');
+        expect(content).not.toContain('Tavern workspace notes tools');
+    });
+
+    test('reconcile is idempotent and only emits an event when the file changes', async () => {
         const events: unknown[] = [];
         const unsubscribe = subscribeToRuntimeEvents((event) => events.push(event));
 
         try {
-            updateAgentInstructionSource(db, {
-                agentId: 'planner',
-                agentName: 'Planner',
-                userInstructions: 'Speak plainly.',
-                workspaceDir,
-            });
+            registerPlanner();
+            const first = await reconcileAgentInstructions(getDb(), 'planner');
+            const second = await reconcileAgentInstructions(getDb(), 'planner');
 
-            const result = await renderAgentInstructions(db, 'planner');
-
-            expect(events).toContainEqual({
+            expect(first.written).toBe(true);
+            expect(second.written).toBe(false);
+            expect(second.content).toBe(first.content);
+            expect(events).toHaveLength(1);
+            expect(events[0]).toMatchObject({
                 agentId: 'planner',
                 path: generatedInstructionFileName,
-                renderedAt: result.renderedAt,
-                sha256: result.sha256,
-                timestamp: result.renderedAt,
+                sha256: first.sha256,
                 type: 'workspace.instructions.updated',
             });
         } finally {
@@ -128,68 +99,130 @@ describe('workspace instructions', () => {
         }
     });
 
-    test('preserves notes when user instructions change', () => {
-        const db = getDb();
-        updateAgentInstructionSource(db, {
+    test('replaces a stale managed block and preserves user content byte-for-byte', async () => {
+        const userContent =
+            '\n\n# My Rules\n\n  - keep indentation\n\ttabs too\n\nTrailing spaces:   \n';
+        await writeFile(
+            path.join(workspaceDir, generatedInstructionFileName),
+            `<!-- tavern:managed v=0123456789abcdef -->\nold managed text\n${managedBlockEndMarker}${userContent}`
+        );
+        registerPlanner();
+
+        const result = await reconcileAgentInstructions(getDb(), 'planner');
+        const expectedBlock = await renderManagedInstructionBlock('Planner');
+
+        expect(result.written).toBe(true);
+        expect(result.content).toBe(`${expectedBlock}${userContent}`);
+        expect(result.content).not.toContain('old managed text');
+    });
+
+    test('rewrites the managed block when the agent is renamed', async () => {
+        registerPlanner();
+        await reconcileAgentInstructions(getDb(), 'planner');
+        const seeded = await readAgentsFile();
+        await writeFile(
+            path.join(workspaceDir, generatedInstructionFileName),
+            `${seeded}\nUser appended note.\n`
+        );
+
+        registerAgentWorkspace(getDb(), {
+            agentId: 'planner',
+            agentName: 'Navigator',
+            workspaceDir,
+        });
+        const result = await reconcileAgentInstructions(getDb(), 'planner');
+
+        expect(result.written).toBe(true);
+        expect(result.content).toContain('You are Navigator, the resident agent of Tavern');
+        expect(result.content).not.toContain('You are Planner');
+        expect(result.content).toContain('User appended note.');
+    });
+
+    test('re-inserts the managed block at the top when markers were deleted', async () => {
+        const userOnly = '# Mine\n\nAll user content, markers deleted.\n';
+        await writeFile(path.join(workspaceDir, generatedInstructionFileName), userOnly);
+        registerPlanner();
+
+        const result = await reconcileAgentInstructions(getDb(), 'planner');
+        const expectedBlock = await renderManagedInstructionBlock('Planner');
+
+        expect(result.written).toBe(true);
+        expect(result.content).toBe(`${expectedBlock}\n\n${userOnly}`);
+    });
+
+    test('prepends a fresh block when the end marker is missing', async () => {
+        const broken = '<!-- tavern:managed v=0123456789abcdef -->\ndangling start, no end\n';
+        await writeFile(path.join(workspaceDir, generatedInstructionFileName), broken);
+        registerPlanner();
+
+        const result = await reconcileAgentInstructions(getDb(), 'planner');
+        const expectedBlock = await renderManagedInstructionBlock('Planner');
+
+        expect(result.written).toBe(true);
+        expect(result.content).toBe(`${expectedBlock}\n\n${broken}`);
+
+        const repeat = await reconcileAgentInstructions(getDb(), 'planner');
+        expect(repeat.written).toBe(false);
+    });
+
+    test('seeding clears legacy bootstrap files but never SOUL.md', async () => {
+        await Promise.all(
+            hermesBootstrapFileNamesToClear.map((fileName) =>
+                writeFile(path.join(workspaceDir, fileName), 'legacy bootstrap')
+            )
+        );
+        await writeFile(path.join(workspaceDir, 'SOUL.md'), 'identity');
+        registerPlanner();
+
+        await reconcileAgentInstructions(getDb(), 'planner');
+
+        await Promise.all(
+            hermesBootstrapFileNamesToClear.map((fileName) =>
+                expect(readFile(path.join(workspaceDir, fileName), 'utf8')).resolves.toBe('')
+            )
+        );
+        await expect(readFile(path.join(workspaceDir, 'SOUL.md'), 'utf8')).resolves.toBe(
+            'identity'
+        );
+    });
+
+    test('clearHermesBootstrapFiles leaves AGENTS.md untouched', async () => {
+        await writeFile(path.join(workspaceDir, generatedInstructionFileName), 'managed');
+
+        await clearHermesBootstrapFiles(workspaceDir);
+
+        await expect(readAgentsFile()).resolves.toBe('managed');
+    });
+
+    test('register preserves the stored agent name when omitted', () => {
+        registerPlanner();
+        registerAgentWorkspace(getDb(), { agentId: 'planner', workspaceDir });
+
+        expect(getAgentWorkspaceSource(getDb(), 'planner')).toMatchObject({
             agentId: 'planner',
             agentName: 'Planner',
-            userInstructions: 'First instructions.',
             workspaceDir,
-        });
-        updateAgentNotes(db, {
-            agentId: 'planner',
-            notes: 'Durable agent note.',
-        });
-        updateAgentInstructionSource(db, {
-            agentId: 'planner',
-            userInstructions: 'Second instructions.',
-            workspaceDir,
-        });
-
-        expect(getAgentInstructionSource(db, 'planner')).toMatchObject({
-            notes: 'Durable agent note.',
-            userInstructions: 'Second instructions.',
         });
     });
 
-    test('reads rendered AGENTS.md from disk', async () => {
-        const db = getDb();
-        updateAgentInstructionSource(db, {
-            agentId: 'planner',
-            agentName: 'Planner',
-            userInstructions: 'Saved instructions.',
-            workspaceDir,
-        });
-        updateAgentNotes(db, {
-            agentId: 'planner',
-            notes: 'Durable agent note.',
-        });
+    test('reads the rendered AGENTS.md from disk with tracked hash', async () => {
+        registerPlanner();
+        const reconciled = await reconcileAgentInstructions(getDb(), 'planner');
 
-        const rendered = await renderAgentInstructions(db, 'planner');
-        const read = await readRenderedAgentInstructions(db, 'planner');
+        const read = await readRenderedAgentInstructions(getDb(), 'planner');
 
         expect(read).toMatchObject({
             agentId: 'planner',
             path: generatedInstructionFileName,
-            renderedAt: rendered.renderedAt,
-            sha256: rendered.sha256,
+            renderedAt: reconciled.renderedAt,
+            sha256: reconciled.sha256,
         });
-        expect(read.content).toContain(
-            'You are Planner, a Tavern-managed agent inside the Tavern chat app.'
-        );
-        expect(read.content).toContain('Saved instructions.');
-        expect(read.content).toContain('Durable agent note.');
+        expect(read.content).toBe(reconciled.content);
     });
 
-    test('instructions route returns the rendered AGENTS.md file', async () => {
-        const db = getDb();
-        updateAgentInstructionSource(db, {
-            agentId: 'planner',
-            agentName: 'Planner',
-            userInstructions: 'Saved instructions.',
-            workspaceDir,
-        });
-        await renderAgentInstructions(db, 'planner');
+    test('instructions GET route returns the rendered AGENTS.md file', async () => {
+        registerPlanner();
+        await reconcileAgentInstructions(getDb(), 'planner');
 
         const response = await handleWorkspaceRequest(
             new Request('http://runtime.test/workspace/agents/planner/instructions')
@@ -198,80 +231,39 @@ describe('workspace instructions', () => {
 
         expect(response?.status).toBe(200);
         expect(body.path).toBe(generatedInstructionFileName);
-        expect(body.content).toContain('Saved instructions.');
+        expect(body.content).toContain('You are Planner, the resident agent of Tavern');
     });
 
-    test('workspace instruction sync preserves an existing AGENTS.md file', async () => {
-        const db = getDb();
+    test('instructions PUT route registers the workspace and reconciles the block', async () => {
+        const userContent = 'User edits stay.\n';
         await writeFile(
             path.join(workspaceDir, generatedInstructionFileName),
-            '# Existing\n\nUser-edited instructions.'
+            `<!-- tavern:managed v=0123456789abcdef -->\nstale\n${managedBlockEndMarker}\n\n${userContent}`
         );
-        updateAgentInstructionSource(db, {
-            agentId: 'planner',
-            agentName: 'Planner',
-            userInstructions: 'Generated instructions.',
-            workspaceDir,
-        });
 
-        const result = await ensureAgentInstructionsFile(db, 'planner');
-
-        expect(result.content).toBe('# Existing\n\nUser-edited instructions.');
-        await expect(
-            readFile(path.join(workspaceDir, generatedInstructionFileName), 'utf8')
-        ).resolves.toBe('# Existing\n\nUser-edited instructions.');
-    });
-
-    test('preserves an explicit empty user instructions update', () => {
-        const db = getDb();
-        updateAgentInstructionSource(db, {
-            agentId: 'planner',
-            agentName: 'Planner',
-            userInstructions: 'First instructions.',
-            workspaceDir,
-        });
-        updateAgentInstructionSource(db, {
-            agentId: 'planner',
-            userInstructions: '',
-            workspaceDir,
-        });
-
-        expect(getAgentInstructionSource(db, 'planner')).toMatchObject({
-            userInstructions: '',
-        });
-    });
-
-    test('composition omits empty optional sections', () => {
-        expect(
-            composeAgentInstructions({
-                agentName: 'Planner',
-                notes: '',
-                userInstructions: '',
+        const response = await handleWorkspaceRequest(
+            new Request('http://runtime.test/workspace/agents/planner/instructions', {
+                body: JSON.stringify({ agentName: 'Planner', workspaceDir }),
+                headers: { 'content-type': 'application/json' },
+                method: 'PUT',
             })
-        ).not.toContain('\n\n\n');
-    });
-
-    test('clears unsupported Hermes bootstrap files owned by Tavern AGENTS.md composition', async () => {
-        await Promise.all(
-            hermesBootstrapFileNamesToClear.map((fileName) =>
-                writeFile(path.join(workspaceDir, fileName), 'legacy bootstrap')
-            )
         );
-        await writeFile(path.join(workspaceDir, generatedInstructionFileName), 'managed');
-        await writeFile(path.join(workspaceDir, 'SOUL.md'), 'supported');
+        const body = (await response?.json()) as {
+            agentId: string;
+            renderedAt: string;
+            sha256: string;
+            updatedAt: string;
+        };
 
-        await clearHermesBootstrapFiles(workspaceDir);
+        expect(response?.status).toBe(200);
+        expect(body.agentId).toBe('planner');
+        expect(body.sha256).toMatch(/^[a-f0-9]{64}$/u);
+        expect(Date.parse(body.renderedAt)).not.toBeNaN();
+        expect(Date.parse(body.updatedAt)).not.toBeNaN();
 
-        await expect(
-            readFile(path.join(workspaceDir, generatedInstructionFileName), 'utf8')
-        ).resolves.toBe('managed');
-        await expect(readFile(path.join(workspaceDir, 'SOUL.md'), 'utf8')).resolves.toBe(
-            'supported'
-        );
-        await Promise.all(
-            hermesBootstrapFileNamesToClear.map((fileName) =>
-                expect(readFile(path.join(workspaceDir, fileName), 'utf8')).resolves.toBe('')
-            )
-        );
+        const content = await readAgentsFile();
+        expect(content).not.toContain('stale');
+        expect(content).toContain('You are Planner, the resident agent of Tavern');
+        expect(content).toContain(userContent);
     });
 });

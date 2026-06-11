@@ -32,8 +32,6 @@ CREATE TABLE IF NOT EXISTS workspace_agent_instructions (
   agent_id      TEXT PRIMARY KEY,
   agent_name    TEXT NOT NULL,
   workspace_dir TEXT NOT NULL,
-  user_instructions TEXT NOT NULL DEFAULT '',
-  notes TEXT NOT NULL DEFAULT '',
   rendered_hash TEXT,
   rendered_at   TEXT,
   created_at    TEXT NOT NULL,

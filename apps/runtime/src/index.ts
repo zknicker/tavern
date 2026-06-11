@@ -9,7 +9,6 @@ import { type RuntimeJobsManager, startRuntimeJobsManager } from './jobs/manager
 import { ensureRuntimeJobsSchema } from './jobs/schema';
 import { log } from './log';
 import { startTavernRuntimeServer } from './tavern/server';
-import { ensureWorkspaceInstructionSchema } from './workspace/instructions';
 
 let runtimeServer: ReturnType<typeof startTavernRuntimeServer> | null = null;
 let hermes: ManagedHermesHandle | null = null;
@@ -24,7 +23,6 @@ async function main(): Promise<void> {
     const db = initDb(dbPath);
     ensureRuntimeSchema(db);
     ensureRuntimeJobsSchema(db);
-    ensureWorkspaceInstructionSchema(db);
     log.info('Runtime DB ready', { path: dbPath });
     runtimeJobs = await startRuntimeJobsManager();
 
