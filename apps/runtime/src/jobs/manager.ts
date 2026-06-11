@@ -21,6 +21,7 @@ const writeDebounceMs = 2500;
 
 interface RuntimeJobBinding {
     definition: RuntimeJobDefinition;
+    disabled: boolean;
     queue: Queue<RuntimeJobQueuePayload>;
     worker: Worker<RuntimeJobQueuePayload, void>;
 }
@@ -173,6 +174,7 @@ function createBinding(definition: RuntimeJobDefinition): RuntimeJobBinding {
     });
     const binding = {
         definition,
+        disabled: false,
         queue,
         worker: undefined as unknown as Worker<RuntimeJobQueuePayload, void>,
     };
@@ -225,10 +227,12 @@ async function syncScheduledRuntimeJobWithOptions(
     binding: RuntimeJobBinding,
     options: { refreshCapabilities?: boolean; runOnStart: boolean }
 ): Promise<void> {
+    const wasDisabled = binding.disabled;
     const disabledReason = await getRuntimeJobDisabledReason(binding.definition, {
         onlyDue: !(options.refreshCapabilities ?? false),
     });
     if (disabledReason) {
+        binding.disabled = true;
         await binding.queue.removeJobScheduler(binding.definition.slug);
         log.info('Runtime job disabled', {
             reason: disabledReason,
@@ -236,6 +240,7 @@ async function syncScheduledRuntimeJobWithOptions(
         });
         return;
     }
+    binding.disabled = false;
 
     await binding.queue.upsertJobScheduler(
         binding.definition.slug,
@@ -249,7 +254,9 @@ async function syncScheduledRuntimeJobWithOptions(
         }
     );
 
-    if (options.runOnStart && binding.definition.schedule.runOnStart) {
+    const runNow =
+        binding.definition.schedule.runOnStart && (options.runOnStart || wasDisabled);
+    if (runNow) {
         const jobId = await enqueueRuntimeJob(binding.definition.slug, { trigger: 'startup' });
         log.info('Runtime startup job queued', { jobId, slug: binding.definition.slug });
     }
