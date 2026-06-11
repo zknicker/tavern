@@ -1010,6 +1010,7 @@ export const cortexLibrarianScanSchema = z.object({
     avgStaleness: z.number().nullable(),
     completedAt: z.string().nullable(),
     lowQualityCount: z.number().nullable(),
+    scanId: z.string().nullable(),
     staleCount: z.number().nullable(),
     threshold: z.number().nullable(),
     topic: z.string().trim().min(1),
@@ -1044,8 +1045,21 @@ export const cortexManagedRunSchema = z.object({
     nextRunAtMs: z.number().int().nonnegative().nullable(),
 });
 
+export const cortexHealthHistoryEntrySchema = z.object({
+    articlesScanned: z.number().nullable(),
+    avgQuality: z.number().nullable(),
+    avgStaleness: z.number().nullable(),
+    escalationsOpen: z.number(),
+    lowQualityCount: z.number().nullable(),
+    recordedAt: z.string().datetime(),
+    scanId: z.string().nullable(),
+    staleCount: z.number().nullable(),
+    topic: z.string().trim().min(1),
+});
+
 export const cortexHealthSchema = z.object({
     escalations: z.array(cortexEscalationSchema),
+    history: z.array(cortexHealthHistoryEntrySchema),
     runs: z.array(cortexManagedRunSchema),
     scans: z.array(cortexLibrarianScanSchema),
     state: cortexHealthStateSchema,
@@ -1216,6 +1230,7 @@ export const agentRuntimeJobSlugSchema = z.enum([
     'refresh-runtime-capabilities',
     'sync-managed-crons',
     'tavern-highlights',
+    'wiki-health-history',
 ]);
 
 export const agentRuntimeJobAvailabilitySchema = z.enum(['disabled', 'enabled']);
@@ -2007,6 +2022,7 @@ export type CortexBacklinkList = z.infer<typeof cortexBacklinkListSchema>;
 export type CortexEscalation = z.infer<typeof cortexEscalationSchema>;
 export type CortexHealth = z.infer<typeof cortexHealthSchema>;
 export type CortexHealthState = z.infer<typeof cortexHealthStateSchema>;
+export type CortexHealthHistoryEntry = z.infer<typeof cortexHealthHistoryEntrySchema>;
 export type CortexLibrarianArticle = z.infer<typeof cortexLibrarianArticleSchema>;
 export type CortexLibrarianScan = z.infer<typeof cortexLibrarianScanSchema>;
 export type CortexManagedRun = z.infer<typeof cortexManagedRunSchema>;

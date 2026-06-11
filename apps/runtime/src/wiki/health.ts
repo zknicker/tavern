@@ -8,6 +8,7 @@ import type {
     CortexPage,
 } from '@tavern/api';
 import { createLocalHermesClient } from '../hermes/local-client';
+import { listWikiHealthHistory } from './history';
 import { getCortexPage, getCortexStatus, listCortexPages, listCortexTopics } from './store';
 
 /**
@@ -26,6 +27,7 @@ export async function getCortexHealth(): Promise<CortexHealth> {
 
     return {
         escalations,
+        history: listWikiHealthHistory(),
         runs,
         scans,
         state: status.readable
@@ -76,7 +78,7 @@ function toEscalation(page: CortexPage): CortexEscalation {
  * scan output ("REPORT.md is rendered from it"). Agent-written JSON is parsed
  * defensively: missing fields become null, unparseable files are skipped.
  */
-async function listLatestLibrarianScans(): Promise<CortexLibrarianScan[]> {
+export async function listLatestLibrarianScans(): Promise<CortexLibrarianScan[]> {
     const { topics } = await listCortexTopics();
     const scans = await Promise.all(
         topics.map(async (topic) => {
@@ -109,6 +111,7 @@ function toLibrarianScan(topic: string, updatedAt: string, value: unknown): Cort
         avgStaleness: readNumber(summary.avg_staleness),
         completedAt: readString(record.completed_at),
         lowQualityCount: readNumber(summary.low_quality_count),
+        scanId: readString(record.scan_id),
         staleCount: readNumber(summary.stale_count),
         threshold: readNumber(record.threshold),
         topic,

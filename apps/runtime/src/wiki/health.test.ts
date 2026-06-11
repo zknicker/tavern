@@ -2,6 +2,8 @@ import fs from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import { afterEach, beforeEach, describe, expect, test } from 'vitest';
+import { closeDb, initTestDb } from '../db/connection';
+import { ensureRuntimeSchema } from '../db/schema';
 import { getCortexHealth } from './health';
 
 describe('cortex health', () => {
@@ -9,12 +11,14 @@ describe('cortex health', () => {
     let previousHubPath: string | undefined;
 
     beforeEach(async () => {
+        ensureRuntimeSchema(initTestDb());
         previousHubPath = process.env.TAVERN_WIKI_HUB_PATH;
         hubPath = await fs.mkdtemp(path.join(os.tmpdir(), 'tavern-cortex-health-'));
         process.env.TAVERN_WIKI_HUB_PATH = hubPath;
     });
 
     afterEach(async () => {
+        closeDb();
         if (previousHubPath === undefined) {
             Reflect.deleteProperty(process.env, 'TAVERN_WIKI_HUB_PATH');
         } else {

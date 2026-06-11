@@ -17,6 +17,7 @@ import { runtimeUnhealthyTooltip, useCapability } from '../../hooks/connections/
 import { formatRelativeTime } from '../../lib/format.ts';
 import type { CortexHealthOutput } from '../../lib/trpc.tsx';
 import { cn } from '../../lib/utils.ts';
+import { CortexHealthTrends } from './cortex-health-trends.tsx';
 
 type CortexHealthData = NonNullable<CortexHealthOutput>;
 type CortexEscalation = CortexHealthData['escalations'][number];
@@ -53,6 +54,8 @@ export function CortexHealthView({
                     </div>
 
                     {health.runs.length > 0 ? <RunTiles runs={health.runs} /> : null}
+
+                    <CortexHealthTrends history={health.history} />
 
                     {health.escalations.length > 0 ? (
                         <section className="mt-8">

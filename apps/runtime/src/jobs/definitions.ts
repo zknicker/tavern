@@ -80,6 +80,28 @@ export const syncManagedCronsJob: RuntimeJobDefinition = {
     slug: 'sync-managed-crons',
 };
 
+export const wikiHealthHistoryJob: RuntimeJobDefinition = {
+    concurrency: 1,
+    defaultInput: {},
+    description: 'Samples wiki health stats (staleness, quality, escalations) into history.',
+    disabledReason() {
+        return null;
+    },
+    displayName: 'Record Wiki Health History',
+    inputSchema: emptyRuntimeJobInputSchema,
+    async run(context) {
+        const { recordWikiHealthSamples } = await import('../wiki/history');
+        const recorded = await recordWikiHealthSamples();
+        await context.log(`Recorded ${recorded} wiki health sample(s).`);
+    },
+    schedule: {
+        everyMs: hourMs,
+        kind: 'interval',
+        runOnStart: true,
+    },
+    slug: 'wiki-health-history',
+};
+
 export const tavernHighlightsJob: RuntimeJobDefinition = {
     concurrency: 1,
     defaultInput: {},
@@ -105,6 +127,7 @@ export const runtimeJobDefinitions = [
     runtimeCapabilitiesRefreshJob,
     syncManagedCronsJob,
     tavernHighlightsJob,
+    wikiHealthHistoryJob,
 ] as const;
 
 export function getRuntimeJobDefinition(slug: RuntimeJobDefinition['slug']): RuntimeJobDefinition {

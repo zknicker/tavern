@@ -254,6 +254,22 @@ CREATE INDEX IF NOT EXISTS idx_tavern_highlights_expires
 
 CREATE INDEX IF NOT EXISTS idx_tavern_highlights_generated
   ON tavern_highlights(generated_at, category);
+
+CREATE TABLE IF NOT EXISTS wiki_health_history (
+  id                 INTEGER PRIMARY KEY AUTOINCREMENT,
+  topic              TEXT NOT NULL,
+  scan_id            TEXT,
+  recorded_at        TEXT NOT NULL,
+  articles_scanned   INTEGER,
+  stale_count        INTEGER,
+  low_quality_count  INTEGER,
+  avg_staleness      REAL,
+  avg_quality        REAL,
+  escalations_open   INTEGER NOT NULL DEFAULT 0
+);
+
+CREATE INDEX IF NOT EXISTS idx_wiki_health_history_topic
+  ON wiki_health_history(topic, recorded_at);
 `;
 
 export function ensureRuntimeSchema(db: Database): void {

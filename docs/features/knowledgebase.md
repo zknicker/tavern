@@ -41,8 +41,9 @@ librarian, lessons, output, inventory, datasets, and archive workflows.
   it shows the health page with escalation cards — each card is a one-line
   question with an input, and answering spawns an agent chat that applies the
   decision to the wiki — plus per-article staleness and quality scores with
-  flags. Health is derived purely from facts; the wiki files stay the source
-  of truth.
+  flags, and trend charts of average staleness, quality, and open escalations
+  over time. Health is derived purely from facts; the wiki files stay the
+  source of truth, and history is an append-only Runtime projection.
 
 ## Contract
 

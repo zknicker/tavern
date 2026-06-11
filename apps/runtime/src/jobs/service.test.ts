@@ -22,6 +22,7 @@ describe('Runtime jobs service', () => {
             'refresh-runtime-capabilities',
             'sync-managed-crons',
             'tavern-highlights',
+            'wiki-health-history',
         ]);
         expect(jobs.some((job) => job.slug.startsWith('cortex-'))).toBe(false);
     });
