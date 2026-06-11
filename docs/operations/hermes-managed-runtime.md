@@ -98,14 +98,30 @@ Set `TAVERN_DEV_STACK_ID` to choose the state directory name, or
 `TAVERN_DEV_PORT_BASE` to choose the first port in the group. Set
 `TAVERN_HERMES_PORT` only when a run must use a specific dashboard port.
 
-## Model Config
+## Generated Config
 
-Runtime writes the generated managed Hermes config into `HERMES_HOME` as a
-domain-based merge (`apps/runtime/src/hermes/generated-config.ts`): the model
-route, Runtime-stored execution settings (model fallback chain, timezone),
-the memory provider, and required plugins. Each domain only sets or deletes
-its own keys, so operator-managed keys elsewhere in the file survive.
-Execution-setting changes rewrite the file and restart managed Hermes.
+Runtime writes the generated managed Hermes config into `HERMES_HOME` through
+one entrypoint, `writeManagedHermesConfigFile`
+(`apps/runtime/src/hermes/model-config.ts`), which runs the domain-based
+composer (`apps/runtime/src/hermes/generated-config.ts`) and the managed
+`.env` merge together. It is the only code path that writes `config.yaml`;
+every Tavern-owned setting that lands in the file is a domain:
+
+| Domain | Keys | Source of truth |
+| --- | --- | --- |
+| model | `model.*` | env/Vault-derived model route |
+| execution | `fallback_providers`, `timezone`, `delegation.*`, `compression.*` | `/execution-settings` store |
+| permissions | `approvals.*`, `command_allowlist` | `/permission-settings` store (untouched until first save) |
+| connectors | `mcp_servers.<id>` + `TAVERN_MCP_*` env secrets | connector vault records |
+| memory | `memory.*` (mnemosyne) | fixed managed policy |
+| plugins | `plugins.enabled` messenger entry | fixed managed policy |
+
+Each domain only sets or deletes its own keys, so operator-managed keys
+elsewhere in the file survive every merge. Runtime storage is the source of
+truth and the YAML is always derived; settings changes rewrite the file and
+restart managed Hermes. Per-agent live settings (name, model, thinking,
+appearance) are not config domains — they flow through the adapter state and
+engine API instead.
 
 Explicit env wins:
 
