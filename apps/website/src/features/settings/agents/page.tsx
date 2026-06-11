@@ -4,7 +4,7 @@ import {
     useRuntimeConnection,
 } from '../../../hooks/connections/use-runtime-connection.ts';
 import { useModelList } from '../../../hooks/models/use-model-list.ts';
-import { withSavingToast } from '../../../lib/saving-toast.ts';
+import { withSaveErrorToast, withSavingToast } from '../../../lib/saving-toast.ts';
 import { type AgentListOutput, type ModelListOutput, trpc } from '../../../lib/trpc.tsx';
 import { MissingAgentState } from '../../agents/missing-agent-state.tsx';
 import { MessagingPlatformsSection } from '../connections/messaging-platform-section.tsx';
@@ -83,7 +83,7 @@ function AgentSettingsContent({
             <AgentModelSection
                 disabled={isSavingAgentConfig}
                 fallbackModels={executionSettings.settings.fallbackModels}
-                fallbacksDisabled={executionSettings.isSaving}
+                fallbacksDisabled={executionSettings.isLoading}
                 modelOptions={modelOptions}
                 onChange={(model) =>
                     void withSavingToast(() =>
@@ -104,17 +104,17 @@ function AgentSettingsContent({
                     ).catch(() => undefined)
                 }
                 onFallbacksChange={(next) =>
-                    void withSavingToast(() =>
+                    void withSaveErrorToast(() =>
                         executionSettings.save({ fallbackModels: next })
                     ).catch(() => undefined)
                 }
                 onSubagentEffortChange={(next) =>
-                    void withSavingToast(() =>
+                    void withSaveErrorToast(() =>
                         executionSettings.save({ subagentEffort: next })
                     ).catch(() => undefined)
                 }
                 onSubagentModelChange={(next) =>
-                    void withSavingToast(() =>
+                    void withSaveErrorToast(() =>
                         executionSettings.save({ subagentModel: next })
                     ).catch(() => undefined)
                 }
@@ -126,14 +126,14 @@ function AgentSettingsContent({
 
             <AgentBehaviorSection
                 compression={executionSettings.settings.compression}
-                disabled={executionSettings.isSaving}
+                disabled={executionSettings.isLoading}
                 onCompressionChange={(next) =>
-                    void withSavingToast(() => executionSettings.save({ compression: next })).catch(
-                        () => undefined
-                    )
+                    void withSaveErrorToast(() =>
+                        executionSettings.save({ compression: next })
+                    ).catch(() => undefined)
                 }
                 onTimezoneChange={(next) =>
-                    void withSavingToast(() => executionSettings.save({ timezone: next })).catch(
+                    void withSaveErrorToast(() => executionSettings.save({ timezone: next })).catch(
                         () => undefined
                     )
                 }
@@ -144,19 +144,19 @@ function AgentSettingsContent({
                 approvalMode={permissionSettings.settings.approvalMode}
                 automationApprovalMode={permissionSettings.settings.automationApprovalMode}
                 commandAllowlist={permissionSettings.settings.commandAllowlist}
-                disabled={permissionSettings.isSaving}
+                disabled={permissionSettings.isLoading}
                 onApprovalModeChange={(approvalMode) =>
-                    void withSavingToast(() => permissionSettings.save({ approvalMode })).catch(
+                    void withSaveErrorToast(() => permissionSettings.save({ approvalMode })).catch(
                         () => undefined
                     )
                 }
                 onAutomationApprovalModeChange={(automationApprovalMode) =>
-                    void withSavingToast(() =>
+                    void withSaveErrorToast(() =>
                         permissionSettings.save({ automationApprovalMode })
                     ).catch(() => undefined)
                 }
                 onCommandAllowlistChange={(next) =>
-                    void withSavingToast(() =>
+                    void withSaveErrorToast(() =>
                         permissionSettings.save({ commandAllowlist: next })
                     ).catch(() => undefined)
                 }
