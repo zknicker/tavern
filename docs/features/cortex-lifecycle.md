@@ -78,9 +78,10 @@ weekly: librarian job                     every 15 min: todo job
 │ recompiles from raw already on disk     │ (~45 min between turns)
 │ files outside-world work ──────────────►│
 │   as todos                              ▼
-                                  resolved, or blocked with the
-                                  reason + affected claims marked
-                                  low-confidence / unverified
+                                  done: record deleted, log.md entry
+                                  is the history — or blocked: record
+                                  kept with the reason + affected
+                                  claims marked low-confidence
 ```
 
 The do-vs-file litmus, for every run: **work with what's on disk inline;

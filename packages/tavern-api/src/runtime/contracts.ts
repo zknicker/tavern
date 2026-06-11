@@ -1005,6 +1005,12 @@ export const cortexTodoProcessingSchema = z.object({
     runningTopic: z.string().nullable(),
 });
 
+export const cortexTodoCompletionSchema = z.object({
+    date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/u),
+    detail: z.string().trim().min(1),
+    topic: z.string().trim().min(1),
+});
+
 export const cortexLibrarianArticleSchema = z.object({
     path: z.string().trim().min(1),
     qualityFlags: z.array(z.string()),
@@ -1071,6 +1077,7 @@ export const cortexHealthSchema = z.object({
     scans: z.array(cortexLibrarianScanSchema),
     state: cortexHealthStateSchema,
     status: cortexStatusSchema,
+    todoCompletions: z.array(cortexTodoCompletionSchema),
     todoProcessing: cortexTodoProcessingSchema,
     todos: z.array(cortexTodoSchema),
 });
@@ -2024,6 +2031,7 @@ export type PlatformBindingStatus = z.infer<typeof agentRuntimeBindingStatusSche
 export type CortexBacklink = z.infer<typeof cortexBacklinkSchema>;
 export type CortexBacklinkList = z.infer<typeof cortexBacklinkListSchema>;
 export type CortexTodo = z.infer<typeof cortexTodoSchema>;
+export type CortexTodoCompletion = z.infer<typeof cortexTodoCompletionSchema>;
 export type CortexTodoProcessing = z.infer<typeof cortexTodoProcessingSchema>;
 export type CortexHealth = z.infer<typeof cortexHealthSchema>;
 export type CortexHealthState = z.infer<typeof cortexHealthStateSchema>;

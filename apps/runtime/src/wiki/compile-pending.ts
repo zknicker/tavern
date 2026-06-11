@@ -1,12 +1,12 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
+import { readWikiLogEntries, type WikiLogEntry } from './log';
 import { listCortexTopics } from './store';
 
 const pendingCountThreshold = 5;
 const pendingAgeMs = 6 * 60 * 60 * 1000;
 const settleMs = 15 * 60 * 1000;
 
-const logEntryPattern = /^## \[(?<date>\d{4}-\d{2}-\d{2})[^\]]*\] (?<op>[a-z-]+) \|(?<rest>.*)$/u;
 const rawPathPattern = /\((?<rawPath>raw\/[^()]+\.md)\)\s*$/u;
 const compileOps = new Set(['compile', 'research']);
 const ingestOps = new Set(['ingest', 'ingest-collection']);
@@ -57,17 +57,7 @@ async function readPendingForTopic(slug: string, topicPath: string): Promise<Pen
         pendingCount: 0,
         topic: slug,
     };
-    let logContent: string;
-    try {
-        logContent = await fs.readFile(path.join(topicPath, 'log.md'), 'utf8');
-    } catch {
-        return empty;
-    }
-
-    const entries = logContent
-        .split('\n')
-        .map((line) => logEntryPattern.exec(line)?.groups)
-        .filter((groups): groups is { date: string; op: string; rest: string } => Boolean(groups));
+    const entries = await readWikiLogEntries(topicPath);
     let lastCompileIndex = -1;
     for (const [index, entry] of entries.entries()) {
         if (compileOps.has(entry.op)) {
@@ -92,10 +82,7 @@ async function readPendingForTopic(slug: string, topicPath: string): Promise<Pen
     };
 }
 
-async function readIngestTimestamp(
-    topicPath: string,
-    entry: { date: string; rest: string }
-): Promise<number> {
+async function readIngestTimestamp(topicPath: string, entry: WikiLogEntry): Promise<number> {
     const rawPath = rawPathPattern.exec(entry.rest)?.groups?.rawPath;
     if (rawPath) {
         try {

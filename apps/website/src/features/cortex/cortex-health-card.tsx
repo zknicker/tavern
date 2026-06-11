@@ -21,10 +21,7 @@ export function CortexHealthCard({
     onOpen: () => void;
 }) {
     const state = health?.state ?? 'healthy';
-    const openTodoCount =
-        health?.todos.filter(
-            (todo) => !['archived', 'ingested', 'superseded'].includes(todo.status)
-        ).length ?? 0;
+    const openTodoCount = health?.todos.length ?? 0;
 
     return (
         <button

@@ -7,7 +7,7 @@ import { listWikiHealthHistory } from './history';
 import { getWikiLibrarianStatus } from './librarian-run';
 import { getCortexStatus, listCortexTopics } from './store';
 import { getWikiTodoProcessing, todoDrainCooldownMs } from './todo-drain';
-import { listWikiTodos, nextDrainableTodo } from './todos';
+import { listWikiTodoCompletions, listWikiTodos, nextDrainableTodo } from './todos';
 
 /**
  * Health rollup for the Cortex tab: derived purely from facts — hub access,
@@ -16,9 +16,10 @@ import { listWikiTodos, nextDrainableTodo } from './todos';
  */
 export async function getCortexHealth(): Promise<CortexHealth> {
     const status = await getCortexStatus();
-    const [todos, scans] = await Promise.all([
+    const [todos, scans, todoCompletions] = await Promise.all([
         status.readable ? listWikiTodos() : Promise.resolve([]),
         status.readable ? listLatestLibrarianScans() : Promise.resolve([]),
+        status.readable ? listWikiTodoCompletions() : Promise.resolve([]),
     ]);
     const todoProcessing = await resolveTodoProcessing(todos);
 
@@ -28,6 +29,7 @@ export async function getCortexHealth(): Promise<CortexHealth> {
         scans,
         state: status.readable ? 'healthy' : 'degraded',
         status,
+        todoCompletions,
         todoProcessing,
         todos,
     };

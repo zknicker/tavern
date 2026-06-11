@@ -12,8 +12,9 @@ Archive operates at the topic-wiki lifecycle level in v1:
   `HUB/topics/.archive/<slug>/`.
 - Project archive remains the existing `output/projects/.archive/<slug>/`
   workflow from `projects.md`.
-- Todo and dataset archive remain their existing `status: archived`
-  frontmatter values.
+- Dataset archive remains the existing `status: archived` frontmatter value.
+  Todos do not archive: completed records are deleted with a log.md entry,
+  and stalled ones stay `blocked`.
 - Individual `raw/` or `wiki/` file archive is intentionally out of scope.
   Moving single source/article files breaks exact `sources:` references,
   backlinks, and coverage checks. If enough material is no longer wanted, the

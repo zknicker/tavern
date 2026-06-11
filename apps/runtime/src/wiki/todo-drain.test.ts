@@ -10,7 +10,7 @@ import {
     runWikiTodoDrain,
     todoDrainCooldownMs,
 } from './todo-drain';
-import { listWikiTodos } from './todos';
+import { listWikiTodoCompletions, listWikiTodos } from './todos';
 
 const nowMs = Date.parse('2026-06-11T12:00:00Z');
 
@@ -35,7 +35,7 @@ describe('wiki todo drain', () => {
         await fs.rm(hubPath, { force: true, recursive: true });
     });
 
-    test('lists todos sorted open-first then by priority, skipping notes and indexes', async () => {
+    test('lists todos sorted proposed-first then by priority, skipping notes and indexes', async () => {
         await writeRecord('coffee', 'todos/_index.md', { title: 'Index' });
         await writeRecord('coffee', 'todos/note.md', { title: 'Just a note' });
         await writeRecord('coffee', 'todos/later.md', {
@@ -49,16 +49,42 @@ describe('wiki todo drain', () => {
             status: 'proposed',
             title: 'Urgent',
         });
-        await writeRecord('coffee', 'todos/finished.md', {
+        await writeRecord('coffee', 'todos/stuck.md', {
             priority: 'p0',
-            status: 'ingested',
-            title: 'Finished',
+            status: 'blocked',
+            title: 'Stuck',
         });
 
         const todos = await listWikiTodos();
 
-        expect(todos.map((todo) => todo.title)).toEqual(['Urgent', 'Low priority', 'Finished']);
+        expect(todos.map((todo) => todo.title)).toEqual(['Urgent', 'Low priority', 'Stuck']);
         expect(todos[0]?.question).toBe('Research corroborating sources.');
+    });
+
+    test('reads recent completions from log.md todo entries', async () => {
+        await writeRecord('coffee', 'wiki/alpha.md', { title: 'Alpha' });
+        const logPath = path.join(hubPath, 'topics', 'coffee', 'log.md');
+        await fs.writeFile(
+            logPath,
+            [
+                '## [2026-06-10] todo | Merge duplicate extraction notes — merged and recompiled.',
+                '## [2026-06-11] compile | 1 source compiled',
+                '## [2026-06-11] todo | Verify the bloom claim — confirmed against SCA guide.',
+            ].join('\n')
+        );
+
+        expect(await listWikiTodoCompletions()).toEqual([
+            {
+                date: '2026-06-11',
+                detail: 'Verify the bloom claim — confirmed against SCA guide.',
+                topic: 'coffee',
+            },
+            {
+                date: '2026-06-10',
+                detail: 'Merge duplicate extraction notes — merged and recompiled.',
+                topic: 'coffee',
+            },
+        ]);
     });
 
     test('drains the top todo through one agent turn and records the time', async () => {
@@ -125,8 +151,9 @@ describe('wiki todo drain', () => {
 
         expect(prompt).toContain('exactly one todo record');
         expect(prompt).toContain('todos/urgent.md');
+        expect(prompt).toContain('delete the record file');
         expect(prompt).toContain('status: blocked');
-        expect(prompt).toContain('do not park work on the user');
+        expect(prompt).toContain('do not park work on the');
         expect(prompt).toContain('Do not start any other todo work');
         expect(prompt).toContain('Re-score any articles you changed');
     });

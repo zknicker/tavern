@@ -15,12 +15,11 @@ import { CortexHealthTrends } from './cortex-health-trends.tsx';
 
 type CortexHealthData = NonNullable<CortexHealthOutput>;
 type CortexTodo = CortexHealthData['todos'][number];
+type CortexTodoCompletion = CortexHealthData['todoCompletions'][number];
 type CortexTodoProcessing = CortexHealthData['todoProcessing'];
 type CortexLibrarianScan = CortexHealthData['scans'][number];
 
-const doneTodoStatuses = new Set(['ingested', 'superseded', 'archived']);
 const todoStatusLabels: Record<string, string> = {
-    active: 'In progress',
     blocked: 'Blocked',
     proposed: 'Queued',
 };
@@ -42,8 +41,8 @@ export function CortexHealthView({
         );
     }
 
-    const openTodos = health.todos.filter((todo) => !doneTodoStatuses.has(todo.status));
-    const doneTodos = health.todos.filter((todo) => doneTodoStatuses.has(todo.status)).slice(0, 5);
+    const openTodos = health.todos;
+    const completions = health.todoCompletions;
 
     return (
         <div className="flex h-full min-h-0 flex-col">
@@ -62,9 +61,9 @@ export function CortexHealthView({
 
                     <CortexHealthTrends history={health.history} />
 
-                    {openTodos.length > 0 || doneTodos.length > 0 ? (
+                    {openTodos.length > 0 || completions.length > 0 ? (
                         <TodoSection
-                            doneTodos={doneTodos}
+                            completions={completions}
                             onSelectPage={onSelectPage}
                             openTodos={openTodos}
                             processing={health.todoProcessing}
@@ -79,7 +78,9 @@ export function CortexHealthView({
                         />
                     ))}
 
-                    {health.todos.length === 0 && health.scans.length === 0 ? (
+                    {health.todos.length === 0 &&
+                    health.todoCompletions.length === 0 &&
+                    health.scans.length === 0 ? (
                         <p className="mt-8 text-muted-foreground text-sm">
                             Nothing needs attention. Todos and scan results will appear here as the
                             agent maintains the wiki.
@@ -92,12 +93,12 @@ export function CortexHealthView({
 }
 
 function TodoSection({
-    doneTodos,
+    completions,
     onSelectPage,
     openTodos,
     processing,
 }: {
-    doneTodos: CortexTodo[];
+    completions: CortexTodoCompletion[];
     onSelectPage: (page: { path: string; topic: string }) => void;
     openTodos: CortexTodo[];
     processing: CortexTodoProcessing;
@@ -137,30 +138,30 @@ function TodoSection({
                 </div>
             ) : null}
 
-            {doneTodos.length > 0 ? (
+            {completions.length > 0 ? (
                 <div className="mt-3 space-y-1">
-                    {doneTodos.map((todo) => (
+                    {completions.map((completion) => (
                         <p
                             className="text-muted-foreground text-sm"
-                            key={`${todo.topic}:${todo.path}`}
+                            key={`${completion.topic}:${completion.date}:${completion.detail}`}
                         >
                             <span aria-hidden className="mr-1.5 text-success">
                                 ✓
                             </span>
-                            <button
-                                className="cursor-pointer hover:underline"
-                                onClick={() => onSelectPage({ path: todo.path, topic: todo.topic })}
-                                type="button"
-                            >
-                                {todo.title}
-                            </button>{' '}
-                            · {formatRelativeTime(todo.updatedAt)}
+                            {completion.detail} · {formatCompletionDate(completion.date)}
                         </p>
                     ))}
                 </div>
             ) : null}
         </section>
     );
+}
+
+function formatCompletionDate(date: string) {
+    return new Date(`${date}T00:00:00`).toLocaleDateString(undefined, {
+        day: 'numeric',
+        month: 'short',
+    });
 }
 
 function TodoRow({

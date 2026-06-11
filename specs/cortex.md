@@ -105,12 +105,14 @@ crons, no human gate:
   `.librarian/scan-results.json`, repairs mechanical findings, recompiles from
   raw already on disk, and files outside-world work as todo records.
 * **Todo job.** A 15-minute check drains todo records one agent turn at a
-  time, spaced by a cooldown. A record the agent cannot finish is blocked with
-  its reason and the affected claims marked low-confidence — work is never
-  parked on the user; corrections happen in conversation. Records with
-  `owner: user` are treated as user-authored and skipped.
+  time, spaced by a cooldown. A completed record is deleted — the `log.md`
+  `todo` entry is the durable history. A record the agent cannot finish is
+  kept and blocked with its reason, and the affected claims marked
+  low-confidence — work is never parked on the user; corrections happen in
+  conversation. Records with `owner: user` are treated as user-authored and
+  skipped.
 
-Inventory records surface in the product as todos; see
+The todo lifecycle is `proposed` → done (deleted) or `blocked`; see
 [Cortex Lifecycle](../docs/features/cortex-lifecycle.md).
 
 ## App Surface

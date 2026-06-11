@@ -276,12 +276,14 @@ For `kind: item`, use optional fields when they help list or filter the record:
 
 Statuses:
 
-- `proposed`: discovered, not accepted yet
-- `active`: accepted and being tracked
-- `blocked`: cannot proceed until a dependency is resolved
-- `ingested`: completed as a raw/wiki ingest or equivalent action
-- `superseded`: replaced by a better record/source
-- `archived`: no longer active but retained for history
+- `proposed`: open — discovered and waiting to be worked
+- `blocked`: cannot proceed; the record body carries the reason and stays as
+  the memory of what was tried
+
+There is no completed status. A finished todo is deleted: append a log.md
+entry of the form `## [YYYY-MM-DD] todo | <record title> — <one-line outcome>`,
+update `todos/_index.md`, and remove the record file. The log entry is the
+durable history; the work itself (articles, merges, ingests) is the proof.
 
 Priorities:
 
@@ -379,9 +381,9 @@ wikis, not as corruption:
 
 ## Relationship To Other Layers
 
-- `raw/`: immutable ingested source content. If a todo candidate is
-  ingested, link the raw source from the todo record and move status toward
-  `ingested` only after the user accepts that the tracking item is complete.
+- `raw/`: immutable ingested source content. When a todo candidate is
+  ingested, the raw source is the proof: log the completion and delete the
+  record per the lifecycle above.
 - `wiki/`: synthesized knowledge articles. Todo records are not evidence
   for factual claims; they are operational state. Query and compile may mention
   them as gaps, candidates, or next actions, but should not cite them as sources

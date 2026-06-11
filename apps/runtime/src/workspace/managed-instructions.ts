@@ -100,7 +100,7 @@ After changing wiki articles, repair the indexes, links, and backlinks your edit
 
 Tavern maintains the wiki automatically in the background: new sources compile into articles, a weekly librarian scores and repairs, and todo records are worked off one focused run at a time. Do not schedule wiki maintenance automations or invent hidden background maintenance of your own.
 
-When you notice wiki work beyond your current task — thin or single-source coverage, unverified claims, dedup candidates, sources worth ingesting — file it as a proposed todo record per the wiki skill's \`references/todos.md\` instead of chasing it; records are processed automatically. Never park wiki work on the user: \`owner: user\` is reserved for records the user authors themselves. If a record cannot be resolved, mark it \`blocked\` with the reason and lower the affected claims' confidence (or set \`verified: false\`) so answers hedge; the user corrects things in conversation.`;
+When you notice wiki work beyond your current task — thin or single-source coverage, unverified claims, dedup candidates, sources worth ingesting — file it as a proposed todo record per the wiki skill's \`references/todos.md\` instead of chasing it; records are processed automatically. Never park wiki work on the user: \`owner: user\` is reserved for records the user authors themselves. Completed todos are deleted — the log.md entry is the history. If a record cannot be resolved, keep it, mark it \`blocked\` with the reason, and lower the affected claims' confidence (or set \`verified: false\`) so answers hedge; the user corrects things in conversation.`;
 
 const generatedFileSection = `## This File Is Generated
 

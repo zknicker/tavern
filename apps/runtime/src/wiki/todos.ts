@@ -1,17 +1,18 @@
-import type { CortexPage, CortexTodo } from '@tavern/api';
-import { getCortexPage, listCortexPages } from './store';
+import type { CortexPage, CortexTodo, CortexTodoCompletion } from '@tavern/api';
+import { readWikiLogEntries } from './log';
+import { getCortexPage, listCortexPages, listCortexTopics } from './store';
 
 const statusRank: Record<string, number> = {
     proposed: 0,
-    active: 1,
-    blocked: 2,
+    blocked: 1,
 };
-const doneStatuses = new Set(['ingested', 'superseded', 'archived']);
 
 /**
- * Inventory records projected as todos — Tavern's product name for llm-wiki's
- * work queue. Records without a `status` are notes, not todos, and are
- * skipped. Sorted open-first, then by priority (p0 best), then most recently
+ * Todo records under `todos/`. The lifecycle is lean: `proposed` records get
+ * worked and then deleted — `log.md` keeps the completion history — and
+ * `blocked` records persist as the memory of what was tried and why it
+ * stalled. Records without a `status` are notes, not todos, and are skipped.
+ * Sorted proposed-first, then by priority (p0 best), then most recently
  * updated.
  */
 export async function listWikiTodos(): Promise<CortexTodo[]> {
@@ -43,8 +44,34 @@ export function nextDrainableTodo(todos: CortexTodo[]): CortexTodo | null {
     return todos.find((todo) => todo.status === 'proposed' && todo.owner !== 'user') ?? null;
 }
 
-export function isDoneTodo(todo: CortexTodo): boolean {
-    return doneStatuses.has(todo.status);
+/**
+ * Recent completions, read from each topic's `log.md` — completed todo
+ * records are deleted, so the log's `todo` entries are the durable history.
+ */
+export async function listWikiTodoCompletions(limit = 5): Promise<CortexTodoCompletion[]> {
+    try {
+        const { topics } = await listCortexTopics();
+        const perTopic = await Promise.all(
+            topics.map(async (topic) => {
+                const entries = await readWikiLogEntries(topic.path);
+                return entries
+                    .filter((entry) => entry.op === 'todo' && entry.rest)
+                    .map((entry, index) => ({
+                        date: entry.date,
+                        detail: entry.rest,
+                        index,
+                        topic: topic.slug,
+                    }));
+            })
+        );
+        return perTopic
+            .flat()
+            .sort((left, right) => right.date.localeCompare(left.date) || right.index - left.index)
+            .slice(0, limit)
+            .map(({ index: _index, ...completion }) => completion);
+    } catch {
+        return [];
+    }
 }
 
 function toTodo(page: CortexPage): CortexTodo | null {
@@ -65,7 +92,7 @@ function toTodo(page: CortexPage): CortexTodo | null {
 }
 
 function compareTodos(left: CortexTodo, right: CortexTodo): number {
-    const statusDelta = (statusRank[left.status] ?? 3) - (statusRank[right.status] ?? 3);
+    const statusDelta = (statusRank[left.status] ?? 2) - (statusRank[right.status] ?? 2);
     if (statusDelta !== 0) {
         return statusDelta;
     }
