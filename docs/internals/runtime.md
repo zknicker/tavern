@@ -78,9 +78,10 @@ personality.
 
 `AGENTS.md` starts with a marker-delimited, hash-versioned Tavern-managed block
 (`apps/runtime/src/workspace/managed-instructions.ts`). Runtime reconciles the
-block during agent sync: a missing file is seeded, a stale block is replaced in
-place, missing markers re-insert the block at the top, and all content outside
-the markers is preserved byte-for-byte. Users edit the file in settings and the
+block during agent sync, after `AGENTS.md` saves through the agent file API,
+and before each turn dispatch: a missing file is seeded, a stale block is
+replaced in place, missing markers re-insert the block at the top, and all
+content outside the markers is preserved byte-for-byte. Users edit the file in settings and the
 agent edits it with file tools; both edit outside the managed block. Runtime
 never writes `SOUL.md`. See [workspace.md](../../specs/workspace.md) for the
 contract.

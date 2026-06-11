@@ -160,6 +160,16 @@ export async function reconcileAgentInstructions(db: Database, agentId = default
     return { content: next, renderedAt, sha256, written } satisfies AgentInstructionReconcileResult;
 }
 
+/**
+ * Reconcile for callers that cannot assume the agent has a registered managed
+ * workspace (file saves, turn dispatch). Returns null when unregistered.
+ */
+export async function reconcileRegisteredAgentInstructions(db: Database, agentId: string) {
+    return getAgentWorkspaceSource(db, agentId)
+        ? await reconcileAgentInstructions(db, agentId)
+        : null;
+}
+
 export async function readRenderedAgentInstructions(db: Database, agentId = defaultAgentId) {
     const row = db
         .prepare(

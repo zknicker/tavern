@@ -13,6 +13,7 @@ import {
     managedBlockEndMarker,
     readRenderedAgentInstructions,
     reconcileAgentInstructions,
+    reconcileRegisteredAgentInstructions,
     registerAgentWorkspace,
     renderManagedInstructionBlock,
 } from './instructions';
@@ -192,6 +193,18 @@ describe('workspace instructions', () => {
         await clearHermesBootstrapFiles(workspaceDir);
 
         await expect(readAgentsFile()).resolves.toBe('managed');
+    });
+
+    test('registered-only reconcile heals registered agents and skips unknown ones', async () => {
+        await expect(
+            reconcileRegisteredAgentInstructions(getDb(), 'unknown-agent')
+        ).resolves.toBeNull();
+
+        registerPlanner();
+        const result = await reconcileRegisteredAgentInstructions(getDb(), 'planner');
+
+        expect(result?.written).toBe(true);
+        await expect(readAgentsFile()).resolves.toBe(result?.content);
     });
 
     test('register preserves the stored agent name when omitted', () => {

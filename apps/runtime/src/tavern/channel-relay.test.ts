@@ -77,6 +77,7 @@ describe('Tavern Hermes channel relay', () => {
             status: 'accepted',
         });
         expect(listMessages('cht_1').messages.map((message) => message.id)).toEqual(['msg_1']);
+        await waitForHermesTurn();
         expect(hermesClient.streamChat).toHaveBeenCalledWith({
             attachments: [],
             content: 'hello',
@@ -86,7 +87,6 @@ describe('Tavern Hermes channel relay', () => {
             signal: expect.any(AbortSignal),
             title: 'cht_1',
         });
-        await waitForHermesTurn();
     });
 
     it('stops a queued Hermes turn before it has a live session id', async () => {

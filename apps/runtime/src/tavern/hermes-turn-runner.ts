@@ -3,7 +3,10 @@ import type {
     AgentRuntimeSessionMessageAttachment,
 } from '@tavern/api';
 import { readConfigValue } from '../config';
+import { getDb } from '../db/connection';
 import { createLocalHermesClient } from '../hermes/local-client';
+import { log } from '../log';
+import { reconcileRegisteredAgentInstructions } from '../workspace/instructions';
 import { createDelivery, upsertResponse, upsertResponseActivity } from './chat-api';
 import { createAgentParticipantId } from './chat-api/ids';
 import { createGatewayActivityRecorder } from './hermes-gateway-activities';
@@ -103,6 +106,7 @@ export async function runHermesTurn(input: {
 
     try {
         publishRuntimeEvent({ timestamp: startedAt, turn, type: 'turn.started' });
+        await healAgentInstructionsBeforeTurn(input.agentId);
 
         for await (const event of client.streamChat({
             attachments: input.attachments,
@@ -946,6 +950,15 @@ function hasCompletedReasoning(content: string, completedMessages: string[]) {
 
 function normalizeProgressText(value: string) {
     return value.replace(/\s+/g, ' ').trim();
+}
+
+async function healAgentInstructionsBeforeTurn(agentId: string) {
+    // Best effort: a broken managed block must not block the user's turn.
+    try {
+        await reconcileRegisteredAgentInstructions(getDb(), agentId);
+    } catch (err) {
+        log.warn('Agent instructions reconcile failed before turn dispatch', { agentId, err });
+    }
 }
 
 function sanitizeId(value: string) {

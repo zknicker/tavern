@@ -1,11 +1,23 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import path from 'node:path';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { closeDb, getDb, initTestDb } from '../db/connection';
+import { ensureRuntimeSchema } from '../db/schema';
+import {
+    generatedInstructionFileName,
+    managedBlockEndMarker,
+    registerAgentWorkspace,
+} from '../workspace/instructions';
 import { handleHermesProxyRequest } from './proxy';
 
 const hermesMock = vi.hoisted(() => ({
     close: vi.fn(),
+    getAgentFile: vi.fn(),
     listSkills: vi.fn(),
     listSessionPreviews: vi.fn(),
     listToolsets: vi.fn(),
+    saveAgentFile: vi.fn(),
     updateAgentName: vi.fn(),
     updateSkillEnabled: vi.fn(),
     updateToolsetEnabled: vi.fn(),
@@ -18,6 +30,11 @@ vi.mock('../hermes/local-client', () => ({
 describe('Hermes proxy routes', () => {
     beforeEach(() => {
         vi.clearAllMocks();
+        ensureRuntimeSchema(initTestDb());
+    });
+
+    afterEach(() => {
+        closeDb();
     });
 
     it('routes session previews before treating previews as a session key', async () => {
@@ -154,6 +171,45 @@ describe('Hermes proxy routes', () => {
         expect(hermesMock.updateToolsetEnabled).toHaveBeenCalledWith('web', {
             enabled: false,
         });
+    });
+
+    it('heals a tampered managed block when AGENTS.md is saved', async () => {
+        const workspaceDir = await mkdtemp(path.join(tmpdir(), 'tavern-proxy-workspace-'));
+        const agentsPath = path.join(workspaceDir, generatedInstructionFileName);
+        const tampered = `<!-- tavern:managed v=0123456789abcdef -->\nedited by hand\n${managedBlockEndMarker}\n\nUser notes stay.\n`;
+        registerAgentWorkspace(getDb(), {
+            agentId: 'agt_hermes',
+            agentName: 'Hermes',
+            workspaceDir,
+        });
+        hermesMock.saveAgentFile.mockImplementation(
+            async (_agentId: string, _path: string, input: { content: string }) => {
+                await writeFile(agentsPath, input.content);
+                return { content: input.content, path: generatedInstructionFileName };
+            }
+        );
+        hermesMock.getAgentFile.mockImplementation(async () => ({
+            content: await readFile(agentsPath, 'utf8'),
+            path: generatedInstructionFileName,
+        }));
+
+        try {
+            const response = await handleHermesProxyRequest(
+                new Request('http://runtime.test/agents/agt_hermes/files/AGENTS.md', {
+                    body: JSON.stringify({ content: tampered }),
+                    method: 'PUT',
+                })
+            );
+            const body = (await response?.json()) as { content: string };
+
+            expect(response?.status).toBe(200);
+            expect(body.content).not.toContain('edited by hand');
+            expect(body.content).toContain('You are Hermes, the resident agent of Tavern');
+            expect(body.content).toContain('User notes stay.');
+            await expect(readFile(agentsPath, 'utf8')).resolves.toBe(body.content);
+        } finally {
+            await rm(workspaceDir, { force: true, recursive: true });
+        }
     });
 
     it('returns a non-2xx response for unsupported Hermes agent patches', async () => {

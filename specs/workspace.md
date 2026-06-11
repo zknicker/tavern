@@ -41,7 +41,9 @@ The managed block is written in product language and does not name Hermes.
 
 ## Recompose Rules
 
-Runtime reconciles the managed block during runtime sync:
+Runtime reconciles the managed block during runtime sync, when `AGENTS.md` is
+saved through the agent file API, and before each turn dispatch — so a
+tampered block heals before it can ride along in another prompt:
 
 * The block is versioned by a hash of its content. A matching hash is a no-op.
 * A differing hash rewrites only the managed block. All content outside the
