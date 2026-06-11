@@ -1,7 +1,9 @@
+import fs from 'node:fs/promises';
+import path from 'node:path';
 import type {
     CortexEscalation,
     CortexHealth,
-    CortexLibrarianReport,
+    CortexLibrarianScan,
     CortexManagedRun,
     CortexPage,
 } from '@tavern/api';
@@ -10,22 +12,22 @@ import { getCortexPage, getCortexStatus, listCortexPages, listCortexTopics } fro
 
 /**
  * Health rollup for the Cortex tab: derived purely from facts — hub access,
- * escalation records, latest librarian reports, and managed cron run state.
+ * escalation records, latest librarian scans, and managed cron run state.
  * The wiki files stay the source of truth; this is a read-only projection.
  */
 export async function getCortexHealth(): Promise<CortexHealth> {
     const status = await getCortexStatus();
-    const [escalationPages, reports, runs] = await Promise.all([
+    const [escalationPages, scans, runs] = await Promise.all([
         status.readable ? listWikiEscalationPages() : Promise.resolve([]),
-        status.readable ? listLatestLibrarianReports() : Promise.resolve([]),
+        status.readable ? listLatestLibrarianScans() : Promise.resolve([]),
         listManagedWikiRuns(),
     ]);
     const escalations = escalationPages.map(toEscalation);
 
     return {
         escalations,
-        reports,
         runs,
+        scans,
         state: status.readable
             ? escalations.length > 0
                 ? 'needs_attention'
@@ -69,18 +71,67 @@ function toEscalation(page: CortexPage): CortexEscalation {
     };
 }
 
-async function listLatestLibrarianReports(): Promise<CortexLibrarianReport[]> {
+/**
+ * Reads `.librarian/scan-results.json` per topic — llm-wiki's machine-readable
+ * scan output ("REPORT.md is rendered from it"). Agent-written JSON is parsed
+ * defensively: missing fields become null, unparseable files are skipped.
+ */
+async function listLatestLibrarianScans(): Promise<CortexLibrarianScan[]> {
     const { topics } = await listCortexTopics();
-    const reports = await Promise.all(
+    const scans = await Promise.all(
         topics.map(async (topic) => {
-            const page = await getCortexPage({
-                path: '.librarian/REPORT.md',
-                topic: topic.slug,
-            });
-            return page ? { body: page.body, topic: topic.slug, updatedAt: page.updatedAt } : null;
+            const filePath = path.join(topic.path, '.librarian', 'scan-results.json');
+            try {
+                const [content, stat] = await Promise.all([
+                    fs.readFile(filePath, 'utf8'),
+                    fs.stat(filePath),
+                ]);
+                return toLibrarianScan(topic.slug, stat.mtime.toISOString(), JSON.parse(content));
+            } catch {
+                return null;
+            }
         })
     );
-    return reports.filter((report): report is CortexLibrarianReport => Boolean(report));
+    return scans.filter((scan): scan is CortexLibrarianScan => Boolean(scan));
+}
+
+function toLibrarianScan(topic: string, updatedAt: string, value: unknown): CortexLibrarianScan {
+    const record = isRecord(value) ? value : {};
+    const summary = isRecord(record.summary) ? record.summary : {};
+    const articles = isRecord(record.articles) ? record.articles : {};
+
+    return {
+        articles: Object.entries(articles)
+            .map(([articlePath, scores]) => toLibrarianArticle(articlePath, scores))
+            .sort((left, right) => worstScore(left) - worstScore(right)),
+        articlesScanned: readNumber(summary.articles_scanned),
+        avgQuality: readNumber(summary.avg_quality),
+        avgStaleness: readNumber(summary.avg_staleness),
+        completedAt: readString(record.completed_at),
+        lowQualityCount: readNumber(summary.low_quality_count),
+        staleCount: readNumber(summary.stale_count),
+        threshold: readNumber(record.threshold),
+        topic,
+        updatedAt,
+    };
+}
+
+function toLibrarianArticle(articlePath: string, value: unknown) {
+    const record = isRecord(value) ? value : {};
+    const staleness = isRecord(record.staleness) ? record.staleness : {};
+    const quality = isRecord(record.quality) ? record.quality : {};
+    return {
+        path: articlePath,
+        qualityFlags: Array.isArray(quality.flags)
+            ? quality.flags.filter((flag): flag is string => typeof flag === 'string')
+            : [],
+        qualityScore: readNumber(quality.score),
+        stalenessScore: readNumber(staleness.score),
+    };
+}
+
+function worstScore(article: { qualityScore: null | number; stalenessScore: null | number }) {
+    return Math.min(article.stalenessScore ?? 100, article.qualityScore ?? 100);
 }
 
 async function listManagedWikiRuns(): Promise<CortexManagedRun[]> {
@@ -110,4 +161,12 @@ function readFrontmatterValue(value: unknown) {
 
 function readString(value: unknown) {
     return typeof value === 'string' && value.trim() ? value.trim() : null;
+}
+
+function readNumber(value: unknown) {
+    return typeof value === 'number' && Number.isFinite(value) ? value : null;
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+    return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
 }

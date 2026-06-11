@@ -54,8 +54,28 @@ describe('cortex health', () => {
         );
         await writeTopicFile(
             'project-notes',
-            '.librarian/REPORT.md',
-            '# Librarian Report\n\n3 articles scanned.'
+            '.librarian/scan-results.json',
+            JSON.stringify({
+                articles: {
+                    'wiki/concepts/alpha.md': {
+                        quality: { dimensions: { depth: 4 }, flags: [], score: 85 },
+                        staleness: { score: 92 },
+                    },
+                    'wiki/topics/beta.md': {
+                        quality: { flags: ['single-source', 'unverified'], score: 42 },
+                        staleness: { score: 31 },
+                    },
+                },
+                completed_at: '2026-06-10T06:15:00Z',
+                summary: {
+                    articles_scanned: 2,
+                    avg_quality: 64,
+                    avg_staleness: 62,
+                    low_quality_count: 1,
+                    stale_count: 1,
+                },
+                threshold: 70,
+            })
         );
 
         const health = await getCortexHealth();
@@ -70,12 +90,41 @@ describe('cortex health', () => {
                 topic: 'project-notes',
             }),
         ]);
-        expect(health.reports).toEqual([
+        expect(health.scans).toEqual([
             expect.objectContaining({
-                body: expect.stringContaining('3 articles scanned'),
+                articlesScanned: 2,
+                avgQuality: 64,
+                completedAt: '2026-06-10T06:15:00Z',
+                lowQualityCount: 1,
+                staleCount: 1,
+                threshold: 70,
                 topic: 'project-notes',
             }),
         ]);
+        expect(health.scans[0]?.articles).toEqual([
+            {
+                path: 'wiki/topics/beta.md',
+                qualityFlags: ['single-source', 'unverified'],
+                qualityScore: 42,
+                stalenessScore: 31,
+            },
+            {
+                path: 'wiki/concepts/alpha.md',
+                qualityFlags: [],
+                qualityScore: 85,
+                stalenessScore: 92,
+            },
+        ]);
+    });
+
+    test('skips unparseable scan results', async () => {
+        await writeTopicFile('project-notes', 'wiki/alpha.md', '# Alpha');
+        await writeTopicFile('project-notes', '.librarian/scan-results.json', 'not json {');
+
+        const health = await getCortexHealth();
+
+        expect(health.scans).toEqual([]);
+        expect(health.state).toBe('healthy');
     });
 
     async function writeTopicFile(topic: string, relativePath: string, content: string) {

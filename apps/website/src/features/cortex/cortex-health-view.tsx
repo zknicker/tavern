@@ -1,16 +1,26 @@
 import * as React from 'react';
+import { Badge } from '../../components/ui/badge.tsx';
 import { BadgeDivider } from '../../components/ui/badge-divider.tsx';
 import { Button } from '../../components/ui/primitives/button.tsx';
+import {
+    Table,
+    TableBody,
+    TableCell,
+    TableHead,
+    TableHeader,
+    TableRow,
+} from '../../components/ui/table.tsx';
 import { Textarea } from '../../components/ui/textarea.tsx';
 import { usePrimaryAgent } from '../../hooks/agents/use-agent-list.ts';
 import { useChatDraftLaunch } from '../../hooks/chats/use-chat-draft-launch.ts';
 import { runtimeUnhealthyTooltip, useCapability } from '../../hooks/connections/use-capability.ts';
 import { formatRelativeTime } from '../../lib/format.ts';
 import type { CortexHealthOutput } from '../../lib/trpc.tsx';
-import { CortexMarkdownViewer } from './cortex-markdown-viewer.tsx';
+import { cn } from '../../lib/utils.ts';
 
 type CortexHealthData = NonNullable<CortexHealthOutput>;
 type CortexEscalation = CortexHealthData['escalations'][number];
+type CortexLibrarianScan = CortexHealthData['scans'][number];
 
 export function CortexHealthView({
     health,
@@ -59,22 +69,17 @@ export function CortexHealthView({
                         </section>
                     ) : null}
 
-                    {health.reports.map((report) => (
-                        <section className="mt-8" key={report.topic}>
-                            <BadgeDivider
-                                subtext={`${report.topic} · ${formatRelativeTime(report.updatedAt)}`}
-                            >
-                                Librarian report
-                            </BadgeDivider>
-                            <div className="mt-3">
-                                <CortexMarkdownViewer value={report.body} />
-                            </div>
-                        </section>
+                    {health.scans.map((scan) => (
+                        <LibrarianScanSection
+                            key={scan.topic}
+                            onSelectPage={onSelectPage}
+                            scan={scan}
+                        />
                     ))}
 
-                    {health.escalations.length === 0 && health.reports.length === 0 ? (
+                    {health.escalations.length === 0 && health.scans.length === 0 ? (
                         <p className="mt-8 text-muted-foreground text-sm">
-                            Nothing needs attention. Reports will appear here after the first
+                            Nothing needs attention. Scan results will appear here after the first
                             librarian run.
                         </p>
                     ) : null}
@@ -82,6 +87,115 @@ export function CortexHealthView({
             </article>
         </div>
     );
+}
+
+function LibrarianScanSection({
+    onSelectPage,
+    scan,
+}: {
+    onSelectPage: (page: { path: string; topic: string }) => void;
+    scan: CortexLibrarianScan;
+}) {
+    const stalenessThreshold = scan.threshold ?? 70;
+    const summaryTiles = [
+        ['Scanned', scan.articlesScanned],
+        ['Stale', scan.staleCount],
+        ['Low quality', scan.lowQualityCount],
+        ['Avg staleness', scan.avgStaleness],
+        ['Avg quality', scan.avgQuality],
+    ].filter((entry): entry is [string, number] => entry[1] !== null);
+
+    return (
+        <section className="mt-8">
+            <BadgeDivider
+                subtext={`${scan.topic} · ${formatRelativeTime(scan.completedAt ?? scan.updatedAt)}`}
+            >
+                Librarian scan
+            </BadgeDivider>
+
+            {summaryTiles.length > 0 ? (
+                <div className="mt-3 grid grid-cols-3 gap-2 lg:grid-cols-5">
+                    {summaryTiles.map(([label, value]) => (
+                        <div className="rounded-lg bg-muted/40 px-3 py-2.5" key={label}>
+                            <p className="text-muted-foreground text-sm">{label}</p>
+                            <p className="mt-0.5 font-medium text-foreground text-sm">
+                                {Math.round(value)}
+                            </p>
+                        </div>
+                    ))}
+                </div>
+            ) : null}
+
+            {scan.articles.length > 0 ? (
+                <div className="mt-3 overflow-hidden rounded-lg border border-border/70">
+                    <Table className="table-auto">
+                        <TableHeader>
+                            <TableRow className="bg-muted/25">
+                                <TableHead className="px-3 py-2">Article</TableHead>
+                                <TableHead className="w-24 px-3 py-2 text-right">
+                                    Staleness
+                                </TableHead>
+                                <TableHead className="w-24 px-3 py-2 text-right">Quality</TableHead>
+                                <TableHead className="px-3 py-2">Flags</TableHead>
+                            </TableRow>
+                        </TableHeader>
+                        <TableBody className="[&_tr:last-child]:border-b-0">
+                            {scan.articles.map((article) => (
+                                <TableRow key={article.path}>
+                                    <TableCell className="px-3 py-2">
+                                        <button
+                                            className="cursor-pointer text-left text-foreground hover:underline"
+                                            onClick={() =>
+                                                onSelectPage({
+                                                    path: article.path,
+                                                    topic: scan.topic,
+                                                })
+                                            }
+                                            type="button"
+                                        >
+                                            {article.path}
+                                        </button>
+                                    </TableCell>
+                                    <TableCell
+                                        className={cn(
+                                            'px-3 py-2 text-right tabular-nums',
+                                            scoreClass(article.stalenessScore, stalenessThreshold)
+                                        )}
+                                    >
+                                        {article.stalenessScore ?? '—'}
+                                    </TableCell>
+                                    <TableCell
+                                        className={cn(
+                                            'px-3 py-2 text-right tabular-nums',
+                                            scoreClass(article.qualityScore, 50)
+                                        )}
+                                    >
+                                        {article.qualityScore ?? '—'}
+                                    </TableCell>
+                                    <TableCell className="px-3 py-2">
+                                        <span className="flex flex-wrap gap-1">
+                                            {article.qualityFlags.map((flag) => (
+                                                <Badge key={flag} size="sm" variant="warning">
+                                                    {flag}
+                                                </Badge>
+                                            ))}
+                                        </span>
+                                    </TableCell>
+                                </TableRow>
+                            ))}
+                        </TableBody>
+                    </Table>
+                </div>
+            ) : null}
+        </section>
+    );
+}
+
+function scoreClass(score: null | number, cutoff: number) {
+    if (score === null) {
+        return 'text-muted-foreground';
+    }
+    return score < cutoff ? 'font-medium text-warning-foreground' : 'text-muted-foreground';
 }
 
 function RunTiles({ runs }: { runs: CortexHealthData['runs'] }) {

@@ -996,8 +996,22 @@ export const cortexEscalationSchema = z.object({
     updatedAt: z.string().datetime(),
 });
 
-export const cortexLibrarianReportSchema = z.object({
-    body: z.string(),
+export const cortexLibrarianArticleSchema = z.object({
+    path: z.string().trim().min(1),
+    qualityFlags: z.array(z.string()),
+    qualityScore: z.number().nullable(),
+    stalenessScore: z.number().nullable(),
+});
+
+export const cortexLibrarianScanSchema = z.object({
+    articles: z.array(cortexLibrarianArticleSchema),
+    articlesScanned: z.number().nullable(),
+    avgQuality: z.number().nullable(),
+    avgStaleness: z.number().nullable(),
+    completedAt: z.string().nullable(),
+    lowQualityCount: z.number().nullable(),
+    staleCount: z.number().nullable(),
+    threshold: z.number().nullable(),
     topic: z.string().trim().min(1),
     updatedAt: z.string().datetime(),
 });
@@ -1032,8 +1046,8 @@ export const cortexManagedRunSchema = z.object({
 
 export const cortexHealthSchema = z.object({
     escalations: z.array(cortexEscalationSchema),
-    reports: z.array(cortexLibrarianReportSchema),
     runs: z.array(cortexManagedRunSchema),
+    scans: z.array(cortexLibrarianScanSchema),
     state: cortexHealthStateSchema,
     status: cortexStatusSchema,
 });
@@ -1993,7 +2007,8 @@ export type CortexBacklinkList = z.infer<typeof cortexBacklinkListSchema>;
 export type CortexEscalation = z.infer<typeof cortexEscalationSchema>;
 export type CortexHealth = z.infer<typeof cortexHealthSchema>;
 export type CortexHealthState = z.infer<typeof cortexHealthStateSchema>;
-export type CortexLibrarianReport = z.infer<typeof cortexLibrarianReportSchema>;
+export type CortexLibrarianArticle = z.infer<typeof cortexLibrarianArticleSchema>;
+export type CortexLibrarianScan = z.infer<typeof cortexLibrarianScanSchema>;
 export type CortexManagedRun = z.infer<typeof cortexManagedRunSchema>;
 export type CortexPage = z.infer<typeof cortexPageSchema>;
 export type CortexPageList = z.infer<typeof cortexPageListSchema>;

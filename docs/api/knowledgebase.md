@@ -36,8 +36,9 @@ The Runtime API covers:
 
 `GET /cortex/health` rolls up derived health: hub status, escalations
 (inventory records with `status: proposed` and `owner: user`), the latest
-`.librarian/REPORT.md` per topic, and managed wiki cron run state. Listings and
-search exclude dot directories; report files stay readable by direct path.
+librarian scan per topic parsed from `.librarian/scan-results.json` — llm-wiki's
+machine-readable scan output — and managed wiki cron run state. Unparseable
+scan files are skipped. Listings and search exclude dot directories.
 
 The tRPC app router exposes the same reads under `cortex.status`,
 `cortex.health`, `cortex.topics`, `cortex.list`, `cortex.get`,

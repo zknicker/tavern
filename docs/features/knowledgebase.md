@@ -36,11 +36,13 @@ librarian, lessons, output, inventory, datasets, and archive workflows.
 * **Status.** Cortex reports the resolved hub path, config source, topic counts,
   page counts, and filesystem access.
 * **Health.** A status card in the sidebar rolls up Cortex health: hub access,
-  open escalations, latest librarian reports, and managed maintenance run
-  state. Opening it shows the health page with escalation cards — each card is
-  a one-line question with an input, and answering spawns an agent chat that
-  applies the decision to the wiki. Health is derived purely from facts; the
-  wiki files stay the source of truth.
+  open escalations, the latest librarian scan per topic (structured data from
+  `.librarian/scan-results.json`), and managed maintenance run state. Opening
+  it shows the health page with escalation cards — each card is a one-line
+  question with an input, and answering spawns an agent chat that applies the
+  decision to the wiki — plus per-article staleness and quality scores with
+  flags. Health is derived purely from facts; the wiki files stay the source
+  of truth.
 
 ## Contract
 
