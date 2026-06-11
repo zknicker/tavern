@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file.
 
+## v1.4.5 - 2026-06-11
+
+- Fixed desktop app startup when the configured Tavern Runtime is unreachable.
+  Tavern now opens from local app state, checks Runtime reachability in the
+  background, and shows checking/disconnected Runtime status inside the app
+  shell.
+
 ## v1.4.4 - 2026-06-11
 
 Runtime auth and pairing release. The Runtime floor is raised to 1.4.4 for the
