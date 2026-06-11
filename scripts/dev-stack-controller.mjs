@@ -333,7 +333,7 @@ export class DevStackController extends EventEmitter {
         if (hasRuntime) {
             this.spawnProcess(
                 'runtime',
-                'cd apps/runtime && bun --watch src/index.ts',
+                'cd apps/runtime && bun --watch src/index.ts serve',
                 startupUiEnv
             );
             startWebsite();
