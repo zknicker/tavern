@@ -2,6 +2,32 @@
 
 All notable changes to this project will be documented in this file.
 
+## v1.4.6 - 2026-06-11
+
+App changes:
+
+- Added settings for connectors, permissions, subagent defaults, context
+  compression, fallback models, timezone, and the editable agent avatar glyph.
+- Improved agent settings saves with optimistic updates, coalesced restart
+  toasts, one-line settings descriptions, and less control flicker.
+
+Runtime changes:
+
+- Added vault-backed MCP connector config, Runtime permission settings,
+  execution settings, the managed Tavern skill, and generated AGENTS.md block
+  reconciliation.
+- Changed managed Hermes config writes to use domain-owned sections with
+  coalesced restarts that defer while turns are active.
+- Fixed Homebrew Runtime services so Runtime state stays under
+  `~/.tavern/runtime`, matching `tavern token`, app pairing, and the documented
+  default root.
+- Fixed Runtime startup, auth, and dev paths by seeding environment Runtime
+  connections, authenticating Tavern skill API calls, retrying startup
+  confirmation until Runtime answers, and passing the `serve` subcommand to the
+  dev Runtime entrypoint.
+- Improved Runtime pairing errors so missing and invalid bearer tokens are
+  distinguishable.
+
 ## v1.4.5 - 2026-06-11
 
 - Fixed desktop app startup when the configured Tavern Runtime is unreachable.
