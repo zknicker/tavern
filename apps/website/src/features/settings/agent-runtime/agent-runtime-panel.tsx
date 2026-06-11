@@ -89,7 +89,9 @@ function RuntimeUrlForm({ connection }: { connection: RuntimeConnection }) {
     const errorMessage = connectMutation.error?.message ?? null;
     const isAuthError =
         errorMessage !== null &&
-        (/401|unauthorized/i.test(errorMessage) || errorMessage.includes('Bearer token required'));
+        (/401|unauthorized/i.test(errorMessage) ||
+            errorMessage.includes('Bearer token required') ||
+            errorMessage.includes('Bearer token invalid'));
 
     React.useEffect(() => {
         setBaseUrl(connection.baseUrl);
@@ -139,7 +141,7 @@ function RuntimeUrlForm({ connection }: { connection: RuntimeConnection }) {
                 error={
                     connectMutation.error
                         ? isAuthError
-                            ? 'The runtime requires a token. Run `tavern token` on the runtime host and paste it here.'
+                            ? 'The runtime token is missing or invalid. Run `tavern token` on the runtime host and paste the current token here.'
                             : errorMessage
                         : null
                 }

@@ -32,6 +32,9 @@ describe('Tavern Runtime HTTP auth', () => {
         server = startTavernRuntimeServer();
         const response = await fetch(new URL('/capabilities', server.url));
         expect(response.status).toBe(401);
+        await expect(response.json()).resolves.toMatchObject({
+            message: 'Bearer token required.',
+        });
     });
 
     it('returns 401 for requests with a wrong token', async () => {
@@ -40,6 +43,9 @@ describe('Tavern Runtime HTTP auth', () => {
             headers: { authorization: 'Bearer wrong-token' },
         });
         expect(response.status).toBe(401);
+        await expect(response.json()).resolves.toMatchObject({
+            message: 'Bearer token invalid.',
+        });
     });
 
     it('allows requests with the correct token', async () => {

@@ -114,9 +114,11 @@ function TavernRuntimeOnboardingForm({
     const errorMessage = connectMutation.error?.message ?? null;
     const isAuthError =
         errorMessage !== null &&
-        (/401|unauthorized/i.test(errorMessage) || errorMessage.includes('Bearer token required'));
+        (/401|unauthorized/i.test(errorMessage) ||
+            errorMessage.includes('Bearer token required') ||
+            errorMessage.includes('Bearer token invalid'));
     const displayErrorMessage = isAuthError
-        ? 'The runtime requires a token. Run `tavern token` on the runtime host and paste it here.'
+        ? 'The runtime token is missing or invalid. Run `tavern token` on the runtime host and paste the current token here.'
         : errorMessage
           ? formatRuntimeConnectionError(errorMessage)
           : null;

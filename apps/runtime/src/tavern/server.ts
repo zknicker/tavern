@@ -64,6 +64,12 @@ function isBearerTokenValid(
     }
 }
 
+function authFailureMessage(authorizationHeader: string | undefined): string {
+    return authorizationHeader?.startsWith('Bearer ')
+        ? 'Bearer token invalid.'
+        : 'Bearer token required.';
+}
+
 export function startTavernRuntimeServer(): TavernRuntimeServerHandle {
     const port = Number(getRuntimePort());
     const host = getRuntimeHost();
@@ -84,7 +90,12 @@ export function startTavernRuntimeServer(): TavernRuntimeServerHandle {
                     )
                 )
             ) {
-                await writeFetchResponse(unauthorized('Bearer token required.'), response);
+                await writeFetchResponse(
+                    unauthorized(
+                        authFailureMessage(fetchRequest.headers.get('authorization') ?? undefined)
+                    ),
+                    response
+                );
                 return;
             }
             const fetchResponse = await handleTavernRuntimeRequest(fetchRequest);

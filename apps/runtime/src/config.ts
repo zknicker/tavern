@@ -62,6 +62,11 @@ function resolveRuntimeRoot(): string {
 }
 
 function resolveDefaultRuntimeRoot(): string {
+    const homebrewRoot = resolveHomebrewRuntimeRoot();
+    if (homebrewRoot) {
+        return homebrewRoot;
+    }
+
     const canonicalRoot = path.join(homeDir, '.tavern', 'runtime');
     const legacyRoot = path.join(homeDir, '.tavern-hermes', 'runtime');
     if (!fs.existsSync(path.join(homeDir, '.tavern')) && fs.existsSync(legacyRoot)) {
@@ -72,6 +77,38 @@ function resolveDefaultRuntimeRoot(): string {
         return legacyRoot;
     }
     return canonicalRoot;
+}
+
+function resolveHomebrewRuntimeRoot(): string | null {
+    const prefix = inferHomebrewPrefix(process.argv[1]) ?? inferHomebrewPrefix(process.execPath);
+    return prefix ? path.join(prefix, 'var', 'tavern', 'runtime') : null;
+}
+
+function inferHomebrewPrefix(executablePath: string | undefined): string | null {
+    if (!executablePath) {
+        return null;
+    }
+
+    const realPath = realpathOrSelf(executablePath);
+    for (const marker of [
+        `${path.sep}Cellar${path.sep}tavern-runtime${path.sep}`,
+        `${path.sep}opt${path.sep}tavern-runtime${path.sep}`,
+    ]) {
+        const index = realPath.indexOf(marker);
+        if (index > 0) {
+            return realPath.slice(0, index);
+        }
+    }
+
+    return null;
+}
+
+function realpathOrSelf(filePath: string): string {
+    try {
+        return fs.realpathSync(filePath);
+    } catch {
+        return filePath;
+    }
 }
 
 export const RUNTIME_ROOT = resolveRuntimeRoot();
