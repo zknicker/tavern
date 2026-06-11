@@ -3,7 +3,7 @@ import { wsRouter } from './ws-router.ts';
 
 test('wsRouter exposes agent event subscriptions used by the app', () => {
     expect(Object.keys(wsRouter._def.procedures).filter((key) => key.startsWith('agent.'))).toEqual(
-        ['agent.onInstructionsUpdate', 'agent.onUpdate']
+        ['agent.onEngineRestart', 'agent.onInstructionsUpdate', 'agent.onUpdate']
     );
 });
 
