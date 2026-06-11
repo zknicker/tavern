@@ -1,10 +1,10 @@
-import {
-    createTavernClient,
-    type TavernArtifact,
-    type TavernChatMessage,
-    type TavernChatResponse,
-    type TavernResponseActivity,
+import type {
+    TavernArtifact,
+    TavernChatMessage,
+    TavernChatResponse,
+    TavernResponseActivity,
 } from '@tavern/sdk';
+import { createTavernClientForConnection } from '../agent-runtime/client-factory.ts';
 import { listAgents } from '../agents/catalog.ts';
 import { sessionMessageAttachmentSchema } from '../sessions/contracts/messages.ts';
 import { getActiveAgentRuntimeConnection } from '../storage/agent-runtime-connections.ts';
@@ -29,7 +29,7 @@ export async function listRuntimeChatTimeline(chatId: string): Promise<{
         return null;
     }
 
-    const client = createTavernClient({ baseUrl: connection.baseUrl });
+    const client = createTavernClientForConnection(connection);
     const [agents, page, responsePage] = await Promise.all([
         listAgents(),
         client.chat.messages(chatId, { limit: 500 }),

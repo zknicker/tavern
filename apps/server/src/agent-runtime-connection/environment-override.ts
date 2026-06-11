@@ -35,7 +35,14 @@ export function saveEnvironmentAgentRuntimeConnection(input: {
     name: string;
 }) {
     const timestamp = new Date().toISOString();
-    const authJson = input.auth ? JSON.stringify(input.auth) : null;
+    // When `auth` is not provided (undefined), preserve the existing authJson so that
+    // status-update calls (mark sync, mark reachable, mark failure) don't silently wipe the token.
+    const authJson =
+        input.auth === undefined
+            ? (environmentConnection?.authJson ?? null)
+            : input.auth
+              ? JSON.stringify(input.auth)
+              : null;
 
     environmentConnection = {
         authJson,

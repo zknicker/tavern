@@ -1,7 +1,10 @@
 import type { AgentRuntimeChat, TavernChat } from '@tavern/api';
-import { createTavernClient, TavernApiError } from '@tavern/sdk';
+import { TavernApiError } from '@tavern/sdk';
 import { buildTavernChatSessionKey } from '../agent-runtime/chats.ts';
-import { createAgentRuntimeClientForConnection } from '../agent-runtime/client-factory.ts';
+import {
+    createAgentRuntimeClientForConnection,
+    createTavernClientForConnection,
+} from '../agent-runtime/client-factory.ts';
 import { getActiveAgentRuntimeConnection } from '../storage/agent-runtime-connections.ts';
 
 export interface RuntimeChatRecord {
@@ -38,7 +41,7 @@ export async function listRuntimeChatRecords(options?: {
         return [];
     }
 
-    const tavernClient = createTavernClient({ baseUrl: connection.baseUrl });
+    const tavernClient = createTavernClientForConnection(connection);
 
     if (options?.chatId) {
         const chat = await getTavernChatOrNull(tavernClient, options.chatId);
@@ -304,12 +307,12 @@ async function requireRuntimeChatClient() {
     }
 
     return {
-        client: createTavernClient({ baseUrl: connection.baseUrl }),
+        client: createTavernClientForConnection(connection),
         runtimeId: connection.id,
     };
 }
 
-async function listAllTavernChats(client: ReturnType<typeof createTavernClient>) {
+async function listAllTavernChats(client: ReturnType<typeof createTavernClientForConnection>) {
     const chats: TavernChat[] = [];
     let cursor: string | null = null;
 
@@ -322,7 +325,10 @@ async function listAllTavernChats(client: ReturnType<typeof createTavernClient>)
     return chats;
 }
 
-async function getTavernChatOrNull(client: ReturnType<typeof createTavernClient>, chatId: string) {
+async function getTavernChatOrNull(
+    client: ReturnType<typeof createTavernClientForConnection>,
+    chatId: string
+) {
     try {
         return await client.chat.get(chatId);
     } catch (error) {

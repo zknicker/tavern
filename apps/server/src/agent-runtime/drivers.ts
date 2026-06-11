@@ -1,5 +1,6 @@
 import type { AgentRuntimeEvent } from '@tavern/api';
 import { agentRuntimeEventSchema, agentRuntimeRoutes } from '@tavern/api';
+import { createTavernClient } from '@tavern/sdk';
 import { WebSocket } from 'ws';
 import { parseAgentRuntimeConnectionAuth } from '../agent-runtime-connection/auth.ts';
 import type { TavernAgentRuntimeClient } from './client.ts';
@@ -24,6 +25,11 @@ export function createAgentRuntimeClientForConnection(
 ): TavernAgentRuntimeClient {
     const auth = parseAgentRuntimeConnectionAuth(input.authJson);
     return createAgentRuntimeClient(input.baseUrl, { token: auth?.token });
+}
+
+export function createTavernClientForConnection(input: AgentRuntimeDriverConnection) {
+    const auth = parseAgentRuntimeConnectionAuth(input.authJson);
+    return createTavernClient({ baseUrl: input.baseUrl, token: auth?.token });
 }
 
 export async function subscribeAgentRuntimeEventsForConnection(

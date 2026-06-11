@@ -1,5 +1,6 @@
-import { createTavernClient, type TavernResponseActivity } from '@tavern/sdk';
+import type { TavernResponseActivity } from '@tavern/sdk';
 import { TRPCError } from '@trpc/server';
+import { createTavernClientForConnection } from '../agent-runtime/client-factory.ts';
 import { getActiveAgentRuntimeConnection } from '../storage/agent-runtime-connections.ts';
 import { buildToolActions } from '../tools/actions.ts';
 import { toolDetailSchema } from '../tools/contracts.ts';
@@ -15,7 +16,7 @@ export async function getChatToolActivity(input: { activityId: string; chatId: s
         });
     }
 
-    const client = createTavernClient({ baseUrl: connection.baseUrl });
+    const client = createTavernClientForConnection(connection);
     try {
         return activityToToolDetail(await client.chat.activity(input.chatId, input.activityId));
     } catch (error) {

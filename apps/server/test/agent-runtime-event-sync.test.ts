@@ -68,6 +68,7 @@ mock.module('../src/api/invalidation-events.ts', () => ({
 
 mock.module('../src/agent-runtime/drivers.ts', () => ({
     createAgentRuntimeClientForConnection,
+    createTavernClientForConnection: mock(() => undefined),
     subscribeAgentRuntimeEventsForConnection,
 }));
 

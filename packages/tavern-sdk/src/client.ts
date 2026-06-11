@@ -29,6 +29,7 @@ export interface TavernClientOptions {
     baseUrl: string;
     fetch?: typeof fetch;
     headers?: HeaderFactory;
+    token?: string;
     WebSocket?: typeof WebSocket;
 }
 
@@ -65,12 +66,14 @@ export class TavernClient {
     readonly #baseUrl: string;
     readonly #fetch: typeof fetch;
     readonly #headers?: HeaderFactory;
+    readonly #token?: string;
     readonly #WebSocket?: typeof WebSocket;
 
     constructor(options: TavernClientOptions) {
         this.#baseUrl = options.baseUrl.replace(/\/+$/u, '');
         this.#fetch = options.fetch ?? fetch;
         this.#headers = options.headers;
+        this.#token = options.token;
         this.#WebSocket = options.WebSocket ?? globalThis.WebSocket;
         this.chat = new TavernChatClient(this);
         this.message = new TavernMessageClient(this);
@@ -116,6 +119,10 @@ export class TavernClient {
 
         if (hasBody && !output.has('content-type')) {
             output.set('content-type', 'application/json');
+        }
+
+        if (this.#token && !output.has('authorization')) {
+            output.set('authorization', `Bearer ${this.#token}`);
         }
 
         for (const [key, value] of new Headers(headers)) {

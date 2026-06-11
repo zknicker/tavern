@@ -1,1 +1,4 @@
-export { createAgentRuntimeClientForConnection } from './drivers.ts';
+export {
+    createAgentRuntimeClientForConnection,
+    createTavernClientForConnection,
+} from './drivers.ts';
