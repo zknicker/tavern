@@ -267,13 +267,13 @@ export function createAppRouter() {
                                             ),
                                         },
                                         {
-                                            path: 'agents-md',
+                                            path: 'notes-md',
                                             lazy: lazyRoute(
                                                 () =>
                                                     import(
-                                                        './routes/dashboard/settings-agents-md-page.tsx'
+                                                        './routes/dashboard/settings-notes-md-page.tsx'
                                                     ),
-                                                'SettingsAgentsMdPage'
+                                                'SettingsNotesMdPage'
                                             ),
                                         },
                                         {

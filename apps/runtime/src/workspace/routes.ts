@@ -1,10 +1,11 @@
 import { getDb } from '../db/connection';
 import { json } from '../tavern/http';
 import {
+    generateAgentInstructions,
     readRenderedAgentInstructions,
-    reconcileAgentInstructions,
     registerAgentWorkspace,
 } from './instructions';
+import { ensureAgentNotesWatcher } from './notes-watcher';
 
 export async function handleWorkspaceRequest(request: Request): Promise<Response | null> {
     const url = new URL(request.url);
@@ -28,12 +29,13 @@ export async function handleWorkspaceRequest(request: Request): Promise<Response
             agentName: readOptionalString(body.agentName),
             workspaceDir: readString(body.workspaceDir, 'workspaceDir'),
         });
-        const reconciled = await reconcileAgentInstructions(getDb(), agentId);
+        const generated = await generateAgentInstructions(getDb(), agentId);
+        ensureAgentNotesWatcher(getDb(), agentId);
 
         return json({
             agentId: source.agentId,
-            renderedAt: reconciled.renderedAt,
-            sha256: reconciled.sha256,
+            renderedAt: generated.renderedAt,
+            sha256: generated.sha256,
             updatedAt: source.updatedAt,
         });
     }

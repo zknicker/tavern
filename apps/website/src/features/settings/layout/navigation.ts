@@ -59,9 +59,9 @@ export const settingsNavItems = [
     },
     {
         icon: FileEditIcon,
-        id: 'agents-md',
-        label: 'AGENTS.md',
-        to: '/dashboard/settings/agents-md',
+        id: 'notes-md',
+        label: 'NOTES.md',
+        to: '/dashboard/settings/notes-md',
     },
     {
         icon: FileEditIcon,
@@ -114,7 +114,7 @@ export const settingsNavSections = [
     },
     {
         id: 'agent',
-        itemIds: ['agent', 'agents-md', 'soul-md', 'skills', 'connectors', 'memories'],
+        itemIds: ['agent', 'notes-md', 'soul-md', 'skills', 'connectors', 'memories'],
         label: 'Agent',
     },
     {

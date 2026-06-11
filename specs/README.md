@@ -38,8 +38,8 @@ directly.
   focused product surfaces.
 - `connectors.md`: user-configured MCP servers as a settings surface.
 - `permissions.md`: approval modes and the command allowlist.
-- `workspace.md`: managed Hermes workspace files, the Tavern-managed
-  `AGENTS.md` block, and user/agent-owned instruction content.
+- `workspace.md`: the generated `AGENTS.md` artifact and its editable
+  sources (`NOTES.md`, `SOUL.md`).
 - `tavern-skill.md`: the agent's product knowledge of and operational access
   to Tavern.
 

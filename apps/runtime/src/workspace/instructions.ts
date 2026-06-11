@@ -3,7 +3,11 @@ import path from 'node:path';
 import type { Database } from '../db/sqlite.ts';
 import { namedParams } from '../db/sqlite.ts';
 import { publishRuntimeEvent } from '../tavern/runtime-events.ts';
-import { renderManagedInstructionContent } from './managed-instructions.ts';
+import {
+    agentNotesFileName,
+    renderAgentInstructions,
+    renderSeededNotes,
+} from './managed-instructions.ts';
 
 export interface AgentWorkspaceSource {
     agentId: string;
@@ -12,7 +16,7 @@ export interface AgentWorkspaceSource {
     workspaceDir: string;
 }
 
-export interface AgentInstructionReconcileResult {
+export interface AgentInstructionGenerateResult {
     content: string;
     renderedAt: string;
     sha256: string;
@@ -39,12 +43,12 @@ export const hermesBootstrapFileNamesToClear = [
     'USER.md',
 ] as const;
 
-export const managedBlockEndMarker = '<!-- /tavern:managed -->';
-
 const defaultAgentId = 'main';
 const defaultAgentName = 'main';
-const managedBlockStartPattern = /<!-- tavern:managed v=[a-f0-9]{16} -->/u;
-const userContentHint =
+// One marker pair per legacy file; used only to migrate pre-generated installs.
+const legacyManagedBlockPattern =
+    /<!-- tavern:managed v=[a-f0-9]{16} -->[\s\S]*?<!-- \/tavern:managed -->/u;
+const legacyUserContentHint =
     '<!-- Everything below is yours. Add durable instructions and notes here; Tavern only rewrites the managed block above. -->';
 
 export function getAgentWorkspaceSource(
@@ -112,29 +116,28 @@ export function registerAgentWorkspace(
 }
 
 /**
- * Reconcile the Tavern-managed block inside the agent's AGENTS.md.
- *
- * Only the managed block is Tavern's write surface: a missing file is seeded,
- * a stale block is replaced in place, and missing markers re-insert the block
- * at the top. All content outside the markers is preserved byte-for-byte.
+ * Generate AGENTS.md from its sources. AGENTS.md is a pure artifact with
+ * Tavern as its single writer: it is composed deterministically from the
+ * managed content, the agent name, and NOTES.md, written read-only, and only
+ * rewritten when the composed bytes change. NOTES.md is seeded once (migrating
+ * any pre-generated AGENTS.md content) and never written by Tavern again.
  */
-export async function reconcileAgentInstructions(db: Database, agentId = defaultAgentId) {
+export async function generateAgentInstructions(db: Database, agentId = defaultAgentId) {
     const source = getAgentWorkspaceSource(db, agentId);
 
     if (!source) {
         throw new Error(`No managed workspace is registered for agent "${agentId}".`);
     }
 
-    const block = await renderManagedInstructionBlock(source.agentName);
     const agentsPath = path.join(source.workspaceDir, generatedInstructionFileName);
+    const notes = await ensureAgentNotes(source.workspaceDir, agentsPath);
+    const next = renderAgentInstructions(source.agentName, notes);
     const existing = await fs.readFile(agentsPath, 'utf8').catch(() => null);
-    const next =
-        existing === null ? `${block}\n\n${userContentHint}\n` : applyManagedBlock(existing, block);
     const written = next !== existing;
 
     if (written) {
         await fs.mkdir(source.workspaceDir, { recursive: true });
-        await fs.writeFile(agentsPath, next, { mode: 0o600 });
+        await writeReadOnlyFile(agentsPath, next);
         await clearHermesBootstrapFiles(source.workspaceDir);
     }
 
@@ -157,16 +160,16 @@ export async function reconcileAgentInstructions(db: Database, agentId = default
         });
     }
 
-    return { content: next, renderedAt, sha256, written } satisfies AgentInstructionReconcileResult;
+    return { content: next, renderedAt, sha256, written } satisfies AgentInstructionGenerateResult;
 }
 
 /**
- * Reconcile for callers that cannot assume the agent has a registered managed
- * workspace (file saves, turn dispatch). Returns null when unregistered.
+ * Generate for callers that cannot assume the agent has a registered managed
+ * workspace. Returns null when unregistered.
  */
-export async function reconcileRegisteredAgentInstructions(db: Database, agentId: string) {
+export async function generateRegisteredAgentInstructions(db: Database, agentId: string) {
     return getAgentWorkspaceSource(db, agentId)
-        ? await reconcileAgentInstructions(db, agentId)
+        ? await generateAgentInstructions(db, agentId)
         : null;
 }
 
@@ -203,13 +206,6 @@ export async function readRenderedAgentInstructions(db: Database, agentId = defa
     } satisfies AgentInstructionReadResult;
 }
 
-export async function renderManagedInstructionBlock(agentName: string) {
-    const content = renderManagedInstructionContent(agentName);
-    const version = (await hashText(content)).slice(0, 16);
-
-    return `<!-- tavern:managed v=${version} -->\n${content}\n${managedBlockEndMarker}`;
-}
-
 export async function clearHermesBootstrapFiles(workspaceDir: string) {
     await Promise.all(
         hermesBootstrapFileNamesToClear.map((fileName) =>
@@ -218,23 +214,44 @@ export async function clearHermesBootstrapFiles(workspaceDir: string) {
     );
 }
 
-function applyManagedBlock(existing: string, block: string) {
-    const startMatch = managedBlockStartPattern.exec(existing);
+/**
+ * Read NOTES.md, seeding it on first run. Seeding migrates the user/agent
+ * content of a pre-generated AGENTS.md (everything outside the legacy managed
+ * block) so nothing is lost when an install moves to the generated layout.
+ */
+async function ensureAgentNotes(workspaceDir: string, agentsPath: string) {
+    const notesPath = path.join(workspaceDir, agentNotesFileName);
+    const existing = await fs.readFile(notesPath, 'utf8').catch(() => null);
 
-    if (startMatch) {
-        const blockStart = startMatch.index;
-        const endIndex = existing.indexOf(managedBlockEndMarker, blockStart);
-
-        if (endIndex >= 0) {
-            if (existing.startsWith(block, blockStart)) {
-                return existing;
-            }
-            const blockEnd = endIndex + managedBlockEndMarker.length;
-            return `${existing.slice(0, blockStart)}${block}${existing.slice(blockEnd)}`;
-        }
+    if (existing !== null) {
+        return existing;
     }
 
-    return `${block}\n\n${existing}`;
+    const seed = (await migrateLegacyAgentsContent(agentsPath)) ?? renderSeededNotes();
+    await fs.mkdir(workspaceDir, { recursive: true });
+    await fs.writeFile(notesPath, seed, { mode: 0o600 });
+    return seed;
+}
+
+async function migrateLegacyAgentsContent(agentsPath: string) {
+    const legacy = await fs.readFile(agentsPath, 'utf8').catch(() => null);
+
+    if (legacy === null || legacy.startsWith('<!-- GENERATED BY TAVERN')) {
+        return null;
+    }
+
+    const remainder = legacy
+        .replace(legacyManagedBlockPattern, '')
+        .replace(legacyUserContentHint, '')
+        .trim();
+
+    return remainder.length > 0 ? `${remainder}\n` : null;
+}
+
+/** AGENTS.md is immutable to everyone but Tavern: written read-only. */
+async function writeReadOnlyFile(filePath: string, content: string) {
+    await fs.rm(filePath, { force: true });
+    await fs.writeFile(filePath, content, { mode: 0o444 });
 }
 
 async function hashText(value: string) {

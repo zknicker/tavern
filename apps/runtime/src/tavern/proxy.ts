@@ -2,10 +2,8 @@ import { type AgentRuntimeCreateMessage, agentRuntimeRoutes } from '@tavern/api'
 import { getDb } from '../db/connection.ts';
 import { unsupportedHermesSurface } from '../hermes/errors.ts';
 import { createLocalHermesClient } from '../hermes/local-client.ts';
-import {
-    generatedInstructionFileName,
-    reconcileRegisteredAgentInstructions,
-} from '../workspace/instructions.ts';
+import { generateRegisteredAgentInstructions } from '../workspace/instructions.ts';
+import { agentNotesFileName } from '../workspace/managed-instructions.ts';
 import { sendTavernChannelMessage, stopTavernChannelTurn } from './channel-relay.ts';
 import { json } from './http.ts';
 
@@ -78,13 +76,11 @@ async function dispatch(context: RouteContext) {
     }
     if (method === 'PUT' && isAgentFileRoute(segments) && segments[3]) {
         const saved = await client.saveAgentFile(segments[1], segments[3], await readJson(request));
-        if (segments[3] !== generatedInstructionFileName) {
-            return saved;
+        if (segments[3] === agentNotesFileName) {
+            // AGENTS.md is generated from NOTES.md; recompose on save.
+            await generateRegisteredAgentInstructions(getDb(), segments[1]);
         }
-        // Heal the Tavern-managed block immediately when AGENTS.md is saved,
-        // so a tampered block never waits for the next agent sync.
-        const healed = await reconcileRegisteredAgentInstructions(getDb(), segments[1]);
-        return healed?.written ? await client.getAgentFile(segments[1], segments[3]) : saved;
+        return saved;
     }
     if (method === 'GET' && url.pathname === agentRuntimeRoutes.hermesConfig) {
         return await client.getHermesConfig();

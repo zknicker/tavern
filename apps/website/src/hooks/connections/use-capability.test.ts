@@ -45,7 +45,7 @@ describe('Runtime capability gates', () => {
     });
 
     test('keeps workspace instruction files editable without Hermes capabilities', () => {
-        expect(settingsCapabilityRequirements['agents-md']).toEqual([]);
+        expect(settingsCapabilityRequirements['notes-md']).toEqual([]);
         expect(settingsCapabilityRequirements['soul-md']).toEqual([]);
     });
 

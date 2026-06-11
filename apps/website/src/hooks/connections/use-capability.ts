@@ -33,7 +33,7 @@ const capabilityLabels = {
 export const settingsCapabilityRequirements = {
     'agent-runtime': [],
     agent: ['apiServer', 'models'],
-    'agents-md': [],
+    'notes-md': [],
     appearance: [],
     connectors: ['apiServer'],
     jobs: [],

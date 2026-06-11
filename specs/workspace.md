@@ -3,72 +3,60 @@
 Tavern owns the managed Hermes workspace it creates for Tavern agents.
 
 The workspace is the prompt-facing home that Hermes loads for each agent
-session. Tavern exposes the Hermes-supported markdown files directly:
+session. Hermes loads one project-context file (`AGENTS.md`) from the
+workspace and `SOUL.md` from the managed Hermes home.
 
-* `AGENTS.md` lives in the managed Hermes workspace and carries workspace
-  instructions, conventions, and operating context.
-* `SOUL.md` lives in the managed Hermes home and carries identity, voice, tone,
-  and durable personality. Hermes does not load `SOUL.md` from the working
-  directory.
+## Generated AGENTS.md
 
-Both files are live agent state. Hermes injects them at prompt build, so edits
-take effect on the next turn.
+`AGENTS.md` is a pure generated artifact with Tavern as its single writer.
+Nobody edits it: it is written read-only, opens with a generated-file banner,
+and instructs the agent that the file is immutable and that `NOTES.md` is its
+scratch space. It is composed deterministically from:
 
-## Managed Block
+* **Tavern-managed content.** The agent's Tavern environment, delegation
+  guidance, the Cortex/memory model, the immutability/scratch-space
+  instructions, and the `tavern` skill pointer
+  ([tavern-skill.md](tavern-skill.md)). Product language; does not name
+  Hermes.
+* **The agent name.** From the registered agent record.
+* **`NOTES.md`.** Composed verbatim into a Notes section.
 
-`AGENTS.md` contains exactly one Tavern-managed block, delimited by markers:
+Composition is a pure function of its sources: identical sources produce
+identical bytes, and the file is only rewritten when the composed bytes
+change. Prompt-cache invalidation therefore happens exactly when a source
+changes and never per turn; there is no per-turn reconcile, healing, or
+managed-region merging.
 
-```
-<!-- tavern:managed v=<content-hash> -->
-...Tavern-managed instructions...
-<!-- /tavern:managed -->
-```
+## Sources
 
-The managed block is Tavern's only write surface in the file. It carries:
+* **`NOTES.md`** (workspace) is the durable free-form source for notes,
+  instructions, and conventions. The user edits it in agent settings; the
+  agent edits it directly with its file tools. Tavern seeds it once —
+  migrating the user/agent content of a pre-generated `AGENTS.md` so nothing
+  is lost — and never writes it again.
+* **`SOUL.md`** (managed Hermes home) carries identity, voice, tone, and
+  durable personality. Tavern never writes it.
 
-* **Environment.** The agent's identity as the Tavern agent, the chat /
-  session / automation product nouns, and what the agent's Tavern access can
-  and cannot touch.
-* **Memory.** Cortex/llm-wiki routing, conflict priority, and provenance
-  rules, plus the memory model boundary: Cortex is durable knowledge; per-turn
-  context management is separate.
-* **Self-maintenance.** The agent may edit `AGENTS.md` outside the managed
-  block, and `SOUL.md`, directly with its file tools.
-* **Tavern access pointer.** Operations on Tavern and product questions route
-  through the `tavern` skill ([tavern-skill.md](tavern-skill.md)).
+## Generation Triggers
 
-The managed block is written in product language and does not name Hermes.
+Tavern regenerates `AGENTS.md` when a source may have changed:
 
-## Recompose Rules
+* on agent sync (registration, rename, managed-content updates),
+* when `NOTES.md` is saved through the agent file API,
+* when a filesystem watch on `NOTES.md` observes a direct agent edit.
 
-Runtime reconciles the managed block during runtime sync, when `AGENTS.md` is
-saved through the agent file API, and before each turn dispatch — so a
-tampered block heals before it can ride along in another prompt:
+Generation failures surface at these controlled moments — never mid-turn —
+and direct writes to the read-only `AGENTS.md` fail loudly at the writer.
 
-* The block is versioned by a hash of its content. A matching hash is a no-op.
-* A differing hash rewrites only the managed block. All content outside the
-  markers is preserved byte-for-byte.
-* A missing `AGENTS.md` is seeded with the managed block and a short hint that
-  the rest of the file belongs to the user and the agent.
-* Missing markers (for example, deleted by hand) cause the block to be
-  re-inserted at the top of the file without touching the rest.
-* Runtime never writes `SOUL.md`.
+## App Surfaces
 
-Everything outside the managed block is user- and agent-owned free text.
-Tavern never regenerates, reorders, or normalizes it.
-
-## Editing
-
-* Users edit `AGENTS.md` and `SOUL.md` in agent settings through Runtime's
-  agent file API.
-* Agents edit the same files directly with file tools. There are no separate
-  Tavern note-taking tools and no DB-backed instruction sources.
-* The app may later render the managed block read-only or collapsed in the
-  settings editor; correctness does not depend on it.
+The app exposes `NOTES.md` and `SOUL.md` as the editable agent files. The
+`NOTES.md` editor offers a read-only preview of the generated `AGENTS.md`.
+The app does not expose `AGENTS.md` for editing.
 
 ## Legacy
 
-Runtime clears unsupported legacy companion bootstrap files such as `TOOLS.md`,
-`IDENTITY.md`, `USER.md`, `HEARTBEAT.md`, `BOOTSTRAP.md`, `MEMORY.md`, and
-`ROLE.md` from the managed workspace. It does not clear `SOUL.md`. The app does
-not expose those legacy files.
+Generation clears unsupported legacy companion bootstrap files such as
+`TOOLS.md`, `IDENTITY.md`, `USER.md`, `HEARTBEAT.md`, `BOOTSTRAP.md`,
+`MEMORY.md`, and `ROLE.md` from the managed workspace. It does not clear
+`SOUL.md`. The app does not expose those legacy files.

@@ -1095,25 +1095,29 @@ describe('LocalHermesClient adapter-owned state', () => {
             token: null,
         });
 
-        await client.saveAgentFile('agt_hermes', 'AGENTS.md', {
-            content: '# Workspace\n\nProject rules.',
+        await client.saveAgentFile('agt_hermes', 'NOTES.md', {
+            content: '# Notes\n\nProject rules.',
         });
         await client.saveAgentFile('agt_hermes', 'SOUL.md', {
             content: '# Soul\n\nSpeak plainly.',
         });
 
-        await expect(fs.readFile(path.join(HERMES_WORKSPACE, 'AGENTS.md'), 'utf8')).resolves.toBe(
-            '# Workspace\n\nProject rules.'
+        await expect(fs.readFile(path.join(HERMES_WORKSPACE, 'NOTES.md'), 'utf8')).resolves.toBe(
+            '# Notes\n\nProject rules.'
         );
         await expect(fs.readFile(path.join(HERMES_HOME, 'SOUL.md'), 'utf8')).resolves.toBe(
             '# Soul\n\nSpeak plainly.'
         );
         await expect(client.listAgentFiles('agt_hermes')).resolves.toMatchObject({
             files: [
-                { mediaType: 'text/markdown', path: 'AGENTS.md' },
+                { mediaType: 'text/markdown', path: 'NOTES.md' },
                 { mediaType: 'text/markdown', path: 'SOUL.md' },
             ],
         });
+        // AGENTS.md is generated, not an editable agent file.
+        await expect(client.getAgentFile('agt_hermes', 'AGENTS.md')).rejects.toThrow(
+            'Hermes agent file "AGENTS.md"'
+        );
         await expect(client.getAgentFile('agt_hermes', 'TOOLS.md')).rejects.toThrow(
             'Hermes agent file "TOOLS.md"'
         );

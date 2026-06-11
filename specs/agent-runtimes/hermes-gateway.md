@@ -111,14 +111,14 @@ decision rather than broadening the default silently.
 Tavern Runtime owns the managed Hermes workspace under
 `~/.tavern/runtime/hermes/run/workspace`.
 
-Runtime exposes Hermes-supported markdown files for Tavern-managed agents. `AGENTS.md` is managed
-workspace context. `SOUL.md` is managed Hermes home identity. `AGENTS.md` opens with a
-marker-delimited Tavern-managed block that Runtime reconciles on sync, on file save, and before
-turn dispatch; all content outside the markers is user- and agent-owned and is never regenerated.
+`AGENTS.md` is a generated artifact with Tavern Runtime as its single writer: composed
+deterministically from Tavern-managed content, the agent name, and `NOTES.md`, written read-only,
+and rewritten only when its sources change. `SOUL.md` is managed Hermes home identity and is never
+written by Tavern.
 
-Agents and users edit both files directly. The agent uses its file tools; users use the agent file
-API. There are no separate note-taking tools. See [Workspace](../workspace.md) for the full
-contract.
+The editable agent files are the sources: `NOTES.md` (durable notes and instructions; user edits
+via the agent file API, the agent edits directly with file tools) and `SOUL.md`. See
+[Workspace](../workspace.md) for the full contract.
 
 ## Required Mapping
 

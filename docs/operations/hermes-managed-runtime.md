@@ -148,8 +148,8 @@ into `HERMES_HOME/skills/tavern` before launch, alongside the wiki skill. It
 carries the agent's product knowledge of Tavern — chat and delivery API
 recipes against `TAVERN_RUNTIME_URL`, the automations delivery contract,
 read-only self-configuration lookups, and the settings map for directing the
-user. Runtime owns the content and refreshes it on every startup; the managed
-`AGENTS.md` block points the agent at it. The contract lives in
+user. Runtime owns the content and refreshes it on every startup; the
+generated `AGENTS.md` points the agent at it. The contract lives in
 [tavern-skill.md](../../specs/tavern-skill.md).
 
 ## Managed Memory Provider

@@ -83,7 +83,7 @@ direct the user to the exact place:
 | Your name, avatar, color | Settings -> Agent (Appearance) |
 | Timezone | Settings -> Agent (Behavior) |
 | What you may run without asking | Settings -> Agent (Permissions) |
-| Workspace instructions / personality | Settings -> AGENTS.md / SOUL.md |
+| Durable notes and instructions / personality | Settings -> NOTES.md / SOUL.md |
 | Skills and toolsets | Settings -> Skills & Toolsets |
 | MCP servers | Settings -> Connectors |
 | Model provider accounts and keys | Settings -> Models |

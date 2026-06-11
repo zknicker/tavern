@@ -71,30 +71,33 @@ responds and `/api/ws` accepts a WebSocket connection.
 
 ## Managed Workspace
 
-Runtime exposes the Hermes-supported markdown files as agent files. `AGENTS.md`
-lives in the managed Hermes workspace and carries project/workspace context.
-`SOUL.md` lives in the managed Hermes home and carries identity, voice, and
-personality.
+`AGENTS.md` is a generated artifact with Runtime as its single writer
+(`apps/runtime/src/workspace/instructions.ts`): composed deterministically from
+the Tavern-managed content (`managed-instructions.ts`), the agent name, and
+`NOTES.md`, written read-only, and rewritten only when the composed bytes
+change — so prompt-cache invalidation happens exactly when a source changes
+and never per turn. The generated file tells the agent it is immutable and
+that `NOTES.md` is its scratch space.
 
-`AGENTS.md` starts with a marker-delimited, hash-versioned Tavern-managed block
-(`apps/runtime/src/workspace/managed-instructions.ts`). Runtime reconciles the
-block during agent sync, after `AGENTS.md` saves through the agent file API,
-and before each turn dispatch: a missing file is seeded, a stale block is
-replaced in place, missing markers re-insert the block at the top, and all
-content outside the markers is preserved byte-for-byte. Users edit the file in settings and the
-agent edits it with file tools; both edit outside the managed block. Runtime
-never writes `SOUL.md`. See [workspace.md](../../specs/workspace.md) for the
-contract.
+The editable agent files are the sources. `NOTES.md` (workspace) carries
+durable notes, instructions, and conventions: the user edits it in settings,
+the agent edits it directly with file tools, and Runtime seeds it once
+(migrating pre-generated `AGENTS.md` content) and never writes it again.
+`SOUL.md` (managed Hermes home) carries identity and personality; Runtime
+never writes it. Regeneration runs on agent sync, on `NOTES.md` saves through
+the agent file API, and via a filesystem watch on `NOTES.md`
+(`workspace/notes-watcher.ts`) for direct agent edits. See
+[workspace.md](../../specs/workspace.md) for the contract.
 
-When a reconcile writes the file, Runtime also clears unsupported legacy
+When generation writes the file, Runtime also clears unsupported legacy
 companion bootstrap files from the managed workspace. It does not clear
 `SOUL.md`.
 
 The agent's operational access to Tavern ships as the managed `tavern` skill
 (`apps/runtime/src/hermes/tavern-skill.ts`): chat reads and searches, attributed
 deliveries into chats, read-only self-configuration lookups, and the settings
-map, all over the local Runtime API. The managed block points the agent at the
-skill; [tavern-skill.md](../../specs/tavern-skill.md) is the contract.
+map, all over the local Runtime API. The generated instructions point the agent
+at the skill; [tavern-skill.md](../../specs/tavern-skill.md) is the contract.
 
 ## Persistence
 

@@ -9,6 +9,7 @@ import { type RuntimeJobsManager, startRuntimeJobsManager } from './jobs/manager
 import { ensureRuntimeJobsSchema } from './jobs/schema';
 import { log } from './log';
 import { startTavernRuntimeServer } from './tavern/server';
+import { closeAgentNotesWatchers } from './workspace/notes-watcher';
 
 let runtimeServer: ReturnType<typeof startTavernRuntimeServer> | null = null;
 let hermes: ManagedHermesHandle | null = null;
@@ -64,6 +65,7 @@ async function shutdown(signal: string): Promise<void> {
 
     shuttingDown = true;
     log.info('Shutdown signal received', { signal });
+    closeAgentNotesWatchers();
     log.info('Stopping Runtime jobs');
     await runtimeJobs?.stop();
     log.info('Runtime jobs stopped');

@@ -7,14 +7,16 @@ import { usePrimaryAgent } from '../../../hooks/agents/use-agent-list.ts';
 import { withSavingToast } from '../../../lib/saving-toast.ts';
 import { trpc } from '../../../lib/trpc.tsx';
 import { MissingAgentState } from '../../agents/missing-agent-state.tsx';
+import { AgentInstructionsPreviewDrawer } from './agent-instructions-preview-drawer.tsx';
 
-export type EditableAgentWorkspaceFile = 'AGENTS.md' | 'SOUL.md';
+export type EditableAgentWorkspaceFile = 'NOTES.md' | 'SOUL.md';
 
 export const editableAgentWorkspaceFiles = [
     {
-        description: 'Workspace instructions, conventions, architecture, and project context.',
-        label: 'AGENTS.md',
-        path: 'AGENTS.md',
+        description:
+            'Durable notes, instructions, and conventions — composed into the generated AGENTS.md.',
+        label: 'NOTES.md',
+        path: 'NOTES.md',
     },
     {
         description: "Your agent's identity, voice, tone, and durable personality.",
@@ -40,14 +42,16 @@ export function AgentWorkspaceFileSettingsPage({ path }: { path: EditableAgentWo
         return <MissingAgentState agentId="primary" />;
     }
 
-    return <AgentWorkspaceFileEditor agentId={agent.id} path={path} />;
+    return <AgentWorkspaceFileEditor agentId={agent.id} agentName={agent.name} path={path} />;
 }
 
 function AgentWorkspaceFileEditor({
     agentId,
+    agentName,
     path,
 }: {
     agentId: string;
+    agentName: string;
     path: EditableAgentWorkspaceFile;
 }) {
     const utils = trpc.useUtils();
@@ -84,24 +88,32 @@ function AgentWorkspaceFileEditor({
             <BadgeDivider className="pb-4">{file?.label ?? path}</BadgeDivider>
             <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
                 <p className="text-muted-foreground text-sm">{file?.description}</p>
-                <Button
-                    disabled={!hasChanges || query.isPending || isSaving}
-                    loading={isSaving}
-                    onClick={() =>
-                        void withSavingToast(() =>
-                            saveWorkspaceFile.mutateAsync({
-                                agentId,
-                                content: draft,
-                                path,
+                <div className="flex items-center gap-2">
+                    {path === 'NOTES.md' ? (
+                        <AgentInstructionsPreviewDrawer
+                            agentDisplayName={agentName}
+                            agentId={agentId}
+                        />
+                    ) : null}
+                    <Button
+                        disabled={!hasChanges || query.isPending || isSaving}
+                        loading={isSaving}
+                        onClick={() =>
+                            void withSavingToast(() =>
+                                saveWorkspaceFile.mutateAsync({
+                                    agentId,
+                                    content: draft,
+                                    path,
+                                })
+                            ).then((saved) => {
+                                savedContentRef.current = saved.content;
+                                setDraft(saved.content);
                             })
-                        ).then((saved) => {
-                            savedContentRef.current = saved.content;
-                            setDraft(saved.content);
-                        })
-                    }
-                >
-                    Save
-                </Button>
+                        }
+                    >
+                        Save
+                    </Button>
+                </div>
             </div>
             <CardFrame>
                 <Card className="relative h-[calc(100vh-15rem)] min-h-[32rem] overflow-hidden p-0">

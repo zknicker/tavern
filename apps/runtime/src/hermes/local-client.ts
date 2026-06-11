@@ -84,11 +84,13 @@ import {
 } from './session-map';
 import { LocalHermesUnsupportedSurfaces } from './unsupported-surfaces';
 
+// AGENTS.md is a generated artifact (Tavern is its single writer) and is not
+// an editable agent file; its sources are.
 const editableHermesAgentFiles = [
     {
         mediaType: 'text/markdown',
-        path: 'AGENTS.md',
-        storagePath: path.join(HERMES_WORKSPACE, 'AGENTS.md'),
+        path: 'NOTES.md',
+        storagePath: path.join(HERMES_WORKSPACE, 'NOTES.md'),
     },
     {
         mediaType: 'text/markdown',

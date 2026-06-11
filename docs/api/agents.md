@@ -27,12 +27,12 @@ with instruction files, model, execution, tool, memory, and skill policy.
   Clients read the stored snapshot and capability state instead of maintaining a
   Tavern-maintained list.
 * Tool and skill controls are inspectable before a run starts.
-* Instruction settings use Hermes-supported markdown files. `AGENTS.md` is
-  managed workspace context and opens with a Tavern-managed block that Runtime
-  keeps current; everything outside the block is user- and agent-owned.
-  `SOUL.md` is managed Hermes home identity. Clients save these files through
-  the Runtime-hosted agent file API; saving `AGENTS.md` returns the reconciled
-  file.
+* Instruction settings use markdown source files. `AGENTS.md` is a generated
+  read-only artifact composed by Runtime; it is not editable. The editable
+  files are its sources: `NOTES.md` (durable notes and instructions) and
+  `SOUL.md` (identity). Clients save the sources through the Runtime-hosted
+  agent file API; saving `NOTES.md` regenerates `AGENTS.md`, and the generated
+  file is readable for preview through the instructions read surface.
 * Tavern policy includes Cortex brain-first lookup guidance. Managed agents
   check Cortex before external lookup when durable user, project, or prior
   decision context may already exist.

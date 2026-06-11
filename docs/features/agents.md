@@ -14,12 +14,11 @@ page or a sidebar Agents section.
 
 * **Single managed agent.** Tavern routes new work through the primary Runtime
   agent.
-* **Hermes markdown files.** Settings exposes the Hermes-supported markdown
-  files: `AGENTS.md` for managed workspace context and `SOUL.md` for the
-  managed Hermes home identity. `AGENTS.md` opens with a marker-delimited
-  Tavern-managed block that Runtime keeps current; everything outside the
-  markers is user- and agent-owned live state and is never regenerated. The
-  agent may edit both files directly with its file tools.
+* **Instruction files.** `AGENTS.md` is a generated, read-only artifact that
+  Runtime composes from its sources; nobody edits it. Settings exposes the
+  sources: `NOTES.md` for durable notes and instructions (with a preview of
+  the generated `AGENTS.md`) and `SOUL.md` for identity and personality. The
+  agent edits both source files directly with its file tools.
 * **New chats.** Starting a direct chat belongs to the normal New Chat flow, not
   an agent landing page.
 * **Global tools and skills.** Per-agent tool policy and per-agent skill
@@ -32,7 +31,7 @@ page or a sidebar Agents section.
 
 The primary app sidebar lists product areas and chats. It does not list agents.
 Legacy agent URLs redirect to Settings -> Sessions. Agent configuration lives in
-Settings, including workspace markdown files, model choice, model fallbacks,
+Settings, including notes and personality files, model choice, model fallbacks,
 subagent defaults, thinking effort, timezone, context compression, permissions,
 connectors, skills, memory, sessions, and jobs.
 
