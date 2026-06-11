@@ -46,9 +46,7 @@ export function CortexHealthView({
 
                     {health.escalations.length > 0 ? (
                         <section className="mt-8">
-                            <div className="-mx-3">
-                                <BadgeDivider>Needs your call</BadgeDivider>
-                            </div>
+                            <BadgeDivider>Needs your call</BadgeDivider>
                             <div className="mt-3 space-y-3">
                                 {health.escalations.map((escalation) => (
                                     <EscalationCard
@@ -63,13 +61,11 @@ export function CortexHealthView({
 
                     {health.reports.map((report) => (
                         <section className="mt-8" key={report.topic}>
-                            <div className="-mx-3">
-                                <BadgeDivider
-                                    subtext={`${report.topic} · ${formatRelativeTime(report.updatedAt)}`}
-                                >
-                                    Librarian report
-                                </BadgeDivider>
-                            </div>
+                            <BadgeDivider
+                                subtext={`${report.topic} · ${formatRelativeTime(report.updatedAt)}`}
+                            >
+                                Librarian report
+                            </BadgeDivider>
                             <div className="mt-3">
                                 <CortexMarkdownViewer value={report.body} />
                             </div>
