@@ -6,6 +6,7 @@ import type {
 import type { Database } from '../db/sqlite';
 import { namedParams } from '../db/sqlite';
 import { createLocalHermesClient } from '../hermes/local-client';
+import { getCortexPage, listCortexPages } from '../wiki/store';
 import { recentWindowMs, toolVolumeWindowMs } from './constants';
 import { formatAgo, formatCount } from './format';
 import { pickHeadline } from './phrases';
@@ -34,9 +35,65 @@ export async function buildHighlightCandidates(input: {
         buildQuestFinishedHighlight(input),
         buildTroubleHighlight(input),
         await buildScheduledRunHighlight(input),
+        await buildWikiAttentionHighlight(input),
     ];
 
     return candidates.filter((candidate): candidate is HighlightCandidate => Boolean(candidate));
+}
+
+/**
+ * Surfaces wiki inventory follow-ups whose next action belongs to the user
+ * (llm-wiki convention: `status: proposed` plus `owner: user`). The managed
+ * wiki crons park human-gated work this way instead of nagging in chat.
+ */
+async function buildWikiAttentionHighlight(input: {
+    now: Date;
+    slotStart: Date;
+}): Promise<HighlightCandidate | null> {
+    const followUps = await listUserOwnedWikiFollowUps();
+    if (followUps.length === 0) {
+        return null;
+    }
+
+    const topics = [...new Set(followUps.map((page) => page.topic))];
+
+    return createCandidate({
+        category: 'wiki_attention',
+        metric: {
+            count: followUps.length,
+            topics,
+        },
+        now: input.now,
+        receipt: `${formatCount(followUps.length, 'wiki follow-up')} in ${formatCount(
+            topics.length,
+            'topic'
+        )} waiting on your call in Cortex.`,
+        slotStart: input.slotStart,
+        sourceRefs: [],
+        windowStart: input.slotStart,
+    });
+}
+
+async function listUserOwnedWikiFollowUps() {
+    try {
+        const { pages } = await listCortexPages({});
+        const inventoryPages = pages.filter((page) => page.section === 'inventory');
+        const details = await Promise.all(
+            inventoryPages.map((page) => getCortexPage({ path: page.path, topic: page.topic }))
+        );
+        return details.filter(
+            (page): page is NonNullable<typeof page> =>
+                Boolean(page) &&
+                readFrontmatterValue(page?.frontmatter.status) === 'proposed' &&
+                readFrontmatterValue(page?.frontmatter.owner) === 'user'
+        );
+    } catch {
+        return [];
+    }
+}
+
+function readFrontmatterValue(value: unknown) {
+    return typeof value === 'string' ? value.trim().toLowerCase() : null;
 }
 
 function buildToolVolumeHighlight(input: {

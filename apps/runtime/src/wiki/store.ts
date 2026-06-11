@@ -333,13 +333,13 @@ function parseMarkdown(content: string) {
     if (!content.startsWith('---\n')) {
         return { body: content, frontmatter: {} };
     }
-    const end = content.indexOf('\n---\n', 4);
-    if (end < 0) {
+    const close = /\n---[ \t]*(?:\r?\n|$)/u.exec(content.slice(4));
+    if (!close) {
         return { body: content, frontmatter: {} };
     }
     return {
-        body: content.slice(end + 5).trimStart(),
-        frontmatter: parseFrontmatter(content.slice(4, end)),
+        body: content.slice(4 + close.index + close[0].length).trimStart(),
+        frontmatter: parseFrontmatter(content.slice(4, 4 + close.index)),
     };
 }
 

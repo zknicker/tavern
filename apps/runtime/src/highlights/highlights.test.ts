@@ -1,3 +1,6 @@
+import fs from 'node:fs/promises';
+import os from 'node:os';
+import path from 'node:path';
 import type { AgentRuntimeCronRun } from '@tavern/api';
 import { afterEach, beforeEach, describe, expect, test } from 'vitest';
 import { closeDb, initTestDb } from '../db/connection';
@@ -8,14 +11,25 @@ import { generateTavernHighlights, listTavernHighlights } from './highlights';
 
 describe('Tavern highlights', () => {
     let db: Database;
+    let hubPath: string;
+    let previousHubPath: string | undefined;
 
-    beforeEach(() => {
+    beforeEach(async () => {
         db = initTestDb();
         ensureRuntimeSchema(db);
+        previousHubPath = process.env.TAVERN_WIKI_HUB_PATH;
+        hubPath = await fs.mkdtemp(path.join(os.tmpdir(), 'tavern-highlights-wiki-'));
+        process.env.TAVERN_WIKI_HUB_PATH = hubPath;
     });
 
-    afterEach(() => {
+    afterEach(async () => {
         closeDb();
+        if (previousHubPath === undefined) {
+            Reflect.deleteProperty(process.env, 'TAVERN_WIKI_HUB_PATH');
+        } else {
+            process.env.TAVERN_WIKI_HUB_PATH = previousHubPath;
+        }
+        await fs.rm(hubPath, { force: true, recursive: true });
     });
 
     test('persists one current highlight per applicable category', async () => {
@@ -71,6 +85,38 @@ describe('Tavern highlights', () => {
             status: 'stale',
         });
     });
+
+    test('surfaces user-owned wiki follow-ups as a highlight', async () => {
+        const now = new Date('2026-06-03T18:25:00.000Z');
+        await writeInventoryRecord(
+            'project-notes',
+            'verify-claim.md',
+            ['---', 'title: Verify launch claim', 'status: proposed', 'owner: user', '---'].join(
+                '\n'
+            )
+        );
+        await writeInventoryRecord(
+            'project-notes',
+            'agent-task.md',
+            ['---', 'title: Profile candidate', 'status: proposed', '---'].join('\n')
+        );
+
+        const result = await generateTavernHighlights({ cronRuns: [], db, now });
+        const highlight = result.highlights.find(
+            (candidate) => candidate.category === 'wiki_attention'
+        );
+
+        expect(highlight).toMatchObject({
+            metric: { count: 1, topics: ['project-notes'] },
+            receipt: '1 wiki follow-up in 1 topic waiting on your call in Cortex.',
+        });
+    });
+
+    async function writeInventoryRecord(topic: string, file: string, content: string) {
+        const filePath = path.join(hubPath, 'topics', topic, 'inventory', file);
+        await fs.mkdir(path.dirname(filePath), { recursive: true });
+        await fs.writeFile(filePath, content);
+    }
 
     test('records a fresh empty generation when no category applies', async () => {
         const now = new Date('2026-06-03T18:25:00.000Z');

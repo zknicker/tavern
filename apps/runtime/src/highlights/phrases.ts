@@ -30,6 +30,13 @@ const headlines: Record<AgentRuntimeHighlightCategory, string[]> = {
         'Smoke curls from the quest board.',
         'The barmaid eyes the omens.',
     ],
+    wiki_attention: [
+        'The librarian left notes for you.',
+        'Pages await your judgment.',
+        'The archive keeps a short list.',
+        'Some scrolls need a steward.',
+        'Marginalia call for the keeper.',
+    ],
 };
 
 export function pickHeadline(category: AgentRuntimeHighlightCategory, slotStart: Date) {

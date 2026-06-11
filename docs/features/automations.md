@@ -48,6 +48,11 @@ maintenance cadence:
   become agent work, not reports to review. The daily upkeep automation
   consumes that queue.
 
+Follow-ups only a human can decide (claim verification, retractions, paid or
+private access) are marked with llm-wiki's `owner: user` inventory convention.
+A homepage highlight surfaces the count of user-owned wiki follow-ups; nothing
+pings chat. Everything else drains automatically.
+
 Wiki automations are created once the wiki hub has at least one active topic,
 so an empty hub does not burn scheduled agent turns.
 

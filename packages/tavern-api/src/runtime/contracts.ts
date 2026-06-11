@@ -1253,6 +1253,7 @@ export const agentRuntimeHighlightCategorySchema = z.enum([
     'scheduled_run',
     'tool_volume',
     'trouble',
+    'wiki_attention',
 ]);
 
 export const agentRuntimeHighlightSourceRefSchema = z.object({
