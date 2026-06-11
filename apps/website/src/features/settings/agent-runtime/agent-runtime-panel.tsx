@@ -1,4 +1,4 @@
-import { AlertCircleIcon } from '@hugeicons/core-free-icons';
+import { AlertCircleIcon, InformationCircleIcon } from '@hugeicons/core-free-icons';
 import { useQueryClient } from '@tanstack/react-query';
 import * as React from 'react';
 import { Alert, AlertDescription, AlertTitle } from '../../../components/ui/alert.tsx';
@@ -8,6 +8,7 @@ import { Icon } from '../../../components/ui/icon.tsx';
 import { Button } from '../../../components/ui/primitives/button.tsx';
 import { Input } from '../../../components/ui/primitives/input.tsx';
 import { SettingsItem, SettingsRow } from '../../../components/ui/settings-row.tsx';
+import { Tooltip, TooltipProvider } from '../../../components/ui/tooltip.tsx';
 import { useConnectAgentRuntime } from '../../../hooks/connections/use-connect-agent-runtime.ts';
 import { type AgentRuntimeConnectionOutput, trpc } from '../../../lib/trpc.tsx';
 import { HermesCapabilitiesSummary } from './hermes-capabilities-table.tsx';
@@ -132,6 +133,7 @@ function RuntimeUrlForm({ connection }: { connection: RuntimeConnection }) {
                 </div>
             </SettingsRow>
             <SettingsRow
+                description="Pairs this app with your runtime."
                 error={
                     connectMutation.error
                         ? isAuthError
@@ -139,8 +141,29 @@ function RuntimeUrlForm({ connection }: { connection: RuntimeConnection }) {
                             : errorMessage
                         : null
                 }
-                description="Pairs this app with your runtime."
-                title="Tavern Runtime Token"
+                title={
+                    <span className="inline-flex items-center gap-1.5">
+                        Tavern Runtime Token
+                        <TooltipProvider>
+                            <Tooltip
+                                content={
+                                    <span>
+                                        On the runtime host, run <code>tavern token</code> to print
+                                        the pairing token, then paste it here.
+                                    </span>
+                                }
+                            >
+                                <span className="inline-flex cursor-default text-muted-foreground">
+                                    <Icon
+                                        aria-label="How to find your runtime token"
+                                        icon={InformationCircleIcon}
+                                        size={14}
+                                    />
+                                </span>
+                            </Tooltip>
+                        </TooltipProvider>
+                    </span>
+                }
             >
                 <Input
                     aria-label="Runtime token"
