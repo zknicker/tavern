@@ -259,6 +259,12 @@ same color behavior as their text unless a provider or status treatment intentio
 Use `components/ui/spinner.tsx` for loading/running indicators; it owns the app-wide bare
 `Loading03Icon` rotating treatment.
 
+Toasts are single-line, content-hugging, and glassy (blurred translucent popover surface): a type
+icon, a bold title, and an optional muted description that truncates. Write toast copy to be read
+in a glance — a short title, at most one short clause of description. Optimistic saves should not
+show a loading toast; surface failures only. Saves that restart the agent engine get one promise
+toast per restart cycle.
+
 ## Loading & Transitions
 
 Do not render a bare text fallback such as "Loading transcript..." or "Loading details..." in place
@@ -294,7 +300,7 @@ Do:
 - Use `global.css` tokens and Tailwind token names derived from them.
 - Use COSS UI/Base UI primitives from `components/ui`.
 - Change shared primitives when multiple screens need the same visual correction.
-- Keep settings descriptions short enough to avoid wrapping.
+- Keep settings row descriptions to one short line; rewrite the copy rather than letting it wrap.
 - Prefer `text-sm` and `text-meta` over a mix of `text-xs` and `text-sm`.
 - Use subtle filled controls inside cards to avoid border-in-border UI.
 - Keep icons large enough to read and consistent with text color.
