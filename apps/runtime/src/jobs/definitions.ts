@@ -83,8 +83,7 @@ export const syncManagedCronsJob: RuntimeJobDefinition = {
 export const wikiCompileTriggerJob: RuntimeJobDefinition = {
     concurrency: 1,
     defaultInput: {},
-    description:
-        'Triggers the wiki upkeep automation early when uncompiled sources pile up or sit too long.',
+    description: 'Triggers the wiki upkeep automation when uncompiled sources pile up.',
     disabledReason() {
         return null;
     },
@@ -98,17 +97,17 @@ export const wikiCompileTriggerJob: RuntimeJobDefinition = {
         try {
             const outcome = await runWikiCompileTrigger(client);
             if (outcome.kind === 'idle') {
-                await context.log('No topics need an early compile.');
+                await context.log('No topics have enough uncompiled sources.');
                 return;
             }
             if (outcome.kind === 'skipped') {
                 await context.log(
-                    `Skipped early compile for ${outcome.topics.join(', ')}: ${describeCompileTriggerSkip(outcome.reason)}`
+                    `Skipped compile trigger for ${outcome.topics.join(', ')}: ${describeCompileTriggerSkip(outcome.reason)}`
                 );
                 return;
             }
             await context.log(
-                `Triggered wiki upkeep early: uncompiled sources in ${outcome.topics.join(', ')}.`
+                `Triggered wiki upkeep: uncompiled sources piled up in ${outcome.topics.join(', ')}.`
             );
         } finally {
             client.close();

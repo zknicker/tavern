@@ -55,7 +55,6 @@ describe('wiki compile trigger', () => {
         expect(pending).toEqual([
             {
                 newestPendingAtMs: nowMs - 2 * hourMs,
-                oldestPendingAtMs: nowMs - 3 * hourMs,
                 pendingCount: 2,
                 topic: 'coffee',
             },
@@ -87,7 +86,6 @@ describe('wiki compile trigger', () => {
         expect(pending).toEqual([
             {
                 newestPendingAtMs: Date.parse('2026-06-09T00:00:00Z'),
-                oldestPendingAtMs: Date.parse('2026-06-09T00:00:00Z'),
                 pendingCount: 1,
                 topic: 'coffee',
             },
@@ -100,15 +98,14 @@ describe('wiki compile trigger', () => {
         expect(await listPendingCompileTopics()).toEqual([]);
     });
 
-    test('trigger decision: settle window, count threshold, and age backstop', () => {
-        const base = { newestPendingAtMs: nowMs - hourMs, oldestPendingAtMs: nowMs - hourMs };
+    test('trigger decision: count threshold with a settle window', () => {
+        const base = { newestPendingAtMs: nowMs - hourMs };
 
         // A batch still settling never triggers, regardless of count.
         expect(
             isCompileTriggerDue(
                 {
                     newestPendingAtMs: nowMs - 5 * 60 * 1000,
-                    oldestPendingAtMs: nowMs - 25 * hourMs,
                     pendingCount: 9,
                     topic: 'coffee',
                 },
@@ -118,20 +115,10 @@ describe('wiki compile trigger', () => {
         expect(isCompileTriggerDue({ ...base, pendingCount: 5, topic: 'coffee' }, nowMs)).toBe(
             true
         );
+        // Small ingests wait for the daily upkeep run.
         expect(isCompileTriggerDue({ ...base, pendingCount: 4, topic: 'coffee' }, nowMs)).toBe(
             false
         );
-        expect(
-            isCompileTriggerDue(
-                {
-                    newestPendingAtMs: nowMs - 25 * hourMs,
-                    oldestPendingAtMs: nowMs - 25 * hourMs,
-                    pendingCount: 1,
-                    topic: 'coffee',
-                },
-                nowMs
-            )
-        ).toBe(true);
     });
 
     test('triggers the managed upkeep cron when a topic is due', async () => {
@@ -195,12 +182,13 @@ describe('wiki compile trigger', () => {
     }
 
     async function seedDueTopic() {
-        await writeRawSource('coffee', 'raw/articles/2026-06-10-stale.md', nowMs - 26 * hourMs);
-        await writeTopicFile(
-            'coffee',
-            'log.md',
-            '## [2026-06-10] ingest | Stale (raw/articles/2026-06-10-stale.md)'
-        );
+        const lines: string[] = [];
+        for (const index of [1, 2, 3, 4, 5]) {
+            const rawPath = `raw/articles/2026-06-11-source-${index}.md`;
+            await writeRawSource('coffee', rawPath, nowMs - 2 * hourMs);
+            lines.push(`## [2026-06-11] ingest | Source ${index} (${rawPath})`);
+        }
+        await writeTopicFile('coffee', 'log.md', lines.join('\n'));
     }
 });
 

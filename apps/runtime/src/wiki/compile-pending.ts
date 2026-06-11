@@ -5,7 +5,6 @@ import { wikiUpkeepCronName } from '../hermes/managed-crons';
 import { listCortexTopics } from './store';
 
 const pendingCountThreshold = 5;
-const pendingAgeMs = 24 * 60 * 60 * 1000;
 const settleMs = 15 * 60 * 1000;
 const triggerCooldownMs = 60 * 60 * 1000;
 
@@ -16,7 +15,6 @@ const ingestOps = new Set(['ingest', 'ingest-collection']);
 
 export interface PendingCompileTopic {
     newestPendingAtMs: null | number;
-    oldestPendingAtMs: null | number;
     pendingCount: number;
     topic: string;
 }
@@ -32,10 +30,11 @@ export type CompileTriggerOutcome =
     | { kind: 'triggered'; topics: string[] };
 
 /**
- * Fires the wiki upkeep automation early when uncompiled raw sources pile up
- * (llm-wiki's 5-source compile nudge) or sit uncompiled past a day. The check
- * itself is pure filesystem work — the agent only runs when there is real
- * compile work, and the cooldown keeps one trigger from queueing several runs.
+ * Fires the wiki upkeep automation when uncompiled raw sources pile up —
+ * llm-wiki's 5-source compile nudge. Smaller ingests wait for the daily upkeep
+ * run, which bounds their delay already. The check itself is pure filesystem
+ * work — the agent only runs when there is real compile work — and the
+ * cooldown keeps one trigger from queueing several runs.
  */
 export async function runWikiCompileTrigger(
     client: CompileTriggerClient,
@@ -83,22 +82,15 @@ export async function listPendingCompileTopics(): Promise<PendingCompileTopic[]>
 }
 
 export function isCompileTriggerDue(pending: PendingCompileTopic, nowMs: number): boolean {
-    if (pending.pendingCount === 0) {
+    if (pending.pendingCount < pendingCountThreshold) {
         return false;
     }
-    if (pending.newestPendingAtMs !== null && nowMs - pending.newestPendingAtMs < settleMs) {
-        return false;
-    }
-    if (pending.pendingCount >= pendingCountThreshold) {
-        return true;
-    }
-    return pending.oldestPendingAtMs !== null && nowMs - pending.oldestPendingAtMs >= pendingAgeMs;
+    return pending.newestPendingAtMs === null || nowMs - pending.newestPendingAtMs >= settleMs;
 }
 
 async function readPendingForTopic(slug: string, topicPath: string): Promise<PendingCompileTopic> {
     const empty: PendingCompileTopic = {
         newestPendingAtMs: null,
-        oldestPendingAtMs: null,
         pendingCount: 0,
         topic: slug,
     };
@@ -131,7 +123,6 @@ async function readPendingForTopic(slug: string, topicPath: string): Promise<Pen
     );
     return {
         newestPendingAtMs: Math.max(...timestamps),
-        oldestPendingAtMs: Math.min(...timestamps),
         pendingCount: pendingEntries.length,
         topic: slug,
     };

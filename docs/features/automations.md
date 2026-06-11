@@ -39,10 +39,11 @@ maintenance cadence:
   candidate profiling). Records that need human judgment stay proposed.
   A Runtime job also checks every 15 minutes for uncompiled raw sources —
   counted from each topic's `log.md` order, no agent run — and triggers upkeep
-  early when a topic has 5 or more pending sources (llm-wiki's compile-nudge
-  threshold) or any source has sat uncompiled past a day. A settle window lets
-  batch ingests finish first, and a one-hour cooldown keeps triggers from
-  stacking. Pausing the upkeep automation also pauses early triggers.
+  when a topic reaches 5 pending sources (llm-wiki's compile-nudge threshold);
+  smaller ingests wait for the daily run, which already bounds their delay. A
+  settle window lets batch ingests finish first, and a one-hour cooldown keeps
+  triggers from stacking. Pausing the upkeep automation also pauses the
+  pending-source trigger.
 * **Tavern: Wiki lint** — weekly structural lint with auto-fix, including
   backlink repair.
 * **Tavern: Wiki librarian** — weekly staleness and quality pass. The scan is

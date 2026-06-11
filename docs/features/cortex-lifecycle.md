@@ -48,19 +48,13 @@ you: "remember this" ──► agent ingests in the current turn
                       raw/ source file        ◄── full content, queryable
                        + log.md entry             immediately
                               │
-       every 15 min, a Runtime job counts uncompiled
-       sources from log.md order — no agent run
-                              │
-            5+ pending, or one older than a day?
-                              │ yes
+                              │ compile — the Wiki upkeep automation
+                              │   • daily at 4:30
+                              │   • sooner when 5+ sources are pending
+                              │     (a 15-minute Runtime check, no agent run)
                               ▼
-                    trigger upkeep early ─────┐
-                                              ▼
-                                   Wiki upkeep automation   ◄── daily 4:30
-                                              │ compile         backstop
-                                              ▼
-                                   wiki/ articles — synthesized,
-                                   cross-linked, cited back to raw/
+                   wiki/ articles — synthesized,
+                   cross-linked, cited back to raw/
 ```
 
 The gap between ingest and compile costs recall almost nothing: the raw file
@@ -69,11 +63,13 @@ immediately, so the agent can answer from it before synthesis. Compiling adds
 what raw files lack — synthesis across sources, confidence ratings, and links
 that weave the concept into existing articles.
 
-Details that keep this calm: a 15-minute settle window lets batch ingests
-finish before compile fires, a one-hour cooldown keeps triggers from stacking,
-and pausing the upkeep automation pauses early triggers too. When the agent
-researches a topic itself, it compiles inline in the same run — the trigger
-path exists for material that arrives without an agent run attached.
+So a research dump compiles within the hour, and a stray source or two waits
+at most until the next morning's run. Details that keep this calm: a
+15-minute settle window lets batch ingests finish before compile fires, a
+one-hour cooldown keeps triggers from stacking, and pausing the upkeep
+automation pauses the pending-source trigger too. When the agent researches a
+topic itself, it compiles inline in the same run — the trigger path exists for
+material that arrives without an agent run attached.
 
 ## Staying Healthy
 
@@ -136,7 +132,7 @@ wiki files (source of truth)
 | --- | --- | --- |
 | Ingest | in chat, when you hand the agent material | the current turn |
 | Compile check | every 15 minutes (Runtime job) | no — filesystem only |
-| Wiki upkeep | daily 4:30, plus early triggers | yes |
+| Wiki upkeep | daily 4:30, sooner at 5+ pending sources | yes |
 | Wiki lint | weekly, Monday 5:00 | yes |
 | Wiki librarian | weekly, Saturday 6:00 | yes — cost tracks problem density |
 | Health history sampler | hourly (Runtime job) | no |
