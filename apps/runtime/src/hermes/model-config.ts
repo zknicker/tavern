@@ -5,6 +5,7 @@ import { loadVaultBackedCodexCredentials } from '../model-access/codex-settings'
 import { getOpenAiApiKey } from '../model-access/openai-settings';
 import { getOpenRouterApiKey } from '../model-access/openrouter-settings';
 import { syncHermesCodexAuth } from './auth-store';
+import { resolveConnectorsDomain } from './connectors';
 import { quoteEnvValue, readEnvEntries, readManagedHermesEnvValue } from './env';
 import { getHermesExecutionSettings } from './execution-settings';
 import { type HermesModelDomain, mergeHermesGeneratedConfig } from './generated-config';
@@ -71,14 +72,7 @@ export async function resolveManagedHermesModelConfig(): Promise<HermesModelConf
 export async function prepareManagedHermesModelConfig(
     input: ManagedHermesModelConfigInput = {}
 ): Promise<HermesModelConfig> {
-    const config = await resolveManagedHermesModelConfig();
-    await fs.mkdir(HERMES_HOME, { recursive: true });
-    await mergeHermesGeneratedConfig(path.join(HERMES_HOME, 'config.yaml'), {
-        execution: getHermesExecutionSettings(),
-        model: config,
-        permissions: await resolveConfiguredPermissionsDomain(),
-    });
-    await mergeHermesEnvFile(path.join(HERMES_HOME, '.env'), config);
+    const config = await writeManagedHermesConfigFile();
     await syncHermesCodexAuth(
         path.join(HERMES_HOME, 'auth.json'),
         await loadVaultBackedCodexCredentials().catch(() => null)
@@ -92,21 +86,40 @@ export async function prepareManagedHermesModelConfig(
 }
 
 /**
- * Rewrite only the generated config file from current Runtime state. Used when
- * a Tavern-owned config domain (e.g. execution settings) changes at runtime.
+ * Rewrite the generated config and env files from current Runtime state. Used
+ * at startup and whenever a Tavern-owned config domain (execution settings,
+ * permissions, connectors) changes at runtime.
  */
-export async function writeManagedHermesConfigFile(): Promise<void> {
+export async function writeManagedHermesConfigFile(): Promise<HermesModelConfig> {
     const config = await resolveManagedHermesModelConfig();
+    const connectors = resolveConnectorsDomain();
     await fs.mkdir(HERMES_HOME, { recursive: true });
     await mergeHermesGeneratedConfig(path.join(HERMES_HOME, 'config.yaml'), {
+        connectors: connectors.domain,
         execution: getHermesExecutionSettings(),
         model: config,
         permissions: await resolveConfiguredPermissionsDomain(),
     });
+    await mergeHermesEnvFile(path.join(HERMES_HOME, '.env'), config, connectors.envEntries);
+    return config;
 }
 
-export async function mergeHermesEnvFile(filePath: string, config: HermesModelConfig) {
+export async function mergeHermesEnvFile(
+    filePath: string,
+    config: HermesModelConfig,
+    connectorEnvEntries: Map<string, string> = new Map()
+) {
     const entries = readEnvEntries(await fs.readFile(filePath, 'utf8').catch(() => ''));
+
+    // Connector secrets are fully managed: stale TAVERN_MCP_* entries go away.
+    for (const key of [...entries.keys()]) {
+        if (key.startsWith('TAVERN_MCP_')) {
+            entries.delete(key);
+        }
+    }
+    for (const [key, value] of connectorEnvEntries) {
+        entries.set(key, value);
+    }
 
     if (config.openAiApiKey) {
         entries.set('OPENAI_API_KEY', config.openAiApiKey);

@@ -251,6 +251,81 @@ export const agentRuntimeSavePermissionSettingsResultSchema =
         restartScheduled: z.boolean(),
     });
 
+export const agentRuntimeConnectorTransportSchema = z.enum(['command', 'url']);
+
+const agentRuntimeConnectorIdSchema = z
+    .string()
+    .trim()
+    .min(1)
+    .max(64)
+    .regex(/^[a-z0-9][a-z0-9-]*$/u, 'Use lowercase letters, digits, and dashes.');
+
+const agentRuntimeConnectorSecretNameSchema = z.string().trim().min(1).max(128);
+
+/** API view of a connector secret entry: values are write-only. */
+const agentRuntimeConnectorSecretFieldSchema = z.object({
+    hasValue: z.boolean(),
+    name: agentRuntimeConnectorSecretNameSchema,
+});
+
+/**
+ * Save input secret entry. Omitted value keeps the stored value for that
+ * name; entries absent from the list are removed.
+ */
+const agentRuntimeSaveConnectorSecretFieldSchema = z.object({
+    name: agentRuntimeConnectorSecretNameSchema,
+    value: z.string().min(1).max(4096).optional(),
+});
+
+export const agentRuntimeConnectorSchema = z.object({
+    args: z.array(z.string().trim().min(1).max(1024)),
+    command: z.string().trim().min(1).max(1024).nullable(),
+    env: z.array(agentRuntimeConnectorSecretFieldSchema),
+    headers: z.array(agentRuntimeConnectorSecretFieldSchema),
+    id: agentRuntimeConnectorIdSchema,
+    name: z.string().trim().min(1).max(80),
+    timeoutSeconds: z.number().int().min(1).max(600).nullable(),
+    transport: agentRuntimeConnectorTransportSchema,
+    updatedAt: z.string().datetime(),
+    url: z.string().trim().url().nullable(),
+});
+
+export const agentRuntimeConnectorListSchema = z.object({
+    connectors: z.array(agentRuntimeConnectorSchema),
+});
+
+export const agentRuntimeSaveConnectorSchema = z
+    .object({
+        args: z.array(z.string().trim().min(1).max(1024)).max(32).default([]),
+        command: z.string().trim().min(1).max(1024).nullable().default(null),
+        env: z.array(agentRuntimeSaveConnectorSecretFieldSchema).max(32).default([]),
+        headers: z.array(agentRuntimeSaveConnectorSecretFieldSchema).max(32).default([]),
+        name: z.string().trim().min(1).max(80),
+        timeoutSeconds: z.number().int().min(1).max(600).nullable().default(null),
+        transport: agentRuntimeConnectorTransportSchema,
+        url: z.string().trim().url().nullable().default(null),
+    })
+    .refine(
+        (value) => (value.transport === 'command' ? Boolean(value.command) : Boolean(value.url)),
+        'A command transport needs a command; a URL transport needs a URL.'
+    );
+
+export const agentRuntimeSaveConnectorResultSchema = agentRuntimeConnectorSchema.extend({
+    restartScheduled: z.boolean(),
+});
+
+export const agentRuntimeDeleteConnectorResultSchema = z.object({
+    deleted: z.boolean(),
+    id: agentRuntimeConnectorIdSchema,
+    restartScheduled: z.boolean(),
+});
+
+export const agentRuntimeConnectorTestResultSchema = z.object({
+    id: agentRuntimeConnectorIdSchema,
+    message: z.string(),
+    ok: z.boolean(),
+});
+
 export const agentRuntimeThinkingLevelSchema = z.enum([
     'off',
     'minimal',
@@ -1889,6 +1964,15 @@ export type AgentRuntimeSavePermissionSettings = z.infer<
 export type AgentRuntimeSavePermissionSettingsResult = z.infer<
     typeof agentRuntimeSavePermissionSettingsResultSchema
 >;
+export type AgentRuntimeConnectorTransport = z.infer<typeof agentRuntimeConnectorTransportSchema>;
+export type AgentRuntimeConnector = z.infer<typeof agentRuntimeConnectorSchema>;
+export type AgentRuntimeConnectorList = z.infer<typeof agentRuntimeConnectorListSchema>;
+export type AgentRuntimeSaveConnector = z.infer<typeof agentRuntimeSaveConnectorSchema>;
+export type AgentRuntimeSaveConnectorResult = z.infer<typeof agentRuntimeSaveConnectorResultSchema>;
+export type AgentRuntimeDeleteConnectorResult = z.infer<
+    typeof agentRuntimeDeleteConnectorResultSchema
+>;
+export type AgentRuntimeConnectorTestResult = z.infer<typeof agentRuntimeConnectorTestResultSchema>;
 export type AgentRuntimeHermesConfig = z.infer<typeof agentRuntimeHermesConfigSchema>;
 export type AgentRuntimeHermesConfigSnapshot = z.infer<
     typeof agentRuntimeHermesConfigSnapshotSchema

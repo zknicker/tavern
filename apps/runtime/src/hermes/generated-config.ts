@@ -33,7 +33,23 @@ export interface HermesPermissionsDomain {
     commandAllowlist: string[];
 }
 
+export interface McpServerEntry {
+    args?: string[];
+    command?: string;
+    env?: Record<string, string>;
+    headers?: Record<string, string>;
+    timeout?: number;
+    url?: string;
+}
+
+export interface HermesConnectorsDomain {
+    servers: Record<string, McpServerEntry>;
+    /** Previously Tavern-managed server ids to remove from the file. */
+    staleIds: string[];
+}
+
 export interface HermesGeneratedConfigDomains {
+    connectors: HermesConnectorsDomain;
     execution: HermesExecutionDomain;
     model: HermesModelDomain;
     /** null = never configured in Tavern; the domain leaves the file untouched. */
@@ -49,6 +65,7 @@ export async function mergeHermesGeneratedConfig(
 
     applyModelDomain(doc, domains.model);
     applyExecutionDomain(doc, domains.execution);
+    applyConnectorsDomain(doc, domains.connectors);
     if (domains.permissions) {
         applyPermissionsDomain(doc, domains.permissions);
     }
@@ -95,6 +112,24 @@ function applyExecutionDomain(doc: GeneratedConfigDocument, execution: HermesExe
         doc.setIn(['timezone'], execution.timezone);
     } else {
         doc.deleteIn(['timezone']);
+    }
+}
+
+/**
+ * Tavern connectors own only their own entries under `mcp_servers`:
+ * operator-added servers under other keys are preserved.
+ */
+function applyConnectorsDomain(doc: GeneratedConfigDocument, connectors: HermesConnectorsDomain) {
+    for (const staleId of connectors.staleIds) {
+        doc.deleteIn(['mcp_servers', staleId]);
+    }
+    for (const [id, entry] of Object.entries(connectors.servers)) {
+        doc.setIn(['mcp_servers', id], entry);
+    }
+
+    const remaining = (doc.toJS() as { mcp_servers?: Record<string, unknown> } | null)?.mcp_servers;
+    if (remaining && Object.keys(remaining).length === 0) {
+        doc.deleteIn(['mcp_servers']);
     }
 }
 

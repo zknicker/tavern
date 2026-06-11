@@ -6,6 +6,7 @@ import { parseDocument } from 'yaml';
 import { mergeHermesGeneratedConfig } from './generated-config';
 
 const emptyExecution = { fallbackModels: [], timezone: null };
+const emptyConnectors = { servers: {}, staleIds: [] };
 const codexModel = {
     apiKey: null,
     baseUrl: null,
@@ -27,6 +28,7 @@ describe('generated Hermes config composer', () => {
         const configPath = await tempConfigPath();
 
         await mergeHermesGeneratedConfig(configPath, {
+            connectors: emptyConnectors,
             execution: {
                 fallbackModels: [
                     { model: 'kimi-k2.5', provider: 'openrouter' },
@@ -74,6 +76,7 @@ describe('generated Hermes config composer', () => {
         );
 
         await mergeHermesGeneratedConfig(configPath, {
+            connectors: emptyConnectors,
             execution: emptyExecution,
             model: codexModel,
             permissions: null,
@@ -96,6 +99,7 @@ describe('generated Hermes config composer', () => {
         const configPath = await tempConfigPath();
 
         await mergeHermesGeneratedConfig(configPath, {
+            connectors: emptyConnectors,
             execution: emptyExecution,
             model: {
                 apiKey: 'tavern-e2e-mock-key',
@@ -116,6 +120,7 @@ describe('generated Hermes config composer', () => {
     it('removes execution keys when fallbacks and timezone are cleared', async () => {
         const configPath = await tempConfigPath();
         await mergeHermesGeneratedConfig(configPath, {
+            connectors: emptyConnectors,
             execution: {
                 fallbackModels: [{ model: 'kimi-k2.5', provider: 'openrouter' }],
                 timezone: 'Europe/Berlin',
@@ -125,6 +130,7 @@ describe('generated Hermes config composer', () => {
         });
 
         await mergeHermesGeneratedConfig(configPath, {
+            connectors: emptyConnectors,
             execution: emptyExecution,
             model: codexModel,
             permissions: null,
@@ -139,6 +145,7 @@ describe('generated Hermes config composer', () => {
         const configPath = await tempConfigPath();
 
         await mergeHermesGeneratedConfig(configPath, {
+            connectors: emptyConnectors,
             execution: emptyExecution,
             model: codexModel,
             permissions: {
@@ -167,6 +174,7 @@ describe('generated Hermes config composer', () => {
         );
 
         await mergeHermesGeneratedConfig(configPath, {
+            connectors: emptyConnectors,
             execution: emptyExecution,
             model: codexModel,
             permissions: null,
@@ -176,6 +184,7 @@ describe('generated Hermes config composer', () => {
         expect(untouched.has('command_allowlist')).toBe(true);
 
         await mergeHermesGeneratedConfig(configPath, {
+            connectors: emptyConnectors,
             execution: emptyExecution,
             model: codexModel,
             permissions: {
@@ -189,6 +198,62 @@ describe('generated Hermes config composer', () => {
         expect(cleared.has('command_allowlist')).toBe(false);
     });
 
+    it('manages only Tavern connector entries under mcp_servers', async () => {
+        const configPath = await tempConfigPath();
+        await fs.writeFile(
+            configPath,
+            ['mcp_servers:', '  operator-server:', '    command: operator-cmd', ''].join('\n')
+        );
+
+        await mergeHermesGeneratedConfig(configPath, {
+            connectors: {
+                servers: {
+                    'github-tools': {
+                        args: ['mcp-server'],
+                        command: 'github',
+                        env: { GITHUB_TOKEN: envRef('TAVERN_MCP_GITHUB_TOOLS_ENV_GITHUB_TOKEN') },
+                        timeout: 30,
+                    },
+                },
+                staleIds: ['removed-connector'],
+            },
+            execution: emptyExecution,
+            model: codexModel,
+            permissions: null,
+        });
+
+        const config = (await readConfig(configPath)).toJS() as {
+            mcp_servers: Record<string, unknown>;
+        };
+        expect(config.mcp_servers['operator-server']).toEqual({ command: 'operator-cmd' });
+        expect(config.mcp_servers['github-tools']).toEqual({
+            args: ['mcp-server'],
+            command: 'github',
+            env: { GITHUB_TOKEN: envRef('TAVERN_MCP_GITHUB_TOOLS_ENV_GITHUB_TOKEN') },
+            timeout: 30,
+        });
+        expect(config.mcp_servers['removed-connector']).toBeUndefined();
+    });
+
+    it('drops the mcp_servers key when the last managed entry is removed', async () => {
+        const configPath = await tempConfigPath();
+        await mergeHermesGeneratedConfig(configPath, {
+            connectors: { servers: { solo: { url: 'https://mcp.example.com' } }, staleIds: [] },
+            execution: emptyExecution,
+            model: codexModel,
+            permissions: null,
+        });
+
+        await mergeHermesGeneratedConfig(configPath, {
+            connectors: { servers: {}, staleIds: ['solo'] },
+            execution: emptyExecution,
+            model: codexModel,
+            permissions: null,
+        });
+
+        expect((await readConfig(configPath)).has('mcp_servers')).toBe(false);
+    });
+
     it('keeps an existing plugins list and appends the messenger plugin once', async () => {
         const configPath = await tempConfigPath();
         await fs.writeFile(
@@ -197,11 +262,13 @@ describe('generated Hermes config composer', () => {
         );
 
         await mergeHermesGeneratedConfig(configPath, {
+            connectors: emptyConnectors,
             execution: emptyExecution,
             model: codexModel,
             permissions: null,
         });
         await mergeHermesGeneratedConfig(configPath, {
+            connectors: emptyConnectors,
             execution: emptyExecution,
             model: codexModel,
             permissions: null,
@@ -213,3 +280,7 @@ describe('generated Hermes config composer', () => {
         expect(config.plugins.enabled).toEqual(['custom-plugin', 'tavern-messenger-platform']);
     });
 });
+
+function envRef(name: string) {
+    return ['${', name, '}'].join('');
+}
