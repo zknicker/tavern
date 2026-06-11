@@ -48,10 +48,12 @@ maintenance cadence:
   become agent work, not reports to review. The daily upkeep automation
   consumes that queue.
 
-Follow-ups only a human can decide (claim verification, retractions, paid or
-private access) are marked with llm-wiki's `owner: user` inventory convention.
-A homepage highlight surfaces the count of user-owned wiki follow-ups; nothing
-pings chat. Everything else drains automatically.
+Escalation is a last resort. When no autonomous workflow can resolve a record
+(claim verification, retraction calls, paid or private access), the crons mark
+it with llm-wiki's `owner: user` convention and a one-line question. Escalations
+surface on the Cortex health page and as a homepage highlight; answering one
+spawns an agent chat that applies the decision to the wiki. Nothing pings chat
+uninvited, and everything else drains automatically.
 
 Wiki automations are created once the wiki hub has at least one active topic,
 so an empty hub does not burn scheduled agent turns.

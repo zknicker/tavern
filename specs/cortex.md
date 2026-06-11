@@ -109,11 +109,15 @@ active topic; see
 The Cortex tab shows:
 
 * topic selector
-* Markdown page list
+* Markdown page list (pure knowledge — dot directories and archived outputs
+  stay out of listings and search)
 * page body
 * file metadata
 * wikilinks and backlinks
 * active and archived topic coverage
+* a health card and health page: derived hub health, managed run state, the
+  latest librarian report per topic, and escalation cards whose answers spawn
+  an agent chat that applies the decision to the wiki
 
 Settings and Memory show hub readiness and counts. They do not expose embedding
 or schema controls.

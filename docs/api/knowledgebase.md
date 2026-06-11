@@ -27,15 +27,21 @@ The Knowledgebase API exposes read-only Cortex access to the llm-wiki hub.
 The Runtime API covers:
 
 * `GET /cortex/status`
+* `GET /cortex/health`
 * `GET /cortex/topics`
 * `GET /cortex/pages?topic=<slug>&includeArchived=true`
 * `GET /cortex/topics/:topic/pages/:path`
 * `GET /cortex/topics/:topic/pages/:path/backlinks`
 * `POST /cortex/search`
 
+`GET /cortex/health` rolls up derived health: hub status, escalations
+(inventory records with `status: proposed` and `owner: user`), the latest
+`.librarian/REPORT.md` per topic, and managed wiki cron run state. Listings and
+search exclude dot directories; report files stay readable by direct path.
+
 The tRPC app router exposes the same reads under `cortex.status`,
-`cortex.topics`, `cortex.list`, `cortex.get`, `cortex.backlinks`, and
-`cortex.search`.
+`cortex.health`, `cortex.topics`, `cortex.list`, `cortex.get`,
+`cortex.backlinks`, and `cortex.search`.
 
 ## Related Docs
 

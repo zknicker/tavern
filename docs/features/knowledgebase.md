@@ -20,9 +20,10 @@ librarian, lessons, output, inventory, datasets, and archive workflows.
   llm-wiki hub.
 * **Markdown pages.** Cortex reads `_index.md`, `config.md`, `log.md`, and
   pages under `wiki/`, `raw/`, `inventory/`, `datasets/`, `output/`, and
-  `inbox/`. Audit and librarian reports under `.audit/` and `.librarian/`
-  appear in the `reports` section. Archived outputs under `output/.archive/`
-  stay hidden.
+  `inbox/`. The page tree stays pure knowledge: dot directories such as
+  `.librarian/` and `.audit/` and archived outputs under `output/.archive/`
+  never appear in listings or search. Report files remain readable by direct
+  path for the health surface.
 * **File browsing.** Cortex shows pages in their wiki directory tree and opens
   Markdown in a read-only document preview.
 * **Backlinks.** Cortex derives inbound references from `[[wikilinks]]` and the
@@ -34,6 +35,12 @@ librarian, lessons, output, inventory, datasets, and archive workflows.
   Markdown files.
 * **Status.** Cortex reports the resolved hub path, config source, topic counts,
   page counts, and filesystem access.
+* **Health.** A status card in the sidebar rolls up Cortex health: hub access,
+  open escalations, latest librarian reports, and managed maintenance run
+  state. Opening it shows the health page with escalation cards — each card is
+  a one-line question with an input, and answering spawns an agent chat that
+  applies the decision to the wiki. Health is derived purely from facts; the
+  wiki files stay the source of truth.
 
 ## Contract
 
