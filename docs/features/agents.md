@@ -16,8 +16,10 @@ page or a sidebar Agents section.
   agent.
 * **Hermes markdown files.** Settings exposes the Hermes-supported markdown
   files: `AGENTS.md` for managed workspace context and `SOUL.md` for the
-  managed Hermes home identity. Runtime seeds `AGENTS.md` only when missing and
-  treats user-saved file contents as live agent state.
+  managed Hermes home identity. `AGENTS.md` opens with a marker-delimited
+  Tavern-managed block that Runtime keeps current; everything outside the
+  markers is user- and agent-owned live state and is never regenerated. The
+  agent may edit both files directly with its file tools.
 * **New chats.** Starting a direct chat belongs to the normal New Chat flow, not
   an agent landing page.
 * **Global tools and skills.** Per-agent tool policy and per-agent skill

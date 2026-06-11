@@ -74,11 +74,19 @@ responds and `/api/ws` accepts a WebSocket connection.
 Runtime exposes the Hermes-supported markdown files as agent files. `AGENTS.md`
 lives in the managed Hermes workspace and carries project/workspace context.
 `SOUL.md` lives in the managed Hermes home and carries identity, voice, and
-personality. Runtime seeds `AGENTS.md` when missing, then preserves user-saved
-file contents.
+personality.
 
-Runtime clears unsupported legacy companion bootstrap files from the managed
-workspace when running the older generated-instructions path. It does not clear
+`AGENTS.md` starts with a marker-delimited, hash-versioned Tavern-managed block
+(`apps/runtime/src/workspace/managed-instructions.ts`). Runtime reconciles the
+block during agent sync: a missing file is seeded, a stale block is replaced in
+place, missing markers re-insert the block at the top, and all content outside
+the markers is preserved byte-for-byte. Users edit the file in settings and the
+agent edits it with file tools; both edit outside the managed block. Runtime
+never writes `SOUL.md`. See [workspace.md](../../specs/workspace.md) for the
+contract.
+
+When a reconcile writes the file, Runtime also clears unsupported legacy
+companion bootstrap files from the managed workspace. It does not clear
 `SOUL.md`.
 
 ## Persistence
