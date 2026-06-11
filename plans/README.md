@@ -16,8 +16,8 @@ options are recorded here so a maintainer can request plans for them later.
 |------|-------|----------|--------|------------|--------|
 | 001  | Gate every deploy on typecheck, lint, and unit tests | P1 | S | — | REJECTED — operator call 2026-06-10: deep in dev, no CI gate wanted yet; revisit before release |
 | 002  | Bound chat event reads with SQL-side visibility and LIMIT | P1 | S | — | DONE (ee67ccfb, reviewed) |
-| 003  | Require a bearer token on Runtime HTTP and WebSocket APIs | P1 | M | — | IN PROGRESS |
-| 004  | Single-chat lookup path for getChat | P2 | M | — | IN PROGRESS (rewritten after first run STOPPED: heavy reads are runtime HTTP calls, not local SQL; now routes through existing `client.chat.get`) |
+| 003  | Require a bearer token on Runtime HTTP and WebSocket APIs | P1 | M | — | DONE (6 commits ending 2d9a561b; reviewed, e2e-verified) |
+| 004  | Single-chat lookup path for getChat | P2 | M | — | DONE (7d4fc56e, reviewed; rewritten once — heavy reads are runtime HTTP calls, now routed through `client.chat.get`) |
 | 005  | Remove dead workspace packages | P3 | S | — | DONE (6aeea01b, reviewed) |
 
 Status values: TODO | IN PROGRESS | DONE | BLOCKED (with one-line reason) |
@@ -34,6 +34,29 @@ REJECTED (with one-line rationale).
   parallel worktrees.
 - 003 is the highest-risk plan (touches the app↔runtime transport); land it
   on its own branch and smoke the dev stack before merging.
+
+## Execution notes and follow-ups (2026-06-11)
+
+- **Plan 003 needed two review revisions**, both now landed: (1) the managed
+  engine env lacked `TAVERN_RUNTIME_TOKEN`, which would have 401-broken cron
+  delivery in production; (2) `saveEnvironmentAgentRuntimeConnection` silently
+  wiped `authJson` on every status-update save, and the Tavern SDK client
+  paths in `apps/server/src/chat/` carried no token. Regression tests pin both
+  (`apps/server/test/agent-runtime-auth-regression.test.ts`).
+- **Discovered: e2e was broken at HEAD before any of this work.** The CLI
+  revamp made the runtime entry dispatch on argv, so the Playwright harness
+  imported it and got a help screen (fixed: `7ae8ed92`). With the harness
+  fixed, **9 e2e tests fail identically at clean v1.4.3 and on this branch**
+  (chats rendering ×4, hermes-chat-contract ×2, mentions ×3) — pre-existing
+  UI/test drift, needs its own pass.
+- **003 follow-ups deliberately deferred**: a token input in the runtime
+  settings panel (today only `TAVERN_RUNTIME_TOKEN` env or the saved
+  connection's `auth` set via API configures the app side — the panel only
+  edits `baseUrl`); token support for SDK *realtime websockets* for external
+  clients (browser `WebSocket` cannot send headers; no first-party path uses
+  it); token rotation and pairing UX.
+- Pre-existing lint failure on main: 2 format errors in
+  `apps/runtime/src/hermes/supervisor.test.ts` (`bun run lint:fix` clears it).
 
 ## Findings without plans (vetted, real, below the cut)
 
