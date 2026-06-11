@@ -34,9 +34,11 @@ test('formatPortBlockers includes owner process details', () => {
 test('waitForRuntimeReady reads the Runtime capabilities health envelope', async () => {
     const originalFetch = globalThis.fetch;
     const requestedUrls = [];
+    const sentAuthHeaders = [];
 
-    globalThis.fetch = async (url) => {
+    globalThis.fetch = async (url, init) => {
         requestedUrls.push(String(url));
+        sentAuthHeaders.push(init?.headers?.authorization ?? null);
         return Response.json({
             health: {
                 ok: true,
@@ -47,12 +49,14 @@ test('waitForRuntimeReady reads the Runtime capabilities health envelope', async
     };
 
     try {
-        await waitForRuntimeReady(undefined, 500);
+        await waitForRuntimeReady(undefined, 500, { token: 'dev-token' });
     } finally {
         globalThis.fetch = originalFetch;
     }
 
     assert.deepEqual(requestedUrls, ['http://127.0.0.1:18790/capabilities']);
+    // The runtime gates /capabilities behind a bearer token; the probe must send it.
+    assert.deepEqual(sentAuthHeaders, ['Bearer dev-token']);
 });
 
 test('createDevStackEnvironment uses shared dev state outside packaged app state', () => {

@@ -121,13 +121,17 @@ export async function waitForPort(port, host = '127.0.0.1', timeoutMs = 30_000) 
 
 export async function waitForRuntimeReady(
     runtimeUrl = getRuntimeBaseUrl(),
-    timeoutMs = 10 * 60 * 1000
+    timeoutMs = 10 * 60 * 1000,
+    { token } = {}
 ) {
     const deadline = Date.now() + timeoutMs;
+    // The runtime enforces a bearer token on every route except /health, so the
+    // readiness probe must authenticate or it 401s forever and the stack hangs.
+    const init = token ? { headers: { authorization: `Bearer ${token}` } } : undefined;
 
     while (Date.now() < deadline) {
         try {
-            const response = await fetch(`${runtimeUrl}/capabilities`);
+            const response = await fetch(`${runtimeUrl}/capabilities`, init);
             if (response.ok) {
                 const capabilities = await response.json();
                 if (capabilities?.health?.ok === true) {

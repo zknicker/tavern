@@ -339,7 +339,9 @@ export class DevStackController extends EventEmitter {
             startWebsite();
             startServerDependencyPrebuild();
             startDesktopPrebuild();
-            await waitForRuntimeReady(runtimeUrl);
+            await waitForRuntimeReady(runtimeUrl, undefined, {
+                token: devStackEnvironment.TAVERN_RUNTIME_TOKEN,
+            });
             this.update((snapshot) => {
                 snapshot.processes.runtime.status = 'running';
             });
