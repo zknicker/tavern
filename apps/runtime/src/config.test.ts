@@ -7,7 +7,6 @@ describe('runtime config paths', () => {
     const originalHome = process.env.HOME;
     const originalHermesHome = process.env.TAVERN_HERMES_HOME;
     const originalRuntimeRoot = process.env.TAVERN_RUNTIME_ROOT;
-    const originalArgv1 = process.argv[1];
     let home: string;
 
     beforeEach(async () => {
@@ -21,7 +20,6 @@ describe('runtime config paths', () => {
         restoreEnv('HOME', originalHome);
         restoreEnv('TAVERN_HERMES_HOME', originalHermesHome);
         restoreEnv('TAVERN_RUNTIME_ROOT', originalRuntimeRoot);
-        process.argv[1] = originalArgv1;
         vi.resetModules();
         await fs.rm(home, { force: true, recursive: true });
     });
@@ -46,17 +44,6 @@ describe('runtime config paths', () => {
         const config = await import('./config');
 
         expect(config.RUNTIME_ROOT).toBe(path.join(home, '.tavern', 'runtime'));
-    });
-
-    it('uses the Homebrew service root for packaged Homebrew binaries by default', async () => {
-        // biome-ignore lint/performance/noDelete: assigning undefined to process.env coerces to the string "undefined"; delete is the only way to unset.
-        delete process.env.TAVERN_RUNTIME_ROOT;
-        process.argv[1] = '/opt/homebrew/Cellar/tavern-runtime/1.4.4/bin/tavern';
-        vi.resetModules();
-
-        const config = await import('./config');
-
-        expect(config.RUNTIME_ROOT).toBe('/opt/homebrew/var/tavern/runtime');
     });
 });
 

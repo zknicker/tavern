@@ -138,10 +138,6 @@ TAVERN_RUNTIME_ROOT=~/.tavern/runtime
 TAVERN_HERMES_PORT=9119
 ```
 
-The Homebrew package uses `<brew-prefix>/var/tavern/runtime` for the service
-root, and the installed `tavern` CLI defaults to that same root so `tavern
-status`, `tavern token`, and app pairing read the service token.
-
 For a server that accepts app connections from another machine, set the host in
 the service environment:
 
