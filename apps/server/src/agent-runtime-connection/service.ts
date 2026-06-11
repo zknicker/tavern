@@ -53,6 +53,22 @@ function toSecureRuntimeUrl(baseUrl: string) {
 
 let currentAgentRuntimeUrl = getAgentRuntimeEnvironmentBaseUrl();
 
+interface RuntimeOwnedStatus {
+    capabilities: AgentRuntimeConnection['capabilities'];
+    lastError: null | string;
+    runtimeVersion: null | string;
+}
+
+const runtimeOwnedStatusById = new Map<string, RuntimeOwnedStatus>();
+
+function cacheRuntimeOwnedStatus(runtimeId: string, status: RuntimeOwnedStatus) {
+    runtimeOwnedStatusById.set(runtimeId, status);
+}
+
+function readCachedRuntimeOwnedStatus(runtimeId: string): RuntimeOwnedStatus | null {
+    return runtimeOwnedStatusById.get(runtimeId) ?? null;
+}
+
 function toAgentRuntimeConnection(input: {
     appVersion?: string;
     authConfigured: boolean;
@@ -97,31 +113,38 @@ function toAgentRuntimeConnection(input: {
     };
 }
 
+function toRuntimeOwnedStatus(
+    capabilities: Awaited<ReturnType<typeof checkAgentRuntimeCapabilities>>['capabilities'],
+    runtimeId: string
+): RuntimeOwnedStatus {
+    return {
+        capabilities: capabilities.capabilities.map((capability) =>
+            toAppCapabilityStatus(capability, runtimeId)
+        ),
+        lastError: null,
+        runtimeVersion: capabilities.info.version,
+    };
+}
+
 async function getRuntimeOwnedStatus(input: {
     authJson?: null | string;
     baseUrl: string;
     runtimeId: string;
-}): Promise<{
-    capabilities: AgentRuntimeConnection['capabilities'];
-    lastError: null | string;
-    runtimeVersion: null | string;
-}> {
+}): Promise<RuntimeOwnedStatus> {
     let client: ReturnType<typeof createAgentRuntimeClientForConnection> | null = null;
     try {
         client = createAgentRuntimeClientForConnection({
             authJson: input.authJson,
             baseUrl: input.baseUrl,
         });
-        const { capabilities, info } = await client.listCapabilities();
-        return {
-            capabilities: capabilities.map((capability) =>
-                toAppCapabilityStatus(capability, input.runtimeId)
-            ),
-            lastError: null,
-            runtimeVersion: info.version,
-        };
+        const capabilities = await client.listCapabilities();
+        const status = toRuntimeOwnedStatus(capabilities, input.runtimeId);
+        cacheRuntimeOwnedStatus(input.runtimeId, status);
+        return status;
     } catch (error) {
-        return { capabilities: [], lastError: toErrorMessage(error), runtimeVersion: null };
+        const status = { capabilities: [], lastError: toErrorMessage(error), runtimeVersion: null };
+        cacheRuntimeOwnedStatus(input.runtimeId, status);
+        return status;
     } finally {
         client?.close();
     }
@@ -179,9 +202,10 @@ export function getCurrentAgentRuntimeUrl() {
     return currentAgentRuntimeUrl;
 }
 
-export async function loadAgentRuntimeConnection() {
+export async function loadAgentRuntimeConnection(input?: { refreshStatus?: boolean }) {
     const saved = await getDefaultAgentRuntimeConnection();
     const environmentBaseUrl = getAgentRuntimeEnvironmentBaseUrl();
+    const refreshStatus = input?.refreshStatus ?? true;
 
     currentAgentRuntimeUrl = environmentBaseUrl ?? saved?.baseUrl ?? null;
 
@@ -189,6 +213,24 @@ export async function loadAgentRuntimeConnection() {
         const checkedAt = new Date().toISOString();
         const environmentToken = getAgentRuntimeEnvironmentToken();
         const environmentAuth = environmentToken ? { token: environmentToken } : undefined;
+
+        if (!refreshStatus) {
+            const record = getEnvironmentAgentRuntimeConnection();
+            return toAgentRuntimeConnection({
+                baseUrl: environmentBaseUrl,
+                authConfigured: environmentAuth !== undefined,
+                enabled: true,
+                id: record?.id ?? 'environment',
+                isActive: true,
+                lastCheckedAt: record?.lastCheckedAt ?? null,
+                lastError: record?.lastError ?? null,
+                lastSyncedAt: record?.lastSyncedAt ?? null,
+                name: record?.name ?? 'Tavern Runtime',
+                runtimeVersion: null,
+                source: 'environment',
+            });
+        }
+
         const checked = await checkAgentRuntimeConnection({
             auth: environmentAuth,
             baseUrl: environmentBaseUrl,
@@ -220,6 +262,22 @@ export async function loadAgentRuntimeConnection() {
     }
 
     if (saved) {
+        if (!refreshStatus) {
+            return toAgentRuntimeConnection({
+                authConfigured: parseAgentRuntimeConnectionAuth(saved.authJson) !== null,
+                baseUrl: saved.baseUrl,
+                enabled: saved.enabled,
+                id: saved.id,
+                isActive: saved.isActive,
+                lastCheckedAt: saved.lastCheckedAt,
+                lastError: saved.lastError,
+                lastSyncedAt: saved.lastSyncedAt,
+                name: saved.name,
+                runtimeVersion: null,
+                source: 'saved',
+            });
+        }
+
         return await toSavedAgentRuntimeConnection(saved);
     }
 
@@ -241,19 +299,22 @@ export async function loadAgentRuntimeConnection() {
     });
 }
 
-export async function getAgentRuntimeConnection() {
+export async function getAgentRuntimeConnection(input?: { refreshStatus?: boolean }) {
     const saved = await getDefaultAgentRuntimeConnection();
     const environmentBaseUrl = getAgentRuntimeEnvironmentBaseUrl();
+    const refreshStatus = input?.refreshStatus ?? true;
 
     if (environmentBaseUrl) {
         const environmentRecord =
             getEnvironmentAgentRuntimeConnection() ?? (await getDefaultAgentRuntimeConnection());
         const runtimeId = environmentRecord?.id ?? agentRuntimeConnectionId;
-        const runtimeStatus = await getRuntimeOwnedStatus({
-            authJson: environmentRecord?.authJson,
-            baseUrl: environmentBaseUrl,
-            runtimeId,
-        });
+        const runtimeStatus = refreshStatus
+            ? await getRuntimeOwnedStatus({
+                  authJson: environmentRecord?.authJson,
+                  baseUrl: environmentBaseUrl,
+                  runtimeId,
+              })
+            : readCachedRuntimeOwnedStatus(runtimeId);
 
         return toAgentRuntimeConnection({
             baseUrl: environmentBaseUrl,
@@ -263,17 +324,35 @@ export async function getAgentRuntimeConnection() {
             enabled: true,
             id: runtimeId,
             isActive: true,
-            capabilities: runtimeStatus.capabilities,
+            capabilities: runtimeStatus?.capabilities,
             lastCheckedAt: environmentRecord?.lastCheckedAt ?? null,
-            lastError: runtimeStatus.lastError,
+            lastError: environmentRecord?.lastError ?? runtimeStatus?.lastError ?? null,
             lastSyncedAt: environmentRecord?.lastSyncedAt ?? null,
             name: 'Tavern Runtime',
-            runtimeVersion: runtimeStatus.runtimeVersion,
+            runtimeVersion: runtimeStatus?.runtimeVersion,
             source: 'environment',
         });
     }
 
     if (saved) {
+        if (!refreshStatus) {
+            const runtimeStatus = readCachedRuntimeOwnedStatus(saved.id);
+            return toAgentRuntimeConnection({
+                authConfigured: parseAgentRuntimeConnectionAuth(saved.authJson) !== null,
+                baseUrl: saved.baseUrl,
+                capabilities: runtimeStatus?.capabilities,
+                enabled: saved.enabled,
+                id: saved.id,
+                isActive: saved.isActive,
+                lastCheckedAt: saved.lastCheckedAt,
+                lastError: saved.lastError ?? runtimeStatus?.lastError ?? null,
+                lastSyncedAt: saved.lastSyncedAt,
+                name: saved.name,
+                runtimeVersion: runtimeStatus?.runtimeVersion,
+                source: 'saved',
+            });
+        }
+
         return await toSavedAgentRuntimeConnection(saved);
     }
 
@@ -523,6 +602,11 @@ export async function markAgentRuntimeConnectionFailure(input: {
 }) {
     const environmentRecord = getEnvironmentAgentRuntimeConnection();
     const message = toErrorMessage(input.error);
+    cacheRuntimeOwnedStatus(input.connectionId, {
+        capabilities: [],
+        lastError: message,
+        runtimeVersion: null,
+    });
 
     if (environmentRecord?.id === input.connectionId) {
         saveEnvironmentAgentRuntimeConnection({
@@ -557,6 +641,14 @@ export async function markAgentRuntimeConnectionFailure(input: {
 
 export async function markAgentRuntimeConnectionReachable(input: { connectionId: string }) {
     const environmentRecord = getEnvironmentAgentRuntimeConnection();
+    const cachedStatus = readCachedRuntimeOwnedStatus(input.connectionId);
+
+    if (cachedStatus) {
+        cacheRuntimeOwnedStatus(input.connectionId, {
+            ...cachedStatus,
+            lastError: null,
+        });
+    }
 
     if (environmentRecord?.id === input.connectionId) {
         saveEnvironmentAgentRuntimeConnection({
@@ -600,7 +692,9 @@ export async function confirmAgentRuntimeConnection() {
         const checked = await checkAgentRuntimeCapabilities(record);
         const runtimeId = checked.capabilities.info.agentRuntimeId;
         const runtimeName = checked.capabilities.info.name;
+        const status = toRuntimeOwnedStatus(checked.capabilities, runtimeId);
         const environmentRecord = getEnvironmentAgentRuntimeConnection();
+        cacheRuntimeOwnedStatus(runtimeId, status);
 
         if (environmentRecord) {
             saveEnvironmentAgentRuntimeConnection({

@@ -8,7 +8,7 @@ import { emitAgentRuntimeUpdated } from '../invalidation-events.ts';
 import { publicProcedure } from '../trpc.ts';
 
 export const checkAgentRuntimeHealthRoute = publicProcedure.mutation(async () => {
-    const connection = await getAgentRuntimeConnection();
+    const connection = await getAgentRuntimeConnection({ refreshStatus: false });
 
     if (!connection) {
         return agentRuntimeConnectionStatusSchema.parse({
@@ -21,7 +21,7 @@ export const checkAgentRuntimeHealthRoute = publicProcedure.mutation(async () =>
     }
 
     if (await confirmAgentRuntimeConnection()) {
-        const refreshedConnection = await getAgentRuntimeConnection();
+        const refreshedConnection = await getAgentRuntimeConnection({ refreshStatus: false });
         const capabilities = refreshedConnection?.capabilities ?? connection.capabilities;
 
         refreshAgentRuntimeEventSync();
@@ -36,7 +36,7 @@ export const checkAgentRuntimeHealthRoute = publicProcedure.mutation(async () =>
         });
     }
 
-    const refreshedConnection = await getAgentRuntimeConnection();
+    const refreshedConnection = await getAgentRuntimeConnection({ refreshStatus: false });
     const capabilities = refreshedConnection?.capabilities ?? connection.capabilities;
 
     refreshAgentRuntimeEventSync();

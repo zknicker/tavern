@@ -1,7 +1,8 @@
 import { AlertCircleIcon, InformationCircleIcon } from '@hugeicons/core-free-icons';
+import { Refresh04Icon } from '@hugeicons-pro/core-solid-rounded';
 import { useQueryClient } from '@tanstack/react-query';
 import * as React from 'react';
-import { Alert, AlertDescription, AlertTitle } from '../../../components/ui/alert.tsx';
+import { Alert, AlertAction, AlertDescription, AlertTitle } from '../../../components/ui/alert.tsx';
 import { BadgeDivider } from '../../../components/ui/badge-divider.tsx';
 import { Card, CardFrame } from '../../../components/ui/card.tsx';
 import { Icon } from '../../../components/ui/icon.tsx';
@@ -14,6 +15,7 @@ import { type AgentRuntimeConnectionOutput, trpc } from '../../../lib/trpc.tsx';
 import { HermesCapabilitiesSummary } from './hermes-capabilities-table.tsx';
 
 interface AgentRuntimeSettingsPanelProps {
+    isChecking?: boolean;
     runtime: AgentRuntimeConnectionOutput;
 }
 
@@ -199,7 +201,17 @@ function MissingRuntimeRow() {
     );
 }
 
-export function AgentRuntimeSettingsPanel({ runtime }: AgentRuntimeSettingsPanelProps) {
+export function AgentRuntimeSettingsPanel({
+    isChecking = false,
+    runtime,
+}: AgentRuntimeSettingsPanelProps) {
+    const queryClient = useQueryClient();
+    const healthMutation = trpc.agentRuntime.checkHealth.useMutation({
+        onSettled: async () => {
+            await queryClient.invalidateQueries();
+        },
+    });
+
     return (
         <div className="grid gap-8">
             <section>
@@ -207,8 +219,35 @@ export function AgentRuntimeSettingsPanel({ runtime }: AgentRuntimeSettingsPanel
                 {runtime?.lastError ? (
                     <Alert className="mb-4" variant="error">
                         <Icon icon={AlertCircleIcon} />
-                        <AlertTitle>Tavern Runtime is disconnected.</AlertTitle>
-                        <AlertDescription>{runtime.lastError}</AlertDescription>
+                        <AlertTitle>Tavern Runtime is unreachable.</AlertTitle>
+                        <AlertDescription>
+                            Check that this computer can reach {runtime.baseUrl}. If the Runtime is
+                            on another machine, verify the host, network, and credentials.
+                            <span className="mt-1 block font-mono text-xs">
+                                {runtime.lastError}
+                            </span>
+                        </AlertDescription>
+                        <AlertAction>
+                            <Button
+                                loading={healthMutation.isPending}
+                                onClick={() => healthMutation.mutate()}
+                                size="sm"
+                                variant="destructive-soft"
+                            >
+                                <Icon icon={Refresh04Icon} />
+                                Check now
+                            </Button>
+                        </AlertAction>
+                    </Alert>
+                ) : null}
+                {runtime && isChecking && !runtime.lastError ? (
+                    <Alert className="mb-4" variant="info">
+                        <Icon className="animate-spin" icon={Refresh04Icon} />
+                        <AlertTitle>Checking Tavern Runtime reachability.</AlertTitle>
+                        <AlertDescription>
+                            Tavern is open with synced data while it checks {runtime.baseUrl}. This
+                            can take up to 10 seconds when the Runtime host is unreachable.
+                        </AlertDescription>
                     </Alert>
                 ) : null}
                 <CardFrame>

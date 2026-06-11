@@ -80,6 +80,74 @@ test('unreachable saved Runtime keeps its URL without reporting a version mismat
     assert.equal(connection?.versionStatus, 'unknown');
 });
 
+test('startup load can use a saved Runtime without refreshing capabilities', async () => {
+    process.env.DATABASE_PATH = join(
+        mkdtempSync(join(tmpdir(), 'tavern-agent-runtime-connection-test-')),
+        'test.sqlite'
+    );
+    process.env.TAVERN_RUNTIME_URL = undefined;
+
+    const [{ ensureDatabaseSchema }, agentRuntimeConnection, storage] = await Promise.all([
+        import('../src/db/bootstrap.ts'),
+        import('../src/agent-runtime-connection/service.ts'),
+        import('../src/storage/agent-runtime-connections.ts'),
+    ]);
+
+    await ensureDatabaseSchema();
+    await storage.saveAgentRuntimeConnection({
+        baseUrl: 'https://zachs-mac-mini.taila0b849.ts.net:18790',
+        enabled: true,
+        id: 'tavern-hermes-managed',
+        isActive: true,
+        lastCheckedAt: null,
+        lastError: null,
+        name: 'Tavern Runtime',
+    });
+
+    const connection = await agentRuntimeConnection.loadAgentRuntimeConnection({
+        refreshStatus: false,
+    });
+
+    assert.equal(connection?.baseUrl, 'https://zachs-mac-mini.taila0b849.ts.net:18790');
+    assert.equal(connection?.runtimeVersion, null);
+    assert.equal(agentRuntimeConnection.getCurrentAgentRuntimeUrl(), connection?.baseUrl);
+    assert.equal(listCapabilities.mock.calls.length, 0);
+});
+
+test('connection snapshot can read a saved Runtime without refreshing capabilities', async () => {
+    process.env.DATABASE_PATH = join(
+        mkdtempSync(join(tmpdir(), 'tavern-agent-runtime-connection-test-')),
+        'test.sqlite'
+    );
+    process.env.TAVERN_RUNTIME_URL = undefined;
+
+    const [{ ensureDatabaseSchema }, agentRuntimeConnection, storage] = await Promise.all([
+        import('../src/db/bootstrap.ts'),
+        import('../src/agent-runtime-connection/service.ts'),
+        import('../src/storage/agent-runtime-connections.ts'),
+    ]);
+
+    await ensureDatabaseSchema();
+    await storage.saveAgentRuntimeConnection({
+        baseUrl: 'https://zachs-mac-mini.taila0b849.ts.net:18790',
+        enabled: true,
+        id: 'tavern-hermes-managed',
+        isActive: true,
+        lastCheckedAt: null,
+        lastError: 'connect timeout',
+        name: 'Tavern Runtime',
+    });
+
+    const connection = await agentRuntimeConnection.getAgentRuntimeConnection({
+        refreshStatus: false,
+    });
+
+    assert.equal(connection?.baseUrl, 'https://zachs-mac-mini.taila0b849.ts.net:18790');
+    assert.equal(connection?.lastError, 'connect timeout');
+    assert.equal(connection?.runtimeVersion, null);
+    assert.equal(listCapabilities.mock.calls.length, 0);
+});
+
 test('Tavern Runtime environment override does not replace the saved Runtime URL', async () => {
     process.env.DATABASE_PATH = join(
         mkdtempSync(join(tmpdir(), 'tavern-agent-runtime-connection-test-')),

@@ -2,5 +2,5 @@ import { getAgentRuntimeConnection } from '../../agent-runtime-connection/servic
 import { publicProcedure } from '../trpc.ts';
 
 export const getAgentRuntimeRoute = publicProcedure.query(async () => {
-    return await getAgentRuntimeConnection();
+    return await getAgentRuntimeConnection({ refreshStatus: false });
 });

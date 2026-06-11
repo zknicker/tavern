@@ -52,6 +52,10 @@ function deriveRuntimeConnectionStatus(input: {
         return 'unreachable';
     }
 
+    if (input.connection.runtimeVersion === null && input.connection.capabilities.length === 0) {
+        return 'checking';
+    }
+
     return input.connection.runtimeVersion && input.connection.versionStatus === 'mismatched'
         ? 'version-mismatch'
         : 'reachable';

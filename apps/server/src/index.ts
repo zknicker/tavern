@@ -9,6 +9,7 @@ import {
 } from './agent-runtime-connection/service.ts';
 import { createApiContext } from './api/context.ts';
 import { apiEventSchedulerIntervals, startApiEventScheduler } from './api/events-scheduler.ts';
+import { emitAgentRuntimeUpdated } from './api/invalidation-events.ts';
 import { appRouter } from './api/router.ts';
 import { startTrpcWebSocketServer } from './api/ws.ts';
 import { env } from './config/env.ts';
@@ -39,8 +40,7 @@ async function start() {
 
     logStartupBanner('🎰 Tavern Server', 'Booting Tavern Runtime services');
     await ensureDatabaseSchema();
-    await loadAgentRuntimeConnection();
-    const agentRuntimeReachable = await confirmAgentRuntimeConnection();
+    await loadAgentRuntimeConnection({ refreshStatus: false });
 
     const app = Fastify({
         logger: false,
@@ -66,25 +66,17 @@ async function start() {
         status: 'ok',
     }));
 
-    await startJobsManager();
-    if (agentRuntimeReachable) {
-        await syncAgentRuntimeAgents().catch((error) => {
-            console.warn('[tavern] failed to sync runtime agents on startup', error);
-        });
-    }
-
     await app.listen({
         host: '0.0.0.0',
         port: env.SERVER_PORT,
     });
 
+    await startJobsManager();
     startTrpcWebSocketServer(app.server);
     startApiEventScheduler();
     startAgentRuntimeEventSync();
-    void confirmAgentRuntimeConnection().catch((error) => {
-        console.warn('[tavern] failed to refresh runtime capabilities', error);
-    });
-    const observedAgentRuntimeCount = (await listConfiguredAgentRuntimeConnections()).length;
+    void refreshRuntimeAfterStartup();
+    const configuredAgentRuntimeCount = (await listConfiguredAgentRuntimeConnections()).length;
 
     logStartupSection('Tavern Runtime');
     logStartupDetail('🗄️', 'Database', shortenHomePath(env.DATABASE_PATH));
@@ -95,8 +87,8 @@ async function start() {
     logStartupDetail(
         '👀',
         'Runtime observe',
-        agentRuntimeReachable && observedAgentRuntimeCount > 0
-            ? `${observedAgentRuntimeCount} connection(s)`
+        configuredAgentRuntimeCount > 0
+            ? `${configuredAgentRuntimeCount} connection(s); refreshing`
             : 'degraded'
     );
     logStartupDetail(
@@ -105,6 +97,22 @@ async function start() {
         formatDurationMs(apiEventSchedulerIntervals.usageIntervalMs)
     );
     logStartupComplete('Tavern is ready');
+}
+
+async function refreshRuntimeAfterStartup() {
+    const agentRuntimeReachable = await confirmAgentRuntimeConnection().catch((error) => {
+        console.warn('[tavern] failed to refresh runtime capabilities', error);
+        return false;
+    });
+    emitAgentRuntimeUpdated();
+
+    if (!agentRuntimeReachable) {
+        return;
+    }
+
+    await syncAgentRuntimeAgents().catch((error) => {
+        console.warn('[tavern] failed to sync runtime agents on startup', error);
+    });
 }
 
 start().catch((error) => {

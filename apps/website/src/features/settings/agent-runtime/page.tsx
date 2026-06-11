@@ -6,9 +6,14 @@ export function AgentRuntimeSettings() {
     useRuntimeCapabilityEvents();
     const runtime = useRuntimeConnection();
 
-    if (runtime.status === 'checking') {
+    if (runtime.status === 'checking' && !runtime.connection) {
         return <p className="text-muted-foreground text-sm">Loading Tavern Runtime...</p>;
     }
 
-    return <AgentRuntimeSettingsPanel runtime={runtime.connection} />;
+    return (
+        <AgentRuntimeSettingsPanel
+            isChecking={runtime.status === 'checking'}
+            runtime={runtime.connection}
+        />
+    );
 }

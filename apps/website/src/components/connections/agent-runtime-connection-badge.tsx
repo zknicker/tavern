@@ -47,7 +47,7 @@ export function AgentRuntimeConnectionBadge() {
                     }`}
                 />
             </span>
-            {isLive ? 'LIVE' : 'DISCONNECTED'}
+            {isLive ? 'LIVE' : isChecking ? 'CHECKING' : 'DISCONNECTED'}
         </div>
     );
 }
