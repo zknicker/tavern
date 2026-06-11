@@ -7,21 +7,19 @@ read_when:
 
 # Cortex Lifecycle
 
-Cortex is the agent's durable knowledge: plain Markdown topic wikis. This doc
-is the loop in one place — how material you hand the agent becomes compiled,
-cross-linked knowledge, and how that knowledge stays healthy without you
-reviewing reports.
+Cortex is the agent's durable knowledge: plain Markdown topic wikis. This is
+the loop — material in, compiled knowledge out, health maintained without
+report review.
 
-Four principles shape everything below:
+Principles:
 
 * **Files are the source of truth.** Tavern's database holds only derived,
-  rebuildable projections of the wiki — never authoritative state.
-* **The page tree stays pure knowledge.** Operational artifacts (scan results,
-  reports) live in dot directories and never appear in browsing or search.
+  rebuildable projections.
+* **The page tree stays pure knowledge.** Operational artifacts live in dot
+  directories, hidden from browsing and search.
 * **Maintenance is agent work.** Findings become wiki edits or queued
-  follow-ups, not reports for you to review.
-* **Escalation is a last resort.** The agent asks you only when no autonomous
-  workflow can resolve something, and nothing pings chat uninvited.
+  follow-ups, not reports.
+* **Escalation is a last resort.** Nothing pings chat uninvited.
 
 ## The Shape
 
@@ -39,8 +37,6 @@ hub
 
 ## From "Remember This" To Knowledge
 
-Ingest is immediate; synthesis is scheduled but never far behind.
-
 ```
 you: "remember this" ──► agent ingests in the current turn
                               │
@@ -57,24 +53,19 @@ you: "remember this" ──► agent ingests in the current turn
                    cross-linked, cited back to raw/
 ```
 
-The gap between ingest and compile costs recall almost nothing: the raw file
-holds the full fetched content (article text, video transcript) and is indexed
-immediately, so the agent can answer from it before synthesis. Compiling adds
-what raw files lack — synthesis across sources, confidence ratings, and links
-that weave the concept into existing articles.
+The ingest-to-compile gap barely costs recall: raw files hold full fetched
+content and are indexed immediately. Compiling adds what raw lacks — synthesis
+across sources, confidence ratings, links into existing articles.
 
-So a research dump compiles within the hour, and a stray source or two waits
-at most until the next morning's run. Details that keep this calm: a
-15-minute settle window lets batch ingests finish before compile fires, a
-one-hour cooldown keeps triggers from stacking, and pausing the upkeep
-automation pauses the pending-source trigger too. When the agent researches a
-topic itself, it compiles inline in the same run — the trigger path exists for
-material that arrives without an agent run attached.
+Net: research dumps compile within the hour; a stray source or two waits at
+most until the next morning. A settle window lets batch ingests finish first,
+a one-hour cooldown stops trigger stacking, and pausing upkeep pauses the
+trigger. Agent-driven research compiles inline in the same run.
 
 ## Staying Healthy
 
-Three managed automations divide the upkeep. They are created automatically
-once the hub has an active topic, and Runtime repairs any drift hourly.
+Three managed automations, created once the hub has an active topic, drift-
+repaired hourly:
 
 ```
 weekly: Wiki lint            weekly: Wiki librarian         daily: Wiki upkeep
@@ -84,11 +75,10 @@ weekly: Wiki lint            weekly: Wiki librarian         daily: Wiki upkeep
                              │   as inventory/ records      │ highest priority first
 ```
 
-The librarian writes machine-readable scan results per topic, then acts on them
-in the same run: mechanical problems get fixed, articles with newer uncompiled
-sources get recompiled, and judgment items (unverified claims, thin coverage,
-dedup candidates) land in `inventory/` as proposed records. The daily upkeep
-run drains that queue.
+The librarian writes machine-readable scan results, then acts in the same run:
+mechanical fixes, recompiles where raw already holds newer material, and
+judgment items (unverified claims, thin coverage, dedup candidates) filed as
+proposed inventory. Daily upkeep drains that queue.
 
 ## When The Agent Needs You
 
@@ -107,15 +97,15 @@ inventory record the agent cannot resolve autonomously
      agent chat (not pinned) applies it to the wiki
 ```
 
-That is the only human gate in the loop. Everything else drains automatically,
-and an unanswered escalation blocks only its own record.
+The only human gate in the loop. An unanswered escalation blocks only its own
+record.
 
 ## Watching It Work
 
-The sidebar health card rolls the whole loop into one state — healthy, needs
-your call, or hub unreachable. Opening it shows escalation cards, the latest
-librarian scan per topic with per-article staleness and quality scores, managed
-automation run state, and trend charts.
+The sidebar health card rolls everything into one state — healthy, needs your
+call, or hub unreachable. The health page behind it: escalation cards, latest
+librarian scan per topic (per-article scores and flags), automation run state,
+trend charts.
 
 ```
 wiki files (source of truth)
@@ -130,7 +120,7 @@ wiki files (source of truth)
 
 | Work | Runs | Agent run? |
 | --- | --- | --- |
-| Ingest | in chat, when you hand the agent material | the current turn |
+| Ingest | in chat, on request | the current turn |
 | Compile check | every 15 minutes (Runtime job) | no — filesystem only |
 | Wiki upkeep | daily 4:30, sooner at 5+ pending sources | yes |
 | Wiki lint | weekly, Monday 5:00 | yes |
@@ -138,12 +128,12 @@ wiki files (source of truth)
 | Health history sampler | hourly (Runtime job) | no |
 | Automation reconciler | hourly and at startup (Runtime job) | no |
 
-Deeper workflows — audits, source refresh, research runs, generated outputs,
-dataset indexing, topic archiving — run on demand when you ask in chat.
+Audits, source refresh, research runs, outputs, dataset indexing, and topic
+archiving run on demand in chat.
 
 ## Related Docs
 
 * [Cortex](knowledgebase.md) — browsing, search, backlinks, hub resolution
-* [Automations](automations.md#managed-automations) — the managed automation
+* [Automations](automations.md#managed-automations) — managed automation
   contract and guardrails
 * [Cortex spec](../../specs/cortex.md) — normative design
