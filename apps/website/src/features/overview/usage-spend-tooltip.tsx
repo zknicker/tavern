@@ -1,16 +1,31 @@
-import type { TooltipProps } from 'recharts';
+interface UsageSpendTooltipEntry {
+    color?: string;
+    dataKey?: number | string;
+    name?: number | string;
+    value?: number | string;
+}
 
-export function UsageSpendTooltip({ active, payload, label }: TooltipProps<number, string>) {
+export function UsageSpendTooltip({
+    active,
+    label,
+    payload,
+}: {
+    active?: boolean;
+    label?: unknown;
+    payload?: readonly UsageSpendTooltipEntry[];
+}) {
     if (!(active && payload?.length)) {
         return null;
     }
 
-    const total = payload.reduce((sum, entry) => sum + (entry.value ?? 0), 0);
-    const nonZero = payload.filter((entry) => (entry.value ?? 0) > 0);
+    const total = payload.reduce((sum, entry) => sum + Number(entry.value ?? 0), 0);
+    const nonZero = payload.filter((entry) => Number(entry.value ?? 0) > 0);
 
     return (
         <div className="rounded-lg border border-border/50 bg-popover/85 px-3 py-2.5 shadow-xl backdrop-blur-md">
-            <p className="mb-1.5 font-medium text-caption text-muted-foreground">{label}</p>
+            <p className="mb-1.5 font-medium text-caption text-muted-foreground">
+                {String(label ?? '')}
+            </p>
             <div className="space-y-1">
                 {nonZero.map((entry) => (
                     <div className="flex items-center justify-between gap-6" key={entry.dataKey}>
