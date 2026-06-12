@@ -988,7 +988,6 @@ export const cortexStatusSchema = z.object({
 });
 
 export const cortexTodoSchema = z.object({
-    owner: z.string().nullable(),
     path: z.string().trim().min(1),
     priority: z.string().nullable(),
     question: z.string().nullable(),
@@ -1063,7 +1062,6 @@ export const cortexHealthHistoryEntrySchema = z.object({
     articlesScanned: z.number().nullable(),
     avgQuality: z.number().nullable(),
     avgStaleness: z.number().nullable(),
-    escalationsOpen: z.number(),
     lowQualityCount: z.number().nullable(),
     recordedAt: z.string().datetime(),
     scanId: z.string().nullable(),

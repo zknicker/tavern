@@ -22,7 +22,7 @@ why the thing does or does not belong in todos.
 Good fits:
 
 - The user wants the wiki to remember something across sessions.
-- The item has state, priority, owner, next action, or a follow-up date.
+- The item has state, priority, next action, or a follow-up date.
 - The item is a real object, SKU, part, host, tool, asset, or component whose
   owned/wanted/selected/rejected state should be listed and revisited.
 - The item is a candidate source/corpus/entity/question that may be acted on
@@ -249,7 +249,7 @@ Recommended fields:
 - `sources`
 - `confidence`
 - `origin` for migrated records
-- `owner` if a human or project owns the next action
+
 
 Kinds:
 
@@ -277,13 +277,19 @@ For `kind: item`, use optional fields when they help list or filter the record:
 Statuses:
 
 - `proposed`: open — discovered and waiting to be worked
-- `blocked`: cannot proceed; the record body carries the reason and stays as
-  the memory of what was tried
+- `blocked`: cannot proceed right now; the record body carries the reason.
+  Blocked is transient, not an archive: the weekly librarian retries records
+  whose blocker has likely cleared and resolves the rest into the wiki —
+  the failure state is written into the affected articles (lowered
+  confidence, `verified: false`, a short note) and the record is deleted.
+  No record stays blocked past roughly thirty days.
 
 There is no completed status. A finished todo is deleted: append a log.md
 entry of the form `## [YYYY-MM-DD] todo | <record title> — <one-line outcome>`,
 update `todos/_index.md`, and remove the record file. The log entry is the
-durable history; the work itself (articles, merges, ingests) is the proof.
+durable history; the work itself (articles, merges, ingests) is the proof —
+and for permanently unachievable work, the failure state marked in the
+articles is the proof.
 
 Priorities:
 

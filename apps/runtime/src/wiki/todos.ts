@@ -34,14 +34,9 @@ export async function listWikiTodos(): Promise<CortexTodo[]> {
     }
 }
 
-/** A todo parked on the user — llm-wiki's `status: proposed` + `owner: user`. */
-export function isUserTodo(todo: CortexTodo): boolean {
-    return todo.owner === 'user' && todo.status === 'proposed';
-}
-
-/** The next todo the agent should work: highest-priority open record not parked on the user. */
+/** The next todo the agent should work: the highest-priority proposed record. */
 export function nextDrainableTodo(todos: CortexTodo[]): CortexTodo | null {
-    return todos.find((todo) => todo.status === 'proposed' && todo.owner !== 'user') ?? null;
+    return todos.find((todo) => todo.status === 'proposed') ?? null;
 }
 
 /**
@@ -80,7 +75,6 @@ function toTodo(page: CortexPage): CortexTodo | null {
         return null;
     }
     return {
-        owner: readValue(page.frontmatter.owner),
         path: page.path,
         priority: readValue(page.frontmatter.priority),
         question: readText(page.frontmatter.next_action) ?? readText(page.frontmatter.summary),

@@ -27,9 +27,8 @@ describe('wiki health history', () => {
         await fs.rm(hubPath, { force: true, recursive: true });
     });
 
-    test('records on scan change and escalation change, dedupes otherwise', async () => {
+    test('records on scan change, dedupes otherwise', async () => {
         await writeScan('s1', 80, 70);
-        await writeEscalation('verify-a.md');
 
         const first = new Date('2026-06-10T06:00:00.000Z');
         expect(await recordWikiHealthSamples(getDb(), first)).toBe(1);
@@ -37,22 +36,16 @@ describe('wiki health history', () => {
         const soonAfter = new Date('2026-06-10T07:00:00.000Z');
         expect(await recordWikiHealthSamples(getDb(), soonAfter)).toBe(0);
 
-        await writeEscalation('verify-b.md');
-        expect(await recordWikiHealthSamples(getDb(), new Date('2026-06-10T08:00:00.000Z'))).toBe(
-            1
-        );
-
         await writeScan('s2', 90, 84);
         expect(await recordWikiHealthSamples(getDb(), new Date('2026-06-10T09:00:00.000Z'))).toBe(
             1
         );
 
         const history = listWikiHealthHistory(getDb());
-        expect(history).toHaveLength(3);
+        expect(history).toHaveLength(2);
         expect(history.at(-1)).toMatchObject({
             avgQuality: 84,
             avgStaleness: 90,
-            escalationsOpen: 2,
             scanId: 's2',
             topic: 'project-notes',
         });
@@ -83,13 +76,6 @@ describe('wiki health history', () => {
                 },
                 threshold: 70,
             })
-        );
-    }
-
-    async function writeEscalation(file: string) {
-        await writeTopicFile(
-            `todos/${file}`,
-            ['---', 'title: Needs a call', 'status: proposed', 'owner: user', '---'].join('\n')
         );
     }
 

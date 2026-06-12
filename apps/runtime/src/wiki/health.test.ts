@@ -38,7 +38,7 @@ describe('cortex health', () => {
         expect(health.status.topicCount).toBe(1);
     });
 
-    test('surfaces todos and the latest report; user-owned records stay informational', async () => {
+    test('surfaces todos and the latest report', async () => {
         await writeTopicFile(
             'project-notes',
             'todos/verify-claim.md',
@@ -46,7 +46,6 @@ describe('cortex health', () => {
                 '---',
                 'title: Verify the claim',
                 'status: proposed',
-                'owner: user',
                 'priority: p1',
                 'next_action: "Confirm the claim, then set verified."',
                 '---',
@@ -88,7 +87,6 @@ describe('cortex health', () => {
         expect(health.state).toBe('healthy');
         expect(health.todos).toEqual([
             expect.objectContaining({
-                owner: 'user',
                 path: 'todos/verify-claim.md',
                 priority: 'p1',
                 question: 'Confirm the claim, then set verified.',
@@ -97,7 +95,6 @@ describe('cortex health', () => {
                 topic: 'project-notes',
             }),
             expect.objectContaining({
-                owner: null,
                 path: 'todos/agent-task.md',
                 status: 'proposed',
                 title: 'Agent task',

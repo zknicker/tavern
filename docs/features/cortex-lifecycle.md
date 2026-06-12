@@ -35,7 +35,6 @@ hub
     ├── raw/          immutable sources — what was ingested, verbatim
     ├── wiki/         compiled articles — synthesized, cross-linked, cited
     ├── todos/        the todo queue — follow-up records with status/priority
-    ├── inbox/        drop zone — files left here get ingested automatically
     ├── datasets/     indexed structured data
     ├── output/       generated deliverables
     ├── log.md        append-only activity log
@@ -54,8 +53,6 @@ you: "remember this" ──► agent ingests in the current turn
                               │ compile job — 15-minute check, runs when
                               │   • 5+ sources are pending, or
                               │   • one has waited ~6 hours
-                              │ (inbox/ drops count as pending and get
-                              │  ingested first)
                               ▼
                    wiki/ articles — synthesized,
                    cross-linked, cited back to raw/
@@ -93,12 +90,15 @@ becomes a todo.** Detection is cheap and comprehensive; treatment is expensive
 and per-item — the queue is the buffer between them, and it gives each finding
 a durable record with attempt history instead of a slot in some giant run.
 
-There is no human gate. A todo the agent can't finish gets blocked with its
-reason, and the affected claims get marked so answers hedge; if it matters,
-it surfaces in conversation and you settle it there. Blocked records don't
-rot: the weekly librarian reviews them — retrying ones whose blocker likely
-cleared, deleting ones whose need was met another way, and keeping the truly
-stuck as the record of what was tried.
+There is no human gate, and nothing accumulates. A todo the agent can't
+finish gets blocked with its reason — but blocked is transient, not an
+archive. The weekly librarian retries records whose blocker likely cleared
+and resolves the rest *into the wiki*: the failure state is written onto the
+affected articles (lowered confidence, `verified: false`, a short "could not
+corroborate" note), so future scans see settled state instead of re-filing
+the work, and the record is deleted. Nothing stays blocked past ~30 days;
+hedged answers surface the unresolved bits in conversation, where you settle
+them.
 
 Scores stay current per run: compile and todo turns re-score the articles they
 changed in the scan results, so the health page reflects work as it lands. The

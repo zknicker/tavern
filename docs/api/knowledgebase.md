@@ -36,15 +36,14 @@ The Runtime API covers:
 
 `GET /cortex/health` rolls up derived health: hub status (`state` is `healthy`
 or `degraded`), todos (open records — `proposed` or `blocked` — projected with
-owner, status, and priority; records with `owner: user` are respected as
-user-authored and skipped by todo processing), recent todo completions (parsed
-from each topic's `log.md` `todo` entries — completed records are deleted, so
-the log is the history), todo processing state (running record, last and next
-run), maintenance run tiles for the compile, librarian, and todo jobs, the
-latest librarian scan per topic parsed from `.librarian/scan-results.json`,
-and health history. History is an append-only Runtime projection sampled
-hourly; it is derived and rebuildable, never authoritative. Unparseable scan
-files are skipped. Listings and search exclude dot directories.
+status and priority), recent todo completions (parsed from each topic's
+`log.md` `todo` entries — completed records are deleted, so the log is the
+history), todo processing state (running record, last and next run),
+maintenance run tiles for the compile, librarian, and todo jobs, the latest
+librarian scan per topic parsed from `.librarian/scan-results.json`, and
+health history. History is an append-only Runtime projection sampled hourly;
+it is derived and rebuildable, never authoritative. Unparseable scan files
+are skipped. Listings and search exclude dot directories.
 
 The tRPC app router exposes the same reads under `cortex.status`,
 `cortex.health`, `cortex.topics`, `cortex.list`, `cortex.get`,

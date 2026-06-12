@@ -80,20 +80,6 @@ describe('wiki compile pipeline', () => {
         expect(await listPendingCompileTopics()).toEqual([]);
     });
 
-    test('inbox files count as pending sources', async () => {
-        await writeRawSource('coffee', 'inbox/dropped-article.pdf', nowMs - 2 * hourMs);
-        await writeRawSource('coffee', 'inbox/.hidden', nowMs - hourMs);
-
-        expect(await listPendingCompileTopics()).toEqual([
-            {
-                newestPendingAtMs: nowMs - 2 * hourMs,
-                oldestPendingAtMs: nowMs - 2 * hourMs,
-                pendingCount: 1,
-                topic: 'coffee',
-            },
-        ]);
-    });
-
     test('compile is due on pile-up or straggler age, after the settle window', () => {
         const settled = { newestPendingAtMs: nowMs - hourMs };
 

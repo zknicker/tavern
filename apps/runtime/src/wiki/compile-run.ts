@@ -62,10 +62,8 @@ export function getWikiCompileStatus(db: Database = getDb()) {
 
 export function buildWikiCompilePrompt(topics: string[]): string {
     return [
-        `Use the wiki skill. These topic wikis have unprocessed sources: ${topics.join(', ')}.`,
-        'First ingest any files waiting in inbox/ per references/ingestion.md, moving',
-        'processed files to inbox/.processed/.',
-        'Then compile the new sources into wiki articles per the incremental compile workflow',
+        `Use the wiki skill. These topic wikis have uncompiled raw sources: ${topics.join(', ')}.`,
+        'Compile the new sources into wiki articles per the incremental compile workflow',
         'in references/compilation.md: synthesize rather than copy, add bidirectional',
         'See Also dual-links, update the affected _index.md files, and append a log.md',
         'entry per wiki changed. Finish with a quick structural pass over the wikis you',

@@ -264,8 +264,7 @@ CREATE TABLE IF NOT EXISTS wiki_health_history (
   stale_count        INTEGER,
   low_quality_count  INTEGER,
   avg_staleness      REAL,
-  avg_quality        REAL,
-  escalations_open   INTEGER NOT NULL DEFAULT 0
+  avg_quality        REAL
 );
 
 CREATE INDEX IF NOT EXISTS idx_wiki_health_history_topic

@@ -124,12 +124,11 @@ describe('wiki todo drain', () => {
         expect(client.prompts).toHaveLength(1);
     });
 
-    test('skips todos parked on the user and idles when nothing is drainable', async () => {
-        await writeRecord('coffee', 'todos/escalated.md', {
-            next_action: 'Should I trust this source?',
-            owner: 'user',
-            status: 'proposed',
-            title: 'Escalated',
+    test('idles without an agent run when only blocked todos remain', async () => {
+        await writeRecord('coffee', 'todos/stuck.md', {
+            next_action: 'Find the paywalled study.',
+            status: 'blocked',
+            title: 'Stuck',
         });
         const client = fakeClient('Should not run.');
 
@@ -139,7 +138,6 @@ describe('wiki todo drain', () => {
 
     test('drain prompt works one record and includes the give-up rule', () => {
         const prompt = buildTodoDrainPrompt({
-            owner: null,
             path: 'todos/urgent.md',
             priority: 'p0',
             question: 'Research corroborating sources.',

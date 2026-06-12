@@ -108,11 +108,18 @@ crons, no human gate:
   `todo` entry is the durable history. A record the agent cannot finish is
   kept and blocked with its reason, and the affected claims marked
   low-confidence — work is never parked on the user; corrections happen in
-  conversation. Records with `owner: user` are treated as user-authored and
-  skipped.
+  conversation. Blocked is transient: the weekly librarian retries records
+  whose blocker likely cleared and resolves the rest into the affected
+  articles, deleting the record; nothing stays blocked past roughly thirty
+  days.
 
-The todo lifecycle is `proposed` → done (deleted) or `blocked`; see
-[Cortex Lifecycle](../docs/features/cortex-lifecycle.md).
+The todo lifecycle is `proposed` → done (deleted) or `blocked` (transient);
+see [Cortex Lifecycle](../docs/features/cortex-lifecycle.md).
+
+The hub directory is part of the agent's workspace contract: agents read and
+write it with plain file tools at `TAVERN_WIKI_HUB_PATH`, on the same machine
+as Runtime and the engine. Any future agent sandboxing must mount the hub
+path read-write inside the sandbox boundary.
 
 ## App Surface
 
