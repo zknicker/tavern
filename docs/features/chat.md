@@ -87,6 +87,19 @@ and external runtime chat inventory.
 Runtime progress and reply events update response and activity rows by stable
 ids. They should not create a second volatile progress transcript.
 
+The chat detail loads a tail window of `chat.log.list` rows and pages older
+history in as the user scrolls up. While a chat stays open, the loaded
+transcript only grows:
+
+* Live progress patches append rows; they never trim loaded rows to the fetch
+  limit.
+* When a refetched window no longer covers a loaded row (the tail window
+  slides forward as durable rows land), the row is retained client-side. A
+  full-coverage window (offset 0) stays authoritative for deletions; a
+  deleted row inside a slid window disappears on the next chat open.
+* Without this, a turn at the page limit visibly drains older expanded work
+  drawers and restores them at completion.
+
 ## Live turn presentation
 
 * The runtime coalesces stream writes: reply text publishes at most every
