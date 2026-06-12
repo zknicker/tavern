@@ -206,9 +206,9 @@ test('turn progress preserves clarification prompt data in live chat rows', asyn
     let log: ChatLogOutput | undefined = {
         activeReply: null,
         limit: 100,
-        offset: 0,
+        nextBeforeSequence: null,
         rows: [],
-        total: 0,
+        totalMessages: 0,
     };
     const handlers = createHandlers({
         patchLog: (updater) => {
