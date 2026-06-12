@@ -275,7 +275,7 @@ export function getResponseActivity(
     return row ? rowToActivity(row) : null;
 }
 
-function listActivityForResponses(
+export function listActivityForResponses(
     responseIds: readonly string[],
     db: Database
 ): TavernResponseActivity[] {
@@ -297,7 +297,10 @@ function listActivityForResponses(
     return rows.map(rowToActivity);
 }
 
-function listArtifactsForResponses(responseIds: readonly string[], db: Database): TavernArtifact[] {
+export function listArtifactsForResponses(
+    responseIds: readonly string[],
+    db: Database
+): TavernArtifact[] {
     if (responseIds.length === 0) {
         return [];
     }
@@ -461,7 +464,7 @@ function activityEventType(status: TavernResponseActivity['status'], created: bo
     return 'activity.updated';
 }
 
-function rowToResponse(row: ResponseRow): TavernChatResponse {
+export function rowToResponse(row: ResponseRow): TavernChatResponse {
     return {
         chat_id: row.chat_id,
         completed_at: row.completed_at,

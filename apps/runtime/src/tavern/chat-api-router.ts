@@ -13,6 +13,7 @@ import {
     createMessage,
     deleteMessage,
     getChat,
+    getChatTimelinePage,
     getMessage,
     getResponseActivity,
     listChats,
@@ -91,6 +92,16 @@ async function route(request: Request, url: URL): Promise<Response> {
             searchMessages(decodeURIComponent(chatMessageSearchMatch[1]), {
                 limit: numberParam(url, 'limit'),
                 query: url.searchParams.get('query') ?? '',
+            })
+        );
+    }
+
+    const chatTimelineMatch = url.pathname.match(/^\/api\/chats\/([^/]+)\/timeline$/u);
+    if (chatTimelineMatch && request.method === 'GET') {
+        return json(
+            getChatTimelinePage(decodeURIComponent(chatTimelineMatch[1]), {
+                beforeSequence: numberParam(url, 'before_sequence'),
+                limit: numberParam(url, 'limit'),
             })
         );
     }

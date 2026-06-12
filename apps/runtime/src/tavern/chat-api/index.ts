@@ -18,3 +18,4 @@ export {
     upsertResponse,
     upsertResponseActivity,
 } from './responses';
+export { getChatTimelinePage } from './timeline';

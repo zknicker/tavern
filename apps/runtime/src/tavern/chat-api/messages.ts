@@ -241,7 +241,7 @@ export function findExistingMessage(
     return message;
 }
 
-function rowToMessage(row: MessageRow, db: Database): TavernChatMessage {
+export function rowToMessage(row: MessageRow, db: Database): TavernChatMessage {
     const author = getParticipant(row.chat_id, row.author_id, db);
     return {
         attachments: parseStoredAttachments(row.attachment_json),
