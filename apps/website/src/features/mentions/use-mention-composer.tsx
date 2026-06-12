@@ -4,6 +4,7 @@ import { type AgentListOutput, trpc } from '../../lib/trpc.tsx';
 import { MentionEditor, type MentionEditorHandle } from './mention-editor.tsx';
 import { MentionPicker } from './mention-picker.tsx';
 import type { ActiveMentionQuery, Mention, MentionOption } from './mention-types.ts';
+import { filterCommandOptionsForQuery, useCommandOptions } from './use-command-options.ts';
 import { useMentionOptions } from './use-mention-options.ts';
 
 export interface MentionComposerState {
@@ -29,6 +30,7 @@ export function useMentionComposer({
     onTextChange,
     onSubmit,
     onMentionsChange,
+    supportsCommands = false,
 }: {
     agentId: string;
     agents: AgentListOutput['agents'];
@@ -36,6 +38,9 @@ export function useMentionComposer({
     onTextChange: (content: string) => void;
     onSubmit?: () => void;
     onMentionsChange?: (mentions: Mention[]) => void;
+    // Commands run in an existing chat session; the new-chat composer
+    // leaves the `/` palette off.
+    supportsCommands?: boolean;
 }) {
     const utils = trpc.useUtils();
     const editorRef = React.useRef<MentionEditorHandle | null>(null);
@@ -48,7 +53,14 @@ export function useMentionComposer({
         agents,
         query: activeQuery?.query ?? '',
     });
-    const visibleMentionOptions = activeQuery ? mentionOptionsState.options : [];
+    const commandOptions = useCommandOptions({ enabled: supportsCommands });
+    const trigger = activeQuery?.trigger ?? '@';
+    const visibleMentionOptions = selectVisibleOptions({
+        activeQuery,
+        commandOptions,
+        mentionOptions: mentionOptionsState.options,
+        supportsCommands,
+    });
     const prefetchMentionOptions = React.useCallback(() => {
         if (!agentId) {
             return;
@@ -94,6 +106,12 @@ export function useMentionComposer({
 
     function handleMentionSelect(option: MentionOption) {
         dismissedQueryRef.current = null;
+
+        if (option.kind === 'command') {
+            editorRef.current?.replaceActiveQuery(option.insertText);
+            return;
+        }
+
         editorRef.current?.insertMention(option);
     }
 
@@ -141,7 +159,7 @@ export function useMentionComposer({
     }
 
     function handleActiveQueryChange(query: ActiveMentionQuery | null) {
-        if (!query) {
+        if (!query || (query.trigger === '/' && !supportsCommands)) {
             dismissedQueryRef.current = null;
             setActiveQuery(null);
             return;
@@ -174,8 +192,8 @@ export function useMentionComposer({
         handleMentionSelect,
         handleTextChange,
         hasQuery: Boolean(activeQuery),
-        isPathSearchActive: mentionOptionsState.isPathSearchActive,
-        isPathSearchLoading: mentionOptionsState.isPathSearchLoading,
+        isPathSearchActive: trigger === '@' && mentionOptionsState.isPathSearchActive,
+        isPathSearchLoading: trigger === '@' && mentionOptionsState.isPathSearchLoading,
         onActiveQueryChange: handleActiveQueryChange,
         options: visibleMentionOptions,
         prefetchMentionOptions,
@@ -188,8 +206,37 @@ function isSameMentionQuery(left: ActiveMentionQuery, right: ActiveMentionQuery 
         right !== null &&
         left.end === right.end &&
         left.query === right.query &&
-        left.start === right.start
+        left.start === right.start &&
+        left.trigger === right.trigger
     );
+}
+
+function selectVisibleOptions({
+    activeQuery,
+    commandOptions,
+    mentionOptions,
+    supportsCommands,
+}: {
+    activeQuery: ActiveMentionQuery | null;
+    commandOptions: MentionOption[];
+    mentionOptions: MentionOption[];
+    supportsCommands: boolean;
+}) {
+    if (!activeQuery) {
+        return [];
+    }
+
+    if (activeQuery.trigger === '/') {
+        return supportsCommands
+            ? filterCommandOptionsForQuery(commandOptions, activeQuery.query)
+            : [];
+    }
+
+    if (activeQuery.trigger === '$') {
+        return mentionOptions.filter((option) => option.kind === 'skill');
+    }
+
+    return mentionOptions;
 }
 
 export function MentionComposerEditor({

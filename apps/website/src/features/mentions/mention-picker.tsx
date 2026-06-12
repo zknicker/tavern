@@ -219,6 +219,10 @@ function groupMentionOptions({
 }
 
 function getGroupLabel(option: MentionOption) {
+    if (option.kind === 'command') {
+        return 'Commands';
+    }
+
     if (option.kind === 'app') {
         return 'Mac apps';
     }

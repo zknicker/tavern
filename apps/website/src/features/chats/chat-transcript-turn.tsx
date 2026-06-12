@@ -1,15 +1,18 @@
+import { Cancel01Icon } from '@hugeicons/core-free-icons';
 import { InspectCodeIcon } from '@hugeicons-pro/core-stroke-rounded';
 import { AgentAvatar } from '../../components/ui/agent-avatar.tsx';
 import { CopyButton } from '../../components/ui/copy-button.tsx';
 import { Icon } from '../../components/ui/icon.tsx';
 import { useActorProfile } from '../../hooks/actors/use-actor.ts';
 import type { ChatActiveReply } from '../../hooks/chats/chat-timeline-state.ts';
+import { useChatDismiss } from '../../hooks/chats/use-chat-dismiss.ts';
 import { useChatThinkingDisplayPreference } from '../../hooks/chats/use-chat-thinking-display-preference.ts';
 import { useSessionDrawer } from '../../hooks/sessions/use-session-drawer.ts';
 import { formatShortTime } from '../../lib/format.ts';
 import { cn } from '../../lib/utils.ts';
 import { getMessageSessionContext } from '../rows/message-context.ts';
 import { MessageContextBadges } from '../rows/message-context-badges.tsx';
+import { CommandRunEntry } from './chat-command-card.tsx';
 import { ChatInlineMarkdownText } from './chat-inline-markdown-text.tsx';
 import {
     ChatTranscriptActivity,
@@ -70,6 +73,14 @@ export function TranscriptEntryView({
             entry.item.row.systemKind === 'runtimeNotice'
         ) {
             return <RuntimeNoticeEntry row={entry.item.row} />;
+        }
+
+        if (
+            entry.item.kind === 'row' &&
+            entry.item.row.kind === 'system' &&
+            entry.item.row.systemKind === 'commandRun'
+        ) {
+            return <CommandRunEntry chatId={chatId} row={entry.item.row} />;
         }
 
         return (
@@ -434,7 +445,7 @@ function AgentTurnItem({
     }
 
     if (item.kind === 'failure') {
-        return <AgentTurnFailure item={item} />;
+        return <AgentTurnFailure chatId={chatId} item={item} />;
     }
 
     return (
@@ -463,12 +474,35 @@ function ActiveReplyText({ item }: { item: Extract<TranscriptItem, { kind: 'acti
     );
 }
 
-function AgentTurnFailure({ item }: { item: Extract<TranscriptItem, { kind: 'failure' }> }) {
+function AgentTurnFailure({
+    chatId,
+    item,
+}: {
+    chatId?: string;
+    item: Extract<TranscriptItem, { kind: 'failure' }>;
+}) {
+    const { dismissRow } = useChatDismiss(chatId);
+    const responseId = item.failure.responseId;
+
     return (
-        <p className="max-w-[34rem] text-sm leading-5" role="alert">
+        <p className="group/failure max-w-[34rem] text-sm leading-5" role="alert">
             <span aria-hidden className="mr-2 inline-block size-2 rounded-full bg-error" />
             <span className="font-medium text-error-foreground">Response failed</span>
             <span className="text-muted-foreground"> · {item.failure.error}</span>
+            {chatId && responseId ? (
+                <button
+                    aria-label="Dismiss failed response"
+                    className={cn(
+                        messageActionButtonClassName,
+                        'ml-1 align-text-bottom opacity-0 transition-opacity duration-150 group-hover/failure:opacity-100'
+                    )}
+                    onClick={() => dismissRow(responseId)}
+                    title="Dismiss"
+                    type="button"
+                >
+                    <Icon className="size-3.5" icon={Cancel01Icon} strokeWidth={2} />
+                </button>
+            ) : null}
         </p>
     );
 }

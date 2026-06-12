@@ -50,6 +50,7 @@ export interface ChatTimelineState {
 
 export interface ChatTurnFailure {
     error: string;
+    responseId: string | null;
     turn: ChatTurn;
 }
 

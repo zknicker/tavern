@@ -323,7 +323,7 @@ function getItemParticipant(item: TranscriptItem): 'agent' | 'system' | 'user' {
         return row.sessionKey?.trim() || row.actor?.kind === 'agent' ? 'agent' : 'system';
     }
 
-    if (row.systemKind === 'runtimeNotice') {
+    if (row.systemKind === 'runtimeNotice' || row.systemKind === 'commandRun') {
         return 'system';
     }
 

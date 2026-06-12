@@ -9,19 +9,35 @@ export function getActiveMentionQuery(
     }
 
     const beforeCaret = content.slice(0, caretIndex);
-    const match = /(?:^|\s)@([^\s@]*)$/u.exec(beforeCaret);
+    // `@` opens the full picker; `$` opens it filtered to skills. Both
+    // trigger at start-of-input or after whitespace.
+    const mentionMatch = /(?:^|\s)([@$])([^\s@$]*)$/u.exec(beforeCaret);
 
-    if (!match || match.index === undefined) {
-        return null;
+    if (mentionMatch?.index !== undefined) {
+        const trigger = mentionMatch[1] === '$' ? '$' : '@';
+        return {
+            end: caretIndex,
+            query: mentionMatch[2] ?? '',
+            start: mentionMatch.index + (/^[@$]/u.test(mentionMatch[0]) ? 0 : 1),
+            trigger,
+        };
     }
 
-    const start = match.index + (match[0].startsWith('@') ? 0 : 1);
+    // `/` opens the command palette only as the very first character of the
+    // composer, so typed paths and URLs never trigger it. A second slash
+    // (path typing) closes the palette.
+    const commandMatch = /^\/([^\s/]*)$/u.exec(beforeCaret);
 
-    return {
-        end: caretIndex,
-        query: match[1] ?? '',
-        start,
-    };
+    if (commandMatch) {
+        return {
+            end: caretIndex,
+            query: commandMatch[1] ?? '',
+            start: 0,
+            trigger: '/',
+        };
+    }
+
+    return null;
 }
 
 export function reconcileMentions(
@@ -130,6 +146,11 @@ export function selectMention(input: {
     option: MentionOption;
 }) {
     const { activeQuery, content, mentions, option } = input;
+
+    if (option.kind === 'command') {
+        throw new Error('Commands execute as actions and do not serialize as mentions.');
+    }
+
     const before = content.slice(0, activeQuery.start);
     const after = content.slice(activeQuery.end);
     const text = option.insertText;

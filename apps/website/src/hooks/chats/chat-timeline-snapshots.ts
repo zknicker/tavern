@@ -168,7 +168,11 @@ export function isSameTurnFailure(left: ChatTurnFailure | null, right: ChatTurnF
         return false;
     }
 
-    return left.error === right.error && left.turn.runId === right.turn.runId;
+    return (
+        left.error === right.error &&
+        left.turn.runId === right.turn.runId &&
+        left.responseId === right.responseId
+    );
 }
 
 function areSameTimeline(left: ChatTimeline, right: ChatTimeline) {

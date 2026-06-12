@@ -1,6 +1,7 @@
 import type { IconSvgElement } from '@hugeicons/react';
 import {
     ChromeIcon,
+    CommandLineIcon,
     CubeIcon,
     File01Icon,
     Folder01Icon,
@@ -11,10 +12,11 @@ import {
 } from '@hugeicons-pro/core-solid-rounded';
 import { Icon } from '../../components/ui/icon.tsx';
 import { cn } from '../../lib/utils.ts';
-import type { MentionKind } from './mention-types.ts';
+import type { MentionOptionKind } from './mention-types.ts';
 
 const mentionIconKeys = [
     'chrome',
+    'command',
     'file',
     'folder',
     'github',
@@ -39,7 +41,7 @@ export interface MentionAppearance {
 
 interface MentionAppearanceInput {
     id: string;
-    kind: MentionKind;
+    kind: MentionOptionKind;
     label: string;
     metadata?: Record<string, unknown>;
 }
@@ -48,12 +50,13 @@ type MentionAppearanceOverride = Partial<MentionAppearance>;
 
 const defaultMentionAppearance = {
     app: { icon: 'plugin', tone: 'mention' },
+    command: { icon: 'command', tone: 'mention' },
     directory: { icon: 'folder', tone: 'path' },
     file: { icon: 'file', tone: 'path' },
     image: { icon: 'image', tone: 'path' },
     plugin: { icon: 'plugin', tone: 'mention' },
     skill: { icon: 'skill', tone: 'mention' },
-} satisfies Record<MentionKind, MentionAppearance>;
+} satisfies Record<MentionOptionKind, MentionAppearance>;
 
 const skillAppearanceOverrides = {
     'gh-issues': {
@@ -93,6 +96,7 @@ const capabilityAppearanceOverrides = {
 
 const mentionIconMap = {
     chrome: ChromeIcon,
+    command: CommandLineIcon,
     file: File01Icon,
     folder: Folder01Icon,
     github: Github01Icon,

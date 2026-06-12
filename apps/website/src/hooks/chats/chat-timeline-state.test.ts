@@ -360,7 +360,7 @@ test('failTimelineTurn stores a failed turn marker', () => {
 
     expect(failed.activeReply).toBeNull();
     expect(failed.activeTurn).toBeNull();
-    expect(failed.failedTurn).toEqual({ error: 'boom', turn });
+    expect(failed.failedTurn).toEqual({ error: 'boom', responseId: null, turn });
 });
 
 test('updateTimelineReply replace resets streamed text without ending the turn', () => {

@@ -147,6 +147,23 @@
     --radius-3xl: calc(var(--radius-3xl-base) * var(--corner-radius-scale));
     --radius-4xl: calc(var(--radius-4xl-base) * var(--corner-radius-scale));
 
+    --color-surface-1: var(--surface-1);
+    --color-surface-2: var(--surface-2);
+    --color-surface-3: var(--surface-3);
+    --color-surface-4: var(--surface-4);
+    --color-surface-5: var(--surface-5);
+    --color-surface-6: var(--surface-6);
+    --color-surface-7: var(--surface-7);
+    --color-surface-8: var(--surface-8);
+    --shadow-surface-1: var(--surface-shadow-1);
+    --shadow-surface-2: var(--surface-shadow-2);
+    --shadow-surface-3: var(--surface-shadow-3);
+    --shadow-surface-4: var(--surface-shadow-4);
+    --shadow-surface-5: var(--surface-shadow-5);
+    --shadow-surface-6: var(--surface-shadow-6);
+    --shadow-surface-7: var(--surface-shadow-7);
+    --shadow-surface-8: var(--surface-shadow-8);
+
     --color-content-card: var(--content-card);
     --color-content-card-border: var(--content-card-border);
     --content-inset: 0px;
@@ -354,6 +371,34 @@
         --brand-ring: --alpha(var(--brand) / 30%);
 
         --card: color-mix(in srgb, var(--background) 98%, var(--color-white));
+
+        /* Surface ladder (Fluid Functionalism): backgrounds step ~3% toward
+           white per level; shadows pair an inner highlight, hairline ring,
+           and layered drops. See components/ui/surface.tsx. */
+        --surface-1: var(--background);
+        --surface-2: color-mix(in srgb, var(--background) 97%, var(--color-white));
+        --surface-3: color-mix(in srgb, var(--background) 94%, var(--color-white));
+        --surface-4: color-mix(in srgb, var(--background) 91%, var(--color-white));
+        --surface-5: color-mix(in srgb, var(--background) 88%, var(--color-white));
+        --surface-6: color-mix(in srgb, var(--background) 85%, var(--color-white));
+        --surface-7: color-mix(in srgb, var(--background) 82%, var(--color-white));
+        --surface-8: color-mix(in srgb, var(--background) 79%, var(--color-white));
+        --sf-hi-base: rgba(255, 255, 255, 0.01);
+        --sf-hi-mid: rgba(255, 255, 255, 0.02);
+        --sf-hi-high: rgba(255, 255, 255, 0.04);
+        --sf-hi-peak: rgba(255, 255, 255, 0.06);
+        --sf-ring-base: rgba(255, 255, 255, 0.02);
+        --sf-ring-mid: rgba(255, 255, 255, 0.04);
+        --sf-ring-high: rgba(255, 255, 255, 0.06);
+        --sf-drop: rgba(0, 0, 0, 0.18);
+        --surface-shadow-1: inset 0 0 0 1px var(--sf-ring-base);
+        --surface-shadow-2: inset 0 1px 0 0 var(--sf-hi-base), inset 0 0 0 1px var(--sf-ring-base), 0 1px 1px -0.5px var(--sf-drop);
+        --surface-shadow-3: inset 0 1px 0 0 var(--sf-hi-mid), inset 0 0 0 1px var(--sf-ring-base), 0 0 0 1px rgba(0, 0, 0, 0.12), 0 1px 1px -0.5px var(--sf-drop), 0 3px 3px -1.5px var(--sf-drop);
+        --surface-shadow-4: inset 0 1px 0 0 var(--sf-hi-mid), inset 0 0 0 1px var(--sf-ring-mid), 0 0 0 1px rgba(0, 0, 0, 0.14), 0 1px 1px -0.5px var(--sf-drop), 0 3px 3px -1.5px var(--sf-drop), 0 6px 6px -3px var(--sf-drop);
+        --surface-shadow-5: inset 0 1px 0 0 var(--sf-hi-high), inset 0 0 0 1px var(--sf-ring-mid), 0 0 0 1px rgba(0, 0, 0, 0.16), 0 1px 1px -0.5px var(--sf-drop), 0 3px 3px -1.5px var(--sf-drop), 0 6px 6px -3px var(--sf-drop), 0 12px 12px -6px var(--sf-drop);
+        --surface-shadow-6: inset 0 1px 0 0 var(--sf-hi-high), inset 0 0 0 1px var(--sf-ring-high), 0 0 0 1px rgba(0, 0, 0, 0.18), 0 1px 1px -0.5px var(--sf-drop), 0 3px 3px -1.5px var(--sf-drop), 0 6px 6px -3px var(--sf-drop), 0 12px 12px -6px var(--sf-drop), 0 24px 24px -12px var(--sf-drop);
+        --surface-shadow-7: inset 0 1px 0 0 var(--sf-hi-peak), inset 0 0 0 1px var(--sf-ring-high), 0 0 0 1px rgba(0, 0, 0, 0.2), 0 1px 1px -0.5px var(--sf-drop), 0 3px 3px -1.5px var(--sf-drop), 0 6px 6px -3px var(--sf-drop), 0 12px 12px -6px var(--sf-drop), 0 24px 24px -12px var(--sf-drop), 0 48px 48px -24px var(--sf-drop);
+        --surface-shadow-8: inset 0 1px 0 0 var(--sf-hi-peak), inset 0 0 0 1px var(--sf-ring-high), 0 0 0 1px rgba(0, 0, 0, 0.22), 0 1px 1px -0.5px var(--sf-drop), 0 3px 3px -1.5px var(--sf-drop), 0 6px 6px -3px var(--sf-drop), 0 12px 12px -6px var(--sf-drop), 0 24px 24px -12px var(--sf-drop), 0 48px 48px -24px var(--sf-drop), 0 96px 96px -48px var(--sf-drop);
         --card-foreground: var(--color-neutral-100);
         --frame: --alpha(var(--color-white) / 6%);
 
@@ -465,6 +510,26 @@
         --brand-ring: --alpha(var(--brand) / 22%);
 
         --card: var(--color-white);
+
+        /* Light surfaces flatten to white after level 2; shadows carry the
+           elevation. */
+        --surface-1: color-mix(in srgb, var(--background) 98%, var(--color-black));
+        --surface-2: color-mix(in srgb, var(--background) 99%, var(--color-black));
+        --surface-3: var(--color-white);
+        --surface-4: var(--color-white);
+        --surface-5: var(--color-white);
+        --surface-6: var(--color-white);
+        --surface-7: var(--color-white);
+        --surface-8: var(--color-white);
+        --sf-shadow-color: rgb(0 0 0 / 0.06);
+        --surface-shadow-1: 0 0 0 1px var(--sf-shadow-color);
+        --surface-shadow-2: 0 0 0 1px var(--sf-shadow-color), 0 1px 1px -0.5px var(--sf-shadow-color);
+        --surface-shadow-3: 0 0 0 1px var(--sf-shadow-color), 0 1px 1px -0.5px var(--sf-shadow-color), 0 3px 3px -1.5px var(--sf-shadow-color);
+        --surface-shadow-4: 0 0 0 1px var(--sf-shadow-color), 0 1px 1px -0.5px var(--sf-shadow-color), 0 3px 3px -1.5px var(--sf-shadow-color), 0 6px 6px -3px var(--sf-shadow-color);
+        --surface-shadow-5: 0 0 0 1px var(--sf-shadow-color), 0 1px 1px -0.5px var(--sf-shadow-color), 0 3px 3px -1.5px var(--sf-shadow-color), 0 6px 6px -3px var(--sf-shadow-color), 0 12px 12px -6px var(--sf-shadow-color);
+        --surface-shadow-6: 0 0 0 1px var(--sf-shadow-color), 0 1px 1px -0.5px var(--sf-shadow-color), 0 3px 3px -1.5px var(--sf-shadow-color), 0 6px 6px -3px var(--sf-shadow-color), 0 12px 12px -6px var(--sf-shadow-color), 0 24px 24px -12px var(--sf-shadow-color);
+        --surface-shadow-7: 0 0 0 1px var(--sf-shadow-color), 0 1px 1px -0.5px var(--sf-shadow-color), 0 3px 3px -1.5px var(--sf-shadow-color), 0 6px 6px -3px var(--sf-shadow-color), 0 12px 12px -6px var(--sf-shadow-color), 0 24px 24px -12px var(--sf-shadow-color), 0 48px 48px -24px var(--sf-shadow-color);
+        --surface-shadow-8: 0 0 0 1px var(--sf-shadow-color), 0 1px 1px -0.5px var(--sf-shadow-color), 0 3px 3px -1.5px var(--sf-shadow-color), 0 6px 6px -3px var(--sf-shadow-color), 0 12px 12px -6px var(--sf-shadow-color), 0 24px 24px -12px var(--sf-shadow-color), 0 48px 48px -24px var(--sf-shadow-color), 0 96px 96px -48px var(--sf-shadow-color);
         --card-foreground: var(--color-neutral-800);
         --frame: --alpha(var(--color-black) / 4%);
 

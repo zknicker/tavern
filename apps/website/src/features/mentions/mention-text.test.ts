@@ -14,7 +14,28 @@ describe('mention text helpers', () => {
             end: 8,
             query: 'Hat',
             start: 4,
+            trigger: '@',
         });
+    });
+
+    it('finds the active $ query as a skills-only trigger', () => {
+        expect(getActiveMentionQuery('use $wik', 8)).toEqual({
+            end: 8,
+            query: 'wik',
+            start: 4,
+            trigger: '$',
+        });
+    });
+
+    it('finds the leading / command query and ignores mid-message slashes', () => {
+        expect(getActiveMentionQuery('/mod', 4)).toEqual({
+            end: 4,
+            query: 'mod',
+            start: 0,
+            trigger: '/',
+        });
+        expect(getActiveMentionQuery('see /mod', 8)).toBeNull();
+        expect(getActiveMentionQuery('/usr/local', 10)).toBeNull();
     });
 
     it('keeps mention offsets aligned when text changes before the mention', () => {
@@ -62,6 +83,7 @@ describe('mention text helpers', () => {
                     end: 8,
                     query: 'Git',
                     start: 4,
+                    trigger: '@',
                 },
                 content: 'use @Ins then Hatch Pet',
                 mentions: [
@@ -112,6 +134,7 @@ describe('mention text helpers', () => {
                     end: 11,
                     query: 'Hat',
                     start: 7,
+                    trigger: '@',
                 },
                 content: 'launch @Hat',
                 mentions: [],

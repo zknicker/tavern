@@ -1,5 +1,9 @@
 import { describe, expect, it } from 'bun:test';
+import type { MentionInventoryOutput } from '../../lib/trpc.tsx';
 import type { MentionOption } from './mention-types.ts';
+
+type InventoryMentionOption = MentionInventoryOutput['options'][number];
+
 import {
     filterMentionOptionsForQuery,
     selectMentionOptionsForQuery,
@@ -67,7 +71,7 @@ describe('selectMentionOptionsForQuery', () => {
 
     it('merges path search results with filtered inventory', () => {
         const helium = createOption({ label: 'Helium' });
-        const pathOption: MentionOption = {
+        const pathOption: InventoryMentionOption = {
             description: 'specs',
             id: '/repo/specs/helium.md',
             insertText: 'specs/helium.md',
@@ -92,7 +96,7 @@ describe('selectMentionOptionsForQuery', () => {
     });
 });
 
-function createOption(input: { label: string }): MentionOption {
+function createOption(input: { label: string }): InventoryMentionOption {
     return {
         description: 'Computer Use',
         id: 'plugin://computer-use@openai-bundled',

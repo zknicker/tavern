@@ -154,6 +154,7 @@ export function failTimelineTurn(
 
     const failedTurn = {
         error: input.error,
+        responseId: null,
         turn: input.turn,
     };
 
@@ -169,5 +170,21 @@ export function failTimelineTurn(
                 ? null
                 : state.activeTurn,
         failedTurn,
+    };
+}
+
+// Dismissing a failed turn hides its banner immediately; the durable
+// soft-delete keeps it from coming back on the next log refetch.
+export function dismissTimelineFailure(
+    state: ChatTimelineState,
+    input: { responseId: string }
+): ChatTimelineState {
+    if (state.failedTurn?.responseId !== input.responseId) {
+        return state;
+    }
+
+    return {
+        ...state,
+        failedTurn: null,
     };
 }

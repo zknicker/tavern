@@ -111,6 +111,8 @@ function getSystemBody({
                     delivery={row.delivery}
                 />
             );
+        case 'commandRun':
+            return null;
         case 'runtimeNotice':
             return null;
         case 'thinking':
@@ -129,6 +131,8 @@ function getSystemSummary(row: Extract<TranscriptRow, { kind: 'system' }>): {
             return { icon: ToolsIcon, label: 'Checked access' };
         case 'artifact':
             return { icon: PackageIcon, label: 'Captured artifact' };
+        case 'commandRun':
+            return { icon: ToolsIcon, label: row.commandRun.command };
         case 'delivery':
             return { icon: Message01Icon, label: 'Delivered update' };
         case 'runtimeNotice': {

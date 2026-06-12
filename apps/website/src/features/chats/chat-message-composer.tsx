@@ -31,6 +31,7 @@ import {
     MentionComposerPicker,
     useMentionComposer,
 } from '../mentions/use-mention-composer.tsx';
+import { useChatCommandRunner } from './chat-command.ts';
 import {
     type ChatComposerAttachment,
     ChatComposerAttachmentList,
@@ -149,12 +150,24 @@ export function ChatMessageComposer({
             void handleSubmit();
         },
         onMentionsChange: setMentions,
+        supportsCommands: true,
     });
+    const chatCommands = useChatCommandRunner();
 
     async function handleSubmit(event?: React.FormEvent<HTMLFormElement>) {
         event?.preventDefault();
 
         if (!canSubmit) {
+            return;
+        }
+
+        // A known leading-slash command runs in the chat's session instead of
+        // starting a turn; unknown slash text falls through and sends.
+        if (chatCommands.matchCommand(content)) {
+            const command = content.trim();
+            setContent('');
+            setMentions([]);
+            await chatCommands.runCommand({ agentId, chatId, command });
             return;
         }
 

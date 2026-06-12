@@ -7,6 +7,7 @@ export {
 export {
     clearTimelineTurn,
     completeTimelineTurn,
+    dismissTimelineFailure,
     failTimelineTurn,
     startTimelineTurn,
     updateTimelineReply,

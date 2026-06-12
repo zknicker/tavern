@@ -11,6 +11,7 @@ import {
     type ChatTurnProgressStep,
     clearTimelineTurn,
     completeTimelineTurn,
+    dismissTimelineFailure,
     emptyTimelineState,
     failTimelineTurn,
     patchTimelineProgress,
@@ -21,6 +22,7 @@ import {
 interface TimelineActionsValue {
     clearTurn: (input: { chatId: string; runId?: string }) => void;
     completeTurn: (input: { chatId: string; completedAt: string; turn: ChatTurn }) => void;
+    dismissFailure: (input: { chatId: string; responseId: string }) => void;
     failTurn: (input: { chatId: string; error: string; turn: ChatTurn }) => void;
     patchProgress: (input: {
         step: ChatTurnProgressStep;
@@ -135,10 +137,19 @@ export function TimelineContextProvider({ children }: PropsWithChildren) {
         []
     );
 
+    const dismissFailure = React.useCallback((input: { chatId: string; responseId: string }) => {
+        setTimelineStates((current) =>
+            updateTimelineState(current, input.chatId, (state) =>
+                dismissTimelineFailure(state, { responseId: input.responseId })
+            )
+        );
+    }, []);
+
     const actions = React.useMemo<TimelineActionsValue>(
         () => ({
             clearTurn,
             completeTurn,
+            dismissFailure,
             failTurn,
             patchProgress,
             setLog,
@@ -146,7 +157,17 @@ export function TimelineContextProvider({ children }: PropsWithChildren) {
             startTurn,
             updateReply,
         }),
-        [clearTurn, completeTurn, failTurn, patchProgress, setLog, setReply, startTurn, updateReply]
+        [
+            clearTurn,
+            completeTurn,
+            dismissFailure,
+            failTurn,
+            patchProgress,
+            setLog,
+            setReply,
+            startTurn,
+            updateReply,
+        ]
     );
 
     return React.createElement(

@@ -1,9 +1,6 @@
-import type { InfiniteData } from '@tanstack/react-query';
 import { useQueryClient } from '@tanstack/react-query';
-import { getQueryKey } from '@trpc/react-query';
-import type { ChatLogOutput } from '../../lib/trpc.tsx';
 import { trpc } from '../../lib/trpc.tsx';
-import { patchInfiniteChatLogWithProgress } from './chat-log-infinite-cache.ts';
+import { patchLiveChatLogQueries } from './chat-log-query-patch.ts';
 import { createChatTurnEventHandlers } from './chat-turn-events.ts';
 import { useTimelineActions } from './use-timeline-context.tsx';
 
@@ -18,37 +15,8 @@ export function useChatTurnEvents() {
             list: utils.chat.list,
             log: {
                 list: {
-                    patchProgress: ({ chatId, updater }) => {
-                        let matchedQuery = false;
-
-                        queryClient.setQueriesData<ChatLogOutput>(
-                            {
-                                exact: false,
-                                predicate: (query) => isLiveChatLogQuery(query.queryKey, chatId),
-                                queryKey: getQueryKey(trpc.chat.log.list, undefined, 'query'),
-                            },
-                            (current) => {
-                                matchedQuery = true;
-                                return updater(current);
-                            }
-                        );
-
-                        if (matchedQuery) {
-                            return;
-                        }
-
-                        queryClient.setQueriesData<InfiniteData<NonNullable<ChatLogOutput>>>(
-                            {
-                                exact: false,
-                                predicate: (query) => isLiveChatLogQuery(query.queryKey, chatId),
-                                queryKey: getQueryKey(trpc.chat.log.list, undefined, 'infinite'),
-                            },
-                            (current) => {
-                                matchedQuery = true;
-                                return patchInfiniteChatLogWithProgress(current, updater);
-                            }
-                        );
-                    },
+                    patchProgress: ({ chatId, updater }) =>
+                        patchLiveChatLogQueries(queryClient, chatId, updater),
                 },
             },
         },
@@ -82,26 +50,4 @@ export function useChatTurnEvents() {
     trpc.chat.onTurnReplyUpdated.useSubscription(undefined, {
         onData: handlers.onTurnReplyUpdated,
     });
-}
-
-function isLiveChatLogQuery(queryKey: readonly unknown[], chatId: string) {
-    const input = readChatLogQueryInput(queryKey);
-
-    return input?.id === chatId && input.offset === undefined;
-}
-
-function readChatLogQueryInput(queryKey: readonly unknown[]) {
-    const metadata = queryKey[1];
-
-    if (!(metadata && typeof metadata === 'object' && 'input' in metadata)) {
-        return null;
-    }
-
-    const input = metadata.input;
-
-    if (!(input && typeof input === 'object' && 'id' in input)) {
-        return null;
-    }
-
-    return input as { id?: string; offset?: number };
 }
