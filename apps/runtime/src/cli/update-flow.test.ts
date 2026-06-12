@@ -51,7 +51,7 @@ describe('runUpdateFlow', () => {
         );
         expect(result.exitCode).toBe(1);
         expect(outText(result.lines)).toContain('Homebrew is required to update the Runtime.');
-        expect(result.lines[0]?.stream).toBe('err');
+        expect(result.lines.at(-1)?.stream).toBe('err');
     });
 
     test('brew upgrade fails → exit 1, captured output shown', async () => {
@@ -81,6 +81,36 @@ describe('runUpdateFlow', () => {
         expect(outText(result.lines)).toContain('Already up to date (v1.4.2)');
         expect(outText(result.lines)).toContain('Runtime is up to date and running v1.4.2.');
         expect(result.shouldRestart).toBe(false);
+    });
+
+    test('emits phase progress before slow update work', async () => {
+        const progress: string[] = [];
+        const result = await runUpdateFlow(
+            {
+                brew: fakeBrew(),
+                probe: fakeProbe('1.4.2'),
+                ...baseDeps,
+            },
+            {
+                restart: false,
+                verbose: false,
+                onProgress: (line) => progress.push(line.text),
+            }
+        );
+
+        expect(progress).toEqual([
+            'Checking Homebrew...',
+            'Checking Tavern Runtime formula...',
+            'Updating Homebrew metadata...',
+            'Staging Tavern Runtime package...',
+            'Pre-staging agent engine...',
+            'Reading staged Runtime version...',
+            'Checking running Runtime version...',
+        ]);
+        expect(result.progressLineCount).toBe(progress.length);
+        expect(result.lines.slice(0, result.progressLineCount).map((line) => line.text)).toEqual(
+            progress
+        );
     });
 
     test('up-to-date formula but running OLD process → staged-but-running-old verdict', async () => {

@@ -17,7 +17,9 @@ interface RestartArgs {
 
 /** Resolve the brew-installed tavern binary, e.g. `/opt/homebrew/bin/tavern`. */
 function brewTavernBin(): string {
-    const prefix = spawnSync('brew', ['--prefix'], { encoding: 'utf8' }).stdout?.trim();
+    const prefix = spawnSync('brew', ['--prefix'], {
+        encoding: 'utf8',
+    }).stdout?.trim();
     return prefix ? `${prefix}/bin/tavern` : 'tavern';
 }
 
@@ -27,7 +29,9 @@ function brewTavernBin(): string {
  * one, so we must ask the freshly staged binary directly.
  */
 async function stagedVersion(): Promise<string> {
-    const result = spawnSync(brewTavernBin(), ['--version'], { encoding: 'utf8' });
+    const result = spawnSync(brewTavernBin(), ['--version'], {
+        encoding: 'utf8',
+    });
     return result.stdout?.trim() || 'unknown';
 }
 
@@ -56,9 +60,13 @@ async function confirmRestart(): Promise<boolean> {
 export async function runUpdateCommand(args: UpdateArgs): Promise<number> {
     const result = await runUpdateFlow(
         { brew, probe: runtimeProbe, stagedVersion, stageEngine },
-        { restart: args.restart, verbose: args.verbose }
+        {
+            restart: args.restart,
+            verbose: args.verbose,
+            onProgress: (line) => printFlowLines([line]),
+        }
     );
-    printFlowLines(result.lines);
+    printFlowLines(result.lines.slice(result.progressLineCount));
 
     const shouldRestart =
         result.shouldRestart ||

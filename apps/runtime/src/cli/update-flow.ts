@@ -11,6 +11,7 @@ export interface UpdateFlowDeps {
 }
 
 export interface UpdateFlowOptions {
+    onProgress?(line: FlowLine): void;
     restart: boolean;
     verbose: boolean;
 }
@@ -30,6 +31,8 @@ export interface UpdateFlowResult {
      * callers never sniff line text (the Phase 0 seam).
      */
     needsCutover: boolean;
+    /** Number of leading lines already emitted through `onProgress`. */
+    progressLineCount: number;
     /** True when the caller should run the restart flow (--restart or TTY confirm). */
     shouldRestart: boolean;
 }
@@ -47,22 +50,35 @@ export async function runUpdateFlow(
     options: UpdateFlowOptions
 ): Promise<UpdateFlowResult> {
     const lines: FlowLine[] = [];
+    let progressLineCount = 0;
 
+    const progress = (text: string) => {
+        const line = out(text);
+        lines.push(line);
+        progressLineCount += 1;
+        options.onProgress?.(line);
+    };
+
+    progress('Checking Homebrew...');
     if (!deps.brew.isAvailable()) {
         lines.push(err(`${MARK_FAIL} Homebrew is required to update the Runtime.`));
-        return { lines, exitCode: 1, shouldRestart: false, needsCutover: false };
+        return result(lines, progressLineCount, 1, false, false);
     }
 
+    progress('Checking Tavern Runtime formula...');
     const alreadyCurrent = !deps.brew.isRuntimeOutdated();
 
+    progress('Updating Homebrew metadata...');
     const updateResult = deps.brew.update();
-    const upgradeFailed = brewFailed(updateResult)
-        ? updateResult
-        : maybeFailed(deps.brew.upgradeRuntime());
+    let upgradeFailed = brewFailed(updateResult) ? updateResult : null;
+    if (!upgradeFailed) {
+        progress('Staging Tavern Runtime package...');
+        upgradeFailed = maybeFailed(deps.brew.upgradeRuntime());
+    }
     if (upgradeFailed) {
         lines.push(err(`${MARK_FAIL} Homebrew failed to stage the Runtime upgrade.`));
         pushCaptured(lines, upgradeFailed, true);
-        return { lines, exitCode: 1, shouldRestart: false, needsCutover: false };
+        return result(lines, progressLineCount, 1, false, false);
     }
 
     if (options.verbose) {
@@ -71,22 +87,26 @@ export async function runUpdateFlow(
 
     // Engine pre-stage is best-effort; a failure only warns (restart-time setup
     // is the safety net), mirroring apps/runtime/src/tavern/update.ts.
+    progress('Pre-staging agent engine...');
     const engineStaged = await deps.stageEngine();
     if (!engineStaged) {
         lines.push(out('  Note: agent engine pre-stage failed; the restart will install it.'));
     }
 
+    progress('Reading staged Runtime version...');
     const staged = await deps.stagedVersion();
     if (alreadyCurrent) {
         lines.push(out(`${MARK_OK} Already up to date (v${staged})`));
     }
 
+    progress('Checking running Runtime version...');
     const running = await deps.probe.currentVersion();
-    return finishUpdate(lines, { running, staged }, options);
+    return finishUpdate(lines, progressLineCount, { running, staged }, options);
 }
 
 function finishUpdate(
     lines: FlowLine[],
+    progressLineCount: number,
     versions: { running: string | null; staged: string },
     options: UpdateFlowOptions
 ): UpdateFlowResult {
@@ -98,20 +118,30 @@ function finishUpdate(
                 `${MARK_OK} Staged v${staged}. Runtime is not running — start it with 'brew services start tavern-runtime'.`
             )
         );
-        return { lines, exitCode: 0, shouldRestart: false, needsCutover: false };
+        return result(lines, progressLineCount, 0, false, false);
     }
 
     if (running === staged) {
         lines.push(out(`${MARK_OK} Runtime is up to date and running v${staged}.`));
-        return { lines, exitCode: 0, shouldRestart: false, needsCutover: false };
+        return result(lines, progressLineCount, 0, false, false);
     }
 
     lines.push(out(`${MARK_OK} Staged v${staged} — runtime is still running v${running}.`));
     if (options.restart) {
-        return { lines, exitCode: 0, shouldRestart: true, needsCutover: true };
+        return result(lines, progressLineCount, 0, true, true);
     }
     lines.push(out("Run 'tavern restart' to cut over."));
-    return { lines, exitCode: 0, shouldRestart: false, needsCutover: true };
+    return result(lines, progressLineCount, 0, false, true);
+}
+
+function result(
+    lines: FlowLine[],
+    progressLineCount: number,
+    exitCode: number,
+    shouldRestart: boolean,
+    needsCutover: boolean
+): UpdateFlowResult {
+    return { exitCode, lines, needsCutover, progressLineCount, shouldRestart };
 }
 
 function brewFailed(result: BrewResult): boolean {

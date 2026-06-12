@@ -74,10 +74,12 @@ other pins; `--all` removes every install.
 `update` shells out to Homebrew and stages the newest Runtime package without
 restarting the running service, then best-effort pre-installs the staged
 Runtime's pinned engine so the cutover restart does not wait on an engine
-download. It always ends with a version verdict: it compares the staged binary
-version against the running Runtime and says explicitly when a restart is
-still required ("formula up to date" never implies the running process is).
-`--restart`, or a confirmation prompt on a TTY, cuts over immediately.
+download. It prints phase progress for Homebrew checks, package staging, engine
+pre-stage, and version checks; `--verbose` also prints captured Homebrew output.
+It always ends with a version verdict: it compares the staged binary version
+against the running Runtime and says explicitly when a restart is still required
+("formula up to date" never implies the running process is). `--restart`, or a
+confirmation prompt on a TTY, cuts over immediately.
 `restart` restarts the Homebrew service, waits for Runtime health, and
 confirms the new running version; it never reports success without observing
 health (`--no-wait` skips the wait). Use Homebrew directly for stop, logs, and
