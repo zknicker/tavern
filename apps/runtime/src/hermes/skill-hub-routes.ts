@@ -1,4 +1,5 @@
 import {
+    type AgentRuntimeSkillHubItem,
     agentRuntimeSkillHubActionResultSchema,
     agentRuntimeSkillHubInstallInputSchema,
     agentRuntimeSkillHubSearchInputSchema,
@@ -7,6 +8,7 @@ import {
 } from '@tavern/api';
 import { badRequest, json, readJson } from '../tavern/http';
 import { createSkillHubClient } from './skill-hub-client';
+import { listTapSkills, searchTapSkills } from './skill-tap-search';
 import { addSkillHubTap, listSkillHubTaps, removeSkillHubTap } from './skill-taps';
 
 export async function handleSkillHubRequest(request: Request): Promise<Response | null> {
@@ -22,7 +24,16 @@ export async function handleSkillHubRequest(request: Request): Promise<Response 
 
     const hub = createSkillHubClient();
     if (request.method === 'GET' && segments[2] === 'sources') {
-        return json(await hub.getCatalog());
+        // The engine's index-backed fast path skips the live GitHub source,
+        // so Runtime surfaces tap skills itself in featured and search.
+        const [catalog, tapSkills] = await Promise.all([
+            hub.getCatalog(),
+            listTapSkills().catch(() => []),
+        ]);
+        return json({
+            ...catalog,
+            featured: mergeTapSkills(tapSkills, catalog.featured),
+        });
     }
 
     if (request.method === 'GET' && segments[2] === 'search') {
@@ -33,7 +44,16 @@ export async function handleSkillHubRequest(request: Request): Promise<Response 
             query: url.searchParams.get('query') ?? '',
             ...(url.searchParams.get('source') ? { source: url.searchParams.get('source') } : {}),
         });
-        return json(await hub.search(input));
+        const [result, tapSkills] = await Promise.all([
+            hub.search(input),
+            input.source && input.source !== 'all' && input.source !== 'github'
+                ? Promise.resolve([])
+                : searchTapSkills(input.query).catch(() => []),
+        ]);
+        return json({
+            ...result,
+            results: mergeTapSkills(tapSkills, result.results),
+        });
     }
 
     if (request.method === 'GET' && segments[2] === 'preview') {
@@ -93,4 +113,12 @@ async function respondWithTapUpdate(
     } catch (error) {
         return badRequest(error instanceof Error ? error.message : String(error));
     }
+}
+
+function mergeTapSkills(
+    tapSkills: AgentRuntimeSkillHubItem[],
+    engineItems: AgentRuntimeSkillHubItem[]
+) {
+    const tapIdentifiers = new Set(tapSkills.map((item) => item.identifier));
+    return [...tapSkills, ...engineItems.filter((item) => !tapIdentifiers.has(item.identifier))];
 }
