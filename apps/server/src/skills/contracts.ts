@@ -24,6 +24,25 @@ export const skillHubTapRemoveInputSchema = z.object({
     repo: z.string().trim().min(1).max(200),
 });
 
+export const toolsetIdInputSchema = z.object({
+    toolsetId: skillIdSchema,
+});
+
+export const toolsetProviderSelectInputSchema = z.object({
+    provider: z.string().trim().min(1).max(100),
+    toolsetId: skillIdSchema,
+});
+
+export const toolsetEnvSaveInputSchema = z.object({
+    env: z.record(z.string().trim().min(1), z.string().max(4000)),
+    toolsetId: skillIdSchema,
+});
+
+export const toolsetPostSetupInputSchema = z.object({
+    key: z.string().trim().min(1).max(100),
+    toolsetId: skillIdSchema,
+});
+
 export const setSkillEnabledInputSchema = z.object({
     enabled: z.boolean(),
     skillId: skillIdSchema,

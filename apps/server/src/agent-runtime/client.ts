@@ -83,7 +83,13 @@ import {
     type AgentRuntimeStopTurnResult,
     type AgentRuntimeSubmitModelProviderOAuth,
     type AgentRuntimeToolset,
+    type AgentRuntimeToolsetConfig,
+    type AgentRuntimeToolsetEnvUpdate,
+    type AgentRuntimeToolsetEnvUpdateResult,
     type AgentRuntimeToolsetList,
+    type AgentRuntimeToolsetPostSetup,
+    type AgentRuntimeToolsetProviderSelect,
+    type AgentRuntimeToolsetProviderSelectResult,
     type AgentRuntimeUpdate,
     type AgentRuntimeUpdateAgentAppearance,
     type AgentRuntimeUpdateAgentModel,
@@ -189,7 +195,13 @@ import {
     agentRuntimeStopTurnResultSchema,
     agentRuntimeStopTurnSchema,
     agentRuntimeSubmitModelProviderOAuthSchema,
+    agentRuntimeToolsetConfigSchema,
+    agentRuntimeToolsetEnvUpdateResultSchema,
+    agentRuntimeToolsetEnvUpdateSchema,
     agentRuntimeToolsetListSchema,
+    agentRuntimeToolsetPostSetupSchema,
+    agentRuntimeToolsetProviderSelectResultSchema,
+    agentRuntimeToolsetProviderSelectSchema,
     agentRuntimeToolsetSchema,
     agentRuntimeUpdateAgentAppearanceSchema,
     agentRuntimeUpdateAgentModelSchema,
@@ -277,6 +289,7 @@ export interface TavernAgentRuntimeClient {
     getSessionGraph(sessionKey: string): Promise<AgentRuntimeSessionGraph>;
     getSessionPrompt(sessionKey: string): Promise<AgentRuntimeSessionPrompt | null>;
     getSkillHubCatalog(): Promise<AgentRuntimeSkillHubCatalog>;
+    getToolsetConfig(toolsetId: string): Promise<AgentRuntimeToolsetConfig>;
     getUpdateStatus(): Promise<AgentRuntimeUpdate>;
     getWorkspaceInstructions(agentId: string): Promise<AgentRuntimeRenderedWorkspaceInstructions>;
     installSkillHubSkill(
@@ -338,6 +351,10 @@ export interface TavernAgentRuntimeClient {
         slug: AgentRuntimeJobSlug,
         input?: AgentRuntimeRunJobInput
     ): Promise<AgentRuntimeRunJob>;
+    runToolsetPostSetup(
+        toolsetId: string,
+        input: AgentRuntimeToolsetPostSetup
+    ): Promise<AgentRuntimeSkillHubActionResult>;
     saveAgentFile(
         agentId: string,
         path: string,
@@ -357,6 +374,10 @@ export interface TavernAgentRuntimeClient {
     savePermissionSettings(
         input: AgentRuntimeSavePermissionSettings
     ): Promise<AgentRuntimeSavePermissionSettingsResult>;
+    saveToolsetEnv(
+        toolsetId: string,
+        input: AgentRuntimeToolsetEnvUpdate
+    ): Promise<AgentRuntimeToolsetEnvUpdateResult>;
     saveWorkspaceInstructions(
         agentId: string,
         input: AgentRuntimeSaveWorkspaceInstructions
@@ -366,6 +387,10 @@ export interface TavernAgentRuntimeClient {
     searchSkillHub(
         input: AgentRuntimeSkillHubSearchInput
     ): Promise<AgentRuntimeSkillHubSearchResult>;
+    selectToolsetProvider(
+        toolsetId: string,
+        input: AgentRuntimeToolsetProviderSelect
+    ): Promise<AgentRuntimeToolsetProviderSelectResult>;
     startModelProviderOAuth(input: AgentRuntimeStartModelProviderOAuth): Promise<unknown>;
     startUpdate(input?: { targetVersion?: null | string }): Promise<AgentRuntimeUpdate>;
     stopChatTurn(chatId: string, input: AgentRuntimeStopTurn): Promise<AgentRuntimeStopTurnResult>;
@@ -1656,6 +1681,41 @@ class HttpTavernAgentRuntimeClient implements TavernAgentRuntimeClient {
         );
     }
 
+    async getToolsetConfig(toolsetId: string) {
+        return agentRuntimeToolsetConfigSchema.parse(
+            await this.#getSkillHubJson(agentRuntimeRoutes.toolsetConfig(toolsetId))
+        );
+    }
+
+    async selectToolsetProvider(toolsetId: string, input: AgentRuntimeToolsetProviderSelect) {
+        const payload = agentRuntimeToolsetProviderSelectSchema.parse(input);
+        return agentRuntimeToolsetProviderSelectResultSchema.parse(
+            await this.#sendSkillHubJson(
+                'PUT',
+                agentRuntimeRoutes.toolsetProvider(toolsetId),
+                payload
+            )
+        );
+    }
+
+    async saveToolsetEnv(toolsetId: string, input: AgentRuntimeToolsetEnvUpdate) {
+        const payload = agentRuntimeToolsetEnvUpdateSchema.parse(input);
+        return agentRuntimeToolsetEnvUpdateResultSchema.parse(
+            await this.#sendSkillHubJson('PUT', agentRuntimeRoutes.toolsetEnv(toolsetId), payload)
+        );
+    }
+
+    async runToolsetPostSetup(toolsetId: string, input: AgentRuntimeToolsetPostSetup) {
+        const payload = agentRuntimeToolsetPostSetupSchema.parse(input);
+        return agentRuntimeSkillHubActionResultSchema.parse(
+            await this.#sendSkillHubJson(
+                'POST',
+                agentRuntimeRoutes.toolsetPostSetup(toolsetId),
+                payload
+            )
+        );
+    }
+
     async #getSkillHubJson(pathname: string) {
         const response = await fetch(`${this.#baseUrl}${pathname}`, {
             headers: this.#authHeaders,
@@ -1668,7 +1728,7 @@ class HttpTavernAgentRuntimeClient implements TavernAgentRuntimeClient {
         return await response.json();
     }
 
-    async #sendSkillHubJson(method: 'DELETE' | 'POST', pathname: string, payload: unknown) {
+    async #sendSkillHubJson(method: 'DELETE' | 'POST' | 'PUT', pathname: string, payload: unknown) {
         const response = await fetch(`${this.#baseUrl}${pathname}`, {
             ...(payload === undefined ? {} : { body: JSON.stringify(payload) }),
             headers: {

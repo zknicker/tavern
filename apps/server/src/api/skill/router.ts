@@ -15,6 +15,12 @@ import { listRuntimeSkillsProcedure } from './list-runtime.ts';
 import { onSkillUpdate } from './on-update.ts';
 import { setSkillEnabledProcedure } from './set-enabled.ts';
 import { setToolsetEnabledProcedure } from './set-toolset-enabled.ts';
+import {
+    runToolsetPostSetupProcedure,
+    saveToolsetEnvProcedure,
+    setToolsetProviderProcedure,
+    toolsetConfigProcedure,
+} from './toolset-setup.ts';
 
 export const skillRouter = createRouter({
     list: listSkillsProcedure,
@@ -31,4 +37,8 @@ export const skillRouter = createRouter({
     hubTaps: skillHubTapListProcedure,
     hubTapAdd: skillHubTapAddProcedure,
     hubTapRemove: skillHubTapRemoveProcedure,
+    toolsetConfig: toolsetConfigProcedure,
+    setToolsetProvider: setToolsetProviderProcedure,
+    saveToolsetEnv: saveToolsetEnvProcedure,
+    runToolsetPostSetup: runToolsetPostSetupProcedure,
 });
