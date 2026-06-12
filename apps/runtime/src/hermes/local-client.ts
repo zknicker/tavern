@@ -4,12 +4,14 @@ import {
     type AgentRuntimeAgentFileContent,
     type AgentRuntimeAgentFileList,
     type AgentRuntimeCancelModelProviderOAuth,
+    type AgentRuntimeCommandList,
     type AgentRuntimeCreateAgent,
     type AgentRuntimeCreateCron,
     type AgentRuntimeCron,
     type AgentRuntimeCronRun,
     type AgentRuntimeModels,
     type AgentRuntimePollModelProviderOAuth,
+    type AgentRuntimeRunCommandResult,
     type AgentRuntimeRunCron,
     type AgentRuntimeSaveModelProviderApiKey,
     type AgentRuntimeSessionGraph,
@@ -32,6 +34,7 @@ import {
     agentRuntimeAgentListSchema,
     agentRuntimeAgentSchema,
     agentRuntimeCancelModelProviderOAuthSchema,
+    agentRuntimeCommandListSchema,
     agentRuntimeCronListSchema,
     agentRuntimeCronRunSchema,
     agentRuntimeCronSchema,
@@ -43,6 +46,7 @@ import {
     agentRuntimeModelProviderOAuthSubmitSchema,
     agentRuntimeModelsSchema,
     agentRuntimePollModelProviderOAuthSchema,
+    agentRuntimeRunCommandResultSchema,
     agentRuntimeSaveModelProviderApiKeySchema,
     agentRuntimeSessionGraphSchema,
     agentRuntimeSessionListSchema,
@@ -135,6 +139,86 @@ export class LocalHermesClient extends LocalHermesUnsupportedSurfaces {
     async interruptLiveSession(sessionId: string) {
         await this.#gateway.request('session.interrupt', {
             session_id: sessionId,
+        });
+    }
+
+    // Starts the chat's next turn on a brand-new engine session: close the
+    // live session if one is open and drop the synced session mapping so the
+    // next open creates a fresh session under the same Tavern session key.
+    // The old engine session stays stored as execution evidence.
+    async resetSession(sessionKey: string) {
+        const liveSessionId = this.#liveSessions.get(sessionKey);
+
+        if (liveSessionId) {
+            await this.#gateway
+                .request('session.close', { session_id: liveSessionId })
+                .catch(() => undefined);
+            this.#liveSessions.delete(sessionKey);
+        }
+
+        await deleteHermesSessionMapping(sessionKey);
+    }
+
+    // Categorized engine command catalog for the composer / palette. Skill
+    // invocation commands live outside the categorized registry and are not
+    // listed in v1; the engine's terminal-UI extras (/logs, /sessions, ...)
+    // only work inside its own TUI client, so that category is dropped too.
+    async listCommands(): Promise<AgentRuntimeCommandList> {
+        const result = await this.#gateway.request('commands.catalog', {});
+        const categories = readArray(result, ['categories']);
+        const commands = categories.flatMap((category) => {
+            const record = asRecord(category);
+            const categoryName = readString(record, ['name']) ?? 'Commands';
+            if (categoryName === 'TUI') {
+                return [];
+            }
+            return readCommandPairs(record.pairs).map(([name, description]) => ({
+                category: categoryName,
+                description: description || null,
+                name,
+            }));
+        });
+        return agentRuntimeCommandListSchema.parse({
+            commands: commands.filter((command) => /^\/[a-z0-9][a-z0-9_-]*$/iu.test(command.name)),
+        });
+    }
+
+    // Runs a slash command in the chat's live session. slash.exec covers the
+    // registry commands; the engine rejects pending-input and skill commands
+    // with a use-command.dispatch error, so those retry through
+    // command.dispatch.
+    async runCommand(sessionKey: string, command: string): Promise<AgentRuntimeRunCommandResult> {
+        const session = await this.#openGatewaySession(sessionKey);
+        const commandText = command.trim();
+
+        try {
+            const result = await this.#gateway.request('slash.exec', {
+                command: commandText,
+                session_id: session.liveSessionId,
+            });
+            return agentRuntimeRunCommandResultSchema.parse({
+                output: stripAnsiSequences(
+                    readStringFromUnknown(result, ['output']) ?? '(no output)'
+                ),
+                status: 'completed',
+            });
+        } catch (error) {
+            if (!isCommandDispatchFallback(error)) {
+                throw error;
+            }
+        }
+
+        const [name = '', arg = ''] = splitCommandText(commandText.replace(/^\//u, ''));
+        const dispatched = await this.#gateway.request('command.dispatch', {
+            arg,
+            name,
+            session_id: session.liveSessionId,
+        });
+        return agentRuntimeRunCommandResultSchema.parse({
+            output: stripAnsiSequences(
+                readStringFromUnknown(dispatched, ['output', 'message', 'target']) ?? '(no output)'
+            ),
+            status: 'completed',
         });
     }
 
@@ -1548,6 +1632,39 @@ async function readFileStats(filePath: string) {
 
 function isMissingHermesSession(error: unknown) {
     return error instanceof Error && /session not found/iu.test(error.message);
+}
+
+// Slash command output is terminal text; the engine colors it with ANSI
+// escape sequences that must not leak into chat evidence.
+function stripAnsiSequences(text: string) {
+    // eslint-disable-next-line no-control-regex
+    return text.replace(/\u001b\[[0-9;?]*[ -/]*[@-~]/gu, '');
+}
+
+// The gateway rejects pending-input, snapshot-restore, and skill commands on
+// slash.exec with an error directing callers to command.dispatch.
+function isCommandDispatchFallback(error: unknown) {
+    return error instanceof Error && /command\.dispatch/iu.test(error.message);
+}
+
+function splitCommandText(text: string): [string, string] {
+    const separatorIndex = text.search(/\s/u);
+    if (separatorIndex < 0) {
+        return [text, ''];
+    }
+    return [text.slice(0, separatorIndex), text.slice(separatorIndex + 1).trim()];
+}
+
+function readCommandPairs(value: unknown): [string, string][] {
+    if (!Array.isArray(value)) {
+        return [];
+    }
+    return value.flatMap((pair): [string, string][] => {
+        if (!Array.isArray(pair) || typeof pair[0] !== 'string') {
+            return [];
+        }
+        return [[pair[0], typeof pair[1] === 'string' ? pair[1] : '']];
+    });
 }
 
 const warnedGatewayEventTypes = new Set<string>();

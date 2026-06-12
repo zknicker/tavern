@@ -992,6 +992,167 @@ describe('LocalHermesClient session routing', () => {
             },
         ]);
     });
+
+    it('maps the categorized commands.catalog into the command list', async () => {
+        server = new WebSocketServer({ host: '127.0.0.1', port: await getFreePort() });
+        server.on('connection', (socket) => {
+            socket.on('message', (message) => {
+                const request = JSON.parse(message.toString()) as { id: string; method: string };
+                if (request.method === 'commands.catalog') {
+                    socket.send(
+                        JSON.stringify({
+                            id: request.id,
+                            jsonrpc: '2.0',
+                            result: {
+                                canon: { '/model': '/model' },
+                                categories: [
+                                    {
+                                        name: 'Session',
+                                        pairs: [
+                                            ['/model', 'Switch the session model'],
+                                            ['/compact', 'Compress older history'],
+                                        ],
+                                    },
+                                    {
+                                        name: 'TUI',
+                                        pairs: [['not-a-command', 'malformed entry']],
+                                    },
+                                ],
+                                pairs: [],
+                                skill_count: 3,
+                                sub: {},
+                                warning: '',
+                            },
+                        })
+                    );
+                    return;
+                }
+                socket.send(JSON.stringify({ id: request.id, jsonrpc: '2.0', result: {} }));
+            });
+        });
+        await new Promise<void>((resolve) => server?.once('listening', () => resolve()));
+        const address = server.address();
+        if (!(address && typeof address === 'object')) {
+            throw new Error('Test WebSocket server did not bind a port.');
+        }
+
+        const { LocalHermesClient } = await import('./local-client');
+        const client = new LocalHermesClient({
+            baseUrl: `http://127.0.0.1:${address.port}`,
+            token: null,
+        });
+        const list = await client.listCommands();
+        client.close();
+
+        expect(list).toEqual({
+            commands: [
+                {
+                    category: 'Session',
+                    description: 'Switch the session model',
+                    name: '/model',
+                },
+                {
+                    category: 'Session',
+                    description: 'Compress older history',
+                    name: '/compact',
+                },
+            ],
+        });
+    });
+
+    it('runs commands via slash.exec and falls back to command.dispatch when directed', async () => {
+        const requests: Array<{ method: string; params: Record<string, unknown> }> = [];
+        server = new WebSocketServer({ host: '127.0.0.1', port: await getFreePort() });
+        server.on('connection', (socket) => {
+            socket.on('message', (message) => {
+                const request = JSON.parse(message.toString()) as {
+                    id: string;
+                    method: string;
+                    params?: Record<string, unknown>;
+                };
+                const params = request.params ?? {};
+                requests.push({ method: request.method, params });
+
+                if (request.method === 'session.create') {
+                    socket.send(
+                        JSON.stringify({
+                            id: request.id,
+                            jsonrpc: '2.0',
+                            result: { session_id: 'live-cmd', stored_session_id: 'stored-cmd' },
+                        })
+                    );
+                    return;
+                }
+                if (request.method === 'slash.exec') {
+                    const command = String(params.command ?? '');
+                    if (command.startsWith('/retry')) {
+                        socket.send(
+                            JSON.stringify({
+                                error: {
+                                    code: 4018,
+                                    message:
+                                        'pending-input command: use command.dispatch for /retry',
+                                },
+                                id: request.id,
+                                jsonrpc: '2.0',
+                            })
+                        );
+                        return;
+                    }
+                    socket.send(
+                        JSON.stringify({
+                            id: request.id,
+                            jsonrpc: '2.0',
+                            result: {
+                                output: '\u001b[1;32mModel set to tavern-e2e-tools\u001b[0m',
+                            },
+                        })
+                    );
+                    return;
+                }
+                if (request.method === 'command.dispatch') {
+                    socket.send(
+                        JSON.stringify({
+                            id: request.id,
+                            jsonrpc: '2.0',
+                            result: { output: 'queued retry', type: 'pending' },
+                        })
+                    );
+                    return;
+                }
+                socket.send(JSON.stringify({ id: request.id, jsonrpc: '2.0', result: {} }));
+            });
+        });
+        await new Promise<void>((resolve) => server?.once('listening', () => resolve()));
+        const address = server.address();
+        if (!(address && typeof address === 'object')) {
+            throw new Error('Test WebSocket server did not bind a port.');
+        }
+
+        const { LocalHermesClient } = await import('./local-client');
+        const client = new LocalHermesClient({
+            baseUrl: `http://127.0.0.1:${address.port}`,
+            token: null,
+        });
+
+        const direct = await client.runCommand('agent:main:tavern:cht_1', '/model sonnet');
+        const dispatched = await client.runCommand('agent:main:tavern:cht_1', '/retry now');
+        client.close();
+
+        expect(direct).toEqual({ output: 'Model set to tavern-e2e-tools', status: 'completed' });
+        expect(dispatched).toEqual({ output: 'queued retry', status: 'completed' });
+        expect(requests.map((entry) => entry.method)).toEqual([
+            'session.create',
+            'slash.exec',
+            'slash.exec',
+            'command.dispatch',
+        ]);
+        expect(requests.at(-1)?.params).toMatchObject({
+            arg: 'now',
+            name: 'retry',
+            session_id: 'live-cmd',
+        });
+    });
 });
 
 describe('LocalHermesClient adapter-owned state', () => {
