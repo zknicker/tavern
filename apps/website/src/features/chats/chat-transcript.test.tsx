@@ -230,10 +230,10 @@ test('ChatTranscript keeps hidden thinking out of tool work headers', () => {
     // A lone tool renders inside the group drawer with a count summary
     // header, so a second tool only retexts the header instead of
     // restructuring the rows.
-    assert.match(markup, /Ran 1 command/);
+    assert.match(markup, /Ran a command/);
     assert.match(markup, /command -v node/);
     assert.match(markup, />Used</);
-    assert.doesNotMatch(markup, /Used 1 tool/);
+    assert.doesNotMatch(markup, /Used a tool/);
 });
 
 test('ToolStep renders bash failures through the shell tool renderer', () => {

@@ -105,14 +105,14 @@ test('renders live tool progress before the final reply', async ({ page }) => {
         .first();
     await expect(liveToolEvidence).toBeVisible({ timeout: 90_000 });
     await expect(page.getByRole('button', { name: /Work(?:ing|ed) for/i })).toHaveCount(1);
-    await expect(page.getByText(/Ran 1 command/i)).toHaveCount(1);
+    await expect(page.getByText(/Ran a command/i)).toHaveCount(1);
 
     await expect(finalReply).toBeVisible({ timeout: 90_000 });
 
     const completedActivity = page.getByRole('button', { name: /Worked for/i });
     await expect(completedActivity).toBeVisible({ timeout: 30_000 });
     await expect(page.getByRole('button', { name: /Work(?:ing|ed) for/i })).toHaveCount(1);
-    await expect(page.getByText(/Ran 1 command/i)).toHaveCount(1);
+    await expect(page.getByText(/Ran a command/i)).toHaveCount(1);
     await openActivityIfClosed(completedActivity);
     await expect(page.getByText(/QA_KICKOFF_TASK\.md|exec|run sleep 4/i).first()).toBeVisible({
         timeout: 10_000,
@@ -142,7 +142,7 @@ test('renders provider-streamed assistant updates between Hermes tool groups', a
     const activity = page.getByRole('button', { name: /Work(?:ing|ed) for/i });
     await expect(activity).toHaveCount(1);
     await openActivityIfClosed(activity);
-    const commandGroups = page.getByRole('button', { name: /Ran 1 command/i });
+    const commandGroups = page.getByRole('button', { name: /Ran a command/i });
     await expect(commandGroups).toHaveCount(2, { timeout: 10_000 });
     await expectAbove(transcriptParagraph(page, firstUpdate), commandGroups.nth(0));
     await expectAbove(commandGroups.nth(0), transcriptParagraph(page, secondUpdate));
@@ -171,7 +171,7 @@ test('renders model thinking as separate activity blocks around tool work', asyn
         timeout: 10_000,
     });
     await expect(
-        page.getByRole('button', { name: /Explored 1 file|Ran \d+ commands?/i })
+        page.getByRole('button', { name: /Read (?:a|\d+) files?|Ran (?:a|\d+) commands?/i })
     ).toBeVisible({
         timeout: 10_000,
     });

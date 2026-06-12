@@ -21,8 +21,8 @@ happen, and keep the durable timeline as context.
   neutral when completed, turn red on failure, and shimmer while running.
   Every contiguous tool group renders as a collapsed work drawer from its
   first step; the header shows the active tool's icon and synopsis while
-  executing and a count summary at rest ("Ran 2 commands, searched web 1
-  time"), so mid-turn growth only retexts the header. Expanding reveals the
+  executing and a count summary at rest ("Ran 2 commands, searched web"),
+  so mid-turn growth only retexts the header. Expanding reveals the
   tool rows; clicking a row opens the tool-aware inspect drawer (see
   [Tool Presentation](../internals/tool-presentation.md)). Model thinking text
   is hidden from the main chat transcript by default; Appearance settings can

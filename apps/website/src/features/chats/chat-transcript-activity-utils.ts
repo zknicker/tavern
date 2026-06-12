@@ -1,5 +1,9 @@
 import type { TranscriptItem, TranscriptRow } from './chat-transcript-model.ts';
-import { resolveToolStepIcon, type ToolStepIcon } from './tool-steps/tool-step-icons.ts';
+import {
+    isEditTool,
+    resolveToolStepIcon,
+    type ToolStepIcon,
+} from './tool-steps/tool-step-icons.ts';
 
 const commandToolNames = ['bash', 'command', 'exec', 'shell', 'terminal', 'zsh'];
 
@@ -190,14 +194,20 @@ export function getActiveWorkLabel(items: ActivityItem[]) {
                 item.row.toolCall.label?.trim() ||
                 name;
             const isCommand = matchesAny(name.toLowerCase(), commandToolNames);
+            const isEdit = isEditTool(name.toLowerCase());
+            const verb = isCommand ? 'Running' : isEdit ? 'Editing' : 'Using';
 
             // A target that is just the tool's internal name is not intent;
             // fall back to plain product phrasing instead of "Running terminal".
             if (target.toLowerCase() === name.toLowerCase()) {
-                return isCommand ? 'Running a command' : `Using ${name}`;
+                if (isCommand) {
+                    return 'Running a command';
+                }
+
+                return isEdit ? 'Editing a file' : `Using ${name}`;
             }
 
-            return `${isCommand ? 'Running' : 'Using'} ${target}`;
+            return `${verb} ${target}`;
         }
 
         if (item.row.kind === 'worker' && item.row.worker.title) {
@@ -209,17 +219,18 @@ export function getActiveWorkLabel(items: ActivityItem[]) {
 }
 
 /**
- * Count summary for a work group ("Ran 2 commands, searched web 1 time"), or
+ * Count summary for a work group ("Ran 2 commands, searched web"), or
  * null when the group has nothing countable yet.
  */
 export function formatWorkGroupSummary(items: ActivityItem[]) {
     const counts = countWorkItems(items);
     const parts = [
-        formatCount(counts.explore, 'Explored', 'file'),
-        formatCount(counts.edit, 'Edited', 'file'),
-        formatCount(counts.command, 'Ran', 'command'),
-        counts.web > 0 ? `Searched web ${counts.web} ${counts.web === 1 ? 'time' : 'times'}` : null,
-        formatCount(counts.other, 'Used', 'tool'),
+        formatActionCount(counts.toolUse + counts.other, 'Used', 'tool'),
+        formatActionCount(counts.fileRead, 'Read', 'file'),
+        formatTimes(counts.codeSearch, 'Searched code'),
+        formatActionCount(counts.edit, 'Edited', 'file'),
+        formatActionCount(counts.command, 'Ran', 'command'),
+        formatTimes(counts.web, 'Searched web'),
     ].filter((part): part is string => Boolean(part));
 
     return parts.length > 0 ? joinHeaderParts(parts) : null;
@@ -281,11 +292,13 @@ function countWorkItems(items: ActivityItem[]) {
             }
 
             const name = item.row.toolCall.name.trim().toLowerCase();
-            const label = item.row.toolCall.label?.trim().toLowerCase() ?? '';
-            const summary = item.row.toolCall.summaryParts.join(' ').trim().toLowerCase();
-            const text = `${name} ${label} ${summary}`;
 
-            if (matchesAny(text, ['patch', 'edit', 'edited', 'write', 'modified', 'file change'])) {
+            if (matchesAny(name, ['tool_search', 'tool-search'])) {
+                counts.toolUse += 1;
+                return counts;
+            }
+
+            if (isFileEditToolName(name)) {
                 counts.edit += 1;
                 return counts;
             }
@@ -302,27 +315,79 @@ function countWorkItems(items: ActivityItem[]) {
                 return counts;
             }
 
-            if (
-                matchesAny(name, ['read', 'grep', 'search']) ||
-                matchesAny(text, ['read ', 'search'])
-            ) {
-                counts.explore += 1;
+            if (isCodeSearchToolName(name)) {
+                counts.codeSearch += 1;
+                return counts;
+            }
+
+            if (isFileReadToolName(name)) {
+                counts.fileRead += 1;
                 return counts;
             }
 
             counts.other += 1;
             return counts;
         },
-        { command: 0, edit: 0, explore: 0, other: 0, thinking: 0, web: 0 }
+        {
+            codeSearch: 0,
+            command: 0,
+            edit: 0,
+            fileRead: 0,
+            other: 0,
+            thinking: 0,
+            toolUse: 0,
+            web: 0,
+        }
     );
 }
 
-function formatCount(count: number, verb: string, noun: string) {
+function isFileEditToolName(normalizedName: string) {
+    return (
+        normalizedName === 'edit' ||
+        normalizedName === 'write' ||
+        matchesAny(normalizedName, [
+            'apply_patch',
+            'edit_file',
+            'file_edit',
+            'file_write',
+            'patch',
+            'replace',
+            'write_file',
+        ])
+    );
+}
+
+function isCodeSearchToolName(normalizedName: string) {
+    return (
+        normalizedName === 'grep' ||
+        normalizedName === 'search' ||
+        normalizedName === 'rg' ||
+        matchesAny(normalizedName, ['file_search', 'search_file'])
+    );
+}
+
+function isFileReadToolName(normalizedName: string) {
+    return normalizedName === 'read' || matchesAny(normalizedName, ['file_read', 'read_file']);
+}
+
+function formatActionCount(count: number, verb: string, noun: string) {
     if (count === 0) {
         return null;
     }
 
-    return `${verb} ${count} ${noun}${count === 1 ? '' : 's'}`;
+    if (count === 1) {
+        return `${verb} a ${noun}`;
+    }
+
+    return `${verb} ${count} ${noun}s`;
+}
+
+function formatTimes(count: number, label: string) {
+    if (count === 0) {
+        return null;
+    }
+
+    return count === 1 ? label : `${label} ${count} times`;
 }
 
 function joinHeaderParts(parts: string[]) {

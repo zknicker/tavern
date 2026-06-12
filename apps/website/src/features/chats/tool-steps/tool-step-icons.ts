@@ -45,7 +45,7 @@ export function resolveToolStepIcon(name: string): ToolStepIcon {
 }
 
 export function isEditTool(normalizedName: string) {
-    return matchesAny(normalizedName, ['edit', 'write', 'patch', 'update']);
+    return matchesAny(normalizedName, ['edit', 'write', 'patch', 'replace']);
 }
 
 export const genericToolStepIcon = ToolsIcon;
