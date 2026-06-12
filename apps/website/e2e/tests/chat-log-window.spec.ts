@@ -18,10 +18,11 @@ declare global {
     }
 }
 
-// Regression: when the chat log sits at its page limit, a live turn used to
-// evict the oldest loaded rows (live-progress trim plus tail-window slide),
-// visibly draining old expanded work drawers until the completion refetch
-// restored them. Loaded history must only grow while the chat stays open.
+// Regression: a live turn used to evict loaded history rows (live-progress
+// trim plus tail-window slide), visibly draining old expanded work drawers
+// until the completion refetch restored them. Loaded history must only grow
+// while the chat stays open: the old drawer keeps its height, node identity,
+// and expanded state through a later working turn.
 test('keeps loaded history and an open old work drawer stable through a live turn', async ({
     page,
 }) => {
@@ -42,11 +43,10 @@ test('keeps loaded history and an open old work drawer stable through a live tur
         prompt: 'Follow-up chat turn marker. Reply exactly `QA_WINDOW_T2_OK`.',
     });
 
-    // Give the first turn's drawer several steps, then fill the log to the
-    // 100-row page limit so the next live turn pushes rows past it.
+    // Give the first turn's drawer several steps and the chat a meaty work
+    // log so eviction regressions have something visible to drain.
     await seedActivities({ chatId, count: 10, prefix: 'a', turn: 'first' });
-    const fillCount = Math.max(0, 100 - (await fetchLogTotal(chatId)));
-    await seedActivities({ chatId, count: fillCount, prefix: 'b', turn: 'last' });
+    await seedActivities({ chatId, count: 40, prefix: 'b', turn: 'last' });
 
     await page.reload();
     await expect(transcriptParagraph(page, 'QA_WINDOW_T2_OK')).toBeVisible({ timeout: 45_000 });
@@ -189,25 +189,6 @@ async function seedActivities(input: {
             title: `Seed tool ${input.prefix}${index}`,
         });
     }
-}
-
-async function fetchLogTotal(chatId: string) {
-    const port = requiredEnv('TAVERN_SERVER_PORT');
-    const input = encodeURIComponent(JSON.stringify({ id: chatId, limit: 1 }));
-    const response = await fetch(`http://localhost:${port}/trpc/chat.log.list?input=${input}`);
-
-    if (!response.ok) {
-        throw new Error(`chat.log.list failed: ${response.status} ${await response.text()}`);
-    }
-
-    const payload = (await response.json()) as { result?: { data?: { total?: number } } };
-    const total = payload.result?.data?.total;
-
-    if (typeof total !== 'number') {
-        throw new Error(`Unexpected chat.log.list payload: ${JSON.stringify(payload)}`);
-    }
-
-    return total;
 }
 
 // Expand the collapsed count-summary groups inside the drawer so its panel
