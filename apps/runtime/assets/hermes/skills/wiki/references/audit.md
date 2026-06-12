@@ -1,7 +1,7 @@
 # Audit Reference
 
-Umbrella truth-seeking audit for the wiki. If `/wiki:librarian` keeps the
-`wiki/` layer in check, `/wiki:audit` answers a broader question: can the user
+Umbrella truth-seeking audit for the wiki. If the librarian keeps the
+`wiki/` layer in check, the audit answers a broader question: can the user
 trust the current knowledge and outputs right now?
 
 The audit is allowed to follow the evidence wherever it leads. It starts from

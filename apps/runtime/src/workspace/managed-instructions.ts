@@ -57,34 +57,15 @@ Do not delegate simple lookups, small edits, or work whose reasoning must stay v
 
 const memorySection = `## Memory
 
-Cortex is Tavern's durable knowledge store: a plain Markdown wiki hub owned by the user. Use it when prior project context, research, source-backed notes, outputs, or durable user preferences could change the answer. Current user instructions and current source material win.
+Cortex is Tavern's durable knowledge store: a plain Markdown wiki hub owned by the user. Use it when prior project context, research, source-backed notes, outputs, or durable user preferences could change the answer.
 
 The context assembled for each of your turns is separate and bounded; it is not your memory. If asked what you know or remember durably, check the wiki rather than guessing from the current conversation.
 
 ### The Wiki Skill
 
-Prefer the installed \`wiki\` skill for wiki work. Use the skill directly for requests such as:
+Use the installed \`wiki\` skill for wiki work — research, ingestion, compilation, querying, auditing, and generated outputs. Do not recreate those workflows with ad hoc files. For quick answers, read/search the wiki directly.
 
-- research a topic and compile findings
-- ingest a source
-- query existing wiki knowledge
-- compile new articles from raw sources
-- audit an output or article
-- write a report, plan, catalog, or other output
-
-The hub lives at \`TAVERN_WIKI_HUB_PATH\`, which Tavern sets for every run. Topic wikis live under \`topics/<slug>/\`; archived topics live under \`topics/.archive/<slug>/\`.
-
-Keep the wiki structure:
-
-- \`raw/\` contains immutable source material.
-- \`wiki/\` contains compiled articles.
-- \`todos/\` is the wiki's todo queue: follow-up records with status and priority that Tavern processes automatically. \`datasets/\` tracks external data manifests.
-- \`output/\` contains reports, plans, decks, catalogs, and generated artifacts.
-- \`_index.md\`, \`config.md\`, and \`log.md\` keep each topic navigable.
-
-### Routing
-
-For quick answers, read/search the wiki first. For research, ingestion, compilation, audit, librarian, lessons, or generated outputs, route through the wiki skill. Do not recreate those workflows with ad hoc files.
+The hub lives at \`TAVERN_WIKI_HUB_PATH\`, which Tavern sets for every run. Topic wikis live under \`topics/<slug>/\` (archived: \`topics/.archive/<slug>/\`): \`raw/\` immutable sources, \`wiki/\` compiled articles, \`todos/\` the follow-up queue, \`datasets/\` data manifests, \`output/\` deliverables; \`_index.md\`, \`config.md\`, and \`log.md\` keep each topic navigable.
 
 ### Conflicts
 
@@ -92,21 +73,17 @@ Priority: current user statement > current source material > compiled wiki artic
 
 ### Writes
 
-Preserve provenance. Put sources in \`raw/\`, synthesize in \`wiki/\`, and file deliverables in \`output/\`. Do not mutate raw source files after ingestion. Do not save secrets or broad chat dumps into the wiki without explicit user direction.
-
-After changing wiki articles, repair the indexes, links, and backlinks your edits affected, and re-score changed articles in \`.librarian/scan-results.json\` where entries exist.
+Preserve provenance: sources in \`raw/\` (never mutated after ingestion), synthesis in \`wiki/\`, deliverables in \`output/\`. Do not save secrets or broad chat dumps into the wiki without explicit user direction. After changing articles, repair the indexes, links, and backlinks your edits affected, and re-score changed articles in \`.librarian/scan-results.json\` where entries exist.
 
 ### Maintenance
 
-Tavern maintains the wiki automatically in the background: new sources compile into articles, a weekly librarian scores and repairs, and todo records are worked off one focused run at a time. Do not schedule wiki maintenance automations or invent hidden background maintenance of your own.
+Tavern maintains the wiki automatically: new sources compile into articles, a weekly librarian scores and repairs, and todo records are worked off one focused run at a time. Do not schedule wiki maintenance automations or invent your own.
 
-When you notice wiki work beyond your current task — thin or single-source coverage, unverified claims, dedup candidates, sources worth ingesting — file it as a proposed todo record per the wiki skill's \`references/todos.md\` instead of chasing it; records are processed automatically. Never park wiki work on the user. Completed todos are deleted — the log.md entry is the history. If a record cannot be resolved, keep it, mark it \`blocked\` with the reason, and lower the affected claims' confidence (or set \`verified: false\`) so answers hedge; the user corrects things in conversation.`;
+When you notice wiki work beyond your current task — thin coverage, unverified claims, dedup candidates, sources worth ingesting — file it as a proposed todo record per the wiki skill's \`references/todos.md\` instead of chasing it. Never park wiki work on the user. Completed todos are deleted — the log.md entry is the history. A record that cannot be resolved is marked \`blocked\` with the reason, and the affected claims get lowered confidence (or \`verified: false\`) so answers hedge.`;
 
 const generatedFileSection = `## This File Is Generated
 
-This AGENTS.md is composed by Tavern and is immutable: it is read-only, writes to it fail, and Tavern overwrites it whenever its sources change. Never try to edit it.
-
-Your scratch space is \`NOTES.md\` in this workspace. Put durable operating notes, conventions, and instructions there by editing it directly with your file tools; its content appears below under "Notes". Identity, voice, and personality belong in \`SOUL.md\` in your home directory, which you may also edit directly. Changes to either file apply from your next turn.`;
+Never edit AGENTS.md. Put durable operating notes, conventions, and instructions in \`NOTES.md\` in this workspace (its content appears below under "Notes"); identity, voice, and personality belong in \`SOUL.md\` in your home directory. Edit both directly with your file tools; changes apply from your next turn.`;
 
 function renderNotesSection(notes: string) {
     const normalized = notes.trim();

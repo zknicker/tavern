@@ -63,17 +63,10 @@ export function getWikiCompileStatus(db: Database = getDb()) {
 export function buildWikiCompilePrompt(topics: string[]): string {
     return [
         `Use the wiki skill. These topic wikis have uncompiled raw sources: ${topics.join(', ')}.`,
-        'Compile the new sources into wiki articles per the incremental compile workflow',
-        'in references/compilation.md: synthesize rather than copy, add bidirectional',
-        'See Also dual-links, update the affected _index.md files, and append a log.md',
-        'entry per wiki changed. Finish with a quick structural pass over the wikis you',
-        'changed: repair any indexes, links, or backlinks your edits affected, and',
-        're-score changed articles in .librarian/scan-results.json per',
-        'references/librarian.md where entries exist. Work only with material already',
-        'on disk. If you notice work that needs new research, external fetches, or',
-        'article rewrites — unverified claims, thin or single-source coverage, dedup',
-        'candidates, promising sources to ingest — file it as a proposed todo',
-        'record per references/todos.md instead of doing it now; records are worked',
-        'off automatically. Finish with a one-line summary.',
-    ].join(' ');
+        'Work only with material already on disk; skip any listed topic with no remaining uncompiled sources.',
+        'Compile the new sources into wiki articles per the incremental compile workflow in references/compilation.md: synthesize rather than copy, add bidirectional See Also dual-links, update the affected _index.md files, and append a log.md entry per wiki changed.',
+        'If you notice work that needs new research, external fetches, or article rewrites — unverified claims, thin or single-source coverage, dedup candidates, promising sources to ingest — file it as a proposed todo record per references/todos.md instead of doing it now.',
+        'Then do a quick structural pass over the wikis you changed: repair any indexes, links, or backlinks your edits affected, and re-score changed articles in .librarian/scan-results.json per the partial re-score protocol in references/librarian.md.',
+        'Finish with a one-line summary.',
+    ].join('\n');
 }

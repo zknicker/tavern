@@ -33,7 +33,7 @@ Wayback CDX snapshot sets. Treat these as **source collections**, not as
 compiled wiki content. The ingest step preserves raw sources and provenance;
 the compile step later synthesizes useful concept/topic/reference articles.
 
-Use `/wiki:ingest-collection` when the user asks to import, mirror, bulk ingest,
+Use collection ingestion when the user asks to import, mirror, bulk ingest,
 ingest another wiki/repository, split a dataset into per-message sources, or
 capture archived snapshots. Do not recursively crawl HTML. Use structured
 upstream interfaces:
@@ -217,25 +217,7 @@ After collection ingestion, compile selectively:
 
 ## URL Ingestion
 
-1. **Detect X.com / Twitter URLs**: If the URL matches `x.com/*/status/*` or `twitter.com/*/status/*`, follow this fallback chain in order:
-
-   **a) Grok MCP (preferred)**: Check if the `grok` MCP server is available by looking for tools matching `mcp__grok__*` (e.g., `mcp__grok__search`). If available, use it to fetch the tweet/thread content. Extract: author handle, display name, full text, date, media descriptions, thread context.
-   > Install: [github.com/nvk/ask-grok-mcp](https://github.com/nvk/ask-grok-mcp)
-
-   **b) FxTwitter proxy**: If Grok MCP is not available, rewrite the URL:
-   - `x.com/user/status/123` → `https://api.fxtwitter.com/user/status/123`
-   - WebFetch this API URL — it returns JSON with full tweet text, author, media, and thread data.
-   - Parse the JSON response for `tweet.text`, `tweet.author`, `tweet.created_at`.
-
-   **c) VxTwitter proxy**: If FxTwitter fails, try:
-   - `x.com/user/status/123` → `https://api.vxtwitter.com/user/status/123`
-   - Same JSON extraction as FxTwitter.
-
-   **d) Direct WebFetch**: Last resort — WebFetch the original `x.com` URL. This often returns limited content (login walls), but sometimes works for public tweets.
-
-   **e) Manual fallback**: If all above fail, report: "Could not fetch tweet content. Options: install [ask-grok-mcp](https://github.com/nvk/ask-grok-mcp) for X.com access, or paste the tweet text manually via `/wiki:ingest \"text\" --title \"@author tweet\"`."
-
-   Type: notes (unless overridden).
+1. **Detect X.com / Twitter URLs**: If the URL matches `x.com/*/status/*` or `twitter.com/*/status/*`: try the grok MCP if its tools (`mcp__grok__*`) are present; else fetch via a JSON proxy mirror (`https://api.fxtwitter.com/user/status/123`, then `https://api.vxtwitter.com/...` — parse `tweet.text`, `tweet.author`, `tweet.created_at`); else direct fetch of the original URL. On total failure, write a metadata stub and file a proposed todo record. Type: notes (unless overridden).
 
 2. **Detect PDF URLs**: If the URL ends in `.pdf` or returns a PDF content type,
    download it to a temporary file and follow the PDF file ingestion flow.
@@ -250,7 +232,7 @@ After collection ingestion, compile selectively:
 
    > "Extract the complete article content from this page. Return: title, author(s) if listed, date published if listed, and the full article text preserving all factual claims, data points, code examples, and technical details. Format as clean markdown."
 
-5. **Failure handling**: If WebFetch fails (auth wall, paywall), report the failure. Suggest: paste content manually via `/wiki:ingest "text" --title "Title"`.
+5. **Failure handling**: If WebFetch fails (auth wall, paywall), report the failure, write a metadata stub with the URL and whatever is known, and file a proposed todo record to retry or source the content another way.
 
 ## File Ingestion
 
@@ -313,7 +295,6 @@ The `inbox/` directory is a drop zone. Users dump files there via Finder, `cp`, 
    - Other files → create a metadata stub noting file type and path
 3. Move each processed file to `inbox/.processed/` (or delete if user did not pass `--keep`)
 4. Report each item processed
-5. If 5+ items were processed, suggest: "You've ingested N new sources. Want me to compile? Run `/wiki:compile`"
 
 ## Slug Generation
 
@@ -339,6 +320,6 @@ After writing each source file, update indexes in order:
 
 If the user provides multiple URLs or paths (comma-separated, space-separated, or one per line), process each sequentially. Report progress after each item.
 
-## Compilation Nudge
+## Compilation Handoff
 
-After ingestion, count uncompiled sources (sources ingested after last compile date). If 5+, suggest running `/wiki:compile`.
+Compilation is automatic; do not suggest or trigger it. Uncompiled sources are picked up by the next compile run.

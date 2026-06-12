@@ -1,15 +1,15 @@
 # Linting Rules
 
-## Development Note — Lint is the Migration
+## Lint Is the Migration
 
 **When you change the canonical structure or frontmatter schema, update the rules in this file and in `compilation.md` — do NOT write migration code.**
 
-The wiki treats "file in the wrong place from an old version" and "file in the wrong place from user error" as the same defect. `/wiki:lint --fix` heals both, idempotently. Indexes are already derived caches (see `indexing.md` Derived Index Protocol) — this principle extends to file placement and frontmatter shape.
+A file in the wrong place from an old layout and a file in the wrong place from user error are the same defect. `lint --fix` heals both, idempotently. Indexes are already derived caches (see `indexing.md` Derived Index Protocol) — this principle extends to file placement and frontmatter shape.
 
-There are two layers where this principle applies, each with its own rules:
+The layers, each with its own rules:
 
 - **Mechanical layer (C11/C12/C13)** — raw-source and wiki-article placement and frontmatter schema. Fully auto-fixable because the canonical location and field shape are pure functions of frontmatter. No judgment required.
-- **Editorial layer (C8/C9)** — project grouping inside `output/projects/`. **Never auto-fixed** because "these files belong together" requires human sense-making. C9 surfaces candidates and emits ready-to-paste `/wiki:project new` + `/wiki:project add` blocks for the user to run.
+- **Editorial layer (C8/C9)** — project grouping inside `output/projects/`. **Never auto-fixed** because "these files belong together" requires sense-making. C9 surfaces candidates with proposed slugs and goals.
 - **Todo layer (C16)** — durable tracking records under `todos/`.
   Todos are lazy: a completely absent todo tree is a suggestion, not
   something to auto-populate with empty placeholders. Partially existing
@@ -35,13 +35,9 @@ Concretely, when evolving the schema:
 - **New directory under `raw/`, `wiki/`, `todos/`, `datasets/`, or hub topic lifecycle paths?** Add it to C12/C19's allowlists and C11/C16/C17/C19's placement maps.
 - **New project-level structure or manifest rule?** Update C8 (and projects.md). Candidate heuristics go in C9.
 
-There is no `/wiki:migrate` command and there should never be one. Lint rules **are** the schema.
+There is no migrate operation and there should never be one. Lint rules **are** the schema.
 
-**When editing the canonical spec** (`wiki-structure.md`, `compilation.md`, `ingestion.md`, `projects.md`, or any reference that defines paths or frontmatter fields), also:
-
-1. Update the relevant check(s) in this file — mechanical changes touch C11/C12/C13; project-model changes touch C8/C9; topic lifecycle changes touch C19.
-2. Verify `commands/lint.md` still runs the placement/alias pass in the correct order.
-3. Verify `commands/compile.md` still runs the placement pre-check on `raw/` as step 0.
+**When editing the canonical spec** (`wiki-structure.md`, `compilation.md`, `ingestion.md`, `projects.md`, or any reference that defines paths or frontmatter fields), also update the relevant check(s) in this file — mechanical changes touch C11/C12/C13; project-model changes touch C8/C9; topic lifecycle changes touch C19.
 
 ## Severity Levels
 
@@ -98,6 +94,12 @@ There is no `/wiki:migrate` command and there should never be one. Lint rules **
   External URLs are allowed. Todo provenance is operational state and must
   not be treated as factual evidence for compile/query/audit verdicts.
 - [ ] No `<!--RETRACTED-SOURCE-->` markers remain in article body (these should be resolved via `--recompile` or manual review)
+
+**Retract** removes a raw source from the evidence base: delete or quarantine
+the raw file, mark every citing article's affected claims unverified and
+low-confidence (insert `<!--RETRACTED-SOURCE-->` markers or recompile), and
+append a `retract` entry to `log.md`. Retraction is for bad evidence; archive
+is for good evidence that should go quiet.
 - [ ] No raw source file is referenced by zero wiki articles (orphan source — suggest compilation or removal)
 - [ ] Exempt raw files tagged `collection-manifest` from orphan-source warnings. A collection manifest is operational provenance for a batch import; child sources should be compiled, but the manifest itself does not need to appear in article `sources:`.
 
@@ -134,31 +136,10 @@ Validates projects under `output/projects/`. The architecture was simplified in 
 - [ ] **C8d** Slug conforms to spec: lowercase, hyphen-separated, ≤40 chars, no dates (**Warning**).
 - [ ] **C8b** Staleness check — for every project, compute transitive source freshness (**Suggestion**). For each member file with `sources:` frontmatter, follow the chain to raw sources using the Source Reference Resolution protocol in `wiki-structure.md`. If any raw source's `ingested:` date is newer than the member's `updated:` date, the project may be stale. Report as: `Project <slug> may be stale: N source(s) newer than member artifacts.` Never auto-fixed — staleness triggers human re-evaluation, not automatic regeneration.
 
-**C8c migration rule** (legacy `_project.md` → `WHY.md`):
-
-Pre-v0.2 wikis have `_project.md` manifests with YAML frontmatter and derived Members sections. When lint encounters one:
-
-1. Read `_project.md` frontmatter — extract `goal` and `title` (fall back to slug-derived title if `title:` is absent).
-2. Read the body and split into sections by `## ` headings.
-3. Identify **derived sections** to drop: any section whose body is (a) entirely between `<!-- DERIVED -->` and `<!-- /DERIVED -->` delimiter comments, or (b) matches the header text `## Members` or `## External Members` even if delimiters are missing. These are regeneratable and not precious.
-4. Identify **human sections** to preserve: everything else. This includes `## Goal`, `## Context`, `## Current State`, `## Research Sessions`, and any custom sections the user added (decision logs, open questions, retrospectives, etc.). **The default is preserve — when in doubt, keep it.** LLMs rebuild wrong without rationale, and custom sections are almost always rationale.
-5. Determine how to surface the goal. Two cases:
-   - **If the body has a `## Goal` section**: preserve it as-is. Do NOT also prepend the frontmatter `goal:` text — that would duplicate. The body version usually has more detail and the same or better phrasing.
-   - **If the body has no `## Goal` section**: prepend the frontmatter `goal:` text as the first body paragraph of `WHY.md`, so the rationale is visible without reading the whole file.
-6. Write `WHY.md` in the same folder, structured as:
-   ```markdown
-   # <title>
-
-   <frontmatter goal as first paragraph — ONLY if the body had no ## Goal section; otherwise omit this paragraph>
-
-   <every preserved human section from step 4, in original order, with original `## ` headings>
-   ```
-7. Delete `_project.md`.
-8. Report: `Migrated <slug>/_project.md → <slug>/WHY.md (preserved N sections: <list>).`
-
-**Lossless guarantee**: every human-written section that existed in `_project.md` appears verbatim in `WHY.md`. The only things dropped are frontmatter metadata (dates live in git log, status in filesystem state, tags are optional, type is structural) and derived Members/External Members lists (recomputable by scanning the folder — never precious).
-
-This is the first real application of the lint-is-the-migration principle codified in this file's dev note. Idempotent — re-running has no effect once WHY.md exists. No separate migration command, no version detection. Just lint.
+**C8c migration rule** (legacy `_project.md` → `WHY.md`): follow the migration
+procedure in `projects.md` § "Migration from legacy `_project.md`". Idempotent —
+re-running has no effect once `WHY.md` exists. Report:
+`Migrated <slug>/_project.md → <slug>/WHY.md (preserved N sections: <list>).`
 
 ### C9: Project Candidates (Suggestion)
 
@@ -166,7 +147,7 @@ Surfaces loose `output/` content that should be grouped into projects. **Never a
 
 - [ ] **C9a** Binary assets (`.png`, `.jpg`, `.pdf`, `.csv`, `.svg`, `.zip`) loose directly in `output/` root (not inside `projects/`) — these cannot stay loose per the projects architecture because relative asset paths break. Propose the likely owning project based on filename prefix. (**Critical** — architecture violation)
 - [ ] **C9b** Any subdirectory inside `output/` that is NOT `projects/` (or `.archive/` inside `projects/`) and contains files — architecture violation, all subdirectories should be under `output/projects/`. (**Critical**)
-- [ ] **C9c** Any `output/projects/<slug>/` folder without a `WHY.md` — this is a malformed project. Suggest: `echo "# <Title>\n\nTODO: goal" > WHY.md` or run `/wiki:project new <slug> "goal"` after archiving the existing folder. (**Warning**)
+- [ ] **C9c** Any `output/projects/<slug>/` folder without a `WHY.md` — this is a malformed project. Suggest writing a `WHY.md` with the title and goal for the existing slug. (**Warning**)
 - [ ] **C9d** ≥3 loose markdown outputs in `output/` that share a common slug prefix (after stripping dates, version tags, and type prefixes) — suggest grouping into a project. (**Suggestion**)
 
 **Candidate report format** (for C9d):
@@ -180,10 +161,7 @@ Suggested: bitcoin-quantum-fud (proposed slug)
     - article-bitcoin-quantum-fud-2026-04-05.md
     - article-bitcoin-quantum-fud-v2-2026-04-06.md
     ...
-  Create with:
-    /wiki:project new bitcoin-quantum-fud "TODO: fill in goal"
-    /wiki:project add bitcoin-quantum-fud article-bitcoin-quantum-fud-2026-04-05.md
-    ...
+  Fix: create project "bitcoin-quantum-fud" with a goal, then move these files into it.
 ```
 
 **Slug derivation heuristic** (C9d): longest common prefix of ≥3 files, stripped of trailing hyphens, dates (`YYYY-MM-DD`), version tags (`-v\d+`, `-final`, `-release`), and the `article-` / `output-` / `report-` prefixes. If the result is <4 chars or ambiguous, report without a proposed slug and let the user name it.
@@ -251,9 +229,7 @@ Any file that is not in the canonical allowlist for its location is either a use
 
 ### C13: Frontmatter Aliases (Warning)
 
-Legacy field names and enum values are rewritten to their canonical form. This is the one place where schema evolution is encoded — add aliases here instead of writing migrations. Run this check **before** C2 and C11 so downstream checks see canonical field names.
-
-**Why this check exists at all (even while empty):** we want the *framework* for schema evolution in place before we need it, so the first rename ever made to a frontmatter field is a one-line addition to a table rather than "let's design a migration system." The dev note at the top of this file explains the full lint-as-migration principle. C13 itself is the mechanism.
+Legacy field names and enum values are rewritten to their canonical form. This is the one place where schema evolution is encoded — add aliases to the tables below instead of writing migrations. Run this check **before** C2 and C11 so downstream checks see canonical field names.
 
 **Canonical optional raw-source keys** (do not warn as unknown):
 `collection`, `adapter`, `upstream_id`, `upstream_type`, `revision`, `sha`,
@@ -286,7 +262,7 @@ Note: thesis files use `type: thesis`, not `category`. Do not alias `theses` to 
 
 **Auto-fix**: Rewrite the YAML key or value in place using Edit. Preserve field order and comments. For older compiled articles that predate the current article schema, `lint --fix` may also infer missing `category` from the containing directory (`wiki/concepts`, `wiki/topics`, `wiki/references`), infer `summary` from an explicit `**Summary**:` line or the first substantial paragraph, fill missing `created`/`updated` from existing date fields, add `tags: [thesis]` only for thesis files with no tags, and add `volatility: warm`.
 
-**When the tables are empty** (current state), C13 only runs the unknown-key warning — alias rewriting is a no-op. This is the honest default: we have no backward-compat debt yet, so advertising alias entries would be fiction. First real rename → first real alias entry.
+**When the tables are empty**, C13 only runs the unknown-key warning — alias rewriting is a no-op.
 
 ### C14: Freshness (Warning/Info)
 
@@ -298,7 +274,7 @@ Computes a composite freshness score (0-100) for each compiled wiki article base
 
 **Severity**: Warning for `hot` and `warm` articles below threshold. Info for `cold` articles below threshold (Lindy Effect — cold content scoring low is unusual and worth noting, but rarely urgent).
 
-**Output**: `Freshness score [score]/100: [article] — source age [avg days], verified [days] ago, compiled [days] ago, [N/M] sources intact. Run /wiki:refresh [path]`
+**Output**: `Freshness score [score]/100: [article] — source age [avg days], verified [days] ago, compiled [days] ago, [N/M] sources intact. Needs a refresh pass.`
 
 For `compiled-from: conversation` articles, use: `Freshness score [score]/100: [article] — conversation-sourced, verified [days] ago, compiled [days] ago. Review or re-verify manually.`
 
@@ -333,8 +309,7 @@ exists.
   frontmatter when present: `title`, `view`, `updated`, `summary`
 - [ ] `kind` is one of: `item`, `ingest-candidate`, `entity`, `corpus`,
   `question`, `task`, `artifact`, `watch`
-- [ ] `status` is one of: `proposed`, `active`, `blocked`, `ingested`,
-  `superseded`, `archived`
+- [ ] `status` is one of: `proposed`, `blocked`
 - [ ] `priority` is one of: `p0`, `p1`, `p2`, `p3`, `p4`
 - [ ] Loose output artifacts that look like durable tracking records are
   reported as todo migration candidates. Heuristics: filename or title
@@ -350,9 +325,9 @@ exists.
   records.
 - With `--fix`, regenerate `todos/views/_index.md` from saved view
   frontmatter when `todos/views/` exists, but do not fabricate saved views.
-- Never auto-convert output artifacts into todo records. Report suggested
-  commands such as:
-  `/wiki:todos migrate-output output/ingest-queue-2026-05-03.md --kind ingest-candidate --dry-run`
+- Never auto-convert output artifacts into todo records. Report each candidate
+  as needing a todos migrate-output dry run (for example: a dry run over
+  `output/ingest-queue-2026-05-03.md` with kind `ingest-candidate`).
 - When reporting candidates, include a short fit note: good todo fit, too
   small and better left as query/ingest/raw note, or too large and better as a
   dataset manifest or collection ingest. For high-confidence pivots, show a
@@ -392,8 +367,8 @@ part of the layer already exists.
   and do not create empty `samples/`, `profiles/`, or `queries/` folders until
   they are needed.
 - Never auto-convert output artifacts, raw data files, or todo records into
-  dataset manifests. Report suggested commands such as:
-  `/wiki:dataset migrate-output output/bitcointalk-data-2026-05-03.md --dry-run`
+  dataset manifests. Report each candidate as needing a dataset migrate-output
+  dry run (for example: a dry run over `output/bitcointalk-data-2026-05-03.md`).
 
 ### C18: Missing Sources (Warning)
 
@@ -408,7 +383,7 @@ The exemption is `compiled-from: conversation` — articles whose evidence is th
 
 **Severity**: Warning (not Critical — the article is still readable and may be substantively correct; but it will silently fail the freshness composite until fixed).
 
-**Auto-fix**: None. Wiring sources requires reading the article body, identifying its origin raw files, and writing accurate paths — not a default-fillable. Surface the file with a one-line suggestion: `Compiled article <path> has no sources. Recompile the relevant raw source with /wiki:compile --source <raw-source-path>, run /wiki:compile --full, OR add 'compiled-from: conversation' if this article was authored from chat without fetchable sources.`
+**Auto-fix**: None. Wiring sources requires reading the article body, identifying its origin raw files, and writing accurate paths — not a default-fillable. Surface the file with a one-line suggestion: `Compiled article <path> has no sources. Recompile from <raw-source-path>, run a full recompilation, OR add 'compiled-from: conversation' if this article was authored from chat without fetchable sources.`
 
 **Output line**: `Compiled article missing sources: <path>. (C18)`
 
@@ -454,41 +429,19 @@ Validates the hub-level archive lifecycle described in `archive.md`.
 
 ## Auto-Fix Rules (when --fix is set)
 
-| Issue | Auto-Fix Action |
-|-------|----------------|
-| Missing `_index.md` | Generate from directory contents (read frontmatter of each file) |
-| File not in index | Regenerate the affected directory index from current directory contents and frontmatter |
-| Dead index entry | Regenerate the affected directory index, dropping dead links/rows |
-| Statistics mismatch | Recalculate from actual file counts |
-| Raw sources with no compiled reference | Create/update `wiki/references/uncompiled-source-coverage.md` as an explicit synthesis backlog |
-| Missing bidirectional link | Add "See Also" entry to the article missing the backlink |
-| Empty frontmatter field | Infer safe schema fields where possible: category from directory, summary from explicit summary/first paragraph, dates from existing frontmatter |
-| Near-duplicate tags | Replace all instances with the canonical form |
-| Fuzzy or dangling source reference | If exact path resolution fails but slug fallback resolves to exactly one raw file, rewrite to that exact `raw/...md` path. If resolution still fails or is ambiguous, warn for human review; never auto-remove provenance entries |
-| Unresolved retraction marker | Warn: "Retracted claim not yet reviewed — run `/wiki:retract --recompile` or edit manually" |
-| **C8a** `output/projects/<slug>/` missing `WHY.md` | **Warn only** — a project without rationale is a malformed project. Report and prompt the user to create one. Auto-creation would manufacture a fake goal, which is worse than the missing file. |
-| **C8b** Staleness detected | **Never auto-fix** — staleness is a signal for human re-evaluation, not automatic content regeneration. |
-| **C8c** Legacy `_project.md` found | Migrate to `WHY.md`: extract goal + title + preserved sections from manifest frontmatter and body, write `WHY.md`, delete `_project.md`. See C8 migration rule for the full procedure. |
-| Stale `output/_index.md` when `projects/` exists | Regenerate as a projects-aware listing: scan `output/projects/*/WHY.md` for first-heading titles + first-paragraph goals, list them as a table, then list any remaining loose outputs in `output/` below. |
-| **C9a/C9b** architecture violations | **Warn** — surface the problem, suggest the fix, never auto-move. User decides. |
-| **C9c** Project folder without `WHY.md` | **Warn only** — same as C8a but surfaced in the candidates section. Suggest running `/wiki:project new <slug> "goal"` with the existing slug. |
-| **C9d** Loose markdown cluster | **Never auto-fix** — grouping is human-authored via `/wiki:project new` + `/wiki:project add`. |
-| **C11** Misplaced file in `raw/` or `wiki/` | `mv` to canonical path derived from frontmatter; create destination dir if missing; invalidate containing indexes. Skip and warn on slug collision |
-| **C11** Content dir at hub level | Move contents into appropriate topic wiki or quarantine to `inbox/.unknown/`. Never delete user data |
-| **C12** Unknown file in known location | Route through C11 if it has frontmatter, else move to `inbox/.unknown/` |
-| **C12** Unknown directory | **Warn only** — never auto-delete |
-| **C13** Legacy frontmatter key | Rewrite key to canonical per alias table |
-| **C13** Legacy enum value | Rewrite value to canonical per alias table |
-| **C13** Older compiled article missing safe schema fields | Infer `category`, `summary`, `created`, `updated`, `tags` for theses, and `volatility` as described above |
-| **C14** Article below freshness score threshold | **Warn/Info only** — composite score below `freshness_threshold` (default 70). Report score breakdown and suggest `/wiki:refresh`. |
-| **C15** Missing volatility field | Add `volatility: warm` — safe default |
-| **C16** Missing todo directories/indexes | Repair missing indexes for existing todo directories; do not create a completely absent todo tree or empty unused category folders |
-| **C16** Output looks like todos | Warn only — suggest `/wiki:todos migrate-output <path> --dry-run`; never auto-migrate |
-| **C17** Missing dataset registry directories/indexes | Repair missing indexes for existing dataset directories; do not create a completely absent dataset tree or empty unused sample/profile/query folders |
-| **C17** Output looks like a dataset manifest | Warn only — suggest `/wiki:dataset migrate-output <path> --dry-run`; never auto-migrate |
-| **C18** Compiled article missing sources | **Warn only** — surface with the suggested commands. Do not auto-add `compiled-from: conversation` (that's a provenance claim that requires human judgment) and do not auto-recompile (would synthesize fake sources). |
-| **C19** Archived topic registry drift | Repair only unambiguous `wikis.json` path/status drift. Do not move topic directories during lint |
-| **C19** Active/archive topic collision | Warn only — user must decide which directory wins |
+Per-check auto-fix behavior lives inline with each check above. General fixes
+not tied to one check:
+
+- Missing `_index.md` → generate from directory contents (read frontmatter of each file).
+- File not in index, or dead index entry → regenerate the affected directory index from current directory contents and frontmatter.
+- Statistics mismatch → recalculate from actual file counts.
+- Raw sources with no compiled reference → create/update `wiki/references/uncompiled-source-coverage.md` as an explicit synthesis backlog.
+- Missing bidirectional link → add the "See Also" backlink to the article missing it.
+- Empty frontmatter field → infer safe schema fields where possible: category from directory, summary from explicit summary/first paragraph, dates from existing frontmatter.
+- Near-duplicate tags → replace all instances with the canonical form.
+- Fuzzy or dangling source reference → if exact path resolution fails but slug fallback resolves to exactly one raw file, rewrite to that exact `raw/...md` path. If resolution still fails or is ambiguous, warn for review; never auto-remove provenance entries.
+- Unresolved retraction marker → warn: "Retracted claim not yet reviewed — needs a retract recompile or manual edit."
+- Stale `output/_index.md` when `projects/` exists → regenerate as a projects-aware listing: scan `output/projects/*/WHY.md` for first-heading titles + first-paragraph goals, list them as a table, then list any remaining loose outputs in `output/` below.
 
 ## Report Format
 
@@ -498,55 +451,29 @@ Validates the hub-level archive lifecycle described in `archive.md`.
 ## Wiki Lint Report — YYYY-MM-DD
 
 ### Summary
-- Ran N health checks
-- Issues found: N (N critical, N warnings, N suggestions)
-- Auto-fixed: N (if --fix was used)
+- Ran N health checks; issues found: N (N critical, N warnings, N suggestions); auto-fixed: N
 
-### Critical Issues
+### Critical Issues / Warnings / Suggestions
 1. [description] — [file path]
-
-### Warnings
-1. [description] — [file path]
-
-### Suggestions
-1. [suggestion] — [reasoning]
 
 ### Coverage
 - Sources with no wiki articles: [list]
-- Wiki articles with broken links: [list]
-- Missing bidirectional links: [list]
-- Potential new connections: [list]
 
 ### Projects
-- Active: N | Archived: N (in `.archive/`)
-- Missing project rationale (WHY.md): [list of slugs]
-- Possibly stale (sources newer than artifacts): [list of slugs with source-count diff]
-- Migrated legacy manifests (_project.md → WHY.md): [list of slugs]
+- Active: N | Archived: N | missing WHY.md: [slugs] | possibly stale: [slugs]
 
 ### Project Candidates
 - [grouped suggestions, formatted as the candidate report block above]
 
 ### Todos
-- Todo records: [count by kind/status]
-- Missing todo structure created: [yes/no]
-- Output artifacts that look like todos: [list with suggested migrate-output commands]
+- Records: [count by kind/status] | migration candidates: [list]
 
 ### Datasets
-- Dataset manifests: [count by status/storage]
-- Missing dataset registry structure created: [yes/no]
-- Dataset manifest/schema issues: [list]
-- Output artifacts that look like datasets: [list with suggested migrate-output commands]
+- Manifests: [count by status/storage] | issues: [list] | migration candidates: [list]
 
 ### File Placement & Schema
-- Misplaced files moved to canonical location: [count, list of moves as `old → new`]
-- Unknown files quarantined to inbox: [count, list of moves to `inbox/.unknown/`]
-- Legacy frontmatter keys updated: [count by alias]
-- Legacy enum values updated: [count by alias]
-- Unknown directories (not auto-deleted): [list]
+- Moves `old → new`: [list] | quarantined: [list] | alias rewrites: [counts] | unknown dirs: [list]
 
 ### Archive
-- Archived topics skipped by default: [count]
-- Archived topics checked: [count, only when explicitly included]
-- Registry lifecycle repairs: [list]
-- Active/archive collisions: [list]
+- Skipped: [count] | checked: [count] | registry repairs: [list] | collisions: [list]
 ```

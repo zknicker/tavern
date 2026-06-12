@@ -64,9 +64,8 @@ describe('generated agent instructions', () => {
 
         expect(content).not.toMatch(/hermes/iu);
         expect(content).toContain('## This File Is Generated');
-        expect(content).toContain('immutable');
-        expect(content).toContain('Never try to edit it');
-        expect(content).toContain('Your scratch space is `NOTES.md`');
+        expect(content).toContain('Never edit AGENTS.md');
+        expect(content).toContain('`NOTES.md`');
         expect(content).toContain('`SOUL.md`');
         expect(content).toContain('use the `tavern` skill');
         expect(content).toContain('## Environment');

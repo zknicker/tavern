@@ -32,7 +32,9 @@ HUB/topics/<name>/
 ├── _index.md                      # Master index: stats, quick nav, recent changes
 ├── .librarian/                    # Optional: wiki-only maintenance reports
 │   ├── REPORT.md
-│   └── scan-results.json
+│   ├── scan-results.json
+│   ├── checkpoint.json            # In-progress scan resume state
+│   └── log.md                     # Append-only librarian activity log
 ├── .audit/                        # Optional: umbrella audit reports
 │   ├── REPORT.md
 │   └── scan-results.json
@@ -105,7 +107,7 @@ HUB/topics/<name>/
     │   │   ├── *.png, *.svg       # Colocated images/diagrams
     │   │   ├── code/              # Optional — prototype scripts
     │   │   └── data/              # Optional — CSVs, JSON exports
-    │   └── .archive/              # Archived projects (moved here by /wiki:project archive)
+    │   └── .archive/              # Archived projects (moved here by project archive)
     │       └── <slug>/
     │           └── WHY.md
     └── *.md                       # Loose outputs (backward compatible)
@@ -119,18 +121,13 @@ todo records and should not be treated as authoritative tracking state.
 Missing optional roots (`todos/`, `datasets/`, `.obsidian/`, `.librarian/`,
 or `.audit/`) mean the layer has not been used yet.
 
-## Local Wiki (--local flag)
-
-Same structure as above but rooted at `<project>/.wiki/` without `wikis.json` or `topics/`.
-
 ## Wiki Resolution Order
 
-When a command runs, first resolve the hub path (HUB) from `TAVERN_WIKI_HUB_PATH` (see `hub-resolution.md`). Then resolve which wiki to use:
+First resolve the hub path (HUB) from `TAVERN_WIKI_HUB_PATH` (see `hub-resolution.md`). Then resolve which wiki to use:
 
-1. `--local` flag present → `<cwd>/.wiki/`
-2. `--wiki <name>` flag present → look up name in `HUB/wikis.json`; resolve `<HUB>`, leading `~`, absolute, and HUB-relative paths, and fall back to `HUB/topics/<name>` when a registry path is stale
-3. Current directory has `.wiki/` → use it
-4. Otherwise → HUB
+1. Named wiki (`--wiki <name>`) → look up name in `HUB/wikis.json`; resolve `<HUB>`, leading `~`, absolute, and HUB-relative paths, and fall back to `HUB/topics/<name>` when a registry path is stale
+2. Topic in scope → `HUB/topics/<slug>/`
+3. Otherwise → HUB
 
 ## wikis.json Format
 
@@ -147,17 +144,12 @@ When a command runs, first resolve the hub path (HUB) from `TAVERN_WIKI_HUB_PATH
       "archived": "YYYY-MM-DD",
       "archive_reason": "optional"
     }
-  },
-  "local_wikis": [
-    { "path": "/absolute/path/.wiki", "description": "..." }
-  ]
+  }
 }
 ```
 
-Topic paths inside the shared hub should be relative (`topics/<topic>`) or use
-the `<HUB>` token. Avoid storing `/Users/<name>/...` absolute paths for
-hub-owned topic wikis; those break when an iCloud wiki is opened from another
-Mac with a different home directory.
+Topic paths inside the shared hub must be relative (`topics/<topic>`) or use
+the `<HUB>` token, never `/Users/<name>/...` absolute paths.
 
 Archived topic wikis live under `topics/.archive/<slug>` and should keep their
 registry entries with `status: archived`. Normal wiki resolution, status,
@@ -240,7 +232,7 @@ Append-only chronological activity log. Every wiki operation appends an entry. N
 
 Each entry: `## [YYYY-MM-DD] operation | Description`
 
-Operations: `init`, `ingest`, `ingest-collection`, `compile`, `query`, `lint`, `research`, `output`, `refresh`, `librarian`, `audit`, `plan`, `project`, `todos`, `dataset`, `archive`, `ll`, `assess`
+Operations: `init`, `ingest`, `ingest-collection`, `compile`, `query`, `lint`, `research`, `output`, `refresh`, `retract`, `librarian`, `audit`, `plan`, `project`, `todo`, `todos`, `dataset`, `archive`
 
 Useful for: `grep "^## \[" log.md | tail -10` to see recent activity.
 
@@ -284,7 +276,7 @@ summary: "2-3 sentence summary"
 
 ### Optional Collection Provenance
 
-Raw files created by `/wiki:ingest-collection` may include additional
+Raw files created by collection ingestion may include additional
 frontmatter. These keys are canonical and should not be linted as unknown:
 
 ```yaml
@@ -322,7 +314,7 @@ tags: [tag1, tag2]
 aliases: [alternate names for Obsidian discovery]
 confidence: high|medium|low
 volatility: hot|warm|cold
-verified: YYYY-MM-DD
+verified: YYYY-MM-DD | false
 compiled-from: sources|conversation|mixed   # optional; defaults to "sources"
 summary: "2-3 sentence summary for index"
 ---
@@ -384,7 +376,7 @@ staleness checks) must resolve source references with this protocol:
 
 ## Volatility Classification
 
-Wiki articles carry a `volatility` field that controls how quickly their freshness score decays. The `verified` field records when a human last confirmed the article's conclusions are still accurate.
+Wiki articles carry a `volatility` field that controls how quickly their freshness score decays. The `verified` field is `YYYY-MM-DD | false`: the date the agent last successfully verified the article's claims against its sources, or `false` when verification was attempted and failed. Scoring treats `false` like a missing field.
 
 | Tier | Decay rate | When to use | Examples |
 |------|-----------|-------------|----------|
@@ -401,7 +393,7 @@ Each source-backed article's freshness is a composite of four dimensions, each c
 | Dimension | What it measures | Computed from |
 |-----------|-----------------|---------------|
 | **Source freshness** | How old are the raw sources this article was compiled from? | Average days since `ingested:` across all `sources:` entries |
-| **Verification recency** | When did a human last confirm accuracy? | Days since `verified:` |
+| **Verification recency** | When did the agent last successfully verify accuracy? | Days since `verified:` (`false` scores as never verified) |
 | **Compilation recency** | When was this article last recompiled? | Days since `updated:` |
 | **Source chain integrity** | Do all referenced sources still exist? | % of `sources:` entries that resolve to actual files |
 
@@ -430,7 +422,7 @@ The [[transformer-architecture|Transformer]] ([Transformer](../concepts/transfor
 
 ## Obsidian Compatibility
 
-The wiki is designed to be opened as an Obsidian vault. On `/wiki init`, a `.obsidian/` config directory is created with minimal settings. Key compatibility notes:
+The wiki is designed to be opened as an Obsidian vault. On wiki init, a `.obsidian/` config directory is created with minimal settings. Key compatibility notes:
 
 - YAML frontmatter `tags` field is read natively by Obsidian
 - `aliases` in frontmatter lets Obsidian find articles by alternate names

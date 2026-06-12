@@ -67,24 +67,15 @@ export function getWikiTodoProcessing(db: Database = getDb()): CortexTodoProcess
 
 export function buildTodoDrainPrompt(todo: CortexTodo): string {
     return [
-        `Use the wiki skill. Work exactly one todo record in the ${todo.topic} topic`,
-        `wiki: ${todo.path} ("${todo.title}").`,
+        `Use the wiki skill. Work exactly one todo record in the ${todo.topic} topic wiki: ${todo.path} ("${todo.title}").`,
         todo.question ? `Its next action: ${todo.question}` : null,
-        'Complete that next action fully per references/todos.md — research, ingest,',
-        'compile, dedup, or profile as the record calls for. On completion, append a',
-        'log.md entry of the form "## [YYYY-MM-DD] todo | <record title> — <one-line',
-        'outcome>", update todos/_index.md, and delete the record file: completed',
-        'todos are removed, and the log entry is the durable history. If you cannot',
-        'complete it — a source is unreachable or paywalled, a claim cannot be',
-        'corroborated, the work depends on something that does not exist yet — keep',
-        'the file and set status: blocked with the reason in the record body, and mark',
-        'any affected article claims with lowered confidence or verified: false so',
-        'answers hedge accordingly. Do not retry endlessly and do not park work on the',
-        'user. Do not start any other todo work; if you notice new work, file it as',
-        'its own proposed record. Re-score any articles you changed in',
-        '.librarian/scan-results.json per references/librarian.md, updating their',
-        'entries and the summary counts. Finish with a one-line summary.',
+        'Do not start any other todo work — file anything new you notice as its own proposed record, and do not park work on the user.',
+        'Complete the next action fully per references/todos.md: research, ingest, compile, dedup, or profile as the record calls for.',
+        'On completion: append a log.md entry "## [YYYY-MM-DD] todo | <record title> — <one-line outcome>", update todos/_index.md, and delete the record file. The log entry is the durable history.',
+        'Give up instead of retrying: if an external source fails twice or a claim cannot be corroborated from available material, keep the file, set status: blocked with the reason in the record body, and mark affected article claims with lowered confidence or verified: false so answers hedge.',
+        'Re-score any articles you changed in .librarian/scan-results.json per the partial re-score protocol in references/librarian.md.',
+        'Finish with a one-line summary.',
     ]
         .filter((line) => line !== null)
-        .join(' ');
+        .join('\n');
 }

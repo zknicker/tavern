@@ -51,7 +51,7 @@ Read `wiki/_index.md` and category indexes. For each key concept:
 
 ### Step 5: Write/Update Articles
 
-**For new outputs with binary artifacts:** If a new output will produce binary siblings (images, diagrams, CSVs, rendered screenshots, code files), create it inside `output/projects/<slug>/` from the start rather than scattering into `output/` root. The reason is colocation — relative asset paths only work when the markdown and its assets live in the same folder. See `references/projects.md` for the full rationale. If the user passed `--project <slug>` explicitly, write into that project folder. Otherwise prompt for a slug and goal and invoke `/wiki:project new` before writing the artifacts. Loose markdown outputs (no binary siblings) can still land flat in `output/` for backward compatibility.
+**For new outputs with binary artifacts:** If a new output will produce binary siblings (images, diagrams, CSVs, rendered screenshots, code files), create it inside `output/projects/<slug>/` from the start rather than scattering into `output/` root. The reason is colocation — relative asset paths only work when the markdown and its assets live in the same folder. See `references/projects.md` for the full rationale. If the user passed `--project <slug>` explicitly, write into that project folder. Otherwise determine a slug and goal and create the project (folder plus `WHY.md`) before writing the artifacts. Loose markdown outputs (no binary siblings) can still land flat in `output/` for backward compatibility.
 
 **For new articles:**
 
@@ -96,7 +96,11 @@ After all articles are written/updated:
 1. Each category `_index.md` (concepts, topics, references) — add/update rows
 2. `wiki/_index.md` — add/update rows
 3. Master `_index.md` — update article count, set "Last compiled" to today, add to Recent Changes
-4. If `output/projects/` exists, regenerate `output/_index.md` as a projects-aware listing: scan each `output/projects/*/WHY.md` for its first `#` heading (title) and first non-heading paragraph (goal, first ~120 chars), list them as a table, then list any remaining loose outputs in `output/` below. This is **best-effort** — if skipped or clobbered by a concurrent session, the next lint/compile will fix it. Member counts per project come from folder scans at render time; there is no cached Members list on disk anymore (the v0.2 simplification removed the `_project.md` manifest, so there's nothing to regenerate inside the project folders themselves — see `references/projects.md`).
+4. If `output/projects/` exists, regenerate `output/_index.md` as a projects-aware listing: scan each `output/projects/*/WHY.md` for its first `#` heading (title) and first non-heading paragraph (goal, first ~120 chars), list them as a table, then list any remaining loose outputs in `output/` below. This is **best-effort** — if skipped or clobbered by a concurrent session, the next lint/compile will fix it. Member counts per project come from folder scans at render time; there is no cached Members list on disk (see `references/projects.md`).
+
+### Step 8: Re-score Changed Articles
+
+**Re-score changed articles.** For each article created or updated, recompute its staleness/quality entry in `.librarian/scan-results.json` per the partial re-score protocol in librarian.md, and update the summary block. Skip if no scan file exists yet.
 
 ## Quality Standards
 

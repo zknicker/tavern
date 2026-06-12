@@ -86,6 +86,9 @@ Default to dry-run previews for pivots. Only write records when the user
 explicitly asks to apply, or when they asked for a single small `add` operation
 with clear fields.
 
+Previews and confirmation apply only to interactive migrations and bulk
+pivots; unattended maintenance runs file `proposed` records directly.
+
 ## Directory Layout
 
 The todo layer lives at the wiki root and is created lazily. A wiki with no
@@ -124,7 +127,7 @@ The subdirectories are intentionally broad:
 - `corpora/`: source collections, archives, datasets, forums, document sets, or
   other bounded bodies of material.
 - `views/`: generated todo views such as "P0 blocked candidates" or
-  "active corpora by license." Views are derived and may be regenerated.
+  "open corpora by license." Views are derived and may be regenerated.
   Created only when a saved view is written.
 
 ## Chat And Saved Views
@@ -148,15 +151,13 @@ records.
 - Open full records only when the user asks for detail or when requested columns
   are not present in the indexes/frontmatter.
 
-Recommended chat views:
+Recommended chat views: `summary` (counts by kind/status), `actions` (next
+work), `items` (item state checks), `records` (compact full listing), and
+`sources` (provenance review). Example:
 
 | View | Columns | Use |
 |------|---------|-----|
-| `summary` | counts by kind/status, top priorities | quick status checks |
 | `actions` | title, priority, status, next action, updated | planning the next work |
-| `items` | item, status, priority, quantity, next action, updated | actual item checks |
-| `records` | title, kind, status, priority, updated | complete compact listing |
-| `sources` | title, source/origin pointers, status | provenance and migration review |
 
 ### Saved Views
 
@@ -168,19 +169,19 @@ Suggested view frontmatter:
 
 ```yaml
 ---
-title: "Active Todo Actions"
+title: "Open Todo Actions"
 view: actions
 filters:
-  status: active
+  status: proposed
 updated: YYYY-MM-DD
-summary: "Derived table of active todo records with next actions."
+summary: "Derived table of open todo records with next actions."
 ---
 ```
 
 Suggested body:
 
 ```markdown
-# Active Todo Actions
+# Open Todo Actions
 
 Generated from todo record frontmatter on YYYY-MM-DD.
 
@@ -289,7 +290,8 @@ entry of the form `## [YYYY-MM-DD] todo | <record title> — <one-line outcome>`
 update `todos/_index.md`, and remove the record file. The log entry is the
 durable history; the work itself (articles, merges, ingests) is the proof —
 and for permanently unachievable work, the failure state marked in the
-articles is the proof.
+articles is the proof. After changing articles, re-score them per
+librarian.md's partial re-score protocol.
 
 Priorities:
 
@@ -317,7 +319,7 @@ Last updated: YYYY-MM-DD
 - Candidates: N
 - Entities: N
 - Corpora: N
-- Active: N
+- Open (proposed): N
 - Blocked: N
 
 ## Quick Navigation

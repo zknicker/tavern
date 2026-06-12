@@ -1,6 +1,6 @@
 # Librarian Reference
 
-Content-level wiki maintenance: staleness detection, quality scoring, factual verification, semantic coherence, deduplication. This reference defines the scoring algorithms, report formats, and operational protocols for `/wiki:librarian`.
+Content-level wiki maintenance: staleness detection, quality scoring, factual verification, semantic coherence, deduplication. This reference defines the scoring algorithms, report formats, and operational protocols for librarian runs.
 
 ## Design Principles
 
@@ -19,7 +19,7 @@ Composite score 0-100 across four dimensions, each contributing 0-25 points. Use
 | Dimension | Measures | Source Field | Computation |
 |-----------|----------|-------------|-------------|
 | Source freshness | Age of raw sources | `sources:` → each raw file's `ingested:` date | Average days since ingestion across all sources |
-| Verification recency | Last human confirmation | `verified:` date | Days since verified |
+| Verification recency | Last successful verification by the agent | `verified:` date | Days since verified |
 | Compilation recency | Article currency | `updated:` date | Days since updated |
 | Source chain integrity | Referenced sources exist | `sources:` entries | Percentage of sources that resolve to actual files |
 
@@ -64,6 +64,7 @@ Range: 0 (completely stale) to 100 (perfectly fresh).
 
 - Missing `volatility`: treat as `warm` (safe default, matches C15 auto-fix)
 - Missing `verified`: treat as never verified — verification_recency = 0
+- `verified: false` (verification attempted and failed): treat like missing — verification_recency = 0
 - Missing `updated`: fall back to `created` date
 - Missing `sources`: integrity = 0 (no sources to verify)
 
@@ -120,7 +121,7 @@ In addition to numeric scores, tag articles with specific quality flags:
 | `low-confidence-sources` | Average source confidence below medium |
 | `no-see-also` | Zero "See Also" cross-references |
 | `stale` | Staleness score below threshold |
-| `unverified` | Missing `verified:` field |
+| `unverified` | Missing `verified:` field, or `verified: false` |
 
 ### Composite Quality Score
 
@@ -132,7 +133,7 @@ Range: 20 (worst possible — all 1s) to 100 (all 5s). Articles below 50 are sur
 
 ## Checkpoint Protocol
 
-The `.librarian/` directory lives inside each topic wiki (e.g., `~/wiki/topics/coffee-brewing/.librarian/`). Created on first scan.
+The `.librarian/` directory lives inside each topic wiki (e.g., `HUB/topics/coffee-brewing/.librarian/`). Created on first scan.
 
 ### checkpoint.json
 
@@ -192,6 +193,19 @@ The complete scan output. Source of truth for other skills.
 }
 ```
 
+### Partial Re-score
+
+When a run outside the full scan changes an article (compile, todo processing,
+refresh, or a chat-turn edit), update that article's entry in
+`scan-results.json` in place:
+
+1. Recompute the article's staleness and quality scores per the scoring
+   rubrics above.
+2. Replace (or add) the article's entry under `articles`.
+3. Recompute the `summary` counts and averages from the updated entries.
+4. Keep the existing `scan_id` — a partial re-score is not a new scan.
+5. Skip the whole step if no `scan-results.json` exists yet.
+
 ### REPORT.md
 
 Human-readable report generated from `scan-results.json`. Format:
@@ -240,13 +254,34 @@ Append-only librarian activity log at `.librarian/log.md`:
 ## [YYYY-MM-DD] scan --article wiki/concepts/foo.md | staleness 45, quality 72
 ```
 
+## Blocked Todo Sweep
+
+A weekly librarian duty over `todos/`:
+
+1. Read every record with `status: blocked`. If the blocker has likely cleared
+   (source back online, dependency completed, time-gated condition passed), set
+   the record back to `proposed`.
+2. Resolve the rest into the wiki: write the failure state into the affected
+   articles (lowered `confidence`, `verified: false`, a short dated note),
+   append the `## [YYYY-MM-DD] todo | <record title> — <one-line outcome>`
+   entry to `log.md`, update `todos/_index.md`, and delete the record.
+3. Nothing stays blocked past roughly thirty days. Blocked is a retry buffer,
+   not an archive.
+
+After changing articles, re-score them per the Partial Re-score protocol above.
+
 ## Boundary with Other Commands
 
 | Command | Responsibility | Librarian Does NOT |
 |---------|---------------|-------------------|
 | `lint` | Structure: broken links, missing indexes, frontmatter schema, file placement | Lint's territory — librarian skips |
 | `lint --deep` (C7) | Quick spot-check: a few web searches for obvious staleness | Lightweight — librarian goes deeper |
-| `refresh` | Re-fetch sources, compare changes, offer recompilation | Librarian flags, then delegates to refresh |
+| `refresh` | Re-fetch sources, compare changes, recompile | Librarian flags; refresh executes |
 | `compile` | Transform raw sources into wiki articles | Librarian reviews compiled output, never compiles |
 
-When the librarian flags an article as stale and the user confirms, it delegates to the refresh protocol in `commands/refresh.md` for that article.
+**Refresh** re-fetches an article's sources, diffs each fetched copy against
+the stored raw file, ingests changed content as a new dated raw source (raw is
+immutable — never overwrite), and recompiles the citing articles. When the
+librarian flags an article as stale, file a proposed todo record for a refresh
+pass (re-fetch sources, compare, recompile), or refresh directly if the
+current run's scope allows.

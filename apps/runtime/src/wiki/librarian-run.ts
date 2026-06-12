@@ -50,26 +50,13 @@ export function getWikiLibrarianStatus(db: Database = getDb()) {
 
 export function buildWikiLibrarianPrompt(): string {
     return [
-        'Use the wiki skill. Run the librarian scan from references/librarian.md across',
-        'active topic wikis: score article staleness and quality and write',
-        '.librarian/scan-results.json and REPORT.md. Then act on the findings in the',
-        'same run, working only with material already on disk. Run lint --fix for',
-        'mechanical repairs: broken links, missing See Also backlinks, stale indexes,',
-        'and misplaced files. Recompile articles whose existing raw sources already',
-        'hold newer uncompiled material, per references/compilation.md. File everything',
-        'that needs outside material — re-fetching stale sources, research to thicken',
-        'thin or single-source coverage, corroborating unverified claims, dedup merges',
-        'needing judgment — as proposed todo records per references/todos.md;',
-        'records are worked off automatically. Review blocked todo records — blocked',
-        'is transient, not an archive: if the blocker has likely cleared, set the',
-        'record back to proposed for a retry; otherwise resolve it into the wiki and',
-        'delete it — write the failure state into the affected articles (lowered',
-        'confidence, verified: false, a short note like "could not corroborate;',
-        'source paywalled, checked 2026-06") so future scans see settled state',
-        'instead of re-filing the work, then append a log.md todo entry recording',
-        'the give-up. No record should stay blocked past roughly thirty days. Do',
-        'not re-fetch external sources and do not rewrite article content beyond',
-        'those failure-state marks in this run. If the hub has no active topic',
-        'wikis, stop after a one-line summary. Finish with a one-line summary.',
-    ].join(' ');
+        'Use the wiki skill. You are an unattended maintenance run: the confirmation, preview, and delegation steps in the references do not apply — score, then act, in this same run.',
+        'Run the librarian scan from references/librarian.md across active topic wikis: score article staleness and quality and write .librarian/scan-results.json and REPORT.md.',
+        'Act on the findings, working only with material already on disk. Run lint --fix for mechanical repairs: broken links, missing See Also backlinks, stale indexes, and misplaced files.',
+        'Recompile articles whose existing raw sources already hold newer uncompiled material, per references/compilation.md.',
+        'File everything that needs outside material — re-fetching stale sources, research to thicken thin or single-source coverage, corroborating unverified claims, dedup merges needing judgment — as proposed todo records per references/todos.md.',
+        'Review blocked todo records — blocked is transient: set records whose blocker has likely cleared back to proposed; resolve the rest into the wiki and delete them, writing the failure state into the affected articles (lowered confidence, verified: false, a short dated note) and appending a log.md todo entry recording the give-up. No record stays blocked past roughly thirty days.',
+        'Beyond those recompiles and failure-state marks, do not rewrite article content, and do not fetch external sources.',
+        'If the hub has no active topic wikis, stop. Finish with a one-line summary.',
+    ].join('\n');
 }

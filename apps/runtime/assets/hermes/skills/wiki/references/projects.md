@@ -10,14 +10,12 @@ Project folders solve this by making colocation the primary structure. The folde
 
 ## Why `WHY.md` is the only required file
 
-Earlier iterations of this architecture (v0.1.0, v0.1.1) used a `_project.md` manifest with YAML frontmatter (`type: project-manifest`, `goal`, `status`, `created`, `updated`), human-written narrative sections, and a derived Members list between `<!-- DERIVED -->` delimiters. That manifest held exactly one thing that couldn't be derived from elsewhere: **the goal — the "why this project exists"**. Everything else (status, timestamps, member list) was either filesystem state or derivable by scanning the folder.
-
-`WHY.md` preserves the precious part (the goal / rationale / "why") and drops the machinery around it. It is plain markdown, no frontmatter, no schema. The convention is:
+The only project state that cannot be derived from the folder is **the goal — the "why this project exists"**. Status, timestamps, and the member list are filesystem state or derivable by scanning the folder. `WHY.md` holds the precious part with no machinery: plain markdown, no frontmatter, no schema.
 
 - First `#` heading → the project title
-- Body → goal, rationale, context, current state, notes — whatever the human wants to write
+- Body → goal, rationale, context, current state, notes — whatever the author wants to write
 
-LLMs rebuild wrong without rationale. LLMs don't need a manifest format to read a markdown file. Keep the first, drop the second.
+LLMs rebuild wrong without rationale. LLMs don't need a manifest format to read a markdown file.
 
 ## Directory layout
 
@@ -51,7 +49,7 @@ LLMs rebuild wrong without rationale. LLMs don't need a manifest format to read 
 5. **No frontmatter schema on member files.** `project: <slug>` in frontmatter is optional sugar for Obsidian tag-based search; folder position is authoritative. If the two disagree, folder wins.
 6. **Max nesting depth: 3 levels inside a project folder.** `projects/<slug>/code/file.py` is the deepest shape allowed.
 7. **Slugs**: lowercase, hyphen-separated, max 40 characters. Semantic, not date-prefixed. Unique within the topic wiki.
-8. **Goal is mandatory at creation.** Enforced by `/wiki:project new <slug> "goal"` — the goal becomes the body of `WHY.md`.
+8. **Goal is mandatory at creation.** Creating a project means creating the folder with a `WHY.md` whose body is the goal.
 
 ## Archive = move the folder
 
@@ -61,9 +59,9 @@ Archiving a project is a filesystem operation, not a metadata flip:
 mv output/projects/<slug> output/projects/.archive/<slug>
 ```
 
-The folder is preserved, all files stay put, git history continues. `/wiki:project list` shows active projects only by default; `list --archived` includes `.archive/`.
+The folder is preserved, all files stay put, git history continues. Project listings show active projects only by default; `--archived` includes `.archive/`.
 
-Reason: a `status: archived` frontmatter field in the old model required the manifest to exist, which required the manifest format, which required the derived-members machinery. Moving the folder is one operation and needs zero schema. The tradeoff is that links to archived projects from other files break — but broken links are something lint already catches (C4), so the existing tooling handles it.
+Moving the folder is one operation and needs zero schema. The tradeoff is that links to archived projects from other files break — but lint already catches broken links (C4), so the existing tooling handles it.
 
 There is no separate `retract` lifecycle state. Retraction means deleting the folder. That's a manual operation (`rm -rf`), deliberately not wrapped in a subcommand, because it's destructive and rare.
 
@@ -85,9 +83,7 @@ No `updated:` field on a manifest. No derived cache. Pure function over the fron
 
 ## Focus / ambient project context
 
-**Removed in the v0.2 simplification.** Earlier iterations used a `.wiki-session.json` file with a `focused_project` field, so that `/wiki:ingest`, `/wiki:research`, `/wiki:query`, etc., would implicitly scope to the focused project. This worked but added a mutable state file, focus-aware logic in every consumer command, and two subcommands (`focus`, `unfocus`) whose only job was to manage it.
-
-The simpler model: pass `--project <slug>` explicitly when you want project scope. One extra flag per command vs. a whole session-state mechanism. If a user finds themselves typing `--project foo` on every command, that's a signal they're deep in the project and should probably `cd` into the folder directly.
+There is no ambient project focus and no session-state focus file. Project scope is always explicit: pass `--project <slug>` per operation when project scoping is wanted.
 
 ## What to avoid
 
@@ -100,13 +96,15 @@ The simpler model: pass `--project <slug>` explicitly when you want project scop
 
 ## Migration from legacy `_project.md`
 
-Existing wikis created under v0.1.0/v0.1.1 will have `_project.md` manifests. Lint check C8c detects these and auto-migrates:
+Older wikis may contain `_project.md` manifests with YAML frontmatter and derived Members sections. Lint check C8c detects these and auto-migrates with this procedure:
 
-1. Read `_project.md` frontmatter
-2. Extract `goal:` (or `title:` if goal is missing)
-3. Read the `## Goal`, `## Context`, `## Current State` sections if present
-4. Write `WHY.md` in the same folder with the first `#` heading as the title and the extracted prose as the body
-5. Delete `_project.md`
-6. Report the migration in the lint output
+1. Read `_project.md` frontmatter — extract `goal` and `title` (fall back to a slug-derived title if `title:` is absent).
+2. Read the body and split into sections by `## ` headings.
+3. Drop **derived sections**: anything between `<!-- DERIVED -->` and `<!-- /DERIVED -->` delimiters, or headed `## Members` / `## External Members` even without delimiters. These are regeneratable, not precious.
+4. Preserve **human sections**: everything else, including custom sections (decision logs, open questions, retrospectives). The default is preserve — when in doubt, keep it. Custom sections are almost always rationale.
+5. Surface the goal: if the body has a `## Goal` section, preserve it as-is and do not duplicate the frontmatter `goal:`. Otherwise prepend the frontmatter `goal:` text as the first body paragraph of `WHY.md`.
+6. Write `WHY.md` in the same folder: first `#` heading is the title, then the goal paragraph (only if step 5 prepended it), then every preserved human section in original order with original headings.
+7. Delete `_project.md`.
+8. Report the migration in the lint output.
 
-This is the first real application of the lint-is-the-migration principle codified in `linting.md`. One-time healing; idempotent; no separate migration command needed. See `linting.md` C8c for the full rule.
+**Lossless guarantee**: every human-written section in `_project.md` appears verbatim in `WHY.md`. Only frontmatter metadata (dates, status, tags, type) and derived member lists are dropped — all recomputable. Idempotent; re-running has no effect once `WHY.md` exists.

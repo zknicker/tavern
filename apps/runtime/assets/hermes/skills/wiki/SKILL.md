@@ -1,28 +1,27 @@
 ---
 name: wiki
 description: >
-  LLM-compiled knowledge base manager for Tavern-managed Hermes. Use it to initialize, ingest,
-  import source collections, collect catalogs, track todos, index datasets, archive old topics, compile, query, lint, audit, research, plan, and generate outputs from topic-scoped wikis.
-  Activates when the user mentions wiki workflows, knowledge-base management,
-  ingestion, collection ingestion, import wiki, collect, catalog, curate,
-  find all, todos, source queue,
-  candidate list, watch list, backlog, dataset, large data, data registry,
-  dataset manifest, compilation, querying, linting, audit, research, librarian,
-  scan quality, article quality, content review, output drift, provenance,
-  archive wiki, archive topic, restore wiki, implementation plan, or uses
-  /wiki-style shorthand in a repo with .wiki/, ~/wiki/, or a configured hub path.
+  Manage LLM-compiled knowledge wikis in the Tavern wiki hub: ingest sources and
+  collections, collect catalogs, track todos, register datasets, compile
+  articles, query, lint, audit, research, run librarian maintenance, archive or
+  restore topics, and generate outputs. Triggers: wiki, knowledge base, ingest,
+  compile, query the wiki, lint, audit, research, librarian, todos, backlog,
+  watch list, dataset, data registry, collection import, collect, catalog,
+  provenance, article quality, output drift, archive topic, restore wiki,
+  implementation plan.
 ---
 
 # LLM Wiki Manager
 
-You manage an LLM-compiled knowledge base. Source documents are ingested into `raw/`, then incrementally compiled into a wiki of interconnected markdown articles. The Hermes agent is both the compiler and the query engine.
+You manage an LLM-compiled knowledge base. Source documents are ingested into `raw/`, then incrementally compiled into a wiki of interconnected markdown articles. The agent is both the compiler and the query engine.
 
-## Tavern Runtime Notes
+## Operating Model
 
-Tavern installs this directory as a managed Hermes skill. Treat any `/wiki`,
-`/wiki:*`, or command-flag examples in this skill and its references as shorthand
-for the same workflow expressed in natural language while using this `wiki`
-skill.
+- Two entry modes: user chat turns, and unattended Tavern Runtime maintenance runs (compile, librarian, todo processing).
+- Maintenance is fully automatic. Never schedule it, suggest it, or ask the user to run anything.
+- Out-of-scope findings become `proposed` todo records — file, don't chase. Never park work on the user.
+- Record uncertainty in article frontmatter (`confidence`, `verified: false`) rather than escalating.
+- In unattended runs there is no user: confirmation and preview steps in these references do not apply — act directly within the run's stated scope.
 
 ## Hub Path
 
@@ -33,8 +32,7 @@ path is unreadable, stop and report the problem instead of falling back. If
 fails with `Operation not permitted`, the hub path is correct and macOS is
 blocking this process; tell the user to grant Full Disk Access to the exact
 app launching the agent and restart. See
-[references/hub-resolution.md](references/hub-resolution.md). All references
-to `~/wiki/` below mean HUB.
+[references/hub-resolution.md](references/hub-resolution.md).
 
 ## Wiki Location
 
@@ -47,12 +45,11 @@ research area and the collection is only one artifact within that topic.
 
 Resolution order:
 
-1. `--local` flag → `.wiki/` in current project
-2. `--wiki <name>` flag → named wiki from `HUB/wikis.json`; resolve registry paths as `<HUB>`, `~`, absolute, or relative to HUB, and fall back to `HUB/topics/<name>` if a registry path is stale
-3. Current directory has `.wiki/` → use it
-4. Otherwise → HUB (the hub)
+1. Named wiki (`--wiki <name>`) → look up in `HUB/wikis.json`; resolve registry paths as `<HUB>`, `~`, absolute, or relative to HUB, and fall back to `HUB/topics/<name>` if a registry path is stale
+2. Topic in scope → `HUB/topics/<slug>/`
+3. Otherwise → HUB (the hub)
 
-When a command targets the hub and the hub has no content, suggest creating a topic sub-wiki instead.
+When an operation targets the hub and the hub has no content, create or suggest a topic sub-wiki instead.
 
 See [references/wiki-structure.md](references/wiki-structure.md) for the complete directory layout and all file format conventions.
 
@@ -64,7 +61,7 @@ See [references/wiki-structure.md](references/wiki-structure.md) for the complet
 
 3. **Articles are synthesized, not copied.** A wiki article draws from multiple sources, contextualizes, and connects to other concepts. Think textbook, not clipboard.
 
-4. **Dual-linking for Obsidian + Hermes.** Cross-references use both `[[wikilink]]` (for Obsidian graph view) and standard markdown `[text](path)` (for Hermes navigation) on the same line: `[[slug|Name]] ([Name](../category/slug.md))`. Bidirectional when it makes sense.
+4. **Dual-linking for Obsidian + agent navigation.** Cross-references use both `[[wikilink]]` (for Obsidian graph view) and standard markdown `[text](path)` (for agent navigation) on the same line: `[[slug|Name]] ([Name](../category/slug.md))`. Bidirectional when it makes sense.
 
 5. **Frontmatter is structured data.** Every `.md` file has YAML frontmatter with title, summary, tags, dates. This makes the wiki searchable without full-text scans.
 
@@ -86,17 +83,11 @@ must not influence new synthesis unless the user explicitly includes it.
 
 When this skill activates outside of an explicit wiki maintenance request:
 
-1. Resolve the hub path (see Hub Path section above), then check if `HUB/_index.md` or `.wiki/_index.md` exists
+1. Resolve the hub path (see Hub Path section above), then check if the wiki's `_index.md` exists
 2. Read the master `_index.md` to assess if the wiki might cover the user's question
 3. If relevant content exists → read the relevant articles and answer with citations
 4. If no relevant content → answer normally, optionally suggest that the user can ask you to ingest it into the wiki.
 5. When peeking at sibling wikis, only read their `_index.md` — do not read full articles unless the user asks. Skip archived sibling wikis by default; in deep mode, archived index matches may be reported separately.
-
-When giving any boot, resume, or "where you left off" briefing, start with the
-active wiki identity: `<wiki-name> booted from <wiki-root-path>`. Prefer the
-`config.md` title; for local `.wiki/` projects, fall back to the parent
-directory name; for `HUB/topics/<slug>/`, fall back to the slug. Include this
-line even when there is nothing in flight to resume.
 
 If the user asks whether they can trust a wiki artifact, requests an audit,
 mentions provenance or drift, or asks for content verification beyond a normal
@@ -117,26 +108,16 @@ reference material you need for that workflow:
   needed to answer
 - `lint` → `references/linting.md`
 - `audit` → `references/audit.md`
-- `research`, `plan`, `output`, `assess` → `references/research-infrastructure.md`
+- `research`, `plan`, `output` → `references/research-infrastructure.md`
 - `project` → `references/projects.md`
 - `librarian` → `references/librarian.md`
 - wiki structure, indexes, log format, file placement, init → `references/wiki-structure.md`
 - hub lookup and path handling → `references/hub-resolution.md`
 
 Collect requests create bounded catalogs of discoverable things: artifacts,
-examples, resources, entities, tools, media, memes, or source candidates. Infer
-scale and media policy, record aliases plus `found_in_context` provenance,
-deduplicate candidates, write a `type: collection` output at
-`output/collect-<slug>-YYYY-MM-DD.md`, then create todo records only when the list
-is small and durable enough; otherwise create or suggest one corpus record.
-Download and hash bounded public binary media into
-`output/assets/collect-<slug>/` by default for media-bearing collections, never
-put binaries in `raw/`, and use defensive download settings: timeouts,
-file-size caps, content-type checks, and IPv4 retry (`curl -4`) when media
-hosts hang on IPv6. Use kind-first topic slugs such as `memes-bitcoin`,
-`memes-ethereum`, or `tools-bitcoin` for collection families that can grow
-across subjects. Never present "all" as exhaustive beyond the stated strategy
-and limit.
+examples, resources, entities, tools, media, memes, or source candidates. See
+`references/research-infrastructure.md` § Collect Catalogs for scale, media,
+provenance, and todo-record rules.
 
 Todos are first-class operational state, not a silo. Ingest, collection, and
 collect workflows should suggest todo records when the user wants to track or
@@ -144,7 +125,7 @@ decide later.
 Dataset manifests should link to todo records when next actions or
 acceptance state matter. Compile and query may surface todo gaps, but
 factual claims still need raw/wiki sources. Collect, research, audit,
-librarian, refresh, plan, output, and assess may propose durable follow-ups as
+librarian, refresh, plan, and output may propose durable follow-ups as
 todo records, but larger pivots should start with a small sample preview.
 
 Keep the first response short and action-oriented. Read deeper references only
@@ -154,8 +135,6 @@ after the user intent is clear or a write action is needed.
 
 - Use absolute file paths in saved-output messages and markdown links for URLs.
 - Append to `log.md` for every wiki write operation; never rewrite old log entries.
-- Keep large writes chunked into multiple edits rather than one long generation.
-- Read `_index.md` files before broader scans, and treat indexes as derived data.
 - Use article `confidence` fields when answering and flag weak sourcing when seen.
 - If structure or placement looks wrong, use the `lint --fix` workflow from
   `references/linting.md` instead of inventing a one-off repair path.

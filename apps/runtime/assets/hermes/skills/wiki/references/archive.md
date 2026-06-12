@@ -6,7 +6,7 @@ bad evidence or deleted content.
 
 ## Scope
 
-Archive operates at the topic-wiki lifecycle level in v1:
+Archive operates at the topic-wiki lifecycle level:
 
 - Hub topic wikis move from `HUB/topics/<slug>/` to
   `HUB/topics/.archive/<slug>/`.
@@ -14,7 +14,8 @@ Archive operates at the topic-wiki lifecycle level in v1:
   workflow from `projects.md`.
 - Dataset archive remains the existing `status: archived` frontmatter value.
   Todos do not archive: completed records are deleted with a log.md entry,
-  and stalled ones stay `blocked`.
+  and blocked records are transient and resolved by the librarian within
+  ~30 days.
 - Individual `raw/` or `wiki/` file archive is intentionally out of scope.
   Moving single source/article files breaks exact `sources:` references,
   backlinks, and coverage checks. If enough material is no longer wanted, the
@@ -84,8 +85,8 @@ Archive is a context filter, not a deletion mechanism.
 | `research` | Ignore archived wikis; warn when an archived topic title strongly overlaps the requested topic |
 | `ingest` / `ingest-collection` | Do not route into archived wikis unless the user explicitly restores or forces archived access |
 | `compile` | Active wikis only by default; explicit archived target compiles inside archive but never makes it active |
-| `todos`, `dataset`, `project`, `lessons-learned` | Reject archived targets unless explicitly included; distinguish topic archive from record/dataset/project archive states |
-| `output`, `plan`, `assess` | Ignore archived unless `--include-archived`; label archived-derived context clearly |
+| `todos`, `dataset`, `project` | Reject archived targets unless explicitly included; distinguish topic archive from record/dataset/project archive states |
+| `output`, `plan` | Ignore archived unless `--include-archived`; label archived-derived context clearly |
 | `init` / `--new-topic` | Treat archived slugs as collisions; restore or choose a new slug instead of creating an active duplicate |
 | `librarian` / `refresh` | Skip archived by default; archived material should not create freshness chores |
 | `audit` | Skip archived by default, except when the targeted artifact depends on archived material |
@@ -137,10 +138,5 @@ filesystem drift:
 - If both active and archived directories exist for the same slug, do not choose
   automatically. Report a collision.
 
-## Local Wikis
-
-Do not move project-local `.wiki/` directories in v1. A local wiki can still
-contain archived todo records, dataset manifests, or projects, but topic
-archive is a hub-level lifecycle operation. If a local wiki needs to go quiet,
-the user can move/rename the project or register it in the hub and archive the
-registered topic later.
+Topic archive is a hub-level lifecycle operation. Dataset manifests and
+projects keep their own archive states inside an active topic wiki.

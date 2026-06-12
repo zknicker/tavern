@@ -92,7 +92,7 @@ datasets/
 Per-dataset manifest folders are created only when a manifest is added. The
 `samples/`, `profiles/`, and `queries/` subfolders are created only when their
 first note is written. Older wikis may have no `datasets/` directory until
-`/wiki:dataset add` or an explicit lint repair creates it.
+a dataset add operation or an explicit lint repair creates it.
 
 ## Manifest Format
 
