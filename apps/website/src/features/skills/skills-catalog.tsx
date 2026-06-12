@@ -1,9 +1,10 @@
-import { CubeIcon, PlugIcon } from '@hugeicons-pro/core-stroke-rounded';
+import { AddCircleIcon, CubeIcon, PlugIcon } from '@hugeicons-pro/core-stroke-rounded';
 import * as React from 'react';
 import { Badge } from '../../components/ui/badge.tsx';
 import { BadgeDivider } from '../../components/ui/badge-divider.tsx';
 import { CardStack, CardStackItem } from '../../components/ui/card-stack.tsx';
 import { Icon } from '../../components/ui/icon.tsx';
+import { Button } from '../../components/ui/primitives/button.tsx';
 import { SearchInput } from '../../components/ui/primitives/search-input.tsx';
 import { Switch } from '../../components/ui/switch.tsx';
 import type { SkillListOutput } from '../../lib/trpc.tsx';
@@ -55,6 +56,7 @@ const prettyNameOverrides = new Map<string, string>([
 ]);
 
 export function SkillsCatalog({
+    onAddSkill,
     onSetSkillEnabled,
     onSetToolsetEnabled,
     savingSkillIds = new Set(),
@@ -62,6 +64,7 @@ export function SkillsCatalog({
     skills,
     toolsets,
 }: {
+    onAddSkill?: () => void;
     onSetSkillEnabled?: (input: { enabled: boolean; skillId: string }) => void;
     onSetToolsetEnabled?: (input: { enabled: boolean; toolsetId: string }) => void;
     savingSkillIds?: Set<string>;
@@ -98,6 +101,12 @@ export function SkillsCatalog({
                             placeholder={`${searchLabel}...`}
                             value={search}
                         />
+                        {onAddSkill ? (
+                            <Button className="shrink-0" onClick={onAddSkill}>
+                                <Icon className="size-4" icon={AddCircleIcon} />
+                                Add skill
+                            </Button>
+                        ) : null}
                     </div>
 
                     {visibleItems.length > 0 ? (
