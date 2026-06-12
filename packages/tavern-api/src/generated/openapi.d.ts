@@ -203,6 +203,43 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/chats/{chat_id}/clear": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Clear a chat's visible history.
+         * @description Soft-deletes every message and response currently in the chat in one operation. Rows keep their sequence slots; new work after the clear appears normally.
+         */
+        post: operations["clearChat"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/responses/{response_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Soft delete a response and its activity. */
+        delete: operations["deleteResponse"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/messages/{message_id}": {
         parameters: {
             query?: never;
@@ -371,6 +408,7 @@ export interface components {
             created_at: components["schemas"]["Timestamp"];
             updated_at: components["schemas"]["Timestamp"];
             completed_at: components["schemas"]["Timestamp"] | null;
+            deleted_at: components["schemas"]["Timestamp"] | null;
             metadata: components["schemas"]["JsonObject"];
         };
         UpsertResponseRequest: {
@@ -472,11 +510,23 @@ export interface components {
             deleted_at: components["schemas"]["Timestamp"];
             cursor: string;
         };
+        DeleteResponseReceipt: {
+            response_id: components["schemas"]["ResponseId"];
+            deleted_at: components["schemas"]["Timestamp"];
+            cursor: string;
+        };
+        ClearChatReceipt: {
+            chat_id: components["schemas"]["ChatId"];
+            cleared_at: components["schemas"]["Timestamp"];
+            messages_deleted: number;
+            responses_deleted: number;
+            cursor: string;
+        };
         EventList: {
             events: components["schemas"]["ChatEvent"][];
             next_cursor: string | null;
         };
-        ChatEvent: components["schemas"]["MessageCreatedEvent"] | components["schemas"]["MessageDeliveredEvent"] | components["schemas"]["MessageDeletedEvent"] | components["schemas"]["ChatReadEvent"] | components["schemas"]["ResponseCreatedEvent"] | components["schemas"]["ResponseUpdatedEvent"] | components["schemas"]["ResponseCompletedEvent"] | components["schemas"]["ResponseFailedEvent"] | components["schemas"]["ActivityCreatedEvent"] | components["schemas"]["ActivityUpdatedEvent"] | components["schemas"]["ActivityCompletedEvent"] | components["schemas"]["ActivityFailedEvent"] | components["schemas"]["ArtifactCreatedEvent"];
+        ChatEvent: components["schemas"]["MessageCreatedEvent"] | components["schemas"]["MessageDeliveredEvent"] | components["schemas"]["MessageDeletedEvent"] | components["schemas"]["ChatReadEvent"] | components["schemas"]["ChatClearedEvent"] | components["schemas"]["ResponseDeletedEvent"] | components["schemas"]["ResponseCreatedEvent"] | components["schemas"]["ResponseUpdatedEvent"] | components["schemas"]["ResponseCompletedEvent"] | components["schemas"]["ResponseFailedEvent"] | components["schemas"]["ActivityCreatedEvent"] | components["schemas"]["ActivityUpdatedEvent"] | components["schemas"]["ActivityCompletedEvent"] | components["schemas"]["ActivityFailedEvent"] | components["schemas"]["ArtifactCreatedEvent"];
         EventBase: {
             id: components["schemas"]["EventId"];
             cursor: string;
@@ -504,6 +554,16 @@ export interface components {
             /** @constant */
             type: "chat.read";
             read: components["schemas"]["ReadReceipt"];
+        };
+        ChatClearedEvent: components["schemas"]["EventBase"] & {
+            /** @constant */
+            type: "chat.cleared";
+            cleared_at: components["schemas"]["Timestamp"];
+        };
+        ResponseDeletedEvent: components["schemas"]["EventBase"] & {
+            /** @constant */
+            type: "response.deleted";
+            response_id: components["schemas"]["ResponseId"];
         };
         ResponseCreatedEvent: components["schemas"]["EventBase"] & {
             /** @constant */
@@ -996,6 +1056,52 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ReadReceipt"];
+                };
+            };
+            default: components["responses"]["Error"];
+        };
+    };
+    clearChat: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                chat_id: components["parameters"]["ChatId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Clear receipt. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ClearChatReceipt"];
+                };
+            };
+            default: components["responses"]["Error"];
+        };
+    };
+    deleteResponse: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                response_id: components["parameters"]["ResponseId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Deleted response receipt. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DeleteResponseReceipt"];
                 };
             };
             default: components["responses"]["Error"];

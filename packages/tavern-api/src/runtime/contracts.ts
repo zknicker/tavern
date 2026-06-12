@@ -275,6 +275,32 @@ export const agentRuntimeSavePermissionSettingsResultSchema =
         restartScheduled: z.boolean(),
     });
 
+export const agentRuntimeCommandSchema = z.object({
+    category: z.string().trim().min(1),
+    description: z.string().trim().min(1).nullable(),
+    // Canonical slash form, such as "/model".
+    name: z
+        .string()
+        .trim()
+        .regex(/^\/[a-z0-9][a-z0-9_-]*$/iu),
+});
+
+export const agentRuntimeCommandListSchema = z.object({
+    commands: z.array(agentRuntimeCommandSchema),
+});
+
+export const agentRuntimeRunCommandSchema = z.object({
+    agentId: z.string().trim().min(1),
+    chatId: z.string().trim().min(1),
+    // Raw command text as typed, including the leading slash and any args.
+    command: z.string().trim().min(1).max(2000),
+});
+
+export const agentRuntimeRunCommandResultSchema = z.object({
+    output: z.string(),
+    status: z.enum(['completed', 'failed']),
+});
+
 export const agentRuntimeConnectorTransportSchema = z.enum(['command', 'url']);
 
 const agentRuntimeConnectorIdSchema = z
@@ -1756,6 +1782,7 @@ export const agentRuntimeTurnProgressStepSchema = z.object({
 
 export const agentRuntimeEventTypeSchema = z.enum([
     'agent.updated',
+    'chat.historyChanged',
     'chat.messageAccepted',
     'chat.read',
     'model.updated',
@@ -1802,6 +1829,14 @@ export const agentRuntimeChatMessageAcceptedEventSchema = z.object({
     sessionKey: z.string().trim().min(1),
     timestamp: z.string().datetime(),
     type: z.literal('chat.messageAccepted'),
+});
+
+// Durable rows were dismissed or cleared; clients refetch the chat log
+// instead of patching caches row by row.
+export const agentRuntimeChatHistoryChangedEventSchema = z.object({
+    chatId: z.string().trim().min(1),
+    timestamp: z.string().datetime(),
+    type: z.literal('chat.historyChanged'),
 });
 
 export const agentRuntimeChatReadEventSchema = z.object({
@@ -1943,6 +1978,7 @@ export const agentRuntimeEngineRestartEventSchema = z.object({
 export const agentRuntimeEventSchema = z.discriminatedUnion('type', [
     agentRuntimeAgentUpdatedEventSchema,
     agentRuntimeEngineRestartEventSchema,
+    agentRuntimeChatHistoryChangedEventSchema,
     agentRuntimeChatMessageAcceptedEventSchema,
     agentRuntimeChatReadEventSchema,
     agentRuntimeModelUpdatedEventSchema,
@@ -2125,6 +2161,10 @@ export type AgentRuntimeSavePermissionSettings = z.infer<
 export type AgentRuntimeSavePermissionSettingsResult = z.infer<
     typeof agentRuntimeSavePermissionSettingsResultSchema
 >;
+export type AgentRuntimeCommand = z.infer<typeof agentRuntimeCommandSchema>;
+export type AgentRuntimeCommandList = z.infer<typeof agentRuntimeCommandListSchema>;
+export type AgentRuntimeRunCommand = z.infer<typeof agentRuntimeRunCommandSchema>;
+export type AgentRuntimeRunCommandResult = z.infer<typeof agentRuntimeRunCommandResultSchema>;
 export type AgentRuntimeConnectorTransport = z.infer<typeof agentRuntimeConnectorTransportSchema>;
 export type AgentRuntimeConnector = z.infer<typeof agentRuntimeConnectorSchema>;
 export type AgentRuntimeConnectorList = z.infer<typeof agentRuntimeConnectorListSchema>;

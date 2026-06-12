@@ -7,9 +7,11 @@ import type {
     TavernChatMessageReceipt,
     TavernChatResponse,
     TavernChatTimelinePage,
+    TavernClearChatReceipt,
     TavernCreateChatRequest,
     TavernCreateDeliveryRequest,
     TavernCreateMessageRequest,
+    TavernDeleteResponseReceipt,
     TavernEventList,
     TavernListChatsResponse,
     TavernListMessagesResponse,
@@ -279,6 +281,24 @@ class TavernChatClient {
             {
                 body: input,
                 method: 'POST',
+            }
+        );
+    }
+
+    clear(chatId: string) {
+        return this.#client.request<TavernClearChatReceipt>(
+            `/api/chats/${encodeURIComponent(chatId)}/clear`,
+            {
+                method: 'POST',
+            }
+        );
+    }
+
+    deleteResponse(responseId: string) {
+        return this.#client.request<TavernDeleteResponseReceipt>(
+            `/api/responses/${encodeURIComponent(responseId)}`,
+            {
+                method: 'DELETE',
             }
         );
     }

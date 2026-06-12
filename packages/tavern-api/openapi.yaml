@@ -367,6 +367,42 @@ paths:
                 $ref: '#/components/schemas/ReadReceipt'
         default:
           $ref: '#/components/responses/Error'
+  /api/chats/{chat_id}/clear:
+    post:
+      operationId: clearChat
+      tags: [Chats]
+      summary: Clear a chat's visible history.
+      description: >
+        Soft-deletes every message and response currently in the chat in one
+        operation. Rows keep their sequence slots; new work after the clear
+        appears normally.
+      parameters:
+        - $ref: '#/components/parameters/ChatId'
+      responses:
+        '200':
+          description: Clear receipt.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ClearChatReceipt'
+        default:
+          $ref: '#/components/responses/Error'
+  /api/responses/{response_id}:
+    delete:
+      operationId: deleteResponse
+      tags: [Chats]
+      summary: Soft delete a response and its activity.
+      parameters:
+        - $ref: '#/components/parameters/ResponseId'
+      responses:
+        '200':
+          description: Deleted response receipt.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeleteResponseReceipt'
+        default:
+          $ref: '#/components/responses/Error'
   /api/messages/{message_id}:
     get:
       operationId: getMessage
@@ -781,6 +817,7 @@ components:
         - created_at
         - updated_at
         - completed_at
+        - deleted_at
         - metadata
       properties:
         id:
@@ -806,6 +843,10 @@ components:
         updated_at:
           $ref: '#/components/schemas/Timestamp'
         completed_at:
+          oneOf:
+            - $ref: '#/components/schemas/Timestamp'
+            - type: 'null'
+        deleted_at:
           oneOf:
             - $ref: '#/components/schemas/Timestamp'
             - type: 'null'
@@ -1117,6 +1158,42 @@ components:
           $ref: '#/components/schemas/Timestamp'
         cursor:
           type: string
+    DeleteResponseReceipt:
+      type: object
+      additionalProperties: false
+      required:
+        - response_id
+        - deleted_at
+        - cursor
+      properties:
+        response_id:
+          $ref: '#/components/schemas/ResponseId'
+        deleted_at:
+          $ref: '#/components/schemas/Timestamp'
+        cursor:
+          type: string
+    ClearChatReceipt:
+      type: object
+      additionalProperties: false
+      required:
+        - chat_id
+        - cleared_at
+        - messages_deleted
+        - responses_deleted
+        - cursor
+      properties:
+        chat_id:
+          $ref: '#/components/schemas/ChatId'
+        cleared_at:
+          $ref: '#/components/schemas/Timestamp'
+        messages_deleted:
+          type: integer
+          minimum: 0
+        responses_deleted:
+          type: integer
+          minimum: 0
+        cursor:
+          type: string
     EventList:
       type: object
       additionalProperties: false
@@ -1136,6 +1213,8 @@ components:
         - $ref: '#/components/schemas/MessageDeliveredEvent'
         - $ref: '#/components/schemas/MessageDeletedEvent'
         - $ref: '#/components/schemas/ChatReadEvent'
+        - $ref: '#/components/schemas/ChatClearedEvent'
+        - $ref: '#/components/schemas/ResponseDeletedEvent'
         - $ref: '#/components/schemas/ResponseCreatedEvent'
         - $ref: '#/components/schemas/ResponseUpdatedEvent'
         - $ref: '#/components/schemas/ResponseCompletedEvent'
@@ -1218,6 +1297,30 @@ components:
               const: chat.read
             read:
               $ref: '#/components/schemas/ReadReceipt'
+    ChatClearedEvent:
+      allOf:
+        - $ref: '#/components/schemas/EventBase'
+        - type: object
+          additionalProperties: false
+          required: [type, cleared_at]
+          properties:
+            type:
+              type: string
+              const: chat.cleared
+            cleared_at:
+              $ref: '#/components/schemas/Timestamp'
+    ResponseDeletedEvent:
+      allOf:
+        - $ref: '#/components/schemas/EventBase'
+        - type: object
+          additionalProperties: false
+          required: [type, response_id]
+          properties:
+            type:
+              type: string
+              const: response.deleted
+            response_id:
+              $ref: '#/components/schemas/ResponseId'
     ResponseCreatedEvent:
       allOf:
         - $ref: '#/components/schemas/EventBase'

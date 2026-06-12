@@ -31,6 +31,8 @@ describe('Tavern OpenAPI contract', () => {
             '/api/chats/{chat_id}/activity/{activity_id}',
             '/api/chats/{chat_id}/artifacts',
             '/api/chats/{chat_id}/read',
+            '/api/chats/{chat_id}/clear',
+            '/api/responses/{response_id}',
             '/api/messages/{message_id}',
             '/api/events',
             '/api/events/ws',
