@@ -76,9 +76,13 @@ enablement changes back through Runtime. Codex app-server skills are not merged
 into the Tavern skill catalog.
 
 Install mechanics stay engine-owned: quarantine, scanning, install policy, and
-the install lockfile live in the engine, and Runtime waits for install and
-uninstall background actions to exit before refreshing the skill inventory
-snapshot and emitting the skill update event.
+the install lockfile live in the engine. Runtime runs the engine CLI directly
+for install (`skills install --yes`) and uninstall (answering the confirm
+prompt over stdin) because the engine dashboard's spawn endpoints mishandle
+the installer's confirmation prompts and report success on cancel. Runtime
+verifies the result against the hub lockfile — tolerating the engine's
+source-prefixed identifiers (e.g. `skills-sh/owner/repo/...`) — then refreshes
+the skill inventory snapshot and emits the skill update event.
 
 The available-skills view is Runtime-owned local reads with no engine HTTP and
 no centralized index: the built-in library comes from the resolved engine
