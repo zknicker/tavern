@@ -155,25 +155,31 @@ catalog.
 
 ## UI Model
 
-- The Skills tab contains product-visible runtime skills.
-- The Toolsets tab contains Hermes toolsets visible to Tavern.
+- Skills and Toolsets are separate settings pages.
+- The Skills page has Installed and Available tabs. Installed is the inventory:
+  enabled, disabled (visibly muted), and needs-setup skills. Available lists
+  installable skills grouped by source; installed items show an installed mark
+  instead of an add action.
+- A skill dialog is the detail surface for both tabs: the rendered SKILL.md,
+  the enable toggle for installed skills, an Uninstall action for hub-installed
+  skills, and an Install action (gated by the scan verdict) for available
+  skills. Skills the hub lockfile does not know (workspace or managed skills)
+  are not uninstallable.
+- A sources dialog on the Skills page adds and removes tap repos.
+- The Toolsets page contains Hermes toolsets visible to Tavern, the Add
+  toolset dialog, and the toolset setup dialog.
 - Skill provenance is shown from source metadata, such as workspace, project,
   personal, managed/local, plugin-owned, or extra directory.
 - Toolsets show enabled state, configured state, description, runtime diagnostic
   text, and tool names when useful.
-- Skill and toolset rows are not clickable. The page is a catalog and enablement
-  surface, not a detail browser.
+- Skill rows open the skill dialog. Toolset rows are not clickable.
 - Agent usability lives in the row as enabled, disabled, or not usable. Runtime
   diagnostics can explain not usable, but they are not first-class product
   states.
 - Internal ids, source paths, runtime config paths, MCP server names, plugin ids,
   and generated config paths are debug details unless the user opens advanced
   status.
-- The Sources tab is the install surface: each source (tap repos, then the
-  built-in library) lists its skills with install state. Rows open a preview
-  dialog with the SKILL.md, file manifest, and scan verdict before
-  install/remove. The tab also adds and removes tap repos. There is no
-  marketplace search.
+- There is no marketplace search.
 - The Add toolset dialog is the MCP surface: the engine's curated MCP catalog
   with one-click install plus custom HTTP/stdio servers with test, enablement,
   and removal.

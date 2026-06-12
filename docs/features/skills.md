@@ -7,31 +7,28 @@ read_when:
 
 # Skills & Toolsets
 
-The Skills & Toolsets settings page is where users manage what the agent can use
-from the runtime-managed Hermes instance.
+The Skills and Toolsets settings pages are where users manage what the agent
+can use from the runtime-managed Hermes instance.
 
 ## In the box
 
-* **Skills.** View reusable instruction packages Hermes can see, enable or
-  disable them for new Hermes sessions, and see runtime-reported setup blockers.
-* **Sources.** A tab beside Skills and Toolsets listing where skills can come
-  from: your GitHub repos (taps, including private repos the runtime can
-  access) and the engine's built-in library of official optional skills. Each
-  source lists its skills with install state; rows open a preview with the
-  SKILL.md, file manifest, and security scan verdict before install or remove.
-  There is no marketplace search — you find skills on the internet and add the
-  repo here.
-* **Toolsets.** Enable or disable Hermes tool groups such as browser, file, MCP,
-  or provider-backed tools. Toolsets are not instructions; they are runtime tool
-  access.
-* **Set up.** Toolsets that need setup expose the engine's provider matrix:
-  pick a provider, save its API keys, and run the provider's install step.
-* **Add toolset.** Install curated MCP servers from the engine catalog or
-  connect a custom HTTP/stdio MCP server, with connection testing, enablement,
-  and removal.
-* **Catalog filters.** Switch between skills and toolsets.
-* **Status.** Show whether each skill or toolset is enabled, off, needs setup,
-  or unknown.
+* **Skills page, Installed tab.** The inventory: enabled, disabled (visibly
+  muted), and needs-setup skills, each with an enable toggle. Rows open the
+  skill dialog.
+* **Skills page, Available tab.** Installable skills grouped by source: your
+  GitHub repos (taps, including private repos the runtime can access) and the
+  engine's built-in library of official optional skills. Installed items show
+  an installed mark; the rest show an add action. There is no marketplace
+  search — you find skills on the internet and add the repo here.
+* **Skill dialog.** One detail surface for installed and available skills: the
+  rendered SKILL.md, the enable toggle, the security scan verdict, Install for
+  available skills, and Uninstall for hub-installed skills.
+* **Manage sources.** A dialog on the Skills page that adds and removes tap
+  repos. Removing a repo never uninstalls skills installed from it.
+* **Toolsets page.** Enable or disable Hermes tool groups such as browser,
+  file, MCP, or provider-backed tools, with the Add toolset dialog (curated MCP
+  catalog plus custom HTTP/stdio servers) and the Set up dialog (the engine's
+  provider matrix: pick a provider, save keys, run the install step).
 
 ## Contract
 
