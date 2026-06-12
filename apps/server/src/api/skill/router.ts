@@ -12,6 +12,15 @@ import {
 import { skillHubUninstallProcedure } from './hub-uninstall.ts';
 import { listSkillsProcedure } from './list.ts';
 import { listRuntimeSkillsProcedure } from './list-runtime.ts';
+import {
+    addMcpServerProcedure,
+    installMcpCatalogEntryProcedure,
+    mcpCatalogProcedure,
+    mcpServersProcedure,
+    removeMcpServerProcedure,
+    setMcpServerEnabledProcedure,
+    testMcpServerProcedure,
+} from './mcp.ts';
 import { onSkillUpdate } from './on-update.ts';
 import { setSkillEnabledProcedure } from './set-enabled.ts';
 import { setToolsetEnabledProcedure } from './set-toolset-enabled.ts';
@@ -41,4 +50,11 @@ export const skillRouter = createRouter({
     setToolsetProvider: setToolsetProviderProcedure,
     saveToolsetEnv: saveToolsetEnvProcedure,
     runToolsetPostSetup: runToolsetPostSetupProcedure,
+    mcpServers: mcpServersProcedure,
+    addMcpServer: addMcpServerProcedure,
+    removeMcpServer: removeMcpServerProcedure,
+    testMcpServer: testMcpServerProcedure,
+    setMcpServerEnabled: setMcpServerEnabledProcedure,
+    mcpCatalog: mcpCatalogProcedure,
+    installMcpCatalogEntry: installMcpCatalogEntryProcedure,
 });

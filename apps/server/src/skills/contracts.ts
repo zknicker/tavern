@@ -1,4 +1,9 @@
-import { agentRuntimeSkillHubTapSchema, agentRuntimeSkillRequirementsSchema } from '@tavern/api';
+import {
+    agentRuntimeMcpCatalogInstallSchema,
+    agentRuntimeMcpServerCreateSchema,
+    agentRuntimeSkillHubTapSchema,
+    agentRuntimeSkillRequirementsSchema,
+} from '@tavern/api';
 import { z } from 'zod';
 
 export const skillIdSchema = z.string().trim().min(1).max(200);
@@ -42,6 +47,19 @@ export const toolsetPostSetupInputSchema = z.object({
     key: z.string().trim().min(1).max(100),
     toolsetId: skillIdSchema,
 });
+
+export const mcpServerCreateInputSchema = agentRuntimeMcpServerCreateSchema;
+
+export const mcpServerNameInputSchema = z.object({
+    name: z.string().trim().min(1).max(100),
+});
+
+export const mcpServerEnabledInputSchema = z.object({
+    enabled: z.boolean(),
+    name: z.string().trim().min(1).max(100),
+});
+
+export const mcpCatalogInstallInputSchema = agentRuntimeMcpCatalogInstallSchema;
 
 export const setSkillEnabledInputSchema = z.object({
     enabled: z.boolean(),

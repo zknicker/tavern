@@ -35,6 +35,12 @@ import {
     type AgentRuntimeJobList,
     type AgentRuntimeJobSlug,
     type AgentRuntimeMacAppList,
+    type AgentRuntimeMcpCatalog,
+    type AgentRuntimeMcpCatalogInstall,
+    type AgentRuntimeMcpServer,
+    type AgentRuntimeMcpServerCreate,
+    type AgentRuntimeMcpServerList,
+    type AgentRuntimeMcpServerTestResult,
     type AgentRuntimeMessageAccepted,
     type AgentRuntimeModelAccess,
     type AgentRuntimeModels,
@@ -141,6 +147,12 @@ import {
     agentRuntimeJobListSchema,
     agentRuntimeJobSlugSchema,
     agentRuntimeMacAppListSchema,
+    agentRuntimeMcpCatalogInstallSchema,
+    agentRuntimeMcpCatalogSchema,
+    agentRuntimeMcpServerCreateSchema,
+    agentRuntimeMcpServerListSchema,
+    agentRuntimeMcpServerSchema,
+    agentRuntimeMcpServerTestResultSchema,
     agentRuntimeMessageAcceptedSchema,
     agentRuntimeModelAccessSchema,
     agentRuntimeModelProviderOAuthCancelSchema,
@@ -253,6 +265,7 @@ export class AgentRuntimeRequestError extends Error {
 }
 
 export interface TavernAgentRuntimeClient {
+    addMcpServer(input: AgentRuntimeMcpServerCreate): Promise<AgentRuntimeMcpServer>;
     addSkillHubTap(input: AgentRuntimeSkillHubTap): Promise<AgentRuntimeSkillHubTapList>;
     applyHermesConfig(
         input: AgentRuntimeApplyHermesConfig
@@ -280,6 +293,7 @@ export interface TavernAgentRuntimeClient {
     getCronJob(jobId: string): Promise<AgentRuntimeCron>;
     getExecutionSettings(): Promise<AgentRuntimeExecutionSettings>;
     getHermesConfig(): Promise<AgentRuntimeHermesConfigSnapshot>;
+    getMcpCatalog(): Promise<AgentRuntimeMcpCatalog>;
     getModelAccess(): Promise<AgentRuntimeModelAccess>;
     getModels(): Promise<AgentRuntimeModels>;
     getOpenAiSettings(): Promise<AgentRuntimeOpenAiSettings>;
@@ -292,6 +306,9 @@ export interface TavernAgentRuntimeClient {
     getToolsetConfig(toolsetId: string): Promise<AgentRuntimeToolsetConfig>;
     getUpdateStatus(): Promise<AgentRuntimeUpdate>;
     getWorkspaceInstructions(agentId: string): Promise<AgentRuntimeRenderedWorkspaceInstructions>;
+    installMcpCatalogEntry(
+        input: AgentRuntimeMcpCatalogInstall
+    ): Promise<AgentRuntimeSkillHubActionResult>;
     installSkillHubSkill(
         input: AgentRuntimeSkillHubInstallInput
     ): Promise<AgentRuntimeSkillHubActionResult>;
@@ -313,6 +330,7 @@ export interface TavernAgentRuntimeClient {
     listDiscordBindings(): Promise<{ bindings: AgentRuntimeDiscordBinding[] }>;
     listHighlights(): Promise<AgentRuntimeHighlightList>;
     listMacApps(options?: { limit?: number; query?: string }): Promise<AgentRuntimeMacAppList>;
+    listMcpServers(): Promise<AgentRuntimeMcpServerList>;
     listRuntimeJobs(): Promise<AgentRuntimeJobList>;
     listSessionMessages(
         sessionKey: string,
@@ -334,6 +352,7 @@ export interface TavernAgentRuntimeClient {
     ): Promise<AgentRuntimeMessageAccepted>;
     previewSkillHubSkill(identifier: string): Promise<AgentRuntimeSkillHubPreview>;
     refreshCapability(id: AgentRuntimeCapabilityHealthId): Promise<AgentRuntimeCapabilityHealth>;
+    removeMcpServer(name: string): Promise<{ ok: boolean }>;
     removeSkillHubTap(repo: string): Promise<AgentRuntimeSkillHubTapList>;
     respondToChatApproval(
         sessionKey: string,
@@ -391,11 +410,13 @@ export interface TavernAgentRuntimeClient {
         toolsetId: string,
         input: AgentRuntimeToolsetProviderSelect
     ): Promise<AgentRuntimeToolsetProviderSelectResult>;
+    setMcpServerEnabled(name: string, enabled: boolean): Promise<{ ok: boolean }>;
     startModelProviderOAuth(input: AgentRuntimeStartModelProviderOAuth): Promise<unknown>;
     startUpdate(input?: { targetVersion?: null | string }): Promise<AgentRuntimeUpdate>;
     stopChatTurn(chatId: string, input: AgentRuntimeStopTurn): Promise<AgentRuntimeStopTurnResult>;
     submitModelProviderOAuth(input: AgentRuntimeSubmitModelProviderOAuth): Promise<unknown>;
     testConnector(id: string): Promise<AgentRuntimeConnectorTestResult>;
+    testMcpServer(name: string): Promise<AgentRuntimeMcpServerTestResult>;
     uninstallSkillHubSkill(
         input: AgentRuntimeSkillHubUninstallInput
     ): Promise<AgentRuntimeSkillHubActionResult>;
@@ -1684,6 +1705,52 @@ class HttpTavernAgentRuntimeClient implements TavernAgentRuntimeClient {
     async getToolsetConfig(toolsetId: string) {
         return agentRuntimeToolsetConfigSchema.parse(
             await this.#getSkillHubJson(agentRuntimeRoutes.toolsetConfig(toolsetId))
+        );
+    }
+
+    async listMcpServers() {
+        return agentRuntimeMcpServerListSchema.parse(
+            await this.#getSkillHubJson(agentRuntimeRoutes.mcpServers)
+        );
+    }
+
+    async addMcpServer(input: AgentRuntimeMcpServerCreate) {
+        const payload = agentRuntimeMcpServerCreateSchema.parse(input);
+        return agentRuntimeMcpServerSchema.parse(
+            await this.#sendSkillHubJson('POST', agentRuntimeRoutes.mcpServers, payload)
+        );
+    }
+
+    async removeMcpServer(name: string) {
+        return (await this.#sendSkillHubJson(
+            'DELETE',
+            agentRuntimeRoutes.mcpServer(name),
+            undefined
+        )) as { ok: boolean };
+    }
+
+    async testMcpServer(name: string) {
+        return agentRuntimeMcpServerTestResultSchema.parse(
+            await this.#sendSkillHubJson('POST', agentRuntimeRoutes.mcpServerTest(name), {})
+        );
+    }
+
+    async setMcpServerEnabled(name: string, enabled: boolean) {
+        return (await this.#sendSkillHubJson('PUT', agentRuntimeRoutes.mcpServerEnabled(name), {
+            enabled,
+        })) as { ok: boolean };
+    }
+
+    async getMcpCatalog() {
+        return agentRuntimeMcpCatalogSchema.parse(
+            await this.#getSkillHubJson(agentRuntimeRoutes.mcpCatalog)
+        );
+    }
+
+    async installMcpCatalogEntry(input: AgentRuntimeMcpCatalogInstall) {
+        const payload = agentRuntimeMcpCatalogInstallSchema.parse(input);
+        return agentRuntimeSkillHubActionResultSchema.parse(
+            await this.#sendSkillHubJson('POST', agentRuntimeRoutes.mcpCatalogInstall, payload)
         );
     }
 
