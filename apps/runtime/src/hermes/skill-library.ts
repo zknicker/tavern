@@ -32,7 +32,54 @@ export async function getAvailableSkills(
         listTapSkillListings(options).catch(() => []),
         readInstalledHubSkills(options).catch(() => ({})),
     ]);
-    return { builtin, installed, taps };
+    const items = [...builtin, ...taps.flatMap((tap) => tap.skills)];
+    return { builtin, installed: expandInstalledForItems(installed, items), taps };
+}
+
+/**
+ * The engine's installer records identifiers with a source prefix (e.g.
+ * `skills-sh/owner/repo/path` when its skills.sh source resolved the install),
+ * while source listings use the bare `owner/repo/path` form. Match with the
+ * prefix tolerated so installed state survives the difference.
+ */
+export function findInstalledHubEntry(
+    identifier: string,
+    installed: Record<string, AgentRuntimeSkillHubInstalledEntry>
+): AgentRuntimeSkillHubInstalledEntry | undefined {
+    if (identifier in installed) {
+        return installed[identifier];
+    }
+    for (const [installedIdentifier, entry] of Object.entries(installed)) {
+        if (
+            stripSourcePrefix(installedIdentifier) === identifier ||
+            stripSourcePrefix(identifier) === installedIdentifier
+        ) {
+            return entry;
+        }
+    }
+    return undefined;
+}
+
+function stripSourcePrefix(identifier: string) {
+    const slash = identifier.indexOf('/');
+    return slash === -1 ? identifier : identifier.slice(slash + 1);
+}
+
+function expandInstalledForItems(
+    installed: Record<string, AgentRuntimeSkillHubInstalledEntry>,
+    items: AgentRuntimeSkillHubItem[]
+) {
+    const expanded = { ...installed };
+    for (const item of items) {
+        if (item.identifier in expanded) {
+            continue;
+        }
+        const entry = findInstalledHubEntry(item.identifier, installed);
+        if (entry) {
+            expanded[item.identifier] = entry;
+        }
+    }
+    return expanded;
 }
 
 export async function listBuiltinLibrarySkills(

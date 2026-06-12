@@ -1,5 +1,4 @@
 import {
-    type AgentRuntimeSkillHubActionResult,
     type AgentRuntimeSkillHubItem,
     type AgentRuntimeSkillHubPreview,
     type AgentRuntimeSkillHubScan,
@@ -7,32 +6,24 @@ import {
     agentRuntimeSkillHubScanSchema,
 } from '@tavern/api';
 import { readHermesConnectionOptions } from './connection';
-import { awaitEngineAction } from './engine-actions';
 import { HermesHttp } from './http';
 import { asRecord, readArray, readString, readStringArray } from './mappers';
 
-const actionPollIntervalMs = 1000;
-const actionTimeoutMs = 180_000;
-
-export function createSkillHubClient(options?: { pollIntervalMs?: number; timeoutMs?: number }) {
-    return new SkillHubClient(new HermesHttp(readHermesConnectionOptions()), options);
+export function createSkillHubClient() {
+    return new SkillHubClient(new HermesHttp(readHermesConnectionOptions()));
 }
 
 /**
- * Engine skill-hub surface: preview, install-time security scan, and
- * install/uninstall by identifier. Install and uninstall are engine background
- * actions; this client owns waiting for the action to exit so callers see one
- * synchronous result.
+ * Engine skill-hub surface: preview and the install-time security scan.
+ * Install and uninstall run through the engine CLI instead (see
+ * skill-install.ts) because the engine's dashboard endpoints mishandle the
+ * installer's confirmation prompts.
  */
 export class SkillHubClient {
     readonly #http: HermesHttp;
-    readonly #pollIntervalMs: number;
-    readonly #timeoutMs: number;
 
-    constructor(http: HermesHttp, options?: { pollIntervalMs?: number; timeoutMs?: number }) {
+    constructor(http: HermesHttp) {
         this.#http = http;
-        this.#pollIntervalMs = options?.pollIntervalMs ?? actionPollIntervalMs;
-        this.#timeoutMs = options?.timeoutMs ?? actionTimeoutMs;
     }
 
     async preview(identifier: string): Promise<AgentRuntimeSkillHubPreview> {
@@ -63,23 +54,6 @@ export class SkillHubClient {
             summary: readString(response, ['summary']) ?? '',
             trustLevel: readString(response, ['trust_level']) ?? 'community',
             verdict: readString(response, ['verdict']) ?? '',
-        });
-    }
-
-    async install(identifier: string): Promise<AgentRuntimeSkillHubActionResult> {
-        await this.#http.postJson('/api/skills/hub/install', { identifier });
-        return await this.#awaitAction('skills-install');
-    }
-
-    async uninstall(name: string): Promise<AgentRuntimeSkillHubActionResult> {
-        await this.#http.postJson('/api/skills/hub/uninstall', { name });
-        return await this.#awaitAction('skills-uninstall');
-    }
-
-    async #awaitAction(name: string) {
-        return await awaitEngineAction(this.#http, name, {
-            pollIntervalMs: this.#pollIntervalMs,
-            timeoutMs: this.#timeoutMs,
         });
     }
 }

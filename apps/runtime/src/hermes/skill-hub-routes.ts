@@ -7,6 +7,7 @@ import {
 } from '@tavern/api';
 import { badRequest, json, readJson } from '../tavern/http';
 import { createSkillHubClient } from './skill-hub-client';
+import { installHubSkill, uninstallHubSkill } from './skill-install';
 import { getAvailableSkills } from './skill-library';
 import { addSkillHubTap, listSkillHubTaps, removeSkillHubTap } from './skill-taps';
 
@@ -45,13 +46,15 @@ export async function handleSkillHubRequest(request: Request): Promise<Response 
     if (request.method === 'POST' && segments[2] === 'install') {
         const input = agentRuntimeSkillHubInstallInputSchema.parse(await readJson(request));
         return json(
-            agentRuntimeSkillHubActionResultSchema.parse(await hub.install(input.identifier))
+            agentRuntimeSkillHubActionResultSchema.parse(await installHubSkill(input.identifier))
         );
     }
 
     if (request.method === 'POST' && segments[2] === 'uninstall') {
         const input = agentRuntimeSkillHubUninstallInputSchema.parse(await readJson(request));
-        return json(agentRuntimeSkillHubActionResultSchema.parse(await hub.uninstall(input.name)));
+        return json(
+            agentRuntimeSkillHubActionResultSchema.parse(await uninstallHubSkill(input.name))
+        );
     }
 
     return null;

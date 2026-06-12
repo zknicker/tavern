@@ -59,8 +59,7 @@ describe('SkillHubClient', () => {
         const address = server?.address();
         const port = typeof address === 'object' && address ? address.port : 0;
         return new SkillHubClient(
-            new HermesHttp({ baseUrl: `http://127.0.0.1:${port}`, token: null }),
-            { pollIntervalMs: 5, timeoutMs: 2000 }
+            new HermesHttp({ baseUrl: `http://127.0.0.1:${port}`, token: null })
         );
     }
 
@@ -84,47 +83,5 @@ describe('SkillHubClient', () => {
             line: 12,
             severity: 'medium',
         });
-    });
-
-    it('waits for the install action to exit and returns the log tail', async () => {
-        let statusPolls = 0;
-        const client = await startFixture((pathname) => {
-            if (pathname === '/api/skills/hub/install') {
-                return { name: 'skills-install', ok: true, pid: 123 };
-            }
-            statusPolls += 1;
-            return statusPolls < 3
-                ? { exit_code: null, lines: [], name: 'skills-install', pid: 123, running: true }
-                : {
-                      exit_code: 0,
-                      lines: ['Installed merchbase'],
-                      name: 'skills-install',
-                      pid: 123,
-                      running: false,
-                  };
-        });
-        const result = await client.install('merchbaseco/skills/skills/merchbase');
-
-        expect(statusPolls).toBe(3);
-        expect(result).toEqual({ exitCode: 0, log: ['Installed merchbase'], ok: true });
-    });
-
-    it('reports a failed install action with its exit code', async () => {
-        const client = await startFixture((pathname) =>
-            pathname === '/api/skills/hub/uninstall'
-                ? { name: 'skills-uninstall', ok: true, pid: 5 }
-                : {
-                      exit_code: 1,
-                      lines: ['No such skill'],
-                      name: 'skills-uninstall',
-                      pid: 5,
-                      running: false,
-                  }
-        );
-        const result = await client.uninstall('missing');
-
-        expect(result.ok).toBe(false);
-        expect(result.exitCode).toBe(1);
-        expect(result.log).toEqual(['No such skill']);
     });
 });

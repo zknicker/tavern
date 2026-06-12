@@ -2,7 +2,11 @@ import fs from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { listBuiltinLibrarySkills, readInstalledHubSkills } from './skill-library';
+import {
+    findInstalledHubEntry,
+    listBuiltinLibrarySkills,
+    readInstalledHubSkills,
+} from './skill-library';
 
 describe('skill library', () => {
     let engineSourceDir: string;
@@ -96,5 +100,24 @@ describe('skill library', () => {
 
     it('returns an empty installed map without a lockfile', async () => {
         expect(await readInstalledHubSkills({ home })).toEqual({});
+    });
+
+    it('matches installed entries across engine source prefixes', () => {
+        const installed = {
+            'skills-sh/merchbaseco/skills/skills/merchbase': {
+                name: 'merchbase',
+                scanVerdict: 'safe',
+                trustLevel: 'community',
+            },
+        };
+
+        expect(findInstalledHubEntry('merchbaseco/skills/skills/merchbase', installed)?.name).toBe(
+            'merchbase'
+        );
+        expect(
+            findInstalledHubEntry('skills-sh/merchbaseco/skills/skills/merchbase', installed)?.name
+        ).toBe('merchbase');
+        expect(findInstalledHubEntry('skills/merchbase', installed)).toBeUndefined();
+        expect(findInstalledHubEntry('official/merchbase', installed)).toBeUndefined();
     });
 });
