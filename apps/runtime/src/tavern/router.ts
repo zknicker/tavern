@@ -19,6 +19,7 @@ import { handleCommandsRequest } from '../hermes/command-routes';
 import { handleConnectorsRequest } from '../hermes/connector-routes';
 import { handleExecutionSettingsRequest } from '../hermes/execution-settings';
 import { handlePermissionSettingsRequest } from '../hermes/permission-settings';
+import { handleSkillHubRequest } from '../hermes/skill-hub-routes';
 import { listTavernHighlights } from '../highlights/highlights';
 import { handleRuntimeJobsRequest } from '../jobs/routes';
 import { listMacApps } from '../mac-apps/inventory';
@@ -115,6 +116,11 @@ export async function handleTavernRuntimeRequest(request: Request): Promise<Resp
     const commandsResponse = await handleCommandsRequest(request);
     if (commandsResponse) {
         return commandsResponse;
+    }
+
+    const skillHubResponse = await handleSkillHubRequest(request);
+    if (skillHubResponse) {
+        return skillHubResponse;
     }
 
     const capabilitiesResponse = await handleRuntimeCapabilitiesRequest(request);

@@ -56,15 +56,10 @@ import {
     agentRuntimeStartModelProviderOAuthSchema,
     agentRuntimeSubmitModelProviderOAuthSchema,
 } from '@tavern/api';
-import {
-    getRuntimePort,
-    HERMES_DASHBOARD_SESSION_TOKEN,
-    HERMES_HOME,
-    HERMES_WORKSPACE,
-    readConfigValue,
-} from '../config';
+import { getRuntimePort, HERMES_HOME, HERMES_WORKSPACE } from '../config';
 import { readHermesAdapterState, updateHermesAdapterState } from './adapter-state';
-import { defaultHermesAgentId, defaultHermesHost, defaultHermesPort } from './constants';
+import { readHermesConnectionOptions } from './connection';
+import { defaultHermesAgentId } from './constants';
 import { unsupportedHermesSurface } from './errors';
 import { HermesGateway } from './gateway';
 import { HermesHttp } from './http';
@@ -104,10 +99,7 @@ const editableHermesAgentFiles = [
 ] as const;
 
 export function createLocalHermesClient() {
-    return new LocalHermesClient({
-        baseUrl: readHermesBaseUrl(),
-        token: readConfigValue('TAVERN_HERMES_TOKEN') ?? HERMES_DASHBOARD_SESSION_TOKEN,
-    });
+    return new LocalHermesClient(readHermesConnectionOptions());
 }
 
 export class LocalHermesClient extends LocalHermesUnsupportedSurfaces {
@@ -1479,12 +1471,6 @@ function formatHermesAttachmentRef(kind: 'file' | 'image', value: string) {
     const trimmed = value.trim();
     const formatted = /^[^\s`]+$/u.test(trimmed) ? trimmed : `\`${trimmed.replace(/`/g, '')}\``;
     return `@${kind}:${formatted}`;
-}
-
-function readHermesBaseUrl() {
-    const host = readConfigValue('TAVERN_HERMES_HOST') ?? defaultHermesHost;
-    const port = readConfigValue('TAVERN_HERMES_PORT') ?? defaultHermesPort;
-    return `http://${host}:${port}`;
 }
 
 function readProviderNumber(record: Record<string, unknown>, key: string) {
