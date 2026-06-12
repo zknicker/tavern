@@ -29,6 +29,12 @@ export const agentRuntimeRoutes = {
     updateRestart: '/update/restart',
     updateStatus: '/update/status',
     macApps: '/mac-apps',
+    mcpCatalog: '/mcp/catalog',
+    mcpCatalogInstall: '/mcp/catalog/install',
+    mcpServer: (name: string) => `/mcp/servers/${encodeURIComponent(name)}`,
+    mcpServerEnabled: (name: string) => `/mcp/servers/${encodeURIComponent(name)}/enabled`,
+    mcpServerTest: (name: string) => `/mcp/servers/${encodeURIComponent(name)}/test`,
+    mcpServers: '/mcp/servers',
     modelAccess: '/model-access',
     modelAccessApiKey: '/model-access/api-key',
     modelAccessOAuthCancel: (sessionId: string) =>

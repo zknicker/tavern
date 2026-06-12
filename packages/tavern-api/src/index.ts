@@ -31,6 +31,7 @@ export type TavernUpsertResponseActivityRequest = TavernApiSchema<'UpsertRespons
 export type TavernUpsertResponseRequest = TavernApiSchema<'UpsertResponseRequest'>;
 
 export * from './runtime/contracts.js';
+export * from './runtime/mcp.js';
 export * from './runtime/model-identity.js';
 export * from './runtime/model-providers.js';
 export * from './runtime/routes.js';
