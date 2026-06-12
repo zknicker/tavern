@@ -137,6 +137,19 @@ outline.
 Provider and product badges may use special colors, but they should still be implemented as
 specializations of `components/ui/badge.tsx` in `components/badges`.
 
+## Surfaces
+
+`components/ui/surface.tsx` carries the Fluid Functionalism surface ladder: eight
+`surface-N`/`shadow-surface-N` token pairs defined in `global.css`, a substrate context, and the
+`Elevated` primitive. Containers communicate their level through context, so a panel nested inside
+a dialog lands one step above the dialog without prop threading.
+
+Use `Elevated` with small offsets for nested panels instead of hand-picking backgrounds: offset 1
+for inline low-contrast cards (system evidence in chat, for example), offset 2 for popovers and
+menus, offset 4 for dialogs. Pass `shadowLevel` when a floating element should keep a constant
+shadow weight regardless of nesting. Dark mode steps the background a few percent toward white per
+level; light mode flattens to white after level 2 and lets the shadow recipes carry elevation.
+
 ## Typography
 
 The app uses system sans for UI and IBM Plex Mono for compact metadata. The typography scale is

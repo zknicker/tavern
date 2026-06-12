@@ -226,6 +226,7 @@ chat_responses
   created_at               TEXT NOT NULL
   updated_at               TEXT NOT NULL
   completed_at             TEXT
+  deleted_at               TEXT
 ```
 
 Indexes:
@@ -244,6 +245,8 @@ Rules:
   activity or final state changes.
 * Running responses are durable and recoverable after reload.
 * Completion or failure updates the same response row.
+* Soft delete sets `deleted_at` and keeps the row; activity and artifacts
+  follow their response out of the timeline. Dismissal and chat clear use it.
 
 ## `chat_response_activity`
 

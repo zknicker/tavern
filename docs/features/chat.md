@@ -51,6 +51,16 @@ happen, and keep the durable timeline as context.
   config, not direct app calls into Hermes internals.
   Users can pick or drag files into the composer. Durable chat messages store
   attachment arrays.
+* **Triggers.** `@` autocompletes mentions (skills, plugins, apps, files,
+  directories); `$` autocompletes skills only; a leading `/` opens the agent
+  command palette and submits as a command run instead of a message. See
+  [mentions](../../specs/mentions.md) and
+  [composer-commands](../../specs/composer-commands.md).
+* **Dismissal and clear.** Command cards and failed-turn banners can be
+  dismissed with a hover X; `/clear` empties the visible timeline and starts
+  fresh context. Both soft-delete durable rows in Tavern Runtime — sequence
+  slots and history records are retained, and the result syncs to every
+  client. See [composer-commands](../../specs/composer-commands.md).
 
 ## Timeline inputs
 

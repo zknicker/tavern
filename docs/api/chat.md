@@ -360,12 +360,14 @@ describe:
 * `response.updated`
 * `response.completed`
 * `response.failed`
+* `response.deleted`
 * `activity.created`
 * `activity.updated`
 * `activity.completed`
 * `activity.failed`
 * `artifact.created`
 * `chat.read`
+* `chat.cleared`
 
 Event shape:
 
@@ -388,9 +390,17 @@ durable chat reads.
 ## Deletes
 
 `DELETE /api/messages/{message_id}` soft-deletes a message.
+`DELETE /api/responses/{response_id}` soft-deletes a response; its activity and
+artifacts follow it out of the timeline.
+`POST /api/chats/{chat_id}/clear` soft-deletes every message and response
+currently in the chat in one operation and emits one `chat.cleared` event.
 
-Soft delete sets `deleted_at`, keeps the row, and preserves the per-chat sequence
-slot so cursors remain stable. Hard delete is not part of the Chat API.
+Soft delete sets `deleted_at`, keeps the row, and preserves the per-chat
+sequence slot so cursors remain stable. List endpoints still return
+soft-deleted rows with `deleted_at` set; clients drop them from the product
+timeline. Hard delete is not part of the Chat API. Dismissing a command card
+or failed turn in the app and the `/clear` composer command both ride this
+contract.
 
 ## Hermes Metadata
 

@@ -14,6 +14,17 @@ Tavern user types `@` and chooses a skill, plugin, app, file, or directory.
 Metadata is stored with the message so Tavern can render chips and project
 runtime context. The message must still make sense if metadata is missing.
 
+## Triggers
+
+- `@` after start-of-input or whitespace opens the full picker: skills,
+  plugins, apps, files, and directories.
+- `$` after start-of-input or whitespace opens the same picker filtered to
+  skills only, matching the `$skill` serialization sigil. Path search does not
+  run for `$` queries.
+- `/` at the very start of the composer opens the command palette, which is a
+  separate surface — see [composer-commands](./composer-commands.md). Commands
+  are not mentions.
+
 Tavern renders mention-shaped markdown with a richer badge-like chrome in the
 composer, transcript, prompt inspector, and any other agent input/output surface.
 
