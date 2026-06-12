@@ -45,7 +45,7 @@ test('live progress preserves the loaded newest-page boundary row', () => {
     expect(next?.pages.at(-1)?.total).toBe(5);
 });
 
-test('single-page live progress still trims to the page limit', () => {
+test('single-page live progress keeps loaded history instead of trimming', () => {
     const cache: InfiniteData<ChatLogPage> = {
         pageParams: [2],
         pages: [chatLogPage(2, ['message-3', 'message-4'])],
@@ -65,11 +65,12 @@ test('single-page live progress still trims to the page limit', () => {
     );
 
     expect(next?.pages.at(-1)?.rows.map((row) => row.id)).toEqual([
+        'message-3',
         'message-4',
         'act_run-1_tool_web',
     ]);
-    expect(next?.pages.at(-1)?.limit).toBe(2);
-    expect(next?.pages.at(-1)?.offset).toBe(3);
+    expect(next?.pages.at(-1)?.limit).toBe(3);
+    expect(next?.pages.at(-1)?.offset).toBe(2);
     expect(next?.pages.at(-1)?.total).toBe(5);
 });
 

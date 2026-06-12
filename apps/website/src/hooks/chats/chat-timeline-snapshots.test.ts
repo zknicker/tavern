@@ -1,0 +1,147 @@
+import { expect, test } from 'bun:test';
+import type { ChatLogOutput } from '../../lib/trpc.tsx';
+import { applyLogSnapshot, emptyTimelineState, startTimelineTurn } from './chat-timeline-state.ts';
+
+type ChatLogRow = NonNullable<ChatLogOutput>['rows'][number];
+
+const turn = {
+    agentId: 'claw',
+    chatId: 'chat-1',
+    runId: 'run-1',
+    sessionKey: 'session-1',
+    startedAt: '2026-04-21T16:08:42.000Z',
+};
+
+test('applyLogSnapshot retains loaded history when the live window slides forward', () => {
+    const loaded = applyLogSnapshot(emptyTimelineState(), {
+        limit: 3,
+        offset: 0,
+        rows: [
+            agentMessage('old-1', '16:08:10'),
+            agentMessage('old-2', '16:08:20'),
+            agentMessage('recent-1', '16:08:30'),
+        ],
+        total: 3,
+    });
+    const live = startTimelineTurn(loaded, turn);
+
+    const next = applyLogSnapshot(live, {
+        limit: 3,
+        offset: 2,
+        rows: [agentMessage('recent-1', '16:08:30'), userMessage('user-2', '16:08:50')],
+        total: 4,
+    });
+
+    expect(next.timeline.map((row) => row.id)).toEqual(['old-1', 'old-2', 'recent-1', 'user-2']);
+    // Retained rows are durable and already counted by the snapshot total.
+    expect(next.totalRows).toBe(4);
+});
+
+test('applyLogSnapshot retains slid-out rows regardless of timestamp order', () => {
+    // The server slices by its own row order, so a slid window can drop a
+    // row whose timestamp sorts later than the window's first row (for
+    // example a back-dated activity upserted after newer rows).
+    const loaded = applyLogSnapshot(emptyTimelineState(), {
+        limit: 3,
+        offset: 0,
+        rows: [
+            agentMessage('old-1', '16:08:10'),
+            agentMessage('late-stamped', '16:08:40'),
+            agentMessage('recent-1', '16:08:30'),
+        ],
+        total: 3,
+    });
+    const live = startTimelineTurn(loaded, turn);
+
+    const next = applyLogSnapshot(live, {
+        limit: 3,
+        offset: 2,
+        rows: [agentMessage('recent-1', '16:08:30'), userMessage('user-2', '16:08:50')],
+        total: 4,
+    });
+
+    expect(next.timeline.map((row) => row.id)).toEqual([
+        'old-1',
+        'recent-1',
+        'late-stamped',
+        'user-2',
+    ]);
+    expect(next.totalRows).toBe(4);
+});
+
+test('applyLogSnapshot retains loaded history through the completion refetch', () => {
+    const loaded = applyLogSnapshot(emptyTimelineState(), {
+        limit: 3,
+        offset: 0,
+        rows: [
+            agentMessage('old-1', '16:08:10'),
+            agentMessage('old-2', '16:08:20'),
+            agentMessage('recent-1', '16:08:30'),
+        ],
+        total: 3,
+    });
+    const live = startTimelineTurn(loaded, turn);
+
+    const next = applyLogSnapshot(live, {
+        limit: 3,
+        offset: 2,
+        rows: [agentMessage('recent-1', '16:08:30'), agentMessage('reply-1', '16:08:55')],
+        total: 4,
+    });
+
+    expect(next.activeReply).toBeNull();
+    expect(next.timeline.map((row) => row.id)).toEqual(['old-1', 'old-2', 'recent-1', 'reply-1']);
+    expect(next.totalRows).toBe(4);
+});
+
+test('applyLogSnapshot defers to a full-coverage window for deletions', () => {
+    const loaded = applyLogSnapshot(emptyTimelineState(), {
+        limit: 3,
+        offset: 0,
+        rows: [
+            agentMessage('old-2', '16:08:20'),
+            agentMessage('deleted-1', '16:08:25'),
+            agentMessage('recent-1', '16:08:30'),
+        ],
+        total: 3,
+    });
+
+    const next = applyLogSnapshot(loaded, {
+        limit: 3,
+        offset: 0,
+        rows: [agentMessage('old-2', '16:08:20'), agentMessage('recent-1', '16:08:30')],
+        total: 2,
+    });
+
+    expect(next.timeline.map((row) => row.id)).toEqual(['old-2', 'recent-1']);
+    expect(next.totalRows).toBe(2);
+});
+
+function agentMessage(id: string, time: string): ChatLogRow {
+    return messageRow(id, time, 'agent');
+}
+
+function userMessage(id: string, time: string): ChatLogRow {
+    return messageRow(id, time, 'user');
+}
+
+function messageRow(id: string, time: string, senderType: 'agent' | 'user'): ChatLogRow {
+    return {
+        actor: senderType === 'agent' ? { id: 'claw', kind: 'agent' } : null,
+        connectsToNext: false,
+        connectsToPrevious: false,
+        id,
+        isFirstInGroup: true,
+        kind: 'message',
+        message: {
+            content: id,
+            id,
+            sender: senderType === 'agent' ? 'Claw' : 'You',
+            senderType,
+            sourceSessionId: null,
+            sourceSessionKey: 'session-1',
+            tavernAgentId: senderType === 'agent' ? 'claw' : undefined,
+            timestamp: `2026-04-21T${time}.000Z`,
+        },
+    };
+}
