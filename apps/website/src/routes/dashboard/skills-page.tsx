@@ -5,12 +5,17 @@ import { Icon } from '../../components/ui/icon.tsx';
 import { AddSkillDialog } from '../../features/skills/add-skill-dialog.tsx';
 import { SkillsCatalog } from '../../features/skills/skills-catalog.tsx';
 import { SkillsPageSkeleton } from '../../features/skills/skills-page-skeleton.tsx';
+import { ToolsetSetupDialog } from '../../features/skills/toolset-setup-dialog.tsx';
 import { useSkillEnabledSet } from '../../hooks/skills/use-skill-enabled-set.ts';
 import { useSkillList } from '../../hooks/skills/use-skill-list.ts';
 import { useToolsetEnabledSet } from '../../hooks/skills/use-toolset-enabled-set.ts';
+import type { SkillListOutput } from '../../lib/trpc.tsx';
 
 export function SkillsPage() {
     const [addSkillOpen, setAddSkillOpen] = React.useState(false);
+    const [setupToolset, setSetupToolset] = React.useState<
+        null | SkillListOutput['toolsets'][number]
+    >(null);
     const setSkillEnabled = useSkillEnabledSet();
     const setToolsetEnabled = useToolsetEnabledSet();
     const skillsQuery = useSkillList();
@@ -39,6 +44,7 @@ export function SkillsPage() {
         <div>
             <SkillsCatalog
                 onAddSkill={() => setAddSkillOpen(true)}
+                onConfigureToolset={setSetupToolset}
                 onSetSkillEnabled={(input) => setSkillEnabled.mutate(input)}
                 onSetToolsetEnabled={(input) => setToolsetEnabled.mutate(input)}
                 savingSkillIds={savingSkillIds}
@@ -48,6 +54,14 @@ export function SkillsPage() {
             />
 
             <AddSkillDialog onOpenChange={setAddSkillOpen} open={addSkillOpen} />
+            <ToolsetSetupDialog
+                onOpenChange={(open) => {
+                    if (!open) {
+                        setSetupToolset(null);
+                    }
+                }}
+                toolset={setupToolset}
+            />
 
             {skillsQuery.error ? (
                 <div className="fixed inset-x-4 bottom-4 z-50">

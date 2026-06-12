@@ -57,6 +57,7 @@ const prettyNameOverrides = new Map<string, string>([
 
 export function SkillsCatalog({
     onAddSkill,
+    onConfigureToolset,
     onSetSkillEnabled,
     onSetToolsetEnabled,
     savingSkillIds = new Set(),
@@ -65,6 +66,7 @@ export function SkillsCatalog({
     toolsets,
 }: {
     onAddSkill?: () => void;
+    onConfigureToolset?: (toolset: ToolsetSummary) => void;
     onSetSkillEnabled?: (input: { enabled: boolean; skillId: string }) => void;
     onSetToolsetEnabled?: (input: { enabled: boolean; toolsetId: string }) => void;
     savingSkillIds?: Set<string>;
@@ -115,6 +117,7 @@ export function SkillsCatalog({
                                 <CatalogCard
                                     item={catalogItem}
                                     key={`${catalogItem.kind}:${catalogItem.item.id}`}
+                                    onConfigureToolset={onConfigureToolset}
                                     onSetSkillEnabled={onSetSkillEnabled}
                                     onSetToolsetEnabled={onSetToolsetEnabled}
                                     savingSkillIds={savingSkillIds}
@@ -335,12 +338,14 @@ function emptyFilterDescription(filter: CatalogFilter) {
 
 function CatalogCard({
     item,
+    onConfigureToolset,
     onSetSkillEnabled,
     onSetToolsetEnabled,
     savingSkillIds,
     savingToolsetIds,
 }: {
     item: CatalogItem;
+    onConfigureToolset?: (toolset: ToolsetSummary) => void;
     onSetSkillEnabled?: (input: { enabled: boolean; skillId: string }) => void;
     onSetToolsetEnabled?: (input: { enabled: boolean; toolsetId: string }) => void;
     savingSkillIds: Set<string>;
@@ -364,14 +369,25 @@ function CatalogCard({
                         }
                     />
                 ) : (
-                    <Switch
-                        aria-label={`${item.item.enabled ? 'Disable' : 'Enable'} ${item.name}`}
-                        checked={item.item.enabled}
-                        disabled={savingToolset || !onSetToolsetEnabled}
-                        onCheckedChange={(checked) =>
-                            onSetToolsetEnabled?.({ enabled: checked, toolsetId: item.item.id })
-                        }
-                    />
+                    <div className="flex items-center gap-2">
+                        {onConfigureToolset && item.item.usability === 'not_usable' ? (
+                            <Button
+                                onClick={() => onConfigureToolset(item.item)}
+                                size="sm"
+                                variant="outline"
+                            >
+                                Set up
+                            </Button>
+                        ) : null}
+                        <Switch
+                            aria-label={`${item.item.enabled ? 'Disable' : 'Enable'} ${item.name}`}
+                            checked={item.item.enabled}
+                            disabled={savingToolset || !onSetToolsetEnabled}
+                            onCheckedChange={(checked) =>
+                                onSetToolsetEnabled?.({ enabled: checked, toolsetId: item.item.id })
+                            }
+                        />
+                    </div>
                 )
             }
         >

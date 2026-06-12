@@ -112,6 +112,7 @@ export type SkillHubSearchOutput = RouterOutput['skill']['hubSearch'];
 export type SkillHubTapListOutput = RouterOutput['skill']['hubTaps'];
 export type SkillListOutput = RouterOutput['skill']['list'];
 export type SkillRuntimeListOutput = RouterOutput['skill']['runtimeList'];
+export type ToolsetConfigOutput = RouterOutput['skill']['toolsetConfig'];
 export type SubAgentListOutput = RouterOutput['subAgent']['list'];
 export type WorkerListOutput = RouterOutput['worker']['list'];
 
