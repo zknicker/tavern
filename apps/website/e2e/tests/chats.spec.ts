@@ -354,8 +354,13 @@ async function expectReadFileDrawerDetails(page: Page) {
 async function openFirstToolDetail(page: Page) {
     await expect(page.getByText(/QA_KICKOFF_TASK\.md/u).first()).toBeVisible();
     const tool = page.getByRole('button', { name: /Inspect read_file/i }).first();
-    await expect(tool).toBeVisible();
-    await tool.click();
+    // The work disclosure can re-collapse while post-reload refetches settle,
+    // putting the row back under the header mid-click; re-open and retry.
+    await expect(async () => {
+        await openWorkedActivity(page);
+        await expect(tool).toBeVisible({ timeout: 2000 });
+        await tool.click({ timeout: 2000 });
+    }).toPass({ timeout: 30_000 });
 }
 
 function transcriptParagraph(page: Page, text: string | RegExp) {

@@ -22,6 +22,24 @@ test('autocompletes runtime skills as visible mention chips', async ({ page }) =
     await expect(listbox).toHaveCount(0);
 });
 
+test('dollar trigger filters the picker to skills', async ({ page }) => {
+    await page.goto('/dashboard/overview');
+
+    const composer = page.locator('#home-prompt');
+    await composer.click();
+    await composer.pressSequentially('Use $');
+
+    const listbox = page.getByRole('listbox');
+    await expect(listbox).toBeVisible({ timeout: 15_000 });
+    await expect(listbox.getByText('Skills', { exact: true })).toBeVisible();
+    await expect(listbox.getByText('Mac apps', { exact: true })).toHaveCount(0);
+    await expect(listbox.getByText('Plugins', { exact: true })).toHaveCount(0);
+
+    await page.keyboard.press('Enter');
+
+    await expect(composer).toContainText(/^Use [^\n[\]()]+ $/);
+});
+
 test('backspace removes a mention chip without moving the caret to a new line', async ({
     page,
 }) => {
