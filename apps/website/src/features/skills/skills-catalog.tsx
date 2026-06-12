@@ -57,6 +57,7 @@ const prettyNameOverrides = new Map<string, string>([
 
 export function SkillsCatalog({
     onAddSkill,
+    onAddToolset,
     onConfigureToolset,
     onSetSkillEnabled,
     onSetToolsetEnabled,
@@ -66,6 +67,7 @@ export function SkillsCatalog({
     toolsets,
 }: {
     onAddSkill?: () => void;
+    onAddToolset?: () => void;
     onConfigureToolset?: (toolset: ToolsetSummary) => void;
     onSetSkillEnabled?: (input: { enabled: boolean; skillId: string }) => void;
     onSetToolsetEnabled?: (input: { enabled: boolean; toolsetId: string }) => void;
@@ -103,7 +105,13 @@ export function SkillsCatalog({
                             placeholder={`${searchLabel}...`}
                             value={search}
                         />
-                        {onAddSkill ? (
+                        {onAddToolset && filter === 'toolsets' ? (
+                            <Button className="shrink-0" onClick={onAddToolset}>
+                                <Icon className="size-4" icon={AddCircleIcon} />
+                                Add toolset
+                            </Button>
+                        ) : null}
+                        {onAddSkill && filter === 'skills' ? (
                             <Button className="shrink-0" onClick={onAddSkill}>
                                 <Icon className="size-4" icon={AddCircleIcon} />
                                 Add skill
