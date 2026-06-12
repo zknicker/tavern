@@ -12,6 +12,7 @@ import {
     agentRuntimeSkillHubSearchResultSchema,
 } from '@tavern/api';
 import { readHermesConnectionOptions } from './connection';
+import { awaitEngineAction } from './engine-actions';
 import { HermesHttp } from './http';
 import { asRecord, readArray, readString, readStringArray } from './mappers';
 
@@ -111,24 +112,11 @@ export class SkillHubClient {
         return await this.#awaitAction('skills-uninstall');
     }
 
-    async #awaitAction(name: string): Promise<AgentRuntimeSkillHubActionResult> {
-        const deadline = Date.now() + this.#timeoutMs;
-        while (Date.now() < deadline) {
-            await sleep(this.#pollIntervalMs);
-            const status = asRecord(
-                await this.#http.get(`/api/actions/${encodeURIComponent(name)}/status`)
-            );
-            if (status.running === true) {
-                continue;
-            }
-            const exitCode = typeof status.exit_code === 'number' ? status.exit_code : null;
-            return {
-                exitCode,
-                log: readStringArray(status.lines),
-                ok: exitCode === 0,
-            };
-        }
-        throw new Error(`Skill hub action "${name}" timed out.`);
+    async #awaitAction(name: string) {
+        return await awaitEngineAction(this.#http, name, {
+            pollIntervalMs: this.#pollIntervalMs,
+            timeoutMs: this.#timeoutMs,
+        });
     }
 }
 
@@ -193,8 +181,4 @@ function mapCountRecord(value: unknown) {
             typeof count === 'number' && Number.isFinite(count) ? [[key, count]] : []
         )
     );
-}
-
-function sleep(ms: number) {
-    return new Promise((resolve) => setTimeout(resolve, ms));
 }
