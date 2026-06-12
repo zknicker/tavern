@@ -6,6 +6,7 @@ import type {
     TavernChatMessage,
     TavernChatMessageReceipt,
     TavernChatResponse,
+    TavernChatTimelinePage,
     TavernCreateChatRequest,
     TavernCreateDeliveryRequest,
     TavernCreateMessageRequest,
@@ -183,6 +184,18 @@ class TavernChatClient {
                 query: {
                     limit: input.limit,
                     query: input.query,
+                },
+            }
+        );
+    }
+
+    timeline(chatId: string, input: { beforeSequence?: number; limit?: number } = {}) {
+        return this.#client.request<TavernChatTimelinePage>(
+            `/api/chats/${encodeURIComponent(chatId)}/timeline`,
+            {
+                query: {
+                    before_sequence: input.beforeSequence,
+                    limit: input.limit,
                 },
             }
         );

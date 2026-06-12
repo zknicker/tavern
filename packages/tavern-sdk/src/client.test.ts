@@ -132,6 +132,35 @@ describe('Tavern SDK client', () => {
         expect(requests[0].url).toBe('http://runtime.test/api/chats/cht_1/responses');
     });
 
+    it('reads a turn-aligned timeline page through the OpenAPI path', async () => {
+        const requests: Request[] = [];
+        const client = createTavernClient({
+            baseUrl: 'http://runtime.test/',
+            fetch: (async (input, init) => {
+                const request = new Request(input, init);
+                requests.push(request);
+
+                return Response.json({
+                    activity: [],
+                    artifacts: [],
+                    messages: [],
+                    next_before_sequence: null,
+                    responses: [],
+                    total_messages: 0,
+                });
+            }) as typeof fetch,
+        });
+
+        const page = await client.chat.timeline('cht_1', { beforeSequence: 42, limit: 100 });
+
+        expect(page.next_before_sequence).toBeNull();
+        expect(requests).toHaveLength(1);
+        expect(requests[0].method).toBe('GET');
+        expect(requests[0].url).toBe(
+            'http://runtime.test/api/chats/cht_1/timeline?before_sequence=42&limit=100'
+        );
+    });
+
     it('gets one response activity through the OpenAPI path', async () => {
         const requests: Request[] = [];
         const client = createTavernClient({

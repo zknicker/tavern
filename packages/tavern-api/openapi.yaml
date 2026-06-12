@@ -154,6 +154,41 @@ paths:
                 $ref: '#/components/schemas/ListMessagesResponse'
         default:
           $ref: '#/components/responses/Error'
+  /api/chats/{chat_id}/timeline:
+    get:
+      operationId: getChatTimeline
+      tags: [Chats]
+      summary: Read one turn-aligned page of chat history.
+      description: >
+        Pages walk backward from the newest message by per-chat message
+        sequence. A page carries whole turn units: its message window plus
+        every response anchored to a window message by request or reply,
+        with that response's full activity and artifacts. Windows extend
+        downward so an in-window reply always ships with its request
+        message; a turn whose request and reply straddle a page boundary is
+        anchored to both pages and deduplicates by id. Responses with no
+        message anchor ride the latest page only.
+      parameters:
+        - $ref: '#/components/parameters/ChatId'
+        - name: before_sequence
+          in: query
+          description: >
+            Exclusive upper bound on message sequence. Omit for the latest
+            page; pass the previous page's next_before_sequence to walk
+            older history.
+          schema:
+            type: integer
+            minimum: 1
+        - $ref: '#/components/parameters/Limit'
+      responses:
+        '200':
+          description: One turn-aligned timeline page.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ChatTimelinePage'
+        default:
+          $ref: '#/components/responses/Error'
   /api/chats/{chat_id}/deliveries:
     post:
       operationId: createChatDelivery
@@ -829,6 +864,39 @@ components:
             $ref: '#/components/schemas/ChatArtifact'
         next_sequence:
           type: [integer, 'null']
+    ChatTimelinePage:
+      type: object
+      additionalProperties: false
+      required:
+        - messages
+        - responses
+        - activity
+        - artifacts
+        - next_before_sequence
+        - total_messages
+      properties:
+        messages:
+          type: array
+          items:
+            $ref: '#/components/schemas/ChatMessage'
+        responses:
+          type: array
+          items:
+            $ref: '#/components/schemas/ChatResponse'
+        activity:
+          type: array
+          items:
+            $ref: '#/components/schemas/ResponseActivity'
+        artifacts:
+          type: array
+          items:
+            $ref: '#/components/schemas/ChatArtifact'
+        next_before_sequence:
+          type: [integer, 'null']
+          description: Cursor for the next older page; null at the start of history.
+        total_messages:
+          type: integer
+          minimum: 0
     ResponseActivity:
       type: object
       additionalProperties: false

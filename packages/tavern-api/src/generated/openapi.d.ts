@@ -77,6 +77,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/chats/{chat_id}/timeline": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Read one turn-aligned page of chat history.
+         * @description Pages walk backward from the newest message by per-chat message sequence. A page carries whole turn units: its message window plus every response anchored to a window message by request or reply, with that response's full activity and artifacts. Windows extend downward so an in-window reply always ships with its request message; a turn whose request and reply straddle a page boundary is anchored to both pages and deduplicates by id. Responses with no message anchor ride the latest page only.
+         */
+        get: operations["getChatTimeline"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/chats/{chat_id}/deliveries": {
         parameters: {
             query?: never;
@@ -368,6 +388,15 @@ export interface components {
             activity: components["schemas"]["ResponseActivity"][];
             artifacts: components["schemas"]["ChatArtifact"][];
             next_sequence: number | null;
+        };
+        ChatTimelinePage: {
+            messages: components["schemas"]["ChatMessage"][];
+            responses: components["schemas"]["ChatResponse"][];
+            activity: components["schemas"]["ResponseActivity"][];
+            artifacts: components["schemas"]["ChatArtifact"][];
+            /** @description Cursor for the next older page; null at the start of history. */
+            next_before_sequence: number | null;
+            total_messages: number;
         };
         ResponseActivity: {
             id: components["schemas"]["ActivityId"];
@@ -718,6 +747,33 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ListMessagesResponse"];
+                };
+            };
+            default: components["responses"]["Error"];
+        };
+    };
+    getChatTimeline: {
+        parameters: {
+            query?: {
+                /** @description Exclusive upper bound on message sequence. Omit for the latest page; pass the previous page's next_before_sequence to walk older history. */
+                before_sequence?: number;
+                limit?: components["parameters"]["Limit"];
+            };
+            header?: never;
+            path: {
+                chat_id: components["parameters"]["ChatId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description One turn-aligned timeline page. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ChatTimelinePage"];
                 };
             };
             default: components["responses"]["Error"];

@@ -14,6 +14,7 @@ export type TavernChatEvent = TavernApiSchema<'ChatEvent'>;
 export type TavernChatMessage = TavernApiSchema<'ChatMessage'>;
 export type TavernChatMessageReceipt = TavernApiSchema<'ChatMessageReceipt'>;
 export type TavernChatResponse = TavernApiSchema<'ChatResponse'>;
+export type TavernChatTimelinePage = TavernApiSchema<'ChatTimelinePage'>;
 export type TavernCreateChatRequest = TavernApiSchema<'CreateChatRequest'>;
 export type TavernCreateDeliveryRequest = TavernApiSchema<'CreateDeliveryRequest'>;
 export type TavernCreateMessageRequest = TavernApiSchema<'CreateMessageRequest'>;
