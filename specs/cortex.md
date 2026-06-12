@@ -1,58 +1,65 @@
 # Cortex
 
-Cortex is Tavern's llm-wiki browser.
+Cortex is Tavern's durable knowledge system: a plain-Markdown wiki hub the
+agent reads and writes with its file tools, maintained as a pipeline drained
+by Runtime jobs, and browsed read-only in the Cortex tab.
 
-The source of truth is the user's llm-wiki hub: plain Markdown topic wikis with
-raw sources, compiled articles, todo records, dataset manifests, outputs,
-indexes, config, logs, and archives. Tavern reads those files and presents them
-in the Cortex tab.
+## At A Glance
+
+The wiki files are the single source of truth. Tavern's database holds only
+derived, rebuildable projections. There are no maintenance crons and no human
+gates: detection is free filesystem work, agent runs happen only when the
+pipeline has work, and uncertainty is recorded in the data (`confidence`,
+`verified`) instead of being escalated to the user.
+
+```text
+hub/                               # TAVERN_WIKI_HUB_PATH — the only source
+├── wikis.json  _index.md  log.md
+└── topics/<topic>/
+    ├── raw/         immutable sources, queryable from the moment of ingest
+    ├── wiki/        compiled articles — synthesized, cross-linked,
+    │                confidence-rated; permanent unknowns live here as
+    │                verified: false plus a short note
+    ├── todos/       queue: proposed → done (record deleted; log.md entry is
+    │                the history) | blocked (transient — librarian retries or
+    │                resolves into articles within ~30 days)
+    ├── datasets/    manifests for structured data
+    ├── output/      generated deliverables (reports, plans, catalogs)
+    ├── inbox/       passive drop zone (chat-driven ingest only)
+    ├── log.md       append-only history — compile detection and todo
+    │                completions are read from it
+    └── .librarian/  scan scores, hidden from the page tree
+```
+
+The pipeline, all Runtime jobs running direct agent turns through the gateway
+(sessions `tavern-wiki-compile`, `tavern-wiki-todos`, `tavern-wiki-librarian`):
+
+| Job | Trigger | Run |
+| --- | --- | --- |
+| `wiki-compile` | 15-min check: 5+ pending sources or one ~6h old, from `log.md` order | one turn: compile, structural pass, re-score touched articles |
+| `wiki-todo-drain` | 15-min check: any `proposed` record, ~45 min between runs | one turn: complete-and-delete, or block with reason |
+| `wiki-librarian` | weekly | score all, mechanical repairs, file outside-world work as todos, review blocked |
+| `wiki-health-history` | hourly, no agent | trend samples on scan change |
 
 ## Architecture
 
 ```mermaid
 flowchart LR
-  Hub["llm-wiki hub"]
-  Topics["topics/<slug>"]
-  Archive["topics/.archive/<slug>"]
+  Hub["wiki hub (files)"]
   Runtime["Tavern Runtime read API"]
-  App["Cortex tab"]
-  Tasks["Tasks and Runtime crons"]
-  Skill["wiki skill"]
+  App["Cortex tab + health page"]
+  Jobs["Runtime jobs"]
+  Skill["wiki skill (agent turns)"]
+  Chat["chats"]
 
-  Hub --> Topics
-  Hub --> Archive
-  Topics --> Runtime
-  Archive --> Runtime
+  Hub --> Runtime
   Runtime --> App
-  Tasks --> Skill
+  Jobs --> Skill
+  Chat --> Skill
   Skill --> Hub
 ```
 
-## Hub Layout
-
-Tavern follows llm-wiki's layout:
-
-```text
-~/wiki/
-├── wikis.json
-├── _index.md
-├── log.md
-└── topics/
-    ├── <topic>/
-    │   ├── inbox/
-    │   ├── todos/
-    │   ├── datasets/
-    │   ├── raw/
-    │   ├── wiki/
-    │   ├── output/
-    │   ├── _index.md
-    │   ├── config.md
-    │   └── log.md
-    └── .archive/
-        └── <topic>/
-```
-
-Hub path resolution:
+## Hub Resolution
 
 1. `TAVERN_WIKI_HUB_PATH` or `TAVERN_CORTEX_WIKI_PATH`
 2. Runtime-managed `wiki/` under `TAVERN_RUNTIME_ROOT`
@@ -76,6 +83,8 @@ Runtime owns only:
 * `[[wikilink]]` extraction
 * backlink derivation
 * simple title, path, and body search
+* pipeline detection and scheduling (free filesystem checks that decide when
+  to spawn a maintenance agent turn)
 
 Runtime does not own:
 
@@ -86,8 +95,8 @@ Runtime does not own:
 * source import processors
 * chat ingestion
 * Dream consolidation
-* Cortex repair jobs
-* hidden wiki maintenance
+* direct wiki file mutation — every write happens through an agent turn
+  running the wiki skill, never Runtime code
 
 ## Workflows
 
