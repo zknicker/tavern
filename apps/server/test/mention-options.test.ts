@@ -6,7 +6,7 @@ import {
     clearComputerUseAppInventoryCache,
     listComputerUseApps,
 } from '../src/api/mention/computer-use-apps.ts';
-import { buildMentionOptions } from '../src/api/mention/list.ts';
+import { buildMentionInventory, buildMentionOptions } from '../src/api/mention/list.ts';
 
 describe('buildMentionOptions', () => {
     it('lists runtime skills as skill-context mention options', async () => {
@@ -374,6 +374,41 @@ describe('buildMentionOptions', () => {
             projection: 'path-reference',
             sourceLabel: 'File',
         });
+    });
+});
+
+describe('buildMentionInventory', () => {
+    it('keeps plugins in the inventory when apps and skills fill the limit', async () => {
+        const root = await createTempDir();
+        await writePluginManifest(root, {
+            description: 'Inspect local web targets.',
+            displayName: 'Browser',
+            name: 'browser',
+            version: '0.1.0',
+        });
+
+        const skills = Array.from({ length: 12 }, (_, index) =>
+            createSkill({ id: `skill-${index}`, name: `skill-${index}` })
+        );
+        const inventory = await buildMentionInventory({
+            codexPluginRoot: root,
+            computerUseAppInventory: { entries: [], source: 'local', status: 'unavailable' },
+            limit: 10,
+            runtimeSkills: skills,
+        });
+
+        expect(inventory).toHaveLength(10);
+        expect(inventory.filter((option) => option.kind === 'plugin')).toEqual([
+            {
+                description: 'Inspect local web targets.',
+                id: 'plugin://browser@openai-bundled',
+                insertText: 'Browser',
+                kind: 'plugin',
+                label: 'Browser',
+                projection: 'capability-reference',
+                sourceLabel: 'Plugin',
+            },
+        ]);
     });
 });
 

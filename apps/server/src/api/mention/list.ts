@@ -136,7 +136,10 @@ export async function buildMentionInventory({
         listComputerUseAppMentionOptions(computerUseAppInventory),
     ]);
 
-    return [...apps, ...skills, ...plugins].slice(0, limit);
+    // Plugins are a small bounded set; reserve room for them so large app and
+    // skill inventories cannot crowd them out of the limit entirely.
+    const reserved = [...apps, ...skills].slice(0, Math.max(0, limit - plugins.length));
+    return [...reserved, ...plugins].slice(0, limit);
 }
 
 function listDefaultMentionOptions({
