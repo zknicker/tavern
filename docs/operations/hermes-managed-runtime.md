@@ -242,6 +242,19 @@ bun run --filter @tavern/website test:e2e -- tests/hermes-tavern-chat-contract.s
 For e2e contract work, use the default Playwright lane. It starts real managed
 Hermes and mocks only the model-provider HTTP endpoint.
 
+### Slow skill search / empty featured skills
+
+Skill hub search should be sub-second: the engine serves it from a centralized
+skills index (~35 MB JSON, cached 6 hours under `skills/.hub/index-cache/`).
+If every search takes ~30 seconds and the Add skill featured grid is empty, the
+index is failing to load and the engine is falling back to live GitHub/ClawHub
+fan-out. Known cause on system Hermes installs (`TAVERN_HERMES_ALLOW_SYSTEM=1`):
+a venv with `brotlicffi` hits an httpx brotli decode bug on the index download.
+Fix by installing the `brotli` package into that venv
+(`~/.hermes/hermes-agent/venv/bin/pip install brotli`); httpx prefers it and the
+index loads. Managed engine installs ship without either brotli module and are
+not affected.
+
 ## Cold-Start Verification
 
 The unit and e2e lanes mock or reuse an existing Hermes; they do not exercise a

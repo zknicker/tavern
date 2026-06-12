@@ -82,6 +82,13 @@ emits the skill update event. Hub taps are the one exception: the engine has no
 HTTP surface for `skills/.hub/taps.json`, so Runtime reads and writes that file
 directly under the managed engine home.
 
+The engine's search fast path serves results from its centralized skills index
+and skips the live GitHub source, which would hide tap skills. Runtime
+therefore lists tap repos itself through the GitHub contents API (token from
+`GITHUB_TOKEN`/`GH_TOKEN` or `gh auth token`, results cached briefly) and
+merges tap skills into the hub catalog's featured list and search results,
+deduplicated by identifier.
+
 Toolset setup proxies the engine provider matrix at
 `/toolsets/{id}/config|provider|env|post-setup`. MCP servers and the curated MCP
 catalog proxy at `/mcp/*`. Env values are written into the engine's env store
