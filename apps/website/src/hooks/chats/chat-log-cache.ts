@@ -36,16 +36,12 @@ export function patchChatLogWithProgress(
             : sourceLog.rows.map((entry, index) =>
                   index === existingIndex ? mergeProgressRows(entry, row) : entry
               );
-    const sortedRows = rows.sort(compareChatLogRows);
-    const nextRows = trimRows(sortedRows, sourceLog.limit);
-    const trimmedCount = sortedRows.length - nextRows.length;
-    const total = existingIndex === -1 ? sourceLog.total + 1 : sourceLog.total;
 
+    // Live progress only grows the loaded page. Progress rows are never
+    // durable chat messages, so the message total is untouched.
     return {
         ...sourceLog,
-        offset: sourceLog.offset + trimmedCount,
-        rows: nextRows,
-        total,
+        rows: rows.sort(compareChatLogRows),
     };
 }
 
@@ -54,9 +50,9 @@ function normalizeChatLog(log: ChatLogInput): ChatLogPage {
         activeReply: log.activeReply ?? null,
         failedTurn: log.failedTurn ?? null,
         limit: log.limit,
-        offset: log.offset,
+        nextBeforeSequence: log.nextBeforeSequence,
         rows: log.rows,
-        total: log.total,
+        totalMessages: log.totalMessages,
     };
 }
 
@@ -443,10 +439,6 @@ function stripActivityPrefix(id: string) {
 
 function activityId(id: string) {
     return id.startsWith('act_') ? id : `act_${id.replace(/[^A-Za-z0-9_-]/gu, '_')}`;
-}
-
-function trimRows(rows: ChatLogRow[], limit: number) {
-    return rows.length > limit ? rows.slice(rows.length - limit) : rows;
 }
 
 function compareChatLogRows(left: ChatLogRow, right: ChatLogRow) {

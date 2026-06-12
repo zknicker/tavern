@@ -38,7 +38,7 @@ export function ChatCard({
     });
     const rows = timeline.rows;
     const rowCount = rows.length;
-    const totalRows = timeline.totalRows;
+    const totalMessages = timeline.totalMessages;
     const hasActiveReply = timeline.activeReply !== null;
     const hasTimelineContent = rowCount > 0 || hasActiveReply || timeline.failedTurn !== null;
     const isInitialTranscriptPending =
@@ -97,7 +97,7 @@ export function ChatCard({
                                 animate
                                 failedTurn={timeline.failedTurn}
                                 rows={rows}
-                                totalRows={totalRows}
+                                totalMessages={totalMessages}
                             />
                         </ChatScrollControllerProvider>
                     ) : (

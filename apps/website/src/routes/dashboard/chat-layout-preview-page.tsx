@@ -156,7 +156,7 @@ export function ChatLayoutPreviewPage() {
                                     activeReply={null}
                                     conversationLayout={getChatMessageLayout(preview.chat)}
                                     rows={preview.rows}
-                                    totalRows={preview.rows.length}
+                                    totalMessages={0}
                                 />
                             </div>
                         </section>

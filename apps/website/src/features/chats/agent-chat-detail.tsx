@@ -186,7 +186,7 @@ function SyncedAgentChatDetail({
         limit: chatDetailLogLimit,
     });
     const rows = timeline.rows;
-    const totalRows = timeline.totalRows;
+    const totalMessages = timeline.totalMessages;
     const contextFullness = modelsQuery.data
         ? getChatContextFullness({
               models: modelsQuery.data.models,
@@ -230,7 +230,7 @@ function SyncedAgentChatDetail({
             isFetchingPreviousPage={timeline.isFetchingPreviousPage}
             isPending={timeline.isPending}
             rows={rows}
-            totalRows={totalRows}
+            totalMessages={totalMessages}
         />
     );
 }

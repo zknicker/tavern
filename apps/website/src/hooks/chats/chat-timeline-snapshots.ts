@@ -27,7 +27,7 @@ export function emptyTimelineState(): ChatTimelineState {
         failedTurn: null,
         historyLoaded: false,
         timeline: [],
-        totalRows: 0,
+        totalMessages: 0,
     };
 }
 
@@ -52,14 +52,14 @@ export function applyLogSnapshot(
         (hasFailureMessage(snapshot.rows, state.failedTurn) ? null : state.failedTurn);
     const historyLoaded = true;
     // The loaded transcript only grows while the chat stays open. The tail
-    // page refetches as `total - limit`, so each new durable row slides the
+    // page refetches from the newest message, so new durable turns slide the
     // fetched window past rows the user may be reading; retained history
     // keeps them until the chat unmounts.
     const loggedRows = retainLoadedHistory({
+        hasOlderHistory: snapshot.nextBeforeSequence !== null,
         liveRunIds: [state.activeReply?.runId, state.activeTurn?.runId],
         logged: snapshot.rows,
         previous: state.timeline,
-        snapshotOffset: snapshot.offset,
     });
     const nextTimeline = hasTerminalMessage
         ? loggedRows
@@ -68,13 +68,11 @@ export function applyLogSnapshot(
               loggedRows,
               runId: state.activeReply?.runId,
           });
-    // Retained rows are durable and already counted by the snapshot total;
-    // only live-only progress rows extend it.
-    const nextTotal = snapshot.total + Math.max(0, nextTimeline.length - loggedRows.length);
+    const nextTotal = snapshot.totalMessages;
 
     if (
         areSameTimeline(state.timeline, nextTimeline) &&
-        state.totalRows === nextTotal &&
+        state.totalMessages === nextTotal &&
         state.historyLoaded === historyLoaded &&
         isSameActiveReply(state.activeReply, nextActiveReply) &&
         state.activeTurn === nextActiveTurn &&
@@ -89,7 +87,7 @@ export function applyLogSnapshot(
         failedTurn: nextFailedTurn,
         historyLoaded,
         timeline: nextTimeline,
-        totalRows: nextTotal,
+        totalMessages: nextTotal,
     };
 }
 
@@ -98,9 +96,9 @@ function normalizeChatLog(log: ChatLogInput): ChatLogPage {
         activeReply: log.activeReply ?? null,
         failedTurn: log.failedTurn ?? null,
         limit: log.limit,
-        offset: log.offset,
+        nextBeforeSequence: log.nextBeforeSequence,
         rows: log.rows,
-        total: log.total,
+        totalMessages: log.totalMessages,
     };
 }
 
@@ -190,18 +188,17 @@ function hasFailureMessage(rows: ChatTimeline, failure: ChatTurnFailure | null) 
 }
 
 // Rows we already showed stay loaded when the fetched window no longer
-// covers the full log (offset > 0): the server slices by its own row order,
-// so a slid window can drop any loaded row, not just the timestamp-oldest.
-// A full-coverage window (offset 0) is authoritative — a row missing there
-// was deleted. The live run's own progress rows are placeholders until the
-// log confirms them, so they never qualify as retained history.
+// covers the full log: a slid window can drop any loaded row, not just the
+// timestamp-oldest. A full-coverage window is authoritative — a row missing
+// there was deleted. The live run's own progress rows are placeholders until
+// the log confirms them, so they never qualify as retained history.
 function retainLoadedHistory(input: {
+    hasOlderHistory: boolean;
     liveRunIds: (string | undefined)[];
     logged: ChatTimeline;
     previous: ChatTimeline;
-    snapshotOffset: number;
 }): ChatTimeline {
-    if (input.snapshotOffset <= 0 || input.previous.length === 0 || input.logged.length === 0) {
+    if (!input.hasOlderHistory || input.previous.length === 0 || input.logged.length === 0) {
         return input.logged;
     }
 

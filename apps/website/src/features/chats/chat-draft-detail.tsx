@@ -150,7 +150,7 @@ export function ChatDraftDetail({
             historyLoaded
             isPending={false}
             rows={visibleTimeline?.rows ?? []}
-            totalRows={visibleTimeline?.total ?? 0}
+            totalMessages={visibleTimeline?.totalMessages ?? 0}
         />
     );
 }
@@ -171,9 +171,9 @@ export function buildDraftHandoffLog(
               }
             : null,
         limit: Math.max(handoffState.timeline.length, draftTimelineLimit),
-        offset: 0,
+        nextBeforeSequence: null,
         rows: handoffState.timeline,
-        total: handoffState.totalRows,
+        totalMessages: handoffState.totalMessages,
     };
 }
 

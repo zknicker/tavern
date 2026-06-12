@@ -16,7 +16,7 @@ export function ChatTimeline({
     isFetchingPreviousPage = false,
     rows,
     scrollViewportRef,
-    totalRows,
+    totalMessages,
 }: {
     activeReply: ChatActiveReply | null;
     animate?: boolean;
@@ -28,9 +28,9 @@ export function ChatTimeline({
     isFetchingPreviousPage?: boolean;
     rows: NonNullable<ChatLogOutput>['rows'];
     scrollViewportRef?: React.RefObject<HTMLDivElement | null>;
-    totalRows: number;
+    totalMessages: number;
 }) {
-    const hiddenCount = Math.max(totalRows - rows.length, 0);
+    const hiddenCount = Math.max(totalMessages - countDurableMessageRows(rows), 0);
 
     return (
         <div className={cn('flex flex-col gap-0 py-1', animate && 'animate-float-up')}>
@@ -48,4 +48,10 @@ export function ChatTimeline({
             />
         </div>
     );
+}
+
+// Activity-backed narration rows reuse the message row kind but are not
+// durable chat messages, so they stay out of the hidden-history math.
+function countDurableMessageRows(rows: NonNullable<ChatLogOutput>['rows']) {
+    return rows.filter((row) => row.kind === 'message' && !row.id.startsWith('act_')).length;
 }

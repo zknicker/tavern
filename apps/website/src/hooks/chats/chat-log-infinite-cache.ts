@@ -20,17 +20,7 @@ export function patchInfiniteChatLogWithProgress(
                 return page;
             }
 
-            return updater(chatLogPageForLivePatch(page)) ?? page;
+            return updater(page) ?? page;
         }),
-    };
-}
-
-// Live patches must only grow the loaded window. Trimming to the fetch limit
-// here evicts loaded history rows while a turn streams, which visibly drains
-// older expanded work drawers until the completion refetch restores them.
-function chatLogPageForLivePatch(page: ChatLogPage): ChatLogPage {
-    return {
-        ...page,
-        limit: Math.max(page.limit, page.rows.length + 1),
     };
 }

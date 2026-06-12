@@ -28,6 +28,6 @@ export function useChatTimeline(input: { chatId: string; limit: number }) {
         failedTurn: timelineWithLog.failedTurn,
         historyLoaded: timelineWithLog.historyLoaded,
         rows: timelineWithLog.timeline,
-        totalRows: timelineWithLog.totalRows,
+        totalMessages: timelineWithLog.totalMessages,
     };
 }

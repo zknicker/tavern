@@ -13,7 +13,9 @@ export function useChatTimelinePage(input: { id: string; limit: number }) {
         },
         {
             ...queryPolicy.agentRuntimeSnapshot,
-            getNextPageParam: (lastPage) => getNextChatLogCursor(lastPage),
+            // New rows arrive through events and latest-page refetches, never
+            // by paging forward.
+            getNextPageParam: () => undefined,
             getPreviousPageParam: (firstPage) => getPreviousChatLogCursor(firstPage),
             // Refetch on mount only when invalidation events marked the log
             // stale; an unconditional refetch duplicates the event-driven
@@ -37,21 +39,14 @@ export function useChatTimelinePage(input: { id: string; limit: number }) {
 }
 
 function getPreviousChatLogCursor(page: ChatLogPage) {
-    if (page.offset <= 0) {
-        return undefined;
-    }
-
-    return {
-        offset: Math.max(page.offset - page.limit, 0),
-    };
+    return page.nextBeforeSequence === null
+        ? undefined
+        : { beforeSequence: page.nextBeforeSequence };
 }
 
-function getNextChatLogCursor(page: ChatLogPage) {
-    const nextOffset = page.offset + page.rows.length;
-
-    return nextOffset < page.total ? { offset: nextOffset } : undefined;
-}
-
+// Pages are ordered oldest-first; the newest page carries live turn state
+// and totals, while the oldest page's cursor says whether older history
+// remains beyond the loaded set.
 function mergeChatLogPages(pages: ChatLogPage[] | undefined): ChatLogPage | undefined {
     if (!(pages && pages.length > 0)) {
         return undefined;
@@ -74,7 +69,7 @@ function mergeChatLogPages(pages: ChatLogPage[] | undefined): ChatLogPage | unde
     return {
         ...latestPage,
         limit: rowsById.size,
-        offset: pages[0]?.offset ?? latestPage.offset,
+        nextBeforeSequence: pages[0]?.nextBeforeSequence ?? latestPage.nextBeforeSequence,
         rows: [...rowsById.values()],
     };
 }

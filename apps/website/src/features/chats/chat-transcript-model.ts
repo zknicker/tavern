@@ -36,6 +36,9 @@ export interface TranscriptTurnEntry {
     key: string;
     kind: 'turn';
     participant: 'agent' | 'user';
+    // Server-truth turn identity from the owning response, when rows carry
+    // it. Live tail items and legacy rows fall back to grouping heuristics.
+    responseId: string | null;
     timestamp: string | null;
 }
 
@@ -66,10 +69,12 @@ export function buildTranscriptEntries(input: {
         }
 
         const key = getTurnKey(item, participant);
+        const responseId = getItemResponseId(item);
         const previous = entries.at(-1);
 
         if (previous?.kind === 'turn' && canAppendToTurn(previous, item, participant, key)) {
             previous.items.push(item);
+            previous.responseId ??= responseId;
             continue;
         }
 
@@ -80,6 +85,7 @@ export function buildTranscriptEntries(input: {
             key,
             kind: 'turn',
             participant,
+            responseId,
             timestamp: getItemTimestamp(item),
         });
     }
@@ -102,8 +108,15 @@ function applyStableTurnEntryIds(entries: TranscriptEntry[]) {
             continue;
         }
 
+        // Run identity first: live tail items only carry the run id, so a
+        // response-keyed id would remount the turn at the live → durable
+        // swap. The response id covers turns with no extractable run id.
         const runId = entry.items.map(getItemRunId).find((value) => value !== null);
-        const candidate = runId ? `turn:${runId}` : entry.id;
+        const candidate = runId
+            ? `turn:${runId}`
+            : entry.responseId
+              ? `turn:${entry.responseId}`
+              : entry.id;
 
         entry.id = usedIds.has(candidate) ? entry.id : candidate;
         usedIds.add(entry.id);
@@ -218,6 +231,15 @@ function canAppendToTurn(
 ) {
     if (entry.participant !== participant) {
         return false;
+    }
+
+    // Response identity is server truth for agent turn membership: rows of
+    // one response always share a turn, rows of different responses never
+    // do, regardless of timestamp gaps.
+    const itemResponseId = getItemResponseId(item);
+
+    if (participant === 'agent' && entry.responseId && itemResponseId) {
+        return entry.responseId === itemResponseId;
     }
 
     const previous = entry.items.at(-1);
@@ -369,6 +391,15 @@ export function transcriptEntryUsesActiveReply(
     }
 
     return entry.items.some((item) => getItemSessionKey(item) === activeReply.sessionKey);
+}
+
+function getItemResponseId(item: TranscriptItem) {
+    if (item.kind !== 'row') {
+        return null;
+    }
+
+    // Session-history row kinds never carry a response id.
+    return 'responseId' in item.row ? (item.row.responseId ?? null) : null;
 }
 
 export function getItemSessionKey(item: TranscriptItem) {

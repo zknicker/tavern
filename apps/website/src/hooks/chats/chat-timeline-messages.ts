@@ -128,9 +128,9 @@ function createEmptyLog(limit: number): ChatLogPage {
         activeReply: null,
         failedTurn: null,
         limit,
-        offset: 0,
+        nextBeforeSequence: null,
         rows: [],
-        total: 0,
+        totalMessages: 0,
     };
 }
 
@@ -169,12 +169,11 @@ export function appendTimelineMessage(
     const nextRows = recomputeRowConnections(
         [...source.rows, buildUserMessageRow(input)].sort(compareChatLogRows)
     );
-    const total = source.total + 1;
 
     return {
         ...source,
         rows: nextRows,
-        total,
+        totalMessages: source.totalMessages + 1,
     };
 }
 
@@ -234,8 +233,8 @@ function normalizeChatLog(log: ChatLogInput): ChatLogPage {
         activeReply: log.activeReply ?? null,
         failedTurn: log.failedTurn ?? null,
         limit: log.limit,
-        offset: log.offset,
+        nextBeforeSequence: log.nextBeforeSequence,
         rows: log.rows,
-        total: log.total,
+        totalMessages: log.totalMessages,
     };
 }

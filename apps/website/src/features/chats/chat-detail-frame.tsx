@@ -30,7 +30,7 @@ export function ChatDetailFrame({
     isFetchingPreviousPage = false,
     isPending,
     rows,
-    totalRows,
+    totalMessages,
 }: {
     activeReply: ChatActiveReply | null;
     animateTimeline?: boolean;
@@ -47,7 +47,7 @@ export function ChatDetailFrame({
     isFetchingPreviousPage?: boolean;
     isPending: boolean;
     rows: NonNullable<ChatLogOutput>['rows'];
-    totalRows: number;
+    totalMessages: number;
 }) {
     const location = useLocation();
     const hasActiveReply = activeReply !== null;
@@ -118,7 +118,7 @@ export function ChatDetailFrame({
                                     scrollViewportRef={
                                         enableVirtualization ? chatScroll.viewportRef : undefined
                                     }
-                                    totalRows={totalRows}
+                                    totalMessages={totalMessages}
                                 />
                             ) : (
                                 <div className="px-2 py-4 text-muted-foreground text-sm">

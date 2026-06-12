@@ -45,7 +45,7 @@ export interface ChatTimelineState {
     failedTurn: ChatTurnFailure | null;
     historyLoaded: boolean;
     timeline: ChatTimeline;
-    totalRows: number;
+    totalMessages: number;
 }
 
 export interface ChatTurnFailure {

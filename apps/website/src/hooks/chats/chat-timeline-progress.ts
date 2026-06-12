@@ -20,7 +20,6 @@ export function patchTimelineProgress(
         ...state,
         activeTurn: input.turn,
         timeline: patched.rows,
-        totalRows: patched.total,
     };
 }
 
@@ -35,8 +34,8 @@ function timelineLog(state: ChatTimelineState): ChatLogOutput {
             : null,
         failedTurn: state.failedTurn,
         limit: Math.max(state.timeline.length + 1, 100),
-        offset: 0,
+        nextBeforeSequence: null,
         rows: state.timeline,
-        total: state.totalRows,
+        totalMessages: state.totalMessages,
     };
 }
