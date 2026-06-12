@@ -69,6 +69,7 @@ export function workerRowFromSubagentActivity(input: {
         id: input.activity.id,
         isFirstInGroup: true,
         kind: 'worker',
+        responseId: input.activity.response_id,
         sessionKey: input.sessionKey,
         startedAt,
         worker,

@@ -35,6 +35,7 @@ export const messageRowSchema = z.object({
     isFirstInGroup: z.boolean(),
     kind: z.literal('message'),
     message: messageRowMessageSchema,
+    responseId: z.string().optional(),
 });
 
 export const toolRowSchema = z.object({
@@ -46,6 +47,7 @@ export const toolRowSchema = z.object({
     id: z.string(),
     isFirstInGroup: z.boolean(),
     kind: z.literal('tool'),
+    responseId: z.string().optional(),
     sessionKey: z.string().nullable(),
     startedAt: z.string().nullable(),
     spawnedRelationships: z.array(sessionRelationshipSchema).default([]),
@@ -60,6 +62,7 @@ export const workerRowSchema = z.object({
     id: z.string(),
     isFirstInGroup: z.boolean(),
     kind: z.literal('worker'),
+    responseId: z.string().optional(),
     sessionKey: z.string().nullable(),
     startedAt: z.string().nullable(),
     worker: workerSchema,
@@ -86,6 +89,7 @@ export const systemRowSchema = z.discriminatedUnion('systemKind', [
         artifact: sessionArtifactSchema,
         id: z.string(),
         kind: z.literal('system'),
+        responseId: z.string().optional(),
         systemKind: z.literal('artifact'),
         timestamp: z.string(),
     }),
@@ -99,6 +103,7 @@ export const systemRowSchema = z.discriminatedUnion('systemKind', [
     z.object({
         id: z.string(),
         kind: z.literal('system'),
+        responseId: z.string().optional(),
         runtimeNotice: runtimeNoticeSchema,
         systemKind: z.literal('runtimeNotice'),
         timestamp: z.string(),
@@ -106,6 +111,7 @@ export const systemRowSchema = z.discriminatedUnion('systemKind', [
     z.object({
         id: z.string(),
         kind: z.literal('system'),
+        responseId: z.string().optional(),
         systemKind: z.literal('thinking'),
         thinking: sessionThinkingSchema,
         timestamp: z.string(),

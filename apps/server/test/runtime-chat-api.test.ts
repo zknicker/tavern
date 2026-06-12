@@ -22,9 +22,7 @@ mock.module('../src/agents/catalog.ts', () => ({
 
 ensureDatabaseSchema();
 
-const { listRuntimeChatRows, listRuntimeChatTimeline } = await import(
-    '../src/chat/runtime-chat-api.ts'
-);
+const { getRuntimeChatTimelinePage } = await import('../src/chat/runtime-chat-api.ts');
 const { getChatLogPage } = await import('../src/chat/log.ts');
 const { getChatToolActivity } = await import('../src/chat/tool.ts');
 
@@ -50,7 +48,7 @@ test('listRuntimeChatRows maps Tavern API messages and keeps preamble/reasoning 
         const url = new URL(request.url);
         requests.push(`${request.method} ${url.pathname}`);
 
-        if (url.pathname === '/api/chats/cht_1/messages') {
+        if (url.pathname === '/api/chats/cht_1/timeline') {
             return Response.json({
                 messages: [
                     chatMessage({
@@ -81,11 +79,6 @@ test('listRuntimeChatRows maps Tavern API messages and keeps preamble/reasoning 
                         sequence: 2,
                     }),
                 ],
-            });
-        }
-
-        if (url.pathname === '/api/chats/cht_1/responses') {
-            return Response.json({
                 activity: [
                     responseActivity({
                         detail: 'I will run the slow QA command before the final reply.',
@@ -110,7 +103,8 @@ test('listRuntimeChatRows maps Tavern API messages and keeps preamble/reasoning 
                     }),
                 ],
                 artifacts: [],
-                next_sequence: null,
+                next_before_sequence: null,
+                total_messages: 0,
                 responses: [
                     {
                         chat_id: 'cht_1',
@@ -138,9 +132,9 @@ test('listRuntimeChatRows maps Tavern API messages and keeps preamble/reasoning 
         throw new Error(`Unexpected Tavern API request: ${url.pathname}`);
     }) as typeof fetch;
 
-    const rows = await listRuntimeChatRows('cht_1');
+    const rows = (await getRuntimeChatTimelinePage('cht_1'))?.rows ?? null;
 
-    expect(requests).toEqual(['GET /api/chats/cht_1/messages', 'GET /api/chats/cht_1/responses']);
+    expect(requests).toEqual(['GET /api/chats/cht_1/timeline']);
     expect(rows?.map((row) => row.id)).toEqual([
         'msg_user',
         'act_assistant_reply_1',
@@ -187,7 +181,7 @@ test('listRuntimeChatTimeline accepts Hermes custom provider message metadata', 
         const request = new Request(input, init);
         const url = new URL(request.url);
 
-        if (url.pathname === '/api/chats/cht_1/messages') {
+        if (url.pathname === '/api/chats/cht_1/timeline') {
             return Response.json({
                 messages: [
                     chatMessage({
@@ -221,14 +215,10 @@ test('listRuntimeChatTimeline accepts Hermes custom provider message metadata', 
                         sequence: 2,
                     }),
                 ],
-            });
-        }
-
-        if (url.pathname === '/api/chats/cht_1/responses') {
-            return Response.json({
                 activity: [],
                 artifacts: [],
-                next_sequence: null,
+                next_before_sequence: null,
+                total_messages: 0,
                 responses: [],
             });
         }
@@ -236,7 +226,7 @@ test('listRuntimeChatTimeline accepts Hermes custom provider message metadata', 
         throw new Error(`Unexpected Tavern API request: ${url.pathname}`);
     }) as typeof fetch;
 
-    const timeline = await listRuntimeChatTimeline('cht_1');
+    const timeline = await getRuntimeChatTimelinePage('cht_1');
 
     expect(timeline?.rows.find((row) => row.id === 'msg_final')).toMatchObject({
         kind: 'message',
@@ -265,7 +255,7 @@ test('getChatLogPage preserves completed openai-codex Hermes provider metadata',
         const request = new Request(input, init);
         const url = new URL(request.url);
 
-        if (url.pathname === '/api/chats/cht_1/messages') {
+        if (url.pathname === '/api/chats/cht_1/timeline') {
             return Response.json({
                 messages: [
                     chatMessage({
@@ -298,14 +288,10 @@ test('getChatLogPage preserves completed openai-codex Hermes provider metadata',
                         sequence: 2,
                     }),
                 ],
-            });
-        }
-
-        if (url.pathname === '/api/chats/cht_1/responses') {
-            return Response.json({
                 activity: [],
                 artifacts: [],
-                next_sequence: null,
+                next_before_sequence: null,
+                total_messages: 0,
                 responses: [],
             });
         }
@@ -341,12 +327,9 @@ test('listRuntimeChatRows maps Tavern API artifacts into chat timeline rows', as
         const request = new Request(input, init);
         const url = new URL(request.url);
 
-        if (url.pathname === '/api/chats/cht_1/messages') {
-            return Response.json({ messages: [] });
-        }
-
-        if (url.pathname === '/api/chats/cht_1/responses') {
+        if (url.pathname === '/api/chats/cht_1/timeline') {
             return Response.json({
+                messages: [],
                 activity: [],
                 artifacts: [
                     {
@@ -365,7 +348,8 @@ test('listRuntimeChatRows maps Tavern API artifacts into chat timeline rows', as
                         updated_at: '2026-05-18T12:00:03.000Z',
                     },
                 ],
-                next_sequence: null,
+                next_before_sequence: null,
+                total_messages: 0,
                 responses: [
                     {
                         chat_id: 'cht_1',
@@ -387,7 +371,7 @@ test('listRuntimeChatRows maps Tavern API artifacts into chat timeline rows', as
         throw new Error(`Unexpected Tavern API request: ${url.pathname}`);
     }) as typeof fetch;
 
-    const rows = await listRuntimeChatRows('cht_1');
+    const rows = (await getRuntimeChatTimelinePage('cht_1'))?.rows ?? null;
 
     expect(rows).toEqual([
         {
@@ -406,6 +390,7 @@ test('listRuntimeChatRows maps Tavern API artifacts into chat timeline rows', as
             },
             id: 'art_report_1',
             kind: 'system',
+            responseId: 'rsp_run_1',
             systemKind: 'artifact',
             timestamp: '2026-05-18T12:00:03.000Z',
         },
@@ -427,12 +412,9 @@ test('listRuntimeChatRows maps runtime notice activity into system rows', async 
         const request = new Request(input, init);
         const url = new URL(request.url);
 
-        if (url.pathname === '/api/chats/cht_1/messages') {
-            return Response.json({ messages: [] });
-        }
-
-        if (url.pathname === '/api/chats/cht_1/responses') {
+        if (url.pathname === '/api/chats/cht_1/timeline') {
             return Response.json({
+                messages: [],
                 activity: [
                     responseActivity({
                         detail: 'd348a369-223c-42a7-8220-67c7340810c2',
@@ -454,7 +436,8 @@ test('listRuntimeChatRows maps runtime notice activity into system rows', async 
                     }),
                 ],
                 artifacts: [],
-                next_sequence: null,
+                next_before_sequence: null,
+                total_messages: 0,
                 responses: [
                     {
                         chat_id: 'cht_1',
@@ -476,12 +459,13 @@ test('listRuntimeChatRows maps runtime notice activity into system rows', async 
         throw new Error(`Unexpected Tavern API request: ${url.pathname}`);
     }) as typeof fetch;
 
-    const rows = await listRuntimeChatRows('cht_1');
+    const rows = (await getRuntimeChatTimelinePage('cht_1'))?.rows ?? null;
 
     expect(rows).toEqual([
         {
             id: 'act_notice_1',
             kind: 'system',
+            responseId: 'rsp_run_1',
             runtimeNotice: {
                 compactionCount: null,
                 detail: 'd348a369-223c-42a7-8220-67c7340810c2',
@@ -511,12 +495,9 @@ test('listRuntimeChatRows preserves durable activity titles for tool rows', asyn
         const request = new Request(input, init);
         const url = new URL(request.url);
 
-        if (url.pathname === '/api/chats/cht_1/messages') {
-            return Response.json({ messages: [] });
-        }
-
-        if (url.pathname === '/api/chats/cht_1/responses') {
+        if (url.pathname === '/api/chats/cht_1/timeline') {
             return Response.json({
+                messages: [],
                 activity: [
                     responseActivity({
                         detail: '',
@@ -539,7 +520,8 @@ test('listRuntimeChatRows preserves durable activity titles for tool rows', asyn
                     }),
                 ],
                 artifacts: [],
-                next_sequence: null,
+                next_before_sequence: null,
+                total_messages: 0,
                 responses: [
                     {
                         chat_id: 'cht_1',
@@ -567,7 +549,7 @@ test('listRuntimeChatRows preserves durable activity titles for tool rows', asyn
         throw new Error(`Unexpected Tavern API request: ${url.pathname}`);
     }) as typeof fetch;
 
-    const rows = await listRuntimeChatRows('cht_1');
+    const rows = (await getRuntimeChatTimelinePage('cht_1'))?.rows ?? null;
 
     expect(rows).toMatchObject([
         {
@@ -597,12 +579,9 @@ test('listRuntimeChatRows includes running assistant message activity as prose r
         const request = new Request(input, init);
         const url = new URL(request.url);
 
-        if (url.pathname === '/api/chats/cht_1/messages') {
-            return Response.json({ messages: [] });
-        }
-
-        if (url.pathname === '/api/chats/cht_1/responses') {
+        if (url.pathname === '/api/chats/cht_1/timeline') {
             return Response.json({
+                messages: [],
                 activity: [
                     responseActivity({
                         detail: 'I will run a timed shell check before the final reply.',
@@ -614,7 +593,8 @@ test('listRuntimeChatRows includes running assistant message activity as prose r
                     }),
                 ],
                 artifacts: [],
-                next_sequence: null,
+                next_before_sequence: null,
+                total_messages: 0,
                 responses: [
                     {
                         chat_id: 'cht_1',
@@ -642,7 +622,7 @@ test('listRuntimeChatRows includes running assistant message activity as prose r
         throw new Error(`Unexpected Tavern API request: ${url.pathname}`);
     }) as typeof fetch;
 
-    const rows = await listRuntimeChatRows('cht_1');
+    const rows = (await getRuntimeChatTimelinePage('cht_1'))?.rows ?? null;
 
     expect(rows).toMatchObject([
         {
@@ -672,7 +652,7 @@ test('listRuntimeChatRows keeps response activity after its request message whil
         const request = new Request(input, init);
         const url = new URL(request.url);
 
-        if (url.pathname === '/api/chats/cht_1/messages') {
+        if (url.pathname === '/api/chats/cht_1/timeline') {
             return Response.json({
                 messages: [
                     chatMessage({
@@ -685,11 +665,6 @@ test('listRuntimeChatRows keeps response activity after its request message whil
                         sequence: 2,
                     }),
                 ],
-            });
-        }
-
-        if (url.pathname === '/api/chats/cht_1/responses') {
-            return Response.json({
                 activity: [
                     responseActivity({
                         detail: 'I will inspect the projector first.',
@@ -701,7 +676,8 @@ test('listRuntimeChatRows keeps response activity after its request message whil
                     }),
                 ],
                 artifacts: [],
-                next_sequence: null,
+                next_before_sequence: null,
+                total_messages: 0,
                 responses: [
                     {
                         chat_id: 'cht_1',
@@ -729,7 +705,7 @@ test('listRuntimeChatRows keeps response activity after its request message whil
         throw new Error(`Unexpected Tavern API request: ${url.pathname}`);
     }) as typeof fetch;
 
-    const rows = await listRuntimeChatRows('cht_1');
+    const rows = (await getRuntimeChatTimelinePage('cht_1'))?.rows ?? null;
 
     expect(rows?.map((row) => row.id)).toEqual(['msg_user', 'act_assistant_reply_1']);
 });
@@ -749,7 +725,7 @@ test('listRuntimeChatTimeline exposes running responses as active replies after 
         const request = new Request(input, init);
         const url = new URL(request.url);
 
-        if (url.pathname === '/api/chats/cht_1/messages') {
+        if (url.pathname === '/api/chats/cht_1/timeline') {
             return Response.json({
                 messages: [
                     chatMessage({
@@ -762,14 +738,10 @@ test('listRuntimeChatTimeline exposes running responses as active replies after 
                         sequence: 1,
                     }),
                 ],
-            });
-        }
-
-        if (url.pathname === '/api/chats/cht_1/responses') {
-            return Response.json({
                 activity: [],
                 artifacts: [],
-                next_sequence: null,
+                next_before_sequence: null,
+                total_messages: 0,
                 responses: [
                     {
                         chat_id: 'cht_1',
@@ -798,7 +770,7 @@ test('listRuntimeChatTimeline exposes running responses as active replies after 
         throw new Error(`Unexpected Tavern API request: ${url.pathname}`);
     }) as typeof fetch;
 
-    const timeline = await listRuntimeChatTimeline('cht_1');
+    const timeline = await getRuntimeChatTimelinePage('cht_1');
 
     expect(timeline?.rows.map((row) => row.id)).toEqual(['msg_user']);
     expect(timeline?.activeReply).toEqual({
@@ -809,6 +781,60 @@ test('listRuntimeChatTimeline exposes running responses as active replies after 
         startedAt: '2026-05-18T12:00:01.500Z',
         text: '',
     });
+});
+
+test('older timeline pages forward the cursor and never carry live turn state', async () => {
+    await saveAgentRuntimeConnection({
+        baseUrl: 'http://runtime.test',
+        enabled: true,
+        id: 'runtime-1',
+        isActive: true,
+        lastCheckedAt: '2026-05-18T12:00:00.000Z',
+        lastError: null,
+        name: 'Runtime',
+    });
+
+    const requests: string[] = [];
+    globalThis.fetch = (async (input, init) => {
+        const request = new Request(input, init);
+        const url = new URL(request.url);
+        requests.push(`${url.pathname}${url.search}`);
+
+        if (url.pathname === '/api/chats/cht_1/timeline') {
+            return Response.json({
+                activity: [],
+                artifacts: [],
+                messages: [],
+                next_before_sequence: 3,
+                responses: [
+                    {
+                        chat_id: 'cht_1',
+                        completed_at: null,
+                        created_at: '2026-05-18T12:00:01.000Z',
+                        id: 'rsp_run_1',
+                        metadata: {},
+                        participant_id: 'agt_main',
+                        request_message_id: null,
+                        response_message_id: null,
+                        status: 'running',
+                        summary: null,
+                        updated_at: '2026-05-18T12:00:03.000Z',
+                    },
+                ],
+                total_messages: 12,
+            });
+        }
+
+        throw new Error(`Unexpected Tavern API request: ${url.pathname}`);
+    }) as typeof fetch;
+
+    const page = await getRuntimeChatTimelinePage('cht_1', { beforeSequence: 9, limit: 50 });
+
+    expect(requests).toEqual(['/api/chats/cht_1/timeline?before_sequence=9&limit=50']);
+    expect(page?.activeReply).toBeNull();
+    expect(page?.failedTurn).toBeNull();
+    expect(page?.nextBeforeSequence).toBe(3);
+    expect(page?.totalMessages).toBe(12);
 });
 
 test('getChatToolActivity resolves durable response activity into tool details', async () => {

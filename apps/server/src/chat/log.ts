@@ -1,75 +1,44 @@
 import { chatLogPageSchema } from './contracts.ts';
-import { listRuntimeChatTimeline } from './runtime-chat-api.ts';
+import { getRuntimeChatTimelinePage } from './runtime-chat-api.ts';
 
-type ChatLogCursor = number | { offset: number };
+type ChatLogCursor = number | { beforeSequence: number };
 
 export async function getChatLogPage(input: {
     cursor?: ChatLogCursor;
-    direction?: 'backward' | 'forward';
     id: string;
     limit: number;
-    offset?: number;
 }) {
-    const timeline = await listRuntimeChatTimeline(input.id);
+    const beforeSequence = resolveBeforeSequence(input.cursor);
+    const page = await getRuntimeChatTimelinePage(input.id, {
+        beforeSequence,
+        limit: input.limit,
+    });
 
-    if (timeline === null) {
+    if (page === null) {
         return chatLogPageSchema.parse({
             activeReply: null,
             failedTurn: null,
             limit: input.limit,
+            nextBeforeSequence: null,
             rows: [],
-            offset: 0,
-            total: 0,
+            totalMessages: 0,
         });
     }
-    const { activeReply, failedTurn, rows } = timeline;
-    const total = rows.length;
-    const offset = resolveChatLogOffset({
-        cursor: input.cursor,
-        direction: input.direction,
-        limit: input.limit,
-        offset: input.offset,
-        total,
-    });
 
     return chatLogPageSchema.parse({
-        activeReply,
-        failedTurn,
+        activeReply: page.activeReply,
+        failedTurn: page.failedTurn,
         limit: input.limit,
-        rows: rows.slice(offset, offset + input.limit),
-        offset,
-        total,
+        nextBeforeSequence: page.nextBeforeSequence,
+        rows: page.rows,
+        totalMessages: page.totalMessages,
     });
 }
 
-export function resolveChatLogOffset(input: {
-    cursor?: ChatLogCursor;
-    direction?: 'backward' | 'forward';
-    limit: number;
-    offset?: number;
-    total: number;
-}) {
-    const cursorOffset = getCursorOffset(input.cursor);
-
-    if (typeof cursorOffset === 'number') {
-        return Math.min(cursorOffset, input.total);
-    }
-
-    if (input.direction === 'backward') {
-        return 0;
-    }
-
-    if (typeof input.offset === 'number') {
-        return Math.min(input.offset, input.total);
-    }
-
-    return Math.max(input.total - input.limit, 0);
-}
-
-function getCursorOffset(cursor: ChatLogCursor | undefined) {
+export function resolveBeforeSequence(cursor: ChatLogCursor | undefined) {
     if (typeof cursor === 'number') {
         return cursor;
     }
 
-    return cursor?.offset;
+    return cursor?.beforeSequence;
 }

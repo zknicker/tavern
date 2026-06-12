@@ -5,16 +5,14 @@ import { publicProcedure } from '../trpc.ts';
 const listChatLogInputSchema = z.object({
     cursor: z
         .union([
-            z.number().int().nonnegative(),
+            z.number().int().positive(),
             z.object({
-                offset: z.number().int().nonnegative(),
+                beforeSequence: z.number().int().positive(),
             }),
         ])
         .optional(),
-    direction: z.enum(['forward', 'backward']).optional(),
     id: z.string().min(1),
     limit: z.number().int().positive().max(100),
-    offset: z.number().int().nonnegative().optional(),
 });
 
 export const listChatLogRoute = publicProcedure

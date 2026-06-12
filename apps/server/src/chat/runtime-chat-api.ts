@@ -12,33 +12,45 @@ import { buildToolSummaryFromValues } from '../tools/summary.ts';
 import type { ChatLogPage } from './contracts.ts';
 import { workerRowFromSubagentActivity } from './runtime-worker-rows.ts';
 
-export async function listRuntimeChatRows(chatId: string): Promise<ChatLogPage['rows'] | null> {
-    const timeline = await listRuntimeChatTimeline(chatId);
-
-    return timeline?.rows ?? null;
-}
-
-export async function listRuntimeChatTimeline(chatId: string): Promise<{
+export interface RuntimeChatTimelinePage {
     activeReply: ChatLogPage['activeReply'];
     failedTurn: ChatLogPage['failedTurn'];
+    nextBeforeSequence: number | null;
     rows: ChatLogPage['rows'];
-} | null> {
+    totalMessages: number;
+}
+
+export async function getRuntimeChatTimelinePage(
+    chatId: string,
+    input: { beforeSequence?: number; limit?: number } = {}
+): Promise<RuntimeChatTimelinePage | null> {
     const connection = await getActiveAgentRuntimeConnection();
 
     if (!(connection?.enabled && connection.baseUrl)) {
         return null;
     }
 
+    const isLatestPage = input.beforeSequence === undefined;
     const client = createTavernClientForConnection(connection);
-    const [agents, page, responsePage] = await Promise.all([
+    const [agents, page] = await Promise.all([
         listAgents(),
-        client.chat.messages(chatId, { limit: 500 }),
-        client.chat.responses(chatId, { limit: 500 }),
+        client.chat.timeline(chatId, {
+            beforeSequence: input.beforeSequence,
+            limit: input.limit,
+        }),
     ]);
     const agentsById = new Map(agents.map((agent) => [agent.id, agent]));
-    const responsesById = new Map(
-        responsePage.responses.map((response) => [response.id, response])
-    );
+    const responsesById = new Map(page.responses.map((response) => [response.id, response]));
+    const responseIdByMessageId = new Map<string, string>();
+
+    for (const response of page.responses) {
+        if (response.request_message_id) {
+            responseIdByMessageId.set(response.request_message_id, response.id);
+        }
+        if (response.response_message_id) {
+            responseIdByMessageId.set(response.response_message_id, response.id);
+        }
+    }
 
     const finalReplyTextByRunId = new Map(
         page.messages
@@ -47,14 +59,18 @@ export async function listRuntimeChatTimeline(chatId: string): Promise<{
             .filter((entry): entry is [string, string] => Boolean(entry[0]))
     );
     const agentNamesById = new Map(agents.map((agent) => [agent.id, agent.name]));
-    const messageRows = page.messages.flatMap((message) => messageToChatRows(message, agentsById));
-    const activityRows = responsePage.activity.flatMap((activity) =>
+    const messageRows = page.messages.flatMap((message) =>
+        messageToChatRows(message, agentsById, responseIdByMessageId)
+    );
+    const activityRows = page.activity.flatMap((activity) =>
         activityToChatRows(activity, responsesById, finalReplyTextByRunId, agentNamesById)
     );
-    const artifactRows = responsePage.artifacts.map(artifactToChatRow);
+    const artifactRows = page.artifacts.map(artifactToChatRow);
     const rows = [...messageRows, ...activityRows, ...artifactRows];
-    const activeReply = activeReplyFromResponses(responsePage.responses);
-    const failedTurn = failedTurnFromResponses(responsePage.responses);
+    // Active and failed turn states describe the newest history; the latest
+    // page is the only one whose responses can carry them.
+    const activeReply = isLatestPage ? activeReplyFromResponses(page.responses) : null;
+    const failedTurn = isLatestPage ? failedTurnFromResponses(page.responses) : null;
     const messageTimestampById = new Map(
         messageRows
             .filter(
@@ -65,14 +81,14 @@ export async function listRuntimeChatTimeline(chatId: string): Promise<{
     );
     const requestMessageIdByRowId = new Map<string, string>();
 
-    for (const activity of responsePage.activity) {
+    for (const activity of page.activity) {
         const response = responsesById.get(activity.response_id);
         if (response?.request_message_id) {
             requestMessageIdByRowId.set(activity.id, response.request_message_id);
         }
     }
 
-    for (const artifact of responsePage.artifacts) {
+    for (const artifact of page.artifacts) {
         const response = artifact.response_id ? responsesById.get(artifact.response_id) : null;
         if (response?.request_message_id) {
             requestMessageIdByRowId.set(artifact.id, response.request_message_id);
@@ -90,12 +106,15 @@ export async function listRuntimeChatTimeline(chatId: string): Promise<{
     return {
         activeReply,
         failedTurn,
+        nextBeforeSequence: page.next_before_sequence,
         rows: sortedRows,
+        totalMessages: page.total_messages,
     };
 }
 
 function artifactToChatRow(artifact: TavernArtifact): ChatLogPage['rows'][number] {
     return {
+        responseId: artifact.response_id ?? undefined,
         artifact: {
             artifactType: artifact.kind,
             createdAt: artifact.created_at,
@@ -118,7 +137,8 @@ function artifactToChatRow(artifact: TavernArtifact): ChatLogPage['rows'][number
 
 function messageToChatRows(
     message: TavernChatMessage,
-    agentsById: Map<string, Awaited<ReturnType<typeof listAgents>>[number]>
+    agentsById: Map<string, Awaited<ReturnType<typeof listAgents>>[number]>,
+    responseIdByMessageId: ReadonlyMap<string, string>
 ): ChatLogPage['rows'] {
     const sourceAgentId = runtimeMetadataString(message, 'agentId') ?? message.author.id;
     const agent = message.author.kind === 'agent' ? agentsById.get(sourceAgentId) : null;
@@ -136,6 +156,7 @@ function messageToChatRows(
         id: message.id,
         isFirstInGroup: true,
         kind: 'message',
+        responseId: responseIdByMessageId.get(message.id),
         message: {
             actor,
             attachments: messageAttachments(message),
@@ -188,6 +209,7 @@ function activityToChatRows(
             {
                 id: activity.id,
                 kind: 'system' as const,
+                responseId: activity.response_id,
                 runtimeNotice,
                 systemKind: 'runtimeNotice' as const,
                 timestamp: activity.started_at,
@@ -249,6 +271,7 @@ function activityToChatRows(
             isFirstInGroup: true,
             kind: 'tool' as const,
             clarification: clarificationFromActivity(activity),
+            responseId: activity.response_id,
             sessionKey,
             spawnedRelationships: [],
             startedAt: activity.started_at,
@@ -276,6 +299,7 @@ function activityToMessageRows(
             id: activity.id,
             isFirstInGroup: true,
             kind: 'message' as const,
+            responseId: activity.response_id,
             message: {
                 actor,
                 content,
@@ -311,6 +335,7 @@ function activityToThinkingRows(
         {
             id: activity.id,
             kind: 'system' as const,
+            responseId: activity.response_id,
             systemKind: 'thinking' as const,
             thinking: {
                 id: activity.id,

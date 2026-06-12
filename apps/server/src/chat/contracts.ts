@@ -305,9 +305,10 @@ export const chatLogPageSchema = z.object({
     activeReply: chatLogActiveReplySchema,
     failedTurn: chatLogTurnFailureSchema.optional(),
     limit: z.number().int().positive(),
+    // Cursor for the next older turn-aligned page; null at history start.
+    nextBeforeSequence: z.number().int().positive().nullable(),
     rows: z.array(chatLogRowSchema),
-    offset: z.number().int().nonnegative(),
-    total: z.number().int().nonnegative(),
+    totalMessages: z.number().int().nonnegative(),
 });
 
 export type Chat = z.infer<typeof chatSchema>;
