@@ -89,7 +89,7 @@ export function SkillBrowse() {
 
                     <section className="grid gap-2">
                         <h3 className="font-medium text-foreground text-sm">
-                            {hasSearch ? 'Results' : 'Popular skills'}
+                            {hasSearch ? 'Results' : 'Featured skills'}
                         </h3>
                         <SkillHubItemList
                             installed={installed}

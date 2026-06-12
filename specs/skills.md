@@ -158,7 +158,7 @@ catalog.
 - Internal ids, source paths, runtime config paths, MCP server names, plugin ids,
   and generated config paths are debug details unless the user opens advanced
   status.
-- The Browse tab is the install surface: popular and searched hub skills with
+- The Browse tab is the install surface: featured and searched hub skills with
   source and trust badges, a "From your repos" group for tap skills, a preview
   dialog with the SKILL.md, file manifest, and scan verdict, and install/remove
   actions. The Sources panel manages hub taps.

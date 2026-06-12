@@ -14,7 +14,7 @@ from the runtime-managed Hermes instance.
 
 * **Skills.** View reusable instruction packages Hermes can see, enable or
   disable them for new Hermes sessions, and see runtime-reported setup blockers.
-* **Browse.** A catalog tab beside Skills and Toolsets: popular skills from the
+* **Browse.** A catalog tab beside Skills and Toolsets: featured skills from the
   engine's skill hub (official, ClawHub, GitHub, skills.sh, LobeHub, Claude
   Marketplace, direct URL), search across all sources, a "From your repos"
   group for tap skills, and a preview with the SKILL.md, file manifest, and
