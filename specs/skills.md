@@ -80,7 +80,7 @@ search, preview, an install-time security scan, and install/uninstall. The
 engine aggregates the sources (official, index, ClawHub, GitHub, skills.sh,
 LobeHub, Claude Marketplace, direct URL) and owns trust tiers, quarantine,
 scanning, install policy, and the install lockfile. Tavern proxies the hub
-through Runtime and presents it in the Add skill dialog; it does not run its
+through Runtime and presents it on the Browse tab; it does not run its
 own registry or marketplace.
 
 Custom GitHub repos ("taps") extend the hub with user-owned skill sources,
@@ -158,9 +158,10 @@ catalog.
 - Internal ids, source paths, runtime config paths, MCP server names, plugin ids,
   and generated config paths are debug details unless the user opens advanced
   status.
-- The Add skill dialog is the install surface: featured and searched hub skills
-  with source and trust badges, a preview of the SKILL.md and file manifest, the
-  scan verdict, and install/remove actions. The Sources view manages hub taps.
+- The Browse tab is the install surface: popular and searched hub skills with
+  source and trust badges, a "From your repos" group for tap skills, a preview
+  dialog with the SKILL.md, file manifest, and scan verdict, and install/remove
+  actions. The Sources panel manages hub taps.
 - The Add toolset dialog is the MCP surface: the engine's curated MCP catalog
   with one-click install plus custom HTTP/stdio servers with test, enablement,
   and removal.

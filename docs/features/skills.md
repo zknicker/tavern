@@ -14,11 +14,13 @@ from the runtime-managed Hermes instance.
 
 * **Skills.** View reusable instruction packages Hermes can see, enable or
   disable them for new Hermes sessions, and see runtime-reported setup blockers.
-* **Add skill.** Browse and search the engine's skill hub (official, ClawHub,
-  GitHub, skills.sh, LobeHub, Claude Marketplace, direct URL), preview a skill's
-  SKILL.md and file manifest, see the security scan verdict, and install or
-  remove it. The Sources view adds custom GitHub repos — including private repos
-  the runtime can access — as searchable skill sources.
+* **Browse.** A catalog tab beside Skills and Toolsets: popular skills from the
+  engine's skill hub (official, ClawHub, GitHub, skills.sh, LobeHub, Claude
+  Marketplace, direct URL), search across all sources, a "From your repos"
+  group for tap skills, and a preview with the SKILL.md, file manifest, and
+  security scan verdict before install or remove. The Sources panel adds custom
+  GitHub repos — including private repos the runtime can access — as searchable
+  skill sources.
 * **Toolsets.** Enable or disable Hermes tool groups such as browser, file, MCP,
   or provider-backed tools. Toolsets are not instructions; they are runtime tool
   access.
@@ -46,8 +48,8 @@ agent do?" Rows must still make the type clear.
 | Source | Shows as | Notes |
 | --- | --- | --- |
 | Hermes skill folders | Skill | Includes runtime-reported workspace, project, personal, managed/local, and configured extra skill folders. Managed Runtime config blocks bundled skill prompt eligibility with a sentinel `skills.allowBundled` allowlist. |
-| Hermes skill hub | Installable skill | Engine-aggregated catalog (official, ClawHub, GitHub, skills.sh, LobeHub, Claude Marketplace, direct URL) browsed from the Add skill dialog. Installs land in the engine's skill folders and then appear as normal skill rows. |
-| Hub taps | Installable skill | User-added GitHub repos with a `skills/<name>/SKILL.md` layout, managed from the Add skill dialog's Sources view. Runtime writes the engine's `skills/.hub/taps.json` and searches tap repos itself (the engine's index-backed fast search skips live GitHub), merging tap skills into featured and search results. Private repos work when Runtime resolves a GitHub token (`GITHUB_TOKEN`/`GH_TOKEN` or `gh auth token`). |
+| Hermes skill hub | Installable skill | Engine-aggregated catalog (official, ClawHub, GitHub, skills.sh, LobeHub, Claude Marketplace, direct URL) browsed from the Browse tab. Installs land in the engine's skill folders and then appear as normal skill rows. |
+| Hub taps | Installable skill | User-added GitHub repos with a `skills/<name>/SKILL.md` layout, managed from the Browse tab's Sources panel. Runtime writes the engine's `skills/.hub/taps.json` and searches tap repos itself (the engine's index-backed fast search skips live GitHub), merging tap skills into featured and search results. Private repos work when Runtime resolves a GitHub token (`GITHUB_TOKEN`/`GH_TOKEN` or `gh auth token`). |
 | Hermes toolsets | Toolset | Runtime-owned groups returned by Hermes `/api/tools/toolsets`; enablement is sent back to Hermes. Setup flows through the engine provider matrix. |
 | MCP servers | Toolset source | Curated catalog installs and custom HTTP/stdio servers managed from the Add toolset dialog. |
 | Hermes plugins | Skill or toolset when exposed | Plugins can register tools, workflows, providers, and plugin-owned skills. Tavern shows the agent-facing skill or toolset, not the plugin package as a separate product row. |
