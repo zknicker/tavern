@@ -1,4 +1,4 @@
-import type { TavernChatMessage, TavernChatResponse, TavernChatTimelinePage } from '@tavern/api';
+import type { TavernChatResponse, TavernChatTimelinePage } from '@tavern/api';
 import { getDb } from '../../db/connection';
 import type { Database } from '../../db/sqlite';
 import { namedParams } from '../../db/sqlite';
@@ -34,7 +34,11 @@ export function getChatTimelinePage(
 
     const limit = clampLimit(input.limit);
     const isLatestPage = input.beforeSequence === undefined;
-    let messageRows = listMessageWindow(chatId, { beforeSequence: input.beforeSequence, limit }, db);
+    let messageRows = listMessageWindow(
+        chatId,
+        { beforeSequence: input.beforeSequence, limit },
+        db
+    );
     let responses = listAnchoredResponses(chatId, messageRows, db);
 
     for (let pass = 0; pass < maxAlignmentPasses; pass += 1) {
@@ -154,16 +158,16 @@ function extendWindowToRequestMessages(
 
     const missingRequestIds = responses
         .map((response) => response.request_message_id)
-        .filter(
-            (id): id is string => id !== null && !messageRows.some((row) => row.id === id)
-        );
+        .filter((id): id is string => id !== null && !messageRows.some((row) => row.id === id));
 
     if (missingRequestIds.length === 0) {
         return messageRows;
     }
 
     const placeholders = missingRequestIds.map((_, index) => `$requestId${index}`).join(', ');
-    const params = Object.fromEntries(missingRequestIds.map((id, index) => [`requestId${index}`, id]));
+    const params = Object.fromEntries(
+        missingRequestIds.map((id, index) => [`requestId${index}`, id])
+    );
     const lowest = db
         .prepare(
             `SELECT MIN(sequence) AS sequence

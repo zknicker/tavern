@@ -3,11 +3,7 @@ import { getRuntimeChatTimelinePage } from './runtime-chat-api.ts';
 
 type ChatLogCursor = number | { beforeSequence: number };
 
-export async function getChatLogPage(input: {
-    cursor?: ChatLogCursor;
-    id: string;
-    limit: number;
-}) {
+export async function getChatLogPage(input: { cursor?: ChatLogCursor; id: string; limit: number }) {
     const beforeSequence = resolveBeforeSequence(input.cursor);
     const page = await getRuntimeChatTimelinePage(input.id, {
         beforeSequence,
