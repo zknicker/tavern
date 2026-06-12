@@ -51,14 +51,26 @@ export function applyLogSnapshot(
         snapshot.failedTurn ??
         (hasFailureMessage(snapshot.rows, state.failedTurn) ? null : state.failedTurn);
     const historyLoaded = true;
+    // The loaded transcript only grows while the chat stays open. The tail
+    // page refetches as `total - limit`, so each new durable row slides the
+    // fetched window past rows the user may be reading; retained history
+    // keeps them until the chat unmounts.
+    const loggedRows = retainLoadedHistory({
+        liveRunIds: [state.activeReply?.runId, state.activeTurn?.runId],
+        logged: snapshot.rows,
+        previous: state.timeline,
+        snapshotOffset: snapshot.offset,
+    });
     const nextTimeline = hasTerminalMessage
-        ? snapshot.rows
+        ? loggedRows
         : mergeActiveProgressRows({
               liveRows: state.timeline,
-              loggedRows: snapshot.rows,
+              loggedRows,
               runId: state.activeReply?.runId,
           });
-    const nextTotal = snapshot.total + Math.max(0, nextTimeline.length - snapshot.rows.length);
+    // Retained rows are durable and already counted by the snapshot total;
+    // only live-only progress rows extend it.
+    const nextTotal = snapshot.total + Math.max(0, nextTimeline.length - loggedRows.length);
 
     if (
         areSameTimeline(state.timeline, nextTimeline) &&
@@ -175,6 +187,52 @@ function areSameTimeline(left: ChatTimeline, right: ChatTimeline) {
 
 function hasFailureMessage(rows: ChatTimeline, failure: ChatTurnFailure | null) {
     return failure ? hasLoggedTurnFailure(rows, failure.turn.runId) : false;
+}
+
+// Rows we already showed stay loaded when the fetched window no longer
+// covers the full log (offset > 0): the server slices by its own row order,
+// so a slid window can drop any loaded row, not just the timestamp-oldest.
+// A full-coverage window (offset 0) is authoritative — a row missing there
+// was deleted. The live run's own progress rows are placeholders until the
+// log confirms them, so they never qualify as retained history.
+function retainLoadedHistory(input: {
+    liveRunIds: (string | undefined)[];
+    logged: ChatTimeline;
+    previous: ChatTimeline;
+    snapshotOffset: number;
+}): ChatTimeline {
+    if (input.snapshotOffset <= 0 || input.previous.length === 0 || input.logged.length === 0) {
+        return input.logged;
+    }
+
+    const loggedIds = new Set<string>();
+
+    for (const row of input.logged) {
+        loggedIds.add(row.id);
+
+        if (row.kind === 'message') {
+            loggedIds.add(row.message.id);
+        }
+    }
+
+    const retainedRows = input.previous.filter(
+        (row) =>
+            !(
+                loggedIds.has(row.id) ||
+                (row.kind === 'message' && loggedIds.has(row.message.id)) ||
+                isLiveRunActivityRowId(row.id, input.liveRunIds)
+            )
+    );
+
+    return retainedRows.length === 0
+        ? input.logged
+        : [...retainedRows, ...input.logged].sort(compareTimelineRows);
+}
+
+function isLiveRunActivityRowId(rowId: string, runIds: (string | undefined)[]) {
+    return runIds.some(
+        (runId) => runId && (rowId.startsWith(`act_${runId}_`) || rowId.startsWith(`act_${runId}-`))
+    );
 }
 
 function mergeActiveProgressRows(input: {
