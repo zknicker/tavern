@@ -72,8 +72,14 @@ export const settingsNavItems = [
     {
         icon: ZapIcon,
         id: 'skills',
-        label: 'Skills & Toolsets',
+        label: 'Skills',
         to: '/dashboard/settings/skills',
+    },
+    {
+        icon: PlugSocketIcon,
+        id: 'toolsets',
+        label: 'Toolsets',
+        to: '/dashboard/settings/toolsets',
     },
     {
         icon: PlugSocketIcon,
@@ -114,7 +120,7 @@ export const settingsNavSections = [
     },
     {
         id: 'agent',
-        itemIds: ['agent', 'notes-md', 'soul-md', 'skills', 'connectors', 'memories'],
+        itemIds: ['agent', 'notes-md', 'soul-md', 'skills', 'toolsets', 'connectors', 'memories'],
         label: 'Agent',
     },
     {

@@ -44,6 +44,7 @@ export const settingsCapabilityRequirements = {
     skills: ['apiServer', 'skills'],
     'soul-md': [],
     stats: ['models'],
+    toolsets: ['apiServer', 'skills'],
     updates: [],
 } as const satisfies Record<string, readonly RuntimeCapabilityId[]>;
 

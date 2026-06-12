@@ -237,6 +237,14 @@ export function createAppRouter() {
                                             ),
                                         },
                                         {
+                                            path: 'toolsets',
+                                            lazy: lazyRoute(
+                                                () =>
+                                                    import('./routes/dashboard/toolsets-page.tsx'),
+                                                'ToolsetsPage'
+                                            ),
+                                        },
+                                        {
                                             path: 'connectors',
                                             lazy: lazyRoute(
                                                 () =>
