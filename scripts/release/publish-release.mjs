@@ -193,9 +193,7 @@ function extractReleaseNotes(changelog, version) {
 
 async function findReleaseArtifacts({ includeRuntime, version }) {
     const artifacts = [
-        ...(await findFiles(bundleRoot, (entry) => entry.endsWith('.dmg'))),
-        ...(await findFiles(bundleRoot, (entry) => entry.endsWith('.zip'))),
-        ...(await findFiles(bundleRoot, (entry) => entry.endsWith('.blockmap'))),
+        ...(await findDesktopArtifacts(version)),
         path.join(bundleRoot, 'latest-mac.yml'),
         ...(includeRuntime ? await findRuntimeArtifacts(version) : []),
     ];
@@ -207,6 +205,16 @@ async function findReleaseArtifacts({ includeRuntime, version }) {
     }
 
     return artifacts;
+}
+
+async function findDesktopArtifacts(version) {
+    const expectedPrefix = `Tavern_${version}_`;
+    return await findFiles(
+        bundleRoot,
+        (entry) =>
+            entry.startsWith(expectedPrefix) &&
+            (entry.endsWith('.dmg') || entry.endsWith('.zip') || entry.endsWith('.blockmap'))
+    );
 }
 
 async function findFiles(directory, predicate) {
