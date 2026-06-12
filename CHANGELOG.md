@@ -2,6 +2,17 @@
 
 All notable changes to this project will be documented in this file.
 
+## v1.4.8 - 2026-06-12
+
+App-only release. The Runtime floor stays at 1.4.7.
+
+- Fixed chat work drawer headers so live file edits say what is being edited,
+  completed tool groups use contextual summaries, and generic tool counts do
+  not duplicate.
+- Fixed the Tavern updater to show progress while an update is staging.
+- Fixed desktop release publishing so only the current release artifacts are
+  uploaded.
+
 ## v1.4.7 - 2026-06-11
 
 Runtime floor raised to 1.4.7 for the Cortex wiki maintenance, health, todo,
