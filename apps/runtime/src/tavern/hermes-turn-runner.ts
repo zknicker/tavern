@@ -291,14 +291,14 @@ export async function runHermesTurn(input: {
             }
 
             if (event.event === 'error') {
-                throw new Error(readString(event.data.message) || 'Hermes stream failed.');
+                throw new Error(readString(event.data.message) || 'Agent response stream failed.');
             }
         }
         completeReasoningToProgress();
         stream.flush();
 
         if (!assistantContent.trim()) {
-            throw new Error('Hermes turn ended before producing a reply.');
+            throw new Error('Agent failed to produce a reply.');
         }
 
         completeHermesTurn(

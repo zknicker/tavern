@@ -498,7 +498,7 @@ export function failedTurnFromResponses(
         error:
             runtimeMetadataString(failedResponse, 'error') ??
             readString(failedResponse.metadata.error) ??
-            'Turn failed.',
+            'Agent failed to produce a reply.',
         turn: {
             agentId:
                 runtimeMetadataString(failedResponse, 'agentId') ?? failedResponse.participant_id,

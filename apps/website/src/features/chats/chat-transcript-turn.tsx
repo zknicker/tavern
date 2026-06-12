@@ -462,7 +462,7 @@ function AgentTurnFailure({ item }: { item: Extract<TranscriptItem, { kind: 'fai
     return (
         <p className="max-w-[34rem] text-sm leading-5" role="alert">
             <span aria-hidden className="mr-2 inline-block size-2 rounded-full bg-error" />
-            <span className="font-medium text-error-foreground">Turn failed</span>
+            <span className="font-medium text-error-foreground">Response failed</span>
             <span className="text-muted-foreground"> · {item.failure.error}</span>
         </p>
     );

@@ -847,7 +847,8 @@ export class LocalHermesClient extends LocalHermesUnsupportedSurfaces {
                     yield {
                         data: {
                             message:
-                                readString(event.payload, ['message']) ?? 'Hermes stream failed.',
+                                readString(event.payload, ['message']) ??
+                                'Agent response stream failed.',
                         },
                         event: 'error',
                     };

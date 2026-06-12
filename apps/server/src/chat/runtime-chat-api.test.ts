@@ -36,7 +36,7 @@ test('latest failed response returns a failed turn', () => {
     });
 
     assert.deepEqual(failedTurnFromResponses([failed]), {
-        error: 'Turn failed.',
+        error: 'Agent failed to produce a reply.',
         turn: {
             agentId: 'agent-main',
             chatId: 'chat-1',

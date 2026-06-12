@@ -62,7 +62,7 @@ function chatEventToRuntimeEvents(event: TavernChatEvent): PersistedRuntimeEvent
                             metadataRuntimeString(event.response.metadata, 'error') ??
                             metadataString(event.response.metadata, 'error') ??
                             event.response.summary ??
-                            'Turn failed.',
+                            'Agent failed to produce a reply.',
                         timestamp: event.created_at,
                         turn: responseToTurn(event.response),
                         type: 'turn.failed',
