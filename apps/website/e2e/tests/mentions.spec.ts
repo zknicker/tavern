@@ -29,10 +29,10 @@ test('backspace removes a mention chip without moving the caret to a new line', 
 
     const composer = page.locator('#home-prompt');
     await composer.click();
-    await composer.pressSequentially('Use @agent-browser');
-    await page.getByRole('option', { name: /Agent Browser/u }).click();
+    await composer.pressSequentially('Use @browser');
+    await page.getByRole('option', { name: /Browser\s+Inspect local web targets/u }).click();
 
-    await expect(composer).toHaveText('Use Agent Browser ');
+    await expect(composer).toHaveText('Use Browser ');
 
     await page.keyboard.press('Backspace');
 
@@ -47,14 +47,14 @@ test('keeps mention chips editable in common composer flows', async ({ page }) =
     const composer = page.locator('#home-prompt');
 
     await composer.click();
-    await composer.pressSequentially('@agent-browser');
-    await page.getByRole('option', { name: /Agent Browser/u }).click();
+    await composer.pressSequentially('@computer');
+    await page.getByRole('option', { name: /Computer Use\s+Control local Mac apps/u }).click();
     await composer.pressSequentially('and @browser');
     await expect(page.getByRole('listbox')).toBeVisible({ timeout: 15_000 });
-    await page.getByRole('option', { name: /Browser\s+Browser lets/u }).click();
+    await page.getByRole('option', { name: /Browser\s+Inspect local web targets/u }).click();
     await composer.pressSequentially('done');
 
-    await expect(composer).toContainText(/^Agent Browser and Browser done$/);
+    await expect(composer).toContainText(/^Computer Use and Browser done$/);
 
     await page.goto('/dashboard/overview');
     await composer.click();
@@ -203,12 +203,26 @@ test('autocompletes apps, files, directories, and skills as visible mention chip
 });
 
 test('submits mention markdown plus Tavern metadata without starting a turn', async ({ page }) => {
+    // The runtime's skill catalog follows the installed engine, so resolve a
+    // real skill from the live inventory instead of pinning a name. Skills
+    // serialize as a markdown link only when the id is a path or URI.
+    const skill = await firstInventorySkill(page);
+    const skillLabel = `$${skill.insertText}`;
     const cases = [
         {
             kind: 'skill',
-            optionName: /Agent Browser/u,
-            query: '@agent-browser',
-            serialized: /\[\$agent-browser\]\(.+\/agent-browser\/SKILL\.md\)/u,
+            optionName: new RegExp(`^${escapeRegExp(skill.label)}`, 'u'),
+            query: `@${skill.insertText}`,
+            serialized:
+                skill.id.includes('://') || skill.id.startsWith('/')
+                    ? `[${skillLabel}](${skill.id})`
+                    : skillLabel,
+        },
+        {
+            kind: 'plugin',
+            optionName: /Browser\s+Inspect local web targets/u,
+            query: '@browser',
+            serialized: '[@Browser](plugin://browser@openai-bundled)',
         },
         {
             kind: 'app',
@@ -265,6 +279,33 @@ test('submits mention markdown plus Tavern metadata without starting a turn', as
         }
     }
 });
+
+async function firstInventorySkill(page: Page) {
+    const serverPort = process.env.TAVERN_SERVER_PORT;
+    const response = await page.request.get(
+        `http://127.0.0.1:${serverPort}/trpc/mention.inventory`
+    );
+    expect(response.ok()).toBe(true);
+
+    const body = (await response.json()) as {
+        result?: {
+            data?: {
+                options?: Array<{ id: string; insertText: string; kind: string; label: string }>;
+            };
+        };
+    };
+    const skill = (body.result?.data?.options ?? []).find((option) => option.kind === 'skill');
+
+    if (!skill) {
+        throw new Error('Expected the mention inventory to expose at least one runtime skill.');
+    }
+
+    return skill;
+}
+
+function escapeRegExp(text: string) {
+    return text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
 
 function waitForBlockedChatStart(page: Page) {
     return new Promise<unknown>((resolve) => {

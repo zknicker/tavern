@@ -42,9 +42,9 @@ test('stores Tavern generated AGENTS.md without runtime bootstrap companion file
     const fullText = await getRuntimeInstructions(runtimeUrl);
 
     expect(fullText).toContain('# Tavern Agent Instructions');
-    expect(fullText).toContain("Cortex is Tavern's browser for the llm-wiki hub.");
-    expect(fullText).toContain('Prefer the installed `wiki` skill for wiki work.');
-    expect(fullText).toContain("Keep llm-wiki's structure:");
+    expect(fullText).toContain("Cortex is Tavern's durable knowledge store");
+    expect(fullText).toContain('Use the installed `wiki` skill for wiki work');
+    expect(fullText).toContain('Topic wikis live under `topics/<slug>/`');
     expect(fullText).not.toContain('# SOUL.md - Who You Are');
     expect(fullText).not.toContain('# TOOLS.md - Local Notes');
     expect(fullText).not.toContain('# IDENTITY.md - Who Am I?');
@@ -262,8 +262,13 @@ async function enableInlineThinking(page: Page) {
 }
 
 async function expectActiveTurnIndicator(page: Page) {
+    // The active work header and the thinking indicator can render together;
+    // either one proves the turn is live.
     await expect(
-        page.getByRole('button', { name: /Working for/i }).or(page.getByLabel('Agent is thinking'))
+        page
+            .getByRole('button', { name: /Working for/i })
+            .or(page.getByLabel('Agent is thinking'))
+            .first()
     ).toBeVisible({ timeout: 30_000 });
 }
 
@@ -281,13 +286,28 @@ function exactTextRegex(text: string) {
     return new RegExp(`^${escapeRegExp(text)}$`);
 }
 
+// Document order, not pixel geometry: the transcript is a single column, and
+// bounding boxes race the work panel's height animation while it expands.
 async function expectAbove(upper: Locator, lower: Locator) {
-    const upperBox = await upper.first().boundingBox();
-    const lowerBox = await lower.first().boundingBox();
+    const lowerHandle = await lower.first().elementHandle();
+    expect(lowerHandle).not.toBeNull();
 
-    expect(upperBox).not.toBeNull();
-    expect(lowerBox).not.toBeNull();
-    expect((upperBox?.y ?? 0) + (upperBox?.height ?? 0)).toBeLessThanOrEqual(lowerBox?.y ?? 0);
+    if (!lowerHandle) {
+        return;
+    }
+
+    const isAbove = await upper
+        .first()
+        .evaluate(
+            (upperElement, lowerElement) =>
+                lowerElement instanceof Node &&
+                Boolean(
+                    upperElement.compareDocumentPosition(lowerElement) &
+                        Node.DOCUMENT_POSITION_FOLLOWING
+                ),
+            lowerHandle
+        );
+    expect(isAbove).toBe(true);
 }
 
 function escapeRegExp(text: string) {

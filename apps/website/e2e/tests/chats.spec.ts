@@ -41,9 +41,7 @@ test('renders tool progress and the final reply for a tool-using turn', async ({
 
     await expect(page.getByText('Read', { exact: true }).first()).toBeVisible();
     await expect(page.getByText(/QA_KICKOFF_TASK\.md/u).first()).toBeVisible();
-    await expect(page.getByText('Tool details not available.')).toHaveCount(0);
-    await expect(page.getByText('Arguments', { exact: true })).toBeVisible();
-    await expect(page.getByText('Result', { exact: true })).toBeVisible();
+    await expectReadFileDrawerDetails(page);
 
     await page.reload();
 
@@ -53,9 +51,7 @@ test('renders tool progress and the final reply for a tool-using turn', async ({
     await openWorkedActivity(page);
     await openFirstToolDetail(page);
 
-    await expect(page.getByText('Tool details not available.')).toHaveCount(0);
-    await expect(page.getByText('Arguments', { exact: true })).toBeVisible();
-    await expect(page.getByText('Result', { exact: true })).toBeVisible();
+    await expectReadFileDrawerDetails(page);
 });
 
 test('renders durable artifacts after reload', async ({ page }) => {
@@ -208,7 +204,9 @@ test('renders a Hermes no-content turn as a no-reply diagnostic', async ({ page 
             /No reply: the model returned empty content after retries and any fallback providers/u
         )
     ).toBeVisible({ timeout: 60_000 });
-    await expect(page.getByText('Model returned no content after all retries.')).toBeVisible();
+    // Engine lifecycle retry statuses are intentionally dropped from durable
+    // activity; the no-reply diagnostic paragraph is the durable evidence.
+    await expect(page.getByText('Model returned no content after all retries.')).toHaveCount(0);
     await expect(
         page.getByRole('button', { name: /Worked for .* Agent turn failed/i })
     ).toHaveCount(0);
@@ -308,6 +306,31 @@ async function openWorkedActivity(page: Page) {
     if ((await activity.getAttribute('aria-expanded')) === 'false') {
         await activity.click();
     }
+    await expandWorkGroups(page);
+}
+
+// Work rows render inside collapsed count-summary groups ("Read a file",
+// "Used a tool, read a file"); their content stays aria-hidden and inert
+// until the group header is expanded.
+const workGroupHeaderName =
+    /^(?:Used (?:a|\d+) tools?|Read (?:a|\d+) files?|Ran (?:a|\d+) commands?|Edited (?:a|\d+) files?|Searched (?:code|web)|Worked)\b(?! for)/i;
+
+async function expandWorkGroups(page: Page) {
+    for (let pass = 0; pass < 5; pass += 1) {
+        const headers = page.getByRole('button', { name: workGroupHeaderName });
+        let clicked = false;
+
+        for (const header of await headers.all()) {
+            if ((await header.getAttribute('aria-expanded')) === 'false') {
+                await header.click();
+                clicked = true;
+            }
+        }
+
+        if (!clicked) {
+            return;
+        }
+    }
 }
 
 async function openThinkingActivity(page: Page) {
@@ -316,6 +339,16 @@ async function openThinkingActivity(page: Page) {
     if ((await activity.getAttribute('aria-expanded')) === 'false') {
         await activity.click();
     }
+}
+
+// read_file opens the specialized file inspector drawer with Path and
+// Content sections instead of the generic Arguments/Result layout.
+async function expectReadFileDrawerDetails(page: Page) {
+    await expect(page.getByText('Tool details not available.')).toHaveCount(0);
+    await expect(page.getByRole('dialog', { name: 'Read File' })).toBeVisible();
+    await expect(page.getByText('Path', { exact: true })).toBeVisible();
+    await expect(page.getByText('Content', { exact: true })).toBeVisible();
+    await expect(page.getByText('QA kickoff task')).toBeVisible();
 }
 
 async function openFirstToolDetail(page: Page) {
