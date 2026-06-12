@@ -35,4 +35,5 @@ export * from './runtime/model-identity.js';
 export * from './runtime/model-providers.js';
 export * from './runtime/routes.js';
 export * from './runtime/runtime-aliases.js';
+export * from './runtime/skill-hub.js';
 export * from './runtime/skills.js';
