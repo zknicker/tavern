@@ -37,3 +37,4 @@ export * from './runtime/routes.js';
 export * from './runtime/runtime-aliases.js';
 export * from './runtime/skill-hub.js';
 export * from './runtime/skills.js';
+export * from './runtime/toolset-setup.js';

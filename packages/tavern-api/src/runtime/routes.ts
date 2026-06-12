@@ -90,7 +90,11 @@ export const agentRuntimeRoutes = {
     skillHubTaps: '/skills/hub/taps',
     skillHubUninstall: '/skills/hub/uninstall',
     skills: '/skills',
+    toolsetConfig: (id: string) => `/toolsets/${encodeURIComponent(id)}/config`,
     toolsetEnabled: (id: string) => `/toolsets/${encodeURIComponent(id)}/enabled`,
+    toolsetEnv: (id: string) => `/toolsets/${encodeURIComponent(id)}/env`,
+    toolsetPostSetup: (id: string) => `/toolsets/${encodeURIComponent(id)}/post-setup`,
+    toolsetProvider: (id: string) => `/toolsets/${encodeURIComponent(id)}/provider`,
     toolsets: '/toolsets',
     sessionApprovalRespond: (sessionKey: string) =>
         `/hermes/sessions/${encodeURIComponent(sessionKey)}/approval`,
