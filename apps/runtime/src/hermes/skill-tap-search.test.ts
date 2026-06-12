@@ -3,7 +3,7 @@ import { createServer, type Server } from 'node:http';
 import os from 'node:os';
 import path from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { clearTapSkillCache, listTapSkills, searchTapSkills } from './skill-tap-search';
+import { clearTapSkillCache, listTapSkillListings } from './skill-tap-search';
 import { addSkillHubTap } from './skill-taps';
 
 const merchbaseSkillMd = `---
@@ -74,9 +74,16 @@ describe('skill tap search', () => {
         await addSkillHubTap({ repo: 'merchbaseco/skills' }, { home });
         const apiBaseUrl = await startGitHubFixture();
 
-        const items = await listTapSkills({ apiBaseUrl, cacheTtlMs: 0, home, token: null });
+        const listings = await listTapSkillListings({
+            apiBaseUrl,
+            cacheTtlMs: 0,
+            home,
+            token: null,
+        });
 
-        expect(items).toEqual([
+        expect(listings).toHaveLength(1);
+        expect(listings[0]?.repo).toBe('merchbaseco/skills');
+        expect(listings[0]?.skills).toEqual([
             {
                 description: 'Manage MerchBase products and listings',
                 identifier: 'merchbaseco/skills/skills/merchbase',
@@ -98,34 +105,29 @@ describe('skill tap search', () => {
         ]);
     });
 
-    it('filters by name and description text', async () => {
-        await addSkillHubTap({ repo: 'merchbaseco/skills' }, { home });
-        const apiBaseUrl = await startGitHubFixture();
-        const options = { apiBaseUrl, cacheTtlMs: 0, home, token: null };
-
-        expect(await searchTapSkills('merchbase', options)).toHaveLength(1);
-        expect(await searchTapSkills('keyword rankings', options)).toHaveLength(1);
-        expect(await searchTapSkills('nope', options)).toHaveLength(0);
-    });
-
     it('serves repeat reads from the cache within the TTL', async () => {
         await addSkillHubTap({ repo: 'merchbaseco/skills' }, { home });
         const apiBaseUrl = await startGitHubFixture();
         const options = { apiBaseUrl, cacheTtlMs: 60_000, home, token: null };
 
-        await listTapSkills(options);
+        await listTapSkillListings(options);
         const requestsAfterFirst = requests.length;
-        await listTapSkills(options);
+        await listTapSkillListings(options);
 
         expect(requests.length).toBe(requestsAfterFirst);
     });
 
-    it('returns no items when the repo is unreachable', async () => {
+    it('returns an empty listing when the repo is unreachable', async () => {
         await addSkillHubTap({ repo: 'merchbaseco/private' }, { home });
         const apiBaseUrl = await startGitHubFixture();
 
-        const items = await listTapSkills({ apiBaseUrl, cacheTtlMs: 0, home, token: null });
+        const listings = await listTapSkillListings({
+            apiBaseUrl,
+            cacheTtlMs: 0,
+            home,
+            token: null,
+        });
 
-        expect(items).toEqual([]);
+        expect(listings).toEqual([{ path: 'skills/', repo: 'merchbaseco/private', skills: [] }]);
     });
 });

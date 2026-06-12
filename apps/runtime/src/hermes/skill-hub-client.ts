@@ -1,15 +1,10 @@
 import {
     type AgentRuntimeSkillHubActionResult,
-    type AgentRuntimeSkillHubCatalog,
     type AgentRuntimeSkillHubItem,
     type AgentRuntimeSkillHubPreview,
     type AgentRuntimeSkillHubScan,
-    type AgentRuntimeSkillHubSearchInput,
-    type AgentRuntimeSkillHubSearchResult,
-    agentRuntimeSkillHubCatalogSchema,
     agentRuntimeSkillHubPreviewSchema,
     agentRuntimeSkillHubScanSchema,
-    agentRuntimeSkillHubSearchResultSchema,
 } from '@tavern/api';
 import { readHermesConnectionOptions } from './connection';
 import { awaitEngineAction } from './engine-actions';
@@ -24,10 +19,10 @@ export function createSkillHubClient(options?: { pollIntervalMs?: number; timeou
 }
 
 /**
- * Engine skill-hub surface: catalog browse, multi-source search, preview,
- * install-time security scan, and install/uninstall. Install and uninstall are
- * engine background actions; this client owns waiting for the action to exit
- * so callers see one synchronous result.
+ * Engine skill-hub surface: preview, install-time security scan, and
+ * install/uninstall by identifier. Install and uninstall are engine background
+ * actions; this client owns waiting for the action to exit so callers see one
+ * synchronous result.
  */
 export class SkillHubClient {
     readonly #http: HermesHttp;
@@ -38,37 +33,6 @@ export class SkillHubClient {
         this.#http = http;
         this.#pollIntervalMs = options?.pollIntervalMs ?? actionPollIntervalMs;
         this.#timeoutMs = options?.timeoutMs ?? actionTimeoutMs;
-    }
-
-    async getCatalog(): Promise<AgentRuntimeSkillHubCatalog> {
-        const response = asRecord(await this.#http.get('/api/skills/hub/sources'));
-        return agentRuntimeSkillHubCatalogSchema.parse({
-            featured: readArray(response, ['featured']).map(mapHubItem),
-            indexAvailable: response.index_available === true,
-            installed: mapInstalledEntries(response.installed),
-            sources: readArray(response, ['sources']).map(mapHubSource),
-        });
-    }
-
-    async search(
-        input: AgentRuntimeSkillHubSearchInput
-    ): Promise<AgentRuntimeSkillHubSearchResult> {
-        const params = new URLSearchParams({ q: input.query });
-        if (input.source) {
-            params.set('source', input.source);
-        }
-        if (input.limit !== undefined) {
-            params.set('limit', String(input.limit));
-        }
-        const response = asRecord(
-            await this.#http.get(`/api/skills/hub/search?${params.toString()}`)
-        );
-        return agentRuntimeSkillHubSearchResultSchema.parse({
-            installed: mapInstalledEntries(response.installed),
-            results: readArray(response, ['results']).map(mapHubItem),
-            sourceCounts: mapCountRecord(response.source_counts),
-            timedOut: readStringArray(response.timed_out),
-        });
     }
 
     async preview(identifier: string): Promise<AgentRuntimeSkillHubPreview> {
@@ -132,32 +96,6 @@ function mapHubItem(value: unknown): AgentRuntimeSkillHubItem {
         tags: readStringArray(record.tags),
         trustLevel: trustLevel === 'builtin' || trustLevel === 'trusted' ? trustLevel : 'community',
     };
-}
-
-function mapHubSource(value: unknown) {
-    const record = asRecord(value);
-    return {
-        ...(typeof record.available === 'boolean' ? { available: record.available } : {}),
-        id: readString(record, ['id']) ?? 'unknown',
-        label: readString(record, ['label', 'id']) ?? 'Unknown',
-        ...(typeof record.rate_limited === 'boolean' ? { rateLimited: record.rate_limited } : {}),
-    };
-}
-
-function mapInstalledEntries(value: unknown) {
-    return Object.fromEntries(
-        Object.entries(asRecord(value)).map(([identifier, entry]) => {
-            const record = asRecord(entry);
-            return [
-                identifier,
-                {
-                    name: readString(record, ['name']) ?? null,
-                    scanVerdict: readString(record, ['scan_verdict']) ?? null,
-                    trustLevel: readString(record, ['trust_level']) ?? null,
-                },
-            ];
-        })
-    );
 }
 
 function mapScanFinding(value: unknown) {

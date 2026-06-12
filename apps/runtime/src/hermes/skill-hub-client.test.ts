@@ -5,50 +5,6 @@ import { SkillHubClient } from './skill-hub-client';
 
 // Engine-shaped fixtures pinned to hermes_cli/web_server.py responses so the
 // snake_case mapping stays honest without a live engine.
-const sourcesFixture = {
-    featured: [
-        {
-            description: 'Manage MerchBase products',
-            identifier: 'merchbaseco/skills/skills/merchbase',
-            name: 'merchbase',
-            repo: 'merchbaseco/skills',
-            source: 'github',
-            tags: ['products'],
-            trust_level: 'community',
-        },
-    ],
-    index_available: true,
-    installed: {
-        'merchbaseco/skills/skills/merchbase': {
-            name: 'merchbase',
-            scan_verdict: 'clean',
-            trust_level: 'community',
-        },
-    },
-    sources: [
-        { id: 'official', label: 'Official (Nous)' },
-        { available: true, id: 'hermes-index', label: 'Hermes Index' },
-        { id: 'github', label: 'GitHub', rate_limited: false },
-    ],
-};
-
-const searchFixture = {
-    installed: {},
-    results: [
-        {
-            description: 'PDF tools',
-            identifier: 'anthropics/skills/skills/pdf',
-            name: 'pdf',
-            repo: 'anthropics/skills',
-            source: 'github',
-            tags: [],
-            trust_level: 'trusted',
-        },
-    ],
-    source_counts: { clawhub: 0, github: 1 },
-    timed_out: ['lobehub'],
-};
-
 const previewFixture = {
     description: 'PDF tools',
     files: ['SKILL.md', 'scripts/fill.py'],
@@ -107,35 +63,6 @@ describe('SkillHubClient', () => {
             { pollIntervalMs: 5, timeoutMs: 2000 }
         );
     }
-
-    it('maps the catalog sources, featured skills, and installed lock entries', async () => {
-        const client = await startFixture(() => sourcesFixture);
-        const catalog = await client.getCatalog();
-
-        expect(catalog.indexAvailable).toBe(true);
-        expect(catalog.sources).toHaveLength(3);
-        expect(catalog.sources[1]).toEqual({
-            available: true,
-            id: 'hermes-index',
-            label: 'Hermes Index',
-        });
-        expect(catalog.featured[0]?.trustLevel).toBe('community');
-        expect(catalog.installed['merchbaseco/skills/skills/merchbase']?.scanVerdict).toBe('clean');
-    });
-
-    it('maps search results with source counts and timed out sources', async () => {
-        const requestedPaths: string[] = [];
-        const client = await startFixture((pathname) => {
-            requestedPaths.push(pathname);
-            return searchFixture;
-        });
-        const result = await client.search({ query: 'pdf' });
-
-        expect(requestedPaths[0]).toBe('/api/skills/hub/search');
-        expect(result.results[0]?.trustLevel).toBe('trusted');
-        expect(result.sourceCounts.github).toBe(1);
-        expect(result.timedOut).toEqual(['lobehub']);
-    });
 
     it('maps the preview SKILL.md and file manifest', async () => {
         const client = await startFixture(() => previewFixture);

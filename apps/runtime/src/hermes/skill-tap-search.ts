@@ -1,16 +1,19 @@
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
-import type { AgentRuntimeSkillHubItem, AgentRuntimeSkillHubTap } from '@tavern/api';
+import type {
+    AgentRuntimeSkillHubItem,
+    AgentRuntimeSkillHubTap,
+    AgentRuntimeSkillHubTapListing,
+} from '@tavern/api';
+import { readSkillFrontmatterDescription } from './skill-frontmatter';
 import { listSkillHubTaps, type SkillTapsOptions } from './skill-taps';
 
 /**
- * Tap skills searched by Runtime itself.
+ * Tap skills listed by Runtime itself.
  *
- * The engine's fast search path serves results from its centralized index and
- * skips the live GitHub source entirely, which makes user taps — including
- * private repos — invisible. Tap repos are small and user-owned, so Runtime
- * lists them directly through the GitHub contents API and merges the results
- * into hub search and the catalog.
+ * Tap repos are small and user-owned, so Runtime lists them directly through
+ * the GitHub contents API — including private repos when a token resolves —
+ * instead of relying on any engine search surface.
  */
 
 export interface TapSearchOptions extends SkillTapsOptions {
@@ -23,27 +26,16 @@ const defaultCacheTtlMs = 5 * 60 * 1000;
 const maxSkillsPerTap = 50;
 const tapCache = new Map<string, { fetchedAt: number; items: AgentRuntimeSkillHubItem[] }>();
 
-export async function listTapSkills(
+export async function listTapSkillListings(
     options?: TapSearchOptions
-): Promise<AgentRuntimeSkillHubItem[]> {
+): Promise<AgentRuntimeSkillHubTapListing[]> {
     const { taps } = await listSkillHubTaps(options);
-    const lists = await Promise.all(
-        taps.map((tap) => listTapRepoSkills(tap, options).catch(() => []))
-    );
-    return lists.flat();
-}
-
-export async function searchTapSkills(
-    query: string,
-    options?: TapSearchOptions
-): Promise<AgentRuntimeSkillHubItem[]> {
-    const normalized = query.trim().toLowerCase();
-    const items = await listTapSkills(options);
-    if (normalized.length === 0) {
-        return items;
-    }
-    return items.filter((item) =>
-        `${item.name} ${item.description}`.toLowerCase().includes(normalized)
+    return await Promise.all(
+        taps.map(async (tap) => ({
+            path: tap.path,
+            repo: tap.repo,
+            skills: await listTapRepoSkills(tap, options).catch(() => []),
+        }))
     );
 }
 
@@ -86,7 +78,7 @@ async function listTapRepoSkills(tap: AgentRuntimeSkillHubTap, options?: TapSear
                 return null;
             }
             return {
-                description: readFrontmatterDescription(skillMd),
+                description: readSkillFrontmatterDescription(skillMd),
                 identifier: `${tap.repo}/${basePath}/${dir.name}`,
                 name: dir.name,
                 repo: tap.repo,
@@ -148,10 +140,4 @@ async function resolveGitHubToken(): Promise<null | string> {
         cachedToken = { value: null };
     }
     return cachedToken.value;
-}
-
-function readFrontmatterDescription(skillMd: string): string {
-    const frontmatter = skillMd.match(/^---\n([\s\S]*?)\n---/u)?.[1];
-    const description = frontmatter?.match(/^description:\s*(.+)$/mu)?.[1];
-    return description?.trim().replace(/^['"]|['"]$/gu, '') ?? '';
 }
