@@ -255,7 +255,10 @@ function AgentTurn({
                     className={cn(
                         hoverGroupClassName,
                         'relative w-[min(80%,52rem)] min-w-0',
-                        lastMessage && metadataGapClassName
+                        // Reserved while live so the gap's appearance with the
+                        // first durable message never resizes the turn — a
+                        // tail shrink shifts the bottom-pinned chat.
+                        (turnActive || lastMessage) && metadataGapClassName
                     )}
                 >
                     {showIdentity ? (
@@ -287,9 +290,11 @@ function AgentTurn({
                         {(hasWorkHeader ? replySegments : segments).map((segment) =>
                             // The status indicator narrates the work above
                             // it, so it sits at the work log's step rhythm
-                            // instead of the reply slot's section gap.
+                            // instead of the reply slot's section gap. -0.5
+                            // keeps the icon where the old padded indicator
+                            // drew it now that the box is one text line tall.
                             hasWorkHeader && isActiveStatusSegment(segment) ? (
-                                <div className="-mt-2.5" key={segment.key}>
+                                <div className="-mt-0.5" key={segment.key}>
                                     <AgentTurnSegment
                                         chatId={chatId}
                                         currentSessionKey={currentSessionKey}

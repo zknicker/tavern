@@ -51,7 +51,11 @@ export const ThinkingIndicator = forwardRef<HTMLOutputElement, HTMLAttributes<HT
         return (
             <output
                 aria-live="polite"
-                className={cn('flex w-fit items-center gap-2 px-3 py-2', className)}
+                // h-5 matches one line of text-sm reply text. The indicator
+                // occupies the exact line the streamed reply will replace, so
+                // the swap never changes the live turn's height while the
+                // viewport is bottom-pinned (a shrink shifts the whole chat).
+                className={cn('flex h-5 w-fit items-center gap-2 px-3', className)}
                 ref={ref}
                 {...props}
             >
