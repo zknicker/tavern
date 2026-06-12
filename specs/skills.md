@@ -73,6 +73,23 @@ Hermes plugin skills are a hybrid source. A plugin may list skill directories in
 enabled. Tavern should show the owning plugin when Hermes includes that source
 metadata.
 
+### Skill hub
+
+New skills install through the engine's skill hub: a multi-source catalog with
+search, preview, an install-time security scan, and install/uninstall. The
+engine aggregates the sources (official, index, ClawHub, GitHub, skills.sh,
+LobeHub, Claude Marketplace, direct URL) and owns trust tiers, quarantine,
+scanning, install policy, and the install lockfile. Tavern proxies the hub
+through Runtime and presents it in the Add skill dialog; it does not run its
+own registry or marketplace.
+
+Custom GitHub repos ("taps") extend the hub with user-owned skill sources,
+including private repos when the engine process can resolve a GitHub token.
+Taps live in the engine's `skills/.hub/taps.json`; the engine has no HTTP
+surface for them, so Runtime owns that file directly — the same managed-config
+pattern as the bundled-skill allowlist. A tapped repo exposes skills as
+`skills/<name>/SKILL.md` directories.
+
 ### Toolset sources
 
 Hermes reports toolsets from its runtime tool registry. Toolsets can come from
@@ -95,6 +112,15 @@ catalog.
 - Tavern reads runtime-visible skills through the runtime's skill inventory
   surface.
 - Tavern reads runtime toolsets through Runtime's managed Hermes proxy.
+- Tavern browses, previews, scans, installs, and uninstalls hub skills through
+  Runtime's `/skills/hub/*` routes. Install and uninstall are engine background
+  actions; Runtime waits for the action to exit and returns one synchronous
+  result, and the server refreshes the skill inventory snapshot and emits the
+  skill update event afterward.
+- Toolset setup flows through Runtime's `/toolsets/{id}/config|provider|env|post-setup`
+  routes; env values are written to the engine's env store and never echoed back.
+- MCP servers and the MCP catalog flow through Runtime's `/mcp/*` routes; env
+  values in server summaries stay redacted by the engine.
 - Tavern should not require file materialization to show a skill or toolset in
   this surface.
 - When Tavern changes skill or toolset access, it should use supported runtime
@@ -132,8 +158,17 @@ catalog.
 - Internal ids, source paths, runtime config paths, MCP server names, plugin ids,
   and generated config paths are debug details unless the user opens advanced
   status.
-- Marketplace, install, uninstall, and update flows are out of scope for the
-  Skills & Toolsets surface.
+- The Add skill dialog is the install surface: featured and searched hub skills
+  with source and trust badges, a preview of the SKILL.md and file manifest, the
+  scan verdict, and install/remove actions. The Sources view manages hub taps.
+- The Add toolset dialog is the MCP surface: the engine's curated MCP catalog
+  with one-click install plus custom HTTP/stdio servers with test, enablement,
+  and removal.
+- A toolset row that reports `not_usable` exposes a Set up action that opens the
+  engine's provider matrix: provider selection, env key entry, and the
+  provider's post-setup install action.
+- Tavern does not build its own marketplace, registry, version pinning UI, or
+  update scheduling; the engine's hub owns those mechanics.
 
 ## Usability State
 

@@ -14,9 +14,19 @@ from the runtime-managed Hermes instance.
 
 * **Skills.** View reusable instruction packages Hermes can see, enable or
   disable them for new Hermes sessions, and see runtime-reported setup blockers.
+* **Add skill.** Browse and search the engine's skill hub (official, ClawHub,
+  GitHub, skills.sh, LobeHub, Claude Marketplace, direct URL), preview a skill's
+  SKILL.md and file manifest, see the security scan verdict, and install or
+  remove it. The Sources view adds custom GitHub repos — including private repos
+  the runtime can access — as searchable skill sources.
 * **Toolsets.** Enable or disable Hermes tool groups such as browser, file, MCP,
   or provider-backed tools. Toolsets are not instructions; they are runtime tool
   access.
+* **Set up.** Toolsets that need setup expose the engine's provider matrix:
+  pick a provider, save its API keys, and run the provider's install step.
+* **Add toolset.** Install curated MCP servers from the engine catalog or
+  connect a custom HTTP/stdio MCP server, with connection testing, enablement,
+  and removal.
 * **Catalog filters.** Switch between skills and toolsets.
 * **Status.** Show whether each skill or toolset is enabled, off, needs setup,
   or unknown.
@@ -36,7 +46,10 @@ agent do?" Rows must still make the type clear.
 | Source | Shows as | Notes |
 | --- | --- | --- |
 | Hermes skill folders | Skill | Includes runtime-reported workspace, project, personal, managed/local, and configured extra skill folders. Managed Runtime config blocks bundled skill prompt eligibility with a sentinel `skills.allowBundled` allowlist. |
-| Hermes toolsets | Toolset | Runtime-owned groups returned by Hermes `/api/tools/toolsets`; enablement is sent back to Hermes. |
+| Hermes skill hub | Installable skill | Engine-aggregated catalog (official, ClawHub, GitHub, skills.sh, LobeHub, Claude Marketplace, direct URL) browsed from the Add skill dialog. Installs land in the engine's skill folders and then appear as normal skill rows. |
+| Hub taps | Installable skill | User-added GitHub repos with a `skills/<name>/SKILL.md` layout, managed from the Add skill dialog's Sources view. Runtime writes the engine's `skills/.hub/taps.json`. Private repos work when the engine process resolves a GitHub token. |
+| Hermes toolsets | Toolset | Runtime-owned groups returned by Hermes `/api/tools/toolsets`; enablement is sent back to Hermes. Setup flows through the engine provider matrix. |
+| MCP servers | Toolset source | Curated catalog installs and custom HTTP/stdio servers managed from the Add toolset dialog. |
 | Hermes plugins | Skill or toolset when exposed | Plugins can register tools, workflows, providers, and plugin-owned skills. Tavern shows the agent-facing skill or toolset, not the plugin package as a separate product row. |
 
 Platform connections are separate. Discord, Slack, and similar messaging places
@@ -93,8 +106,18 @@ Codex-only rather than presented as Hermes skills. Tavern does not copy runtime
 skills or plugins into `~/.tavern/skills` or describe plugins to the model as
 Tavern skills.
 
+## Trust and safety
+
+Hub skills carry an engine trust tier (built-in, trusted, community) shown as a
+badge. The preview shows the SKILL.md and the exact files an install would
+write. The engine's install-time security scan runs before install; a blocked
+verdict disables the install action, and findings are listed in the preview.
+Tavern surfaces these signals but does not re-implement scanning or policy —
+the engine owns quarantine, scan, and install policy.
+
 ## What is intentionally missing
 
-* Marketplace, install, uninstall, and update flows.
+* A Tavern-owned marketplace, registry, version pinning UI, or update
+  scheduling; the engine hub owns install mechanics and its lockfile.
 * Converting runtime plugins or toolsets into Tavern skills.
 * Expanded troubleshooting flows for unusable toolsets.

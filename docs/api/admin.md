@@ -40,6 +40,9 @@ capabilities. It is not a second product API.
 | Jobs | `/jobs`, `/jobs/{slug}`, `/jobs/{slug}/run` |
 | Cron | `/cron-jobs`, `/cron-jobs/{id}`, `/cron-jobs/{id}/run`, `/cron-jobs/{id}/runs`, `/cron-runs`, `/cron-runs/{id}` |
 | Skills | `/skills`, `/skills/{id}`, `/skills/{id}/config` |
+| Skill hub | `/skills/hub/sources`, `/skills/hub/search`, `/skills/hub/preview`, `/skills/hub/scan`, `/skills/hub/install`, `/skills/hub/uninstall`, `/skills/hub/taps`, `/skills/hub/taps/{repo}` |
+| Toolset setup | `/toolsets`, `/toolsets/{id}/enabled`, `/toolsets/{id}/config`, `/toolsets/{id}/provider`, `/toolsets/{id}/env`, `/toolsets/{id}/post-setup` |
+| MCP servers | `/mcp/servers`, `/mcp/servers/{name}`, `/mcp/servers/{name}/test`, `/mcp/servers/{name}/enabled`, `/mcp/catalog`, `/mcp/catalog/install` |
 | Cortex, models, and access | `/cortex/status`, `/cortex/topics`, `/cortex/pages`, `/cortex/search`, `/models`, `/model-access`, `/model-access/api-key`, `/model-access/oauth/{providerId}/start`, `/model-access/oauth/{providerId}/poll/{sessionId}`, `/model-access/oauth/{providerId}/submit`, `/model-access/oauth/sessions/{sessionId}`, `/model-access/openrouter` |
 | Platform bindings | `/bindings`, `/bindings/{id}` |
 | Hermes chat projections | `/hermes/chats`, `/hermes/chats/{chatId}/messages` |

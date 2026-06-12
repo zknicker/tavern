@@ -213,7 +213,7 @@ integration points, and external dependencies.
 | `gateway` | Runtime can open managed Hermes Gateway WebSocket `/api/ws`. |
 | `cortexWiki` | The llm-wiki hub can be read and the managed Hermes `wiki` skill has been prepared. Runtime reports write access in capability metadata because wiki maintenance needs it, but read-only hubs remain browseable. |
 | `models` | Runtime can reach managed Hermes model inventory at `/api/model/options`. |
-| `skills` | Runtime can reach managed Hermes skill inventory at `/api/skills`. |
+| `skills` | Runtime can reach managed Hermes skill inventory at `/api/skills`. App-side capability methods under `skills` also track the skill hub (`skill-hub.*`), toolset setup (`toolsets.config`/`toolsets.setup`), and MCP management (`mcp.*`) surfaces. |
 
 Plain Tavern CRUD, timeline, mentions, cron, and logging surfaces are not
 capabilities by themselves. Add a capability only when a user-facing action

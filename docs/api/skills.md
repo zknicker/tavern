@@ -39,6 +39,19 @@ The API covers:
 * list Hermes toolsets visible to Tavern
 * enable or disable a Hermes toolset
 * read runtime-provided usability and diagnostic text
+* browse the skill hub catalog (`skill.hubCatalog`), search it
+  (`skill.hubSearch`), preview a skill's SKILL.md and file manifest
+  (`skill.hubPreview`), and read its security scan verdict (`skill.hubScan`)
+* install and uninstall hub skills (`skill.hubInstall`, `skill.hubUninstall`)
+* manage custom GitHub skill sources ("taps": `skill.hubTaps`,
+  `skill.hubTapAdd`, `skill.hubTapRemove`)
+* read a toolset's provider matrix (`skill.toolsetConfig`) and run setup
+  (`skill.setToolsetProvider`, `skill.saveToolsetEnv`,
+  `skill.runToolsetPostSetup`)
+* manage MCP servers and the MCP catalog (`skill.mcpServers`,
+  `skill.addMcpServer`, `skill.removeMcpServer`, `skill.testMcpServer`,
+  `skill.setMcpServerEnabled`, `skill.mcpCatalog`,
+  `skill.installMcpCatalogEntry`)
 
 ## Runtime Boundary
 
@@ -60,6 +73,20 @@ runtime allowlist policy.
 Toolsets remain Hermes-owned. Tavern reads them from Hermes and sends supported
 enablement changes back through Runtime. Codex app-server skills are not merged
 into the Tavern skill catalog.
+
+The skill hub is engine-owned: source aggregation, trust tiers, quarantine,
+scanning, install policy, and the install lockfile all live in the engine.
+Runtime proxies the hub at `/skills/hub/*`, waits for install/uninstall
+background actions to exit, then refreshes the skill inventory snapshot and
+emits the skill update event. Hub taps are the one exception: the engine has no
+HTTP surface for `skills/.hub/taps.json`, so Runtime reads and writes that file
+directly under the managed engine home.
+
+Toolset setup proxies the engine provider matrix at
+`/toolsets/{id}/config|provider|env|post-setup`. MCP servers and the curated MCP
+catalog proxy at `/mcp/*`. Env values are written into the engine's env store
+and come back only as set/unset status; server summaries keep env values
+redacted.
 
 ## Related Docs
 
