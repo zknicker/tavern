@@ -8,11 +8,6 @@ import { z } from 'zod';
 
 export const skillIdSchema = z.string().trim().min(1).max(200);
 
-export const skillHubSearchInputSchema = z.object({
-    query: z.string().trim().min(1).max(200),
-    source: z.string().trim().min(1).max(50).optional(),
-});
-
 export const skillHubIdentifierInputSchema = z.object({
     identifier: z.string().trim().min(1).max(400),
 });

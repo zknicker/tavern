@@ -1,9 +1,8 @@
 import { createRouter } from '../trpc.ts';
-import { skillHubCatalogProcedure } from './hub-catalog.ts';
+import { skillHubAvailableProcedure } from './hub-available.ts';
 import { skillHubInstallProcedure } from './hub-install.ts';
 import { skillHubPreviewProcedure } from './hub-preview.ts';
 import { skillHubScanProcedure } from './hub-scan.ts';
-import { skillHubSearchProcedure } from './hub-search.ts';
 import {
     skillHubTapAddProcedure,
     skillHubTapListProcedure,
@@ -37,8 +36,7 @@ export const skillRouter = createRouter({
     onUpdate: onSkillUpdate,
     setEnabled: setSkillEnabledProcedure,
     setToolsetEnabled: setToolsetEnabledProcedure,
-    hubCatalog: skillHubCatalogProcedure,
-    hubSearch: skillHubSearchProcedure,
+    hubAvailable: skillHubAvailableProcedure,
     hubPreview: skillHubPreviewProcedure,
     hubScan: skillHubScanProcedure,
     hubInstall: skillHubInstallProcedure,

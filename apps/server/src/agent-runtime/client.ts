@@ -74,12 +74,10 @@ import {
     type AgentRuntimeSessionResync,
     type AgentRuntimeSkill,
     type AgentRuntimeSkillHubActionResult,
-    type AgentRuntimeSkillHubCatalog,
+    type AgentRuntimeSkillHubAvailable,
     type AgentRuntimeSkillHubInstallInput,
     type AgentRuntimeSkillHubPreview,
     type AgentRuntimeSkillHubScan,
-    type AgentRuntimeSkillHubSearchInput,
-    type AgentRuntimeSkillHubSearchResult,
     type AgentRuntimeSkillHubTap,
     type AgentRuntimeSkillHubTapList,
     type AgentRuntimeSkillHubUninstallInput,
@@ -192,12 +190,10 @@ import {
     agentRuntimeSessionPromptSchema,
     agentRuntimeSessionResyncSchema,
     agentRuntimeSkillHubActionResultSchema,
-    agentRuntimeSkillHubCatalogSchema,
+    agentRuntimeSkillHubAvailableSchema,
     agentRuntimeSkillHubInstallInputSchema,
     agentRuntimeSkillHubPreviewSchema,
     agentRuntimeSkillHubScanSchema,
-    agentRuntimeSkillHubSearchInputSchema,
-    agentRuntimeSkillHubSearchResultSchema,
     agentRuntimeSkillHubTapListSchema,
     agentRuntimeSkillHubTapSchema,
     agentRuntimeSkillHubUninstallInputSchema,
@@ -302,7 +298,7 @@ export interface TavernAgentRuntimeClient {
     getRuntimeJob(slug: AgentRuntimeJobSlug): Promise<AgentRuntimeJobDetail | null>;
     getSessionGraph(sessionKey: string): Promise<AgentRuntimeSessionGraph>;
     getSessionPrompt(sessionKey: string): Promise<AgentRuntimeSessionPrompt | null>;
-    getSkillHubCatalog(): Promise<AgentRuntimeSkillHubCatalog>;
+    getSkillHubAvailable(): Promise<AgentRuntimeSkillHubAvailable>;
     getToolsetConfig(toolsetId: string): Promise<AgentRuntimeToolsetConfig>;
     getUpdateStatus(): Promise<AgentRuntimeUpdate>;
     getWorkspaceInstructions(agentId: string): Promise<AgentRuntimeRenderedWorkspaceInstructions>;
@@ -403,9 +399,6 @@ export interface TavernAgentRuntimeClient {
     ): Promise<AgentRuntimeWorkspaceInstructions>;
     scanSkillHubSkill(identifier: string): Promise<AgentRuntimeSkillHubScan>;
     searchCortex(input: CortexSearchInput): Promise<CortexSearchResult>;
-    searchSkillHub(
-        input: AgentRuntimeSkillHubSearchInput
-    ): Promise<AgentRuntimeSkillHubSearchResult>;
     selectToolsetProvider(
         toolsetId: string,
         input: AgentRuntimeToolsetProviderSelect
@@ -1633,23 +1626,9 @@ class HttpTavernAgentRuntimeClient implements TavernAgentRuntimeClient {
         return agentRuntimeToolsetSchema.parse(await response.json());
     }
 
-    async getSkillHubCatalog() {
-        return agentRuntimeSkillHubCatalogSchema.parse(
-            await this.#getSkillHubJson(agentRuntimeRoutes.skillHubSources)
-        );
-    }
-
-    async searchSkillHub(input: AgentRuntimeSkillHubSearchInput) {
-        const parsed = agentRuntimeSkillHubSearchInputSchema.parse(input);
-        const params = new URLSearchParams({ query: parsed.query });
-        if (parsed.source) {
-            params.set('source', parsed.source);
-        }
-        if (parsed.limit !== undefined) {
-            params.set('limit', String(parsed.limit));
-        }
-        return agentRuntimeSkillHubSearchResultSchema.parse(
-            await this.#getSkillHubJson(`${agentRuntimeRoutes.skillHubSearch}?${params.toString()}`)
+    async getSkillHubAvailable() {
+        return agentRuntimeSkillHubAvailableSchema.parse(
+            await this.#getSkillHubJson(agentRuntimeRoutes.skillHubAvailable)
         );
     }
 

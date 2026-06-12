@@ -1,6 +1,5 @@
 import type {
     AgentRuntimeSkillHubInstallInput,
-    AgentRuntimeSkillHubSearchInput,
     AgentRuntimeSkillHubTap,
     AgentRuntimeSkillHubUninstallInput,
 } from '@tavern/api';
@@ -11,17 +10,10 @@ import {
     getCurrentConfiguredAgentRuntimeConnection,
 } from './configured-client.ts';
 
-export async function getAgentRuntimeSkillHubCatalog() {
+export async function getAgentRuntimeSkillHubAvailable() {
     return await callSkillHub(
         'skill-hub.status',
-        async (client) => await client.getSkillHubCatalog()
-    );
-}
-
-export async function searchAgentRuntimeSkillHub(input: AgentRuntimeSkillHubSearchInput) {
-    return await callSkillHub(
-        'skill-hub.status',
-        async (client) => await client.searchSkillHub(input)
+        async (client) => await client.getSkillHubAvailable()
     );
 }
 

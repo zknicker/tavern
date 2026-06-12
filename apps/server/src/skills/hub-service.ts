@@ -1,20 +1,18 @@
 import type { AgentRuntimeSkillHubActionResult } from '@tavern/api';
 import {
     addAgentRuntimeSkillHubTap,
-    getAgentRuntimeSkillHubCatalog,
+    getAgentRuntimeSkillHubAvailable,
     installAgentRuntimeSkillHubSkill,
     listAgentRuntimeSkillHubTaps,
     previewAgentRuntimeSkillHubSkill,
     removeAgentRuntimeSkillHubTap,
     scanAgentRuntimeSkillHubSkill,
-    searchAgentRuntimeSkillHub,
     uninstallAgentRuntimeSkillHubSkill,
 } from '../agent-runtime/skill-hub.ts';
 import { emitSkillInvalidationCascade } from '../api/invalidation-events.ts';
 import {
     skillHubIdentifierInputSchema,
     skillHubInstallInputSchema,
-    skillHubSearchInputSchema,
     skillHubTapInputSchema,
     skillHubTapRemoveInputSchema,
     skillHubUninstallInputSchema,
@@ -22,13 +20,8 @@ import {
 import { enqueueRuntimeSkillInventoryRefresh } from './inventory-job.ts';
 import { refreshRuntimeSkillInventory } from './inventory-sync.ts';
 
-export async function getSkillHubCatalog() {
-    return requireHub(await getAgentRuntimeSkillHubCatalog());
-}
-
-export async function searchSkillHub(input: unknown) {
-    const parsed = skillHubSearchInputSchema.parse(input);
-    return requireHub(await searchAgentRuntimeSkillHub(parsed));
+export async function getSkillHubAvailable() {
+    return requireHub(await getAgentRuntimeSkillHubAvailable());
 }
 
 export async function previewSkillHubSkill(input: unknown) {
