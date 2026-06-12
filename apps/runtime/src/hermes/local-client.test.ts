@@ -791,6 +791,14 @@ describe('LocalHermesClient session routing', () => {
                             },
                             type: 'approval.request',
                         },
+                        {
+                            payload: {
+                                choices: ['Los Angeles', 'San Francisco'],
+                                question: 'Which part of California?',
+                                request_id: 'clarify_1',
+                            },
+                            type: 'clarify.request',
+                        },
                         { payload: { text: 'done' }, type: 'message.complete' },
                     ]) {
                         socket.send(
@@ -863,6 +871,15 @@ describe('LocalHermesClient session routing', () => {
                     source_event: 'approval.request',
                 },
                 event: 'approval.requested',
+            },
+            {
+                data: {
+                    choices: ['Los Angeles', 'San Francisco'],
+                    question: 'Which part of California?',
+                    request_id: 'clarify_1',
+                    source_event: 'clarify.request',
+                },
+                event: 'clarification.requested',
             },
             {
                 data: {

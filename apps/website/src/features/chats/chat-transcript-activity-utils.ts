@@ -189,6 +189,9 @@ export function getActiveWorkLabel(items: ActivityItem[]) {
 
         if (item.row.kind === 'tool') {
             const name = item.row.toolCall.name.trim();
+            if (name.toLowerCase() === 'clarify') {
+                return 'Needs an answer';
+            }
             const target =
                 item.row.toolCall.summaryParts.join(' ').trim() ||
                 item.row.toolCall.label?.trim() ||
@@ -295,6 +298,11 @@ function countWorkItems(items: ActivityItem[]) {
 
             if (matchesAny(name, ['tool_search', 'tool-search'])) {
                 counts.toolUse += 1;
+                return counts;
+            }
+
+            if (name === 'clarify') {
+                counts.other += 1;
                 return counts;
             }
 

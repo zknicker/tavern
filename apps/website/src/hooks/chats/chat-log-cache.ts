@@ -159,6 +159,7 @@ function progressStepToToolRow(input: {
             kind: 'agent',
         },
         completedAt,
+        clarification: normalizeProgressClarification(input.step.clarification),
         connectsToNext: false,
         connectsToPrevious: false,
         id: progressActivityId(input.turn.runId, input.step.id),
@@ -322,6 +323,7 @@ function mergeWorkerRows(existing: WorkerRow, next: WorkerRow): WorkerRow {
 function mergeToolRows(existing: ToolRow, next: ToolRow): ToolRow {
     return {
         ...next,
+        clarification: next.clarification ?? existing.clarification ?? null,
         completedAt: next.completedAt ?? existing.completedAt,
         startedAt: existing.startedAt ?? next.startedAt,
         toolCall: {
@@ -356,6 +358,21 @@ function toolFacts(
     ];
 }
 
+function normalizeProgressClarification(step: ChatTurnProgressStep['clarification']) {
+    if (!step) {
+        return null;
+    }
+
+    return {
+        answer: step.answer ?? null,
+        choices: step.choices,
+        deadlineAt: step.deadlineAt ?? null,
+        disposition: step.disposition ?? null,
+        question: step.question,
+        requestId: step.requestId,
+    };
+}
+
 function isShellStep(step: ChatTurnProgressStep) {
     const name = step.toolName?.trim().toLowerCase() ?? '';
 
@@ -376,6 +393,10 @@ function toolNameForStep(step: ChatTurnProgressStep) {
 }
 
 function toolTarget(step: ChatTurnProgressStep) {
+    if (step.toolName?.trim().toLowerCase() === 'clarify') {
+        return step.clarification?.question ?? step.detail?.trim() ?? stripToolVerb(step.label);
+    }
+
     const detail = step.detail?.trim();
 
     if (

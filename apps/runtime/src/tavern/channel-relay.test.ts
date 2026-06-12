@@ -9,7 +9,9 @@ interface MockHermesEvent {
 
 const hermesClient = vi.hoisted(() => ({
     close: vi.fn(),
+    respondToLiveClarification: vi.fn(async () => ({ resolved: true })),
     streamChat: vi.fn(async function* streamChat(_input?: {
+        onLiveSessionId?: (sessionId: string) => void;
         signal?: AbortSignal;
     }): AsyncGenerator<MockHermesEvent> {
         yield {
@@ -37,7 +39,7 @@ vi.mock('../hermes/local-client', () => ({
 
 import { sendTavernChannelMessage, stopTavernChannelTurn } from './channel-relay';
 import { createChat, getChat, listMessages, listResponses } from './chat-api';
-import { closeHermesTurnClients } from './hermes-turn-runner';
+import { closeHermesTurnClients, respondToHermesClarification } from './hermes-turn-runner';
 
 describe('Tavern Hermes channel relay', () => {
     beforeEach(() => {
@@ -529,6 +531,94 @@ describe('Tavern Hermes channel relay', () => {
         ).toEqual(['(o_o) processing...']);
     });
 
+    it('preserves clarification answer metadata when the gateway stream resumes first', async () => {
+        const responseStarted = deferred<void>();
+        const allowResponseToResolve = deferred<void>();
+        hermesClient.streamChat.mockImplementationOnce(async function* streamChat(input?: {
+            onLiveSessionId?: (sessionId: string) => void;
+        }) {
+            input?.onLiveSessionId?.('live_session_1');
+            yield {
+                data: {
+                    choices: ['Berlin', 'Munich'],
+                    question: 'Which city?',
+                    request_id: 'clarify_1',
+                },
+                event: 'clarification.requested',
+            };
+            await responseStarted.promise;
+            yield { data: { delta: 'Berlin is mild.' }, event: 'assistant.delta' };
+            yield {
+                data: { content: 'Berlin is mild.', message_id: 'hermes_msg_clarify' },
+                event: 'assistant.completed',
+            };
+        });
+        hermesClient.respondToLiveClarification.mockImplementationOnce(async () => {
+            responseStarted.resolve();
+            await allowResponseToResolve.promise;
+            return { resolved: true };
+        });
+        createChat({ id: 'cht_1' });
+
+        await sendTavernChannelMessage('cht_1', {
+            agent: {
+                agentId: 'agt_1',
+            },
+            message: {
+                content: 'weather',
+                id: 'msg_clarify',
+                nonce: 'nonce_clarify',
+            },
+            target: {
+                externalId: null,
+                sessionKey: 'session_1',
+                target: 'cht_1',
+                type: 'tavern',
+            },
+        });
+        await waitFor(() =>
+            listResponses('cht_1').activity.some(
+                (activity) => activity.metadata.event === 'clarify.request'
+            )
+        );
+
+        const response = respondToHermesClarification({
+            answer: 'Berlin',
+            disposition: 'answered',
+            requestId: 'clarify_1',
+            sessionKey: 'session_1',
+        });
+        await responseStarted.promise;
+        await waitFor(() =>
+            listResponses('cht_1').activity.some((activity) => {
+                const clarification = readRecord(activity.metadata.clarification);
+                return (
+                    activity.metadata.event === 'clarify.answered' &&
+                    clarification.answer === 'Berlin'
+                );
+            })
+        );
+
+        allowResponseToResolve.resolve();
+        await response;
+        expect(listResponses('cht_1').activity).toEqual(
+            expect.arrayContaining([
+                expect.objectContaining({
+                    kind: 'custom',
+                    metadata: expect.objectContaining({
+                        clarification: expect.objectContaining({
+                            answer: 'Berlin',
+                            disposition: 'answered',
+                        }),
+                        event: 'clarify.answered',
+                    }),
+                    status: 'completed',
+                    title: 'Clarification',
+                }),
+            ])
+        );
+    });
+
     it('does not duplicate completed streamed reasoning with final aggregate reasoning', async () => {
         hermesClient.streamChat.mockImplementationOnce(async function* streamChat() {
             yield {
@@ -788,6 +878,17 @@ async function waitForHermesTurn() {
     await new Promise((resolve) => setTimeout(resolve, 0));
 }
 
+async function waitFor(predicate: () => boolean) {
+    for (let attempt = 0; attempt < 20; attempt += 1) {
+        if (predicate()) {
+            return;
+        }
+        await new Promise((resolve) => setTimeout(resolve, 0));
+    }
+
+    throw new Error('Timed out waiting for expected test state.');
+}
+
 function deferred<T>() {
     let resolve!: (value: T | PromiseLike<T>) => void;
     let reject!: (reason?: unknown) => void;
@@ -796,4 +897,10 @@ function deferred<T>() {
         reject = promiseReject;
     });
     return { promise, reject, resolve };
+}
+
+function readRecord(value: unknown): Record<string, unknown> {
+    return value && typeof value === 'object' && !Array.isArray(value)
+        ? (value as Record<string, unknown>)
+        : {};
 }

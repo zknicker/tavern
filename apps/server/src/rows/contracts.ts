@@ -13,6 +13,15 @@ import { workerSchema } from '../workers/contracts.ts';
 export const toolFactRowSchema = toolFactSchema;
 export const toolCallRowSchema = toolCallSchema;
 
+export const clarificationRowSchema = z.object({
+    answer: z.string().nullable(),
+    choices: z.array(z.string()),
+    deadlineAt: z.string().nullable(),
+    disposition: z.enum(['answered', 'skipped', 'timeout']).nullable(),
+    question: z.string(),
+    requestId: z.string(),
+});
+
 export const messageRowMessageSchema = sessionMessageSchema.extend({
     sourceSessionId: z.string().nullable(),
     sourceSessionKey: z.string(),
@@ -31,6 +40,7 @@ export const messageRowSchema = z.object({
 export const toolRowSchema = z.object({
     actor: actorRefSchema.nullable(),
     completedAt: z.string().nullable(),
+    clarification: clarificationRowSchema.nullable().optional(),
     connectsToNext: z.boolean(),
     connectsToPrevious: z.boolean(),
     id: z.string(),

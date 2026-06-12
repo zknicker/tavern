@@ -1,6 +1,8 @@
 import {
     agentRuntimeApprovalRespondResultSchema,
     agentRuntimeApprovalRespondSchema,
+    agentRuntimeClarificationRespondResultSchema,
+    agentRuntimeClarificationRespondSchema,
     agentRuntimeHighlightListSchema,
     agentRuntimeMacAppListSchema,
     agentRuntimeMutationHeaders,
@@ -26,7 +28,7 @@ import { handleCortexRequest } from '../wiki/routes';
 import { handleWorkspaceRequest } from '../workspace/routes';
 import { handleTavernApiRequest } from './chat-api-router';
 import { deliverHermesCronToTavernChat } from './cron-delivery';
-import { respondToHermesApproval } from './hermes-turn-runner';
+import { respondToHermesApproval, respondToHermesClarification } from './hermes-turn-runner';
 import { forbidden, json, notFound, readJson } from './http';
 import { handleHermesProxyRequest } from './proxy';
 import { listProjectedTavernRuntimeEvents } from './runtime-event-projection';
@@ -235,6 +237,18 @@ export async function handleTavernRuntimeRequest(request: Request): Promise<Resp
         return json(
             agentRuntimeApprovalRespondResultSchema.parse(
                 await respondToHermesApproval({ ...payload, sessionKey: hermesSessionKey })
+            )
+        );
+    }
+
+    if (hermesSessionKey && request.method === 'POST' && segments[3] === 'clarification') {
+        const payload = agentRuntimeClarificationRespondSchema.parse(await readJson(request));
+        return json(
+            agentRuntimeClarificationRespondResultSchema.parse(
+                await respondToHermesClarification({
+                    ...payload,
+                    sessionKey: hermesSessionKey,
+                })
             )
         );
     }

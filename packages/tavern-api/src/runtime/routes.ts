@@ -84,6 +84,8 @@ export const agentRuntimeRoutes = {
     toolsets: '/toolsets',
     sessionApprovalRespond: (sessionKey: string) =>
         `/hermes/sessions/${encodeURIComponent(sessionKey)}/approval`,
+    sessionClarificationRespond: (sessionKey: string) =>
+        `/hermes/sessions/${encodeURIComponent(sessionKey)}/clarification`,
     sessionGraph: (sessionKey: string) => `/hermes/sessions/${sessionKey}/graph`,
     sessionMessages: (sessionKey: string) => `/hermes/sessions/${sessionKey}/messages`,
     sessionPrompt: (sessionKey: string) => `/hermes/sessions/${sessionKey}/prompt`,

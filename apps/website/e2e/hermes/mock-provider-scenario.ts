@@ -30,7 +30,10 @@ export function buildChatCompletion(body: Record<string, unknown>): ChatCompleti
         reasoning: shouldEmitReasoning(prompt)
             ? 'I should show this reasoning summary in Tavern.'
             : '',
-        text: toolCalls.length > 0 || shouldReturnEmptyReply(transcript) ? '' : selectReply(prompt),
+        text:
+            toolCalls.length > 0 || shouldReturnEmptyReply(transcript)
+                ? ''
+                : selectReply(prompt, toolOutput),
         toolCalls,
     };
 }
@@ -62,6 +65,9 @@ function buildToolCall(body: Record<string, unknown>, prompt: string, index: num
 }
 
 function chooseToolName(available: Set<string>, prompt: string) {
+    if (shouldRunClarification(prompt) && available.has('clarify')) {
+        return 'clarify';
+    }
     if (/multi-stage progress/i.test(prompt) && available.has('terminal')) {
         return 'terminal';
     }
@@ -85,6 +91,12 @@ function chooseToolName(available: Set<string>, prompt: string) {
 
 function buildToolArgs(toolName: string, prompt: string) {
     const taskPath = path.join(workspaceDir, 'QA_KICKOFF_TASK.md');
+    if (toolName === 'clarify') {
+        return {
+            choices: ['Los Angeles', 'San Francisco', 'San Diego', 'Sacramento'],
+            question: 'Which part of California?',
+        };
+    }
     if (toolName === 'terminal') {
         const sleepPrefix = /slow QA command|reload-heavy|subagent recovery/i.test(prompt)
             ? 'sleep 4 && '
@@ -113,7 +125,11 @@ function readToolNames(body: Record<string, unknown>) {
     return names;
 }
 
-function selectReply(prompt: string) {
+function selectReply(prompt: string, toolOutput: string) {
+    if (shouldRunClarification(prompt)) {
+        return selectClarificationReply(prompt, toolOutput);
+    }
+
     return (
         (/thinking visibility check/i.test(prompt) && 'THINKING-MAX-OK') ||
         prompt.match(/reply exactly `([^`]+)`/iu)?.[1] ||
@@ -127,9 +143,33 @@ function shouldReturnEmptyReply(transcript: string) {
 }
 
 function shouldUseTool(prompt: string) {
-    return /QA_KICKOFF_TASK\.md|tool progress|slow QA command|reload-heavy|subagent recovery|use\s+3\s+tools|multi-stage progress/i.test(
+    return /QA_KICKOFF_TASK\.md|tool progress|slow QA command|reload-heavy|subagent recovery|use\s+3\s+tools|multi-stage progress|clarification (?:choice|skip) qa/i.test(
         prompt
     );
+}
+
+function shouldRunClarification(prompt: string) {
+    return /clarification (?:choice|skip) qa/i.test(prompt);
+}
+
+function selectClarificationReply(prompt: string, toolOutput: string) {
+    const marker = prompt.match(/reply exactly `([^`]+)`/iu)?.[1] ?? 'CLARIFICATION-OK';
+    const response = extractClarificationResponse(toolOutput);
+
+    if (/clarification skip qa/i.test(prompt)) {
+        return /cancelled|best judgement/i.test(response)
+            ? marker
+            : `CLARIFICATION-SKIP-MISSING:${response}`;
+    }
+
+    return response === 'San Francisco' ? marker : `CLARIFICATION-ANSWER:${response}`;
+}
+
+function extractClarificationResponse(toolOutput: string) {
+    const parsed = safeJsonRecord(toolOutput);
+    const response = parsed ? readString(parsed.user_response) : null;
+
+    return response ?? toolOutput;
 }
 
 function shouldEmitReasoning(prompt: string) {
@@ -220,6 +260,14 @@ function asRecord(value: unknown): Record<string, unknown> {
     return typeof value === 'object' && value !== null && !Array.isArray(value)
         ? (value as Record<string, unknown>)
         : {};
+}
+
+function safeJsonRecord(value: string) {
+    try {
+        return asRecord(JSON.parse(value) as unknown);
+    } catch {
+        return null;
+    }
 }
 
 interface ToolCallPayload {

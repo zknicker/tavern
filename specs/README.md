@@ -36,6 +36,8 @@ directly.
 - `mentions.md`: `@` references in composers, their metadata, and their runtime effects.
 - `jobs.md`, `workers.md`, `models.md`, `skills.md`, `tools.md`, `catalog.md`, `activity-log.md`:
   focused product surfaces.
+- `clarifications.md`: mid-turn questions, skip/timeout answers, and runtime
+  response wiring.
 - `connectors.md`: user-configured MCP servers as a settings surface.
 - `permissions.md`: approval modes and the command allowlist.
 - `workspace.md`: the generated `AGENTS.md` artifact and its editable

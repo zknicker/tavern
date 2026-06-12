@@ -248,6 +248,7 @@ function activityToChatRows(
             id: activity.id,
             isFirstInGroup: true,
             kind: 'tool' as const,
+            clarification: clarificationFromActivity(activity),
             sessionKey,
             spawnedRelationships: [],
             startedAt: activity.started_at,
@@ -428,6 +429,10 @@ function activityName(activity: TavernResponseActivity) {
 function activitySummaryParts(activity: TavernResponseActivity) {
     const detail = activity.detail?.trim() ?? '';
 
+    if (detail && readRecord(activity.metadata.clarification).requestId) {
+        return [detail];
+    }
+
     if (
         detail &&
         (activity.kind === 'approval' ||
@@ -449,6 +454,51 @@ function readRecord(value: unknown): Record<string, unknown> {
 
 function readString(value: unknown) {
     return typeof value === 'string' && value.trim().length > 0 ? value : null;
+}
+
+function readOptionalString(value: unknown) {
+    return typeof value === 'string' ? value : null;
+}
+
+function readStringArray(value: unknown) {
+    return Array.isArray(value)
+        ? value.filter((item): item is string => typeof item === 'string' && item.trim().length > 0)
+        : [];
+}
+
+function readClarificationDisposition(value: unknown): 'answered' | 'skipped' | 'timeout' | null {
+    if (value === 'answered' || value === 'skipped' || value === 'timeout') {
+        return value;
+    }
+
+    return null;
+}
+
+function readIsoString(value: unknown) {
+    if (typeof value !== 'string' || Number.isNaN(Date.parse(value))) {
+        return null;
+    }
+
+    return new Date(Date.parse(value)).toISOString();
+}
+
+function clarificationFromActivity(activity: TavernResponseActivity) {
+    const clarification = readRecord(activity.metadata.clarification);
+    const requestId = readString(clarification.requestId);
+    const question = readString(clarification.question);
+
+    if (!(requestId && question)) {
+        return null;
+    }
+
+    return {
+        answer: readOptionalString(clarification.answer),
+        choices: readStringArray(clarification.choices),
+        deadlineAt: readIsoString(clarification.deadlineAt),
+        disposition: readClarificationDisposition(clarification.disposition),
+        question,
+        requestId,
+    };
 }
 
 function messageText(message: TavernChatMessage) {

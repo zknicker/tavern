@@ -1,5 +1,7 @@
 import type {
     AgentRuntimeApprovalRespond,
+    AgentRuntimeClarificationRespond,
+    AgentRuntimeClarificationRespondResult,
     AgentRuntimeSessionMessageAttachment,
 } from '@tavern/api';
 import { readConfigValue } from '../config';
@@ -15,20 +17,31 @@ import {
 } from './turn-stream-throttle';
 
 type HermesClient = ReturnType<typeof createLocalHermesClient>;
+type ClarificationDisposition = 'answered' | 'skipped' | 'timeout';
+interface ClarificationSettlement {
+    answer?: string | null;
+    disposition?: ClarificationDisposition | null;
+}
 
-const activeHermesTurns = new Map<
-    string,
-    {
-        client: HermesClient;
-        controller: AbortController;
-        settleAllApprovals: boolean;
-        sessionId: string | null;
-        sessionKey: string;
-    }
->();
+interface ActiveHermesTurn {
+    clarificationDeadlines: Map<string, number>;
+    clarificationSettlements: Map<string, ClarificationSettlement>;
+    clarificationTimers: Map<string, ReturnType<typeof setTimeout>>;
+    client: HermesClient;
+    controller: AbortController;
+    sessionId: string | null;
+    sessionKey: string;
+    settleAllApprovals: boolean;
+    settleClarification: (requestId: string, settlement?: ClarificationSettlement) => boolean;
+}
+
+const activeHermesTurns = new Map<string, ActiveHermesTurn>();
 let hermesTurnClient: HermesClient | null = null;
 const visibleAssistantStatusKinds = new Set(['compressing', 'goal', 'process', 'status']);
 const hiddenAssistantStatusDetails = new Set(['ready']);
+const defaultClarificationTimeoutMs = 120_000;
+const clarificationTimeoutAnswer =
+    'The user did not provide an answer before Tavern timed out. Use your best judgement to proceed.';
 
 export async function runHermesTurn(input: {
     agentId: string;
@@ -60,14 +73,6 @@ export async function runHermesTurn(input: {
     let reasoningSegment: ReasoningSegment | null = null;
     let reasoningSegmentIndex = 0;
     const completedReasoningMessages: string[] = [];
-    const activeTurn = {
-        client,
-        controller: new AbortController(),
-        settleAllApprovals: false,
-        sessionId: null as string | null,
-        sessionKey: input.sessionKey,
-    };
-    activeHermesTurns.set(input.runId, activeTurn);
     const stream = createTurnStreamThrottle();
     const gatewayActivities = createGatewayActivityRecorder({
         agentId: input.agentId,
@@ -76,6 +81,18 @@ export async function runHermesTurn(input: {
         runId: input.runId,
         sessionKey: input.sessionKey,
     });
+    const activeTurn = {
+        client,
+        clarificationDeadlines: new Map<string, number>(),
+        clarificationSettlements: new Map<string, ClarificationSettlement>(),
+        clarificationTimers: new Map<string, ReturnType<typeof setTimeout>>(),
+        controller: new AbortController(),
+        settleClarification: gatewayActivities.settleClarification,
+        settleAllApprovals: false,
+        sessionId: null as string | null,
+        sessionKey: input.sessionKey,
+    };
+    activeHermesTurns.set(input.runId, activeTurn);
     // Both wrappers flush coalesced stream writes first so running-status
     // writes always land before the segment's terminal write.
     const completeReasoningToProgress = (sourceEvent?: string) => {
@@ -132,6 +149,15 @@ export async function runHermesTurn(input: {
                 }
             }
 
+            if (gatewayActivities.hasOpenClarification() && isAgentResumedEvent(event.event)) {
+                settlePendingClarifications(activeTurn);
+                if (gatewayActivities.hasOpenClarification()) {
+                    clearClarificationTimers(activeTurn);
+                    activeTurn.clarificationDeadlines.clear();
+                    gatewayActivities.settleOpenClarifications();
+                }
+            }
+
             if (event.event === 'assistant.composing') {
                 continue;
             }
@@ -156,6 +182,13 @@ export async function runHermesTurn(input: {
                 flushAssistantToProgress();
                 stream.flush();
                 gatewayActivities.recordApproval(event.data);
+                continue;
+            }
+
+            if (event.event === 'clarification.requested') {
+                flushAssistantToProgress();
+                stream.flush();
+                recordClarificationRequest(gatewayActivities, activeTurn, event);
                 continue;
             }
 
@@ -315,6 +348,7 @@ export async function runHermesTurn(input: {
         reasoningSegment = null;
         failHermesTurn(input, participantId, error, turn);
     } finally {
+        clearClarificationTimers(activeTurn);
         activeHermesTurns.delete(input.runId);
     }
 }
@@ -365,6 +399,43 @@ export async function respondToHermesApproval(
     }
 
     throw new Error(`No active turn is awaiting approval for session "${input.sessionKey}".`);
+}
+
+export async function respondToHermesClarification(
+    input: AgentRuntimeClarificationRespond & { sessionKey: string }
+): Promise<AgentRuntimeClarificationRespondResult> {
+    for (const activeTurn of activeHermesTurns.values()) {
+        if (activeTurn.sessionKey !== input.sessionKey || !activeTurn.sessionId) {
+            continue;
+        }
+
+        const settlement = {
+            answer: input.answer,
+            disposition: input.disposition ?? 'answered',
+        } satisfies ClarificationSettlement;
+        activeTurn.clarificationSettlements.set(input.requestId, settlement);
+        clearClarificationTimer(activeTurn, input.requestId);
+
+        try {
+            const result = await activeTurn.client.respondToLiveClarification(
+                activeTurn.sessionId,
+                {
+                    answer: input.answer,
+                    requestId: input.requestId,
+                }
+            );
+            finalizeClarificationSettlement(activeTurn, input.requestId, settlement);
+            return result;
+        } catch (error) {
+            if (activeTurn.clarificationSettlements.get(input.requestId) === settlement) {
+                activeTurn.clarificationSettlements.delete(input.requestId);
+                restoreClarificationTimer(activeTurn, input.requestId);
+            }
+            throw error;
+        }
+    }
+
+    throw new Error(`No active turn is awaiting clarification for session "${input.sessionKey}".`);
 }
 
 /** Whether any chat turn is currently dispatched to the engine. */
@@ -420,6 +491,147 @@ function getHermesTurnClient() {
     const client = createLocalHermesClient();
     hermesTurnClient = client;
     return client;
+}
+
+function recordClarificationRequest(
+    gatewayActivities: ReturnType<typeof createGatewayActivityRecorder>,
+    activeTurn: ActiveHermesTurn,
+    event: HermesEvent
+) {
+    const requestId = readClarificationRequestId(event.data);
+
+    if (!requestId) {
+        gatewayActivities.recordClarification(event.data);
+        return;
+    }
+
+    const deadlineAtMs = Date.now() + resolveClarificationTimeoutMs();
+    const deadlineAt = new Date(deadlineAtMs).toISOString();
+
+    gatewayActivities.recordClarification({
+        ...event.data,
+        deadline_at: deadlineAt,
+    });
+    scheduleClarificationTimeout(activeTurn, requestId, deadlineAtMs);
+}
+
+function scheduleClarificationTimeout(
+    activeTurn: ActiveHermesTurn,
+    requestId: string,
+    deadlineAtMs: number
+) {
+    clearClarificationTimer(activeTurn, requestId);
+    activeTurn.clarificationDeadlines.set(requestId, deadlineAtMs);
+    const timeoutMs = Math.max(0, deadlineAtMs - Date.now());
+    const timer = setTimeout(() => {
+        activeTurn.clarificationTimers.delete(requestId);
+        const sessionId = activeTurn.sessionId;
+
+        if (!sessionId) {
+            return;
+        }
+
+        const settlement = {
+            answer: clarificationTimeoutAnswer,
+            disposition: 'timeout',
+        } satisfies ClarificationSettlement;
+        activeTurn.clarificationSettlements.set(requestId, settlement);
+        activeTurn.client
+            .respondToLiveClarification(sessionId, {
+                answer: clarificationTimeoutAnswer,
+                requestId,
+            })
+            .then(() => {
+                finalizeClarificationSettlement(activeTurn, requestId, settlement);
+            })
+            .catch((error: unknown) => {
+                if (activeTurn.clarificationSettlements.get(requestId) === settlement) {
+                    activeTurn.clarificationSettlements.delete(requestId);
+                }
+                console.warn('[tavern-runtime] Clarification timeout response failed', error);
+            });
+    }, timeoutMs);
+
+    unrefTimer(timer);
+    activeTurn.clarificationTimers.set(requestId, timer);
+}
+
+function settlePendingClarifications(activeTurn: ActiveHermesTurn) {
+    for (const [requestId, settlement] of [...activeTurn.clarificationSettlements]) {
+        finalizeClarificationSettlement(activeTurn, requestId, settlement);
+    }
+}
+
+function finalizeClarificationSettlement(
+    activeTurn: ActiveHermesTurn,
+    requestId: string,
+    settlement: ClarificationSettlement
+) {
+    activeTurn.settleClarification(requestId, settlement);
+    activeTurn.clarificationSettlements.delete(requestId);
+    activeTurn.clarificationDeadlines.delete(requestId);
+    clearClarificationTimer(activeTurn, requestId);
+}
+
+function restoreClarificationTimer(activeTurn: ActiveHermesTurn, requestId: string) {
+    const deadlineAtMs = activeTurn.clarificationDeadlines.get(requestId);
+
+    if (!deadlineAtMs) {
+        return;
+    }
+
+    scheduleClarificationTimeout(activeTurn, requestId, deadlineAtMs);
+}
+
+function clearClarificationTimer(
+    activeTurn: { clarificationTimers: Map<string, ReturnType<typeof setTimeout>> },
+    requestId: string
+) {
+    const timer = activeTurn.clarificationTimers.get(requestId);
+
+    if (!timer) {
+        return;
+    }
+
+    clearTimeout(timer);
+    activeTurn.clarificationTimers.delete(requestId);
+}
+
+function clearClarificationTimers(activeTurn: {
+    clarificationTimers: Map<string, ReturnType<typeof setTimeout>>;
+}) {
+    for (const timer of activeTurn.clarificationTimers.values()) {
+        clearTimeout(timer);
+    }
+    activeTurn.clarificationTimers.clear();
+}
+
+function readClarificationRequestId(data: Record<string, unknown>) {
+    return readString(data.request_id) ?? readString(data.requestId) ?? readString(data.id);
+}
+
+function resolveClarificationTimeoutMs() {
+    const configured = Number.parseInt(
+        readConfigValue('TAVERN_CLARIFICATION_TIMEOUT_MS') ?? '',
+        10
+    );
+
+    if (Number.isFinite(configured) && configured > 0) {
+        return configured;
+    }
+
+    return defaultClarificationTimeoutMs;
+}
+
+function unrefTimer(timer: ReturnType<typeof setTimeout>) {
+    if (typeof timer !== 'object' || !('unref' in timer)) {
+        return;
+    }
+
+    const unref = timer.unref;
+    if (typeof unref === 'function') {
+        unref.call(timer);
+    }
 }
 
 function recordToolProgress(input: HermesTurnInput, turn: HermesTurn, event: HermesEvent) {

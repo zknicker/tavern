@@ -159,6 +159,18 @@ export class LocalHermesClient extends LocalHermesUnsupportedSurfaces {
         };
     }
 
+    async respondToLiveClarification(
+        sessionId: string,
+        input: { answer: string; requestId: string }
+    ) {
+        await this.#gateway.request('clarify.respond', {
+            answer: input.answer,
+            request_id: input.requestId,
+            session_id: sessionId,
+        });
+        return { resolved: true };
+    }
+
     async listAgents() {
         const state = await readHermesAdapterState();
         return agentRuntimeAgentListSchema.parse({
@@ -730,6 +742,10 @@ export class LocalHermesClient extends LocalHermesUnsupportedSurfaces {
                     return;
                 }
 
+                if (event.type.startsWith('tool.') && isClarifyToolPayload(event.payload)) {
+                    continue;
+                }
+
                 if (event.type === 'tool.start') {
                     yield {
                         data: {
@@ -827,6 +843,14 @@ export class LocalHermesClient extends LocalHermesUnsupportedSurfaces {
                     yield {
                         data: { ...event.payload, source_event: event.type },
                         event: 'approval.requested',
+                    };
+                    continue;
+                }
+
+                if (event.type === 'clarify.request') {
+                    yield {
+                        data: { ...event.payload, source_event: event.type },
+                        event: 'clarification.requested',
                     };
                     continue;
                 }
@@ -1359,6 +1383,12 @@ function readStringFromUnknown(value: unknown, keys: string[]) {
     return value && typeof value === 'object'
         ? readString(value as Record<string, unknown>, keys)
         : undefined;
+}
+
+function isClarifyToolPayload(payload: Record<string, unknown>) {
+    const name = readString(payload, ['name', 'tool_name']);
+
+    return name?.trim().toLowerCase() === 'clarify';
 }
 
 function formatHermesAttachmentRef(kind: 'file' | 'image', value: string) {

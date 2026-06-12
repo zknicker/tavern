@@ -2,6 +2,7 @@ import type { HugeiconsIconProps } from '@hugeicons/react';
 import {
     AiMagicIcon,
     BrowserIcon,
+    BubbleChatQuestionIcon,
     CommandLineIcon,
     FileEditIcon,
     FileSearchIcon,
@@ -19,6 +20,10 @@ export function resolveToolStepIcon(name: string): ToolStepIcon {
 
     if (matchesAny(normalized, ['bash', 'command', 'exec', 'shell', 'terminal', 'zsh'])) {
         return CommandLineIcon;
+    }
+
+    if (normalized === 'clarify') {
+        return BubbleChatQuestionIcon;
     }
 
     if (isEditTool(normalized)) {

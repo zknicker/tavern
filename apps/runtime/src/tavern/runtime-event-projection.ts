@@ -192,6 +192,7 @@ function activityEventToRuntimeEvents(
     const turn = activityToTurn(event.activity);
     const runtimeEvent: AgentRuntimeEvent = {
         step: {
+            clarification: clarificationFromActivity(event.activity) ?? undefined,
             detail: event.activity.detail,
             id: event.activity.id,
             kind: activityKind(event.activity),
@@ -281,6 +282,32 @@ function activityKind(activity: TavernResponseActivity) {
     return 'tool' as const;
 }
 
+function clarificationFromActivity(activity: TavernResponseActivity) {
+    const clarification = isRecord(activity.metadata.clarification)
+        ? activity.metadata.clarification
+        : null;
+
+    if (!clarification) {
+        return null;
+    }
+
+    const requestId = readRequiredString(clarification.requestId);
+    const question = readRequiredString(clarification.question);
+
+    if (!(requestId && question)) {
+        return null;
+    }
+
+    return {
+        answer: readStringValue(clarification.answer),
+        choices: readStringArray(clarification.choices),
+        deadlineAt: readIsoString(clarification.deadlineAt),
+        disposition: readClarificationDisposition(clarification.disposition),
+        question,
+        requestId,
+    };
+}
+
 function hasMetadataRecord(value: unknown, key: string) {
     return isRecord(value) && isRecord(value[key]);
 }
@@ -326,4 +353,34 @@ function metadataRuntimeString(metadata: Record<string, unknown>, key: string) {
 function metadataString(metadata: Record<string, unknown>, key: string) {
     const value = metadata[key];
     return typeof value === 'string' ? value : null;
+}
+
+function readRequiredString(value: unknown) {
+    return typeof value === 'string' && value.trim().length > 0 ? value : null;
+}
+
+function readStringValue(value: unknown) {
+    return typeof value === 'string' ? value : null;
+}
+
+function readStringArray(value: unknown) {
+    return Array.isArray(value)
+        ? value.filter((item): item is string => typeof item === 'string' && item.trim().length > 0)
+        : [];
+}
+
+function readIsoString(value: unknown) {
+    if (typeof value !== 'string' || Number.isNaN(Date.parse(value))) {
+        return null;
+    }
+
+    return new Date(Date.parse(value)).toISOString();
+}
+
+function readClarificationDisposition(value: unknown): 'answered' | 'skipped' | 'timeout' | null {
+    if (value === 'answered' || value === 'skipped' || value === 'timeout') {
+        return value;
+    }
+
+    return null;
 }

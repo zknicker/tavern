@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react';
 import { ApprovalToolStep } from './approval-tool-step.tsx';
+import { ClarificationToolStep } from './clarification-tool-step.tsx';
 import { GenericToolStep } from './generic-tool-step.tsx';
 import { ShellToolStep } from './shell-tool-step.tsx';
 import type { ToolStepRendererProps } from './types.ts';
@@ -16,6 +17,7 @@ type ToolStepRenderer = (props: ToolStepRendererProps) => ReactNode;
 const toolStepRenderers = {
     approval: ApprovalToolStep,
     bash: ShellToolStep,
+    clarify: ClarificationToolStep,
     command: ShellToolStep,
     exec: ShellToolStep,
     shell: ShellToolStep,

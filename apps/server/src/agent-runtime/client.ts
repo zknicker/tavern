@@ -14,6 +14,8 @@ import {
     type AgentRuntimeCapabilityHealthId,
     type AgentRuntimeCapabilityHealthList,
     type AgentRuntimeChat,
+    type AgentRuntimeClarificationRespond,
+    type AgentRuntimeClarificationRespondResult,
     type AgentRuntimeConnectorList,
     type AgentRuntimeConnectorTestResult,
     type AgentRuntimeCreateAgent,
@@ -97,6 +99,8 @@ import {
     agentRuntimeCapabilityHealthListSchema,
     agentRuntimeCapabilityHealthSchema,
     agentRuntimeChatListSchema,
+    agentRuntimeClarificationRespondResultSchema,
+    agentRuntimeClarificationRespondSchema,
     agentRuntimeConnectorListSchema,
     agentRuntimeConnectorTestResultSchema,
     agentRuntimeCreateAgentSchema,
@@ -287,6 +291,10 @@ export interface TavernAgentRuntimeClient {
         sessionKey: string,
         input: AgentRuntimeApprovalRespond
     ): Promise<AgentRuntimeApprovalRespondResult>;
+    respondToChatClarification(
+        sessionKey: string,
+        input: AgentRuntimeClarificationRespond
+    ): Promise<AgentRuntimeClarificationRespondResult>;
     restartForUpdate(): Promise<AgentRuntimeUpdate>;
     resyncSession(sessionKey: string): Promise<AgentRuntimeSessionResync>;
     runCronJob(jobId: string, input?: AgentRuntimeRunCron): Promise<AgentRuntimeCronRun>;
@@ -1565,6 +1573,30 @@ class HttpTavernAgentRuntimeClient implements TavernAgentRuntimeClient {
         }
 
         return agentRuntimeApprovalRespondResultSchema.parse(await response.json());
+    }
+
+    async respondToChatClarification(
+        sessionKey: string,
+        input: AgentRuntimeClarificationRespond
+    ): Promise<AgentRuntimeClarificationRespondResult> {
+        const payload = agentRuntimeClarificationRespondSchema.parse(input);
+        const response = await fetch(
+            `${this.#baseUrl}${agentRuntimeRoutes.sessionClarificationRespond(sessionKey)}`,
+            {
+                body: JSON.stringify(payload),
+                headers: {
+                    ...this.#authHeaders,
+                    'content-type': 'application/json',
+                },
+                method: 'POST',
+            }
+        );
+
+        if (!response.ok) {
+            await readErrorResponse(response);
+        }
+
+        return agentRuntimeClarificationRespondResultSchema.parse(await response.json());
     }
 
     async stopChatTurn(

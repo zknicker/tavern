@@ -44,12 +44,20 @@ export function WorkingLog({
     const now = useNow(isActive && start !== null, start);
     const activeSeconds = isActive ? formatActiveActivitySeconds({ now, start }) : null;
     const thinkingOnly = isThinkingOnly(items);
-    const defaultOpen = groupMode ? false : isActive || (!thinkingOnly && hasNarration(items));
+    const firstPendingApprovalId = findFirstPendingApprovalId(items);
+    const firstPendingClarificationId = findFirstPendingClarificationId(items);
+    const hasPendingPrompt = Boolean(firstPendingApprovalId ?? firstPendingClarificationId);
+    const defaultOpen = groupMode
+        ? hasPendingPrompt
+        : isActive || (!thinkingOnly && hasNarration(items));
     const [open, setOpen] = React.useState(defaultOpen);
     const disclosureAnchor = useDisclosureScrollAnchor();
 
     React.useEffect(() => {
         if (groupMode) {
+            if (hasPendingPrompt) {
+                setOpen(true);
+            }
             return;
         }
 
@@ -61,7 +69,7 @@ export function WorkingLog({
         if (thinkingOnly) {
             setOpen(false);
         }
-    }, [groupMode, isActive, thinkingOnly]);
+    }, [groupMode, hasPendingPrompt, isActive, thinkingOnly]);
 
     const groupLabel = groupMode
         ? isActive
@@ -69,8 +77,6 @@ export function WorkingLog({
             : formatWorkGroupHeader(items)
         : null;
     const groupIcon = groupMode ? getWorkGroupIcon(items) : null;
-    const firstPendingApprovalId = findFirstPendingApprovalId(items);
-
     return (
         <ThinkingSteps
             // Group mode: the trigger's click padding must not stack onto the
@@ -130,6 +136,7 @@ export function WorkingLog({
                     <ActivityStep
                         animateEnter={isActive}
                         canRespondToApproval={item.row.id === firstPendingApprovalId}
+                        canRespondToClarification={item.row.id === firstPendingClarificationId}
                         chatId={chatId}
                         currentSessionKey={currentSessionKey}
                         index={index}
@@ -148,6 +155,18 @@ function findFirstPendingApprovalId(items: ActivityItem[]) {
         (candidate) =>
             candidate.row.kind === 'tool' &&
             candidate.row.toolCall.name.trim().toLowerCase() === 'approval' &&
+            !candidate.row.completedAt &&
+            !hasErrorStatus(candidate.row.toolCall.status)
+    );
+
+    return item?.row.id ?? null;
+}
+
+function findFirstPendingClarificationId(items: ActivityItem[]) {
+    const item = items.find(
+        (candidate) =>
+            candidate.row.kind === 'tool' &&
+            candidate.row.toolCall.name.trim().toLowerCase() === 'clarify' &&
             !candidate.row.completedAt &&
             !hasErrorStatus(candidate.row.toolCall.status)
     );

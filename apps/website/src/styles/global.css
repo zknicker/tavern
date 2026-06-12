@@ -123,6 +123,13 @@
     --color-info: var(--info);
     --color-info-foreground: var(--info-foreground);
     --color-info-bg: var(--info-bg);
+    --color-clarification: var(--clarification);
+    --color-clarification-foreground: var(--clarification-foreground);
+    --color-clarification-bg: var(--clarification-bg);
+    --color-clarification-border: var(--clarification-border);
+    --color-clarification-row-hover: var(--clarification-row-hover);
+    --color-clarification-action: var(--clarification-action);
+    --color-clarification-action-foreground: var(--clarification-action-foreground);
 
     --corner-radius-scale: 1;
     --radius-sm-base: 0.3125rem;
@@ -409,6 +416,13 @@
         --info-foreground: var(--color-blue-400);
         --info-bg: --alpha(var(--color-blue-500) / 10%);
         --info-border: --alpha(var(--color-blue-500) / 20%);
+        --clarification: var(--foreground);
+        --clarification-foreground: var(--foreground);
+        --clarification-bg: var(--card);
+        --clarification-border: var(--border-strong);
+        --clarification-row-hover: --alpha(var(--color-white) / 7%);
+        --clarification-action: var(--foreground);
+        --clarification-action-foreground: var(--background);
         --chat-log-row-hover: --alpha(var(--color-white) / 7%);
         --chat-log-session-badge-bg: --alpha(var(--color-blue-500) / 14%);
 
@@ -513,6 +527,13 @@
         --info-foreground: var(--color-blue-700);
         --info-bg: --alpha(var(--color-blue-500) / 11%);
         --info-border: --alpha(var(--color-blue-500) / 22%);
+        --clarification: var(--foreground);
+        --clarification-foreground: var(--foreground);
+        --clarification-bg: var(--card);
+        --clarification-border: var(--border-strong);
+        --clarification-row-hover: --alpha(var(--color-black) / 5%);
+        --clarification-action: var(--foreground);
+        --clarification-action-foreground: var(--background);
         --chat-log-row-hover: --alpha(var(--color-black) / 5%);
         --chat-log-session-badge-bg: var(--color-blue-50);
 

@@ -27,10 +27,24 @@ interface OpenApproval {
     metadata: Record<string, unknown>;
 }
 
+interface OpenClarification {
+    detail: string;
+    id: string;
+    metadata: Record<string, unknown>;
+    requestId: string;
+}
+
+export interface ClarificationSettlement {
+    answer?: string | null;
+    disposition?: 'answered' | 'skipped' | 'timeout' | null;
+}
+
 export function createGatewayActivityRecorder(context: GatewayActivityContext) {
     const openNotices = new Map<string, OpenNotice>();
     const openApprovals: OpenApproval[] = [];
+    const openClarifications = new Map<string, OpenClarification>();
     let approvalIndex = 0;
+    let clarificationIndex = 0;
     const settleOldestApproval = () => {
         const approval = openApprovals.shift();
 
@@ -47,6 +61,46 @@ export function createGatewayActivityRecorder(context: GatewayActivityContext) {
             status: 'completed',
             title: 'Approval',
         });
+    };
+    const settleClarification = (requestId: string, settlement: ClarificationSettlement = {}) => {
+        const clarification = openClarifications.get(requestId);
+
+        if (!clarification) {
+            return false;
+        }
+
+        openClarifications.delete(requestId);
+        const answer = readString(settlement.answer);
+        const disposition = readClarificationDisposition(settlement.disposition);
+        const previous = readRecord(clarification.metadata.clarification);
+        const metadata = {
+            ...clarification.metadata,
+            clarification: {
+                ...previous,
+                answer,
+                disposition,
+            },
+            event: disposition ? `clarify.${disposition}` : 'clarify.settled',
+            tool: {
+                arguments: readRecord(readRecord(clarification.metadata.tool).arguments),
+                name: 'clarify',
+                result: compact({
+                    disposition,
+                    user_response: answer,
+                }),
+            },
+        };
+
+        upsertResponseActivity(context.chatId, context.responseId, {
+            completed_at: new Date().toISOString(),
+            detail: clarification.detail,
+            id: clarification.id,
+            kind: 'custom',
+            metadata,
+            status: 'completed',
+            title: 'Clarification',
+        });
+        return true;
     };
 
     return {
@@ -72,6 +126,10 @@ export function createGatewayActivityRecorder(context: GatewayActivityContext) {
 
         hasOpenApproval() {
             return openApprovals.length > 0;
+        },
+
+        hasOpenClarification() {
+            return openClarifications.size > 0;
         },
 
         recordApproval(data: Record<string, unknown>) {
@@ -105,6 +163,56 @@ export function createGatewayActivityRecorder(context: GatewayActivityContext) {
                 metadata,
                 status: 'running',
                 title: 'Approval',
+            });
+        },
+
+        recordClarification(data: Record<string, unknown>) {
+            const requestId =
+                readString(data.request_id) ?? readString(data.requestId) ?? readString(data.id);
+            const question = readString(data.question) ?? readString(data.prompt);
+
+            if (!(requestId && question)) {
+                return;
+            }
+
+            clarificationIndex += 1;
+            const id = activityId(
+                context.runId,
+                `clarify_${stableSuffix(requestId)}_${clarificationIndex}`
+            );
+            const choices = readStringArray(data.choices) ?? [];
+            const deadlineAt = readIsoString(data.deadline_at) ?? readIsoString(data.deadlineAt);
+            const metadata = {
+                clarification: {
+                    answer: null,
+                    choices,
+                    deadlineAt,
+                    disposition: null,
+                    question,
+                    requestId,
+                },
+                event: 'clarify.request',
+                runtime: { ...runtimeMetadata(context), toolName: 'clarify' },
+                tool: {
+                    arguments: { choices, question },
+                    name: 'clarify',
+                    result: null,
+                },
+            };
+
+            openClarifications.set(requestId, {
+                detail: question,
+                id,
+                metadata,
+                requestId,
+            });
+            upsertResponseActivity(context.chatId, context.responseId, {
+                detail: question,
+                id,
+                kind: 'custom',
+                metadata,
+                status: 'running',
+                title: 'Clarification',
             });
         },
 
@@ -195,6 +303,16 @@ export function createGatewayActivityRecorder(context: GatewayActivityContext) {
                 settleOldestApproval();
             }
         },
+
+        settleClarification(requestId: string, settlement?: ClarificationSettlement) {
+            return settleClarification(requestId, settlement);
+        },
+
+        settleOpenClarifications(settlement?: ClarificationSettlement) {
+            for (const requestId of [...openClarifications.keys()]) {
+                settleClarification(requestId, settlement);
+            }
+        },
     };
 }
 
@@ -255,6 +373,16 @@ function readString(value: unknown) {
     return typeof value === 'string' && value.trim().length > 0 ? value : null;
 }
 
+function readIsoString(value: unknown) {
+    const text = readString(value);
+
+    if (!text || Number.isNaN(Date.parse(text))) {
+        return null;
+    }
+
+    return new Date(Date.parse(text)).toISOString();
+}
+
 function readNumber(value: unknown) {
     return typeof value === 'number' && Number.isFinite(value) ? value : null;
 }
@@ -272,6 +400,14 @@ function readRecord(value: unknown) {
     return value && typeof value === 'object' && !Array.isArray(value)
         ? (value as Record<string, unknown>)
         : {};
+}
+
+function readClarificationDisposition(value: unknown) {
+    if (value === 'answered' || value === 'skipped' || value === 'timeout') {
+        return value;
+    }
+
+    return null;
 }
 
 let warnedMissingSubagentId = false;

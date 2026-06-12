@@ -201,6 +201,77 @@ test('turn progress applies preamble and normalized tool updates without refetch
     expect(invalidatedQueries).toEqual([]);
 });
 
+test('turn progress preserves clarification prompt data in live chat rows', async () => {
+    const patchedProgress: string[] = [];
+    let log: ChatLogOutput | undefined = {
+        activeReply: null,
+        limit: 100,
+        offset: 0,
+        rows: [],
+        total: 0,
+    };
+    const handlers = createHandlers({
+        patchLog: (updater) => {
+            log = updater(log);
+        },
+        patchedProgress,
+    });
+    const clarification = {
+        choices: ['Los Angeles', 'San Francisco'],
+        deadlineAt: '2026-06-12T16:00:00.000Z',
+        question: 'Which part of California?',
+        requestId: 'clarify_1',
+    };
+
+    handlers.onTurnProgress({
+        step: {
+            clarification,
+            detail: clarification.question,
+            id: 'act_run-1_clarify_1',
+            kind: 'tool',
+            label: 'Clarification',
+            status: 'active',
+            toolName: 'clarify',
+        },
+        timestamp: '2026-06-12T15:58:00.000Z',
+        turn,
+    });
+    handlers.onTurnProgress({
+        step: {
+            clarification: {
+                ...clarification,
+                answer: 'San Francisco',
+                disposition: 'answered',
+            },
+            detail: clarification.question,
+            id: 'act_run-1_clarify_1',
+            kind: 'tool',
+            label: 'Clarification',
+            status: 'completed',
+            toolName: 'clarify',
+        },
+        timestamp: '2026-06-12T15:58:04.000Z',
+        turn,
+    });
+    await Promise.resolve();
+
+    expect(patchedProgress).toEqual(['chat-1', 'chat-1']);
+    expect(log?.rows[0]).toMatchObject({
+        clarification: {
+            answer: 'San Francisco',
+            choices: ['Los Angeles', 'San Francisco'],
+            disposition: 'answered',
+            question: 'Which part of California?',
+            requestId: 'clarify_1',
+        },
+        completedAt: '2026-06-12T15:58:04.000Z',
+        toolCall: {
+            name: 'clarify',
+            summaryParts: ['Which part of California?'],
+        },
+    });
+});
+
 test('turn reply updates local timeline state without refetching live status', async () => {
     const invalidatedQueries: string[] = [];
     const updates: string[] = [];

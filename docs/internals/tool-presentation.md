@@ -84,3 +84,17 @@ The approval row (`tool-steps/approval-tool-step.tsx`, registered as
    reaches the engine gateway through the Runtime session approval endpoint.
 4. The runtime completes the activity when the agent resumes, which flips the
    row to its settled state everywhere without app-side bookkeeping.
+
+## Worked example: clarifications
+
+The clarification row (`tool-steps/clarification-tool-step.tsx`, registered as
+`clarify`) uses the same custom-renderer path:
+
+1. Runtime records `clarify.request` as custom response activity with
+   `metadata.clarification` and projects it as a `tool` step named `clarify`.
+2. The renderer composes `ToolTimelineStep` with `AskUserQuestions` so choices,
+   Other, Skip, and pending state live inside the work log.
+3. The buttons call `chat.clarification.respond`, which reaches Runtime and the
+   engine `clarify.respond` RPC.
+4. Runtime owns the timeout and sends an explicit timeout answer before the
+   engine fallback can fire.

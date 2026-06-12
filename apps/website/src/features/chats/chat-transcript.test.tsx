@@ -837,6 +837,103 @@ test('ChatTranscript renders active tool progress as one-line status rows', () =
     assert.doesNotMatch(markup, />start</);
 });
 
+test('ChatTranscript renders a pending clarification prompt inline', () => {
+    const markup = renderActiveTranscript(
+        {
+            agentId: 'tiny',
+            isThinking: true,
+            runId: 'run-clarify',
+            sessionKey: 'agent:tiny:session-1',
+            startedAt: new Date(Date.now() - 3000).toISOString(),
+            text: '',
+        },
+        [
+            {
+                actor: { id: 'tiny', kind: 'agent' },
+                clarification: {
+                    answer: null,
+                    choices: ['Los Angeles', 'San Francisco'],
+                    deadlineAt: new Date(Date.now() + 60_000).toISOString(),
+                    disposition: null,
+                    question: 'Which part of California?',
+                    requestId: 'clarify_1',
+                },
+                completedAt: null,
+                connectsToNext: false,
+                connectsToPrevious: false,
+                id: 'act_run-clarify_clarify_1',
+                isFirstInGroup: true,
+                kind: 'tool',
+                sessionKey: 'agent:tiny:session-1',
+                spawnedRelationships: [],
+                startedAt: new Date().toISOString(),
+                toolCall: {
+                    callId: null,
+                    facts: [],
+                    label: 'Clarification',
+                    name: 'clarify',
+                    status: null,
+                    summaryParts: ['Which part of California?'],
+                },
+            },
+        ]
+    );
+
+    assert.match(markup, /Needs answer[\s\S]*Which part of California\?/);
+    assert.match(markup, /Los Angeles/);
+    assert.match(markup, /San Francisco/);
+    assert.match(markup, />Other</);
+    assert.match(markup, />Skip</);
+    assert.doesNotMatch(markup, /Using[\s\S]*Which part of California\?/);
+});
+
+test('ChatTranscript renders one answer input for free-text clarification prompts', () => {
+    const markup = renderActiveTranscript(
+        {
+            agentId: 'tiny',
+            isThinking: true,
+            runId: 'run-clarify',
+            sessionKey: 'agent:tiny:session-1',
+            startedAt: new Date(Date.now() - 3000).toISOString(),
+            text: '',
+        },
+        [
+            {
+                actor: { id: 'tiny', kind: 'agent' },
+                clarification: {
+                    answer: null,
+                    choices: [],
+                    deadlineAt: new Date(Date.now() + 60_000).toISOString(),
+                    disposition: null,
+                    question: 'Which city should I use?',
+                    requestId: 'clarify_text',
+                },
+                completedAt: null,
+                connectsToNext: false,
+                connectsToPrevious: false,
+                id: 'act_run-clarify_text',
+                isFirstInGroup: true,
+                kind: 'tool',
+                sessionKey: 'agent:tiny:session-1',
+                spawnedRelationships: [],
+                startedAt: new Date().toISOString(),
+                toolCall: {
+                    callId: null,
+                    facts: [],
+                    label: 'Clarification',
+                    name: 'clarify',
+                    status: null,
+                    summaryParts: ['Which city should I use?'],
+                },
+            },
+        ]
+    );
+
+    assert.match(markup, /Needs answer[\s\S]*Which city should I use\?/);
+    assert.equal(countMatches(markup, />Answer</g), 1);
+    assert.doesNotMatch(markup, />Other</);
+});
+
 test('ChatTranscript wires active progress tool ids to the tool drawer trigger', () => {
     const markup = renderActiveTranscript(
         {

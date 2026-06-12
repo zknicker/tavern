@@ -254,6 +254,24 @@ export const respondToChatApprovalResultSchema = z.object({
     resolved: z.number().int().nonnegative(),
 });
 
+export const respondToChatClarificationDispositionSchema = z.enum([
+    'answered',
+    'skipped',
+    'timeout',
+]);
+
+export const respondToChatClarificationInputSchema = z.object({
+    answer: z.string().trim().min(1),
+    chatId: z.string().trim().min(1),
+    disposition: respondToChatClarificationDispositionSchema.optional(),
+    requestId: z.string().trim().min(1),
+    sessionKey: z.string().trim().min(1),
+});
+
+export const respondToChatClarificationResultSchema = z.object({
+    resolved: z.boolean(),
+});
+
 export const chatLogMessageRowSchema = messageRowSchema;
 export const chatLogToolRowSchema = toolRowSchema;
 export const chatLogWorkerRowSchema = workerRowSchema;
@@ -315,3 +333,7 @@ export type StopChatTurnInput = z.infer<typeof stopChatTurnInputSchema>;
 export type StopChatTurnResult = z.infer<typeof stopChatTurnResultSchema>;
 export type RespondToChatApprovalInput = z.infer<typeof respondToChatApprovalInputSchema>;
 export type RespondToChatApprovalResult = z.infer<typeof respondToChatApprovalResultSchema>;
+export type RespondToChatClarificationInput = z.infer<typeof respondToChatClarificationInputSchema>;
+export type RespondToChatClarificationResult = z.infer<
+    typeof respondToChatClarificationResultSchema
+>;

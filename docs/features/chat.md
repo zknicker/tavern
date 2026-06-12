@@ -149,6 +149,11 @@ that also patch live through `turn.progress` steps:
   waiting shimmer until the agent resumes; approving runs the command once,
   denying blocks it. An unanswered prompt times out engine-side and the turn
   continues as denied.
+* **Clarifications.** A mid-turn agent question records as activity named
+  `clarify` and renders with inline answer controls. The row supports choices,
+  free-text Other answers, Skip, and a Runtime-owned timeout shorter than the
+  engine wait. Answers flow through `chat.clarification.respond` and the row
+  settles as answered, skipped, or timed out.
 * **Turn indicator.** The live tail keeps the morphing Thinking indicator while
   the turn is active and no reply text is streaming. Tool rows, reasoning rows,
   and assistant status updates do not hide, replace, or remount that indicator.

@@ -1630,6 +1630,31 @@ export const agentRuntimeApprovalRespondResultSchema = z.object({
     resolved: z.number().int().nonnegative(),
 });
 
+export const agentRuntimeClarificationDispositionSchema = z.enum([
+    'answered',
+    'skipped',
+    'timeout',
+]);
+
+export const agentRuntimeClarificationPromptSchema = z.object({
+    answer: z.string().nullable().optional(),
+    choices: z.array(z.string().trim().min(1)).default([]),
+    deadlineAt: z.string().datetime().nullable().optional(),
+    disposition: agentRuntimeClarificationDispositionSchema.nullable().optional(),
+    question: z.string().trim().min(1),
+    requestId: z.string().trim().min(1),
+});
+
+export const agentRuntimeClarificationRespondSchema = z.object({
+    answer: z.string().trim().min(1),
+    disposition: agentRuntimeClarificationDispositionSchema.optional(),
+    requestId: z.string().trim().min(1),
+});
+
+export const agentRuntimeClarificationRespondResultSchema = z.object({
+    resolved: z.boolean(),
+});
+
 export const tavernChannelConversationSchema = z.object({
     groupChannel: z.string().trim().min(1).nullable().optional(),
     groupSubject: z.string().trim().min(1).nullable().optional(),
@@ -1724,6 +1749,7 @@ export const agentRuntimeTurnProgressStepSchema = z.object({
     ]),
     label: z.string().trim().min(1),
     status: agentRuntimeTurnProgressStatusSchema,
+    clarification: agentRuntimeClarificationPromptSchema.optional(),
     toolCallId: z.string().trim().min(1).nullable().optional(),
     toolName: z.string().trim().min(1).nullable().optional(),
 });
@@ -2188,6 +2214,16 @@ export type AgentRuntimeApprovalChoice = z.infer<typeof agentRuntimeApprovalChoi
 export type AgentRuntimeApprovalRespond = z.infer<typeof agentRuntimeApprovalRespondSchema>;
 export type AgentRuntimeApprovalRespondResult = z.infer<
     typeof agentRuntimeApprovalRespondResultSchema
+>;
+export type AgentRuntimeClarificationDisposition = z.infer<
+    typeof agentRuntimeClarificationDispositionSchema
+>;
+export type AgentRuntimeClarificationPrompt = z.infer<typeof agentRuntimeClarificationPromptSchema>;
+export type AgentRuntimeClarificationRespond = z.infer<
+    typeof agentRuntimeClarificationRespondSchema
+>;
+export type AgentRuntimeClarificationRespondResult = z.infer<
+    typeof agentRuntimeClarificationRespondResultSchema
 >;
 export type TavernChannelConversation = z.infer<typeof tavernChannelConversationSchema>;
 export type TavernChannelHistoryEntry = z.infer<typeof tavernChannelHistoryEntrySchema>;

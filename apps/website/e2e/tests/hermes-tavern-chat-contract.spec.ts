@@ -1,5 +1,7 @@
 import { fileURLToPath } from 'node:url';
 import type { Locator, Page } from '@playwright/test';
+import { createTRPCProxyClient, httpLink } from '@trpc/client';
+import type { AppRouter } from '../../../server/src/api/router.ts';
 import { fillComposer } from '../support/composer.ts';
 import { expect, test } from '../support/test.ts';
 
@@ -148,6 +150,54 @@ test('renders provider-streamed assistant updates between Hermes tool groups', a
     await expectAbove(commandGroups.nth(0), transcriptParagraph(page, secondUpdate));
     await expectAbove(transcriptParagraph(page, secondUpdate), commandGroups.nth(1));
     await expectAbove(commandGroups.nth(1), transcriptParagraph(page, expectedReply));
+});
+
+test('answers a mid-turn clarification choice and resumes the turn', async ({ page }) => {
+    test.setTimeout(180_000);
+
+    const expectedReply = `CLARIFICATION-CHOICE-${Date.now()}`;
+    const prompt = `Clarification choice qa. Ask the clarification, then reply exactly \`${expectedReply}\`.`;
+
+    await refreshRuntimeCapabilities();
+    await page.goto('/dashboard/overview');
+
+    await fillComposer(page, '#home-prompt', prompt);
+    await expect(page.getByRole('button', { name: 'Start chat' })).toBeEnabled({
+        timeout: 30_000,
+    });
+    await page.getByRole('button', { name: 'Start chat' }).click();
+
+    await waitForRealChatRoute(page);
+    await expect(page.getByText('Which part of California?').first()).toBeVisible({
+        timeout: 90_000,
+    });
+    await page.getByRole('button', { name: /San Francisco/ }).click();
+
+    await expect(transcriptParagraph(page, expectedReply)).toBeVisible({ timeout: 90_000 });
+});
+
+test('skips a mid-turn clarification and resumes the turn', async ({ page }) => {
+    test.setTimeout(180_000);
+
+    const expectedReply = `CLARIFICATION-SKIP-${Date.now()}`;
+    const prompt = `Clarification skip qa. Ask the clarification, then reply exactly \`${expectedReply}\`.`;
+
+    await refreshRuntimeCapabilities();
+    await page.goto('/dashboard/overview');
+
+    await fillComposer(page, '#home-prompt', prompt);
+    await expect(page.getByRole('button', { name: 'Start chat' })).toBeEnabled({
+        timeout: 30_000,
+    });
+    await page.getByRole('button', { name: 'Start chat' }).click();
+
+    await waitForRealChatRoute(page);
+    await expect(page.getByText('Which part of California?').first()).toBeVisible({
+        timeout: 90_000,
+    });
+    await page.getByRole('button', { name: 'Skip' }).click();
+
+    await expect(transcriptParagraph(page, expectedReply)).toBeVisible({ timeout: 90_000 });
 });
 
 test('renders model thinking as separate activity blocks around tool work', async ({ page }) => {
@@ -380,4 +430,52 @@ async function getRuntimeInstructions(runtimeUrl: string) {
         throw new Error('Expected Runtime instructions response content.');
     }
     return content;
+}
+
+async function refreshRuntimeCapabilities() {
+    const client = createTRPCProxyClient<AppRouter>({
+        links: [
+            httpLink({
+                methodOverride: 'POST',
+                url: new URL('/trpc', requireServerOrigin()).toString(),
+            }),
+        ],
+    });
+    const requiredCapabilities = ['apiServer', 'gateway', 'models'];
+    let missing = requiredCapabilities;
+
+    for (let attempt = 0; attempt < 30; attempt += 1) {
+        const status = await client.agentRuntime.checkHealth.mutate();
+        const healthyCapabilities = new Set(
+            status.capabilities
+                .filter((capability) => capability.state === 'healthy')
+                .map((capability) => capability.capability)
+        );
+
+        missing = requiredCapabilities.filter((capability) => !healthyCapabilities.has(capability));
+
+        if (missing.length === 0) {
+            return;
+        }
+
+        await wait(2000);
+    }
+
+    if (missing.length > 0) {
+        throw new Error(`Runtime capabilities are not healthy: ${missing.join(', ')}`);
+    }
+}
+
+function wait(ms: number) {
+    return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function requireServerOrigin() {
+    const configured = process.env.VITE_SERVER_ORIGIN?.trim();
+
+    if (configured) {
+        return configured;
+    }
+
+    return `http://127.0.0.1:${process.env.TAVERN_SERVER_PORT ?? '8081'}`;
 }

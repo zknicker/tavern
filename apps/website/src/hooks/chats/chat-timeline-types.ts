@@ -13,6 +13,14 @@ export interface ChatActiveReply {
 export type ChatTimelineMessageRow = Extract<ChatTimeline[number], { kind: 'message' }>;
 
 export interface ChatTurnProgressStep {
+    clarification?: {
+        answer?: string | null;
+        choices: string[];
+        deadlineAt?: string | null;
+        disposition?: 'answered' | 'skipped' | 'timeout' | null;
+        question: string;
+        requestId: string;
+    };
     detail?: string | null;
     id: string;
     kind:

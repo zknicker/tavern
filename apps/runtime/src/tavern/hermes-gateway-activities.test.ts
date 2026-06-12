@@ -229,6 +229,64 @@ describe('Hermes gateway activity recorder', () => {
         expect(getResponseActivity(approvals[1]?.id ?? '')?.status).toBe('completed');
         expect(recorder.hasOpenApproval()).toBe(false);
     });
+
+    it('records and settles a pending clarification prompt', () => {
+        const recorder = createGatewayActivityRecorder(context);
+
+        expect(recorder.hasOpenClarification()).toBe(false);
+        recorder.recordClarification({
+            choices: ['Los Angeles', 'San Francisco'],
+            deadline_at: '2026-06-12T16:00:00.000Z',
+            question: 'Which part of California?',
+            request_id: 'clarify_1',
+        });
+
+        expect(recorder.hasOpenClarification()).toBe(true);
+        const pending = findActivityByEvent('clarify.request');
+        expect(pending).toMatchObject({
+            detail: 'Which part of California?',
+            kind: 'custom',
+            status: 'running',
+            title: 'Clarification',
+        });
+        expect(pending?.metadata.clarification).toMatchObject({
+            choices: ['Los Angeles', 'San Francisco'],
+            deadlineAt: '2026-06-12T16:00:00.000Z',
+            question: 'Which part of California?',
+            requestId: 'clarify_1',
+        });
+        expect(lastProjectedStep()).toMatchObject({
+            clarification: {
+                choices: ['Los Angeles', 'San Francisco'],
+                question: 'Which part of California?',
+                requestId: 'clarify_1',
+            },
+            kind: 'tool',
+            status: 'active',
+            toolName: 'clarify',
+        });
+
+        expect(
+            recorder.settleClarification('clarify_1', {
+                answer: 'San Francisco',
+                disposition: 'answered',
+            })
+        ).toBe(true);
+        expect(recorder.hasOpenClarification()).toBe(false);
+        const settled = getResponseActivity(pending?.id ?? '');
+        expect(settled?.status).toBe('completed');
+        expect(settled?.metadata.clarification).toMatchObject({
+            answer: 'San Francisco',
+            disposition: 'answered',
+        });
+        expect(lastProjectedStep()).toMatchObject({
+            clarification: {
+                answer: 'San Francisco',
+                disposition: 'answered',
+            },
+            status: 'completed',
+        });
+    });
 });
 
 function findActivityByEvent(event: string) {
