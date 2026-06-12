@@ -45,6 +45,8 @@ function removeResponseFromLog(
         return log;
     }
 
+    // Dismissable rows are response evidence, not messages, so the page's
+    // totalMessages count is unaffected.
     const rows = log.rows.filter(
         (row) =>
             !(
@@ -53,10 +55,9 @@ function removeResponseFromLog(
                 row.commandRun.responseId === responseId
             )
     );
-    const removed = log.rows.length - rows.length;
     const failedTurn = log.failedTurn?.responseId === responseId ? null : log.failedTurn;
 
-    if (removed === 0 && failedTurn === log.failedTurn) {
+    if (rows.length === log.rows.length && failedTurn === log.failedTurn) {
         return log;
     }
 
@@ -64,6 +65,5 @@ function removeResponseFromLog(
         ...log,
         failedTurn,
         rows,
-        total: Math.max(0, log.total - removed),
     };
 }
