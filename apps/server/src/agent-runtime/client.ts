@@ -67,6 +67,16 @@ import {
     type AgentRuntimeSessionPrompt,
     type AgentRuntimeSessionResync,
     type AgentRuntimeSkill,
+    type AgentRuntimeSkillHubActionResult,
+    type AgentRuntimeSkillHubCatalog,
+    type AgentRuntimeSkillHubInstallInput,
+    type AgentRuntimeSkillHubPreview,
+    type AgentRuntimeSkillHubScan,
+    type AgentRuntimeSkillHubSearchInput,
+    type AgentRuntimeSkillHubSearchResult,
+    type AgentRuntimeSkillHubTap,
+    type AgentRuntimeSkillHubTapList,
+    type AgentRuntimeSkillHubUninstallInput,
     type AgentRuntimeSkillSummary,
     type AgentRuntimeStartModelProviderOAuth,
     type AgentRuntimeStopTurn,
@@ -163,6 +173,16 @@ import {
     agentRuntimeSessionPreviewListSchema,
     agentRuntimeSessionPromptSchema,
     agentRuntimeSessionResyncSchema,
+    agentRuntimeSkillHubActionResultSchema,
+    agentRuntimeSkillHubCatalogSchema,
+    agentRuntimeSkillHubInstallInputSchema,
+    agentRuntimeSkillHubPreviewSchema,
+    agentRuntimeSkillHubScanSchema,
+    agentRuntimeSkillHubSearchInputSchema,
+    agentRuntimeSkillHubSearchResultSchema,
+    agentRuntimeSkillHubTapListSchema,
+    agentRuntimeSkillHubTapSchema,
+    agentRuntimeSkillHubUninstallInputSchema,
     agentRuntimeSkillListSchema,
     agentRuntimeSkillSchema,
     agentRuntimeStartModelProviderOAuthSchema,
@@ -221,6 +241,7 @@ export class AgentRuntimeRequestError extends Error {
 }
 
 export interface TavernAgentRuntimeClient {
+    addSkillHubTap(input: AgentRuntimeSkillHubTap): Promise<AgentRuntimeSkillHubTapList>;
     applyHermesConfig(
         input: AgentRuntimeApplyHermesConfig
     ): Promise<AgentRuntimeHermesConfigSnapshot>;
@@ -255,8 +276,12 @@ export interface TavernAgentRuntimeClient {
     getRuntimeJob(slug: AgentRuntimeJobSlug): Promise<AgentRuntimeJobDetail | null>;
     getSessionGraph(sessionKey: string): Promise<AgentRuntimeSessionGraph>;
     getSessionPrompt(sessionKey: string): Promise<AgentRuntimeSessionPrompt | null>;
+    getSkillHubCatalog(): Promise<AgentRuntimeSkillHubCatalog>;
     getUpdateStatus(): Promise<AgentRuntimeUpdate>;
     getWorkspaceInstructions(agentId: string): Promise<AgentRuntimeRenderedWorkspaceInstructions>;
+    installSkillHubSkill(
+        input: AgentRuntimeSkillHubInstallInput
+    ): Promise<AgentRuntimeSkillHubActionResult>;
     listAgentFiles(agentId: string): Promise<AgentRuntimeAgentFileList>;
     listAgents(): Promise<{ agents: AgentRuntimeAgent[] }>;
     listBindings(): Promise<{ bindings: AgentRuntimeBinding[] }>;
@@ -284,6 +309,7 @@ export interface TavernAgentRuntimeClient {
         input: AgentRuntimeListSessionPreviewsInput
     ): Promise<AgentRuntimeSessionPreviewList>;
     listSessions(): Promise<AgentRuntimeSessionList>;
+    listSkillHubTaps(): Promise<AgentRuntimeSkillHubTapList>;
     listSkills(
         options?: AgentRuntimeListSkillsOptions
     ): Promise<{ skills: AgentRuntimeSkillSummary[] }>;
@@ -293,7 +319,9 @@ export interface TavernAgentRuntimeClient {
         chatId: string,
         input: AgentRuntimeCreateMessage
     ): Promise<AgentRuntimeMessageAccepted>;
+    previewSkillHubSkill(identifier: string): Promise<AgentRuntimeSkillHubPreview>;
     refreshCapability(id: AgentRuntimeCapabilityHealthId): Promise<AgentRuntimeCapabilityHealth>;
+    removeSkillHubTap(repo: string): Promise<AgentRuntimeSkillHubTapList>;
     respondToChatApproval(
         sessionKey: string,
         input: AgentRuntimeApprovalRespond
@@ -333,12 +361,19 @@ export interface TavernAgentRuntimeClient {
         agentId: string,
         input: AgentRuntimeSaveWorkspaceInstructions
     ): Promise<AgentRuntimeWorkspaceInstructions>;
+    scanSkillHubSkill(identifier: string): Promise<AgentRuntimeSkillHubScan>;
     searchCortex(input: CortexSearchInput): Promise<CortexSearchResult>;
+    searchSkillHub(
+        input: AgentRuntimeSkillHubSearchInput
+    ): Promise<AgentRuntimeSkillHubSearchResult>;
     startModelProviderOAuth(input: AgentRuntimeStartModelProviderOAuth): Promise<unknown>;
     startUpdate(input?: { targetVersion?: null | string }): Promise<AgentRuntimeUpdate>;
     stopChatTurn(chatId: string, input: AgentRuntimeStopTurn): Promise<AgentRuntimeStopTurnResult>;
     submitModelProviderOAuth(input: AgentRuntimeSubmitModelProviderOAuth): Promise<unknown>;
     testConnector(id: string): Promise<AgentRuntimeConnectorTestResult>;
+    uninstallSkillHubSkill(
+        input: AgentRuntimeSkillHubUninstallInput
+    ): Promise<AgentRuntimeSkillHubActionResult>;
     updateAgentAppearance(
         agentId: string,
         input: AgentRuntimeUpdateAgentAppearance
@@ -1550,6 +1585,105 @@ class HttpTavernAgentRuntimeClient implements TavernAgentRuntimeClient {
         }
 
         return agentRuntimeToolsetSchema.parse(await response.json());
+    }
+
+    async getSkillHubCatalog() {
+        return agentRuntimeSkillHubCatalogSchema.parse(
+            await this.#getSkillHubJson(agentRuntimeRoutes.skillHubSources)
+        );
+    }
+
+    async searchSkillHub(input: AgentRuntimeSkillHubSearchInput) {
+        const parsed = agentRuntimeSkillHubSearchInputSchema.parse(input);
+        const params = new URLSearchParams({ query: parsed.query });
+        if (parsed.source) {
+            params.set('source', parsed.source);
+        }
+        if (parsed.limit !== undefined) {
+            params.set('limit', String(parsed.limit));
+        }
+        return agentRuntimeSkillHubSearchResultSchema.parse(
+            await this.#getSkillHubJson(`${agentRuntimeRoutes.skillHubSearch}?${params.toString()}`)
+        );
+    }
+
+    async previewSkillHubSkill(identifier: string) {
+        const params = new URLSearchParams({ identifier });
+        return agentRuntimeSkillHubPreviewSchema.parse(
+            await this.#getSkillHubJson(
+                `${agentRuntimeRoutes.skillHubPreview}?${params.toString()}`
+            )
+        );
+    }
+
+    async scanSkillHubSkill(identifier: string) {
+        const params = new URLSearchParams({ identifier });
+        return agentRuntimeSkillHubScanSchema.parse(
+            await this.#getSkillHubJson(`${agentRuntimeRoutes.skillHubScan}?${params.toString()}`)
+        );
+    }
+
+    async installSkillHubSkill(input: AgentRuntimeSkillHubInstallInput) {
+        const payload = agentRuntimeSkillHubInstallInputSchema.parse(input);
+        return agentRuntimeSkillHubActionResultSchema.parse(
+            await this.#sendSkillHubJson('POST', agentRuntimeRoutes.skillHubInstall, payload)
+        );
+    }
+
+    async uninstallSkillHubSkill(input: AgentRuntimeSkillHubUninstallInput) {
+        const payload = agentRuntimeSkillHubUninstallInputSchema.parse(input);
+        return agentRuntimeSkillHubActionResultSchema.parse(
+            await this.#sendSkillHubJson('POST', agentRuntimeRoutes.skillHubUninstall, payload)
+        );
+    }
+
+    async listSkillHubTaps() {
+        return agentRuntimeSkillHubTapListSchema.parse(
+            await this.#getSkillHubJson(agentRuntimeRoutes.skillHubTaps)
+        );
+    }
+
+    async addSkillHubTap(input: AgentRuntimeSkillHubTap) {
+        const payload = agentRuntimeSkillHubTapSchema.parse(input);
+        return agentRuntimeSkillHubTapListSchema.parse(
+            await this.#sendSkillHubJson('POST', agentRuntimeRoutes.skillHubTaps, payload)
+        );
+    }
+
+    async removeSkillHubTap(repo: string) {
+        return agentRuntimeSkillHubTapListSchema.parse(
+            await this.#sendSkillHubJson('DELETE', agentRuntimeRoutes.skillHubTap(repo), undefined)
+        );
+    }
+
+    async #getSkillHubJson(pathname: string) {
+        const response = await fetch(`${this.#baseUrl}${pathname}`, {
+            headers: this.#authHeaders,
+        });
+
+        if (!response.ok) {
+            await readErrorResponse(response);
+        }
+
+        return await response.json();
+    }
+
+    async #sendSkillHubJson(method: 'DELETE' | 'POST', pathname: string, payload: unknown) {
+        const response = await fetch(`${this.#baseUrl}${pathname}`, {
+            ...(payload === undefined ? {} : { body: JSON.stringify(payload) }),
+            headers: {
+                ...this.#authHeaders,
+                'content-type': 'application/json',
+                [agentRuntimeMutationHeaders.origin]: agentRuntimeMutationOrigins.tavern,
+            },
+            method,
+        });
+
+        if (!response.ok) {
+            await readErrorResponse(response);
+        }
+
+        return await response.json();
     }
 
     async listMacApps(options?: { limit?: number; query?: string }) {

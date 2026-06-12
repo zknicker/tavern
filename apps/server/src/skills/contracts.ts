@@ -1,7 +1,28 @@
-import { agentRuntimeSkillRequirementsSchema } from '@tavern/api';
+import { agentRuntimeSkillHubTapSchema, agentRuntimeSkillRequirementsSchema } from '@tavern/api';
 import { z } from 'zod';
 
 export const skillIdSchema = z.string().trim().min(1).max(200);
+
+export const skillHubSearchInputSchema = z.object({
+    query: z.string().trim().min(1).max(200),
+    source: z.string().trim().min(1).max(50).optional(),
+});
+
+export const skillHubIdentifierInputSchema = z.object({
+    identifier: z.string().trim().min(1).max(400),
+});
+
+export const skillHubInstallInputSchema = skillHubIdentifierInputSchema;
+
+export const skillHubUninstallInputSchema = z.object({
+    name: z.string().trim().min(1).max(200),
+});
+
+export const skillHubTapInputSchema = agentRuntimeSkillHubTapSchema;
+
+export const skillHubTapRemoveInputSchema = z.object({
+    repo: z.string().trim().min(1).max(200),
+});
 
 export const setSkillEnabledInputSchema = z.object({
     enabled: z.boolean(),
