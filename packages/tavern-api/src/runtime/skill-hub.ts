@@ -21,37 +21,24 @@ export const agentRuntimeSkillHubItemSchema = z.object({
     trustLevel: agentRuntimeSkillHubTrustLevelSchema,
 });
 
-export const agentRuntimeSkillHubSourceSchema = z.object({
-    available: z.boolean().optional(),
-    id: z.string().trim().min(1),
-    label: z.string().trim().min(1),
-    rateLimited: z.boolean().optional(),
-});
-
 export const agentRuntimeSkillHubInstalledEntrySchema = z.object({
     name: z.string().trim().min(1).nullable(),
     scanVerdict: z.string().trim().min(1).nullable(),
     trustLevel: z.string().trim().min(1).nullable(),
 });
 
-export const agentRuntimeSkillHubCatalogSchema = z.object({
-    featured: z.array(agentRuntimeSkillHubItemSchema),
-    indexAvailable: z.boolean(),
-    installed: z.record(z.string(), agentRuntimeSkillHubInstalledEntrySchema),
-    sources: z.array(agentRuntimeSkillHubSourceSchema),
+const skillHubTapRepoPatternForListing = /^[\w.-]+\/[\w.-]+$/u;
+
+export const agentRuntimeSkillHubTapListingSchema = z.object({
+    path: z.string().trim().min(1),
+    repo: z.string().trim().regex(skillHubTapRepoPatternForListing),
+    skills: z.array(agentRuntimeSkillHubItemSchema),
 });
 
-export const agentRuntimeSkillHubSearchInputSchema = z.object({
-    limit: z.number().int().min(1).max(50).optional(),
-    query: z.string().trim().min(1).max(200),
-    source: z.string().trim().min(1).optional(),
-});
-
-export const agentRuntimeSkillHubSearchResultSchema = z.object({
+export const agentRuntimeSkillHubAvailableSchema = z.object({
+    builtin: z.array(agentRuntimeSkillHubItemSchema),
     installed: z.record(z.string(), agentRuntimeSkillHubInstalledEntrySchema),
-    results: z.array(agentRuntimeSkillHubItemSchema),
-    sourceCounts: z.record(z.string(), z.number().int().nonnegative()),
-    timedOut: z.array(z.string()),
+    taps: z.array(agentRuntimeSkillHubTapListingSchema),
 });
 
 export const agentRuntimeSkillHubPreviewSchema = agentRuntimeSkillHubItemSchema.extend({
@@ -112,7 +99,7 @@ export const agentRuntimeSkillHubTapListSchema = z.object({
 export type AgentRuntimeSkillHubActionResult = z.infer<
     typeof agentRuntimeSkillHubActionResultSchema
 >;
-export type AgentRuntimeSkillHubCatalog = z.infer<typeof agentRuntimeSkillHubCatalogSchema>;
+export type AgentRuntimeSkillHubAvailable = z.infer<typeof agentRuntimeSkillHubAvailableSchema>;
 export type AgentRuntimeSkillHubInstallInput = z.infer<
     typeof agentRuntimeSkillHubInstallInputSchema
 >;
@@ -123,12 +110,8 @@ export type AgentRuntimeSkillHubItem = z.infer<typeof agentRuntimeSkillHubItemSc
 export type AgentRuntimeSkillHubPreview = z.infer<typeof agentRuntimeSkillHubPreviewSchema>;
 export type AgentRuntimeSkillHubScan = z.infer<typeof agentRuntimeSkillHubScanSchema>;
 export type AgentRuntimeSkillHubScanFinding = z.infer<typeof agentRuntimeSkillHubScanFindingSchema>;
-export type AgentRuntimeSkillHubSearchInput = z.infer<typeof agentRuntimeSkillHubSearchInputSchema>;
-export type AgentRuntimeSkillHubSearchResult = z.infer<
-    typeof agentRuntimeSkillHubSearchResultSchema
->;
-export type AgentRuntimeSkillHubSource = z.infer<typeof agentRuntimeSkillHubSourceSchema>;
 export type AgentRuntimeSkillHubTap = z.infer<typeof agentRuntimeSkillHubTapSchema>;
+export type AgentRuntimeSkillHubTapListing = z.infer<typeof agentRuntimeSkillHubTapListingSchema>;
 export type AgentRuntimeSkillHubTapList = z.infer<typeof agentRuntimeSkillHubTapListSchema>;
 export type AgentRuntimeSkillHubUninstallInput = z.infer<
     typeof agentRuntimeSkillHubUninstallInputSchema
