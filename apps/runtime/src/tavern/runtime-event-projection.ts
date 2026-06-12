@@ -26,6 +26,12 @@ export function listProjectedTavernRuntimeEvents(
 }
 
 function chatEventToRuntimeEvents(event: TavernChatEvent): PersistedRuntimeEvent[] {
+    // Composer command runs are settled evidence, not live turns; projecting
+    // them would surface a phantom in-flight turn in the app.
+    if (isCommandRunEvent(event)) {
+        return [];
+    }
+
     switch (event.type) {
         case 'message.created': {
             const runtimeEvent = messageCreatedToRuntimeEvent(event.message, event.created_at);
@@ -107,12 +113,46 @@ function chatEventToRuntimeEvents(event: TavernChatEvent): PersistedRuntimeEvent
                 cursor: Number(event.cursor),
                 event: runtimeEvent,
             }));
-        case 'artifact.created':
+        case 'chat.cleared':
         case 'message.deleted':
+        case 'response.deleted':
+            return [
+                {
+                    cursor: Number(event.cursor),
+                    event: {
+                        chatId: event.chat_id,
+                        timestamp: event.created_at,
+                        type: 'chat.historyChanged',
+                    },
+                },
+            ];
+        case 'artifact.created':
             return [];
         default:
             throw new Error('Unsupported Tavern chat event type during runtime projection.');
     }
+}
+
+function isCommandRunEvent(event: TavernChatEvent) {
+    if (
+        event.type === 'response.created' ||
+        event.type === 'response.updated' ||
+        event.type === 'response.completed' ||
+        event.type === 'response.failed'
+    ) {
+        return metadataRuntimeString(event.response.metadata, 'source') === 'command';
+    }
+
+    if (
+        event.type === 'activity.created' ||
+        event.type === 'activity.updated' ||
+        event.type === 'activity.completed' ||
+        event.type === 'activity.failed'
+    ) {
+        return event.activity.kind === 'command' && isRecord(event.activity.metadata.command);
+    }
+
+    return false;
 }
 
 function messageCreatedToRuntimeEvent(

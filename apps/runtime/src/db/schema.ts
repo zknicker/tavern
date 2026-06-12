@@ -175,6 +175,7 @@ CREATE TABLE IF NOT EXISTS chat_responses (
   created_at          TEXT NOT NULL,
   updated_at          TEXT NOT NULL,
   completed_at        TEXT,
+  deleted_at          TEXT,
   FOREIGN KEY(chat_id) REFERENCES chats(id) ON DELETE CASCADE,
   FOREIGN KEY(request_message_id) REFERENCES chat_messages(id) ON DELETE SET NULL,
   FOREIGN KEY(response_message_id) REFERENCES chat_messages(id) ON DELETE SET NULL
@@ -277,6 +278,11 @@ export function ensureRuntimeSchema(db: Database): void {
         column: 'pinned',
         definition: 'INTEGER NOT NULL DEFAULT 0 CHECK (pinned IN (0, 1))',
         table: 'chats',
+    });
+    ensureColumn(db, {
+        column: 'deleted_at',
+        definition: 'TEXT',
+        table: 'chat_responses',
     });
 }
 

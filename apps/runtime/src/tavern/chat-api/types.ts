@@ -75,6 +75,7 @@ export interface ResponseRow {
     chat_id: string;
     completed_at: string | null;
     created_at: string;
+    deleted_at: string | null;
     id: string;
     metadata_json: string;
     participant_id: string;

@@ -3,9 +3,11 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { closeDb, getDb, initTestDb } from '../db/connection';
 import { ensureRuntimeSchema } from '../db/schema';
 import {
+    clearChat,
     createChat,
     createDelivery,
     createMessage,
+    deleteResponse,
     getChat,
     getResponse,
     getResponseActivity,
@@ -22,6 +24,7 @@ import {
 } from './chat-api';
 import { insertEvent } from './chat-api/events';
 import { handleTavernRuntimeRequest } from './router';
+import { listProjectedTavernRuntimeEvents } from './runtime-event-projection';
 
 describe('Tavern Runtime Chat API store', () => {
     beforeEach(() => {
@@ -30,6 +33,83 @@ describe('Tavern Runtime Chat API store', () => {
 
     afterEach(() => {
         closeDb();
+    });
+
+    it('keeps composer command runs out of the live turn projection', () => {
+        createChat({ id: 'cht_1', title: 'Test' });
+        upsertResponse('cht_1', {
+            id: 'rsp_cmd_1',
+            metadata: { runtime: { agentId: 'agt_hermes', source: 'command' } },
+            participant_id: 'agt_hermes',
+            status: 'completed',
+        });
+        upsertResponseActivity('cht_1', 'rsp_cmd_1', {
+            detail: 'Hermes CLI Status',
+            id: 'act_rsp_cmd_1',
+            kind: 'command',
+            metadata: { command: { status: 'completed', text: '/status' } },
+            status: 'completed',
+            title: '/status',
+        });
+
+        const projected = listProjectedTavernRuntimeEvents().map((entry) => entry.event.type);
+        expect(projected).not.toContain('turn.started');
+        expect(projected).not.toContain('turn.completed');
+        expect(projected).not.toContain('turn.progress');
+    });
+
+    it('soft-deletes a response and projects a history change', () => {
+        createChat({ id: 'cht_1' });
+        upsertResponse('cht_1', {
+            id: 'rsp_cmd_1',
+            metadata: { runtime: { agentId: 'agt_hermes', source: 'command' } },
+            participant_id: 'agt_hermes',
+            status: 'completed',
+        });
+
+        const receipt = deleteResponse('rsp_cmd_1');
+
+        expect(receipt.response_id).toBe('rsp_cmd_1');
+        expect(getResponse('rsp_cmd_1')?.deleted_at).toBe(receipt.deleted_at);
+        expect(listResponses('cht_1').responses[0]?.deleted_at).toBe(receipt.deleted_at);
+        expect(listEvents().events.map((event) => event.type)).toContain('response.deleted');
+        expect(listProjectedTavernRuntimeEvents().map((entry) => entry.event.type)).toContain(
+            'chat.historyChanged'
+        );
+    });
+
+    it('rejects deleting a response that does not exist', () => {
+        createChat({ id: 'cht_1' });
+
+        expect(() => deleteResponse('rsp_missing')).toThrow('Missing chat response');
+    });
+
+    it('clears a chat by soft-deleting everything currently in it', () => {
+        createChat({ id: 'cht_1' });
+        createMessage('cht_1', messageInput('msg_1', 'nonce_1', 'hello'));
+        upsertResponse('cht_1', {
+            id: 'rsp_1',
+            participant_id: 'agt_hermes',
+            status: 'completed',
+        });
+
+        const receipt = clearChat('cht_1');
+
+        expect(receipt.messages_deleted).toBe(1);
+        expect(receipt.responses_deleted).toBe(1);
+        expect(listMessages('cht_1').messages[0]?.deleted_at).toBe(receipt.cleared_at);
+        expect(listResponses('cht_1').responses[0]?.deleted_at).toBe(receipt.cleared_at);
+        expect(listEvents().events.map((event) => event.type)).toContain('chat.cleared');
+
+        // Sequence slots stay stable, new work after the clear is visible,
+        // and a repeat clear does not re-delete already-hidden rows.
+        const after = createMessage('cht_1', messageInput('msg_2', 'nonce_2', 'after'));
+        expect(after.message.sequence).toBe(2);
+        expect(after.message.deleted_at).toBeNull();
+
+        const repeat = clearChat('cht_1');
+        expect(repeat.messages_deleted).toBe(1);
+        expect(repeat.responses_deleted).toBe(0);
     });
 
     it('creates messages with per-chat sequence, events, and idempotent nonce receipts', () => {
@@ -599,6 +679,32 @@ describe('Tavern Runtime Chat API routes', () => {
                 id: 'msg_1',
                 sequence: 1,
             },
+        });
+    });
+
+    it('soft-deletes responses and clears chats through the chat API routes', async () => {
+        createChat({ id: 'cht_1' });
+        createMessage('cht_1', messageInput('msg_1', 'nonce_1', 'hello'));
+        upsertResponse('cht_1', {
+            id: 'rsp_1',
+            participant_id: 'agt_1',
+            status: 'completed',
+        });
+
+        const deleted = await handleTavernRuntimeRequest(
+            new Request('http://127.0.0.1:18790/api/responses/rsp_1', { method: 'DELETE' })
+        );
+        expect(deleted.status).toBe(200);
+        await expect(deleted.json()).resolves.toMatchObject({ response_id: 'rsp_1' });
+
+        const cleared = await handleTavernRuntimeRequest(
+            jsonRequest('POST', '/api/chats/cht_1/clear', {})
+        );
+        expect(cleared.status).toBe(200);
+        await expect(cleared.json()).resolves.toMatchObject({
+            chat_id: 'cht_1',
+            messages_deleted: 1,
+            responses_deleted: 0,
         });
     });
 

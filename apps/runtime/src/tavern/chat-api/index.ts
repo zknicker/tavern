@@ -1,5 +1,6 @@
 export { createChat, getChat, listChats } from './chats';
 export { createDelivery } from './deliveries';
+export { clearChat, deleteResponse } from './dismiss';
 export { listEvents, subscribeToTavernApiEvents } from './events';
 export {
     createMessage,

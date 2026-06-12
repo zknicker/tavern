@@ -8,10 +8,12 @@ import type {
     TavernUpsertResponseRequest,
 } from '@tavern/api';
 import {
+    clearChat,
     createChat,
     createDelivery,
     createMessage,
     deleteMessage,
+    deleteResponse,
     getChat,
     getChatTimelinePage,
     getMessage,
@@ -169,12 +171,20 @@ async function route(request: Request, url: URL): Promise<Response> {
         if (child === 'read') {
             return json(markRead(chatId, (await readJson(request)) as TavernMarkReadRequest));
         }
+        if (child === 'clear') {
+            return json(clearChat(chatId));
+        }
     }
 
     const chatMatch = url.pathname.match(/^\/api\/chats\/([^/]+)$/u);
     if (chatMatch && request.method === 'GET') {
         const chat = getChat(decodeURIComponent(chatMatch[1]));
         return chat ? json(chat) : notFound();
+    }
+
+    const responseMatch = url.pathname.match(/^\/api\/responses\/([^/]+)$/u);
+    if (responseMatch && request.method === 'DELETE') {
+        return json(deleteResponse(decodeURIComponent(responseMatch[1])));
     }
 
     const messageMatch = url.pathname.match(/^\/api\/messages\/([^/]+)$/u);

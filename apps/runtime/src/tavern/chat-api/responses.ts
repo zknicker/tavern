@@ -469,6 +469,7 @@ export function rowToResponse(row: ResponseRow): TavernChatResponse {
         chat_id: row.chat_id,
         completed_at: row.completed_at,
         created_at: row.created_at,
+        deleted_at: row.deleted_at ?? null,
         id: row.id,
         metadata: JSON.parse(row.metadata_json) as Record<string, unknown>,
         participant_id: row.participant_id,

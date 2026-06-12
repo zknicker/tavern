@@ -15,6 +15,7 @@ import {
     runtimeRoutes,
 } from '@tavern/api';
 import { handleRuntimeCapabilitiesRequest } from '../capabilities/routes';
+import { handleCommandsRequest } from '../hermes/command-routes';
 import { handleConnectorsRequest } from '../hermes/connector-routes';
 import { handleExecutionSettingsRequest } from '../hermes/execution-settings';
 import { handlePermissionSettingsRequest } from '../hermes/permission-settings';
@@ -109,6 +110,11 @@ export async function handleTavernRuntimeRequest(request: Request): Promise<Resp
     const connectorsResponse = await handleConnectorsRequest(request);
     if (connectorsResponse) {
         return connectorsResponse;
+    }
+
+    const commandsResponse = await handleCommandsRequest(request);
+    if (commandsResponse) {
+        return commandsResponse;
     }
 
     const capabilitiesResponse = await handleRuntimeCapabilitiesRequest(request);
