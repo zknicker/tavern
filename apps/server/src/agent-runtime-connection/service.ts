@@ -126,6 +126,24 @@ function toRuntimeOwnedStatus(
     };
 }
 
+/**
+ * Re-fetch a runtime's self-reported capability snapshot and replace the
+ * cached runtime-owned status. Runtime event sync calls this when the runtime
+ * publishes `capability.updated`, so reads with `refreshStatus: false` see the
+ * runtime's current state instead of the snapshot cached at connect time.
+ */
+export async function refreshRuntimeOwnedStatus(connection: {
+    authJson?: null | string;
+    baseUrl: string;
+    id: string;
+}): Promise<RuntimeOwnedStatus> {
+    return await getRuntimeOwnedStatus({
+        authJson: connection.authJson,
+        baseUrl: connection.baseUrl,
+        runtimeId: connection.id,
+    });
+}
+
 async function getRuntimeOwnedStatus(input: {
     authJson?: null | string;
     baseUrl: string;

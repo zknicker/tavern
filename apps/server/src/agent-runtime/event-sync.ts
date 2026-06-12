@@ -3,6 +3,7 @@ import {
     confirmAgentRuntimeConnection,
     markAgentRuntimeConnectionFailure,
     markAgentRuntimeConnectionReachable,
+    refreshRuntimeOwnedStatus,
 } from '../agent-runtime-connection/service.ts';
 import {
     emitAgentInstructionsUpdated,
@@ -122,7 +123,7 @@ export async function applyObservedAgentRuntimeEvent(
                 return;
             }
 
-            void refreshRuntimeCapability(connection, event.capability).catch((error) => {
+            await refreshRuntimeCapability(connection).catch((error) => {
                 console.warn('[tavern] failed to refresh runtime capability', error);
             });
             return;
@@ -336,9 +337,8 @@ function sanitizeRuntimeId(id: string) {
     return id.replace(/[^A-Za-z0-9_-]/gu, '_');
 }
 
-async function refreshRuntimeCapability(connection: RuntimeConnectionRecord, capability: string) {
-    void connection;
-    void capability;
+async function refreshRuntimeCapability(connection: RuntimeConnectionRecord) {
+    await refreshRuntimeOwnedStatus(connection);
     emitAgentRuntimeCapabilityUpdated();
     emitAgentRuntimeUpdated();
 }

@@ -187,9 +187,15 @@ gate.
 
 Runtime emits `capability.updated` after a capability write. Managed Hermes
 state changes use the same path: Gateway down writes updated Runtime capability
-health, Runtime emits `capability.updated`, App backend emits
+health, Runtime emits `capability.updated`, App backend re-fetches the
+runtime's capability snapshot into its cached runtime-owned status, emits
 `agent-runtime-capability.updated`, and the frontend invalidates
 `agentRuntime.get`.
+
+The App backend re-fetch is load-bearing: `agentRuntime.get` serves the cached
+runtime-owned status without contacting Runtime, so a `capability.updated`
+event that does not refresh the cache leaves the app on the snapshot taken at
+connect time (for example, engine checks still warming during startup).
 
 Frontend controls must render from the refreshed capability record. Do not
 disable sends, cron actions, or other Hermes-backed actions from app-local
