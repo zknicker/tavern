@@ -1,5 +1,4 @@
 import { CubeIcon, Tick02Icon } from '@hugeicons-pro/core-stroke-rounded';
-import { Badge } from '../../components/ui/badge.tsx';
 import { Icon } from '../../components/ui/icon.tsx';
 import { Button } from '../../components/ui/primitives/button.tsx';
 import { Spinner } from '../../components/ui/spinner.tsx';
@@ -34,10 +33,10 @@ export function AvailableSkillsList({
     }
 
     return (
-        <div className="grid gap-7">
+        <div className="grid gap-9">
             {available.taps.map((tap) => (
                 <section className="grid gap-2" key={tap.repo}>
-                    <h3 className="font-mono text-foreground text-sm">{tap.repo}</h3>
+                    <h3 className="font-semibold text-base text-foreground">{tap.repo}</h3>
                     {tap.skills.length > 0 ? (
                         <SourceSkillRows
                             installed={available.installed}
@@ -55,12 +54,7 @@ export function AvailableSkillsList({
             ))}
 
             <section className="grid gap-2">
-                <header className="flex items-center gap-2">
-                    <h3 className="font-medium text-foreground text-sm">Built-in library</h3>
-                    <span className="text-muted-foreground text-xs">
-                        Optional skills maintained by the agent engine
-                    </span>
-                </header>
+                <h3 className="font-semibold text-base text-foreground">Built-in library</h3>
                 {available.builtin.length > 0 ? (
                     <SourceSkillRows
                         installed={available.installed}
@@ -87,39 +81,44 @@ function SourceSkillRows({
     onSelect: (item: SkillHubItemOutput) => void;
 }) {
     return (
-        <div className="grid gap-2">
+        <div className="grid">
             {items.map((item) => {
                 const isInstalled = item.identifier in installed;
 
                 return (
                     <div
-                        className="flex items-center gap-3 rounded-xl border border-border/70 pr-4 transition-colors hover:border-border-strong"
+                        className="-mx-3 flex items-center gap-4 rounded-xl px-3 py-2.5 transition-colors hover:bg-accent/40"
                         key={item.identifier}
                     >
                         <button
-                            className="flex min-w-0 flex-1 items-center gap-3 px-4 py-3 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                            className="flex min-w-0 flex-1 items-center gap-4 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                             onClick={() => onSelect(item)}
                             type="button"
                         >
-                            <span className="flex size-7 shrink-0 items-center justify-center rounded-lg border border-border/70 bg-background text-muted-foreground">
-                                <Icon className="size-4" icon={CubeIcon} />
+                            <span className="flex size-10 shrink-0 items-center justify-center rounded-[10px] border border-border/50 bg-muted/40 text-muted-foreground">
+                                <Icon className="size-5" icon={CubeIcon} />
                             </span>
                             <span className="min-w-0 flex-1">
-                                <span className="truncate font-medium text-foreground text-sm">
+                                <span className="block truncate font-medium text-[15px] text-foreground">
                                     {formatSkillName(item.name)}
                                 </span>
-                                <span className="mt-1 line-clamp-1 block text-muted-foreground text-sm">
+                                <span className="mt-0.5 line-clamp-1 text-muted-foreground text-sm">
                                     {item.description || item.identifier}
                                 </span>
                             </span>
                         </button>
                         {isInstalled ? (
-                            <Badge size="sm" variant="success">
-                                <Icon className="size-3" icon={Tick02Icon} />
-                                Installed
-                            </Badge>
+                            <Icon
+                                className="size-4 shrink-0 text-muted-foreground"
+                                icon={Tick02Icon}
+                            />
                         ) : (
-                            <Button onClick={() => onSelect(item)} size="sm" variant="outline">
+                            <Button
+                                className="shrink-0 rounded-full"
+                                onClick={() => onSelect(item)}
+                                size="sm"
+                                variant="secondary"
+                            >
                                 Add skill
                             </Button>
                         )}

@@ -2,7 +2,6 @@ import { AlertCircleIcon } from '@hugeicons/core-free-icons';
 import { AddCircleIcon } from '@hugeicons-pro/core-stroke-rounded';
 import * as React from 'react';
 import { Alert, AlertDescription } from '../../components/ui/alert.tsx';
-import { BadgeDivider } from '../../components/ui/badge-divider.tsx';
 import { Icon } from '../../components/ui/icon.tsx';
 import { Button } from '../../components/ui/primitives/button.tsx';
 import { AddToolsetDialog } from '../../features/skills/add-toolset-dialog.tsx';
@@ -34,16 +33,26 @@ export function ToolsetsPage() {
     }
 
     return (
-        <div>
-            <section className="grid gap-4">
-                <BadgeDivider className="pb-4">Toolsets</BadgeDivider>
-                <div className="flex items-center">
-                    <Button className="ml-auto" onClick={() => setAddToolsetOpen(true)}>
-                        <Icon className="size-4" icon={AddCircleIcon} />
-                        Add toolset
-                    </Button>
+        <div className="mx-auto w-full max-w-3xl">
+            <header className="flex items-start pb-6">
+                <div>
+                    <h1 className="font-semibold text-2xl text-foreground">Toolsets</h1>
+                    <p className="mt-1 text-muted-foreground text-sm">
+                        Grant the agent access to groups of runtime tools
+                    </p>
                 </div>
+                <Button
+                    className="ml-auto shrink-0 rounded-full"
+                    onClick={() => setAddToolsetOpen(true)}
+                    size="sm"
+                    variant="secondary"
+                >
+                    <Icon className="size-4" icon={AddCircleIcon} />
+                    Add toolset
+                </Button>
+            </header>
 
+            <section className="grid gap-4">
                 <ToolsetsList
                     onConfigure={setSetupToolset}
                     onSetEnabled={(input) => setToolsetEnabled.mutate(input)}

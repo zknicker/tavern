@@ -1,7 +1,6 @@
 import { AlertCircleIcon } from '@hugeicons/core-free-icons';
 import * as React from 'react';
 import { Alert, AlertDescription } from '../../components/ui/alert.tsx';
-import { BadgeDivider } from '../../components/ui/badge-divider.tsx';
 import { Icon } from '../../components/ui/icon.tsx';
 import { Button } from '../../components/ui/primitives/button.tsx';
 import { AvailableSkillsList } from '../../features/skills/available-skills-list.tsx';
@@ -10,7 +9,6 @@ import { SkillDialog, type SkillDialogSubject } from '../../features/skills/skil
 import { SkillSourcesDialog } from '../../features/skills/skill-sources-dialog.tsx';
 import { SkillsPageSkeleton } from '../../features/skills/skills-page-skeleton.tsx';
 import { type SkillsTab, SkillsTabBar } from '../../features/skills/skills-tab-bar.tsx';
-import { useSkillEnabledSet } from '../../hooks/skills/use-skill-enabled-set.ts';
 import { useSkillHubAvailable } from '../../hooks/skills/use-skill-hub-available.ts';
 import { useSkillList } from '../../hooks/skills/use-skill-list.ts';
 import type { SkillHubItemOutput, SkillListOutput } from '../../lib/trpc.tsx';
@@ -19,7 +17,6 @@ export function SkillsPage() {
     const [tab, setTab] = React.useState<SkillsTab>('installed');
     const [sourcesOpen, setSourcesOpen] = React.useState(false);
     const [subject, setSubject] = React.useState<null | SkillDialogSubject>(null);
-    const setSkillEnabled = useSkillEnabledSet();
     const skillsQuery = useSkillList();
     const availableQuery = useSkillHubAvailable({ enabled: true });
     const skills = skillsQuery.data?.skills ?? [];
@@ -32,13 +29,6 @@ export function SkillsPage() {
         }
         return byName;
     }, [availableQuery.data?.installed]);
-    const savingSkillIds = React.useMemo(
-        () =>
-            setSkillEnabled.isPending && setSkillEnabled.variables
-                ? new Set([setSkillEnabled.variables.skillId])
-                : new Set<string>(),
-        [setSkillEnabled.isPending, setSkillEnabled.variables]
-    );
     const liveSubject = subject ? refreshSubject(subject, skills, hubByName) : null;
 
     if (skillsQuery.isPending && !skillsQuery.data) {
@@ -46,9 +36,15 @@ export function SkillsPage() {
     }
 
     return (
-        <div>
-            <section className="grid gap-4">
-                <BadgeDivider className="pb-4">Skills</BadgeDivider>
+        <div className="mx-auto w-full max-w-3xl">
+            <header className="pb-6">
+                <h1 className="font-semibold text-2xl text-foreground">Skills</h1>
+                <p className="mt-1 text-muted-foreground text-sm">
+                    Teach the agent reusable workflows from sources you choose
+                </p>
+            </header>
+
+            <div className="grid gap-5">
                 <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
                     <SkillsTabBar
                         counts={{ installed: skills.length }}
@@ -56,9 +52,10 @@ export function SkillsPage() {
                         value={tab}
                     />
                     <Button
-                        className="shrink-0 sm:ml-auto"
+                        className="shrink-0 rounded-full sm:ml-auto"
                         onClick={() => setSourcesOpen(true)}
-                        variant="outline"
+                        size="sm"
+                        variant="secondary"
                     >
                         Manage sources
                     </Button>
@@ -67,8 +64,6 @@ export function SkillsPage() {
                 {tab === 'installed' ? (
                     <InstalledSkillsList
                         onSelect={(skill) => setSubject(installedSubject(skill, hubByName))}
-                        onSetEnabled={(input) => setSkillEnabled.mutate(input)}
-                        savingSkillIds={savingSkillIds}
                         skills={skills}
                     />
                 ) : (
@@ -76,7 +71,7 @@ export function SkillsPage() {
                         onSelect={(item) => setSubject(availableSubject(item, skills, hubByName))}
                     />
                 )}
-            </section>
+            </div>
 
             <SkillDialog
                 onOpenChange={(open) => {

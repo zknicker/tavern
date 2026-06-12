@@ -19,7 +19,7 @@ export function SkillsTabBar({
     return (
         <div
             aria-label="Filter skills"
-            className="flex min-w-0 flex-wrap items-center gap-1 self-start rounded-lg bg-muted/50 p-1"
+            className="flex min-w-0 flex-wrap items-center gap-1 self-start"
             role="tablist"
         >
             {tabs.map((tab) => {
@@ -29,8 +29,10 @@ export function SkillsTabBar({
                     <button
                         aria-selected={active}
                         className={cn(
-                            'flex h-8 shrink-0 items-center gap-1.5 rounded-md px-3 font-medium text-muted-foreground text-sm transition-colors hover:bg-background/70 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
-                            active && 'bg-background text-foreground shadow-xs'
+                            'flex h-8 shrink-0 items-center gap-1.5 rounded-full px-3.5 font-medium text-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+                            active
+                                ? 'bg-secondary text-secondary-foreground'
+                                : 'text-muted-foreground hover:text-foreground'
                         )}
                         key={tab.id}
                         onClick={() => onChange(tab.id)}

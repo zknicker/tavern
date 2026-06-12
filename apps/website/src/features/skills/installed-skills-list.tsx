@@ -1,9 +1,8 @@
-import { CubeIcon } from '@hugeicons-pro/core-stroke-rounded';
+import { CubeIcon, Tick02Icon } from '@hugeicons-pro/core-stroke-rounded';
 import * as React from 'react';
 import { Badge } from '../../components/ui/badge.tsx';
 import { Icon } from '../../components/ui/icon.tsx';
 import { SearchInput } from '../../components/ui/primitives/search-input.tsx';
-import { Switch } from '../../components/ui/switch.tsx';
 import type { SkillListOutput } from '../../lib/trpc.tsx';
 import { cn } from '../../lib/utils.ts';
 import { EmptyState } from '../shell/empty-state.tsx';
@@ -13,13 +12,9 @@ type SkillSummary = SkillListOutput['skills'][number];
 
 export function InstalledSkillsList({
     onSelect,
-    onSetEnabled,
-    savingSkillIds,
     skills,
 }: {
     onSelect: (skill: SkillSummary) => void;
-    onSetEnabled: (input: { enabled: boolean; skillId: string }) => void;
-    savingSkillIds: Set<string>;
     skills: SkillSummary[];
 }) {
     const [search, setSearch] = React.useState('');
@@ -27,10 +22,10 @@ export function InstalledSkillsList({
     const visibleSkills = filterSkills(skills, deferredSearch);
 
     return (
-        <div className="grid gap-4">
+        <div className="grid gap-2">
             <SearchInput
                 aria-label="Search installed skills"
-                className="w-full sm:max-w-xs"
+                className="h-11 w-full rounded-full px-4"
                 name="skill-search"
                 onChange={(event) => setSearch(event.target.value)}
                 placeholder="Search skills..."
@@ -38,15 +33,9 @@ export function InstalledSkillsList({
             />
 
             {visibleSkills.length > 0 ? (
-                <div className="grid gap-2">
+                <div className="mt-2 grid">
                     {visibleSkills.map((skill) => (
-                        <SkillRow
-                            key={skill.id}
-                            onSelect={() => onSelect(skill)}
-                            onSetEnabled={(enabled) => onSetEnabled({ enabled, skillId: skill.id })}
-                            saving={savingSkillIds.has(skill.id)}
-                            skill={skill}
-                        />
+                        <SkillRow key={skill.id} onSelect={() => onSelect(skill)} skill={skill} />
                     ))}
                 </div>
             ) : (
@@ -64,55 +53,42 @@ export function InstalledSkillsList({
     );
 }
 
-function SkillRow({
-    onSelect,
-    onSetEnabled,
-    saving,
-    skill,
-}: {
-    onSelect: () => void;
-    onSetEnabled: (enabled: boolean) => void;
-    saving: boolean;
-    skill: SkillSummary;
-}) {
+function SkillRow({ onSelect, skill }: { onSelect: () => void; skill: SkillSummary }) {
     const needsSetup = skill.enabled && skill.dependencyState === 'missing';
 
     return (
-        <div className="flex items-center gap-3 rounded-xl border border-border/70 pr-4 transition-colors hover:border-border-strong">
-            <button
+        <button
+            className="-mx-3 flex items-center gap-4 rounded-xl px-3 py-2.5 text-left transition-colors hover:bg-accent/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            onClick={onSelect}
+            type="button"
+        >
+            <span
                 className={cn(
-                    'flex min-w-0 flex-1 items-center gap-3 px-4 py-3 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
-                    !skill.enabled && 'opacity-50'
+                    'flex size-10 shrink-0 items-center justify-center rounded-[10px] border border-border/50 bg-muted/40 text-muted-foreground',
+                    !skill.enabled && 'opacity-45'
                 )}
-                onClick={onSelect}
-                type="button"
             >
-                <span className="flex size-7 shrink-0 items-center justify-center rounded-lg border border-border/70 bg-background text-muted-foreground">
-                    <Icon className="size-4" icon={CubeIcon} />
-                </span>
-                <span className="min-w-0 flex-1">
-                    <span className="flex min-w-0 items-center gap-2">
-                        <span className="truncate font-medium text-foreground text-sm">
-                            {formatSkillName(skill.name)}
-                        </span>
-                        {needsSetup ? (
-                            <Badge size="sm" variant="error">
-                                {skill.diagnostic ?? 'Needs setup'}
-                            </Badge>
-                        ) : null}
+                <Icon className="size-5" icon={CubeIcon} />
+            </span>
+            <span className={cn('min-w-0 flex-1', !skill.enabled && 'opacity-45')}>
+                <span className="flex min-w-0 items-center gap-2">
+                    <span className="truncate font-medium text-[15px] text-foreground">
+                        {formatSkillName(skill.name)}
                     </span>
-                    <span className="mt-1 line-clamp-1 text-muted-foreground text-sm">
-                        {skill.description ?? skill.id}
-                    </span>
+                    {needsSetup ? (
+                        <Badge size="sm" variant="error">
+                            {skill.diagnostic ?? 'Needs setup'}
+                        </Badge>
+                    ) : null}
                 </span>
-            </button>
-            <Switch
-                aria-label={`${skill.enabled ? 'Disable' : 'Enable'} ${skill.name}`}
-                checked={skill.enabled}
-                disabled={saving}
-                onCheckedChange={onSetEnabled}
-            />
-        </div>
+                <span className="mt-0.5 line-clamp-1 text-muted-foreground text-sm">
+                    {skill.description ?? skill.id}
+                </span>
+            </span>
+            {skill.enabled ? (
+                <Icon className="size-4 shrink-0 text-muted-foreground" icon={Tick02Icon} />
+            ) : null}
+        </button>
     );
 }
 

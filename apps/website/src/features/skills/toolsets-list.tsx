@@ -28,10 +28,10 @@ export function ToolsetsList({
     const visibleToolsets = filterToolsets(toolsets, deferredSearch);
 
     return (
-        <div className="grid gap-4">
+        <div className="grid gap-2">
             <SearchInput
                 aria-label="Search toolsets"
-                className="w-full sm:max-w-xs"
+                className="h-11 w-full rounded-full px-4"
                 name="toolset-search"
                 onChange={(event) => setSearch(event.target.value)}
                 placeholder="Search toolsets..."
@@ -39,7 +39,7 @@ export function ToolsetsList({
             />
 
             {visibleToolsets.length > 0 ? (
-                <div className="grid gap-2">
+                <div className="mt-2 grid">
                     {visibleToolsets.map((toolset) => (
                         <ToolsetRow
                             key={toolset.id}
@@ -81,18 +81,18 @@ function ToolsetRow({
     const needsSetup = toolset.usability === 'not_usable';
 
     return (
-        <div className="flex items-center gap-3 rounded-xl border border-border/70 px-4 py-3 transition-colors hover:border-border-strong">
+        <div className="-mx-3 flex items-center gap-4 rounded-xl px-3 py-2.5 transition-colors hover:bg-accent/40">
             <span
                 className={cn(
-                    'flex size-7 shrink-0 items-center justify-center rounded-lg border border-border/70 bg-background text-muted-foreground',
-                    !toolset.enabled && 'opacity-50'
+                    'flex size-10 shrink-0 items-center justify-center rounded-[10px] border border-border/50 bg-muted/40 text-muted-foreground',
+                    !toolset.enabled && 'opacity-45'
                 )}
             >
-                <Icon className="size-4" icon={PlugIcon} />
+                <Icon className="size-5" icon={PlugIcon} />
             </span>
-            <span className={cn('min-w-0 flex-1', !toolset.enabled && 'opacity-50')}>
+            <span className={cn('min-w-0 flex-1', !toolset.enabled && 'opacity-45')}>
                 <span className="flex min-w-0 items-center gap-2">
-                    <span className="truncate font-medium text-foreground text-sm">
+                    <span className="truncate font-medium text-[15px] text-foreground">
                         {formatSkillName(toolset.name)}
                     </span>
                     {needsSetup ? (
@@ -105,12 +105,17 @@ function ToolsetRow({
                         </Badge>
                     ) : null}
                 </span>
-                <span className="mt-1 line-clamp-1 block text-muted-foreground text-sm">
+                <span className="mt-0.5 line-clamp-1 text-muted-foreground text-sm">
                     {toolset.description ?? toolset.id}
                 </span>
             </span>
             {needsSetup ? (
-                <Button onClick={onConfigure} size="sm" variant="outline">
+                <Button
+                    className="shrink-0 rounded-full"
+                    onClick={onConfigure}
+                    size="sm"
+                    variant="secondary"
+                >
                     Set up
                 </Button>
             ) : null}
