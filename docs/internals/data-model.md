@@ -24,6 +24,7 @@ reads, soft deletes, automations, deliveries, and the product timeline.
 | Runtime channel outbox | `apps/runtime/src/tavern/channel-store.ts` | Private relay queue and accepted-message receipt state for channel-style ingress |
 | Cortex wiki store | `apps/runtime/src/wiki/` | Runtime read API over the llm-wiki hub |
 | Runtime chat tests | `apps/runtime/src/tavern/chat-api-store.test.ts` | Contract, identity, sequence, event, read, and route behavior |
+| Runtime timeline tests | `apps/runtime/src/tavern/chat-api-timeline.test.ts` | Turn-aligned history pages, cursor stability, and window alignment |
 | App schema | `apps/server/src/db/bootstrap.ts` | App SQLite fresh setup |
 | App Drizzle schema | `apps/server/src/db/schema/` | Typed app cache and synced runtime tables |
 | Tavern API package | `packages/tavern-api/src/` | OpenAPI-generated and Zod-backed API contracts |

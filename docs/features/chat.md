@@ -87,16 +87,19 @@ and external runtime chat inventory.
 Runtime progress and reply events update response and activity rows by stable
 ids. They should not create a second volatile progress transcript.
 
-The chat detail loads a tail window of `chat.log.list` rows and pages older
-history in as the user scrolls up. While a chat stays open, the loaded
+The chat detail loads turn-aligned `chat.log.list` pages keyed by message
+sequence and pages older history in as the user scrolls up. A page always
+carries whole turn units — the user request, the response's activity, and the
+reply — so partial work logs never appear at a page boundary, and rows carry
+their owning `responseId` so transcript turn grouping uses server truth
+instead of timestamp-gap heuristics. While a chat stays open, the loaded
 transcript only grows:
 
-* Live progress patches append rows; they never trim loaded rows to the fetch
-  limit.
-* When a refetched window no longer covers a loaded row (the tail window
-  slides forward as durable rows land), the row is retained client-side. A
-  full-coverage window (offset 0) stays authoritative for deletions; a
-  deleted row inside a slid window disappears on the next chat open.
+* Live progress patches append rows; they never trim the loaded page.
+* When a refetched tail window no longer covers a loaded row, the row is
+  retained client-side. A full-coverage window stays authoritative for
+  deletions; a deleted row inside a partial window disappears on the next
+  chat open.
 * Without this, a turn at the page limit visibly drains older expanded work
   drawers and restores them at completion.
 

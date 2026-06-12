@@ -39,6 +39,7 @@ POST   /api/chats
 GET    /api/chats/{chat_id}
 GET    /api/chats/{chat_id}/messages?after_sequence=&before_sequence=&limit=
 GET    /api/chats/{chat_id}/messages/search?query=&limit=
+GET    /api/chats/{chat_id}/timeline?before_sequence=&limit=
 GET    /api/chats/{chat_id}/responses?after_sequence=&limit=
 GET    /api/chats/{chat_id}/activity/{activity_id}
 POST   /api/chats/{chat_id}/messages
@@ -72,8 +73,10 @@ The Tavern app keeps list and detail reads separate:
   Tavern chat tab.
 * `chat.updateSystemPrompt` changes trusted chat-specific agent instructions
   for a pinned Tavern chat. Empty text clears the prompt.
-* `chat.log.list` returns paged durable timeline rows for one chat, including
-  messages, responses, running and completed activity, and renderable artifacts.
+* `chat.log.list` returns turn-aligned pages of durable timeline rows for one
+  chat, including messages, responses, running and completed activity, and
+  renderable artifacts. Pages walk backward from the newest message with a
+  `beforeSequence` cursor; rows carry their owning `responseId`.
 
 Invalidate `chat.list` when membership or list ordering can change. Invalidate
 `chat.get` when one chat's detail fields can change. Response and activity
@@ -169,6 +172,22 @@ Rules:
 `GET /api/chats/{chat_id}/messages/search` returns matching durable messages
 from that chat. Search is case-insensitive keyword search over canonical message
 content and returns newest matches first.
+
+`GET /api/chats/{chat_id}/timeline` returns one turn-aligned page of chat
+history: a message window walked backward by sequence plus every response
+anchored to a window message by request or reply, with that response's full
+activity and artifacts.
+
+Rules:
+
+* `before_sequence` is an exclusive upper bound; omit it for the latest page
+  and pass the page's `next_before_sequence` to walk older history.
+* The window extends downward so an in-window reply always ships with its
+  request message. A turn whose request and reply straddle a page boundary is
+  anchored to both pages; consumers deduplicate by id.
+* Responses with no message anchor (live or automation turns not yet linked)
+  ride the latest page only.
+* `total_messages` counts the chat's durable messages.
 
 Runtime sessions can have their own sequence domains. Preserve runtime sequence
 in metadata or source fields; never use it as the Tavern timeline cursor.
