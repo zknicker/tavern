@@ -38,7 +38,7 @@ test('applyLogSnapshot clears the active reply when the assistant message lands'
     const state = startTimelineTurn(emptyTimelineState(), turn);
     const next = applyLogSnapshot(state, {
         limit: 100,
-        offset: 0,
+        nextBeforeSequence: null,
         rows: [
             {
                 actor: { id: 'claw', kind: 'agent' },
@@ -59,7 +59,7 @@ test('applyLogSnapshot clears the active reply when the assistant message lands'
                 },
             },
         ],
-        total: 1,
+        totalMessages: 1,
     });
 
     expect(next.activeReply).toBeNull();
@@ -71,7 +71,7 @@ test('applyLogSnapshot preserves active reply while durable activity is running'
     const state = startTimelineTurn(emptyTimelineState(), turn);
     const next = applyLogSnapshot(state, {
         limit: 100,
-        offset: 0,
+        nextBeforeSequence: null,
         rows: [
             {
                 actor: { id: 'claw', kind: 'agent' },
@@ -94,7 +94,7 @@ test('applyLogSnapshot preserves active reply while durable activity is running'
                 },
             },
         ],
-        total: 1,
+        totalMessages: 1,
     });
 
     expect(next.activeReply?.runId).toBe('run-1');
@@ -142,13 +142,13 @@ test('applyLogSnapshot preserves live progress rows while the turn is active', (
 
     const next = applyLogSnapshot(live, {
         limit: 100,
-        offset: 0,
+        nextBeforeSequence: null,
         rows: [],
-        total: 0,
+        totalMessages: 0,
     });
 
     expect(next.timeline.map((row) => row.id)).toEqual(['act_run-1_tool_web']);
-    expect(next.totalRows).toBe(1);
+    expect(next.totalMessages).toBe(0);
 });
 
 test('patchTimelineProgress updates the same preamble and Hermes tool rows through completion', () => {
@@ -229,14 +229,14 @@ test('applyLogSnapshot preserves live progress rows while replacing a pending tu
 
     const next = applyLogSnapshot(live, {
         limit: 100,
-        offset: 0,
+        nextBeforeSequence: null,
         rows: [],
-        total: 0,
+        totalMessages: 0,
     });
 
     expect(next.activeReply?.runId).toBe('pending:msg-1');
     expect(next.timeline.map((row) => row.id)).toEqual(['act_run-1_tool_web']);
-    expect(next.totalRows).toBe(1);
+    expect(next.totalMessages).toBe(0);
 });
 
 test('applyLogSnapshot clears live progress rows when the assistant message lands', () => {
@@ -253,7 +253,7 @@ test('applyLogSnapshot clears live progress rows when the assistant message land
 
     const next = applyLogSnapshot(live, {
         limit: 100,
-        offset: 0,
+        nextBeforeSequence: null,
         rows: [
             {
                 actor: { id: 'claw', kind: 'agent' },
@@ -274,7 +274,7 @@ test('applyLogSnapshot clears live progress rows when the assistant message land
                 },
             },
         ],
-        total: 1,
+        totalMessages: 1,
     });
 
     expect(next.timeline.map((row) => row.id)).toEqual(['message-1']);
@@ -391,7 +391,7 @@ test('applyLogSnapshot keeps the active reply when narration activity messages l
     });
     const next = applyLogSnapshot(streamed, {
         limit: 100,
-        offset: 0,
+        nextBeforeSequence: null,
         rows: [
             {
                 actor: { id: 'claw', kind: 'agent' },
@@ -413,7 +413,7 @@ test('applyLogSnapshot keeps the active reply when narration activity messages l
                 },
             },
         ],
-        total: 1,
+        totalMessages: 1,
     });
 
     expect(next.activeReply?.runId).toBe('run-1');
@@ -442,7 +442,7 @@ test('applyReplySnapshot does not regress streamed text from a stale snapshot', 
 test('applyReplySnapshot does not restore thinking after the assistant message is visible', () => {
     const logged = applyLogSnapshot(emptyTimelineState(), {
         limit: 100,
-        offset: 0,
+        nextBeforeSequence: null,
         rows: [
             {
                 actor: { id: 'claw', kind: 'agent' },
@@ -463,7 +463,7 @@ test('applyReplySnapshot does not restore thinking after the assistant message i
                 },
             },
         ],
-        total: 1,
+        totalMessages: 1,
     });
 
     const next = applyReplySnapshot(logged, {

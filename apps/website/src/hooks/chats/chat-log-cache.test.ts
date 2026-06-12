@@ -14,9 +14,9 @@ function emptyLog(): ChatLogOutput {
     return {
         activeReply: null,
         limit: 100,
-        offset: 0,
+        nextBeforeSequence: null,
         rows: [],
-        total: 0,
+        totalMessages: 0,
     };
 }
 
@@ -89,7 +89,7 @@ test('progress patch updates an existing activity row without replacing its star
         turn,
     });
 
-    expect(completed?.total).toBe(1);
+    expect(completed?.totalMessages).toBe(0);
     expect(completed?.rows[0]).toMatchObject({
         completedAt: '2026-05-22T19:00:06.000Z',
         id: 'act_run-1_tool-call-1',
@@ -131,7 +131,7 @@ test('progress patch renders live reasoning as one thinking row instead of a too
         turn,
     });
 
-    expect(second?.total).toBe(1);
+    expect(second?.totalMessages).toBe(0);
     expect(second?.rows[0]).toMatchObject({
         id: 'act_run-1_reasoning',
         kind: 'system',
@@ -181,7 +181,7 @@ test('progress patch keeps preamble and normalized Hermes tool activity stable t
         turn,
     });
 
-    expect(completed?.total).toBe(2);
+    expect(completed?.totalMessages).toBe(0);
     expect(completed?.rows.map((row) => row.id)).toEqual([
         'act_run-1_assistant-preamble',
         'act_run-1_call_mock_read_123',

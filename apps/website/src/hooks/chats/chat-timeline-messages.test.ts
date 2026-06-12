@@ -8,7 +8,7 @@ import {
 test('appendTimelineMessage appends a user message row', () => {
     const current = {
         limit: 20,
-        offset: 0,
+        nextBeforeSequence: null,
         rows: [
             {
                 actor: { id: 'agent-1', kind: 'agent' as const },
@@ -30,7 +30,7 @@ test('appendTimelineMessage appends a user message row', () => {
                 },
             },
         ],
-        total: 1,
+        totalMessages: 1,
     };
 
     const next = appendTimelineMessage(current, {
@@ -40,7 +40,7 @@ test('appendTimelineMessage appends a user message row', () => {
         timestamp: '2026-04-20T18:15:00.000Z',
     });
 
-    expect(next?.total).toBe(2);
+    expect(next?.totalMessages).toBe(2);
     expect(next?.rows.at(-1)).toMatchObject({
         id: 'timeline:1',
         kind: 'message',
@@ -55,7 +55,7 @@ test('appendTimelineMessage appends a user message row', () => {
 test('appendTimelineMessage keeps loaded rows visible past the page limit', () => {
     const current = {
         limit: 2,
-        offset: 0,
+        nextBeforeSequence: null,
         rows: [
             {
                 actor: null,
@@ -94,7 +94,7 @@ test('appendTimelineMessage keeps loaded rows visible past the page limit', () =
                 },
             },
         ],
-        total: 2,
+        totalMessages: 2,
     };
 
     const next = appendTimelineMessage(current, {
@@ -103,8 +103,8 @@ test('appendTimelineMessage keeps loaded rows visible past the page limit', () =
         timestamp: '2026-04-20T18:15:00.000Z',
     });
 
-    expect(next?.offset).toBe(0);
-    expect(next?.total).toBe(3);
+    expect(next?.nextBeforeSequence).toBeNull();
+    expect(next?.totalMessages).toBe(3);
     expect(next?.rows.map((row) => row.id)).toEqual(['message-1', 'message-2', 'timeline:2']);
 });
 
@@ -123,8 +123,8 @@ test('mergeTimelineMessages can render a local row before the log has loaded', (
 
     expect(next).toMatchObject({
         limit: 20,
-        offset: 0,
-        total: 1,
+        nextBeforeSequence: null,
+        totalMessages: 1,
     });
     expect(next?.rows).toHaveLength(1);
     expect(next?.rows[0]).toMatchObject({
@@ -143,7 +143,7 @@ test('mergeTimelineMessages keeps a local user row before already visible live a
         limit: 20,
         logged: {
             limit: 20,
-            offset: 0,
+            nextBeforeSequence: null,
             rows: [
                 {
                     actor: { id: 'agent-1', kind: 'agent' as const },
@@ -166,7 +166,7 @@ test('mergeTimelineMessages keeps a local user row before already visible live a
                     },
                 },
             ],
-            total: 1,
+            totalMessages: 1,
         },
         messages: [
             {
@@ -191,7 +191,7 @@ test('mergeTimelineMessages keeps a local user row before already visible live a
 test('getLoggedTimelineMessageIds confirms local user rows by stable id only', () => {
     const logged = {
         limit: 20,
-        offset: 0,
+        nextBeforeSequence: null,
         rows: [
             {
                 actor: null,
@@ -228,7 +228,7 @@ test('getLoggedTimelineMessageIds confirms local user rows by stable id only', (
                 },
             },
         ],
-        total: 2,
+        totalMessages: 2,
     };
 
     const confirmedIds = getLoggedTimelineMessageIds(logged, [
@@ -246,7 +246,7 @@ test('getLoggedTimelineMessageIds confirms local user rows by stable id only', (
 test('getLoggedTimelineMessageIds does not confirm same-content user rows with different ids', () => {
     const logged = {
         limit: 20,
-        offset: 0,
+        nextBeforeSequence: null,
         rows: [
             {
                 actor: null,
@@ -266,7 +266,7 @@ test('getLoggedTimelineMessageIds does not confirm same-content user rows with d
                 },
             },
         ],
-        total: 1,
+        totalMessages: 1,
     };
 
     const confirmedIds = getLoggedTimelineMessageIds(logged, [
@@ -284,7 +284,7 @@ test('getLoggedTimelineMessageIds does not confirm same-content user rows with d
 test('getLoggedTimelineMessageIds confirms completed turns by stable id when timestamps differ', () => {
     const logged = {
         limit: 20,
-        offset: 0,
+        nextBeforeSequence: null,
         rows: [
             {
                 actor: null,
@@ -323,7 +323,7 @@ test('getLoggedTimelineMessageIds confirms completed turns by stable id when tim
                 },
             },
         ],
-        total: 2,
+        totalMessages: 2,
     };
 
     const confirmedIds = getLoggedTimelineMessageIds(logged, [
@@ -341,7 +341,7 @@ test('getLoggedTimelineMessageIds confirms completed turns by stable id when tim
 test('getLoggedTimelineMessageIds does not confirm long-running turns by content and timestamp', () => {
     const logged = {
         limit: 20,
-        offset: 0,
+        nextBeforeSequence: null,
         rows: [
             {
                 actor: null,
@@ -361,7 +361,7 @@ test('getLoggedTimelineMessageIds does not confirm long-running turns by content
                 },
             },
         ],
-        total: 1,
+        totalMessages: 1,
     };
 
     const confirmedIds = getLoggedTimelineMessageIds(logged, [
@@ -379,7 +379,7 @@ test('getLoggedTimelineMessageIds does not confirm long-running turns by content
 test('getLoggedTimelineMessageIds does not confirm local rows by session key alone', () => {
     const logged = {
         limit: 20,
-        offset: 0,
+        nextBeforeSequence: null,
         rows: [
             {
                 actor: null,
@@ -400,7 +400,7 @@ test('getLoggedTimelineMessageIds does not confirm local rows by session key alo
                 },
             },
         ],
-        total: 1,
+        totalMessages: 1,
     };
 
     const confirmedIds = getLoggedTimelineMessageIds(logged, [

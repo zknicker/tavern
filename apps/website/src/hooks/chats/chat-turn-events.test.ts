@@ -139,9 +139,9 @@ test('turn progress applies preamble and normalized tool updates without refetch
     let log: ChatLogOutput | undefined = {
         activeReply: null,
         limit: 100,
-        offset: 0,
+        nextBeforeSequence: null,
         rows: [],
-        total: 0,
+        totalMessages: 0,
     };
     const handlers = createHandlers({
         invalidatedQueries,

@@ -94,10 +94,10 @@ describe('buildDraftHandoffLog', () => {
                     },
                 },
             ],
-            totalRows: 1,
+            totalMessages: 1,
         });
 
         expect(log?.rows.map((row) => row.id)).toEqual(['act_run-1_tool']);
-        expect(log?.total).toBe(1);
+        expect(log?.totalMessages).toBe(1);
     });
 });

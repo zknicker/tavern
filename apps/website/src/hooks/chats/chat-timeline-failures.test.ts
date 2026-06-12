@@ -10,7 +10,7 @@ import {
 function failureLog() {
     return {
         limit: 100,
-        offset: 0,
+        nextBeforeSequence: null,
         rows: [
             {
                 actor: null,
@@ -39,7 +39,7 @@ function failureLog() {
                 },
             },
         ],
-        total: 1,
+        totalMessages: 1,
     };
 }
 

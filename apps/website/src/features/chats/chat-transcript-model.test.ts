@@ -248,6 +248,56 @@ test('buildTranscriptEntries keeps active thinking status after assistant narrat
     ).toEqual(['tool:exec', 'tool:message', 'activeStatus']);
 });
 
+test('buildTranscriptEntries splits agent turns by response identity over gap heuristics', () => {
+    const rows: ChatRow[] = [
+        withResponseId(toolRow('tool-1', false, false), 'rsp_1'),
+        withResponseId(agentMessage('agent-1', 'First reply.', false, false), 'rsp_1'),
+        // Same actor, same session, same timestamps — only the response id
+        // says this is a different turn.
+        withResponseId(toolRow('tool-2', false, false), 'rsp_2'),
+        withResponseId(agentMessage('agent-2', 'Second reply.', false, false), 'rsp_2'),
+    ];
+
+    const entries = buildTranscriptEntries({ activeReply: null, rows });
+
+    expect(entries).toHaveLength(2);
+    expect(entries[0]).toMatchObject({ id: 'turn:rsp_1', kind: 'turn', participant: 'agent' });
+    expect(entries[1]).toMatchObject({ id: 'turn:rsp_2', kind: 'turn', participant: 'agent' });
+});
+
+test('buildTranscriptEntries keeps one response together across long gaps', () => {
+    const lateReply = withResponseId(agentMessage('agent-1', 'Done late.', false, false), 'rsp_1');
+
+    if (lateReply.kind !== 'message') {
+        throw new Error('Expected message row.');
+    }
+
+    const rows: ChatRow[] = [
+        withResponseId(toolRow('tool-1', false, false), 'rsp_1'),
+        {
+            ...lateReply,
+            message: {
+                ...lateReply.message,
+                // Far beyond the 5-minute grouping gap.
+                timestamp: '2026-05-11T17:30:00.000Z',
+            },
+        },
+    ];
+
+    const entries = buildTranscriptEntries({ activeReply: null, rows });
+
+    expect(entries).toHaveLength(1);
+    expect(entries[0]).toMatchObject({ id: 'turn:rsp_1', kind: 'turn', participant: 'agent' });
+});
+
+function withResponseId(row: ChatRow, responseId: string): ChatRow {
+    if (!(row.kind === 'message' || row.kind === 'tool')) {
+        throw new Error('Expected a message or tool row.');
+    }
+
+    return { ...row, responseId };
+}
+
 function userMessage(
     id: string,
     content: string,

@@ -16,10 +16,10 @@ const turn = {
 
 test('live progress preserves the loaded newest-page boundary row', () => {
     const cache: InfiniteData<ChatLogPage> = {
-        pageParams: [0, 2],
+        pageParams: [{ beforeSequence: 3 }, undefined],
         pages: [
-            chatLogPage(0, ['message-1', 'message-2']),
-            chatLogPage(2, ['message-3', 'message-4']),
+            chatLogPage(null, ['message-1', 'message-2']),
+            chatLogPage(3, ['message-3', 'message-4']),
         ],
     };
 
@@ -41,14 +41,14 @@ test('live progress preserves the loaded newest-page boundary row', () => {
         'message-4',
         'act_run-1_tool_web',
     ]);
-    expect(next?.pages.at(-1)?.limit).toBe(3);
-    expect(next?.pages.at(-1)?.total).toBe(5);
+    expect(next?.pages.at(-1)?.limit).toBe(2);
+    expect(next?.pages.at(-1)?.totalMessages).toBe(4);
 });
 
 test('single-page live progress keeps loaded history instead of trimming', () => {
     const cache: InfiniteData<ChatLogPage> = {
-        pageParams: [2],
-        pages: [chatLogPage(2, ['message-3', 'message-4'])],
+        pageParams: [undefined],
+        pages: [chatLogPage(3, ['message-3', 'message-4'])],
     };
 
     const next = patchInfiniteChatLogWithProgress(cache, (current) =>
@@ -69,18 +69,18 @@ test('single-page live progress keeps loaded history instead of trimming', () =>
         'message-4',
         'act_run-1_tool_web',
     ]);
-    expect(next?.pages.at(-1)?.limit).toBe(3);
-    expect(next?.pages.at(-1)?.offset).toBe(2);
-    expect(next?.pages.at(-1)?.total).toBe(5);
+    expect(next?.pages.at(-1)?.limit).toBe(2);
+    expect(next?.pages.at(-1)?.nextBeforeSequence).toBe(3);
+    expect(next?.pages.at(-1)?.totalMessages).toBe(4);
 });
 
-function chatLogPage(offset: number, ids: string[]): ChatLogPage {
+function chatLogPage(nextBeforeSequence: number | null, ids: string[]): ChatLogPage {
     return {
         activeReply: null,
         limit: 2,
-        offset,
+        nextBeforeSequence,
         rows: ids.map(messageRow),
-        total: 4,
+        totalMessages: 4,
     };
 }
 

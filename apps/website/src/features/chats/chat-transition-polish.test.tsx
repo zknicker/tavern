@@ -29,10 +29,10 @@ test('synced timeline still animates for normal chat transcript loads', () => {
 
 test('chat timeline animation is explicit and can be disabled', () => {
     const animated = renderToStaticMarkup(
-        <ChatTimeline activeReply={null} animate rows={[]} totalRows={0} />
+        <ChatTimeline activeReply={null} animate rows={[]} totalMessages={0} />
     );
     const still = renderToStaticMarkup(
-        <ChatTimeline activeReply={null} animate={false} rows={[]} totalRows={0} />
+        <ChatTimeline activeReply={null} animate={false} rows={[]} totalMessages={0} />
     );
 
     expect(animated).toContain('animate-float-up');
@@ -64,7 +64,7 @@ test('draft handoff waits while the accepted turn is still blank thinking', () =
             failedTurn: null,
             historyLoaded: true,
             timeline: [],
-            totalRows: 0,
+            totalMessages: 0,
         })
     ).toBe(false);
 });
@@ -92,7 +92,7 @@ test('draft handoff forwards the real active reply once the turn starts', () => 
             failedTurn: null,
             historyLoaded: true,
             timeline: [],
-            totalRows: 0,
+            totalMessages: 0,
         },
     });
 
@@ -114,7 +114,7 @@ test('draft handoff releases when the active reply has visible text', () => {
             failedTurn: null,
             historyLoaded: true,
             timeline: [],
-            totalRows: 0,
+            totalMessages: 0,
         })
     ).toBe(true);
 });
@@ -147,7 +147,7 @@ test('draft handoff waits when the loaded real chat only has the user message', 
                     },
                 },
             ],
-            totalRows: 1,
+            totalMessages: 1,
         })
     ).toBe(false);
 });
@@ -180,7 +180,7 @@ test('draft handoff releases when no active reply remains after terminal history
                     },
                 },
             ],
-            totalRows: 1,
+            totalMessages: 1,
         })
     ).toBe(true);
 });

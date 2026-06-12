@@ -15,26 +15,26 @@ const turn = {
 test('applyLogSnapshot retains loaded history when the live window slides forward', () => {
     const loaded = applyLogSnapshot(emptyTimelineState(), {
         limit: 3,
-        offset: 0,
+        nextBeforeSequence: null,
         rows: [
             agentMessage('old-1', '16:08:10'),
             agentMessage('old-2', '16:08:20'),
             agentMessage('recent-1', '16:08:30'),
         ],
-        total: 3,
+        totalMessages: 3,
     });
     const live = startTimelineTurn(loaded, turn);
 
     const next = applyLogSnapshot(live, {
         limit: 3,
-        offset: 2,
+        nextBeforeSequence: 2,
         rows: [agentMessage('recent-1', '16:08:30'), userMessage('user-2', '16:08:50')],
-        total: 4,
+        totalMessages: 4,
     });
 
     expect(next.timeline.map((row) => row.id)).toEqual(['old-1', 'old-2', 'recent-1', 'user-2']);
     // Retained rows are durable and already counted by the snapshot total.
-    expect(next.totalRows).toBe(4);
+    expect(next.totalMessages).toBe(4);
 });
 
 test('applyLogSnapshot retains slid-out rows regardless of timestamp order', () => {
@@ -43,21 +43,21 @@ test('applyLogSnapshot retains slid-out rows regardless of timestamp order', () 
     // example a back-dated activity upserted after newer rows).
     const loaded = applyLogSnapshot(emptyTimelineState(), {
         limit: 3,
-        offset: 0,
+        nextBeforeSequence: null,
         rows: [
             agentMessage('old-1', '16:08:10'),
             agentMessage('late-stamped', '16:08:40'),
             agentMessage('recent-1', '16:08:30'),
         ],
-        total: 3,
+        totalMessages: 3,
     });
     const live = startTimelineTurn(loaded, turn);
 
     const next = applyLogSnapshot(live, {
         limit: 3,
-        offset: 2,
+        nextBeforeSequence: 2,
         rows: [agentMessage('recent-1', '16:08:30'), userMessage('user-2', '16:08:50')],
-        total: 4,
+        totalMessages: 4,
     });
 
     expect(next.timeline.map((row) => row.id)).toEqual([
@@ -66,55 +66,55 @@ test('applyLogSnapshot retains slid-out rows regardless of timestamp order', () 
         'late-stamped',
         'user-2',
     ]);
-    expect(next.totalRows).toBe(4);
+    expect(next.totalMessages).toBe(4);
 });
 
 test('applyLogSnapshot retains loaded history through the completion refetch', () => {
     const loaded = applyLogSnapshot(emptyTimelineState(), {
         limit: 3,
-        offset: 0,
+        nextBeforeSequence: null,
         rows: [
             agentMessage('old-1', '16:08:10'),
             agentMessage('old-2', '16:08:20'),
             agentMessage('recent-1', '16:08:30'),
         ],
-        total: 3,
+        totalMessages: 3,
     });
     const live = startTimelineTurn(loaded, turn);
 
     const next = applyLogSnapshot(live, {
         limit: 3,
-        offset: 2,
+        nextBeforeSequence: 2,
         rows: [agentMessage('recent-1', '16:08:30'), agentMessage('reply-1', '16:08:55')],
-        total: 4,
+        totalMessages: 4,
     });
 
     expect(next.activeReply).toBeNull();
     expect(next.timeline.map((row) => row.id)).toEqual(['old-1', 'old-2', 'recent-1', 'reply-1']);
-    expect(next.totalRows).toBe(4);
+    expect(next.totalMessages).toBe(4);
 });
 
 test('applyLogSnapshot defers to a full-coverage window for deletions', () => {
     const loaded = applyLogSnapshot(emptyTimelineState(), {
         limit: 3,
-        offset: 0,
+        nextBeforeSequence: null,
         rows: [
             agentMessage('old-2', '16:08:20'),
             agentMessage('deleted-1', '16:08:25'),
             agentMessage('recent-1', '16:08:30'),
         ],
-        total: 3,
+        totalMessages: 3,
     });
 
     const next = applyLogSnapshot(loaded, {
         limit: 3,
-        offset: 0,
+        nextBeforeSequence: null,
         rows: [agentMessage('old-2', '16:08:20'), agentMessage('recent-1', '16:08:30')],
-        total: 2,
+        totalMessages: 2,
     });
 
     expect(next.timeline.map((row) => row.id)).toEqual(['old-2', 'recent-1']);
-    expect(next.totalRows).toBe(2);
+    expect(next.totalMessages).toBe(2);
 });
 
 function agentMessage(id: string, time: string): ChatLogRow {
