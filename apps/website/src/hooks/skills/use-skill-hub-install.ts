@@ -7,8 +7,7 @@ export function useSkillHubInstall() {
         onSuccess: async () => {
             await Promise.all([
                 utils.skill.list.invalidate(),
-                utils.skill.hubCatalog.invalidate(),
-                utils.skill.hubSearch.invalidate(),
+                utils.skill.hubAvailable.invalidate(),
             ]);
         },
     });

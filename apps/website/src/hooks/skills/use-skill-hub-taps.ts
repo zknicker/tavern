@@ -14,8 +14,7 @@ export function useSkillHubTapAdd() {
         onSuccess: async () => {
             await Promise.all([
                 utils.skill.hubTaps.invalidate(),
-                utils.skill.hubCatalog.invalidate(),
-                utils.skill.hubSearch.invalidate(),
+                utils.skill.hubAvailable.invalidate(),
             ]);
         },
     });
@@ -28,8 +27,7 @@ export function useSkillHubTapRemove() {
         onSuccess: async () => {
             await Promise.all([
                 utils.skill.hubTaps.invalidate(),
-                utils.skill.hubCatalog.invalidate(),
-                utils.skill.hubSearch.invalidate(),
+                utils.skill.hubAvailable.invalidate(),
             ]);
         },
     });

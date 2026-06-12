@@ -3,7 +3,7 @@ import * as React from 'react';
 import { Alert, AlertDescription } from '../../components/ui/alert.tsx';
 import { Icon } from '../../components/ui/icon.tsx';
 import { AddToolsetDialog } from '../../features/skills/add-toolset-dialog.tsx';
-import { SkillBrowse } from '../../features/skills/skill-browse.tsx';
+import { SkillSourcesTab } from '../../features/skills/skill-sources-tab.tsx';
 import { SkillsCatalog } from '../../features/skills/skills-catalog.tsx';
 import { SkillsPageSkeleton } from '../../features/skills/skills-page-skeleton.tsx';
 import { ToolsetSetupDialog } from '../../features/skills/toolset-setup-dialog.tsx';
@@ -44,7 +44,6 @@ export function SkillsPage() {
     return (
         <div>
             <SkillsCatalog
-                browseContent={<SkillBrowse />}
                 onAddToolset={() => setAddToolsetOpen(true)}
                 onConfigureToolset={setSetupToolset}
                 onSetSkillEnabled={(input) => setSkillEnabled.mutate(input)}
@@ -52,6 +51,7 @@ export function SkillsPage() {
                 savingSkillIds={savingSkillIds}
                 savingToolsetIds={savingToolsetIds}
                 skills={skills}
+                sourcesContent={<SkillSourcesTab />}
                 toolsets={toolsets}
             />
 

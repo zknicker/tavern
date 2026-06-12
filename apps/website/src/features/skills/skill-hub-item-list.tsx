@@ -1,7 +1,7 @@
 import { CubeIcon, Tick02Icon } from '@hugeicons-pro/core-stroke-rounded';
 import { Badge } from '../../components/ui/badge.tsx';
 import { Icon } from '../../components/ui/icon.tsx';
-import type { SkillHubCatalogOutput, SkillHubItemOutput } from '../../lib/trpc.tsx';
+import type { SkillHubAvailableOutput, SkillHubItemOutput } from '../../lib/trpc.tsx';
 import { EmptyState } from '../shell/empty-state.tsx';
 import { formatSkillSourceLabel, SkillTrustBadge } from './skill-hub-badges.tsx';
 
@@ -10,7 +10,7 @@ export function SkillHubItemList({
     items,
     onSelect,
 }: {
-    installed: SkillHubCatalogOutput['installed'];
+    installed: SkillHubAvailableOutput['installed'];
     items: SkillHubItemOutput[];
     onSelect: (item: SkillHubItemOutput) => void;
 }) {

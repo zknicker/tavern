@@ -24,7 +24,7 @@ type CatalogItem =
           kind: 'toolset';
           name: string;
       };
-type CatalogFilter = 'browse' | 'skills' | 'toolsets';
+type CatalogFilter = 'skills' | 'sources' | 'toolsets';
 
 const catalogFilters: Array<{
     id: CatalogFilter;
@@ -32,7 +32,7 @@ const catalogFilters: Array<{
 }> = [
     { id: 'skills', label: 'Skills' },
     { id: 'toolsets', label: 'Toolsets' },
-    { id: 'browse', label: 'Browse' },
+    { id: 'sources', label: 'Sources' },
 ];
 
 const prettyNameOverrides = new Map<string, string>([
@@ -57,7 +57,7 @@ const prettyNameOverrides = new Map<string, string>([
 ]);
 
 export function SkillsCatalog({
-    browseContent,
+    sourcesContent,
     onAddToolset,
     onConfigureToolset,
     onSetSkillEnabled,
@@ -67,7 +67,7 @@ export function SkillsCatalog({
     skills,
     toolsets,
 }: {
-    browseContent?: React.ReactNode;
+    sourcesContent?: React.ReactNode;
     onAddToolset?: () => void;
     onConfigureToolset?: (toolset: ToolsetSummary) => void;
     onSetSkillEnabled?: (input: { enabled: boolean; skillId: string }) => void;
@@ -98,7 +98,7 @@ export function SkillsCatalog({
                             onChange={setFilter}
                             value={filter}
                         />
-                        {filter === 'browse' ? null : (
+                        {filter === 'sources' ? null : (
                             <SearchInput
                                 aria-label={searchLabel}
                                 className="w-full xl:ml-auto xl:max-w-xs"
@@ -116,8 +116,8 @@ export function SkillsCatalog({
                         ) : null}
                     </div>
 
-                    {filter === 'browse' ? (
-                        browseContent
+                    {filter === 'sources' ? (
+                        sourcesContent
                     ) : visibleItems.length > 0 ? (
                         <CardStack>
                             {visibleItems.map((catalogItem) => (

@@ -5,14 +5,14 @@ import { useSkillHubInstall } from '../../hooks/skills/use-skill-hub-install.ts'
 import { useSkillHubPreview } from '../../hooks/skills/use-skill-hub-preview.ts';
 import { useSkillHubScan } from '../../hooks/skills/use-skill-hub-scan.ts';
 import { useSkillHubUninstall } from '../../hooks/skills/use-skill-hub-uninstall.ts';
-import type { SkillHubCatalogOutput, SkillHubItemOutput } from '../../lib/trpc.tsx';
+import type { SkillHubAvailableOutput, SkillHubItemOutput } from '../../lib/trpc.tsx';
 import { formatSkillSourceLabel, SkillScanBadge, SkillTrustBadge } from './skill-hub-badges.tsx';
 
 export function SkillHubPreview({
     installed,
     item,
 }: {
-    installed: SkillHubCatalogOutput['installed'];
+    installed: SkillHubAvailableOutput['installed'];
     item: SkillHubItemOutput;
 }) {
     const previewQuery = useSkillHubPreview({ identifier: item.identifier });
