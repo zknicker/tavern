@@ -2,6 +2,27 @@
 
 All notable changes to this project will be documented in this file.
 
+## v1.4.7 - 2026-06-11
+
+Runtime floor raised to 1.4.7 for the Cortex wiki maintenance, health, todo,
+backlink, and follow-up contracts in this release.
+
+- Added Tavern-managed wiki maintenance: default wiki crons, run-on-start job
+  recovery, daily todo upkeep, librarian action runs, compile rescoring, inbox
+  automation, blocked-todo review, and user-owned follow-ups that can open agent
+  chat from highlights.
+- Added Cortex health surfaces with structured librarian scan data, history
+  trends, and last-resort escalation signals.
+- Added navigable Cortex wiki links, backlinks, trust-report browsing, archived
+  output hiding, and stronger Markdown/frontmatter/search fidelity.
+- Changed the wiki format from inventory-owned records to Tavern-owned todos:
+  completed todos are deleted, `log.md` is the durable history, blocked todos
+  resolve into the wiki, and llm-wiki fallback paths are removed.
+- Updated managed wiki skill instructions and generated AGENTS.md guidance to
+  match the pipeline model and fresh-context agent workflow.
+- Fixed Cortex health reads to send the Runtime auth token and chat recovery to
+  finalize turns orphaned by a Runtime restart.
+
 ## v1.4.6 - 2026-06-11
 
 App changes:
