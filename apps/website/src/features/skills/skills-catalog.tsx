@@ -24,7 +24,7 @@ type CatalogItem =
           kind: 'toolset';
           name: string;
       };
-type CatalogFilter = 'skills' | 'toolsets';
+type CatalogFilter = 'browse' | 'skills' | 'toolsets';
 
 const catalogFilters: Array<{
     id: CatalogFilter;
@@ -32,6 +32,7 @@ const catalogFilters: Array<{
 }> = [
     { id: 'skills', label: 'Skills' },
     { id: 'toolsets', label: 'Toolsets' },
+    { id: 'browse', label: 'Browse' },
 ];
 
 const prettyNameOverrides = new Map<string, string>([
@@ -56,7 +57,7 @@ const prettyNameOverrides = new Map<string, string>([
 ]);
 
 export function SkillsCatalog({
-    onAddSkill,
+    browseContent,
     onAddToolset,
     onConfigureToolset,
     onSetSkillEnabled,
@@ -66,7 +67,7 @@ export function SkillsCatalog({
     skills,
     toolsets,
 }: {
-    onAddSkill?: () => void;
+    browseContent?: React.ReactNode;
     onAddToolset?: () => void;
     onConfigureToolset?: (toolset: ToolsetSummary) => void;
     onSetSkillEnabled?: (input: { enabled: boolean; skillId: string }) => void;
@@ -97,29 +98,27 @@ export function SkillsCatalog({
                             onChange={setFilter}
                             value={filter}
                         />
-                        <SearchInput
-                            aria-label={searchLabel}
-                            className="w-full xl:ml-auto xl:max-w-xs"
-                            name="skill-search"
-                            onChange={(event) => setSearch(event.target.value)}
-                            placeholder={`${searchLabel}...`}
-                            value={search}
-                        />
+                        {filter === 'browse' ? null : (
+                            <SearchInput
+                                aria-label={searchLabel}
+                                className="w-full xl:ml-auto xl:max-w-xs"
+                                name="skill-search"
+                                onChange={(event) => setSearch(event.target.value)}
+                                placeholder={`${searchLabel}...`}
+                                value={search}
+                            />
+                        )}
                         {onAddToolset && filter === 'toolsets' ? (
                             <Button className="shrink-0" onClick={onAddToolset}>
                                 <Icon className="size-4" icon={AddCircleIcon} />
                                 Add toolset
                             </Button>
                         ) : null}
-                        {onAddSkill && filter === 'skills' ? (
-                            <Button className="shrink-0" onClick={onAddSkill}>
-                                <Icon className="size-4" icon={AddCircleIcon} />
-                                Add skill
-                            </Button>
-                        ) : null}
                     </div>
 
-                    {visibleItems.length > 0 ? (
+                    {filter === 'browse' ? (
+                        browseContent
+                    ) : visibleItems.length > 0 ? (
                         <CardStack>
                             {visibleItems.map((catalogItem) => (
                                 <CatalogCard
@@ -155,7 +154,7 @@ function CatalogFilterTabs({
     onChange,
     value,
 }: {
-    counts: Record<CatalogFilter, number>;
+    counts: Partial<Record<CatalogFilter, number>>;
     onChange: (value: CatalogFilter) => void;
     value: CatalogFilter;
 }) {
@@ -181,9 +180,11 @@ function CatalogFilterTabs({
                         type="button"
                     >
                         <span>{filter.label}</span>
-                        <span className="font-mono text-muted-foreground text-xs tabular-nums">
-                            {counts[filter.id]}
-                        </span>
+                        {counts[filter.id] === undefined ? null : (
+                            <span className="font-mono text-muted-foreground text-xs tabular-nums">
+                                {counts[filter.id]}
+                            </span>
+                        )}
                     </button>
                 );
             })}
@@ -232,7 +233,7 @@ function filterCatalogItemsByKind(items: CatalogItem[], filter: CatalogFilter) {
     return items.filter((item) => item.kind === (filter === 'toolsets' ? 'toolset' : 'skill'));
 }
 
-function countCatalogFilters(items: CatalogItem[]): Record<CatalogFilter, number> {
+function countCatalogFilters(items: CatalogItem[]): Partial<Record<CatalogFilter, number>> {
     return {
         skills: items.filter((item) => item.kind === 'skill').length,
         toolsets: items.filter((item) => item.kind === 'toolset').length,
