@@ -73,22 +73,31 @@ Hermes plugin skills are a hybrid source. A plugin may list skill directories in
 enabled. Tavern should show the owning plugin when Hermes includes that source
 metadata.
 
-### Skill hub
+### Installable sources
 
-New skills install through the engine's skill hub: a multi-source catalog with
-search, preview, an install-time security scan, and install/uninstall. The
-engine aggregates the sources (official, index, ClawHub, GitHub, skills.sh,
-LobeHub, Claude Marketplace, direct URL) and owns trust tiers, quarantine,
-scanning, install policy, and the install lockfile. Tavern proxies the hub
-through Runtime and presents it on the Browse tab; it does not run its
-own registry or marketplace.
+Tavern has no skill marketplace. New skills install from sources the user
+chose, listed on the Sources tab:
 
-Custom GitHub repos ("taps") extend the hub with user-owned skill sources,
-including private repos when the engine process can resolve a GitHub token.
-Taps live in the engine's `skills/.hub/taps.json`; the engine has no HTTP
-surface for them, so Runtime owns that file directly — the same managed-config
-pattern as the bundled-skill allowlist. A tapped repo exposes skills as
-`skills/<name>/SKILL.md` directories.
+1. **Taps** — user-added GitHub repos with a `skills/<name>/SKILL.md` layout,
+   including private repos when Runtime resolves a GitHub token. Taps live in
+   the engine's `skills/.hub/taps.json`; the engine has no HTTP surface for
+   them, so Runtime owns that file directly — the same managed-config pattern
+   as the bundled-skill allowlist. Runtime lists tap repos itself through the
+   GitHub contents API.
+2. **Built-in library** — the engine's vendored `optional-skills/` directory:
+   official, vendor-maintained skills that are not activated by default.
+   Runtime lists this directory from the resolved engine install.
+
+Install state comes from the engine's hub lockfile
+(`skills/.hub/lock.json`), which Runtime reads directly. Installs still run
+through the engine's hub installer, which owns quarantine, the install-time
+security scan, install policy, and the lockfile. Removing a source never
+uninstalls skills that were installed from it.
+
+The engine's multi-source hub search (ClawHub, skills.sh, LobeHub, the
+centralized index, and similar registries) is intentionally not a Tavern
+product surface. Users find skills by browsing the internet and bring the repo
+here as a tap.
 
 ### Toolset sources
 
@@ -112,11 +121,13 @@ catalog.
 - Tavern reads runtime-visible skills through the runtime's skill inventory
   surface.
 - Tavern reads runtime toolsets through Runtime's managed Hermes proxy.
-- Tavern browses, previews, scans, installs, and uninstalls hub skills through
-  Runtime's `/skills/hub/*` routes. Install and uninstall are engine background
-  actions; Runtime waits for the action to exit and returns one synchronous
-  result, and the server refreshes the skill inventory snapshot and emits the
-  skill update event afterward.
+- Tavern reads available skills (built-in library, tap listings, and the
+  installed lockfile map) through Runtime's `/skills/hub/available` route —
+  local reads with no engine HTTP and no centralized index. Preview, scan,
+  install, and uninstall flow through the other `/skills/hub/*` routes; install
+  and uninstall are engine background actions that Runtime waits on, and the
+  server refreshes the skill inventory snapshot and emits the skill update
+  event afterward.
 - Toolset setup flows through Runtime's `/toolsets/{id}/config|provider|env|post-setup`
   routes; env values are written to the engine's env store and never echoed back.
 - MCP servers and the MCP catalog flow through Runtime's `/mcp/*` routes; env
@@ -158,10 +169,11 @@ catalog.
 - Internal ids, source paths, runtime config paths, MCP server names, plugin ids,
   and generated config paths are debug details unless the user opens advanced
   status.
-- The Browse tab is the install surface: featured and searched hub skills with
-  source and trust badges, a "From your repos" group for tap skills, a preview
-  dialog with the SKILL.md, file manifest, and scan verdict, and install/remove
-  actions. The Sources panel manages hub taps.
+- The Sources tab is the install surface: each source (tap repos, then the
+  built-in library) lists its skills with install state. Rows open a preview
+  dialog with the SKILL.md, file manifest, and scan verdict before
+  install/remove. The tab also adds and removes tap repos. There is no
+  marketplace search.
 - The Add toolset dialog is the MCP surface: the engine's curated MCP catalog
   with one-click install plus custom HTTP/stdio servers with test, enablement,
   and removal.

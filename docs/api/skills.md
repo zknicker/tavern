@@ -39,9 +39,10 @@ The API covers:
 * list Hermes toolsets visible to Tavern
 * enable or disable a Hermes toolset
 * read runtime-provided usability and diagnostic text
-* browse the skill hub catalog (`skill.hubCatalog`), search it
-  (`skill.hubSearch`), preview a skill's SKILL.md and file manifest
-  (`skill.hubPreview`), and read its security scan verdict (`skill.hubScan`)
+* list available skills from chosen sources — the built-in library, tap
+  listings, and the installed map (`skill.hubAvailable`) — preview a skill's
+  SKILL.md and file manifest (`skill.hubPreview`), and read its security scan
+  verdict (`skill.hubScan`)
 * install and uninstall hub skills (`skill.hubInstall`, `skill.hubUninstall`)
 * manage custom GitHub skill sources ("taps": `skill.hubTaps`,
   `skill.hubTapAdd`, `skill.hubTapRemove`)
@@ -74,20 +75,20 @@ Toolsets remain Hermes-owned. Tavern reads them from Hermes and sends supported
 enablement changes back through Runtime. Codex app-server skills are not merged
 into the Tavern skill catalog.
 
-The skill hub is engine-owned: source aggregation, trust tiers, quarantine,
-scanning, install policy, and the install lockfile all live in the engine.
-Runtime proxies the hub at `/skills/hub/*`, waits for install/uninstall
-background actions to exit, then refreshes the skill inventory snapshot and
-emits the skill update event. Hub taps are the one exception: the engine has no
-HTTP surface for `skills/.hub/taps.json`, so Runtime reads and writes that file
-directly under the managed engine home.
+Install mechanics stay engine-owned: quarantine, scanning, install policy, and
+the install lockfile live in the engine, and Runtime waits for install and
+uninstall background actions to exit before refreshing the skill inventory
+snapshot and emitting the skill update event.
 
-The engine's search fast path serves results from its centralized skills index
-and skips the live GitHub source, which would hide tap skills. Runtime
-therefore lists tap repos itself through the GitHub contents API (token from
-`GITHUB_TOKEN`/`GH_TOKEN` or `gh auth token`, results cached briefly) and
-merges tap skills into the hub catalog's featured list and search results,
-deduplicated by identifier.
+The available-skills view is Runtime-owned local reads with no engine HTTP and
+no centralized index: the built-in library comes from the resolved engine
+install's `optional-skills/` directory, tap listings come from the GitHub
+contents API (token from `GITHUB_TOKEN`/`GH_TOKEN` or `gh auth token`, results
+cached briefly), and the installed map comes from the engine's
+`skills/.hub/lock.json`. Taps themselves live in `skills/.hub/taps.json`; the
+engine has no HTTP surface for either file, so Runtime reads and writes them
+directly under the managed engine home. The engine's multi-source hub search is
+not exposed as a Tavern API surface.
 
 Toolset setup proxies the engine provider matrix at
 `/toolsets/{id}/config|provider|env|post-setup`. MCP servers and the curated MCP
