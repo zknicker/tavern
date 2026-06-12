@@ -97,6 +97,10 @@ ids. They should not create a second volatile progress transcript.
   the durable message so completion does not reflow.
 * The streamed reply and its durable message share one React key
   (`reply:<runId>`), so the end-of-turn swap does not remount.
+* The live tail is height-neutral: the Thinking indicator occupies exactly one
+  reply text line and the hover-metadata gap is reserved while the turn is
+  live, so the indicator → streaming → durable swaps never resize the turn (a
+  tail shrink shifts the whole bottom-pinned chat).
 * Intra-turn text segments move into the work log as narration rows when a
   tool follows; only the live tail (status indicator or streaming text) and
   the durable reply occupy the slot below the work disclosure.
