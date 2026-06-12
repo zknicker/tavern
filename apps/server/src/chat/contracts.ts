@@ -291,6 +291,9 @@ export const chatLogActiveReplySchema = z
 export const chatLogTurnFailureSchema = z
     .object({
         error: z.string().trim().min(1),
+        // Live turn.failed events carry no durable response id; the durable
+        // refetch fills it in, which is what enables dismissal.
+        responseId: z.string().trim().min(1).nullable(),
         turn: z.object({
             agentId: z.string().trim().min(1),
             chatId: z.string().trim().min(1),
@@ -300,6 +303,11 @@ export const chatLogTurnFailureSchema = z
         }),
     })
     .nullable();
+
+export const dismissChatLogRowInputSchema = z.object({
+    chatId: z.string().trim().min(1),
+    responseId: z.string().trim().min(1),
+});
 
 export const chatLogPageSchema = z.object({
     activeReply: chatLogActiveReplySchema,

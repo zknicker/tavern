@@ -77,12 +77,29 @@ export const runtimeNoticeSchema = z.object({
     title: z.string(),
 });
 
+// A composer slash command run in the chat's session: durable evidence of
+// the command and its output. responseId targets the row for dismissal.
+// See specs/composer-commands.md.
+export const commandRunSchema = z.object({
+    command: z.string(),
+    output: z.string(),
+    responseId: z.string(),
+    status: z.enum(['completed', 'failed']),
+});
+
 export const systemRowSchema = z.discriminatedUnion('systemKind', [
     z.object({
         accessEvent: sessionAccessEventSchema,
         id: z.string(),
         kind: z.literal('system'),
         systemKind: z.literal('accessEvent'),
+        timestamp: z.string(),
+    }),
+    z.object({
+        commandRun: commandRunSchema,
+        id: z.string(),
+        kind: z.literal('system'),
+        systemKind: z.literal('commandRun'),
         timestamp: z.string(),
     }),
     z.object({

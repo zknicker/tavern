@@ -176,6 +176,13 @@ test('settings and connector client requests carry the Authorization header', as
         () => client.listConnectors(),
         () => client.deleteConnector('connector-1'),
         () => client.testConnector('connector-1'),
+        () => client.listCommands(),
+        () =>
+            client.runCommand({
+                agentId: 'agt_main',
+                chatId: 'cht_1',
+                command: '/status',
+            }),
     ];
 
     for (const call of calls) {

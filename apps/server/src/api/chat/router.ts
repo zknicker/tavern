@@ -5,6 +5,7 @@ import { respondToChatClarificationRoute } from './clarification-respond.ts';
 import { createChatRoute } from './create.ts';
 import { getChatRoute } from './get.ts';
 import { listChatsRoute } from './list.ts';
+import { dismissChatLogRowRoute } from './log-dismiss.ts';
 import { listChatLogRoute } from './log-list.ts';
 import { onChatLogUpdate } from './log-on-update.ts';
 import { onChatTurnCompleted } from './on-turn-completed.ts';
@@ -37,6 +38,7 @@ export const chatRouter = createRouter({
     }),
     list: listChatsRoute,
     log: createRouter({
+        dismiss: dismissChatLogRowRoute,
         list: listChatLogRoute,
         onUpdate: onChatLogUpdate,
     }),

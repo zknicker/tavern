@@ -35,6 +35,11 @@ const enqueueRuntimeSkillInventoryRefresh = mock(async () => undefined);
 const enqueueRuntimeSkillInventoryRefreshIfStale = mock(async () => undefined);
 const emitObservedAgentRuntimeEvent = mock(() => undefined);
 const confirmAgentRuntimeConnection = mock(async () => true);
+const refreshRuntimeOwnedStatus = mock(async () => ({
+    capabilities: [],
+    lastError: null,
+    runtimeVersion: null,
+}));
 const tavernChatId = '220f46ed-2d7c-41dd-9d7e-d02691f1afc3';
 const originalFetch = globalThis.fetch;
 let tavernApiRequests: Array<{ body: unknown; method: string; path: string }> = [];
@@ -43,6 +48,7 @@ mock.module('../src/agent-runtime-connection/service.ts', () => ({
     confirmAgentRuntimeConnection,
     markAgentRuntimeConnectionFailure,
     markAgentRuntimeConnectionReachable,
+    refreshRuntimeOwnedStatus,
 }));
 
 mock.module('../src/api/invalidation-events.ts', () => ({

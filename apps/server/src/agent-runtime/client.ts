@@ -16,6 +16,7 @@ import {
     type AgentRuntimeChat,
     type AgentRuntimeClarificationRespond,
     type AgentRuntimeClarificationRespondResult,
+    type AgentRuntimeCommandList,
     type AgentRuntimeConnectorList,
     type AgentRuntimeConnectorTestResult,
     type AgentRuntimeCreateAgent,
@@ -42,6 +43,8 @@ import {
     type AgentRuntimePermissionSettings,
     type AgentRuntimePollModelProviderOAuth,
     type AgentRuntimeRenderedWorkspaceInstructions,
+    type AgentRuntimeRunCommand,
+    type AgentRuntimeRunCommandResult,
     type AgentRuntimeRunCron,
     type AgentRuntimeRunJob,
     type AgentRuntimeRunJobInput,
@@ -101,6 +104,7 @@ import {
     agentRuntimeChatListSchema,
     agentRuntimeClarificationRespondResultSchema,
     agentRuntimeClarificationRespondSchema,
+    agentRuntimeCommandListSchema,
     agentRuntimeConnectorListSchema,
     agentRuntimeConnectorTestResultSchema,
     agentRuntimeCreateAgentSchema,
@@ -136,6 +140,8 @@ import {
     agentRuntimePollModelProviderOAuthSchema,
     agentRuntimeRenderedWorkspaceInstructionsSchema,
     agentRuntimeRoutes,
+    agentRuntimeRunCommandResultSchema,
+    agentRuntimeRunCommandSchema,
     agentRuntimeRunCronSchema,
     agentRuntimeRunJobInputSchema,
     agentRuntimeRunJobSchema,
@@ -256,6 +262,7 @@ export interface TavernAgentRuntimeClient {
     listBindings(): Promise<{ bindings: AgentRuntimeBinding[] }>;
     listCapabilities(): Promise<AgentRuntimeCapabilityHealthList>;
     listChats(): Promise<{ chats: AgentRuntimeChat[] }>;
+    listCommands(): Promise<AgentRuntimeCommandList>;
     listConnectors(): Promise<AgentRuntimeConnectorList>;
     listCortexBacklinks(input: { path: string; topic: string }): Promise<CortexBacklinkList>;
     listCortexPages(input?: {
@@ -297,6 +304,7 @@ export interface TavernAgentRuntimeClient {
     ): Promise<AgentRuntimeClarificationRespondResult>;
     restartForUpdate(): Promise<AgentRuntimeUpdate>;
     resyncSession(sessionKey: string): Promise<AgentRuntimeSessionResync>;
+    runCommand(input: AgentRuntimeRunCommand): Promise<AgentRuntimeRunCommandResult>;
     runCronJob(jobId: string, input?: AgentRuntimeRunCron): Promise<AgentRuntimeCronRun>;
     runRuntimeJob(
         slug: AgentRuntimeJobSlug,
@@ -721,6 +729,37 @@ class HttpTavernAgentRuntimeClient implements TavernAgentRuntimeClient {
         }
 
         return parseAgentRuntimeCapabilityHealthList(await response.json());
+    }
+
+    async listCommands() {
+        const response = await fetch(`${this.#baseUrl}${agentRuntimeRoutes.commands}`, {
+            headers: this.#authHeaders,
+        });
+
+        if (!response.ok) {
+            await readErrorResponse(response);
+        }
+
+        return agentRuntimeCommandListSchema.parse(await response.json());
+    }
+
+    async runCommand(input: AgentRuntimeRunCommand) {
+        const payload = agentRuntimeRunCommandSchema.parse(input);
+        const response = await fetch(`${this.#baseUrl}${agentRuntimeRoutes.commandsRun}`, {
+            body: JSON.stringify(payload),
+            headers: {
+                ...this.#authHeaders,
+                'content-type': 'application/json',
+                [agentRuntimeMutationHeaders.origin]: agentRuntimeMutationOrigins.tavern,
+            },
+            method: 'POST',
+        });
+
+        if (!response.ok) {
+            await readErrorResponse(response);
+        }
+
+        return agentRuntimeRunCommandResultSchema.parse(await response.json());
     }
 
     async getCapability(id: AgentRuntimeCapabilityHealthId) {

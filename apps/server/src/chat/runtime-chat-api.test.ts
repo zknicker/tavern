@@ -1,7 +1,85 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import type { TavernChatResponse } from '@tavern/sdk';
-import { failedTurnFromResponses } from './runtime-chat-api.ts';
+import type { TavernChatMessage, TavernChatResponse, TavernResponseActivity } from '@tavern/sdk';
+import {
+    commandRunFromActivity,
+    failedTurnFromResponses,
+    visibleTimelineSources,
+} from './runtime-chat-api.ts';
+
+test('command activity with a typed slash command maps to a command run', () => {
+    assert.deepEqual(
+        commandRunFromActivity(
+            commandActivity({
+                detail: 'Model set to tavern-e2e-tools',
+                metadata: { command: { status: 'completed', text: '/model sonnet' } },
+                status: 'completed',
+            })
+        ),
+        {
+            command: '/model sonnet',
+            output: 'Model set to tavern-e2e-tools',
+            responseId: 'rsp_cmd_1',
+            status: 'completed',
+        }
+    );
+});
+
+test('failed command activity maps to a failed command run', () => {
+    assert.deepEqual(
+        commandRunFromActivity(
+            commandActivity({
+                detail: 'slash worker start failed',
+                metadata: { command: { status: 'failed', text: '/compact' } },
+                status: 'failed',
+            })
+        ),
+        {
+            command: '/compact',
+            output: 'slash worker start failed',
+            responseId: 'rsp_cmd_1',
+            status: 'failed',
+        }
+    );
+});
+
+test('command activity without a slash command stays out of the command-run lane', () => {
+    assert.equal(
+        commandRunFromActivity(
+            commandActivity({
+                detail: 'ls -la',
+                metadata: {},
+                status: 'completed',
+                title: 'shell',
+            })
+        ),
+        null
+    );
+});
+
+function commandActivity(input: {
+    detail: string;
+    metadata: Record<string, unknown>;
+    status: TavernResponseActivity['status'];
+    title?: string;
+}): TavernResponseActivity {
+    return {
+        artifact_ids: [],
+        chat_id: 'chat-1',
+        completed_at: '2026-06-12T12:00:01.000Z',
+        detail: input.detail,
+        id: 'act_cmd_1',
+        kind: 'command',
+        metadata: input.metadata,
+        response_id: 'rsp_cmd_1',
+        sequence: 1,
+        started_at: '2026-06-12T12:00:00.000Z',
+        status: input.status,
+        summary: null,
+        title: input.title ?? '/model',
+        updated_at: '2026-06-12T12:00:01.000Z',
+    };
+}
 
 test('failed turn only reflects the latest response', () => {
     const failed = response({
@@ -37,6 +115,7 @@ test('latest failed response returns a failed turn', () => {
 
     assert.deepEqual(failedTurnFromResponses([failed]), {
         error: 'Agent failed to produce a reply.',
+        responseId: 'response-failed',
         turn: {
             agentId: 'agent-main',
             chatId: 'chat-1',
@@ -46,6 +125,75 @@ test('latest failed response returns a failed turn', () => {
         },
     });
 });
+
+test('soft-deleted rows never reach the timeline', () => {
+    const liveResponse = response({
+        id: 'rsp_live',
+        status: 'completed',
+        updatedAt: '2026-06-08T12:00:00.000Z',
+    });
+    const deletedResponse = {
+        ...response({
+            id: 'rsp_deleted',
+            status: 'failed',
+            updatedAt: '2026-06-08T12:01:00.000Z',
+        }),
+        deleted_at: '2026-06-08T12:02:00.000Z',
+    };
+    const visible = visibleTimelineSources({
+        activity: [
+            {
+                ...commandActivity({ detail: 'live', metadata: {}, status: 'completed' }),
+                response_id: 'rsp_live',
+            },
+            {
+                ...commandActivity({ detail: 'gone', metadata: {}, status: 'completed' }),
+                id: 'act_deleted',
+                response_id: 'rsp_deleted',
+            },
+        ],
+        artifacts: [],
+        messages: [
+            message({ id: 'msg_live' }),
+            { ...message({ id: 'msg_deleted' }), deleted_at: '2026-06-08T12:02:00.000Z' },
+        ],
+        responses: [liveResponse, deletedResponse],
+    });
+
+    assert.deepEqual(
+        visible.messages.map((entry) => entry.id),
+        ['msg_live']
+    );
+    assert.deepEqual(
+        visible.responses.map((entry) => entry.id),
+        ['rsp_live']
+    );
+    assert.deepEqual(
+        visible.activity.map((entry) => entry.id),
+        ['act_cmd_1']
+    );
+    // The dismissed failed response no longer drives the failure banner.
+    assert.equal(failedTurnFromResponses(visible.responses), null);
+});
+
+function message(input: { id: string }): TavernChatMessage {
+    return {
+        attachments: [],
+        author: { id: 'usr_1', kind: 'user', label: null, metadata: {} },
+        chat_id: 'chat-1',
+        content: 'hello',
+        created_at: '2026-06-08T12:00:00.000Z',
+        deleted_at: null,
+        delivery_id: null,
+        id: input.id,
+        metadata: {},
+        nonce: null,
+        parent_message_id: null,
+        role: 'user',
+        sequence: 1,
+        thread_root_id: null,
+    } as TavernChatMessage;
+}
 
 function response(input: {
     id: string;

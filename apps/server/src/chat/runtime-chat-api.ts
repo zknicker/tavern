@@ -40,10 +40,16 @@ export async function getRuntimeChatTimelinePage(
         }),
     ]);
     const agentsById = new Map(agents.map((agent) => [agent.id, agent]));
-    const responsesById = new Map(page.responses.map((response) => [response.id, response]));
+    const { activity, artifacts, messages, responses } = visibleTimelineSources({
+        activity: page.activity,
+        artifacts: page.artifacts,
+        messages: page.messages,
+        responses: page.responses,
+    });
+    const responsesById = new Map(responses.map((response) => [response.id, response]));
     const responseIdByMessageId = new Map<string, string>();
 
-    for (const response of page.responses) {
+    for (const response of responses) {
         if (response.request_message_id) {
             responseIdByMessageId.set(response.request_message_id, response.id);
         }
@@ -53,24 +59,24 @@ export async function getRuntimeChatTimelinePage(
     }
 
     const finalReplyTextByRunId = new Map(
-        page.messages
+        messages
             .filter((message) => message.chat_id === chatId && message.role === 'assistant')
             .map((message) => [runtimeMetadataString(message, 'runId'), messageText(message)])
             .filter((entry): entry is [string, string] => Boolean(entry[0]))
     );
     const agentNamesById = new Map(agents.map((agent) => [agent.id, agent.name]));
-    const messageRows = page.messages.flatMap((message) =>
+    const messageRows = messages.flatMap((message) =>
         messageToChatRows(message, agentsById, responseIdByMessageId)
     );
-    const activityRows = page.activity.flatMap((activity) =>
-        activityToChatRows(activity, responsesById, finalReplyTextByRunId, agentNamesById)
+    const activityRows = activity.flatMap((entry) =>
+        activityToChatRows(entry, responsesById, finalReplyTextByRunId, agentNamesById)
     );
-    const artifactRows = page.artifacts.map(artifactToChatRow);
+    const artifactRows = artifacts.map(artifactToChatRow);
     const rows = [...messageRows, ...activityRows, ...artifactRows];
     // Active and failed turn states describe the newest history; the latest
     // page is the only one whose responses can carry them.
-    const activeReply = isLatestPage ? activeReplyFromResponses(page.responses) : null;
-    const failedTurn = isLatestPage ? failedTurnFromResponses(page.responses) : null;
+    const activeReply = isLatestPage ? activeReplyFromResponses(responses) : null;
+    const failedTurn = isLatestPage ? failedTurnFromResponses(responses) : null;
     const messageTimestampById = new Map(
         messageRows
             .filter(
@@ -81,14 +87,14 @@ export async function getRuntimeChatTimelinePage(
     );
     const requestMessageIdByRowId = new Map<string, string>();
 
-    for (const activity of page.activity) {
-        const response = responsesById.get(activity.response_id);
+    for (const entry of activity) {
+        const response = responsesById.get(entry.response_id);
         if (response?.request_message_id) {
-            requestMessageIdByRowId.set(activity.id, response.request_message_id);
+            requestMessageIdByRowId.set(entry.id, response.request_message_id);
         }
     }
 
-    for (const artifact of page.artifacts) {
+    for (const artifact of artifacts) {
         const response = artifact.response_id ? responsesById.get(artifact.response_id) : null;
         if (response?.request_message_id) {
             requestMessageIdByRowId.set(artifact.id, response.request_message_id);
@@ -109,6 +115,28 @@ export async function getRuntimeChatTimelinePage(
         nextBeforeSequence: page.next_before_sequence,
         rows: sortedRows,
         totalMessages: page.total_messages,
+    };
+}
+
+// Soft-deleted rows stay durable in Runtime (sequence slots are stable) but
+// never reach the timeline: dismissed cards, dismissed failures, cleared
+// chats. Activity and artifacts follow their response.
+export function visibleTimelineSources(input: {
+    activity: readonly TavernResponseActivity[];
+    artifacts: readonly TavernArtifact[];
+    messages: readonly TavernChatMessage[];
+    responses: readonly TavernChatResponse[];
+}) {
+    const responses = input.responses.filter((response) => !response.deleted_at);
+    const liveResponseIds = new Set(responses.map((response) => response.id));
+
+    return {
+        activity: input.activity.filter((entry) => liveResponseIds.has(entry.response_id)),
+        artifacts: input.artifacts.filter(
+            (artifact) => !artifact.response_id || liveResponseIds.has(artifact.response_id)
+        ),
+        messages: input.messages.filter((message) => !message.deleted_at),
+        responses,
     };
 }
 
@@ -212,6 +240,20 @@ function activityToChatRows(
                 responseId: activity.response_id,
                 runtimeNotice,
                 systemKind: 'runtimeNotice' as const,
+                timestamp: activity.started_at,
+            },
+        ];
+    }
+
+    const commandRun = commandRunFromActivity(activity);
+
+    if (commandRun) {
+        return [
+            {
+                commandRun,
+                id: activity.id,
+                kind: 'system' as const,
+                systemKind: 'commandRun' as const,
                 timestamp: activity.started_at,
             },
         ];
@@ -388,6 +430,29 @@ function runtimeNoticeKind(value: unknown) {
         : null;
 }
 
+// Composer command runs persist as command-kind activity with the typed
+// command under metadata.command; they render as standalone system cards
+// instead of work-log tool rows.
+export function commandRunFromActivity(activity: TavernResponseActivity) {
+    if (activity.kind !== 'command') {
+        return null;
+    }
+
+    const commandMetadata = readRecord(activity.metadata.command);
+    const command = readString(commandMetadata.text) ?? activity.title;
+
+    if (!command.startsWith('/')) {
+        return null;
+    }
+
+    return {
+        command,
+        output: activity.detail ?? '',
+        responseId: activity.response_id,
+        status: activity.status === 'failed' ? ('failed' as const) : ('completed' as const),
+    };
+}
+
 function runtimeNoticeFallbackTitle(kind: 'auto_compaction' | 'new_session' | 'status') {
     switch (kind) {
         case 'auto_compaction':
@@ -559,9 +624,11 @@ function activeReplyFromResponses(
 export function failedTurnFromResponses(
     responses: readonly TavernChatResponse[]
 ): ChatLogPage['failedTurn'] {
-    const latestResponse = [...responses].sort(
-        (left, right) => Date.parse(right.updated_at) - Date.parse(left.updated_at)
-    );
+    // Command runs carry their own failure state on the command card; they
+    // never drive the failed-turn banner.
+    const latestResponse = responses
+        .filter((response) => runtimeMetadataString(response, 'source') !== 'command')
+        .sort((left, right) => Date.parse(right.updated_at) - Date.parse(left.updated_at));
 
     if (!(latestResponse[0]?.status === 'failed' && !latestResponse[0].response_message_id)) {
         return null;
@@ -574,6 +641,7 @@ export function failedTurnFromResponses(
             runtimeMetadataString(failedResponse, 'error') ??
             readString(failedResponse.metadata.error) ??
             'Agent failed to produce a reply.',
+        responseId: failedResponse.id,
         turn: {
             agentId:
                 runtimeMetadataString(failedResponse, 'agentId') ?? failedResponse.participant_id,

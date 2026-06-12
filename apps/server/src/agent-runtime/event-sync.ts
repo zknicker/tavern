@@ -53,6 +53,13 @@ export async function applyObservedAgentRuntimeEvent(
             emitAgentUpdated();
             return;
         }
+        case 'chat.historyChanged': {
+            emitObservedAgentRuntimeEvent(event);
+            debugTurnEvent(event);
+            emitChatUpdated({ chatId: event.chatId });
+            emitChatLogUpdated();
+            return;
+        }
         case 'chat.messageAccepted': {
             emitObservedAgentRuntimeEvent(event);
             debugTurnEvent(event);
