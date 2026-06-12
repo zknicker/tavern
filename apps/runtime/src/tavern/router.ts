@@ -18,6 +18,7 @@ import { handleRuntimeCapabilitiesRequest } from '../capabilities/routes';
 import { handleCommandsRequest } from '../hermes/command-routes';
 import { handleConnectorsRequest } from '../hermes/connector-routes';
 import { handleExecutionSettingsRequest } from '../hermes/execution-settings';
+import { handleMcpRequest } from '../hermes/mcp-routes';
 import { handlePermissionSettingsRequest } from '../hermes/permission-settings';
 import { handleSkillHubRequest } from '../hermes/skill-hub-routes';
 import { handleToolsetSetupRequest } from '../hermes/toolset-setup-routes';
@@ -127,6 +128,11 @@ export async function handleTavernRuntimeRequest(request: Request): Promise<Resp
     const toolsetSetupResponse = await handleToolsetSetupRequest(request);
     if (toolsetSetupResponse) {
         return toolsetSetupResponse;
+    }
+
+    const mcpResponse = await handleMcpRequest(request);
+    if (mcpResponse) {
+        return mcpResponse;
     }
 
     const capabilitiesResponse = await handleRuntimeCapabilitiesRequest(request);
