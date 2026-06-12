@@ -151,6 +151,47 @@ test('saved connection authJson is cleared when auth is explicitly null', async 
     assert.equal(record.authJson, null, 'authJson must be null after explicit auth: null clear');
 });
 
+test('settings and connector client requests carry the Authorization header', async () => {
+    globalThis.fetch = mock(async (input: RequestInfo | URL, init?: RequestInit) => {
+        const headers = new Headers(init?.headers);
+        capturedRequests.push({
+            authorization: headers.get('authorization') ?? undefined,
+            url: String(input),
+        });
+        return Response.json({});
+    }) as typeof fetch;
+
+    const { createAgentRuntimeClient } = await import('../src/agent-runtime/client.ts');
+    const client = createAgentRuntimeClient('http://runtime.test', { token: 'test-token' });
+
+    // Response bodies are junk; schema parse failures are fine — the assertion
+    // is that every outbound request carries the bearer token.
+    const calls: Array<() => Promise<unknown>> = [
+        () => client.getExecutionSettings(),
+        () => client.getPermissionSettings(),
+        () =>
+            client.savePermissionSettings({
+                approvalMode: 'allow',
+            }),
+        () => client.listConnectors(),
+        () => client.deleteConnector('connector-1'),
+        () => client.testConnector('connector-1'),
+    ];
+
+    for (const call of calls) {
+        await call().catch(() => undefined);
+    }
+
+    assert.equal(capturedRequests.length, calls.length);
+    for (const request of capturedRequests) {
+        assert.equal(
+            request.authorization,
+            'Bearer test-token',
+            `${request.url} must carry the bearer token`
+        );
+    }
+});
+
 test('syncAgentRuntimeAgents sends Authorization header when environment connection has a token', async () => {
     process.env.DATABASE_PATH = join(
         mkdtempSync(join(tmpdir(), 'tavern-auth-regression-test-')),

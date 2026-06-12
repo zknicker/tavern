@@ -996,6 +996,7 @@ class HttpTavernAgentRuntimeClient implements TavernAgentRuntimeClient {
             {
                 body: JSON.stringify(payload),
                 headers: {
+                    ...this.#authHeaders,
                     'content-type': 'application/json',
                     [agentRuntimeMutationHeaders.origin]: agentRuntimeMutationOrigins.tavern,
                 },
@@ -1291,7 +1292,9 @@ class HttpTavernAgentRuntimeClient implements TavernAgentRuntimeClient {
     }
 
     async getExecutionSettings() {
-        const response = await fetch(`${this.#baseUrl}${agentRuntimeRoutes.executionSettings}`);
+        const response = await fetch(`${this.#baseUrl}${agentRuntimeRoutes.executionSettings}`, {
+            headers: this.#authHeaders,
+        });
 
         if (!response.ok) {
             await readErrorResponse(response);
@@ -1305,6 +1308,7 @@ class HttpTavernAgentRuntimeClient implements TavernAgentRuntimeClient {
         const response = await fetch(`${this.#baseUrl}${agentRuntimeRoutes.executionSettings}`, {
             body: JSON.stringify(payload),
             headers: {
+                ...this.#authHeaders,
                 'content-type': 'application/json',
                 [agentRuntimeMutationHeaders.origin]: agentRuntimeMutationOrigins.tavern,
             },
@@ -1319,7 +1323,9 @@ class HttpTavernAgentRuntimeClient implements TavernAgentRuntimeClient {
     }
 
     async getPermissionSettings() {
-        const response = await fetch(`${this.#baseUrl}${agentRuntimeRoutes.permissionSettings}`);
+        const response = await fetch(`${this.#baseUrl}${agentRuntimeRoutes.permissionSettings}`, {
+            headers: this.#authHeaders,
+        });
 
         if (!response.ok) {
             await readErrorResponse(response);
@@ -1333,6 +1339,7 @@ class HttpTavernAgentRuntimeClient implements TavernAgentRuntimeClient {
         const response = await fetch(`${this.#baseUrl}${agentRuntimeRoutes.permissionSettings}`, {
             body: JSON.stringify(payload),
             headers: {
+                ...this.#authHeaders,
                 'content-type': 'application/json',
                 [agentRuntimeMutationHeaders.origin]: agentRuntimeMutationOrigins.tavern,
             },
@@ -1347,7 +1354,9 @@ class HttpTavernAgentRuntimeClient implements TavernAgentRuntimeClient {
     }
 
     async listConnectors() {
-        const response = await fetch(`${this.#baseUrl}${agentRuntimeRoutes.connectors}`);
+        const response = await fetch(`${this.#baseUrl}${agentRuntimeRoutes.connectors}`, {
+            headers: this.#authHeaders,
+        });
 
         if (!response.ok) {
             await readErrorResponse(response);
@@ -1361,6 +1370,7 @@ class HttpTavernAgentRuntimeClient implements TavernAgentRuntimeClient {
         const response = await fetch(`${this.#baseUrl}${agentRuntimeRoutes.connectors}`, {
             body: JSON.stringify(payload),
             headers: {
+                ...this.#authHeaders,
                 'content-type': 'application/json',
                 [agentRuntimeMutationHeaders.origin]: agentRuntimeMutationOrigins.tavern,
             },
@@ -1379,6 +1389,7 @@ class HttpTavernAgentRuntimeClient implements TavernAgentRuntimeClient {
         const response = await fetch(`${this.#baseUrl}${agentRuntimeRoutes.connector(id)}`, {
             body: JSON.stringify(payload),
             headers: {
+                ...this.#authHeaders,
                 'content-type': 'application/json',
                 [agentRuntimeMutationHeaders.origin]: agentRuntimeMutationOrigins.tavern,
             },
@@ -1395,6 +1406,7 @@ class HttpTavernAgentRuntimeClient implements TavernAgentRuntimeClient {
     async deleteConnector(id: string) {
         const response = await fetch(`${this.#baseUrl}${agentRuntimeRoutes.connector(id)}`, {
             headers: {
+                ...this.#authHeaders,
                 [agentRuntimeMutationHeaders.origin]: agentRuntimeMutationOrigins.tavern,
             },
             method: 'DELETE',
@@ -1410,6 +1422,7 @@ class HttpTavernAgentRuntimeClient implements TavernAgentRuntimeClient {
     async testConnector(id: string) {
         const response = await fetch(`${this.#baseUrl}${agentRuntimeRoutes.connectorTest(id)}`, {
             headers: {
+                ...this.#authHeaders,
                 [agentRuntimeMutationHeaders.origin]: agentRuntimeMutationOrigins.tavern,
             },
             method: 'POST',
