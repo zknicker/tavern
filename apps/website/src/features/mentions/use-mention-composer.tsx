@@ -1,6 +1,7 @@
 import * as React from 'react';
 import { queryPolicy } from '../../lib/query-policy.ts';
 import { type AgentListOutput, trpc } from '../../lib/trpc.tsx';
+import type { ChatContextFullness } from '../chats/chat-context-fullness.ts';
 import { MentionEditor, type MentionEditorHandle } from './mention-editor.tsx';
 import { MentionPicker } from './mention-picker.tsx';
 import type { ActiveMentionQuery, Mention, MentionOption } from './mention-types.ts';
@@ -27,6 +28,7 @@ export function useMentionComposer({
     agentId,
     agents,
     content,
+    contextFullness = null,
     onTextChange,
     onSubmit,
     onMentionsChange,
@@ -35,6 +37,7 @@ export function useMentionComposer({
     agentId: string;
     agents: AgentListOutput['agents'];
     content: string;
+    contextFullness?: ChatContextFullness | null;
     onTextChange: (content: string) => void;
     onSubmit?: () => void;
     onMentionsChange?: (mentions: Mention[]) => void;
@@ -53,7 +56,7 @@ export function useMentionComposer({
         agents,
         query: activeQuery?.query ?? '',
     });
-    const commandOptions = useCommandOptions({ enabled: supportsCommands });
+    const commandOptions = useCommandOptions({ contextFullness, enabled: supportsCommands });
     const trigger = activeQuery?.trigger ?? '@';
     const visibleMentionOptions = selectVisibleOptions({
         activeQuery,

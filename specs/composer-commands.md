@@ -21,6 +21,9 @@ not mentions and never serialize into message markdown or metadata.
   arguments and submits normally. No chip is created.
 - The palette is available only where a chat session exists. The new-chat
   composer does not offer commands.
+- Context-management commands such as `/context`, `/compact`, or `/compress`
+  show the current context fullness when the app can resolve model usage and
+  context window data.
 
 ## Catalog
 

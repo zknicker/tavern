@@ -146,6 +146,7 @@ export function ChatMessageComposer({
         agentId,
         agents,
         content,
+        contextFullness,
         onTextChange: setContent,
         onSubmit: () => {
             void handleSubmit();

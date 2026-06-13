@@ -29,6 +29,10 @@ export interface MentionOption {
     metadata?: Record<string, unknown>;
     projection: MentionProjection;
     sourceLabel?: string | null;
+    statusAdornment?: {
+        kind: 'context-fullness';
+        percent: number;
+    };
 }
 
 export interface ActiveMentionQuery {

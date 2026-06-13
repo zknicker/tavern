@@ -120,6 +120,7 @@ export function MentionPicker({
                                                 icon={appearance.icon}
                                                 iconDataUrl={appearance.iconDataUrl}
                                             />
+                                            <MentionOptionAdornment option={option} />
                                             <span
                                                 className={cn(
                                                     'truncate font-medium text-foreground',
@@ -147,6 +148,45 @@ export function MentionPicker({
                 </div>
             </div>
         </Card>
+    );
+}
+
+function MentionOptionAdornment({ option }: { option: MentionOption }) {
+    if (option.statusAdornment?.kind !== 'context-fullness') {
+        return null;
+    }
+
+    const radius = 6;
+    const circumference = 2 * Math.PI * radius;
+    const percent = Math.min(Math.max(option.statusAdornment.percent, 0), 1);
+    const dashOffset = circumference * (1 - percent);
+
+    return (
+        <svg
+            aria-hidden="true"
+            className="size-4 shrink-0 -rotate-90 text-muted-foreground"
+            viewBox="0 0 18 18"
+        >
+            <circle
+                className="stroke-muted-foreground/20"
+                cx="9"
+                cy="9"
+                fill="none"
+                r={radius}
+                strokeWidth="3"
+            />
+            <circle
+                className="stroke-foreground/80"
+                cx="9"
+                cy="9"
+                fill="none"
+                r={radius}
+                strokeDasharray={circumference}
+                strokeDashoffset={dashOffset}
+                strokeLinecap="round"
+                strokeWidth="3"
+            />
+        </svg>
     );
 }
 
