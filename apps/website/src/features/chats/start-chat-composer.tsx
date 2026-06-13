@@ -37,6 +37,7 @@ import { handleChatComposerKeyDown } from './chat-composer-keyboard.ts';
 import { ChatComposerAttachmentButton, ChatComposerModelSelector } from './chat-composer-tools.tsx';
 
 type Agent = AgentListOutput['agents'][number];
+const CHAT_COMPOSER_PLACEHOLDER = "Let's go on an adventure...";
 
 export function StartChatComposer({
     agent,
@@ -117,11 +118,7 @@ export function StartChatComposer({
     const isAgentDensity = density === 'agent';
     const promptId =
         id ?? (isAgentDensity ? `agent-${agent?.id ?? 'unknown'}-prompt` : 'home-prompt');
-    const placeholder = agent
-        ? isAgentDensity
-            ? `Send a message to ${agent.name}...`
-            : 'Ask Tavern to investigate, summarize, or take the next step...'
-        : 'Start Tavern Runtime to sync your agent.';
+    const inputLabel = agent ? `Message ${agent.name}` : 'Start chat message';
 
     async function handleAttachmentInputChange(event: React.ChangeEvent<HTMLInputElement>) {
         const files = [...(event.currentTarget.files ?? [])];
@@ -185,14 +182,17 @@ export function StartChatComposer({
             <PromptInputBody>
                 {canUseMentions ? (
                     <MentionComposerEditor
+                        ariaLabel={inputLabel}
+                        autoFocus
                         composer={mentionComposer}
                         id={promptId}
                         name="start-chat"
-                        placeholder={placeholder}
+                        placeholder={CHAT_COMPOSER_PLACEHOLDER}
                     />
                 ) : (
                     <PromptInputTextarea
-                        aria-label={placeholder}
+                        aria-label={inputLabel}
+                        autoFocus
                         id={promptId}
                         name="start-chat"
                         onChange={(event) => setPrompt(event.target.value)}
@@ -206,7 +206,7 @@ export function StartChatComposer({
                                 value: prompt,
                             })
                         }
-                        placeholder={placeholder}
+                        placeholder={CHAT_COMPOSER_PLACEHOLDER}
                         rows={1}
                         value={prompt}
                     />

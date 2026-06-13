@@ -105,7 +105,7 @@ test('keeps loaded history and an open old work drawer stable through a live tur
         window.__DRAWER_TIMER__ = window.setInterval(sample, 100);
     });
 
-    const composer = page.getByRole('textbox', { name: /Ask for follow-up changes/ });
+    const composer = page.getByRole('textbox', { name: /Chat message/ });
     await composer.fill(
         'Run the slow QA command against `QA_KICKOFF_TASK.md`, then reply exactly `QA_WINDOW_T3_OK`.'
     );
@@ -232,7 +232,7 @@ async function sendFollowUp(
     page: Page,
     { expectedReply, prompt }: { expectedReply: string; prompt: string }
 ) {
-    const composer = page.getByRole('textbox', { name: /Ask for follow-up changes/ });
+    const composer = page.getByRole('textbox', { name: /Chat message/ });
     await expect(composer).toBeEnabled({ timeout: 30_000 });
 
     await composer.fill(prompt);

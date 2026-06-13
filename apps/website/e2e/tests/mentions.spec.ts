@@ -1,6 +1,16 @@
 import type { Page } from '@playwright/test';
 import { expect, test } from '../support/test.ts';
 
+test('focuses the homepage composer with adventure placeholder copy', async ({ page }) => {
+    await page.goto('/dashboard/overview');
+
+    const composer = page.locator('#home-prompt');
+
+    await expect(composer).toBeFocused();
+    await expect(composer).toHaveText('');
+    await expect(page.getByText("Let's go on an adventure...")).toBeVisible();
+});
+
 test('autocompletes runtime skills as visible mention chips', async ({ page }) => {
     await page.goto('/dashboard/overview');
 
@@ -87,13 +97,13 @@ test('keeps mention chips editable in common composer flows', async ({ page }) =
     await expect(composer).toHaveText('Use @gh');
 });
 
-test('inserts a newline on Cmd+Enter in the mention composer', async ({ page }) => {
+test('inserts a newline on Shift+Enter in the mention composer', async ({ page }) => {
     await page.goto('/dashboard/overview');
 
     const composer = page.locator('#home-prompt');
     await composer.click();
     await composer.pressSequentially('first');
-    await page.keyboard.press('Meta+Enter');
+    await page.keyboard.press('Shift+Enter');
     await composer.pressSequentially('second');
 
     await expect

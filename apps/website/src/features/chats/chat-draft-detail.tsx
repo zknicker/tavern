@@ -118,9 +118,10 @@ export function ChatDraftDetail({
                 >
                     <PromptInputBody>
                         <MentionComposerEditor
+                            ariaLabel="Chat message"
                             composer={mentionComposer}
                             name="draft-chat-message"
-                            placeholder="Ask for follow-up changes"
+                            placeholder="Let's go on an adventure..."
                         />
                     </PromptInputBody>
                     <MentionComposerPicker composer={mentionComposer} />

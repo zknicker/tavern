@@ -149,7 +149,10 @@ export function useMentionComposer({
             return true;
         }
 
-        if (event.key === 'Enter' || event.key === 'Tab') {
+        if (
+            (event.key === 'Enter' && !(event.metaKey || event.ctrlKey || event.shiftKey)) ||
+            event.key === 'Tab'
+        ) {
             event.preventDefault();
             handleMentionSelect(visibleMentionOptions[activeIndex]);
             return true;
@@ -175,7 +178,13 @@ export function useMentionComposer({
     }
 
     function handleSubmitKeyDown(event: KeyboardEvent) {
-        if (event.key !== 'Enter' || event.metaKey || event.isComposing) {
+        if (
+            event.key !== 'Enter' ||
+            event.metaKey ||
+            event.ctrlKey ||
+            event.shiftKey ||
+            event.isComposing
+        ) {
             return false;
         }
 
@@ -240,20 +249,26 @@ function selectVisibleOptions({
 }
 
 export function MentionComposerEditor({
+    ariaLabel,
+    autoFocus,
     composer,
     disabled,
     id,
     name,
     placeholder,
 }: {
+    ariaLabel: string;
+    autoFocus?: boolean;
     composer: MentionComposerState;
     disabled?: boolean;
     id?: string;
     name: string;
-    placeholder: string;
+    placeholder?: string;
 }) {
     return (
         <MentionEditor
+            ariaLabel={ariaLabel}
+            autoFocus={autoFocus}
             disabled={disabled}
             id={id}
             name={name}

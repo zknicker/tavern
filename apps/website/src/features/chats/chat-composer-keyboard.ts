@@ -1,11 +1,13 @@
 import type * as React from 'react';
 
 interface ChatComposerKeyInput {
+    ctrlKey?: boolean;
     key: string;
     metaKey?: boolean;
     nativeEvent?: {
         isComposing?: boolean;
     };
+    shiftKey?: boolean;
 }
 
 interface LineBreakInput {
@@ -20,11 +22,17 @@ interface LineBreakUpdate {
 }
 
 export function shouldSubmitChatComposerKey(event: ChatComposerKeyInput) {
-    return event.key === 'Enter' && !event.metaKey && !event.nativeEvent?.isComposing;
+    return (
+        event.key === 'Enter' &&
+        !event.metaKey &&
+        !event.ctrlKey &&
+        !event.shiftKey &&
+        !event.nativeEvent?.isComposing
+    );
 }
 
 export function shouldInsertChatComposerLineBreak(event: ChatComposerKeyInput) {
-    return event.key === 'Enter' && Boolean(event.metaKey) && !event.nativeEvent?.isComposing;
+    return event.key === 'Enter' && Boolean(event.shiftKey) && !event.nativeEvent?.isComposing;
 }
 
 export function getChatComposerLineBreakUpdate({

@@ -289,8 +289,9 @@ async function sendFollowUp(
         prompt: string;
     }
 ) {
-    const composer = page.getByRole('textbox', { name: /Ask for follow-up changes/ });
+    const composer = page.getByRole('textbox', { name: /Chat message/ });
     await expect(composer).toBeEnabled({ timeout: 30_000 });
+    await expect(composer).toBeFocused();
 
     await composer.fill(prompt);
     await composer.press('Enter');

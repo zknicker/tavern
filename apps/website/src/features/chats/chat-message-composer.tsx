@@ -48,6 +48,7 @@ import {
 import type { ChatContextFullness } from './chat-context-fullness.ts';
 
 export type ChatMessageComposerVariant = 'compact' | 'detail';
+const CHAT_COMPOSER_PLACEHOLDER = "Let's go on an adventure...";
 
 export function ChatMessageComposer({
     agentRuntimeSyncLabel = null,
@@ -351,9 +352,11 @@ export function ChatMessageComposer({
             />
             <PromptInputBody>
                 <MentionComposerEditor
+                    ariaLabel="Chat message"
+                    autoFocus={variant === 'detail'}
                     composer={mentionComposer}
                     name="chat-message"
-                    placeholder={getPlaceholder({ variant })}
+                    placeholder={CHAT_COMPOSER_PLACEHOLDER}
                 />
             </PromptInputBody>
             <MentionComposerPicker composer={mentionComposer} />
@@ -500,8 +503,4 @@ function getSendDisabledTooltip({
     }
 
     return undefined;
-}
-
-function getPlaceholder({ variant }: { variant: ChatMessageComposerVariant }) {
-    return variant === 'compact' ? 'Send a message to this chat...' : 'Ask for follow-up changes';
 }

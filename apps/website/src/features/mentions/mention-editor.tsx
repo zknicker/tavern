@@ -21,6 +21,8 @@ export interface MentionEditorHandle {
 }
 
 export function MentionEditor({
+    ariaLabel,
+    autoFocus = false,
     className,
     disabled = false,
     id,
@@ -33,6 +35,8 @@ export function MentionEditor({
     ref,
     value,
 }: {
+    ariaLabel: string;
+    autoFocus?: boolean;
     className?: string;
     disabled?: boolean;
     id?: string;
@@ -41,7 +45,7 @@ export function MentionEditor({
     onChange: (content: string, mentions: Mention[]) => void;
     onFocus?: () => void;
     onKeyDown: (event: KeyboardEvent) => boolean;
-    placeholder: string;
+    placeholder?: string;
     ref?: React.Ref<MentionEditorHandle>;
     value: string;
 }) {
@@ -84,9 +88,10 @@ export function MentionEditor({
             return;
         }
 
+        let focusFrame: number | null = null;
         const view = new EditorView(element, {
             attributes: {
-                'aria-label': placeholder,
+                'aria-label': ariaLabel,
                 class: cn(
                     'min-h-0 whitespace-pre-wrap break-words px-3 pt-2 pb-0 text-sm leading-6 outline-none max-sm:text-base',
                     disabled && 'pointer-events-none'
@@ -152,12 +157,18 @@ export function MentionEditor({
 
         viewRef.current = view;
         onActiveQueryChangeRef.current(getActiveQuery(view.state.doc, view.state.selection.from));
+        if (autoFocus && !disabled) {
+            focusFrame = requestAnimationFrame(() => view.focus());
+        }
 
         return () => {
+            if (focusFrame !== null) {
+                cancelAnimationFrame(focusFrame);
+            }
             view.destroy();
             viewRef.current = null;
         };
-    }, [disabled, id, placeholder]);
+    }, [ariaLabel, autoFocus, disabled, id]);
 
     React.useEffect(() => {
         const view = viewRef.current;
@@ -175,7 +186,7 @@ export function MentionEditor({
 
     return (
         <div className={cn('relative', className)}>
-            {value.length === 0 ? (
+            {value.length === 0 && placeholder ? (
                 <div className="pointer-events-none absolute inset-x-3 top-2 text-muted-foreground/60 text-sm leading-6 max-sm:text-base">
                     {placeholder}
                 </div>
@@ -187,9 +198,9 @@ export function MentionEditor({
 }
 
 export function isMentionEditorLineBreakShortcut(
-    event: Pick<KeyboardEvent, 'isComposing' | 'key' | 'metaKey'>
+    event: Pick<KeyboardEvent, 'isComposing' | 'key' | 'shiftKey'>
 ) {
-    return event.key === 'Enter' && event.metaKey && !event.isComposing;
+    return event.key === 'Enter' && event.shiftKey && !event.isComposing;
 }
 
 const mentionSchema = new Schema({

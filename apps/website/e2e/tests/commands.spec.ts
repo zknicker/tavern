@@ -10,7 +10,7 @@ test('slash opens the command palette in a chat and runs the picked command', as
         prompt: 'Command palette qa marker. Reply exactly `QA_COMMANDS_OK`.',
     });
 
-    const composer = page.getByRole('textbox', { name: /Ask for follow-up changes/ });
+    const composer = page.getByRole('textbox', { name: /Chat message/ });
     await expect(composer).toBeEnabled({ timeout: 30_000 });
     await composer.click();
     await composer.pressSequentially('/');
@@ -117,7 +117,7 @@ test('slash typed mid-message never opens the palette', async ({ page }) => {
         prompt: 'Command palette mid-slash qa. Reply exactly `QA_COMMANDS_MIDSLASH_OK`.',
     });
 
-    const composer = page.getByRole('textbox', { name: /Ask for follow-up changes/ });
+    const composer = page.getByRole('textbox', { name: /Chat message/ });
     await expect(composer).toBeEnabled({ timeout: 30_000 });
     await composer.click();
     await composer.pressSequentially('see /status');
@@ -126,7 +126,7 @@ test('slash typed mid-message never opens the palette', async ({ page }) => {
 });
 
 async function runCommand(page: Page, name: string) {
-    const composer = page.getByRole('textbox', { name: /Ask for follow-up changes/ });
+    const composer = page.getByRole('textbox', { name: /Chat message/ });
     await expect(composer).toBeEnabled({ timeout: 30_000 });
     await composer.click();
     await composer.pressSequentially('/');
