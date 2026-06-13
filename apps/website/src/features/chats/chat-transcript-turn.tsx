@@ -1,13 +1,15 @@
 import { Cancel01Icon } from '@hugeicons/core-free-icons';
+import * as React from 'react';
 import { AgentAvatar } from '../../components/ui/agent-avatar.tsx';
 import { CopyButton } from '../../components/ui/copy-button.tsx';
 import { Icon } from '../../components/ui/icon.tsx';
 import { useActorProfile } from '../../hooks/actors/use-actor.ts';
-import type { ChatActiveReply } from '../../hooks/chats/chat-timeline-state.ts';
+import type { ChatActiveReply, ChatTurnFailure } from '../../hooks/chats/chat-timeline-state.ts';
 import { useChatDismiss } from '../../hooks/chats/use-chat-dismiss.ts';
 import { useChatThinkingDisplayPreference } from '../../hooks/chats/use-chat-thinking-display-preference.ts';
 import { formatShortTime } from '../../lib/format.ts';
 import { cn } from '../../lib/utils.ts';
+import { AgentPresenceIndicator } from './agent-presence-indicator.tsx';
 import { CommandRunEntry } from './chat-command-card.tsx';
 import { ChatInlineMarkdownText } from './chat-inline-markdown-text.tsx';
 import {
@@ -15,7 +17,7 @@ import {
     ChatTranscriptActivityGroup,
 } from './chat-transcript-activity.tsx';
 import {
-    getActivityEnd,
+    formatActiveActivitySeconds,
     getActivityStart,
     getAssistantNarrationText,
     isActivityItem,
@@ -36,30 +38,69 @@ import type {
 } from './chat-transcript-model.ts';
 import { getItemSessionKey, isActivityBackedMessageRow } from './chat-transcript-model.ts';
 import { RuntimeNoticeEntry } from './chat-transcript-system-step.tsx';
-import { ThinkingIndicator } from './thinking-indicator.tsx';
 import { useRevealedText } from './use-revealed-text.ts';
-import { TurnWorkDisclosure } from './working-log.tsx';
 
 const rowClassName = 'relative w-full px-3 pt-1 pb-3';
 const newTurnGapClassName = 'mt-1.5';
 const hoverGroupClassName = 'group';
 const metadataGapClassName = 'pb-6';
+const agentPresenceSize = 32;
+const activePresenceVerbs = [
+    'Adventuring',
+    'Brewing',
+    'Conjuring',
+    'Scrying',
+    'Questing',
+    'Forging',
+    'Enchanting',
+    'Spellcasting',
+    'Charting',
+    'Delving',
+    'Summoning',
+    'Transmuting',
+    'Wandering',
+    'Wayfinding',
+    'Alchemizing',
+    'Incanting',
+    'Rummaging',
+    'Tinkering',
+    'Polishing',
+    'Deciphering',
+    'Divining',
+    'Kindling',
+    'Gathering',
+    'Mapping',
+    'Exploring',
+    'Crafting',
+    'Channeling',
+    'Weaving',
+    'Unfurling',
+    'Illuminating',
+] as const;
 
 export function TranscriptEntryView({
     activeReply,
+    agentPresenceColor,
     chatId,
     conversationLayout,
     currentSessionKey,
     entry,
+    failedTurn,
     followsRuntimeNotice,
+    presenceRows,
+    showAgentPresence,
     turnStartedAt,
 }: {
     activeReply: ChatActiveReply | null;
+    agentPresenceColor?: string | null;
     chatId?: string;
     conversationLayout: ConversationMessageLayout;
     currentSessionKey?: string | null;
     entry: TranscriptEntry;
+    failedTurn?: ChatTurnFailure | null;
     followsRuntimeNotice?: boolean;
+    presenceRows: TranscriptRow[];
+    showAgentPresence: boolean;
     turnStartedAt?: string | null;
 }) {
     if (entry.kind === 'system') {
@@ -97,11 +138,15 @@ export function TranscriptEntryView({
     return (
         <AgentTurn
             activeReply={activeReply}
+            agentPresenceColor={agentPresenceColor ?? null}
             chatId={chatId}
             currentSessionKey={currentSessionKey}
             entry={entry}
+            failedTurn={failedTurn ?? null}
             followsRuntimeNotice={Boolean(followsRuntimeNotice)}
             layout={conversationLayout}
+            presenceRows={presenceRows}
+            showPresence={showAgentPresence}
             turnStartedAt={turnStartedAt}
         />
     );
@@ -176,19 +221,27 @@ function UserTurn({
 
 function AgentTurn({
     activeReply,
+    agentPresenceColor,
     chatId,
     currentSessionKey,
     entry,
+    failedTurn,
     followsRuntimeNotice,
     layout,
+    presenceRows,
+    showPresence,
     turnStartedAt,
 }: {
     activeReply: ChatActiveReply | null;
+    agentPresenceColor: string | null;
     chatId?: string;
     currentSessionKey?: string | null;
     entry: Extract<TranscriptEntry, { kind: 'turn' }>;
+    failedTurn: ChatTurnFailure | null;
     followsRuntimeNotice: boolean;
     layout: ConversationMessageLayout;
+    presenceRows: TranscriptRow[];
+    showPresence: boolean;
     turnStartedAt?: string | null;
 }) {
     const actorProfile = useActorProfile(entry.actor);
@@ -202,39 +255,34 @@ function AgentTurn({
     const lastMessage = getLastMessage(items);
     const turnCompletedAt = lastMessage?.timestamp ?? null;
     const segments = groupAgentItems(items);
+    const visibleSegments = segments.filter((segment) => !isActiveStatusSegment(segment));
     const turnActive = isActiveTurn(items, activeReply, lastMessage);
     const activityItems = items.filter(isActivityItem);
-    const hasWorkHeader =
-        activityItems.length > 0 ||
-        items.some((item) => isAssistantNarrationItem(item) || isNarrationMessageItem(item));
-    const activityEnd = getActivityEnd(activityItems);
-    // While live, anchor the "Working for" timer to the turn start so it does
+    // While live, anchor the active timer to the turn start so it does
     // not reset when the first tool activity lands. Completed turns keep the
-    // durable activity span.
+    // eyes but no timing text.
     const workStart = turnActive
         ? (turnStartedAt ?? getActivityStart(activityItems) ?? entry.timestamp)
         : (getActivityStart(activityItems) ?? turnStartedAt ?? entry.timestamp);
-    const workEnd = turnActive
-        ? null
-        : activityEnd
-          ? (turnCompletedAt ?? activityEnd)
-          : (turnCompletedAt ?? entry.timestamp);
-    const finalSegmentIndex = findFinalSegmentIndex(segments);
-    const workSegments =
-        hasWorkHeader && finalSegmentIndex >= 0
-            ? segments.filter((_, index) => index !== finalSegmentIndex)
-            : segments;
-    const replySegments =
-        hasWorkHeader && finalSegmentIndex >= 0 ? [segments[finalSegmentIndex]] : [];
-    const activeReplyStarted =
-        turnActive &&
-        activeReply !== null &&
-        items.some(
-            (item) =>
-                item.kind === 'activeReply' &&
-                item.reply.runId === activeReply.runId &&
-                (item.reply.text ?? '').trim().length > 0
-        );
+    const presenceNow = usePresenceNow(turnActive, workStart);
+    const presenceTimingLabel = turnActive
+        ? getAgentPresenceTimingLabel({
+              now: presenceNow,
+              start: workStart,
+              verb: getActivePresenceVerb(activeReply?.runId ?? entry.id),
+          })
+        : null;
+    const presence = showPresence ? (
+        <AgentPresenceIndicator
+            activeReply={activeReply}
+            className="translate-y-px"
+            color={actorProfile?.primaryColor ?? agentPresenceColor}
+            failedTurn={failedTurn}
+            rows={presenceRows}
+            size={agentPresenceSize}
+        />
+    ) : null;
+    const reserveHoverMetaGap = lastMessage !== null || (turnActive && visibleSegments.length > 0);
 
     return (
         <div
@@ -258,75 +306,61 @@ function AgentTurn({
                         />
                     </div>
                 ) : null}
-                <div
-                    className={cn(
-                        hoverGroupClassName,
-                        'relative w-full min-w-0',
-                        // Reserved while live so the gap's appearance with the
-                        // first durable message never resizes the turn — a
-                        // tail shrink shifts the bottom-pinned chat.
-                        (turnActive || lastMessage) && metadataGapClassName
-                    )}
-                >
+                <div className={cn(hoverGroupClassName, 'w-full min-w-0')}>
                     {showIdentity ? (
                         <div className="mb-1.5 min-w-0 truncate font-medium text-[0.8125rem] text-muted-foreground/80 leading-none">
                             {displayName}
                         </div>
                     ) : null}
-                    <div className="flex min-w-0 flex-col gap-4">
-                        {hasWorkHeader ? (
-                            <TurnWorkDisclosure
-                                collapseForReply={activeReplyStarted}
-                                end={workEnd}
-                                start={workStart}
-                                status={turnActive ? 'active' : 'completed'}
-                            >
-                                {workSegments.map((segment, index) => (
-                                    <AgentTurnSegment
-                                        chatId={chatId}
-                                        currentSessionKey={currentSessionKey}
-                                        key={segment.key}
-                                        segment={segment}
-                                        turnActive={turnActive && index === workSegments.length - 1}
-                                        turnCompletedAt={turnCompletedAt}
-                                        turnStartedAt={turnStartedAt}
-                                    />
-                                ))}
-                            </TurnWorkDisclosure>
-                        ) : null}
-                        {(hasWorkHeader ? replySegments : segments).map((segment) =>
-                            // The status indicator narrates the work above
-                            // it, so it sits at the work log's step rhythm
-                            // instead of the reply slot's section gap. -0.5
-                            // keeps the icon where the old padded indicator
-                            // drew it now that the box is one text line tall.
-                            hasWorkHeader && isActiveStatusSegment(segment) ? (
-                                <div className="-mt-0.5" key={segment.key}>
-                                    <AgentTurnSegment
-                                        chatId={chatId}
-                                        currentSessionKey={currentSessionKey}
-                                        segment={segment}
-                                        turnActive={turnActive}
-                                        turnCompletedAt={turnCompletedAt}
-                                        turnStartedAt={turnStartedAt}
-                                    />
-                                </div>
-                            ) : (
+                    <div
+                        className={cn(
+                            'relative min-w-0',
+                            // Keep the message hover affordance before the
+                            // presence row so the eyes sit below the whole
+                            // agent message surface, not between the text and
+                            // its metadata/actions.
+                            reserveHoverMetaGap && metadataGapClassName
+                        )}
+                    >
+                        <div className="flex min-w-0 flex-col gap-4">
+                            {visibleSegments.map((segment, index) => (
                                 <AgentTurnSegment
                                     chatId={chatId}
                                     currentSessionKey={currentSessionKey}
                                     key={segment.key}
                                     segment={segment}
-                                    turnActive={turnActive}
+                                    turnActive={turnActive && index === visibleSegments.length - 1}
                                     turnCompletedAt={turnCompletedAt}
                                     turnStartedAt={turnStartedAt}
                                 />
-                            )
-                        )}
+                            ))}
+                        </div>
+                        {lastMessage ? <TranscriptHoverMeta message={lastMessage} /> : null}
                     </div>
-                    {lastMessage ? <TranscriptHoverMeta message={lastMessage} /> : null}
+                    {presence ? (
+                        <AgentPresenceRow label={presenceTimingLabel} presence={presence} />
+                    ) : null}
                 </div>
             </div>
+        </div>
+    );
+}
+
+function AgentPresenceRow({
+    label,
+    presence,
+}: {
+    label: string | null;
+    presence: React.ReactNode;
+}) {
+    return (
+        <div className="mt-2 flex h-8 min-w-0 items-center gap-2 overflow-visible text-muted-foreground/65 text-sm leading-5">
+            {presence}
+            {label ? (
+                <span className="thinking-indicator-text flex min-h-8 items-center truncate tabular-nums">
+                    {label}
+                </span>
+            ) : null}
         </div>
     );
 }
@@ -365,35 +399,63 @@ function isActiveStatusSegment(segment: AgentItemSegment) {
     return segment.kind === 'item' && segment.item.kind === 'activeStatus';
 }
 
-function findFinalSegmentIndex(segments: AgentItemSegment[]) {
-    for (let index = segments.length - 1; index >= 0; index -= 1) {
-        const segment = segments[index];
+function getAgentPresenceTimingLabel({
+    now,
+    start,
+    verb,
+}: {
+    now: number;
+    start: string | null;
+    verb: string;
+}) {
+    const activeSeconds = formatActiveActivitySeconds({ now, start });
+    return activeSeconds ? `${verb} for ${activeSeconds}` : verb;
+}
 
-        if (segment.kind === 'item' && isReplyOutcomeItem(segment.item)) {
-            return index;
-        }
+function getActivePresenceVerb(seed: string) {
+    let hash = 0;
+
+    for (let index = 0; index < seed.length; index += 1) {
+        hash = (hash * 31 + seed.charCodeAt(index)) >>> 0;
     }
 
-    return -1;
+    return activePresenceVerbs[hash % activePresenceVerbs.length] ?? activePresenceVerbs[0];
 }
 
-// Narration messages are work-log evidence; only the live tail (status
-// indicator or streaming text) and the durable reply may occupy the reply
-// slot below the work disclosure. Keeping the indicator in the same slot the
-// text streams into means the tail never vacates a row inside the work log.
-function isReplyOutcomeItem(item: TranscriptItem) {
-    return (
-        item.kind === 'activeReply' ||
-        item.kind === 'activeStatus' ||
-        item.kind === 'failure' ||
-        (item.kind === 'row' &&
-            item.row.kind === 'message' &&
-            !isActivityBackedMessageRow(item.row))
-    );
-}
+function usePresenceNow(enabled: boolean, start: string | null) {
+    const [now, setNow] = React.useState(() => Date.now());
 
-function isNarrationMessageItem(item: TranscriptItem) {
-    return item.kind === 'row' && isActivityBackedMessageRow(item.row);
+    React.useEffect(() => {
+        if (!enabled) {
+            return;
+        }
+
+        const updateNow = () => setNow(Date.now());
+        const startMs = start ? Date.parse(start) : Number.NaN;
+        const elapsedMs = Number.isNaN(startMs) ? 0 : Math.max(0, Date.now() - startMs);
+        const delayMs = Number.isNaN(startMs) ? 1000 : 1000 - (elapsedMs % 1000);
+        let interval: number | undefined;
+
+        updateNow();
+
+        const timeout = window.setTimeout(
+            () => {
+                updateNow();
+                interval = window.setInterval(updateNow, 1000);
+            },
+            Math.max(100, delayMs)
+        );
+
+        return () => {
+            window.clearTimeout(timeout);
+
+            if (interval !== undefined) {
+                window.clearInterval(interval);
+            }
+        };
+    }, [enabled, start]);
+
+    return now;
 }
 
 function UserTurnItem({ item }: { item: TranscriptItem }) {
@@ -424,10 +486,7 @@ function AgentTurnItem({
     }
 
     if (item.kind === 'activeStatus') {
-        // The indicator's internal px-3 minus this margin lands its icon on
-        // the work log's px-2 icon grid, so the tail lines up with the rows
-        // it follows.
-        return <ThinkingIndicator aria-label="Agent is thinking" className="-ml-1 text-sm" />;
+        return null;
     }
 
     if (isAssistantNarrationItem(item)) {

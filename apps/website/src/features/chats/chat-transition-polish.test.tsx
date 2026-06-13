@@ -5,9 +5,9 @@ import {
     shouldAnimateSyncedChatTimeline,
     shouldReleaseDraftHandoff,
 } from './agent-chat-detail.tsx';
+import { AgentPresenceIndicator } from './agent-presence-indicator.tsx';
 import { resolveDraftHandoffFrame } from './chat-draft-detail.tsx';
 import { ChatTimeline } from './chat-timeline.tsx';
-import { ThinkingIndicator } from './thinking-indicator.tsx';
 
 test('synced timeline does not replay entrance animation after optimistic draft handoff', () => {
     expect(
@@ -39,14 +39,12 @@ test('chat timeline animation is explicit and can be disabled', () => {
     expect(still).not.toContain('animate-float-up');
 });
 
-// The indicator box must equal one line of text-sm reply text (h-5, no
-// vertical padding). The streamed reply replaces it in the same slot, and any
-// height difference shifts the whole bottom-pinned chat on the swap.
-test('thinking indicator occupies exactly one reply text line', () => {
-    const markup = renderToStaticMarkup(<ThinkingIndicator />);
+test('agent presence indicator keeps a fixed icon box for layout motion', () => {
+    const markup = renderToStaticMarkup(<AgentPresenceIndicator activeReply={null} rows={[]} />);
 
-    expect(markup).toContain('h-5');
-    expect(markup).not.toContain('py-');
+    expect(markup).toContain('height:32px');
+    expect(markup).toContain('width:32px');
+    expect(markup).toContain('Agent idle');
 });
 
 test('draft handoff waits while the accepted turn is still blank thinking', () => {

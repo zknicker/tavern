@@ -37,6 +37,7 @@ export function ChatDraftDetail({
     const agentsQuery = useAgentList();
     const boundAgentIds = React.useMemo(() => (draft ? [draft.agentId] : []), [draft]);
     const [agentId, setAgentId] = React.useState(draft?.agentId ?? '');
+    const selectedAgent = agentsQuery.data?.agents.find((agent) => agent.id === agentId) ?? null;
     const [content, setContent] = React.useState('');
     const mentionComposer = useMentionComposer({
         agentId,
@@ -106,6 +107,7 @@ export function ChatDraftDetail({
     return (
         <ChatDetailFrame
             activeReply={handoffFrame.activeReply}
+            agentPresenceColor={selectedAgent?.effectivePrimaryColor ?? null}
             animateTimeline={animateTimeline}
             chatId={timelineChatId}
             emptyLabel=""

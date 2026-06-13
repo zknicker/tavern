@@ -1,20 +1,24 @@
 import * as React from 'react';
 import { DayDivider } from '../../components/ui/day-divider.tsx';
-import type { ChatActiveReply } from '../../hooks/chats/chat-timeline-state.ts';
+import type { ChatActiveReply, ChatTurnFailure } from '../../hooks/chats/chat-timeline-state.ts';
 import type {
     ConversationMessageLayout,
     TranscriptActor,
     TranscriptEntry,
     TranscriptItem,
+    TranscriptRow,
 } from './chat-transcript-model.ts';
 import type { TranscriptRenderRow } from './chat-transcript-row-model.ts';
 import { TranscriptEntryView } from './chat-transcript-turn.tsx';
 
 interface TranscriptEntryRowProps {
     activeReply: ChatActiveReply | null;
+    agentPresenceColor?: string | null;
     chatId?: string;
     conversationLayout: ConversationMessageLayout;
     currentSessionKey?: string | null;
+    failedTurn?: ChatTurnFailure | null;
+    presenceRows: TranscriptRow[];
     row: Extract<TranscriptRenderRow, { kind: 'entry' }>;
 }
 
@@ -24,20 +28,27 @@ interface TranscriptEntryRowProps {
 export const TranscriptEntryRow = React.memo(
     ({
         activeReply,
+        agentPresenceColor = null,
         chatId,
         conversationLayout,
         currentSessionKey,
+        failedTurn = null,
+        presenceRows,
         row,
     }: TranscriptEntryRowProps) => (
         <>
             {row.dayLabel ? <DayDivider className="mx-3 mt-3 mb-1" label={row.dayLabel} /> : null}
             <TranscriptEntryView
                 activeReply={activeReply}
+                agentPresenceColor={agentPresenceColor}
                 chatId={chatId}
                 conversationLayout={conversationLayout}
                 currentSessionKey={currentSessionKey}
                 entry={row.entry}
+                failedTurn={failedTurn}
                 followsRuntimeNotice={row.followsRuntimeNotice}
+                presenceRows={presenceRows}
+                showAgentPresence={row.isLatestAgentEntry}
                 turnStartedAt={row.turnStartedAt}
             />
         </>
@@ -55,11 +66,24 @@ function areTranscriptEntryRowPropsEqual(
         previous.activeReply === next.activeReply &&
         previous.chatId === next.chatId &&
         previous.currentSessionKey === next.currentSessionKey &&
+        arePresencePropsEqual(previous, next) &&
         previous.conversationLayout.showAgentIdentity ===
             next.conversationLayout.showAgentIdentity &&
         previous.conversationLayout.showHumanIdentity ===
             next.conversationLayout.showHumanIdentity &&
         areRenderRowsEqual(previous.row, next.row)
+    );
+}
+
+function arePresencePropsEqual(previous: TranscriptEntryRowProps, next: TranscriptEntryRowProps) {
+    if (!(previous.row.isLatestAgentEntry || next.row.isLatestAgentEntry)) {
+        return true;
+    }
+
+    return (
+        previous.agentPresenceColor === next.agentPresenceColor &&
+        previous.failedTurn === next.failedTurn &&
+        previous.presenceRows === next.presenceRows
     );
 }
 
@@ -71,6 +95,7 @@ function areRenderRowsEqual(
         previous.id === next.id &&
         previous.dayLabel === next.dayLabel &&
         previous.followsRuntimeNotice === next.followsRuntimeNotice &&
+        previous.isLatestAgentEntry === next.isLatestAgentEntry &&
         previous.turnStartedAt === next.turnStartedAt &&
         areEntriesEqual(previous.entry, next.entry)
     );

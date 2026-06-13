@@ -7,6 +7,7 @@ import type { ConversationMessageLayout } from './chat-transcript-model.ts';
 
 export function ChatTimeline({
     activeReply,
+    agentPresenceColor = null,
     animate = false,
     chatId,
     conversationLayout,
@@ -19,6 +20,7 @@ export function ChatTimeline({
     totalMessages,
 }: {
     activeReply: ChatActiveReply | null;
+    agentPresenceColor?: string | null;
     animate?: boolean;
     chatId?: string;
     conversationLayout?: ConversationMessageLayout;
@@ -36,6 +38,7 @@ export function ChatTimeline({
         <div className={cn('flex flex-col gap-0 py-1', animate && 'animate-float-up')}>
             <ChatTranscript
                 activeReply={activeReply}
+                agentPresenceColor={agentPresenceColor}
                 chatId={chatId}
                 conversationLayout={conversationLayout}
                 failedTurn={failedTurn}

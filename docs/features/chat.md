@@ -123,18 +123,14 @@ transcript only grows:
   the durable message so completion does not reflow.
 * The streamed reply and its durable message share one React key
   (`reply:<runId>`), so the end-of-turn swap does not remount.
-* The live tail is height-neutral: the Thinking indicator occupies exactly one
-  reply text line and the hover-metadata gap is reserved while the turn is
-  live, so the indicator → streaming → durable swaps never resize the turn (a
-  tail shrink shifts the whole bottom-pinned chat).
-* Intra-turn text segments move into the work log as narration rows when a
-  tool follows; only the live tail (status indicator or streaming text) and
-  the durable reply occupy the slot below the work disclosure.
-* The "Working for" timer counts from message send while live; completed turns
-  show the durable activity span ("Worked for").
-* The work disclosure is open while a turn runs tools or other visible work and
-  collapses with an animation as soon as the final response begins streaming.
-  Completed turns start collapsed.
+* Agent turns render visible work and reply content in timeline order; there is
+  no outer turn-level work disclosure. Per-tool work groups still own their
+  existing drawers so detailed tool output stays available on demand.
+* The presence row stays below the latest agent turn at rest and while live.
+  It keeps a fixed 32px icon box, uses the agent's configured color, and follows
+  transcript reflow instantly as the turn grows.
+* While live, a stable-random one-word activity verb and timer sit next to the
+  presence eyes. Completed turns keep the eyes visible without timing text.
 * Step enter animations are tied to DOM insertion during a live turn
   (`@starting-style`), not to step status, so fast tools still animate and
   history never replays.
@@ -180,9 +176,11 @@ that also patch live through `turn.progress` steps:
   free-text Other answers, Skip, and a Runtime-owned timeout shorter than the
   engine wait. Answers flow through `chat.clarification.respond` and the row
   settles as answered, skipped, or timed out.
-* **Turn indicator.** The live tail keeps the morphing Thinking indicator while
-  the turn is active and no reply text is streaming. Tool rows, reasoning rows,
-  and assistant status updates do not hide, replace, or remount that indicator.
+* **Agent presence.** The latest agent turn shows the morphing agent eyes below
+  the content, even at rest. The same shared-layout indicator remains 32px while
+  the transcript places it under new work or reply text. The eyes use the
+  agent's configured color, stay visible at rest, and live reply state plus
+  active progress rows drive the expression.
 
 ## Pinned chats
 

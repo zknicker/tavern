@@ -201,6 +201,7 @@ function SyncedAgentChatDetail({
     return (
         <ChatDetailFrame
             activeReply={timeline.activeReply}
+            agentPresenceColor={agent?.effectivePrimaryColor ?? null}
             animateTimeline={animateTimeline}
             chatId={chat.id}
             conversationLayout={conversationLayout}

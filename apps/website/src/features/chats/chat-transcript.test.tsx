@@ -11,6 +11,11 @@ import { ChatTranscript } from './chat-transcript.tsx';
 import { SystemStep } from './chat-transcript-system-step.tsx';
 import { ToolStep } from './tool-steps/registry.tsx';
 
+const activePresenceLabelPattern =
+    /(?:Adventuring|Brewing|Conjuring|Scrying|Questing|Forging|Enchanting|Spellcasting|Charting|Delving|Summoning|Transmuting|Wandering|Wayfinding|Alchemizing|Incanting|Rummaging|Tinkering|Polishing|Deciphering|Divining|Kindling|Gathering|Mapping|Exploring|Crafting|Channeling|Weaving|Unfurling|Illuminating) for \d+s/;
+const activePresenceShimmerPattern =
+    /thinking-indicator-text[^>]*>(?:Adventuring|Brewing|Conjuring|Scrying|Questing|Forging|Enchanting|Spellcasting|Charting|Delving|Summoning|Transmuting|Wandering|Wayfinding|Alchemizing|Incanting|Rummaging|Tinkering|Polishing|Deciphering|Divining|Kindling|Gathering|Mapping|Exploring|Crafting|Channeling|Weaving|Unfurling|Illuminating) for \d+s</;
+
 test('ChatTranscript renders hover time and copy action without session or usage badges', () => {
     const markup = renderTranscript([
         {
@@ -50,6 +55,10 @@ test('ChatTranscript renders hover time and copy action without session or usage
     assert.doesNotMatch(markup, /group-focus-within:opacity-100/);
     assert.match(markup, /aria-label="Copy message"/);
     assert.doesNotMatch(markup, /aria-label="View session"/);
+    assert.ok(
+        markup.indexOf('aria-label="Copy message"') < markup.indexOf('Agent idle'),
+        'agent presence renders below message hover actions'
+    );
     assert.doesNotMatch(markup, /aria-label="Collapse message"/);
     assert.doesNotMatch(markup, /session 9f83ac/);
 });
@@ -131,7 +140,8 @@ test('ChatTranscript renders tool calls and agent responses through one surface'
     ]);
 
     assert.match(markup, /Done\./);
-    assert.match(markup, /Worked/);
+    assert.doesNotMatch(markup, /Worked/);
+    assert.match(markup, /Agent idle/);
     // Completed work starts collapsed; users expand it on demand.
     assert.match(markup, /aria-expanded="false"/);
     assert.doesNotMatch(markup, /aria-expanded="true"/);
@@ -435,7 +445,7 @@ test('ToolStep avoids duplicating the tool verb when the activity title already 
     assert.doesNotMatch(markup, /Read read from QA_KICKOFF_TASK\.md/);
 });
 
-test('ChatTranscript shows completed activity as worked duration', () => {
+test('ChatTranscript omits completed activity timing beside presence', () => {
     const markup = renderTranscript([
         {
             actor: { id: 'tiny', kind: 'agent' },
@@ -459,7 +469,8 @@ test('ChatTranscript shows completed activity as worked duration', () => {
         },
     ]);
 
-    assert.match(markup, /Worked for 2 minutes 3 seconds/);
+    assert.doesNotMatch(markup, /Worked for 2 minutes 3 seconds/);
+    assert.match(markup, /Agent idle/);
 });
 
 test('ArtifactLogEntry renders durable artifact titles', () => {
@@ -571,7 +582,7 @@ test('ChatTranscript renders durable activity once when an assistant reply follo
 
     const markup = renderTranscript(rows);
 
-    assert.equal(markup.match(/Worked for/g)?.length, 1);
+    assert.doesNotMatch(markup, /Worked for/);
     assert.match(markup, /NYC right now: 61F\./);
 });
 
@@ -599,7 +610,7 @@ test('ChatTranscript renders runtime notices outside the work disclosure', () =>
     assert.doesNotMatch(markup, /Worked/);
 });
 
-test('ChatTranscript prefers durable activity timestamps for completed activity duration', () => {
+test('ChatTranscript keeps completed presence eyes text-free after activity', () => {
     const markup = renderTranscript([
         {
             actor: { id: 'profile-1', kind: 'participant' },
@@ -659,11 +670,12 @@ test('ChatTranscript prefers durable activity timestamps for completed activity 
         },
     ]);
 
-    assert.match(markup, /Worked for 3 seconds/);
+    assert.doesNotMatch(markup, /Worked for 3 seconds/);
     assert.doesNotMatch(markup, /Worked for 1 second/);
+    assert.match(markup, /Agent idle/);
 });
 
-test('ChatTranscript shows a thinking indicator instead of generic worked text when no progress exists', () => {
+test('ChatTranscript shows active presence timing when no progress exists yet', () => {
     const markup = renderActiveTranscript({
         agentId: 'tiny',
         isThinking: true,
@@ -674,11 +686,12 @@ test('ChatTranscript shows a thinking indicator instead of generic worked text w
     });
 
     assert.match(markup, /Agent is thinking/);
-    assert.doesNotMatch(markup, /Working/);
+    assert.match(markup, activePresenceLabelPattern);
+    assert.match(markup, activePresenceShimmerPattern);
     assert.doesNotMatch(markup, /Worked/);
 });
 
-test('ChatTranscript keeps the thinking indicator for empty non-thinking replies', () => {
+test('ChatTranscript keeps empty non-thinking replies in the presence slot only', () => {
     const markup = renderActiveTranscript({
         agentId: 'tiny',
         isThinking: false,
@@ -689,7 +702,7 @@ test('ChatTranscript keeps the thinking indicator for empty non-thinking replies
     });
 
     assert.match(markup, /Agent is thinking/);
-    assert.doesNotMatch(markup, /Working/);
+    assert.match(markup, activePresenceLabelPattern);
     assert.doesNotMatch(markup, /Worked/);
 });
 
@@ -777,15 +790,15 @@ test('ChatTranscript shows active progress through the same thinking steps surfa
         ]
     );
 
-    assert.match(markup, /Working for[\s\S]*>\d+s</);
+    assert.match(markup, activePresenceLabelPattern);
     assert.match(markup, /I&#x27;ll inspect the workspace before making changes\./);
     assert.doesNotMatch(markup, /Assistant reply\n/);
     assert.match(markup, /Using[\s\S]*Listing files/);
     assert.match(markup, /I found the files\. Next I will inspect the renderer\./);
-    assert.match(markup, /Agent is thinking/);
+    assert.match(markup, /Agent is working/);
     assert.match(markup, /chat-step-enter/);
     assert.doesNotMatch(markup, />Running</);
-    assert.match(markup, /aria-expanded="true"/);
+    assert.doesNotMatch(markup, /chat-turn-work-panel/);
 });
 
 test('ChatTranscript renders active tool progress as one-line status rows', () => {
@@ -804,7 +817,7 @@ test('ChatTranscript renders active tool progress as one-line status rows', () =
                 completedAt: null,
                 connectsToNext: false,
                 connectsToPrevious: false,
-                id: 'tool-1',
+                id: 'activity:run-progress:tool:1',
                 isFirstInGroup: true,
                 kind: 'tool',
                 sessionKey: 'agent:tiny:session-1',
@@ -830,7 +843,7 @@ test('ChatTranscript renders active tool progress as one-line status rows', () =
 
     assert.match(markup, /Using[\s\S]*bash/);
     assert.match(markup, /data-slot="drawer-trigger"/);
-    assert.match(markup, /Agent is thinking/);
+    assert.match(markup, /Agent is working/);
     assert.doesNotMatch(markup, />Running</);
     assert.doesNotMatch(markup, />start</);
 });
@@ -1004,7 +1017,7 @@ test('ChatTranscript keeps live progress in working state when current steps are
         ]
     );
 
-    assert.match(markup, /Working for[\s\S]*>\d+s</);
+    assert.match(markup, activePresenceLabelPattern);
     assert.doesNotMatch(markup, /Worked for/);
 });
 
@@ -1064,13 +1077,13 @@ test('ChatTranscript keeps narration messages in the work log above later tools'
     const narrationIndex = markup.indexOf('I will inspect the workspace before replying.');
     const toolIndex = markup.indexOf('Listing files');
 
-    assert.match(markup, /Working for[\s\S]*>\d+s</);
+    assert.match(markup, activePresenceLabelPattern);
     assert.doesNotMatch(markup, /Worked for/);
     assert.ok(narrationIndex >= 0 && toolIndex >= 0, 'narration and tool both render');
     assert.ok(narrationIndex < toolIndex, 'narration renders above the tool that follows it');
 });
 
-test('ChatTranscript keeps the thinking indicator visible while hidden reasoning streams', () => {
+test('ChatTranscript keeps hidden reasoning out of the inline transcript', () => {
     const now = Date.now();
     const markup = renderActiveTranscript(
         {

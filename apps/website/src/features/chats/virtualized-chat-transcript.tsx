@@ -1,9 +1,10 @@
 import { useVirtualizer } from '@tanstack/react-virtual';
 import * as React from 'react';
-import type { ChatActiveReply } from '../../hooks/chats/chat-timeline-state.ts';
+import type { ChatActiveReply, ChatTurnFailure } from '../../hooks/chats/chat-timeline-state.ts';
 import { SessionLogHiddenCount } from '../sessions/session-log-hidden-count.tsx';
 import {
     type ConversationMessageLayout,
+    type TranscriptRow,
     transcriptEntryUsesActiveReply,
 } from './chat-transcript-model.ts';
 import {
@@ -17,24 +18,30 @@ const previousPageScrollThreshold = 160;
 
 export function VirtualizedChatTranscript({
     activeReply,
+    agentPresenceColor = null,
     chatId,
     conversationLayout,
     currentSessionKey,
+    failedTurn = null,
     fetchPreviousPage,
     hasPreviousPage,
     hiddenCount,
     isFetchingPreviousPage,
+    presenceRows,
     rows,
     scrollViewportRef,
 }: {
     activeReply: ChatActiveReply | null;
+    agentPresenceColor?: string | null;
     chatId?: string;
     conversationLayout: ConversationMessageLayout;
     currentSessionKey?: string | null;
+    failedTurn?: ChatTurnFailure | null;
     fetchPreviousPage?: () => void;
     hasPreviousPage: boolean;
     hiddenCount: number;
     isFetchingPreviousPage: boolean;
+    presenceRows: TranscriptRow[];
     rows: TranscriptRenderRow[];
     scrollViewportRef: React.RefObject<HTMLDivElement | null>;
 }) {
@@ -120,9 +127,12 @@ export function VirtualizedChatTranscript({
                                         ? activeReply
                                         : null
                                 }
+                                agentPresenceColor={agentPresenceColor}
                                 chatId={chatId}
                                 conversationLayout={conversationLayout}
                                 currentSessionKey={currentSessionKey}
+                                failedTurn={failedTurn}
+                                presenceRows={presenceRows}
                                 row={row}
                             />
                         )}

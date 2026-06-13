@@ -20,6 +20,7 @@ const directConversationMessageLayout: ConversationMessageLayout = {
 
 export function ChatTranscript({
     activeReply,
+    agentPresenceColor = null,
     chatId,
     conversationLayout = directConversationMessageLayout,
     currentSessionKey,
@@ -32,6 +33,7 @@ export function ChatTranscript({
     scrollViewportRef,
 }: {
     activeReply: ChatActiveReply | null;
+    agentPresenceColor?: string | null;
     chatId?: string;
     conversationLayout?: ConversationMessageLayout;
     currentSessionKey?: string | null;
@@ -97,13 +99,16 @@ export function ChatTranscript({
         return (
             <VirtualizedChatTranscript
                 activeReply={activeReply}
+                agentPresenceColor={agentPresenceColor}
                 chatId={chatId}
                 conversationLayout={conversationLayout}
                 currentSessionKey={currentSessionKey}
+                failedTurn={failedTurn}
                 fetchPreviousPage={fetchPreviousPage}
                 hasPreviousPage={hasPreviousPage}
                 hiddenCount={hiddenCount}
                 isFetchingPreviousPage={isFetchingPreviousPage}
+                presenceRows={rows}
                 rows={transcriptRows}
                 scrollViewportRef={scrollViewportRef}
             />
@@ -121,10 +126,13 @@ export function ChatTranscript({
                                 ? activeReply
                                 : null
                         }
+                        agentPresenceColor={agentPresenceColor}
                         chatId={chatId}
                         conversationLayout={conversationLayout}
                         currentSessionKey={currentSessionKey}
+                        failedTurn={failedTurn}
                         key={row.id}
+                        presenceRows={rows}
                         row={row}
                     />
                 ) : null

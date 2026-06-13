@@ -9,12 +9,14 @@ export type TranscriptRenderRow =
           entry: TranscriptEntry;
           followsRuntimeNotice: boolean;
           id: string;
+          isLatestAgentEntry: boolean;
           kind: 'entry';
           turnStartedAt: string | null;
       };
 
 export function buildTranscriptRenderRows(entries: TranscriptEntry[], hiddenCount: number) {
     const rows: TranscriptRenderRow[] = [];
+    const latestAgentEntryId = getLatestAgentEntryId(entries);
 
     if (hiddenCount > 0) {
         rows.push({ id: 'hidden-count', kind: 'hiddenCount' });
@@ -33,6 +35,7 @@ export function buildTranscriptRenderRows(entries: TranscriptEntry[], hiddenCoun
             entry,
             followsRuntimeNotice: isRuntimeNoticeEntry(previousEntry),
             id: entry.id,
+            isLatestAgentEntry: entry.id === latestAgentEntryId,
             kind: 'entry',
             turnStartedAt: getAgentTurnStartedAt(previousEntry, entry),
         });
@@ -43,6 +46,18 @@ export function buildTranscriptRenderRows(entries: TranscriptEntry[], hiddenCoun
     });
 
     return rows;
+}
+
+function getLatestAgentEntryId(entries: TranscriptEntry[]) {
+    for (let index = entries.length - 1; index >= 0; index -= 1) {
+        const entry = entries[index];
+
+        if (entry?.kind === 'turn' && entry.participant === 'agent') {
+            return entry.id;
+        }
+    }
+
+    return null;
 }
 
 export function getEstimatedTranscriptRowSize(row: TranscriptRenderRow | undefined) {
