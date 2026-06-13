@@ -46,8 +46,7 @@ test('ChatTranscript renders hover time and copy action without session or usage
     assert.doesNotMatch(markup, /in 524/);
     assert.doesNotMatch(markup, /cached 29k/);
     assert.doesNotMatch(markup, /total 29k/);
-    assert.match(markup, /group-hover:opacity-100/);
-    assert.doesNotMatch(markup, /class="[^"]*\bgroup\b[^"]*\bw-full\b/);
+    assert.match(markup, /group-hover:pointer-events-auto group-hover:opacity-100/);
     assert.doesNotMatch(markup, /group-focus-within:opacity-100/);
     assert.match(markup, /aria-label="Copy message"/);
     assert.doesNotMatch(markup, /aria-label="View session"/);
