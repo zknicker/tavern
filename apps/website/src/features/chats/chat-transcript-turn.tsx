@@ -261,7 +261,7 @@ function AgentTurn({
                 <div
                     className={cn(
                         hoverGroupClassName,
-                        'relative w-[min(80%,52rem)] min-w-0',
+                        'relative w-full min-w-0',
                         // Reserved while live so the gap's appearance with the
                         // first durable message never resizes the turn — a
                         // tail shrink shifts the bottom-pinned chat.

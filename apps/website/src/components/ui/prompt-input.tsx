@@ -67,7 +67,7 @@ export function PromptInput({
     return (
         <PromptInputContext.Provider value={{ setTextareaElement }}>
             <form className={cn('px-6 pt-1 pb-4', className)} {...props}>
-                <div className={cn('mx-auto w-full max-w-[46rem]', contentClassName)}>
+                <div className={cn('mx-auto w-full max-w-[60rem]', contentClassName)}>
                     {/* biome-ignore lint/a11y/noStaticElementInteractions lint/a11y/noNoninteractiveElementInteractions: The Fluid prompt shell focuses its editor when inert surface space is clicked. */}
                     <div
                         className={cn(

@@ -97,7 +97,7 @@ export function ChatDetailFrame({
                         ref={chatScroll.viewportRef}
                     >
                         <div
-                            className="mx-auto min-h-full w-full max-w-[46rem]"
+                            className="mx-auto min-h-full w-full max-w-[60rem]"
                             ref={chatScroll.contentRef}
                         >
                             {isInitialTranscriptPending ? null : error ? (
