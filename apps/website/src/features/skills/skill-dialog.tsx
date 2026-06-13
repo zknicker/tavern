@@ -1,4 +1,5 @@
-import { CubeIcon } from '@hugeicons-pro/core-stroke-rounded';
+import { CubeIcon, FileEmpty02Icon } from '@hugeicons-pro/core-stroke-rounded';
+import type * as React from 'react';
 import {
     Dialog,
     DialogContent,
@@ -15,6 +16,7 @@ import { useSkillHubInstall } from '../../hooks/skills/use-skill-hub-install.ts'
 import { useSkillHubPreview } from '../../hooks/skills/use-skill-hub-preview.ts';
 import { useSkillHubScan } from '../../hooks/skills/use-skill-hub-scan.ts';
 import { useSkillHubUninstall } from '../../hooks/skills/use-skill-hub-uninstall.ts';
+import { cn } from '../../lib/utils.ts';
 import { CortexMarkdownViewer } from '../cortex/cortex-markdown-viewer.tsx';
 import { SkillScanBadge, SkillTrustBadge } from './skill-hub-badges.tsx';
 import { formatSkillName } from './skill-name-format.ts';
@@ -174,35 +176,79 @@ function SkillDialogBody({
     );
 }
 
+const markdownCardHeight = 'h-[min(34rem,55vh)]';
+
 function SkillMarkdownCard({ identifier }: { identifier: null | string }) {
     const previewQuery = useSkillHubPreview({ identifier });
 
     if (identifier === null) {
         return (
-            <p className="text-muted-foreground text-sm">
-                This skill's instructions are managed by the runtime and have no source preview.
-            </p>
+            <MarkdownCardFrame centered>
+                <MarkdownEmptyState caption="This skill's instructions are managed by the runtime and have no source preview." />
+            </MarkdownCardFrame>
         );
     }
     if (previewQuery.isPending) {
         return (
-            <div className="grid min-h-32 place-items-center rounded-xl border border-border/70 bg-muted/20">
+            <MarkdownCardFrame centered>
                 <Spinner className="size-5" />
-            </div>
+            </MarkdownCardFrame>
         );
     }
     if (previewQuery.error) {
-        return <p className="text-error text-sm">{previewQuery.error.message}</p>;
+        return (
+            <MarkdownCardFrame centered>
+                <p className="px-8 text-center text-error text-sm">{previewQuery.error.message}</p>
+            </MarkdownCardFrame>
+        );
     }
 
     const body = stripFrontmatter(previewQuery.data?.skillMd ?? '');
+    if (body.trim().length === 0) {
+        return (
+            <MarkdownCardFrame centered>
+                <MarkdownEmptyState caption="This skill ships without SKILL.md content to preview." />
+            </MarkdownCardFrame>
+        );
+    }
+
     return (
-        <div className="max-h-80 overflow-auto rounded-xl border border-border/70 bg-muted/20 px-5 py-4">
-            {body.trim().length > 0 ? (
+        <MarkdownCardFrame>
+            <div className="h-full overflow-auto px-5 py-4">
                 <CortexMarkdownViewer value={body} />
-            ) : (
-                <p className="text-muted-foreground text-sm">This skill has no SKILL.md content.</p>
+            </div>
+        </MarkdownCardFrame>
+    );
+}
+
+function MarkdownCardFrame({
+    centered = false,
+    children,
+}: {
+    centered?: boolean;
+    children: React.ReactNode;
+}) {
+    return (
+        <div
+            className={cn(
+                'rounded-xl border border-border/70 bg-muted/20',
+                markdownCardHeight,
+                centered && 'grid place-items-center'
             )}
+        >
+            {children}
+        </div>
+    );
+}
+
+function MarkdownEmptyState({ caption }: { caption: string }) {
+    return (
+        <div className="grid justify-items-center gap-3 px-8 text-center">
+            <span className="flex size-12 items-center justify-center rounded-full border border-border/60 bg-background text-muted-foreground">
+                <Icon className="size-6" icon={FileEmpty02Icon} />
+            </span>
+            <p className="font-medium text-foreground text-sm">No preview</p>
+            <p className="max-w-sm text-muted-foreground text-sm">{caption}</p>
         </div>
     );
 }
