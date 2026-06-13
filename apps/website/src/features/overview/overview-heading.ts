@@ -1,70 +1,7 @@
-import type { CronListOutput, WorkerListOutput } from '../../lib/trpc.tsx';
-
-type OverviewCronJob = Pick<CronListOutput['jobs'][number], 'enabled' | 'state'>;
-type OverviewWorker = Pick<WorkerListOutput['workers'][number], 'status'>;
-
-type OverviewHeadingPhraseKey =
-    | 'attention'
-    | 'completedQuests'
-    | 'cronJobs'
-    | 'memoryStored'
-    | 'newSessions';
-
 interface BuildOverviewHeadingInput {
-    jobs: OverviewCronJob[];
-    memoryCount: number;
     now?: Date;
     phraseSeed?: number;
-    sessionsCount: number;
-    workers: OverviewWorker[];
 }
-
-const activeWorkerStatuses = new Set(['queued', 'running', 'waiting']);
-const attentionWorkerStatuses = new Set(['blocked', 'failed', 'timed_out', 'lost']);
-const failedRunStatuses = new Set(['error']);
-
-export const overviewHeadingPhrases: Record<OverviewHeadingPhraseKey, string[]> = {
-    attention: [
-        'Dark tidings ride the night wind.',
-        'The warning bells thunder; heed them.',
-        'A shadow falls across the hall.',
-        'Peril stirs; the realm calls you.',
-        'Trouble breaks; rise, the watch summons you.',
-        'An ill omen darkens the doorway.',
-    ],
-    completedQuests: [
-        'Your quests return home in triumph.',
-        'The deeds are done; the heroes ride back.',
-        'Glory was earned while you were away.',
-        'The labors are finished in glory.',
-        'Victory awaits upon your return, traveler.',
-        'Great tasks were won beneath your banner.',
-    ],
-    cronJobs: [
-        'The ancient bells kept their vigil.',
-        'The faithful rites ran through the night.',
-        'The great clockwork turned, unfailing.',
-        'The midnight watch walked its rounds.',
-        'The old rituals held while you slept.',
-        'The hour bells tolled, steady and true.',
-    ],
-    memoryStored: [
-        'A new legend enters the great chronicle.',
-        'The ancient ledger claims another secret.',
-        'A tale is bound in gold.',
-        'Old magic now remembers your deeds.',
-        'The chronicle deepens, traveler; sit awhile.',
-        'Another secret is carved in eternal stone.',
-    ],
-    newSessions: [
-        'Heroes throng the hall this night.',
-        'The great doors swing for many.',
-        'A gathering of legends fills the room.',
-        'Champions arrive from every distant road.',
-        'The tavern roars with new arrivals.',
-        'Countless travelers cross the threshold tonight.',
-    ],
-};
 
 export const overviewIdleHourPhrases = [
     [
@@ -190,100 +127,15 @@ export const overviewIdleHourPhrases = [
 ] as const;
 
 export function buildOverviewHeading({
-    jobs,
-    memoryCount,
     now = new Date(),
     phraseSeed = Math.random(),
-    sessionsCount,
-    workers,
-}: BuildOverviewHeadingInput) {
-    const activeWorkerCount = workers.filter((worker) =>
-        activeWorkerStatuses.has(worker.status)
-    ).length;
-    const attentionWorkerCount = workers.filter((worker) =>
-        attentionWorkerStatuses.has(worker.status)
-    ).length;
-    const completedWorkerCount = workers.filter((worker) => worker.status === 'succeeded').length;
-    const runningJobCount = jobs.filter((job) => typeof job.state.runningAtMs === 'number').length;
-    const attentionJobCount = jobs.filter((job) =>
-        failedRunStatuses.has(job.state.lastRunStatus ?? '')
-    ).length;
-    const enabledJobCount = jobs.filter((job) => job.enabled).length;
-    const openIssueCount = attentionWorkerCount + attentionJobCount;
-
-    return getStatePhrase({
-        activeWorkerCount,
-        completedWorkerCount,
-        enabledJobCount,
-        memoryCount,
-        now,
-        openIssueCount,
-        phraseSeed,
-        runningJobCount,
-        sessionsCount,
-    });
-}
-
-function getStatePhrase({
-    activeWorkerCount,
-    completedWorkerCount,
-    enabledJobCount,
-    memoryCount,
-    now,
-    openIssueCount,
-    phraseSeed,
-    runningJobCount,
-    sessionsCount,
-}: {
-    activeWorkerCount: number;
-    completedWorkerCount: number;
-    enabledJobCount: number;
-    memoryCount: number;
-    now: Date;
-    openIssueCount: number;
-    phraseSeed: number;
-    runningJobCount: number;
-    sessionsCount: number;
-}) {
-    if (openIssueCount > 0) {
-        return pickPhrase('attention', phraseSeed);
-    }
-
-    if (completedWorkerCount > 0) {
-        return pickPhrase('completedQuests', phraseSeed);
-    }
-
-    if (runningJobCount > 0) {
-        return pickPhrase('cronJobs', phraseSeed);
-    }
-
-    if (enabledJobCount > 0) {
-        return pickPhrase('cronJobs', phraseSeed);
-    }
-
-    if (activeWorkerCount > 0) {
-        return pickPhrase('newSessions', phraseSeed);
-    }
-
-    if (sessionsCount > 0) {
-        return pickPhrase('newSessions', phraseSeed);
-    }
-
-    if (memoryCount > 0) {
-        return pickPhrase('memoryStored', phraseSeed);
-    }
-
+}: BuildOverviewHeadingInput = {}) {
     return getIdleTimePhrase(now, phraseSeed);
 }
 
 function getIdleTimePhrase(now: Date, phraseSeed: number) {
     const hour = now.getHours();
     const phrases = overviewIdleHourPhrases[hour] ?? overviewIdleHourPhrases[0];
-    return phrases[getPhraseIndex(phraseSeed, phrases.length)] ?? phrases[0];
-}
-
-function pickPhrase(key: OverviewHeadingPhraseKey, phraseSeed: number) {
-    const phrases = overviewHeadingPhrases[key];
     return phrases[getPhraseIndex(phraseSeed, phrases.length)] ?? phrases[0];
 }
 

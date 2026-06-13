@@ -41,7 +41,6 @@ export type CortexListOutput = RouterOutput['cortex']['list'];
 export type CortexPageOutput = RouterOutput['cortex']['get'];
 export type CortexStatusOutput = RouterOutput['cortex']['status'];
 export type CortexTopicListOutput = RouterOutput['cortex']['topics'];
-export type HighlightListOutput = RouterOutput['highlight']['list'];
 export type JobsListOutput = RouterOutput['jobs']['list'];
 export type JobDetailOutput = RouterOutput['jobs']['get']['job'];
 export type JobRecentRunsOutput = RouterOutput['jobs']['recentRuns'];
