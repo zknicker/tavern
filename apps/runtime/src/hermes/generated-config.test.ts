@@ -48,6 +48,10 @@ describe('generated Hermes config composer', () => {
         });
 
         expect((await readConfig(configPath)).toJS()).toEqual({
+            display: {
+                interim_assistant_messages: true,
+                tool_progress: 'all',
+            },
             fallback_providers: [
                 { model: 'kimi-k2.5', provider: 'openrouter' },
                 { base_url: 'http://127.0.0.1:1234/v1', model: 'local', provider: 'custom' },
@@ -91,6 +95,8 @@ describe('generated Hermes config composer', () => {
 
         const doc = await readConfig(configPath);
         expect(doc.getIn(['gateway', 'bind'])).toBe('loopback');
+        expect(doc.getIn(['display', 'tool_progress'])).toBe('all');
+        expect(doc.getIn(['display', 'interim_assistant_messages'])).toBe(true);
         expect(doc.getIn(['model', 'default'])).toBe('gpt-5.4-mini');
         expect(doc.getIn(['model', 'provider'])).toBe('openai-codex');
         expect(doc.getIn(['model', 'base_url'])).toBeUndefined();

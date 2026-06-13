@@ -112,6 +112,7 @@ every Tavern-owned setting that lands in the file is a domain:
 | --- | --- | --- |
 | model | `model.*` | env/Vault-derived model route |
 | execution | `fallback_providers`, `timezone`, `delegation.*`, `compression.*` | `/execution-settings` store |
+| display | `display.tool_progress`, `display.interim_assistant_messages` | fixed managed policy |
 | permissions | `approvals.*`, `command_allowlist` | `/permission-settings` store (untouched until first save) |
 | connectors | `mcp_servers.<id>` + `TAVERN_MCP_*` env secrets | connector vault records |
 | memory | `memory.*` (mnemosyne) | fixed managed policy |

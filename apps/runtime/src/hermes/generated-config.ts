@@ -79,6 +79,7 @@ export async function mergeHermesGeneratedConfig(
     if (domains.permissions) {
         applyPermissionsDomain(doc, domains.permissions);
     }
+    applyDisplayDomain(doc);
     applyMemoryDomain(doc);
     applyPluginsDomain(doc, tavernMessengerPluginName());
 
@@ -202,6 +203,11 @@ function applyMemoryDomain(doc: GeneratedConfigDocument) {
     doc.setIn(['memory', 'provider'], 'mnemosyne');
     doc.setIn(['memory', 'memory_enabled'], false);
     doc.setIn(['memory', 'user_profile_enabled'], false);
+}
+
+function applyDisplayDomain(doc: GeneratedConfigDocument) {
+    doc.setIn(['display', 'tool_progress'], 'all');
+    doc.setIn(['display', 'interim_assistant_messages'], true);
 }
 
 function applyPluginsDomain(doc: GeneratedConfigDocument, pluginName: string) {
