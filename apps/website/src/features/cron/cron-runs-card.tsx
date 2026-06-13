@@ -1,10 +1,7 @@
-import { ArrowRight01Icon } from '@hugeicons-pro/core-solid-rounded';
 import * as React from 'react';
 
 import { Badge, type BadgeProps } from '../../components/ui/badge.tsx';
 import { Empty, EmptyDescription, EmptyHeader, EmptyTitle } from '../../components/ui/empty.tsx';
-import { Icon } from '../../components/ui/icon.tsx';
-import { Button } from '../../components/ui/primitives/button.tsx';
 import {
     Table,
     TableBody,
@@ -13,7 +10,6 @@ import {
     TableHeader,
     TableRow,
 } from '../../components/ui/table.tsx';
-import { useSessionDrawer } from '../../hooks/sessions/use-session-drawer.ts';
 import { formatTimestamp, titleCase } from '../../lib/format.ts';
 import type { CronRunsOutput } from '../../lib/trpc.tsx';
 import { cn } from '../../lib/utils.ts';
@@ -40,7 +36,6 @@ interface CronRunRow {
 }
 
 export function CronRunsCard({ deliveryDestinationLabel, isPending, runs }: CronRunsCardProps) {
-    const { openSession } = useSessionDrawer();
     const rows = React.useMemo(
         () => buildRows(runs, deliveryDestinationLabel),
         [deliveryDestinationLabel, runs]
@@ -75,42 +70,34 @@ export function CronRunsCard({ deliveryDestinationLabel, isPending, runs }: Cron
                     const sessionKey = row.sessionKey;
                     return (
                         <TableRow
-                            className={cn(sessionKey && 'cursor-pointer')}
+                            className={cn(sessionKey && 'text-foreground')}
                             key={row.id}
                             title={row.detail ?? undefined}
                         >
                             <TableCell className="pl-8">
-                                {sessionKey ? (
-                                    <button
-                                        aria-label={`Open logs for run started ${row.startedLabel}`}
-                                        className="absolute inset-x-4 inset-y-1 z-10 cursor-pointer rounded-md bg-transparent outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset"
-                                        onClick={() => openSession(sessionKey)}
-                                        type="button"
-                                    />
-                                ) : null}
-                                <div className="pointer-events-none relative z-20 flex min-w-0 items-center gap-2">
+                                <div className="relative z-20 flex min-w-0 items-center gap-2">
                                     <StatusDot status={row.status} />
                                     <span className="truncate font-medium">{row.startedLabel}</span>
                                 </div>
                             </TableCell>
                             <TableCell>
-                                <div className="pointer-events-none relative z-20">
+                                <div className="relative z-20">
                                     <RunOutcome row={row} />
                                 </div>
                             </TableCell>
                             <TableCell>
-                                <div className="pointer-events-none relative z-20">
+                                <div className="relative z-20">
                                     <DeliveryDestination row={row} />
                                 </div>
                             </TableCell>
                             <TableCell className="hidden text-muted-foreground sm:table-cell">
-                                <span className="pointer-events-none relative z-20">
-                                    {row.triggerLabel}
-                                </span>
+                                <span className="relative z-20">{row.triggerLabel}</span>
                             </TableCell>
                             <TableCell className="pr-8 text-right">
                                 {sessionKey ? (
-                                    <SessionActionCue />
+                                    <span className="relative z-20 font-mono text-muted-foreground text-xs">
+                                        {sessionKey}
+                                    </span>
                                 ) : (
                                     <span className="relative z-20 text-muted-foreground">-</span>
                                 )}
@@ -120,21 +107,6 @@ export function CronRunsCard({ deliveryDestinationLabel, isPending, runs }: Cron
                 })}
             </TableBody>
         </Table>
-    );
-}
-
-function SessionActionCue() {
-    return (
-        <Button
-            aria-hidden="true"
-            className="group-[.is-active]/row:!border-primary group-[.is-active]/row:!bg-primary group-[.is-active]/row:!text-primary-foreground group-[.is-active]/row:!shadow-primary/24 group-[.is-active]/row:!shadow-xs pointer-events-none relative z-20"
-            render={<span />}
-            size="sm"
-            variant="secondary"
-        >
-            View logs
-            <Icon icon={ArrowRight01Icon} />
-        </Button>
     );
 }
 

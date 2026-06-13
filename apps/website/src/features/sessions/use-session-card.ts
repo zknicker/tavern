@@ -3,7 +3,7 @@ import { useSessionHistory } from '../../hooks/sessions/use-session-history.ts';
 const sessionSummaryLimit = 10;
 
 export function useSessionCard(sessionKey: string | null) {
-    const resolvedSessionKey = sessionKey ?? 'session-drawer';
+    const resolvedSessionKey = sessionKey ?? 'session-card';
     const isEnabled = sessionKey !== null;
     const sessionHistoryQuery = useSessionHistory(
         {

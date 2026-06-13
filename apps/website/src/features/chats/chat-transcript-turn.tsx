@@ -1,5 +1,4 @@
 import { Cancel01Icon } from '@hugeicons/core-free-icons';
-import { InspectCodeIcon } from '@hugeicons-pro/core-stroke-rounded';
 import { AgentAvatar } from '../../components/ui/agent-avatar.tsx';
 import { CopyButton } from '../../components/ui/copy-button.tsx';
 import { Icon } from '../../components/ui/icon.tsx';
@@ -7,11 +6,8 @@ import { useActorProfile } from '../../hooks/actors/use-actor.ts';
 import type { ChatActiveReply } from '../../hooks/chats/chat-timeline-state.ts';
 import { useChatDismiss } from '../../hooks/chats/use-chat-dismiss.ts';
 import { useChatThinkingDisplayPreference } from '../../hooks/chats/use-chat-thinking-display-preference.ts';
-import { useSessionDrawer } from '../../hooks/sessions/use-session-drawer.ts';
 import { formatShortTime } from '../../lib/format.ts';
 import { cn } from '../../lib/utils.ts';
-import { getMessageSessionContext } from '../rows/message-context.ts';
-import { MessageContextBadges } from '../rows/message-context-badges.tsx';
 import { CommandRunEntry } from './chat-command-card.tsx';
 import { ChatInlineMarkdownText } from './chat-inline-markdown-text.tsx';
 import {
@@ -328,9 +324,7 @@ function AgentTurn({
                             )
                         )}
                     </div>
-                    {lastMessage ? (
-                        <TranscriptHoverMeta includeContextBadges message={lastMessage} />
-                    ) : null}
+                    {lastMessage ? <TranscriptHoverMeta message={lastMessage} /> : null}
                 </div>
             </div>
         </div>
@@ -509,11 +503,9 @@ function AgentTurnFailure({
 
 function TranscriptHoverMeta({
     align = 'left',
-    includeContextBadges = false,
     message,
 }: {
     align?: 'left' | 'right';
-    includeContextBadges?: boolean;
     message: Extract<TranscriptRow, { kind: 'message' }>['message'];
 }) {
     const actions = <TranscriptMessageActions message={message} />;
@@ -527,9 +519,6 @@ function TranscriptHoverMeta({
         >
             <span className="tabular-nums">{formatShortTime(message.timestamp)}</span>
             {actions}
-            {includeContextBadges ? (
-                <MessageContextBadges className="shrink-0" message={message} />
-            ) : null}
         </div>
     );
 }
@@ -539,29 +528,13 @@ function TranscriptMessageActions({
 }: {
     message: Extract<TranscriptRow, { kind: 'message' }>['message'];
 }) {
-    const { openSession } = useSessionDrawer();
-    const sessionContext = getMessageSessionContext(message);
-
     return (
-        <>
-            {sessionContext ? (
-                <button
-                    aria-label="View session"
-                    className={messageActionButtonClassName}
-                    onClick={() => openSession(sessionContext.sessionKey)}
-                    title="View session"
-                    type="button"
-                >
-                    <Icon className="size-3.5" icon={InspectCodeIcon} strokeWidth={2} />
-                </button>
-            ) : null}
-            <CopyButton
-                className={messageActionButtonClassName}
-                copiedLabel="Copied message"
-                label="Copy message"
-                value={message.content}
-            />
-        </>
+        <CopyButton
+            className={messageActionButtonClassName}
+            copiedLabel="Copied message"
+            label="Copy message"
+            value={message.content}
+        />
     );
 }
 

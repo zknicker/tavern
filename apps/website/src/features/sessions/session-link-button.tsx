@@ -1,4 +1,3 @@
-import { useSessionDrawer } from '../../hooks/sessions/use-session-drawer.ts';
 import { cn } from '../../lib/utils.ts';
 
 export function SessionLinkButton({
@@ -16,25 +15,17 @@ export function SessionLinkButton({
     title: string;
     tone?: 'amber' | 'neutral' | 'sky';
 }) {
-    const { openSession } = useSessionDrawer();
-
-    function handleClick() {
-        openSession(sessionKey);
-    }
-
     return (
-        <button
+        <div
             className={cn(
-                'flex min-w-0 flex-col rounded-lg border px-3 py-2 text-left transition-colors',
+                'flex min-w-0 flex-col rounded-lg border px-3 py-2 text-left',
                 tone === 'amber'
-                    ? 'border-[color:var(--warning-border)] bg-[var(--warning-bg)] hover:bg-[color:color-mix(in_srgb,var(--warning-bg),var(--warning)_10%)]'
+                    ? 'border-[color:var(--warning-border)] bg-[var(--warning-bg)]'
                     : tone === 'sky'
-                      ? 'border-[color:var(--info-border)] bg-[var(--info-bg)] hover:bg-[color:color-mix(in_srgb,var(--info-bg),var(--info)_10%)]'
-                      : 'border-border/60 bg-muted/30 hover:bg-muted/50',
+                      ? 'border-[color:var(--info-border)] bg-[var(--info-bg)]'
+                      : 'border-border/60 bg-muted/30',
                 className
             )}
-            onClick={handleClick}
-            type="button"
         >
             {label ? (
                 <span
@@ -65,6 +56,9 @@ export function SessionLinkButton({
                     {subtitle}
                 </span>
             ) : null}
-        </button>
+            <span className="min-w-0 truncate font-mono text-caption text-muted-foreground/60">
+                {sessionKey}
+            </span>
+        </div>
     );
 }

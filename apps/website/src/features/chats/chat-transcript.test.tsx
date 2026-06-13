@@ -4,7 +4,6 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { httpLink } from '@trpc/client';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { MemoryRouter } from 'react-router-dom';
-import { SessionDrawerProvider } from '../../hooks/sessions/use-session-drawer.ts';
 import { type ChatLogOutput, trpc } from '../../lib/trpc.tsx';
 import { ArtifactLogEntry } from '../sessions/log/event-entry/artifact-entry.tsx';
 import { ToolDrawerBody } from '../sessions/tools/tool-drawer-body.tsx';
@@ -12,7 +11,7 @@ import { ChatTranscript } from './chat-transcript.tsx';
 import { SystemStep } from './chat-transcript-system-step.tsx';
 import { ToolStep } from './tool-steps/registry.tsx';
 
-test('ChatTranscript renders hover message metadata and the session action', () => {
+test('ChatTranscript renders hover time and copy action without session or usage badges', () => {
     const markup = renderTranscript([
         {
             actor: { id: 'tiny', kind: 'agent' },
@@ -43,15 +42,15 @@ test('ChatTranscript renders hover message metadata and the session action', () 
         },
     ]);
 
-    assert.match(markup, /claude-3\.7-sonnet/);
-    assert.match(markup, /in 524/);
-    assert.match(markup, /cached 29k/);
-    assert.match(markup, /total 29k/);
+    assert.doesNotMatch(markup, /claude-3\.7-sonnet/);
+    assert.doesNotMatch(markup, /in 524/);
+    assert.doesNotMatch(markup, /cached 29k/);
+    assert.doesNotMatch(markup, /total 29k/);
     assert.match(markup, /group-hover:opacity-100/);
     assert.doesNotMatch(markup, /class="[^"]*\bgroup\b[^"]*\bw-full\b/);
     assert.doesNotMatch(markup, /group-focus-within:opacity-100/);
     assert.match(markup, /aria-label="Copy message"/);
-    assert.match(markup, /aria-label="View session"/);
+    assert.doesNotMatch(markup, /aria-label="View session"/);
     assert.doesNotMatch(markup, /aria-label="Collapse message"/);
     assert.doesNotMatch(markup, /session 9f83ac/);
 });
@@ -1126,9 +1125,7 @@ function renderTranscript(rows: ChatRow[], options: { chatId?: string } = {}) {
         <trpc.Provider client={client} queryClient={queryClient}>
             <QueryClientProvider client={queryClient}>
                 <MemoryRouter>
-                    <SessionDrawerProvider>
-                        <ChatTranscript activeReply={null} chatId={options.chatId} rows={rows} />
-                    </SessionDrawerProvider>
+                    <ChatTranscript activeReply={null} chatId={options.chatId} rows={rows} />
                 </MemoryRouter>
             </QueryClientProvider>
         </trpc.Provider>
@@ -1165,9 +1162,7 @@ function renderActiveTranscript(
         <trpc.Provider client={client} queryClient={queryClient}>
             <QueryClientProvider client={queryClient}>
                 <MemoryRouter>
-                    <SessionDrawerProvider>
-                        <ChatTranscript activeReply={activeReply} chatId="cht_test" rows={rows} />
-                    </SessionDrawerProvider>
+                    <ChatTranscript activeReply={activeReply} chatId="cht_test" rows={rows} />
                 </MemoryRouter>
             </QueryClientProvider>
         </trpc.Provider>

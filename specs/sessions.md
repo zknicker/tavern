@@ -49,10 +49,10 @@ Sessions are Tavern's per-agent execution records inside chats, backed by observ
 
 ## Navigation
 
-- A person inspecting a session can jump to related sessions, cron runs, and
-  delivered messages when those relationships are known.
 - A session surfaces enough relationship information that a person can understand why a
   message or interaction happened.
+- Related session keys, cron run records, and deliveries are shown as evidence,
+  but the chat timeline does not open a separate session drawer.
 
 ## History
 

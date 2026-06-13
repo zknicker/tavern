@@ -1,5 +1,4 @@
 import { PuzzleIcon } from '@hugeicons-pro/core-stroke-rounded';
-import { useSessionDrawer } from '../../hooks/sessions/use-session-drawer.ts';
 import { workerKindConfig } from '../workers/config.ts';
 import type { ActivityItem } from './chat-transcript-activity-utils.ts';
 import type { TranscriptRow } from './chat-transcript-model.ts';
@@ -74,9 +73,7 @@ function WorkerStep({
     isLast: boolean;
     row: Extract<TranscriptRow, { kind: 'worker' }>;
 }) {
-    const { openSession } = useSessionDrawer();
     const config = workerKindConfig[row.worker.kind];
-    const relatedSessionKey = row.worker.childSessionKey ?? row.worker.sessionKey;
     const status = workerStepStatus(row.worker.status);
 
     return (
@@ -87,15 +84,10 @@ function WorkerStep({
             index={index}
             isLast={isLast}
             label={
-                <button
-                    className="inline-flex min-w-0 max-w-full items-baseline gap-1.5 text-left hover:text-foreground disabled:pointer-events-none"
-                    disabled={!relatedSessionKey}
-                    onClick={() => relatedSessionKey && openSession(relatedSessionKey)}
-                    type="button"
-                >
+                <span className="inline-flex min-w-0 max-w-full items-baseline gap-1.5 text-left">
                     <span className="shrink-0">{config.label}</span>
                     <span className="truncate text-muted-foreground">{row.worker.title}</span>
-                </button>
+                </span>
             }
             status={status}
         />

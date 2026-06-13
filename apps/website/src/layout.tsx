@@ -6,10 +6,8 @@ import {
     AppShellDragRegion,
     AppShellMain,
 } from './components/ui/app-shell.tsx';
-import { SessionDrawerHost } from './features/sessions/session-drawer.tsx';
 import { AppTopbar } from './features/shell/topbar.tsx';
 import { useRouteTab } from './hooks/dashboard/use-route-tab.ts';
-import { SessionDrawerProvider } from './hooks/sessions/use-session-drawer.ts';
 
 export interface DashboardLayoutContextValue {
     navigateToSettings: () => void;
@@ -35,14 +33,11 @@ export function Layout() {
                 />
                 <AppShellBody>
                     <AppShellMain>
-                        <SessionDrawerProvider>
-                            <Outlet
-                                context={{
-                                    navigateToSettings,
-                                }}
-                            />
-                            <SessionDrawerHost />
-                        </SessionDrawerProvider>
+                        <Outlet
+                            context={{
+                                navigateToSettings,
+                            }}
+                        />
                     </AppShellMain>
                 </AppShellBody>
             </AppShell>
