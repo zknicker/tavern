@@ -2,6 +2,34 @@
 
 All notable changes to this project will be documented in this file.
 
+## v1.4.9 - 2026-06-12
+
+Runtime floor raised to 1.4.9 for chat clarifications, turn-aligned timeline
+pages, command/dismissal contracts, and Runtime-backed skill, toolset, and MCP
+catalog flows.
+
+App changes:
+
+- Added chat clarifications, composer commands, command cards, response
+  dismissal, and chat clearing in the main chat timeline.
+- Changed chat history to load turn-aligned keyset pages so older transcript
+  windows stay stable while live turns continue.
+- Added split Skills and Toolsets pages with installed/available views, source
+  management, skill previews, toolset setup, and MCP catalog/server panels.
+- Improved live chat rows, thinking-to-reply height stability, skill list
+  styling, and skill dialog sizing.
+
+Runtime changes:
+
+- Added Runtime API, SDK, and OpenAPI contracts for clarifications, chat
+  timeline pages, response soft delete, chat clear, agent commands, skill hub,
+  toolset setup, and MCP catalog/server access.
+- Added Runtime proxies for engine skill install/uninstall, skill taps, available
+  skill discovery, Runtime-side tap search, toolset setup, and MCP catalog data.
+- Fixed Runtime bearer-token use for settings and connector requests, app-side
+  capability refresh on Runtime capability events, mention inventory limits, and
+  skill install/uninstall to run through the engine CLI.
+
 ## v1.4.8 - 2026-06-12
 
 App-only release. The Runtime floor stays at 1.4.7.
