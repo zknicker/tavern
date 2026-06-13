@@ -44,6 +44,11 @@ export function VirtualizedChatTranscript({
         estimateSize: (index) => getEstimatedTranscriptRowSize(rows[index]),
         getItemKey: (index) => rows[index]?.id ?? index,
         getScrollElement: () => scrollViewportRef.current,
+        initialOffset: () =>
+            getEstimatedTranscriptBottomOffset(
+                rows,
+                getInitialTranscriptViewportHeight(scrollViewportRef.current)
+            ),
         overscan: 8,
     });
     // The scroll controller decides when item-resize compensation is safe:
@@ -152,4 +157,24 @@ export function shouldLoadPreviousVirtualizedChatPage({
     }
 
     return true;
+}
+
+export function getEstimatedTranscriptBottomOffset(
+    rows: TranscriptRenderRow[],
+    viewportHeight: number
+) {
+    const totalEstimatedHeight = rows.reduce(
+        (total, row) => total + getEstimatedTranscriptRowSize(row),
+        0
+    );
+
+    return Math.max(totalEstimatedHeight - viewportHeight, 0);
+}
+
+function getInitialTranscriptViewportHeight(viewport: HTMLElement | null) {
+    if (viewport) {
+        return viewport.clientHeight;
+    }
+
+    return typeof window === 'undefined' ? 0 : window.innerHeight;
 }
