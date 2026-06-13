@@ -1,4 +1,5 @@
 import { CubeIcon, Tick02Icon } from '@hugeicons-pro/core-stroke-rounded';
+import { FluidList, FluidListItem } from '../../components/ui/fluid-list.tsx';
 import { Icon } from '../../components/ui/icon.tsx';
 import { Button } from '../../components/ui/primitives/button.tsx';
 import { Spinner } from '../../components/ui/spinner.tsx';
@@ -81,50 +82,49 @@ function SourceSkillRows({
     onSelect: (item: SkillHubItemOutput) => void;
 }) {
     return (
-        <div className="grid">
-            {items.map((item) => {
+        <FluidList className="grid">
+            {items.map((item, index) => {
                 const isInstalled = item.identifier in installed;
 
                 return (
-                    <div
-                        className="-mx-3 flex items-center gap-4 rounded-xl px-3 py-2.5 transition-colors hover:bg-accent/40"
-                        key={item.identifier}
-                    >
-                        <button
-                            className="flex min-w-0 flex-1 items-center gap-4 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                            onClick={() => onSelect(item)}
-                            type="button"
-                        >
-                            <span className="flex size-10 shrink-0 items-center justify-center rounded-[10px] border border-border/50 bg-muted/40 text-muted-foreground">
-                                <Icon className="size-5" icon={CubeIcon} />
-                            </span>
-                            <span className="min-w-0 flex-1">
-                                <span className="block truncate font-medium text-[15px] text-foreground">
-                                    {formatSkillName(item.name)}
-                                </span>
-                                <span className="mt-0.5 line-clamp-1 text-muted-foreground text-sm">
-                                    {item.description || item.identifier}
-                                </span>
-                            </span>
-                        </button>
-                        {isInstalled ? (
-                            <Icon
-                                className="size-4 shrink-0 text-muted-foreground"
-                                icon={Tick02Icon}
-                            />
-                        ) : (
-                            <Button
-                                className="shrink-0 rounded-full"
+                    <FluidListItem className="-mx-3" index={index} key={item.identifier}>
+                        <div className="flex items-center gap-4 rounded-xl px-3 py-2.5">
+                            <button
+                                className="flex min-w-0 flex-1 items-center gap-4 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                                 onClick={() => onSelect(item)}
-                                size="sm"
-                                variant="secondary"
+                                type="button"
                             >
-                                Add skill
-                            </Button>
-                        )}
-                    </div>
+                                <span className="flex size-10 shrink-0 items-center justify-center rounded-[10px] border border-border/50 bg-muted/40 text-muted-foreground">
+                                    <Icon className="size-5" icon={CubeIcon} />
+                                </span>
+                                <span className="min-w-0 flex-1">
+                                    <span className="block truncate font-medium text-[15px] text-foreground">
+                                        {formatSkillName(item.name)}
+                                    </span>
+                                    <span className="mt-0.5 line-clamp-1 text-muted-foreground text-sm">
+                                        {item.description || item.identifier}
+                                    </span>
+                                </span>
+                            </button>
+                            {isInstalled ? (
+                                <Icon
+                                    className="size-4 shrink-0 text-muted-foreground"
+                                    icon={Tick02Icon}
+                                />
+                            ) : (
+                                <Button
+                                    className="shrink-0 rounded-full"
+                                    onClick={() => onSelect(item)}
+                                    size="sm"
+                                    variant="secondary"
+                                >
+                                    Add skill
+                                </Button>
+                            )}
+                        </div>
+                    </FluidListItem>
                 );
             })}
-        </div>
+        </FluidList>
     );
 }

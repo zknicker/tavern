@@ -1,6 +1,7 @@
 import { PlugIcon } from '@hugeicons-pro/core-stroke-rounded';
 import * as React from 'react';
 import { Badge } from '../../components/ui/badge.tsx';
+import { FluidList, FluidListItem } from '../../components/ui/fluid-list.tsx';
 import { Icon } from '../../components/ui/icon.tsx';
 import { Button } from '../../components/ui/primitives/button.tsx';
 import { SearchInput } from '../../components/ui/primitives/search-input.tsx';
@@ -31,7 +32,7 @@ export function ToolsetsList({
         <div className="grid gap-2">
             <SearchInput
                 aria-label="Search toolsets"
-                className="h-11 w-full rounded-full px-4"
+                className="w-full [&_[data-slot=input-control]]:h-11 [&_[data-slot=input-control]]:rounded-full"
                 name="toolset-search"
                 onChange={(event) => setSearch(event.target.value)}
                 placeholder="Search toolsets..."
@@ -39,19 +40,20 @@ export function ToolsetsList({
             />
 
             {visibleToolsets.length > 0 ? (
-                <div className="mt-2 grid">
-                    {visibleToolsets.map((toolset) => (
-                        <ToolsetRow
-                            key={toolset.id}
-                            onConfigure={() => onConfigure(toolset)}
-                            onSetEnabled={(enabled) =>
-                                onSetEnabled({ enabled, toolsetId: toolset.id })
-                            }
-                            saving={savingToolsetIds.has(toolset.id)}
-                            toolset={toolset}
-                        />
+                <FluidList className="mt-2 grid">
+                    {visibleToolsets.map((toolset, index) => (
+                        <FluidListItem className="-mx-3" index={index} key={toolset.id}>
+                            <ToolsetRow
+                                onConfigure={() => onConfigure(toolset)}
+                                onSetEnabled={(enabled) =>
+                                    onSetEnabled({ enabled, toolsetId: toolset.id })
+                                }
+                                saving={savingToolsetIds.has(toolset.id)}
+                                toolset={toolset}
+                            />
+                        </FluidListItem>
                     ))}
-                </div>
+                </FluidList>
             ) : (
                 <EmptyState
                     className="py-16"
@@ -81,7 +83,7 @@ function ToolsetRow({
     const needsSetup = toolset.usability === 'not_usable';
 
     return (
-        <div className="-mx-3 flex items-center gap-4 rounded-xl px-3 py-2.5 transition-colors hover:bg-accent/40">
+        <div className="flex items-center gap-4 rounded-xl px-3 py-2.5">
             <span
                 className={cn(
                     'flex size-10 shrink-0 items-center justify-center rounded-[10px] border border-border/50 bg-muted/40 text-muted-foreground',

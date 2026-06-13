@@ -1,6 +1,7 @@
 import { CubeIcon, Tick02Icon } from '@hugeicons-pro/core-stroke-rounded';
 import * as React from 'react';
 import { Badge } from '../../components/ui/badge.tsx';
+import { FluidList, FluidListItem } from '../../components/ui/fluid-list.tsx';
 import { Icon } from '../../components/ui/icon.tsx';
 import { SearchInput } from '../../components/ui/primitives/search-input.tsx';
 import type { SkillListOutput } from '../../lib/trpc.tsx';
@@ -25,7 +26,7 @@ export function InstalledSkillsList({
         <div className="grid gap-2">
             <SearchInput
                 aria-label="Search installed skills"
-                className="h-11 w-full rounded-full px-4"
+                className="w-full [&_[data-slot=input-control]]:h-11 [&_[data-slot=input-control]]:rounded-full"
                 name="skill-search"
                 onChange={(event) => setSearch(event.target.value)}
                 placeholder="Search skills..."
@@ -33,11 +34,13 @@ export function InstalledSkillsList({
             />
 
             {visibleSkills.length > 0 ? (
-                <div className="mt-2 grid">
-                    {visibleSkills.map((skill) => (
-                        <SkillRow key={skill.id} onSelect={() => onSelect(skill)} skill={skill} />
+                <FluidList className="mt-2 grid">
+                    {visibleSkills.map((skill, index) => (
+                        <FluidListItem className="-mx-3" index={index} key={skill.id}>
+                            <SkillRow onSelect={() => onSelect(skill)} skill={skill} />
+                        </FluidListItem>
                     ))}
-                </div>
+                </FluidList>
             ) : (
                 <EmptyState
                     className="py-16"
@@ -58,7 +61,7 @@ function SkillRow({ onSelect, skill }: { onSelect: () => void; skill: SkillSumma
 
     return (
         <button
-            className="-mx-3 flex items-center gap-4 rounded-xl px-3 py-2.5 text-left transition-colors hover:bg-accent/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            className="flex w-full items-center gap-4 rounded-xl px-3 py-2.5 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
             onClick={onSelect}
             type="button"
         >
