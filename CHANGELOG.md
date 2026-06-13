@@ -2,6 +2,20 @@
 
 All notable changes to this project will be documented in this file.
 
+## v1.4.10 - 2026-06-13
+
+App-only release. The Runtime floor stays at 1.4.9.
+
+- Added persistent agent presence eyes below chat turns, with live thinking and
+  response states.
+- Improved chat streaming motion so thinking, reply text, and the presence row
+  settle without replaying message entrances or jumping during line wraps.
+- Improved chat composer sizing, transcript tail initialization, tool drawer
+  hover rows, command palette context-fullness display, and overview welcome
+  copy.
+- Fixed managed progress updates so live work stays preserved while the
+  transcript updates.
+
 ## v1.4.9 - 2026-06-12
 
 Runtime floor raised to 1.4.9 for chat clarifications, turn-aligned timeline
