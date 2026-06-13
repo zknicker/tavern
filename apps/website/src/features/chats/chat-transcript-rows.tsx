@@ -14,6 +14,7 @@ import { TranscriptEntryView } from './chat-transcript-turn.tsx';
 interface TranscriptEntryRowProps {
     activeReply: ChatActiveReply | null;
     agentPresenceColor?: string | null;
+    animateMessages: boolean;
     chatId?: string;
     conversationLayout: ConversationMessageLayout;
     currentSessionKey?: string | null;
@@ -29,6 +30,7 @@ export const TranscriptEntryRow = React.memo(
     ({
         activeReply,
         agentPresenceColor = null,
+        animateMessages,
         chatId,
         conversationLayout,
         currentSessionKey,
@@ -41,6 +43,7 @@ export const TranscriptEntryRow = React.memo(
             <TranscriptEntryView
                 activeReply={activeReply}
                 agentPresenceColor={agentPresenceColor}
+                animateMessages={animateMessages}
                 chatId={chatId}
                 conversationLayout={conversationLayout}
                 currentSessionKey={currentSessionKey}
@@ -64,6 +67,7 @@ function areTranscriptEntryRowPropsEqual(
 ) {
     return (
         previous.activeReply === next.activeReply &&
+        previous.animateMessages === next.animateMessages &&
         previous.chatId === next.chatId &&
         previous.currentSessionKey === next.currentSessionKey &&
         arePresencePropsEqual(previous, next) &&

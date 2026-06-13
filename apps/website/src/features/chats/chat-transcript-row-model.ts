@@ -69,7 +69,24 @@ export function getEstimatedTranscriptRowSize(row: TranscriptRenderRow | undefin
         return 48;
     }
 
-    return row.entry.participant === 'user' ? 88 : 180;
+    if (row.entry.participant === 'user') {
+        return 88;
+    }
+
+    if (isActiveStatusOnlyAgentEntry(row.entry)) {
+        return 56;
+    }
+
+    return 180;
+}
+
+function isActiveStatusOnlyAgentEntry(entry: TranscriptEntry) {
+    return (
+        entry.kind === 'turn' &&
+        entry.participant === 'agent' &&
+        entry.items.length === 1 &&
+        entry.items[0]?.kind === 'activeStatus'
+    );
 }
 
 function isRuntimeNoticeEntry(entry: TranscriptEntry | null) {

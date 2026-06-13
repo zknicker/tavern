@@ -9,6 +9,7 @@ import { ArtifactLogEntry } from '../sessions/log/event-entry/artifact-entry.tsx
 import { ToolDrawerBody } from '../sessions/tools/tool-drawer-body.tsx';
 import { ChatTranscript } from './chat-transcript.tsx';
 import { SystemStep } from './chat-transcript-system-step.tsx';
+import { getActiveReplyDisplayText } from './chat-transcript-turn.tsx';
 import { ToolStep } from './tool-steps/registry.tsx';
 
 const activePresenceLabelPattern =
@@ -53,6 +54,7 @@ test('ChatTranscript renders hover time and copy action without session or usage
     assert.doesNotMatch(markup, /total 29k/);
     assert.match(markup, /group-hover:pointer-events-auto group-hover:opacity-100/);
     assert.doesNotMatch(markup, /group-focus-within:opacity-100/);
+    assert.doesNotMatch(markup, /opacity:0;transform/);
     assert.match(markup, /aria-label="Copy message"/);
     assert.doesNotMatch(markup, /aria-label="View session"/);
     assert.ok(
@@ -95,6 +97,26 @@ test('ChatTranscript renders constrained inline markdown in message text', () =>
     assert.match(markup, /&lt;u&gt;raw&lt;\/u&gt;/);
     assert.doesNotMatch(markup, /<h1/);
     assert.doesNotMatch(markup, /href="javascript:/);
+});
+
+test('ChatTranscript renders active replies through the chat message shell', () => {
+    const markup = renderActiveTranscript({
+        agentId: 'tiny',
+        isThinking: false,
+        runId: 'run-1',
+        sessionKey: 'agent:tiny:session-1',
+        startedAt: '2026-03-31T15:00:00.000Z',
+        text: 'Done.',
+    });
+
+    assert.match(markup, /group flex/);
+    assert.match(markup, /transform-origin:bottom left/);
+    assert.doesNotMatch(markup, /pb-6/);
+    assert.doesNotMatch(markup, /opacity:0;transform/);
+});
+
+test('active reply display text ignores invisible streaming edge whitespace', () => {
+    assert.equal(getActiveReplyDisplayText('\n\nDone.\n\n'), 'Done.');
 });
 
 test('ChatTranscript renders tool calls and agent responses through one surface', () => {

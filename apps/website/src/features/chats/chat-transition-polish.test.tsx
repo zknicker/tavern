@@ -1,5 +1,6 @@
 import { expect, test } from 'bun:test';
 import { renderToStaticMarkup } from 'react-dom/server';
+import { ChatMessage } from '../../components/chats/chat-message.tsx';
 import {
     isBlockingActiveReply,
     shouldAnimateSyncedChatTimeline,
@@ -45,6 +46,31 @@ test('agent presence indicator keeps a fixed icon box for layout motion', () => 
     expect(markup).toContain('height:32px');
     expect(markup).toContain('width:32px');
     expect(markup).toContain('Agent idle');
+});
+
+test('chat message entrance animation can be disabled for handoffs', () => {
+    const animated = renderToStaticMarkup(
+        <ChatMessage animateEnter from="user">
+            Hello
+        </ChatMessage>
+    );
+    const still = renderToStaticMarkup(
+        <ChatMessage animateEnter={false} from="user">
+            Hello
+        </ChatMessage>
+    );
+
+    expect(animated).toContain('opacity:0;transform');
+    expect(still).not.toContain('opacity:0;transform');
+});
+
+test('assistant chat message prose keeps the live tail text-line height', () => {
+    const assistant = renderToStaticMarkup(<ChatMessage from="assistant">Done</ChatMessage>);
+    const user = renderToStaticMarkup(<ChatMessage from="user">Done</ChatMessage>);
+
+    expect(assistant).not.toContain('py-2');
+    expect(assistant).toContain('min-h-5');
+    expect(user).toContain('py-2');
 });
 
 test('draft handoff waits while the accepted turn is still blank thinking', () => {

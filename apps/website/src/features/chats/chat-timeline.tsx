@@ -1,4 +1,4 @@
-import type * as React from 'react';
+import * as React from 'react';
 import type { ChatActiveReply, ChatTurnFailure } from '../../hooks/chats/chat-timeline-state.ts';
 import type { ChatLogOutput } from '../../lib/trpc.tsx';
 import { cn } from '../../lib/utils.ts';
@@ -33,12 +33,23 @@ export function ChatTimeline({
     totalMessages: number;
 }) {
     const hiddenCount = Math.max(totalMessages - countDurableMessageRows(rows), 0);
+    const [messageEntrancesEnabled, setMessageEntrancesEnabled] = React.useState(animate);
+
+    React.useEffect(() => {
+        if (messageEntrancesEnabled) {
+            return;
+        }
+
+        const frame = requestAnimationFrame(() => setMessageEntrancesEnabled(true));
+        return () => cancelAnimationFrame(frame);
+    }, [messageEntrancesEnabled]);
 
     return (
         <div className={cn('flex flex-col gap-0 py-1', animate && 'animate-float-up')}>
             <ChatTranscript
                 activeReply={activeReply}
                 agentPresenceColor={agentPresenceColor}
+                animateMessages={messageEntrancesEnabled}
                 chatId={chatId}
                 conversationLayout={conversationLayout}
                 failedTurn={failedTurn}

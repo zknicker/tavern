@@ -21,6 +21,7 @@ const directConversationMessageLayout: ConversationMessageLayout = {
 export function ChatTranscript({
     activeReply,
     agentPresenceColor = null,
+    animateMessages = true,
     chatId,
     conversationLayout = directConversationMessageLayout,
     currentSessionKey,
@@ -34,6 +35,7 @@ export function ChatTranscript({
 }: {
     activeReply: ChatActiveReply | null;
     agentPresenceColor?: string | null;
+    animateMessages?: boolean;
     chatId?: string;
     conversationLayout?: ConversationMessageLayout;
     currentSessionKey?: string | null;
@@ -100,6 +102,7 @@ export function ChatTranscript({
             <VirtualizedChatTranscript
                 activeReply={activeReply}
                 agentPresenceColor={agentPresenceColor}
+                animateMessages={animateMessages}
                 chatId={chatId}
                 conversationLayout={conversationLayout}
                 currentSessionKey={currentSessionKey}
@@ -127,6 +130,7 @@ export function ChatTranscript({
                                 : null
                         }
                         agentPresenceColor={agentPresenceColor}
+                        animateMessages={animateMessages}
                         chatId={chatId}
                         conversationLayout={conversationLayout}
                         currentSessionKey={currentSessionKey}

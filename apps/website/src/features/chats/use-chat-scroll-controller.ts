@@ -19,6 +19,7 @@ const anchorFallbackMs = 600;
 // the virtualizer) so they reach the controller without window events.
 export interface ChatScrollControllerHandle {
     beginAnchor: (trigger: HTMLElement) => void;
+    pinBottomIfFollowing: () => void;
     shouldVirtualizerAdjust: (itemStart: number) => boolean;
 }
 
@@ -77,6 +78,17 @@ export function useChatScrollController({
         },
         [dispatch, writeScrollToBottom]
     );
+
+    const pinBottomIfFollowing = React.useCallback(() => {
+        const transition = dispatch({ type: 'contentResized' });
+
+        if (transition.action !== 'pinBottom') {
+            return;
+        }
+
+        writeScrollToBottom('auto');
+        setIsAtBottom(true);
+    }, [dispatch, writeScrollToBottom]);
 
     const clearAnchor = React.useCallback(() => {
         const anchor = anchorRef.current;
@@ -280,6 +292,7 @@ export function useChatScrollController({
     const handle = React.useMemo<ChatScrollControllerHandle>(
         () => ({
             beginAnchor,
+            pinBottomIfFollowing,
             shouldVirtualizerAdjust: (itemStart: number) => {
                 const viewport = viewportRef.current;
 
@@ -294,7 +307,7 @@ export function useChatScrollController({
                 });
             },
         }),
-        [beginAnchor]
+        [beginAnchor, pinBottomIfFollowing]
     );
 
     return {

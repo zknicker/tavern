@@ -16,7 +16,13 @@ type TranscriptMessage =
 
 type MessageAttachment = NonNullable<TranscriptMessage['attachments']>[number];
 
-export function ChatTranscriptMessageContent({ message }: { message: TranscriptMessage }) {
+export function ChatTranscriptMessageContent({
+    message,
+    textClassName,
+}: {
+    message: TranscriptMessage;
+    textClassName?: string;
+}) {
     const messageDisplay = getMessageDisplay(message);
     const attachments = message.attachments ?? [];
     const hasAttachments = attachments.length > 0;
@@ -55,7 +61,7 @@ export function ChatTranscriptMessageContent({ message }: { message: TranscriptM
                             'w-fit max-w-full rounded-md border border-border/40 bg-muted/45 px-3 py-2'
                     )}
                 >
-                    <CollapsibleText className="text-foreground text-sm">
+                    <CollapsibleText className={cn('text-sm', textClassName ?? 'text-foreground')}>
                         <ChatInlineMarkdownText
                             content={messageDisplay.content}
                             mentions={mentions}

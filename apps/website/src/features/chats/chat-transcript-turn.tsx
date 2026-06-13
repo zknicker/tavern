@@ -1,5 +1,6 @@
 import { Cancel01Icon } from '@hugeicons/core-free-icons';
 import * as React from 'react';
+import { ChatMessage } from '../../components/chats/chat-message.tsx';
 import { AgentAvatar } from '../../components/ui/agent-avatar.tsx';
 import { CopyButton } from '../../components/ui/copy-button.tsx';
 import { Icon } from '../../components/ui/icon.tsx';
@@ -9,6 +10,7 @@ import { useChatDismiss } from '../../hooks/chats/use-chat-dismiss.ts';
 import { useChatThinkingDisplayPreference } from '../../hooks/chats/use-chat-thinking-display-preference.ts';
 import { formatShortTime } from '../../lib/format.ts';
 import { cn } from '../../lib/utils.ts';
+import { useActiveReplyLayoutSync } from './active-reply-layout-sync.tsx';
 import { AgentPresenceIndicator } from './agent-presence-indicator.tsx';
 import { CommandRunEntry } from './chat-command-card.tsx';
 import { ChatInlineMarkdownText } from './chat-inline-markdown-text.tsx';
@@ -38,6 +40,7 @@ import type {
 } from './chat-transcript-model.ts';
 import { getItemSessionKey, isActivityBackedMessageRow } from './chat-transcript-model.ts';
 import { RuntimeNoticeEntry } from './chat-transcript-system-step.tsx';
+import { useChatScrollControllerHandle } from './use-chat-scroll-controller.ts';
 import { useRevealedText } from './use-revealed-text.ts';
 
 const rowClassName = 'relative w-full px-3 pt-1 pb-3';
@@ -81,6 +84,7 @@ const activePresenceVerbs = [
 export function TranscriptEntryView({
     activeReply,
     agentPresenceColor,
+    animateMessages,
     chatId,
     conversationLayout,
     currentSessionKey,
@@ -93,6 +97,7 @@ export function TranscriptEntryView({
 }: {
     activeReply: ChatActiveReply | null;
     agentPresenceColor?: string | null;
+    animateMessages: boolean;
     chatId?: string;
     conversationLayout: ConversationMessageLayout;
     currentSessionKey?: string | null;
@@ -132,7 +137,9 @@ export function TranscriptEntryView({
     }
 
     if (entry.participant === 'user') {
-        return <UserTurn entry={entry} layout={conversationLayout} />;
+        return (
+            <UserTurn animateMessages={animateMessages} entry={entry} layout={conversationLayout} />
+        );
     }
 
     return (
@@ -153,9 +160,11 @@ export function TranscriptEntryView({
 }
 
 function UserTurn({
+    animateMessages,
     entry,
     layout,
 }: {
+    animateMessages: boolean;
     entry: Extract<TranscriptEntry, { kind: 'turn' }>;
     layout: ConversationMessageLayout;
 }) {
@@ -165,21 +174,18 @@ function UserTurn({
 
     if (!layout.showHumanIdentity) {
         return (
-            <div className={cn(rowClassName, 'flex justify-end', newTurnGapClassName)}>
-                <div
-                    className={cn(
-                        hoverGroupClassName,
-                        'relative flex max-w-[min(42rem,78%)] flex-col items-end gap-1.5',
-                        lastMessage && metadataGapClassName
-                    )}
-                >
-                    {entry.items.map((item) => (
-                        <UserTurnItem item={item} key={getTranscriptItemKey(item)} />
-                    ))}
-                    {lastMessage ? (
-                        <TranscriptHoverMeta align="right" message={lastMessage} />
-                    ) : null}
-                </div>
+            <div
+                className={cn(rowClassName, 'flex flex-col items-end gap-1.5', newTurnGapClassName)}
+            >
+                {entry.items.map((item) => (
+                    <UserTurnItem
+                        animateEnter={animateMessages}
+                        className="max-w-[min(42rem,78%)]"
+                        item={item}
+                        key={getTranscriptItemKey(item)}
+                        showMeta={isMessageItem(item, lastMessage)}
+                    />
+                ))}
             </div>
         );
     }
@@ -187,24 +193,21 @@ function UserTurn({
     return (
         <div className={cn(rowClassName, 'flex justify-end', newTurnGapClassName)}>
             <div className="grid max-w-[min(42rem,82%)] grid-cols-[minmax(0,1fr)_2rem] gap-x-2.5">
-                <div
-                    className={cn(
-                        hoverGroupClassName,
-                        'relative min-w-0',
-                        lastMessage && metadataGapClassName
-                    )}
-                >
+                <div className="relative min-w-0">
                     <div className="mb-1.5 min-w-0 truncate pr-4 text-right font-medium text-[0.8125rem] text-muted-foreground/80 leading-none">
                         {displayName}
                     </div>
                     <div className="flex flex-col items-end gap-1.5">
                         {entry.items.map((item) => (
-                            <UserTurnItem item={item} key={getTranscriptItemKey(item)} />
+                            <UserTurnItem
+                                animateEnter={animateMessages}
+                                className="max-w-[100%]"
+                                item={item}
+                                key={getTranscriptItemKey(item)}
+                                showMeta={isMessageItem(item, lastMessage)}
+                            />
                         ))}
                     </div>
-                    {lastMessage ? (
-                        <TranscriptHoverMeta align="right" message={lastMessage} />
-                    ) : null}
                 </div>
                 <div className="flex justify-center pt-5">
                     <AgentAvatar
@@ -282,7 +285,7 @@ function AgentTurn({
             size={agentPresenceSize}
         />
     ) : null;
-    const reserveHoverMetaGap = lastMessage !== null || (turnActive && visibleSegments.length > 0);
+    const showHoverMeta = lastMessage !== null;
 
     return (
         <div
@@ -319,7 +322,7 @@ function AgentTurn({
                             // presence row so the eyes sit below the whole
                             // agent message surface, not between the text and
                             // its metadata/actions.
-                            reserveHoverMetaGap && metadataGapClassName
+                            showHoverMeta && metadataGapClassName
                         )}
                     >
                         <div className="flex min-w-0 flex-col gap-4">
@@ -335,7 +338,7 @@ function AgentTurn({
                                 />
                             ))}
                         </div>
-                        {lastMessage ? <TranscriptHoverMeta message={lastMessage} /> : null}
+                        {showHoverMeta ? <TranscriptHoverMeta message={lastMessage} /> : null}
                     </div>
                     {presence ? (
                         <AgentPresenceRow label={presenceTimingLabel} presence={presence} />
@@ -458,17 +461,34 @@ function usePresenceNow(enabled: boolean, start: string | null) {
     return now;
 }
 
-function UserTurnItem({ item }: { item: TranscriptItem }) {
+function UserTurnItem({
+    animateEnter,
+    className,
+    item,
+    showMeta,
+}: {
+    animateEnter: boolean;
+    className?: string;
+    item: TranscriptItem;
+    showMeta: boolean;
+}) {
     if (item.kind !== 'row' || item.row.kind !== 'message') {
         return null;
     }
 
-    const body = <ChatTranscriptMessageContent message={item.row.message} />;
+    const message = item.row.message;
+    const body = <ChatTranscriptMessageContent message={message} textClassName="text-current" />;
 
     return body ? (
-        <div className="rounded-[1.35rem] bg-muted px-4 py-2 text-foreground text-sm leading-snug">
+        <ChatMessage
+            actions={showMeta ? <TranscriptMessageActions message={message} /> : null}
+            animateEnter={animateEnter}
+            className={className}
+            from="user"
+            time={showMeta ? formatShortTime(message.timestamp) : null}
+        >
             {body}
-        </div>
+        </ChatMessage>
     ) : null;
 }
 
@@ -494,7 +514,11 @@ function AgentTurnItem({
     }
 
     if (item.kind === 'row' && item.row.kind === 'message') {
-        return <ChatTranscriptMessageContent message={item.row.message} />;
+        return (
+            <ChatMessage animateEnter={false} className="max-w-[100%]" from="assistant">
+                <ChatTranscriptMessageContent message={item.row.message} />
+            </ChatMessage>
+        );
     }
 
     if (item.kind === 'failure') {
@@ -515,16 +539,27 @@ function AssistantNarrationText({ item }: { item: TranscriptItem }) {
 }
 
 function ActiveReplyText({ item }: { item: Extract<TranscriptItem, { kind: 'activeReply' }> }) {
+    const syncActiveReplyLayout = useActiveReplyLayoutSync();
+    const scrollController = useChatScrollControllerHandle();
     const revealedText = useRevealedText(
-        (item.reply.text ?? '').trimStart(),
+        getActiveReplyDisplayText(item.reply.text ?? ''),
         !item.reply.completedAt
     );
 
+    React.useLayoutEffect(() => {
+        syncActiveReplyLayout?.();
+        scrollController?.pinBottomIfFollowing();
+    });
+
     return (
-        <div className="whitespace-pre-wrap break-words text-foreground text-sm">
+        <ChatMessage animateEnter={false} className="max-w-[100%]" from="assistant">
             <ChatInlineMarkdownText content={revealedText} />
-        </div>
+        </ChatMessage>
     );
+}
+
+export function getActiveReplyDisplayText(text: string) {
+    return text.trimStart().trimEnd();
 }
 
 function AgentTurnFailure({
@@ -614,6 +649,18 @@ function getLastMessage(items: TranscriptItem[]) {
     }
 
     return null;
+}
+
+function isMessageItem(
+    item: TranscriptItem,
+    message: Extract<TranscriptRow, { kind: 'message' }>['message'] | null
+) {
+    return (
+        message !== null &&
+        item.kind === 'row' &&
+        item.row.kind === 'message' &&
+        item.row.message.id === message.id
+    );
 }
 
 function isActiveTurn(
