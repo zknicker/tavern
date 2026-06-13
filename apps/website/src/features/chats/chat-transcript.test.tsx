@@ -311,8 +311,8 @@ test('ToolStep renders completed verbs in neutral text and the whole row as the 
     assert.doesNotMatch(markup, /text-success/);
     assert.match(markup, /text-muted-foreground">Used</);
     assert.match(markup, /aria-label="Inspect bash · date"[^>]*data-slot="drawer-trigger"/);
-    assert.match(markup, /cursor-pointer/);
-    assert.match(markup, /group-hover\/tool-step:opacity-100/);
+    assert.match(markup, /cursor-default/);
+    assert.doesNotMatch(markup, /cursor-pointer/);
     assert.doesNotMatch(markup, /thinking-indicator-text/);
 });
 

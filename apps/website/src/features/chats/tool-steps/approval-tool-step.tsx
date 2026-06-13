@@ -13,6 +13,7 @@ export function ApprovalToolStep({
     animateEnter,
     canRespondToApproval = false,
     chatId,
+    index,
     isLast,
     row,
 }: ToolStepRendererProps) {
@@ -24,6 +25,7 @@ export function ApprovalToolStep({
             animateEnter={animateEnter}
             chatId={chatId}
             icon={SecurityCheckIcon}
+            index={index}
             isLast={isLast}
             label={
                 <InlineToolLabel

@@ -12,6 +12,7 @@ export function ClarificationToolStep({
     animateEnter,
     canRespondToClarification = false,
     chatId,
+    index,
     isLast,
     row,
 }: ToolStepRendererProps) {
@@ -31,6 +32,7 @@ export function ClarificationToolStep({
             animateEnter={animateEnter}
             chatId={chatId}
             icon={BubbleChatQuestionIcon}
+            index={index}
             isLast={isLast}
             label={<InlineToolLabel row={row} target={question} verb={verb} />}
             row={row}

@@ -1,5 +1,4 @@
 import type { HugeiconsIconProps } from '@hugeicons/react';
-import { Search01Icon } from '@hugeicons-pro/core-stroke-rounded';
 import type { ReactNode } from 'react';
 import * as React from 'react';
 import { Drawer, DrawerTrigger } from '../../../components/ui/drawer.tsx';
@@ -7,6 +6,7 @@ import { Icon } from '../../../components/ui/icon.tsx';
 import { cn } from '../../../lib/utils.ts';
 import { ToolDrawer } from '../../sessions/tools/tool-drawer.tsx';
 import { formatToolDuration, hasErrorStatus } from '../../sessions/tools/tool-ui.ts';
+import { useToolRowHoverItem } from '../tool-row-hover.ts';
 import type { ToolStepRow } from './types.ts';
 
 type ToolIcon = HugeiconsIconProps['icon'];
@@ -16,6 +16,7 @@ export function ToolTimelineStep({
     chatId,
     children,
     icon,
+    index,
     isLast,
     label,
     row,
@@ -24,6 +25,7 @@ export function ToolTimelineStep({
     chatId?: string;
     children?: ReactNode;
     icon: ToolIcon;
+    index: number;
     isLast: boolean;
     label: ReactNode;
     row: ToolStepRow;
@@ -31,6 +33,7 @@ export function ToolTimelineStep({
     const [isOpen, setIsOpen] = React.useState(false);
     const sessionKey = row.sessionKey;
     const inspectLabel = `Inspect ${row.toolCall.label || row.toolCall.name || 'tool call'}`;
+    const hoverItem = useToolRowHoverItem(index + 1);
 
     return (
         <div
@@ -38,6 +41,7 @@ export function ToolTimelineStep({
                 'group/tool-step relative z-10 overflow-hidden',
                 animateEnter && 'chat-step-enter'
             )}
+            data-tool-row-hover-index={hoverItem.dataIndex}
         >
             {isLast ? null : <div className="absolute top-7 bottom-0 left-4 w-px bg-border/60" />}
             <Drawer onOpenChange={setIsOpen} open={isOpen} position="right">
@@ -45,34 +49,25 @@ export function ToolTimelineStep({
                     render={
                         <button
                             aria-label={inspectLabel}
-                            className="flex w-full min-w-0 cursor-pointer items-center gap-1.5 rounded-md px-2 py-1.5 text-left outline-none transition-colors hover:bg-chat-log-row-hover focus-visible:bg-chat-log-row-hover focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset"
+                            className={cn(
+                                'flex w-full min-w-0 cursor-default items-center gap-2 rounded-md py-1.5 pr-2 pl-3 text-left text-muted-foreground outline-none transition-none focus-visible:bg-surface-1 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset',
+                                !hoverItem.hasSharedHover && 'hover:bg-surface-1'
+                            )}
+                            ref={hoverItem.ref}
                             title={inspectLabel}
                             type="button"
                         />
                     }
                 >
-                    <span className="flex size-4 shrink-0 items-center justify-center">
+                    <span className="-ml-1 flex size-4 shrink-0 items-center justify-center">
                         <Icon
-                            className="size-4 text-muted-foreground"
+                            className="size-4 text-muted-foreground/75"
                             icon={icon}
                             strokeWidth={1.5}
                         />
                     </span>
-                    <span className="flex min-w-0 flex-1 items-center text-[13px] text-foreground leading-4">
+                    <span className="flex min-w-0 flex-1 items-center text-meta leading-4">
                         {label}
-                    </span>
-                    <span
-                        aria-hidden
-                        className={cn(
-                            // Reveal on hover, on keyboard focus (focus-visible,
-                            // not focus-within — the latter sticks after the
-                            // drawer returns focus to the trigger on close), and
-                            // while the drawer is open.
-                            'ml-0.5 flex shrink-0 items-center text-muted-foreground opacity-0 transition-opacity group-hover/tool-step:opacity-100 group-has-focus-visible/tool-step:opacity-100',
-                            isOpen && 'opacity-100'
-                        )}
-                    >
-                        <Icon className="size-3.5" icon={Search01Icon} />
                     </span>
                 </DrawerTrigger>
                 {chatId ? (

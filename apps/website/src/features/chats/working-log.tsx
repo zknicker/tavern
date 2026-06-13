@@ -14,6 +14,7 @@ import {
     getWorkGroupIcon,
 } from './chat-transcript-activity-utils.ts';
 import { ThinkingSteps, ThinkingStepsContent, ThinkingStepsHeader } from './thinking-steps.tsx';
+import { ToolRowHoverRoot, useToolRowHoverGroup } from './tool-row-hover.ts';
 import { useChatScrollControllerHandle } from './use-chat-scroll-controller.ts';
 
 export function WorkingLog({
@@ -77,76 +78,90 @@ export function WorkingLog({
             : formatWorkGroupHeader(items)
         : null;
     const groupIcon = groupMode ? getWorkGroupIcon(items) : null;
+    const rowHover = useToolRowHoverGroup({
+        enabled: groupMode,
+        headerRef: disclosureAnchor.triggerRef,
+        measureKey: groupMode ? `${open}:${items.length}:${groupLabel ?? ''}` : '',
+    });
+
     return (
-        <ThinkingSteps
-            // Group mode: the trigger's click padding must not stack onto the
-            // surrounding 16px block rhythm.
-            className={cn(
-                'w-full max-w-[34rem]',
-                groupMode && '-my-1.5',
-                groupMode && animateEnter && 'chat-step-enter'
-            )}
-            onOpenChange={setOpen}
-            open={open}
-        >
-            <ThinkingStepsHeader
-                className={
-                    groupMode
-                        ? 'w-full px-2 py-1.5 font-normal text-muted-foreground hover:bg-chat-log-row-hover hover:text-foreground'
-                        : undefined
-                }
-                onKeyDown={disclosureAnchor.captureFromKeyboard}
-                onPointerDown={disclosureAnchor.capture}
-                ref={disclosureAnchor.triggerRef}
-                wrapperClassName={groupMode ? 'w-full' : undefined}
-            >
-                {groupMode ? (
-                    <span className="flex min-w-0 items-center gap-1.5">
-                        {groupIcon ? (
-                            <span className="flex size-4 shrink-0 items-center justify-center">
-                                <Icon
-                                    className="size-4 text-muted-foreground"
-                                    icon={groupIcon}
-                                    strokeWidth={1.5}
-                                />
-                            </span>
-                        ) : null}
-                        <span
-                            className={cn(
-                                'min-w-0 max-w-[28rem] truncate text-left',
-                                isActive && 'thinking-indicator-text'
-                            )}
-                        >
-                            {groupLabel}
-                        </span>
-                    </span>
-                ) : isActive && activeSeconds ? (
-                    <span>
-                        Working for{' '}
-                        <span className="inline-block min-w-[2.2ch] text-left tabular-nums">
-                            {activeSeconds}
-                        </span>
-                    </span>
-                ) : (
-                    formatActivityHeader({ end, isActive, now, start })
+        <ToolRowHoverRoot value={rowHover.contextValue}>
+            <ThinkingSteps
+                // Group mode: the trigger's click padding must not stack onto the
+                // surrounding 16px block rhythm.
+                className={cn(
+                    'w-full max-w-[34rem]',
+                    groupMode && 'relative -my-1.5',
+                    groupMode && animateEnter && 'chat-step-enter'
                 )}
-            </ThinkingStepsHeader>
-            <ThinkingStepsContent className={showDurationHeader ? undefined : 'pt-1'}>
-                {items.map((item, index) => (
-                    <ActivityStep
-                        animateEnter={isActive}
-                        canRespondToApproval={item.row.id === firstPendingApprovalId}
-                        canRespondToClarification={item.row.id === firstPendingClarificationId}
-                        chatId={chatId}
-                        currentSessionKey={currentSessionKey}
-                        index={index}
-                        isLast={index === items.length - 1}
-                        item={item}
-                        key={getActivityItemKey(item)}
-                    />
-                ))}
-            </ThinkingStepsContent>
-        </ThinkingSteps>
+                onOpenChange={setOpen}
+                open={open}
+                ref={groupMode ? rowHover.containerRef : undefined}
+            >
+                {rowHover.hoverLayer}
+                <ThinkingStepsHeader
+                    className={
+                        groupMode
+                            ? 'relative z-10 w-full py-1.5 pr-2 pl-3 font-normal text-muted-foreground/85 outline-none transition-none hover:bg-surface-1 hover:text-muted-foreground/85 focus-visible:bg-surface-1 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset'
+                            : undefined
+                    }
+                    onFocus={groupMode ? rowHover.clearActiveItem : undefined}
+                    onKeyDown={disclosureAnchor.captureFromKeyboard}
+                    onMouseEnter={groupMode ? rowHover.clearActiveItem : undefined}
+                    onPointerDown={disclosureAnchor.capture}
+                    ref={groupMode ? rowHover.registerHeader : disclosureAnchor.triggerRef}
+                    wrapperClassName={groupMode ? 'relative z-10 w-full' : undefined}
+                >
+                    {groupMode ? (
+                        <span className="flex min-w-0 items-center gap-2">
+                            {groupIcon ? (
+                                <span className="-ml-1 flex size-4 shrink-0 items-center justify-center">
+                                    <Icon
+                                        className="size-4 text-muted-foreground/75"
+                                        icon={groupIcon}
+                                        strokeWidth={1.5}
+                                    />
+                                </span>
+                            ) : null}
+                            <span
+                                className={cn(
+                                    'min-w-0 max-w-[28rem] truncate text-left',
+                                    isActive && 'thinking-indicator-text'
+                                )}
+                            >
+                                {groupLabel}
+                            </span>
+                        </span>
+                    ) : isActive && activeSeconds ? (
+                        <span>
+                            Working for{' '}
+                            <span className="inline-block min-w-[2.2ch] text-left tabular-nums">
+                                {activeSeconds}
+                            </span>
+                        </span>
+                    ) : (
+                        formatActivityHeader({ end, isActive, now, start })
+                    )}
+                </ThinkingStepsHeader>
+                <ThinkingStepsContent
+                    className={showDurationHeader ? undefined : 'relative z-10 pt-1'}
+                >
+                    {items.map((item, index) => (
+                        <ActivityStep
+                            animateEnter={isActive}
+                            canRespondToApproval={item.row.id === firstPendingApprovalId}
+                            canRespondToClarification={item.row.id === firstPendingClarificationId}
+                            chatId={chatId}
+                            currentSessionKey={currentSessionKey}
+                            index={index}
+                            isLast={index === items.length - 1}
+                            item={item}
+                            key={getActivityItemKey(item)}
+                        />
+                    ))}
+                </ThinkingStepsContent>
+            </ThinkingSteps>
+        </ToolRowHoverRoot>
     );
 }
 

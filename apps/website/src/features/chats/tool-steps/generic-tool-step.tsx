@@ -6,7 +6,13 @@ import { isEditTool, resolveToolStepIcon } from './tool-step-icons.ts';
 import { getToolTarget, InlineToolLabel, ToolTimelineStep } from './tool-summary.tsx';
 import type { ToolStepRendererProps } from './types.ts';
 
-export function GenericToolStep({ animateEnter, chatId, isLast, row }: ToolStepRendererProps) {
+export function GenericToolStep({
+    animateEnter,
+    chatId,
+    index,
+    isLast,
+    row,
+}: ToolStepRendererProps) {
     const target = getToolTarget(row);
 
     return (
@@ -14,6 +20,7 @@ export function GenericToolStep({ animateEnter, chatId, isLast, row }: ToolStepR
             animateEnter={animateEnter}
             chatId={chatId}
             icon={resolveToolStepIcon(row.toolCall.name)}
+            index={index}
             isLast={isLast}
             label={<InlineToolLabel row={row} target={target} verb={getToolVerb(row, target)} />}
             row={row}
