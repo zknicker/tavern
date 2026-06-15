@@ -20,7 +20,7 @@ state.
 ## Ownership
 
 - Tavern Runtime owns the skill content and installs it into the managed
-  skills surface, the same lifecycle pattern as the wiki skill. Users do not
+  skills surface, the same lifecycle pattern as the `cortex-wiki` skill. Users do not
   hand-install or edit it; Runtime refreshes it on sync.
 - The skill authenticates to Tavern Runtime with the runtime URL and token
   already provisioned to the managed engine environment.

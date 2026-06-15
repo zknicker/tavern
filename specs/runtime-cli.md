@@ -178,7 +178,7 @@ Tavern Runtime v1.4.2                        ← staged/installed binary version
 Capabilities
   ● Codex OAuth          healthy       6m ago
   ● Agent engine API     unavailable   2m ago — Managed agent engine API is not reachable.
-  ◐ Cortex wiki          degraded      just now — Managed wiki skill has not been prepared.
+  ◐ Cortex wiki          degraded      just now — Managed cortex-wiki skill has not been prepared.
   …
 
 Engine

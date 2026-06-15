@@ -12,7 +12,7 @@ Hermes owns live execution context for turns.
 
 Prompt-time context management helps the agent stay oriented during active
 work, but it is not Tavern memory. Managed Tavern Hermes keeps Hermes-native
-memory disabled and installs the managed wiki skill for durable knowledge work.
+memory disabled and installs the managed `cortex-wiki` skill for durable knowledge work.
 
 ## Wiki Lifecycle
 
@@ -28,7 +28,7 @@ topics/<topic>/
   inbox/
 ```
 
-Agents write and maintain those files through the managed wiki skill. Tavern Runtime
+Agents write and maintain those files through the managed `cortex-wiki` skill. Tavern Runtime
 does not run a hidden capture, recall, embedding, or repair pipeline.
 
 ## Correction And Forgetting

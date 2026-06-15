@@ -50,7 +50,7 @@ export function getWikiLibrarianStatus(db: Database = getDb()) {
 
 export function buildWikiLibrarianPrompt(): string {
     return [
-        'Use the wiki skill. You are an unattended maintenance run: the confirmation, preview, and delegation steps in the references do not apply — score, then act, in this same run.',
+        'Use the cortex-wiki skill. You are an unattended maintenance run: the confirmation, preview, and delegation steps in the references do not apply — score, then act, in this same run.',
         'Run the librarian scan from references/librarian.md across active topic wikis: score article staleness and quality and write .librarian/scan-results.json and REPORT.md.',
         'Act on the findings, working only with material already on disk. Run lint --fix for mechanical repairs: broken links, missing See Also backlinks, stale indexes, and misplaced files.',
         'Recompile articles whose existing raw sources already hold newer uncompiled material, per references/compilation.md.',

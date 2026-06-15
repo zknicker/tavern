@@ -4,7 +4,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { HERMES_HOME, RUNTIME_ROOT, readConfigValue, resolveConfiguredPath } from '../config';
 
-export const managedWikiSkillName = 'wiki';
+export const managedWikiSkillName = 'cortex-wiki';
 
 interface ManagedWikiIntegrationInput {
     assetsRoot?: string;

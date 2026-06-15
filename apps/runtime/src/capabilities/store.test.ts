@@ -92,9 +92,9 @@ describe('Runtime capabilities store', () => {
             id: 'cortexWiki',
             metadata: expect.objectContaining({
                 missing: true,
-                skillPath: expect.stringContaining('skills/wiki'),
+                skillPath: expect.stringContaining('skills/cortex-wiki'),
             }),
-            reason: 'The managed wiki skill has not been prepared yet.',
+            reason: 'The managed cortex-wiki skill has not been prepared yet.',
             state: 'degraded',
         });
     });
@@ -113,7 +113,7 @@ describe('Runtime capabilities store', () => {
                 metadata: expect.objectContaining({
                     writable: false,
                 }),
-                reason: 'The managed wiki skill has not been prepared yet.',
+                reason: 'The managed cortex-wiki skill has not been prepared yet.',
                 state: 'degraded',
             });
         } finally {

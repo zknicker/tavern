@@ -1,14 +1,15 @@
 ---
-name: wiki
+name: cortex-wiki
 description: >
-  Manage LLM-compiled knowledge wikis in the Tavern wiki hub: ingest sources and
+  Manage Cortex, Tavern's LLM-compiled knowledge wiki: ingest sources and
   collections, collect catalogs, track todos, register datasets, compile
   articles, query, lint, audit, research, run librarian maintenance, archive or
-  restore topics, and generate outputs. Triggers: wiki, knowledge base, ingest,
-  compile, query the wiki, lint, audit, research, librarian, todos, backlog,
-  watch list, dataset, data registry, collection import, collect, catalog,
-  provenance, article quality, output drift, archive topic, restore wiki,
-  implementation plan.
+  restore topics, and generate outputs. Triggers: Cortex, cortex wiki, wiki,
+  knowledge base, durable knowledge, inspect memory, query Cortex, query the
+  wiki, ingest, compile, lint, audit, research, librarian, todos, backlog, watch
+  list, dataset, data registry, collection import, collect, catalog, provenance,
+  article quality, output drift, archive topic, restore wiki, implementation
+  plan.
 ---
 
 # Cortex Wiki Manager

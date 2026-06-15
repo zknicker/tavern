@@ -79,29 +79,15 @@ Do not save secrets, credentials, broad chat dumps, or speculative claims. If me
 
 const wikiSection = `## Wiki (Cortex)
 
-Cortex is Tavern's browsable knowledge wiki: a plain Markdown hub owned by the user. Use it when source-backed notes, research, durable outputs, or inspectable project knowledge could change the answer.
+Cortex is Tavern's durable knowledge wiki: plain Markdown owned by the user. Use it when source-backed notes, research, durable outputs, or inspectable project knowledge could change the answer. Turn context is not Cortex; if asked what durable knowledge exists, check Cortex.
 
-The context assembled for each of your turns is separate and bounded; it is not the wiki. If asked what durable source-backed knowledge exists, check Cortex rather than guessing from the current conversation.
+Use the installed \`cortex-wiki\` skill for Cortex work: query, ingest, compile, audit, lint, todos, librarian, research, and outputs. "Cortex", "the cortex", "knowledge base", or "durable knowledge" means \`cortex-wiki\`. Do not probe for a \`cortex\` CLI or recreate those workflows with ad hoc files.
 
-### The Wiki Skill
+The hub is \`TAVERN_WIKI_HUB_PATH\`. Topic wikis live under \`topics/<slug>/\`; archived topics under \`topics/.archive/<slug>/\`. Use \`raw/\` for immutable sources, \`wiki/\` for synthesis, \`todos/\` for follow-up, \`datasets/\` for manifests, and \`output/\` for deliverables.
 
-Use the installed \`wiki\` skill for wiki work — research, ingestion, compilation, querying, auditing, and generated outputs. Do not recreate those workflows with ad hoc files. For quick answers, read/search the wiki directly.
+Priority: current user statement > current source material > compiled article > raw notes > older outputs. Do not save secrets or broad chat dumps. Preserve provenance; after article edits repair affected indexes, links, backlinks, and existing librarian scores.
 
-The hub lives at \`TAVERN_WIKI_HUB_PATH\`, which Tavern sets for every run. Topic wikis live under \`topics/<slug>/\` (archived: \`topics/.archive/<slug>/\`): \`raw/\` immutable sources, \`wiki/\` compiled articles, \`todos/\` the follow-up queue, \`datasets/\` data manifests, \`output/\` deliverables; \`_index.md\`, \`config.md\`, and \`log.md\` keep each topic navigable.
-
-### Conflicts
-
-Priority: current user statement > current source material > compiled wiki article > raw source notes > older outputs.
-
-### Writes
-
-Preserve provenance: sources in \`raw/\` (never mutated after ingestion), synthesis in \`wiki/\`, deliverables in \`output/\`. Do not save secrets or broad chat dumps into the wiki without explicit user direction. After changing articles, repair the indexes, links, and backlinks your edits affected, and re-score changed articles in \`.librarian/scan-results.json\` where entries exist.
-
-### Maintenance
-
-Tavern maintains the wiki automatically: new sources compile into articles, a weekly librarian scores and repairs, and todo records are worked off one focused run at a time. Do not schedule wiki maintenance automations or invent your own.
-
-When you notice wiki work beyond your current task — thin coverage, unverified claims, dedup candidates, sources worth ingesting — file it as a proposed todo record per the wiki skill's \`references/todos.md\` instead of chasing it. Never park wiki work on the user. Completed todos are deleted — the log.md entry is the history. A record that cannot be resolved is marked \`blocked\` with the reason, and the affected claims get lowered confidence (or \`verified: false\`) so answers hedge.`;
+Tavern runs routine maintenance automatically. If you notice extra wiki work, file a proposed todo via \`cortex-wiki\` \`references/todos.md\`; do not chase it or park it on the user.`;
 
 const generatedFileSection = `## This File Is Generated
 

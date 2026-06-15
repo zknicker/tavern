@@ -185,7 +185,7 @@ async function checkCortexWikiCapability(): Promise<RuntimeCapabilityCheckResult
                 ? { metadata: existingMetadata, state: 'healthy' }
                 : {
                       metadata: existingMetadata,
-                      reason: 'The managed wiki skill has not been prepared yet.',
+                      reason: 'The managed cortex-wiki skill has not been prepared yet.',
                       state: 'degraded',
                   };
         }
@@ -193,7 +193,7 @@ async function checkCortexWikiCapability(): Promise<RuntimeCapabilityCheckResult
         fs.accessSync(path.dirname(wikiPath), fs.constants.R_OK | fs.constants.W_OK);
         return {
             metadata: { ...metadata, missing: true },
-            reason: skillReady ? null : 'The managed wiki skill has not been prepared yet.',
+            reason: skillReady ? null : 'The managed cortex-wiki skill has not been prepared yet.',
             state: skillReady ? 'healthy' : 'degraded',
         };
     } catch (error) {

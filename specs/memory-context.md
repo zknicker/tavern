@@ -12,7 +12,7 @@ It is not a durable memory system. It is prompt assembly over existing sources.
 | Hermes context management | Hermes | Prompt-time continuity during active turns |
 | Chat and activity state | Tavern Runtime | Recent product state and live work |
 | Participant/profile state | Tavern Runtime and Tavern App | Person identity and explicit links |
-| Cortex wiki hub | Managed wiki skill and agent jobs | Durable Markdown knowledge |
+| Cortex wiki hub | Managed `cortex-wiki` skill and agent jobs | Durable Markdown knowledge |
 
 Memory context reads from these sources and renders a bounded prompt-facing
 view. It does not persist a synthesized bulletin as canonical memory.

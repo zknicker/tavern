@@ -13,7 +13,7 @@ interface ManagedTavernSkillInput {
  * Install the managed `tavern` skill: the agent's product knowledge of and
  * operational access to Tavern (chats, deliveries, automations, settings map).
  * Runtime owns the content and refreshes it on every startup, mirroring the
- * managed wiki skill.
+ * managed cortex-wiki skill.
  */
 export async function ensureManagedTavernSkill(input: ManagedTavernSkillInput = {}) {
     const assetsRoot = input.assetsRoot ?? resolveRuntimeAssetsRoot();

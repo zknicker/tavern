@@ -2,7 +2,7 @@
 name: tavern
 description: >
   Use for Tavern-specific inspection: chats, agent settings, connectors,
-  skills, Runtime health, and where settings live.
+  skills, Runtime health, Cortex status, and where settings live.
 ---
 
 # Tavern

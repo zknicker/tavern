@@ -36,7 +36,7 @@ reads, soft deletes, automations, deliveries, and the product timeline.
 | --- | --- | --- |
 | Runtime SQLite | Tavern Runtime | Canonical chat model, automation delivery, channel ingress, cursor-backed events, read markers, runtime metadata |
 | App SQLite | Tavern App | Client cache, app-local settings, and presentation state |
-| Cortex wiki hub | Managed wiki skill and agent jobs | Topic Markdown, raw sources, compiled pages, todos, datasets, output, inbox, archives |
+| Cortex wiki hub | Managed `cortex-wiki` skill and agent jobs | Topic Markdown, raw sources, compiled pages, todos, datasets, output, inbox, archives |
 | Hermes state | Hermes | Sessions, turns, tools, model calls, transcripts, and files |
 
 Runtime SQLite is the product source of truth for chat. App SQLite can cache for

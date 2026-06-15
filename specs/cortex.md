@@ -49,7 +49,7 @@ flowchart LR
   Runtime["Tavern Runtime read API"]
   App["Cortex tab + health page"]
   Jobs["Runtime jobs"]
-  Skill["wiki skill (agent turns)"]
+  Skill["cortex-wiki skill (agent turns)"]
   Chat["chats"]
 
   Hub --> Runtime
@@ -64,9 +64,10 @@ flowchart LR
 1. `TAVERN_WIKI_HUB_PATH` or `TAVERN_CORTEX_WIKI_PATH`
 2. Runtime-managed `wiki/` under `TAVERN_RUNTIME_ROOT`
 
-Managed Hermes startup prepares the wiki skill package before launch:
+Managed Hermes startup prepares the `cortex-wiki` skill package before launch:
 
-* copy the bundled `wiki` workflow skill directory into `HERMES_HOME/skills/wiki`
+* copy the bundled `cortex-wiki` workflow skill directory into
+  `HERMES_HOME/skills/cortex-wiki`
 * create the managed hub skeleton when it does not exist
 * pass `TAVERN_WIKI_HUB_PATH` to the Hermes process
 
@@ -96,7 +97,7 @@ Runtime does not own:
 * chat ingestion
 * Dream consolidation
 * direct wiki file mutation — every write happens through an agent turn
-  running the wiki skill, never Runtime code
+  running the `cortex-wiki` skill, never Runtime code
 
 ## Workflows
 

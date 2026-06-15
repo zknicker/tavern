@@ -158,17 +158,17 @@ Runtime also syncs Vault-backed Codex OAuth material into managed Hermes
 
 Runtime packages the Tavern-owned Cortex wiki skill with managed Hermes. Before
 launch it copies the prompt-visible workflow skill directory to
-`HERMES_HOME/skills/wiki`.
+`HERMES_HOME/skills/cortex-wiki`.
 
 The wiki hub defaults to `TAVERN_RUNTIME_ROOT/wiki`. Operators can override it
 with `TAVERN_WIKI_HUB_PATH` or `TAVERN_CORTEX_WIKI_PATH`. Runtime creates the
 hub skeleton and passes the resolved path to Hermes as `TAVERN_WIKI_HUB_PATH`.
 
-### Changing the managed wiki skill
+### Changing the managed Cortex wiki skill
 
-The skill at `apps/runtime/assets/hermes/skills/wiki/` is Tavern-owned product
-surface. When changing its workflows or cadence, update the matching Runtime
-pipeline prompts in `apps/runtime/src/wiki/compile-run.ts`,
+The skill at `apps/runtime/assets/hermes/skills/cortex-wiki/` is Tavern-owned
+product surface. When changing its workflows or cadence, update the matching
+Runtime pipeline prompts in `apps/runtime/src/wiki/compile-run.ts`,
 `librarian-run.ts`, and `todo-drain.ts`.
 
 Run `bun run --filter @tavern/runtime test -- src/hermes/managed-wiki.test.ts
@@ -177,7 +177,7 @@ src/wiki` and start the dev stack to verify skill sync.
 ## Managed Tavern Skill
 
 Runtime installs the `tavern` skill (`apps/runtime/assets/hermes/skills/tavern`)
-into `HERMES_HOME/skills/tavern` before launch, alongside the wiki skill. It
+into `HERMES_HOME/skills/tavern` before launch, alongside the Cortex wiki skill. It
 carries the agent's product knowledge of Tavern — chat and delivery API
 recipes against `TAVERN_RUNTIME_URL`, the automations delivery contract,
 read-only self-configuration lookups, and the settings map for directing the

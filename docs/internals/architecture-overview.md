@@ -59,7 +59,7 @@ flowchart LR
   metadata.
 * **Cortex** is the app and Runtime read surface for the user's Cortex wiki hub.
   The hub's Markdown files are the durable knowledge source. Agents maintain the
-  hub through the managed wiki skill, Tasks, and Runtime crons.
+  hub through the managed `cortex-wiki` skill, Tasks, and Runtime crons.
 * **Hermes** owns agent execution: sessions, turns, model calls, tools, files,
   and native transcripts.
 

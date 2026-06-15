@@ -140,7 +140,7 @@ describe('renderStatus', () => {
                     displayName: 'Cortex wiki',
                     state: 'degraded',
                     healthy: false,
-                    reason: 'Managed wiki skill has not been prepared.',
+                    reason: 'Managed cortex-wiki skill has not been prepared.',
                     updatedAt: '2026-06-10T11:59:50.000Z',
                 }),
                 capability({
@@ -153,7 +153,7 @@ describe('renderStatus', () => {
         });
         const text = render(report);
         expect(text).toContain('◐ Cortex wiki');
-        expect(text).toContain('just now — Managed wiki skill has not been prepared.');
+        expect(text).toContain('just now — Managed cortex-wiki skill has not been prepared.');
         expect(text).toContain('○ Agent engine API');
         expect(text).toContain('— Managed agent engine API is not reachable.');
     });

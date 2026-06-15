@@ -14,9 +14,12 @@ describe('managed wiki integration', () => {
         const assetsRoot = path.join(directory, 'assets');
         const hermesHome = path.join(directory, 'hermes-home');
         const runtimeRoot = path.join(directory, 'runtime-root');
-        const sourceSkill = path.join(assetsRoot, 'hermes', 'skills', 'wiki');
+        const sourceSkill = path.join(assetsRoot, 'hermes', 'skills', 'cortex-wiki');
 
-        await writeFile(path.join(sourceSkill, 'SKILL.md'), '---\nname: wiki\n---\n\nWiki body.\n');
+        await writeFile(
+            path.join(sourceSkill, 'SKILL.md'),
+            '---\nname: cortex-wiki\n---\n\nWiki body.\n'
+        );
         await writeFile(path.join(sourceSkill, 'references', 'ingestion.md'), '# Ingestion\n');
 
         const integration = await prepareManagedWikiIntegration({
@@ -62,6 +65,18 @@ describe('managed wiki integration', () => {
         } finally {
             restoreEnv('TAVERN_RUNTIME_ASSETS_DIR', previousAssetsDir);
         }
+    });
+
+    it('names Cortex in the bundled skill trigger metadata', async () => {
+        const skill = await fs.readFile(
+            path.join(resolveRuntimeAssetsRoot(), 'hermes', 'skills', 'cortex-wiki', 'SKILL.md'),
+            'utf8'
+        );
+
+        expect(skill).toContain('name: cortex-wiki');
+        expect(skill).toContain('Manage Cortex');
+        expect(skill).toContain('Triggers: Cortex');
+        expect(skill).toContain('query Cortex');
     });
 });
 

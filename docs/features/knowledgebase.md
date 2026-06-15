@@ -61,12 +61,12 @@ hidden unless a caller explicitly includes archived topics.
 
 Runtime exposes a small read API. The App renders the Cortex tab from that API.
 Wiki maintenance runs as Runtime jobs that spawn agent turns with the managed
-`wiki` skill when the pipeline has work (compile, librarian, todos); see
+`cortex-wiki` skill when the pipeline has work (compile, librarian, todos); see
 [Cortex Lifecycle](cortex-lifecycle.md).
 
-Runtime packages the managed wiki skill for managed Hermes. Startup copies the
-workflow skill directory to `HERMES_HOME/skills/wiki` and passes the resolved
-hub path to the Hermes process.
+Runtime packages the managed `cortex-wiki` skill for managed Hermes. Startup copies the
+workflow skill directory to `HERMES_HOME/skills/cortex-wiki` and passes the
+resolved hub path to the Hermes process.
 
 ## Boundary
 

@@ -12,7 +12,7 @@ separate from durable wiki knowledge.
 ## Durable Knowledge
 
 Wiki topics hold source material, compiled pages, inventories, datasets, inbox
-notes, and outputs as plain Markdown. Agents use the managed wiki skill to create and
+notes, and outputs as plain Markdown. Agents use the managed `cortex-wiki` skill to create and
 maintain those files.
 
 Tavern does not add a parallel `memory_records` table for normal memory. If a

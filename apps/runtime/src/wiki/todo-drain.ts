@@ -67,7 +67,7 @@ export function getWikiTodoProcessing(db: Database = getDb()): CortexTodoProcess
 
 export function buildTodoDrainPrompt(todo: CortexTodo): string {
     return [
-        `Use the wiki skill. Work exactly one todo record in the ${todo.topic} topic wiki: ${todo.path} ("${todo.title}").`,
+        `Use the cortex-wiki skill. Work exactly one todo record in the ${todo.topic} topic wiki: ${todo.path} ("${todo.title}").`,
         todo.question ? `Its next action: ${todo.question}` : null,
         'Do not start any other todo work — file anything new you notice as its own proposed record, and do not park work on the user.',
         'Complete the next action fully per references/todos.md: research, ingest, compile, dedup, or profile as the record calls for.',

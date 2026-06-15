@@ -35,7 +35,7 @@ tools; it is not a skill package and is not listed by the Skills API.
 
 ## Agent Boundary
 
-Runtime installs the managed wiki skill. Agents use that skill for writes and
+Runtime installs the managed `cortex-wiki` skill. Agents use that skill for writes and
 maintenance, use memory tools for assistant memory, and use the Cortex API when
 they need to browse the current wiki state from Tavern.
 
