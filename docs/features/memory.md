@@ -1,17 +1,22 @@
 ---
-summary: Memory feature for Cortex-backed durable knowledge and the context-management boundary.
+summary: Memory feature for assistant memory, Cortex wiki knowledge, and the context-management boundary.
 read_when:
-  - changing memory visibility, Cortex hub status, or Cortex-backed knowledge expectations
+  - changing assistant memory, memory visibility, Cortex hub status, or Cortex-backed knowledge expectations
   - changing the boundary between Hermes context management and durable wiki knowledge
 ---
 
 # Memory
 
-Memory is the Cortex wiki hub.
+Tavern has two memory surfaces:
 
-Tavern does not maintain a separate durable memory database. Durable knowledge
-lives in topic wiki files. Agents use managed wiki workflows to research, ingest,
-compile, audit, and maintain those files.
+* **Assistant memory.** Runtime configures the managed agent with the local
+  Mnemosyne memory provider. It is prompt-time memory tooling, exposed to the
+  agent as `memory_*` tools and surfaced operationally through Runtime
+  capabilities. The provider is not a skill package and does not appear in the
+  skills list.
+* **Cortex knowledge.** Cortex is the browsable wiki hub. Durable knowledge that
+  users inspect lives in topic wiki files. Agents use managed wiki workflows to
+  research, ingest, compile, audit, and maintain those files.
 
 ## In Cortex
 
@@ -25,13 +30,13 @@ Users can inspect:
 
 ## Contract
 
-Memory visibility is file-backed. The Memory and Cortex surfaces read wiki
-Markdown. They do not expose model settings, hidden queues, generated schemas,
-or internal repair controls.
+User-facing knowledge visibility is file-backed. The Memory and Cortex surfaces
+read wiki Markdown. They do not expose model settings, hidden queues, generated
+schemas, or internal repair controls.
 
-Prompt-time context management remains separate. Hermes may use relevant wiki
-material when an agent reads it, but Hermes context management does not own the
-remembered fact.
+Assistant memory is an execution capability. It can affect what the agent
+recalls during work, but it is not the Cortex wiki and is not edited through the
+wiki browser.
 
 ## Boundary
 

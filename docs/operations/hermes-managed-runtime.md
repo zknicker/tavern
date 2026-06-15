@@ -115,7 +115,7 @@ every Tavern-owned setting that lands in the file is a domain:
 | display | `display.tool_progress`, `display.interim_assistant_messages` | fixed managed policy |
 | permissions | `approvals.*`, `command_allowlist` | `/permission-settings` store (untouched until first save) |
 | connectors | `mcp_servers.<id>` + `TAVERN_MCP_*` env secrets | connector vault records |
-| memory | `memory.*` (mnemosyne) | fixed managed policy |
+| memory | `memory.*` (mnemosyne), `MNEMOSYNE_HOST_LLM_ENABLED` | fixed managed policy |
 | plugins | `plugins.enabled` messenger entry | fixed managed policy |
 
 Each domain only sets or deletes its own keys, so operator-managed keys
@@ -136,16 +136,18 @@ TAVERN_HERMES_BASE_URL
 TAVERN_HERMES_API_KEY
 ```
 
-Without explicit provider/model values, Runtime prefers OpenRouter only when an
-OpenRouter key exists and no OpenAI key exists. Otherwise it defaults to the
-OpenAI Codex provider:
+Without explicit provider/model values, Runtime chooses the first runnable
+credentialed route:
 
-```text
-provider = openai-codex
-model    = CODEX_MODEL or gpt-5.4-mini
-```
+1. Codex OAuth when Codex credentials are available.
+2. OpenAI API when an OpenAI key is configured.
+3. OpenRouter when an OpenRouter key is configured.
 
-Tavern applies this as Hermes's default runtime. It does not set
+When no route is configured, Runtime leaves Hermes without a generated default
+model and reports the setup gap through capabilities instead of inventing an
+unusable provider.
+
+When Runtime resolves a route, Tavern applies it as Hermes's default runtime. It does not set
 `model.openai_runtime: codex_app_server`; that remains a Hermes opt-in.
 
 Runtime also syncs Vault-backed Codex OAuth material into managed Hermes
@@ -191,6 +193,13 @@ memory:
   provider: mnemosyne
   memory_enabled: false
   user_profile_enabled: false
+  mnemosyne:
+    auto_sleep: true
+    sleep_threshold: 20
+    ignore_patterns:
+      - "^Traceback \\(most recent call last\\)"
+      - "^Error:"
+      - "^\\s+at "
 ```
 
 Runtime also materializes a managed `HERMES_HOME/plugins/mnemosyne` discovery
@@ -199,6 +208,14 @@ starting the dashboard. Release artifacts carry a bundled Mnemosyne wheelhouse
 under `runtime-assets/python/mnemosyne`; source runs fall back to the Python
 package index when the wheelhouse is absent. Operators do not run `pip`,
 `pipx`, or `hermes memory setup` for the managed instance.
+
+Runtime writes `MNEMOSYNE_HOST_LLM_ENABLED=true` into the managed Hermes `.env`
+so Mnemosyne sleep and consolidation route through Hermes's authenticated
+auxiliary model client.
+
+The managed Mnemosyne shim exposes provider tools with product names such as
+`memory_remember`, `memory_recall`, `memory_stats`, and `memory_sleep`, then
+dispatches those calls to the provider's native tools internally.
 
 Runtime resolves the Hermes Python interpreter from `TAVERN_HERMES_PYTHON_BIN`,
 then a `python` next to the resolved Hermes binary or its launcher target. When
@@ -216,6 +233,7 @@ Managed Hermes readiness is split into primitive Runtime capabilities:
 | `dashboardServer` | Runtime can reach Hermes dashboard status. |
 | `apiServer` | Runtime can make an authenticated Hermes REST call. |
 | `gateway` | Runtime can open the Hermes Gateway WebSocket. |
+| `mnemosyneMemory` | Runtime has written the managed Mnemosyne config, host-LLM env flag, and plugin files. |
 | `models` | Runtime can read Hermes model inventory. |
 | `skills` | Runtime can read Hermes skill inventory. |
 

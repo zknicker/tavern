@@ -4,7 +4,11 @@ import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { syncHermesCodexAuth } from './auth-store';
 import { ensureManagedMnemosynePlugin } from './mnemosyne';
-import { mergeHermesEnvFile } from './model-config';
+import {
+    managedMnemosyneEnv,
+    mergeHermesEnvFile,
+    resolveManagedHermesModelRoute,
+} from './model-config';
 
 const codexEnvConfig = {
     apiKey: null,
@@ -69,13 +73,86 @@ describe('managed Hermes model config', () => {
         expect(env).toContain('KEEP_ME="still-here"');
     });
 
-    it('removes the managed Hermes env file when no entries exist', async () => {
+    it('writes managed Mnemosyne host LLM env without provider keys', async () => {
         const directory = await fs.mkdtemp(path.join(os.tmpdir(), 'tavern-hermes-env-'));
         const envPath = path.join(directory, '.env');
 
         await mergeHermesEnvFile(envPath, codexEnvConfig);
 
-        await expect(fs.stat(envPath)).rejects.toThrow();
+        await expect(fs.readFile(envPath, 'utf8')).resolves.toContain(
+            `MNEMOSYNE_HOST_LLM_ENABLED="${managedMnemosyneEnv.MNEMOSYNE_HOST_LLM_ENABLED}"`
+        );
+    });
+
+    it('uses Codex OAuth only when credentials are available', () => {
+        expect(
+            resolveManagedHermesModelRoute({
+                codexCredentialsAvailable: true,
+                codexModel: null,
+                explicitApiKey: null,
+                explicitBaseUrl: null,
+                explicitModel: null,
+                explicitProvider: null,
+                openAiApiKey: null,
+                openRouterApiKey: null,
+            })
+        ).toMatchObject({
+            model: 'gpt-5.4-mini',
+            provider: 'openai-codex',
+        });
+
+        expect(
+            resolveManagedHermesModelRoute({
+                codexCredentialsAvailable: false,
+                codexModel: null,
+                explicitApiKey: null,
+                explicitBaseUrl: null,
+                explicitModel: null,
+                explicitProvider: null,
+                openAiApiKey: null,
+                openRouterApiKey: null,
+            })
+        ).toMatchObject({
+            model: null,
+            provider: null,
+        });
+    });
+
+    it('prefers direct OpenAI API before OpenRouter when Codex OAuth is absent', () => {
+        expect(
+            resolveManagedHermesModelRoute({
+                codexCredentialsAvailable: false,
+                codexModel: null,
+                explicitApiKey: null,
+                explicitBaseUrl: null,
+                explicitModel: null,
+                explicitProvider: null,
+                openAiApiKey: 'sk-openai',
+                openRouterApiKey: 'sk-or-openrouter',
+            })
+        ).toMatchObject({
+            baseUrl: 'https://api.openai.com/v1',
+            model: 'gpt-5.4-mini',
+            provider: 'openai',
+        });
+    });
+
+    it('uses OpenRouter when it is the only configured provider', () => {
+        expect(
+            resolveManagedHermesModelRoute({
+                codexCredentialsAvailable: false,
+                codexModel: null,
+                explicitApiKey: null,
+                explicitBaseUrl: null,
+                explicitModel: null,
+                explicitProvider: null,
+                openAiApiKey: null,
+                openRouterApiKey: 'sk-or-openrouter',
+            })
+        ).toMatchObject({
+            model: 'moonshotai/kimi-k2.5',
+            provider: 'openrouter',
+        });
     });
 
     it('writes Codex OAuth credentials into the Hermes auth store', async () => {

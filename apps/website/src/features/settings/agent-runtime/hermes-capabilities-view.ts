@@ -30,6 +30,7 @@ const capabilityCategories: Partial<Record<CapabilityId, CapabilityCategoryId>> 
     cortexWiki: 'knowledge',
     dashboardServer: 'runtimeCore',
     gateway: 'runtimeCore',
+    mnemosyneMemory: 'knowledge',
     models: 'extensions',
     skills: 'extensions',
 };
@@ -40,6 +41,7 @@ const capabilityDisplayOrder: CapabilityId[] = [
     'dashboardServer',
     'gateway',
     'cortexWiki',
+    'mnemosyneMemory',
     'models',
     'skills',
 ];
@@ -56,7 +58,7 @@ const requiredCapabilities = new Set<CapabilityId>([
     'skills',
 ]);
 
-const supportingCapabilities = new Set<CapabilityId>(['codexOAuth']);
+const supportingCapabilities = new Set<CapabilityId>(['codexOAuth', 'mnemosyneMemory']);
 
 export function getCapabilityLabel(capability: RuntimeCapability) {
     return capability.displayName ?? capability.capability;

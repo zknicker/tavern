@@ -73,7 +73,12 @@ describe('generated agent instructions', () => {
         expect(content).toContain('send one short preamble');
         expect(content).toContain('send a brief update');
         expect(content).toContain('## Delegation');
-        expect(content).toContain("Cortex is Tavern's durable knowledge store");
+        expect(content).toContain('## Memory');
+        expect(content).toContain('memory_recall');
+        expect(content).toContain('memory_remember');
+        expect(content).toContain('not a skill package');
+        expect(content).toContain('## Wiki (Cortex)');
+        expect(content).toContain("Cortex is Tavern's browsable knowledge wiki");
         expect(content).toContain('Tavern maintains the wiki automatically');
         expect(content).toContain('Never park wiki work on the user');
     });

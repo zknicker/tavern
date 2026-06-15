@@ -7,6 +7,7 @@ export const agentRuntimeCapabilitySchema = z.enum([
     'dashboardServer',
     'apiServer',
     'gateway',
+    'mnemosyneMemory',
     'models',
     'skills',
 ]);

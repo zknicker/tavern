@@ -1008,11 +1008,7 @@ function completeHermesTurn(
 function resolveTurnModelContext(): HermesModelContext {
     return {
         model: readConfigValue('TAVERN_HERMES_MODEL') ?? readConfigValue('CODEX_MODEL'),
-        provider:
-            readConfigValue('TAVERN_HERMES_PROVIDER') ??
-            (readConfigValue('OPENROUTER_API_KEY') && !readConfigValue('OPENAI_API_KEY')
-                ? 'openrouter'
-                : 'openai-codex'),
+        provider: readConfigValue('TAVERN_HERMES_PROVIDER'),
         usage: null,
     };
 }

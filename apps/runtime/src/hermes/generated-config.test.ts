@@ -58,6 +58,15 @@ describe('generated Hermes config composer', () => {
             ],
             memory: {
                 memory_enabled: false,
+                mnemosyne: {
+                    auto_sleep: true,
+                    ignore_patterns: [
+                        '^Traceback \\(most recent call last\\)',
+                        '^Error:',
+                        '^\\s+at ',
+                    ],
+                    sleep_threshold: 20,
+                },
                 provider: 'mnemosyne',
                 user_profile_enabled: false,
             },
@@ -82,6 +91,9 @@ describe('generated Hermes config composer', () => {
                 'model:',
                 '  default: old-model',
                 '  provider: old-provider',
+                'memory:',
+                '  memory_char_limit: 2200',
+                '  user_char_limit: 1375',
                 '',
             ].join('\n')
         );
@@ -104,8 +116,32 @@ describe('generated Hermes config composer', () => {
         expect(doc.getIn(['memory', 'provider'])).toBe('mnemosyne');
         expect(doc.getIn(['memory', 'memory_enabled'])).toBe(false);
         expect(doc.getIn(['memory', 'user_profile_enabled'])).toBe(false);
+        expect(doc.getIn(['memory', 'memory_char_limit'])).toBeUndefined();
+        expect(doc.getIn(['memory', 'user_char_limit'])).toBeUndefined();
+        expect(doc.getIn(['memory', 'mnemosyne', 'auto_sleep'])).toBe(true);
+        expect(doc.getIn(['memory', 'mnemosyne', 'sleep_threshold'])).toBe(20);
         expect(doc.has('fallback_providers')).toBe(false);
         expect(doc.has('timezone')).toBe(false);
+    });
+
+    it('omits the model route when Runtime has no runnable provider', async () => {
+        const configPath = await tempConfigPath();
+
+        await mergeHermesGeneratedConfig(configPath, {
+            connectors: emptyConnectors,
+            execution: emptyExecution,
+            model: {
+                apiKey: null,
+                baseUrl: null,
+                model: null,
+                provider: null,
+            },
+            permissions: null,
+        });
+
+        const doc = await readConfig(configPath);
+        expect(doc.has('model')).toBe(false);
+        expect(doc.getIn(['memory', 'provider'])).toBe('mnemosyne');
     });
 
     it('writes a custom provider base URL for local Hermes e2e runs', async () => {

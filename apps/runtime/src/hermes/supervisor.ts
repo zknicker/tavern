@@ -336,6 +336,10 @@ async function waitForHermesReady(port: number, child: ChildProcess) {
 
 async function applyManagedHermesModelConfig(client: ReturnType<typeof createLocalHermesClient>) {
     const config = await resolveManagedHermesModelConfig();
+    if (!(config.model && config.provider)) {
+        log.warn('Managed Hermes model config has no runnable default route');
+        return;
+    }
     await client
         .updateAgentModel('agt_hermes', {
             model: {

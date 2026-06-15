@@ -49,6 +49,7 @@ describe('Runtime capabilities store', () => {
             'cortexWiki',
             'dashboardServer',
             'gateway',
+            'mnemosyneMemory',
             'models',
             'skills',
         ]);

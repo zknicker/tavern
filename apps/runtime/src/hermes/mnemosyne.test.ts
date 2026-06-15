@@ -3,6 +3,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { buildMnemosyneInstallArgs, resolveHermesPythonPath } from './mnemosyne.ts';
+import { managedMnemosynePluginSource } from './mnemosyne-shim.ts';
 
 describe('managed Mnemosyne provisioning', () => {
     it('resolves Hermes Python from a venv bin executable', async () => {
@@ -73,6 +74,13 @@ describe('managed Mnemosyne provisioning', () => {
             '/runtime-assets/python/mnemosyne',
             'mnemosyne-hermes==0.1.5',
         ]);
+    });
+
+    it('aliases provider tool names to product memory names', () => {
+        expect(managedMnemosynePluginSource).toContain('PRODUCT_TOOL_PREFIX = "memory_"');
+        expect(managedMnemosynePluginSource).toContain('TOOL_PREFIX = "mnemosyne_"');
+        expect(managedMnemosynePluginSource).toContain('TavernMnemosyneMemoryProvider');
+        expect(managedMnemosynePluginSource).toContain('_to_provider_tool_name(tool_name)');
     });
 });
 

@@ -26,6 +26,7 @@ const capabilityLabels = {
     cortexWiki: 'Cortex Wiki',
     dashboardServer: 'Agent engine',
     gateway: 'Agent connection',
+    mnemosyneMemory: 'Assistant memory',
     models: 'Models',
     skills: 'Skills',
 } satisfies Record<RuntimeCapabilityId, string>;

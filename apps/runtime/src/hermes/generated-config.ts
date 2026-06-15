@@ -14,8 +14,8 @@ import { tavernMessengerPluginName } from './tavern-messenger-plugin';
 export interface HermesModelDomain {
     apiKey: string | null;
     baseUrl: null | string;
-    model: string;
-    provider: string;
+    model: null | string;
+    provider: null | string;
 }
 
 interface HermesModelRef {
@@ -91,6 +91,10 @@ export async function mergeHermesGeneratedConfig(
 type GeneratedConfigDocument = ReturnType<typeof parseDocument>;
 
 function applyModelDomain(doc: GeneratedConfigDocument, model: HermesModelDomain) {
+    if (!(model.model && model.provider)) {
+        doc.deleteIn(['model']);
+        return;
+    }
     doc.setIn(['model', 'default'], model.model);
     doc.setIn(['model', 'provider'], model.provider);
     if (model.baseUrl) {
@@ -199,10 +203,24 @@ function applyPermissionsDomain(
     }
 }
 
+export const managedMnemosyneConfig = {
+    autoSleep: true,
+    ignorePatterns: ['^Traceback \\(most recent call last\\)', '^Error:', '^\\s+at '],
+    sleepThreshold: 20,
+} as const;
+
 function applyMemoryDomain(doc: GeneratedConfigDocument) {
     doc.setIn(['memory', 'provider'], 'mnemosyne');
     doc.setIn(['memory', 'memory_enabled'], false);
     doc.setIn(['memory', 'user_profile_enabled'], false);
+    doc.deleteIn(['memory', 'memory_char_limit']);
+    doc.deleteIn(['memory', 'user_char_limit']);
+    doc.setIn(['memory', 'mnemosyne', 'auto_sleep'], managedMnemosyneConfig.autoSleep);
+    doc.setIn(['memory', 'mnemosyne', 'sleep_threshold'], managedMnemosyneConfig.sleepThreshold);
+    doc.setIn(
+        ['memory', 'mnemosyne', 'ignore_patterns'],
+        [...managedMnemosyneConfig.ignorePatterns]
+    );
 }
 
 function applyDisplayDomain(doc: GeneratedConfigDocument) {

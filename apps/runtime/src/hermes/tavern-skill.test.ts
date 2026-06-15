@@ -14,7 +14,10 @@ describe('managed tavern skill', () => {
         expect(skillPath).toBe(path.join(hermesHome, 'skills', 'tavern'));
         expect(skill).toContain('name: tavern');
         expect(skill).toContain('$TAVERN_RUNTIME_URL/api/chats');
-        expect(skill).toContain('/cron/deliveries');
+        expect(skill).not.toContain('/cron/deliveries');
+        expect(skill).not.toContain('## Automations');
+        expect(skill).not.toContain('## Assistant Memory');
+        expect(skill).not.toContain('memory_remember');
         expect(skill).toContain('Settings -> Connectors');
     });
 

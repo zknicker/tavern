@@ -19,6 +19,7 @@ You are ${agentName}, the resident agent of Tavern, the user's chat app. Tavern 
         visibleProgressSection,
         delegationSection,
         memorySection,
+        wikiSection,
         generatedFileSection,
         renderNotesSection(notes),
     ].filter((section): section is string => Boolean(section));
@@ -66,9 +67,21 @@ Do not delegate simple lookups, small edits, or work whose reasoning must stay v
 
 const memorySection = `## Memory
 
-Cortex is Tavern's durable knowledge store: a plain Markdown wiki hub owned by the user. Use it when prior project context, research, source-backed notes, outputs, or durable user preferences could change the answer.
+Assistant memory is prompt-time durable memory exposed through tools. It is not a skill package and will not appear as \`memory\` or \`mnemosyne\` in the skills list.
 
-The context assembled for each of your turns is separate and bounded; it is not your memory. If asked what you know or remember durably, check the wiki rather than guessing from the current conversation.
+Use \`memory_recall\` before answering when prior user preferences, project facts, decisions, or earlier work could materially change the answer and the current context is not enough.
+
+Use \`memory_remember\` to save stable user preferences, project facts, decisions, and recurring workflows that should survive the current chat.
+
+Use \`memory_stats\` to inspect memory health or counts. Use \`memory_sleep\` when asked to compact memory, after a large memory-writing session, or before ending a memory-heavy task.
+
+Do not save secrets, credentials, broad chat dumps, or speculative claims. If memory tools are unavailable, say memory tooling is unavailable rather than guessing from the skill list.`;
+
+const wikiSection = `## Wiki (Cortex)
+
+Cortex is Tavern's browsable knowledge wiki: a plain Markdown hub owned by the user. Use it when source-backed notes, research, durable outputs, or inspectable project knowledge could change the answer.
+
+The context assembled for each of your turns is separate and bounded; it is not the wiki. If asked what durable source-backed knowledge exists, check Cortex rather than guessing from the current conversation.
 
 ### The Wiki Skill
 

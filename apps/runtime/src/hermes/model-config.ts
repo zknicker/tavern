@@ -14,13 +14,28 @@ import { ensureManagedMnemosynePackage, ensureManagedMnemosynePlugin } from './m
 import { resolveConfiguredPermissionsDomain } from './permission-settings';
 import { ensureManagedTavernSkill } from './tavern-skill';
 
-interface HermesModelConfig extends HermesModelDomain {
+export interface HermesModelConfig extends HermesModelDomain {
     openAiApiKey: string | null;
     openRouterApiKey: string | null;
 }
 
+export const managedMnemosyneEnv = {
+    MNEMOSYNE_HOST_LLM_ENABLED: 'true',
+} as const;
+
 interface ManagedHermesModelConfigInput {
     hermesBinary?: string;
+}
+
+export interface ManagedHermesModelRouteInput {
+    codexCredentialsAvailable: boolean;
+    codexModel: null | string;
+    explicitApiKey: null | string;
+    explicitBaseUrl: null | string;
+    explicitModel: null | string;
+    explicitProvider: null | string;
+    openAiApiKey: null | string;
+    openRouterApiKey: null | string;
 }
 
 export async function resolveManagedHermesModelConfig(): Promise<HermesModelConfig> {
@@ -37,36 +52,74 @@ export async function resolveManagedHermesModelConfig(): Promise<HermesModelConf
     const explicitBaseUrl = readConfigValue('TAVERN_HERMES_BASE_URL');
     const explicitApiKey = readConfigValue('TAVERN_HERMES_API_KEY');
     const codexModel = readConfigValue('CODEX_MODEL');
+    const codexCredentials = await loadVaultBackedCodexCredentials().catch(() => null);
 
-    if (explicitProvider && explicitModel) {
+    return resolveManagedHermesModelRoute({
+        codexCredentialsAvailable: codexCredentials !== null,
+        codexModel,
+        explicitApiKey,
+        explicitBaseUrl,
+        explicitModel,
+        explicitProvider,
+        openAiApiKey,
+        openRouterApiKey,
+    });
+}
+
+export function resolveManagedHermesModelRoute(
+    input: ManagedHermesModelRouteInput
+): HermesModelConfig {
+    if (input.explicitProvider && input.explicitModel) {
         return {
-            apiKey: explicitApiKey,
-            baseUrl: explicitBaseUrl,
-            model: explicitModel,
-            openAiApiKey,
-            openRouterApiKey,
-            provider: explicitProvider,
+            apiKey: input.explicitApiKey,
+            baseUrl: input.explicitBaseUrl,
+            model: input.explicitModel,
+            openAiApiKey: input.openAiApiKey,
+            openRouterApiKey: input.openRouterApiKey,
+            provider: input.explicitProvider,
         };
     }
 
-    if (openRouterApiKey && !openAiApiKey) {
+    if (input.codexCredentialsAvailable) {
         return {
-            apiKey: explicitApiKey,
-            baseUrl: explicitBaseUrl,
-            model: explicitModel ?? 'moonshotai/kimi-k2.5',
-            openAiApiKey,
-            openRouterApiKey,
-            provider: explicitProvider ?? 'openrouter',
+            apiKey: input.explicitApiKey,
+            baseUrl: input.explicitBaseUrl,
+            model: input.explicitModel ?? input.codexModel ?? 'gpt-5.4-mini',
+            openAiApiKey: input.openAiApiKey,
+            openRouterApiKey: input.openRouterApiKey,
+            provider: input.explicitProvider ?? 'openai-codex',
+        };
+    }
+
+    if (input.openAiApiKey) {
+        return {
+            apiKey: input.explicitApiKey,
+            baseUrl: input.explicitBaseUrl ?? 'https://api.openai.com/v1',
+            model: input.explicitModel ?? input.codexModel ?? 'gpt-5.4-mini',
+            openAiApiKey: input.openAiApiKey,
+            openRouterApiKey: input.openRouterApiKey,
+            provider: input.explicitProvider ?? 'openai',
+        };
+    }
+
+    if (input.openRouterApiKey) {
+        return {
+            apiKey: input.explicitApiKey,
+            baseUrl: input.explicitBaseUrl,
+            model: input.explicitModel ?? 'moonshotai/kimi-k2.5',
+            openAiApiKey: input.openAiApiKey,
+            openRouterApiKey: input.openRouterApiKey,
+            provider: input.explicitProvider ?? 'openrouter',
         };
     }
 
     return {
-        apiKey: explicitApiKey,
-        baseUrl: explicitBaseUrl,
-        model: explicitModel ?? codexModel ?? 'gpt-5.4-mini',
-        openAiApiKey,
-        openRouterApiKey,
-        provider: explicitProvider ?? 'openai-codex',
+        apiKey: input.explicitApiKey,
+        baseUrl: input.explicitBaseUrl,
+        model: input.explicitModel ?? null,
+        openAiApiKey: input.openAiApiKey,
+        openRouterApiKey: input.openRouterApiKey,
+        provider: input.explicitProvider ?? null,
     };
 }
 
@@ -120,6 +173,10 @@ export async function mergeHermesEnvFile(
         }
     }
     for (const [key, value] of connectorEnvEntries) {
+        entries.set(key, value);
+    }
+
+    for (const [key, value] of Object.entries(managedMnemosyneEnv)) {
         entries.set(key, value);
     }
 
