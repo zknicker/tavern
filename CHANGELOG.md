@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file.
 
+## v1.4.12 - 2026-06-14
+
+App-only release. The Runtime floor stays at 1.4.9.
+
+- Improved chat image attachments so inline screenshots render as compact
+  thumbnails in the message surface instead of blank file frames.
+- Tightened chat transcript spacing between user messages, attachments, and
+  assistant replies while keeping hover metadata available.
+- Clarified the release docs for when app changes require a Runtime floor bump.
+
 ## v1.4.11 - 2026-06-14
 
 Compatible Runtime release. The Runtime floor stays at 1.4.9.
