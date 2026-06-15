@@ -1,8 +1,14 @@
 import { Dialog as DialogPrimitive } from '@base-ui/react/dialog';
-import { Cancel01Icon, ZoomInAreaIcon, ZoomOutAreaIcon } from '@hugeicons-pro/core-stroke-rounded';
+import {
+    Cancel01Icon,
+    Download01Icon,
+    MinusSignIcon,
+    PlusSignIcon,
+} from '@hugeicons-pro/core-stroke-rounded';
 import * as React from 'react';
 import { Dialog, DialogPortal, DialogTitle } from '../../components/ui/dialog.tsx';
 import { Icon } from '../../components/ui/icon.tsx';
+import { Button, buttonVariants } from '../../components/ui/primitives/button.tsx';
 import { cn } from '../../lib/utils.ts';
 
 interface ChatMessageImageAttachment {
@@ -20,6 +26,7 @@ export function ChatMessageImage({ attachment }: { attachment: ChatMessageImageA
     const width = attachment.width ?? 960;
     const height = attachment.height ?? 540;
     const isFitZoom = zoom === 1;
+    const zoomPercent = `${Math.round(zoom * 100)}%`;
 
     React.useEffect(() => {
         if (open) {
@@ -46,33 +53,53 @@ export function ChatMessageImage({ attachment }: { attachment: ChatMessageImageA
             </button>
             <Dialog onOpenChange={setOpen} open={open}>
                 <DialogPortal>
-                    <DialogPrimitive.Backdrop className="fixed inset-0 z-50 bg-black/72 backdrop-blur-md transition-[opacity,backdrop-filter] duration-200 ease-out data-ending-style:opacity-0 data-starting-style:opacity-0 data-ending-style:backdrop-blur-none data-starting-style:backdrop-blur-none" />
+                    <DialogPrimitive.Backdrop className="fixed inset-0 z-50 bg-black/76 backdrop-blur-md transition-[opacity,backdrop-filter] duration-200 ease-out data-ending-style:opacity-0 data-starting-style:opacity-0 data-ending-style:backdrop-blur-none data-starting-style:backdrop-blur-none" />
                     <DialogPrimitive.Popup className="fixed inset-0 z-50 flex min-h-dvh flex-col text-white outline-none transition-[opacity,scale] duration-200 ease-out will-change-transform data-ending-style:scale-96 data-starting-style:scale-96 data-ending-style:opacity-0 data-starting-style:opacity-0">
                         <DialogTitle className="sr-only">{attachment.filename}</DialogTitle>
-                        <div className="flex h-14 shrink-0 items-center gap-3 pr-3 pl-24">
+                        <div className="pointer-events-none absolute top-4 right-4 z-20 flex items-center gap-3">
+                            <a
+                                aria-label={`Download ${attachment.filename}`}
+                                className={cn(
+                                    buttonVariants({ size: 'icon-xl', variant: 'default' }),
+                                    imageViewerActionButtonClassName
+                                )}
+                                download={attachment.filename}
+                                href={dataUrl}
+                            >
+                                <Icon icon={Download01Icon} size={24} strokeWidth={2} />
+                                <span className="sr-only">Download {attachment.filename}</span>
+                            </a>
+                            <DialogPrimitive.Close
+                                aria-label="Close image viewer"
+                                render={
+                                    <Button
+                                        className={imageViewerActionButtonClassName}
+                                        size="icon-xl"
+                                        variant="default"
+                                    />
+                                }
+                            >
+                                <Icon icon={Cancel01Icon} size={24} strokeWidth={2} />
+                            </DialogPrimitive.Close>
+                        </div>
+                        <div className="flex h-14 shrink-0 items-center gap-3 pr-32 pl-24">
                             <p className="min-w-0 flex-1 truncate text-sm text-white/75">
                                 {attachment.filename}
                             </p>
-                            <ImageZoomControls
-                                isFitZoom={isFitZoom}
-                                onReset={() => setZoom(1)}
-                                onZoomIn={() => setZoom((value) => Math.min(4, value + 0.25))}
-                                onZoomOut={() => setZoom((value) => Math.max(1, value - 0.25))}
-                                zoom={zoom}
-                            />
-                            <DialogPrimitive.Close
-                                aria-label="Close"
-                                className="inline-flex size-9 shrink-0 items-center justify-center rounded-full text-white/75 hover:bg-white/10 hover:text-white"
-                            >
-                                <Icon icon={Cancel01Icon} size={20} />
-                            </DialogPrimitive.Close>
                         </div>
                         <div className="min-h-0 flex-1 overflow-auto px-6 pt-2 pb-8 md:px-12 md:pb-12">
-                            <div className="flex min-h-full min-w-full items-center justify-center">
+                            <div className="relative flex min-h-full min-w-full items-center justify-center">
+                                <button
+                                    aria-hidden="true"
+                                    className="absolute inset-0 cursor-zoom-out"
+                                    onClick={() => setOpen(false)}
+                                    tabIndex={-1}
+                                    type="button"
+                                />
                                 <img
                                     alt=""
                                     className={cn(
-                                        'rounded-md object-contain shadow-2xl shadow-black/50',
+                                        'relative z-10 cursor-default rounded-md object-contain shadow-2xl shadow-black/55',
                                         isFitZoom ? 'max-h-full max-w-full' : 'max-w-none'
                                     )}
                                     height={isFitZoom ? height : Math.round(height * zoom)}
@@ -81,6 +108,12 @@ export function ChatMessageImage({ attachment }: { attachment: ChatMessageImageA
                                 />
                             </div>
                         </div>
+                        <ImageZoomControls
+                            onZoomIn={() => setZoom((value) => Math.min(4, value + 0.25))}
+                            onZoomOut={() => setZoom((value) => Math.max(1, value - 0.25))}
+                            zoom={zoom}
+                            zoomLabel={zoomPercent}
+                        />
                     </DialogPrimitive.Popup>
                 </DialogPortal>
             </Dialog>
@@ -88,47 +121,42 @@ export function ChatMessageImage({ attachment }: { attachment: ChatMessageImageA
     );
 }
 
+const imageViewerActionButtonClassName =
+    'pointer-events-auto size-11 rounded-full border-white bg-white text-neutral-950 shadow-black/20 shadow-lg before:rounded-full hover:bg-white/90 focus-visible:ring-white/70 focus-visible:ring-offset-black/40 sm:size-11 dark:bg-white dark:text-neutral-950 dark:hover:bg-white/90 [&_svg]:opacity-100';
+
 function ImageZoomControls({
-    isFitZoom,
-    onReset,
     onZoomIn,
     onZoomOut,
     zoom,
+    zoomLabel,
 }: {
-    isFitZoom: boolean;
-    onReset: () => void;
     onZoomIn: () => void;
     onZoomOut: () => void;
     zoom: number;
+    zoomLabel: string;
 }) {
     return (
-        <div className="inset-ring-1 inset-ring-white/10 flex shrink-0 items-center gap-0.5 rounded-full bg-white/10 p-1 text-white/85 backdrop-blur-md">
+        <div className="absolute bottom-8 left-1/2 z-20 flex -translate-x-1/2 items-center rounded-full border border-white/15 bg-white text-neutral-950 shadow-black/20 shadow-lg">
             <button
                 aria-label="Zoom out"
-                className="inline-flex size-7 items-center justify-center rounded-full hover:bg-white/15 hover:text-white disabled:cursor-default disabled:opacity-30 disabled:hover:bg-transparent"
+                className="inline-flex size-10 items-center justify-center rounded-l-full hover:bg-neutral-100 disabled:cursor-default disabled:opacity-35 disabled:hover:bg-transparent"
                 disabled={zoom <= 1}
                 onClick={onZoomOut}
                 type="button"
             >
-                <Icon icon={ZoomOutAreaIcon} size={14} />
+                <Icon icon={MinusSignIcon} size={18} strokeWidth={2} />
             </button>
-            <button
-                aria-label={isFitZoom ? 'Fit to screen' : 'Reset zoom'}
-                className="inline-flex h-7 min-w-14 items-center justify-center rounded-full px-2 font-medium text-xs tabular-nums hover:bg-white/15 hover:text-white disabled:cursor-default disabled:hover:bg-transparent"
-                disabled={isFitZoom}
-                onClick={onReset}
-                type="button"
-            >
-                {isFitZoom ? 'Fit' : `${Math.round(zoom * 100)}%`}
-            </button>
+            <div className="min-w-16 border-neutral-200 border-x px-3 text-center font-medium text-sm tabular-nums">
+                {zoomLabel}
+            </div>
             <button
                 aria-label="Zoom in"
-                className="inline-flex size-7 items-center justify-center rounded-full hover:bg-white/15 hover:text-white disabled:cursor-default disabled:opacity-30 disabled:hover:bg-transparent"
+                className="inline-flex size-10 items-center justify-center rounded-r-full hover:bg-neutral-100 disabled:cursor-default disabled:opacity-35 disabled:hover:bg-transparent"
                 disabled={zoom >= 4}
                 onClick={onZoomIn}
                 type="button"
             >
-                <Icon icon={ZoomInAreaIcon} size={14} />
+                <Icon icon={PlusSignIcon} size={18} strokeWidth={2} />
             </button>
         </div>
     );

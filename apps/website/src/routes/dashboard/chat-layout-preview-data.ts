@@ -1,4 +1,5 @@
 import type { ChatLogOutput } from '../../lib/trpc.tsx';
+import { previewAttachmentPngBase64 } from './chat-layout-preview-attachment.ts';
 
 type ChatRows = NonNullable<ChatLogOutput>['rows'];
 type MessageRow = Extract<ChatRows[number], { kind: 'message' }>;
@@ -240,14 +241,13 @@ function userWithImage(sender: string, content: string): MessageRow {
             ...row.message,
             attachments: [
                 {
-                    dataBase64:
-                        'iVBORw0KGgoAAAANSUhEUgAAAAMAAAACCAYAAACddGYaAAAAEElEQVR42mP8z8AARLJgYAAAL6sCAd5MvA8AAAAASUVORK5CYII=',
+                    dataBase64: previewAttachmentPngBase64,
                     filename: 'release-notes.png',
-                    height: 540,
+                    height: 270,
                     mediaType: 'image/png',
-                    sizeBytes: 96_000,
+                    sizeBytes: 2022,
                     type: 'inline',
-                    width: 960,
+                    width: 480,
                 },
             ],
         },
