@@ -8,6 +8,7 @@ import {
 } from './agent-chat-detail.tsx';
 import { AgentPresenceIndicator } from './agent-presence-indicator.tsx';
 import { resolveDraftHandoffFrame } from './chat-draft-detail.tsx';
+import { getSteerableRunId } from './chat-steering.ts';
 import { ChatTimeline } from './chat-timeline.tsx';
 
 test('synced timeline does not replay entrance animation after optimistic draft handoff', () => {
@@ -257,4 +258,65 @@ test('active tool-only turns keep the composer in queue mode', () => {
             agentsPending: false,
         })
     ).toBe(true);
+});
+
+test('steering is available only before final reply text streams', () => {
+    const activeTurn = {
+        agentId: 'agent-1',
+        chatId: 'chat-1',
+        runId: 'run-1',
+        sessionKey: 'session-1',
+        startedAt: '2026-05-13T12:00:00.000Z',
+    };
+
+    expect(getSteerableRunId({ activeReply: null, activeTurn })).toBe('run-1');
+    expect(
+        getSteerableRunId({
+            activeReply: {
+                runId: 'run-1',
+                text: '',
+            },
+            activeTurn,
+        })
+    ).toBe('run-1');
+    expect(
+        getSteerableRunId({
+            activeReply: {
+                runId: 'run-1',
+                text: 'Canada is too broad.',
+            },
+            activeTurn,
+        })
+    ).toBeNull();
+    expect(
+        getSteerableRunId({
+            activeReply: {
+                runId: 'run-1',
+                text: '',
+            },
+            activeTurn,
+            rows: [
+                {
+                    actor: { id: 'agent-1', kind: 'agent' },
+                    connectsToNext: false,
+                    connectsToPrevious: false,
+                    id: 'act_run-1_message_1',
+                    isFirstInGroup: true,
+                    kind: 'message',
+                    message: {
+                        actor: { id: 'agent-1', kind: 'agent' },
+                        content: 'Canada is too broad.',
+                        id: 'act_run-1_message_1',
+                        metadata: { runtime: { runId: 'run-1' } },
+                        sender: 'agent-1',
+                        senderType: 'agent',
+                        sourceSessionId: null,
+                        sourceSessionKey: 'session-1',
+                        tavernAgentId: 'agent-1',
+                        timestamp: '2026-05-13T12:00:01.000Z',
+                    },
+                },
+            ],
+        })
+    ).toBeNull();
 });

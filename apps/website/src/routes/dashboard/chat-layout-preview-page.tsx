@@ -93,6 +93,7 @@ function ChatComposerQueuePreview({
     return (
         <PromptInput className="w-full" onSubmit={(event) => event.preventDefault()}>
             <ChatComposerQueuePanel
+                canSteerBlockedMessages={false}
                 isBlocked={isBlocked}
                 onEdit={noop}
                 onMove={(id, direction) =>

@@ -35,8 +35,9 @@ maps its controls onto managed Hermes surfaces:
 * active-turn queueing is Tavern App state until the queued draft is dispatched
   through Runtime or explicitly steered into the live turn
 * text-only queued steering calls Hermes Gateway `session.steer` for the active
-  live session; Runtime publishes `turn.steered` and records a durable
-  `runtimeNotice` activity
+  live session before final reply text starts streaming; Runtime records a
+  durable `runtimeNotice` activity with the steered text and publishes
+  `turn.steered`
 * queued drafts with attachments or a model override cannot use steering; their
   "send now" action promotes the draft, interrupts the active run, and lets the
   next normal send path stage attachments or apply model selection
@@ -93,17 +94,22 @@ the user chooses the action on each queued draft.
 
 Runtime steering is intentionally narrow:
 
-1. The app sends `chat.steer` with `chatId`, active `runId`, text `content`,
+1. The app offers steering only while the active turn has not begun streaming
+   final reply text. After text starts, the queued draft remains a normal draft
+   unless the user stops the active run.
+2. The app sends `chat.steer` with `chatId`, active `runId`, text `content`,
    and optional Tavern metadata.
-2. The server validates the chat's Runtime connection and posts to
+3. The server validates the chat's Runtime connection and posts to
    `/hermes/chats/{chatId}/turns/{runId}/steer`.
-3. Runtime finds the active managed Hermes turn, projects Tavern mention
+4. Runtime finds the active managed Hermes turn, projects Tavern mention
    metadata into Hermes-readable prompt text, and calls Gateway
    `session.steer`.
-4. Hermes returns accepted status when the text was queued for the live agent.
+5. Hermes returns accepted status when the text was queued for the live agent.
    Runtime then publishes `turn.steered`.
-5. Server event sync records that as `runtimeNotice` activity attached to the
-   active response.
+6. Runtime records a `runtimeNotice` activity attached to the active response.
+   The app projects that activity as a visible, user-styled steer row and does
+   not render a separate steering system notice. The projected row is not a
+   durable Tavern message.
 
 Steering never creates a Tavern user message. If the queued draft needs
 attachments, image bytes, or a model override, the app must keep it as a normal

@@ -397,6 +397,89 @@ test('listRuntimeChatRows maps Tavern API artifacts into chat timeline rows', as
     ]);
 });
 
+test('listRuntimeChatRows keeps response artifacts after producing activity', async () => {
+    await saveAgentRuntimeConnection({
+        baseUrl: 'http://runtime.test',
+        enabled: true,
+        id: 'runtime-1',
+        isActive: true,
+        lastCheckedAt: '2026-05-18T12:00:00.000Z',
+        lastError: null,
+        name: 'Runtime',
+    });
+
+    globalThis.fetch = (async (input, init) => {
+        const request = new Request(input, init);
+        const url = new URL(request.url);
+
+        if (url.pathname === '/api/chats/cht_1/timeline') {
+            return Response.json({
+                messages: [
+                    chatMessage({
+                        authorId: 'usr_owner',
+                        authorKind: 'user',
+                        authorLabel: 'You',
+                        content: 'Write the report.',
+                        id: 'msg_user',
+                        role: 'user',
+                        sequence: 1,
+                    }),
+                ],
+                activity: [
+                    responseActivity({
+                        detail: 'Generated report.md',
+                        id: 'act_tool_1',
+                        kind: 'tool_call',
+                        responseId: 'rsp_run_1',
+                        startedAt: '2026-05-18T12:00:02.000Z',
+                        title: 'Ran a command',
+                    }),
+                ],
+                artifacts: [
+                    {
+                        activity_id: 'act_tool_1',
+                        chat_id: 'cht_1',
+                        content_ref: 'file:///tmp/report.md',
+                        content_text: '# Report',
+                        created_at: '2026-05-18T12:00:03.000Z',
+                        id: 'art_report_1',
+                        kind: 'document',
+                        message_id: null,
+                        metadata: {},
+                        mime_type: 'text/markdown',
+                        response_id: 'rsp_run_1',
+                        title: 'Report',
+                        updated_at: '2026-05-18T12:00:03.000Z',
+                    },
+                ],
+                next_before_sequence: null,
+                total_messages: 0,
+                responses: [
+                    {
+                        chat_id: 'cht_1',
+                        completed_at: '2026-05-18T12:00:04.000Z',
+                        created_at: '2026-05-18T12:00:01.500Z',
+                        id: 'rsp_run_1',
+                        metadata: {},
+                        participant_id: 'agt_main',
+                        request_message_id: 'msg_user',
+                        response_message_id: null,
+                        status: 'completed',
+                        summary: null,
+                        updated_at: '2026-05-18T12:00:04.000Z',
+                    },
+                ],
+            });
+        }
+
+        throw new Error(`Unexpected Tavern API request: ${url.pathname}`);
+    }) as typeof fetch;
+
+    const rows = (await getRuntimeChatTimelinePage('cht_1'))?.rows ?? [];
+
+    expect(rows.map((row) => row.id)).toEqual(['msg_user', 'act_tool_1', 'art_report_1']);
+});
+
 test('listRuntimeChatRows maps runtime notice activity into system rows', async () => {
     await saveAgentRuntimeConnection({
         baseUrl: 'http://runtime.test',
@@ -478,6 +561,128 @@ test('listRuntimeChatRows maps runtime notice activity into system rows', async 
             timestamp: '2026-05-18T12:00:02.000Z',
         },
     ]);
+});
+
+test('listRuntimeChatRows places steers between surrounding activity and shows the steer text', async () => {
+    await saveAgentRuntimeConnection({
+        baseUrl: 'http://runtime.test',
+        enabled: true,
+        id: 'runtime-1',
+        isActive: true,
+        lastCheckedAt: '2026-05-18T12:00:00.000Z',
+        lastError: null,
+        name: 'Runtime',
+    });
+
+    globalThis.fetch = (async (input, init) => {
+        const request = new Request(input, init);
+        const url = new URL(request.url);
+
+        if (url.pathname === '/api/chats/cht_1/timeline') {
+            return Response.json({
+                messages: [
+                    chatMessage({
+                        authorId: 'usr_owner',
+                        authorKind: 'user',
+                        authorLabel: 'You',
+                        content: 'weather in manhattan',
+                        id: 'msg_user',
+                        role: 'user',
+                        sequence: 1,
+                    }),
+                ],
+                activity: [
+                    responseActivity({
+                        detail: 'curl wttr.in/Manhattan',
+                        id: 'act_run_1_tool_1',
+                        kind: 'tool_call',
+                        responseId: 'rsp_run_1',
+                        startedAt: '2026-05-18T12:00:02.000Z',
+                        title: 'Ran a command',
+                    }),
+                    responseActivity({
+                        detail: 'actually la',
+                        id: 'act_run_1_runtime_notice_steered',
+                        kind: 'custom',
+                        metadata: {
+                            runtime: {
+                                agentId: 'main',
+                                notice: {
+                                    detail: 'actually la',
+                                    id: 'runtime_notice_steered',
+                                    kind: 'status',
+                                    sessionId: null,
+                                    text: 'Steered active turn: actually la',
+                                    title: 'Steered active turn',
+                                },
+                                runId: 'run_1',
+                                sessionKey: 'session_1',
+                                source: 'hermes',
+                                startedAt: '2026-05-18T12:00:01.500Z',
+                            },
+                        },
+                        responseId: 'rsp_run_1',
+                        sequence: 2,
+                        startedAt: '2026-05-18T12:00:03.000Z',
+                        title: 'Steered active turn',
+                    }),
+                    responseActivity({
+                        detail: 'curl wttr.in/Los_Angeles',
+                        id: 'act_run_1_tool_2',
+                        kind: 'tool_call',
+                        responseId: 'rsp_run_1',
+                        sequence: 3,
+                        startedAt: '2026-05-18T12:00:04.000Z',
+                        title: 'Ran a command',
+                    }),
+                ],
+                artifacts: [],
+                next_before_sequence: null,
+                total_messages: 0,
+                responses: [
+                    {
+                        chat_id: 'cht_1',
+                        completed_at: null,
+                        created_at: '2026-05-18T12:00:01.500Z',
+                        id: 'rsp_run_1',
+                        metadata: {
+                            runtime: {
+                                agentId: 'main',
+                                runId: 'run_1',
+                                sessionKey: 'session_1',
+                                startedAt: '2026-05-18T12:00:01.500Z',
+                            },
+                        },
+                        participant_id: 'agt_main',
+                        request_message_id: 'msg_user',
+                        response_message_id: null,
+                        status: 'running',
+                        summary: null,
+                        updated_at: '2026-05-18T12:00:04.000Z',
+                    },
+                ],
+            });
+        }
+
+        throw new Error(`Unexpected Tavern API request: ${url.pathname}`);
+    }) as typeof fetch;
+
+    const rows = (await getRuntimeChatTimelinePage('cht_1'))?.rows ?? [];
+
+    expect(rows.map((row) => row.id)).toEqual([
+        'msg_user',
+        'act_run_1_tool_1',
+        'act_run_1_runtime_notice_steered_message',
+        'act_run_1_tool_2',
+    ]);
+    expect(rows[2]).toMatchObject({
+        kind: 'message',
+        message: {
+            content: 'actually la',
+            sender: 'You',
+            senderType: 'user',
+        },
+    });
 });
 
 test('listRuntimeChatRows preserves durable activity titles for tool rows', async () => {
@@ -942,6 +1147,8 @@ function responseActivity(input: {
     kind: 'custom' | 'message' | 'reasoning' | 'tool_call';
     metadata?: Record<string, unknown>;
     responseId: string;
+    sequence?: number;
+    startedAt?: string;
     status?: 'completed' | 'running';
     title: string;
 }) {
@@ -954,8 +1161,10 @@ function responseActivity(input: {
         kind: input.kind,
         metadata: input.metadata ?? {},
         response_id: input.responseId,
-        sequence: input.id.endsWith('_1') ? 1 : input.id.includes('reasoning') ? 2 : 3,
-        started_at: '2026-05-18T12:00:02.000Z',
+        sequence:
+            input.sequence ??
+            (input.id.endsWith('_1') ? 1 : input.id.includes('reasoning') ? 2 : 3),
+        started_at: input.startedAt ?? '2026-05-18T12:00:02.000Z',
         status: input.status ?? 'completed',
         summary: null,
         title: input.title,

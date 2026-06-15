@@ -4,6 +4,7 @@ import {
     isQueuedMessageSteerable,
     moveQueuedMessage,
     promoteQueuedMessage,
+    shouldInterruptActiveTurnForQueuedMessage,
 } from './chat-composer-queue.ts';
 import { getQueuedDragVisualIndex } from './chat-composer-queue-panel.tsx';
 
@@ -130,6 +131,32 @@ test('queued messages are steerable only when they can become text-only live inp
             modelRef: 'openai/gpt-5',
         })
     ).toBe(false);
+});
+
+test('text-only queued messages do not interrupt when steering is closed', () => {
+    expect(shouldInterruptActiveTurnForQueuedMessage(message('queued_text', 'send next'))).toBe(
+        false
+    );
+    expect(
+        shouldInterruptActiveTurnForQueuedMessage({
+            ...message('queued_attachment', 'send now'),
+            attachments: [
+                {
+                    dataBase64: 'aW1hZ2U=',
+                    filename: 'image.png',
+                    mediaType: 'image/png',
+                    sizeBytes: 5,
+                    type: 'inline',
+                },
+            ],
+        })
+    ).toBe(true);
+    expect(
+        shouldInterruptActiveTurnForQueuedMessage({
+            ...message('queued_model', 'send now'),
+            modelRef: 'openai/gpt-5',
+        })
+    ).toBe(true);
 });
 
 function message(id: string, content: string): ChatComposerQueuedMessage {

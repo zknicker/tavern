@@ -157,9 +157,6 @@ export async function applyObservedAgentRuntimeEvent(
             markTurnSessionActive(event.turn.sessionKey);
             emitObservedAgentRuntimeEvent(event);
             debugTurnEvent(event);
-            void recordSteeredTurnNotice(event, connection).catch((error) => {
-                console.warn('[tavern] failed to record Hermes steering notice', error);
-            });
             return;
         }
         case 'turn.completed':
@@ -227,122 +224,6 @@ function queueRuntimeSkillInventoryRefresh() {
     void enqueueRuntimeSkillInventoryRefresh().catch((error) => {
         console.warn('[tavern] failed to queue skills inventory refresh', error);
     });
-}
-
-async function recordSteeredTurnNotice(
-    event: Extract<AgentRuntimeEvent, { type: 'turn.steered' }>,
-    connection?: RuntimeConnectionRecord
-) {
-    if (!connection?.baseUrl) {
-        return;
-    }
-
-    const responseId = runtimeResponseId(event.turn.runId);
-    const activityId = runtimeActivityId(event.turn.runId, 'runtime_notice_steered');
-    const notice = {
-        detail: event.message ?? null,
-        id: 'runtime_notice_steered',
-        kind: 'status',
-        sessionId: null,
-        text: event.message ? `Steered active turn: ${event.message}` : 'Steered active turn.',
-        title: 'Steered active turn',
-    };
-    const metadata = {
-        runtime: {
-            agentId: event.turn.agentId,
-            notice,
-            runId: event.turn.runId,
-            sessionKey: event.turn.sessionKey,
-            source: 'hermes',
-            startedAt: event.turn.startedAt,
-        },
-    };
-    const responseInput = {
-        id: responseId,
-        metadata,
-        participant_id: agentParticipantId(event.turn.agentId),
-        request_message_id: event.requestMessageId ?? null,
-        status: 'running',
-        summary: null,
-    };
-    const activityInput = {
-        completed_at: event.timestamp,
-        detail: notice.detail,
-        id: activityId,
-        kind: 'custom',
-        metadata,
-        started_at: event.timestamp,
-        status: 'completed',
-        title: notice.title,
-    };
-
-    if (event.requestMessageId) {
-        await postRuntimeJson(
-            connection.baseUrl,
-            `/api/chats/${event.turn.chatId}/responses`,
-            responseInput
-        );
-    }
-
-    try {
-        await postRuntimeJson(
-            connection.baseUrl,
-            `/api/chats/${event.turn.chatId}/responses/${responseId}/activity`,
-            activityInput
-        );
-    } catch (error) {
-        if (event.requestMessageId) {
-            throw error;
-        }
-
-        await postRuntimeJson(
-            connection.baseUrl,
-            `/api/chats/${event.turn.chatId}/responses`,
-            responseInput
-        );
-        await postRuntimeJson(
-            connection.baseUrl,
-            `/api/chats/${event.turn.chatId}/responses/${responseId}/activity`,
-            activityInput
-        );
-    }
-    emitChatLogUpdated({ sessionKey: event.turn.sessionKey });
-}
-
-async function postRuntimeJson(baseUrl: string, path: string, body: Record<string, unknown>) {
-    const url = new URL(path, baseUrl);
-    const response = await fetch(url, {
-        body: JSON.stringify(body),
-        headers: {
-            'Content-Type': 'application/json',
-        },
-        method: 'POST',
-    });
-
-    if (!response.ok) {
-        throw new Error(`Runtime request failed: ${response.status} ${response.statusText}`);
-    }
-
-    return response.json();
-}
-
-function agentParticipantId(agentId: string) {
-    return agentId.startsWith('agt_') || agentId.startsWith('agent:')
-        ? agentId
-        : `agent:${agentId}`;
-}
-
-function runtimeResponseId(runId: string) {
-    return runId.startsWith('rsp_') ? runId : `rsp_${sanitizeRuntimeId(runId)}`;
-}
-
-function runtimeActivityId(runId: string, id: string) {
-    const activity = id.startsWith('act_') ? id.slice('act_'.length) : id;
-    return `act_${sanitizeRuntimeId(`${runId}_${activity}`)}`;
-}
-
-function sanitizeRuntimeId(id: string) {
-    return id.replace(/[^A-Za-z0-9_-]/gu, '_');
 }
 
 async function refreshRuntimeCapability(connection: RuntimeConnectionRecord) {

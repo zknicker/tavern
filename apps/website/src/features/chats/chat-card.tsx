@@ -7,6 +7,7 @@ import { getChatCardDomId } from './chat-card-dom-id.ts';
 import { ChatCardHeader } from './chat-card-header.tsx';
 import type { ChatListItem } from './chat-list-data.ts';
 import { ChatMessageComposer } from './chat-message-composer.tsx';
+import { getSteerableRunId } from './chat-steering.ts';
 import { ChatTimeline } from './chat-timeline.tsx';
 import { getChatTimelineFollowKey } from './chat-timeline-follow-key.ts';
 import { ChatTranscriptLoadingIndicator } from './chat-transcript-loading-indicator.tsx';
@@ -118,6 +119,11 @@ export function ChatCard({
                 chatId={chat.id}
                 isDisabled={chat.isDisabled}
                 isReplyActive={hasActiveTurn}
+                steerRunId={getSteerableRunId({
+                    activeReply: timeline.activeReply,
+                    activeTurn: timeline.activeTurn,
+                    rows,
+                })}
                 variant="compact"
             />
         </div>

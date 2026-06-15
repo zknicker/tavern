@@ -28,17 +28,31 @@ export function patchChatLogWithProgress(
 
     const sourceLog = normalizeChatLog(log);
 
-    const row = progressStepToChatRow(input);
-    const existingIndex = sourceLog.rows.findIndex((entry) => entry.id === row.id);
-    const rows =
-        existingIndex === -1
-            ? [...sourceLog.rows, row]
-            : sourceLog.rows.map((entry, index) =>
-                  index === existingIndex ? mergeProgressRows(entry, row) : entry
-              );
+    const rows = upsertProgressRows(sourceLog.rows, progressStepToChatRows(input));
 
     // Live progress only grows the loaded page. Progress rows are never
     // durable chat messages, so the message total is untouched.
+    return {
+        ...sourceLog,
+        rows: rows.sort(compareChatLogRows),
+    };
+}
+
+export function patchChatLogWithSteerNotice(
+    log: ChatLogInput | undefined,
+    input: {
+        content: string;
+        runId: string;
+        timestamp: string;
+    }
+): ChatLogOutput | undefined {
+    if (!log) {
+        return undefined;
+    }
+
+    const sourceLog = normalizeChatLog(log);
+    const rows = upsertRows(sourceLog.rows, steerNoticeToChatRows(input));
+
     return {
         ...sourceLog,
         rows: rows.sort(compareChatLogRows),
@@ -56,28 +70,143 @@ function normalizeChatLog(log: ChatLogInput): ChatLogPage {
     };
 }
 
-function progressStepToChatRow(input: {
+function steerNoticeToChatRows(input: {
+    content: string;
+    runId: string;
+    timestamp: string;
+}): MessageRow[] {
+    const content = input.content.trim();
+
+    if (!content) {
+        return [];
+    }
+
+    const text = `Steered active turn: ${content}`;
+    const messageId = `${steerNoticeActivityId(input.runId)}_message`;
+
+    return [
+        {
+            actor: { id: 'usr_tavern', kind: 'participant' },
+            connectsToNext: false,
+            connectsToPrevious: false,
+            id: messageId,
+            isFirstInGroup: true,
+            kind: 'message',
+            message: {
+                actor: { id: 'usr_tavern', kind: 'participant' },
+                content,
+                id: messageId,
+                metadata: {
+                    runtime: {
+                        notice: {
+                            detail: content,
+                            id: 'runtime_notice_steered',
+                            kind: 'status',
+                            sessionId: null,
+                            text,
+                            title: 'Steered active turn',
+                        },
+                        runId: input.runId,
+                        source: 'hermes',
+                    },
+                },
+                sender: 'You',
+                senderType: 'user',
+                sourceSessionId: null,
+                sourceSessionKey: '',
+                tavernAgentId: null,
+                timestamp: input.timestamp,
+            },
+            responseId: undefined,
+        },
+    ];
+}
+
+function upsertRows(current: readonly ChatLogRow[], nextRows: readonly ProgressRow[]) {
+    const rows = [...current];
+
+    for (const row of nextRows) {
+        const existingIndex = rows.findIndex((entry) => entry.id === row.id);
+
+        if (existingIndex === -1) {
+            rows.push(row);
+            continue;
+        }
+
+        rows[existingIndex] = row;
+    }
+
+    return rows;
+}
+
+function upsertProgressRows(current: readonly ChatLogRow[], nextRows: readonly ProgressRow[]) {
+    let rows = [...current];
+
+    for (const row of nextRows) {
+        const existingIndex = rows.findIndex((entry) => entry.id === row.id);
+
+        rows =
+            existingIndex === -1
+                ? [...rows, row]
+                : rows.map((entry, index) =>
+                      index === existingIndex ? mergeProgressRows(entry, row) : entry
+                  );
+    }
+
+    return rows;
+}
+
+function progressStepToNoticeRow(input: {
     step: ChatTurnProgressStep;
     timestamp: string;
     turn: ChatTurn;
-}): ProgressRow {
+}): NoticeRow {
+    return {
+        id: progressActivityId(input.turn.runId, input.step.id),
+        kind: 'system',
+        runtimeNotice: {
+            compactionCount: null,
+            detail: null,
+            kind: 'status',
+            sessionId: null,
+            text: input.step.detail ?? input.step.label,
+            title: input.step.label,
+        },
+        systemKind: 'runtimeNotice',
+        timestamp: input.timestamp,
+    };
+}
+
+function progressStepToChatRows(input: {
+    step: ChatTurnProgressStep;
+    timestamp: string;
+    turn: ChatTurn;
+}): ProgressRow[] {
+    if (input.step.kind === 'notice' && input.step.id.endsWith('runtime_notice_steered')) {
+        return steerNoticeToChatRows({
+            content: input.step.detail ?? '',
+            runId: input.turn.runId,
+            timestamp: input.timestamp,
+        });
+    }
+
     if (input.step.kind === 'message') {
-        return progressStepToMessageRow(input);
+        return [progressStepToMessageRow(input)];
     }
 
     if (input.step.kind === 'reasoning' || input.step.kind === 'plan') {
-        return progressStepToThinkingRow(input);
+        return [progressStepToThinkingRow(input)];
     }
 
     if (input.step.kind === 'notice') {
-        return progressStepToNoticeRow(input);
+        return [progressStepToNoticeRow(input)];
     }
 
     if (input.step.kind === 'worker') {
-        return progressStepToWorkerRow(input);
+        return [progressStepToWorkerRow(input)];
     }
 
-    return progressStepToToolRow(input);
+    return [progressStepToToolRow(input)];
 }
 
 function progressStepToMessageRow(input: {
@@ -172,31 +301,6 @@ function progressStepToToolRow(input: {
             status: input.step.status === 'failed' ? 'error' : null,
             summaryParts: target ? [target] : [],
         },
-    };
-}
-
-// Live placeholders until the durable rows land on the next chat log
-// refetch. Notice rows reuse the runtime-notice system row; worker rows
-// carry just enough of the worker shape for WorkerStep and live group
-// labels — identity facts the runtime did not send stay null.
-function progressStepToNoticeRow(input: {
-    step: ChatTurnProgressStep;
-    timestamp: string;
-    turn: ChatTurn;
-}): NoticeRow {
-    return {
-        id: progressActivityId(input.turn.runId, input.step.id),
-        kind: 'system',
-        runtimeNotice: {
-            compactionCount: null,
-            detail: null,
-            kind: 'status',
-            sessionId: null,
-            text: input.step.detail ?? input.step.label,
-            title: input.step.label,
-        },
-        systemKind: 'runtimeNotice',
-        timestamp: input.timestamp,
     };
 }
 
@@ -431,6 +535,10 @@ function progressActivityId(runId: string, stepId: string) {
     const scopedActivity = activity.startsWith(`${runId}_`) ? activity : `${runId}_${activity}`;
 
     return activityId(scopedActivity);
+}
+
+function steerNoticeActivityId(runId: string) {
+    return activityId(`${runId}_runtime_notice_steered`);
 }
 
 function stripActivityPrefix(id: string) {

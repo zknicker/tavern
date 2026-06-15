@@ -94,10 +94,14 @@ stays app-local until the final assistant message is persisted.
 `chat.stop` and `chat.steer` are turn-control mutations, not message writes.
 `chat.steer` accepts `chatId`, active `runId`, text `content`, and optional
 message metadata. It forwards text into the live agent turn and returns
-`steered: true` only after Runtime accepts the steer. Steering does not create a
-durable user message; accepted steers are represented as response activity.
-Messages with attachments or model overrides must use the normal message send
-path.
+`steered: true` only after Runtime accepts and records the steer. Steering does
+not create a durable user message; accepted steers are represented as response
+activity. Clients may project that activity as a visible user-style transcript
+row without rendering a separate system notice, but message totals and durable
+message search remain unchanged. Messages with attachments or model overrides
+must use the normal message send path. App clients should only offer steering
+before final reply text starts streaming; after that point an accepted engine
+steer may be too late to affect the answer.
 
 ## Messages
 

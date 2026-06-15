@@ -78,34 +78,8 @@ export async function getRuntimeChatTimelinePage(
     // page is the only one whose responses can carry them.
     const activeReply = isLatestPage ? activeReplyFromResponses(responses) : null;
     const failedTurn = isLatestPage ? failedTurnFromResponses(responses) : null;
-    const messageTimestampById = new Map(
-        messageRows
-            .filter(
-                (row): row is Extract<ChatLogPage['rows'][number], { kind: 'message' }> =>
-                    row.kind === 'message'
-            )
-            .map((row) => [row.id, row.message.timestamp])
-    );
-    const requestMessageIdByRowId = new Map<string, string>();
-
-    for (const entry of activity) {
-        const response = responsesById.get(entry.response_id);
-        if (response?.request_message_id) {
-            requestMessageIdByRowId.set(entry.id, response.request_message_id);
-        }
-    }
-
-    for (const artifact of artifacts) {
-        const response = artifact.response_id ? responsesById.get(artifact.response_id) : null;
-        if (response?.request_message_id) {
-            requestMessageIdByRowId.set(artifact.id, response.request_message_id);
-        }
-    }
-
     const sortedRows = rows.sort((left, right) => {
-        const timestampDelta =
-            rowTimestamp(left, { messageTimestampById, requestMessageIdByRowId }) -
-            rowTimestamp(right, { messageTimestampById, requestMessageIdByRowId });
+        const timestampDelta = rowTimestamp(left) - rowTimestamp(right);
 
         return timestampDelta || rowSortRank(left) - rowSortRank(right);
     });
@@ -261,6 +235,12 @@ function activityToChatRows(
     const runtimeNotice = runtimeNoticeFromActivity(activity);
 
     if (runtimeNotice) {
+        const steerMessage = steerMessageRowFromNotice(activity, runtimeNotice, response);
+
+        if (steerMessage) {
+            return [steerMessage];
+        }
+
         return [
             {
                 id: activity.id,
@@ -348,6 +328,53 @@ function activityToChatRows(
             toolCall: titledToolCall,
         },
     ];
+}
+
+function steerMessageRowFromNotice(
+    activity: TavernResponseActivity,
+    notice: NonNullable<ReturnType<typeof runtimeNoticeFromActivity>>,
+    response: TavernChatResponse | null
+): ChatLogPage['rows'][number] | null {
+    const runtime = readRecord(activity.metadata.runtime);
+    const noticeRecord = readRecord(runtime.notice);
+
+    if (noticeRecord.id !== 'runtime_notice_steered') {
+        return null;
+    }
+
+    const content = notice.detail?.trim();
+
+    if (!content) {
+        return null;
+    }
+
+    const actor = { id: 'usr_tavern', kind: 'participant' as const };
+    const id = `${activity.id}_message`;
+
+    return {
+        actor,
+        connectsToNext: false,
+        connectsToPrevious: false,
+        id,
+        isFirstInGroup: true,
+        kind: 'message' as const,
+        responseId: activity.response_id,
+        message: {
+            actor,
+            content,
+            id,
+            metadata: activity.metadata,
+            sender: 'You',
+            senderType: 'user' as const,
+            sourceSessionId: runtimeMetadataString(response, 'sessionId'),
+            sourceSessionKey:
+                readString(runtime.sessionKey) ??
+                runtimeMetadataString(response, 'sessionKey') ??
+                '',
+            tavernAgentId: null,
+            timestamp: activity.started_at,
+        },
+    };
 }
 
 function activityToMessageRows(
@@ -696,26 +723,15 @@ function runtimeMetadataString(
     return typeof value === 'string' ? value : null;
 }
 
-function rowTimestamp(
-    row: ChatLogPage['rows'][number],
-    context: {
-        messageTimestampById?: ReadonlyMap<string, string>;
-        requestMessageIdByRowId?: ReadonlyMap<string, string>;
-    } = {}
-) {
-    const requestMessageId = context.requestMessageIdByRowId?.get(row.id);
-    const requestMessageTimestamp = requestMessageId
-        ? context.messageTimestampById?.get(requestMessageId)
-        : null;
+function rowTimestamp(row: ChatLogPage['rows'][number]) {
     const timestamp =
-        requestMessageTimestamp ??
-        (row.kind === 'message'
+        row.kind === 'message'
             ? row.message.timestamp
             : row.kind === 'tool'
               ? (row.startedAt ?? row.completedAt)
               : row.kind === 'worker'
                 ? (row.startedAt ?? row.completedAt ?? row.worker.lastEventAt)
-                : row.timestamp);
+                : row.timestamp;
     const parsed = timestamp ? Date.parse(timestamp) : Number.NaN;
 
     return Number.isNaN(parsed) ? Number.MAX_SAFE_INTEGER : parsed;
@@ -723,6 +739,9 @@ function rowTimestamp(
 
 function rowSortRank(row: ChatLogPage['rows'][number]) {
     if (row.kind === 'message') {
+        if (isSteerMessageRow(row)) {
+            return 2;
+        }
         if (isActivityMessageRow(row)) {
             return 1;
         }
@@ -734,4 +753,8 @@ function rowSortRank(row: ChatLogPage['rows'][number]) {
 
 function isActivityMessageRow(row: Extract<ChatLogPage['rows'][number], { kind: 'message' }>) {
     return row.id.startsWith('act_');
+}
+
+function isSteerMessageRow(row: Extract<ChatLogPage['rows'][number], { kind: 'message' }>) {
+    return row.id.endsWith('_runtime_notice_steered_message');
 }

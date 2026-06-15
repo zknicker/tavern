@@ -42,6 +42,7 @@ import {
 import {
     type ChatComposerQueuedMessage,
     isQueuedMessageSteerable,
+    shouldInterruptActiveTurnForQueuedMessage,
     useChatComposerQueue,
 } from './chat-composer-queue.ts';
 import { ChatComposerQueuePanel } from './chat-composer-queue-panel.tsx';
@@ -66,6 +67,7 @@ export function ChatMessageComposer({
     contextFullness = null,
     isDisabled,
     isReplyActive,
+    steerRunId = null,
     variant = 'detail',
 }: {
     agentRuntimeSyncLabel?: string | null;
@@ -77,6 +79,7 @@ export function ChatMessageComposer({
     contextFullness?: ChatContextFullness | null;
     isDisabled: boolean;
     isReplyActive: boolean;
+    steerRunId?: string | null;
     variant?: ChatMessageComposerVariant;
 }) {
     const sendMessage = useChatSend();
@@ -214,7 +217,7 @@ export function ChatMessageComposer({
         }
 
         if (isSendBlocked || sendMessage.isPending) {
-            if (activeRunId && isQueuedMessageSteerable(entry)) {
+            if (steerRunId && isQueuedMessageSteerable(entry)) {
                 if (steerTurn.isPending) {
                     return;
                 }
@@ -224,7 +227,7 @@ export function ChatMessageComposer({
                         chatId,
                         content: entry.content,
                         metadata: entry.metadata,
-                        runId: activeRunId,
+                        runId: steerRunId,
                     },
                     {
                         onSuccess: (result) => {
@@ -238,7 +241,11 @@ export function ChatMessageComposer({
             }
 
             composerQueue.promote(id);
-            if (activeRunId && !stopTurn.isPending) {
+            if (
+                shouldInterruptActiveTurnForQueuedMessage(entry) &&
+                activeRunId &&
+                !stopTurn.isPending
+            ) {
                 stopTurn.mutate({
                     chatId,
                     runId: activeRunId,
@@ -380,6 +387,7 @@ export function ChatMessageComposer({
             surfaceClassName={isCompact ? 'rounded-2xl shadow-none' : undefined}
         >
             <ChatComposerQueuePanel
+                canSteerBlockedMessages={Boolean(steerRunId)}
                 isBlocked={isSendBlocked}
                 onEdit={handleEditQueuedMessage}
                 onMove={composerQueue.move}

@@ -18,6 +18,7 @@ import { buildChatListItem, type ChatListItem } from './chat-list-data.ts';
 import { ChatMessageComposer } from './chat-message-composer.tsx';
 import { getChatMessageLayout } from './chat-message-layout.ts';
 import { buildChatPath } from './chat-path.ts';
+import { getSteerableRunId } from './chat-steering.ts';
 
 const chatDetailLogLimit = 100;
 
@@ -229,6 +230,11 @@ function SyncedAgentChatDetail({
                         activeReply: timeline.activeReply,
                         activeTurn: timeline.activeTurn,
                         agentsPending: agentsQuery.isPending,
+                    })}
+                    steerRunId={getSteerableRunId({
+                        activeReply: timeline.activeReply,
+                        activeTurn: timeline.activeTurn,
+                        rows,
                     })}
                 />
             }

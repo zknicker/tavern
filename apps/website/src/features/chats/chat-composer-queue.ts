@@ -120,6 +120,10 @@ export function isQueuedMessageSteerable(entry: ChatComposerQueuedMessage) {
     );
 }
 
+export function shouldInterruptActiveTurnForQueuedMessage(entry: ChatComposerQueuedMessage) {
+    return !isQueuedMessageSteerable(entry);
+}
+
 function loadQueue(chatId: string): ChatComposerQueuedMessage[] {
     if (typeof window === 'undefined') {
         return [];

@@ -358,6 +358,30 @@ describe('Tavern Hermes channel relay', () => {
             'tighten the plan'
         );
         expect(listMessages('cht_1').messages.map((message) => message.id)).toEqual(['msg_first']);
+        expect(listResponses('cht_1').activity).toMatchObject([
+            {
+                detail: 'tighten the plan',
+                id: `act_${accepted.runId}_runtime_notice_steered`,
+                kind: 'custom',
+                metadata: {
+                    runtime: {
+                        messageId: 'msg_first',
+                        notice: {
+                            detail: 'tighten the plan',
+                            kind: 'status',
+                            text: 'Steered active turn: tighten the plan',
+                            title: 'Steered active turn',
+                        },
+                        runId: accepted.runId,
+                        sessionKey: 'session_1',
+                        source: 'hermes',
+                    },
+                },
+                response_id: `rsp_${accepted.runId}`,
+                status: 'completed',
+                title: 'Steered active turn',
+            },
+        ]);
 
         releaseTurn.resolve();
         await waitForHermesTurn();

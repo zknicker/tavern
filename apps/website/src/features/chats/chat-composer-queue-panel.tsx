@@ -13,6 +13,7 @@ const maxCollapsedPeekCount = 2;
 const dragRowStep = queuedCardHeight + queuedCardGap;
 
 export function ChatComposerQueuePanel({
+    canSteerBlockedMessages,
     className,
     isBlocked,
     onEdit,
@@ -22,6 +23,7 @@ export function ChatComposerQueuePanel({
     onReorder,
     queue,
 }: {
+    canSteerBlockedMessages: boolean;
     className?: string;
     isBlocked: boolean;
     onEdit: (id: string) => void;
@@ -236,6 +238,7 @@ export function ChatComposerQueuePanel({
                         {queue.map((entry, index) => (
                             <QueuedStackCard
                                 activeDragId={activeDragId}
+                                canSteerBlockedMessages={canSteerBlockedMessages}
                                 dragStartIndex={dragStartIndex}
                                 dragTargetIndex={dragTargetIndex}
                                 dragY={dragY}
@@ -272,6 +275,7 @@ export function ChatComposerQueuePanel({
 
 function QueuedStackCard({
     activeDragId,
+    canSteerBlockedMessages,
     dragStartIndex,
     dragTargetIndex,
     dragY,
@@ -288,6 +292,7 @@ function QueuedStackCard({
     touchDevice,
 }: {
     activeDragId: string | null;
+    canSteerBlockedMessages: boolean;
     dragStartIndex: number | null;
     dragTargetIndex: number | null;
     dragY: number;
@@ -420,7 +425,7 @@ function QueuedStackCard({
                     <Icon className="size-5" icon={Edit02Icon} />
                 </QueueIconButton>
                 <QueueIconButton
-                    label={queuedActionLabel({ entry, isBlocked })}
+                    label={queuedActionLabel({ canSteerBlockedMessages, entry, isBlocked })}
                     onClick={() => onPromote(entry.id)}
                 >
                     <Icon className="size-5" icon={ArrowUp02Icon} />
@@ -468,9 +473,11 @@ function attachmentSummary(attachments: readonly Record<string, unknown>[] | und
 }
 
 function queuedActionLabel({
+    canSteerBlockedMessages,
     entry,
     isBlocked,
 }: {
+    canSteerBlockedMessages: boolean;
     entry: ChatComposerQueuedMessage;
     isBlocked: boolean;
 }) {
@@ -478,9 +485,11 @@ function queuedActionLabel({
         return 'Send queued message now';
     }
 
-    return isQueuedMessageSteerable(entry)
-        ? 'Steer queued message now'
-        : 'Send queued message next';
+    if (isQueuedMessageSteerable(entry)) {
+        return canSteerBlockedMessages ? 'Steer queued message now' : 'Send queued message next';
+    }
+
+    return 'Send queued message now';
 }
 
 function QueueIconButton({

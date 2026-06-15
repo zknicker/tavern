@@ -34,6 +34,7 @@ interface ActiveHermesTurn {
     controller: AbortController;
     interrupted: boolean;
     requestMessageId: string;
+    responseId: string;
     runId: string;
     sessionId: string | null;
     sessionKey: string;
@@ -98,6 +99,7 @@ export async function runHermesTurn(input: {
         controller: new AbortController(),
         interrupted: false,
         requestMessageId: input.requestMessageId,
+        responseId: input.responseId,
         runId: input.runId,
         settleClarification: gatewayActivities.settleClarification,
         settleAllApprovals: false,
@@ -430,10 +432,12 @@ export async function steerHermesTurn(input: {
         return false;
     }
 
+    const timestamp = new Date().toISOString();
+    recordSteeredTurnNotice(activeTurn, input.content, timestamp);
     publishRuntimeEvent({
         message: input.content,
         requestMessageId: activeTurn.requestMessageId,
-        timestamp: new Date().toISOString(),
+        timestamp,
         turn: {
             agentId: activeTurn.agentId,
             chatId: activeTurn.chatId,
@@ -445,6 +449,39 @@ export async function steerHermesTurn(input: {
     });
 
     return true;
+}
+
+function recordSteeredTurnNotice(turn: ActiveHermesTurn, content: string, timestamp: string) {
+    const trimmedContent = content.trim();
+    const notice = {
+        detail: trimmedContent || null,
+        id: 'runtime_notice_steered',
+        kind: 'status',
+        sessionId: null,
+        text: trimmedContent ? `Steered active turn: ${trimmedContent}` : 'Steered active turn.',
+        title: 'Steered active turn',
+    };
+
+    upsertResponseActivity(turn.chatId, turn.responseId, {
+        completed_at: timestamp,
+        detail: notice.detail,
+        id: createActivityId(turn.runId, notice.id),
+        kind: 'custom',
+        metadata: {
+            runtime: {
+                agentId: turn.agentId,
+                messageId: turn.requestMessageId,
+                notice,
+                runId: turn.runId,
+                sessionKey: turn.sessionKey,
+                source: 'hermes',
+                startedAt: turn.startedAt,
+            },
+        },
+        started_at: timestamp,
+        status: 'completed',
+        title: notice.title,
+    });
 }
 
 // Answers a pending tool-approval prompt for the session's active turn by

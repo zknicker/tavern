@@ -445,7 +445,7 @@ test('applyObservedAgentRuntimeEvent does not sync history for live reply update
     });
 });
 
-test('applyObservedAgentRuntimeEvent records steered turns as runtime notices', async () => {
+test('applyObservedAgentRuntimeEvent observes steered turns without writing Runtime rows', async () => {
     await applyObservedAgentRuntimeEvent(
         {
             message: 'Use the smaller fix.',
@@ -480,39 +480,8 @@ test('applyObservedAgentRuntimeEvent records steered turns as runtime notices', 
         },
         type: 'turn.steered',
     });
-    expect(tavernApiRequests).toEqual([
-        expect.objectContaining({
-            body: expect.objectContaining({
-                id: 'rsp_run-1',
-                participant_id: 'agent:test',
-                request_message_id: 'msg_steer_1',
-                status: 'running',
-            }),
-            method: 'POST',
-            path: `/api/chats/${tavernChatId}/responses`,
-        }),
-        expect.objectContaining({
-            body: expect.objectContaining({
-                detail: 'Use the smaller fix.',
-                id: 'act_run-1_runtime_notice_steered',
-                kind: 'custom',
-                metadata: expect.objectContaining({
-                    runtime: expect.objectContaining({
-                        notice: expect.objectContaining({
-                            kind: 'status',
-                            text: 'Steered active turn: Use the smaller fix.',
-                            title: 'Steered active turn',
-                        }),
-                    }),
-                }),
-                status: 'completed',
-                title: 'Steered active turn',
-            }),
-            method: 'POST',
-            path: `/api/chats/${tavernChatId}/responses/rsp_run-1/activity`,
-        }),
-    ]);
-    expect(emitChatLogUpdated).toHaveBeenCalledWith({ sessionKey: 'session-1' });
+    expect(tavernApiRequests).toEqual([]);
+    expect(emitChatLogUpdated).not.toHaveBeenCalled();
 });
 
 test('applyObservedAgentRuntimeEvent defers invalidated session sync while a turn is active', async () => {
