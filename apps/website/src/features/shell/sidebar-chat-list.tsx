@@ -39,7 +39,6 @@ import {
 } from './sidebar-chat-actions.tsx';
 
 const sidebarChatLimit = 8;
-const archiveConfirmTimeoutMs = 2400;
 
 export function AppSidebarChatList() {
     const location = useLocation();
@@ -108,11 +107,6 @@ export function AppSidebarChatList() {
         },
         [archiveChat, location.pathname, navigate]
     );
-    const archiveConfirmation = useInlineDeleteConfirmation({
-        getKey: (chat: ChatListItem) => chat.id,
-        onConfirm: archiveSidebarChat,
-        timeoutMs: archiveConfirmTimeoutMs,
-    });
     const pinSidebarChat = React.useCallback(
         async (chat: ChatListItem, pinned: boolean) => {
             try {
@@ -137,8 +131,6 @@ export function AppSidebarChatList() {
                     <SidebarGroupContent>
                         <SidebarMenu>
                             {sidebarChats.pinnedChats.map((chat) => {
-                                const isConfirmingArchive =
-                                    archiveConfirmation.confirmingKey === chat.id;
                                 const isArchivePending =
                                     archiveChat.isPending &&
                                     archiveChat.variables?.chatId === chat.id;
@@ -148,15 +140,10 @@ export function AppSidebarChatList() {
                                         chat={chat}
                                         isActive={location.pathname === buildChatPath(chat.id)}
                                         isArchivePending={isArchivePending}
-                                        isConfirmingArchive={isConfirmingArchive}
                                         key={chat.id}
                                         onArchive={(selectedChat) => {
                                             void archiveSidebarChat(selectedChat);
                                         }}
-                                        onCommitInlineArchive={(selectedChat) => {
-                                            void archiveConfirmation.confirm(selectedChat);
-                                        }}
-                                        onConfirmArchive={() => archiveConfirmation.request(chat)}
                                         onEditSystemPrompt={(selectedChat) => {
                                             systemPrompt.reset();
                                             setEditingSystemPromptChat(selectedChat);
@@ -208,8 +195,6 @@ export function AppSidebarChatList() {
                             );
                         })}
                         {visibleRecentChats.map((chat) => {
-                            const isConfirmingArchive =
-                                archiveConfirmation.confirmingKey === chat.id;
                             const isArchivePending =
                                 archiveChat.isPending && archiveChat.variables?.chatId === chat.id;
 
@@ -218,15 +203,10 @@ export function AppSidebarChatList() {
                                     chat={chat}
                                     isActive={location.pathname === buildChatPath(chat.id)}
                                     isArchivePending={isArchivePending}
-                                    isConfirmingArchive={isConfirmingArchive}
                                     key={chat.id}
                                     onArchive={(selectedChat) => {
                                         void archiveSidebarChat(selectedChat);
                                     }}
-                                    onCommitInlineArchive={(selectedChat) => {
-                                        void archiveConfirmation.confirm(selectedChat);
-                                    }}
-                                    onConfirmArchive={() => archiveConfirmation.request(chat)}
                                     onEditSystemPrompt={(selectedChat) => {
                                         systemPrompt.reset();
                                         setEditingSystemPromptChat(selectedChat);
@@ -337,10 +317,7 @@ function SidebarRecentChatItem({
     chat,
     isActive,
     isArchivePending,
-    isConfirmingArchive,
     onArchive,
-    onCommitInlineArchive,
-    onConfirmArchive,
     onEditSystemPrompt,
     onPinChange,
     onRename,
@@ -348,10 +325,7 @@ function SidebarRecentChatItem({
     chat: ChatListItem;
     isActive: boolean;
     isArchivePending: boolean;
-    isConfirmingArchive: boolean;
     onArchive: (chat: ChatListItem) => void;
-    onCommitInlineArchive: (chat: ChatListItem) => void;
-    onConfirmArchive: () => void;
     onEditSystemPrompt: (chat: ChatListItem) => void;
     onPinChange: (chat: ChatListItem, pinned: boolean) => void;
     onRename: (chat: ChatListItem) => void;
@@ -372,30 +346,22 @@ function SidebarRecentChatItem({
             >
                 <SidebarMenuButton
                     className="font-normal group-focus-within/menu-item:bg-sidebar-accent group-focus-within/menu-item:text-sidebar-accent-foreground group-hover/menu-item:bg-sidebar-accent group-hover/menu-item:text-sidebar-accent-foreground"
-                    data-archive-confirm={isConfirmingArchive ? '' : undefined}
                     isActive={isActive}
                     render={<NavLink to={path} />}
                     tooltip={title}
                 >
                     <span className="flex min-w-0 flex-1 items-center gap-3">
                         <span className="min-w-0 flex-1 truncate">{title}</span>
-                        {isConfirmingArchive ? (
-                            <span aria-hidden="true" className="w-[52px] shrink-0" />
-                        ) : null}
                         <SidebarChatActivity chat={chat} hidden={hasActiveTurn} />
-                        {hasActiveTurn && !(isConfirmingArchive || isArchivePending) ? (
+                        {hasActiveTurn && !isArchivePending ? (
                             <span aria-hidden="true" className="w-6 shrink-0" />
                         ) : null}
                     </span>
                 </SidebarMenuButton>
-                <SidebarChatActiveTurnIndicator
-                    hidden={isConfirmingArchive || isArchivePending || !hasActiveTurn}
-                />
+                <SidebarChatActiveTurnIndicator hidden={isArchivePending || !hasActiveTurn} />
                 <SidebarChatArchiveAction
-                    confirm={isConfirmingArchive}
                     isPending={isArchivePending}
-                    onArchive={() => onCommitInlineArchive(chat)}
-                    onConfirm={onConfirmArchive}
+                    onArchive={() => onArchive(chat)}
                 />
             </SidebarChatContextMenu>
         </SidebarMenuItem>
@@ -430,15 +396,11 @@ function SidebarChatActiveTurnIndicator({ hidden }: { hidden: boolean }) {
 }
 
 function SidebarChatArchiveAction({
-    confirm,
     isPending,
     onArchive,
-    onConfirm,
 }: {
-    confirm: boolean;
     isPending: boolean;
     onArchive: () => void;
-    onConfirm: () => void;
 }) {
     const handleClick = (event: React.MouseEvent<HTMLButtonElement>) => {
         event.preventDefault();
@@ -448,33 +410,11 @@ function SidebarChatArchiveAction({
             return;
         }
 
-        if (confirm) {
-            onArchive();
-            return;
-        }
-
-        onConfirm();
+        onArchive();
     };
 
     const controlClassName =
         'absolute top-1/2 right-0.5 z-10 size-6 -translate-y-1/2 border-transparent bg-transparent text-sidebar-muted opacity-0 shadow-none hover:bg-transparent hover:text-sidebar-accent-foreground group-focus-within/menu-item:opacity-100 group-hover/menu-item:opacity-100 data-pressed:bg-transparent sm:size-6 [&_svg]:size-4 [&_svg]:opacity-100';
-
-    if (confirm) {
-        return (
-            <Button
-                aria-label="Confirm archive chat"
-                className="absolute top-1/2 right-1 z-10 -translate-y-1/2"
-                disabled={isPending}
-                loading={isPending}
-                onClick={handleClick}
-                size="xs"
-                title="Confirm archive chat"
-                variant="destructive-soft"
-            >
-                Confirm
-            </Button>
-        );
-    }
 
     return (
         <Button
@@ -498,50 +438,6 @@ export function formatSidebarActivityLabel(label: string) {
     }
 
     return label;
-}
-
-function useInlineDeleteConfirmation<TItem>({
-    getKey,
-    onConfirm,
-    timeoutMs,
-}: {
-    getKey: (item: TItem) => string;
-    onConfirm: (item: TItem) => Promise<void> | void;
-    timeoutMs: number;
-}) {
-    const [confirmingKey, setConfirmingKey] = React.useState<string | null>(null);
-
-    React.useEffect(() => {
-        if (!confirmingKey) {
-            return;
-        }
-
-        const timeout = window.setTimeout(() => setConfirmingKey(null), timeoutMs);
-
-        return () => window.clearTimeout(timeout);
-    }, [confirmingKey, timeoutMs]);
-
-    const request = React.useCallback(
-        (item: TItem) => {
-            setConfirmingKey(getKey(item));
-        },
-        [getKey]
-    );
-
-    const confirm = React.useCallback(
-        async (item: TItem) => {
-            if (confirmingKey !== getKey(item)) {
-                setConfirmingKey(getKey(item));
-                return;
-            }
-
-            setConfirmingKey(null);
-            await onConfirm(item);
-        },
-        [confirmingKey, getKey, onConfirm]
-    );
-
-    return { confirm, confirmingKey, request };
 }
 
 export function buildSidebarChatList(chats: ChatListItem[]) {

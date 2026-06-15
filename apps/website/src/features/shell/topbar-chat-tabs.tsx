@@ -5,15 +5,12 @@ import {
     BubbleChatIcon,
     BubbleChatTemporaryIcon,
     CancelCircleIcon,
-    Joystick04Icon,
     MoreHorizontalIcon,
     PlusSignIcon,
-    RubiksCubeIcon,
 } from '@hugeicons-pro/core-stroke-rounded';
 import * as React from 'react';
 import { NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { resolveTavernChatName } from '../../components/chats/chat-display.ts';
-import { TavernLogo } from '../../components/tavern-logo.tsx';
 import { Icon } from '../../components/ui/icon.tsx';
 import { Menu, MenuItem, MenuPopup, MenuTrigger } from '../../components/ui/menu.tsx';
 import { Button } from '../../components/ui/primitives/button.tsx';
@@ -45,6 +42,7 @@ import { cn } from '../../lib/utils.ts';
 import { buildChatList, type ChatListItem } from '../chats/chat-list-data.ts';
 import { buildChatPath, buildNewChatDraftPath } from '../chats/chat-path.ts';
 import { pinnedTabColorOptions } from './pinned-tab-options.ts';
+import { getRouteTabIcon, getRouteTabIconNode } from './route-tab-presentation.tsx';
 import {
     canRenameSidebarChat,
     getErrorMessage,
@@ -811,34 +809,6 @@ function getSelectedChat(value: string, chats: ChatListItem[]) {
     }
 
     return chats.find((chat) => chat.id === value) ?? null;
-}
-
-function getRouteTabIcon(tab: RouteTab) {
-    switch (tab) {
-        case 'cortex':
-            return RubiksCubeIcon;
-        case 'cron':
-        case 'overview':
-            return undefined;
-    }
-}
-
-function getRouteTabIconNode(tab: RouteTab) {
-    switch (tab) {
-        case 'cron':
-            return (
-                <Icon
-                    aria-hidden="true"
-                    className="size-5 shrink-0 opacity-70 transition-opacity duration-150 group-data-active:opacity-90"
-                    icon={Joystick04Icon}
-                    size={20}
-                />
-            );
-        case 'overview':
-            return <TavernLogo aria-hidden="true" className="size-5 shrink-0 opacity-70" />;
-        case 'cortex':
-            return undefined;
-    }
 }
 
 function hasLocalActiveTurn(state: Pick<ChatTimelineState, 'activeTurn'>) {

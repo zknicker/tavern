@@ -1,6 +1,3 @@
-import type { IconSvgElement } from '@hugeicons/react';
-import { Atom02Icon, Home09Icon, HourglassIcon } from '@hugeicons-pro/core-stroke-rounded';
-import { Icon } from '../../components/ui/icon.tsx';
 import {
     SidebarGroup,
     SidebarGroupContent,
@@ -15,12 +12,7 @@ import {
 } from '../../hooks/connections/use-capability.ts';
 import type { RouteTab } from '../../hooks/dashboard/use-route-tab.ts';
 import { routeTabs } from '../../hooks/dashboard/use-route-tab.ts';
-
-const tabIcons = {
-    overview: Home09Icon,
-    cron: HourglassIcon,
-    cortex: Atom02Icon,
-} satisfies Record<RouteTab, IconSvgElement>;
+import { RouteTabIcon } from './route-tab-presentation.tsx';
 
 interface AppSidebarNavProps {
     activeTab: RouteTab | null;
@@ -35,7 +27,6 @@ export function AppSidebarNav({ activeTab, onSelectTab }: AppSidebarNavProps) {
             <SidebarGroupContent>
                 <SidebarMenu>
                     {routeTabs.map((tab) => {
-                        const icon = tabIcons[tab.id];
                         const isActive = activeTab === tab.id;
                         const gate = capability(routeTabCapabilityRequirements[tab.id]);
                         const disabledReason = gate.healthy
@@ -53,14 +44,9 @@ export function AppSidebarNav({ activeTab, onSelectTab }: AppSidebarNavProps) {
                                             onSelectTab(tab.id);
                                         }
                                     }}
-                                    tooltip={disabledReason ?? tab.label}
+                                    tooltip={disabledReason ?? undefined}
                                 >
-                                    <Icon
-                                        aria-hidden="true"
-                                        className="shrink-0"
-                                        icon={icon}
-                                        size={18}
-                                    />
+                                    <RouteTabIcon className="size-4.5" tab={tab.id} />
                                     <span className="min-w-0 truncate">{tab.label}</span>
                                 </SidebarMenuButton>
                             </SidebarMenuItem>

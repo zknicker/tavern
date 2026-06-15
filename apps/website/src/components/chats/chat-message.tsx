@@ -65,8 +65,7 @@ const ChatMessage = forwardRef<HTMLDivElement, ChatMessageProps>(
                 {showMeta ? (
                     <div
                         className={cn(
-                            'pointer-events-none absolute top-full z-10 mt-1 flex select-none items-center gap-2 px-1 text-muted-foreground text-xs leading-none opacity-0 transition-opacity duration-150',
-                            isUser ? 'right-0' : 'left-0',
+                            'pointer-events-none flex select-none items-center gap-2 px-1 text-muted-foreground text-xs leading-none opacity-0 transition-opacity duration-150',
                             'group-hover:pointer-events-auto group-hover:opacity-100',
                             'group-has-focus-visible:pointer-events-auto group-has-focus-visible:opacity-100'
                         )}

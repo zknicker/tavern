@@ -73,6 +73,18 @@ test('assistant chat message prose keeps the live tail text-line height', () => 
     expect(user).toContain('py-2');
 });
 
+test('chat message meta row reserves flow height', () => {
+    const markup = renderToStaticMarkup(
+        <ChatMessage actions={<button type="button">Copy</button>} from="user" time="12:00">
+            Done
+        </ChatMessage>
+    );
+
+    expect(markup).toContain('opacity-0');
+    expect(markup).not.toContain('absolute');
+    expect(markup).not.toContain('top-full');
+});
+
 test('draft handoff waits while the accepted turn is still blank thinking', () => {
     expect(
         shouldReleaseDraftHandoff({

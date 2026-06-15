@@ -1,3 +1,4 @@
+import { ArrowLeft02Icon } from '@hugeicons-pro/core-stroke-rounded';
 import { NavLink } from 'react-router-dom';
 import { Icon } from '../../../components/ui/icon.tsx';
 import {
@@ -17,11 +18,34 @@ import { settingsNavItems, settingsNavSections } from './navigation.ts';
 
 const settingsNavItemsById = new Map(settingsNavItems.map((item) => [item.id, item]));
 
-export function SettingsSidebarNav() {
+export function SettingsSidebarNav({ onBackToApp }: { onBackToApp?: () => void }) {
     const capability = useCapability();
 
     return (
-        <aside className="flex min-h-0 w-[260px] shrink-0 flex-col border-border/60 border-r bg-transparent">
+        <>
+            {onBackToApp ? (
+                <SidebarGroup className="pt-2">
+                    <SidebarGroupContent>
+                        <SidebarMenu>
+                            <SidebarMenuItem>
+                                <SidebarMenuButton
+                                    className="text-sidebar-muted"
+                                    onClick={onBackToApp}
+                                    tooltip="Back to app"
+                                >
+                                    <Icon
+                                        aria-hidden="true"
+                                        className="shrink-0"
+                                        icon={ArrowLeft02Icon}
+                                        size={18}
+                                    />
+                                    <span className="min-w-0 truncate">Back to app</span>
+                                </SidebarMenuButton>
+                            </SidebarMenuItem>
+                        </SidebarMenu>
+                    </SidebarGroupContent>
+                </SidebarGroup>
+            ) : null}
             {settingsNavSections.map((section) => (
                 <SidebarGroup key={section.id}>
                     <SidebarGroupLabel>{section.label}</SidebarGroupLabel>
@@ -85,6 +109,6 @@ export function SettingsSidebarNav() {
                     </SidebarGroupContent>
                 </SidebarGroup>
             ))}
-        </aside>
+        </>
     );
 }

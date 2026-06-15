@@ -85,16 +85,20 @@ export function AppShellDragRegion({
  */
 export function AppShellTopbar({
     className,
+    nativeDragRegion = true,
     render,
     ...props
-}: useRender.ComponentProps<'header'>): React.ReactElement {
+}: useRender.ComponentProps<'header'> & {
+    nativeDragRegion?: boolean;
+}): React.ReactElement {
     const defaultProps = {
         className: cn(
             'app-shell-topbar pointer-events-auto absolute top-0 left-0 z-40 flex h-[var(--topbar-height)] w-full cursor-default select-none items-stretch',
+            nativeDragRegion ? null : 'no-drag',
             className
         ),
         'data-slot': 'app-shell-topbar',
-        'data-window-drag-region': '',
+        ...(nativeDragRegion ? { 'data-window-drag-region': '' } : {}),
     };
 
     return useRender({

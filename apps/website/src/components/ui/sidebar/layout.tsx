@@ -1,7 +1,7 @@
 'use client';
 
 import { PanelLeftIcon } from '@hugeicons-pro/core-solid-rounded';
-import type * as React from 'react';
+import * as React from 'react';
 import { cn } from '../../../lib/utils.ts';
 import { Drawer, DrawerPopup } from '../drawer.tsx';
 import { Icon } from '../icon.tsx';
@@ -101,11 +101,21 @@ export function Sidebar({
 }
 
 export function SidebarTrigger({
+    activateOnPointerDown = false,
     className,
     onClick,
+    onPointerDown,
     ...props
-}: React.ComponentProps<typeof Button>) {
+}: React.ComponentProps<typeof Button> & {
+    activateOnPointerDown?: boolean;
+}) {
     const { toggleSidebar } = useSidebar();
+    const pointerActivatedRef = React.useRef(false);
+    const clearPointerActivated = React.useCallback(() => {
+        window.setTimeout(() => {
+            pointerActivatedRef.current = false;
+        }, 0);
+    }, []);
 
     return (
         <Button
@@ -117,8 +127,31 @@ export function SidebarTrigger({
             data-slot="sidebar-trigger"
             onClick={(event) => {
                 onClick?.(event);
+                if (pointerActivatedRef.current) {
+                    pointerActivatedRef.current = false;
+                    return;
+                }
                 toggleSidebar();
             }}
+            onPointerCancel={clearPointerActivated}
+            onPointerDown={(event) => {
+                onPointerDown?.(event);
+
+                if (
+                    !activateOnPointerDown ||
+                    event.defaultPrevented ||
+                    event.button !== 0 ||
+                    event.pointerType === 'touch'
+                ) {
+                    return;
+                }
+
+                pointerActivatedRef.current = true;
+                event.preventDefault();
+                event.stopPropagation();
+                toggleSidebar();
+            }}
+            onPointerUp={clearPointerActivated}
             size="icon"
             variant="ghost"
             {...props}

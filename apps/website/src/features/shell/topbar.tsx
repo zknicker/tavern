@@ -1,8 +1,9 @@
 import { Setting07Icon } from '@hugeicons-pro/core-stroke-rounded';
 import { DesktopUpdateIndicator } from '../../components/desktop-update-indicator.tsx';
-import { AppShellTopbar } from '../../components/ui/app-shell.tsx';
+import { AppShellTopbar, AppShellTopbarSidebarSlot } from '../../components/ui/app-shell.tsx';
 import { Icon } from '../../components/ui/icon.tsx';
 import { Button } from '../../components/ui/primitives/button.tsx';
+import { SidebarTrigger } from '../../components/ui/sidebar.tsx';
 import type { RouteTab } from '../../hooks/dashboard/use-route-tab.ts';
 import { TopbarAllChatsMenuButton, TopbarChatTabs } from './topbar-chat-tabs.tsx';
 
@@ -45,6 +46,31 @@ export function AppTopbar({
                     <DesktopUpdateIndicator />
                 </div>
             </div>
+        </AppShellTopbar>
+    );
+}
+
+export function AppSidebarTopbar({ isExpanded }: { isExpanded: boolean }) {
+    const collapsedTopbarWidth = 'w-[calc(var(--traffic-light-inset)_+_2.75rem)]';
+    const collapsedTopbarSlotWidth =
+        'items-center pt-0 md:w-[calc(var(--traffic-light-inset)_+_2.75rem)]';
+
+    return (
+        <AppShellTopbar
+            className={isExpanded ? 'w-[var(--sidebar-width)]' : collapsedTopbarWidth}
+            nativeDragRegion={false}
+        >
+            <AppShellTopbarSidebarSlot
+                className={isExpanded ? 'items-center pt-0' : collapsedTopbarSlotWidth}
+            >
+                <div className="no-drag flex items-center gap-1">
+                    <SidebarTrigger
+                        activateOnPointerDown
+                        className="size-7 rounded-md"
+                        size="icon-sm"
+                    />
+                </div>
+            </AppShellTopbarSidebarSlot>
         </AppShellTopbar>
     );
 }

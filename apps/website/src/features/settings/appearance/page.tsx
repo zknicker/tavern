@@ -8,6 +8,7 @@ import { SettingsRow } from '../../../components/ui/settings-row.tsx';
 import { Switch } from '../../../components/ui/switch.tsx';
 import { useChatThinkingDisplayPreference } from '../../../hooks/chats/use-chat-thinking-display-preference.ts';
 import { useChatVirtualizationPreference } from '../../../hooks/chats/use-chat-virtualization-preference.ts';
+import { useAppLayoutPreference } from '../../../hooks/dashboard/use-app-layout-preference.ts';
 import { cn } from '../../../lib/utils.ts';
 
 const themeOptions: Array<{
@@ -23,6 +24,7 @@ const themeOptions: Array<{
 
 export function AppearanceSettings() {
     const { setTheme, theme } = useTheme();
+    const appLayout = useAppLayoutPreference();
     const chatThinkingDisplay = useChatThinkingDisplayPreference();
     const chatVirtualization = useChatVirtualizationPreference();
 
@@ -98,6 +100,26 @@ export function AppearanceSettings() {
                             </button>
                         );
                     })}
+                </div>
+            </div>
+
+            <div>
+                <BadgeDivider className="pb-3">App Layout</BadgeDivider>
+                <div className="overflow-hidden rounded-lg border border-border bg-card">
+                    <SettingsRow
+                        description="Use a persistent left sidebar for navigation and recent chats."
+                        title="Side navigation"
+                    >
+                        <div className="flex justify-start md:justify-end">
+                            <Switch
+                                aria-label="Side navigation"
+                                checked={appLayout.mode === 'sidebar'}
+                                onCheckedChange={(enabled) =>
+                                    appLayout.setMode(enabled ? 'sidebar' : 'tabs')
+                                }
+                            />
+                        </div>
+                    </SettingsRow>
                 </div>
             </div>
 

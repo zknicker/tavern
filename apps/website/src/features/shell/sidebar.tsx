@@ -17,6 +17,9 @@ import { AppSidebarNav } from './sidebar-nav.tsx';
 interface AppSidebarProps {
     activeTab: RouteTab | null;
     isSettingsRoute: boolean;
+    onBackToApp: () => void;
+    onMouseEnter?: () => void;
+    onMouseLeave?: () => void;
     onNavigateToSettings: () => void;
     onSelectTab: (tab: RouteTab) => void;
 }
@@ -24,17 +27,22 @@ interface AppSidebarProps {
 export function AppSidebar({
     activeTab,
     isSettingsRoute,
+    onBackToApp,
+    onMouseEnter,
+    onMouseLeave,
     onNavigateToSettings,
     onSelectTab,
 }: AppSidebarProps) {
     return (
         <Sidebar
             className="app-shell-sidebar border-sidebar-border bg-transparent pt-[calc(var(--topbar-height)-8px)] group-data-[side=left]:border-r-0 group-data-[side=right]:border-l-0"
-            collapsible="icon"
+            collapsible="offcanvas"
+            onMouseEnter={onMouseEnter}
+            onMouseLeave={onMouseLeave}
         >
             <SidebarContent>
                 {isSettingsRoute ? (
-                    <SettingsSidebarNav />
+                    <SettingsSidebarNav onBackToApp={onBackToApp} />
                 ) : (
                     <>
                         <AppSidebarNav activeTab={activeTab} onSelectTab={onSelectTab} />

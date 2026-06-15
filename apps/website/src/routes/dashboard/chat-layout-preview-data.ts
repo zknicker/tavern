@@ -1,6 +1,5 @@
 import type { ChatComposerQueuedMessage } from '../../features/chats/chat-composer-queue.ts';
 import type { ChatLogOutput } from '../../lib/trpc.tsx';
-import { previewAttachmentPngBase64 } from './chat-layout-preview-attachment.ts';
 
 type ChatRows = NonNullable<ChatLogOutput>['rows'];
 type MessageRow = Extract<ChatRows[number], { kind: 'message' }>;
@@ -29,10 +28,18 @@ export const chatLayoutPreviews = [
     {
         chat: chatActors({ agents: ['Atlas'], humans: ['You'] }),
         rows: rows([
-            userWithImage('You', 'Can you use this screenshot in the release notes?'),
-            agent('Atlas', 'Yes. The frame keeps it legible without blowing out the transcript.'),
+            userWithFile(
+                'You',
+                'hi dude, can you please fetch the weather in the 5 biggest us cities',
+                'weather-request.txt',
+                '/attachments/weather-request.txt'
+            ),
+            agent(
+                'Atlas',
+                'Yep — I can use the attached brief and keep the response compact for the preview.'
+            ),
         ]),
-        title: 'Image attachment',
+        title: 'Message + attachment',
     },
     {
         chat: chatActors({ agents: ['Atlas', 'Nova'], humans: ['You'] }),
@@ -284,7 +291,7 @@ function queuedMessage(
     };
 }
 
-function userWithImage(sender: string, content: string): MessageRow {
+function userWithFile(sender: string, content: string, filename: string, path: string): MessageRow {
     const row = user(sender, content);
 
     return {
@@ -293,13 +300,11 @@ function userWithImage(sender: string, content: string): MessageRow {
             ...row.message,
             attachments: [
                 {
-                    dataBase64: previewAttachmentPngBase64,
-                    filename: 'release-notes.png',
-                    height: 270,
-                    mediaType: 'image/png',
-                    sizeBytes: 2022,
-                    type: 'inline',
-                    width: 480,
+                    filename,
+                    mediaType: 'text/plain',
+                    path,
+                    sizeBytes: 184,
+                    type: 'file',
                 },
             ],
         },

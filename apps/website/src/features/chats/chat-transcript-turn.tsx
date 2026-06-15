@@ -46,10 +46,9 @@ import { RuntimeNoticeEntry } from './chat-transcript-system-step.tsx';
 import { useChatScrollControllerHandle } from './use-chat-scroll-controller.ts';
 import { useRevealedText } from './use-revealed-text.ts';
 
-const rowClassName = 'relative w-full px-3 pt-0.5 pb-1.5';
-const newTurnGapClassName = 'mt-1.5';
+const rowClassName = 'relative w-full px-3 py-1.5';
+const newTurnGapClassName = '';
 const hoverGroupClassName = 'group';
-const metadataGapClassName = 'pb-5';
 const agentPresenceSize = 32;
 const activePresenceVerbs = [
     'Adventuring',
@@ -288,13 +287,11 @@ function AgentTurn({
             size={agentPresenceSize}
         />
     ) : null;
-    const showHoverMeta = lastMessage !== null;
-
     return (
         <div
             className={cn(
                 rowClassName,
-                showIdentity ? newTurnGapClassName : followsRuntimeNotice ? 'mt-0' : 'mt-1'
+                showIdentity ? newTurnGapClassName : followsRuntimeNotice ? 'mt-0' : null
             )}
         >
             <div
@@ -318,22 +315,14 @@ function AgentTurn({
                             {displayName}
                         </div>
                     ) : null}
-                    <div
-                        className={cn(
-                            'relative min-w-0',
-                            // Keep the message hover affordance before the
-                            // presence row so the eyes sit below the whole
-                            // agent message surface, not between the text and
-                            // its metadata/actions.
-                            showHoverMeta && metadataGapClassName
-                        )}
-                    >
-                        <div className="flex min-w-0 flex-col gap-4">
+                    <div className="relative min-w-0">
+                        <div className="flex min-w-0 flex-col gap-2">
                             {visibleSegments.map((segment, index) => (
                                 <AgentTurnSegment
                                     chatId={chatId}
                                     currentSessionKey={currentSessionKey}
                                     key={segment.key}
+                                    lastMessage={lastMessage}
                                     segment={segment}
                                     turnActive={turnActive && index === visibleSegments.length - 1}
                                     turnCompletedAt={turnCompletedAt}
@@ -341,7 +330,6 @@ function AgentTurn({
                                 />
                             ))}
                         </div>
-                        {showHoverMeta ? <TranscriptHoverMeta message={lastMessage} /> : null}
                     </div>
                     {presence ? (
                         <AgentPresenceRow label={presenceTimingLabel} presence={presence} />
@@ -360,7 +348,7 @@ function AgentPresenceRow({
     presence: React.ReactNode;
 }) {
     return (
-        <div className="mt-2 flex h-8 min-w-0 items-center gap-2 overflow-visible text-muted-foreground/65 text-sm leading-5">
+        <div className="mt-3 flex h-8 min-w-0 items-center gap-2 overflow-visible text-muted-foreground/65 text-sm leading-5">
             {presence}
             {label ? (
                 <span className="thinking-indicator-text flex min-h-8 items-center truncate tabular-nums">
@@ -374,6 +362,7 @@ function AgentPresenceRow({
 function AgentTurnSegment({
     chatId,
     currentSessionKey,
+    lastMessage,
     segment,
     turnActive,
     turnCompletedAt,
@@ -381,6 +370,7 @@ function AgentTurnSegment({
 }: {
     chatId?: string;
     currentSessionKey?: string | null;
+    lastMessage: Extract<TranscriptRow, { kind: 'message' }>['message'] | null;
     segment: AgentItemSegment;
     turnActive: boolean;
     turnCompletedAt: string | null;
@@ -397,7 +387,12 @@ function AgentTurnSegment({
             turnStartedAt={turnStartedAt}
         />
     ) : (
-        <AgentTurnItem chatId={chatId} currentSessionKey={currentSessionKey} item={segment.item} />
+        <AgentTurnItem
+            chatId={chatId}
+            currentSessionKey={currentSessionKey}
+            item={segment.item}
+            lastMessage={lastMessage}
+        />
     );
 }
 
@@ -503,10 +498,12 @@ function AgentTurnItem({
     chatId,
     currentSessionKey,
     item,
+    lastMessage,
 }: {
     chatId?: string;
     currentSessionKey?: string | null;
     item: TranscriptItem;
+    lastMessage: Extract<TranscriptRow, { kind: 'message' }>['message'] | null;
 }) {
     if (item.kind === 'activeReply') {
         return <ActiveReplyText item={item} />;
@@ -525,6 +522,11 @@ function AgentTurnItem({
 
         return (
             <ChatMessage
+                actions={
+                    message.id === lastMessage?.id ? (
+                        <TranscriptMessageActions message={message} />
+                    ) : null
+                }
                 animateEnter={false}
                 attachments={
                     <ChatTranscriptMessageAttachments attachments={message.attachments ?? []} />
@@ -589,7 +591,7 @@ function AgentTurnFailure({
     const responseId = item.failure.responseId;
 
     return (
-        <p className="group/failure max-w-[34rem] text-sm leading-5" role="alert">
+        <p className="group/failure max-w-[34rem] pl-0.5 text-sm leading-5" role="alert">
             <span aria-hidden className="mr-2 inline-block size-2 rounded-full bg-error" />
             <span className="font-medium text-error-foreground">Response failed</span>
             <span className="text-muted-foreground"> · {item.failure.error}</span>
@@ -608,28 +610,6 @@ function AgentTurnFailure({
                 </button>
             ) : null}
         </p>
-    );
-}
-
-function TranscriptHoverMeta({
-    align = 'left',
-    message,
-}: {
-    align?: 'left' | 'right';
-    message: Extract<TranscriptRow, { kind: 'message' }>['message'];
-}) {
-    const actions = <TranscriptMessageActions message={message} />;
-
-    return (
-        <div
-            className={cn(
-                'pointer-events-none absolute bottom-0 z-10 flex h-5 items-center gap-2 whitespace-nowrap text-muted-foreground/75 text-xs leading-4 opacity-0 transition-opacity duration-150 group-hover:pointer-events-auto group-hover:opacity-100',
-                align === 'right' ? 'right-0 justify-end' : 'left-0'
-            )}
-        >
-            <span className="tabular-nums">{formatShortTime(message.timestamp)}</span>
-            {actions}
-        </div>
     );
 }
 

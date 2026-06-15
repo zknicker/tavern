@@ -90,7 +90,7 @@ export function WorkingLog({
                 // surrounding 16px block rhythm.
                 className={cn(
                     'w-full max-w-[34rem]',
-                    groupMode && 'relative -my-1.5',
+                    groupMode && 'relative -my-1.5 -ml-2 w-[calc(100%+0.5rem)]',
                     groupMode && animateEnter && 'chat-step-enter'
                 )}
                 onOpenChange={setOpen}
@@ -101,7 +101,7 @@ export function WorkingLog({
                 <ThinkingStepsHeader
                     className={
                         groupMode
-                            ? 'relative z-10 w-full py-1.5 pr-2 pl-3 font-normal text-muted-foreground/85 outline-none transition-none hover:bg-surface-1 hover:text-muted-foreground/85 focus-visible:bg-surface-1 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset'
+                            ? 'relative z-10 w-full py-1.5 pr-2 pl-3 font-normal text-muted-foreground/85 text-sm outline-none transition-none hover:bg-surface-1 hover:text-muted-foreground/85 focus-visible:bg-surface-1 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset'
                             : undefined
                     }
                     onFocus={groupMode ? rowHover.clearActiveItem : undefined}

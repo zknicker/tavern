@@ -717,6 +717,16 @@
         -webkit-app-region: no-drag;
     }
 
+    html.macos-electron .no-drag,
+    html.macos-electron .no-drag::before,
+    html.macos-electron .no-drag::after,
+    html.macos-electron .no-drag *,
+    html.macos-electron .no-drag *::before,
+    html.macos-electron .no-drag *::after {
+        app-region: no-drag;
+        -webkit-app-region: no-drag;
+    }
+
     .chrome-noise {
         background-image: radial-gradient(
             circle at 14px 14px,
@@ -739,6 +749,10 @@
         background: var(--app-chrome-fill);
     }
 
+    .app-shell[data-app-layout='sidebar'] {
+        background: var(--app-chrome-fill);
+    }
+
     .app-window-shell,
     .app-shell [data-slot='sidebar-container'].app-shell-sidebar,
     .app-shell [data-slot='sidebar-inner'] {
@@ -751,11 +765,96 @@
         -webkit-backdrop-filter: var(--app-chrome-backdrop);
     }
 
-    .app-shell:has([data-slot='sidebar'][data-state='collapsed']) .app-shell-topbar {
+    .app-shell-main[data-edge-to-edge='true'] {
+        margin: 0 !important;
+        border: 0 solid var(--content-card-border) !important;
+        border-left-width: 1px !important;
+        border-radius: var(--main-radius) 0 0 var(--main-radius) !important;
+    }
+
+    .app-shell-main-top-drag-fade {
+        pointer-events: auto;
+        position: absolute;
+        top: 0;
+        right: 0;
+        left: 0;
+        z-index: 35;
+        height: 48px;
+        background: linear-gradient(
+            to bottom,
+            color-mix(in srgb, var(--content-card) 76%, transparent) 0%,
+            color-mix(in srgb, var(--content-card) 38%, transparent) 48%,
+            color-mix(in srgb, var(--content-card) 10%, transparent) 78%,
+            transparent 100%
+        );
+        backdrop-filter: blur(0.6px);
+        -webkit-backdrop-filter: blur(0.6px);
+        -webkit-mask-image: linear-gradient(
+            to bottom,
+            black 0%,
+            rgb(0 0 0 / 0.88) 42%,
+            rgb(0 0 0 / 0.48) 72%,
+            transparent 100%
+        );
+        mask-image: linear-gradient(
+            to bottom,
+            black 0%,
+            rgb(0 0 0 / 0.88) 42%,
+            rgb(0 0 0 / 0.48) 72%,
+            transparent 100%
+        );
+    }
+
+    .app-shell:has([data-slot='sidebar'][data-state='collapsed'][data-collapsible='offcanvas'])
+        .app-shell-main-top-drag-fade {
+        left: calc(var(--traffic-light-inset) + 2.75rem);
+    }
+
+    [data-slot='sidebar-wrapper'][data-sidebar-preview-open='true']
+        [data-slot='sidebar'][data-state='collapsed'][data-collapsible='offcanvas']
+        [data-slot='sidebar-container'],
+    [data-slot='sidebar-wrapper']:has([data-slot='sidebar-container']:focus-within)
+        [data-slot='sidebar'][data-state='collapsed'][data-collapsible='offcanvas']
+        [data-slot='sidebar-container'] {
+        left: 0 !important;
+    }
+
+    [data-slot='sidebar'][data-collapsible='offcanvas'] [data-slot='sidebar-container'].app-shell-sidebar {
+        background: var(--app-chrome-fill) !important;
+        backdrop-filter: var(--app-chrome-backdrop);
+        -webkit-backdrop-filter: var(--app-chrome-backdrop);
+        border-right: 1px solid var(--sidebar-border) !important;
+    }
+
+    [data-slot='sidebar'][data-collapsible='offcanvas'] [data-slot='sidebar-inner'] {
+        background: transparent !important;
+    }
+
+    [data-slot='sidebar'][data-state='expanded'][data-collapsible='offcanvas']
+        [data-slot='sidebar-container'].app-shell-sidebar,
+    [data-slot='sidebar-wrapper'][data-sidebar-preview-open='true']
+        [data-slot='sidebar'][data-collapsible='offcanvas']
+        [data-slot='sidebar-container'].app-shell-sidebar {
+        box-shadow: 12px 0 28px -24px rgb(0 0 0 / 0.42) !important;
+    }
+
+    [data-slot='sidebar-wrapper'][data-sidebar-preview-open='true']
+        [data-slot='sidebar'][data-collapsible='offcanvas']
+        [data-slot='sidebar-container'].app-shell-sidebar,
+    [data-slot='sidebar-wrapper'][data-sidebar-preview-open='true']
+        [data-slot='sidebar'][data-collapsible='offcanvas']
+        [data-slot='sidebar-inner'] {
+        border-top-right-radius: var(--main-radius);
+        border-bottom-right-radius: var(--main-radius);
+    }
+
+    .app-shell:has([data-slot='sidebar'][data-state='collapsed'][data-collapsible='icon'])
+        .app-shell-topbar {
         width: var(--sidebar-width-icon);
     }
 
-    .app-shell:has([data-slot='sidebar'][data-state='collapsed']) .app-shell-topbar-sidebar-slot {
+    .app-shell:has([data-slot='sidebar'][data-state='collapsed'][data-collapsible='icon'])
+        .app-shell-topbar-sidebar-slot {
         width: var(--sidebar-width-icon);
     }
 
@@ -767,6 +866,16 @@
 
     html.macos-electron .app-shell {
         background: var(--app-chrome-native-fill);
+    }
+
+    html.macos-electron .app-shell[data-app-layout='sidebar'] {
+        background: var(--app-chrome-native-fill);
+    }
+
+    html.macos-electron
+        [data-slot='sidebar'][data-collapsible='offcanvas']
+        [data-slot='sidebar-container'].app-shell-sidebar {
+        background: var(--app-chrome-native-fill) !important;
     }
 
     .scrollbar-hidden {

@@ -66,7 +66,7 @@ export function ToolTimelineStep({
                             strokeWidth={1.5}
                         />
                     </span>
-                    <span className="flex min-w-0 flex-1 items-center text-meta leading-4">
+                    <span className="flex min-w-0 flex-1 items-center text-sm leading-5">
                         {label}
                     </span>
                 </DrawerTrigger>
