@@ -1,5 +1,10 @@
 import { normalizeActiveReply } from './chat-timeline-reply.ts';
 import { applyReplySnapshot, isSameTurnFailure } from './chat-timeline-snapshots.ts';
+import {
+    createOptimisticStopRow,
+    hasTurnStatusRow,
+    optimisticStopRowId,
+} from './chat-timeline-turn-status.ts';
 import type {
     ChatReplyUpdate,
     ChatTimeline,
@@ -139,6 +144,57 @@ function completeLiveProgressRows(
 
 function isTurnActivityRow(rowId: string, runId: string) {
     return rowId.startsWith(`act_${runId}_`) || rowId.startsWith(`act_${runId}-`);
+}
+
+export function optimisticallyStopTimelineTurn(
+    state: ChatTimelineState,
+    input: {
+        chatId: string;
+        runId: string;
+        stoppedAt: string;
+    }
+): ChatTimelineState {
+    if (hasTurnStatusRow(state.timeline, input.runId)) {
+        return state;
+    }
+
+    const activeTurn =
+        state.activeTurn?.runId === input.runId
+            ? state.activeTurn
+            : state.activeReply?.runId === input.runId
+              ? {
+                    agentId: state.activeReply.agentId,
+                    chatId: input.chatId,
+                    runId: state.activeReply.runId,
+                    sessionKey: state.activeReply.sessionKey,
+                    startedAt: state.activeReply.startedAt,
+                }
+              : null;
+
+    if (!activeTurn) {
+        return state;
+    }
+
+    return {
+        ...state,
+        timeline: [
+            ...state.timeline,
+            createOptimisticStopRow({
+                timestamp: input.stoppedAt,
+                turn: activeTurn,
+            }),
+        ],
+    };
+}
+
+export function removeOptimisticStoppedTurn(
+    state: ChatTimelineState,
+    input: { runId: string }
+): ChatTimelineState {
+    const optimisticId = optimisticStopRowId(input.runId);
+    const timeline = state.timeline.filter((row) => row.id !== optimisticId);
+
+    return timeline.length === state.timeline.length ? state : { ...state, timeline };
 }
 
 export function failTimelineTurn(

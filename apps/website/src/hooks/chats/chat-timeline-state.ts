@@ -9,6 +9,8 @@ export {
     completeTimelineTurn,
     dismissTimelineFailure,
     failTimelineTurn,
+    optimisticallyStopTimelineTurn,
+    removeOptimisticStoppedTurn,
     startTimelineTurn,
     updateTimelineReply,
 } from './chat-timeline-turns.ts';

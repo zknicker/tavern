@@ -87,6 +87,14 @@ export const commandRunSchema = z.object({
     status: z.enum(['completed', 'failed']),
 });
 
+export const turnStatusSchema = z.object({
+    agentId: z.string(),
+    runId: z.string(),
+    sessionKey: z.string(),
+    status: z.enum(['stopped']),
+    text: z.string(),
+});
+
 export const systemRowSchema = z.discriminatedUnion('systemKind', [
     z.object({
         accessEvent: sessionAccessEventSchema,
@@ -124,6 +132,14 @@ export const systemRowSchema = z.discriminatedUnion('systemKind', [
         runtimeNotice: runtimeNoticeSchema,
         systemKind: z.literal('runtimeNotice'),
         timestamp: z.string(),
+    }),
+    z.object({
+        id: z.string(),
+        kind: z.literal('system'),
+        responseId: z.string(),
+        systemKind: z.literal('turnStatus'),
+        timestamp: z.string(),
+        turnStatus: turnStatusSchema,
     }),
     z.object({
         id: z.string(),

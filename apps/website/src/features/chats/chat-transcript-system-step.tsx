@@ -1,6 +1,7 @@
 import type { HugeiconsIconProps } from '@hugeicons/react';
 import {
     BrainIcon,
+    Cancel01Icon,
     CompassIcon,
     DatabaseSyncIcon,
     InformationCircleIcon,
@@ -117,6 +118,8 @@ function getSystemBody({
             return null;
         case 'thinking':
             return null;
+        case 'turnStatus':
+            return null;
     }
 }
 
@@ -148,6 +151,11 @@ function getSystemSummary(row: Extract<TranscriptRow, { kind: 'system' }>): {
                 ...parseThinkingSummary(row.thinking.text),
                 icon: BrainIcon,
                 showIcon: false,
+            };
+        case 'turnStatus':
+            return {
+                icon: Cancel01Icon,
+                label: row.turnStatus.text,
             };
     }
 }

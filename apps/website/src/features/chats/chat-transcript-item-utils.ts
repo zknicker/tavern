@@ -73,6 +73,10 @@ export function isTranscriptActivityItem(item: TranscriptItem) {
         return false;
     }
 
+    if (item.kind === 'row' && item.row.kind === 'system' && item.row.systemKind === 'turnStatus') {
+        return false;
+    }
+
     return item.kind !== 'row' || (item.row.kind !== 'message' && !isAssistantNarrationItem(item));
 }
 

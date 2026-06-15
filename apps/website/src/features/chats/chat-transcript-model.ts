@@ -140,6 +140,10 @@ function getItemRunId(item: TranscriptItem) {
         }
     }
 
+    if (item.row.kind === 'system' && item.row.systemKind === 'turnStatus') {
+        return item.row.turnStatus.runId;
+    }
+
     // Tool, worker, and thinking rows carry no runtime metadata, but their
     // activity ids embed the run id. Without this, the turn id flips between
     // turn:<runId> and a row id whenever the live tail (the only other runId
@@ -177,7 +181,11 @@ function buildTranscriptItems(input: {
     // key, which restructures the turn (and replays animations) during the
     // completion handoff.
     const activeReply =
-        input.activeReply && !hasDurableReplyRow(input.rows, input.activeReply.runId)
+        input.activeReply &&
+        !(
+            hasDurableReplyRow(input.rows, input.activeReply.runId) ||
+            hasStoppedTurnRow(input.rows, input.activeReply.runId)
+        )
             ? input.activeReply
             : null;
     const items: TranscriptItem[] = input.rows.map((row) => {
@@ -211,6 +219,15 @@ function hasDurableReplyRow(rows: TranscriptRow[], runId: string) {
             row.message.senderType === 'agent' &&
             !row.id.startsWith('act_') &&
             getItemRunId({ kind: 'row', row }) === runId
+    );
+}
+
+function hasStoppedTurnRow(rows: TranscriptRow[], runId: string) {
+    return rows.some(
+        (row) =>
+            row.kind === 'system' &&
+            row.systemKind === 'turnStatus' &&
+            row.turnStatus.runId === runId
     );
 }
 
@@ -323,6 +340,10 @@ function getItemParticipant(item: TranscriptItem): 'agent' | 'system' | 'user' {
         return row.sessionKey?.trim() || row.actor?.kind === 'agent' ? 'agent' : 'system';
     }
 
+    if (row.systemKind === 'turnStatus') {
+        return 'agent';
+    }
+
     if (row.systemKind === 'runtimeNotice' || row.systemKind === 'commandRun') {
         return 'system';
     }
@@ -341,6 +362,10 @@ function getItemActor(item: TranscriptItem): TranscriptActor {
 
     if (item.kind === 'failure') {
         return { id: item.failure.turn.agentId, kind: 'agent' };
+    }
+
+    if (item.row.kind === 'system' && item.row.systemKind === 'turnStatus') {
+        return { id: item.row.turnStatus.agentId, kind: 'agent' };
     }
 
     if (item.row.kind !== 'system') {
@@ -420,6 +445,10 @@ export function getItemSessionKey(item: TranscriptItem) {
 
     if (row.kind === 'tool' || row.kind === 'worker') {
         return row.sessionKey;
+    }
+
+    if (row.systemKind === 'turnStatus') {
+        return row.turnStatus.sessionKey;
     }
 
     return null;

@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import type { TavernChatMessage, TavernChatResponse, TavernResponseActivity } from '@tavern/sdk';
 import {
+    cancelledResponseToChatRow,
     commandRunFromActivity,
     failedTurnFromResponses,
     visibleTimelineSources,
@@ -126,6 +127,43 @@ test('latest failed response returns a failed turn', () => {
     });
 });
 
+test('cancelled response maps to a stopped system row', () => {
+    const cancelled = response({
+        id: 'response-cancelled',
+        status: 'cancelled',
+        summary: 'Agent response stopped.',
+        updatedAt: '2026-06-08T12:01:00.000Z',
+    });
+
+    assert.deepEqual(cancelledResponseToChatRow(cancelled), [
+        {
+            id: 'response-cancelled:cancelled',
+            kind: 'system',
+            responseId: 'response-cancelled',
+            systemKind: 'turnStatus',
+            timestamp: '2026-06-08T12:01:00.000Z',
+            turnStatus: {
+                agentId: 'agt_hermes',
+                runId: 'response-cancelled',
+                sessionKey: 'response-cancelled',
+                status: 'stopped',
+                text: 'Agent response stopped.',
+            },
+        },
+    ]);
+});
+
+test('cancelled command response stays out of the stopped system row lane', () => {
+    const cancelledCommand = response({
+        id: 'response-cancelled-command',
+        metadata: { runtime: { source: 'command' } },
+        status: 'cancelled',
+        updatedAt: '2026-06-08T12:01:00.000Z',
+    });
+
+    assert.deepEqual(cancelledResponseToChatRow(cancelledCommand), []);
+});
+
 test('soft-deleted rows never reach the timeline', () => {
     const liveResponse = response({
         id: 'rsp_live',
@@ -200,6 +238,7 @@ function response(input: {
     metadata?: Record<string, unknown>;
     responseMessageId?: string;
     status: TavernChatResponse['status'];
+    summary?: string | null;
     updatedAt: string;
 }): TavernChatResponse {
     return {
@@ -212,7 +251,7 @@ function response(input: {
         request_message_id: 'message-user',
         response_message_id: input.responseMessageId ?? null,
         status: input.status,
-        summary: null,
+        summary: input.summary ?? null,
         updated_at: input.updatedAt,
     } as TavernChatResponse;
 }

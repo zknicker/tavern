@@ -72,7 +72,8 @@ export async function getRuntimeChatTimelinePage(
         activityToChatRows(entry, responsesById, finalReplyTextByRunId, agentNamesById)
     );
     const artifactRows = artifacts.map(artifactToChatRow);
-    const rows = [...messageRows, ...activityRows, ...artifactRows];
+    const turnStatusRows = responses.flatMap(cancelledResponseToChatRow);
+    const rows = [...messageRows, ...activityRows, ...artifactRows, ...turnStatusRows];
     // Active and failed turn states describe the newest history; the latest
     // page is the only one whose responses can carry them.
     const activeReply = isLatestPage ? activeReplyFromResponses(responses) : null;
@@ -161,6 +162,33 @@ function artifactToChatRow(artifact: TavernArtifact): ChatLogPage['rows'][number
         systemKind: 'artifact',
         timestamp: artifact.created_at,
     };
+}
+
+export function cancelledResponseToChatRow(response: TavernChatResponse): ChatLogPage['rows'] {
+    if (
+        response.status !== 'cancelled' ||
+        response.response_message_id ||
+        runtimeMetadataString(response, 'source') === 'command'
+    ) {
+        return [];
+    }
+
+    return [
+        {
+            id: `${response.id}:cancelled`,
+            kind: 'system' as const,
+            responseId: response.id,
+            systemKind: 'turnStatus' as const,
+            timestamp: response.completed_at ?? response.updated_at,
+            turnStatus: {
+                agentId: runtimeMetadataString(response, 'agentId') ?? response.participant_id,
+                runId: runtimeMetadataString(response, 'runId') ?? response.id,
+                sessionKey: runtimeMetadataString(response, 'sessionKey') ?? response.id,
+                status: 'stopped' as const,
+                text: response.summary?.trim() || 'Response stopped.',
+            },
+        },
+    ];
 }
 
 function messageToChatRows(

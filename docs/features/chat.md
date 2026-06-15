@@ -170,6 +170,9 @@ Stopping a live turn interrupts the managed engine session, keeps the session
 busy until the engine reports the interrupted turn settled, then clears the
 active response. The next user message starts only after that settlement, so the
 stopped request remains historical context instead of the current instruction.
+The cancelled response renders as a one-line stopped status row in the durable
+timeline. The app may show that stopped row optimistically as soon as the user
+requests a stop; if the stop request fails, the optimistic row is removed.
 
 When Hermes accepts an explicit mid-turn steer, Runtime records a
 `runtimeNotice` activity row. Tavern App renders it as a system row in the same

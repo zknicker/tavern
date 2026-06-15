@@ -9,6 +9,11 @@ import {
     mergeActiveReplySnapshot,
     normalizeActiveReply,
 } from './chat-timeline-reply.ts';
+import {
+    hasTurnStatusRow,
+    isOptimisticStopRow,
+    isTurnStatusRow,
+} from './chat-timeline-turn-status.ts';
 import type {
     ChatActiveReply,
     ChatTimeline,
@@ -44,7 +49,9 @@ export function applyLogSnapshot(
         hasTerminalReplyOrFailure({
             activeReply: state.activeReply,
             rows: snapshot.rows,
-        }) || snapshot.failedTurn !== null;
+        }) ||
+        snapshot.failedTurn !== null ||
+        hasTurnStatusRow(snapshot.rows, state.activeReply?.runId ?? state.activeTurn?.runId);
     const nextActiveReply = hasTerminalMessage ? null : state.activeReply;
     const nextActiveTurn = hasTerminalMessage ? null : state.activeTurn;
     const nextFailedTurn =
@@ -120,7 +127,8 @@ export function applyReplySnapshot(
         if (normalizedActiveReply !== null) {
             if (
                 state.failedTurn?.turn.runId === normalizedActiveReply.runId ||
-                hasLoggedTurnFailure(state.timeline, normalizedActiveReply.runId)
+                hasLoggedTurnFailure(state.timeline, normalizedActiveReply.runId) ||
+                hasTurnStatusRow(state.timeline, normalizedActiveReply.runId)
             ) {
                 return null;
             }
@@ -135,6 +143,9 @@ export function applyReplySnapshot(
         return hasAssistantReplyForActiveTurn(state.timeline, state.activeReply) ||
             Boolean(
                 state.activeReply && hasLoggedTurnFailure(state.timeline, state.activeReply.runId)
+            ) ||
+            Boolean(
+                state.activeReply && hasTurnStatusRow(state.timeline, state.activeReply.runId)
             ) ||
             state.failedTurn?.turn.runId === state.activeReply?.runId
             ? null
@@ -207,6 +218,7 @@ function retainLoadedHistory(input: {
     }
 
     const loggedIds = new Set<string>();
+    const loggedStoppedRunIds = stoppedRunIds(input.logged);
 
     for (const row of input.logged) {
         loggedIds.add(row.id);
@@ -221,6 +233,7 @@ function retainLoadedHistory(input: {
             !(
                 loggedIds.has(row.id) ||
                 (row.kind === 'message' && loggedIds.has(row.message.id)) ||
+                (isOptimisticStopRow(row) && loggedStoppedRunIds.has(row.turnStatus.runId)) ||
                 isLiveRunActivityRowId(row.id, input.liveRunIds)
             )
     );
@@ -242,8 +255,12 @@ function mergeActiveProgressRows(input: {
     runId?: string;
 }) {
     const loggedIds = new Set(input.loggedRows.map((row) => row.id));
+    const loggedStoppedRunIds = stoppedRunIds(input.loggedRows);
     const missingLiveRows = input.liveRows.filter(
-        (row) => isLiveProgressRow(row, input.runId) && !loggedIds.has(row.id)
+        (row) =>
+            (isOptimisticStopRow(row)
+                ? !loggedStoppedRunIds.has(row.turnStatus.runId)
+                : isLiveProgressRow(row, input.runId)) && !loggedIds.has(row.id)
     );
 
     if (missingLiveRows.length === 0) {
@@ -251,6 +268,10 @@ function mergeActiveProgressRows(input: {
     }
 
     return [...input.loggedRows, ...missingLiveRows].sort(compareTimelineRows);
+}
+
+function stoppedRunIds(rows: ChatTimeline) {
+    return new Set(rows.filter(isTurnStatusRow).map((row) => row.turnStatus.runId));
 }
 
 function isLiveProgressRow(row: ChatTimeline[number], runId?: string) {

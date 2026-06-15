@@ -103,6 +103,31 @@ test('buildTranscriptEntries renders active reply text after durable activity', 
     ).toEqual(['tool', 'activeReply']);
 });
 
+test('buildTranscriptEntries hides active reply when a stopped row is visible', () => {
+    const entries = buildTranscriptEntries({
+        activeReply: {
+            agentId: 'agent-1',
+            isThinking: false,
+            runId: 'run-1',
+            sessionKey: 'session-1',
+            startedAt: '2026-05-11T16:00:00.000Z',
+            text: 'Partial answer',
+        },
+        rows: [turnStatusRow('stop-1')],
+    });
+
+    expect(entries).toHaveLength(1);
+    expect(entries[0]).toMatchObject({ kind: 'turn', participant: 'agent' });
+
+    if (entries[0]?.kind !== 'turn') {
+        throw new Error('Expected agent turn entry.');
+    }
+
+    expect(entries[0].items.map((item) => (item.kind === 'row' ? item.row.id : item.kind))).toEqual(
+        ['stop-1']
+    );
+});
+
 test('buildTranscriptEntries keeps prior completed tool activity grouped during a later active turn', () => {
     const rows: ChatRow[] = [
         userMessage('user-1', 'Use the tool', false, false),
@@ -429,6 +454,23 @@ function runtimeNoticeRow(id: string): ChatRow {
         },
         systemKind: 'runtimeNotice',
         timestamp: '2026-05-11T16:00:01.500Z',
+    };
+}
+
+function turnStatusRow(id: string): ChatRow {
+    return {
+        id,
+        kind: 'system',
+        responseId: 'response-1',
+        systemKind: 'turnStatus',
+        timestamp: '2026-05-11T16:00:02.000Z',
+        turnStatus: {
+            agentId: 'agent-1',
+            runId: 'run-1',
+            sessionKey: 'session-1',
+            status: 'stopped',
+            text: 'Agent response stopped.',
+        },
     };
 }
 

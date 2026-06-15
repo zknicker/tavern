@@ -671,6 +671,31 @@ test('ChatTranscript renders runtime notices outside the work disclosure', () =>
     assert.doesNotMatch(markup, /Worked/);
 });
 
+test('ChatTranscript renders stopped turns as a muted system row', () => {
+    const markup = renderTranscript([
+        {
+            id: 'response-cancelled:cancelled',
+            kind: 'system',
+            responseId: 'response-cancelled',
+            systemKind: 'turnStatus',
+            timestamp: '2026-03-31T15:00:00.000Z',
+            turnStatus: {
+                agentId: 'tiny',
+                runId: 'run-cancelled',
+                sessionKey: 'agent:tiny:session-1',
+                status: 'stopped',
+                text: 'Agent response stopped.',
+            },
+        },
+    ]);
+
+    assert.match(markup, /Agent response stopped\./);
+    assert.match(markup, /rounded-full bg-error/);
+    assert.doesNotMatch(markup, /data-slot="drawer-trigger"/);
+    assert.doesNotMatch(markup, /Working/);
+    assert.doesNotMatch(markup, /Worked/);
+});
+
 test('ChatTranscript keeps completed presence eyes text-free after activity', () => {
     const markup = renderTranscript([
         {

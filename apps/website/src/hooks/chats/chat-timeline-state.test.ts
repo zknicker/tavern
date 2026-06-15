@@ -6,7 +6,9 @@ import {
     completeTimelineTurn,
     emptyTimelineState,
     failTimelineTurn,
+    optimisticallyStopTimelineTurn,
     patchTimelineProgress,
+    removeOptimisticStoppedTurn,
     startTimelineTurn,
     updateTimelineReply,
 } from './chat-timeline-state.ts';
@@ -18,6 +20,23 @@ const turn = {
     sessionKey: 'session-1',
     startedAt: '2026-04-21T16:08:42.000Z',
 };
+
+function stoppedRow() {
+    return {
+        id: 'response-1:cancelled',
+        kind: 'system' as const,
+        responseId: 'response-1',
+        systemKind: 'turnStatus' as const,
+        timestamp: '2026-04-21T16:08:45.000Z',
+        turnStatus: {
+            agentId: 'claw',
+            runId: 'run-1',
+            sessionKey: 'session-1',
+            status: 'stopped' as const,
+            text: 'Agent response stopped.',
+        },
+    };
+}
 
 test('startTimelineTurn creates blank active reply state', () => {
     const state = startTimelineTurn(emptyTimelineState(), turn);
@@ -149,6 +168,77 @@ test('applyLogSnapshot preserves live progress rows while the turn is active', (
 
     expect(next.timeline.map((row) => row.id)).toEqual(['act_run-1_tool_web']);
     expect(next.totalMessages).toBe(0);
+});
+
+test('optimisticallyStopTimelineTurn adds a local stopped row without dropping active state', () => {
+    const active = startTimelineTurn(emptyTimelineState(), turn);
+    const stopped = optimisticallyStopTimelineTurn(active, {
+        chatId: 'chat-1',
+        runId: 'run-1',
+        stoppedAt: '2026-04-21T16:08:44.000Z',
+    });
+
+    expect(stopped.activeReply?.runId).toBe('run-1');
+    expect(stopped.activeTurn?.runId).toBe('run-1');
+    expect(stopped.timeline).toMatchObject([
+        {
+            id: 'optimistic-stop:run-1',
+            kind: 'system',
+            systemKind: 'turnStatus',
+            turnStatus: {
+                agentId: 'claw',
+                runId: 'run-1',
+                sessionKey: 'session-1',
+                text: 'Agent response stopped.',
+            },
+        },
+    ]);
+});
+
+test('applyLogSnapshot preserves optimistic stopped rows until durable cancellation lands', () => {
+    const stopped = optimisticallyStopTimelineTurn(startTimelineTurn(emptyTimelineState(), turn), {
+        chatId: 'chat-1',
+        runId: 'run-1',
+        stoppedAt: '2026-04-21T16:08:44.000Z',
+    });
+    const next = applyLogSnapshot(stopped, {
+        limit: 100,
+        nextBeforeSequence: null,
+        rows: [],
+        totalMessages: 0,
+    });
+
+    expect(next.timeline.map((row) => row.id)).toEqual(['optimistic-stop:run-1']);
+});
+
+test('applyLogSnapshot replaces optimistic stopped rows with durable cancellation', () => {
+    const stopped = optimisticallyStopTimelineTurn(startTimelineTurn(emptyTimelineState(), turn), {
+        chatId: 'chat-1',
+        runId: 'run-1',
+        stoppedAt: '2026-04-21T16:08:44.000Z',
+    });
+    const next = applyLogSnapshot(stopped, {
+        limit: 100,
+        nextBeforeSequence: null,
+        rows: [stoppedRow()],
+        totalMessages: 1,
+    });
+
+    expect(next.activeReply).toBeNull();
+    expect(next.activeTurn).toBeNull();
+    expect(next.timeline.map((row) => row.id)).toEqual(['response-1:cancelled']);
+});
+
+test('removeOptimisticStoppedTurn removes only the local stopped row', () => {
+    const stopped = optimisticallyStopTimelineTurn(startTimelineTurn(emptyTimelineState(), turn), {
+        chatId: 'chat-1',
+        runId: 'run-1',
+        stoppedAt: '2026-04-21T16:08:44.000Z',
+    });
+    const next = removeOptimisticStoppedTurn(stopped, { runId: 'run-1' });
+
+    expect(next.timeline).toHaveLength(0);
+    expect(next.activeReply?.runId).toBe('run-1');
 });
 
 test('patchTimelineProgress updates the same preamble and Hermes tool rows through completion', () => {

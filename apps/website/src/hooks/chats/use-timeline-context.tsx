@@ -14,7 +14,9 @@ import {
     dismissTimelineFailure,
     emptyTimelineState,
     failTimelineTurn,
+    optimisticallyStopTimelineTurn,
     patchTimelineProgress,
+    removeOptimisticStoppedTurn,
     startTimelineTurn,
     updateTimelineReply,
 } from './chat-timeline-state.ts';
@@ -24,11 +26,13 @@ interface TimelineActionsValue {
     completeTurn: (input: { chatId: string; completedAt: string; turn: ChatTurn }) => void;
     dismissFailure: (input: { chatId: string; responseId: string }) => void;
     failTurn: (input: { chatId: string; error: string; turn: ChatTurn }) => void;
+    optimisticallyStopTurn: (input: { chatId: string; runId: string }) => void;
     patchProgress: (input: {
         step: ChatTurnProgressStep;
         timestamp: string;
         turn: ChatTurn;
     }) => void;
+    removeOptimisticStop: (input: { chatId: string; runId: string }) => void;
     setLog: (chatId: string, log: ChatLogOutput | undefined) => void;
     setReply: (chatId: string, activeReply: ChatActiveReply | null) => void;
     startTurn: (turn: ChatTurn) => void;
@@ -109,6 +113,26 @@ export function TimelineContextProvider({ children }: PropsWithChildren) {
         );
     }, []);
 
+    const optimisticallyStopTurn = React.useCallback((input: { chatId: string; runId: string }) => {
+        setTimelineStates((current) =>
+            updateTimelineState(current, input.chatId, (state) =>
+                optimisticallyStopTimelineTurn(state, {
+                    chatId: input.chatId,
+                    runId: input.runId,
+                    stoppedAt: new Date().toISOString(),
+                })
+            )
+        );
+    }, []);
+
+    const removeOptimisticStop = React.useCallback((input: { chatId: string; runId: string }) => {
+        setTimelineStates((current) =>
+            updateTimelineState(current, input.chatId, (state) =>
+                removeOptimisticStoppedTurn(state, { runId: input.runId })
+            )
+        );
+    }, []);
+
     const completeTurn = React.useCallback(
         (input: { chatId: string; completedAt: string; turn: ChatTurn }) => {
             setTimelineStates((current) =>
@@ -151,7 +175,9 @@ export function TimelineContextProvider({ children }: PropsWithChildren) {
             completeTurn,
             dismissFailure,
             failTurn,
+            optimisticallyStopTurn,
             patchProgress,
+            removeOptimisticStop,
             setLog,
             setReply,
             startTurn,
@@ -162,7 +188,9 @@ export function TimelineContextProvider({ children }: PropsWithChildren) {
             completeTurn,
             dismissFailure,
             failTurn,
+            optimisticallyStopTurn,
             patchProgress,
+            removeOptimisticStop,
             setLog,
             setReply,
             startTurn,

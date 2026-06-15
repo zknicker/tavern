@@ -14,6 +14,7 @@ import {
     PromptInputSubmit,
     PromptInputTools,
 } from '../../components/ui/prompt-input.tsx';
+import { Spinner } from '../../components/ui/spinner.tsx';
 import { useChatSend } from '../../hooks/chats/use-chat-send.ts';
 import { useChatSteer } from '../../hooks/chats/use-chat-steer.ts';
 import { useChatStop } from '../../hooks/chats/use-chat-stop.ts';
@@ -440,7 +441,7 @@ export function ChatMessageComposer({
                     ) : null}
                     {activeRunId ? (
                         <PromptInputButton
-                            aria-label="Stop response"
+                            aria-label={stopTurn.isPending ? 'Stopping response' : 'Stop response'}
                             disabled={stopTurn.isPending}
                             onClick={() =>
                                 stopTurn.mutate({
@@ -449,11 +450,15 @@ export function ChatMessageComposer({
                                 })
                             }
                             size="icon-tight"
-                            tooltip="Stop response"
+                            tooltip={stopTurn.isPending ? 'Stopping response' : 'Stop response'}
                             type="button"
                             variant="secondary"
                         >
-                            <Icon className="size-4" icon={Cancel01Icon} />
+                            {stopTurn.isPending ? (
+                                <Spinner className="size-4 text-muted-foreground" />
+                            ) : (
+                                <Icon className="size-4" icon={Cancel01Icon} />
+                            )}
                         </PromptInputButton>
                     ) : null}
                     <PromptInputSubmit

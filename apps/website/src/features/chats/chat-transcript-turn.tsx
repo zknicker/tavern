@@ -543,6 +543,10 @@ function AgentTurnItem({
         return <AgentTurnFailure chatId={chatId} item={item} />;
     }
 
+    if (isTurnStatusItem(item)) {
+        return <AgentTurnStatus item={item} />;
+    }
+
     return (
         <ChatTranscriptActivity chatId={chatId} currentSessionKey={currentSessionKey} item={item} />
     );
@@ -610,6 +614,32 @@ function AgentTurnFailure({
                 </button>
             ) : null}
         </p>
+    );
+}
+
+function AgentTurnStatus({
+    item,
+}: {
+    item: Extract<TranscriptItem, { kind: 'row' }> & {
+        row: Extract<TranscriptRow, { kind: 'system'; systemKind: 'turnStatus' }>;
+    };
+}) {
+    return (
+        <p className="max-w-[34rem] pl-0.5 text-sm leading-5">
+            <span aria-hidden className="mr-2 inline-block size-2 rounded-full bg-error" />
+            <span className="font-medium text-muted-foreground">{item.row.turnStatus.text}</span>
+        </p>
+    );
+}
+
+function isTurnStatusItem(item: TranscriptItem): item is Extract<
+    TranscriptItem,
+    { kind: 'row' }
+> & {
+    row: Extract<TranscriptRow, { kind: 'system'; systemKind: 'turnStatus' }>;
+} {
+    return (
+        item.kind === 'row' && item.row.kind === 'system' && item.row.systemKind === 'turnStatus'
     );
 }
 

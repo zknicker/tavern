@@ -17,6 +17,10 @@ export function isActivityItem(item: TranscriptItem): item is ActivityItem {
         return false;
     }
 
+    if (item.kind === 'row' && item.row.kind === 'system' && item.row.systemKind === 'turnStatus') {
+        return false;
+    }
+
     return item.kind !== 'row' || (item.row.kind !== 'message' && !isNarrationToolRow(item.row));
 }
 
