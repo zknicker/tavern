@@ -2,6 +2,22 @@
 
 All notable changes to this project will be documented in this file.
 
+## v1.4.14 - 2026-06-15
+
+Runtime floor raised to 1.4.14 for managed agent environment settings.
+
+App changes:
+
+- Added Settings -> Agent controls for write-only agent environment variables.
+
+Runtime changes:
+
+- Added a vault-backed `/agent-env` Runtime API and managed Hermes `.env`
+  materialization so saved variables are available to the managed agent after
+  restart.
+- Preserved operator-managed env entries while clearing stale Tavern-managed
+  agent env names during generated config writes.
+
 ## v1.4.13 - 2026-06-15
 
 Runtime floor raised to 1.4.13 for assistant memory configuration, queued
