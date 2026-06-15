@@ -1,6 +1,7 @@
 import { expect, test } from 'bun:test';
 import {
     type ActivityItem,
+    formatActiveWorkGroupHeader,
     formatWorkGroupHeader,
     formatWorkGroupSummary,
     getActiveWorkLabel,
@@ -12,6 +13,24 @@ test('active work label shows the command target while it runs', () => {
     ]);
 
     expect(label).toBe("Running sleep 2 && date '+%H:%M'");
+});
+
+test('active work group header does not flash count summaries between fast tools', () => {
+    const label = formatActiveWorkGroupHeader([
+        toolItem({ name: 'search_files', summaryParts: ['query one'] }),
+        toolItem({ id: 'tool-2', name: 'search_files', summaryParts: ['query two'] }),
+    ]);
+
+    expect(label).toBe('Working');
+});
+
+test('active work group header still shows the current running tool synopsis', () => {
+    const label = formatActiveWorkGroupHeader([
+        toolItem({ name: 'search_files', summaryParts: ['query one'] }),
+        toolItem({ id: 'tool-2', name: 'terminal', running: true, summaryParts: ['bun test'] }),
+    ]);
+
+    expect(label).toBe('Running bun test');
 });
 
 test('active work label never echoes a bare tool name as the target', () => {

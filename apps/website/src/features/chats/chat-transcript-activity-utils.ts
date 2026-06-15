@@ -249,6 +249,16 @@ export function formatWorkGroupHeader(items: ActivityItem[]) {
     return countWorkItems(items).thinking > 0 ? 'Thinking' : 'Worked';
 }
 
+export function formatActiveWorkGroupHeader(items: ActivityItem[]) {
+    const activeLabel = getActiveWorkLabel(items);
+
+    if (activeLabel) {
+        return activeLabel;
+    }
+
+    return countWorkItems(items).thinking > 0 ? 'Thinking' : 'Working';
+}
+
 /**
  * Icon for a collapsed work group header: the running tool's icon while
  * work executes, the shared icon when every tool resolves to one kind, and

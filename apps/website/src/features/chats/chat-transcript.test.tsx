@@ -1082,6 +1082,64 @@ test('ChatTranscript keeps live progress in working state when current steps are
     assert.doesNotMatch(markup, /Worked for/);
 });
 
+test('ChatTranscript keeps active work headers stable between fast completed tools', () => {
+    const markup = renderActiveTranscript(
+        {
+            agentId: 'tiny',
+            isThinking: true,
+            runId: 'run-progress',
+            sessionKey: 'agent:tiny:session-1',
+            startedAt: new Date(Date.now() - 3000).toISOString(),
+            text: '',
+        },
+        [
+            {
+                actor: { id: 'tiny', kind: 'agent' },
+                completedAt: new Date(Date.now() - 1200).toISOString(),
+                connectsToNext: true,
+                connectsToPrevious: false,
+                id: 'activity:run-progress:tool:1',
+                isFirstInGroup: true,
+                kind: 'tool',
+                sessionKey: 'agent:tiny:session-1',
+                spawnedRelationships: [],
+                startedAt: new Date(Date.now() - 1400).toISOString(),
+                toolCall: {
+                    callId: 'call-1',
+                    facts: [],
+                    label: 'query one',
+                    name: 'search_files',
+                    status: 'completed',
+                    summaryParts: ['query one'],
+                },
+            },
+            {
+                actor: { id: 'tiny', kind: 'agent' },
+                completedAt: new Date(Date.now() - 600).toISOString(),
+                connectsToNext: false,
+                connectsToPrevious: true,
+                id: 'activity:run-progress:tool:2',
+                isFirstInGroup: false,
+                kind: 'tool',
+                sessionKey: 'agent:tiny:session-1',
+                spawnedRelationships: [],
+                startedAt: new Date(Date.now() - 800).toISOString(),
+                toolCall: {
+                    callId: 'call-2',
+                    facts: [],
+                    label: 'query two',
+                    name: 'search_files',
+                    status: 'completed',
+                    summaryParts: ['query two'],
+                },
+            },
+        ]
+    );
+
+    assert.match(markup, />Working</);
+    assert.doesNotMatch(markup, /Searched code 2 times/);
+});
+
 test('ChatTranscript keeps narration messages in the work log above later tools', () => {
     const now = Date.now();
     const markup = renderActiveTranscript(

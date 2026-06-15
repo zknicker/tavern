@@ -6,9 +6,9 @@ import { ActivityStep } from './chat-transcript-activity-step.tsx';
 import {
     type ActivityItem,
     formatActiveActivitySeconds,
+    formatActiveWorkGroupHeader,
     formatActivityHeader,
     formatWorkGroupHeader,
-    getActiveWorkLabel,
     getActivityItemKey,
     getWorkGroupIcon,
 } from './chat-transcript-activity-utils.ts';
@@ -73,7 +73,7 @@ export function WorkingLog({
 
     const groupLabel = groupMode
         ? isActive
-            ? (getActiveWorkLabel(items) ?? formatWorkGroupHeader(items))
+            ? formatActiveWorkGroupHeader(items)
             : formatWorkGroupHeader(items)
         : null;
     const groupIcon = groupMode ? getWorkGroupIcon(items) : null;
