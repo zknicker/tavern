@@ -3,7 +3,7 @@ import test from 'node:test';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { WikiHubStatusCard } from './page.tsx';
 
-test('WikiHubStatusCard renders llm-wiki hub status instead of old Cortex settings', () => {
+test('WikiHubStatusCard renders Cortex wiki hub status instead of old Cortex settings', () => {
     const markup = renderToStaticMarkup(
         <WikiHubStatusCard
             status={{

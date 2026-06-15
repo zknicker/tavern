@@ -1,6 +1,6 @@
 import path from 'node:path';
 import { HERMES_HOME } from '../config';
-import { resolveRuntimeAssetsRoot, syncDirectory } from './llm-wiki';
+import { resolveRuntimeAssetsRoot, syncDirectory } from './managed-wiki';
 
 export const tavernSkillName = 'tavern';
 

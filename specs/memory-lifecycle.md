@@ -1,10 +1,10 @@
 # Memory Lifecycle
 
-Tavern memory lifecycle is llm-wiki lifecycle.
+Tavern memory lifecycle follows the Cortex wiki lifecycle.
 
 There is no separate durable memory pool, promotion queue, capture database, or
 repair ranking system in Tavern Runtime. Durable knowledge lives as Markdown in
-the llm-wiki hub.
+the Cortex wiki hub.
 
 ## Context Management Boundary
 
@@ -12,11 +12,11 @@ Hermes owns live execution context for turns.
 
 Prompt-time context management helps the agent stay oriented during active
 work, but it is not Tavern memory. Managed Tavern Hermes keeps Hermes-native
-memory disabled and installs llm-wiki skills for durable knowledge work.
+memory disabled and installs the managed wiki skill for durable knowledge work.
 
 ## Wiki Lifecycle
 
-llm-wiki owns durable knowledge files under the hub:
+Tavern wiki workflows own durable knowledge files under the hub:
 
 ```txt
 topics/<topic>/
@@ -28,7 +28,7 @@ topics/<topic>/
   inbox/
 ```
 
-Agents write and maintain those files through llm-wiki skills. Tavern Runtime
+Agents write and maintain those files through the managed wiki skill. Tavern Runtime
 does not run a hidden capture, recall, embedding, or repair pipeline.
 
 ## Correction And Forgetting
@@ -42,6 +42,6 @@ The Cortex tab reflects the current hub state; it does not keep a second copy.
 
 Maintenance is scheduled work, not a built-in Runtime subsystem.
 
-Tasks and runtime crons can run llm-wiki research, ingest, query, compile, audit,
+Tasks and runtime crons can run wiki research, ingest, query, compile, audit,
 and output workflows. Runtime exposes hub readiness and browsing APIs so those
 jobs can be inspected from Tavern.

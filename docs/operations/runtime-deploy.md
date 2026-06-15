@@ -57,8 +57,8 @@ suppressed.
 
 `cortex` commands are thin CLI clients for the managed Runtime. They require a
 running Runtime and use `TAVERN_RUNTIME_URL`, or `http://127.0.0.1:18790` by
-default. They browse the resolved llm-wiki hub; writes and maintenance happen
-through llm-wiki skills launched from Tasks or Runtime crons. When the Runtime
+default. They browse the resolved Cortex wiki hub; writes and maintenance happen
+through the managed wiki skill launched from Tasks or Runtime crons. When the Runtime
 is unreachable they fail with a pointer to `tavern status`.
 
 `tavern` is the preferred CLI. `tavern-runtime` remains as a compatibility

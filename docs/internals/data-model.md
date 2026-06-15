@@ -22,7 +22,7 @@ reads, soft deletes, automations, deliveries, and the product timeline.
 | Runtime chat store | `apps/runtime/src/tavern/chat-api/` | OpenAPI-backed chat, message, response, activity, artifact, delivery, read, and event store |
 | Runtime channel relay | `apps/runtime/src/tavern/channel-relay.ts` | Durable message acceptance and managed Hermes turn startup |
 | Runtime channel outbox | `apps/runtime/src/tavern/channel-store.ts` | Private relay queue and accepted-message receipt state for channel-style ingress |
-| Cortex wiki store | `apps/runtime/src/wiki/` | Runtime read API over the llm-wiki hub |
+| Cortex wiki store | `apps/runtime/src/wiki/` | Runtime read API over the Cortex wiki hub |
 | Runtime chat tests | `apps/runtime/src/tavern/chat-api-store.test.ts` | Contract, identity, sequence, event, read, and route behavior |
 | Runtime timeline tests | `apps/runtime/src/tavern/chat-api-timeline.test.ts` | Turn-aligned history pages, cursor stability, and window alignment |
 | App schema | `apps/server/src/db/bootstrap.ts` | App SQLite fresh setup |
@@ -36,7 +36,7 @@ reads, soft deletes, automations, deliveries, and the product timeline.
 | --- | --- | --- |
 | Runtime SQLite | Tavern Runtime | Canonical chat model, automation delivery, channel ingress, cursor-backed events, read markers, runtime metadata |
 | App SQLite | Tavern App | Client cache, app-local settings, and presentation state |
-| llm-wiki hub | llm-wiki skills and agent jobs | Topic Markdown, raw sources, compiled pages, todos, datasets, output, inbox, archives |
+| Cortex wiki hub | Managed wiki skill and agent jobs | Topic Markdown, raw sources, compiled pages, todos, datasets, output, inbox, archives |
 | Hermes state | Hermes | Sessions, turns, tools, model calls, transcripts, and files |
 
 Runtime SQLite is the product source of truth for chat. App SQLite can cache for
@@ -72,7 +72,7 @@ Read markers are scoped records, not standalone product ids.
 Hermes ids and runtime agent ids remain source ids. Store them in runtime
 metadata or source fields, not as Tavern product ids unless Tavern minted them.
 
-Cortex page identity is `(topic, path)` from the llm-wiki hub.
+Cortex page identity is `(topic, path)` from the Cortex wiki hub.
 
 ## Runtime Chat Tables
 
@@ -462,7 +462,7 @@ canonical chat history.
 
 ## Cortex Wiki Files
 
-Tavern Runtime does not store Cortex tables. It resolves the llm-wiki hub and
+Tavern Runtime does not store Cortex tables. It resolves the Cortex wiki hub and
 reads Markdown files directly.
 
 ```text
@@ -485,7 +485,7 @@ Rules:
 * Page identity is the topic slug plus Markdown path.
 * Frontmatter parsing is light and display-oriented.
 * Wikilinks and backlinks are derived from Markdown bodies.
-* Imports, compiles, audits, and maintenance are llm-wiki agent workflows.
+* Imports, compiles, audits, and maintenance are managed wiki agent workflows.
 
 ## Transaction Rules
 
@@ -563,7 +563,7 @@ transactional writes. Search indexes are derived state, not the source of truth.
 * Events notify; runtime durable reads recover.
 * Response activity is durable and statusful.
 * App-local progress hints never become a second chat history.
-* Cortex wiki reads fail visibly when the llm-wiki hub is missing or unreadable.
+* Cortex wiki reads fail visibly when the Cortex wiki hub is missing or unreadable.
 
 ## Related Docs
 

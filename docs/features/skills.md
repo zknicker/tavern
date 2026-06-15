@@ -87,7 +87,7 @@ packages into `~/.tavern/skills`, and it does not describe toolsets to the model
 as Tavern skills.
 
 Runtime-owned workflow packages can still be prepared as managed skills when
-they are part of Tavern's product contract. llm-wiki is the current example:
+they are part of Tavern's product contract. Cortex wiki is the current example:
 Runtime bundles the upstream workflow package as the `wiki` managed Hermes skill
 so Tasks, crons, and normal agent turns can invoke wiki work.
 

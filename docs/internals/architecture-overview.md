@@ -20,8 +20,8 @@ flowchart LR
     appdb[(App SQLite<br/>cache + settings)]
     runtime[Tavern Runtime<br/>chat server + tools + managed services]
     runtimedb[(Runtime SQLite<br/>chat + events + execution state)]
-    cortex[Cortex<br/>llm-wiki browser]
-    cortexwiki[(llm-wiki hub<br/>Markdown topics)]
+    cortex[Cortex<br/>Cortex wiki browser]
+    cortexwiki[(Cortex wiki hub<br/>Markdown topics)]
     hermes[Hermes<br/>sessions + turns + tools + transcripts]
     hermesstate[(Hermes state<br/>native execution store)]
 
@@ -57,9 +57,9 @@ flowchart LR
 * **Runtime SQLite** stores chats, messages, responses, activity, artifacts,
   participants, events, reads, channel ingress, execution evidence, and runtime
   metadata.
-* **Cortex** is the app and Runtime read surface for the user's llm-wiki hub.
+* **Cortex** is the app and Runtime read surface for the user's Cortex wiki hub.
   The hub's Markdown files are the durable knowledge source. Agents maintain the
-  hub through llm-wiki skills, Tasks, and Runtime crons.
+  hub through the managed wiki skill, Tasks, and Runtime crons.
 * **Hermes** owns agent execution: sessions, turns, model calls, tools, files,
   and native transcripts.
 
@@ -71,7 +71,7 @@ flowchart LR
   artifacts, participants, events, reads, automation delivery, channel ingress,
   accepted message identity, execution evidence, and runtime metadata.
 * Cortex reads topics, pages, links, backlinks, and search results from the
-  llm-wiki hub resolved by Runtime.
+  Cortex wiki hub resolved by Runtime.
 * App SQLite is a client cache and app-local settings store.
 * Hermes stores native execution state.
 * Tavern maps Hermes execution into Tavern messages, responses, artifacts,

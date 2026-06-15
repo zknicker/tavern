@@ -13,12 +13,12 @@ Managed Tavern Hermes does not use Lossless Claw. It is incompatible with the
 Codex app-server runtime path, so Runtime strips stale `lossless-claw` config
 instead of installing or enabling that plugin.
 
-Memory means the llm-wiki hub that Cortex can browse. The durable facts live in
-plain Markdown topic wikis.
+Memory means the Cortex wiki hub. The durable facts live in plain Markdown
+topic wikis.
 
 ## Contract
 
-* Cortex browses llm-wiki Markdown.
+* Cortex browses Markdown topic wikis.
 * Context management may read wiki material, chat state, activity, and
   participant context when building bounded prompt context.
 * Context management does not create a durable memory database, memory record,
@@ -43,7 +43,7 @@ contains `memory`.
 Context management can place relevant wiki material into a prompt. It does not
 own the remembered fact.
 
-When an agent needs durable memory, it reads or queries the llm-wiki hub. When
+When an agent needs durable memory, it reads or queries the Cortex wiki hub. When
 an active turn needs continuity, Hermes manages bounded prompt context without
 Lossless Claw in the managed Tavern runtime.
 

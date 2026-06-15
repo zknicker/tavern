@@ -3,14 +3,14 @@ import os from 'node:os';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 import {
-    prepareManagedLlmWikiIntegration,
+    prepareManagedWikiIntegration,
     resolveManagedWikiHubPath,
     resolveRuntimeAssetsRoot,
-} from './llm-wiki';
+} from './managed-wiki';
 
-describe('managed llm-wiki integration', () => {
+describe('managed wiki integration', () => {
     it('materializes the managed skill and hub skeleton', async () => {
-        const directory = await fs.mkdtemp(path.join(os.tmpdir(), 'tavern-llm-wiki-'));
+        const directory = await fs.mkdtemp(path.join(os.tmpdir(), 'tavern-managed-wiki-'));
         const assetsRoot = path.join(directory, 'assets');
         const hermesHome = path.join(directory, 'hermes-home');
         const runtimeRoot = path.join(directory, 'runtime-root');
@@ -19,7 +19,7 @@ describe('managed llm-wiki integration', () => {
         await writeFile(path.join(sourceSkill, 'SKILL.md'), '---\nname: wiki\n---\n\nWiki body.\n');
         await writeFile(path.join(sourceSkill, 'references', 'ingestion.md'), '# Ingestion\n');
 
-        const integration = await prepareManagedLlmWikiIntegration({
+        const integration = await prepareManagedWikiIntegration({
             assetsRoot,
             hermesHome,
             runtimeRoot,

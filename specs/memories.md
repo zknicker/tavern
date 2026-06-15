@@ -1,8 +1,8 @@
 # Memories
 
-Memory in Tavern is llm-wiki plus prompt-time context.
+Memory in Tavern is Cortex wiki plus prompt-time context.
 
-Durable knowledge lives in the llm-wiki hub. Tavern Runtime exposes that hub
+Durable knowledge lives in the Cortex wiki hub. Tavern Runtime exposes that hub
 through the Cortex API and Cortex tab, but it does not own a separate memory
 database.
 
@@ -12,7 +12,7 @@ separate from durable wiki knowledge.
 ## Durable Knowledge
 
 Wiki topics hold source material, compiled pages, inventories, datasets, inbox
-notes, and outputs as plain Markdown. Agents use llm-wiki skills to create and
+notes, and outputs as plain Markdown. Agents use the managed wiki skill to create and
 maintain those files.
 
 Tavern does not add a parallel `memory_records` table for normal memory. If a

@@ -130,7 +130,7 @@ network, and account state.
 
 Cortex no longer has provider-backed live smoke lanes. Runtime tests should
 cover hub resolution, topic listing, Markdown reads, search, and backlinks with
-temporary llm-wiki-style directories. Live wiki maintenance belongs to llm-wiki
+temporary Cortex wiki-style directories. Live wiki maintenance belongs to Cortex wiki
 skill tests or operator-run Tasks.
 
 ## Keeping Suites Current

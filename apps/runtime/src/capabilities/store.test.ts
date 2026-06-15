@@ -83,7 +83,7 @@ describe('Runtime capabilities store', () => {
         expect(events).toContain('dashboardServer');
     });
 
-    test('records a missing llm-wiki hub as degraded until the managed skill is prepared', async () => {
+    test('records a missing Cortex wiki hub as degraded until the managed skill is prepared', async () => {
         const [capability] = await refreshRuntimeCapabilities({ ids: ['cortexWiki'] });
 
         expect(capability).toMatchObject({
@@ -98,7 +98,7 @@ describe('Runtime capabilities store', () => {
         });
     });
 
-    test('keeps a readable read-only llm-wiki hub browseable', async () => {
+    test('keeps a readable read-only Cortex wiki hub browseable', async () => {
         const hubPath = path.join(runtimeRoot, 'wiki');
         await mkdir(hubPath, { recursive: true });
         await chmod(hubPath, 0o555);

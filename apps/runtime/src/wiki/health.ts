@@ -85,7 +85,7 @@ async function resolveTodoProcessing(todos: Awaited<ReturnType<typeof listWikiTo
 }
 
 /**
- * Reads `.librarian/scan-results.json` per topic — llm-wiki's machine-readable
+ * Reads `.librarian/scan-results.json` per topic — the Cortex machine-readable
  * scan output ("REPORT.md is rendered from it"). Agent-written JSON is parsed
  * defensively: missing fields become null, unparseable files are skipped.
  */

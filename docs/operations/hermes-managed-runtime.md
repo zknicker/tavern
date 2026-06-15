@@ -7,7 +7,7 @@ read_when:
   - changing Hermes startup, dashboard ports, model provider config, Codex auth sync, or Runtime capability checks
   - verifying that multiple Tavern worktrees can run managed Hermes simultaneously
   - cold-start testing a real engine install or the no-co-opt / version-pin guarantees
-  - upgrading the vendored llm-wiki skill package or changing managed wiki crons
+  - changing the managed Cortex wiki skill package or managed wiki crons
 ---
 
 # Managed Hermes Runtime
@@ -153,7 +153,7 @@ Runtime also syncs Vault-backed Codex OAuth material into managed Hermes
 
 ## Managed Wiki Package
 
-Runtime packages the Tavern-adapted llm-wiki skill with managed Hermes. Before
+Runtime packages the Tavern-owned Cortex wiki skill with managed Hermes. Before
 launch it copies the prompt-visible workflow skill directory to
 `HERMES_HOME/skills/wiki`.
 
@@ -161,23 +161,15 @@ The wiki hub defaults to `TAVERN_RUNTIME_ROOT/wiki`. Operators can override it
 with `TAVERN_WIKI_HUB_PATH` or `TAVERN_CORTEX_WIKI_PATH`. Runtime creates the
 hub skeleton and passes the resolved path to Hermes as `TAVERN_WIKI_HUB_PATH`.
 
-### Upgrading the vendored wiki skill
+### Changing the managed wiki skill
 
-The skill at `apps/runtime/assets/hermes/skills/wiki/` is a vendored snapshot
-of `nvk/llm-wiki` (`plugins/llm-wiki/skills/wiki`); the pinned upstream version
-lives in that directory's `TAVERN.md`. To bump it:
+The skill at `apps/runtime/assets/hermes/skills/wiki/` is Tavern-owned product
+surface. When changing its workflows or cadence, update the matching Runtime
+pipeline prompts in `apps/runtime/src/wiki/compile-run.ts`,
+`librarian-run.ts`, and `todo-drain.ts`.
 
-1. Diff the upstream release against the vendored `SKILL.md` and `references/`.
-2. Re-apply the Tavern adaptations noted in `TAVERN.md`: `TAVERN_WIKI_HUB_PATH`
-   is the first hub source, and `/wiki` command examples read as natural
-   language shorthand for the same skill workflows.
-3. Update the version line in `TAVERN.md`.
-4. If upstream changed maintenance workflows or cadence, revisit the wiki
-   pipeline run prompts in `apps/runtime/src/wiki/compile-run.ts`,
-   `librarian-run.ts`, and `todo-drain.ts` and their prompts'
-   `references/*.md` pointers.
-5. Run `bun run --filter @tavern/runtime test -- src/hermes/llm-wiki.test.ts
-   src/wiki` and start the dev stack to verify skill sync.
+Run `bun run --filter @tavern/runtime test -- src/hermes/managed-wiki.test.ts
+src/wiki` and start the dev stack to verify skill sync.
 
 ## Managed Tavern Skill
 

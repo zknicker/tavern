@@ -112,7 +112,7 @@ that Tavern renders, inspects, searches, or recovers are persisted in Tavern
 Runtime storage as execution evidence. Hermes remains canonical for native
 execution behavior.
 
-Cortex is a Runtime read surface over the user's llm-wiki hub. Hermes context
+Cortex is a Runtime read surface over the user's Cortex wiki hub. Hermes context
 management for turns remains separate from durable wiki knowledge. Tavern
 reports wiki hub readiness separately from prompt-time context management.
 
@@ -152,7 +152,7 @@ health and exposes it through the Admin API. Jobs and app surfaces can use
 capability health to decide whether dependent functionality is available. The
 app renders capability health; it does not own Runtime capability checks.
 
-Cortex wiki maintenance does not sync from Hermes. Agents perform llm-wiki
+Cortex wiki maintenance does not sync from Hermes. Agents perform Cortex wiki
 maintenance through Tasks and Runtime crons.
 
 ## Boundaries

@@ -51,7 +51,7 @@ describe('wiki store', () => {
         await fs.rm(hubPath, { force: true, recursive: true });
     });
 
-    test('lists llm-wiki topics and pages', async () => {
+    test('lists Cortex wiki topics and pages', async () => {
         await expect(listCortexTopics()).resolves.toMatchObject({
             topics: [{ archived: false, slug: 'project-notes', title: 'Project Notes' }],
         });

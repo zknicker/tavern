@@ -16,7 +16,7 @@ The distinction between the systems should stay explicit.
 
 - `activity log` is the timestamped event record of what happened.
 - `working memory` is the synthesized recent understanding built from the activity log.
-- llm-wiki stores durable Markdown knowledge.
+- Cortex wiki stores durable Markdown knowledge.
 - Tasks and crons own wiki maintenance behavior.
 
 The activity log remains queryable even after its contents have been synthesized into working

@@ -6,8 +6,8 @@ import type {
     AgentRuntimeCapabilityHealthId,
     AgentRuntimeCapabilityHealthState,
 } from '@tavern/api';
-import { getManagedLlmWikiPaths } from '../hermes/llm-wiki';
 import { createLocalHermesClient } from '../hermes/local-client';
+import { getManagedWikiPaths } from '../hermes/managed-wiki';
 import { getManagedHermesState } from '../hermes/state';
 import { loadVaultBackedCodexCredentials } from '../model-access/codex-settings';
 import { resolveWikiConfig } from '../wiki/store';
@@ -144,7 +144,7 @@ export const runtimeCapabilityDefinitions: RuntimeCapabilityDefinition[] = [
 async function checkCortexWikiCapability(): Promise<RuntimeCapabilityCheckResult> {
     const config = await resolveWikiConfig();
     const wikiPath = config.hubPath;
-    const wikiIntegration = getManagedLlmWikiPaths();
+    const wikiIntegration = getManagedWikiPaths();
     const metadata = {
         configSource: config.source,
         skillPath: wikiIntegration.skillPath,

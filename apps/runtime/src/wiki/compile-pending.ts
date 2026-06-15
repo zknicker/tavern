@@ -33,7 +33,7 @@ export async function listPendingCompileTopics(): Promise<PendingCompileTopic[]>
 }
 
 /**
- * Compile when a batch piles up (llm-wiki's 5-source nudge) or a straggler has
+ * Compile when a batch piles up (the 5-source nudge) or a straggler has
  * waited past the age limit — small ingests batch, nothing waits forever. The
  * settle window lets an in-flight ingest batch finish first.
  */

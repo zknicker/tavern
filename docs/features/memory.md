@@ -1,16 +1,16 @@
 ---
-summary: Memory feature for llm-wiki-backed durable knowledge and the context-management boundary.
+summary: Memory feature for Cortex-backed durable knowledge and the context-management boundary.
 read_when:
-  - changing memory visibility, Cortex hub status, or llm-wiki-backed knowledge expectations
+  - changing memory visibility, Cortex hub status, or Cortex-backed knowledge expectations
   - changing the boundary between Hermes context management and durable wiki knowledge
 ---
 
 # Memory
 
-Memory is the llm-wiki hub Cortex can browse.
+Memory is the Cortex wiki hub.
 
 Tavern does not maintain a separate durable memory database. Durable knowledge
-lives in topic wiki files. Agents use llm-wiki workflows to research, ingest,
+lives in topic wiki files. Agents use managed wiki workflows to research, ingest,
 compile, audit, and maintain those files.
 
 ## In Cortex
@@ -25,7 +25,7 @@ Users can inspect:
 
 ## Contract
 
-Memory visibility is file-backed. The Memory and Cortex surfaces read llm-wiki
+Memory visibility is file-backed. The Memory and Cortex surfaces read wiki
 Markdown. They do not expose model settings, hidden queues, generated schemas,
 or internal repair controls.
 

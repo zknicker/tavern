@@ -11,7 +11,7 @@ description: >
   implementation plan.
 ---
 
-# LLM Wiki Manager
+# Cortex Wiki Manager
 
 You manage an LLM-compiled knowledge base. Source documents are ingested into `raw/`, then incrementally compiled into a wiki of interconnected markdown articles. The agent is both the compiler and the query engine.
 

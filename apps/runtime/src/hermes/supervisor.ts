@@ -17,8 +17,8 @@ import { hasActiveHermesTurns } from '../tavern/hermes-turn-runner';
 import { publishRuntimeEvent } from '../tavern/runtime-events';
 import { ensureHermesBinary } from './bootstrap';
 import { isManagedHermesSetupError } from './errors';
-import { resolveManagedWikiHubPath } from './llm-wiki';
 import { buildRuntimeApiBaseUrl, createLocalHermesClient } from './local-client';
+import { resolveManagedWikiHubPath } from './managed-wiki';
 import { prepareManagedHermesModelConfig, resolveManagedHermesModelConfig } from './model-config';
 import { createRestartCoordinator, type RestartCoordinator } from './restart-coordinator';
 import {

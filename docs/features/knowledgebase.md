@@ -1,25 +1,25 @@
 ---
-summary: Cortex feature for browsing llm-wiki topic wikis, Markdown articles, raw sources, todos, datasets, outputs, and archives.
+summary: Cortex feature for browsing topic wikis, Markdown articles, raw sources, todos, datasets, outputs, and archives.
 read_when:
-  - changing Cortex wiki browsing, topic listing, Markdown reads, backlinks, or llm-wiki hub resolution
-  - changing how agents or users inspect llm-wiki files from Tavern
+  - changing Cortex wiki browsing, topic listing, Markdown reads, backlinks, or Cortex wiki hub resolution
+  - changing how agents or users inspect Cortex wiki files from Tavern
 ---
 
 # Cortex
 
-Cortex is Tavern's browser for the user's llm-wiki hub. For the end-to-end
+Cortex is Tavern's browser for the user's wiki hub. For the end-to-end
 flow — how material becomes compiled knowledge and stays healthy — see
 [Cortex Lifecycle](cortex-lifecycle.md).
 
 The durable knowledge is plain Markdown. Tavern does not maintain a second
 Cortex database, vector index, schema registry, claim table, Dream job, or chat
-ingestion engine. llm-wiki owns research, ingest, compile, query, audit,
-librarian, lessons, output, todos, datasets, and archive workflows.
+ingestion engine. Tavern's wiki workflows own research, ingest, compile, query,
+audit, librarian, lessons, output, todos, datasets, and archive workflows.
 
 ## In The Box
 
-* **Topic wikis.** Cortex lists active and archived topic wikis from the
-  llm-wiki hub.
+* **Topic wikis.** Cortex lists active and archived topic wikis from the wiki
+  hub.
 * **Markdown pages.** Cortex reads `_index.md`, `config.md`, `log.md`, and
   pages under `wiki/`, `raw/`, `todos/`, `datasets/`, `output/`, and
   `inbox/`. The page tree stays pure knowledge: dot directories such as
@@ -29,7 +29,7 @@ librarian, lessons, output, todos, datasets, and archive workflows.
 * **File browsing.** Cortex shows pages in their wiki directory tree and opens
   Markdown in a read-only document preview.
 * **Backlinks.** Cortex derives inbound references from `[[wikilinks]]` and the
-  markdown half of llm-wiki dual-links, across topics, and shows them on each
+  markdown half of Tavern dual-links, across topics, and shows them on each
   page.
 * **Link navigation.** Wikilinks and relative page links open the target page
   in the document pane.
@@ -64,7 +64,7 @@ Wiki maintenance runs as Runtime jobs that spawn agent turns with the managed
 `wiki` skill when the pipeline has work (compile, librarian, todos); see
 [Cortex Lifecycle](cortex-lifecycle.md).
 
-Runtime packages llm-wiki for managed Hermes. Startup copies the bundled
+Runtime packages the managed wiki skill for managed Hermes. Startup copies the
 workflow skill directory to `HERMES_HOME/skills/wiki` and passes the resolved
 hub path to the Hermes process.
 
@@ -72,5 +72,5 @@ hub path to the Hermes process.
 
 Cortex browses wiki files. It does not compile or maintain the wiki.
 
-Use llm-wiki for research, ingestion, compilation, auditing, librarian scans,
-lesson extraction, and generated outputs.
+Use the managed wiki workflows for research, ingestion, compilation, auditing,
+librarian scans, lesson extraction, and generated outputs.

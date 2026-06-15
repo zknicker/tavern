@@ -4,34 +4,34 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { HERMES_HOME, RUNTIME_ROOT, readConfigValue, resolveConfiguredPath } from '../config';
 
-export const llmWikiSkillName = 'wiki';
+export const managedWikiSkillName = 'wiki';
 
-interface ManagedLlmWikiIntegrationInput {
+interface ManagedWikiIntegrationInput {
     assetsRoot?: string;
     hermesHome?: string;
     runtimeRoot?: string;
 }
 
-export interface ManagedLlmWikiIntegration {
+export interface ManagedWikiIntegration {
     hubPath: string;
     skillPath: string;
 }
 
-export function getManagedLlmWikiPaths(input: ManagedLlmWikiIntegrationInput = {}) {
+export function getManagedWikiPaths(input: ManagedWikiIntegrationInput = {}) {
     const hermesHome = input.hermesHome ?? HERMES_HOME;
     const runtimeRoot = input.runtimeRoot ?? RUNTIME_ROOT;
     return {
         hubPath: resolveManagedWikiHubPath(runtimeRoot),
-        skillPath: path.join(hermesHome, 'skills', llmWikiSkillName),
+        skillPath: path.join(hermesHome, 'skills', managedWikiSkillName),
     };
 }
 
-export async function prepareManagedLlmWikiIntegration(
-    input: ManagedLlmWikiIntegrationInput = {}
-): Promise<ManagedLlmWikiIntegration> {
+export async function prepareManagedWikiIntegration(
+    input: ManagedWikiIntegrationInput = {}
+): Promise<ManagedWikiIntegration> {
     const assetsRoot = input.assetsRoot ?? resolveRuntimeAssetsRoot();
-    const skillSource = path.join(assetsRoot, 'hermes', 'skills', llmWikiSkillName);
-    const { hubPath, skillPath } = getManagedLlmWikiPaths(input);
+    const skillSource = path.join(assetsRoot, 'hermes', 'skills', managedWikiSkillName);
+    const { hubPath, skillPath } = getManagedWikiPaths(input);
 
     await Promise.all([prepareManagedWikiHub(hubPath), syncDirectory(skillSource, skillPath)]);
 

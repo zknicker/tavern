@@ -18,7 +18,7 @@ import {
     writeEngineMarker,
 } from './engine';
 import { managedHermesSetupError } from './errors';
-import { resolveRuntimeAssetsRoot } from './llm-wiki';
+import { resolveRuntimeAssetsRoot } from './managed-wiki';
 
 const installerTimeoutMs = 20 * 60 * 1000;
 

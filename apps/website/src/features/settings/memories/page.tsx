@@ -14,7 +14,7 @@ export function MemoriesSettings() {
 
     return (
         <div>
-            <BadgeDivider className="pb-4" subtext="Read-only llm-wiki hub status.">
+            <BadgeDivider className="pb-4" subtext="Read-only Cortex wiki hub status.">
                 Wiki
             </BadgeDivider>
             <WikiHubStatusCard

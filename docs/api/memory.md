@@ -1,5 +1,5 @@
 ---
-summary: Memory API boundary for llm-wiki inspection and Hermes prompt-time context.
+summary: Memory API boundary for Cortex wiki inspection and Hermes prompt-time context.
 read_when:
   - changing memory visibility or Cortex inspection APIs
   - changing the boundary between Hermes context management and Cortex wiki browsing
@@ -11,16 +11,16 @@ read_when:
 The Memory API is the product contract for inspecting durable knowledge and
 prompt-time context.
 
-Durable knowledge lives in the llm-wiki hub. Runtime exposes it through the
+Durable knowledge lives in the Cortex wiki hub. Runtime exposes it through the
 Cortex API as read-only wiki topics, pages, search results, and backlinks. There
 is no separate memory table, vector index, schema-addition store, or capture
 pipeline in Tavern Runtime.
 
 ## Contract
 
-* Cortex status reports the resolved llm-wiki hub path, topic counts, page
+* Cortex status reports the resolved Cortex wiki hub path, topic counts, page
   counts, and filesystem readiness.
-* Cortex topics and pages expose the Markdown files under the llm-wiki hub.
+* Cortex topics and pages expose the Markdown files under the Cortex wiki hub.
 * Cortex search is a lightweight lexical scan over wiki Markdown.
 * Backlinks are derived from `[[wikilinks]]` in page bodies.
 * Hermes context management remains prompt-time execution state, not durable
@@ -30,7 +30,7 @@ pipeline in Tavern Runtime.
 
 ## Agent Boundary
 
-Managed Hermes installs llm-wiki skills. Agents use those skills for writes and
+Managed Hermes installs the managed wiki skill. Agents use that skill for writes and
 maintenance, and use the Cortex API when they need to browse the current wiki
 state from Tavern.
 

@@ -15,8 +15,8 @@ function MemoryContent() {
             <div className="max-w-3xl">
                 <h1 className="font-semibold text-2xl tracking-tight">Memory</h1>
                 <p className="mt-2 text-muted-foreground text-sm leading-6">
-                    Memory is the llm-wiki hub Cortex can browse. Agent research, ingest, compile,
-                    audit, and maintenance work belongs in Tasks.
+                    Memory is the Cortex wiki hub. Agent research, ingest, compile, audit, and
+                    maintenance work belongs in Tasks.
                 </p>
             </div>
 

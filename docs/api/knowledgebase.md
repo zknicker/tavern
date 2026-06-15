@@ -1,25 +1,25 @@
 ---
-summary: Cortex API for reading llm-wiki hub status, topics, Markdown pages, search results, and backlinks.
+summary: Cortex API for reading Cortex wiki hub status, topics, Markdown pages, search results, and backlinks.
 read_when:
   - changing Cortex topic, page, search, status, or backlink APIs
-  - changing the boundary between Tavern Runtime and llm-wiki files
+  - changing the boundary between Tavern Runtime and Cortex wiki files
 ---
 
 # Knowledgebase API
 
-The Knowledgebase API exposes read-only Cortex access to the llm-wiki hub.
+The Knowledgebase API exposes read-only Cortex access to the Cortex wiki hub.
 
 ## Contract
 
 * The hub is a filesystem directory, not a Tavern database.
-* Topic ids are llm-wiki topic slugs.
+* Topic ids are Cortex wiki topic slugs.
 * Page identity is `(topic, path)`.
 * Page bodies are Markdown file contents after light frontmatter parsing.
 * Backlinks are derived from `[[wikilinks]]`.
 * Search is lightweight title, path, and body matching.
 * `configSource` is `environment` or `runtime`; `runtime` means Tavern is
   using the managed Runtime wiki hub.
-* Writes, ingestion, compilation, audits, and maintenance are llm-wiki agent
+* Writes, ingestion, compilation, audits, and maintenance are managed wiki agent
   workflows launched through Tasks or Runtime crons.
 
 ## Surface

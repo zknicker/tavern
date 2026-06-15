@@ -6,7 +6,7 @@ import { promisify } from 'node:util';
 import { HERMES_HOME, readConfigValue, resolveConfiguredPath } from '../config';
 import { log } from '../log';
 import { managedHermesSetupError } from './errors';
-import { resolveRuntimeAssetsRoot } from './llm-wiki';
+import { resolveRuntimeAssetsRoot } from './managed-wiki';
 import {
     managedMnemosyneMarker,
     managedMnemosynePluginManifest,

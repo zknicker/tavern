@@ -9,7 +9,7 @@ import { resolveConnectorsDomain } from './connectors';
 import { quoteEnvValue, readEnvEntries, readManagedHermesEnvValue } from './env';
 import { getHermesExecutionSettings } from './execution-settings';
 import { type HermesModelDomain, mergeHermesGeneratedConfig } from './generated-config';
-import { prepareManagedLlmWikiIntegration } from './llm-wiki';
+import { prepareManagedWikiIntegration } from './managed-wiki';
 import { ensureManagedMnemosynePackage, ensureManagedMnemosynePlugin } from './mnemosyne';
 import { resolveConfiguredPermissionsDomain } from './permission-settings';
 import { ensureManagedTavernSkill } from './tavern-skill';
@@ -78,7 +78,7 @@ export async function prepareManagedHermesModelConfig(
         path.join(HERMES_HOME, 'auth.json'),
         await loadVaultBackedCodexCredentials().catch(() => null)
     );
-    await prepareManagedLlmWikiIntegration();
+    await prepareManagedWikiIntegration();
     await ensureManagedTavernSkill();
     await ensureManagedMnemosynePlugin();
     if (input.hermesBinary) {

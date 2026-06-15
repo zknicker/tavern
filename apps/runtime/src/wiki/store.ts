@@ -11,7 +11,7 @@ import type {
     CortexTopicList,
 } from '@tavern/api';
 import { RUNTIME_ROOT, readConfigValue, resolveConfiguredPath } from '../config';
-import { resolveManagedWikiHubPath } from '../hermes/llm-wiki';
+import { resolveManagedWikiHubPath } from '../hermes/managed-wiki';
 
 interface WikiConfig {
     hubPath: string;
@@ -401,7 +401,7 @@ function extractWikiLinks(content: string): CortexPage['links'] {
 
 /**
  * Link targets for backlink derivation: `[[wikilinks]]` plus the markdown half
- * of llm-wiki's dual-link convention (relative `.md` links).
+ * of Cortex's dual-link convention (relative `.md` links).
  */
 function extractLinkTargets(content: string): CortexPage['links'] {
     const markdownLinks = Array.from(

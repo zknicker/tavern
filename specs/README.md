@@ -47,11 +47,11 @@ directly.
 
 ## Memory Specs
 
-- `memories.md`: llm-wiki durable knowledge, person memory, and memory
+- `memories.md`: Cortex wiki durable knowledge, person memory, and memory
   inspection surfaces.
 - `memory-context.md`: bounded prompt-facing context assembled from Hermes
   context management, chat state, participants, and selected wiki material.
-- `memory-lifecycle.md`: llm-wiki lifecycle, correction, forgetting, and
+- `memory-lifecycle.md`: Cortex wiki lifecycle, correction, forgetting, and
   maintenance through Tasks and crons.
 - `memory-persistence.md`: historical memory persistence design; do not extend
   it for new wiki work.
@@ -60,7 +60,7 @@ directly.
 
 ## Cortex Specs
 
-- `cortex.md`: llm-wiki-backed durable knowledge browser and Runtime contract.
+- `cortex.md`: Cortex-backed durable knowledge browser and Runtime contract.
 
 ## Runtime Specs
 

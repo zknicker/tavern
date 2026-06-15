@@ -102,7 +102,7 @@ Runtime does not own:
 
 Research, ingestion, compilation, audit, librarian, lessons, generated outputs,
 todo maintenance, dataset maintenance, and archive lifecycle run through
-llm-wiki. Routine wiki maintenance is a pipeline drained by Runtime jobs — no
+Cortex wiki. Routine wiki maintenance is a pipeline drained by Runtime jobs — no
 crons, no human gate:
 
 * **Compile job.** A 15-minute filesystem check counts uncompiled raw sources

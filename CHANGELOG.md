@@ -93,7 +93,7 @@ backlink, and follow-up contracts in this release.
   output hiding, and stronger Markdown/frontmatter/search fidelity.
 - Changed the wiki format from inventory-owned records to Tavern-owned todos:
   completed todos are deleted, `log.md` is the durable history, blocked todos
-  resolve into the wiki, and llm-wiki fallback paths are removed.
+  resolve into the wiki, and Cortex wiki fallback paths are removed.
 - Updated managed wiki skill instructions and generated AGENTS.md guidance to
   match the pipeline model and fresh-context agent workflow.
 - Fixed Cortex health reads to send the Runtime auth token and chat recovery to
@@ -190,15 +190,15 @@ floor stays at 1.4.2.
 
 ## v1.4.0 - 2026-06-09
 
-- Replaced the OpenClaw/Cortex stack with managed Hermes execution, the llm-wiki hub browser, and managed Hermes wiki skill.
+- Replaced the OpenClaw/Cortex stack with managed Hermes execution, the Cortex wiki hub browser, and managed Hermes wiki skill.
 - Added Hermes-backed model provider settings, runtime skills and toolsets, cron delivery and run history, Tavern channel context tools, and editable managed agent workspace files.
 - Fixed managed agent model saves so Tavern no longer infers or persists a Codex runtime path from `openai-codex`; Hermes keeps its default runtime unless Hermes config explicitly opts into Codex app-server runtime.
-- Raised the required Runtime floor to 1.4.0 for the Hermes Gateway, model config, runtime skill, cron, workspace file, and llm-wiki contracts.
+- Raised the required Runtime floor to 1.4.0 for the Hermes Gateway, model config, runtime skill, cron, workspace file, and Cortex wiki contracts.
 
 ## v1.3.0 - 2026-06-09
 
-- Replaced the GBrain/PGlite Cortex stack with a read-only llm-wiki hub browser and managed Hermes wiki skill.
-- Updated Runtime packaging, Homebrew assets, capability checks, and docs for the llm-wiki hub.
+- Replaced the GBrain/PGlite Cortex stack with a read-only Cortex wiki hub browser and managed Hermes wiki skill.
+- Updated Runtime packaging, Homebrew assets, capability checks, and docs for the Cortex wiki hub.
 - Raised the required Runtime floor to 1.3.0 for the new Cortex API, wiki hub, and managed Hermes integration.
 
 ## v1.2.9 - 2026-06-06

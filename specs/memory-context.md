@@ -12,7 +12,7 @@ It is not a durable memory system. It is prompt assembly over existing sources.
 | Hermes context management | Hermes | Prompt-time continuity during active turns |
 | Chat and activity state | Tavern Runtime | Recent product state and live work |
 | Participant/profile state | Tavern Runtime and Tavern App | Person identity and explicit links |
-| llm-wiki hub | llm-wiki skills and agent jobs | Durable Markdown knowledge |
+| Cortex wiki hub | Managed wiki skill and agent jobs | Durable Markdown knowledge |
 
 Memory context reads from these sources and renders a bounded prompt-facing
 view. It does not persist a synthesized bulletin as canonical memory.
@@ -25,7 +25,7 @@ The prompt-facing context can include:
 * relevant recent activity
 * active participant/profile context
 * Hermes prompt-time context
-* selected llm-wiki pages or search results
+* selected Cortex wiki pages or search results
 
 Each piece is bounded and source-linked. If the wiki has no useful result, the
 context omits wiki material instead of adding filler.
@@ -34,7 +34,7 @@ context omits wiki material instead of adding filler.
 
 * Memory context stays bounded.
 * Managed Tavern Hermes does not use Lossless Claw.
-* llm-wiki remains the durable knowledge system.
+* Cortex remains the durable knowledge system.
 * The Memory page inspects wiki readiness; it is not a separate memory
   database.
 * The Cortex page browses wiki pages; it is not a separate store.

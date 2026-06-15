@@ -36,7 +36,7 @@ manage businesses, complete knowledge work, and automate routine tasks.
 * **Hermes as agent runtime.** Sessions, turns, tools, model calls, files,
   and native transcripts stay execution-owned.
 * **Memory you can inspect.** Hermes handles prompt-time context, while Tavern
-  shows the llm-wiki hub behind durable agent knowledge.
+  shows the Cortex wiki hub behind durable agent knowledge.
 * **Cortex wiki included.** Give agents a linked Markdown wiki for durable
   notes, sources, compiled pages, todos, datasets, outputs, and working
   material instead of stuffing everything into prompts.
@@ -66,10 +66,10 @@ manage businesses, complete knowledge work, and automate routine tasks.
   summaries, and final replies in one timeline.
 * **Agents.** Model, tool, memory, skill, and toolset configuration for the
   people you actually work with in Tavern.
-* **Cortex.** A browsable llm-wiki hub with topics, Markdown pages, backlinks,
+* **Cortex.** A browsable Cortex wiki hub with topics, Markdown pages, backlinks,
   source folders, inventories, datasets, outputs, and agent-authored notes.
 * **Context management.** Prompt-time continuity for active Hermes turns.
-* **Memory.** llm-wiki hub readiness plus prompt-time context inspection.
+* **Memory.** Cortex wiki hub readiness plus prompt-time context inspection.
 * **Cron automations.** Scheduled agent work with run history, delivery targets,
   and clear follow-up state, even while the app is closed.
 * **Skills & Toolsets.** Reusable instruction packages and Hermes tool groups.
