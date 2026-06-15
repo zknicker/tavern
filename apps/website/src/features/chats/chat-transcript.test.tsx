@@ -99,6 +99,45 @@ test('ChatTranscript renders constrained inline markdown in message text', () =>
     assert.doesNotMatch(markup, /href="javascript:/);
 });
 
+test('ChatTranscript renders image attachments in a fluid media frame', () => {
+    const markup = renderTranscript([
+        {
+            actor: { id: 'profile-1', kind: 'participant' },
+            connectsToNext: false,
+            connectsToPrevious: false,
+            id: 'message-image',
+            isFirstInGroup: true,
+            kind: 'message',
+            message: {
+                tavernAgentId: null,
+                attachments: [
+                    {
+                        dataBase64: 'iVBORw0KGgo=',
+                        filename: 'screenshot.png',
+                        height: 768,
+                        mediaType: 'image/png',
+                        sizeBytes: 12_345,
+                        type: 'inline',
+                        width: 1024,
+                    },
+                ],
+                content: 'Can you inspect this?',
+                id: 'message-image',
+                sender: 'You',
+                senderType: 'user',
+                sourceSessionId: null,
+                sourceSessionKey: 'agent:tiny:session-1',
+                timestamp: '2026-03-31T15:00:00.000Z',
+            },
+        },
+    ]);
+
+    assert.match(markup, /aria-label="Open screenshot\.png"/);
+    assert.match(markup, /size-16/);
+    assert.doesNotMatch(markup, /bg-surface-2/);
+    assert.doesNotMatch(markup, /File reference/);
+});
+
 test('ChatTranscript renders active replies through the chat message shell', () => {
     const markup = renderActiveTranscript({
         agentId: 'tiny',

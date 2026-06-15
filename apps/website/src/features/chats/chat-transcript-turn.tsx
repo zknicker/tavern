@@ -31,7 +31,10 @@ import {
     getVisibleAgentItems,
     groupAgentItems,
 } from './chat-transcript-item-utils.ts';
-import { ChatTranscriptMessageContent } from './chat-transcript-message.tsx';
+import {
+    ChatTranscriptMessageAttachments,
+    ChatTranscriptMessageContent,
+} from './chat-transcript-message.tsx';
 import type {
     ConversationMessageLayout,
     TranscriptEntry,
@@ -477,12 +480,16 @@ function UserTurnItem({
     }
 
     const message = item.row.message;
+    const attachments = (
+        <ChatTranscriptMessageAttachments attachments={message.attachments ?? []} />
+    );
     const body = <ChatTranscriptMessageContent message={message} textClassName="text-current" />;
 
     return body ? (
         <ChatMessage
             actions={showMeta ? <TranscriptMessageActions message={message} /> : null}
             animateEnter={animateEnter}
+            attachments={attachments}
             className={className}
             from="user"
             time={showMeta ? formatShortTime(message.timestamp) : null}
@@ -514,9 +521,18 @@ function AgentTurnItem({
     }
 
     if (item.kind === 'row' && item.row.kind === 'message') {
+        const message = item.row.message;
+
         return (
-            <ChatMessage animateEnter={false} className="max-w-[100%]" from="assistant">
-                <ChatTranscriptMessageContent message={item.row.message} />
+            <ChatMessage
+                animateEnter={false}
+                attachments={
+                    <ChatTranscriptMessageAttachments attachments={message.attachments ?? []} />
+                }
+                className="max-w-[100%]"
+                from="assistant"
+            >
+                <ChatTranscriptMessageContent message={message} />
             </ChatMessage>
         );
     }

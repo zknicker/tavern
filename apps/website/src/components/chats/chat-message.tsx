@@ -8,15 +8,20 @@ import { cn } from '../../lib/utils.ts';
 export interface ChatMessageProps extends Omit<HTMLMotionProps<'div'>, 'children'> {
     actions?: ReactNode;
     animateEnter?: boolean;
+    attachments?: ReactNode;
     children?: ReactNode;
     from: 'user' | 'assistant';
     time?: ReactNode;
 }
 
 const ChatMessage = forwardRef<HTMLDivElement, ChatMessageProps>(
-    ({ actions, animateEnter = true, children, className, from, time, ...props }, ref) => {
+    (
+        { actions, animateEnter = true, attachments, children, className, from, time, ...props },
+        ref
+    ) => {
         const isUser = from === 'user';
         const hasBody = children !== null && children !== undefined && children !== '';
+        const hasAttachments = attachments !== null && attachments !== undefined;
         const showTime = isUser && time !== null && time !== undefined;
         const showActions = actions !== null && actions !== undefined;
         const showMeta = showTime || showActions;
@@ -35,6 +40,16 @@ const ChatMessage = forwardRef<HTMLDivElement, ChatMessageProps>(
                 transition={springs.moderate}
                 {...props}
             >
+                {hasAttachments ? (
+                    <div
+                        className={cn(
+                            'flex flex-wrap gap-1.5',
+                            isUser ? 'justify-end' : 'justify-start'
+                        )}
+                    >
+                        {attachments}
+                    </div>
+                ) : null}
                 {hasBody ? (
                     <div
                         className={cn(
