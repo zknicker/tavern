@@ -39,6 +39,10 @@ export function useChatTurnEvents() {
         onData: handlers.onTurnCompleted,
     });
 
+    trpc.chat.onTurnCancelled.useSubscription(undefined, {
+        onData: handlers.onTurnCancelled,
+    });
+
     trpc.chat.onTurnFailed.useSubscription(undefined, {
         onData: handlers.onTurnFailed,
     });

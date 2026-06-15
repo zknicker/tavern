@@ -34,7 +34,9 @@ maps its controls onto managed Hermes surfaces:
 * active-turn queueing is Tavern App state until the queued draft is dispatched
   through Runtime
 * stopping an active turn calls the Desktop parity Gateway method
-  `session.interrupt` for the active managed Hermes session
+  `session.interrupt` for the active managed Hermes session, keeps consuming
+  the interrupted stream until the engine settles it, then marks the Tavern
+  response `cancelled`
 
 There is no standalone first-party Hermes plugin package in this worktree. The
 adapter is Runtime code, and Runtime writes the managed Tavern Messenger

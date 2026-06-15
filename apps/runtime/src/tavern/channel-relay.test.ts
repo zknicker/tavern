@@ -18,6 +18,7 @@ interface MockStreamChatInput {
 
 const hermesClient = vi.hoisted(() => ({
     close: vi.fn(),
+    interruptLiveSession: vi.fn(async () => undefined),
     respondToLiveClarification: vi.fn(async () => ({ resolved: true })),
     streamChat: vi.fn(async function* streamChat(
         _input?: MockStreamChatInput
@@ -226,7 +227,82 @@ describe('Tavern Hermes channel relay', () => {
             },
             {
                 request_message_id: 'msg_second',
-                status: 'failed',
+                status: 'cancelled',
+            },
+        ]);
+    });
+
+    it('cancels a live Hermes turn without delivering interrupted output', async () => {
+        const liveStarted = deferred<void>();
+        const releaseInterruptedCompletion = deferred<void>();
+        const liveSignal: { current: AbortSignal | null } = { current: null };
+        hermesClient.streamChat.mockImplementationOnce(async function* streamChat(input?: {
+            onLiveSessionId?: (sessionId: string) => void;
+            signal?: AbortSignal;
+        }) {
+            liveSignal.current = input?.signal ?? null;
+            input?.onLiveSessionId?.('live_session_1');
+            liveStarted.resolve();
+            yield {
+                data: { delta: 'writing a poem' },
+                event: 'assistant.delta',
+            };
+            await releaseInterruptedCompletion.promise;
+            yield {
+                data: { delta: 'late poem text' },
+                event: 'assistant.delta',
+            };
+            yield {
+                data: {
+                    content: 'Operation interrupted, but here is the poem.',
+                    message_id: 'hermes_msg_interrupted',
+                },
+                event: 'assistant.completed',
+            };
+        });
+        createChat({ id: 'cht_1' });
+
+        const accepted = await sendTavernChannelMessage('cht_1', {
+            agent: {
+                agentId: 'agt_1',
+            },
+            message: {
+                content: 'write me a poem',
+                id: 'msg_poem',
+                nonce: 'nonce_poem',
+            },
+            target: {
+                externalId: null,
+                sessionKey: 'session_1',
+                target: 'cht_1',
+                type: 'tavern',
+            },
+        });
+        await liveStarted.promise;
+
+        await expect(stopTavernChannelTurn({ runId: accepted.runId })).resolves.toEqual({
+            runId: accepted.runId,
+            stopped: true,
+        });
+        expect(hermesClient.interruptLiveSession).toHaveBeenCalledWith('live_session_1');
+        expect(liveSignal.current?.aborted).toBe(false);
+        expect(listResponses('cht_1').responses).toMatchObject([
+            {
+                request_message_id: 'msg_poem',
+                status: 'running',
+            },
+        ]);
+
+        releaseInterruptedCompletion.resolve();
+        await waitFor(() => listResponses('cht_1').responses.at(0)?.status === 'cancelled');
+
+        expect(listMessages('cht_1').messages.map((message) => message.id)).toEqual(['msg_poem']);
+        expect(listResponses('cht_1').responses).toMatchObject([
+            {
+                request_message_id: 'msg_poem',
+                response_message_id: null,
+                status: 'cancelled',
+                summary: 'Agent response stopped.',
             },
         ]);
     });

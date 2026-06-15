@@ -30,6 +30,7 @@ interface ActiveHermesTurn {
     clarificationTimers: Map<string, ReturnType<typeof setTimeout>>;
     client: HermesClient;
     controller: AbortController;
+    interrupted: boolean;
     sessionId: string | null;
     sessionKey: string;
     settleAllApprovals: boolean;
@@ -88,6 +89,7 @@ export async function runHermesTurn(input: {
         clarificationSettlements: new Map<string, ClarificationSettlement>(),
         clarificationTimers: new Map<string, ReturnType<typeof setTimeout>>(),
         controller: new AbortController(),
+        interrupted: false,
         settleClarification: gatewayActivities.settleClarification,
         settleAllApprovals: false,
         sessionId: null as string | null,
@@ -137,6 +139,10 @@ export async function runHermesTurn(input: {
             signal: activeTurn.controller.signal,
             title: input.chatId,
         })) {
+            if (activeTurn.interrupted) {
+                continue;
+            }
+
             // Notices arrive from a background poller and must not chop an
             // in-flight reasoning segment.
             if (!(isReasoningEvent(event.event) || isNoticeEvent(event.event))) {
@@ -335,6 +341,11 @@ export async function runHermesTurn(input: {
         completeReasoningToProgress();
         stream.flush();
 
+        if (activeTurn.interrupted) {
+            cancelHermesTurn(input, participantId, turn);
+            return;
+        }
+
         if (!assistantContent.trim()) {
             throw new Error('Agent failed to produce a reply.');
         }
@@ -351,6 +362,10 @@ export async function runHermesTurn(input: {
         stream.flush();
         completeReasoningSegment(input, reasoningSegment);
         reasoningSegment = null;
+        if (activeTurn.interrupted) {
+            cancelHermesTurn(input, participantId, turn);
+            return;
+        }
         failHermesTurn(input, participantId, error, turn);
     } finally {
         clearClarificationTimers(activeTurn);
@@ -366,15 +381,17 @@ export async function interruptHermesTurn(runId: string) {
     }
 
     if (!activeTurn.sessionId) {
+        activeTurn.interrupted = true;
         activeTurn.controller.abort();
         return true;
     }
 
     try {
+        activeTurn.interrupted = true;
         await activeTurn.client.interruptLiveSession(activeTurn.sessionId);
-        activeTurn.controller.abort();
         return true;
     } catch (error) {
+        activeTurn.interrupted = false;
         activeTurn.controller.abort();
         console.warn('[tavern-runtime] Hermes turn interrupt failed', error);
         return false;
@@ -1038,6 +1055,33 @@ function failHermesTurn(
         type: 'turn.failed',
     });
     console.warn('[tavern-runtime] Hermes turn failed', error);
+}
+
+function cancelHermesTurn(input: HermesTurnInput, participantId: string, turn: HermesTurn) {
+    const message = 'Agent response stopped.';
+    upsertResponse(input.chatId, {
+        id: input.responseId,
+        metadata: {
+            runtime: {
+                agentId: input.agentId,
+                messageId: input.requestMessageId,
+                runId: input.runId,
+                sessionKey: input.sessionKey,
+                source: 'hermes',
+                startedAt: turn.startedAt,
+                stopReason: 'user_stopped',
+            },
+        },
+        participant_id: participantId,
+        request_message_id: input.requestMessageId,
+        status: 'cancelled',
+        summary: message,
+    });
+    publishRuntimeEvent({
+        timestamp: new Date().toISOString(),
+        turn,
+        type: 'turn.cancelled',
+    });
 }
 
 function isToolLifecycleEvent(event: string) {

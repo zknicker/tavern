@@ -4,6 +4,7 @@ import { createChatTurnEventHandlers } from './chat-turn-events.ts';
 
 function createHandlers(input?: {
     invalidatedQueries?: string[];
+    onClear?: (runId?: string) => void;
     onComplete?: (runId: string) => void;
     onFail?: (value: string) => void;
     onProgress?: (value: string) => void;
@@ -34,9 +35,7 @@ function createHandlers(input?: {
             },
         },
         timeline: {
-            clearTurn: () => {
-                throw new Error('Expected no turn clear.');
-            },
+            clearTurn: (event) => input?.onClear?.(event.runId),
             completeTurn: (event) => input?.onComplete?.(event.turn.runId),
             failTurn: (event) => input?.onFail?.(`${event.turn.runId}:${event.error}`),
             patchProgress: (event) =>
@@ -88,6 +87,40 @@ test('duplicate turn completion events do not refetch live status again', async 
     await Promise.resolve();
 
     expect(completedTurns).toEqual(['run-1']);
+    expect(invalidatedQueries).toEqual(['agent.activity']);
+});
+
+test('turn cancellation clears the active turn without failing it', async () => {
+    const invalidatedQueries: string[] = [];
+    const clearedTurns: (string | undefined)[] = [];
+    const failures: string[] = [];
+    const handlers = createHandlers({
+        invalidatedQueries,
+        onClear: (runId) => clearedTurns.push(runId),
+        onFail: (value) => failures.push(value),
+    });
+
+    handlers.onTurnCancelled(turn);
+    await Promise.resolve();
+
+    expect(clearedTurns).toEqual(['run-1']);
+    expect(failures).toEqual([]);
+    expect(invalidatedQueries).toEqual(['agent.activity']);
+});
+
+test('duplicate turn cancellation events do not refetch live status again', async () => {
+    const invalidatedQueries: string[] = [];
+    const clearedTurns: (string | undefined)[] = [];
+    const handlers = createHandlers({
+        invalidatedQueries,
+        onClear: (runId) => clearedTurns.push(runId),
+    });
+
+    handlers.onTurnCancelled(turn);
+    handlers.onTurnCancelled(turn);
+    await Promise.resolve();
+
+    expect(clearedTurns).toEqual(['run-1']);
     expect(invalidatedQueries).toEqual(['agent.activity']);
 });
 

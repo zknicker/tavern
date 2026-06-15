@@ -8,6 +8,7 @@ import { listChatsRoute } from './list.ts';
 import { dismissChatLogRowRoute } from './log-dismiss.ts';
 import { listChatLogRoute } from './log-list.ts';
 import { onChatLogUpdate } from './log-on-update.ts';
+import { onChatTurnCancelled } from './on-turn-cancelled.ts';
 import { onChatTurnCompleted } from './on-turn-completed.ts';
 import { onChatTurnFailed } from './on-turn-failed.ts';
 import { onChatTurnProgress } from './on-turn-progress.ts';
@@ -43,6 +44,7 @@ export const chatRouter = createRouter({
         onUpdate: onChatLogUpdate,
     }),
     onUpdate: onChatUpdate,
+    onTurnCancelled: onChatTurnCancelled,
     onTurnCompleted: onChatTurnCompleted,
     onTurnFailed: onChatTurnFailed,
     onTurnProgress: onChatTurnProgress,

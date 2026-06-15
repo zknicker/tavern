@@ -77,6 +77,22 @@ export function createChatTurnEventHandlers(utils: ChatTurnEventUtils) {
             });
             invalidateCompletedTurn();
         },
+        onTurnCancelled: (turn: ChatTurn) => {
+            if (!rememberTerminalTurn(terminalTurnIds, `cancelled:${turn.runId}`)) {
+                return;
+            }
+
+            debugChatEvent('turn.cancelled.event', {
+                chatId: turn.chatId,
+                runId: turn.runId,
+                sessionKey: turn.sessionKey,
+            });
+            utils.timeline.clearTurn({
+                chatId: turn.chatId,
+                runId: turn.runId,
+            });
+            invalidateCompletedTurn();
+        },
         onTurnFailed: (input: { error: string; turn: ChatTurn }) => {
             if (!rememberTerminalTurn(terminalTurnIds, `failed:${input.turn.runId}`)) {
                 return;

@@ -163,6 +163,7 @@ export async function applyObservedAgentRuntimeEvent(
             return;
         }
         case 'turn.completed':
+        case 'turn.cancelled':
         case 'turn.failed': {
             clearTurnSessionActive(event.turn.sessionKey);
             emitObservedAgentRuntimeEvent(event);

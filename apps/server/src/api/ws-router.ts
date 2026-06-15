@@ -4,6 +4,7 @@ import { onAgentUpdate } from './agent/on-update.ts';
 import { onAgentRuntimeCapabilityUpdated } from './agent-runtime/on-capability-updated.ts';
 import { onAgentRuntimeUpdate } from './agent-runtime/on-update.ts';
 import { onChatLogUpdate } from './chat/log-on-update.ts';
+import { onChatTurnCancelled } from './chat/on-turn-cancelled.ts';
 import { onChatTurnCompleted } from './chat/on-turn-completed.ts';
 import { onChatTurnFailed } from './chat/on-turn-failed.ts';
 import { onChatTurnProgress } from './chat/on-turn-progress.ts';
@@ -32,6 +33,7 @@ export const wsRouter = createRouter({
             onUpdate: onChatLogUpdate,
         }),
         onTurnCompleted: onChatTurnCompleted,
+        onTurnCancelled: onChatTurnCancelled,
         onTurnFailed: onChatTurnFailed,
         onTurnProgress: onChatTurnProgress,
         onTurnReplyUpdated: onChatTurnReplyUpdated,

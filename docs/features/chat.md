@@ -44,7 +44,8 @@ happen, and keep the durable timeline as context.
 * **Mid-turn steering.** The chat composer stays available while an agent turn
   is running. Drafts entered during an active turn are queued for the same chat
   and agent, then sent when the active response settles. Explicit steering and
-  stopping are separate controls.
+  stopping are separate controls. A stopped turn settles as `cancelled`; late
+  engine output from that turn is not delivered as the assistant reply.
 * **Composer context.** The composer keeps a compositional input shell with
   tool, model, attachment, queue, and submit slots. Attachments and per-chat
   model choices are Tavern controls backed by managed Hermes capabilities and
@@ -148,6 +149,11 @@ Queued composer drafts are app-local until dispatched. A queued draft does not
 create a durable Tavern message, response, Hermes session entry, or transcript
 row until Runtime accepts it through the normal send path. The queued draft
 keeps its selected agent, attachments, model override, content, and metadata.
+
+Stopping a live turn interrupts the managed engine session, keeps the session
+busy until the engine reports the interrupted turn settled, then clears the
+active response. The next user message starts only after that settlement, so the
+stopped request remains historical context instead of the current instruction.
 
 When Hermes accepts an explicit mid-turn steer, Runtime records a
 `runtimeNotice` activity row. Tavern App renders it as a system row in the same

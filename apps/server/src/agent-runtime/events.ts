@@ -50,6 +50,10 @@ export function subscribeToObservedAgentRuntimeTurnCompleted(signal?: AbortSigna
     return subscribeToObservedAgentRuntimeEventType('turn.completed', signal);
 }
 
+export function subscribeToObservedAgentRuntimeTurnCancelled(signal?: AbortSignal) {
+    return subscribeToObservedAgentRuntimeEventType('turn.cancelled', signal);
+}
+
 export function subscribeToObservedAgentRuntimeTurnFailed(signal?: AbortSignal) {
     return subscribeToObservedAgentRuntimeEventType('turn.failed', signal);
 }
