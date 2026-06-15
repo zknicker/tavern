@@ -134,6 +134,17 @@ export class LocalHermesClient extends LocalHermesUnsupportedSurfaces {
         });
     }
 
+    async steerLiveSession(sessionId: string, content: string) {
+        const result = await this.#gateway.request('session.steer', {
+            session_id: sessionId,
+            text: content,
+        });
+
+        return {
+            steered: readStringFromUnknown(result, ['status']) === 'queued',
+        };
+    }
+
     // Starts the chat's next turn on a brand-new engine session: close the
     // live session if one is open and drop the synced session mapping so the
     // next open creates a fresh session under the same Tavern session key.

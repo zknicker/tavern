@@ -1,10 +1,18 @@
-import { type AgentRuntimeCreateMessage, agentRuntimeRoutes } from '@tavern/api';
+import {
+    type AgentRuntimeCreateMessage,
+    type AgentRuntimeSteerTurn,
+    agentRuntimeRoutes,
+} from '@tavern/api';
 import { getDb } from '../db/connection.ts';
 import { unsupportedHermesSurface } from '../hermes/errors.ts';
 import { createLocalHermesClient } from '../hermes/local-client.ts';
 import { generateRegisteredAgentInstructions } from '../workspace/instructions.ts';
 import { agentNotesFileName } from '../workspace/managed-instructions.ts';
-import { sendTavernChannelMessage, stopTavernChannelTurn } from './channel-relay.ts';
+import {
+    sendTavernChannelMessage,
+    steerTavernChannelTurn,
+    stopTavernChannelTurn,
+} from './channel-relay.ts';
 import { json } from './http.ts';
 
 type LocalHermesClient = ReturnType<typeof createLocalHermesClient>;
@@ -256,6 +264,18 @@ async function dispatchChats({ client, request, url }: RouteContext, segments: s
             return await sendTavernChannelMessage(chatId, input);
         }
         return await client.postMessage(chatId, input);
+    }
+    if (
+        request.method === 'POST' &&
+        segments[3] === 'turns' &&
+        segments[4] &&
+        segments[5] === 'steer'
+    ) {
+        const input = (await readJson(request)) as AgentRuntimeSteerTurn;
+        return await steerTavernChannelTurn(chatId, {
+            ...input,
+            runId: segments[4],
+        });
     }
     if (
         request.method === 'POST' &&

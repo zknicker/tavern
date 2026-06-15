@@ -1,9 +1,12 @@
 import {
     type AgentRuntimeCreateMessage,
     type AgentRuntimeMessageAccepted,
+    type AgentRuntimeSteerTurn,
     agentRuntimeCreateMessageSchema,
     agentRuntimeMessageAcceptedSchema,
     agentRuntimeRoutes,
+    agentRuntimeSteerTurnResultSchema,
+    agentRuntimeSteerTurnSchema,
     agentRuntimeStopTurnResultSchema,
     agentRuntimeStopTurnSchema,
     tavernChannelClientFrameSchema,
@@ -11,7 +14,7 @@ import {
 import type { WebSocket } from 'ws';
 import { createAgentParticipantId, createRunId } from './chat-api/ids.ts';
 import { createMessage, upsertResponse } from './chat-api/index.ts';
-import { interruptHermesTurn, runHermesTurn } from './hermes-turn-runner.ts';
+import { interruptHermesTurn, runHermesTurn, steerHermesTurn } from './hermes-turn-runner.ts';
 
 const sockets = new Set<WebSocket>();
 
@@ -132,6 +135,21 @@ export async function stopTavernChannelTurn(input: { runId: string }) {
     return agentRuntimeStopTurnResultSchema.parse({
         runId: payload.runId,
         stopped,
+    });
+}
+
+export async function steerTavernChannelTurn(chatId: string, input: AgentRuntimeSteerTurn) {
+    const payload = agentRuntimeSteerTurnSchema.parse(input);
+    const steered = await steerHermesTurn({
+        chatId,
+        content: payload.content,
+        metadata: payload.metadata,
+        runId: payload.runId,
+    });
+
+    return agentRuntimeSteerTurnResultSchema.parse({
+        runId: payload.runId,
+        steered,
     });
 }
 

@@ -18,6 +18,7 @@ import { onChatUpdate } from './on-update.ts';
 import { sendChatMessageRoute } from './send.ts';
 import { setChatPinnedRoute } from './set-pinned.ts';
 import { startChatRoute } from './start.ts';
+import { steerChatTurnRoute } from './steer.ts';
 import { stopChatTurnRoute } from './stop.ts';
 import { getChatToolRoute } from './tool-get.ts';
 import { updateChatRoute } from './update.ts';
@@ -53,6 +54,7 @@ export const chatRouter = createRouter({
     send: sendChatMessageRoute,
     setPinned: setChatPinnedRoute,
     start: startChatRoute,
+    steer: steerChatTurnRoute,
     stop: stopChatTurnRoute,
     updateTabAppearance: updateChatTabAppearanceRoute,
     updateSystemPrompt: updateChatSystemPromptRoute,

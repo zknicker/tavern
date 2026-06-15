@@ -154,11 +154,16 @@ function hasTerminalChatRow(state: ChatTimelineState) {
     });
 }
 
-export function isBlockingActiveReply(input: {
+export function isBlockingActiveTurn(input: {
     activeReply: { isThinking?: boolean | null } | null;
+    activeTurn?: unknown;
     agentsPending: boolean;
 }) {
     if (input.agentsPending) {
+        return true;
+    }
+
+    if (input.activeTurn) {
         return true;
     }
 
@@ -212,7 +217,7 @@ function SyncedAgentChatDetail({
             fetchPreviousPage={timeline.fetchPreviousPage}
             footer={
                 <ChatMessageComposer
-                    activeRunId={timeline.activeReply?.runId ?? null}
+                    activeRunId={timeline.activeTurn?.runId ?? timeline.activeReply?.runId ?? null}
                     agentRuntimeSyncLabel={chat.agentRuntimeSyncLabel}
                     agents={agents}
                     boundAgentIds={chat.boundAgentIds}
@@ -220,8 +225,9 @@ function SyncedAgentChatDetail({
                     chatId={chat.id}
                     contextFullness={contextFullness}
                     isDisabled={chat.isDisabled}
-                    isReplyActive={isBlockingActiveReply({
+                    isReplyActive={isBlockingActiveTurn({
                         activeReply: timeline.activeReply,
+                        activeTurn: timeline.activeTurn,
                         agentsPending: agentsQuery.isPending,
                     })}
                 />

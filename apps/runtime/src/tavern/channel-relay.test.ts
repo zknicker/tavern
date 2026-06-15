@@ -20,6 +20,7 @@ const hermesClient = vi.hoisted(() => ({
     close: vi.fn(),
     interruptLiveSession: vi.fn(async () => undefined),
     respondToLiveClarification: vi.fn(async () => ({ resolved: true })),
+    steerLiveSession: vi.fn(async () => ({ steered: true })),
     streamChat: vi.fn(async function* streamChat(
         _input?: MockStreamChatInput
     ): AsyncGenerator<MockHermesEvent> {
@@ -46,7 +47,11 @@ vi.mock('../hermes/local-client', () => ({
     createLocalHermesClient: () => hermesClient,
 }));
 
-import { sendTavernChannelMessage, stopTavernChannelTurn } from './channel-relay';
+import {
+    sendTavernChannelMessage,
+    steerTavernChannelTurn,
+    stopTavernChannelTurn,
+} from './channel-relay';
 import { createChat, getChat, listMessages, listResponses } from './chat-api';
 import { closeHermesTurnClients, respondToHermesClarification } from './hermes-turn-runner';
 
@@ -305,6 +310,104 @@ describe('Tavern Hermes channel relay', () => {
                 summary: 'Agent response stopped.',
             },
         ]);
+    });
+
+    it('steers a live Hermes turn without creating a queued Tavern message', async () => {
+        const releaseTurn = deferred<void>();
+        hermesClient.streamChat.mockImplementationOnce(async function* streamChat(
+            input?: MockStreamChatInput
+        ) {
+            input?.onLiveSessionId?.('live_session_1');
+            await releaseTurn.promise;
+            yield {
+                data: { content: 'steered result', message_id: 'hermes_msg_steered' },
+                event: 'assistant.completed',
+            };
+        });
+        createChat({ id: 'cht_1' });
+
+        const accepted = await sendTavernChannelMessage('cht_1', {
+            agent: {
+                agentId: 'agt_1',
+            },
+            message: {
+                content: 'first',
+                id: 'msg_first',
+                nonce: 'nonce_first',
+            },
+            target: {
+                externalId: null,
+                sessionKey: 'session_1',
+                target: 'cht_1',
+                type: 'tavern',
+            },
+        });
+        await waitFor(() => hermesClient.streamChat.mock.calls.length === 1);
+
+        await expect(
+            steerTavernChannelTurn('cht_1', {
+                content: 'tighten the plan',
+                runId: accepted.runId,
+            })
+        ).resolves.toEqual({
+            runId: accepted.runId,
+            steered: true,
+        });
+        expect(hermesClient.steerLiveSession).toHaveBeenCalledWith(
+            'live_session_1',
+            'tighten the plan'
+        );
+        expect(listMessages('cht_1').messages.map((message) => message.id)).toEqual(['msg_first']);
+
+        releaseTurn.resolve();
+        await waitForHermesTurn();
+    });
+
+    it('does not steer a run for another chat', async () => {
+        const releaseTurn = deferred<void>();
+        hermesClient.streamChat.mockImplementationOnce(async function* streamChat(
+            input?: MockStreamChatInput
+        ) {
+            input?.onLiveSessionId?.('live_session_1');
+            await releaseTurn.promise;
+            yield {
+                data: { content: 'done', message_id: 'hermes_msg_done' },
+                event: 'assistant.completed',
+            };
+        });
+        createChat({ id: 'cht_1' });
+
+        const accepted = await sendTavernChannelMessage('cht_1', {
+            agent: {
+                agentId: 'agt_1',
+            },
+            message: {
+                content: 'first',
+                id: 'msg_first',
+                nonce: 'nonce_first',
+            },
+            target: {
+                externalId: null,
+                sessionKey: 'session_1',
+                target: 'cht_1',
+                type: 'tavern',
+            },
+        });
+        await waitFor(() => hermesClient.streamChat.mock.calls.length === 1);
+
+        await expect(
+            steerTavernChannelTurn('cht_other', {
+                content: 'wrong chat',
+                runId: accepted.runId,
+            })
+        ).resolves.toEqual({
+            runId: accepted.runId,
+            steered: false,
+        });
+        expect(hermesClient.steerLiveSession).not.toHaveBeenCalled();
+
+        releaseTurn.resolve();
+        await waitForHermesTurn();
     });
 
     it('delivers the completed Hermes assistant message into Tavern history', async () => {

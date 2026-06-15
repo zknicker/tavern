@@ -3,6 +3,7 @@ summary: Durable chat API for messages, responses, activity, artifacts, receipts
 read_when:
   - changing chat messages, responses, activity, artifacts, receipts, history, or timeline recovery
   - changing how Hermes, bots, webhooks, or local tools send chat work into Tavern
+  - changing chat turn stop or steering contracts
 ---
 
 # Chat API
@@ -89,6 +90,14 @@ Live turn progress updates the visible `chat.log.list` cache by activity id.
 The eventual durable read returns the same row ids, so running activity becomes
 completed activity without remounting the transcript. Streamed final reply text
 stays app-local until the final assistant message is persisted.
+
+`chat.stop` and `chat.steer` are turn-control mutations, not message writes.
+`chat.steer` accepts `chatId`, active `runId`, text `content`, and optional
+message metadata. It forwards text into the live agent turn and returns
+`steered: true` only after Runtime accepts the steer. Steering does not create a
+durable user message; accepted steers are represented as response activity.
+Messages with attachments or model overrides must use the normal message send
+path.
 
 ## Messages
 

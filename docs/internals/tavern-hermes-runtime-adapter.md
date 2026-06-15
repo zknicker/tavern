@@ -3,6 +3,7 @@ summary: Tavern Runtime adapter contract for managed Hermes turns, stream event 
 read_when:
   - changing how Tavern Runtime sends chat work to managed Hermes
   - changing Tavern chat participant to Hermes session binding or session-scoped slash commands
+  - changing active-turn queueing, steering, or stop behavior
   - changing Hermes stream event mapping, assistant progress activity, thinking display, tool rows, or final delivery
   - debugging duplicated chat rows, missing progress, active turn state, or model-provider e2e behavior
 ---
@@ -32,7 +33,13 @@ maps its controls onto managed Hermes surfaces:
   the Desktop app uses, then Tavern records the selected model on the message or
   response metadata
 * active-turn queueing is Tavern App state until the queued draft is dispatched
-  through Runtime
+  through Runtime or explicitly steered into the live turn
+* text-only queued steering calls Hermes Gateway `session.steer` for the active
+  live session; Runtime publishes `turn.steered` and records a durable
+  `runtimeNotice` activity
+* queued drafts with attachments or a model override cannot use steering; their
+  "send now" action promotes the draft, interrupts the active run, and lets the
+  next normal send path stage attachments or apply model selection
 * stopping an active turn calls the Desktop parity Gateway method
   `session.interrupt` for the active managed Hermes session, keeps consuming
   the interrupted stream until the engine settles it, then marks the Tavern
@@ -77,6 +84,30 @@ Accepted Tavern messages are durable before model work starts.
 
 Duplicate ids and nonces reconcile through the normal Chat API. Runtime must not
 match messages by text or timestamp.
+
+## Queueing And Steering
+
+Hermes supports queue, interrupt, and steer as busy-input behaviors. Tavern does
+not expose that as one global mode. The app keeps queued drafts locally, and
+the user chooses the action on each queued draft.
+
+Runtime steering is intentionally narrow:
+
+1. The app sends `chat.steer` with `chatId`, active `runId`, text `content`,
+   and optional Tavern metadata.
+2. The server validates the chat's Runtime connection and posts to
+   `/hermes/chats/{chatId}/turns/{runId}/steer`.
+3. Runtime finds the active managed Hermes turn, projects Tavern mention
+   metadata into Hermes-readable prompt text, and calls Gateway
+   `session.steer`.
+4. Hermes returns accepted status when the text was queued for the live agent.
+   Runtime then publishes `turn.steered`.
+5. Server event sync records that as `runtimeNotice` activity attached to the
+   active response.
+
+Steering never creates a Tavern user message. If the queued draft needs
+attachments, image bytes, or a model override, the app must keep it as a normal
+message draft and use interruption plus the normal send lifecycle instead.
 
 ## Stream Mapping
 

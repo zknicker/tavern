@@ -49,11 +49,16 @@ export function useChatComposerQueue(chatId: string) {
         setQueue((current) => moveQueuedMessage(current, id, direction));
     }, []);
 
+    const reorder = React.useCallback((nextQueue: readonly ChatComposerQueuedMessage[]) => {
+        setQueue([...nextQueue]);
+    }, []);
+
     return {
         enqueue,
         move,
         promote,
         queue,
+        reorder,
         remove,
     };
 }
@@ -105,6 +110,14 @@ export function moveQueuedMessage(
     next[index] = target;
     next[nextIndex] = entry;
     return next;
+}
+
+export function isQueuedMessageSteerable(entry: ChatComposerQueuedMessage) {
+    return (
+        entry.content.trim().length > 0 &&
+        !entry.attachments?.length &&
+        entry.modelRef === undefined
+    );
 }
 
 function loadQueue(chatId: string): ChatComposerQueuedMessage[] {

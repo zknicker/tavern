@@ -3,6 +3,7 @@ summary: Agent chat experience for durable messages, responses, activity, artifa
 read_when:
   - changing the main agent conversation experience
   - changing durable messages, responses, activity, artifacts, receipts, or timeline recovery
+  - changing mid-turn queueing, steering, or stop behavior
 ---
 
 # Chat
@@ -43,9 +44,12 @@ happen, and keep the durable timeline as context.
   closed; the app reloads from durable rows and refetches on reconnect.
 * **Mid-turn steering.** The chat composer stays available while an agent turn
   is running. Drafts entered during an active turn are queued for the same chat
-  and agent, then sent when the active response settles. Explicit steering and
-  stopping are separate controls. A stopped turn settles as `cancelled`; late
-  engine output from that turn is not delivered as the assistant reply.
+  and agent, then sent when the active response settles. A queued text-only
+  draft can be steered into the active turn on demand; queued drafts with
+  attachments or a model override stay normal next-turn messages because
+  steering carries only text. Explicit stopping remains a separate control. A
+  stopped turn settles as `cancelled`; late engine output from that turn is not
+  delivered as the assistant reply.
 * **Composer context.** The composer keeps a compositional input shell with
   tool, model, attachment, queue, and submit slots. Attachments and per-chat
   model choices are Tavern controls backed by managed Hermes capabilities and
@@ -145,10 +149,22 @@ transcript only grows:
   anchor. Deep components reach the controller through React context, never
   window events.
 
-Queued composer drafts are app-local until dispatched. A queued draft does not
-create a durable Tavern message, response, Hermes session entry, or transcript
-row until Runtime accepts it through the normal send path. The queued draft
-keeps its selected agent, attachments, model override, content, and metadata.
+Queued composer drafts are app-local until dispatched or explicitly steered. A
+queued draft does not create a durable Tavern message, response, Hermes session
+entry, or transcript row while it is only waiting in the composer. The queued
+draft keeps its selected agent, attachments, model override, content, and
+metadata.
+
+The queued draft action follows the payload:
+
+* text-only draft while a turn is active: call Runtime steering for the active
+  run. If Hermes accepts the steer, remove the queued draft; if Hermes rejects
+  it, keep the draft queued.
+* draft with attachments or a model override while a turn is active: promote it
+  to the queue head and stop the active run. After the stop settles, the draft
+  sends through the normal message path so attachment staging and model
+  selection still apply.
+* any draft while the chat is idle: send it through the normal message path.
 
 Stopping a live turn interrupts the managed engine session, keeps the session
 busy until the engine reports the interrupted turn settled, then clears the

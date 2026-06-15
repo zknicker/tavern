@@ -2,7 +2,7 @@ import { expect, test } from 'bun:test';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { ChatMessage } from '../../components/chats/chat-message.tsx';
 import {
-    isBlockingActiveReply,
+    isBlockingActiveTurn,
     shouldAnimateSyncedChatTimeline,
     shouldReleaseDraftHandoff,
 } from './agent-chat-detail.tsx';
@@ -211,18 +211,36 @@ test('draft handoff releases when no active reply remains after terminal history
 
 test('visible non-thinking fallback replies do not keep the composer blocked', () => {
     expect(
-        isBlockingActiveReply({
+        isBlockingActiveTurn({
             activeReply: {
                 isThinking: false,
             },
+            activeTurn: null,
             agentsPending: false,
         })
     ).toBe(false);
 
     expect(
-        isBlockingActiveReply({
+        isBlockingActiveTurn({
             activeReply: {
                 isThinking: true,
+            },
+            activeTurn: null,
+            agentsPending: false,
+        })
+    ).toBe(true);
+});
+
+test('active tool-only turns keep the composer in queue mode', () => {
+    expect(
+        isBlockingActiveTurn({
+            activeReply: null,
+            activeTurn: {
+                agentId: 'agent-1',
+                chatId: 'chat-1',
+                runId: 'run-1',
+                sessionKey: 'session-1',
+                startedAt: '2026-05-13T12:00:00.000Z',
             },
             agentsPending: false,
         })

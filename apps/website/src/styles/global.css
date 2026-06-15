@@ -87,6 +87,8 @@
     --color-muted: var(--muted);
     --color-muted-foreground: var(--muted-foreground);
 
+    --color-subtle: var(--subtle);
+
     --color-accent: var(--accent);
     --color-accent-foreground: var(--accent-foreground);
     --color-hover: var(--hover);
@@ -412,6 +414,7 @@
         --secondary: --alpha(var(--color-white) / 4%);
         --secondary-foreground: var(--color-neutral-100);
 
+        --subtle: var(--surface-3);
         --muted: --alpha(var(--color-white) / 4%);
         --muted-foreground: color-mix(
             in srgb,
@@ -543,6 +546,7 @@
         --secondary: --alpha(var(--color-black) / 4%);
         --secondary-foreground: var(--color-neutral-800);
 
+        --subtle: var(--color-neutral-100);
         --muted: --alpha(var(--color-black) / 4%);
         --muted-foreground: color-mix(
             in srgb,

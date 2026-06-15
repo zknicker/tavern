@@ -25,6 +25,7 @@ export function useChatTimeline(input: { chatId: string; limit: number }) {
     return {
         ...query,
         activeReply: timelineWithLog.activeReply,
+        activeTurn: timelineWithLog.activeTurn,
         failedTurn: timelineWithLog.failedTurn,
         historyLoaded: timelineWithLog.historyLoaded,
         rows: timelineWithLog.timeline,

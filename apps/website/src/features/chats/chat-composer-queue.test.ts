@@ -1,9 +1,11 @@
 import { expect, test } from 'vitest';
 import {
     type ChatComposerQueuedMessage,
+    isQueuedMessageSteerable,
     moveQueuedMessage,
     promoteQueuedMessage,
 } from './chat-composer-queue.ts';
+import { getQueuedDragVisualIndex } from './chat-composer-queue-panel.tsx';
 
 const queue = [
     message('queued_1', 'first'),
@@ -82,6 +84,52 @@ test('moveQueuedMessage reorders queued messages one slot at a time', () => {
         'queued_3',
         'queued_2',
     ]);
+});
+
+test('queued drag visual index shifts displaced cards into open tiers', () => {
+    expect(
+        [0, 1, 2].map((index) =>
+            getQueuedDragVisualIndex({
+                dragStartIndex: 0,
+                dragTargetIndex: 2,
+                index,
+            })
+        )
+    ).toEqual([0, 0, 1]);
+
+    expect(
+        [0, 1, 2].map((index) =>
+            getQueuedDragVisualIndex({
+                dragStartIndex: 2,
+                dragTargetIndex: 0,
+                index,
+            })
+        )
+    ).toEqual([1, 2, 2]);
+});
+
+test('queued messages are steerable only when they can become text-only live input', () => {
+    expect(isQueuedMessageSteerable(message('queued_text', 'nudge the current turn'))).toBe(true);
+    expect(
+        isQueuedMessageSteerable({
+            ...message('queued_attachment', 'use this'),
+            attachments: [
+                {
+                    dataBase64: 'aW1hZ2U=',
+                    filename: 'image.png',
+                    mediaType: 'image/png',
+                    sizeBytes: 5,
+                    type: 'inline',
+                },
+            ],
+        })
+    ).toBe(false);
+    expect(
+        isQueuedMessageSteerable({
+            ...message('queued_model', 'use a different model'),
+            modelRef: 'openai/gpt-5',
+        })
+    ).toBe(false);
 });
 
 function message(id: string, content: string): ChatComposerQueuedMessage {

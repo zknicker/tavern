@@ -103,6 +103,9 @@ so `docs:list` routes future agents correctly.
   umbrella feature names.
 - Prefer COSS UI components backed by Base UI for shared app primitives. Do not add new shadcn or
   Radix UI usage.
+- Use existing color tokens from `apps/website/src/styles/global.css` and Tailwind token classes for
+  UI colors. Do not hand-roll component-local color mixes or arbitrary color values unless a new
+  reusable token is first added to the theme.
 - Follow `DESIGN.md` for visual design decisions, especially token usage, settings layout, and
   shared component behavior.
 

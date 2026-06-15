@@ -244,6 +244,18 @@ export const stopChatTurnResultSchema = z.object({
     stopped: z.boolean(),
 });
 
+export const steerChatTurnInputSchema = z.object({
+    chatId: z.string().trim().min(1),
+    content: z.string().trim().min(1),
+    metadata: sendChatMessageMetadataSchema.optional(),
+    runId: z.string().trim().min(1),
+});
+
+export const steerChatTurnResultSchema = z.object({
+    runId: z.string().trim().min(1),
+    steered: z.boolean(),
+});
+
 export const respondToChatApprovalInputSchema = z.object({
     chatId: z.string().trim().min(1),
     choice: z.enum(['once', 'session', 'always', 'deny']),
@@ -340,6 +352,8 @@ export type SendChatMessageInput = z.infer<typeof sendChatMessageInputSchema>;
 export type SendChatMessageResult = z.infer<typeof sendChatMessageResultSchema>;
 export type StopChatTurnInput = z.infer<typeof stopChatTurnInputSchema>;
 export type StopChatTurnResult = z.infer<typeof stopChatTurnResultSchema>;
+export type SteerChatTurnInput = z.infer<typeof steerChatTurnInputSchema>;
+export type SteerChatTurnResult = z.infer<typeof steerChatTurnResultSchema>;
 export type RespondToChatApprovalInput = z.infer<typeof respondToChatApprovalInputSchema>;
 export type RespondToChatApprovalResult = z.infer<typeof respondToChatApprovalResultSchema>;
 export type RespondToChatClarificationInput = z.infer<typeof respondToChatClarificationInputSchema>;

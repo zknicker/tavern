@@ -25,16 +25,21 @@ interface ClarificationSettlement {
 }
 
 interface ActiveHermesTurn {
+    agentId: string;
+    chatId: string;
     clarificationDeadlines: Map<string, number>;
     clarificationSettlements: Map<string, ClarificationSettlement>;
     clarificationTimers: Map<string, ReturnType<typeof setTimeout>>;
     client: HermesClient;
     controller: AbortController;
     interrupted: boolean;
+    requestMessageId: string;
+    runId: string;
     sessionId: string | null;
     sessionKey: string;
     settleAllApprovals: boolean;
     settleClarification: (requestId: string, settlement?: ClarificationSettlement) => boolean;
+    startedAt: string;
 }
 
 const activeHermesTurns = new Map<string, ActiveHermesTurn>();
@@ -84,16 +89,21 @@ export async function runHermesTurn(input: {
         sessionKey: input.sessionKey,
     });
     const activeTurn = {
+        agentId: input.agentId,
+        chatId: input.chatId,
         client,
         clarificationDeadlines: new Map<string, number>(),
         clarificationSettlements: new Map<string, ClarificationSettlement>(),
         clarificationTimers: new Map<string, ReturnType<typeof setTimeout>>(),
         controller: new AbortController(),
         interrupted: false,
+        requestMessageId: input.requestMessageId,
+        runId: input.runId,
         settleClarification: gatewayActivities.settleClarification,
         settleAllApprovals: false,
         sessionId: null as string | null,
         sessionKey: input.sessionKey,
+        startedAt,
     };
     activeHermesTurns.set(input.runId, activeTurn);
     // Both wrappers flush coalesced stream writes first so running-status
@@ -396,6 +406,45 @@ export async function interruptHermesTurn(runId: string) {
         console.warn('[tavern-runtime] Hermes turn interrupt failed', error);
         return false;
     }
+}
+
+export async function steerHermesTurn(input: {
+    chatId: string;
+    content: string;
+    metadata?: unknown;
+    runId: string;
+}) {
+    const activeTurn = activeHermesTurns.get(input.runId);
+
+    if (!(activeTurn?.sessionId && activeTurn.chatId === input.chatId && input.content.trim())) {
+        return false;
+    }
+
+    const projectedContent = await projectTavernMessageForHermes({
+        content: input.content,
+        metadata: input.metadata,
+    });
+    const result = await activeTurn.client.steerLiveSession(activeTurn.sessionId, projectedContent);
+
+    if (!result.steered) {
+        return false;
+    }
+
+    publishRuntimeEvent({
+        message: input.content,
+        requestMessageId: activeTurn.requestMessageId,
+        timestamp: new Date().toISOString(),
+        turn: {
+            agentId: activeTurn.agentId,
+            chatId: activeTurn.chatId,
+            runId: activeTurn.runId,
+            sessionKey: activeTurn.sessionKey,
+            startedAt: activeTurn.startedAt,
+        },
+        type: 'turn.steered',
+    });
+
+    return true;
 }
 
 // Answers a pending tool-approval prompt for the session's active turn by

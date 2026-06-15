@@ -15,6 +15,7 @@ import {
     PromptInputTools,
 } from '../../components/ui/prompt-input.tsx';
 import { useChatSend } from '../../hooks/chats/use-chat-send.ts';
+import { useChatSteer } from '../../hooks/chats/use-chat-steer.ts';
 import { useChatStop } from '../../hooks/chats/use-chat-stop.ts';
 import { runtimeUnhealthyTooltip, useCapability } from '../../hooks/connections/use-capability.ts';
 import { useModelList } from '../../hooks/models/use-model-list.ts';
@@ -37,7 +38,11 @@ import {
     ChatComposerAttachmentList,
     readComposerAttachment,
 } from './chat-composer-attachments.tsx';
-import { useChatComposerQueue } from './chat-composer-queue.ts';
+import {
+    type ChatComposerQueuedMessage,
+    isQueuedMessageSteerable,
+    useChatComposerQueue,
+} from './chat-composer-queue.ts';
 import { ChatComposerQueuePanel } from './chat-composer-queue-panel.tsx';
 import {
     ChatComposerAgentSelector,
@@ -74,11 +79,13 @@ export function ChatMessageComposer({
     variant?: ChatMessageComposerVariant;
 }) {
     const sendMessage = useChatSend();
+    const steerTurn = useChatSteer();
     const stopTurn = useChatStop();
     const gatewayCapability = useCapability('gateway');
     const modelList = useModelList();
     const composerQueue = useChatComposerQueue(chatId);
     const drainingQueueRef = React.useRef(false);
+    const failedQueuedDispatchIdsRef = React.useRef(new Set<string>());
     const fileInputRef = React.useRef<HTMLInputElement | null>(null);
     const [agentId, setAgentId] = React.useState<string>(boundAgentIds[0] ?? '');
     const [attachments, setAttachments] = React.useState<ChatComposerAttachment[]>([]);
@@ -103,6 +110,7 @@ export function ChatMessageComposer({
     const canSubmit = isSendBlocked ? canQueue : canSend;
     const canDispatchQueued = chatCanSend && canSendToRuntime && !isDisabled && !isSendBlocked;
 
+    // biome-ignore lint/correctness/useExhaustiveDependencies: Dispatch is ref-gated; queue head and blocked state drive this effect.
     React.useEffect(() => {
         if (!canDispatchQueued || drainingQueueRef.current) {
             return;
@@ -110,29 +118,22 @@ export function ChatMessageComposer({
 
         const entry = composerQueue.queue[0];
 
-        if (!entry) {
+        if (!entry || failedQueuedDispatchIdsRef.current.has(entry.id)) {
             return;
         }
 
-        drainingQueueRef.current = true;
-        composerQueue.remove(entry.id);
-        sendMessage.mutate(
-            {
-                agentId: entry.agentId,
-                ...(entry.attachments?.length ? { attachments: entry.attachments } : {}),
-                chatId,
-                clientMessageId: `msg_${crypto.randomUUID()}`,
-                content: entry.content,
-                metadata: entry.metadata,
-                ...(entry.modelRef ? { modelRef: entry.modelRef } : {}),
-            },
-            {
-                onSettled: () => {
-                    drainingQueueRef.current = false;
-                },
+        dispatchQueuedEntry(entry);
+    }, [canDispatchQueued, composerQueue.queue]);
+
+    React.useEffect(() => {
+        const queuedIds = new Set(composerQueue.queue.map((entry) => entry.id));
+
+        for (const id of failedQueuedDispatchIdsRef.current) {
+            if (!queuedIds.has(id)) {
+                failedQueuedDispatchIdsRef.current.delete(id);
             }
-        );
-    }, [canDispatchQueued, chatId, composerQueue.queue, composerQueue.remove, sendMessage]);
+        }
+    }, [composerQueue.queue]);
 
     React.useEffect(() => {
         const nextAgentId = boundAgentIds[0] ?? '';
@@ -205,19 +206,56 @@ export function ChatMessageComposer({
     }
 
     function handlePromoteQueuedMessage(id: string) {
-        if (isSendBlocked || sendMessage.isPending) {
-            composerQueue.promote(id);
-            return;
-        }
-
         const entry = composerQueue.queue.find((queued) => queued.id === id);
 
         if (!entry) {
             return;
         }
 
+        if (isSendBlocked || sendMessage.isPending) {
+            if (activeRunId && isQueuedMessageSteerable(entry)) {
+                if (steerTurn.isPending) {
+                    return;
+                }
+
+                steerTurn.mutate(
+                    {
+                        chatId,
+                        content: entry.content,
+                        metadata: entry.metadata,
+                        runId: activeRunId,
+                    },
+                    {
+                        onSuccess: (result) => {
+                            if (result.steered) {
+                                composerQueue.remove(entry.id);
+                            }
+                        },
+                    }
+                );
+                return;
+            }
+
+            composerQueue.promote(id);
+            if (activeRunId && !stopTurn.isPending) {
+                stopTurn.mutate({
+                    chatId,
+                    runId: activeRunId,
+                });
+            }
+            return;
+        }
+
+        dispatchQueuedEntry(entry);
+    }
+
+    function dispatchQueuedEntry(entry: ChatComposerQueuedMessage) {
+        if (drainingQueueRef.current) {
+            return;
+        }
+
+        failedQueuedDispatchIdsRef.current.delete(entry.id);
         drainingQueueRef.current = true;
-        composerQueue.remove(entry.id);
         sendMessage.mutate(
             {
                 agentId: entry.agentId,
@@ -229,6 +267,12 @@ export function ChatMessageComposer({
                 ...(entry.modelRef ? { modelRef: entry.modelRef } : {}),
             },
             {
+                onError: () => {
+                    failedQueuedDispatchIdsRef.current.add(entry.id);
+                },
+                onSuccess: () => {
+                    composerQueue.remove(entry.id);
+                },
                 onSettled: () => {
                     drainingQueueRef.current = false;
                 },
@@ -327,7 +371,7 @@ export function ChatMessageComposer({
                     : null
             )}
             contentClassName={isCompact ? 'max-w-none' : undefined}
-            error={attachmentError ?? sendMessage.error?.message}
+            error={attachmentError ?? steerTurn.error?.message ?? sendMessage.error?.message}
             onDragOver={handleAttachmentDragOver}
             onDrop={handleAttachmentDrop}
             onSubmit={handleSubmit}
@@ -340,6 +384,7 @@ export function ChatMessageComposer({
                 onMove={composerQueue.move}
                 onPromote={handlePromoteQueuedMessage}
                 onRemove={composerQueue.remove}
+                onReorder={composerQueue.reorder}
                 queue={composerQueue.queue}
             />
             <ChatComposerAttachmentList

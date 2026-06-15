@@ -40,6 +40,7 @@ export function ChatCard({
     const rowCount = rows.length;
     const totalMessages = timeline.totalMessages;
     const hasActiveReply = timeline.activeReply !== null;
+    const hasActiveTurn = timeline.activeTurn !== null || hasActiveReply;
     const hasTimelineContent = rowCount > 0 || hasActiveReply || timeline.failedTurn !== null;
     const isInitialTranscriptPending =
         timeline.isPending && !timeline.historyLoaded && !hasActiveReply;
@@ -109,14 +110,14 @@ export function ChatCard({
             </div>
 
             <ChatMessageComposer
-                activeRunId={timeline.activeReply?.runId ?? null}
+                activeRunId={timeline.activeTurn?.runId ?? timeline.activeReply?.runId ?? null}
                 agentRuntimeSyncLabel={chat.agentRuntimeSyncLabel}
                 agents={agents}
                 boundAgentIds={chat.boundAgentIds}
                 canSend={chat.canSend}
                 chatId={chat.id}
                 isDisabled={chat.isDisabled}
-                isReplyActive={hasActiveReply}
+                isReplyActive={hasActiveTurn}
                 variant="compact"
             />
         </div>

@@ -1,3 +1,4 @@
+import type { ChatComposerQueuedMessage } from '../../features/chats/chat-composer-queue.ts';
 import type { ChatLogOutput } from '../../lib/trpc.tsx';
 import { previewAttachmentPngBase64 } from './chat-layout-preview-attachment.ts';
 
@@ -137,6 +138,42 @@ export const chatLayoutPreviews = [
     },
 ];
 
+export const chatComposerQueuePreviews: {
+    isBlocked: boolean;
+    queue: ChatComposerQueuedMessage[];
+    title: string;
+}[] = [
+    {
+        isBlocked: false,
+        queue: [
+            queuedMessage('queued-1', 'Check the release notes wording'),
+            queuedMessage('queued-2', 'Then make the changelog tighter', {
+                modelRef: 'openai/gpt-5-codex',
+            }),
+        ],
+        title: 'Queued drafts, idle',
+    },
+    {
+        isBlocked: true,
+        queue: [
+            queuedMessage('queued-3', 'Match these mockups', {
+                attachments: [
+                    {
+                        dataBase64:
+                            'iVBORw0KGgoAAAANSUhEUgAAAAMAAAACCAYAAACddGYaAAAAEElEQVR42mP8z8AARLJgYAAAL6sCAd5MvA8AAAAASUVORK5CYII=',
+                        filename: 'mockup.png',
+                        mediaType: 'image/png',
+                        sizeBytes: 96_000,
+                        type: 'inline',
+                    },
+                ],
+            }),
+            queuedMessage('queued-4', 'After that, audit the spacing'),
+        ],
+        title: 'Queued during active turn',
+    },
+];
+
 function chatActors({ agents, humans }: { agents: string[]; humans: string[] }) {
     return {
         boundAgentIds: agents.map(toActorId),
@@ -230,6 +267,21 @@ function user(sender: string, content: string): MessageRow {
         sender,
         senderType: 'user',
     });
+}
+
+function queuedMessage(
+    id: string,
+    content: string,
+    options: Partial<Pick<ChatComposerQueuedMessage, 'attachments' | 'modelRef'>> = {}
+): ChatComposerQueuedMessage {
+    return {
+        agentId: 'atlas',
+        content,
+        createdAt: previewTime,
+        id,
+        ...(options.attachments ? { attachments: options.attachments } : {}),
+        ...(options.modelRef ? { modelRef: options.modelRef } : {}),
+    };
 }
 
 function userWithImage(sender: string, content: string): MessageRow {

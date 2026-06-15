@@ -83,6 +83,8 @@ import {
     type AgentRuntimeSkillHubUninstallInput,
     type AgentRuntimeSkillSummary,
     type AgentRuntimeStartModelProviderOAuth,
+    type AgentRuntimeSteerTurn,
+    type AgentRuntimeSteerTurnResult,
     type AgentRuntimeStopTurn,
     type AgentRuntimeStopTurnResult,
     type AgentRuntimeSubmitModelProviderOAuth,
@@ -200,6 +202,8 @@ import {
     agentRuntimeSkillListSchema,
     agentRuntimeSkillSchema,
     agentRuntimeStartModelProviderOAuthSchema,
+    agentRuntimeSteerTurnResultSchema,
+    agentRuntimeSteerTurnSchema,
     agentRuntimeStopTurnResultSchema,
     agentRuntimeStopTurnSchema,
     agentRuntimeSubmitModelProviderOAuthSchema,
@@ -406,6 +410,10 @@ export interface TavernAgentRuntimeClient {
     setMcpServerEnabled(name: string, enabled: boolean): Promise<{ ok: boolean }>;
     startModelProviderOAuth(input: AgentRuntimeStartModelProviderOAuth): Promise<unknown>;
     startUpdate(input?: { targetVersion?: null | string }): Promise<AgentRuntimeUpdate>;
+    steerChatTurn(
+        chatId: string,
+        input: AgentRuntimeSteerTurn
+    ): Promise<AgentRuntimeSteerTurnResult>;
     stopChatTurn(chatId: string, input: AgentRuntimeStopTurn): Promise<AgentRuntimeStopTurnResult>;
     submitModelProviderOAuth(input: AgentRuntimeSubmitModelProviderOAuth): Promise<unknown>;
     testConnector(id: string): Promise<AgentRuntimeConnectorTestResult>;
@@ -1900,6 +1908,30 @@ class HttpTavernAgentRuntimeClient implements TavernAgentRuntimeClient {
         }
 
         return agentRuntimeStopTurnResultSchema.parse(await response.json());
+    }
+
+    async steerChatTurn(
+        chatId: string,
+        input: AgentRuntimeSteerTurn
+    ): Promise<AgentRuntimeSteerTurnResult> {
+        const payload = agentRuntimeSteerTurnSchema.parse(input);
+        const response = await fetch(
+            `${this.#baseUrl}${agentRuntimeRoutes.chatTurnSteer(chatId, payload.runId)}`,
+            {
+                body: JSON.stringify(payload),
+                headers: {
+                    ...this.#authHeaders,
+                    'content-type': 'application/json',
+                },
+                method: 'POST',
+            }
+        );
+
+        if (!response.ok) {
+            await readErrorResponse(response);
+        }
+
+        return agentRuntimeSteerTurnResultSchema.parse(await response.json());
     }
 
     async listChats() {
