@@ -2,6 +2,32 @@
 
 All notable changes to this project will be documented in this file.
 
+## v1.4.13 - 2026-06-15
+
+Runtime floor raised to 1.4.13 for assistant memory configuration, queued
+message steering, and cancelled-turn event contracts.
+
+App changes:
+
+- Added an Appearance setting for the side-navigation app layout, with
+  Codex-style hover reveal, settings navigation, direct chat archive controls,
+  and polished sidebar drag/overlay behavior.
+- Added queued-message steering in the composer so follow-up instructions can
+  stack behind an active turn.
+- Improved chat presentation for image attachments, active work drawer headers,
+  tool rows, working affordances, and transcript spacing.
+- Renamed the Cortex wiki surfaces to use Tavern-owned product language across
+  the app and docs.
+
+Runtime changes:
+
+- Added managed assistant memory configuration and capability reporting for the
+  Runtime-backed memory stack.
+- Added Runtime and server contracts for steering queued messages into an active
+  chat turn.
+- Fixed stopped chat turns to settle as cancelled and emit the cancellation
+  events the app needs to clear active work.
+
 ## v1.4.12 - 2026-06-14
 
 App-only release. The Runtime floor stays at 1.4.9.
