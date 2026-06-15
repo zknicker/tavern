@@ -30,7 +30,7 @@ const ChatMessage = forwardRef<HTMLDivElement, ChatMessageProps>(
             <motion.div
                 animate={{ opacity: 1, scale: 1, y: 0 }}
                 className={cn(
-                    'group flex max-w-[80%] flex-col gap-1.5',
+                    'group relative flex max-w-[80%] flex-col gap-1.5',
                     isUser ? 'items-end self-end' : 'items-start self-start',
                     className
                 )}
@@ -65,7 +65,8 @@ const ChatMessage = forwardRef<HTMLDivElement, ChatMessageProps>(
                 {showMeta ? (
                     <div
                         className={cn(
-                            'pointer-events-none flex select-none items-center gap-2 px-1 text-muted-foreground text-xs leading-none opacity-0 transition-opacity duration-150',
+                            'pointer-events-none absolute top-full z-10 mt-1 flex select-none items-center gap-2 px-1 text-muted-foreground text-xs leading-none opacity-0 transition-opacity duration-150',
+                            isUser ? 'right-0' : 'left-0',
                             'group-hover:pointer-events-auto group-hover:opacity-100',
                             'group-has-focus-visible:pointer-events-auto group-has-focus-visible:opacity-100'
                         )}

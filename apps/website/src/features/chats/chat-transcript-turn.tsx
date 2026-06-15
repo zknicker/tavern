@@ -46,10 +46,10 @@ import { RuntimeNoticeEntry } from './chat-transcript-system-step.tsx';
 import { useChatScrollControllerHandle } from './use-chat-scroll-controller.ts';
 import { useRevealedText } from './use-revealed-text.ts';
 
-const rowClassName = 'relative w-full px-3 pt-1 pb-3';
+const rowClassName = 'relative w-full px-3 pt-0.5 pb-1.5';
 const newTurnGapClassName = 'mt-1.5';
 const hoverGroupClassName = 'group';
-const metadataGapClassName = 'pb-6';
+const metadataGapClassName = 'pb-5';
 const agentPresenceSize = 32;
 const activePresenceVerbs = [
     'Adventuring',
@@ -294,7 +294,7 @@ function AgentTurn({
         <div
             className={cn(
                 rowClassName,
-                showIdentity ? newTurnGapClassName : followsRuntimeNotice ? 'mt-0' : 'mt-3.5'
+                showIdentity ? newTurnGapClassName : followsRuntimeNotice ? 'mt-0' : 'mt-1'
             )}
         >
             <div

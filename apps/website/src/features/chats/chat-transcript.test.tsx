@@ -148,7 +148,7 @@ test('ChatTranscript renders active replies through the chat message shell', () 
         text: 'Done.',
     });
 
-    assert.match(markup, /group flex/);
+    assert.match(markup, /group relative flex/);
     assert.match(markup, /transform-origin:bottom left/);
     assert.doesNotMatch(markup, /pb-6/);
     assert.doesNotMatch(markup, /opacity:0;transform/);
