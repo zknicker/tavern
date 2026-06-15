@@ -1,6 +1,11 @@
 import { describe, expect, test } from 'bun:test';
 import type { ChatStartDraft } from '../../hooks/chats/use-chat-start-drafts.tsx';
-import { buildDraftActiveReply, buildDraftHandoffLog } from './chat-draft-detail.tsx';
+import {
+    buildDraftActiveReply,
+    buildDraftHandoffLog,
+    canDraftUseSyncedComposer,
+    isDraftReplyActive,
+} from './chat-draft-detail.tsx';
 
 function createDraft(overrides: Partial<ChatStartDraft> = {}): ChatStartDraft {
     return {
@@ -99,5 +104,63 @@ describe('buildDraftHandoffLog', () => {
 
         expect(log?.rows.map((row) => row.id)).toEqual(['act_run-1_tool']);
         expect(log?.totalMessages).toBe(1);
+    });
+});
+
+describe('canDraftUseSyncedComposer', () => {
+    test('enables the queue-capable composer after draft reconciliation', () => {
+        expect(
+            canDraftUseSyncedComposer(
+                createDraft({
+                    realChatId: 'chat-1',
+                    status: 'reconciled',
+                })
+            )
+        ).toBe(true);
+    });
+
+    test('keeps the placeholder composer before the real chat exists', () => {
+        expect(canDraftUseSyncedComposer(createDraft())).toBe(false);
+    });
+
+    test('does not enable sending for failed drafts', () => {
+        expect(
+            canDraftUseSyncedComposer(
+                createDraft({
+                    realChatId: 'chat-1',
+                    status: 'error',
+                })
+            )
+        ).toBe(false);
+    });
+});
+
+describe('isDraftReplyActive', () => {
+    test('treats reconciled active replies as queue-blocking', () => {
+        expect(
+            isDraftReplyActive({
+                activeReply: buildDraftActiveReply(
+                    createDraft({
+                        realChatId: 'chat-1',
+                        realRunId: 'run-1',
+                        status: 'reconciled',
+                    })
+                ),
+                activeTurn: null,
+                agentsPending: false,
+                draft: createDraft({ status: 'reconciled' }),
+            })
+        ).toBe(true);
+    });
+
+    test('does not block after the handoff reply is complete', () => {
+        expect(
+            isDraftReplyActive({
+                activeReply: { isThinking: false },
+                activeTurn: null,
+                agentsPending: false,
+                draft: createDraft({ status: 'reconciled' }),
+            })
+        ).toBe(false);
     });
 });

@@ -22,6 +22,7 @@ import {
 } from '../mentions/use-mention-composer.tsx';
 import { ChatComposerAgentSelector } from './chat-composer-tools.tsx';
 import { ChatDetailFrame } from './chat-detail-frame.tsx';
+import { ChatMessageComposer } from './chat-message-composer.tsx';
 
 const draftTimelineLimit = 100;
 
@@ -58,6 +59,13 @@ export function ChatDraftDetail({
         draftActiveReply,
         handoffState,
     });
+    const canUseSyncedComposer = canDraftUseSyncedComposer(draft);
+    const composerChatId = canUseSyncedComposer ? draft.realChatId : null;
+    const activeRunId =
+        handoffState?.activeTurn?.runId ??
+        handoffFrame.activeReply?.runId ??
+        draft?.realRunId ??
+        null;
     const fallbackTimeline = draft
         ? mergeTimelineMessages({
               limit: draftTimelineLimit,
@@ -113,42 +121,59 @@ export function ChatDraftDetail({
             emptyLabel=""
             failedTurn={handoffFrame.failedTurn}
             footer={
-                <PromptInput
-                    error={draft?.errorMessage}
-                    onSubmit={(event) => event?.preventDefault()}
-                    onTextEditorFocus={mentionComposer.focusTextEditor}
-                >
-                    <PromptInputBody>
-                        <MentionComposerEditor
-                            ariaLabel="Chat message"
-                            composer={mentionComposer}
-                            name="draft-chat-message"
-                            placeholder="Let's go on an adventure..."
-                        />
-                    </PromptInputBody>
-                    <MentionComposerPicker composer={mentionComposer} />
-                    <PromptInputFooter>
-                        <PromptInputTools>
-                            <ChatComposerAgentSelector
-                                agentId={agentId}
-                                agents={agentsQuery.data?.agents ?? []}
-                                boundAgentIds={boundAgentIds}
-                                onAgentChange={setAgentId}
+                composerChatId ? (
+                    <ChatMessageComposer
+                        activeRunId={activeRunId}
+                        agents={agentsQuery.data?.agents ?? []}
+                        boundAgentIds={boundAgentIds}
+                        canSend
+                        chatId={composerChatId}
+                        isDisabled={false}
+                        isReplyActive={isDraftReplyActive({
+                            activeReply: handoffFrame.activeReply,
+                            activeTurn: handoffState?.activeTurn,
+                            agentsPending: agentsQuery.isPending,
+                            draft,
+                        })}
+                    />
+                ) : (
+                    <PromptInput
+                        error={draft?.errorMessage}
+                        onSubmit={(event) => event?.preventDefault()}
+                        onTextEditorFocus={mentionComposer.focusTextEditor}
+                    >
+                        <PromptInputBody>
+                            <MentionComposerEditor
+                                ariaLabel="Chat message"
+                                composer={mentionComposer}
+                                name="draft-chat-message"
+                                placeholder="Let's go on an adventure..."
                             />
-                        </PromptInputTools>
-                        <PromptInputActions>
-                            <PromptInputSubmit
-                                canSubmit={false}
-                                label="Send message"
-                                tooltip={
-                                    draft && draft.status !== 'error'
-                                        ? 'A reply is already in progress.'
-                                        : undefined
-                                }
-                            />
-                        </PromptInputActions>
-                    </PromptInputFooter>
-                </PromptInput>
+                        </PromptInputBody>
+                        <MentionComposerPicker composer={mentionComposer} />
+                        <PromptInputFooter>
+                            <PromptInputTools>
+                                <ChatComposerAgentSelector
+                                    agentId={agentId}
+                                    agents={agentsQuery.data?.agents ?? []}
+                                    boundAgentIds={boundAgentIds}
+                                    onAgentChange={setAgentId}
+                                />
+                            </PromptInputTools>
+                            <PromptInputActions>
+                                <PromptInputSubmit
+                                    canSubmit={false}
+                                    label="Send message"
+                                    tooltip={
+                                        draft && draft.status !== 'error'
+                                            ? 'Chat is still being created.'
+                                            : undefined
+                                    }
+                                />
+                            </PromptInputActions>
+                        </PromptInputFooter>
+                    </PromptInput>
+                )
             }
             historyLoaded
             isPending={false}
@@ -206,4 +231,32 @@ export function buildDraftActiveReply(draft: ChatStartDraft | null): ChatActiveR
         startedAt: draft.realAcceptedAt ?? draft.createdAt,
         text: '',
     };
+}
+
+export function canDraftUseSyncedComposer(
+    draft: ChatStartDraft | null
+): draft is ChatStartDraft & { realChatId: string } {
+    return draft?.status !== 'error' && typeof draft?.realChatId === 'string';
+}
+
+export function isDraftReplyActive({
+    activeReply,
+    activeTurn,
+    agentsPending,
+    draft,
+}: {
+    activeReply: { isThinking?: boolean | null } | null;
+    activeTurn?: unknown;
+    agentsPending: boolean;
+    draft: Pick<ChatStartDraft, 'status'> | null;
+}) {
+    if (agentsPending) {
+        return true;
+    }
+
+    if (draft?.status !== 'error' && activeTurn) {
+        return true;
+    }
+
+    return draft?.status !== 'error' && activeReply?.isThinking !== false && activeReply !== null;
 }
