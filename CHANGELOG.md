@@ -2,6 +2,19 @@
 
 All notable changes to this project will be documented in this file.
 
+## v1.4.11 - 2026-06-14
+
+Compatible Runtime release. The Runtime floor stays at 1.4.9.
+
+Runtime changes:
+
+- Fixed chat-scoped Hermes session routing so slash commands and normal turns
+  share the same live session client and Tavern-owned session binding.
+- Fixed `/new`, `/clear`, and `/status` so they reset or inspect the
+  Tavern-bound session instead of creating a separate command-runner session.
+- Added skill mention projection so explicitly tagged `SKILL.md` instructions
+  are injected into the engine prompt for that turn.
+
 ## v1.4.10 - 2026-06-13
 
 App-only release. The Runtime floor stays at 1.4.9.
