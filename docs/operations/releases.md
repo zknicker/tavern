@@ -36,11 +36,13 @@ Before every release, inspect the changed files and choose one lane:
 | Lane | Use when | Runtime package | Runtime floor |
 | --- | --- | --- | --- |
 | App-only | UI, desktop shell, docs, app cache, app presentation, or any change that does not require a new Runtime behavior | unchanged | unchanged |
-| Compatible Runtime | Runtime bugfix or operational improvement that existing apps can keep using without new API behavior | bump with app release | unchanged |
-| Required Runtime | App depends on new Runtime API, storage, capability, event, job, managed Hermes behavior, or CLI behavior | bump with app release | bump to the release version |
+| Compatible Runtime | Runtime bugfix or operational improvement that users can safely defer because the old Runtime still preserves correct core behavior | bump with app release | unchanged |
+| Required Runtime | App depends on new Runtime API, storage, capability, event, job, managed Hermes behavior, or CLI behavior; or the release fixes correctness-critical Runtime behavior | bump with app release | bump to the release version |
 
 Default to **App-only** unless the app needs new Runtime behavior. Runtime
-updates are operator work; do not force one for a desktop-only patch.
+updates are operator work; do not force one for a desktop-only patch. When a
+Runtime fix changes whether core chat execution is truthful or correct, treat it
+as **Required Runtime** even if the HTTP/API shape is unchanged.
 
 ## App-Only Flow
 
@@ -105,9 +107,15 @@ the automated lanes do not exercise a real bootstrap install.
   new or changed Runtime API fields, capability ids, websocket events, durable
   records, managed Hermes lifecycle behavior, Runtime CLI behavior, or
   Hermes adapter behavior that the app requires.
+* **Raise the floor for correctness-critical Runtime fixes.** This includes
+  fixes for chat/session binding, model selection, command routing, skill
+  projection, tool execution, auth, data integrity, updater correctness, or any
+  other Runtime bug where leaving users on the old Runtime would make core
+  workflows silently wrong while the app still reports healthy or up to date.
 * **Keep compatible Runtime fixes optional.** If a Runtime patch improves
-  reliability but old app builds keep working, publish the Runtime artifact
-  without changing `tavern.runtime.minimumVersion`.
+  reliability or performance but old Runtime builds still preserve correct core
+  behavior, publish the Runtime artifact without changing
+  `tavern.runtime.minimumVersion`.
 * **Use patch bumps inside a Runtime API epoch.** If Runtime compatibility needs
   a clean break, bump the minor version and raise the app floor to that new
   minor.
@@ -125,6 +133,9 @@ Raise `tavern.runtime.minimumVersion` when any answer is yes:
   model config, or adapter behavior?
 * Does the app require new Runtime CLI, Homebrew service, artifact layout, port,
   or environment behavior?
+* Does this release fix a core Runtime correctness bug in chat execution,
+  session routing, model choice, commands, skills, tools, auth, data integrity,
+  or updater behavior?
 * Would the new app fail, hide core functionality, corrupt state, or show a
   false healthy state against the current floor Runtime?
 
