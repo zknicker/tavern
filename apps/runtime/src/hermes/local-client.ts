@@ -151,6 +151,19 @@ export class LocalHermesClient extends LocalHermesUnsupportedSurfaces {
         await deleteHermesSessionMapping(sessionKey);
     }
 
+    async getSessionBindingStatus(sessionKey: string) {
+        const liveSessionId = this.#liveSessions.get(sessionKey) ?? null;
+        const mapping = await getHermesSessionMapping(sessionKey);
+
+        return {
+            liveSessionId,
+            sessionKey,
+            state: liveSessionId ? 'live' : mapping ? 'bound' : 'empty',
+            storedSessionId: mapping?.hermesSessionKey ?? null,
+            updatedAt: mapping?.updatedAt ?? null,
+        };
+    }
+
     // Categorized engine command catalog for the composer / palette. Skill
     // invocation commands live outside the categorized registry and are not
     // listed in v1; the engine's terminal-UI extras (/logs, /sessions, ...)

@@ -35,7 +35,10 @@ describe('LocalHermesClient session routing', () => {
         let createCount = 0;
         let resumeCount = 0;
 
-        server = new WebSocketServer({ host: '127.0.0.1', port: await getFreePort() });
+        server = new WebSocketServer({
+            host: '127.0.0.1',
+            port: await getFreePort(),
+        });
         server.on('connection', (socket) => {
             socket.on('message', (message) => {
                 const request = JSON.parse(message.toString()) as {
@@ -105,16 +108,27 @@ describe('LocalHermesClient session routing', () => {
             token: null,
         });
 
-        await drain(client.streamChat({ content: 'first', sessionKey: 'agent:main:tavern:cht_1' }));
         await drain(
-            client.streamChat({ content: 'second', sessionKey: 'agent:main:tavern:cht_1' })
+            client.streamChat({
+                content: 'first',
+                sessionKey: 'agent:main:tavern:cht_1',
+            })
+        );
+        await drain(
+            client.streamChat({
+                content: 'second',
+                sessionKey: 'agent:main:tavern:cht_1',
+            })
         );
         client.close();
 
         expect(createCount).toBe(1);
         expect(resumeCount).toBe(0);
         expect(requests).toEqual([
-            { method: 'session.create', params: { title: 'agent:main:tavern:cht_1' } },
+            {
+                method: 'session.create',
+                params: { title: 'agent:main:tavern:cht_1' },
+            },
             {
                 method: 'prompt.submit',
                 params: { session_id: 'live-created', text: 'first' },
@@ -126,13 +140,167 @@ describe('LocalHermesClient session routing', () => {
         ]);
     });
 
+    it('drops the live cache on reset so the next turn creates a fresh engine session', async () => {
+        const requests: Array<{ method: string; params: Record<string, unknown> }> = [];
+        let createCount = 0;
+
+        server = new WebSocketServer({
+            host: '127.0.0.1',
+            port: await getFreePort(),
+        });
+        server.on('connection', (socket) => {
+            socket.on('message', (message) => {
+                const request = JSON.parse(message.toString()) as {
+                    id: string;
+                    method: string;
+                    params?: Record<string, unknown>;
+                };
+                const params = request.params ?? {};
+                requests.push({ method: request.method, params });
+
+                if (request.method === 'session.create') {
+                    createCount += 1;
+                    socket.send(
+                        JSON.stringify({
+                            id: request.id,
+                            jsonrpc: '2.0',
+                            result: {
+                                session_id: `live-${createCount}`,
+                                stored_session_id: `stored-${createCount}`,
+                            },
+                        })
+                    );
+                    return;
+                }
+
+                socket.send(JSON.stringify({ id: request.id, jsonrpc: '2.0', result: {} }));
+                if (request.method === 'prompt.submit') {
+                    socket.send(
+                        `${JSON.stringify({
+                            jsonrpc: '2.0',
+                            method: 'event',
+                            params: {
+                                payload: { text: 'done' },
+                                session_id: params.session_id,
+                                type: 'message.complete',
+                            },
+                        })}\n`
+                    );
+                }
+            });
+        });
+
+        await new Promise<void>((resolve) => server?.once('listening', () => resolve()));
+        const address = server.address();
+        if (!(address && typeof address === 'object')) {
+            throw new Error('Test WebSocket server did not bind a port.');
+        }
+
+        const { LocalHermesClient } = await import('./local-client');
+        const { getHermesSessionMapping } = await import('./session-map');
+        const client = new LocalHermesClient({
+            baseUrl: `http://127.0.0.1:${address.port}`,
+            token: null,
+        });
+
+        await drain(
+            client.streamChat({
+                content: 'first',
+                sessionKey: 'agent:main:tavern:cht_1',
+            })
+        );
+        await client.resetSession('agent:main:tavern:cht_1');
+        expect(await getHermesSessionMapping('agent:main:tavern:cht_1')).toBeNull();
+        await drain(
+            client.streamChat({
+                content: 'second',
+                sessionKey: 'agent:main:tavern:cht_1',
+            })
+        );
+        client.close();
+
+        expect(requests).toEqual([
+            {
+                method: 'session.create',
+                params: { title: 'agent:main:tavern:cht_1' },
+            },
+            {
+                method: 'prompt.submit',
+                params: { session_id: 'live-1', text: 'first' },
+            },
+            { method: 'session.close', params: { session_id: 'live-1' } },
+            {
+                method: 'session.create',
+                params: { title: 'agent:main:tavern:cht_1' },
+            },
+            {
+                method: 'prompt.submit',
+                params: { session_id: 'live-2', text: 'second' },
+            },
+        ]);
+        expect(await getHermesSessionMapping('agent:main:tavern:cht_1')).toMatchObject({
+            hermesSessionKey: 'stored-2',
+        });
+    });
+
+    it('reports binding status without opening or resuming a gateway session', async () => {
+        const requests: Array<{ method: string; params: Record<string, unknown> }> = [];
+
+        server = new WebSocketServer({
+            host: '127.0.0.1',
+            port: await getFreePort(),
+        });
+        server.on('connection', (socket) => {
+            socket.on('message', (message) => {
+                const request = JSON.parse(message.toString()) as {
+                    id: string;
+                    method: string;
+                    params?: Record<string, unknown>;
+                };
+                requests.push({ method: request.method, params: request.params ?? {} });
+                socket.send(JSON.stringify({ id: request.id, jsonrpc: '2.0', result: {} }));
+            });
+        });
+
+        await new Promise<void>((resolve) => server?.once('listening', () => resolve()));
+        const address = server.address();
+        if (!(address && typeof address === 'object')) {
+            throw new Error('Test WebSocket server did not bind a port.');
+        }
+
+        const { LocalHermesClient } = await import('./local-client');
+        const { saveHermesSessionMapping } = await import('./session-map');
+        await saveHermesSessionMapping({
+            hermesSessionKey: 'stored-session',
+            tavernSessionKey: 'agent:main:tavern:cht_1',
+        });
+        const client = new LocalHermesClient({
+            baseUrl: `http://127.0.0.1:${address.port}`,
+            token: null,
+        });
+
+        await expect(
+            client.getSessionBindingStatus('agent:main:tavern:cht_1')
+        ).resolves.toMatchObject({
+            liveSessionId: null,
+            state: 'bound',
+            storedSessionId: 'stored-session',
+        });
+        client.close();
+
+        expect(requests).toEqual([]);
+    });
+
     it('serializes overlapping turns for one Tavern session key', async () => {
         const prompts: string[] = [];
         const firstPromptSubmitted = deferred<void>();
         const releaseFirstCompletion = deferred<void>();
         const secondPromptSubmitted = deferred<void>();
 
-        server = new WebSocketServer({ host: '127.0.0.1', port: await getFreePort() });
+        server = new WebSocketServer({
+            host: '127.0.0.1',
+            port: await getFreePort(),
+        });
         server.on('connection', (socket) => {
             socket.on('message', (message) => {
                 const request = JSON.parse(message.toString()) as {
@@ -209,11 +377,17 @@ describe('LocalHermesClient session routing', () => {
         });
 
         const firstEvents = collect(
-            client.streamChat({ content: 'first', sessionKey: 'agent:main:tavern:cht_1' })
+            client.streamChat({
+                content: 'first',
+                sessionKey: 'agent:main:tavern:cht_1',
+            })
         );
         await firstPromptSubmitted.promise;
         const secondEvents = collect(
-            client.streamChat({ content: 'second', sessionKey: 'agent:main:tavern:cht_1' })
+            client.streamChat({
+                content: 'second',
+                sessionKey: 'agent:main:tavern:cht_1',
+            })
         );
 
         await expect(
@@ -242,7 +416,10 @@ describe('LocalHermesClient session routing', () => {
         const releaseFirstCompletion = deferred<void>();
         const secondPromptSubmitted = deferred<void>();
 
-        server = new WebSocketServer({ host: '127.0.0.1', port: await getFreePort() });
+        server = new WebSocketServer({
+            host: '127.0.0.1',
+            port: await getFreePort(),
+        });
         server.on('connection', (socket) => {
             socket.on('message', (message) => {
                 const request = JSON.parse(message.toString()) as {
@@ -309,7 +486,10 @@ describe('LocalHermesClient session routing', () => {
         const controller = new AbortController();
 
         const firstEvents = collect(
-            client.streamChat({ content: 'first', sessionKey: 'agent:main:tavern:cht_1' })
+            client.streamChat({
+                content: 'first',
+                sessionKey: 'agent:main:tavern:cht_1',
+            })
         );
         await firstPromptSubmitted.promise;
         const secondEvents = collect(
@@ -343,7 +523,10 @@ describe('LocalHermesClient session routing', () => {
         const releaseModelRequest = deferred<void>();
         const promptSubmitted = deferred<void>();
 
-        server = new WebSocketServer({ host: '127.0.0.1', port: await getFreePort() });
+        server = new WebSocketServer({
+            host: '127.0.0.1',
+            port: await getFreePort(),
+        });
         server.on('connection', (socket) => {
             socket.on('message', (message) => {
                 const request = JSON.parse(message.toString()) as {
@@ -424,7 +607,10 @@ describe('LocalHermesClient session routing', () => {
         let createCount = 0;
         let resumeCount = 0;
 
-        server = new WebSocketServer({ host: '127.0.0.1', port: await getFreePort() });
+        server = new WebSocketServer({
+            host: '127.0.0.1',
+            port: await getFreePort(),
+        });
         server.on('connection', (socket) => {
             socket.on('message', (message) => {
                 const request = JSON.parse(message.toString()) as {
@@ -494,7 +680,10 @@ describe('LocalHermesClient session routing', () => {
             token: null,
         });
         await drain(
-            firstClient.streamChat({ content: 'first', sessionKey: 'agent:main:tavern:cht_1' })
+            firstClient.streamChat({
+                content: 'first',
+                sessionKey: 'agent:main:tavern:cht_1',
+            })
         );
         firstClient.close();
 
@@ -503,14 +692,20 @@ describe('LocalHermesClient session routing', () => {
             token: null,
         });
         await drain(
-            secondClient.streamChat({ content: 'second', sessionKey: 'agent:main:tavern:cht_1' })
+            secondClient.streamChat({
+                content: 'second',
+                sessionKey: 'agent:main:tavern:cht_1',
+            })
         );
         secondClient.close();
 
         expect(createCount).toBe(1);
         expect(resumeCount).toBe(1);
         expect(requests).toEqual([
-            { method: 'session.create', params: { title: 'agent:main:tavern:cht_1' } },
+            {
+                method: 'session.create',
+                params: { title: 'agent:main:tavern:cht_1' },
+            },
             {
                 method: 'prompt.submit',
                 params: { session_id: 'live-created', text: 'first' },
@@ -524,7 +719,10 @@ describe('LocalHermesClient session routing', () => {
     });
 
     it('routes concurrent stream events by live Hermes session id on one gateway socket', async () => {
-        server = new WebSocketServer({ host: '127.0.0.1', port: await getFreePort() });
+        server = new WebSocketServer({
+            host: '127.0.0.1',
+            port: await getFreePort(),
+        });
         server.on('connection', (socket) => {
             socket.on('message', (message) => {
                 const request = JSON.parse(message.toString()) as {
@@ -585,17 +783,26 @@ describe('LocalHermesClient session routing', () => {
         client.close();
 
         expect(firstEvents).toMatchObject([
-            { data: { content: 'live-session-1:done' }, event: 'assistant.completed' },
+            {
+                data: { content: 'live-session-1:done' },
+                event: 'assistant.completed',
+            },
         ]);
         expect(secondEvents).toMatchObject([
-            { data: { content: 'live-session-2:done' }, event: 'assistant.completed' },
+            {
+                data: { content: 'live-session-2:done' },
+                event: 'assistant.completed',
+            },
         ]);
     });
 
     it('stages attachments and applies the session model before prompt.submit', async () => {
         const requests: Array<{ method: string; params: Record<string, unknown> }> = [];
 
-        server = new WebSocketServer({ host: '127.0.0.1', port: await getFreePort() });
+        server = new WebSocketServer({
+            host: '127.0.0.1',
+            port: await getFreePort(),
+        });
         server.on('connection', (socket) => {
             socket.on('message', (message) => {
                 const request = JSON.parse(message.toString()) as {
@@ -697,7 +904,10 @@ describe('LocalHermesClient session routing', () => {
         client.close();
 
         expect(requests).toEqual([
-            { method: 'session.create', params: { title: 'agent:main:tavern:cht_1' } },
+            {
+                method: 'session.create',
+                params: { title: 'agent:main:tavern:cht_1' },
+            },
             {
                 method: 'slash.exec',
                 params: {
@@ -732,7 +942,10 @@ describe('LocalHermesClient session routing', () => {
     });
 
     it('maps composing, notice, subagent, and approval gateway events', async () => {
-        server = new WebSocketServer({ host: '127.0.0.1', port: await getFreePort() });
+        server = new WebSocketServer({
+            host: '127.0.0.1',
+            port: await getFreePort(),
+        });
         server.on('connection', (socket) => {
             socket.on('message', (message) => {
                 const request = JSON.parse(message.toString()) as {
@@ -829,7 +1042,10 @@ describe('LocalHermesClient session routing', () => {
         });
 
         const events = await collect(
-            client.streamChat({ content: 'work', sessionKey: 'agent:main:tavern:cht_1' })
+            client.streamChat({
+                content: 'work',
+                sessionKey: 'agent:main:tavern:cht_1',
+            })
         );
         client.close();
 
@@ -896,7 +1112,10 @@ describe('LocalHermesClient session routing', () => {
     });
 
     it('maps Hermes visible and reasoning gateway events into separate adapter stream events', async () => {
-        server = new WebSocketServer({ host: '127.0.0.1', port: await getFreePort() });
+        server = new WebSocketServer({
+            host: '127.0.0.1',
+            port: await getFreePort(),
+        });
         server.on('connection', (socket) => {
             socket.on('message', (message) => {
                 const request = JSON.parse(message.toString()) as {
@@ -968,14 +1187,21 @@ describe('LocalHermesClient session routing', () => {
         });
 
         const events = await collect(
-            client.streamChat({ content: 'think', sessionKey: 'agent:main:tavern:cht_1' })
+            client.streamChat({
+                content: 'think',
+                sessionKey: 'agent:main:tavern:cht_1',
+            })
         );
         client.close();
 
         expect(events).toEqual([
             { data: { delta: 'checking context' }, event: 'assistant.delta' },
             {
-                data: { delta: 'running checks', kind: 'process', source_event: 'status.update' },
+                data: {
+                    delta: 'running checks',
+                    kind: 'process',
+                    source_event: 'status.update',
+                },
                 event: 'assistant.status',
             },
             { data: { delta: 'first thought' }, event: 'reasoning.delta' },
@@ -994,10 +1220,16 @@ describe('LocalHermesClient session routing', () => {
     });
 
     it('maps the categorized commands.catalog into the command list', async () => {
-        server = new WebSocketServer({ host: '127.0.0.1', port: await getFreePort() });
+        server = new WebSocketServer({
+            host: '127.0.0.1',
+            port: await getFreePort(),
+        });
         server.on('connection', (socket) => {
             socket.on('message', (message) => {
-                const request = JSON.parse(message.toString()) as { id: string; method: string };
+                const request = JSON.parse(message.toString()) as {
+                    id: string;
+                    method: string;
+                };
                 if (request.method === 'commands.catalog') {
                     socket.send(
                         JSON.stringify({
@@ -1062,7 +1294,10 @@ describe('LocalHermesClient session routing', () => {
 
     it('runs commands via slash.exec and falls back to command.dispatch when directed', async () => {
         const requests: Array<{ method: string; params: Record<string, unknown> }> = [];
-        server = new WebSocketServer({ host: '127.0.0.1', port: await getFreePort() });
+        server = new WebSocketServer({
+            host: '127.0.0.1',
+            port: await getFreePort(),
+        });
         server.on('connection', (socket) => {
             socket.on('message', (message) => {
                 const request = JSON.parse(message.toString()) as {
@@ -1078,7 +1313,10 @@ describe('LocalHermesClient session routing', () => {
                         JSON.stringify({
                             id: request.id,
                             jsonrpc: '2.0',
-                            result: { session_id: 'live-cmd', stored_session_id: 'stored-cmd' },
+                            result: {
+                                session_id: 'live-cmd',
+                                stored_session_id: 'stored-cmd',
+                            },
                         })
                     );
                     return;
@@ -1139,7 +1377,10 @@ describe('LocalHermesClient session routing', () => {
         const dispatched = await client.runCommand('agent:main:tavern:cht_1', '/retry now');
         client.close();
 
-        expect(direct).toEqual({ output: 'Model set to tavern-e2e-tools', status: 'completed' });
+        expect(direct).toEqual({
+            output: 'Model set to tavern-e2e-tools',
+            status: 'completed',
+        });
         expect(dispatched).toEqual({ output: 'queued retry', status: 'completed' });
         expect(requests.map((entry) => entry.method)).toEqual([
             'session.create',
@@ -1199,7 +1440,9 @@ describe('LocalHermesClient adapter-owned state', () => {
         });
 
         await client.updateAgentName('agt_hermes', { name: 'Tavern Hermes' });
-        await client.updateAgentThinkingDefault('agt_hermes', { thinkingDefault: 'medium' });
+        await client.updateAgentThinkingDefault('agt_hermes', {
+            thinkingDefault: 'medium',
+        });
         await client.updateAgentModel('agt_hermes', {
             model: {
                 model: 'gpt-5.5',
@@ -1334,7 +1577,9 @@ describe('LocalHermesClient adapter-owned state', () => {
             token: null,
         });
 
-        const updated = await client.updateSkillEnabled('browser', { enabled: false });
+        const updated = await client.updateSkillEnabled('browser', {
+            enabled: false,
+        });
 
         expect(requests).toEqual([
             {
@@ -1389,7 +1634,9 @@ describe('LocalHermesClient adapter-owned state', () => {
             token: null,
         });
 
-        const updated = await client.updateToolsetEnabled('web', { enabled: false });
+        const updated = await client.updateToolsetEnabled('web', {
+            enabled: false,
+        });
 
         expect(requests).toEqual([
             {

@@ -5,10 +5,11 @@ import type {
     AgentRuntimeSessionMessageAttachment,
 } from '@tavern/api';
 import { readConfigValue } from '../config';
-import { createLocalHermesClient } from '../hermes/local-client';
+import { closeSharedHermesClient, getSharedHermesClient } from '../hermes/shared-client';
 import { createDelivery, upsertResponse, upsertResponseActivity } from './chat-api';
 import { createAgentParticipantId } from './chat-api/ids';
 import { createGatewayActivityRecorder } from './hermes-gateway-activities';
+import { projectTavernMessageForHermes } from './mention-projection';
 import { publishRuntimeEvent } from './runtime-events';
 import {
     createTurnStreamThrottle,
@@ -16,7 +17,7 @@ import {
     turnReplyFlushIntervalMs,
 } from './turn-stream-throttle';
 
-type HermesClient = ReturnType<typeof createLocalHermesClient>;
+type HermesClient = ReturnType<typeof getSharedHermesClient>;
 type ClarificationDisposition = 'answered' | 'skipped' | 'timeout';
 interface ClarificationSettlement {
     answer?: string | null;
@@ -36,7 +37,6 @@ interface ActiveHermesTurn {
 }
 
 const activeHermesTurns = new Map<string, ActiveHermesTurn>();
-let hermesTurnClient: HermesClient | null = null;
 const visibleAssistantStatusKinds = new Set(['compressing', 'goal', 'process', 'status']);
 const hiddenAssistantStatusDetails = new Set(['ready']);
 const defaultClarificationTimeoutMs = 120_000;
@@ -48,13 +48,14 @@ export async function runHermesTurn(input: {
     attachments?: AgentRuntimeSessionMessageAttachment[];
     chatId: string;
     content: string;
+    metadata?: unknown;
     modelRef?: string;
     requestMessageId: string;
     responseId: string;
     runId: string;
     sessionKey: string;
 }) {
-    const client = getHermesTurnClient();
+    const client = getSharedHermesClient();
     const participantId = createAgentParticipantId(input.agentId);
     const startedAt = new Date().toISOString();
     const turn = {
@@ -120,10 +121,14 @@ export async function runHermesTurn(input: {
 
     try {
         publishRuntimeEvent({ timestamp: startedAt, turn, type: 'turn.started' });
+        const projectedContent = await projectTavernMessageForHermes({
+            content: input.content,
+            metadata: input.metadata,
+        });
 
         for await (const event of client.streamChat({
             attachments: input.attachments,
-            content: input.content,
+            content: projectedContent,
             modelRef: input.modelRef,
             onLiveSessionId: (sessionId) => {
                 activeTurn.sessionId = sessionId;
@@ -444,10 +449,7 @@ export function hasActiveHermesTurns() {
 }
 
 export function closeHermesTurnClients() {
-    if (hermesTurnClient) {
-        hermesTurnClient.close();
-    }
-    hermesTurnClient = null;
+    closeSharedHermesClient();
 }
 
 interface HermesTurn {
@@ -482,16 +484,6 @@ interface HermesModelContext {
 }
 
 type HermesTurnInput = Parameters<typeof runHermesTurn>[0];
-
-function getHermesTurnClient() {
-    if (hermesTurnClient) {
-        return hermesTurnClient;
-    }
-
-    const client = createLocalHermesClient();
-    hermesTurnClient = client;
-    return client;
-}
 
 function recordClarificationRequest(
     gatewayActivities: ReturnType<typeof createGatewayActivityRecorder>,

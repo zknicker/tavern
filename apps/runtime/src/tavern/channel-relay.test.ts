@@ -1,3 +1,6 @@
+import fs from 'node:fs/promises';
+import os from 'node:os';
+import path from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { closeDb, initTestDb } from '../db/connection';
 import { ensureRuntimeSchema } from '../db/schema';
@@ -7,13 +10,18 @@ interface MockHermesEvent {
     event: string;
 }
 
+interface MockStreamChatInput {
+    content?: string;
+    onLiveSessionId?: (sessionId: string) => void;
+    signal?: AbortSignal;
+}
+
 const hermesClient = vi.hoisted(() => ({
     close: vi.fn(),
     respondToLiveClarification: vi.fn(async () => ({ resolved: true })),
-    streamChat: vi.fn(async function* streamChat(_input?: {
-        onLiveSessionId?: (sessionId: string) => void;
-        signal?: AbortSignal;
-    }): AsyncGenerator<MockHermesEvent> {
+    streamChat: vi.fn(async function* streamChat(
+        _input?: MockStreamChatInput
+    ): AsyncGenerator<MockHermesEvent> {
         yield {
             data: {
                 model: 'tavern-e2e-tools',
@@ -89,6 +97,57 @@ describe('Tavern Hermes channel relay', () => {
             signal: expect.any(AbortSignal),
             title: 'cht_1',
         });
+    });
+
+    it('projects skill mentions into the Hermes prompt without changing the Tavern message', async () => {
+        const skillDir = await fs.mkdtemp(path.join(os.tmpdir(), 'tavern-skill-mention-'));
+        const skillPath = path.join(skillDir, 'SKILL.md');
+        await fs.writeFile(skillPath, '# BidBeacon\n\nUse `bb metrics table` for spend.\n');
+        createChat({ id: 'cht_1' });
+
+        await sendTavernChannelMessage('cht_1', {
+            agent: {
+                agentId: 'agt_1',
+            },
+            message: {
+                content: `Can you see [$bidbeacon](${skillPath}) spend?`,
+                id: 'msg_skill',
+                metadata: {
+                    tavern: {
+                        mentions: [
+                            {
+                                end: `Can you see [$bidbeacon](${skillPath})`.length,
+                                id: skillPath,
+                                kind: 'skill',
+                                label: 'BidBeacon',
+                                metadata: { skillName: 'bidbeacon' },
+                                projection: 'skill-context',
+                                start: 'Can you see '.length,
+                                text: `[$bidbeacon](${skillPath})`,
+                            },
+                        ],
+                    },
+                },
+                nonce: 'nonce_skill',
+            },
+            target: {
+                externalId: null,
+                sessionKey: 'session_1',
+                target: 'cht_1',
+                type: 'tavern',
+            },
+        });
+        await waitForHermesTurn();
+
+        const streamInput = hermesClient.streamChat.mock.calls.at(-1)?.[0];
+        expect(streamInput?.content).toContain('<skill_context>');
+        expect(streamInput?.content).toContain('Use `bb metrics table` for spend.');
+        expect(streamInput?.content).toContain(`Can you see [$bidbeacon](${skillPath}) spend?`);
+        expect(listMessages('cht_1').messages[0]?.content).toBe(
+            `Can you see [$bidbeacon](${skillPath}) spend?`
+        );
+
+        await fs.rm(skillDir, { force: true, recursive: true });
     });
 
     it('stops a queued Hermes turn before it has a live session id', async () => {
@@ -331,7 +390,10 @@ describe('Tavern Hermes channel relay', () => {
                 event: 'reasoning.available',
             };
             yield {
-                data: { content: 'final answer', message_id: 'hermes_msg_reasoning_available' },
+                data: {
+                    content: 'final answer',
+                    message_id: 'hermes_msg_reasoning_available',
+                },
                 event: 'assistant.completed',
             };
         });
@@ -488,9 +550,18 @@ describe('Tavern Hermes channel relay', () => {
         // so made the completion dedup strip the delivered reply to empty.
         hermesClient.streamChat.mockImplementationOnce(async function* streamChat() {
             yield { data: {}, event: 'assistant.composing' };
-            yield { data: { delta: '(o_o) processing...' }, event: 'reasoning.delta' };
-            yield { data: { delta: 'Hey! What can I help you with?' }, event: 'assistant.delta' };
-            yield { data: { delta: 'Hey! What can I help you with?' }, event: 'reasoning.delta' };
+            yield {
+                data: { delta: '(o_o) processing...' },
+                event: 'reasoning.delta',
+            };
+            yield {
+                data: { delta: 'Hey! What can I help you with?' },
+                event: 'assistant.delta',
+            };
+            yield {
+                data: { delta: 'Hey! What can I help you with?' },
+                event: 'reasoning.delta',
+            };
             yield {
                 data: {
                     content: 'Hey! What can I help you with?',
@@ -549,7 +620,10 @@ describe('Tavern Hermes channel relay', () => {
             await responseStarted.promise;
             yield { data: { delta: 'Berlin is mild.' }, event: 'assistant.delta' };
             yield {
-                data: { content: 'Berlin is mild.', message_id: 'hermes_msg_clarify' },
+                data: {
+                    content: 'Berlin is mild.',
+                    message_id: 'hermes_msg_clarify',
+                },
                 event: 'assistant.completed',
             };
         });

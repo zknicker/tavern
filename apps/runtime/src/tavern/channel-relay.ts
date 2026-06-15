@@ -101,6 +101,7 @@ export async function sendTavernChannelMessage(
         attachments: payload.message.attachments ?? [],
         chatId,
         content: payload.message.content,
+        metadata: payload.message.metadata,
         modelRef: payload.message.modelRef,
         requestMessageId: messageReceipt.message.id,
         responseId,

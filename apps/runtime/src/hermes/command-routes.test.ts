@@ -1,5 +1,34 @@
-import { describe, expect, it } from 'vitest';
-import { catalogForTavern, presentEngineDescription } from './command-routes';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { closeDb, initTestDb } from '../db/connection';
+import { ensureRuntimeSchema } from '../db/schema';
+import { createChat, listResponses } from '../tavern/chat-api';
+import {
+    catalogForTavern,
+    handleCommandsRequest,
+    presentEngineDescription,
+} from './command-routes';
+import { closeSharedHermesClient } from './shared-client';
+
+const hermesClient = vi.hoisted(() => ({
+    close: vi.fn(),
+    getSessionBindingStatus: vi.fn(async () => ({
+        liveSessionId: 'live-session',
+        sessionKey: 'agent:agt_hermes:tavern:channel:cht_1',
+        state: 'live',
+        storedSessionId: 'stored-session',
+        updatedAt: '2026-06-14T00:00:00.000Z',
+    })),
+    listCommands: vi.fn(async () => ({ commands: [] })),
+    resetSession: vi.fn(async () => undefined),
+    runCommand: vi.fn(async () => ({
+        output: 'command output',
+        status: 'completed' as const,
+    })),
+}));
+
+vi.mock('./local-client', () => ({
+    createLocalHermesClient: () => hermesClient,
+}));
 
 describe('Tavern command catalog policy', () => {
     it('hides terminal-client and host-machine commands', () => {
@@ -96,6 +125,26 @@ describe('Tavern command catalog policy', () => {
         ]);
     });
 
+    it('presents /status as a Tavern binding read', () => {
+        const catalog = catalogForTavern({
+            commands: [
+                {
+                    category: 'Session',
+                    description: 'Show Hermes CLI status',
+                    name: '/status',
+                },
+            ],
+        });
+
+        expect(catalog.commands).toEqual([
+            {
+                category: 'Session',
+                description: "Show this chat's agent session status",
+                name: '/status',
+            },
+        ]);
+    });
+
     it('keeps the engine name and install paths out of command descriptions', () => {
         const catalog = catalogForTavern({
             commands: [
@@ -130,6 +179,89 @@ describe('Tavern command catalog policy', () => {
     });
 });
 
+describe('Tavern command execution policy', () => {
+    beforeEach(() => {
+        vi.clearAllMocks();
+        ensureRuntimeSchema(initTestDb());
+        createChat({ id: 'cht_1' });
+    });
+
+    afterEach(() => {
+        closeSharedHermesClient();
+        closeDb();
+    });
+
+    it('runs ordinary engine commands through the shared chat client', async () => {
+        const response = await runCommand('/model gpt-5.5');
+        const body = (await response.json()) as { output: string; status: string };
+
+        expect(body).toEqual({ output: 'command output', status: 'completed' });
+        expect(hermesClient.runCommand).toHaveBeenCalledWith(
+            'agent:agt_hermes:tavern:channel:cht_1',
+            '/model gpt-5.5'
+        );
+        expect(hermesClient.close).not.toHaveBeenCalled();
+        expect(commandActivity()).toMatchObject({
+            detail: 'command output',
+            title: '/model',
+        });
+    });
+
+    it('resets the shared chat binding for /new', async () => {
+        const response = await runCommand('/new');
+        const body = (await response.json()) as { output: string; status: string };
+
+        expect(body).toEqual({
+            output: 'Started a fresh session. New messages start with fresh context.',
+            status: 'completed',
+        });
+        expect(hermesClient.resetSession).toHaveBeenCalledWith(
+            'agent:agt_hermes:tavern:channel:cht_1'
+        );
+        expect(hermesClient.runCommand).not.toHaveBeenCalled();
+    });
+
+    it('reports /status without creating or resuming an engine session', async () => {
+        const response = await runCommand('/status');
+        const body = (await response.json()) as { output: string; status: string };
+
+        expect(body.status).toBe('completed');
+        expect(body.output).toContain('Agent Session Status');
+        expect(body.output).toContain('Bound session: stored-session');
+        expect(body.output).toContain('Live session: live-session');
+        expect(hermesClient.getSessionBindingStatus).toHaveBeenCalledWith(
+            'agent:agt_hermes:tavern:channel:cht_1'
+        );
+        expect(hermesClient.runCommand).not.toHaveBeenCalled();
+        expect(hermesClient.resetSession).not.toHaveBeenCalled();
+    });
+});
+
 function command(name: string) {
     return { category: 'Session', description: null, name };
+}
+
+async function runCommand(commandText: string) {
+    const response = await handleCommandsRequest(
+        new Request('http://runtime.test/commands/run', {
+            body: JSON.stringify({
+                agentId: 'agt_hermes',
+                chatId: 'cht_1',
+                command: commandText,
+            }),
+            method: 'POST',
+        })
+    );
+    if (!response) {
+        throw new Error('Command request was not handled.');
+    }
+    return response;
+}
+
+function commandActivity() {
+    const response = listResponses('cht_1').responses[0];
+    if (!response) {
+        throw new Error('Missing command response.');
+    }
+    return listResponses('cht_1').activity.find((activity) => activity.response_id === response.id);
 }

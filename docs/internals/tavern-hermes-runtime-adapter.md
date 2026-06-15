@@ -2,6 +2,7 @@
 summary: Tavern Runtime adapter contract for managed Hermes turns, stream event mapping, durable activity, and model-provider test seams.
 read_when:
   - changing how Tavern Runtime sends chat work to managed Hermes
+  - changing Tavern chat participant to Hermes session binding or session-scoped slash commands
   - changing Hermes stream event mapping, assistant progress activity, thinking display, tool rows, or final delivery
   - debugging duplicated chat rows, missing progress, active turn state, or model-provider e2e behavior
 ---
@@ -43,6 +44,7 @@ platform plugin into the managed Hermes home during startup:
 | --- | --- |
 | `apps/runtime/src/hermes/supervisor.ts` | Managed `hermes dashboard --no-open` lifecycle. |
 | `apps/runtime/src/hermes/local-client.ts` | Hermes dashboard REST, Gateway, sessions, models, skills, and SSE client. |
+| `apps/runtime/src/hermes/shared-client.ts` | Process-wide Hermes client used by chat turns and chat-scoped slash commands. |
 | `apps/runtime/src/hermes/session-map.ts` | Tavern session key to Hermes stored-session key mapping in Runtime SQLite. |
 | `apps/runtime/src/hermes/tavern-messenger-plugin.ts` | Managed Hermes platform plugin files for Tavern cron delivery. |
 | `apps/runtime/src/tavern/channel-relay.ts` | Durable user-message acceptance and response creation. |
@@ -142,6 +144,11 @@ Tavern session routing stores `tavernSessionKey -> hermesSessionKey` in Runtime
 SQLite. Runtime does not write `tavern-session-map.json` under the Hermes home;
 the managed Hermes home is execution state, not Tavern routing state.
 
+Hermes owns native session identity, transcripts, model state, tool state, and
+context management. Tavern owns only the durable binding between a Tavern chat
+participant and the Hermes session Runtime should use for that participant.
+That binding is the session key contract for chat turns and chat-scoped commands.
+
 Runtime keeps a persistent Hermes Gateway client for chat turns, matching the
 Hermes Desktop pattern of a long-lived backend socket with events keyed by live
 `session_id`. Runtime caches the live Hermes `session_id` for each Tavern
@@ -149,6 +156,20 @@ session key and submits follow-up turns directly to that live id. Runtime calls
 `session.resume` only when it has no live id, such as after a Gateway reconnect
 or Runtime restart, and then updates the live-id cache from the resume result.
 Runtime closes the cached Gateway client when the Tavern Runtime server stops.
+
+Chat turns and chat-scoped slash commands use the same shared Runtime Hermes
+client and live-session cache. Commands such as `/model`, `/compress`, and other
+engine-native session commands must dispatch against the same Tavern session key
+that the next chat turn will use.
+
+`/new` and `/clear` are Tavern binding operations, not independent command-runner
+sessions. They close any cached live Hermes session for the Tavern session key,
+drop the stored binding, and let the next turn or command create a fresh Hermes
+session under the same Tavern key. `/clear` also clears the Tavern chat timeline.
+
+`/status` is a binding read. It reports the live cached session id, stored
+Hermes session id, or empty binding state for the Tavern session key without
+creating, resuming, or rotating a Hermes session.
 
 ## Cron Delivery
 

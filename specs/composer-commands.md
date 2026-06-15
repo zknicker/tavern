@@ -42,15 +42,18 @@ Every engine command gets exactly one of three treatments:
 
 1. **Run in the session (default).** The command executes through the engine
    and its output lands as a command card. This covers session, configuration,
-   info, and tools/skills commands (`/status`, `/usage`, `/model`, `/compress`,
+   info, and tools/skills commands (`/usage`, `/model`, `/compress`,
    `/skills`, ...). Tavern never parses or reimplements them. `/model` and
    `/reasoning` are deliberately session-scoped overrides: they tune the
-   current chat's session and never write Tavern agent settings.
-2. **Tavern-native.** `/new` and `/clear` are reinterpreted because session
-   identity is Tavern-owned state: both run Tavern's session reset, and
-   `/clear` additionally clears the Tavern timeline (see Execution). Their
-   catalog descriptions are rewritten ("Start fresh context without clearing
-   the chat" / "Clear the chat and start fresh context").
+   current chat-bound engine session and never write Tavern agent settings.
+2. **Tavern binding commands.** Hermes owns native session identity,
+   transcripts, reset semantics, model overrides, and tool state. Tavern owns
+   the binding between a Tavern chat participant and a Hermes session. `/new`
+   and `/clear` rotate that binding; `/clear` additionally clears the Tavern
+   timeline (see Execution). `/status` reads the current binding without
+   opening a new engine session. Their catalog descriptions are rewritten
+   ("Start fresh context without clearing the chat", "Clear the chat and start
+   fresh context", and "Show this chat's agent session status").
 3. **Suppressed.** Runtime drops these from the catalog and rejects direct
    runs, for one of four reasons:
    - They act on the engine's own terminal client or its host machine, which
@@ -107,8 +110,10 @@ catalog command executes as a command instead of starting a chat turn:
 1. The app calls `agent.runCommand` with the agent id, chat id, and the raw
    command text.
 2. The server proxies to Runtime `POST /commands/run`.
-3. Runtime derives the chat's canonical channel session key, opens or resumes
-   the live engine session, and executes the command through the gateway:
+3. Runtime derives the chat's canonical channel session key and uses the same
+   long-lived Hermes client used by normal chat turns. For default engine
+   commands, Runtime opens or resumes the chat-bound live engine session and
+   executes the command through the gateway:
    `slash.exec` first; when the engine rejects with its
    use-`command.dispatch` error, Runtime retries via `command.dispatch`.
    ANSI escape sequences are stripped from the output.
@@ -125,16 +130,17 @@ catalog command executes as a command instead of starting a chat turn:
 Unknown leading-slash text falls through and sends as a normal message.
 Command execution mutates live session state only through the engine's own
 command semantics. Tavern does not parse or reimplement individual commands,
-with `/new` and `/clear` as the Tavern-native exceptions.
+with `/new`, `/clear`, and `/status` as the binding-aware exceptions.
 
-### /new and /clear
+### /new, /clear, and /status
 
-Both commands run Tavern's session reset: Runtime closes the live engine
-session and drops the synced session mapping, so the chat's next message
-opens a brand-new engine session under the same Tavern session key. The
-engine's own `/new` handler is deliberately not used — it rotates the stored
-engine session without updating Tavern's synced mapping, so the fresh context
-would silently revert to the old session after a runtime restart.
+`/new` and `/clear` rotate the Hermes session bound to this chat participant:
+Runtime closes the live engine session when one is open and drops the synced
+session mapping, so the chat's next message opens a brand-new engine session
+under the same Tavern session key. The engine's own `/new` handler is
+deliberately not used unless Runtime can observe the new Hermes session id and
+atomically update the binding; otherwise the fresh context can silently diverge
+from the session normal chat turns use.
 
 `/new` stops there: fresh context, timeline untouched.
 
@@ -145,6 +151,9 @@ lands as a command card after the wipe — the only row left in the timeline —
 and new work appears normally. History stays durable; rows keep their
 sequence slots, and the old engine session remains stored execution evidence
 in both cases.
+
+`/status` reports the binding Runtime will use for the next chat turn. It must
+not create, resume, or rotate an engine session just to inspect status.
 
 ## Dismissal
 
@@ -162,8 +171,8 @@ have no dismiss control until the durable refetch fills the id in.
 - Command runs are durable chat evidence, keyed like any response: the card
   survives reloads and offline catch-up (unless dismissed).
 - The catalog is engine-owned. Tavern never invents command names; the only
-  Tavern-side edits are the suppression list, the `/new` and `/clear` remaps,
-  and the description sanitization above.
+  Tavern-side edits are the suppression list, the `/new`, `/clear`, and
+  `/status` remaps, and the description sanitization above.
 - Command execution requires the `gateway` capability and an existing chat.
 - User-facing copy presents these as the assistant's commands.
 - Dismissal and `/clear` ride the chat API's soft-delete contract; they never

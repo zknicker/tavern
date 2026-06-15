@@ -4,13 +4,14 @@ import { clearChat, upsertResponse, upsertResponseActivity } from '../tavern/cha
 import { createAgentChannelSessionKey, createAgentParticipantId } from '../tavern/chat-api/ids';
 import { badRequest, json } from '../tavern/http';
 import { createLocalHermesClient } from './local-client';
+import { getSharedHermesClient } from './shared-client';
 
 /**
- * Engine slash commands for the composer palette: list the categorized
- * catalog and run one command in a chat's live session. Each run persists as
- * durable chat evidence — a completed response with a single command
- * activity row. /new and /clear are Tavern-native session resets; /clear
- * also dismisses the chat's visible timeline. See specs/composer-commands.md.
+ * Engine slash commands for the composer palette: list the categorized catalog
+ * and run one command against the chat-bound agent session. Each run persists
+ * as durable chat evidence. /new and /clear rotate the chat binding; /status
+ * reports that binding without creating a fresh engine session. See
+ * specs/composer-commands.md.
  */
 export async function handleCommandsRequest(request: Request): Promise<Response | null> {
     const url = new URL(request.url);
@@ -85,13 +86,12 @@ const suppressedCommands = new Set([
     '/yolo',
 ]);
 
-// Session identity is Tavern-owned state: these commands run as Tavern's
-// session reset (close the live engine session, drop the synced session
-// mapping) instead of the engine's own handlers, which would rotate the
-// stored session without updating the mapping.
+// Tavern owns the chat-to-agent-session binding. These descriptions name the
+// Tavern behavior even when the engine's catalog uses terminal-client wording.
 const tavernCommandDescriptions: Record<string, string> = {
     '/clear': 'Clear the chat and start fresh context',
     '/new': 'Start fresh context without clearing the chat',
+    '/status': "Show this chat's agent session status",
 };
 
 export function catalogForTavern(catalog: AgentRuntimeCommandList): AgentRuntimeCommandList {
@@ -132,19 +132,28 @@ async function runChatCommand(input: { agentId: string; chatId: string; command:
         );
     }
 
-    const client = createLocalHermesClient();
     const sessionKey = createAgentChannelSessionKey(input.agentId, input.chatId);
+    const client = getSharedHermesClient();
+
+    if (name === '/status') {
+        const output = formatSessionBindingStatus(await client.getSessionBindingStatus(sessionKey));
+        recordCommandRun({ ...input, command, output, status: 'completed' });
+        return { output, status: 'completed' as const };
+    }
 
     try {
         const result = await client.runCommand(sessionKey, command);
-        recordCommandRun({ ...input, command, output: result.output, status: 'completed' });
+        recordCommandRun({
+            ...input,
+            command,
+            output: result.output,
+            status: 'completed',
+        });
         return result;
     } catch (error) {
         const output = error instanceof Error ? error.message : 'Command failed.';
         recordCommandRun({ ...input, command, output, status: 'failed' });
         return { output, status: 'failed' as const };
-    } finally {
-        client.close();
     }
 }
 
@@ -156,7 +165,7 @@ async function resetTavernSession(
     input: { agentId: string; chatId: string; command: string },
     options: { clearTimeline: boolean }
 ) {
-    const client = createLocalHermesClient();
+    const client = getSharedHermesClient();
     const sessionKey = createAgentChannelSessionKey(input.agentId, input.chatId);
 
     try {
@@ -170,9 +179,43 @@ async function resetTavernSession(
         const output = error instanceof Error ? error.message : 'Command failed.';
         recordCommandRun({ ...input, output, status: 'failed' });
         return { output, status: 'failed' as const };
-    } finally {
-        client.close();
     }
+}
+
+function formatSessionBindingStatus(input: {
+    liveSessionId: string | null;
+    sessionKey: string;
+    state: string;
+    storedSessionId: string | null;
+    updatedAt: string | null;
+}) {
+    const state =
+        input.state === 'live'
+            ? 'Active live session'
+            : input.state === 'bound'
+              ? 'Linked; not currently live'
+              : 'No linked session yet';
+    const lines = [
+        'Agent Session Status',
+        '',
+        `State: ${state}`,
+        `Session key: ${input.sessionKey}`,
+    ];
+
+    if (input.storedSessionId) {
+        lines.push(`Bound session: ${input.storedSessionId}`);
+    }
+    if (input.liveSessionId) {
+        lines.push(`Live session: ${input.liveSessionId}`);
+    }
+    if (input.updatedAt) {
+        lines.push(`Binding updated: ${input.updatedAt}`);
+    }
+    if (input.state === 'empty') {
+        lines.push('Next message or session command will start a session.');
+    }
+
+    return lines.join('\n');
 }
 
 function clearedChatOutput(cleared: { messages_deleted: number; responses_deleted: number }) {
