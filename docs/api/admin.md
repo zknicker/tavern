@@ -33,7 +33,7 @@ capabilities. It is not a second product API.
 | Health and capabilities | `/health`, `/capabilities`, `/capabilities/{id}`, `/capabilities/{id}/refresh`, `/capabilities/refresh` |
 | Runtime update | `/update/status`, `/update`, `/update/restart` |
 | Runtime events | `/events`, websocket `/events` |
-| Managed Hermes | `/hermes-config`, `/execution-settings`, `/permission-settings` |
+| Managed Hermes | `/hermes-config`, `/execution-settings`, `/permission-settings`, `/agent-env` |
 | Connectors | `/connectors`, `/connectors/{id}`, `/connectors/{id}/test` |
 | Agents and files | `/agents`, `/agents/{id}`, `/agents/{id}/config`, `/agents/{id}/files`, `/agents/{id}/files/{path}` |
 | Sessions and execution evidence | `/hermes/sessions`, `/hermes/sessions/previews`, `/hermes/sessions/{sessionKey}/messages`, `/hermes/sessions/{sessionKey}/graph`, `/hermes/sessions/{sessionKey}/prompt`, `/hermes/sessions/{sessionKey}/resync` |
@@ -63,6 +63,11 @@ tool and automation approval modes and the command allowlist. Runtime stores
 the policy, rewrites the generated managed runtime config, and restarts
 managed Hermes to apply it; live "always" approval answers persisted by the
 engine are imported into the visible allowlist.
+
+`/agent-env` (GET/PUT) owns Tavern-stored environment variables for the managed
+agent process. Values live in Tavern Vault, reads return only `{name, hasValue}`
+masks, and saves rewrite the generated managed env file and restart managed
+Hermes to apply them.
 
 `/connectors` owns Tavern-stored MCP server records. Secret env and header
 values live in Tavern Vault and are materialized into the generated managed

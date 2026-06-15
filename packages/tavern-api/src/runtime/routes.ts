@@ -50,6 +50,7 @@ export const agentRuntimeRoutes = {
     connector: (id: string) => `/connectors/${encodeURIComponent(id)}`,
     connectorTest: (id: string) => `/connectors/${encodeURIComponent(id)}/test`,
     connectors: '/connectors',
+    agentEnv: '/agent-env',
     executionSettings: '/execution-settings',
     permissionSettings: '/permission-settings',
     job: (slug: string) => `/jobs/${encodeURIComponent(slug)}`,

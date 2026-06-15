@@ -4,6 +4,7 @@ import { HERMES_HOME, readConfigValue } from '../config';
 import { loadVaultBackedCodexCredentials } from '../model-access/codex-settings';
 import { getOpenAiApiKey } from '../model-access/openai-settings';
 import { getOpenRouterApiKey } from '../model-access/openrouter-settings';
+import { resolveAgentEnvEntries } from './agent-env';
 import { syncHermesCodexAuth } from './auth-store';
 import { resolveConnectorsDomain } from './connectors';
 import { quoteEnvValue, readEnvEntries, readManagedHermesEnvValue } from './env';
@@ -147,6 +148,7 @@ export async function prepareManagedHermesModelConfig(
  */
 export async function writeManagedHermesConfigFile(): Promise<HermesModelConfig> {
     const config = await resolveManagedHermesModelConfig();
+    const agentEnv = resolveAgentEnvEntries();
     const connectors = resolveConnectorsDomain();
     await fs.mkdir(HERMES_HOME, { recursive: true });
     await mergeHermesGeneratedConfig(path.join(HERMES_HOME, 'config.yaml'), {
@@ -155,15 +157,26 @@ export async function writeManagedHermesConfigFile(): Promise<HermesModelConfig>
         model: config,
         permissions: await resolveConfiguredPermissionsDomain(),
     });
-    await mergeHermesEnvFile(path.join(HERMES_HOME, '.env'), config, connectors.envEntries);
+    await mergeHermesEnvFile(path.join(HERMES_HOME, '.env'), {
+        agentEnvEntries: agentEnv.envEntries,
+        agentEnvStaleNames: agentEnv.staleNames,
+        config,
+        connectorEnvEntries: connectors.envEntries,
+    });
     return config;
 }
 
 export async function mergeHermesEnvFile(
     filePath: string,
-    config: HermesModelConfig,
-    connectorEnvEntries: Map<string, string> = new Map()
+    input: {
+        agentEnvEntries?: Map<string, string>;
+        agentEnvStaleNames?: string[];
+        config: HermesModelConfig;
+        connectorEnvEntries?: Map<string, string>;
+    }
 ) {
+    const agentEnvEntries = input.agentEnvEntries ?? new Map();
+    const connectorEnvEntries = input.connectorEnvEntries ?? new Map();
     const entries = readEnvEntries(await fs.readFile(filePath, 'utf8').catch(() => ''));
 
     // Connector secrets are fully managed: stale TAVERN_MCP_* entries go away.
@@ -176,15 +189,22 @@ export async function mergeHermesEnvFile(
         entries.set(key, value);
     }
 
+    for (const key of input.agentEnvStaleNames ?? []) {
+        entries.delete(key);
+    }
+    for (const [key, value] of agentEnvEntries) {
+        entries.set(key, value);
+    }
+
     for (const [key, value] of Object.entries(managedMnemosyneEnv)) {
         entries.set(key, value);
     }
 
-    if (config.openAiApiKey) {
-        entries.set('OPENAI_API_KEY', config.openAiApiKey);
+    if (input.config.openAiApiKey) {
+        entries.set('OPENAI_API_KEY', input.config.openAiApiKey);
     }
-    if (config.openRouterApiKey) {
-        entries.set('OPENROUTER_API_KEY', config.openRouterApiKey);
+    if (input.config.openRouterApiKey) {
+        entries.set('OPENROUTER_API_KEY', input.config.openRouterApiKey);
     }
 
     if (entries.size === 0) {

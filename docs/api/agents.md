@@ -41,9 +41,10 @@ with instruction files, model, execution, tool, memory, and skill policy.
   bindings through agent and messaging APIs instead of editing or saving raw
   Hermes config JSON.
 * Execution settings — the model fallback chain and the agent timezone — are
-  Runtime-stored and edited through the agent execution settings API. Saving
-  rewrites the generated managed runtime config and restarts managed Hermes to
-  apply.
+  Runtime-stored and edited through the agent execution settings API. Agent
+  environment variables are Runtime-stored Vault secrets exposed as write-only
+  masks. Saving either surface rewrites the generated managed runtime config or
+  env file and restarts managed Hermes to apply.
 * Runtime execution state is not required just to list agents.
 
 ## Surface
@@ -57,6 +58,7 @@ The API covers:
 * read and update supported agent markdown files
 * read model choices and availability
 * read and update execution settings (model fallbacks, timezone)
+* read and update agent environment variables
 * read and update tool policy
 * read and update memory policy
 * read and update skill assignment

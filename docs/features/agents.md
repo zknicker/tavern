@@ -33,7 +33,7 @@ The primary app sidebar lists product areas and chats. It does not list agents.
 Legacy agent URLs redirect to Settings -> Sessions. Agent configuration lives in
 Settings, including notes and personality files, model choice, model fallbacks,
 subagent defaults, thinking effort, timezone, context compression, permissions,
-connectors, skills, memory, sessions, and jobs.
+agent environment variables, connectors, skills, memory, sessions, and jobs.
 
 ## Runtime boundary
 

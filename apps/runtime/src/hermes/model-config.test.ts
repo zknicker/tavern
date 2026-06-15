@@ -62,9 +62,11 @@ describe('managed Hermes model config', () => {
         );
 
         await mergeHermesEnvFile(envPath, {
-            ...codexEnvConfig,
-            openRouterApiKey: 'new-openrouter',
-            provider: 'openrouter',
+            config: {
+                ...codexEnvConfig,
+                openRouterApiKey: 'new-openrouter',
+                provider: 'openrouter',
+            },
         });
 
         const env = await fs.readFile(envPath, 'utf8');
@@ -77,11 +79,39 @@ describe('managed Hermes model config', () => {
         const directory = await fs.mkdtemp(path.join(os.tmpdir(), 'tavern-hermes-env-'));
         const envPath = path.join(directory, '.env');
 
-        await mergeHermesEnvFile(envPath, codexEnvConfig);
+        await mergeHermesEnvFile(envPath, { config: codexEnvConfig });
 
         await expect(fs.readFile(envPath, 'utf8')).resolves.toContain(
             `MNEMOSYNE_HOST_LLM_ENABLED="${managedMnemosyneEnv.MNEMOSYNE_HOST_LLM_ENABLED}"`
         );
+    });
+
+    it('writes managed agent env vars and clears stale managed names only', async () => {
+        const directory = await fs.mkdtemp(path.join(os.tmpdir(), 'tavern-hermes-env-'));
+        const envPath = path.join(directory, '.env');
+        await fs.writeFile(
+            envPath,
+            [
+                'OLD_AGENT_SECRET="old"',
+                'KEEP_ME="still-here"',
+                'TAVERN_MCP_OLD_ENV_TOKEN="stale-connector"',
+                '',
+            ].join('\n')
+        );
+
+        await mergeHermesEnvFile(envPath, {
+            agentEnvEntries: new Map([['NEW_AGENT_SECRET', 'new']]),
+            agentEnvStaleNames: ['OLD_AGENT_SECRET'],
+            config: codexEnvConfig,
+            connectorEnvEntries: new Map([['TAVERN_MCP_NEW_ENV_TOKEN', 'connector']]),
+        });
+
+        const env = await fs.readFile(envPath, 'utf8');
+        expect(env).not.toContain('OLD_AGENT_SECRET');
+        expect(env).not.toContain('TAVERN_MCP_OLD_ENV_TOKEN');
+        expect(env).toContain('NEW_AGENT_SECRET="new"');
+        expect(env).toContain('KEEP_ME="still-here"');
+        expect(env).toContain('TAVERN_MCP_NEW_ENV_TOKEN="connector"');
     });
 
     it('uses Codex OAuth only when credentials are available', () => {

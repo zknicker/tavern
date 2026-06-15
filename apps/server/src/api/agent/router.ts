@@ -3,6 +3,7 @@ import { listAgentActivityRoute } from './activity.ts';
 import { listAgentChatsRoute } from './chats-list.ts';
 import { listAgentCommandsProcedure, runAgentCommandProcedure } from './commands.ts';
 import { deleteAgent } from './delete.ts';
+import { getAgentEnvSettingsProcedure, saveAgentEnvSettingsProcedure } from './env-settings.ts';
 import {
     getAgentExecutionSettingsProcedure,
     saveAgentExecutionSettingsProcedure,
@@ -34,6 +35,7 @@ export const agentRouter = createRouter({
     }),
     commands: listAgentCommandsProcedure,
     delete: deleteAgent,
+    envSettings: getAgentEnvSettingsProcedure,
     executionSettings: getAgentExecutionSettingsProcedure,
     get: getAgent,
     instructions: getAgentInstructions,
@@ -44,6 +46,7 @@ export const agentRouter = createRouter({
     permissionSettings: getAgentPermissionSettingsProcedure,
     primary: getPrimaryAgentRoute,
     runCommand: runAgentCommandProcedure,
+    saveEnvSettings: saveAgentEnvSettingsProcedure,
     saveExecutionSettings: saveAgentExecutionSettingsProcedure,
     savePermissionSettings: saveAgentPermissionSettingsProcedure,
     saveProfile: saveAgentProfile,

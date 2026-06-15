@@ -276,6 +276,47 @@ export const agentRuntimeSavePermissionSettingsResultSchema =
         restartScheduled: z.boolean(),
     });
 
+const agentRuntimeReservedEnvPrefixes = ['TAVERN_', 'HERMES_', 'MNEMOSYNE_'] as const;
+const agentRuntimeReservedEnvNames = new Set(['OPENAI_API_KEY', 'OPENROUTER_API_KEY']);
+
+function isAgentRuntimeReservedEnvName(name: string) {
+    return (
+        agentRuntimeReservedEnvNames.has(name) ||
+        agentRuntimeReservedEnvPrefixes.some((prefix) => name.startsWith(prefix))
+    );
+}
+
+const agentRuntimeAgentEnvNameSchema = z
+    .string()
+    .trim()
+    .min(1)
+    .max(128)
+    .regex(/^[A-Z_][A-Z0-9_]*$/u, 'Use uppercase letters, digits, and underscores.')
+    .refine((name) => !isAgentRuntimeReservedEnvName(name), 'This name is managed by Tavern.');
+
+export const agentRuntimeAgentEnvVariableSchema = z.object({
+    hasValue: z.boolean(),
+    name: agentRuntimeAgentEnvNameSchema,
+});
+
+export const agentRuntimeAgentEnvSchema = z.object({
+    updatedAt: z.string().datetime().nullable(),
+    variables: z.array(agentRuntimeAgentEnvVariableSchema),
+});
+
+export const agentRuntimeSaveAgentEnvVariableSchema = z.object({
+    name: agentRuntimeAgentEnvNameSchema,
+    value: z.string().min(1).max(8192).optional(),
+});
+
+export const agentRuntimeSaveAgentEnvSchema = z.object({
+    variables: z.array(agentRuntimeSaveAgentEnvVariableSchema).max(64),
+});
+
+export const agentRuntimeSaveAgentEnvResultSchema = agentRuntimeAgentEnvSchema.extend({
+    restartScheduled: z.boolean(),
+});
+
 export const agentRuntimeCommandSchema = z.object({
     category: z.string().trim().min(1),
     description: z.string().trim().min(1).nullable(),
@@ -2181,6 +2222,10 @@ export type AgentRuntimeSavePermissionSettings = z.infer<
 export type AgentRuntimeSavePermissionSettingsResult = z.infer<
     typeof agentRuntimeSavePermissionSettingsResultSchema
 >;
+export type AgentRuntimeAgentEnv = z.infer<typeof agentRuntimeAgentEnvSchema>;
+export type AgentRuntimeAgentEnvVariable = z.infer<typeof agentRuntimeAgentEnvVariableSchema>;
+export type AgentRuntimeSaveAgentEnv = z.infer<typeof agentRuntimeSaveAgentEnvSchema>;
+export type AgentRuntimeSaveAgentEnvResult = z.infer<typeof agentRuntimeSaveAgentEnvResultSchema>;
 export type AgentRuntimeCommand = z.infer<typeof agentRuntimeCommandSchema>;
 export type AgentRuntimeCommandList = z.infer<typeof agentRuntimeCommandListSchema>;
 export type AgentRuntimeRunCommand = z.infer<typeof agentRuntimeRunCommandSchema>;

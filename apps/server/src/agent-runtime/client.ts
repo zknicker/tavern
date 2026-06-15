@@ -1,5 +1,6 @@
 import {
     type AgentRuntimeAgent,
+    type AgentRuntimeAgentEnv,
     type AgentRuntimeAgentFileContent,
     type AgentRuntimeAgentFileList,
     type AgentRuntimeApplyHermesConfig,
@@ -54,6 +55,8 @@ import {
     type AgentRuntimeRunCron,
     type AgentRuntimeRunJob,
     type AgentRuntimeRunJobInput,
+    type AgentRuntimeSaveAgentEnv,
+    type AgentRuntimeSaveAgentEnvResult,
     type AgentRuntimeSaveAgentFile,
     type AgentRuntimeSaveConnector,
     type AgentRuntimeSaveConnectorResult,
@@ -107,6 +110,7 @@ import {
     type AgentRuntimeUpdateToolsetEnabled,
     type AgentRuntimeUpsertBinding,
     type AgentRuntimeWorkspaceInstructions,
+    agentRuntimeAgentEnvSchema,
     agentRuntimeAgentFileContentSchema,
     agentRuntimeAgentFileListSchema,
     agentRuntimeAgentListSchema,
@@ -173,6 +177,8 @@ import {
     agentRuntimeRunCronSchema,
     agentRuntimeRunJobInputSchema,
     agentRuntimeRunJobSchema,
+    agentRuntimeSaveAgentEnvResultSchema,
+    agentRuntimeSaveAgentEnvSchema,
     agentRuntimeSaveAgentFileSchema,
     agentRuntimeSaveConnectorResultSchema,
     agentRuntimeSaveConnectorSchema,
@@ -285,6 +291,7 @@ export interface TavernAgentRuntimeClient {
     deleteOpenAiSettings(): Promise<AgentRuntimeOpenAiSettings>;
     deleteOpenRouterSettings(): Promise<AgentRuntimeOpenRouterSettings>;
     getAgentConfig(agentId: string): Promise<AgentRuntimeAgent>;
+    getAgentEnv(): Promise<AgentRuntimeAgentEnv>;
     getAgentFile(agentId: string, path: string): Promise<AgentRuntimeAgentFileContent>;
     getCapability(id: AgentRuntimeCapabilityHealthId): Promise<AgentRuntimeCapabilityHealth>;
     getCortexHealth(): Promise<CortexHealth>;
@@ -374,6 +381,7 @@ export interface TavernAgentRuntimeClient {
         toolsetId: string,
         input: AgentRuntimeToolsetPostSetup
     ): Promise<AgentRuntimeSkillHubActionResult>;
+    saveAgentEnv(input: AgentRuntimeSaveAgentEnv): Promise<AgentRuntimeSaveAgentEnvResult>;
     saveAgentFile(
         agentId: string,
         path: string,
@@ -1480,6 +1488,37 @@ class HttpTavernAgentRuntimeClient implements TavernAgentRuntimeClient {
         }
 
         return agentRuntimeSavePermissionSettingsResultSchema.parse(await response.json());
+    }
+
+    async getAgentEnv(): Promise<AgentRuntimeAgentEnv> {
+        const response = await fetch(`${this.#baseUrl}${agentRuntimeRoutes.agentEnv}`, {
+            headers: this.#authHeaders,
+        });
+
+        if (!response.ok) {
+            await readErrorResponse(response);
+        }
+
+        return agentRuntimeAgentEnvSchema.parse(await response.json());
+    }
+
+    async saveAgentEnv(input: AgentRuntimeSaveAgentEnv): Promise<AgentRuntimeSaveAgentEnvResult> {
+        const payload = agentRuntimeSaveAgentEnvSchema.parse(input);
+        const response = await fetch(`${this.#baseUrl}${agentRuntimeRoutes.agentEnv}`, {
+            body: JSON.stringify(payload),
+            headers: {
+                ...this.#authHeaders,
+                'content-type': 'application/json',
+                [agentRuntimeMutationHeaders.origin]: agentRuntimeMutationOrigins.tavern,
+            },
+            method: 'PUT',
+        });
+
+        if (!response.ok) {
+            await readErrorResponse(response);
+        }
+
+        return agentRuntimeSaveAgentEnvResultSchema.parse(await response.json());
     }
 
     async listConnectors() {

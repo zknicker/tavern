@@ -10,9 +10,11 @@ import { MissingAgentState } from '../../agents/missing-agent-state.tsx';
 import { MessagingPlatformsSection } from '../connections/messaging-platform-section.tsx';
 import { AgentAppearanceSection } from './appearance-section.tsx';
 import { AgentBehaviorSection } from './behavior-section.tsx';
+import { AgentEnvSection } from './env-section.tsx';
 import { AgentModelSection } from './model-section.tsx';
 import { AgentPermissionsSection } from './permissions-section.tsx';
 import type { AgentModelDraft } from './types.ts';
+import { useAgentEnvSettings } from './use-env-settings.ts';
 import { useAgentExecutionSettings } from './use-execution-settings.ts';
 import { useAgentPermissionSettings } from './use-permission-settings.ts';
 
@@ -72,6 +74,7 @@ function AgentSettingsContent({
             await Promise.all([utils.agent.list.invalidate(), utils.model.list.invalidate()]);
         },
     });
+    const envSettings = useAgentEnvSettings();
     const executionSettings = useAgentExecutionSettings();
     const permissionSettings = useAgentPermissionSettings();
     const isSavingAgentConfig = updateModel.isPending || updateThinkingDefault.isPending;
@@ -160,6 +163,15 @@ function AgentSettingsContent({
                         permissionSettings.save({ commandAllowlist: next })
                     ).catch(() => undefined)
                 }
+            />
+
+            <AgentEnvSection
+                disabled={envSettings.isLoading}
+                isSaving={envSettings.isSaving}
+                onChange={(next) =>
+                    withSaveErrorToast(() => envSettings.save(next)).catch(() => undefined)
+                }
+                variables={envSettings.settings.variables}
             />
 
             <MessagingPlatformsSection
