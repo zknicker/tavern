@@ -1,4 +1,4 @@
-import { type SVGProps, useEffect, useMemo, useRef } from 'react';
+import { type SVGProps, useEffect, useRef } from 'react';
 import {
     type AgentEyeEmotion,
     blinkTiming,
@@ -39,14 +39,12 @@ export function AgentEyes({
     const dropRef = useRef<SVGPathElement | null>(null);
     const propRef = useRef({ blinking, emotion, intensity, speed });
     propRef.current = { blinking, emotion, intensity, speed };
-    const staticPaths = useMemo(() => {
-        const nextEmotion = emotionConfig[emotion] ?? emotionConfig.default;
+    const initialPathsRef = useRef<{ left: string; right: string } | null>(null);
 
-        return {
-            left: buildEyePath(resolveStaticEye(nextEmotion.L, intensity), leftEyeX),
-            right: buildEyePath(resolveStaticEye(nextEmotion.R, intensity), rightEyeX),
-        };
-    }, [emotion, intensity]);
+    initialPathsRef.current ??= {
+        left: buildEyePath(resolveStaticEye(emotionConfig.default.L, 1), leftEyeX),
+        right: buildEyePath(resolveStaticEye(emotionConfig.default.R, 1), rightEyeX),
+    };
 
     useEffect(() => {
         const current = { L: defaultEyeParams.slice(), R: defaultEyeParams.slice() };
@@ -156,8 +154,8 @@ export function AgentEyes({
             width={size}
             {...props}
         >
-            <path d={staticPaths.left} fill={color} ref={leftRef} />
-            <path d={staticPaths.right} fill={color} ref={rightRef} />
+            <path d={initialPathsRef.current.left} fill={color} ref={leftRef} />
+            <path d={initialPathsRef.current.right} fill={color} ref={rightRef} />
             <path d={dropPath} fill="#5fb8f6" opacity="0" ref={dropRef} />
         </svg>
     );

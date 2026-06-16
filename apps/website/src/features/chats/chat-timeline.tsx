@@ -47,7 +47,7 @@ export function ChatTimeline({
     }, [messageEntrancesEnabled]);
 
     return (
-        <div className={cn('flex flex-col gap-0 py-1', animate && 'animate-float-up')}>
+        <div className={cn('flex flex-col gap-3 py-1', animate && 'animate-float-up')}>
             <ChatTranscript
                 activeReply={activeReply}
                 agentPresenceColor={agentPresenceColor}

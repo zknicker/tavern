@@ -11,7 +11,9 @@ import { ActiveReplyLayoutSyncProvider } from './active-reply-layout-sync.tsx';
 import type { ConversationMessageLayout, TranscriptRow } from './chat-transcript-model.ts';
 import {
     getEstimatedTranscriptRowSize,
+    getEstimatedTranscriptRowsSize,
     type TranscriptRenderRow,
+    transcriptRenderRowGap,
     transcriptRenderRowUsesActiveReply,
 } from './chat-transcript-row-model.ts';
 import { TranscriptRenderRowView } from './chat-transcript-rows.tsx';
@@ -22,6 +24,7 @@ const transcriptFallbackOverscan = 8;
 
 export function VirtualizedChatTranscript({
     activeReply,
+    activePresenceVerb = null,
     agentPresenceColor = null,
     animateMessages,
     chatId,
@@ -38,6 +41,7 @@ export function VirtualizedChatTranscript({
     scrollViewportRef,
 }: {
     activeReply: ChatActiveReply | null;
+    activePresenceVerb?: string | null;
     agentPresenceColor?: string | null;
     animateMessages: boolean;
     chatId?: string;
@@ -62,6 +66,7 @@ export function VirtualizedChatTranscript({
         count: rows.length,
         estimateSize: (index) => getEstimatedTranscriptRowSize(rows[index]),
         followOnAppend: true,
+        gap: transcriptRenderRowGap,
         getItemKey: (index) => rows[index]?.id ?? index,
         getScrollElement: () => scrollViewportRef.current,
         initialRect: getInitialTranscriptViewportRect(scrollViewportRef.current),
@@ -217,6 +222,9 @@ export function VirtualizedChatTranscript({
                             virtualizer={virtualizer}
                         >
                             <TranscriptRenderRowView
+                                activePresenceVerb={
+                                    row.kind === 'presence' ? activePresenceVerb : null
+                                }
                                 activeReply={rendersActiveReply ? activeReply : null}
                                 agentPresenceColor={agentPresenceColor}
                                 animateMessages={animateMessages}
@@ -336,10 +344,7 @@ export function getEstimatedTranscriptBottomOffset(
     rows: TranscriptRenderRow[],
     viewportHeight: number
 ) {
-    const totalEstimatedHeight = rows.reduce(
-        (total, row) => total + getEstimatedTranscriptRowSize(row),
-        0
-    );
+    const totalEstimatedHeight = getEstimatedTranscriptRowsSize(rows);
 
     return Math.max(totalEstimatedHeight - viewportHeight, 0);
 }

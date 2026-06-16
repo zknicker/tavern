@@ -774,6 +774,7 @@ test('ChatTranscript shows active presence timing when no progress exists yet', 
     assert.match(markup, /Agent is thinking/);
     assert.match(markup, activePresenceLabelPattern);
     assert.match(markup, activePresenceShimmerPattern);
+    assert.match(markup, /style="opacity:0/);
     assert.doesNotMatch(markup, /Worked/);
 });
 

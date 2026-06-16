@@ -108,6 +108,9 @@ so `docs:list` routes future agents correctly.
   reusable token is first added to the theme.
 - Follow `DESIGN.md` for visual design decisions, especially token usage, settings layout, and
   shared component behavior.
+- For motion polish, use Fluid Functionalism's motion guidance and ThinkingIndicator reference:
+  https://www.fluidfunctionalism.com/docs/motion and
+  https://www.fluidfunctionalism.com/docs/thinking-indicator.
 
 ## Runtime And Data
 

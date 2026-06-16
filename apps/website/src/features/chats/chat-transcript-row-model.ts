@@ -19,6 +19,8 @@ export type TranscriptRenderRow =
           turnStartedAt: string | null;
       };
 
+export const transcriptRenderRowGap = 12;
+
 export function buildTranscriptRenderRows(entries: TranscriptEntry[], hiddenCount: number) {
     const rows: TranscriptRenderRow[] = [];
     const latestAgentEntryId = getLatestAgentEntryId(entries);
@@ -97,7 +99,7 @@ export function getEstimatedTranscriptRowSize(row: TranscriptRenderRow | undefin
     }
 
     if (row.kind === 'presence') {
-        return 44;
+        return 32;
     }
 
     if (row.entry.kind === 'system') {
@@ -113,6 +115,13 @@ export function getEstimatedTranscriptRowSize(row: TranscriptRenderRow | undefin
     }
 
     return 180;
+}
+
+export function getEstimatedTranscriptRowsSize(rows: TranscriptRenderRow[]) {
+    const rowSize = rows.reduce((total, row) => total + getEstimatedTranscriptRowSize(row), 0);
+    const gapSize = Math.max(rows.length - 1, 0) * transcriptRenderRowGap;
+
+    return rowSize + gapSize;
 }
 
 export function transcriptRenderRowUsesActiveReply(

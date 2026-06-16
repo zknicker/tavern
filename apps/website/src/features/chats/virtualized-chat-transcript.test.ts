@@ -69,7 +69,7 @@ test('virtualized chat initial offset starts at the estimated transcript bottom'
         },
     ] as TranscriptRenderRow[];
 
-    expect(getEstimatedTranscriptBottomOffset(rows, 120)).toBe(180);
+    expect(getEstimatedTranscriptBottomOffset(rows, 120)).toBe(204);
     expect(getEstimatedTranscriptBottomOffset(rows, 400)).toBe(0);
 });
 
@@ -149,7 +149,7 @@ test('virtualized chat does not reserve reply space for hidden thinking progress
     const presenceRow = rows.find((row) => row.kind === 'presence');
 
     expect(rows.map((row) => row.kind)).toEqual(['dayDivider', 'presence']);
-    expect(getEstimatedTranscriptRowSize(presenceRow)).toBe(44);
+    expect(getEstimatedTranscriptRowSize(presenceRow)).toBe(32);
 });
 
 test('virtualized chat sync-measures only the live active row', () => {

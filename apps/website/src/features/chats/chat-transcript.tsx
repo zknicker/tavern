@@ -2,6 +2,7 @@ import * as React from 'react';
 import type { ChatActiveReply, ChatTurnFailure } from '../../hooks/chats/chat-timeline-state.ts';
 import { useChatThinkingDisplayPreference } from '../../hooks/chats/use-chat-thinking-display-preference.ts';
 import { markChatTiming } from '../../lib/chat-timing.ts';
+import { resolveActivePresenceVerb } from './chat-active-presence-verb.ts';
 import {
     buildTranscriptEntries,
     type ConversationMessageLayout,
@@ -66,6 +67,7 @@ export function ChatTranscript({
         [entries, hiddenCount]
     );
     const latestAgentMessage = React.useMemo(() => getLatestAgentMessage(rows), [rows]);
+    const activePresenceVerb = useActivePresenceVerb(activeReply);
 
     React.useEffect(() => {
         if (!activeReply) {
@@ -103,6 +105,7 @@ export function ChatTranscript({
     if (scrollViewportRef) {
         return (
             <VirtualizedChatTranscript
+                activePresenceVerb={activePresenceVerb}
                 activeReply={activeReply}
                 agentPresenceColor={agentPresenceColor}
                 animateMessages={animateMessages}
@@ -127,6 +130,7 @@ export function ChatTranscript({
             {transcriptRows.map((row) =>
                 row.kind === 'hiddenCount' && hiddenCount === 0 ? null : (
                     <TranscriptRenderRowView
+                        activePresenceVerb={row.kind === 'presence' ? activePresenceVerb : null}
                         activeReply={
                             transcriptRenderRowUsesActiveReply(row, activeReply)
                                 ? activeReply
@@ -147,6 +151,18 @@ export function ChatTranscript({
             )}
         </>
     );
+}
+
+function useActivePresenceVerb(activeReply: ChatActiveReply | null) {
+    const verbRef = React.useRef<string | null>(null);
+    const verb = resolveActivePresenceVerb({
+        activeReply,
+        currentVerb: verbRef.current,
+    });
+
+    verbRef.current = verb;
+
+    return verb;
 }
 
 function getLatestAgentMessage(rows: TranscriptRow[]) {

@@ -7,6 +7,7 @@ import {
     shouldReleaseDraftHandoff,
 } from './agent-chat-detail.tsx';
 import { AgentPresenceIndicator } from './agent-presence-indicator.tsx';
+import { resolveActivePresenceVerb } from './chat-active-presence-verb.ts';
 import { resolveDraftHandoffFrame } from './chat-draft-detail.tsx';
 import { getSteerableRunId } from './chat-steering.ts';
 import { ChatTimeline } from './chat-timeline.tsx';
@@ -49,6 +50,57 @@ test('agent presence indicator keeps a fixed icon box for layout motion', () => 
     expect(markup).toContain('Agent idle');
 });
 
+test('agent presence indicator leaves emotion changes to the eye spring', () => {
+    const idleMarkup = renderToStaticMarkup(
+        <AgentPresenceIndicator activeReply={null} rows={[]} />
+    );
+    const thinkingMarkup = renderToStaticMarkup(
+        <AgentPresenceIndicator
+            activeReply={{
+                agentId: 'agent-1',
+                isThinking: true,
+                runId: 'run-1',
+                sessionKey: 'session-1',
+                startedAt: '2026-05-13T12:00:00.000Z',
+                text: '',
+            }}
+            rows={[]}
+        />
+    );
+
+    expect(getFirstPathData(thinkingMarkup)).toBe(getFirstPathData(idleMarkup));
+    expect(thinkingMarkup).toContain('Agent is thinking');
+});
+
+test('active presence verb stays stable across draft run reconciliation', () => {
+    const draftVerb = resolveActivePresenceVerb({
+        activeReply: {
+            agentId: 'agent-1',
+            isThinking: true,
+            runId: 'draft-message-1',
+            sessionKey: 'draft-chat-1',
+            startedAt: '2026-05-13T12:00:00.000Z',
+            text: '',
+        },
+        currentVerb: null,
+    });
+
+    expect(
+        resolveActivePresenceVerb({
+            activeReply: {
+                agentId: 'agent-1',
+                isThinking: true,
+                runId: 'run-1',
+                sessionKey: 'session-1',
+                startedAt: '2026-05-13T12:00:01.000Z',
+                text: '',
+            },
+            currentVerb: draftVerb,
+        })
+    ).toBe(draftVerb);
+    expect(resolveActivePresenceVerb({ activeReply: null, currentVerb: draftVerb })).toBeNull();
+});
+
 test('chat message entrance animation can be disabled for handoffs', () => {
     const animated = renderToStaticMarkup(
         <ChatMessage animateEnter from="user">
@@ -64,6 +116,10 @@ test('chat message entrance animation can be disabled for handoffs', () => {
     expect(animated).toContain('opacity:0;transform');
     expect(still).not.toContain('opacity:0;transform');
 });
+
+function getFirstPathData(markup: string) {
+    return /<path d="([^"]+)"/.exec(markup)?.[1] ?? null;
+}
 
 test('assistant chat message prose keeps the live tail text-line height', () => {
     const assistant = renderToStaticMarkup(<ChatMessage from="assistant">Done</ChatMessage>);
@@ -82,8 +138,28 @@ test('chat message meta row reserves flow height', () => {
     );
 
     expect(markup).toContain('opacity-0');
+    expect(markup).toContain('min-h-7');
     expect(markup).not.toContain('absolute');
     expect(markup).not.toContain('top-full');
+});
+
+test('chat message disabled copy action keeps the live reply gutter', () => {
+    const markup = renderToStaticMarkup(
+        <ChatMessage
+            actions={
+                <button disabled type="button">
+                    Copy
+                </button>
+            }
+            from="assistant"
+        >
+            Streaming
+        </ChatMessage>
+    );
+
+    expect(markup).toContain('min-h-7');
+    expect(markup).toContain('disabled=""');
+    expect(markup).not.toContain('absolute');
 });
 
 test('draft handoff waits while the accepted turn is still blank thinking', () => {

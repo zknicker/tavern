@@ -13,6 +13,7 @@ import type { TranscriptRenderRow } from './chat-transcript-row-model.ts';
 import { AgentPresenceTranscriptRow, TranscriptEntryView } from './chat-transcript-turn.tsx';
 
 interface TranscriptRenderRowViewProps {
+    activePresenceVerb?: string | null;
     activeReply: ChatActiveReply | null;
     agentPresenceColor?: string | null;
     animateMessages: boolean;
@@ -31,6 +32,7 @@ interface TranscriptRenderRowViewProps {
 export const TranscriptRenderRowView = React.memo(
     ({
         activeReply,
+        activePresenceVerb = null,
         agentPresenceColor = null,
         animateMessages,
         chatId,
@@ -52,6 +54,7 @@ export const TranscriptRenderRowView = React.memo(
         if (row.kind === 'presence') {
             return (
                 <AgentPresenceTranscriptRow
+                    activePresenceVerb={activePresenceVerb}
                     activeReply={activeReply}
                     agentPresenceColor={agentPresenceColor}
                     conversationLayout={conversationLayout}
@@ -87,6 +90,7 @@ function areTranscriptRenderRowViewPropsEqual(
 ) {
     return (
         previous.activeReply === next.activeReply &&
+        previous.activePresenceVerb === next.activePresenceVerb &&
         previous.animateMessages === next.animateMessages &&
         previous.chatId === next.chatId &&
         previous.currentSessionKey === next.currentSessionKey &&

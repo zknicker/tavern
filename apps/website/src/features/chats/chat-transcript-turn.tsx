@@ -1,4 +1,5 @@
 import { Cancel01Icon } from '@hugeicons/core-free-icons';
+import { AnimatePresence, motion, type Transition, useReducedMotion } from 'framer-motion';
 import * as React from 'react';
 import { ChatMessage } from '../../components/chats/chat-message.tsx';
 import { AgentAvatar } from '../../components/ui/agent-avatar.tsx';
@@ -9,9 +10,11 @@ import type { ChatActiveReply, ChatTurnFailure } from '../../hooks/chats/chat-ti
 import { useChatDismiss } from '../../hooks/chats/use-chat-dismiss.ts';
 import { useChatThinkingDisplayPreference } from '../../hooks/chats/use-chat-thinking-display-preference.ts';
 import { formatShortTime } from '../../lib/format.ts';
+import { springs } from '../../lib/springs.ts';
 import { cn } from '../../lib/utils.ts';
 import { useActiveReplyLayoutSync } from './active-reply-layout-sync.tsx';
 import { AgentPresenceIndicator } from './agent-presence-indicator.tsx';
+import { getActivePresenceVerb } from './chat-active-presence-verb.ts';
 import { CommandRunEntry } from './chat-command-card.tsx';
 import { ChatInlineMarkdownText } from './chat-inline-markdown-text.tsx';
 import {
@@ -45,42 +48,15 @@ import { getItemSessionKey, isActivityBackedMessageRow } from './chat-transcript
 import { RuntimeNoticeEntry } from './chat-transcript-system-step.tsx';
 import { useRevealedText } from './use-revealed-text.ts';
 
-const rowClassName = 'relative w-full px-3 py-1.5';
+const rowClassName = 'relative w-full px-3';
 const newTurnGapClassName = '';
 const hoverGroupClassName = 'group';
 const agentPresenceSize = 32;
-const activePresenceVerbs = [
-    'Adventuring',
-    'Brewing',
-    'Conjuring',
-    'Scrying',
-    'Questing',
-    'Forging',
-    'Enchanting',
-    'Spellcasting',
-    'Charting',
-    'Delving',
-    'Summoning',
-    'Transmuting',
-    'Wandering',
-    'Wayfinding',
-    'Alchemizing',
-    'Incanting',
-    'Rummaging',
-    'Tinkering',
-    'Polishing',
-    'Deciphering',
-    'Divining',
-    'Kindling',
-    'Gathering',
-    'Mapping',
-    'Exploring',
-    'Crafting',
-    'Channeling',
-    'Weaving',
-    'Unfurling',
-    'Illuminating',
-] as const;
+const presenceLabelExitTransition = {
+    duration: 0.12,
+    ease: [0.4, 0, 0.2, 1],
+} satisfies Transition;
+const reducedPresenceLabelTransition = { duration: 0.08 } satisfies Transition;
 
 export function TranscriptEntryView({
     activeReply,
@@ -150,6 +126,7 @@ export function TranscriptEntryView({
 
 export function AgentPresenceTranscriptRow({
     activeReply,
+    activePresenceVerb,
     agentPresenceColor,
     conversationLayout,
     entry,
@@ -158,6 +135,7 @@ export function AgentPresenceTranscriptRow({
     turnStartedAt,
 }: {
     activeReply: ChatActiveReply | null;
+    activePresenceVerb?: string | null;
     agentPresenceColor: string | null;
     conversationLayout: ConversationMessageLayout;
     entry: Extract<TranscriptEntry, { kind: 'turn' }>;
@@ -187,7 +165,7 @@ export function AgentPresenceTranscriptRow({
         ? getAgentPresenceTimingLabel({
               now: presenceNow,
               start: workStart,
-              verb: getActivePresenceVerb(activeReply?.runId ?? entry.id),
+              verb: activePresenceVerb ?? getActivePresenceVerb(activeReply?.runId ?? entry.id),
           })
         : null;
     const presence = (
@@ -388,14 +366,36 @@ function AgentPresenceRow({
     label: string | null;
     presence: React.ReactNode;
 }) {
+    const shouldReduceMotion = useReducedMotion();
+    const labelInitial = shouldReduceMotion ? { opacity: 0 } : { opacity: 0, width: 0, x: -4 };
+    const labelAnimate = shouldReduceMotion ? { opacity: 1 } : { opacity: 1, width: 'auto', x: 0 };
+    const labelExit = shouldReduceMotion
+        ? { opacity: 0, transition: reducedPresenceLabelTransition }
+        : {
+              opacity: 0,
+              transition: presenceLabelExitTransition,
+              width: 0,
+              x: -4,
+          };
+    const labelTransition = shouldReduceMotion ? reducedPresenceLabelTransition : springs.moderate;
+
     return (
         <div className="flex h-8 min-w-0 items-center gap-2 overflow-visible text-muted-foreground/65 text-sm leading-5">
             {presence}
-            {label ? (
-                <span className="thinking-indicator-text flex min-h-8 items-center truncate tabular-nums">
-                    {label}
-                </span>
-            ) : null}
+            <AnimatePresence>
+                {label ? (
+                    <motion.span
+                        animate={labelAnimate}
+                        className="thinking-indicator-text flex min-h-8 items-center overflow-hidden whitespace-nowrap tabular-nums"
+                        exit={labelExit}
+                        initial={labelInitial}
+                        key="presence-label"
+                        transition={labelTransition}
+                    >
+                        {label}
+                    </motion.span>
+                ) : null}
+            </AnimatePresence>
         </div>
     );
 }
@@ -452,16 +452,6 @@ function getAgentPresenceTimingLabel({
 }) {
     const activeSeconds = formatActiveActivitySeconds({ now, start });
     return activeSeconds ? `${verb} for ${activeSeconds}` : verb;
-}
-
-function getActivePresenceVerb(seed: string) {
-    let hash = 0;
-
-    for (let index = 0; index < seed.length; index += 1) {
-        hash = (hash * 31 + seed.charCodeAt(index)) >>> 0;
-    }
-
-    return activePresenceVerbs[hash % activePresenceVerbs.length] ?? activePresenceVerbs[0];
 }
 
 function usePresenceNow(enabled: boolean, start: string | null) {
@@ -523,7 +513,7 @@ function UserTurnItem({
 
     return body ? (
         <ChatMessage
-            actions={showMeta ? <TranscriptMessageActions message={message} /> : null}
+            actions={showMeta ? <TranscriptMessageActions value={message.content} /> : null}
             animateEnter={animateEnter}
             attachments={attachments}
             className={className}
@@ -565,7 +555,7 @@ function AgentTurnItem({
             <ChatMessage
                 actions={
                     message.id === lastMessage?.id ? (
-                        <TranscriptMessageActions message={message} />
+                        <TranscriptMessageActions value={message.content} />
                     ) : null
                 }
                 animateEnter={false}
@@ -613,7 +603,12 @@ function ActiveReplyText({ item }: { item: Extract<TranscriptItem, { kind: 'acti
     });
 
     return (
-        <ChatMessage animateEnter={false} className="max-w-[100%]" from="assistant">
+        <ChatMessage
+            actions={<TranscriptMessageActions disabled value={revealedText} />}
+            animateEnter={false}
+            className="max-w-[100%]"
+            from="assistant"
+        >
             <ChatInlineMarkdownText content={revealedText} />
         </ChatMessage>
     );
@@ -683,16 +678,19 @@ function isTurnStatusItem(item: TranscriptItem): item is Extract<
 }
 
 function TranscriptMessageActions({
-    message,
+    disabled = false,
+    value,
 }: {
-    message: Extract<TranscriptRow, { kind: 'message' }>['message'];
+    disabled?: boolean;
+    value: string;
 }) {
     return (
         <CopyButton
             className={messageActionButtonClassName}
             copiedLabel="Copied message"
-            label="Copy message"
-            value={message.content}
+            disabled={disabled}
+            label={disabled ? 'Copy available when complete' : 'Copy message'}
+            value={value}
         />
     );
 }
