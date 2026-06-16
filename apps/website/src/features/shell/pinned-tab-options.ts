@@ -1,3 +1,5 @@
+import type { CSSProperties } from 'react';
+
 export const pinnedTabColorOptions = [
     { darkValue: '#94a3b8', id: 'slate', label: 'Slate', lightValue: '#475569', value: '#64748b' },
     { darkValue: '#f87171', id: 'red', label: 'Red', lightValue: '#dc2626', value: '#ef4444' },
@@ -60,3 +62,44 @@ export const pinnedTabColorOptions = [
     { darkValue: '#f472b6', id: 'pink', label: 'Pink', lightValue: '#db2777', value: '#ec4899' },
     { darkValue: '#fb7185', id: 'rose', label: 'Rose', lightValue: '#e11d48', value: '#f43f5e' },
 ] as const;
+
+export interface PinnedTabColorTheme {
+    darkValue: string;
+    lightValue: string;
+}
+
+type PinnedTabColorStyle = CSSProperties & Record<`--${string}`, string>;
+
+export function getPinnedTabColorStyle(
+    color: string | null | undefined
+): PinnedTabColorStyle | undefined {
+    if (!color) {
+        return undefined;
+    }
+
+    const theme = getPinnedTabColorTheme(color);
+
+    return {
+        '--pinned-tab-bg-active-dark': colorMix(theme.darkValue, 24),
+        '--pinned-tab-bg-active-light': colorMix(theme.lightValue, 20),
+        '--pinned-tab-bg-dark': colorMix(theme.darkValue, 13),
+        '--pinned-tab-bg-hover-dark': colorMix(theme.darkValue, 20),
+        '--pinned-tab-bg-hover-light': colorMix(theme.lightValue, 16),
+        '--pinned-tab-bg-light': colorMix(theme.lightValue, 11),
+        '--pinned-tab-color-dark': theme.darkValue,
+        '--pinned-tab-color-light': theme.lightValue,
+    };
+}
+
+export function getPinnedTabColorTheme(color: string): PinnedTabColorTheme {
+    const normalized = color.toLowerCase();
+    const option = pinnedTabColorOptions.find((entry) => entry.value === normalized);
+
+    return option
+        ? { darkValue: option.darkValue, lightValue: option.lightValue }
+        : { darkValue: color, lightValue: color };
+}
+
+function colorMix(color: string, percent: number) {
+    return `color-mix(in srgb, ${color} ${percent}%, transparent)`;
+}

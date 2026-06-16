@@ -29,8 +29,10 @@ import {
     useCapability,
 } from '../../hooks/connections/use-capability.ts';
 import { markChatTiming } from '../../lib/chat-timing.ts';
+import { cn } from '../../lib/utils.ts';
 import { buildChatList, type ChatListItem } from '../chats/chat-list-data.ts';
 import { buildChatPath, buildNewChatDraftPath } from '../chats/chat-path.ts';
+import { getPinnedTabColorStyle } from './pinned-tab-options.ts';
 import {
     canRenameSidebarChat,
     getErrorMessage,
@@ -360,6 +362,9 @@ function SidebarRecentChatItem({
     const path = buildChatPath(chat.id);
     const timelineState = useChatRuntimeTimelineState(chat.id);
     const hasActiveTurn = chat.hasActiveTurn || hasLocalActiveTurn(timelineState);
+    const pinnedTabColorStyle = getPinnedTabColorStyle(
+        chat.isPinned ? chat.tabAppearance.color : null
+    );
 
     return (
         <SidebarMenuItem>
@@ -372,9 +377,15 @@ function SidebarRecentChatItem({
                 onRename={onRename}
             >
                 <SidebarMenuButton
-                    className="font-normal group-focus-within/menu-item:bg-sidebar-accent group-focus-within/menu-item:text-sidebar-accent-foreground group-hover/menu-item:bg-sidebar-accent group-hover/menu-item:text-sidebar-accent-foreground"
+                    className={cn(
+                        'font-normal group-focus-within/menu-item:bg-sidebar-accent group-focus-within/menu-item:text-sidebar-accent-foreground group-hover/menu-item:bg-sidebar-accent group-hover/menu-item:text-sidebar-accent-foreground',
+                        pinnedTabColorStyle
+                            ? 'group-focus-within/menu-item:bg-[var(--pinned-tab-bg-hover-light)] group-hover/menu-item:bg-[var(--pinned-tab-bg-hover-light)] data-active:bg-[var(--pinned-tab-bg-active-light)] dark:data-active:bg-[var(--pinned-tab-bg-active-dark)] dark:group-hover/menu-item:bg-[var(--pinned-tab-bg-hover-dark)] dark:group-focus-within/menu-item:bg-[var(--pinned-tab-bg-hover-dark)]'
+                            : null
+                    )}
                     isActive={isActive}
                     render={<NavLink to={path} />}
+                    style={pinnedTabColorStyle}
                     tooltip={title}
                 >
                     <span className="flex min-w-0 flex-1 items-center gap-3">

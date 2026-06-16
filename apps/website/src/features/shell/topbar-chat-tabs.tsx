@@ -41,7 +41,7 @@ import { formatTimestamp } from '../../lib/format.ts';
 import { cn } from '../../lib/utils.ts';
 import { buildChatList, type ChatListItem } from '../chats/chat-list-data.ts';
 import { buildChatPath, buildNewChatDraftPath } from '../chats/chat-path.ts';
-import { pinnedTabColorOptions } from './pinned-tab-options.ts';
+import { getPinnedTabColorStyle } from './pinned-tab-options.ts';
 import { getRouteTabIcon, getRouteTabIconNode } from './route-tab-presentation.tsx';
 import {
     canRenameSidebarChat,
@@ -584,6 +584,7 @@ function TopbarRecentChatTab({
     const timelineState = useChatRuntimeTimelineState(chat.id);
     const hasActiveTurn = chat.hasActiveTurn || hasLocalActiveTurn(timelineState);
     const tabColor = chat.isPinned ? chat.tabAppearance.color : null;
+    const pinnedTabColorStyle = getPinnedTabColorStyle(tabColor);
     const canClose = !(chat.isPinned || hasActiveTurn);
 
     return (
@@ -601,6 +602,7 @@ function TopbarRecentChatTab({
                 <TabsSubtleItem
                     aria-current={isActive ? 'page' : undefined}
                     className={topbarChatTabButtonClassName({
+                        hasPinnedColor: Boolean(pinnedTabColorStyle),
                         isActive,
                     })}
                     iconNode={
@@ -612,6 +614,7 @@ function TopbarRecentChatTab({
                         />
                     }
                     label={title}
+                    style={pinnedTabColorStyle}
                     title={title}
                     value={chat.id}
                 >
@@ -680,55 +683,43 @@ function TopbarChatTabIcon({
                 'size-4 shrink-0',
                 isPinned ? '-mr-0.5' : null,
                 isPinned && color
-                    ? 'text-[var(--topbar-pinned-tab-icon-light)] dark:text-[var(--topbar-pinned-tab-icon-dark)]'
+                    ? 'text-[var(--pinned-tab-color-light)] dark:text-[var(--pinned-tab-color-dark)]'
                     : null,
                 className
             )}
             icon={isPinned ? HashtagIcon : BubbleChatTemporaryIcon}
             size={16}
-            style={getTopbarChatTabIconStyle({ color, isPinned })}
+            style={getTopbarChatTabIconStyle({ isPinned })}
         />
     );
 }
 
-function getTopbarChatTabIconStyle({
-    color,
-    isPinned,
-}: {
-    color?: string | null;
-    isPinned: boolean;
-}): React.CSSProperties | undefined {
-    if (!(color || isPinned)) {
+function getTopbarChatTabIconStyle({ isPinned }: { isPinned: boolean }) {
+    if (!isPinned) {
         return undefined;
     }
 
-    const themeColor = color ? getPinnedTabThemeColor(color) : null;
-
     return {
-        '--topbar-pinned-tab-icon-dark': themeColor?.darkValue,
-        '--topbar-pinned-tab-icon-light': themeColor?.lightValue,
-        stroke: isPinned ? 'currentColor' : undefined,
-        strokeWidth: isPinned ? 0.6 : undefined,
+        stroke: 'currentColor',
+        strokeWidth: 0.6,
     } as React.CSSProperties;
 }
 
-function getPinnedTabThemeColor(color: string) {
-    const normalized = color.toLowerCase();
-    const option = pinnedTabColorOptions.find((entry) => entry.value === normalized);
-
-    return option ?? { darkValue: color, lightValue: color };
-}
-
 function topbarChatTabButtonClassName({
+    hasPinnedColor = false,
     isActive,
     tone = 'default',
 }: {
+    hasPinnedColor?: boolean;
     isActive: boolean;
     tone?: 'default' | 'error';
 }) {
     return cn(
         'no-drag h-7 w-fit max-w-[180px] justify-start overflow-hidden rounded-lg px-2 [&_svg]:opacity-70',
         getTopbarChatTabTextClassName({ isActive }),
+        hasPinnedColor
+            ? 'before:bg-[var(--pinned-tab-bg-light)] before:opacity-100 hover:before:bg-[var(--pinned-tab-bg-hover-light)] data-active:before:bg-[var(--pinned-tab-bg-active-light)] dark:before:bg-[var(--pinned-tab-bg-dark)] dark:data-active:before:bg-[var(--pinned-tab-bg-active-dark)] dark:hover:before:bg-[var(--pinned-tab-bg-hover-dark)]'
+            : null,
         tone === 'error' ? 'text-error-foreground hover:text-error-foreground' : null
     );
 }
