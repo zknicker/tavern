@@ -6,7 +6,6 @@ import {
     ContextMenu,
     ContextMenuItem,
     ContextMenuPopup,
-    ContextMenuSeparator,
     ContextMenuSub,
     ContextMenuSubPopup,
     ContextMenuSubTrigger,
@@ -72,7 +71,6 @@ export function SidebarChatContextMenu({
                     <Icon className={contextMenuIconClassName} icon={PencilEdit02Icon} />
                     Rename chat
                 </ContextMenuItem>
-                <ContextMenuSeparator />
                 <ContextMenuItem onClick={() => onPinChange(chat, !chat.isPinned)}>
                     <Icon
                         className={contextMenuIconClassName}
@@ -91,7 +89,6 @@ export function SidebarChatContextMenu({
                                 <Icon className={contextMenuIconClassName} icon={ColorsIcon} />
                                 Default
                             </ContextMenuItem>
-                            <ContextMenuSeparator />
                             {pinnedTabColorOptions.map((option) => (
                                 <ContextMenuItem
                                     key={option.id}
@@ -114,7 +111,6 @@ export function SidebarChatContextMenu({
                         Instructions
                     </ContextMenuItem>
                 ) : null}
-                <ContextMenuSeparator />
                 {canCloseTab ? (
                     <ContextMenuItem onClick={() => onCloseTab(chat)}>
                         <Icon className={contextMenuIconClassName} icon={Cancel01Icon} />

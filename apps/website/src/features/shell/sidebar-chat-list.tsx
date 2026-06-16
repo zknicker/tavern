@@ -20,6 +20,7 @@ import { useChatPin } from '../../hooks/chats/use-chat-pin.ts';
 import type { ChatStartDraft } from '../../hooks/chats/use-chat-start-drafts.tsx';
 import { useChatStartDrafts } from '../../hooks/chats/use-chat-start-drafts.tsx';
 import { useChatSystemPrompt } from '../../hooks/chats/use-chat-system-prompt.ts';
+import { useChatTabAppearance } from '../../hooks/chats/use-chat-tab-appearance.ts';
 import { useChatUpdate } from '../../hooks/chats/use-chat-update.ts';
 import { useChatRuntimeTimelineState } from '../../hooks/chats/use-timeline-context.tsx';
 import {
@@ -50,6 +51,7 @@ export function AppSidebarChatList() {
     const archiveChat = useChatArchive();
     const pinChat = useChatPin();
     const systemPrompt = useChatSystemPrompt();
+    const tabAppearance = useChatTabAppearance();
     const [renamingChat, setRenamingChat] = React.useState<ChatListItem | null>(null);
     const [editingSystemPromptChat, setEditingSystemPromptChat] =
         React.useState<ChatListItem | null>(null);
@@ -118,6 +120,20 @@ export function AppSidebarChatList() {
         },
         [pinChat]
     );
+    const setPinnedTabColor = React.useCallback(
+        async (chat: ChatListItem, color: string | null) => {
+            try {
+                await tabAppearance.mutateAsync({
+                    chatId: chat.id,
+                    color,
+                });
+            } catch (error) {
+                // biome-ignore lint/suspicious/noAlert: Keep sidebar failures visible without adding a global toast dependency.
+                window.alert(getErrorMessage(error));
+            }
+        },
+        [tabAppearance]
+    );
 
     return (
         <>
@@ -143,6 +159,10 @@ export function AppSidebarChatList() {
                                         key={chat.id}
                                         onArchive={(selectedChat) => {
                                             void archiveSidebarChat(selectedChat);
+                                        }}
+                                        onCustomizeColor={(selectedChat, color) => {
+                                            tabAppearance.reset();
+                                            void setPinnedTabColor(selectedChat, color);
                                         }}
                                         onEditSystemPrompt={(selectedChat) => {
                                             systemPrompt.reset();
@@ -206,6 +226,10 @@ export function AppSidebarChatList() {
                                     key={chat.id}
                                     onArchive={(selectedChat) => {
                                         void archiveSidebarChat(selectedChat);
+                                    }}
+                                    onCustomizeColor={(selectedChat, color) => {
+                                        tabAppearance.reset();
+                                        void setPinnedTabColor(selectedChat, color);
                                     }}
                                     onEditSystemPrompt={(selectedChat) => {
                                         systemPrompt.reset();
@@ -318,6 +342,7 @@ function SidebarRecentChatItem({
     isActive,
     isArchivePending,
     onArchive,
+    onCustomizeColor,
     onEditSystemPrompt,
     onPinChange,
     onRename,
@@ -326,6 +351,7 @@ function SidebarRecentChatItem({
     isActive: boolean;
     isArchivePending: boolean;
     onArchive: (chat: ChatListItem) => void;
+    onCustomizeColor: (chat: ChatListItem, color: string | null) => void;
     onEditSystemPrompt: (chat: ChatListItem) => void;
     onPinChange: (chat: ChatListItem, pinned: boolean) => void;
     onRename: (chat: ChatListItem) => void;
@@ -340,6 +366,7 @@ function SidebarRecentChatItem({
             <SidebarChatContextMenu
                 chat={chat}
                 onArchive={onArchive}
+                onCustomizeColor={onCustomizeColor}
                 onEditSystemPrompt={onEditSystemPrompt}
                 onPinChange={onPinChange}
                 onRename={onRename}
