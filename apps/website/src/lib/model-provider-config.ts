@@ -3,6 +3,7 @@ import { Atom02Icon } from '@hugeicons-pro/core-stroke-rounded';
 import type { ModelProviderLogoSource } from '../components/badges/model-provider-logo.tsx';
 import {
     configuredModelProviders,
+    iconModelProviderPresets,
     logoModelProviderPresets,
     providerConfigAliasIds,
 } from './model-provider-presets.ts';
@@ -31,6 +32,13 @@ const providerConfigByName = new Map<string, ModelProviderConfig>(
 );
 providerConfigByName.set('openai', getRequiredProviderConfig('openai-api'));
 
+for (const [configName, displayName, color, icon] of iconModelProviderPresets) {
+    providerConfigByName.set(
+        configName,
+        createIconProviderConfig(configName, displayName, color, icon)
+    );
+}
+
 for (const [configName, displayName, color, logo] of logoModelProviderPresets) {
     providerConfigByName.set(
         configName,
@@ -52,8 +60,11 @@ const providerConfigByAccessId = new Map<ModelAccessId, ModelProviderConfig>(
 );
 
 export function getModelProviderConfig(providerId: string): ModelProviderConfig {
+    const normalizedProviderId = normalizeProviderIdentifier(providerId);
+
     return (
         providerConfigByName.get(providerId) ??
+        providerConfigByName.get(normalizedProviderId) ??
         getAliasedModelProviderConfig(providerId) ??
         createFallbackModelProvider(providerId)
     );
@@ -130,6 +141,22 @@ function getAliasedModelProviderConfig(providerId: string): ModelProviderConfig 
     }
 
     return null;
+}
+
+function createIconProviderConfig(
+    configName: string,
+    displayName: string,
+    color: string,
+    icon: IconSvgElement
+): ModelProviderConfig {
+    return {
+        accessDisplayName: displayName,
+        accessId: null,
+        color,
+        configName,
+        displayName,
+        icon,
+    };
 }
 
 function createLogoProviderConfig(

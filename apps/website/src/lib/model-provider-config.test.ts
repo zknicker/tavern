@@ -39,11 +39,93 @@ test('provider config resolves branded Hermes provider variants to SVGL logos', 
     });
 });
 
-test('removed providers fall back to generic display metadata', () => {
+test('provider config tolerates runtime display names as provider identifiers', () => {
+    expect(getModelProviderConfig('Azure Foundry')).toMatchObject({
+        configName: 'azure-foundry',
+        displayName: 'Azure Foundry',
+        logo: {
+            light: 'https://svgl.app/library/azure.svg',
+        },
+    });
+    expect(getModelProviderConfig('Claude Code Oauth')).toMatchObject({
+        configName: 'claude-code-oauth',
+        displayName: 'Claude Code OAuth',
+        logo: {
+            light: 'https://svgl.app/library/anthropic_black.svg',
+        },
+    });
+});
+
+test('provider config resolves discovered Hermes providers to brand logos', () => {
+    expect(getModelProviderConfig('nous')).toMatchObject({
+        configName: 'nous',
+        displayName: 'Nous Portal',
+        logo: {
+            light: 'https://thesvg.org/icons/nousresearch-hermes/default.svg',
+        },
+    });
+    expect(getModelProviderConfig('alibaba-coding-plan')).toMatchObject({
+        configName: 'alibaba-coding-plan',
+        displayName: 'Alibaba Cloud (Coding Plan)',
+        logo: {
+            light: 'https://thesvg.org/icons/alibabacloud/default.svg',
+        },
+    });
+    expect(getModelProviderConfig('arcee')).toMatchObject({
+        configName: 'arcee',
+        displayName: 'Arcee AI',
+        logo: {
+            light: 'https://thesvg.org/icons/arcee/default.svg',
+        },
+    });
+    expect(getModelProviderConfig('bedrock')).toMatchObject({
+        configName: 'bedrock',
+        displayName: 'AWS Bedrock',
+        logo: {
+            light: 'https://thesvg.org/icons/aws-amazon-bedrock/default.svg',
+        },
+    });
+});
+
+test('provider config preserves provider labels when vendors share a brand mark', () => {
+    expect(getModelProviderConfig('anthropic')).toMatchObject({
+        configName: 'anthropic',
+        displayName: 'Anthropic',
+        logo: {
+            light: 'https://svgl.app/library/anthropic_black.svg',
+        },
+    });
     expect(getModelProviderConfig('claude')).toMatchObject({
         accessId: null,
         configName: 'claude',
         displayName: 'Claude',
+        logo: {
+            light: 'https://svgl.app/library/anthropic_black.svg',
+        },
+    });
+    expect(getModelProviderConfig('claude-code-oauth')).toMatchObject({
+        accessId: null,
+        configName: 'claude-code-oauth',
+        displayName: 'Claude Code OAuth',
+        logo: {
+            light: 'https://svgl.app/library/anthropic_black.svg',
+        },
+    });
+});
+
+test('provider config resolves non-logo provider rows to purpose-fit fallback icons', () => {
+    expect(getModelProviderConfig('custom')).toMatchObject({
+        accessId: null,
+        configName: 'custom',
+        displayName: 'Custom endpoint',
+    });
+});
+
+test('unknown providers fall back to generic display metadata', () => {
+    expect(getModelProviderConfig('local-test-provider')).toMatchObject({
+        accessId: null,
+        configName: 'local-test-provider',
+        displayName: 'Local Test Provider',
     });
 });
 

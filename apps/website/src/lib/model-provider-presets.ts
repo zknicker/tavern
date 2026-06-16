@@ -1,5 +1,12 @@
 import { Atom02Icon, ChatGptIcon, Globe02Icon } from '@hugeicons-pro/core-stroke-rounded';
 import type { ModelProviderConfig } from './model-provider-config.ts';
+import {
+    anthropicProviderLogo,
+    openAiLogo,
+    openRouterLogo,
+} from './model-provider-logo-presets.ts';
+
+export { logoModelProviderPresets } from './model-provider-logo-presets.ts';
 
 export const configuredModelProviders = [
     {
@@ -9,10 +16,7 @@ export const configuredModelProviders = [
         configName: 'openai-codex',
         displayName: 'OpenAI Codex',
         icon: ChatGptIcon,
-        logo: {
-            dark: 'https://svgl.app/library/openai_dark.svg',
-            light: 'https://svgl.app/library/openai.svg',
-        },
+        logo: openAiLogo,
     },
     {
         accessDisplayName: 'OpenAI API',
@@ -21,10 +25,7 @@ export const configuredModelProviders = [
         configName: 'openai-api',
         displayName: 'OpenAI',
         icon: ChatGptIcon,
-        logo: {
-            dark: 'https://svgl.app/library/openai_dark.svg',
-            light: 'https://svgl.app/library/openai.svg',
-        },
+        logo: openAiLogo,
     },
     {
         accessDisplayName: 'Anthropic',
@@ -33,10 +34,7 @@ export const configuredModelProviders = [
         configName: 'anthropic',
         displayName: 'Anthropic',
         icon: Atom02Icon,
-        logo: {
-            dark: 'https://svgl.app/library/anthropic_white.svg',
-            light: 'https://svgl.app/library/anthropic_black.svg',
-        },
+        logo: anthropicProviderLogo,
     },
     {
         accessDisplayName: 'OpenRouter',
@@ -45,84 +43,64 @@ export const configuredModelProviders = [
         configName: 'openrouter',
         displayName: 'OpenRouter',
         icon: Globe02Icon,
-        logo: {
-            dark: 'https://svgl.app/library/openrouter_dark.svg',
-            light: 'https://svgl.app/library/openrouter_light.svg',
-        },
+        logo: openRouterLogo,
     },
 ] as const satisfies readonly ModelProviderConfig[];
 
-export const logoModelProviderPresets = [
-    ['azure-foundry', 'Azure Foundry', '#0078D4', { light: 'https://svgl.app/library/azure.svg' }],
-    ['deepseek', 'DeepSeek', '#4D6BFE', { light: 'https://svgl.app/library/deepseek.svg' }],
-    ['gemini', 'Gemini', '#8E75B2', { light: 'https://svgl.app/library/gemini.svg' }],
-    [
-        'github-copilot',
-        'GitHub Copilot',
-        '#2F81F7',
-        {
-            dark: 'https://svgl.app/library/copilot_dark.svg',
-            light: 'https://svgl.app/library/copilot.svg',
-        },
-    ],
-    ['google', 'Google', '#4285F4', { light: 'https://svgl.app/library/google.svg' }],
-    [
-        'google-cloud',
-        'Google Cloud',
-        '#4285F4',
-        { light: 'https://svgl.app/library/google-cloud.svg' },
-    ],
-    ['groq', 'Groq', '#F55036', { light: 'https://svgl.app/library/groq.svg' }],
-    ['mistral', 'Mistral AI', '#FF7000', { light: 'https://svgl.app/library/mistral-ai_logo.svg' }],
-    [
-        'ollama',
-        'Ollama',
-        '#111827',
-        {
-            dark: 'https://svgl.app/library/ollama_dark.svg',
-            light: 'https://svgl.app/library/ollama_light.svg',
-        },
-    ],
-    [
-        'qwen',
-        'Qwen',
-        '#615CED',
-        {
-            dark: 'https://svgl.app/library/qwen_dark.svg',
-            light: 'https://svgl.app/library/qwen_light.svg',
-        },
-    ],
-    [
-        'xai',
-        'xAI',
-        '#111827',
-        {
-            dark: 'https://svgl.app/library/xai_dark.svg',
-            light: 'https://svgl.app/library/xai_light.svg',
-        },
-    ],
+export const iconModelProviderPresets = [
+    ['custom', 'Custom endpoint', '#64748B', Globe02Icon],
+    ['custom-endpoint', 'Custom endpoint', '#64748B', Globe02Icon],
+    ['gmi', 'GMI Cloud', '#2563EB', Globe02Icon],
 ] as const satisfies readonly [
     configName: string,
     displayName: string,
     color: string,
-    logo: NonNullable<ModelProviderConfig['logo']>,
+    icon: ModelProviderConfig['icon'],
 ][];
 
 export const providerConfigAliasIds = [
     {
-        aliases: ['github-copilot', 'github-copilot-acp', 'copilot'],
+        aliases: ['alibaba-coding-plan', 'alibaba-coding', 'alibaba_coding'],
+        providerId: 'alibaba-coding-plan',
+    },
+    {
+        aliases: ['amazon-bedrock', 'aws-bedrock', 'bedrock'],
+        providerId: 'bedrock',
+    },
+    {
+        aliases: ['github-copilot', 'github-copilot-acp', 'copilot', 'copilot-acp'],
         providerId: 'github-copilot',
     },
     {
-        aliases: ['openai', 'openai-api', 'openai-codex'],
+        aliases: ['hf', 'hugging-face', 'huggingface'],
+        providerId: 'huggingface',
+    },
+    {
+        aliases: ['kimi-coding', 'kimi-for-coding'],
+        providerId: 'kimi-coding',
+    },
+    {
+        aliases: ['kilocode', 'kilo-code', 'kilo'],
+        providerId: 'kilocode',
+    },
+    {
+        aliases: ['codex', 'openai-codex'],
+        providerId: 'openai-codex',
+    },
+    {
+        aliases: ['openai', 'openai-api'],
         providerId: 'openai-api',
+    },
+    {
+        aliases: ['opencode', 'opencode-zen'],
+        providerId: 'opencode-zen',
     },
     {
         aliases: ['qwen', 'qwen-oauth', 'qwen-oauth-portal'],
         providerId: 'qwen',
     },
     {
-        aliases: ['xai', 'xai-grok', 'xai-grok-oauth', 'grok'],
+        aliases: ['xai', 'xai-grok', 'xai-grok-oauth', 'xai-oauth', 'grok', 'grok-oauth'],
         providerId: 'xai',
     },
 ] as const;
