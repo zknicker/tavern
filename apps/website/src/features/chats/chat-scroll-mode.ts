@@ -53,6 +53,14 @@ export function transitionChatScrollMode(
     }
 }
 
+export function shouldAnchorVirtualizerToEnd(mode: ChatScrollMode) {
+    return mode !== 'anchored';
+}
+
+export function shouldAdjustVirtualizerOnItemSizeChange(mode: ChatScrollMode) {
+    return mode !== 'anchored';
+}
+
 // "Near bottom" tolerance: small enough that reading history never follows,
 // large enough that sub-pixel rounding and momentum overshoot still count.
 const bottomTolerancePx = 72;

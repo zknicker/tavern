@@ -3,6 +3,8 @@ import {
     getAnchorScrollDelta,
     initialChatScrollMode,
     isNearBottom,
+    shouldAdjustVirtualizerOnItemSizeChange,
+    shouldAnchorVirtualizerToEnd,
     transitionChatScrollMode,
 } from './chat-scroll-mode.ts';
 
@@ -100,6 +102,20 @@ describe('getAnchorScrollDelta', () => {
     test('returns null when the trigger has not moved (collapse anchored at scrollTop 0 writes nothing)', () => {
         expect(getAnchorScrollDelta({ capturedTop: 100, currentTop: 100 })).toBeNull();
         expect(getAnchorScrollDelta({ capturedTop: 100, currentTop: 100.4 })).toBeNull();
+    });
+});
+
+describe('virtualizer ownership helpers', () => {
+    test('TanStack end anchoring is suspended only during drawer anchoring', () => {
+        expect(shouldAnchorVirtualizerToEnd('following')).toBe(true);
+        expect(shouldAnchorVirtualizerToEnd('free')).toBe(true);
+        expect(shouldAnchorVirtualizerToEnd('anchored')).toBe(false);
+    });
+
+    test('TanStack size-change scroll adjustment is suspended only during drawer anchoring', () => {
+        expect(shouldAdjustVirtualizerOnItemSizeChange('following')).toBe(true);
+        expect(shouldAdjustVirtualizerOnItemSizeChange('free')).toBe(true);
+        expect(shouldAdjustVirtualizerOnItemSizeChange('anchored')).toBe(false);
     });
 });
 

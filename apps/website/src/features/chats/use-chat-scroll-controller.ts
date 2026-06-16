@@ -18,6 +18,8 @@ const anchorFallbackMs = 600;
 // the virtualizer) so they reach the controller without window events.
 export interface ChatScrollControllerHandle {
     beginAnchor: (trigger: HTMLElement) => void;
+    getMode: () => ChatScrollMode;
+    subscribeMode: (listener: () => void) => () => void;
 }
 
 const ChatScrollControllerContext = React.createContext<ChatScrollControllerHandle | null>(null);
@@ -26,6 +28,22 @@ export const ChatScrollControllerProvider = ChatScrollControllerContext.Provider
 
 export function useChatScrollControllerHandle() {
     return React.useContext(ChatScrollControllerContext);
+}
+
+const emptyChatScrollModeSubscribe = () => () => {};
+
+function getInitialChatScrollModeSnapshot() {
+    return initialChatScrollMode;
+}
+
+export function useChatScrollControllerMode() {
+    const controller = useChatScrollControllerHandle();
+
+    return React.useSyncExternalStore(
+        controller?.subscribeMode ?? emptyChatScrollModeSubscribe,
+        controller?.getMode ?? getInitialChatScrollModeSnapshot,
+        getInitialChatScrollModeSnapshot
+    );
 }
 
 interface ActiveAnchor {
@@ -49,15 +67,42 @@ export function useChatScrollController({
     const viewportRef = React.useRef<HTMLDivElement | null>(null);
     const contentRef = React.useRef<HTMLDivElement | null>(null);
     const modeRef = React.useRef<ChatScrollMode>(initialChatScrollMode);
+    const modeListenersRef = React.useRef(new Set<() => void>());
     const anchorRef = React.useRef<ActiveAnchor | null>(null);
     const [isAtBottom, setIsAtBottom] = React.useState(true);
 
-    const dispatch = React.useCallback((event: ChatScrollEvent) => {
-        const transition = transitionChatScrollMode(modeRef.current, event);
-        modeRef.current = transition.mode;
-
-        return transition;
+    const notifyModeListeners = React.useCallback(() => {
+        for (const listener of modeListenersRef.current) {
+            listener();
+        }
     }, []);
+
+    const getMode = React.useCallback(() => modeRef.current, []);
+
+    const subscribeMode = React.useCallback((listener: () => void) => {
+        const listeners = modeListenersRef.current;
+
+        listeners.add(listener);
+
+        return () => {
+            listeners.delete(listener);
+        };
+    }, []);
+
+    const dispatch = React.useCallback(
+        (event: ChatScrollEvent) => {
+            const previousMode = modeRef.current;
+            const transition = transitionChatScrollMode(previousMode, event);
+            modeRef.current = transition.mode;
+
+            if (transition.mode !== previousMode) {
+                notifyModeListeners();
+            }
+
+            return transition;
+        },
+        [notifyModeListeners]
+    );
 
     const writeScrollToBottom = React.useCallback((behavior: ScrollBehavior) => {
         const viewport = viewportRef.current;
@@ -280,8 +325,10 @@ export function useChatScrollController({
     const handle = React.useMemo<ChatScrollControllerHandle>(
         () => ({
             beginAnchor,
+            getMode,
+            subscribeMode,
         }),
-        [beginAnchor]
+        [beginAnchor, getMode, subscribeMode]
     );
 
     return {

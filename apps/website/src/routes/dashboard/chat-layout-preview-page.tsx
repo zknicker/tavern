@@ -16,7 +16,15 @@ import {
 import { ChatComposerQueuePanel } from '../../features/chats/chat-composer-queue-panel.tsx';
 import { getChatMessageLayout } from '../../features/chats/chat-message-layout.ts';
 import { ChatTimeline } from '../../features/chats/chat-timeline.tsx';
-import { chatComposerQueuePreviews, chatLayoutPreviews } from './chat-layout-preview-data.ts';
+import {
+    ChatScrollControllerProvider,
+    useChatScrollController,
+} from '../../features/chats/use-chat-scroll-controller.ts';
+import {
+    chatComposerQueuePreviews,
+    chatLayoutPreviews,
+    scrollingToolDrawerPreview,
+} from './chat-layout-preview-data.ts';
 
 export function ChatLayoutPreviewPage() {
     return (
@@ -28,6 +36,7 @@ export function ChatLayoutPreviewPage() {
                         Mocked conversations for participant mixes and rich message cases.
                     </p>
                 </div>
+                <VirtualizedToolDrawerPreview preview={scrollingToolDrawerPreview} />
                 <div className="grid gap-4 xl:grid-cols-2">
                     {chatLayoutPreviews.map((preview) => (
                         <section
@@ -72,6 +81,45 @@ export function ChatLayoutPreviewPage() {
                 </div>
             </div>
         </div>
+    );
+}
+
+function VirtualizedToolDrawerPreview({ preview }: { preview: typeof scrollingToolDrawerPreview }) {
+    const chatScroll = useChatScrollController({
+        enabled: preview.rows.length > 0,
+        followContentResizes: false,
+    });
+
+    return (
+        <ChatScrollControllerProvider value={chatScroll.handle}>
+            <section
+                className="min-h-0 rounded-lg border border-border bg-background"
+                data-testid="virtualized-tool-drawer-preview"
+            >
+                <div className="border-border border-b px-4 py-3">
+                    <h2 className="font-medium text-foreground text-sm">{preview.title}</h2>
+                </div>
+                <div
+                    className="h-[32rem] min-h-0 overflow-y-auto px-4 py-3 [scrollbar-gutter:stable]"
+                    data-testid="virtualized-tool-drawer-scrollport"
+                    ref={chatScroll.viewportRef}
+                >
+                    <div
+                        className="mx-auto min-h-full w-full max-w-[60rem]"
+                        ref={chatScroll.contentRef}
+                    >
+                        <ChatTimeline
+                            activeReply={null}
+                            conversationLayout={getChatMessageLayout(preview.chat)}
+                            initialScrollKey={preview.title}
+                            rows={preview.rows}
+                            scrollViewportRef={chatScroll.viewportRef}
+                            totalMessages={0}
+                        />
+                    </div>
+                </div>
+            </section>
+        </ChatScrollControllerProvider>
     );
 }
 

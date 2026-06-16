@@ -145,6 +145,12 @@ export const chatLayoutPreviews = [
     },
 ];
 
+export const scrollingToolDrawerPreview = {
+    chat: chatActors({ agents: ['Atlas'], humans: ['You'] }),
+    rows: buildScrollingToolDrawerRows(),
+    title: 'Scrolling virtualized tool drawer',
+};
+
 export const chatComposerQueuePreviews: {
     isBlocked: boolean;
     queue: ChatComposerQueuedMessage[];
@@ -180,6 +186,56 @@ export const chatComposerQueuePreviews: {
         title: 'Queued during active turn',
     },
 ];
+
+function buildScrollingToolDrawerRows(): ChatRows {
+    const fillerRows = Array.from({ length: 12 }, (_, index) => [
+        user(
+            'You',
+            `Checkpoint ${index + 1}: Capture another transcript state before the tool work.`
+        ),
+        agent(
+            'Atlas',
+            `Ack ${index + 1}: The transcript row stays stable while the next mocked turn loads.`
+        ),
+    ]).flat();
+
+    return rows([
+        ...fillerRows,
+        user('You', 'Open the work group near the tail and keep the header pinned.'),
+        narration(
+            'Atlas',
+            'I will inspect the transcript virtualization path and verify the drawer.'
+        ),
+        toolActivity({
+            id: 'virtual-demo-read-controller',
+            label: 'Read use-chat-scroll-controller.ts',
+            name: 'read',
+            summaryParts: ['use-chat-scroll-controller.ts'],
+        }),
+        toolActivity({
+            id: 'virtual-demo-read-transcript',
+            label: 'Read virtualized-chat-transcript.tsx',
+            name: 'read',
+            summaryParts: ['virtualized-chat-transcript.tsx'],
+        }),
+        toolActivity({
+            id: 'virtual-demo-run-test',
+            label: 'bun test chat-scroll-mode',
+            name: 'bash',
+            summaryParts: ['bun test apps/website/src/features/chats/chat-scroll-mode.test.ts'],
+        }),
+        toolActivity({
+            id: 'virtual-demo-edit',
+            label: 'Edited virtualizer resize policy',
+            name: 'patch',
+            summaryParts: ['virtualized-chat-transcript.tsx', 'use-chat-scroll-controller.ts'],
+        }),
+        agent(
+            'Atlas',
+            'The virtualized transcript now keeps the disclosure trigger in place while the drawer expands below it.'
+        ),
+    ]);
+}
 
 function chatActors({ agents, humans }: { agents: string[]; humans: string[] }) {
     return {

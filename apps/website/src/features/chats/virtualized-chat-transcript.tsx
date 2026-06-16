@@ -8,6 +8,10 @@ import {
 import * as React from 'react';
 import type { ChatActiveReply, ChatTurnFailure } from '../../hooks/chats/chat-timeline-state.ts';
 import { ActiveReplyLayoutSyncProvider } from './active-reply-layout-sync.tsx';
+import {
+    shouldAdjustVirtualizerOnItemSizeChange,
+    shouldAnchorVirtualizerToEnd,
+} from './chat-scroll-mode.ts';
 import type { ConversationMessageLayout, TranscriptRow } from './chat-transcript-model.ts';
 import {
     getEstimatedTranscriptRowSize,
@@ -17,6 +21,7 @@ import {
     transcriptRenderRowUsesActiveReply,
 } from './chat-transcript-row-model.ts';
 import { TranscriptRenderRowView } from './chat-transcript-rows.tsx';
+import { useChatScrollControllerMode } from './use-chat-scroll-controller.ts';
 
 const previousPageScrollThreshold = 160;
 const transcriptScrollEndThreshold = 72;
@@ -61,9 +66,14 @@ export function VirtualizedChatTranscript({
     const initialScrollKeyRef = React.useRef<string | null>(null);
     const initialScrollMeasureKeyRef = React.useRef<string | null>(null);
     const initialScrollPendingRef = React.useRef(false);
+    const chatScrollMode = useChatScrollControllerMode();
+    const virtualizerAnchorsToEnd = shouldAnchorVirtualizerToEnd(chatScrollMode);
+    const virtualizerAdjustsItemSize = shouldAdjustVirtualizerOnItemSizeChange(chatScrollMode);
     const virtualizer = useVirtualizer<HTMLDivElement, HTMLDivElement>({
-        anchorTo: 'end',
+        anchorTo: virtualizerAnchorsToEnd ? 'end' : 'start',
         count: rows.length,
+        directDomUpdates: true,
+        directDomUpdatesMode: 'transform',
         estimateSize: (index) => getEstimatedTranscriptRowSize(rows[index]),
         followOnAppend: true,
         gap: transcriptRenderRowGap,
@@ -108,14 +118,25 @@ export function VirtualizedChatTranscript({
         }
     }, [virtualizer]);
     const virtualItems = virtualizer.getVirtualItems();
-    const renderableVirtualItems =
-        virtualItems.length > 0
-            ? virtualItems
-            : getEstimatedTranscriptTailVirtualItems(
-                  rows,
-                  getInitialTranscriptViewportHeight(scrollViewportRef.current)
-              );
+    const usingEstimatedTail = virtualItems.length === 0;
+    const renderableVirtualItems = usingEstimatedTail
+        ? getEstimatedTranscriptTailVirtualItems(
+              rows,
+              getInitialTranscriptViewportHeight(scrollViewportRef.current)
+          )
+        : virtualItems;
     const firstEntryIndex = virtualItems.find((item) => rows[item.index]?.kind === 'entry')?.index;
+
+    React.useLayoutEffect(() => {
+        const controlledVirtualizer = virtualizer as SizeAdjustmentControlledVirtualizer;
+
+        controlledVirtualizer.shouldAdjustScrollPositionOnItemSizeChange = () =>
+            virtualizerAdjustsItemSize;
+
+        return () => {
+            controlledVirtualizer.shouldAdjustScrollPositionOnItemSizeChange = undefined;
+        };
+    }, [virtualizer, virtualizerAdjustsItemSize]);
 
     React.useLayoutEffect(() => {
         const measureChanged = initialScrollMeasureKeyRef.current !== initialScrollMeasureKey;
@@ -138,21 +159,20 @@ export function VirtualizedChatTranscript({
                 virtualizer.scrollToEnd({ behavior: 'auto' });
                 return;
             }
-        }
 
+            if (initialScrollPendingRef.current && (keyChanged || measureChanged)) {
+                initialScrollPendingRef.current = false;
+            }
+        }
+    }, [initialScrollKey, initialScrollMeasureKey, rows.length, virtualizer]);
+
+    React.useLayoutEffect(() => {
         if (tailFollowKey.length === 0) {
             return;
         }
 
         scrollToEndIfNearEnd();
-    }, [
-        initialScrollKey,
-        initialScrollMeasureKey,
-        rows.length,
-        scrollToEndIfNearEnd,
-        tailFollowKey,
-        virtualizer,
-    ]);
+    }, [scrollToEndIfNearEnd, tailFollowKey]);
 
     React.useEffect(() => {
         if (!initialScrollKey) {
@@ -199,10 +219,7 @@ export function VirtualizedChatTranscript({
 
     return (
         <ActiveReplyLayoutSyncProvider value={syncActiveReplyLayout}>
-            <div
-                className="relative w-full [overflow-anchor:none]"
-                style={{ height: `${totalSize}px` }}
-            >
+            <div className="relative w-full [overflow-anchor:none]" ref={virtualizer.containerRef}>
                 {renderableVirtualItems.map((virtualItem) => {
                     const row = rows[virtualItem.index];
 
@@ -217,6 +234,7 @@ export function VirtualizedChatTranscript({
                         <TranscriptVirtualRow
                             activeRowElementRef={activeRowElementRef}
                             key={virtualItem.key}
+                            positionsWithReact={usingEstimatedTail}
                             usesActiveReply={measuresActiveReply}
                             virtualItem={virtualItem}
                             virtualizer={virtualizer}
@@ -244,15 +262,25 @@ export function VirtualizedChatTranscript({
     );
 }
 
+type SizeAdjustmentControlledVirtualizer = ReactVirtualizer<HTMLDivElement, HTMLDivElement> & {
+    shouldAdjustScrollPositionOnItemSizeChange?: (
+        item: VirtualItem,
+        delta: number,
+        instance: ReactVirtualizer<HTMLDivElement, HTMLDivElement>
+    ) => boolean;
+};
+
 function TranscriptVirtualRow({
     activeRowElementRef,
     children,
+    positionsWithReact,
     usesActiveReply,
     virtualItem,
     virtualizer,
 }: {
     activeRowElementRef: React.RefObject<HTMLDivElement | null>;
     children: React.ReactNode;
+    positionsWithReact: boolean;
     usesActiveReply: boolean;
     virtualItem: VirtualItem;
     virtualizer: ReactVirtualizer<HTMLDivElement, HTMLDivElement>;
@@ -278,9 +306,13 @@ function TranscriptVirtualRow({
             className="absolute top-0 left-0 w-full [overflow-anchor:none]"
             data-index={virtualItem.index}
             ref={measureRowElement}
-            style={{
-                transform: `translateY(${virtualItem.start}px)`,
-            }}
+            style={
+                positionsWithReact
+                    ? {
+                          transform: `translateY(${virtualItem.start}px)`,
+                      }
+                    : undefined
+            }
         >
             {children}
         </div>
