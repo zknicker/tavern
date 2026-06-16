@@ -2,6 +2,7 @@ import { AlertCircleIcon, InformationCircleIcon } from '@hugeicons/core-free-ico
 import { Refresh04Icon } from '@hugeicons-pro/core-solid-rounded';
 import { useQueryClient } from '@tanstack/react-query';
 import * as React from 'react';
+import { NavLink, useLocation } from 'react-router-dom';
 import { Alert, AlertAction, AlertDescription, AlertTitle } from '../../../components/ui/alert.tsx';
 import { BadgeDivider } from '../../../components/ui/badge-divider.tsx';
 import { Card, CardFrame } from '../../../components/ui/card.tsx';
@@ -10,6 +11,10 @@ import { Button } from '../../../components/ui/primitives/button.tsx';
 import { Input } from '../../../components/ui/primitives/input.tsx';
 import { SettingsItem, SettingsRow } from '../../../components/ui/settings-row.tsx';
 import { Tooltip, TooltipProvider } from '../../../components/ui/tooltip.tsx';
+import {
+    getRuntimeVersionMismatchDescription,
+    getRuntimeVersionMismatchReason,
+} from '../../../hooks/connections/runtime-version-gate.ts';
 import { useConnectAgentRuntime } from '../../../hooks/connections/use-connect-agent-runtime.ts';
 import { type AgentRuntimeConnectionOutput, trpc } from '../../../lib/trpc.tsx';
 import { HermesCapabilitiesSummary } from './hermes-capabilities-table.tsx';
@@ -48,18 +53,26 @@ function CapabilitySection({
 }
 
 function RuntimeConnectionRow({ connection }: { connection: RuntimeConnection }) {
+    const location = useLocation();
     const queryClient = useQueryClient();
     const capabilityMutation = trpc.agentRuntime.refreshCapability.useMutation({
         onSettled: async () => {
             await queryClient.invalidateQueries();
         },
     });
+    const previewConnection = getRuntimeCompatibilityPreviewConnection(connection, location.search);
+    const compatibilityConnection = previewConnection ?? connection;
+    const showCompatibilityAlert =
+        connection.versionStatus === 'mismatched' || previewConnection !== null;
 
     return (
         <SettingsItem className="p-0">
             <RuntimeUrlForm connection={connection} />
             {connection.lastError ? null : (
                 <div className="border-border/60 border-t p-3.5">
+                    {showCompatibilityAlert ? (
+                        <RuntimeCompatibilityAlert connection={compatibilityConnection} />
+                    ) : null}
                     <CapabilitySection
                         capabilities={connection.runtimeCapabilities}
                         emptyLabel="No Tavern Runtime capability checks recorded."
@@ -73,6 +86,61 @@ function RuntimeConnectionRow({ connection }: { connection: RuntimeConnection })
                 </div>
             )}
         </SettingsItem>
+    );
+}
+
+function getRuntimeCompatibilityPreviewConnection(
+    connection: RuntimeConnection,
+    search: string
+): RuntimeConnection | null {
+    if (!import.meta.env.DEV) {
+        return null;
+    }
+
+    if (new URLSearchParams(search).get('previewRuntimeMismatch') !== 'old') {
+        return null;
+    }
+
+    return {
+        ...connection,
+        runtimeVersion: getPreviewOldRuntimeVersion(connection.requiredRuntimeVersion),
+        versionStatus: 'mismatched',
+    };
+}
+
+function getPreviewOldRuntimeVersion(version: string) {
+    const parts = version.split('.').map((part) => Number.parseInt(part, 10));
+    const [major, minor, patch] = parts;
+
+    if (
+        parts.length === 3 &&
+        Number.isFinite(major) &&
+        Number.isFinite(minor) &&
+        Number.isFinite(patch) &&
+        patch > 0
+    ) {
+        return `${major}.${minor}.${patch - 1}`;
+    }
+
+    return `${version}-preview-old`;
+}
+
+function RuntimeCompatibilityAlert({ connection }: { connection: RuntimeConnection }) {
+    return (
+        <Alert className="mb-3" variant="error">
+            <Icon icon={AlertCircleIcon} />
+            <AlertTitle>{getRuntimeVersionMismatchReason(connection)}</AlertTitle>
+            <AlertDescription>{getRuntimeVersionMismatchDescription(connection)}</AlertDescription>
+            <AlertAction>
+                <Button
+                    render={<NavLink to="/dashboard/settings/updates" />}
+                    size="sm"
+                    variant="destructive-soft"
+                >
+                    Open Updates
+                </Button>
+            </AlertAction>
+        </Alert>
     );
 }
 

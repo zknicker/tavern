@@ -1,5 +1,6 @@
 import { describe, expect, test } from 'bun:test';
 import type { AgentRuntimeConnectionOutput } from '../../lib/trpc.tsx';
+import { getRuntimeVersionMismatchDescription } from './runtime-version-gate.ts';
 import {
     formatCapabilityDisabledReason,
     getCapability,
@@ -52,11 +53,25 @@ describe('Runtime capability gates', () => {
     test('gates Tasks on managed Hermes capabilities', () => {
         expect(routeTabCapabilityRequirements.cron).toEqual(hermesCapabilityRequirements);
     });
+
+    test('explains old Runtime version mismatch beside green capability probes', () => {
+        expect(
+            getRuntimeVersionMismatchDescription(
+                createRuntimeConnection({
+                    requiredRuntimeVersion: '1.2.2',
+                    runtimeVersion: '1.2.1',
+                    versionStatus: 'mismatched',
+                })
+            )
+        ).toBe(
+            'Runtime v1.2.1 is older than this app requires (v1.2.2). Chat and Runtime-backed settings stay disabled until Runtime updates.'
+        );
+    });
 });
 
 function createRuntimeConnection(
     overrides: Partial<NonNullable<AgentRuntimeConnectionOutput>> = {}
-): AgentRuntimeConnectionOutput {
+): NonNullable<AgentRuntimeConnectionOutput> {
     return {
         appVersion: '1.2.2',
         authConfigured: false,

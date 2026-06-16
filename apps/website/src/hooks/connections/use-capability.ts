@@ -1,6 +1,7 @@
 import * as React from 'react';
 import type { AgentRuntimeConnectionOutput } from '../../lib/trpc.tsx';
 import type { RouteTab } from '../dashboard/use-route-tab.ts';
+import { getRuntimeVersionMismatchReason } from './runtime-version-gate.ts';
 import { useRuntimeConnection } from './use-runtime-connection.ts';
 
 type RuntimeConnection = NonNullable<AgentRuntimeConnectionOutput>;
@@ -166,34 +167,5 @@ function formatCapabilityList(capabilities: readonly RuntimeCapabilityId[]) {
 }
 
 function getVersionMismatchReason(connection: RuntimeConnection) {
-    return compareVersions(connection.runtimeVersion, connection.requiredRuntimeVersion) > 0
-        ? 'Tavern update required.'
-        : 'Tavern Runtime update required.';
-}
-
-function compareVersions(left?: null | string, right?: null | string) {
-    if (!(left && right)) {
-        return -1;
-    }
-
-    const leftParts = toVersionParts(left);
-    const rightParts = toVersionParts(right);
-    const maxLength = Math.max(leftParts.length, rightParts.length);
-
-    for (let index = 0; index < maxLength; index += 1) {
-        const leftPart = leftParts[index] ?? 0;
-        const rightPart = rightParts[index] ?? 0;
-        if (leftPart !== rightPart) {
-            return leftPart > rightPart ? 1 : -1;
-        }
-    }
-
-    return 0;
-}
-
-function toVersionParts(version: string) {
-    return version
-        .split(/[^\d]+/)
-        .filter(Boolean)
-        .map((part) => Number(part));
+    return getRuntimeVersionMismatchReason(connection);
 }

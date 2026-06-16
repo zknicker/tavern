@@ -1,10 +1,12 @@
 import * as React from 'react';
 import type { AgentRuntimeConnectionOutput } from '../../lib/trpc.tsx';
 import { trpc } from '../../lib/trpc.tsx';
+import {
+    compareVersions,
+    getRuntimeVersionMismatchKind,
+} from '../connections/runtime-version-gate.ts';
 import { useRuntimeConnection } from '../connections/use-runtime-connection.ts';
 import { type DesktopUpdateStatus, useDesktopUpdate } from './use-desktop-update.ts';
-
-type RuntimeConnection = NonNullable<AgentRuntimeConnectionOutput>;
 
 export type TavernUpdateStatus =
     | { phase: 'unsupported'; detail: string }
@@ -313,41 +315,6 @@ function fromDesktopUpdateStatus(status: DesktopUpdateStatus): TavernUpdateStatu
         default:
             return { detail: 'Tavern update monitor is idle.', phase: 'idle' };
     }
-}
-
-function getRuntimeVersionMismatchKind(connection: RuntimeConnection) {
-    const comparison = compareVersions(
-        connection.runtimeVersion,
-        connection.requiredRuntimeVersion
-    );
-    return comparison > 0 ? 'app-needs-update' : 'runtime-needs-update';
-}
-
-function compareVersions(left?: null | string, right?: null | string) {
-    if (!(left && right)) {
-        return -1;
-    }
-
-    const leftParts = toVersionParts(left);
-    const rightParts = toVersionParts(right);
-    const maxLength = Math.max(leftParts.length, rightParts.length);
-
-    for (let index = 0; index < maxLength; index += 1) {
-        const leftPart = leftParts[index] ?? 0;
-        const rightPart = rightParts[index] ?? 0;
-        if (leftPart !== rightPart) {
-            return leftPart > rightPart ? 1 : -1;
-        }
-    }
-
-    return 0;
-}
-
-function toVersionParts(version: string) {
-    return version
-        .split(/[^\d]+/)
-        .filter(Boolean)
-        .map((part) => Number(part));
 }
 
 function getRuntimeTargetVersion(connection: AgentRuntimeConnectionOutput) {

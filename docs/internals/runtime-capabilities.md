@@ -231,5 +231,10 @@ The Runtime settings page reads Runtime capability health and renders:
 * the last check time,
 * the `reason` inline or in the row detail for non-healthy capabilities.
 
+App/Runtime version compatibility is app-owned, not a Runtime capability. When
+the version contract blocks Runtime-backed features, the settings page renders
+that compatibility failure next to the capability health so green Runtime probes
+do not imply chat or settings availability.
+
 The app may cache the response for fast rendering, but the cache is not
 authoritative.
