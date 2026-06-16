@@ -45,6 +45,8 @@ interface ChatStartDraftContextValue {
         runId: string;
         sessionKey: string | null;
     }) => void;
+    removeReconciledDrafts: (chatId: string) => ChatStartDraft[];
+    restoreDrafts: (drafts: ChatStartDraft[]) => void;
 }
 
 const ChatStartDraftContext = React.createContext<ChatStartDraftContextValue | null>(null);
@@ -159,6 +161,30 @@ export function ChatStartDraftProvider({ children }: PropsWithChildren) {
             ),
         [drafts]
     );
+    const removeReconciledDrafts = React.useCallback(
+        (chatId: string) => {
+            const result = removeReconciledDraftsForChat(drafts, chatId);
+
+            if (result.removedDrafts.length === 0) {
+                return [];
+            }
+
+            setDrafts((current) => removeReconciledDraftsForChat(current, chatId).drafts);
+
+            return result.removedDrafts;
+        },
+        [drafts]
+    );
+    const restoreDrafts = React.useCallback((removedDrafts: ChatStartDraft[]) => {
+        if (removedDrafts.length === 0) {
+            return;
+        }
+
+        setDrafts((current) => ({
+            ...Object.fromEntries(removedDrafts.map((draft) => [draft.id, draft])),
+            ...current,
+        }));
+    }, []);
 
     const value = React.useMemo<ChatStartDraftContextValue>(
         () => ({
@@ -169,6 +195,8 @@ export function ChatStartDraftProvider({ children }: PropsWithChildren) {
             listDrafts,
             markCreating,
             reconcileDraft,
+            removeReconciledDrafts,
+            restoreDrafts,
         }),
         [
             createDraft,
@@ -178,6 +206,8 @@ export function ChatStartDraftProvider({ children }: PropsWithChildren) {
             listDrafts,
             markCreating,
             reconcileDraft,
+            removeReconciledDrafts,
+            restoreDrafts,
         ]
     );
 
@@ -192,6 +222,24 @@ export function useChatStartDrafts() {
     }
 
     return context;
+}
+
+export function removeReconciledDraftsForChat(
+    drafts: Record<string, ChatStartDraft>,
+    chatId: string
+) {
+    const removedDrafts = Object.values(drafts).filter((draft) => draft.realChatId === chatId);
+
+    if (removedDrafts.length === 0) {
+        return { drafts, removedDrafts };
+    }
+
+    const removedIds = new Set(removedDrafts.map((draft) => draft.id));
+    const nextDrafts = Object.fromEntries(
+        Object.entries(drafts).filter(([draftId]) => !removedIds.has(draftId))
+    );
+
+    return { drafts: nextDrafts, removedDrafts };
 }
 
 function attachmentTitle(attachments: readonly ChatMessageAttachmentInput[] | undefined) {

@@ -1,6 +1,8 @@
 import { trpc } from '../../lib/trpc.tsx';
+import { useChatStartDrafts } from './use-chat-start-drafts.tsx';
 
 export function useChatArchive() {
+    const drafts = useChatStartDrafts();
     const utils = trpc.useUtils();
 
     return trpc.chat.archive.useMutation({
@@ -9,6 +11,7 @@ export function useChatArchive() {
             await utils.chat.get.cancel({ chatId });
             const previousChatList = utils.chat.list.getData();
             const previousChat = utils.chat.get.getData({ chatId });
+            const removedDrafts = drafts.removeReconciledDrafts(chatId);
 
             utils.chat.list.setData(undefined, (current) => {
                 if (!current) {
@@ -25,7 +28,7 @@ export function useChatArchive() {
             });
             utils.chat.get.setData({ chatId }, null);
 
-            return { previousChat, previousChatList };
+            return { previousChat, previousChatList, removedDrafts };
         },
         onError: (_error, _input, context) => {
             if (context?.previousChatList) {
@@ -34,6 +37,10 @@ export function useChatArchive() {
 
             if (context?.previousChat) {
                 utils.chat.get.setData({ chatId: context.previousChat.id }, context.previousChat);
+            }
+
+            if (context?.removedDrafts) {
+                drafts.restoreDrafts(context.removedDrafts);
             }
         },
         onSettled: async (_result, _error, { chatId }) => {
