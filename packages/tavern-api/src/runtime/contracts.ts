@@ -1849,6 +1849,7 @@ export const agentRuntimeEventTypeSchema = z.enum([
     'turn.started',
     'turn.progress',
     'turn.replyUpdated',
+    'turn.statusUpdated',
     'turn.steered',
     'turn.completed',
     'turn.cancelled',
@@ -1977,6 +1978,13 @@ export const agentRuntimeTurnReplyUpdatedEventSchema = z.object({
     type: z.literal('turn.replyUpdated'),
 });
 
+export const agentRuntimeTurnStatusUpdatedEventSchema = z.object({
+    sequence: z.number().int().positive(),
+    timestamp: z.string().datetime(),
+    turn: agentRuntimeTurnSchema,
+    type: z.literal('turn.statusUpdated'),
+});
+
 export const agentRuntimeTurnCompletedEventSchema = z.object({
     timestamp: z.string().datetime(),
     turn: agentRuntimeTurnSchema,
@@ -2053,6 +2061,7 @@ export const agentRuntimeEventSchema = z.discriminatedUnion('type', [
     agentRuntimeTurnStartedEventSchema,
     agentRuntimeTurnProgressEventSchema,
     agentRuntimeTurnReplyUpdatedEventSchema,
+    agentRuntimeTurnStatusUpdatedEventSchema,
     agentRuntimeTurnSteeredEventSchema,
     agentRuntimeTurnCompletedEventSchema,
     agentRuntimeTurnCancelledEventSchema,

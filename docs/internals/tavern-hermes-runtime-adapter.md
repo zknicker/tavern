@@ -123,6 +123,7 @@ Hermes stream events become Tavern rows by stable ids.
 | --- | --- |
 | `assistant.delta` | Active reply text; flushed as `message` response activity when tool, status, or reasoning work interrupts it. |
 | `assistant.status` | `message` response activity titled `Assistant update` only for turn-progress status kinds. Runtime lifecycle notices are not chat activity. |
+| `thinking.delta` | Live-only `turn.statusUpdated` rotation signal. Runtime ignores the text and does not store this as Thinking activity. |
 | `reasoning.delta` | `reasoning` response activity titled `Thinking`. |
 | `tool.progress` with a tool id | Running `tool_call` response activity. |
 | `tool.progress` without a tool id | `message` response activity so status prose does not masquerade as a tool. |
@@ -138,6 +139,10 @@ Model-internal reasoning is `reasoning` response activity titled `Thinking`.
 Those rows are execution evidence and are hidden from the main chat transcript
 by default. Appearance settings can show them without changing the stored
 activity.
+
+Hermes `thinking.delta` is presentation status from the engine spinner, not
+provider reasoning. Runtime uses it only as a signal to rotate the themed live
+presence verb next to the agent eyes; the engine's status text is not shown.
 
 Assistant progress text is not duplicated into the final assistant message. When
 Hermes includes already-flushed progress text in the completed content, Runtime

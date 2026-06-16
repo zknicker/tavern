@@ -1,14 +1,23 @@
 import type { ChatComposerQueuedMessage } from '../../features/chats/chat-composer-queue.ts';
+import type { ChatActiveReply } from '../../hooks/chats/chat-timeline-state.ts';
 import type { ChatLogOutput } from '../../lib/trpc.tsx';
 
 type ChatRows = NonNullable<ChatLogOutput>['rows'];
 type MessageRow = Extract<ChatRows[number], { kind: 'message' }>;
 type SenderType = MessageRow['message']['senderType'];
 type ToolRow = Extract<ChatRows[number], { kind: 'tool' }>;
+interface ChatLayoutPreview {
+    activeReply?: ChatActiveReply;
+    chat: ReturnType<typeof chatActors>;
+    defaultOpenWorkGroups?: boolean;
+    rows: ChatRows;
+    title: string;
+}
 
 const previewTime = '2026-05-08T18:00:00.000Z';
+const streamingPreviewStartedAt = new Date(Date.now() - 17_000).toISOString();
 
-export const chatLayoutPreviews = [
+export const chatLayoutPreviews: ChatLayoutPreview[] = [
     {
         chat: chatActors({ agents: ['Atlas'], humans: ['You'] }),
         rows: rows([
@@ -143,6 +152,77 @@ export const chatLayoutPreviews = [
         ]),
         title: 'Hermes activity turn',
     },
+    {
+        chat: chatActors({ agents: ['Atlas'], humans: ['You'] }),
+        rows: rowsAt(
+            [
+                user(
+                    'You',
+                    'Check the deployment notes, run whatever tools you need, and stop for approval if the security scan is high.'
+                ),
+                thinking(
+                    'Atlas',
+                    '**Planning the pass** I need to inspect the release notes, run a terminal check, then pause on any high-risk scan result.'
+                ),
+                narration(
+                    'Atlas',
+                    'I’ll verify the release note wording first, then run the local security scan before changing anything.'
+                ),
+                toolActivity({
+                    id: 'stack-read-release-notes',
+                    label: 'Read release notes',
+                    name: 'read',
+                    summaryParts: ['docs/operations/releases.md'],
+                }),
+                toolActivity({
+                    id: 'stack-run-host-scan',
+                    label: 'bun run scan:hosts',
+                    name: 'bash',
+                    summaryParts: ['bun run scan:hosts'],
+                }),
+                toolActivity({
+                    id: 'stack-approval-security',
+                    label: 'Security scan — [HIGH] Invalid characters in hostname: Host names contain spaces',
+                    name: 'approval',
+                    summaryParts: [
+                        'Security scan — [HIGH] Invalid characters in hostname: Host names contain spaces',
+                    ],
+                }),
+                thinking(
+                    'Atlas',
+                    '**Rechecking after approval** The scan result blocks the risky path, so I should rerun the safe command and summarize the remaining action.'
+                ),
+                narration(
+                    'Atlas',
+                    'The high finding is isolated to the hostname list. I’m rerunning the safer validation path now.'
+                ),
+                toolActivity({
+                    id: 'stack-rerun-safe-scan',
+                    label: 'bun run scan:hosts -- --strict',
+                    name: 'bash',
+                    summaryParts: ['bun run scan:hosts -- --strict'],
+                }),
+                toolActivity({
+                    id: 'stack-search-docs',
+                    label: 'rg hostname docs',
+                    name: 'search_files',
+                    summaryParts: ['hostname docs/operations'],
+                }),
+            ],
+            streamingPreviewStartedAt
+        ),
+        activeReply: {
+            agentId: toActorId('Atlas'),
+            isThinking: true,
+            runId: 'run_preview_streaming_stack',
+            sessionKey: `preview:${toActorId('Atlas')}`,
+            startedAt: streamingPreviewStartedAt,
+            statusSequence: 1,
+            text: '',
+        },
+        defaultOpenWorkGroups: true,
+        title: 'Streaming turn stack',
+    },
 ];
 
 export const scrollingToolDrawerPreview = {
@@ -263,6 +343,44 @@ function rows(messages: ChatRows): ChatRows {
         };
     });
 }
+
+function rowsAt(messages: ChatRows, timestamp: string): ChatRows {
+    return rows(messages).map((row) => withPreviewTimestamp(row, timestamp));
+}
+
+function withPreviewTimestamp(row: ChatRows[number], timestamp: string): ChatRows[number] {
+    if (row.kind === 'message') {
+        return {
+            ...row,
+            message: {
+                ...row.message,
+                timestamp,
+            },
+        };
+    }
+
+    if (row.kind === 'tool') {
+        return {
+            ...row,
+            completedAt: row.completedAt ? timestamp : null,
+            startedAt: timestamp,
+        };
+    }
+
+    if (row.kind === 'system' && row.systemKind === 'thinking') {
+        return {
+            ...row,
+            thinking: {
+                ...row.thinking,
+                timestamp,
+            },
+            timestamp,
+        };
+    }
+
+    return row;
+}
+
 function agent(sender: string, content: string): MessageRow {
     return message({
         actorKind: 'agent',
@@ -280,6 +398,24 @@ function narration(sender: string, content: string): ToolRow {
         sender,
         summaryParts: [content],
     });
+}
+
+function thinking(sender: string, content: string): ChatRows[number] {
+    const id = `thinking:${sender}:${content.slice(0, 16)}`;
+
+    return {
+        id,
+        kind: 'system',
+        systemKind: 'thinking',
+        thinking: {
+            id,
+            messageId: `message:${toActorId(sender)}`,
+            sender: toActorId(sender),
+            text: content,
+            timestamp: previewTime,
+        },
+        timestamp: previewTime,
+    };
 }
 
 function toolActivity({

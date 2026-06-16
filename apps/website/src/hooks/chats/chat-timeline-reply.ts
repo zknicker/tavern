@@ -52,6 +52,7 @@ export function isSameActiveReply(left: ChatActiveReply | null, right: ChatActiv
         left.runId === right.runId &&
         left.sessionKey === right.sessionKey &&
         left.startedAt === right.startedAt &&
+        (left.statusSequence ?? null) === (right.statusSequence ?? null) &&
         (left.text ?? '') === (right.text ?? '')
     );
 }
@@ -89,6 +90,7 @@ export function mergeActiveReplySnapshot(
         return {
             ...incoming,
             completedAt: incoming.completedAt ?? current.completedAt ?? null,
+            statusSequence: incoming.statusSequence ?? current.statusSequence ?? null,
         };
     }
 
@@ -102,6 +104,7 @@ export function mergeActiveReplySnapshot(
                 ? false
                 : incoming.isThinking,
         completedAt: incoming.completedAt ?? current.completedAt ?? null,
+        statusSequence: incoming.statusSequence ?? current.statusSequence ?? null,
         text: incomingText.length >= currentText.length ? incomingText : currentText,
     };
 }

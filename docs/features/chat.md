@@ -134,15 +134,20 @@ transcript only grows:
 * The presence row stays below the latest agent turn at rest and while live.
   It keeps a fixed 32px icon box, uses the agent's configured color, and follows
   transcript reflow instantly as the turn grows.
-* While live, a stable-random one-word activity verb and timer sit next to the
-  presence eyes. Completed turns keep the eyes visible without timing text.
+* While live, an activity verb and timer sit next to the presence eyes. Engine
+  thinking status can rotate the themed verb during the turn; the engine's
+  status text is ignored. Completed turns keep the eyes visible without timing
+  text.
+* Stored model thinking renders as normal transcript activity when the
+  Appearance setting shows thinking text. Hidden thinking does not render as a
+  separate presence bubble.
 * Step enter animations are tied to DOM insertion during a live turn
   (`@starting-style`), not to step status, so fast tools still animate and
   history never replays.
 * The full transcript virtualizes visible rows only: hidden thinking evidence
-  stays available to presence and inspectors, but does not reserve transcript
-  height while the Appearance setting hides thinking text. TanStack Virtual owns
-  end anchoring, follow-on-append, and streaming reply growth for this list.
+  does not reserve transcript height while the Appearance setting hides
+  thinking text. TanStack Virtual owns end anchoring, follow-on-append, and
+  streaming reply growth for this list.
   The local scroll controller still tracks bottom state and owns disclosure
   anchoring for non-virtualized chat surfaces.
 

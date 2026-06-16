@@ -28,6 +28,7 @@ export function ChatTranscriptActivity({
 export function ChatTranscriptActivityGroup({
     chatId,
     currentSessionKey,
+    defaultOpen,
     items,
     showDurationHeader = true,
     turnActive = false,
@@ -36,6 +37,7 @@ export function ChatTranscriptActivityGroup({
 }: {
     chatId?: string;
     currentSessionKey?: string | null;
+    defaultOpen?: boolean;
     items: TranscriptItem[];
     showDurationHeader?: boolean;
     turnActive?: boolean;
@@ -61,6 +63,7 @@ export function ChatTranscriptActivityGroup({
             animateEnter={isActive}
             chatId={chatId}
             currentSessionKey={currentSessionKey}
+            defaultOpen={defaultOpen}
             end={end}
             items={activityItems}
             showDurationHeader={showDurationHeader}

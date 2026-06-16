@@ -10,6 +10,7 @@ function createHandlers(input?: {
     onProgress?: (value: string) => void;
     onReply?: (value: string) => void;
     onStart?: (runId: string) => void;
+    onStatus?: (value: string) => void;
     patchLog?: (updater: (current: ChatLogOutput | undefined) => ChatLogOutput | undefined) => void;
     patchedProgress?: string[];
 }) {
@@ -42,6 +43,8 @@ function createHandlers(input?: {
                 input?.onProgress?.(`${event.turn.runId}:${event.step.id}:${event.timestamp}`),
             startTurn: (turn) => input?.onStart?.(turn.runId),
             updateReply: (update) => input?.onReply?.(`${update.turn.runId}:${update.text}`),
+            updateTurnStatus: (update) =>
+                input?.onStatus?.(`${update.turn.runId}:${update.sequence}`),
         },
         worker: {
             list: {
@@ -163,6 +166,28 @@ test('turn progress patches durable chat activity without refetching live status
 
     expect(patchedProgress).toEqual(['chat-1']);
     expect(timelineProgress).toEqual(['run-1:tool:web:2026-04-27T17:20:08.408Z']);
+    expect(invalidatedQueries).toEqual([]);
+});
+
+test('turn status updates live timeline state without patching durable chat activity', async () => {
+    const invalidatedQueries: string[] = [];
+    const patchedProgress: string[] = [];
+    const statuses: string[] = [];
+    const handlers = createHandlers({
+        invalidatedQueries,
+        onStatus: (value) => statuses.push(value),
+        patchedProgress,
+    });
+
+    handlers.onTurnStatusUpdated({
+        sequence: 1,
+        timestamp: '2026-04-27T17:20:08.250Z',
+        turn,
+    });
+    await Promise.resolve();
+
+    expect(statuses).toEqual(['run-1:1']);
+    expect(patchedProgress).toEqual([]);
     expect(invalidatedQueries).toEqual([]);
 });
 

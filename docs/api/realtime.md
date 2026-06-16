@@ -116,6 +116,9 @@ Examples:
 Tool progress, assistant progress, and provider-exposed thinking summaries
 are not ephemeral notifications in Tavern chat. Runtime persists them as
 responses, response activity, or artifacts, then emits durable events.
+Engine spinner status is separate: Runtime may publish it as live
+`turn.statusUpdated` rotation signals, but its text is ignored and it is not
+durable chat activity.
 
 ## Reconnect Recovery
 

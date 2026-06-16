@@ -20,6 +20,7 @@ export function WorkingLog({
     animateEnter = false,
     chatId,
     currentSessionKey,
+    defaultOpen: defaultOpenOverride,
     end,
     items,
     showDurationHeader = true,
@@ -29,6 +30,7 @@ export function WorkingLog({
     animateEnter?: boolean;
     chatId?: string;
     currentSessionKey?: string | null;
+    defaultOpen?: boolean;
     end: string | null;
     items: ActivityItem[];
     showDurationHeader?: boolean;
@@ -46,9 +48,10 @@ export function WorkingLog({
     const thinkingOnly = isThinkingOnly(items);
     const firstPendingClarificationId = findFirstPendingClarificationId(items);
     const hasPendingPrompt = Boolean(firstPendingClarificationId);
-    const defaultOpen = groupMode
+    const inferredDefaultOpen = groupMode
         ? hasPendingPrompt
         : isActive || (!thinkingOnly && hasNarration(items));
+    const defaultOpen = defaultOpenOverride ?? inferredDefaultOpen;
     const [open, setOpen] = React.useState(defaultOpen);
     const disclosureAnchor = useDisclosureScrollAnchor();
 
@@ -85,11 +88,11 @@ export function WorkingLog({
     return (
         <ToolRowHoverRoot value={rowHover.contextValue}>
             <ThinkingSteps
-                // Group mode: the trigger's click padding must not stack onto the
-                // surrounding 16px block rhythm.
+                // Group mode keeps the horizontal hover affordance without
+                // compressing the surrounding turn rhythm.
                 className={cn(
                     'w-full max-w-[34rem]',
-                    groupMode && 'relative -my-1.5 -ml-2 w-[calc(100%+0.5rem)]',
+                    groupMode && 'relative -ml-2 w-[calc(100%+0.5rem)]',
                     groupMode && animateEnter && 'chat-step-enter'
                 )}
                 onOpenChange={setOpen}

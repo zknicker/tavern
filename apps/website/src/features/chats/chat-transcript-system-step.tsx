@@ -160,7 +160,7 @@ function getSystemSummary(row: Extract<TranscriptRow, { kind: 'system' }>): {
     }
 }
 
-function parseThinkingSummary(text: string): {
+export function parseThinkingSummary(text: string): {
     description?: string;
     label: string;
 } {

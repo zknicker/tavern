@@ -7,8 +7,15 @@ import { useTimelineActions } from './use-timeline-context.tsx';
 export function useChatTurnEvents() {
     const queryClient = useQueryClient();
     const utils = trpc.useUtils();
-    const { clearTurn, completeTurn, failTurn, patchProgress, startTurn, updateReply } =
-        useTimelineActions();
+    const {
+        clearTurn,
+        completeTurn,
+        failTurn,
+        patchProgress,
+        startTurn,
+        updateReply,
+        updateTurnStatus,
+    } = useTimelineActions();
     const handlers = createChatTurnEventHandlers({
         agent: utils.agent,
         chat: {
@@ -27,6 +34,7 @@ export function useChatTurnEvents() {
             patchProgress,
             startTurn,
             updateReply,
+            updateTurnStatus,
         },
         worker: utils.worker,
     });
@@ -53,5 +61,9 @@ export function useChatTurnEvents() {
 
     trpc.chat.onTurnReplyUpdated.useSubscription(undefined, {
         onData: handlers.onTurnReplyUpdated,
+    });
+
+    trpc.chat.onTurnStatusUpdated.useSubscription(undefined, {
+        onData: handlers.onTurnStatusUpdated,
     });
 }

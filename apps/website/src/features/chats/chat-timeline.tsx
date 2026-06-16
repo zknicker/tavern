@@ -11,6 +11,7 @@ export function ChatTimeline({
     animate = false,
     chatId,
     conversationLayout,
+    defaultOpenWorkGroups = false,
     fetchPreviousPage,
     failedTurn,
     hasPreviousPage = false,
@@ -18,6 +19,7 @@ export function ChatTimeline({
     isFetchingPreviousPage = false,
     rows,
     scrollViewportRef,
+    showThinkingText,
     totalMessages,
 }: {
     activeReply: ChatActiveReply | null;
@@ -25,6 +27,7 @@ export function ChatTimeline({
     animate?: boolean;
     chatId?: string;
     conversationLayout?: ConversationMessageLayout;
+    defaultOpenWorkGroups?: boolean;
     fetchPreviousPage?: () => void;
     failedTurn?: ChatTurnFailure | null;
     hasPreviousPage?: boolean;
@@ -32,6 +35,7 @@ export function ChatTimeline({
     isFetchingPreviousPage?: boolean;
     rows: NonNullable<ChatLogOutput>['rows'];
     scrollViewportRef?: React.RefObject<HTMLDivElement | null>;
+    showThinkingText?: boolean;
     totalMessages: number;
 }) {
     const hiddenCount = Math.max(totalMessages - countDurableMessageRows(rows), 0);
@@ -54,6 +58,7 @@ export function ChatTimeline({
                 animateMessages={messageEntrancesEnabled}
                 chatId={chatId}
                 conversationLayout={conversationLayout}
+                defaultOpenWorkGroups={defaultOpenWorkGroups}
                 failedTurn={failedTurn}
                 fetchPreviousPage={fetchPreviousPage}
                 hasPreviousPage={hasPreviousPage}
@@ -62,6 +67,7 @@ export function ChatTimeline({
                 isFetchingPreviousPage={isFetchingPreviousPage}
                 rows={rows}
                 scrollViewportRef={scrollViewportRef}
+                showThinkingText={showThinkingText}
             />
         </div>
     );

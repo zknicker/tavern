@@ -54,6 +54,7 @@ import {
 } from './channel-relay';
 import { createChat, getChat, listMessages, listResponses } from './chat-api';
 import { closeHermesTurnClients, respondToHermesClarification } from './hermes-turn-runner';
+import { subscribeToRuntimeEvents } from './runtime-events';
 
 describe('Tavern Hermes channel relay', () => {
     beforeEach(() => {
@@ -622,6 +623,60 @@ describe('Tavern Hermes channel relay', () => {
 
         expect(listMessages('cht_1').messages.at(-1)?.content).toBe('final answer');
         expect(listResponses('cht_1').activity).toEqual([]);
+    });
+
+    it('publishes thinking.status as live turn status without storing Thinking activity', async () => {
+        const runtimeEvents: unknown[] = [];
+        const unsubscribe = subscribeToRuntimeEvents((event) => runtimeEvents.push(event));
+        hermesClient.streamChat.mockImplementationOnce(async function* streamChat() {
+            yield {
+                data: {},
+                event: 'thinking.status',
+            };
+            yield {
+                data: {},
+                event: 'thinking.status',
+            };
+            yield {
+                data: { content: 'done', message_id: 'hermes_msg_thinking_status' },
+                event: 'assistant.completed',
+            };
+        });
+        createChat({ id: 'cht_1' });
+
+        await sendTavernChannelMessage('cht_1', {
+            agent: {
+                agentId: 'agt_1',
+            },
+            message: {
+                content: 'show live status',
+                id: 'msg_thinking_status',
+                nonce: 'nonce_thinking_status',
+            },
+            target: {
+                externalId: null,
+                sessionKey: 'session_1',
+                target: 'cht_1',
+                type: 'tavern',
+            },
+        });
+        await waitForHermesTurn();
+        unsubscribe();
+
+        expect(listMessages('cht_1').messages.at(-1)?.content).toBe('done');
+        expect(listResponses('cht_1').activity).toEqual([]);
+        expect(runtimeEvents).toEqual(
+            expect.arrayContaining([
+                expect.objectContaining({
+                    sequence: 1,
+                    type: 'turn.statusUpdated',
+                }),
+                expect.objectContaining({
+                    sequence: 2,
+                    type: 'turn.statusUpdated',
+                }),
+            ])
+        );
     });
 
     it('stores reasoning.delta as Tavern Thinking activity', async () => {

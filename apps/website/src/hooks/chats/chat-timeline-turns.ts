@@ -10,6 +10,7 @@ import type {
     ChatTimeline,
     ChatTimelineState,
     ChatTurn,
+    ChatTurnStatusUpdate,
 } from './chat-timeline-types.ts';
 
 export function startTimelineTurn(state: ChatTimelineState, turn: ChatTurn): ChatTimelineState {
@@ -49,6 +50,7 @@ export function updateTimelineReply(
         runId: update.turn.runId,
         sessionKey: update.turn.sessionKey,
         startedAt: update.turn.startedAt,
+        statusSequence: existingReply?.statusSequence ?? null,
         text: nextText,
     });
 
@@ -112,6 +114,34 @@ export function completeTimelineTurn(
         },
         activeTurn: null,
         timeline,
+    };
+}
+
+export function updateTimelineTurnStatus(
+    state: ChatTimelineState,
+    update: ChatTurnStatusUpdate
+): ChatTimelineState {
+    if (state.failedTurn?.turn.runId === update.turn.runId) {
+        return state;
+    }
+
+    if (!state.activeReply || state.activeReply.runId !== update.turn.runId) {
+        return state.activeTurn?.runId === update.turn.runId
+            ? { ...state, activeTurn: update.turn }
+            : state;
+    }
+
+    if (state.activeReply.statusSequence === update.sequence) {
+        return state;
+    }
+
+    return {
+        ...state,
+        activeReply: {
+            ...state.activeReply,
+            statusSequence: update.sequence,
+        },
+        activeTurn: update.turn,
     };
 }
 

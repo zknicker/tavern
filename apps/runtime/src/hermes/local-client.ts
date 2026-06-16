@@ -901,15 +901,18 @@ export class LocalHermesClient extends LocalHermesUnsupportedSurfaces {
                     continue;
                 }
 
-                // The gateway streams model thought through three channels:
-                // reasoning.delta and thinking.delta are incremental, and
-                // reasoning.available delivers one complete block for models
-                // that do not stream reasoning. All carry { text }.
-                if (
-                    event.type === 'reasoning.delta' ||
-                    event.type === 'thinking.delta' ||
-                    event.type === 'reasoning.available'
-                ) {
+                if (event.type === 'thinking.delta') {
+                    yield {
+                        data: {},
+                        event: 'thinking.status',
+                    };
+                    continue;
+                }
+
+                // The gateway streams model thought through reasoning.delta,
+                // and reasoning.available delivers one complete block for
+                // models that do not stream reasoning. Both carry { text }.
+                if (event.type === 'reasoning.delta' || event.type === 'reasoning.available') {
                     yield {
                         data: {
                             delta: readString(event.payload, ['text']) ?? '',

@@ -241,7 +241,6 @@ export function ThinkingStep({
                             )}
                         >
                             {label}
-                            {isActive && typeof label === 'string' ? '...' : null}
                         </span>
                         {description ? (
                             <span className="min-w-0 text-[13px] text-muted-foreground leading-snug">

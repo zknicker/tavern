@@ -9,6 +9,7 @@ import {
     type ChatTimelineState,
     type ChatTurn,
     type ChatTurnProgressStep,
+    type ChatTurnStatusUpdate,
     clearTimelineTurn,
     completeTimelineTurn,
     dismissTimelineFailure,
@@ -19,6 +20,7 @@ import {
     removeOptimisticStoppedTurn,
     startTimelineTurn,
     updateTimelineReply,
+    updateTimelineTurnStatus,
 } from './chat-timeline-state.ts';
 
 interface TimelineActionsValue {
@@ -37,6 +39,7 @@ interface TimelineActionsValue {
     setReply: (chatId: string, activeReply: ChatActiveReply | null) => void;
     startTurn: (turn: ChatTurn) => void;
     updateReply: (update: ChatReplyUpdate) => void;
+    updateTurnStatus: (update: ChatTurnStatusUpdate) => void;
 }
 
 const TimelineActionsContext = React.createContext<TimelineActionsValue | null>(null);
@@ -88,6 +91,14 @@ export function TimelineContextProvider({ children }: PropsWithChildren) {
         setTimelineStates((current) =>
             updateTimelineState(current, update.turn.chatId, (state) =>
                 updateTimelineReply(state, update)
+            )
+        );
+    }, []);
+
+    const updateTurnStatus = React.useCallback((update: ChatTurnStatusUpdate) => {
+        setTimelineStates((current) =>
+            updateTimelineState(current, update.turn.chatId, (state) =>
+                updateTimelineTurnStatus(state, update)
             )
         );
     }, []);
@@ -182,6 +193,7 @@ export function TimelineContextProvider({ children }: PropsWithChildren) {
             setReply,
             startTurn,
             updateReply,
+            updateTurnStatus,
         }),
         [
             clearTurn,
@@ -195,6 +207,7 @@ export function TimelineContextProvider({ children }: PropsWithChildren) {
             setReply,
             startTurn,
             updateReply,
+            updateTurnStatus,
         ]
     );
 

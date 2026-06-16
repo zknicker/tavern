@@ -42,6 +42,10 @@ export function subscribeToObservedAgentRuntimeTurnReplyUpdated(signal?: AbortSi
     return subscribeToObservedAgentRuntimeEventType('turn.replyUpdated', signal);
 }
 
+export function subscribeToObservedAgentRuntimeTurnStatusUpdated(signal?: AbortSignal) {
+    return subscribeToObservedAgentRuntimeEventType('turn.statusUpdated', signal);
+}
+
 export function subscribeToObservedAgentRuntimeTurnSteered(signal?: AbortSignal) {
     return subscribeToObservedAgentRuntimeEventType('turn.steered', signal);
 }

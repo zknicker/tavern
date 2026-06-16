@@ -20,6 +20,7 @@ interface TranscriptRenderRowViewProps {
     chatId?: string;
     conversationLayout: ConversationMessageLayout;
     currentSessionKey?: string | null;
+    defaultOpenWorkGroups?: boolean;
     failedTurn?: ChatTurnFailure | null;
     hiddenCount: number;
     presenceRows: TranscriptRow[];
@@ -38,6 +39,7 @@ export const TranscriptRenderRowView = React.memo(
         chatId,
         conversationLayout,
         currentSessionKey,
+        defaultOpenWorkGroups = false,
         failedTurn = null,
         hiddenCount,
         presenceRows,
@@ -73,6 +75,7 @@ export const TranscriptRenderRowView = React.memo(
                 chatId={chatId}
                 conversationLayout={conversationLayout}
                 currentSessionKey={currentSessionKey}
+                defaultOpenWorkGroups={defaultOpenWorkGroups}
                 entry={row.entry}
                 followsRuntimeNotice={row.followsRuntimeNotice}
                 turnStartedAt={row.turnStartedAt}
@@ -94,6 +97,7 @@ function areTranscriptRenderRowViewPropsEqual(
         previous.animateMessages === next.animateMessages &&
         previous.chatId === next.chatId &&
         previous.currentSessionKey === next.currentSessionKey &&
+        previous.defaultOpenWorkGroups === next.defaultOpenWorkGroups &&
         previous.hiddenCount === next.hiddenCount &&
         arePresencePropsEqual(previous, next) &&
         previous.conversationLayout.showAgentIdentity ===

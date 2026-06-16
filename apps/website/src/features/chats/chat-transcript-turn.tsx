@@ -1,6 +1,8 @@
 import { Cancel01Icon } from '@hugeicons/core-free-icons';
 import { AnimatePresence, motion, type Transition, useReducedMotion } from 'framer-motion';
 import * as React from 'react';
+import { chromatic } from 'slot-text';
+import { SlotText } from 'slot-text/react';
 import { ChatMessage } from '../../components/chats/chat-message.tsx';
 import { AgentAvatar } from '../../components/ui/agent-avatar.tsx';
 import { CopyButton } from '../../components/ui/copy-button.tsx';
@@ -8,7 +10,6 @@ import { Icon } from '../../components/ui/icon.tsx';
 import { useActorProfile } from '../../hooks/actors/use-actor.ts';
 import type { ChatActiveReply, ChatTurnFailure } from '../../hooks/chats/chat-timeline-state.ts';
 import { useChatDismiss } from '../../hooks/chats/use-chat-dismiss.ts';
-import { useChatThinkingDisplayPreference } from '../../hooks/chats/use-chat-thinking-display-preference.ts';
 import { formatShortTime } from '../../lib/format.ts';
 import { springs } from '../../lib/springs.ts';
 import { cn } from '../../lib/utils.ts';
@@ -31,7 +32,6 @@ import {
 import {
     type AgentItemSegment,
     getTranscriptItemKey,
-    getVisibleAgentItems,
     groupAgentItems,
 } from './chat-transcript-item-utils.ts';
 import {
@@ -64,6 +64,7 @@ export function TranscriptEntryView({
     chatId,
     conversationLayout,
     currentSessionKey,
+    defaultOpenWorkGroups = false,
     entry,
     followsRuntimeNotice,
     turnStartedAt,
@@ -73,6 +74,7 @@ export function TranscriptEntryView({
     chatId?: string;
     conversationLayout: ConversationMessageLayout;
     currentSessionKey?: string | null;
+    defaultOpenWorkGroups?: boolean;
     entry: TranscriptEntry;
     followsRuntimeNotice?: boolean;
     turnStartedAt?: string | null;
@@ -116,6 +118,7 @@ export function TranscriptEntryView({
             activeReply={activeReply}
             chatId={chatId}
             currentSessionKey={currentSessionKey}
+            defaultOpenWorkGroups={defaultOpenWorkGroups}
             entry={entry}
             followsRuntimeNotice={Boolean(followsRuntimeNotice)}
             layout={conversationLayout}
@@ -144,11 +147,7 @@ export function AgentPresenceTranscriptRow({
     turnStartedAt?: string | null;
 }) {
     const actorProfile = useActorProfile(entry.actor);
-    const chatThinkingDisplay = useChatThinkingDisplayPreference();
-    const items = getVisibleAgentItems({
-        items: entry.items,
-        showThinkingText: chatThinkingDisplay.enabled,
-    });
+    const items = entry.items;
     const lastMessage = getLastMessage(items);
     const turnActive = isActiveTurn(items, activeReply, lastMessage);
     const activityItems = items.filter(isActivityItem);
@@ -283,6 +282,7 @@ function AgentTurn({
     activeReply,
     chatId,
     currentSessionKey,
+    defaultOpenWorkGroups,
     entry,
     followsRuntimeNotice,
     layout,
@@ -291,17 +291,14 @@ function AgentTurn({
     activeReply: ChatActiveReply | null;
     chatId?: string;
     currentSessionKey?: string | null;
+    defaultOpenWorkGroups: boolean;
     entry: Extract<TranscriptEntry, { kind: 'turn' }>;
     followsRuntimeNotice: boolean;
     layout: ConversationMessageLayout;
     turnStartedAt?: string | null;
 }) {
     const actorProfile = useActorProfile(entry.actor);
-    const chatThinkingDisplay = useChatThinkingDisplayPreference();
-    const items = getVisibleAgentItems({
-        items: entry.items,
-        showThinkingText: chatThinkingDisplay.enabled,
-    });
+    const items = entry.items;
     const displayName = actorProfile?.name ?? getTurnFallbackName(entry) ?? 'Agent';
     const showIdentity = layout.showAgentIdentity;
     const lastMessage = getLastMessage(items);
@@ -338,11 +335,12 @@ function AgentTurn({
                         </div>
                     ) : null}
                     <div className="relative min-w-0">
-                        <div className="flex min-w-0 flex-col gap-2">
+                        <div className="flex min-w-0 flex-col gap-3">
                             {visibleSegments.map((segment, index) => (
                                 <AgentTurnSegment
                                     chatId={chatId}
                                     currentSessionKey={currentSessionKey}
+                                    defaultOpenWorkGroups={defaultOpenWorkGroups}
                                     key={segment.key}
                                     lastMessage={lastMessage}
                                     segment={segment}
@@ -363,7 +361,7 @@ function AgentPresenceRow({
     label,
     presence,
 }: {
-    label: string | null;
+    label: PresenceTimingLabel | null;
     presence: React.ReactNode;
 }) {
     const shouldReduceMotion = useReducedMotion();
@@ -378,6 +376,7 @@ function AgentPresenceRow({
               x: -4,
           };
     const labelTransition = shouldReduceMotion ? reducedPresenceLabelTransition : springs.moderate;
+    const labelText = label ? formatPresenceTimingLabel(label) : null;
 
     return (
         <div className="flex h-8 min-w-0 items-center gap-2 overflow-visible text-muted-foreground/65 text-sm leading-5">
@@ -386,13 +385,14 @@ function AgentPresenceRow({
                 {label ? (
                     <motion.span
                         animate={labelAnimate}
+                        aria-label={labelText ?? undefined}
                         className="thinking-indicator-text flex min-h-8 items-center overflow-hidden whitespace-nowrap tabular-nums"
                         exit={labelExit}
                         initial={labelInitial}
                         key="presence-label"
                         transition={labelTransition}
                     >
-                        {label}
+                        <PresenceTimingText label={label} reduceMotion={shouldReduceMotion} />
                     </motion.span>
                 ) : null}
             </AnimatePresence>
@@ -400,9 +400,110 @@ function AgentPresenceRow({
     );
 }
 
+interface PresenceTimingLabel {
+    seconds: string | null;
+    verb: string;
+}
+
+function PresenceTimingText({
+    label,
+    reduceMotion,
+}: {
+    label: PresenceTimingLabel;
+    reduceMotion: boolean | null;
+}) {
+    const [slotReady, setSlotReady] = React.useState(false);
+    const [slotText, setSlotText] = React.useState('');
+    const entryAnimatedRef = React.useRef(false);
+
+    React.useEffect(() => {
+        if (reduceMotion !== false) {
+            entryAnimatedRef.current = false;
+            setSlotReady(false);
+            setSlotText('');
+            return;
+        }
+
+        setSlotReady(true);
+
+        if (entryAnimatedRef.current) {
+            setSlotText(label.verb);
+            return;
+        }
+
+        setSlotText('');
+
+        let cancelled = false;
+        const revealText = () => {
+            if (cancelled) {
+                return;
+            }
+
+            entryAnimatedRef.current = true;
+            setSlotText(label.verb);
+        };
+
+        if (typeof window.requestAnimationFrame === 'function') {
+            const frame = window.requestAnimationFrame(revealText);
+
+            return () => {
+                cancelled = true;
+                window.cancelAnimationFrame(frame);
+            };
+        }
+
+        const timeout = window.setTimeout(revealText, 16);
+
+        return () => {
+            cancelled = true;
+            window.clearTimeout(timeout);
+        };
+    }, [label.verb, reduceMotion]);
+
+    const primingSlot = slotReady && slotText.length === 0;
+
+    const verb = slotReady ? (
+        <SlotText
+            aria-hidden={true}
+            className="presence-verb-slot inline-flex font-medium text-muted-foreground/75"
+            options={{
+                bounce: 0.35,
+                color: chromatic({ from: 210, lightness: 60, saturation: 80, spread: 130 }),
+                colorFade: 360,
+                direction: 'up',
+                duration: 260,
+                interrupt: true,
+                skipUnchanged: false,
+                stagger: 18,
+            }}
+            text={slotText}
+        />
+    ) : (
+        <span aria-hidden={true} className="inline-flex font-medium text-muted-foreground/75">
+            {label.verb}
+        </span>
+    );
+
+    return (
+        <>
+            {verb}
+            {label.seconds && !primingSlot ? (
+                <span aria-hidden={true} className="ml-1 tabular-nums">
+                    for {label.seconds}
+                </span>
+            ) : null}
+        </>
+    );
+}
+
+function formatPresenceTimingLabel(label: PresenceTimingLabel) {
+    return label.seconds ? `${label.verb} for ${label.seconds}` : label.verb;
+}
+
 function AgentTurnSegment({
     chatId,
     currentSessionKey,
+    defaultOpenWorkGroups,
     lastMessage,
     segment,
     turnActive,
@@ -411,6 +512,7 @@ function AgentTurnSegment({
 }: {
     chatId?: string;
     currentSessionKey?: string | null;
+    defaultOpenWorkGroups: boolean;
     lastMessage: Extract<TranscriptRow, { kind: 'message' }>['message'] | null;
     segment: AgentItemSegment;
     turnActive: boolean;
@@ -421,6 +523,7 @@ function AgentTurnSegment({
         <ChatTranscriptActivityGroup
             chatId={chatId}
             currentSessionKey={currentSessionKey}
+            defaultOpen={defaultOpenWorkGroups}
             items={segment.items}
             showDurationHeader={false}
             turnActive={turnActive}
@@ -450,8 +553,10 @@ function getAgentPresenceTimingLabel({
     start: string | null;
     verb: string;
 }) {
-    const activeSeconds = formatActiveActivitySeconds({ now, start });
-    return activeSeconds ? `${verb} for ${activeSeconds}` : verb;
+    return {
+        seconds: formatActiveActivitySeconds({ now, start }),
+        verb,
+    };
 }
 
 function usePresenceNow(enabled: boolean, start: string | null) {
@@ -587,7 +692,9 @@ function AssistantNarrationText({ item }: { item: TranscriptItem }) {
     const text = getAssistantNarrationText(item);
 
     return text ? (
-        <div className="whitespace-pre-wrap break-words text-foreground text-sm">{text}</div>
+        <div className="max-w-[46rem] whitespace-pre-wrap break-words text-foreground text-sm leading-6">
+            {text}
+        </div>
     ) : null;
 }
 

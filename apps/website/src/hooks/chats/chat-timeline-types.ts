@@ -8,6 +8,7 @@ export interface ChatActiveReply {
     runId: string;
     sessionKey: string;
     startedAt: string;
+    statusSequence?: number | null;
     text?: string;
 }
 export type ChatTimelineMessageRow = Extract<ChatTimeline[number], { kind: 'message' }>;
@@ -67,6 +68,12 @@ export interface ChatReplyUpdate {
     isThinking?: boolean;
     replace?: boolean;
     text: string;
+    timestamp?: string;
+    turn: ChatTurn;
+}
+
+export interface ChatTurnStatusUpdate {
+    sequence: number;
     timestamp?: string;
     turn: ChatTurn;
 }

@@ -4,6 +4,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { httpLink } from '@trpc/client';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { MemoryRouter } from 'react-router-dom';
+import type { ChatActiveReply } from '../../hooks/chats/chat-timeline-state.ts';
 import { type ChatLogOutput, trpc } from '../../lib/trpc.tsx';
 import { ArtifactLogEntry } from '../sessions/log/event-entry/artifact-entry.tsx';
 import { ToolDrawerBody } from '../sessions/tools/tool-drawer-body.tsx';
@@ -12,10 +13,9 @@ import { SystemStep } from './chat-transcript-system-step.tsx';
 import { getActiveReplyDisplayText } from './chat-transcript-turn.tsx';
 import { ToolStep } from './tool-steps/registry.tsx';
 
-const activePresenceLabelPattern =
-    /(?:Adventuring|Brewing|Conjuring|Scrying|Questing|Forging|Enchanting|Spellcasting|Charting|Delving|Summoning|Transmuting|Wandering|Wayfinding|Alchemizing|Incanting|Rummaging|Tinkering|Polishing|Deciphering|Divining|Kindling|Gathering|Mapping|Exploring|Crafting|Channeling|Weaving|Unfurling|Illuminating) for \d+s/;
+const activePresenceLabelPattern = /[A-Z][A-Za-z'-]+(?: [A-Za-z'-]+)* for \d+s/;
 const activePresenceShimmerPattern =
-    /thinking-indicator-text[^>]*>(?:Adventuring|Brewing|Conjuring|Scrying|Questing|Forging|Enchanting|Spellcasting|Charting|Delving|Summoning|Transmuting|Wandering|Wayfinding|Alchemizing|Incanting|Rummaging|Tinkering|Polishing|Deciphering|Divining|Kindling|Gathering|Mapping|Exploring|Crafting|Channeling|Weaving|Unfurling|Illuminating) for \d+s</;
+    /(?:thinking-indicator-text[^>]*aria-label|aria-label="[A-Z][^"]+ for \d+s"[^>]*thinking-indicator-text)/;
 
 test('ChatTranscript renders hover time and copy action without session or usage badges', () => {
     const markup = renderTranscript([
@@ -229,6 +229,57 @@ test('ChatTranscript hides reasoning by default', () => {
     assert.doesNotMatch(markup, /I should greet the user directly\./);
     assert.doesNotMatch(markup, /Details/);
     assert.doesNotMatch(markup, /Inspect/);
+});
+
+test('ChatTranscript renders active thinking text inline when enabled', () => {
+    const rows: ChatRow[] = [
+        {
+            id: 'thinking-1',
+            kind: 'system',
+            systemKind: 'thinking',
+            thinking: {
+                id: 'thinking-1',
+                messageId: 'response-1',
+                sender: 'tiny',
+                text: '**Reviewing the request** I should inspect the workspace before using a command.',
+                timestamp: '2026-03-31T15:00:00.000Z',
+            },
+            timestamp: '2026-03-31T15:00:00.000Z',
+        },
+        {
+            id: 'thinking-2',
+            kind: 'system',
+            systemKind: 'thinking',
+            thinking: {
+                id: 'thinking-2',
+                messageId: 'response-1',
+                sender: 'tiny',
+                text: '**Checking tool output** I should summarize only the command result.',
+                timestamp: '2026-03-31T15:00:02.000Z',
+            },
+            timestamp: '2026-03-31T15:00:02.000Z',
+        },
+    ];
+    const markup = renderActiveTranscript(
+        {
+            agentId: 'tiny',
+            isThinking: true,
+            runId: 'response-1',
+            sessionKey: 'agent:tiny:session-1',
+            startedAt: '2026-03-31T15:00:00.000Z',
+            text: '',
+        },
+        rows,
+        undefined,
+        { showThinkingText: true }
+    );
+    const completedMarkup = renderTranscript(rows);
+
+    assert.match(markup, /Reviewing the request/);
+    assert.match(markup, /I should inspect the workspace before using a command\./);
+    assert.match(markup, /Checking tool output/);
+    assert.match(markup, /I should summarize only the command result\./);
+    assert.doesNotMatch(completedMarkup, /Checking tool output/);
 });
 
 test('SystemStep uses leading bold thinking text as the thinking step title', () => {
@@ -775,6 +826,22 @@ test('ChatTranscript shows active presence timing when no progress exists yet', 
     assert.doesNotMatch(markup, /Worked/);
 });
 
+test('ChatTranscript rotates themed presence verbs from thinking status signals', () => {
+    const markup = renderActiveTranscript({
+        agentId: 'tiny',
+        isThinking: true,
+        runId: 'run-thinking',
+        sessionKey: 'agent:tiny:session-1',
+        startedAt: '2026-03-31T15:00:00.000Z',
+        statusSequence: 1,
+        text: '',
+    });
+
+    assert.match(markup, activePresenceLabelPattern);
+    assert.doesNotMatch(markup, /Deliberating/);
+    assert.doesNotMatch(markup, /Synthesizing/);
+});
+
 test('ChatTranscript identifies presence-only agent turns in multi-agent layout', () => {
     const markup = renderActiveTranscript(
         {
@@ -1258,11 +1325,13 @@ test('ChatTranscript keeps narration messages in the work log above later tools'
 
     assert.match(markup, activePresenceLabelPattern);
     assert.doesNotMatch(markup, /Worked for/);
+    assert.match(markup, /flex min-w-0 flex-col gap-3/);
+    assert.doesNotMatch(markup, /-my-1\.5/);
     assert.ok(narrationIndex >= 0 && toolIndex >= 0, 'narration and tool both render');
     assert.ok(narrationIndex < toolIndex, 'narration renders above the tool that follows it');
 });
 
-test('ChatTranscript keeps hidden reasoning out of the inline transcript', () => {
+test('ChatTranscript keeps hidden reasoning out of live presence by default', () => {
     const now = Date.now();
     const markup = renderActiveTranscript(
         {
@@ -1292,12 +1361,21 @@ test('ChatTranscript keeps hidden reasoning out of the inline transcript', () =>
 
     assert.match(markup, /Agent is thinking/);
     assert.doesNotMatch(markup, /Considering which files matter\./);
+    assert.doesNotMatch(markup, /Details/);
+    assert.doesNotMatch(markup, /data-slot="drawer-trigger"/);
 });
 
 type ChatRow = NonNullable<ChatLogOutput>['rows'][number];
 type ToolChatRow = Extract<ChatRow, { kind: 'tool' }>;
 
-function renderTranscript(rows: ChatRow[], options: { chatId?: string } = {}) {
+function renderTranscript(
+    rows: ChatRow[],
+    options: {
+        chatId?: string;
+        defaultOpenWorkGroups?: boolean;
+        showThinkingText?: boolean;
+    } = {}
+) {
     const queryClient = new QueryClient({
         defaultOptions: {
             queries: {
@@ -1317,7 +1395,13 @@ function renderTranscript(rows: ChatRow[], options: { chatId?: string } = {}) {
         <trpc.Provider client={client} queryClient={queryClient}>
             <QueryClientProvider client={queryClient}>
                 <MemoryRouter>
-                    <ChatTranscript activeReply={null} chatId={options.chatId} rows={rows} />
+                    <ChatTranscript
+                        activeReply={null}
+                        chatId={options.chatId}
+                        defaultOpenWorkGroups={options.defaultOpenWorkGroups}
+                        rows={rows}
+                        showThinkingText={options.showThinkingText}
+                    />
                 </MemoryRouter>
             </QueryClientProvider>
         </trpc.Provider>
@@ -1325,16 +1409,10 @@ function renderTranscript(rows: ChatRow[], options: { chatId?: string } = {}) {
 }
 
 function renderActiveTranscript(
-    activeReply: {
-        agentId: string;
-        isThinking: boolean;
-        runId: string;
-        sessionKey: string;
-        startedAt: string;
-        text: string;
-    },
+    activeReply: ChatActiveReply,
     rows: ChatRow[] = [],
-    conversationLayout?: { showAgentIdentity: boolean; showHumanIdentity: boolean }
+    conversationLayout?: { showAgentIdentity: boolean; showHumanIdentity: boolean },
+    options: { showThinkingText?: boolean } = {}
 ) {
     const queryClient = new QueryClient({
         defaultOptions: {
@@ -1360,6 +1438,7 @@ function renderActiveTranscript(
                         chatId="cht_test"
                         conversationLayout={conversationLayout}
                         rows={rows}
+                        showThinkingText={options.showThinkingText}
                     />
                 </MemoryRouter>
             </QueryClientProvider>

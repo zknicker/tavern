@@ -13,6 +13,7 @@ export {
     removeOptimisticStoppedTurn,
     startTimelineTurn,
     updateTimelineReply,
+    updateTimelineTurnStatus,
 } from './chat-timeline-turns.ts';
 export type {
     ChatActiveReply,
@@ -22,4 +23,5 @@ export type {
     ChatTurn,
     ChatTurnFailure,
     ChatTurnProgressStep,
+    ChatTurnStatusUpdate,
 } from './chat-timeline-types.ts';

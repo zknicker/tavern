@@ -77,6 +77,7 @@ export async function runHermesTurn(input: {
     let modelContext = resolveTurnModelContext();
     let assistantSegment: AssistantSegment | null = null;
     let assistantSegmentIndex = 0;
+    let thinkingStatusSequence = 0;
     const progressMessages: string[] = [];
     let reasoningSegment: ReasoningSegment | null = null;
     let reasoningSegmentIndex = 0;
@@ -182,6 +183,12 @@ export async function runHermesTurn(input: {
             }
 
             if (event.event === 'assistant.composing') {
+                continue;
+            }
+
+            if (event.event === 'thinking.status') {
+                thinkingStatusSequence += 1;
+                recordThinkingStatus(turn, thinkingStatusSequence);
                 continue;
             }
 
@@ -919,6 +926,15 @@ function recordReasoningProgress(
         timestamp: new Date().toISOString(),
         turn,
         type: 'turn.progress',
+    });
+}
+
+function recordThinkingStatus(turn: HermesTurn, sequence: number) {
+    publishRuntimeEvent({
+        sequence,
+        timestamp: new Date().toISOString(),
+        turn,
+        type: 'turn.statusUpdated',
     });
 }
 

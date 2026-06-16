@@ -153,6 +153,12 @@ export async function applyObservedAgentRuntimeEvent(
             debugTurnEvent(event);
             return;
         }
+        case 'turn.statusUpdated': {
+            markTurnSessionActive(event.turn.sessionKey);
+            emitObservedAgentRuntimeEvent(event);
+            debugTurnEvent(event);
+            return;
+        }
         case 'turn.steered': {
             markTurnSessionActive(event.turn.sessionKey);
             emitObservedAgentRuntimeEvent(event);
@@ -198,6 +204,7 @@ function debugTurnEvent(event: AgentRuntimeEvent) {
         case 'turn.failed':
         case 'turn.progress':
         case 'turn.replyUpdated':
+        case 'turn.statusUpdated':
         case 'turn.steered':
         case 'turn.started':
             console.info('[tavern:chat:server]', event.type, {
@@ -212,6 +219,7 @@ function debugTurnEvent(event: AgentRuntimeEvent) {
                               status: event.step.status,
                           }
                         : undefined,
+                sequence: event.type === 'turn.statusUpdated' ? event.sequence : undefined,
                 timestamp: event.timestamp,
             });
             return;

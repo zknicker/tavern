@@ -10,6 +10,7 @@ import { onChatTurnFailed } from './chat/on-turn-failed.ts';
 import { onChatTurnProgress } from './chat/on-turn-progress.ts';
 import { onChatTurnReplyUpdated } from './chat/on-turn-reply-updated.ts';
 import { onChatTurnStarted } from './chat/on-turn-started.ts';
+import { onChatTurnStatusUpdated } from './chat/on-turn-status-updated.ts';
 import { onChatUpdate } from './chat/on-update.ts';
 import { onCronUpdate } from './cron/on-update.ts';
 import { onJobsUpdate } from './jobs/on-update.ts';
@@ -38,6 +39,7 @@ export const wsRouter = createRouter({
         onTurnProgress: onChatTurnProgress,
         onTurnReplyUpdated: onChatTurnReplyUpdated,
         onTurnStarted: onChatTurnStarted,
+        onTurnStatusUpdated: onChatTurnStatusUpdated,
         onUpdate: onChatUpdate,
     }),
     jobs: createRouter({

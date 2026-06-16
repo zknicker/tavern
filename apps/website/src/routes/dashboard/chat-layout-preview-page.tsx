@@ -50,8 +50,9 @@ export function ChatLayoutPreviewPage() {
                             </div>
                             <div className="px-2 py-3">
                                 <ChatTimeline
-                                    activeReply={null}
+                                    activeReply={preview.activeReply ?? null}
                                     conversationLayout={getChatMessageLayout(preview.chat)}
+                                    defaultOpenWorkGroups={preview.defaultOpenWorkGroups}
                                     rows={preview.rows}
                                     totalMessages={0}
                                 />

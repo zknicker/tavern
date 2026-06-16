@@ -1,7 +1,12 @@
 import { debugChatEvent, markChatTiming } from '../../lib/chat-timing.ts';
 import type { ChatLogOutput } from '../../lib/trpc.tsx';
 import { patchChatLogWithProgress } from './chat-log-cache.ts';
-import type { ChatReplyUpdate, ChatTurn, ChatTurnProgressStep } from './chat-timeline-state.ts';
+import type {
+    ChatReplyUpdate,
+    ChatTurn,
+    ChatTurnProgressStep,
+    ChatTurnStatusUpdate,
+} from './chat-timeline-state.ts';
 
 export interface ChatTurnEventUtils {
     agent: {
@@ -33,6 +38,7 @@ export interface ChatTurnEventUtils {
         }) => void;
         startTurn: (turn: ChatTurn) => void;
         updateReply: (update: ChatReplyUpdate) => void;
+        updateTurnStatus: (update: ChatTurnStatusUpdate) => void;
     };
     worker: {
         list: {
@@ -161,6 +167,14 @@ export function createChatTurnEventHandlers(utils: ChatTurnEventUtils) {
                 textLength: update.text.length,
             });
             utils.timeline.updateReply(update);
+        },
+        onTurnStatusUpdated: (update: ChatTurnStatusUpdate) => {
+            debugChatEvent('turn.statusUpdated.event', {
+                chatId: update.turn.chatId,
+                runId: update.turn.runId,
+                sequence: update.sequence,
+            });
+            utils.timeline.updateTurnStatus(update);
         },
         onTurnStarted: (turn: ChatTurn) => {
             markChatTiming('client.turnStartedEvent', {

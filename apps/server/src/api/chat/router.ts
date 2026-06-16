@@ -14,6 +14,7 @@ import { onChatTurnFailed } from './on-turn-failed.ts';
 import { onChatTurnProgress } from './on-turn-progress.ts';
 import { onChatTurnReplyUpdated } from './on-turn-reply-updated.ts';
 import { onChatTurnStarted } from './on-turn-started.ts';
+import { onChatTurnStatusUpdated } from './on-turn-status-updated.ts';
 import { onChatUpdate } from './on-update.ts';
 import { sendChatMessageRoute } from './send.ts';
 import { setChatPinnedRoute } from './set-pinned.ts';
@@ -51,6 +52,7 @@ export const chatRouter = createRouter({
     onTurnProgress: onChatTurnProgress,
     onTurnReplyUpdated: onChatTurnReplyUpdated,
     onTurnStarted: onChatTurnStarted,
+    onTurnStatusUpdated: onChatTurnStatusUpdated,
     send: sendChatMessageRoute,
     setPinned: setChatPinnedRoute,
     start: startChatRoute,

@@ -35,6 +35,7 @@ export function VirtualizedChatTranscript({
     chatId,
     conversationLayout,
     currentSessionKey,
+    defaultOpenWorkGroups = false,
     failedTurn = null,
     fetchPreviousPage,
     hasPreviousPage,
@@ -52,6 +53,7 @@ export function VirtualizedChatTranscript({
     chatId?: string;
     conversationLayout: ConversationMessageLayout;
     currentSessionKey?: string | null;
+    defaultOpenWorkGroups?: boolean;
     failedTurn?: ChatTurnFailure | null;
     fetchPreviousPage?: () => void;
     hasPreviousPage: boolean;
@@ -249,6 +251,7 @@ export function VirtualizedChatTranscript({
                                 chatId={chatId}
                                 conversationLayout={conversationLayout}
                                 currentSessionKey={currentSessionKey}
+                                defaultOpenWorkGroups={defaultOpenWorkGroups}
                                 failedTurn={failedTurn}
                                 hiddenCount={hiddenCount}
                                 presenceRows={presenceRows}

@@ -27,6 +27,7 @@ export function ChatTranscript({
     chatId,
     conversationLayout = directConversationMessageLayout,
     currentSessionKey,
+    defaultOpenWorkGroups = false,
     fetchPreviousPage,
     failedTurn = null,
     hasPreviousPage = false,
@@ -35,6 +36,7 @@ export function ChatTranscript({
     isFetchingPreviousPage = false,
     rows,
     scrollViewportRef,
+    showThinkingText,
 }: {
     activeReply: ChatActiveReply | null;
     agentPresenceColor?: string | null;
@@ -42,6 +44,7 @@ export function ChatTranscript({
     chatId?: string;
     conversationLayout?: ConversationMessageLayout;
     currentSessionKey?: string | null;
+    defaultOpenWorkGroups?: boolean;
     fetchPreviousPage?: () => void;
     failedTurn?: ChatTurnFailure | null;
     hasPreviousPage?: boolean;
@@ -50,17 +53,19 @@ export function ChatTranscript({
     isFetchingPreviousPage?: boolean;
     rows: TranscriptRow[];
     scrollViewportRef?: React.RefObject<HTMLDivElement | null>;
+    showThinkingText?: boolean;
 }) {
     const chatThinkingDisplay = useChatThinkingDisplayPreference();
+    const thinkingTextVisible = showThinkingText ?? chatThinkingDisplay.enabled;
     const entries = React.useMemo(
         () =>
             buildTranscriptEntries({
                 activeReply,
                 failedTurn,
                 rows,
-                showThinkingText: chatThinkingDisplay.enabled,
+                showThinkingText: thinkingTextVisible,
             }),
-        [activeReply, chatThinkingDisplay.enabled, failedTurn, rows]
+        [activeReply, failedTurn, rows, thinkingTextVisible]
     );
     const transcriptRows = React.useMemo(
         () => buildTranscriptRenderRows(entries, hiddenCount),
@@ -112,6 +117,7 @@ export function ChatTranscript({
                 chatId={chatId}
                 conversationLayout={conversationLayout}
                 currentSessionKey={currentSessionKey}
+                defaultOpenWorkGroups={defaultOpenWorkGroups}
                 failedTurn={failedTurn}
                 fetchPreviousPage={fetchPreviousPage}
                 hasPreviousPage={hasPreviousPage}
@@ -141,6 +147,7 @@ export function ChatTranscript({
                         chatId={chatId}
                         conversationLayout={conversationLayout}
                         currentSessionKey={currentSessionKey}
+                        defaultOpenWorkGroups={defaultOpenWorkGroups}
                         failedTurn={failedTurn}
                         hiddenCount={hiddenCount}
                         key={row.id}

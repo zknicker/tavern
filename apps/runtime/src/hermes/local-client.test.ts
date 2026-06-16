@@ -1169,6 +1169,10 @@ describe('LocalHermesClient session routing', () => {
                             type: 'status.update',
                         },
                         {
+                            payload: { text: '( •_•)>⌐■-■ synthesizing...' },
+                            type: 'thinking.delta',
+                        },
+                        {
                             payload: { text: 'first thought' },
                             type: 'reasoning.delta',
                         },
@@ -1221,6 +1225,10 @@ describe('LocalHermesClient session routing', () => {
                     source_event: 'status.update',
                 },
                 event: 'assistant.status',
+            },
+            {
+                data: {},
+                event: 'thinking.status',
             },
             { data: { delta: 'first thought' }, event: 'reasoning.delta' },
             {
