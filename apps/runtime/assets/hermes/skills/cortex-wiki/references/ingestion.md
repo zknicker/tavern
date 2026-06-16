@@ -33,6 +33,11 @@ Wayback CDX snapshot sets. Treat these as **source collections**, not as
 compiled wiki content. The ingest step preserves raw sources and provenance;
 the compile step later synthesizes useful concept/topic/reference articles.
 
+Before importing any collection that could create multiple topic wikis, run the
+topic planning protocol in `references/topic-planning.md`. Directory names,
+folder leaves, note titles, and dates are source provenance, not automatic
+topic boundaries.
+
 Use collection ingestion when the user asks to import, mirror, bulk ingest,
 ingest another wiki/repository, split a dataset into per-message sources, or
 capture archived snapshots. Do not recursively crawl HTML. Use structured
@@ -45,6 +50,44 @@ upstream interfaces:
 | `mediawiki-api` | Targeted MediaWiki imports or dumpless sites | `api.php` with `allpages` + `revisions` |
 | `csv-messages` | CSV/TSV/JSON/JSONL message archives such as mailing-list exports | Python stdlib `csv`/`json`, one child source per message row/object |
 | `wayback-cdx` | Internet Archive snapshots for known URLs or URL prefixes | CDX API inventory, snapshot fetch, readability-to-markdown extraction |
+
+### Large Source Imports
+
+If the user asks to ingest, mirror, or preserve a large source, inspect enough
+of the corpus to choose broad topic wikis before writing. Do not create an
+intermediate intake topic just because the source is large.
+
+1. Inventory paths, headings, metadata, counts, and representative samples.
+2. Create or reuse the broad topic wikis implied by the corpus.
+3. Ingest each child source into its primary topic's `raw/` tree. Preserve
+   source paths, revisions, timestamps, hashes, and adapter details.
+4. When one upstream corpus splits across topics, write a subset manifest in
+   each target topic using the same collection id.
+5. Update raw indexes and `log.md`.
+6. Compile enough to make each topic navigable: source maps, collection
+   overviews, timelines, or the first supported article graph.
+7. File proposed todos for deeper synthesis, URL fetching, consolidation, or
+   topic promotion.
+
+Use a dataset manifest instead of Markdown raw files when the source is large,
+mutable, external, structured, or better queried in its native format. Do not
+create one topic per raw child source.
+
+### Vault And Folder Imports
+
+Use this path for Obsidian vaults and user-owned note folders.
+
+1. Inventory the source tree and group files by durable domain.
+2. Create a topic plan before writing. Do not create one topic per note, dated
+   journal entry, bookmark page, or folder leaf.
+3. Preserve each original relative path in raw frontmatter.
+4. Ingest each source once into its primary broad topic. Avoid duplicating the
+   same raw source across both leaf and broad topics.
+5. Compile manageable imports into real articles in the same run. For huge
+   imports, write source maps or collection overviews in the target topics and
+   file todos for deeper synthesis.
+6. File todos for URL fetching, corroboration, stale claims, or later curation
+   instead of leaving raw bookmark dumps as finished knowledge.
 
 ### Collection Manifest
 

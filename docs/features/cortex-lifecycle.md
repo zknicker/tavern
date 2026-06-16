@@ -68,6 +68,15 @@ one-hour cooldown stops runs stacking, and each compile turn ends with a
 structural pass over the wikis it changed. Agent-driven research compiles
 inline in the same run.
 
+Bulk imports add one planning step before that loop. The agent inventories the
+source tree, maps source clusters to broad topic wikis, and ingests each source
+as raw evidence in its primary topic. Source paths, dated journals, and folder
+leaves are provenance, not automatic topic boundaries. For manageable imports,
+the agent compiles useful articles in the same run. For huge imports, the first
+pass can preserve raw sources and write source maps in the target topics, with
+deeper synthesis filed as todos. A topic with only `wiki/topics/overview.md` is
+an initialization scaffold, not a completed compile.
+
 ## Staying Healthy
 
 ```

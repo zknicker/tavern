@@ -21,6 +21,22 @@ must not use archived sources to update active articles.
 
 ## The Compilation Loop
 
+### Step 0: Check Topic Fit
+
+Before writing articles, apply `references/topic-planning.md`.
+
+- If the target topic is broad enough, continue.
+- If the target topic is source-shaped, such as a single dated journal entry or
+  bookmark folder leaf, do not deepen the fragmentation. Prefer compiling into
+  an existing broader sibling when the user explicitly targeted that broader
+  wiki; otherwise file a proposed consolidation todo and keep edits minimal.
+- For huge imports, compile enough to make each target topic navigable and file
+  todos for deeper synthesis. The raw corpus can be preserved and indexed before
+  every supported article has been written.
+- Compilation is not done until the wiki has useful synthesized articles.
+  `wiki/topics/overview.md` alone is an initialization scaffold, not a compiled
+  knowledge base.
+
 ### Step 1: Survey
 
 1. Read `raw/_index.md` to see all sources
@@ -48,6 +64,17 @@ Read `wiki/_index.md` and category indexes. For each key concept:
 - **concept**: A specific, bounded idea explainable in 1-3 pages. Examples: "Transformer Architecture", "Gradient Descent", "Docker Container"
 - **topic**: A broader theme tying concepts together. Examples: "Deep Learning", "DevOps", "Functional Programming"
 - **reference**: A curated list of resources, tools, or links. Examples: "Python ML Libraries", "Transformer Paper Timeline"
+
+For source collections, favor a small article graph over one overview page:
+
+- source maps or collection inventories for huge imports
+- timeline or journal index for dated operational notes
+- entity/project pages for durable products, people, accounts, campaigns, or
+  systems
+- concept pages for recurring ideas and decision rules
+- reference pages for curated resources, command lists, taxonomies, glossaries,
+  and playbooks
+- todo records for follow-ups that need external checks or user judgment
 
 ### Step 5: Write/Update Articles
 

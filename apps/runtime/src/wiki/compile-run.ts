@@ -64,7 +64,9 @@ export function buildWikiCompilePrompt(topics: string[]): string {
     return [
         `Use the cortex-wiki skill. These topic wikis have uncompiled raw sources: ${topics.join(', ')}.`,
         'Work only with material already on disk; skip any listed topic with no remaining uncompiled sources.',
+        'Apply references/topic-planning.md before writing: do not create or reinforce one-source, source-shaped topics; if a listed topic should be consolidated into a broader wiki, file a proposed consolidation todo and keep edits minimal.',
         'Compile the new sources into wiki articles per the incremental compile workflow in references/compilation.md: synthesize rather than copy, add bidirectional See Also dual-links, update the affected _index.md files, and append a log.md entry per wiki changed.',
+        'Do not stop at an overview-only scaffold. Create or update the useful concept, entity/project, timeline, playbook, glossary, or reference articles the source set supports.',
         'If you notice work that needs new research, external fetches, or article rewrites — unverified claims, thin or single-source coverage, dedup candidates, promising sources to ingest — file it as a proposed todo record per references/todos.md instead of doing it now.',
         'Then do a quick structural pass over the wikis you changed: repair any indexes, links, or backlinks your edits affected, and re-score changed articles in .librarian/scan-results.json per the partial re-score protocol in references/librarian.md.',
         'Finish with a one-line summary.',

@@ -39,6 +39,12 @@ app launching the agent and restart. See
 
 **Topic sub-wikis are the default.** HUB is a hub — content lives in `HUB/topics/<name>/`. Each topic gets isolated indexes, sources, and articles. This keeps queries focused and prevents unrelated topics from polluting each other's search space.
 
+Topic wikis are broad durable domains, not source files. Do not mirror every
+note title, dated journal entry, bookmark category, or folder leaf into its own
+topic. For collections and vault imports, plan topic boundaries first, then
+ingest sources into the broad topics and compile articles inside them. See
+[references/topic-planning.md](references/topic-planning.md).
+
 For collection families that will grow across subjects, prefer kind-first topic
 slugs such as `memes-bitcoin`, `memes-ethereum`, `tools-bitcoin`, or
 `examples-seedqr`. Use subject-first slugs when the subject is the primary
@@ -58,23 +64,27 @@ See [references/wiki-structure.md](references/wiki-structure.md) for the complet
 
 1. **Indexes are a derived cache.** The `.md` files and their YAML frontmatter are the source of truth. `_index.md` files are a cached view rebuilt on read when stale. Always read indexes first for navigation — but before trusting one, stale-check it (file count vs row count). See [references/indexing.md](references/indexing.md) for the Derived Index Protocol.
 
-2. **Raw is immutable.** Once ingested into `raw/`, sources are never modified. They are a record of what was ingested and when. All synthesis happens in `wiki/`.
+2. **Topics are broad; sources are granular.** A topic wiki should collect a
+durable area of knowledge. A source note, dated journal, bookmark list, or
+folder leaf usually belongs in `raw/` under a broader topic.
 
-3. **Articles are synthesized, not copied.** A wiki article draws from multiple sources, contextualizes, and connects to other concepts. Think textbook, not clipboard.
+3. **Raw is immutable.** Once ingested into `raw/`, sources are never modified. They are a record of what was ingested and when. All synthesis happens in `wiki/`.
 
-4. **Dual-linking for Obsidian + agent navigation.** Cross-references use both `[[wikilink]]` (for Obsidian graph view) and standard markdown `[text](path)` (for agent navigation) on the same line: `[[slug|Name]] ([Name](../category/slug.md))`. Bidirectional when it makes sense.
+4. **Articles are synthesized, not copied.** A wiki article draws from multiple sources, contextualizes, and connects to other concepts. Think textbook, not clipboard.
 
-5. **Frontmatter is structured data.** Every `.md` file has YAML frontmatter with title, summary, tags, dates. This makes the wiki searchable without full-text scans.
+5. **Dual-linking for Obsidian + agent navigation.** Cross-references use both `[[wikilink]]` (for Obsidian graph view) and standard markdown `[text](path)` (for agent navigation) on the same line: `[[slug|Name]] ([Name](../category/slug.md))`. Bidirectional when it makes sense.
 
-6. **Incremental over wholesale.** Compilation processes only new sources by default. Full recompilation is expensive and explicit (`--full`).
+6. **Frontmatter is structured data.** Every `.md` file has YAML frontmatter with title, summary, tags, dates. This makes the wiki searchable without full-text scans.
 
-7. **Honest gaps.** When answering questions, if the wiki doesn't have the answer, say so. Never hallucinate. Suggest what to ingest to fill the gap.
+7. **Incremental over wholesale.** Compilation processes only new sources by default. Full recompilation is expensive and explicit (`--full`).
 
-8. **Multi-wiki awareness.** When querying, answer from the primary wiki first. Then peek at sibling wiki indexes (via `HUB/wikis.json`) for relevant overlap. Flag connections but never merge content across wikis.
+8. **Honest gaps.** When answering questions, if the wiki doesn't have the answer, say so. Never hallucinate. Suggest what to ingest to fill the gap.
 
-9. **Chunk large writes.** Never create files longer than ~200 lines in a single Write call — the API stream idles during large generations, causing timeout errors. Write the skeleton (frontmatter + headers + first section) first, then use sequential Edit calls to append remaining sections. For plans, articles, and raw notes: write one section per tool call.
+9. **Multi-wiki awareness.** When querying, answer from the primary wiki first. Then peek at sibling wiki indexes (via `HUB/wikis.json`) for relevant overlap. Flag connections but never merge content across wikis.
 
-10. **Archive is quiet preservation.** Archived topic wikis live under
+10. **Chunk large writes.** Never create files longer than ~200 lines in a single Write call — the API stream idles during large generations, causing timeout errors. Write the skeleton (frontmatter + headers + first section) first, then use sequential Edit calls to append remaining sections. For plans, articles, and raw notes: write one section per tool call.
+
+11. **Archive is quiet preservation.** Archived topic wikis live under
 `HUB/topics/.archive/<slug>/` and are hidden from normal semantic workflows.
 They remain structurally maintainable through explicit archive/lint operations.
 Deep queries may surface archived index matches separately, but archived content
@@ -99,12 +109,14 @@ query, use the Audit workflow instead of treating it as plain Q&A.
 Choose the smallest workflow that matches the request, then load only the
 reference material you need for that workflow:
 
-- `ingest` and `ingest-collection` → `references/ingestion.md`
+- `ingest` and `ingest-collection` → `references/topic-planning.md` and
+  `references/ingestion.md`
 - `collect` → `references/todos.md` and `references/research-infrastructure.md`
 - `todos` → `references/todos.md`
 - `dataset` → `references/datasets.md`
 - `archive` → `references/archive.md`
-- `compile` → `references/compilation.md` and `references/indexing.md`
+- `compile` → `references/topic-planning.md`, `references/compilation.md`, and
+  `references/indexing.md`
 - `query` → read the relevant `_index.md` files first, then only the articles
   needed to answer
 - `lint` → `references/linting.md`

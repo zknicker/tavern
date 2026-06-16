@@ -25,6 +25,8 @@ The layers, each with its own rules:
   archived topics as skipped, while `--include-archived` or `--archived-only`
   can structurally maintain them without creating freshness or compilation
   chores.
+- **Topic planning (C20)** — broadness and consolidation candidates for topic
+  wikis. Never auto-fixed because topic boundaries require judgment.
 
 Concretely, when evolving the schema:
 
@@ -37,7 +39,11 @@ Concretely, when evolving the schema:
 
 There is no migrate operation and there should never be one. Lint rules **are** the schema.
 
-**When editing the canonical spec** (`wiki-structure.md`, `compilation.md`, `ingestion.md`, `projects.md`, or any reference that defines paths or frontmatter fields), also update the relevant check(s) in this file — mechanical changes touch C11/C12/C13; project-model changes touch C8/C9; topic lifecycle changes touch C19.
+**When editing the canonical spec** (`topic-planning.md`, `wiki-structure.md`,
+`compilation.md`, `ingestion.md`, `projects.md`, or any reference that defines
+paths or frontmatter fields), also update the relevant check(s) in this file —
+mechanical changes touch C11/C12/C13; project-model changes touch C8/C9; topic
+lifecycle changes touch C19; topic-boundary changes touch C20.
 
 ## Severity Levels
 
@@ -426,6 +432,32 @@ Validates the hub-level archive lifecycle described in `archive.md`.
 - Do not move a topic into or out of archive during lint. Archive and restore
   are explicit lifecycle operations.
 - Do not auto-resolve active/archive collisions.
+
+### C20: Topic Granularity (Suggestion)
+
+Flags topic wikis that look like source files or folder leaves instead of broad
+durable domains. See `topic-planning.md`.
+
+- [ ] Active topic has exactly one raw source and exactly one compiled article,
+  and that article is `wiki/topics/overview.md`.
+- [ ] Active topic slug or title contains a source-like date such as
+  `YYYY-MM-DD` and has no broader article graph.
+- [ ] Several sibling topics share a prefix and differ only by date or folder
+  leaf.
+- [ ] A recent collection import created topic count close to source count.
+- [ ] A topic's config scope describes a single source, bookmark page, or
+  folder leaf instead of an ongoing research or operating area.
+
+Report a consolidation candidate naming:
+
+- the source-shaped topic(s)
+- the likely broad target topic slug
+- which raw sources should move or be re-ingested there
+- which articles should be created after consolidation
+
+**Auto-fix**: None. Do not move topics, duplicate sources, or archive leaf
+topics during lint. If the operator asks for repair, create a proposed todo
+record with the consolidation plan or carry out the explicit migration request.
 
 ## Auto-Fix Rules (when --fix is set)
 
