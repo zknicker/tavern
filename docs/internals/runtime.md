@@ -93,6 +93,11 @@ When generation writes the file, Runtime also clears unsupported legacy
 companion bootstrap files from the managed workspace. It does not clear
 `SOUL.md`.
 
+Runtime also has to pass the managed workspace as the Hermes execution context.
+Chat sessions use `session.create.cwd`; Tavern-created cron jobs use `workdir`.
+Without that context, Hermes runs but does not inject the generated `AGENTS.md`,
+including Tavern skills and visible-progress guidance.
+
 The agent's operational access to Tavern ships as the managed `tavern` skill
 (`apps/runtime/src/hermes/tavern-skill.ts`): chat reads and searches, attributed
 deliveries into chats, read-only self-configuration lookups, and the settings

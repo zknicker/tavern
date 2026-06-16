@@ -10,6 +10,8 @@ describe('LocalHermesClient session routing', () => {
     let runtimeRoot: string;
     let server: WebSocketServer | null = null;
 
+    const expectedHermesWorkspace = () => path.join(runtimeRoot, 'hermes', 'workspace');
+
     beforeEach(async () => {
         runtimeRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'tavern-hermes-client-'));
         process.env.TAVERN_RUNTIME_ROOT = runtimeRoot;
@@ -127,7 +129,10 @@ describe('LocalHermesClient session routing', () => {
         expect(requests).toEqual([
             {
                 method: 'session.create',
-                params: { title: 'agent:main:tavern:cht_1' },
+                params: {
+                    cwd: expectedHermesWorkspace(),
+                    title: 'agent:main:tavern:cht_1',
+                },
             },
             {
                 method: 'prompt.submit',
@@ -222,7 +227,10 @@ describe('LocalHermesClient session routing', () => {
         expect(requests).toEqual([
             {
                 method: 'session.create',
-                params: { title: 'agent:main:tavern:cht_1' },
+                params: {
+                    cwd: expectedHermesWorkspace(),
+                    title: 'agent:main:tavern:cht_1',
+                },
             },
             {
                 method: 'prompt.submit',
@@ -231,7 +239,10 @@ describe('LocalHermesClient session routing', () => {
             { method: 'session.close', params: { session_id: 'live-1' } },
             {
                 method: 'session.create',
-                params: { title: 'agent:main:tavern:cht_1' },
+                params: {
+                    cwd: expectedHermesWorkspace(),
+                    title: 'agent:main:tavern:cht_1',
+                },
             },
             {
                 method: 'prompt.submit',
@@ -704,7 +715,10 @@ describe('LocalHermesClient session routing', () => {
         expect(requests).toEqual([
             {
                 method: 'session.create',
-                params: { title: 'agent:main:tavern:cht_1' },
+                params: {
+                    cwd: expectedHermesWorkspace(),
+                    title: 'agent:main:tavern:cht_1',
+                },
             },
             {
                 method: 'prompt.submit',
@@ -906,7 +920,10 @@ describe('LocalHermesClient session routing', () => {
         expect(requests).toEqual([
             {
                 method: 'session.create',
-                params: { title: 'agent:main:tavern:cht_1' },
+                params: {
+                    cwd: expectedHermesWorkspace(),
+                    title: 'agent:main:tavern:cht_1',
+                },
             },
             {
                 method: 'config.set',
@@ -1420,6 +1437,8 @@ describe('LocalHermesClient adapter-owned state', () => {
     let runtimeRoot: string;
     let httpServer: ReturnType<typeof Bun.serve> | null = null;
 
+    const expectedHermesWorkspace = () => path.join(runtimeRoot, 'hermes', 'workspace');
+
     beforeEach(async () => {
         runtimeRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'tavern-hermes-state-'));
         process.env.TAVERN_RUNTIME_ROOT = runtimeRoot;
@@ -1806,13 +1825,19 @@ describe('LocalHermesClient adapter-owned state', () => {
                     name: 'Daily check',
                     prompt: 'check in',
                     schedule: 'every 1m',
+                    workdir: expectedHermesWorkspace(),
                 },
                 method: 'POST',
                 pathname: '/api/cron/jobs',
             },
             { method: 'POST', pathname: '/api/cron/jobs/hermes_job_1/pause' },
             {
-                body: { updates: { name: 'Paused daily check' } },
+                body: {
+                    updates: {
+                        name: 'Paused daily check',
+                        workdir: expectedHermesWorkspace(),
+                    },
+                },
                 method: 'PUT',
                 pathname: '/api/cron/jobs/hermes_job_1',
             },

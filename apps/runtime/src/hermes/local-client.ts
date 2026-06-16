@@ -450,6 +450,7 @@ export class LocalHermesClient extends LocalHermesUnsupportedSurfaces {
             name: input.name,
             prompt: toHermesCronPrompt(input),
             schedule: toHermesCronSchedule(input.schedule),
+            workdir: HERMES_WORKSPACE,
         });
         const job = mapHermesCronJob(created, input);
 
@@ -1199,6 +1200,7 @@ export class LocalHermesClient extends LocalHermesUnsupportedSurfaces {
             session_key?: string;
             stored_session_id?: string;
         }>('session.create', {
+            cwd: HERMES_WORKSPACE,
             title: title ?? sessionKey,
         });
         const liveSessionId = readString(created, ['session_id']);
@@ -1287,12 +1289,18 @@ function toHermesCronDeliver(delivery: AgentRuntimeCron['delivery']) {
 type CronFallback = Partial<AgentRuntimeCreateCron> & Partial<AgentRuntimeUpdateCron>;
 
 function toHermesCronUpdates(input: AgentRuntimeUpdateCron) {
-    return {
+    const updates = {
         ...(input.delivery !== undefined ? { deliver: toHermesCronDeliver(input.delivery) } : {}),
         ...(input.name ? { name: input.name } : {}),
         ...(input.payload ? { prompt: toHermesCronPrompt({ payload: input.payload }) } : {}),
         ...(input.schedule ? { schedule: toHermesCronSchedule(input.schedule) } : {}),
     };
+
+    return hasCronPatch(input) ? { ...updates, workdir: HERMES_WORKSPACE } : updates;
+}
+
+function hasCronPatch(input: AgentRuntimeUpdateCron) {
+    return Object.values(input).some((value) => value !== undefined);
 }
 
 function mapHermesCronJob(value: unknown, fallback: CronFallback = {}): AgentRuntimeCron {
