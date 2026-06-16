@@ -37,10 +37,10 @@ import {
 } from '../mentions/use-mention-composer.tsx';
 import { useChatCommandRunner } from './chat-command.ts';
 import {
-    type ChatComposerAttachment,
     ChatComposerAttachmentList,
     readComposerAttachment,
 } from './chat-composer-attachments.tsx';
+import { useChatComposerDraftState } from './chat-composer-draft-state.ts';
 import {
     type ChatComposerQueuedMessage,
     isQueuedMessageSteerable,
@@ -90,16 +90,21 @@ export function ChatMessageComposer({
     const gatewayCapability = useCapability('gateway');
     const modelList = useModelList();
     const composerQueue = useChatComposerQueue(chatId);
+    const composerDraft = useChatComposerDraftState({ boundAgentIds, chatId });
     const drainingQueueRef = React.useRef(false);
     const failedQueuedDispatchIdsRef = React.useRef(new Set<string>());
     const fileInputRef = React.useRef<HTMLInputElement | null>(null);
-    const [agentId, setAgentId] = React.useState<string>(boundAgentIds[0] ?? '');
-    const [attachments, setAttachments] = React.useState<ChatComposerAttachment[]>([]);
     const [attachmentError, setAttachmentError] = React.useState<string | null>(null);
-    const [content, setContent] = React.useState('');
-    const [editingQueuedMessageId, setEditingQueuedMessageId] = React.useState<string | null>(null);
-    const [mentions, setMentions] = React.useState<Mention[]>([]);
-    const [modelRef, setModelRef] = React.useState<string | null>(null);
+    const { agentId, attachments, content, editingQueuedMessageId, mentions, modelRef } =
+        composerDraft.draft;
+    const {
+        setAgentId,
+        setAttachments,
+        setContent,
+        setEditingQueuedMessageId,
+        setMentions,
+        setModelRef,
+    } = composerDraft;
     const allModelOptions = React.useMemo(
         () => buildChatRoutingModelOptions(modelList.data),
         [modelList.data]
@@ -144,14 +149,6 @@ export function ChatMessageComposer({
             }
         }
     }, [composerQueue.queue]);
-
-    React.useEffect(() => {
-        const nextAgentId = boundAgentIds[0] ?? '';
-
-        if (!boundAgentIds.includes(agentId)) {
-            setAgentId(nextAgentId);
-        }
-    }, [agentId, boundAgentIds]);
 
     const chatCommands = useChatCommandRunner();
     const modelCommandOptions = React.useMemo(
