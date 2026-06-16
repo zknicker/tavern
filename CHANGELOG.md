@@ -2,6 +2,32 @@
 
 All notable changes to this project will be documented in this file.
 
+## v1.4.15 - 2026-06-15
+
+Runtime floor raised to 1.4.15 for stopped-turn recovery, steered chat message
+projection, managed Cortex wiki skill naming, and model command completion.
+
+App changes:
+
+- Stabilized virtualized chat autoscroll so live replies and agent presence
+  rows stay anchored without extra scrollable bottom space.
+- Rendered steered queued messages inline and kept queued follow-up sends
+  available during new-chat handoff.
+- Show stopped turns immediately as muted chat rows instead of leaving active
+  reply state hanging.
+- Polished model command completion, mention parsing, and shared dialog, select,
+  and scroll-area interactions.
+
+Runtime changes:
+
+- Added stopped-turn chat rows and sync contracts so cancelled turns recover
+  consistently across runtime history and the app timeline.
+- Projected steered chat messages through Runtime/server chat APIs so follow-up
+  instructions render as first-class timeline entries.
+- Renamed the managed wiki skill package to Cortex wiki across Runtime assets,
+  capabilities, status, and generated workspace instructions.
+- Improved managed Hermes model route completion support used by `/model`.
+
 ## v1.4.14 - 2026-06-15
 
 Runtime floor raised to 1.4.14 for managed agent environment settings.
