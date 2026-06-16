@@ -107,7 +107,7 @@ export function AppearanceSettings() {
                 <BadgeDivider className="pb-3">App Layout</BadgeDivider>
                 <div className="overflow-hidden rounded-lg border border-border bg-card">
                     <SettingsRow
-                        description="Use a persistent left sidebar for navigation and recent chats."
+                        description="Use a sidebar for app navigation."
                         title="Side navigation"
                     >
                         <div className="flex justify-start md:justify-end">
