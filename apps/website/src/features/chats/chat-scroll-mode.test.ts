@@ -3,7 +3,6 @@ import {
     getAnchorScrollDelta,
     initialChatScrollMode,
     isNearBottom,
-    shouldVirtualizerAdjustForItem,
     transitionChatScrollMode,
 } from './chat-scroll-mode.ts';
 
@@ -101,26 +100,6 @@ describe('getAnchorScrollDelta', () => {
     test('returns null when the trigger has not moved (collapse anchored at scrollTop 0 writes nothing)', () => {
         expect(getAnchorScrollDelta({ capturedTop: 100, currentTop: 100 })).toBeNull();
         expect(getAnchorScrollDelta({ capturedTop: 100, currentTop: 100.4 })).toBeNull();
-    });
-});
-
-describe('shouldVirtualizerAdjustForItem', () => {
-    test('compensates only in free mode for items above the viewport', () => {
-        expect(
-            shouldVirtualizerAdjustForItem({ itemStart: 50, mode: 'free', scrollTop: 400 })
-        ).toBe(true);
-        expect(
-            shouldVirtualizerAdjustForItem({ itemStart: 500, mode: 'free', scrollTop: 400 })
-        ).toBe(false);
-    });
-
-    test('never compensates while following or anchored', () => {
-        expect(
-            shouldVirtualizerAdjustForItem({ itemStart: 50, mode: 'following', scrollTop: 400 })
-        ).toBe(false);
-        expect(
-            shouldVirtualizerAdjustForItem({ itemStart: 50, mode: 'anchored', scrollTop: 400 })
-        ).toBe(false);
     });
 });
 

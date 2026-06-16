@@ -6,21 +6,17 @@ import {
 } from '@tanstack/react-virtual';
 import * as React from 'react';
 import type { ChatActiveReply, ChatTurnFailure } from '../../hooks/chats/chat-timeline-state.ts';
-import { SessionLogHiddenCount } from '../sessions/session-log-hidden-count.tsx';
 import { ActiveReplyLayoutSyncProvider } from './active-reply-layout-sync.tsx';
-import {
-    type ConversationMessageLayout,
-    type TranscriptRow,
-    transcriptEntryUsesActiveReply,
-} from './chat-transcript-model.ts';
+import type { ConversationMessageLayout, TranscriptRow } from './chat-transcript-model.ts';
 import {
     getEstimatedTranscriptRowSize,
     type TranscriptRenderRow,
+    transcriptRenderRowUsesActiveReply,
 } from './chat-transcript-row-model.ts';
-import { TranscriptEntryRow } from './chat-transcript-rows.tsx';
-import { useChatScrollControllerHandle } from './use-chat-scroll-controller.ts';
+import { TranscriptRenderRowView } from './chat-transcript-rows.tsx';
 
 const previousPageScrollThreshold = 160;
+const transcriptScrollEndThreshold = 72;
 
 export function VirtualizedChatTranscript({
     activeReply,
@@ -53,11 +49,12 @@ export function VirtualizedChatTranscript({
     rows: TranscriptRenderRow[];
     scrollViewportRef: React.RefObject<HTMLDivElement | null>;
 }) {
-    const scrollController = useChatScrollControllerHandle();
     const activeRowElementRef = React.useRef<HTMLDivElement | null>(null);
     const virtualizer = useVirtualizer<HTMLDivElement, HTMLDivElement>({
+        anchorTo: 'end',
         count: rows.length,
         estimateSize: (index) => getEstimatedTranscriptRowSize(rows[index]),
+        followOnAppend: true,
         getItemKey: (index) => rows[index]?.id ?? index,
         getScrollElement: () => scrollViewportRef.current,
         initialOffset: () =>
@@ -75,22 +72,36 @@ export function VirtualizedChatTranscript({
             return measureVirtualElement(element, entry, instance);
         },
         overscan: 8,
+        scrollEndThreshold: transcriptScrollEndThreshold,
     });
+    const tailFollowKey = getVirtualizedTranscriptTailFollowKey(rows, activeReply);
+    const scrollToEndIfNearEnd = React.useCallback(() => {
+        if (virtualizer.isAtEnd(transcriptScrollEndThreshold)) {
+            virtualizer.scrollToEnd({ behavior: 'auto' });
+        }
+    }, [virtualizer]);
     const syncActiveReplyLayout = React.useCallback(() => {
         const activeRowElement = activeRowElementRef.current;
+        const shouldFollowEnd = virtualizer.isAtEnd(transcriptScrollEndThreshold);
 
         if (activeRowElement) {
             virtualizer.measureElement(activeRowElement);
         }
+
+        if (shouldFollowEnd) {
+            virtualizer.scrollToEnd({ behavior: 'auto' });
+        }
     }, [virtualizer]);
-    // The scroll controller decides when item-resize compensation is safe:
-    // only while the user reads scrolled-up history. While following or
-    // anchored, the controller owns the position and compensating as well
-    // makes the two fight during animated collapses.
-    virtualizer.shouldAdjustScrollPositionOnItemSizeChange = (item) =>
-        scrollController ? scrollController.shouldVirtualizerAdjust(item.start) : false;
     const virtualItems = virtualizer.getVirtualItems();
     const firstEntryIndex = virtualItems.find((item) => rows[item.index]?.kind === 'entry')?.index;
+
+    React.useLayoutEffect(() => {
+        if (tailFollowKey.length === 0) {
+            return;
+        }
+
+        scrollToEndIfNearEnd();
+    }, [scrollToEndIfNearEnd, tailFollowKey]);
 
     React.useEffect(() => {
         const viewport = scrollViewportRef.current;
@@ -134,35 +145,29 @@ export function VirtualizedChatTranscript({
                         return null;
                     }
 
-                    const usesActiveReply = transcriptRowUsesActiveReply(row, activeReply);
+                    const measuresActiveReply = transcriptRowUsesActiveReply(row, activeReply);
+                    const rendersActiveReply = transcriptRenderRowUsesActiveReply(row, activeReply);
 
                     return (
                         <TranscriptVirtualRow
                             activeRowElementRef={activeRowElementRef}
                             key={virtualItem.key}
-                            usesActiveReply={usesActiveReply}
+                            usesActiveReply={measuresActiveReply}
                             virtualItem={virtualItem}
                             virtualizer={virtualizer}
                         >
-                            {row.kind === 'hiddenCount' ? (
-                                <SessionLogHiddenCount hiddenCount={hiddenCount} />
-                            ) : (
-                                <TranscriptEntryRow
-                                    activeReply={
-                                        transcriptEntryUsesActiveReply(row.entry, activeReply)
-                                            ? activeReply
-                                            : null
-                                    }
-                                    agentPresenceColor={agentPresenceColor}
-                                    animateMessages={animateMessages}
-                                    chatId={chatId}
-                                    conversationLayout={conversationLayout}
-                                    currentSessionKey={currentSessionKey}
-                                    failedTurn={failedTurn}
-                                    presenceRows={presenceRows}
-                                    row={row}
-                                />
-                            )}
+                            <TranscriptRenderRowView
+                                activeReply={rendersActiveReply ? activeReply : null}
+                                agentPresenceColor={agentPresenceColor}
+                                animateMessages={animateMessages}
+                                chatId={chatId}
+                                conversationLayout={conversationLayout}
+                                currentSessionKey={currentSessionKey}
+                                failedTurn={failedTurn}
+                                hiddenCount={hiddenCount}
+                                presenceRows={presenceRows}
+                                row={row}
+                            />
                         </TranscriptVirtualRow>
                     );
                 })}
@@ -218,7 +223,27 @@ export function transcriptRowUsesActiveReply(
     row: TranscriptRenderRow | undefined,
     activeReply: ChatActiveReply | null
 ) {
-    return row?.kind === 'entry' && transcriptEntryUsesActiveReply(row.entry, activeReply);
+    return (
+        row?.kind === 'entry' &&
+        row.entry.kind === 'turn' &&
+        Boolean(activeReply) &&
+        row.entry.items.some((item) => item.kind === 'activeReply')
+    );
+}
+
+export function getVirtualizedTranscriptTailFollowKey(
+    rows: TranscriptRenderRow[],
+    activeReply: ChatActiveReply | null
+) {
+    const tailRowIds = rows
+        .slice(-3)
+        .map((row) => row.id)
+        .join('|');
+    const activeReplyState = activeReply
+        ? `${activeReply.runId}:${activeReply.completedAt ?? 'live'}`
+        : 'idle';
+
+    return `${tailRowIds || 'none'}:${activeReplyState}`;
 }
 
 export function shouldLoadPreviousVirtualizedChatPage({

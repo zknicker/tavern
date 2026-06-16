@@ -76,15 +76,3 @@ export function getAnchorScrollDelta(positions: { capturedTop: number; currentTo
 
     return Math.abs(delta) >= anchorWriteThresholdPx ? delta : null;
 }
-
-// Virtualizer scroll compensation for items resizing above the viewport is
-// only valid in free mode: while following, bottom-follow owns the position
-// (compensating as well makes the two fight during animated collapses), and
-// while anchored, the anchor owns it.
-export function shouldVirtualizerAdjustForItem(input: {
-    itemStart: number;
-    mode: ChatScrollMode;
-    scrollTop: number;
-}) {
-    return input.mode === 'free' && input.itemStart < input.scrollTop;
-}

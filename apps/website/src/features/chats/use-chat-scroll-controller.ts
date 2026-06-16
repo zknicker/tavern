@@ -5,7 +5,6 @@ import {
     getAnchorScrollDelta,
     initialChatScrollMode,
     isNearBottom,
-    shouldVirtualizerAdjustForItem,
     transitionChatScrollMode,
 } from './chat-scroll-mode.ts';
 
@@ -19,8 +18,6 @@ const anchorFallbackMs = 600;
 // the virtualizer) so they reach the controller without window events.
 export interface ChatScrollControllerHandle {
     beginAnchor: (trigger: HTMLElement) => void;
-    pinBottomIfFollowing: () => void;
-    shouldVirtualizerAdjust: (itemStart: number) => boolean;
 }
 
 const ChatScrollControllerContext = React.createContext<ChatScrollControllerHandle | null>(null);
@@ -41,10 +38,12 @@ interface ActiveAnchor {
 export function useChatScrollController({
     enabled,
     followKey,
+    followContentResizes = true,
     initialScrollKey,
 }: {
     enabled: boolean;
     followKey?: string | null;
+    followContentResizes?: boolean;
     initialScrollKey?: string | null;
 }) {
     const viewportRef = React.useRef<HTMLDivElement | null>(null);
@@ -78,17 +77,6 @@ export function useChatScrollController({
         },
         [dispatch, writeScrollToBottom]
     );
-
-    const pinBottomIfFollowing = React.useCallback(() => {
-        const transition = dispatch({ type: 'contentResized' });
-
-        if (transition.action !== 'pinBottom') {
-            return;
-        }
-
-        writeScrollToBottom('auto');
-        setIsAtBottom(true);
-    }, [dispatch, writeScrollToBottom]);
 
     const clearAnchor = React.useCallback(() => {
         const anchor = anchorRef.current;
@@ -246,7 +234,7 @@ export function useChatScrollController({
     // bottom. This also settles the initial virtualized render — estimated
     // sizes correct themselves through resizes until the true bottom holds.
     React.useEffect(() => {
-        if (!enabled || typeof ResizeObserver === 'undefined') {
+        if (!(enabled && followContentResizes) || typeof ResizeObserver === 'undefined') {
             return;
         }
 
@@ -267,7 +255,7 @@ export function useChatScrollController({
         observer.observe(content);
 
         return () => observer.disconnect();
-    }, [dispatch, enabled, writeScrollToBottom]);
+    }, [dispatch, enabled, followContentResizes, writeScrollToBottom]);
 
     React.useLayoutEffect(() => {
         if (enabled && modeRef.current === 'following') {
@@ -292,22 +280,8 @@ export function useChatScrollController({
     const handle = React.useMemo<ChatScrollControllerHandle>(
         () => ({
             beginAnchor,
-            pinBottomIfFollowing,
-            shouldVirtualizerAdjust: (itemStart: number) => {
-                const viewport = viewportRef.current;
-
-                if (!viewport) {
-                    return false;
-                }
-
-                return shouldVirtualizerAdjustForItem({
-                    itemStart,
-                    mode: modeRef.current,
-                    scrollTop: viewport.scrollTop,
-                });
-            },
         }),
-        [beginAnchor, pinBottomIfFollowing]
+        [beginAnchor]
     );
 
     return {

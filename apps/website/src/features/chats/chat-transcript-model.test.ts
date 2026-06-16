@@ -40,6 +40,7 @@ test('buildTranscriptEntries keeps thinking rows inside the agent turn', () => {
     const entries = buildTranscriptEntries({
         activeReply: null,
         rows,
+        showThinkingText: true,
     });
 
     expect(entries).toHaveLength(1);
@@ -58,6 +59,29 @@ test('buildTranscriptEntries keeps thinking rows inside the agent turn', () => {
                   : item.kind
         )
     ).toEqual(['tool', 'system:thinking', 'message']);
+});
+
+test('buildTranscriptEntries keeps hidden thinking out of the main transcript', () => {
+    const entries = buildTranscriptEntries({
+        activeReply: {
+            agentId: 'agent-1',
+            isThinking: true,
+            runId: 'run-1',
+            sessionKey: 'session-1',
+            startedAt: '2026-05-11T16:00:00.000Z',
+            text: '',
+        },
+        rows: [thinkingRow('thinking-1')],
+        showThinkingText: false,
+    });
+
+    expect(entries).toHaveLength(1);
+
+    if (entries[0]?.kind !== 'turn') {
+        throw new Error('Expected agent turn entry.');
+    }
+
+    expect(entries[0].items.map((item) => item.kind)).toEqual(['activeStatus']);
 });
 
 test('buildTranscriptEntries keeps runtime notices as standalone system entries', () => {

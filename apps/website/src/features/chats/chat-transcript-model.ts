@@ -188,8 +188,12 @@ function buildTranscriptItems(input: {
         )
             ? input.activeReply
             : null;
-    const items: TranscriptItem[] = input.rows.map((row) => {
-        return { kind: 'row', row };
+    const items: TranscriptItem[] = input.rows.flatMap((row) => {
+        if (input.showThinkingText === false && isThinkingRow(row)) {
+            return [];
+        }
+
+        return [{ kind: 'row', row }];
     });
     const activeReplyText = activeReply?.text?.trim() ?? '';
 
@@ -229,6 +233,10 @@ function hasStoppedTurnRow(rows: TranscriptRow[], runId: string) {
             row.systemKind === 'turnStatus' &&
             row.turnStatus.runId === runId
     );
+}
+
+function isThinkingRow(row: TranscriptRow) {
+    return row.kind === 'system' && row.systemKind === 'thinking';
 }
 
 /**

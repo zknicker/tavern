@@ -43,7 +43,6 @@ import type {
 } from './chat-transcript-model.ts';
 import { getItemSessionKey, isActivityBackedMessageRow } from './chat-transcript-model.ts';
 import { RuntimeNoticeEntry } from './chat-transcript-system-step.tsx';
-import { useChatScrollControllerHandle } from './use-chat-scroll-controller.ts';
 import { useRevealedText } from './use-revealed-text.ts';
 
 const rowClassName = 'relative w-full px-3 py-1.5';
@@ -85,29 +84,21 @@ const activePresenceVerbs = [
 
 export function TranscriptEntryView({
     activeReply,
-    agentPresenceColor,
     animateMessages,
     chatId,
     conversationLayout,
     currentSessionKey,
     entry,
-    failedTurn,
     followsRuntimeNotice,
-    presenceRows,
-    showAgentPresence,
     turnStartedAt,
 }: {
     activeReply: ChatActiveReply | null;
-    agentPresenceColor?: string | null;
     animateMessages: boolean;
     chatId?: string;
     conversationLayout: ConversationMessageLayout;
     currentSessionKey?: string | null;
     entry: TranscriptEntry;
-    failedTurn?: ChatTurnFailure | null;
     followsRuntimeNotice?: boolean;
-    presenceRows: TranscriptRow[];
-    showAgentPresence: boolean;
     turnStartedAt?: string | null;
 }) {
     if (entry.kind === 'system') {
@@ -147,18 +138,104 @@ export function TranscriptEntryView({
     return (
         <AgentTurn
             activeReply={activeReply}
-            agentPresenceColor={agentPresenceColor ?? null}
             chatId={chatId}
             currentSessionKey={currentSessionKey}
             entry={entry}
-            failedTurn={failedTurn ?? null}
             followsRuntimeNotice={Boolean(followsRuntimeNotice)}
             layout={conversationLayout}
-            presenceRows={presenceRows}
-            showPresence={showAgentPresence}
             turnStartedAt={turnStartedAt}
         />
     );
+}
+
+export function AgentPresenceTranscriptRow({
+    activeReply,
+    agentPresenceColor,
+    conversationLayout,
+    entry,
+    failedTurn,
+    presenceRows,
+    turnStartedAt,
+}: {
+    activeReply: ChatActiveReply | null;
+    agentPresenceColor: string | null;
+    conversationLayout: ConversationMessageLayout;
+    entry: Extract<TranscriptEntry, { kind: 'turn' }>;
+    failedTurn: ChatTurnFailure | null;
+    presenceRows: TranscriptRow[];
+    turnStartedAt?: string | null;
+}) {
+    const actorProfile = useActorProfile(entry.actor);
+    const chatThinkingDisplay = useChatThinkingDisplayPreference();
+    const items = getVisibleAgentItems({
+        items: entry.items,
+        showThinkingText: chatThinkingDisplay.enabled,
+    });
+    const lastMessage = getLastMessage(items);
+    const turnActive = isActiveTurn(items, activeReply, lastMessage);
+    const activityItems = items.filter(isActivityItem);
+    const displayName = actorProfile?.name ?? getTurnFallbackName(entry) ?? 'Agent';
+    const presenceOnlyTurn = items.every((item) => item.kind === 'activeStatus');
+    // While live, anchor the active timer to the turn start so it does
+    // not reset when the first tool activity lands. Completed turns keep the
+    // eyes but no timing text.
+    const workStart = turnActive
+        ? (turnStartedAt ?? getActivityStart(activityItems) ?? entry.timestamp)
+        : (getActivityStart(activityItems) ?? turnStartedAt ?? entry.timestamp);
+    const presenceNow = usePresenceNow(turnActive, workStart);
+    const presenceTimingLabel = turnActive
+        ? getAgentPresenceTimingLabel({
+              now: presenceNow,
+              start: workStart,
+              verb: getActivePresenceVerb(activeReply?.runId ?? entry.id),
+          })
+        : null;
+    const presence = (
+        <AgentPresenceRow
+            label={presenceTimingLabel}
+            presence={
+                <AgentPresenceIndicator
+                    activeReply={activeReply}
+                    className="translate-y-px"
+                    color={actorProfile?.primaryColor ?? agentPresenceColor}
+                    failedTurn={failedTurn}
+                    rows={presenceRows}
+                    size={agentPresenceSize}
+                />
+            }
+        />
+    );
+
+    if (conversationLayout.showAgentIdentity) {
+        return (
+            <div className={cn(rowClassName, presenceOnlyTurn ? newTurnGapClassName : null)}>
+                <div className="grid grid-cols-[2rem_minmax(0,1fr)] gap-x-2.5">
+                    {presenceOnlyTurn ? (
+                        <div className="flex justify-center pt-5">
+                            <AgentAvatar
+                                avatar={actorProfile?.avatar ?? displayName}
+                                backgroundColor={actorProfile?.primaryColor ?? '#64748b'}
+                                className="size-6 shrink-0"
+                                name={displayName}
+                            />
+                        </div>
+                    ) : (
+                        <div aria-hidden="true" />
+                    )}
+                    <div className="min-w-0">
+                        {presenceOnlyTurn ? (
+                            <div className="mb-1.5 min-w-0 truncate font-medium text-[0.8125rem] text-muted-foreground/80 leading-none">
+                                {displayName}
+                            </div>
+                        ) : null}
+                        {presence}
+                    </div>
+                </div>
+            </div>
+        );
+    }
+
+    return <div className={rowClassName}>{presence}</div>;
 }
 
 function UserTurn({
@@ -226,27 +303,19 @@ function UserTurn({
 
 function AgentTurn({
     activeReply,
-    agentPresenceColor,
     chatId,
     currentSessionKey,
     entry,
-    failedTurn,
     followsRuntimeNotice,
     layout,
-    presenceRows,
-    showPresence,
     turnStartedAt,
 }: {
     activeReply: ChatActiveReply | null;
-    agentPresenceColor: string | null;
     chatId?: string;
     currentSessionKey?: string | null;
     entry: Extract<TranscriptEntry, { kind: 'turn' }>;
-    failedTurn: ChatTurnFailure | null;
     followsRuntimeNotice: boolean;
     layout: ConversationMessageLayout;
-    presenceRows: TranscriptRow[];
-    showPresence: boolean;
     turnStartedAt?: string | null;
 }) {
     const actorProfile = useActorProfile(entry.actor);
@@ -262,31 +331,6 @@ function AgentTurn({
     const segments = groupAgentItems(items);
     const visibleSegments = segments.filter((segment) => !isActiveStatusSegment(segment));
     const turnActive = isActiveTurn(items, activeReply, lastMessage);
-    const activityItems = items.filter(isActivityItem);
-    // While live, anchor the active timer to the turn start so it does
-    // not reset when the first tool activity lands. Completed turns keep the
-    // eyes but no timing text.
-    const workStart = turnActive
-        ? (turnStartedAt ?? getActivityStart(activityItems) ?? entry.timestamp)
-        : (getActivityStart(activityItems) ?? turnStartedAt ?? entry.timestamp);
-    const presenceNow = usePresenceNow(turnActive, workStart);
-    const presenceTimingLabel = turnActive
-        ? getAgentPresenceTimingLabel({
-              now: presenceNow,
-              start: workStart,
-              verb: getActivePresenceVerb(activeReply?.runId ?? entry.id),
-          })
-        : null;
-    const presence = showPresence ? (
-        <AgentPresenceIndicator
-            activeReply={activeReply}
-            className="translate-y-px"
-            color={actorProfile?.primaryColor ?? agentPresenceColor}
-            failedTurn={failedTurn}
-            rows={presenceRows}
-            size={agentPresenceSize}
-        />
-    ) : null;
     return (
         <div
             className={cn(
@@ -331,9 +375,6 @@ function AgentTurn({
                             ))}
                         </div>
                     </div>
-                    {presence ? (
-                        <AgentPresenceRow label={presenceTimingLabel} presence={presence} />
-                    ) : null}
                 </div>
             </div>
         </div>
@@ -348,7 +389,7 @@ function AgentPresenceRow({
     presence: React.ReactNode;
 }) {
     return (
-        <div className="mt-3 flex h-8 min-w-0 items-center gap-2 overflow-visible text-muted-foreground/65 text-sm leading-5">
+        <div className="flex h-8 min-w-0 items-center gap-2 overflow-visible text-muted-foreground/65 text-sm leading-5">
             {presence}
             {label ? (
                 <span className="thinking-indicator-text flex min-h-8 items-center truncate tabular-nums">
@@ -562,7 +603,6 @@ function AssistantNarrationText({ item }: { item: TranscriptItem }) {
 
 function ActiveReplyText({ item }: { item: Extract<TranscriptItem, { kind: 'activeReply' }> }) {
     const syncActiveReplyLayout = useActiveReplyLayoutSync();
-    const scrollController = useChatScrollControllerHandle();
     const revealedText = useRevealedText(
         getActiveReplyDisplayText(item.reply.text ?? ''),
         !item.reply.completedAt
@@ -570,7 +610,6 @@ function ActiveReplyText({ item }: { item: Extract<TranscriptItem, { kind: 'acti
 
     React.useLayoutEffect(() => {
         syncActiveReplyLayout?.();
-        scrollController?.pinBottomIfFollowing();
     });
 
     return (

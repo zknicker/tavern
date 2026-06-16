@@ -62,6 +62,7 @@ export function ChatDetailFrame({
     const initialScrollKey = isInitialTranscriptPending ? null : `${chatId}:${location.key}`;
     const chatScroll = useChatScrollController({
         enabled: !isInitialTranscriptPending && hasTimelineContent,
+        followContentResizes: !enableVirtualization,
         followKey,
         initialScrollKey,
     });

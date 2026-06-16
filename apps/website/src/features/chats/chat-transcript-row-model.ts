@@ -1,16 +1,21 @@
 import { formatDayLabel } from '../../components/ui/day-divider.tsx';
 import type { TranscriptEntry } from './chat-transcript-model.ts';
-import { getItemSessionKey } from './chat-transcript-model.ts';
+import { getItemSessionKey, transcriptEntryUsesActiveReply } from './chat-transcript-model.ts';
 
 export type TranscriptRenderRow =
     | { id: 'hidden-count'; kind: 'hiddenCount' }
+    | { id: string; kind: 'dayDivider'; label: string }
     | {
-          dayLabel: string | null;
           entry: TranscriptEntry;
           followsRuntimeNotice: boolean;
           id: string;
-          isLatestAgentEntry: boolean;
           kind: 'entry';
+          turnStartedAt: string | null;
+      }
+    | {
+          entry: Extract<TranscriptEntry, { kind: 'turn' }>;
+          id: string;
+          kind: 'presence';
           turnStartedAt: string | null;
       };
 
@@ -29,16 +34,38 @@ export function buildTranscriptRenderRows(entries: TranscriptEntry[], hiddenCoun
         const timestamp = entry.timestamp;
         const dayKey = getDayKey(timestamp);
         const showDayDivider = dayKey !== null && dayKey !== previousDayKey;
+        const turnStartedAt = getAgentTurnStartedAt(previousEntry, entry);
 
-        rows.push({
-            dayLabel: showDayDivider && timestamp ? formatDayLabel(timestamp) : null,
-            entry,
-            followsRuntimeNotice: isRuntimeNoticeEntry(previousEntry),
-            id: entry.id,
-            isLatestAgentEntry: entry.id === latestAgentEntryId,
-            kind: 'entry',
-            turnStartedAt: getAgentTurnStartedAt(previousEntry, entry),
-        });
+        if (showDayDivider && timestamp) {
+            rows.push({
+                id: `day:${dayKey}`,
+                kind: 'dayDivider',
+                label: formatDayLabel(timestamp),
+            });
+        }
+
+        if (shouldRenderTranscriptEntry(entry)) {
+            rows.push({
+                entry,
+                followsRuntimeNotice: isRuntimeNoticeEntry(previousEntry),
+                id: entry.id,
+                kind: 'entry',
+                turnStartedAt,
+            });
+        }
+
+        if (
+            entry.kind === 'turn' &&
+            entry.participant === 'agent' &&
+            entry.id === latestAgentEntryId
+        ) {
+            rows.push({
+                entry,
+                id: `presence:${entry.id}`,
+                kind: 'presence',
+                turnStartedAt,
+            });
+        }
 
         if (dayKey !== null) {
             previousDayKey = dayKey;
@@ -65,6 +92,14 @@ export function getEstimatedTranscriptRowSize(row: TranscriptRenderRow | undefin
         return 32;
     }
 
+    if (row.kind === 'dayDivider') {
+        return 36;
+    }
+
+    if (row.kind === 'presence') {
+        return 44;
+    }
+
     if (row.entry.kind === 'system') {
         return 48;
     }
@@ -78,6 +113,25 @@ export function getEstimatedTranscriptRowSize(row: TranscriptRenderRow | undefin
     }
 
     return 180;
+}
+
+export function transcriptRenderRowUsesActiveReply(
+    row: TranscriptRenderRow | undefined,
+    activeReply: Parameters<typeof transcriptEntryUsesActiveReply>[1]
+) {
+    if (!row || row.kind === 'hiddenCount' || row.kind === 'dayDivider') {
+        return false;
+    }
+
+    return transcriptEntryUsesActiveReply(row.entry, activeReply);
+}
+
+function shouldRenderTranscriptEntry(entry: TranscriptEntry) {
+    if (entry.kind !== 'turn' || entry.participant !== 'agent') {
+        return true;
+    }
+
+    return entry.items.some((item) => item.kind !== 'activeStatus');
 }
 
 function isActiveStatusOnlyAgentEntry(entry: TranscriptEntry) {

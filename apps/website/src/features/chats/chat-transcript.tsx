@@ -2,15 +2,16 @@ import * as React from 'react';
 import type { ChatActiveReply, ChatTurnFailure } from '../../hooks/chats/chat-timeline-state.ts';
 import { useChatThinkingDisplayPreference } from '../../hooks/chats/use-chat-thinking-display-preference.ts';
 import { markChatTiming } from '../../lib/chat-timing.ts';
-import { SessionLogHiddenCount } from '../sessions/session-log-hidden-count.tsx';
 import {
     buildTranscriptEntries,
     type ConversationMessageLayout,
     type TranscriptRow,
-    transcriptEntryUsesActiveReply,
 } from './chat-transcript-model.ts';
-import { buildTranscriptRenderRows } from './chat-transcript-row-model.ts';
-import { TranscriptEntryRow } from './chat-transcript-rows.tsx';
+import {
+    buildTranscriptRenderRows,
+    transcriptRenderRowUsesActiveReply,
+} from './chat-transcript-row-model.ts';
+import { TranscriptRenderRowView } from './chat-transcript-rows.tsx';
 import { VirtualizedChatTranscript } from './virtualized-chat-transcript.tsx';
 
 const directConversationMessageLayout: ConversationMessageLayout = {
@@ -120,12 +121,11 @@ export function ChatTranscript({
 
     return (
         <>
-            <SessionLogHiddenCount hiddenCount={hiddenCount} />
             {transcriptRows.map((row) =>
-                row.kind === 'entry' ? (
-                    <TranscriptEntryRow
+                row.kind === 'hiddenCount' && hiddenCount === 0 ? null : (
+                    <TranscriptRenderRowView
                         activeReply={
-                            transcriptEntryUsesActiveReply(row.entry, activeReply)
+                            transcriptRenderRowUsesActiveReply(row, activeReply)
                                 ? activeReply
                                 : null
                         }
@@ -135,11 +135,12 @@ export function ChatTranscript({
                         conversationLayout={conversationLayout}
                         currentSessionKey={currentSessionKey}
                         failedTurn={failedTurn}
+                        hiddenCount={hiddenCount}
                         key={row.id}
                         presenceRows={rows}
                         row={row}
                     />
-                ) : null
+                )
             )}
         </>
     );

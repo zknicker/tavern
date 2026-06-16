@@ -777,6 +777,43 @@ test('ChatTranscript shows active presence timing when no progress exists yet', 
     assert.doesNotMatch(markup, /Worked/);
 });
 
+test('ChatTranscript identifies presence-only agent turns in multi-agent layout', () => {
+    const markup = renderActiveTranscript(
+        {
+            agentId: 'tiny',
+            isThinking: true,
+            runId: 'run-thinking',
+            sessionKey: 'agent:tiny:session-1',
+            startedAt: '2026-03-31T15:00:00.000Z',
+            text: '',
+        },
+        [],
+        { showAgentIdentity: true, showHumanIdentity: false }
+    );
+
+    assert.match(markup, />Agent</);
+    assert.match(markup, activePresenceLabelPattern);
+});
+
+test('ChatTranscript avoids duplicate agent identity beside visible presence rows', () => {
+    const markup = renderActiveTranscript(
+        {
+            agentId: 'tiny',
+            isThinking: false,
+            runId: 'run-replying',
+            sessionKey: 'agent:tiny:session-1',
+            startedAt: '2026-03-31T15:00:00.000Z',
+            text: 'Replying now.',
+        },
+        [],
+        { showAgentIdentity: true, showHumanIdentity: false }
+    );
+
+    assert.equal(markup.match(/>Agent</g)?.length, 1);
+    assert.equal(markup.match(/grid-cols-\[2rem_minmax\(0,1fr\)\]/g)?.length, 2);
+    assert.match(markup, /Agent is replying/);
+});
+
 test('ChatTranscript keeps empty non-thinking replies in the presence slot only', () => {
     const markup = renderActiveTranscript({
         agentId: 'tiny',
@@ -1297,7 +1334,8 @@ function renderActiveTranscript(
         startedAt: string;
         text: string;
     },
-    rows: ChatRow[] = []
+    rows: ChatRow[] = [],
+    conversationLayout?: { showAgentIdentity: boolean; showHumanIdentity: boolean }
 ) {
     const queryClient = new QueryClient({
         defaultOptions: {
@@ -1318,7 +1356,12 @@ function renderActiveTranscript(
         <trpc.Provider client={client} queryClient={queryClient}>
             <QueryClientProvider client={queryClient}>
                 <MemoryRouter>
-                    <ChatTranscript activeReply={activeReply} chatId="cht_test" rows={rows} />
+                    <ChatTranscript
+                        activeReply={activeReply}
+                        chatId="cht_test"
+                        conversationLayout={conversationLayout}
+                        rows={rows}
+                    />
                 </MemoryRouter>
             </QueryClientProvider>
         </trpc.Provider>

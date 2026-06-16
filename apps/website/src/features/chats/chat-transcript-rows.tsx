@@ -1,6 +1,7 @@
 import * as React from 'react';
 import { DayDivider } from '../../components/ui/day-divider.tsx';
 import type { ChatActiveReply, ChatTurnFailure } from '../../hooks/chats/chat-timeline-state.ts';
+import { SessionLogHiddenCount } from '../sessions/session-log-hidden-count.tsx';
 import type {
     ConversationMessageLayout,
     TranscriptActor,
@@ -9,9 +10,9 @@ import type {
     TranscriptRow,
 } from './chat-transcript-model.ts';
 import type { TranscriptRenderRow } from './chat-transcript-row-model.ts';
-import { TranscriptEntryView } from './chat-transcript-turn.tsx';
+import { AgentPresenceTranscriptRow, TranscriptEntryView } from './chat-transcript-turn.tsx';
 
-interface TranscriptEntryRowProps {
+interface TranscriptRenderRowViewProps {
     activeReply: ChatActiveReply | null;
     agentPresenceColor?: string | null;
     animateMessages: boolean;
@@ -19,14 +20,15 @@ interface TranscriptEntryRowProps {
     conversationLayout: ConversationMessageLayout;
     currentSessionKey?: string | null;
     failedTurn?: ChatTurnFailure | null;
+    hiddenCount: number;
     presenceRows: TranscriptRow[];
-    row: Extract<TranscriptRenderRow, { kind: 'entry' }>;
+    row: TranscriptRenderRow;
 }
 
 // Entry and item wrappers are rebuilt on every streaming update, but the
 // underlying row objects keep their identity. Comparing structurally lets
 // historical rows skip re-rendering while text streams into the live turn.
-export const TranscriptEntryRow = React.memo(
+export const TranscriptRenderRowView = React.memo(
     ({
         activeReply,
         agentPresenceColor = null,
@@ -35,41 +37,60 @@ export const TranscriptEntryRow = React.memo(
         conversationLayout,
         currentSessionKey,
         failedTurn = null,
+        hiddenCount,
         presenceRows,
         row,
-    }: TranscriptEntryRowProps) => (
-        <>
-            {row.dayLabel ? <DayDivider className="mx-3 mt-3 mb-1" label={row.dayLabel} /> : null}
+    }: TranscriptRenderRowViewProps) => {
+        if (row.kind === 'hiddenCount') {
+            return <SessionLogHiddenCount hiddenCount={hiddenCount} />;
+        }
+
+        if (row.kind === 'dayDivider') {
+            return <DayDivider className="mx-3 mt-3 mb-1" label={row.label} />;
+        }
+
+        if (row.kind === 'presence') {
+            return (
+                <AgentPresenceTranscriptRow
+                    activeReply={activeReply}
+                    agentPresenceColor={agentPresenceColor}
+                    conversationLayout={conversationLayout}
+                    entry={row.entry}
+                    failedTurn={failedTurn}
+                    presenceRows={presenceRows}
+                    turnStartedAt={row.turnStartedAt}
+                />
+            );
+        }
+
+        return (
             <TranscriptEntryView
                 activeReply={activeReply}
-                agentPresenceColor={agentPresenceColor}
                 animateMessages={animateMessages}
                 chatId={chatId}
                 conversationLayout={conversationLayout}
                 currentSessionKey={currentSessionKey}
                 entry={row.entry}
-                failedTurn={failedTurn}
                 followsRuntimeNotice={row.followsRuntimeNotice}
-                presenceRows={presenceRows}
-                showAgentPresence={row.isLatestAgentEntry}
                 turnStartedAt={row.turnStartedAt}
             />
-        </>
-    ),
-    areTranscriptEntryRowPropsEqual
+        );
+    },
+    areTranscriptRenderRowViewPropsEqual
 );
 
-TranscriptEntryRow.displayName = 'TranscriptEntryRow';
+TranscriptRenderRowView.displayName = 'TranscriptRenderRowView';
 
-function areTranscriptEntryRowPropsEqual(
-    previous: TranscriptEntryRowProps,
-    next: TranscriptEntryRowProps
+function areTranscriptRenderRowViewPropsEqual(
+    previous: TranscriptRenderRowViewProps,
+    next: TranscriptRenderRowViewProps
 ) {
     return (
         previous.activeReply === next.activeReply &&
         previous.animateMessages === next.animateMessages &&
         previous.chatId === next.chatId &&
         previous.currentSessionKey === next.currentSessionKey &&
+        previous.hiddenCount === next.hiddenCount &&
         arePresencePropsEqual(previous, next) &&
         previous.conversationLayout.showAgentIdentity ===
             next.conversationLayout.showAgentIdentity &&
@@ -79,8 +100,11 @@ function areTranscriptEntryRowPropsEqual(
     );
 }
 
-function arePresencePropsEqual(previous: TranscriptEntryRowProps, next: TranscriptEntryRowProps) {
-    if (!(previous.row.isLatestAgentEntry || next.row.isLatestAgentEntry)) {
+function arePresencePropsEqual(
+    previous: TranscriptRenderRowViewProps,
+    next: TranscriptRenderRowViewProps
+) {
+    if (!(previous.row.kind === 'presence' || next.row.kind === 'presence')) {
         return true;
     }
 
@@ -92,14 +116,36 @@ function arePresencePropsEqual(previous: TranscriptEntryRowProps, next: Transcri
 }
 
 function areRenderRowsEqual(
-    previous: TranscriptEntryRowProps['row'],
-    next: TranscriptEntryRowProps['row']
+    previous: TranscriptRenderRowViewProps['row'],
+    next: TranscriptRenderRowViewProps['row']
 ) {
+    if (previous.kind !== next.kind || previous.id !== next.id) {
+        return false;
+    }
+
+    if (previous.kind === 'hiddenCount' || next.kind === 'hiddenCount') {
+        return true;
+    }
+
+    if (previous.kind === 'dayDivider' || next.kind === 'dayDivider') {
+        return (
+            previous.kind === 'dayDivider' &&
+            next.kind === 'dayDivider' &&
+            previous.label === next.label
+        );
+    }
+
+    if (previous.kind === 'presence' || next.kind === 'presence') {
+        return (
+            previous.kind === 'presence' &&
+            next.kind === 'presence' &&
+            previous.turnStartedAt === next.turnStartedAt &&
+            areEntriesEqual(previous.entry, next.entry)
+        );
+    }
+
     return (
-        previous.id === next.id &&
-        previous.dayLabel === next.dayLabel &&
         previous.followsRuntimeNotice === next.followsRuntimeNotice &&
-        previous.isLatestAgentEntry === next.isLatestAgentEntry &&
         previous.turnStartedAt === next.turnStartedAt &&
         areEntriesEqual(previous.entry, next.entry)
     );
