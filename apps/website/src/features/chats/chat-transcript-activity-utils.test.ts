@@ -33,6 +33,18 @@ test('active work group header still shows the current running tool synopsis', (
     expect(label).toBe('Running bun test');
 });
 
+test('active work label treats approval as a normal tool', () => {
+    const label = getActiveWorkLabel([
+        toolItem({
+            name: 'approval',
+            running: true,
+            summaryParts: ["curl -L --silent 'https://duckduckgo.com/html/?q=site%3Anasa.gov'"],
+        }),
+    ]);
+
+    expect(label).toBe("Using curl -L --silent 'https://duckduckgo.com/html/?q=site%3Anasa.gov'");
+});
+
 test('active work label never echoes a bare tool name as the target', () => {
     const command = getActiveWorkLabel([
         toolItem({ label: 'terminal', name: 'terminal', running: true, summaryParts: [] }),

@@ -230,10 +230,11 @@ function activityEventToRuntimeEvents(
     >
 ): PersistedRuntimeEvent[] {
     const turn = activityToTurn(event.activity);
+    const detail = activityStepDetail(event.activity);
     const runtimeEvent: AgentRuntimeEvent = {
         step: {
             clarification: clarificationFromActivity(event.activity) ?? undefined,
-            detail: event.activity.detail,
+            detail,
             id: event.activity.id,
             kind: activityKind(event.activity),
             label: event.activity.title,
@@ -247,6 +248,16 @@ function activityEventToRuntimeEvents(
     };
 
     return [{ cursor: Number(event.cursor), event: runtimeEvent }];
+}
+
+function activityStepDetail(activity: TavernResponseActivity) {
+    if (activity.kind !== 'approval') {
+        return activity.detail;
+    }
+
+    const tool = isRecord(activity.metadata.tool) ? activity.metadata.tool : {};
+    const argumentsValue = isRecord(tool.arguments) ? tool.arguments : {};
+    return readRequiredString(argumentsValue.command) ?? activity.detail;
 }
 
 function messageToTurn(

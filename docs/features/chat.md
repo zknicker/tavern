@@ -193,11 +193,11 @@ that also patch live through `turn.progress` steps:
   workers count toward live group labels ("Working on …"). Rollups stay in
   metadata for Stats.
 * **Tool approvals.** A pending approval prompt records an `approval`
-  activity and renders as a tool row with inline Approve/Deny actions
-  (`chat.approval.respond` → Runtime → engine gateway). The row shows the
-  waiting shimmer until the agent resumes; approving runs the command once,
-  denying blocks it. An unanswered prompt times out engine-side and the turn
-  continues as denied.
+  activity and renders in chat as a normal tool row using the requested
+  command as its label. The blocking approval surface owns Approve/Deny
+  choices (`chat.approval.respond` → Runtime → engine gateway). Approving
+  runs the command once; denying blocks it. An unanswered prompt times out
+  engine-side and the turn continues as denied.
 * **Clarifications.** A mid-turn agent question records as activity named
   `clarify` and renders with inline answer controls. The row supports choices,
   free-text Other answers, Skip, and a Runtime-owned timeout shorter than the

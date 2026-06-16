@@ -44,9 +44,8 @@ export function WorkingLog({
     const now = useNow(isActive && start !== null, start);
     const activeSeconds = isActive ? formatActiveActivitySeconds({ now, start }) : null;
     const thinkingOnly = isThinkingOnly(items);
-    const firstPendingApprovalId = findFirstPendingApprovalId(items);
     const firstPendingClarificationId = findFirstPendingClarificationId(items);
-    const hasPendingPrompt = Boolean(firstPendingApprovalId ?? firstPendingClarificationId);
+    const hasPendingPrompt = Boolean(firstPendingClarificationId);
     const defaultOpen = groupMode
         ? hasPendingPrompt
         : isActive || (!thinkingOnly && hasNarration(items));
@@ -148,7 +147,6 @@ export function WorkingLog({
                     {items.map((item, index) => (
                         <ActivityStep
                             animateEnter={isActive}
-                            canRespondToApproval={item.row.id === firstPendingApprovalId}
                             canRespondToClarification={item.row.id === firstPendingClarificationId}
                             chatId={chatId}
                             currentSessionKey={currentSessionKey}
@@ -162,18 +160,6 @@ export function WorkingLog({
             </ThinkingSteps>
         </ToolRowHoverRoot>
     );
-}
-
-function findFirstPendingApprovalId(items: ActivityItem[]) {
-    const item = items.find(
-        (candidate) =>
-            candidate.row.kind === 'tool' &&
-            candidate.row.toolCall.name.trim().toLowerCase() === 'approval' &&
-            !candidate.row.completedAt &&
-            !hasErrorStatus(candidate.row.toolCall.status)
-    );
-
-    return item?.row.id ?? null;
 }
 
 function findFirstPendingClarificationId(items: ActivityItem[]) {

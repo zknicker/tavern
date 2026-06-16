@@ -193,15 +193,17 @@ export function getActiveWorkLabel(items: ActivityItem[]) {
 
         if (item.row.kind === 'tool') {
             const name = item.row.toolCall.name.trim();
-            if (name.toLowerCase() === 'clarify') {
+            const normalizedName = name.toLowerCase();
+
+            if (normalizedName === 'clarify') {
                 return 'Needs an answer';
             }
             const target =
                 item.row.toolCall.summaryParts.join(' ').trim() ||
                 item.row.toolCall.label?.trim() ||
                 name;
-            const isCommand = matchesAny(name.toLowerCase(), commandToolNames);
-            const isEdit = isEditTool(name.toLowerCase());
+            const isCommand = matchesAny(normalizedName, commandToolNames);
+            const isEdit = isEditTool(normalizedName);
             const verb = isCommand ? 'Running' : isEdit ? 'Editing' : 'Using';
 
             // A target that is just the tool's internal name is not intent;

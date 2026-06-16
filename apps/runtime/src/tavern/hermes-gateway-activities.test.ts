@@ -174,6 +174,7 @@ describe('Hermes gateway activity recorder', () => {
             patternKey: 'rm -rf',
         });
         expect(lastProjectedStep()).toMatchObject({
+            detail: 'rm -rf build',
             kind: 'approval',
             status: 'active',
             toolName: 'approval',

@@ -70,19 +70,23 @@ renderer — the label is shared by chat rows, group headers, and the live
 
 ## Worked example: tool approvals
 
-The approval row (`tool-steps/approval-tool-step.tsx`, registered as
-`approval`) shows the full custom-renderer shape:
+Approval prompts intentionally use the normal tool-row renderer. The blocking
+approval surface owns the user's choice, so the chat timeline stays an
+execution log instead of a second approval UI:
 
 1. The runtime records a pending prompt as an `approval` activity with the
    command and reason in `metadata.tool.arguments`
    (`apps/runtime/src/tavern/hermes-gateway-activities.ts`).
 2. The activity projects as a tool row named `approval` (durable) and an
    `approval` progress step (live), both with the same row id.
-3. The renderer composes `ToolTimelineStep` + `InlineToolLabel` for the
-   shimmer/drawer behavior and adds Approve/Deny buttons as row children
-   while the row is running. The buttons call `chat.approval.respond`, which
-   reaches the engine gateway through the Runtime session approval endpoint.
-4. The runtime completes the activity when the agent resumes, which flips the
+3. `buildToolSummaryFromValues` summarizes the row with the command rather
+   than the approval reason, so group headers and rows show the action the
+   agent requested.
+4. The row falls through to `GenericToolStep`, inheriting the standard
+   running shimmer, drawer behavior, and status colors. The separate blocking
+   approval surface calls `chat.approval.respond`, which reaches the engine
+   gateway through the Runtime session approval endpoint.
+5. The runtime completes the activity when the agent resumes, which flips the
    row to its settled state everywhere without app-side bookkeeping.
 
 ## Worked example: clarifications

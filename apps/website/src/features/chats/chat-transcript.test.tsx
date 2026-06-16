@@ -418,19 +418,16 @@ test('ToolStep shimmers running tool rows like the thinking indicator', () => {
     assert.match(markup, />Using</);
 });
 
-test('ChatTranscript exposes approval actions only on the oldest pending approval', () => {
-    const markup = renderTranscript(
-        [
-            pendingApprovalRow('approval-1', 'rm -rf build'),
-            pendingApprovalRow('approval-2', 'deploy production'),
-        ],
-        { chatId: 'cht_1' }
+test('ToolStep renders approval rows as ordinary tool rows', () => {
+    const markup = renderToStaticMarkup(
+        <ToolStep index={0} isLast row={pendingApprovalRow('approval-1', 'rm -rf build')} />
     );
 
-    assert.equal(countMatches(markup, />Approve</g), 1);
-    assert.equal(countMatches(markup, />Deny</g), 1);
+    assert.match(markup, />Using</);
     assert.match(markup, /rm -rf build/);
-    assert.match(markup, /deploy production/);
+    assert.doesNotMatch(markup, />Approve</);
+    assert.doesNotMatch(markup, />Deny</);
+    assert.doesNotMatch(markup, /Needs approval/);
 });
 
 test('ToolStep keeps older tool rows inspectable when call id is missing', () => {
@@ -1298,6 +1295,7 @@ test('ChatTranscript keeps hidden reasoning out of the inline transcript', () =>
 });
 
 type ChatRow = NonNullable<ChatLogOutput>['rows'][number];
+type ToolChatRow = Extract<ChatRow, { kind: 'tool' }>;
 
 function renderTranscript(rows: ChatRow[], options: { chatId?: string } = {}) {
     const queryClient = new QueryClient({
@@ -1369,7 +1367,7 @@ function renderActiveTranscript(
     );
 }
 
-function pendingApprovalRow(id: string, command: string): ChatRow {
+function pendingApprovalRow(id: string, command: string): ToolChatRow {
     return {
         actor: { id: 'tiny', kind: 'agent' },
         completedAt: null,

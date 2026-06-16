@@ -91,6 +91,23 @@ test('buildToolSummaryFromValues keeps multi-line shell output out of summaryPar
     );
 });
 
+test('buildToolSummaryFromValues summarizes approvals by command instead of description', () => {
+    const summary = buildToolSummaryFromValues({
+        argumentsValue: {
+            command: "curl -L --silent 'https://duckduckgo.com/html/?q=site%3Anasa.gov'",
+            description: 'Security scan — [HIGH] Invalid characters in hostname.',
+        },
+        callId: 'call-approval',
+        isError: false,
+        name: 'approval',
+        resultValue: null,
+    });
+
+    assert.deepEqual(summary.summaryParts, [
+        "curl -L --silent 'https://duckduckgo.com/html/?q=site%3Anasa.gov'",
+    ]);
+});
+
 test('buildToolSummaryFromValues summarizes search tools as pattern in path', () => {
     const summary = buildToolSummaryFromValues({
         argumentsValue: {
