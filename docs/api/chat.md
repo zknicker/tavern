@@ -304,6 +304,11 @@ Clients open activity detail surfaces by stable activity id:
 durable activity used by timeline rendering, including runtime tool metadata and
 artifact links.
 
+Approval activity metadata carries `approval.command`, optional
+`approval.description`, and optional pattern keys. Chat timeline tool rows
+project this as `approval` so clients can show the exact command in approval
+prompts while keeping row labels concise.
+
 Activity ids are global Tavern ids. Updating an activity id that belongs to a
 different chat or response is a contract error. Runtime adapters must include
 turn identity when their source item ids can repeat across turns.

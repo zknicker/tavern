@@ -71,18 +71,24 @@ renderer — the label is shared by chat rows, group headers, and the live
 ## Worked example: tool approvals
 
 The approval row (`tool-steps/approval-tool-step.tsx`, registered as
-`approval`) shows the full custom-renderer shape:
+`approval`) keeps the pending request visible as work-log evidence while the
+interactive answer surface lives in the chat footer
+(`chat-approval-prompt.tsx`):
 
 1. The runtime records a pending prompt as an `approval` activity with the
    command and reason in `metadata.tool.arguments`
    (`apps/runtime/src/tavern/hermes-gateway-activities.ts`).
 2. The activity projects as a tool row named `approval` (durable) and an
    `approval` progress step (live), both with the same row id.
-3. The renderer composes `ToolTimelineStep` + `InlineToolLabel` for the
-   shimmer/drawer behavior and adds Approve/Deny buttons as row children
-   while the row is running. The buttons call `chat.approval.respond`, which
-   reaches the engine gateway through the Runtime session approval endpoint.
-4. The runtime completes the activity when the agent resumes, which flips the
+3. The row renderer composes `ToolTimelineStep` + `InlineToolLabel` for the
+   shimmer/drawer behavior without inline action buttons. The chat footer
+   derives the oldest pending approval from loaded chat rows, previews the
+   command from `row.approval.command`, overlays the prompt bar, blocks the
+   composer, and renders `AskUserQuestions` with once, session, always, and
+   deny choices.
+4. The footer prompt calls `chat.approval.respond`, which reaches the engine
+   gateway through the Runtime session approval endpoint.
+5. The runtime completes the activity when the agent resumes, which flips the
    row to its settled state everywhere without app-side bookkeeping.
 
 ## Worked example: clarifications

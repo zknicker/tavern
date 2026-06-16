@@ -16,6 +16,7 @@ import {
 import { ChatComposerQueuePanel } from '../../features/chats/chat-composer-queue-panel.tsx';
 import { getChatMessageLayout } from '../../features/chats/chat-message-layout.ts';
 import { ChatTimeline } from '../../features/chats/chat-timeline.tsx';
+import { ApprovalFlowMotionPreview } from './chat-approval-flow-preview.tsx';
 import { chatComposerQueuePreviews, chatLayoutPreviews } from './chat-layout-preview-data.ts';
 
 export function ChatLayoutPreviewPage() {
@@ -50,6 +51,7 @@ export function ChatLayoutPreviewPage() {
                         </section>
                     ))}
                 </div>
+                <ApprovalFlowMotionPreview />
                 <div className="grid gap-4 xl:grid-cols-2">
                     {chatComposerQueuePreviews.map((preview) => (
                         <section

@@ -16,6 +16,7 @@ export interface AskUserQuestionOption {
 
 export interface AskUserQuestion {
     allowOther?: boolean;
+    description?: React.ReactNode;
     id: string;
     options: AskUserQuestionOption[];
     skippable?: boolean;
@@ -37,6 +38,7 @@ export function AskUserQuestions({
     onComplete,
     onSkip,
     questions,
+    showProgress = true,
     skipLabel = 'Skip',
 }: {
     className?: string;
@@ -45,10 +47,12 @@ export function AskUserQuestions({
     onComplete: (answer: AskUserQuestionAnswer) => void;
     onSkip?: (question: AskUserQuestion) => void;
     questions: AskUserQuestion[];
+    showProgress?: boolean;
     skipLabel?: string;
 }) {
     const question = questions[currentIndex];
     const titleId = React.useId();
+    const descriptionId = React.useId();
     const rowsContainerRef = React.useRef<HTMLFieldSetElement>(null);
     const {
         activeIndex,
@@ -148,17 +152,28 @@ export function AskUserQuestions({
                 className
             )}
         >
-            <div className="px-5 pt-5 pb-2 text-[13px] text-muted-foreground leading-none">
-                Question {currentIndex + 1} of {questions.length}
-            </div>
-            <div className="px-5 pb-1">
+            {showProgress ? (
+                <div className="px-5 pt-5 pb-2 text-[13px] text-muted-foreground leading-none">
+                    Question {currentIndex + 1} of {questions.length}
+                </div>
+            ) : null}
+            <div className={cn('px-5 pb-1', !showProgress && 'pt-5')}>
                 <h3 className="font-semibold text-[16px] text-foreground leading-snug" id={titleId}>
                     {question.title}
                 </h3>
             </div>
+            {question.description ? (
+                <div
+                    className="px-5 pt-1 pb-2 text-[13px] text-muted-foreground leading-snug"
+                    id={descriptionId}
+                >
+                    {question.description}
+                </div>
+            ) : null}
             <div className="px-5 pb-2.5">
                 {question.options.length > 0 ? (
                     <fieldset
+                        aria-describedby={question.description ? descriptionId : undefined}
                         aria-labelledby={titleId}
                         className="relative m-0 -mx-3 flex min-w-0 flex-col gap-0.5 border-0 p-0"
                         ref={rowsContainerRef}
@@ -198,6 +213,7 @@ export function AskUserQuestions({
                 ) : null}
                 {question.options.length === 0 ? (
                     <fieldset
+                        aria-describedby={question.description ? descriptionId : undefined}
                         aria-labelledby={titleId}
                         className="relative m-0 -mx-3 flex min-w-0 flex-col gap-0.5 border-0 p-0"
                         ref={rowsContainerRef}

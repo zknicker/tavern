@@ -49,11 +49,13 @@ export function ChatComposerAgentSelector({
     agentId,
     agents,
     boundAgentIds,
+    disabled = false,
     onAgentChange,
 }: {
     agentId: string;
     agents: AgentListOutput['agents'];
     boundAgentIds: string[];
+    disabled?: boolean;
     onAgentChange: (agentId: string) => void;
 }) {
     const boundAgents = boundAgentIds.map((boundAgentId) => getAgentOption(agents, boundAgentId));
@@ -63,6 +65,7 @@ export function ChatComposerAgentSelector({
             {boundAgentIds.length > 1 ? (
                 <div className="min-w-0">
                     <Select
+                        disabled={disabled}
                         onValueChange={(value) => value && onAgentChange(value)}
                         value={agentId}
                     >

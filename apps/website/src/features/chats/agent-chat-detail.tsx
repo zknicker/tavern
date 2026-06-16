@@ -11,6 +11,12 @@ import { useChatVirtualizationPreference } from '../../hooks/chats/use-chat-virt
 import { useChatRuntimeTimelineState } from '../../hooks/chats/use-timeline-context.tsx';
 import { useModelList } from '../../hooks/models/use-model-list.ts';
 import { MissingAgentState } from '../agents/missing-agent-state.tsx';
+import {
+    ChatApprovalFlow,
+    ChatApprovalFlowComposer,
+    ChatApprovalPrompt,
+    getPendingChatApprovalPrompt,
+} from './chat-approval-prompt.tsx';
 import { getChatContextFullness } from './chat-context-fullness.ts';
 import { ChatDetailFrame } from './chat-detail-frame.tsx';
 import { ChatDraftDetail } from './chat-draft-detail.tsx';
@@ -192,6 +198,11 @@ function SyncedAgentChatDetail({
         limit: chatDetailLogLimit,
     });
     const rows = timeline.rows;
+    const pendingApprovalPrompt = getPendingChatApprovalPrompt(rows);
+    const hasPendingApprovalPrompt = pendingApprovalPrompt !== null;
+    const pendingApprovalBlockReason = hasPendingApprovalPrompt
+        ? 'Respond to the pending approval before sending another message.'
+        : null;
     const totalMessages = timeline.totalMessages;
     const contextFullness = modelsQuery.data
         ? getChatContextFullness({
@@ -217,26 +228,34 @@ function SyncedAgentChatDetail({
             failedTurn={timeline.failedTurn}
             fetchPreviousPage={timeline.fetchPreviousPage}
             footer={
-                <ChatMessageComposer
-                    activeRunId={timeline.activeTurn?.runId ?? timeline.activeReply?.runId ?? null}
-                    agentRuntimeSyncLabel={chat.agentRuntimeSyncLabel}
-                    agents={agents}
-                    boundAgentIds={chat.boundAgentIds}
-                    canSend={chat.canSend}
-                    chatId={chat.id}
-                    contextFullness={contextFullness}
-                    isDisabled={chat.isDisabled}
-                    isReplyActive={isBlockingActiveTurn({
-                        activeReply: timeline.activeReply,
-                        activeTurn: timeline.activeTurn,
-                        agentsPending: agentsQuery.isPending,
-                    })}
-                    steerRunId={getSteerableRunId({
-                        activeReply: timeline.activeReply,
-                        activeTurn: timeline.activeTurn,
-                        rows,
-                    })}
-                />
+                <ChatApprovalFlow active={hasPendingApprovalPrompt}>
+                    <ChatApprovalPrompt chatId={chat.id} prompt={pendingApprovalPrompt} />
+                    <ChatApprovalFlowComposer>
+                        <ChatMessageComposer
+                            activeRunId={
+                                timeline.activeTurn?.runId ?? timeline.activeReply?.runId ?? null
+                            }
+                            agentRuntimeSyncLabel={chat.agentRuntimeSyncLabel}
+                            agents={agents}
+                            blockReason={pendingApprovalBlockReason}
+                            boundAgentIds={chat.boundAgentIds}
+                            canSend={chat.canSend}
+                            chatId={chat.id}
+                            contextFullness={contextFullness}
+                            isDisabled={chat.isDisabled}
+                            isReplyActive={isBlockingActiveTurn({
+                                activeReply: timeline.activeReply,
+                                activeTurn: timeline.activeTurn,
+                                agentsPending: agentsQuery.isPending,
+                            })}
+                            steerRunId={getSteerableRunId({
+                                activeReply: timeline.activeReply,
+                                activeTurn: timeline.activeTurn,
+                                rows,
+                            })}
+                        />
+                    </ChatApprovalFlowComposer>
+                </ChatApprovalFlow>
             }
             hasPreviousPage={timeline.hasPreviousPage}
             historyLoaded={timeline.historyLoaded}
