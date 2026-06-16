@@ -2,6 +2,25 @@
 
 All notable changes to this project will be documented in this file.
 
+## v1.4.16 - 2026-06-16
+
+Runtime floor raised to 1.4.16 for managed Hermes workspace context.
+
+App changes:
+
+- Stabilized chat presence motion, virtualized scroll restoration, and composer
+  draft preservation across chat navigation.
+- Added missing model provider icons and polished sidebar chat actions,
+  settings controls, and Appearance copy.
+
+Runtime changes:
+
+- Passed the managed workspace to Hermes chat sessions and Tavern-created cron
+  jobs so generated `AGENTS.md` instructions, Tavern skills, Cortex wiki skills,
+  and visible-progress guidance are injected into agent work.
+- Improved Cortex wiki topic-planning guidance for ingestion, compilation,
+  linting, and librarian runs.
+
 ## v1.4.15 - 2026-06-15
 
 Runtime floor raised to 1.4.15 for stopped-turn recovery, steered chat message
