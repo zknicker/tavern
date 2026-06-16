@@ -15,6 +15,8 @@ export function useChatCommandRunner() {
     const runCommand = trpc.agent.runCommand.useMutation();
 
     return {
+        isRunning: runCommand.isPending,
+        isBareModelCommand,
         matchCommand(content: string) {
             return matchChatCommand(content, catalog.data?.commands ?? []);
         },
@@ -36,6 +38,10 @@ export function useChatCommandRunner() {
             await utils.chat.log.list.invalidate().catch(() => undefined);
         },
     };
+}
+
+export function isBareModelCommand(content: string) {
+    return /^\/model\s*$/iu.test(content.trim());
 }
 
 export function matchChatCommand(

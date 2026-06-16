@@ -38,6 +38,21 @@ describe('mention text helpers', () => {
         expect(getActiveMentionQuery('/usr/local', 10)).toBeNull();
     });
 
+    it('keeps /model argument completion active after the command name', () => {
+        expect(getActiveMentionQuery('/model ', 7)).toEqual({
+            end: 7,
+            query: 'model ',
+            start: 0,
+            trigger: '/',
+        });
+        expect(getActiveMentionQuery('/model gpt', 10)).toEqual({
+            end: 10,
+            query: 'model gpt',
+            start: 0,
+            trigger: '/',
+        });
+    });
+
     it('keeps mention offsets aligned when text changes before the mention', () => {
         const mentions = [
             {

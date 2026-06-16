@@ -4,15 +4,29 @@ import { Dialog as DialogPrimitive } from '@base-ui/react/dialog';
 import { mergeProps } from '@base-ui/react/merge-props';
 import { useRender } from '@base-ui/react/use-render';
 import { Cancel01Icon } from '@hugeicons-pro/core-stroke-rounded';
+import { motion } from 'framer-motion';
 import type React from 'react';
+import { springs } from '../../lib/springs.ts';
 import { cn } from '../../lib/utils.ts';
 import { Icon } from './icon.tsx';
 import { Button } from './primitives/button.tsx';
 import { ScrollArea } from './scroll-area.tsx';
+import { SurfaceProvider, surfaceClasses, useSurface } from './surface.tsx';
 
 export const DialogCreateHandle: typeof DialogPrimitive.createHandle = DialogPrimitive.createHandle;
 
-export const Dialog: typeof DialogPrimitive.Root = DialogPrimitive.Root;
+const dialogSurfaceOffset = 4;
+
+export function Dialog({ onOpenChange, ...props }: DialogPrimitive.Root.Props): React.ReactElement {
+    return (
+        <DialogPrimitive.Root
+            onOpenChange={(open, eventDetails) => {
+                onOpenChange?.(open, eventDetails);
+            }}
+            {...props}
+        />
+    );
+}
 
 export const DialogPortal: typeof DialogPrimitive.Portal = DialogPrimitive.Portal;
 
@@ -30,11 +44,24 @@ export function DialogBackdrop({
 }: DialogPrimitive.Backdrop.Props): React.ReactElement {
     return (
         <DialogPrimitive.Backdrop
-            className={cn(
-                'fixed inset-0 z-50 bg-black/32 backdrop-blur-sm transition-all duration-200 data-ending-style:opacity-0 data-starting-style:opacity-0',
-                className
-            )}
             data-slot="dialog-backdrop"
+            render={(backdropProps, state) => {
+                const restProps = stripDialogMotionEventProps(backdropProps);
+
+                return (
+                    <motion.div
+                        {...restProps}
+                        animate={{ opacity: state.transitionStatus === 'ending' ? 0 : 1 }}
+                        className={cn('fixed inset-0 z-50 bg-black/40 dark:bg-black/80', className)}
+                        initial={{ opacity: 0 }}
+                        transition={
+                            state.transitionStatus === 'ending'
+                                ? dialogExitTransition
+                                : springs.slow
+                        }
+                    />
+                );
+            }}
             {...props}
         />
     );
@@ -61,36 +88,67 @@ export function DialogContent({
     children,
     showCloseButton = true,
     closeProps,
+    size = 'sm',
     ...props
-}: DialogPrimitive.Popup.Props & {
+}: Omit<DialogPrimitive.Popup.Props, 'render'> & {
     showCloseButton?: boolean;
     closeProps?: DialogPrimitive.Close.Props;
+    size?: 'sm' | 'lg';
 }): React.ReactElement {
+    const substrate = useSurface();
+    const dialogLevel = Math.min(substrate + dialogSurfaceOffset, 8);
+
     return (
         <DialogPortal>
             <DialogBackdrop />
             <DialogViewport>
                 <DialogPrimitive.Popup
-                    className={cn(
-                        'relative row-start-2 flex max-h-full min-h-0 w-full min-w-0 max-w-lg origin-center flex-col rounded-2xl border bg-popover not-dark:bg-clip-padding text-popover-foreground opacity-[calc(1-var(--nested-dialogs))] shadow-lg/5 outline-none transition-[scale,opacity,translate] duration-200 ease-in-out will-change-transform before:pointer-events-none before:absolute before:inset-0 before:rounded-[calc(var(--radius-2xl,1rem)-1px)] before:shadow-[0_1px_--theme(--color-black/4%)] data-ending-style:opacity-0 data-starting-style:opacity-0 sm:scale-[calc(1-0.1*var(--nested-dialogs))] sm:data-ending-style:scale-98 sm:data-starting-style:scale-98 dark:before:shadow-[0_-1px_--theme(--color-white/6%)]',
-                        className
-                    )}
                     data-slot="dialog-popup"
+                    render={(popupProps, state) => {
+                        const restProps = stripDialogMotionEventProps(popupProps);
+
+                        return (
+                            <motion.div
+                                {...restProps}
+                                animate={{
+                                    opacity: state.transitionStatus === 'ending' ? 0 : 1,
+                                    scale: state.transitionStatus === 'ending' ? 0.97 : 1,
+                                }}
+                                className={cn(
+                                    'relative row-start-2 flex max-h-full min-h-0 w-[calc(100%-2rem)] min-w-0 origin-center flex-col rounded-2xl text-popover-foreground outline-none',
+                                    surfaceClasses(dialogLevel),
+                                    'p-6',
+                                    size === 'sm' && 'max-w-[400px]',
+                                    size === 'lg' && 'max-w-[540px]',
+                                    className
+                                )}
+                                initial={{ opacity: 0, scale: 0.97 }}
+                                transition={
+                                    state.transitionStatus === 'ending'
+                                        ? dialogExitTransition
+                                        : springs.slow
+                                }
+                            >
+                                <SurfaceProvider value={dialogLevel}>
+                                    {children}
+                                    {showCloseButton && (
+                                        <DialogPrimitive.Close
+                                            aria-label="Close"
+                                            className="absolute top-3 right-3"
+                                            render={
+                                                <Button size="icon-sm" variant="ghost">
+                                                    <Icon className="size-4" icon={Cancel01Icon} />
+                                                </Button>
+                                            }
+                                            {...closeProps}
+                                        />
+                                    )}
+                                </SurfaceProvider>
+                            </motion.div>
+                        );
+                    }}
                     {...props}
-                >
-                    {children}
-                    {showCloseButton && (
-                        <DialogPrimitive.Close
-                            aria-label="Close"
-                            className="absolute end-3 top-3"
-                            render={<Button size="sm" variant="secondary" />}
-                            {...closeProps}
-                        >
-                            <Icon className="size-5" icon={Cancel01Icon} />
-                            Close
-                        </DialogPrimitive.Close>
-                    )}
-                </DialogPrimitive.Popup>
+                />
             </DialogViewport>
         </DialogPortal>
     );
@@ -102,10 +160,7 @@ export function DialogHeader({
     ...props
 }: useRender.ComponentProps<'div'>): React.ReactElement {
     const defaultProps = {
-        className: cn(
-            'flex flex-col gap-1 px-6 py-5 pe-28 in-[[data-slot=dialog-popup]:has([data-slot=dialog-panel])]:pb-3 max-sm:pb-4',
-            className
-        ),
+        className: cn('mb-4 flex flex-col gap-1.5 pe-10', className),
         'data-slot': 'dialog-header',
     };
 
@@ -126,10 +181,9 @@ export function DialogFooter({
 }): React.ReactElement {
     const defaultProps = {
         className: cn(
-            'flex flex-col-reverse gap-2 px-6 sm:flex-row sm:justify-end sm:rounded-b-[calc(var(--radius-2xl,1rem)-1px)]',
-            variant === 'default' && 'border-t bg-muted/72 py-3.5',
-            variant === 'bare' &&
-                'in-[[data-slot=dialog-popup]:has([data-slot=dialog-panel])]:pt-3 pt-3 pb-5',
+            'mt-6 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end',
+            variant === 'default' && 'border-border border-t pt-4',
+            variant === 'bare' && 'mt-4',
             className
         ),
         'data-slot': 'dialog-footer',
@@ -148,11 +202,9 @@ export function DialogTitle({
 }: DialogPrimitive.Title.Props): React.ReactElement {
     return (
         <DialogPrimitive.Title
-            className={cn(
-                'font-heading font-semibold text-xl leading-none tracking-tight',
-                className
-            )}
+            className={cn('text-foreground text-lg leading-tight', className)}
             data-slot="dialog-title"
+            style={{ fontVariationSettings: "'wght' 700" }}
             {...props}
         />
     );
@@ -164,7 +216,7 @@ export function DialogDescription({
 }: DialogPrimitive.Description.Props): React.ReactElement {
     return (
         <DialogPrimitive.Description
-            className={cn('text-muted-foreground text-sm leading-snug', className)}
+            className={cn('text-meta text-muted-foreground', className)}
             data-slot="dialog-description"
             {...props}
         />
@@ -180,15 +232,12 @@ export function DialogPanel({
     scrollFade?: boolean;
 }): React.ReactElement {
     const defaultProps = {
-        className: cn(
-            'px-6 py-4 in-[[data-slot=dialog-popup]:has([data-slot=dialog-header])]:pt-0 in-[[data-slot=dialog-popup]:has([data-slot=dialog-footer]:not(.border-t))]:pb-1',
-            className
-        ),
+        className: cn(className),
         'data-slot': 'dialog-panel',
     };
 
     return (
-        <ScrollArea scrollFade={scrollFade}>
+        <ScrollArea className="-m-1" scrollFade={scrollFade} viewportClassName="p-1">
             {useRender({
                 defaultTagName: 'div',
                 props: mergeProps<'div'>(defaultProps, props),
@@ -199,3 +248,29 @@ export function DialogPanel({
 }
 
 export { DialogPrimitive, DialogBackdrop as DialogOverlay };
+
+const dialogExitTransition = {
+    ...springs.slow,
+    duration: 0.18,
+};
+
+function stripDialogMotionEventProps(props: React.HTMLAttributes<HTMLDivElement>) {
+    const {
+        onAnimationEnd,
+        onAnimationIteration,
+        onAnimationStart,
+        onDrag,
+        onDragEnd,
+        onDragStart,
+        ...restProps
+    } = props;
+
+    void onAnimationEnd;
+    void onAnimationIteration;
+    void onAnimationStart;
+    void onDrag;
+    void onDragEnd;
+    void onDragStart;
+
+    return restProps;
+}

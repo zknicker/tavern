@@ -29,8 +29,8 @@ maps its controls onto managed Hermes surfaces:
   `@file:`, `@folder:`, `@url:`, and `@image:` after attachment staging
 * model inventory and default model selection come from managed Hermes config
   and model APIs
-* session-scoped model changes use the same Hermes session model command path
-  the Desktop app uses, then Tavern records the selected model on the message or
+* session-scoped model changes use the same Hermes session config path the
+  Desktop app uses, then Tavern records the selected model on the message or
   response metadata
 * active-turn queueing is Tavern App state until the queued draft is dispatched
   through Runtime or explicitly steered into the live turn
@@ -73,8 +73,8 @@ Accepted Tavern messages are durable before model work starts.
 4. Runtime stages any message attachments into the managed Hermes session and
    resolves Hermes-readable context refs. Tavern message records carry
    attachment arrays.
-5. Runtime applies any session-scoped model choice through `slash.exec` with the
-   Hermes `/model` command.
+5. Runtime applies any session-scoped model choice through Gateway `config.set`
+   with `key: "model"`.
 6. Runtime starts `runHermesTurn(...)` with the existing `chatId`,
    `requestMessageId`, `responseId`, `runId`, `sessionKey`, resolved prompt
    text, attachment metadata, and model metadata.

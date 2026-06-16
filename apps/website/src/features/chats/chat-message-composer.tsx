@@ -3,6 +3,7 @@ import * as React from 'react';
 import { Icon } from '../../components/ui/icon.tsx';
 import {
     buildChatRoutingConfiguredModelOptions,
+    buildChatRoutingModelOptions,
     type ModelOptionItem,
 } from '../../components/ui/model-route-shared.ts';
 import {
@@ -20,6 +21,7 @@ import { useChatSteer } from '../../hooks/chats/use-chat-steer.ts';
 import { useChatStop } from '../../hooks/chats/use-chat-stop.ts';
 import { runtimeUnhealthyTooltip, useCapability } from '../../hooks/connections/use-capability.ts';
 import { useModelList } from '../../hooks/models/use-model-list.ts';
+import { getModelProviderConfig } from '../../lib/model-provider-config.ts';
 import type { AgentListOutput } from '../../lib/trpc.tsx';
 import { cn } from '../../lib/utils.ts';
 import {
@@ -27,7 +29,7 @@ import {
     compileMentionSubmission,
     normalizeMentions,
 } from '../mentions/mention-text.ts';
-import type { Mention } from '../mentions/mention-types.ts';
+import type { ActiveMentionQuery, Mention, MentionOption } from '../mentions/mention-types.ts';
 import {
     MentionComposerEditor,
     MentionComposerPicker,
@@ -98,6 +100,10 @@ export function ChatMessageComposer({
     const [editingQueuedMessageId, setEditingQueuedMessageId] = React.useState<string | null>(null);
     const [mentions, setMentions] = React.useState<Mention[]>([]);
     const [modelRef, setModelRef] = React.useState<string | null>(null);
+    const allModelOptions = React.useMemo(
+        () => buildChatRoutingModelOptions(modelList.data),
+        [modelList.data]
+    );
     const modelOptions = React.useMemo(
         () => buildChatRoutingConfiguredModelOptions(modelList.data),
         [modelList.data]
@@ -147,11 +153,32 @@ export function ChatMessageComposer({
         }
     }, [agentId, boundAgentIds]);
 
+    const chatCommands = useChatCommandRunner();
+    const modelCommandOptions = React.useMemo(
+        () => createModelCommandOptions(allModelOptions),
+        [allModelOptions]
+    );
+    const resolveCommandArgumentOptions = React.useCallback(
+        (query: ActiveMentionQuery) => {
+            const modelQuery = getModelCommandArgumentQuery(query.query);
+
+            if (modelQuery === null) {
+                return null;
+            }
+
+            return filterModelCommandOptions(modelCommandOptions, modelQuery);
+        },
+        [modelCommandOptions]
+    );
     const mentionComposer = useMentionComposer({
         agentId,
         agents,
+        commandArgumentOptions: resolveCommandArgumentOptions,
         content,
         contextFullness,
+        onCommandAction: (command) => {
+            void handleCommandAction(command);
+        },
         onTextChange: setContent,
         onSubmit: () => {
             void handleSubmit();
@@ -159,7 +186,6 @@ export function ChatMessageComposer({
         onMentionsChange: setMentions,
         supportsCommands: true,
     });
-    const chatCommands = useChatCommandRunner();
 
     async function handleSubmit(event?: React.FormEvent<HTMLFormElement>) {
         event?.preventDefault();
@@ -170,11 +196,16 @@ export function ChatMessageComposer({
 
         // A known leading-slash command runs in the chat's session instead of
         // starting a turn; unknown slash text falls through and sends.
+        if (chatCommands.isBareModelCommand(content)) {
+            setContent('/model ');
+            setMentions([]);
+            mentionComposer.focusTextEditor();
+            return;
+        }
+
         if (chatCommands.matchCommand(content)) {
             const command = content.trim();
-            setContent('');
-            setMentions([]);
-            await chatCommands.runCommand({ agentId, chatId, command });
+            await handleCommandAction(command);
             return;
         }
 
@@ -321,6 +352,16 @@ export function ChatMessageComposer({
         if (event.dataTransfer.types.includes('Files')) {
             event.preventDefault();
         }
+    }
+
+    async function handleCommandAction(command: string) {
+        setContent('');
+        setMentions([]);
+        await chatCommands.runCommand({
+            agentId,
+            chatId,
+            command,
+        });
     }
 
     function handleAttachmentDrop(event: React.DragEvent<HTMLFormElement>) {
@@ -516,6 +557,57 @@ function ModelSelectorSlot({
             value={modelRef}
         />
     );
+}
+
+function createModelCommandOptions(models: readonly ModelOptionItem[]): MentionOption[] {
+    return models.map((model) => {
+        const provider = getModelProviderConfig(model.provider);
+
+        return {
+            action: {
+                command: `/model ${model.value}`,
+                kind: 'run-command',
+            },
+            description: `${model.value} · ${formatAvailabilityLabel(model.availability)}`,
+            groupLabel: 'Models',
+            id: `model-command:${model.value}`,
+            insertText: `/model ${model.value}`,
+            kind: 'command',
+            label: model.label,
+            projection: 'capability-reference',
+            sourceLabel: provider.displayName,
+        };
+    });
+}
+
+function filterModelCommandOptions(options: MentionOption[], query: string) {
+    const normalized = query.trim().toLowerCase();
+
+    if (!normalized) {
+        return options;
+    }
+
+    return options.filter((option) =>
+        [option.label, option.description ?? '', option.sourceLabel ?? '']
+            .join(' ')
+            .toLowerCase()
+            .includes(normalized)
+    );
+}
+
+function getModelCommandArgumentQuery(query: string) {
+    const match = /^model\s+(.*)$/iu.exec(query);
+
+    return match ? (match[1] ?? '') : null;
+}
+
+function formatAvailabilityLabel(availability: ModelOptionItem['availability']) {
+    switch (availability) {
+        case 'configured':
+            return 'configured';
+        case 'available':
+            return 'available';
+    }
 }
 
 function getSendDisabledTooltip({

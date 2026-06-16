@@ -27,8 +27,10 @@ export interface MentionComposerState {
 export function useMentionComposer({
     agentId,
     agents,
+    commandArgumentOptions,
     content,
     contextFullness = null,
+    onCommandAction,
     onTextChange,
     onSubmit,
     onMentionsChange,
@@ -36,8 +38,10 @@ export function useMentionComposer({
 }: {
     agentId: string;
     agents: AgentListOutput['agents'];
+    commandArgumentOptions?: (query: ActiveMentionQuery) => MentionOption[] | null;
     content: string;
     contextFullness?: ChatContextFullness | null;
+    onCommandAction?: (command: string) => void;
     onTextChange: (content: string) => void;
     onSubmit?: () => void;
     onMentionsChange?: (mentions: Mention[]) => void;
@@ -60,6 +64,7 @@ export function useMentionComposer({
     const trigger = activeQuery?.trigger ?? '@';
     const visibleMentionOptions = selectVisibleOptions({
         activeQuery,
+        commandArgumentOptions: activeQuery ? commandArgumentOptions?.(activeQuery) : null,
         commandOptions,
         mentionOptions: mentionOptionsState.options,
         supportsCommands,
@@ -111,6 +116,12 @@ export function useMentionComposer({
         dismissedQueryRef.current = null;
 
         if (option.kind === 'command') {
+            if (option.action?.kind === 'run-command') {
+                setActiveQuery(null);
+                onCommandAction?.(option.action.command);
+                return;
+            }
+
             editorRef.current?.replaceActiveQuery(option.insertText);
             return;
         }
@@ -225,11 +236,13 @@ function isSameMentionQuery(left: ActiveMentionQuery, right: ActiveMentionQuery 
 
 function selectVisibleOptions({
     activeQuery,
+    commandArgumentOptions,
     commandOptions,
     mentionOptions,
     supportsCommands,
 }: {
     activeQuery: ActiveMentionQuery | null;
+    commandArgumentOptions?: MentionOption[] | null;
     commandOptions: MentionOption[];
     mentionOptions: MentionOption[];
     supportsCommands: boolean;
@@ -239,6 +252,10 @@ function selectVisibleOptions({
     }
 
     if (activeQuery.trigger === '/') {
+        if (commandArgumentOptions) {
+            return commandArgumentOptions;
+        }
+
         return supportsCommands
             ? filterCommandOptionsForQuery(commandOptions, activeQuery.query)
             : [];

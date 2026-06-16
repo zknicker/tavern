@@ -259,6 +259,10 @@ function groupMentionOptions({
 }
 
 function getGroupLabel(option: MentionOption) {
+    if (option.groupLabel) {
+        return option.groupLabel;
+    }
+
     if (option.kind === 'command') {
         return 'Commands';
     }

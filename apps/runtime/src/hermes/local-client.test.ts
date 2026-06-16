@@ -550,7 +550,7 @@ describe('LocalHermesClient session routing', () => {
                     return;
                 }
 
-                if (request.method === 'slash.exec') {
+                if (request.method === 'config.set') {
                     modelRequestReceived.resolve();
                     void releaseModelRequest.promise.then(() => {
                         socket.send(JSON.stringify({ id: request.id, jsonrpc: '2.0', result: {} }));
@@ -599,7 +599,7 @@ describe('LocalHermesClient session routing', () => {
         ).resolves.toBe('cancelled');
         client.close();
 
-        expect(requests).toEqual(['session.create', 'slash.exec']);
+        expect(requests).toEqual(['session.create', 'config.set']);
     });
 
     it('resumes the Hermes stored session when a new client loses the live id', async () => {
@@ -909,10 +909,11 @@ describe('LocalHermesClient session routing', () => {
                 params: { title: 'agent:main:tavern:cht_1' },
             },
             {
-                method: 'slash.exec',
+                method: 'config.set',
                 params: {
-                    command: 'model gpt-5 --provider openai',
+                    key: 'model',
                     session_id: 'live-created',
+                    value: 'gpt-5 --provider openai',
                 },
             },
             {
@@ -1292,7 +1293,7 @@ describe('LocalHermesClient session routing', () => {
         });
     });
 
-    it('runs commands via slash.exec and falls back to command.dispatch when directed', async () => {
+    it('runs model commands through config.set and falls back to command.dispatch when directed', async () => {
         const requests: Array<{ method: string; params: Record<string, unknown> }> = [];
         server = new WebSocketServer({
             host: '127.0.0.1',
@@ -1317,6 +1318,16 @@ describe('LocalHermesClient session routing', () => {
                                 session_id: 'live-cmd',
                                 stored_session_id: 'stored-cmd',
                             },
+                        })
+                    );
+                    return;
+                }
+                if (request.method === 'config.set') {
+                    socket.send(
+                        JSON.stringify({
+                            id: request.id,
+                            jsonrpc: '2.0',
+                            result: { key: 'model', value: params.value },
                         })
                     );
                     return;
@@ -1373,21 +1384,29 @@ describe('LocalHermesClient session routing', () => {
             token: null,
         });
 
-        const direct = await client.runCommand('agent:main:tavern:cht_1', '/model sonnet');
+        const direct = await client.runCommand(
+            'agent:main:tavern:cht_1',
+            '/model anthropic/claude-haiku-4-5-20251001'
+        );
         const dispatched = await client.runCommand('agent:main:tavern:cht_1', '/retry now');
         client.close();
 
         expect(direct).toEqual({
-            output: 'Model set to tavern-e2e-tools',
+            output: 'Model switched: anthropic/claude-haiku-4-5-20251001',
             status: 'completed',
         });
         expect(dispatched).toEqual({ output: 'queued retry', status: 'completed' });
         expect(requests.map((entry) => entry.method)).toEqual([
             'session.create',
-            'slash.exec',
+            'config.set',
             'slash.exec',
             'command.dispatch',
         ]);
+        expect(requests[1]?.params).toMatchObject({
+            key: 'model',
+            session_id: 'live-cmd',
+            value: 'claude-haiku-4-5-20251001 --provider anthropic',
+        });
         expect(requests.at(-1)?.params).toMatchObject({
             arg: 'now',
             name: 'retry',

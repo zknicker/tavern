@@ -199,13 +199,23 @@ export class LocalHermesClient extends LocalHermesUnsupportedSurfaces {
         });
     }
 
-    // Runs a slash command in the chat's live session. slash.exec covers the
+    // Runs a slash command in the chat's live session. /model uses the same
+    // session config path as the engine client. slash.exec covers the other
     // registry commands; the engine rejects pending-input and skill commands
     // with a use-command.dispatch error, so those retry through
     // command.dispatch.
     async runCommand(sessionKey: string, command: string): Promise<AgentRuntimeRunCommandResult> {
         const session = await this.#openGatewaySession(sessionKey);
         const commandText = command.trim();
+        const modelCommandValue = modelCommandConfigValue(commandText);
+
+        if (modelCommandValue) {
+            const result = await this.#setSessionModel(session.liveSessionId, modelCommandValue);
+            return agentRuntimeRunCommandResultSchema.parse({
+                output: formatModelSwitchOutput(result),
+                status: 'completed',
+            });
+        }
 
         try {
             const result = await this.#gateway.request('slash.exec', {
@@ -986,11 +996,11 @@ export class LocalHermesClient extends LocalHermesUnsupportedSurfaces {
         }
     }
 
-    async #setSessionModel(sessionId: string, modelRef: string) {
-        const model = parseHermesModelRef(modelRef);
-        await this.#gateway.request('slash.exec', {
-            command: `model ${model.model} --provider ${model.provider}`,
+    async #setSessionModel(sessionId: string, value: string) {
+        return await this.#gateway.request('config.set', {
+            key: 'model',
             session_id: sessionId,
+            value,
         });
     }
 
@@ -1121,7 +1131,7 @@ export class LocalHermesClient extends LocalHermesUnsupportedSurfaces {
 
             try {
                 if (input.modelRef) {
-                    await this.#setSessionModel(liveSessionId, input.modelRef);
+                    await this.#setSessionModel(liveSessionId, modelRefConfigValue(input.modelRef));
                 }
                 assertHermesTurnNotCancelled(input.signal);
                 const promptText = await this.#buildPromptText({
@@ -1477,6 +1487,48 @@ function parseHermesModelRef(value: string) {
         model: trimmed.slice(separatorIndex + 1).trim(),
         provider: trimmed.slice(0, separatorIndex).trim(),
     };
+}
+
+function modelRefConfigValue(modelRef: string) {
+    const model = parseHermesModelRef(modelRef);
+    return `${model.model} --provider ${model.provider}`;
+}
+
+function modelCommandConfigValue(command: string) {
+    const match = /^\/?model(?:\s+(?<value>.+))?$/iu.exec(command.trim());
+    const value = match?.groups?.value?.trim();
+
+    if (!value) {
+        return null;
+    }
+
+    return isHermesModelRef(value) ? modelRefConfigValue(value) : value;
+}
+
+function isHermesModelRef(value: string) {
+    return /^[^/\s]+\/[^/\s].*$/u.test(value.trim());
+}
+
+function formatModelSwitchOutput(result: unknown) {
+    const value = readStringFromUnknown(result, ['value']);
+    const warning = readStringFromUnknown(result, ['warning']);
+    return [`Model switched: ${formatModelConfigValueForDisplay(value ?? null)}`, warning]
+        .filter(Boolean)
+        .join('\n');
+}
+
+function formatModelConfigValueForDisplay(value: string | null) {
+    if (!value) {
+        return 'unknown';
+    }
+
+    const match = /^(?<model>\S+)\s+--provider\s+(?<provider>\S+)$/u.exec(value.trim());
+
+    if (!match?.groups) {
+        return value;
+    }
+
+    return `${match.groups.provider}/${match.groups.model}`;
 }
 
 function readStringFromUnknown(value: unknown, keys: string[]) {

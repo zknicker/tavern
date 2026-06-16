@@ -19,6 +19,8 @@ not mentions and never serialize into message markdown or metadata.
 - The palette filters the catalog as the user types (`/mod` matches `/model`).
 - Selecting a command inserts `/name ` as plain text; the user may add
   arguments and submits normally. No chip is created.
+- Submitting bare `/model` opens model completion in the composer. Picking a
+  model runs `/model <provider/model>` in the chat session.
 - The palette is available only where a chat session exists. The new-chat
   composer does not offer commands.
 - Context-management commands such as `/context`, `/compact`, or `/compress`
@@ -43,8 +45,9 @@ Every engine command gets exactly one of three treatments:
 1. **Run in the session (default).** The command executes through the engine
    and its output lands as a command card. This covers session, configuration,
    info, and tools/skills commands (`/usage`, `/model`, `/compress`,
-   `/skills`, ...). Tavern never parses or reimplements them. `/model` and
-   `/reasoning` are deliberately session-scoped overrides: they tune the
+   `/skills`, ...). Tavern does not invent their semantics. `/model` uses the
+   engine's session `config.set` path, matching the engine client. `/model`
+   and `/reasoning` are deliberately session-scoped overrides: they tune the
    current chat-bound engine session and never write Tavern agent settings.
 2. **Tavern binding commands.** Hermes owns native session identity,
    transcripts, reset semantics, model overrides, and tool state. Tavern owns
@@ -110,18 +113,24 @@ catalog command executes as a command instead of starting a chat turn:
 1. The app calls `agent.runCommand` with the agent id, chat id, and the raw
    command text.
 2. The server proxies to Runtime `POST /commands/run`.
-3. Runtime derives the chat's canonical channel session key and uses the same
-   long-lived Hermes client used by normal chat turns. For default engine
-   commands, Runtime opens or resumes the chat-bound live engine session and
-   executes the command through the gateway:
-   `slash.exec` first; when the engine rejects with its
-   use-`command.dispatch` error, Runtime retries via `command.dispatch`.
-   ANSI escape sequences are stripped from the output.
-4. Runtime records the run as durable chat evidence: a completed (or failed)
+3. Bare `/model` opens app-side model completion before Runtime is called. When
+   the user picks a model, the app submits `/model <provider/model>` through
+   the same command path.
+4. Runtime derives the chat's canonical channel session key and uses the same
+   long-lived Hermes client used by normal chat turns. Runtime opens or resumes
+   the chat-bound live engine session and executes the command through the
+   gateway. `/model <provider/model>` is the Tavern/App canonical ref form;
+   Runtime translates it to the engine's native `model --provider provider`
+   argument and uses `config.set` with `key: "model"` so the next turn sees the
+   same session model as the engine client. Other default engine commands use
+   `slash.exec` first; when the engine rejects with its use-`command.dispatch`
+   error, Runtime retries via `command.dispatch`. ANSI escape sequences are
+   stripped from the output.
+5. Runtime records the run as durable chat evidence: a completed (or failed)
    response holding one `command` activity row with the typed command under
    `metadata.command` and the output as the detail. Evidence is written after
    the run settles so the timeline never shows an in-flight command turn.
-5. The app's chat log shapes that activity into a standalone
+6. The app's chat log shapes that activity into a standalone
    `system / commandRun` row, rendered as a low-contrast surface card with
    the command name and collapsible monospace output. Failures use the error
    tone. The only toast is the failure case where the command could not run

@@ -33,3 +33,28 @@ test('MentionPicker renders context fullness adornment for command options', () 
     assert.match(markup, /stroke-dasharray/);
     assert.match(markup, /stroke-dashoffset/);
 });
+
+test('MentionPicker honors option group labels', () => {
+    const option: MentionOption = {
+        description: 'openai-codex/gpt-5.5',
+        groupLabel: 'Models',
+        id: 'model-command:openai-codex/gpt-5.5',
+        insertText: '/model openai-codex/gpt-5.5',
+        kind: 'command',
+        label: 'gpt-5.5',
+        projection: 'capability-reference',
+    };
+    const markup = renderToStaticMarkup(
+        <MentionPicker
+            activeIndex={0}
+            hasQuery
+            isPathSearchActive={false}
+            isPathSearchLoading={false}
+            onSelect={() => undefined}
+            options={[option]}
+        />
+    );
+
+    assert.match(markup, /Models/);
+    assert.doesNotMatch(markup, /Commands/);
+});

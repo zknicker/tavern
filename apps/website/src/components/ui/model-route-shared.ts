@@ -149,3 +149,12 @@ export function buildChatRoutingConfiguredModelOptions(
             Boolean(data?.models.find((model) => model.ref === modelRef)?.supportsChatRouting)
     );
 }
+
+export function buildChatRoutingModelOptions(data: ModelListOutput | undefined): ModelOptionItem[] {
+    return buildModelOptionItems(
+        data,
+        (model) => model.supportsChatRouting,
+        (modelRef) =>
+            Boolean(data?.models.find((model) => model.ref === modelRef)?.supportsChatRouting)
+    );
+}

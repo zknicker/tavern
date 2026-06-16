@@ -3,10 +3,10 @@
 import { mergeProps } from '@base-ui/react/merge-props';
 import { Select as SelectPrimitive } from '@base-ui/react/select';
 import { useRender } from '@base-ui/react/use-render';
-import { ArrowUp01 } from '@hugeicons/core-free-icons';
-import { ArrowDown01Icon, ChevronDoubleCloseIcon } from '@hugeicons-pro/core-solid-rounded';
+import { ChevronDoubleCloseIcon, Tick02Icon } from '@hugeicons-pro/core-solid-rounded';
 import { cva, type VariantProps } from 'class-variance-authority';
-import type * as React from 'react';
+import { AnimatePresence, motion } from 'framer-motion';
+import * as React from 'react';
 import {
     type ChangeEvent,
     Children,
@@ -14,8 +14,12 @@ import {
     type ReactNode,
     type SelectHTMLAttributes,
 } from 'react';
+import { useProximityHover } from '../../hooks/use-proximity-hover.ts';
+import { springs } from '../../lib/springs.ts';
 import { cn } from '../../lib/utils.ts';
 import { Icon } from './icon.tsx';
+import { ScrollEdgeCue, useScrollEdges } from './scroll-area.tsx';
+import { Elevated } from './surface.tsx';
 
 export const Select: typeof SelectPrimitive.Root = SelectPrimitive.Root;
 
@@ -144,6 +148,83 @@ export function SelectContent({
     alignItemWithTrigger?: SelectPrimitive.Positioner.Props['alignItemWithTrigger'];
     anchor?: SelectPrimitive.Positioner.Props['anchor'];
 }): React.ReactElement {
+    const listRef = React.useRef<HTMLDivElement | null>(null);
+    const [listElement, setListElement] = React.useState<HTMLDivElement | null>(null);
+    const edges = useScrollEdges(listRef, { enabled: Boolean(listElement), axis: 'vertical' });
+    const {
+        activeIndex,
+        handlers,
+        itemRects,
+        measureItems,
+        registerItem,
+        sessionRef,
+        setActiveIndex,
+    } = useProximityHover(listRef);
+    const previousItemCountRef = React.useRef(0);
+    const [selectedIndex, setSelectedIndex] = React.useState<number | null>(null);
+    const activeRect = activeIndex === null ? null : (itemRects[activeIndex] ?? null);
+    const selectedRect = selectedIndex === null ? null : (itemRects[selectedIndex] ?? null);
+    const isHoveringOther = activeIndex !== null && activeIndex !== selectedIndex;
+    const handleListRef = React.useCallback((element: HTMLDivElement | null) => {
+        listRef.current = element;
+        setListElement(element);
+    }, []);
+
+    const syncSelectItems = React.useCallback(() => {
+        const list = listElement;
+
+        if (!list) {
+            return;
+        }
+
+        const items = Array.from(list.querySelectorAll<HTMLElement>('[data-slot="select-item"]'));
+
+        for (let index = 0; index < items.length; index += 1) {
+            registerItem(index, items[index] ?? null);
+        }
+
+        for (let index = items.length; index < previousItemCountRef.current; index += 1) {
+            registerItem(index, null);
+        }
+
+        previousItemCountRef.current = items.length;
+        const nextSelectedIndex = items.findIndex(
+            (item) =>
+                item.hasAttribute('data-selected') || item.getAttribute('aria-selected') === 'true'
+        );
+        setSelectedIndex(nextSelectedIndex === -1 ? null : nextSelectedIndex);
+        measureItems();
+    }, [listElement, measureItems, registerItem]);
+
+    React.useLayoutEffect(() => {
+        syncSelectItems();
+
+        const list = listElement;
+
+        if (!list) {
+            return;
+        }
+
+        const observer = new MutationObserver(() => {
+            syncSelectItems();
+
+            const highlightedIndex = Array.from(
+                list.querySelectorAll<HTMLElement>('[data-slot="select-item"]')
+            ).findIndex((item) => item.hasAttribute('data-highlighted'));
+
+            setActiveIndex(highlightedIndex === -1 ? null : highlightedIndex);
+        });
+
+        observer.observe(list, {
+            attributeFilter: ['aria-selected', 'data-highlighted', 'data-selected'],
+            attributes: true,
+            childList: true,
+            subtree: true,
+        });
+
+        return () => observer.disconnect();
+    }, [listElement, setActiveIndex, syncSelectItems]);
+
     return (
         <SelectPrimitive.Portal>
             <SelectPrimitive.Positioner
@@ -157,36 +238,106 @@ export function SelectContent({
                 sideOffset={sideOffset}
             >
                 <SelectPrimitive.Popup
-                    className="origin-(--transform-origin) text-foreground outline-none"
                     data-slot="select-popup"
+                    render={(popupProps, state) => {
+                        const restProps = stripSelectMotionEventProps(popupProps);
+
+                        return (
+                            <motion.div
+                                {...restProps}
+                                animate={{
+                                    opacity: state.transitionStatus === 'ending' ? 0 : 1,
+                                    scaleY: state.transitionStatus === 'ending' ? 0.96 : 1,
+                                    y: state.transitionStatus === 'ending' ? -4 : 0,
+                                }}
+                                className="origin-(--transform-origin) text-foreground outline-none"
+                                initial={{ opacity: 0, scaleY: 0.96, y: -4 }}
+                                transition={
+                                    state.transitionStatus === 'ending'
+                                        ? selectExitTransition
+                                        : springs.fast
+                                }
+                            />
+                        );
+                    }}
                     {...props}
                 >
-                    <SelectPrimitive.ScrollUpArrow
-                        className="top-0 z-50 flex h-6 w-full cursor-default items-center justify-center before:pointer-events-none before:absolute before:inset-x-px before:top-px before:h-[200%] before:rounded-t-[calc(var(--radius-lg)-1px)] before:bg-linear-to-b before:from-50% before:from-popover"
-                        data-slot="select-scroll-up-arrow"
+                    <Elevated
+                        className="relative h-full min-w-(--anchor-width) overflow-hidden rounded-xl border border-border/70"
+                        offset={2}
+                        shadowLevel={3}
                     >
-                        <Icon className="relative size-4" icon={ArrowUp01} />
-                    </SelectPrimitive.ScrollUpArrow>
-                    <div className="relative h-full min-w-(--anchor-width) overflow-hidden rounded-lg border border-border/70 bg-popover shadow-lg/5">
                         <SelectPrimitive.List
                             className={cn(
-                                'max-h-(--available-height) overflow-y-auto p-1',
+                                'relative max-h-[min(var(--available-height),18.75rem)] min-w-(--anchor-width) overflow-y-auto p-1 outline-none',
                                 className
                             )}
                             data-slot="select-list"
+                            onMouseEnter={() => {
+                                handlers.onMouseEnter();
+                                syncSelectItems();
+                            }}
+                            onMouseLeave={handlers.onMouseLeave}
+                            onMouseMove={handlers.onMouseMove}
+                            ref={handleListRef}
                         >
+                            <AnimatePresence>
+                                {selectedRect ? (
+                                    <motion.div
+                                        animate={{
+                                            opacity: isHoveringOther ? 0.72 : 1,
+                                            top: selectedRect.top,
+                                            left: selectedRect.left,
+                                            width: selectedRect.width,
+                                            height: selectedRect.height,
+                                        }}
+                                        className="pointer-events-none absolute rounded-lg bg-active"
+                                        data-slot="select-selected-background"
+                                        exit={{
+                                            opacity: 0,
+                                            transition: springs.moderate,
+                                        }}
+                                        initial={false}
+                                        transition={{
+                                            ...springs.moderate,
+                                            opacity: { duration: 0.08 },
+                                        }}
+                                    />
+                                ) : null}
+                            </AnimatePresence>
+                            <AnimatePresence>
+                                {activeRect ? (
+                                    <motion.div
+                                        animate={{
+                                            opacity: 1,
+                                            top: activeRect.top,
+                                            left: activeRect.left,
+                                            width: activeRect.width,
+                                            height: activeRect.height,
+                                        }}
+                                        className="pointer-events-none absolute rounded-lg bg-hover"
+                                        data-slot="select-hover-background"
+                                        exit={{ opacity: 0, transition: springs.fast }}
+                                        initial={{
+                                            opacity: 0,
+                                            top: selectedRect?.top ?? activeRect.top,
+                                            left: selectedRect?.left ?? activeRect.left,
+                                            width: selectedRect?.width ?? activeRect.width,
+                                            height: selectedRect?.height ?? activeRect.height,
+                                        }}
+                                        key={sessionRef.current}
+                                        transition={{
+                                            ...springs.fast,
+                                            opacity: { duration: 0.08 },
+                                        }}
+                                    />
+                                ) : null}
+                            </AnimatePresence>
+                            <ScrollEdgeCue edge="top" size="tight" visible={edges.top} />
                             {children}
+                            <ScrollEdgeCue edge="bottom" size="tight" visible={edges.bottom} />
                         </SelectPrimitive.List>
-                    </div>
-                    <SelectPrimitive.ScrollDownArrow
-                        className="bottom-0 z-50 flex h-6 w-full cursor-default items-center justify-center before:pointer-events-none before:absolute before:inset-x-px before:bottom-px before:h-[200%] before:rounded-b-[calc(var(--radius-lg)-1px)] before:bg-linear-to-t before:from-50% before:from-popover"
-                        data-slot="select-scroll-down-arrow"
-                    >
-                        <Icon
-                            className="relative size-4 text-foreground/30 dark:text-foreground/36"
-                            icon={ArrowDown01Icon}
-                        />
-                    </SelectPrimitive.ScrollDownArrow>
+                    </Elevated>
                 </SelectPrimitive.Popup>
             </SelectPrimitive.Positioner>
         </SelectPrimitive.Portal>
@@ -201,29 +352,26 @@ export function SelectItem({
     return (
         <SelectPrimitive.Item
             className={cn(
-                "grid min-h-7 in-data-[side=none]:min-w-[calc(var(--anchor-width)+1.25rem)] cursor-default grid-cols-[1rem_1fr] items-center gap-2 rounded-sm py-1 ps-2 pe-4 text-sm outline-none data-disabled:pointer-events-none data-highlighted:bg-accent data-highlighted:text-accent-foreground data-disabled:opacity-64 [&_svg:not([class*='size-'])]:size-4 [&_svg]:pointer-events-none [&_svg]:shrink-0",
+                "relative z-10 grid min-h-8 in-data-[side=none]:min-w-[calc(var(--anchor-width)+1.25rem)] cursor-default grid-cols-[1rem_1fr] items-center gap-2 rounded-lg py-2 ps-2 pe-4 text-[13px] outline-none transition-colors duration-80 data-disabled:pointer-events-none data-highlighted:text-foreground data-selected:text-foreground data-disabled:opacity-50 [&_svg:not([class*='size-'])]:size-4 [&_svg]:pointer-events-none [&_svg]:shrink-0",
                 className
             )}
             data-slot="select-item"
             {...props}
         >
-            <SelectPrimitive.ItemIndicator className="col-start-1">
-                <svg
-                    aria-hidden="true"
-                    fill="none"
-                    height="24"
-                    stroke="currentColor"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth="2"
-                    viewBox="0 0 24 24"
-                    width="24"
-                    xmlns="http://www.w3.org/2000/svg"
-                >
-                    <path d="M5.252 12.7 10.2 18.63 18.748 5.37" />
-                </svg>
+            <SelectPrimitive.ItemIndicator className="col-start-1 text-foreground">
+                <AnimatePresence initial={false}>
+                    <motion.span
+                        animate={{ opacity: 1, scale: 1 }}
+                        className="flex size-4 items-center justify-center"
+                        exit={{ opacity: 0, scale: 0.8 }}
+                        initial={{ opacity: 0, scale: 0.8 }}
+                        transition={{ duration: 0.08, ease: 'easeOut' }}
+                    >
+                        <Icon className="size-4" icon={Tick02Icon} />
+                    </motion.span>
+                </AnimatePresence>
             </SelectPrimitive.ItemIndicator>
-            <SelectPrimitive.ItemText className="col-start-2 min-w-0">
+            <SelectPrimitive.ItemText className="col-start-2 min-w-0 truncate">
                 {children}
             </SelectPrimitive.ItemText>
         </SelectPrimitive.Item>
@@ -339,64 +487,47 @@ export function LegacySelect({
             required={props.required}
             value={normalizeValue(value)}
         >
-            <SelectPrimitive.Trigger
-                className={cn(
-                    'inline-flex h-8 w-full items-center justify-between gap-2 rounded-lg border border-transparent bg-muted px-3 text-left text-foreground text-sm outline-none ring-ring/24 transition-[background-color,box-shadow] hover:bg-accent focus-visible:ring-[3px] disabled:pointer-events-none disabled:opacity-50 dark:bg-input/32 dark:hover:bg-input/48',
-                    className
-                )}
-                data-slot="select"
-                id={props.id}
-            >
-                <SelectPrimitive.Value className="truncate data-placeholder:text-muted-foreground">
+            <SelectTrigger className={className} data-slot="select" id={props.id}>
+                <SelectValue placeholder={props.placeholder}>
                     {currentOption?.label ?? props.placeholder}
-                </SelectPrimitive.Value>
-                <SelectPrimitive.Icon aria-hidden="true" className="text-muted-foreground">
-                    <SelectTriggerIcon className="size-4 opacity-80" />
-                </SelectPrimitive.Icon>
-            </SelectPrimitive.Trigger>
+                </SelectValue>
+            </SelectTrigger>
 
-            <SelectPrimitive.Portal>
-                <SelectPrimitive.Positioner
-                    align="start"
-                    className="z-50"
-                    data-slot="select-positioner"
-                    sideOffset={4}
-                >
-                    <SelectPrimitive.Popup
-                        className="overflow-hidden rounded-lg border border-border/70 bg-popover shadow-lg/5"
-                        data-slot="select-popup"
-                    >
-                        <SelectPrimitive.List className="p-1" data-slot="select-list">
-                            {options.map((option) => (
-                                <SelectPrimitive.Item
-                                    className="grid min-h-7 cursor-default grid-cols-[1rem_1fr] items-center gap-2 rounded-md px-2 py-1 text-sm outline-none data-disabled:pointer-events-none data-highlighted:bg-accent data-highlighted:text-accent-foreground data-selected:text-foreground data-disabled:opacity-50"
-                                    disabled={option.disabled}
-                                    key={option.value}
-                                    value={option.value}
-                                >
-                                    <SelectPrimitive.ItemIndicator className="text-primary">
-                                        <svg fill="none" height="14" viewBox="0 0 14 14" width="14">
-                                            <title>Selected</title>
-                                            <path
-                                                d="M2.5 7.25 5.375 10.125 11.5 4"
-                                                stroke="currentColor"
-                                                strokeLinecap="round"
-                                                strokeLinejoin="round"
-                                                strokeWidth="1.5"
-                                            />
-                                        </svg>
-                                    </SelectPrimitive.ItemIndicator>
-                                    <SelectPrimitive.ItemText>
-                                        {option.label}
-                                    </SelectPrimitive.ItemText>
-                                </SelectPrimitive.Item>
-                            ))}
-                        </SelectPrimitive.List>
-                    </SelectPrimitive.Popup>
-                </SelectPrimitive.Positioner>
-            </SelectPrimitive.Portal>
+            <SelectContent>
+                {options.map((option) => (
+                    <SelectItem disabled={option.disabled} key={option.value} value={option.value}>
+                        {option.label}
+                    </SelectItem>
+                ))}
+            </SelectContent>
         </SelectPrimitive.Root>
     );
+}
+
+const selectExitTransition = {
+    ...springs.fast,
+    duration: 0.12,
+};
+
+function stripSelectMotionEventProps(props: React.HTMLAttributes<HTMLDivElement>) {
+    const {
+        onAnimationEnd,
+        onAnimationIteration,
+        onAnimationStart,
+        onDrag,
+        onDragEnd,
+        onDragStart,
+        ...restProps
+    } = props;
+
+    void onAnimationEnd;
+    void onAnimationIteration;
+    void onAnimationStart;
+    void onDrag;
+    void onDragEnd;
+    void onDragStart;
+
+    return restProps;
 }
 
 export { SelectPrimitive };

@@ -21,7 +21,12 @@ export interface Mention {
 }
 
 export interface MentionOption {
+    action?: {
+        command: string;
+        kind: 'run-command';
+    };
     description?: string | null;
+    groupLabel?: string;
     id: string;
     insertText: string;
     kind: MentionOptionKind;

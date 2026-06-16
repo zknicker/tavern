@@ -18,10 +18,8 @@ const FluidListContext = React.createContext<FluidListContextValue | null>(null)
 export function FluidList({
     children,
     className,
-}: {
-    children: React.ReactNode;
-    className?: string;
-}) {
+    ...props
+}: React.ComponentPropsWithoutRef<'div'>) {
     const containerRef = React.useRef<HTMLDivElement>(null);
     const { activeIndex, handlers, itemRects, registerItem, sessionRef } =
         useProximityHover(containerRef);
@@ -30,7 +28,7 @@ export function FluidList({
 
     return (
         <FluidListContext.Provider value={contextValue}>
-            <div className={cn('relative', className)} ref={containerRef} {...handlers}>
+            <div className={cn('relative', className)} ref={containerRef} {...handlers} {...props}>
                 <AnimatePresence>
                     {activeRect ? (
                         <motion.div
@@ -72,9 +70,8 @@ export function FluidListItem({
     children,
     className,
     index,
-}: {
-    children: React.ReactNode;
-    className?: string;
+    ...props
+}: React.ComponentPropsWithoutRef<'div'> & {
     index: number;
 }) {
     const context = React.useContext(FluidListContext);
@@ -83,6 +80,7 @@ export function FluidListItem({
         <div
             className={cn('relative', className)}
             ref={(element) => context?.registerItem(index, element)}
+            {...props}
         >
             {children}
         </div>

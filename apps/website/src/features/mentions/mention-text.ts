@@ -26,6 +26,17 @@ export function getActiveMentionQuery(
     // `/` opens the command palette only as the very first character of the
     // composer, so typed paths and URLs never trigger it. A second slash
     // (path typing) closes the palette.
+    const modelCommandMatch = /^\/model\s+([^\n]*)$/iu.exec(beforeCaret);
+
+    if (modelCommandMatch) {
+        return {
+            end: caretIndex,
+            query: `model ${modelCommandMatch[1] ?? ''}`,
+            start: 0,
+            trigger: '/',
+        };
+    }
+
     const commandMatch = /^\/([^\s/]*)$/u.exec(beforeCaret);
 
     if (commandMatch) {
