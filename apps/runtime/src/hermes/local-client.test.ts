@@ -1763,6 +1763,15 @@ describe('LocalHermesClient adapter-owned state', () => {
                                 preview: 'cron completed',
                                 started_at: 1_780_000_000,
                             },
+                            {
+                                ended_at: 1_780_000_120,
+                                id: 'cron_hermes_job_1_1780000060',
+                                last_active: 1_780_000_120,
+                                last_error: 'Provider timeout',
+                                last_status: 'failed',
+                                preview: 'cron failed',
+                                started_at: 1_780_000_060,
+                            },
                         ],
                     });
                 }
@@ -1817,12 +1826,20 @@ describe('LocalHermesClient adapter-owned state', () => {
             status: 'running',
             trigger: 'manual',
         });
-        expect(runs.runs).toHaveLength(1);
+        expect(runs.runs).toHaveLength(2);
         expect(runs.runs[0]).toMatchObject({
             jobId,
             sessionId: 'cron_hermes_job_1_1780000000',
             status: 'success',
             summary: 'cron completed',
+        });
+        expect(runs.runs[1]).toMatchObject({
+            executionErrorCode: 'execution_failed',
+            executionErrorMessage: 'Provider timeout',
+            jobId,
+            sessionId: 'cron_hermes_job_1_1780000060',
+            status: 'error',
+            summary: 'cron failed',
         });
         expect(deletedResult).toEqual({ archived: true, id: jobId });
         await expect(client.listCronJobs()).resolves.toMatchObject({ jobs: [] });

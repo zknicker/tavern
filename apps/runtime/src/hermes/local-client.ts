@@ -1371,12 +1371,27 @@ function mapHermesCronRun(jobId: string, value: unknown): AgentRuntimeCronRun {
     const startedAt = unixOrIsoToIso(record.started_at) ?? unixOrIsoToIso(record.last_active);
     const finishedAt = unixOrIsoToIso(record.ended_at);
     const active = finishedAt === null;
+    const executionErrorMessage = readString(record, [
+        'error',
+        'error_message',
+        'last_error',
+        'last_error_message',
+    ]);
+    const deliveryError = readString(record, ['delivery_error', 'last_delivery_error']);
+    const sourceStatus = readString(record, ['status', 'last_status', 'state']);
+    const mappedStatus = sourceStatus ? mapHermesCronStatus(sourceStatus) : null;
+    const status =
+        mappedStatus === 'error' || executionErrorMessage
+            ? 'error'
+            : active
+              ? 'running'
+              : (mappedStatus ?? 'success');
 
     return agentRuntimeCronRunSchema.parse({
-        deliveryError: null,
-        deliveryStatus: 'delivered',
-        executionErrorCode: null,
-        executionErrorMessage: null,
+        deliveryError,
+        deliveryStatus: deliveryError ? 'failed' : 'delivered',
+        executionErrorCode: status === 'error' ? 'execution_failed' : null,
+        executionErrorMessage: status === 'error' ? executionErrorMessage : null,
         finishedAt,
         id: sessionId,
         jobId,
@@ -1384,8 +1399,8 @@ function mapHermesCronRun(jobId: string, value: unknown): AgentRuntimeCronRun {
         sessionId,
         sessionKey: sessionId,
         startedAt,
-        status: active ? 'running' : 'success',
-        summary: readString(record, ['preview', 'title']) ?? null,
+        status,
+        summary: readString(record, ['preview', 'title', 'summary']) ?? null,
         trigger: 'schedule',
     });
 }

@@ -76,7 +76,9 @@ export function CronJobResultBadge({ job }: { job: CronListItem }) {
     }
 
     return (
-        <Badge variant={successRateVariant(job.successRate)}>{titleCase(job.successRate)}</Badge>
+        <Badge title={job.lastErrorRaw ?? undefined} variant={successRateVariant(job.successRate)}>
+            {titleCase(job.successRate)}
+        </Badge>
     );
 }
 

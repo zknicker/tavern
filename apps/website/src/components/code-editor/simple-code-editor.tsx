@@ -103,13 +103,13 @@ export function SimpleCodeEditor({
             <div className="grid min-h-full grid-cols-[auto_minmax(0,1fr)]">
                 <pre
                     aria-hidden="true"
-                    className="sticky left-0 min-w-14 select-none border-border/50 border-r bg-muted/50 px-3 py-[12px] text-right font-mono text-code text-muted-foreground tabular-nums leading-[1.65]"
+                    className="sticky left-0 min-h-full min-w-14 select-none border-border/50 border-r bg-muted/50 px-3 py-[12px] text-right font-mono text-code text-muted-foreground tabular-nums leading-[1.65]"
                 >
                     {lineNumbers}
                 </pre>
                 <div
                     className={cn(
-                        'tavern-simple-code-editor',
+                        'tavern-simple-code-editor min-h-full',
                         readOnly && 'tavern-simple-code-editor--plain'
                     )}
                 >

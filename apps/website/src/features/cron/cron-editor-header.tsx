@@ -1,4 +1,4 @@
-import { Clock, PlayIcon, Trash2 } from '@hugeicons/core-free-icons';
+import { PlayIcon, Trash2 } from '@hugeicons/core-free-icons';
 import { AppShellContentHeader } from '../../components/ui/app-shell.tsx';
 import { Icon } from '../../components/ui/icon.tsx';
 import { Button } from '../../components/ui/primitives/button.tsx';
@@ -11,7 +11,6 @@ interface CronEditorHeaderProps {
     isPending: boolean;
     isRunning: boolean;
     onDelete: () => void;
-    onHistory: () => void;
     onRun: () => void;
 }
 
@@ -23,7 +22,6 @@ export function CronEditorHeader({
     isPending,
     isRunning,
     onDelete,
-    onHistory,
     onRun,
 }: CronEditorHeaderProps) {
     return (
@@ -31,15 +29,6 @@ export function CronEditorHeader({
             <div className="ml-auto flex shrink-0 items-center gap-2">
                 {isNew ? null : (
                     <>
-                        <Button
-                            onClick={onHistory}
-                            size="icon"
-                            title="View run history"
-                            type="button"
-                            variant="secondary"
-                        >
-                            <Icon icon={Clock} />
-                        </Button>
                         <Button
                             disabled={!canRunActions || isDeleting}
                             loading={isDeleting}

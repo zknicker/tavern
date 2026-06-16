@@ -30,6 +30,7 @@ interface CronViewProps {
     onDelete: (job: CronListItem) => Promise<void>;
     onEdit: (job: CronListItem) => void;
     onFilterChange: (filter: CronFilter) => void;
+    onHistory: (job: CronListItem) => void;
     onNavigateToSettings: () => void;
     onQueryChange: (query: string) => void;
     onRun: (job: CronListItem) => Promise<void>;
@@ -57,6 +58,7 @@ export function CronView({
     onDelete,
     onEdit,
     onFilterChange,
+    onHistory,
     onNavigateToSettings,
     onQueryChange,
     onRun,
@@ -141,6 +143,7 @@ export function CronView({
                                 jobs={filteredJobs}
                                 onDelete={onDelete}
                                 onEdit={onEdit}
+                                onHistory={onHistory}
                                 onRun={onRun}
                                 onToggle={onToggle}
                             />

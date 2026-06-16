@@ -1,4 +1,4 @@
-import { PencilEdit02Icon, PlayIcon, Trash2 } from '@hugeicons/core-free-icons';
+import { Clock, PencilEdit02Icon, PlayIcon, Trash2 } from '@hugeicons/core-free-icons';
 import { Icon } from '../../components/ui/icon.tsx';
 import { Button } from '../../components/ui/primitives/button.tsx';
 import { Switch } from '../../components/ui/switch.tsx';
@@ -12,6 +12,7 @@ interface CronJobActionsProps {
     job: CronListItem;
     onDelete: (job: CronListItem) => Promise<void>;
     onEdit: (job: CronListItem) => void;
+    onHistory: (job: CronListItem) => void;
     onRun: (job: CronListItem) => Promise<void>;
     onToggle: (job: CronListItem, enabled: boolean) => Promise<void>;
 }
@@ -24,6 +25,7 @@ export function CronJobActions({
     job,
     onDelete,
     onEdit,
+    onHistory,
     onRun,
     onToggle,
 }: CronJobActionsProps) {
@@ -38,6 +40,16 @@ export function CronJobActions({
             />
 
             <div className="flex items-center gap-0">
+                <Button
+                    disabled={false}
+                    onClick={() => onHistory(job)}
+                    size="icon-sm"
+                    title="View run history"
+                    type="button"
+                    variant="ghost"
+                >
+                    <Icon className="size-4" icon={Clock} />
+                </Button>
                 <Button
                     disabled={!canEdit || isRunning}
                     loading={isRunning}

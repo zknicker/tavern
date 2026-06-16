@@ -1,6 +1,6 @@
 import * as React from 'react';
 import { usePrimaryAgentSuspense } from '../../hooks/agents/use-agent-list.ts';
-import type { CronGetOutput } from '../../lib/trpc.tsx';
+import type { CronGetOutput, CronRunsOutput } from '../../lib/trpc.tsx';
 import { CronEditorPromptPane } from './cron-editor-prompt-pane.tsx';
 import { CronEditorSidebar } from './cron-editor-sidebar.tsx';
 import type { CronFormState } from './cron-form.ts';
@@ -13,14 +13,20 @@ import {
 type CronJob = CronGetOutput['job'];
 
 interface CronEditorPageFormProps {
+    isRunsPending: boolean;
     job: CronJob | null;
+    onRunSelect: (run: CronRunsOutput['runs'][number]) => void;
     onSubmit: (formState: CronFormState) => Promise<void>;
+    runs: CronRunsOutput['runs'];
 }
 
 function CronEditorPageFormInner({
+    isRunsPending,
     job,
+    onRunSelect,
     onSubmit,
     primaryAgentId,
+    runs,
 }: CronEditorPageFormProps & { primaryAgentId: string }) {
     const form = useCronEditorForm({
         job,
@@ -47,7 +53,13 @@ function CronEditorPageFormInner({
                 {({ errorMessage }) => (
                     <>
                         <CronEditorPromptPane errorMessage={errorMessage} form={form} />
-                        <CronEditorSidebar form={form} job={job} />
+                        <CronEditorSidebar
+                            form={form}
+                            isRunsPending={isRunsPending}
+                            job={job}
+                            onRunSelect={onRunSelect}
+                            runs={runs}
+                        />
                     </>
                 )}
             </form.Subscribe>

@@ -1,7 +1,9 @@
+import { ArrowDown01Icon } from '@hugeicons-pro/core-solid-rounded';
 import * as React from 'react';
 
-import { Badge, type BadgeProps } from '../../components/ui/badge.tsx';
+import { Badge } from '../../components/ui/badge.tsx';
 import { Empty, EmptyDescription, EmptyHeader, EmptyTitle } from '../../components/ui/empty.tsx';
+import { Icon } from '../../components/ui/icon.tsx';
 import {
     Table,
     TableBody,
@@ -13,6 +15,17 @@ import {
 import { formatTimestamp, titleCase } from '../../lib/format.ts';
 import type { CronRunsOutput } from '../../lib/trpc.tsx';
 import { cn } from '../../lib/utils.ts';
+import { CronRunError, CronRunFacts } from './cron-run-detail-sections.tsx';
+import {
+    formatCronRunDeliveryLabel,
+    formatCronRunDetail,
+    formatCronRunFinishedLabel,
+    formatCronRunStatus,
+    getCronRunDeliveryVariant,
+    getCronRunStatusDotClassName,
+    getCronRunStatusVariant,
+    resolveCronRunDestinationLabel,
+} from './cron-run-view-data.ts';
 
 interface CronRunsCardProps {
     deliveryDestinationLabel: string | null;
@@ -29,6 +42,7 @@ interface CronRunRow {
     detail: string | null;
     finishedLabel: string;
     id: string;
+    run: CronRun;
     sessionKey: string | null;
     startedLabel: string;
     status: CronRun['status'];
@@ -36,10 +50,17 @@ interface CronRunRow {
 }
 
 export function CronRunsCard({ deliveryDestinationLabel, isPending, runs }: CronRunsCardProps) {
+    const [expandedRunId, setExpandedRunId] = React.useState<string | null>(null);
     const rows = React.useMemo(
         () => buildRows(runs, deliveryDestinationLabel),
         [deliveryDestinationLabel, runs]
     );
+
+    React.useEffect(() => {
+        if (expandedRunId && !rows.some((row) => row.id === expandedRunId)) {
+            setExpandedRunId(null);
+        }
+    }, [expandedRunId, rows]);
 
     if (rows.length === 0) {
         return <CronRunsEmpty isPending={isPending} />;
@@ -61,21 +82,50 @@ export function CronRunsCard({ deliveryDestinationLabel, isPending, runs }: Cron
                     <TableHead>Destination</TableHead>
                     <TableHead className="hidden sm:table-cell">Trigger</TableHead>
                     <TableHead className="pr-8 text-right">
-                        <span className="sr-only">Logs</span>
+                        <span className="sr-only">Session</span>
                     </TableHead>
                 </TableRow>
             </TableHeader>
             <TableBody>
-                {rows.map((row) => {
+                {rows.flatMap((row, index) => {
                     const sessionKey = row.sessionKey;
-                    return (
+                    const expanded = expandedRunId === row.id;
+                    const toggleExpanded = () => {
+                        setExpandedRunId(expanded ? null : row.id);
+                    };
+
+                    return [
                         <TableRow
-                            className={cn(sessionKey && 'text-foreground')}
+                            aria-expanded={expanded}
+                            className={cn(
+                                'cursor-pointer outline-hidden focus-visible:bg-hover',
+                                sessionKey && 'text-foreground'
+                            )}
+                            index={index}
                             key={row.id}
+                            onClick={toggleExpanded}
+                            onKeyDown={(event) => {
+                                if (event.key !== 'Enter' && event.key !== ' ') {
+                                    return;
+                                }
+
+                                event.preventDefault();
+                                toggleExpanded();
+                            }}
+                            role="button"
+                            tabIndex={0}
                             title={row.detail ?? undefined}
                         >
                             <TableCell className="pl-8">
                                 <div className="relative z-20 flex min-w-0 items-center gap-2">
+                                    <Icon
+                                        aria-hidden
+                                        className={cn(
+                                            'size-3.5 shrink-0 text-muted-foreground transition-transform',
+                                            expanded && 'rotate-180'
+                                        )}
+                                        icon={ArrowDown01Icon}
+                                    />
                                     <StatusDot status={row.status} />
                                     <span className="truncate font-medium">{row.startedLabel}</span>
                                 </div>
@@ -102,8 +152,25 @@ export function CronRunsCard({ deliveryDestinationLabel, isPending, runs }: Cron
                                     <span className="relative z-20 text-muted-foreground">-</span>
                                 )}
                             </TableCell>
-                        </TableRow>
-                    );
+                        </TableRow>,
+                        expanded ? (
+                            <tr
+                                className="border-border/60 border-b bg-muted/25"
+                                key={`${row.id}:details`}
+                            >
+                                <td className="px-8 pt-1 pb-4" colSpan={5}>
+                                    <div className="grid gap-3 rounded-lg border border-border/70 bg-background/80 p-3">
+                                        <CronRunFacts
+                                            deliveryDestinationLabel={deliveryDestinationLabel}
+                                            run={row.run}
+                                            variant="bare"
+                                        />
+                                        <CronRunError run={row.run} />
+                                    </div>
+                                </td>
+                            </tr>
+                        ) : null,
+                    ];
                 })}
             </TableBody>
         </Table>
@@ -116,9 +183,19 @@ function RunOutcome({ row }: { row: CronRunRow }) {
     }
 
     return (
-        <Badge size="sm" variant={getStatusVariant(row.status)}>
-            {formatRunStatus(row.status)}
-        </Badge>
+        <div className="flex min-w-0 flex-col items-start gap-1">
+            <Badge size="sm" variant={getCronRunStatusVariant(row.status)}>
+                {formatCronRunStatus(row.status)}
+            </Badge>
+            {row.detail ? (
+                <span
+                    className="max-w-full truncate text-muted-foreground text-xs"
+                    title={row.detail}
+                >
+                    {row.detail}
+                </span>
+            ) : null}
+        </div>
     );
 }
 
@@ -128,11 +205,22 @@ function DeliveryDestination({ row }: { row: CronRunRow }) {
     }
 
     return (
-        <div className="flex min-w-0 items-center gap-2">
-            <span className="truncate text-foreground">{row.destinationLabel}</span>
-            <Badge size="sm" variant={getDeliveryVariant(row.deliveryStatus)}>
-                {row.deliveryLabel}
-            </Badge>
+        <div className="flex min-w-0 flex-col items-start gap-1">
+            <div className="flex min-w-0 items-center gap-2">
+                <span className="truncate text-foreground">{row.destinationLabel}</span>
+                <Badge size="sm" variant={getCronRunDeliveryVariant(row.deliveryStatus)}>
+                    {row.deliveryLabel}
+                </Badge>
+            </div>
+            {row.detail &&
+            (row.deliveryStatus === 'failed' || row.deliveryStatus === 'parent_missing') ? (
+                <span
+                    className="max-w-full truncate text-muted-foreground text-xs"
+                    title={row.detail}
+                >
+                    {row.detail}
+                </span>
+            ) : null}
         </div>
     );
 }
@@ -158,12 +246,7 @@ function StatusDot({ status }: { status: CronRun['status'] }) {
     return (
         <span
             aria-hidden
-            className={cn(
-                'size-2 shrink-0 rounded-full',
-                status === 'success' && 'bg-emerald-500',
-                status === 'error' && 'bg-red-500',
-                (status === 'queued' || status === 'running') && 'bg-amber-500'
-            )}
+            className={cn('size-2 shrink-0 rounded-full', getCronRunStatusDotClassName(status))}
         />
     );
 }
@@ -173,101 +256,19 @@ function buildRows(
     deliveryDestinationLabel: string | null
 ): CronRunRow[] {
     return runs.map((run) => ({
-        deliveryLabel: formatDeliveryLabel(run.deliveryStatus),
+        deliveryLabel: formatCronRunDeliveryLabel(run.deliveryStatus),
         deliveryStatus: run.deliveryStatus,
-        destinationLabel: resolveDestinationLabel(run.deliveryStatus, deliveryDestinationLabel),
-        detail: buildRunDetail(run),
-        finishedLabel: formatFinishedLabel(run),
+        destinationLabel: resolveCronRunDestinationLabel(
+            run.deliveryStatus,
+            deliveryDestinationLabel
+        ),
+        detail: formatCronRunDetail(run),
+        finishedLabel: formatCronRunFinishedLabel(run),
         id: run.id,
+        run,
         sessionKey: run.sessionKey,
         startedLabel: formatTimestamp(run.startedAt ?? run.scheduledFor),
         status: run.status,
         triggerLabel: titleCase(run.trigger),
     }));
-}
-
-function buildRunDetail(run: CronRun): string | null {
-    if (run.status === 'error') {
-        return run.executionErrorMessage ?? 'Run failed.';
-    }
-    if (run.deliveryStatus === 'failed' || run.deliveryStatus === 'parent_missing') {
-        return run.deliveryError ?? formatDeliveryLabel(run.deliveryStatus);
-    }
-    return null;
-}
-
-function formatFinishedLabel(run: CronRun): string {
-    if (run.finishedAt) {
-        return formatTimestamp(run.finishedAt);
-    }
-
-    if (run.status === 'running' || run.status === 'queued') {
-        return titleCase(run.status);
-    }
-
-    if (run.status === 'error') {
-        return 'Failed';
-    }
-
-    return 'Completed';
-}
-
-function formatRunStatus(status: CronRun['status']): string {
-    if (status === 'error') {
-        return 'Failed';
-    }
-    return titleCase(status);
-}
-
-function formatDeliveryLabel(status: CronRun['deliveryStatus']): string {
-    if (!(status && status !== 'not_applicable')) {
-        return 'None';
-    }
-    if (status === 'parent_missing') {
-        return 'Parent missing';
-    }
-    if (status === 'session_queued') {
-        return 'Queued';
-    }
-    return titleCase(status);
-}
-
-function resolveDestinationLabel(
-    status: CronRun['deliveryStatus'],
-    deliveryDestinationLabel: string | null
-): string {
-    if (!(status && status !== 'not_applicable')) {
-        return 'No delivery';
-    }
-
-    return deliveryDestinationLabel ?? 'Delivery target';
-}
-
-function getStatusVariant(status: CronRun['status']): BadgeProps['variant'] {
-    switch (status) {
-        case 'error':
-            return 'destructive';
-        case 'success':
-            return 'success';
-        case 'queued':
-        case 'running':
-            return 'warning';
-        default:
-            return 'secondary';
-    }
-}
-
-function getDeliveryVariant(status: CronRun['deliveryStatus']): BadgeProps['variant'] {
-    switch (status) {
-        case 'delivered':
-            return 'success';
-        case 'failed':
-        case 'parent_missing':
-            return 'destructive';
-        case 'pending':
-        case 'session_queued':
-            return 'warning';
-        default:
-            return 'subtle';
-    }
 }

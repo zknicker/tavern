@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, mock, spyOn, test } from 'bun:test';
-import { buildCronList } from './cron-list-data.ts';
+import { buildCronList, formatCronErrorMessage } from './cron-list-data.ts';
 
 afterEach(() => {
     mock.restore();
@@ -34,6 +34,44 @@ describe('buildCronList', () => {
         expect(job?.lastRun).toBe('10m ago');
         expect(job?.successRate).toBe('success');
         expect(job?.executions).toEqual([]);
+    });
+
+    test('extracts readable cron failure messages from provider wrappers', () => {
+        expect(
+            formatCronErrorMessage(
+                "RuntimeError: Error code: 400 - {'error': {'message': \"You are out of extra usage.\"}}"
+            )
+        ).toBe('You are out of extra usage.');
+        expect(formatCronErrorMessage('Provider timeout')).toBe('Provider timeout');
+        expect(formatCronErrorMessage('   ')).toBeNull();
+    });
+
+    test('carries last job error detail for failed list rows', () => {
+        const [job] = buildCronList([
+            {
+                agentId: 'agent:planner',
+                description: 'Daily standup',
+                enabled: true,
+                id: 'cron:standup',
+                name: 'Standup',
+                schedule: {
+                    expr: '0 9 * * 1-5',
+                    kind: 'cron' as const,
+                },
+                state: {
+                    lastErrorCode: 'execution_failed' as const,
+                    lastErrorMessage:
+                        "RuntimeError: Error code: 400 - {'error': {'message': \"You are out of extra usage.\"}}",
+                    lastRunAtMs: Date.parse('2026-04-16T12:00:00.000Z'),
+                    lastStatus: 'error' as const,
+                },
+                updatedAt: '2026-04-16T12:00:00.000Z',
+            },
+        ]);
+
+        expect(job?.lastErrorMessage).toBe('You are out of extra usage.');
+        expect(job?.lastErrorRaw).toContain('RuntimeError');
+        expect(job?.successRate).toBe('error');
     });
 
     test('builds list rows without requiring a job-scoped cron session', () => {

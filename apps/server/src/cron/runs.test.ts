@@ -11,12 +11,14 @@ process.env.DATABASE_PATH = databasePath;
 const [
     { ensureDatabaseSchema },
     { databaseClient },
+    { saveCronJobRecord },
     { reconcileSyntheticCronTriggerRuns, upsertCronRuns },
     agentRuntimeSync,
     { listCronRuns },
 ] = await Promise.all([
     import('../db/bootstrap.ts'),
     import('../db/index.ts'),
+    import('../storage/cron-jobs.ts'),
     import('../storage/cron-runs.ts'),
     import('../sync/agent-runtime-sync.ts'),
     import('./runs.ts'),
@@ -27,6 +29,7 @@ ensureDatabaseSchema();
 afterEach(() => {
     mock.restore();
     databaseClient.exec('DELETE FROM cron_runs;');
+    databaseClient.exec('DELETE FROM cron_jobs;');
 });
 
 test('listCronRuns returns mapped runs and honors the limit', async () => {
@@ -114,6 +117,81 @@ test('listCronRuns hides session drill-through until a runtime session exists', 
 
     expect(result.runs[0]?.id).toBe('run-queued');
     expect(result.runs[0]?.sessionKey).toBeNull();
+});
+
+test('listCronRuns shows a newer failed job state when stored run history missed it', async () => {
+    const syncSpy = spyOn(agentRuntimeSync, 'syncAgentRuntimeCron').mockImplementation(
+        async () => []
+    );
+
+    await saveCronJobRecord({
+        job: {
+            agentId: 'agent-1',
+            createdAt: '2026-06-15T13:00:00.000Z',
+            deleteAfterRun: false,
+            delivery: { chatId: 'general' },
+            description: null,
+            enabled: true,
+            id: 'cron:good-morning',
+            name: 'Good morning',
+            payload: {
+                kind: 'agentTurn',
+                message: 'Say good morning and summarize what happened yesterday.',
+            },
+            schedule: { expr: '0 9 * * *', kind: 'cron', tz: 'America/New_York' },
+            state: {
+                lastErrorCode: 'execution_failed',
+                lastErrorMessage: 'RuntimeError: Provider usage exhausted',
+                lastRunAtMs: Date.parse('2026-06-16T13:00:42.659Z'),
+                lastRunStatus: 'error',
+                lastStatus: 'error',
+                nextRunAtMs: Date.parse('2026-06-17T13:00:00.000Z'),
+            },
+            updatedAt: '2026-06-16T13:00:42.659Z',
+            wakeMode: 'now',
+        },
+        runtimeId: 'runtime-1',
+        syncedAt: '2026-06-16T13:00:43.000Z',
+    });
+    await upsertCronRuns([
+        {
+            agentId: null,
+            deliveryStatus: 'delivered',
+            durationMs: 668,
+            error: null,
+            jobId: 'cron:good-morning',
+            providerJobId: 'cron_good_morning_20260616_090041',
+            runAt: '2026-06-16T13:00:41.904Z',
+            runtimeId: 'runtime-1',
+            runtimeRunId: 'cron_good_morning_20260616_090041',
+            runtimeSessionKey: 'cron_good_morning_20260616_090041',
+            sessionId: 'cron_good_morning_20260616_090041',
+            sessionKey: 'cron_good_morning_20260616_090041',
+            status: 'success',
+            summary: 'Posted update.',
+            syncedAt: '2026-06-16T13:00:42.700Z',
+            trigger: 'schedule',
+        },
+    ]);
+
+    const result = await listCronRuns({
+        jobId: 'cron:good-morning',
+        limit: 5,
+    });
+
+    expect(result.runs).toHaveLength(1);
+    expect(result.runs[0]).toMatchObject({
+        executionErrorCode: 'execution_failed',
+        executionErrorMessage: 'RuntimeError: Provider usage exhausted',
+        finishedAt: '2026-06-16T13:00:42.659Z',
+        id: 'state:cron:good-morning:1781614842659',
+        jobId: 'cron:good-morning',
+        sessionId: null,
+        sessionKey: null,
+        startedAt: '2026-06-16T13:00:42.659Z',
+        status: 'error',
+    });
+    expect(syncSpy).toHaveBeenCalledTimes(1);
 });
 
 test('reconcileSyntheticCronTriggerRuns removes trigger acknowledgements with real runs', async () => {

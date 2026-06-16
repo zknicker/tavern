@@ -1,7 +1,6 @@
 import * as React from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { BadgeDivider } from '../../components/ui/badge-divider.tsx';
-import { Card } from '../../components/ui/card.tsx';
+import { Skeleton } from '../../components/ui/skeleton.tsx';
 import { useCronCreate } from '../../hooks/cron/use-cron-create.ts';
 import { useCronDelete } from '../../hooks/cron/use-cron-delete.ts';
 import { useCronDeliveryTargets } from '../../hooks/cron/use-cron-delivery-targets.ts';
@@ -11,16 +10,25 @@ import { useCronRuns } from '../../hooks/cron/use-cron-runs.ts';
 import { useCronUpdate } from '../../hooks/cron/use-cron-update.ts';
 import { useOptimisticCronRuns } from '../../hooks/cron/use-optimistic-cron-runs.ts';
 import type { CronDeliveryTargetsOutput, CronGetOutput } from '../../lib/trpc.tsx';
+import { cn } from '../../lib/utils.ts';
 import { CronDeleteDialog } from './cron-delete-dialog.tsx';
 import { CronEditorHeader } from './cron-editor-header.tsx';
 import { CronEditorPageForm } from './cron-editor-page-form.tsx';
 import type { CronFormState } from './cron-form.ts';
 import { buildCronCreateInput, buildCronUpdateInput } from './cron-inputs.ts';
-import { CronRunsDrawer } from './cron-runs-drawer.tsx';
+import { CronRunDetailDrawer } from './cron-run-detail-drawer.tsx';
 import { MissingCronJobCard } from './missing-cron-job-card.tsx';
 
 type CronJob = CronGetOutput['job'];
 type CronDeliveryTarget = CronDeliveryTargetsOutput['targets'][number];
+type CronEditorSkeletonTitleWidth = 'lg' | 'md' | 'sm';
+
+const cronEditorSkeletonLineIds = ['line-1', 'line-2', 'line-3'];
+const cronEditorSkeletonTitleClassName: Record<CronEditorSkeletonTitleWidth, string> = {
+    lg: 'w-20',
+    md: 'w-18',
+    sm: 'w-16',
+};
 
 export function shouldRenderCronEditorPageForm(input: {
     isLoading: boolean;
@@ -40,7 +48,7 @@ export function CronEditor() {
     const runMutation = useCronRun();
     const updateMutation = useCronUpdate();
     const job = isNew ? null : (cronJobQuery.data?.job ?? null);
-    const cronRunsQuery = useCronRuns(job ? { jobId: job.id, limit: 20 } : null);
+    const cronRunsQuery = useCronRuns(job ? { jobId: job.id, limit: 10 } : null);
     const deliveryTargetsQuery = useCronDeliveryTargets();
     const deliveryDestinationLabel = getCronDeliveryDestinationLabel(
         job,
@@ -56,7 +64,9 @@ export function CronEditor() {
         job,
     });
     const [deleteDialogOpen, setDeleteDialogOpen] = React.useState(false);
-    const [runsDrawerOpen, setRunsDrawerOpen] = React.useState(false);
+    const [selectedRunId, setSelectedRunId] = React.useState<string | null>(null);
+    const selectedRun = optimisticCronRuns.runs.find((run) => run.id === selectedRunId) ?? null;
+    const isLoadingEditor = !(shouldRenderForm || isMissingJob);
 
     const handleBack = React.useCallback(() => {
         navigate('/dashboard/cron');
@@ -65,7 +75,7 @@ export function CronEditor() {
     return (
         <div className="flex flex-1 flex-col overflow-hidden">
             <CronEditorHeader
-                canEdit={canEdit}
+                canEdit={canEdit && !isLoadingEditor}
                 canRunActions={Boolean(job)}
                 isDeleting={deleteMutation.isPending}
                 isNew={isNew}
@@ -73,9 +83,6 @@ export function CronEditor() {
                 isRunning={runMutation.isPending}
                 onDelete={() => {
                     setDeleteDialogOpen(true);
-                }}
-                onHistory={() => {
-                    setRunsDrawerOpen(true);
                 }}
                 onRun={() => {
                     if (!job) {
@@ -107,7 +114,11 @@ export function CronEditor() {
                 </div>
             ) : shouldRenderForm ? (
                 <CronEditorPageForm
+                    isRunsPending={cronRunsQuery.isPending}
                     job={job}
+                    onRunSelect={(run) => {
+                        setSelectedRunId(run.id);
+                    }}
                     onSubmit={async (formState: CronFormState) => {
                         if (job) {
                             await updateMutation.mutateAsync(
@@ -119,32 +130,19 @@ export function CronEditor() {
 
                         navigate('/dashboard/cron');
                     }}
+                    runs={optimisticCronRuns.runs}
                 />
             ) : (
-                <div className="p-4">
-                    <Card className="overflow-hidden">
-                        <BadgeDivider
-                            className="px-4 pt-5 pb-4"
-                            subtext="Loading the selected automation."
-                        >
-                            Configuration
-                        </BadgeDivider>
-                        <div className="p-4 text-muted-foreground text-sm">
-                            Loading automation...
-                        </div>
-                    </Card>
-                </div>
+                <CronEditorSkeleton />
             )}
 
-            <CronRunsDrawer
+            <CronRunDetailDrawer
                 deliveryDestinationLabel={deliveryDestinationLabel}
-                isOpen={runsDrawerOpen}
-                isPending={cronRunsQuery.isPending}
                 jobName={job?.name ?? null}
                 onClose={() => {
-                    setRunsDrawerOpen(false);
+                    setSelectedRunId(null);
                 }}
-                runs={optimisticCronRuns.runs}
+                run={selectedRun}
             />
 
             <CronDeleteDialog
@@ -170,6 +168,67 @@ export function CronEditor() {
                 }}
             />
         </div>
+    );
+}
+
+function CronEditorSkeleton() {
+    return (
+        <div aria-busy="true" className="flex min-h-0 flex-1 flex-col lg:flex-row">
+            <span className="sr-only">Loading automation editor</span>
+            <main className="min-w-0 flex-1">
+                <div className="mx-auto flex h-full min-h-[42rem] w-full max-w-4xl flex-col gap-6 px-6 pt-3 pb-8 lg:px-10">
+                    <div className="flex shrink-0 flex-col gap-2 pt-1">
+                        <Skeleton className="h-9 w-80 max-w-full rounded-md" />
+                        <Skeleton className="h-6 w-52 max-w-full rounded-md" />
+                    </div>
+
+                    <div className="min-h-0 flex-1 space-y-2">
+                        <Skeleton className="h-5 w-16 rounded-md" />
+                        <div className="h-full min-h-[28rem] rounded-lg border border-border/70 p-4">
+                            <Skeleton className="h-4 w-full rounded-md" />
+                            <Skeleton className="mt-3 h-4 w-4/5 rounded-md" />
+                            <Skeleton className="mt-3 h-4 w-3/5 rounded-md" />
+                        </div>
+                    </div>
+                </div>
+            </main>
+
+            <aside className="w-full border-border/70 border-t lg:w-[22rem] lg:border-t-0 lg:border-l">
+                <div className="flex flex-col gap-4 px-4 pt-7 pb-4">
+                    <CronEditorSkeletonSection lineCount={3} titleWidth="sm" />
+                    <Skeleton className="h-px w-full rounded-none" />
+                    <CronEditorSkeletonSection lineCount={2} titleWidth="lg" />
+                    <Skeleton className="h-px w-full rounded-none" />
+                    <CronEditorSkeletonSection lineCount={3} titleWidth="md" />
+                    <Skeleton className="h-px w-full rounded-none" />
+                    <CronEditorSkeletonSection lineCount={2} titleWidth="sm" />
+                </div>
+            </aside>
+        </div>
+    );
+}
+
+function CronEditorSkeletonSection({
+    lineCount,
+    titleWidth,
+}: {
+    lineCount: number;
+    titleWidth: CronEditorSkeletonTitleWidth;
+}) {
+    return (
+        <section className="space-y-3">
+            <Skeleton
+                className={cn('h-4 rounded-md', cronEditorSkeletonTitleClassName[titleWidth])}
+            />
+            <div className="space-y-2">
+                {cronEditorSkeletonLineIds.slice(0, lineCount).map((id) => (
+                    <div className="flex items-center justify-between gap-4" key={id}>
+                        <Skeleton className="h-4 w-20 rounded-md" />
+                        <Skeleton className="h-4 w-24 rounded-md" />
+                    </div>
+                ))}
+            </div>
+        </section>
     );
 }
 

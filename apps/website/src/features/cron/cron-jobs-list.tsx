@@ -15,6 +15,7 @@ interface CronJobsListProps {
     jobs: CronListItem[];
     onDelete: (job: CronListItem) => Promise<void>;
     onEdit: (job: CronListItem) => void;
+    onHistory: (job: CronListItem) => void;
     onRun: (job: CronListItem) => Promise<void>;
     onToggle: (job: CronListItem, enabled: boolean) => Promise<void>;
 }
@@ -33,6 +34,7 @@ function CronJobCard({
     job,
     onDelete,
     onEdit,
+    onHistory,
     onRun,
     onToggle,
 }: CronJobCardProps) {
@@ -50,6 +52,7 @@ function CronJobCard({
                     job={job}
                     onDelete={onDelete}
                     onEdit={onEdit}
+                    onHistory={onHistory}
                     onRun={onRun}
                     onToggle={onToggle}
                 />
@@ -65,17 +68,27 @@ function CronJobCard({
                     name={job.channelId}
                 />
 
-                <div className="flex min-w-0 flex-1 items-center gap-2">
-                    <p className="truncate font-medium text-foreground text-sm">{job.name}</p>
-                    <span className="hidden text-muted-foreground text-sm md:inline">·</span>
-                    <span className="hidden min-w-0 truncate font-mono text-muted-foreground text-sm md:inline">
-                        {job.schedule}
-                    </span>
-                    <span className="hidden text-muted-foreground text-sm lg:inline">·</span>
-                    <div className="hidden items-center gap-2 lg:flex">
-                        <CronJobLastRun job={job} />
-                        <CronJobResultBadge job={job} />
+                <div className="flex min-w-0 flex-1 flex-col gap-1">
+                    <div className="flex min-w-0 items-center gap-2">
+                        <p className="truncate font-medium text-foreground text-sm">{job.name}</p>
+                        <span className="hidden text-muted-foreground text-sm md:inline">·</span>
+                        <span className="hidden min-w-0 truncate font-mono text-muted-foreground text-sm md:inline">
+                            {job.schedule}
+                        </span>
+                        <span className="hidden text-muted-foreground text-sm lg:inline">·</span>
+                        <div className="hidden items-center gap-2 lg:flex">
+                            <CronJobLastRun job={job} />
+                            <CronJobResultBadge job={job} />
+                        </div>
                     </div>
+                    {job.lastErrorMessage ? (
+                        <p
+                            className="max-w-[48rem] truncate text-error-foreground text-xs"
+                            title={job.lastErrorRaw ?? job.lastErrorMessage}
+                        >
+                            {job.lastErrorMessage}
+                        </p>
+                    ) : null}
                 </div>
             </div>
         </CardStackItem>
@@ -91,6 +104,7 @@ export function CronJobsList({
     jobs,
     onDelete,
     onEdit,
+    onHistory,
     onRun,
     onToggle,
 }: CronJobsListProps) {
@@ -107,6 +121,7 @@ export function CronJobsList({
                     key={job.id}
                     onDelete={onDelete}
                     onEdit={onEdit}
+                    onHistory={onHistory}
                     onRun={onRun}
                     onToggle={onToggle}
                 />

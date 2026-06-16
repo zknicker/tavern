@@ -50,6 +50,18 @@ function getResultLabel(job: CronJobRecord) {
     return job.state.lastStatus ?? 'unknown';
 }
 
+export function formatCronErrorMessage(message: null | string | undefined) {
+    const trimmed = message?.trim();
+    if (!trimmed) {
+        return null;
+    }
+
+    const embeddedMessage = /["']message["']\s*:\s*(["'])(?<message>.+?)\1[},]/u.exec(trimmed)
+        ?.groups?.message;
+
+    return embeddedMessage?.trim() || trimmed;
+}
+
 function getRunOccurredAt(run: CronRunRecord) {
     if (
         (run.status === 'success' || run.status === 'error' || run.status === 'skipped') &&
@@ -107,6 +119,8 @@ export function buildCronList(cronJobs: CronListOutput['jobs'], runs: CronRunsOu
             executions: buildExecutions(runsByJobId.get(job.id) ?? []),
             id: job.id,
             job,
+            lastErrorMessage: formatCronErrorMessage(job.state.lastErrorMessage),
+            lastErrorRaw: job.state.lastErrorMessage ?? null,
             lastRun: formatRelativeTime(lastRunAt),
             name: job.name,
             schedule: formatCronSchedule(job.schedule, true),

@@ -88,8 +88,13 @@ function withLatestRunState(job: AgentRuntimeCron, latestRun?: CronRun): AgentRu
         state: {
             ...job.state,
             lastDeliveryStatus: latestRun.deliveryStatus ?? job.state.lastDeliveryStatus,
+            lastErrorCode:
+                latestRun.status === 'error' && latestRun.error ? 'execution_failed' : undefined,
+            lastErrorMessage:
+                latestRun.status === 'error' ? (latestRun.error ?? undefined) : undefined,
             lastRunAtMs: runAtMs,
             lastRunStatus: latestRun.status ?? job.state.lastRunStatus,
+            lastStatus: latestRun.status ?? job.state.lastStatus,
         },
     };
 }

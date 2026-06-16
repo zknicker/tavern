@@ -9,11 +9,13 @@ import {
 import { useCronDelete } from '../../hooks/cron/use-cron-delete.ts';
 import { useCronList } from '../../hooks/cron/use-cron-list.ts';
 import { useCronRun } from '../../hooks/cron/use-cron-run.ts';
+import { useCronRuns } from '../../hooks/cron/use-cron-runs.ts';
 import { useCronToggle } from '../../hooks/cron/use-cron-toggle.ts';
 import { useSearch } from '../../hooks/dashboard/use-search.ts';
 import { useLayoutContext } from '../shell/use-layout-context.ts';
 import { CronDeleteDialog } from './cron-delete-dialog.tsx';
 import { buildCronList, type CronListItem } from './cron-list-data.ts';
+import { CronRunsDrawer } from './cron-runs-drawer.tsx';
 import { CronView } from './cron-view.tsx';
 import { type CronFilter, filterCronJobs } from './filter-cron-jobs.ts';
 
@@ -38,6 +40,8 @@ export function Cron() {
     );
     const [filter, setFilter] = React.useState<CronFilter>('all');
     const [deleteJob, setDeleteJob] = React.useState<CronListItem | null>(null);
+    const [historyJob, setHistoryJob] = React.useState<CronListItem | null>(null);
+    const cronRunsQuery = useCronRuns(historyJob ? { jobId: historyJob.id, limit: 20 } : null);
     const totalJobs = cronJobs.length;
     const enabledJobs = React.useMemo(
         () => cronJobs.filter((job) => job.enabled).length,
@@ -102,6 +106,7 @@ export function Cron() {
                 }}
                 onEdit={editJob}
                 onFilterChange={setFilter}
+                onHistory={setHistoryJob}
                 onNavigateToSettings={navigateToSettings}
                 onQueryChange={setQuery}
                 onRun={async (job) => {
@@ -119,6 +124,16 @@ export function Cron() {
                 pausedJobs={pausedJobs}
                 query={query}
                 totalJobs={totalJobs}
+            />
+            <CronRunsDrawer
+                deliveryDestinationLabel={null}
+                isOpen={historyJob !== null}
+                isPending={cronRunsQuery.isPending}
+                jobName={historyJob?.name ?? null}
+                onClose={() => {
+                    setHistoryJob(null);
+                }}
+                runs={cronRunsQuery.data?.runs ?? []}
             />
             <CronDeleteDialog
                 errorMessage={deleteMutation.error?.message ?? null}

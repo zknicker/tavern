@@ -6,9 +6,10 @@ import { Separator } from '../../components/ui/separator.tsx';
 import { Switch } from '../../components/ui/switch.tsx';
 import { usePrimaryAgent } from '../../hooks/agents/use-agent-list.ts';
 import { formatTimestamp } from '../../lib/format.ts';
-import type { CronGetOutput } from '../../lib/trpc.tsx';
+import type { CronGetOutput, CronRunsOutput } from '../../lib/trpc.tsx';
 import { CronEditorScheduleFields } from './cron-editor-schedule-fields.tsx';
 import type { CronFormState } from './cron-form.ts';
+import { CronRunHistoryList } from './cron-run-history-list.tsx';
 import { CronDeliveryFields } from './editor/cron-delivery-fields.tsx';
 import { CronSectionHeader } from './editor/cron-section.tsx';
 import { CronSelectRow } from './editor/cron-select-field.tsx';
@@ -24,7 +25,10 @@ const runTypeOptions = [
 
 interface CronEditorSidebarProps {
     form: CronEditorFormApi;
+    isRunsPending: boolean;
     job: CronJob | null;
+    onRunSelect: (run: CronRunsOutput['runs'][number]) => void;
+    runs: CronRunsOutput['runs'];
 }
 
 function SidebarSection({ children, title }: { children: ReactNode; title: string }) {
@@ -49,7 +53,13 @@ function formatStateTime(value: number | undefined) {
     return value ? formatTimestamp(new Date(value).toISOString()) : 'Not available';
 }
 
-export function CronEditorSidebar({ form, job }: CronEditorSidebarProps) {
+export function CronEditorSidebar({
+    form,
+    isRunsPending,
+    job,
+    onRunSelect,
+    runs,
+}: CronEditorSidebarProps) {
     const currentAgentId = useStore(form.store, (state) => state.values.agentId);
     const currentDeliveryChatId = useStore(form.store, (state) => state.values.deliveryChatId);
     const isSystemEvent = useStore(form.store, (state) => state.values.runType === 'systemEvent');
@@ -118,6 +128,20 @@ export function CronEditorSidebar({ form, job }: CronEditorSidebarProps) {
                         )}
                         <CronDeliveryFields deliveryChatOptions={deliveryChatOptions} form={form} />
                     </SidebarSection>
+
+                    {job ? (
+                        <>
+                            <Separator />
+
+                            <SidebarSection title="History">
+                                <CronRunHistoryList
+                                    isPending={isRunsPending}
+                                    onRunSelect={onRunSelect}
+                                    runs={runs}
+                                />
+                            </SidebarSection>
+                        </>
+                    ) : null}
                 </div>
             </ScrollArea>
         </aside>
