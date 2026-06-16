@@ -40,7 +40,7 @@ export function AppearanceSettings() {
                             <button
                                 aria-pressed={isActive}
                                 className={cn(
-                                    'group relative flex flex-col overflow-hidden rounded-2xl border bg-popover not-dark:bg-clip-padding text-left shadow-xs/5 outline-none transition-shadow dark:bg-input/32',
+                                    'no-drag group relative flex flex-col overflow-hidden rounded-2xl border bg-popover not-dark:bg-clip-padding text-left shadow-xs/5 outline-none transition-shadow dark:bg-input/32',
                                     'focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 focus-visible:ring-offset-background',
                                     isActive
                                         ? 'border-brand'
