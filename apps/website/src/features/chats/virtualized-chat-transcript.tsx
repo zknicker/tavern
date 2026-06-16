@@ -1,6 +1,7 @@
 import {
     measureElement as measureVirtualElement,
     type ReactVirtualizer,
+    type Rect,
     useVirtualizer,
     type VirtualItem,
 } from '@tanstack/react-virtual';
@@ -17,6 +18,7 @@ import { TranscriptRenderRowView } from './chat-transcript-rows.tsx';
 
 const previousPageScrollThreshold = 160;
 const transcriptScrollEndThreshold = 72;
+const transcriptFallbackOverscan = 8;
 
 export function VirtualizedChatTranscript({
     activeReply,
@@ -29,6 +31,7 @@ export function VirtualizedChatTranscript({
     fetchPreviousPage,
     hasPreviousPage,
     hiddenCount,
+    initialScrollKey = null,
     isFetchingPreviousPage,
     presenceRows,
     rows,
@@ -44,12 +47,16 @@ export function VirtualizedChatTranscript({
     fetchPreviousPage?: () => void;
     hasPreviousPage: boolean;
     hiddenCount: number;
+    initialScrollKey?: string | null;
     isFetchingPreviousPage: boolean;
     presenceRows: TranscriptRow[];
     rows: TranscriptRenderRow[];
     scrollViewportRef: React.RefObject<HTMLDivElement | null>;
 }) {
     const activeRowElementRef = React.useRef<HTMLDivElement | null>(null);
+    const initialScrollKeyRef = React.useRef<string | null>(null);
+    const initialScrollMeasureKeyRef = React.useRef<string | null>(null);
+    const initialScrollPendingRef = React.useRef(false);
     const virtualizer = useVirtualizer<HTMLDivElement, HTMLDivElement>({
         anchorTo: 'end',
         count: rows.length,
@@ -57,6 +64,7 @@ export function VirtualizedChatTranscript({
         followOnAppend: true,
         getItemKey: (index) => rows[index]?.id ?? index,
         getScrollElement: () => scrollViewportRef.current,
+        initialRect: getInitialTranscriptViewportRect(scrollViewportRef.current),
         initialOffset: () =>
             getEstimatedTranscriptBottomOffset(
                 rows,
@@ -74,6 +82,8 @@ export function VirtualizedChatTranscript({
         overscan: 8,
         scrollEndThreshold: transcriptScrollEndThreshold,
     });
+    const totalSize = virtualizer.getTotalSize();
+    const initialScrollMeasureKey = `${rows.length}:${totalSize}`;
     const tailFollowKey = getVirtualizedTranscriptTailFollowKey(rows, activeReply);
     const scrollToEndIfNearEnd = React.useCallback(() => {
         if (virtualizer.isAtEnd(transcriptScrollEndThreshold)) {
@@ -93,15 +103,65 @@ export function VirtualizedChatTranscript({
         }
     }, [virtualizer]);
     const virtualItems = virtualizer.getVirtualItems();
+    const renderableVirtualItems =
+        virtualItems.length > 0
+            ? virtualItems
+            : getEstimatedTranscriptTailVirtualItems(
+                  rows,
+                  getInitialTranscriptViewportHeight(scrollViewportRef.current)
+              );
     const firstEntryIndex = virtualItems.find((item) => rows[item.index]?.kind === 'entry')?.index;
 
     React.useLayoutEffect(() => {
+        const measureChanged = initialScrollMeasureKeyRef.current !== initialScrollMeasureKey;
+        initialScrollMeasureKeyRef.current = initialScrollMeasureKey;
+
+        if (initialScrollKey && rows.length > 0) {
+            const keyChanged = initialScrollKeyRef.current !== initialScrollKey;
+
+            if (keyChanged) {
+                initialScrollPendingRef.current = true;
+            }
+
+            initialScrollKeyRef.current = initialScrollKey;
+
+            if (
+                initialScrollPendingRef.current &&
+                (keyChanged || measureChanged) &&
+                !virtualizer.isAtEnd(transcriptScrollEndThreshold)
+            ) {
+                virtualizer.scrollToEnd({ behavior: 'auto' });
+                return;
+            }
+        }
+
         if (tailFollowKey.length === 0) {
             return;
         }
 
         scrollToEndIfNearEnd();
-    }, [scrollToEndIfNearEnd, tailFollowKey]);
+    }, [
+        initialScrollKey,
+        initialScrollMeasureKey,
+        rows.length,
+        scrollToEndIfNearEnd,
+        tailFollowKey,
+        virtualizer,
+    ]);
+
+    React.useEffect(() => {
+        if (!initialScrollKey) {
+            return;
+        }
+
+        const timer = window.setTimeout(() => {
+            if (initialScrollKeyRef.current === initialScrollKey) {
+                initialScrollPendingRef.current = false;
+            }
+        }, 1200);
+
+        return () => window.clearTimeout(timer);
+    }, [initialScrollKey]);
 
     React.useEffect(() => {
         const viewport = scrollViewportRef.current;
@@ -136,9 +196,9 @@ export function VirtualizedChatTranscript({
         <ActiveReplyLayoutSyncProvider value={syncActiveReplyLayout}>
             <div
                 className="relative w-full [overflow-anchor:none]"
-                style={{ height: `${virtualizer.getTotalSize()}px` }}
+                style={{ height: `${totalSize}px` }}
             >
-                {virtualItems.map((virtualItem) => {
+                {renderableVirtualItems.map((virtualItem) => {
                     const row = rows[virtualItem.index];
 
                     if (!row) {
@@ -282,6 +342,62 @@ export function getEstimatedTranscriptBottomOffset(
     );
 
     return Math.max(totalEstimatedHeight - viewportHeight, 0);
+}
+
+export function getEstimatedTranscriptTailVirtualItems(
+    rows: TranscriptRenderRow[],
+    viewportHeight: number
+): VirtualItem[] {
+    if (rows.length === 0 || viewportHeight <= 0) {
+        return [];
+    }
+
+    const items = buildEstimatedTranscriptVirtualItems(rows);
+    const totalEstimatedHeight = items.at(-1)?.end ?? 0;
+    const visibleStart = Math.max(totalEstimatedHeight - viewportHeight, 0);
+    const firstVisibleIndex = items.findIndex((item) => item.end >= visibleStart);
+    const startIndex = Math.max(
+        (firstVisibleIndex === -1 ? 0 : firstVisibleIndex) - transcriptFallbackOverscan,
+        0
+    );
+
+    return items.slice(startIndex);
+}
+
+function buildEstimatedTranscriptVirtualItems(rows: TranscriptRenderRow[]): VirtualItem[] {
+    let start = 0;
+
+    return rows.map((row, index) => {
+        const size = getEstimatedTranscriptRowSize(row);
+        const item = {
+            end: start + size,
+            index,
+            key: row.id,
+            lane: 0,
+            size,
+            start,
+        };
+        start = item.end;
+        return item;
+    });
+}
+
+function getInitialTranscriptViewportRect(viewport: HTMLElement | null): Rect {
+    if (viewport) {
+        return {
+            height: viewport.offsetHeight,
+            width: viewport.offsetWidth,
+        };
+    }
+
+    if (typeof window === 'undefined') {
+        return { height: 0, width: 0 };
+    }
+
+    return {
+        height: window.innerHeight,
+        width: window.innerWidth,
+    };
 }
 
 function getInitialTranscriptViewportHeight(viewport: HTMLElement | null) {

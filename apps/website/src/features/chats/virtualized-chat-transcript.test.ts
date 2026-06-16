@@ -8,6 +8,7 @@ import {
 } from './chat-transcript-row-model.ts';
 import {
     getEstimatedTranscriptBottomOffset,
+    getEstimatedTranscriptTailVirtualItems,
     getVirtualizedTranscriptTailFollowKey,
     shouldLoadPreviousVirtualizedChatPage,
     transcriptRowUsesActiveReply,
@@ -70,6 +71,47 @@ test('virtualized chat initial offset starts at the estimated transcript bottom'
 
     expect(getEstimatedTranscriptBottomOffset(rows, 120)).toBe(180);
     expect(getEstimatedTranscriptBottomOffset(rows, 400)).toBe(0);
+});
+
+test('virtualized chat fallback renders the estimated tail when the measured range is empty', () => {
+    const rows = [
+        { id: 'hidden-count', kind: 'hiddenCount' },
+        {
+            entry: {
+                actor: null,
+                id: 'user-row',
+                items: [],
+                key: 'user:test',
+                kind: 'turn',
+                participant: 'user',
+                responseId: null,
+                timestamp: null,
+            },
+            id: 'user-row',
+            kind: 'entry',
+        },
+        {
+            entry: {
+                actor: null,
+                id: 'agent-row',
+                items: [],
+                key: 'agent:test',
+                kind: 'turn',
+                participant: 'agent',
+                responseId: null,
+                timestamp: null,
+            },
+            id: 'agent-row',
+            kind: 'entry',
+        },
+    ] as TranscriptRenderRow[];
+
+    expect(getEstimatedTranscriptTailVirtualItems(rows, 120).map((item) => item.key)).toEqual([
+        'hidden-count',
+        'user-row',
+        'agent-row',
+    ]);
+    expect(getEstimatedTranscriptTailVirtualItems(rows, 0)).toEqual([]);
 });
 
 test('virtualized chat estimates blank thinking presence without fake bottom space', () => {

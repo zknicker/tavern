@@ -14,6 +14,7 @@ export function ChatTimeline({
     fetchPreviousPage,
     failedTurn,
     hasPreviousPage = false,
+    initialScrollKey = null,
     isFetchingPreviousPage = false,
     rows,
     scrollViewportRef,
@@ -27,6 +28,7 @@ export function ChatTimeline({
     fetchPreviousPage?: () => void;
     failedTurn?: ChatTurnFailure | null;
     hasPreviousPage?: boolean;
+    initialScrollKey?: string | null;
     isFetchingPreviousPage?: boolean;
     rows: NonNullable<ChatLogOutput>['rows'];
     scrollViewportRef?: React.RefObject<HTMLDivElement | null>;
@@ -56,6 +58,7 @@ export function ChatTimeline({
                 fetchPreviousPage={fetchPreviousPage}
                 hasPreviousPage={hasPreviousPage}
                 hiddenCount={hiddenCount}
+                initialScrollKey={initialScrollKey}
                 isFetchingPreviousPage={isFetchingPreviousPage}
                 rows={rows}
                 scrollViewportRef={scrollViewportRef}

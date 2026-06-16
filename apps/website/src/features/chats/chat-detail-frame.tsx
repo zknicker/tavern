@@ -64,7 +64,7 @@ export function ChatDetailFrame({
         enabled: !isInitialTranscriptPending && hasTimelineContent,
         followContentResizes: !enableVirtualization,
         followKey,
-        initialScrollKey,
+        initialScrollKey: enableVirtualization ? null : initialScrollKey,
     });
     // The scroll controller owns its own viewport listeners; this handler only
     // drives the non-virtualized previous-page fetch.
@@ -117,6 +117,9 @@ export function ChatDetailFrame({
                                     failedTurn={failedTurn}
                                     fetchPreviousPage={fetchPreviousPage}
                                     hasPreviousPage={hasPreviousPage}
+                                    initialScrollKey={
+                                        enableVirtualization ? initialScrollKey : null
+                                    }
                                     isFetchingPreviousPage={isFetchingPreviousPage}
                                     rows={rows}
                                     scrollViewportRef={
