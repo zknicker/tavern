@@ -1,4 +1,4 @@
-import { Cancel01Icon } from '@hugeicons-pro/core-stroke-rounded';
+import { StopIcon } from '@hugeicons-pro/core-solid-rounded';
 import * as React from 'react';
 import { Icon } from '../../components/ui/icon.tsx';
 import {
@@ -124,6 +124,11 @@ export function ChatMessageComposer({
     const canSend = canQueue && !isSendBlocked;
     const canSubmit = isSendBlocked ? canQueue : canSend;
     const canDispatchQueued = chatCanSend && canSendToRuntime && !isDisabled && !isSendBlocked;
+    const primaryAction = getComposerPrimaryAction({
+        activeRunId,
+        hasDraftPayload: hasPayload,
+        isReplyActive,
+    });
 
     // biome-ignore lint/correctness/useExhaustiveDependencies: Dispatch is ref-gated; queue head and blocked state drive this effect.
     React.useEffect(() => {
@@ -485,7 +490,7 @@ export function ChatMessageComposer({
                     {contextFullness ? (
                         <ChatComposerContextFullness fullness={contextFullness} />
                     ) : null}
-                    {activeRunId ? (
+                    {primaryAction === 'stop' && activeRunId ? (
                         <PromptInputButton
                             aria-label={stopTurn.isPending ? 'Stopping response' : 'Stop response'}
                             disabled={stopTurn.isPending}
@@ -498,37 +503,45 @@ export function ChatMessageComposer({
                             size="icon-tight"
                             tooltip={stopTurn.isPending ? 'Stopping response' : 'Stop response'}
                             type="button"
-                            variant="secondary"
                         >
                             {stopTurn.isPending ? (
                                 <Spinner className="size-4 text-muted-foreground" />
                             ) : (
-                                <Icon className="size-4" icon={Cancel01Icon} />
+                                <Icon className="size-5" icon={StopIcon} />
                             )}
                         </PromptInputButton>
-                    ) : null}
-                    <PromptInputSubmit
-                        canSubmit={canSubmit}
-                        label={
-                            (editingQueuedMessageId || isSendBlocked) && hasPayload
-                                ? 'Queue message'
-                                : 'Send message'
-                        }
-                        tooltip={getSendDisabledTooltip({
-                            agentRuntimeSyncLabel,
-                            boundAgentCount: boundAgentIds.length,
-                            canSend: chatCanSend,
-                            isDisabled,
-                            isPending: sendMessage.isPending,
-                            isReplyActive,
-                            runtimeReady: canSendToRuntime,
-                            runtimeReason: runtimeDisabledReason,
-                        })}
-                    />
+                    ) : (
+                        <PromptInputSubmit
+                            canSubmit={canSubmit}
+                            label={
+                                (editingQueuedMessageId || isSendBlocked) && hasPayload
+                                    ? 'Queue message'
+                                    : 'Send message'
+                            }
+                            tooltip={getSendDisabledTooltip({
+                                agentRuntimeSyncLabel,
+                                boundAgentCount: boundAgentIds.length,
+                                canSend: chatCanSend,
+                                isDisabled,
+                                isPending: sendMessage.isPending,
+                                isReplyActive,
+                                runtimeReady: canSendToRuntime,
+                                runtimeReason: runtimeDisabledReason,
+                            })}
+                        />
+                    )}
                 </PromptInputActions>
             </PromptInputFooter>
         </PromptInput>
     );
+}
+
+export function getComposerPrimaryAction(input: {
+    activeRunId: string | null;
+    hasDraftPayload: boolean;
+    isReplyActive: boolean;
+}) {
+    return input.activeRunId && input.isReplyActive && !input.hasDraftPayload ? 'stop' : 'submit';
 }
 
 function ModelSelectorSlot({
