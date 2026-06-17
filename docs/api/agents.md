@@ -40,6 +40,9 @@ with instruction files, model, execution, tool, memory, and skill policy.
   name, appearance (avatar and emoji), model, thinking default, and messaging
   bindings through agent and messaging APIs instead of editing or saving raw
   Hermes config JSON.
+* Persisted agent settings mean user intent. Runtime startup can apply Tavern
+  defaults to the managed engine, but it must not write those defaults into the
+  saved agent settings store.
 * Execution settings — the model fallback chain and the agent timezone — are
   Runtime-stored and edited through the agent execution settings API. Agent
   environment variables are Runtime-stored Vault secrets exposed as write-only

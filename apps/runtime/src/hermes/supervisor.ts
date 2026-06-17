@@ -341,7 +341,7 @@ async function applyManagedHermesModelConfig(client: ReturnType<typeof createLoc
         return;
     }
     await client
-        .updateAgentModel('agt_hermes', {
+        .applyDefaultAgentModel({
             model: {
                 baseUrl: config.baseUrl ?? undefined,
                 model: config.model,

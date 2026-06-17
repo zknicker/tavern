@@ -57,7 +57,11 @@ import {
     agentRuntimeSubmitModelProviderOAuthSchema,
 } from '@tavern/api';
 import { getRuntimePort, HERMES_HOME, HERMES_WORKSPACE } from '../config';
-import { readHermesAdapterState, updateHermesAdapterState } from './adapter-state';
+import {
+    readHermesAdapterState,
+    resolveHermesConfiguredAgentState,
+    updateHermesConfiguredAgentState,
+} from './adapter-state';
 import { readHermesConnectionOptions } from './connection';
 import { defaultHermesAgentId } from './constants';
 import { unsupportedHermesSurface } from './errors';
@@ -283,11 +287,12 @@ export class LocalHermesClient extends LocalHermesUnsupportedSurfaces {
 
     async listAgents() {
         const state = await readHermesAdapterState();
+        const configured = resolveHermesConfiguredAgentState(state)?.settings ?? {};
         return agentRuntimeAgentListSchema.parse({
             agents: [
                 {
                     ...defaultHermesAgent(),
-                    ...state.agent,
+                    ...configured,
                 },
             ],
         });
@@ -313,15 +318,12 @@ export class LocalHermesClient extends LocalHermesUnsupportedSurfaces {
             workspaceFolder: input.workspaceFolder,
         });
 
-        await updateHermesAdapterState((state) => ({
-            ...state,
-            agent: {
-                ...state.agent,
-                avatar: next.avatar,
-                emoji: next.emoji,
-                enabledSkillIds: next.enabledSkillIds,
-                name: next.name,
-            },
+        await updateHermesConfiguredAgentState((settings) => ({
+            ...settings,
+            avatar: next.avatar,
+            emoji: next.emoji,
+            enabledSkillIds: next.enabledSkillIds,
+            name: next.name,
         }));
 
         return next;
@@ -375,12 +377,9 @@ export class LocalHermesClient extends LocalHermesUnsupportedSurfaces {
     }
 
     async updateAgentName(_agentId: string, input: AgentRuntimeUpdateAgentName) {
-        await updateHermesAdapterState((state) => ({
-            ...state,
-            agent: {
-                ...state.agent,
-                name: input.name,
-            },
+        await updateHermesConfiguredAgentState((settings) => ({
+            ...settings,
+            name: input.name,
         }));
         return toHermesConfigSnapshot({
             agent: { name: input.name },
@@ -393,12 +392,9 @@ export class LocalHermesClient extends LocalHermesUnsupportedSurfaces {
             ...(input.avatar !== undefined ? { avatar: input.avatar || null } : {}),
             ...(input.emoji !== undefined ? { emoji: input.emoji || null } : {}),
         };
-        await updateHermesAdapterState((state) => ({
-            ...state,
-            agent: {
-                ...state.agent,
-                ...appearance,
-            },
+        await updateHermesConfiguredAgentState((settings) => ({
+            ...settings,
+            ...appearance,
         }));
         return toHermesConfigSnapshot({
             agent: appearance,
@@ -407,21 +403,22 @@ export class LocalHermesClient extends LocalHermesUnsupportedSurfaces {
     }
 
     async updateAgentModel(_agentId: string, input: AgentRuntimeUpdateAgentModel) {
-        const result = await this.#http.postJson('/api/model/set', {
-            base_url: input.model.baseUrl,
-            model: input.model.model,
-            provider: input.model.provider,
-            scope: 'main',
-        });
-        await updateHermesAdapterState((state) => ({
-            ...state,
-            agent: {
-                ...state.agent,
-                hermesModelName: input.model,
-            },
+        const result = await this.#setMainModel(input.model);
+        await updateHermesConfiguredAgentState((settings) => ({
+            ...settings,
+            hermesModelName: input.model,
         }));
         return toHermesConfigSnapshot({
             hash: `model:${input.model.provider}/${input.model.model}`,
+            model: input.model,
+            result,
+        });
+    }
+
+    async applyDefaultAgentModel(input: AgentRuntimeUpdateAgentModel) {
+        const result = await this.#setMainModel(input.model);
+        return toHermesConfigSnapshot({
+            hash: `default-model:${input.model.provider}/${input.model.model}`,
             model: input.model,
             result,
         });
@@ -431,16 +428,22 @@ export class LocalHermesClient extends LocalHermesUnsupportedSurfaces {
         _agentId: string,
         input: AgentRuntimeUpdateAgentThinkingDefault
     ) {
-        await updateHermesAdapterState((state) => ({
-            ...state,
-            agent: {
-                ...state.agent,
-                thinkingDefault: input.thinkingDefault,
-            },
+        await updateHermesConfiguredAgentState((settings) => ({
+            ...settings,
+            thinkingDefault: input.thinkingDefault,
         }));
         return toHermesConfigSnapshot({
             agent: { thinkingDefault: input.thinkingDefault },
             hash: `thinking:${input.thinkingDefault ?? 'default'}`,
+        });
+    }
+
+    async #setMainModel(model: AgentRuntimeUpdateAgentModel['model']) {
+        return await this.#http.postJson('/api/model/set', {
+            base_url: model.baseUrl,
+            model: model.model,
+            provider: model.provider,
+            scope: 'main',
         });
     }
 
@@ -788,9 +791,10 @@ export class LocalHermesClient extends LocalHermesUnsupportedSurfaces {
 
     async getHermesConfig() {
         const state = await readHermesAdapterState();
+        const configured = resolveHermesConfiguredAgentState(state)?.settings ?? {};
         const agent = {
             ...defaultHermesAgent(),
-            ...state.agent,
+            ...configured,
         };
         const config = {
             agents: {

@@ -1,9 +1,15 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
+import type { AgentRuntimeHermesModelName } from '@tavern/api';
 import { HERMES_HOME, readConfigValue } from '../config';
 import { loadVaultBackedCodexCredentials } from '../model-access/codex-settings';
 import { getOpenAiApiKey } from '../model-access/openai-settings';
 import { getOpenRouterApiKey } from '../model-access/openrouter-settings';
+import {
+    readHermesAdapterState,
+    resolveHermesConfiguredAgentState,
+    updateHermesAdapterState,
+} from './adapter-state';
 import { resolveAgentEnvEntries } from './agent-env';
 import { syncHermesCodexAuth } from './auth-store';
 import { resolveConnectorsDomain } from './connectors';
@@ -55,7 +61,7 @@ export async function resolveManagedHermesModelConfig(): Promise<HermesModelConf
     const codexModel = readConfigValue('CODEX_MODEL');
     const codexCredentials = await loadVaultBackedCodexCredentials().catch(() => null);
 
-    return resolveManagedHermesModelRoute({
+    const route = resolveManagedHermesModelRoute({
         codexCredentialsAvailable: codexCredentials !== null,
         codexModel,
         explicitApiKey,
@@ -64,6 +70,20 @@ export async function resolveManagedHermesModelConfig(): Promise<HermesModelConf
         explicitProvider,
         openAiApiKey,
         openRouterApiKey,
+    });
+
+    const state = explicitProvider || explicitModel ? null : await readHermesAdapterState();
+    const configured = state ? resolveHermesConfiguredAgentState(state) : null;
+    const savedModel = configured?.settings.hermesModelName ?? null;
+    if (savedModel && configured?.legacy && isSameModelRoute(savedModel, route)) {
+        await clearLegacyDefaultModelState();
+    }
+    return applySavedAgentModelRoute({
+        config: route,
+        explicitModel,
+        explicitProvider,
+        savedModel,
+        savedModelLegacy: configured?.legacy ?? false,
     });
 }
 
@@ -122,6 +142,57 @@ export function resolveManagedHermesModelRoute(
         openRouterApiKey: input.openRouterApiKey,
         provider: input.explicitProvider ?? null,
     };
+}
+
+export function applySavedAgentModelRoute(input: {
+    config: HermesModelConfig;
+    explicitModel: null | string;
+    explicitProvider: null | string;
+    savedModel: AgentRuntimeHermesModelName | null | undefined;
+    savedModelLegacy?: boolean;
+}): HermesModelConfig {
+    if (input.explicitProvider || input.explicitModel || !input.savedModel) {
+        return input.config;
+    }
+
+    if (input.savedModelLegacy && isSameModelRoute(input.savedModel, input.config)) {
+        return input.config;
+    }
+
+    return {
+        ...input.config,
+        baseUrl:
+            input.savedModel.baseUrl ??
+            (input.savedModel.provider === input.config.provider ? input.config.baseUrl : null),
+        model: input.savedModel.model,
+        provider: input.savedModel.provider,
+    };
+}
+
+function isSameModelRoute(
+    savedModel: AgentRuntimeHermesModelName,
+    config: HermesModelConfig
+): boolean {
+    return (
+        savedModel.model === config.model &&
+        savedModel.provider === config.provider &&
+        (savedModel.baseUrl ?? null) === (config.baseUrl ?? null)
+    );
+}
+
+async function clearLegacyDefaultModelState() {
+    await updateHermesAdapterState((state) => {
+        if (!state.agent?.hermesModelName) {
+            return state;
+        }
+
+        const { hermesModelName, ...agentConfigured } = state.agent;
+        return {
+            ...state,
+            agent: undefined,
+            agentConfigured: Object.keys(agentConfigured).length > 0 ? agentConfigured : undefined,
+        };
+    });
 }
 
 export async function prepareManagedHermesModelConfig(

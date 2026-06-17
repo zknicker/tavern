@@ -8,15 +8,23 @@ import type {
 } from '@tavern/api';
 import { HERMES_HOME } from '../config';
 
-interface HermesAdapterState {
-    agent?: {
-        avatar?: null | string;
-        emoji?: null | string;
-        enabledSkillIds?: string[];
-        hermesModelName?: AgentRuntimeHermesModelName | null;
-        name?: string;
-        thinkingDefault?: AgentRuntimeAgent['thinkingDefault'];
-    };
+export interface HermesConfiguredAgentState {
+    avatar?: null | string;
+    emoji?: null | string;
+    enabledSkillIds?: string[];
+    hermesModelName?: AgentRuntimeHermesModelName | null;
+    name?: string;
+    thinkingDefault?: AgentRuntimeAgent['thinkingDefault'];
+}
+
+export interface HermesAdapterState {
+    /** Legacy pre-agentConfigured state; read for migration only. */
+    agent?: HermesConfiguredAgentState;
+    /**
+     * User/API-saved agent settings. Absence means Tavern/runtime defaults.
+     * Runtime startup must not write defaults here.
+     */
+    agentConfigured?: HermesConfiguredAgentState;
     cronJobs?: AgentRuntimeCron[];
     cronRuns?: AgentRuntimeCronRun[];
 }
@@ -27,7 +35,8 @@ export async function readHermesAdapterState(): Promise<HermesAdapterState> {
     try {
         const parsed = JSON.parse(await fs.readFile(statePath, 'utf8')) as HermesAdapterState;
         return {
-            agent: parsed.agent && typeof parsed.agent === 'object' ? parsed.agent : undefined,
+            agent: parseConfiguredAgentState(parsed.agent),
+            agentConfigured: parseConfiguredAgentState(parsed.agentConfigured),
             cronJobs: Array.isArray(parsed.cronJobs) ? parsed.cronJobs : [],
             cronRuns: Array.isArray(parsed.cronRuns) ? parsed.cronRuns : [],
         };
@@ -53,4 +62,36 @@ export async function updateHermesAdapterState(
     const next = update(current);
     await writeHermesAdapterState(next);
     return next;
+}
+
+export function resolveHermesConfiguredAgentState(state: HermesAdapterState): {
+    legacy: boolean;
+    settings: HermesConfiguredAgentState;
+} | null {
+    if (state.agentConfigured) {
+        return { legacy: false, settings: state.agentConfigured };
+    }
+    if (state.agent) {
+        return { legacy: true, settings: state.agent };
+    }
+    return null;
+}
+
+export async function updateHermesConfiguredAgentState(
+    update: (settings: HermesConfiguredAgentState) => HermesConfiguredAgentState
+) {
+    const current = await readHermesAdapterState();
+    const existing = resolveHermesConfiguredAgentState(current)?.settings ?? {};
+    const next = update(existing);
+    return await writeHermesAdapterState({
+        ...current,
+        agent: undefined,
+        agentConfigured: next,
+    });
+}
+
+function parseConfiguredAgentState(value: unknown): HermesConfiguredAgentState | undefined {
+    return value && typeof value === 'object' && !Array.isArray(value)
+        ? (value as HermesConfiguredAgentState)
+        : undefined;
 }

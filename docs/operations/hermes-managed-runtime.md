@@ -110,7 +110,7 @@ every Tavern-owned setting that lands in the file is a domain:
 
 | Domain | Keys | Source of truth |
 | --- | --- | --- |
-| model | `model.*` | env/Vault-derived model route |
+| model | `model.*` | explicit env, saved agent model, or credentialed default route |
 | execution | `fallback_providers`, `timezone`, `delegation.*`, `compression.*` | `/execution-settings` store |
 | display | `display.tool_progress`, `display.interim_assistant_messages` | fixed managed policy |
 | permissions | `approvals.*`, `command_allowlist` | `/permission-settings` store (untouched until first save) |
@@ -124,9 +124,9 @@ elsewhere in the file survive every merge. Runtime storage is the source of
 truth and the YAML is always derived; settings changes rewrite the file and
 schedule a managed Hermes restart. Restarts are coalesced — a burst of saves
 produces one restart, debounced and deferred (bounded) while a chat turn is
-active (`apps/runtime/src/hermes/restart-coordinator.ts`). Per-agent live settings (name, model, thinking,
-appearance) are not config domains — they flow through the adapter state and
-engine API instead.
+active (`apps/runtime/src/hermes/restart-coordinator.ts`). Per-agent live settings (name, model,
+thinking, appearance) are not config domains — saved values live in the
+adapter's configured-agent state and flow through the engine API instead.
 
 Explicit env wins:
 
@@ -147,6 +147,13 @@ credentialed route:
 When no route is configured, Runtime leaves Hermes without a generated default
 model and reports the setup gap through capabilities instead of inventing an
 unusable provider.
+
+Startup applies the credentialed route as the engine default without saving it
+as user intent. Saved settings stores only carry user/API intent; absence means
+Tavern should use the current default. Once the user saves an agent model in
+Tavern, that saved model remains the generated default across managed runtime
+restarts and app updates. `TAVERN_HERMES_PROVIDER` or `TAVERN_HERMES_MODEL`
+still explicitly forces a route.
 
 When Runtime resolves a route, Tavern applies it as Hermes's default runtime. It does not set
 `model.openai_runtime: codex_app_server`; that remains a Hermes opt-in.

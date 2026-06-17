@@ -1508,6 +1508,74 @@ describe('LocalHermesClient adapter-owned state', () => {
         });
     });
 
+    it('applies a Tavern default model without marking it as a saved agent setting', async () => {
+        httpServer = Bun.serve({
+            fetch: async (request) => {
+                const url = new URL(request.url);
+                if (request.method === 'POST' && url.pathname === '/api/model/set') {
+                    return Response.json({ ok: true });
+                }
+                return new Response('not found', { status: 404 });
+            },
+            port: 0,
+        });
+
+        const { LocalHermesClient } = await import('./local-client');
+        const client = new LocalHermesClient({
+            baseUrl: `http://127.0.0.1:${httpServer.port}`,
+            token: null,
+        });
+
+        await client.applyDefaultAgentModel({
+            model: {
+                model: 'gpt-5.4-mini',
+                provider: 'openai-codex',
+            },
+        });
+
+        const agents = await client.listAgents();
+        const { HERMES_HOME } = await import('../config');
+
+        expect(agents.agents[0]?.hermesModelName).toBeUndefined();
+        await expect(
+            fs.readFile(path.join(HERMES_HOME, 'tavern-adapter-state.json'), 'utf8')
+        ).rejects.toThrow();
+    });
+
+    it('migrates legacy adapter agent settings into the configured settings envelope', async () => {
+        const { HERMES_HOME } = await import('../config');
+        await fs.mkdir(HERMES_HOME, { recursive: true });
+        await fs.writeFile(
+            path.join(HERMES_HOME, 'tavern-adapter-state.json'),
+            JSON.stringify({
+                agent: {
+                    name: 'Legacy name',
+                },
+            })
+        );
+
+        const { LocalHermesClient } = await import('./local-client');
+        const client = new LocalHermesClient({
+            baseUrl: 'http://127.0.0.1:1',
+            token: null,
+        });
+
+        await expect(client.listAgents()).resolves.toMatchObject({
+            agents: [{ name: 'Legacy name' }],
+        });
+        await client.updateAgentName('agt_hermes', { name: 'Configured name' });
+
+        const state = JSON.parse(
+            await fs.readFile(path.join(HERMES_HOME, 'tavern-adapter-state.json'), 'utf8')
+        );
+        expect(state).toMatchObject({
+            agentConfigured: {
+                name: 'Configured name',
+            },
+        });
+        expect(state.agent).toBeUndefined();
+    });
+
     it('persists avatar and emoji appearance into adapter state', async () => {
         const { LocalHermesClient } = await import('./local-client');
         const client = new LocalHermesClient({
