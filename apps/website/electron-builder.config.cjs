@@ -11,6 +11,7 @@ module.exports = {
     files: [
         'dist/**',
         'electron/edit-context-menu.cjs',
+        'electron/external-link-handlers.cjs',
         'electron/main.cjs',
         'electron/preload.cjs',
         'package.json',

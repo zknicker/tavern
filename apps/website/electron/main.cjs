@@ -1,11 +1,12 @@
 'use strict';
 
-const { app, BrowserWindow, ipcMain, Menu, nativeTheme } = require('electron');
+const { app, BrowserWindow, ipcMain, Menu, nativeTheme, shell } = require('electron');
 const path = require('node:path');
 const { spawn, execFile, spawnSync } = require('node:child_process');
 const { existsSync } = require('node:fs');
 const electronUpdater = require('electron-updater');
 const { registerEditContextMenuHandlers } = require('./edit-context-menu.cjs');
+const { registerExternalLinkHandlers } = require('./external-link-handlers.cjs');
 
 const desktopServerOrigin = 'http://127.0.0.1:3180';
 const sidecarStartupDeadlineMs = 10_000;
@@ -68,6 +69,11 @@ function createMainWindow() {
 
     mainWindow.once('ready-to-show', () => {
         mainWindow?.show();
+    });
+
+    registerExternalLinkHandlers(mainWindow, {
+        appUrl: process.env.TAVERN_ELECTRON_DEV_URL ?? 'file://',
+        openExternal: (url) => shell.openExternal(url),
     });
 
     void loadMainWindow(mainWindow);
