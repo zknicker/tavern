@@ -33,6 +33,7 @@ export function ChatTranscriptActivityGroup({
     showDurationHeader = true,
     turnActive = false,
     turnCompletedAt,
+    turnStopped = false,
     turnStartedAt,
 }: {
     chatId?: string;
@@ -42,10 +43,11 @@ export function ChatTranscriptActivityGroup({
     showDurationHeader?: boolean;
     turnActive?: boolean;
     turnCompletedAt?: string | null;
+    turnStopped?: boolean;
     turnStartedAt?: string | null;
 }) {
     const activityItems = items.filter(isActivityItem);
-    const isActive = turnActive || activityItems.some(isActiveActivityItem);
+    const isActive = !turnStopped && (turnActive || activityItems.some(isActiveActivityItem));
     const activityEnd = getActivityEnd(activityItems);
     const activityStart = getActivityStart(activityItems);
     const start = activityStart ?? (isActive ? null : (turnStartedAt ?? null));

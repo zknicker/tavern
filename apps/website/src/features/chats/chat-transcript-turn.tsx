@@ -149,6 +149,8 @@ export function AgentPresenceTranscriptRow({
     const actorProfile = useActorProfile(entry.actor);
     const items = entry.items;
     const lastMessage = getLastMessage(items);
+    const activeRunStopped = hasStoppedTurn(items, activeReply?.runId);
+    const presenceActiveReply = activeRunStopped ? null : activeReply;
     const turnActive = isActiveTurn(items, activeReply, lastMessage);
     const activityItems = items.filter(isActivityItem);
     const displayName = actorProfile?.name ?? getTurnFallbackName(entry) ?? 'Agent';
@@ -172,7 +174,7 @@ export function AgentPresenceTranscriptRow({
             label={presenceTimingLabel}
             presence={
                 <AgentPresenceIndicator
-                    activeReply={activeReply}
+                    activeReply={presenceActiveReply}
                     className="translate-y-px"
                     color={actorProfile?.primaryColor ?? agentPresenceColor}
                     failedTurn={failedTurn}
@@ -305,6 +307,8 @@ function AgentTurn({
     const turnCompletedAt = lastMessage?.timestamp ?? null;
     const segments = groupAgentItems(items);
     const visibleSegments = segments.filter((segment) => !isActiveStatusSegment(segment));
+    const turnStopped =
+        hasStoppedTurn(items, activeReply?.runId) || (!activeReply && hasAnyStoppedTurn(items));
     const turnActive = isActiveTurn(items, activeReply, lastMessage);
     return (
         <div
@@ -347,6 +351,7 @@ function AgentTurn({
                                     turnActive={turnActive && index === visibleSegments.length - 1}
                                     turnCompletedAt={turnCompletedAt}
                                     turnStartedAt={turnStartedAt}
+                                    turnStopped={turnStopped}
                                 />
                             ))}
                         </div>
@@ -508,6 +513,7 @@ function AgentTurnSegment({
     segment,
     turnActive,
     turnCompletedAt,
+    turnStopped,
     turnStartedAt,
 }: {
     chatId?: string;
@@ -517,6 +523,7 @@ function AgentTurnSegment({
     segment: AgentItemSegment;
     turnActive: boolean;
     turnCompletedAt: string | null;
+    turnStopped: boolean;
     turnStartedAt?: string | null;
 }) {
     return segment.kind === 'activity' ? (
@@ -529,6 +536,7 @@ function AgentTurnSegment({
             turnActive={turnActive}
             turnCompletedAt={turnCompletedAt}
             turnStartedAt={turnStartedAt}
+            turnStopped={turnStopped}
         />
     ) : (
         <AgentTurnItem
@@ -838,11 +846,37 @@ function isActiveTurn(
     activeReply: ChatActiveReply | null,
     lastMessage: Extract<TranscriptRow, { kind: 'message' }>['message'] | null
 ) {
-    if (!(activeReply && lastMessage === null) || activeReply.completedAt) {
+    if (
+        !(activeReply && lastMessage === null) ||
+        activeReply.completedAt ||
+        hasStoppedTurn(items, activeReply.runId)
+    ) {
         return false;
     }
 
     return items.some((item) => getItemSessionKey(item) === activeReply.sessionKey);
+}
+
+function hasStoppedTurn(items: TranscriptItem[], runId: string | null | undefined) {
+    return Boolean(
+        runId &&
+            items.some(
+                (item) =>
+                    item.kind === 'row' &&
+                    item.row.kind === 'system' &&
+                    item.row.systemKind === 'turnStatus' &&
+                    item.row.turnStatus.runId === runId
+            )
+    );
+}
+
+function hasAnyStoppedTurn(items: TranscriptItem[]) {
+    return items.some(
+        (item) =>
+            item.kind === 'row' &&
+            item.row.kind === 'system' &&
+            item.row.systemKind === 'turnStatus'
+    );
 }
 
 function getTurnFallbackName(entry: Extract<TranscriptEntry, { kind: 'turn' }>) {

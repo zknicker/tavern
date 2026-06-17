@@ -744,6 +744,62 @@ test('ChatTranscript renders stopped turns as a muted system row', () => {
     assert.doesNotMatch(markup, /Worked/);
 });
 
+test('ChatTranscript does not keep timing a stopped active turn', () => {
+    const markup = renderActiveTranscript(
+        {
+            agentId: 'tiny',
+            isThinking: true,
+            runId: 'run-cancelled',
+            sessionKey: 'agent:tiny:session-1',
+            startedAt: '2026-03-31T15:00:00.000Z',
+            text: '',
+        },
+        [
+            {
+                actor: { id: 'tiny', kind: 'agent' },
+                completedAt: null,
+                connectsToNext: true,
+                connectsToPrevious: false,
+                id: 'act_run-cancelled_tool_1',
+                isFirstInGroup: true,
+                kind: 'tool',
+                sessionKey: 'agent:tiny:session-1',
+                spawnedRelationships: [],
+                startedAt: '2026-03-31T15:00:05.000Z',
+                toolCall: {
+                    callId: 'call-1',
+                    facts: [],
+                    label: 'bash',
+                    name: 'bash',
+                    status: 'running',
+                    summaryParts: ['bash'],
+                },
+            },
+            {
+                id: 'response-cancelled:cancelled',
+                kind: 'system',
+                responseId: 'response-cancelled',
+                systemKind: 'turnStatus',
+                timestamp: '2026-03-31T15:00:10.000Z',
+                turnStatus: {
+                    agentId: 'tiny',
+                    runId: 'run-cancelled',
+                    sessionKey: 'agent:tiny:session-1',
+                    status: 'stopped',
+                    text: 'Agent response stopped.',
+                },
+            },
+        ]
+    );
+
+    assert.match(markup, /Agent response stopped\./);
+    assert.match(markup, /Agent idle/);
+    assert.match(markup, /Ran a command/);
+    assert.doesNotMatch(markup, activePresenceLabelPattern);
+    assert.doesNotMatch(markup, activePresenceShimmerPattern);
+    assert.doesNotMatch(markup, /Working for/);
+});
+
 test('ChatTranscript keeps completed presence eyes text-free after activity', () => {
     const markup = renderTranscript([
         {
