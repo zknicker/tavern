@@ -4,7 +4,7 @@ import { renderToStaticMarkup } from 'react-dom/server';
 import { HermesCapabilitiesSummary } from './hermes-capabilities-table.tsx';
 
 function capability(input: {
-    capability: 'apiServer' | 'dashboardServer' | 'gateway' | 'models' | 'skills';
+    capability: 'apiServer' | 'dashboardServer' | 'gateway' | 'models' | 'skills' | 'vault';
     displayName?: string;
     state?: 'degraded' | 'healthy' | 'unknown' | 'unavailable';
 }) {
@@ -29,14 +29,14 @@ test('HermesCapabilitiesSummary renders per-capability refresh actions', () => {
         <HermesCapabilitiesSummary
             capabilities={[
                 {
-                    capability: 'cortexWiki',
+                    capability: 'vault',
                     checkedAt: '2026-05-28T12:00:00.000Z',
-                    displayName: 'Cortex wiki',
+                    displayName: 'Vault',
                     errorCode: null,
                     lastHealthyAt: null,
                     metadataJson: '{}',
                     method: 'runtime.capabilities',
-                    reason: 'Cortex wiki path is not readable and writable.',
+                    reason: 'Vault path is not readable and writable.',
                     runtimeId: 'runtime-1',
                     state: 'unavailable',
                     technicalMessage: null,
@@ -47,8 +47,8 @@ test('HermesCapabilitiesSummary renders per-capability refresh actions', () => {
         />
     );
 
-    assert.match(markup, /Refresh Cortex wiki/);
-    assert.match(markup, /Cortex wiki/);
+    assert.match(markup, /Refresh Vault/);
+    assert.match(markup, /Vault/);
 });
 
 test('HermesCapabilitiesSummary groups by category', () => {

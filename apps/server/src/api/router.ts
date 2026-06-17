@@ -2,7 +2,6 @@ import { agentRouter } from './agent/router.ts';
 import { agentRuntimeRouter } from './agent-runtime/router.ts';
 import { chatRouter } from './chat/router.ts';
 import { connectorRouter } from './connector/router.ts';
-import { cortexRouter } from './cortex/router.ts';
 import { cronRouter } from './cron/router.ts';
 import { hermesConfigRouter } from './hermes-config/router.ts';
 import { highlightRouter } from './highlight/router.ts';
@@ -20,6 +19,7 @@ import { skillRouter } from './skill/router.ts';
 import { subAgentRouter } from './sub-agent/router.ts';
 import { createRouter } from './trpc.ts';
 import { usageRouter } from './usage/router.ts';
+import { vaultRouter } from './vault/router.ts';
 import { workerRouter } from './worker/router.ts';
 
 export const appRouter = createRouter({
@@ -28,7 +28,6 @@ export const appRouter = createRouter({
     connector: connectorRouter,
     cron: cronRouter,
     highlight: highlightRouter,
-    cortex: cortexRouter,
     jobs: jobsRouter,
     log: logRouter,
     mention: mentionRouter,
@@ -44,6 +43,7 @@ export const appRouter = createRouter({
     skill: skillRouter,
     subAgent: subAgentRouter,
     usage: usageRouter,
+    vault: vaultRouter,
     worker: workerRouter,
 });
 

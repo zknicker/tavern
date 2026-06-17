@@ -1,7 +1,7 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import { parseDocument } from 'yaml';
-import { tavernMessengerPluginName } from './tavern-messenger-plugin';
+import { tavernMessengerPluginName } from './tavern-messenger-plugin.ts';
 
 /**
  * Domain-based composer for the generated managed Hermes config file.
@@ -207,6 +207,10 @@ export const managedMnemosyneConfig = {
     autoSleep: true,
     ignorePatterns: ['^Traceback \\(most recent call last\\)', '^Error:', '^\\s+at '],
     sleepThreshold: 20,
+} as const;
+
+export const managedMnemosyneEnv = {
+    MNEMOSYNE_HOST_LLM_ENABLED: 'true',
 } as const;
 
 function applyMemoryDomain(doc: GeneratedConfigDocument) {

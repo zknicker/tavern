@@ -1,34 +1,34 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import type { AgentRuntimeHermesModelName } from '@tavern/api';
-import { HERMES_HOME, readConfigValue } from '../config';
-import { loadVaultBackedCodexCredentials } from '../model-access/codex-settings';
-import { getOpenAiApiKey } from '../model-access/openai-settings';
-import { getOpenRouterApiKey } from '../model-access/openrouter-settings';
+import { HERMES_HOME, readConfigValue } from '../config.ts';
+import { loadVaultBackedCodexCredentials } from '../model-access/codex-settings.ts';
+import { getOpenAiApiKey } from '../model-access/openai-settings.ts';
+import { getOpenRouterApiKey } from '../model-access/openrouter-settings.ts';
 import {
     readHermesAdapterState,
     resolveHermesConfiguredAgentState,
     updateHermesAdapterState,
-} from './adapter-state';
-import { resolveAgentEnvEntries } from './agent-env';
-import { syncHermesCodexAuth } from './auth-store';
-import { resolveConnectorsDomain } from './connectors';
-import { quoteEnvValue, readEnvEntries, readManagedHermesEnvValue } from './env';
-import { getHermesExecutionSettings } from './execution-settings';
-import { type HermesModelDomain, mergeHermesGeneratedConfig } from './generated-config';
-import { prepareManagedWikiIntegration } from './managed-wiki';
-import { ensureManagedMnemosynePackage, ensureManagedMnemosynePlugin } from './mnemosyne';
-import { resolveConfiguredPermissionsDomain } from './permission-settings';
-import { ensureManagedTavernSkill } from './tavern-skill';
+} from './adapter-state.ts';
+import { resolveAgentEnvEntries } from './agent-env.ts';
+import { syncHermesCodexAuth } from './auth-store.ts';
+import { resolveConnectorsDomain } from './connectors.ts';
+import { quoteEnvValue, readEnvEntries, readManagedHermesEnvValue } from './env.ts';
+import { getHermesExecutionSettings } from './execution-settings.ts';
+import {
+    type HermesModelDomain,
+    managedMnemosyneEnv,
+    mergeHermesGeneratedConfig,
+} from './generated-config.ts';
+import { prepareManagedVaultIntegration, resolveManagedVaultPath } from './managed-vault.ts';
+import { ensureManagedMnemosynePackage, ensureManagedMnemosynePlugin } from './mnemosyne.ts';
+import { resolveConfiguredPermissionsDomain } from './permission-settings.ts';
+import { ensureManagedTavernSkill } from './tavern-skill.ts';
 
 export interface HermesModelConfig extends HermesModelDomain {
     openAiApiKey: string | null;
     openRouterApiKey: string | null;
 }
-
-export const managedMnemosyneEnv = {
-    MNEMOSYNE_HOST_LLM_ENABLED: 'true',
-} as const;
 
 interface ManagedHermesModelConfigInput {
     hermesBinary?: string;
@@ -203,7 +203,7 @@ export async function prepareManagedHermesModelConfig(
         path.join(HERMES_HOME, 'auth.json'),
         await loadVaultBackedCodexCredentials().catch(() => null)
     );
-    await prepareManagedWikiIntegration();
+    await prepareManagedVaultIntegration();
     await ensureManagedTavernSkill();
     await ensureManagedMnemosynePlugin();
     if (input.hermesBinary) {
@@ -266,6 +266,8 @@ export async function mergeHermesEnvFile(
     for (const [key, value] of agentEnvEntries) {
         entries.set(key, value);
     }
+
+    entries.set('TAVERN_VAULT_PATH', resolveManagedVaultPath());
 
     for (const [key, value] of Object.entries(managedMnemosyneEnv)) {
         entries.set(key, value);

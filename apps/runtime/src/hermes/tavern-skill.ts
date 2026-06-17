@@ -1,6 +1,6 @@
 import path from 'node:path';
 import { HERMES_HOME } from '../config';
-import { resolveRuntimeAssetsRoot, syncDirectory } from './managed-wiki';
+import { resolveRuntimeAssetsRoot, syncDirectory } from './managed-vault';
 
 export const tavernSkillName = 'tavern';
 
@@ -12,8 +12,7 @@ interface ManagedTavernSkillInput {
 /**
  * Install the managed `tavern` skill: the agent's product knowledge of and
  * operational access to Tavern (chats, deliveries, automations, settings map).
- * Runtime owns the content and refreshes it on every startup, mirroring the
- * managed cortex-wiki skill.
+ * Runtime owns the content and refreshes it on every startup.
  */
 export async function ensureManagedTavernSkill(input: ManagedTavernSkillInput = {}) {
     const assetsRoot = input.assetsRoot ?? resolveRuntimeAssetsRoot();

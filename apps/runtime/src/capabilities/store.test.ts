@@ -23,7 +23,7 @@ describe('Runtime capabilities store', () => {
         });
         process.env.CODEX_HOME = path.join(runtimeRoot, 'empty-codex-home');
         process.env.PATH = binPath;
-        process.env.TAVERN_CORTEX_WIKI_PATH = path.join(runtimeRoot, 'wiki');
+        process.env.TAVERN_VAULT_PATH = path.join(runtimeRoot, 'wiki');
         process.env.TAVERN_HERMES_PORT = '1';
         const db = initTestDb();
         ensureRuntimeSchema(db);
@@ -36,7 +36,7 @@ describe('Runtime capabilities store', () => {
         process.env.CODEX_HOME = undefined;
         process.env.TAVERN_HERMES_PORT = originalHermesPort;
         process.env.PATH = originalPath;
-        process.env.TAVERN_CORTEX_WIKI_PATH = undefined;
+        process.env.TAVERN_VAULT_PATH = undefined;
         await rm(runtimeRoot, { force: true, recursive: true });
     });
 
@@ -46,14 +46,14 @@ describe('Runtime capabilities store', () => {
         expect(capabilities.map((capability) => capability.id)).toEqual([
             'apiServer',
             'codexOAuth',
-            'cortexWiki',
             'dashboardServer',
             'gateway',
             'mnemosyneMemory',
             'models',
             'skills',
+            'vault',
         ]);
-        expect(getRuntimeCapability('cortexWiki')).toMatchObject({
+        expect(getRuntimeCapability('vault')).toMatchObject({
             checkedAt: null,
             healthy: false,
             reason: 'Capability has not been checked yet.',
@@ -84,36 +84,36 @@ describe('Runtime capabilities store', () => {
         expect(events).toContain('dashboardServer');
     });
 
-    test('records a missing Cortex wiki hub as degraded until the managed skill is prepared', async () => {
-        const [capability] = await refreshRuntimeCapabilities({ ids: ['cortexWiki'] });
+    test('records a missing Vault root as degraded until the managed skill is prepared', async () => {
+        const [capability] = await refreshRuntimeCapabilities({ ids: ['vault'] });
 
         expect(capability).toMatchObject({
             healthy: false,
-            id: 'cortexWiki',
+            id: 'vault',
             metadata: expect.objectContaining({
                 missing: true,
-                skillPath: expect.stringContaining('skills/cortex-wiki'),
+                skillPath: expect.stringContaining('skills/vault'),
             }),
-            reason: 'The managed cortex-wiki skill has not been prepared yet.',
+            reason: 'The managed Vault skill has not been prepared yet.',
             state: 'degraded',
         });
     });
 
-    test('keeps a readable read-only Cortex wiki hub browseable', async () => {
+    test('keeps a readable read-only Vault root browseable', async () => {
         const hubPath = path.join(runtimeRoot, 'wiki');
         await mkdir(hubPath, { recursive: true });
         await chmod(hubPath, 0o555);
 
         try {
-            const [capability] = await refreshRuntimeCapabilities({ ids: ['cortexWiki'] });
+            const [capability] = await refreshRuntimeCapabilities({ ids: ['vault'] });
 
             expect(capability).toMatchObject({
                 healthy: false,
-                id: 'cortexWiki',
+                id: 'vault',
                 metadata: expect.objectContaining({
                     writable: false,
                 }),
-                reason: 'The managed cortex-wiki skill has not been prepared yet.',
+                reason: 'The managed Vault skill has not been prepared yet.',
                 state: 'degraded',
             });
         } finally {

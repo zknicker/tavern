@@ -27,12 +27,12 @@ const categories: CapabilityCategory[] = [
 const capabilityCategories: Partial<Record<CapabilityId, CapabilityCategoryId>> = {
     apiServer: 'runtimeCore',
     codexOAuth: 'runtimeCore',
-    cortexWiki: 'knowledge',
     dashboardServer: 'runtimeCore',
     gateway: 'runtimeCore',
     mnemosyneMemory: 'knowledge',
     models: 'extensions',
     skills: 'extensions',
+    vault: 'knowledge',
 };
 
 const capabilityDisplayOrder: CapabilityId[] = [
@@ -40,7 +40,7 @@ const capabilityDisplayOrder: CapabilityId[] = [
     'apiServer',
     'dashboardServer',
     'gateway',
-    'cortexWiki',
+    'vault',
     'mnemosyneMemory',
     'models',
     'skills',

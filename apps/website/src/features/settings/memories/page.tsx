@@ -1,40 +1,72 @@
+import * as React from 'react';
 import { BadgeDivider } from '../../../components/ui/badge-divider.tsx';
 import { Card, CardFrame } from '../../../components/ui/card.tsx';
 import { CodeSnippet } from '../../../components/ui/code-snippet.tsx';
+import { Button } from '../../../components/ui/primitives/button.tsx';
+import { Input } from '../../../components/ui/primitives/input.tsx';
 import { Separator } from '../../../components/ui/separator.tsx';
 import { SettingsRow, SettingsValue } from '../../../components/ui/settings-row.tsx';
 import { Skeleton } from '../../../components/ui/skeleton.tsx';
-import { useCortexStatus } from '../../../hooks/cortex/use-cortex-status.ts';
-import type { CortexStatusOutput } from '../../../lib/trpc.tsx';
+import {
+    useSaveVaultSettings,
+    useVaultSettings,
+    useVaultStatus,
+} from '../../../hooks/vault/use-vault-status.ts';
+import type { VaultSettingsOutput, VaultStatusOutput } from '../../../lib/trpc.tsx';
 
-type WikiHubStatus = NonNullable<CortexStatusOutput>;
+type VaultSettings = NonNullable<VaultSettingsOutput>;
+type VaultStatus = NonNullable<VaultStatusOutput>;
 
 export function MemoriesSettings() {
-    const statusQuery = useCortexStatus();
+    const statusQuery = useVaultStatus();
+    const settingsQuery = useVaultSettings();
+    const saveSettings = useSaveVaultSettings();
 
     return (
         <div>
-            <BadgeDivider className="pb-4" subtext="Read-only Cortex wiki hub status.">
-                Wiki
+            <BadgeDivider className="pb-4" subtext="Vault root and Markdown index status.">
+                Vault
             </BadgeDivider>
-            <WikiHubStatusCard
-                error={statusQuery.error?.message ?? null}
-                isLoading={statusQuery.isPending}
+            <VaultSettingsCard
+                error={
+                    settingsQuery.error?.message ??
+                    statusQuery.error?.message ??
+                    saveSettings.error?.message ??
+                    null
+                }
+                isLoading={settingsQuery.isPending || statusQuery.isPending}
+                isSaving={saveSettings.isPending}
+                onSave={(vaultPath) => saveSettings.mutateAsync({ vaultPath })}
+                settings={settingsQuery.data ?? null}
                 status={statusQuery.data ?? null}
             />
         </div>
     );
 }
 
-export function WikiHubStatusCard({
+export function VaultSettingsCard({
     error,
     isLoading,
+    isSaving,
+    onSave,
+    settings,
     status,
 }: {
     error?: string | null;
     isLoading?: boolean;
-    status: WikiHubStatus | null;
+    isSaving?: boolean;
+    onSave: (vaultPath: string) => Promise<unknown> | undefined;
+    settings: VaultSettings | null;
+    status: VaultStatus | null;
 }) {
+    const [vaultPath, setVaultPath] = React.useState('');
+
+    React.useEffect(() => {
+        if (settings) {
+            setVaultPath(settings.configuredPath ?? settings.effectivePath);
+        }
+    }, [settings]);
+
     if (isLoading) {
         return (
             <CardFrame>
@@ -49,7 +81,7 @@ export function WikiHubStatusCard({
         );
     }
 
-    if (!status) {
+    if (!(settings && status)) {
         return (
             <CardFrame>
                 <Card className="p-4 text-muted-foreground text-sm">
@@ -59,35 +91,72 @@ export function WikiHubStatusCard({
         );
     }
 
+    const trimmedPath = vaultPath.trim();
+    const environmentLocked = settings.configSource === 'environment';
+    const hasChanged =
+        trimmedPath && trimmedPath !== (settings.configuredPath ?? settings.effectivePath);
+
     return (
         <CardFrame>
             <Card className="overflow-hidden p-0">
-                <SettingsRow title="Hub path">
-                    <CodeSnippet lines={status.hubPath} />
+                <form
+                    onSubmit={(event) => {
+                        event.preventDefault();
+                        if (!(trimmedPath && hasChanged && !environmentLocked)) {
+                            return;
+                        }
+                        void onSave(trimmedPath);
+                    }}
+                >
+                    <SettingsRow
+                        description="Defaults to ~/wiki."
+                        error={
+                            environmentLocked ? 'TAVERN_VAULT_PATH is set by environment.' : null
+                        }
+                        title="Vault path"
+                    >
+                        <div className="flex max-w-full flex-col gap-2 sm:flex-row sm:items-center sm:justify-end">
+                            <Input
+                                aria-label="Vault path"
+                                className="font-mono md:flex-1"
+                                disabled={isSaving || environmentLocked}
+                                name="vault-path"
+                                onChange={(event) => setVaultPath(event.currentTarget.value)}
+                                value={vaultPath}
+                            />
+                            <Button
+                                className="w-fit"
+                                disabled={
+                                    !(trimmedPath && hasChanged) || isSaving || environmentLocked
+                                }
+                                loading={isSaving}
+                                type="submit"
+                                variant="secondary"
+                            >
+                                Save
+                            </Button>
+                        </div>
+                    </SettingsRow>
+                </form>
+                <Separator />
+                <SettingsRow title="Effective path">
+                    <CodeSnippet lines={settings.effectivePath} />
                 </SettingsRow>
                 <Separator />
                 <SettingsRow title="Config source">
-                    <SettingsValue>{formatConfigSource(status.configSource)}</SettingsValue>
-                </SettingsRow>
-                <Separator />
-                <SettingsRow title="Active topics">
-                    <SettingsValue>{status.topicCount}</SettingsValue>
-                </SettingsRow>
-                <Separator />
-                <SettingsRow title="Archived topics">
-                    <SettingsValue>{status.archivedTopicCount}</SettingsValue>
+                    <SettingsValue>{formatConfigSource(settings.configSource)}</SettingsValue>
                 </SettingsRow>
                 <Separator />
                 <SettingsRow title="Markdown pages">
                     <SettingsValue>{status.pageCount}</SettingsValue>
                 </SettingsRow>
                 <Separator />
-                <SettingsRow title="Access">
-                    <SettingsValue>{formatAccess(status)}</SettingsValue>
+                <SettingsRow title="INDEX.md">
+                    <SettingsValue>{status.indexExists ? 'Present' : 'Missing'}</SettingsValue>
                 </SettingsRow>
                 <Separator />
-                <SettingsRow title="Wiki work">
-                    <SettingsValue>Tasks and Runtime crons</SettingsValue>
+                <SettingsRow title="Access">
+                    <SettingsValue>{formatAccess(status)}</SettingsValue>
                 </SettingsRow>
                 {error ? (
                     <>
@@ -100,7 +169,7 @@ export function WikiHubStatusCard({
     );
 }
 
-function formatAccess(status: Pick<WikiHubStatus, 'readable' | 'writable'>) {
+function formatAccess(status: Pick<VaultStatus, 'readable' | 'writable'>) {
     if (status.readable && status.writable) {
         return 'Readable and writable';
     }
@@ -112,11 +181,13 @@ function formatAccess(status: Pick<WikiHubStatus, 'readable' | 'writable'>) {
     return 'Unavailable';
 }
 
-function formatConfigSource(source: WikiHubStatus['configSource']) {
+function formatConfigSource(source: VaultSettings['configSource']) {
     switch (source) {
+        case 'default':
+            return 'Default';
         case 'environment':
             return 'Environment';
-        case 'runtime':
-            return 'Runtime managed';
+        case 'settings':
+            return 'Settings';
     }
 }

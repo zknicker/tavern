@@ -11,25 +11,25 @@ import { generateTavernHighlights, listTavernHighlights } from './highlights';
 
 describe('Tavern highlights', () => {
     let db: Database;
-    let hubPath: string;
-    let previousHubPath: string | undefined;
+    let vaultPath: string;
+    let previousVaultPath: string | undefined;
 
     beforeEach(async () => {
         db = initTestDb();
         ensureRuntimeSchema(db);
-        previousHubPath = process.env.TAVERN_WIKI_HUB_PATH;
-        hubPath = await fs.mkdtemp(path.join(os.tmpdir(), 'tavern-highlights-wiki-'));
-        process.env.TAVERN_WIKI_HUB_PATH = hubPath;
+        previousVaultPath = process.env.TAVERN_VAULT_PATH;
+        vaultPath = await fs.mkdtemp(path.join(os.tmpdir(), 'tavern-highlights-vault-'));
+        process.env.TAVERN_VAULT_PATH = vaultPath;
     });
 
     afterEach(async () => {
         closeDb();
-        if (previousHubPath === undefined) {
-            Reflect.deleteProperty(process.env, 'TAVERN_WIKI_HUB_PATH');
+        if (previousVaultPath === undefined) {
+            Reflect.deleteProperty(process.env, 'TAVERN_VAULT_PATH');
         } else {
-            process.env.TAVERN_WIKI_HUB_PATH = previousHubPath;
+            process.env.TAVERN_VAULT_PATH = previousVaultPath;
         }
-        await fs.rm(hubPath, { force: true, recursive: true });
+        await fs.rm(vaultPath, { force: true, recursive: true });
     });
 
     test('persists one current highlight per applicable category', async () => {

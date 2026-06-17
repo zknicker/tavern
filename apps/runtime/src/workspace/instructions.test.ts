@@ -77,14 +77,14 @@ describe('generated agent instructions', () => {
         expect(content).toContain('memory_recall');
         expect(content).toContain('memory_remember');
         expect(content).toContain('not a skill package');
-        expect(content).toContain('## Wiki (Cortex)');
-        expect(content).toContain("Cortex is Tavern's durable knowledge wiki");
-        expect(content).toContain('Use the installed `cortex-wiki` skill');
-        expect(content).toContain('"Cortex", "the cortex", "knowledge base"');
-        expect(content).toContain('Do not probe for a `cortex` CLI');
-        expect(content).toContain('The hub is `TAVERN_WIKI_HUB_PATH`');
-        expect(content).toContain('Tavern runs routine maintenance automatically');
-        expect(content).toContain('do not chase it or park it on the user');
+        expect(content).toContain('## Vault');
+        expect(content).toContain("Vault is the user's central knowledge hub");
+        expect(content).toContain('Use the installed `vault` skill');
+        expect(content).toContain('"Vault", "wiki", "knowledge base", or "durable knowledge"');
+        expect(content).toContain('The Vault path is `TAVERN_VAULT_PATH`');
+        expect(content).toContain('`INDEX.md` at the Vault root is the global directory');
+        expect(content).toContain('search for related existing notes');
+        expect(content).toContain('add useful backlinks');
     });
 
     test('generation is deterministic and only writes on change', async () => {

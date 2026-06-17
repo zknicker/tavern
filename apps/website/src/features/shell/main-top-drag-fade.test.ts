@@ -9,7 +9,7 @@ describe('shouldShowMainTopDragFade', () => {
     });
 
     test('disables the fade for fixed dashboard pages', () => {
-        expect(shouldShowMainTopDragFade('/dashboard/cortex')).toBe(false);
+        expect(shouldShowMainTopDragFade('/dashboard/vault')).toBe(false);
         expect(shouldShowMainTopDragFade('/dashboard/cron')).toBe(false);
         expect(shouldShowMainTopDragFade('/dashboard/overview')).toBe(false);
         expect(shouldShowMainTopDragFade('/dashboard/settings')).toBe(false);

@@ -2,14 +2,14 @@ import fs from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { syncHermesCodexAuth } from './auth-store';
-import { ensureManagedMnemosynePlugin } from './mnemosyne';
+import { syncHermesCodexAuth } from './auth-store.ts';
+import { managedMnemosyneEnv } from './generated-config.ts';
+import { ensureManagedMnemosynePlugin } from './mnemosyne.ts';
 import {
     applySavedAgentModelRoute,
-    managedMnemosyneEnv,
     mergeHermesEnvFile,
     resolveManagedHermesModelRoute,
-} from './model-config';
+} from './model-config.ts';
 
 const codexEnvConfig = {
     apiKey: null,

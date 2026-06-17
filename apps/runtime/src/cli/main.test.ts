@@ -76,18 +76,18 @@ describe('dispatch', () => {
 
     test('group --help → group help, exit 0', async () => {
         const read = capture('stdout');
-        const result = await dispatch(['cortex', '--help']);
+        const result = await dispatch(['vault', '--help']);
         expect(result).toEqual({ kind: 'exit', code: 0 });
-        expect(read()).toContain('tavern cortex');
+        expect(read()).toContain('tavern vault');
     });
 
     test('subcommand --help → that subcommand help, not group help, exit 0', async () => {
         const read = capture('stdout');
-        const result = await dispatch(['cortex', 'list', '--help']);
+        const result = await dispatch(['vault', 'list', '--help']);
         expect(result).toEqual({ kind: 'exit', code: 0 });
         const out = read();
-        expect(out).toContain('tavern cortex list');
-        expect(out).not.toContain('<status|topics|list|get|search>');
+        expect(out).toContain('tavern vault list');
+        expect(out).not.toContain('<status|list|get|search>');
     });
 
     test('help update → per-command help, exit 0', async () => {

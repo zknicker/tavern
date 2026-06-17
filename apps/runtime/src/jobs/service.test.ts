@@ -21,11 +21,7 @@ describe('Runtime jobs service', () => {
         expect(jobs.map((job) => job.slug)).toEqual([
             'refresh-runtime-capabilities',
             'tavern-highlights',
-            'wiki-compile',
-            'wiki-health-history',
-            'wiki-librarian',
-            'wiki-todo-drain',
         ]);
-        expect(jobs.some((job) => job.slug.startsWith('cortex-'))).toBe(false);
+        expect(jobs.some((job) => job.slug.startsWith('wiki-'))).toBe(false);
     });
 });

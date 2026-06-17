@@ -18,7 +18,7 @@ import { publishRuntimeEvent } from '../tavern/runtime-events';
 import { ensureHermesBinary } from './bootstrap';
 import { isManagedHermesSetupError } from './errors';
 import { buildRuntimeApiBaseUrl, createLocalHermesClient } from './local-client';
-import { resolveManagedWikiHubPath } from './managed-wiki';
+import { resolveManagedVaultPath } from './managed-vault';
 import { prepareManagedHermesModelConfig, resolveManagedHermesModelConfig } from './model-config';
 import { createRestartCoordinator, type RestartCoordinator } from './restart-coordinator';
 import {
@@ -79,7 +79,7 @@ export async function startHermesForRuntime(): Promise<ManagedHermesHandle> {
             log.warn('Managed Hermes API port is already open; not adopting existing process', {
                 port,
                 reason,
-                wikiHubPath: resolveManagedWikiHubPath(),
+                vaultPath: resolveManagedVaultPath(),
             });
             markManagedHermesApiStopped();
             publishGatewayCapabilitiesUpdated();
@@ -244,7 +244,7 @@ export function buildHermesDashboardEnv() {
         HERMES_HOME,
         TAVERN_RUNTIME_TOKEN: getRuntimeApiToken(),
         TAVERN_RUNTIME_URL: buildRuntimeApiBaseUrl(),
-        TAVERN_WIKI_HUB_PATH: resolveManagedWikiHubPath(),
+        TAVERN_VAULT_PATH: resolveManagedVaultPath(),
     };
     // The official launcher unsets PYTHONPATH before exec; mirror it because the
     // managed engine binary is the venv executable, not the launcher wrapper.

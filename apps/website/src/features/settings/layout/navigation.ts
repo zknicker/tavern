@@ -96,7 +96,7 @@ export const settingsNavItems = [
     {
         icon: Database02Icon,
         id: 'memories',
-        label: 'Wiki',
+        label: 'Vault',
         to: '/dashboard/settings/memories',
     },
     {

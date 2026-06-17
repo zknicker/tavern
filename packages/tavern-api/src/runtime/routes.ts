@@ -72,15 +72,12 @@ export const agentRuntimeRoutes = {
     chatTurnStop: (chatId: string, runId: string) =>
         `/hermes/chats/${encodeURIComponent(chatId)}/turns/${encodeURIComponent(runId)}/stop`,
     chats: '/hermes/chats',
-    cortexBacklinks: (topic: string, pagePath: string) =>
-        `/cortex/topics/${encodeURIComponent(topic)}/pages/${encodeURIComponent(pagePath)}/backlinks`,
-    cortexPage: (topic: string, pagePath: string) =>
-        `/cortex/topics/${encodeURIComponent(topic)}/pages/${encodeURIComponent(pagePath)}`,
-    cortexHealth: '/cortex/health',
-    cortexPages: '/cortex/pages',
-    cortexSearch: '/cortex/search',
-    cortexStatus: '/cortex/status',
-    cortexTopics: '/cortex/topics',
+    vaultBacklinks: (pagePath: string) => `/vault/pages/${encodeURIComponent(pagePath)}/backlinks`,
+    vaultPage: (pagePath: string) => `/vault/pages/${encodeURIComponent(pagePath)}`,
+    vaultPages: '/vault/pages',
+    vaultSearch: '/vault/search',
+    vaultSettings: '/vault/settings',
+    vaultStatus: '/vault/status',
     health: '/health',
     workspaceAgentInstructions: (agentId: string) =>
         `/workspace/agents/${encodeURIComponent(agentId)}/instructions`,

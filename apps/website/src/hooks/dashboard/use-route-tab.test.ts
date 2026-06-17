@@ -8,7 +8,7 @@ describe('dashboard route tab', () => {
 
     test('returns the matching dashboard tab for primary routes', () => {
         expect(getRouteTab('/dashboard/overview')).toBe('overview');
-        expect(getRouteTab('/dashboard/cortex')).toBe('cortex');
+        expect(getRouteTab('/dashboard/vault')).toBe('vault');
     });
 
     test('returns null when no dashboard tab is active', () => {

@@ -4,10 +4,10 @@ import { Card, CardContent, CardFrame } from '../../components/ui/card.tsx';
 import { CodeSnippet } from '../../components/ui/code-snippet.tsx';
 import { Separator } from '../../components/ui/separator.tsx';
 import { SettingsRow, SettingsValue } from '../../components/ui/settings-row.tsx';
-import { useCortexStatusSuspense } from '../../hooks/cortex/use-cortex-status.ts';
+import { useVaultStatusSuspense } from '../../hooks/vault/use-vault-status.ts';
 
 function MemoryContent() {
-    const [status] = useCortexStatusSuspense();
+    const [status] = useVaultStatusSuspense();
     const unavailable = 'Tavern Runtime unavailable';
 
     return (
@@ -15,32 +15,25 @@ function MemoryContent() {
             <div className="max-w-3xl">
                 <h1 className="font-semibold text-2xl tracking-tight">Memory</h1>
                 <p className="mt-2 text-muted-foreground text-sm leading-6">
-                    Memory is the Cortex wiki hub. Agent research, ingest, compile, audit, and
-                    maintenance work belongs in Tasks.
+                    Vault stores durable Markdown knowledge. Assistant memory is prompt-time
+                    execution state.
                 </p>
             </div>
 
             <div>
-                <BadgeDivider
-                    className="pb-4"
-                    subtext="Cortex reads plain Markdown topic wikis. The agent engine owns prompt-time context continuity."
-                >
-                    Wiki Memory
+                <BadgeDivider className="pb-4" subtext="Plain Markdown under the Vault root.">
+                    Vault
                 </BadgeDivider>
                 <CardFrame>
                     <Card className="overflow-hidden p-0">
-                        <SettingsRow title="Active topics">
-                            <SettingsValue>{status?.topicCount ?? unavailable}</SettingsValue>
-                        </SettingsRow>
-                        <Separator />
-                        <SettingsRow title="Archived topics">
-                            <SettingsValue>
-                                {status?.archivedTopicCount ?? unavailable}
-                            </SettingsValue>
-                        </SettingsRow>
-                        <Separator />
                         <SettingsRow title="Markdown pages">
                             <SettingsValue>{status?.pageCount ?? unavailable}</SettingsValue>
+                        </SettingsRow>
+                        <Separator />
+                        <SettingsRow title="INDEX.md">
+                            <SettingsValue>
+                                {status?.indexExists ? 'Present' : 'Missing'}
+                            </SettingsValue>
                         </SettingsRow>
                         <Separator />
                         <SettingsRow title="Readable">
@@ -51,8 +44,8 @@ function MemoryContent() {
                             <SettingsValue>{status?.writable ? 'Yes' : 'No'}</SettingsValue>
                         </SettingsRow>
                         <Separator />
-                        <SettingsRow title="Hub path">
-                            <CodeSnippet lines={status?.hubPath ?? unavailable} />
+                        <SettingsRow title="Vault path">
+                            <CodeSnippet lines={status?.vaultPath ?? unavailable} />
                         </SettingsRow>
                     </Card>
                 </CardFrame>

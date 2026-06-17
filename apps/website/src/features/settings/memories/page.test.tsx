@@ -1,31 +1,36 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { renderToStaticMarkup } from 'react-dom/server';
-import { WikiHubStatusCard } from './page.tsx';
+import { VaultSettingsCard } from './page.tsx';
 
-test('WikiHubStatusCard renders Cortex wiki hub status instead of old Cortex settings', () => {
+test('VaultSettingsCard renders path setting and Vault status', () => {
     const markup = renderToStaticMarkup(
-        <WikiHubStatusCard
+        <VaultSettingsCard
+            isSaving={false}
+            onSave={() => undefined}
+            settings={{
+                configSource: 'settings',
+                configuredPath: '~/wiki',
+                effectivePath: '/Users/zknicker/wiki',
+                environmentPath: null,
+                updatedAt: '2026-06-17T12:00:00.000Z',
+            }}
             status={{
-                archivedTopicCount: 1,
-                configSource: 'runtime',
-                hubPath: '/Users/zknicker/.tavern/wiki',
+                configSource: 'settings',
+                indexExists: true,
                 pageCount: 42,
                 readable: true,
-                topicCount: 7,
+                vaultPath: '/Users/zknicker/wiki',
                 writable: true,
             }}
         />
     );
 
-    assert.match(markup, /Hub path/);
-    assert.match(markup, /Runtime managed/);
-    assert.match(markup, /Active topics/);
+    assert.match(markup, /Vault path/);
+    assert.match(markup, /Effective path/);
+    assert.match(markup, /Settings/);
     assert.match(markup, /Markdown pages/);
-    assert.match(markup, /Tasks and Runtime crons/);
-    assert.doesNotMatch(markup, /Embedding model/);
-    assert.doesNotMatch(markup, /Query expansion model/);
-    assert.doesNotMatch(markup, /Chat ingestion model/);
-    assert.doesNotMatch(markup, /Dream model/);
-    assert.doesNotMatch(markup, /Schema/);
+    assert.match(markup, /INDEX.md/);
+    assert.doesNotMatch(markup, /Active topics/);
+    assert.doesNotMatch(markup, /Runtime crons/);
 });

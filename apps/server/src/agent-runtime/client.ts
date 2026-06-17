@@ -68,6 +68,8 @@ import {
     type AgentRuntimeSaveOpenRouterSettings,
     type AgentRuntimeSavePermissionSettings,
     type AgentRuntimeSavePermissionSettingsResult,
+    type AgentRuntimeSaveVaultSettings,
+    type AgentRuntimeSaveVaultSettingsResult,
     type AgentRuntimeSaveWorkspaceInstructions,
     type AgentRuntimeSessionGraph,
     type AgentRuntimeSessionList,
@@ -109,6 +111,7 @@ import {
     type AgentRuntimeUpdateSkillEnabled,
     type AgentRuntimeUpdateToolsetEnabled,
     type AgentRuntimeUpsertBinding,
+    type AgentRuntimeVaultSettings,
     type AgentRuntimeWorkspaceInstructions,
     agentRuntimeAgentEnvSchema,
     agentRuntimeAgentFileContentSchema,
@@ -190,6 +193,8 @@ import {
     agentRuntimeSaveOpenRouterSettingsSchema,
     agentRuntimeSavePermissionSettingsResultSchema,
     agentRuntimeSavePermissionSettingsSchema,
+    agentRuntimeSaveVaultSettingsResultSchema,
+    agentRuntimeSaveVaultSettingsSchema,
     agentRuntimeSaveWorkspaceInstructionsSchema,
     agentRuntimeSessionGraphSchema,
     agentRuntimeSessionListSchema,
@@ -231,23 +236,20 @@ import {
     agentRuntimeUpdateSkillEnabledSchema,
     agentRuntimeUpdateToolsetEnabledSchema,
     agentRuntimeUpsertBindingSchema,
+    agentRuntimeVaultSettingsSchema,
     agentRuntimeWorkspaceInstructionsSchema,
-    type CortexBacklinkList,
-    type CortexHealth,
-    type CortexPage,
-    type CortexPageList,
-    type CortexSearchInput,
-    type CortexSearchResult,
-    type CortexStatus,
-    type CortexTopicList,
-    cortexBacklinkListSchema,
-    cortexHealthSchema,
-    cortexPageListSchema,
-    cortexPageSchema,
-    cortexSearchInputSchema,
-    cortexSearchResultSchema,
-    cortexStatusSchema,
-    cortexTopicListSchema,
+    type VaultBacklinkList,
+    type VaultPage,
+    type VaultPageList,
+    type VaultSearchInput,
+    type VaultSearchResult,
+    type VaultStatus,
+    vaultBacklinkListSchema,
+    vaultPageListSchema,
+    vaultPageSchema,
+    vaultSearchInputSchema,
+    vaultSearchResultSchema,
+    vaultStatusSchema,
 } from '@tavern/api';
 import { z } from 'zod';
 
@@ -294,9 +296,6 @@ export interface TavernAgentRuntimeClient {
     getAgentEnv(): Promise<AgentRuntimeAgentEnv>;
     getAgentFile(agentId: string, path: string): Promise<AgentRuntimeAgentFileContent>;
     getCapability(id: AgentRuntimeCapabilityHealthId): Promise<AgentRuntimeCapabilityHealth>;
-    getCortexHealth(): Promise<CortexHealth>;
-    getCortexPage(input: { path: string; topic: string }): Promise<CortexPage | null>;
-    getCortexStatus(): Promise<CortexStatus>;
     getCronJob(jobId: string): Promise<AgentRuntimeCron>;
     getExecutionSettings(): Promise<AgentRuntimeExecutionSettings>;
     getHermesConfig(): Promise<AgentRuntimeHermesConfigSnapshot>;
@@ -312,6 +311,9 @@ export interface TavernAgentRuntimeClient {
     getSkillHubAvailable(): Promise<AgentRuntimeSkillHubAvailable>;
     getToolsetConfig(toolsetId: string): Promise<AgentRuntimeToolsetConfig>;
     getUpdateStatus(): Promise<AgentRuntimeUpdate>;
+    getVaultPage(input: { path: string }): Promise<VaultPage | null>;
+    getVaultSettings(): Promise<AgentRuntimeVaultSettings>;
+    getVaultStatus(): Promise<VaultStatus>;
     getWorkspaceInstructions(agentId: string): Promise<AgentRuntimeRenderedWorkspaceInstructions>;
     installMcpCatalogEntry(
         input: AgentRuntimeMcpCatalogInstall
@@ -326,12 +328,6 @@ export interface TavernAgentRuntimeClient {
     listChats(): Promise<{ chats: AgentRuntimeChat[] }>;
     listCommands(): Promise<AgentRuntimeCommandList>;
     listConnectors(): Promise<AgentRuntimeConnectorList>;
-    listCortexBacklinks(input: { path: string; topic: string }): Promise<CortexBacklinkList>;
-    listCortexPages(input?: {
-        includeArchived?: boolean;
-        topic?: string | null;
-    }): Promise<CortexPageList>;
-    listCortexTopics(input?: { includeArchived?: boolean }): Promise<CortexTopicList>;
     listCronJobs(): Promise<AgentRuntimeCronList>;
     listCronRuns(jobId?: string): Promise<{ runs: AgentRuntimeCronRun[] }>;
     listDiscordBindings(): Promise<{ bindings: AgentRuntimeDiscordBinding[] }>;
@@ -352,6 +348,8 @@ export interface TavernAgentRuntimeClient {
         options?: AgentRuntimeListSkillsOptions
     ): Promise<{ skills: AgentRuntimeSkillSummary[] }>;
     listToolsets(): Promise<AgentRuntimeToolsetList>;
+    listVaultBacklinks(input: { path: string }): Promise<VaultBacklinkList>;
+    listVaultPages(): Promise<VaultPageList>;
     pollModelProviderOAuth(input: AgentRuntimePollModelProviderOAuth): Promise<unknown>;
     postMessage(
         chatId: string,
@@ -405,12 +403,15 @@ export interface TavernAgentRuntimeClient {
         toolsetId: string,
         input: AgentRuntimeToolsetEnvUpdate
     ): Promise<AgentRuntimeToolsetEnvUpdateResult>;
+    saveVaultSettings(
+        input: AgentRuntimeSaveVaultSettings
+    ): Promise<AgentRuntimeSaveVaultSettingsResult>;
     saveWorkspaceInstructions(
         agentId: string,
         input: AgentRuntimeSaveWorkspaceInstructions
     ): Promise<AgentRuntimeWorkspaceInstructions>;
     scanSkillHubSkill(identifier: string): Promise<AgentRuntimeSkillHubScan>;
-    searchCortex(input: CortexSearchInput): Promise<CortexSearchResult>;
+    searchVault(input: VaultSearchInput): Promise<VaultSearchResult>;
     selectToolsetProvider(
         toolsetId: string,
         input: AgentRuntimeToolsetProviderSelect
@@ -522,7 +523,7 @@ class HttpTavernAgentRuntimeClient implements TavernAgentRuntimeClient {
 
     close() {}
 
-    async postCortexQuery<T>(route: string, input: unknown, schema: z.ZodType<T>): Promise<T> {
+    async postVaultQuery<T>(route: string, input: unknown, schema: z.ZodType<T>): Promise<T> {
         const response = await fetch(`${this.#baseUrl}${route}`, {
             body: JSON.stringify(input),
             headers: { ...this.#authHeaders, 'content-type': 'application/json' },
@@ -972,8 +973,8 @@ class HttpTavernAgentRuntimeClient implements TavernAgentRuntimeClient {
         return agentRuntimeRunJobSchema.parse(await response.json());
     }
 
-    async getCortexHealth() {
-        const response = await fetch(`${this.#baseUrl}${agentRuntimeRoutes.cortexHealth}`, {
+    async getVaultStatus() {
+        const response = await fetch(`${this.#baseUrl}${agentRuntimeRoutes.vaultStatus}`, {
             headers: this.#authHeaders,
         });
 
@@ -981,11 +982,11 @@ class HttpTavernAgentRuntimeClient implements TavernAgentRuntimeClient {
             await readErrorResponse(response);
         }
 
-        return cortexHealthSchema.parse(await response.json());
+        return vaultStatusSchema.parse(await response.json());
     }
 
-    async getCortexStatus() {
-        const response = await fetch(`${this.#baseUrl}${agentRuntimeRoutes.cortexStatus}`, {
+    async getVaultSettings() {
+        const response = await fetch(`${this.#baseUrl}${agentRuntimeRoutes.vaultSettings}`, {
             headers: this.#authHeaders,
         });
 
@@ -993,44 +994,46 @@ class HttpTavernAgentRuntimeClient implements TavernAgentRuntimeClient {
             await readErrorResponse(response);
         }
 
-        return cortexStatusSchema.parse(await response.json());
+        return agentRuntimeVaultSettingsSchema.parse(await response.json());
     }
 
-    async listCortexTopics(input: { includeArchived?: boolean } = {}) {
-        const url = new URL(`${this.#baseUrl}${agentRuntimeRoutes.cortexTopics}`);
-        if (input.includeArchived) {
-            url.searchParams.set('includeArchived', 'true');
-        }
-        const response = await fetch(url, { headers: this.#authHeaders });
+    async saveVaultSettings(input: AgentRuntimeSaveVaultSettings) {
+        const payload = agentRuntimeSaveVaultSettingsSchema.parse(input);
+        const response = await fetch(`${this.#baseUrl}${agentRuntimeRoutes.vaultSettings}`, {
+            body: JSON.stringify(payload),
+            headers: {
+                ...this.#authHeaders,
+                'content-type': 'application/json',
+                [agentRuntimeMutationHeaders.origin]: agentRuntimeMutationOrigins.tavern,
+            },
+            method: 'PUT',
+        });
 
         if (!response.ok) {
             await readErrorResponse(response);
         }
 
-        return cortexTopicListSchema.parse(await response.json());
+        return agentRuntimeSaveVaultSettingsResultSchema.parse(await response.json());
     }
 
-    async listCortexPages(input: { includeArchived?: boolean; topic?: string | null } = {}) {
-        const url = new URL(`${this.#baseUrl}${agentRuntimeRoutes.cortexPages}`);
-        if (input.includeArchived) {
-            url.searchParams.set('includeArchived', 'true');
-        }
-        if (input.topic) {
-            url.searchParams.set('topic', input.topic);
-        }
-        const response = await fetch(url, { headers: this.#authHeaders });
+    async listVaultPages() {
+        const response = await fetch(`${this.#baseUrl}${agentRuntimeRoutes.vaultPages}`, {
+            headers: this.#authHeaders,
+        });
 
         if (!response.ok) {
             await readErrorResponse(response);
         }
 
-        return cortexPageListSchema.parse(await response.json());
+        return vaultPageListSchema.parse(await response.json());
     }
 
-    async getCortexPage(input: { path: string; topic: string }) {
+    async getVaultPage(input: { path: string }) {
         const response = await fetch(
-            `${this.#baseUrl}${agentRuntimeRoutes.cortexPage(input.topic, input.path)}`,
-            { headers: this.#authHeaders }
+            `${this.#baseUrl}${agentRuntimeRoutes.vaultPage(input.path)}`,
+            {
+                headers: this.#authHeaders,
+            }
         );
 
         if (response.status === 404) {
@@ -1040,28 +1043,30 @@ class HttpTavernAgentRuntimeClient implements TavernAgentRuntimeClient {
             await readErrorResponse(response);
         }
 
-        return cortexPageSchema.parse(await response.json());
+        return vaultPageSchema.parse(await response.json());
     }
 
-    async searchCortex(input: CortexSearchInput) {
-        return await this.postCortexQuery(
-            agentRuntimeRoutes.cortexSearch,
-            cortexSearchInputSchema.parse(input),
-            cortexSearchResultSchema
+    async searchVault(input: VaultSearchInput) {
+        return await this.postVaultQuery(
+            agentRuntimeRoutes.vaultSearch,
+            vaultSearchInputSchema.parse(input),
+            vaultSearchResultSchema
         );
     }
 
-    async listCortexBacklinks(input: { path: string; topic: string }) {
+    async listVaultBacklinks(input: { path: string }) {
         const response = await fetch(
-            `${this.#baseUrl}${agentRuntimeRoutes.cortexBacklinks(input.topic, input.path)}`,
-            { headers: this.#authHeaders }
+            `${this.#baseUrl}${agentRuntimeRoutes.vaultBacklinks(input.path)}`,
+            {
+                headers: this.#authHeaders,
+            }
         );
 
         if (!response.ok) {
             await readErrorResponse(response);
         }
 
-        return cortexBacklinkListSchema.parse(await response.json());
+        return vaultBacklinkListSchema.parse(await response.json());
     }
 
     async getModels() {
@@ -2197,36 +2202,6 @@ export function createAgentRuntimeClient(
     });
 }
 
-const legacyRuntimeCapabilityIds = new Set([
-    'cortexDatabase',
-    'cortexImportProcessors',
-    'cortexJobs',
-    'cortexModelAccess',
-    'embeddingModel',
-]);
-
 function parseAgentRuntimeCapabilityHealthList(input: unknown): AgentRuntimeCapabilityHealthList {
-    return agentRuntimeCapabilityHealthListSchema.parse(filterLegacyRuntimeCapabilities(input));
-}
-
-function filterLegacyRuntimeCapabilities(input: unknown): unknown {
-    if (!input || typeof input !== 'object' || Array.isArray(input)) {
-        return input;
-    }
-    const record = input as Record<string, unknown>;
-    if (!Array.isArray(record.capabilities)) {
-        return input;
-    }
-    return {
-        ...record,
-        capabilities: record.capabilities.filter((capability) => !isLegacyCapability(capability)),
-    };
-}
-
-function isLegacyCapability(input: unknown) {
-    if (!input || typeof input !== 'object' || Array.isArray(input)) {
-        return false;
-    }
-    const id = (input as Record<string, unknown>).id;
-    return typeof id === 'string' && legacyRuntimeCapabilityIds.has(id);
+    return agentRuntimeCapabilityHealthListSchema.parse(input);
 }

@@ -39,10 +39,10 @@ async function main(): Promise<void> {
         .then(async (handle) => {
             hermes = handle;
             await refreshRuntimeCapabilities({
-                ids: ['cortexWiki', 'gateway'],
+                ids: ['vault', 'gateway'],
                 publishUpdated: true,
             }).catch((err) => {
-                log.warn('Managed wiki capability refresh failed after Hermes startup', { err });
+                log.warn('Vault capability refresh failed after Hermes startup', { err });
             });
             if (shuttingDown) {
                 void handle.stop();

@@ -87,7 +87,7 @@ export function createAppRouter() {
                                 },
                                 {
                                     path: 'workers',
-                                    element: <Navigate replace to="/dashboard/cortex" />,
+                                    element: <Navigate replace to="/dashboard/vault" />,
                                 },
                                 {
                                     path: 'cron',
@@ -123,29 +123,29 @@ export function createAppRouter() {
                                 },
                                 {
                                     path: 'events',
-                                    element: <Navigate replace to="/dashboard/cortex" />,
+                                    element: <Navigate replace to="/dashboard/vault" />,
                                 },
                                 {
                                     path: 'logs',
-                                    element: <Navigate replace to="/dashboard/cortex" />,
+                                    element: <Navigate replace to="/dashboard/vault" />,
                                 },
                                 {
                                     path: 'memory',
-                                    element: <Navigate replace to="/dashboard/cortex" />,
+                                    element: <Navigate replace to="/dashboard/vault" />,
                                 },
                                 {
                                     path: 'pulse',
-                                    element: <Navigate replace to="/dashboard/cortex" />,
+                                    element: <Navigate replace to="/dashboard/vault" />,
                                 },
                                 {
                                     path: 'memories',
-                                    element: <Navigate replace to="/dashboard/cortex" />,
+                                    element: <Navigate replace to="/dashboard/vault" />,
                                 },
                                 {
-                                    path: 'cortex',
+                                    path: 'vault',
                                     lazy: lazyRoute(
-                                        () => import('./routes/dashboard/cortex-page.tsx'),
-                                        'CortexPage'
+                                        () => import('./routes/dashboard/vault-page.tsx'),
+                                        'VaultPage'
                                     ),
                                 },
                                 {

@@ -22,7 +22,7 @@ export function RouteTabIcon({ className, tab }: { className?: string; tab: Rout
 
 export function getRouteTabIcon(tab: RouteTab): IconSvgElement | undefined {
     switch (tab) {
-        case 'cortex':
+        case 'vault':
             return RubiksCubeIcon;
         case 'cron':
         case 'overview':
@@ -38,7 +38,7 @@ export function getRouteTabIconNode(tab: RouteTab, className = routeTabIconNodeC
             );
         case 'overview':
             return <TavernLogo aria-hidden="true" className={className} />;
-        case 'cortex':
+        case 'vault':
             return undefined;
     }
 }

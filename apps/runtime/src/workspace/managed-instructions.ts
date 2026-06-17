@@ -77,17 +77,17 @@ Use \`memory_stats\` to inspect memory health or counts. Use \`memory_sleep\` wh
 
 Do not save secrets, credentials, broad chat dumps, or speculative claims. If memory tools are unavailable, say memory tooling is unavailable rather than guessing from the skill list.`;
 
-const wikiSection = `## Wiki (Cortex)
+const wikiSection = `## Vault
 
-Cortex is Tavern's durable knowledge wiki: plain Markdown owned by the user. Use it when source-backed notes, research, durable outputs, or inspectable project knowledge could change the answer. Turn context is not Cortex; if asked what durable knowledge exists, check Cortex.
+Vault is the user's central knowledge hub: plain Markdown owned by the user and maintained by agents. Use it when source-backed notes, research, durable outputs, or inspectable project knowledge could change the answer. Turn context is not Vault; if asked what durable knowledge exists, check Vault.
 
-Use the installed \`cortex-wiki\` skill for Cortex work: query, ingest, compile, audit, lint, todos, librarian, research, and outputs. "Cortex", "the cortex", "knowledge base", or "durable knowledge" means \`cortex-wiki\`. Do not probe for a \`cortex\` CLI or recreate those workflows with ad hoc files.
+Use the installed \`vault\` skill when the user says "Vault", "wiki", "knowledge base", or "durable knowledge". It routes normal wiki edits to the Obsidian skill and bounded research folders to the llm-wiki skill.
 
-The hub is \`TAVERN_WIKI_HUB_PATH\`. Topic wikis live under \`topics/<slug>/\`; archived topics under \`topics/.archive/<slug>/\`. Use \`raw/\` for immutable sources, \`wiki/\` for synthesis, \`todos/\` for follow-up, \`datasets/\` for manifests, and \`output/\` for deliverables.
+The Vault path is \`TAVERN_VAULT_PATH\`; if unset, use \`~/wiki\`. Do not guess sibling vaults.
 
-Priority: current user statement > current source material > compiled article > raw notes > older outputs. Do not save secrets or broad chat dumps. Preserve provenance; after article edits repair affected indexes, links, backlinks, and existing librarian scores.
+\`INDEX.md\` at the Vault root is the global directory. Read it before changing Vault structure. When adding, moving, renaming, or substantially changing durable notes, update \`INDEX.md\` if navigation changes.
 
-Tavern runs routine maintenance automatically. If you notice extra wiki work, file a proposed todo via \`cortex-wiki\` \`references/todos.md\`; do not chase it or park it on the user.`;
+Before creating a new note, search for related existing notes. Use Obsidian wikilinks for durable concepts. After creating or updating a note, add useful backlinks or a short related section.`;
 
 const generatedFileSection = `## This File Is Generated
 

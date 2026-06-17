@@ -37,8 +37,8 @@ describe('Runtime capability gates', () => {
         expect(formatCapabilityDisabledReason(capability)).toBe('Tavern update required.');
     });
 
-    test('gates Memories settings on the wiki hub', () => {
-        expect(settingsCapabilityRequirements.memories).toEqual(['cortexWiki']);
+    test('gates Memories settings on Vault', () => {
+        expect(settingsCapabilityRequirements.memories).toEqual(['vault']);
     });
 
     test('gates Stats settings on model inventory', () => {

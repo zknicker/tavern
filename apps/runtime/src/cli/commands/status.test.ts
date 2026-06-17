@@ -143,13 +143,13 @@ describe('runStatusCommand', () => {
                         capabilities: [
                             {
                                 checkedAt: null,
-                                displayName: 'Cortex wiki',
+                                displayName: 'Vault',
                                 healthy: false,
-                                id: 'cortexWiki',
+                                id: 'vault',
                                 lastHealthyAt: null,
                                 metadata: {},
                                 nextCheckAt: null,
-                                reason: 'Managed cortex-wiki skill has not been prepared.',
+                                reason: 'Managed Vault skill has not been prepared.',
                                 state: 'degraded',
                                 technicalMessage: null,
                                 updatedAt: '2026-06-10T11:59:55.000Z',
@@ -160,8 +160,8 @@ describe('runStatusCommand', () => {
         });
         await runStatusCommand(args(), d);
         const text = captured.join('');
-        expect(text).toContain('◐ Cortex wiki');
-        expect(text).toContain('just now — Managed cortex-wiki skill has not been prepared.');
+        expect(text).toContain('◐ Vault');
+        expect(text).toContain('just now — Managed Vault skill has not been prepared.');
     });
 
     test('--json emits one parseable document with all keys and no ANSI', async () => {

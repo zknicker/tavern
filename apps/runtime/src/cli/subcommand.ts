@@ -3,7 +3,7 @@ import type { CliCommand, CliFlag } from './registry.ts';
 import { errorBlock, heading, rows } from './ui.ts';
 
 /**
- * One subcommand under a group (e.g. `cortex list`, `engine status`). Declares
+ * One subcommand under a group (e.g. `vault list`, `engine status`). Declares
  * its own flags, positionals, usage, and run() so the framework validates args
  * and renders per-subcommand help uniformly across groups.
  */
@@ -23,7 +23,7 @@ export interface SubCommand {
  * Dispatch a group's raw argv to one of its subcommands. Validates flags against
  * the subcommand spec (UsageError → exit 2 with that subcommand's help) and
  * handles `--help` and unknown-subcommand suggestions. `groupName` prefixes
- * error/help copy ('tavern cortex …').
+ * error/help copy ('tavern vault …').
  */
 export async function dispatchSubcommand(
     groupName: string,
@@ -73,7 +73,7 @@ function validateArity(spec: CliCommand, sub: SubCommand, parsed: ParsedArgs): v
 function toCliCommand(groupName: string, sub: SubCommand): CliCommand {
     return {
         name: `${groupName} ${sub.name}`,
-        section: 'Cortex',
+        section: groupName === 'engine' ? 'Engine' : groupName === 'vault' ? 'Vault' : 'Status',
         summary: sub.summary,
         usage: sub.usage,
         flags: sub.flags,

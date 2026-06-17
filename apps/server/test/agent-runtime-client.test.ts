@@ -55,7 +55,7 @@ test('client sends no Authorization header when constructed without a token', as
     assert.equal(capturedAuthorization, undefined);
 });
 
-test('listCapabilities ignores legacy Cortex capability rows from older Runtimes', async () => {
+test('listCapabilities parses Vault capability rows', async () => {
     const now = new Date().toISOString();
     const fetchMock = mock(async (input: RequestInfo | URL) => {
         assert.equal(String(input), `http://runtime.test${agentRuntimeRoutes.capabilities}`);
@@ -63,9 +63,9 @@ test('listCapabilities ignores legacy Cortex capability rows from older Runtimes
             capabilities: [
                 {
                     checkedAt: now,
-                    displayName: 'embedding model',
+                    displayName: 'dashboard server',
                     healthy: true,
-                    id: 'embeddingModel',
+                    id: 'dashboardServer',
                     lastHealthyAt: now,
                     metadata: {},
                     nextCheckAt: now,
@@ -76,11 +76,11 @@ test('listCapabilities ignores legacy Cortex capability rows from older Runtimes
                 },
                 {
                     checkedAt: now,
-                    displayName: 'Cortex wiki',
+                    displayName: 'Vault',
                     healthy: true,
-                    id: 'cortexWiki',
+                    id: 'vault',
                     lastHealthyAt: now,
-                    metadata: {},
+                    metadata: { vaultPath: '/Users/zknicker/wiki' },
                     nextCheckAt: now,
                     reason: null,
                     state: 'healthy',
@@ -108,7 +108,7 @@ test('listCapabilities ignores legacy Cortex capability rows from older Runtimes
 
     assert.deepEqual(
         capabilities.capabilities.map((capability) => capability.id),
-        ['cortexWiki']
+        ['dashboardServer', 'vault']
     );
     assert.equal(capabilities.info.version, '1.2.9');
 });

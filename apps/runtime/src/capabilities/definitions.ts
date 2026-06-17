@@ -7,16 +7,15 @@ import type {
     AgentRuntimeCapabilityHealthState,
 } from '@tavern/api';
 import { parseDocument } from 'yaml';
-import { HERMES_HOME } from '../config';
-import { readEnvEntries } from '../hermes/env';
-import { managedMnemosyneConfig } from '../hermes/generated-config';
-import { createLocalHermesClient } from '../hermes/local-client';
-import { getManagedWikiPaths } from '../hermes/managed-wiki';
-import { getManagedMnemosynePluginPath } from '../hermes/mnemosyne';
-import { managedMnemosyneEnv } from '../hermes/model-config';
-import { getManagedHermesState } from '../hermes/state';
-import { loadVaultBackedCodexCredentials } from '../model-access/codex-settings';
-import { resolveWikiConfig } from '../wiki/store';
+import { HERMES_HOME } from '../config.ts';
+import { readEnvEntries } from '../hermes/env.ts';
+import { managedMnemosyneConfig, managedMnemosyneEnv } from '../hermes/generated-config.ts';
+import { createLocalHermesClient } from '../hermes/local-client.ts';
+import { getManagedVaultSkillPath } from '../hermes/managed-vault.ts';
+import { getManagedMnemosynePluginPath } from '../hermes/mnemosyne.ts';
+import { getManagedHermesState } from '../hermes/state.ts';
+import { loadVaultBackedCodexCredentials } from '../model-access/codex-settings.ts';
+import { resolveVaultConfig } from '../vault/store.ts';
 
 export interface RuntimeCapabilityCheckResult {
     metadata?: Record<string, unknown>;
@@ -51,10 +50,10 @@ export const runtimeCapabilityDefinitions: RuntimeCapabilityDefinition[] = [
     },
     {
         async check() {
-            return await checkCortexWikiCapability();
+            return await checkVaultCapability();
         },
-        displayName: 'Cortex wiki',
-        id: 'cortexWiki',
+        displayName: 'Vault',
+        id: 'vault',
         refresh: {
             intervalMs: 5 * minuteMs,
             runOnStart: true,
@@ -158,47 +157,47 @@ export const runtimeCapabilityDefinitions: RuntimeCapabilityDefinition[] = [
     },
 ];
 
-async function checkCortexWikiCapability(): Promise<RuntimeCapabilityCheckResult> {
-    const config = await resolveWikiConfig();
-    const wikiPath = config.hubPath;
-    const wikiIntegration = getManagedWikiPaths();
+async function checkVaultCapability(): Promise<RuntimeCapabilityCheckResult> {
+    const config = await resolveVaultConfig();
+    const vaultPath = config.vaultPath;
+    const skillPath = getManagedVaultSkillPath();
     const metadata = {
         configSource: config.source,
-        skillPath: wikiIntegration.skillPath,
-        wikiPath,
+        skillPath,
+        vaultPath,
     };
     try {
-        const skillReady = fs.existsSync(path.join(wikiIntegration.skillPath, 'SKILL.md'));
-        if (fs.existsSync(wikiPath)) {
-            const stat = fs.statSync(wikiPath);
+        const skillReady = fs.existsSync(path.join(skillPath, 'SKILL.md'));
+        if (fs.existsSync(vaultPath)) {
+            const stat = fs.statSync(vaultPath);
             if (!stat.isDirectory()) {
                 return {
-                    reason: 'Cortex wiki path is not a directory.',
+                    reason: 'Vault path is not a directory.',
                     state: 'unavailable',
-                    technicalMessage: wikiPath,
+                    technicalMessage: vaultPath,
                 };
             }
-            fs.accessSync(wikiPath, fs.constants.R_OK);
-            const writable = canAccess(wikiPath, fs.constants.W_OK);
+            fs.accessSync(vaultPath, fs.constants.R_OK);
+            const writable = canAccess(vaultPath, fs.constants.W_OK);
             const existingMetadata = { ...metadata, writable };
             return skillReady
                 ? { metadata: existingMetadata, state: 'healthy' }
                 : {
                       metadata: existingMetadata,
-                      reason: 'The managed cortex-wiki skill has not been prepared yet.',
+                      reason: 'The managed Vault skill has not been prepared yet.',
                       state: 'degraded',
                   };
         }
 
-        fs.accessSync(path.dirname(wikiPath), fs.constants.R_OK | fs.constants.W_OK);
+        fs.accessSync(path.dirname(vaultPath), fs.constants.R_OK | fs.constants.W_OK);
         return {
             metadata: { ...metadata, missing: true },
-            reason: skillReady ? null : 'The managed cortex-wiki skill has not been prepared yet.',
+            reason: skillReady ? null : 'The managed Vault skill has not been prepared yet.',
             state: skillReady ? 'healthy' : 'degraded',
         };
     } catch (error) {
         return {
-            reason: 'Cortex wiki path is not readable.',
+            reason: 'Vault path is not readable.',
             state: 'unavailable',
             technicalMessage: error instanceof Error ? error.message : String(error),
         };

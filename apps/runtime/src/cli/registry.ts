@@ -10,17 +10,17 @@ export interface CliFlag {
     valueName?: string;
 }
 
-export type CliSection = 'Server' | 'Status' | 'Maintenance' | 'Cortex' | 'Engine';
+export type CliSection = 'Server' | 'Status' | 'Maintenance' | 'Vault' | 'Engine';
 
 /** Section render order in global help. */
-export const SECTION_ORDER: CliSection[] = ['Server', 'Status', 'Maintenance', 'Cortex', 'Engine'];
+export const SECTION_ORDER: CliSection[] = ['Server', 'Status', 'Maintenance', 'Vault', 'Engine'];
 
 /** A registered top-level command or command group. */
 export interface CliCommand {
     examples: string[];
     flags: CliFlag[];
     /**
-     * True for command groups (cortex, engine) whose run() prints group help and
+     * True for command groups (vault, engine) whose run() prints group help and
      * exits 1 when invoked bare. The parse layer skips strict flag validation for
      * groups so subcommands handle their own args.
      */
@@ -115,34 +115,28 @@ const restartCommand: CliCommand = {
     },
 };
 
-const cortexCommand: CliCommand = {
-    name: 'cortex',
-    section: 'Cortex',
+const vaultCommand: CliCommand = {
+    name: 'vault',
+    section: 'Vault',
     group: true,
-    summary: 'Browse the Cortex knowledge base (status, topics, list, get, search)',
-    usage: 'tavern cortex <status|topics|list|get|search> [flags]',
+    summary: 'Browse the Vault wiki (status, list, get, search)',
+    usage: 'tavern vault <status|list|get|search> [flags]',
     flags: [
         { name: '--json', description: 'Emit one JSON document' },
-        { name: '--topic', valueName: '<topic>', description: 'Limit to a topic' },
-        { name: '--include-archived', description: 'Include archived topics and pages' },
         { name: '--runtime-url', valueName: '<url>', description: 'Override the Runtime API URL' },
     ],
-    examples: [
-        'tavern cortex status',
-        'tavern cortex list --topic runtime',
-        'tavern cortex get runtime overview',
-    ],
+    examples: ['tavern vault status', 'tavern vault list', 'tavern vault get INDEX.md'],
     async run(_args, raw) {
         if (raw.length === 0) {
             const { printGroupHelp } = await import('./help');
-            printGroupHelp(cortexCommand, process.stdout);
+            printGroupHelp(vaultCommand, process.stdout);
             return 1;
         }
-        const [{ CORTEX_SUBCOMMANDS }, { dispatchSubcommand }] = await Promise.all([
-            import('./commands/cortex'),
+        const [{ VAULT_SUBCOMMANDS }, { dispatchSubcommand }] = await Promise.all([
+            import('./commands/vault'),
             import('./subcommand'),
         ]);
-        return await dispatchSubcommand('cortex', CORTEX_SUBCOMMANDS, raw);
+        return await dispatchSubcommand('vault', VAULT_SUBCOMMANDS, raw);
     },
 };
 
@@ -205,7 +199,7 @@ export const COMMANDS: CliCommand[] = [
     tokenCommand,
     updateCommand,
     restartCommand,
-    cortexCommand,
+    vaultCommand,
     engineCommand,
     helpCommand,
 ];

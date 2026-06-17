@@ -2,7 +2,7 @@
 name: tavern
 description: >
   Use for Tavern-specific inspection: chats, agent settings, connectors,
-  skills, Runtime health, Cortex status, and where settings live.
+  skills, Runtime health, Vault status, and where settings live.
 ---
 
 # Tavern
@@ -14,7 +14,7 @@ user to the right setting.
 
 Core nouns: a **chat** is the durable conversation; your work runs in
 **sessions** inside chats; **automations** are scheduled runs that deliver
-results into a chat; **Cortex** is the browsable knowledge wiki.
+results into a chat; **Vault** is the browsable knowledge wiki.
 
 ## The Tavern API
 
@@ -68,7 +68,7 @@ direct the user to the exact place:
 | MCP servers | Settings -> Connectors |
 | Model provider accounts and keys | Settings -> Models |
 | Assistant memory health | Settings -> Tavern Runtime |
-| Browsable knowledge wiki | Settings -> Wiki |
+| Browsable knowledge wiki | Settings -> Vault |
 
 ## Boundaries
 

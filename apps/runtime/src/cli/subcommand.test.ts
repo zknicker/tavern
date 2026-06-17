@@ -6,10 +6,10 @@ function sub(over: Partial<SubCommand> = {}): SubCommand {
     return {
         name: 'get',
         summary: 'Get a thing',
-        usage: 'tavern cortex get <topic> <path>',
+        usage: 'tavern vault get <path>',
         flags: [{ name: '--json', description: 'Emit JSON' }],
-        positionals: ['<topic>', '<path>'],
-        examples: ['tavern cortex get runtime overview'],
+        positionals: ['<path>'],
+        examples: ['tavern vault get Projects/Alpha.md'],
         run: () => Promise.resolve(0),
         ...over,
     };
@@ -28,7 +28,7 @@ describe('dispatchSubcommand', () => {
     test('routes to the matching subcommand with parsed args', async () => {
         let received: ParsedArgs | null = null;
         const code = await dispatchSubcommand(
-            'cortex',
+            'vault',
             [
                 sub({
                     run: (a) => {
@@ -37,35 +37,35 @@ describe('dispatchSubcommand', () => {
                     },
                 }),
             ],
-            ['get', 'runtime', 'overview']
+            ['get', 'Projects/Alpha.md']
         );
         expect(code).toBe(0);
         expect(received).not.toBeNull();
-        expect((received as unknown as ParsedArgs).positionals).toEqual(['runtime', 'overview']);
+        expect((received as unknown as ParsedArgs).positionals).toEqual(['Projects/Alpha.md']);
     });
 
     test('unknown subcommand suggests a near match, exit 2', async () => {
         const out = stderr();
-        const code = await dispatchSubcommand('cortex', [sub({ name: 'status' })], ['statuss']);
+        const code = await dispatchSubcommand('vault', [sub({ name: 'status' })], ['statuss']);
         expect(code).toBe(2);
-        expect(out.mock.calls.join('')).toContain("Did you mean 'cortex status'?");
+        expect(out.mock.calls.join('')).toContain("Did you mean 'vault status'?");
     });
 
     test('wrong positional arity prints help to stderr, exit 2', async () => {
         const out = stderr();
-        const code = await dispatchSubcommand('cortex', [sub()], ['get', 'onlyone']);
+        const code = await dispatchSubcommand('vault', [sub()], ['get']);
         expect(code).toBe(2);
         const written = out.mock.calls.join('');
-        expect(written).toContain('Expected 2 arguments');
-        expect(written).toContain('tavern cortex get <topic> <path>');
+        expect(written).toContain('Expected 1 argument');
+        expect(written).toContain('tavern vault get <path>');
     });
 
     test('unknown flag prints help to stderr, exit 2', async () => {
         const out = stderr();
         const code = await dispatchSubcommand(
-            'cortex',
-            [sub({ name: 'topics', positionals: [] })],
-            ['topics', '--nope']
+            'vault',
+            [sub({ name: 'status', positionals: [] })],
+            ['status', '--nope']
         );
         expect(code).toBe(2);
         expect(out.mock.calls.join('')).toContain("Unknown flag '--nope'");
@@ -75,7 +75,7 @@ describe('dispatchSubcommand', () => {
         const out = stdout();
         let ran = false;
         const code = await dispatchSubcommand(
-            'cortex',
+            'vault',
             [
                 sub({
                     run: () => {
@@ -88,6 +88,6 @@ describe('dispatchSubcommand', () => {
         );
         expect(code).toBe(0);
         expect(ran).toBe(false);
-        expect(out.mock.calls.join('')).toContain('tavern cortex get <topic> <path>');
+        expect(out.mock.calls.join('')).toContain('tavern vault get <path>');
     });
 });

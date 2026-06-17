@@ -65,7 +65,7 @@ export function rows(entries: { left: string; right: string }[], indent = '  '):
 /**
  * Aligned multi-column table. Each cell column is padded to its widest entry so
  * values line up; the final column is left unpadded. Returns the joined block.
- * Used for cortex topics/pages/search hits in place of raw `\t` joins.
+ * Used for aligned command output in place of raw `\t` joins.
  */
 export function table(rowsOfCells: string[][], indent = '  '): string {
     if (rowsOfCells.length === 0) {

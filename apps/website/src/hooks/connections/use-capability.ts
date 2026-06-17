@@ -24,12 +24,12 @@ const runtimeDisconnectedReason = 'Tavern Runtime is disconnected.';
 const capabilityLabels = {
     apiServer: 'Agent engine API',
     codexOAuth: 'Codex OAuth',
-    cortexWiki: 'Cortex Wiki',
     dashboardServer: 'Agent engine',
     gateway: 'Agent connection',
     mnemosyneMemory: 'Assistant memory',
     models: 'Models',
     skills: 'Skills',
+    vault: 'Vault',
 } satisfies Record<RuntimeCapabilityId, string>;
 
 export const settingsCapabilityRequirements = {
@@ -39,7 +39,7 @@ export const settingsCapabilityRequirements = {
     appearance: [],
     connectors: ['apiServer'],
     jobs: [],
-    memories: ['cortexWiki'],
+    memories: ['vault'],
     models: ['apiServer', 'models'],
     participants: [],
     sessions: ['apiServer'],
@@ -59,10 +59,10 @@ export const hermesCapabilityRequirements = [
 ] as const satisfies readonly RuntimeCapabilityId[];
 
 export const routeTabCapabilityRequirements = {
-    cortex: ['cortexWiki'],
     // Tasks are hidden unless managed Hermes is fully ready because create/run actions execute through Hermes.
     cron: hermesCapabilityRequirements,
     overview: [],
+    vault: ['vault'],
 } as const satisfies Record<RouteTab, readonly RuntimeCapabilityId[]>;
 
 export const newChatCapabilityRequirements = ['apiServer', 'gateway'] as const;

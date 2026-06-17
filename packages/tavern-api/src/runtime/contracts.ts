@@ -6,7 +6,7 @@ export const agentRuntimeProtocolVersion = 1 as const;
 
 export const agentRuntimeCapabilitySchema = z.enum([
     'codexOAuth',
-    'cortexWiki',
+    'vault',
     'dashboardServer',
     'apiServer',
     'gateway',
@@ -958,148 +958,87 @@ export const agentRuntimeModelsSchema = z.object({
     updatedAt: z.string().datetime().nullable(),
 });
 
-export const cortexTopicSchema = z.object({
-    archived: z.boolean(),
-    path: z.string().trim().min(1),
-    slug: z.string().trim().min(1),
-    title: z.string().trim().min(1),
-});
+export const vaultConfigSourceSchema = z.enum(['default', 'environment', 'settings']);
 
-export const cortexTopicListSchema = z.object({
-    hubPath: z.string().trim().min(1),
-    topics: z.array(cortexTopicSchema),
-});
-
-export const cortexPageSectionSchema = z.enum([
-    'datasets',
-    'inbox',
-    'output',
-    'raw',
-    'reports',
-    'root',
-    'todos',
-    'wiki',
-]);
-
-export const cortexWikiLinkSchema = z.object({
+export const vaultWikiLinkSchema = z.object({
     label: z.string().trim().min(1).nullable(),
     target: z.string().trim().min(1),
 });
 
-export const cortexPageSummarySchema = z.object({
-    archived: z.boolean(),
+export const vaultPageSummarySchema = z.object({
     path: z.string().trim().min(1),
-    section: cortexPageSectionSchema,
     title: z.string().trim().min(1),
-    topic: z.string().trim().min(1),
     updatedAt: z.string().datetime(),
 });
 
-export const cortexPageSchema = cortexPageSummarySchema.extend({
+export const vaultPageSchema = vaultPageSummarySchema.extend({
     body: z.string(),
     frontmatter: z.record(z.string(), z.unknown()).default({}),
-    links: z.array(cortexWikiLinkSchema).default([]),
+    links: z.array(vaultWikiLinkSchema).default([]),
     size: z.number().int().nonnegative(),
-    wikiPath: z.string().trim().min(1),
+    vaultPath: z.string().trim().min(1),
 });
 
-export const cortexPageListSchema = z.object({
-    pages: z.array(cortexPageSummarySchema),
-    topic: z.string().trim().min(1).nullable().default(null),
+export const vaultPageListSchema = z.object({
+    pages: z.array(vaultPageSummarySchema),
 });
 
-export const cortexSearchInputSchema = z.object({
-    includeArchived: z.boolean().default(false),
+export const vaultSearchInputSchema = z.object({
     limit: z.number().int().positive().max(100).default(20),
     offset: z.number().int().nonnegative().default(0),
     query: z.string().trim().min(1),
-    topic: z.string().trim().min(1).nullable().optional(),
 });
 
-export const cortexSearchHitSchema = z.object({
-    page: cortexPageSummarySchema,
+export const vaultSearchHitSchema = z.object({
+    page: vaultPageSummarySchema,
     score: z.number().nonnegative(),
     snippet: z.string().default(''),
 });
 
-export const cortexSearchResultSchema = z.object({
-    hits: z.array(cortexSearchHitSchema),
+export const vaultSearchResultSchema = z.object({
+    hits: z.array(vaultSearchHitSchema),
     limit: z.number().int().positive().default(20),
     offset: z.number().int().nonnegative().default(0),
     query: z.string().trim().min(1),
     totalHitCount: z.number().int().nonnegative(),
 });
 
-export const cortexBacklinkSchema = z.object({
+export const vaultBacklinkSchema = z.object({
     fromPath: z.string().trim().min(1),
     fromTitle: z.string().trim().min(1),
     label: z.string().trim().min(1).nullable(),
     targetPath: z.string().trim().min(1),
-    targetTopic: z.string().trim().min(1),
-    topic: z.string().trim().min(1),
 });
 
-export const cortexBacklinkListSchema = z.object({
-    links: z.array(cortexBacklinkSchema),
+export const vaultBacklinkListSchema = z.object({
+    links: z.array(vaultBacklinkSchema),
     targetPath: z.string().trim().min(1),
-    topic: z.string().trim().min(1),
 });
 
-export const cortexStatusSchema = z.object({
-    archivedTopicCount: z.number().int().nonnegative(),
-    configSource: z.enum(['environment', 'runtime']),
-    hubPath: z.string().trim().min(1),
+export const vaultStatusSchema = z.object({
+    configSource: vaultConfigSourceSchema,
+    indexExists: z.boolean(),
     pageCount: z.number().int().nonnegative(),
     readable: z.boolean(),
-    topicCount: z.number().int().nonnegative(),
+    vaultPath: z.string().trim().min(1),
     writable: z.boolean(),
 });
 
-export const cortexTodoSchema = z.object({
-    path: z.string().trim().min(1),
-    priority: z.string().nullable(),
-    question: z.string().nullable(),
-    status: z.string().trim().min(1),
-    title: z.string().trim().min(1),
-    topic: z.string().trim().min(1),
-    updatedAt: z.string().datetime(),
+export const agentRuntimeVaultSettingsSchema = z.object({
+    configSource: vaultConfigSourceSchema,
+    configuredPath: z.string().trim().min(1).nullable(),
+    environmentPath: z.string().trim().min(1).nullable(),
+    effectivePath: z.string().trim().min(1),
+    updatedAt: z.string().datetime().nullable(),
 });
 
-export const cortexTodoProcessingSchema = z.object({
-    lastRunAtMs: z.number().int().nonnegative().nullable(),
-    nextRunAtMs: z.number().int().nonnegative().nullable(),
-    runningPath: z.string().nullable(),
-    runningTopic: z.string().nullable(),
+export const agentRuntimeSaveVaultSettingsSchema = z.object({
+    vaultPath: z.string().trim().min(1, 'Enter a Vault path.'),
 });
 
-export const cortexTodoCompletionSchema = z.object({
-    date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/u),
-    detail: z.string().trim().min(1),
-    topic: z.string().trim().min(1),
+export const agentRuntimeSaveVaultSettingsResultSchema = agentRuntimeVaultSettingsSchema.extend({
+    restartScheduled: z.boolean(),
 });
-
-export const cortexLibrarianArticleSchema = z.object({
-    path: z.string().trim().min(1),
-    qualityFlags: z.array(z.string()),
-    qualityScore: z.number().nullable(),
-    stalenessScore: z.number().nullable(),
-});
-
-export const cortexLibrarianScanSchema = z.object({
-    articles: z.array(cortexLibrarianArticleSchema),
-    articlesScanned: z.number().nullable(),
-    avgQuality: z.number().nullable(),
-    avgStaleness: z.number().nullable(),
-    completedAt: z.string().nullable(),
-    lowQualityCount: z.number().nullable(),
-    scanId: z.string().nullable(),
-    staleCount: z.number().nullable(),
-    threshold: z.number().nullable(),
-    topic: z.string().trim().min(1),
-    updatedAt: z.string().datetime(),
-});
-
-export const cortexHealthStateSchema = z.enum(['degraded', 'healthy']);
 
 export const agentRuntimeCronDeliverySchema = z.object({
     chatId: z.string().trim().min(1),
@@ -1118,35 +1057,6 @@ export const agentRuntimeExecutionErrorCodeSchema = z.enum([
     'execution_failed',
     'control_plane_restarted',
 ]);
-
-export const cortexMaintenanceRunSchema = z.object({
-    lastRunAtMs: z.number().int().nonnegative().nullable(),
-    name: z.string().trim().min(1),
-    nextRunAtMs: z.number().int().nonnegative().nullable(),
-    running: z.boolean(),
-});
-
-export const cortexHealthHistoryEntrySchema = z.object({
-    articlesScanned: z.number().nullable(),
-    avgQuality: z.number().nullable(),
-    avgStaleness: z.number().nullable(),
-    lowQualityCount: z.number().nullable(),
-    recordedAt: z.string().datetime(),
-    scanId: z.string().nullable(),
-    staleCount: z.number().nullable(),
-    topic: z.string().trim().min(1),
-});
-
-export const cortexHealthSchema = z.object({
-    history: z.array(cortexHealthHistoryEntrySchema),
-    runs: z.array(cortexMaintenanceRunSchema),
-    scans: z.array(cortexLibrarianScanSchema),
-    state: cortexHealthStateSchema,
-    status: cortexStatusSchema,
-    todoCompletions: z.array(cortexTodoCompletionSchema),
-    todoProcessing: cortexTodoProcessingSchema,
-    todos: z.array(cortexTodoSchema),
-});
 
 export const agentRuntimeExecutionErrorSchema = z.object({
     code: agentRuntimeExecutionErrorCodeSchema,
@@ -1305,10 +1215,6 @@ export const agentRuntimeRunCronSchema = z.object({
 export const agentRuntimeJobSlugSchema = z.enum([
     'refresh-runtime-capabilities',
     'tavern-highlights',
-    'wiki-compile',
-    'wiki-health-history',
-    'wiki-librarian',
-    'wiki-todo-drain',
 ]);
 
 export const agentRuntimeJobAvailabilitySchema = z.enum(['disabled', 'enabled']);
@@ -2158,27 +2064,21 @@ export type AgentRuntimeBinding = z.infer<typeof agentRuntimeBindingSchema>;
 export type AgentRuntimeBindingList = z.infer<typeof agentRuntimeBindingListSchema>;
 export type AgentRuntimeBindingMatch = z.infer<typeof agentRuntimeBindingMatchSchema>;
 export type PlatformBindingStatus = z.infer<typeof agentRuntimeBindingStatusSchema>;
-export type CortexBacklink = z.infer<typeof cortexBacklinkSchema>;
-export type CortexBacklinkList = z.infer<typeof cortexBacklinkListSchema>;
-export type CortexTodo = z.infer<typeof cortexTodoSchema>;
-export type CortexTodoCompletion = z.infer<typeof cortexTodoCompletionSchema>;
-export type CortexTodoProcessing = z.infer<typeof cortexTodoProcessingSchema>;
-export type CortexHealth = z.infer<typeof cortexHealthSchema>;
-export type CortexHealthState = z.infer<typeof cortexHealthStateSchema>;
-export type CortexHealthHistoryEntry = z.infer<typeof cortexHealthHistoryEntrySchema>;
-export type CortexLibrarianArticle = z.infer<typeof cortexLibrarianArticleSchema>;
-export type CortexLibrarianScan = z.infer<typeof cortexLibrarianScanSchema>;
-export type CortexMaintenanceRun = z.infer<typeof cortexMaintenanceRunSchema>;
-export type CortexPage = z.infer<typeof cortexPageSchema>;
-export type CortexPageList = z.infer<typeof cortexPageListSchema>;
-export type CortexPageSection = z.infer<typeof cortexPageSectionSchema>;
-export type CortexPageSummary = z.infer<typeof cortexPageSummarySchema>;
-export type CortexSearchInput = z.input<typeof cortexSearchInputSchema>;
-export type CortexSearchResult = z.infer<typeof cortexSearchResultSchema>;
-export type CortexStatus = z.infer<typeof cortexStatusSchema>;
-export type CortexTopic = z.infer<typeof cortexTopicSchema>;
-export type CortexTopicList = z.infer<typeof cortexTopicListSchema>;
-export type CortexWikiLink = z.infer<typeof cortexWikiLinkSchema>;
+export type VaultBacklink = z.infer<typeof vaultBacklinkSchema>;
+export type VaultBacklinkList = z.infer<typeof vaultBacklinkListSchema>;
+export type VaultConfigSource = z.infer<typeof vaultConfigSourceSchema>;
+export type VaultPage = z.infer<typeof vaultPageSchema>;
+export type VaultPageList = z.infer<typeof vaultPageListSchema>;
+export type VaultPageSummary = z.infer<typeof vaultPageSummarySchema>;
+export type VaultSearchInput = z.input<typeof vaultSearchInputSchema>;
+export type VaultSearchResult = z.infer<typeof vaultSearchResultSchema>;
+export type VaultStatus = z.infer<typeof vaultStatusSchema>;
+export type VaultWikiLink = z.infer<typeof vaultWikiLinkSchema>;
+export type AgentRuntimeVaultSettings = z.infer<typeof agentRuntimeVaultSettingsSchema>;
+export type AgentRuntimeSaveVaultSettings = z.infer<typeof agentRuntimeSaveVaultSettingsSchema>;
+export type AgentRuntimeSaveVaultSettingsResult = z.infer<
+    typeof agentRuntimeSaveVaultSettingsResultSchema
+>;
 export type AgentRuntimeModelAccess = z.infer<typeof agentRuntimeModelAccessSchema>;
 export type AgentRuntimeModelAccessId = z.infer<typeof agentRuntimeModelAccessIdSchema>;
 export type AgentRuntimeModelAccessState = z.infer<typeof agentRuntimeModelAccessStateSchema>;

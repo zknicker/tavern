@@ -18,7 +18,7 @@ describe('managed tavern skill', () => {
         expect(skill).not.toContain('## Automations');
         expect(skill).not.toContain('## Assistant Memory');
         expect(skill).not.toContain('memory_remember');
-        expect(skill).toContain('Cortex status');
+        expect(skill).toContain('Vault status');
         expect(skill).toContain('Settings -> Connectors');
     });
 
