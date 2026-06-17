@@ -51,7 +51,7 @@ export function AppSidebar({
                 )}
             </SidebarContent>
             {isSettingsRoute ? null : (
-                <SidebarFooter className="pb-4">
+                <SidebarFooter>
                     <SidebarMenu>
                         <SidebarMenuItem>
                             <SidebarMenuButton onClick={onNavigateToSettings}>
