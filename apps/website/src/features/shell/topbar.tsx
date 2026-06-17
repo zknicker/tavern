@@ -60,7 +60,7 @@ export function AppSidebarTopbar({ isExpanded }: { isExpanded: boolean }) {
             <AppShellTopbarSidebarSlot
                 className={isExpanded ? 'items-center pt-0' : collapsedTopbarSlotWidth}
             >
-                <div className="no-drag flex items-center gap-1">
+                <div className="no-drag ml-auto flex items-center gap-1">
                     <SidebarTrigger
                         activateOnPointerDown
                         className="size-7 rounded-md"
