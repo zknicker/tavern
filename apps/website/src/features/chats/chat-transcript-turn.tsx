@@ -1,5 +1,11 @@
 import { Cancel01Icon } from '@hugeicons/core-free-icons';
-import { AnimatePresence, motion, type Transition, useReducedMotion } from 'framer-motion';
+import {
+    AnimatePresence,
+    motion,
+    type Transition,
+    useAnimationControls,
+    useReducedMotion,
+} from 'framer-motion';
 import * as React from 'react';
 import { chromatic } from 'slot-text';
 import { SlotText } from 'slot-text/react';
@@ -17,6 +23,7 @@ import { AgentPresenceIndicator } from './agent-presence-indicator.tsx';
 import { getActivePresenceVerb } from './chat-active-presence-verb.ts';
 import { CommandRunEntry } from './chat-command-card.tsx';
 import { ChatInlineMarkdownText } from './chat-inline-markdown-text.tsx';
+import { useStreamingTextRanges } from './chat-streaming-text-ranges.ts';
 import {
     ChatTranscriptActivity,
     ChatTranscriptActivityGroup,
@@ -56,6 +63,10 @@ const agentPresenceSize = 32;
 const presenceLabelExitTransition = {
     duration: 0.12,
     ease: [0.4, 0, 0.2, 1],
+} satisfies Transition;
+const presenceBlockEnterTransition = {
+    duration: 0.68,
+    ease: [0.16, 1, 0.3, 1],
 } satisfies Transition;
 const reducedPresenceLabelTransition = { duration: 0.08 } satisfies Transition;
 
@@ -371,6 +382,11 @@ function AgentPresenceRow({
     presence: React.ReactNode;
 }) {
     const shouldReduceMotion = useReducedMotion();
+    const active = label !== null;
+    const blockControls = useAnimationControls();
+    const blockMountedRef = React.useRef(false);
+    const previousActiveRef = React.useRef(false);
+    const blockInitial = active && shouldReduceMotion !== true ? { opacity: 0, y: 22 } : false;
     const labelInitial = shouldReduceMotion ? { opacity: 0 } : { opacity: 0, width: 0, x: -4 };
     const labelAnimate = shouldReduceMotion ? { opacity: 1 } : { opacity: 1, width: 'auto', x: 0 };
     const labelExit = shouldReduceMotion
@@ -384,8 +400,39 @@ function AgentPresenceRow({
     const labelTransition = shouldReduceMotion ? reducedPresenceLabelTransition : springs.moderate;
     const labelText = label ? formatPresenceTimingLabel(label) : null;
 
+    React.useLayoutEffect(() => {
+        const wasActive = blockMountedRef.current ? previousActiveRef.current : false;
+        blockMountedRef.current = true;
+        previousActiveRef.current = active;
+
+        if (shouldReduceMotion) {
+            blockControls.set({ opacity: 1, y: 0 });
+            return;
+        }
+
+        if (active && !wasActive) {
+            blockControls.set({ opacity: 0, y: 22 });
+
+            const frame = window.requestAnimationFrame(() => {
+                void blockControls.start({
+                    opacity: 1,
+                    transition: presenceBlockEnterTransition,
+                    y: 0,
+                });
+            });
+
+            return () => window.cancelAnimationFrame(frame);
+        }
+
+        blockControls.set({ opacity: 1, y: 0 });
+    }, [active, blockControls, shouldReduceMotion]);
+
     return (
-        <div className="flex h-8 min-w-0 items-center gap-2 overflow-visible text-muted-foreground/65 text-sm leading-5">
+        <motion.div
+            animate={blockControls}
+            className="flex h-8 min-w-0 items-center gap-2 overflow-visible text-muted-foreground/65 text-sm leading-5"
+            initial={blockInitial}
+        >
             {presence}
             <AnimatePresence>
                 {label ? (
@@ -402,7 +449,7 @@ function AgentPresenceRow({
                     </motion.span>
                 ) : null}
             </AnimatePresence>
-        </div>
+        </motion.div>
     );
 }
 
@@ -720,6 +767,12 @@ function AssistantReplyText({
         enabled: initiallyRevealing,
         revealKey: revealKey ?? (message ? getAssistantMessageRevealKey(message) : 'assistant'),
     });
+    const shouldReduceMotion = useReducedMotion();
+    const animatedRanges = useStreamingTextRanges(revealedText, {
+        enabled:
+            shouldReduceMotion !== true &&
+            (initiallyRevealing || revealedText.length < fullContent.length),
+    });
     const attachments = message ? (
         <ChatTranscriptMessageAttachments attachments={message.attachments ?? []} />
     ) : null;
@@ -740,9 +793,13 @@ function AssistantReplyText({
             from="assistant"
         >
             {message ? (
-                <ChatTranscriptMessageContent contentOverride={revealedText} message={message} />
+                <ChatTranscriptMessageContent
+                    animatedRanges={animatedRanges}
+                    contentOverride={revealedText}
+                    message={message}
+                />
             ) : (
-                <ChatInlineMarkdownText content={revealedText} />
+                <ChatInlineMarkdownText animatedRanges={animatedRanges} content={revealedText} />
             )}
         </ChatMessage>
     );

@@ -10,7 +10,10 @@ import {
     getChatVirtualizerScrollBehavior,
     getEstimatedTranscriptBottomOffset,
     getEstimatedTranscriptTailVirtualItems,
+    getTranscriptRowGrowthSnapshot,
+    shouldCorrectVirtualizedTranscriptEndGap,
     shouldLoadPreviousVirtualizedChatPage,
+    shouldSmoothFollowRowGrowth,
 } from './virtualized-chat-transcript.tsx';
 
 test('virtualized chat loads previous rows only when the real viewport is near top', () => {
@@ -170,6 +173,51 @@ test('virtualized chat respects explicit scroll behavior requests', () => {
     ).toBe('smooth');
 });
 
+test('virtualized chat corrects small bottom gaps while following', () => {
+    expect(
+        shouldCorrectVirtualizedTranscriptEndGap({
+            distanceFromEnd: 20,
+            isFollowing: true,
+        })
+    ).toBe(true);
+    expect(
+        shouldCorrectVirtualizedTranscriptEndGap({
+            distanceFromEnd: 20,
+            isFollowing: false,
+        })
+    ).toBe(false);
+    expect(
+        shouldCorrectVirtualizedTranscriptEndGap({
+            distanceFromEnd: 0.5,
+            isFollowing: true,
+        })
+    ).toBe(false);
+});
+
+test('virtualized chat smooths row growth at the tail while following', () => {
+    const previous = getTranscriptRowGrowthSnapshot([
+        { id: 'day:today', kind: 'dayDivider', label: 'Today' },
+        userRenderRow('user-1'),
+        presenceRenderRow('agent-1'),
+    ]);
+    const next = getTranscriptRowGrowthSnapshot([
+        { id: 'day:today', kind: 'dayDivider', label: 'Today' },
+        userRenderRow('user-1'),
+        userRenderRow('user-2'),
+        presenceRenderRow('agent-1'),
+    ]);
+
+    expect(shouldSmoothFollowRowGrowth({ isFollowing: true, next, previous })).toBe(true);
+    expect(shouldSmoothFollowRowGrowth({ isFollowing: false, next, previous })).toBe(false);
+});
+
+test('virtualized chat does not smooth prepended history growth', () => {
+    const previous = getTranscriptRowGrowthSnapshot([userRenderRow('user-3')]);
+    const next = getTranscriptRowGrowthSnapshot([userRenderRow('user-1'), userRenderRow('user-3')]);
+
+    expect(shouldSmoothFollowRowGrowth({ isFollowing: true, next, previous })).toBe(false);
+});
+
 test('virtualized chat estimates blank thinking presence without fake bottom space', () => {
     const entries = buildTranscriptEntries({
         activeReply: {
@@ -245,6 +293,45 @@ test('virtualized chat keeps the presence row stable when first visible reply ap
 });
 
 type ChatRow = NonNullable<ChatLogOutput>['rows'][number];
+
+function userRenderRow(id: string): TranscriptRenderRow {
+    return {
+        entry: {
+            actor: null,
+            id,
+            items: [],
+            key: `user:${id}`,
+            kind: 'turn',
+            participant: 'user',
+            responseId: null,
+            timestamp: null,
+        },
+        followsRuntimeNotice: false,
+        id,
+        kind: 'entry',
+        turnStartedAt: null,
+    };
+}
+
+function presenceRenderRow(id: string): TranscriptRenderRow {
+    const entry = {
+        actor: null,
+        id,
+        items: [],
+        key: `agent:${id}`,
+        kind: 'turn',
+        participant: 'agent',
+        responseId: null,
+        timestamp: null,
+    } satisfies Extract<TranscriptRenderRow, { kind: 'presence' }>['entry'];
+
+    return {
+        entry,
+        id: `presence:${id}`,
+        kind: 'presence',
+        turnStartedAt: null,
+    };
+}
 
 function thinkingRow(id: string): ChatRow {
     return {

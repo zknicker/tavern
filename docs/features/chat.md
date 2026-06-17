@@ -123,9 +123,10 @@ transcript only grows:
 * The runtime coalesces stream writes: reply text publishes at most every
   ~60ms and activity writes at most every ~200ms, with flushes at segment and
   turn boundaries.
-* Streamed reply text reveals at a paced rate (capped, never snapping), keeps
-  revealing after the turn completes, and renders the same inline markdown as
-  the durable message so completion does not reflow.
+* Streamed reply text reveals at a paced rate (capped, never snapping), fades in
+  fresh text at the live tail, keeps revealing after the turn completes, and
+  renders the same inline markdown as the durable message so completion does not
+  reflow.
 * The streamed reply and its durable message share one React key
   (`reply:<runId>`), so the end-of-turn swap does not remount.
 * Agent turns render visible work and reply content in timeline order; there is
@@ -134,10 +135,12 @@ transcript only grows:
 * The presence row stays below the latest agent turn at rest and while live.
   It keeps a fixed 32px icon box, uses the agent's configured color, and follows
   transcript reflow instantly as the turn grows.
-* While live, an activity verb and timer sit next to the presence eyes. Engine
-  thinking status can rotate the themed verb during the turn; the engine's
-  status text is ignored. Completed turns keep the eyes visible without timing
-  text.
+* While live, an activity verb and timer sit next to the presence eyes. The live
+  presence block slides and fades in when an idle chat starts a turn; completion
+  keeps the eyes mounted and lets their normal idle transition run without an
+  exit animation. Engine thinking status can rotate the themed verb during the
+  turn; the engine's status text is ignored. Completed turns keep the eyes
+  visible without timing text.
 * Stored model thinking renders as normal transcript activity when the
   Appearance setting shows thinking text. Hidden thinking does not render as a
   separate presence bubble.
@@ -146,8 +149,8 @@ transcript only grows:
   history never replays.
 * The full transcript virtualizes visible rows only: hidden thinking evidence
   does not reserve transcript height while the Appearance setting hides
-  thinking text. TanStack Virtual owns end anchoring, follow-on-append, and
-  streaming reply growth for this list.
+  thinking text. TanStack Virtual owns end anchoring, smooth follow-on-append,
+  tail row growth, and streaming reply growth for this list.
   The local scroll controller still tracks bottom state and owns disclosure
   anchoring for non-virtualized chat surfaces.
 

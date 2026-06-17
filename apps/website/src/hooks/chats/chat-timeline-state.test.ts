@@ -398,6 +398,22 @@ test('updateTimelineReply accumulates delta-only streamed text', () => {
     expect(second.activeReply?.text).toBe('Hello');
 });
 
+test('updateTimelineReply ignores stale shorter full-text snapshots for the same run', () => {
+    const streamed = updateTimelineReply(startTimelineTurn(emptyTimelineState(), turn), {
+        isThinking: false,
+        text: "Absolutely - here's another one:\n\nAt morning's edge",
+        turn,
+    });
+    const stale = updateTimelineReply(streamed, {
+        isThinking: false,
+        text: "Absolutely - here's anothe",
+        turn,
+    });
+
+    expect(stale.activeReply?.text).toBe("Absolutely - here's another one:\n\nAt morning's edge");
+    expect(stale.activeReply?.isThinking).toBe(false);
+});
+
 test('clearTimelineTurn only clears the matching run', () => {
     const state = startTimelineTurn(emptyTimelineState(), turn);
 

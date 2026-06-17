@@ -26,6 +26,7 @@ import {
 
 const previousPageScrollThreshold = 160;
 const transcriptScrollEndThreshold = 72;
+const transcriptPinnedEndThreshold = 1;
 const transcriptFallbackOverscan = 8;
 const transcriptEndInset = 64;
 
@@ -69,6 +70,7 @@ export function VirtualizedChatTranscript({
     const initialScrollKeyRef = React.useRef<string | null>(null);
     const initialScrollMeasureKeyRef = React.useRef<string | null>(null);
     const initialScrollPendingRef = React.useRef(false);
+    const previousRowGrowthSnapshotRef = React.useRef<TranscriptRowGrowthSnapshot | null>(null);
     const chatScrollController = useChatScrollControllerHandle();
     const chatScrollMode = useChatScrollControllerMode();
     const virtualizerAnchorsToEnd = shouldAnchorVirtualizerToEnd(chatScrollMode);
@@ -91,13 +93,18 @@ export function VirtualizedChatTranscript({
                 transcriptEndInset
             ),
         onChange: (instance, sync) => {
-            if (sync || chatScrollController?.getMode() !== 'following') {
+            if (
+                sync ||
+                initialScrollPendingRef.current ||
+                !shouldCorrectVirtualizedTranscriptEndGap({
+                    distanceFromEnd: instance.getDistanceFromEnd(),
+                    isFollowing: chatScrollController?.getMode() === 'following',
+                })
+            ) {
                 return;
             }
 
-            if (!instance.isAtEnd(transcriptScrollEndThreshold)) {
-                instance.scrollToEnd({ behavior: 'smooth' });
-            }
+            instance.scrollToEnd({ behavior: 'smooth' });
         },
         overscan: 8,
         paddingEnd: transcriptEndInset,
@@ -164,7 +171,7 @@ export function VirtualizedChatTranscript({
             if (
                 initialScrollPendingRef.current &&
                 (keyChanged || measureChanged) &&
-                !virtualizer.isAtEnd(transcriptScrollEndThreshold)
+                !virtualizer.isAtEnd(transcriptPinnedEndThreshold)
             ) {
                 virtualizer.scrollToEnd({ behavior: 'auto' });
                 return;
@@ -189,6 +196,40 @@ export function VirtualizedChatTranscript({
 
         return () => window.clearTimeout(timer);
     }, [initialScrollKey]);
+
+    React.useLayoutEffect(() => {
+        const previous = previousRowGrowthSnapshotRef.current;
+        const next = getTranscriptRowGrowthSnapshot(rows);
+
+        previousRowGrowthSnapshotRef.current = next;
+
+        if (
+            !shouldSmoothFollowRowGrowth({
+                isFollowing: chatScrollMode === 'following',
+                next,
+                previous,
+            }) ||
+            initialScrollPendingRef.current
+        ) {
+            return;
+        }
+
+        virtualizer.scrollToEnd({ behavior: 'smooth' });
+    }, [chatScrollMode, rows, virtualizer]);
+
+    React.useLayoutEffect(() => {
+        if (
+            initialScrollPendingRef.current ||
+            !shouldCorrectVirtualizedTranscriptEndGap({
+                distanceFromEnd: virtualizer.getDistanceFromEnd(),
+                isFollowing: chatScrollMode === 'following',
+            })
+        ) {
+            return;
+        }
+
+        virtualizer.scrollToEnd({ behavior: 'smooth' });
+    });
 
     React.useEffect(() => {
         const viewport = scrollViewportRef.current;
@@ -367,6 +408,48 @@ export function getChatVirtualizerScrollBehavior({
     }
 
     return hasAdjustments && isFollowing ? 'smooth' : 'auto';
+}
+
+export function shouldCorrectVirtualizedTranscriptEndGap({
+    distanceFromEnd,
+    isFollowing,
+}: {
+    distanceFromEnd: number;
+    isFollowing: boolean;
+}) {
+    return isFollowing && distanceFromEnd > transcriptPinnedEndThreshold;
+}
+
+interface TranscriptRowGrowthSnapshot {
+    firstRowId: string | null;
+    rowCount: number;
+}
+
+export function getTranscriptRowGrowthSnapshot(
+    rows: TranscriptRenderRow[]
+): TranscriptRowGrowthSnapshot {
+    return {
+        firstRowId: rows[0]?.id ?? null,
+        rowCount: rows.length,
+    };
+}
+
+export function shouldSmoothFollowRowGrowth({
+    isFollowing,
+    next,
+    previous,
+}: {
+    isFollowing: boolean;
+    next: TranscriptRowGrowthSnapshot;
+    previous: TranscriptRowGrowthSnapshot | null;
+}) {
+    return Boolean(
+        isFollowing &&
+            previous &&
+            previous.rowCount > 0 &&
+            next.rowCount > previous.rowCount &&
+            next.firstRowId === previous.firstRowId
+    );
 }
 
 function buildEstimatedTranscriptVirtualItems(rows: TranscriptRenderRow[]): VirtualItem[] {

@@ -2,18 +2,28 @@ import type * as React from 'react';
 import { MentionChip } from '../mentions/mention-chip.tsx';
 import type { Mention } from '../mentions/mention-types.ts';
 import { splitMentionText } from '../mentions/render-mention-text.tsx';
+import { MarkdownLink, matchBareUrl, matchMarkdownLink } from './chat-inline-markdown-link.tsx';
+import {
+    type ChatTextAnimationRange,
+    renderTextWithAnimatedRanges,
+} from './chat-inline-text-animation.tsx';
 
 const maxParseDepth = 6;
 
 export function ChatInlineMarkdownText({
+    animatedRanges = [],
     content,
     mentions,
 }: {
+    animatedRanges?: readonly ChatTextAnimationRange[];
     content: string;
     mentions?: readonly Mention[];
 }) {
     if (!mentions || mentions.length === 0) {
-        return renderInlineMarkdown(content, 'message');
+        return renderInlineMarkdown(content, 'message', 0, {
+            animatedRanges,
+            sourceOffset: 0,
+        });
     }
 
     return splitMentionText(content, mentions).flatMap((fragment, index) => {
@@ -29,30 +39,55 @@ export function ChatInlineMarkdownText({
             );
         }
 
-        return renderInlineMarkdown(fragment.text, `text:${fragment.start}:${index}`);
+        return renderInlineMarkdown(fragment.text, `text:${fragment.start}:${index}`, 0, {
+            animatedRanges,
+            sourceOffset: fragment.start,
+        });
     });
 }
 
-function renderInlineMarkdown(text: string, keyPrefix: string, depth = 0): React.ReactNode[] {
+function renderInlineMarkdown(
+    text: string,
+    keyPrefix: string,
+    depth: number,
+    options: {
+        animatedRanges: readonly ChatTextAnimationRange[];
+        sourceOffset: number;
+    }
+): React.ReactNode[] {
     if (text.length === 0) {
         return [];
     }
 
     if (depth > maxParseDepth) {
-        return [text];
+        return renderTextWithAnimatedRanges(
+            text,
+            options.sourceOffset,
+            `${keyPrefix}:max-depth`,
+            options.animatedRanges
+        );
     }
 
     const nodes: React.ReactNode[] = [];
     let buffer = '';
+    let bufferStart: number | null = null;
     let cursor = 0;
 
     const flushBuffer = () => {
-        if (buffer.length === 0) {
+        if (buffer.length === 0 || bufferStart === null) {
             return;
         }
 
-        nodes.push(buffer);
+        nodes.push(
+            ...renderTextWithAnimatedRanges(
+                buffer,
+                options.sourceOffset + bufferStart,
+                `${keyPrefix}:text:${bufferStart}`,
+                options.animatedRanges
+            )
+        );
         buffer = '';
+        bufferStart = null;
     };
 
     while (cursor < text.length) {
@@ -62,7 +97,12 @@ function renderInlineMarkdown(text: string, keyPrefix: string, depth = 0): React
             flushBuffer();
             nodes.push(
                 <MarkdownLink href={urlMatch.href} key={`${keyPrefix}:url:${cursor}`}>
-                    {urlMatch.label}
+                    {renderTextWithAnimatedRanges(
+                        urlMatch.label,
+                        options.sourceOffset + cursor,
+                        `${keyPrefix}:url-label:${cursor}`,
+                        options.animatedRanges
+                    )}
                 </MarkdownLink>
             );
             cursor += urlMatch.length;
@@ -79,7 +119,12 @@ function renderInlineMarkdown(text: string, keyPrefix: string, depth = 0): React
                         className="break-words rounded bg-muted px-1 py-0.5 font-mono text-[0.92em] [overflow-wrap:anywhere]"
                         key={`${keyPrefix}:code:${cursor}`}
                     >
-                        {text.slice(cursor + 1, end)}
+                        {renderTextWithAnimatedRanges(
+                            text.slice(cursor + 1, end),
+                            options.sourceOffset + cursor + 1,
+                            `${keyPrefix}:code-text:${cursor}`,
+                            options.animatedRanges
+                        )}
                     </code>
                 );
                 cursor = end + 1;
@@ -96,7 +141,11 @@ function renderInlineMarkdown(text: string, keyPrefix: string, depth = 0): React
                     {renderInlineMarkdown(
                         link.label,
                         `${keyPrefix}:link-label:${cursor}`,
-                        depth + 1
+                        depth + 1,
+                        {
+                            animatedRanges: options.animatedRanges,
+                            sourceOffset: options.sourceOffset + cursor + 1,
+                        }
                     )}
                 </MarkdownLink>
             );
@@ -113,7 +162,11 @@ function renderInlineMarkdown(text: string, keyPrefix: string, depth = 0): React
                     {renderInlineMarkdown(
                         strong.content,
                         `${keyPrefix}:strong:${cursor}`,
-                        depth + 1
+                        depth + 1,
+                        {
+                            animatedRanges: options.animatedRanges,
+                            sourceOffset: options.sourceOffset + strong.contentStart,
+                        }
                     )}
                 </strong>
             );
@@ -127,11 +180,23 @@ function renderInlineMarkdown(text: string, keyPrefix: string, depth = 0): React
             flushBuffer();
             nodes.push(
                 <em className="italic" key={`${keyPrefix}:em:${cursor}`}>
-                    {renderInlineMarkdown(emphasis.content, `${keyPrefix}:em:${cursor}`, depth + 1)}
+                    {renderInlineMarkdown(
+                        emphasis.content,
+                        `${keyPrefix}:em:${cursor}`,
+                        depth + 1,
+                        {
+                            animatedRanges: options.animatedRanges,
+                            sourceOffset: options.sourceOffset + emphasis.contentStart,
+                        }
+                    )}
                 </em>
             );
             cursor = emphasis.end;
             continue;
+        }
+
+        if (buffer.length === 0) {
+            bufferStart = cursor;
         }
 
         buffer += text[cursor];
@@ -140,19 +205,6 @@ function renderInlineMarkdown(text: string, keyPrefix: string, depth = 0): React
 
     flushBuffer();
     return nodes;
-}
-
-function MarkdownLink({ children, href }: { children: React.ReactNode; href: string }) {
-    return (
-        <a
-            className="break-words text-primary underline underline-offset-2 [overflow-wrap:anywhere] hover:text-primary/85"
-            href={href}
-            rel="noreferrer"
-            target="_blank"
-        >
-            {children}
-        </a>
-    );
 }
 
 function matchDelimited(text: string, cursor: number, delimiter: '*' | '**' | '__') {
@@ -169,81 +221,7 @@ function matchDelimited(text: string, cursor: number, delimiter: '*' | '**' | '_
 
     return {
         content: text.slice(contentStart, contentEnd),
+        contentStart,
         end: contentEnd + delimiter.length,
     };
-}
-
-function matchMarkdownLink(text: string, cursor: number) {
-    if (text[cursor] !== '[') {
-        return null;
-    }
-
-    const labelEnd = text.indexOf(']', cursor + 1);
-
-    if (labelEnd <= cursor + 1 || text[labelEnd + 1] !== '(') {
-        return null;
-    }
-
-    const hrefEnd = text.indexOf(')', labelEnd + 2);
-
-    if (hrefEnd <= labelEnd + 2) {
-        return null;
-    }
-
-    const href = sanitizeUrl(text.slice(labelEnd + 2, hrefEnd).trim());
-
-    if (!href) {
-        return null;
-    }
-
-    return {
-        end: hrefEnd + 1,
-        href,
-        label: text.slice(cursor + 1, labelEnd),
-    };
-}
-
-function matchBareUrl(text: string) {
-    const match = /^(?:https?:\/\/|www\.)[^\s<>()]+/u.exec(text);
-
-    if (!match) {
-        return null;
-    }
-
-    const raw = match[0];
-    const label = stripTrailingUrlPunctuation(raw);
-    const href = sanitizeUrl(label);
-
-    if (!href) {
-        return null;
-    }
-
-    return {
-        href,
-        label,
-        length: label.length,
-    };
-}
-
-function sanitizeUrl(value: string) {
-    const href = value.startsWith('www.') ? `https://${value}` : value;
-
-    try {
-        const url = new URL(href);
-        return url.protocol === 'http:' || url.protocol === 'https:' || url.protocol === 'mailto:'
-            ? url.toString()
-            : null;
-    } catch {
-        return null;
-    }
-}
-
-function stripTrailingUrlPunctuation(value: string) {
-    let end = value.length;
-
-    while (end > 0 && /[.,;:!?]/u.test(value[end - 1] ?? '')) {
-        end -= 1;
-    }
-
-    return value.slice(0, end);
 }

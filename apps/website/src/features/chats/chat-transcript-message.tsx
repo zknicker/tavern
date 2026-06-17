@@ -4,6 +4,7 @@ import { readMentionsFromMetadata } from '../mentions/mention-metadata.ts';
 import { CollapsibleText } from '../rows/collapsible-text.tsx';
 import { getMessageDisplay } from '../rows/message-display.ts';
 import { ChatInlineMarkdownText } from './chat-inline-markdown-text.tsx';
+import type { ChatTextAnimationRange } from './chat-inline-text-animation.tsx';
 import { ChatMessageImage } from './chat-message-image.tsx';
 
 export type TranscriptMessage =
@@ -13,10 +14,12 @@ export type TranscriptMessage =
 type MessageAttachment = NonNullable<TranscriptMessage['attachments']>[number];
 
 export function ChatTranscriptMessageContent({
+    animatedRanges,
     contentOverride,
     message,
     textClassName,
 }: {
+    animatedRanges?: readonly ChatTextAnimationRange[];
     contentOverride?: string;
     message: TranscriptMessage;
     textClassName?: string;
@@ -48,7 +51,11 @@ export function ChatTranscriptMessageContent({
 
     return (
         <CollapsibleText className={cn('text-sm', textClassName ?? 'text-foreground')}>
-            <ChatInlineMarkdownText content={content} mentions={mentions} />
+            <ChatInlineMarkdownText
+                animatedRanges={animatedRanges}
+                content={content}
+                mentions={mentions}
+            />
         </CollapsibleText>
     );
 }

@@ -198,7 +198,7 @@ export function getReplacementVisibleLength({
 }) {
     const visiblePrevious = previous.slice(0, Math.min(previousVisibleLength, previous.length));
     const rawPrefixLength = Math.min(commonPrefixLength(previous, next), next.length);
-    const semanticPrefix = stripRevealWhitespace(visiblePrevious);
+    const semanticPrefix = stripRevealFormatting(visiblePrevious);
 
     if (semanticPrefix.length === 0 || !startsWithRevealSemanticPrefix(next, semanticPrefix)) {
         return rawPrefixLength;
@@ -217,7 +217,7 @@ function getIndexAfterRevealSemanticPrefix(text: string, semanticPrefix: string)
     for (let index = 0; index < text.length; index += 1) {
         const character = text[index] ?? '';
 
-        if (isRevealWhitespace(character)) {
+        if (isRevealFormattingCharacter(character)) {
             continue;
         }
 
@@ -235,11 +235,11 @@ function getIndexAfterRevealSemanticPrefix(text: string, semanticPrefix: string)
     return semanticIndex === semanticPrefix.length ? text.length : null;
 }
 
-function stripRevealWhitespace(text: string) {
+function stripRevealFormatting(text: string) {
     let result = '';
 
     for (const character of text) {
-        if (!isRevealWhitespace(character)) {
+        if (!isRevealFormattingCharacter(character)) {
             result += character;
         }
     }
@@ -247,8 +247,8 @@ function stripRevealWhitespace(text: string) {
     return result;
 }
 
-function isRevealWhitespace(character: string) {
-    return /\s/u.test(character);
+function isRevealFormattingCharacter(character: string) {
+    return /[\s\p{P}]/u.test(character);
 }
 
 function usePrefersReducedMotion() {

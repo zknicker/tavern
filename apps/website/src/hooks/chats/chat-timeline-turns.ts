@@ -43,7 +43,11 @@ export function updateTimelineReply(
     const existingText = existingReply?.text ?? '';
     const nextText = update.replace
         ? update.text
-        : update.text || (update.delta ? `${existingText}${update.delta}` : existingText);
+        : resolveLiveReplyText({
+              existingText,
+              incomingDelta: update.delta,
+              incomingText: update.text,
+          });
     const nextReply = normalizeActiveReply({
         agentId: update.turn.agentId,
         isThinking: update.isThinking ?? existingReply?.isThinking,
@@ -60,6 +64,29 @@ export function updateTimelineReply(
         ...nextState,
         activeTurn: nextState.activeReply ? update.turn : nextState.activeTurn,
     };
+}
+
+function resolveLiveReplyText(input: {
+    existingText: string;
+    incomingDelta?: string;
+    incomingText: string;
+}) {
+    if (input.incomingDelta) {
+        return `${input.existingText}${input.incomingDelta}`;
+    }
+
+    if (!input.incomingText) {
+        return input.existingText;
+    }
+
+    if (
+        input.incomingText.length < input.existingText.length &&
+        input.existingText.startsWith(input.incomingText)
+    ) {
+        return input.existingText;
+    }
+
+    return input.incomingText;
 }
 
 export function clearTimelineTurn(

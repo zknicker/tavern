@@ -263,6 +263,19 @@
     }
 }
 
+@keyframes chat-streaming-text-unit-in {
+    from {
+        opacity: 0;
+        transform: translateY(0.45em);
+        filter: blur(1px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+        filter: blur(0);
+    }
+}
+
 @keyframes chat-approval-card-in {
     from {
         opacity: 0;
@@ -281,6 +294,7 @@
 
     .thinking-indicator-text,
     .thinking-indicator-word,
+    .chat-streaming-text-unit,
     [class*='desktop-update-indicator'] {
         animation: none !important;
     }
@@ -388,6 +402,19 @@
         animation:
             thinking-indicator-shimmer 1.5s ease-in-out infinite,
             thinking-indicator-word-in 240ms cubic-bezier(0.4, 0, 0.2, 1) both;
+    }
+
+    .chat-streaming-text-chunk {
+        display: inline;
+        line-height: inherit;
+    }
+
+    .chat-streaming-text-unit {
+        display: inline-block;
+        line-height: inherit;
+        vertical-align: baseline;
+        animation: chat-streaming-text-unit-in 720ms cubic-bezier(0.16, 1, 0.3, 1) both;
+        will-change: opacity, transform, filter;
     }
 }
 

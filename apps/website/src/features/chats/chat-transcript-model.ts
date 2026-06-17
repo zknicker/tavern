@@ -144,10 +144,18 @@ function getItemRunId(item: TranscriptItem) {
         return item.row.turnStatus.runId;
     }
 
-    // Tool, worker, and thinking rows carry no runtime metadata, but their
-    // activity ids embed the run id. Without this, the turn id flips between
-    // turn:<runId> and a row id whenever the live tail (the only other runId
-    // source) toggles, remounting the whole turn mid-stream.
+    if (item.row.kind === 'system' && item.row.systemKind === 'thinking') {
+        const messageId = item.row.thinking.messageId.trim();
+
+        if (isLikelyRunId(messageId)) {
+            return messageId;
+        }
+    }
+
+    // Tool, worker, and some thinking rows carry no runtime metadata, but
+    // their activity ids embed the run id. Without this, the turn id flips
+    // between turn:<runId> and a row id whenever the live tail toggles,
+    // remounting the whole turn mid-stream.
     return activityRowRunId(item.row.id);
 }
 
@@ -170,6 +178,10 @@ function runtimeMetadataRunId(metadata: Record<string, unknown> | null | undefin
     return typeof runId === 'string' && runId.trim().length > 0 ? runId : null;
 }
 
+function isLikelyRunId(value: string) {
+    return value.startsWith('run_') || value.startsWith('run-');
+}
+
 function buildTranscriptItems(input: {
     activeReply: ChatActiveReply | null;
     failedTurn?: ChatTurnFailure | null;
@@ -190,6 +202,10 @@ function buildTranscriptItems(input: {
             : null;
     const items: TranscriptItem[] = input.rows.flatMap((row) => {
         if (input.showThinkingText === false && isThinkingRow(row)) {
+            return [];
+        }
+
+        if (isDuplicateReplyThinkingRow(row, input.rows, activeReply)) {
             return [];
         }
 
@@ -237,6 +253,60 @@ function hasStoppedTurnRow(rows: TranscriptRow[], runId: string) {
 
 function isThinkingRow(row: TranscriptRow) {
     return row.kind === 'system' && row.systemKind === 'thinking';
+}
+
+function isDuplicateReplyThinkingRow(
+    row: TranscriptRow,
+    rows: TranscriptRow[],
+    activeReply: ChatActiveReply | null
+) {
+    if (!isThinkingRow(row)) {
+        return false;
+    }
+
+    const runId = getItemRunId({ kind: 'row', row });
+    const thinkingText = row.thinking.text;
+
+    if (!(runId && thinkingText.trim())) {
+        return false;
+    }
+
+    if (
+        activeReply?.runId === runId &&
+        isTranscriptTextPrefix(thinkingText, activeReply.text ?? '')
+    ) {
+        return true;
+    }
+
+    return rows.some(
+        (candidate) =>
+            candidate !== row &&
+            isDurableAgentReplyRow(candidate, runId) &&
+            isTranscriptTextPrefix(thinkingText, candidate.message.content)
+    );
+}
+
+function isDurableAgentReplyRow(
+    row: TranscriptRow,
+    runId: string
+): row is Extract<TranscriptRow, { kind: 'message' }> {
+    return (
+        row.kind === 'message' &&
+        row.message.senderType === 'agent' &&
+        !row.id.startsWith('act_') &&
+        getItemRunId({ kind: 'row', row }) === runId
+    );
+}
+
+function isTranscriptTextPrefix(prefix: string, value: string) {
+    const normalizedPrefix = normalizeTranscriptText(prefix);
+    const normalizedValue = normalizeTranscriptText(value);
+
+    return Boolean(normalizedPrefix && normalizedValue.startsWith(normalizedPrefix));
+}
+
+function normalizeTranscriptText(value: string) {
+    return value.replace(/\s+/g, ' ').trim();
 }
 
 /**

@@ -558,6 +558,24 @@ function durableReplyRow(): ChatRow {
     };
 }
 
+function runThinkingRow(text: string): ChatRow {
+    const id = `act_${handoffRunId}_thinking_1`;
+
+    return {
+        id,
+        kind: 'system',
+        systemKind: 'thinking',
+        thinking: {
+            id,
+            messageId: handoffRunId,
+            sender: 'Agent',
+            text,
+            timestamp: '2026-05-11T16:00:10.000Z',
+        },
+        timestamp: '2026-05-11T16:00:10.000Z',
+    };
+}
+
 test('agent turn entries keep one run-stable id from live streaming to durable rows', () => {
     const streamingOnly = buildTranscriptEntries({
         activeReply: handoffReply('', true),
@@ -604,6 +622,52 @@ test('the live reply item is suppressed once the durable reply row lands', () =>
     const itemKinds = agentTurn?.kind === 'turn' ? agentTurn.items.map((item) => item.kind) : [];
 
     expect(itemKinds.filter((kind) => kind === 'activeReply')).toHaveLength(0);
+});
+
+test('duplicate thinking text is hidden when it matches the active reply', () => {
+    const entries = buildTranscriptEntries({
+        activeReply: handoffReply('Done. Clouds check the window,'),
+        rows: [runThinkingRow('Done. Clouds')],
+        showThinkingText: true,
+    });
+    const agentTurn = entries.find(
+        (entry) => entry.kind === 'turn' && entry.participant === 'agent'
+    );
+    const itemLabels =
+        agentTurn?.kind === 'turn'
+            ? agentTurn.items.map((item) =>
+                  item.kind === 'row' && item.row.kind === 'system'
+                      ? `${item.row.kind}:${item.row.systemKind}`
+                      : item.kind === 'row'
+                        ? item.row.kind
+                        : item.kind
+              )
+            : [];
+
+    expect(itemLabels).toEqual(['activeReply']);
+});
+
+test('duplicate thinking text is hidden when it matches the durable reply', () => {
+    const entries = buildTranscriptEntries({
+        activeReply: null,
+        rows: [runThinkingRow('Done. Clouds'), durableReplyRow()],
+        showThinkingText: true,
+    });
+    const agentTurn = entries.find(
+        (entry) => entry.kind === 'turn' && entry.participant === 'agent'
+    );
+    const itemLabels =
+        agentTurn?.kind === 'turn'
+            ? agentTurn.items.map((item) =>
+                  item.kind === 'row' && item.row.kind === 'system'
+                      ? `${item.row.kind}:${item.row.systemKind}`
+                      : item.kind === 'row'
+                        ? item.row.kind
+                        : item.kind
+              )
+            : [];
+
+    expect(itemLabels).toEqual(['message']);
 });
 
 test('agent turns split by a runtime notice keep unique entry ids', () => {

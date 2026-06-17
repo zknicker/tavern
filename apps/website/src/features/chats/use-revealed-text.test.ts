@@ -87,6 +87,16 @@ test('getReplacementVisibleLength preserves progress when final formatting inser
     ).toBe('Hello,\nworld'.length);
 });
 
+test('getReplacementVisibleLength preserves progress when final formatting inserts punctuation', () => {
+    expect(
+        getReplacementVisibleLength({
+            next: "Of course — here's another one:\n\nCold brew",
+            previous: "Of course here's another one: Cold brew",
+            previousVisibleLength: "Of course here's another one".length,
+        })
+    ).toBe("Of course — here's another one".length);
+});
+
 test('getReplacementVisibleLength falls back to the raw prefix for semantic replacements', () => {
     expect(
         getReplacementVisibleLength({
