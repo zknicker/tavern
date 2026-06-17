@@ -263,6 +263,17 @@
     }
 }
 
+@keyframes chat-approval-card-in {
+    from {
+        opacity: 0;
+        transform: translate3d(0, 1.5rem, 0) scale(0.965);
+    }
+    to {
+        opacity: 1;
+        transform: translate3d(0, 0, 0) scale(1);
+    }
+}
+
 @media (prefers-reduced-motion: reduce) {
     .animate-float-up {
         animation: none !important;
@@ -299,6 +310,61 @@
 
         @starting-style {
             opacity: 0;
+        }
+    }
+
+    .chat-approval-flow {
+        position: relative;
+        isolation: isolate;
+    }
+
+    .chat-approval-flow-card {
+        position: relative;
+        z-index: 3;
+        opacity: 1;
+        transform: translate3d(0, 0, 0) scale(1);
+        transform-origin: bottom center;
+        animation: chat-approval-card-in 320ms cubic-bezier(0.22, 0.68, 0.2, 1) both;
+        transition:
+            opacity 180ms cubic-bezier(0.23, 1, 0.32, 1),
+            transform 320ms cubic-bezier(0.22, 0.68, 0.2, 1);
+        will-change: opacity, transform;
+    }
+
+    .chat-approval-flow-active .chat-approval-flow-card {
+        position: absolute;
+        right: 0;
+        bottom: calc(100% - 3.625rem);
+        left: 0;
+    }
+
+    .chat-approval-flow-composer {
+        position: relative;
+        z-index: 2;
+        transform: translate3d(0, 0, 0) scale(1);
+        transform-origin: center center;
+        transition: transform 160ms cubic-bezier(0.23, 1, 0.32, 1);
+        will-change: transform;
+    }
+
+    .chat-approval-flow-active .chat-approval-flow-composer {
+        transform: translate3d(0, 0.5rem, 0) scale(0.972);
+        transition-duration: 480ms;
+        transition-timing-function: cubic-bezier(0.23, 1, 0.32, 1);
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+        .chat-approval-flow-card {
+            animation: none !important;
+            transform: none !important;
+            transition: opacity 120ms cubic-bezier(0.23, 1, 0.32, 1) !important;
+            will-change: auto;
+        }
+
+        .chat-approval-flow-composer {
+            transform: none !important;
+            transition: none !important;
+            will-change: auto;
         }
     }
 

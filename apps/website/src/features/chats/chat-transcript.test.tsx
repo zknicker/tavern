@@ -8,6 +8,7 @@ import type { ChatActiveReply } from '../../hooks/chats/chat-timeline-state.ts';
 import { type ChatLogOutput, trpc } from '../../lib/trpc.tsx';
 import { ArtifactLogEntry } from '../sessions/log/event-entry/artifact-entry.tsx';
 import { ToolDrawerBody } from '../sessions/tools/tool-drawer-body.tsx';
+import { ChatApprovalPrompt, getPendingChatApprovalPrompt } from './chat-approval-prompt.tsx';
 import { ChatTranscript } from './chat-transcript.tsx';
 import { SystemStep } from './chat-transcript-system-step.tsx';
 import { getActiveReplyDisplayText } from './chat-transcript-turn.tsx';
@@ -479,6 +480,48 @@ test('ToolStep renders approval rows as ordinary tool rows', () => {
     assert.doesNotMatch(markup, />Approve</);
     assert.doesNotMatch(markup, />Deny</);
     assert.doesNotMatch(markup, /Needs approval/);
+});
+
+test('ChatTranscript keeps approval actions out of the work log', () => {
+    const rows = [
+        pendingApprovalRow('approval-1', 'rm -rf build'),
+        pendingApprovalRow('approval-2', 'deploy production'),
+    ];
+    const markup = renderTranscript(rows, { chatId: 'cht_1' });
+    const prompt = getPendingChatApprovalPrompt(rows);
+
+    assert.equal(countMatches(markup, />Allow once</g), 0);
+    assert.equal(countMatches(markup, />Deny</g), 0);
+    assert.match(markup, /rm -rf build/);
+    assert.match(markup, /deploy production/);
+    assert.doesNotMatch(markup, /Needs approval/);
+    assert.deepEqual(prompt, {
+        command: 'rm -rf build',
+        description: null,
+        id: 'approval-1',
+        sessionKey: 'agent:tiny:session-1',
+    });
+});
+
+test('ChatApprovalPrompt renders the oldest pending approval choices', () => {
+    const prompt = getPendingChatApprovalPrompt([
+        pendingApprovalRow('approval-1', 'rm -rf build', {
+            description: 'delete in root path',
+            summary: 'delete in root path',
+        }),
+        pendingApprovalRow('approval-2', 'deploy production'),
+    ]);
+    const markup = renderApprovalPrompt(prompt);
+
+    assert.match(markup, /Do you want to approve this command\?/);
+    assert.doesNotMatch(markup, /Question 1 of 1/);
+    assert.match(markup, /rm -rf build/);
+    assert.match(markup, /Reason: delete in root path/);
+    assert.doesNotMatch(markup, /deploy production/);
+    assert.match(markup, />Allow once</);
+    assert.match(markup, />Allow session</);
+    assert.match(markup, />Always allow</);
+    assert.match(markup, />Deny</);
 });
 
 test('ToolStep keeps older tool rows inspectable when call id is missing', () => {
@@ -1502,8 +1545,46 @@ function renderActiveTranscript(
     );
 }
 
-function pendingApprovalRow(id: string, command: string): ToolChatRow {
+function renderApprovalPrompt(
+    prompt: ReturnType<typeof getPendingChatApprovalPrompt>,
+    chatId = 'cht_1'
+) {
+    const queryClient = new QueryClient({
+        defaultOptions: {
+            queries: {
+                retry: false,
+            },
+        },
+    });
+    const client = trpc.createClient({
+        links: [
+            httpLink({
+                url: 'http://127.0.0.1:1/trpc',
+            }),
+        ],
+    });
+
+    return renderToStaticMarkup(
+        <trpc.Provider client={client} queryClient={queryClient}>
+            <QueryClientProvider client={queryClient}>
+                <ChatApprovalPrompt chatId={chatId} prompt={prompt} />
+            </QueryClientProvider>
+        </trpc.Provider>
+    );
+}
+
+function pendingApprovalRow(
+    id: string,
+    command: string,
+    options: { description?: string | null; summary?: string } = {}
+): ToolChatRow {
     return {
+        approval: {
+            command,
+            description: options.description ?? null,
+            patternKey: null,
+            patternKeys: [],
+        },
         actor: { id: 'tiny', kind: 'agent' },
         completedAt: null,
         connectsToNext: false,
@@ -1520,7 +1601,7 @@ function pendingApprovalRow(id: string, command: string): ToolChatRow {
             label: command,
             name: 'approval',
             status: 'running',
-            summaryParts: [command],
+            summaryParts: [options.summary ?? command],
         },
     };
 }

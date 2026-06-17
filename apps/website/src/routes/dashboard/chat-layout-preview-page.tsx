@@ -20,6 +20,7 @@ import {
     ChatScrollControllerProvider,
     useChatScrollController,
 } from '../../features/chats/use-chat-scroll-controller.ts';
+import { ApprovalFlowMotionPreview } from './chat-approval-flow-preview.tsx';
 import {
     chatComposerQueuePreviews,
     chatLayoutPreviews,
@@ -60,6 +61,7 @@ export function ChatLayoutPreviewPage() {
                         </section>
                     ))}
                 </div>
+                <ApprovalFlowMotionPreview />
                 <div className="grid gap-4 xl:grid-cols-2">
                     {chatComposerQueuePreviews.map((preview) => (
                         <section

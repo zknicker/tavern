@@ -320,6 +320,7 @@ function activityToChatRows(
             id: activity.id,
             isFirstInGroup: true,
             kind: 'tool' as const,
+            approval: approvalFromActivity(activity),
             clarification: clarificationFromActivity(activity),
             responseId: activity.response_id,
             sessionKey,
@@ -625,6 +626,22 @@ function readIsoString(value: unknown) {
     }
 
     return new Date(Date.parse(value)).toISOString();
+}
+
+function approvalFromActivity(activity: TavernResponseActivity) {
+    const approval = readRecord(activity.metadata.approval);
+    const command = readString(approval.command);
+
+    if (!(activity.kind === 'approval' && command)) {
+        return null;
+    }
+
+    return {
+        command,
+        description: readOptionalString(approval.description),
+        patternKey: readOptionalString(approval.patternKey),
+        patternKeys: readStringArray(approval.patternKeys),
+    };
 }
 
 function clarificationFromActivity(activity: TavernResponseActivity) {

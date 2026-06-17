@@ -199,10 +199,12 @@ that also patch live through `turn.progress` steps:
   metadata for Stats.
 * **Tool approvals.** A pending approval prompt records an `approval`
   activity and renders in chat as a normal tool row using the requested
-  command as its label. The blocking approval surface owns Approve/Deny
-  choices (`chat.approval.respond` → Runtime → engine gateway). Approving
-  runs the command once; denying blocks it. An unanswered prompt times out
-  engine-side and the turn continues as denied.
+  command as its label. The response controls render as a separate chat-footer
+  prompt (`chat.approval.respond` → Runtime → engine gateway), with once,
+  session, always, and deny choices. The footer prompt previews the command,
+  overlays the prompt bar, and blocks the composer until answered. The row
+  shows the waiting shimmer until the agent resumes. An unanswered prompt times
+  out engine-side and the turn continues as denied.
 * **Clarifications.** A mid-turn agent question records as activity named
   `clarify` and renders with inline answer controls. The row supports choices,
   free-text Other answers, Skip, and a Runtime-owned timeout shorter than the

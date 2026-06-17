@@ -83,10 +83,14 @@ execution log instead of a second approval UI:
    than the approval reason, so group headers and rows show the action the
    agent requested.
 4. The row falls through to `GenericToolStep`, inheriting the standard
-   running shimmer, drawer behavior, and status colors. The separate blocking
-   approval surface calls `chat.approval.respond`, which reaches the engine
+   running shimmer, drawer behavior, and status colors.
+5. The chat footer derives the oldest pending approval from loaded chat rows,
+   previews the command from `row.approval.command`, overlays the prompt bar,
+   blocks the composer, and renders `AskUserQuestions` with once, session,
+   always, and deny choices.
+6. The footer prompt calls `chat.approval.respond`, which reaches the engine
    gateway through the Runtime session approval endpoint.
-5. The runtime completes the activity when the agent resumes, which flips the
+7. The runtime completes the activity when the agent resumes, which flips the
    row to its settled state everywhere without app-side bookkeeping.
 
 ## Worked example: clarifications

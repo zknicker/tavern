@@ -63,6 +63,7 @@ export function ChatMessageComposer({
     agentRuntimeSyncLabel = null,
     activeRunId = null,
     agents,
+    blockReason = null,
     boundAgentIds,
     canSend: chatCanSend,
     chatId,
@@ -75,6 +76,7 @@ export function ChatMessageComposer({
     agentRuntimeSyncLabel?: string | null;
     activeRunId?: string | null;
     agents: AgentListOutput['agents'];
+    blockReason?: string | null;
     boundAgentIds: string[];
     canSend: boolean;
     chatId: string;
@@ -119,11 +121,13 @@ export function ChatMessageComposer({
     const canSendToRuntime = gatewayCapability.healthy;
     const runtimeDisabledReason = runtimeUnhealthyTooltip;
     const isSendBlocked = sendMessage.isPending || isReplyActive;
+    const isComposerBlocked = isDisabled || blockReason !== null;
     const canQueue =
-        chatCanSend && canSendToRuntime && !isDisabled && agentId.length > 0 && hasPayload;
+        chatCanSend && canSendToRuntime && !isComposerBlocked && agentId.length > 0 && hasPayload;
     const canSend = canQueue && !isSendBlocked;
     const canSubmit = isSendBlocked ? canQueue : canSend;
-    const canDispatchQueued = chatCanSend && canSendToRuntime && !isDisabled && !isSendBlocked;
+    const canDispatchQueued =
+        chatCanSend && canSendToRuntime && !isComposerBlocked && !isSendBlocked;
     const primaryAction = getComposerPrimaryAction({
         activeRunId,
         hasDraftPayload: hasPayload,
@@ -351,6 +355,10 @@ export function ChatMessageComposer({
     }
 
     function handleAttachmentDragOver(event: React.DragEvent<HTMLFormElement>) {
+        if (isComposerBlocked) {
+            return;
+        }
+
         if (event.dataTransfer.types.includes('Files')) {
             event.preventDefault();
         }
@@ -367,6 +375,10 @@ export function ChatMessageComposer({
     }
 
     function handleAttachmentDrop(event: React.DragEvent<HTMLFormElement>) {
+        if (isComposerBlocked) {
+            return;
+        }
+
         const files = [...event.dataTransfer.files];
 
         if (files.length === 0) {
@@ -426,8 +438,11 @@ export function ChatMessageComposer({
             onDragOver={handleAttachmentDragOver}
             onDrop={handleAttachmentDrop}
             onSubmit={handleSubmit}
-            onTextEditorFocus={mentionComposer.focusTextEditor}
-            surfaceClassName={isCompact ? 'rounded-2xl shadow-none' : undefined}
+            onTextEditorFocus={isComposerBlocked ? undefined : mentionComposer.focusTextEditor}
+            surfaceClassName={cn(
+                isCompact ? 'rounded-2xl shadow-none' : undefined,
+                isComposerBlocked && 'cursor-not-allowed opacity-60'
+            )}
         >
             <ChatComposerQueuePanel
                 canSteerBlockedMessages={Boolean(steerRunId)}
@@ -453,6 +468,7 @@ export function ChatMessageComposer({
                     ariaLabel="Chat message"
                     autoFocus={variant === 'detail'}
                     composer={mentionComposer}
+                    disabled={isComposerBlocked || !canSendToRuntime}
                     name="chat-message"
                     placeholder={CHAT_COMPOSER_PLACEHOLDER}
                 />
@@ -470,17 +486,18 @@ export function ChatMessageComposer({
                         type="file"
                     />
                     <ChatComposerAttachmentButton
-                        disabled={isDisabled || !canSendToRuntime}
+                        disabled={isComposerBlocked || !canSendToRuntime}
                         onClick={() => fileInputRef.current?.click()}
                     />
                     <ChatComposerAgentSelector
                         agentId={agentId}
                         agents={agents}
                         boundAgentIds={boundAgentIds}
+                        disabled={isComposerBlocked}
                         onAgentChange={setAgentId}
                     />
                     <ModelSelectorSlot
-                        disabled={isDisabled || !canSendToRuntime}
+                        disabled={isComposerBlocked || !canSendToRuntime}
                         modelOptions={modelOptions}
                         modelRef={modelRef}
                         onModelChange={setModelRef}
@@ -514,13 +531,16 @@ export function ChatMessageComposer({
                         <PromptInputSubmit
                             canSubmit={canSubmit}
                             label={
-                                (editingQueuedMessageId || isSendBlocked) && hasPayload
+                                !isComposerBlocked &&
+                                (editingQueuedMessageId || isSendBlocked) &&
+                                hasPayload
                                     ? 'Queue message'
                                     : 'Send message'
                             }
                             tooltip={getSendDisabledTooltip({
                                 agentRuntimeSyncLabel,
                                 boundAgentCount: boundAgentIds.length,
+                                blockReason,
                                 canSend: chatCanSend,
                                 isDisabled,
                                 isPending: sendMessage.isPending,
@@ -622,6 +642,7 @@ function formatAvailabilityLabel(availability: ModelOptionItem['availability']) 
 
 function getSendDisabledTooltip({
     agentRuntimeSyncLabel,
+    blockReason,
     boundAgentCount,
     canSend,
     isDisabled,
@@ -631,6 +652,7 @@ function getSendDisabledTooltip({
     runtimeReason,
 }: {
     agentRuntimeSyncLabel: string | null;
+    blockReason: string | null;
     boundAgentCount: number;
     canSend: boolean;
     isDisabled: boolean;
@@ -641,6 +663,10 @@ function getSendDisabledTooltip({
 }) {
     if (isPending) {
         return 'Sending message...';
+    }
+
+    if (blockReason) {
+        return blockReason;
     }
 
     if (isReplyActive) {
