@@ -76,7 +76,7 @@ function renderInlineMarkdown(text: string, keyPrefix: string, depth = 0): React
                 flushBuffer();
                 nodes.push(
                     <code
-                        className="rounded bg-muted px-1 py-0.5 font-mono text-[0.92em]"
+                        className="break-words rounded bg-muted px-1 py-0.5 font-mono text-[0.92em] [overflow-wrap:anywhere]"
                         key={`${keyPrefix}:code:${cursor}`}
                     >
                         {text.slice(cursor + 1, end)}
@@ -145,7 +145,7 @@ function renderInlineMarkdown(text: string, keyPrefix: string, depth = 0): React
 function MarkdownLink({ children, href }: { children: React.ReactNode; href: string }) {
     return (
         <a
-            className="text-primary underline underline-offset-2 hover:text-primary/85"
+            className="break-words text-primary underline underline-offset-2 [overflow-wrap:anywhere] hover:text-primary/85"
             href={href}
             rel="noreferrer"
             target="_blank"

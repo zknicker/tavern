@@ -694,7 +694,7 @@ function AssistantNarrationText({ item }: { item: TranscriptItem }) {
     const text = getAssistantNarrationText(item);
 
     return text ? (
-        <div className="max-w-[46rem] whitespace-pre-wrap break-words text-foreground text-sm leading-6">
+        <div className="min-w-0 max-w-[46rem] whitespace-pre-wrap break-words text-foreground text-sm leading-6 [overflow-wrap:anywhere]">
             {text}
         </div>
     ) : null;

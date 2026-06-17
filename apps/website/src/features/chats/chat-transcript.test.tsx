@@ -96,9 +96,15 @@ test('ChatTranscript renders constrained inline markdown in message text', () =>
     assert.match(markup, /# Test/);
     assert.match(markup, /<strong class="font-semibold">gpt-5\.4-mini<\/strong>/);
     assert.match(markup, /<em class="italic">carefully<\/em>/);
-    assert.match(markup, /<code class="[^"]*">OPENAI_API_KEY<\/code>/);
+    assert.match(
+        markup,
+        /<code class="[^"]*\[overflow-wrap:anywhere\][^"]*">OPENAI_API_KEY<\/code>/
+    );
     assert.match(markup, /href="https:\/\/openai\.com\/"/);
-    assert.match(markup, /href="https:\/\/www\.example\.com\/"/);
+    assert.match(
+        markup,
+        /<a class="[^"]*\[overflow-wrap:anywhere\][^"]*" href="https:\/\/www\.example\.com\/"/
+    );
     assert.match(markup, /&lt;u&gt;raw&lt;\/u&gt;/);
     assert.doesNotMatch(markup, /<h1/);
     assert.doesNotMatch(markup, /href="javascript:/);
@@ -692,6 +698,8 @@ test('ArtifactLogEntry renders durable artifact titles', () => {
 });
 
 test('ChatTranscript renders completed assistant narration as prose', () => {
+    const narrationText =
+        'Open https://accounts.google.com/o/oauth2/auth?response_type=code&client_id=preview-client.apps.googleusercontent.com&redirect_uri=http%3A%2F%2Flocalhost%3A1&scope=calendar.events.readonly before the final reply.';
     const markup = renderTranscript([
         {
             actor: { id: 'tiny', kind: 'agent' },
@@ -710,21 +718,19 @@ test('ChatTranscript renders completed assistant narration as prose', () => {
                     {
                         label: 'Detail',
                         tone: 'default',
-                        value: 'I will run the slow QA command before the final reply.',
+                        value: narrationText,
                     },
                 ],
                 label: 'Assistant reply',
                 name: 'message',
                 status: 'ok',
-                summaryParts: [
-                    'Assistant reply',
-                    'I will run the slow QA command before the final reply.',
-                ],
+                summaryParts: ['Assistant reply', narrationText],
             },
         },
     ]);
 
-    assert.match(markup, /I will run the slow QA command before the final reply\./);
+    assert.match(markup, /Open https:\/\/accounts\.google\.com\/o\/oauth2\/auth/);
+    assert.match(markup, /\[overflow-wrap:anywhere\]/);
     assert.doesNotMatch(markup, /Assistant reply\n/);
 });
 

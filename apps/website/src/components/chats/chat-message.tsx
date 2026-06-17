@@ -30,7 +30,7 @@ const ChatMessage = forwardRef<HTMLDivElement, ChatMessageProps>(
             <motion.div
                 animate={{ opacity: 1, scale: 1, y: 0 }}
                 className={cn(
-                    'group relative flex max-w-[80%] flex-col gap-1.5',
+                    'group relative flex min-w-0 max-w-[80%] flex-col gap-1.5',
                     isUser ? 'items-end self-end' : 'items-start self-start',
                     className
                 )}
@@ -53,7 +53,7 @@ const ChatMessage = forwardRef<HTMLDivElement, ChatMessageProps>(
                 {hasBody ? (
                     <div
                         className={cn(
-                            'whitespace-pre-wrap break-words text-sm',
+                            'min-w-0 max-w-full whitespace-pre-wrap break-words text-sm [overflow-wrap:anywhere]',
                             isUser
                                 ? 'text-pretty rounded-[20px] bg-[color-mix(in_oklab,var(--accent),var(--background)_45%)] px-3.5 py-2 text-accent-foreground'
                                 : 'min-h-5 text-foreground'

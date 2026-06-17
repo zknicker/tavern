@@ -130,6 +130,18 @@ test('assistant chat message prose keeps the live tail text-line height', () => 
     expect(user).toContain('py-2');
 });
 
+test('chat message wraps long pasted tokens inside the bubble', () => {
+    const longToken = `{"client_secret":"${'x'.repeat(256)}"}`;
+
+    for (const from of ['user', 'assistant'] as const) {
+        const markup = renderToStaticMarkup(<ChatMessage from={from}>{longToken}</ChatMessage>);
+
+        expect(markup).toContain('min-w-0 max-w-[80%]');
+        expect(markup).toContain('min-w-0 max-w-full');
+        expect(markup).toContain('[overflow-wrap:anywhere]');
+    }
+});
+
 test('chat message meta row reserves flow height', () => {
     const markup = renderToStaticMarkup(
         <ChatMessage actions={<button type="button">Copy</button>} from="user" time="12:00">

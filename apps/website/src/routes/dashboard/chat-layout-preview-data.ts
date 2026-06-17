@@ -16,8 +16,23 @@ interface ChatLayoutPreview {
 
 const previewTime = '2026-05-08T18:00:00.000Z';
 const streamingPreviewStartedAt = new Date(Date.now() - 17_000).toISOString();
+const longPastedOAuthJson =
+    '{"installed":{"client_id":"535034123734-jckkmfjk3qajgeo8mhcstmtkbdrt0gn2.apps.googleusercontent.com","project_id":"tavern-static-preview","auth_uri":"https://accounts.google.com/o/oauth2/auth","token_uri":"https://oauth2.googleapis.com/token","auth_provider_x509_cert_url":"https://www.googleapis.com/oauth2/v1/certs","client_secret":"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cret","redirect_uris":["http://localhost"]}}';
+const longOAuthConsentUrl =
+    'https://accounts.google.com/o/oauth2/auth?response_type=code&client_id=535034123734-jckkmfjk3qajgeo8mhcstmtkbdrt0gn2.apps.googleusercontent.com&redirect_uri=http%3A%2F%2Flocalhost%3A1&scope=https%3A%2F%2Fwww.googleapis.com%2Fauth%2Fcalendar.events.readonly&access_type=offline&prompt=consent&state=tavern_static_preview_long_agent_response_token';
 
 export const chatLayoutPreviews: ChatLayoutPreview[] = [
+    {
+        chat: chatActors({ agents: ['Atlas'], humans: ['You'] }),
+        rows: rows([
+            user('You', longPastedOAuthJson),
+            agent(
+                'Atlas',
+                `Auth URL created. Open this URL:\n\n${longOAuthConsentUrl}\n\nAfter approval, copy the localhost callback URL and paste it here.`
+            ),
+        ]),
+        title: 'Long pasted JSON + agent URL',
+    },
     {
         chat: chatActors({ agents: ['Atlas'], humans: ['You'] }),
         rows: rows([
