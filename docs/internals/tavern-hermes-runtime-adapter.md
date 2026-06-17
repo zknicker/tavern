@@ -22,9 +22,10 @@ Tavern follows the Hermes Desktop app as the north-star for managed Hermes chat
 behavior. The app composer remains Tavern-owned and compositional, but Runtime
 maps its controls onto managed Hermes surfaces:
 
-* file and image attachments are staged through Hermes Dashboard/Gateway
-  attachment APIs such as `file.attach`, `image.attach`, or `image.attach_bytes`
-  before `prompt.submit`
+* image attachments are staged through Hermes Dashboard/Gateway attachment APIs
+  such as `image.attach` or `image.attach_bytes` before `prompt.submit`
+* non-image inline attachments are materialized under the managed workspace and
+  passed as Hermes-readable `@file:` references before `prompt.submit`
 * the agent-facing prompt includes Hermes-readable context refs such as
   `@file:`, `@folder:`, `@url:`, and `@image:` after attachment staging
 * model inventory and default model selection come from managed Hermes config
@@ -70,9 +71,10 @@ Accepted Tavern messages are durable before model work starts.
    `sessionKey`.
 2. Runtime creates the Tavern user message.
 3. Runtime creates a running `chat_response` for the agent.
-4. Runtime stages any message attachments into the managed Hermes session and
-   resolves Hermes-readable context refs. Tavern message records carry
-   attachment arrays.
+4. Runtime stages image attachments into the managed Hermes session, writes
+   non-image inline attachments into the managed workspace, and resolves
+   Hermes-readable context refs. Tavern message records carry attachment
+   arrays.
 5. Runtime applies any session-scoped model choice through Gateway `config.set`
    with `key: "model"`.
 6. Runtime starts `runHermesTurn(...)` with the existing `chatId`,

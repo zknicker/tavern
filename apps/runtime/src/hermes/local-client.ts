@@ -1,3 +1,4 @@
+import { randomUUID } from 'node:crypto';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import {
@@ -1055,26 +1056,11 @@ export class LocalHermesClient extends LocalHermesUnsupportedSurfaces {
                 );
             }
 
-            const result = await this.#gateway.request('file.attach', {
-                data_url: `data:${attachment.mediaType};base64,${attachment.dataBase64}`,
-                name: attachment.filename,
-                session_id: sessionId,
-            });
-            return (
-                readStringFromUnknown(result, ['ref_text']) ??
-                formatHermesAttachmentRef('file', attachment.filename)
-            );
+            const filePath = await writeInlineAttachmentToWorkspace(sessionId, attachment);
+            return formatHermesAttachmentRef('file', filePath);
         }
 
-        const result = await this.#gateway.request('file.attach', {
-            name: attachment.filename,
-            path: attachment.path,
-            session_id: sessionId,
-        });
-        return (
-            readStringFromUnknown(result, ['ref_text']) ??
-            formatHermesAttachmentRef('file', attachment.path)
-        );
+        return formatHermesAttachmentRef('file', attachment.path);
     }
 
     async #acquireSessionTurn(sessionKey: string, signal?: AbortSignal) {
@@ -1577,6 +1563,33 @@ function formatHermesAttachmentRef(kind: 'file' | 'image', value: string) {
     const trimmed = value.trim();
     const formatted = /^[^\s`]+$/u.test(trimmed) ? trimmed : `\`${trimmed.replace(/`/g, '')}\``;
     return `@${kind}:${formatted}`;
+}
+
+async function writeInlineAttachmentToWorkspace(
+    sessionId: string,
+    attachment: Extract<AgentRuntimeSessionMessageAttachment, { type: 'inline' }>
+) {
+    const directory = path.join(
+        HERMES_WORKSPACE,
+        '.tavern-attachments',
+        safeAttachmentPathSegment(sessionId),
+        randomUUID()
+    );
+    const filePath = path.join(directory, safeAttachmentFilename(attachment.filename));
+    await fs.mkdir(directory, { recursive: true });
+    await fs.writeFile(filePath, Buffer.from(attachment.dataBase64, 'base64'));
+    return filePath;
+}
+
+function safeAttachmentPathSegment(value: string) {
+    const sanitized = value.replace(/[^A-Za-z0-9._-]+/g, '_').replace(/^_+|_+$/g, '');
+    return sanitized || 'session';
+}
+
+function safeAttachmentFilename(value: string) {
+    const base = path.basename(value.trim()) || 'attachment';
+    const sanitized = base.replace(/[^A-Za-z0-9._ -]+/g, '_').trim();
+    return sanitized || 'attachment';
 }
 
 function readProviderNumber(record: Record<string, unknown>, key: string) {

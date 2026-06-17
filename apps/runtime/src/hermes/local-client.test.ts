@@ -810,7 +810,7 @@ describe('LocalHermesClient session routing', () => {
         ]);
     });
 
-    it('stages attachments and applies the session model before prompt.submit', async () => {
+    it('stages images and materializes file attachments before prompt.submit', async () => {
         const requests: Array<{ method: string; params: Record<string, unknown> }> = [];
 
         server = new WebSocketServer({
@@ -847,17 +847,6 @@ describe('LocalHermesClient session routing', () => {
                             id: request.id,
                             jsonrpc: '2.0',
                             result: { path: '/workspace/cat.png' },
-                        })
-                    );
-                    return;
-                }
-
-                if (request.method === 'file.attach') {
-                    socket.send(
-                        JSON.stringify({
-                            id: request.id,
-                            jsonrpc: '2.0',
-                            result: { ref_text: '@file:/workspace/notes.pdf' },
                         })
                     );
                     return;
@@ -903,10 +892,10 @@ describe('LocalHermesClient session routing', () => {
                         type: 'inline',
                     },
                     {
-                        dataBase64: 'cGRm',
-                        filename: 'notes.pdf',
-                        mediaType: 'application/pdf',
-                        sizeBytes: 3,
+                        dataBase64: 'eyJjbGllbnQiOnRydWV9',
+                        filename: 'client_secret.json',
+                        mediaType: 'application/json',
+                        sizeBytes: 15,
                         type: 'inline',
                     },
                 ],
@@ -917,7 +906,13 @@ describe('LocalHermesClient session routing', () => {
         );
         client.close();
 
-        expect(requests).toEqual([
+        expect(requests.map((request) => request.method)).toEqual([
+            'session.create',
+            'config.set',
+            'image.attach_bytes',
+            'prompt.submit',
+        ]);
+        expect(requests.slice(0, 3)).toEqual([
             {
                 method: 'session.create',
                 params: {
@@ -941,22 +936,17 @@ describe('LocalHermesClient session routing', () => {
                     session_id: 'live-created',
                 },
             },
-            {
-                method: 'file.attach',
-                params: {
-                    data_url: 'data:application/pdf;base64,cGRm',
-                    name: 'notes.pdf',
-                    session_id: 'live-created',
-                },
-            },
-            {
-                method: 'prompt.submit',
-                params: {
-                    session_id: 'live-created',
-                    text: '@image:/workspace/cat.png\n@file:/workspace/notes.pdf\n\nsummarize this',
-                },
-            },
         ]);
+        const promptSubmit = requests.at(-1);
+        expect(promptSubmit?.params.session_id).toBe('live-created');
+        const promptText = String(promptSubmit?.params.text);
+        expect(promptText).toMatch(
+            /^@image:\/workspace\/cat\.png\n@file:.*client_secret\.json\n\nsummarize this$/u
+        );
+        const filePath = /^@image:[^\n]+\n@file:(?<path>[^\n]+)\n\n/u.exec(promptText)?.groups
+            ?.path;
+        expect(filePath).toBeTruthy();
+        expect(await fs.readFile(String(filePath), 'utf8')).toBe('{"client":true}');
     });
 
     it('maps composing, notice, subagent, and approval gateway events', async () => {
