@@ -7,6 +7,10 @@ description: >
 
 # Tavern
 
+Managed by Tavern Runtime. Do not edit this skill directory; Runtime refreshes
+it on startup. For durable agent-managed skill changes, create or update a
+separate skill in your normal skills directory.
+
 Tavern is the chat app you live in. The user talks to you in Tavern chats; your
 configuration, skills, connectors, and durable memory are Tavern product
 surfaces. This skill is your map for reading those surfaces and pointing the

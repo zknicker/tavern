@@ -32,13 +32,19 @@ describe('managed Vault integration', () => {
             await expect(
                 fs.readFile(path.join(integration.skillPath, 'SKILL.md'), 'utf8')
             ).resolves.toContain('Vault body.');
+            await expectOwnerWriteDisabled(integration.skillPath);
+            await expectOwnerWriteDisabled(path.join(integration.skillPath, 'SKILL.md'));
             await expect(
                 fs.readFile(path.join(integration.vaultPath, 'INDEX.md'), 'utf8')
             ).resolves.toBe('# Vault\n');
             expect(integration.vaultPath).toBe(vaultPath);
+
+            await expect(
+                prepareManagedVaultIntegration({ assetsRoot, hermesHome })
+            ).resolves.toMatchObject({ skillPath: integration.skillPath });
         } finally {
             restoreEnv('TAVERN_VAULT_PATH', previousVaultPath);
-            await fs.rm(directory, { force: true, recursive: true });
+            await removeWritable(directory);
         }
     });
 
@@ -71,10 +77,38 @@ describe('managed Vault integration', () => {
         );
 
         expect(skill).toContain('name: vault');
+        expect(skill).toContain('Managed by Tavern Runtime');
         expect(skill).toContain('Vault is the user');
         expect(skill).toContain('Use `TAVERN_VAULT_PATH`');
     });
 });
+
+async function expectOwnerWriteDisabled(filePath: string) {
+    const mode = (await fs.stat(filePath)).mode;
+    expect(mode & 0o200).toBe(0);
+}
+
+async function removeWritable(filePath: string) {
+    await makeWritable(filePath);
+    await fs.rm(filePath, { force: true, recursive: true });
+}
+
+async function makeWritable(filePath: string) {
+    const stats = await fs.lstat(filePath).catch(() => null);
+    if (!stats || stats.isSymbolicLink()) {
+        return;
+    }
+
+    if (stats.isDirectory()) {
+        await fs.chmod(filePath, 0o700).catch(() => undefined);
+        await Promise.all(
+            (await fs.readdir(filePath)).map((entry) => makeWritable(path.join(filePath, entry)))
+        );
+        return;
+    }
+
+    await fs.chmod(filePath, 0o600).catch(() => undefined);
+}
 
 async function writeFile(filePath: string, content: string) {
     await fs.mkdir(path.dirname(filePath), { recursive: true });

@@ -90,6 +90,10 @@ Runtime-owned workflow packages can still be prepared as managed skills when
 they are part of Tavern's product contract. Vault is the current example:
 Runtime bundles the `vault` managed skill so normal wiki work can route to
 Obsidian and bounded research folders can route to llm-wiki.
+The Runtime-owned `vault` and `tavern` skill copies are read-only and refreshed
+from Tavern assets on startup. Agent-created, hub-installed, workspace,
+personal, extra-directory, and plugin-owned skills remain owned by their source
+location and keep their normal Hermes editability.
 
 Managed memory providers are not Tavern skills. Runtime configures Hermes to
 select the `mnemosyne` memory provider and writes the provider discovery shim

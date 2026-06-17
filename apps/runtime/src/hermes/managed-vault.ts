@@ -1,4 +1,4 @@
-import fsSync from 'node:fs';
+import fsSync, { type Stats } from 'node:fs';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -37,7 +37,10 @@ export async function prepareManagedVaultIntegration(
     const skillSource = path.join(assetsRoot, 'hermes', 'skills', managedVaultSkillName);
     const { skillPath, vaultPath } = getManagedVaultPaths(input);
 
-    await Promise.all([prepareVaultRoot(vaultPath), syncDirectory(skillSource, skillPath)]);
+    await Promise.all([
+        prepareVaultRoot(vaultPath),
+        syncManagedSkillDirectory(skillSource, skillPath),
+    ]);
 
     return { skillPath, vaultPath };
 }
@@ -75,7 +78,8 @@ function resolveSourceAssetsRoot() {
     return candidates.find((candidate) => fsSync.existsSync(candidate)) ?? candidates.at(-1)!;
 }
 
-export async function syncDirectory(source: string, target: string) {
+export async function syncManagedSkillDirectory(source: string, target: string) {
+    await prepareExistingManagedSkillForReplacement(target);
     await fs.rm(target, { force: true, recursive: true });
     await fs.mkdir(path.dirname(target), { recursive: true });
     await fs.cp(source, target, {
@@ -84,4 +88,53 @@ export async function syncDirectory(source: string, target: string) {
         recursive: true,
         verbatimSymlinks: true,
     });
+    await protectManagedSkillDirectory(target);
+}
+
+async function prepareExistingManagedSkillForReplacement(target: string) {
+    const stats = await fs.lstat(target).catch(() => null);
+    if (!stats || stats.isSymbolicLink()) {
+        return;
+    }
+
+    if (stats.isDirectory()) {
+        await fs.chmod(target, (stats.mode | 0o700) & 0o777).catch(() => undefined);
+        const entries = await fs.readdir(target);
+        await Promise.all(
+            entries.map((entry) =>
+                prepareExistingManagedSkillForReplacement(path.join(target, entry))
+            )
+        );
+        return;
+    }
+
+    await fs.chmod(target, (stats.mode | 0o600) & 0o777).catch(() => undefined);
+}
+
+async function protectManagedSkillDirectory(target: string) {
+    const stats = await fs.lstat(target);
+    if (stats.isSymbolicLink()) {
+        return;
+    }
+
+    if (stats.isDirectory()) {
+        const entries = await fs.readdir(target);
+        await Promise.all(
+            entries.map((entry) => protectManagedSkillDirectory(path.join(target, entry)))
+        );
+        await fs.chmod(target, readOnlyMode(stats, true)).catch(() => undefined);
+        return;
+    }
+
+    await fs.chmod(target, readOnlyMode(stats, false)).catch(() => undefined);
+}
+
+function readOnlyMode(stats: Stats, directory: boolean) {
+    const mode = stats.mode & 0o777;
+    if (directory) {
+        return (mode | 0o500) & ~0o222;
+    }
+
+    const executable = (mode & 0o111) !== 0;
+    return (mode | (executable ? 0o500 : 0o400)) & ~0o222;
 }

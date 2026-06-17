@@ -1,6 +1,6 @@
 import path from 'node:path';
 import { HERMES_HOME } from '../config';
-import { resolveRuntimeAssetsRoot, syncDirectory } from './managed-vault';
+import { resolveRuntimeAssetsRoot, syncManagedSkillDirectory } from './managed-vault';
 
 export const tavernSkillName = 'tavern';
 
@@ -19,7 +19,7 @@ export async function ensureManagedTavernSkill(input: ManagedTavernSkillInput = 
     const skillSource = path.join(assetsRoot, 'hermes', 'skills', tavernSkillName);
     const skillPath = path.join(input.hermesHome ?? HERMES_HOME, 'skills', tavernSkillName);
 
-    await syncDirectory(skillSource, skillPath);
+    await syncManagedSkillDirectory(skillSource, skillPath);
 
     return { skillPath };
 }

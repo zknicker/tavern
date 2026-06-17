@@ -192,6 +192,14 @@ user. Runtime owns the content and refreshes it on every startup; the
 generated `AGENTS.md` points the agent at it. The contract lives in
 [tavern-skill.md](../../specs/tavern-skill.md).
 
+Runtime writes the managed `vault` and `tavern` skill directories read-only and
+the skill text tells agents not to edit them. On the next startup Runtime first
+makes the old managed copy replaceable, deletes it, copies the bundled source,
+and writes it read-only again. Other skills under `HERMES_HOME/skills` remain
+Hermes-owned skill state: hub-installed and agent-created skills stay
+agent-editable and, with the default managed home, live under the Runtime root
+backup unit across Tavern Runtime updates and Hermes pin changes.
+
 ## Managed Memory Provider
 
 Runtime configures managed Hermes to use the Mnemosyne memory provider:

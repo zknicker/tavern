@@ -8,6 +8,10 @@ description: >
 
 # Vault
 
+Managed by Tavern Runtime. Do not edit this skill directory; Runtime refreshes
+it on startup. For durable agent-managed skill changes, create or update a
+separate skill in your normal skills directory.
+
 Vault is the user's central knowledge hub: durable Markdown, inspectable by the user, maintained by agents.
 
 ## Path
