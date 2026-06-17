@@ -158,7 +158,14 @@ export async function runHermesTurn(input: {
 
             // Notices arrive from a background poller and must not chop an
             // in-flight reasoning segment.
-            if (!(isReasoningEvent(event.event) || isNoticeEvent(event.event))) {
+            if (
+                !(
+                    isReasoningEvent(event.event) ||
+                    isNoticeEvent(event.event) ||
+                    event.event === 'assistant.status' ||
+                    event.event === 'assistant.completed'
+                )
+            ) {
                 completeReasoningToProgress();
             }
 
@@ -223,9 +230,9 @@ export async function runHermesTurn(input: {
             }
 
             if (event.event === 'assistant.delta') {
-                const delta = readString(event.data.delta) ?? '';
+                const delta = readStreamText(event.data.delta) ?? '';
                 assistantContent += delta;
-                if (!delta) {
+                if (delta.length === 0) {
                     continue;
                 }
                 if (!assistantSegment) {
@@ -277,8 +284,8 @@ export async function runHermesTurn(input: {
             }
 
             if (event.event === 'reasoning.delta') {
-                const delta = readString(event.data.delta) ?? '';
-                if (!delta) {
+                const delta = readStreamText(event.data.delta) ?? '';
+                if (delta.length === 0) {
                     continue;
                 }
                 // The gateway mirrors the visible reply through the thinking
@@ -301,11 +308,6 @@ export async function runHermesTurn(input: {
                 }
                 const segment = reasoningSegment;
                 segment.content += delta;
-                stream.schedule(
-                    `reasoning:${segment.index}`,
-                    () => recordReasoningProgress(input, turn, segment),
-                    turnActivityFlushIntervalMs
-                );
                 continue;
             }
 
@@ -320,6 +322,7 @@ export async function runHermesTurn(input: {
                 // Hidden statuses (e.g. "ready" at turn end) must not flush
                 // the in-flight reply segment into the work log.
                 if (isRecordableAssistantStatus(event)) {
+                    completeReasoningToProgress();
                     flushAssistantToProgress();
                     recordAssistantStatus(input, turn, event);
                 }
@@ -327,10 +330,21 @@ export async function runHermesTurn(input: {
             }
 
             if (event.event === 'assistant.completed') {
-                stream.flush();
                 const completedContent = readString(event.data.content) || assistantContent;
-                const completedReasoning = readString(event.data.reasoning);
                 const deliveredContent = removeProgressMessages(completedContent, progressMessages);
+                if (
+                    reasoningSegment &&
+                    isProgressTextPrefix(reasoningSegment.content, deliveredContent)
+                ) {
+                    reasoningSegment = null;
+                }
+                stream.flush();
+                collectCompletedReasoning(
+                    completedReasoningMessages,
+                    completeReasoningSegment(input, reasoningSegment)
+                );
+                reasoningSegment = null;
+                const completedReasoning = readString(event.data.reasoning);
                 if (
                     completedReasoning &&
                     !isSameProgressText(completedReasoning, deliveredContent) &&
@@ -1288,6 +1302,13 @@ function isSameProgressText(left: string, right: string) {
     return Boolean(normalizedLeft && normalizedLeft === normalizedRight);
 }
 
+function isProgressTextPrefix(prefix: string, value: string) {
+    const normalizedPrefix = normalizeProgressText(prefix);
+    const normalizedValue = normalizeProgressText(value);
+
+    return Boolean(normalizedPrefix && normalizedValue.startsWith(normalizedPrefix));
+}
+
 function hasCompletedReasoning(content: string, completedMessages: string[]) {
     return (
         completedMessages.some((message) => isSameProgressText(content, message)) ||
@@ -1322,6 +1343,10 @@ function runtimeMetadata(
 
 function readString(value: unknown) {
     return typeof value === 'string' && value.trim().length > 0 ? value : null;
+}
+
+function readStreamText(value: unknown) {
+    return typeof value === 'string' ? value : null;
 }
 
 function readNumber(value: unknown) {

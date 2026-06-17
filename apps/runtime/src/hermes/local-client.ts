@@ -827,6 +827,8 @@ export class LocalHermesClient extends LocalHermesUnsupportedSurfaces {
             const { events } = await this.#startGatewayTurn(input);
 
             for await (const event of events) {
+                debugHermesGatewayStreamEvent(event);
+
                 if (event.type === 'session.info') {
                     yield {
                         data: event.payload,
@@ -837,7 +839,7 @@ export class LocalHermesClient extends LocalHermesUnsupportedSurfaces {
 
                 if (event.type === 'message.delta') {
                     yield {
-                        data: { delta: readString(event.payload, ['text']) ?? '' },
+                        data: { delta: readPayloadString(event.payload, ['text']) ?? '' },
                         event: 'assistant.delta',
                     };
                     continue;
@@ -846,10 +848,10 @@ export class LocalHermesClient extends LocalHermesUnsupportedSurfaces {
                 if (event.type === 'message.complete') {
                     yield {
                         data: {
-                            content: readString(event.payload, ['text']) ?? '',
+                            content: readPayloadString(event.payload, ['text']) ?? '',
                             message_id: readString(event.payload, ['message_id', 'id']),
                             model: readString(event.payload, ['model']),
-                            reasoning: readString(event.payload, ['reasoning', 'thinking']),
+                            reasoning: readPayloadString(event.payload, ['reasoning', 'thinking']),
                             status: readString(event.payload, ['status']),
                             usage: event.payload.usage ?? null,
                         },
@@ -920,7 +922,7 @@ export class LocalHermesClient extends LocalHermesUnsupportedSurfaces {
                 if (event.type === 'reasoning.delta' || event.type === 'reasoning.available') {
                     yield {
                         data: {
-                            delta: readString(event.payload, ['text']) ?? '',
+                            delta: readPayloadString(event.payload, ['text']) ?? '',
                         },
                         event: 'reasoning.delta',
                     };
@@ -977,7 +979,7 @@ export class LocalHermesClient extends LocalHermesUnsupportedSurfaces {
                 if (event.type === 'status.update') {
                     yield {
                         data: {
-                            delta: readString(event.payload, ['text']) ?? '',
+                            delta: readPayloadString(event.payload, ['text']) ?? '',
                             kind: readString(event.payload, ['kind']) ?? 'status',
                             source_event: event.type,
                         },
@@ -1773,6 +1775,68 @@ function readCommandPairs(value: unknown): [string, string][] {
 }
 
 const warnedGatewayEventTypes = new Set<string>();
+const debugHermesGatewayStreamEventTypes = new Set([
+    'message.delta',
+    'message.complete',
+    'reasoning.available',
+    'reasoning.delta',
+    'thinking.delta',
+]);
+
+function debugHermesGatewayStreamEvent(event: {
+    payload: Record<string, unknown>;
+    sessionId?: null | string;
+    type: string;
+}) {
+    if (
+        process.env.TAVERN_CHAT_DEBUG !== '1' ||
+        !debugHermesGatewayStreamEventTypes.has(event.type)
+    ) {
+        return;
+    }
+
+    const text =
+        readPayloadString(event.payload, ['text']) ??
+        readPayloadString(event.payload, ['delta']) ??
+        readPayloadString(event.payload, ['reasoning']) ??
+        readPayloadString(event.payload, ['thinking']) ??
+        '';
+
+    console.info('[tavern:chat:runtime:gateway]', event.type, {
+        payloadKeys: Object.keys(event.payload).sort(),
+        preview: debugTextPreview(text),
+        sessionId: event.sessionId ?? null,
+        textLength: text.length,
+        textNewlines: countNewlines(text),
+    });
+}
+
+function debugTextPreview(text: string) {
+    if (!text) {
+        return '';
+    }
+
+    const preview = text.length > 160 ? `${text.slice(0, 159)}...` : text;
+    return preview
+        .replaceAll('\\', '\\\\')
+        .replaceAll('\n', '\\n')
+        .replaceAll('\r', '\\r')
+        .replaceAll('\t', '\\t');
+}
+
+function countNewlines(text: string) {
+    return text.split('\n').length - 1;
+}
+
+function readPayloadString(record: Record<string, unknown>, keys: string[]) {
+    for (const key of keys) {
+        const value = record[key];
+        if (typeof value === 'string') {
+            return value;
+        }
+    }
+    return null;
+}
 
 // Gateway event types we have no mapping for must be visible, not silently
 // dropped — unhandled types are how stream content goes missing.

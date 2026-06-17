@@ -329,7 +329,7 @@ describe('Tavern channel store', () => {
         ]);
     });
 
-    it('maps durable assistant deliveries into final turn projection events', () => {
+    it('maps durable assistant deliveries into terminal turn projection events', () => {
         createChat({ id: 'cht_1' });
         createDelivery('cht_1', {
             agent_id: 'agt_1',
@@ -354,20 +354,6 @@ describe('Tavern channel store', () => {
         expect(
             listProjectedTavernRuntimeEvents({ afterCursor: 0 }).map((entry) => entry.event)
         ).toEqual([
-            {
-                isThinking: false,
-                replace: true,
-                text: 'Done.',
-                timestamp: expect.any(String),
-                turn: {
-                    agentId: 'main',
-                    chatId: 'cht_1',
-                    runId: 'run_1',
-                    sessionKey: 'session-1',
-                    startedAt: '2026-05-16T12:00:00.000Z',
-                },
-                type: 'turn.replyUpdated',
-            },
             {
                 timestamp: expect.any(String),
                 turn: {

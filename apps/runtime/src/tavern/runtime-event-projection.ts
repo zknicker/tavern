@@ -194,27 +194,13 @@ function messageDeliveredToRuntimeEvents(
     event: Extract<TavernChatEvent, { type: 'message.delivered' }>
 ): AgentRuntimeEvent[] {
     const turn = messageToTurn(event.delivery.message);
-    const text = messageText(event.delivery.message);
-    const events: AgentRuntimeEvent[] = [];
-
-    if (text.trim()) {
-        events.push({
-            isThinking: false,
-            replace: true,
-            text,
+    return [
+        {
             timestamp: event.created_at,
             turn,
-            type: 'turn.replyUpdated',
-        });
-    }
-
-    events.push({
-        timestamp: event.created_at,
-        turn,
-        type: 'turn.completed',
-    });
-
-    return events;
+            type: 'turn.completed',
+        },
+    ];
 }
 
 function activityEventToRuntimeEvents(

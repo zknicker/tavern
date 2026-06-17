@@ -679,6 +679,56 @@ describe('Tavern Hermes channel relay', () => {
         );
     });
 
+    it('preserves newline-only assistant deltas in live reply updates', async () => {
+        const runtimeEvents: unknown[] = [];
+        const unsubscribe = subscribeToRuntimeEvents((event) => runtimeEvents.push(event));
+        hermesClient.streamChat.mockImplementationOnce(async function* streamChat() {
+            yield {
+                data: { delta: 'Line one' },
+                event: 'assistant.delta',
+            };
+            yield {
+                data: { delta: '\n\n' },
+                event: 'assistant.delta',
+            };
+            yield {
+                data: { delta: 'Line two' },
+                event: 'assistant.delta',
+            };
+            yield {
+                data: { content: 'Line one\n\nLine two', message_id: 'hermes_msg_newlines' },
+                event: 'assistant.completed',
+            };
+        });
+        createChat({ id: 'cht_1' });
+
+        await sendTavernChannelMessage('cht_1', {
+            agent: {
+                agentId: 'agt_1',
+            },
+            message: {
+                content: 'stream blank lines',
+                id: 'msg_newline_stream',
+                nonce: 'nonce_newline_stream',
+            },
+            target: {
+                externalId: null,
+                sessionKey: 'session_1',
+                target: 'cht_1',
+                type: 'tavern',
+            },
+        });
+        await waitForHermesTurn();
+        unsubscribe();
+
+        const replyTexts = runtimeEvents.flatMap((event) => {
+            const record = readRecord(event);
+            return record.type === 'turn.replyUpdated' ? [record.text] : [];
+        });
+        expect(replyTexts).toContain('Line one\n\nLine two');
+        expect(listMessages('cht_1').messages.at(-1)?.content).toBe('Line one\n\nLine two');
+    });
+
     it('stores reasoning.delta as Tavern Thinking activity', async () => {
         hermesClient.streamChat.mockImplementationOnce(async function* streamChat() {
             yield {
@@ -858,6 +908,55 @@ describe('Tavern Hermes channel relay', () => {
         expect(
             activity.flatMap((entry) => (entry.kind === 'reasoning' ? [entry.detail] : []))
         ).toEqual(['(o_o) processing...']);
+    });
+
+    it('does not store final reply text that arrives only through reasoning delta', async () => {
+        hermesClient.streamChat.mockImplementationOnce(async function* streamChat() {
+            yield {
+                data: {
+                    delta: 'Final answer from the model.\n\nFirst line,\nsecond line,\nTh',
+                },
+                event: 'reasoning.delta',
+            };
+            yield {
+                data: { delta: 'ready' },
+                event: 'assistant.status',
+            };
+            yield {
+                data: {
+                    content:
+                        'Final answer from the model.\n\nFirst line,\nsecond line,\nThird line.',
+                    message_id: 'hermes_msg_reasoning_reply',
+                },
+                event: 'assistant.completed',
+            };
+        });
+        createChat({ id: 'cht_1' });
+
+        await sendTavernChannelMessage('cht_1', {
+            agent: {
+                agentId: 'agt_1',
+            },
+            message: {
+                content: 'answer through reasoning',
+                id: 'msg_reasoning_reply',
+                nonce: 'nonce_reasoning_reply',
+            },
+            target: {
+                externalId: null,
+                sessionKey: 'session_1',
+                target: 'cht_1',
+                type: 'tavern',
+            },
+        });
+        await waitForHermesTurn();
+
+        expect(listMessages('cht_1').messages.at(-1)?.content).toBe(
+            'Final answer from the model.\n\nFirst line,\nsecond line,\nThird line.'
+        );
+        expect(
+            listResponses('cht_1').activity.filter((entry) => entry.kind === 'reasoning')
+        ).toEqual([]);
     });
 
     it('preserves clarification answer metadata when the gateway stream resumes first', async () => {

@@ -1155,6 +1155,10 @@ describe('LocalHermesClient session routing', () => {
                             type: 'message.delta',
                         },
                         {
+                            payload: { text: '\n\n' },
+                            type: 'message.delta',
+                        },
+                        {
                             payload: { kind: 'process', text: 'running checks' },
                             type: 'status.update',
                         },
@@ -1208,6 +1212,7 @@ describe('LocalHermesClient session routing', () => {
 
         expect(events).toEqual([
             { data: { delta: 'checking context' }, event: 'assistant.delta' },
+            { data: { delta: '\n\n' }, event: 'assistant.delta' },
             {
                 data: {
                     delta: 'running checks',
