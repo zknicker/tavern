@@ -83,7 +83,7 @@ Ownership:
 | Health, status, and admin control | [Admin API](api/admin.md) |
 | Agents, models, and tool policy | [Agents API](api/agents.md) |
 | Memory inspection and review | [Memory API](api/memory.md) |
-| Cortex wiki pages, files, and citations | [Knowledgebase API](api/knowledgebase.md) |
+| Vault pages, files, and citations | [Vault API](api/vault.md) |
 | Cron automations and run history | [Automations API](api/automations.md) |
 | Skill packages and assignment | [Skills API](api/skills.md) |
 | Usage and operational stats | [Stats API](api/stats.md) |

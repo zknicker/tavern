@@ -21,11 +21,10 @@ tavern                 # banner, live runtime status line, command list
 tavern serve
 tavern status [--json] [--runtime-url <url>]
 tavern token [--json]
-tavern cortex topics
-tavern cortex list --topic project-wiki
-tavern cortex get project-wiki wiki/index.md
-tavern cortex search "theme across project notes"
-tavern cortex status
+tavern vault list
+tavern vault get INDEX.md
+tavern vault search "theme across project notes"
+tavern vault status
 tavern engine status
 tavern engine install
 tavern engine clean
@@ -38,13 +37,13 @@ tavern help [command]
 Bare `tavern` does not start the server; it prints the banner, a one-line
 runtime status, and the command list. Help is generated from the command
 registry: `tavern help <command>` and `--help` work on every command, bare
-`tavern engine` / `tavern cortex` print group help, and unknown commands get
+`tavern engine` / `tavern vault` print group help, and unknown commands get
 a did-you-mean suggestion. Exit codes are `0` success, `1` operational
 failure, `2` usage error. Read commands support `--json`.
 
 `serve` runs the foreground Runtime process. It starts the Runtime HTTP and
-WebSocket API, Runtime storage, managed Hermes dashboard/API/Gateway, Cortex
-wiki reads, and Runtime jobs. It logs to stdout and stderr, and exits on
+WebSocket API, Runtime storage, managed Hermes dashboard/API/Gateway, Vault
+reads, and Runtime jobs. It logs to stdout and stderr, and exits on
 `SIGINT` or `SIGTERM`. The Homebrew service and the dev launchd plist invoke
 `tavern serve` explicitly.
 
@@ -55,11 +54,11 @@ resolved engine. With `--runtime-url` it inspects a remote Runtime; the
 local-only rows are then labeled `(local)` and the staged-binary hint is
 suppressed.
 
-`cortex` commands are thin CLI clients for the managed Runtime. They require a
+`vault` commands are thin CLI clients for the managed Runtime. They require a
 running Runtime and use `TAVERN_RUNTIME_URL`, or `http://127.0.0.1:18790` by
-default. They browse the resolved Cortex wiki hub; writes and maintenance happen
-through the managed `cortex-wiki` skill launched from Tasks or Runtime crons. When the Runtime
-is unreachable they fail with a pointer to `tavern status`.
+default. They browse the resolved Vault root; writes and maintenance happen
+through the managed `vault` skill. When the Runtime is unreachable they fail
+with a pointer to `tavern status`.
 
 `tavern` is the preferred CLI. `tavern-runtime` remains as a compatibility
 alias.

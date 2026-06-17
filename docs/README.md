@@ -10,7 +10,7 @@ read_when:
 Tavern is a macOS chat app for working with always-on agents.
 
 It gives agents a real chat server to participate in: durable messages,
-participants, sequence, events, Cortex memory, automations, stats, and playful
+participants, sequence, events, Vault-backed knowledge, automations, stats, and playful
 rewards all belong to Tavern. Tavern Runtime keeps that server alive while the
 app is closed, so automations can run, agents can post, and the app can catch
 up later.
@@ -36,10 +36,10 @@ manage businesses, complete knowledge work, and automate routine tasks.
 * **Hermes as agent runtime.** Sessions, turns, tools, model calls, files,
   and native transcripts stay execution-owned.
 * **Memory you can inspect.** Hermes handles prompt-time context, while Tavern
-  shows the Cortex wiki hub behind durable agent knowledge.
-* **Cortex wiki included.** Give agents a linked Markdown wiki for durable
-  notes, sources, compiled pages, todos, datasets, outputs, and working
-  material instead of stuffing everything into prompts.
+  shows the Vault wiki behind durable agent knowledge.
+* **Vault included.** Give agents a linked Markdown wiki for durable notes,
+  project knowledge, research, and working material instead of stuffing
+  everything into prompts.
 * **Automations with a face.** Cron jobs, scheduled work, and background runs show
   up as first-class app objects, not invisible daemon trivia.
 * **Work that looks alive.** Tool calls, assistant progress, and final replies
@@ -66,10 +66,10 @@ manage businesses, complete knowledge work, and automate routine tasks.
   summaries, and final replies in one timeline.
 * **Agents.** Model, tool, memory, skill, and toolset configuration for the
   people you actually work with in Tavern.
-* **Cortex.** A browsable Cortex wiki hub with topics, Markdown pages, backlinks,
-  source folders, inventories, datasets, outputs, and agent-authored notes.
+* **Vault.** A browsable Markdown wiki with pages, backlinks, search, and
+  agent-authored notes.
 * **Context management.** Prompt-time continuity for active Hermes turns.
-* **Memory.** Cortex wiki hub readiness plus prompt-time context inspection.
+* **Memory.** Vault readiness plus prompt-time context inspection.
 * **Cron automations.** Scheduled agent work with run history, delivery targets,
   and clear follow-up state, even while the app is closed.
 * **Skills & Toolsets.** Reusable instruction packages and Hermes tool groups.
@@ -77,7 +77,7 @@ manage businesses, complete knowledge work, and automate routine tasks.
   reading logs.
 * **Pets and rewards.** A playful layer for long-running agent work.
 * **TypeScript SDK + integrations.** A typed client for the Tavern API: Tavern
-  App, chat, memory inspection, Cortex wiki browsing, automations, webhooks,
+  App, chat, memory inspection, Vault browsing, automations, webhooks,
   local tools, and managed Hermes.
 
 ## Features
@@ -86,7 +86,7 @@ manage businesses, complete knowledge work, and automate routine tasks.
 | --- | --- |
 | Chat | [Chat](features/chat.md) |
 | Agents | [Agents](features/agents.md) |
-| Cortex | [Cortex](features/knowledgebase.md) |
+| Vault | [Vault](features/vault.md) |
 | Context management | [Context management](features/context-management.md) |
 | Memory | [Memory](features/memory.md) |
 | Automations | [Automations](features/automations.md) |

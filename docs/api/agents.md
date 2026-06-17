@@ -33,8 +33,8 @@ with instruction files, model, execution, tool, memory, and skill policy.
   `SOUL.md` (identity). Clients save the sources through the Runtime-hosted
   agent file API; saving `NOTES.md` regenerates `AGENTS.md`, and the generated
   file is readable for preview through the instructions read surface.
-* Tavern policy includes Cortex brain-first lookup guidance. Managed agents
-  check Cortex before external lookup when durable user, project, or prior
+* Tavern policy includes Vault-first lookup guidance. Managed agents
+  check Vault before external lookup when durable user, project, or prior
   decision context may already exist.
 * Hermes-backed settings use narrow domain mutations. Clients update agent
   name, appearance (avatar and emoji), model, thinking default, and messaging

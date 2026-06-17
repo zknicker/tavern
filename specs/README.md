@@ -5,7 +5,7 @@ bug history or stale plans.
 
 Tavern is an always-on agent chat system backed by Tavern Runtime. Tavern Runtime owns canonical
 chats, messages, responses, activity, artifacts, participants, event cursors, automations,
-deliveries, Cortex, generated config policy, and jobs. Tavern App owns the first-party Mac client,
+deliveries, Vault, generated config policy, and jobs. Tavern App owns the first-party Mac client,
 cache, presentation metadata, profiles, participant links, and app settings. Hermes owns native
 agent execution, sessions, turns, transcripts, files, tools, applied model/runtime config, platform
 bindings, and prompt-time memory.
@@ -47,20 +47,20 @@ directly.
 
 ## Memory Specs
 
-- `memories.md`: Cortex wiki durable knowledge, person memory, and memory
+- `memories.md`: Vault durable knowledge, person memory, and memory
   inspection surfaces.
 - `memory-context.md`: bounded prompt-facing context assembled from Hermes
   context management, chat state, participants, and selected wiki material.
-- `memory-lifecycle.md`: Cortex wiki lifecycle, correction, forgetting, and
+- `memory-lifecycle.md`: Vault lifecycle, correction, forgetting, and
   maintenance through Tasks and crons.
 - `memory-persistence.md`: historical memory persistence design; do not extend
   it for new wiki work.
 - `participant-knowledge.md`: participant/profile resolution and person-level
   knowledge.
 
-## Cortex Specs
+## Vault Specs
 
-- `cortex.md`: Cortex-backed durable knowledge browser and Runtime contract.
+- `vault.md`: Vault-backed durable knowledge browser and Runtime contract.
 
 ## Runtime Specs
 

@@ -86,9 +86,8 @@ keep projecting prompt hints itself or map mentions to Hermes's native support.
 * `~/.tavern/runtime/hermes/home` is the default managed `HERMES_HOME`.
 * `~/.tavern/runtime/hermes/workspace` is the generated managed workspace.
 * `~/.tavern/runtime/data/runtime.db` is Tavern Runtime durable state.
-* The Cortex wiki hub is durable Cortex knowledge. Runtime resolves it from
-  `TAVERN_WIKI_HUB_PATH`, `TAVERN_CORTEX_WIKI_PATH`, or the managed Runtime
-  wiki root.
+* The Vault wiki is durable knowledge. Runtime resolves it from
+  `TAVERN_VAULT_PATH`, Settings -> Vault, or `~/wiki`.
 * Dev stack state is isolated under `~/.tavern/dev/<worktree-id>/`.
 * Runtime-backed Hermes rows remain scoped to `tavern-hermes-managed`.
 

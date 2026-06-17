@@ -17,11 +17,9 @@ Automations let users ask agents to do work later or on a schedule.
 * **Delivery targets.** Automation output can land in the right chat.
 * **Follow-up state.** Users can see what ran, what failed, and what comes next.
 
-Automations are entirely user-authored. Tavern's own background work — Cortex
-wiki maintenance, highlights, health sampling — runs as Runtime jobs, not
-automations: condition-driven checks that spawn agent turns directly when
-there is work. See [Cortex Lifecycle](cortex-lifecycle.md) for the wiki
-pipeline.
+Automations are entirely user-authored. Tavern's own background work, such as
+highlights and capability refreshes, runs as Runtime jobs. Vault work belongs to
+agents through the managed `vault` skill, not hidden Runtime maintenance.
 
 ## Boundary
 

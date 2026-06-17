@@ -16,10 +16,8 @@ options are recorded here so a maintainer can request plans for them later.
 |------|-------|----------|--------|------------|--------|
 | 001  | Gate every deploy on typecheck, lint, and unit tests | P1 | S | — | REJECTED — operator call 2026-06-10: deep in dev, no CI gate wanted yet; revisit before release |
 | 002  | Bound chat event reads with SQL-side visibility and LIMIT | P1 | S | — | DONE (ee67ccfb, reviewed) |
-| 003  | Require a bearer token on Runtime HTTP and WebSocket APIs | P1 | M | — | DONE (6 commits ending 2d9a561b; reviewed, e2e-verified) |
 | 004  | Single-chat lookup path for getChat | P2 | M | — | DONE (7d4fc56e, reviewed; rewritten once — heavy reads are runtime HTTP calls, now routed through `client.chat.get`) |
 | 005  | Remove dead workspace packages | P3 | S | — | DONE (6aeea01b, reviewed) |
-| 006  | Token pairing UX: `tavern token` CLI + token fields in onboarding/settings | P1 | M | 003 | DONE (2 commits, reviewed; the plan's claimed save-path auth-wipe turned out already fixed in the storage upsert — regression tests added anyway) |
 
 Status values: TODO | IN PROGRESS | DONE | BLOCKED (with one-line reason) |
 REJECTED (with one-line rationale).
@@ -31,33 +29,19 @@ REJECTED (with one-line rationale).
   `cd apps/runtime && bun run test`, `cd apps/server && bun run test`,
   `bun run typecheck`, `bun run lint`. References to a root `bun run test`
   in plans 002–005 read as those lanes.
-- 002–005 are independent of each other and can run in any order or in
+- 002, 004, and 005 are independent of each other and can run in any order or in
   parallel worktrees.
-- 003 is the highest-risk plan (touches the app↔runtime transport); land it
-  on its own branch and smoke the dev stack before merging.
 
 ## Execution notes and follow-ups (2026-06-11)
 
-- **Plan 003 needed two review revisions**, both now landed: (1) the managed
-  engine env lacked `TAVERN_RUNTIME_TOKEN`, which would have 401-broken cron
-  delivery in production; (2) `saveEnvironmentAgentRuntimeConnection` silently
-  wiped `authJson` on every status-update save, and the Tavern SDK client
-  paths in `apps/server/src/chat/` carried no token. Regression tests pin both
-  (`apps/server/test/agent-runtime-auth-regression.test.ts`).
-- **Discovered: e2e was broken at HEAD before any of this work.** The CLI
+- **Discovered: e2e was broken at HEAD before the runtime auth work.** The CLI
   revamp made the runtime entry dispatch on argv, so the Playwright harness
   imported it and got a help screen (fixed: `7ae8ed92`). With the harness
-  fixed, **9 e2e tests fail identically at clean v1.4.3 and on this branch**
+  fixed, **9 e2e tests failed identically at clean v1.4.3 and on that branch**
   (chats rendering ×4, hermes-chat-contract ×2, mentions ×3) — pre-existing
-  UI/test drift, needs its own pass.
-- **003 follow-ups deliberately deferred**: a token input in the runtime
-  settings panel (today only `TAVERN_RUNTIME_TOKEN` env or the saved
-  connection's `auth` set via API configures the app side — the panel only
-  edits `baseUrl`); token support for SDK *realtime websockets* for external
-  clients (browser `WebSocket` cannot send headers; no first-party path uses
-  it); token rotation and pairing UX.
-- Pre-existing lint failure on main: 2 format errors in
-  `apps/runtime/src/hermes/supervisor.test.ts` (`bun run lint:fix` clears it).
+  UI/test drift, needs its own pass if still reproducible.
+- Pre-existing lint failure on main at the time: 2 format errors in
+  `apps/runtime/src/hermes/supervisor.test.ts` (`bun run lint:fix` cleared it).
 
 ## Findings without plans (vetted, real, below the cut)
 
@@ -81,10 +65,9 @@ REJECTED (with one-line rationale).
 
 ## Direction findings (options, not ranked against fixes)
 
-- **Runtime credentials / pairing** — partially addressed by plan 003.
-  `docs/api/auth.md` promises "explicit Tavern-issued credentials" for
-  external clients; after 003 the natural next step is a pairing UX (token
-  paste/QR in settings) and per-client tokens.
+- **Runtime credentials / pairing** — current bearer-token pairing is in
+  product. Future work is token rotation, QR/deep-link pairing, and per-client
+  tokens.
 - **Multi-agent productization** — `docs/features/agents.md` explicitly
   frames today's scope as the "current single-agent product boundary," yet
   the plumbing already exists: a `subAgent.list` tRPC surface

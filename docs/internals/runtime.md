@@ -16,7 +16,7 @@ executor.
 * **Tavern Runtime owns chat and local integration.** It stores canonical chats,
   messages, participants, events, reads, automations, agents, and delivery
   state. It starts managed Hermes, carries runtime events, stores runtime
-  settings, exposes Cortex wiki reads, and exposes Tavern tools to agents.
+  settings, exposes Vault reads, and exposes Tavern tools to agents.
 * **Hermes owns execution.** Sessions, turns, messages, tools, model calls, and
   native Hermes runtime behavior remain Hermes-owned. Tavern stores projected
   execution evidence only where the product needs durable chat, activity,
@@ -27,8 +27,8 @@ executor.
   and message ids; it does not create chats, repair chats, or write chat-level
   Tavern metadata.
 * **Tavern App owns presentation.** The app reads runtime chat history, caches
-  what it needs, and renders chats, activity, settings, memory inspection, the
-  Cortex wiki, automations, skills, and stats.
+  what it needs, and renders chats, activity, settings, memory inspection,
+  Vault, automations, skills, and stats.
 * **Events are recoverable notifications.** Runtime chat events are durable and
   cursor-backed. Hermes stream events trigger focused ingestion paths; they are
   not durable chat history by themselves.
@@ -107,8 +107,8 @@ at the skill; [tavern-skill.md](../../specs/tavern-skill.md) is the contract.
 ## Persistence
 
 The Runtime root is the backup unit. It defaults to
-`~/.tavern/runtime` and contains Tavern's runtime chat database, Cortex,
-vault, managed skills, runtime settings, generated Hermes home/workspace, and
+`~/.tavern/runtime` and contains Tavern's runtime chat database, managed
+skills, runtime settings, generated Hermes home/workspace, Vault metadata, and
 projected Hermes execution evidence. The dev stack uses
 `~/.tavern/dev/<worktree-id>/runtime` by default.
 
@@ -117,12 +117,12 @@ that Tavern renders, inspects, searches, or recovers are persisted in Tavern
 Runtime storage as execution evidence. Hermes remains canonical for native
 execution behavior.
 
-Cortex is a Runtime read surface over the user's Cortex wiki hub. Hermes context
+Vault is a Runtime read surface over the user's Markdown wiki. Hermes context
 management for turns remains separate from durable wiki knowledge. Tavern
-reports wiki hub readiness separately from prompt-time context management.
+reports Vault readiness separately from prompt-time context management.
 
-Memory and Cortex product contracts live in [Memories](../../specs/memories.md)
-and [Cortex](../../specs/cortex.md).
+Memory and Vault product contracts live in [Memories](../../specs/memories.md)
+and [Vault](../../specs/vault.md).
 
 ## Runtime Ingestion
 
@@ -157,8 +157,8 @@ health and exposes it through the Admin API. Jobs and app surfaces can use
 capability health to decide whether dependent functionality is available. The
 app renders capability health; it does not own Runtime capability checks.
 
-Cortex wiki maintenance does not sync from Hermes. Agents perform Cortex wiki
-maintenance through Tasks and Runtime crons.
+Vault maintenance does not sync from Hermes. Agents perform Vault work through
+the managed `vault` skill.
 
 ## Boundaries
 

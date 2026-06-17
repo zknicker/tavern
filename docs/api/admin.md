@@ -43,15 +43,15 @@ capabilities. It is not a second product API.
 | Skill hub | `/skills/hub/available`, `/skills/hub/preview`, `/skills/hub/scan`, `/skills/hub/install`, `/skills/hub/uninstall`, `/skills/hub/taps`, `/skills/hub/taps/{repo}` |
 | Toolset setup | `/toolsets`, `/toolsets/{id}/enabled`, `/toolsets/{id}/config`, `/toolsets/{id}/provider`, `/toolsets/{id}/env`, `/toolsets/{id}/post-setup` |
 | MCP servers | `/mcp/servers`, `/mcp/servers/{name}`, `/mcp/servers/{name}/test`, `/mcp/servers/{name}/enabled`, `/mcp/catalog`, `/mcp/catalog/install` |
-| Cortex, models, and access | `/cortex/status`, `/cortex/topics`, `/cortex/pages`, `/cortex/search`, `/models`, `/model-access`, `/model-access/api-key`, `/model-access/oauth/{providerId}/start`, `/model-access/oauth/{providerId}/poll/{sessionId}`, `/model-access/oauth/{providerId}/submit`, `/model-access/oauth/sessions/{sessionId}`, `/model-access/openrouter` |
+| Vault, models, and access | `/vault/status`, `/vault/settings`, `/vault/pages`, `/vault/search`, `/models`, `/model-access`, `/model-access/api-key`, `/model-access/oauth/{providerId}/start`, `/model-access/oauth/{providerId}/poll/{sessionId}`, `/model-access/oauth/{providerId}/submit`, `/model-access/oauth/sessions/{sessionId}`, `/model-access/openrouter` |
 | Platform bindings | `/bindings`, `/bindings/{id}` |
 | Hermes chat projections | `/hermes/chats`, `/hermes/chats/{chatId}/messages` |
 | Runtime chat relay | websocket `/chat` |
 
 `POST /jobs/{slug}/run` is the single manual job-run interface. Runtime job
-definitions own their payload schema and default input. Cortex wiki maintenance
-is not a built-in Runtime job; scheduled wiki work belongs in Tasks and runtime
-crons.
+definitions own their payload schema and default input. Vault maintenance is
+not a built-in Runtime job; wiki work belongs to agents through the managed
+`vault` skill.
 
 `/execution-settings` (GET/PUT) owns Tavern-stored agent execution settings:
 the model fallback chain and the agent timezone. Runtime stores the settings,

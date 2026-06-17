@@ -79,7 +79,7 @@ Every engine command gets exactly one of three treatments:
      `/clear`, and dismissal instead.
    - They manage subsystems or presentation Tavern owns: `/memory` reviews
      the write-approval queue of the engine's built-in curated memory, which
-     Tavern disables (`memory_enabled = false`) in favor of Cortex via the
+     Tavern disables (`memory_enabled = false`) in favor of Vault plus the
      managed Mnemosyne provider; `/yolo` toggles dangerous-command approval
      skipping out from under Tavern's permission settings; `/footer` and
      `/voice` are messaging-platform reply presentation Tavern renders

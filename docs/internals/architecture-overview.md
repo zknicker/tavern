@@ -20,8 +20,8 @@ flowchart LR
     appdb[(App SQLite<br/>cache + settings)]
     runtime[Tavern Runtime<br/>chat server + tools + managed services]
     runtimedb[(Runtime SQLite<br/>chat + events + execution state)]
-    cortex[Cortex<br/>Cortex wiki browser]
-    cortexwiki[(Cortex wiki hub<br/>Markdown topics)]
+    vault[Vault<br/>Markdown wiki browser]
+    vaultwiki[(Vault<br/>Markdown files)]
     hermes[Hermes<br/>sessions + turns + tools + transcripts]
     hermesstate[(Hermes state<br/>native execution store)]
 
@@ -30,8 +30,8 @@ flowchart LR
     api --> runtime
     app --> appdb
     runtime --> runtimedb
-    runtime --> cortex
-    cortex --> cortexwiki
+    runtime --> vault
+    vault --> vaultwiki
     runtime --> hermes
     hermes --> hermesstate
     hermes --> runtime
@@ -41,25 +41,25 @@ flowchart LR
 ## Layers
 
 * **Tavern App** presents chats, responses, activity, artifacts, agents, memory
-  inspection, the Cortex wiki, automations, skills, stats, and settings. React
+  inspection, Vault, automations, skills, stats, and settings. React
   and the local Node/tRPC layer are implementation pieces of one client
   boundary.
 * **Tavern API** is the client-facing contract for chat, agents, memory
-  inspection, the Cortex wiki, automations, skills, stats, and settings. The
+  inspection, Vault, automations, skills, stats, and settings. The
   runtime is the authoritative host for chat and execution-facing API state.
 * **TypeScript SDK** is a client wrapper around the Tavern API for bots,
   webhooks, automations, managed Hermes, local tools, and other clients.
 * **App SQLite** stores client cache, app-local settings, and presentation state.
 * **Tavern Runtime** stores canonical chat state, responses, activity,
   artifacts, starts managed Hermes, applies Tavern-owned config, runs
-  automations, carries runtime events, exposes Cortex wiki reads, and exposes
+  automations, carries runtime events, exposes Vault reads, and exposes
   Tavern tools to agents.
 * **Runtime SQLite** stores chats, messages, responses, activity, artifacts,
   participants, events, reads, channel ingress, execution evidence, and runtime
   metadata.
-* **Cortex** is the app and Runtime read surface for the user's Cortex wiki hub.
-  The hub's Markdown files are the durable knowledge source. Agents maintain the
-  hub through the managed `cortex-wiki` skill, Tasks, and Runtime crons.
+* **Vault** is the app and Runtime read surface for the user's Markdown wiki.
+  The Vault files are the durable knowledge source. Agents maintain them
+  through the managed `vault` skill.
 * **Hermes** owns agent execution: sessions, turns, model calls, tools, files,
   and native transcripts.
 
@@ -70,8 +70,8 @@ flowchart LR
 * Runtime SQLite is the durable source for chats, messages, responses, activity,
   artifacts, participants, events, reads, automation delivery, channel ingress,
   accepted message identity, execution evidence, and runtime metadata.
-* Cortex reads topics, pages, links, backlinks, and search results from the
-  Cortex wiki hub resolved by Runtime.
+* Vault reads pages, links, backlinks, and search results from the wiki root
+  resolved by Runtime.
 * App SQLite is a client cache and app-local settings store.
 * Hermes stores native execution state.
 * Tavern maps Hermes execution into Tavern messages, responses, artifacts,

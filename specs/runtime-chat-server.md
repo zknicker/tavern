@@ -61,8 +61,8 @@ automations
 automation_runs
 ```
 
-Cortex and search are runtime-owned product surfaces. Memory inspection and the
-Knowledgebase page read Cortex; context-management status reads Hermes
+Vault and search are runtime-owned product surfaces. Memory inspection and the
+Vault page read the configured wiki; context-management status reads Hermes
 prompt-time readiness. Table details live with those feature contracts.
 
 ## App Cache And Evidence

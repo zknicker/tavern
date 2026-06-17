@@ -87,7 +87,7 @@ Chat events:
 * `artifact.created`
 * `chat.read`
 
-Automation, memory inspection, Cortex wiki, skill, and stats events use the
+Automation, memory inspection, Vault, skill, and stats events use the
 same durable event log when they affect client-visible Runtime state.
 
 Activity events project to live `turn.progress` steps for app patching. The
@@ -154,7 +154,7 @@ Product state still comes from:
 
 * `GET /api/chats/{chat_id}/messages`
 * response, activity, and artifact reads for the chat timeline
-* focused resource reads for automations, memory inspection, the Cortex wiki,
+* focused resource reads for automations, memory inspection, Vault,
   skills, and stats
 
 ## What Is Intentionally Missing

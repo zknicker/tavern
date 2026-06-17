@@ -22,7 +22,7 @@ reads, soft deletes, automations, deliveries, and the product timeline.
 | Runtime chat store | `apps/runtime/src/tavern/chat-api/` | OpenAPI-backed chat, message, response, activity, artifact, delivery, read, and event store |
 | Runtime channel relay | `apps/runtime/src/tavern/channel-relay.ts` | Durable message acceptance and managed Hermes turn startup |
 | Runtime channel outbox | `apps/runtime/src/tavern/channel-store.ts` | Private relay queue and accepted-message receipt state for channel-style ingress |
-| Cortex wiki store | `apps/runtime/src/wiki/` | Runtime read API over the Cortex wiki hub |
+| Vault store | `apps/runtime/src/vault/` | Runtime read API over the user's Markdown wiki |
 | Runtime chat tests | `apps/runtime/src/tavern/chat-api-store.test.ts` | Contract, identity, sequence, event, read, and route behavior |
 | Runtime timeline tests | `apps/runtime/src/tavern/chat-api-timeline.test.ts` | Turn-aligned history pages, cursor stability, and window alignment |
 | App schema | `apps/server/src/db/bootstrap.ts` | App SQLite fresh setup |
@@ -36,7 +36,7 @@ reads, soft deletes, automations, deliveries, and the product timeline.
 | --- | --- | --- |
 | Runtime SQLite | Tavern Runtime | Canonical chat model, automation delivery, channel ingress, cursor-backed events, read markers, runtime metadata |
 | App SQLite | Tavern App | Client cache, app-local settings, and presentation state |
-| Cortex wiki hub | Managed `cortex-wiki` skill and agent jobs | Topic Markdown, raw sources, compiled pages, todos, datasets, output, inbox, archives |
+| Vault wiki | Managed `vault` skill and agent file tools | Markdown pages under the configured wiki root |
 | Hermes state | Hermes | Sessions, turns, tools, model calls, transcripts, and files |
 
 Runtime SQLite is the product source of truth for chat. App SQLite can cache for
@@ -72,7 +72,7 @@ Read markers are scoped records, not standalone product ids.
 Hermes ids and runtime agent ids remain source ids. Store them in runtime
 metadata or source fields, not as Tavern product ids unless Tavern minted them.
 
-Cortex page identity is `(topic, path)` from the Cortex wiki hub.
+Vault page identity is the Markdown path relative to the configured wiki root.
 
 ## Runtime Chat Tables
 
@@ -460,32 +460,24 @@ evidence. Sync paths map user-visible work into responses, response activity,
 and artifacts by stable ids. They enrich the UI, but they do not replace
 canonical chat history.
 
-## Cortex Wiki Files
+## Vault Files
 
-Tavern Runtime does not store Cortex tables. It resolves the Cortex wiki hub and
+Tavern Runtime does not store Vault page tables. It resolves the Vault root and
 reads Markdown files directly.
 
 ```text
-topics/<topic>/
-  _index.md
-  config.md
-  log.md
-  wiki/
-  raw/
-  todos/
-  datasets/
-  output/
-  inbox/
-topics/.archive/<topic>/
+INDEX.md
+projects/example.md
+research/example/...
 ```
 
 Rules:
 
 * Runtime never creates a second canonical copy of wiki pages.
-* Page identity is the topic slug plus Markdown path.
+* Page identity is the Markdown path relative to the Vault root.
 * Frontmatter parsing is light and display-oriented.
 * Wikilinks and backlinks are derived from Markdown bodies.
-* Imports, compiles, audits, and maintenance are managed wiki agent workflows.
+* Imports, research, and maintenance are agent workflows, not Runtime jobs.
 
 ## Transaction Rules
 
@@ -544,7 +536,7 @@ App tables are cache, settings, or execution evidence:
 Search has first-class indexing for:
 
 * chat messages
-* Cortex pages and files
+* Vault pages and files
 
 SQLite FTS mirrors durable text fields through triggers or explicit
 transactional writes. Search indexes are derived state, not the source of truth.
@@ -563,7 +555,7 @@ transactional writes. Search indexes are derived state, not the source of truth.
 * Events notify; runtime durable reads recover.
 * Response activity is durable and statusful.
 * App-local progress hints never become a second chat history.
-* Cortex wiki reads fail visibly when the Cortex wiki hub is missing or unreadable.
+* Vault reads fail visibly when the configured root is missing or unreadable.
 
 ## Related Docs
 
@@ -574,4 +566,4 @@ transactional writes. Search indexes are derived state, not the source of truth.
 * [Architecture overview](architecture-overview.md)
 * [Tavern Runtime Chat Server](../../specs/runtime-chat-server.md)
 * [Memories](../../specs/memories.md)
-* [Cortex](../../specs/cortex.md)
+* [Vault](../../specs/vault.md)

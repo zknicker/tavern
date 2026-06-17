@@ -87,9 +87,9 @@ packages into `~/.tavern/skills`, and it does not describe toolsets to the model
 as Tavern skills.
 
 Runtime-owned workflow packages can still be prepared as managed skills when
-they are part of Tavern's product contract. Cortex wiki is the current example:
-Runtime bundles the upstream workflow package as the `wiki` managed Hermes skill
-so Tasks, crons, and normal agent turns can invoke wiki work.
+they are part of Tavern's product contract. Vault is the current example:
+Runtime bundles the `vault` managed skill so normal wiki work can route to
+Obsidian and bounded research folders can route to llm-wiki.
 
 Managed memory providers are not Tavern skills. Runtime configures Hermes to
 select the `mnemosyne` memory provider and writes the provider discovery shim

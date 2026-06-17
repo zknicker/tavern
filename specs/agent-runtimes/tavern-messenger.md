@@ -81,7 +81,7 @@ the Tavern Messenger plugin.
 
 Hermes tool names exposed by Tavern-owned plugins must use provider-safe
 identifiers: letters, numbers, underscores, and hyphens only. Do not use dotted
-names such as `cortex.search`; Codex and provider tool APIs may reject them
+names such as `vault.search`; Codex and provider tool APIs may reject them
 before a turn starts.
 
 ## Channel Responsibilities

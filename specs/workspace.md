@@ -14,7 +14,7 @@ and instructs the agent that the file is immutable and that `NOTES.md` is its
 scratch space. It is composed deterministically from:
 
 * **Tavern-managed content.** The agent's Tavern environment, delegation
-  guidance, the Cortex/memory model, the immutability/scratch-space
+  guidance, the Vault/memory model, the immutability/scratch-space
   instructions, and the `tavern` skill pointer
   ([tavern-skill.md](tavern-skill.md)). Product language; does not name
   Hermes.

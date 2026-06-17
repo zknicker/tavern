@@ -33,7 +33,7 @@ Tavern's shape is clear:
 | Admin | [Admin API](admin.md) |
 | Agents | [Agents API](agents.md) |
 | Memory inspection | [Memory API](memory.md) |
-| Cortex wiki | [Knowledgebase API](knowledgebase.md) |
+| Vault wiki | [Vault API](vault.md) |
 | Automations | [Automations API](automations.md) |
 | Skills | [Skills API](skills.md) |
 | Stats | [Stats API](stats.md) |

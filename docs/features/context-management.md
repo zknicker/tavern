@@ -1,5 +1,5 @@
 ---
-summary: Context management feature for bounded turn context and the boundary with Cortex memory.
+summary: Context management feature for bounded turn context and the boundary with Vault memory.
 read_when:
   - changing prompt-time context readiness or context-engine status
   - changing how active turns receive bounded context from chat, participants, activity, or wiki material
@@ -13,12 +13,11 @@ Managed Tavern Hermes does not use Lossless Claw. It is incompatible with the
 Codex app-server runtime path, so Runtime strips stale `lossless-claw` config
 instead of installing or enabling that plugin.
 
-Memory means the Cortex wiki hub. The durable facts live in plain Markdown
-topic wikis.
+Memory means the Vault wiki. The durable facts live in plain Markdown files.
 
 ## Contract
 
-* Cortex browses Markdown topic wikis.
+* Vault browses Markdown wiki files.
 * Context management may read wiki material, chat state, activity, and
   participant context when building bounded prompt context.
 * Context management does not create a durable memory database, memory record,
@@ -43,13 +42,13 @@ contains `memory`.
 Context management can place relevant wiki material into a prompt. It does not
 own the remembered fact.
 
-When an agent needs durable memory, it reads or queries the Cortex wiki hub. When
+When an agent needs durable memory, it reads or queries the Vault wiki. When
 an active turn needs continuity, Hermes manages bounded prompt context without
 Lossless Claw in the managed Tavern runtime.
 
 ## Related Docs
 
 * [Memory](memory.md)
-* [Cortex](knowledgebase.md)
+* [Vault](vault.md)
 * [Memory context spec](../../specs/memory-context.md)
 * [Memories spec](../../specs/memories.md)

@@ -49,7 +49,7 @@ Each capability has a stable id and one current health record.
 
 | Field | Meaning |
 | --- | --- |
-| `id` | Stable capability id such as `apiServer`, `gateway`, or `cortexWiki`. |
+| `id` | Stable capability id such as `apiServer`, `gateway`, or `vault`. |
 | `displayName` | Human-readable name for settings and logs. |
 | `healthy` | `true` only when Runtime can use the capability now. |
 | `state` | `healthy`, `degraded`, `unavailable`, `unauthorized`, or `unknown`. |
@@ -211,7 +211,7 @@ integration points, and external dependencies.
 | `dashboardServer` | Runtime can reach managed Hermes dashboard status at `/api/status`. |
 | `apiServer` | Runtime can make an authenticated managed Hermes REST API call. |
 | `gateway` | Runtime can open managed Hermes Gateway WebSocket `/api/ws`. |
-| `cortexWiki` | The Cortex wiki hub can be read and the managed Hermes `cortex-wiki` skill has been prepared. Runtime reports write access in capability metadata because wiki maintenance needs it, but read-only hubs remain browseable. |
+| `vault` | The configured Vault root can be read and the managed `vault` skill has been prepared. Runtime reports write access in capability metadata because agent wiki maintenance needs it, but read-only roots remain browseable. |
 | `mnemosyneMemory` | Runtime has written managed assistant memory config, enabled host-LLM consolidation, and prepared the managed memory provider plugin. |
 | `models` | Runtime can reach managed Hermes model inventory at `/api/model/options`. |
 | `skills` | Runtime can reach managed Hermes skill inventory at `/api/skills`. App-side capability methods under `skills` also track the skill hub (`skill-hub.*`), toolset setup (`toolsets.config`/`toolsets.setup`), and MCP management (`mcp.*`) surfaces. |
