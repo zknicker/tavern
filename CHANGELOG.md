@@ -2,6 +2,23 @@
 
 All notable changes to this project will be documented in this file.
 
+## v1.4.18 - 2026-06-17
+
+Runtime floor raised to 1.4.18 for configured managed agent settings.
+
+App changes:
+
+- Smoothed chat reply streaming and virtualized autoscroll so long agent
+  replies reveal steadily, final message formatting does not replay, and
+  presence rows stay pinned above the composer.
+- Restored chat approval footer actions and stop controls.
+- Improved app chrome drag regions across the window.
+
+Runtime changes:
+
+- Preserved configured managed agent settings across Runtime startup and
+  adapter refreshes.
+
 ## v1.4.17 - 2026-06-16
 
 App-only release. The Runtime floor stays at 1.4.16.
