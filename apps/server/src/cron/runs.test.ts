@@ -86,6 +86,7 @@ test('listCronRuns returns mapped runs and honors the limit', async () => {
     expect(result.runs[0]?.sessionKey).toBe('agent:planner:cron:standup:2');
     expect(result.runs[0]?.trigger).toBe('manual');
     expect(syncSpy).toHaveBeenCalledTimes(1);
+    expect(syncSpy.mock.calls[0]?.[0]).toEqual({ emitUpdates: false });
 });
 
 test('listCronRuns hides session drill-through until a runtime session exists', async () => {

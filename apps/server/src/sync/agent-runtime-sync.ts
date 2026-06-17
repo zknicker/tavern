@@ -33,6 +33,7 @@ type RuntimeConnectionRecord = Awaited<
 >[number];
 
 interface SyncInput {
+    emitUpdates?: boolean;
     log?: SyncLog;
 }
 
@@ -219,7 +220,7 @@ async function syncPrimitiveAcrossRuntimes(
         }
     }
 
-    if (results.some(hasChanged)) {
+    if (input?.emitUpdates !== false && results.some(hasChanged)) {
         emitForPrimitive(kind);
     }
 

@@ -14,7 +14,7 @@ const [
     { saveCronJobRecord },
     { upsertCronRuns },
     agentRuntimeSync,
-    { listCronJobs },
+    { getCronJob, listCronJobs },
 ] = await Promise.all([
     import('../db/bootstrap.ts'),
     import('../db/index.ts'),
@@ -86,4 +86,16 @@ test('listCronJobs promotes latest failed run state for list badges', async () =
         lastRunStatus: 'error',
         lastStatus: 'error',
     });
+});
+
+test('cron reads refresh runtime state without emitting invalidation updates', async () => {
+    const syncSpy = spyOn(agentRuntimeSync, 'syncAgentRuntimeCron').mockResolvedValue([]);
+
+    await listCronJobs();
+    await getCronJob({ jobId: 'cron:missing' });
+
+    expect(syncSpy.mock.calls.map((call) => call[0])).toEqual([
+        { emitUpdates: false },
+        { emitUpdates: false },
+    ]);
 });

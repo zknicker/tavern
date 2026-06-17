@@ -30,7 +30,7 @@ export async function listCronRuns(input?: unknown) {
 
 async function refreshCronState() {
     try {
-        await syncAgentRuntimeCron();
+        await syncAgentRuntimeCron({ emitUpdates: false });
     } catch (error) {
         console.warn('[tavern] failed to refresh cron runs', error);
     }
