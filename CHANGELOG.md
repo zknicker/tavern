@@ -2,6 +2,21 @@
 
 All notable changes to this project will be documented in this file.
 
+## v1.4.17 - 2026-06-16
+
+App-only release. The Runtime floor stays at 1.4.16.
+
+- Polished Automations with a card-less list, shared pill tabs, breadcrumb
+  editor navigation, always-visible row actions, and status dots for active,
+  paused, and failed schedules.
+- Fixed cron list and run reads so Runtime refreshes no longer emit repeated
+  invalidation updates that can spam `cron.list` requests.
+- Surfaced cron run failures in the automation list and run history without
+  fading paused rows.
+- Tightened dashboard chrome interactions including pinned chat colors, approval
+  tool rows, live thinking status, tool drawer animation, archived-chat drafts,
+  and Runtime version mismatch messaging.
+
 ## v1.4.16 - 2026-06-16
 
 Runtime floor raised to 1.4.16 for managed Hermes workspace context.
