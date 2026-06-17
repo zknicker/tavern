@@ -13,7 +13,6 @@ import { useChatDismiss } from '../../hooks/chats/use-chat-dismiss.ts';
 import { formatShortTime } from '../../lib/format.ts';
 import { springs } from '../../lib/springs.ts';
 import { cn } from '../../lib/utils.ts';
-import { useActiveReplyLayoutSync } from './active-reply-layout-sync.tsx';
 import { AgentPresenceIndicator } from './agent-presence-indicator.tsx';
 import { getActivePresenceVerb } from './chat-active-presence-verb.ts';
 import { CommandRunEntry } from './chat-command-card.tsx';
@@ -37,6 +36,8 @@ import {
 import {
     ChatTranscriptMessageAttachments,
     ChatTranscriptMessageContent,
+    getTranscriptMessageContent,
+    type TranscriptMessage,
 } from './chat-transcript-message.tsx';
 import type {
     ConversationMessageLayout,
@@ -650,7 +651,14 @@ function AgentTurnItem({
     lastMessage: Extract<TranscriptRow, { kind: 'message' }>['message'] | null;
 }) {
     if (item.kind === 'activeReply') {
-        return <ActiveReplyText item={item} />;
+        return (
+            <AssistantReplyText
+                content={getActiveReplyDisplayText(item.reply.text ?? '')}
+                copyValue={item.reply.text ?? ''}
+                initiallyRevealing={true}
+                revealKey={item.reply.runId}
+            />
+        );
     }
 
     if (item.kind === 'activeStatus') {
@@ -665,21 +673,7 @@ function AgentTurnItem({
         const message = item.row.message;
 
         return (
-            <ChatMessage
-                actions={
-                    message.id === lastMessage?.id ? (
-                        <TranscriptMessageActions value={message.content} />
-                    ) : null
-                }
-                animateEnter={false}
-                attachments={
-                    <ChatTranscriptMessageAttachments attachments={message.attachments ?? []} />
-                }
-                className="max-w-[100%]"
-                from="assistant"
-            >
-                <ChatTranscriptMessageContent message={message} />
-            </ChatMessage>
+            <AssistantReplyText message={message} showActions={message.id === lastMessage?.id} />
         );
     }
 
@@ -706,27 +700,64 @@ function AssistantNarrationText({ item }: { item: TranscriptItem }) {
     ) : null;
 }
 
-function ActiveReplyText({ item }: { item: Extract<TranscriptItem, { kind: 'activeReply' }> }) {
-    const syncActiveReplyLayout = useActiveReplyLayoutSync();
-    const revealedText = useRevealedText(
-        getActiveReplyDisplayText(item.reply.text ?? ''),
-        !item.reply.completedAt
-    );
-
-    React.useLayoutEffect(() => {
-        syncActiveReplyLayout?.();
+function AssistantReplyText({
+    content,
+    copyValue,
+    initiallyRevealing = false,
+    message,
+    revealKey,
+    showActions = false,
+}: {
+    content?: string;
+    copyValue?: string;
+    initiallyRevealing?: boolean;
+    message?: TranscriptMessage;
+    revealKey?: string;
+    showActions?: boolean;
+}) {
+    const fullContent = content ?? (message ? getTranscriptMessageContent(message) : '');
+    const revealedText = useRevealedText(fullContent, {
+        enabled: initiallyRevealing,
+        revealKey: revealKey ?? (message ? getAssistantMessageRevealKey(message) : 'assistant'),
     });
+    const attachments = message ? (
+        <ChatTranscriptMessageAttachments attachments={message.attachments ?? []} />
+    ) : null;
+    const actions = message ? (
+        showActions ? (
+            <TranscriptMessageActions value={message.content} />
+        ) : null
+    ) : (
+        <TranscriptMessageActions disabled value={copyValue ?? revealedText} />
+    );
 
     return (
         <ChatMessage
-            actions={<TranscriptMessageActions disabled value={revealedText} />}
+            actions={actions}
             animateEnter={false}
+            attachments={attachments}
             className="max-w-[100%]"
             from="assistant"
         >
-            <ChatInlineMarkdownText content={revealedText} />
+            {message ? (
+                <ChatTranscriptMessageContent contentOverride={revealedText} message={message} />
+            ) : (
+                <ChatInlineMarkdownText content={revealedText} />
+            )}
         </ChatMessage>
     );
+}
+
+function getAssistantMessageRevealKey(message: TranscriptMessage) {
+    const runtime = message.metadata?.runtime;
+
+    if (!(runtime && typeof runtime === 'object' && !Array.isArray(runtime))) {
+        return message.id;
+    }
+
+    const runId = (runtime as Record<string, unknown>).runId;
+
+    return typeof runId === 'string' && runId.trim().length > 0 ? runId : message.id;
 }
 
 export function getActiveReplyDisplayText(text: string) {

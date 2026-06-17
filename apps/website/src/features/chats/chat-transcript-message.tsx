@@ -6,16 +6,18 @@ import { getMessageDisplay } from '../rows/message-display.ts';
 import { ChatInlineMarkdownText } from './chat-inline-markdown-text.tsx';
 import { ChatMessageImage } from './chat-message-image.tsx';
 
-type TranscriptMessage =
+export type TranscriptMessage =
     | Extract<NonNullable<ChatLogOutput>['rows'][number], { kind: 'message' }>['message']
     | Extract<SessionHistoryOutput['rows'][number], { kind: 'message' }>['message'];
 
 type MessageAttachment = NonNullable<TranscriptMessage['attachments']>[number];
 
 export function ChatTranscriptMessageContent({
+    contentOverride,
     message,
     textClassName,
 }: {
+    contentOverride?: string;
     message: TranscriptMessage;
     textClassName?: string;
 }) {
@@ -24,8 +26,9 @@ export function ChatTranscriptMessageContent({
         message.senderType === 'agent' &&
         messageDisplay.content.length === 0 &&
         message.metadata?.stopReason === 'error';
+    const content = contentOverride ?? messageDisplay.content;
     const mentions = readMentionsFromMetadata(
-        messageDisplay.content,
+        content,
         message.metadata as Record<string, unknown> | null | undefined
     );
 
@@ -45,9 +48,15 @@ export function ChatTranscriptMessageContent({
 
     return (
         <CollapsibleText className={cn('text-sm', textClassName ?? 'text-foreground')}>
-            <ChatInlineMarkdownText content={messageDisplay.content} mentions={mentions} />
+            <ChatInlineMarkdownText content={content} mentions={mentions} />
         </CollapsibleText>
     );
+}
+
+export function getTranscriptMessageContent(message: TranscriptMessage) {
+    const messageDisplay = getMessageDisplay(message);
+
+    return messageDisplay.showBodyContent ? messageDisplay.content : '';
 }
 
 export function ChatTranscriptMessageAttachments({

@@ -1,4 +1,5 @@
 import { expect, test } from 'bun:test';
+import { createChatRunId } from './chat-run-id.ts';
 import { createChatSendMutationHandlers } from './chat-send-mutation.ts';
 
 test('useChatSend stores the local user row in app state until the log catches up', async () => {
@@ -100,7 +101,7 @@ test('useChatSend stores the local user row in app state until the log catches u
     const result = {
         acceptedAt: '2026-04-20T18:15:00.000Z',
         chatId: 'chat-1',
-        runId: 'run-1',
+        runId: 'run_1',
         sessionKey: 'session-1',
         status: 'accepted' as const,
     };
@@ -124,14 +125,14 @@ test('useChatSend stores the local user row in app state until the log catches u
         {
             agentId: 'agent-1',
             chatId: 'chat-1',
-            runId: 'pending:msg_1',
+            runId: 'run_1',
             sessionKey: '',
             startedAt: timelineMessages[0]?.timestamp,
         },
         {
             agentId: 'agent-1',
             chatId: 'chat-1',
-            runId: 'run-1',
+            runId: 'run_1',
             sessionKey: 'session-1',
             startedAt: '2026-04-20T18:15:00.000Z',
         },
@@ -190,6 +191,10 @@ test('useChatSend removes the local user row if the send fails', async () => {
     };
     const context = await mutation.onMutate(input);
 
+    if (!context) {
+        throw new Error('Expected mutation context.');
+    }
+
     mutation.onError(new Error('send failed'), input, context);
 
     expect(removedMessages).toEqual([
@@ -201,7 +206,7 @@ test('useChatSend removes the local user row if the send fails', async () => {
     expect(clearedTurns).toEqual([
         {
             chatId: 'chat-1',
-            runId: `pending:${context?.timelineMessageId}`,
+            runId: createChatRunId(context.timelineMessageId),
         },
     ]);
 });

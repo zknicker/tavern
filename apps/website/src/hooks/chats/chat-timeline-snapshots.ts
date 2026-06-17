@@ -279,7 +279,7 @@ function isLiveProgressRow(row: ChatTimeline[number], runId?: string) {
         return false;
     }
 
-    return !runId || row.id.startsWith(`act_${runId}_`) || runId.startsWith('pending:');
+    return !runId || row.id.startsWith(`act_${runId}_`);
 }
 
 function compareTimelineRows(left: ChatTimeline[number], right: ChatTimeline[number]) {

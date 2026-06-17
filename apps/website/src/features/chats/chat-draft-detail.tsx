@@ -8,6 +8,7 @@ import {
     PromptInputTools,
 } from '../../components/ui/prompt-input.tsx';
 import { useAgentList } from '../../hooks/agents/use-agent-list.ts';
+import { createChatRunId } from '../../hooks/chats/chat-run-id.ts';
 import { mergeTimelineMessages } from '../../hooks/chats/chat-timeline-messages.ts';
 import type { ChatActiveReply, ChatTimelineState } from '../../hooks/chats/chat-timeline-state.ts';
 import type { ChatStartDraft } from '../../hooks/chats/use-chat-start-drafts.tsx';
@@ -226,7 +227,7 @@ export function buildDraftActiveReply(draft: ChatStartDraft | null): ChatActiveR
     return {
         agentId: draft.agentId,
         isThinking: true,
-        runId: draft.realRunId ?? draft.clientMessageId,
+        runId: draft.realRunId ?? createChatRunId(draft.clientMessageId),
         sessionKey: draft.realSessionKey ?? draft.realChatId ?? draft.id,
         startedAt: draft.realAcceptedAt ?? draft.createdAt,
         text: '',

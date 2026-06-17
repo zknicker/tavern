@@ -7,11 +7,10 @@ import {
     getEstimatedTranscriptRowSize,
 } from './chat-transcript-row-model.ts';
 import {
+    getChatVirtualizerScrollBehavior,
     getEstimatedTranscriptBottomOffset,
     getEstimatedTranscriptTailVirtualItems,
-    getVirtualizedTranscriptTailFollowKey,
     shouldLoadPreviousVirtualizedChatPage,
-    transcriptRowUsesActiveReply,
 } from './virtualized-chat-transcript.tsx';
 
 test('virtualized chat loads previous rows only when the real viewport is near top', () => {
@@ -70,6 +69,7 @@ test('virtualized chat initial offset starts at the estimated transcript bottom'
     ] as TranscriptRenderRow[];
 
     expect(getEstimatedTranscriptBottomOffset(rows, 120)).toBe(204);
+    expect(getEstimatedTranscriptBottomOffset(rows, 120, 64)).toBe(268);
     expect(getEstimatedTranscriptBottomOffset(rows, 400)).toBe(0);
 });
 
@@ -111,7 +111,63 @@ test('virtualized chat fallback renders the estimated tail when the measured ran
         'user-row',
         'agent-row',
     ]);
+    expect(getEstimatedTranscriptTailVirtualItems(rows, 40, 64).map((item) => item.key)).toEqual([
+        'hidden-count',
+        'user-row',
+        'agent-row',
+    ]);
     expect(getEstimatedTranscriptTailVirtualItems(rows, 0)).toEqual([]);
+});
+
+test('virtualized chat fallback keeps rendering the tail when the viewport is inside the end inset', () => {
+    const rows = Array.from({ length: 12 }, (_, index) => ({
+        id: `day-${index}`,
+        kind: 'dayDivider',
+        label: 'Today',
+    })) satisfies TranscriptRenderRow[];
+
+    expect(getEstimatedTranscriptTailVirtualItems(rows, 40, 64).map((item) => item.key)).toEqual([
+        'day-3',
+        'day-4',
+        'day-5',
+        'day-6',
+        'day-7',
+        'day-8',
+        'day-9',
+        'day-10',
+        'day-11',
+    ]);
+});
+
+test('virtualized chat smooths implicit size adjustments only while following', () => {
+    expect(
+        getChatVirtualizerScrollBehavior({
+            hasAdjustments: true,
+            isFollowing: true,
+        })
+    ).toBe('smooth');
+    expect(
+        getChatVirtualizerScrollBehavior({
+            hasAdjustments: true,
+            isFollowing: false,
+        })
+    ).toBe('auto');
+    expect(
+        getChatVirtualizerScrollBehavior({
+            hasAdjustments: false,
+            isFollowing: true,
+        })
+    ).toBe('auto');
+});
+
+test('virtualized chat respects explicit scroll behavior requests', () => {
+    expect(
+        getChatVirtualizerScrollBehavior({
+            hasAdjustments: true,
+            isFollowing: false,
+            requestedBehavior: 'smooth',
+        })
+    ).toBe('smooth');
 });
 
 test('virtualized chat estimates blank thinking presence without fake bottom space', () => {
@@ -152,66 +208,7 @@ test('virtualized chat does not reserve reply space for hidden thinking progress
     expect(getEstimatedTranscriptRowSize(presenceRow)).toBe(32);
 });
 
-test('virtualized chat sync-measures only the live active row', () => {
-    const activeReply = {
-        agentId: 'agent-1',
-        isThinking: false,
-        runId: 'run-1',
-        sessionKey: 'session-1',
-        startedAt: '2026-05-11T16:00:00.000Z',
-        text: 'Streaming reply.',
-    };
-    const rows = buildTranscriptRenderRows(
-        buildTranscriptEntries({
-            activeReply,
-            rows: [],
-        }),
-        1
-    );
-    const activeEntryIndex = rows.findIndex(
-        (row) =>
-            row.kind === 'entry' &&
-            row.entry.kind === 'turn' &&
-            row.entry.items.some((item) => item.kind === 'activeReply')
-    );
-    const presenceIndex = rows.findIndex((row) => row.kind === 'presence');
-
-    expect(transcriptRowUsesActiveReply(rows[0], activeReply)).toBe(false);
-    expect(transcriptRowUsesActiveReply(rows[activeEntryIndex], activeReply)).toBe(true);
-    expect(transcriptRowUsesActiveReply(rows[presenceIndex], activeReply)).toBe(false);
-    expect(transcriptRowUsesActiveReply(rows[activeEntryIndex], null)).toBe(false);
-});
-
-test('virtualized chat reruns tail follow when the active reply settles', () => {
-    const activeReply = {
-        agentId: 'agent-1',
-        isThinking: false,
-        runId: 'run-1',
-        sessionKey: 'session-1',
-        startedAt: '2026-05-11T16:00:00.000Z',
-        text: 'Streaming reply.',
-    };
-    const completedReply = {
-        ...activeReply,
-        completedAt: '2026-05-11T16:00:03.000Z',
-    };
-    const rows = buildTranscriptRenderRows(
-        buildTranscriptEntries({
-            activeReply,
-            rows: [],
-        }),
-        0
-    );
-
-    expect(getVirtualizedTranscriptTailFollowKey(rows, activeReply)).not.toBe(
-        getVirtualizedTranscriptTailFollowKey(rows, completedReply)
-    );
-    expect(getVirtualizedTranscriptTailFollowKey(rows, completedReply)).not.toBe(
-        getVirtualizedTranscriptTailFollowKey(rows, null)
-    );
-});
-
-test('virtualized chat reruns tail follow when first visible reply appears above presence', () => {
+test('virtualized chat keeps the presence row stable when first visible reply appears', () => {
     const thinkingReply = {
         agentId: 'agent-1',
         isThinking: true,
@@ -245,9 +242,6 @@ test('virtualized chat reruns tail follow when first visible reply appears above
     expect(thinkingRows.map((row) => row.kind)).toEqual(['dayDivider', 'presence']);
     expect(streamingRows.map((row) => row.kind)).toEqual(['dayDivider', 'entry', 'presence']);
     expect(thinkingRows.at(-1)?.id).toBe(streamingRows.at(-1)?.id);
-    expect(getVirtualizedTranscriptTailFollowKey(thinkingRows, thinkingReply)).not.toBe(
-        getVirtualizedTranscriptTailFollowKey(streamingRows, streamingReply)
-    );
 });
 
 type ChatRow = NonNullable<ChatLogOutput>['rows'][number];

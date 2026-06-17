@@ -1,5 +1,4 @@
 import {
-    measureElement as measureVirtualElement,
     type ReactVirtualizer,
     type Rect,
     useVirtualizer,
@@ -7,7 +6,6 @@ import {
 } from '@tanstack/react-virtual';
 import * as React from 'react';
 import type { ChatActiveReply, ChatTurnFailure } from '../../hooks/chats/chat-timeline-state.ts';
-import { ActiveReplyLayoutSyncProvider } from './active-reply-layout-sync.tsx';
 import {
     shouldAdjustVirtualizerOnItemSizeChange,
     shouldAnchorVirtualizerToEnd,
@@ -21,11 +19,15 @@ import {
     transcriptRenderRowUsesActiveReply,
 } from './chat-transcript-row-model.ts';
 import { TranscriptRenderRowView } from './chat-transcript-rows.tsx';
-import { useChatScrollControllerMode } from './use-chat-scroll-controller.ts';
+import {
+    useChatScrollControllerHandle,
+    useChatScrollControllerMode,
+} from './use-chat-scroll-controller.ts';
 
 const previousPageScrollThreshold = 160;
 const transcriptScrollEndThreshold = 72;
 const transcriptFallbackOverscan = 8;
+const transcriptEndInset = 64;
 
 export function VirtualizedChatTranscript({
     activeReply,
@@ -64,10 +66,10 @@ export function VirtualizedChatTranscript({
     rows: TranscriptRenderRow[];
     scrollViewportRef: React.RefObject<HTMLDivElement | null>;
 }) {
-    const activeRowElementRef = React.useRef<HTMLDivElement | null>(null);
     const initialScrollKeyRef = React.useRef<string | null>(null);
     const initialScrollMeasureKeyRef = React.useRef<string | null>(null);
     const initialScrollPendingRef = React.useRef(false);
+    const chatScrollController = useChatScrollControllerHandle();
     const chatScrollMode = useChatScrollControllerMode();
     const virtualizerAnchorsToEnd = shouldAnchorVirtualizerToEnd(chatScrollMode);
     const virtualizerAdjustsItemSize = shouldAdjustVirtualizerOnItemSizeChange(chatScrollMode);
@@ -77,7 +79,7 @@ export function VirtualizedChatTranscript({
         directDomUpdates: true,
         directDomUpdatesMode: 'transform',
         estimateSize: (index) => getEstimatedTranscriptRowSize(rows[index]),
-        followOnAppend: true,
+        followOnAppend: 'smooth',
         gap: transcriptRenderRowGap,
         getItemKey: (index) => rows[index]?.id ?? index,
         getScrollElement: () => scrollViewportRef.current,
@@ -85,46 +87,52 @@ export function VirtualizedChatTranscript({
         initialOffset: () =>
             getEstimatedTranscriptBottomOffset(
                 rows,
-                getInitialTranscriptViewportHeight(scrollViewportRef.current)
+                getInitialTranscriptViewportHeight(scrollViewportRef.current),
+                transcriptEndInset
             ),
-        measureElement: (element, entry, instance) => {
-            const index = instance.indexFromElement(element);
-
-            if (transcriptRowUsesActiveReply(rows[index], activeReply)) {
-                return Math.round(element.getBoundingClientRect().height);
+        onChange: (instance, sync) => {
+            if (sync || chatScrollController?.getMode() !== 'following') {
+                return;
             }
 
-            return measureVirtualElement(element, entry, instance);
+            if (!instance.isAtEnd(transcriptScrollEndThreshold)) {
+                instance.scrollToEnd({ behavior: 'smooth' });
+            }
         },
         overscan: 8,
+        paddingEnd: transcriptEndInset,
         scrollEndThreshold: transcriptScrollEndThreshold,
+        scrollToFn: (offset, { adjustments = 0, behavior }, instance) => {
+            const scrollElement = instance.scrollElement;
+
+            if (!scrollElement) {
+                return;
+            }
+
+            const resolvedBehavior = getChatVirtualizerScrollBehavior({
+                hasAdjustments: adjustments !== 0,
+                isFollowing: chatScrollController?.getMode() === 'following',
+                requestedBehavior: behavior,
+            });
+            const nextOffset = offset + adjustments;
+
+            if (instance.options.horizontal) {
+                scrollElement.scrollTo({ behavior: resolvedBehavior, left: nextOffset });
+                return;
+            }
+
+            scrollElement.scrollTo({ behavior: resolvedBehavior, top: nextOffset });
+        },
     });
     const totalSize = virtualizer.getTotalSize();
     const initialScrollMeasureKey = `${rows.length}:${totalSize}`;
-    const tailFollowKey = getVirtualizedTranscriptTailFollowKey(rows, activeReply);
-    const scrollToEndIfNearEnd = React.useCallback(() => {
-        if (virtualizer.isAtEnd(transcriptScrollEndThreshold)) {
-            virtualizer.scrollToEnd({ behavior: 'auto' });
-        }
-    }, [virtualizer]);
-    const syncActiveReplyLayout = React.useCallback(() => {
-        const activeRowElement = activeRowElementRef.current;
-        const shouldFollowEnd = virtualizer.isAtEnd(transcriptScrollEndThreshold);
-
-        if (activeRowElement) {
-            virtualizer.measureElement(activeRowElement);
-        }
-
-        if (shouldFollowEnd) {
-            virtualizer.scrollToEnd({ behavior: 'auto' });
-        }
-    }, [virtualizer]);
     const virtualItems = virtualizer.getVirtualItems();
     const usingEstimatedTail = virtualItems.length === 0;
     const renderableVirtualItems = usingEstimatedTail
         ? getEstimatedTranscriptTailVirtualItems(
               rows,
-              getInitialTranscriptViewportHeight(scrollViewportRef.current)
+              getInitialTranscriptViewportHeight(scrollViewportRef.current),
+              transcriptEndInset
           )
         : virtualItems;
     const firstEntryIndex = virtualItems.find((item) => rows[item.index]?.kind === 'entry')?.index;
@@ -167,14 +175,6 @@ export function VirtualizedChatTranscript({
             }
         }
     }, [initialScrollKey, initialScrollMeasureKey, rows.length, virtualizer]);
-
-    React.useLayoutEffect(() => {
-        if (tailFollowKey.length === 0) {
-            return;
-        }
-
-        scrollToEndIfNearEnd();
-    }, [scrollToEndIfNearEnd, tailFollowKey]);
 
     React.useEffect(() => {
         if (!initialScrollKey) {
@@ -220,48 +220,41 @@ export function VirtualizedChatTranscript({
     ]);
 
     return (
-        <ActiveReplyLayoutSyncProvider value={syncActiveReplyLayout}>
-            <div className="relative w-full [overflow-anchor:none]" ref={virtualizer.containerRef}>
-                {renderableVirtualItems.map((virtualItem) => {
-                    const row = rows[virtualItem.index];
+        <div className="relative w-full [overflow-anchor:none]" ref={virtualizer.containerRef}>
+            {renderableVirtualItems.map((virtualItem) => {
+                const row = rows[virtualItem.index];
 
-                    if (!row) {
-                        return null;
-                    }
+                if (!row) {
+                    return null;
+                }
 
-                    const measuresActiveReply = transcriptRowUsesActiveReply(row, activeReply);
-                    const rendersActiveReply = transcriptRenderRowUsesActiveReply(row, activeReply);
+                const rendersActiveReply = transcriptRenderRowUsesActiveReply(row, activeReply);
 
-                    return (
-                        <TranscriptVirtualRow
-                            activeRowElementRef={activeRowElementRef}
-                            key={virtualItem.key}
-                            positionsWithReact={usingEstimatedTail}
-                            usesActiveReply={measuresActiveReply}
-                            virtualItem={virtualItem}
-                            virtualizer={virtualizer}
-                        >
-                            <TranscriptRenderRowView
-                                activePresenceVerb={
-                                    row.kind === 'presence' ? activePresenceVerb : null
-                                }
-                                activeReply={rendersActiveReply ? activeReply : null}
-                                agentPresenceColor={agentPresenceColor}
-                                animateMessages={animateMessages}
-                                chatId={chatId}
-                                conversationLayout={conversationLayout}
-                                currentSessionKey={currentSessionKey}
-                                defaultOpenWorkGroups={defaultOpenWorkGroups}
-                                failedTurn={failedTurn}
-                                hiddenCount={hiddenCount}
-                                presenceRows={presenceRows}
-                                row={row}
-                            />
-                        </TranscriptVirtualRow>
-                    );
-                })}
-            </div>
-        </ActiveReplyLayoutSyncProvider>
+                return (
+                    <TranscriptVirtualRow
+                        key={virtualItem.key}
+                        positionsWithReact={usingEstimatedTail}
+                        virtualItem={virtualItem}
+                        virtualizer={virtualizer}
+                    >
+                        <TranscriptRenderRowView
+                            activePresenceVerb={row.kind === 'presence' ? activePresenceVerb : null}
+                            activeReply={rendersActiveReply ? activeReply : null}
+                            agentPresenceColor={agentPresenceColor}
+                            animateMessages={animateMessages}
+                            chatId={chatId}
+                            conversationLayout={conversationLayout}
+                            currentSessionKey={currentSessionKey}
+                            defaultOpenWorkGroups={defaultOpenWorkGroups}
+                            failedTurn={failedTurn}
+                            hiddenCount={hiddenCount}
+                            presenceRows={presenceRows}
+                            row={row}
+                        />
+                    </TranscriptVirtualRow>
+                );
+            })}
+        </div>
     );
 }
 
@@ -274,41 +267,21 @@ type SizeAdjustmentControlledVirtualizer = ReactVirtualizer<HTMLDivElement, HTML
 };
 
 function TranscriptVirtualRow({
-    activeRowElementRef,
     children,
     positionsWithReact,
-    usesActiveReply,
     virtualItem,
     virtualizer,
 }: {
-    activeRowElementRef: React.RefObject<HTMLDivElement | null>;
     children: React.ReactNode;
     positionsWithReact: boolean;
-    usesActiveReply: boolean;
     virtualItem: VirtualItem;
     virtualizer: ReactVirtualizer<HTMLDivElement, HTMLDivElement>;
 }) {
-    const measureRowElement = React.useCallback(
-        (element: HTMLDivElement | null) => {
-            virtualizer.measureElement(element);
-
-            if (usesActiveReply) {
-                activeRowElementRef.current = element;
-                return;
-            }
-
-            if (activeRowElementRef.current === element) {
-                activeRowElementRef.current = null;
-            }
-        },
-        [activeRowElementRef, usesActiveReply, virtualizer]
-    );
-
     return (
         <div
             className="absolute top-0 left-0 w-full [overflow-anchor:none]"
             data-index={virtualItem.index}
-            ref={measureRowElement}
+            ref={virtualizer.measureElement}
             style={
                 positionsWithReact
                     ? {
@@ -320,33 +293,6 @@ function TranscriptVirtualRow({
             {children}
         </div>
     );
-}
-
-export function transcriptRowUsesActiveReply(
-    row: TranscriptRenderRow | undefined,
-    activeReply: ChatActiveReply | null
-) {
-    return (
-        row?.kind === 'entry' &&
-        row.entry.kind === 'turn' &&
-        Boolean(activeReply) &&
-        row.entry.items.some((item) => item.kind === 'activeReply')
-    );
-}
-
-export function getVirtualizedTranscriptTailFollowKey(
-    rows: TranscriptRenderRow[],
-    activeReply: ChatActiveReply | null
-) {
-    const tailRowIds = rows
-        .slice(-3)
-        .map((row) => row.id)
-        .join('|');
-    const activeReplyState = activeReply
-        ? `${activeReply.runId}:${activeReply.completedAt ?? 'live'}`
-        : 'idle';
-
-    return `${tailRowIds || 'none'}:${activeReplyState}`;
 }
 
 export function shouldLoadPreviousVirtualizedChatPage({
@@ -377,31 +323,50 @@ export function shouldLoadPreviousVirtualizedChatPage({
 
 export function getEstimatedTranscriptBottomOffset(
     rows: TranscriptRenderRow[],
-    viewportHeight: number
+    viewportHeight: number,
+    endInset = 0
 ) {
-    const totalEstimatedHeight = getEstimatedTranscriptRowsSize(rows);
+    const totalEstimatedHeight = getEstimatedTranscriptRowsSize(rows) + endInset;
 
     return Math.max(totalEstimatedHeight - viewportHeight, 0);
 }
 
 export function getEstimatedTranscriptTailVirtualItems(
     rows: TranscriptRenderRow[],
-    viewportHeight: number
+    viewportHeight: number,
+    endInset = 0
 ): VirtualItem[] {
     if (rows.length === 0 || viewportHeight <= 0) {
         return [];
     }
 
     const items = buildEstimatedTranscriptVirtualItems(rows);
-    const totalEstimatedHeight = items.at(-1)?.end ?? 0;
+    const totalEstimatedHeight = (items.at(-1)?.end ?? 0) + endInset;
     const visibleStart = Math.max(totalEstimatedHeight - viewportHeight, 0);
     const firstVisibleIndex = items.findIndex((item) => item.end >= visibleStart);
     const startIndex = Math.max(
-        (firstVisibleIndex === -1 ? 0 : firstVisibleIndex) - transcriptFallbackOverscan,
+        (firstVisibleIndex === -1 ? items.length - 1 : firstVisibleIndex) -
+            transcriptFallbackOverscan,
         0
     );
 
     return items.slice(startIndex);
+}
+
+export function getChatVirtualizerScrollBehavior({
+    hasAdjustments,
+    isFollowing,
+    requestedBehavior,
+}: {
+    hasAdjustments: boolean;
+    isFollowing: boolean;
+    requestedBehavior?: ScrollBehavior;
+}) {
+    if (requestedBehavior) {
+        return requestedBehavior;
+    }
+
+    return hasAdjustments && isFollowing ? 'smooth' : 'auto';
 }
 
 function buildEstimatedTranscriptVirtualItems(rows: TranscriptRenderRow[]): VirtualItem[] {

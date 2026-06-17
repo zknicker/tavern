@@ -300,13 +300,13 @@ test('patchTimelineProgress updates the same preamble and Hermes tool rows throu
     });
 });
 
-test('applyLogSnapshot preserves live progress rows while replacing a pending turn id', () => {
-    const pendingTurn = {
+test('applyLogSnapshot preserves live progress rows when the optimistic run id matches Runtime', () => {
+    const optimisticTurn = {
         ...turn,
-        runId: 'pending:msg-1',
+        runId: 'run_1',
         sessionKey: '',
     };
-    const live = patchTimelineProgress(startTimelineTurn(emptyTimelineState(), pendingTurn), {
+    const live = patchTimelineProgress(startTimelineTurn(emptyTimelineState(), optimisticTurn), {
         step: {
             id: 'tool:web',
             kind: 'tool',
@@ -314,7 +314,7 @@ test('applyLogSnapshot preserves live progress rows while replacing a pending tu
             status: 'active',
         },
         timestamp: '2026-04-21T16:08:43.000Z',
-        turn,
+        turn: optimisticTurn,
     });
 
     const next = applyLogSnapshot(live, {
@@ -324,8 +324,8 @@ test('applyLogSnapshot preserves live progress rows while replacing a pending tu
         totalMessages: 0,
     });
 
-    expect(next.activeReply?.runId).toBe('pending:msg-1');
-    expect(next.timeline.map((row) => row.id)).toEqual(['act_run-1_tool_web']);
+    expect(next.activeReply?.runId).toBe('run_1');
+    expect(next.timeline.map((row) => row.id)).toEqual(['act_run_1_tool_web']);
     expect(next.totalMessages).toBe(0);
 });
 

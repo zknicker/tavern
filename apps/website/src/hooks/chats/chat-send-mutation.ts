@@ -1,4 +1,5 @@
 import type { ChatMessageAttachmentInput } from '../../lib/trpc.tsx';
+import { createChatRunId } from './chat-run-id.ts';
 
 export interface ChatSendMutationContext {
     timelineMessageId: string;
@@ -71,6 +72,7 @@ export function createChatSendMutationHandlers(utils: ChatSendMutationUtils) {
         }) => {
             const timestamp = new Date().toISOString();
             const timelineMessageId = input.clientMessageId ?? `msg_${crypto.randomUUID()}`;
+            const optimisticRunId = createChatRunId(timelineMessageId);
             utils.timelineMessage.add({
                 ...(input.attachments?.length ? { attachments: input.attachments } : {}),
                 chatId: input.chatId,
@@ -84,7 +86,7 @@ export function createChatSendMutationHandlers(utils: ChatSendMutationUtils) {
                 utils.timelineTurn.start({
                     agentId: input.agentId,
                     chatId: input.chatId,
-                    runId: `pending:${timelineMessageId}`,
+                    runId: optimisticRunId,
                     sessionKey: '',
                     startedAt: timestamp,
                 });
@@ -109,7 +111,7 @@ export function createChatSendMutationHandlers(utils: ChatSendMutationUtils) {
             });
             utils.timelineTurn.clear({
                 chatId: input.chatId,
-                runId: `pending:${context.timelineMessageId}`,
+                runId: createChatRunId(context.timelineMessageId),
             });
         },
         onSuccess: async (
