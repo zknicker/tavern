@@ -9,10 +9,13 @@ import { Textarea, type TextareaProps } from './textarea.tsx';
 import { Tooltip, TooltipContent, TooltipTrigger } from './tooltip.tsx';
 
 interface PromptInputContextValue {
+    focusTextEditor: () => void;
     setTextareaElement: (element: HTMLTextAreaElement | null) => void;
 }
 
 const PromptInputContext = React.createContext<PromptInputContextValue | null>(null);
+
+function noop() {}
 
 export interface PromptInputProps extends Omit<React.ComponentPropsWithoutRef<'form'>, 'children'> {
     children: React.ReactNode;
@@ -36,6 +39,18 @@ export function PromptInput({
     const setTextareaElement = React.useCallback((element: HTMLTextAreaElement | null) => {
         textareaRef.current = element;
     }, []);
+    const focusTextEditor = React.useCallback(() => {
+        if (textareaRef.current) {
+            textareaRef.current.focus();
+            return;
+        }
+
+        onTextEditorFocus?.();
+    }, [onTextEditorFocus]);
+    const promptInputContext = React.useMemo(
+        () => ({ focusTextEditor, setTextareaElement }),
+        [focusTextEditor, setTextareaElement]
+    );
 
     const handleSurfaceMouseDown = React.useCallback(
         (event: React.MouseEvent<HTMLDivElement>) => {
@@ -54,18 +69,13 @@ export function PromptInput({
             }
 
             event.preventDefault();
-            if (textareaRef.current) {
-                textareaRef.current.focus();
-                return;
-            }
-
-            onTextEditorFocus?.();
+            focusTextEditor();
         },
-        [onTextEditorFocus]
+        [focusTextEditor]
     );
 
     return (
-        <PromptInputContext.Provider value={{ setTextareaElement }}>
+        <PromptInputContext.Provider value={promptInputContext}>
             <form className={cn('px-6 pt-1 pb-4', className)} {...props}>
                 <div className={cn('mx-auto w-full max-w-[60rem]', contentClassName)}>
                     {/* biome-ignore lint/a11y/noStaticElementInteractions lint/a11y/noNoninteractiveElementInteractions: The Fluid prompt shell focuses its editor when inert surface space is clicked. */}
@@ -86,6 +96,10 @@ export function PromptInput({
             </form>
         </PromptInputContext.Provider>
     );
+}
+
+export function usePromptInputTextEditorFocus() {
+    return React.useContext(PromptInputContext)?.focusTextEditor ?? noop;
 }
 
 export function PromptInputHeader({ className, ...props }: React.ComponentPropsWithoutRef<'div'>) {

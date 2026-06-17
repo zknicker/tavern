@@ -1,5 +1,6 @@
 import { Cancel01Icon } from '@hugeicons-pro/core-stroke-rounded';
 import { Icon } from '../../components/ui/icon.tsx';
+import { usePromptInputTextEditorFocus } from '../../components/ui/prompt-input.tsx';
 import type { ChatMessageAttachmentInput } from '../../lib/trpc.tsx';
 
 export type ChatComposerInlineAttachment = Extract<ChatMessageAttachmentInput, { type: 'inline' }>;
@@ -55,6 +56,7 @@ function ChatComposerAttachmentPreview({
     onRemove: () => void;
 }) {
     const isImage = attachment.type === 'inline' && attachment.mediaType.startsWith('image/');
+    const focusTextEditor = usePromptInputTextEditorFocus();
 
     return (
         <div
@@ -80,7 +82,9 @@ function ChatComposerAttachmentPreview({
                 onClick={(event) => {
                     event.stopPropagation();
                     onRemove();
+                    focusTextEditor();
                 }}
+                onMouseDown={(event) => event.preventDefault()}
                 type="button"
             >
                 <Icon className="size-3" icon={Cancel01Icon} />
