@@ -26,7 +26,7 @@ export function CortexHealthCard({
     return (
         <button
             className={cn(
-                'mx-3 mt-4 flex w-[calc(100%-1.5rem)] items-center gap-2.5 rounded-lg border px-3 py-2.5 text-left transition-colors',
+                'no-drag relative z-40 mx-3 mt-4 flex w-[calc(100%-1.5rem)] items-center gap-2.5 rounded-lg border px-3 py-2.5 text-left transition-colors',
                 isSelected
                     ? 'border-border-strong bg-muted/60'
                     : 'border-border/70 bg-muted/25 hover:bg-muted/50'

@@ -56,10 +56,7 @@ export function AppSidebarTopbar({ isExpanded }: { isExpanded: boolean }) {
         'items-center pt-0 md:w-[calc(var(--traffic-light-inset)_+_2.75rem)]';
 
     return (
-        <AppShellTopbar
-            className={isExpanded ? 'w-[var(--sidebar-width)]' : collapsedTopbarWidth}
-            nativeDragRegion={false}
-        >
+        <AppShellTopbar className={isExpanded ? 'w-[var(--sidebar-width)]' : collapsedTopbarWidth}>
             <AppShellTopbarSidebarSlot
                 className={isExpanded ? 'items-center pt-0' : collapsedTopbarSlotWidth}
             >

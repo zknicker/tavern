@@ -715,6 +715,28 @@
         -webkit-app-region: no-drag;
     }
 
+    html.macos-electron
+        :is(
+            button,
+            a[href],
+            input,
+            textarea,
+            select,
+            option,
+            summary,
+            label,
+            [role='button'],
+            [role='tab'],
+            [contenteditable='true'],
+            [contenteditable='plaintext-only'],
+            [data-slot='input-control'],
+            [data-slot='textarea-control'],
+            [data-window-drag-disabled]
+        ) {
+        app-region: no-drag;
+        -webkit-app-region: no-drag;
+    }
+
     html.macos-electron .no-drag,
     html.macos-electron .no-drag::before,
     html.macos-electron .no-drag::after,

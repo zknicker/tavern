@@ -60,8 +60,8 @@ export function AppShell({
 
 /**
  * AppShellDragRegion — transparent native drag strip across the top chrome.
- * Window dragging is delegated through AppShell so top-edge controls remain
- * clickable across every page.
+ * Top-edge controls opt out with no-drag while empty chrome stays draggable
+ * across every page.
  */
 export function AppShellDragRegion({
     className,
@@ -75,6 +75,7 @@ export function AppShellDragRegion({
                 className
             )}
             data-slot="app-shell-drag-region"
+            data-window-drag-region=""
             {...props}
         />
     );
@@ -135,7 +136,8 @@ export function AppShellTopbarSidebarSlot({
 
 /**
  * AppShellContentHeader — aligns page chrome in the main column with the
- * sidebar controls in AppShellTopbar.
+ * sidebar controls in AppShellTopbar. The header is draggable in blank space;
+ * buttons and links opt out through shared no-drag styles.
  */
 export function AppShellContentHeader({
     className,
@@ -144,10 +146,11 @@ export function AppShellContentHeader({
 }: useRender.ComponentProps<'div'>): React.ReactElement {
     const defaultProps = {
         className: cn(
-            'no-drag relative z-40 flex h-[var(--topbar-height)] shrink-0 items-start gap-2 px-4 pt-[11px]',
+            'relative z-40 flex h-[var(--topbar-height)] shrink-0 items-start gap-2 px-4 pt-[11px]',
             className
         ),
         'data-slot': 'app-shell-content-header',
+        'data-window-drag-region': '',
     };
 
     return useRender({
