@@ -1,7 +1,5 @@
 import * as React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useAgentAvatarDirectory } from '../../hooks/agents/use-agent-avatar-directory.ts';
-import { useAgentListSuspense } from '../../hooks/agents/use-agent-list.ts';
 import {
     toRuntimePageConnectionState,
     useRuntimeConnection,
@@ -26,8 +24,6 @@ function getCronMutationErrorMessage(error: { message?: string } | null | undefi
 export function Cron() {
     const navigate = useNavigate();
     const { navigateToSettings } = useLayoutContext();
-    const [agents] = useAgentListSuspense();
-    const avatarDirectory = useAgentAvatarDirectory(agents.agents);
     const runtimeConnection = useRuntimeConnection();
     const cronJobsQuery = useCronList();
     const deleteMutation = useCronDelete();
@@ -88,7 +84,6 @@ export function Cron() {
                 activeDeleteJobId={activeDeleteJobId}
                 activeRunJobId={activeRunJobId}
                 activeToggleJobId={activeToggleJobId}
-                avatarDirectory={avatarDirectory}
                 canEdit={true}
                 connectionState={toRuntimePageConnectionState(runtimeConnection.status)}
                 cronJobs={cronJobs}

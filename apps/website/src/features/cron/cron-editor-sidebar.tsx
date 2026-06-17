@@ -4,7 +4,6 @@ import { Label } from '../../components/ui/primitives/label.tsx';
 import { ScrollArea } from '../../components/ui/scroll-area.tsx';
 import { Separator } from '../../components/ui/separator.tsx';
 import { Switch } from '../../components/ui/switch.tsx';
-import { usePrimaryAgent } from '../../hooks/agents/use-agent-list.ts';
 import { formatTimestamp } from '../../lib/format.ts';
 import type { CronGetOutput, CronRunsOutput } from '../../lib/trpc.tsx';
 import { CronEditorScheduleFields } from './cron-editor-schedule-fields.tsx';
@@ -60,13 +59,8 @@ export function CronEditorSidebar({
     onRunSelect,
     runs,
 }: CronEditorSidebarProps) {
-    const currentAgentId = useStore(form.store, (state) => state.values.agentId);
     const currentDeliveryChatId = useStore(form.store, (state) => state.values.deliveryChatId);
-    const isSystemEvent = useStore(form.store, (state) => state.values.runType === 'systemEvent');
-    const primaryAgentQuery = usePrimaryAgent();
     const { deliveryChatOptions } = useCronEditorOptions({ currentDeliveryChatId });
-    const agentLabel =
-        primaryAgentQuery.data?.agent?.name ?? (currentAgentId.trim() || 'No synced agent');
 
     return (
         <aside className="w-full border-border/70 border-t lg:w-[22rem] lg:border-t-0 lg:border-l">
@@ -123,9 +117,6 @@ export function CronEditorSidebar({
                                 />
                             )}
                         </form.Field>
-                        {isSystemEvent ? null : (
-                            <SidebarValueRow label="Agent" value={agentLabel} />
-                        )}
                         <CronDeliveryFields deliveryChatOptions={deliveryChatOptions} form={form} />
                     </SidebarSection>
 

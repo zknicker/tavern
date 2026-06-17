@@ -1,11 +1,23 @@
 'use client';
 
 import { Tabs as TabsPrimitive } from '@base-ui/react/tabs';
-import type React from 'react';
+import type { IconSvgElement } from '@hugeicons/react';
+import { AnimatePresence, motion } from 'framer-motion';
+import * as React from 'react';
+import { useProximityHover } from '../../hooks/use-proximity-hover.ts';
+import { fontWeights } from '../../lib/font-weight.ts';
+import { springs } from '../../lib/springs.ts';
 import { cn } from '../../lib/utils.ts';
+import { Icon } from './icon.tsx';
 
 export type TabsVariant = 'default' | 'underline';
 export type TabsSize = 'sm' | 'default' | 'lg';
+
+interface TabsListContextValue {
+    setOptimisticIndex: (index: number) => void;
+}
+
+const TabsListContext = React.createContext<TabsListContextValue | null>(null);
 
 export function Tabs({ className, ...props }: TabsPrimitive.Root.Props): React.ReactElement {
     return (
@@ -21,57 +33,327 @@ export function TabsList({
     variant = 'default',
     className,
     children,
+    showIndicator = true,
     ...props
 }: TabsPrimitive.List.Props & {
+    showIndicator?: boolean;
     variant?: TabsVariant;
 }): React.ReactElement {
+    const containerRef = React.useRef<HTMLDivElement | null>(null);
+    const isMouseInside = React.useRef(false);
+    const registeredTabCountRef = React.useRef(0);
+    const [selectedIndex, setSelectedIndex] = React.useState<number | null>(null);
+    const [optimisticIndex, setOptimisticIndex] = React.useState<number | null>(null);
+    const [focusedIndex, setFocusedIndex] = React.useState<number | null>(null);
+    const {
+        activeIndex: hoveredIndex,
+        handlers,
+        itemRects,
+        measureItems,
+        registerItem,
+        setActiveIndex: setHoveredIndex,
+    } = useProximityHover(containerRef, { axis: 'x' });
+
+    const measureTabs = React.useCallback(() => {
+        const container = containerRef.current;
+
+        if (!container) {
+            return;
+        }
+
+        const tabs = Array.from(container.querySelectorAll<HTMLElement>('[data-slot="tabs-tab"]'));
+        const previousCount = registeredTabCountRef.current;
+
+        for (let index = tabs.length; index < previousCount; index += 1) {
+            registerItem(index, null);
+        }
+
+        tabs.forEach((tab, index) => {
+            tab.dataset.proximityIndex = String(index);
+            registerItem(index, tab);
+        });
+
+        registeredTabCountRef.current = tabs.length;
+        const activeIndex = tabs.findIndex((tab) => tab.hasAttribute('data-active'));
+        setSelectedIndex(activeIndex >= 0 ? activeIndex : null);
+        setOptimisticIndex(activeIndex >= 0 ? activeIndex : null);
+        measureItems();
+    }, [measureItems, registerItem]);
+
+    React.useEffect(() => {
+        measureTabs();
+    }, [measureTabs]);
+
+    React.useEffect(() => {
+        const container = containerRef.current;
+
+        if (!container) {
+            return;
+        }
+
+        const observer = new MutationObserver(measureTabs);
+
+        observer.observe(container, {
+            attributeFilter: ['data-active', 'data-disabled', 'aria-selected'],
+            childList: true,
+            subtree: true,
+        });
+
+        return () => observer.disconnect();
+    }, [measureTabs]);
+
+    React.useEffect(() => {
+        const container = containerRef.current;
+
+        if (!container) {
+            return;
+        }
+
+        const observer = new ResizeObserver(measureTabs);
+
+        observer.observe(container);
+
+        for (const tab of container.querySelectorAll<HTMLElement>('[data-slot="tabs-tab"]')) {
+            observer.observe(tab);
+        }
+
+        return () => observer.disconnect();
+    }, [measureTabs]);
+
+    const selectedRect = optimisticIndex !== null ? itemRects[optimisticIndex] : null;
+    const hoverRect = hoveredIndex !== null ? itemRects[hoveredIndex] : null;
+    const focusRect = focusedIndex !== null ? itemRects[focusedIndex] : null;
+    const isHoveringSelected = hoveredIndex === (optimisticIndex ?? selectedIndex);
+    const isHovering = hoveredIndex !== null && !isHoveringSelected;
+
     return (
-        <TabsPrimitive.List
-            className={cn(
-                'relative z-0 flex w-fit items-center justify-center text-muted-foreground',
-                'data-[orientation=vertical]:flex-col',
-                variant === 'default'
-                    ? 'gap-x-1'
-                    : 'gap-x-0.5 data-[orientation=vertical]:px-1 data-[orientation=horizontal]:py-1 *:data-[slot=tabs-tab]:hover:bg-accent',
-                className
-            )}
-            data-slot="tabs-list"
-            {...props}
-        >
-            {children}
-            <TabsPrimitive.Indicator
+        <TabsListContext.Provider value={{ setOptimisticIndex }}>
+            <TabsPrimitive.List
+                {...props}
                 className={cn(
-                    'absolute bottom-0 left-0 h-(--active-tab-height) w-(--active-tab-width) translate-x-(--active-tab-left) -translate-y-(--active-tab-bottom) transition-[width,translate] duration-200 ease-in-out',
-                    variant === 'underline'
-                        ? 'z-10 bg-primary data-[orientation=horizontal]:h-0.5 data-[orientation=vertical]:w-0.5 data-[orientation=vertical]:-translate-x-px data-[orientation=horizontal]:translate-y-px'
-                        : '-z-1 rounded-md border border-input bg-background shadow-none'
+                    'scrollbar-hidden relative z-0 -mx-0.5 flex w-fit max-w-full select-none items-center gap-0.5 overflow-visible px-0.5 py-1 text-muted-foreground',
+                    'data-[orientation=vertical]:flex-col',
+                    variant === 'underline' && 'pb-1',
+                    className
                 )}
-                data-slot="tab-indicator"
-            />
-        </TabsPrimitive.List>
+                data-slot="tabs-list"
+                onBlur={(event) => {
+                    props.onBlur?.(event);
+
+                    if (event.defaultPrevented) {
+                        return;
+                    }
+
+                    if (containerRef.current?.contains(event.relatedTarget as Node)) {
+                        return;
+                    }
+
+                    setFocusedIndex(null);
+
+                    if (!isMouseInside.current) {
+                        setHoveredIndex(null);
+                    }
+                }}
+                onFocus={(event) => {
+                    props.onFocus?.(event);
+
+                    if (event.defaultPrevented) {
+                        return;
+                    }
+
+                    const tab = (event.target as HTMLElement).closest<HTMLElement>(
+                        '[data-slot="tabs-tab"]'
+                    );
+                    const indexAttr = tab?.dataset.proximityIndex;
+
+                    if (indexAttr === undefined) {
+                        return;
+                    }
+
+                    const index = Number(indexAttr);
+
+                    setHoveredIndex(index);
+                    setFocusedIndex(
+                        (event.target as HTMLElement).matches(':focus-visible') ? index : null
+                    );
+                }}
+                onMouseLeave={(event) => {
+                    props.onMouseLeave?.(event);
+
+                    if (event.defaultPrevented) {
+                        return;
+                    }
+
+                    isMouseInside.current = false;
+                    handlers.onMouseLeave();
+                }}
+                onMouseMove={(event) => {
+                    props.onMouseMove?.(event);
+
+                    if (event.defaultPrevented) {
+                        return;
+                    }
+
+                    isMouseInside.current = true;
+                    handlers.onMouseMove(event);
+                }}
+                ref={(node) => {
+                    containerRef.current = node;
+                }}
+            >
+                {showIndicator && selectedRect ? (
+                    <motion.div
+                        animate={{
+                            height: variant === 'underline' ? 2 : selectedRect.height,
+                            left: selectedRect.left,
+                            opacity: isHovering ? 0.84 : 1,
+                            top:
+                                variant === 'underline'
+                                    ? selectedRect.top + selectedRect.height - 2
+                                    : selectedRect.top,
+                            width: selectedRect.width,
+                        }}
+                        className={cn(
+                            'pointer-events-none absolute',
+                            variant === 'underline'
+                                ? 'z-10 rounded-full bg-primary'
+                                : 'rounded-full bg-active'
+                        )}
+                        data-slot="tabs-indicator"
+                        initial={false}
+                        transition={{ ...springs.moderate, opacity: { duration: 0.08 } }}
+                    />
+                ) : null}
+
+                <AnimatePresence>
+                    {showIndicator && hoverRect && !isHoveringSelected && selectedRect ? (
+                        <motion.div
+                            animate={{
+                                height:
+                                    variant === 'underline'
+                                        ? selectedRect.height
+                                        : hoverRect.height,
+                                left: hoverRect.left,
+                                opacity: 0.42,
+                                top: hoverRect.top,
+                                width: hoverRect.width,
+                            }}
+                            className="pointer-events-none absolute rounded-full bg-hover"
+                            data-slot="tabs-hover-indicator"
+                            exit={
+                                isMouseInside.current
+                                    ? { opacity: 0, transition: springs.fast }
+                                    : {
+                                          height: selectedRect.height,
+                                          left: selectedRect.left,
+                                          opacity: 0,
+                                          top: selectedRect.top,
+                                          transition: {
+                                              ...springs.moderate,
+                                              opacity: { duration: 0.06 },
+                                          },
+                                          width: selectedRect.width,
+                                      }
+                            }
+                            initial={{
+                                height: selectedRect.height,
+                                left: selectedRect.left,
+                                opacity: 0,
+                                top: selectedRect.top,
+                                width: selectedRect.width,
+                            }}
+                            transition={{ ...springs.fast, opacity: { duration: 0.08 } }}
+                        />
+                    ) : null}
+                </AnimatePresence>
+
+                <AnimatePresence>
+                    {focusRect ? (
+                        <motion.div
+                            animate={{
+                                height: focusRect.height + 4,
+                                left: focusRect.left - 2,
+                                top: focusRect.top - 2,
+                                width: focusRect.width + 4,
+                            }}
+                            className="pointer-events-none absolute z-20 rounded-full border border-ring"
+                            data-slot="tabs-focus-indicator"
+                            exit={{ opacity: 0, transition: springs.fast }}
+                            initial={false}
+                            transition={{ ...springs.fast, opacity: { duration: 0.08 } }}
+                        />
+                    ) : null}
+                </AnimatePresence>
+
+                {children}
+            </TabsPrimitive.List>
+        </TabsListContext.Provider>
     );
 }
 
 export function TabsTab({
     size = 'default',
     className,
+    children,
+    disabled,
+    icon,
+    iconNode,
+    iconOnly = false,
+    label,
+    onClick,
+    tabIndex,
     ...props
 }: TabsPrimitive.Tab.Props & {
+    icon?: IconSvgElement;
+    iconNode?: React.ReactNode;
+    iconOnly?: boolean;
+    label?: string;
     size?: TabsSize;
 }): React.ReactElement {
+    const listContext = React.useContext(TabsListContext);
+
     return (
         <TabsPrimitive.Tab
+            aria-label={iconOnly ? label : props['aria-label']}
             className={cn(
-                "relative flex shrink-0 cursor-pointer items-center justify-center gap-1.5 whitespace-nowrap rounded-md text-muted-foreground outline-none transition-colors hover:text-foreground/80 focus-visible:ring-2 focus-visible:ring-ring data-disabled:pointer-events-none data-[orientation=vertical]:w-full data-[orientation=vertical]:justify-start data-active:text-foreground data-disabled:opacity-64 [&_svg:not([class*='size-'])]:size-4 [&_svg]:pointer-events-none [&_svg]:shrink-0",
-                size === 'sm' && 'h-8 px-2.5 text-sm',
-                size === 'default' && 'h-9 px-3 font-medium text-sm',
-                size === 'lg' && 'h-10 px-3 font-medium text-sm',
+                'no-drag group relative z-10 flex shrink-0 cursor-pointer items-center justify-center gap-2 bg-transparent text-muted-foreground outline-none transition-colors duration-80 hover:text-foreground data-disabled:pointer-events-none data-disabled:cursor-default data-active:text-foreground data-disabled:opacity-50 [&>*]:relative [&>*]:z-10 [&_svg]:pointer-events-none [&_svg]:shrink-0',
+                'rounded-full',
+                size === 'sm' && 'h-8 px-3 text-sm',
+                size === 'default' && 'h-9 px-3.5 text-sm',
+                size === 'lg' && 'h-10 px-4 text-sm',
+                iconOnly && 'w-8 px-0',
                 className
             )}
             data-slot="tabs-tab"
             data-window-drag-disabled=""
+            disabled={disabled}
+            onClick={(event) => {
+                onClick?.(event);
+
+                if (event.defaultPrevented || disabled) {
+                    return;
+                }
+
+                const index = Number(event.currentTarget.dataset.proximityIndex);
+
+                if (Number.isFinite(index)) {
+                    listContext?.setOptimisticIndex(index);
+                }
+            }}
+            tabIndex={disabled ? undefined : (tabIndex ?? 0)}
             {...props}
-        />
+        >
+            {iconNode ?? null}
+            {icon && !iconNode ? (
+                <Icon
+                    aria-hidden="true"
+                    className="size-4 opacity-70 transition-[color,opacity] duration-80 group-data-active:opacity-90"
+                    icon={icon}
+                    size={16}
+                />
+            ) : null}
+            {iconOnly ? null : (children ?? (label ? <TabsLabel>{label}</TabsLabel> : null))}
+        </TabsPrimitive.Tab>
     );
 }
 
@@ -82,6 +364,23 @@ export function TabsPanel({ className, ...props }: TabsPrimitive.Panel.Props): R
             data-slot="tabs-content"
             {...props}
         />
+    );
+}
+
+function TabsLabel({ children }: { children: React.ReactNode }) {
+    return (
+        <span className="inline-grid whitespace-nowrap text-sm">
+            <span
+                aria-hidden="true"
+                className="invisible col-start-1 row-start-1"
+                style={{ fontVariationSettings: fontWeights.semibold }}
+            >
+                {children}
+            </span>
+            <span className="col-start-1 row-start-1 font-normal transition-[color,font-weight] duration-80 group-data-active:font-semibold">
+                {children}
+            </span>
+        </span>
     );
 }
 

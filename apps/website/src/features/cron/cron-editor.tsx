@@ -58,6 +58,7 @@ export function CronEditor() {
     const isMissingJob = !isNew && cronJobQuery.status === 'success' && !job;
     const isPending = createMutation.isPending || updateMutation.isPending;
     const canEdit = !isMissingJob;
+    const pageLabel = job?.name ?? (isNew ? 'New automation' : 'Automation');
     const shouldRenderForm = shouldRenderCronEditorPageForm({
         isLoading: cronJobQuery.isPending,
         isNew,
@@ -81,6 +82,7 @@ export function CronEditor() {
                 isNew={isNew}
                 isPending={isPending}
                 isRunning={runMutation.isPending}
+                onBack={handleBack}
                 onDelete={() => {
                     setDeleteDialogOpen(true);
                 }}
@@ -100,6 +102,7 @@ export function CronEditor() {
                             optimisticCronRuns.markManualRunFailed(optimisticRunId);
                         });
                 }}
+                pageLabel={pageLabel}
             />
 
             {runMutation.error ? (

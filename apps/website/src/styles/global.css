@@ -771,7 +771,7 @@
     }
 
     .app-shell-main-top-drag-fade {
-        pointer-events: auto;
+        pointer-events: none;
         position: absolute;
         top: 0;
         right: 0;

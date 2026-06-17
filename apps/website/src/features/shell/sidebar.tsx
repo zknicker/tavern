@@ -54,7 +54,7 @@ export function AppSidebar({
                 <SidebarFooter className="pb-4">
                     <SidebarMenu>
                         <SidebarMenuItem>
-                            <SidebarMenuButton onClick={onNavigateToSettings} tooltip="Settings">
+                            <SidebarMenuButton onClick={onNavigateToSettings}>
                                 <Icon
                                     aria-hidden="true"
                                     className="shrink-0"

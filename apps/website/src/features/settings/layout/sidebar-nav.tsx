@@ -31,7 +31,6 @@ export function SettingsSidebarNav({ onBackToApp }: { onBackToApp?: () => void }
                                 <SidebarMenuButton
                                     className="text-sidebar-muted"
                                     onClick={onBackToApp}
-                                    tooltip="Back to app"
                                 >
                                     <Icon
                                         aria-hidden="true"

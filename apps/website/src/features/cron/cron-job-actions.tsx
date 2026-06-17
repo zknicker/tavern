@@ -1,11 +1,20 @@
 import { Clock, PencilEdit02Icon, PlayIcon, Trash2 } from '@hugeicons/core-free-icons';
+import { MoreHorizontalIcon, PauseIcon } from '@hugeicons-pro/core-stroke-rounded';
 import { Icon } from '../../components/ui/icon.tsx';
+import {
+    Menu,
+    MenuItem,
+    MenuPopup,
+    MenuSeparator,
+    MenuTrigger,
+} from '../../components/ui/menu.tsx';
 import { Button } from '../../components/ui/primitives/button.tsx';
-import { Switch } from '../../components/ui/switch.tsx';
+import { cn } from '../../lib/utils.ts';
 import type { CronListItem } from './cron-list-data.ts';
 
 interface CronJobActionsProps {
     canEdit: boolean;
+    className?: string;
     isDeleting: boolean;
     isRunning: boolean;
     isToggling: boolean;
@@ -19,6 +28,7 @@ interface CronJobActionsProps {
 
 export function CronJobActions({
     canEdit,
+    className,
     isDeleting,
     isRunning,
     isToggling,
@@ -29,68 +39,90 @@ export function CronJobActions({
     onRun,
     onToggle,
 }: CronJobActionsProps) {
-    return (
-        <div className="flex shrink-0 items-center gap-2">
-            <Switch
-                checked={job.enabled}
-                disabled={!canEdit || isToggling}
-                onCheckedChange={(checked) => {
-                    void onToggle(job, checked);
-                }}
-            />
+    const toggleLabel = job.enabled ? 'Pause' : 'Enable';
+    const toggleTitle = canEdit
+        ? `${toggleLabel} automation`
+        : `Start Tavern Runtime to ${toggleLabel.toLowerCase()} this automation`;
 
-            <div className="flex items-center gap-0">
-                <Button
-                    disabled={false}
-                    onClick={() => onHistory(job)}
-                    size="icon-sm"
-                    title="View run history"
-                    type="button"
-                    variant="ghost"
-                >
-                    <Icon className="size-4" icon={Clock} />
-                </Button>
-                <Button
-                    disabled={!canEdit || isRunning}
-                    loading={isRunning}
-                    onClick={() => {
-                        void onRun(job);
-                    }}
-                    size="icon-sm"
-                    title={canEdit ? 'Run now' : 'Start Tavern Runtime to run this automation'}
-                    type="button"
-                    variant="ghost"
-                >
-                    <Icon className="size-4" icon={PlayIcon} />
-                </Button>
-                <Button
-                    disabled={false}
-                    onClick={() => onEdit(job)}
-                    size="icon-sm"
-                    title="Edit automation"
-                    type="button"
-                    variant="ghost"
-                >
-                    <Icon className="size-4" icon={PencilEdit02Icon} />
-                </Button>
-                <Button
-                    disabled={!canEdit || isDeleting}
-                    loading={isDeleting}
-                    onClick={() => {
-                        void onDelete(job);
-                    }}
-                    size="icon-sm"
-                    title={
-                        canEdit
-                            ? 'Delete automation'
-                            : 'Start Tavern Runtime to delete this automation'
+    return (
+        <div className={cn('flex shrink-0 items-center gap-0.5', className)}>
+            <Button
+                disabled={!canEdit || isRunning}
+                loading={isRunning}
+                onClick={() => {
+                    void onRun(job);
+                }}
+                size="icon-sm"
+                title={canEdit ? 'Run now' : 'Start Tavern Runtime to run this automation'}
+                type="button"
+                variant="ghost"
+            >
+                <Icon className="size-4" icon={PlayIcon} />
+            </Button>
+            <Button
+                disabled={false}
+                onClick={() => onEdit(job)}
+                size="icon-sm"
+                title="Edit automation"
+                type="button"
+                variant="ghost"
+            >
+                <Icon className="size-4" icon={PencilEdit02Icon} />
+            </Button>
+            <Menu>
+                <MenuTrigger
+                    render={
+                        <Button
+                            aria-label={`${job.name} actions`}
+                            size="icon-sm"
+                            title="Automation actions"
+                            variant="ghost"
+                        />
                     }
-                    type="button"
-                    variant="ghost"
                 >
-                    <Icon className="size-4 text-destructive" icon={Trash2} />
-                </Button>
-            </div>
+                    <Icon className="size-4" icon={MoreHorizontalIcon} />
+                </MenuTrigger>
+                <MenuPopup align="end">
+                    <MenuItem onClick={() => onHistory(job)}>
+                        <Icon className="size-4" icon={Clock} />
+                        Run history
+                    </MenuItem>
+                    <MenuItem
+                        disabled={!canEdit || isRunning}
+                        onClick={() => {
+                            void onRun(job);
+                        }}
+                    >
+                        <Icon className="size-4" icon={PlayIcon} />
+                        Run now
+                    </MenuItem>
+                    <MenuItem
+                        disabled={!canEdit || isToggling}
+                        onClick={() => {
+                            void onToggle(job, !job.enabled);
+                        }}
+                        title={toggleTitle}
+                    >
+                        <Icon className="size-4" icon={job.enabled ? PauseIcon : PlayIcon} />
+                        {toggleLabel}
+                    </MenuItem>
+                    <MenuSeparator />
+                    <MenuItem onClick={() => onEdit(job)}>
+                        <Icon className="size-4" icon={PencilEdit02Icon} />
+                        Edit
+                    </MenuItem>
+                    <MenuItem
+                        disabled={!canEdit || isDeleting}
+                        onClick={() => {
+                            void onDelete(job);
+                        }}
+                        variant="destructive"
+                    >
+                        <Icon className="size-4" icon={Trash2} />
+                        Delete
+                    </MenuItem>
+                </MenuPopup>
+            </Menu>
         </div>
     );
 }

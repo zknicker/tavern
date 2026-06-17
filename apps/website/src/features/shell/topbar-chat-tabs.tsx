@@ -715,7 +715,7 @@ function topbarChatTabButtonClassName({
     tone?: 'default' | 'error';
 }) {
     return cn(
-        'no-drag h-7 w-fit max-w-[180px] justify-start overflow-hidden rounded-lg px-2 [&_svg]:opacity-70',
+        'no-drag h-7 w-fit max-w-[180px] justify-start overflow-hidden rounded-full px-2 [&_svg]:opacity-70',
         getTopbarChatTabTextClassName({ isActive }),
         hasPinnedColor
             ? 'before:bg-[var(--pinned-tab-bg-light)] before:opacity-100 hover:before:bg-[var(--pinned-tab-bg-hover-light)] data-active:before:bg-[var(--pinned-tab-bg-active-light)] dark:before:bg-[var(--pinned-tab-bg-dark)] dark:data-active:before:bg-[var(--pinned-tab-bg-active-dark)] dark:hover:before:bg-[var(--pinned-tab-bg-hover-dark)]'

@@ -7,6 +7,7 @@ import {
     AppShellMain,
 } from './components/ui/app-shell.tsx';
 import { SidebarProvider } from './components/ui/sidebar.tsx';
+import { shouldShowMainTopDragFade } from './features/shell/main-top-drag-fade.ts';
 import { AppSidebar } from './features/shell/sidebar.tsx';
 import { AppSidebarTopbar, AppTopbar } from './features/shell/topbar.tsx';
 import {
@@ -68,6 +69,7 @@ export function Layout() {
     }, []);
 
     const isSettingsRoute = location.pathname.startsWith('/dashboard/settings');
+    const showMainTopDragFade = shouldShowMainTopDragFade(location.pathname);
     const currentPath = `${location.pathname}${location.search}${location.hash}`;
     const lastAppPathRef = React.useRef('/dashboard/overview');
     React.useEffect(() => {
@@ -118,7 +120,7 @@ export function Layout() {
                             onSelectTab={setActiveTab}
                         />
                         <AppShellMain data-edge-to-edge="true">
-                            <SidebarMainTopDragFade />
+                            {showMainTopDragFade ? <SidebarMainTopDragFade /> : null}
                             {outlet}
                         </AppShellMain>
                     </AppShellBody>

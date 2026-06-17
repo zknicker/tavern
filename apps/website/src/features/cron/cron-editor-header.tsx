@@ -1,5 +1,14 @@
 import { PlayIcon, Trash2 } from '@hugeicons/core-free-icons';
+import { Link } from 'react-router-dom';
 import { AppShellContentHeader } from '../../components/ui/app-shell.tsx';
+import {
+    Breadcrumb,
+    BreadcrumbItem,
+    BreadcrumbLink,
+    BreadcrumbList,
+    BreadcrumbPage,
+    BreadcrumbSeparator,
+} from '../../components/ui/breadcrumb.tsx';
 import { Icon } from '../../components/ui/icon.tsx';
 import { Button } from '../../components/ui/primitives/button.tsx';
 
@@ -10,8 +19,10 @@ interface CronEditorHeaderProps {
     isNew: boolean;
     isPending: boolean;
     isRunning: boolean;
+    onBack: () => void;
     onDelete: () => void;
     onRun: () => void;
+    pageLabel: string;
 }
 
 export function CronEditorHeader({
@@ -21,11 +32,44 @@ export function CronEditorHeader({
     isNew,
     isPending,
     isRunning,
+    pageLabel,
+    onBack,
     onDelete,
     onRun,
 }: CronEditorHeaderProps) {
     return (
         <AppShellContentHeader>
+            <Breadcrumb aria-label="Automation breadcrumb" className="flex-1">
+                <BreadcrumbList className="min-w-0 flex-nowrap">
+                    <BreadcrumbItem>
+                        <BreadcrumbLink
+                            onClick={(event) => {
+                                event.preventDefault();
+                                onBack();
+                            }}
+                            onPointerDown={(event) => {
+                                if (event.button !== 0) {
+                                    return;
+                                }
+
+                                event.preventDefault();
+                                onBack();
+                            }}
+                            render={<Link to="/dashboard/cron" />}
+                            title="Back to automations"
+                        >
+                            Automations
+                        </BreadcrumbLink>
+                    </BreadcrumbItem>
+                    <BreadcrumbSeparator />
+                    <BreadcrumbItem className="min-w-0">
+                        <BreadcrumbPage className="min-w-0 truncate" title={pageLabel}>
+                            {pageLabel}
+                        </BreadcrumbPage>
+                    </BreadcrumbItem>
+                </BreadcrumbList>
+            </Breadcrumb>
+
             <div className="ml-auto flex shrink-0 items-center gap-2">
                 {isNew ? null : (
                     <>

@@ -14,7 +14,8 @@ describe('TabsSubtle', () => {
             </TabsSubtle>
         );
 
-        expect(markup).toContain('focus-visible:inset-ring-2');
+        expect(markup).toContain('data-slot="tabs-list"');
+        expect(markup).toContain('font-variation-settings:&#x27;wght&#x27; 550');
         expect(markup.match(/tabindex="0"/g)).toHaveLength(2);
         expect(markup).toContain('aria-disabled="true"');
     });

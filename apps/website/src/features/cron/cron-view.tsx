@@ -3,13 +3,11 @@ import { Icon } from '../../components/ui/icon.tsx';
 import { Button } from '../../components/ui/primitives/button.tsx';
 import { SearchInput } from '../../components/ui/primitives/search-input.tsx';
 import { ScrollArea } from '../../components/ui/scroll-area.tsx';
-import type { DashboardAvatarDirectory } from '../../hooks/agents/use-agent-avatar-directory.ts';
 import { EmptyState } from '../shell/empty-state.tsx';
 import { CronEmptyResults } from './cron-empty-results.tsx';
 import { CronFilterTabs } from './cron-filter-tabs.tsx';
 import { CronJobsList } from './cron-jobs-list.tsx';
 import type { CronListItem } from './cron-list-data.ts';
-import { CronMobileHeader } from './cron-mobile-header.tsx';
 import type { CronFilter } from './filter-cron-jobs.ts';
 
 interface CronViewProps {
@@ -17,7 +15,6 @@ interface CronViewProps {
     activeDeleteJobId: string | null;
     activeRunJobId: string | null;
     activeToggleJobId: string | null;
-    avatarDirectory: DashboardAvatarDirectory;
     canEdit: boolean;
     connectionState: 'reachable' | 'unconfigured' | 'unreachable';
     cronJobs: CronListItem[];
@@ -45,7 +42,6 @@ export function CronView({
     activeDeleteJobId,
     activeRunJobId,
     activeToggleJobId,
-    avatarDirectory,
     canEdit,
     connectionState,
     cronJobs,
@@ -81,23 +77,6 @@ export function CronView({
 
     return (
         <div className="flex flex-1 flex-col overflow-hidden">
-            <CronMobileHeader
-                enabledJobs={enabledJobs}
-                filter={filter}
-                isMutating={isMutating}
-                onCreate={onCreate}
-                onFilterChange={onFilterChange}
-                pausedJobs={pausedJobs}
-                totalJobs={totalJobs}
-            />
-
-            <div className="hidden justify-end py-3 pr-3 pl-5 md:flex">
-                <Button disabled={isMutating} onClick={onCreate} type="button" variant="secondary">
-                    <Icon aria-hidden="true" icon={Plus} />
-                    New Automation
-                </Button>
-            </div>
-
             {actionErrorMessage ? (
                 <div className="border-error/40 border-b bg-error-bg px-4 py-3">
                     <p className="text-error-foreground text-sm">{actionErrorMessage}</p>
@@ -114,46 +93,70 @@ export function CronView({
                 />
             ) : (
                 <ScrollArea className="flex-1">
-                    <div className="mx-auto flex w-full max-w-5xl flex-col gap-4 px-5 py-8">
-                        <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-                            <CronFilterTabs
-                                enabledJobs={enabledJobs}
-                                filter={filter}
-                                onFilterChange={onFilterChange}
-                                pausedJobs={pausedJobs}
-                                totalJobs={totalJobs}
-                            />
-                            <SearchInput
-                                aria-label="Search automations"
-                                className="w-full sm:ml-auto sm:max-w-xs"
-                                name="automation-search"
-                                onChange={(event) => onQueryChange(event.target.value)}
-                                placeholder="Search automations..."
-                                value={query}
-                            />
-                        </div>
+                    <div className="mx-auto flex w-full max-w-3xl flex-col px-5 py-8">
+                        <header className="relative z-40 flex items-start pb-6">
+                            <div>
+                                <h1 className="font-semibold text-2xl text-foreground">
+                                    Automations
+                                </h1>
+                                <p className="mt-1 text-muted-foreground text-sm">
+                                    Schedule recurring work for your agent
+                                </p>
+                            </div>
+                            <Button
+                                className="ml-auto shrink-0 rounded-full"
+                                disabled={isMutating}
+                                onClick={onCreate}
+                                size="sm"
+                                type="button"
+                                variant="secondary"
+                            >
+                                <Icon aria-hidden="true" className="size-4" icon={Plus} />
+                                New Automation
+                            </Button>
+                        </header>
 
-                        {filteredJobs.length > 0 ? (
-                            <CronJobsList
-                                activeDeleteJobId={activeDeleteJobId}
-                                activeRunJobId={activeRunJobId}
-                                activeToggleJobId={activeToggleJobId}
-                                avatarDirectory={avatarDirectory}
-                                canEdit={canEdit}
-                                jobs={filteredJobs}
-                                onDelete={onDelete}
-                                onEdit={onEdit}
-                                onHistory={onHistory}
-                                onRun={onRun}
-                                onToggle={onToggle}
-                            />
-                        ) : (
-                            <CronEmptyResults
-                                filter={filter}
-                                onClearFilters={onClearFilters}
-                                query={query}
-                            />
-                        )}
+                        <section className="grid gap-3">
+                            <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+                                <CronFilterTabs
+                                    enabledJobs={enabledJobs}
+                                    filter={filter}
+                                    onFilterChange={onFilterChange}
+                                    pausedJobs={pausedJobs}
+                                    totalJobs={totalJobs}
+                                />
+                                <SearchInput
+                                    aria-label="Search automations"
+                                    className="w-full sm:ml-auto sm:max-w-64 [&_[data-slot=input-control]]:rounded-full"
+                                    name="automation-search"
+                                    onChange={(event) => onQueryChange(event.target.value)}
+                                    placeholder="Search automations..."
+                                    size="default"
+                                    value={query}
+                                />
+                            </div>
+
+                            {filteredJobs.length > 0 ? (
+                                <CronJobsList
+                                    activeDeleteJobId={activeDeleteJobId}
+                                    activeRunJobId={activeRunJobId}
+                                    activeToggleJobId={activeToggleJobId}
+                                    canEdit={canEdit}
+                                    jobs={filteredJobs}
+                                    onDelete={onDelete}
+                                    onEdit={onEdit}
+                                    onHistory={onHistory}
+                                    onRun={onRun}
+                                    onToggle={onToggle}
+                                />
+                            ) : (
+                                <CronEmptyResults
+                                    filter={filter}
+                                    onClearFilters={onClearFilters}
+                                    query={query}
+                                />
+                            )}
+                        </section>
                     </div>
                 </ScrollArea>
             )}
