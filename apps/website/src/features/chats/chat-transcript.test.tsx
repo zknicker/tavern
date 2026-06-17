@@ -8,7 +8,11 @@ import type { ChatActiveReply } from '../../hooks/chats/chat-timeline-state.ts';
 import { type ChatLogOutput, trpc } from '../../lib/trpc.tsx';
 import { ArtifactLogEntry } from '../sessions/log/event-entry/artifact-entry.tsx';
 import { ToolDrawerBody } from '../sessions/tools/tool-drawer-body.tsx';
-import { ChatApprovalPrompt, getPendingChatApprovalPrompt } from './chat-approval-prompt.tsx';
+import {
+    ChatApprovalPrompt,
+    getPendingChatApprovalPrompt,
+    getVisibleChatApprovalPrompt,
+} from './chat-approval-prompt.tsx';
 import { ChatTranscript } from './chat-transcript.tsx';
 import { SystemStep } from './chat-transcript-system-step.tsx';
 import { getActiveReplyDisplayText } from './chat-transcript-turn.tsx';
@@ -522,6 +526,40 @@ test('ChatApprovalPrompt renders the oldest pending approval choices', () => {
     assert.match(markup, />Allow session</);
     assert.match(markup, />Always allow</);
     assert.match(markup, />Deny</);
+});
+
+test('getVisibleChatApprovalPrompt hides a locally answered pending approval', () => {
+    const first = pendingApprovalRow('approval-1', 'rm -rf build');
+    const second = pendingApprovalRow('approval-2', 'deploy production');
+    const answeredApprovalIds = new Set(['approval-1']);
+
+    assert.equal(
+        getVisibleChatApprovalPrompt({
+            answeredApprovalIds,
+            rows: [first, second],
+        }),
+        null
+    );
+
+    assert.deepEqual(
+        getVisibleChatApprovalPrompt({
+            answeredApprovalIds,
+            rows: [
+                {
+                    ...first,
+                    completedAt: '2026-03-31T15:00:02.000Z',
+                    toolCall: { ...first.toolCall, status: 'completed' },
+                },
+                second,
+            ],
+        }),
+        {
+            command: 'deploy production',
+            description: null,
+            id: 'approval-2',
+            sessionKey: 'agent:tiny:session-1',
+        }
+    );
 });
 
 test('ToolStep keeps older tool rows inspectable when call id is missing', () => {

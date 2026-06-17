@@ -15,7 +15,7 @@ import {
     ChatApprovalFlow,
     ChatApprovalFlowComposer,
     ChatApprovalPrompt,
-    getPendingChatApprovalPrompt,
+    useChatApprovalPromptState,
 } from './chat-approval-prompt.tsx';
 import { getChatContextFullness } from './chat-context-fullness.ts';
 import { ChatDetailFrame } from './chat-detail-frame.tsx';
@@ -198,9 +198,8 @@ function SyncedAgentChatDetail({
         limit: chatDetailLogLimit,
     });
     const rows = timeline.rows;
-    const pendingApprovalPrompt = getPendingChatApprovalPrompt(rows);
-    const hasPendingApprovalPrompt = pendingApprovalPrompt !== null;
-    const pendingApprovalBlockReason = hasPendingApprovalPrompt
+    const approvalPrompt = useChatApprovalPromptState(rows);
+    const pendingApprovalBlockReason = approvalPrompt.isActive
         ? 'Respond to the pending approval before sending another message.'
         : null;
     const totalMessages = timeline.totalMessages;
@@ -228,8 +227,14 @@ function SyncedAgentChatDetail({
             failedTurn={timeline.failedTurn}
             fetchPreviousPage={timeline.fetchPreviousPage}
             footer={
-                <ChatApprovalFlow active={hasPendingApprovalPrompt}>
-                    <ChatApprovalPrompt chatId={chat.id} prompt={pendingApprovalPrompt} />
+                <ChatApprovalFlow active={approvalPrompt.isActive}>
+                    <ChatApprovalPrompt
+                        chatId={chat.id}
+                        hasError={approvalPrompt.hasError}
+                        onAnswerError={approvalPrompt.markAnswerError}
+                        onAnswered={approvalPrompt.markAnswered}
+                        prompt={approvalPrompt.prompt}
+                    />
                     <ChatApprovalFlowComposer>
                         <ChatMessageComposer
                             activeRunId={

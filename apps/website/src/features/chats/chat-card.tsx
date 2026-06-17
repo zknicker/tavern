@@ -7,7 +7,7 @@ import {
     ChatApprovalFlow,
     ChatApprovalFlowComposer,
     ChatApprovalPrompt,
-    getPendingChatApprovalPrompt,
+    useChatApprovalPromptState,
 } from './chat-approval-prompt.tsx';
 import { getChatCardDomId } from './chat-card-dom-id.ts';
 import { ChatCardHeader } from './chat-card-header.tsx';
@@ -49,9 +49,8 @@ export function ChatCard({
     const hasActiveReply = timeline.activeReply !== null;
     const hasActiveTurn = timeline.activeTurn !== null || hasActiveReply;
     const hasTimelineContent = rowCount > 0 || hasActiveReply || timeline.failedTurn !== null;
-    const pendingApprovalPrompt = getPendingChatApprovalPrompt(rows);
-    const hasPendingApprovalPrompt = pendingApprovalPrompt !== null;
-    const pendingApprovalBlockReason = hasPendingApprovalPrompt
+    const approvalPrompt = useChatApprovalPromptState(rows);
+    const pendingApprovalBlockReason = approvalPrompt.isActive
         ? 'Respond to the pending approval before sending another message.'
         : null;
     const isInitialTranscriptPending =
@@ -121,11 +120,14 @@ export function ChatCard({
                 </div>
             </div>
 
-            <ChatApprovalFlow active={hasPendingApprovalPrompt}>
+            <ChatApprovalFlow active={approvalPrompt.isActive}>
                 <ChatApprovalPrompt
                     chatId={chat.id}
                     className="border-r-[3px] border-r-border/70 bg-chrome/40 px-3 pt-2"
-                    prompt={pendingApprovalPrompt}
+                    hasError={approvalPrompt.hasError}
+                    onAnswerError={approvalPrompt.markAnswerError}
+                    onAnswered={approvalPrompt.markAnswered}
+                    prompt={approvalPrompt.prompt}
                 />
                 <ChatApprovalFlowComposer>
                     <ChatMessageComposer

@@ -42,13 +42,6 @@ const approvalChoices = [
     },
 ] satisfies { description: string; id: ChatApprovalChoice; label: string }[];
 
-const approvalResultLabels = {
-    always: 'Always allowed.',
-    deny: 'Denied.',
-    once: 'Allowed once.',
-    session: 'Allowed for this session.',
-} satisfies Record<ChatApprovalChoice, string>;
-
 export function ChatApprovalFlow({
     active,
     children,
@@ -72,10 +65,16 @@ export function ChatApprovalFlowComposer({ children }: { children: React.ReactNo
 export function ChatApprovalPrompt({
     chatId,
     className,
+    hasError = false,
+    onAnswerError,
+    onAnswered,
     prompt,
 }: {
     chatId: string;
     className?: string;
+    hasError?: boolean;
+    onAnswerError?: (promptId: string) => void;
+    onAnswered?: (promptId: string) => void;
     prompt: PendingChatApprovalPrompt | null;
 }) {
     if (!prompt) {
@@ -86,7 +85,10 @@ export function ChatApprovalPrompt({
         <ChatApprovalPromptContent
             chatId={chatId}
             className={className}
+            hasError={hasError}
             key={prompt.id}
+            onAnswerError={onAnswerError}
+            onAnswered={onAnswered}
             prompt={prompt}
         />
     );
@@ -95,16 +97,21 @@ export function ChatApprovalPrompt({
 function ChatApprovalPromptContent({
     chatId,
     className,
+    hasError,
+    onAnswerError,
+    onAnswered,
     prompt,
 }: {
     chatId: string;
     className?: string;
+    hasError: boolean;
+    onAnswerError?: (promptId: string) => void;
+    onAnswered?: (promptId: string) => void;
     prompt: PendingChatApprovalPrompt;
 }) {
     const respond = trpc.chat.approval.respond.useMutation();
-    const [choice, setChoice] = React.useState<ChatApprovalChoice | null>(null);
 
-    const disabled = respond.isPending || Boolean(choice);
+    const disabled = respond.isPending;
     const send = (answer: AskUserQuestionAnswer) => {
         const nextChoice = toApprovalChoice(answer.optionId);
 
@@ -112,10 +119,10 @@ function ChatApprovalPromptContent({
             return;
         }
 
-        setChoice(nextChoice);
+        onAnswered?.(prompt.id);
         respond.mutate(
             { chatId, choice: nextChoice, sessionKey: prompt.sessionKey },
-            { onError: () => setChoice(null) }
+            { onError: () => onAnswerError?.(prompt.id) }
         );
     };
 
@@ -141,12 +148,7 @@ function ChatApprovalPromptContent({
                 ]}
                 showProgress={false}
             />
-            {choice && !respond.isError ? (
-                <p className="mx-auto mt-1 max-w-[520px] px-1 text-meta text-muted-foreground">
-                    {approvalResultLabels[choice]}
-                </p>
-            ) : null}
-            {respond.isError ? (
+            {hasError || respond.isError ? (
                 <p className="mx-auto mt-1 max-w-[520px] px-1 text-destructive text-meta">
                     Could not send the response.
                 </p>
@@ -172,6 +174,83 @@ export function getPendingChatApprovalPrompt(
     }
 
     return null;
+}
+
+export function getVisibleChatApprovalPrompt({
+    answeredApprovalIds,
+    rows,
+}: {
+    answeredApprovalIds: ReadonlySet<string>;
+    rows: NonNullable<ChatLogOutput>['rows'];
+}) {
+    const prompt = getPendingChatApprovalPrompt(rows);
+
+    if (!prompt || answeredApprovalIds.has(prompt.id)) {
+        return null;
+    }
+
+    return prompt;
+}
+
+export function useChatApprovalPromptState(rows: NonNullable<ChatLogOutput>['rows']) {
+    const [answeredApprovalIds, setAnsweredApprovalIds] = React.useState<ReadonlySet<string>>(
+        () => new Set()
+    );
+    const [failedApprovalId, setFailedApprovalId] = React.useState<string | null>(null);
+    const prompt = getVisibleChatApprovalPrompt({ answeredApprovalIds, rows });
+
+    React.useEffect(() => {
+        setAnsweredApprovalIds((current) => {
+            if (current.size === 0) {
+                return current;
+            }
+
+            const pendingIds = new Set(rows.filter(isPendingApprovalRow).map((row) => row.id));
+            const next = new Set([...current].filter((id) => pendingIds.has(id)));
+
+            return next.size === current.size ? current : next;
+        });
+    }, [rows]);
+
+    React.useEffect(() => {
+        if (!failedApprovalId || rows.some((row) => row.id === failedApprovalId)) {
+            return;
+        }
+
+        setFailedApprovalId(null);
+    }, [failedApprovalId, rows]);
+
+    const markAnswered = React.useCallback((promptId: string) => {
+        setFailedApprovalId((current) => (current === promptId ? null : current));
+        setAnsweredApprovalIds((current) => {
+            if (current.has(promptId)) {
+                return current;
+            }
+
+            return new Set(current).add(promptId);
+        });
+    }, []);
+
+    const markAnswerError = React.useCallback((promptId: string) => {
+        setFailedApprovalId(promptId);
+        setAnsweredApprovalIds((current) => {
+            if (!current.has(promptId)) {
+                return current;
+            }
+
+            const next = new Set(current);
+            next.delete(promptId);
+            return next;
+        });
+    }, []);
+
+    return {
+        hasError: prompt ? failedApprovalId === prompt.id : false,
+        isActive: prompt !== null,
+        markAnswerError,
+        markAnswered,
+        prompt,
+    };
 }
 
 function ApprovalCommandPreview({
