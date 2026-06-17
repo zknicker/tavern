@@ -15,5 +15,6 @@ to use, and the result to verify.
 | Development | [Development](development.md) |
 | Testing | [Testing](testing.md) |
 | Managed Hermes runtime | [Managed Hermes Runtime](hermes-managed-runtime.md) |
+| Managed Hermes live patches | [Hermes Engine Patches](hermes-engine-patches.md) |
 | Release process and Homebrew tap | [Release Process](releases.md) |
 | Runtime deployment | [Runtime Deployment](runtime-deploy.md) |

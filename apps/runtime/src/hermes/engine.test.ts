@@ -75,6 +75,7 @@ describe('managed Hermes engine pin and paths', () => {
             binaryPath: engineBinaryPath(pin),
             installedAt: '2026-06-09T00:00:00.000Z',
             installerSource: 'bundled-asset' as const,
+            patches: [],
             ref: pin.ref,
         };
         writeEngineMarker(pin, marker);

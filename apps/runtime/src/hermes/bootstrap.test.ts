@@ -98,6 +98,7 @@ describe('managed Hermes bootstrap', () => {
     it('installs the managed engine when nothing is found, then resolves it', async () => {
         const { ensureHermesBinary } = await import('./bootstrap');
         const { engineBinaryPath, readEngineMarker, resolveHermesPin } = await import('./engine');
+        const { managedHermesEnginePatchManifest } = await import('./engine-patches');
         const pin = resolveHermesPin();
         const phases: string[] = [];
 
@@ -112,8 +113,43 @@ describe('managed Hermes bootstrap', () => {
         expect(phases).toEqual(['installing', 'installed']);
         expect(readEngineMarker(pin)).toMatchObject({
             binaryPath: engineBinaryPath(pin),
+            patches: managedHermesEnginePatchManifest,
             ref: pin.ref,
         });
+    });
+
+    it('reconciles the patch marker for an existing managed engine before returning it', async () => {
+        const { ensureHermesBinary } = await import('./bootstrap');
+        const { engineBinaryPath, readEngineMarker, resolveHermesPin } = await import('./engine');
+        const { managedHermesEnginePatchManifest } = await import('./engine-patches');
+        const pin = resolveHermesPin();
+        const runInstaller = vi.fn();
+
+        await writeFakeEngineInstall(engineBinaryPath(pin));
+        const engine = await import('./engine');
+        engine.writeEngineMarker(pin, {
+            binaryPath: engineBinaryPath(pin),
+            installedAt: new Date().toISOString(),
+            installerSource: 'bundled-asset',
+            patches: [],
+            ref: pin.ref,
+        });
+
+        const resolved = await ensureHermesBinary({ runInstaller });
+
+        expect(resolved).toEqual({ binaryPath: engineBinaryPath(pin), tier: 'managed' });
+        expect(runInstaller).not.toHaveBeenCalled();
+        expect(readEngineMarker(pin)?.patches).toEqual(managedHermesEnginePatchManifest);
+        await expect(
+            fs.readFile(
+                path.join(
+                    path.resolve(path.dirname(engineBinaryPath(pin)), '..', '..'),
+                    'agent',
+                    'codex_runtime.py'
+                ),
+                'utf8'
+            )
+        ).resolves.toContain('agent._fire_stream_delta(text)');
     });
 
     it('force-installs the managed engine even when an allowed system binary exists', async () => {
@@ -190,6 +226,7 @@ describe('managed Hermes bootstrap', () => {
             binaryPath: engineBinaryPath(pin),
             installedAt: new Date().toISOString(),
             installerSource: 'bundled-asset',
+            patches: [],
             ref: pin.ref,
         });
 
@@ -277,6 +314,19 @@ describe('managed Hermes bootstrap', () => {
     async function writeFakeEngineInstall(binaryPath: string) {
         await writeExecutable(binaryPath);
         await writeExecutable(path.join(path.dirname(binaryPath), 'python'));
+        const installDir = path.resolve(path.dirname(binaryPath), '..', '..');
+        const codexRuntimePath = path.join(installDir, 'agent', 'codex_runtime.py');
+        await fs.mkdir(path.dirname(codexRuntimePath), { recursive: true });
+        await fs.writeFile(
+            codexRuntimePath,
+            `def run_codex_stream(agent, api_kwargs):
+    agent._codex_streamed_text_parts = []
+
+    def _on_text_delta(text: str) -> None:
+        agent._codex_streamed_text_parts.append(text)
+        agent._fire_stream_delta(text)
+`
+        );
     }
 });
 

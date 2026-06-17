@@ -75,6 +75,7 @@ describe('managed Hermes binary resolution', () => {
             binaryPath: managedBinary,
             installedAt: new Date().toISOString(),
             installerSource: 'bundled-asset',
+            patches: [],
             ref: pin.ref,
         });
 

@@ -16,6 +16,7 @@ const STATUS_FIXTURE: EngineStatusReport = {
         binaryPath: '/home/u/.tavern/engine/c986377/hermes-agent/venv/bin/hermes',
         installedAt: '2026-06-01T10:00:00.000Z',
         installerSource: 'remote-download',
+        patches: [],
         ref: 'c9863772368720a892faaa6e1f3402dbea72f4bf',
     },
     pin: { kind: 'commit', ref: 'c9863772368720a892faaa6e1f3402dbea72f4bf', source: 'pinned' },

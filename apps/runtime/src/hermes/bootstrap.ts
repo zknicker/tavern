@@ -17,6 +17,7 @@ import {
     resolveHermesPin,
     writeEngineMarker,
 } from './engine';
+import { applyManagedHermesEnginePatches } from './engine-patches';
 import { managedHermesSetupError } from './errors';
 import { resolveRuntimeAssetsRoot } from './managed-vault';
 
@@ -92,6 +93,9 @@ export async function ensureHermesBinary(
 ): Promise<ResolvedHermesBinary> {
     const existing = resolveInstalledHermesBinary();
     if (existing && !(options.forceInstall && existing.tier === 'system')) {
+        if (existing.tier === 'managed') {
+            await ensureInstalledManagedHermesPatches(resolveHermesPin());
+        }
         return existing;
     }
 
@@ -125,6 +129,7 @@ export async function bootstrapManagedHermes(options: EnsureHermesBinaryOptions 
         // Another process may have finished the install while we waited. A
         // marker with a broken interpreter does not count — reinstall it.
         if (isManagedInstallHealthy(pin)) {
+            await applyAndRecordManagedHermesPatches(pin);
             return;
         }
 
@@ -162,17 +167,37 @@ export async function bootstrapManagedHermes(options: EnsureHermesBinaryOptions 
             );
         }
         assertEngineInterpreterResolves(pin);
+        const patches = await applyManagedHermesEnginePatches(pin);
 
         writeEngineMarker(pin, {
             binaryPath: engineBinaryPath(pin),
             installedAt: new Date().toISOString(),
             installerSource: installer.source,
+            patches,
             ref: pin.ref,
         });
         // Keep the sandbox HOME on failure for debugging; drop it on success.
         await fs.rm(homeDir, { force: true, recursive: true }).catch(() => undefined);
         options.onPhase?.('installed');
     });
+}
+
+async function ensureInstalledManagedHermesPatches(pin: HermesEnginePin) {
+    await withEngineInstallLock(engineRoot(), async () => {
+        await applyAndRecordManagedHermesPatches(pin);
+    });
+}
+
+async function applyAndRecordManagedHermesPatches(pin: HermesEnginePin) {
+    if (!isManagedInstallHealthy(pin)) {
+        return;
+    }
+    const marker = readEngineMarker(pin);
+    if (!marker) {
+        return;
+    }
+    const patches = await applyManagedHermesEnginePatches(pin);
+    writeEngineMarker(pin, { ...marker, patches });
 }
 
 /**

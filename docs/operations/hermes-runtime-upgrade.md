@@ -20,31 +20,34 @@ Tavern Runtime records.
    the bundled installer snapshot at `apps/runtime/assets/hermes/installer/`
    (update its `SOURCE.md`). For local validation against a specific install,
    set `TAVERN_HERMES_BIN` or `TAVERN_HERMES_COMMIT` instead of editing code.
-3. Start the dev stack and confirm Runtime resolves the intended binary
+3. Review [Hermes Engine Patches](hermes-engine-patches.md). Remove patches
+   that landed upstream, update patches whose target source changed, and keep
+   each remaining patch's rationale current before starting the managed engine.
+4. Start the dev stack and confirm Runtime resolves the intended binary
    (`tavern engine status` shows the resolved tier and pin):
    ```bash
    bun run dev
    ```
-4. Read Hermes release notes and Tavern's [feature docs](../features/) for
+5. Read Hermes release notes and Tavern's [feature docs](../features/) for
    behavior that overlaps with Tavern-owned chat, model, settings, tools, or
    activity surfaces.
-5. If Hermes changed a behavior Tavern already models, update the owning Tavern
+6. If Hermes changed a behavior Tavern already models, update the owning Tavern
    spec before changing code.
-6. Update generated managed workspace/config code when Hermes changes expected
+7. Update generated managed workspace/config code when Hermes changes expected
    home, workspace, auth, model, or instruction files.
-7. Update capability checks when Hermes changes `/api/status`, `/api/sessions`,
+8. Update capability checks when Hermes changes `/api/status`, `/api/sessions`,
    `/api/ws`, `/api/model/options`, or `/api/skills`.
-8. Update adapter mappings when Hermes changes stream events for assistant text,
+9. Update adapter mappings when Hermes changes stream events for assistant text,
    assistant status, reasoning, tool progress, tool lifecycle, errors, or turn
    completion.
-9. Update model-provider setup when Hermes changes provider ids, auth storage,
+10. Update model-provider setup when Hermes changes provider ids, auth storage,
    model selection, custom provider config, or Codex OAuth state.
-10. Update the e2e model-provider mock only when the Hermes-to-provider request
+11. Update the e2e model-provider mock only when the Hermes-to-provider request
     or response contract changes. Keep the real managed Hermes stack live in
     e2e.
-11. Add a runtime-state migration only when Hermes state cannot be regenerated
+12. Add a runtime-state migration only when Hermes state cannot be regenerated
     or resynced.
-12. Run verification.
+13. Run verification.
 
 ## Feature Overlap Review
 

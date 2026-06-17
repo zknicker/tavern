@@ -18,10 +18,16 @@ export interface HermesEnginePin {
     source: 'commit-env' | 'branch-env' | 'pinned';
 }
 
+export interface HermesEngineAppliedPatch {
+    checksum: string;
+    id: string;
+}
+
 export interface HermesEngineMarker {
     binaryPath: string;
     installedAt: string;
     installerSource: 'bundled-asset' | 'remote-download';
+    patches: HermesEngineAppliedPatch[];
     ref: string;
 }
 
@@ -80,6 +86,7 @@ export function readEngineMarker(pin: HermesEnginePin): HermesEngineMarker | nul
             binaryPath: parsed.binaryPath,
             installedAt: parsed.installedAt,
             installerSource: parsed.installerSource ?? 'bundled-asset',
+            patches: readAppliedPatches(parsed.patches),
             ref: parsed.ref,
         };
     } catch {
@@ -96,4 +103,20 @@ export function writeEngineMarker(pin: HermesEnginePin, marker: HermesEngineMark
 export function enginePinDirName(pin: HermesEnginePin): string {
     // Branch refs can contain path separators; keep dir names flat.
     return pin.ref.replaceAll('/', '-');
+}
+
+function readAppliedPatches(value: unknown): HermesEngineAppliedPatch[] {
+    if (!Array.isArray(value)) {
+        return [];
+    }
+    return value
+        .filter(
+            (item): item is Partial<HermesEngineAppliedPatch> =>
+                typeof item === 'object' && item !== null
+        )
+        .flatMap((item) =>
+            typeof item.id === 'string' && typeof item.checksum === 'string'
+                ? [{ id: item.id, checksum: item.checksum }]
+                : []
+        );
 }

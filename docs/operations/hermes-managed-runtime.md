@@ -8,6 +8,8 @@ read_when:
   - verifying that multiple Tavern worktrees can run managed Hermes simultaneously
   - cold-start testing a real engine install or the no-co-opt / version-pin guarantees
   - changing the managed Vault skill package or Vault path handling
+  - changing managed Hermes live patches
+  - changing the managed Cortex wiki skill package or managed wiki crons
 ---
 
 # Managed Hermes Runtime
@@ -66,6 +68,11 @@ a `~/.local/bin/hermes` launcher and edits shell rc files from `$HOME`,
 ignoring `--dir`. The sandbox contains those writes; a managed install touches
 nothing outside `~/.tavern`. Tavern execs the engine's venv binary directly and
 never uses the launcher.
+
+Runtime applies Tavern-owned live patches to managed installs before launch.
+Patch ids and checksums are recorded in the engine marker, and the detailed
+inventory lives in [Hermes Engine Patches](hermes-engine-patches.md). Live
+patches do not apply to `TAVERN_HERMES_BIN` or system-tier installs.
 
 Runtime sets `HERMES_DESKTOP=1` for the managed dashboard process. Hermes uses
 that flag to start the dashboard cron ticker; without it, cron jobs can be
