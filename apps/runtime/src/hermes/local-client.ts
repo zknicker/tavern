@@ -217,7 +217,7 @@ export class LocalHermesClient extends LocalHermesUnsupportedSurfaces {
         if (modelCommandValue) {
             const result = await this.#setSessionModel(session.liveSessionId, modelCommandValue);
             return agentRuntimeRunCommandResultSchema.parse({
-                output: formatModelSwitchOutput(result),
+                output: formatModelSwitchOutput(result, modelCommandValue),
                 status: 'completed',
             });
         }
@@ -1520,19 +1520,49 @@ function modelCommandConfigValue(command: string) {
         return null;
     }
 
-    return isHermesModelRef(value) ? modelRefConfigValue(value) : value;
+    return isHermesModelRef(value) && !hasExplicitProviderFlag(value)
+        ? modelRefConfigValue(value)
+        : value;
 }
 
 function isHermesModelRef(value: string) {
     return /^[^/\s]+\/[^/\s].*$/u.test(value.trim());
 }
 
-function formatModelSwitchOutput(result: unknown) {
+function hasExplicitProviderFlag(value: string) {
+    return /(?:^|\s)--provider(?:=|\s+\S+)/u.test(value.trim());
+}
+
+function formatModelSwitchOutput(result: unknown, requestedValue: string | null = null) {
     const value = readStringFromUnknown(result, ['value']);
     const warning = readStringFromUnknown(result, ['warning']);
-    return [`Model switched: ${formatModelConfigValueForDisplay(value ?? null)}`, warning]
+    return [
+        `Model switched: ${formatModelConfigValueForDisplay(
+            selectModelSwitchDisplayValue(value ?? null, requestedValue)
+        )}`,
+        warning,
+    ]
         .filter(Boolean)
         .join('\n');
+}
+
+function selectModelSwitchDisplayValue(value: string | null, requestedValue: string | null) {
+    const resultValue = value?.trim() || null;
+    const requestedModel = parseModelConfigValue(requestedValue);
+
+    if (!resultValue) {
+        return requestedValue;
+    }
+
+    if (parseModelConfigValue(resultValue)) {
+        return resultValue;
+    }
+
+    if (requestedModel && resultValue === requestedModel.model) {
+        return requestedValue;
+    }
+
+    return resultValue;
 }
 
 function formatModelConfigValueForDisplay(value: string | null) {
@@ -1540,13 +1570,30 @@ function formatModelConfigValueForDisplay(value: string | null) {
         return 'unknown';
     }
 
-    const match = /^(?<model>\S+)\s+--provider\s+(?<provider>\S+)$/u.exec(value.trim());
+    const match = parseModelConfigValue(value);
 
-    if (!match?.groups) {
+    if (!match) {
         return value;
     }
 
-    return `${match.groups.provider}/${match.groups.model}`;
+    return `${match.provider}/${match.model}`;
+}
+
+function parseModelConfigValue(value: string | null) {
+    if (!value) {
+        return null;
+    }
+
+    const match = /^(?<model>\S+)\s+--provider\s+(?<provider>\S+)$/u.exec(value.trim());
+
+    if (!match?.groups) {
+        return null;
+    }
+
+    return {
+        model: match.groups.model,
+        provider: match.groups.provider,
+    };
 }
 
 function readStringFromUnknown(value: unknown, keys: string[]) {

@@ -1343,11 +1343,15 @@ describe('LocalHermesClient session routing', () => {
                     return;
                 }
                 if (request.method === 'config.set') {
+                    const value =
+                        params.value === 'z-ai/glm-5.2 --provider nous'
+                            ? 'z-ai/glm-5.2'
+                            : params.value;
                     socket.send(
                         JSON.stringify({
                             id: request.id,
                             jsonrpc: '2.0',
-                            result: { key: 'model', value: params.value },
+                            result: { key: 'model', value },
                         })
                     );
                     return;
@@ -1408,6 +1412,14 @@ describe('LocalHermesClient session routing', () => {
             'agent:main:tavern:cht_1',
             '/model anthropic/claude-haiku-4-5-20251001'
         );
+        const nestedModel = await client.runCommand(
+            'agent:main:tavern:cht_1',
+            '/model nous/z-ai/glm-5.2'
+        );
+        const nativeProviderFlag = await client.runCommand(
+            'agent:main:tavern:cht_1',
+            '/model z-ai/glm-5.2 --provider nous'
+        );
         const dispatched = await client.runCommand('agent:main:tavern:cht_1', '/retry now');
         client.close();
 
@@ -1415,9 +1427,19 @@ describe('LocalHermesClient session routing', () => {
             output: 'Model switched: anthropic/claude-haiku-4-5-20251001',
             status: 'completed',
         });
+        expect(nestedModel).toEqual({
+            output: 'Model switched: nous/z-ai/glm-5.2',
+            status: 'completed',
+        });
+        expect(nativeProviderFlag).toEqual({
+            output: 'Model switched: nous/z-ai/glm-5.2',
+            status: 'completed',
+        });
         expect(dispatched).toEqual({ output: 'queued retry', status: 'completed' });
         expect(requests.map((entry) => entry.method)).toEqual([
             'session.create',
+            'config.set',
+            'config.set',
             'config.set',
             'slash.exec',
             'command.dispatch',
@@ -1426,6 +1448,16 @@ describe('LocalHermesClient session routing', () => {
             key: 'model',
             session_id: 'live-cmd',
             value: 'claude-haiku-4-5-20251001 --provider anthropic',
+        });
+        expect(requests[2]?.params).toMatchObject({
+            key: 'model',
+            session_id: 'live-cmd',
+            value: 'z-ai/glm-5.2 --provider nous',
+        });
+        expect(requests[3]?.params).toMatchObject({
+            key: 'model',
+            session_id: 'live-cmd',
+            value: 'z-ai/glm-5.2 --provider nous',
         });
         expect(requests.at(-1)?.params).toMatchObject({
             arg: 'now',
