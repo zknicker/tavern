@@ -16,10 +16,7 @@ export const tavernRenderBarChartSeriesSchema = z
     })
     .strict();
 
-const chartYSchema = z.union([
-    chartSeriesKeySchema,
-    z.array(chartSeriesKeySchema).min(1).max(4),
-]);
+const chartYSchema = z.union([chartSeriesKeySchema, z.array(chartSeriesKeySchema).min(1).max(4)]);
 
 export const tavernRenderBarChartPropsSchema = z
     .object({
@@ -126,7 +123,7 @@ function validateStoredChartProps(
         });
     }
 
-    props.data.forEach((row, rowIndex) => {
+    for (const [rowIndex, row] of props.data.entries()) {
         const xValue = row[props.xKey];
 
         if (!(typeof xValue === 'string' || typeof xValue === 'number')) {
@@ -137,7 +134,7 @@ function validateStoredChartProps(
             });
         }
 
-        props.series.forEach((series, seriesIndex) => {
+        for (const [seriesIndex, series] of props.series.entries()) {
             const value = row[series.key];
 
             if (
@@ -153,8 +150,8 @@ function validateStoredChartProps(
                     path: ['data', rowIndex, props.series[seriesIndex]?.key ?? series.key],
                 });
             }
-        });
-    });
+        }
+    }
 }
 
 function validateToolChartInput(
@@ -173,7 +170,7 @@ function validateToolChartInput(
         });
     }
 
-    input.data.forEach((row, rowIndex) => {
+    for (const [rowIndex, row] of input.data.entries()) {
         const xValue = row[input.x];
 
         if (!(typeof xValue === 'string' || typeof xValue === 'number')) {
@@ -184,7 +181,7 @@ function validateToolChartInput(
             });
         }
 
-        yKeys.forEach((key) => {
+        for (const key of yKeys) {
             const value = chartNumberFromValue(row[key], { allowNegative: options.allowNegative });
 
             if (value === null) {
@@ -194,8 +191,8 @@ function validateToolChartInput(
                     path: ['data', rowIndex, key],
                 });
             }
-        });
-    });
+        }
+    }
 }
 
 function normalizeToolChartInput(input: ChartToolInput, options: { allowNegative: boolean }) {
@@ -236,10 +233,7 @@ function chartLabelFromKey(key: string) {
     return words ? words.charAt(0).toUpperCase() + words.slice(1) : key;
 }
 
-function chartNumberFromValue(
-    value: unknown,
-    options: { allowNegative?: boolean } = {}
-) {
+function chartNumberFromValue(value: unknown, options: { allowNegative?: boolean } = {}) {
     if (
         typeof value === 'number' &&
         Number.isFinite(value) &&

@@ -69,10 +69,13 @@ test('chart bar tool input normalizes numeric string series values', () => {
     if (!result.success) {
         throw new Error('Expected chart tool input to parse.');
     }
-    expect(result.data.data).toEqual([{ quarter: 'Q1', revenue: 12_000 }]);
-    expect(result.data.series).toEqual([{ key: 'revenue', label: 'Revenue' }]);
-    expect(result.data.unit).toBe('USD');
-    expect(result.data.xKey).toBe('quarter');
+    expect(result.data).toEqual({
+        data: [{ quarter: 'Q1', revenue: 12_000 }],
+        series: [{ key: 'revenue', label: 'Revenue' }],
+        title: 'Quarterly Revenue',
+        unit: 'USD',
+        xKey: 'quarter',
+    });
 });
 
 test('chart bar tool input accepts multiple y keys', () => {
