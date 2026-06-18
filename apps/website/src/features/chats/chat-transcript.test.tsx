@@ -219,6 +219,89 @@ test('ChatTranscript renders tool calls and agent responses through one surface'
     assert.doesNotMatch(markup, /aria-expanded="true"/);
 });
 
+test('ChatTranscript renders chart widgets inline', () => {
+    const markup = renderTranscript([widgetRow('ui-chart')]);
+
+    assert.match(markup, /Quarterly Revenue/);
+    assert.match(markup, /relative w-full overflow-visible/);
+    assert.doesNotMatch(markup, /Widget unavailable/);
+    assert.doesNotMatch(markup, /aria-expanded/);
+});
+
+test('ChatTranscript renders line chart widgets inline', () => {
+    const row = widgetRow('ui-line-chart');
+
+    if (row.kind !== 'widget') {
+        throw new Error('Expected Widget row.');
+    }
+
+    const markup = renderTranscript([
+        {
+            ...row,
+            widget: {
+                ...row.widget,
+                component: 'tavern.render_line_chart',
+                fallbackText: 'Monthly Net Signups',
+                props: {
+                    data: [
+                        { month: 'Jan', net: -12 },
+                        { month: 'Feb', net: 18 },
+                    ],
+                    series: [{ key: 'net', label: 'Net' }],
+                    title: 'Monthly Net Signups',
+                    xKey: 'month',
+                },
+            },
+        },
+    ]);
+
+    assert.match(markup, /Monthly Net Signups/);
+    assert.doesNotMatch(markup, /Widget unavailable/);
+});
+
+test('ChatTranscript renders fallback for invalid widgets', () => {
+    const row = widgetRow('ui-invalid');
+
+    if (row.kind !== 'widget') {
+        throw new Error('Expected Widget row.');
+    }
+
+    const markup = renderTranscript([
+        {
+            ...row,
+            widget: {
+                ...row.widget,
+                props: { data: [] },
+                validationError: 'Invalid widget.',
+            },
+        },
+    ]);
+
+    assert.match(markup, /Quarterly Revenue/);
+    assert.match(markup, /Widget unavailable/);
+});
+
+test('ChatTranscript renders fallback for unknown widget components', () => {
+    const row = widgetRow('ui-unknown');
+
+    if (row.kind !== 'widget') {
+        throw new Error('Expected Widget row.');
+    }
+
+    const markup = renderTranscript([
+        {
+            ...row,
+            widget: {
+                ...row.widget,
+                component: 'tavern.chart.line.v1',
+            },
+        },
+    ]);
+
+    assert.match(markup, /Quarterly Revenue/);
+    assert.match(markup, /Widget unavailable/);
+});
+
 test('ChatTranscript hides reasoning by default', () => {
     const markup = renderTranscript([
         {
@@ -1646,6 +1729,37 @@ function pendingApprovalRow(
             name: 'approval',
             status: 'running',
             summaryParts: [options.summary ?? command],
+        },
+    };
+}
+
+function widgetRow(id: string): ChatRow {
+    return {
+        actor: { id: 'tiny', kind: 'agent' },
+        completedAt: '2026-03-31T15:00:01.000Z',
+        connectsToNext: false,
+        connectsToPrevious: false,
+        id,
+        isFirstInGroup: true,
+        kind: 'widget',
+        responseId: 'rsp_ui',
+        sessionKey: 'agent:tiny:session-1',
+        startedAt: '2026-03-31T15:00:00.000Z',
+        widget: {
+            component: 'tavern.render_bar_chart',
+            fallbackText: 'Quarterly Revenue',
+            id,
+            props: {
+                data: [
+                    { quarter: 'Q1', revenue: 12_000 },
+                    { quarter: 'Q2', revenue: 15_500 },
+                ],
+                series: [{ key: 'revenue', label: 'Revenue' }],
+                title: 'Quarterly Revenue',
+                xKey: 'quarter',
+            },
+            target: 'chat.inline',
+            validationError: null,
         },
     };
 }

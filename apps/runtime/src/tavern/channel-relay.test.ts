@@ -587,6 +587,212 @@ describe('Tavern Hermes channel relay', () => {
         );
     });
 
+    it('stores ui.render events as durable widget activity', async () => {
+        hermesClient.streamChat.mockImplementationOnce(async function* streamChat() {
+            yield {
+                data: {
+                    component: 'tavern.render_bar_chart',
+                    fallback: { text: 'Quarterly Revenue' },
+                    props: {
+                        data: [{ quarter: 'Q1', revenue: 12_000 }],
+                        series: [{ key: 'revenue', label: 'Revenue' }],
+                        title: 'Quarterly Revenue',
+                        xKey: 'quarter',
+                    },
+                    target: 'chat.inline',
+                },
+                event: 'ui.render',
+            };
+            yield {
+                data: { content: 'Rendered the chart.', message_id: 'hermes_msg_ui' },
+                event: 'assistant.completed',
+            };
+        });
+        createChat({ id: 'cht_1' });
+
+        await sendTavernChannelMessage('cht_1', {
+            agent: {
+                agentId: 'agt_1',
+            },
+            message: {
+                content: 'show chart',
+                id: 'msg_ui',
+                nonce: 'nonce_ui',
+            },
+            target: {
+                externalId: null,
+                sessionKey: 'session_1',
+                target: 'cht_1',
+                type: 'tavern',
+            },
+        });
+        await waitForHermesTurn();
+
+        expect(listResponses('cht_1').activity).toMatchObject([
+            {
+                detail: 'Quarterly Revenue',
+                kind: 'widget',
+                metadata: {
+                    widget: {
+                        component: 'tavern.render_bar_chart',
+                        target: 'chat.inline',
+                    },
+                },
+                title: 'tavern.render_bar_chart',
+            },
+        ]);
+    });
+
+    it('stores render-bar-chart tool completions as durable widget activity', async () => {
+        hermesClient.streamChat.mockImplementationOnce(async function* streamChat() {
+            yield {
+                data: {
+                    arguments: {
+                        data: [{ quarter: 'Q1', revenue: '12000' }],
+                        series: [{ key: 'revenue', label: 'Revenue' }],
+                        title: 'Quarterly Revenue',
+                        xKey: 'quarter',
+                    },
+                    tool_name: 'render_bar_chart',
+                },
+                event: 'tool.started',
+            };
+            yield {
+                data: {
+                    result: '{"status":"rendered"}',
+                    tool_name: 'render_bar_chart',
+                },
+                event: 'tool.completed',
+            };
+            yield {
+                data: { content: 'Rendered the chart.', message_id: 'hermes_msg_chart_tool' },
+                event: 'assistant.completed',
+            };
+        });
+        createChat({ id: 'cht_1' });
+
+        await sendTavernChannelMessage('cht_1', {
+            agent: {
+                agentId: 'agt_1',
+            },
+            message: {
+                content: 'show chart',
+                id: 'msg_chart_tool',
+                nonce: 'nonce_chart_tool',
+            },
+            target: {
+                externalId: null,
+                sessionKey: 'session_1',
+                target: 'cht_1',
+                type: 'tavern',
+            },
+        });
+        await waitForHermesTurn();
+
+        expect(listResponses('cht_1').activity).toEqual(
+            expect.arrayContaining([
+                expect.objectContaining({
+                    kind: 'tool_call',
+                    status: 'completed',
+                    title: 'render_bar_chart',
+                }),
+                expect.objectContaining({
+                    detail: 'Quarterly Revenue',
+                    kind: 'widget',
+                    metadata: expect.objectContaining({
+                        widget: expect.objectContaining({
+                            component: 'tavern.render_bar_chart',
+                            fallback: { text: 'Quarterly Revenue' },
+                            props: expect.objectContaining({
+                                data: [{ quarter: 'Q1', revenue: 12_000 }],
+                            }),
+                            target: 'chat.inline',
+                        }),
+                    }),
+                    title: 'render_bar_chart',
+                }),
+            ])
+        );
+    });
+
+    it('stores render-line-chart tool completions as durable widget activity', async () => {
+        hermesClient.streamChat.mockImplementationOnce(async function* streamChat() {
+            yield {
+                data: {
+                    arguments: {
+                        data: [
+                            { month: 'Jan', net: '-12.5' },
+                            { month: 'Feb', net: 18 },
+                        ],
+                        series: [{ key: 'net', label: 'Net' }],
+                        title: 'Monthly Net Change',
+                        xKey: 'month',
+                    },
+                    tool_name: 'render_line_chart',
+                },
+                event: 'tool.started',
+            };
+            yield {
+                data: {
+                    result: '{"status":"rendered"}',
+                    tool_name: 'render_line_chart',
+                },
+                event: 'tool.completed',
+            };
+            yield {
+                data: { content: 'Rendered the chart.', message_id: 'hermes_msg_line_chart_tool' },
+                event: 'assistant.completed',
+            };
+        });
+        createChat({ id: 'cht_1' });
+
+        await sendTavernChannelMessage('cht_1', {
+            agent: {
+                agentId: 'agt_1',
+            },
+            message: {
+                content: 'show line chart',
+                id: 'msg_line_chart_tool',
+                nonce: 'nonce_line_chart_tool',
+            },
+            target: {
+                externalId: null,
+                sessionKey: 'session_1',
+                target: 'cht_1',
+                type: 'tavern',
+            },
+        });
+        await waitForHermesTurn();
+
+        expect(listResponses('cht_1').activity).toEqual(
+            expect.arrayContaining([
+                expect.objectContaining({
+                    kind: 'tool_call',
+                    status: 'completed',
+                    title: 'render_line_chart',
+                }),
+                expect.objectContaining({
+                    detail: 'Monthly Net Change',
+                    kind: 'widget',
+                    metadata: expect.objectContaining({
+                        widget: expect.objectContaining({
+                            component: 'tavern.render_line_chart',
+                            fallback: { text: 'Monthly Net Change' },
+                            props: expect.objectContaining({
+                                data: [
+                                    { month: 'Jan', net: -12.5 },
+                                    { month: 'Feb', net: 18 },
+                                ],
+                            }),
+                            target: 'chat.inline',
+                        }),
+                    }),
+                    title: 'render_line_chart',
+                }),
+            ])
+        );
+    });
+
     it('does not store Hermes reasoning.available as model Thinking', async () => {
         hermesClient.streamChat.mockImplementationOnce(async function* streamChat() {
             yield {

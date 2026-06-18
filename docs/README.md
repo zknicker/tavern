@@ -105,6 +105,8 @@ manage businesses, complete knowledge work, and automate routine tasks.
 | Tavern Runtime Chat Server | [Tavern Runtime Chat Server](../specs/runtime-chat-server.md) |
 | API Overview | [API Overview](api/overview.md) |
 | Data Model | [Data Model](internals/data-model.md) |
+| Chat Demos | [Chat Demos](internals/chat-demos.md) |
+| Widgets | [Widgets](internals/widgets.md) |
 
 ## Operations
 

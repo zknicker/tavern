@@ -145,6 +145,117 @@ describe('LocalHermesClient session routing', () => {
         ]);
     });
 
+    it('maps gateway tool.completed events and error flags into runtime tool lifecycle events', async () => {
+        server = new WebSocketServer({
+            host: '127.0.0.1',
+            port: await getFreePort(),
+        });
+        server.on('connection', (socket) => {
+            socket.on('message', (message) => {
+                const request = JSON.parse(message.toString()) as {
+                    id: string;
+                    method: string;
+                    params?: Record<string, unknown>;
+                };
+                const params = request.params ?? {};
+
+                if (request.method === 'session.create') {
+                    socket.send(
+                        JSON.stringify({
+                            id: request.id,
+                            jsonrpc: '2.0',
+                            result: { session_id: 'live-created' },
+                        })
+                    );
+                    return;
+                }
+
+                socket.send(JSON.stringify({ id: request.id, jsonrpc: '2.0', result: {} }));
+                if (request.method === 'prompt.submit') {
+                    socket.send(
+                        `${JSON.stringify({
+                            jsonrpc: '2.0',
+                            method: 'event',
+                            params: {
+                                payload: {
+                                    args: { title: 'Quarterly Revenue' },
+                                    tool: 'render_bar_chart',
+                                },
+                                session_id: params.session_id,
+                                type: 'tool.started',
+                            },
+                        })}\n`
+                    );
+                    socket.send(
+                        `${JSON.stringify({
+                            jsonrpc: '2.0',
+                            method: 'event',
+                            params: {
+                                payload: {
+                                    error: true,
+                                    result_text: '{"error":"Invalid chart data"}',
+                                    tool: 'render_bar_chart',
+                                },
+                                session_id: params.session_id,
+                                type: 'tool.completed',
+                            },
+                        })}\n`
+                    );
+                    socket.send(
+                        `${JSON.stringify({
+                            jsonrpc: '2.0',
+                            method: 'event',
+                            params: {
+                                payload: { text: 'done' },
+                                session_id: params.session_id,
+                                type: 'message.complete',
+                            },
+                        })}\n`
+                    );
+                }
+            });
+        });
+
+        await new Promise<void>((resolve) => server?.once('listening', () => resolve()));
+        const address = server.address();
+        if (!(address && typeof address === 'object')) {
+            throw new Error('Test WebSocket server did not bind a port.');
+        }
+
+        const { LocalHermesClient } = await import('./local-client');
+        const client = new LocalHermesClient({
+            baseUrl: `http://127.0.0.1:${address.port}`,
+            token: null,
+        });
+
+        const events = await collect(
+            client.streamChat({ content: 'show chart', sessionKey: 'session-1' })
+        );
+        client.close();
+
+        expect(events).toMatchObject([
+            {
+                data: {
+                    arguments: { title: 'Quarterly Revenue' },
+                    tool_name: 'render_bar_chart',
+                },
+                event: 'tool.started',
+            },
+            {
+                data: {
+                    error: true,
+                    result: '{"error":"Invalid chart data"}',
+                    tool_name: 'render_bar_chart',
+                },
+                event: 'tool.failed',
+            },
+            {
+                data: { content: 'done' },
+                event: 'assistant.completed',
+            },
+        ]);
+    });
+
     it('drops the live cache on reset so the next turn creates a fresh engine session', async () => {
         const requests: Array<{ method: string; params: Record<string, unknown> }> = [];
         let createCount = 0;

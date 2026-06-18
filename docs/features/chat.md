@@ -16,8 +16,8 @@ happen, and keep the durable timeline as context.
 * **Durable messages.** User, assistant, and system rows are stable history.
 * **Responses.** Agent work is grouped as a response to a message, with durable
   status from queued through completion or failure.
-* **Activity.** Tool calls, thinking summaries, commands, approvals, snippets,
-  and generated outputs render while work is happening and after completion.
+* **Activity.** Tool calls, Widgets, thinking summaries, commands, approvals,
+  snippets, and generated outputs render while work is happening and after completion.
   Tool rows label intent only (command, path, target — never results), stay
   neutral when completed, turn red on failure, and shimmer while running.
   Every contiguous tool group renders as a collapsed work drawer from its

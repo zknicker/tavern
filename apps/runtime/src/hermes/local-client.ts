@@ -864,13 +864,14 @@ export class LocalHermesClient extends LocalHermesUnsupportedSurfaces {
                     continue;
                 }
 
-                if (event.type === 'tool.start') {
+                if (event.type === 'tool.start' || event.type === 'tool.started') {
                     yield {
                         data: {
                             arguments: event.payload.args ?? {},
                             preview: readString(event.payload, ['context', 'preview', 'args_text']),
                             tool_call_id: readString(event.payload, ['tool_id', 'id', 'call_id']),
-                            tool_name: readString(event.payload, ['name', 'tool_name']) ?? 'tool',
+                            tool_name:
+                                readString(event.payload, ['name', 'tool_name', 'tool']) ?? 'tool',
                         },
                         event: 'tool.started',
                     };
@@ -883,17 +884,20 @@ export class LocalHermesClient extends LocalHermesUnsupportedSurfaces {
                             delta: readString(event.payload, ['preview', 'text', 'context']) ?? '',
                             source_event: event.type,
                             tool_call_id: readString(event.payload, ['tool_id', 'id', 'call_id']),
-                            tool_name: readString(event.payload, ['name', 'tool_name']) ?? 'tool',
+                            tool_name:
+                                readString(event.payload, ['name', 'tool_name', 'tool']) ?? 'tool',
                         },
                         event: 'tool.progress',
                     };
                     continue;
                 }
 
-                if (event.type === 'tool.complete') {
+                if (event.type === 'tool.complete' || event.type === 'tool.completed') {
+                    const isError = event.payload.error === true;
                     yield {
                         data: {
                             arguments: event.payload.args ?? {},
+                            error: isError,
                             preview: readString(event.payload, [
                                 'summary',
                                 'result_text',
@@ -901,9 +905,10 @@ export class LocalHermesClient extends LocalHermesUnsupportedSurfaces {
                             ]),
                             result: event.payload.result_text ?? event.payload.result ?? null,
                             tool_call_id: readString(event.payload, ['tool_id', 'id', 'call_id']),
-                            tool_name: readString(event.payload, ['name', 'tool_name']) ?? 'tool',
+                            tool_name:
+                                readString(event.payload, ['name', 'tool_name', 'tool']) ?? 'tool',
                         },
-                        event: 'tool.completed',
+                        event: isError ? 'tool.failed' : 'tool.completed',
                     };
                     continue;
                 }
@@ -972,6 +977,14 @@ export class LocalHermesClient extends LocalHermesUnsupportedSurfaces {
                     yield {
                         data: { ...event.payload, source_event: event.type },
                         event: 'clarification.requested',
+                    };
+                    continue;
+                }
+
+                if (event.type === 'ui.render') {
+                    yield {
+                        data: { ...event.payload, source_event: event.type },
+                        event: 'ui.render',
                     };
                     continue;
                 }

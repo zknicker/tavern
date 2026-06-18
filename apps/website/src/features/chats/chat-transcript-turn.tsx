@@ -19,6 +19,7 @@ import { useChatDismiss } from '../../hooks/chats/use-chat-dismiss.ts';
 import { formatShortTime } from '../../lib/format.ts';
 import { springs } from '../../lib/springs.ts';
 import { cn } from '../../lib/utils.ts';
+import { AgentWidget } from '../../widgets/render-widget.tsx';
 import { AgentPresenceIndicator } from './agent-presence-indicator.tsx';
 import { getActivePresenceVerb } from './chat-active-presence-verb.ts';
 import { CommandRunEntry } from './chat-command-card.tsx';
@@ -722,6 +723,10 @@ function AgentTurnItem({
         return (
             <AssistantReplyText message={message} showActions={message.id === lastMessage?.id} />
         );
+    }
+
+    if (item.kind === 'row' && item.row.kind === 'widget') {
+        return <AgentWidget row={item.row} />;
     }
 
     if (item.kind === 'failure') {

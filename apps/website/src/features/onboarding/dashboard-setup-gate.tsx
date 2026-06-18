@@ -21,11 +21,7 @@ export function DashboardSetupGate() {
     return <Outlet />;
 }
 
-export function shouldRedirectToRuntimeOnboarding(input: SetupGateState, pathname = '') {
-    if (pathname === '/dashboard/chat-layout-preview') {
-        return false;
-    }
-
+export function shouldRedirectToRuntimeOnboarding(input: SetupGateState, _pathname = '') {
     if (input.status === 'checking' || input.status === 'error') {
         return false;
     }

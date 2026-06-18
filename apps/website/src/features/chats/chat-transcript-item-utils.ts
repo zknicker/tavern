@@ -77,7 +77,12 @@ export function isTranscriptActivityItem(item: TranscriptItem) {
         return false;
     }
 
-    return item.kind !== 'row' || (item.row.kind !== 'message' && !isAssistantNarrationItem(item));
+    return (
+        item.kind !== 'row' ||
+        (item.row.kind !== 'message' &&
+            item.row.kind !== 'widget' &&
+            !isAssistantNarrationItem(item))
+    );
 }
 
 export function getTranscriptItemKey(item: TranscriptItem) {

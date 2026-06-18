@@ -184,3 +184,17 @@ so `docs:list` routes future agents correctly.
   remains.
 - When Tavern depends on a specific Gateway RPC, event shape, or delivery behavior, add or update a
   focused raw-frame or fixture-backed test. Do not rely on memory for event names or payload shape.
+
+## Agent skills
+
+### Issue tracker
+
+Issues live in the Linear `TAVERN` team. See `docs/agents/issue-tracker.md`.
+
+### Triage labels
+
+Use the default five-label triage vocabulary in Linear. See `docs/agents/triage-labels.md`.
+
+### Domain docs
+
+Single-context repo: use root `CONTEXT.md` and `docs/adr/`. See `docs/agents/domain.md`.

@@ -1,6 +1,18 @@
 {
   "version": 1,
   "skills": {
+    "bklit-studio": {
+      "source": "bklit/bklit-ui",
+      "sourceType": "github",
+      "skillPath": ".agents/skills/bklit-studio/SKILL.md",
+      "computedHash": "caba1f2d3b6e6588095df0f604289d7bb2f8eb84942b8436ffa4cdd97df8cf1a"
+    },
+    "bklit-studio-chart-performance": {
+      "source": "bklit/bklit-ui",
+      "sourceType": "github",
+      "skillPath": ".agents/skills/bklit-studio-chart-performance/SKILL.md",
+      "computedHash": "093d2ee09ed0a6ca307e2091ccc393896c49c8b0d614cc119b1222ba49dce988"
+    },
     "coss": {
       "source": "cosscom/coss",
       "sourceType": "github",

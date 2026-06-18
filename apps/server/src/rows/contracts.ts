@@ -76,6 +76,29 @@ export const workerRowSchema = z.object({
     worker: workerSchema,
 });
 
+export const widgetSchema = z.object({
+    component: z.string().nullable(),
+    fallbackText: z.string(),
+    id: z.string(),
+    props: z.unknown().nullable(),
+    target: z.string().nullable(),
+    validationError: z.string().nullable(),
+});
+
+export const widgetRowSchema = z.object({
+    actor: actorRefSchema.nullable(),
+    completedAt: z.string().nullable(),
+    connectsToNext: z.boolean(),
+    connectsToPrevious: z.boolean(),
+    id: z.string(),
+    isFirstInGroup: z.boolean(),
+    kind: z.literal('widget'),
+    responseId: z.string().optional(),
+    sessionKey: z.string().nullable(),
+    startedAt: z.string().nullable(),
+    widget: widgetSchema,
+});
+
 export const runtimeNoticeSchema = z.object({
     compactionCount: z.number().int().nonnegative().nullable().optional(),
     detail: z.string().nullable(),
@@ -162,6 +185,7 @@ export const systemRowSchema = z.discriminatedUnion('systemKind', [
 export const historyRowSchema = z.discriminatedUnion('kind', [
     messageRowSchema,
     toolRowSchema,
+    widgetRowSchema,
     workerRowSchema,
     systemRowSchema,
 ]);

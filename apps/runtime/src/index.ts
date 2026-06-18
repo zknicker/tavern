@@ -8,6 +8,7 @@ import { type ManagedHermesHandle, startHermesForRuntime } from './hermes/superv
 import { type RuntimeJobsManager, startRuntimeJobsManager } from './jobs/manager';
 import { ensureRuntimeJobsSchema } from './jobs/schema';
 import { log } from './log';
+import { seedDevelopmentChatDemos } from './tavern/development-chat-demos';
 import { startTavernRuntimeServer } from './tavern/server';
 import { recoverInterruptedChatResponses } from './tavern/turn-recovery';
 import { closeAgentNotesWatchers } from './workspace/notes-watcher';
@@ -29,6 +30,10 @@ async function main(): Promise<void> {
     const recoveredTurns = recoverInterruptedChatResponses(db);
     if (recoveredTurns > 0) {
         log.info('Recovered interrupted chat responses', { count: recoveredTurns });
+    }
+    const demoSeed = seedDevelopmentChatDemos({ db });
+    if (demoSeed.seeded > 0) {
+        log.info('Development chat demos ready', { count: demoSeed.seeded });
     }
     runtimeJobs = await startRuntimeJobsManager();
 

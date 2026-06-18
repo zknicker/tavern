@@ -9,8 +9,9 @@ type MessageRow = Extract<ChatLogRow, { kind: 'message' }>;
 type ToolRow = Extract<ChatLogRow, { kind: 'tool' }>;
 type ThinkingRow = Extract<ChatLogRow, { kind: 'system'; systemKind: 'thinking' }>;
 type NoticeRow = Extract<ChatLogRow, { kind: 'system'; systemKind: 'runtimeNotice' }>;
+type WidgetRow = Extract<ChatLogRow, { kind: 'widget' }>;
 type WorkerRow = Extract<ChatLogRow, { kind: 'worker' }>;
-type ProgressRow = MessageRow | NoticeRow | ThinkingRow | ToolRow | WorkerRow;
+type ProgressRow = MessageRow | NoticeRow | ThinkingRow | ToolRow | WidgetRow | WorkerRow;
 
 export const defaultLiveChatLogLimit = 100;
 
@@ -559,7 +560,7 @@ function rowTimestamp(row: ChatLogRow) {
     const timestamp =
         row.kind === 'message'
             ? row.message.timestamp
-            : row.kind === 'tool'
+            : row.kind === 'tool' || row.kind === 'widget'
               ? (row.startedAt ?? row.completedAt)
               : row.kind === 'worker'
                 ? (row.startedAt ?? row.completedAt ?? row.worker.lastEventAt)

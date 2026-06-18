@@ -6,6 +6,13 @@ import type {
 } from '@tavern/api';
 import { readConfigValue } from '../config';
 import { closeSharedHermesClient, getSharedHermesClient } from '../hermes/shared-client';
+import {
+    chartWidgetActivityFromRenderBarChartTool,
+    chartWidgetActivityFromRenderLineChartTool,
+    renderBarChartToolName,
+    renderLineChartToolName,
+} from '../widgets/charts';
+import { widgetActivityFromHermesRender } from '../widgets/render';
 import { createDelivery, upsertResponse, upsertResponseActivity } from './chat-api';
 import { createAgentParticipantId } from './chat-api/ids';
 import { createGatewayActivityRecorder } from './hermes-gateway-activities';
@@ -81,6 +88,8 @@ export async function runHermesTurn(input: {
     const progressMessages: string[] = [];
     let reasoningSegment: ReasoningSegment | null = null;
     let reasoningSegmentIndex = 0;
+    let widgetRenderIndex = 0;
+    const toolArgumentsByKey = new Map<string, unknown>();
     const completedReasoningMessages: string[] = [];
     const stream = createTurnStreamThrottle();
     const gatewayActivities = createGatewayActivityRecorder({
@@ -229,6 +238,14 @@ export async function runHermesTurn(input: {
                 continue;
             }
 
+            if (event.event === 'ui.render') {
+                widgetRenderIndex += 1;
+                flushAssistantToProgress();
+                stream.flush();
+                recordWidgetRender(input, turn, event, widgetRenderIndex);
+                continue;
+            }
+
             if (event.event === 'assistant.delta') {
                 const delta = readStreamText(event.data.delta) ?? '';
                 assistantContent += delta;
@@ -314,7 +331,13 @@ export async function runHermesTurn(input: {
             if (isToolLifecycleEvent(event.event)) {
                 flushAssistantToProgress();
                 stream.flush();
-                recordToolLifecycle(input, turn, event);
+                rememberToolArguments(toolArgumentsByKey, event);
+                const toolEvent = eventWithKnownToolArguments(toolArgumentsByKey, event);
+                recordToolLifecycle(input, turn, toolEvent);
+                if (toolEvent.event === 'tool.completed') {
+                    widgetRenderIndex += 1;
+                    recordRenderChartToolWidget(input, turn, toolEvent, widgetRenderIndex);
+                }
                 continue;
             }
 
@@ -802,6 +825,69 @@ function recordToolProgress(input: HermesTurnInput, turn: HermesTurn, event: Her
     });
 }
 
+function recordWidgetRender(
+    input: HermesTurnInput,
+    turn: HermesTurn,
+    event: HermesEvent,
+    index: number
+) {
+    const timestamp = new Date().toISOString();
+
+    upsertResponseActivity(
+        input.chatId,
+        input.responseId,
+        widgetActivityFromHermesRender({
+            activityId: createActivityId(input.runId, `ui_${index}`),
+            agentId: input.agentId,
+            eventData: event.data,
+            messageId: input.requestMessageId,
+            runId: input.runId,
+            sessionKey: input.sessionKey,
+            startedAt: turn.startedAt,
+            timestamp,
+        })
+    );
+}
+
+function recordRenderChartToolWidget(
+    input: HermesTurnInput,
+    turn: HermesTurn,
+    event: HermesEvent,
+    index: number
+) {
+    const toolName = readString(event.data.tool_name);
+
+    if (
+        (toolName !== renderBarChartToolName && toolName !== renderLineChartToolName) ||
+        event.data.error === true
+    ) {
+        return;
+    }
+
+    const toolCallId = readString(event.data.tool_call_id);
+    const timestamp = new Date().toISOString();
+    const projector =
+        toolName === renderBarChartToolName
+            ? chartWidgetActivityFromRenderBarChartTool
+            : chartWidgetActivityFromRenderLineChartTool;
+    const activity = projector({
+        activityId: createActivityId(input.runId, `widget_${toolCallId ?? index}`),
+        agentId: input.agentId,
+        messageId: input.requestMessageId,
+        runId: input.runId,
+        sessionKey: input.sessionKey,
+        startedAt: turn.startedAt,
+        timestamp,
+        toolInput: event.data.arguments ?? {},
+    });
+
+    if (!activity) {
+        return;
+    }
+
+    upsertResponseActivity(input.chatId, input.responseId, activity);
+}
+
 function isRecordableAssistantStatus(event: HermesEvent) {
     const detail = readString(event.data.delta);
 
@@ -1016,6 +1102,57 @@ function recordToolLifecycle(input: HermesTurnInput, turn: HermesTurn, event: He
         turn,
         type: 'turn.progress',
     });
+}
+
+function rememberToolArguments(toolArgumentsByKey: Map<string, unknown>, event: HermesEvent) {
+    const argumentsValue = event.data.arguments;
+
+    if (!hasToolArguments(argumentsValue)) {
+        return;
+    }
+
+    const key = toolArgumentKey(event);
+
+    if (key) {
+        toolArgumentsByKey.set(key, argumentsValue);
+    }
+}
+
+function eventWithKnownToolArguments(
+    toolArgumentsByKey: Map<string, unknown>,
+    event: HermesEvent
+): HermesEvent {
+    if (hasToolArguments(event.data.arguments)) {
+        return event;
+    }
+
+    const key = toolArgumentKey(event);
+    const argumentsValue = key ? toolArgumentsByKey.get(key) : undefined;
+
+    if (!argumentsValue) {
+        return event;
+    }
+
+    return {
+        ...event,
+        data: {
+            ...event.data,
+            arguments: argumentsValue,
+        },
+    };
+}
+
+function toolArgumentKey(event: HermesEvent) {
+    return readString(event.data.tool_call_id) ?? readString(event.data.tool_name);
+}
+
+function hasToolArguments(value: unknown) {
+    return (
+        value !== null &&
+        typeof value === 'object' &&
+        !Array.isArray(value) &&
+        Object.keys(value).length > 0
+    );
 }
 
 function completeHermesTurn(

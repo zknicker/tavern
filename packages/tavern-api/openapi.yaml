@@ -802,7 +802,7 @@ components:
       enum: [queued, running, completed, failed, cancelled]
     ResponseActivityKind:
       type: string
-      enum: [planning, reasoning, tool_call, tool_result, command, approval, message, artifact, custom]
+      enum: [planning, reasoning, tool_call, tool_result, command, approval, message, artifact, widget, custom]
     ChatResponse:
       type: object
       additionalProperties: false

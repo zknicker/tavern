@@ -1,6 +1,11 @@
 import { AiAudioIcon } from '@hugeicons-pro/core-stroke-rounded';
 import * as React from 'react';
-import { Bar, BarChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
+import { Bar } from '../../components/charts/bar.tsx';
+import { BarChart } from '../../components/charts/bar-chart.tsx';
+import { BarXAxis } from '../../components/charts/bar-x-axis.tsx';
+import { Grid } from '../../components/charts/grid.tsx';
+import { ChartTooltip, type TooltipRow } from '../../components/charts/tooltip/index.ts';
+import { YAxis } from '../../components/charts/y-axis.tsx';
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card.tsx';
 import { Icon } from '../../components/ui/icon.tsx';
 import { Button } from '../../components/ui/primitives/button.tsx';
@@ -10,7 +15,6 @@ import { Input } from '../../components/ui/primitives/input.tsx';
 import { useSaveOpenRouterSettings } from '../../hooks/connections/use-save-openrouter-settings.ts';
 import type { LiveUsageOutput } from '../../lib/trpc.tsx';
 import { UsageSpendSummary } from './usage-spend-summary.tsx';
-import { UsageSpendTooltip } from './usage-spend-tooltip.tsx';
 import { useUsageSpend } from './use-usage-spend.ts';
 
 interface UsageSpendModuleProps {
@@ -66,50 +70,28 @@ export function UsageSpendModule({ liveUsage }: UsageSpendModuleProps) {
                 </CardTitle>
             </CardHeader>
             <CardContent className="px-4 pt-3 pb-0">
-                <div className="h-48">
-                    <ResponsiveContainer height="100%" width="100%">
-                        <BarChart
-                            data={chartData}
-                            margin={{ bottom: 0, left: -20, right: 4, top: 4 }}
-                        >
-                            <XAxis
-                                axisLine={false}
-                                dataKey="day"
-                                interval="preserveStartEnd"
-                                minTickGap={24}
-                                tick={{
-                                    fill: 'var(--color-muted-foreground)',
-                                    fontSize: 'var(--text-caption)',
-                                }}
-                                tickLine={false}
+                <div className="h-48" style={usageChartStyleVars}>
+                    <BarChart
+                        aspectRatio={undefined}
+                        data={chartData}
+                        margin={{ bottom: 34, left: 44, right: 10, top: 8 }}
+                        stacked={true}
+                        stackGap={0}
+                        xDataKey="day"
+                    >
+                        <Grid horizontal={true} vertical={false} />
+                        <YAxis formatValue={(value) => `$${value.toFixed(0)}`} numTicks={4} />
+                        <ChartTooltip rows={(point) => buildUsageSpendTooltipRows(keys, point)} />
+                        {keys.map((key, index) => (
+                            <Bar
+                                dataKey={key.id}
+                                fill={keyColors[index % keyColors.length]}
+                                key={key.id}
+                                lineCap={3}
                             />
-                            <YAxis
-                                allowDecimals={false}
-                                axisLine={false}
-                                tick={{
-                                    fill: 'var(--color-muted-foreground)',
-                                    fontSize: 'var(--text-caption)',
-                                }}
-                                tickFormatter={(value) => `$${Number(value).toFixed(0)}`}
-                                tickLine={false}
-                                width={40}
-                            />
-                            <Tooltip
-                                content={<UsageSpendTooltip />}
-                                cursor={{ fill: 'var(--color-muted)', opacity: 0.4, radius: 4 }}
-                            />
-                            {keys.map((key, index) => (
-                                <Bar
-                                    dataKey={key.id}
-                                    fill={keyColors[index % keyColors.length]}
-                                    key={key.id}
-                                    name={key.label}
-                                    radius={index === keys.length - 1 ? [3, 3, 0, 0] : [0, 0, 0, 0]}
-                                    stackId="spend"
-                                />
-                            ))}
-                        </BarChart>
-                    </ResponsiveContainer>
+                        ))}
+                        <BarXAxis maxLabels={6} />
+                    </BarChart>
                 </div>
             </CardContent>
             <UsageSpendSummary grandTotal={grandTotal} stats={keyStats} />
@@ -177,3 +159,30 @@ function _getOpenRouterRangeLabel(latestReportedDate: string | null) {
 
     return `Through ${formatDay(latestReportedDate)} UTC`;
 }
+
+function buildUsageSpendTooltipRows(
+    keys: { id: string; label: string }[],
+    point: Record<string, unknown>
+): TooltipRow[] {
+    return keys
+        .map((key, index) => {
+            const value = Number(point[key.id] ?? 0);
+
+            return {
+                color: keyColors[index % keyColors.length] ?? keyColors[0],
+                label: key.label,
+                value: Number.isFinite(value) ? `$${value.toFixed(2)}` : '$0.00',
+            };
+        })
+        .filter((row) => row.value !== '$0.00');
+}
+
+const usageChartStyleVars = {
+    '--chart-background': 'var(--surface-3)',
+    '--chart-crosshair': 'var(--muted-foreground)',
+    '--chart-grid': 'color-mix(in srgb, var(--border-strong) 45%, transparent)',
+    '--chart-label': 'var(--muted-foreground)',
+    '--chart-tooltip-background': 'color-mix(in srgb, var(--foreground) 88%, transparent)',
+    '--chart-tooltip-foreground': 'var(--background)',
+    '--chart-tooltip-muted': 'color-mix(in srgb, var(--background) 62%, transparent)',
+} as React.CSSProperties;

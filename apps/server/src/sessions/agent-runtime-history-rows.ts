@@ -85,7 +85,7 @@ function getRowTimestamp(row: SessionHistory['rows'][number]) {
         return row.message.timestamp;
     }
 
-    if (row.kind === 'tool' || row.kind === 'worker') {
+    if (row.kind === 'tool' || row.kind === 'widget' || row.kind === 'worker') {
         return row.startedAt ?? row.completedAt ?? new Date(0).toISOString();
     }
 
@@ -97,7 +97,7 @@ function getRowSessionKey(row: SessionHistory['rows'][number]) {
         return row.message.sourceSessionKey;
     }
 
-    if (row.kind === 'tool' || row.kind === 'worker') {
+    if (row.kind === 'tool' || row.kind === 'widget' || row.kind === 'worker') {
         return row.sessionKey;
     }
 

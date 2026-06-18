@@ -7,10 +7,11 @@ import {
 
 const commandToolNames = ['bash', 'command', 'exec', 'shell', 'terminal', 'zsh'];
 
-export type ActivityItem = Exclude<
-    TranscriptItem,
-    { kind: 'activeReply' } | { kind: 'activeStatus' } | { kind: 'failure' }
->;
+type ActivityRow = Exclude<TranscriptRow, Extract<TranscriptRow, { kind: 'message' | 'widget' }>>;
+
+export type ActivityItem = Extract<TranscriptItem, { kind: 'row' }> & {
+    row: ActivityRow;
+};
 
 export function isActivityItem(item: TranscriptItem): item is ActivityItem {
     if (item.kind === 'activeReply' || item.kind === 'activeStatus' || item.kind === 'failure') {
@@ -21,7 +22,10 @@ export function isActivityItem(item: TranscriptItem): item is ActivityItem {
         return false;
     }
 
-    return item.kind !== 'row' || (item.row.kind !== 'message' && !isNarrationToolRow(item.row));
+    return (
+        item.kind !== 'row' ||
+        (item.row.kind !== 'message' && item.row.kind !== 'widget' && !isNarrationToolRow(item.row))
+    );
 }
 
 export function isAssistantNarrationItem(item: TranscriptItem): item is Extract<
@@ -70,7 +74,7 @@ function getActivityStartTimestamp(item: ActivityItem | undefined): string | nul
         return item.row.timestamp;
     }
 
-    return item.row.message.timestamp;
+    return null;
 }
 
 function getActivityEndTimestamp(item: ActivityItem | undefined): string | null {
@@ -86,7 +90,7 @@ function getActivityEndTimestamp(item: ActivityItem | undefined): string | null 
         return item.row.timestamp;
     }
 
-    return item.row.message.timestamp;
+    return null;
 }
 
 export function formatActivityHeader({

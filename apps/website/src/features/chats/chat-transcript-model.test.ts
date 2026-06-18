@@ -297,6 +297,27 @@ test('buildTranscriptEntries keeps active thinking status after assistant narrat
     ).toEqual(['tool:exec', 'tool:message', 'activeStatus']);
 });
 
+test('buildTranscriptEntries keeps widgets inline inside the agent turn', () => {
+    const entries = buildTranscriptEntries({
+        activeReply: null,
+        rows: [
+            withResponseId(widgetRow('ui-1'), 'rsp_1'),
+            withResponseId(agentMessage('agent-1', 'Here is the chart.', false, false), 'rsp_1'),
+        ],
+    });
+
+    expect(entries).toHaveLength(1);
+    expect(entries[0]).toMatchObject({ kind: 'turn', participant: 'agent' });
+
+    if (entries[0]?.kind !== 'turn') {
+        throw new Error('Expected agent turn entry.');
+    }
+
+    expect(
+        entries[0].items.map((item) => (item.kind === 'row' ? item.row.kind : item.kind))
+    ).toEqual(['widget', 'message']);
+});
+
 test('buildTranscriptEntries splits agent turns by response identity over gap heuristics', () => {
     const rows: ChatRow[] = [
         withResponseId(toolRow('tool-1', false, false), 'rsp_1'),
@@ -340,8 +361,8 @@ test('buildTranscriptEntries keeps one response together across long gaps', () =
 });
 
 function withResponseId(row: ChatRow, responseId: string): ChatRow {
-    if (!(row.kind === 'message' || row.kind === 'tool')) {
-        throw new Error('Expected a message or tool row.');
+    if (!(row.kind === 'message' || row.kind === 'tool' || row.kind === 'widget')) {
+        throw new Error('Expected a message, tool, or widget row.');
     }
 
     return { ...row, responseId };
@@ -441,6 +462,33 @@ function narrationRow(id: string, connectsToPrevious: boolean, connectsToNext: b
             name: 'message',
             status: 'running',
             summaryParts: ['I found the first file.'],
+        },
+    };
+}
+
+function widgetRow(id: string): ChatRow {
+    return {
+        actor: { id: 'agent-1', kind: 'agent' },
+        completedAt: '2026-05-11T16:00:05.000Z',
+        connectsToNext: false,
+        connectsToPrevious: false,
+        id,
+        isFirstInGroup: true,
+        kind: 'widget',
+        sessionKey: 'session-1',
+        startedAt: '2026-05-11T16:00:01.000Z',
+        widget: {
+            component: 'tavern.render_bar_chart',
+            fallbackText: 'Quarterly Revenue',
+            id,
+            props: {
+                data: [{ quarter: 'Q1', revenue: 12_000 }],
+                series: [{ key: 'revenue', label: 'Revenue' }],
+                title: 'Quarterly Revenue',
+                xKey: 'quarter',
+            },
+            target: 'chat.inline',
+            validationError: null,
         },
     };
 }

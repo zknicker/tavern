@@ -45,25 +45,4 @@ describe('dashboard setup gate', () => {
             })
         ).toBe(false);
     });
-
-    test('keeps the static chat layout preview available without runtime setup', () => {
-        expect(
-            shouldRedirectToRuntimeOnboarding(
-                {
-                    hasConfiguredRuntime: false,
-                    status: 'unconfigured',
-                },
-                '/dashboard/chat-layout-preview'
-            )
-        ).toBe(false);
-        expect(
-            shouldRedirectToRuntimeOnboarding(
-                {
-                    hasConfiguredRuntime: false,
-                    status: 'version-mismatch',
-                },
-                '/dashboard/chat-layout-preview'
-            )
-        ).toBe(false);
-    });
 });

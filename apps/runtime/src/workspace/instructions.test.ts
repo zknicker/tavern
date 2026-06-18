@@ -69,6 +69,14 @@ describe('generated agent instructions', () => {
         expect(content).toContain('`SOUL.md`');
         expect(content).toContain('use the `tavern` skill');
         expect(content).toContain('## Environment');
+        expect(content).toContain('## Widgets');
+        expect(content).toContain('You can render Widgets using tool calls');
+        expect(content).toContain(
+            '- `render_bar_chart`: simple bar chart from prepared categorical data; number values render as bars.'
+        );
+        expect(content).toContain(
+            '- `render_line_chart`: simple trend chart from prepared numeric data; number values render as a line or filled area.'
+        );
         expect(content).toContain('## Visible Progress');
         expect(content).toContain('send one short preamble');
         expect(content).toContain('send a brief update');

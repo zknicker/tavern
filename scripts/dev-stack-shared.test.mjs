@@ -94,6 +94,7 @@ test('createDevStackEnvironment uses shared dev state outside packaged app state
     assert.equal(environment.TAVERN_RUNTIME_PORT, '42002');
     assert.equal(environment.TAVERN_SERVER_PORT, '42001');
     assert.equal(environment.TAVERN_WEBSITE_PORT, '42000');
+    assert.equal(environment.TAVERN_DEV_STACK, '1');
     assert.equal(environment.TAVERN_HERMES_ALLOW_SYSTEM, '1');
     assert.equal(environment.TAVERN_HERMES_AUTO_INSTALL, '0');
     assert.notEqual(environment.DATABASE_PATH, path.join(os.homedir(), '.tavern', 'tavern.sqlite'));

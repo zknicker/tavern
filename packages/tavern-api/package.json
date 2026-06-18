@@ -6,6 +6,9 @@
   "exports": {
     ".": "./src/index.ts",
     "./config": "./src/runtime/config.ts",
+    "./development-chat-demos": "./src/development-chat-demos.ts",
+    "./widgets": "./src/widgets/contracts.ts",
+    "./widgets/charts": "./src/widgets/charts/contracts.ts",
     "./openapi.yaml": "./openapi.yaml"
   },
   "scripts": {

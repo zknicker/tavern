@@ -20,6 +20,7 @@ export function ChatDetailFrame({
     animateTimeline = true,
     chatId,
     conversationLayout,
+    defaultOpenWorkGroups = false,
     emptyLabel,
     enableVirtualization = true,
     error,
@@ -38,6 +39,7 @@ export function ChatDetailFrame({
     animateTimeline?: boolean;
     chatId: string;
     conversationLayout?: ConversationMessageLayout;
+    defaultOpenWorkGroups?: boolean;
     emptyLabel: string;
     enableVirtualization?: boolean;
     error?: unknown;
@@ -114,6 +116,7 @@ export function ChatDetailFrame({
                                     animate={animateTimeline}
                                     chatId={chatId}
                                     conversationLayout={conversationLayout}
+                                    defaultOpenWorkGroups={defaultOpenWorkGroups}
                                     failedTurn={failedTurn}
                                     fetchPreviousPage={fetchPreviousPage}
                                     hasPreviousPage={hasPreviousPage}

@@ -1,20 +1,29 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
-import { HERMES_HOME } from '../config';
+import { tavernRenderBarChartToolName, tavernRenderLineChartToolName } from '@tavern/api';
 
 const PLUGIN_NAME = 'tavern-messenger-platform';
-const PLUGIN_DIR = path.join(HERMES_HOME, 'plugins', 'platforms', 'tavern-messenger');
 
 export function tavernMessengerPluginName() {
     return PLUGIN_NAME;
 }
 
+export function tavernMessengerPluginSource() {
+    return PLUGIN_SOURCE;
+}
+
 export async function ensureTavernMessengerPlugin() {
-    await fs.mkdir(PLUGIN_DIR, { recursive: true });
+    const pluginDir = await tavernMessengerPluginDir();
+    await fs.mkdir(pluginDir, { recursive: true });
     await Promise.all([
-        fs.writeFile(path.join(PLUGIN_DIR, 'plugin.yaml'), PLUGIN_MANIFEST),
-        fs.writeFile(path.join(PLUGIN_DIR, '__init__.py'), PLUGIN_SOURCE),
+        fs.writeFile(path.join(pluginDir, 'plugin.yaml'), PLUGIN_MANIFEST),
+        fs.writeFile(path.join(pluginDir, '__init__.py'), PLUGIN_SOURCE),
     ]);
+}
+
+async function tavernMessengerPluginDir() {
+    const { HERMES_HOME } = await import('../config');
+    return path.join(HERMES_HOME, 'plugins', 'platforms', 'tavern-messenger');
 }
 
 const PLUGIN_MANIFEST = `name: ${PLUGIN_NAME}
@@ -34,13 +43,124 @@ requires_env:
 `;
 
 const PLUGIN_SOURCE = `import json
+import math
 import os
+import re
 import urllib.error
 import urllib.request
 from typing import Any, Dict, Optional
 
 from gateway.config import Platform, PlatformConfig
 from gateway.platforms.base import BasePlatformAdapter, SendResult
+from tools.registry import tool_error, tool_result
+
+
+_CHART_NUMBER_PATTERN = re.compile(r"^[+-]?(?:\\d+(?:\\.\\d*)?|\\.\\d+)(?:[eE][+-]?\\d+)?$")
+_ROOT_KEYS = {"title", "xKey", "series", "data"}
+_SERIES_KEYS = {"key", "label"}
+
+
+TAVERN_RENDER_BAR_CHART_SCHEMA = {
+    "name": "${tavernRenderBarChartToolName}",
+    "description": "Use when the user asks to see prepared categorical data as a simple vertical bar chart in chat. Series values should be finite nonnegative JSON numbers; numeric strings are normalized.",
+    "parameters": {
+        "type": "object",
+        "additionalProperties": False,
+        "required": ["title", "xKey", "series", "data"],
+        "properties": {
+            "title": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 160,
+                "description": "Chart title.",
+            },
+            "xKey": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 80,
+                "description": "Data key for x-axis labels.",
+            },
+            "series": {
+                "type": "array",
+                "minItems": 1,
+                "maxItems": 4,
+                "description": "1-4 numeric series; each key's row value must be a finite nonnegative JSON number or numeric string.",
+                "items": {
+                    "type": "object",
+                    "additionalProperties": False,
+                    "required": ["key", "label"],
+                    "properties": {
+                        "key": {"type": "string", "minLength": 1, "maxLength": 80},
+                        "label": {"type": "string", "minLength": 1, "maxLength": 120},
+                    },
+                },
+            },
+            "data": {
+                "type": "array",
+                "minItems": 1,
+                "maxItems": 50,
+                "description": "1-50 rows. xKey is the label; series values are finite nonnegative numbers or numeric strings.",
+                "items": {
+                    "type": "object",
+                    "additionalProperties": {
+                        "type": ["string", "number", "boolean", "null"]
+                    },
+                },
+            },
+        },
+    },
+}
+
+TAVERN_RENDER_LINE_CHART_SCHEMA = {
+    "name": "${tavernRenderLineChartToolName}",
+    "description": "Use when the user asks to see prepared numeric data as a simple trend chart in chat. Series values should be finite JSON numbers; numeric strings are normalized.",
+    "parameters": {
+        "type": "object",
+        "additionalProperties": False,
+        "required": ["title", "xKey", "series", "data"],
+        "properties": {
+            "title": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 160,
+                "description": "Chart title.",
+            },
+            "xKey": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 80,
+                "description": "Data key for x-axis labels.",
+            },
+            "series": {
+                "type": "array",
+                "minItems": 1,
+                "maxItems": 4,
+                "description": "1-4 numeric series; each key's row value must be a finite JSON number or numeric string.",
+                "items": {
+                    "type": "object",
+                    "additionalProperties": False,
+                    "required": ["key", "label"],
+                    "properties": {
+                        "key": {"type": "string", "minLength": 1, "maxLength": 80},
+                        "label": {"type": "string", "minLength": 1, "maxLength": 120},
+                    },
+                },
+            },
+            "data": {
+                "type": "array",
+                "minItems": 1,
+                "maxItems": 50,
+                "description": "1-50 rows. xKey is the label; series values are finite numbers or numeric strings.",
+                "items": {
+                    "type": "object",
+                    "additionalProperties": {
+                        "type": ["string", "number", "boolean", "null"]
+                    },
+                },
+            },
+        },
+    },
+}
 
 
 def _runtime_url(extra: Dict[str, Any]) -> str:
@@ -62,6 +182,110 @@ def validate_config(config) -> bool:
 
 def is_connected(config) -> bool:
     return validate_config(config)
+
+
+def _is_text(value: Any, max_len: int) -> bool:
+    return isinstance(value, str) and 0 < len(value.strip()) <= max_len
+
+
+def _is_json_primitive(value: Any) -> bool:
+    return value is None or isinstance(value, (str, int, float, bool))
+
+
+def _coerce_chart_number(value: Any, *, allow_negative: bool = False) -> Optional[float]:
+    if isinstance(value, bool):
+        return None
+    if isinstance(value, (int, float)) and math.isfinite(value) and (allow_negative or value >= 0):
+        return float(value)
+    if not isinstance(value, str):
+        return None
+    stripped = value.strip()
+    if not stripped:
+        return None
+    if not _CHART_NUMBER_PATTERN.fullmatch(stripped):
+        return None
+    try:
+        numeric = float(stripped)
+    except ValueError:
+        return None
+    return numeric if math.isfinite(numeric) and (allow_negative or numeric >= 0) else None
+
+
+def _validate_tavern_chart(args: Any, *, allow_negative: bool) -> Optional[str]:
+    value_message = (
+        "finite number or numeric string"
+        if allow_negative
+        else "finite nonnegative number or numeric string"
+    )
+    if not isinstance(args, dict):
+        return "Input must be an object."
+    unsupported = set(args.keys()) - _ROOT_KEYS
+    if unsupported:
+        return "Input contains unsupported fields."
+    if not _is_text(args.get("title"), 160):
+        return "title must be a non-empty string."
+    x_key = args.get("xKey")
+    if not _is_text(x_key, 80):
+        return "xKey must be a non-empty string."
+
+    series = args.get("series")
+    if not isinstance(series, list) or not (1 <= len(series) <= 4):
+        return "series must contain 1 to 4 entries."
+    series_keys = []
+    for item in series:
+        if not isinstance(item, dict):
+            return "Each series entry must be an object."
+        unsupported = set(item.keys()) - _SERIES_KEYS
+        if unsupported:
+            return "Series entries contain unsupported fields."
+        key = item.get("key")
+        if not _is_text(key, 80):
+            return "Each series entry needs a non-empty key."
+        if not _is_text(item.get("label"), 120):
+            return "Each series entry needs a non-empty label."
+        series_keys.append(key)
+    if len(set(series_keys)) != len(series_keys):
+        return "Series keys must be unique."
+
+    data = args.get("data")
+    if not isinstance(data, list) or not (1 <= len(data) <= 50):
+        return "data must contain 1 to 50 rows."
+    for index, row in enumerate(data):
+        if not isinstance(row, dict):
+            return f"data[{index}] must be an object."
+        for field, value in row.items():
+            if not _is_json_primitive(value):
+                return f"data[{index}].{field} must be a JSON primitive."
+        x_value = row.get(x_key)
+        if not isinstance(x_value, (str, int, float)) or isinstance(x_value, bool):
+            return f"data[{index}].{x_key} must be a string or number."
+        for key in series_keys:
+            if _coerce_chart_number(row.get(key), allow_negative=allow_negative) is None:
+                return f"data[{index}].{key} must be a {value_message}."
+
+    return None
+
+
+def _validate_tavern_render_bar_chart(args: Any) -> Optional[str]:
+    return _validate_tavern_chart(args, allow_negative=False)
+
+
+def _validate_tavern_render_line_chart(args: Any) -> Optional[str]:
+    return _validate_tavern_chart(args, allow_negative=True)
+
+
+def _handle_tavern_render_bar_chart(args: Any, **_kwargs) -> str:
+    error = _validate_tavern_render_bar_chart(args)
+    if error:
+        return tool_error(error)
+    return tool_result({"status": "rendered"})
+
+
+def _handle_tavern_render_line_chart(args: Any, **_kwargs) -> str:
+    error = _validate_tavern_render_line_chart(args)
+    if error:
+        return tool_error(error)
+    return tool_result({"status": "rendered"})
 
 
 def _env_enablement() -> Optional[dict]:
@@ -164,6 +388,22 @@ async def _standalone_send(
 
 
 def register(ctx) -> None:
+    ctx.register_tool(
+        name="${tavernRenderBarChartToolName}",
+        toolset="tavern",
+        schema=TAVERN_RENDER_BAR_CHART_SCHEMA,
+        handler=_handle_tavern_render_bar_chart,
+        description="Render prepared categorical data as a simple vertical bar chart in chat.",
+        emoji="📊",
+    )
+    ctx.register_tool(
+        name="${tavernRenderLineChartToolName}",
+        toolset="tavern",
+        schema=TAVERN_RENDER_LINE_CHART_SCHEMA,
+        handler=_handle_tavern_render_line_chart,
+        description="Render prepared numeric data as a simple trend chart in chat.",
+        emoji="📈",
+    )
     ctx.register_platform(
         name="tavern",
         label="Tavern",

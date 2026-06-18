@@ -1,4 +1,5 @@
 import { runtimeRoutes } from '@tavern/api';
+import { developmentChatDemoIds } from '@tavern/api/development-chat-demos';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { closeDb, getDb, initTestDb } from '../db/connection';
 import { ensureRuntimeSchema } from '../db/schema';
@@ -23,6 +24,7 @@ import {
     upsertResponseActivity,
 } from './chat-api';
 import { insertEvent } from './chat-api/events';
+import { seedDevelopmentChatDemos } from './development-chat-demos';
 import { handleTavernRuntimeRequest } from './router';
 import { listProjectedTavernRuntimeEvents } from './runtime-event-projection';
 
@@ -56,6 +58,60 @@ describe('Tavern Runtime Chat API store', () => {
         expect(projected).not.toContain('turn.started');
         expect(projected).not.toContain('turn.completed');
         expect(projected).not.toContain('turn.progress');
+    });
+
+    it('seeds development chat demos as durable Runtime chats', () => {
+        const first = seedDevelopmentChatDemos({ db: getDb(), enabled: true });
+        const second = seedDevelopmentChatDemos({ db: getDb(), enabled: true });
+
+        const demoIds = Object.values(developmentChatDemoIds).sort();
+
+        expect(first.seeded).toBe(demoIds.length);
+        expect(second.seeded).toBe(demoIds.length);
+        expect(
+            listChats()
+                .chats.map((chat) => chat.id)
+                .sort()
+        ).toEqual(demoIds);
+        expect(
+            listMessages(developmentChatDemoIds.charts).messages.map((message) => message.id)
+        ).toEqual(['msg_demo_charts_request', 'msg_demo_charts_response']);
+        expect(listResponses(developmentChatDemoIds.charts).responses).toMatchObject([
+            {
+                id: 'rsp_demo_charts',
+                request_message_id: 'msg_demo_charts_request',
+                response_message_id: 'msg_demo_charts_response',
+                status: 'completed',
+            },
+        ]);
+        expect(getResponseActivity('act_demo_charts_widget')).toMatchObject({
+            id: 'act_demo_charts_widget',
+            kind: 'widget',
+            status: 'completed',
+            title: 'render_bar_chart',
+        });
+        expect(getResponseActivity('act_demo_line_chart_widget')).toMatchObject({
+            id: 'act_demo_line_chart_widget',
+            kind: 'widget',
+            status: 'completed',
+            title: 'render_line_chart',
+        });
+        expect(listMessages(developmentChatDemoIds.charts).messages).toHaveLength(2);
+        expect(listMessages(developmentChatDemoIds.lineChart).messages).toHaveLength(2);
+        expect(listMessages(developmentChatDemoIds.attachment).messages[0]?.attachments).toEqual([
+            expect.objectContaining({ filename: 'weather-request.txt', type: 'file' }),
+        ]);
+        expect(getResponseActivity('act_demo_activity_turn_tests')).toMatchObject({
+            kind: 'tool_call',
+            status: 'completed',
+        });
+        expect(listResponses(developmentChatDemoIds.streamingStack).responses).toMatchObject([
+            { id: 'rsp_demo_streaming_stack', status: 'running' },
+        ]);
+        expect(getResponseActivity('act_demo_approval_flow_prompt')).toMatchObject({
+            kind: 'approval',
+            status: 'running',
+        });
     });
 
     it('soft-deletes a response and projects a history change', () => {

@@ -16,6 +16,7 @@ export function renderAgentInstructions(agentName: string, notes: string) {
 
 You are ${agentName}, the resident agent of Tavern, the user's chat app. Tavern is your home: your chats, scheduled automations, skills, settings, and durable memory all live here.`,
         environmentSection,
+        widgetsSection,
         visibleProgressSection,
         delegationSection,
         memorySection,
@@ -46,6 +47,15 @@ const environmentSection = `## Environment
 - Skills and toolsets define what you can do; the user enables them in Tavern Settings.
 - The user configures you in Tavern Settings: model and thinking effort, skills and toolsets, memory, automations, and your instruction files. You cannot change Tavern settings yourself; when a change belongs to settings, direct the user there.
 - For Tavern operations — finding, reading, or posting to your chats, scheduled work, reading your own configuration, or questions about Tavern itself — use the \`tavern\` skill.`;
+
+const widgetsSection = `## Widgets
+
+You can render Widgets using tool calls. Widgets give the user a richer display of important information.
+
+Available Widgets:
+
+- \`render_bar_chart\`: simple bar chart from prepared categorical data; number values render as bars.
+- \`render_line_chart\`: simple trend chart from prepared numeric data; number values render as a line or filled area.`;
 
 const visibleProgressSection = `## Visible Progress
 

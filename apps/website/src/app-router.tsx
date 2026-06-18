@@ -76,16 +76,6 @@ export function createAppRouter() {
                                     element: <Navigate replace to="/dashboard/overview" />,
                                 },
                                 {
-                                    path: 'chat-layout-preview',
-                                    lazy: lazyRoute(
-                                        () =>
-                                            import(
-                                                './routes/dashboard/chat-layout-preview-page.tsx'
-                                            ),
-                                        'ChatLayoutPreviewPage'
-                                    ),
-                                },
-                                {
                                     path: 'workers',
                                     element: <Navigate replace to="/dashboard/vault" />,
                                 },

@@ -31,6 +31,7 @@ export function createDevStackEnvironment({
     return {
         ...baseEnvironment,
         DATABASE_PATH: baseEnvironment.DATABASE_PATH ?? statePaths.databasePath,
+        TAVERN_DEV_STACK: baseEnvironment.TAVERN_DEV_STACK ?? '1',
         // Dev stacks share one system Hermes; never download an engine per machine.
         TAVERN_HERMES_ALLOW_SYSTEM: baseEnvironment.TAVERN_HERMES_ALLOW_SYSTEM ?? '1',
         TAVERN_HERMES_AUTO_INSTALL: baseEnvironment.TAVERN_HERMES_AUTO_INSTALL ?? '0',
