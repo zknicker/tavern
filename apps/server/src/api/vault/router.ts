@@ -1,11 +1,24 @@
-import { agentRuntimeSaveVaultSettingsSchema, vaultSearchInputSchema } from '@tavern/api';
+import {
+    agentRuntimeSaveVaultSettingsSchema,
+    vaultCreatePageSchema,
+    vaultMovePathSchema,
+    vaultPathInputSchema,
+    vaultSavePageSchema,
+    vaultSearchInputSchema,
+} from '@tavern/api';
 import { z } from 'zod';
 import {
+    createVaultFolder,
+    createVaultPage,
+    deleteVaultFolder,
+    deleteVaultPage,
     getVaultPage,
     getVaultSettings,
     getVaultStatus,
     listVaultBacklinks,
     listVaultPages,
+    moveVaultPath,
+    saveVaultPage,
     saveVaultSettings,
     searchVault,
 } from '../../vault/service.ts';
@@ -15,10 +28,28 @@ export const vaultRouter = createRouter({
     backlinks: publicProcedure
         .input(z.object({ path: z.string().trim().min(1) }))
         .query(({ input }) => listVaultBacklinks(input)),
+    createFolder: publicProcedure
+        .input(vaultPathInputSchema)
+        .mutation(({ input }) => createVaultFolder(input)),
+    createPage: publicProcedure
+        .input(vaultCreatePageSchema)
+        .mutation(({ input }) => createVaultPage(input)),
+    deleteFolder: publicProcedure
+        .input(vaultPathInputSchema)
+        .mutation(({ input }) => deleteVaultFolder(input)),
+    deletePage: publicProcedure
+        .input(vaultPathInputSchema)
+        .mutation(({ input }) => deleteVaultPage(input)),
     get: publicProcedure
         .input(z.object({ path: z.string().trim().min(1) }))
         .query(({ input }) => getVaultPage(input)),
     list: publicProcedure.query(() => listVaultPages()),
+    movePath: publicProcedure
+        .input(vaultMovePathSchema)
+        .mutation(({ input }) => moveVaultPath(input)),
+    savePage: publicProcedure
+        .input(vaultSavePageSchema)
+        .mutation(({ input }) => saveVaultPage(input)),
     saveSettings: publicProcedure
         .input(agentRuntimeSaveVaultSettingsSchema)
         .mutation(({ input }) => saveVaultSettings(input)),

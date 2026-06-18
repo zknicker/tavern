@@ -239,14 +239,24 @@ import {
     agentRuntimeVaultSettingsSchema,
     agentRuntimeWorkspaceInstructionsSchema,
     type VaultBacklinkList,
+    type VaultCreatePage,
+    type VaultMovePath,
     type VaultPage,
     type VaultPageList,
+    type VaultPathInput,
+    type VaultPathMutationResult,
+    type VaultSavePage,
     type VaultSearchInput,
     type VaultSearchResult,
     type VaultStatus,
     vaultBacklinkListSchema,
+    vaultCreatePageSchema,
+    vaultMovePathSchema,
     vaultPageListSchema,
     vaultPageSchema,
+    vaultPathInputSchema,
+    vaultPathMutationResultSchema,
+    vaultSavePageSchema,
     vaultSearchInputSchema,
     vaultSearchResultSchema,
     vaultStatusSchema,
@@ -282,6 +292,8 @@ export interface TavernAgentRuntimeClient {
     close(): void;
     createConnector(input: AgentRuntimeSaveConnector): Promise<AgentRuntimeSaveConnectorResult>;
     createCronJob(input: AgentRuntimeCreateCron): Promise<AgentRuntimeCron>;
+    createVaultFolder(input: VaultPathInput): Promise<VaultPathMutationResult>;
+    createVaultPage(input: VaultCreatePage): Promise<VaultPathMutationResult>;
     deleteAgent(agentId: string): Promise<AgentRuntimeArchiveAgent>;
     deleteBinding(bindingId: string): Promise<AgentRuntimeArchiveBinding>;
     deleteConnector(id: string): Promise<AgentRuntimeDeleteConnectorResult>;
@@ -292,6 +304,8 @@ export interface TavernAgentRuntimeClient {
     ): Promise<AgentRuntimeHermesConfigSnapshot>;
     deleteOpenAiSettings(): Promise<AgentRuntimeOpenAiSettings>;
     deleteOpenRouterSettings(): Promise<AgentRuntimeOpenRouterSettings>;
+    deleteVaultFolder(input: VaultPathInput): Promise<VaultPathMutationResult>;
+    deleteVaultPage(input: VaultPathInput): Promise<VaultPathMutationResult>;
     getAgentConfig(agentId: string): Promise<AgentRuntimeAgent>;
     getAgentEnv(): Promise<AgentRuntimeAgentEnv>;
     getAgentFile(agentId: string, path: string): Promise<AgentRuntimeAgentFileContent>;
@@ -350,6 +364,7 @@ export interface TavernAgentRuntimeClient {
     listToolsets(): Promise<AgentRuntimeToolsetList>;
     listVaultBacklinks(input: { path: string }): Promise<VaultBacklinkList>;
     listVaultPages(): Promise<VaultPageList>;
+    moveVaultPath(input: VaultMovePath): Promise<VaultPathMutationResult>;
     pollModelProviderOAuth(input: AgentRuntimePollModelProviderOAuth): Promise<unknown>;
     postMessage(
         chatId: string,
@@ -403,6 +418,7 @@ export interface TavernAgentRuntimeClient {
         toolsetId: string,
         input: AgentRuntimeToolsetEnvUpdate
     ): Promise<AgentRuntimeToolsetEnvUpdateResult>;
+    saveVaultPage(input: VaultSavePage): Promise<VaultPathMutationResult>;
     saveVaultSettings(
         input: AgentRuntimeSaveVaultSettings
     ): Promise<AgentRuntimeSaveVaultSettingsResult>;
@@ -1016,6 +1032,66 @@ class HttpTavernAgentRuntimeClient implements TavernAgentRuntimeClient {
         return agentRuntimeSaveVaultSettingsResultSchema.parse(await response.json());
     }
 
+    async createVaultPage(input: VaultCreatePage) {
+        const payload = vaultCreatePageSchema.parse(input);
+        const response = await fetch(`${this.#baseUrl}${agentRuntimeRoutes.vaultPages}`, {
+            body: JSON.stringify(payload),
+            headers: {
+                ...this.#authHeaders,
+                'content-type': 'application/json',
+                [agentRuntimeMutationHeaders.origin]: agentRuntimeMutationOrigins.tavern,
+            },
+            method: 'POST',
+        });
+
+        if (!response.ok) {
+            await readErrorResponse(response);
+        }
+
+        return vaultPathMutationResultSchema.parse(await response.json());
+    }
+
+    async saveVaultPage(input: VaultSavePage) {
+        const payload = vaultSavePageSchema.parse(input);
+        const response = await fetch(
+            `${this.#baseUrl}${agentRuntimeRoutes.vaultPage(payload.path)}`,
+            {
+                body: JSON.stringify({ body: payload.body }),
+                headers: {
+                    ...this.#authHeaders,
+                    'content-type': 'application/json',
+                    [agentRuntimeMutationHeaders.origin]: agentRuntimeMutationOrigins.tavern,
+                },
+                method: 'PUT',
+            }
+        );
+
+        if (!response.ok) {
+            await readErrorResponse(response);
+        }
+
+        return vaultPathMutationResultSchema.parse(await response.json());
+    }
+
+    async createVaultFolder(input: VaultPathInput) {
+        const payload = vaultPathInputSchema.parse(input);
+        const response = await fetch(`${this.#baseUrl}${agentRuntimeRoutes.vaultFolders}`, {
+            body: JSON.stringify(payload),
+            headers: {
+                ...this.#authHeaders,
+                'content-type': 'application/json',
+                [agentRuntimeMutationHeaders.origin]: agentRuntimeMutationOrigins.tavern,
+            },
+            method: 'POST',
+        });
+
+        if (!response.ok) {
+            await readErrorResponse(response);
+        }
+
+        return vaultPathMutationResultSchema.parse(await response.json());
+    }
+
     async listVaultPages() {
         const response = await fetch(`${this.#baseUrl}${agentRuntimeRoutes.vaultPages}`, {
             headers: this.#authHeaders,
@@ -1044,6 +1120,65 @@ class HttpTavernAgentRuntimeClient implements TavernAgentRuntimeClient {
         }
 
         return vaultPageSchema.parse(await response.json());
+    }
+
+    async deleteVaultPage(input: VaultPathInput) {
+        const payload = vaultPathInputSchema.parse(input);
+        const response = await fetch(
+            `${this.#baseUrl}${agentRuntimeRoutes.vaultPage(payload.path)}`,
+            {
+                headers: {
+                    ...this.#authHeaders,
+                    [agentRuntimeMutationHeaders.origin]: agentRuntimeMutationOrigins.tavern,
+                },
+                method: 'DELETE',
+            }
+        );
+
+        if (!response.ok) {
+            await readErrorResponse(response);
+        }
+
+        return vaultPathMutationResultSchema.parse(await response.json());
+    }
+
+    async deleteVaultFolder(input: VaultPathInput) {
+        const payload = vaultPathInputSchema.parse(input);
+        const response = await fetch(
+            `${this.#baseUrl}${agentRuntimeRoutes.vaultFolder(payload.path)}`,
+            {
+                headers: {
+                    ...this.#authHeaders,
+                    [agentRuntimeMutationHeaders.origin]: agentRuntimeMutationOrigins.tavern,
+                },
+                method: 'DELETE',
+            }
+        );
+
+        if (!response.ok) {
+            await readErrorResponse(response);
+        }
+
+        return vaultPathMutationResultSchema.parse(await response.json());
+    }
+
+    async moveVaultPath(input: VaultMovePath) {
+        const payload = vaultMovePathSchema.parse(input);
+        const response = await fetch(`${this.#baseUrl}${agentRuntimeRoutes.vaultMovePath}`, {
+            body: JSON.stringify(payload),
+            headers: {
+                ...this.#authHeaders,
+                'content-type': 'application/json',
+                [agentRuntimeMutationHeaders.origin]: agentRuntimeMutationOrigins.tavern,
+            },
+            method: 'POST',
+        });
+
+        if (!response.ok) {
+            await readErrorResponse(response);
+        }
+
+        return vaultPathMutationResultSchema.parse(await response.json());
     }
 
     async searchVault(input: VaultSearchInput) {

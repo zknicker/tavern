@@ -980,7 +980,36 @@ export const vaultPageSchema = vaultPageSummarySchema.extend({
 });
 
 export const vaultPageListSchema = z.object({
+    folders: z.array(z.string().trim().min(1)).default([]),
     pages: z.array(vaultPageSummarySchema),
+});
+
+export const vaultPathKindSchema = z.enum(['folder', 'page']);
+
+export const vaultCreatePageSchema = z.object({
+    body: z.string().optional(),
+    path: z.string().trim().min(1, 'Enter a page path.'),
+});
+
+export const vaultSavePageSchema = z.object({
+    body: z.string(),
+    path: z.string().trim().min(1, 'Enter a page path.'),
+});
+
+export const vaultPathInputSchema = z.object({
+    path: z.string().trim().min(1, 'Enter a Vault path.'),
+});
+
+export const vaultMovePathSchema = z.object({
+    fromPath: z.string().trim().min(1, 'Enter the current path.'),
+    kind: vaultPathKindSchema,
+    toPath: z.string().trim().min(1, 'Enter the new path.'),
+});
+
+export const vaultPathMutationResultSchema = z.object({
+    kind: vaultPathKindSchema,
+    page: vaultPageSchema.nullable().default(null),
+    path: z.string().trim().min(1),
 });
 
 export const vaultSearchInputSchema = z.object({
@@ -2067,9 +2096,15 @@ export type PlatformBindingStatus = z.infer<typeof agentRuntimeBindingStatusSche
 export type VaultBacklink = z.infer<typeof vaultBacklinkSchema>;
 export type VaultBacklinkList = z.infer<typeof vaultBacklinkListSchema>;
 export type VaultConfigSource = z.infer<typeof vaultConfigSourceSchema>;
+export type VaultCreatePage = z.infer<typeof vaultCreatePageSchema>;
+export type VaultMovePath = z.infer<typeof vaultMovePathSchema>;
 export type VaultPage = z.infer<typeof vaultPageSchema>;
 export type VaultPageList = z.infer<typeof vaultPageListSchema>;
 export type VaultPageSummary = z.infer<typeof vaultPageSummarySchema>;
+export type VaultPathInput = z.infer<typeof vaultPathInputSchema>;
+export type VaultPathKind = z.infer<typeof vaultPathKindSchema>;
+export type VaultPathMutationResult = z.infer<typeof vaultPathMutationResultSchema>;
+export type VaultSavePage = z.infer<typeof vaultSavePageSchema>;
 export type VaultSearchInput = z.input<typeof vaultSearchInputSchema>;
 export type VaultSearchResult = z.infer<typeof vaultSearchResultSchema>;
 export type VaultStatus = z.infer<typeof vaultStatusSchema>;

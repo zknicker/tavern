@@ -5,11 +5,17 @@ import { afterEach, beforeEach, describe, expect, test } from 'vitest';
 import { closeDb, initTestDb } from '../db/connection.ts';
 import { ensureRuntimeSchema } from '../db/schema.ts';
 import {
+    createVaultFolder,
+    createVaultPage,
+    deleteVaultFolder,
+    deleteVaultPage,
     getVaultPage,
     getVaultSettings,
     getVaultStatus,
     listVaultBacklinks,
     listVaultPages,
+    moveVaultPath,
+    saveVaultPage,
     saveVaultSettings,
     searchVault,
 } from './store.ts';
@@ -72,6 +78,7 @@ describe('Vault store', () => {
     test('lists Markdown pages without dot-directory files', async () => {
         const list = await listVaultPages();
 
+        expect(list.folders).toEqual(['Concepts', 'Projects']);
         expect(list.pages.map((page) => page.path).sort()).toEqual([
             'Concepts/Lattice.md',
             'INDEX.md',
@@ -94,6 +101,92 @@ describe('Vault store', () => {
             title: 'Alpha Project',
             vaultPath: root,
         });
+    });
+
+    test('creates pages and folders inside the Vault root', async () => {
+        await expect(createVaultFolder({ path: 'Projects/Beta' })).resolves.toMatchObject({
+            kind: 'folder',
+            path: 'Projects/Beta',
+        });
+
+        await expect(
+            createVaultPage({ body: '# Launch Plan\n', path: 'Projects/Beta/Launch Plan' })
+        ).resolves.toMatchObject({
+            kind: 'page',
+            page: {
+                body: '# Launch Plan\n',
+                path: 'Projects/Beta/Launch Plan.md',
+                title: 'Launch Plan',
+            },
+            path: 'Projects/Beta/Launch Plan.md',
+        });
+    });
+
+    test('saves page bodies while preserving frontmatter', async () => {
+        await expect(
+            saveVaultPage({
+                body: '# Alpha Project\n\nUpdated body.\n',
+                path: 'Projects/Alpha.md',
+            })
+        ).resolves.toMatchObject({
+            page: {
+                body: '# Alpha Project\n\nUpdated body.\n',
+                frontmatter: {
+                    aliases: ['alpha brief'],
+                    tags: ['ads', 'launch'],
+                    title: 'Alpha Project',
+                },
+            },
+        });
+
+        await expect(
+            fs.readFile(path.join(root, 'Projects', 'Alpha.md'), 'utf8')
+        ).resolves.toContain('aliases:\n  - alpha brief\n---\n# Alpha Project\n\nUpdated body.');
+    });
+
+    test('moves pages and folders inside the Vault root', async () => {
+        await expect(
+            moveVaultPath({
+                fromPath: 'Projects/Alpha.md',
+                kind: 'page',
+                toPath: 'Projects/Renamed Alpha.md',
+            })
+        ).resolves.toMatchObject({
+            kind: 'page',
+            page: { path: 'Projects/Renamed Alpha.md' },
+            path: 'Projects/Renamed Alpha.md',
+        });
+        await expect(getVaultPage({ path: 'Projects/Alpha.md' })).resolves.toBeNull();
+
+        await expect(
+            moveVaultPath({
+                fromPath: 'Projects',
+                kind: 'folder',
+                toPath: 'Archive/Projects',
+            })
+        ).resolves.toMatchObject({
+            kind: 'folder',
+            path: 'Archive/Projects',
+        });
+        await expect(
+            getVaultPage({ path: 'Archive/Projects/Renamed Alpha.md' })
+        ).resolves.toMatchObject({
+            title: 'Alpha Project',
+        });
+    });
+
+    test('deletes pages and folders inside the Vault root', async () => {
+        await expect(deleteVaultPage({ path: 'Concepts/Lattice.md' })).resolves.toMatchObject({
+            kind: 'page',
+            path: 'Concepts/Lattice.md',
+        });
+        await expect(getVaultPage({ path: 'Concepts/Lattice.md' })).resolves.toBeNull();
+
+        await expect(deleteVaultFolder({ path: 'Projects' })).resolves.toMatchObject({
+            kind: 'folder',
+            path: 'Projects',
+        });
+        await expect(getVaultPage({ path: 'Projects/Alpha.md' })).resolves.toBeNull();
     });
 
     test('searches title, frontmatter, path, and body text', async () => {
@@ -130,6 +223,15 @@ describe('Vault store', () => {
 
     test('rejects path traversal outside the Vault root', async () => {
         await expect(getVaultPage({ path: '../outside.md' })).resolves.toBeNull();
+        await expect(createVaultPage({ path: '../outside.md' })).rejects.toThrow(
+            /inside the Vault/
+        );
+        await expect(createVaultFolder({ path: '.obsidian/new' })).rejects.toThrow(
+            /dot directories/
+        );
+        await expect(
+            moveVaultPath({ fromPath: 'Projects', kind: 'folder', toPath: 'Projects/Nested' })
+        ).rejects.toThrow(/cannot be moved into itself/);
     });
 
     test('saves a settings-backed Vault path and creates INDEX.md', async () => {

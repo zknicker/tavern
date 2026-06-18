@@ -5,8 +5,13 @@ import type {
     AgentRuntimeSaveVaultSettings,
     AgentRuntimeVaultSettings,
     VaultBacklinkList,
+    VaultCreatePage,
+    VaultMovePath,
     VaultPage,
     VaultPageList,
+    VaultPathInput,
+    VaultPathMutationResult,
+    VaultSavePage,
     VaultSearchInput,
     VaultSearchResult,
     VaultStatus,
@@ -95,14 +100,125 @@ export async function listVaultPages(): Promise<VaultPageList> {
     const pages = (await listMarkdownFiles(config.vaultPath))
         .map(toPageSummary)
         .sort((left, right) => left.title.localeCompare(right.title));
+    const folders = (await listVaultFolders(config.vaultPath)).sort((left, right) =>
+        left.localeCompare(right, undefined, { numeric: true, sensitivity: 'base' })
+    );
 
-    return { pages };
+    return { folders, pages };
 }
 
 export async function getVaultPage(input: { path: string }): Promise<VaultPage | null> {
     const config = await resolveVaultConfig();
     const file = await readMarkdownFile(config.vaultPath, input.path);
     return file ? toPage(file) : null;
+}
+
+export async function createVaultPage(input: VaultCreatePage): Promise<VaultPathMutationResult> {
+    const config = await resolveVaultConfig();
+    const relativePath = normalizeWritableMarkdownPath(input.path);
+    const absolutePath = resolveVaultChildPath(config.vaultPath, relativePath);
+
+    await fs.mkdir(path.dirname(absolutePath), { recursive: true });
+    await fs.writeFile(absolutePath, input.body ?? defaultMarkdownBody(relativePath), {
+        flag: 'wx',
+    });
+
+    const file = await toMarkdownFile(config.vaultPath, absolutePath);
+    return { kind: 'page', page: toPage(file), path: relativePath };
+}
+
+export async function saveVaultPage(input: VaultSavePage): Promise<VaultPathMutationResult> {
+    const config = await resolveVaultConfig();
+    const relativePath = normalizeWritableMarkdownPath(input.path);
+    const absolutePath = resolveVaultChildPath(config.vaultPath, relativePath);
+    const stat = await fs.stat(absolutePath).catch(() => null);
+    if (!(stat?.isFile() && absolutePath.endsWith('.md'))) {
+        throw new Error('Vault page does not exist.');
+    }
+
+    const current = await fs.readFile(absolutePath, 'utf8');
+    await fs.writeFile(absolutePath, replaceMarkdownBody(current, input.body));
+
+    const file = await toMarkdownFile(config.vaultPath, absolutePath);
+    return { kind: 'page', page: toPage(file), path: relativePath };
+}
+
+export async function createVaultFolder(input: VaultPathInput): Promise<VaultPathMutationResult> {
+    const config = await resolveVaultConfig();
+    const relativePath = normalizeWritableFolderPath(input.path);
+    const absolutePath = resolveVaultChildPath(config.vaultPath, relativePath);
+
+    await fs.mkdir(absolutePath, { recursive: false });
+    return { kind: 'folder', page: null, path: relativePath };
+}
+
+export async function deleteVaultPage(input: VaultPathInput): Promise<VaultPathMutationResult> {
+    const config = await resolveVaultConfig();
+    const relativePath = normalizeWritableMarkdownPath(input.path);
+    const absolutePath = resolveVaultChildPath(config.vaultPath, relativePath);
+    const stat = await fs.stat(absolutePath).catch(() => null);
+    if (!(stat?.isFile() && absolutePath.endsWith('.md'))) {
+        throw new Error('Vault page does not exist.');
+    }
+
+    await fs.rm(absolutePath);
+    return { kind: 'page', page: null, path: relativePath };
+}
+
+export async function deleteVaultFolder(input: VaultPathInput): Promise<VaultPathMutationResult> {
+    const config = await resolveVaultConfig();
+    const relativePath = normalizeWritableFolderPath(input.path);
+    const absolutePath = resolveVaultChildPath(config.vaultPath, relativePath);
+    const stat = await fs.stat(absolutePath).catch(() => null);
+    if (!stat?.isDirectory()) {
+        throw new Error('Vault folder does not exist.');
+    }
+
+    await fs.rm(absolutePath, { recursive: true });
+    return { kind: 'folder', page: null, path: relativePath };
+}
+
+export async function moveVaultPath(input: VaultMovePath): Promise<VaultPathMutationResult> {
+    const config = await resolveVaultConfig();
+    const fromPath =
+        input.kind === 'page'
+            ? normalizeWritableMarkdownPath(input.fromPath)
+            : normalizeWritableFolderPath(input.fromPath);
+    const toPath =
+        input.kind === 'page'
+            ? normalizeWritableMarkdownPath(input.toPath)
+            : normalizeWritableFolderPath(input.toPath);
+    const fromAbsolutePath = resolveVaultChildPath(config.vaultPath, fromPath);
+    const toAbsolutePath = resolveVaultChildPath(config.vaultPath, toPath);
+    const sourceStat = await fs.stat(fromAbsolutePath).catch(() => null);
+    const targetStat = await fs.stat(toAbsolutePath).catch(() => null);
+
+    if (input.kind === 'page' && !(sourceStat?.isFile() && fromAbsolutePath.endsWith('.md'))) {
+        throw new Error('Vault page does not exist.');
+    }
+    if (input.kind === 'folder' && !sourceStat?.isDirectory()) {
+        throw new Error('Vault folder does not exist.');
+    }
+    if (targetStat) {
+        throw new Error('A Vault item already exists at that path.');
+    }
+    if (
+        input.kind === 'folder' &&
+        (toAbsolutePath === fromAbsolutePath ||
+            toAbsolutePath.startsWith(`${fromAbsolutePath}${path.sep}`))
+    ) {
+        throw new Error('Vault folder cannot be moved into itself.');
+    }
+
+    await fs.mkdir(path.dirname(toAbsolutePath), { recursive: true });
+    await fs.rename(fromAbsolutePath, toAbsolutePath);
+
+    if (input.kind === 'page') {
+        const file = await toMarkdownFile(config.vaultPath, toAbsolutePath);
+        return { kind: 'page', page: toPage(file), path: toPath };
+    }
+
+    return { kind: 'folder', page: null, path: toPath };
 }
 
 export async function searchVault(input: VaultSearchInput): Promise<VaultSearchResult> {
@@ -246,6 +362,11 @@ async function listMarkdownFiles(vaultPath: string): Promise<MarkdownFile[]> {
     return await Promise.all(files.map((file) => toMarkdownFile(vaultPath, file)));
 }
 
+async function listVaultFolders(vaultPath: string) {
+    const folders = await walkFolders(vaultPath);
+    return folders.map((folder) => path.relative(vaultPath, folder));
+}
+
 async function readMarkdownFile(vaultPath: string, relativePath: string) {
     const safePath = normalizeRelativeMarkdownPath(relativePath);
     const root = path.resolve(vaultPath);
@@ -275,6 +396,19 @@ async function walkMarkdown(root: string): Promise<string[]> {
         }
     }
     return files;
+}
+
+async function walkFolders(root: string): Promise<string[]> {
+    const entries = await fs.readdir(root, { withFileTypes: true }).catch(() => []);
+    const folders: string[] = [];
+    for (const entry of entries) {
+        if (!entry.isDirectory() || entry.name.startsWith('.')) {
+            continue;
+        }
+        const entryPath = path.join(root, entry.name);
+        folders.push(entryPath, ...(await walkFolders(entryPath)));
+    }
+    return folders;
 }
 
 async function toMarkdownFile(vaultPath: string, absolutePath: string): Promise<MarkdownFile> {
@@ -417,6 +551,49 @@ function normalizeRelativeMarkdownPath(value: string) {
     return normalized.endsWith('.md') ? normalized : `${normalized}.md`;
 }
 
+function normalizeWritableMarkdownPath(value: string) {
+    const normalized = normalizeWritableRelativePath(value);
+    return normalized.endsWith('.md') ? normalized : `${normalized}.md`;
+}
+
+function normalizeWritableFolderPath(value: string) {
+    const normalized = normalizeWritableRelativePath(value);
+    if (normalized.endsWith('.md')) {
+        throw new Error('Vault folder paths must not end in .md.');
+    }
+    return normalized;
+}
+
+function normalizeWritableRelativePath(value: string) {
+    const trimmed = value.trim().replaceAll('\\', '/');
+    const segments = trimmed.split('/');
+    if (
+        !trimmed ||
+        trimmed.startsWith('/') ||
+        segments.some(
+            (segment) => !segment || segment === '.' || segment === '..' || segment.startsWith('.')
+        )
+    ) {
+        throw new Error('Vault path must stay inside the Vault and avoid dot directories.');
+    }
+
+    const normalized = path.posix.normalize(trimmed);
+    if (normalized === '.' || normalized === '..' || normalized.startsWith('../')) {
+        throw new Error('Vault path must stay inside the Vault.');
+    }
+
+    return normalized;
+}
+
+function resolveVaultChildPath(vaultPath: string, relativePath: string) {
+    const root = path.resolve(vaultPath);
+    const absolutePath = path.resolve(root, ...relativePath.split('/'));
+    if (!isPathInside(absolutePath, root)) {
+        throw new Error('Vault path must stay inside the Vault.');
+    }
+    return absolutePath;
+}
+
 function isPathInside(filePath: string, root: string) {
     return filePath === root || filePath.startsWith(`${root}${path.sep}`);
 }
@@ -447,6 +624,26 @@ function titleFromPath(relativePath: string) {
 
 function titleFromSlug(slug: string) {
     return slug.replace(/[-_]+/gu, ' ').replace(/\b\w/gu, (character) => character.toUpperCase());
+}
+
+function defaultMarkdownBody(relativePath: string) {
+    return `# ${titleFromPath(relativePath)}\n`;
+}
+
+function replaceMarkdownBody(content: string, body: string) {
+    const prefix = readFrontmatterPrefix(content);
+    return prefix ? `${prefix}${body.trimStart()}` : body;
+}
+
+function readFrontmatterPrefix(content: string) {
+    if (!content.startsWith('---\n')) {
+        return null;
+    }
+    const close = /\n---[ \t]*(?:\r?\n|$)/u.exec(content.slice(4));
+    if (!close) {
+        return null;
+    }
+    return content.slice(0, 4 + close.index + close[0].length);
 }
 
 function snippet(content: string, index: number) {

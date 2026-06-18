@@ -1,4 +1,11 @@
-import type { AgentRuntimeSaveVaultSettings, VaultSearchInput } from '@tavern/api';
+import type {
+    AgentRuntimeSaveVaultSettings,
+    VaultCreatePage,
+    VaultMovePath,
+    VaultPathInput,
+    VaultSavePage,
+    VaultSearchInput,
+} from '@tavern/api';
 import type { TavernAgentRuntimeClient } from '../agent-runtime/client.ts';
 import { createConfiguredAgentRuntimeClient } from '../agent-runtime/configured-client.ts';
 
@@ -28,10 +35,52 @@ export async function saveVaultSettings(
     return await requireRuntimeClient(client).saveVaultSettings(input);
 }
 
+export async function createVaultPage(
+    input: VaultCreatePage,
+    client: TavernAgentRuntimeClient | null = createConfiguredAgentRuntimeClient()
+) {
+    return await requireRuntimeClient(client).createVaultPage(input);
+}
+
+export async function saveVaultPage(
+    input: VaultSavePage,
+    client: TavernAgentRuntimeClient | null = createConfiguredAgentRuntimeClient()
+) {
+    return await requireRuntimeClient(client).saveVaultPage(input);
+}
+
+export async function createVaultFolder(
+    input: VaultPathInput,
+    client: TavernAgentRuntimeClient | null = createConfiguredAgentRuntimeClient()
+) {
+    return await requireRuntimeClient(client).createVaultFolder(input);
+}
+
+export async function deleteVaultPage(
+    input: VaultPathInput,
+    client: TavernAgentRuntimeClient | null = createConfiguredAgentRuntimeClient()
+) {
+    return await requireRuntimeClient(client).deleteVaultPage(input);
+}
+
+export async function deleteVaultFolder(
+    input: VaultPathInput,
+    client: TavernAgentRuntimeClient | null = createConfiguredAgentRuntimeClient()
+) {
+    return await requireRuntimeClient(client).deleteVaultFolder(input);
+}
+
+export async function moveVaultPath(
+    input: VaultMovePath,
+    client: TavernAgentRuntimeClient | null = createConfiguredAgentRuntimeClient()
+) {
+    return await requireRuntimeClient(client).moveVaultPath(input);
+}
+
 export async function listVaultPages(
     client: TavernAgentRuntimeClient | null = createConfiguredAgentRuntimeClient()
 ) {
-    return client ? await client.listVaultPages() : { pages: [] };
+    return client ? await client.listVaultPages() : { folders: [], pages: [] };
 }
 
 export async function getVaultPage(

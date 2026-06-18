@@ -6,8 +6,13 @@ import {
     agentRuntimeSaveVaultSettingsSchema,
     agentRuntimeVaultSettingsSchema,
     vaultBacklinkListSchema,
+    vaultCreatePageSchema,
+    vaultMovePathSchema,
     vaultPageListSchema,
     vaultPageSchema,
+    vaultPathInputSchema,
+    vaultPathMutationResultSchema,
+    vaultSavePageSchema,
     vaultSearchInputSchema,
     vaultSearchResultSchema,
     vaultStatusSchema,
@@ -16,11 +21,17 @@ import { writeManagedHermesConfigFile } from '../hermes/model-config';
 import { requestManagedHermesRestart } from '../hermes/supervisor';
 import { forbidden, json, notFound } from '../tavern/http';
 import {
+    createVaultFolder,
+    createVaultPage,
+    deleteVaultFolder,
+    deleteVaultPage,
     getVaultPage,
     getVaultSettings,
     getVaultStatus,
     listVaultBacklinks,
     listVaultPages,
+    moveVaultPath,
+    saveVaultPage,
     saveVaultSettings,
     searchVault,
 } from './store';
@@ -40,11 +51,9 @@ export async function handleVaultRequest(request: Request): Promise<Response | n
     }
 
     if (request.method === 'PUT' && url.pathname === agentRuntimeRoutes.vaultSettings) {
-        if (
-            request.headers.get(agentRuntimeMutationHeaders.origin) !==
-            agentRuntimeMutationOrigins.tavern
-        ) {
-            return forbidden('Vault settings require a Tavern caller.');
+        const forbiddenResponse = requireTavernMutation(request, 'Vault settings');
+        if (forbiddenResponse) {
+            return forbiddenResponse;
         }
         const input = agentRuntimeSaveVaultSettingsSchema.parse(await readJson(request));
         const settings = await saveVaultSettings(input);
@@ -57,6 +66,33 @@ export async function handleVaultRequest(request: Request): Promise<Response | n
 
     if (request.method === 'GET' && url.pathname === agentRuntimeRoutes.vaultPages) {
         return json(vaultPageListSchema.parse(await listVaultPages()));
+    }
+
+    if (request.method === 'POST' && url.pathname === agentRuntimeRoutes.vaultPages) {
+        const forbiddenResponse = requireTavernMutation(request, 'Vault page creation');
+        if (forbiddenResponse) {
+            return forbiddenResponse;
+        }
+        const input = vaultCreatePageSchema.parse(await readJson(request));
+        return json(vaultPathMutationResultSchema.parse(await createVaultPage(input)));
+    }
+
+    if (request.method === 'POST' && url.pathname === agentRuntimeRoutes.vaultFolders) {
+        const forbiddenResponse = requireTavernMutation(request, 'Vault folder creation');
+        if (forbiddenResponse) {
+            return forbiddenResponse;
+        }
+        const input = vaultPathInputSchema.parse(await readJson(request));
+        return json(vaultPathMutationResultSchema.parse(await createVaultFolder(input)));
+    }
+
+    if (request.method === 'POST' && url.pathname === agentRuntimeRoutes.vaultMovePath) {
+        const forbiddenResponse = requireTavernMutation(request, 'Vault path moves');
+        if (forbiddenResponse) {
+            return forbiddenResponse;
+        }
+        const input = vaultMovePathSchema.parse(await readJson(request));
+        return json(vaultPathMutationResultSchema.parse(await moveVaultPath(input)));
     }
 
     if (request.method === 'POST' && url.pathname === agentRuntimeRoutes.vaultSearch) {
@@ -83,9 +119,64 @@ export async function handleVaultRequest(request: Request): Promise<Response | n
         return page ? json(vaultPageSchema.parse(page)) : notFound();
     }
 
+    if (request.method === 'PUT' && pageMatch?.[1]) {
+        const forbiddenResponse = requireTavernMutation(request, 'Vault page saves');
+        if (forbiddenResponse) {
+            return forbiddenResponse;
+        }
+        const body = readJsonRecord(await readJson(request));
+        const input = vaultSavePageSchema.parse({
+            ...body,
+            path: decodeURIComponent(pageMatch[1]),
+        });
+        return json(vaultPathMutationResultSchema.parse(await saveVaultPage(input)));
+    }
+
+    if (request.method === 'DELETE' && pageMatch?.[1]) {
+        const forbiddenResponse = requireTavernMutation(request, 'Vault page deletion');
+        if (forbiddenResponse) {
+            return forbiddenResponse;
+        }
+        return json(
+            vaultPathMutationResultSchema.parse(
+                await deleteVaultPage({ path: decodeURIComponent(pageMatch[1]) })
+            )
+        );
+    }
+
+    const folderMatch = url.pathname.match(/^\/vault\/folders\/(.+)$/u);
+    if (request.method === 'DELETE' && folderMatch?.[1]) {
+        const forbiddenResponse = requireTavernMutation(request, 'Vault folder deletion');
+        if (forbiddenResponse) {
+            return forbiddenResponse;
+        }
+        return json(
+            vaultPathMutationResultSchema.parse(
+                await deleteVaultFolder({ path: decodeURIComponent(folderMatch[1]) })
+            )
+        );
+    }
+
     return null;
+}
+
+function requireTavernMutation(request: Request, label: string) {
+    if (
+        request.headers.get(agentRuntimeMutationHeaders.origin) ===
+        agentRuntimeMutationOrigins.tavern
+    ) {
+        return null;
+    }
+    return forbidden(`${label} requires a Tavern caller.`);
 }
 
 async function readJson(request: Request): Promise<unknown> {
     return await request.json().catch(() => ({}));
+}
+
+function readJsonRecord(value: unknown): Record<string, unknown> {
+    if (value && typeof value === 'object' && !Array.isArray(value)) {
+        return value as Record<string, unknown>;
+    }
+    return {};
 }
