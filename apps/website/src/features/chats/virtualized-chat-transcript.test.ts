@@ -1,6 +1,6 @@
 import { expect, test } from 'bun:test';
 import type { ChatLogOutput } from '../../lib/trpc.tsx';
-import { buildTranscriptEntries } from './chat-transcript-model.ts';
+import { buildTranscriptEntries, type TranscriptItem } from './chat-transcript-model.ts';
 import type { TranscriptRenderRow } from './chat-transcript-row-model.ts';
 import {
     buildTranscriptRenderRows,
@@ -211,6 +211,25 @@ test('virtualized chat smooths row growth at the tail while following', () => {
     expect(shouldSmoothFollowRowGrowth({ isFollowing: false, next, previous })).toBe(false);
 });
 
+test('virtualized chat smooths tail entry item growth while following', () => {
+    const previous = getTranscriptRowGrowthSnapshot([
+        { id: 'day:today', kind: 'dayDivider', label: 'Today' },
+        agentRenderRow('turn:run-1', [{ kind: 'row', row: thinkingRow('act_run_1_thinking') }]),
+        presenceRenderRow('turn:run-1'),
+    ]);
+    const next = getTranscriptRowGrowthSnapshot([
+        { id: 'day:today', kind: 'dayDivider', label: 'Today' },
+        agentRenderRow('turn:run-1', [
+            { kind: 'row', row: thinkingRow('act_run_1_thinking') },
+            { kind: 'row', row: widgetRow('act_run_1_widget') },
+        ]),
+        presenceRenderRow('turn:run-1'),
+    ]);
+
+    expect(shouldSmoothFollowRowGrowth({ isFollowing: true, next, previous })).toBe(true);
+    expect(shouldSmoothFollowRowGrowth({ isFollowing: false, next, previous })).toBe(false);
+});
+
 test('virtualized chat does not smooth prepended history growth', () => {
     const previous = getTranscriptRowGrowthSnapshot([userRenderRow('user-3')]);
     const next = getTranscriptRowGrowthSnapshot([userRenderRow('user-1'), userRenderRow('user-3')]);
@@ -333,6 +352,25 @@ function presenceRenderRow(id: string): TranscriptRenderRow {
     };
 }
 
+function agentRenderRow(id: string, items: TranscriptItem[]): TranscriptRenderRow {
+    return {
+        entry: {
+            actor: { id: 'agent-1', kind: 'agent' },
+            id,
+            items,
+            key: 'agent:agent-1:session-1',
+            kind: 'turn',
+            participant: 'agent',
+            responseId: 'rsp-1',
+            timestamp: '2026-05-11T16:00:01.000Z',
+        },
+        followsRuntimeNotice: false,
+        id,
+        kind: 'entry',
+        turnStartedAt: null,
+    };
+}
+
 function thinkingRow(id: string): ChatRow {
     return {
         id,
@@ -346,5 +384,33 @@ function thinkingRow(id: string): ChatRow {
             timestamp: '2026-05-11T16:00:01.000Z',
         },
         timestamp: '2026-05-11T16:00:01.000Z',
+    };
+}
+
+function widgetRow(id: string): ChatRow {
+    return {
+        actor: { id: 'agent-1', kind: 'agent' },
+        completedAt: '2026-05-11T16:00:02.000Z',
+        connectsToNext: false,
+        connectsToPrevious: false,
+        id,
+        isFirstInGroup: true,
+        kind: 'widget',
+        responseId: 'rsp-1',
+        sessionKey: 'session-1',
+        startedAt: '2026-05-11T16:00:02.000Z',
+        widget: {
+            component: 'tavern.render_line_chart',
+            fallbackText: 'Sample Trend Comparison',
+            id,
+            props: {
+                data: [{ day: 'Jan 1', value: 12 }],
+                series: [{ key: 'value', label: 'Value' }],
+                title: 'Sample Trend Comparison',
+                xKey: 'day',
+            },
+            target: 'chat.inline',
+            validationError: null,
+        },
     };
 }

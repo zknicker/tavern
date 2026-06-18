@@ -19,6 +19,21 @@ export interface UseChartPhaseOrchestratorOptions {
   skipEnterReveal?: boolean;
 }
 
+export function resolveInitialChartPhase({
+  animationDuration,
+  chartStatus,
+  skipEnterReveal = false,
+}: Pick<
+  UseChartPhaseOrchestratorOptions,
+  "animationDuration" | "chartStatus" | "skipEnterReveal"
+>): ChartPhase {
+  if (chartStatus === "ready" && animationDuration > 0 && !skipEnterReveal) {
+    return "revealing";
+  }
+
+  return resolveRestingChartPhase(chartStatus);
+}
+
 export function useChartPhaseOrchestrator({
   chartStatus,
   targetData,
@@ -29,14 +44,14 @@ export function useChartPhaseOrchestrator({
   skipEnterReveal = false,
 }: UseChartPhaseOrchestratorOptions) {
   const [chartPhase, setChartPhase] = useState<ChartPhase>(() =>
-    resolveRestingChartPhase(chartStatus)
+    resolveInitialChartPhase({ animationDuration, chartStatus, skipEnterReveal })
   );
   const [plotData, setPlotData] = useState<Record<string, unknown>[]>(() =>
     chartStatus === "loading" ? skeletonData : targetData
   );
   const [revealEpoch, setRevealEpoch] = useState(0);
   const [concealEpoch, setConcealEpoch] = useState(0);
-  const [isLoaded, setIsLoaded] = useState(() => chartStatus === "ready");
+  const [isLoaded, setIsLoaded] = useState(() => chartPhase === "ready");
   const prevStatusRef = useRef(chartStatus);
   const phaseRef = useRef(chartPhase);
   phaseRef.current = chartPhase;

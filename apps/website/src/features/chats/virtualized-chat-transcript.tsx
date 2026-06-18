@@ -10,7 +10,12 @@ import {
     shouldAdjustVirtualizerOnItemSizeChange,
     shouldAnchorVirtualizerToEnd,
 } from './chat-scroll-mode.ts';
-import type { ConversationMessageLayout, TranscriptRow } from './chat-transcript-model.ts';
+import { getTranscriptItemKey } from './chat-transcript-item-utils.ts';
+import type {
+    ConversationMessageLayout,
+    TranscriptEntry,
+    TranscriptRow,
+} from './chat-transcript-model.ts';
 import {
     getEstimatedTranscriptRowSize,
     getEstimatedTranscriptRowsSize,
@@ -423,14 +428,28 @@ export function shouldCorrectVirtualizedTranscriptEndGap({
 interface TranscriptRowGrowthSnapshot {
     firstRowId: string | null;
     rowCount: number;
+    tailEntryItemCount: number;
+    tailEntryItemsKey: string | null;
+    tailEntryRowId: string | null;
 }
+
+type TranscriptTurnRenderRow = Extract<TranscriptRenderRow, { kind: 'entry' }> & {
+    entry: Extract<TranscriptEntry, { kind: 'turn' }>;
+};
 
 export function getTranscriptRowGrowthSnapshot(
     rows: TranscriptRenderRow[]
 ): TranscriptRowGrowthSnapshot {
+    const tailEntry = getTailEntryRow(rows);
+
     return {
         firstRowId: rows[0]?.id ?? null,
         rowCount: rows.length,
+        tailEntryItemCount: tailEntry?.entry.items.length ?? 0,
+        tailEntryItemsKey: tailEntry
+            ? tailEntry.entry.items.map(getTranscriptItemKey).join('\u0000')
+            : null,
+        tailEntryRowId: tailEntry?.id ?? null,
     };
 }
 
@@ -443,13 +462,42 @@ export function shouldSmoothFollowRowGrowth({
     next: TranscriptRowGrowthSnapshot;
     previous: TranscriptRowGrowthSnapshot | null;
 }) {
+    if (!(isFollowing && previous && previous.rowCount > 0)) {
+        return false;
+    }
+
+    if (next.firstRowId !== previous.firstRowId) {
+        return false;
+    }
+
+    if (next.rowCount > previous.rowCount) {
+        return true;
+    }
+
     return Boolean(
-        isFollowing &&
-            previous &&
-            previous.rowCount > 0 &&
-            next.rowCount > previous.rowCount &&
-            next.firstRowId === previous.firstRowId
+        next.rowCount === previous.rowCount &&
+            next.tailEntryRowId === previous.tailEntryRowId &&
+            next.tailEntryItemsKey !== previous.tailEntryItemsKey &&
+            next.tailEntryItemCount > previous.tailEntryItemCount
     );
+}
+
+function getTailEntryRow(rows: TranscriptRenderRow[]): TranscriptTurnRenderRow | null {
+    for (let index = rows.length - 1; index >= 0; index -= 1) {
+        const row = rows[index];
+
+        if (isTranscriptTurnRenderRow(row)) {
+            return row;
+        }
+    }
+
+    return null;
+}
+
+function isTranscriptTurnRenderRow(
+    row: TranscriptRenderRow | undefined
+): row is TranscriptTurnRenderRow {
+    return row?.kind === 'entry' && row.entry.kind === 'turn';
 }
 
 function buildEstimatedTranscriptVirtualItems(rows: TranscriptRenderRow[]): VirtualItem[] {
