@@ -2,6 +2,33 @@
 
 All notable changes to this project will be documented in this file.
 
+## v1.4.19 - 2026-06-18
+
+Runtime floor raised to 1.4.19 for writable Vault APIs, managed Vault runtime
+assets, chat widget contracts, and streamed reply/file attachment correctness.
+
+App changes:
+
+- Rebuilt Vault as a compact wiki browser and Markdown editor with a dense file
+  tree, create/delete/rename actions, folder moves, search, full-width edit and
+  preview modes, and a collapsible Metadata sidebar.
+- Added first-class chat widgets for charts and calendar events, with polished
+  animated chart rendering and standardized widget input.
+- Improved chat streaming, inline Markdown links, long-token wrapping,
+  attachment focus, approval dismissal, external desktop links, sidebar chrome,
+  settings layout, and global context-menu styling.
+
+Runtime changes:
+
+- Added writable Vault Runtime and server APIs for page and folder creation,
+  deletion, movement, and persisted Markdown edits.
+- Replaced the Cortex wiki surface with managed Vault skills, capabilities, CLI
+  commands, runtime assets, and documentation.
+- Added widget activity contracts for chart and calendar rendering.
+- Preserved model provider and streamed reply formatting through Hermes events,
+  materialized file attachments before prompt submit, protected managed skills,
+  and tracked managed Hermes live patches.
+
 ## v1.4.18 - 2026-06-17
 
 Runtime floor raised to 1.4.18 for configured managed agent settings.
