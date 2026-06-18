@@ -13,14 +13,28 @@ test('buildVaultPageTree groups pages by path directories', () => {
 
     assert.deepEqual(summarizeTree(buildVaultPageTree(pages)), [
         {
-            children: ['Lattice.md'],
+            children: ['Lattice'],
             name: 'Concepts',
         },
         {
-            children: ['Alpha.md', 'Beta.md'],
+            children: ['Alpha', 'Beta'],
             name: 'Projects',
         },
-        'INDEX.md',
+        'INDEX',
+    ]);
+});
+
+test('buildVaultPageTree includes empty folders from the list contract', () => {
+    assert.deepEqual(summarizeTree(buildVaultPageTree([], ['Projects/Empty'])), [
+        {
+            children: [
+                {
+                    children: [],
+                    name: 'Empty',
+                },
+            ],
+            name: 'Projects',
+        },
     ]);
 });
 

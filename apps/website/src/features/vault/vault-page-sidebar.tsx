@@ -1,145 +1,140 @@
-import {
-    ArrowDown01Icon,
-    ArrowRight01Icon,
-    File01Icon,
-    Folder01Icon,
-} from '@hugeicons-pro/core-stroke-rounded';
+import { FileAddIcon, FolderAddIcon } from '@hugeicons-pro/core-stroke-rounded';
 import * as React from 'react';
 import { Icon } from '../../components/ui/icon.tsx';
-import { SidebarMenu, SidebarMenuItem } from '../../components/ui/sidebar.tsx';
-import { cn } from '../../lib/utils.ts';
+import { Button } from '../../components/ui/primitives/button.tsx';
+import { SearchInput } from '../../components/ui/primitives/search-input.tsx';
+import {
+    SidebarContent,
+    SidebarGroup,
+    SidebarGroupContent,
+    SidebarHeader,
+} from '../../components/ui/sidebar.tsx';
 import type { VaultPageNode } from './types.ts';
-import { buildVaultPageTree, getVaultDirectoryIds, type VaultPageTreeNode } from './utils.ts';
+import type { VaultDeleteTarget } from './vault-dialogs.tsx';
+import { VaultPageFileTree } from './vault-page-sidebar-file-tree.tsx';
+
+export interface VaultMoveTarget {
+    fromPath: string;
+    kind: 'folder' | 'page';
+    toFolderPath: string;
+}
+
+export interface VaultRenameTarget {
+    fromPath: string;
+    kind: 'folder' | 'page';
+    toPath: string;
+}
 
 export function VaultPageSidebar({
-    header,
+    folders,
+    onCreate,
+    onDelete,
+    onMove,
+    onRenamePath,
     onSelect,
     pages,
     selectedPageKey,
 }: {
-    header?: React.ReactNode;
+    folders: string[];
+    onCreate: (kind: 'folder' | 'page', parentPath?: string) => void;
+    onDelete: (target: VaultDeleteTarget) => void;
+    onMove: (target: VaultMoveTarget) => void;
+    onRenamePath: (target: VaultRenameTarget) => void;
     onSelect: (page: VaultPageNode) => void;
     pages: VaultPageNode[];
     selectedPageKey: string | null;
 }) {
-    const tree = React.useMemo(() => buildVaultPageTree(pages), [pages]);
-    const directoryIds = React.useMemo(() => getVaultDirectoryIds(tree), [tree]);
-    const [collapsedDirectoryIds, setCollapsedDirectoryIds] = React.useState<Set<string>>(
-        () => new Set()
-    );
-
-    React.useEffect(() => {
-        setCollapsedDirectoryIds((current) => {
-            const next = new Set([...current].filter((id) => directoryIds.includes(id)));
-            return next.size === current.size ? current : next;
-        });
-    }, [directoryIds]);
-
-    function toggleDirectory(id: string) {
-        setCollapsedDirectoryIds((current) => {
-            const next = new Set(current);
-            if (next.has(id)) {
-                next.delete(id);
-            } else {
-                next.add(id);
-            }
-            return next;
-        });
-    }
+    const [query, setQuery] = React.useState('');
 
     return (
-        <aside className="flex min-h-0 w-[300px] shrink-0 flex-col border-border/60 border-r bg-transparent">
-            {header}
-            {pages.length === 0 ? (
-                <div className="px-5 py-2 text-muted-foreground text-sm">No Vault pages found.</div>
-            ) : (
-                <div className="min-h-0 flex-1 overflow-auto px-3 pt-4 pb-4">
-                    <SidebarMenu>
-                        <VaultTreeNodes
-                            collapsedDirectoryIds={collapsedDirectoryIds}
-                            nodes={tree}
-                            onSelect={onSelect}
-                            onToggleDirectory={toggleDirectory}
-                            selectedPageKey={selectedPageKey}
-                        />
-                    </SidebarMenu>
-                </div>
-            )}
+        <aside className="flex min-h-0 w-[276px] shrink-0 flex-col overflow-x-hidden border-border/70 border-r bg-sidebar/35 text-sidebar-foreground">
+            <VaultPageSidebarContent
+                folders={folders}
+                onCreate={onCreate}
+                onDelete={onDelete}
+                onMove={onMove}
+                onRenamePath={onRenamePath}
+                onSelect={onSelect}
+                pages={pages}
+                query={query}
+                selectedPageKey={selectedPageKey}
+                setQuery={setQuery}
+            />
         </aside>
     );
 }
 
-function VaultTreeNodes({
-    collapsedDirectoryIds,
-    depth = 0,
-    nodes,
+function VaultPageSidebarContent({
+    folders,
+    onCreate,
+    onDelete,
+    onMove,
+    onRenamePath,
     onSelect,
-    onToggleDirectory,
+    pages,
+    query,
     selectedPageKey,
+    setQuery,
 }: {
-    collapsedDirectoryIds: Set<string>;
-    depth?: number;
-    nodes: VaultPageTreeNode[];
+    folders: string[];
+    onCreate: (kind: 'folder' | 'page', parentPath?: string) => void;
+    onDelete: (target: VaultDeleteTarget) => void;
+    onMove: (target: VaultMoveTarget) => void;
+    onRenamePath: (target: VaultRenameTarget) => void;
     onSelect: (page: VaultPageNode) => void;
-    onToggleDirectory: (id: string) => void;
+    pages: VaultPageNode[];
+    query: string;
     selectedPageKey: string | null;
+    setQuery: React.Dispatch<React.SetStateAction<string>>;
 }) {
-    return nodes.map((node) => {
-        if (node.kind === 'directory') {
-            const collapsed = collapsedDirectoryIds.has(node.id);
-            return (
-                <React.Fragment key={node.id}>
-                    <SidebarMenuItem>
-                        <button
-                            aria-expanded={!collapsed}
-                            className="flex h-7 w-full cursor-default items-center gap-1.5 rounded-md px-2 text-left font-medium text-sidebar-foreground text-sm outline-hidden hover:bg-sidebar-accent hover:text-sidebar-accent-foreground focus-visible:ring-2 focus-visible:ring-sidebar-ring"
-                            onClick={() => onToggleDirectory(node.id)}
-                            style={{ paddingLeft: `${0.5 + depth * 0.875}rem` }}
-                            type="button"
-                        >
-                            <Icon
-                                aria-hidden="true"
-                                className="size-3.5 shrink-0 text-muted-foreground"
-                                icon={collapsed ? ArrowRight01Icon : ArrowDown01Icon}
-                            />
-                            <Icon
-                                aria-hidden="true"
-                                className="size-4 shrink-0"
-                                icon={Folder01Icon}
-                            />
-                            <span className="min-w-0 flex-1 truncate">{node.name}</span>
-                        </button>
-                    </SidebarMenuItem>
-                    {collapsed ? null : (
-                        <VaultTreeNodes
-                            collapsedDirectoryIds={collapsedDirectoryIds}
-                            depth={depth + 1}
-                            nodes={node.children}
+    return (
+        <div className="flex min-h-0 flex-1 flex-col overflow-x-hidden">
+            <SidebarHeader className="h-12 border-border/60 border-b px-2 py-2">
+                <div className="flex items-center gap-1">
+                    <SearchInput
+                        className="min-w-0 flex-1"
+                        onChange={(event) => setQuery(event.currentTarget.value)}
+                        placeholder="Search pages"
+                        size="default"
+                        value={query}
+                    />
+                    <Button
+                        aria-label="New page"
+                        onClick={() => onCreate('page')}
+                        size="icon-sm"
+                        title="New page"
+                        variant="ghost"
+                    >
+                        <Icon icon={FileAddIcon} />
+                    </Button>
+                    <Button
+                        aria-label="New folder"
+                        onClick={() => onCreate('folder')}
+                        size="icon-sm"
+                        title="New folder"
+                        variant="ghost"
+                    >
+                        <Icon icon={FolderAddIcon} />
+                    </Button>
+                </div>
+            </SidebarHeader>
+            <SidebarContent className="min-h-0 flex-1 overflow-x-hidden">
+                <SidebarGroup className="flex min-h-0 flex-1 flex-col overflow-x-hidden px-2 py-2">
+                    <SidebarGroupContent className="flex min-h-0 flex-1 overflow-x-hidden">
+                        <VaultPageFileTree
+                            folders={folders}
+                            onCreate={onCreate}
+                            onDelete={onDelete}
+                            onMove={onMove}
+                            onRenamePath={onRenamePath}
                             onSelect={onSelect}
-                            onToggleDirectory={onToggleDirectory}
+                            pages={pages}
+                            query={query}
                             selectedPageKey={selectedPageKey}
                         />
-                    )}
-                </React.Fragment>
-            );
-        }
-
-        return (
-            <SidebarMenuItem key={node.id}>
-                <button
-                    className={cn(
-                        'flex h-7 w-full cursor-default items-center gap-2 overflow-hidden rounded-md px-2 text-left font-medium text-sidebar-foreground text-sm outline-hidden hover:bg-sidebar-accent hover:text-sidebar-accent-foreground focus-visible:ring-2 focus-visible:ring-sidebar-ring active:bg-sidebar-accent active:text-sidebar-accent-foreground',
-                        node.id === selectedPageKey &&
-                            'bg-[var(--sidebar-accent-active)] text-sidebar-accent-foreground'
-                    )}
-                    onClick={() => onSelect(node.page)}
-                    style={{ paddingLeft: `${1.375 + depth * 0.875}rem` }}
-                    type="button"
-                >
-                    <Icon aria-hidden="true" className="size-4 shrink-0" icon={File01Icon} />
-                    <span className="min-w-0 flex-1 truncate">{node.name}</span>
-                </button>
-            </SidebarMenuItem>
-        );
-    });
+                    </SidebarGroupContent>
+                </SidebarGroup>
+            </SidebarContent>
+        </div>
+    );
 }

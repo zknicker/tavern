@@ -30,7 +30,6 @@ export function AppTopbar({
                     <Button
                         aria-current={isSettingsRoute ? 'page' : undefined}
                         aria-label="Settings"
-                        className="size-7 rounded-md"
                         onClick={onNavigateToSettings}
                         size="icon-sm"
                         title="Settings"
@@ -61,11 +60,7 @@ export function AppSidebarTopbar({ isExpanded }: { isExpanded: boolean }) {
                 className={isExpanded ? 'items-center pt-0' : collapsedTopbarSlotWidth}
             >
                 <div className="no-drag ml-auto flex items-center gap-1">
-                    <SidebarTrigger
-                        activateOnPointerDown
-                        className="size-7 rounded-md"
-                        size="icon-sm"
-                    />
+                    <SidebarTrigger activateOnPointerDown size="icon-sm" />
                 </div>
             </AppShellTopbarSidebarSlot>
         </AppShellTopbar>

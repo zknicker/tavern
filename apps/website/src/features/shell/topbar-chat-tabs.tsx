@@ -441,7 +441,6 @@ export function TopbarAllChatsMenuButton() {
                 render={
                     <Button
                         aria-label="All chats"
-                        className="size-7 rounded-md"
                         size="icon-sm"
                         title="All chats"
                         variant="ghost"
@@ -491,7 +490,7 @@ export function TopbarNewChatButton() {
     return (
         <Button
             aria-label="New chat"
-            className="no-drag size-7 rounded-md text-muted-foreground/70 hover:text-foreground data-pressed:text-foreground [&_svg]:opacity-70 hover:[&_svg]:opacity-90"
+            className="no-drag text-muted-foreground/70 hover:text-foreground data-pressed:text-foreground [&_svg]:opacity-70 hover:[&_svg]:opacity-90"
             disabled={!gate.healthy}
             render={gate.healthy ? <NavLink to="/dashboard/overview" /> : undefined}
             size="icon-sm"

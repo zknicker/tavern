@@ -91,12 +91,24 @@ function resolveRelativePagePath(fromPath: string, target: string) {
     return base.join('/');
 }
 
-export function buildVaultPageTree(pages: VaultPageNode[]): VaultPageTreeNode[] {
+export function buildVaultPageTree(
+    pages: VaultPageNode[],
+    folders: string[] = []
+): VaultPageTreeNode[] {
     const root = createInternalDirectory('', '');
+
+    for (const folderPath of folders) {
+        let parent = root;
+        const directorySegments: string[] = [];
+        for (const segment of splitTreePath(folderPath)) {
+            directorySegments.push(segment);
+            parent = getOrCreateDirectory(parent, directorySegments.join('/'), segment);
+        }
+    }
 
     for (const page of pages) {
         const segments = splitTreePath(page.path);
-        const fileName = segments.at(-1) ?? page.title;
+        const fileName = removeMarkdownExtension(segments.at(-1) ?? page.title);
         let parent = root;
         const directorySegments: string[] = [];
 
@@ -185,4 +197,8 @@ function compareTreeNodes(left: VaultPageTreeNode, right: VaultPageTreeNode) {
 
 function splitTreePath(value: string) {
     return value.split('/').filter(Boolean);
+}
+
+function removeMarkdownExtension(value: string) {
+    return value.replace(/\.md$/u, '');
 }

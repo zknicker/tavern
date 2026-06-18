@@ -1,36 +1,38 @@
 import { describe, expect, test } from 'bun:test';
+import { EyeIcon, LayoutTwoColumnIcon } from '@hugeicons-pro/core-stroke-rounded';
 import { renderToStaticMarkup } from 'react-dom/server';
-import { Tabs, TabsList, TabsTrigger } from './tabs.tsx';
+import { TabItem, Tabs, TabsList } from './tabs.tsx';
 
 describe('Tabs', () => {
-    test('keeps default tab items content-sized', () => {
+    test('renders the Fluid Base UI tab item API', () => {
         const markup = renderToStaticMarkup(
             <Tabs value="preview">
                 <TabsList>
-                    <TabsTrigger value="preview">Preview</TabsTrigger>
-                    <TabsTrigger value="code">Code</TabsTrigger>
+                    <TabItem icon={EyeIcon} label="Preview" value="preview" />
+                    <TabItem icon={LayoutTwoColumnIcon} label="Split" value="split" />
                 </TabsList>
             </Tabs>
         );
 
-        expect(markup).toContain('w-fit');
-        expect(markup).not.toContain(' grow ');
+        expect(markup).toContain('role="tablist"');
+        expect(markup).toContain('data-proximity-index="0"');
+        expect(markup).toContain('Preview');
+        expect(markup).toContain('Split');
     });
 
-    test('allows callers to opt into stretched tab items', () => {
+    test('keeps icon-only tabs labeled without rendering text', () => {
         const markup = renderToStaticMarkup(
             <Tabs value="preview">
                 <TabsList>
-                    <TabsTrigger className="grow" value="preview">
-                        Preview
-                    </TabsTrigger>
-                    <TabsTrigger className="grow" value="code">
-                        Code
-                    </TabsTrigger>
+                    <TabItem icon={EyeIcon} iconOnly label="Preview" value="preview" />
+                    <TabItem icon={LayoutTwoColumnIcon} iconOnly label="Split" value="split" />
                 </TabsList>
             </Tabs>
         );
 
-        expect(markup).toContain(' grow');
+        expect(markup).toContain('aria-label="Preview"');
+        expect(markup).toContain('title="Preview"');
+        expect(markup).not.toContain('>Preview<');
+        expect(markup).not.toContain('>Split<');
     });
 });

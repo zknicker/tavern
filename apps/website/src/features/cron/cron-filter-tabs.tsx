@@ -1,5 +1,5 @@
 import { Badge } from '../../components/ui/badge.tsx';
-import { Tabs, TabsList, TabsTrigger } from '../../components/ui/tabs.tsx';
+import { TabsSubtle, TabsSubtleItem, TabsSubtleList } from '../../components/ui/tabs-subtle.tsx';
 import type { CronFilter } from './filter-cron-jobs.ts';
 
 interface CronFilterTabsProps {
@@ -20,34 +20,34 @@ export function CronFilterTabs({
     totalJobs,
 }: CronFilterTabsProps) {
     return (
-        <Tabs onValueChange={(value) => onFilterChange(value as CronFilter)} value={filter}>
-            <TabsList className={compact ? 'h-7 gap-0.5' : undefined}>
-                <TabsTrigger
+        <TabsSubtle onValueChange={(value) => onFilterChange(value as CronFilter)} value={filter}>
+            <TabsSubtleList className={compact ? 'h-7 gap-0.5' : undefined}>
+                <TabsSubtleItem
                     className={compact ? 'h-6 px-2 text-xs' : undefined}
                     size="sm"
                     value="all"
                 >
                     All
                     <CronFilterCount compact={compact} count={totalJobs} />
-                </TabsTrigger>
-                <TabsTrigger
+                </TabsSubtleItem>
+                <TabsSubtleItem
                     className={compact ? 'h-6 px-2 text-xs' : undefined}
                     size="sm"
                     value="active"
                 >
                     Active
                     <CronFilterCount compact={compact} count={enabledJobs} />
-                </TabsTrigger>
-                <TabsTrigger
+                </TabsSubtleItem>
+                <TabsSubtleItem
                     className={compact ? 'h-6 px-2 text-xs' : undefined}
                     size="sm"
                     value="paused"
                 >
                     Paused
                     <CronFilterCount compact={compact} count={pausedJobs} />
-                </TabsTrigger>
-            </TabsList>
-        </Tabs>
+                </TabsSubtleItem>
+            </TabsSubtleList>
+        </TabsSubtle>
     );
 }
 

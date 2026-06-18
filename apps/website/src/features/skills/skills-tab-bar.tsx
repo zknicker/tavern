@@ -1,4 +1,4 @@
-import { Tabs, TabsList, TabsTrigger } from '../../components/ui/tabs.tsx';
+import { TabsSubtle, TabsSubtleItem, TabsSubtleList } from '../../components/ui/tabs-subtle.tsx';
 
 export type SkillsTab = 'available' | 'installed';
 
@@ -17,24 +17,24 @@ export function SkillsTabBar({
     value: SkillsTab;
 }) {
     return (
-        <Tabs
+        <TabsSubtle
             aria-label="Filter skills"
             className="self-start"
             onValueChange={(nextValue) => onChange(nextValue as SkillsTab)}
             value={value}
         >
-            <TabsList>
+            <TabsSubtleList>
                 {tabs.map((tab) => (
-                    <TabsTrigger key={tab.id} size="sm" value={tab.id}>
+                    <TabsSubtleItem key={tab.id} size="sm" value={tab.id}>
                         <span>{tab.label}</span>
                         {counts[tab.id] === undefined ? null : (
                             <span className="font-mono text-muted-foreground text-xs tabular-nums">
                                 {counts[tab.id]}
                             </span>
                         )}
-                    </TabsTrigger>
+                    </TabsSubtleItem>
                 ))}
-            </TabsList>
-        </Tabs>
+            </TabsSubtleList>
+        </TabsSubtle>
     );
 }

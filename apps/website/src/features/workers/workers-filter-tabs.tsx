@@ -1,4 +1,4 @@
-import { Tabs, TabsList, TabsTrigger } from '../../components/ui/tabs.tsx';
+import { TabsSubtle, TabsSubtleItem, TabsSubtleList } from '../../components/ui/tabs-subtle.tsx';
 import type { WorkersFilterType } from './filter-workers.ts';
 
 const filterTabs = [
@@ -16,14 +16,17 @@ interface WorkersFilterTabsProps {
 
 export function WorkersFilterTabs({ filter, onFilterChange }: WorkersFilterTabsProps) {
     return (
-        <Tabs onValueChange={(value) => onFilterChange(value as WorkersFilterType)} value={filter}>
-            <TabsList>
+        <TabsSubtle
+            onValueChange={(value) => onFilterChange(value as WorkersFilterType)}
+            value={filter}
+        >
+            <TabsSubtleList>
                 {filterTabs.map((item) => (
-                    <TabsTrigger key={item.id} size="sm" value={item.id}>
+                    <TabsSubtleItem key={item.id} size="sm" value={item.id}>
                         {item.label}
-                    </TabsTrigger>
+                    </TabsSubtleItem>
                 ))}
-            </TabsList>
-        </Tabs>
+            </TabsSubtleList>
+        </TabsSubtle>
     );
 }

@@ -17,7 +17,7 @@ import {
     SelectTriggerIcon,
     SelectValue,
 } from '../../components/ui/select.tsx';
-import { Tabs, TabsList, TabsTrigger } from '../../components/ui/tabs.tsx';
+import { TabsSubtle, TabsSubtleItem, TabsSubtleList } from '../../components/ui/tabs-subtle.tsx';
 import type { CronScheduleKind } from './cron-form.ts';
 import type { CronEditorFormApi } from './use-cron-editor-form.ts';
 
@@ -96,24 +96,24 @@ export function CronEditorScheduleFields({ form }: { form: CronEditorFormApi }) 
 
                         <form.Field name="scheduleKind">
                             {(field) => (
-                                <Tabs
+                                <TabsSubtle
                                     onValueChange={(value) =>
                                         field.handleChange(value as CronScheduleKind)
                                     }
                                     value={field.state.value}
                                 >
-                                    <TabsList className="rounded-full bg-muted/80 p-0.5">
+                                    <TabsSubtleList className="rounded-full bg-muted/80 p-0.5">
                                         {scheduleOptions.map((option) => (
-                                            <TabsTrigger
+                                            <TabsSubtleItem
                                                 key={option.value}
                                                 size="sm"
                                                 value={option.value}
                                             >
                                                 {option.label}
-                                            </TabsTrigger>
+                                            </TabsSubtleItem>
                                         ))}
-                                    </TabsList>
-                                </Tabs>
+                                    </TabsSubtleList>
+                                </TabsSubtle>
                             )}
                         </form.Field>
 

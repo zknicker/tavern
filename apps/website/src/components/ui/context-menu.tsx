@@ -8,8 +8,20 @@ import { MenuItem, MenuSeparator, MenuSub, MenuSubPopup, MenuSubTrigger } from '
 export const contextMenuPopupClassName =
     'relative flex w-[152px] rounded-[14px] border border-black/15 bg-[#f7f7f8]/95 shadow-[0_16px_40px_rgb(0_0_0_/_0.18),0_2px_10px_rgb(0_0_0_/_0.10)] outline-none backdrop-blur-xl dark:border-white/12 dark:bg-[#2b2b2d]/92';
 export const contextMenuItemClassName =
-    'data-highlighted:!bg-[#0A84FF] data-highlighted:!text-white min-h-7 gap-2.5 rounded-[7px] py-0.5 ps-3 pe-3 font-normal text-sm';
+    'min-h-[27px] gap-2.5 rounded-[10px] py-px ps-3 pe-3 font-normal text-sm data-highlighted:bg-accent data-highlighted:text-accent-foreground sm:min-h-[27px]';
 export const contextMenuSeparatorClassName = 'mx-1 my-1 bg-black/12 dark:bg-white/14';
+
+interface ContextMenuPositionerProps {
+    align?: ContextMenuPrimitive.Positioner.Props['align'];
+    alignOffset?: ContextMenuPrimitive.Positioner.Props['alignOffset'];
+    anchor?: ContextMenuPrimitive.Positioner.Props['anchor'];
+    collisionAvoidance?: ContextMenuPrimitive.Positioner.Props['collisionAvoidance'];
+    collisionBoundary?: ContextMenuPrimitive.Positioner.Props['collisionBoundary'];
+    collisionPadding?: ContextMenuPrimitive.Positioner.Props['collisionPadding'];
+    positionMethod?: ContextMenuPrimitive.Positioner.Props['positionMethod'];
+    side?: ContextMenuPrimitive.Positioner.Props['side'];
+    sideOffset?: ContextMenuPrimitive.Positioner.Props['sideOffset'];
+}
 
 export function ContextMenu({
     children,
@@ -43,16 +55,14 @@ export function ContextMenuPopup({
     alignOffset,
     children,
     className,
+    collisionAvoidance,
+    collisionBoundary,
+    collisionPadding,
+    positionMethod,
     side = 'bottom',
     sideOffset = 0,
     ...props
-}: ContextMenuPrimitive.Popup.Props & {
-    align?: ContextMenuPrimitive.Positioner.Props['align'];
-    sideOffset?: ContextMenuPrimitive.Positioner.Props['sideOffset'];
-    alignOffset?: ContextMenuPrimitive.Positioner.Props['alignOffset'];
-    side?: ContextMenuPrimitive.Positioner.Props['side'];
-    anchor?: ContextMenuPrimitive.Positioner.Props['anchor'];
-}): React.ReactElement {
+}: ContextMenuPrimitive.Popup.Props & ContextMenuPositionerProps): React.ReactElement {
     return (
         <ContextMenuPrimitive.Portal>
             <ContextMenuPrimitive.Positioner
@@ -60,7 +70,11 @@ export function ContextMenuPopup({
                 alignOffset={alignOffset}
                 anchor={anchor}
                 className="z-50"
+                collisionAvoidance={collisionAvoidance}
+                collisionBoundary={collisionBoundary}
+                collisionPadding={collisionPadding}
                 data-slot="context-menu-positioner"
+                positionMethod={positionMethod}
                 side={side}
                 sideOffset={sideOffset}
             >
@@ -69,12 +83,29 @@ export function ContextMenuPopup({
                     data-slot="context-menu-popup"
                     {...props}
                 >
-                    <div className="max-h-(--available-height) w-full overflow-y-auto p-1">
+                    <div className="max-h-(--available-height) w-full overflow-y-auto p-1.5">
                         {children}
                     </div>
                 </ContextMenuPrimitive.Popup>
             </ContextMenuPrimitive.Positioner>
         </ContextMenuPrimitive.Portal>
+    );
+}
+
+export function ContextMenuAnchoredPopup({
+    children,
+    onOpenChange,
+    open = true,
+    ...props
+}: ContextMenuPrimitive.Popup.Props &
+    ContextMenuPositionerProps & {
+        onOpenChange?: ContextMenuPrimitive.Root.Props['onOpenChange'];
+        open?: ContextMenuPrimitive.Root.Props['open'];
+    }): React.ReactElement {
+    return (
+        <ContextMenuPrimitive.Root onOpenChange={onOpenChange} open={open}>
+            <ContextMenuPopup {...props}>{children}</ContextMenuPopup>
+        </ContextMenuPrimitive.Root>
     );
 }
 
@@ -101,7 +132,7 @@ export function ContextMenuSubTrigger({
     return (
         <MenuSubTrigger
             className={cn(
-                'data-highlighted:!bg-[#0A84FF] data-highlighted:!text-white data-popup-open:!bg-[#0A84FF] data-popup-open:!text-white min-h-7 gap-2.5 rounded-[7px] py-0.5 ps-3 pe-2 font-normal text-sm',
+                'min-h-[27px] gap-2.5 rounded-[10px] py-px ps-3 pe-2 font-normal text-sm data-highlighted:bg-accent data-popup-open:bg-accent data-highlighted:text-accent-foreground data-popup-open:text-accent-foreground sm:min-h-[27px]',
                 className
             )}
             closeDelay={160}
@@ -119,7 +150,7 @@ export function ContextMenuSubPopup({
     return (
         <MenuSubPopup
             className={cn(
-                'w-[152px] rounded-[14px] border-black/15 bg-[#f7f7f8]/95 shadow-[0_16px_40px_rgb(0_0_0_/_0.18),0_2px_10px_rgb(0_0_0_/_0.10)] backdrop-blur-xl before:hidden dark:border-white/12 dark:bg-[#2b2b2d]/92 [&>div]:p-1',
+                'w-[152px] rounded-[14px] border-black/15 bg-[#f7f7f8]/95 shadow-[0_16px_40px_rgb(0_0_0_/_0.18),0_2px_10px_rgb(0_0_0_/_0.10)] backdrop-blur-xl before:hidden dark:border-white/12 dark:bg-[#2b2b2d]/92 [&>div]:p-1.5',
                 className
             )}
             {...props}

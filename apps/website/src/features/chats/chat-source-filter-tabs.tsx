@@ -1,5 +1,5 @@
 import { Badge } from '../../components/ui/badge.tsx';
-import { Tabs, TabsList, TabsTrigger } from '../../components/ui/tabs.tsx';
+import { TabsSubtle, TabsSubtleItem, TabsSubtleList } from '../../components/ui/tabs-subtle.tsx';
 
 export type ChatSourceFilter = 'all' | string;
 
@@ -23,18 +23,18 @@ export function ChatSourceFilterTabs({
     options,
 }: ChatSourceFilterTabsProps) {
     return (
-        <Tabs onValueChange={onFilterChange} value={filter}>
-            <TabsList className="max-w-full overflow-x-auto pb-1">
+        <TabsSubtle onValueChange={onFilterChange} value={filter}>
+            <TabsSubtleList className="max-w-full overflow-x-auto pb-1">
                 {options.map((option) => (
-                    <TabsTrigger key={option.kind} size="sm" value={option.kind}>
+                    <TabsSubtleItem key={option.kind} size="sm" value={option.kind}>
                         {option.label}
                         <Badge size="sm" variant="secondary">
                             {option.count}
                         </Badge>
-                    </TabsTrigger>
+                    </TabsSubtleItem>
                 ))}
-            </TabsList>
-        </Tabs>
+            </TabsSubtleList>
+        </TabsSubtle>
     );
 }
 
