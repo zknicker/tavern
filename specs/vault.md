@@ -1,7 +1,7 @@
 # Vault
 
 Vault is Tavern's durable wiki: a plain-Markdown directory the user owns and
-agents maintain with file tools.
+edits through Tavern or agents.
 
 ## Contract
 
@@ -19,7 +19,12 @@ Runtime owns:
 * path resolution
 * read/write access checks
 * Markdown file listing
+* folder listing
 * page reads
+* page and folder creation
+* page body saves that preserve frontmatter
+* page and folder deletion
+* page and folder moves or renames
 * light frontmatter parsing
 * `[[wikilink]]` and Markdown link extraction
 * backlink derivation
@@ -34,7 +39,7 @@ Runtime does not own:
 * librarian scans
 * todo queues
 * wiki maintenance jobs
-* direct wiki content mutation beyond creating `INDEX.md` when saving a path
+* automatic wiki rewrites beyond user or agent requests
 
 ## Agent Contract
 
@@ -51,12 +56,17 @@ creating new ones, and add useful wikilinks or backlinks.
 
 The Vault tab shows:
 
-* Markdown page tree
-* page body
+* compact Markdown page and folder tree
+* page body source editor
+* source, split, and preview modes
+* Markdown formatting toolbar
+* live Markdown preview
 * file metadata
 * wikilinks and backlinks
 * search
 * resolved path and access status
+* word, character, line, and draft-link counts
+* add, delete, rename, save, and drag-to-folder move controls
 
 Settings and Memory show Vault readiness and counts. They do not expose hidden
 pipeline controls.

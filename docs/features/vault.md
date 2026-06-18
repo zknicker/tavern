@@ -1,14 +1,15 @@
 ---
-summary: Vault feature for browsing the user's Markdown wiki, page graph, search, backlinks, and configurable wiki path.
+summary: Vault feature for browsing and editing the user's Markdown wiki, page graph, search, backlinks, and configurable wiki path.
 read_when:
-  - changing Vault browsing, Markdown reads, backlinks, search, or Vault path settings
+  - changing Vault browsing, Markdown editing, backlinks, search, or Vault path settings
   - changing how agents or users inspect durable wiki knowledge from Tavern
 ---
 
 # Vault
 
-Vault is Tavern's browser for the user's wiki. The wiki is plain Markdown on
-the local filesystem, owned by the user and maintained by agents.
+Vault is Tavern's browser and editor for the user's wiki. The wiki is plain
+Markdown on the local filesystem, owned by the user and maintained by the user
+and agents.
 
 Vault is not a second database, vector index, ingestion pipeline, compile
 pipeline, or hidden maintenance system. It is a browsable file-backed knowledge
@@ -18,8 +19,18 @@ surface.
 
 * **Markdown pages.** Vault lists Markdown files under the configured root,
   ignoring dot directories such as `.obsidian/`.
-* **File browsing.** Vault shows pages in their directory tree and opens
-  Markdown in a read-only document preview.
+* **File browsing.** Vault shows pages and folders in a compact directory tree.
+* **Editing.** Vault can create pages, create folders, save page body changes,
+  delete pages or folders, rename paths, and drag pages or folders into another
+  folder.
+* **Editor modes.** The first-party editor supports source, split, and preview
+  modes, a Markdown formatting toolbar, and dirty/save state.
+* **Metadata.** File metadata, frontmatter properties, and backlinks live in a
+  slideable, collapsed-by-default right metadata panel so the editor and preview
+  keep the central width.
+* **Rich editor candidate.** MDXEditor remains the preferred rich editor
+  candidate after a focused spike proves clean Markdown roundtripping and Tavern
+  UI fit without weakening the COSS boundary.
 * **Backlinks.** Vault derives inbound references from `[[wikilinks]]` and
   Markdown links.
 * **Link navigation.** Wikilinks and relative Markdown links open the target
@@ -42,10 +53,10 @@ The Vault path resolves in this order:
 Runtime creates the configured root and an `INDEX.md` file when the path is
 saved in Settings. `INDEX.md` is the global directory for the wiki.
 
-Runtime exposes a small read API and one settings write. Tavern App renders the
-Vault tab from that API. Agents maintain the files through the managed `vault`
-skill: normal wiki work routes to the Obsidian skill, and bounded research
-folders route to the llm-wiki skill.
+Runtime exposes a small read/write API for path-safe Markdown file operations.
+Tavern App renders the Vault tab from that API. Agents maintain the same files
+through the managed `vault` skill: normal wiki work routes to the Obsidian
+skill, and bounded research folders route to the llm-wiki skill.
 
 ## Boundary
 
