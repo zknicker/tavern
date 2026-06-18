@@ -59,9 +59,10 @@ test('chart bar props reject missing numeric series values', () => {
 test('chart bar tool input normalizes numeric string series values', () => {
     const result = tavernRenderBarChartToolInputSchema.safeParse({
         data: [{ quarter: 'Q1', revenue: '12000' }],
-        series: [{ key: 'revenue', label: 'Revenue' }],
         title: 'Quarterly Revenue',
-        xKey: 'quarter',
+        unit: 'USD',
+        x: 'quarter',
+        y: 'revenue',
     });
 
     expect(result.success).toBe(true);
@@ -69,14 +70,35 @@ test('chart bar tool input normalizes numeric string series values', () => {
         throw new Error('Expected chart tool input to parse.');
     }
     expect(result.data.data).toEqual([{ quarter: 'Q1', revenue: 12_000 }]);
+    expect(result.data.series).toEqual([{ key: 'revenue', label: 'Revenue' }]);
+    expect(result.data.unit).toBe('USD');
+    expect(result.data.xKey).toBe('quarter');
+});
+
+test('chart bar tool input accepts multiple y keys', () => {
+    const result = tavernRenderBarChartToolInputSchema.safeParse({
+        data: [{ quarter: 'Q1', revenue: '12000', expenses: 7600 }],
+        title: 'Quarterly Revenue',
+        x: 'quarter',
+        y: ['revenue', 'expenses'],
+    });
+
+    expect(result.success).toBe(true);
+    if (!result.success) {
+        throw new Error('Expected chart tool input to parse.');
+    }
+    expect(result.data.series).toEqual([
+        { key: 'revenue', label: 'Revenue' },
+        { key: 'expenses', label: 'Expenses' },
+    ]);
 });
 
 test('chart bar tool input rejects nonnumeric string series values', () => {
     const result = tavernRenderBarChartToolInputSchema.safeParse({
         data: [{ quarter: 'Q1', revenue: 'twelve thousand' }],
-        series: [{ key: 'revenue', label: 'Revenue' }],
         title: 'Quarterly Revenue',
-        xKey: 'quarter',
+        x: 'quarter',
+        y: 'revenue',
     });
 
     expect(result.success).toBe(false);
@@ -118,9 +140,9 @@ test('chart line props accept finite negative series values', () => {
 test('chart line tool input normalizes negative numeric string series values', () => {
     const result = tavernRenderLineChartToolInputSchema.safeParse({
         data: [{ month: 'Jan', net: '-12.5' }],
-        series: [{ key: 'net', label: 'Net' }],
         title: 'Net Change',
-        xKey: 'month',
+        x: 'month',
+        y: 'net',
     });
 
     expect(result.success).toBe(true);

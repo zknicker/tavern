@@ -4,11 +4,13 @@ import {
     type TavernRenderCalendarEventToolInput,
     type TavernRenderLineChartProps,
     tavernRenderBarChartComponentId,
+    tavernRenderBarChartToolInputSchema,
     tavernRenderBarChartToolName,
     tavernRenderCalendarEventComponentId,
     tavernRenderCalendarEventToolInputSchema,
     tavernRenderCalendarEventToolName,
     tavernRenderLineChartComponentId,
+    tavernRenderLineChartToolInputSchema,
     tavernRenderLineChartToolName,
     type WidgetRenderInput,
 } from '@tavern/api';
@@ -29,7 +31,8 @@ const longOAuthConsentUrl =
     'https://accounts.google.com/o/oauth2/auth?response_type=code&client_id=535034123734-jckkmfjk3qajgeo8mhcstmtkbdrt0gn2.apps.googleusercontent.com&redirect_uri=http%3A%2F%2Flocalhost%3A1&scope=https%3A%2F%2Fwww.googleapis.com%2Fauth%2Fcalendar.events.readonly&access_type=offline&prompt=consent&state=tavern_static_preview_long_agent_response_token';
 
 export function chartDemo(): DevelopmentChatDemo {
-    const chartProps = chartDemoProps();
+    const chartToolInput = chartDemoToolInput();
+    const chartProps = tavernRenderBarChartToolInputSchema.parse(chartToolInput);
     const chatId = developmentChatDemoIds.charts;
     const runId = 'run_demo_charts';
     const requestMessageId = 'msg_demo_charts_request';
@@ -72,7 +75,7 @@ export function chartDemo(): DevelopmentChatDemo {
                         runId,
                         sequence: 1,
                         title: tavernRenderBarChartToolName,
-                        toolArguments: chartProps,
+                        toolArguments: chartToolInput,
                         toolCallId: 'call_demo_charts_tool',
                         toolName: tavernRenderBarChartToolName,
                         toolResult: { status: 'rendered' },
@@ -106,7 +109,8 @@ export function chartDemo(): DevelopmentChatDemo {
 }
 
 export function lineChartDemo(): DevelopmentChatDemo {
-    const chartProps = lineChartDemoProps();
+    const chartToolInput = lineChartDemoToolInput();
+    const chartProps = tavernRenderLineChartToolInputSchema.parse(chartToolInput);
     const chatId = developmentChatDemoIds.lineChart;
     const runId = 'run_demo_line_chart';
     const requestMessageId = 'msg_demo_line_chart_request';
@@ -149,7 +153,7 @@ export function lineChartDemo(): DevelopmentChatDemo {
                         runId,
                         sequence: 1,
                         title: tavernRenderLineChartToolName,
-                        toolArguments: chartProps,
+                        toolArguments: chartToolInput,
                         toolCallId: 'call_demo_line_chart_tool',
                         toolName: tavernRenderLineChartToolName,
                         toolResult: { status: 'rendered' },
@@ -389,7 +393,7 @@ function calendarEventDemoRenderInput(props: TavernRenderCalendarEventProps): Wi
     };
 }
 
-function chartDemoProps(): TavernRenderBarChartProps {
+function chartDemoToolInput() {
     return {
         data: [
             { quarter: 'Q1', revenue: 12_000, expenses: 7600 },
@@ -397,12 +401,10 @@ function chartDemoProps(): TavernRenderBarChartProps {
             { quarter: 'Q3', revenue: 18_200, expenses: 10_100 },
             { quarter: 'Q4', revenue: 22_400, expenses: 11_800 },
         ],
-        series: [
-            { key: 'revenue', label: 'Revenue' },
-            { key: 'expenses', label: 'Expenses' },
-        ],
         title: 'Quarterly Revenue',
-        xKey: 'quarter',
+        unit: 'USD',
+        x: 'quarter',
+        y: ['revenue', 'expenses'],
     };
 }
 
@@ -417,7 +419,7 @@ function calendarEventDemoToolInput(): TavernRenderCalendarEventToolInput {
     };
 }
 
-function lineChartDemoProps(): TavernRenderLineChartProps {
+function lineChartDemoToolInput() {
     return {
         data: [
             { date: 'May 20', users: 1320, pageviews: 5200 },
@@ -451,11 +453,8 @@ function lineChartDemoProps(): TavernRenderLineChartProps {
             { date: 'Jun 17', users: 2160, pageviews: 8820 },
             { date: 'Jun 18', users: 2180, pageviews: 8950 },
         ],
-        series: [
-            { key: 'users', label: 'users' },
-            { key: 'pageviews', label: 'pageviews' },
-        ],
         title: 'Daily Traffic',
-        xKey: 'date',
+        x: 'date',
+        y: ['users', 'pageviews'],
     };
 }

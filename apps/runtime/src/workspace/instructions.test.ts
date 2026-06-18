@@ -71,14 +71,15 @@ describe('generated agent instructions', () => {
         expect(content).toContain('## Environment');
         expect(content).toContain('## Widgets');
         expect(content).toContain('You can render Widgets using tool calls');
+        expect(content).toContain('When data is clearly visual, prefer a Widget');
         expect(content).toContain(
-            '- `render_bar_chart`: simple bar chart from prepared categorical data; number values render as bars.'
+            '- `render_bar_chart`: bar chart for categorical comparisons, rankings, and totals.'
         );
         expect(content).toContain(
-            '- `render_line_chart`: simple trend chart from prepared numeric data; number values render as a line or filled area.'
+            '- `render_line_chart`: line chart for trends, time series, and ordered numeric data.'
         );
         expect(content).toContain(
-            '- `render_calendar_event`: single calendar event from Google-shaped event data.'
+            '- `render_calendar_event`: single prepared calendar event; preserve source start/end date, dateTime, and timeZone fields.'
         );
         expect(content).toContain('## Visible Progress');
         expect(content).toContain('send one short preamble');

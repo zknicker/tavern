@@ -9,9 +9,8 @@ import {
     tavernRenderLineChartComponentId,
     tavernRenderLineChartPropsSchema,
 } from '@tavern/api/widgets/charts';
-import { type CSSProperties, useState } from 'react';
+import { useState } from 'react';
 import { Area, AreaChart } from '../components/charts/area-chart.tsx';
-import { buildPackedChartMargin } from '../components/charts/axis-packing.ts';
 import { Bar } from '../components/charts/bar.tsx';
 import { BarChart } from '../components/charts/bar-chart.tsx';
 import { BarXAxis } from '../components/charts/bar-x-axis.tsx';
@@ -25,12 +24,23 @@ import {
     LegendMarker,
     LegendValue,
 } from '../components/charts/legend/index.ts';
-import { ChartTooltip, type TooltipRow } from '../components/charts/tooltip/index.ts';
+import { ChartTooltip } from '../components/charts/tooltip/index.ts';
 import { XAxis } from '../components/charts/x-axis.tsx';
 import { YAxis } from '../components/charts/y-axis.tsx';
 import { Icon } from '../components/ui/icon.tsx';
 import { Button } from '../components/ui/primitives/button.tsx';
 import { WidgetFrame } from '../components/widgets/widget-frame.tsx';
+import {
+    buildBarChartMargin,
+    buildLegendItems,
+    buildLineChartMargin,
+    buildTooltipRows,
+    chartStyleVars,
+    formatChartValue,
+    lineYAxisId,
+    normalizeLineChartData,
+    seriesColor,
+} from './chart-view-model.ts';
 import type { TavernWidget } from './types.ts';
 
 export function renderChartWidget(widget: TavernWidget): React.ReactNode {
@@ -54,18 +64,7 @@ function TavernBarChart({ props }: { props: TavernRenderBarChartProps }) {
     const [hoveredSeriesIndex, setHoveredSeriesIndex] = useState<null | number>(null);
     const toggleLabel = expanded ? 'Collapse chart' : 'Expand chart';
     const legendItems = buildLegendItems(props);
-    const margin = buildPackedChartMargin({
-        base: { bottom: 44, left: 30, right: 18, top: 24 },
-        data: props.data,
-        yAxes: [
-            {
-                keys: props.series.map((series) => series.key),
-                max: 48,
-                min: 30,
-                side: 'left',
-            },
-        ],
-    });
+    const margin = buildBarChartMargin(props);
 
     return (
         <ChartLegendHoverProvider
@@ -117,7 +116,7 @@ function TavernBarChart({ props }: { props: TavernRenderBarChartProps }) {
                         ))}
                         <ChartTooltip
                             indicatorDasharray="4,4"
-                            rows={(point) => buildTooltipRows(props.series, point)}
+                            rows={(point) => buildTooltipRows(props.series, point, props.unit)}
                         />
                         <BarXAxis maxLabels={8} />
                     </BarChart>
@@ -125,6 +124,7 @@ function TavernBarChart({ props }: { props: TavernRenderBarChartProps }) {
                         hoveredIndex={hoveredSeriesIndex}
                         items={legendItems}
                         onHoverChange={setHoveredSeriesIndex}
+                        unit={props.unit}
                     />
                 </div>
             </WidgetFrame>
@@ -194,13 +194,14 @@ function TavernLineChart({ props }: { props: TavernRenderLineChartProps }) {
                         <XAxis />
                         <ChartTooltip
                             indicatorColor={seriesColor(0)}
-                            rows={(point) => buildTooltipRows(props.series, point)}
+                            rows={(point) => buildTooltipRows(props.series, point, props.unit)}
                         />
                     </AreaChart>
                     <ChartLegend
                         hoveredIndex={hoveredSeriesIndex}
                         items={legendItems}
                         onHoverChange={setHoveredSeriesIndex}
+                        unit={props.unit}
                     />
                 </div>
             </WidgetFrame>
@@ -212,10 +213,12 @@ function ChartLegend({
     hoveredIndex,
     items,
     onHoverChange,
+    unit,
 }: {
     hoveredIndex: null | number;
     items: LegendItemData[];
     onHoverChange: (index: null | number) => void;
+    unit?: string;
 }) {
     return (
         <Legend
@@ -227,113 +230,11 @@ function ChartLegend({
             <LegendItem className="group flex min-w-0 items-center gap-2 hover:bg-muted data-[hovered]:bg-muted">
                 <LegendMarker className="size-2.5" />
                 <LegendLabel className="min-w-0 truncate font-medium text-sm" />
-                <LegendValue className="font-medium text-sm tabular-nums group-data-[hovered]:text-foreground" />
+                <LegendValue
+                    className="font-medium text-sm tabular-nums group-data-[hovered]:text-foreground"
+                    formatValue={(value) => formatChartValue(value, unit)}
+                />
             </LegendItem>
         </Legend>
     );
 }
-
-function buildLegendItems(
-    props: TavernRenderBarChartProps | TavernRenderLineChartProps
-): LegendItemData[] {
-    const lastPoint = props.data.at(-1) ?? {};
-
-    return props.series.map((series, index) => ({
-        color: seriesColor(index),
-        label: series.label,
-        maxValue: maxSeriesValue(props.data, series.key),
-        value: numericValue(lastPoint[series.key]),
-    }));
-}
-
-function buildTooltipRows(
-    series: TavernRenderBarChartProps['series'],
-    point: Record<string, unknown>
-): TooltipRow[] {
-    return series.map((item, index) => ({
-        color: seriesColor(index),
-        label: item.label,
-        value: numericValue(point[item.key]),
-    }));
-}
-
-function maxSeriesValue(data: Record<string, string | number | boolean | null>[], key: string) {
-    return data.reduce((max, point) => Math.max(max, numericValue(point[key])), 0);
-}
-
-function numericValue(value: unknown) {
-    return typeof value === 'number' && Number.isFinite(value) ? value : 0;
-}
-
-function seriesColor(index: number) {
-    return chartSeriesColors[index % chartSeriesColors.length] ?? chartSeriesColors[0];
-}
-
-function lineYAxisId(index: number) {
-    return index === 1 ? 'right' : 'left';
-}
-
-function buildLineChartMargin(
-    data: Record<string, unknown>[],
-    series: TavernRenderLineChartProps['series']
-) {
-    const leftSeriesKeys = series
-        .filter((_, index) => lineYAxisId(index) === 'left')
-        .map((series) => series.key);
-    const rightSeriesKeys = series
-        .filter((_, index) => lineYAxisId(index) === 'right')
-        .map((series) => series.key);
-
-    return buildPackedChartMargin({
-        base: { bottom: 40, left: 30, right: 18, top: 24 },
-        data,
-        emptySideMargin: { right: 18 },
-        yAxes: [
-            { keys: leftSeriesKeys, max: 48, min: 30, side: 'left' },
-            { keys: rightSeriesKeys, max: 48, min: 30, side: 'right' },
-        ],
-    });
-}
-
-function normalizeLineChartData(props: TavernRenderLineChartProps) {
-    const baseTime = Date.UTC(2026, 0, 1);
-
-    return props.data.map((point, index) => {
-        const xValue = point[props.xKey];
-        const parsedDate =
-            typeof xValue === 'string' || typeof xValue === 'number' ? new Date(xValue) : null;
-
-        return {
-            ...point,
-            [props.xKey]:
-                parsedDate && Number.isFinite(parsedDate.getTime())
-                    ? parsedDate
-                    : new Date(baseTime + index * 86_400_000),
-        };
-    });
-}
-
-const chartSeriesColors = [
-    'var(--chart-line-primary)',
-    'var(--chart-line-secondary)',
-    'var(--chart-line-tertiary)',
-    'var(--chart-line-quaternary)',
-];
-
-const chartStyleVars = {
-    '--chart-background': 'var(--surface-3)',
-    '--chart-crosshair': 'var(--chart-line-primary)',
-    '--chart-grid': 'color-mix(in srgb, var(--border-strong) 58%, transparent)',
-    '--chart-label': 'color-mix(in srgb, var(--muted-foreground) 86%, transparent)',
-    '--chart-line-primary': 'var(--color-cyan-300)',
-    '--chart-line-secondary': 'var(--color-cyan-500)',
-    '--chart-line-tertiary': 'var(--brand)',
-    '--chart-line-quaternary': 'var(--info)',
-    '--chart-tooltip-background': 'color-mix(in srgb, var(--foreground) 88%, transparent)',
-    '--chart-tooltip-foreground': 'var(--background)',
-    '--chart-tooltip-muted': 'color-mix(in srgb, var(--background) 62%, transparent)',
-    '--legend-foreground': 'var(--foreground)',
-    '--legend-muted': 'color-mix(in srgb, var(--foreground) 8%, transparent)',
-    '--legend-muted-foreground': 'var(--muted-foreground)',
-    '--legend-track': 'var(--border)',
-} as CSSProperties;

@@ -20,15 +20,15 @@ describe('tavern messenger plugin', () => {
         expect(source).toContain(`name="${tavernRenderLineChartToolName}"`);
         expect(source).toContain(`"name": "${tavernRenderCalendarEventToolName}"`);
         expect(source).toContain(`name="${tavernRenderCalendarEventToolName}"`);
-        expect(source).toContain('Use when the user asks to see prepared categorical data');
-        expect(source).toContain('Use when the user asks to see prepared numeric data');
+        expect(source).toContain('Render prepared categorical data');
+        expect(source).toContain('Render prepared numeric data');
         expect(source).toContain(
             'Use when the user asks to see one prepared single-day calendar event'
         );
         expect(source).toContain('Google Calendar event data');
         expect(source).toContain('numeric strings are normalized');
-        expect(source).toContain('finite nonnegative JSON number or numeric string');
-        expect(source).toContain('finite JSON number or numeric string');
+        expect(source).toContain('finite nonnegative JSON numbers; numeric strings are normalized');
+        expect(source).toContain('finite JSON numbers; numeric strings are normalized');
         expect(tavernRenderBarChartToolName).toMatch(/^[a-zA-Z0-9_-]+$/u);
         expect(tavernRenderLineChartToolName).toMatch(/^[a-zA-Z0-9_-]+$/u);
         expect(tavernRenderCalendarEventToolName).toMatch(/^[a-zA-Z0-9_-]+$/u);
@@ -39,36 +39,44 @@ describe('tavern messenger plugin', () => {
             extraRootField: {
                 data: [{ quarter: 'Q1', revenue: 12_000 }],
                 extra: true,
-                series: [{ key: 'revenue', label: 'Revenue' }],
                 title: 'Quarterly Revenue',
-                xKey: 'quarter',
+                x: 'quarter',
+                y: 'revenue',
             },
-            extraSeriesField: {
+            duplicateY: {
                 data: [{ quarter: 'Q1', revenue: 12_000 }],
-                series: [{ color: 'red', key: 'revenue', label: 'Revenue' }],
                 title: 'Quarterly Revenue',
-                xKey: 'quarter',
+                x: 'quarter',
+                y: ['revenue', 'revenue'],
+            },
+            multipleY: {
+                data: [{ quarter: 'Q1', revenue: '12000', expenses: 7600 }],
+                title: 'Quarterly Revenue',
+                x: 'quarter',
+                y: ['revenue', 'expenses'],
             },
             numericString: {
                 data: [{ quarter: 'Q1', revenue: '12000' }],
-                series: [{ key: 'revenue', label: 'Revenue' }],
                 title: 'Quarterly Revenue',
-                xKey: 'quarter',
+                unit: 'USD',
+                x: 'quarter',
+                y: 'revenue',
             },
             underscoredNumericString: {
                 data: [{ quarter: 'Q1', revenue: '1_000' }],
-                series: [{ key: 'revenue', label: 'Revenue' }],
                 title: 'Quarterly Revenue',
-                xKey: 'quarter',
+                x: 'quarter',
+                y: 'revenue',
             },
         });
 
         expect(results.numericString).toEqual({ status: 'rendered' });
+        expect(results.multipleY).toEqual({ status: 'rendered' });
         expect(results.extraRootField).toMatchObject({
             error: 'Input contains unsupported fields.',
         });
-        expect(results.extraSeriesField).toMatchObject({
-            error: 'Series entries contain unsupported fields.',
+        expect(results.duplicateY).toMatchObject({
+            error: 'y keys must be unique.',
         });
         expect(results.underscoredNumericString).toMatchObject({
             error: 'data[0].revenue must be a finite nonnegative number or numeric string.',
@@ -80,15 +88,15 @@ describe('tavern messenger plugin', () => {
             {
                 negativeNumericString: {
                     data: [{ month: 'Jan', net: '-12.5' }],
-                    series: [{ key: 'net', label: 'Net' }],
                     title: 'Net Change',
-                    xKey: 'month',
+                    x: 'month',
+                    y: 'net',
                 },
                 underscoredNumericString: {
                     data: [{ month: 'Jan', net: '1_000' }],
-                    series: [{ key: 'net', label: 'Net' }],
                     title: 'Net Change',
-                    xKey: 'month',
+                    x: 'month',
+                    y: 'net',
                 },
             },
             '_handle_tavern_render_line_chart'

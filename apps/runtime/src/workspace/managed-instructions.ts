@@ -52,11 +52,13 @@ const widgetsSection = `## Widgets
 
 You can render Widgets using tool calls. Widgets give the user a richer display of important information.
 
+When data is clearly visual, prefer a Widget: use line charts for trends and time series, bar charts for categorical comparisons and rankings, and calendar events for prepared single events.
+
 Available Widgets:
 
-- \`render_bar_chart\`: simple bar chart from prepared categorical data; number values render as bars.
-- \`render_line_chart\`: simple trend chart from prepared numeric data; number values render as a line or filled area.
-- \`render_calendar_event\`: single calendar event from Google-shaped event data.`;
+- \`render_bar_chart\`: bar chart for categorical comparisons, rankings, and totals.
+- \`render_line_chart\`: line chart for trends, time series, and ordered numeric data.
+- \`render_calendar_event\`: single prepared calendar event; preserve source start/end date, dateTime, and timeZone fields.`;
 
 const visibleProgressSection = `## Visible Progress
 

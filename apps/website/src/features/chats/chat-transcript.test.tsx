@@ -101,10 +101,8 @@ test('ChatTranscript renders constrained inline markdown in message text', () =>
         /<code class="[^"]*\[overflow-wrap:anywhere\][^"]*">OPENAI_API_KEY<\/code>/
     );
     assert.match(markup, /href="https:\/\/openai\.com\/"/);
-    assert.match(
-        markup,
-        /<a class="[^"]*\[overflow-wrap:anywhere\][^"]*" href="https:\/\/www\.example\.com\/"/
-    );
+    assert.match(markup, /href="https:\/\/www\.example\.com\/"/);
+    assert.match(markup, />www\.example\.com<\/a>/);
     assert.match(markup, /&lt;u&gt;raw&lt;\/u&gt;/);
     assert.doesNotMatch(markup, /<h1/);
     assert.doesNotMatch(markup, /href="javascript:/);
@@ -162,7 +160,8 @@ test('ChatTranscript renders active replies through the chat message shell', () 
     assert.match(markup, /group relative flex/);
     assert.match(markup, /transform-origin:bottom left/);
     assert.doesNotMatch(markup, /pb-6/);
-    assert.doesNotMatch(markup, /opacity:0;transform/);
+    assert.match(markup, /style="transform-origin:bottom left;opacity:1;transform:none"/);
+    assert.doesNotMatch(markup, /style="transform-origin:bottom left;opacity:0;transform/);
 });
 
 test('active reply display text ignores invisible streaming edge whitespace', () => {
@@ -223,6 +222,7 @@ test('ChatTranscript renders chart widgets inline', () => {
     const markup = renderTranscript([widgetRow('ui-chart')]);
 
     assert.match(markup, /Quarterly Revenue/);
+    assert.match(markup, /\$15,500/);
     assert.match(markup, /relative w-full overflow-visible/);
     assert.doesNotMatch(markup, /Widget unavailable/);
     assert.doesNotMatch(markup, /aria-expanded/);
@@ -1756,6 +1756,7 @@ function widgetRow(id: string): ChatRow {
                 ],
                 series: [{ key: 'revenue', label: 'Revenue' }],
                 title: 'Quarterly Revenue',
+                unit: 'USD',
                 xKey: 'quarter',
             },
             target: 'chat.inline',

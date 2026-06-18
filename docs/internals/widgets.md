@@ -58,13 +58,16 @@ with the managed Tavern agent:
 You can render Widgets using tool calls. Widgets give the user a richer display
 of important information.
 
+When data is clearly visual, prefer a Widget: use line charts for trends and
+time series, bar charts for categorical comparisons and rankings, and calendar
+events for prepared single events.
+
 Available Widgets:
 
-* `render_bar_chart`: simple bar chart from prepared categorical data; number
-  values render as bars.
-* `render_line_chart`: simple trend chart from prepared numeric data; number
-  values render as a line or filled area.
-* `render_calendar_event`: single calendar event from Google-shaped event data.
+* `render_bar_chart`: bar chart for categorical comparisons, rankings, and totals.
+* `render_line_chart`: line chart for trends, time series, and ordered numeric data.
+* `render_calendar_event`: single prepared calendar event; preserve source
+  start/end date, dateTime, and timeZone fields.
 ```
 
 As Tavern adds weather or other Widget families, append their
@@ -90,22 +93,24 @@ The raw `ui.render` contract requires `fallback.text`, but chart Widget tools do
 not ask the agent for fallback copy. Runtime generates deterministic fallback
 text from the validated chart title.
 
-The tool input shape matches the chart render props:
+The chart tool input shape matches common chart-ready data:
 
 ```ts
-{ title, xKey, series, data }
+{ title, data, x, y, unit? }
 ```
 
-Runtime normalizes accepted tool input, then wraps those props with `target`,
-`component`, and generated fallback text.
+Runtime normalizes accepted chart tool input into stored render props, then wraps
+those props with `target`, `component`, and generated fallback text. `y` may be
+one numeric key or an array of up to four numeric keys.
 
 The chart tool accepts already-prepared chart data only. It does not query,
 aggregate, read files, run SQL, call external APIs, or accept domain-specific
 data references.
 
-Series values should be finite nonnegative JSON numbers. Numeric strings such as
-`"12"` are accepted at the tool boundary and normalized before widget activity
-is recorded. Non-numeric strings are invalid.
+Bar chart `y` values should be finite nonnegative JSON numbers. Line chart `y`
+values should be finite JSON numbers. Numeric strings such as `"12"` are
+accepted at the tool boundary and normalized before widget activity is recorded.
+Non-numeric strings are invalid.
 
 Built-in Widget tools are Tavern-owned built-in tools, available to every Tavern
 agent by default. They render validated UI into the current chat, do not execute
@@ -419,15 +424,34 @@ The stored widget payload is intentionally small:
 Tavern maps those props to bklit chart components. The assistant does not
 choose bklit primitives, margins, colors, CSS, or layout.
 
+The agent-facing chart tool input is simpler than the stored props:
+
+```jsonc
+{
+  "title": "Quarterly Revenue",
+  "data": [
+    { "quarter": "Q1", "revenue": 12000 },
+    { "quarter": "Q2", "revenue": 15500 }
+  ],
+  "x": "quarter",
+  "y": "revenue",
+  "unit": "USD"
+}
+```
+
+Source APIs may return this chart-ready shape as neutral data. They should not
+include a Tavern schema id, widget component id, tool name, or chart type. The
+agent chooses the appropriate render tool for the user's question and data shape.
+
 The bar chart supports up to 50 rows and up to 4 series. X values are strings or
 numbers. Stored series values are finite nonnegative numbers. The tool accepts
-numeric strings for series values and normalizes them before storage. The schema
-keeps `series` as an array even when the first chart uses one series.
+one `y` key or up to four `y` keys and normalizes numeric strings before
+storage.
 
 The trend chart supports up to 50 rows and up to 4 series. X values are strings
 or numbers. Stored series values are finite numbers, including negative values.
-The tool accepts numeric strings for series values and normalizes them before
-storage.
+The tool accepts one `y` key or up to four `y` keys and normalizes numeric
+strings before storage.
 
 ## Calendar event widget
 

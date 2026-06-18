@@ -66,7 +66,7 @@ _CALENDAR_DATE_PATTERN = re.compile(r"^\\d{4}-\\d{2}-\\d{2}$")
 _CALENDAR_DATETIME_PATTERN = re.compile(r"^(\\d{4}-\\d{2}-\\d{2})T(\\d{2}:\\d{2})")
 _CALENDAR_OFFSET_PATTERN = re.compile(r"(?:Z|[+-]\\d{2}:?\\d{2})$", re.IGNORECASE)
 _CALENDAR_TIME_PATTERN = re.compile(r"^(?:[01]\\d|2[0-3]):[0-5]\\d$")
-_ROOT_KEYS = {"title", "xKey", "series", "data"}
+_ROOT_KEYS = {"data", "title", "unit", "x", "y"}
 _CALENDAR_ROOT_KEYS = {
     "calendar",
     "description",
@@ -79,16 +79,14 @@ _CALENDAR_ROOT_KEYS = {
     "title",
 }
 _CALENDAR_TIME_KEYS = {"date", "dateTime", "timeZone"}
-_SERIES_KEYS = {"key", "label"}
-
 
 TAVERN_RENDER_BAR_CHART_SCHEMA = {
     "name": "${tavernRenderBarChartToolName}",
-    "description": "Use when the user asks to see prepared categorical data as a simple vertical bar chart in chat. Series values should be finite nonnegative JSON numbers; numeric strings are normalized.",
+    "description": "Render prepared categorical data as a simple vertical bar chart in chat. Use for comparisons, rankings, and category totals. Y values should be finite nonnegative JSON numbers; numeric strings are normalized.",
     "parameters": {
         "type": "object",
         "additionalProperties": False,
-        "required": ["title", "xKey", "series", "data"],
+        "required": ["title", "x", "y", "data"],
         "properties": {
             "title": {
                 "type": "string",
@@ -96,32 +94,35 @@ TAVERN_RENDER_BAR_CHART_SCHEMA = {
                 "maxLength": 160,
                 "description": "Chart title.",
             },
-            "xKey": {
+            "x": {
                 "type": "string",
                 "minLength": 1,
                 "maxLength": 80,
                 "description": "Data key for x-axis labels.",
             },
-            "series": {
-                "type": "array",
-                "minItems": 1,
-                "maxItems": 4,
-                "description": "1-4 numeric series; each key's row value must be a finite nonnegative JSON number or numeric string.",
-                "items": {
-                    "type": "object",
-                    "additionalProperties": False,
-                    "required": ["key", "label"],
-                    "properties": {
-                        "key": {"type": "string", "minLength": 1, "maxLength": 80},
-                        "label": {"type": "string", "minLength": 1, "maxLength": 120},
+            "y": {
+                "anyOf": [
+                    {"type": "string", "minLength": 1, "maxLength": 80},
+                    {
+                        "type": "array",
+                        "minItems": 1,
+                        "maxItems": 4,
+                        "items": {"type": "string", "minLength": 1, "maxLength": 80},
                     },
-                },
+                ],
+                "description": "One numeric data key, or 1-4 numeric data keys. Row values must be finite nonnegative numbers or numeric strings.",
+            },
+            "unit": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 40,
+                "description": "Optional display unit such as USD, count, or percent.",
             },
             "data": {
                 "type": "array",
                 "minItems": 1,
                 "maxItems": 50,
-                "description": "1-50 rows. xKey is the label; series values are finite nonnegative numbers or numeric strings.",
+                "description": "1-50 rows. x is the label field; y fields are finite nonnegative numbers or numeric strings.",
                 "items": {
                     "type": "object",
                     "additionalProperties": {
@@ -135,11 +136,11 @@ TAVERN_RENDER_BAR_CHART_SCHEMA = {
 
 TAVERN_RENDER_LINE_CHART_SCHEMA = {
     "name": "${tavernRenderLineChartToolName}",
-    "description": "Use when the user asks to see prepared numeric data as a simple trend chart in chat. Series values should be finite JSON numbers; numeric strings are normalized.",
+    "description": "Render prepared numeric data as a simple trend chart in chat. Use for time series, ordered progression, and numeric trends. Y values should be finite JSON numbers; numeric strings are normalized.",
     "parameters": {
         "type": "object",
         "additionalProperties": False,
-        "required": ["title", "xKey", "series", "data"],
+        "required": ["title", "x", "y", "data"],
         "properties": {
             "title": {
                 "type": "string",
@@ -147,32 +148,35 @@ TAVERN_RENDER_LINE_CHART_SCHEMA = {
                 "maxLength": 160,
                 "description": "Chart title.",
             },
-            "xKey": {
+            "x": {
                 "type": "string",
                 "minLength": 1,
                 "maxLength": 80,
                 "description": "Data key for x-axis labels.",
             },
-            "series": {
-                "type": "array",
-                "minItems": 1,
-                "maxItems": 4,
-                "description": "1-4 numeric series; each key's row value must be a finite JSON number or numeric string.",
-                "items": {
-                    "type": "object",
-                    "additionalProperties": False,
-                    "required": ["key", "label"],
-                    "properties": {
-                        "key": {"type": "string", "minLength": 1, "maxLength": 80},
-                        "label": {"type": "string", "minLength": 1, "maxLength": 120},
+            "y": {
+                "anyOf": [
+                    {"type": "string", "minLength": 1, "maxLength": 80},
+                    {
+                        "type": "array",
+                        "minItems": 1,
+                        "maxItems": 4,
+                        "items": {"type": "string", "minLength": 1, "maxLength": 80},
                     },
-                },
+                ],
+                "description": "One numeric data key, or 1-4 numeric data keys. Row values must be finite numbers or numeric strings.",
+            },
+            "unit": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 40,
+                "description": "Optional display unit such as USD, count, or percent.",
             },
             "data": {
                 "type": "array",
                 "minItems": 1,
                 "maxItems": 50,
-                "description": "1-50 rows. xKey is the label; series values are finite numbers or numeric strings.",
+                "description": "1-50 rows. x is the label field; y fields are finite numbers or numeric strings.",
                 "items": {
                     "type": "object",
                     "additionalProperties": {
@@ -411,28 +415,21 @@ def _validate_tavern_chart(args: Any, *, allow_negative: bool) -> Optional[str]:
         return "Input contains unsupported fields."
     if not _is_text(args.get("title"), 160):
         return "title must be a non-empty string."
-    x_key = args.get("xKey")
+    x_key = args.get("x")
     if not _is_text(x_key, 80):
-        return "xKey must be a non-empty string."
+        return "x must be a non-empty string."
+    if "unit" in args and not _is_text(args.get("unit"), 40):
+        return "unit must be a non-empty string."
 
-    series = args.get("series")
-    if not isinstance(series, list) or not (1 <= len(series) <= 4):
-        return "series must contain 1 to 4 entries."
-    series_keys = []
-    for item in series:
-        if not isinstance(item, dict):
-            return "Each series entry must be an object."
-        unsupported = set(item.keys()) - _SERIES_KEYS
-        if unsupported:
-            return "Series entries contain unsupported fields."
-        key = item.get("key")
-        if not _is_text(key, 80):
-            return "Each series entry needs a non-empty key."
-        if not _is_text(item.get("label"), 120):
-            return "Each series entry needs a non-empty label."
-        series_keys.append(key)
-    if len(set(series_keys)) != len(series_keys):
-        return "Series keys must be unique."
+    y = args.get("y")
+    if isinstance(y, str):
+        y_keys = [y]
+    elif isinstance(y, list) and 1 <= len(y) <= 4 and all(_is_text(item, 80) for item in y):
+        y_keys = y
+    else:
+        return "y must be a non-empty string or 1 to 4 non-empty strings."
+    if len(set(y_keys)) != len(y_keys):
+        return "y keys must be unique."
 
     data = args.get("data")
     if not isinstance(data, list) or not (1 <= len(data) <= 50):
@@ -446,7 +443,7 @@ def _validate_tavern_chart(args: Any, *, allow_negative: bool) -> Optional[str]:
         x_value = row.get(x_key)
         if not isinstance(x_value, (str, int, float)) or isinstance(x_value, bool):
             return f"data[{index}].{x_key} must be a string or number."
-        for key in series_keys:
+        for key in y_keys:
             if _coerce_chart_number(row.get(key), allow_negative=allow_negative) is None:
                 return f"data[{index}].{key} must be a {value_message}."
 
