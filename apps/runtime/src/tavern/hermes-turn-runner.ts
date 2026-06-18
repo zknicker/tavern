@@ -7,6 +7,10 @@ import type {
 import { readConfigValue } from '../config';
 import { closeSharedHermesClient, getSharedHermesClient } from '../hermes/shared-client';
 import {
+    calendarWidgetActivityFromRenderCalendarEventTool,
+    renderCalendarEventToolName,
+} from '../widgets/calendar';
+import {
     chartWidgetActivityFromRenderBarChartTool,
     chartWidgetActivityFromRenderLineChartTool,
     renderBarChartToolName,
@@ -336,7 +340,7 @@ export async function runHermesTurn(input: {
                 recordToolLifecycle(input, turn, toolEvent);
                 if (toolEvent.event === 'tool.completed') {
                     widgetRenderIndex += 1;
-                    recordRenderChartToolWidget(input, turn, toolEvent, widgetRenderIndex);
+                    recordRenderToolWidget(input, turn, toolEvent, widgetRenderIndex);
                 }
                 continue;
             }
@@ -849,27 +853,21 @@ function recordWidgetRender(
     );
 }
 
-function recordRenderChartToolWidget(
+function recordRenderToolWidget(
     input: HermesTurnInput,
     turn: HermesTurn,
     event: HermesEvent,
     index: number
 ) {
     const toolName = readString(event.data.tool_name);
+    const projector = widgetToolProjector(toolName);
 
-    if (
-        (toolName !== renderBarChartToolName && toolName !== renderLineChartToolName) ||
-        event.data.error === true
-    ) {
+    if (!projector || event.data.error === true) {
         return;
     }
 
     const toolCallId = readString(event.data.tool_call_id);
     const timestamp = new Date().toISOString();
-    const projector =
-        toolName === renderBarChartToolName
-            ? chartWidgetActivityFromRenderBarChartTool
-            : chartWidgetActivityFromRenderLineChartTool;
     const activity = projector({
         activityId: createActivityId(input.runId, `widget_${toolCallId ?? index}`),
         agentId: input.agentId,
@@ -886,6 +884,19 @@ function recordRenderChartToolWidget(
     }
 
     upsertResponseActivity(input.chatId, input.responseId, activity);
+}
+
+function widgetToolProjector(toolName: string | null) {
+    switch (toolName) {
+        case renderBarChartToolName:
+            return chartWidgetActivityFromRenderBarChartTool;
+        case renderLineChartToolName:
+            return chartWidgetActivityFromRenderLineChartTool;
+        case renderCalendarEventToolName:
+            return calendarWidgetActivityFromRenderCalendarEventTool;
+        default:
+            return null;
+    }
 }
 
 function isRecordableAssistantStatus(event: HermesEvent) {

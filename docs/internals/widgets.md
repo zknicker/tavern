@@ -1,5 +1,5 @@
 ---
-summary: Widget architecture for typed chat widgets, explicit host adapters, schemas, fallbacks, and the chart widget.
+summary: Widget architecture for typed chat widgets, explicit host adapters, schemas, fallbacks, chart widgets, and calendar event widgets.
 read_when:
   - adding or changing Widgets in chat or sidebar
   - adding a widget folder, host adapter, ui.render contract, or render fallback
@@ -64,9 +64,10 @@ Available Widgets:
   values render as bars.
 * `render_line_chart`: simple trend chart from prepared numeric data; number
   values render as a line or filled area.
+* `render_calendar_event`: single calendar event from Google-shaped event data.
 ```
 
-As Tavern adds calendar, weather, or other Widget families, append their
+As Tavern adds weather or other Widget families, append their
 description and tool call to this list. Keep the wording about what the agent can
 do, not where code lives.
 
@@ -428,11 +429,80 @@ or numbers. Stored series values are finite numbers, including negative values.
 The tool accepts numeric strings for series values and normalizes them before
 storage.
 
+## Calendar event widget
+
+The Calendar family registers one widget component:
+
+```text
+tavern.render_calendar_event
+```
+
+The agent-facing Widget tool is:
+
+```text
+render_calendar_event
+```
+
+The calendar event widget renders one prepared calendar event in chat. It does
+not read the user's calendar, create events, update events, or ask for calendar
+permissions.
+
+The tool input is shaped for direct Google Calendar translation:
+
+```jsonc
+{
+  "summary": "Q1 roadmap review",
+  "start": {
+    "dateTime": "2026-06-20T13:00:00-04:00",
+    "timeZone": "America/New_York"
+  },
+  "end": {
+    "dateTime": "2026-06-20T14:00:00-04:00",
+    "timeZone": "America/New_York"
+  },
+  "location": "Design room",
+  "calendar": "Product",
+  "description": "Review roadmap priorities and launch risks."
+}
+```
+
+For all-day events, use Google Calendar's `start.date` and optional exclusive
+`end.date`. The current widget is single-day: an all-day `end.date` must be the
+next calendar date, and timed events must start and end on the same display day.
+Runtime normalizes accepted tool input into the stored widget payload.
+
+The stored widget payload is intentionally small:
+
+```jsonc
+{
+  "component": "tavern.render_calendar_event",
+  "target": "chat.inline",
+  "props": {
+    "title": "Q1 roadmap review",
+    "date": "2026-06-20",
+    "startTime": "13:00",
+    "endTime": "14:00",
+    "timezone": "America/New_York",
+    "location": "Design room",
+    "calendar": "Product",
+    "notes": "Review roadmap priorities and launch risks."
+  },
+  "fallback": {
+    "text": "Q1 roadmap review"
+  }
+}
+```
+
+Stored dates use `YYYY-MM-DD`. Timed events use a same-day `HH:mm` start and end
+time, with `endTime` later than `startTime`. All-day events set `allDay: true`
+and omit times. Optional `calendar`, `timezone`, `location`, and `notes` are
+display text only.
+
 ## What is intentionally missing
 
 * Generic component tree DSL.
 * Arbitrary HTML, JSX, CSS, or scripts.
 * Approve/deny flows.
-* Calendar, ads, metrics cards, or domain-specific widgets.
+* Ads, metrics cards, or domain-specific widgets.
 * Model-owned actions or callbacks.
 * Sidebar rendering beyond the typed target contract.

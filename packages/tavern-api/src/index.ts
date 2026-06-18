@@ -40,5 +40,6 @@ export * from './runtime/runtime-aliases.js';
 export * from './runtime/skill-hub.js';
 export * from './runtime/skills.js';
 export * from './runtime/toolset-setup.js';
+export * from './widgets/calendar/contracts.js';
 export * from './widgets/charts/contracts.js';
 export * from './widgets/contracts.js';

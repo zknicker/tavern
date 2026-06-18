@@ -77,6 +77,9 @@ describe('generated agent instructions', () => {
         expect(content).toContain(
             '- `render_line_chart`: simple trend chart from prepared numeric data; number values render as a line or filled area.'
         );
+        expect(content).toContain(
+            '- `render_calendar_event`: single calendar event from Google-shaped event data.'
+        );
         expect(content).toContain('## Visible Progress');
         expect(content).toContain('send one short preamble');
         expect(content).toContain('send a brief update');

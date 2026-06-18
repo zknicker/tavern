@@ -793,6 +793,90 @@ describe('Tavern Hermes channel relay', () => {
         );
     });
 
+    it('stores render-calendar-event tool completions as durable widget activity', async () => {
+        hermesClient.streamChat.mockImplementationOnce(async function* streamChat() {
+            yield {
+                data: {
+                    arguments: {
+                        description: 'Review roadmap priorities and launch risks.',
+                        end: {
+                            dateTime: '2026-06-20T14:00:00-04:00',
+                            timeZone: 'America/New_York',
+                        },
+                        location: 'Design room',
+                        start: {
+                            dateTime: '2026-06-20T13:00:00-04:00',
+                            timeZone: 'America/New_York',
+                        },
+                        summary: 'Q1 roadmap review',
+                    },
+                    tool_name: 'render_calendar_event',
+                },
+                event: 'tool.started',
+            };
+            yield {
+                data: {
+                    result: '{"status":"rendered"}',
+                    tool_name: 'render_calendar_event',
+                },
+                event: 'tool.completed',
+            };
+            yield {
+                data: { content: 'Rendered the event.', message_id: 'hermes_msg_calendar_tool' },
+                event: 'assistant.completed',
+            };
+        });
+        createChat({ id: 'cht_1' });
+
+        await sendTavernChannelMessage('cht_1', {
+            agent: {
+                agentId: 'agt_1',
+            },
+            message: {
+                content: 'show calendar event',
+                id: 'msg_calendar_tool',
+                nonce: 'nonce_calendar_tool',
+            },
+            target: {
+                externalId: null,
+                sessionKey: 'session_1',
+                target: 'cht_1',
+                type: 'tavern',
+            },
+        });
+        await waitForHermesTurn();
+
+        expect(listResponses('cht_1').activity).toEqual(
+            expect.arrayContaining([
+                expect.objectContaining({
+                    kind: 'tool_call',
+                    status: 'completed',
+                    title: 'render_calendar_event',
+                }),
+                expect.objectContaining({
+                    detail: 'Q1 roadmap review',
+                    kind: 'widget',
+                    metadata: expect.objectContaining({
+                        widget: expect.objectContaining({
+                            component: 'tavern.render_calendar_event',
+                            fallback: { text: 'Q1 roadmap review' },
+                            props: expect.objectContaining({
+                                date: '2026-06-20',
+                                endTime: '14:00',
+                                notes: 'Review roadmap priorities and launch risks.',
+                                startTime: '13:00',
+                                timezone: 'America/New_York',
+                                title: 'Q1 roadmap review',
+                            }),
+                            target: 'chat.inline',
+                        }),
+                    }),
+                    title: 'render_calendar_event',
+                }),
+            ])
+        );
+    });
+
     it('does not store Hermes reasoning.available as model Thinking', async () => {
         hermesClient.streamChat.mockImplementationOnce(async function* streamChat() {
             yield {

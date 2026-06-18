@@ -1,6 +1,7 @@
 import { type WidgetRenderInput, widgetRenderInputSchema } from '@tavern/api/widgets';
 import type { TavernResponseActivity } from '@tavern/sdk';
 import type { ChatLogPage } from '../chat/contracts.ts';
+import { calendarWidgetFromParsedPayload } from './calendar.ts';
 import { chartWidgetFromParsedPayload } from './charts.ts';
 
 type WidgetRow = Extract<ChatLogPage['rows'][number], { kind: 'widget' }>;
@@ -9,7 +10,10 @@ type WidgetPayloadAdapter = (
     activity: TavernResponseActivity
 ) => WidgetRow['widget'] | null;
 
-const widgetPayloadAdapters: WidgetPayloadAdapter[] = [chartWidgetFromParsedPayload];
+const widgetPayloadAdapters: WidgetPayloadAdapter[] = [
+    chartWidgetFromParsedPayload,
+    calendarWidgetFromParsedPayload,
+];
 
 export function widgetRowFromActivity(input: {
     activity: TavernResponseActivity;

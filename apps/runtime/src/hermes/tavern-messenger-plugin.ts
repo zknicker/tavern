@@ -1,6 +1,10 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
-import { tavernRenderBarChartToolName, tavernRenderLineChartToolName } from '@tavern/api';
+import {
+    tavernRenderBarChartToolName,
+    tavernRenderCalendarEventToolName,
+    tavernRenderLineChartToolName,
+} from '@tavern/api';
 
 const PLUGIN_NAME = 'tavern-messenger-platform';
 
@@ -42,13 +46,15 @@ requires_env:
     password: false
 `;
 
-const PLUGIN_SOURCE = `import json
+const PLUGIN_SOURCE = `import datetime
+import json
 import math
 import os
 import re
 import urllib.error
 import urllib.request
 from typing import Any, Dict, Optional
+from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from gateway.config import Platform, PlatformConfig
 from gateway.platforms.base import BasePlatformAdapter, SendResult
@@ -56,7 +62,23 @@ from tools.registry import tool_error, tool_result
 
 
 _CHART_NUMBER_PATTERN = re.compile(r"^[+-]?(?:\\d+(?:\\.\\d*)?|\\.\\d+)(?:[eE][+-]?\\d+)?$")
+_CALENDAR_DATE_PATTERN = re.compile(r"^\\d{4}-\\d{2}-\\d{2}$")
+_CALENDAR_DATETIME_PATTERN = re.compile(r"^(\\d{4}-\\d{2}-\\d{2})T(\\d{2}:\\d{2})")
+_CALENDAR_OFFSET_PATTERN = re.compile(r"(?:Z|[+-]\\d{2}:?\\d{2})$", re.IGNORECASE)
+_CALENDAR_TIME_PATTERN = re.compile(r"^(?:[01]\\d|2[0-3]):[0-5]\\d$")
 _ROOT_KEYS = {"title", "xKey", "series", "data"}
+_CALENDAR_ROOT_KEYS = {
+    "calendar",
+    "description",
+    "end",
+    "location",
+    "notes",
+    "start",
+    "summary",
+    "timezone",
+    "title",
+}
+_CALENDAR_TIME_KEYS = {"date", "dateTime", "timeZone"}
 _SERIES_KEYS = {"key", "label"}
 
 
@@ -162,6 +184,104 @@ TAVERN_RENDER_LINE_CHART_SCHEMA = {
     },
 }
 
+TAVERN_RENDER_CALENDAR_EVENT_SCHEMA = {
+    "name": "${tavernRenderCalendarEventToolName}",
+    "description": "Use when the user asks to see one prepared single-day calendar event in chat. Input is shaped like Google Calendar event data: summary, start, end, location, and description.",
+    "parameters": {
+        "type": "object",
+        "additionalProperties": False,
+        "required": ["start"],
+        "properties": {
+            "summary": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 160,
+                "description": "Google Calendar event summary. Use title only when summary is unavailable.",
+            },
+            "title": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 160,
+                "description": "Fallback event title when summary is unavailable.",
+            },
+            "start": {
+                "type": "object",
+                "additionalProperties": False,
+                "description": "Google Calendar start object. Use date for all-day events or dateTime for timed events.",
+                "properties": {
+                    "date": {
+                        "type": "string",
+                        "pattern": "^\\\\d{4}-\\\\d{2}-\\\\d{2}$",
+                        "description": "All-day event date as YYYY-MM-DD.",
+                    },
+                    "dateTime": {
+                        "type": "string",
+                        "description": "Timed event start as an ISO date-time.",
+                    },
+                    "timeZone": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 80,
+                        "description": "IANA time zone from Google Calendar.",
+                    },
+                },
+            },
+            "end": {
+                "type": "object",
+                "additionalProperties": False,
+                "description": "Google Calendar end object. All-day end.date is exclusive and must be the next day.",
+                "properties": {
+                    "date": {
+                        "type": "string",
+                        "pattern": "^\\\\d{4}-\\\\d{2}-\\\\d{2}$",
+                        "description": "Exclusive all-day end date as YYYY-MM-DD.",
+                    },
+                    "dateTime": {
+                        "type": "string",
+                        "description": "Timed event end as an ISO date-time.",
+                    },
+                    "timeZone": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 80,
+                        "description": "IANA time zone from Google Calendar.",
+                    },
+                },
+            },
+            "timezone": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 80,
+                "description": "Optional fallback IANA time zone or short display label.",
+            },
+            "location": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 160,
+                "description": "Optional event location.",
+            },
+            "calendar": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 80,
+                "description": "Optional calendar name.",
+            },
+            "description": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 280,
+                "description": "Optional short Google Calendar description.",
+            },
+            "notes": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 280,
+                "description": "Fallback short note when description is unavailable.",
+            },
+        },
+    },
+}
+
 
 def _runtime_url(extra: Dict[str, Any]) -> str:
     return (os.getenv("TAVERN_RUNTIME_URL") or extra.get("runtime_url") or "").rstrip("/")
@@ -190,6 +310,73 @@ def _is_text(value: Any, max_len: int) -> bool:
 
 def _is_json_primitive(value: Any) -> bool:
     return value is None or isinstance(value, (str, int, float, bool))
+
+
+def _is_calendar_date(value: Any) -> bool:
+    if not isinstance(value, str) or not _CALENDAR_DATE_PATTERN.fullmatch(value.strip()):
+        return False
+    year, month, day = [int(part) for part in value.strip().split("-")]
+    if month < 1 or month > 12 or day < 1:
+        return False
+    month_lengths = [31, 29 if _is_leap_year(year) else 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
+    return day <= month_lengths[month - 1]
+
+
+def _is_leap_year(year: int) -> bool:
+    return year % 4 == 0 and (year % 100 != 0 or year % 400 == 0)
+
+
+def _is_time(value: Any) -> bool:
+    return isinstance(value, str) and bool(_CALENDAR_TIME_PATTERN.fullmatch(value.strip()))
+
+
+def _minutes(value: str) -> int:
+    hour, minute = value.strip().split(":")
+    return int(hour) * 60 + int(minute)
+
+
+def _next_calendar_date(value: str) -> str:
+    return (datetime.date.fromisoformat(value.strip()) + datetime.timedelta(days=1)).isoformat()
+
+
+def _calendar_datetime_parts(value: Any, timezone: Any = None) -> Optional[Dict[str, str]]:
+    if not isinstance(value, str):
+        return None
+    stripped = value.strip()
+    match = _CALENDAR_DATETIME_PATTERN.match(stripped)
+    if not match:
+        return None
+    date, time = match.groups()
+    if not _is_calendar_date(date) or not _is_time(time):
+        return None
+    if isinstance(timezone, str) and _CALENDAR_OFFSET_PATTERN.search(stripped):
+        try:
+            local = datetime.datetime.fromisoformat(
+                stripped.replace("Z", "+00:00").replace("z", "+00:00")
+            ).astimezone(ZoneInfo(timezone))
+            return {"date": local.date().isoformat(), "time": local.strftime("%H:%M")}
+        except (ValueError, ZoneInfoNotFoundError):
+            pass
+    return {"date": date, "time": time}
+
+
+def _validate_calendar_time(value: Any, label: str) -> Optional[str]:
+    if not isinstance(value, dict):
+        return f"{label} must be an object."
+    unsupported = set(value.keys()) - _CALENDAR_TIME_KEYS
+    if unsupported:
+        return f"{label} contains unsupported fields."
+    has_date = "date" in value
+    has_date_time = "dateTime" in value
+    if has_date == has_date_time:
+        return f"{label} needs exactly one of date or dateTime."
+    if has_date and not _is_calendar_date(value.get("date")):
+        return f"{label}.date must be a real YYYY-MM-DD calendar date."
+    if has_date_time and _calendar_datetime_parts(value.get("dateTime"), value.get("timeZone")) is None:
+        return f"{label}.dateTime must start with an ISO date and HH:mm time."
+    if "timeZone" in value and not _is_text(value.get("timeZone"), 80):
+        return f"{label}.timeZone must be a non-empty string."
+    return None
 
 
 def _coerce_chart_number(value: Any, *, allow_negative: bool = False) -> Optional[float]:
@@ -274,6 +461,63 @@ def _validate_tavern_render_line_chart(args: Any) -> Optional[str]:
     return _validate_tavern_chart(args, allow_negative=True)
 
 
+def _validate_tavern_render_calendar_event(args: Any) -> Optional[str]:
+    if not isinstance(args, dict):
+        return "Input must be an object."
+    unsupported = set(args.keys()) - _CALENDAR_ROOT_KEYS
+    if unsupported:
+        return "Input contains unsupported fields."
+    if "summary" not in args and "title" not in args:
+        return "summary or title is required."
+    if "summary" in args and not _is_text(args.get("summary"), 160):
+        return "summary must be a non-empty string."
+    if "title" in args and not _is_text(args.get("title"), 160):
+        return "title must be a non-empty string."
+
+    for key, max_len in {
+        "calendar": 80,
+        "description": 280,
+        "location": 160,
+        "notes": 280,
+        "timezone": 80,
+    }.items():
+        if key in args and not _is_text(args.get(key), max_len):
+            return f"{key} must be a non-empty string."
+
+    start = args.get("start")
+    start_error = _validate_calendar_time(start, "start")
+    if start_error:
+        return start_error
+
+    end = args.get("end")
+    if end is not None:
+        end_error = _validate_calendar_time(end, "end")
+        if end_error:
+            return end_error
+
+    if "date" in start:
+        if isinstance(end, dict) and "dateTime" in end:
+            return "All-day events need end.date or no end."
+        if isinstance(end, dict) and end.get("date") != _next_calendar_date(start["date"]):
+            return "Multi-day calendar events are not supported."
+        return None
+
+    if not isinstance(end, dict) or "dateTime" not in end:
+        return "Timed events need end.dateTime."
+
+    timezone = start.get("timeZone") or end.get("timeZone") or args.get("timezone")
+    start_parts = _calendar_datetime_parts(start.get("dateTime"), start.get("timeZone") or timezone)
+    end_parts = _calendar_datetime_parts(end.get("dateTime"), end.get("timeZone") or timezone)
+    if start_parts is None or end_parts is None:
+        return "Timed events need ISO dateTime values."
+    if start_parts["date"] != end_parts["date"]:
+        return "Multi-day calendar events are not supported."
+    if _minutes(end_parts["time"]) <= _minutes(start_parts["time"]):
+        return "end.dateTime must be later than start.dateTime."
+
+    return None
+
+
 def _handle_tavern_render_bar_chart(args: Any, **_kwargs) -> str:
     error = _validate_tavern_render_bar_chart(args)
     if error:
@@ -283,6 +527,13 @@ def _handle_tavern_render_bar_chart(args: Any, **_kwargs) -> str:
 
 def _handle_tavern_render_line_chart(args: Any, **_kwargs) -> str:
     error = _validate_tavern_render_line_chart(args)
+    if error:
+        return tool_error(error)
+    return tool_result({"status": "rendered"})
+
+
+def _handle_tavern_render_calendar_event(args: Any, **_kwargs) -> str:
+    error = _validate_tavern_render_calendar_event(args)
     if error:
         return tool_error(error)
     return tool_result({"status": "rendered"})
@@ -403,6 +654,14 @@ def register(ctx) -> None:
         handler=_handle_tavern_render_line_chart,
         description="Render prepared numeric data as a simple trend chart in chat.",
         emoji="📈",
+    )
+    ctx.register_tool(
+        name="${tavernRenderCalendarEventToolName}",
+        toolset="tavern",
+        schema=TAVERN_RENDER_CALENDAR_EVENT_SCHEMA,
+        handler=_handle_tavern_render_calendar_event,
+        description="Render one prepared calendar event in chat.",
+        emoji="📅",
     )
     ctx.register_platform(
         name="tavern",

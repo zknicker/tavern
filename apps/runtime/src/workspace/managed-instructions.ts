@@ -55,7 +55,8 @@ You can render Widgets using tool calls. Widgets give the user a richer display 
 Available Widgets:
 
 - \`render_bar_chart\`: simple bar chart from prepared categorical data; number values render as bars.
-- \`render_line_chart\`: simple trend chart from prepared numeric data; number values render as a line or filled area.`;
+- \`render_line_chart\`: simple trend chart from prepared numeric data; number values render as a line or filled area.
+- \`render_calendar_event\`: single calendar event from Google-shaped event data.`;
 
 const visibleProgressSection = `## Visible Progress
 

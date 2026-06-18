@@ -37,6 +37,7 @@ app-local UI state, not durable Runtime chat rows.
 | `cht_demo_activity_turn` | Assistant progress messages and grouped tool activity in one completed turn. |
 | `cht_demo_approval_flow` | A running response blocked on approval activity. |
 | `cht_demo_attachment` | Durable user message attachment rendering. |
+| `cht_demo_calendar_event` | Calendar Event Widget response activity rendered inline in a real chat. |
 | `cht_demo_charts` | Chart Widget response activity rendered inline in a real chat. |
 | `cht_demo_line_chart` | Line Chart Widget response activity rendered inline in a real chat. |
 | `cht_demo_long_content` | Long pasted JSON and long URL wrapping. |

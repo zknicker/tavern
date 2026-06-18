@@ -1,8 +1,13 @@
 import {
     type TavernRenderBarChartProps,
+    type TavernRenderCalendarEventProps,
+    type TavernRenderCalendarEventToolInput,
     type TavernRenderLineChartProps,
     tavernRenderBarChartComponentId,
     tavernRenderBarChartToolName,
+    tavernRenderCalendarEventComponentId,
+    tavernRenderCalendarEventToolInputSchema,
+    tavernRenderCalendarEventToolName,
     tavernRenderLineChartComponentId,
     tavernRenderLineChartToolName,
     type WidgetRenderInput,
@@ -177,6 +182,84 @@ export function lineChartDemo(): DevelopmentChatDemo {
     };
 }
 
+export function calendarEventDemo(): DevelopmentChatDemo {
+    const eventToolInput = calendarEventDemoToolInput();
+    const eventProps = tavernRenderCalendarEventToolInputSchema.parse(eventToolInput);
+    const chatId = developmentChatDemoIds.calendarEvent;
+    const runId = 'run_demo_calendar_event';
+    const requestMessageId = 'msg_demo_calendar_event_request';
+    const responseMessageId = 'msg_demo_calendar_event_response';
+
+    return {
+        chatId,
+        title: 'Demo: Calendar Event',
+        messages: [
+            userMessage({
+                chatId,
+                content: 'Show my roadmap review as a calendar event.',
+                id: requestMessageId,
+                nonce: 'demo-calendar-event-request',
+            }),
+            assistantMessage({
+                chatId,
+                content: 'Here is the calendar event.',
+                id: responseMessageId,
+                nonce: 'demo-calendar-event-response',
+                requestMessageId,
+                runId,
+            }),
+        ],
+        responses: [
+            {
+                ...completedResponse({
+                    chatId,
+                    id: 'rsp_demo_calendar_event',
+                    requestMessageId,
+                    responseMessageId,
+                    runId,
+                    summary: 'Rendered a calendar event demo.',
+                }),
+                activities: [
+                    toolActivity({
+                        chatId,
+                        id: 'act_demo_calendar_event_tool',
+                        requestMessageId,
+                        runId,
+                        sequence: 1,
+                        title: tavernRenderCalendarEventToolName,
+                        toolArguments: eventToolInput,
+                        toolCallId: 'call_demo_calendar_event_tool',
+                        toolName: tavernRenderCalendarEventToolName,
+                        toolResult: { status: 'rendered' },
+                    }),
+                    {
+                        completed_at: demoTime,
+                        detail: eventProps.title,
+                        id: 'act_demo_calendar_event_widget',
+                        kind: 'widget',
+                        metadata: {
+                            runtime: activityRuntimeMetadata({
+                                chatId,
+                                id: 'act_demo_calendar_event_widget',
+                                requestMessageId,
+                                runId,
+                                sequence: 2,
+                                source: tavernRenderCalendarEventToolName,
+                            }),
+                            widget: calendarEventDemoRenderInput(eventProps),
+                        },
+                        sequence: 2,
+                        started_at: demoTime,
+                        status: 'completed',
+                        summary: eventProps.title,
+                        title: tavernRenderCalendarEventToolName,
+                    },
+                ],
+            },
+        ],
+    };
+}
+
 export function longContentDemo(): DevelopmentChatDemo {
     return completedTextDemo({
         chatId: developmentChatDemoIds.longContent,
@@ -297,6 +380,15 @@ function lineChartDemoRenderInput(props: TavernRenderLineChartProps): WidgetRend
     };
 }
 
+function calendarEventDemoRenderInput(props: TavernRenderCalendarEventProps): WidgetRenderInput {
+    return {
+        component: tavernRenderCalendarEventComponentId,
+        fallback: { text: props.title },
+        props,
+        target: 'chat.inline',
+    };
+}
+
 function chartDemoProps(): TavernRenderBarChartProps {
     return {
         data: [
@@ -311,6 +403,17 @@ function chartDemoProps(): TavernRenderBarChartProps {
         ],
         title: 'Quarterly Revenue',
         xKey: 'quarter',
+    };
+}
+
+function calendarEventDemoToolInput(): TavernRenderCalendarEventToolInput {
+    return {
+        calendar: 'Product',
+        description: 'Review roadmap priorities and launch risks.',
+        end: { dateTime: '2026-06-20T14:00:00-04:00', timeZone: 'America/New_York' },
+        location: 'Design room',
+        start: { dateTime: '2026-06-20T13:00:00-04:00', timeZone: 'America/New_York' },
+        summary: 'Q1 roadmap review',
     };
 }
 

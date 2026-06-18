@@ -2,7 +2,11 @@ import { execFileSync } from 'node:child_process';
 import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
-import { tavernRenderBarChartToolName, tavernRenderLineChartToolName } from '@tavern/api';
+import {
+    tavernRenderBarChartToolName,
+    tavernRenderCalendarEventToolName,
+    tavernRenderLineChartToolName,
+} from '@tavern/api';
 import { describe, expect, it } from 'vitest';
 import { tavernMessengerPluginSource } from './tavern-messenger-plugin';
 
@@ -14,13 +18,20 @@ describe('tavern messenger plugin', () => {
         expect(source).toContain(`name="${tavernRenderBarChartToolName}"`);
         expect(source).toContain(`"name": "${tavernRenderLineChartToolName}"`);
         expect(source).toContain(`name="${tavernRenderLineChartToolName}"`);
+        expect(source).toContain(`"name": "${tavernRenderCalendarEventToolName}"`);
+        expect(source).toContain(`name="${tavernRenderCalendarEventToolName}"`);
         expect(source).toContain('Use when the user asks to see prepared categorical data');
         expect(source).toContain('Use when the user asks to see prepared numeric data');
+        expect(source).toContain(
+            'Use when the user asks to see one prepared single-day calendar event'
+        );
+        expect(source).toContain('Google Calendar event data');
         expect(source).toContain('numeric strings are normalized');
         expect(source).toContain('finite nonnegative JSON number or numeric string');
         expect(source).toContain('finite JSON number or numeric string');
         expect(tavernRenderBarChartToolName).toMatch(/^[a-zA-Z0-9_-]+$/u);
         expect(tavernRenderLineChartToolName).toMatch(/^[a-zA-Z0-9_-]+$/u);
+        expect(tavernRenderCalendarEventToolName).toMatch(/^[a-zA-Z0-9_-]+$/u);
     });
 
     it('validates chart tool input with the same boundary Runtime projects', async () => {
@@ -86,6 +97,65 @@ describe('tavern messenger plugin', () => {
         expect(results.negativeNumericString).toEqual({ status: 'rendered' });
         expect(results.underscoredNumericString).toMatchObject({
             error: 'data[0].net must be a finite number or numeric string.',
+        });
+    });
+
+    it('validates calendar event tool input', async () => {
+        const results = await runPluginValidator(
+            {
+                allDayEvent: {
+                    end: { date: '2026-06-21' },
+                    start: { date: '2026-06-20' },
+                    summary: 'Launch day',
+                },
+                impossibleDate: {
+                    end: { date: '2026-03-01' },
+                    start: { date: '2026-02-31' },
+                    summary: 'Launch day',
+                },
+                multiDayAllDayEvent: {
+                    end: { date: '2026-06-22' },
+                    start: { date: '2026-06-20' },
+                    summary: 'Launch window',
+                },
+                multiDayTimedEvent: {
+                    end: {
+                        dateTime: '2026-06-21T10:00:00-04:00',
+                        timeZone: 'America/New_York',
+                    },
+                    start: {
+                        dateTime: '2026-06-20T13:00:00-04:00',
+                        timeZone: 'America/New_York',
+                    },
+                    summary: 'Launch window',
+                },
+                timedEvent: {
+                    description: 'Review roadmap priorities and launch risks.',
+                    end: {
+                        dateTime: '2026-06-20T14:00:00-04:00',
+                        timeZone: 'America/New_York',
+                    },
+                    location: 'Design room',
+                    start: {
+                        dateTime: '2026-06-20T13:00:00-04:00',
+                        timeZone: 'America/New_York',
+                    },
+                    summary: 'Q1 roadmap review',
+                },
+            },
+            '_handle_tavern_render_calendar_event'
+        );
+
+        expect(results.timedEvent).toEqual({ status: 'rendered' });
+        expect(results.allDayEvent).toEqual({ status: 'rendered' });
+        expect(results.impossibleDate).toMatchObject({
+            error: 'start.date must be a real YYYY-MM-DD calendar date.',
+        });
+        expect(results.multiDayAllDayEvent).toMatchObject({
+            error: 'Multi-day calendar events are not supported.',
+        });
+        expect(results.multiDayTimedEvent).toMatchObject({
+            error: 'Multi-day calendar events are not supported.',
         });
     });
 });

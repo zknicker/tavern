@@ -96,8 +96,15 @@ describe('Tavern Runtime Chat API store', () => {
             status: 'completed',
             title: 'render_line_chart',
         });
+        expect(getResponseActivity('act_demo_calendar_event_widget')).toMatchObject({
+            id: 'act_demo_calendar_event_widget',
+            kind: 'widget',
+            status: 'completed',
+            title: 'render_calendar_event',
+        });
         expect(listMessages(developmentChatDemoIds.charts).messages).toHaveLength(2);
         expect(listMessages(developmentChatDemoIds.lineChart).messages).toHaveLength(2);
+        expect(listMessages(developmentChatDemoIds.calendarEvent).messages).toHaveLength(2);
         expect(listMessages(developmentChatDemoIds.attachment).messages[0]?.attachments).toEqual([
             expect.objectContaining({ filename: 'weather-request.txt', type: 'file' }),
         ]);

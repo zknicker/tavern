@@ -1,5 +1,6 @@
 import type { ChatLogOutput } from '../lib/trpc.tsx';
 import { cn } from '../lib/utils.ts';
+import { renderCalendarWidget } from './calendar.tsx';
 import { renderChartWidget } from './charts.tsx';
 
 type WidgetRow = Extract<NonNullable<ChatLogOutput>['rows'][number], { kind: 'widget' }>;
@@ -24,7 +25,7 @@ function renderWidget(widget: WidgetRow['widget']) {
         return null;
     }
 
-    return renderChartWidget(widget);
+    return renderChartWidget(widget) ?? renderCalendarWidget(widget);
 }
 
 function WidgetFallback({ error, text }: { error: string | null; text: string }) {
