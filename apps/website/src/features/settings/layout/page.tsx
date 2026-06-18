@@ -1,12 +1,14 @@
 import { Outlet } from 'react-router-dom';
 import { useAppLayoutPreference } from '../../../hooks/dashboard/use-app-layout-preference.ts';
+import { useLayoutContext } from '../../shell/use-layout-context.ts';
 import { SettingsSidebarNav } from './sidebar-nav.tsx';
 
 export function SettingsLayout() {
     const appLayout = useAppLayoutPreference();
+    const layoutContext = useLayoutContext();
 
     if (appLayout.mode === 'sidebar') {
-        return <SettingsContent />;
+        return <SettingsContent layoutContext={layoutContext} />;
     }
 
     return (
@@ -14,16 +16,20 @@ export function SettingsLayout() {
             <aside className="flex min-h-0 w-[260px] shrink-0 flex-col border-border/60 border-r bg-transparent">
                 <SettingsSidebarNav />
             </aside>
-            <SettingsContent />
+            <SettingsContent layoutContext={layoutContext} />
         </div>
     );
 }
 
-function SettingsContent() {
+function SettingsContent({
+    layoutContext,
+}: {
+    layoutContext: ReturnType<typeof useLayoutContext>;
+}) {
     return (
         <section className="flex min-h-0 flex-1 flex-col overflow-y-scroll [scrollbar-gutter:stable]">
             <div className="mx-auto w-full max-w-5xl px-12 pt-6 pb-16">
-                <Outlet />
+                <Outlet context={layoutContext} />
             </div>
         </section>
     );
