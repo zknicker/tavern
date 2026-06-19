@@ -4,6 +4,7 @@ import { Tick02Icon } from '@hugeicons-pro/core-stroke-rounded';
 import { type ThemePreference, useTheme } from '../../../components/theme-provider.tsx';
 import { BadgeDivider } from '../../../components/ui/badge-divider.tsx';
 import { Icon } from '../../../components/ui/icon.tsx';
+import { Separator } from '../../../components/ui/separator.tsx';
 import { SettingsRow } from '../../../components/ui/settings-row.tsx';
 import { Switch } from '../../../components/ui/switch.tsx';
 import { useChatThinkingDisplayPreference } from '../../../hooks/chats/use-chat-thinking-display-preference.ts';
@@ -138,6 +139,7 @@ export function AppearanceSettings() {
                             />
                         </div>
                     </SettingsRow>
+                    <Separator />
                     <SettingsRow
                         description="Keep long chats smooth while scrolling."
                         title="Virtualize chat history"
