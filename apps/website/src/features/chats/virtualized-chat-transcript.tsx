@@ -109,7 +109,7 @@ export function VirtualizedChatTranscript({
                 return;
             }
 
-            instance.scrollToEnd({ behavior: 'smooth' });
+            instance.scrollToEnd({ behavior: 'auto' });
         },
         overscan: 8,
         paddingEnd: transcriptEndInset,
@@ -209,7 +209,7 @@ export function VirtualizedChatTranscript({
         previousRowGrowthSnapshotRef.current = next;
 
         if (
-            !shouldSmoothFollowRowGrowth({
+            !shouldFollowTailGrowth({
                 isFollowing: chatScrollMode === 'following',
                 next,
                 previous,
@@ -219,7 +219,7 @@ export function VirtualizedChatTranscript({
             return;
         }
 
-        virtualizer.scrollToEnd({ behavior: 'smooth' });
+        virtualizer.scrollToEnd({ behavior: 'auto' });
     }, [chatScrollMode, rows, virtualizer]);
 
     React.useLayoutEffect(() => {
@@ -233,7 +233,7 @@ export function VirtualizedChatTranscript({
             return;
         }
 
-        virtualizer.scrollToEnd({ behavior: 'smooth' });
+        virtualizer.scrollToEnd({ behavior: 'auto' });
     });
 
     React.useEffect(() => {
@@ -400,8 +400,6 @@ export function getEstimatedTranscriptTailVirtualItems(
 }
 
 export function getChatVirtualizerScrollBehavior({
-    hasAdjustments,
-    isFollowing,
     requestedBehavior,
 }: {
     hasAdjustments: boolean;
@@ -412,7 +410,7 @@ export function getChatVirtualizerScrollBehavior({
         return requestedBehavior;
     }
 
-    return hasAdjustments && isFollowing ? 'smooth' : 'auto';
+    return 'auto';
 }
 
 export function shouldCorrectVirtualizedTranscriptEndGap({
@@ -453,7 +451,7 @@ export function getTranscriptRowGrowthSnapshot(
     };
 }
 
-export function shouldSmoothFollowRowGrowth({
+export function shouldFollowTailGrowth({
     isFollowing,
     next,
     previous,

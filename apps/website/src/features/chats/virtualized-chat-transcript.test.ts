@@ -12,8 +12,8 @@ import {
     getEstimatedTranscriptTailVirtualItems,
     getTranscriptRowGrowthSnapshot,
     shouldCorrectVirtualizedTranscriptEndGap,
+    shouldFollowTailGrowth,
     shouldLoadPreviousVirtualizedChatPage,
-    shouldSmoothFollowRowGrowth,
 } from './virtualized-chat-transcript.tsx';
 
 test('virtualized chat loads previous rows only when the real viewport is near top', () => {
@@ -142,13 +142,13 @@ test('virtualized chat fallback keeps rendering the tail when the viewport is in
     ]);
 });
 
-test('virtualized chat smooths implicit size adjustments only while following', () => {
+test('virtualized chat keeps implicit size adjustments instant while following', () => {
     expect(
         getChatVirtualizerScrollBehavior({
             hasAdjustments: true,
             isFollowing: true,
         })
-    ).toBe('smooth');
+    ).toBe('auto');
     expect(
         getChatVirtualizerScrollBehavior({
             hasAdjustments: true,
@@ -194,7 +194,7 @@ test('virtualized chat corrects small bottom gaps while following', () => {
     ).toBe(false);
 });
 
-test('virtualized chat smooths row growth at the tail while following', () => {
+test('virtualized chat follows row growth at the tail while following', () => {
     const previous = getTranscriptRowGrowthSnapshot([
         { id: 'day:today', kind: 'dayDivider', label: 'Today' },
         userRenderRow('user-1'),
@@ -207,11 +207,11 @@ test('virtualized chat smooths row growth at the tail while following', () => {
         presenceRenderRow('agent-1'),
     ]);
 
-    expect(shouldSmoothFollowRowGrowth({ isFollowing: true, next, previous })).toBe(true);
-    expect(shouldSmoothFollowRowGrowth({ isFollowing: false, next, previous })).toBe(false);
+    expect(shouldFollowTailGrowth({ isFollowing: true, next, previous })).toBe(true);
+    expect(shouldFollowTailGrowth({ isFollowing: false, next, previous })).toBe(false);
 });
 
-test('virtualized chat smooths tail entry item growth while following', () => {
+test('virtualized chat follows tail entry item growth while following', () => {
     const previous = getTranscriptRowGrowthSnapshot([
         { id: 'day:today', kind: 'dayDivider', label: 'Today' },
         agentRenderRow('turn:run-1', [{ kind: 'row', row: thinkingRow('act_run_1_thinking') }]),
@@ -226,15 +226,15 @@ test('virtualized chat smooths tail entry item growth while following', () => {
         presenceRenderRow('turn:run-1'),
     ]);
 
-    expect(shouldSmoothFollowRowGrowth({ isFollowing: true, next, previous })).toBe(true);
-    expect(shouldSmoothFollowRowGrowth({ isFollowing: false, next, previous })).toBe(false);
+    expect(shouldFollowTailGrowth({ isFollowing: true, next, previous })).toBe(true);
+    expect(shouldFollowTailGrowth({ isFollowing: false, next, previous })).toBe(false);
 });
 
-test('virtualized chat does not smooth prepended history growth', () => {
+test('virtualized chat does not follow prepended history growth', () => {
     const previous = getTranscriptRowGrowthSnapshot([userRenderRow('user-3')]);
     const next = getTranscriptRowGrowthSnapshot([userRenderRow('user-1'), userRenderRow('user-3')]);
 
-    expect(shouldSmoothFollowRowGrowth({ isFollowing: true, next, previous })).toBe(false);
+    expect(shouldFollowTailGrowth({ isFollowing: true, next, previous })).toBe(false);
 });
 
 test('virtualized chat estimates blank thinking presence without fake bottom space', () => {
