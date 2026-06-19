@@ -42,3 +42,4 @@ app-local UI state, not durable Runtime chat rows.
 | `cht_demo_line_chart` | Line Chart Widget response activity rendered inline in a real chat. |
 | `cht_demo_long_content` | Long pasted JSON and long URL wrapping. |
 | `cht_demo_streaming_stack` | Running turn with thinking, progress, and tool stack rows. |
+| `cht_demo_tool_headers` | Stable collapsed tool drawer headers for mixed work, render tools, approval, and a live running group. |

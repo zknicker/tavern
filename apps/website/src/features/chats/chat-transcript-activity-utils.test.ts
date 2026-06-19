@@ -5,6 +5,8 @@ import {
     formatWorkGroupHeader,
     formatWorkGroupSummary,
     getActiveWorkLabel,
+    getToolIntent,
+    mappedToolIntentNames,
 } from './chat-transcript-activity-utils.ts';
 
 test('active work label shows the command target while it runs', () => {
@@ -21,19 +23,19 @@ test('active work group header does not flash count summaries between fast tools
         toolItem({ id: 'tool-2', name: 'search_files', summaryParts: ['query two'] }),
     ]);
 
-    expect(label).toBe('Working');
+    expect(label).toBe('Searched code');
 });
 
-test('active work group header still shows the current running tool synopsis', () => {
+test('active work group header prefers a stable group summary over a new running tool', () => {
     const label = formatActiveWorkGroupHeader([
         toolItem({ name: 'search_files', summaryParts: ['query one'] }),
         toolItem({ id: 'tool-2', name: 'terminal', running: true, summaryParts: ['bun test'] }),
     ]);
 
-    expect(label).toBe('Running bun test');
+    expect(label).toBe('Searched code, ran a command');
 });
 
-test('active work label treats approval as a normal tool', () => {
+test('active work label treats approval as a decision state', () => {
     const label = getActiveWorkLabel([
         toolItem({
             name: 'approval',
@@ -42,7 +44,7 @@ test('active work label treats approval as a normal tool', () => {
         }),
     ]);
 
-    expect(label).toBe("Using curl -L --silent 'https://duckduckgo.com/html/?q=site%3Anasa.gov'");
+    expect(label).toBe('Needs approval');
 });
 
 test('active work label never echoes a bare tool name as the target', () => {
@@ -58,7 +60,7 @@ test('active work label never echoes a bare tool name as the target', () => {
 
     expect(command).toBe('Running a command');
     expect(edit).toBe('Editing a file');
-    expect(generic).toBe('Using memorize');
+    expect(generic).toBe('Using a tool');
 });
 
 test('active work label uses edit language for file writes', () => {
@@ -78,13 +80,13 @@ test('active work label does not treat plan updates as file edits', () => {
         toolItem({ label: 'update_plan', name: 'update_plan', running: true, summaryParts: [] }),
     ]);
 
-    expect(label).toBe('Using update_plan');
+    expect(label).toBe('Updating tasks');
 });
 
 test('work group summary counts commands and web searches in product language', () => {
     const items = [
-        toolItem({ name: 'terminal', summaryParts: ['pwd'] }),
-        toolItem({ id: 'tool-2', name: 'terminal', summaryParts: ['ls'] }),
+        toolItem({ name: 'terminal', summaryParts: ['date'] }),
+        toolItem({ id: 'tool-2', name: 'terminal', summaryParts: ['whoami'] }),
         toolItem({ id: 'tool-3', name: 'search_web', summaryParts: ['weather NYC'] }),
     ];
 
@@ -100,30 +102,55 @@ test('work group summary keeps file reads and code search distinct', () => {
         toolItem({ id: 'tool-5', name: 'exec', summaryParts: ['bun test'] }),
     ];
 
-    expect(formatWorkGroupSummary(items)).toBe(
-        'Used a tool, read 2 files, searched code, ran a command'
-    );
+    expect(formatWorkGroupSummary(items)).toBe('Read 2 files, searched code');
 });
 
 test('work group summary does not treat memory search as code search', () => {
     const items = [toolItem({ name: 'memory_search', summaryParts: ['SOUL.md'] })];
 
-    expect(formatWorkGroupSummary(items)).toBe('Used a tool');
+    expect(formatWorkGroupSummary(items)).toBe('Checked memory');
 });
 
 test('work group summary does not treat message reads as file reads', () => {
     const items = [toolItem({ label: 'read · #general', name: 'message', summaryParts: ['read'] })];
 
-    expect(formatWorkGroupSummary(items)).toBe('Used a tool');
+    expect(formatWorkGroupSummary(items)).toBe('Sent a message');
 });
 
 test('work group summary combines generic tool counts', () => {
     const items = [
-        toolItem({ name: 'tool_search_tool', summaryParts: ['browser'] }),
-        toolItem({ id: 'tool-2', name: 'memory_search', summaryParts: ['SOUL.md'] }),
+        toolItem({ name: 'memorize', summaryParts: ['SOUL.md'] }),
+        toolItem({ id: 'tool-2', name: 'diagnostic_tool', summaryParts: ['status'] }),
     ];
 
     expect(formatWorkGroupSummary(items)).toBe('Used 2 tools');
+});
+
+test('work group summary names first-party widget rendering', () => {
+    expect(formatWorkGroupSummary([toolItem({ name: 'render_bar_chart', summaryParts: [] })])).toBe(
+        'Rendered a bar chart'
+    );
+
+    expect(
+        formatWorkGroupSummary([
+            toolItem({ name: 'render_line_chart', summaryParts: [] }),
+            toolItem({ id: 'tool-2', name: 'render_calendar_event', summaryParts: [] }),
+        ])
+    ).toBe('Rendered 2 widgets');
+});
+
+test('tool intent catalog covers mapped names', () => {
+    const genericToolNames = new Set(['tool-search', 'tool_search', 'tool_search_tool']);
+
+    for (const name of mappedToolIntentNames) {
+        const intent = getToolIntent(toolItem({ name, summaryParts: [] }));
+
+        expect(intent).not.toBeNull();
+
+        if (!genericToolNames.has(name)) {
+            expect(intent?.kind).not.toBe('tool');
+        }
+    }
 });
 
 test('work group header falls back to Worked when nothing is countable', () => {

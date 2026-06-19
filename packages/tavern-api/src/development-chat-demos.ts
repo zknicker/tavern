@@ -7,4 +7,5 @@ export const developmentChatDemoIds = {
     lineChart: 'cht_demo_line_chart',
     longContent: 'cht_demo_long_content',
     streamingStack: 'cht_demo_streaming_stack',
+    toolHeaders: 'cht_demo_tool_headers',
 } as const;

@@ -37,12 +37,15 @@ custom presentation for a specific tool.
   magnifier icon is a hover hint, not the click target.
 - **Every contiguous tool group renders as a collapsed work drawer from its
   first step** (`apps/website/src/features/chats/chat-transcript-activity.tsx`
-  → `WorkingLog` group mode). The header is permanent — while the group
-  executes it carries the active tool's icon and synopsis with the running
-  shimmer; at rest it carries the count summary ("Ran 2 commands, searched
-  web 1 time"). Growth retexts the header; it never restructures the rows.
-  Expanding the drawer reveals the individual tool rows, which remain the
-  inspect-drawer triggers.
+  → `WorkingLog` group mode). The header is permanent and uses the
+  `chat-transcript-tool-intents.ts` entrypoint to summarize the top tool intent
+  families: "Read 2 files, searched code", "Rendered a calendar event", "Needs
+  approval". Short commands, file paths, and first-party Widget targets can
+  appear in the header; long commands, approval commands, browser payloads, and
+  search queries stay in the drawer. Active headers latch meaningful copy and
+  animate short text changes with SlotText, so fast tool state changes do not
+  flash between raw commands and "Working". Expanding the drawer reveals the
+  individual tool rows, which remain the inspect-drawer triggers.
 
 ## Adding custom presentation for a tool
 
@@ -65,8 +68,10 @@ both of:
 
 If the default row label is wrong for the tool, fix it at the source in
 `buildSummaryParts` (`apps/server/src/tools/summary.ts`) rather than in a row
-renderer — the label is shared by chat rows, group headers, and the live
-"working" summary.
+renderer. If the collapsed group header uses the wrong family, update
+`chat-transcript-tool-intent-catalog.ts`; if it exposes the wrong target, update
+`chat-transcript-tool-intent-resolver.ts`; if the words or priority are wrong,
+update `chat-transcript-tool-intent-copy.ts`.
 
 ## Worked example: tool approvals
 
@@ -80,8 +85,9 @@ execution log instead of a second approval UI:
 2. The activity projects as a tool row named `approval` (durable) and an
    `approval` progress step (live), both with the same row id.
 3. `buildToolSummaryFromValues` summarizes the row with the command rather
-   than the approval reason, so group headers and rows show the action the
-   agent requested.
+   than the approval reason. The row/drawer can show the command, while the
+   collapsed group header uses "Needs approval" so it does not flash a raw
+   command while waiting.
 4. The row falls through to `GenericToolStep`, inheriting the standard
    running shimmer, drawer behavior, and status colors.
 5. The chat footer derives the oldest pending approval from loaded chat rows,

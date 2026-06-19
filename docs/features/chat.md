@@ -21,10 +21,13 @@ happen, and keep the durable timeline as context.
   Tool rows label intent only (command, path, target — never results), stay
   neutral when completed, turn red on failure, and shimmer while running.
   Every contiguous tool group renders as a collapsed work drawer from its
-  first step; the header shows the active tool's icon and synopsis while
-  executing and a count summary at rest ("Ran 2 commands, searched web"),
-  so mid-turn growth only retexts the header. Expanding reveals the
-  tool rows; clicking a row opens the tool-aware inspect drawer (see
+  first step. The header shows a stable work summary, such as "Read 2 files,
+  searched code", "Rendered a calendar event", or "Needs approval". It can show
+  a short useful command or target, but noisy commands and search payloads stay
+  inside the drawer. Active headers latch meaningful copy and animate short
+  text changes, so rapid tool progress does not flash between raw commands and
+  generic "Working" text. Expanding reveals the tool rows; clicking a row opens
+  the tool-aware inspect drawer (see
   [Tool Presentation](../internals/tool-presentation.md)). Model thinking text
   is hidden from the main chat transcript by default; Appearance settings can
   show it without changing the underlying runtime evidence.

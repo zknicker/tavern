@@ -441,10 +441,9 @@ test('ChatTranscript keeps hidden thinking out of tool work headers', () => {
     ]);
 
     assert.doesNotMatch(markup, /Thinking/);
-    // A lone tool renders inside the group drawer with a count summary
-    // header, so a second tool only retexts the header instead of
-    // restructuring the rows.
-    assert.match(markup, /Ran a command/);
+    // A lone short command can surface in the group header; the row still
+    // owns the inspectable command details.
+    assert.match(markup, /Ran command -v node/);
     assert.match(markup, /command -v node/);
     assert.match(markup, />Used</);
     assert.doesNotMatch(markup, /Used a tool/);
@@ -1489,7 +1488,7 @@ test('ChatTranscript keeps active work headers stable between fast completed too
         ]
     );
 
-    assert.match(markup, />Working</);
+    assert.match(markup, />Searched code</);
     assert.doesNotMatch(markup, /Searched code 2 times/);
 });
 

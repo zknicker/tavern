@@ -15,6 +15,7 @@ import {
 import { ThinkingSteps, ThinkingStepsContent, ThinkingStepsHeader } from './thinking-steps.tsx';
 import { ToolRowHoverRoot, useToolRowHoverGroup } from './tool-row-hover.ts';
 import { useChatScrollControllerHandle } from './use-chat-scroll-controller.ts';
+import { useStableWorkGroupLabel, WorkGroupHeaderText } from './work-group-header-text.tsx';
 
 export function WorkingLog({
     animateEnter = false,
@@ -40,8 +41,8 @@ export function WorkingLog({
     const isActive = status === 'active';
     // Group mode (no duration header) renders Codex-style: a collapsed
     // drawer that exists from the first step. The header carries the active
-    // tool's synopsis while work executes and the count summary at rest;
-    // only the text changes, never the structure.
+    // work summary while the drawer owns exact tool rows; only the text
+    // changes, never the structure.
     const groupMode = !showDurationHeader;
     const now = useNow(isActive && start !== null, start);
     const activeSeconds = isActive ? formatActiveActivitySeconds({ now, start }) : null;
@@ -73,11 +74,12 @@ export function WorkingLog({
         }
     }, [groupMode, hasPendingPrompt, isActive, thinkingOnly]);
 
-    const groupLabel = groupMode
+    const rawGroupLabel = groupMode
         ? isActive
             ? formatActiveWorkGroupHeader(items)
             : formatWorkGroupHeader(items)
         : null;
+    const groupLabel = useStableWorkGroupLabel(rawGroupLabel, groupMode && isActive);
     const groupIcon = groupMode ? getWorkGroupIcon(items) : null;
     const rowHover = useToolRowHoverGroup({
         enabled: groupMode,
@@ -124,14 +126,7 @@ export function WorkingLog({
                                     />
                                 </span>
                             ) : null}
-                            <span
-                                className={cn(
-                                    'min-w-0 max-w-[28rem] truncate text-left',
-                                    isActive && 'thinking-indicator-text'
-                                )}
-                            >
-                                {groupLabel}
-                            </span>
+                            <WorkGroupHeaderText isActive={isActive} label={groupLabel} />
                         </span>
                     ) : isActive && activeSeconds ? (
                         <span>

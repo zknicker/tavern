@@ -10,6 +10,7 @@ import {
     lineChartDemo,
     longContentDemo,
 } from './development-chat-demo-basic-definitions';
+import { toolHeadersDemo } from './development-chat-demo-tool-header-definitions';
 import type { DevelopmentChatDemo } from './development-chat-demo-types';
 
 export const developmentChatDemos: DevelopmentChatDemo[] = [
@@ -21,4 +22,5 @@ export const developmentChatDemos: DevelopmentChatDemo[] = [
     activityTurnDemo(),
     streamingStackDemo(),
     approvalFlowDemo(),
+    toolHeadersDemo(),
 ];

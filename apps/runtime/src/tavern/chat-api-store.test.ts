@@ -119,6 +119,20 @@ describe('Tavern Runtime Chat API store', () => {
             kind: 'approval',
             status: 'running',
         });
+        expect(listMessages(developmentChatDemoIds.toolHeaders).messages).toHaveLength(3);
+        expect(listResponses(developmentChatDemoIds.toolHeaders).responses).toMatchObject([
+            { id: 'rsp_demo_tool_headers_completed', status: 'completed' },
+            { id: 'rsp_demo_tool_headers_live', status: 'running' },
+        ]);
+        expect(getResponseActivity('act_demo_tool_headers_render_bar')).toMatchObject({
+            kind: 'tool_call',
+            status: 'completed',
+            title: 'render_bar_chart',
+        });
+        expect(getResponseActivity('act_demo_tool_headers_live_command')).toMatchObject({
+            kind: 'tool_call',
+            status: 'running',
+        });
     });
 
     it('soft-deletes a response and projects a history change', () => {
