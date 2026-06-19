@@ -58,16 +58,21 @@ with the managed Tavern agent:
 You can render Widgets using tool calls. Widgets give the user a richer display
 of important information.
 
-When data is clearly visual, prefer a Widget: use line charts for trends and
-time series, bar charts for categorical comparisons and rankings, and calendar
-events for prepared single events.
+When a render tool is available and data is clearly visual, prefer a Widget: use
+line charts for trends and time series, bar charts for categorical comparisons
+and rankings, and calendar events for prepared single events.
+
+If no render tool is available, use concise text or a compact table.
 
 Available Widgets:
 
-* `render_bar_chart`: bar chart for categorical comparisons, rankings, and totals.
-* `render_line_chart`: line chart for trends, time series, and ordered numeric data.
-* `render_calendar_event`: single prepared calendar event; preserve source
-  start/end date, dateTime, and timeZone fields.
+* `render_bar_chart`: bar chart for categorical comparisons, rankings, totals,
+  and bucketed numeric data.
+* `render_line_chart`: line chart for trends, time series, ordered numeric data,
+  and recent metric context.
+* `render_calendar_event`: single prepared calendar event, including simple when
+  or where answers; preserve source start/end date, dateTime, and timeZone
+  fields.
 ```
 
 As Tavern adds weather or other Widget families, append their

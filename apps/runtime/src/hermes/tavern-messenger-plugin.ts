@@ -82,7 +82,7 @@ _CALENDAR_TIME_KEYS = {"date", "dateTime", "timeZone"}
 
 TAVERN_RENDER_BAR_CHART_SCHEMA = {
     "name": "${tavernRenderBarChartToolName}",
-    "description": "Render prepared categorical data as a simple vertical bar chart in chat. Use for comparisons, rankings, and category totals. Y values should be finite nonnegative JSON numbers; numeric strings are normalized.",
+    "description": "Render prepared categorical comparisons, rankings, totals, or bucketed numeric data as a vertical bar chart in chat. Y values should be finite nonnegative JSON numbers; numeric strings are normalized.",
     "parameters": {
         "type": "object",
         "additionalProperties": False,
@@ -136,7 +136,7 @@ TAVERN_RENDER_BAR_CHART_SCHEMA = {
 
 TAVERN_RENDER_LINE_CHART_SCHEMA = {
     "name": "${tavernRenderLineChartToolName}",
-    "description": "Render prepared numeric data as a simple trend chart in chat. Use for time series, ordered progression, and numeric trends. Y values should be finite JSON numbers; numeric strings are normalized.",
+    "description": "Render prepared ordered numeric data, trends, time series, or recent metric context as a line chart in chat. Y values should be finite JSON numbers; numeric strings are normalized.",
     "parameters": {
         "type": "object",
         "additionalProperties": False,
@@ -190,7 +190,7 @@ TAVERN_RENDER_LINE_CHART_SCHEMA = {
 
 TAVERN_RENDER_CALENDAR_EVENT_SCHEMA = {
     "name": "${tavernRenderCalendarEventToolName}",
-    "description": "Use when the user asks to see one prepared single-day calendar event in chat. Input is shaped like Google Calendar event data: summary, start, end, location, and description.",
+    "description": "Render one prepared single-day calendar event in chat, including simple when or where event answers. Input is shaped like Google Calendar event data: summary, start, end, location, and description.",
     "parameters": {
         "type": "object",
         "additionalProperties": False,
@@ -641,7 +641,7 @@ def register(ctx) -> None:
         toolset="tavern",
         schema=TAVERN_RENDER_BAR_CHART_SCHEMA,
         handler=_handle_tavern_render_bar_chart,
-        description="Render prepared categorical data as a simple vertical bar chart in chat.",
+        description="Render prepared categorical comparisons, rankings, totals, or bucketed numeric data as a vertical bar chart in chat.",
         emoji="📊",
     )
     ctx.register_tool(
@@ -649,7 +649,7 @@ def register(ctx) -> None:
         toolset="tavern",
         schema=TAVERN_RENDER_LINE_CHART_SCHEMA,
         handler=_handle_tavern_render_line_chart,
-        description="Render prepared numeric data as a simple trend chart in chat.",
+        description="Render prepared ordered numeric data, trends, time series, or recent metric context as a line chart in chat.",
         emoji="📈",
     )
     ctx.register_tool(
@@ -657,7 +657,7 @@ def register(ctx) -> None:
         toolset="tavern",
         schema=TAVERN_RENDER_CALENDAR_EVENT_SCHEMA,
         handler=_handle_tavern_render_calendar_event,
-        description="Render one prepared calendar event in chat.",
+        description="Render one prepared calendar event in chat, including simple when or where event answers.",
         emoji="📅",
     )
     ctx.register_platform(

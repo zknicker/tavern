@@ -71,16 +71,25 @@ describe('generated agent instructions', () => {
         expect(content).toContain('## Environment');
         expect(content).toContain('## Widgets');
         expect(content).toContain('You can render Widgets using tool calls');
-        expect(content).toContain('When data is clearly visual, prefer a Widget');
         expect(content).toContain(
-            '- `render_bar_chart`: bar chart for categorical comparisons, rankings, and totals.'
+            'When a render tool is available and data is clearly visual, prefer a Widget'
         );
         expect(content).toContain(
-            '- `render_line_chart`: line chart for trends, time series, and ordered numeric data.'
+            'If no render tool is available, use concise text or a compact table.'
         );
         expect(content).toContain(
-            '- `render_calendar_event`: single prepared calendar event; preserve source start/end date, dateTime, and timeZone fields.'
+            '- `render_bar_chart`: bar chart for categorical comparisons, rankings, totals, and bucketed numeric data.'
         );
+        expect(content).toContain(
+            '- `render_line_chart`: line chart for trends, time series, ordered numeric data, and recent metric context.'
+        );
+        expect(content).toContain(
+            '- `render_calendar_event`: single prepared calendar event, including simple when or where answers; preserve source start/end date, dateTime, and timeZone fields.'
+        );
+        expect(content).toContain('## Notes And Skills');
+        expect(content).toContain('keep entries short, direct, and reusable');
+        expect(content).toContain('Generalize the feedback into a durable preference or process');
+        expect(content).toContain('Update the smallest durable place');
         expect(content).toContain('## Visible Progress');
         expect(content).toContain('send one short preamble');
         expect(content).toContain('send a brief update');

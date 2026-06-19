@@ -20,10 +20,10 @@ describe('tavern messenger plugin', () => {
         expect(source).toContain(`name="${tavernRenderLineChartToolName}"`);
         expect(source).toContain(`"name": "${tavernRenderCalendarEventToolName}"`);
         expect(source).toContain(`name="${tavernRenderCalendarEventToolName}"`);
-        expect(source).toContain('Render prepared categorical data');
-        expect(source).toContain('Render prepared numeric data');
+        expect(source).toContain('Render prepared categorical comparisons');
+        expect(source).toContain('Render prepared ordered numeric data');
         expect(source).toContain(
-            'Use when the user asks to see one prepared single-day calendar event'
+            'Render one prepared single-day calendar event in chat, including simple when or where event answers'
         );
         expect(source).toContain('Google Calendar event data');
         expect(source).toContain('numeric strings are normalized');
