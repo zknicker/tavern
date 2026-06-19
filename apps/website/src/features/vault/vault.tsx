@@ -10,8 +10,17 @@ import {
     useSaveVaultPage,
 } from '../../hooks/vault/use-vault-mutations.ts';
 import { useVaultPage } from '../../hooks/vault/use-vault-page.ts';
-import type { VaultPageNode } from './types.ts';
-import { pageKey, resolveSelectedPage, resolveVaultLinkTarget } from './utils.ts';
+import {
+    getErrorMessage,
+    isPathInFolder,
+    joinVaultPath,
+    lastPathSegment,
+    normalizeDialogPath,
+    pageKey,
+    replacePathPrefix,
+    resolveSelectedPage,
+    resolveVaultLinkTarget,
+} from './utils.ts';
 import {
     VaultDeleteDialog,
     type VaultDeleteTarget,
@@ -24,6 +33,7 @@ import {
     VaultPageSidebar,
     type VaultRenameTarget,
 } from './vault-page-sidebar.tsx';
+import { type VaultEditorMode, VaultTopbar } from './vault-topbar.tsx';
 
 export function Vault() {
     const [searchParams] = useSearchParams();
@@ -36,6 +46,10 @@ export function Vault() {
     const [deleteTarget, setDeleteTarget] = React.useState<VaultDeleteTarget | null>(null);
     const [deleteError, setDeleteError] = React.useState<string | null>(null);
     const [moveError, setMoveError] = React.useState<string | null>(null);
+    const [query, setQuery] = React.useState('');
+    const [draft, setDraft] = React.useState('');
+    const [editorMode, setEditorMode] = React.useState<VaultEditorMode>('edit');
+    const [inspectorOpen, setInspectorOpen] = React.useState(false);
     const [list] = useVaultListSuspense();
     const pageNode = resolveSelectedPage(list, selectedPage);
     const pageDetailQuery = useVaultPage(pageNode ? { path: pageNode.path } : null);
@@ -45,6 +59,11 @@ export function Vault() {
     const deletePage = useDeleteVaultPage();
     const deleteFolder = useDeleteVaultFolder();
     const movePath = useMoveVaultPath();
+    const pageDetail = pageDetailQuery.data ?? null;
+    const pageBody = pageDetail?.body ?? '';
+    const pagePath = pageDetail?.path ?? '';
+    const isDirty = pageDetail ? draft !== pageBody : false;
+    const canSave = Boolean(pageDetail && isDirty && !savePage.isPending);
 
     React.useEffect(() => {
         if (pageNode && (!selectedPage || pageNode.path !== selectedPage.path)) {
@@ -55,13 +74,9 @@ export function Vault() {
         }
     }, [pageNode, selectedPage]);
 
-    function handleSelect(page: VaultPageNode) {
-        setSelectedPage({ path: page.path });
-    }
-
-    function handleSelectPage(page: { path: string }) {
-        setSelectedPage(page);
-    }
+    React.useEffect(() => {
+        setDraft(pagePath ? pageBody : '');
+    }, [pageBody, pagePath]);
 
     function handleCreate(kind: 'folder' | 'page', parentPath?: string) {
         setPathDialogError(null);
@@ -201,32 +216,50 @@ export function Vault() {
     }
 
     return (
-        <div className="grid min-h-0 flex-1 bg-background">
-            <div className="grid min-h-0 grid-cols-[276px_minmax(0,1fr)] overflow-hidden">
+        <div className="flex h-full min-h-0 flex-1 flex-col bg-background">
+            <VaultTopbar
+                canSave={canSave}
+                editorMode={editorMode}
+                inspectorOpen={inspectorOpen}
+                isSaving={savePage.isPending}
+                onEditorModeChange={setEditorMode}
+                onInspectorOpenChange={setInspectorOpen}
+                onSave={() => void handleSave(draft)}
+                pagePath={pagePath}
+                pageSelected={Boolean(pageDetail)}
+            />
+            <div className="grid h-full min-h-0 flex-1 grid-cols-[276px_minmax(0,1fr)] overflow-hidden">
                 <VaultPageSidebar
                     folders={list.folders}
                     onCreate={handleCreate}
                     onDelete={handleDelete}
                     onMove={(target) => void handleMove(target)}
+                    onQueryChange={setQuery}
                     onRenamePath={(target) => void handleRenamePath(target)}
-                    onSelect={handleSelect}
+                    onSelect={setSelectedPage}
                     pages={list.pages}
+                    query={query}
                     selectedPageKey={pageNode ? pageKey(pageNode) : null}
                 />
-                <main className="min-h-0 overflow-hidden">
-                    <div className="h-full min-h-0">
+                <main className="flex min-h-0 flex-col overflow-hidden">
+                    <div className="flex h-full min-h-0 flex-1 flex-col">
                         {moveError ? (
                             <div className="border-border/70 border-b bg-destructive/5 px-4 py-2 text-destructive-foreground text-sm">
                                 {moveError}
                             </div>
                         ) : null}
                         <VaultDocumentPane
+                            draft={draft}
+                            editorMode={editorMode}
+                            inspectorOpen={inspectorOpen}
                             isLoading={pageDetailQuery.isFetching}
                             isSaving={savePage.isPending}
+                            onDraftChange={setDraft}
                             onNavigate={handleNavigate}
                             onSave={handleSave}
-                            onSelectPage={handleSelectPage}
-                            page={pageDetailQuery.data ?? null}
+                            onSelectPage={setSelectedPage}
+                            page={pageDetail}
+                            saveDisabled={!canSave}
                             saveErrorMessage={
                                 savePage.error ? getErrorMessage(savePage.error) : null
                             }
@@ -256,38 +289,4 @@ export function Vault() {
             />
         </div>
     );
-}
-
-function joinVaultPath(parentPath: string | undefined, childPath: string) {
-    const normalizedChild = normalizeDialogPath(childPath);
-    if (!parentPath) {
-        return normalizedChild;
-    }
-    return `${normalizeDialogPath(parentPath)}/${normalizedChild}`;
-}
-
-function normalizeDialogPath(path: string) {
-    return path.trim().replace(/\\/gu, '/').replace(/^\/+/u, '').replace(/\/+$/u, '');
-}
-
-function lastPathSegment(path: string) {
-    return normalizeDialogPath(path).split('/').at(-1) ?? path;
-}
-
-function isPathInFolder(path: string, folderPath: string) {
-    return path === folderPath || path.startsWith(`${folderPath}/`);
-}
-
-function replacePathPrefix(path: string, fromPrefix: string, toPrefix: string) {
-    if (!isPathInFolder(path, fromPrefix)) {
-        return path;
-    }
-    return `${toPrefix}${path.slice(fromPrefix.length)}`;
-}
-
-function getErrorMessage(error: unknown) {
-    if (error instanceof Error && error.message) {
-        return error.message;
-    }
-    return 'Vault update failed.';
 }

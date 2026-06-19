@@ -64,6 +64,40 @@ export function resolveVaultLinkTarget(
     return pages.find((page) => pageSlug(page.path) === slug) ?? null;
 }
 
+export function joinVaultPath(parentPath: string | undefined, childPath: string) {
+    const normalizedChild = normalizeDialogPath(childPath);
+    if (!parentPath) {
+        return normalizedChild;
+    }
+    return `${normalizeDialogPath(parentPath)}/${normalizedChild}`;
+}
+
+export function normalizeDialogPath(path: string) {
+    return path.trim().replace(/\\/gu, '/').replace(/^\/+/u, '').replace(/\/+$/u, '');
+}
+
+export function lastPathSegment(path: string) {
+    return normalizeDialogPath(path).split('/').at(-1) ?? path;
+}
+
+export function isPathInFolder(path: string, folderPath: string) {
+    return path === folderPath || path.startsWith(`${folderPath}/`);
+}
+
+export function replacePathPrefix(path: string, fromPrefix: string, toPrefix: string) {
+    if (!isPathInFolder(path, fromPrefix)) {
+        return path;
+    }
+    return `${toPrefix}${path.slice(fromPrefix.length)}`;
+}
+
+export function getErrorMessage(error: unknown) {
+    if (error instanceof Error && error.message) {
+        return error.message;
+    }
+    return 'Vault update failed.';
+}
+
 function pageSlug(value: string) {
     return (
         value

@@ -57,10 +57,10 @@ creating new ones, and add useful wikilinks or backlinks.
 The Vault tab shows:
 
 * compact Markdown page and folder tree
-* page body source editor
-* source, split, and preview modes
+* page body rich Markdown editor
+* edit, split, and preview modes
 * Markdown formatting toolbar
-* live Markdown preview
+* read-only wiki preview
 * file metadata
 * wikilinks and backlinks
 * search

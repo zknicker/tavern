@@ -23,14 +23,12 @@ surface.
 * **Editing.** Vault can create pages, create folders, save page body changes,
   delete pages or folders, rename paths, and drag pages or folders into another
   folder.
-* **Editor modes.** The first-party editor supports source, split, and preview
-  modes, a Markdown formatting toolbar, and dirty/save state.
+* **Editor modes.** The MDXEditor-backed editor supports rich Markdown editing,
+  a formatting toolbar, draft stats, and dirty/save state. Tavern also offers
+  app-level split and preview modes for read-only wiki navigation.
 * **Metadata.** File metadata, frontmatter properties, and backlinks live in a
   slideable, collapsed-by-default right metadata panel so the editor and preview
   keep the central width.
-* **Rich editor candidate.** MDXEditor remains the preferred rich editor
-  candidate after a focused spike proves clean Markdown roundtripping and Tavern
-  UI fit without weakening the COSS boundary.
 * **Backlinks.** Vault derives inbound references from `[[wikilinks]]` and
   Markdown links.
 * **Link navigation.** Wikilinks and relative Markdown links open the target

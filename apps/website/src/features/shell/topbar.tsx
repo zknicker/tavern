@@ -53,13 +53,16 @@ export function AppSidebarTopbar({ isExpanded }: { isExpanded: boolean }) {
     const collapsedTopbarWidth = 'w-[calc(var(--traffic-light-inset)_+_2.75rem)]';
     const collapsedTopbarSlotWidth =
         'items-center pt-0 md:w-[calc(var(--traffic-light-inset)_+_2.75rem)]';
+    const triggerOffset = isExpanded
+        ? 'translate-x-[6px] translate-y-[4px]'
+        : '-translate-x-[14px] translate-y-[4px]';
 
     return (
         <AppShellTopbar className={isExpanded ? 'w-[var(--sidebar-width)]' : collapsedTopbarWidth}>
             <AppShellTopbarSidebarSlot
                 className={isExpanded ? 'items-center pt-0' : collapsedTopbarSlotWidth}
             >
-                <div className="no-drag ml-auto flex items-center gap-1">
+                <div className={`no-drag ml-auto flex items-center gap-1 ${triggerOffset}`}>
                     <SidebarTrigger activateOnPointerDown size="icon-sm" />
                 </div>
             </AppShellTopbarSidebarSlot>

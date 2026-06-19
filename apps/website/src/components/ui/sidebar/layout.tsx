@@ -1,6 +1,6 @@
 'use client';
 
-import { PanelLeftIcon } from '@hugeicons-pro/core-solid-rounded';
+import { PanelLeftCloseIcon, PanelLeftOpenIcon } from '@hugeicons-pro/core-stroke-rounded';
 import * as React from 'react';
 import { cn } from '../../../lib/utils.ts';
 import { Drawer, DrawerPopup } from '../drawer.tsx';
@@ -109,7 +109,8 @@ export function SidebarTrigger({
 }: React.ComponentProps<typeof Button> & {
     activateOnPointerDown?: boolean;
 }) {
-    const { toggleSidebar } = useSidebar();
+    const { state, toggleSidebar } = useSidebar();
+    const TriggerIcon = state === 'collapsed' ? PanelLeftCloseIcon : PanelLeftOpenIcon;
     const pointerActivatedRef = React.useRef(false);
     const clearPointerActivated = React.useCallback(() => {
         window.setTimeout(() => {
@@ -156,7 +157,7 @@ export function SidebarTrigger({
             variant="ghost"
             {...props}
         >
-            <Icon aria-hidden="true" className="size-4.5" icon={PanelLeftIcon} size={18} />
+            <Icon aria-hidden="true" icon={TriggerIcon} />
             <span className="sr-only">Toggle sidebar</span>
         </Button>
     );

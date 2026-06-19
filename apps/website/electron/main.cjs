@@ -16,8 +16,8 @@ const openDevtoolsMenuId = 'open-devtools';
 const topbarHeightPx = 38;
 const macosTrafficLightDiameterPx = 12;
 const macosTrafficLightPosition = {
-    x: 13,
-    y: (topbarHeightPx - macosTrafficLightDiameterPx) / 2 - 1,
+    x: 17,
+    y: (topbarHeightPx - macosTrafficLightDiameterPx) / 2 + 3,
 };
 const { autoUpdater } = electronUpdater;
 const useMockUpdater = !app.isPackaged && process.env.TAVERN_ELECTRON_UPDATER_MOCK === '1';

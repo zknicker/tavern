@@ -366,7 +366,7 @@ const treeHostStyle: TreeHostStyle = {
     '--trees-item-margin-x-override': '0px',
     '--trees-item-padding-x-override': '8px',
     '--trees-level-gap-override': '8px',
-    '--trees-padding-inline-override': '8px',
+    '--trees-padding-inline-override': '4px',
     '--trees-scrollbar-gutter-override': '6px',
     '--trees-selected-bg-override': 'var(--sidebar-accent-active)',
     '--trees-selected-fg-override': 'var(--sidebar-accent-foreground)',
