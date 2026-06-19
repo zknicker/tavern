@@ -61,7 +61,7 @@ function SkillRow({ onSelect, skill }: { onSelect: () => void; skill: SkillSumma
 
     return (
         <button
-            className="flex w-full items-center gap-4 rounded-xl px-3 py-2.5 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            className="flex w-full select-none items-center gap-4 rounded-xl px-3 py-2.5 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
             onClick={onSelect}
             type="button"
         >

@@ -83,7 +83,7 @@ function ToolsetRow({
     const needsSetup = toolset.usability === 'not_usable';
 
     return (
-        <div className="flex items-center gap-4 rounded-xl px-3 py-2.5">
+        <div className="flex select-none items-center gap-4 rounded-xl px-3 py-2.5">
             <span
                 className={cn(
                     'flex size-10 shrink-0 items-center justify-center rounded-[10px] border border-border/50 bg-muted/40 text-muted-foreground',
