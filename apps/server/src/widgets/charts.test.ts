@@ -84,6 +84,48 @@ test('projects line chart widget activity metadata into a chart row', () => {
     });
 });
 
+test('projects composed chart widget activity metadata into a chart row', () => {
+    const row = widgetRowFromActivity({
+        activity: activity({
+            metadata: {
+                widget: {
+                    component: 'tavern.render_composed_chart',
+                    fallback: { text: 'Revenue and Profit' },
+                    target: 'chat.inline',
+                    props: {
+                        barSeries: [{ key: 'revenue', label: 'Revenue' }],
+                        data: [
+                            { month: '2026-01-01', profit: 31, revenue: 120 },
+                            { month: '2026-02-01', profit: 34, revenue: 138 },
+                        ],
+                        lineSeries: [{ key: 'profit', label: 'Profit' }],
+                        title: 'Revenue and Profit',
+                        unit: 'USD',
+                        xKey: 'month',
+                    },
+                },
+            },
+        }),
+        actor: { id: 'main', kind: 'agent' },
+        sessionKey: 'agent:main:tavern:cht_1',
+    });
+
+    expect(row).toMatchObject({
+        kind: 'widget',
+        widget: {
+            component: 'tavern.render_composed_chart',
+            fallbackText: 'Revenue and Profit',
+            target: 'chat.inline',
+            validationError: null,
+        },
+    });
+    expect(row?.widget.props).toMatchObject({
+        barSeries: [{ key: 'revenue', label: 'Revenue' }],
+        lineSeries: [{ key: 'profit', label: 'Profit' }],
+        title: 'Revenue and Profit',
+    });
+});
+
 test('uses fallback rendering for invalid line chart props', () => {
     const row = widgetRowFromActivity({
         activity: activity({

@@ -5,6 +5,7 @@ export const developmentChatDemoIds = {
     calendarDay: 'cht_demo_calendar_day',
     calendarEvent: 'cht_demo_calendar_event',
     charts: 'cht_demo_charts',
+    composedChart: 'cht_demo_composed_chart',
     lineChart: 'cht_demo_line_chart',
     longContent: 'cht_demo_long_content',
     streamingStack: 'cht_demo_streaming_stack',

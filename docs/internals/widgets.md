@@ -26,8 +26,9 @@ Hermes turn output, Tavern tool projection, or a future runtime helper. Every
 producer uses the same contract and validation path.
 
 Agents should not hand-author raw `ui.render` JSON. The agent-facing path is a
-narrow Widget tool such as `render_bar_chart` or `render_line_chart`, with a typed schema. Runtime
-validates the tool input and records the same durable Widget render payload.
+narrow Widget tool such as `render_bar_chart`, `render_line_chart`, or
+`render_composed_chart`, with a typed schema. Runtime validates the tool input
+and records the same durable Widget render payload.
 
 Do not add a generic `tavern.render_widget` tool. One widget component gets one
 typed tool until a real repeated pattern appears.
@@ -60,8 +61,8 @@ of important information.
 
 When a render tool is available and data is clearly visual, prefer a Widget: use
 line charts for trends and time series, bar charts for categorical comparisons
-and rankings, calendar events for prepared single events, and calendar days for
-prepared daily agendas.
+and rankings, composed charts for bars plus lines on one ordered axis, calendar
+events for prepared single events, and calendar days for prepared daily agendas.
 
 If no render tool is available, use concise text or a compact table.
 
@@ -71,6 +72,8 @@ Available Widgets:
   and bucketed numeric data.
 * `render_line_chart`: line chart for trends, time series, ordered numeric data,
   and recent metric context.
+* `render_composed_chart`: composed bar and line chart for ordered data where
+  totals and trend share one axis.
 * `render_calendar_day`: prepared calendar day with same-day events.
 * `render_calendar_event`: single prepared calendar event, including simple when
   or where answers; preserve source start/end date, dateTime, and timeZone
@@ -100,7 +103,7 @@ The raw `ui.render` contract requires `fallback.text`, but chart Widget tools do
 not ask the agent for fallback copy. Runtime generates deterministic fallback
 text from the validated chart title.
 
-The chart tool input shape matches common chart-ready data:
+The bar and line chart tool input shape matches common chart-ready data:
 
 ```ts
 { title, data, x, y, unit? }
@@ -110,14 +113,19 @@ Runtime normalizes accepted chart tool input into stored render props, then wrap
 those props with `target`, `component`, and generated fallback text. `y` may be
 one numeric key or an array of up to four numeric keys.
 
+The composed chart tool uses the same prepared `data`, `title`, `x`, and
+optional `unit`, plus separate `barY` and `lineY` keys. Each accepts one numeric
+key or an array, with up to four total series across bars and lines.
+
 The chart tool accepts already-prepared chart data only. It does not query,
 aggregate, read files, run SQL, call external APIs, or accept domain-specific
 data references.
 
 Bar chart `y` values should be finite nonnegative JSON numbers. Line chart `y`
-values should be finite JSON numbers. Numeric strings such as `"12"` are
-accepted at the tool boundary and normalized before widget activity is recorded.
-Non-numeric strings are invalid.
+values should be finite JSON numbers. Composed chart `barY` and `lineY` values
+should be finite nonnegative JSON numbers because bars and lines share one
+axis. Numeric strings such as `"12"` are accepted at the tool boundary and
+normalized before widget activity is recorded. Non-numeric strings are invalid.
 
 Built-in Widget tools are Tavern-owned built-in tools, available to every Tavern
 agent by default. They render validated UI into the current chat, do not execute
@@ -390,11 +398,12 @@ projection, and the App renderer.
 
 ## Chart widget
 
-The first widget family is Charts. It registers two widget components:
+The first widget family is Charts. It registers three widget components:
 
 ```text
 tavern.render_bar_chart
 tavern.render_line_chart
+tavern.render_composed_chart
 ```
 
 The agent-facing Widget tools for these components are:
@@ -402,6 +411,7 @@ The agent-facing Widget tools for these components are:
 ```text
 render_bar_chart
 render_line_chart
+render_composed_chart
 ```
 
 Each widget component owns its own props schema. Chart components can share the
@@ -431,7 +441,7 @@ The stored widget payload is intentionally small:
 Tavern maps those props to bklit chart components. The assistant does not
 choose bklit primitives, margins, colors, CSS, or layout.
 
-The agent-facing chart tool input is simpler than the stored props:
+The agent-facing bar and line chart tool input is simpler than the stored props:
 
 ```jsonc
 {
@@ -459,6 +469,13 @@ The trend chart supports up to 50 rows and up to 4 series. X values are strings
 or numbers. Stored series values are finite numbers, including negative values.
 The tool accepts one `y` key or up to four `y` keys and normalizes numeric
 strings before storage.
+
+The composed chart supports up to 50 rows and up to 4 total series across
+`barSeries` and `lineSeries`. X values are strings or numbers. Stored series
+values are finite nonnegative numbers. The tool accepts one `barY` key or array
+and one `lineY` key or array, normalizes numeric strings before storage, and
+stores separate `barSeries` and `lineSeries` so the App can render Bklit
+`SeriesBar` and `Line` layers inside one `ComposedChart`.
 
 ## Calendar widgets
 

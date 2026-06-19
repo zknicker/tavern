@@ -1,6 +1,6 @@
 import type {
     TavernRenderBarChartProps,
-    TavernRenderLineChartProps,
+    TavernRenderComposedChartProps,
 } from '@tavern/api/widgets/charts';
 import type { CSSProperties } from 'react';
 import { buildPackedChartMargin } from '../components/charts/axis-packing.ts';
@@ -8,9 +8,17 @@ import { intFmt } from '../components/charts/chart-formatters.ts';
 import type { LegendItemData } from '../components/charts/legend/index.ts';
 import type { TooltipRow } from '../components/charts/tooltip/index.ts';
 
-export function buildLegendItems(
-    props: TavernRenderBarChartProps | TavernRenderLineChartProps
-): LegendItemData[] {
+type ChartSeries = TavernRenderBarChartProps['series'];
+
+interface ChartValueProps {
+    data: TavernRenderBarChartProps['data'];
+    series: ChartSeries;
+    title: string;
+    unit?: string;
+    xKey: string;
+}
+
+export function buildLegendItems(props: ChartValueProps): LegendItemData[] {
     const lastPoint = props.data.at(-1) ?? {};
 
     return props.series.map((series, index) => ({
@@ -22,7 +30,7 @@ export function buildLegendItems(
 }
 
 export function buildTooltipRows(
-    series: TavernRenderBarChartProps['series'],
+    series: ChartSeries,
     point: Record<string, unknown>,
     unit?: string
 ): TooltipRow[] {
@@ -64,6 +72,18 @@ export function lineYAxisId(index: number) {
     return index === 1 ? 'right' : 'left';
 }
 
+export function composedLineMarkerStyle(color: string) {
+    return {
+        fill: 'var(--chart-background)',
+        inactiveBlur: 0,
+        radius: 4.5,
+        ringGap: 0,
+        showActiveHighlight: false,
+        stroke: color,
+        strokeWidth: 2.25,
+    };
+}
+
 export function buildBarChartMargin(props: TavernRenderBarChartProps) {
     return buildPackedChartMargin({
         base: { bottom: 44, left: 30, right: 18, top: 24 },
@@ -79,10 +99,7 @@ export function buildBarChartMargin(props: TavernRenderBarChartProps) {
     });
 }
 
-export function buildLineChartMargin(
-    data: Record<string, unknown>[],
-    series: TavernRenderLineChartProps['series']
-) {
+export function buildLineChartMargin(data: Record<string, unknown>[], series: ChartSeries) {
     const leftSeriesKeys = series
         .filter((_, index) => lineYAxisId(index) === 'left')
         .map((series) => series.key);
@@ -101,7 +118,19 @@ export function buildLineChartMargin(
     });
 }
 
-export function normalizeLineChartData(props: TavernRenderLineChartProps) {
+export function buildComposedChartMargin(data: Record<string, unknown>[], series: ChartSeries) {
+    return buildPackedChartMargin({
+        base: { bottom: 40, left: 30, right: 18, top: 24 },
+        data,
+        yAxes: [{ keys: series.map((item) => item.key), max: 48, min: 30, side: 'left' }],
+    });
+}
+
+export function buildComposedSeries(props: TavernRenderComposedChartProps): ChartSeries {
+    return [...props.barSeries, ...props.lineSeries];
+}
+
+export function normalizeLineChartData(props: ChartValueProps) {
     const baseTime = Date.UTC(2026, 0, 1);
 
     return props.data.map((point, index) => {

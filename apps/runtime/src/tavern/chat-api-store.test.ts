@@ -3,6 +3,7 @@ import { developmentChatDemoIds } from '@tavern/api/development-chat-demos';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { closeDb, getDb, initTestDb } from '../db/connection';
 import { ensureRuntimeSchema } from '../db/schema';
+import { namedParams } from '../db/sqlite';
 import {
     clearChat,
     createChat,
@@ -102,6 +103,24 @@ describe('Tavern Runtime Chat API store', () => {
             status: 'completed',
             title: 'render_calendar_day',
         });
+        expect(getResponseActivity('act_demo_composed_chart_bar_widget')).toMatchObject({
+            id: 'act_demo_composed_chart_bar_widget',
+            kind: 'widget',
+            status: 'completed',
+            title: 'render_bar_chart',
+        });
+        expect(getResponseActivity('act_demo_composed_chart_line_widget')).toMatchObject({
+            id: 'act_demo_composed_chart_line_widget',
+            kind: 'widget',
+            status: 'completed',
+            title: 'render_line_chart',
+        });
+        expect(getResponseActivity('act_demo_composed_chart_widget')).toMatchObject({
+            id: 'act_demo_composed_chart_widget',
+            kind: 'widget',
+            status: 'completed',
+            title: 'render_composed_chart',
+        });
         expect(getResponseActivity('act_demo_calendar_event_widget')).toMatchObject({
             id: 'act_demo_calendar_event_widget',
             kind: 'widget',
@@ -111,6 +130,7 @@ describe('Tavern Runtime Chat API store', () => {
         expect(listMessages(developmentChatDemoIds.charts).messages).toHaveLength(2);
         expect(listMessages(developmentChatDemoIds.lineChart).messages).toHaveLength(2);
         expect(listMessages(developmentChatDemoIds.calendarDay).messages).toHaveLength(2);
+        expect(listMessages(developmentChatDemoIds.composedChart).messages).toHaveLength(2);
         expect(listMessages(developmentChatDemoIds.calendarEvent).messages).toHaveLength(2);
         expect(listMessages(developmentChatDemoIds.attachment).messages[0]?.attachments).toEqual([
             expect.objectContaining({ filename: 'weather-request.txt', type: 'file' }),
@@ -140,6 +160,50 @@ describe('Tavern Runtime Chat API store', () => {
             kind: 'tool_call',
             status: 'running',
         });
+    });
+
+    it('replaces stale development demo activity when a demo shape changes', () => {
+        const db = getDb();
+        seedDevelopmentChatDemos({ db, enabled: true });
+        db.prepare('DELETE FROM chat_response_activity WHERE response_id = $responseId').run(
+            namedParams({ responseId: 'rsp_demo_composed_chart' })
+        );
+        upsertResponseActivity(developmentChatDemoIds.composedChart, 'rsp_demo_composed_chart', {
+            id: 'act_demo_composed_chart_tool',
+            kind: 'tool_call',
+            sequence: 1,
+            status: 'completed',
+            title: 'render_composed_chart',
+        });
+        upsertResponseActivity(developmentChatDemoIds.composedChart, 'rsp_demo_composed_chart', {
+            id: 'act_demo_composed_chart_widget',
+            kind: 'widget',
+            sequence: 2,
+            status: 'completed',
+            title: 'render_composed_chart',
+        });
+
+        expect(() => seedDevelopmentChatDemos({ db, enabled: true })).not.toThrow();
+        const rows = db
+            .prepare(
+                `SELECT id, sequence
+                 FROM chat_response_activity
+                 WHERE response_id = $responseId
+                 ORDER BY sequence ASC`
+            )
+            .all(namedParams({ responseId: 'rsp_demo_composed_chart' })) as {
+            id: string;
+            sequence: number;
+        }[];
+
+        expect(rows.map((row) => row.id)).toEqual([
+            'act_demo_composed_chart_bar_tool',
+            'act_demo_composed_chart_bar_widget',
+            'act_demo_composed_chart_line_tool',
+            'act_demo_composed_chart_line_widget',
+            'act_demo_composed_chart_tool',
+            'act_demo_composed_chart_widget',
+        ]);
     });
 
     it('soft-deletes a response and projects a history change', () => {

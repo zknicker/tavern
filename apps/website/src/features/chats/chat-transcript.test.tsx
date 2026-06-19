@@ -259,6 +259,39 @@ test('ChatTranscript renders line chart widgets inline', () => {
     assert.doesNotMatch(markup, /Widget unavailable/);
 });
 
+test('ChatTranscript renders composed chart widgets inline', () => {
+    const row = widgetRow('ui-composed-chart');
+
+    if (row.kind !== 'widget') {
+        throw new Error('Expected Widget row.');
+    }
+
+    const markup = renderTranscript([
+        {
+            ...row,
+            widget: {
+                ...row.widget,
+                component: 'tavern.render_composed_chart',
+                fallbackText: 'Revenue and Profit',
+                props: {
+                    barSeries: [{ key: 'revenue', label: 'Revenue' }],
+                    data: [
+                        { month: '2026-01-01', profit: 31, revenue: 120 },
+                        { month: '2026-02-01', profit: 34, revenue: 138 },
+                    ],
+                    lineSeries: [{ key: 'profit', label: 'Profit' }],
+                    title: 'Revenue and Profit',
+                    unit: 'USD',
+                    xKey: 'month',
+                },
+            },
+        },
+    ]);
+
+    assert.match(markup, /Revenue and Profit/);
+    assert.doesNotMatch(markup, /Widget unavailable/);
+});
+
 test('ChatTranscript renders calendar day widgets inline', () => {
     const row = widgetRow('ui-calendar-day');
 

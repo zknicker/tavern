@@ -449,7 +449,7 @@ function completedTextDemo(input: {
     };
 }
 
-function chartDemoRenderInput(props: TavernRenderBarChartProps): WidgetRenderInput {
+export function chartDemoRenderInput(props: TavernRenderBarChartProps): WidgetRenderInput {
     return {
         component: tavernRenderBarChartComponentId,
         fallback: { text: props.title },
@@ -458,7 +458,7 @@ function chartDemoRenderInput(props: TavernRenderBarChartProps): WidgetRenderInp
     };
 }
 
-function lineChartDemoRenderInput(props: TavernRenderLineChartProps): WidgetRenderInput {
+export function lineChartDemoRenderInput(props: TavernRenderLineChartProps): WidgetRenderInput {
     return {
         component: tavernRenderLineChartComponentId,
         fallback: { text: props.title },
@@ -485,7 +485,7 @@ function calendarDayDemoRenderInput(props: TavernRenderCalendarDayProps): Widget
     };
 }
 
-function chartDemoToolInput() {
+export function chartDemoToolInput() {
     return {
         data: [
             { quarter: 'Q1', revenue: 12_000, expenses: 7600 },
@@ -538,7 +538,7 @@ function calendarDayDemoToolInput(): TavernRenderCalendarDayToolInput {
     };
 }
 
-function lineChartDemoToolInput() {
+export function lineChartDemoToolInput() {
     return {
         data: [
             { date: 'May 20', users: 1320, pageviews: 5200 },

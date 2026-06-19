@@ -1,13 +1,23 @@
 import * as z from 'zod';
+import {
+    composedSeries,
+    normalizeToolChartInput,
+    normalizeToolComposedChartInput,
+    validateComposedStoredSeriesCount,
+    validateStoredChartProps,
+    validateToolChartInput,
+    validateToolComposedChartInput,
+} from './chart-normalization.ts';
 
 export const tavernRenderBarChartToolName = 'render_bar_chart' as const;
 export const tavernRenderBarChartComponentId = 'tavern.render_bar_chart' as const;
 export const tavernRenderLineChartToolName = 'render_line_chart' as const;
 export const tavernRenderLineChartComponentId = 'tavern.render_line_chart' as const;
+export const tavernRenderComposedChartToolName = 'render_composed_chart' as const;
+export const tavernRenderComposedChartComponentId = 'tavern.render_composed_chart' as const;
 
 const chartDatumValueSchema = z.union([z.string(), z.number(), z.boolean(), z.null()]);
 const chartSeriesKeySchema = z.string().trim().min(1).max(80);
-const numericStringPattern = /^[+-]?(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][+-]?\d+)?$/u;
 
 export const tavernRenderBarChartSeriesSchema = z
     .object({
@@ -87,174 +97,46 @@ export const tavernRenderLineChartToolInputSchema = z
     })
     .transform((input) => normalizeToolChartInput(input, { allowNegative: true }));
 
+export const tavernRenderComposedChartSeriesSchema = tavernRenderBarChartSeriesSchema;
+
+export const tavernRenderComposedChartPropsSchema = z
+    .object({
+        barSeries: z.array(tavernRenderComposedChartSeriesSchema).min(1).max(4),
+        data: z.array(z.record(z.string(), chartDatumValueSchema)).min(1).max(50),
+        lineSeries: z.array(tavernRenderComposedChartSeriesSchema).min(1).max(4),
+        title: z.string().trim().min(1).max(160),
+        unit: z.string().trim().min(1).max(40).optional(),
+        xKey: z.string().trim().min(1).max(80),
+    })
+    .strict()
+    .superRefine((props, context) => {
+        validateStoredChartProps({ ...props, series: composedSeries(props) }, context, {
+            allowNegative: false,
+            valueMessage: 'Composed chart series values must be finite nonnegative numbers.',
+        });
+        validateComposedStoredSeriesCount(props, context);
+    });
+
+export const tavernRenderComposedChartToolInputSchema = z
+    .object({
+        barY: chartYSchema,
+        data: z.array(z.record(z.string(), chartDatumValueSchema)).min(1).max(50),
+        lineY: chartYSchema,
+        title: z.string().trim().min(1).max(160),
+        unit: z.string().trim().min(1).max(40).optional(),
+        x: z.string().trim().min(1).max(80),
+    })
+    .strict()
+    .superRefine((input, context) => {
+        validateToolComposedChartInput(input, context);
+    })
+    .transform(normalizeToolComposedChartInput);
+
 export type TavernRenderBarChartProps = z.infer<typeof tavernRenderBarChartPropsSchema>;
 export type TavernRenderBarChartToolInput = z.infer<typeof tavernRenderBarChartToolInputSchema>;
 export type TavernRenderLineChartProps = z.infer<typeof tavernRenderLineChartPropsSchema>;
 export type TavernRenderLineChartToolInput = z.infer<typeof tavernRenderLineChartToolInputSchema>;
-
-interface ChartProps {
-    data: Record<string, string | number | boolean | null>[];
-    series: z.infer<typeof tavernRenderBarChartSeriesSchema>[];
-    title: string;
-    unit?: string;
-    xKey: string;
-}
-
-interface ChartToolInput {
-    data: Record<string, string | number | boolean | null>[];
-    title: string;
-    unit?: string;
-    x: string;
-    y: string | string[];
-}
-
-function validateStoredChartProps(
-    props: ChartProps,
-    context: z.RefinementCtx,
-    options: { allowNegative: boolean; valueMessage: string }
-) {
-    const keys = new Set(props.series.map((series) => series.key));
-
-    if (keys.size !== props.series.length) {
-        context.addIssue({
-            code: 'custom',
-            message: 'Series keys must be unique.',
-            path: ['series'],
-        });
-    }
-
-    for (const [rowIndex, row] of props.data.entries()) {
-        const xValue = row[props.xKey];
-
-        if (!(typeof xValue === 'string' || typeof xValue === 'number')) {
-            context.addIssue({
-                code: 'custom',
-                message: 'Each data row needs a string or number x value.',
-                path: ['data', rowIndex, props.xKey],
-            });
-        }
-
-        for (const [seriesIndex, series] of props.series.entries()) {
-            const value = row[series.key];
-
-            if (
-                !(
-                    typeof value === 'number' &&
-                    Number.isFinite(value) &&
-                    (options.allowNegative || value >= 0)
-                )
-            ) {
-                context.addIssue({
-                    code: 'custom',
-                    message: options.valueMessage,
-                    path: ['data', rowIndex, props.series[seriesIndex]?.key ?? series.key],
-                });
-            }
-        }
-    }
-}
-
-function validateToolChartInput(
-    input: ChartToolInput,
-    context: z.RefinementCtx,
-    options: { allowNegative: boolean; valueMessage: string }
-) {
-    const yKeys = chartYKeys(input.y);
-    const keys = new Set(yKeys);
-
-    if (keys.size !== yKeys.length) {
-        context.addIssue({
-            code: 'custom',
-            message: 'Y keys must be unique.',
-            path: ['y'],
-        });
-    }
-
-    for (const [rowIndex, row] of input.data.entries()) {
-        const xValue = row[input.x];
-
-        if (!(typeof xValue === 'string' || typeof xValue === 'number')) {
-            context.addIssue({
-                code: 'custom',
-                message: 'Each data row needs a string or number x value.',
-                path: ['data', rowIndex, input.x],
-            });
-        }
-
-        for (const key of yKeys) {
-            const value = chartNumberFromValue(row[key], { allowNegative: options.allowNegative });
-
-            if (value === null) {
-                context.addIssue({
-                    code: 'custom',
-                    message: options.valueMessage,
-                    path: ['data', rowIndex, key],
-                });
-            }
-        }
-    }
-}
-
-function normalizeToolChartInput(input: ChartToolInput, options: { allowNegative: boolean }) {
-    const yKeys = chartYKeys(input.y);
-    const normalized = {
-        data: input.data.map((row) => {
-            const next = { ...row };
-
-            for (const key of yKeys) {
-                const value = chartNumberFromValue(row[key], {
-                    allowNegative: options.allowNegative,
-                });
-                if (value !== null) {
-                    next[key] = value;
-                }
-            }
-
-            return next;
-        }),
-        series: yKeys.map((key) => ({ key, label: chartLabelFromKey(key) })),
-        title: input.title,
-        xKey: input.x,
-    };
-
-    return input.unit ? { ...normalized, unit: input.unit } : normalized;
-}
-
-function chartYKeys(value: string | string[]) {
-    return Array.isArray(value) ? value : [value];
-}
-
-function chartLabelFromKey(key: string) {
-    const words = key
-        .replace(/[_-]+/gu, ' ')
-        .replace(/([a-z0-9])([A-Z])/gu, '$1 $2')
-        .trim();
-
-    return words ? words.charAt(0).toUpperCase() + words.slice(1) : key;
-}
-
-function chartNumberFromValue(value: unknown, options: { allowNegative?: boolean } = {}) {
-    if (
-        typeof value === 'number' &&
-        Number.isFinite(value) &&
-        (options.allowNegative || value >= 0)
-    ) {
-        return value;
-    }
-
-    if (typeof value !== 'string') {
-        return null;
-    }
-
-    const trimmed = value.trim();
-
-    if (!numericStringPattern.test(trimmed)) {
-        return null;
-    }
-
-    const numericValue = Number(trimmed);
-
-    return Number.isFinite(numericValue) && (options.allowNegative || numericValue >= 0)
-        ? numericValue
-        : null;
-}
+export type TavernRenderComposedChartProps = z.infer<typeof tavernRenderComposedChartPropsSchema>;
+export type TavernRenderComposedChartToolInput = z.infer<
+    typeof tavernRenderComposedChartToolInputSchema
+>;

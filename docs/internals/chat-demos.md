@@ -18,6 +18,8 @@ rendering, and composer code paths without asking an agent to generate data.
 * Runtime startup seeds demo chats only when that flag is present.
 * Demo chats use stable `cht_`, `msg_`, `rsp_`, and `act_` ids so seeding is
   idempotent across restarts.
+* Demo response activity is replaced from the current demo definition on each
+  seed, so changed demo activity sequences do not leave stale rows behind.
 * Demo chats are normal Tavern chats. They appear in the sidebar `Chats` list and
   open through `/dashboard/chats/:id`.
 * Do not add a separate Demos tab, lab route, or preview-only page for them.
@@ -40,6 +42,7 @@ app-local UI state, not durable Runtime chat rows.
 | `cht_demo_calendar_day` | Calendar Day Widget response activity rendered inline in a real chat. |
 | `cht_demo_calendar_event` | Calendar Event Widget response activity rendered inline in a real chat. |
 | `cht_demo_charts` | Chart Widget response activity rendered inline in a real chat. |
+| `cht_demo_composed_chart` | Bar, Line, and Composed Chart Widget response activity rendered inline in one real chat. |
 | `cht_demo_line_chart` | Line Chart Widget response activity rendered inline in a real chat. |
 | `cht_demo_long_content` | Long pasted JSON and long URL wrapping. |
 | `cht_demo_streaming_stack` | Running turn with thinking, progress, and tool stack rows. |

@@ -58,6 +58,7 @@ import { ReferenceAreaRegistrationContext } from "./reference-area-registration-
 import {
   computeSeriesBarRevealClipPadding,
   computeSeriesBarWidth,
+  computeSeriesBarXScalePadding,
 } from "./series-bar-layout";
 import { useStaticChartPreview } from "./static-chart-preview-context";
 import { useAnimatedYDomains } from "./use-animated-y-domains";
@@ -281,6 +282,35 @@ const TimeSeriesChartCore = memo(function TimeSeriesChartCore({
     [children]
   );
 
+  const xScalePadding = useMemo(() => {
+    if (!composedBarDataKeys?.length) {
+      return 0;
+    }
+    const slotCount =
+      xDomain && xDomainSlotCount != null
+        ? xDomainSlotCount
+        : visiblePlotData.length;
+    return computeSeriesBarXScalePadding({
+      composedBarGap,
+      composedBarSize,
+      composedMaxBarSize,
+      dataLength: slotCount,
+      innerWidth,
+      seriesCount: composedBarDataKeys.length,
+      stacked: composedStacked,
+    });
+  }, [
+    composedBarDataKeys,
+    composedBarGap,
+    composedBarSize,
+    composedMaxBarSize,
+    composedStacked,
+    innerWidth,
+    visiblePlotData.length,
+    xDomain,
+    xDomainSlotCount,
+  ]);
+
   const xScale = useMemo(() => {
     const minTime = xDomain
       ? xDomain[0].getTime()
@@ -295,10 +325,10 @@ const TimeSeriesChartCore = memo(function TimeSeriesChartCore({
     }
 
     return scaleTime({
-      range: [0, innerWidth],
+      range: [xScalePadding, Math.max(xScalePadding, innerWidth - xScalePadding)],
       domain: [minTime, maxTime],
     });
-  }, [innerWidth, plotData, projectionConfigs, xAccessor, xDomain]);
+  }, [innerWidth, plotData, projectionConfigs, xAccessor, xDomain, xScalePadding]);
 
   // When brushing, keep the full series for path rendering so edge fades stay
   // anchored to the viewport while the line pans through them. Y-domain and
@@ -322,8 +352,8 @@ const TimeSeriesChartCore = memo(function TimeSeriesChartCore({
     if (slotCount < 2) {
       return 0;
     }
-    return innerWidth / (slotCount - 1);
-  }, [innerWidth, visiblePlotData.length, xDomain, xDomainSlotCount]);
+    return Math.max(0, innerWidth - xScalePadding * 2) / (slotCount - 1);
+  }, [innerWidth, visiblePlotData.length, xDomain, xDomainSlotCount, xScalePadding]);
 
   const yDomainSkeletonByAxis = useMemo(
     () =>

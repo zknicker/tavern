@@ -63,6 +63,7 @@ export const mappedToolIntentNames = [
     'render_bar_chart',
     'render_calendar_day',
     'render_calendar_event',
+    'render_composed_chart',
     'render_line_chart',
     'rg',
     'search',
@@ -160,6 +161,7 @@ export const exactToolKinds = {
     render_bar_chart: 'widget',
     render_calendar_day: 'widget',
     render_calendar_event: 'widget',
+    render_composed_chart: 'widget',
     render_line_chart: 'widget',
     rg: 'code-search',
     search: 'code-search',
@@ -204,5 +206,6 @@ export const exactToolSubjects = {
     render_bar_chart: 'a bar chart',
     render_calendar_day: 'a calendar day',
     render_calendar_event: 'a calendar event',
+    render_composed_chart: 'a composed chart',
     render_line_chart: 'a line chart',
 } satisfies Partial<Record<(typeof mappedToolIntentNames)[number], string>>;

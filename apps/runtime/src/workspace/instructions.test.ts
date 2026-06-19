@@ -81,6 +81,9 @@ describe('generated agent instructions', () => {
             '- `render_bar_chart`: bar chart for categorical comparisons, rankings, totals, and bucketed numeric data.'
         );
         expect(content).toContain(
+            '- `render_composed_chart`: composed bar and line chart for ordered data where totals and trend share one axis.'
+        );
+        expect(content).toContain(
             '- `render_line_chart`: line chart for trends, time series, ordered numeric data, and recent metric context.'
         );
         expect(content).toContain(

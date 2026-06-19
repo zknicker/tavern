@@ -43,6 +43,53 @@ export function computeSeriesBarWidth(input: {
   return Math.max(2, width);
 }
 
+/** X-scale inset needed so first/last centered bars stay inside the plot. */
+export function computeSeriesBarXScalePadding(input: {
+  innerWidth: number;
+  dataLength: number;
+  seriesCount: number;
+  composedBarSize?: number;
+  composedMaxBarSize?: number;
+  composedBarGap?: number;
+  stacked?: boolean;
+}): number {
+  const {
+    innerWidth,
+    dataLength,
+    seriesCount,
+    composedBarSize,
+    composedMaxBarSize,
+    composedBarGap,
+    stacked,
+  } = input;
+
+  if (innerWidth <= 0 || dataLength === 0 || seriesCount === 0) {
+    return 0;
+  }
+
+  const columnWidth = dataLength < 2 ? innerWidth : innerWidth / (dataLength - 1);
+  const barWidth = computeSeriesBarWidth({
+    columnWidth,
+    composedBarGap,
+    composedBarSize,
+    composedMaxBarSize,
+    dataLength,
+    innerWidth,
+    seriesCount,
+    stacked,
+  });
+
+  return Math.min(
+    innerWidth / 2,
+    computeSeriesBarRevealClipPadding({
+      barWidth,
+      gap: composedBarGap,
+      seriesCount,
+      stacked,
+    })
+  );
+}
+
 /** Half-width of the bar group at each x — used to pad reveal clips. */
 export function computeSeriesBarRevealClipPadding(input: {
   barWidth: number;

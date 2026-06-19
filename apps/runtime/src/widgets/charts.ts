@@ -2,6 +2,9 @@ import {
     tavernRenderBarChartComponentId,
     tavernRenderBarChartToolInputSchema,
     tavernRenderBarChartToolName,
+    tavernRenderComposedChartComponentId,
+    tavernRenderComposedChartToolInputSchema,
+    tavernRenderComposedChartToolName,
     tavernRenderLineChartComponentId,
     tavernRenderLineChartToolInputSchema,
     tavernRenderLineChartToolName,
@@ -11,6 +14,7 @@ import { widgetActivity } from './render';
 
 export const renderBarChartToolName = tavernRenderBarChartToolName;
 export const renderLineChartToolName = tavernRenderLineChartToolName;
+export const renderComposedChartToolName = tavernRenderComposedChartToolName;
 
 export function chartWidgetActivityFromRenderBarChartTool(input: {
     activityId: string;
@@ -85,5 +89,43 @@ export function chartWidgetActivityFromRenderLineChartTool(input: {
         startedAt: input.startedAt,
         timestamp: input.timestamp,
         title: renderLineChartToolName,
+    });
+}
+
+export function chartWidgetActivityFromRenderComposedChartTool(input: {
+    activityId: string;
+    agentId: string;
+    messageId: string;
+    runId: string;
+    sessionKey: string;
+    startedAt: string;
+    timestamp: string;
+    toolInput: unknown;
+}) {
+    const parsed = tavernRenderComposedChartToolInputSchema.safeParse(input.toolInput);
+
+    if (!parsed.success) {
+        return null;
+    }
+
+    const render: WidgetRenderInput = {
+        component: tavernRenderComposedChartComponentId,
+        fallback: { text: parsed.data.title },
+        props: parsed.data,
+        target: 'chat.inline',
+    };
+
+    return widgetActivity({
+        activityId: input.activityId,
+        agentId: input.agentId,
+        fallbackText: parsed.data.title,
+        messageId: input.messageId,
+        render,
+        runId: input.runId,
+        sessionKey: input.sessionKey,
+        source: renderComposedChartToolName,
+        startedAt: input.startedAt,
+        timestamp: input.timestamp,
+        title: renderComposedChartToolName,
     });
 }

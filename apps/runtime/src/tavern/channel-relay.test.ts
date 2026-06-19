@@ -799,6 +799,87 @@ describe('Tavern Hermes channel relay', () => {
         );
     });
 
+    it('stores render-composed-chart tool completions as durable widget activity', async () => {
+        hermesClient.streamChat.mockImplementationOnce(async function* streamChat() {
+            yield {
+                data: {
+                    arguments: {
+                        barY: 'revenue',
+                        data: [{ month: '2026-01-01', profit: '31', revenue: '120' }],
+                        lineY: 'profit',
+                        title: 'Revenue and Profit',
+                        unit: 'USD',
+                        x: 'month',
+                    },
+                    tool_name: 'render_composed_chart',
+                },
+                event: 'tool.started',
+            };
+            yield {
+                data: {
+                    result: '{"status":"rendered"}',
+                    tool_name: 'render_composed_chart',
+                },
+                event: 'tool.completed',
+            };
+            yield {
+                data: {
+                    content: 'Rendered the composed chart.',
+                    message_id: 'hermes_msg_composed_chart_tool',
+                },
+                event: 'assistant.completed',
+            };
+        });
+        createChat({ id: 'cht_1' });
+
+        await sendTavernChannelMessage('cht_1', {
+            agent: {
+                agentId: 'agt_1',
+            },
+            message: {
+                content: 'show composed chart',
+                id: 'msg_composed_chart_tool',
+                nonce: 'nonce_composed_chart_tool',
+            },
+            target: {
+                externalId: null,
+                sessionKey: 'session_1',
+                target: 'cht_1',
+                type: 'tavern',
+            },
+        });
+        await waitForHermesTurn();
+
+        expect(listResponses('cht_1').activity).toEqual(
+            expect.arrayContaining([
+                expect.objectContaining({
+                    kind: 'tool_call',
+                    status: 'completed',
+                    title: 'render_composed_chart',
+                }),
+                expect.objectContaining({
+                    detail: 'Revenue and Profit',
+                    kind: 'widget',
+                    metadata: expect.objectContaining({
+                        widget: expect.objectContaining({
+                            component: 'tavern.render_composed_chart',
+                            fallback: { text: 'Revenue and Profit' },
+                            props: expect.objectContaining({
+                                barSeries: [{ key: 'revenue', label: 'Revenue' }],
+                                data: [{ month: '2026-01-01', profit: 31, revenue: 120 }],
+                                lineSeries: [{ key: 'profit', label: 'Profit' }],
+                                unit: 'USD',
+                                xKey: 'month',
+                            }),
+                            target: 'chat.inline',
+                        }),
+                    }),
+                    title: 'render_composed_chart',
+                }),
+            ])
+        );
+    });
+
     it('stores render-calendar-event tool completions as durable widget activity', async () => {
         hermesClient.streamChat.mockImplementationOnce(async function* streamChat() {
             yield {

@@ -47,6 +47,7 @@ export function seedDevelopmentChatDemos({
 
         for (const { activities = [], ...response } of demo.responses) {
             upsertResponse(demo.chatId, response, db);
+            replaceResponseActivities(response.id, db);
             for (const activity of activities) {
                 upsertResponseActivity(demo.chatId, response.id, activity, db);
             }
@@ -54,6 +55,12 @@ export function seedDevelopmentChatDemos({
     }
 
     return { seeded: developmentChatDemos.length };
+}
+
+function replaceResponseActivities(responseId: string, db: Database) {
+    db.prepare('DELETE FROM chat_response_activity WHERE response_id = $responseId').run(
+        namedParams({ responseId })
+    );
 }
 
 function seedMessage(chatId: string, input: DevelopmentDemoMessage, db: Database) {

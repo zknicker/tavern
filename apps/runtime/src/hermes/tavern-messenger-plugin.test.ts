@@ -6,6 +6,7 @@ import {
     tavernRenderBarChartToolName,
     tavernRenderCalendarDayToolName,
     tavernRenderCalendarEventToolName,
+    tavernRenderComposedChartToolName,
     tavernRenderLineChartToolName,
 } from '@tavern/api';
 import { describe, expect, it } from 'vitest';
@@ -19,12 +20,18 @@ describe('tavern messenger plugin', () => {
         expect(source).toContain(`name="${tavernRenderBarChartToolName}"`);
         expect(source).toContain(`"name": "${tavernRenderLineChartToolName}"`);
         expect(source).toContain(`name="${tavernRenderLineChartToolName}"`);
+        expect(source).toContain(`"name": "${tavernRenderComposedChartToolName}"`);
+        expect(source).toContain(`name="${tavernRenderComposedChartToolName}"`);
         expect(source).toContain(`"name": "${tavernRenderCalendarEventToolName}"`);
         expect(source).toContain(`name="${tavernRenderCalendarEventToolName}"`);
         expect(source).toContain(`"name": "${tavernRenderCalendarDayToolName}"`);
         expect(source).toContain(`name="${tavernRenderCalendarDayToolName}"`);
         expect(source).toContain('Render prepared categorical comparisons');
         expect(source).toContain('Render prepared ordered numeric data');
+        expect(source).toContain('Render prepared ordered data as a composed chart');
+        expect(source).toContain(
+            'Render prepared ordered data as a composed bar and line chart in chat when totals and trend share one ordered axis'
+        );
         expect(source).toContain(
             'Render one prepared single-day calendar event in chat, including simple when or where event answers'
         );
@@ -35,6 +42,7 @@ describe('tavern messenger plugin', () => {
         expect(source).toContain('finite JSON numbers; numeric strings are normalized');
         expect(tavernRenderBarChartToolName).toMatch(/^[a-zA-Z0-9_-]+$/u);
         expect(tavernRenderLineChartToolName).toMatch(/^[a-zA-Z0-9_-]+$/u);
+        expect(tavernRenderComposedChartToolName).toMatch(/^[a-zA-Z0-9_-]+$/u);
         expect(tavernRenderCalendarEventToolName).toMatch(/^[a-zA-Z0-9_-]+$/u);
         expect(tavernRenderCalendarDayToolName).toMatch(/^[a-zA-Z0-9_-]+$/u);
     });
@@ -110,6 +118,54 @@ describe('tavern messenger plugin', () => {
         expect(results.negativeNumericString).toEqual({ status: 'rendered' });
         expect(results.underscoredNumericString).toMatchObject({
             error: 'data[0].net must be a finite number or numeric string.',
+        });
+    });
+
+    it('validates composed chart tool input with bar and line series', async () => {
+        const results = await runPluginValidator(
+            {
+                duplicateAcrossSeries: {
+                    barY: 'revenue',
+                    data: [{ month: 'Jan', revenue: 120 }],
+                    lineY: 'revenue',
+                    title: 'Revenue and Profit',
+                    x: 'month',
+                },
+                negativeLine: {
+                    barY: 'revenue',
+                    data: [{ month: 'Jan', profit: -2, revenue: 120 }],
+                    lineY: 'profit',
+                    title: 'Revenue and Profit',
+                    x: 'month',
+                },
+                numericStrings: {
+                    barY: 'revenue',
+                    data: [{ month: 'Jan', profit: '31', revenue: '120' }],
+                    lineY: 'profit',
+                    title: 'Revenue and Profit',
+                    unit: 'USD',
+                    x: 'month',
+                },
+                tooManySeries: {
+                    barY: ['one', 'two', 'three'],
+                    data: [{ five: 5, four: 4, month: 'Jan', one: 1, three: 3, two: 2 }],
+                    lineY: ['four', 'five'],
+                    title: 'Too Many Series',
+                    x: 'month',
+                },
+            },
+            '_handle_tavern_render_composed_chart'
+        );
+
+        expect(results.numericStrings).toEqual({ status: 'rendered' });
+        expect(results.duplicateAcrossSeries).toMatchObject({
+            error: 'composed chart y keys must be unique.',
+        });
+        expect(results.negativeLine).toMatchObject({
+            error: 'data[0].profit must be a finite nonnegative number or numeric string.',
+        });
+        expect(results.tooManySeries).toMatchObject({
+            error: 'composed charts support up to 4 total series.',
         });
     });
 

@@ -4,6 +4,9 @@ import {
     tavernRenderBarChartComponentId,
     tavernRenderBarChartPropsSchema,
     tavernRenderBarChartToolInputSchema,
+    tavernRenderComposedChartComponentId,
+    tavernRenderComposedChartPropsSchema,
+    tavernRenderComposedChartToolInputSchema,
     tavernRenderLineChartComponentId,
     tavernRenderLineChartPropsSchema,
     tavernRenderLineChartToolInputSchema,
@@ -153,4 +156,73 @@ test('chart line tool input normalizes negative numeric string series values', (
         throw new Error('Expected line chart tool input to parse.');
     }
     expect(result.data.data).toEqual([{ month: 'Jan', net: -12.5 }]);
+});
+
+test('widget render input accepts the composed chart widget demo payload', () => {
+    const result = widgetRenderInputSchema.safeParse({
+        component: tavernRenderComposedChartComponentId,
+        fallback: { text: 'Revenue and Profit' },
+        target: 'chat.inline',
+        props: {
+            barSeries: [{ key: 'revenue', label: 'Revenue' }],
+            data: [
+                { month: '2026-01-01', profit: 31, revenue: 120 },
+                { month: '2026-02-01', profit: 34, revenue: 138 },
+            ],
+            lineSeries: [{ key: 'profit', label: 'Profit' }],
+            title: 'Revenue and Profit',
+            unit: 'USD',
+            xKey: 'month',
+        },
+    });
+
+    expect(result.success).toBe(true);
+});
+
+test('chart composed props reject negative bar or line values', () => {
+    const result = tavernRenderComposedChartPropsSchema.safeParse({
+        barSeries: [{ key: 'revenue', label: 'Revenue' }],
+        data: [{ month: 'Jan', profit: -2, revenue: 120 }],
+        lineSeries: [{ key: 'profit', label: 'Profit' }],
+        title: 'Revenue and Profit',
+        xKey: 'month',
+    });
+
+    expect(result.success).toBe(false);
+});
+
+test('chart composed tool input normalizes bar and line numeric strings', () => {
+    const result = tavernRenderComposedChartToolInputSchema.safeParse({
+        barY: 'revenue',
+        data: [{ month: '2026-01-01', profit: '31', revenue: '120' }],
+        lineY: 'profit',
+        title: 'Revenue and Profit',
+        unit: 'USD',
+        x: 'month',
+    });
+
+    expect(result.success).toBe(true);
+    if (!result.success) {
+        throw new Error('Expected composed chart tool input to parse.');
+    }
+    expect(result.data).toEqual({
+        barSeries: [{ key: 'revenue', label: 'Revenue' }],
+        data: [{ month: '2026-01-01', profit: 31, revenue: 120 }],
+        lineSeries: [{ key: 'profit', label: 'Profit' }],
+        title: 'Revenue and Profit',
+        unit: 'USD',
+        xKey: 'month',
+    });
+});
+
+test('chart composed tool input rejects too many total series', () => {
+    const result = tavernRenderComposedChartToolInputSchema.safeParse({
+        barY: ['one', 'two', 'three'],
+        data: [{ month: 'Jan', five: 5, four: 4, one: 1, three: 3, two: 2 }],
+        lineY: ['four', 'five'],
+        title: 'Too Many Series',
+        x: 'month',
+    });
+
+    expect(result.success).toBe(false);
 });

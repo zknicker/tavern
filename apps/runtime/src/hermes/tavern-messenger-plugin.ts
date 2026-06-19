@@ -4,6 +4,7 @@ import {
     tavernRenderBarChartToolName,
     tavernRenderCalendarDayToolName,
     tavernRenderCalendarEventToolName,
+    tavernRenderComposedChartToolName,
     tavernRenderLineChartToolName,
 } from '@tavern/api';
 
@@ -68,6 +69,7 @@ _CALENDAR_DATETIME_PATTERN = re.compile(r"^(\\d{4}-\\d{2}-\\d{2})T(\\d{2}:\\d{2}
 _CALENDAR_OFFSET_PATTERN = re.compile(r"(?:Z|[+-]\\d{2}:?\\d{2})$", re.IGNORECASE)
 _CALENDAR_TIME_PATTERN = re.compile(r"^(?:[01]\\d|2[0-3]):[0-5]\\d$")
 _ROOT_KEYS = {"data", "title", "unit", "x", "y"}
+_COMPOSED_ROOT_KEYS = {"barY", "data", "lineY", "title", "unit", "x"}
 _CALENDAR_ROOT_KEYS = {
     "calendar",
     "description",
@@ -179,6 +181,72 @@ TAVERN_RENDER_LINE_CHART_SCHEMA = {
                 "minItems": 1,
                 "maxItems": 50,
                 "description": "1-50 rows. x is the label field; y fields are finite numbers or numeric strings.",
+                "items": {
+                    "type": "object",
+                    "additionalProperties": {
+                        "type": ["string", "number", "boolean", "null"]
+                    },
+                },
+            },
+        },
+    },
+}
+
+TAVERN_RENDER_COMPOSED_CHART_SCHEMA = {
+    "name": "${tavernRenderComposedChartToolName}",
+    "description": "Render prepared ordered data as a composed chart with bar columns and a line in chat. Use when totals and trend belong on one shared time or ordered x-axis. Y values should be finite nonnegative JSON numbers; numeric strings are normalized.",
+    "parameters": {
+        "type": "object",
+        "additionalProperties": False,
+        "required": ["title", "x", "barY", "lineY", "data"],
+        "properties": {
+            "title": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 160,
+                "description": "Chart title.",
+            },
+            "x": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 80,
+                "description": "Data key for the shared ordered or time x-axis.",
+            },
+            "barY": {
+                "anyOf": [
+                    {"type": "string", "minLength": 1, "maxLength": 80},
+                    {
+                        "type": "array",
+                        "minItems": 1,
+                        "maxItems": 4,
+                        "items": {"type": "string", "minLength": 1, "maxLength": 80},
+                    },
+                ],
+                "description": "One numeric data key, or 1-4 numeric data keys, to render as bars.",
+            },
+            "lineY": {
+                "anyOf": [
+                    {"type": "string", "minLength": 1, "maxLength": 80},
+                    {
+                        "type": "array",
+                        "minItems": 1,
+                        "maxItems": 4,
+                        "items": {"type": "string", "minLength": 1, "maxLength": 80},
+                    },
+                ],
+                "description": "One numeric data key, or 1-4 numeric data keys, to render as lines.",
+            },
+            "unit": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 40,
+                "description": "Optional display unit such as USD, count, or percent.",
+            },
+            "data": {
+                "type": "array",
+                "minItems": 1,
+                "maxItems": 50,
+                "description": "1-50 rows. x is the shared axis field; barY and lineY fields are finite nonnegative numbers or numeric strings.",
                 "items": {
                     "type": "object",
                     "additionalProperties": {
@@ -440,6 +508,14 @@ def _coerce_chart_number(value: Any, *, allow_negative: bool = False) -> Optiona
     return numeric if math.isfinite(numeric) and (allow_negative or numeric >= 0) else None
 
 
+def _chart_y_keys(value: Any, label: str) -> Optional[list]:
+    if isinstance(value, str):
+        return [value]
+    if isinstance(value, list) and 1 <= len(value) <= 4 and all(_is_text(item, 80) for item in value):
+        return value
+    return None
+
+
 def _validate_tavern_chart(args: Any, *, allow_negative: bool) -> Optional[str]:
     value_message = (
         "finite number or numeric string"
@@ -459,12 +535,8 @@ def _validate_tavern_chart(args: Any, *, allow_negative: bool) -> Optional[str]:
     if "unit" in args and not _is_text(args.get("unit"), 40):
         return "unit must be a non-empty string."
 
-    y = args.get("y")
-    if isinstance(y, str):
-        y_keys = [y]
-    elif isinstance(y, list) and 1 <= len(y) <= 4 and all(_is_text(item, 80) for item in y):
-        y_keys = y
-    else:
+    y_keys = _chart_y_keys(args.get("y"), "y")
+    if y_keys is None:
         return "y must be a non-empty string or 1 to 4 non-empty strings."
     if len(set(y_keys)) != len(y_keys):
         return "y keys must be unique."
@@ -494,6 +566,51 @@ def _validate_tavern_render_bar_chart(args: Any) -> Optional[str]:
 
 def _validate_tavern_render_line_chart(args: Any) -> Optional[str]:
     return _validate_tavern_chart(args, allow_negative=True)
+
+
+def _validate_tavern_render_composed_chart(args: Any) -> Optional[str]:
+    if not isinstance(args, dict):
+        return "Input must be an object."
+    unsupported = set(args.keys()) - _COMPOSED_ROOT_KEYS
+    if unsupported:
+        return "Input contains unsupported fields."
+    if not _is_text(args.get("title"), 160):
+        return "title must be a non-empty string."
+    x_key = args.get("x")
+    if not _is_text(x_key, 80):
+        return "x must be a non-empty string."
+    if "unit" in args and not _is_text(args.get("unit"), 40):
+        return "unit must be a non-empty string."
+
+    bar_keys = _chart_y_keys(args.get("barY"), "barY")
+    if bar_keys is None:
+        return "barY must be a non-empty string or 1 to 4 non-empty strings."
+    line_keys = _chart_y_keys(args.get("lineY"), "lineY")
+    if line_keys is None:
+        return "lineY must be a non-empty string or 1 to 4 non-empty strings."
+    y_keys = [*bar_keys, *line_keys]
+    if len(y_keys) > 4:
+        return "composed charts support up to 4 total series."
+    if len(set(y_keys)) != len(y_keys):
+        return "composed chart y keys must be unique."
+
+    data = args.get("data")
+    if not isinstance(data, list) or not (1 <= len(data) <= 50):
+        return "data must contain 1 to 50 rows."
+    for index, row in enumerate(data):
+        if not isinstance(row, dict):
+            return f"data[{index}] must be an object."
+        for field, value in row.items():
+            if not _is_json_primitive(value):
+                return f"data[{index}].{field} must be a JSON primitive."
+        x_value = row.get(x_key)
+        if not isinstance(x_value, (str, int, float)) or isinstance(x_value, bool):
+            return f"data[{index}].{x_key} must be a string or number."
+        for key in y_keys:
+            if _coerce_chart_number(row.get(key), allow_negative=False) is None:
+                return f"data[{index}].{key} must be a finite nonnegative number or numeric string."
+
+    return None
 
 
 def _validate_tavern_render_calendar_event(args: Any) -> Optional[str]:
@@ -599,6 +716,13 @@ def _handle_tavern_render_bar_chart(args: Any, **_kwargs) -> str:
 
 def _handle_tavern_render_line_chart(args: Any, **_kwargs) -> str:
     error = _validate_tavern_render_line_chart(args)
+    if error:
+        return tool_error(error)
+    return tool_result({"status": "rendered"})
+
+
+def _handle_tavern_render_composed_chart(args: Any, **_kwargs) -> str:
+    error = _validate_tavern_render_composed_chart(args)
     if error:
         return tool_error(error)
     return tool_result({"status": "rendered"})
@@ -733,6 +857,14 @@ def register(ctx) -> None:
         handler=_handle_tavern_render_line_chart,
         description="Render prepared ordered numeric data, trends, time series, or recent metric context as a line chart in chat.",
         emoji="📈",
+    )
+    ctx.register_tool(
+        name="${tavernRenderComposedChartToolName}",
+        toolset="tavern",
+        schema=TAVERN_RENDER_COMPOSED_CHART_SCHEMA,
+        handler=_handle_tavern_render_composed_chart,
+        description="Render prepared ordered data as a composed bar and line chart in chat when totals and trend share one ordered axis.",
+        emoji="📊",
     )
     ctx.register_tool(
         name="${tavernRenderCalendarEventToolName}",

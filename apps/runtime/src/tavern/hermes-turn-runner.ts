@@ -14,8 +14,10 @@ import {
 } from '../widgets/calendar';
 import {
     chartWidgetActivityFromRenderBarChartTool,
+    chartWidgetActivityFromRenderComposedChartTool,
     chartWidgetActivityFromRenderLineChartTool,
     renderBarChartToolName,
+    renderComposedChartToolName,
     renderLineChartToolName,
 } from '../widgets/charts';
 import { widgetActivityFromHermesRender } from '../widgets/render';
@@ -894,6 +896,8 @@ function widgetToolProjector(toolName: string | null) {
             return chartWidgetActivityFromRenderBarChartTool;
         case renderLineChartToolName:
             return chartWidgetActivityFromRenderLineChartTool;
+        case renderComposedChartToolName:
+            return chartWidgetActivityFromRenderComposedChartTool;
         case renderCalendarDayToolName:
             return calendarWidgetActivityFromRenderCalendarDayTool;
         case renderCalendarEventToolName:
