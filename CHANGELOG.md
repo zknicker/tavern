@@ -2,6 +2,20 @@
 
 All notable changes to this project will be documented in this file.
 
+## v1.4.20 - 2026-06-19
+
+Runtime floor raised to 1.4.20 for the widget activity schema repair.
+
+App changes:
+
+- Requires Runtime 1.4.20 so upgraded apps do not keep using a Runtime that
+  rejects widget activity rows.
+
+Runtime changes:
+
+- Repairs legacy Runtime chat activity tables so Widget tool completions can
+  persist `widget` activity rows after upgrading from pre-widget databases.
+
 ## v1.4.19 - 2026-06-18
 
 Runtime floor raised to 1.4.19 for writable Vault APIs, managed Vault runtime
