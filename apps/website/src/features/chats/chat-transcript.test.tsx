@@ -366,6 +366,8 @@ test('ChatTranscript renders calendar event description fallback', () => {
 
     assert.match(markup, /Focus block/);
     assert.match(markup, /No description\./);
+    assert.match(markup, /flex items-start gap-3/);
+    assert.match(markup, /min-h-\[72px\] min-w-0 flex-1 flex-col gap-1/);
     assert.doesNotMatch(markup, /Widget unavailable/);
 });
 

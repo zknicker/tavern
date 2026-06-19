@@ -36,9 +36,9 @@ function CalendarEventWidget({ props }: { props: TavernRenderCalendarEventProps 
 
     return (
         <WidgetFrame>
-            <div className="flex gap-3">
+            <div className="flex items-start gap-3">
                 <CalendarTile date={date} />
-                <div className="flex h-[72px] min-w-0 flex-1 flex-col justify-center gap-1">
+                <div className="flex min-h-[72px] min-w-0 flex-1 flex-col gap-1">
                     <div className="flex min-w-0 items-baseline justify-between gap-3">
                         <p className="min-w-0 truncate font-medium text-foreground text-sm">
                             {props.title}
