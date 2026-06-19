@@ -329,6 +329,79 @@ describe('Tavern channel store', () => {
         ]);
     });
 
+    it('projects durable widget activity as widget turn progress', () => {
+        createChat({ id: 'cht_1' });
+        upsertResponse('cht_1', {
+            id: 'rsp_run_1',
+            metadata: {
+                runtime: {
+                    agentId: 'main',
+                    runId: 'run_1',
+                    sessionKey: 'session-1',
+                    startedAt: '2026-05-16T12:00:00.000Z',
+                },
+            },
+            participant_id: 'agt_1',
+            status: 'running',
+        });
+        upsertResponseActivity('cht_1', 'rsp_run_1', {
+            completed_at: '2026-05-16T12:00:02.000Z',
+            detail: 'Quarterly Revenue',
+            id: 'act_widget_1',
+            kind: 'widget',
+            metadata: {
+                runtime: {
+                    agentId: 'main',
+                    runId: 'run_1',
+                    sessionKey: 'session-1',
+                    startedAt: '2026-05-16T12:00:00.000Z',
+                },
+                widget: {
+                    component: 'tavern.render_bar_chart',
+                    fallback: { text: 'Quarterly Revenue' },
+                    props: {
+                        data: [{ quarter: 'Q1', revenue: 12_000 }],
+                        series: [{ key: 'revenue', label: 'Revenue' }],
+                        title: 'Quarterly Revenue',
+                        xKey: 'quarter',
+                    },
+                    target: 'chat.inline',
+                },
+            },
+            started_at: '2026-05-16T12:00:01.000Z',
+            status: 'completed',
+            title: 'render_bar_chart',
+        });
+
+        expect(
+            listProjectedTavernRuntimeEvents({ afterCursor: 0 }).map((entry) => entry.event)
+        ).toContainEqual(
+            expect.objectContaining({
+                step: {
+                    detail: 'Quarterly Revenue',
+                    id: 'act_widget_1',
+                    kind: 'widget',
+                    label: 'render_bar_chart',
+                    status: 'completed',
+                    toolCallId: null,
+                    toolName: null,
+                    widget: {
+                        component: 'tavern.render_bar_chart',
+                        fallbackText: 'Quarterly Revenue',
+                        id: 'act_widget_1',
+                        props: expect.objectContaining({
+                            title: 'Quarterly Revenue',
+                            xKey: 'quarter',
+                        }),
+                        target: 'chat.inline',
+                        validationError: null,
+                    },
+                },
+                type: 'turn.progress',
+            })
+        );
+    });
+
     it('maps durable assistant deliveries into terminal turn projection events', () => {
         createChat({ id: 'cht_1' });
         createDelivery('cht_1', {

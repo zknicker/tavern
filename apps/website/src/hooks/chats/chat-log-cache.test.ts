@@ -230,6 +230,51 @@ test('progress patch inserts a notice step as a runtime-notice system row', () =
     });
 });
 
+test('progress patch inserts a widget row for live widget progress', () => {
+    const log = patchChatLogWithProgress(emptyLog(), {
+        step: {
+            detail: 'Quarterly Revenue',
+            id: 'act_run-1_widget_chart',
+            kind: 'widget',
+            label: 'render_bar_chart',
+            status: 'completed',
+            widget: {
+                component: 'tavern.render_bar_chart',
+                fallbackText: 'Quarterly Revenue',
+                id: 'act_run-1_widget_chart',
+                props: {
+                    data: [{ quarter: 'Q1', revenue: 12_000 }],
+                    series: [{ key: 'revenue', label: 'Revenue' }],
+                    title: 'Quarterly Revenue',
+                    xKey: 'quarter',
+                },
+                target: 'chat.inline',
+                validationError: null,
+            },
+        },
+        timestamp: '2026-05-22T19:00:03.000Z',
+        turn,
+    });
+
+    expect(log?.rows).toHaveLength(1);
+    expect(log?.rows[0]).toMatchObject({
+        completedAt: '2026-05-22T19:00:03.000Z',
+        id: 'act_run-1_widget_chart',
+        kind: 'widget',
+        sessionKey: turn.sessionKey,
+        widget: {
+            component: 'tavern.render_bar_chart',
+            fallbackText: 'Quarterly Revenue',
+            props: {
+                title: 'Quarterly Revenue',
+                xKey: 'quarter',
+            },
+            target: 'chat.inline',
+            validationError: null,
+        },
+    });
+});
+
 test('steer patch inserts the accepted steer as a user message row', () => {
     const log = patchChatLogWithSteerNotice(emptyLog(), {
         content: 'nvm do LA',

@@ -207,6 +207,10 @@ function progressStepToChatRows(input: {
         return [progressStepToWorkerRow(input)];
     }
 
+    if (input.step.kind === 'widget') {
+        return [progressStepToWidgetRow(input)];
+    }
+
     return [progressStepToToolRow(input)];
 }
 
@@ -357,6 +361,39 @@ function progressStepToWorkerRow(input: {
     };
 }
 
+function progressStepToWidgetRow(input: {
+    step: ChatTurnProgressStep;
+    timestamp: string;
+    turn: ChatTurn;
+}): WidgetRow {
+    const id = progressActivityId(input.turn.runId, input.step.id);
+    const widget = input.step.widget ?? {
+        component: null,
+        fallbackText: input.step.detail?.trim() || input.step.label,
+        id,
+        props: null,
+        target: null,
+        validationError: 'Widget unavailable.',
+    };
+
+    return {
+        actor: { id: input.turn.agentId, kind: 'agent' },
+        completedAt: input.step.status === 'active' ? null : input.timestamp,
+        connectsToNext: false,
+        connectsToPrevious: false,
+        id,
+        isFirstInGroup: true,
+        kind: 'widget',
+        sessionKey: input.turn.sessionKey,
+        startedAt: input.timestamp,
+        widget: {
+            ...widget,
+            id,
+            props: widget.props ?? null,
+        },
+    };
+}
+
 function mergeProgressRows(existing: ChatLogRow, next: ProgressRow) {
     if (existing.kind === 'message' && next.kind === 'message') {
         return mergeMessageRows(existing, next);
@@ -368,6 +405,10 @@ function mergeProgressRows(existing: ChatLogRow, next: ProgressRow) {
 
     if (existing.kind === 'worker' && next.kind === 'worker') {
         return mergeWorkerRows(existing, next);
+    }
+
+    if (existing.kind === 'widget' && next.kind === 'widget') {
+        return mergeWidgetRows(existing, next);
     }
 
     if (
@@ -418,6 +459,14 @@ function mergeWorkerRows(existing: WorkerRow, next: WorkerRow): WorkerRow {
             progressSummary: next.worker.progressSummary ?? existing.worker.progressSummary,
             startedAt: existing.worker.startedAt ?? next.worker.startedAt,
         },
+    };
+}
+
+function mergeWidgetRows(existing: WidgetRow, next: WidgetRow): WidgetRow {
+    return {
+        ...next,
+        completedAt: next.completedAt ?? existing.completedAt,
+        startedAt: existing.startedAt ?? next.startedAt,
     };
 }
 

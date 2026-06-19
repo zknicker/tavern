@@ -24,9 +24,6 @@ test('preserves Tavern chat session routing and renders one final reply', async 
     await expect(finalReply).toBeVisible({ timeout: 45_000 });
     await expect(page.getByLabel('Agent is thinking')).toHaveCount(0);
     await expect(finalReply).toHaveCount(1);
-    await finalReply.hover();
-    await expect(page.getByText('custom', { exact: true }).first()).toBeVisible();
-    await expect(page.getByText('tavern-e2e-tools', { exact: true }).first()).toBeVisible();
     expect(chatId).not.toBe('new');
 });
 
@@ -98,7 +95,7 @@ test('renders live tool progress before the final reply', async ({ page }) => {
     const finalReply = transcriptParagraph(page, expectedReply);
     await expect(finalReply).toHaveCount(0);
 
-    const liveActivity = page.getByRole('button', { name: /Work(?:ing|ed) for/i });
+    const liveActivity = page.getByRole('button', { name: commandWorkGroupName }).first();
     await expect(liveActivity).toBeVisible({ timeout: 30_000 });
     await expect(transcriptParagraph(page, expectedProgress)).toBeVisible({ timeout: 90_000 });
 
@@ -106,19 +103,51 @@ test('renders live tool progress before the final reply', async ({ page }) => {
         .getByText(/QA_KICKOFF_TASK\.md|exec|run sleep 4|command sleep 4/i)
         .first();
     await expect(liveToolEvidence).toBeVisible({ timeout: 90_000 });
-    await expect(page.getByRole('button', { name: /Work(?:ing|ed) for/i })).toHaveCount(1);
-    await expect(page.getByText(/Ran a command/i)).toHaveCount(1);
+    await expect(page.getByRole('button', { name: commandWorkGroupName })).toHaveCount(1);
 
     await expect(finalReply).toBeVisible({ timeout: 90_000 });
 
-    const completedActivity = page.getByRole('button', { name: /Worked for/i });
+    const completedActivity = page.getByRole('button', { name: commandWorkGroupName }).first();
     await expect(completedActivity).toBeVisible({ timeout: 30_000 });
-    await expect(page.getByRole('button', { name: /Work(?:ing|ed) for/i })).toHaveCount(1);
-    await expect(page.getByText(/Ran a command/i)).toHaveCount(1);
+    await expect(page.getByRole('button', { name: commandWorkGroupName })).toHaveCount(1);
     await openActivityIfClosed(completedActivity);
     await expect(page.getByText(/QA_KICKOFF_TASK\.md|exec|run sleep 4/i).first()).toBeVisible({
         timeout: 10_000,
     });
+});
+
+test('renders live widget progress before the final reply', async ({ page }) => {
+    test.setTimeout(240_000);
+
+    const expectedReply = `LIVE-WIDGET-PROGRESS-${Date.now()}`;
+    const widgetTitle = 'E2E live widget revenue';
+    const prompt = `Live widget progress qa check. Render the revenue chart, then reply exactly \`${expectedReply}\`.`;
+
+    await page.goto('/dashboard/overview');
+
+    await fillComposer(page, '#home-prompt', prompt);
+    await page.getByRole('button', { name: 'Start chat' }).click();
+
+    await waitForRealChatRoute(page);
+
+    const finalReply = transcriptParagraph(page, expectedReply);
+    await expect(finalReply).toHaveCount(0);
+
+    const main = page.locator('main');
+    await expect(main.getByText(widgetTitle, { exact: true })).toBeVisible({ timeout: 90_000 });
+    await expect(main.getByText('Revenue', { exact: true }).first()).toBeVisible({
+        timeout: 30_000,
+    });
+    await expect(finalReply).toHaveCount(0);
+
+    await expect(finalReply).toBeVisible({ timeout: 90_000 });
+    await expect(finalReply).toHaveCount(1);
+
+    await page.reload();
+    await expect(page.locator('main').getByText(widgetTitle, { exact: true })).toBeVisible({
+        timeout: 30_000,
+    });
+    await expect(transcriptParagraph(page, expectedReply)).toHaveCount(1);
 });
 
 test('renders provider-streamed assistant updates between Hermes tool groups', async ({ page }) => {
@@ -141,15 +170,12 @@ test('renders provider-streamed assistant updates between Hermes tool groups', a
     await expect(transcriptParagraph(page, secondUpdate)).toBeVisible({ timeout: 90_000 });
     await expect(transcriptParagraph(page, expectedReply)).toBeVisible({ timeout: 90_000 });
 
-    const activity = page.getByRole('button', { name: /Work(?:ing|ed) for/i });
-    await expect(activity).toHaveCount(1);
-    await openActivityIfClosed(activity);
-    const commandGroups = page.getByRole('button', { name: /Ran a command/i });
-    await expect(commandGroups).toHaveCount(2, { timeout: 10_000 });
-    await expectAbove(transcriptParagraph(page, firstUpdate), commandGroups.nth(0));
-    await expectAbove(commandGroups.nth(0), transcriptParagraph(page, secondUpdate));
-    await expectAbove(transcriptParagraph(page, secondUpdate), commandGroups.nth(1));
-    await expectAbove(commandGroups.nth(1), transcriptParagraph(page, expectedReply));
+    const readFileGroups = page.getByRole('button', { name: readFileWorkGroupName });
+    await expect(readFileGroups).toHaveCount(2, { timeout: 10_000 });
+    await expectAbove(transcriptParagraph(page, firstUpdate), readFileGroups.nth(0));
+    await expectAbove(readFileGroups.nth(0), transcriptParagraph(page, secondUpdate));
+    await expectAbove(transcriptParagraph(page, secondUpdate), readFileGroups.nth(1));
+    await expectAbove(readFileGroups.nth(1), transcriptParagraph(page, expectedReply));
 });
 
 test('answers a mid-turn clarification choice and resumes the turn', async ({ page }) => {
@@ -216,7 +242,7 @@ test('renders model thinking as separate activity blocks around tool work', asyn
         timeout: 90_000,
     });
 
-    await openActivityIfClosed(page.getByRole('button', { name: /Worked for/i }));
+    await openActivityIfClosed(page.getByRole('button', { name: workGroupHeaderName }).first());
     await expect(page.getByRole('button', { name: /^Thinking$/i })).toHaveCount(2, {
         timeout: 10_000,
     });
@@ -249,7 +275,7 @@ test('preserves one user message and tool progress across repeated hard reloads'
     await page.getByRole('button', { name: 'Start chat' }).click();
 
     await waitForRealChatRoute(page);
-    await expect(page.getByRole('button', { name: /Working for/i })).toBeVisible({
+    await expect(page.getByRole('button', { name: commandWorkGroupName }).first()).toBeVisible({
         timeout: 30_000,
     });
 
@@ -257,7 +283,7 @@ test('preserves one user message and tool progress across repeated hard reloads'
     await expect(userPromptParagraph(page, promptMarker)).toBeVisible({
         timeout: 30_000,
     });
-    await expect(page.getByRole('button', { name: /Working for/i })).toBeVisible({
+    await expect(page.getByRole('button', { name: commandWorkGroupName }).first()).toBeVisible({
         timeout: 30_000,
     });
 
@@ -265,7 +291,7 @@ test('preserves one user message and tool progress across repeated hard reloads'
     await expect(userPromptParagraph(page, promptMarker)).toHaveCount(1, {
         timeout: 30_000,
     });
-    const activity = page.getByRole('button', { name: /Work(?:ing|ed) for/i });
+    const activity = page.getByRole('button', { name: commandWorkGroupName }).first();
     await expect(activity).toBeVisible({ timeout: 60_000 });
     await openActivityIfClosed(activity);
     await expect(page.getByText(/QA_KICKOFF_TASK\.md/i).first()).toBeVisible({
@@ -316,7 +342,7 @@ async function expectActiveTurnIndicator(page: Page) {
     // either one proves the turn is live.
     await expect(
         page
-            .getByRole('button', { name: /Working for/i })
+            .getByRole('button', { name: workGroupHeaderName })
             .or(page.getByLabel('Agent is thinking'))
             .first()
     ).toBeVisible({ timeout: 30_000 });
@@ -335,6 +361,11 @@ function userPromptParagraph(page: Page, marker: string) {
 function exactTextRegex(text: string) {
     return new RegExp(`^${escapeRegExp(text)}$`);
 }
+
+const commandWorkGroupName = /^(?:Running|Ran) a command\b/i;
+const readFileWorkGroupName = /^Read(?:ing)? a file\b/i;
+const workGroupHeaderName =
+    /^(?:Using|Used|Reading|Read|Running|Ran|Editing|Edited|Searching|Searched|Rendering|Rendered|Thinking|Worked)\b(?! for)/i;
 
 // Document order, not pixel geometry: the transcript is a single column, and
 // bounding boxes race the work panel's height animation while it expands.

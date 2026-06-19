@@ -23,7 +23,7 @@ export function buildChatCompletion(body: Record<string, unknown>): ChatCompleti
     const toolCalls = selectToolCalls(body, prompt, toolOutputCount);
 
     return {
-        finalDelayMs: shouldDelayFinalReply(prompt, toolOutput) ? 1200 : 0,
+        finalDelayMs: finalReplyDelayMs(prompt, toolOutput),
         id: `chatcmpl_tavern_${crypto.randomUUID().replaceAll('-', '').slice(0, 16)}`,
         model: readString(body.model) ?? modelId,
         preamble: selectPreamble(prompt, toolOutputCount),
@@ -68,6 +68,9 @@ function chooseToolName(available: Set<string>, prompt: string) {
     if (shouldRunClarification(prompt) && available.has('clarify')) {
         return 'clarify';
     }
+    if (shouldRenderWidget(prompt) && available.has('render_bar_chart')) {
+        return 'render_bar_chart';
+    }
     if (/multi-stage progress/i.test(prompt) && available.has('terminal')) {
         return 'terminal';
     }
@@ -102,6 +105,19 @@ function buildToolArgs(toolName: string, prompt: string) {
             ? 'sleep 4 && '
             : '';
         return { command: `${sleepPrefix}cat ${JSON.stringify(taskPath)}`, workdir: workspaceDir };
+    }
+    if (toolName === 'render_bar_chart') {
+        return {
+            data: [
+                { month: 'Jan', revenue: 12_500 },
+                { month: 'Feb', revenue: 18_250 },
+                { month: 'Mar', revenue: 21_750 },
+            ],
+            title: 'E2E live widget revenue',
+            unit: 'USD',
+            x: 'month',
+            y: 'revenue',
+        };
     }
     if (toolName === 'execute_code') {
         const delay = /slow QA command|reload-heavy|subagent recovery/i.test(prompt) ? 4 : 0;
@@ -143,9 +159,13 @@ function shouldReturnEmptyReply(transcript: string) {
 }
 
 function shouldUseTool(prompt: string) {
-    return /QA_KICKOFF_TASK\.md|tool progress|slow QA command|reload-heavy|subagent recovery|use\s+3\s+tools|multi-stage progress|clarification (?:choice|skip) qa/i.test(
+    return /QA_KICKOFF_TASK\.md|tool progress|widget progress|slow QA command|reload-heavy|subagent recovery|use\s+3\s+tools|multi-stage progress|clarification (?:choice|skip) qa/i.test(
         prompt
     );
+}
+
+function shouldRenderWidget(prompt: string) {
+    return /widget progress/i.test(prompt);
 }
 
 function shouldRunClarification(prompt: string) {
@@ -196,8 +216,14 @@ function shouldRunMultiStageProgress(prompt: string) {
     return /multi-stage progress/i.test(prompt);
 }
 
-function shouldDelayFinalReply(prompt: string, toolOutput: string) {
-    return Boolean(toolOutput) && /slow QA command|reload-heavy/i.test(prompt);
+function finalReplyDelayMs(prompt: string, toolOutput: string) {
+    if (!toolOutput) {
+        return 0;
+    }
+    if (shouldRenderWidget(prompt)) {
+        return 5000;
+    }
+    return /slow QA command|reload-heavy/i.test(prompt) ? 1200 : 0;
 }
 
 function extractLatestUserText(messages: Record<string, unknown>[]) {

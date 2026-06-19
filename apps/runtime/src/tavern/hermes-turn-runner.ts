@@ -20,7 +20,7 @@ import {
     renderComposedChartToolName,
     renderLineChartToolName,
 } from '../widgets/charts';
-import { widgetActivityFromHermesRender } from '../widgets/render';
+import { widgetActivityFromHermesRender, widgetProgressFromActivity } from '../widgets/render';
 import { createDelivery, upsertResponse, upsertResponseActivity } from './chat-api';
 import { createAgentParticipantId } from './chat-api/ids';
 import { createGatewayActivityRecorder } from './hermes-gateway-activities';
@@ -840,21 +840,19 @@ function recordWidgetRender(
     index: number
 ) {
     const timestamp = new Date().toISOString();
+    const activity = widgetActivityFromHermesRender({
+        activityId: createActivityId(input.runId, `ui_${index}`),
+        agentId: input.agentId,
+        eventData: event.data,
+        messageId: input.requestMessageId,
+        runId: input.runId,
+        sessionKey: input.sessionKey,
+        startedAt: turn.startedAt,
+        timestamp,
+    });
 
-    upsertResponseActivity(
-        input.chatId,
-        input.responseId,
-        widgetActivityFromHermesRender({
-            activityId: createActivityId(input.runId, `ui_${index}`),
-            agentId: input.agentId,
-            eventData: event.data,
-            messageId: input.requestMessageId,
-            runId: input.runId,
-            sessionKey: input.sessionKey,
-            startedAt: turn.startedAt,
-            timestamp,
-        })
-    );
+    upsertResponseActivity(input.chatId, input.responseId, activity);
+    publishWidgetProgress(turn, activity, timestamp);
 }
 
 function recordRenderToolWidget(
@@ -888,6 +886,33 @@ function recordRenderToolWidget(
     }
 
     upsertResponseActivity(input.chatId, input.responseId, activity);
+    publishWidgetProgress(turn, activity, timestamp);
+}
+
+function publishWidgetProgress(
+    turn: HermesTurn,
+    activity: ReturnType<typeof widgetActivityFromHermesRender>,
+    timestamp: string
+) {
+    const widget = widgetProgressFromActivity(activity);
+
+    if (!widget) {
+        return;
+    }
+
+    publishRuntimeEvent({
+        step: {
+            detail: activity.detail,
+            id: activity.id,
+            kind: 'widget',
+            label: activity.title,
+            status: activity.status === 'failed' ? 'failed' : 'completed',
+            widget,
+        },
+        timestamp,
+        turn,
+        type: 'turn.progress',
+    });
 }
 
 function widgetToolProjector(toolName: string | null) {

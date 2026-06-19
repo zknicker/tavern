@@ -588,6 +588,8 @@ describe('Tavern Hermes channel relay', () => {
     });
 
     it('stores ui.render events as durable widget activity', async () => {
+        const runtimeEvents: unknown[] = [];
+        const unsubscribe = subscribeToRuntimeEvents((event) => runtimeEvents.push(event));
         hermesClient.streamChat.mockImplementationOnce(async function* streamChat() {
             yield {
                 data: {
@@ -627,6 +629,7 @@ describe('Tavern Hermes channel relay', () => {
             },
         });
         await waitForHermesTurn();
+        unsubscribe();
 
         expect(listResponses('cht_1').activity).toMatchObject([
             {
@@ -641,6 +644,23 @@ describe('Tavern Hermes channel relay', () => {
                 title: 'tavern.render_bar_chart',
             },
         ]);
+        expect(runtimeEvents).toEqual(
+            expect.arrayContaining([
+                expect.objectContaining({
+                    step: expect.objectContaining({
+                        kind: 'widget',
+                        label: 'tavern.render_bar_chart',
+                        widget: expect.objectContaining({
+                            component: 'tavern.render_bar_chart',
+                            fallbackText: 'Quarterly Revenue',
+                            target: 'chat.inline',
+                            validationError: null,
+                        }),
+                    }),
+                    type: 'turn.progress',
+                }),
+            ])
+        );
     });
 
     it('stores render-bar-chart tool completions as durable widget activity', async () => {

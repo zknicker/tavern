@@ -1,4 +1,17 @@
-import type { TavernUpsertResponseActivityRequest } from '@tavern/api';
+import {
+    type AgentRuntimeWidgetProgress,
+    type TavernUpsertResponseActivityRequest,
+    widgetRenderInputSchema,
+} from '@tavern/api';
+
+interface WidgetActivitySource {
+    detail?: string | null;
+    id: string;
+    kind: string;
+    metadata?: Record<string, unknown>;
+    summary?: string | null;
+    title: string;
+}
 
 export function widgetActivityFromHermesRender(input: {
     activityId: string;
@@ -64,10 +77,81 @@ export function widgetActivity(input: {
     };
 }
 
+export function widgetProgressFromActivity(
+    activity: WidgetActivitySource
+): AgentRuntimeWidgetProgress | null {
+    if (activity.kind !== 'widget') {
+        return null;
+    }
+
+    const payload = readRecord(activity.metadata).widget;
+
+    if (payload === undefined) {
+        return invalidWidgetProgress(activity, null, 'Missing widget payload.');
+    }
+
+    const parsed = widgetRenderInputSchema.safeParse(payload);
+
+    if (parsed.success) {
+        return {
+            component: parsed.data.component,
+            fallbackText: parsed.data.fallback.text,
+            id: activity.id,
+            props: parsed.data.props,
+            target: parsed.data.target,
+            validationError: null,
+        };
+    }
+
+    const record = readRecord(payload);
+    const component = readString(record.component);
+
+    return invalidWidgetProgress(
+        activity,
+        {
+            component,
+            fallbackText: readFallbackText(record.fallback),
+            target: readString(record.target),
+        },
+        parsed.error.issues[0]?.message ?? 'Invalid widget.'
+    );
+}
+
 function fallbackTextFromRender(eventData: Record<string, unknown>, component: string) {
     const fallback = readRecord(eventData.fallback);
 
     return readString(fallback.text) ?? readString(eventData.title) ?? component;
+}
+
+function invalidWidgetProgress(
+    activity: WidgetActivitySource,
+    input: {
+        component: string | null;
+        fallbackText: string | null;
+        target: string | null;
+    } | null,
+    error: string
+): AgentRuntimeWidgetProgress {
+    const component = input?.component ?? null;
+
+    return {
+        component,
+        fallbackText:
+            input?.fallbackText ??
+            activity.summary?.trim() ??
+            activity.detail?.trim() ??
+            readString(activity.title) ??
+            component ??
+            'Unable to render widget.',
+        id: activity.id,
+        props: null,
+        target: input?.target ?? null,
+        validationError: error,
+    };
+}
+
+function readFallbackText(value: unknown) {
+    return readString(readRecord(value).text);
 }
 
 function readRecord(value: unknown): Record<string, unknown> {

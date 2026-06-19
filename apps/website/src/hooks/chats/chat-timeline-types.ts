@@ -33,11 +33,20 @@ export interface ChatTurnProgressStep {
         | 'plan'
         | 'reasoning'
         | 'tool'
+        | 'widget'
         | 'worker';
     label: string;
     status: 'active' | 'completed' | 'failed';
     toolCallId?: string | null;
     toolName?: string | null;
+    widget?: {
+        component: string | null;
+        fallbackText: string;
+        id: string;
+        props?: unknown | null;
+        target: string | null;
+        validationError: string | null;
+    };
 }
 
 export interface ChatTimelineState {

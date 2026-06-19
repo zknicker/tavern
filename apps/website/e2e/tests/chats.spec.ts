@@ -302,7 +302,7 @@ async function sendFollowUp(
 }
 
 async function openWorkedActivity(page: Page) {
-    const activity = page.getByRole('button', { name: /Worked for/i });
+    const activity = page.getByRole('button', { name: workGroupHeaderName }).first();
     await expect(activity).toBeVisible();
     if ((await activity.getAttribute('aria-expanded')) === 'false') {
         await activity.click();
@@ -314,7 +314,7 @@ async function openWorkedActivity(page: Page) {
 // "Used a tool, read a file"); their content stays aria-hidden and inert
 // until the group header is expanded.
 const workGroupHeaderName =
-    /^(?:Used (?:a|\d+) tools?|Read (?:a|\d+) files?|Ran (?:a|\d+) commands?|Edited (?:a|\d+) files?|Searched (?:code|web)|Worked)\b(?! for)/i;
+    /^(?:Using|Used|Reading|Read|Running|Ran|Editing|Edited|Searching|Searched|Rendering|Rendered|Thinking|Worked)\b(?! for)/i;
 
 async function expandWorkGroups(page: Page) {
     for (let pass = 0; pass < 5; pass += 1) {

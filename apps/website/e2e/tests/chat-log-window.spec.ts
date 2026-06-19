@@ -51,7 +51,7 @@ test('keeps loaded history and an open old work drawer stable through a live tur
     await page.reload();
     await expect(transcriptParagraph(page, 'QA_WINDOW_T2_OK')).toBeVisible({ timeout: 45_000 });
 
-    const drawer = page.getByRole('button', { name: /Worked for/i }).first();
+    const drawer = page.getByRole('button', { name: workGroupHeaderName }).first();
     await drawer.scrollIntoViewIfNeeded();
     if ((await drawer.getAttribute('aria-expanded')) === 'false') {
         await drawer.click();
@@ -61,8 +61,12 @@ test('keeps loaded history and an open old work drawer stable through a live tur
     await page.waitForTimeout(800);
 
     await page.evaluate(() => {
-        const target = Array.from(document.querySelectorAll('button[aria-expanded]')).find((el) =>
-            /Worked for/i.test(el.textContent ?? '')
+        const isWorkGroupHeader = (el: Element) =>
+            /^(?:Using|Used|Reading|Read|Running|Ran|Editing|Edited|Searching|Searched|Rendering|Rendered|Thinking|Worked)\b(?! for)/i.test(
+                el.textContent ?? ''
+            );
+        const target = Array.from(document.querySelectorAll('button[aria-expanded]')).find(
+            isWorkGroupHeader
         );
 
         if (!(target instanceof HTMLElement)) {
@@ -74,12 +78,17 @@ test('keeps loaded history and an open old work drawer stable through a live tur
         window.__DRAWER_SAMPLES__ = samples;
 
         const sample = () => {
-            const current = Array.from(document.querySelectorAll('button[aria-expanded]')).find(
-                (el) => /Worked for/i.test(el.textContent ?? '')
-            );
-            const panel = current?.getAttribute('aria-controls')
-                ? document.getElementById(current.getAttribute('aria-controls') ?? '')
-                : null;
+            const current = document.querySelector('button[data-window-spec-tag="original"]');
+            const controlledPanel =
+                current?.getAttribute('aria-controls') &&
+                document.getElementById(current.getAttribute('aria-controls') ?? '');
+            const siblingPanel = current?.parentElement?.nextElementSibling;
+            const panel =
+                controlledPanel instanceof HTMLElement
+                    ? controlledPanel
+                    : siblingPanel instanceof HTMLElement
+                      ? siblingPanel
+                      : null;
 
             const hidden = Array.from(document.querySelectorAll('p')).find((el) =>
                 /older (?:entry|entries)/.test(el.textContent ?? '')
@@ -244,6 +253,9 @@ async function sendFollowUp(
 function transcriptParagraph(page: Page, text: string) {
     return page.locator('main p').filter({ hasText: new RegExp(`^${text}$`) });
 }
+
+const workGroupHeaderName =
+    /^(?:Using|Used|Reading|Read|Running|Ran|Editing|Edited|Searching|Searched|Rendering|Rendered|Thinking|Worked)\b(?! for)/i;
 
 async function waitForRealChatRoute(page: Page) {
     await page.waitForURL((url) => /^\/dashboard\/chats\/(?!new$)[^/]+$/.test(url.pathname), {
