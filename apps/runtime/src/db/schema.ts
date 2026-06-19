@@ -1,3 +1,4 @@
+import { repairRuntimeSchema } from './schema-repairs.ts';
 import type { Database } from './sqlite.ts';
 
 export const RUNTIME_SCHEMA = `
@@ -274,6 +275,7 @@ CREATE INDEX IF NOT EXISTS idx_wiki_health_history_topic
 
 export function ensureRuntimeSchema(db: Database): void {
     db.exec(RUNTIME_SCHEMA);
+    repairRuntimeSchema(db);
     ensureColumn(db, {
         column: 'pinned',
         definition: 'INTEGER NOT NULL DEFAULT 0 CHECK (pinned IN (0, 1))',
