@@ -4,7 +4,6 @@ import { chatRouter } from './chat/router.ts';
 import { connectorRouter } from './connector/router.ts';
 import { cronRouter } from './cron/router.ts';
 import { hermesConfigRouter } from './hermes-config/router.ts';
-import { highlightRouter } from './highlight/router.ts';
 import { jobsRouter } from './jobs/router.ts';
 import { logRouter } from './log/router.ts';
 import { mentionRouter } from './mention/router.ts';
@@ -27,7 +26,6 @@ export const appRouter = createRouter({
     chat: chatRouter,
     connector: connectorRouter,
     cron: cronRouter,
-    highlight: highlightRouter,
     jobs: jobsRouter,
     log: logRouter,
     mention: mentionRouter,

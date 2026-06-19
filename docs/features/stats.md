@@ -20,6 +20,3 @@ Stats turn runtime and provider activity into something users can scan.
   to read account activity.
 * **Runtime health.** Show whether the agent runtime is connected and working.
 * **Operational clues.** Help users understand slow, failed, or expensive work.
-* **Homepage highlights.** Rotate short tavern headlines backed by recent
-  receipts, such as tool volume, completed quests, scheduled runs, saved lore,
-  or failed work.

@@ -6,7 +6,6 @@ describe('jobSlugSchema', () => {
         expect(jobSlugSchema.parse('refresh-runtime-capabilities')).toBe(
             'refresh-runtime-capabilities'
         );
-        expect(jobSlugSchema.parse('tavern-highlights')).toBe('tavern-highlights');
     });
 
     test('rejects unknown jobs', () => {

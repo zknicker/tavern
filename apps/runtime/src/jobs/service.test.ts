@@ -18,10 +18,7 @@ describe('Runtime jobs service', () => {
     test('exposes only Runtime-owned operational jobs', async () => {
         const { jobs } = await listRuntimeJobs();
 
-        expect(jobs.map((job) => job.slug)).toEqual([
-            'refresh-runtime-capabilities',
-            'tavern-highlights',
-        ]);
+        expect(jobs.map((job) => job.slug)).toEqual(['refresh-runtime-capabilities']);
         expect(jobs.some((job) => job.slug.startsWith('wiki-'))).toBe(false);
     });
 });

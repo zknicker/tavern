@@ -65,7 +65,6 @@ export const agentRuntimeRoutes = {
     cronRuns: '/cron-runs',
     events: '/events',
     chatSocket: '/chat',
-    highlights: '/highlights',
     chatMessages: (chatId: string) => `/hermes/chats/${chatId}/messages`,
     chatTurnSteer: (chatId: string, runId: string) =>
         `/hermes/chats/${encodeURIComponent(chatId)}/turns/${encodeURIComponent(runId)}/steer`,

@@ -1,4 +1,3 @@
-import { generateTavernHighlights } from '../highlights/highlights.ts';
 import type { RuntimeJobDefinition } from './types.ts';
 
 const emptyRuntimeJobInputSchema = {
@@ -12,7 +11,6 @@ const emptyRuntimeJobInputSchema = {
     },
 };
 
-const hourMs = 60 * 60 * 1000;
 export const runtimeCapabilitiesRefreshIntervalMs = 60 * 1000;
 
 export const runtimeCapabilitiesRefreshJob: RuntimeJobDefinition = {
@@ -40,28 +38,7 @@ export const runtimeCapabilitiesRefreshJob: RuntimeJobDefinition = {
     slug: 'refresh-runtime-capabilities',
 };
 
-export const tavernHighlightsJob: RuntimeJobDefinition = {
-    concurrency: 1,
-    defaultInput: {},
-    description: 'Generates hourly Tavern homepage highlights from recent Runtime activity.',
-    disabledReason() {
-        return null;
-    },
-    displayName: 'Generate Tavern Highlights',
-    inputSchema: emptyRuntimeJobInputSchema,
-    async run(context) {
-        const result = await generateTavernHighlights();
-        await context.log(`Generated ${result.highlights.length} active Tavern highlight(s).`);
-    },
-    schedule: {
-        everyMs: hourMs,
-        kind: 'interval',
-        runOnStart: true,
-    },
-    slug: 'tavern-highlights',
-};
-
-export const runtimeJobDefinitions = [runtimeCapabilitiesRefreshJob, tavernHighlightsJob] as const;
+export const runtimeJobDefinitions = [runtimeCapabilitiesRefreshJob] as const;
 
 export function getRuntimeJobDefinition(slug: RuntimeJobDefinition['slug']): RuntimeJobDefinition {
     const definition = runtimeJobDefinitions.find((job) => job.slug === slug);

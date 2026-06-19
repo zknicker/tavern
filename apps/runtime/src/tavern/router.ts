@@ -3,7 +3,6 @@ import {
     agentRuntimeApprovalRespondSchema,
     agentRuntimeClarificationRespondResultSchema,
     agentRuntimeClarificationRespondSchema,
-    agentRuntimeHighlightListSchema,
     agentRuntimeMacAppListSchema,
     agentRuntimeMutationHeaders,
     agentRuntimeMutationOrigins,
@@ -23,7 +22,6 @@ import { handleMcpRequest } from '../hermes/mcp-routes';
 import { handlePermissionSettingsRequest } from '../hermes/permission-settings';
 import { handleSkillHubRequest } from '../hermes/skill-hub-routes';
 import { handleToolsetSetupRequest } from '../hermes/toolset-setup-routes';
-import { listTavernHighlights } from '../highlights/highlights';
 import { handleRuntimeJobsRequest } from '../jobs/routes';
 import { listMacApps } from '../mac-apps/inventory';
 import { handleModelAccessRequest } from '../model-access/model-access';
@@ -56,10 +54,6 @@ export async function handleTavernRuntimeRequest(request: Request): Promise<Resp
                 }),
             })
         );
-    }
-
-    if (request.method === 'GET' && url.pathname === runtimeRoutes.highlights) {
-        return json(agentRuntimeHighlightListSchema.parse(listTavernHighlights()));
     }
 
     if (request.method === 'POST' && url.pathname === '/cron/deliveries') {

@@ -86,7 +86,6 @@ chat_artifacts
 chat_deliveries
 chat_events
 chat_reads
-tavern_highlights
 ```
 
 These tables live in Runtime SQLite and back the OpenAPI chat contract.
@@ -94,11 +93,6 @@ These tables live in Runtime SQLite and back the OpenAPI chat contract.
 `tavern_channel_outbox` also lives in Runtime SQLite, but it is not chat
 history. It is the private relay queue for channel-style ingress and hydrates
 frames from existing `chats` and `chat_messages` rows.
-
-`tavern_highlights` is a derived presentation cache. Runtime regenerates current
-homepage highlight receipts hourly from recent response activity, chat
-responses, and cron runs. It expires old rows and keeps the app from recomputing
-cross-domain stats during render.
 
 ## `chats`
 

@@ -31,7 +31,6 @@ import {
     type AgentRuntimeDiscordBinding,
     type AgentRuntimeExecutionSettings,
     type AgentRuntimeHermesConfigSnapshot,
-    type AgentRuntimeHighlightList,
     type AgentRuntimeJobDetail,
     type AgentRuntimeJobList,
     type AgentRuntimeJobSlug,
@@ -149,7 +148,6 @@ import {
     agentRuntimeErrorSchema,
     agentRuntimeExecutionSettingsSchema,
     agentRuntimeHermesConfigSnapshotSchema,
-    agentRuntimeHighlightListSchema,
     agentRuntimeJobDetailSchema,
     agentRuntimeJobListSchema,
     agentRuntimeJobSlugSchema,
@@ -345,7 +343,6 @@ export interface TavernAgentRuntimeClient {
     listCronJobs(): Promise<AgentRuntimeCronList>;
     listCronRuns(jobId?: string): Promise<{ runs: AgentRuntimeCronRun[] }>;
     listDiscordBindings(): Promise<{ bindings: AgentRuntimeDiscordBinding[] }>;
-    listHighlights(): Promise<AgentRuntimeHighlightList>;
     listMacApps(options?: { limit?: number; query?: string }): Promise<AgentRuntimeMacAppList>;
     listMcpServers(): Promise<AgentRuntimeMcpServerList>;
     listRuntimeJobs(): Promise<AgentRuntimeJobList>;
@@ -812,18 +809,6 @@ class HttpTavernAgentRuntimeClient implements TavernAgentRuntimeClient {
         }
 
         return agentRuntimeJobListSchema.parse(await response.json());
-    }
-
-    async listHighlights() {
-        const response = await fetch(`${this.#baseUrl}${agentRuntimeRoutes.highlights}`, {
-            headers: this.#authHeaders,
-        });
-
-        if (!response.ok) {
-            await readErrorResponse(response);
-        }
-
-        return agentRuntimeHighlightListSchema.parse(await response.json());
     }
 
     async listCapabilities() {

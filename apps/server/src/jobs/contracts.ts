@@ -2,7 +2,7 @@ import { z } from 'zod';
 import { jobDefinitions } from '../../../../jobs/index.ts';
 
 const jobSlugs = jobDefinitions.map((definition) => definition.slug);
-export const runtimeJobSlugs = ['refresh-runtime-capabilities', 'tavern-highlights'] as const;
+export const runtimeJobSlugs = ['refresh-runtime-capabilities'] as const;
 const allJobSlugs = [...jobSlugs, ...runtimeJobSlugs];
 
 if (allJobSlugs.length === 0) {
