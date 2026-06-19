@@ -2,6 +2,29 @@
 
 All notable changes to this project will be documented in this file.
 
+## v1.4.22 - 2026-06-19
+
+Runtime floor raised to 1.4.22 for saved agent environment values and new
+Widget tool contracts.
+
+App changes:
+
+- Replaced Vault's source Markdown editor with an MDXEditor-backed rich
+  Markdown editor, Tavern-styled toolbar, app-level edit/split/preview controls,
+  file breadcrumb, and a cleaner Metadata sidebar.
+- Added composed chart rendering and calendar day Widget rendering in chat.
+- Shows saved agent environment values in Settings, prefetches model settings,
+  prevents skill row text selection, and adds the missing Appearance settings
+  row divider.
+- Removed the obsolete participant profile settings surface.
+
+Runtime changes:
+
+- Added composed chart and calendar day Widget tools, validation, activity
+  projection, and demo coverage.
+- Returns saved agent environment values to the app settings API.
+- Improved agent Widget render guidance and removed the unused highlights job.
+
 ## v1.4.21 - 2026-06-19
 
 App-only release. The Runtime floor stays at 1.4.20.
