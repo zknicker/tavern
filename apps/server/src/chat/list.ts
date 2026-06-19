@@ -92,7 +92,6 @@ function presentChatTitle(input: {
         actorId: string;
         actorType: 'agent' | 'participant';
         name: string;
-        profileId?: string | null;
     }>;
     platform: string;
     source: ChatSource;
@@ -487,7 +486,6 @@ function toChatTargetParticipant(participant: Participant | null) {
         name: resolveParticipantName(participant),
         observedName: participant.observedName,
         primaryColor: resolveParticipantColor(participant),
-        profileId: participant.linkedProfile?.id ?? null,
     };
 }
 
@@ -551,7 +549,6 @@ function resolveObservedParticipants(input: {
                     avatar: resolveParticipantAvatar(participant),
                     name: resolveParticipantName(participant),
                     primaryColor: resolveParticipantColor(participant),
-                    profileId: participant.linkedProfile?.id ?? null,
                 },
             ];
         });

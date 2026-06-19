@@ -4,7 +4,6 @@ import {
     Clock04Icon,
     ConnectIcon,
     PaintBrush01Icon,
-    UserMultiple02Icon,
 } from '@hugeicons-pro/core-duotone-rounded';
 import { AiBrain01Icon, ChatIcon } from '@hugeicons-pro/core-stroke-rounded';
 import * as React from 'react';
@@ -23,7 +22,6 @@ import { AppearanceSettings } from './appearance/page.tsx';
 import { JobsSettings } from './jobs/page.tsx';
 import { MemoriesSettings } from './memories/page.tsx';
 import { ModelsSettings } from './models/page.tsx';
-import { ParticipantsSettings } from './participants/page.tsx';
 import { SessionsSettings } from './sessions/page.tsx';
 
 export type SettingsTab =
@@ -31,7 +29,6 @@ export type SettingsTab =
     | 'jobs'
     | 'memories'
     | 'models'
-    | 'participants'
     | 'sessions'
     | 'agent-runtime';
 
@@ -41,7 +38,6 @@ const settingsTabs: Array<{
     label: string;
 }> = [
     { id: 'agent-runtime', label: 'Tavern Runtime', icon: ConnectIcon },
-    { id: 'participants', label: 'Profile', icon: UserMultiple02Icon },
     { id: 'appearance', label: 'Appearance', icon: PaintBrush01Icon },
     { id: 'sessions', label: 'Sessions', icon: ChatIcon },
     { id: 'models', label: 'Models', icon: AiBrain01Icon },
@@ -67,10 +63,6 @@ const tabContent: Record<
     },
     memories: {
         component: MemoriesSettings,
-        scrollBehavior: 'dialog',
-    },
-    participants: {
-        component: ParticipantsSettings,
         scrollBehavior: 'dialog',
     },
     sessions: {

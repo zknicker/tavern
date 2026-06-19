@@ -10,7 +10,6 @@ import {
 import { createConfiguredAgentRuntimeClient } from '../agent-runtime/configured-client.ts';
 import { listAgents } from '../agents/catalog.ts';
 import { listRuntimeChatRecords, presentRuntimeChatLabel } from '../chat/runtime-chats.ts';
-import { selfProfileId } from '../participants/self.ts';
 import { buildSessionToolCallsFromMessages } from '../sync/session-tool-call-sync.ts';
 import {
     globalSessionListItemSchema,
@@ -19,6 +18,8 @@ import {
     sessionRelationshipSchema,
 } from './contracts.ts';
 import { getSessionDisplay } from './display.ts';
+
+const selfProfileActorId = 'profile:self';
 
 export interface AgentRuntimeSessionSnapshot {
     agentsById: Map<string, string>;
@@ -121,7 +122,7 @@ export function mapAgentRuntimeSessionMessage(
         actor: agentId
             ? { id: agentId, kind: 'agent' as const }
             : isTavernSelfMessage
-              ? { id: selfProfileId, kind: 'profile' as const }
+              ? { id: selfProfileActorId, kind: 'profile' as const }
               : null,
         tavernAgentId: agentId,
         attachments: message.attachments,

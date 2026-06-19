@@ -8,7 +8,6 @@ import { archiveTavernChat, setTavernChatPinned } from '../src/chat/save.ts';
 import { ensureDatabaseSchema } from '../src/db/bootstrap.ts';
 import { databaseClient } from '../src/db/index.ts';
 import { syncChatParticipantsForRuntime } from '../src/participants/chat-participants.ts';
-import { linkParticipantToSelf } from '../src/participants/link.ts';
 import { saveAgentRuntimeConnection } from '../src/storage/agent-runtime-connections.ts';
 import { syncAgentsForRuntime } from '../src/storage/agents.ts';
 import {
@@ -45,7 +44,7 @@ afterEach(() => {
     mock.restore();
     globalThis.fetch = originalFetch;
     databaseClient.exec(
-        'DELETE FROM session_runs; DELETE FROM agents; DELETE FROM agent_runtime_connections; DELETE FROM profile_participants; DELETE FROM participant_labels; DELETE FROM participants; DELETE FROM profiles;'
+        'DELETE FROM session_runs; DELETE FROM agents; DELETE FROM agent_runtime_connections; DELETE FROM participant_labels; DELETE FROM participants;'
     );
 });
 
@@ -539,80 +538,6 @@ test('agent chat list resolves DM targets through participant identities', async
     assert.equal(dmChats.length, 1);
     assert.equal(dmChats[0]?.displayName, 'Zach Knickerbocker');
     assert.equal(dmChats[0]?.targetParticipant?.name, 'Zach Knickerbocker');
-});
-
-test('DM participant sync preserves manual self profile links', async () => {
-    const chats = [
-        {
-            bindingId: null,
-            bindings: [{ agentId: 'blippy' }],
-            id: 'discord:agent:blippy:dm:user:778786269458464829',
-            inboundMode: 'active' as const,
-            metadata: {},
-            parentTarget: null,
-            participants: [
-                { agentId: 'blippy', type: 'agent' as const },
-                {
-                    accountKey: null,
-                    externalId: '778786269458464829',
-                    name: 'Zach Knickerbocker',
-                    observedLabels: ['Zach Knickerbocker'],
-                    participantId: 'participant:discord:global:external:778786269458464829',
-                    platform: 'discord',
-                    type: 'participant' as const,
-                },
-            ],
-            platform: 'discord',
-            platformMetadata: {
-                accountIds: [],
-                channel: null,
-                dm: { userId: '778786269458464829' },
-                guild: null,
-                observedLabels: ['Zach Knickerbocker'],
-                provider: 'discord' as const,
-                sourceRecords: [],
-                thread: null,
-            },
-            requiresTrigger: false,
-            scope: 'dm' as const,
-            target: 'dm:user:778786269458464829',
-            trigger: null,
-        },
-    ];
-
-    await syncAgentsForRuntime({
-        agents: [
-            {
-                avatar: null,
-                enabledSkillIds: [],
-                emoji: null,
-                id: 'blippy',
-                isAdmin: false,
-                name: 'Blippy',
-                primaryColor: null,
-                workspaceFolder: 'blippy',
-            },
-        ],
-        runtimeId: 'runtime-1',
-    });
-    runtimeChats = chats;
-    await syncChatParticipantsForRuntime({
-        chats,
-        syncedAt: '2026-05-02T20:48:22.769Z',
-    });
-    await linkParticipantToSelf('participant:discord:global:external:778786269458464829');
-    await syncChatParticipantsForRuntime({
-        chats,
-        syncedAt: '2026-05-02T21:48:22.769Z',
-    });
-
-    const result = await listAgentChats({ agentId: 'blippy' });
-
-    assert.equal(
-        listedChats(result)[0]?.targetParticipant?.id,
-        'participant:discord:global:external:778786269458464829'
-    );
-    assert.equal(listedChats(result)[0]?.targetParticipant?.profileId, 'profile:self');
 });
 
 function listedChats(result: ChatList) {

@@ -45,7 +45,7 @@ The skill documents and exposes:
 
 - No raw engine config mutation. Configuration changes route the user to the
   appropriate settings surface.
-- No app-local state: profiles, cache, presentation, or app settings.
+- No app-local state: cache, presentation, or app settings.
 - No secret reads or writes.
 - Message sends and automation writes are attributed to the agent and visible
   in normal chat and automation history; the skill adds no hidden side

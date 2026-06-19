@@ -12,16 +12,13 @@ function shortName(value: string) {
 }
 
 export function resolveParticipantName(participant: Participant) {
-    return participant.linkedProfile?.displayName ?? participant.observedName;
+    return participant.observedName;
 }
 
 export function resolveParticipantAvatar(participant: Participant) {
-    return (
-        participant.linkedProfile?.avatar ??
-        shortName(resolveParticipantName(participant) || participant.id)
-    );
+    return shortName(resolveParticipantName(participant) || participant.id);
 }
 
-export function resolveParticipantColor(participant: Participant) {
-    return participant.linkedProfile?.primaryColor?.trim() || null;
+export function resolveParticipantColor(_participant: Participant) {
+    return null;
 }

@@ -295,16 +295,6 @@ export function createAppRouter() {
                                             ),
                                         },
                                         {
-                                            path: 'participants',
-                                            lazy: lazyRoute(
-                                                () =>
-                                                    import(
-                                                        './routes/dashboard/settings-participants-page.tsx'
-                                                    ),
-                                                'SettingsParticipantsPage'
-                                            ),
-                                        },
-                                        {
                                             path: 'tracking',
                                             lazy: lazyRoute(
                                                 () =>

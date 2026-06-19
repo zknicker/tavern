@@ -22,7 +22,6 @@ export const tavernEventNames = {
     hermesConfigUpdated: 'hermes-config.updated',
     agentRuntimeCapabilityUpdated: 'agent-runtime-capability.updated',
     agentRuntimeUpdated: 'agent-runtime.updated',
-    participantUpdated: 'participant.updated',
     sessionUpdated: 'session.updated',
     skillUpdated: 'skill.updated',
     usageLiveUpdated: 'usage.live.updated',
@@ -109,10 +108,6 @@ export function emitSessionUpdated(input?: { sessionKey?: string }) {
         ...createInvalidationEvent(),
         ...(input?.sessionKey ? { sessionKey: input.sessionKey } : {}),
     });
-}
-
-export function emitParticipantUpdated() {
-    emitTavernEvent(tavernEventNames.participantUpdated);
 }
 
 export function emitJobsUpdated() {

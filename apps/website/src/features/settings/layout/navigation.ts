@@ -10,7 +10,6 @@ import {
     PaintBrush03Icon,
     PlugSocketIcon,
     SystemUpdate01Icon,
-    UserAccountIcon,
     ZapIcon,
 } from '@hugeicons-pro/core-stroke-rounded';
 
@@ -20,12 +19,6 @@ export const settingsNavItems = [
         id: 'agent-runtime',
         label: 'Tavern Runtime',
         to: '/dashboard/settings/agent-runtime',
-    },
-    {
-        icon: UserAccountIcon,
-        id: 'participants',
-        label: 'Profile',
-        to: '/dashboard/settings/participants',
     },
     {
         icon: PaintBrush03Icon,
@@ -115,7 +108,7 @@ export const settingsNavItems = [
 export const settingsNavSections = [
     {
         id: 'general',
-        itemIds: ['agent-runtime', 'participants', 'appearance', 'updates', 'models'],
+        itemIds: ['agent-runtime', 'appearance', 'updates', 'models'],
         label: 'General',
     },
     {

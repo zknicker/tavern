@@ -29,12 +29,12 @@ embedding settings, hidden repair queues, or generated schema controls.
 
 ## Person Memory
 
-Person knowledge uses Tavern participants and profiles for identity, then stores
-durable facts in wiki pages when an agent intentionally writes them.
+Person knowledge uses Tavern participants for identity, then stores durable
+facts in wiki pages when an agent intentionally writes them.
 
 Observed participant labels remain source evidence. Tavern does not merge
-people by display name, and wiki facts should cite the participant/profile source
-when identity matters.
+people by display name, and wiki facts should cite the participant source when
+identity matters.
 
 ## Prompt Continuity
 

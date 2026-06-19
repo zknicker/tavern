@@ -16,7 +16,7 @@ canonical chat server.
 * **API procedures stay thin.** Validate input, call product logic, and return a
   narrow result.
 * **Product logic owns product nouns.** Chat, agents, memory, automations,
-  skills, stats, profiles, and settings live under their capability, not under
+  skills, stats, and settings live under their capability, not under
   integration folders.
 * **Chat history is runtime-owned.** Tavern Runtime owns chats, messages,
   participants, sequence, events, reads, soft deletes, and the product timeline.
@@ -37,9 +37,9 @@ canonical chat server.
 
 ## Data Shape
 
-App storage includes client cache, presentation state, profiles, and local
-settings. Canonical chat, agent, session, and execution evidence records belong
-in Tavern Runtime.
+App storage includes client cache, presentation state, and local settings.
+Canonical chat, agent, participant, session, and execution evidence records
+belong in Tavern Runtime.
 
 Keep table names in product language. Attach runtime ownership with columns such
 as `runtime_id`, `source`, or `last_synced_at`; do not create integration-shaped

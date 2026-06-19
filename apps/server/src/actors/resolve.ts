@@ -9,10 +9,6 @@ export function toParticipantActor(id: string | null): ActorRef | null {
     return id ? { id, kind: 'participant' } : null;
 }
 
-export function toProfileActor(id: string | null): ActorRef | null {
-    return id ? { id, kind: 'profile' } : null;
-}
-
 export function getMessageActor(input: {
     fallbackAgentId: string | null;
     message: SessionMessage;

@@ -4,7 +4,6 @@ import { getSenderColor } from './sender-color.ts';
 interface ActorColorInput {
     kind: HistoryActorOutput['kind'];
     primaryColor: string | null;
-    profileId?: string | null;
 }
 
 export function getActorNameStyle(actor: ActorColorInput | null) {
@@ -16,7 +15,7 @@ export function getActorNameStyle(actor: ActorColorInput | null) {
         return { color: actor.primaryColor };
     }
 
-    if (actor.kind === 'profile' || actor.profileId) {
+    if (actor.kind === 'profile') {
         return { color: '#64748b' };
     }
 

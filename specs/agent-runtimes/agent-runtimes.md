@@ -12,7 +12,7 @@ Tavern primitives.
   generated config inputs, sync status, and Runtime-specific metadata.
 - Hermes owns native agent execution, sessions, turns, transcripts, logs, skills, agent files,
   applied model/runtime config, platform channels, and runtime settings.
-- Tavern App owns client cache, presentation state, profiles, participant links, and app settings.
+- Tavern App owns client cache, presentation state, and app settings.
 - Tavern Runtime installs, starts, supervises, upgrades, and launches Hermes with Seatbelt
   guardrails.
 - Tavern does not require users to configure Hermes through native files or CLIs.

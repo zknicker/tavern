@@ -41,7 +41,6 @@ export const settingsCapabilityRequirements = {
     jobs: [],
     memories: ['vault'],
     models: ['apiServer', 'models'],
-    participants: [],
     sessions: ['apiServer'],
     skills: ['apiServer', 'skills'],
     'soul-md': [],

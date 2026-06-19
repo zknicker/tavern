@@ -130,7 +130,6 @@ chat_participants
   kind                  TEXT NOT NULL        -- user, agent, system, external
   source                TEXT NOT NULL        -- tavern, hermes, discord, system
   source_id             TEXT
-  profile_id            TEXT
   agent_id              TEXT
   observed_label        TEXT
   metadata_json         TEXT NOT NULL DEFAULT '{}'
@@ -143,12 +142,11 @@ Indexes:
 ```text
 idx_chat_participants_chat(chat_id)
 idx_chat_participants_source(source, source_id)
-idx_chat_participants_profile(profile_id)
 idx_chat_participants_agent(agent_id)
 ```
 
-Do not merge participants by display name. Profile linking is Tavern-owned
-state.
+Do not merge participants by display name. Participant labels are source
+provenance, not person identity assertions.
 
 ## `chat_messages`
 

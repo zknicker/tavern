@@ -28,7 +28,6 @@ export const chatParticipantSchema = z.object({
     avatar: z.string().nullable(),
     name: z.string(),
     primaryColor: z.string().nullable(),
-    profileId: z.string().nullable().optional(),
 });
 
 export const chatTargetParticipantSchema = z
@@ -38,7 +37,6 @@ export const chatTargetParticipantSchema = z
         name: z.string(),
         observedName: z.string(),
         primaryColor: z.string().nullable(),
-        profileId: z.string().nullable(),
     })
     .nullable();
 

@@ -208,14 +208,6 @@ const schemaStatements = [
         ON agent_thought_snapshots (generated_at);`,
     `CREATE INDEX IF NOT EXISTS agent_thought_snapshots_snapshot_hour_idx
         ON agent_thought_snapshots (snapshot_hour);`,
-    `CREATE TABLE IF NOT EXISTS profiles (
-        id TEXT PRIMARY KEY NOT NULL,
-        display_name TEXT,
-        avatar TEXT,
-        primary_color TEXT,
-        created_at TEXT NOT NULL,
-        updated_at TEXT NOT NULL
-    );`,
     `CREATE TABLE IF NOT EXISTS participants (
         id TEXT PRIMARY KEY NOT NULL,
         provider TEXT NOT NULL,
@@ -244,18 +236,6 @@ const schemaStatements = [
         ON participant_labels (participant_id);`,
     `CREATE INDEX IF NOT EXISTS participant_labels_normalized_idx
         ON participant_labels (participant_id, normalized_label);`,
-    `CREATE TABLE IF NOT EXISTS profile_participants (
-        profile_id TEXT NOT NULL,
-        participant_id TEXT NOT NULL,
-        created_at TEXT NOT NULL,
-        PRIMARY KEY (profile_id, participant_id),
-        FOREIGN KEY (profile_id) REFERENCES profiles(id) ON DELETE CASCADE,
-        FOREIGN KEY (participant_id) REFERENCES participants(id) ON DELETE CASCADE
-    );`,
-    `CREATE INDEX IF NOT EXISTS profile_participants_profile_idx
-        ON profile_participants (profile_id);`,
-    `CREATE INDEX IF NOT EXISTS profile_participants_participant_idx
-        ON profile_participants (participant_id);`,
     `CREATE TABLE IF NOT EXISTS cron_runs (
         session_key TEXT PRIMARY KEY NOT NULL,
         job_id TEXT NOT NULL,

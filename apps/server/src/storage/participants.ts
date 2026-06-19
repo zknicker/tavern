@@ -5,20 +5,11 @@ import {
     type ParticipantLabelInsert,
     participantLabelsTable,
     participantsTable,
-    profileParticipantsTable,
-    profilesTable,
 } from '../db/schema.ts';
 import {
     extractObservedExternalId,
     normalizeObservedParticipantLabel,
 } from '../participants/observed.ts';
-
-export interface Profile {
-    avatar: string | null;
-    displayName: string | null;
-    id: string;
-    primaryColor: string | null;
-}
 
 export interface Participant {
     accountKey: string | null;
@@ -26,7 +17,6 @@ export interface Participant {
     id: string;
     labels: string[];
     lastSeenAt: string | null;
-    linkedProfile: Profile | null;
     observedName: string;
     provider: string;
 }
@@ -48,13 +38,6 @@ function compareOptionalTimestamp(left: string | null, right: string | null) {
 }
 
 function compareParticipants(left: Participant, right: Participant) {
-    const linkedComparison =
-        Number(Boolean(right.linkedProfile)) - Number(Boolean(left.linkedProfile));
-
-    if (linkedComparison !== 0) {
-        return linkedComparison;
-    }
-
     const lastSeenAtComparison = compareOptionalTimestamp(left.lastSeenAt, right.lastSeenAt);
 
     if (lastSeenAtComparison !== 0) {
@@ -73,10 +56,6 @@ export async function listParticipants() {
             label: participantLabelsTable.label,
             lastSeenAt: participantsTable.lastSeenAt,
             observedName: participantsTable.observedName,
-            profileAvatar: profilesTable.avatar,
-            profileDisplayName: profilesTable.displayName,
-            profileId: profilesTable.id,
-            profilePrimaryColor: profilesTable.primaryColor,
             provider: participantsTable.provider,
         })
         .from(participantsTable)
@@ -84,11 +63,6 @@ export async function listParticipants() {
             participantLabelsTable,
             eq(participantLabelsTable.participantId, participantsTable.id)
         )
-        .leftJoin(
-            profileParticipantsTable,
-            eq(profileParticipantsTable.participantId, participantsTable.id)
-        )
-        .leftJoin(profilesTable, eq(profilesTable.id, profileParticipantsTable.profileId))
         .orderBy(asc(participantsTable.observedName), asc(participantsTable.id));
 
     return hydrateParticipants(rows).sort(compareParticipants);
@@ -103,10 +77,6 @@ export async function getParticipant(participantId: string) {
             label: participantLabelsTable.label,
             lastSeenAt: participantsTable.lastSeenAt,
             observedName: participantsTable.observedName,
-            profileAvatar: profilesTable.avatar,
-            profileDisplayName: profilesTable.displayName,
-            profileId: profilesTable.id,
-            profilePrimaryColor: profilesTable.primaryColor,
             provider: participantsTable.provider,
         })
         .from(participantsTable)
@@ -114,11 +84,6 @@ export async function getParticipant(participantId: string) {
             participantLabelsTable,
             eq(participantLabelsTable.participantId, participantsTable.id)
         )
-        .leftJoin(
-            profileParticipantsTable,
-            eq(profileParticipantsTable.participantId, participantsTable.id)
-        )
-        .leftJoin(profilesTable, eq(profilesTable.id, profileParticipantsTable.profileId))
         .where(eq(participantsTable.id, participantId));
 
     return hydrateParticipants(rows)[0] ?? null;
@@ -366,22 +331,6 @@ export async function upsertParticipantLabels(records: ParticipantLabelInsert[])
         });
 }
 
-export async function linkParticipantToProfile(input: {
-    participantId: string;
-    profileId: string;
-}) {
-    const timestamp = new Date().toISOString();
-
-    await db
-        .insert(profileParticipantsTable)
-        .values({
-            createdAt: timestamp,
-            participantId: input.participantId,
-            profileId: input.profileId,
-        })
-        .onConflictDoNothing();
-}
-
 function hydrateParticipants(
     rows: Array<{
         accountKey: string | null;
@@ -390,10 +339,6 @@ function hydrateParticipants(
         label: string | null;
         lastSeenAt: string | null;
         observedName: string;
-        profileAvatar: string | null;
-        profileDisplayName: string | null;
-        profileId: string | null;
-        profilePrimaryColor: string | null;
         provider: string;
     }>
 ) {
@@ -407,15 +352,6 @@ function hydrateParticipants(
                 existing.labels.push(row.label);
             }
 
-            if (!existing.linkedProfile && row.profileId) {
-                existing.linkedProfile = {
-                    avatar: row.profileAvatar,
-                    displayName: row.profileDisplayName,
-                    id: row.profileId,
-                    primaryColor: row.profilePrimaryColor,
-                };
-            }
-
             continue;
         }
 
@@ -425,14 +361,6 @@ function hydrateParticipants(
             id: row.id,
             labels: row.label ? [row.label] : [],
             lastSeenAt: row.lastSeenAt,
-            linkedProfile: row.profileId
-                ? {
-                      avatar: row.profileAvatar,
-                      displayName: row.profileDisplayName,
-                      id: row.profileId,
-                      primaryColor: row.profilePrimaryColor,
-                  }
-                : null,
             observedName: row.observedName,
             provider: row.provider,
         });

@@ -9,7 +9,6 @@ export interface ChatActorPresentation {
     actorId: string;
     actorType: 'agent' | 'participant';
     name: string;
-    profileId?: string | null;
 }
 
 function getExternalIdFromTarget(target: string | null) {
@@ -60,13 +59,6 @@ export function resolveChatIdentityFromId(chatId: string): ChatIdentity | null {
 }
 
 export function compareChatActors(left: ChatActorPresentation, right: ChatActorPresentation) {
-    const leftIsProfile = Boolean(left.profileId);
-    const rightIsProfile = Boolean(right.profileId);
-
-    if (leftIsProfile !== rightIsProfile) {
-        return leftIsProfile ? -1 : 1;
-    }
-
     if (left.actorType !== right.actorType) {
         return left.actorType === 'participant' ? -1 : 1;
     }

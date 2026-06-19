@@ -6,7 +6,7 @@ bug history or stale plans.
 Tavern is an always-on agent chat system backed by Tavern Runtime. Tavern Runtime owns canonical
 chats, messages, responses, activity, artifacts, participants, event cursors, automations,
 deliveries, Vault, generated config policy, and jobs. Tavern App owns the first-party Mac client,
-cache, presentation metadata, profiles, participant links, and app settings. Hermes owns native
+cache, presentation metadata, and app settings. Hermes owns native
 agent execution, sessions, turns, transcripts, files, tools, applied model/runtime config, platform
 bindings, and prompt-time memory.
 
@@ -32,7 +32,7 @@ directly.
 - `sync-model.md`: runtime mapping, freshness, deletion, edit, event, and job behavior.
 - `agents.md`, `chats.md`, `sessions.md`, `messages.md`, `cron.md`: core runtime-owned
   primitives as Tavern presents them.
-- `participants.md`: profiles, participants, labels, and manual profile links.
+- `participants.md`: observed participants, labels, and self actor presentation.
 - `mentions.md`: `@` references in composers, their metadata, and their runtime effects.
 - `jobs.md`, `workers.md`, `models.md`, `skills.md`, `tools.md`, `catalog.md`, `activity-log.md`:
   focused product surfaces.
@@ -55,7 +55,7 @@ directly.
   maintenance through Tasks and crons.
 - `memory-persistence.md`: historical memory persistence design; do not extend
   it for new wiki work.
-- `participant-knowledge.md`: participant/profile resolution and person-level
+- `participant-knowledge.md`: participant identity resolution and person-level
   knowledge.
 
 ## Vault Specs

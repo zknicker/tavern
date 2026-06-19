@@ -194,7 +194,7 @@ For Discord, `platformMetadata.provider` is `discord` and includes:
   kind, chat type, display name, and session key.
 
 Adapters do not turn those source facts into final product names. Tavern server/frontend code
-owns display names, using `platformMetadata`, chat participants, and linked Tavern profiles.
+owns display names, using `platformMetadata` and chat participants.
 
 For Tavern Messenger, `platformMetadata.provider` is `tavern` and includes:
 

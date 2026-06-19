@@ -1,14 +1,5 @@
 import { index, sqliteTable, text } from 'drizzle-orm/sqlite-core';
 
-export const profilesTable = sqliteTable('profiles', {
-    avatar: text('avatar'),
-    createdAt: text('created_at').notNull(),
-    displayName: text('display_name'),
-    id: text('id').primaryKey(),
-    primaryColor: text('primary_color'),
-    updatedAt: text('updated_at').notNull(),
-});
-
 export const participantsTable = sqliteTable(
     'participants',
     {
@@ -53,27 +44,7 @@ export const participantLabelsTable = sqliteTable(
     })
 );
 
-export const profileParticipantsTable = sqliteTable(
-    'profile_participants',
-    {
-        createdAt: text('created_at').notNull(),
-        participantId: text('participant_id')
-            .notNull()
-            .references(() => participantsTable.id, { onDelete: 'cascade' }),
-        profileId: text('profile_id')
-            .notNull()
-            .references(() => profilesTable.id, { onDelete: 'cascade' }),
-    },
-    (table) => ({
-        participantIdx: index('profile_participants_participant_idx').on(table.participantId),
-        profileIdx: index('profile_participants_profile_idx').on(table.profileId),
-    })
-);
-
 export type ParticipantLabelInsert = typeof participantLabelsTable.$inferInsert;
 export type ParticipantLabelRecord = typeof participantLabelsTable.$inferSelect;
 export type ParticipantInsert = typeof participantsTable.$inferInsert;
 export type ParticipantRecord = typeof participantsTable.$inferSelect;
-export type ProfileInsert = typeof profilesTable.$inferInsert;
-export type ProfileParticipantInsert = typeof profileParticipantsTable.$inferInsert;
-export type ProfileRecord = typeof profilesTable.$inferSelect;

@@ -11,7 +11,7 @@ It is not a durable memory system. It is prompt assembly over existing sources.
 | --- | --- | --- |
 | Hermes context management | Hermes | Prompt-time continuity during active turns |
 | Chat and activity state | Tavern Runtime | Recent product state and live work |
-| Participant/profile state | Tavern Runtime and Tavern App | Person identity and explicit links |
+| Participant state | Tavern Runtime | Active people and observed source labels |
 | Vault wiki | Managed `vault` skill and agent file tools | Durable Markdown knowledge |
 
 Memory context reads from these sources and renders a bounded prompt-facing
@@ -23,7 +23,7 @@ The prompt-facing context can include:
 
 * active chat and session orientation
 * relevant recent activity
-* active participant/profile context
+* active participant context
 * Hermes prompt-time context
 * selected Vault pages or search results
 

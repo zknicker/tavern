@@ -16,7 +16,6 @@ import { onCronUpdate } from './cron/on-update.ts';
 import { onJobsUpdate } from './jobs/on-update.ts';
 import { onModelUpdate } from './model/on-update.ts';
 import { onOpenRouterSettingsUpdate } from './openrouter-settings/on-update.ts';
-import { onParticipantUpdate } from './participant/on-update.ts';
 import { onSessionUpdate } from './session/on-update.ts';
 import { onSkillUpdate } from './skill/on-update.ts';
 import { createRouter } from './trpc.ts';
@@ -53,9 +52,6 @@ export const wsRouter = createRouter({
     }),
     openRouterSettings: createRouter({
         onUpdate: onOpenRouterSettingsUpdate,
-    }),
-    participant: createRouter({
-        onUpdate: onParticipantUpdate,
     }),
     session: createRouter({
         onUpdate: onSessionUpdate,

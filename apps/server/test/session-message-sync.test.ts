@@ -17,10 +17,8 @@ ensureDatabaseSchema();
 afterEach(() => {
     databaseClient.exec('DELETE FROM session_tool_calls;');
     databaseClient.exec('DELETE FROM session_messages;');
-    databaseClient.exec('DELETE FROM profile_participants;');
     databaseClient.exec('DELETE FROM participant_labels;');
     databaseClient.exec('DELETE FROM participants;');
-    databaseClient.exec('DELETE FROM profiles;');
 });
 
 test('session tool call sync projects durable graph timings', async () => {

@@ -11,7 +11,6 @@ import { useCronEvents } from '../hooks/cron/use-cron-events.ts';
 import { useHermesConfigEvents } from '../hooks/hermes-config/use-hermes-config-events.ts';
 import { useModelEvents } from '../hooks/models/use-model-events.ts';
 import { useUsageEvents } from '../hooks/models/use-usage-events.ts';
-import { useParticipantEvents } from '../hooks/participants/use-participant-events.ts';
 import { useSessionEvents } from '../hooks/sessions/use-session-events.ts';
 import { useSkillEvents } from '../hooks/skills/use-events.ts';
 import { useWorkerEvents } from '../hooks/workers/use-worker-events.ts';
@@ -27,7 +26,6 @@ export function TrpcEventListeners() {
     useModelEvents();
     useOpenRouterSettingsEvents();
     useHermesConfigEvents();
-    useParticipantEvents();
     useSessionEvents();
     useSkillEvents();
     useUsageEvents();

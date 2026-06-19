@@ -34,7 +34,6 @@ Every activity event should preserve:
 - a calendar day for efficient day-scoped grouping
 - the owning agent and any relevant workspace, chat, session, task, or job context
 - the observed participant when one exists
-- the linked profile when one exists
 - the relevant maintenance run identity when one exists
 - a one-line summary
 - optional detail

@@ -64,10 +64,8 @@ Chats are Tavern's shared conversation surfaces.
 - Runtime adapter records do not include chat `name` or chat `workspaceFolder`. Names are
   Tavern presentation, and runtime file browsing is agent-file scoped unless a runtime exposes a
   separate chat-file capability.
-- For external direct messages, the external participant is a first-class chat primitive. Before
-  the participant is linked to a Tavern profile, Tavern may render the best observed label. After
-  linking, Tavern renders the profile presentation while retaining the participant as
-  provenance.
+- For external direct messages, the external participant is a first-class chat primitive. Tavern
+  renders the best observed label while retaining the participant as provenance.
 
 ## Relationships
 

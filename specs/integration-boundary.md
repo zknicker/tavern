@@ -14,8 +14,7 @@ execution state.
 - Ownership is per domain.
 - Tavern Runtime-owned domains include chats, messages, events, reads, automations, deliveries,
   memory, runtime health, sync state, generated config policy, and jobs.
-- Tavern App-owned domains include client cache, app settings, profiles, participant links, and
-  presentation overlays.
+- Tavern App-owned domains include client cache, app settings, and presentation overlays.
 - Hermes domains include native execution sessions, turns, transcripts, logs, skills,
   tools, model routing, channel bindings, and provider secrets unless Hermes explicitly delegates
   a domain to Tavern.

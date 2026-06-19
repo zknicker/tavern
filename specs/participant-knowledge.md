@@ -125,12 +125,11 @@ not automatically create durable relationship knowledge.
 
 ## Capture Rules
 
-Participant knowledge should be captured against profiles when a manual profile link exists and
-against observed participants otherwise.
+Participant knowledge should be captured against observed participants.
 
 - The system should first resolve the observed source identity into a participant.
 - When the speaker is known, observations about that speaker should attach to that participant
-  directly unless it is linked to a profile.
+  directly.
 - When a message or action clearly refers to another identified participant, the observation should
   attach to that participant rather than to a name string.
 - When a message clearly expresses a relationship between two identified participants, Tavern should
@@ -145,13 +144,11 @@ platform event it came from.
 
 ## Recall And Prompt Use
 
-Participant knowledge should be recalled and rendered by profile or participant identity first, not
-by fuzzy name matching.
+Participant knowledge should be recalled and rendered by participant identity first, not by fuzzy
+name matching.
 
-- Participant-specific recall should start from profile or participant identity and then include
-  relevant shared context.
-- Linked participants should widen what can resolve to that profile, but they should not create
-  duplicate profile records or duplicate person memories.
+- Participant-specific recall should start from participant identity and then include relevant
+  shared context.
 - Observer-scoped observations should only appear when that observer scope is relevant to the
   current session.
 - Participant context should prioritize the active participants in the current session.

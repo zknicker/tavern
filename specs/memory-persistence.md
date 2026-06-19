@@ -38,7 +38,7 @@ Source references are preferable to copying whole chat history into Vault.
 The agent workflow:
 
 1. Load the bounded source slice.
-2. Resolve observed identities to participants and profile links.
+2. Resolve observed source facts to participants.
 3. Search related Vault pages to avoid duplicate pages and detect updates.
 4. Update durable notes, timelines, links, tags, and source metadata.
 5. Add useful wikilinks and backlinks.

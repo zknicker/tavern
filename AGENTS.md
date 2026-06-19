@@ -20,7 +20,7 @@ Hermes's plumbing.
 | Layer | Owns |
 | --- | --- |
 | Tavern Runtime | Canonical chats, messages, participants, events, reads, automations, deliveries, runtime activity, Vault reads, managed Hermes startup, and Tavern tools. |
-| Tavern App | The Electron/React product surface, local presentation, app cache, profiles, participant links, app settings, optimistic UI, and tRPC client behavior. |
+| Tavern App | The Electron/React product surface, local presentation, app cache, app settings, optimistic UI, and tRPC client behavior. |
 | Tavern API / SDK | Stable contracts for chats, realtime, admin/runtime control, automations, Vault, memory inspection, skills, stats, and external clients. |
 | Hermes | Native agent execution: agents, sessions, turns, transcripts, files, tools, model calls, context management, and Gateway behavior. |
 
@@ -116,11 +116,11 @@ so `docs:list` routes future agents correctly.
 
 - Runtime owns canonical chat records, durable events, activity state, Vault reads, managed
   Hermes startup, and runtime tools.
-- App storage is cache, settings, profiles, local presentation state, and runtime evidence views.
+- App storage is cache, settings, local presentation state, and runtime evidence views.
 - Runtime adapters project Tavern primitives plus source facts. They must not author final Tavern
   presentation such as display names or fake chat workspace folders.
-- Preserve participant source labels as observed labels. Do not merge participants by display name;
-  profile-to-participant linking is explicit Tavern-owned state.
+- Preserve participant source labels as observed labels. Do not merge participants by display name
+  or reintroduce observed-identity linking without a current product spec.
 - Message sends to agent runtimes must use a synced session key for the selected agent/chat pair.
   Do not derive Discord channel, Discord DM, or opaque runtime session keys from chat targets.
 - If a runtime record is missing a required stable id, timestamp, schedule, file content, or actor,

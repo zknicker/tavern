@@ -8,15 +8,14 @@ Runtime APIs and events when Tavern needs to render or inspect them later.
 
 - Tavern Runtime owns chats, messages, participants, events, reads, automations, deliveries,
   runtime activity, memory, generated Hermes config inputs, and operational jobs.
-- Tavern App owns React Query cache, presentation state, profiles, participant links, optimistic UI,
-  and app settings.
+- Tavern App owns React Query cache, presentation state, optimistic UI, and app settings.
 - Tavern API / SDK exposes stable chat, realtime, automation, admin, Runtime control, memory, skill,
   stats, and integration contracts.
 - Hermes owns native agent execution, sessions, turns, transcripts, logs, agent files, tool calls,
   model calls, context management, applied native config, and Gateway behavior.
 - Runtime persists any Hermes-produced data Tavern may render, inspect, recover, or navigate later.
 - Product screens read through focused Runtime-backed APIs such as `chat.list`, `chat.get`,
-  `chat.log.list`, `session.list`, `cron.list`, `agent.list`, and participant/profile APIs.
+  `chat.log.list`, `session.list`, `cron.list`, `agent.list`, and participant APIs.
 - React Query is the app cache. It is refreshed by write responses, exact cache updates, focused
   invalidations, and narrow realtime subscriptions.
 - Jobs represent real scheduled operational work. They are not the data transport between Runtime
@@ -29,7 +28,7 @@ Runtime APIs and events when Tavern needs to render or inspect them later.
 | `agent` | Runtime agent records and capabilities | `agent.*` APIs | `agent.onUpdate` |
 | `chat` | Runtime chat records | `chat.*` APIs | `chat.onUpdate` |
 | `chat log` | Runtime messages, responses, activity, artifacts, and receipts | `chat.log.*` APIs | `chat.log.onUpdate`, turn events |
-| `participant` | Runtime-ingested source identities plus Tavern profile links | participant/profile APIs | `participant.onUpdate` |
+| `participant` | Runtime-ingested source identities and observed labels | participant APIs | chat and runtime sync events |
 | `session` | Runtime session, history, and execution evidence | `session.*` APIs | `session.onUpdate`, turn events |
 | `cron` | Runtime automation configuration and run history | `cron.*` APIs | `cron.onUpdate` |
 | `config` | Tavern-owned settings applied by Runtime | focused settings/config APIs | config, model, skill, and runtime events |
@@ -87,7 +86,7 @@ Runtime APIs and events when Tavern needs to render or inspect them later.
 - Events identify the affected product primitive and stable id when one exists.
 - Events may include a complete payload or an invalidation hint.
 - Event subscriptions are scoped narrowly: examples include `chat.onUpdate`, `chat.log.onUpdate`,
-  `session.onUpdate`, `participant.onUpdate`, `cron.onUpdate`, and turn progress/completion events.
+  `session.onUpdate`, `cron.onUpdate`, and turn progress/completion events.
 - App event hooks own the exact React Query cache update or invalidation for that event.
 - Websocket events are freshness signals. Durable state must be recoverable through Runtime reads,
   cursor replay, or both.
