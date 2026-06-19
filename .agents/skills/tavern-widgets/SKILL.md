@@ -37,6 +37,7 @@ For each new Widget component:
      normalize safely.
 2. Add or update Runtime tool registration.
    - Keep the model-facing description compact and decision-oriented.
+   - Name the user intent the tool satisfies, not only the input shape.
    - Keep JSON schema, validation, and TypeScript schema behavior in parity.
    - Return a short status result, not the full render payload.
 3. Project successful tool completion into durable `widget` response activity.
@@ -55,6 +56,8 @@ For each new Widget component:
    - Never render model-provided HTML, JSX, CSS, class names, or component trees.
 7. Add one short generated `AGENTS.md` Widget bullet.
    - One line per tool.
+   - Phrase availability conditionally: use render tools when available, with a
+     text/table fallback for non-Tavern channels.
    - No examples or implementation notes in generated prompt context.
 8. Seed a dev chat demo.
    - Use real Runtime chat rows, not static routes or local transcript fixtures.
@@ -66,6 +69,21 @@ For each new Widget component:
    - Server fallback and known-component projection.
    - Website render/fallback behavior.
    - Generated `AGENTS.md` Widget bullet.
+
+## Agent Adoption
+
+- Treat tool descriptions and schemas as the primary agent-facing contract.
+  Generated `AGENTS.md`, NOTES.md, and skills reinforce behavior but must not be
+  the only place the agent learns when to render.
+- When changing when an agent should choose a Widget, update the matching
+  surfaces together: tool description/schema, generated `AGENTS.md` guidance,
+  docs, and string tests.
+- Keep domain skills focused on mapping user intent to source/API/CLI data and
+  neutral chart-ready projections. Mention Tavern render tools only for local
+  Tavern preferences and always include a non-render fallback.
+- If the request is about behavior in a deployed managed agent, verify the
+  actual runtime workspace and skill paths before claiming NOTES.md or skill
+  edits apply there.
 
 ## Standards
 
