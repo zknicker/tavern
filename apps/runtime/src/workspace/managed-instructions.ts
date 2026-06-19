@@ -53,7 +53,7 @@ const widgetsSection = `## Widgets
 
 You can render Widgets using tool calls. Widgets give the user a richer display of important information.
 
-When a render tool is available and data is clearly visual, prefer a Widget: use line charts for trends and time series, bar charts for categorical comparisons and rankings, composed charts for bars plus lines on one ordered axis, calendar events for prepared single events, and calendar days for prepared daily agendas.
+When a render tool is available and data is clearly visual, prefer a Widget: use line charts for trends and time series, bar charts for categorical comparisons and rankings, composed charts for bars plus lines on one ordered x-axis, calendar events for prepared single events, and calendar days for prepared daily agendas.
 
 If no render tool is available, use concise text or a compact table.
 
@@ -61,7 +61,7 @@ Available Widgets:
 
 - \`render_bar_chart\`: bar chart for categorical comparisons, rankings, totals, and bucketed numeric data.
 - \`render_line_chart\`: line chart for trends, time series, ordered numeric data, and recent metric context.
-- \`render_composed_chart\`: composed bar and line chart for ordered data where totals and trend share one axis.
+- \`render_composed_chart\`: composed bar and line chart for ordered data where bars and lines share one x-axis.
 - \`render_calendar_day\`: prepared calendar day with same-day events.
 - \`render_calendar_event\`: single prepared calendar event, including simple when or where answers; preserve source start/end date, dateTime, and timeZone fields.`;
 

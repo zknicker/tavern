@@ -804,11 +804,12 @@ describe('Tavern Hermes channel relay', () => {
             yield {
                 data: {
                     arguments: {
-                        barY: 'revenue',
-                        data: [{ month: '2026-01-01', profit: '31', revenue: '120' }],
-                        lineY: 'profit',
-                        title: 'Revenue and Profit',
-                        unit: 'USD',
+                        barUnit: 'units',
+                        barY: 'units',
+                        data: [{ month: '2026-01-01', royalties: '54.91', units: '19' }],
+                        lineUnit: 'USD',
+                        lineY: 'royalties',
+                        title: 'Units and Royalties',
                         x: 'month',
                     },
                     tool_name: 'render_composed_chart',
@@ -858,17 +859,18 @@ describe('Tavern Hermes channel relay', () => {
                     title: 'render_composed_chart',
                 }),
                 expect.objectContaining({
-                    detail: 'Revenue and Profit',
+                    detail: 'Units and Royalties',
                     kind: 'widget',
                     metadata: expect.objectContaining({
                         widget: expect.objectContaining({
                             component: 'tavern.render_composed_chart',
-                            fallback: { text: 'Revenue and Profit' },
+                            fallback: { text: 'Units and Royalties' },
                             props: expect.objectContaining({
-                                barSeries: [{ key: 'revenue', label: 'Revenue' }],
-                                data: [{ month: '2026-01-01', profit: 31, revenue: 120 }],
-                                lineSeries: [{ key: 'profit', label: 'Profit' }],
-                                unit: 'USD',
+                                barSeries: [{ key: 'units', label: 'Units' }],
+                                barUnit: 'units',
+                                data: [{ month: '2026-01-01', royalties: 54.91, units: 19 }],
+                                lineSeries: [{ key: 'royalties', label: 'Royalties' }],
+                                lineUnit: 'USD',
                                 xKey: 'month',
                             }),
                             target: 'chat.inline',

@@ -179,7 +179,7 @@ test('widget render input accepts the composed chart widget demo payload', () =>
     expect(result.success).toBe(true);
 });
 
-test('chart composed props reject negative bar or line values', () => {
+test('chart composed props accept signed line values on the secondary axis', () => {
     const result = tavernRenderComposedChartPropsSchema.safeParse({
         barSeries: [{ key: 'revenue', label: 'Revenue' }],
         data: [{ month: 'Jan', profit: -2, revenue: 120 }],
@@ -188,16 +188,29 @@ test('chart composed props reject negative bar or line values', () => {
         xKey: 'month',
     });
 
+    expect(result.success).toBe(true);
+});
+
+test('chart composed props reject negative bar values', () => {
+    const result = tavernRenderComposedChartPropsSchema.safeParse({
+        barSeries: [{ key: 'units', label: 'Units' }],
+        data: [{ month: 'Jan', profit: 12, units: -1 }],
+        lineSeries: [{ key: 'profit', label: 'Profit' }],
+        title: 'Units and Profit',
+        xKey: 'month',
+    });
+
     expect(result.success).toBe(false);
 });
 
-test('chart composed tool input normalizes bar and line numeric strings', () => {
+test('chart composed tool input normalizes numeric strings and split units', () => {
     const result = tavernRenderComposedChartToolInputSchema.safeParse({
-        barY: 'revenue',
-        data: [{ month: '2026-01-01', profit: '31', revenue: '120' }],
-        lineY: 'profit',
-        title: 'Revenue and Profit',
-        unit: 'USD',
+        barUnit: 'units',
+        barY: 'units',
+        data: [{ month: '2026-01-01', royalties: '54.91', units: '19' }],
+        lineUnit: 'USD',
+        lineY: 'royalties',
+        title: 'Units and Royalties',
         x: 'month',
     });
 
@@ -206,11 +219,12 @@ test('chart composed tool input normalizes bar and line numeric strings', () => 
         throw new Error('Expected composed chart tool input to parse.');
     }
     expect(result.data).toEqual({
-        barSeries: [{ key: 'revenue', label: 'Revenue' }],
-        data: [{ month: '2026-01-01', profit: 31, revenue: 120 }],
-        lineSeries: [{ key: 'profit', label: 'Profit' }],
-        title: 'Revenue and Profit',
-        unit: 'USD',
+        barSeries: [{ key: 'units', label: 'Units' }],
+        barUnit: 'units',
+        data: [{ month: '2026-01-01', royalties: 54.91, units: 19 }],
+        lineSeries: [{ key: 'royalties', label: 'Royalties' }],
+        lineUnit: 'USD',
+        title: 'Units and Royalties',
         xKey: 'month',
     });
 });

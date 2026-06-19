@@ -61,8 +61,9 @@ of important information.
 
 When a render tool is available and data is clearly visual, prefer a Widget: use
 line charts for trends and time series, bar charts for categorical comparisons
-and rankings, composed charts for bars plus lines on one ordered axis, calendar
-events for prepared single events, and calendar days for prepared daily agendas.
+and rankings, composed charts for bars plus lines on one ordered x-axis,
+calendar events for prepared single events, and calendar days for prepared daily
+agendas.
 
 If no render tool is available, use concise text or a compact table.
 
@@ -73,7 +74,7 @@ Available Widgets:
 * `render_line_chart`: line chart for trends, time series, ordered numeric data,
   and recent metric context.
 * `render_composed_chart`: composed bar and line chart for ordered data where
-  totals and trend share one axis.
+  bars and lines share one x-axis.
 * `render_calendar_day`: prepared calendar day with same-day events.
 * `render_calendar_event`: single prepared calendar event, including simple when
   or where answers; preserve source start/end date, dateTime, and timeZone
@@ -114,18 +115,21 @@ those props with `target`, `component`, and generated fallback text. `y` may be
 one numeric key or an array of up to four numeric keys.
 
 The composed chart tool uses the same prepared `data`, `title`, `x`, and
-optional `unit`, plus separate `barY` and `lineY` keys. Each accepts one numeric
-key or an array, with up to four total series across bars and lines.
+optional `unit`, plus separate `barY` and `lineY` keys. Use `barUnit` and
+`lineUnit` when bars and lines use different units; `unit` remains the shared
+display unit when both series groups use the same unit. Each y field accepts one
+numeric key or an array, with up to four total series across bars and lines.
 
 The chart tool accepts already-prepared chart data only. It does not query,
 aggregate, read files, run SQL, call external APIs, or accept domain-specific
 data references.
 
 Bar chart `y` values should be finite nonnegative JSON numbers. Line chart `y`
-values should be finite JSON numbers. Composed chart `barY` and `lineY` values
-should be finite nonnegative JSON numbers because bars and lines share one
-axis. Numeric strings such as `"12"` are accepted at the tool boundary and
-normalized before widget activity is recorded. Non-numeric strings are invalid.
+values should be finite JSON numbers. Composed chart `barY` values should be
+finite nonnegative JSON numbers, while `lineY` values should be finite JSON
+numbers on their secondary y-axis. Numeric strings such as `"12"` are accepted
+at the tool boundary and normalized before widget activity is recorded.
+Non-numeric strings are invalid.
 
 Built-in Widget tools are Tavern-owned built-in tools, available to every Tavern
 agent by default. They render validated UI into the current chat, do not execute
@@ -471,11 +475,12 @@ The tool accepts one `y` key or up to four `y` keys and normalizes numeric
 strings before storage.
 
 The composed chart supports up to 50 rows and up to 4 total series across
-`barSeries` and `lineSeries`. X values are strings or numbers. Stored series
-values are finite nonnegative numbers. The tool accepts one `barY` key or array
-and one `lineY` key or array, normalizes numeric strings before storage, and
+`barSeries` and `lineSeries`. X values are strings or numbers. Stored bar values
+are finite nonnegative numbers, and stored line values are finite numbers. The
+tool accepts one `barY` key or array and one `lineY` key or array, normalizes
+numeric strings before storage, stores optional `barUnit` and `lineUnit`, and
 stores separate `barSeries` and `lineSeries` so the App can render Bklit
-`SeriesBar` and `Line` layers inside one `ComposedChart`.
+`SeriesBar` and `Line` layers inside one `ComposedChart` with separate y-axes.
 
 ## Calendar widgets
 

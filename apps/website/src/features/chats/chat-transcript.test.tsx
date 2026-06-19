@@ -275,13 +275,14 @@ test('ChatTranscript renders composed chart widgets inline', () => {
                 fallbackText: 'Revenue and Profit',
                 props: {
                     barSeries: [{ key: 'revenue', label: 'Revenue' }],
+                    barUnit: 'USD',
                     data: [
                         { month: '2026-01-01', profit: 31, revenue: 120 },
                         { month: '2026-02-01', profit: 34, revenue: 138 },
                     ],
+                    lineUnit: '%',
                     lineSeries: [{ key: 'profit', label: 'Profit' }],
                     title: 'Revenue and Profit',
-                    unit: 'USD',
                     xKey: 'month',
                 },
             },

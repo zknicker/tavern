@@ -69,7 +69,7 @@ _CALENDAR_DATETIME_PATTERN = re.compile(r"^(\\d{4}-\\d{2}-\\d{2})T(\\d{2}:\\d{2}
 _CALENDAR_OFFSET_PATTERN = re.compile(r"(?:Z|[+-]\\d{2}:?\\d{2})$", re.IGNORECASE)
 _CALENDAR_TIME_PATTERN = re.compile(r"^(?:[01]\\d|2[0-3]):[0-5]\\d$")
 _ROOT_KEYS = {"data", "title", "unit", "x", "y"}
-_COMPOSED_ROOT_KEYS = {"barY", "data", "lineY", "title", "unit", "x"}
+_COMPOSED_ROOT_KEYS = {"barUnit", "barY", "data", "lineUnit", "lineY", "title", "unit", "x"}
 _CALENDAR_ROOT_KEYS = {
     "calendar",
     "description",
@@ -194,7 +194,7 @@ TAVERN_RENDER_LINE_CHART_SCHEMA = {
 
 TAVERN_RENDER_COMPOSED_CHART_SCHEMA = {
     "name": "${tavernRenderComposedChartToolName}",
-    "description": "Render prepared ordered data as a composed chart with bar columns and a line in chat. Use when totals and trend belong on one shared time or ordered x-axis. Y values should be finite nonnegative JSON numbers; numeric strings are normalized.",
+    "description": "Render prepared ordered data as a composed chart with bar columns and lines in chat. Use when bars and lines share one ordered x-axis but may need separate y-axes or units. Bar values should be finite nonnegative JSON numbers; line values should be finite JSON numbers; numeric strings are normalized.",
     "parameters": {
         "type": "object",
         "additionalProperties": False,
@@ -240,13 +240,25 @@ TAVERN_RENDER_COMPOSED_CHART_SCHEMA = {
                 "type": "string",
                 "minLength": 1,
                 "maxLength": 40,
-                "description": "Optional display unit such as USD, count, or percent.",
+                "description": "Optional display unit used for both bars and lines when barUnit or lineUnit is not set.",
+            },
+            "barUnit": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 40,
+                "description": "Optional display unit for bar values, such as units, count, or USD.",
+            },
+            "lineUnit": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 40,
+                "description": "Optional display unit for line values, such as USD, count, or percent.",
             },
             "data": {
                 "type": "array",
                 "minItems": 1,
                 "maxItems": 50,
-                "description": "1-50 rows. x is the shared axis field; barY and lineY fields are finite nonnegative numbers or numeric strings.",
+                "description": "1-50 rows. x is the shared axis field; barY fields are finite nonnegative numbers or numeric strings; lineY fields are finite numbers or numeric strings.",
                 "items": {
                     "type": "object",
                     "additionalProperties": {
@@ -532,8 +544,9 @@ def _validate_tavern_chart(args: Any, *, allow_negative: bool) -> Optional[str]:
     x_key = args.get("x")
     if not _is_text(x_key, 80):
         return "x must be a non-empty string."
-    if "unit" in args and not _is_text(args.get("unit"), 40):
-        return "unit must be a non-empty string."
+    for unit_key in ("unit", "barUnit", "lineUnit"):
+        if unit_key in args and not _is_text(args.get(unit_key), 40):
+            return f"{unit_key} must be a non-empty string."
 
     y_keys = _chart_y_keys(args.get("y"), "y")
     if y_keys is None:
@@ -606,9 +619,12 @@ def _validate_tavern_render_composed_chart(args: Any) -> Optional[str]:
         x_value = row.get(x_key)
         if not isinstance(x_value, (str, int, float)) or isinstance(x_value, bool):
             return f"data[{index}].{x_key} must be a string or number."
-        for key in y_keys:
+        for key in bar_keys:
             if _coerce_chart_number(row.get(key), allow_negative=False) is None:
                 return f"data[{index}].{key} must be a finite nonnegative number or numeric string."
+        for key in line_keys:
+            if _coerce_chart_number(row.get(key), allow_negative=True) is None:
+                return f"data[{index}].{key} must be a finite number or numeric string."
 
     return None
 
@@ -863,7 +879,7 @@ def register(ctx) -> None:
         toolset="tavern",
         schema=TAVERN_RENDER_COMPOSED_CHART_SCHEMA,
         handler=_handle_tavern_render_composed_chart,
-        description="Render prepared ordered data as a composed bar and line chart in chat when totals and trend share one ordered axis.",
+        description="Render prepared ordered data as a composed bar and line chart in chat when bars and lines share one x-axis.",
         emoji="📊",
     )
     ctx.register_tool(

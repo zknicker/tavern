@@ -25,16 +25,20 @@ interface ChartToolInput {
 
 interface ComposedChartProps {
     barSeries: ChartSeries[];
+    barUnit?: string;
     data: ChartDatum[];
     lineSeries: ChartSeries[];
+    lineUnit?: string;
     title: string;
     unit?: string;
     xKey: string;
 }
 
 interface ComposedChartToolInput {
+    barUnit?: string;
     barY: string | string[];
     data: ChartDatum[];
+    lineUnit?: string;
     lineY: string | string[];
     title: string;
     unit?: string;
@@ -142,26 +146,40 @@ export function validateToolComposedChartInput(
         });
     }
 
-    validateToolChartRows({ ...input, y: allKeys }, allKeys, context, {
+    validateToolChartRows({ ...input, y: barKeys }, barKeys, context, {
         allowNegative: false,
         valueMessage:
-            'Composed chart y values must be finite nonnegative numbers or numeric strings.',
+            'Composed chart bar values must be finite nonnegative numbers or numeric strings.',
+    });
+    validateToolChartRows({ ...input, y: lineKeys }, lineKeys, context, {
+        allowNegative: true,
+        valueMessage: 'Composed chart line values must be finite numbers or numeric strings.',
     });
 }
 
 export function normalizeToolComposedChartInput(input: ComposedChartToolInput) {
     const barKeys = chartYKeys(input.barY);
     const lineKeys = chartYKeys(input.lineY);
-    const allKeys = [...barKeys, ...lineKeys];
     const normalized = {
         barSeries: barKeys.map((key) => ({ key, label: chartLabelFromKey(key) })),
-        data: normalizeRows(input.data, allKeys, { allowNegative: false }),
+        data: normalizeRows(
+            normalizeRows(input.data, barKeys, { allowNegative: false }),
+            lineKeys,
+            {
+                allowNegative: true,
+            }
+        ),
         lineSeries: lineKeys.map((key) => ({ key, label: chartLabelFromKey(key) })),
         title: input.title,
         xKey: input.x,
     };
 
-    return input.unit ? { ...normalized, unit: input.unit } : normalized;
+    return {
+        ...normalized,
+        ...(input.barUnit ? { barUnit: input.barUnit } : {}),
+        ...(input.lineUnit ? { lineUnit: input.lineUnit } : {}),
+        ...(input.unit ? { unit: input.unit } : {}),
+    };
 }
 
 export function composedSeries(props: ComposedChartProps) {
@@ -176,6 +194,20 @@ export function validateComposedStoredSeriesCount(
         composedSeries(props).map((series) => series.key),
         context
     );
+}
+
+export function validateComposedStoredSeriesKeys(
+    props: ComposedChartProps,
+    context: z.RefinementCtx
+) {
+    const keys = composedSeries(props).map((series) => series.key);
+    if (new Set(keys).size !== keys.length) {
+        context.addIssue({
+            code: 'custom',
+            message: 'Composed chart series keys must be unique.',
+            path: ['lineSeries'],
+        });
+    }
 }
 
 function validateToolChartRows(

@@ -37,7 +37,11 @@ import {
     buildLineChartMargin,
     buildTooltipRows,
     chartStyleVars,
+    composedBarUnit,
     composedLineMarkerStyle,
+    composedLineUnit,
+    composedSeriesUnit,
+    formatChartValue,
     lineYAxisId,
     normalizeLineChartData,
     seriesColor,
@@ -107,7 +111,6 @@ function TavernBarChart({ props }: { props: TavernRenderBarChartProps }) {
                     hoveredIndex={hoveredSeriesIndex}
                     items={legendItems}
                     onHoverChange={setHoveredSeriesIndex}
-                    unit={props.unit}
                 />
             </ChartWidgetFrame>
         </ChartLegendHoverProvider>
@@ -157,7 +160,6 @@ function TavernLineChart({ props }: { props: TavernRenderLineChartProps }) {
                     hoveredIndex={hoveredSeriesIndex}
                     items={legendItems}
                     onHoverChange={setHoveredSeriesIndex}
-                    unit={props.unit}
                 />
             </ChartWidgetFrame>
         </ChartLegendHoverProvider>
@@ -168,8 +170,13 @@ function TavernComposedChart({ props }: { props: TavernRenderComposedChartProps 
     const [hoveredSeriesIndex, setHoveredSeriesIndex] = useState<null | number>(null);
     const chartSeries = buildComposedSeries(props);
     const chartData = normalizeLineChartData({ ...props, series: chartSeries });
-    const legendItems = buildLegendItems({ ...props, series: chartSeries });
-    const margin = buildComposedChartMargin(chartData, chartSeries);
+    const legendItems = buildLegendItems({ ...props, series: chartSeries }, (_series, index) =>
+        composedSeriesUnit(props, index)
+    );
+    const margin = buildComposedChartMargin(chartData, props);
+    const barUnit = composedBarUnit(props);
+    const lineUnit = composedLineUnit(props);
+
     return (
         <ChartLegendHoverProvider
             hoveredIndex={hoveredSeriesIndex}
@@ -206,14 +213,27 @@ function TavernComposedChart({ props }: { props: TavernRenderComposedChartProps 
                                 showMarkers={true}
                                 stroke={seriesColor(colorIndex)}
                                 strokeWidth={2.5}
+                                yAxisId="right"
                             />
                         );
                     })}
-                    <YAxis yAxisId="left" />
+                    <YAxis
+                        formatValue={(value) => formatChartValue(value, barUnit)}
+                        yAxisId="left"
+                    />
+                    <YAxis
+                        formatValue={(value) => formatChartValue(value, lineUnit)}
+                        orientation="right"
+                        yAxisId="right"
+                    />
                     <XAxis />
                     <ChartTooltip
                         indicatorColor={seriesColor(0)}
-                        rows={(point) => buildTooltipRows(chartSeries, point, props.unit)}
+                        rows={(point) =>
+                            buildTooltipRows(chartSeries, point, (_series, index) =>
+                                composedSeriesUnit(props, index)
+                            )
+                        }
                         showCrosshair={false}
                     />
                 </ComposedChart>
@@ -221,7 +241,6 @@ function TavernComposedChart({ props }: { props: TavernRenderComposedChartProps 
                     hoveredIndex={hoveredSeriesIndex}
                     items={legendItems}
                     onHoverChange={setHoveredSeriesIndex}
-                    unit={props.unit}
                 />
             </ChartWidgetFrame>
         </ChartLegendHoverProvider>

@@ -30,7 +30,7 @@ describe('tavern messenger plugin', () => {
         expect(source).toContain('Render prepared ordered numeric data');
         expect(source).toContain('Render prepared ordered data as a composed chart');
         expect(source).toContain(
-            'Render prepared ordered data as a composed bar and line chart in chat when totals and trend share one ordered axis'
+            'Render prepared ordered data as a composed bar and line chart in chat when bars and lines share one x-axis'
         );
         expect(source).toContain(
             'Render one prepared single-day calendar event in chat, including simple when or where event answers'
@@ -131,6 +131,13 @@ describe('tavern messenger plugin', () => {
                     title: 'Revenue and Profit',
                     x: 'month',
                 },
+                negativeBar: {
+                    barY: 'revenue',
+                    data: [{ month: 'Jan', profit: 2, revenue: -120 }],
+                    lineY: 'profit',
+                    title: 'Revenue and Profit',
+                    x: 'month',
+                },
                 negativeLine: {
                     barY: 'revenue',
                     data: [{ month: 'Jan', profit: -2, revenue: 120 }],
@@ -139,11 +146,12 @@ describe('tavern messenger plugin', () => {
                     x: 'month',
                 },
                 numericStrings: {
-                    barY: 'revenue',
-                    data: [{ month: 'Jan', profit: '31', revenue: '120' }],
-                    lineY: 'profit',
-                    title: 'Revenue and Profit',
-                    unit: 'USD',
+                    barUnit: 'units',
+                    barY: 'units',
+                    data: [{ month: 'Jan', royalties: '54.91', units: '19' }],
+                    lineUnit: 'USD',
+                    lineY: 'royalties',
+                    title: 'Units and Royalties',
                     x: 'month',
                 },
                 tooManySeries: {
@@ -158,11 +166,12 @@ describe('tavern messenger plugin', () => {
         );
 
         expect(results.numericStrings).toEqual({ status: 'rendered' });
+        expect(results.negativeLine).toEqual({ status: 'rendered' });
         expect(results.duplicateAcrossSeries).toMatchObject({
             error: 'composed chart y keys must be unique.',
         });
-        expect(results.negativeLine).toMatchObject({
-            error: 'data[0].profit must be a finite nonnegative number or numeric string.',
+        expect(results.negativeBar).toMatchObject({
+            error: 'data[0].revenue must be a finite nonnegative number or numeric string.',
         });
         expect(results.tooManySeries).toMatchObject({
             error: 'composed charts support up to 4 total series.',

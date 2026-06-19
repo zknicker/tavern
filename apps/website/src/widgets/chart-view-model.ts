@@ -9,6 +9,12 @@ import type { LegendItemData } from '../components/charts/legend/index.ts';
 import type { TooltipRow } from '../components/charts/tooltip/index.ts';
 
 type ChartSeries = TavernRenderBarChartProps['series'];
+export type ChartLegendItemData = LegendItemData & { unit?: string };
+
+type ChartUnitResolver =
+    | string
+    | ((series: ChartSeries[number], index: number) => string | undefined)
+    | undefined;
 
 interface ChartValueProps {
     data: TavernRenderBarChartProps['data'];
@@ -18,13 +24,17 @@ interface ChartValueProps {
     xKey: string;
 }
 
-export function buildLegendItems(props: ChartValueProps): LegendItemData[] {
+export function buildLegendItems(
+    props: ChartValueProps,
+    unit: ChartUnitResolver = props.unit
+): ChartLegendItemData[] {
     const lastPoint = props.data.at(-1) ?? {};
 
     return props.series.map((series, index) => ({
         color: seriesColor(index),
         label: series.label,
         maxValue: maxSeriesValue(props.data, series.key),
+        unit: chartUnitForSeries(unit, series, index),
         value: numericValue(lastPoint[series.key]),
     }));
 }
@@ -32,17 +42,20 @@ export function buildLegendItems(props: ChartValueProps): LegendItemData[] {
 export function buildTooltipRows(
     series: ChartSeries,
     point: Record<string, unknown>,
-    unit?: string
+    unit?: ChartUnitResolver
 ): TooltipRow[] {
     return series.map((item, index) => ({
         color: seriesColor(index),
         label: item.label,
-        value: formatChartValue(numericValue(point[item.key]), unit),
+        value: formatChartValue(
+            numericValue(point[item.key]),
+            chartUnitForSeries(unit, item, index)
+        ),
     }));
 }
 
 export function formatChartValue(value: number, unit?: string) {
-    const formatted = intFmt(value);
+    const formatted = formatNumericChartValue(value);
     const label = unit?.trim();
 
     if (!label) {
@@ -118,16 +131,49 @@ export function buildLineChartMargin(data: Record<string, unknown>[], series: Ch
     });
 }
 
-export function buildComposedChartMargin(data: Record<string, unknown>[], series: ChartSeries) {
+export function buildComposedChartMargin(
+    data: Record<string, unknown>[],
+    props: TavernRenderComposedChartProps
+) {
+    const barUnit = composedBarUnit(props);
+    const lineUnit = composedLineUnit(props);
+
     return buildPackedChartMargin({
-        base: { bottom: 40, left: 30, right: 18, top: 24 },
+        base: { bottom: 40, left: 30, right: 30, top: 24 },
         data,
-        yAxes: [{ keys: series.map((item) => item.key), max: 48, min: 30, side: 'left' }],
+        yAxes: [
+            {
+                formatValue: (value) => formatChartValue(value, barUnit),
+                keys: props.barSeries.map((item) => item.key),
+                max: axisMarginMax(barUnit),
+                min: 30,
+                side: 'left',
+            },
+            {
+                formatValue: (value) => formatChartValue(value, lineUnit),
+                keys: props.lineSeries.map((item) => item.key),
+                max: axisMarginMax(lineUnit),
+                min: 30,
+                side: 'right',
+            },
+        ],
     });
 }
 
 export function buildComposedSeries(props: TavernRenderComposedChartProps): ChartSeries {
     return [...props.barSeries, ...props.lineSeries];
+}
+
+export function composedBarUnit(props: TavernRenderComposedChartProps) {
+    return props.barUnit ?? props.unit;
+}
+
+export function composedLineUnit(props: TavernRenderComposedChartProps) {
+    return props.lineUnit ?? props.unit;
+}
+
+export function composedSeriesUnit(props: TavernRenderComposedChartProps, index: number) {
+    return index < props.barSeries.length ? composedBarUnit(props) : composedLineUnit(props);
 }
 
 export function normalizeLineChartData(props: ChartValueProps) {
@@ -174,9 +220,23 @@ function numericValue(value: unknown) {
     return typeof value === 'number' && Number.isFinite(value) ? value : 0;
 }
 
+function formatNumericChartValue(value: number) {
+    return Number.isInteger(value) ? intFmt(value) : decimalFmt.format(value);
+}
+
+function chartUnitForSeries(unit: ChartUnitResolver, series: ChartSeries[number], index: number) {
+    return typeof unit === 'function' ? unit(series, index) : unit;
+}
+
+function axisMarginMax(unit?: string) {
+    return unit ? 72 : 48;
+}
+
 const chartSeriesColors = [
     'var(--chart-line-primary)',
     'var(--chart-line-secondary)',
     'var(--chart-line-tertiary)',
     'var(--chart-line-quaternary)',
 ];
+
+const decimalFmt = new Intl.NumberFormat('en-US', { maximumFractionDigits: 2 });

@@ -188,18 +188,19 @@ function composedChartDemoRenderInput(props: TavernRenderComposedChartProps): Wi
 
 function composedChartDemoToolInput() {
     return {
-        barY: 'revenue',
+        barUnit: 'units',
+        barY: 'units',
         data: [
-            { month: '2026-01-01', profit: 31, revenue: 120 },
-            { month: '2026-02-01', profit: 34, revenue: 138 },
-            { month: '2026-03-01', profit: 32, revenue: 132 },
-            { month: '2026-04-01', profit: 37, revenue: 154 },
-            { month: '2026-05-01', profit: 39, revenue: 168 },
-            { month: '2026-06-01', profit: 42, revenue: 181 },
+            { month: '2026-01-01', royalties: 54.91, units: 19 },
+            { month: '2026-02-01', royalties: 49.25, units: 17 },
+            { month: '2026-03-01', royalties: 63.7, units: 23 },
+            { month: '2026-04-01', royalties: 58.4, units: 21 },
+            { month: '2026-05-01', royalties: 72.15, units: 26 },
+            { month: '2026-06-01', royalties: 66.8, units: 24 },
         ],
-        lineY: 'profit',
-        title: 'Revenue and Profit',
-        unit: 'USD',
+        lineUnit: 'USD',
+        lineY: 'royalties',
+        title: 'Units and Royalties',
         x: 'month',
     };
 }
