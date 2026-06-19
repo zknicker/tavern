@@ -42,9 +42,9 @@ import {
     groupAgentItems,
 } from './chat-transcript-item-utils.ts';
 import {
-    ChatTranscriptMessageAttachments,
     ChatTranscriptMessageContent,
     getTranscriptMessageContent,
+    renderTranscriptMessageAttachments,
     type TranscriptMessage,
 } from './chat-transcript-message.tsx';
 import type {
@@ -668,9 +668,7 @@ function UserTurnItem({
     }
 
     const message = item.row.message;
-    const attachments = (
-        <ChatTranscriptMessageAttachments attachments={message.attachments ?? []} />
-    );
+    const attachments = renderTranscriptMessageAttachments(message.attachments);
     const body = <ChatTranscriptMessageContent message={message} textClassName="text-current" />;
 
     return body ? (
@@ -778,9 +776,7 @@ function AssistantReplyText({
             shouldReduceMotion !== true &&
             (initiallyRevealing || revealedText.length < fullContent.length),
     });
-    const attachments = message ? (
-        <ChatTranscriptMessageAttachments attachments={message.attachments ?? []} />
-    ) : null;
+    const attachments = message ? renderTranscriptMessageAttachments(message.attachments) : null;
     const actions = message ? (
         showActions ? (
             <TranscriptMessageActions value={message.content} />

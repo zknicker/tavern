@@ -103,6 +103,16 @@ export function ChatTranscriptMessageAttachments({
     );
 }
 
+export function renderTranscriptMessageAttachments(
+    attachments: MessageAttachment[] | null | undefined
+) {
+    if (!attachments || attachments.length === 0) {
+        return null;
+    }
+
+    return <ChatTranscriptMessageAttachments attachments={attachments} />;
+}
+
 function MessageFileReference({
     attachment,
 }: {
