@@ -5,6 +5,7 @@ import {
 } from './development-chat-demo-activity-definitions';
 import {
     attachmentDemo,
+    calendarDayDemo,
     calendarEventDemo,
     chartDemo,
     lineChartDemo,
@@ -16,6 +17,7 @@ import type { DevelopmentChatDemo } from './development-chat-demo-types';
 export const developmentChatDemos: DevelopmentChatDemo[] = [
     chartDemo(),
     lineChartDemo(),
+    calendarDayDemo(),
     calendarEventDemo(),
     longContentDemo(),
     attachmentDemo(),

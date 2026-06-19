@@ -2,6 +2,7 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import {
     tavernRenderBarChartToolName,
+    tavernRenderCalendarDayToolName,
     tavernRenderCalendarEventToolName,
     tavernRenderLineChartToolName,
 } from '@tavern/api';
@@ -78,6 +79,7 @@ _CALENDAR_ROOT_KEYS = {
     "timezone",
     "title",
 }
+_CALENDAR_DAY_ROOT_KEYS = {"date", "events", "timezone", "title"}
 _CALENDAR_TIME_KEYS = {"date", "dateTime", "timeZone"}
 
 TAVERN_RENDER_BAR_CHART_SCHEMA = {
@@ -281,6 +283,42 @@ TAVERN_RENDER_CALENDAR_EVENT_SCHEMA = {
                 "minLength": 1,
                 "maxLength": 280,
                 "description": "Fallback short note when description is unavailable.",
+            },
+        },
+    },
+}
+
+TAVERN_RENDER_CALENDAR_DAY_SCHEMA = {
+    "name": "${tavernRenderCalendarDayToolName}",
+    "description": "Use when the user asks to see a prepared calendar day or daily agenda in chat. Input is a day date plus up to 12 Google Calendar-style events for that same day.",
+    "parameters": {
+        "type": "object",
+        "additionalProperties": False,
+        "required": ["date"],
+        "properties": {
+            "date": {
+                "type": "string",
+                "pattern": "^\\\\d{4}-\\\\d{2}-\\\\d{2}$",
+                "description": "Calendar day as YYYY-MM-DD.",
+            },
+            "title": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 160,
+                "description": "Optional display title for the day.",
+            },
+            "timezone": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 80,
+                "description": "Optional fallback IANA time zone or short display label.",
+            },
+            "events": {
+                "type": "array",
+                "minItems": 0,
+                "maxItems": 12,
+                "description": "0-12 Google Calendar-style events that start on this day.",
+                "items": TAVERN_RENDER_CALENDAR_EVENT_SCHEMA["parameters"],
             },
         },
     },
@@ -515,6 +553,43 @@ def _validate_tavern_render_calendar_event(args: Any) -> Optional[str]:
     return None
 
 
+def _calendar_event_display_date(args: Dict[str, Any]) -> Optional[str]:
+    start = args.get("start")
+    if not isinstance(start, dict):
+        return None
+    if "date" in start:
+        return start.get("date").strip() if isinstance(start.get("date"), str) else None
+    end = args.get("end")
+    timezone = start.get("timeZone") or (end.get("timeZone") if isinstance(end, dict) else None) or args.get("timezone")
+    parts = _calendar_datetime_parts(start.get("dateTime"), start.get("timeZone") or timezone)
+    return parts["date"] if parts else None
+
+
+def _validate_tavern_render_calendar_day(args: Any) -> Optional[str]:
+    if not isinstance(args, dict):
+        return "Input must be an object."
+    unsupported = set(args.keys()) - _CALENDAR_DAY_ROOT_KEYS
+    if unsupported:
+        return "Input contains unsupported fields."
+    if not _is_calendar_date(args.get("date")):
+        return "date must be a real YYYY-MM-DD calendar date."
+    if "title" in args and not _is_text(args.get("title"), 160):
+        return "title must be a non-empty string."
+    if "timezone" in args and not _is_text(args.get("timezone"), 80):
+        return "timezone must be a non-empty string."
+
+    events = args.get("events", [])
+    if not isinstance(events, list) or len(events) > 12:
+        return "events must contain 0 to 12 events."
+    for index, event in enumerate(events):
+        error = _validate_tavern_render_calendar_event(event)
+        if error:
+            return f"events[{index}]: {error}"
+        if _calendar_event_display_date(event) != args["date"].strip():
+            return "events must match the calendar day date."
+    return None
+
+
 def _handle_tavern_render_bar_chart(args: Any, **_kwargs) -> str:
     error = _validate_tavern_render_bar_chart(args)
     if error:
@@ -531,6 +606,13 @@ def _handle_tavern_render_line_chart(args: Any, **_kwargs) -> str:
 
 def _handle_tavern_render_calendar_event(args: Any, **_kwargs) -> str:
     error = _validate_tavern_render_calendar_event(args)
+    if error:
+        return tool_error(error)
+    return tool_result({"status": "rendered"})
+
+
+def _handle_tavern_render_calendar_day(args: Any, **_kwargs) -> str:
+    error = _validate_tavern_render_calendar_day(args)
     if error:
         return tool_error(error)
     return tool_result({"status": "rendered"})
@@ -658,6 +740,14 @@ def register(ctx) -> None:
         schema=TAVERN_RENDER_CALENDAR_EVENT_SCHEMA,
         handler=_handle_tavern_render_calendar_event,
         description="Render one prepared calendar event in chat, including simple when or where event answers.",
+        emoji="📅",
+    )
+    ctx.register_tool(
+        name="${tavernRenderCalendarDayToolName}",
+        toolset="tavern",
+        schema=TAVERN_RENDER_CALENDAR_DAY_SCHEMA,
+        handler=_handle_tavern_render_calendar_day,
+        description="Render a prepared calendar day agenda in chat.",
         emoji="📅",
     )
     ctx.register_platform(

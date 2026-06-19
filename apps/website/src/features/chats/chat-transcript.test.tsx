@@ -259,6 +259,83 @@ test('ChatTranscript renders line chart widgets inline', () => {
     assert.doesNotMatch(markup, /Widget unavailable/);
 });
 
+test('ChatTranscript renders calendar day widgets inline', () => {
+    const row = widgetRow('ui-calendar-day');
+
+    if (row.kind !== 'widget') {
+        throw new Error('Expected Widget row.');
+    }
+
+    const markup = renderTranscript([
+        {
+            ...row,
+            widget: {
+                ...row.widget,
+                component: 'tavern.render_calendar_day',
+                fallbackText: 'Saturday schedule',
+                props: {
+                    date: '2026-06-20',
+                    events: [
+                        {
+                            endTime: '12:45',
+                            startTime: '12:00',
+                            title: 'Lunch',
+                        },
+                        {
+                            endTime: '14:00',
+                            startTime: '13:00',
+                            title: 'Q1 roadmap review',
+                        },
+                    ],
+                    timezone: 'America/New_York',
+                    title: 'Saturday schedule',
+                },
+            },
+        },
+    ]);
+
+    assert.match(markup, /Lunch/);
+    assert.match(markup, /Q1 roadmap review/);
+    assert.match(markup, /1:00 - 2:00 PM/);
+    assert.match(markup, /JUN/);
+    assert.match(markup, /SAT/);
+    assert.match(markup, /Saturday/);
+    assert.match(markup, /No description\./);
+    assert.match(markup, /max-w-\[30rem\]/);
+    assert.match(markup, /border-border\/45/);
+    assert.match(markup, /shadow-surface-1/);
+    assert.doesNotMatch(markup, /Widget unavailable/);
+});
+
+test('ChatTranscript renders calendar event description fallback', () => {
+    const row = widgetRow('ui-calendar-event');
+
+    if (row.kind !== 'widget') {
+        throw new Error('Expected Widget row.');
+    }
+
+    const markup = renderTranscript([
+        {
+            ...row,
+            widget: {
+                ...row.widget,
+                component: 'tavern.render_calendar_event',
+                fallbackText: 'Focus block',
+                props: {
+                    date: '2026-06-20',
+                    endTime: '14:00',
+                    startTime: '13:00',
+                    title: 'Focus block',
+                },
+            },
+        },
+    ]);
+
+    assert.match(markup, /Focus block/);
+    assert.match(markup, /No description\./);
+    assert.doesNotMatch(markup, /Widget unavailable/);
+});
+
 test('ChatTranscript renders fallback for invalid widgets', () => {
     const row = widgetRow('ui-invalid');
 

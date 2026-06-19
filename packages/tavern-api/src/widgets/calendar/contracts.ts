@@ -1,12 +1,17 @@
 import * as z from 'zod';
+import {
+    dateTimeParts,
+    isCalendarDate,
+    isoDatePattern,
+    minutes,
+    nextCalendarDate,
+    timePattern,
+} from './datetime.ts';
 
 export const tavernRenderCalendarEventToolName = 'render_calendar_event' as const;
 export const tavernRenderCalendarEventComponentId = 'tavern.render_calendar_event' as const;
-
-const isoDatePattern = /^\d{4}-\d{2}-\d{2}$/u;
-const timePattern = /^(?:[01]\d|2[0-3]):[0-5]\d$/u;
-const dateTimePattern = /^(\d{4}-\d{2}-\d{2})T(\d{2}:\d{2})/u;
-const explicitOffsetPattern = /(?:z|[+-]\d{2}:?\d{2})$/iu;
+export const tavernRenderCalendarDayToolName = 'render_calendar_day' as const;
+export const tavernRenderCalendarDayComponentId = 'tavern.render_calendar_day' as const;
 
 export const tavernRenderCalendarEventPropsSchema = z
     .object({
@@ -185,6 +190,110 @@ export type TavernRenderCalendarEventToolInput = z.input<
     typeof tavernRenderCalendarEventToolInputSchema
 >;
 
+export const tavernRenderCalendarDayEventPropsSchema = z
+    .object({
+        allDay: z.boolean().optional(),
+        calendar: z.string().trim().min(1).max(80).optional(),
+        endTime: z.string().trim().regex(timePattern, 'End time must use HH:mm.').optional(),
+        location: z.string().trim().min(1).max(160).optional(),
+        notes: z.string().trim().min(1).max(280).optional(),
+        startTime: z.string().trim().regex(timePattern, 'Start time must use HH:mm.').optional(),
+        timezone: z.string().trim().min(1).max(80).optional(),
+        title: z.string().trim().min(1).max(160),
+    })
+    .strict()
+    .superRefine((event, context) => {
+        const hasStart = Boolean(event.startTime);
+        const hasEnd = Boolean(event.endTime);
+
+        if (event.allDay && (hasStart || hasEnd)) {
+            context.addIssue({
+                code: 'custom',
+                message: 'All-day events must not include startTime or endTime.',
+                path: ['allDay'],
+            });
+            return;
+        }
+
+        if (hasStart !== hasEnd) {
+            context.addIssue({
+                code: 'custom',
+                message: 'Timed events need both startTime and endTime.',
+                path: hasStart ? ['endTime'] : ['startTime'],
+            });
+            return;
+        }
+
+        if (
+            event.startTime &&
+            event.endTime &&
+            minutes(event.endTime) <= minutes(event.startTime)
+        ) {
+            context.addIssue({
+                code: 'custom',
+                message: 'endTime must be later than startTime.',
+                path: ['endTime'],
+            });
+        }
+    });
+
+export type TavernRenderCalendarDayEventProps = z.infer<
+    typeof tavernRenderCalendarDayEventPropsSchema
+>;
+
+export const tavernRenderCalendarDayPropsSchema = z
+    .object({
+        date: z.string().trim().regex(isoDatePattern, 'Date must use YYYY-MM-DD.'),
+        events: z.array(tavernRenderCalendarDayEventPropsSchema).max(12),
+        timezone: z.string().trim().min(1).max(80).optional(),
+        title: z.string().trim().min(1).max(160).optional(),
+    })
+    .strict()
+    .superRefine((day, context) => {
+        if (!isCalendarDate(day.date)) {
+            context.addIssue({
+                code: 'custom',
+                message: 'Date must be a real calendar date.',
+                path: ['date'],
+            });
+        }
+    });
+
+export type TavernRenderCalendarDayProps = z.infer<typeof tavernRenderCalendarDayPropsSchema>;
+
+export const tavernRenderCalendarDayToolInputSchema = z
+    .object({
+        date: z.string().trim().regex(isoDatePattern, 'Date must use YYYY-MM-DD.'),
+        events: z.array(tavernRenderCalendarEventToolInputSchema).max(12).default([]),
+        timezone: z.string().trim().min(1).max(80).optional(),
+        title: z.string().trim().min(1).max(160).optional(),
+    })
+    .strict()
+    .superRefine((day, context) => {
+        if (!isCalendarDate(day.date)) {
+            context.addIssue({
+                code: 'custom',
+                message: 'Date must be a real calendar date.',
+                path: ['date'],
+            });
+        }
+
+        for (const [index, event] of day.events.entries()) {
+            if (event.date !== day.date) {
+                context.addIssue({
+                    code: 'custom',
+                    message: 'Calendar day events must match the day date.',
+                    path: ['events', index, 'start'],
+                });
+            }
+        }
+    })
+    .transform((day) => normalizeCalendarDayToolInput(day));
+
+export type TavernRenderCalendarDayToolInput = z.input<
+    typeof tavernRenderCalendarDayToolInputSchema
+>;
+
 type GoogleCalendarTime = z.infer<typeof googleCalendarTimeSchema>;
 
 interface GoogleCalendarEventToolInput {
@@ -236,95 +345,38 @@ function normalizeCalendarEventToolInput(
     return props;
 }
 
-function isCalendarDate(value: string) {
-    const match = /^(\d{4})-(\d{2})-(\d{2})$/u.exec(value);
+function normalizeCalendarDayToolInput(input: {
+    date: string;
+    events: TavernRenderCalendarEventProps[];
+    timezone?: string;
+    title?: string;
+}): TavernRenderCalendarDayProps {
+    const events = input.events
+        .map(calendarDayEventFromCalendarEvent)
+        .sort((left, right) => dayEventSortValue(left) - dayEventSortValue(right));
+    const timezone = input.timezone ?? input.events.find((event) => event.timezone)?.timezone;
+    const props: TavernRenderCalendarDayProps = {
+        date: input.date,
+        events,
+    };
 
-    if (!match) {
-        return false;
+    if (input.title) {
+        props.title = input.title;
+    }
+    if (timezone) {
+        props.timezone = timezone;
     }
 
-    const year = Number(match[1]);
-    const month = Number(match[2]);
-    const day = Number(match[3]);
-    const date = new Date(Date.UTC(year, month - 1, day));
-
-    return (
-        date.getUTCFullYear() === year &&
-        date.getUTCMonth() === month - 1 &&
-        date.getUTCDate() === day
-    );
+    return props;
 }
 
-function minutes(value: string) {
-    const [hour = '0', minute = '0'] = value.split(':');
-    return Number(hour) * 60 + Number(minute);
+function calendarDayEventFromCalendarEvent(
+    event: TavernRenderCalendarEventProps
+): TavernRenderCalendarDayEventProps {
+    const { date: _date, ...props } = event;
+    return props;
 }
 
-function nextCalendarDate(value: string) {
-    const [year = '0', month = '0', day = '0'] = value.split('-');
-    const date = new Date(Date.UTC(Number(year), Number(month) - 1, Number(day) + 1));
-    return date.toISOString().slice(0, 10);
-}
-
-function dateTimeParts(value: string | undefined, timezone?: string) {
-    if (!value) {
-        return null;
-    }
-
-    const trimmed = value.trim();
-    const direct = dateTimePattern.exec(trimmed);
-
-    if (!direct) {
-        return null;
-    }
-
-    const [, date, time] = direct;
-
-    if (!(isCalendarDate(date) && timePattern.test(time))) {
-        return null;
-    }
-
-    if (timezone && isValidTimeZone(timezone) && explicitOffsetPattern.test(trimmed)) {
-        const parsed = new Date(trimmed);
-
-        if (Number.isFinite(parsed.getTime())) {
-            return dateTimePartsInTimeZone(parsed, timezone);
-        }
-    }
-
-    return { date, time };
-}
-
-function dateTimePartsInTimeZone(date: Date, timezone: string) {
-    const parts = new Intl.DateTimeFormat('en-US', {
-        day: '2-digit',
-        hour: '2-digit',
-        hourCycle: 'h23',
-        minute: '2-digit',
-        month: '2-digit',
-        timeZone: timezone,
-        year: 'numeric',
-    }).formatToParts(date);
-    const value = (type: Intl.DateTimeFormatPartTypes) =>
-        parts.find((part) => part.type === type)?.value ?? '';
-    const day = value('day');
-    const hour = value('hour');
-    const minute = value('minute');
-    const month = value('month');
-    const year = value('year');
-
-    if (!(year && month && day && hour && minute)) {
-        return null;
-    }
-
-    return { date: `${year}-${month}-${day}`, time: `${hour}:${minute}` };
-}
-
-function isValidTimeZone(value: string) {
-    try {
-        new Intl.DateTimeFormat('en-US', { timeZone: value }).format(new Date(0));
-        return true;
-    } catch {
-        return false;
-    }
+function dayEventSortValue(event: TavernRenderCalendarDayEventProps) {
+    return event.allDay ? -1 : minutes(event.startTime ?? '23:59');
 }

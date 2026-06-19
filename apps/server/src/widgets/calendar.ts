@@ -1,5 +1,7 @@
 import type { WidgetRenderInput } from '@tavern/api/widgets';
 import {
+    tavernRenderCalendarDayComponentId,
+    tavernRenderCalendarDayPropsSchema,
     tavernRenderCalendarEventComponentId,
     tavernRenderCalendarEventPropsSchema,
 } from '@tavern/api/widgets/calendar';
@@ -12,11 +14,23 @@ export function calendarWidgetFromParsedPayload(
     block: WidgetRenderInput,
     activity: TavernResponseActivity
 ): WidgetRow['widget'] | null {
-    if (block.component !== tavernRenderCalendarEventComponentId) {
-        return null;
+    if (block.component === tavernRenderCalendarEventComponentId) {
+        return parsedCalendarWidget(block, activity, tavernRenderCalendarEventPropsSchema);
     }
 
-    const parsedProps = tavernRenderCalendarEventPropsSchema.safeParse(block.props);
+    if (block.component === tavernRenderCalendarDayComponentId) {
+        return parsedCalendarWidget(block, activity, tavernRenderCalendarDayPropsSchema);
+    }
+
+    return null;
+}
+
+function parsedCalendarWidget(
+    block: WidgetRenderInput,
+    activity: TavernResponseActivity,
+    schema: typeof tavernRenderCalendarDayPropsSchema | typeof tavernRenderCalendarEventPropsSchema
+): WidgetRow['widget'] {
+    const parsedProps = schema.safeParse(block.props);
 
     return {
         component: block.component,

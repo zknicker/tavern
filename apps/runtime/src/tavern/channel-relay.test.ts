@@ -883,6 +883,114 @@ describe('Tavern Hermes channel relay', () => {
         );
     });
 
+    it('stores render-calendar-day tool completions as durable widget activity', async () => {
+        hermesClient.streamChat.mockImplementationOnce(async function* streamChat() {
+            yield {
+                data: {
+                    arguments: {
+                        date: '2026-06-20',
+                        events: [
+                            {
+                                end: {
+                                    dateTime: '2026-06-20T12:45:00-04:00',
+                                    timeZone: 'America/New_York',
+                                },
+                                start: {
+                                    dateTime: '2026-06-20T12:00:00-04:00',
+                                    timeZone: 'America/New_York',
+                                },
+                                summary: 'Lunch',
+                            },
+                            {
+                                end: {
+                                    dateTime: '2026-06-20T14:00:00-04:00',
+                                    timeZone: 'America/New_York',
+                                },
+                                start: {
+                                    dateTime: '2026-06-20T13:00:00-04:00',
+                                    timeZone: 'America/New_York',
+                                },
+                                summary: 'Q1 roadmap review',
+                            },
+                        ],
+                        timezone: 'America/New_York',
+                        title: 'Saturday schedule',
+                    },
+                    tool_name: 'render_calendar_day',
+                },
+                event: 'tool.started',
+            };
+            yield {
+                data: {
+                    result: '{"status":"rendered"}',
+                    tool_name: 'render_calendar_day',
+                },
+                event: 'tool.completed',
+            };
+            yield {
+                data: { content: 'Rendered the day.', message_id: 'hermes_msg_calendar_day_tool' },
+                event: 'assistant.completed',
+            };
+        });
+        createChat({ id: 'cht_1' });
+
+        await sendTavernChannelMessage('cht_1', {
+            agent: {
+                agentId: 'agt_1',
+            },
+            message: {
+                content: 'show calendar day',
+                id: 'msg_calendar_day_tool',
+                nonce: 'nonce_calendar_day_tool',
+            },
+            target: {
+                externalId: null,
+                sessionKey: 'session_1',
+                target: 'cht_1',
+                type: 'tavern',
+            },
+        });
+        await waitForHermesTurn();
+
+        expect(listResponses('cht_1').activity).toEqual(
+            expect.arrayContaining([
+                expect.objectContaining({
+                    kind: 'tool_call',
+                    status: 'completed',
+                    title: 'render_calendar_day',
+                }),
+                expect.objectContaining({
+                    detail: 'Saturday schedule',
+                    kind: 'widget',
+                    metadata: expect.objectContaining({
+                        widget: expect.objectContaining({
+                            component: 'tavern.render_calendar_day',
+                            fallback: { text: 'Saturday schedule' },
+                            props: expect.objectContaining({
+                                date: '2026-06-20',
+                                events: [
+                                    expect.objectContaining({
+                                        endTime: '12:45',
+                                        startTime: '12:00',
+                                        title: 'Lunch',
+                                    }),
+                                    expect.objectContaining({
+                                        endTime: '14:00',
+                                        startTime: '13:00',
+                                        title: 'Q1 roadmap review',
+                                    }),
+                                ],
+                                timezone: 'America/New_York',
+                            }),
+                            target: 'chat.inline',
+                        }),
+                    }),
+                    title: 'render_calendar_day',
+                }),
+            ])
+        );
+    });
+
     it('does not store Hermes reasoning.available as model Thinking', async () => {
         hermesClient.streamChat.mockImplementationOnce(async function* streamChat() {
             yield {

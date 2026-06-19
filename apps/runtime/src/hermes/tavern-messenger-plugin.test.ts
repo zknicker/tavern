@@ -4,6 +4,7 @@ import { tmpdir } from 'node:os';
 import path from 'node:path';
 import {
     tavernRenderBarChartToolName,
+    tavernRenderCalendarDayToolName,
     tavernRenderCalendarEventToolName,
     tavernRenderLineChartToolName,
 } from '@tavern/api';
@@ -20,11 +21,14 @@ describe('tavern messenger plugin', () => {
         expect(source).toContain(`name="${tavernRenderLineChartToolName}"`);
         expect(source).toContain(`"name": "${tavernRenderCalendarEventToolName}"`);
         expect(source).toContain(`name="${tavernRenderCalendarEventToolName}"`);
+        expect(source).toContain(`"name": "${tavernRenderCalendarDayToolName}"`);
+        expect(source).toContain(`name="${tavernRenderCalendarDayToolName}"`);
         expect(source).toContain('Render prepared categorical comparisons');
         expect(source).toContain('Render prepared ordered numeric data');
         expect(source).toContain(
             'Render one prepared single-day calendar event in chat, including simple when or where event answers'
         );
+        expect(source).toContain('prepared calendar day or daily agenda');
         expect(source).toContain('Google Calendar event data');
         expect(source).toContain('numeric strings are normalized');
         expect(source).toContain('finite nonnegative JSON numbers; numeric strings are normalized');
@@ -32,6 +36,7 @@ describe('tavern messenger plugin', () => {
         expect(tavernRenderBarChartToolName).toMatch(/^[a-zA-Z0-9_-]+$/u);
         expect(tavernRenderLineChartToolName).toMatch(/^[a-zA-Z0-9_-]+$/u);
         expect(tavernRenderCalendarEventToolName).toMatch(/^[a-zA-Z0-9_-]+$/u);
+        expect(tavernRenderCalendarDayToolName).toMatch(/^[a-zA-Z0-9_-]+$/u);
     });
 
     it('validates chart tool input with the same boundary Runtime projects', async () => {
@@ -164,6 +169,63 @@ describe('tavern messenger plugin', () => {
         });
         expect(results.multiDayTimedEvent).toMatchObject({
             error: 'Multi-day calendar events are not supported.',
+        });
+    });
+
+    it('validates calendar day tool input', async () => {
+        const results = await runPluginValidator(
+            {
+                dayAgenda: {
+                    date: '2026-06-20',
+                    events: [
+                        {
+                            end: {
+                                dateTime: '2026-06-20T12:45:00-04:00',
+                                timeZone: 'America/New_York',
+                            },
+                            start: {
+                                dateTime: '2026-06-20T12:00:00-04:00',
+                                timeZone: 'America/New_York',
+                            },
+                            summary: 'Lunch',
+                        },
+                        {
+                            end: {
+                                dateTime: '2026-06-20T14:00:00-04:00',
+                                timeZone: 'America/New_York',
+                            },
+                            start: {
+                                dateTime: '2026-06-20T13:00:00-04:00',
+                                timeZone: 'America/New_York',
+                            },
+                            summary: 'Q1 roadmap review',
+                        },
+                    ],
+                    timezone: 'America/New_York',
+                },
+                wrongDay: {
+                    date: '2026-06-20',
+                    events: [
+                        {
+                            end: {
+                                dateTime: '2026-06-21T11:00:00-04:00',
+                                timeZone: 'America/New_York',
+                            },
+                            start: {
+                                dateTime: '2026-06-21T10:00:00-04:00',
+                                timeZone: 'America/New_York',
+                            },
+                            summary: 'Next day review',
+                        },
+                    ],
+                },
+            },
+            '_handle_tavern_render_calendar_day'
+        );
+
+        expect(results.dayAgenda).toEqual({ status: 'rendered' });
+        expect(results.wrongDay).toMatchObject({
+            error: 'events must match the calendar day date.',
         });
     });
 });

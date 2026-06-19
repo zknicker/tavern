@@ -7,7 +7,9 @@ import type {
 import { readConfigValue } from '../config';
 import { closeSharedHermesClient, getSharedHermesClient } from '../hermes/shared-client';
 import {
+    calendarWidgetActivityFromRenderCalendarDayTool,
     calendarWidgetActivityFromRenderCalendarEventTool,
+    renderCalendarDayToolName,
     renderCalendarEventToolName,
 } from '../widgets/calendar';
 import {
@@ -892,6 +894,8 @@ function widgetToolProjector(toolName: string | null) {
             return chartWidgetActivityFromRenderBarChartTool;
         case renderLineChartToolName:
             return chartWidgetActivityFromRenderLineChartTool;
+        case renderCalendarDayToolName:
+            return calendarWidgetActivityFromRenderCalendarDayTool;
         case renderCalendarEventToolName:
             return calendarWidgetActivityFromRenderCalendarEventTool;
         default:

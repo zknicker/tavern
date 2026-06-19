@@ -1,5 +1,5 @@
 ---
-summary: Widget architecture for typed chat widgets, explicit host adapters, schemas, fallbacks, chart widgets, and calendar event widgets.
+summary: Widget architecture for typed chat widgets, explicit host adapters, schemas, fallbacks, chart widgets, and calendar widgets.
 read_when:
   - adding or changing Widgets in chat or sidebar
   - adding a widget folder, host adapter, ui.render contract, or render fallback
@@ -60,7 +60,8 @@ of important information.
 
 When a render tool is available and data is clearly visual, prefer a Widget: use
 line charts for trends and time series, bar charts for categorical comparisons
-and rankings, and calendar events for prepared single events.
+and rankings, calendar events for prepared single events, and calendar days for
+prepared daily agendas.
 
 If no render tool is available, use concise text or a compact table.
 
@@ -70,6 +71,7 @@ Available Widgets:
   and bucketed numeric data.
 * `render_line_chart`: line chart for trends, time series, ordered numeric data,
   and recent metric context.
+* `render_calendar_day`: prepared calendar day with same-day events.
 * `render_calendar_event`: single prepared calendar event, including simple when
   or where answers; preserve source start/end date, dateTime, and timeZone
   fields.
@@ -458,17 +460,19 @@ or numbers. Stored series values are finite numbers, including negative values.
 The tool accepts one `y` key or up to four `y` keys and normalizes numeric
 strings before storage.
 
-## Calendar event widget
+## Calendar widgets
 
-The Calendar family registers one widget component:
+The Calendar family registers two widget components:
 
 ```text
+tavern.render_calendar_day
 tavern.render_calendar_event
 ```
 
-The agent-facing Widget tool is:
+The agent-facing Widget tools are:
 
 ```text
+render_calendar_day
 render_calendar_event
 ```
 
@@ -526,6 +530,82 @@ Stored dates use `YYYY-MM-DD`. Timed events use a same-day `HH:mm` start and end
 time, with `endTime` later than `startTime`. All-day events set `allDay: true`
 and omit times. Optional `calendar`, `timezone`, `location`, and `notes` are
 display text only.
+
+The calendar day widget renders one prepared calendar day plus up to 12
+same-day events in chat. It does not read the user's calendar, create events,
+update events, or ask for calendar permissions.
+
+The tool input is shaped for a Google Calendar events list that has already
+been fetched or prepared:
+
+```jsonc
+{
+  "date": "2026-06-20",
+  "timezone": "America/New_York",
+  "title": "Saturday schedule",
+  "events": [
+    {
+      "summary": "Lunch",
+      "start": {
+        "dateTime": "2026-06-20T12:00:00-04:00",
+        "timeZone": "America/New_York"
+      },
+      "end": {
+        "dateTime": "2026-06-20T12:45:00-04:00",
+        "timeZone": "America/New_York"
+      }
+    },
+    {
+      "summary": "Q1 roadmap review",
+      "start": {
+        "dateTime": "2026-06-20T13:00:00-04:00",
+        "timeZone": "America/New_York"
+      },
+      "end": {
+        "dateTime": "2026-06-20T14:00:00-04:00",
+        "timeZone": "America/New_York"
+      },
+      "calendar": "Product"
+    }
+  ]
+}
+```
+
+Runtime normalizes accepted tool input into the stored day payload:
+
+```jsonc
+{
+  "component": "tavern.render_calendar_day",
+  "target": "chat.inline",
+  "props": {
+    "date": "2026-06-20",
+    "timezone": "America/New_York",
+    "title": "Saturday schedule",
+    "events": [
+      {
+        "title": "Lunch",
+        "startTime": "12:00",
+        "endTime": "12:45",
+        "timezone": "America/New_York"
+      },
+      {
+        "title": "Q1 roadmap review",
+        "startTime": "13:00",
+        "endTime": "14:00",
+        "timezone": "America/New_York",
+        "calendar": "Product"
+      }
+    ]
+  },
+  "fallback": {
+    "text": "Saturday schedule"
+  }
+}
+```
+
+Day events use the same single-day event rules as `render_calendar_event`.
+Events must start on the day `date`. Runtime stores them in display order:
+all-day events first, then timed events by `startTime`.
 
 ## What is intentionally missing
 

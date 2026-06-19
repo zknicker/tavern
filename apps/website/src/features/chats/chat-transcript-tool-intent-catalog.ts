@@ -61,6 +61,7 @@ export const mappedToolIntentNames = [
     'read_file',
     'replace',
     'render_bar_chart',
+    'render_calendar_day',
     'render_calendar_event',
     'render_line_chart',
     'rg',
@@ -157,6 +158,7 @@ export const exactToolKinds = {
     read_file: 'file-read',
     replace: 'file-edit',
     render_bar_chart: 'widget',
+    render_calendar_day: 'widget',
     render_calendar_event: 'widget',
     render_line_chart: 'widget',
     rg: 'code-search',
@@ -200,6 +202,7 @@ export const exactToolKinds = {
 
 export const exactToolSubjects = {
     render_bar_chart: 'a bar chart',
+    render_calendar_day: 'a calendar day',
     render_calendar_event: 'a calendar event',
     render_line_chart: 'a line chart',
 } satisfies Partial<Record<(typeof mappedToolIntentNames)[number], string>>;

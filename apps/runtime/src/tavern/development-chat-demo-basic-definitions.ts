@@ -1,11 +1,16 @@
 import {
     type TavernRenderBarChartProps,
+    type TavernRenderCalendarDayProps,
+    type TavernRenderCalendarDayToolInput,
     type TavernRenderCalendarEventProps,
     type TavernRenderCalendarEventToolInput,
     type TavernRenderLineChartProps,
     tavernRenderBarChartComponentId,
     tavernRenderBarChartToolInputSchema,
     tavernRenderBarChartToolName,
+    tavernRenderCalendarDayComponentId,
+    tavernRenderCalendarDayToolInputSchema,
+    tavernRenderCalendarDayToolName,
     tavernRenderCalendarEventComponentId,
     tavernRenderCalendarEventToolInputSchema,
     tavernRenderCalendarEventToolName,
@@ -264,6 +269,84 @@ export function calendarEventDemo(): DevelopmentChatDemo {
     };
 }
 
+export function calendarDayDemo(): DevelopmentChatDemo {
+    const dayToolInput = calendarDayDemoToolInput();
+    const dayProps = tavernRenderCalendarDayToolInputSchema.parse(dayToolInput);
+    const chatId = developmentChatDemoIds.calendarDay;
+    const runId = 'run_demo_calendar_day';
+    const requestMessageId = 'msg_demo_calendar_day_request';
+    const responseMessageId = 'msg_demo_calendar_day_response';
+
+    return {
+        chatId,
+        title: 'Demo: Calendar Day',
+        messages: [
+            userMessage({
+                chatId,
+                content: 'Show my Saturday schedule as a calendar day.',
+                id: requestMessageId,
+                nonce: 'demo-calendar-day-request',
+            }),
+            assistantMessage({
+                chatId,
+                content: 'Here is the calendar day.',
+                id: responseMessageId,
+                nonce: 'demo-calendar-day-response',
+                requestMessageId,
+                runId,
+            }),
+        ],
+        responses: [
+            {
+                ...completedResponse({
+                    chatId,
+                    id: 'rsp_demo_calendar_day',
+                    requestMessageId,
+                    responseMessageId,
+                    runId,
+                    summary: 'Rendered a calendar day demo.',
+                }),
+                activities: [
+                    toolActivity({
+                        chatId,
+                        id: 'act_demo_calendar_day_tool',
+                        requestMessageId,
+                        runId,
+                        sequence: 1,
+                        title: tavernRenderCalendarDayToolName,
+                        toolArguments: dayToolInput,
+                        toolCallId: 'call_demo_calendar_day_tool',
+                        toolName: tavernRenderCalendarDayToolName,
+                        toolResult: { status: 'rendered' },
+                    }),
+                    {
+                        completed_at: demoTime,
+                        detail: dayProps.title ?? dayProps.date,
+                        id: 'act_demo_calendar_day_widget',
+                        kind: 'widget',
+                        metadata: {
+                            runtime: activityRuntimeMetadata({
+                                chatId,
+                                id: 'act_demo_calendar_day_widget',
+                                requestMessageId,
+                                runId,
+                                sequence: 2,
+                                source: tavernRenderCalendarDayToolName,
+                            }),
+                            widget: calendarDayDemoRenderInput(dayProps),
+                        },
+                        sequence: 2,
+                        started_at: demoTime,
+                        status: 'completed',
+                        summary: dayProps.title ?? dayProps.date,
+                        title: tavernRenderCalendarDayToolName,
+                    },
+                ],
+            },
+        ],
+    };
+}
+
 export function longContentDemo(): DevelopmentChatDemo {
     return completedTextDemo({
         chatId: developmentChatDemoIds.longContent,
@@ -393,6 +476,15 @@ function calendarEventDemoRenderInput(props: TavernRenderCalendarEventProps): Wi
     };
 }
 
+function calendarDayDemoRenderInput(props: TavernRenderCalendarDayProps): WidgetRenderInput {
+    return {
+        component: tavernRenderCalendarDayComponentId,
+        fallback: { text: props.title ?? props.date },
+        props,
+        target: 'chat.inline',
+    };
+}
+
 function chartDemoToolInput() {
     return {
         data: [
@@ -416,6 +508,33 @@ function calendarEventDemoToolInput(): TavernRenderCalendarEventToolInput {
         location: 'Design room',
         start: { dateTime: '2026-06-20T13:00:00-04:00', timeZone: 'America/New_York' },
         summary: 'Q1 roadmap review',
+    };
+}
+
+function calendarDayDemoToolInput(): TavernRenderCalendarDayToolInput {
+    return {
+        date: '2026-06-20',
+        events: [
+            {
+                end: { dateTime: '2026-06-20T12:45:00-04:00', timeZone: 'America/New_York' },
+                start: { dateTime: '2026-06-20T12:00:00-04:00', timeZone: 'America/New_York' },
+                summary: 'Lunch',
+            },
+            {
+                calendar: 'Product',
+                end: { dateTime: '2026-06-20T14:00:00-04:00', timeZone: 'America/New_York' },
+                start: { dateTime: '2026-06-20T13:00:00-04:00', timeZone: 'America/New_York' },
+                summary: 'Q1 roadmap review',
+            },
+            {
+                calendar: 'Team',
+                end: { dateTime: '2026-06-20T16:00:00-04:00', timeZone: 'America/New_York' },
+                start: { dateTime: '2026-06-20T15:30:00-04:00', timeZone: 'America/New_York' },
+                summary: 'Team standup',
+            },
+        ],
+        timezone: 'America/New_York',
+        title: 'Saturday schedule',
     };
 }
 

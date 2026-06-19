@@ -84,6 +84,9 @@ describe('generated agent instructions', () => {
             '- `render_line_chart`: line chart for trends, time series, ordered numeric data, and recent metric context.'
         );
         expect(content).toContain(
+            '- `render_calendar_day`: prepared calendar day with same-day events.'
+        );
+        expect(content).toContain(
             '- `render_calendar_event`: single prepared calendar event, including simple when or where answers; preserve source start/end date, dateTime, and timeZone fields.'
         );
         expect(content).toContain('## Notes And Skills');

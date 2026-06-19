@@ -1,26 +1,38 @@
-import type { TavernRenderCalendarEventProps } from '@tavern/api/widgets/calendar';
+import type {
+    TavernRenderCalendarDayEventProps,
+    TavernRenderCalendarDayProps,
+    TavernRenderCalendarEventProps,
+} from '@tavern/api/widgets/calendar';
 import {
+    tavernRenderCalendarDayComponentId,
+    tavernRenderCalendarDayPropsSchema,
     tavernRenderCalendarEventComponentId,
     tavernRenderCalendarEventPropsSchema,
 } from '@tavern/api/widgets/calendar';
+import { Elevated } from '../components/ui/surface.tsx';
 import { WidgetFrame } from '../components/widgets/widget-frame.tsx';
 import { cn } from '../lib/utils.ts';
 import type { TavernWidget } from './types.ts';
 
 export function renderCalendarWidget(widget: TavernWidget): React.ReactNode {
-    if (widget.component !== tavernRenderCalendarEventComponentId) {
-        return null;
+    if (widget.component === tavernRenderCalendarEventComponentId) {
+        const parsed = tavernRenderCalendarEventPropsSchema.safeParse(widget.props);
+        return parsed.success ? <CalendarEventWidget props={parsed.data} /> : null;
     }
 
-    const parsed = tavernRenderCalendarEventPropsSchema.safeParse(widget.props);
+    if (widget.component === tavernRenderCalendarDayComponentId) {
+        const parsed = tavernRenderCalendarDayPropsSchema.safeParse(widget.props);
+        return parsed.success ? <CalendarDayWidget props={parsed.data} /> : null;
+    }
 
-    return parsed.success ? <CalendarEventWidget props={parsed.data} /> : null;
+    return null;
 }
 
 function CalendarEventWidget({ props }: { props: TavernRenderCalendarEventProps }) {
     const date = dateFromCalendarValue(props.date);
     const timeLabel = formatEventTime(props);
     const detailText = [props.location, props.notes].filter(Boolean).join(' - ');
+    const descriptionText = detailText || 'No description.';
 
     return (
         <WidgetFrame>
@@ -35,11 +47,9 @@ function CalendarEventWidget({ props }: { props: TavernRenderCalendarEventProps 
                             {timeLabel}
                         </p>
                     </div>
-                    {detailText ? (
-                        <p className="line-clamp-2 break-words text-muted-foreground text-sm">
-                            {detailText}
-                        </p>
-                    ) : null}
+                    <p className="line-clamp-2 break-words text-muted-foreground text-sm">
+                        {descriptionText}
+                    </p>
                 </div>
             </div>
         </WidgetFrame>
@@ -70,6 +80,69 @@ function CalendarTile({ date }: { date: Date }) {
     );
 }
 
+function CalendarDayWidget({ props }: { props: TavernRenderCalendarDayProps }) {
+    const date = dateFromCalendarValue(props.date);
+    const timezone = timezoneDisplayNameForDate(date, props.timezone);
+
+    return (
+        <WidgetFrame className="max-w-[30rem]">
+            <section
+                aria-label={props.title ?? formatFullDate(date)}
+                className="flex min-w-0 gap-3 max-[420px]:flex-col"
+            >
+                <div className="flex w-[60px] shrink-0 flex-col items-center gap-2 max-[420px]:w-full max-[420px]:flex-row">
+                    <CalendarTile date={date} />
+                    {timezone ? (
+                        <p className="max-w-[60px] text-center text-muted-foreground text-xs max-[420px]:text-left">
+                            {timezone}
+                        </p>
+                    ) : null}
+                </div>
+                <div className="flex min-w-0 flex-1 flex-col gap-2">
+                    {props.events.length ? (
+                        props.events.map((event, index) => (
+                            <CalendarDayEventCard event={event} key={dayEventKey(event, index)} />
+                        ))
+                    ) : (
+                        <Elevated
+                            className="rounded-xl border border-border/45 px-3 py-4 text-muted-foreground text-sm"
+                            offset={1}
+                            shadowLevel={1}
+                        >
+                            No events scheduled.
+                        </Elevated>
+                    )}
+                </div>
+            </section>
+        </WidgetFrame>
+    );
+}
+
+function CalendarDayEventCard({ event }: { event: TavernRenderCalendarDayEventProps }) {
+    const detailText = [event.location, event.notes].filter(Boolean).join(' - ');
+    const descriptionText = detailText || 'No description.';
+
+    return (
+        <Elevated
+            className="min-h-[4.5rem] rounded-xl border border-border/45 px-3 py-2.5"
+            offset={1}
+            shadowLevel={1}
+        >
+            <div className="flex min-w-0 items-baseline justify-between gap-3">
+                <p className="min-w-0 truncate font-medium text-foreground text-sm">
+                    {event.title}
+                </p>
+                <p className="shrink-0 font-medium text-info-foreground text-sm">
+                    {formatDayEventTime(event)}
+                </p>
+            </div>
+            <p className="mt-1 line-clamp-2 break-words text-muted-foreground text-sm">
+                {descriptionText}
+            </p>
+        </Elevated>
+    );
+}
+
 function formatTileMonth(date: Date) {
     return tileMonthFormatter.format(date).toUpperCase();
 }
@@ -82,8 +155,15 @@ function formatTileWeekday(date: Date) {
     return tileWeekdayFormatter.format(date).toUpperCase();
 }
 
+function formatFullDate(date: Date) {
+    return fullDateFormatter.format(date);
+}
+
 function formatEventTime(props: TavernRenderCalendarEventProps) {
-    const timezoneLabel = timezoneDisplayName(props);
+    const timezoneLabel = timezoneDisplayNameForDate(
+        dateFromCalendarValue(props.date),
+        props.timezone
+    );
 
     if (props.allDay) {
         return joinTimeLabel('All day', timezoneLabel);
@@ -94,6 +174,18 @@ function formatEventTime(props: TavernRenderCalendarEventProps) {
     }
 
     return joinTimeLabel(formatTimeRange(props.startTime, props.endTime), timezoneLabel);
+}
+
+function formatDayEventTime(event: TavernRenderCalendarDayEventProps) {
+    if (event.allDay) {
+        return 'All day';
+    }
+
+    if (!(event.startTime && event.endTime)) {
+        return 'Time TBD';
+    }
+
+    return formatTimeRange(event.startTime, event.endTime);
 }
 
 function formatTimeRange(startTime: string, endTime: string) {
@@ -127,21 +219,21 @@ function period(hour: number) {
     return hour >= 12 ? 'PM' : 'AM';
 }
 
-function timezoneDisplayName(props: TavernRenderCalendarEventProps) {
-    if (!props.timezone) {
+function timezoneDisplayNameForDate(date: Date, timezone: string | undefined) {
+    if (!timezone) {
         return null;
     }
 
     try {
         const parts = new Intl.DateTimeFormat(undefined, {
-            timeZone: props.timezone,
+            timeZone: timezone,
             timeZoneName: 'short',
-        }).formatToParts(dateFromCalendarValue(props.date));
+        }).formatToParts(date);
         const name = parts.find((part) => part.type === 'timeZoneName')?.value;
 
-        return name && name !== 'GMT' ? name : props.timezone;
+        return name && name !== 'GMT' ? name : timezone;
     } catch {
-        return props.timezone;
+        return timezone;
     }
 }
 
@@ -152,6 +244,10 @@ function joinTimeLabel(time: string, timezone: string | null) {
 function dateFromCalendarValue(value: string) {
     const [year = '1970', month = '1', day = '1'] = value.split('-');
     return new Date(Date.UTC(Number(year), Number(month) - 1, Number(day)));
+}
+
+function dayEventKey(event: TavernRenderCalendarDayEventProps, index: number) {
+    return `${event.startTime ?? 'all-day'}-${event.endTime ?? 'open'}-${event.title}-${index}`;
 }
 
 const tileMonthFormatter = new Intl.DateTimeFormat(undefined, {
@@ -167,4 +263,12 @@ const tileDayFormatter = new Intl.DateTimeFormat(undefined, {
 const tileWeekdayFormatter = new Intl.DateTimeFormat(undefined, {
     timeZone: 'UTC',
     weekday: 'short',
+});
+
+const fullDateFormatter = new Intl.DateTimeFormat(undefined, {
+    day: 'numeric',
+    month: 'long',
+    timeZone: 'UTC',
+    weekday: 'long',
+    year: 'numeric',
 });

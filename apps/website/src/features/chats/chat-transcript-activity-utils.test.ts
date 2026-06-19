@@ -130,6 +130,9 @@ test('work group summary names first-party widget rendering', () => {
     expect(formatWorkGroupSummary([toolItem({ name: 'render_bar_chart', summaryParts: [] })])).toBe(
         'Rendered a bar chart'
     );
+    expect(
+        formatWorkGroupSummary([toolItem({ name: 'render_calendar_day', summaryParts: [] })])
+    ).toBe('Rendered a calendar day');
 
     expect(
         formatWorkGroupSummary([
