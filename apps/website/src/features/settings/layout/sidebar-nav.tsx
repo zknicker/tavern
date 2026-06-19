@@ -1,4 +1,5 @@
 import { ArrowLeft02Icon } from '@hugeicons-pro/core-stroke-rounded';
+import * as React from 'react';
 import { NavLink } from 'react-router-dom';
 import { Icon } from '../../../components/ui/icon.tsx';
 import {
@@ -14,12 +15,19 @@ import {
     settingsCapabilityRequirements,
     useCapability,
 } from '../../../hooks/connections/use-capability.ts';
+import { queryPolicy } from '../../../lib/query-policy.ts';
+import { trpc } from '../../../lib/trpc.tsx';
 import { settingsNavItems, settingsNavSections } from './navigation.ts';
 
 const settingsNavItemsById = new Map(settingsNavItems.map((item) => [item.id, item]));
 
 export function SettingsSidebarNav({ onBackToApp }: { onBackToApp?: () => void }) {
     const capability = useCapability();
+    const utils = trpc.useUtils();
+    const prefetchModelsSettings = React.useCallback(() => {
+        void import('../../../routes/dashboard/settings-models-page.tsx');
+        void utils.model.inventory.prefetch(undefined, queryPolicy.runtimeModelSnapshot);
+    }, [utils]);
 
     return (
         <>
@@ -69,6 +77,16 @@ export function SettingsSidebarNav({ onBackToApp }: { onBackToApp?: () => void }
                                                 {({ isActive }) => (
                                                     <SidebarMenuButton
                                                         isActive={isActive}
+                                                        onFocus={
+                                                            item.id === 'models'
+                                                                ? prefetchModelsSettings
+                                                                : undefined
+                                                        }
+                                                        onPointerEnter={
+                                                            item.id === 'models'
+                                                                ? prefetchModelsSettings
+                                                                : undefined
+                                                        }
                                                         render={<div />}
                                                     >
                                                         <Icon
