@@ -43,6 +43,10 @@ or plugin-backed tool groups.
   `tavern` skill copies under managed `HERMES_HOME/skills`, refreshes them from
   Tavern assets on startup, and writes them read-only. The agent should create
   or update a separate skill for durable self-edits.
+- Agent-managed skill updates are Hermes procedural memory. For writable,
+  non-managed skill sources, the agent updates the skill in place, including
+  fetching source material and merging targeted changes when the user asks for
+  an update.
 - Runtime toolsets remain owned by Hermes. Tavern owns only the user's
   Tavern-side enablement request and the Runtime route that sends it to Hermes.
 - Hermes plugins may provide skills, workflows, tools, channels, runtime
@@ -132,6 +136,10 @@ catalog.
   and uninstall are engine background actions that Runtime waits on, and the
   server refreshes the skill inventory snapshot and emits the skill update
   event afterward.
+- A request to update skill content is an agent task, not a Tavern settings
+  mutation. Tavern may start the work from chat or a skill row; Hermes skill
+  tooling performs the read/merge/write, and Runtime refreshes the inventory
+  after the write.
 - Toolset setup flows through Runtime's `/toolsets/{id}/config|provider|env|post-setup`
   routes; env values are written to the engine's env store and never echoed back.
 - MCP servers and the MCP catalog flow through Runtime's `/mcp/*` routes; env
@@ -184,14 +192,18 @@ catalog.
   and generated config paths are debug details unless the user opens advanced
   status.
 - There is no marketplace search.
+- A skill row may offer "ask the agent to update" for convenience. That starts
+  normal agent work; it is not a version manager, conflict editor, or background
+  update scheduler.
 - The Add toolset dialog is the MCP surface: the engine's curated MCP catalog
   with one-click install plus custom HTTP/stdio servers with test, enablement,
   and removal.
 - A toolset row that reports `not_usable` exposes a Set up action that opens the
   engine's provider matrix: provider selection, env key entry, and the
   provider's post-setup install action.
-- Tavern does not build its own marketplace, registry, version pinning UI, or
-  update scheduling; the engine's hub owns those mechanics.
+- Tavern does not build its own marketplace, registry, version pinning UI,
+  merge-conflict UI, or update scheduling. Hermes and the agent own skill
+  update mechanics.
 
 ## Usability State
 

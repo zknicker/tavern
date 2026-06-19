@@ -205,7 +205,10 @@ makes the old managed copy replaceable, deletes it, copies the bundled source,
 and writes it read-only again. Other skills under `HERMES_HOME/skills` remain
 Hermes-owned skill state: hub-installed and agent-created skills stay
 agent-editable and, with the default managed home, live under the Runtime root
-backup unit across Tavern Runtime updates and Hermes pin changes.
+backup unit across Tavern Runtime updates and Hermes pin changes. Updating
+those skills is normal Hermes agent-managed skill work: the agent edits or
+merges the source copy, and Runtime only refreshes the visible inventory after
+Hermes observes the change.
 
 ## Managed Memory Provider
 

@@ -28,6 +28,8 @@ also exposes a concrete skill for it.
   toolset as configured and usable.
 * Runtime toolset details are exposed as metadata for diagnostics, not as copied
   Tavern skill instructions.
+* Skill content updates are not a Tavern merge contract. Outside Runtime-owned
+  read-only skills, Hermes and the agent edit the skill source in place.
 
 ## Surface
 
@@ -83,6 +85,12 @@ the installer's confirmation prompts and report success on cancel. Runtime
 verifies the result against the hub lockfile — tolerating the engine's
 source-prefixed identifiers (e.g. `skills-sh/owner/repo/...`) — then refreshes
 the skill inventory snapshot and emits the skill update event.
+
+Skill-content update requests run as agent work through Hermes skill tooling.
+The agent can fetch source material, merge or patch the installed skill, and
+explain the result. Runtime observes the changed inventory afterward; the
+Skills & Toolsets API does not implement source merge policy or expose
+version-control state.
 
 The available-skills view is Runtime-owned local reads with no engine HTTP and
 no centralized index: the built-in library comes from the resolved engine

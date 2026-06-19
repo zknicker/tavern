@@ -40,6 +40,12 @@ toolset for it.
 The page shows skills and toolsets together because both answer "what can the
 agent do?" Rows must still make the type clear.
 
+Skill content updates follow Hermes's procedural-memory model. Outside
+Runtime-owned read-only skills, updating a skill is agent work: the agent reads
+the installed skill and its source material, applies a targeted patch or merge
+in the source location, and reports the result. Tavern does not model skill
+versions or merge conflicts as settings state.
+
 ## Sources
 
 | Source | Shows as | Notes |
@@ -93,7 +99,9 @@ Obsidian and bounded research folders can route to llm-wiki.
 The Runtime-owned `vault` and `tavern` skill copies are read-only and refreshed
 from Tavern assets on startup. Agent-created, hub-installed, workspace,
 personal, extra-directory, and plugin-owned skills remain owned by their source
-location and keep their normal Hermes editability.
+location and keep their normal Hermes editability. Tavern refreshes inventory
+after Hermes reports skill-related writes; it does not become the editor or
+merge owner for those files.
 
 Managed memory providers are not Tavern skills. Runtime configures Hermes to
 select the `mnemosyne` memory provider and writes the provider discovery shim
@@ -123,7 +131,9 @@ the engine owns quarantine, scan, and install policy.
 * A skill marketplace or cross-registry search. The engine's hub search
   (ClawHub, skills.sh, LobeHub, the centralized index) is not a Tavern product
   surface; users bring repos they trust as taps.
-* A Tavern-owned registry, version pinning UI, or update scheduling; the
-  engine hub owns install mechanics and its lockfile.
+* A Tavern-owned registry, version pinning UI, update scheduler, or
+  merge-conflict manager. The settings surface may start an agent task to
+  update a skill, but the update itself remains Hermes agent-managed skill
+  editing.
 * Converting runtime plugins or toolsets into Tavern skills.
 * Expanded troubleshooting flows for unusable toolsets.
