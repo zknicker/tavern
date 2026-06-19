@@ -2,7 +2,7 @@ import { trpc } from '../../../lib/trpc.tsx';
 
 const emptyEnvSettings = {
     updatedAt: null,
-    variables: [] as { hasValue: boolean; name: string }[],
+    variables: [] as { hasValue: boolean; name: string; value?: string }[],
 };
 
 export function useAgentEnvSettings() {

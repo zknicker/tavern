@@ -45,9 +45,9 @@ with instruction files, model, execution, tool, memory, and skill policy.
   saved agent settings store.
 * Execution settings — the model fallback chain and the agent timezone — are
   Runtime-stored and edited through the agent execution settings API. Agent
-  environment variables are Runtime-stored Vault secrets exposed as write-only
-  masks. Saving either surface rewrites the generated managed runtime config or
-  env file and restarts managed Hermes to apply.
+  environment variables are Runtime-stored Vault secrets exposed to the local
+  settings UI. Saving either surface rewrites the generated managed runtime
+  config or env file and restarts managed Hermes to apply.
 * Runtime execution state is not required just to list agents.
 
 ## Surface

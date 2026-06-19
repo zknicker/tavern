@@ -1,5 +1,5 @@
 import { Cancel01Icon, Plus } from '@hugeicons/core-free-icons';
-import { useState } from 'react';
+import { Fragment, useState } from 'react';
 import { BadgeDivider } from '../../../components/ui/badge-divider.tsx';
 import { Card, CardFrame } from '../../../components/ui/card.tsx';
 import { Icon } from '../../../components/ui/icon.tsx';
@@ -7,13 +7,20 @@ import { Button } from '../../../components/ui/primitives/button.tsx';
 import { Input } from '../../../components/ui/primitives/input.tsx';
 import { Separator } from '../../../components/ui/separator.tsx';
 import { SettingsRow } from '../../../components/ui/settings-row.tsx';
+import { EnvSecretInput } from './env-secret-input.tsx';
 
 export interface AgentEnvVariable {
     hasValue: boolean;
     name: string;
+    value?: string;
 }
 
 const envNamePattern = /^[A-Z_][A-Z0-9_]*$/u;
+
+interface SaveAgentEnvVariable {
+    name: string;
+    value?: string;
+}
 
 export function AgentEnvSection({
     disabled,
@@ -23,14 +30,17 @@ export function AgentEnvSection({
 }: {
     disabled: boolean;
     isSaving: boolean;
-    onChange: (next: { variables: { name: string; value?: string }[] }) => Promise<unknown>;
+    onChange: (next: { variables: SaveAgentEnvVariable[] }) => Promise<unknown>;
     variables: AgentEnvVariable[];
 }) {
+    const [isAdding, setIsAdding] = useState(false);
     const [draftName, setDraftName] = useState('');
     const [draftValue, setDraftValue] = useState('');
     const [replacementDrafts, setReplacementDrafts] = useState<Record<string, string>>({});
+    const [revealedValues, setRevealedValues] = useState<Record<string, boolean>>({});
+    const [isDraftValueRevealed, setIsDraftValueRevealed] = useState(false);
 
-    const saveVariables = async (next: { name: string; value?: string }[]) => {
+    const saveVariables = async (next: SaveAgentEnvVariable[]) => {
         await onChange({ variables: next });
         setReplacementDrafts({});
     };
@@ -47,139 +57,215 @@ export function AgentEnvSection({
             .filter((entry) => entry.name !== name)
             .map((entry) => ({ name: entry.name }));
         await saveVariables([...existing, { name, value }]);
-        setDraftName('');
-        setDraftValue('');
+        closeAddRow();
     };
 
-    return (
-        <section>
-            <BadgeDivider className="pb-4">Environment</BadgeDivider>
-            <CardFrame>
-                <Card className="overflow-hidden p-0">
-                    <SettingsRow
-                        description="Secrets and flags available to the managed agent after restart."
-                        title="Agent env vars"
-                    >
-                        <div className="flex flex-col gap-3">
-                            {variables.length === 0 ? (
-                                <p className="text-muted-foreground text-sm">
-                                    No agent env vars saved.
-                                </p>
-                            ) : (
-                                variables.map((variable, index) => (
-                                    <div className="flex flex-col gap-2" key={variable.name}>
-                                        {index > 0 ? <Separator /> : null}
-                                        <div className="grid gap-2 sm:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)_auto_auto]">
-                                            <Input disabled nativeInput value={variable.name} />
-                                            <Input
-                                                disabled={disabled}
-                                                nativeInput
-                                                onChange={(event) =>
-                                                    setReplacementDrafts((drafts) => ({
-                                                        ...drafts,
-                                                        [variable.name]: event.target.value,
-                                                    }))
-                                                }
-                                                placeholder={
-                                                    variable.hasValue ? 'Saved value' : 'New value'
-                                                }
-                                                type="password"
-                                                value={replacementDrafts[variable.name] ?? ''}
-                                            />
-                                            <Button
-                                                disabled={
-                                                    disabled || !replacementDrafts[variable.name]
-                                                }
-                                                loading={isSaving}
-                                                onClick={() =>
-                                                    void saveVariables(
-                                                        variables.map((entry) => ({
-                                                            name: entry.name,
-                                                            value:
-                                                                entry.name === variable.name
-                                                                    ? replacementDrafts[
-                                                                          variable.name
-                                                                      ]
-                                                                    : undefined,
-                                                        }))
-                                                    )
-                                                }
-                                                size="sm"
-                                                variant="outline"
-                                            >
-                                                Save
-                                            </Button>
-                                            <Button
-                                                aria-label={`Remove ${variable.name}`}
-                                                disabled={disabled}
-                                                loading={isSaving}
-                                                onClick={() =>
-                                                    void saveVariables(
-                                                        variables
-                                                            .filter(
-                                                                (entry) =>
-                                                                    entry.name !== variable.name
-                                                            )
-                                                            .map((entry) => ({ name: entry.name }))
-                                                    )
-                                                }
-                                                size="icon-sm"
-                                                variant="ghost"
-                                            >
-                                                <Icon icon={Cancel01Icon} />
-                                            </Button>
-                                        </div>
-                                    </div>
-                                ))
-                            )}
-                        </div>
-                    </SettingsRow>
+    const closeAddRow = () => {
+        setIsAdding(false);
+        setDraftName('');
+        setDraftValue('');
+        setIsDraftValueRevealed(false);
+    };
 
-                    <Separator />
+    const toggleReveal = (name: string) => {
+        setRevealedValues((current) => ({ ...current, [name]: !current[name] }));
+    };
 
+    const normalizedDraftName = draftName.trim().toUpperCase();
+    const canAdd =
+        !disabled &&
+        Boolean(normalizedDraftName && draftValue && envNamePattern.test(normalizedDraftName));
+
+    const rows = [
+        ...(variables.length === 0 && !isAdding
+            ? [
+                  {
+                      content: (
+                          <SettingsRow
+                              className="md:grid-cols-[minmax(10rem,1fr)_minmax(18rem,42rem)]"
+                              description="Secrets and flags available to the managed agent after restart."
+                              title="Agent env vars"
+                          >
+                              <p className="text-muted-foreground text-sm">
+                                  No agent env vars saved.
+                              </p>
+                          </SettingsRow>
+                      ),
+                      key: 'empty',
+                  },
+              ]
+            : []),
+        ...variables.map((variable) => {
+            const persistedValue = variable.value ?? '';
+            const hasReplacementDraft = Object.hasOwn(replacementDrafts, variable.name);
+            const replacementValue = replacementDrafts[variable.name] ?? '';
+            const fieldValue = hasReplacementDraft ? replacementValue : persistedValue;
+            const canSave =
+                !disabled &&
+                hasReplacementDraft &&
+                replacementValue.length > 0 &&
+                replacementValue !== persistedValue;
+
+            return {
+                content: (
                     <SettingsRow
-                        description="Use shell-style names like GITHUB_TOKEN."
-                        title="Add env var"
+                        className="md:grid-cols-[minmax(10rem,1fr)_minmax(20rem,42rem)]"
+                        description="Available after agent restart."
+                        title={
+                            <span className="block min-w-0 break-all font-mono text-foreground text-sm">
+                                {variable.name}
+                            </span>
+                        }
                     >
-                        <div className="grid gap-2 sm:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)_auto]">
-                            <Input
-                                autoCapitalize="characters"
+                        <div className="grid gap-2 sm:grid-cols-[minmax(0,1fr)_auto_auto]">
+                            <EnvSecretInput
+                                ariaLabel={`${variable.name} value`}
                                 disabled={disabled}
-                                nativeInput
-                                onChange={(event) => setDraftName(event.target.value)}
-                                placeholder="NAME"
-                                value={draftName}
-                            />
-                            <Input
-                                disabled={disabled}
-                                nativeInput
-                                onChange={(event) => setDraftValue(event.target.value)}
-                                onKeyDown={(event) => {
-                                    if (event.key === 'Enter') {
-                                        event.preventDefault();
-                                        void addVariable();
-                                    }
-                                }}
-                                placeholder="Value"
-                                type="password"
-                                value={draftValue}
+                                name={`agent-env-${variable.name}`}
+                                onChange={(value) =>
+                                    setReplacementDrafts((drafts) => ({
+                                        ...drafts,
+                                        [variable.name]: value,
+                                    }))
+                                }
+                                onRevealToggle={() => toggleReveal(variable.name)}
+                                revealed={Boolean(revealedValues[variable.name])}
+                                value={fieldValue}
                             />
                             <Button
-                                disabled={
-                                    disabled ||
-                                    !(draftName.trim() && draftValue) ||
-                                    !envNamePattern.test(draftName.trim().toUpperCase())
-                                }
+                                disabled={!canSave}
                                 loading={isSaving}
-                                onClick={() => void addVariable()}
+                                onClick={() =>
+                                    void saveVariables(
+                                        variables.map((entry) => ({
+                                            name: entry.name,
+                                            value:
+                                                entry.name === variable.name
+                                                    ? replacementValue
+                                                    : undefined,
+                                        }))
+                                    )
+                                }
                                 size="sm"
                                 variant="outline"
                             >
-                                <Icon icon={Plus} />
-                                Add
+                                Save
+                            </Button>
+                            <Button
+                                aria-label={`Remove ${variable.name}`}
+                                disabled={disabled}
+                                loading={isSaving}
+                                onClick={() =>
+                                    void saveVariables(
+                                        variables
+                                            .filter((entry) => entry.name !== variable.name)
+                                            .map((entry) => ({ name: entry.name }))
+                                    )
+                                }
+                                size="icon-sm"
+                                variant="ghost"
+                            >
+                                <Icon icon={Cancel01Icon} />
                             </Button>
                         </div>
                     </SettingsRow>
+                ),
+                key: variable.name,
+            };
+        }),
+        ...(isAdding
+            ? [
+                  {
+                      content: (
+                          <SettingsRow
+                              className="md:grid-cols-[minmax(10rem,1fr)_minmax(20rem,42rem)]"
+                              description="Use shell-style names like GITHUB_TOKEN."
+                              title="New env var"
+                          >
+                              <div className="grid gap-2 sm:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)_auto_auto]">
+                                  <Input
+                                      aria-label="Env var name"
+                                      autoCapitalize="characters"
+                                      disabled={disabled}
+                                      name="agent-env-name"
+                                      nativeInput
+                                      onChange={(event) => setDraftName(event.target.value)}
+                                      placeholder="NAME"
+                                      value={draftName}
+                                  />
+                                  <EnvSecretInput
+                                      ariaLabel="New env var value"
+                                      disabled={disabled}
+                                      name="agent-env-value"
+                                      onChange={setDraftValue}
+                                      onKeyDown={(event) => {
+                                          if (event.key === 'Enter' && canAdd) {
+                                              event.preventDefault();
+                                              void addVariable();
+                                          }
+                                      }}
+                                      onRevealToggle={() =>
+                                          setIsDraftValueRevealed((revealed) => !revealed)
+                                      }
+                                      placeholder="Value"
+                                      revealed={isDraftValueRevealed}
+                                      value={draftValue}
+                                  />
+                                  <Button
+                                      disabled={!canAdd}
+                                      loading={isSaving}
+                                      onClick={() => void addVariable()}
+                                      size="sm"
+                                      variant="outline"
+                                  >
+                                      <Icon icon={Plus} />
+                                      Add
+                                  </Button>
+                                  <Button
+                                      aria-label="Cancel new env var"
+                                      disabled={disabled}
+                                      onClick={closeAddRow}
+                                      size="icon-sm"
+                                      variant="ghost"
+                                  >
+                                      <Icon icon={Cancel01Icon} />
+                                  </Button>
+                              </div>
+                          </SettingsRow>
+                      ),
+                      key: 'add',
+                  },
+              ]
+            : []),
+    ];
+
+    return (
+        <section>
+            <BadgeDivider
+                action={
+                    <Button
+                        aria-expanded={isAdding}
+                        disabled={disabled || isAdding}
+                        onClick={() => setIsAdding(true)}
+                        size="sm"
+                        variant="secondary"
+                    >
+                        <Icon icon={Plus} />
+                        Add env var
+                    </Button>
+                }
+                className="pb-4"
+            >
+                Environment
+            </BadgeDivider>
+            <CardFrame>
+                <Card className="overflow-hidden p-0">
+                    {rows.map((row, index) => (
+                        <Fragment key={row.key}>
+                            {index > 0 ? <Separator /> : null}
+                            {row.content}
+                        </Fragment>
+                    ))}
                 </Card>
             </CardFrame>
         </section>

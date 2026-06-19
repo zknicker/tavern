@@ -65,9 +65,9 @@ managed Hermes to apply it; live "always" approval answers persisted by the
 engine are imported into the visible allowlist.
 
 `/agent-env` (GET/PUT) owns Tavern-stored environment variables for the managed
-agent process. Values live in Tavern Vault, reads return only `{name, hasValue}`
-masks, and saves rewrite the generated managed env file and restart managed
-Hermes to apply them.
+agent process. Values live in Tavern Vault, reads return saved values for the
+local settings UI, and saves rewrite the generated managed env file and restart
+managed Hermes to apply them.
 
 `/connectors` owns Tavern-stored MCP server records. Secret env and header
 values live in Tavern Vault and are materialized into the generated managed

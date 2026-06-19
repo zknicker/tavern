@@ -29,15 +29,16 @@ describe('agent env settings', () => {
         await fs.rm(envPath, { force: true });
     });
 
-    test('stores env values write-only and materializes managed Hermes env', async () => {
+    test('stores env values and materializes managed Hermes env', async () => {
         const response = await putAgentEnv({
             variables: [{ name: 'GITHUB_TOKEN', value: 'secret-token' }],
         });
         const body = (await response?.json()) as Record<string, unknown>;
 
         expect(response?.status).toBe(200);
-        expect(body.variables).toEqual([{ hasValue: true, name: 'GITHUB_TOKEN' }]);
-        expect(JSON.stringify(body)).not.toContain('secret-token');
+        expect(body.variables).toEqual([
+            { hasValue: true, name: 'GITHUB_TOKEN', value: 'secret-token' },
+        ]);
         await expect(fs.readFile(envPath, 'utf8')).resolves.toContain(
             'GITHUB_TOKEN="secret-token"'
         );

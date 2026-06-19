@@ -297,6 +297,7 @@ const agentRuntimeAgentEnvNameSchema = z
 export const agentRuntimeAgentEnvVariableSchema = z.object({
     hasValue: z.boolean(),
     name: agentRuntimeAgentEnvNameSchema,
+    value: z.string().min(1).max(8192).optional(),
 });
 
 export const agentRuntimeAgentEnvSchema = z.object({

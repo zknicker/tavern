@@ -107,7 +107,7 @@ function toApiAgentEnv(row: {
     return agentRuntimeAgentEnvSchema.parse({
         updatedAt: row.updatedAt,
         variables: row.stored.variables
-            .map((entry) => ({ hasValue: true, name: entry.name }))
+            .map((entry) => ({ hasValue: true, name: entry.name, value: entry.value }))
             .sort((left, right) => left.name.localeCompare(right.name)),
     });
 }
