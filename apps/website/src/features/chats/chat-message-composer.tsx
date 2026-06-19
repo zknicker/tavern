@@ -41,6 +41,8 @@ import {
     readComposerAttachment,
 } from './chat-composer-attachments.tsx';
 import { useChatComposerDraftState } from './chat-composer-draft-state.ts';
+import { useComposerFileDrop } from './chat-composer-file-drop.ts';
+import { ChatComposerMainDropOverlay } from './chat-composer-main-drop-overlay.tsx';
 import {
     type ChatComposerQueuedMessage,
     isQueuedMessageSteerable,
@@ -132,6 +134,12 @@ export function ChatMessageComposer({
         activeRunId,
         hasDraftPayload: hasPayload,
         isReplyActive,
+    });
+    const useMainDropTarget = !isCompact;
+    const attachmentDrop = useComposerFileDrop({
+        disabled: isComposerBlocked || !canSendToRuntime,
+        onFiles: addSelectedAttachments,
+        target: useMainDropTarget ? 'main' : 'self',
     });
 
     // biome-ignore lint/correctness/useExhaustiveDependencies: Dispatch is ref-gated; queue head and blocked state drive this effect.
@@ -354,16 +362,6 @@ export function ChatMessageComposer({
         await addSelectedAttachments(files);
     }
 
-    function handleAttachmentDragOver(event: React.DragEvent<HTMLFormElement>) {
-        if (isComposerBlocked) {
-            return;
-        }
-
-        if (event.dataTransfer.types.includes('Files')) {
-            event.preventDefault();
-        }
-    }
-
     async function handleCommandAction(command: string) {
         setContent('');
         setMentions([]);
@@ -372,21 +370,6 @@ export function ChatMessageComposer({
             chatId,
             command,
         });
-    }
-
-    function handleAttachmentDrop(event: React.DragEvent<HTMLFormElement>) {
-        if (isComposerBlocked) {
-            return;
-        }
-
-        const files = [...event.dataTransfer.files];
-
-        if (files.length === 0) {
-            return;
-        }
-
-        event.preventDefault();
-        void addSelectedAttachments(files);
     }
 
     async function addSelectedAttachments(files: File[]) {
@@ -435,15 +418,23 @@ export function ChatMessageComposer({
             )}
             contentClassName={isCompact ? 'max-w-none' : undefined}
             error={attachmentError ?? steerTurn.error?.message ?? sendMessage.error?.message}
-            onDragOver={handleAttachmentDragOver}
-            onDrop={handleAttachmentDrop}
+            onDragEnter={useMainDropTarget ? undefined : attachmentDrop.onDragEnter}
+            onDragLeave={useMainDropTarget ? undefined : attachmentDrop.onDragLeave}
+            onDragOver={useMainDropTarget ? undefined : attachmentDrop.onDragOver}
+            onDrop={useMainDropTarget ? undefined : attachmentDrop.onDrop}
             onSubmit={handleSubmit}
             onTextEditorFocus={isComposerBlocked ? undefined : mentionComposer.focusTextEditor}
             surfaceClassName={cn(
                 isCompact ? 'rounded-2xl shadow-none' : undefined,
+                isCompact &&
+                    attachmentDrop.isFileDropActive &&
+                    'border-ring/35 bg-accent/10 shadow-md shadow-ring/10 ring-2 ring-ring/35',
                 isComposerBlocked && 'cursor-not-allowed opacity-60'
             )}
         >
+            <ChatComposerMainDropOverlay
+                active={useMainDropTarget && attachmentDrop.isFileDropActive}
+            />
             <ChatComposerQueuePanel
                 canSteerBlockedMessages={Boolean(steerRunId)}
                 isBlocked={isSendBlocked}

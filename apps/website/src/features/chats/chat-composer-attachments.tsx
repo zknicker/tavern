@@ -1,6 +1,8 @@
 import { Cancel01Icon } from '@hugeicons-pro/core-stroke-rounded';
+import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
 import { Icon } from '../../components/ui/icon.tsx';
 import { usePromptInputTextEditorFocus } from '../../components/ui/prompt-input.tsx';
+import { springs } from '../../lib/springs.ts';
 import type { ChatMessageAttachmentInput } from '../../lib/trpc.tsx';
 
 export type ChatComposerInlineAttachment = Extract<ChatMessageAttachmentInput, { type: 'inline' }>;
@@ -31,19 +33,50 @@ export function ChatComposerAttachmentList({
     attachments: readonly ChatComposerAttachment[];
     onRemove: (index: number) => void;
 }) {
+    const shouldReduceMotion = useReducedMotion();
+
     if (attachments.length === 0) {
         return null;
     }
 
     return (
         <div className="mx-1 mb-2 flex flex-wrap items-start gap-2">
-            {attachments.map((attachment, index) => (
-                <ChatComposerAttachmentPreview
-                    attachment={attachment}
-                    key={attachmentKey(attachment)}
-                    onRemove={() => onRemove(index)}
-                />
-            ))}
+            <AnimatePresence initial={false}>
+                {attachments.map((attachment, index) => (
+                    <motion.div
+                        animate={{
+                            opacity: 1,
+                            transform: 'translateY(0) scale(1)',
+                        }}
+                        exit={
+                            shouldReduceMotion
+                                ? { opacity: 0, transition: springs.fast }
+                                : {
+                                      opacity: 0,
+                                      transform: 'translateY(-2px) scale(0.98)',
+                                      transition: springs.fast,
+                                  }
+                        }
+                        initial={
+                            shouldReduceMotion
+                                ? { opacity: 0 }
+                                : {
+                                      opacity: 0,
+                                      transform: 'translateY(6px) scale(0.96)',
+                                  }
+                        }
+                        key={attachmentKey(attachment, index)}
+                        layout={!shouldReduceMotion}
+                        style={{ transformOrigin: 'top left' }}
+                        transition={springs.moderate}
+                    >
+                        <ChatComposerAttachmentPreview
+                            attachment={attachment}
+                            onRemove={() => onRemove(index)}
+                        />
+                    </motion.div>
+                ))}
+            </AnimatePresence>
         </div>
     );
 }
@@ -93,12 +126,12 @@ function ChatComposerAttachmentPreview({
     );
 }
 
-function attachmentKey(attachment: ChatComposerAttachment) {
+function attachmentKey(attachment: ChatComposerAttachment, index: number) {
     if (attachment.type === 'inline') {
-        return `${attachment.type}:${attachment.filename}:${attachment.sizeBytes}:${attachment.dataBase64.slice(0, 24)}`;
+        return `${attachment.type}:${attachment.filename}:${attachment.sizeBytes}:${attachment.dataBase64.slice(0, 24)}:${index}`;
     }
 
-    return `${attachment.type}:${attachment.filename}:${attachment.path}`;
+    return `${attachment.type}:${attachment.filename}:${attachment.path}:${index}`;
 }
 
 function attachmentDetail(attachment: ChatComposerAttachment) {

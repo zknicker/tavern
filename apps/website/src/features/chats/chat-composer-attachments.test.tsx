@@ -1,6 +1,12 @@
 import { describe, expect, test } from 'bun:test';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { ChatComposerAttachmentList } from './chat-composer-attachments.tsx';
+import { hasFileTransfer } from './chat-composer-file-drop.ts';
+
+test('detects file drag transfers', () => {
+    expect(hasFileTransfer({ types: ['Files'] })).toBe(true);
+    expect(hasFileTransfer({ types: ['text/plain'] })).toBe(false);
+});
 
 describe('ChatComposerAttachmentList', () => {
     test('renders image attachments as compact tray tiles', () => {

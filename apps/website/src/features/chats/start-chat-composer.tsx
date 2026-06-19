@@ -33,7 +33,9 @@ import {
     ChatComposerAttachmentList,
     readComposerAttachment,
 } from './chat-composer-attachments.tsx';
+import { useComposerFileDrop } from './chat-composer-file-drop.ts';
 import { handleChatComposerKeyDown } from './chat-composer-keyboard.ts';
+import { ChatComposerMainDropOverlay } from './chat-composer-main-drop-overlay.tsx';
 import { ChatComposerAttachmentButton, ChatComposerModelSelector } from './chat-composer-tools.tsx';
 
 type Agent = AgentListOutput['agents'][number];
@@ -70,6 +72,11 @@ export function StartChatComposer({
     const isPromptReady = (prompt.trim().length > 0 || attachments.length > 0) && agent !== null;
     const canSubmit = isPromptReady && canSendToRuntime;
     const runtimeDisabledReason = runtimeUnhealthyTooltip;
+    const attachmentDrop = useComposerFileDrop({
+        disabled: !canSendToRuntime,
+        onFiles: addSelectedAttachments,
+        target: 'main',
+    });
     const handleSubmit = React.useEffectEvent((event?: React.FormEvent<HTMLFormElement>) => {
         event?.preventDefault();
 
@@ -131,23 +138,6 @@ export function StartChatComposer({
         await addSelectedAttachments(files);
     }
 
-    function handleAttachmentDragOver(event: React.DragEvent<HTMLFormElement>) {
-        if (event.dataTransfer.types.includes('Files')) {
-            event.preventDefault();
-        }
-    }
-
-    function handleAttachmentDrop(event: React.DragEvent<HTMLFormElement>) {
-        const files = [...event.dataTransfer.files];
-
-        if (files.length === 0) {
-            return;
-        }
-
-        event.preventDefault();
-        void addSelectedAttachments(files);
-    }
-
     async function addSelectedAttachments(files: File[]) {
         try {
             setAttachmentError(null);
@@ -165,11 +155,10 @@ export function StartChatComposer({
             className={cn(isAgentDensity ? 'p-0' : 'mt-8 w-full p-0', className)}
             contentClassName="max-w-none"
             error={attachmentError}
-            onDragOver={handleAttachmentDragOver}
-            onDrop={handleAttachmentDrop}
             onSubmit={handleSubmit}
             onTextEditorFocus={canUseMentions ? mentionComposer.focusTextEditor : undefined}
         >
+            <ChatComposerMainDropOverlay active={attachmentDrop.isFileDropActive} />
             <ChatComposerAttachmentList
                 attachments={attachments}
                 onRemove={(index) => {
