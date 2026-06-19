@@ -15,9 +15,7 @@ export function WorkGroupHeaderText({
     label: string | null;
 }) {
     const shouldReduceMotion = useReducedMotion();
-    const previousLabelRef = React.useRef(label);
-    const [animatedLabel, setAnimatedLabel] = React.useState<string | null>(null);
-    const [slotVisible, setSlotVisible] = React.useState(false);
+    const [slotReady, setSlotReady] = React.useState(false);
     const canSlot =
         isActive &&
         shouldReduceMotion === false &&
@@ -25,32 +23,20 @@ export function WorkGroupHeaderText({
         label.length <= slotTextHeaderLimit;
 
     React.useEffect(() => {
-        if (!(canSlot && label)) {
-            previousLabelRef.current = label;
-            setAnimatedLabel(null);
-            setSlotVisible(false);
+        if (!canSlot) {
+            setSlotReady(false);
             return;
         }
-
-        const previousLabel = previousLabelRef.current;
-        previousLabelRef.current = label;
-
-        if (!previousLabel || previousLabel === label) {
-            setAnimatedLabel(null);
-            setSlotVisible(false);
-            return;
-        }
-
-        setAnimatedLabel(label);
-        setSlotVisible(false);
 
         let cancelled = false;
         let revealFrame: number | null = null;
         const reveal = () => {
             if (!cancelled) {
-                setSlotVisible(true);
+                setSlotReady(true);
             }
         };
+
+        setSlotReady(false);
 
         if (typeof window.requestAnimationFrame === 'function') {
             const primeFrame = window.requestAnimationFrame(() => {
@@ -73,8 +59,29 @@ export function WorkGroupHeaderText({
             cancelled = true;
             window.clearTimeout(timeout);
         };
-    }, [canSlot, label]);
+    }, [canSlot]);
 
+    return (
+        <WorkGroupHeaderTextView
+            canSlot={canSlot}
+            isActive={isActive}
+            label={label}
+            slotReady={slotReady}
+        />
+    );
+}
+
+export function WorkGroupHeaderTextView({
+    canSlot,
+    isActive,
+    label,
+    slotReady,
+}: {
+    canSlot: boolean;
+    isActive: boolean;
+    label: string | null;
+    slotReady: boolean;
+}) {
     if (!label) {
         return null;
     }
@@ -88,36 +95,34 @@ export function WorkGroupHeaderText({
         return <span className={className}>{label}</span>;
     }
 
-    const showingSlot = animatedLabel !== null && slotVisible;
-
     return (
         <span className={className}>
-            <span className={showingSlot ? 'sr-only' : undefined}>{label}</span>
-            {animatedLabel ? (
-                <SlotText
-                    aria-hidden={true}
-                    className={showingSlot ? 'inline-flex' : 'sr-only'}
-                    options={{
-                        bounce: 0.28,
-                        color: chromatic({
-                            from: 210,
-                            lightness: 62,
-                            saturation: 70,
-                            spread: 120,
-                        }),
-                        colorFade: 260,
-                        direction: 'up',
-                        duration: 220,
-                        interrupt: true,
-                        skipUnchanged: true,
-                        stagger: 12,
-                    }}
-                    text={animatedLabel}
-                />
-            ) : null}
+            <span className={slotReady ? 'sr-only' : undefined}>{label}</span>
+            <SlotText
+                aria-hidden={true}
+                className={slotReady ? 'inline-flex' : 'sr-only'}
+                options={slotTextOptions}
+                text={label}
+            />
         </span>
     );
 }
+
+const slotTextOptions = {
+    bounce: 0.28,
+    color: chromatic({
+        from: 210,
+        lightness: 62,
+        saturation: 70,
+        spread: 120,
+    }),
+    colorFade: 260,
+    direction: 'up',
+    duration: 220,
+    interrupt: true,
+    skipUnchanged: true,
+    stagger: 12,
+} as const;
 
 export function useStableWorkGroupLabel(label: string | null, enabled: boolean) {
     const [stableLabel, setStableLabel] = React.useState(label);
