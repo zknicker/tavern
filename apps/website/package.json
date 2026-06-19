@@ -1,7 +1,7 @@
 {
   "name": "@tavern/website",
   "private": true,
-  "version": "1.4.20",
+  "version": "1.4.21",
   "tavern": {
     "runtime": {
       "minimumVersion": "1.4.20"

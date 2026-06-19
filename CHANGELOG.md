@@ -2,6 +2,19 @@
 
 All notable changes to this project will be documented in this file.
 
+## v1.4.21 - 2026-06-19
+
+App-only release. The Runtime floor stays at 1.4.20.
+
+App changes:
+
+- Stabilized chat reply handoff geometry so live assistant replies do not snap
+  when their durable message row takes over.
+- Anchored chat tail correction immediately after smooth follow-to-tail scrolls
+  settle.
+- Summarized collapsed tool drawer headers by tool intent, with stable active
+  copy for mixed file, search, command, Widget, and approval work.
+
 ## v1.4.20 - 2026-06-19
 
 Runtime floor raised to 1.4.20 for the widget activity schema repair.
