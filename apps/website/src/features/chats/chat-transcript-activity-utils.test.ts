@@ -126,25 +126,6 @@ test('work group summary combines generic tool counts', () => {
     expect(formatWorkGroupSummary(items)).toBe('Used 2 tools');
 });
 
-test('work group summary names first-party widget rendering', () => {
-    expect(formatWorkGroupSummary([toolItem({ name: 'render_bar_chart', summaryParts: [] })])).toBe(
-        'Rendered a bar chart'
-    );
-    expect(
-        formatWorkGroupSummary([toolItem({ name: 'render_calendar_day', summaryParts: [] })])
-    ).toBe('Rendered a calendar day');
-    expect(
-        formatWorkGroupSummary([toolItem({ name: 'render_composed_chart', summaryParts: [] })])
-    ).toBe('Rendered a composed chart');
-
-    expect(
-        formatWorkGroupSummary([
-            toolItem({ name: 'render_line_chart', summaryParts: [] }),
-            toolItem({ id: 'tool-2', name: 'render_calendar_event', summaryParts: [] }),
-        ])
-    ).toBe('Rendered 2 widgets');
-});
-
 test('tool intent catalog covers mapped names', () => {
     const genericToolNames = new Set(['tool-search', 'tool_search', 'tool_search_tool']);
 

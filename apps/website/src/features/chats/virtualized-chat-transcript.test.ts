@@ -221,7 +221,7 @@ test('virtualized chat follows tail entry item growth while following', () => {
         { id: 'day:today', kind: 'dayDivider', label: 'Today' },
         agentRenderRow('turn:run-1', [
             { kind: 'row', row: thinkingRow('act_run_1_thinking') },
-            { kind: 'row', row: widgetRow('act_run_1_widget') },
+            { kind: 'row', row: richResponseRow('act_run_1_rich_response') },
         ]),
         presenceRenderRow('turn:run-1'),
     ]);
@@ -387,7 +387,7 @@ function thinkingRow(id: string): ChatRow {
     };
 }
 
-function widgetRow(id: string): ChatRow {
+function richResponseRow(id: string): ChatRow {
     return {
         actor: { id: 'agent-1', kind: 'agent' },
         completedAt: '2026-05-11T16:00:02.000Z',
@@ -395,22 +395,33 @@ function widgetRow(id: string): ChatRow {
         connectsToPrevious: false,
         id,
         isFirstInGroup: true,
-        kind: 'widget',
-        responseId: 'rsp-1',
-        sessionKey: 'session-1',
-        startedAt: '2026-05-11T16:00:02.000Z',
-        widget: {
-            component: 'tavern.render_line_chart',
+        kind: 'rich_response',
+        richResponse: {
+            component: 'tavern.rich_response',
             fallbackText: 'Sample Trend Comparison',
             id,
             props: {
-                data: [{ day: 'Jan 1', value: 12 }],
-                series: [{ key: 'value', label: 'Value' }],
-                title: 'Sample Trend Comparison',
-                xKey: 'day',
+                spec: {
+                    elements: {
+                        display: {
+                            props: {
+                                data: [{ day: 'Jan 1', value: 12 }],
+                                series: [{ key: 'value', label: 'Value' }],
+                                title: 'Sample Trend Comparison',
+                                xKey: 'day',
+                            },
+                            type: 'LineChart',
+                        },
+                    },
+                    root: 'display',
+                    state: {},
+                },
             },
             target: 'chat.inline',
             validationError: null,
         },
+        responseId: 'rsp-1',
+        sessionKey: 'session-1',
+        startedAt: '2026-05-11T16:00:02.000Z',
     };
 }

@@ -1,41 +1,20 @@
 import type {
-    TavernRenderCalendarDayEventProps,
-    TavernRenderCalendarDayProps,
-    TavernRenderCalendarEventProps,
-} from '@tavern/api/widgets/calendar';
-import {
-    tavernRenderCalendarDayComponentId,
-    tavernRenderCalendarDayPropsSchema,
-    tavernRenderCalendarEventComponentId,
-    tavernRenderCalendarEventPropsSchema,
-} from '@tavern/api/widgets/calendar';
+    RichResponseCalendarDayEventProps,
+    RichResponseCalendarDayProps,
+    RichResponseCalendarEventProps,
+} from '@tavern/api/rich-responses/calendar';
+import { RichResponseFrame } from '../components/rich-responses/rich-response-frame.tsx';
 import { Elevated } from '../components/ui/surface.tsx';
-import { WidgetFrame } from '../components/widgets/widget-frame.tsx';
 import { cn } from '../lib/utils.ts';
-import type { TavernWidget } from './types.ts';
 
-export function renderCalendarWidget(widget: TavernWidget): React.ReactNode {
-    if (widget.component === tavernRenderCalendarEventComponentId) {
-        const parsed = tavernRenderCalendarEventPropsSchema.safeParse(widget.props);
-        return parsed.success ? <CalendarEventWidget props={parsed.data} /> : null;
-    }
-
-    if (widget.component === tavernRenderCalendarDayComponentId) {
-        const parsed = tavernRenderCalendarDayPropsSchema.safeParse(widget.props);
-        return parsed.success ? <CalendarDayWidget props={parsed.data} /> : null;
-    }
-
-    return null;
-}
-
-function CalendarEventWidget({ props }: { props: TavernRenderCalendarEventProps }) {
+export function RichResponseCalendarEvent({ props }: { props: RichResponseCalendarEventProps }) {
     const date = dateFromCalendarValue(props.date);
     const timeLabel = formatEventTime(props);
     const detailText = [props.location, props.notes].filter(Boolean).join(' - ');
     const descriptionText = detailText || 'No description.';
 
     return (
-        <WidgetFrame>
+        <RichResponseFrame>
             <div className="flex items-start gap-3">
                 <CalendarTile date={date} />
                 <div className="flex min-h-[72px] min-w-0 flex-1 flex-col gap-1">
@@ -52,7 +31,7 @@ function CalendarEventWidget({ props }: { props: TavernRenderCalendarEventProps 
                     </p>
                 </div>
             </div>
-        </WidgetFrame>
+        </RichResponseFrame>
     );
 }
 
@@ -80,12 +59,12 @@ function CalendarTile({ date }: { date: Date }) {
     );
 }
 
-function CalendarDayWidget({ props }: { props: TavernRenderCalendarDayProps }) {
+export function RichResponseCalendarDay({ props }: { props: RichResponseCalendarDayProps }) {
     const date = dateFromCalendarValue(props.date);
     const timezone = timezoneDisplayNameForDate(date, props.timezone);
 
     return (
-        <WidgetFrame className="max-w-[30rem]">
+        <RichResponseFrame className="max-w-[30rem]">
             <section
                 aria-label={props.title ?? formatFullDate(date)}
                 className="flex min-w-0 gap-3 max-[420px]:flex-col"
@@ -114,11 +93,11 @@ function CalendarDayWidget({ props }: { props: TavernRenderCalendarDayProps }) {
                     )}
                 </div>
             </section>
-        </WidgetFrame>
+        </RichResponseFrame>
     );
 }
 
-function CalendarDayEventCard({ event }: { event: TavernRenderCalendarDayEventProps }) {
+function CalendarDayEventCard({ event }: { event: RichResponseCalendarDayEventProps }) {
     const detailText = [event.location, event.notes].filter(Boolean).join(' - ');
     const descriptionText = detailText || 'No description.';
 
@@ -159,7 +138,7 @@ function formatFullDate(date: Date) {
     return fullDateFormatter.format(date);
 }
 
-function formatEventTime(props: TavernRenderCalendarEventProps) {
+function formatEventTime(props: RichResponseCalendarEventProps) {
     const timezoneLabel = timezoneDisplayNameForDate(
         dateFromCalendarValue(props.date),
         props.timezone
@@ -176,7 +155,7 @@ function formatEventTime(props: TavernRenderCalendarEventProps) {
     return joinTimeLabel(formatTimeRange(props.startTime, props.endTime), timezoneLabel);
 }
 
-function formatDayEventTime(event: TavernRenderCalendarDayEventProps) {
+function formatDayEventTime(event: RichResponseCalendarDayEventProps) {
     if (event.allDay) {
         return 'All day';
     }
@@ -246,7 +225,7 @@ function dateFromCalendarValue(value: string) {
     return new Date(Date.UTC(Number(year), Number(month) - 1, Number(day)));
 }
 
-function dayEventKey(event: TavernRenderCalendarDayEventProps, index: number) {
+function dayEventKey(event: RichResponseCalendarDayEventProps, index: number) {
     return `${event.startTime ?? 'all-day'}-${event.endTime ?? 'open'}-${event.title}-${index}`;
 }
 

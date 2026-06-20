@@ -31,6 +31,9 @@ export type TavernUpsertResponseActivityRequest = TavernApiSchema<'UpsertRespons
 export type TavernUpsertResponseRequest = TavernApiSchema<'UpsertResponseRequest'>;
 
 export * from './development-chat-demos.js';
+export * from './rich-responses/calendar/contracts.js';
+export * from './rich-responses/charts/contracts.js';
+export * from './rich-responses/contracts.js';
 export * from './runtime/contracts.js';
 export * from './runtime/mcp.js';
 export * from './runtime/model-identity.js';
@@ -40,6 +43,3 @@ export * from './runtime/runtime-aliases.js';
 export * from './runtime/skill-hub.js';
 export * from './runtime/skills.js';
 export * from './runtime/toolset-setup.js';
-export * from './widgets/calendar/contracts.js';
-export * from './widgets/charts/contracts.js';
-export * from './widgets/contracts.js';

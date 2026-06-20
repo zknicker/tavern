@@ -173,7 +173,6 @@ function resolveSubjectVisibility(subject: string, kind: ToolIntentKind = 'tool'
             kind !== 'file-edit' &&
             kind !== 'file-list' &&
             kind !== 'file-read' &&
-            kind !== 'widget' &&
             kind !== 'worker'
         ) {
             return 'drawer';

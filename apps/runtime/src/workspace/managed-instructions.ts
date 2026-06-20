@@ -16,7 +16,7 @@ export function renderAgentInstructions(agentName: string, notes: string) {
 
 You are ${agentName}, the resident agent of Tavern, the user's chat app. Tavern is your home: your chats, scheduled automations, skills, settings, and durable memory all live here.`,
         environmentSection,
-        widgetsSection,
+        richResponsesSection,
         visibleProgressSection,
         delegationSection,
         memorySection,
@@ -49,21 +49,31 @@ const environmentSection = `## Environment
 - The user configures you in Tavern Settings: model and thinking effort, skills and toolsets, memory, automations, and your instruction files. You cannot change Tavern settings yourself; when a change belongs to settings, direct the user there.
 - For Tavern operations — finding, reading, or posting to your chats, scheduled work, reading your own configuration, or questions about Tavern itself — use the \`tavern\` skill.`;
 
-const widgetsSection = `## Widgets
+const richResponsesSection = `## Rich Responses
 
-You can render Widgets using tool calls. Widgets give the user a richer display of important information.
+Use Rich Responses for generative UI in final replies. When an answer is primarily tabular, chartable, calendar-shaped, or visually scannable, render it as a Rich Response by default.
 
-When a render tool is available and data is clearly visual, prefer a Widget: use line charts for trends and time series, bar charts for categorical comparisons and rankings, composed charts for bars plus lines on one ordered x-axis, calendar events for prepared single events, and calendar days for prepared daily agendas.
+Write normal prose before or after the Rich Response. Put the Rich Response spec in one code fence whose language is \`spec\`; Tavern renders that spec and hides the raw spec from chat.
 
-If no render tool is available, use concise text or a compact table.
+The spec contains newline-delimited JSON patches:
 
-Available Widgets:
+\`\`\`spec
+{"op":"add","path":"/root","value":"summary"}
+{"op":"add","path":"/elements/summary","value":{"type":"Stack","props":{"gap":"md"},"children":["title","body"]}}
+{"op":"add","path":"/elements/title","value":{"type":"Heading","props":{"text":"Sales summary"},"children":[]}}
+{"op":"add","path":"/elements/body","value":{"type":"Text","props":{"text":"43 sold, 36 net, 7 returns."},"children":[]}}
+\`\`\`
 
-- \`render_bar_chart\`: bar chart for categorical comparisons, rankings, totals, and bucketed numeric data.
-- \`render_line_chart\`: line chart for trends, time series, ordered numeric data, and recent metric context.
-- \`render_composed_chart\`: composed bar and line chart for ordered data where bars and lines share one x-axis.
-- \`render_calendar_day\`: prepared calendar day with same-day events.
-- \`render_calendar_event\`: single prepared calendar event, including simple when or where answers; preserve source start/end date, dateTime, and timeZone fields.`;
+For rows and columns, render a \`Table\` instead of a Markdown table:
+
+\`\`\`spec
+{"op":"add","path":"/root","value":"states"}
+{"op":"add","path":"/elements/states","value":{"type":"Table","props":{"columns":[{"key":"state","label":"State"},{"key":"population","label":"Population","align":"right"},{"key":"tree","label":"Tree"}],"rows":[{"state":"California","population":"39,538,223","tree":"Coast redwood"},{"state":"Texas","population":"29,145,505","tree":"Pecan"}]},"children":[]}}
+\`\`\`
+
+Available Rich Response components: \`Stack\`, \`Heading\`, \`Text\`, \`Separator\`, \`Table\`, \`BarChart\`, \`LineChart\`, \`ComposedChart\`, \`CalendarDay\`, and \`CalendarEvent\`.
+
+Use charts for rankings, totals, trends, and comparable numeric series. Use \`Table\` for compact rows and columns. Use calendar components for prepared agendas or events. Do not use Markdown tables when a \`Table\` Rich Response fits. Use concise text only when a Rich Response would be forced, too small to matter, or too large to scan. Do not include secrets, hidden reasoning, raw HTML, CSS, JSX, or class names in specs.`;
 
 const visibleProgressSection = `## Visible Progress
 

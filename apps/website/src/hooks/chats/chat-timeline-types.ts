@@ -32,14 +32,11 @@ export interface ChatTurnProgressStep {
         | 'notice'
         | 'plan'
         | 'reasoning'
+        | 'rich_response'
         | 'tool'
-        | 'widget'
         | 'worker';
     label: string;
-    status: 'active' | 'completed' | 'failed';
-    toolCallId?: string | null;
-    toolName?: string | null;
-    widget?: {
+    richResponse?: {
         component: string | null;
         fallbackText: string;
         id: string;
@@ -47,6 +44,9 @@ export interface ChatTurnProgressStep {
         target: string | null;
         validationError: string | null;
     };
+    status: 'active' | 'completed' | 'failed';
+    toolCallId?: string | null;
+    toolName?: string | null;
 }
 
 export interface ChatTimelineState {

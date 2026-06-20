@@ -94,8 +94,9 @@ Activity events project to live `turn.progress` steps for app patching. The
 step kind comes from the durable activity: `approval` activities project as
 `approval` steps, activities carrying `metadata.runtime.notice` project as
 `notice` steps, and activities carrying `metadata.subagent` source facts
-project as `worker` steps. `widget` activities project as `widget` steps with
-the render payload for immediate inline rendering. Activities carrying
+project as `worker` steps. `rich_response` activities project as
+`rich_response` steps with the render payload for immediate inline rendering.
+Activities carrying
 `metadata.clarification` project as `tool` steps named `clarify` with a typed
 `clarification` payload
 for choices, answer state, disposition, and deadline. The projected step id

@@ -329,7 +329,7 @@ describe('Tavern channel store', () => {
         ]);
     });
 
-    it('projects durable widget activity as widget turn progress', () => {
+    it('projects durable rich response activity as rich response turn progress', () => {
         createChat({ id: 'cht_1' });
         upsertResponse('cht_1', {
             id: 'rsp_run_1',
@@ -347,8 +347,8 @@ describe('Tavern channel store', () => {
         upsertResponseActivity('cht_1', 'rsp_run_1', {
             completed_at: '2026-05-16T12:00:02.000Z',
             detail: 'Quarterly Revenue',
-            id: 'act_widget_1',
-            kind: 'widget',
+            id: 'act_rich_response_1',
+            kind: 'rich_response',
             metadata: {
                 runtime: {
                     agentId: 'main',
@@ -356,21 +356,32 @@ describe('Tavern channel store', () => {
                     sessionKey: 'session-1',
                     startedAt: '2026-05-16T12:00:00.000Z',
                 },
-                widget: {
-                    component: 'tavern.render_bar_chart',
+                richResponse: {
+                    component: 'tavern.rich_response',
                     fallback: { text: 'Quarterly Revenue' },
                     props: {
-                        data: [{ quarter: 'Q1', revenue: 12_000 }],
-                        series: [{ key: 'revenue', label: 'Revenue' }],
-                        title: 'Quarterly Revenue',
-                        xKey: 'quarter',
+                        spec: {
+                            elements: {
+                                chart: {
+                                    props: {
+                                        data: [{ quarter: 'Q1', revenue: 12_000 }],
+                                        series: [{ key: 'revenue', label: 'Revenue' }],
+                                        title: 'Quarterly Revenue',
+                                        xKey: 'quarter',
+                                    },
+                                    type: 'BarChart',
+                                },
+                            },
+                            root: 'chart',
+                            state: {},
+                        },
                     },
                     target: 'chat.inline',
                 },
             },
             started_at: '2026-05-16T12:00:01.000Z',
             status: 'completed',
-            title: 'render_bar_chart',
+            title: 'Rich Response',
         });
 
         expect(
@@ -379,23 +390,24 @@ describe('Tavern channel store', () => {
             expect.objectContaining({
                 step: {
                     detail: 'Quarterly Revenue',
-                    id: 'act_widget_1',
-                    kind: 'widget',
-                    label: 'render_bar_chart',
-                    status: 'completed',
-                    toolCallId: null,
-                    toolName: null,
-                    widget: {
-                        component: 'tavern.render_bar_chart',
+                    id: 'act_rich_response_1',
+                    kind: 'rich_response',
+                    label: 'Rich Response',
+                    richResponse: {
+                        component: 'tavern.rich_response',
                         fallbackText: 'Quarterly Revenue',
-                        id: 'act_widget_1',
+                        id: 'act_rich_response_1',
                         props: expect.objectContaining({
-                            title: 'Quarterly Revenue',
-                            xKey: 'quarter',
+                            spec: expect.objectContaining({
+                                root: 'chart',
+                            }),
                         }),
                         target: 'chat.inline',
                         validationError: null,
                     },
+                    status: 'completed',
+                    toolCallId: null,
+                    toolName: null,
                 },
                 type: 'turn.progress',
             })

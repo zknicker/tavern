@@ -106,7 +106,7 @@ manage businesses, complete knowledge work, and automate routine tasks.
 | API Overview | [API Overview](api/overview.md) |
 | Data Model | [Data Model](internals/data-model.md) |
 | Chat Demos | [Chat Demos](internals/chat-demos.md) |
-| Widgets | [Widgets](internals/widgets.md) |
+| Rich Responses | [Rich Responses](internals/rich-responses.md) |
 
 ## Operations
 

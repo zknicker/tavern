@@ -1,17 +1,9 @@
 import { CollapseIcon, ExpandIcon } from '@hugeicons/core-free-icons';
 import type {
-    TavernRenderBarChartProps,
-    TavernRenderComposedChartProps,
-    TavernRenderLineChartProps,
-} from '@tavern/api/widgets/charts';
-import {
-    tavernRenderBarChartComponentId,
-    tavernRenderBarChartPropsSchema,
-    tavernRenderComposedChartComponentId,
-    tavernRenderComposedChartPropsSchema,
-    tavernRenderLineChartComponentId,
-    tavernRenderLineChartPropsSchema,
-} from '@tavern/api/widgets/charts';
+    RichResponseBarChartProps,
+    RichResponseComposedChartProps,
+    RichResponseLineChartProps,
+} from '@tavern/api/rich-responses/charts';
 import { type ReactNode, useState } from 'react';
 import { Area, AreaChart } from '../components/charts/area-chart.tsx';
 import { Bar } from '../components/charts/bar.tsx';
@@ -25,9 +17,9 @@ import { SeriesBar } from '../components/charts/series-bar.tsx';
 import { ChartTooltip } from '../components/charts/tooltip/index.ts';
 import { XAxis } from '../components/charts/x-axis.tsx';
 import { YAxis } from '../components/charts/y-axis.tsx';
+import { RichResponseFrame } from '../components/rich-responses/rich-response-frame.tsx';
 import { Icon } from '../components/ui/icon.tsx';
 import { Button } from '../components/ui/primitives/button.tsx';
-import { WidgetFrame } from '../components/widgets/widget-frame.tsx';
 import { ChartLegend } from './chart-legend.tsx';
 import {
     buildBarChartMargin,
@@ -46,31 +38,8 @@ import {
     normalizeLineChartData,
     seriesColor,
 } from './chart-view-model.ts';
-import type { TavernWidget } from './types.ts';
 
-export function renderChartWidget(widget: TavernWidget): React.ReactNode {
-    if (widget.component === tavernRenderBarChartComponentId) {
-        const parsed = tavernRenderBarChartPropsSchema.safeParse(widget.props);
-
-        return parsed.success ? <TavernBarChart props={parsed.data} /> : null;
-    }
-
-    if (widget.component === tavernRenderLineChartComponentId) {
-        const parsed = tavernRenderLineChartPropsSchema.safeParse(widget.props);
-
-        return parsed.success ? <TavernLineChart props={parsed.data} /> : null;
-    }
-
-    if (widget.component === tavernRenderComposedChartComponentId) {
-        const parsed = tavernRenderComposedChartPropsSchema.safeParse(widget.props);
-
-        return parsed.success ? <TavernComposedChart props={parsed.data} /> : null;
-    }
-
-    return null;
-}
-
-function TavernBarChart({ props }: { props: TavernRenderBarChartProps }) {
+export function RichResponseBarChart({ props }: { props: RichResponseBarChartProps }) {
     const [hoveredSeriesIndex, setHoveredSeriesIndex] = useState<null | number>(null);
     const legendItems = buildLegendItems(props);
     const margin = buildBarChartMargin(props);
@@ -80,7 +49,7 @@ function TavernBarChart({ props }: { props: TavernRenderBarChartProps }) {
             hoveredIndex={hoveredSeriesIndex}
             onHoverChange={setHoveredSeriesIndex}
         >
-            <ChartWidgetFrame title={props.title}>
+            <ChartFrame title={props.title}>
                 <BarChart
                     aspectRatio="16 / 9"
                     barGap={0.2}
@@ -112,12 +81,12 @@ function TavernBarChart({ props }: { props: TavernRenderBarChartProps }) {
                     items={legendItems}
                     onHoverChange={setHoveredSeriesIndex}
                 />
-            </ChartWidgetFrame>
+            </ChartFrame>
         </ChartLegendHoverProvider>
     );
 }
 
-function TavernLineChart({ props }: { props: TavernRenderLineChartProps }) {
+export function RichResponseLineChart({ props }: { props: RichResponseLineChartProps }) {
     const [hoveredSeriesIndex, setHoveredSeriesIndex] = useState<null | number>(null);
     const chartData = normalizeLineChartData(props);
     const legendItems = buildLegendItems(props);
@@ -128,7 +97,7 @@ function TavernLineChart({ props }: { props: TavernRenderLineChartProps }) {
             hoveredIndex={hoveredSeriesIndex}
             onHoverChange={setHoveredSeriesIndex}
         >
-            <ChartWidgetFrame title={props.title}>
+            <ChartFrame title={props.title}>
                 <AreaChart
                     aspectRatio="16 / 9"
                     data={chartData}
@@ -161,12 +130,12 @@ function TavernLineChart({ props }: { props: TavernRenderLineChartProps }) {
                     items={legendItems}
                     onHoverChange={setHoveredSeriesIndex}
                 />
-            </ChartWidgetFrame>
+            </ChartFrame>
         </ChartLegendHoverProvider>
     );
 }
 
-function TavernComposedChart({ props }: { props: TavernRenderComposedChartProps }) {
+export function RichResponseComposedChart({ props }: { props: RichResponseComposedChartProps }) {
     const [hoveredSeriesIndex, setHoveredSeriesIndex] = useState<null | number>(null);
     const chartSeries = buildComposedSeries(props);
     const chartData = normalizeLineChartData({ ...props, series: chartSeries });
@@ -182,7 +151,7 @@ function TavernComposedChart({ props }: { props: TavernRenderComposedChartProps 
             hoveredIndex={hoveredSeriesIndex}
             onHoverChange={setHoveredSeriesIndex}
         >
-            <ChartWidgetFrame title={props.title}>
+            <ChartFrame title={props.title}>
                 <ComposedChart
                     aspectRatio="16 / 9"
                     barGap={6}
@@ -242,17 +211,17 @@ function TavernComposedChart({ props }: { props: TavernRenderComposedChartProps 
                     items={legendItems}
                     onHoverChange={setHoveredSeriesIndex}
                 />
-            </ChartWidgetFrame>
+            </ChartFrame>
         </ChartLegendHoverProvider>
     );
 }
 
-function ChartWidgetFrame({ children, title }: { children: ReactNode; title: string }) {
+function ChartFrame({ children, title }: { children: ReactNode; title: string }) {
     const [expanded, setExpanded] = useState(false);
     const toggleLabel = expanded ? 'Collapse chart' : 'Expand chart';
 
     return (
-        <WidgetFrame
+        <RichResponseFrame
             action={
                 <Button
                     aria-label={toggleLabel}
@@ -277,6 +246,6 @@ function ChartWidgetFrame({ children, title }: { children: ReactNode; title: str
             <div className="min-w-0" style={chartStyleVars}>
                 {children}
             </div>
-        </WidgetFrame>
+        </RichResponseFrame>
     );
 }

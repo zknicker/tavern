@@ -396,7 +396,7 @@ export interface components {
         /** @enum {string} */
         ResponseStatus: "queued" | "running" | "completed" | "failed" | "cancelled";
         /** @enum {string} */
-        ResponseActivityKind: "planning" | "reasoning" | "tool_call" | "tool_result" | "command" | "approval" | "message" | "artifact" | "widget" | "custom";
+        ResponseActivityKind: "planning" | "reasoning" | "tool_call" | "tool_result" | "command" | "approval" | "message" | "artifact" | "rich_response" | "custom";
         ChatResponse: {
             id: components["schemas"]["ResponseId"];
             chat_id: components["schemas"]["ChatId"];

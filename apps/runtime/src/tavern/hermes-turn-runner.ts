@@ -7,20 +7,10 @@ import type {
 import { readConfigValue } from '../config';
 import { closeSharedHermesClient, getSharedHermesClient } from '../hermes/shared-client';
 import {
-    calendarWidgetActivityFromRenderCalendarDayTool,
-    calendarWidgetActivityFromRenderCalendarEventTool,
-    renderCalendarDayToolName,
-    renderCalendarEventToolName,
-} from '../widgets/calendar';
-import {
-    chartWidgetActivityFromRenderBarChartTool,
-    chartWidgetActivityFromRenderComposedChartTool,
-    chartWidgetActivityFromRenderLineChartTool,
-    renderBarChartToolName,
-    renderComposedChartToolName,
-    renderLineChartToolName,
-} from '../widgets/charts';
-import { widgetActivityFromHermesRender, widgetProgressFromActivity } from '../widgets/render';
+    parseRichResponseFromAssistantContent,
+    richResponseActivity,
+    richResponseProgressFromActivity,
+} from '../rich-responses/render';
 import { createDelivery, upsertResponse, upsertResponseActivity } from './chat-api';
 import { createAgentParticipantId } from './chat-api/ids';
 import { createGatewayActivityRecorder } from './hermes-gateway-activities';
@@ -96,7 +86,6 @@ export async function runHermesTurn(input: {
     const progressMessages: string[] = [];
     let reasoningSegment: ReasoningSegment | null = null;
     let reasoningSegmentIndex = 0;
-    let widgetRenderIndex = 0;
     const toolArgumentsByKey = new Map<string, unknown>();
     const completedReasoningMessages: string[] = [];
     const stream = createTurnStreamThrottle();
@@ -246,14 +235,6 @@ export async function runHermesTurn(input: {
                 continue;
             }
 
-            if (event.event === 'ui.render') {
-                widgetRenderIndex += 1;
-                flushAssistantToProgress();
-                stream.flush();
-                recordWidgetRender(input, turn, event, widgetRenderIndex);
-                continue;
-            }
-
             if (event.event === 'assistant.delta') {
                 const delta = readStreamText(event.data.delta) ?? '';
                 assistantContent += delta;
@@ -342,10 +323,6 @@ export async function runHermesTurn(input: {
                 rememberToolArguments(toolArgumentsByKey, event);
                 const toolEvent = eventWithKnownToolArguments(toolArgumentsByKey, event);
                 recordToolLifecycle(input, turn, toolEvent);
-                if (toolEvent.event === 'tool.completed') {
-                    widgetRenderIndex += 1;
-                    recordRenderToolWidget(input, turn, toolEvent, widgetRenderIndex);
-                }
                 continue;
             }
 
@@ -410,14 +387,21 @@ export async function runHermesTurn(input: {
             return;
         }
 
-        if (!assistantContent.trim()) {
+        const richResponse = parseRichResponseFromAssistantContent(assistantContent);
+        const deliveredAssistantContent = richResponse?.displayContent ?? assistantContent;
+
+        if (!(deliveredAssistantContent.trim() || richResponse)) {
             throw new Error('Agent failed to produce a reply.');
+        }
+
+        if (richResponse) {
+            recordRichResponse(input, turn, richResponse);
         }
 
         completeHermesTurn(
             input,
             participantId,
-            assistantContent,
+            deliveredAssistantContent,
             assistantMessageId,
             turn,
             modelContext
@@ -833,70 +817,37 @@ function recordToolProgress(input: HermesTurnInput, turn: HermesTurn, event: Her
     });
 }
 
-function recordWidgetRender(
+function recordRichResponse(
     input: HermesTurnInput,
     turn: HermesTurn,
-    event: HermesEvent,
-    index: number
+    richResponse: NonNullable<ReturnType<typeof parseRichResponseFromAssistantContent>>
 ) {
     const timestamp = new Date().toISOString();
-    const activity = widgetActivityFromHermesRender({
-        activityId: createActivityId(input.runId, `ui_${index}`),
+    const activity = richResponseActivity({
+        activityId: createActivityId(input.runId, 'rich_response'),
         agentId: input.agentId,
-        eventData: event.data,
+        fallbackText: richResponse.fallbackText,
         messageId: input.requestMessageId,
+        render: richResponse.render,
         runId: input.runId,
         sessionKey: input.sessionKey,
+        source: 'assistant.spec',
         startedAt: turn.startedAt,
         timestamp,
     });
 
     upsertResponseActivity(input.chatId, input.responseId, activity);
-    publishWidgetProgress(turn, activity, timestamp);
+    publishRichResponseProgress(turn, activity, timestamp);
 }
 
-function recordRenderToolWidget(
-    input: HermesTurnInput,
+function publishRichResponseProgress(
     turn: HermesTurn,
-    event: HermesEvent,
-    index: number
-) {
-    const toolName = readString(event.data.tool_name);
-    const projector = widgetToolProjector(toolName);
-
-    if (!projector || event.data.error === true) {
-        return;
-    }
-
-    const toolCallId = readString(event.data.tool_call_id);
-    const timestamp = new Date().toISOString();
-    const activity = projector({
-        activityId: createActivityId(input.runId, `widget_${toolCallId ?? index}`),
-        agentId: input.agentId,
-        messageId: input.requestMessageId,
-        runId: input.runId,
-        sessionKey: input.sessionKey,
-        startedAt: turn.startedAt,
-        timestamp,
-        toolInput: event.data.arguments ?? {},
-    });
-
-    if (!activity) {
-        return;
-    }
-
-    upsertResponseActivity(input.chatId, input.responseId, activity);
-    publishWidgetProgress(turn, activity, timestamp);
-}
-
-function publishWidgetProgress(
-    turn: HermesTurn,
-    activity: ReturnType<typeof widgetActivityFromHermesRender>,
+    activity: ReturnType<typeof richResponseActivity>,
     timestamp: string
 ) {
-    const widget = widgetProgressFromActivity(activity);
+    const richResponse = richResponseProgressFromActivity(activity);
 
-    if (!widget) {
+    if (!richResponse) {
         return;
     }
 
@@ -904,32 +855,15 @@ function publishWidgetProgress(
         step: {
             detail: activity.detail,
             id: activity.id,
-            kind: 'widget',
+            kind: 'rich_response',
             label: activity.title,
             status: activity.status === 'failed' ? 'failed' : 'completed',
-            widget,
+            richResponse,
         },
         timestamp,
         turn,
         type: 'turn.progress',
     });
-}
-
-function widgetToolProjector(toolName: string | null) {
-    switch (toolName) {
-        case renderBarChartToolName:
-            return chartWidgetActivityFromRenderBarChartTool;
-        case renderLineChartToolName:
-            return chartWidgetActivityFromRenderLineChartTool;
-        case renderComposedChartToolName:
-            return chartWidgetActivityFromRenderComposedChartTool;
-        case renderCalendarDayToolName:
-            return calendarWidgetActivityFromRenderCalendarDayTool;
-        case renderCalendarEventToolName:
-            return calendarWidgetActivityFromRenderCalendarEventTool;
-        default:
-            return null;
-    }
 }
 
 function isRecordableAssistantStatus(event: HermesEvent) {

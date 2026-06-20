@@ -230,27 +230,38 @@ test('progress patch inserts a notice step as a runtime-notice system row', () =
     });
 });
 
-test('progress patch inserts a widget row for live widget progress', () => {
+test('progress patch inserts a Rich Response row for live Rich Response progress', () => {
     const log = patchChatLogWithProgress(emptyLog(), {
         step: {
             detail: 'Quarterly Revenue',
-            id: 'act_run-1_widget_chart',
-            kind: 'widget',
-            label: 'render_bar_chart',
-            status: 'completed',
-            widget: {
-                component: 'tavern.render_bar_chart',
+            id: 'act_run-1_rich_response',
+            kind: 'rich_response',
+            label: 'Rich Response',
+            richResponse: {
+                component: 'tavern.rich_response',
                 fallbackText: 'Quarterly Revenue',
-                id: 'act_run-1_widget_chart',
+                id: 'act_run-1_rich_response',
                 props: {
-                    data: [{ quarter: 'Q1', revenue: 12_000 }],
-                    series: [{ key: 'revenue', label: 'Revenue' }],
-                    title: 'Quarterly Revenue',
-                    xKey: 'quarter',
+                    spec: {
+                        elements: {
+                            chart: {
+                                props: {
+                                    data: [{ quarter: 'Q1', revenue: 12_000 }],
+                                    series: [{ key: 'revenue', label: 'Revenue' }],
+                                    title: 'Quarterly Revenue',
+                                    xKey: 'quarter',
+                                },
+                                type: 'BarChart',
+                            },
+                        },
+                        root: 'chart',
+                        state: {},
+                    },
                 },
                 target: 'chat.inline',
                 validationError: null,
             },
+            status: 'completed',
         },
         timestamp: '2026-05-22T19:00:03.000Z',
         turn,
@@ -259,19 +270,20 @@ test('progress patch inserts a widget row for live widget progress', () => {
     expect(log?.rows).toHaveLength(1);
     expect(log?.rows[0]).toMatchObject({
         completedAt: '2026-05-22T19:00:03.000Z',
-        id: 'act_run-1_widget_chart',
-        kind: 'widget',
-        sessionKey: turn.sessionKey,
-        widget: {
-            component: 'tavern.render_bar_chart',
+        id: 'act_run-1_rich_response',
+        kind: 'rich_response',
+        richResponse: {
+            component: 'tavern.rich_response',
             fallbackText: 'Quarterly Revenue',
             props: {
-                title: 'Quarterly Revenue',
-                xKey: 'quarter',
+                spec: expect.objectContaining({
+                    root: 'chart',
+                }),
             },
             target: 'chat.inline',
             validationError: null,
         },
+        sessionKey: turn.sessionKey,
     });
 });
 

@@ -130,9 +130,8 @@ Hermes stream events become Tavern rows by stable ids.
 | `tool.progress` with a tool id | Running `tool_call` response activity. |
 | `tool.progress` without a tool id | `message` response activity so status prose does not masquerade as a tool. |
 | `tool.started` / `tool.completed` / `tool.failed` | Upserted `tool_call` activity keyed by normalized tool call id. |
-| `tool.completed` for a chart Widget tool | Also records `widget` response activity with the chart component id when the completed tool input validates. |
-| `ui.render` | Records first-class `widget` response activity from the typed render payload. |
-| `assistant.completed` | Final assistant message content and optional model/provider/usage metadata. If Hermes includes distinct final reasoning, Runtime stores it as completed `Thinking` activity. |
+| `assistant.completed` with a fenced `spec` block | Stores the compiled spec as `rich_response` activity and strips the raw spec from delivered assistant text. |
+| `assistant.completed` | Final assistant message content and optional model/provider/usage metadata. If the content contains a Rich Response spec, Runtime stores it as activity before completing the turn. If Hermes includes distinct final reasoning, Runtime stores it as completed `Thinking` activity. |
 | `error` | Failed response with Runtime event and failure metadata. |
 
 Visible assistant preambles and intra-turn updates are `message` response

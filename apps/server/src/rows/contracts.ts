@@ -76,7 +76,7 @@ export const workerRowSchema = z.object({
     worker: workerSchema,
 });
 
-export const widgetSchema = z.object({
+export const richResponseSchema = z.object({
     component: z.string().nullable(),
     fallbackText: z.string(),
     id: z.string(),
@@ -85,18 +85,18 @@ export const widgetSchema = z.object({
     validationError: z.string().nullable(),
 });
 
-export const widgetRowSchema = z.object({
+export const richResponseRowSchema = z.object({
     actor: actorRefSchema.nullable(),
     completedAt: z.string().nullable(),
     connectsToNext: z.boolean(),
     connectsToPrevious: z.boolean(),
     id: z.string(),
     isFirstInGroup: z.boolean(),
-    kind: z.literal('widget'),
+    kind: z.literal('rich_response'),
     responseId: z.string().optional(),
     sessionKey: z.string().nullable(),
     startedAt: z.string().nullable(),
-    widget: widgetSchema,
+    richResponse: richResponseSchema,
 });
 
 export const runtimeNoticeSchema = z.object({
@@ -185,7 +185,7 @@ export const systemRowSchema = z.discriminatedUnion('systemKind', [
 export const historyRowSchema = z.discriminatedUnion('kind', [
     messageRowSchema,
     toolRowSchema,
-    widgetRowSchema,
+    richResponseRowSchema,
     workerRowSchema,
     systemRowSchema,
 ]);

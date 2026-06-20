@@ -283,111 +283,192 @@ test('ChatTranscript renders tool calls and agent responses through one surface'
     assert.doesNotMatch(markup, /aria-expanded="true"/);
 });
 
-test('ChatTranscript renders chart widgets inline', () => {
-    const markup = renderTranscript([widgetRow('ui-chart')]);
+test('ChatTranscript renders chart Rich Responses inline', () => {
+    const markup = renderTranscript([richResponseRow('ui-chart')]);
 
     assert.match(markup, /Quarterly Revenue/);
     assert.match(markup, /\$15,500/);
     assert.match(markup, /relative w-full overflow-visible/);
-    assert.doesNotMatch(markup, /Widget unavailable/);
+    assert.doesNotMatch(markup, /Rich Response unavailable/);
     assert.doesNotMatch(markup, /aria-expanded/);
 });
 
-test('ChatTranscript renders line chart widgets inline', () => {
-    const row = widgetRow('ui-line-chart');
+test('ChatTranscript renders Rich Response table matrix shorthand', () => {
+    const row = richResponseRow('ui-table-matrix');
 
-    if (row.kind !== 'widget') {
-        throw new Error('Expected Widget row.');
+    if (row.kind !== 'rich_response') {
+        throw new Error('Expected Rich Response row.');
     }
 
     const markup = renderTranscript([
         {
             ...row,
-            widget: {
-                ...row.widget,
-                component: 'tavern.render_line_chart',
+            richResponse: {
+                ...row.richResponse,
+                fallbackText: 'Top states',
+                props: {
+                    spec: {
+                        elements: {
+                            display: {
+                                children: ['title', 'table'],
+                                props: { gap: 'md' },
+                                type: 'Stack',
+                            },
+                            table: {
+                                props: {
+                                    columns: ['State', 'Population'],
+                                    rows: [
+                                        ['California', '39,538,223'],
+                                        ['Texas', '29,145,505'],
+                                    ],
+                                },
+                                type: 'Table',
+                            },
+                            title: {
+                                props: { text: 'Top states' },
+                                type: 'Heading',
+                            },
+                        },
+                        root: 'display',
+                        state: {},
+                    },
+                },
+            },
+        },
+    ]);
+
+    assert.match(markup, /Top states/);
+    assert.match(markup, /Population/);
+    assert.match(markup, /California/);
+    assert.match(markup, /39,538,223/);
+    assert.doesNotMatch(markup, /Rich Response unavailable/);
+});
+
+test('ChatTranscript renders line chart Rich Responses inline', () => {
+    const row = richResponseRow('ui-line-chart');
+
+    if (row.kind !== 'rich_response') {
+        throw new Error('Expected Rich Response row.');
+    }
+
+    const markup = renderTranscript([
+        {
+            ...row,
+            richResponse: {
+                ...row.richResponse,
                 fallbackText: 'Monthly Net Signups',
                 props: {
-                    data: [
-                        { month: 'Jan', net: -12 },
-                        { month: 'Feb', net: 18 },
-                    ],
-                    series: [{ key: 'net', label: 'Net' }],
-                    title: 'Monthly Net Signups',
-                    xKey: 'month',
+                    spec: {
+                        elements: {
+                            display: {
+                                props: {
+                                    data: [
+                                        { month: 'Jan', net: -12 },
+                                        { month: 'Feb', net: 18 },
+                                    ],
+                                    series: [{ key: 'net', label: 'Net' }],
+                                    title: 'Monthly Net Signups',
+                                    xKey: 'month',
+                                },
+                                type: 'LineChart',
+                            },
+                        },
+                        root: 'display',
+                        state: {},
+                    },
                 },
             },
         },
     ]);
 
     assert.match(markup, /Monthly Net Signups/);
-    assert.doesNotMatch(markup, /Widget unavailable/);
+    assert.doesNotMatch(markup, /Rich Response unavailable/);
 });
 
-test('ChatTranscript renders composed chart widgets inline', () => {
-    const row = widgetRow('ui-composed-chart');
+test('ChatTranscript renders composed chart Rich Responses inline', () => {
+    const row = richResponseRow('ui-composed-chart');
 
-    if (row.kind !== 'widget') {
-        throw new Error('Expected Widget row.');
+    if (row.kind !== 'rich_response') {
+        throw new Error('Expected Rich Response row.');
     }
 
     const markup = renderTranscript([
         {
             ...row,
-            widget: {
-                ...row.widget,
-                component: 'tavern.render_composed_chart',
+            richResponse: {
+                ...row.richResponse,
                 fallbackText: 'Revenue and Profit',
                 props: {
-                    barSeries: [{ key: 'revenue', label: 'Revenue' }],
-                    barUnit: 'USD',
-                    data: [
-                        { month: '2026-01-01', profit: 31, revenue: 120 },
-                        { month: '2026-02-01', profit: 34, revenue: 138 },
-                    ],
-                    lineUnit: '%',
-                    lineSeries: [{ key: 'profit', label: 'Profit' }],
-                    title: 'Revenue and Profit',
-                    xKey: 'month',
+                    spec: {
+                        elements: {
+                            display: {
+                                props: {
+                                    barSeries: [{ key: 'revenue', label: 'Revenue' }],
+                                    barUnit: 'USD',
+                                    data: [
+                                        { month: '2026-01-01', profit: 31, revenue: 120 },
+                                        { month: '2026-02-01', profit: 34, revenue: 138 },
+                                    ],
+                                    lineSeries: [{ key: 'profit', label: 'Profit' }],
+                                    lineUnit: '%',
+                                    title: 'Revenue and Profit',
+                                    xKey: 'month',
+                                },
+                                type: 'ComposedChart',
+                            },
+                        },
+                        root: 'display',
+                        state: {},
+                    },
                 },
             },
         },
     ]);
 
     assert.match(markup, /Revenue and Profit/);
-    assert.doesNotMatch(markup, /Widget unavailable/);
+    assert.doesNotMatch(markup, /Rich Response unavailable/);
 });
 
-test('ChatTranscript renders calendar day widgets inline', () => {
-    const row = widgetRow('ui-calendar-day');
+test('ChatTranscript renders calendar day Rich Responses inline', () => {
+    const row = richResponseRow('ui-calendar-day');
 
-    if (row.kind !== 'widget') {
-        throw new Error('Expected Widget row.');
+    if (row.kind !== 'rich_response') {
+        throw new Error('Expected Rich Response row.');
     }
 
     const markup = renderTranscript([
         {
             ...row,
-            widget: {
-                ...row.widget,
-                component: 'tavern.render_calendar_day',
+            richResponse: {
+                ...row.richResponse,
                 fallbackText: 'Saturday schedule',
                 props: {
-                    date: '2026-06-20',
-                    events: [
-                        {
-                            endTime: '12:45',
-                            startTime: '12:00',
-                            title: 'Lunch',
+                    spec: {
+                        elements: {
+                            display: {
+                                props: {
+                                    date: '2026-06-20',
+                                    events: [
+                                        {
+                                            endTime: '12:45',
+                                            startTime: '12:00',
+                                            title: 'Lunch',
+                                        },
+                                        {
+                                            endTime: '14:00',
+                                            startTime: '13:00',
+                                            title: 'Q1 roadmap review',
+                                        },
+                                    ],
+                                    timezone: 'America/New_York',
+                                    title: 'Saturday schedule',
+                                },
+                                type: 'CalendarDay',
+                            },
                         },
-                        {
-                            endTime: '14:00',
-                            startTime: '13:00',
-                            title: 'Q1 roadmap review',
-                        },
-                    ],
-                    timezone: 'America/New_York',
-                    title: 'Saturday schedule',
+                        root: 'display',
+                        state: {},
+                    },
                 },
             },
         },
@@ -403,28 +484,38 @@ test('ChatTranscript renders calendar day widgets inline', () => {
     assert.match(markup, /max-w-\[30rem\]/);
     assert.match(markup, /border-border\/45/);
     assert.match(markup, /shadow-surface-1/);
-    assert.doesNotMatch(markup, /Widget unavailable/);
+    assert.doesNotMatch(markup, /Rich Response unavailable/);
 });
 
 test('ChatTranscript renders calendar event description fallback', () => {
-    const row = widgetRow('ui-calendar-event');
+    const row = richResponseRow('ui-calendar-event');
 
-    if (row.kind !== 'widget') {
-        throw new Error('Expected Widget row.');
+    if (row.kind !== 'rich_response') {
+        throw new Error('Expected Rich Response row.');
     }
 
     const markup = renderTranscript([
         {
             ...row,
-            widget: {
-                ...row.widget,
-                component: 'tavern.render_calendar_event',
+            richResponse: {
+                ...row.richResponse,
                 fallbackText: 'Focus block',
                 props: {
-                    date: '2026-06-20',
-                    endTime: '14:00',
-                    startTime: '13:00',
-                    title: 'Focus block',
+                    spec: {
+                        elements: {
+                            display: {
+                                props: {
+                                    date: '2026-06-20',
+                                    endTime: '14:00',
+                                    startTime: '13:00',
+                                    title: 'Focus block',
+                                },
+                                type: 'CalendarEvent',
+                            },
+                        },
+                        root: 'display',
+                        state: {},
+                    },
                 },
             },
         },
@@ -434,50 +525,96 @@ test('ChatTranscript renders calendar event description fallback', () => {
     assert.match(markup, /No description\./);
     assert.match(markup, /flex items-start gap-3/);
     assert.match(markup, /min-h-\[72px\] min-w-0 flex-1 flex-col gap-1/);
-    assert.doesNotMatch(markup, /Widget unavailable/);
+    assert.doesNotMatch(markup, /Rich Response unavailable/);
 });
 
-test('ChatTranscript renders fallback for invalid widgets', () => {
-    const row = widgetRow('ui-invalid');
+test('ChatTranscript renders fallback for invalid Rich Responses', () => {
+    const row = richResponseRow('ui-invalid');
 
-    if (row.kind !== 'widget') {
-        throw new Error('Expected Widget row.');
+    if (row.kind !== 'rich_response') {
+        throw new Error('Expected Rich Response row.');
     }
 
     const markup = renderTranscript([
         {
             ...row,
-            widget: {
-                ...row.widget,
+            richResponse: {
+                ...row.richResponse,
                 props: { data: [] },
-                validationError: 'Invalid widget.',
+                validationError: 'Invalid Rich Response.',
             },
         },
     ]);
 
     assert.match(markup, /Quarterly Revenue/);
-    assert.match(markup, /Widget unavailable/);
+    assert.match(markup, /Rich Response unavailable/);
 });
 
-test('ChatTranscript renders fallback for unknown widget components', () => {
-    const row = widgetRow('ui-unknown');
+test('ChatTranscript renders fallback when a nested Rich Response element is invalid', () => {
+    const row = richResponseRow('ui-invalid-nested-table');
 
-    if (row.kind !== 'widget') {
-        throw new Error('Expected Widget row.');
+    if (row.kind !== 'rich_response') {
+        throw new Error('Expected Rich Response row.');
     }
 
     const markup = renderTranscript([
         {
             ...row,
-            widget: {
-                ...row.widget,
-                component: 'tavern.chart.line.v1',
+            richResponse: {
+                ...row.richResponse,
+                fallbackText: 'Top states',
+                props: {
+                    spec: {
+                        elements: {
+                            display: {
+                                children: ['title', 'table'],
+                                props: { gap: 'md' },
+                                type: 'Stack',
+                            },
+                            table: {
+                                props: {
+                                    columns: ['State'],
+                                    rows: [{ state: 'California' }],
+                                },
+                                type: 'Table',
+                            },
+                            title: {
+                                props: { text: 'Top states' },
+                                type: 'Heading',
+                            },
+                        },
+                        root: 'display',
+                        state: {},
+                    },
+                },
+            },
+        },
+    ]);
+
+    assert.match(markup, /Top states/);
+    assert.match(markup, /Rich Response unavailable/);
+    assert.doesNotMatch(markup, /California/);
+});
+
+test('ChatTranscript renders fallback for unknown Rich Response components', () => {
+    const row = richResponseRow('ui-unknown');
+
+    if (row.kind !== 'rich_response') {
+        throw new Error('Expected Rich Response row.');
+    }
+
+    const markup = renderTranscript([
+        {
+            ...row,
+            richResponse: {
+                ...row.richResponse,
+                component: 'tavern.unknown',
             },
         },
     ]);
 
     assert.match(markup, /Quarterly Revenue/);
-    assert.match(markup, /Widget unavailable/);
+    assert.match(markup, /Rich Response unavailable/);
 });
 
 test('ChatTranscript hides reasoning by default', () => {
@@ -1909,7 +2046,7 @@ function pendingApprovalRow(
     };
 }
 
-function widgetRow(id: string): ChatRow {
+function richResponseRow(id: string): ChatRow {
     return {
         actor: { id: 'tiny', kind: 'agent' },
         completedAt: '2026-03-31T15:00:01.000Z',
@@ -1917,27 +2054,38 @@ function widgetRow(id: string): ChatRow {
         connectsToPrevious: false,
         id,
         isFirstInGroup: true,
-        kind: 'widget',
-        responseId: 'rsp_ui',
-        sessionKey: 'agent:tiny:session-1',
-        startedAt: '2026-03-31T15:00:00.000Z',
-        widget: {
-            component: 'tavern.render_bar_chart',
+        kind: 'rich_response',
+        richResponse: {
+            component: 'tavern.rich_response',
             fallbackText: 'Quarterly Revenue',
             id,
             props: {
-                data: [
-                    { quarter: 'Q1', revenue: 12_000 },
-                    { quarter: 'Q2', revenue: 15_500 },
-                ],
-                series: [{ key: 'revenue', label: 'Revenue' }],
-                title: 'Quarterly Revenue',
-                unit: 'USD',
-                xKey: 'quarter',
+                spec: {
+                    elements: {
+                        display: {
+                            props: {
+                                data: [
+                                    { quarter: 'Q1', revenue: 12_000 },
+                                    { quarter: 'Q2', revenue: 15_500 },
+                                ],
+                                series: [{ key: 'revenue', label: 'Revenue' }],
+                                title: 'Quarterly Revenue',
+                                unit: 'USD',
+                                xKey: 'quarter',
+                            },
+                            type: 'BarChart',
+                        },
+                    },
+                    root: 'display',
+                    state: {},
+                },
             },
             target: 'chat.inline',
             validationError: null,
         },
+        responseId: 'rsp_ui',
+        sessionKey: 'agent:tiny:session-1',
+        startedAt: '2026-03-31T15:00:00.000Z',
     };
 }
 

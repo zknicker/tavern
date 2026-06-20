@@ -6,7 +6,7 @@ import type {
     TavernResponseActivity,
 } from '@tavern/api';
 import type { Database } from '../db/sqlite';
-import { widgetProgressFromActivity } from '../widgets/render';
+import { richResponseProgressFromActivity } from '../rich-responses/render';
 import { listEvents } from './chat-api';
 import { createRunId } from './chat-api/ids';
 
@@ -218,7 +218,7 @@ function activityEventToRuntimeEvents(
 ): PersistedRuntimeEvent[] {
     const turn = activityToTurn(event.activity);
     const detail = activityStepDetail(event.activity);
-    const widget = widgetProgressFromActivity(event.activity) ?? undefined;
+    const richResponse = richResponseProgressFromActivity(event.activity) ?? undefined;
     const runtimeEvent: AgentRuntimeEvent = {
         step: {
             clarification: clarificationFromActivity(event.activity) ?? undefined,
@@ -226,10 +226,10 @@ function activityEventToRuntimeEvents(
             id: event.activity.id,
             kind: activityKind(event.activity),
             label: event.activity.title,
+            richResponse,
             status: activityStatus(event.activity.status, event.type),
             toolCallId: metadataRuntimeString(event.activity.metadata, 'toolCallId'),
             toolName: metadataRuntimeString(event.activity.metadata, 'toolName'),
-            widget,
         },
         timestamp: event.created_at,
         turn,
@@ -319,8 +319,8 @@ function activityKind(activity: TavernResponseActivity) {
     if (kind === 'message') {
         return 'message' as const;
     }
-    if (kind === 'widget') {
-        return 'widget' as const;
+    if (kind === 'rich_response') {
+        return 'rich_response' as const;
     }
     return 'tool' as const;
 }

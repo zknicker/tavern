@@ -292,7 +292,7 @@ function rowTimestamp(row: ChatTimeline[number]) {
     const timestamp =
         row.kind === 'message'
             ? row.message.timestamp
-            : row.kind === 'tool' || row.kind === 'widget'
+            : row.kind === 'tool' || row.kind === 'rich_response'
               ? (row.startedAt ?? row.completedAt)
               : row.kind === 'worker'
                 ? (row.startedAt ?? row.completedAt ?? row.worker.lastEventAt)

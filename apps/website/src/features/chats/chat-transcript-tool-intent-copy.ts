@@ -121,12 +121,6 @@ export const intentCopy: Record<ToolIntentKind, ToolIntentCopy> = {
         completed: 'Searched web',
         priority: 8,
     },
-    widget: {
-        active: 'Rendering a widget',
-        completed: 'Rendered a widget',
-        plural: 'Rendered {count} widgets',
-        priority: 10,
-    },
     worker: {
         active: 'Working with agents',
         completed: 'Worked with agents',
@@ -182,8 +176,6 @@ export function activeVerb(kind: ToolIntentKind) {
             return 'Generating';
         case 'web':
             return 'Searching';
-        case 'widget':
-            return 'Rendering';
         case 'worker':
             return 'Working on';
     }
@@ -237,8 +229,6 @@ export function completedVerb(kind: ToolIntentKind) {
             return 'Generated';
         case 'web':
             return 'Searched';
-        case 'widget':
-            return 'Rendered';
         case 'worker':
             return 'Worked on';
     }

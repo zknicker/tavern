@@ -1,23 +1,13 @@
 import {
-    type TavernRenderBarChartProps,
-    type TavernRenderCalendarDayProps,
-    type TavernRenderCalendarDayToolInput,
-    type TavernRenderCalendarEventProps,
-    type TavernRenderCalendarEventToolInput,
-    type TavernRenderLineChartProps,
-    tavernRenderBarChartComponentId,
-    tavernRenderBarChartToolInputSchema,
-    tavernRenderBarChartToolName,
-    tavernRenderCalendarDayComponentId,
-    tavernRenderCalendarDayToolInputSchema,
-    tavernRenderCalendarDayToolName,
-    tavernRenderCalendarEventComponentId,
-    tavernRenderCalendarEventToolInputSchema,
-    tavernRenderCalendarEventToolName,
-    tavernRenderLineChartComponentId,
-    tavernRenderLineChartToolInputSchema,
-    tavernRenderLineChartToolName,
-    type WidgetRenderInput,
+    type RichResponseBarChartProps,
+    type RichResponseCalendarDayProps,
+    type RichResponseCalendarEventProps,
+    type RichResponseLineChartProps,
+    type RichResponseRenderInput,
+    richResponseCalendarDayPropsSchema,
+    richResponseCalendarEventPropsSchema,
+    richResponseComponentId,
+    richResponseLineChartPropsSchema,
 } from '@tavern/api';
 import { developmentChatDemoIds } from '@tavern/api/development-chat-demos';
 import {
@@ -26,7 +16,6 @@ import {
     completedResponse,
     type DevelopmentChatDemo,
     demoTime,
-    toolActivity,
     userMessage,
 } from './development-chat-demo-types';
 
@@ -35,87 +24,8 @@ const longPastedOAuthJson =
 const longOAuthConsentUrl =
     'https://accounts.google.com/o/oauth2/auth?response_type=code&client_id=535034123734-jckkmfjk3qajgeo8mhcstmtkbdrt0gn2.apps.googleusercontent.com&redirect_uri=http%3A%2F%2Flocalhost%3A1&scope=https%3A%2F%2Fwww.googleapis.com%2Fauth%2Fcalendar.events.readonly&access_type=offline&prompt=consent&state=tavern_static_preview_long_agent_response_token';
 
-export function chartDemo(): DevelopmentChatDemo {
-    const chartToolInput = chartDemoToolInput();
-    const chartProps = tavernRenderBarChartToolInputSchema.parse(chartToolInput);
-    const chatId = developmentChatDemoIds.charts;
-    const runId = 'run_demo_charts';
-    const requestMessageId = 'msg_demo_charts_request';
-    const responseMessageId = 'msg_demo_charts_response';
-
-    return {
-        chatId,
-        title: 'Demo: Charts',
-        messages: [
-            userMessage({
-                chatId,
-                content: 'Show quarterly revenue as a chart.',
-                id: requestMessageId,
-                nonce: 'demo-charts-request',
-            }),
-            assistantMessage({
-                chatId,
-                content: 'Here is the quarterly revenue chart.',
-                id: responseMessageId,
-                nonce: 'demo-charts-response',
-                requestMessageId,
-                runId,
-            }),
-        ],
-        responses: [
-            {
-                ...completedResponse({
-                    chatId,
-                    id: 'rsp_demo_charts',
-                    requestMessageId,
-                    responseMessageId,
-                    runId,
-                    summary: 'Rendered a chart demo.',
-                }),
-                activities: [
-                    toolActivity({
-                        chatId,
-                        id: 'act_demo_charts_tool',
-                        requestMessageId,
-                        runId,
-                        sequence: 1,
-                        title: tavernRenderBarChartToolName,
-                        toolArguments: chartToolInput,
-                        toolCallId: 'call_demo_charts_tool',
-                        toolName: tavernRenderBarChartToolName,
-                        toolResult: { status: 'rendered' },
-                    }),
-                    {
-                        completed_at: demoTime,
-                        detail: chartProps.title,
-                        id: 'act_demo_charts_widget',
-                        kind: 'widget',
-                        metadata: {
-                            runtime: activityRuntimeMetadata({
-                                chatId,
-                                id: 'act_demo_charts_widget',
-                                requestMessageId,
-                                runId,
-                                sequence: 2,
-                                source: tavernRenderBarChartToolName,
-                            }),
-                            widget: chartDemoRenderInput(chartProps),
-                        },
-                        sequence: 2,
-                        started_at: demoTime,
-                        status: 'completed',
-                        summary: chartProps.title,
-                        title: tavernRenderBarChartToolName,
-                    },
-                ],
-            },
-        ],
-    };
-}
-
 export function lineChartDemo(): DevelopmentChatDemo {
-    const chartToolInput = lineChartDemoToolInput();
-    const chartProps = tavernRenderLineChartToolInputSchema.parse(chartToolInput);
+    const chartProps = richResponseLineChartPropsSchema.parse(lineChartDemoProps());
     const chatId = developmentChatDemoIds.lineChart;
     const runId = 'run_demo_line_chart';
     const requestMessageId = 'msg_demo_line_chart_request';
@@ -151,39 +61,27 @@ export function lineChartDemo(): DevelopmentChatDemo {
                     summary: 'Rendered a line chart demo.',
                 }),
                 activities: [
-                    toolActivity({
-                        chatId,
-                        id: 'act_demo_line_chart_tool',
-                        requestMessageId,
-                        runId,
-                        sequence: 1,
-                        title: tavernRenderLineChartToolName,
-                        toolArguments: chartToolInput,
-                        toolCallId: 'call_demo_line_chart_tool',
-                        toolName: tavernRenderLineChartToolName,
-                        toolResult: { status: 'rendered' },
-                    }),
                     {
                         completed_at: demoTime,
                         detail: chartProps.title,
-                        id: 'act_demo_line_chart_widget',
-                        kind: 'widget',
+                        id: 'act_demo_line_chart_rich_response',
+                        kind: 'rich_response',
                         metadata: {
                             runtime: activityRuntimeMetadata({
                                 chatId,
-                                id: 'act_demo_line_chart_widget',
+                                id: 'act_demo_line_chart_rich_response',
                                 requestMessageId,
                                 runId,
-                                sequence: 2,
-                                source: tavernRenderLineChartToolName,
+                                sequence: 1,
+                                source: 'demo.rich_response',
                             }),
-                            widget: lineChartDemoRenderInput(chartProps),
+                            richResponse: lineChartDemoRenderInput(chartProps),
                         },
-                        sequence: 2,
+                        sequence: 1,
                         started_at: demoTime,
                         status: 'completed',
                         summary: chartProps.title,
-                        title: tavernRenderLineChartToolName,
+                        title: 'Rich Response',
                     },
                 ],
             },
@@ -192,8 +90,7 @@ export function lineChartDemo(): DevelopmentChatDemo {
 }
 
 export function calendarEventDemo(): DevelopmentChatDemo {
-    const eventToolInput = calendarEventDemoToolInput();
-    const eventProps = tavernRenderCalendarEventToolInputSchema.parse(eventToolInput);
+    const eventProps = richResponseCalendarEventPropsSchema.parse(calendarEventDemoProps());
     const chatId = developmentChatDemoIds.calendarEvent;
     const runId = 'run_demo_calendar_event';
     const requestMessageId = 'msg_demo_calendar_event_request';
@@ -229,39 +126,27 @@ export function calendarEventDemo(): DevelopmentChatDemo {
                     summary: 'Rendered a calendar event demo.',
                 }),
                 activities: [
-                    toolActivity({
-                        chatId,
-                        id: 'act_demo_calendar_event_tool',
-                        requestMessageId,
-                        runId,
-                        sequence: 1,
-                        title: tavernRenderCalendarEventToolName,
-                        toolArguments: eventToolInput,
-                        toolCallId: 'call_demo_calendar_event_tool',
-                        toolName: tavernRenderCalendarEventToolName,
-                        toolResult: { status: 'rendered' },
-                    }),
                     {
                         completed_at: demoTime,
                         detail: eventProps.title,
-                        id: 'act_demo_calendar_event_widget',
-                        kind: 'widget',
+                        id: 'act_demo_calendar_event_rich_response',
+                        kind: 'rich_response',
                         metadata: {
                             runtime: activityRuntimeMetadata({
                                 chatId,
-                                id: 'act_demo_calendar_event_widget',
+                                id: 'act_demo_calendar_event_rich_response',
                                 requestMessageId,
                                 runId,
-                                sequence: 2,
-                                source: tavernRenderCalendarEventToolName,
+                                sequence: 1,
+                                source: 'demo.rich_response',
                             }),
-                            widget: calendarEventDemoRenderInput(eventProps),
+                            richResponse: calendarEventDemoRenderInput(eventProps),
                         },
-                        sequence: 2,
+                        sequence: 1,
                         started_at: demoTime,
                         status: 'completed',
                         summary: eventProps.title,
-                        title: tavernRenderCalendarEventToolName,
+                        title: 'Rich Response',
                     },
                 ],
             },
@@ -270,8 +155,7 @@ export function calendarEventDemo(): DevelopmentChatDemo {
 }
 
 export function calendarDayDemo(): DevelopmentChatDemo {
-    const dayToolInput = calendarDayDemoToolInput();
-    const dayProps = tavernRenderCalendarDayToolInputSchema.parse(dayToolInput);
+    const dayProps = richResponseCalendarDayPropsSchema.parse(calendarDayDemoProps());
     const chatId = developmentChatDemoIds.calendarDay;
     const runId = 'run_demo_calendar_day';
     const requestMessageId = 'msg_demo_calendar_day_request';
@@ -307,39 +191,27 @@ export function calendarDayDemo(): DevelopmentChatDemo {
                     summary: 'Rendered a calendar day demo.',
                 }),
                 activities: [
-                    toolActivity({
-                        chatId,
-                        id: 'act_demo_calendar_day_tool',
-                        requestMessageId,
-                        runId,
-                        sequence: 1,
-                        title: tavernRenderCalendarDayToolName,
-                        toolArguments: dayToolInput,
-                        toolCallId: 'call_demo_calendar_day_tool',
-                        toolName: tavernRenderCalendarDayToolName,
-                        toolResult: { status: 'rendered' },
-                    }),
                     {
                         completed_at: demoTime,
                         detail: dayProps.title ?? dayProps.date,
-                        id: 'act_demo_calendar_day_widget',
-                        kind: 'widget',
+                        id: 'act_demo_calendar_day_rich_response',
+                        kind: 'rich_response',
                         metadata: {
                             runtime: activityRuntimeMetadata({
                                 chatId,
-                                id: 'act_demo_calendar_day_widget',
+                                id: 'act_demo_calendar_day_rich_response',
                                 requestMessageId,
                                 runId,
-                                sequence: 2,
-                                source: tavernRenderCalendarDayToolName,
+                                sequence: 1,
+                                source: 'demo.rich_response',
                             }),
-                            widget: calendarDayDemoRenderInput(dayProps),
+                            richResponse: calendarDayDemoRenderInput(dayProps),
                         },
-                        sequence: 2,
+                        sequence: 1,
                         started_at: demoTime,
                         status: 'completed',
                         summary: dayProps.title ?? dayProps.date,
-                        title: tavernRenderCalendarDayToolName,
+                        title: 'Rich Response',
                     },
                 ],
             },
@@ -449,43 +321,51 @@ function completedTextDemo(input: {
     };
 }
 
-export function chartDemoRenderInput(props: TavernRenderBarChartProps): WidgetRenderInput {
+export function barChartDemoRenderInput(props: RichResponseBarChartProps): RichResponseRenderInput {
+    return richResponseDemoRenderInput('BarChart', props.title, props);
+}
+
+export function lineChartDemoRenderInput(
+    props: RichResponseLineChartProps
+): RichResponseRenderInput {
+    return richResponseDemoRenderInput('LineChart', props.title, props);
+}
+
+function calendarEventDemoRenderInput(
+    props: RichResponseCalendarEventProps
+): RichResponseRenderInput {
+    return richResponseDemoRenderInput('CalendarEvent', props.title, props);
+}
+
+function calendarDayDemoRenderInput(props: RichResponseCalendarDayProps): RichResponseRenderInput {
+    return richResponseDemoRenderInput('CalendarDay', props.title ?? props.date, props);
+}
+
+export function richResponseDemoRenderInput(
+    type: RichResponseRenderInput['props']['spec']['elements'][string]['type'],
+    fallbackText: string,
+    props: Record<string, unknown>
+): RichResponseRenderInput {
     return {
-        component: tavernRenderBarChartComponentId,
-        fallback: { text: props.title },
-        props,
+        component: richResponseComponentId,
+        fallback: { text: fallbackText },
+        props: {
+            spec: {
+                elements: {
+                    display: {
+                        props,
+                        type,
+                    },
+                },
+                root: 'display',
+                state: {},
+            },
+        },
         target: 'chat.inline',
     };
 }
 
-export function lineChartDemoRenderInput(props: TavernRenderLineChartProps): WidgetRenderInput {
-    return {
-        component: tavernRenderLineChartComponentId,
-        fallback: { text: props.title },
-        props,
-        target: 'chat.inline',
-    };
-}
-
-function calendarEventDemoRenderInput(props: TavernRenderCalendarEventProps): WidgetRenderInput {
-    return {
-        component: tavernRenderCalendarEventComponentId,
-        fallback: { text: props.title },
-        props,
-        target: 'chat.inline',
-    };
-}
-
-function calendarDayDemoRenderInput(props: TavernRenderCalendarDayProps): WidgetRenderInput {
-    return {
-        component: tavernRenderCalendarDayComponentId,
-        fallback: { text: props.title ?? props.date },
-        props,
-        target: 'chat.inline',
-    };
-}
-
-export function chartDemoToolInput() {
+export function chartDemoProps(): RichResponseBarChartProps {
     return {
         data: [
             { quarter: 'Q1', revenue: 12_000, expenses: 7600 },
@@ -493,44 +373,51 @@ export function chartDemoToolInput() {
             { quarter: 'Q3', revenue: 18_200, expenses: 10_100 },
             { quarter: 'Q4', revenue: 22_400, expenses: 11_800 },
         ],
+        series: [
+            { key: 'revenue', label: 'Revenue' },
+            { key: 'expenses', label: 'Expenses' },
+        ],
         title: 'Quarterly Revenue',
         unit: 'USD',
-        x: 'quarter',
-        y: ['revenue', 'expenses'],
+        xKey: 'quarter',
     };
 }
 
-function calendarEventDemoToolInput(): TavernRenderCalendarEventToolInput {
+function calendarEventDemoProps(): RichResponseCalendarEventProps {
     return {
         calendar: 'Product',
-        description: 'Review roadmap priorities and launch risks.',
-        end: { dateTime: '2026-06-20T14:00:00-04:00', timeZone: 'America/New_York' },
+        date: '2026-06-20',
+        endTime: '14:00',
         location: 'Design room',
-        start: { dateTime: '2026-06-20T13:00:00-04:00', timeZone: 'America/New_York' },
-        summary: 'Q1 roadmap review',
+        notes: 'Review roadmap priorities and launch risks.',
+        startTime: '13:00',
+        timezone: 'America/New_York',
+        title: 'Q1 roadmap review',
     };
 }
 
-function calendarDayDemoToolInput(): TavernRenderCalendarDayToolInput {
+function calendarDayDemoProps(): RichResponseCalendarDayProps {
     return {
         date: '2026-06-20',
         events: [
             {
-                end: { dateTime: '2026-06-20T12:45:00-04:00', timeZone: 'America/New_York' },
-                start: { dateTime: '2026-06-20T12:00:00-04:00', timeZone: 'America/New_York' },
-                summary: 'Lunch',
+                endTime: '12:45',
+                startTime: '12:00',
+                title: 'Lunch',
             },
             {
                 calendar: 'Product',
-                end: { dateTime: '2026-06-20T14:00:00-04:00', timeZone: 'America/New_York' },
-                start: { dateTime: '2026-06-20T13:00:00-04:00', timeZone: 'America/New_York' },
-                summary: 'Q1 roadmap review',
+                endTime: '14:00',
+                location: 'Design room',
+                notes: 'Review roadmap priorities and launch risks.',
+                startTime: '13:00',
+                title: 'Q1 roadmap review',
             },
             {
                 calendar: 'Team',
-                end: { dateTime: '2026-06-20T16:00:00-04:00', timeZone: 'America/New_York' },
-                start: { dateTime: '2026-06-20T15:30:00-04:00', timeZone: 'America/New_York' },
-                summary: 'Team standup',
+                endTime: '16:00',
+                startTime: '15:30',
+                title: 'Team standup',
             },
         ],
         timezone: 'America/New_York',
@@ -538,7 +425,7 @@ function calendarDayDemoToolInput(): TavernRenderCalendarDayToolInput {
     };
 }
 
-export function lineChartDemoToolInput() {
+export function lineChartDemoProps(): RichResponseLineChartProps {
     return {
         data: [
             { date: 'May 20', users: 1320, pageviews: 5200 },
@@ -572,8 +459,11 @@ export function lineChartDemoToolInput() {
             { date: 'Jun 17', users: 2160, pageviews: 8820 },
             { date: 'Jun 18', users: 2180, pageviews: 8950 },
         ],
+        series: [
+            { key: 'users', label: 'Users' },
+            { key: 'pageviews', label: 'Pageviews' },
+        ],
         title: 'Daily Traffic',
-        x: 'date',
-        y: ['users', 'pageviews'],
+        xKey: 'date',
     };
 }

@@ -39,8 +39,8 @@ custom presentation for a specific tool.
   first step** (`apps/website/src/features/chats/chat-transcript-activity.tsx`
   → `WorkingLog` group mode). The header is permanent and uses the
   `chat-transcript-tool-intents.ts` entrypoint to summarize the top tool intent
-  families: "Read 2 files, searched code", "Rendered a calendar event", "Needs
-  approval". Short commands, file paths, and first-party Widget targets can
+  families: "Read 2 files, searched code", "Updated tasks", "Needs approval".
+  Short commands and file paths can
   appear in the header; long commands, approval commands, browser payloads, and
   search queries stay in the drawer. Active headers latch meaningful copy and
   animate short text changes with SlotText, so fast tool state changes do not

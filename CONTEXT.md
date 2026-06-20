@@ -8,38 +8,41 @@ the docs to read before changing behavior.
 
 ## Language
 
-**Widget**:
-A typed app-rendered UI block produced by an agent event and rendered by Tavern in chat or another
-known product surface.
-_Avoid_: UI block, widget kit, AG-UI component, ChatKit widget
+**Rich Response**:
+One assistant-authored, app-rendered UI island attached to an assistant response.
+_Avoid_: Widget, UI block, widget kit, AG-UI component, ChatKit widget
 
-**Widget activity**:
-The durable response activity kind that stores a Widget render request in Tavern chat history.
-_Avoid_: Custom activity with widget metadata, UI metadata row
+**Rich Response activity**:
+The durable response activity kind that stores a Rich Response in Tavern chat history.
+_Avoid_: Widget activity, custom activity with UI metadata
 
-**Widget tool**:
-A narrow agent-facing tool that collects typed Widget intent and lets Runtime produce the
-corresponding `ui.render` event.
-_Avoid_: Raw JSON instruction, generic render-widget tool
+**Rich Response Spec**:
+The validated json-render document that describes a Rich Response's state, layout, and catalog
+components.
+_Avoid_: Raw JSON, HTML, JSX, component tree
 
-**Widget definition**:
-The package-shaped TypeScript module that owns one widget family's typed contract.
-_Avoid_: Plugin, manifest package, runtime package
+**Rich Response Catalog**:
+The Tavern-owned vocabulary of components and prop schemas an agent may use inside a Rich Response.
+_Avoid_: Plugin registry, arbitrary component set, model component library
+
+**Rich Response Component**:
+A single allowed component in the Rich Response Catalog, rendered by Tavern from validated props.
+_Avoid_: React component, model component, widget tool
 
 **Host adapter**:
-A small integration file in Runtime, Server, or Website that connects a widget definition to that
+A small integration file in Runtime, Server, or Website that connects a Rich Response contract to that
 layer's existing event, projection, or rendering pipeline.
-_Avoid_: Widget implementation, plugin loader
+_Avoid_: Rich Response implementation, plugin loader
 
 **Surface component**:
-A normal Tavern App React component used to render validated widget props with the app's shared
+A normal Tavern App React component used to render validated rich-response props with the app's shared
 visual system.
 _Avoid_: Model component, widget primitive
 
 **Charts**:
-The Widget family for agent-authored chart intent.
+The Rich Response Component family for agent-authored chart displays.
 _Avoid_: Chart kit
 
-**Widget component**:
-A single renderable contract inside a Widget family, with its own component id and props schema.
-_Avoid_: Widget, React component
+**Calendar displays**:
+The Rich Response Component family for agent-authored calendar event and calendar day displays.
+_Avoid_: Calendar widget tools

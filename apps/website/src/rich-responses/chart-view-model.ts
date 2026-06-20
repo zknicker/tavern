@@ -1,14 +1,14 @@
 import type {
-    TavernRenderBarChartProps,
-    TavernRenderComposedChartProps,
-} from '@tavern/api/widgets/charts';
+    RichResponseBarChartProps,
+    RichResponseComposedChartProps,
+} from '@tavern/api/rich-responses/charts';
 import type { CSSProperties } from 'react';
 import { buildPackedChartMargin } from '../components/charts/axis-packing.ts';
 import { intFmt } from '../components/charts/chart-formatters.ts';
 import type { LegendItemData } from '../components/charts/legend/index.ts';
 import type { TooltipRow } from '../components/charts/tooltip/index.ts';
 
-type ChartSeries = TavernRenderBarChartProps['series'];
+type ChartSeries = RichResponseBarChartProps['series'];
 export type ChartLegendItemData = LegendItemData & { unit?: string };
 
 type ChartUnitResolver =
@@ -17,7 +17,7 @@ type ChartUnitResolver =
     | undefined;
 
 interface ChartValueProps {
-    data: TavernRenderBarChartProps['data'];
+    data: RichResponseBarChartProps['data'];
     series: ChartSeries;
     title: string;
     unit?: string;
@@ -97,7 +97,7 @@ export function composedLineMarkerStyle(color: string) {
     };
 }
 
-export function buildBarChartMargin(props: TavernRenderBarChartProps) {
+export function buildBarChartMargin(props: RichResponseBarChartProps) {
     return buildPackedChartMargin({
         base: { bottom: 44, left: 30, right: 18, top: 24 },
         data: props.data,
@@ -133,7 +133,7 @@ export function buildLineChartMargin(data: Record<string, unknown>[], series: Ch
 
 export function buildComposedChartMargin(
     data: Record<string, unknown>[],
-    props: TavernRenderComposedChartProps
+    props: RichResponseComposedChartProps
 ) {
     const barUnit = composedBarUnit(props);
     const lineUnit = composedLineUnit(props);
@@ -160,19 +160,19 @@ export function buildComposedChartMargin(
     });
 }
 
-export function buildComposedSeries(props: TavernRenderComposedChartProps): ChartSeries {
+export function buildComposedSeries(props: RichResponseComposedChartProps): ChartSeries {
     return [...props.barSeries, ...props.lineSeries];
 }
 
-export function composedBarUnit(props: TavernRenderComposedChartProps) {
+export function composedBarUnit(props: RichResponseComposedChartProps) {
     return props.barUnit ?? props.unit;
 }
 
-export function composedLineUnit(props: TavernRenderComposedChartProps) {
+export function composedLineUnit(props: RichResponseComposedChartProps) {
     return props.lineUnit ?? props.unit;
 }
 
-export function composedSeriesUnit(props: TavernRenderComposedChartProps, index: number) {
+export function composedSeriesUnit(props: RichResponseComposedChartProps, index: number) {
     return index < props.barSeries.length ? composedBarUnit(props) : composedLineUnit(props);
 }
 

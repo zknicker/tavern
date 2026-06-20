@@ -178,8 +178,8 @@ describe('LocalHermesClient session routing', () => {
                             method: 'event',
                             params: {
                                 payload: {
-                                    args: { title: 'Quarterly Revenue' },
-                                    tool: 'render_bar_chart',
+                                    args: { path: 'sales-summary.json' },
+                                    tool: 'read_file',
                                 },
                                 session_id: params.session_id,
                                 type: 'tool.started',
@@ -193,8 +193,8 @@ describe('LocalHermesClient session routing', () => {
                             params: {
                                 payload: {
                                     error: true,
-                                    result_text: '{"error":"Invalid chart data"}',
-                                    tool: 'render_bar_chart',
+                                    result_text: '{"error":"File not found"}',
+                                    tool: 'read_file',
                                 },
                                 session_id: params.session_id,
                                 type: 'tool.completed',
@@ -229,23 +229,23 @@ describe('LocalHermesClient session routing', () => {
         });
 
         const events = await collect(
-            client.streamChat({ content: 'show chart', sessionKey: 'session-1' })
+            client.streamChat({ content: 'read file', sessionKey: 'session-1' })
         );
         client.close();
 
         expect(events).toMatchObject([
             {
                 data: {
-                    arguments: { title: 'Quarterly Revenue' },
-                    tool_name: 'render_bar_chart',
+                    arguments: { path: 'sales-summary.json' },
+                    tool_name: 'read_file',
                 },
                 event: 'tool.started',
             },
             {
                 data: {
                     error: true,
-                    result: '{"error":"Invalid chart data"}',
-                    tool_name: 'render_bar_chart',
+                    result: '{"error":"File not found"}',
+                    tool_name: 'read_file',
                 },
                 event: 'tool.failed',
             },

@@ -6,7 +6,7 @@ CREATE TABLE chat_response_activity (
   response_id    TEXT NOT NULL,
   chat_id        TEXT NOT NULL,
   sequence       INTEGER NOT NULL,
-  kind           TEXT NOT NULL CHECK (kind IN ('planning', 'reasoning', 'tool_call', 'tool_result', 'command', 'approval', 'message', 'artifact', 'widget', 'custom')),
+  kind           TEXT NOT NULL CHECK (kind IN ('planning', 'reasoning', 'tool_call', 'tool_result', 'command', 'approval', 'message', 'artifact', 'rich_response', 'custom')),
   status         TEXT NOT NULL CHECK (status IN ('queued', 'running', 'completed', 'failed', 'cancelled')),
   title          TEXT NOT NULL,
   detail         TEXT,
@@ -30,13 +30,13 @@ CREATE INDEX IF NOT EXISTS idx_chat_response_activity_chat_sequence
 `;
 
 export function repairRuntimeSchema(db: Database): void {
-    ensureChatResponseActivityWidgetKind(db);
+    ensureChatResponseActivityRichResponseKind(db);
 }
 
-function ensureChatResponseActivityWidgetKind(db: Database): void {
+function ensureChatResponseActivityRichResponseKind(db: Database): void {
     const sql = tableSql(db, 'chat_response_activity');
 
-    if (!sql || sql.includes("'widget'")) {
+    if (!sql || (sql.includes("'rich_response'") && !sql.includes("'widget'"))) {
         return;
     }
 
@@ -56,9 +56,11 @@ ${CHAT_RESPONSE_ACTIVITY_TABLE};
 INSERT INTO chat_response_activity
   (id, response_id, chat_id, sequence, kind, status, title, detail, summary,
    artifact_ids_json, metadata_json, started_at, updated_at, completed_at)
-  SELECT id, response_id, chat_id, sequence, kind, status, title, detail, summary,
+  SELECT id, response_id, chat_id, sequence,
+         kind, status, title, detail, summary,
          artifact_ids_json, metadata_json, started_at, updated_at, completed_at
-  FROM chat_response_activity_rebuild;
+  FROM chat_response_activity_rebuild
+  WHERE kind <> 'widget';
 DROP TABLE temp.chat_response_activity_rebuild;
 ${CHAT_RESPONSE_ACTIVITY_INDEXES}
 `);

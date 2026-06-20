@@ -2,7 +2,7 @@ import type { ReactNode } from 'react';
 import { cn } from '../../lib/utils.ts';
 import { Elevated } from '../ui/surface.tsx';
 
-export function WidgetFrame({
+export function RichResponseFrame({
     action,
     children,
     className,

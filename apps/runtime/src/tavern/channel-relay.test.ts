@@ -587,26 +587,22 @@ describe('Tavern Hermes channel relay', () => {
         );
     });
 
-    it('stores ui.render events as durable widget activity', async () => {
+    it('stores final spec fences as durable Rich Response activity', async () => {
         const runtimeEvents: unknown[] = [];
         const unsubscribe = subscribeToRuntimeEvents((event) => runtimeEvents.push(event));
+        const content = [
+            'Here is the chart.',
+            '',
+            '```spec',
+            '{"op":"add","path":"/root","value":"chart"}',
+            '{"op":"add","path":"/elements/chart","value":{"type":"BarChart","props":{"data":[{"quarter":"Q1","revenue":12000}],"series":[{"key":"revenue","label":"Revenue"}],"title":"Quarterly Revenue","xKey":"quarter"},"children":[]}}',
+            '```',
+            '',
+            'Done.',
+        ].join('\n');
         hermesClient.streamChat.mockImplementationOnce(async function* streamChat() {
             yield {
-                data: {
-                    component: 'tavern.render_bar_chart',
-                    fallback: { text: 'Quarterly Revenue' },
-                    props: {
-                        data: [{ quarter: 'Q1', revenue: 12_000 }],
-                        series: [{ key: 'revenue', label: 'Revenue' }],
-                        title: 'Quarterly Revenue',
-                        xKey: 'quarter',
-                    },
-                    target: 'chat.inline',
-                },
-                event: 'ui.render',
-            };
-            yield {
-                data: { content: 'Rendered the chart.', message_id: 'hermes_msg_ui' },
+                data: { content, message_id: 'hermes_msg_rich_response' },
                 event: 'assistant.completed',
             };
         });
@@ -618,8 +614,8 @@ describe('Tavern Hermes channel relay', () => {
             },
             message: {
                 content: 'show chart',
-                id: 'msg_ui',
-                nonce: 'nonce_ui',
+                id: 'msg_rich_response',
+                nonce: 'nonce_rich_response',
             },
             target: {
                 externalId: null,
@@ -631,464 +627,39 @@ describe('Tavern Hermes channel relay', () => {
         await waitForHermesTurn();
         unsubscribe();
 
+        expect(listMessages('cht_1').messages.at(-1)?.content).toBe('Here is the chart.\n\nDone.');
         expect(listResponses('cht_1').activity).toMatchObject([
             {
                 detail: 'Quarterly Revenue',
-                kind: 'widget',
+                kind: 'rich_response',
                 metadata: {
-                    widget: {
-                        component: 'tavern.render_bar_chart',
+                    richResponse: {
+                        component: 'tavern.rich_response',
+                        props: {
+                            spec: expect.objectContaining({
+                                root: 'chart',
+                            }),
+                        },
                         target: 'chat.inline',
                     },
                 },
-                title: 'tavern.render_bar_chart',
+                title: 'Rich Response',
             },
         ]);
         expect(runtimeEvents).toEqual(
             expect.arrayContaining([
                 expect.objectContaining({
                     step: expect.objectContaining({
-                        kind: 'widget',
-                        label: 'tavern.render_bar_chart',
-                        widget: expect.objectContaining({
-                            component: 'tavern.render_bar_chart',
+                        kind: 'rich_response',
+                        label: 'Rich Response',
+                        richResponse: expect.objectContaining({
+                            component: 'tavern.rich_response',
                             fallbackText: 'Quarterly Revenue',
                             target: 'chat.inline',
                             validationError: null,
                         }),
                     }),
                     type: 'turn.progress',
-                }),
-            ])
-        );
-    });
-
-    it('stores render-bar-chart tool completions as durable widget activity', async () => {
-        hermesClient.streamChat.mockImplementationOnce(async function* streamChat() {
-            yield {
-                data: {
-                    arguments: {
-                        data: [{ quarter: 'Q1', revenue: '12000' }],
-                        title: 'Quarterly Revenue',
-                        unit: 'USD',
-                        x: 'quarter',
-                        y: 'revenue',
-                    },
-                    tool_name: 'render_bar_chart',
-                },
-                event: 'tool.started',
-            };
-            yield {
-                data: {
-                    result: '{"status":"rendered"}',
-                    tool_name: 'render_bar_chart',
-                },
-                event: 'tool.completed',
-            };
-            yield {
-                data: { content: 'Rendered the chart.', message_id: 'hermes_msg_chart_tool' },
-                event: 'assistant.completed',
-            };
-        });
-        createChat({ id: 'cht_1' });
-
-        await sendTavernChannelMessage('cht_1', {
-            agent: {
-                agentId: 'agt_1',
-            },
-            message: {
-                content: 'show chart',
-                id: 'msg_chart_tool',
-                nonce: 'nonce_chart_tool',
-            },
-            target: {
-                externalId: null,
-                sessionKey: 'session_1',
-                target: 'cht_1',
-                type: 'tavern',
-            },
-        });
-        await waitForHermesTurn();
-
-        expect(listResponses('cht_1').activity).toEqual(
-            expect.arrayContaining([
-                expect.objectContaining({
-                    kind: 'tool_call',
-                    status: 'completed',
-                    title: 'render_bar_chart',
-                }),
-                expect.objectContaining({
-                    detail: 'Quarterly Revenue',
-                    kind: 'widget',
-                    metadata: expect.objectContaining({
-                        widget: expect.objectContaining({
-                            component: 'tavern.render_bar_chart',
-                            fallback: { text: 'Quarterly Revenue' },
-                            props: expect.objectContaining({
-                                data: [{ quarter: 'Q1', revenue: 12_000 }],
-                                series: [{ key: 'revenue', label: 'Revenue' }],
-                                unit: 'USD',
-                                xKey: 'quarter',
-                            }),
-                            target: 'chat.inline',
-                        }),
-                    }),
-                    title: 'render_bar_chart',
-                }),
-            ])
-        );
-    });
-
-    it('stores render-line-chart tool completions as durable widget activity', async () => {
-        hermesClient.streamChat.mockImplementationOnce(async function* streamChat() {
-            yield {
-                data: {
-                    arguments: {
-                        data: [
-                            { month: 'Jan', net: '-12.5' },
-                            { month: 'Feb', net: 18 },
-                        ],
-                        title: 'Monthly Net Change',
-                        x: 'month',
-                        y: 'net',
-                    },
-                    tool_name: 'render_line_chart',
-                },
-                event: 'tool.started',
-            };
-            yield {
-                data: {
-                    result: '{"status":"rendered"}',
-                    tool_name: 'render_line_chart',
-                },
-                event: 'tool.completed',
-            };
-            yield {
-                data: { content: 'Rendered the chart.', message_id: 'hermes_msg_line_chart_tool' },
-                event: 'assistant.completed',
-            };
-        });
-        createChat({ id: 'cht_1' });
-
-        await sendTavernChannelMessage('cht_1', {
-            agent: {
-                agentId: 'agt_1',
-            },
-            message: {
-                content: 'show line chart',
-                id: 'msg_line_chart_tool',
-                nonce: 'nonce_line_chart_tool',
-            },
-            target: {
-                externalId: null,
-                sessionKey: 'session_1',
-                target: 'cht_1',
-                type: 'tavern',
-            },
-        });
-        await waitForHermesTurn();
-
-        expect(listResponses('cht_1').activity).toEqual(
-            expect.arrayContaining([
-                expect.objectContaining({
-                    kind: 'tool_call',
-                    status: 'completed',
-                    title: 'render_line_chart',
-                }),
-                expect.objectContaining({
-                    detail: 'Monthly Net Change',
-                    kind: 'widget',
-                    metadata: expect.objectContaining({
-                        widget: expect.objectContaining({
-                            component: 'tavern.render_line_chart',
-                            fallback: { text: 'Monthly Net Change' },
-                            props: expect.objectContaining({
-                                data: [
-                                    { month: 'Jan', net: -12.5 },
-                                    { month: 'Feb', net: 18 },
-                                ],
-                                series: [{ key: 'net', label: 'Net' }],
-                                xKey: 'month',
-                            }),
-                            target: 'chat.inline',
-                        }),
-                    }),
-                    title: 'render_line_chart',
-                }),
-            ])
-        );
-    });
-
-    it('stores render-composed-chart tool completions as durable widget activity', async () => {
-        hermesClient.streamChat.mockImplementationOnce(async function* streamChat() {
-            yield {
-                data: {
-                    arguments: {
-                        barUnit: 'units',
-                        barY: 'units',
-                        data: [{ month: '2026-01-01', royalties: '54.91', units: '19' }],
-                        lineUnit: 'USD',
-                        lineY: 'royalties',
-                        title: 'Units and Royalties',
-                        x: 'month',
-                    },
-                    tool_name: 'render_composed_chart',
-                },
-                event: 'tool.started',
-            };
-            yield {
-                data: {
-                    result: '{"status":"rendered"}',
-                    tool_name: 'render_composed_chart',
-                },
-                event: 'tool.completed',
-            };
-            yield {
-                data: {
-                    content: 'Rendered the composed chart.',
-                    message_id: 'hermes_msg_composed_chart_tool',
-                },
-                event: 'assistant.completed',
-            };
-        });
-        createChat({ id: 'cht_1' });
-
-        await sendTavernChannelMessage('cht_1', {
-            agent: {
-                agentId: 'agt_1',
-            },
-            message: {
-                content: 'show composed chart',
-                id: 'msg_composed_chart_tool',
-                nonce: 'nonce_composed_chart_tool',
-            },
-            target: {
-                externalId: null,
-                sessionKey: 'session_1',
-                target: 'cht_1',
-                type: 'tavern',
-            },
-        });
-        await waitForHermesTurn();
-
-        expect(listResponses('cht_1').activity).toEqual(
-            expect.arrayContaining([
-                expect.objectContaining({
-                    kind: 'tool_call',
-                    status: 'completed',
-                    title: 'render_composed_chart',
-                }),
-                expect.objectContaining({
-                    detail: 'Units and Royalties',
-                    kind: 'widget',
-                    metadata: expect.objectContaining({
-                        widget: expect.objectContaining({
-                            component: 'tavern.render_composed_chart',
-                            fallback: { text: 'Units and Royalties' },
-                            props: expect.objectContaining({
-                                barSeries: [{ key: 'units', label: 'Units' }],
-                                barUnit: 'units',
-                                data: [{ month: '2026-01-01', royalties: 54.91, units: 19 }],
-                                lineSeries: [{ key: 'royalties', label: 'Royalties' }],
-                                lineUnit: 'USD',
-                                xKey: 'month',
-                            }),
-                            target: 'chat.inline',
-                        }),
-                    }),
-                    title: 'render_composed_chart',
-                }),
-            ])
-        );
-    });
-
-    it('stores render-calendar-event tool completions as durable widget activity', async () => {
-        hermesClient.streamChat.mockImplementationOnce(async function* streamChat() {
-            yield {
-                data: {
-                    arguments: {
-                        description: 'Review roadmap priorities and launch risks.',
-                        end: {
-                            dateTime: '2026-06-20T14:00:00-04:00',
-                            timeZone: 'America/New_York',
-                        },
-                        location: 'Design room',
-                        start: {
-                            dateTime: '2026-06-20T13:00:00-04:00',
-                            timeZone: 'America/New_York',
-                        },
-                        summary: 'Q1 roadmap review',
-                    },
-                    tool_name: 'render_calendar_event',
-                },
-                event: 'tool.started',
-            };
-            yield {
-                data: {
-                    result: '{"status":"rendered"}',
-                    tool_name: 'render_calendar_event',
-                },
-                event: 'tool.completed',
-            };
-            yield {
-                data: { content: 'Rendered the event.', message_id: 'hermes_msg_calendar_tool' },
-                event: 'assistant.completed',
-            };
-        });
-        createChat({ id: 'cht_1' });
-
-        await sendTavernChannelMessage('cht_1', {
-            agent: {
-                agentId: 'agt_1',
-            },
-            message: {
-                content: 'show calendar event',
-                id: 'msg_calendar_tool',
-                nonce: 'nonce_calendar_tool',
-            },
-            target: {
-                externalId: null,
-                sessionKey: 'session_1',
-                target: 'cht_1',
-                type: 'tavern',
-            },
-        });
-        await waitForHermesTurn();
-
-        expect(listResponses('cht_1').activity).toEqual(
-            expect.arrayContaining([
-                expect.objectContaining({
-                    kind: 'tool_call',
-                    status: 'completed',
-                    title: 'render_calendar_event',
-                }),
-                expect.objectContaining({
-                    detail: 'Q1 roadmap review',
-                    kind: 'widget',
-                    metadata: expect.objectContaining({
-                        widget: expect.objectContaining({
-                            component: 'tavern.render_calendar_event',
-                            fallback: { text: 'Q1 roadmap review' },
-                            props: expect.objectContaining({
-                                date: '2026-06-20',
-                                endTime: '14:00',
-                                notes: 'Review roadmap priorities and launch risks.',
-                                startTime: '13:00',
-                                timezone: 'America/New_York',
-                                title: 'Q1 roadmap review',
-                            }),
-                            target: 'chat.inline',
-                        }),
-                    }),
-                    title: 'render_calendar_event',
-                }),
-            ])
-        );
-    });
-
-    it('stores render-calendar-day tool completions as durable widget activity', async () => {
-        hermesClient.streamChat.mockImplementationOnce(async function* streamChat() {
-            yield {
-                data: {
-                    arguments: {
-                        date: '2026-06-20',
-                        events: [
-                            {
-                                end: {
-                                    dateTime: '2026-06-20T12:45:00-04:00',
-                                    timeZone: 'America/New_York',
-                                },
-                                start: {
-                                    dateTime: '2026-06-20T12:00:00-04:00',
-                                    timeZone: 'America/New_York',
-                                },
-                                summary: 'Lunch',
-                            },
-                            {
-                                end: {
-                                    dateTime: '2026-06-20T14:00:00-04:00',
-                                    timeZone: 'America/New_York',
-                                },
-                                start: {
-                                    dateTime: '2026-06-20T13:00:00-04:00',
-                                    timeZone: 'America/New_York',
-                                },
-                                summary: 'Q1 roadmap review',
-                            },
-                        ],
-                        timezone: 'America/New_York',
-                        title: 'Saturday schedule',
-                    },
-                    tool_name: 'render_calendar_day',
-                },
-                event: 'tool.started',
-            };
-            yield {
-                data: {
-                    result: '{"status":"rendered"}',
-                    tool_name: 'render_calendar_day',
-                },
-                event: 'tool.completed',
-            };
-            yield {
-                data: { content: 'Rendered the day.', message_id: 'hermes_msg_calendar_day_tool' },
-                event: 'assistant.completed',
-            };
-        });
-        createChat({ id: 'cht_1' });
-
-        await sendTavernChannelMessage('cht_1', {
-            agent: {
-                agentId: 'agt_1',
-            },
-            message: {
-                content: 'show calendar day',
-                id: 'msg_calendar_day_tool',
-                nonce: 'nonce_calendar_day_tool',
-            },
-            target: {
-                externalId: null,
-                sessionKey: 'session_1',
-                target: 'cht_1',
-                type: 'tavern',
-            },
-        });
-        await waitForHermesTurn();
-
-        expect(listResponses('cht_1').activity).toEqual(
-            expect.arrayContaining([
-                expect.objectContaining({
-                    kind: 'tool_call',
-                    status: 'completed',
-                    title: 'render_calendar_day',
-                }),
-                expect.objectContaining({
-                    detail: 'Saturday schedule',
-                    kind: 'widget',
-                    metadata: expect.objectContaining({
-                        widget: expect.objectContaining({
-                            component: 'tavern.render_calendar_day',
-                            fallback: { text: 'Saturday schedule' },
-                            props: expect.objectContaining({
-                                date: '2026-06-20',
-                                events: [
-                                    expect.objectContaining({
-                                        endTime: '12:45',
-                                        startTime: '12:00',
-                                        title: 'Lunch',
-                                    }),
-                                    expect.objectContaining({
-                                        endTime: '14:00',
-                                        startTime: '13:00',
-                                        title: 'Q1 roadmap review',
-                                    }),
-                                ],
-                                timezone: 'America/New_York',
-                            }),
-                            target: 'chat.inline',
-                        }),
-                    }),
-                    title: 'render_calendar_day',
                 }),
             ])
         );

@@ -8,6 +8,7 @@ export const developmentChatDemoIds = {
     composedChart: 'cht_demo_composed_chart',
     lineChart: 'cht_demo_line_chart',
     longContent: 'cht_demo_long_content',
+    richResponseCatalog: 'cht_demo_rich_response_catalog',
     streamingStack: 'cht_demo_streaming_stack',
     toolHeaders: 'cht_demo_tool_headers',
 } as const;

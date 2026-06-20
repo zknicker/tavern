@@ -69,29 +69,15 @@ describe('generated agent instructions', () => {
         expect(content).toContain('`SOUL.md`');
         expect(content).toContain('use the `tavern` skill');
         expect(content).toContain('## Environment');
-        expect(content).toContain('## Widgets');
-        expect(content).toContain('You can render Widgets using tool calls');
-        expect(content).toContain(
-            'When a render tool is available and data is clearly visual, prefer a Widget'
-        );
-        expect(content).toContain(
-            'If no render tool is available, use concise text or a compact table.'
-        );
-        expect(content).toContain(
-            '- `render_bar_chart`: bar chart for categorical comparisons, rankings, totals, and bucketed numeric data.'
-        );
-        expect(content).toContain(
-            '- `render_composed_chart`: composed bar and line chart for ordered data where bars and lines share one x-axis.'
-        );
-        expect(content).toContain(
-            '- `render_line_chart`: line chart for trends, time series, ordered numeric data, and recent metric context.'
-        );
-        expect(content).toContain(
-            '- `render_calendar_day`: prepared calendar day with same-day events.'
-        );
-        expect(content).toContain(
-            '- `render_calendar_event`: single prepared calendar event, including simple when or where answers; preserve source start/end date, dateTime, and timeZone fields.'
-        );
+        expect(content).toContain('## Rich Responses');
+        expect(content).toContain('Use Rich Responses for generative UI in final replies');
+        expect(content).toContain('code fence whose language is `spec`');
+        expect(content).toContain('render a `Table` instead of a Markdown table');
+        expect(content).toContain('Do not use Markdown tables when a `Table` Rich Response fits');
+        expect(content).toContain('Available Rich Response components');
+        expect(content).toContain('`Table`');
+        expect(content).toContain('`BarChart`');
+        expect(content).toContain('`CalendarEvent`');
         expect(content).toContain('## Notes And Skills');
         expect(content).toContain('keep entries short, direct, and reusable');
         expect(content).toContain('Generalize the feedback into a durable preference or process');

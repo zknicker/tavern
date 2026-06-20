@@ -85,53 +85,74 @@ describe('Tavern Runtime Chat API store', () => {
                 status: 'completed',
             },
         ]);
-        expect(getResponseActivity('act_demo_charts_widget')).toMatchObject({
-            id: 'act_demo_charts_widget',
-            kind: 'widget',
+        expect(getResponseActivity('act_demo_charts_rich_response')).toMatchObject({
+            id: 'act_demo_charts_rich_response',
+            kind: 'rich_response',
+            metadata: {
+                richResponse: {
+                    props: {
+                        spec: {
+                            elements: {
+                                bar: { type: 'BarChart' },
+                                composed: { type: 'ComposedChart' },
+                                line: { type: 'LineChart' },
+                            },
+                        },
+                    },
+                },
+            },
             status: 'completed',
-            title: 'render_bar_chart',
+            title: 'Rich Response',
         });
-        expect(getResponseActivity('act_demo_line_chart_widget')).toMatchObject({
-            id: 'act_demo_line_chart_widget',
-            kind: 'widget',
+        expect(getResponseActivity('act_demo_line_chart_rich_response')).toMatchObject({
+            id: 'act_demo_line_chart_rich_response',
+            kind: 'rich_response',
             status: 'completed',
-            title: 'render_line_chart',
+            title: 'Rich Response',
         });
-        expect(getResponseActivity('act_demo_calendar_day_widget')).toMatchObject({
-            id: 'act_demo_calendar_day_widget',
-            kind: 'widget',
+        expect(getResponseActivity('act_demo_calendar_day_rich_response')).toMatchObject({
+            id: 'act_demo_calendar_day_rich_response',
+            kind: 'rich_response',
             status: 'completed',
-            title: 'render_calendar_day',
+            title: 'Rich Response',
         });
-        expect(getResponseActivity('act_demo_composed_chart_bar_widget')).toMatchObject({
-            id: 'act_demo_composed_chart_bar_widget',
-            kind: 'widget',
+        expect(getResponseActivity('act_demo_composed_chart_rich_response')).toMatchObject({
+            id: 'act_demo_composed_chart_rich_response',
+            kind: 'rich_response',
             status: 'completed',
-            title: 'render_bar_chart',
+            title: 'Rich Response',
         });
-        expect(getResponseActivity('act_demo_composed_chart_line_widget')).toMatchObject({
-            id: 'act_demo_composed_chart_line_widget',
-            kind: 'widget',
+        expect(getResponseActivity('act_demo_calendar_event_rich_response')).toMatchObject({
+            id: 'act_demo_calendar_event_rich_response',
+            kind: 'rich_response',
             status: 'completed',
-            title: 'render_line_chart',
+            title: 'Rich Response',
         });
-        expect(getResponseActivity('act_demo_composed_chart_widget')).toMatchObject({
-            id: 'act_demo_composed_chart_widget',
-            kind: 'widget',
+        expect(getResponseActivity('act_demo_rich_response_catalog')).toMatchObject({
+            id: 'act_demo_rich_response_catalog',
+            kind: 'rich_response',
+            metadata: {
+                richResponse: {
+                    props: {
+                        spec: {
+                            elements: {
+                                separator: { type: 'Separator' },
+                                table: { type: 'Table' },
+                                title: { type: 'Heading' },
+                            },
+                        },
+                    },
+                },
+            },
             status: 'completed',
-            title: 'render_composed_chart',
-        });
-        expect(getResponseActivity('act_demo_calendar_event_widget')).toMatchObject({
-            id: 'act_demo_calendar_event_widget',
-            kind: 'widget',
-            status: 'completed',
-            title: 'render_calendar_event',
+            title: 'Rich Response',
         });
         expect(listMessages(developmentChatDemoIds.charts).messages).toHaveLength(2);
         expect(listMessages(developmentChatDemoIds.lineChart).messages).toHaveLength(2);
         expect(listMessages(developmentChatDemoIds.calendarDay).messages).toHaveLength(2);
         expect(listMessages(developmentChatDemoIds.composedChart).messages).toHaveLength(2);
         expect(listMessages(developmentChatDemoIds.calendarEvent).messages).toHaveLength(2);
+        expect(listMessages(developmentChatDemoIds.richResponseCatalog).messages).toHaveLength(2);
         expect(listMessages(developmentChatDemoIds.attachment).messages[0]?.attachments).toEqual([
             expect.objectContaining({ filename: 'weather-request.txt', type: 'file' }),
         ]);
@@ -151,10 +172,10 @@ describe('Tavern Runtime Chat API store', () => {
             { id: 'rsp_demo_tool_headers_completed', status: 'completed' },
             { id: 'rsp_demo_tool_headers_live', status: 'running' },
         ]);
-        expect(getResponseActivity('act_demo_tool_headers_render_bar')).toMatchObject({
+        expect(getResponseActivity('act_demo_tool_headers_read_sales')).toMatchObject({
             kind: 'tool_call',
             status: 'completed',
-            title: 'render_bar_chart',
+            title: 'sales-summary.json',
         });
         expect(getResponseActivity('act_demo_tool_headers_live_command')).toMatchObject({
             kind: 'tool_call',
@@ -173,14 +194,14 @@ describe('Tavern Runtime Chat API store', () => {
             kind: 'tool_call',
             sequence: 1,
             status: 'completed',
-            title: 'render_composed_chart',
+            title: 'old chart activity',
         });
         upsertResponseActivity(developmentChatDemoIds.composedChart, 'rsp_demo_composed_chart', {
-            id: 'act_demo_composed_chart_widget',
-            kind: 'widget',
+            id: 'act_demo_composed_chart_rich_response',
+            kind: 'rich_response',
             sequence: 2,
             status: 'completed',
-            title: 'render_composed_chart',
+            title: 'Rich Response',
         });
 
         expect(() => seedDevelopmentChatDemos({ db, enabled: true })).not.toThrow();
@@ -196,14 +217,7 @@ describe('Tavern Runtime Chat API store', () => {
             sequence: number;
         }[];
 
-        expect(rows.map((row) => row.id)).toEqual([
-            'act_demo_composed_chart_bar_tool',
-            'act_demo_composed_chart_bar_widget',
-            'act_demo_composed_chart_line_tool',
-            'act_demo_composed_chart_line_widget',
-            'act_demo_composed_chart_tool',
-            'act_demo_composed_chart_widget',
-        ]);
+        expect(rows.map((row) => row.id)).toEqual(['act_demo_composed_chart_rich_response']);
     });
 
     it('soft-deletes a response and projects a history change', () => {

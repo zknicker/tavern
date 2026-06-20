@@ -961,14 +961,6 @@ export class LocalHermesClient extends LocalHermesUnsupportedSurfaces {
                     continue;
                 }
 
-                if (event.type === 'ui.render') {
-                    yield {
-                        data: { ...event.payload, source_event: event.type },
-                        event: 'ui.render',
-                    };
-                    continue;
-                }
-
                 if (event.type === 'status.update') {
                     yield {
                         data: {

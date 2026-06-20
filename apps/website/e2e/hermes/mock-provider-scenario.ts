@@ -68,9 +68,6 @@ function chooseToolName(available: Set<string>, prompt: string) {
     if (shouldRunClarification(prompt) && available.has('clarify')) {
         return 'clarify';
     }
-    if (shouldRenderWidget(prompt) && available.has('render_bar_chart')) {
-        return 'render_bar_chart';
-    }
     if (/multi-stage progress/i.test(prompt) && available.has('terminal')) {
         return 'terminal';
     }
@@ -106,19 +103,6 @@ function buildToolArgs(toolName: string, prompt: string) {
             : '';
         return { command: `${sleepPrefix}cat ${JSON.stringify(taskPath)}`, workdir: workspaceDir };
     }
-    if (toolName === 'render_bar_chart') {
-        return {
-            data: [
-                { month: 'Jan', revenue: 12_500 },
-                { month: 'Feb', revenue: 18_250 },
-                { month: 'Mar', revenue: 21_750 },
-            ],
-            title: 'E2E live widget revenue',
-            unit: 'USD',
-            x: 'month',
-            y: 'revenue',
-        };
-    }
     if (toolName === 'execute_code') {
         const delay = /slow QA command|reload-heavy|subagent recovery/i.test(prompt) ? 4 : 0;
         return {
@@ -145,6 +129,9 @@ function selectReply(prompt: string, toolOutput: string) {
     if (shouldRunClarification(prompt)) {
         return selectClarificationReply(prompt, toolOutput);
     }
+    if (shouldRenderRichResponse(prompt)) {
+        return richResponseReply(prompt);
+    }
 
     return (
         (/thinking visibility check/i.test(prompt) && 'THINKING-MAX-OK') ||
@@ -159,13 +146,27 @@ function shouldReturnEmptyReply(transcript: string) {
 }
 
 function shouldUseTool(prompt: string) {
-    return /QA_KICKOFF_TASK\.md|tool progress|widget progress|slow QA command|reload-heavy|subagent recovery|use\s+3\s+tools|multi-stage progress|clarification (?:choice|skip) qa/i.test(
+    return /QA_KICKOFF_TASK\.md|tool progress|slow QA command|reload-heavy|subagent recovery|use\s+3\s+tools|multi-stage progress|clarification (?:choice|skip) qa/i.test(
         prompt
     );
 }
 
-function shouldRenderWidget(prompt: string) {
-    return /widget progress/i.test(prompt);
+function shouldRenderRichResponse(prompt: string) {
+    return /rich response progress/i.test(prompt);
+}
+
+function richResponseReply(prompt: string) {
+    const marker = prompt.match(/reply exactly `([^`]+)`/iu)?.[1] ?? 'QA_HERMES_OK';
+    return [
+        'Here is the revenue chart.',
+        '',
+        '```spec',
+        '{"op":"add","path":"/root","value":"chart"}',
+        '{"op":"add","path":"/elements/chart","value":{"type":"BarChart","props":{"data":[{"month":"Jan","revenue":12500},{"month":"Feb","revenue":18250},{"month":"Mar","revenue":21750}],"series":[{"key":"revenue","label":"Revenue"}],"title":"E2E Rich Response revenue","unit":"USD","xKey":"month"},"children":[]}}',
+        '```',
+        '',
+        marker,
+    ].join('\n');
 }
 
 function shouldRunClarification(prompt: string) {
@@ -220,7 +221,7 @@ function finalReplyDelayMs(prompt: string, toolOutput: string) {
     if (!toolOutput) {
         return 0;
     }
-    if (shouldRenderWidget(prompt)) {
+    if (shouldRenderRichResponse(prompt)) {
         return 5000;
     }
     return /slow QA command|reload-heavy/i.test(prompt) ? 1200 : 0;

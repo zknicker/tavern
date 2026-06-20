@@ -116,12 +116,12 @@ test('renders live tool progress before the final reply', async ({ page }) => {
     });
 });
 
-test('renders live widget progress before the final reply', async ({ page }) => {
+test('renders Rich Response specs in the final reply', async ({ page }) => {
     test.setTimeout(240_000);
 
-    const expectedReply = `LIVE-WIDGET-PROGRESS-${Date.now()}`;
-    const widgetTitle = 'E2E live widget revenue';
-    const prompt = `Live widget progress qa check. Render the revenue chart, then reply exactly \`${expectedReply}\`.`;
+    const expectedReply = `RICH-RESPONSE-PROGRESS-${Date.now()}`;
+    const richResponseTitle = 'E2E Rich Response revenue';
+    const prompt = `Rich response progress qa check. Render the revenue chart, then reply exactly \`${expectedReply}\`.`;
 
     await page.goto('/dashboard/overview');
 
@@ -130,21 +130,20 @@ test('renders live widget progress before the final reply', async ({ page }) => 
 
     await waitForRealChatRoute(page);
 
-    const finalReply = transcriptParagraph(page, expectedReply);
-    await expect(finalReply).toHaveCount(0);
-
     const main = page.locator('main');
-    await expect(main.getByText(widgetTitle, { exact: true })).toBeVisible({ timeout: 90_000 });
+    await expect(main.getByText(richResponseTitle, { exact: true })).toBeVisible({
+        timeout: 90_000,
+    });
     await expect(main.getByText('Revenue', { exact: true }).first()).toBeVisible({
         timeout: 30_000,
     });
-    await expect(finalReply).toHaveCount(0);
 
+    const finalReply = transcriptParagraph(page, expectedReply);
     await expect(finalReply).toBeVisible({ timeout: 90_000 });
     await expect(finalReply).toHaveCount(1);
 
     await page.reload();
-    await expect(page.locator('main').getByText(widgetTitle, { exact: true })).toBeVisible({
+    await expect(page.locator('main').getByText(richResponseTitle, { exact: true })).toBeVisible({
         timeout: 30_000,
     });
     await expect(transcriptParagraph(page, expectedReply)).toHaveCount(1);

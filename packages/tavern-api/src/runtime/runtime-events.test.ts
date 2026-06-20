@@ -23,27 +23,38 @@ test('engine restart events reject unknown phases', () => {
     );
 });
 
-test('widget progress events carry renderable widget payloads', () => {
+test('rich response progress events carry renderable payloads', () => {
     const event = agentRuntimeEventSchema.parse({
         step: {
             detail: 'Quarterly Revenue',
-            id: 'act_widget_1',
-            kind: 'widget',
-            label: 'render_bar_chart',
-            status: 'completed',
-            widget: {
-                component: 'tavern.render_bar_chart',
+            id: 'act_rich_response_1',
+            kind: 'rich_response',
+            label: 'Rich Response',
+            richResponse: {
+                component: 'tavern.rich_response',
                 fallbackText: 'Quarterly Revenue',
-                id: 'act_widget_1',
+                id: 'act_rich_response_1',
                 props: {
-                    data: [{ quarter: 'Q1', revenue: 12_000 }],
-                    series: [{ key: 'revenue', label: 'Revenue' }],
-                    title: 'Quarterly Revenue',
-                    xKey: 'quarter',
+                    spec: {
+                        elements: {
+                            chart: {
+                                props: {
+                                    data: [{ quarter: 'Q1', revenue: 12_000 }],
+                                    series: [{ key: 'revenue', label: 'Revenue' }],
+                                    title: 'Quarterly Revenue',
+                                    xKey: 'quarter',
+                                },
+                                type: 'BarChart',
+                            },
+                        },
+                        root: 'chart',
+                        state: {},
+                    },
                 },
                 target: 'chat.inline',
                 validationError: null,
             },
+            status: 'completed',
         },
         timestamp: '2026-06-11T12:00:00.000Z',
         turn: {
@@ -57,6 +68,6 @@ test('widget progress events carry renderable widget payloads', () => {
     });
 
     assert.equal(event.type, 'turn.progress');
-    assert.equal(event.step.kind, 'widget');
-    assert.equal(event.step.widget?.fallbackText, 'Quarterly Revenue');
+    assert.equal(event.step.kind, 'rich_response');
+    assert.equal(event.step.richResponse?.fallbackText, 'Quarterly Revenue');
 });

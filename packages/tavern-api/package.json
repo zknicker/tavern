@@ -7,9 +7,9 @@
     ".": "./src/index.ts",
     "./config": "./src/runtime/config.ts",
     "./development-chat-demos": "./src/development-chat-demos.ts",
-    "./widgets/calendar": "./src/widgets/calendar/contracts.ts",
-    "./widgets": "./src/widgets/contracts.ts",
-    "./widgets/charts": "./src/widgets/charts/contracts.ts",
+    "./rich-responses": "./src/rich-responses/contracts.ts",
+    "./rich-responses/calendar": "./src/rich-responses/calendar/contracts.ts",
+    "./rich-responses/charts": "./src/rich-responses/charts/contracts.ts",
     "./openapi.yaml": "./openapi.yaml"
   },
   "scripts": {

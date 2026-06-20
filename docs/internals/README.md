@@ -20,5 +20,5 @@ Internals docs explain how Tavern is built. Product-facing behavior belongs in
 | React conventions | [React Conventions](react.md) |
 | Chat demos | [Chat Demos](chat-demos.md) |
 | Tool presentation | [Tool Presentation](tool-presentation.md) |
-| Widgets | [Widgets](widgets.md) |
+| Rich Responses | [Rich Responses](rich-responses.md) |
 | Hermes runtime adapter | [Tavern Hermes Runtime Adapter](tavern-hermes-runtime-adapter.md) |

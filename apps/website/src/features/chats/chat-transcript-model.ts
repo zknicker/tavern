@@ -7,7 +7,7 @@ export type TranscriptRow =
     | SessionHistoryOutput['rows'][number];
 
 export type TranscriptActor = Exclude<
-    Extract<TranscriptRow, { kind: 'message' | 'tool' | 'widget' | 'worker' }>['actor'],
+    Extract<TranscriptRow, { kind: 'message' | 'rich_response' | 'tool' | 'worker' }>['actor'],
     undefined
 >;
 
@@ -388,7 +388,7 @@ function isActivityItem(item: TranscriptItem | undefined) {
         return item.kind === 'failure';
     }
 
-    return item.row.kind !== 'message' && item.row.kind !== 'widget';
+    return item.row.kind !== 'message' && item.row.kind !== 'rich_response';
 }
 
 function hasExplicitConnection(current: TranscriptItem, previous: TranscriptItem) {
@@ -414,7 +414,7 @@ function getItemParticipant(item: TranscriptItem): 'agent' | 'system' | 'user' {
         return row.message.senderType === 'user' ? 'user' : 'agent';
     }
 
-    if (row.kind === 'tool' || row.kind === 'widget' || row.kind === 'worker') {
+    if (row.kind === 'tool' || row.kind === 'rich_response' || row.kind === 'worker') {
         return row.sessionKey?.trim() || row.actor?.kind === 'agent' ? 'agent' : 'system';
     }
 
@@ -521,7 +521,7 @@ export function getItemSessionKey(item: TranscriptItem) {
         return sessionKey.length > 0 ? sessionKey : null;
     }
 
-    if (row.kind === 'tool' || row.kind === 'widget' || row.kind === 'worker') {
+    if (row.kind === 'tool' || row.kind === 'rich_response' || row.kind === 'worker') {
         return row.sessionKey;
     }
 
@@ -547,7 +547,7 @@ export function getItemTimestamp(item: TranscriptItem) {
         return row.message.timestamp;
     }
 
-    if (row.kind === 'tool' || row.kind === 'widget' || row.kind === 'worker') {
+    if (row.kind === 'tool' || row.kind === 'rich_response' || row.kind === 'worker') {
         return row.startedAt ?? row.completedAt;
     }
 

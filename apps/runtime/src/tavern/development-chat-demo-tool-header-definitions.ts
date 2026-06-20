@@ -34,7 +34,7 @@ export function toolHeadersDemo(): DevelopmentChatDemo {
             assistantMessage({
                 chatId,
                 content:
-                    'Here are the settled examples: file work groups collapse to stable summaries, Widget render tools get Widget copy, and decision tools avoid echoing raw commands.',
+                    'Here are the settled examples: file work groups collapse to stable summaries, data-prep tools stay generic, and decision tools avoid echoing raw commands.',
                 id: completedResponseMessageId,
                 nonce: 'demo-tool-headers-response',
                 requestMessageId: completedRequestMessageId,
@@ -122,37 +122,31 @@ function completedToolHeaderActivities(input: DemoToolHeaderActivityInput) {
         }),
         messageActivity({
             ...input,
-            detail: 'Next I am grouping first-party render tools so they read as Widget work instead of generic tool calls.',
-            id: 'act_demo_tool_headers_widget_intro',
+            detail: 'Next I am grouping data-prep tools so the collapsed drawer reads as normal tool work.',
+            id: 'act_demo_tool_headers_data_intro',
             sequence: 5,
         }),
         toolActivity({
             ...input,
-            id: 'act_demo_tool_headers_render_bar',
+            id: 'act_demo_tool_headers_read_sales',
             sequence: 6,
-            title: 'render_bar_chart',
+            title: 'sales-summary.json',
             toolArguments: {
-                title: 'Tool header examples',
-                xKey: 'kind',
-                yKey: 'count',
+                path: 'sales-summary.json',
             },
-            toolCallId: 'call_demo_tool_headers_render_bar',
-            toolName: 'render_bar_chart',
+            toolCallId: 'call_demo_tool_headers_read_sales',
+            toolName: 'read_file',
         }),
         toolActivity({
             ...input,
-            id: 'act_demo_tool_headers_render_calendar',
+            id: 'act_demo_tool_headers_search_sales',
             sequence: 7,
-            title: 'render_calendar_event',
+            title: 'sales anomaly notes',
             toolArguments: {
-                event: {
-                    end: { dateTime: '2026-06-19T10:30:00-04:00' },
-                    start: { dateTime: '2026-06-19T10:00:00-04:00' },
-                    title: 'Review tool header summaries',
-                },
+                query: 'sales anomaly notes',
             },
-            toolCallId: 'call_demo_tool_headers_render_calendar',
-            toolName: 'render_calendar_event',
+            toolCallId: 'call_demo_tool_headers_search_sales',
+            toolName: 'search_files',
         }),
         messageActivity({
             ...input,

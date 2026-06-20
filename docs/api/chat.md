@@ -297,7 +297,7 @@ Common activity kinds:
 | `command` | Shell-like command work when the runtime exposes it as a command. |
 | `approval` | User or system approval request and decision. |
 | `artifact` | Renderable output, patch, file, image, document, or diff summary. |
-| `widget` | Typed app-rendered UI block with validated component props and fallback text. |
+| `rich_response` | App-rendered assistant UI from a validated Rich Response Spec. |
 | `custom` | Runtime-specific activity with typed metadata. |
 
 Clients open activity detail surfaces by stable activity id:
