@@ -28,10 +28,12 @@ export function Layout() {
     const location = useLocation();
     const navigate = useNavigate();
     useAppLayoutSearchParam();
+    const sidebarWrapperRef = React.useRef<HTMLDivElement | null>(null);
     const [isSidebarPinnedOpen, setIsSidebarPinnedOpenState] = React.useState(
         getInitialSidebarPinnedOpen
     );
     const [isSidebarPreviewOpen, setIsSidebarPreviewOpen] = React.useState(false);
+    const [isSidebarPreviewSuppressed, setIsSidebarPreviewSuppressed] = React.useState(false);
     const sidebarPreviewCloseTimeoutRef = React.useRef<number | null>(null);
     const clearSidebarPreviewCloseTimeout = React.useCallback(() => {
         if (sidebarPreviewCloseTimeoutRef.current !== null) {
@@ -40,13 +42,28 @@ export function Layout() {
         }
     }, []);
     const openSidebarPreview = React.useCallback(() => {
+        if (isSidebarPreviewSuppressed) {
+            return;
+        }
         clearSidebarPreviewCloseTimeout();
         setIsSidebarPreviewOpen(true);
-    }, [clearSidebarPreviewCloseTimeout]);
+    }, [clearSidebarPreviewCloseTimeout, isSidebarPreviewSuppressed]);
     const closeSidebarPreview = React.useCallback(() => {
         clearSidebarPreviewCloseTimeout();
         setIsSidebarPreviewOpen(false);
     }, [clearSidebarPreviewCloseTimeout]);
+    const handleShellPointerMove = React.useCallback(
+        (event: React.PointerEvent) => {
+            if (!isSidebarPreviewSuppressed) {
+                return;
+            }
+
+            if (event.clientX > getCurrentSidebarWidth(sidebarWrapperRef.current)) {
+                setIsSidebarPreviewSuppressed(false);
+            }
+        },
+        [isSidebarPreviewSuppressed]
+    );
     const scheduleSidebarPreviewClose = React.useCallback(() => {
         clearSidebarPreviewCloseTimeout();
         sidebarPreviewCloseTimeoutRef.current = window.setTimeout(() => {
@@ -69,6 +86,8 @@ export function Layout() {
     }, []);
 
     const isSettingsRoute = location.pathname.startsWith('/dashboard/settings');
+    const showSidebarPreview =
+        appLayout.mode === 'sidebar' && !isSidebarPinnedOpen && isSidebarPreviewOpen;
     const showMainTopDragFade = shouldShowMainTopDragFade(location.pathname);
     const currentPath = `${location.pathname}${location.search}${location.hash}`;
     const lastAppPathRef = React.useRef('/dashboard/overview');
@@ -94,28 +113,40 @@ export function Layout() {
     );
 
     if (appLayout.mode === 'sidebar') {
-        const showSidebarPreview = !isSidebarPinnedOpen && isSidebarPreviewOpen;
-
         return (
             <SidebarProvider
                 className="dashboard-reference-theme flex min-h-screen w-full md:h-dvh md:min-h-0"
                 data-sidebar-preview-open={showSidebarPreview ? 'true' : undefined}
                 onOpenChange={(open) => {
+                    if (!open) {
+                        blurFocusedSidebarElement(sidebarWrapperRef.current);
+                    }
                     setSidebarPinnedOpen(open);
                     closeSidebarPreview();
+                    setIsSidebarPreviewSuppressed(!open);
                 }}
                 open={isSidebarPinnedOpen}
+                ref={sidebarWrapperRef}
             >
-                <AppShell className="w-full" data-app-layout="sidebar">
+                <AppShell
+                    className="w-full"
+                    data-app-layout="sidebar"
+                    onPointerMove={handleShellPointerMove}
+                >
                     <AppShellDragRegion />
-                    <AppSidebarTopbar isExpanded={isSidebarPinnedOpen || showSidebarPreview} />
+                    <AppSidebarTopbar
+                        isExpanded={isSidebarPinnedOpen || showSidebarPreview}
+                        isPreview={showSidebarPreview}
+                        onMouseEnter={showSidebarPreview ? openSidebarPreview : undefined}
+                        onMouseLeave={showSidebarPreview ? scheduleSidebarPreviewClose : undefined}
+                    />
                     <AppShellBody className="pt-0 md:flex-row">
                         <AppSidebar
                             activeTab={activeTab}
                             isSettingsRoute={isSettingsRoute}
                             onBackToApp={navigateBackToApp}
                             onMouseEnter={openSidebarPreview}
-                            onMouseLeave={closeSidebarPreview}
+                            onMouseLeave={scheduleSidebarPreviewClose}
                             onNavigateToSettings={navigateToSettings}
                             onSelectTab={setActiveTab}
                         />
@@ -193,4 +224,25 @@ function getInitialSidebarPinnedOpen() {
     const saved = window.localStorage.getItem(sidebarPinnedOpenStorageKey);
 
     return saved === null ? true : saved === 'true';
+}
+
+function getCurrentSidebarWidth(wrapper: HTMLElement | null) {
+    if (!wrapper) {
+        return 276;
+    }
+
+    const sidebarWidth = Number.parseFloat(
+        window.getComputedStyle(wrapper).getPropertyValue('--sidebar-width')
+    );
+
+    return Number.isFinite(sidebarWidth) ? sidebarWidth : 276;
+}
+
+function blurFocusedSidebarElement(wrapper: HTMLElement | null) {
+    const sidebarContainer = wrapper?.querySelector<HTMLElement>('[data-slot="sidebar-container"]');
+    const activeElement = document.activeElement;
+
+    if (activeElement instanceof HTMLElement && sidebarContainer?.contains(activeElement)) {
+        activeElement.blur();
+    }
 }

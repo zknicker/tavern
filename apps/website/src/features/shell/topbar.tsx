@@ -1,4 +1,5 @@
 import { Setting07Icon } from '@hugeicons-pro/core-stroke-rounded';
+import type { MouseEventHandler } from 'react';
 import { DesktopUpdateIndicator } from '../../components/desktop-update-indicator.tsx';
 import { AppShellTopbar, AppShellTopbarSidebarSlot } from '../../components/ui/app-shell.tsx';
 import { Icon } from '../../components/ui/icon.tsx';
@@ -49,19 +50,30 @@ export function AppTopbar({
     );
 }
 
-export function AppSidebarTopbar({ isExpanded }: { isExpanded: boolean }) {
-    const collapsedTopbarWidth = 'w-[calc(var(--traffic-light-inset)_+_2.75rem)]';
-    const collapsedTopbarSlotWidth =
-        'items-center pt-0 md:w-[calc(var(--traffic-light-inset)_+_2.75rem)]';
-    const triggerOffset = isExpanded
-        ? 'translate-x-[6px] translate-y-[4px]'
-        : '-translate-x-[14px] translate-y-[4px]';
+export function AppSidebarTopbar({
+    isExpanded,
+    isPreview = false,
+    onMouseEnter,
+    onMouseLeave,
+}: {
+    isExpanded: boolean;
+    isPreview?: boolean;
+    onMouseEnter?: MouseEventHandler<HTMLElement>;
+    onMouseLeave?: MouseEventHandler<HTMLElement>;
+}) {
+    if (!isExpanded) {
+        return null;
+    }
+
+    const triggerOffset = isPreview ? 'translate-y-[4px]' : 'translate-x-[6px] translate-y-[4px]';
 
     return (
-        <AppShellTopbar className={isExpanded ? 'w-[var(--sidebar-width)]' : collapsedTopbarWidth}>
-            <AppShellTopbarSidebarSlot
-                className={isExpanded ? 'items-center pt-0' : collapsedTopbarSlotWidth}
-            >
+        <AppShellTopbar
+            className="w-[var(--sidebar-width)]"
+            onMouseEnter={onMouseEnter}
+            onMouseLeave={onMouseLeave}
+        >
+            <AppShellTopbarSidebarSlot className="items-center pt-0">
                 <div className={`no-drag ml-auto flex items-center gap-1 ${triggerOffset}`}>
                     <SidebarTrigger activateOnPointerDown size="icon-sm" />
                 </div>

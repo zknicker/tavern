@@ -216,19 +216,8 @@ export function Vault() {
     }
 
     return (
-        <div className="flex h-full min-h-0 flex-1 flex-col bg-background">
-            <VaultTopbar
-                canSave={canSave}
-                editorMode={editorMode}
-                inspectorOpen={inspectorOpen}
-                isSaving={savePage.isPending}
-                onEditorModeChange={setEditorMode}
-                onInspectorOpenChange={setInspectorOpen}
-                onSave={() => void handleSave(draft)}
-                pagePath={pagePath}
-                pageSelected={Boolean(pageDetail)}
-            />
-            <div className="grid h-full min-h-0 flex-1 grid-cols-[276px_minmax(0,1fr)] overflow-hidden">
+        <div className="grid h-full min-h-0 flex-1 grid-cols-[276px_minmax(0,1fr)] grid-rows-[48px_minmax(0,1fr)] overflow-hidden bg-background">
+            <div className="col-start-1 row-span-2 row-start-1 min-h-0">
                 <VaultPageSidebar
                     folders={list.folders}
                     onCreate={handleCreate}
@@ -241,32 +230,43 @@ export function Vault() {
                     query={query}
                     selectedPageKey={pageNode ? pageKey(pageNode) : null}
                 />
-                <main className="flex min-h-0 flex-col overflow-hidden">
-                    <div className="flex h-full min-h-0 flex-1 flex-col">
-                        {moveError ? (
-                            <div className="border-border/70 border-b bg-destructive/5 px-4 py-2 text-destructive-foreground text-sm">
-                                {moveError}
-                            </div>
-                        ) : null}
-                        <VaultDocumentPane
-                            draft={draft}
-                            editorMode={editorMode}
-                            inspectorOpen={inspectorOpen}
-                            isLoading={pageDetailQuery.isFetching}
-                            isSaving={savePage.isPending}
-                            onDraftChange={setDraft}
-                            onNavigate={handleNavigate}
-                            onSave={handleSave}
-                            onSelectPage={setSelectedPage}
-                            page={pageDetail}
-                            saveDisabled={!canSave}
-                            saveErrorMessage={
-                                savePage.error ? getErrorMessage(savePage.error) : null
-                            }
-                        />
-                    </div>
-                </main>
             </div>
+            <div className="col-start-2 row-start-1 min-w-0">
+                <VaultTopbar
+                    canSave={canSave}
+                    editorMode={editorMode}
+                    inspectorOpen={inspectorOpen}
+                    isSaving={savePage.isPending}
+                    onEditorModeChange={setEditorMode}
+                    onInspectorOpenChange={setInspectorOpen}
+                    onSave={() => void handleSave(draft)}
+                    pagePath={pagePath}
+                    pageSelected={Boolean(pageDetail)}
+                />
+            </div>
+            <main className="col-start-2 row-start-2 flex min-h-0 flex-col overflow-hidden">
+                <div className="flex h-full min-h-0 flex-1 flex-col">
+                    {moveError ? (
+                        <div className="border-border/70 border-b bg-destructive/5 px-4 py-2 text-destructive-foreground text-sm">
+                            {moveError}
+                        </div>
+                    ) : null}
+                    <VaultDocumentPane
+                        draft={draft}
+                        editorMode={editorMode}
+                        inspectorOpen={inspectorOpen}
+                        isLoading={pageDetailQuery.isFetching}
+                        isSaving={savePage.isPending}
+                        onDraftChange={setDraft}
+                        onNavigate={handleNavigate}
+                        onSave={handleSave}
+                        onSelectPage={setSelectedPage}
+                        page={pageDetail}
+                        saveDisabled={!canSave}
+                        saveErrorMessage={savePage.error ? getErrorMessage(savePage.error) : null}
+                    />
+                </div>
+            </main>
             <VaultPathDialog
                 errorMessage={pathDialogError}
                 isPending={createPage.isPending || createFolder.isPending || movePath.isPending}

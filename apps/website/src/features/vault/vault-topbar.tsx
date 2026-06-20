@@ -46,8 +46,7 @@ export function VaultTopbar({
     pageSelected: boolean;
 }) {
     return (
-        <header className="grid h-12 shrink-0 grid-cols-[276px_minmax(0,1fr)_auto] items-center border-border/70 border-b">
-            <div aria-hidden="true" />
+        <header className="grid h-12 shrink-0 grid-cols-[minmax(0,1fr)_auto] items-center border-border/70 border-b">
             <div className="min-w-0 px-4">
                 {pagePath ? <VaultPathBreadcrumb path={pagePath} /> : null}
             </div>

@@ -90,7 +90,7 @@ function VaultPageSidebarContent({
 }) {
     return (
         <div className="flex h-full min-h-0 flex-1 flex-col overflow-x-hidden">
-            <SidebarHeader className="h-[41px] border-border/70 border-b py-1 pr-2 pl-1">
+            <SidebarHeader className="h-12 border-border/70 border-b py-2 pr-2 pl-2">
                 <div className="flex items-center gap-1">
                     <SearchInput
                         className="min-w-0 flex-1"
