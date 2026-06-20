@@ -1,10 +1,10 @@
 import { useReducedMotion } from 'framer-motion';
 import * as React from 'react';
-import { chromatic } from 'slot-text';
 import { SlotText } from 'slot-text/react';
 import { cn } from '../../lib/utils.ts';
 
 const activeHeaderDwellMs = 280;
+const slotTextPrimeAttemptLimit = 10;
 const slotTextHeaderLimit = 64;
 
 export function WorkGroupHeaderText({
@@ -15,6 +15,7 @@ export function WorkGroupHeaderText({
     label: string | null;
 }) {
     const shouldReduceMotion = useReducedMotion();
+    const slotTextRef = React.useRef<HTMLSpanElement | null>(null);
     const [slotReady, setSlotReady] = React.useState(false);
     const canSlot =
         isActive &&
@@ -30,7 +31,20 @@ export function WorkGroupHeaderText({
 
         let cancelled = false;
         let revealFrame: number | null = null;
-        const reveal = () => {
+        let revealTimeout: number | null = null;
+        const reveal = (attempt = 0) => {
+            if (cancelled) {
+                return;
+            }
+
+            if (!isSlotTextPrimed(slotTextRef.current)) {
+                if (attempt < slotTextPrimeAttemptLimit) {
+                    revealTimeout = window.setTimeout(() => reveal(attempt + 1), 32);
+                }
+
+                return;
+            }
+
             if (!cancelled) {
                 setSlotReady(true);
             }
@@ -50,6 +64,10 @@ export function WorkGroupHeaderText({
                 if (revealFrame !== null) {
                     window.cancelAnimationFrame(revealFrame);
                 }
+
+                if (revealTimeout !== null) {
+                    window.clearTimeout(revealTimeout);
+                }
             };
         }
 
@@ -58,6 +76,10 @@ export function WorkGroupHeaderText({
         return () => {
             cancelled = true;
             window.clearTimeout(timeout);
+
+            if (revealTimeout !== null) {
+                window.clearTimeout(revealTimeout);
+            }
         };
     }, [canSlot]);
 
@@ -67,6 +89,7 @@ export function WorkGroupHeaderText({
             isActive={isActive}
             label={label}
             slotReady={slotReady}
+            slotRef={slotTextRef}
         />
     );
 }
@@ -75,11 +98,13 @@ export function WorkGroupHeaderTextView({
     canSlot,
     isActive,
     label,
+    slotRef,
     slotReady,
 }: {
     canSlot: boolean;
     isActive: boolean;
     label: string | null;
+    slotRef?: React.Ref<HTMLSpanElement>;
     slotReady: boolean;
 }) {
     if (!label) {
@@ -88,7 +113,7 @@ export function WorkGroupHeaderTextView({
 
     const className = cn(
         'min-w-0 max-w-[28rem] truncate text-left',
-        isActive && 'thinking-indicator-text'
+        isActive && !canSlot && 'thinking-indicator-text'
     );
 
     if (!canSlot) {
@@ -100,23 +125,21 @@ export function WorkGroupHeaderTextView({
             <span className={slotReady ? 'sr-only' : undefined}>{label}</span>
             <SlotText
                 aria-hidden={true}
-                className={slotReady ? 'inline-flex' : 'sr-only'}
+                className={cn('slot-text', slotReady ? 'inline-flex' : 'sr-only')}
                 options={slotTextOptions}
+                ref={slotRef}
                 text={label}
             />
         </span>
     );
 }
 
+function isSlotTextPrimed(element: HTMLSpanElement | null) {
+    return Boolean(element?.querySelector('.char-slot'));
+}
+
 const slotTextOptions = {
     bounce: 0.28,
-    color: chromatic({
-        from: 210,
-        lightness: 62,
-        saturation: 70,
-        spread: 120,
-    }),
-    colorFade: 260,
     direction: 'up',
     duration: 220,
     interrupt: true,
