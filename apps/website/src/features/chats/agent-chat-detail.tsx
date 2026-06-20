@@ -26,7 +26,7 @@ import { getChatMessageLayout } from './chat-message-layout.ts';
 import { buildChatPath } from './chat-path.ts';
 import { getSteerableRunId } from './chat-steering.ts';
 
-const chatDetailLogLimit = 100;
+export const chatDetailLogLimit = 24;
 
 export function AgentChatDetail({ chatId }: { chatId: string }) {
     const location = useLocation();

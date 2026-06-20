@@ -2,6 +2,7 @@ import { expect, test } from 'bun:test';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { ChatMessage } from '../../components/chats/chat-message.tsx';
 import {
+    chatDetailLogLimit,
     isBlockingActiveTurn,
     shouldAnimateSyncedChatTimeline,
     shouldReleaseDraftHandoff,
@@ -28,6 +29,10 @@ test('synced timeline still animates for normal chat transcript loads', () => {
             draftRealChatId: null,
         })
     ).toBe(true);
+});
+
+test('chat detail cold-open loads a narrow transcript tail', () => {
+    expect(chatDetailLogLimit).toBeLessThanOrEqual(30);
 });
 
 test('chat timeline animation is explicit and can be disabled', () => {
