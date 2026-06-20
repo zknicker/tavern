@@ -98,7 +98,6 @@ export function ChatCard({
                         <ChatScrollControllerProvider value={chatScroll.handle}>
                             <ChatTimeline
                                 activeReply={timeline.activeReply}
-                                animate
                                 failedTurn={timeline.failedTurn}
                                 rows={rows}
                                 totalMessages={totalMessages}

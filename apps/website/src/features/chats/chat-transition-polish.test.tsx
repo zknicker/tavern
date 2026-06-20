@@ -4,47 +4,15 @@ import { ChatMessage } from '../../components/chats/chat-message.tsx';
 import {
     chatDetailLogLimit,
     isBlockingActiveTurn,
-    shouldAnimateSyncedChatTimeline,
     shouldReleaseDraftHandoff,
 } from './agent-chat-detail.tsx';
 import { AgentPresenceIndicator } from './agent-presence-indicator.tsx';
 import { resolveActivePresenceVerb } from './chat-active-presence-verb.ts';
 import { resolveDraftHandoffFrame } from './chat-draft-detail.tsx';
 import { getSteerableRunId } from './chat-steering.ts';
-import { ChatTimeline } from './chat-timeline.tsx';
-
-test('synced timeline does not replay entrance animation after optimistic draft handoff', () => {
-    expect(
-        shouldAnimateSyncedChatTimeline({
-            chatId: 'chat-real',
-            draftRealChatId: 'chat-real',
-        })
-    ).toBe(false);
-});
-
-test('synced timeline still animates for normal chat transcript loads', () => {
-    expect(
-        shouldAnimateSyncedChatTimeline({
-            chatId: 'chat-real',
-            draftRealChatId: null,
-        })
-    ).toBe(true);
-});
 
 test('chat detail cold-open loads a narrow transcript tail', () => {
     expect(chatDetailLogLimit).toBeLessThanOrEqual(30);
-});
-
-test('chat timeline animation is explicit and can be disabled', () => {
-    const animated = renderToStaticMarkup(
-        <ChatTimeline activeReply={null} animate rows={[]} totalMessages={0} />
-    );
-    const still = renderToStaticMarkup(
-        <ChatTimeline activeReply={null} animate={false} rows={[]} totalMessages={0} />
-    );
-
-    expect(animated).toContain('animate-float-up');
-    expect(still).not.toContain('animate-float-up');
 });
 
 test('agent presence indicator keeps a fixed icon box for layout motion', () => {

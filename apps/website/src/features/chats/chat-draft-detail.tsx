@@ -28,11 +28,9 @@ import { ChatMessageComposer } from './chat-message-composer.tsx';
 const draftTimelineLimit = 100;
 
 export function ChatDraftDetail({
-    animateTimeline = true,
     draft,
     timelineChatId,
 }: {
-    animateTimeline?: boolean;
     draft: ChatStartDraft | null;
     timelineChatId: string;
 }) {
@@ -117,7 +115,6 @@ export function ChatDraftDetail({
         <ChatDetailFrame
             activeReply={handoffFrame.activeReply}
             agentPresenceColor={selectedAgent?.effectivePrimaryColor ?? null}
-            animateTimeline={animateTimeline}
             chatId={timelineChatId}
             emptyLabel=""
             failedTurn={handoffFrame.failedTurn}

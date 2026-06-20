@@ -39,7 +39,6 @@ export function VirtualizedChatTranscript({
     activeReply,
     activePresenceVerb = null,
     agentPresenceColor = null,
-    animateMessages,
     chatId,
     conversationLayout,
     currentSessionKey,
@@ -57,7 +56,6 @@ export function VirtualizedChatTranscript({
     activeReply: ChatActiveReply | null;
     activePresenceVerb?: string | null;
     agentPresenceColor?: string | null;
-    animateMessages: boolean;
     chatId?: string;
     conversationLayout: ConversationMessageLayout;
     currentSessionKey?: string | null;
@@ -287,7 +285,6 @@ export function VirtualizedChatTranscript({
                             activePresenceVerb={row.kind === 'presence' ? activePresenceVerb : null}
                             activeReply={rendersActiveReply ? activeReply : null}
                             agentPresenceColor={agentPresenceColor}
-                            animateMessages={animateMessages}
                             chatId={chatId}
                             conversationLayout={conversationLayout}
                             currentSessionKey={currentSessionKey}

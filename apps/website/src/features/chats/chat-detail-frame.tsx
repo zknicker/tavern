@@ -17,7 +17,6 @@ import {
 export function ChatDetailFrame({
     activeReply,
     agentPresenceColor = null,
-    animateTimeline = true,
     chatId,
     conversationLayout,
     defaultOpenWorkGroups = false,
@@ -36,7 +35,6 @@ export function ChatDetailFrame({
 }: {
     activeReply: ChatActiveReply | null;
     agentPresenceColor?: string | null;
-    animateTimeline?: boolean;
     chatId: string;
     conversationLayout?: ConversationMessageLayout;
     defaultOpenWorkGroups?: boolean;
@@ -113,7 +111,6 @@ export function ChatDetailFrame({
                                 <ChatTimeline
                                     activeReply={activeReply}
                                     agentPresenceColor={agentPresenceColor}
-                                    animate={animateTimeline}
                                     chatId={chatId}
                                     conversationLayout={conversationLayout}
                                     defaultOpenWorkGroups={defaultOpenWorkGroups}

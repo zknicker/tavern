@@ -8,6 +8,8 @@ type ChatLogInput = Omit<ChatLogPage, 'activeReply' | 'failedTurn'> &
     Partial<Pick<ChatLogPage, 'activeReply' | 'failedTurn'>>;
 type ChatMessageRow = Extract<ChatLogRow, { kind: 'message' }>;
 
+const localTimelineMessageMetadataKey = '__tavernLocalTimelineMessage';
+
 export interface ChatTimelineMessage {
     attachments?: ChatMessageRow['message']['attachments'];
     content: string;
@@ -15,6 +17,12 @@ export interface ChatTimelineMessage {
     metadata?: Record<string, unknown>;
     sessionKey?: string | null;
     timestamp: string;
+}
+
+export function isLocalTimelineMessageMetadata(
+    metadata: Record<string, unknown> | null | undefined
+) {
+    return metadata?.[localTimelineMessageMetadataKey] === true;
 }
 
 function getRowTimestampMs(row: ChatLogRow) {
@@ -113,7 +121,10 @@ function buildUserMessageRow(input: {
             attachments: input.attachments,
             content: input.content,
             id: input.id,
-            metadata: input.metadata,
+            metadata: {
+                ...(input.metadata ?? {}),
+                [localTimelineMessageMetadataKey]: true,
+            },
             sender: 'You',
             senderType: 'user',
             sourceSessionId: null,

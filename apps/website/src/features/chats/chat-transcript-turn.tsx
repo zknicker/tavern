@@ -13,6 +13,7 @@ import { ChatMessage } from '../../components/chats/chat-message.tsx';
 import { CopyButton } from '../../components/ui/copy-button.tsx';
 import { Icon } from '../../components/ui/icon.tsx';
 import { useActorProfile } from '../../hooks/actors/use-actor.ts';
+import { isLocalTimelineMessageMetadata } from '../../hooks/chats/chat-timeline-messages.ts';
 import type { ChatActiveReply, ChatTurnFailure } from '../../hooks/chats/chat-timeline-state.ts';
 import { useChatDismiss } from '../../hooks/chats/use-chat-dismiss.ts';
 import { formatShortTime } from '../../lib/format.ts';
@@ -72,7 +73,6 @@ const reducedPresenceLabelTransition = { duration: 0.08 } satisfies Transition;
 
 export function TranscriptEntryView({
     activeReply,
-    animateMessages,
     chatId,
     conversationLayout,
     currentSessionKey,
@@ -82,7 +82,6 @@ export function TranscriptEntryView({
     turnStartedAt,
 }: {
     activeReply: ChatActiveReply | null;
-    animateMessages: boolean;
     chatId?: string;
     conversationLayout: ConversationMessageLayout;
     currentSessionKey?: string | null;
@@ -120,9 +119,7 @@ export function TranscriptEntryView({
     }
 
     if (entry.participant === 'user') {
-        return (
-            <UserTurn animateMessages={animateMessages} entry={entry} layout={conversationLayout} />
-        );
+        return <UserTurn entry={entry} layout={conversationLayout} />;
     }
 
     return (
@@ -214,11 +211,9 @@ export function AgentPresenceTranscriptRow({
 }
 
 function UserTurn({
-    animateMessages,
     entry,
     layout,
 }: {
-    animateMessages: boolean;
     entry: Extract<TranscriptEntry, { kind: 'turn' }>;
     layout: ConversationMessageLayout;
 }) {
@@ -233,7 +228,6 @@ function UserTurn({
             >
                 {entry.items.map((item) => (
                     <UserTurnItem
-                        animateEnter={animateMessages}
                         className="max-w-[min(42rem,78%)]"
                         item={item}
                         key={getTranscriptItemKey(item)}
@@ -254,7 +248,6 @@ function UserTurn({
                     <div className="flex flex-col items-end gap-1.5">
                         {entry.items.map((item) => (
                             <UserTurnItem
-                                animateEnter={animateMessages}
                                 className="max-w-[100%]"
                                 item={item}
                                 key={getTranscriptItemKey(item)}
@@ -536,19 +529,23 @@ function AgentTurnSegment({
     turnStopped: boolean;
     turnStartedAt?: string | null;
 }) {
-    return segment.kind === 'activity' ? (
-        <ChatTranscriptActivityGroup
-            chatId={chatId}
-            currentSessionKey={currentSessionKey}
-            defaultOpen={defaultOpenWorkGroups}
-            items={segment.items}
-            showDurationHeader={false}
-            turnActive={turnActive}
-            turnCompletedAt={turnCompletedAt}
-            turnStartedAt={turnStartedAt}
-            turnStopped={turnStopped}
-        />
-    ) : (
+    if (segment.kind === 'activity') {
+        return (
+            <ChatTranscriptActivityGroup
+                chatId={chatId}
+                currentSessionKey={currentSessionKey}
+                defaultOpen={defaultOpenWorkGroups}
+                items={segment.items}
+                showDurationHeader={false}
+                turnActive={turnActive}
+                turnCompletedAt={turnCompletedAt}
+                turnStartedAt={turnStartedAt}
+                turnStopped={turnStopped}
+            />
+        );
+    }
+
+    return (
         <AgentTurnItem
             chatId={chatId}
             currentSessionKey={currentSessionKey}
@@ -614,12 +611,10 @@ function usePresenceNow(enabled: boolean, start: string | null) {
 }
 
 function UserTurnItem({
-    animateEnter,
     className,
     item,
     showMeta,
 }: {
-    animateEnter: boolean;
     className?: string;
     item: TranscriptItem;
     showMeta: boolean;
@@ -635,7 +630,7 @@ function UserTurnItem({
     return body ? (
         <ChatMessage
             actions={showMeta ? <TranscriptMessageActions value={message.content} /> : null}
-            animateEnter={animateEnter}
+            animateEnter={isLocalTimelineMessageMetadata(message.metadata)}
             attachments={attachments}
             className={className}
             from="user"
@@ -662,8 +657,8 @@ function AgentTurnItem({
             <AssistantReplyText
                 content={getActiveReplyDisplayText(item.reply.text ?? '')}
                 copyValue={item.reply.text ?? ''}
-                initiallyRevealing={true}
                 revealKey={item.reply.runId}
+                revealText={isStreamingActiveReply(item.reply)}
             />
         );
     }
@@ -714,28 +709,27 @@ function AssistantNarrationText({ item }: { item: TranscriptItem }) {
 function AssistantReplyText({
     content,
     copyValue,
-    initiallyRevealing = false,
     message,
     revealKey,
+    revealText = false,
     showActions = false,
 }: {
     content?: string;
     copyValue?: string;
-    initiallyRevealing?: boolean;
     message?: TranscriptMessage;
     revealKey?: string;
+    revealText?: boolean;
     showActions?: boolean;
 }) {
     const fullContent = content ?? (message ? getTranscriptMessageContent(message) : '');
     const revealedText = useRevealedText(fullContent, {
-        enabled: initiallyRevealing,
+        enabled: revealText,
         revealKey: revealKey ?? (message ? getAssistantMessageRevealKey(message) : 'assistant'),
     });
     const shouldReduceMotion = useReducedMotion();
     const animatedRanges = useStreamingTextRanges(revealedText, {
         enabled:
-            shouldReduceMotion !== true &&
-            (initiallyRevealing || revealedText.length < fullContent.length),
+            shouldReduceMotion !== true && (revealText || revealedText.length < fullContent.length),
     });
     const attachments = message ? renderTranscriptMessageAttachments(message.attachments) : null;
     const actions = message ? (
@@ -777,6 +771,10 @@ function getAssistantMessageRevealKey(message: TranscriptMessage) {
     const runId = (runtime as Record<string, unknown>).runId;
 
     return typeof runId === 'string' && runId.trim().length > 0 ? runId : message.id;
+}
+
+function isStreamingActiveReply(reply: ChatActiveReply) {
+    return !reply.completedAt;
 }
 
 export function getActiveReplyDisplayText(text: string) {

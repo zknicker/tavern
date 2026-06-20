@@ -21,10 +21,10 @@ Chats are Tavern's shared conversation surfaces.
   skeleton cards.
 - Transcript loading is indicated outside the transcript body, using the shared app spinner
   in the chat screen chrome.
-- When transcript rows first arrive for a normal chat load, the divider and messages may enter with
-  the standard `animate-float-up` treatment.
+- When transcript rows first arrive for a normal chat load, durable history mounts without
+  transcript entrance motion.
 - When a new Tavern chat moves from the optimistic `/dashboard/chats/new` draft route to the real
-  `/dashboard/chats/:chatId` route, rows already visible in the draft must not replay their entrance
+  `/dashboard/chats/:chatId` route, rows already visible in the draft must not replay entrance
   animation after reconciliation.
 - Optimistic draft rows are app-local presentation state. They reconcile to the real chat
   route without becoming a separate durable transcript source.

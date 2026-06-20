@@ -16,7 +16,18 @@ export interface ChatMessageProps extends Omit<HTMLMotionProps<'div'>, 'children
 
 const ChatMessage = forwardRef<HTMLDivElement, ChatMessageProps>(
     (
-        { actions, animateEnter = true, attachments, children, className, from, time, ...props },
+        {
+            actions,
+            animateEnter = true,
+            attachments,
+            children,
+            className,
+            from,
+            style,
+            time,
+            transition,
+            ...props
+        },
         ref
     ) => {
         const isUser = from === 'user';
@@ -36,8 +47,11 @@ const ChatMessage = forwardRef<HTMLDivElement, ChatMessageProps>(
                 )}
                 initial={animateEnter ? { opacity: 0, scale: 0.96, y: 8 } : false}
                 ref={ref}
-                style={{ transformOrigin: isUser ? 'bottom right' : 'bottom left' }}
-                transition={springs.moderate}
+                style={{
+                    transformOrigin: isUser ? 'bottom right' : 'bottom left',
+                    ...style,
+                }}
+                transition={transition ?? springs.moderate}
                 {...props}
             >
                 {hasAttachments ? (

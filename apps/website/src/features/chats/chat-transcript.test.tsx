@@ -4,6 +4,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { httpLink } from '@trpc/client';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { MemoryRouter } from 'react-router-dom';
+import { mergeTimelineMessages } from '../../hooks/chats/chat-timeline-messages.ts';
 import type { ChatActiveReply } from '../../hooks/chats/chat-timeline-state.ts';
 import { type ChatLogOutput, trpc } from '../../lib/trpc.tsx';
 import { ArtifactLogEntry } from '../sessions/log/event-entry/artifact-entry.tsx';
@@ -68,6 +69,24 @@ test('ChatTranscript renders hover time and copy action without session or usage
     );
     assert.doesNotMatch(markup, /aria-label="Collapse message"/);
     assert.doesNotMatch(markup, /session 9f83ac/);
+});
+
+test('ChatTranscript animates only local optimistic user messages', () => {
+    const localTimeline = mergeTimelineMessages({
+        limit: 10,
+        logged: undefined,
+        messages: [
+            {
+                content: 'Can you check this?',
+                id: 'msg-local',
+                timestamp: '2026-03-31T15:00:00.000Z',
+            },
+        ],
+    });
+    const markup = renderTranscript(localTimeline?.rows ?? []);
+
+    assert.match(markup, /Can you check this\?/);
+    assert.match(markup, /style="transform-origin:bottom right;opacity:0;transform/);
 });
 
 test('ChatTranscript renders constrained inline markdown in message text', () => {
@@ -160,8 +179,54 @@ test('ChatTranscript renders active replies through the chat message shell', () 
     assert.match(markup, /group relative flex/);
     assert.match(markup, /transform-origin:bottom left/);
     assert.doesNotMatch(markup, /pb-6/);
-    assert.match(markup, /style="transform-origin:bottom left;opacity:1;transform:none"/);
     assert.doesNotMatch(markup, /style="transform-origin:bottom left;opacity:0;transform/);
+});
+
+test('ChatTranscript renders completed active replies as one full message block', () => {
+    const markup = renderActiveTranscript({
+        agentId: 'tiny',
+        completedAt: '2026-03-31T15:00:03.000Z',
+        isThinking: false,
+        runId: 'run-1',
+        sessionKey: 'agent:tiny:session-1',
+        startedAt: '2026-03-31T15:00:00.000Z',
+        text: 'First line.\nSecond line.\nThird line.',
+    });
+
+    assert.match(markup, /First line\./);
+    assert.match(markup, /Second line\./);
+    assert.match(markup, /Third line\./);
+    assert.match(markup, /group relative flex/);
+    assert.doesNotMatch(markup, /chat-streaming-text-unit/);
+});
+
+test('ChatTranscript renders loaded multiline assistant replies as one message block', () => {
+    const markup = renderTranscript([
+        {
+            actor: { id: 'tiny', kind: 'agent' },
+            connectsToNext: false,
+            connectsToPrevious: false,
+            id: 'message-multiline',
+            isFirstInGroup: true,
+            kind: 'message',
+            message: {
+                tavernAgentId: 'tiny',
+                content: 'First line.\nSecond line.\nThird line.',
+                id: 'message-multiline',
+                sender: 'Tiny',
+                senderType: 'agent',
+                sourceSessionId: null,
+                sourceSessionKey: 'agent:tiny:session-1',
+                timestamp: '2026-03-31T15:00:00.000Z',
+            },
+        },
+    ]);
+
+    assert.match(markup, /First line\./);
+    assert.match(markup, /Second line\./);
+    assert.match(markup, /Third line\./);
+    assert.match(markup, /group relative flex/);
+    assert.doesNotMatch(markup, /chat-streaming-text-unit/);
 });
 
 test('active reply display text ignores invisible streaming edge whitespace', () => {
@@ -1213,7 +1278,6 @@ test('ChatTranscript avoids duplicate agent identity beside visible presence row
     );
 
     assert.equal(markup.match(/>Agent</g)?.length, 1);
-    assert.equal(markup.match(/grid-cols-\[2rem_minmax\(0,1fr\)\]/g)?.length, 2);
     assert.match(markup, /Agent is replying/);
 });
 

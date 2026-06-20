@@ -126,10 +126,10 @@ transcript only grows:
 * The runtime coalesces stream writes: reply text publishes at most every
   ~60ms and activity writes at most every ~200ms, with flushes at segment and
   turn boundaries.
-* Streamed reply text reveals at a paced rate (capped, never snapping), fades in
-  fresh text at the live tail, keeps revealing after the turn completes, and
-  renders the same inline markdown as the durable message so completion does not
-  reflow.
+* Streamed reply text reveals at a paced rate while the reply is live.
+  Completed handoff replies and durable history load full assistant text
+  immediately without transcript entrance motion. The live reply renders the
+  same inline markdown as the durable message so completion does not reflow.
 * The streamed reply and its durable message share one React key
   (`reply:<runId>`), so the end-of-turn swap does not remount.
 * Agent turns render visible work and reply content in timeline order; there is
@@ -138,6 +138,9 @@ transcript only grows:
 * The presence row stays below the latest agent turn at rest and while live.
   It keeps a fixed 32px icon box, uses the agent's configured color, and follows
   transcript reflow instantly as the turn grows.
+* Normal transcript loads mount durable history without entrance motion. Local
+  optimistic user messages keep the chat bubble entrance animation; live tool
+  step inserts keep their insertion-only step motion.
 * While live, an activity verb and timer sit next to the presence eyes. The live
   presence block slides and fades in when an idle chat starts a turn; completion
   keeps the eyes mounted and lets their normal idle transition run without an

@@ -1,14 +1,11 @@
-import * as React from 'react';
 import type { ChatActiveReply, ChatTurnFailure } from '../../hooks/chats/chat-timeline-state.ts';
 import type { ChatLogOutput } from '../../lib/trpc.tsx';
-import { cn } from '../../lib/utils.ts';
 import { ChatTranscript } from './chat-transcript.tsx';
 import type { ConversationMessageLayout } from './chat-transcript-model.ts';
 
 export function ChatTimeline({
     activeReply,
     agentPresenceColor = null,
-    animate = false,
     chatId,
     conversationLayout,
     defaultOpenWorkGroups = false,
@@ -24,7 +21,6 @@ export function ChatTimeline({
 }: {
     activeReply: ChatActiveReply | null;
     agentPresenceColor?: string | null;
-    animate?: boolean;
     chatId?: string;
     conversationLayout?: ConversationMessageLayout;
     defaultOpenWorkGroups?: boolean;
@@ -39,23 +35,12 @@ export function ChatTimeline({
     totalMessages: number;
 }) {
     const hiddenCount = Math.max(totalMessages - countDurableMessageRows(rows), 0);
-    const [messageEntrancesEnabled, setMessageEntrancesEnabled] = React.useState(animate);
-
-    React.useEffect(() => {
-        if (messageEntrancesEnabled) {
-            return;
-        }
-
-        const frame = requestAnimationFrame(() => setMessageEntrancesEnabled(true));
-        return () => cancelAnimationFrame(frame);
-    }, [messageEntrancesEnabled]);
 
     return (
-        <div className={cn('flex flex-col gap-3 py-1', animate && 'animate-float-up')}>
+        <div className="flex flex-col gap-3 py-1">
             <ChatTranscript
                 activeReply={activeReply}
                 agentPresenceColor={agentPresenceColor}
-                animateMessages={messageEntrancesEnabled}
                 chatId={chatId}
                 conversationLayout={conversationLayout}
                 defaultOpenWorkGroups={defaultOpenWorkGroups}

@@ -16,7 +16,6 @@ interface TranscriptRenderRowViewProps {
     activePresenceVerb?: string | null;
     activeReply: ChatActiveReply | null;
     agentPresenceColor?: string | null;
-    animateMessages: boolean;
     chatId?: string;
     conversationLayout: ConversationMessageLayout;
     currentSessionKey?: string | null;
@@ -35,7 +34,6 @@ export const TranscriptRenderRowView = React.memo(
         activeReply,
         activePresenceVerb = null,
         agentPresenceColor = null,
-        animateMessages,
         chatId,
         conversationLayout,
         currentSessionKey,
@@ -71,7 +69,6 @@ export const TranscriptRenderRowView = React.memo(
         return (
             <TranscriptEntryView
                 activeReply={activeReply}
-                animateMessages={animateMessages}
                 chatId={chatId}
                 conversationLayout={conversationLayout}
                 currentSessionKey={currentSessionKey}
@@ -94,7 +91,6 @@ function areTranscriptRenderRowViewPropsEqual(
     return (
         previous.activeReply === next.activeReply &&
         previous.activePresenceVerb === next.activePresenceVerb &&
-        previous.animateMessages === next.animateMessages &&
         previous.chatId === next.chatId &&
         previous.currentSessionKey === next.currentSessionKey &&
         previous.defaultOpenWorkGroups === next.defaultOpenWorkGroups &&

@@ -90,20 +90,12 @@ export function AgentChatDetail({ chatId }: { chatId: string }) {
     }
 
     if (routeDraft?.realChatId === chatId && releasedDraftId !== routeDraft.id) {
-        return (
-            <ChatDraftDetail animateTimeline={false} draft={routeDraft} timelineChatId={chatId} />
-        );
+        return <ChatDraftDetail draft={routeDraft} timelineChatId={chatId} />;
     }
 
     if (!chat) {
         if (reconciledDraft) {
-            return (
-                <ChatDraftDetail
-                    animateTimeline={false}
-                    draft={reconciledDraft}
-                    timelineChatId={chatId}
-                />
-            );
+            return <ChatDraftDetail draft={reconciledDraft} timelineChatId={chatId} />;
         }
 
         if (chatQuery.isPending) {
@@ -113,26 +105,7 @@ export function AgentChatDetail({ chatId }: { chatId: string }) {
         return <Navigate replace to="/dashboard/overview" />;
     }
 
-    return (
-        <SyncedAgentChatDetail
-            animateTimeline={shouldAnimateSyncedChatTimeline({
-                chatId,
-                draftRealChatId: routeDraft?.realChatId ?? null,
-            })}
-            chat={chat}
-            chatId={chatId}
-        />
-    );
-}
-
-export function shouldAnimateSyncedChatTimeline({
-    chatId,
-    draftRealChatId,
-}: {
-    chatId: string;
-    draftRealChatId: string | null;
-}) {
-    return draftRealChatId !== chatId;
+    return <SyncedAgentChatDetail chat={chat} chatId={chatId} />;
 }
 
 export function shouldReleaseDraftHandoff(state: ChatTimelineState | undefined) {
@@ -177,15 +150,7 @@ export function isBlockingActiveTurn(input: {
     return input.activeReply?.isThinking !== false && input.activeReply !== null;
 }
 
-function SyncedAgentChatDetail({
-    animateTimeline,
-    chat,
-    chatId,
-}: {
-    animateTimeline: boolean;
-    chat: ChatListItem;
-    chatId: string;
-}) {
+function SyncedAgentChatDetail({ chat, chatId }: { chat: ChatListItem; chatId: string }) {
     const agentsQuery = useAgentList();
     const modelsQuery = useModelList();
     const chatVirtualization = useChatVirtualizationPreference();
@@ -218,7 +183,6 @@ function SyncedAgentChatDetail({
         <ChatDetailFrame
             activeReply={timeline.activeReply}
             agentPresenceColor={agent?.effectivePrimaryColor ?? null}
-            animateTimeline={animateTimeline}
             chatId={chat.id}
             conversationLayout={conversationLayout}
             emptyLabel="No synced messages for this chat yet."
