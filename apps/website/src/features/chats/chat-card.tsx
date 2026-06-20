@@ -1,5 +1,4 @@
 import * as React from 'react';
-import type { DashboardAvatarDirectory } from '../../hooks/agents/use-agent-avatar-directory.ts';
 import { useChatTimeline } from '../../hooks/chats/use-chat-timeline.ts';
 import type { AgentListOutput } from '../../lib/trpc.tsx';
 import { cn } from '../../lib/utils.ts';
@@ -26,14 +25,12 @@ const chatSummaryLimit = 20;
 
 export function ChatCard({
     agents,
-    avatarDirectory,
     chat,
     highlighted,
     onArchive,
     onEdit,
 }: {
     agents: AgentListOutput['agents'];
-    avatarDirectory: DashboardAvatarDirectory;
     chat: ChatListItem;
     highlighted: boolean;
     onArchive?: (() => void) | null;
@@ -89,12 +86,7 @@ export function ChatCard({
                 visible={isInitialTranscriptPending}
             />
             <div className="border-r-[3px] border-r-border-strong/80">
-                <ChatCardHeader
-                    avatarDirectory={avatarDirectory}
-                    chat={chat}
-                    onArchive={onArchive}
-                    onEdit={onEdit}
-                />
+                <ChatCardHeader chat={chat} onArchive={onArchive} onEdit={onEdit} />
             </div>
 
             <div

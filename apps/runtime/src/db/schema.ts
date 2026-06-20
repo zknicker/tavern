@@ -42,8 +42,6 @@ CREATE TABLE IF NOT EXISTS workspace_agent_instructions (
 CREATE TABLE IF NOT EXISTS agents (
   id                     TEXT PRIMARY KEY,
   name                   TEXT NOT NULL,
-  avatar                 TEXT,
-  emoji                  TEXT,
   primary_color          TEXT,
   workspace_folder       TEXT NOT NULL,
   enabled_skill_ids_json TEXT NOT NULL DEFAULT '[]',

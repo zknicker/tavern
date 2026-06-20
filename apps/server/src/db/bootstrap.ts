@@ -26,8 +26,6 @@ const schemaStatements = [
         id TEXT PRIMARY KEY NOT NULL,
         runtime_id TEXT NOT NULL,
         name TEXT NOT NULL,
-        avatar TEXT,
-        emoji TEXT,
         primary_color TEXT,
         enabled_skill_ids_json TEXT NOT NULL DEFAULT '[]',
         workspace_folder TEXT,

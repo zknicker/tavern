@@ -49,8 +49,7 @@ Tavern primitives.
 - Hermes-native config edits outside Tavern are not part of the supported product model and may
   be overwritten by Runtime.
 - Hermes-originated runtime events notify Tavern through Gateway events and targeted sync.
-- Tavern-owned fields on local records, such as visual color and avatar presentation, remain
-  local Tavern state.
+- Tavern-owned fields on local records, such as visual color, remain local Tavern state.
 
 ## Platforms
 

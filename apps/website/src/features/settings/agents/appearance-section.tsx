@@ -11,7 +11,6 @@ import {
 } from '../../../components/ui/select.tsx';
 import { Separator } from '../../../components/ui/separator.tsx';
 import { SettingsRow } from '../../../components/ui/settings-row.tsx';
-import { resolveAgentGlyph } from '../../../hooks/agents/use-agent-avatar-directory.ts';
 import { withSavingToast } from '../../../lib/saving-toast.ts';
 import { type AgentListOutput, trpc } from '../../../lib/trpc.tsx';
 import { agentColorPresets } from '../../agents/agent-color-presets.ts';
@@ -30,20 +29,12 @@ export function AgentAppearanceSection({
         await Promise.all([utils.agent.list.invalidate(), utils.agent.primary.invalidate()]);
     };
     const updateName = trpc.agent.updateName.useMutation({ onSuccess: invalidateAgents });
-    const updateAppearance = trpc.agent.updateAppearance.useMutation({
-        onSuccess: invalidateAgents,
-    });
     const [displayName, setDisplayName] = useState(agent.name);
-    const [avatar, setAvatar] = useState(agent.avatar ?? '');
-    const isSaving = disabled || updateName.isPending || updateAppearance.isPending;
+    const isSaving = disabled || updateName.isPending;
 
     useEffect(() => {
         setDisplayName(agent.name);
     }, [agent.name]);
-
-    useEffect(() => {
-        setAvatar(agent.avatar ?? '');
-    }, [agent.avatar]);
 
     const selectedColor = agent.effectivePrimaryColor;
     const selectedColorPreset =
@@ -85,41 +76,6 @@ export function AgentAppearanceSection({
                             }}
                             placeholder={agent.id}
                             value={displayName}
-                        />
-                    </SettingsRow>
-
-                    <Separator />
-
-                    <SettingsRow description="A character or two, or an emoji." title="Avatar">
-                        <Input
-                            disabled={isSaving}
-                            id="agent-avatar"
-                            maxLength={8}
-                            name="agent-avatar"
-                            onBlur={() => {
-                                const nextAvatar = avatar.trim() || null;
-
-                                if (nextAvatar === (agent.avatar ?? null)) {
-                                    return;
-                                }
-
-                                void withSavingToast(() =>
-                                    updateAppearance.mutateAsync({
-                                        agentId: agent.id,
-                                        avatar: nextAvatar,
-                                    })
-                                ).catch(() => undefined);
-                            }}
-                            onChange={(event) => {
-                                setAvatar(event.target.value);
-                            }}
-                            onKeyDown={(event) => {
-                                if (event.key === 'Enter') {
-                                    event.currentTarget.blur();
-                                }
-                            }}
-                            placeholder={resolveAgentGlyph({ avatar: null, name: agent.name })}
-                            value={avatar}
                         />
                     </SettingsRow>
 

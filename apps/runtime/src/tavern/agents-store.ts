@@ -4,9 +4,7 @@ import type { Database } from '../db/sqlite';
 import { namedParams } from '../db/sqlite';
 
 interface AgentRow {
-    avatar: string | null;
     created_at: string;
-    emoji: string | null;
     enabled_skill_ids_json: string;
     id: string;
     is_admin: 0 | 1;
@@ -65,8 +63,6 @@ export function replaceStoredAgents(input: {
                 `INSERT INTO agents (
                     id,
                     name,
-                    avatar,
-                    emoji,
                     primary_color,
                     workspace_folder,
                     enabled_skill_ids_json,
@@ -79,8 +75,6 @@ export function replaceStoredAgents(input: {
                 VALUES (
                     $id,
                     $name,
-                    $avatar,
-                    $emoji,
                     $primaryColor,
                     $workspaceFolder,
                     $enabledSkillIdsJson,
@@ -92,8 +86,6 @@ export function replaceStoredAgents(input: {
                 )
                 ON CONFLICT(id) DO UPDATE SET
                     name = excluded.name,
-                    avatar = excluded.avatar,
-                    emoji = excluded.emoji,
                     primary_color = excluded.primary_color,
                     workspace_folder = excluded.workspace_folder,
                     enabled_skill_ids_json = excluded.enabled_skill_ids_json,
@@ -103,9 +95,7 @@ export function replaceStoredAgents(input: {
                     updated_at = excluded.updated_at`
             ).run(
                 namedParams({
-                    avatar: agent.avatar,
                     createdAt: syncedAt,
-                    emoji: agent.emoji,
                     enabledSkillIdsJson: JSON.stringify(agent.enabledSkillIds),
                     id: agent.id,
                     isAdmin: agent.isAdmin ? 1 : 0,
@@ -140,9 +130,7 @@ export function replaceStoredAgents(input: {
 
 function rowToAgent(row: AgentRow): AgentRuntimeAgent {
     return {
-        avatar: row.avatar,
         enabledSkillIds: parseEnabledSkillIds(row.enabled_skill_ids_json),
-        emoji: row.emoji,
         id: row.id,
         isAdmin: row.is_admin === 1,
         name: row.name,
@@ -166,9 +154,7 @@ function parseEnabledSkillIds(value: string) {
 
 function stableAgentJson(agent: AgentRuntimeAgent) {
     return JSON.stringify({
-        avatar: agent.avatar,
         enabledSkillIds: agent.enabledSkillIds,
-        emoji: agent.emoji,
         id: agent.id,
         isAdmin: agent.isAdmin,
         name: agent.name,

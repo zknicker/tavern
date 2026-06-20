@@ -1,11 +1,8 @@
 import type * as React from 'react';
 import { cn } from '../../lib/utils.ts';
-import { AgentAvatar } from './agent-avatar.tsx';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './select.tsx';
 
 export interface AgentOptionItem {
-    avatar: string;
-    color: string;
     idLabel: string;
     summary: string;
     title: string;
@@ -20,15 +17,7 @@ const agentPickerTriggerSizeClassName = {
     sm: 'min-h-12 py-1.5',
 } satisfies Record<AgentPickerSize, string>;
 
-const agentPickerAvatarClassName = {
-    default: 'size-8',
-    lg: 'size-10',
-    sm: 'size-7',
-} satisfies Record<AgentPickerSize, string>;
-
 const agentPickerPlaceholder = {
-    avatar: '',
-    color: '#64748b',
     idLabel: 'required',
     summary: 'Select an agent to run this automation prompt.',
     title: 'Choose agent',
@@ -47,19 +36,7 @@ function AgentSelectionCard({
     const isCompact = size === 'sm';
 
     return (
-        <div
-            className={cn(
-                'flex min-w-0 items-center text-left',
-                isCompact ? 'gap-2' : 'gap-3',
-                className
-            )}
-        >
-            <AgentAvatar
-                avatar={option.avatar}
-                backgroundColor={option.color}
-                className={cn('shrink-0', agentPickerAvatarClassName[size])}
-                name={option.title}
-            />
+        <div className={cn('flex min-w-0 items-center text-left', className)}>
             <div className="min-w-0 flex-1">
                 <div className="truncate font-medium text-sm">{option.title}</div>
                 <div

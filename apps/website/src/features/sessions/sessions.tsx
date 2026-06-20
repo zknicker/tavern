@@ -1,5 +1,4 @@
 import * as React from 'react';
-import { useAgentAvatarDirectory } from '../../hooks/agents/use-agent-avatar-directory.ts';
 import { useAgentListSuspense } from '../../hooks/agents/use-agent-list.ts';
 import {
     toRuntimePageConnectionState,
@@ -28,11 +27,9 @@ function SessionsContent() {
         () => buildSessionList(agents.agents, sessionsData.sessions),
         [agents.agents, sessionsData.sessions]
     );
-    const avatarDirectory = useAgentAvatarDirectory(agents.agents);
 
     return (
         <SessionsList
-            avatarDirectory={avatarDirectory}
             connectionState={toRuntimePageConnectionState(runtimeConnection.status)}
             onNavigateToSettings={navigateToSettings}
             sessions={sessions}

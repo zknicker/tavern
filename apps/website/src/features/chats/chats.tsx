@@ -1,5 +1,4 @@
 import * as React from 'react';
-import { useAgentAvatarDirectory } from '../../hooks/agents/use-agent-avatar-directory.ts';
 import { useAgentListSuspense } from '../../hooks/agents/use-agent-list.ts';
 import { useChatArchive } from '../../hooks/chats/use-chat-archive.ts';
 import { useChatListSuspense } from '../../hooks/chats/use-chat-list.ts';
@@ -11,7 +10,6 @@ import { ChatsList } from './chats-list.tsx';
 export function Chats() {
     const [agents] = useAgentListSuspense();
     const [chatData] = useChatListSuspense();
-    const avatarDirectory = useAgentAvatarDirectory(agents.agents);
     const chats = React.useMemo(() => buildChatList(chatData), [chatData]);
     const updateChat = useChatUpdate();
     const archiveChat = useChatArchive();
@@ -31,7 +29,6 @@ export function Chats() {
         <div className="flex min-h-0 flex-1 flex-col">
             <ChatsList
                 agents={agents.agents}
-                avatarDirectory={avatarDirectory}
                 chats={chats}
                 onArchive={async (chat) => {
                     // biome-ignore lint/suspicious/noAlert: Browser confirm is the current archive safeguard.

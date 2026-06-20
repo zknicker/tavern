@@ -210,9 +210,7 @@ test('syncAgentRuntimeAgents sends Authorization header when environment connect
     const agentListResponse = {
         agents: [
             {
-                avatar: null,
                 enabledSkillIds: [],
-                emoji: null,
                 id: 'main',
                 isAdmin: false,
                 name: 'Main',

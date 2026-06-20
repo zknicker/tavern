@@ -1,25 +1,12 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { renderToStaticMarkup } from 'react-dom/server';
-import type { DashboardAvatarDirectory } from '../../hooks/agents/use-agent-avatar-directory.ts';
 import { ChatCardHeader } from './chat-card-header.tsx';
 
-const stubAvatarDirectory: DashboardAvatarDirectory = {
-    get(nameOrId) {
-        const name = nameOrId?.trim() || 'unknown';
-        return {
-            avatar: name.slice(0, 2).toUpperCase(),
-            backgroundColor: '#64748b',
-            displayName: null,
-        };
-    },
-};
-
-test('ChatCardHeader renders participant avatars and omits session link blocks', () => {
+test('ChatCardHeader renders chat labels and omits session link blocks', () => {
     const sessionKey = 'portal:chat:atlas:c8b38c6e';
     const markup = renderToStaticMarkup(
         <ChatCardHeader
-            avatarDirectory={stubAvatarDirectory}
             chat={{
                 boundAgentIds: [],
                 canSend: false,
@@ -83,7 +70,6 @@ test('ChatCardHeader renders participant avatars and omits session link blocks',
 test('ChatCardHeader derives runtime DM titles from chat primitives', () => {
     const markup = renderToStaticMarkup(
         <ChatCardHeader
-            avatarDirectory={stubAvatarDirectory}
             chat={{
                 boundAgentIds: ['runtime:blippy'],
                 canSend: true,
@@ -140,7 +126,6 @@ test('ChatCardHeader derives runtime DM titles from chat primitives', () => {
 test('ChatCardHeader badges first-party Tavern chats by provider', () => {
     const markup = renderToStaticMarkup(
         <ChatCardHeader
-            avatarDirectory={stubAvatarDirectory}
             chat={{
                 boundAgentIds: ['blippy'],
                 canSend: true,
@@ -197,7 +182,6 @@ test('ChatCardHeader badges first-party Tavern chats by provider', () => {
 test('ChatCardHeader omits duplicate badges for system sessions', () => {
     const markup = renderToStaticMarkup(
         <ChatCardHeader
-            avatarDirectory={stubAvatarDirectory}
             chat={{
                 boundAgentIds: ['main'],
                 canSend: false,

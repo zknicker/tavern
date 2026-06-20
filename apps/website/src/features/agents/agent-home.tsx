@@ -1,8 +1,7 @@
-import { Add01Icon } from '@hugeicons-pro/core-duotone-rounded';
+import { Add01Icon, Chat01Icon } from '@hugeicons-pro/core-duotone-rounded';
 import { PlugIcon } from '@hugeicons-pro/core-stroke-rounded';
 import type * as React from 'react';
 import { Link } from 'react-router-dom';
-import { AgentAvatar } from '../../components/ui/agent-avatar.tsx';
 import { Icon } from '../../components/ui/icon.tsx';
 import { usePrimaryAgentSuspense } from '../../hooks/agents/use-agent-list.ts';
 import { useMessagingPlatformListSuspense } from '../../hooks/connections/use-messaging-platform-list.ts';
@@ -98,13 +97,6 @@ function renderMessagingBindingIcon(binding: MessagingPlatformListOutput['bindin
 function AgentHero({ agent }: { agent: AgentListOutput['agents'][number] }) {
     return (
         <header className="flex flex-col gap-5">
-            <AgentAvatar
-                active
-                avatar={agent.name}
-                backgroundColor={agent.effectivePrimaryColor}
-                className="size-14"
-                name={agent.name}
-            />
             <h1 className="max-w-[20ch] truncate font-semibold text-4xl text-foreground tracking-tight">
                 {agent.name}
             </h1>
@@ -130,12 +122,9 @@ function AgentChannels({
                 <ChannelCard
                     description="Built-in direct chats"
                     icon={
-                        <AgentAvatar
-                            avatar={agent.name}
-                            backgroundColor={agent.effectivePrimaryColor}
-                            className="size-7"
-                            name={agent.name}
-                        />
+                        <span className="flex size-7 items-center justify-center rounded-md bg-muted/50 text-muted-foreground">
+                            <Icon className="size-3.5" icon={Chat01Icon} />
+                        </span>
                     }
                     title="Tavern chats"
                     to={buildAgentPath(agent.id)}

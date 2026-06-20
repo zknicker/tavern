@@ -38,8 +38,6 @@ function buildAgentOptions(agent: AgentListOutput['agents'][number] | null | und
     return agent
         ? [
               {
-                  avatar: agent.name,
-                  color: agent.effectivePrimaryColor,
                   idLabel: agent.id,
                   summary: `Workspace ${agent.id}`,
                   title: agent.name,

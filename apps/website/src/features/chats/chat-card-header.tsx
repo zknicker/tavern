@@ -1,20 +1,15 @@
 import { getChatDisplayTitle } from '../../components/chats/chat-display.ts';
 import { ChatTitle } from '../../components/chats/chat-title.tsx';
 import { ChatTypeBadge } from '../../components/chats/chat-type-badge.tsx';
-import { AgentAvatar } from '../../components/ui/agent-avatar.tsx';
 import { Badge } from '../../components/ui/badge.tsx';
 import { Button } from '../../components/ui/primitives/button.tsx';
-import { Tooltip, TooltipContent, TooltipTrigger } from '../../components/ui/tooltip.tsx';
-import type { DashboardAvatarDirectory } from '../../hooks/agents/use-agent-avatar-directory.ts';
 import type { ChatListItem } from './chat-list-data.ts';
 
 export function ChatCardHeader({
-    avatarDirectory,
     chat,
     onArchive,
     onEdit,
 }: {
-    avatarDirectory: DashboardAvatarDirectory;
     chat: ChatListItem;
     onArchive?: (() => void) | null;
     onEdit?: (() => void) | null;
@@ -50,40 +45,6 @@ export function ChatCardHeader({
                     </div>
                     {chat.isDisabled ? <Badge variant="secondary">Disabled</Badge> : null}
                 </div>
-                {chat.participants.length > 0 ? (
-                    <div className="ml-auto flex shrink-0 items-center -space-x-1 self-start leading-none">
-                        {chat.participants.map((participant) => {
-                            const resolved =
-                                participant.actorType === 'agent'
-                                    ? avatarDirectory.get(participant.actorId ?? participant.name)
-                                    : {
-                                          avatar: participant.avatar ?? participant.name,
-                                          backgroundColor: participant.primaryColor ?? '#64748b',
-                                      };
-                            return (
-                                <Tooltip
-                                    key={`${chat.id}:${participant.actorType}:${participant.actorId}`}
-                                >
-                                    <TooltipTrigger
-                                        render={
-                                            <span className="flex items-center self-center">
-                                                <AgentAvatar
-                                                    avatar={resolved.avatar}
-                                                    backgroundColor={resolved.backgroundColor}
-                                                    className="size-5 self-center ring-1 ring-chrome"
-                                                    name={participant.name}
-                                                />
-                                            </span>
-                                        }
-                                    />
-                                    <TooltipContent side="bottom">
-                                        {participant.name}
-                                    </TooltipContent>
-                                </Tooltip>
-                            );
-                        })}
-                    </div>
-                ) : null}
                 {onEdit || onArchive ? (
                     <div className="ml-2 flex shrink-0 items-center gap-1">
                         {onEdit ? (

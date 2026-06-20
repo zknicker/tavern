@@ -53,8 +53,7 @@ Runtime APIs and events when Tavern needs to render or inspect them later.
 - Tavern Runtime generates managed Hermes config from Tavern-owned state.
 - If Runtime recreates Hermes state, it reapplies generated config before accepting work that
   depends on that config.
-- Tavern preserves Tavern-owned overlays such as agent color and avatar presentation separately from
-  runtime-native records.
+- Tavern preserves Tavern-owned overlays such as agent color separately from runtime-native records.
 - Tavern does not treat Hermes config files as canonical product settings.
 - Runtime-owned config saves call Runtime, persist the returned product state, and emit focused
   invalidation events for affected screens.

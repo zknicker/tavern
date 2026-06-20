@@ -25,7 +25,6 @@ import {
     type AgentRuntimeStartModelProviderOAuth,
     type AgentRuntimeSubmitModelProviderOAuth,
     type AgentRuntimeToolset,
-    type AgentRuntimeUpdateAgentAppearance,
     type AgentRuntimeUpdateAgentModel,
     type AgentRuntimeUpdateAgentName,
     type AgentRuntimeUpdateAgentThinkingDefault,
@@ -310,9 +309,7 @@ export class LocalHermesClient extends LocalHermesUnsupportedSurfaces {
         const existing = await this.getAgentConfig(defaultHermesAgentId);
         const next = agentRuntimeAgentSchema.parse({
             ...existing,
-            avatar: input.avatar ?? existing.avatar,
             enabledSkillIds: input.enabledSkillIds ?? existing.enabledSkillIds,
-            emoji: input.emoji ?? existing.emoji,
             isAdmin: input.isAdmin ?? existing.isAdmin,
             name: input.name,
             primaryColor: input.primaryColor ?? existing.primaryColor,
@@ -321,8 +318,6 @@ export class LocalHermesClient extends LocalHermesUnsupportedSurfaces {
 
         await updateHermesConfiguredAgentState((settings) => ({
             ...settings,
-            avatar: next.avatar,
-            emoji: next.emoji,
             enabledSkillIds: next.enabledSkillIds,
             name: next.name,
         }));
@@ -385,21 +380,6 @@ export class LocalHermesClient extends LocalHermesUnsupportedSurfaces {
         return toHermesConfigSnapshot({
             agent: { name: input.name },
             hash: `agent-name:${input.name}`,
-        });
-    }
-
-    async updateAgentAppearance(_agentId: string, input: AgentRuntimeUpdateAgentAppearance) {
-        const appearance = {
-            ...(input.avatar !== undefined ? { avatar: input.avatar || null } : {}),
-            ...(input.emoji !== undefined ? { emoji: input.emoji || null } : {}),
-        };
-        await updateHermesConfiguredAgentState((settings) => ({
-            ...settings,
-            ...appearance,
-        }));
-        return toHermesConfigSnapshot({
-            agent: appearance,
-            hash: `agent-appearance:${input.avatar ?? ''}:${input.emoji ?? ''}`,
         });
     }
 

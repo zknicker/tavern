@@ -1,5 +1,4 @@
 import { Plus } from '@hugeicons/core-free-icons';
-import { AgentAvatar } from '../../components/ui/agent-avatar.tsx';
 import { Icon } from '../../components/ui/icon.tsx';
 import type { ModelOptionItem } from '../../components/ui/model-route-shared.ts';
 import { PromptInputButton } from '../../components/ui/prompt-input.tsx';
@@ -11,14 +10,11 @@ import {
     SelectValue,
 } from '../../components/ui/select.tsx';
 import type { AgentListOutput } from '../../lib/trpc.tsx';
-import { cn } from '../../lib/utils.ts';
 import type { ChatContextFullness } from './chat-context-fullness.ts';
 
 interface AgentOption {
-    avatar: string;
     id: string;
     name: string;
-    primaryColor: string;
 }
 
 export const defaultComposerModelValue = '__agent_default__';
@@ -59,6 +55,8 @@ export function ChatComposerAgentSelector({
     onAgentChange: (agentId: string) => void;
 }) {
     const boundAgents = boundAgentIds.map((boundAgentId) => getAgentOption(agents, boundAgentId));
+    const selectedAgent =
+        boundAgents.find((agent) => agent.id === agentId) ?? boundAgents[0] ?? null;
 
     return (
         <div className="flex min-w-0 items-center gap-2">
@@ -74,21 +72,14 @@ export function ChatComposerAgentSelector({
                             className="h-9 min-w-0 rounded-full border-transparent bg-muted/75 py-1 pr-2 pl-1.5 shadow-none ring-1 ring-border/35 hover:bg-accent"
                             size="sm"
                         >
-                            <SelectValue className="sr-only" placeholder="Choose agent" />
-                            <AgentAvatarCluster agents={boundAgents} selectedAgentId={agentId} />
+                            <SelectValue placeholder="Choose agent">
+                                {selectedAgent?.name}
+                            </SelectValue>
                         </SelectTrigger>
                         <SelectContent>
                             {boundAgents.map((boundAgent) => (
                                 <SelectItem key={boundAgent.id} value={boundAgent.id}>
-                                    <span className="flex min-w-0 items-center gap-2">
-                                        <AgentAvatar
-                                            avatar={boundAgent.avatar}
-                                            backgroundColor={boundAgent.primaryColor}
-                                            className="size-5 shrink-0"
-                                            name={boundAgent.name}
-                                        />
-                                        <span className="min-w-0 truncate">{boundAgent.name}</span>
-                                    </span>
+                                    {boundAgent.name}
                                 </SelectItem>
                             ))}
                         </SelectContent>
@@ -174,43 +165,12 @@ export function ChatComposerContextFullness({ fullness }: { fullness: ChatContex
     );
 }
 
-function AgentAvatarCluster({
-    agents,
-    selectedAgentId,
-}: {
-    agents: AgentOption[];
-    selectedAgentId: string;
-}) {
-    return (
-        <div className="flex min-w-0 items-center -space-x-1.5">
-            {agents.map((agent) => (
-                <AgentAvatar
-                    avatar={agent.avatar}
-                    backgroundColor={agent.primaryColor}
-                    className={cn(
-                        'size-7 shrink-0 rounded-full ring-2 ring-popover',
-                        agent.id === selectedAgentId ? 'z-10' : 'opacity-88'
-                    )}
-                    key={agent.id}
-                    name={agent.name}
-                />
-            ))}
-        </div>
-    );
-}
-
 function getAgentOption(agents: AgentListOutput['agents'], agentId: string): AgentOption {
     const agent = agents.find((entry) => entry.id === agentId);
     const name = agent?.name ?? agentId;
 
     return {
-        avatar: fallbackAvatar(name),
         id: agentId,
         name,
-        primaryColor: agent?.effectivePrimaryColor ?? '#64748b',
     };
-}
-
-function fallbackAvatar(value: string) {
-    return value.trim().slice(0, 1).toUpperCase() || '?';
 }

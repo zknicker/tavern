@@ -1,7 +1,6 @@
 import * as React from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { Card } from '../../components/ui/card.tsx';
-import type { DashboardAvatarDirectory } from '../../hooks/agents/use-agent-avatar-directory.ts';
 import { useSearch } from '../../hooks/dashboard/use-search.ts';
 import { EmptyState } from '../shell/empty-state.tsx';
 import { SessionCard } from './session-card.tsx';
@@ -13,14 +12,12 @@ import {
 } from './session-list-data.ts';
 
 interface SessionsListProps {
-    avatarDirectory: DashboardAvatarDirectory;
     connectionState: 'reachable' | 'unconfigured' | 'unreachable';
     onNavigateToSettings: () => void;
     sessions: SessionListItem[];
 }
 
 export function SessionsList({
-    avatarDirectory,
     connectionState,
     onNavigateToSettings,
     sessions,
@@ -120,7 +117,6 @@ export function SessionsList({
                     <div className="flex h-full min-w-max items-stretch">
                         {visibleCards.map((card) => (
                             <SessionCard
-                                avatarDirectory={avatarDirectory}
                                 card={card}
                                 highlighted={highlightedSessionKey === card.session.key}
                                 key={card.id}

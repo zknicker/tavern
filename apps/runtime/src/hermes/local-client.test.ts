@@ -1714,39 +1714,6 @@ describe('LocalHermesClient adapter-owned state', () => {
         expect(state.agent).toBeUndefined();
     });
 
-    it('persists avatar and emoji appearance into adapter state', async () => {
-        const { LocalHermesClient } = await import('./local-client');
-        const client = new LocalHermesClient({
-            baseUrl: 'http://127.0.0.1:1',
-            token: null,
-        });
-
-        const snapshot = await client.updateAgentAppearance('agt_hermes', {
-            avatar: 'HM',
-            emoji: '🦉',
-        });
-
-        expect(snapshot).toMatchObject({
-            config: { agent: { avatar: 'HM', emoji: '🦉' } },
-            hash: 'agent-appearance:HM:🦉',
-            valid: true,
-        });
-        await expect(client.listAgents()).resolves.toMatchObject({
-            agents: [{ avatar: 'HM', emoji: '🦉' }],
-        });
-        await expect(client.getAgentConfig('agt_hermes')).resolves.toMatchObject({
-            avatar: 'HM',
-            emoji: '🦉',
-        });
-
-        await client.updateAgentAppearance('agt_hermes', { avatar: null });
-
-        await expect(client.getAgentConfig('agt_hermes')).resolves.toMatchObject({
-            avatar: null,
-            emoji: '🦉',
-        });
-    });
-
     it('keeps raw Hermes config invalid so server fixups do not call raw mutation', async () => {
         const { LocalHermesClient } = await import('./local-client');
         const client = new LocalHermesClient({

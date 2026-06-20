@@ -156,9 +156,7 @@ test('syncAgentRuntimeAgents syncs managed workspace instructions', async () => 
     await runtimeSync.syncAgentWorkspaceInstructions({
         agents: [
             {
-                avatar: null,
                 enabledSkillIds: [],
-                emoji: null,
                 id: 'planner',
                 isAdmin: false,
                 name: 'Planner',
@@ -192,9 +190,7 @@ test('syncAgentRuntimeAgents refreshes workspace instruction names without a pro
     await runtimeSync.syncAgentWorkspaceInstructions({
         agents: [
             {
-                avatar: null,
                 enabledSkillIds: [],
-                emoji: null,
                 id: 'main',
                 isAdmin: false,
                 name: 'Blippy',

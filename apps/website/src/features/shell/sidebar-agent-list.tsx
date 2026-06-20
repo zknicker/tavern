@@ -1,5 +1,4 @@
 import { NavLink, useLocation } from 'react-router-dom';
-import { AgentAvatar } from '../../components/ui/agent-avatar.tsx';
 import {
     SidebarGroup,
     SidebarGroupContent,
@@ -13,7 +12,7 @@ import { buildAgentPath, getActiveAgentPage } from '../agents/agent-path.ts';
 
 const supportsLiveSidebarAgentActivity = false;
 
-export function resolveSidebarAgentAvatarActive(agent: AgentRailItem) {
+export function resolveSidebarAgentActive(agent: AgentRailItem) {
     return supportsLiveSidebarAgentActivity ? agent.isThinking : false;
 }
 
@@ -23,7 +22,7 @@ export function AppSidebarAgentList({ sidebarAgents }: { sidebarAgents: AgentRai
     const agent = sidebarAgents[0] ?? null;
     const agentPath = agent ? buildAgentPath(agent.id) : '/dashboard/agent';
     const isActiveAgent = activeAgentPage !== null;
-    const isAvatarActive = agent ? isActiveAgent || resolveSidebarAgentAvatarActive(agent) : false;
+    const hasLiveActivity = agent ? resolveSidebarAgentActive(agent) : false;
 
     return (
         <SidebarGroup className="min-h-0 flex-1">
@@ -33,17 +32,10 @@ export function AppSidebarAgentList({ sidebarAgents }: { sidebarAgents: AgentRai
                     {agent ? (
                         <SidebarMenuItem key={agent.id}>
                             <SidebarMenuButton
-                                isActive={isActiveAgent}
+                                isActive={isActiveAgent || hasLiveActivity}
                                 render={<NavLink to={agentPath} />}
                                 tooltip={agent.name}
                             >
-                                <AgentAvatar
-                                    active={isAvatarActive}
-                                    avatar={agent.avatar}
-                                    backgroundColor={agent.primaryColor ?? '#64748b'}
-                                    className="size-5"
-                                    name={agent.name}
-                                />
                                 <span className="min-w-0 truncate">{agent.name}</span>
                             </SidebarMenuButton>
                         </SidebarMenuItem>

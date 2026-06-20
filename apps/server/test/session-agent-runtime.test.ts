@@ -65,9 +65,7 @@ function mockRuntimeChatFetch(chats = [runtimeTavernChat()]) {
             return Response.json({
                 agents: [
                     {
-                        avatar: null,
                         enabledSkillIds: [],
-                        emoji: null,
                         id: 'support',
                         isAdmin: false,
                         name: 'Support',
@@ -399,9 +397,7 @@ test('session queries read bounded Hermes session history', async () => {
         listAgents: async () => ({
             agents: [
                 {
-                    avatar: null,
                     enabledSkillIds: [],
-                    emoji: null,
                     id: 'support',
                     isAdmin: false,
                     name: 'Support',
@@ -472,9 +468,7 @@ test('session queries read bounded Hermes session history', async () => {
         listAgents: async () => ({
             agents: [
                 {
-                    avatar: null,
                     enabledSkillIds: [],
-                    emoji: null,
                     id: 'support',
                     isAdmin: false,
                     name: 'Support',
@@ -533,9 +527,7 @@ test('session queries read bounded Hermes session history', async () => {
     await syncAgentsForRuntime({
         agents: [
             {
-                avatar: null,
                 enabledSkillIds: [],
-                emoji: null,
                 id: 'support',
                 isAdmin: false,
                 name: 'Support',

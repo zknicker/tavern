@@ -4,7 +4,6 @@ import { useAgentList } from '../agents/use-agent-list.ts';
 import { useParticipantList } from '../participants/use-participant-list.ts';
 
 interface ActorProfile {
-    avatar: string;
     id: string;
     kind: HistoryActorOutput['kind'];
     name: string;
@@ -27,7 +26,6 @@ export function useActorProfile(actor: HistoryActorOutput | null) {
 
             return agent
                 ? ({
-                      avatar: agent.name,
                       id: agent.id,
                       kind: 'agent',
                       name: agent.name,
@@ -39,7 +37,6 @@ export function useActorProfile(actor: HistoryActorOutput | null) {
         if (actor.kind === 'profile') {
             return actor.id === selfProfileActorId
                 ? ({
-                      avatar: 'You',
                       id: selfProfileActorId,
                       kind: 'profile',
                       name: 'You',
@@ -54,7 +51,6 @@ export function useActorProfile(actor: HistoryActorOutput | null) {
 
         return participant
             ? ({
-                  avatar: participant.avatar,
                   id: participant.id,
                   kind: 'participant',
                   name: participant.name,

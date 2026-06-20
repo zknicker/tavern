@@ -26,9 +26,7 @@ describe('Runtime agent and Hermes reads', () => {
         await expect(response.json()).resolves.toEqual({
             agents: [
                 {
-                    avatar: null,
                     enabledSkillIds: [],
-                    emoji: null,
                     hermesModelName: {
                         model: 'gpt-5.5',
                         provider: 'openai-codex',

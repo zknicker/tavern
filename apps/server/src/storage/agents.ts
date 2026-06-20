@@ -51,9 +51,7 @@ export async function syncAgentsForRuntime(input: {
         await db
             .insert(agentsTable)
             .values({
-                avatar: agent.avatar ?? null,
                 createdAt: timestamp,
-                emoji: agent.emoji ?? null,
                 enabledSkillIdsJson: JSON.stringify(agent.enabledSkillIds ?? []),
                 id: agent.id,
                 lastSyncedAt: timestamp,
@@ -67,8 +65,6 @@ export async function syncAgentsForRuntime(input: {
             .onConflictDoUpdate({
                 target: agentsTable.id,
                 set: {
-                    avatar: agent.avatar ?? null,
-                    emoji: agent.emoji ?? null,
                     enabledSkillIdsJson: JSON.stringify(agent.enabledSkillIds ?? []),
                     lastSyncedAt: timestamp,
                     name: agent.name,

@@ -10,9 +10,7 @@ import { defaultHermesAgentId } from './constants';
 
 export function defaultHermesAgent(): AgentRuntimeAgent {
     return {
-        avatar: null,
         enabledSkillIds: [],
-        emoji: null,
         id: defaultHermesAgentId,
         isAdmin: true,
         name: 'Hermes',

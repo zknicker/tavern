@@ -5,28 +5,24 @@ import { renderToStaticMarkup } from 'react-dom/server';
 import { MemoryRouter } from 'react-router-dom';
 import { SidebarProvider } from '../../components/ui/sidebar.tsx';
 import type { AgentRailItem } from '../../hooks/agents/use-agent-rail.ts';
-import { AppSidebarAgentList, resolveSidebarAgentAvatarActive } from './sidebar-agent-list.tsx';
+import { AppSidebarAgentList, resolveSidebarAgentActive } from './sidebar-agent-list.tsx';
 
 function createAgentRailItem(overrides: Partial<AgentRailItem> = {}): AgentRailItem {
     return {
-        avatar: 'A',
         id: 'agent-1',
         isThinking: false,
         name: 'Alpha Agent',
-        primaryColor: '#000000',
         ...overrides,
     };
 }
 
-describe('resolveSidebarAgentAvatarActive', () => {
-    test('keeps sidebar avatars idle when an agent rail item is marked thinking', () => {
-        expect(resolveSidebarAgentAvatarActive(createAgentRailItem({ isThinking: true }))).toBe(
-            false
-        );
+describe('resolveSidebarAgentActive', () => {
+    test('keeps sidebar agent rows idle when an agent rail item is marked thinking', () => {
+        expect(resolveSidebarAgentActive(createAgentRailItem({ isThinking: true }))).toBe(false);
     });
 
     test('keeps idle agent rail items idle', () => {
-        expect(resolveSidebarAgentAvatarActive(createAgentRailItem())).toBe(false);
+        expect(resolveSidebarAgentActive(createAgentRailItem())).toBe(false);
     });
 });
 

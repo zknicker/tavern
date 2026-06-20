@@ -40,27 +40,6 @@ export async function updateHermesAgentName(input: { agentId: string; name: stri
     }
 }
 
-export async function updateHermesAgentAppearance(input: {
-    agentId: string;
-    avatar?: string | null;
-    emoji?: string | null;
-}) {
-    const { client, runtimeId } = await createClientForAgent(input.agentId);
-
-    try {
-        const result = await client.updateAgentAppearance(input.agentId, {
-            ...(input.avatar !== undefined ? { avatar: input.avatar } : {}),
-            ...(input.emoji !== undefined ? { emoji: input.emoji } : {}),
-        });
-        await persistHermesConfigSnapshot({ runtimeId, snapshot: result });
-        await refreshAgentSnapshot({ client, runtimeId });
-        emitAgentUpdated();
-        return result;
-    } finally {
-        client.close();
-    }
-}
-
 export async function updateHermesAgentModel(input: { agentId: string; modelRef: string }) {
     const model = parseHermesModelRef(input.modelRef);
 

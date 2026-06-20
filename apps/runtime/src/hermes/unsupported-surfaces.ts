@@ -32,9 +32,7 @@ export class LocalHermesUnsupportedSurfaces {
 
     async upsertAgent(input: AgentRuntimeCreateAgent) {
         return {
-            avatar: input.avatar ?? null,
             enabledSkillIds: input.enabledSkillIds ?? [],
-            emoji: input.emoji ?? null,
             id: input.id,
             isAdmin: input.isAdmin ?? false,
             name: input.name,

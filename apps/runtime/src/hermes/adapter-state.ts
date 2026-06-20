@@ -9,8 +9,6 @@ import type {
 import { HERMES_HOME } from '../config';
 
 export interface HermesConfiguredAgentState {
-    avatar?: null | string;
-    emoji?: null | string;
     enabledSkillIds?: string[];
     hermesModelName?: AgentRuntimeHermesModelName | null;
     name?: string;
@@ -91,7 +89,21 @@ export async function updateHermesConfiguredAgentState(
 }
 
 function parseConfiguredAgentState(value: unknown): HermesConfiguredAgentState | undefined {
-    return value && typeof value === 'object' && !Array.isArray(value)
-        ? (value as HermesConfiguredAgentState)
-        : undefined;
+    if (!(value && typeof value === 'object' && !Array.isArray(value))) {
+        return undefined;
+    }
+
+    const record = value as HermesConfiguredAgentState;
+    return {
+        ...(Array.isArray(record.enabledSkillIds)
+            ? { enabledSkillIds: record.enabledSkillIds }
+            : {}),
+        ...(record.hermesModelName !== undefined
+            ? { hermesModelName: record.hermesModelName }
+            : {}),
+        ...(typeof record.name === 'string' ? { name: record.name } : {}),
+        ...(record.thinkingDefault !== undefined
+            ? { thinkingDefault: record.thinkingDefault }
+            : {}),
+    };
 }

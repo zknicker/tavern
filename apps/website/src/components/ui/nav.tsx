@@ -4,7 +4,6 @@ import { mergeProps } from '@base-ui/react/merge-props';
 import { useRender } from '@base-ui/react/use-render';
 import type React from 'react';
 import { cn } from '../../lib/utils.ts';
-import { AgentAvatar } from './agent-avatar.tsx';
 
 export function Nav({
     className,
@@ -113,48 +112,4 @@ export function NavItemBadge({
         props: mergeProps<'div'>(defaultProps, props),
         render,
     });
-}
-
-export function NavAgent({
-    active = false,
-    avatar,
-    avatarActive = active,
-    backgroundColor,
-    className,
-    collapsed = false,
-    label,
-    name,
-    render,
-    ...props
-}: Omit<useRender.ComponentProps<'button'>, 'children'> & {
-    active?: boolean;
-    avatar: string;
-    avatarActive?: boolean;
-    backgroundColor: string | null;
-    collapsed?: boolean;
-    label: string;
-    name: string;
-}): React.ReactElement {
-    return (
-        <NavItem active={active} className={className} render={render} {...props}>
-            <AgentAvatar
-                active={avatarActive}
-                avatar={avatar}
-                backgroundColor={backgroundColor ?? '#64748b'}
-                className="size-[18px]"
-                name={name}
-            />
-            <span
-                aria-hidden={collapsed}
-                className={cn(
-                    'min-w-0 flex-1 truncate transition-[max-width,opacity,transform] duration-[180ms] ease-[cubic-bezier(0.23,1,0.32,1)] motion-reduce:transition-none',
-                    collapsed
-                        ? 'max-w-0 -translate-x-1.5 opacity-0'
-                        : 'max-w-32 translate-x-0 opacity-100 delay-[40ms]'
-                )}
-            >
-                {label}
-            </span>
-        </NavItem>
-    );
 }

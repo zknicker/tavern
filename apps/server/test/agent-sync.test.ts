@@ -6,9 +6,7 @@ import * as invalidationEvents from '../src/api/invalidation-events.ts';
 
 function createAgentRuntimeClient(
     agentRuntimeConfigs: Array<{
-        avatar: string | null;
         enabledSkillIds: string[];
-        emoji: string | null;
         id: string;
         isAdmin: boolean;
         name: string;
@@ -78,9 +76,7 @@ test('syncAgents stores runtime agent ids without importing config fields', asyn
     const synced = await agentRuntimeAgents.syncAgents(
         createAgentRuntimeClient([
             {
-                avatar: 'PX',
                 enabledSkillIds: ['agent-browser'],
-                emoji: 'PX',
                 id: 'agent:planner',
                 isAdmin: false,
                 name: 'Planner from Runtime',
@@ -88,9 +84,7 @@ test('syncAgents stores runtime agent ids without importing config fields', asyn
                 workspaceFolder: 'agent-planner',
             },
             {
-                avatar: null,
                 enabledSkillIds: [],
-                emoji: null,
                 id: 'agent:writer',
                 isAdmin: false,
                 name: 'Writer from Runtime',
@@ -114,9 +108,7 @@ test('syncAgent stores a single runtime agent id without importing config fields
         'agent:planner',
         createAgentRuntimeClient([
             {
-                avatar: 'PL',
                 enabledSkillIds: ['agent-browser'],
-                emoji: 'PL',
                 id: 'agent:planner',
                 isAdmin: false,
                 name: 'Planner',

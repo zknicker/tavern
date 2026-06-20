@@ -101,7 +101,6 @@ import {
     type AgentRuntimeToolsetProviderSelect,
     type AgentRuntimeToolsetProviderSelectResult,
     type AgentRuntimeUpdate,
-    type AgentRuntimeUpdateAgentAppearance,
     type AgentRuntimeUpdateAgentModel,
     type AgentRuntimeUpdateAgentName,
     type AgentRuntimeUpdateAgentThinkingDefault,
@@ -224,7 +223,6 @@ import {
     agentRuntimeToolsetProviderSelectResultSchema,
     agentRuntimeToolsetProviderSelectSchema,
     agentRuntimeToolsetSchema,
-    agentRuntimeUpdateAgentAppearanceSchema,
     agentRuntimeUpdateAgentModelSchema,
     agentRuntimeUpdateAgentNameSchema,
     agentRuntimeUpdateAgentThinkingDefaultSchema,
@@ -443,10 +441,6 @@ export interface TavernAgentRuntimeClient {
     uninstallSkillHubSkill(
         input: AgentRuntimeSkillHubUninstallInput
     ): Promise<AgentRuntimeSkillHubActionResult>;
-    updateAgentAppearance(
-        agentId: string,
-        input: AgentRuntimeUpdateAgentAppearance
-    ): Promise<AgentRuntimeHermesConfigSnapshot>;
     updateAgentModel(
         agentId: string,
         input: AgentRuntimeUpdateAgentModel
@@ -1243,28 +1237,6 @@ class HttpTavernAgentRuntimeClient implements TavernAgentRuntimeClient {
             },
             method: 'PATCH',
         });
-
-        if (!response.ok) {
-            await readErrorResponse(response);
-        }
-
-        return agentRuntimeHermesConfigSnapshotSchema.parse(await response.json());
-    }
-
-    async updateAgentAppearance(agentId: string, input: AgentRuntimeUpdateAgentAppearance) {
-        const payload = agentRuntimeUpdateAgentAppearanceSchema.parse(input);
-        const response = await fetch(
-            `${this.#baseUrl}${agentRuntimeRoutes.agentAppearance(agentId)}`,
-            {
-                body: JSON.stringify(payload),
-                headers: {
-                    ...this.#authHeaders,
-                    'content-type': 'application/json',
-                    [agentRuntimeMutationHeaders.origin]: agentRuntimeMutationOrigins.tavern,
-                },
-                method: 'PATCH',
-            }
-        );
 
         if (!response.ok) {
             await readErrorResponse(response);

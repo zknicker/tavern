@@ -1,5 +1,4 @@
 import { Trash2 } from '@hugeicons/core-free-icons';
-import { AgentAvatar } from '../../../components/ui/agent-avatar.tsx';
 import { Icon } from '../../../components/ui/icon.tsx';
 import { Button } from '../../../components/ui/primitives/button.tsx';
 import { SettingsItem } from '../../../components/ui/settings-row.tsx';
@@ -25,8 +24,6 @@ export function DiscordBindingCard({
     showAgent?: boolean;
 }) {
     const agent = agentOptions.find((option) => option.value === binding.agentId) ?? {
-        avatar: '',
-        color: '#64748b',
         idLabel: binding.agentId,
         summary: `Workspace ${binding.agentId}`,
         title: binding.agentId,
@@ -58,12 +55,6 @@ export function DiscordBindingCard({
             </div>
             {showAgent ? (
                 <div className="flex min-w-0 items-center gap-3">
-                    <AgentAvatar
-                        avatar={agent.avatar}
-                        backgroundColor={agent.color}
-                        className="size-10 shrink-0"
-                        name={agent.title}
-                    />
                     <div className="min-w-0">
                         <p className="truncate font-medium text-foreground text-sm">
                             {agent.title}

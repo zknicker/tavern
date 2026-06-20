@@ -115,9 +115,7 @@ test('ensureDatabaseSchema creates the current Tavern schema without obsolete ta
         assert.deepEqual(
             listSortedColumnNames(db, 'agents'),
             [
-                'avatar',
                 'created_at',
-                'emoji',
                 'enabled_skill_ids_json',
                 'id',
                 'last_synced_at',

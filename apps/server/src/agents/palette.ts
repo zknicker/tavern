@@ -4,16 +4,6 @@ export function resolveAgentName(agent: Agent) {
     return agent.name;
 }
 
-function hashHue(value: string) {
-    let hash = 0;
-
-    for (const char of value) {
-        hash = (hash * 31 + char.charCodeAt(0)) % Number.MAX_SAFE_INTEGER;
-    }
-
-    return ['#f97316', '#f59e0b', '#2563eb', '#0ea5e9', '#ec4899'][hash % 5] ?? '#f97316';
-}
-
 function toRgb(hex: string) {
     return {
         blue: Number.parseInt(hex.slice(5, 7), 16),
@@ -38,8 +28,8 @@ function darkenHex(hex: string, ratio: number) {
     return fromRgb(rgb.red * scale, rgb.green * scale, rgb.blue * scale);
 }
 
-export function resolveAgentDefaultPrimaryColor(agentId: string) {
-    return hashHue(agentId);
+export function resolveAgentDefaultPrimaryColor(_agentId: string) {
+    return '#64748b';
 }
 
 export function buildAgentPalette(agent: Agent) {

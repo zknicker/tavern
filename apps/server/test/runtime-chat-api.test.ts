@@ -8,8 +8,6 @@ const originalFetch = globalThis.fetch;
 mock.module('../src/agents/catalog.ts', () => ({
     listAgents: mock(async () => [
         {
-            avatar: null,
-            emoji: null,
             enabledSkillIds: [],
             id: 'main',
             name: 'Main',

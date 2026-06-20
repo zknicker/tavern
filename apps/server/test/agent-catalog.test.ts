@@ -6,9 +6,7 @@ function createAgent(
     overrides: Partial<Parameters<typeof toAgentCatalogItem>[0]> = {}
 ): Parameters<typeof toAgentCatalogItem>[0] {
     return {
-        avatar: null,
         enabledSkillIds: null,
-        emoji: '🤖',
         id: 'agent-1',
         name: 'Alpha Agent',
         primaryColor: null,

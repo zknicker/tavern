@@ -176,9 +176,7 @@ test('agent chat list labels Hermes internal runtime sessions by source', async 
     await syncAgentsForRuntime({
         agents: [
             {
-                avatar: null,
                 enabledSkillIds: [],
-                emoji: null,
                 id: 'main',
                 isAdmin: false,
                 name: 'Main',
@@ -300,9 +298,7 @@ test('agent chat list keeps non-Tavern session-only runtime surfaces visible', a
     await syncAgentsForRuntime({
         agents: [
             {
-                avatar: null,
                 enabledSkillIds: [],
-                emoji: null,
                 id: 'main',
                 isAdmin: false,
                 name: 'Main',
@@ -347,9 +343,7 @@ test('agent chat list titles runtime DMs from participants and platform metadata
     await syncAgentsForRuntime({
         agents: [
             {
-                avatar: null,
                 enabledSkillIds: [],
-                emoji: null,
                 id: 'blippy',
                 isAdmin: false,
                 name: 'Blippy',
@@ -431,9 +425,7 @@ test('agent chat list resolves DM targets through participant identities', async
     await syncAgentsForRuntime({
         agents: [
             {
-                avatar: null,
                 enabledSkillIds: [],
-                emoji: null,
                 id: 'blippy',
                 isAdmin: false,
                 name: 'Blippy',
@@ -441,9 +433,7 @@ test('agent chat list resolves DM targets through participant identities', async
                 workspaceFolder: 'blippy',
             },
             {
-                avatar: null,
                 enabledSkillIds: [],
-                emoji: null,
                 id: 'main',
                 isAdmin: false,
                 name: 'main',
@@ -622,9 +612,7 @@ async function mockRuntimeFetch(input: RequestInfo | URL, init?: RequestInit) {
 
 function runtimeAgent(id: string, name: string, workspaceFolder: string) {
     return {
-        avatar: null,
         enabledSkillIds: [],
-        emoji: null,
         id,
         isAdmin: false,
         name,
@@ -692,9 +680,7 @@ async function seedPlanningChat(input: { includeSession: boolean; pinned?: boole
     await syncAgentsForRuntime({
         agents: [
             {
-                avatar: null,
                 enabledSkillIds: [],
-                emoji: null,
                 id: 'agent:planner',
                 isAdmin: false,
                 name: 'Planner',

@@ -1,4 +1,5 @@
 export const agentColorPresets = [
+    { color: '#64748b', label: 'Slate' },
     { color: '#f97316', label: 'Orange' },
     { color: '#f59e0b', label: 'Gold' },
     { color: '#ef4444', label: 'Red' },
@@ -9,5 +10,4 @@ export const agentColorPresets = [
     { color: '#0ea5e9', label: 'Sky' },
     { color: '#14b8a6', label: 'Teal' },
     { color: '#22c55e', label: 'Green' },
-    { color: '#64748b', label: 'Slate' },
 ] as const;

@@ -39,7 +39,6 @@ const hexColorPattern = /^#[0-9a-f]{6}$/i;
 const fallbackAgentUpdatedAt = new Date(0).toISOString();
 
 export interface Agent {
-    avatar: string | null;
     enabledSkillIds: string[] | null;
     id: string;
     name: string;
@@ -73,7 +72,6 @@ export const agentEnabledSkillIdsSchema = z.array(skillIdSchema).nullable();
 export const agentUserInstructionsSchema = z.string().max(20_000).nullable();
 
 export interface AgentCatalogItem {
-    avatar: string | null;
     defaultPrimaryColor: string;
     effectivePrimaryColor: string;
     enabledSkillIds: string[];
@@ -103,7 +101,6 @@ function toAgent(
     profile: { primaryColor: string | null; updatedAt: string; userInstructions: string } | null
 ): Agent {
     return {
-        avatar: agent.avatar ?? null,
         enabledSkillIds: parseEnabledSkillIds(agent),
         id: agent.id,
         name: agent.name,
@@ -155,7 +152,6 @@ export function toAgentCatalogItem(
             : resolveEnabledSkillIds(agent.enabledSkillIds, availableSkillIds);
 
     return {
-        avatar: agent.avatar,
         defaultPrimaryColor: resolveAgentDefaultPrimaryColor(agent.id),
         effectivePrimaryColor: buildAgentPalette(agent).accentFrom,
         enabledSkillIds,
@@ -523,7 +519,6 @@ function toAgentFromAgentRuntimeAgent(input: {
     runtimeId: string;
 }): Agent {
     return {
-        avatar: input.agent.avatar ?? null,
         enabledSkillIds: input.agent.enabledSkillIds,
         id: input.id,
         name: input.agent.name,

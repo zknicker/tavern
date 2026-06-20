@@ -1,5 +1,4 @@
 import * as React from 'react';
-import type { DashboardAvatarDirectory } from '../../hooks/agents/use-agent-avatar-directory.ts';
 import { cn } from '../../lib/utils.ts';
 import { SessionCardBody } from './session-card-body.tsx';
 import { getSessionCardDomId } from './session-card-dom-id.ts';
@@ -9,11 +8,9 @@ import type { SessionCardData } from './session-list-data.ts';
 import { useSessionCard } from './use-session-card.ts';
 
 export function SessionCard({
-    avatarDirectory,
     card,
     highlighted,
 }: {
-    avatarDirectory: DashboardAvatarDirectory;
     card: SessionCardData;
     highlighted: boolean;
 }) {
@@ -52,7 +49,6 @@ export function SessionCard({
             id={getSessionCardDomId(session.key)}
         >
             <SessionCardHeader
-                avatarDirectory={avatarDirectory}
                 card={card}
                 historyOffset={historyOffset}
                 sessionId={session.id}

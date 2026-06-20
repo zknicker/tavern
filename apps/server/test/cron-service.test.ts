@@ -46,9 +46,7 @@ test('cron list returns summaries while get returns the full editable job', asyn
     await syncAgentsForRuntime({
         agents: [
             {
-                avatar: null,
                 enabledSkillIds: [],
-                emoji: null,
                 id: 'agent:planner',
                 isAdmin: false,
                 name: 'Planner',

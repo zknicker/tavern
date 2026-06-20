@@ -10,7 +10,6 @@ import * as React from 'react';
 import { chromatic } from 'slot-text';
 import { SlotText } from 'slot-text/react';
 import { ChatMessage } from '../../components/chats/chat-message.tsx';
-import { AgentAvatar } from '../../components/ui/agent-avatar.tsx';
 import { CopyButton } from '../../components/ui/copy-button.tsx';
 import { Icon } from '../../components/ui/icon.tsx';
 import { useActorProfile } from '../../hooks/actors/use-actor.ts';
@@ -201,28 +200,12 @@ export function AgentPresenceTranscriptRow({
     if (conversationLayout.showAgentIdentity) {
         return (
             <div className={cn(rowClassName, presenceOnlyTurn ? newTurnGapClassName : null)}>
-                <div className="grid grid-cols-[2rem_minmax(0,1fr)] gap-x-2.5">
-                    {presenceOnlyTurn ? (
-                        <div className="flex justify-center pt-5">
-                            <AgentAvatar
-                                avatar={actorProfile?.avatar ?? displayName}
-                                backgroundColor={actorProfile?.primaryColor ?? '#64748b'}
-                                className="size-6 shrink-0"
-                                name={displayName}
-                            />
-                        </div>
-                    ) : (
-                        <div aria-hidden="true" />
-                    )}
-                    <div className="min-w-0">
-                        {presenceOnlyTurn ? (
-                            <div className="mb-1.5 min-w-0 truncate font-medium text-[0.8125rem] text-muted-foreground/80 leading-none">
-                                {displayName}
-                            </div>
-                        ) : null}
-                        {presence}
+                {presenceOnlyTurn ? (
+                    <div className="mb-1.5 min-w-0 truncate font-medium text-[0.8125rem] text-muted-foreground/80 leading-none">
+                        {displayName}
                     </div>
-                </div>
+                ) : null}
+                {presence}
             </div>
         );
     }
@@ -263,7 +246,7 @@ function UserTurn({
 
     return (
         <div className={cn(rowClassName, 'flex justify-end', newTurnGapClassName)}>
-            <div className="grid max-w-[min(42rem,82%)] grid-cols-[minmax(0,1fr)_2rem] gap-x-2.5">
+            <div className="relative min-w-0 max-w-[min(42rem,82%)]">
                 <div className="relative min-w-0">
                     <div className="mb-1.5 min-w-0 truncate pr-4 text-right font-medium text-[0.8125rem] text-muted-foreground/80 leading-none">
                         {displayName}
@@ -279,14 +262,6 @@ function UserTurn({
                             />
                         ))}
                     </div>
-                </div>
-                <div className="flex justify-center pt-5">
-                    <AgentAvatar
-                        avatar={actorProfile?.avatar ?? displayName}
-                        backgroundColor={actorProfile?.primaryColor ?? '#64748b'}
-                        className="size-6 shrink-0"
-                        name={displayName}
-                    />
                 </div>
             </div>
         </div>
@@ -330,21 +305,7 @@ function AgentTurn({
                 showIdentity ? newTurnGapClassName : followsRuntimeNotice ? 'mt-0' : null
             )}
         >
-            <div
-                className={cn(
-                    showIdentity ? 'grid grid-cols-[2rem_minmax(0,1fr)] gap-x-2.5' : 'block'
-                )}
-            >
-                {showIdentity ? (
-                    <div className="flex justify-center pt-5">
-                        <AgentAvatar
-                            avatar={actorProfile?.avatar ?? displayName}
-                            backgroundColor={actorProfile?.primaryColor ?? '#64748b'}
-                            className="size-6 shrink-0"
-                            name={displayName}
-                        />
-                    </div>
-                ) : null}
+            <div>
                 <div className={cn(hoverGroupClassName, 'w-full min-w-0')}>
                     {showIdentity ? (
                         <div className="mb-1.5 min-w-0 truncate font-medium text-[0.8125rem] text-muted-foreground/80 leading-none">

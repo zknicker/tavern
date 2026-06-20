@@ -29,10 +29,9 @@ surfaces resolve the primary agent instead of asking the person to choose among 
   inference.
 - Tavern reads and writes Hermes agent config through Hermes Gateway.
 - Tavern does not keep a competing canonical agent config store.
-- Tavern may keep local presentation overlays such as color, avatar style, pinned state, and local
+- Tavern may keep local presentation overlays such as color, pinned state, and local
   notes.
-- Tavern exposes agent identity appearance — avatar and emoji — as editable agent settings on the
-  agent record.
+- Tavern exposes agent display name and color as editable agent settings on the agent record.
 - Tavern exposes subagent defaults — the model and effort used for delegated work — as agent-level
   settings materialized through generated managed runtime config.
 - Tavern exposes the agent timezone as a Runtime-stored execution setting (system default when

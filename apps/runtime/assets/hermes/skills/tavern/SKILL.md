@@ -45,7 +45,7 @@ curl -s -H "$AUTH" "$TAVERN_RUNTIME_URL/api/chats/<chat_id>/messages/search?quer
 ### Read your own configuration (read-only)
 
 ```sh
-curl -s -H "$AUTH" "$TAVERN_RUNTIME_URL/agents"                # your record (name, avatar, skills)
+curl -s -H "$AUTH" "$TAVERN_RUNTIME_URL/agents"                # your record (name, skills)
 curl -s -H "$AUTH" "$TAVERN_RUNTIME_URL/execution-settings"    # model fallbacks, timezone
 curl -s -H "$AUTH" "$TAVERN_RUNTIME_URL/permission-settings"   # approval modes, command allowlist
 curl -s -H "$AUTH" "$TAVERN_RUNTIME_URL/connectors"            # MCP servers (secrets masked)
@@ -64,7 +64,7 @@ direct the user to the exact place:
 | The user wants to change | Where |
 | --- | --- |
 | Your model, thinking effort, fallback models | Settings -> Agent |
-| Your name, avatar, color | Settings -> Agent (Appearance) |
+| Your name, color | Settings -> Agent (Appearance) |
 | Timezone | Settings -> Agent (Behavior) |
 | What you may run without asking | Settings -> Agent (Permissions) |
 | Durable notes and instructions / personality | Settings -> NOTES.md / SOUL.md |

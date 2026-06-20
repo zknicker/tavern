@@ -15,9 +15,7 @@ function requireAgentRuntimeClient(client: TavernAgentRuntimeClient | null) {
 
 export function toAgentRuntimeCreateAgentConfig(agent: AgentRuntimeAgent): AgentRuntimeCreateAgent {
     return {
-        avatar: agent.avatar,
         enabledSkillIds: agent.enabledSkillIds,
-        emoji: agent.emoji,
         id: agent.id,
         isAdmin: agent.isAdmin,
         name: agent.name,

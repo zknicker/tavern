@@ -10,7 +10,6 @@ import {
     EmptyTitle,
 } from '../../components/ui/empty.tsx';
 import { Icon } from '../../components/ui/icon.tsx';
-import type { DashboardAvatarDirectory } from '../../hooks/agents/use-agent-avatar-directory.ts';
 import { useSearch } from '../../hooks/dashboard/use-search.ts';
 import type { AgentListOutput } from '../../lib/trpc.tsx';
 import { ChatCard } from './chat-card.tsx';
@@ -24,13 +23,11 @@ import { useFocusedChatCard } from './use-focused-chat-card.ts';
 
 export function ChatsList({
     agents,
-    avatarDirectory,
     chats,
     onArchive,
     onEdit,
 }: {
     agents: AgentListOutput['agents'];
-    avatarDirectory: DashboardAvatarDirectory;
     chats: ChatListItem[];
     onArchive: (chat: ChatListItem) => void;
     onEdit: (chat: ChatListItem) => void;
@@ -86,7 +83,6 @@ export function ChatsList({
                         {visibleChats.map((chat) => (
                             <ChatCard
                                 agents={agents}
-                                avatarDirectory={avatarDirectory}
                                 chat={chat}
                                 highlighted={highlightedChatId === chat.id}
                                 key={chat.id}

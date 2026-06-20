@@ -1,9 +1,9 @@
 import { Cancel01Icon, CopyIcon, Tick02Icon } from '@hugeicons-pro/core-stroke-rounded';
 import * as React from 'react';
-import { AgentBadge } from '../../components/badges/agent-badge.tsx';
 import { ChatBadge, type ChatBadgeKind } from '../../components/badges/chat-badge.tsx';
 import { SessionBadge } from '../../components/badges/session-badge.tsx';
 import { SimpleCodeEditor } from '../../components/code-editor/simple-code-editor.tsx';
+import { Badge } from '../../components/ui/badge.tsx';
 import { Dialog, DialogClose, DialogContent, DialogTitle } from '../../components/ui/dialog.tsx';
 import {
     Empty,
@@ -60,8 +60,6 @@ const SECTION_KIND_ORDER: SectionKind[] = [
 const ALL_TAB_VALUE = '__all__';
 
 interface PromptInspectDialogProps {
-    agentAvatar: string;
-    agentColor: string | null;
     agentName: string;
     chatKind: ChatBadgeKind;
     chatTitle: string;
@@ -69,8 +67,6 @@ interface PromptInspectDialogProps {
 }
 
 export function PromptInspectDialog({
-    agentAvatar,
-    agentColor,
     agentName,
     chatKind,
     chatTitle,
@@ -122,8 +118,6 @@ export function PromptInspectDialog({
                 <div className="flex min-h-0 flex-1 flex-row">
                     <PromptRail
                         activeId={activeId}
-                        agentAvatar={agentAvatar}
-                        agentColor={agentColor}
                         agentName={agentName}
                         chatKind={chatKind}
                         chatTitle={chatTitle}
@@ -150,8 +144,6 @@ export function PromptInspectDialog({
 
 interface PromptRailProps {
     activeId: string;
-    agentAvatar: string;
-    agentColor: string | null;
     agentName: string;
     chatKind: ChatBadgeKind;
     chatTitle: string;
@@ -162,8 +154,6 @@ interface PromptRailProps {
 
 function PromptRail({
     activeId,
-    agentAvatar,
-    agentColor,
     agentName,
     chatKind,
     chatTitle,
@@ -187,11 +177,13 @@ function PromptRail({
                     Close
                 </DialogClose>
                 <div className="flex flex-col gap-1.5">
-                    <AgentBadge
-                        avatar={agentAvatar}
-                        backgroundColor={agentColor}
-                        name={agentName}
-                    />
+                    <Badge
+                        className="h-7 max-w-full justify-start rounded-md border-border/60 px-1.5 text-foreground text-sm normal-case tracking-normal dark:bg-input/40"
+                        title={agentName}
+                        variant="secondary"
+                    >
+                        <span className="min-w-0 truncate font-medium">{agentName}</span>
+                    </Badge>
                     <ChatBadge kind={chatKind} title={chatTitle} />
                     {sessionKey ? <SessionBadge sessionKey={sessionKey} /> : null}
                 </div>

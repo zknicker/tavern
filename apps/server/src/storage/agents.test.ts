@@ -87,9 +87,7 @@ test('listAgents scopes rows to the active Hermes runtime', async () => {
 
 function createAgent(input: { id: string; name: string }) {
     return {
-        avatar: null,
         enabledSkillIds: [],
-        emoji: null,
         id: input.id,
         isAdmin: false,
         name: input.name,

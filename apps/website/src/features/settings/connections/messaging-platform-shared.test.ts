@@ -6,8 +6,6 @@ import {
 
 const agentOptions = [
     {
-        avatar: 'A',
-        color: '#64748b',
         idLabel: 'atlas',
         summary: 'Workspace atlas',
         title: 'Atlas',

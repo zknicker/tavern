@@ -3,9 +3,7 @@ import { index, sqliteTable, text } from 'drizzle-orm/sqlite-core';
 export const agentsTable = sqliteTable(
     'agents',
     {
-        avatar: text('avatar'),
         createdAt: text('created_at').notNull(),
-        emoji: text('emoji'),
         enabledSkillIdsJson: text('enabled_skill_ids_json').notNull(),
         id: text('id').primaryKey(),
         lastSyncedAt: text('last_synced_at').notNull(),

@@ -280,9 +280,7 @@ async function seedPlanningChat() {
     await syncAgentsForRuntime({
         agents: [
             {
-                avatar: null,
                 enabledSkillIds: [],
-                emoji: null,
                 id: 'agent:planner',
                 isAdmin: false,
                 name: 'Planner',

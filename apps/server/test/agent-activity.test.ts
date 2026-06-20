@@ -12,9 +12,7 @@ function createAgent(
     overrides: Partial<Awaited<ReturnType<typeof agentCatalog.listAgents>>[number]> = {}
 ) {
     return {
-        avatar: null,
         enabledSkillIds: null,
-        emoji: null,
         id: 'agent-1',
         name: 'Alpha Agent',
         primaryColor: null,

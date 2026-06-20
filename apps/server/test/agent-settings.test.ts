@@ -33,9 +33,7 @@ test('saveCatalogAgentProfile saves color without requiring a runtime connection
     await agentStorage.syncAgentsForRuntime({
         agents: [
             {
-                avatar: null,
                 enabledSkillIds: [],
-                emoji: null,
                 id: 'blippy',
                 isAdmin: false,
                 name: 'Blippy',
@@ -59,9 +57,7 @@ test('saveCatalogAgentSettings persists skill enablement through runtime agent c
     await agentStorage.syncAgentsForRuntime({
         agents: [
             {
-                avatar: null,
                 enabledSkillIds: [],
-                emoji: null,
                 id: 'blippy',
                 isAdmin: false,
                 name: 'Blippy',
@@ -76,9 +72,7 @@ test('saveCatalogAgentSettings persists skill enablement through runtime agent c
     let listedSkillsAgentId: string | null = null;
     const runtimeClient = {
         getAgentConfig: async () => ({
-            avatar: null,
             enabledSkillIds: [],
-            emoji: null,
             id: 'blippy',
             isAdmin: false,
             name: 'Blippy',
@@ -88,9 +82,7 @@ test('saveCatalogAgentSettings persists skill enablement through runtime agent c
         listAgents: async () => ({
             agents: [
                 {
-                    avatar: null,
                     enabledSkillIds: savedEnabledSkillIds ?? [],
-                    emoji: null,
                     id: 'blippy',
                     isAdmin: false,
                     name: 'Blippy',
@@ -144,9 +136,7 @@ test('saveCatalogAgentSettings persists skill enablement through runtime agent c
         upsertAgent: async (agent: { enabledSkillIds: string[] }) => {
             savedEnabledSkillIds = agent.enabledSkillIds;
             return {
-                avatar: null,
                 enabledSkillIds: agent.enabledSkillIds,
-                emoji: null,
                 id: 'blippy',
                 isAdmin: false,
                 name: 'Blippy',
@@ -173,9 +163,7 @@ test('saveCatalogAgentSettings leaves skills untouched for name-only saves', asy
     await agentStorage.syncAgentsForRuntime({
         agents: [
             {
-                avatar: null,
                 enabledSkillIds: ['runtime-newer-skill'],
-                emoji: null,
                 id: 'blippy',
                 isAdmin: false,
                 name: 'Blippy',
@@ -189,9 +177,7 @@ test('saveCatalogAgentSettings leaves skills untouched for name-only saves', asy
     let savedEnabledSkillIds: string[] | undefined;
     const runtimeClient = {
         getAgentConfig: async () => ({
-            avatar: null,
             enabledSkillIds: ['runtime-newer-skill'],
-            emoji: null,
             id: 'blippy',
             isAdmin: false,
             name: 'Blippy',
@@ -201,9 +187,7 @@ test('saveCatalogAgentSettings leaves skills untouched for name-only saves', asy
         listAgents: async () => ({
             agents: [
                 {
-                    avatar: null,
                     enabledSkillIds: ['runtime-newer-skill'],
-                    emoji: null,
                     id: 'blippy',
                     isAdmin: false,
                     name: 'Renamed',
@@ -218,9 +202,7 @@ test('saveCatalogAgentSettings leaves skills untouched for name-only saves', asy
         upsertAgent: async (agent: { enabledSkillIds?: string[]; name: string }) => {
             savedEnabledSkillIds = agent.enabledSkillIds;
             return {
-                avatar: null,
                 enabledSkillIds: ['runtime-newer-skill'],
-                emoji: null,
                 id: 'blippy',
                 isAdmin: false,
                 name: agent.name,

@@ -54,14 +54,6 @@ async function dispatch(context: RouteContext) {
     if (method === 'PATCH' && segments[0] === 'agents' && segments[1] && segments[2] === 'name') {
         return await client.updateAgentName(segments[1], await readJson(request));
     }
-    if (
-        method === 'PATCH' &&
-        segments[0] === 'agents' &&
-        segments[1] &&
-        segments[2] === 'appearance'
-    ) {
-        return await client.updateAgentAppearance(segments[1], await readJson(request));
-    }
     if (method === 'PATCH' && segments[0] === 'agents' && segments[1] && segments[2] === 'model') {
         return await client.updateAgentModel(segments[1], await readJson(request));
     }

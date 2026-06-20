@@ -453,12 +453,6 @@ export const agentRuntimeUpdateAgentNameSchema = agentRuntimeHermesConfigMutatio
     name: z.string().trim().min(1),
 });
 
-export const agentRuntimeUpdateAgentAppearanceSchema =
-    agentRuntimeHermesConfigMutationSchema.extend({
-        avatar: z.string().trim().max(8).nullable().optional(),
-        emoji: z.string().trim().max(8).nullable().optional(),
-    });
-
 export const agentRuntimeUpdateAgentModelSchema = agentRuntimeHermesConfigMutationSchema.extend({
     model: agentRuntimeHermesModelNameSchema,
 });
@@ -553,9 +547,7 @@ export const agentRuntimeDiscordBindingListSchema = z.object({
 });
 
 export const agentRuntimeAgentSchema = z.object({
-    avatar: z.string().trim().min(1).nullable(),
     enabledSkillIds: z.array(z.string().trim().min(1)),
-    emoji: z.string().trim().min(1).nullable(),
     id: z.string().trim().min(1),
     isAdmin: z.boolean(),
     name: z.string().trim().min(1),
@@ -575,9 +567,7 @@ export const agentRuntimeArchiveAgentSchema = z.object({
 });
 
 export const agentRuntimeCreateAgentSchema = z.object({
-    avatar: z.string().trim().min(1).nullable().optional(),
     enabledSkillIds: z.array(z.string().trim().min(1)).optional(),
-    emoji: z.string().trim().min(1).nullable().optional(),
     id: z.string().trim().min(1),
     isAdmin: z.boolean().optional(),
     name: z.string().trim().min(1),
@@ -586,9 +576,7 @@ export const agentRuntimeCreateAgentSchema = z.object({
 });
 
 export const agentRuntimeUpdateAgentSchema = z.object({
-    avatar: z.string().trim().min(1).nullable().optional(),
     enabledSkillIds: z.array(z.string().trim().min(1)).optional(),
-    emoji: z.string().trim().min(1).nullable().optional(),
     isAdmin: z.boolean().optional(),
     name: z.string().trim().min(1).optional(),
     primaryColor: z.string().trim().min(1).nullable().optional(),
@@ -2161,9 +2149,6 @@ export type AgentRuntimeHermesConfigSnapshot = z.infer<
 >;
 export type AgentRuntimeApplyHermesConfig = z.infer<typeof agentRuntimeApplyHermesConfigSchema>;
 export type AgentRuntimeUpdateAgentName = z.infer<typeof agentRuntimeUpdateAgentNameSchema>;
-export type AgentRuntimeUpdateAgentAppearance = z.infer<
-    typeof agentRuntimeUpdateAgentAppearanceSchema
->;
 export type AgentRuntimeUpdateAgentModel = z.infer<typeof agentRuntimeUpdateAgentModelSchema>;
 export type AgentRuntimeUpdateAgentThinkingDefault = z.infer<
     typeof agentRuntimeUpdateAgentThinkingDefaultSchema
