@@ -115,6 +115,17 @@ describe('sidebar chat list', () => {
         ]);
     });
 
+    test('does not cap visible draft chats', () => {
+        const drafts = Array.from({ length: 10 }, (_, index) =>
+            createDraft({
+                id: `tavern-draft-chat:${index}`,
+                createdAt: `2026-05-13T12:${String(index).padStart(2, '0')}:00.000Z`,
+            })
+        );
+
+        expect(buildSidebarDraftChatList(drafts, [])).toHaveLength(drafts.length);
+    });
+
     test('links pending drafts to the draft route and reconciled drafts to the real chat', () => {
         expect(getSidebarDraftPath(createDraft())).toBe('/dashboard/chats/new');
         expect(getSidebarDraftPath(createDraft({ realChatId: 'chat-1' }))).toBe(

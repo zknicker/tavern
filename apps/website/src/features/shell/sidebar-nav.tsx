@@ -23,7 +23,7 @@ export function AppSidebarNav({ activeTab, onSelectTab }: AppSidebarNavProps) {
     const capability = useCapability();
 
     return (
-        <SidebarGroup className="pt-2">
+        <SidebarGroup className="shrink-0 pt-2">
             <SidebarGroupContent>
                 <SidebarMenu>
                     {routeTabs.map((tab) => {

@@ -40,7 +40,7 @@ export function AppSidebar({
             onMouseEnter={onMouseEnter}
             onMouseLeave={onMouseLeave}
         >
-            <SidebarContent>
+            <SidebarContent className="overflow-hidden">
                 {isSettingsRoute ? (
                     <SettingsSidebarNav onBackToApp={onBackToApp} />
                 ) : (

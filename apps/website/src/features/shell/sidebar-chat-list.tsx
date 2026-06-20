@@ -41,8 +41,6 @@ import {
     SidebarChatSystemPromptDialog,
 } from './sidebar-chat-actions.tsx';
 
-const sidebarChatLimit = 8;
-
 export function AppSidebarChatList() {
     const location = useLocation();
     const navigate = useNavigate();
@@ -64,10 +62,6 @@ export function AppSidebarChatList() {
     const draftChats = React.useMemo(
         () => buildSidebarDraftChatList(drafts.listDrafts(), sidebarChats.allChats),
         [drafts, sidebarChats.allChats]
-    );
-    const visibleRecentChats = React.useMemo(
-        () => sidebarChats.recentChats.slice(0, Math.max(sidebarChatLimit - draftChats.length, 0)),
-        [draftChats.length, sidebarChats.recentChats]
     );
     const activeDraftRoute = getChatDraftRouteState(location.state);
     const newChatGate = capability(newChatCapabilityRequirements);
@@ -139,16 +133,89 @@ export function AppSidebarChatList() {
 
     return (
         <>
-            {sidebarChats.pinnedChats.length > 0 ? (
-                <SidebarGroup className="group/pinned pt-1">
+            <div className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden overscroll-contain">
+                {sidebarChats.pinnedChats.length > 0 ? (
+                    <SidebarGroup className="group/pinned pt-1">
+                        <div className="relative flex h-8 items-center px-2">
+                            <div className="font-medium text-[var(--nav-section-label)] text-sm">
+                                Pinned
+                            </div>
+                        </div>
+                        <SidebarGroupContent>
+                            <SidebarMenu>
+                                {sidebarChats.pinnedChats.map((chat) => {
+                                    const isArchivePending =
+                                        archiveChat.isPending &&
+                                        archiveChat.variables?.chatId === chat.id;
+
+                                    return (
+                                        <SidebarRecentChatItem
+                                            chat={chat}
+                                            isActive={location.pathname === buildChatPath(chat.id)}
+                                            isArchivePending={isArchivePending}
+                                            key={chat.id}
+                                            onArchive={(selectedChat) => {
+                                                void archiveSidebarChat(selectedChat);
+                                            }}
+                                            onCustomizeColor={(selectedChat, color) => {
+                                                tabAppearance.reset();
+                                                void setPinnedTabColor(selectedChat, color);
+                                            }}
+                                            onEditSystemPrompt={(selectedChat) => {
+                                                systemPrompt.reset();
+                                                setEditingSystemPromptChat(selectedChat);
+                                            }}
+                                            onPinChange={(selectedChat, pinned) => {
+                                                void pinSidebarChat(selectedChat, pinned);
+                                            }}
+                                            onRename={openRename}
+                                        />
+                                    );
+                                })}
+                            </SidebarMenu>
+                        </SidebarGroupContent>
+                    </SidebarGroup>
+                ) : null}
+                <SidebarGroup className="group/chats pt-1">
                     <div className="relative flex h-8 items-center px-2">
                         <div className="font-medium text-[var(--nav-section-label)] text-sm">
-                            Pinned
+                            Chats
                         </div>
+                        <Button
+                            aria-label="New chat"
+                            className="absolute top-1/2 right-[0.0625rem] -translate-y-1/2 opacity-0 group-focus-within/chats:opacity-100 group-hover/chats:opacity-100 [&_svg]:size-[1.0625rem]"
+                            disabled={!newChatGate.healthy}
+                            render={
+                                newChatGate.healthy ? (
+                                    <NavLink to="/dashboard/overview" />
+                                ) : undefined
+                            }
+                            size="icon-xs"
+                            title={newChatDisabledReason ?? 'New chat'}
+                            variant="ghost"
+                        >
+                            <Icon aria-hidden="true" icon={Plus} />
+                        </Button>
                     </div>
                     <SidebarGroupContent>
                         <SidebarMenu>
-                            {sidebarChats.pinnedChats.map((chat) => {
+                            {draftChats.map((draft) => {
+                                const path = getSidebarDraftPath(draft);
+                                const isActive =
+                                    activeDraftRoute?.draftChatId === draft.id ||
+                                    (draft.realChatId !== null &&
+                                        location.pathname === buildChatPath(draft.realChatId));
+
+                                return (
+                                    <SidebarDraftChatItem
+                                        draft={draft}
+                                        isActive={isActive}
+                                        key={draft.id}
+                                        path={path}
+                                    />
+                                );
+                            })}
+                            {sidebarChats.recentChats.map((chat) => {
                                 const isArchivePending =
                                     archiveChat.isPending &&
                                     archiveChat.variables?.chatId === chat.id;
@@ -180,73 +247,7 @@ export function AppSidebarChatList() {
                         </SidebarMenu>
                     </SidebarGroupContent>
                 </SidebarGroup>
-            ) : null}
-            <SidebarGroup className="group/chats pt-1">
-                <div className="relative flex h-8 items-center px-2">
-                    <div className="font-medium text-[var(--nav-section-label)] text-sm">Chats</div>
-                    <Button
-                        aria-label="New chat"
-                        className="absolute top-1/2 right-[0.0625rem] -translate-y-1/2 opacity-0 group-focus-within/chats:opacity-100 group-hover/chats:opacity-100 [&_svg]:size-[1.0625rem]"
-                        disabled={!newChatGate.healthy}
-                        render={
-                            newChatGate.healthy ? <NavLink to="/dashboard/overview" /> : undefined
-                        }
-                        size="icon-xs"
-                        title={newChatDisabledReason ?? 'New chat'}
-                        variant="ghost"
-                    >
-                        <Icon aria-hidden="true" icon={Plus} />
-                    </Button>
-                </div>
-                <SidebarGroupContent>
-                    <SidebarMenu>
-                        {draftChats.map((draft) => {
-                            const path = getSidebarDraftPath(draft);
-                            const isActive =
-                                activeDraftRoute?.draftChatId === draft.id ||
-                                (draft.realChatId !== null &&
-                                    location.pathname === buildChatPath(draft.realChatId));
-
-                            return (
-                                <SidebarDraftChatItem
-                                    draft={draft}
-                                    isActive={isActive}
-                                    key={draft.id}
-                                    path={path}
-                                />
-                            );
-                        })}
-                        {visibleRecentChats.map((chat) => {
-                            const isArchivePending =
-                                archiveChat.isPending && archiveChat.variables?.chatId === chat.id;
-
-                            return (
-                                <SidebarRecentChatItem
-                                    chat={chat}
-                                    isActive={location.pathname === buildChatPath(chat.id)}
-                                    isArchivePending={isArchivePending}
-                                    key={chat.id}
-                                    onArchive={(selectedChat) => {
-                                        void archiveSidebarChat(selectedChat);
-                                    }}
-                                    onCustomizeColor={(selectedChat, color) => {
-                                        tabAppearance.reset();
-                                        void setPinnedTabColor(selectedChat, color);
-                                    }}
-                                    onEditSystemPrompt={(selectedChat) => {
-                                        systemPrompt.reset();
-                                        setEditingSystemPromptChat(selectedChat);
-                                    }}
-                                    onPinChange={(selectedChat, pinned) => {
-                                        void pinSidebarChat(selectedChat, pinned);
-                                    }}
-                                    onRename={openRename}
-                                />
-                            );
-                        })}
-                    </SidebarMenu>
-                </SidebarGroupContent>
-            </SidebarGroup>
+            </div>
 
             <SidebarChatRenameDialog
                 chat={renamingChat}
@@ -497,8 +498,7 @@ export function buildSidebarDraftChatList(drafts: ChatStartDraft[], chats: ChatL
 
     return drafts
         .filter((draft) => !(draft.realChatId && syncedChatIds.has(draft.realChatId)))
-        .sort((left, right) => Date.parse(right.createdAt) - Date.parse(left.createdAt))
-        .slice(0, sidebarChatLimit);
+        .sort((left, right) => Date.parse(right.createdAt) - Date.parse(left.createdAt));
 }
 
 export function getSidebarDraftPath(draft: ChatStartDraft) {
