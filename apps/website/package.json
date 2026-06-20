@@ -1,10 +1,10 @@
 {
   "name": "@tavern/website",
   "private": true,
-  "version": "1.4.22",
+  "version": "1.4.23",
   "tavern": {
     "runtime": {
-      "minimumVersion": "1.4.22"
+      "minimumVersion": "1.4.23"
     }
   },
   "type": "module",

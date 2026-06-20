@@ -2,6 +2,33 @@
 
 All notable changes to this project will be documented in this file.
 
+## v1.4.23 - 2026-06-20
+
+Runtime floor raised to 1.4.23 for Rich Response contracts, rendering, and
+runtime event projection.
+
+App changes:
+
+- Replaced chat Widgets with Rich Responses, including chart, calendar, and
+  catalog rendering backed by the new typed response contracts.
+- Improved chat stability for loaded history, cold chat opens, final reply
+  progress, composed chart axes, work group labels, and tool drawer headers.
+- Added a richer composer file dropzone and main-composer drag overlay.
+- Defaulted agents to slate styling, removed avatar chrome, and simplified
+  agent identity presentation.
+- Polished Vault and dashboard sidebar behavior, including the collapsed Vault
+  sidebar preview, file-browser top alignment, search spacing, and full-height
+  chat list scrolling.
+
+Runtime changes:
+
+- Replaced Widget activity contracts with Rich Response contracts across the
+  Runtime, API package, and managed Tavern instructions.
+- Added Runtime Rich Response rendering, storage projection, chat API support,
+  demo data, and fixture coverage.
+- Removed obsolete Widget tool surfaces and avatar-backed agent appearance
+  fields.
+
 ## v1.4.22 - 2026-06-19
 
 Runtime floor raised to 1.4.22 for saved agent environment values and new
