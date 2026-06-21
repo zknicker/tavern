@@ -7,6 +7,7 @@
     ".": "./src/index.ts",
     "./config": "./src/runtime/config.ts",
     "./development-chat-demos": "./src/development-chat-demos.ts",
+    "./rich-responses/catalog": "./src/rich-responses/catalog.ts",
     "./rich-responses": "./src/rich-responses/contracts.ts",
     "./rich-responses/calendar": "./src/rich-responses/calendar/contracts.ts",
     "./rich-responses/charts": "./src/rich-responses/charts/contracts.ts",
@@ -27,6 +28,7 @@
     "yaml": "2.9.0"
   },
   "dependencies": {
+    "@json-render/core": "0.19.0",
     "zod": "4.1.11"
   }
 }

@@ -8,7 +8,9 @@ import { readConfigValue } from '../config';
 import { closeSharedHermesClient, getSharedHermesClient } from '../hermes/shared-client';
 import {
     parseRichResponseFromAssistantContent,
+    parseStreamingRichResponseFromAssistantContent,
     richResponseActivity,
+    richResponseDisplayContent,
     richResponseProgressFromActivity,
 } from '../rich-responses/render';
 import { createDelivery, upsertResponse, upsertResponseActivity } from './chat-api';
@@ -86,6 +88,7 @@ export async function runHermesTurn(input: {
     const progressMessages: string[] = [];
     let reasoningSegment: ReasoningSegment | null = null;
     let reasoningSegmentIndex = 0;
+    let richResponsePatchCount = 0;
     const toolArgumentsByKey = new Map<string, unknown>();
     const completedReasoningMessages: string[] = [];
     const stream = createTurnStreamThrottle();
@@ -250,15 +253,32 @@ export async function runHermesTurn(input: {
                     };
                 }
                 assistantSegment.content += delta;
+                const streamingRichResponse =
+                    parseStreamingRichResponseFromAssistantContent(assistantContent);
+                if (
+                    streamingRichResponse &&
+                    streamingRichResponse.patches.length > richResponsePatchCount
+                ) {
+                    richResponsePatchCount = streamingRichResponse.patches.length;
+                    stream.schedule(
+                        'rich_response',
+                        () => publishStreamingRichResponse(input, turn, streamingRichResponse),
+                        turnActivityFlushIntervalMs
+                    );
+                }
                 stream.schedule(
                     'reply',
                     () => {
+                        const text = richResponseDisplayContent(
+                            assistantSegment?.content ?? ''
+                        ).trimStart();
                         publishRuntimeEvent({
                             isThinking: false,
                             // Segments after a narration flush begin with the
                             // model's paragraph separator; leading newlines
                             // render as blank space in the live reply.
-                            text: (assistantSegment?.content ?? '').trimStart(),
+                            replace: true,
+                            text,
                             timestamp: new Date().toISOString(),
                             turn,
                             type: 'turn.replyUpdated',
@@ -840,10 +860,33 @@ function recordRichResponse(
     publishRichResponseProgress(turn, activity, timestamp);
 }
 
+function publishStreamingRichResponse(
+    input: HermesTurnInput,
+    turn: HermesTurn,
+    richResponse: NonNullable<ReturnType<typeof parseStreamingRichResponseFromAssistantContent>>
+) {
+    const timestamp = new Date().toISOString();
+    const activity = richResponseActivity({
+        activityId: createActivityId(input.runId, 'rich_response'),
+        agentId: input.agentId,
+        fallbackText: richResponse.fallbackText,
+        messageId: input.requestMessageId,
+        render: richResponse.render,
+        runId: input.runId,
+        sessionKey: input.sessionKey,
+        source: 'assistant.spec',
+        startedAt: turn.startedAt,
+        timestamp,
+    });
+
+    publishRichResponseProgress(turn, activity, timestamp, 'active');
+}
+
 function publishRichResponseProgress(
     turn: HermesTurn,
     activity: ReturnType<typeof richResponseActivity>,
-    timestamp: string
+    timestamp: string,
+    status: 'active' | 'completed' = 'completed'
 ) {
     const richResponse = richResponseProgressFromActivity(activity);
 
@@ -857,7 +900,7 @@ function publishRichResponseProgress(
             id: activity.id,
             kind: 'rich_response',
             label: activity.title,
-            status: activity.status === 'failed' ? 'failed' : 'completed',
+            status,
             richResponse,
         },
         timestamp,

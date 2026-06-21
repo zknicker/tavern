@@ -1,12 +1,17 @@
 import * as z from 'zod';
 import {
     richResponseCalendarDayComponentType,
+    richResponseCalendarDayPropsSchema,
     richResponseCalendarEventComponentType,
+    richResponseCalendarEventPropsSchema,
 } from './calendar/contracts.ts';
 import {
     richResponseBarChartComponentType,
+    richResponseBarChartPropsSchema,
     richResponseComposedChartComponentType,
+    richResponseComposedChartPropsSchema,
     richResponseLineChartComponentType,
+    richResponseLineChartPropsSchema,
 } from './charts/contracts.ts';
 
 export const richResponseComponentId = 'tavern.rich_response' as const;
@@ -62,7 +67,7 @@ const richResponseTableColumnSchema = z
     })
     .strict();
 
-const richResponseTableCanonicalPropsSchema = z
+export const richResponseTableCanonicalPropsSchema = z
     .object({
         columns: z.array(richResponseTableColumnSchema).min(1).max(8),
         rows: z.array(z.record(z.string(), tableValueSchema)).max(50),
@@ -151,6 +156,17 @@ export const richResponseSpecSchema = z
                     });
                 }
             }
+
+            const propsSchema = richResponsePropsSchemaForType(element.type);
+            const parsed = propsSchema.safeParse(element.props);
+            if (!parsed.success) {
+                context.addIssue({
+                    code: 'custom',
+                    message:
+                        parsed.error.issues[0]?.message ?? `${element.type} props are not valid.`,
+                    path: ['elements', id, 'props'],
+                });
+            }
         }
     });
 
@@ -167,13 +183,51 @@ export const richResponseRenderInputSchema = z
     })
     .strict();
 
-export const richResponsePatchSchema = z
-    .object({
-        op: z.enum(['add', 'replace']),
-        path: z.string().trim().min(1).max(500),
-        value: z.unknown(),
-    })
-    .strict();
+const jsonPointerPathSchema = z.string().trim().min(1).max(500);
+
+export const richResponsePatchSchema = z.discriminatedUnion('op', [
+    z
+        .object({
+            op: z.literal('add'),
+            path: jsonPointerPathSchema,
+            value: z.unknown(),
+        })
+        .strict(),
+    z
+        .object({
+            op: z.literal('remove'),
+            path: jsonPointerPathSchema,
+        })
+        .strict(),
+    z
+        .object({
+            op: z.literal('replace'),
+            path: jsonPointerPathSchema,
+            value: z.unknown(),
+        })
+        .strict(),
+    z
+        .object({
+            from: jsonPointerPathSchema,
+            op: z.literal('move'),
+            path: jsonPointerPathSchema,
+        })
+        .strict(),
+    z
+        .object({
+            from: jsonPointerPathSchema,
+            op: z.literal('copy'),
+            path: jsonPointerPathSchema,
+        })
+        .strict(),
+    z
+        .object({
+            op: z.literal('test'),
+            path: jsonPointerPathSchema,
+            value: z.unknown(),
+        })
+        .strict(),
+]);
 
 export type RichResponseComponentType = z.infer<typeof richResponseComponentTypeSchema>;
 export type RichResponseElement = z.infer<typeof richResponseElementSchema>;
@@ -182,3 +236,28 @@ export type RichResponsePatch = z.infer<typeof richResponsePatchSchema>;
 export type RichResponseRenderInput = z.infer<typeof richResponseRenderInputSchema>;
 export type RichResponseSpec = z.infer<typeof richResponseSpecSchema>;
 export type RichResponseTarget = z.infer<typeof richResponseTargetSchema>;
+
+function richResponsePropsSchemaForType(type: RichResponseComponentType) {
+    switch (type) {
+        case 'Stack':
+            return richResponseStackPropsSchema;
+        case 'Heading':
+            return richResponseHeadingPropsSchema;
+        case 'Text':
+            return richResponseTextPropsSchema;
+        case 'Separator':
+            return richResponseSeparatorPropsSchema;
+        case 'Table':
+            return richResponseTablePropsSchema;
+        case richResponseBarChartComponentType:
+            return richResponseBarChartPropsSchema;
+        case richResponseLineChartComponentType:
+            return richResponseLineChartPropsSchema;
+        case richResponseComposedChartComponentType:
+            return richResponseComposedChartPropsSchema;
+        case richResponseCalendarEventComponentType:
+            return richResponseCalendarEventPropsSchema;
+        case richResponseCalendarDayComponentType:
+            return richResponseCalendarDayPropsSchema;
+    }
+}

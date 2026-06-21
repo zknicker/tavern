@@ -665,6 +665,102 @@ describe('Tavern Hermes channel relay', () => {
         );
     });
 
+    it('streams spec fences as active Rich Response progress without showing raw JSONL', async () => {
+        const runtimeEvents: unknown[] = [];
+        const unsubscribe = subscribeToRuntimeEvents((event) => runtimeEvents.push(event));
+        const content = [
+            'Here is the chart.',
+            '',
+            '```spec',
+            '{"op":"add","path":"/root","value":"chart"}',
+            '{"op":"add","path":"/elements/chart","value":{"type":"BarChart","props":{"data":[{"quarter":"Q1","revenue":12000}],"series":[{"key":"revenue","label":"Revenue"}],"title":"Quarterly Revenue","xKey":"quarter"},"children":[]}}',
+            '```',
+            '',
+            'Done.',
+        ].join('\n');
+
+        hermesClient.streamChat.mockImplementationOnce(async function* streamChat() {
+            yield {
+                data: { delta: 'Here is the chart.\n\n```spec\n' },
+                event: 'assistant.delta',
+            };
+            yield {
+                data: { delta: '{"op":"add","path":"/root","value":"chart"}\n' },
+                event: 'assistant.delta',
+            };
+            yield {
+                data: {
+                    delta: '{"op":"add","path":"/elements/chart","value":{"type":"BarChart","props":{"data":[{"quarter":"Q1","revenue":12000}],"series":[{"key":"revenue","label":"Revenue"}],"title":"Quarterly Revenue","xKey":"quarter"},"children":[]}}\n',
+                },
+                event: 'assistant.delta',
+            };
+            yield {
+                data: { delta: '```\n\nDone.' },
+                event: 'assistant.delta',
+            };
+            yield {
+                data: { content, message_id: 'hermes_msg_streamed_rich_response' },
+                event: 'assistant.completed',
+            };
+        });
+        createChat({ id: 'cht_1' });
+
+        await sendTavernChannelMessage('cht_1', {
+            agent: {
+                agentId: 'agt_1',
+            },
+            message: {
+                content: 'show chart',
+                id: 'msg_streamed_rich_response',
+                nonce: 'nonce_streamed_rich_response',
+            },
+            target: {
+                externalId: null,
+                sessionKey: 'session_1',
+                target: 'cht_1',
+                type: 'tavern',
+            },
+        });
+        await waitForHermesTurn();
+        unsubscribe();
+
+        const replyTexts = runtimeEvents.flatMap((event) => {
+            const record = readRecord(event);
+            return record.type === 'turn.replyUpdated' ? [readString(record.text) ?? ''] : [];
+        });
+        expect(replyTexts.every((text) => !text.includes('```spec'))).toBe(true);
+        expect(replyTexts.every((text) => !text.includes('"op"'))).toBe(true);
+
+        const richResponseSteps = runtimeEvents.flatMap((event) => {
+            const record = readRecord(event);
+            const step = readRecord(record.step);
+            return record.type === 'turn.progress' && step.kind === 'rich_response' ? [step] : [];
+        });
+        expect(richResponseSteps).toEqual(
+            expect.arrayContaining([
+                expect.objectContaining({
+                    status: 'active',
+                    richResponse: expect.objectContaining({
+                        component: 'tavern.rich_response',
+                        fallbackText: 'Quarterly Revenue',
+                        target: 'chat.inline',
+                        validationError: null,
+                    }),
+                }),
+                expect.objectContaining({
+                    status: 'completed',
+                    richResponse: expect.objectContaining({
+                        component: 'tavern.rich_response',
+                        fallbackText: 'Quarterly Revenue',
+                        target: 'chat.inline',
+                        validationError: null,
+                    }),
+                }),
+            ])
+        );
+        expect(listMessages('cht_1').messages.at(-1)?.content).toBe('Here is the chart.\n\nDone.');
+    });
+
     it('does not store Hermes reasoning.available as model Thinking', async () => {
         hermesClient.streamChat.mockImplementationOnce(async function* streamChat() {
             yield {
@@ -1412,4 +1508,8 @@ function readRecord(value: unknown): Record<string, unknown> {
     return value && typeof value === 'object' && !Array.isArray(value)
         ? (value as Record<string, unknown>)
         : {};
+}
+
+function readString(value: unknown): string | null {
+    return typeof value === 'string' ? value : null;
 }

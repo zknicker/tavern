@@ -1,3 +1,5 @@
+import { renderRichResponsePrompt } from '@tavern/api/rich-responses/catalog';
+
 /**
  * Generated AGENTS.md content. AGENTS.md is a pure Tavern-composed artifact:
  * Tavern is the single writer; the user and the agent edit the NOTES.md and
@@ -51,29 +53,13 @@ const environmentSection = `## Environment
 
 const richResponsesSection = `## Rich Responses
 
-Use Rich Responses for generative UI in final replies. When an answer is primarily tabular, chartable, calendar-shaped, or visually scannable, render it as a Rich Response by default.
-
-Write normal prose before or after the Rich Response. Put the Rich Response spec in one code fence whose language is \`spec\`; Tavern renders that spec and hides the raw spec from chat.
-
-The spec contains newline-delimited JSON patches:
-
-\`\`\`spec
-{"op":"add","path":"/root","value":"summary"}
-{"op":"add","path":"/elements/summary","value":{"type":"Stack","props":{"gap":"md"},"children":["title","body"]}}
-{"op":"add","path":"/elements/title","value":{"type":"Heading","props":{"text":"Sales summary"},"children":[]}}
-{"op":"add","path":"/elements/body","value":{"type":"Text","props":{"text":"43 sold, 36 net, 7 returns."},"children":[]}}
-\`\`\`
-
-For rows and columns, render a \`Table\` instead of a Markdown table:
-
-\`\`\`spec
-{"op":"add","path":"/root","value":"states"}
-{"op":"add","path":"/elements/states","value":{"type":"Table","props":{"columns":[{"key":"state","label":"State"},{"key":"population","label":"Population","align":"right"},{"key":"tree","label":"Tree"}],"rows":[{"state":"California","population":"39,538,223","tree":"Coast redwood"},{"state":"Texas","population":"29,145,505","tree":"Pecan"}]},"children":[]}}
-\`\`\`
-
-Available Rich Response components: \`Stack\`, \`Heading\`, \`Text\`, \`Separator\`, \`Table\`, \`BarChart\`, \`LineChart\`, \`ComposedChart\`, \`CalendarDay\`, and \`CalendarEvent\`.
-
-Use charts for rankings, totals, trends, and comparable numeric series. Use \`Table\` for compact rows and columns. Use calendar components for prepared agendas or events. Do not use Markdown tables when a \`Table\` Rich Response fits. Use concise text only when a Rich Response would be forced, too small to matter, or too large to scan. Do not include secrets, hidden reasoning, raw HTML, CSS, JSX, or class names in specs.`;
+${renderRichResponsePrompt({
+    customRules: [
+        'Use Rich Responses by default when an answer is primarily tabular, chartable, calendar-shaped, or visually scannable.',
+        'Use concise text only when a Rich Response would be forced, too small to matter, or too large to scan.',
+    ],
+    system: 'Use Rich Responses for generative UI in final replies.',
+})}`;
 
 const visibleProgressSection = `## Visible Progress
 

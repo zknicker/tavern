@@ -1,10 +1,9 @@
 import {
     type AgentRuntimeRichResponseProgress,
-    type RichResponsePatch,
+    compileRichResponseSpecStream,
+    parseRichResponseSpecStreamLines,
     richResponseComponentId,
-    richResponsePatchSchema,
     richResponseRenderInputSchema,
-    richResponseSpecSchema,
     type TavernUpsertResponseActivityRequest,
 } from '@tavern/api';
 
@@ -22,33 +21,58 @@ const specFencePattern = /```spec\s*\n([\s\S]*?)\n```/u;
 export interface ParsedRichResponse {
     displayContent: string;
     fallbackText: string;
-    patches: RichResponsePatch[];
+    patches: unknown[];
     render: unknown;
 }
 
 export function parseRichResponseFromAssistantContent(content: string): ParsedRichResponse | null {
-    const match = specFencePattern.exec(content);
-
-    if (!match) {
+    const fence = splitRichResponseSpecFence(content);
+    if (!fence?.closed) {
         return null;
     }
 
-    const [fence, body] = match;
-    const displayContent = content
-        .replace(fence, '')
-        .replace(/\n{3,}/gu, '\n\n')
-        .trim();
+    const displayContent = richResponseDisplayContent(content);
+    return parseRichResponseSpecBody(fence.body, displayContent, true);
+}
+
+export function parseStreamingRichResponseFromAssistantContent(
+    content: string
+): ParsedRichResponse | null {
+    const fence = splitRichResponseSpecFence(content);
+    if (!fence) {
+        return null;
+    }
+
+    const body = completedSpecBody(fence.body, fence.closed);
+    if (!body.trim()) {
+        return null;
+    }
 
     try {
-        const patches = parsePatchLines(body);
-        const spec = applyRichResponsePatches(patches);
-        const parsed = richResponseSpecSchema.safeParse(spec);
+        return parseRichResponseSpecBody(body, richResponseDisplayContent(content), false);
+    } catch {
+        return null;
+    }
+}
 
-        if (!parsed.success) {
-            throw new Error(parsed.error.issues[0]?.message ?? 'Invalid Rich Response spec.');
-        }
+export function richResponseDisplayContent(content: string) {
+    const fence = splitRichResponseSpecFence(content);
+    if (!fence) {
+        return content;
+    }
 
-        const fallbackText = richResponseFallbackText(parsed.data);
+    return `${fence.before}${fence.closed ? fence.after : ''}`.replace(/\n{3,}/gu, '\n\n').trim();
+}
+
+function parseRichResponseSpecBody(
+    body: string,
+    displayContent: string,
+    includeInvalidPayload: boolean
+): ParsedRichResponse | null {
+    try {
+        const patches = parseRichResponseSpecStreamLines(body);
+        const spec = compileRichResponseSpecStream(body);
+        const fallbackText = richResponseFallbackText(spec);
 
         return {
             displayContent,
@@ -57,11 +81,15 @@ export function parseRichResponseFromAssistantContent(content: string): ParsedRi
             render: {
                 component: richResponseComponentId,
                 fallback: { text: fallbackText },
-                props: { spec: parsed.data },
+                props: { spec },
                 target: 'chat.inline',
             },
         };
     } catch (error) {
+        if (!includeInvalidPayload) {
+            throw error;
+        }
+
         const fallbackText = fallbackTextFromDisplayContent(displayContent);
 
         return {
@@ -77,6 +105,53 @@ export function parseRichResponseFromAssistantContent(content: string): ParsedRi
             },
         };
     }
+}
+
+interface RichResponseSpecFence {
+    after: string;
+    before: string;
+    body: string;
+    closed: boolean;
+}
+
+function splitRichResponseSpecFence(content: string): RichResponseSpecFence | null {
+    const match = specFencePattern.exec(content);
+
+    if (match) {
+        const [fence, body] = match;
+        const start = match.index;
+        const end = start + fence.length;
+
+        return {
+            after: content.slice(end),
+            before: content.slice(0, start),
+            body,
+            closed: true,
+        };
+    }
+
+    const start = /```spec\s*\n?/u.exec(content);
+    if (!start) {
+        return null;
+    }
+
+    const bodyStart = start.index + start[0].length;
+    return {
+        after: '',
+        before: content.slice(0, start.index),
+        body: content.slice(bodyStart),
+        closed: false,
+    };
+}
+
+function completedSpecBody(body: string, closed: boolean) {
+    if (closed || /\r?\n$/u.test(body)) {
+        return body;
+    }
+
+    const lines = body.split(/\r?\n/u);
+    lines.pop();
+    return lines.join('\n');
 }
 
 export function richResponseActivity(input: {
@@ -154,125 +229,6 @@ export function richResponseProgressFromActivity(
             parsed.error.issues[0]?.message ??
             'Invalid Rich Response.'
     );
-}
-
-function parsePatchLines(body: string): RichResponsePatch[] {
-    const patches: RichResponsePatch[] = [];
-
-    for (const [index, line] of body.split(/\r?\n/u).entries()) {
-        const trimmed = line.trim();
-        if (!trimmed) {
-            continue;
-        }
-
-        let value: unknown;
-        try {
-            value = JSON.parse(trimmed);
-        } catch {
-            throw new Error(`Rich Response spec line ${index + 1} is not valid JSON.`);
-        }
-
-        const parsed = richResponsePatchSchema.safeParse(value);
-        if (!parsed.success) {
-            throw new Error(
-                parsed.error.issues[0]?.message ??
-                    `Rich Response spec line ${index + 1} is not a valid patch.`
-            );
-        }
-        patches.push(parsed.data);
-    }
-
-    if (patches.length === 0) {
-        throw new Error('Rich Response spec is empty.');
-    }
-
-    if (patches.length > 300) {
-        throw new Error('Rich Response specs support at most 300 patches.');
-    }
-
-    return patches;
-}
-
-function applyRichResponsePatches(patches: RichResponsePatch[]) {
-    const document: Record<string, unknown> = {};
-
-    for (const patch of patches) {
-        setJsonPointerValue(document, patch.path, patch.value);
-    }
-
-    return document;
-}
-
-function setJsonPointerValue(document: Record<string, unknown>, path: string, value: unknown) {
-    if (!path.startsWith('/')) {
-        throw new Error('Rich Response patch paths must be JSON pointers.');
-    }
-
-    const parts = path
-        .slice(1)
-        .split('/')
-        .filter(Boolean)
-        .map((part) => part.replace(/~1/gu, '/').replace(/~0/gu, '~'));
-
-    if (parts.length === 0) {
-        throw new Error('Rich Response patches cannot replace the document root.');
-    }
-
-    let target: Record<string, unknown> | unknown[] = document;
-    for (const [index, part] of parts.entries()) {
-        const isLast = index === parts.length - 1;
-
-        if (isLast) {
-            setContainerValue(target, part, value);
-            return;
-        }
-
-        const next = getContainerValue(target, part);
-        if (!(next && typeof next === 'object')) {
-            const nextPart = parts[index + 1];
-            const container: Record<string, unknown> | unknown[] = isArrayIndex(nextPart) ? [] : {};
-            setContainerValue(target, part, container);
-        }
-        const stored = getContainerValue(target, part);
-        if (!(stored && typeof stored === 'object')) {
-            throw new Error('Rich Response patch path cannot traverse a primitive value.');
-        }
-        target = stored as Record<string, unknown> | unknown[];
-    }
-}
-
-function getContainerValue(container: Record<string, unknown> | unknown[], key: string) {
-    if (Array.isArray(container)) {
-        return isArrayIndex(key) ? container[Number(key)] : undefined;
-    }
-
-    return container[key];
-}
-
-function setContainerValue(
-    container: Record<string, unknown> | unknown[],
-    key: string,
-    value: unknown
-) {
-    if (Array.isArray(container)) {
-        if (key === '-') {
-            container.push(value);
-            return;
-        }
-
-        if (!isArrayIndex(key)) {
-            throw new Error('Rich Response array patch paths must use numeric indexes.');
-        }
-
-        container[Number(key)] = value;
-        return;
-    }
-
-    container[key] = value;
-}
-
-function isArrayIndex(value: string | undefined) {
-    return Boolean(value && /^(?:0|[1-9]\d*)$/u.test(value));
 }
 
 function richResponseFallbackText(spec: {

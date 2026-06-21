@@ -12,11 +12,22 @@ Rich Responses let the assistant include one app-rendered UI island in a final
 chat reply. The assistant writes normal Markdown plus one Rich Response spec in
 a code fence whose language is `spec`.
 Runtime strips the block from the delivered assistant message, compiles the
-newline-delimited JSON patches into a validated Rich Response Spec, and stores
-the result as durable `rich_response` response activity.
+newline-delimited JSON patches through json-render SpecStream, validates the
+compiled Rich Response Spec against Tavern's catalog schemas, and stores the
+result as durable `rich_response` response activity.
 
 The model does not call render tools. Tavern does not register first-party
 render tools in the managed platform plugin.
+
+Tavern uses json-render for the Rich Response spec island: json-render core
+assembles the catalog-backed prompt and compiles SpecStream patches, and the
+Website renders the compiled spec with `@json-render/react` using Tavern-styled
+component renderers.
+
+The current prompt and Runtime validator expose a read-only chat subset.
+json-render interaction features such as `repeat`, `on`, `watch`, visibility,
+and two-way bindings are renderer-capable, but Tavern does not ask agents to
+emit them until the Runtime contract accepts and persists those fields.
 
 ## Contract
 
@@ -45,6 +56,13 @@ The compiled spec shape is:
 
 Runtime validates the root, element count, child references, and component
 types. Website validates component props again before rendering.
+
+While an assistant is streaming an open `spec` fence, Runtime compiles complete
+SpecStream lines from `assistant.delta` events and publishes active
+`rich_response` progress. Runtime hides the raw JSONL fence from live
+`turn.replyUpdated` text. When the assistant completes, Runtime records the
+final validated Rich Response activity and stores the assistant message without
+the `spec` block.
 
 ## Catalog
 
@@ -86,16 +104,19 @@ state.
 
 ## Agent Guidance
 
-Generated `AGENTS.md` tells agents to use Rich Responses by default for
-tabular, chartable, calendar-shaped, or visually scannable final answers. It
-lists the component catalog, shows compact spec examples, and explicitly tells
-agents to use `Table` instead of Markdown tables when rows and columns are the
-main display. Detailed component schemas live in
+Generated `AGENTS.md` gets its Rich Response section from the json-render
+catalog prompt assembler. Tavern defines each component once in the shared
+catalog with a description and Zod props schema; prompt text, Runtime
+compilation, and validation all read from that catalog instead of duplicating
+per-component examples in generated instructions. Tavern supplies a small
+json-render schema template so the prompt describes only the read-only subset
+the current renderer accepts. Detailed component schemas live in
 `packages/tavern-api/src/rich-responses`.
 
 ## Ownership
 
-Canonical schemas live in `packages/tavern-api/src/rich-responses`.
+Canonical schemas and the json-render catalog live in
+`packages/tavern-api/src/rich-responses`.
 
 Runtime owns parsing final assistant content and writing `rich_response`
 activity. Server owns row projection. Website owns the renderer and visual
