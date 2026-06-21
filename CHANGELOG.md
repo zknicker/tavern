@@ -2,6 +2,26 @@
 
 All notable changes to this project will be documented in this file.
 
+## v1.4.25 - 2026-06-21
+
+Runtime floor raised to 1.4.25 for json-render Rich Response correctness.
+
+App changes:
+
+- Requires Runtime 1.4.25 so upgraded apps do not keep using a Runtime that
+  rejects renderer-supported json-render specs.
+
+Runtime changes:
+
+- Uses json-render's default catalog prompt assembler with Tavern component and
+  product rules instead of a custom prompt template.
+- Accepts json-render state, repeat, event, watcher, visibility, and dynamic
+  prop fields that the renderer supports.
+- Delivers usable prose when a final Rich Response spec fence is malformed
+  instead of leaving the chat with an unavailable Rich Response.
+- Prevents managed note and skill maintenance from reintroducing render-tool or
+  Widget guidance for Rich Responses.
+
 ## v1.4.24 - 2026-06-21
 
 Runtime floor raised to 1.4.24 for json-render Rich Response rendering and
