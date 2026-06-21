@@ -2,6 +2,27 @@
 
 All notable changes to this project will be documented in this file.
 
+## v1.4.24 - 2026-06-21
+
+Runtime floor raised to 1.4.24 for json-render Rich Response rendering and
+streaming progress.
+
+App changes:
+
+- Renders Rich Response islands through `@json-render/react` with Tavern-styled
+  catalog components.
+- Restored translucent app chrome and stabilized the collapsed sidebar preview
+  hover state.
+
+Runtime changes:
+
+- Generates Rich Response guidance from a json-render catalog and compiles
+  SpecStream JSON patch output through json-render core.
+- Streams complete Rich Response spec lines as active progress while hiding raw
+  JSONL from live reply text.
+- Rejects stale chart and calendar prop names before rendering unavailable Rich
+  Responses.
+
 ## v1.4.23 - 2026-06-20
 
 Runtime floor raised to 1.4.23 for Rich Response contracts, rendering, and
