@@ -19,6 +19,7 @@ const toolStepRenderers = {
     command: ShellToolStep,
     exec: ShellToolStep,
     shell: ShellToolStep,
+    terminal: ShellToolStep,
     zsh: ShellToolStep,
 } satisfies Record<string, ToolStepRenderer>;
 

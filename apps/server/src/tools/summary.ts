@@ -20,6 +20,7 @@ const preferredArgumentKeys = [
     'query',
     'pattern',
     'command',
+    'cmd',
 ] as const;
 
 const preferredResultKeys = [
@@ -44,6 +45,7 @@ const readToolNames = ['grep', 'read', 'search'] as const;
 const toolLabelByKey: Partial<Record<string, string>> = {
     agentId: 'Agent',
     childSessionKey: 'Session',
+    cmd: 'Command',
     command: 'Command',
     error: 'Error',
     filePath: 'File',
@@ -155,7 +157,7 @@ function buildSummaryParts(input: {
     const normalizedName = input.name.trim().toLowerCase();
 
     if (matchesToolName(normalizedName, shellToolNames)) {
-        const command = getArgumentString(input.argumentsValue, ['command']);
+        const command = getArgumentString(input.argumentsValue, ['command', 'cmd']);
 
         if (command) {
             return [command];

@@ -526,7 +526,10 @@ function normalizeProgressClarification(step: ChatTurnProgressStep['clarificatio
 function isShellStep(step: ChatTurnProgressStep) {
     const name = step.toolName?.trim().toLowerCase() ?? '';
 
-    return step.kind === 'command' || ['bash', 'command', 'exec', 'shell', 'zsh'].includes(name);
+    return (
+        step.kind === 'command' ||
+        ['bash', 'command', 'exec', 'shell', 'terminal', 'zsh'].includes(name)
+    );
 }
 
 function toolNameForStep(step: ChatTurnProgressStep) {

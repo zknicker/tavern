@@ -10,6 +10,7 @@ import { useToolRowHoverItem } from '../tool-row-hover.ts';
 import type { ToolStepRow } from './types.ts';
 
 type ToolIcon = HugeiconsIconProps['icon'];
+const inlineToolTargetMaxLength = 96;
 
 export function ToolTimelineStep({
     animateEnter = false,
@@ -97,6 +98,7 @@ export function InlineToolLabel({
 }) {
     const duration = formatToolDuration(row.startedAt, row.completedAt);
     const isRunning = isRunningToolRow(row);
+    const visibleTarget = formatInlineToolTarget(target);
 
     return (
         <span
@@ -114,7 +116,7 @@ export function InlineToolLabel({
                 {verb}
             </span>
             <span className={cn('truncate', isRunning ? null : 'text-muted-foreground')}>
-                {target}
+                {visibleTarget}
             </span>
             {duration ? (
                 <span className="shrink-0 font-mono text-[11px] text-muted-foreground/70 tabular-nums">
@@ -139,6 +141,14 @@ export function getInlineToolVerbClassName(row: ToolStepRow) {
 
 export function getToolTarget(row: ToolStepRow) {
     return row.toolCall.summaryParts.join(' ') || row.toolCall.label || row.toolCall.name || 'tool';
+}
+
+function formatInlineToolTarget(target: string) {
+    if (target.length <= inlineToolTargetMaxLength) {
+        return target;
+    }
+
+    return `${target.slice(0, inlineToolTargetMaxLength - 3).trimEnd()}...`;
 }
 
 export function getToolFact(row: ToolStepRow, label: string) {

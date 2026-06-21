@@ -91,6 +91,32 @@ test('buildToolSummaryFromValues keeps multi-line shell output out of summaryPar
     );
 });
 
+test('buildToolSummaryFromValues summarizes terminal cmd arguments as commands', () => {
+    const command = 'merchbase sales series --range 10d --bucket day --marketplace US';
+    const summary = buildToolSummaryFromValues({
+        argumentsValue: {
+            cmd: command,
+        },
+        callId: 'call-terminal',
+        isError: false,
+        name: 'terminal',
+        resultValue: {
+            output: '{"ok":true}',
+        },
+    });
+
+    assert.deepEqual(summary.summaryParts, [command]);
+    assert.deepEqual(summary.facts[0], {
+        label: 'Command',
+        tone: 'default',
+        value: command,
+    });
+    assert.equal(
+        summary.summaryParts.some((part) => part.includes('ok')),
+        false
+    );
+});
+
 test('buildToolSummaryFromValues summarizes approvals by command instead of description', () => {
     const summary = buildToolSummaryFromValues({
         argumentsValue: {

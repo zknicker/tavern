@@ -19,7 +19,8 @@ custom presentation for a specific tool.
    this layer.
 2. **Server projection** turns activities into timeline tool rows
    (`apps/server/src/chat/runtime-chat-api.ts`). Row labels come from
-   `buildToolSummaryFromValues` (`apps/server/src/tools/summary.ts`).
+   `buildToolSummaryFromValues` (`apps/server/src/tools/summary.ts`). Shell
+   tools accept `command` and `cmd` as the command argument.
 3. **Row rendering** resolves a step component by tool name
    (`apps/website/src/features/chats/tool-steps/registry.tsx`).
 4. **Drawer rendering** fetches the full call (`chat.tool.get` /
@@ -30,6 +31,7 @@ custom presentation for a specific tool.
 
 - **Row labels describe intent, never outcome.** `summaryParts` derive only
   from tool arguments (command, path, pattern). Results belong in the drawer.
+  Inline labels cap long targets; the inspect drawer keeps full values.
   Tests in `apps/server/src/tools/summary.test.ts` pin this.
 - **Color is signal.** Completed verbs are neutral; red is reserved for
   failures; running rows shimmer (`thinking-indicator-text`).

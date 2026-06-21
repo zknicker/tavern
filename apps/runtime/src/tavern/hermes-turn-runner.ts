@@ -1088,7 +1088,9 @@ function recordToolLifecycle(input: HermesTurnInput, turn: HermesTurn, event: He
     const toolName = readString(event.data.tool_name) || 'tool';
     const toolCallId = readString(event.data.tool_call_id);
     const id = createActivityId(input.runId, toolCallId ?? toolName);
-    const detail = readString(event.data.preview);
+    const detail =
+        readShellCommandFromToolArguments(toolName, event.data.arguments) ??
+        readString(event.data.preview);
     const status =
         event.event === 'tool.failed'
             ? 'failed'
@@ -1177,6 +1179,21 @@ function hasToolArguments(value: unknown) {
         !Array.isArray(value) &&
         Object.keys(value).length > 0
     );
+}
+
+function readShellCommandFromToolArguments(toolName: string, value: unknown) {
+    const normalizedName = toolName.trim().toLowerCase();
+
+    if (!['bash', 'command', 'exec', 'shell', 'terminal', 'zsh'].includes(normalizedName)) {
+        return null;
+    }
+
+    if (!(value && typeof value === 'object' && !Array.isArray(value))) {
+        return null;
+    }
+
+    const record = value as Record<string, unknown>;
+    return readString(record.command) ?? readString(record.cmd);
 }
 
 function completeHermesTurn(

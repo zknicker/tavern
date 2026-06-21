@@ -415,6 +415,12 @@ test('progress patch prefers the command detail over a bare tool-name label', ()
         kind: 'tool',
         toolCall: {
             name: 'terminal',
+            facts: [
+                {
+                    label: 'Command',
+                    value: "pwd && ls -la | sed -n '1,8p'",
+                },
+            ],
             summaryParts: ["pwd && ls -la | sed -n '1,8p'"],
         },
     });

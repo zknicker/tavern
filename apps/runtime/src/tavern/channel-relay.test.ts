@@ -537,7 +537,6 @@ describe('Tavern Hermes channel relay', () => {
             yield {
                 data: {
                     arguments: { cmd: 'rg message.delta apps/runtime/src' },
-                    preview: 'rg message.delta apps/runtime/src',
                     tool_call_id: 'tool_1',
                     tool_name: 'shell',
                 },

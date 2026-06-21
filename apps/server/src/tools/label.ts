@@ -49,8 +49,12 @@ export function buildToolLabel(input: {
             return joinLabel(['list', formatCountLabel(count, 'agent')]);
         }
         case 'bash':
-        case 'exec': {
-            const command = getString(argumentsValue?.command);
+        case 'command':
+        case 'exec':
+        case 'shell':
+        case 'terminal':
+        case 'zsh': {
+            const command = getString(argumentsValue?.command) ?? getString(argumentsValue?.cmd);
             const resultText = getString(resultValue?.text);
             return joinLabel([...summarizeCommand(command), deriveProcessState(resultText)]);
         }

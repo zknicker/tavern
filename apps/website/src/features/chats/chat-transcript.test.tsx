@@ -849,6 +849,78 @@ test('ToolStep renders completed verbs in neutral text and the whole row as the 
     assert.doesNotMatch(markup, /thinking-indicator-text/);
 });
 
+test('ToolStep renders terminal rows with the command instead of the tool name', () => {
+    const command = 'merchbase sales series --range 10d --bucket day --marketplace US';
+    const markup = renderToStaticMarkup(
+        <ToolStep
+            index={0}
+            isLast
+            row={{
+                actor: { id: 'tiny', kind: 'agent' },
+                completedAt: '2026-03-31T15:00:05.000Z',
+                connectsToNext: false,
+                connectsToPrevious: false,
+                id: 'tool-terminal',
+                isFirstInGroup: true,
+                kind: 'tool',
+                sessionKey: 'agent:tiny:session-1',
+                spawnedRelationships: [],
+                startedAt: '2026-03-31T15:00:00.000Z',
+                toolCall: {
+                    callId: null,
+                    facts: [{ label: 'Command', tone: 'default', value: command }],
+                    label: 'terminal',
+                    name: 'terminal',
+                    status: 'ok',
+                    summaryParts: [command],
+                },
+            }}
+        />
+    );
+
+    assert.match(markup, />Used</);
+    assert.match(markup, /merchbase sales series --range 10d --bucket day --marketplace US/);
+    assert.doesNotMatch(markup, />terminal</);
+});
+
+test('ToolStep caps long inline tool targets', () => {
+    const command =
+        'merchbase sales series --range 365d --bucket day --marketplace US --format json --include-orders --debug';
+    const markup = renderToStaticMarkup(
+        <ToolStep
+            index={0}
+            isLast
+            row={{
+                actor: { id: 'tiny', kind: 'agent' },
+                completedAt: '2026-03-31T15:00:05.000Z',
+                connectsToNext: false,
+                connectsToPrevious: false,
+                id: 'tool-terminal-long',
+                isFirstInGroup: true,
+                kind: 'tool',
+                sessionKey: 'agent:tiny:session-1',
+                spawnedRelationships: [],
+                startedAt: '2026-03-31T15:00:00.000Z',
+                toolCall: {
+                    callId: null,
+                    facts: [{ label: 'Command', tone: 'default', value: command }],
+                    label: 'terminal',
+                    name: 'terminal',
+                    status: 'ok',
+                    summaryParts: [command],
+                },
+            }}
+        />
+    );
+
+    assert.match(
+        markup,
+        /merchbase sales series --range 365d --bucket day --marketplace US --format json --include-ord/
+    );
+    assert.match(markup, /\.\.\./);
+    assert.doesNotMatch(markup, /--debug/);
+});
+
 test('ToolStep shimmers running tool rows like the thinking indicator', () => {
     const markup = renderToStaticMarkup(
         <ToolStep
