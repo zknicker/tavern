@@ -1,6 +1,7 @@
 // Pure state machine for chat viewport scroll ownership. The controller in
-// use-chat-scroll-controller.ts interprets these transitions and is the only
-// writer of the viewport's scrollTop. See specs/chat-scroll-controller.md.
+// use-chat-scroll-controller.ts interprets app-owned transitions; virtualized
+// chat surfaces leave item measurement compensation to TanStack Virtual.
+// See specs/chat-scroll-controller.md.
 
 export type ChatScrollMode = 'following' | 'anchored' | 'free';
 
@@ -57,8 +58,10 @@ export function shouldAnchorVirtualizerToEnd(mode: ChatScrollMode) {
     return mode !== 'anchored';
 }
 
-export function shouldAdjustVirtualizerOnItemSizeChange(mode: ChatScrollMode) {
-    return mode !== 'anchored';
+const suppressVirtualizerSizeAdjustment = () => false;
+
+export function getVirtualizerSizeAdjustmentPredicate(mode: ChatScrollMode) {
+    return mode === 'anchored' ? suppressVirtualizerSizeAdjustment : undefined;
 }
 
 // "Near bottom" tolerance: small enough that reading history never follows,

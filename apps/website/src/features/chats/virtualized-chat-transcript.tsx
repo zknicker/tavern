@@ -7,15 +7,10 @@ import {
 import * as React from 'react';
 import type { ChatActiveReply, ChatTurnFailure } from '../../hooks/chats/chat-timeline-state.ts';
 import {
-    shouldAdjustVirtualizerOnItemSizeChange,
+    getVirtualizerSizeAdjustmentPredicate,
     shouldAnchorVirtualizerToEnd,
 } from './chat-scroll-mode.ts';
-import { getTranscriptItemKey } from './chat-transcript-item-utils.ts';
-import type {
-    ConversationMessageLayout,
-    TranscriptEntry,
-    TranscriptRow,
-} from './chat-transcript-model.ts';
+import type { ConversationMessageLayout, TranscriptRow } from './chat-transcript-model.ts';
 import {
     getEstimatedTranscriptRowSize,
     getEstimatedTranscriptRowsSize,
@@ -24,13 +19,9 @@ import {
     transcriptRenderRowUsesActiveReply,
 } from './chat-transcript-row-model.ts';
 import { TranscriptRenderRowView } from './chat-transcript-rows.tsx';
-import {
-    useChatScrollControllerHandle,
-    useChatScrollControllerMode,
-} from './use-chat-scroll-controller.ts';
+import { useChatScrollControllerMode } from './use-chat-scroll-controller.ts';
 
 const previousPageScrollThreshold = 160;
-const transcriptScrollEndThreshold = 72;
 const transcriptPinnedEndThreshold = 1;
 const transcriptFallbackOverscan = 8;
 const transcriptEndInset = 64;
@@ -73,11 +64,10 @@ export function VirtualizedChatTranscript({
     const initialScrollKeyRef = React.useRef<string | null>(null);
     const initialScrollMeasureKeyRef = React.useRef<string | null>(null);
     const initialScrollPendingRef = React.useRef(false);
-    const previousRowGrowthSnapshotRef = React.useRef<TranscriptRowGrowthSnapshot | null>(null);
-    const chatScrollController = useChatScrollControllerHandle();
     const chatScrollMode = useChatScrollControllerMode();
     const virtualizerAnchorsToEnd = shouldAnchorVirtualizerToEnd(chatScrollMode);
-    const virtualizerAdjustsItemSize = shouldAdjustVirtualizerOnItemSizeChange(chatScrollMode);
+    const virtualizerSizeAdjustmentPredicate =
+        getVirtualizerSizeAdjustmentPredicate(chatScrollMode);
     const virtualizer = useVirtualizer<HTMLDivElement, HTMLDivElement>({
         anchorTo: virtualizerAnchorsToEnd ? 'end' : 'start',
         count: rows.length,
@@ -95,23 +85,9 @@ export function VirtualizedChatTranscript({
                 getInitialTranscriptViewportHeight(scrollViewportRef.current),
                 transcriptEndInset
             ),
-        onChange: (instance, sync) => {
-            if (
-                sync ||
-                initialScrollPendingRef.current ||
-                !shouldCorrectVirtualizedTranscriptEndGap({
-                    distanceFromEnd: instance.getDistanceFromEnd(),
-                    isFollowing: chatScrollController?.getMode() === 'following',
-                })
-            ) {
-                return;
-            }
-
-            instance.scrollToEnd({ behavior: 'auto' });
-        },
         overscan: 8,
         paddingEnd: transcriptEndInset,
-        scrollEndThreshold: transcriptScrollEndThreshold,
+        scrollEndThreshold: transcriptPinnedEndThreshold,
         scrollToFn: (offset, { adjustments = 0, behavior }, instance) => {
             const scrollElement = instance.scrollElement;
 
@@ -120,8 +96,6 @@ export function VirtualizedChatTranscript({
             }
 
             const resolvedBehavior = getChatVirtualizerScrollBehavior({
-                hasAdjustments: adjustments !== 0,
-                isFollowing: chatScrollController?.getMode() === 'following',
                 requestedBehavior: behavior,
             });
             const nextOffset = offset + adjustments;
@@ -150,13 +124,13 @@ export function VirtualizedChatTranscript({
     React.useLayoutEffect(() => {
         const controlledVirtualizer = virtualizer as SizeAdjustmentControlledVirtualizer;
 
-        controlledVirtualizer.shouldAdjustScrollPositionOnItemSizeChange = () =>
-            virtualizerAdjustsItemSize;
+        controlledVirtualizer.shouldAdjustScrollPositionOnItemSizeChange =
+            virtualizerSizeAdjustmentPredicate;
 
         return () => {
             controlledVirtualizer.shouldAdjustScrollPositionOnItemSizeChange = undefined;
         };
-    }, [virtualizer, virtualizerAdjustsItemSize]);
+    }, [virtualizer, virtualizerSizeAdjustmentPredicate]);
 
     React.useLayoutEffect(() => {
         const measureChanged = initialScrollMeasureKeyRef.current !== initialScrollMeasureKey;
@@ -199,40 +173,6 @@ export function VirtualizedChatTranscript({
 
         return () => window.clearTimeout(timer);
     }, [initialScrollKey]);
-
-    React.useLayoutEffect(() => {
-        const previous = previousRowGrowthSnapshotRef.current;
-        const next = getTranscriptRowGrowthSnapshot(rows);
-
-        previousRowGrowthSnapshotRef.current = next;
-
-        if (
-            !shouldFollowTailGrowth({
-                isFollowing: chatScrollMode === 'following',
-                next,
-                previous,
-            }) ||
-            initialScrollPendingRef.current
-        ) {
-            return;
-        }
-
-        virtualizer.scrollToEnd({ behavior: 'auto' });
-    }, [chatScrollMode, rows, virtualizer]);
-
-    React.useLayoutEffect(() => {
-        if (
-            initialScrollPendingRef.current ||
-            !shouldCorrectVirtualizedTranscriptEndGap({
-                distanceFromEnd: virtualizer.getDistanceFromEnd(),
-                isFollowing: chatScrollMode === 'following',
-            })
-        ) {
-            return;
-        }
-
-        virtualizer.scrollToEnd({ behavior: 'auto' });
-    });
 
     React.useEffect(() => {
         const viewport = scrollViewportRef.current;
@@ -399,8 +339,6 @@ export function getEstimatedTranscriptTailVirtualItems(
 export function getChatVirtualizerScrollBehavior({
     requestedBehavior,
 }: {
-    hasAdjustments: boolean;
-    isFollowing: boolean;
     requestedBehavior?: ScrollBehavior;
 }) {
     if (requestedBehavior) {
@@ -408,91 +346,6 @@ export function getChatVirtualizerScrollBehavior({
     }
 
     return 'auto';
-}
-
-export function shouldCorrectVirtualizedTranscriptEndGap({
-    distanceFromEnd,
-    isFollowing,
-}: {
-    distanceFromEnd: number;
-    isFollowing: boolean;
-}) {
-    return isFollowing && distanceFromEnd > transcriptPinnedEndThreshold;
-}
-
-interface TranscriptRowGrowthSnapshot {
-    firstRowId: string | null;
-    rowCount: number;
-    tailEntryItemCount: number;
-    tailEntryItemsKey: string | null;
-    tailEntryRowId: string | null;
-}
-
-type TranscriptTurnRenderRow = Extract<TranscriptRenderRow, { kind: 'entry' }> & {
-    entry: Extract<TranscriptEntry, { kind: 'turn' }>;
-};
-
-export function getTranscriptRowGrowthSnapshot(
-    rows: TranscriptRenderRow[]
-): TranscriptRowGrowthSnapshot {
-    const tailEntry = getTailEntryRow(rows);
-
-    return {
-        firstRowId: rows[0]?.id ?? null,
-        rowCount: rows.length,
-        tailEntryItemCount: tailEntry?.entry.items.length ?? 0,
-        tailEntryItemsKey: tailEntry
-            ? tailEntry.entry.items.map(getTranscriptItemKey).join('\u0000')
-            : null,
-        tailEntryRowId: tailEntry?.id ?? null,
-    };
-}
-
-export function shouldFollowTailGrowth({
-    isFollowing,
-    next,
-    previous,
-}: {
-    isFollowing: boolean;
-    next: TranscriptRowGrowthSnapshot;
-    previous: TranscriptRowGrowthSnapshot | null;
-}) {
-    if (!(isFollowing && previous && previous.rowCount > 0)) {
-        return false;
-    }
-
-    if (next.firstRowId !== previous.firstRowId) {
-        return false;
-    }
-
-    if (next.rowCount > previous.rowCount) {
-        return true;
-    }
-
-    return Boolean(
-        next.rowCount === previous.rowCount &&
-            next.tailEntryRowId === previous.tailEntryRowId &&
-            next.tailEntryItemsKey !== previous.tailEntryItemsKey &&
-            next.tailEntryItemCount > previous.tailEntryItemCount
-    );
-}
-
-function getTailEntryRow(rows: TranscriptRenderRow[]): TranscriptTurnRenderRow | null {
-    for (let index = rows.length - 1; index >= 0; index -= 1) {
-        const row = rows[index];
-
-        if (isTranscriptTurnRenderRow(row)) {
-            return row;
-        }
-    }
-
-    return null;
-}
-
-function isTranscriptTurnRenderRow(
-    row: TranscriptRenderRow | undefined
-): row is TranscriptTurnRenderRow {
-    return row?.kind === 'entry' && row.entry.kind === 'turn';
 }
 
 function buildEstimatedTranscriptVirtualItems(rows: TranscriptRenderRow[]): VirtualItem[] {

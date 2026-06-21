@@ -1,8 +1,10 @@
 # Chat Scroll Controller (Plan A)
 
 Status: implemented (`chat-scroll-mode.ts` + `use-chat-scroll-controller.ts`).
-Consolidates chat scroll ownership into one controller so the recurring
-animation-hitch bug class becomes structurally impossible. Notes from the
+Consolidates app-owned chat scroll writes into one controller so the recurring
+animation-hitch bug class becomes structurally impossible. Virtualized
+transcripts let TanStack Virtual own item measurement compensation, prepend
+anchoring, pinned-end anchoring, and follow-on-append. Notes from the
 implementation: the controller attaches its own viewport listeners (scroll,
 wheel, touchmove, transitionend) instead of exposing `handleScroll`, so no
 consumer can forget one; the 12-frame initial scroll loop was deleted —
@@ -29,13 +31,14 @@ instead of removing the race.
 
 ## Design
 
-One controller is the only writer of `scrollTop`. Explicit modes:
+One controller owns app-issued `scrollTop` writes. TanStack Virtual owns
+virtualized measurement and range adjustments. Explicit modes:
 
 | Mode | Entered when | Who may write scrollTop |
 | --- | --- | --- |
 | `following` | near bottom (72px tolerance); also the initial mode | controller pins bottom on every content resize |
 | `anchored` | pointer-down/keydown on a disclosure trigger | controller pins the trigger's viewport Y each frame |
-| `free` | user scrolls up | nobody — except virtualizer compensation for items above the viewport |
+| `free` | user scrolls up | nobody from Tavern — TanStack Virtual may apply its default compensation for items above the viewport |
 
 `anchored` exits on a bubbling `transitionend` (`propertyName === 'height'`)
 reaching the viewport, +1 frame, with a ~600ms time fallback for reduced
@@ -50,9 +53,13 @@ Two files:
    scroll during anchor → cancel.
 2. `use-chat-scroll-controller.ts` — thin DOM layer (viewport/content refs,
    ResizeObserver, scroll + transitionend listeners) exposing
-   `{ isAtBottom, scrollToBottom, beginAnchor, shouldVirtualizerAdjust,
-   handleScroll }` through a React context so deep components reach it without
-   window events.
+   `{ isAtBottom, scrollToBottom, beginAnchor }` through a React context so
+   deep components reach it without window events.
+
+Virtualized transcript rule: leave TanStack Virtual's
+`shouldAdjustScrollPositionOnItemSizeChange` undefined during normal scrolling
+so the library keeps its backward-scroll guard. Set a suppressing predicate
+only while Tavern disclosure anchoring is active.
 
 ## Migration steps
 

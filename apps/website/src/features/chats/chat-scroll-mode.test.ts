@@ -1,9 +1,9 @@
 import { describe, expect, test } from 'bun:test';
 import {
     getAnchorScrollDelta,
+    getVirtualizerSizeAdjustmentPredicate,
     initialChatScrollMode,
     isNearBottom,
-    shouldAdjustVirtualizerOnItemSizeChange,
     shouldAnchorVirtualizerToEnd,
     transitionChatScrollMode,
 } from './chat-scroll-mode.ts';
@@ -112,10 +112,10 @@ describe('virtualizer ownership helpers', () => {
         expect(shouldAnchorVirtualizerToEnd('anchored')).toBe(false);
     });
 
-    test('TanStack size-change scroll adjustment is suspended only during drawer anchoring', () => {
-        expect(shouldAdjustVirtualizerOnItemSizeChange('following')).toBe(true);
-        expect(shouldAdjustVirtualizerOnItemSizeChange('free')).toBe(true);
-        expect(shouldAdjustVirtualizerOnItemSizeChange('anchored')).toBe(false);
+    test('TanStack size-change adjustment uses the library default except during drawer anchoring', () => {
+        expect(getVirtualizerSizeAdjustmentPredicate('following')).toBeUndefined();
+        expect(getVirtualizerSizeAdjustmentPredicate('free')).toBeUndefined();
+        expect(getVirtualizerSizeAdjustmentPredicate('anchored')?.()).toBe(false);
     });
 });
 

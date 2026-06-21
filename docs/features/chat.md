@@ -155,10 +155,12 @@ transcript only grows:
   history never replays.
 * The full transcript virtualizes visible rows only: hidden thinking evidence
   does not reserve transcript height while the Appearance setting hides
-  thinking text. TanStack Virtual owns smooth follow-on-append and instant end
-  anchoring for measured tail growth and streaming reply growth.
-  The local scroll controller still tracks bottom state and owns disclosure
-  anchoring for non-virtualized chat surfaces.
+  thinking text. TanStack Virtual owns follow-on-append, measured row size
+  compensation, prepend anchoring, and pinned-end anchoring. Tavern leaves the
+  library's default size-change adjustment in place so upward scroll input wins,
+  and suppresses it only while disclosure anchoring is active. The local scroll
+  controller still tracks bottom state and owns disclosure anchoring for
+  non-virtualized chat surfaces.
 
 Queued composer drafts are app-local until dispatched or explicitly steered. A
 queued draft does not create a durable Tavern message, response, Hermes session
