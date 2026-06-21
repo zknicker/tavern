@@ -1,4 +1,3 @@
-import { CollapseIcon, ExpandIcon } from '@hugeicons/core-free-icons';
 import type {
     RichResponseBarChartProps,
     RichResponseComposedChartProps,
@@ -18,8 +17,6 @@ import { ChartTooltip } from '../components/charts/tooltip/index.ts';
 import { XAxis } from '../components/charts/x-axis.tsx';
 import { YAxis } from '../components/charts/y-axis.tsx';
 import { RichResponseFrame } from '../components/rich-responses/rich-response-frame.tsx';
-import { Icon } from '../components/ui/icon.tsx';
-import { Button } from '../components/ui/primitives/button.tsx';
 import { ChartLegend } from './chart-legend.tsx';
 import {
     buildBarChartMargin,
@@ -39,6 +36,8 @@ import {
     seriesColor,
 } from './chart-view-model.ts';
 
+const richResponseChartAspectRatio = '21 / 9';
+
 export function RichResponseBarChart({ props }: { props: RichResponseBarChartProps }) {
     const [hoveredSeriesIndex, setHoveredSeriesIndex] = useState<null | number>(null);
     const legendItems = buildLegendItems(props);
@@ -51,7 +50,7 @@ export function RichResponseBarChart({ props }: { props: RichResponseBarChartPro
         >
             <ChartFrame title={props.title}>
                 <BarChart
-                    aspectRatio="16 / 9"
+                    aspectRatio={richResponseChartAspectRatio}
                     barGap={0.2}
                     barOuterGap={0.06}
                     data={props.data}
@@ -99,7 +98,7 @@ export function RichResponseLineChart({ props }: { props: RichResponseLineChartP
         >
             <ChartFrame title={props.title}>
                 <AreaChart
-                    aspectRatio="16 / 9"
+                    aspectRatio={richResponseChartAspectRatio}
                     data={chartData}
                     margin={margin}
                     xDataKey={props.xKey}
@@ -153,7 +152,7 @@ export function RichResponseComposedChart({ props }: { props: RichResponseCompos
         >
             <ChartFrame title={props.title}>
                 <ComposedChart
-                    aspectRatio="16 / 9"
+                    aspectRatio={richResponseChartAspectRatio}
                     barGap={6}
                     data={chartData}
                     margin={margin}
@@ -217,32 +216,8 @@ export function RichResponseComposedChart({ props }: { props: RichResponseCompos
 }
 
 function ChartFrame({ children, title }: { children: ReactNode; title: string }) {
-    const [expanded, setExpanded] = useState(false);
-    const toggleLabel = expanded ? 'Collapse chart' : 'Expand chart';
-
     return (
-        <RichResponseFrame
-            action={
-                <Button
-                    aria-label={toggleLabel}
-                    aria-pressed={expanded}
-                    className="shrink-0 rounded-md text-muted-foreground/75 hover:text-foreground"
-                    onClick={() => setExpanded((value) => !value)}
-                    size="icon-sm"
-                    title={toggleLabel}
-                    variant="ghost"
-                >
-                    <Icon
-                        aria-hidden="true"
-                        className="size-4"
-                        icon={expanded ? CollapseIcon : ExpandIcon}
-                        strokeWidth={2.4}
-                    />
-                </Button>
-            }
-            expanded={expanded}
-            title={title}
-        >
+        <RichResponseFrame size="full" title={title}>
             <div className="min-w-0" style={chartStyleVars}>
                 {children}
             </div>

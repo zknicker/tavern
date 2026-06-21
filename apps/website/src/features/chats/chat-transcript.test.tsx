@@ -288,9 +288,13 @@ test('ChatTranscript renders chart Rich Responses inline', () => {
 
     assert.match(markup, /Quarterly Revenue/);
     assert.match(markup, /\$15,500/);
+    assert.match(markup, /max-w-\[46rem\]/);
+    assert.match(markup, /aspect-ratio:21 \/ 9/);
     assert.match(markup, /relative w-full overflow-visible/);
     assert.doesNotMatch(markup, /Rich Response unavailable/);
     assert.doesNotMatch(markup, /aria-expanded/);
+    assert.doesNotMatch(markup, /aria-pressed/);
+    assert.doesNotMatch(markup, /Expand chart/);
 });
 
 test('ChatTranscript renders Rich Response table matrix shorthand', () => {
