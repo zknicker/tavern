@@ -48,6 +48,9 @@ describe('generated Hermes config composer', () => {
         });
 
         expect((await readConfig(configPath)).toJS()).toEqual({
+            cron: {
+                wrap_response: false,
+            },
             display: {
                 interim_assistant_messages: true,
                 tool_progress: 'all',
@@ -88,6 +91,9 @@ describe('generated Hermes config composer', () => {
             [
                 'gateway:',
                 '  bind: loopback',
+                'cron:',
+                '  script_timeout_seconds: 45',
+                '  wrap_response: true',
                 'model:',
                 '  default: old-model',
                 '  provider: old-provider',
@@ -107,6 +113,8 @@ describe('generated Hermes config composer', () => {
 
         const doc = await readConfig(configPath);
         expect(doc.getIn(['gateway', 'bind'])).toBe('loopback');
+        expect(doc.getIn(['cron', 'script_timeout_seconds'])).toBe(45);
+        expect(doc.getIn(['cron', 'wrap_response'])).toBe(false);
         expect(doc.getIn(['display', 'tool_progress'])).toBe('all');
         expect(doc.getIn(['display', 'interim_assistant_messages'])).toBe(true);
         expect(doc.getIn(['model', 'default'])).toBe('gpt-5.4-mini');

@@ -81,6 +81,7 @@ export async function mergeHermesGeneratedConfig(
     }
     applyDisplayDomain(doc);
     applyMemoryDomain(doc);
+    applyCronDomain(doc);
     applyPluginsDomain(doc, tavernMessengerPluginName());
 
     await fs.mkdir(path.dirname(filePath), { recursive: true });
@@ -230,6 +231,10 @@ function applyMemoryDomain(doc: GeneratedConfigDocument) {
 function applyDisplayDomain(doc: GeneratedConfigDocument) {
     doc.setIn(['display', 'tool_progress'], 'all');
     doc.setIn(['display', 'interim_assistant_messages'], true);
+}
+
+function applyCronDomain(doc: GeneratedConfigDocument) {
+    doc.setIn(['cron', 'wrap_response'], false);
 }
 
 function applyPluginsDomain(doc: GeneratedConfigDocument, pluginName: string) {

@@ -231,8 +231,10 @@ patches. Runtime installs the `tavern-messenger-platform` plugin into managed
 Hermes and enables it in managed `config.yaml`. Tavern cron jobs with a chat
 destination send `deliver: "tavern:<chatId>"`; Hermes calls the plugin's live
 adapter or standalone sender, and the plugin posts to Runtime
-`POST /cron/deliveries`. Runtime then creates a Tavern `message.delivered`
-receipt in the target chat.
+`POST /cron/deliveries`. Runtime sets `cron.wrap_response: false` in managed
+Hermes config, so chat delivery stores only the agent's output instead of
+Hermes's generic cron header and management footer. Runtime then creates a
+Tavern `message.delivered` receipt in the target chat.
 
 ## Model Provider Boundary
 
