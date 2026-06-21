@@ -933,14 +933,26 @@
     }
 
     [data-slot='sidebar'][data-collapsible='offcanvas'] [data-slot='sidebar-container'].app-shell-sidebar {
-        background: var(--app-chrome-fill) !important;
-        backdrop-filter: var(--app-chrome-backdrop);
-        -webkit-backdrop-filter: var(--app-chrome-backdrop);
-        border-right: 1px solid var(--sidebar-border) !important;
+        background: transparent !important;
+        backdrop-filter: none;
+        -webkit-backdrop-filter: none;
+        border-right: 0 solid transparent !important;
     }
 
     [data-slot='sidebar'][data-collapsible='offcanvas'] [data-slot='sidebar-inner'] {
         background: transparent !important;
+    }
+
+    [data-slot='sidebar-wrapper'][data-sidebar-preview-open='true']
+        [data-slot='sidebar'][data-collapsible='offcanvas']
+        [data-slot='sidebar-container'].app-shell-sidebar,
+    [data-slot='sidebar-wrapper']:has([data-slot='sidebar-container']:focus-within)
+        [data-slot='sidebar'][data-state='collapsed'][data-collapsible='offcanvas']
+        [data-slot='sidebar-container'].app-shell-sidebar {
+        background: var(--app-chrome-fill) !important;
+        backdrop-filter: var(--app-chrome-backdrop);
+        -webkit-backdrop-filter: var(--app-chrome-backdrop);
+        border-right: 1px solid var(--sidebar-border) !important;
     }
 
     [data-slot='sidebar'][data-state='expanded'][data-collapsible='offcanvas']
@@ -987,6 +999,17 @@
 
     html.macos-electron
         [data-slot='sidebar'][data-collapsible='offcanvas']
+        [data-slot='sidebar-container'].app-shell-sidebar {
+        background: transparent !important;
+    }
+
+    html.macos-electron
+        [data-slot='sidebar-wrapper'][data-sidebar-preview-open='true']
+        [data-slot='sidebar'][data-collapsible='offcanvas']
+        [data-slot='sidebar-container'].app-shell-sidebar,
+    html.macos-electron
+        [data-slot='sidebar-wrapper']:has([data-slot='sidebar-container']:focus-within)
+        [data-slot='sidebar'][data-state='collapsed'][data-collapsible='offcanvas']
         [data-slot='sidebar-container'].app-shell-sidebar {
         background: var(--app-chrome-native-fill) !important;
     }

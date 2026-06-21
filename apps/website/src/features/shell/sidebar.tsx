@@ -35,7 +35,7 @@ export function AppSidebar({
 }: AppSidebarProps) {
     return (
         <Sidebar
-            className="app-shell-sidebar z-30 border-sidebar-border bg-sidebar pt-[calc(var(--topbar-height)-4px)] group-data-[side=left]:border-r-0 group-data-[side=right]:border-l-0"
+            className="app-shell-sidebar z-30 border-sidebar-border bg-transparent pt-[calc(var(--topbar-height)-4px)] group-data-[side=left]:border-r-0 group-data-[side=right]:border-l-0"
             collapsible="offcanvas"
             onMouseEnter={onMouseEnter}
             onMouseLeave={onMouseLeave}
