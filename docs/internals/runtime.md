@@ -79,17 +79,29 @@ the Tavern-managed content (`managed-instructions.ts`), the agent name, and
 `NOTES.md`, written read-only, and rewritten only when the composed bytes
 change — so prompt-cache invalidation happens exactly when a source changes
 and never per turn. The generated file tells the agent it is immutable and
-that `NOTES.md` is its scratch space.
+that `NOTES.md` is its scratch space. The managed content includes Tavern
+environment, memory, Vault, Rich Response, delegation, skill-maintenance, and
+progress guidance. For skill work, it tells agents to inspect the current
+skill catalog with native skill tools before creating or patching skill
+content. For external skill search, it uses
+`hermes skills search <query> --source skills-sh` unless the user names a
+different source.
 
 The editable agent files are the sources. `NOTES.md` (workspace) carries
 durable notes, instructions, and conventions: the user edits it in settings,
-the agent edits it directly with file tools, and Runtime seeds it once
-(migrating pre-generated `AGENTS.md` content) and never writes it again.
+the agent edits it directly with file tools, and Runtime seeds it as an empty
+file for new workspaces. When migrating a pre-generated `AGENTS.md`, Runtime
+seeds `NOTES.md` once with the old user/agent content and never writes it
+again.
 `SOUL.md` (managed Hermes home) carries identity and personality; Runtime
 never writes it. Regeneration runs on agent sync, on `NOTES.md` saves through
 the agent file API, and via a filesystem watch on `NOTES.md`
 (`workspace/notes-watcher.ts`) for direct agent edits. See
 [workspace.md](../../specs/workspace.md) for the contract.
+
+Fresh Hermes homes seed `SOUL.md`; they do not seed a default workspace
+`AGENTS.md`. Tavern generates its own workspace context so managed chats always
+load Tavern-specific instructions from the session cwd.
 
 When generation writes the file, Runtime also clears unsupported legacy
 companion bootstrap files from the managed workspace. It does not clear

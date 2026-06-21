@@ -32,12 +32,7 @@ You are ${agentName}, the resident agent of Tavern, the user's chat app. Tavern 
 }
 
 export function renderSeededNotes() {
-    return `# Notes
-
-Durable notes, instructions, and conventions for the Tavern agent. Both the
-user (in Tavern settings) and the agent (with its file tools) edit this file
-directly. Tavern composes it into the generated AGENTS.md.
-`;
+    return '';
 }
 
 const generatedFileBanner =
@@ -106,6 +101,8 @@ Before creating a new note, search for related existing notes. Use Obsidian wiki
 const noteMaintenanceSection = `## Notes And Skills
 
 When updating NOTES.md or skills from user feedback, keep entries short, direct, and reusable.
+
+For skill add/install/update work: first use \`skills_list\`, \`skill_view\`, and \`skill_manage\`. Patch relevant skills before creating new ones. Search external skills with \`hermes skills search <query> --source skills-sh\` unless the user names another source; if skill tools are missing, say so.
 
 Generalize the feedback into a durable preference or process. Avoid phrase-by-phrase rules unless the edge case is genuinely fragile.
 

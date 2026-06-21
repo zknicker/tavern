@@ -15,7 +15,7 @@ scratch space. It is composed deterministically from:
 
 * **Tavern-managed content.** The agent's Tavern environment, delegation
   guidance, the Vault/memory model, the immutability/scratch-space
-  instructions, and the `tavern` skill pointer
+  instructions, skill-maintenance guidance, and the `tavern` skill pointer
   ([tavern-skill.md](tavern-skill.md)). Product language; does not name
   Hermes.
 * **The agent name.** From the registered agent record.
@@ -31,11 +31,22 @@ managed-region merging.
 
 * **`NOTES.md`** (workspace) is the durable free-form source for notes,
   instructions, and conventions. The user edits it in agent settings; the
-  agent edits it directly with its file tools. Tavern seeds it once —
-  migrating the user/agent content of a pre-generated `AGENTS.md` so nothing
-  is lost — and never writes it again.
+  agent edits it directly with its file tools. For a new workspace, Tavern
+  seeds it as an empty file. When migrating a pre-generated `AGENTS.md`,
+  Tavern seeds it once with the old user/agent content so nothing is lost, and
+  never writes it again.
 * **`SOUL.md`** (managed Hermes home) carries identity, voice, tone, and
   durable personality. Tavern never writes it.
+
+Fresh Hermes homes seed `SOUL.md`; they do not seed a default workspace
+`AGENTS.md`. Tavern's generated `AGENTS.md` is therefore Tavern's managed
+workspace context, not a copied upstream default.
+
+The generated skill-maintenance guidance tells agents to inspect the current
+skill catalog before adding or updating skills, then use native skill tools to
+read, create, or patch the smallest durable skill. For external skill search,
+it uses `hermes skills search <query> --source skills-sh` unless the user names
+a different source.
 
 ## Generation Triggers
 

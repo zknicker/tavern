@@ -90,7 +90,12 @@ Skill-content update requests run as agent work through Hermes skill tooling.
 The agent can fetch source material, merge or patch the installed skill, and
 explain the result. Runtime observes the changed inventory afterward; the
 Skills & Toolsets API does not implement source merge policy or expose
-version-control state.
+version-control state. Tavern's generated workspace instructions tell agents
+to inspect the current skill catalog before adding or updating skill content,
+then use native skill tools for the actual read/create/patch. For external
+skill search, the instructions use
+`hermes skills search <query> --source skills-sh` unless the user names a
+different source.
 
 The available-skills view is Runtime-owned local reads with no engine HTTP and
 no centralized index: the built-in library comes from the resolved engine

@@ -45,6 +45,11 @@ Runtime-owned read-only skills, updating a skill is agent work: the agent reads
 the installed skill and its source material, applies a targeted patch or merge
 in the source location, and reports the result. Tavern does not model skill
 versions or merge conflicts as settings state.
+The managed workspace instructions tell agents to inspect the current skill
+catalog first, then use native skill tools to load, create, or patch the
+smallest durable skill. For external skill search, agents use
+`hermes skills search <query> --source skills-sh` unless the user names a
+different source.
 
 ## Sources
 
