@@ -89,4 +89,54 @@ describe('Rich Response contracts', () => {
 
         expect(result.success).toBe(false);
     });
+
+    test('render input accepts json-render state, repeat, visibility, actions, and dynamic props', () => {
+        const itemTemplate = ['$', '{title}: ', '$', '{units} units'].join('');
+        const result = richResponseRenderInputSchema.safeParse({
+            component: richResponseComponentId,
+            fallback: { text: 'Sales list' },
+            props: {
+                spec: {
+                    elements: {
+                        item: {
+                            children: [],
+                            props: {
+                                text: { $template: itemTemplate },
+                            },
+                            type: 'Text',
+                            visible: { $item: 'visible' },
+                        },
+                        list: {
+                            children: ['item'],
+                            on: {
+                                press: {
+                                    action: 'setState',
+                                    params: {
+                                        statePath: '/selected',
+                                        value: { $state: '/items/0/id' },
+                                    },
+                                },
+                            },
+                            props: {},
+                            repeat: { key: 'id', statePath: '/items' },
+                            type: 'Stack',
+                            watch: {
+                                '/selected': {
+                                    action: 'setState',
+                                    params: { statePath: '/touched', value: true },
+                                },
+                            },
+                        },
+                    },
+                    root: 'list',
+                    state: {
+                        items: [{ id: 'a', title: 'Today', units: 5, visible: true }],
+                    },
+                },
+            },
+            target: 'chat.inline',
+        });
+
+        expect(result.success).toBe(true);
+    });
 });

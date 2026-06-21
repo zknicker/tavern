@@ -99,11 +99,42 @@ export const richResponseTablePropsSchema = z.union([
     richResponseTableMatrixPropsSchema,
 ]);
 
+const jsonPointerPathSchema = z.string().trim().min(1).max(500);
+
+const richResponseRepeatSchema = z
+    .object({
+        key: z.string().trim().min(1).max(120).optional(),
+        statePath: jsonPointerPathSchema,
+    })
+    .strict();
+
+const richResponseActionBindingSchema = z
+    .object({
+        action: z.string().trim().min(1).max(120),
+        confirm: z.unknown().optional(),
+        onError: z.unknown().optional(),
+        onSuccess: z.unknown().optional(),
+        params: z.record(z.string(), z.unknown()).optional(),
+        preventDefault: z.boolean().optional(),
+    })
+    .strict();
+
+const richResponseActionBindingListSchema = z.union([
+    richResponseActionBindingSchema,
+    z.array(richResponseActionBindingSchema).min(1).max(10),
+]);
+
 export const richResponseElementSchema = z
     .object({
         children: z.array(z.string().trim().min(1).max(120)).max(40).optional(),
+        on: z
+            .record(z.string().trim().min(1).max(80), richResponseActionBindingListSchema)
+            .optional(),
         props: z.record(z.string(), z.unknown()).default({}),
+        repeat: richResponseRepeatSchema.optional(),
         type: richResponseComponentTypeSchema,
+        visible: z.unknown().optional(),
+        watch: z.record(jsonPointerPathSchema, richResponseActionBindingListSchema).optional(),
     })
     .strict()
     .superRefine((element, context) => {
@@ -158,7 +189,9 @@ export const richResponseSpecSchema = z
             }
 
             const propsSchema = richResponsePropsSchemaForType(element.type);
-            const parsed = propsSchema.safeParse(element.props);
+            const parsed = hasJsonRenderDynamicValue(element.props)
+                ? { success: true as const }
+                : propsSchema.safeParse(element.props);
             if (!parsed.success) {
                 context.addIssue({
                     code: 'custom',
@@ -182,8 +215,6 @@ export const richResponseRenderInputSchema = z
         target: richResponseTargetSchema,
     })
     .strict();
-
-const jsonPointerPathSchema = z.string().trim().min(1).max(500);
 
 export const richResponsePatchSchema = z.discriminatedUnion('op', [
     z
@@ -236,6 +267,37 @@ export type RichResponsePatch = z.infer<typeof richResponsePatchSchema>;
 export type RichResponseRenderInput = z.infer<typeof richResponseRenderInputSchema>;
 export type RichResponseSpec = z.infer<typeof richResponseSpecSchema>;
 export type RichResponseTarget = z.infer<typeof richResponseTargetSchema>;
+
+const jsonRenderDynamicValueKeys = new Set([
+    '$bindItem',
+    '$bindState',
+    '$computed',
+    '$cond',
+    '$directives',
+    '$else',
+    '$index',
+    '$item',
+    '$state',
+    '$template',
+    '$then',
+]);
+
+function hasJsonRenderDynamicValue(value: unknown): boolean {
+    if (Array.isArray(value)) {
+        return value.some(hasJsonRenderDynamicValue);
+    }
+
+    if (!value || typeof value !== 'object') {
+        return false;
+    }
+
+    const record = value as Record<string, unknown>;
+    if (Object.keys(record).some((key) => jsonRenderDynamicValueKeys.has(key))) {
+        return true;
+    }
+
+    return Object.values(record).some(hasJsonRenderDynamicValue);
+}
 
 function richResponsePropsSchemaForType(type: RichResponseComponentType) {
     switch (type) {

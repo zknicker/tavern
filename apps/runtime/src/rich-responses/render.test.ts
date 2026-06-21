@@ -1,9 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import {
+    hasRenderableRichResponse,
     parseRichResponseFromAssistantContent,
     parseStreamingRichResponseFromAssistantContent,
     richResponseDisplayContent,
-    richResponseProgressFromActivity,
 } from './render';
 
 describe('Rich Response rendering', () => {
@@ -36,7 +36,7 @@ describe('Rich Response rendering', () => {
         });
     });
 
-    it('returns an invalid Rich Response payload instead of failing the turn', () => {
+    it('strips invalid Rich Response specs without creating a render payload', () => {
         const parsed = parseRichResponseFromAssistantContent(
             ['Here is the chart.', '', '```spec', 'not json', '```', '', 'Done.'].join('\n')
         );
@@ -44,25 +44,10 @@ describe('Rich Response rendering', () => {
         expect(parsed).toMatchObject({
             displayContent: 'Here is the chart.\n\nDone.',
             fallbackText: 'Here is the chart.',
-            render: {
-                component: 'tavern.rich_response',
-                fallback: { text: 'Here is the chart.' },
-                target: 'chat.inline',
-            },
-        });
-
-        const progress = richResponseProgressFromActivity({
-            id: 'act_rich_response',
-            kind: 'rich_response',
-            metadata: { richResponse: parsed?.render },
-            title: 'Rich Response',
-        });
-
-        expect(progress).toMatchObject({
-            fallbackText: 'Here is the chart.',
-            id: 'act_rich_response',
+            render: null,
             validationError: 'Rich Response spec line 1 is not valid JSON Patch.',
         });
+        expect(hasRenderableRichResponse(parsed)).toBe(false);
     });
 
     it('hides streaming specs from visible reply text', () => {

@@ -7,8 +7,10 @@ import type {
 import { readConfigValue } from '../config';
 import { closeSharedHermesClient, getSharedHermesClient } from '../hermes/shared-client';
 import {
+    hasRenderableRichResponse,
     parseRichResponseFromAssistantContent,
     parseStreamingRichResponseFromAssistantContent,
+    type RenderableParsedRichResponse,
     richResponseActivity,
     richResponseDisplayContent,
     richResponseProgressFromActivity,
@@ -409,12 +411,13 @@ export async function runHermesTurn(input: {
 
         const richResponse = parseRichResponseFromAssistantContent(assistantContent);
         const deliveredAssistantContent = richResponse?.displayContent ?? assistantContent;
+        const shouldRecordRichResponse = hasRenderableRichResponse(richResponse);
 
-        if (!(deliveredAssistantContent.trim() || richResponse)) {
+        if (!(deliveredAssistantContent.trim() || shouldRecordRichResponse)) {
             throw new Error('Agent failed to produce a reply.');
         }
 
-        if (richResponse) {
+        if (shouldRecordRichResponse) {
             recordRichResponse(input, turn, richResponse);
         }
 
@@ -840,7 +843,7 @@ function recordToolProgress(input: HermesTurnInput, turn: HermesTurn, event: Her
 function recordRichResponse(
     input: HermesTurnInput,
     turn: HermesTurn,
-    richResponse: NonNullable<ReturnType<typeof parseRichResponseFromAssistantContent>>
+    richResponse: RenderableParsedRichResponse
 ) {
     const timestamp = new Date().toISOString();
     const activity = richResponseActivity({

@@ -109,7 +109,9 @@ When updating NOTES.md or skills from user feedback, keep entries short, direct,
 
 Generalize the feedback into a durable preference or process. Avoid phrase-by-phrase rules unless the edge case is genuinely fragile.
 
-Update the smallest durable place that prevents the same class of mistake.`;
+Update the smallest durable place that prevents the same class of mistake.
+
+Do not add render-tool, render_*, widget, or Widget instructions for Rich Responses. Rich Response guidance comes from the generated Rich Responses section above.`;
 
 const generatedFileSection = `## This File Is Generated
 

@@ -665,6 +665,54 @@ describe('Tavern Hermes channel relay', () => {
         );
     });
 
+    it('strips malformed final spec fences without storing Rich Response activity', async () => {
+        const runtimeEvents: unknown[] = [];
+        const unsubscribe = subscribeToRuntimeEvents((event) => runtimeEvents.push(event));
+        const prose =
+            'US sales today so far: 6 sold, 5 net, $17.82 royalties. Slow start, 44 units under the prior 9-day average.';
+        const content = [prose, '', '```spec', 'not json', '```'].join('\n');
+        hermesClient.streamChat.mockImplementationOnce(async function* streamChat() {
+            yield {
+                data: { content, message_id: 'hermes_msg_malformed_rich_response' },
+                event: 'assistant.completed',
+            };
+        });
+        createChat({ id: 'cht_1' });
+
+        await sendTavernChannelMessage('cht_1', {
+            agent: {
+                agentId: 'agt_1',
+            },
+            message: {
+                content: 'how are sales today',
+                id: 'msg_malformed_rich_response',
+                nonce: 'nonce_malformed_rich_response',
+            },
+            target: {
+                externalId: null,
+                sessionKey: 'session_1',
+                target: 'cht_1',
+                type: 'tavern',
+            },
+        });
+        await waitForHermesTurn();
+        unsubscribe();
+
+        expect(listMessages('cht_1').messages.at(-1)?.content).toBe(prose);
+        expect(
+            listResponses('cht_1').activity.filter((activity) => activity.kind === 'rich_response')
+        ).toEqual([]);
+        expect(
+            runtimeEvents.flatMap((event) => {
+                const record = readRecord(event);
+                const step = readRecord(record.step);
+                return record.type === 'turn.progress' && step.kind === 'rich_response'
+                    ? [step]
+                    : [];
+            })
+        ).toEqual([]);
+    });
+
     it('streams spec fences as active Rich Response progress without showing raw JSONL', async () => {
         const runtimeEvents: unknown[] = [];
         const unsubscribe = subscribeToRuntimeEvents((event) => runtimeEvents.push(event));

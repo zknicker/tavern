@@ -73,11 +73,11 @@ describe('generated agent instructions', () => {
         expect(content).toContain('Use Rich Responses for generative UI in final replies');
         expect(content).toContain('```spec code fence');
         expect(content).toContain('Use Table for rows and columns instead of Markdown tables');
-        expect(content).toContain('Available components');
+        expect(content).toContain('DYNAMIC LISTS (repeat field)');
+        expect(content).toContain('AVAILABLE COMPONENTS');
         expect(content).toContain('Table');
         expect(content).toContain('BarChart');
         expect(content).toContain('CalendarEvent');
-        expect(content).toContain('props:');
         expect(content).toContain('xKey');
         expect(content).toContain('barSeries');
         expect(content).toContain('lineSeries');
@@ -88,6 +88,9 @@ describe('generated agent instructions', () => {
         expect(content).toContain('keep entries short, direct, and reusable');
         expect(content).toContain('Generalize the feedback into a durable preference or process');
         expect(content).toContain('Update the smallest durable place');
+        expect(content).toContain(
+            'Do not add render-tool, render_*, widget, or Widget instructions'
+        );
         expect(content).toContain('## Visible Progress');
         expect(content).toContain('send one short preamble');
         expect(content).toContain('send a brief update');

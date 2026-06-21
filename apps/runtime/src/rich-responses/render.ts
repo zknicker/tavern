@@ -22,7 +22,13 @@ export interface ParsedRichResponse {
     displayContent: string;
     fallbackText: string;
     patches: unknown[];
+    render: unknown | null;
+    validationError: string | null;
+}
+
+export interface RenderableParsedRichResponse extends ParsedRichResponse {
     render: unknown;
+    validationError: null;
 }
 
 export function parseRichResponseFromAssistantContent(content: string): ParsedRichResponse | null {
@@ -37,7 +43,7 @@ export function parseRichResponseFromAssistantContent(content: string): ParsedRi
 
 export function parseStreamingRichResponseFromAssistantContent(
     content: string
-): ParsedRichResponse | null {
+): RenderableParsedRichResponse | null {
     const fence = splitRichResponseSpecFence(content);
     if (!fence) {
         return null;
@@ -49,10 +55,17 @@ export function parseStreamingRichResponseFromAssistantContent(
     }
 
     try {
-        return parseRichResponseSpecBody(body, richResponseDisplayContent(content), false);
+        const parsed = parseRichResponseSpecBody(body, richResponseDisplayContent(content), false);
+        return hasRenderableRichResponse(parsed) ? parsed : null;
     } catch {
         return null;
     }
+}
+
+export function hasRenderableRichResponse(
+    richResponse: ParsedRichResponse | null
+): richResponse is RenderableParsedRichResponse {
+    return richResponse?.render != null;
 }
 
 export function richResponseDisplayContent(content: string) {
@@ -84,6 +97,7 @@ function parseRichResponseSpecBody(
                 props: { spec },
                 target: 'chat.inline',
             },
+            validationError: null,
         };
     } catch (error) {
         if (!includeInvalidPayload) {
@@ -96,13 +110,8 @@ function parseRichResponseSpecBody(
             displayContent,
             fallbackText,
             patches: [],
-            render: {
-                component: richResponseComponentId,
-                fallback: { text: fallbackText },
-                props: {},
-                target: 'chat.inline',
-                validationError: errorMessage(error),
-            },
+            render: null,
+            validationError: errorMessage(error),
         };
     }
 }

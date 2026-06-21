@@ -20,14 +20,15 @@ The model does not call render tools. Tavern does not register first-party
 render tools in the managed platform plugin.
 
 Tavern uses json-render for the Rich Response spec island: json-render core
-assembles the catalog-backed prompt and compiles SpecStream patches, and the
-Website renders the compiled spec with `@json-render/react` using Tavern-styled
-component renderers.
+assembles the catalog-backed prompt with its default prompt assembler and
+compiles SpecStream patches. The Website renders the compiled spec with
+`@json-render/react` using Tavern-styled component renderers.
 
-The current prompt and Runtime validator expose a read-only chat subset.
-json-render interaction features such as `repeat`, `on`, `watch`, visibility,
-and two-way bindings are renderer-capable, but Tavern does not ask agents to
-emit them until the Runtime contract accepts and persists those fields.
+Tavern owns the component catalog and product rules, not a custom json-render
+prompt template. Runtime accepts the json-render element fields the renderer
+understands, including `repeat`, `on`, `watch`, `visible`, `state`, and dynamic
+prop expressions. Tavern still restricts component types to its chat catalog and
+does not accept model-authored HTML, JSX, CSS, or arbitrary imports.
 
 ## Contract
 
@@ -49,20 +50,29 @@ The compiled spec shape is:
     type: RichResponseComponentType;
     props: Record<string, unknown>;
     children?: string[];
+    repeat?: { statePath: string; key?: string };
+    on?: Record<string, unknown>;
+    watch?: Record<string, unknown>;
+    visible?: unknown;
   }>;
   state: Record<string, unknown>;
 }
 ```
 
-Runtime validates the root, element count, child references, and component
-types. Website validates component props again before rendering.
+Runtime validates the root, element count, child references, component types,
+and literal component props. When props contain json-render dynamic expressions
+such as `$state`, `$item`, `$index`, `$bindState`, `$bindItem`, `$cond`, or
+`$template`, Runtime persists them and lets `@json-render/react` resolve them
+before Website validates the resolved component props.
 
 While an assistant is streaming an open `spec` fence, Runtime compiles complete
 SpecStream lines from `assistant.delta` events and publishes active
 `rich_response` progress. Runtime hides the raw JSONL fence from live
 `turn.replyUpdated` text. When the assistant completes, Runtime records the
 final validated Rich Response activity and stores the assistant message without
-the `spec` block.
+the `spec` block. If the final `spec` block is malformed but the reply has
+usable prose, Runtime strips the block and delivers the prose without creating a
+Rich Response activity.
 
 ## Catalog
 
@@ -99,18 +109,18 @@ metadata: {
 
 Server projects `rich_response` activity into chat rows with a `richResponse`
 payload. The Website transcript renders that row inline inside the assistant
-turn. Invalid payloads render the fallback text plus a visible unavailable
-state.
+turn. Invalid durable payloads render the fallback text plus a visible
+unavailable state.
 
 ## Agent Guidance
 
 Generated `AGENTS.md` gets its Rich Response section from the json-render
 catalog prompt assembler. Tavern defines each component once in the shared
-catalog with a description and Zod props schema; prompt text, Runtime
-compilation, and validation all read from that catalog instead of duplicating
-per-component examples in generated instructions. Tavern supplies a small
-json-render schema template so the prompt describes only the read-only subset
-the current renderer accepts. Detailed component schemas live in
+catalog with a description, child-slot metadata, and Zod props schema; prompt
+text, Runtime compilation, and validation all read from that catalog instead of
+duplicating per-component examples in generated instructions. Tavern appends
+only product-specific rules such as chat compactness, `Stack` child ownership,
+and component-choice guidance. Detailed component schemas live in
 `packages/tavern-api/src/rich-responses`.
 
 ## Ownership

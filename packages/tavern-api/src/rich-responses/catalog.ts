@@ -28,16 +28,6 @@ import {
 
 type JsonRenderZodSchema = Parameters<PromptContext['formatZodType']>[0];
 
-interface RichResponseJsonRenderCatalogInput {
-    components: Record<
-        string,
-        {
-            description: string;
-            props: JsonRenderZodSchema;
-        }
-    >;
-}
-
 const optional = <T extends SchemaType>(type: T): T & { optional: true } => ({
     ...type,
     optional: true as const,
@@ -52,14 +42,24 @@ const richResponseJsonRenderSchema = defineSchema(
             components: schema.map({
                 description: schema.string(),
                 props: schema.zod(),
+                slots: optional(schema.array(schema.string())),
             }),
         }),
         spec: schema.object({
             elements: schema.record(
                 schema.object({
                     children: optional(schema.array(schema.string())),
+                    on: optional(schema.record(schema.any())),
                     props: schema.propsOf('catalog.components'),
+                    repeat: optional(
+                        schema.object({
+                            key: optional(schema.string()),
+                            statePath: schema.string(),
+                        })
+                    ),
                     type: schema.ref('catalog.components'),
+                    visible: optional(schema.any()),
+                    watch: optional(schema.record(schema.any())),
                 })
             ),
             root: schema.string(),
@@ -67,60 +67,75 @@ const richResponseJsonRenderSchema = defineSchema(
         }),
     }),
     {
-        promptTemplate: ({ catalog, componentNames, formatZodType, options }) => {
-            const richCatalog = catalog as RichResponseJsonRenderCatalogInput;
-            const system =
-                typeof options.system === 'string'
-                    ? options.system
-                    : 'Use Rich Responses for app-rendered UI in final replies.';
-            const customRules = Array.isArray(options.customRules) ? options.customRules : [];
-            const lines = [
-                system,
-                '',
-                'OUTPUT FORMAT (text + JSONL, RFC 6902 JSON Patch):',
-                'Write normal prose before or after a Rich Response. Put the Rich Response spec in exactly one ```spec code fence.',
-                'Each non-empty line inside the fence is one JSON Patch operation. Start with /root, then add /elements/<id> objects.',
-                '',
-                'The spec shape is:',
-                '- root: string element id',
-                '- elements: object keyed by element id',
-                '- each element: { "type": <component>, "props": <component props>, "children": [] }',
-                '',
-                'Available components:',
-            ];
-
-            for (const name of componentNames) {
-                const definition = richCatalog.components[name];
-                if (!definition) {
-                    continue;
-                }
-
-                lines.push(`- ${name}: ${definition.description}`);
-                lines.push(`  props: ${formatZodType(definition.props)}`);
-            }
-
-            lines.push(
-                '',
-                'Rules:',
-                '- Use only the available components and their listed prop keys.',
-                '- Do not use raw HTML, JSX, CSS, class names, imports, event handlers, or tool names.',
-                '- Use Table for rows and columns instead of Markdown tables.',
-                '- Use charts for rankings, totals, trends, and comparable numeric series.',
-                '- Use calendar components for prepared agendas or events.',
-                '- If the answer does not need app-rendered UI, respond with text only.'
-            );
-
-            lines.push(...customRules.map((rule) => `- ${rule}`));
-            return lines.join('\n');
-        },
+        builtInActions: [
+            {
+                description:
+                    'Update a value in the state model at the given statePath. Params: { statePath: string, value: any }',
+                name: 'setState',
+            },
+            {
+                description:
+                    'Append an item to an array in state. Params: { statePath: string, value: any, clearStatePath?: string }. Value can contain {"$state":"/path"} refs and "$id" for auto IDs.',
+                name: 'pushState',
+            },
+            {
+                description:
+                    'Remove an item from an array in state by index. Params: { statePath: string, index: number }',
+                name: 'removeState',
+            },
+            {
+                description:
+                    'Validate all registered form fields and write the result to state. Params: { statePath?: string }. Defaults to /formValidation. Result: { valid: boolean, errors: Record<string, string[]> }.',
+                name: 'validateForm',
+            },
+        ],
+        defaultRules: [
+            'Tavern renders Rich Responses inside chat: keep the UI compact, source-backed, and readable.',
+            'Only Stack accepts children; every other component should use children: [].',
+            'Use Stack as the repeat container when rendering repeated rows from state.',
+            'Do not use raw HTML, JSX, CSS, class names, imports, event handlers, or tool names.',
+            'Use Table for rows and columns instead of Markdown tables.',
+            'Use charts for rankings, totals, trends, and comparable numeric series.',
+            'Use calendar components for prepared agendas or events.',
+            'If the answer does not need app-rendered UI, or you are unsure the spec is valid, respond with text only.',
+        ],
     }
 );
 
 export const richResponseJsonRenderCatalog = defineCatalog(richResponseJsonRenderSchema, {
     components: {
+        Stack: {
+            description: 'Vertical container for composing multiple child elements.',
+            props: jsonRenderPropsSchema(richResponseStackPropsSchema),
+            slots: ['default'],
+        },
+        Heading: {
+            description: 'Chat-sized semibold heading text.',
+            props: jsonRenderPropsSchema(richResponseHeadingPropsSchema),
+        },
+        Text: {
+            description: 'Chat-sized paragraph text.',
+            props: jsonRenderPropsSchema(richResponseTextPropsSchema),
+        },
+        Separator: {
+            description: 'Subtle horizontal separator.',
+            props: jsonRenderPropsSchema(richResponseSeparatorPropsSchema),
+        },
+        Table: {
+            description: 'Compact rows and columns for tabular data.',
+            props: jsonRenderPropsSchema(richResponseTableCanonicalPropsSchema),
+        },
         BarChart: {
             description: 'Bar chart for nonnegative comparable numeric series.',
             props: jsonRenderPropsSchema(richResponseBarChartPropsSchema),
+        },
+        LineChart: {
+            description: 'Line chart for trend series; values may be negative.',
+            props: jsonRenderPropsSchema(richResponseLineChartPropsSchema),
+        },
+        ComposedChart: {
+            description: 'Combined bar and line chart for related quantities sharing one x-axis.',
+            props: jsonRenderPropsSchema(richResponseComposedChartPropsSchema),
         },
         CalendarDay: {
             description: 'Single-day agenda with zero or more same-day events.',
@@ -129,34 +144,6 @@ export const richResponseJsonRenderCatalog = defineCatalog(richResponseJsonRende
         CalendarEvent: {
             description: 'Single calendar event card with date, optional time, and event details.',
             props: jsonRenderPropsSchema(richResponseCalendarEventPropsSchema),
-        },
-        ComposedChart: {
-            description: 'Combined bar and line chart for related quantities sharing one x-axis.',
-            props: jsonRenderPropsSchema(richResponseComposedChartPropsSchema),
-        },
-        Heading: {
-            description: 'Chat-sized semibold heading text.',
-            props: jsonRenderPropsSchema(richResponseHeadingPropsSchema),
-        },
-        LineChart: {
-            description: 'Line chart for trend series; values may be negative.',
-            props: jsonRenderPropsSchema(richResponseLineChartPropsSchema),
-        },
-        Separator: {
-            description: 'Subtle horizontal separator.',
-            props: jsonRenderPropsSchema(richResponseSeparatorPropsSchema),
-        },
-        Stack: {
-            description: 'Vertical container for composing multiple child elements.',
-            props: jsonRenderPropsSchema(richResponseStackPropsSchema),
-        },
-        Table: {
-            description: 'Compact rows and columns for tabular data.',
-            props: jsonRenderPropsSchema(richResponseTableCanonicalPropsSchema),
-        },
-        Text: {
-            description: 'Chat-sized paragraph text.',
-            props: jsonRenderPropsSchema(richResponseTextPropsSchema),
         },
     },
 });
