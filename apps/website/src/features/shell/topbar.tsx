@@ -70,6 +70,7 @@ export function AppSidebarTopbar({
     return (
         <AppShellTopbar
             className="w-[var(--sidebar-width)]"
+            nativeDragRegion={!isPreview}
             onMouseEnter={onMouseEnter}
             onMouseLeave={onMouseLeave}
         >

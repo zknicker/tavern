@@ -33,7 +33,6 @@ export function Layout() {
         getInitialSidebarPinnedOpen
     );
     const [isSidebarPreviewOpen, setIsSidebarPreviewOpen] = React.useState(false);
-    const [isSidebarPreviewSuppressed, setIsSidebarPreviewSuppressed] = React.useState(false);
     const sidebarPreviewCloseTimeoutRef = React.useRef<number | null>(null);
     const clearSidebarPreviewCloseTimeout = React.useCallback(() => {
         if (sidebarPreviewCloseTimeoutRef.current !== null) {
@@ -42,28 +41,13 @@ export function Layout() {
         }
     }, []);
     const openSidebarPreview = React.useCallback(() => {
-        if (isSidebarPreviewSuppressed) {
-            return;
-        }
         clearSidebarPreviewCloseTimeout();
         setIsSidebarPreviewOpen(true);
-    }, [clearSidebarPreviewCloseTimeout, isSidebarPreviewSuppressed]);
+    }, [clearSidebarPreviewCloseTimeout]);
     const closeSidebarPreview = React.useCallback(() => {
         clearSidebarPreviewCloseTimeout();
         setIsSidebarPreviewOpen(false);
     }, [clearSidebarPreviewCloseTimeout]);
-    const handleShellPointerMove = React.useCallback(
-        (event: React.PointerEvent) => {
-            if (!isSidebarPreviewSuppressed) {
-                return;
-            }
-
-            if (event.clientX > getCurrentSidebarWidth(sidebarWrapperRef.current)) {
-                setIsSidebarPreviewSuppressed(false);
-            }
-        },
-        [isSidebarPreviewSuppressed]
-    );
     const scheduleSidebarPreviewClose = React.useCallback(() => {
         clearSidebarPreviewCloseTimeout();
         sidebarPreviewCloseTimeoutRef.current = window.setTimeout(() => {
@@ -123,16 +107,11 @@ export function Layout() {
                     }
                     setSidebarPinnedOpen(open);
                     closeSidebarPreview();
-                    setIsSidebarPreviewSuppressed(!open);
                 }}
                 open={isSidebarPinnedOpen}
                 ref={sidebarWrapperRef}
             >
-                <AppShell
-                    className="w-full"
-                    data-app-layout="sidebar"
-                    onPointerMove={handleShellPointerMove}
-                >
+                <AppShell className="w-full" data-app-layout="sidebar">
                     <AppShellDragRegion />
                     <AppSidebarTopbar
                         isExpanded={isSidebarPinnedOpen || showSidebarPreview}
@@ -224,18 +203,6 @@ function getInitialSidebarPinnedOpen() {
     const saved = window.localStorage.getItem(sidebarPinnedOpenStorageKey);
 
     return saved === null ? true : saved === 'true';
-}
-
-function getCurrentSidebarWidth(wrapper: HTMLElement | null) {
-    if (!wrapper) {
-        return 276;
-    }
-
-    const sidebarWidth = Number.parseFloat(
-        window.getComputedStyle(wrapper).getPropertyValue('--sidebar-width')
-    );
-
-    return Number.isFinite(sidebarWidth) ? sidebarWidth : 276;
 }
 
 function blurFocusedSidebarElement(wrapper: HTMLElement | null) {
