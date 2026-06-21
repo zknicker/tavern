@@ -81,7 +81,10 @@ function resolveDevPortBase({ baseEnvironment, repositoryRoot }) {
         return parsed;
     }
 
-    const digest = createHash('sha256').update(repositoryRoot).digest();
+    const portIdentity = baseEnvironment.TAVERN_DEV_STACK_ID
+        ? `stack:${baseEnvironment.TAVERN_DEV_STACK_ID}`
+        : repositoryRoot;
+    const digest = createHash('sha256').update(portIdentity).digest();
     const bucket = digest.readUInt32BE(0) % devPortGroupCount;
     return devPortGroupBase + bucket * 4;
 }

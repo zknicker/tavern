@@ -115,6 +115,23 @@ test('resolveDevPorts derives different default port groups for different worktr
     assert.equal(Number(left.hermesPort), Number(left.websitePort) + 3);
 });
 
+test('resolveDevPorts derives shared default ports from an explicit stack id', () => {
+    const baseEnvironment = { TAVERN_DEV_STACK_ID: 'tavern-shared' };
+    const left = resolveDevPorts({
+        baseEnvironment,
+        repositoryRoot: '/repo/worktree-left/tavern',
+    });
+    const right = resolveDevPorts({
+        baseEnvironment,
+        repositoryRoot: '/repo/worktree-right/tavern',
+    });
+
+    assert.deepEqual(left, right);
+    assert.equal(Number(left.serverPort), Number(left.websitePort) + 1);
+    assert.equal(Number(left.runtimePort), Number(left.websitePort) + 2);
+    assert.equal(Number(left.hermesPort), Number(left.websitePort) + 3);
+});
+
 test('createDevStackEnvironment preserves explicit state overrides', () => {
     const environment = createDevStackEnvironment({
         baseEnvironment: {

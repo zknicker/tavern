@@ -93,7 +93,8 @@ The dev stack uses worktree-isolated state:
 ~/.tavern/dev/<worktree-id>/runtime/
 ```
 
-The dev stack derives a stable four-port group from the worktree path:
+The dev stack derives a stable four-port group from the worktree path by
+default:
 
 ```text
 website
@@ -105,6 +106,9 @@ managed Hermes
 Set `TAVERN_DEV_STACK_ID` to choose the state directory name, or
 `TAVERN_DEV_PORT_BASE` to choose the first port in the group. Set
 `TAVERN_HERMES_PORT` only when a run must use a specific dashboard port.
+When `TAVERN_DEV_STACK_ID` is set, the default port group is derived from that
+stack id, so multiple worktrees can intentionally share both state and ports.
+`bun run dev:shared` uses `TAVERN_DEV_STACK_ID=tavern-shared`.
 
 ## Generated Config
 

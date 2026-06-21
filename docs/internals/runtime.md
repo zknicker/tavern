@@ -60,14 +60,16 @@ Key paths:
 ~/.tavern/dev/<worktree-id>/runtime/hermes/home/
 ```
 
-The dev stack derives a stable port group from the worktree path and passes the
-same `TAVERN_RUNTIME_PORT`, `TAVERN_RUNTIME_URL`, and `TAVERN_HERMES_PORT` to
-Runtime, server, website, and desktop. Use `TAVERN_DEV_STACK_ID`,
-`TAVERN_DEV_PORT_BASE`, `TAVERN_RUNTIME_ROOT`, `TAVERN_HERMES_HOME`,
-`TAVERN_HERMES_BIN`, `TAVERN_HERMES_HOST`, `TAVERN_HERMES_PORT`, and
-`TAVERN_HERMES_TOKEN` to isolate or point a local run at a specific Hermes
-process. Runtime marks Hermes ready only after the dashboard HTTP status route
-responds and `/api/ws` accepts a WebSocket connection.
+The dev stack derives a stable port group from the worktree path by default, or
+from `TAVERN_DEV_STACK_ID` when a run intentionally shares state across
+worktrees, and passes the same `TAVERN_RUNTIME_PORT`, `TAVERN_RUNTIME_URL`, and
+`TAVERN_HERMES_PORT` to Runtime, server, website, and desktop. Use
+`TAVERN_DEV_STACK_ID`, `TAVERN_DEV_PORT_BASE`, `TAVERN_RUNTIME_ROOT`,
+`TAVERN_HERMES_HOME`, `TAVERN_HERMES_BIN`, `TAVERN_HERMES_HOST`,
+`TAVERN_HERMES_PORT`, and `TAVERN_HERMES_TOKEN` to isolate or point a local run
+at a specific Hermes process. Runtime marks Hermes ready only after the
+dashboard HTTP status route responds and `/api/ws` accepts a WebSocket
+connection.
 
 ## Managed Workspace
 

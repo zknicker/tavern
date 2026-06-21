@@ -32,6 +32,19 @@ Tavern worktrees can run at the same time without sharing Runtime state or a
 managed Hermes dashboard. This keeps the managed dev Runtime out of the packaged
 app's `~/.tavern/tavern.sqlite` state and away from pre-Hermes dev databases.
 
+To intentionally share one dev workspace across worktrees, run:
+
+```bash
+bun run dev:shared
+```
+
+That target defaults `TAVERN_DEV_STACK_ID` to `tavern-shared`, so every checkout
+using it reads and writes `~/.tavern/dev/tavern-shared/`. When a stack id is set,
+the default port group is derived from that stack id instead of the checkout
+path, so the shared workspace also has one stable set of local URLs. You can set
+`TAVERN_DEV_STACK_ID` before `bun run dev:shared` to choose a different shared
+workspace name. Run one shared stack per shared workspace at a time.
+
 Set `TAVERN_DEV_STACK_ID` to choose the state directory name, or
 `TAVERN_DEV_PORT_BASE` to choose the first port in the four-port group:
 
@@ -46,7 +59,8 @@ database or Runtime root.
 `.claude/launch.json` is gitignored and generated per checkout by a
 `SessionStart` hook (`dev-port --claude-launch`), so Claude Code previews use
 this checkout's real website port. The `dev-port` helper and the dev stack
-derive the same four-port group from the checkout path.
+derive the same four-port group from the checkout path, or from
+`TAVERN_DEV_STACK_ID` when it is set.
 
 Set `TAVERN_HERMES_HOME`, `TAVERN_HERMES_BIN`, `TAVERN_HERMES_HOST`,
 `TAVERN_HERMES_PORT`, or `TAVERN_HERMES_TOKEN` when a dev run should use a
