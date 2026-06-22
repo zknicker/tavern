@@ -2,6 +2,28 @@
 
 All notable changes to this project will be documented in this file.
 
+## v1.4.28 - 2026-06-22
+
+Runtime floor raised to 1.4.28 for Vault live refreshes, agent execution
+settings, managed engine updates, and chat presentation correctness.
+
+App changes:
+
+- Requires Runtime 1.4.28 so upgraded apps receive Vault filesystem updates,
+  web extract summarizer settings, and the managed engine update.
+- Keeps virtualized chat transcripts pinned to the latest reply while Rich
+  Response tables and other tall content stream in, with smooth follow motion.
+- Sends queued steering messages immediately when a running chat becomes
+  steerable.
+- Refreshes Vault views from Runtime update events when files change on disk.
+
+Runtime changes:
+
+- Watches Vault files on disk and emits update events so open Vault views stay
+  current without manual refreshes.
+- Adds web extract summarizer configuration to generated managed agent config.
+- Upgrades the managed Hermes engine and bundled installer snapshot.
+
 ## v1.4.27 - 2026-06-21
 
 Runtime floor raised to 1.4.27 for managed agent progress guidance.
