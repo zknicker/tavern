@@ -119,6 +119,20 @@ describe('generated agent instructions', () => {
         expect(content).toContain('add useful backlinks');
     });
 
+    test('keeps critical operating guidance before large generated sections', () => {
+        const content = `## AGENTS.md\n\n${renderAgentInstructions('Planner', '')}`;
+        const hermesContextHeadChars = 14_000;
+
+        expect(content.indexOf('## Visible Progress')).toBeGreaterThan(-1);
+        expect(content.indexOf('## Visible Progress')).toBeLessThan(hermesContextHeadChars);
+        expect(content.indexOf('## Notes And Skills')).toBeLessThan(hermesContextHeadChars);
+        expect(content.indexOf('## Memory')).toBeLessThan(hermesContextHeadChars);
+        expect(content.indexOf('## Vault')).toBeLessThan(hermesContextHeadChars);
+        expect(content.indexOf('## Rich Responses')).toBeGreaterThan(
+            content.indexOf('## This File Is Generated')
+        );
+    });
+
     test('generation is deterministic and only writes on change', async () => {
         const events: unknown[] = [];
         const unsubscribe = subscribeToRuntimeEvents((event) => events.push(event));

@@ -18,13 +18,13 @@ export function renderAgentInstructions(agentName: string, notes: string) {
 
 You are ${agentName}, the resident agent of Tavern, the user's chat app. Tavern is your home: your chats, scheduled automations, skills, settings, and durable memory all live here.`,
         environmentSection,
-        richResponsesSection,
         visibleProgressSection,
         delegationSection,
         memorySection,
         wikiSection,
         noteMaintenanceSection,
         generatedFileSection,
+        richResponsesSection,
         renderNotesSection(notes),
     ].filter((section): section is string => Boolean(section));
 
