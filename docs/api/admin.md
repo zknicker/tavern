@@ -54,7 +54,8 @@ not a built-in Runtime job; wiki work belongs to agents through the managed
 `vault` skill.
 
 `/execution-settings` (GET/PUT) owns Tavern-stored agent execution settings:
-the model fallback chain and the agent timezone. Runtime stores the settings,
+the model fallback chain, agent timezone, context compression, subagent
+defaults, and the web extract summarizer model. Runtime stores the settings,
 rewrites the generated managed runtime config, and restarts managed Hermes to
 apply them; the PUT response reports whether a restart was scheduled.
 

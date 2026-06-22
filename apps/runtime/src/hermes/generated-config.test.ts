@@ -11,6 +11,7 @@ const emptyExecution = {
     subagentEffort: null,
     subagentModel: null,
     timezone: null,
+    webExtractSummarizer: null,
 };
 const emptyConnectors = { servers: {}, staleIds: [] };
 const codexModel = {
@@ -233,6 +234,53 @@ describe('generated Hermes config composer', () => {
         expect(cleared.getIn(['delegation', 'reasoning_effort'])).toBeUndefined();
         expect(cleared.getIn(['compression', 'enabled'])).toBeUndefined();
         expect(cleared.getIn(['compression', 'threshold'])).toBeUndefined();
+    });
+
+    it('writes and clears the web_extract auxiliary summarizer', async () => {
+        const configPath = await tempConfigPath();
+        await fs.writeFile(
+            configPath,
+            [
+                'auxiliary:',
+                '  other_task:',
+                '    provider: openrouter',
+                '    model: meta/llama-fast',
+                '',
+            ].join('\n')
+        );
+
+        await mergeHermesGeneratedConfig(configPath, {
+            connectors: emptyConnectors,
+            execution: {
+                ...emptyExecution,
+                webExtractSummarizer: {
+                    model: 'google/gemini-3-flash-preview',
+                    provider: 'openrouter',
+                    timeoutSeconds: 360,
+                },
+            },
+            model: codexModel,
+            permissions: null,
+        });
+
+        const doc = await readConfig(configPath);
+        expect(doc.getIn(['auxiliary', 'other_task', 'model'])).toBe('meta/llama-fast');
+        expect(doc.getIn(['auxiliary', 'web_extract', 'provider'])).toBe('openrouter');
+        expect(doc.getIn(['auxiliary', 'web_extract', 'model'])).toBe(
+            'google/gemini-3-flash-preview'
+        );
+        expect(doc.getIn(['auxiliary', 'web_extract', 'timeout'])).toBe(360);
+
+        await mergeHermesGeneratedConfig(configPath, {
+            connectors: emptyConnectors,
+            execution: emptyExecution,
+            model: codexModel,
+            permissions: null,
+        });
+
+        const cleared = await readConfig(configPath);
+        expect(cleared.getIn(['auxiliary', 'web_extract'])).toBeUndefined();
+        expect(cleared.getIn(['auxiliary', 'other_task', 'model'])).toBe('meta/llama-fast');
     });
 
     it('writes configured permissions with product-to-engine mode mapping', async () => {

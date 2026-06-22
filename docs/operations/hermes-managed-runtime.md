@@ -122,7 +122,7 @@ every Tavern-owned setting that lands in the file is a domain:
 | Domain | Keys | Source of truth |
 | --- | --- | --- |
 | model | `model.*` | explicit env, saved agent model, or credentialed default route |
-| execution | `fallback_providers`, `timezone`, `delegation.*`, `compression.*` | `/execution-settings` store |
+| execution | `fallback_providers`, `timezone`, `delegation.*`, `compression.*`, `auxiliary.web_extract.*` | `/execution-settings` store |
 | display | `display.tool_progress`, `display.interim_assistant_messages` | fixed managed policy |
 | cron | `cron.wrap_response` | fixed managed policy |
 | permissions | `approvals.*`, `command_allowlist` | `/permission-settings` store (untouched until first save) |

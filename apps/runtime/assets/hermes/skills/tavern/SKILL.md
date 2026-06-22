@@ -46,7 +46,7 @@ curl -s -H "$AUTH" "$TAVERN_RUNTIME_URL/api/chats/<chat_id>/messages/search?quer
 
 ```sh
 curl -s -H "$AUTH" "$TAVERN_RUNTIME_URL/agents"                # your record (name, skills)
-curl -s -H "$AUTH" "$TAVERN_RUNTIME_URL/execution-settings"    # model fallbacks, timezone
+curl -s -H "$AUTH" "$TAVERN_RUNTIME_URL/execution-settings"    # model fallbacks, timezone, web extract summarizer
 curl -s -H "$AUTH" "$TAVERN_RUNTIME_URL/permission-settings"   # approval modes, command allowlist
 curl -s -H "$AUTH" "$TAVERN_RUNTIME_URL/connectors"            # MCP servers (secrets masked)
 curl -s -H "$AUTH" "$TAVERN_RUNTIME_URL/skills"                # available skills

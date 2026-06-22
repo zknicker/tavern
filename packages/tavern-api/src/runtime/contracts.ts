@@ -229,6 +229,11 @@ export const agentRuntimeCompressionSettingsSchema = z.object({
     thresholdPercent: z.number().int().min(10).max(95),
 });
 
+export const agentRuntimeWebExtractSummarizerSettingsSchema =
+    agentRuntimeHermesModelNameSchema.extend({
+        timeoutSeconds: z.number().int().min(30).max(900),
+    });
+
 export const agentRuntimeExecutionSettingsSchema = z.object({
     /** null = engine default; the compression keys are left untouched. */
     compression: agentRuntimeCompressionSettingsSchema.nullable().default(null),
@@ -239,6 +244,10 @@ export const agentRuntimeExecutionSettingsSchema = z.object({
     subagentEffort: agentRuntimeSubagentEffortSchema.nullable().default(null),
     timezone: z.string().nullable(),
     updatedAt: z.string().datetime().nullable(),
+    /** null = engine default; web_extract summaries use the primary chat model. */
+    webExtractSummarizer: agentRuntimeWebExtractSummarizerSettingsSchema
+        .nullable()
+        .default(null),
 });
 
 export const agentRuntimeSaveExecutionSettingsSchema = z.object({
@@ -247,6 +256,7 @@ export const agentRuntimeSaveExecutionSettingsSchema = z.object({
     subagentModel: agentRuntimeHermesModelNameSchema.nullable().optional(),
     subagentEffort: agentRuntimeSubagentEffortSchema.nullable().optional(),
     timezone: z.string().trim().min(1).nullable().optional(),
+    webExtractSummarizer: agentRuntimeWebExtractSummarizerSettingsSchema.nullable().optional(),
 });
 
 export const agentRuntimeSaveExecutionSettingsResultSchema =
@@ -2140,6 +2150,9 @@ export type AgentRuntimeHermesModelName = z.infer<typeof agentRuntimeHermesModel
 export type AgentRuntimeExecutionSettings = z.infer<typeof agentRuntimeExecutionSettingsSchema>;
 export type AgentRuntimeSubagentEffort = z.infer<typeof agentRuntimeSubagentEffortSchema>;
 export type AgentRuntimeCompressionSettings = z.infer<typeof agentRuntimeCompressionSettingsSchema>;
+export type AgentRuntimeWebExtractSummarizerSettings = z.infer<
+    typeof agentRuntimeWebExtractSummarizerSettingsSchema
+>;
 export type AgentRuntimeSaveExecutionSettings = z.infer<
     typeof agentRuntimeSaveExecutionSettingsSchema
 >;

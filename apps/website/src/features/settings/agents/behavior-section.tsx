@@ -11,6 +11,7 @@ import {
 } from '../../../components/ui/select.tsx';
 import { Separator } from '../../../components/ui/separator.tsx';
 import { SettingsRow } from '../../../components/ui/settings-row.tsx';
+import type { ModelListOutput } from '../../../lib/trpc.tsx';
 
 export interface CompressionSettings {
     enabled: boolean;
@@ -18,9 +19,27 @@ export interface CompressionSettings {
     thresholdPercent: number;
 }
 
+export interface WebExtractSummarizerSettings {
+    baseUrl?: string;
+    model: string;
+    provider: string;
+    timeoutSeconds: number;
+}
+
+type Model = ModelListOutput['models'][number];
+interface WebExtractSummarizerChoice {
+    description: string;
+    model: string;
+    name: string;
+    provider: string;
+    ref: string;
+}
+
 const systemTimezoneValue = '__system__';
 const defaultCompressionValue = '__default__';
 const customCompressionValue = '__custom__';
+const autoWebExtractSummarizerValue = '__auto__';
+const defaultWebExtractSummarizerTimeoutSeconds = 360;
 
 const customCompressionSeed: CompressionSettings = {
     enabled: true,
@@ -28,20 +47,43 @@ const customCompressionSeed: CompressionSettings = {
     thresholdPercent: 80,
 };
 
+const recommendedWebExtractSummarizerChoice: WebExtractSummarizerChoice = {
+    description: 'OpenRouter',
+    model: 'google/gemini-3-flash-preview',
+    name: 'Gemini 3 Flash Preview',
+    provider: 'openrouter',
+    ref: 'openrouter/google/gemini-3-flash-preview',
+};
+
 export function AgentBehaviorSection({
     compression,
     disabled,
+    modelOptions,
     onCompressionChange,
     onTimezoneChange,
+    onWebExtractSummarizerChange,
     timezone,
+    webExtractSummarizer,
 }: {
     compression: CompressionSettings | null;
     disabled: boolean;
+    modelOptions: Model[];
     onCompressionChange: (next: CompressionSettings | null) => void;
     onTimezoneChange: (timezone: null | string) => void;
+    onWebExtractSummarizerChange: (next: WebExtractSummarizerSettings | null) => void;
     timezone: null | string;
+    webExtractSummarizer: WebExtractSummarizerSettings | null;
 }) {
     const timezones = Intl.supportedValuesOf('timeZone');
+    const summarizerChoices = listWebExtractSummarizerChoices({
+        current: webExtractSummarizer,
+        models: modelOptions,
+    });
+    const selectedSummarizerRef = webExtractSummarizer
+        ? formatWebExtractSummarizerRef(webExtractSummarizer)
+        : autoWebExtractSummarizerValue;
+    const selectedSummarizerChoice =
+        summarizerChoices.find((choice) => choice.ref === selectedSummarizerRef) ?? null;
 
     return (
         <section>
@@ -73,6 +115,63 @@ export function AgentBehaviorSection({
                                 {timezones.map((zone) => (
                                     <SelectItem key={zone} value={zone}>
                                         {zone}
+                                    </SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
+                    </SettingsRow>
+
+                    <Separator />
+
+                    <SettingsRow
+                        description="Model used to summarize long web pages."
+                        title="Web page summarizer"
+                    >
+                        <Select
+                            disabled={disabled}
+                            onValueChange={(value) => {
+                                if (value === autoWebExtractSummarizerValue) {
+                                    onWebExtractSummarizerChange(null);
+                                    return;
+                                }
+
+                                const choice = summarizerChoices.find(
+                                    (candidate) => candidate.ref === value
+                                );
+                                if (!choice) {
+                                    return;
+                                }
+
+                                onWebExtractSummarizerChange({
+                                    model: choice.model,
+                                    provider: choice.provider,
+                                    timeoutSeconds:
+                                        webExtractSummarizer?.timeoutSeconds ??
+                                        defaultWebExtractSummarizerTimeoutSeconds,
+                                });
+                            }}
+                            value={selectedSummarizerRef}
+                        >
+                            <SelectTrigger>
+                                <SelectValue placeholder="Choose summarizer">
+                                    {selectedSummarizerChoice
+                                        ? selectedSummarizerChoice.name
+                                        : 'Auto (main model)'}
+                                </SelectValue>
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value={autoWebExtractSummarizerValue}>
+                                    <WebExtractSummarizerLabel
+                                        description="Uses the main chat model"
+                                        name="Auto"
+                                    />
+                                </SelectItem>
+                                {summarizerChoices.map((choice) => (
+                                    <SelectItem key={choice.ref} value={choice.ref}>
+                                        <WebExtractSummarizerLabel
+                                            description={choice.description}
+                                            name={choice.name}
+                                        />
                                     </SelectItem>
                                 ))}
                             </SelectContent>
@@ -176,6 +275,67 @@ export function clampCompression(input: CompressionSettings): CompressionSetting
         protectLastMessages: clampInteger(input.protectLastMessages, 0, 400),
         thresholdPercent: clampInteger(input.thresholdPercent, 10, 95),
     };
+}
+
+export function listWebExtractSummarizerChoices({
+    current,
+    models,
+}: {
+    current: WebExtractSummarizerSettings | null;
+    models: Model[];
+}): WebExtractSummarizerChoice[] {
+    const choicesByRef = new Map<string, WebExtractSummarizerChoice>();
+
+    for (const model of models) {
+        choicesByRef.set(model.ref, {
+            description: model.provider,
+            model: model.modelId,
+            name: model.name,
+            provider: model.provider,
+            ref: model.ref,
+        });
+    }
+
+    choicesByRef.set(
+        recommendedWebExtractSummarizerChoice.ref,
+        recommendedWebExtractSummarizerChoice
+    );
+
+    if (current) {
+        const ref = formatWebExtractSummarizerRef(current);
+        if (!choicesByRef.has(ref)) {
+            choicesByRef.set(ref, {
+                description: current.provider,
+                model: current.model,
+                name: `${current.provider}/${current.model}`,
+                provider: current.provider,
+                ref,
+            });
+        }
+    }
+
+    return [...choicesByRef.values()].sort((left, right) => {
+        if (left.ref === recommendedWebExtractSummarizerChoice.ref) {
+            return -1;
+        }
+        if (right.ref === recommendedWebExtractSummarizerChoice.ref) {
+            return 1;
+        }
+        return left.name.localeCompare(right.name) || left.provider.localeCompare(right.provider);
+    });
+}
+
+export function formatWebExtractSummarizerRef(input: { model: string; provider: string }) {
+    return `${input.provider}/${input.model}`;
+}
+
+function WebExtractSummarizerLabel({ description, name }: { description: string; name: string }) {
+    return (
+        <span className="block min-w-0">
+            <span className="block truncate">{name}</span>
+            <span className="block truncate text-muted-foreground text-xs">{description}</span>
+        </span>
+    );
 }
 
 function clampInteger(value: number, min: number, max: number): number {

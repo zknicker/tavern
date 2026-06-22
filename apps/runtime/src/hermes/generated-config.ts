@@ -35,6 +35,8 @@ export interface HermesExecutionDomain {
     subagentEffort: null | string;
     subagentModel: HermesModelRef | null;
     timezone: string | null;
+    /** null = engine default; web_extract summaries use the primary chat model. */
+    webExtractSummarizer: (HermesModelRef & { timeoutSeconds: number }) | null;
 }
 
 export interface HermesPermissionsDomain {
@@ -159,11 +161,46 @@ function applyExecutionDomain(doc: GeneratedConfigDocument, execution: HermesExe
         deleteIfPresent(doc, ['compression', 'threshold']);
         deleteIfPresent(doc, ['compression', 'protect_last_n']);
     }
+
+    if (execution.webExtractSummarizer) {
+        doc.setIn(
+            ['auxiliary', 'web_extract', 'provider'],
+            execution.webExtractSummarizer.provider
+        );
+        doc.setIn(['auxiliary', 'web_extract', 'model'], execution.webExtractSummarizer.model);
+        doc.setIn(
+            ['auxiliary', 'web_extract', 'timeout'],
+            execution.webExtractSummarizer.timeoutSeconds
+        );
+        if (execution.webExtractSummarizer.baseUrl) {
+            doc.setIn(
+                ['auxiliary', 'web_extract', 'base_url'],
+                execution.webExtractSummarizer.baseUrl
+            );
+        } else {
+            deleteIfPresent(doc, ['auxiliary', 'web_extract', 'base_url']);
+        }
+    } else {
+        deleteIfPresent(doc, ['auxiliary', 'web_extract', 'provider']);
+        deleteIfPresent(doc, ['auxiliary', 'web_extract', 'model']);
+        deleteIfPresent(doc, ['auxiliary', 'web_extract', 'timeout']);
+        deleteIfPresent(doc, ['auxiliary', 'web_extract', 'base_url']);
+        deleteEmptyMap(doc, ['auxiliary', 'web_extract']);
+        deleteEmptyMap(doc, ['auxiliary']);
+    }
 }
 
 /** deleteIn throws when an ancestor node is absent; guard nested deletes. */
 function deleteIfPresent(doc: GeneratedConfigDocument, path: string[]) {
     if (doc.hasIn(path)) {
+        doc.deleteIn(path);
+    }
+}
+
+function deleteEmptyMap(doc: GeneratedConfigDocument, path: string[]) {
+    const value = doc.getIn(path);
+    const node = value && typeof value === 'object' ? (value as { items?: unknown[] }) : null;
+    if (node && Array.isArray(node.items) && node.items.length === 0) {
         doc.deleteIn(path);
     }
 }

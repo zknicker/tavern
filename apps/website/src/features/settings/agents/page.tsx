@@ -130,6 +130,7 @@ function AgentSettingsContent({
             <AgentBehaviorSection
                 compression={executionSettings.settings.compression}
                 disabled={executionSettings.isLoading}
+                modelOptions={modelOptions}
                 onCompressionChange={(next) =>
                     void withSaveErrorToast(() =>
                         executionSettings.save({ compression: next })
@@ -140,7 +141,13 @@ function AgentSettingsContent({
                         () => undefined
                     )
                 }
+                onWebExtractSummarizerChange={(next) =>
+                    void withSaveErrorToast(() =>
+                        executionSettings.save({ webExtractSummarizer: next })
+                    ).catch(() => undefined)
+                }
                 timezone={executionSettings.settings.timezone}
+                webExtractSummarizer={executionSettings.settings.webExtractSummarizer}
             />
 
             <AgentPermissionsSection

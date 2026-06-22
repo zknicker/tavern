@@ -35,6 +35,7 @@ describe('agent execution settings', () => {
             subagentModel: null,
             timezone: null,
             updatedAt: null,
+            webExtractSummarizer: null,
         });
     });
 
@@ -61,6 +62,34 @@ describe('agent execution settings', () => {
             subagentEffort: null,
             subagentModel: null,
         });
+    });
+
+    test('persists the web_extract summarizer and writes auxiliary engine keys', async () => {
+        await putSettings({
+            webExtractSummarizer: {
+                model: 'google/gemini-3-flash-preview',
+                provider: 'openrouter',
+                timeoutSeconds: 360,
+            },
+        });
+
+        expect(getHermesExecutionSettings()).toMatchObject({
+            webExtractSummarizer: {
+                model: 'google/gemini-3-flash-preview',
+                provider: 'openrouter',
+                timeoutSeconds: 360,
+            },
+        });
+
+        const config = await fs.readFile(path.join(tempHermesHome, 'config.yaml'), 'utf8');
+        expect(config).toContain('auxiliary:');
+        expect(config).toContain('web_extract:');
+        expect(config).toContain('provider: openrouter');
+        expect(config).toContain('model: google/gemini-3-flash-preview');
+        expect(config).toContain('timeout: 360');
+
+        await putSettings({ webExtractSummarizer: null });
+        expect(getHermesExecutionSettings().webExtractSummarizer).toBeNull();
     });
 
     test('GET returns stored settings', async () => {

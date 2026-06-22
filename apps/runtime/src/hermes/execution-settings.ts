@@ -59,6 +59,7 @@ export function getHermesExecutionSettings(): AgentRuntimeExecutionSettings {
             subagentModel: null,
             timezone: null,
             updatedAt: null,
+            webExtractSummarizer: null,
         };
     }
 
@@ -77,6 +78,10 @@ function saveHermesExecutionSettings(
         subagentModel:
             input.subagentModel === undefined ? current.subagentModel : input.subagentModel,
         timezone: input.timezone === undefined ? current.timezone : input.timezone,
+        webExtractSummarizer:
+            input.webExtractSummarizer === undefined
+                ? current.webExtractSummarizer
+                : input.webExtractSummarizer,
     };
 
     const now = new Date().toISOString();
