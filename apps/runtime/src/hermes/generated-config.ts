@@ -68,6 +68,8 @@ export interface HermesGeneratedConfigDomains {
     permissions: HermesPermissionsDomain | null;
 }
 
+export const managedHermesContextFileMaxChars = 64_000;
+
 export async function mergeHermesGeneratedConfig(
     filePath: string,
     domains: HermesGeneratedConfigDomains
@@ -77,6 +79,7 @@ export async function mergeHermesGeneratedConfig(
 
     applyModelDomain(doc, domains.model);
     applyExecutionDomain(doc, domains.execution);
+    applyContextFilesDomain(doc);
     applyConnectorsDomain(doc, domains.connectors);
     if (domains.permissions) {
         applyPermissionsDomain(doc, domains.permissions);
@@ -188,6 +191,10 @@ function applyExecutionDomain(doc: GeneratedConfigDocument, execution: HermesExe
         deleteEmptyMap(doc, ['auxiliary', 'web_extract']);
         deleteEmptyMap(doc, ['auxiliary']);
     }
+}
+
+function applyContextFilesDomain(doc: GeneratedConfigDocument) {
+    doc.setIn(['context_file_max_chars'], managedHermesContextFileMaxChars);
 }
 
 /** deleteIn throws when an ancestor node is absent; guard nested deletes. */

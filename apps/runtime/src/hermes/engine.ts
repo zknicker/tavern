@@ -8,7 +8,7 @@ import { readConfigValue } from '../config';
  * pin and refresh the bundled installer snapshot; see
  * docs/operations/hermes-runtime-upgrade.md.
  */
-export const hermesPinnedCommit = 'c9863772368720a892faaa6e1f3402dbea72f4bf';
+export const hermesPinnedCommit = '5937b95192bc02a98a8a29d44caffd71f2b25694';
 
 export const hermesInstallerUrl = 'https://hermes-agent.nousresearch.com/install.sh';
 

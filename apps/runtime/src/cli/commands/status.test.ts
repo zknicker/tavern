@@ -51,9 +51,9 @@ function snapshot(over: Partial<RuntimeSnapshot> = {}): RuntimeSnapshot {
 }
 
 const engineSection: StatusEngineSection = {
-    pin: { kind: 'commit', ref: 'c9863772368720a892faaa6e1f3402dbea72f4bf', source: 'pinned' },
+    pin: { kind: 'commit', ref: '5937b95192bc02a98a8a29d44caffd71f2b25694', source: 'pinned' },
     resolved: {
-        path: '/home/u/.tavern/engine/c986377/hermes-agent/venv/bin/hermes',
+        path: '/home/u/.tavern/engine/ed711e/hermes-agent/venv/bin/hermes',
         tier: 'managed',
     },
 };

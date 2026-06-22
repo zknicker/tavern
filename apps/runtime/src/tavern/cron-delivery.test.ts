@@ -141,9 +141,15 @@ describe('Hermes cron delivery into Tavern chats', () => {
             },
             role: 'assistant',
         });
-        expect(runtimeEvents.map((event) => event.event.type)).toEqual([
-            'turn.replyUpdated',
-            'turn.completed',
+        expect(runtimeEvents.map((event) => event.event)).toEqual([
+            expect.objectContaining({
+                turn: expect.objectContaining({
+                    chatId: 'cht_cron',
+                    runId: 'run_cron_hermes_job_1_1780000000',
+                    sessionKey: 'cron_hermes_job_1_1780000000',
+                }),
+                type: 'turn.completed',
+            }),
         ]);
     });
 });

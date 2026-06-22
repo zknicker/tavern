@@ -37,11 +37,11 @@ function baseReport(over: Partial<StatusReport> = {}): StatusReport {
         engine: {
             pin: {
                 kind: 'commit',
-                ref: 'c9863772368720a892faaa6e1f3402dbea72f4bf',
+                ref: '5937b95192bc02a98a8a29d44caffd71f2b25694',
                 source: 'pinned',
             },
             resolved: {
-                path: '~/.tavern/engine/c986377/hermes-agent/venv/bin/hermes',
+                path: '~/.tavern/engine/ed711e/hermes-agent/venv/bin/hermes',
                 tier: 'managed',
             },
         },
@@ -97,7 +97,7 @@ describe('renderStatus', () => {
         expect(text).toContain('Binary   v1.4.2 · up to date');
         expect(text).toContain('● Codex OAuth');
         expect(text).toContain('6m ago');
-        expect(text).toContain('Pin       c986377 (commit, pinned)');
+        expect(text).toContain('Pin       5937b95 (commit, pinned)');
         expect(text).toContain('(managed)');
     });
 

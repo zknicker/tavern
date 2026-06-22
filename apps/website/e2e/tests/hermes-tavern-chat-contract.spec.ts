@@ -99,9 +99,7 @@ test('renders live tool progress before the final reply', async ({ page }) => {
     await expect(liveActivity).toBeVisible({ timeout: 30_000 });
     await expect(transcriptParagraph(page, expectedProgress)).toBeVisible({ timeout: 90_000 });
 
-    const liveToolEvidence = page
-        .getByText(/QA_KICKOFF_TASK\.md|exec|run sleep 4|command sleep 4/i)
-        .first();
+    const liveToolEvidence = toolCommandDetail(page, /sleep 4 && cat/i);
     await expect(liveToolEvidence).toBeVisible({ timeout: 90_000 });
     await expect(page.getByRole('button', { name: commandWorkGroupName })).toHaveCount(1);
 
@@ -111,7 +109,7 @@ test('renders live tool progress before the final reply', async ({ page }) => {
     await expect(completedActivity).toBeVisible({ timeout: 30_000 });
     await expect(page.getByRole('button', { name: commandWorkGroupName })).toHaveCount(1);
     await openActivityIfClosed(completedActivity);
-    await expect(page.getByText(/QA_KICKOFF_TASK\.md|exec|run sleep 4/i).first()).toBeVisible({
+    await expect(toolCommandDetail(page, /sleep 4 && cat/i)).toBeVisible({
         timeout: 10_000,
     });
 });
@@ -180,7 +178,10 @@ test('renders Rich Response specs in the final reply', async ({ page }) => {
         timeout: 30_000,
     });
 
-    const finalReply = transcriptParagraph(page, expectedReply);
+    const finalReply = transcriptParagraph(
+        page,
+        new RegExp(`Here is the revenue chart\\.\\s+${escapeRegExp(expectedReply)}`)
+    );
     await expect(finalReply).toBeVisible({ timeout: 90_000 });
     await expect(finalReply).toHaveCount(1);
 
@@ -188,7 +189,7 @@ test('renders Rich Response specs in the final reply', async ({ page }) => {
     await expect(page.locator('main').getByText(richResponseTitle, { exact: true })).toBeVisible({
         timeout: 30_000,
     });
-    await expect(transcriptParagraph(page, expectedReply)).toHaveCount(1);
+    await expect(transcriptParagraph(page, finalReplyRegex(expectedReply))).toHaveCount(1);
 });
 
 test('renders provider-streamed assistant updates between Hermes tool groups', async ({ page }) => {
@@ -207,7 +208,7 @@ test('renders provider-streamed assistant updates between Hermes tool groups', a
     await waitForRealChatRoute(page);
 
     await expect(transcriptParagraph(page, firstUpdate)).toBeVisible({ timeout: 90_000 });
-    await expect(page.getByText(/QA_KICKOFF_TASK\.md/i).first()).toBeVisible({ timeout: 90_000 });
+    await expect(toolCommandDetail(page, /cat /i)).toBeVisible({ timeout: 90_000 });
     await expect(transcriptParagraph(page, secondUpdate)).toBeVisible({ timeout: 90_000 });
     await expect(transcriptParagraph(page, expectedReply)).toBeVisible({ timeout: 90_000 });
 
@@ -335,7 +336,7 @@ test('preserves one user message and tool progress across repeated hard reloads'
     const activity = page.getByRole('button', { name: commandWorkGroupName }).first();
     await expect(activity).toBeVisible({ timeout: 60_000 });
     await openActivityIfClosed(activity);
-    await expect(page.getByText(/QA_KICKOFF_TASK\.md/i).first()).toBeVisible({
+    await expect(toolCommandDetail(page, /sleep 4 && cat/i)).toBeVisible({
         timeout: 60_000,
     });
 
@@ -407,6 +408,14 @@ function transcriptParagraph(page: Page, text: string | RegExp) {
 
 function userPromptParagraph(page: Page, marker: string) {
     return page.locator('main p').filter({ hasText: marker });
+}
+
+function toolCommandDetail(page: Page, command: RegExp) {
+    return page.locator('main button').filter({ hasText: command }).first();
+}
+
+function finalReplyRegex(text: string) {
+    return new RegExp(`Here is the revenue chart\\.\\s+${escapeRegExp(text)}`);
 }
 
 function exactTextRegex(text: string) {

@@ -78,6 +78,31 @@ For example, if Hermes adds native `@` mention support, update
 [Mentions](../../specs/mentions.md) first. Then decide whether Tavern should
 keep projecting prompt hints itself or map mentions to Hermes's native support.
 
+## Gateway/Dashboard Contract Review
+
+Gateway and Dashboard changes are release-blocking when they affect Tavern's
+managed runtime path. Compare the old and new Hermes source for Tavern-used
+surfaces before bumping the pin:
+
+* Dashboard REST: `/api/status`, `/api/sessions`, `/api/model/options`,
+  `/api/skills`, and `/api/cron/jobs`
+* Gateway WebSocket: `/api/ws`
+* Gateway RPCs: `session.create`, `session.resume`, `prompt.submit`,
+  `session.interrupt`, `session.steer`, `config.set`, `image.attach_bytes`,
+  `approval.respond`, `clarify.respond`, `commands.catalog`, `slash.exec`, and
+  `command.dispatch`
+* Gateway events: `message.delta`, `message.complete`, `reasoning.delta`,
+  `thinking.delta`, `status.update`, `tool.*`, `approval.request`,
+  `clarify.request`, `session.info`, and `error`
+
+Token or auth changes need a focused Runtime review. Tavern launches the
+managed dashboard on loopback with `HERMES_DASHBOARD_SESSION_TOKEN`; HTTP
+clients send `Authorization` and `X-Hermes-Session-Token`, and Gateway
+WebSocket clients pass `?token=...`. If Hermes changes loopback token mode or
+requires ticket/cookie auth for managed runtime, update
+`apps/runtime/src/hermes/http.ts`, `apps/runtime/src/hermes/gateway.ts`,
+`apps/runtime/src/hermes/connection.ts`, and capability checks before release.
+
 ## State Rules
 
 * `~/.tavern/engine/<pin>` holds managed engine installs, shared across

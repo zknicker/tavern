@@ -116,8 +116,8 @@ Capabilities
   ◐ Vault                degraded      just now — Managed Vault skill has not been prepared.
 
 Engine
-  Pin         c986377 (pinned)
-  Resolved    ~/.tavern/engine/c986377.../hermes-agent/venv/bin/hermes (managed)
+  Pin         5937b95 (pinned)
+  Resolved    ~/.tavern/engine/ed711e.../hermes-agent/venv/bin/hermes (managed)
 ```
 
 `--json` emits one object with `binary`, `service`, `runtime`,

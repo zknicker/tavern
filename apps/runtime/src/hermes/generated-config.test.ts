@@ -3,7 +3,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { parseDocument } from 'yaml';
-import { mergeHermesGeneratedConfig } from './generated-config';
+import { managedHermesContextFileMaxChars, mergeHermesGeneratedConfig } from './generated-config';
 
 const emptyExecution = {
     compression: null,
@@ -49,6 +49,7 @@ describe('generated Hermes config composer', () => {
         });
 
         expect((await readConfig(configPath)).toJS()).toEqual({
+            context_file_max_chars: managedHermesContextFileMaxChars,
             cron: {
                 wrap_response: false,
             },
@@ -92,6 +93,9 @@ describe('generated Hermes config composer', () => {
             [
                 'gateway:',
                 '  bind: loopback',
+                'agent:',
+                '  max_turns: 500',
+                'context_file_max_chars: 20000',
                 'cron:',
                 '  script_timeout_seconds: 45',
                 '  wrap_response: true',
@@ -114,6 +118,8 @@ describe('generated Hermes config composer', () => {
 
         const doc = await readConfig(configPath);
         expect(doc.getIn(['gateway', 'bind'])).toBe('loopback');
+        expect(doc.getIn(['agent', 'max_turns'])).toBe(500);
+        expect(doc.get('context_file_max_chars')).toBe(managedHermesContextFileMaxChars);
         expect(doc.getIn(['cron', 'script_timeout_seconds'])).toBe(45);
         expect(doc.getIn(['cron', 'wrap_response'])).toBe(false);
         expect(doc.getIn(['display', 'tool_progress'])).toBe('all');

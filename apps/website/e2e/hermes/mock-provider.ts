@@ -200,7 +200,11 @@ function usage() {
 }
 
 function chunkText(text: string) {
-    return text.match(/.{1,12}/gu) ?? [text];
+    const chunks: string[] = [];
+    for (let index = 0; index < text.length; index += 12) {
+        chunks.push(text.slice(index, index + 12));
+    }
+    return chunks.length > 0 ? chunks : [text];
 }
 
 function nowSeconds() {

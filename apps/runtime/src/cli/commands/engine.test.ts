@@ -11,18 +11,18 @@ function args(over: Partial<ParsedArgs> = {}): ParsedArgs {
 
 const STATUS_FIXTURE: EngineStatusReport = {
     engineRoot: '/home/u/.tavern/engine',
-    installedPins: ['c986377', 'abc1234'],
+    installedPins: ['ed711e', 'abc1234'],
     marker: {
-        binaryPath: '/home/u/.tavern/engine/c986377/hermes-agent/venv/bin/hermes',
+        binaryPath: '/home/u/.tavern/engine/ed711e/hermes-agent/venv/bin/hermes',
         installedAt: '2026-06-01T10:00:00.000Z',
         installerSource: 'remote-download',
         patches: [],
-        ref: 'c9863772368720a892faaa6e1f3402dbea72f4bf',
+        ref: '5937b95192bc02a98a8a29d44caffd71f2b25694',
     },
-    pin: { kind: 'commit', ref: 'c9863772368720a892faaa6e1f3402dbea72f4bf', source: 'pinned' },
+    pin: { kind: 'commit', ref: '5937b95192bc02a98a8a29d44caffd71f2b25694', source: 'pinned' },
     resolved: {
         binary: {
-            binaryPath: '/home/u/.tavern/engine/c986377/hermes-agent/venv/bin/hermes',
+            binaryPath: '/home/u/.tavern/engine/ed711e/hermes-agent/venv/bin/hermes',
             tier: 'managed',
         },
         error: null,
@@ -70,7 +70,7 @@ describe('engine clean', () => {
             removed,
             deps: {
                 listInstalls: () => installs,
-                currentPinDir: () => 'c986377',
+                currentPinDir: () => 'ed711e',
                 removeInstall: (dir: string) => {
                     removed.push(dir);
                     return Promise.resolve();
@@ -81,21 +81,21 @@ describe('engine clean', () => {
     }
 
     test('keeps the current pin by default, removes the rest', async () => {
-        const { logged, removed, deps } = cleanHarness(['c986377', 'abc1234']);
+        const { logged, removed, deps } = cleanHarness(['ed711e', 'abc1234']);
         const code = await __test.runClean(args(), deps);
         expect(code).toBe(0);
         expect(removed).toEqual(['abc1234']);
-        expect(logged.join('\n')).toContain('Kept current pin: c986377');
+        expect(logged.join('\n')).toContain('Kept current pin: ed711e');
     });
 
     test('--all removes every install', async () => {
-        const { removed, deps } = cleanHarness(['c986377', 'abc1234']);
+        const { removed, deps } = cleanHarness(['ed711e', 'abc1234']);
         await __test.runClean(args({ flags: { '--all': true } }), deps);
-        expect(removed).toEqual(['c986377', 'abc1234']);
+        expect(removed).toEqual(['ed711e', 'abc1234']);
     });
 
     test('nothing to clean when only the current pin exists', async () => {
-        const { logged, removed, deps } = cleanHarness(['c986377']);
+        const { logged, removed, deps } = cleanHarness(['ed711e']);
         await __test.runClean(args(), deps);
         expect(removed).toEqual([]);
         expect(logged.join('\n')).toContain('Nothing to clean.');
@@ -110,7 +110,7 @@ describe('engine install', () => {
             install: async (onLine) => {
                 onLine('Downloading engine...');
                 onLine('Building venv...');
-                return { binaryPath: '/home/u/.tavern/engine/c986377/.../hermes', tier: 'managed' };
+                return { binaryPath: '/home/u/.tavern/engine/ed711e/.../hermes', tier: 'managed' };
             },
         });
         expect(code).toBe(0);
