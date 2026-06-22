@@ -245,9 +245,7 @@ export const agentRuntimeExecutionSettingsSchema = z.object({
     timezone: z.string().nullable(),
     updatedAt: z.string().datetime().nullable(),
     /** null = engine default; web_extract summaries use the primary chat model. */
-    webExtractSummarizer: agentRuntimeWebExtractSummarizerSettingsSchema
-        .nullable()
-        .default(null),
+    webExtractSummarizer: agentRuntimeWebExtractSummarizerSettingsSchema.nullable().default(null),
 });
 
 export const agentRuntimeSaveExecutionSettingsSchema = z.object({
