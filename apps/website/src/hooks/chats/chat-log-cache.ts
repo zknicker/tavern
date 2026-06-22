@@ -12,6 +12,7 @@ type NoticeRow = Extract<ChatLogRow, { kind: 'system'; systemKind: 'runtimeNotic
 type RichResponseRow = Extract<ChatLogRow, { kind: 'rich_response' }>;
 type WorkerRow = Extract<ChatLogRow, { kind: 'worker' }>;
 type ProgressRow = MessageRow | NoticeRow | ThinkingRow | ToolRow | RichResponseRow | WorkerRow;
+export type ChatLogSteerNoticeSnapshot = MessageRow;
 
 export const defaultLiveChatLogLimit = 100;
 
@@ -53,6 +54,62 @@ export function patchChatLogWithSteerNotice(
 
     const sourceLog = normalizeChatLog(log);
     const rows = upsertRows(sourceLog.rows, steerNoticeToChatRows(input));
+
+    return {
+        ...sourceLog,
+        rows: rows.sort(compareChatLogRows),
+    };
+}
+
+export function readChatLogSteerNotice(
+    log: ChatLogInput | undefined,
+    input: {
+        runId: string;
+    }
+): ChatLogSteerNoticeSnapshot | null {
+    if (!log) {
+        return null;
+    }
+
+    const messageId = `${steerNoticeActivityId(input.runId)}_message`;
+    const row = log.rows.find((entry) => entry.id === messageId);
+
+    return row?.kind === 'message' ? row : null;
+}
+
+export function rollbackChatLogSteerNotice(
+    log: ChatLogInput | undefined,
+    input: {
+        content: string;
+        previousNotice: ChatLogSteerNoticeSnapshot | null;
+        runId: string;
+    }
+): ChatLogOutput | undefined {
+    if (!log) {
+        return undefined;
+    }
+
+    const sourceLog = normalizeChatLog(log);
+    const messageId = `${steerNoticeActivityId(input.runId)}_message`;
+    const trimmedContent = input.content.trim();
+    let foundAnyNotice = false;
+    const rows = sourceLog.rows.flatMap((row) => {
+        if (row.id !== messageId) {
+            return [row];
+        }
+
+        foundAnyNotice = true;
+
+        if (row.kind !== 'message' || row.message.content !== trimmedContent) {
+            return [row];
+        }
+
+        return input.previousNotice ? [input.previousNotice] : [];
+    });
+
+    if (!foundAnyNotice && input.previousNotice) {
+        rows.push(input.previousNotice);
+    }
 
     return {
         ...sourceLog,

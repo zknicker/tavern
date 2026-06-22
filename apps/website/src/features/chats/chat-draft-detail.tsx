@@ -24,6 +24,7 @@ import {
 import { ChatComposerAgentSelector } from './chat-composer-tools.tsx';
 import { ChatDetailFrame } from './chat-detail-frame.tsx';
 import { ChatMessageComposer } from './chat-message-composer.tsx';
+import { getSteerableRunId } from './chat-steering.ts';
 
 const draftTimelineLimit = 100;
 
@@ -65,6 +66,11 @@ export function ChatDraftDetail({
         handoffFrame.activeReply?.runId ??
         draft?.realRunId ??
         null;
+    const steerRunId = getSteerableRunId({
+        activeReply: handoffFrame.activeReply,
+        activeTurn: handoffState?.activeTurn ?? null,
+        rows: handoffState?.timeline,
+    });
     const fallbackTimeline = draft
         ? mergeTimelineMessages({
               limit: draftTimelineLimit,
@@ -133,6 +139,7 @@ export function ChatDraftDetail({
                             agentsPending: agentsQuery.isPending,
                             draft,
                         })}
+                        steerRunId={steerRunId}
                     />
                 ) : (
                     <PromptInput

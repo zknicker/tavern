@@ -45,7 +45,11 @@ import { useComposerFileDrop } from './chat-composer-file-drop.ts';
 import { ChatComposerMainDropOverlay } from './chat-composer-main-drop-overlay.tsx';
 import {
     type ChatComposerQueuedMessage,
+    canStartQueuedSteer,
+    hasPendingSteerAtQueueHead,
     isQueuedMessageSteerable,
+    removeStoredQueuedMessage,
+    reorderVisibleQueuedMessages,
     shouldInterruptActiveTurnForQueuedMessage,
     useChatComposerQueue,
 } from './chat-composer-queue.ts';
@@ -97,8 +101,12 @@ export function ChatMessageComposer({
     const composerDraft = useChatComposerDraftState({ boundAgentIds, chatId });
     const drainingQueueRef = React.useRef(false);
     const failedQueuedDispatchIdsRef = React.useRef(new Set<string>());
+    const pendingSteerQueuedIdsRef = React.useRef(new Set<string>());
     const fileInputRef = React.useRef<HTMLInputElement | null>(null);
     const [attachmentError, setAttachmentError] = React.useState<string | null>(null);
+    const [pendingSteerQueuedIds, setPendingSteerQueuedIds] = React.useState<ReadonlySet<string>>(
+        () => new Set()
+    );
     const { agentId, attachments, content, editingQueuedMessageId, mentions, modelRef } =
         composerDraft.draft;
     const {
@@ -130,6 +138,14 @@ export function ChatMessageComposer({
     const canSubmit = isSendBlocked ? canQueue : canSend;
     const canDispatchQueued =
         chatCanSend && canSendToRuntime && !isComposerBlocked && !isSendBlocked;
+    const visibleQueuedMessages = React.useMemo(
+        () => composerQueue.queue.filter((entry) => !pendingSteerQueuedIds.has(entry.id)),
+        [composerQueue.queue, pendingSteerQueuedIds]
+    );
+    const isQueueDrainBlockedByPendingSteer = hasPendingSteerAtQueueHead(
+        composerQueue.queue,
+        pendingSteerQueuedIds
+    );
     const primaryAction = getComposerPrimaryAction({
         activeRunId,
         hasDraftPayload: hasPayload,
@@ -142,20 +158,20 @@ export function ChatMessageComposer({
         target: useMainDropTarget ? 'main' : 'self',
     });
 
-    // biome-ignore lint/correctness/useExhaustiveDependencies: Dispatch is ref-gated; queue head and blocked state drive this effect.
+    // biome-ignore lint/correctness/useExhaustiveDependencies: Dispatch is ref-gated; visible queue head and blocked state drive this effect.
     React.useEffect(() => {
-        if (!canDispatchQueued || drainingQueueRef.current) {
+        if (!canDispatchQueued || drainingQueueRef.current || isQueueDrainBlockedByPendingSteer) {
             return;
         }
 
-        const entry = composerQueue.queue[0];
+        const entry = visibleQueuedMessages[0];
 
         if (!entry || failedQueuedDispatchIdsRef.current.has(entry.id)) {
             return;
         }
 
         dispatchQueuedEntry(entry);
-    }, [canDispatchQueued, composerQueue.queue]);
+    }, [canDispatchQueued, isQueueDrainBlockedByPendingSteer, visibleQueuedMessages]);
 
     React.useEffect(() => {
         const queuedIds = new Set(composerQueue.queue.map((entry) => entry.id));
@@ -164,6 +180,19 @@ export function ChatMessageComposer({
             if (!queuedIds.has(id)) {
                 failedQueuedDispatchIdsRef.current.delete(id);
             }
+        }
+
+        const nextPendingSteerQueuedIds = new Set<string>();
+
+        for (const id of pendingSteerQueuedIdsRef.current) {
+            if (queuedIds.has(id)) {
+                nextPendingSteerQueuedIds.add(id);
+            }
+        }
+
+        if (nextPendingSteerQueuedIds.size !== pendingSteerQueuedIdsRef.current.size) {
+            pendingSteerQueuedIdsRef.current = nextPendingSteerQueuedIds;
+            setPendingSteerQueuedIds(nextPendingSteerQueuedIds);
         }
     }, [composerQueue.queue]);
 
@@ -255,7 +284,8 @@ export function ChatMessageComposer({
     }
 
     function handlePromoteQueuedMessage(id: string) {
-        const entry = composerQueue.queue.find((queued) => queued.id === id);
+        const queueIndex = composerQueue.queue.findIndex((queued) => queued.id === id);
+        const entry = composerQueue.queue[queueIndex];
 
         if (!entry) {
             return;
@@ -263,25 +293,7 @@ export function ChatMessageComposer({
 
         if (isSendBlocked || sendMessage.isPending) {
             if (steerRunId && isQueuedMessageSteerable(entry)) {
-                if (steerTurn.isPending) {
-                    return;
-                }
-
-                steerTurn.mutate(
-                    {
-                        chatId,
-                        content: entry.content,
-                        metadata: entry.metadata,
-                        runId: steerRunId,
-                    },
-                    {
-                        onSuccess: (result) => {
-                            if (result.steered) {
-                                composerQueue.remove(entry.id);
-                            }
-                        },
-                    }
-                );
+                void steerQueuedEntry(entry, steerRunId);
                 return;
             }
 
@@ -300,6 +312,40 @@ export function ChatMessageComposer({
         }
 
         dispatchQueuedEntry(entry);
+    }
+
+    async function steerQueuedEntry(entry: ChatComposerQueuedMessage, runId: string) {
+        if (
+            !canStartQueuedSteer({
+                pendingSteerIds: pendingSteerQueuedIdsRef.current,
+                steerPending: steerTurn.isPending,
+            })
+        ) {
+            return;
+        }
+
+        setQueuedSteerPending(entry.id, true);
+
+        try {
+            const result = await steerTurn.mutateAsync({
+                chatId,
+                content: entry.content,
+                metadata: entry.metadata,
+                runId,
+            });
+
+            if (result.steered) {
+                removeStoredQueuedMessage(chatId, entry.id);
+                composerQueue.remove(entry.id);
+                setQueuedSteerPending(entry.id, false);
+                return;
+            }
+        } catch {
+            setQueuedSteerPending(entry.id, false);
+            return;
+        }
+
+        setQueuedSteerPending(entry.id, false);
     }
 
     function dispatchQueuedEntry(entry: ChatComposerQueuedMessage) {
@@ -349,6 +395,29 @@ export function ChatMessageComposer({
         setModelRef(entry.modelRef ?? null);
         setAttachmentError(null);
         mentionComposer.focusTextEditor();
+    }
+
+    function handleReorderQueuedMessages(nextQueue: readonly ChatComposerQueuedMessage[]) {
+        composerQueue.reorder(
+            reorderVisibleQueuedMessages(composerQueue.queue, nextQueue, pendingSteerQueuedIds)
+        );
+    }
+
+    function setQueuedSteerPending(id: string, pending: boolean) {
+        if (pendingSteerQueuedIdsRef.current.has(id) === pending) {
+            return;
+        }
+
+        const nextIds = new Set(pendingSteerQueuedIdsRef.current);
+
+        if (pending) {
+            nextIds.add(id);
+        } else {
+            nextIds.delete(id);
+        }
+
+        pendingSteerQueuedIdsRef.current = nextIds;
+        setPendingSteerQueuedIds(nextIds);
     }
 
     async function handleAttachmentInputChange(event: React.ChangeEvent<HTMLInputElement>) {
@@ -442,8 +511,8 @@ export function ChatMessageComposer({
                 onMove={composerQueue.move}
                 onPromote={handlePromoteQueuedMessage}
                 onRemove={composerQueue.remove}
-                onReorder={composerQueue.reorder}
-                queue={composerQueue.queue}
+                onReorder={handleReorderQueuedMessages}
+                queue={visibleQueuedMessages}
             />
             <ChatComposerAttachmentList
                 attachments={attachments}

@@ -321,7 +321,7 @@ test('active tool-only turns keep the composer in queue mode', () => {
     ).toBe(true);
 });
 
-test('steering is available only before final reply text streams', () => {
+test('steering is available while the active run is still live', () => {
     const activeTurn = {
         agentId: 'agent-1',
         chatId: 'chat-1',
@@ -344,9 +344,19 @@ test('steering is available only before final reply text streams', () => {
         getSteerableRunId({
             activeReply: {
                 runId: 'run-1',
-                text: 'Canada is too broad.',
+                text: 'I will check that first.',
             },
             activeTurn,
+        })
+    ).toBe('run-1');
+    expect(
+        getSteerableRunId({
+            activeReply: {
+                completedAt: '2026-05-13T12:00:03.000Z',
+                runId: 'run-1',
+                text: 'Canada is too broad.',
+            },
+            activeTurn: null,
         })
     ).toBeNull();
     expect(
@@ -366,8 +376,39 @@ test('steering is available only before final reply text streams', () => {
                     kind: 'message',
                     message: {
                         actor: { id: 'agent-1', kind: 'agent' },
-                        content: 'Canada is too broad.',
+                        content: 'Checking the weather source.',
                         id: 'act_run-1_message_1',
+                        metadata: { runtime: { runId: 'run-1' } },
+                        sender: 'agent-1',
+                        senderType: 'agent',
+                        sourceSessionId: null,
+                        sourceSessionKey: 'session-1',
+                        tavernAgentId: 'agent-1',
+                        timestamp: '2026-05-13T12:00:01.000Z',
+                    },
+                },
+            ],
+        })
+    ).toBe('run-1');
+    expect(
+        getSteerableRunId({
+            activeReply: {
+                runId: 'run-1',
+                text: '',
+            },
+            activeTurn,
+            rows: [
+                {
+                    actor: { id: 'agent-1', kind: 'agent' },
+                    connectsToNext: false,
+                    connectsToPrevious: false,
+                    id: 'msg_agent_1',
+                    isFirstInGroup: true,
+                    kind: 'message',
+                    message: {
+                        actor: { id: 'agent-1', kind: 'agent' },
+                        content: 'Canada is too broad.',
+                        id: 'msg_agent_1',
                         metadata: { runtime: { runId: 'run-1' } },
                         sender: 'agent-1',
                         senderType: 'agent',

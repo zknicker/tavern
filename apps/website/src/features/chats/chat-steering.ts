@@ -1,17 +1,20 @@
 import type { ChatTimeline } from '../../hooks/chats/chat-timeline-state.ts';
 
 export function getSteerableRunId(input: {
-    activeReply: { runId: string; text?: string | null } | null;
+    activeReply: { completedAt?: string | null; runId: string; text?: string | null } | null;
     activeTurn: { runId: string } | null;
     rows?: ChatTimeline;
 }) {
-    const runId = input.activeTurn?.runId ?? input.activeReply?.runId ?? null;
+    const runId =
+        input.activeTurn?.runId ??
+        (input.activeReply?.completedAt ? null : input.activeReply?.runId) ??
+        null;
 
     if (!runId) {
         return null;
     }
 
-    if ((input.activeReply?.text ?? '').trim().length > 0) {
+    if (input.activeReply?.runId === runId && input.activeReply.completedAt) {
         return null;
     }
 
@@ -28,8 +31,16 @@ function hasAgentMessageForRun(rows: ChatTimeline, runId: string) {
             return false;
         }
 
+        if (isActivityMessageRow(row)) {
+            return false;
+        }
+
         return runtimeRunId(row.message.metadata) === runId;
     });
+}
+
+function isActivityMessageRow(row: Extract<ChatTimeline[number], { kind: 'message' }>) {
+    return row.id.startsWith('act_');
 }
 
 function runtimeRunId(metadata: unknown) {

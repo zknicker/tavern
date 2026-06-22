@@ -1,6 +1,7 @@
 import type { PropsWithChildren } from 'react';
 import * as React from 'react';
 import type { ChatLogOutput } from '../../lib/trpc.tsx';
+import type { ChatLogSteerNoticeSnapshot } from './chat-log-cache.ts';
 import {
     applyLogSnapshot,
     applyReplySnapshot,
@@ -17,7 +18,10 @@ import {
     failTimelineTurn,
     optimisticallyStopTimelineTurn,
     patchTimelineProgress,
+    patchTimelineWithSteerNotice,
+    readTimelineSteerNotice,
     removeOptimisticStoppedTurn,
+    rollbackTimelineSteerNotice,
     startTimelineTurn,
     updateTimelineReply,
     updateTimelineTurnStatus,
@@ -35,8 +39,20 @@ interface TimelineActionsValue {
         turn: ChatTurn;
     }) => void;
     removeOptimisticStop: (input: { chatId: string; runId: string }) => void;
+    rollbackSteerNotice: (input: {
+        chatId: string;
+        content: string;
+        previousNotice: ChatLogSteerNoticeSnapshot | null;
+        runId: string;
+    }) => void;
     setLog: (chatId: string, log: ChatLogOutput | undefined) => void;
     setReply: (chatId: string, activeReply: ChatActiveReply | null) => void;
+    showSteerNotice: (input: {
+        chatId: string;
+        content: string;
+        runId: string;
+        timestamp: string;
+    }) => ChatLogSteerNoticeSnapshot | null;
     startTurn: (turn: ChatTurn) => void;
     updateReply: (update: ChatReplyUpdate) => void;
     updateTurnStatus: (update: ChatTurnStatusUpdate) => void;
@@ -68,117 +84,162 @@ export function TimelineContextProvider({ children }: PropsWithChildren) {
     const [timelineStates, setTimelineStates] = React.useState<Record<string, ChatTimelineState>>(
         {}
     );
+    const timelineStatesRef = React.useRef(timelineStates);
 
-    const setLog = React.useCallback((chatId: string, log: ChatLogOutput | undefined) => {
-        setTimelineStates((current) =>
-            updateTimelineState(current, chatId, (state) => applyLogSnapshot(state, log))
-        );
-    }, []);
+    React.useEffect(() => {
+        timelineStatesRef.current = timelineStates;
+    }, [timelineStates]);
 
-    const setReply = React.useCallback((chatId: string, activeReply: ChatActiveReply | null) => {
-        setTimelineStates((current) =>
-            updateTimelineState(current, chatId, (state) => applyReplySnapshot(state, activeReply))
-        );
-    }, []);
+    const setTimelineState = React.useCallback(
+        (chatId: string, updater: (state: ChatTimelineState) => ChatTimelineState) => {
+            const current = timelineStatesRef.current;
+            const next = updateTimelineState(current, chatId, updater);
 
-    const startTurn = React.useCallback((turn: ChatTurn) => {
-        setTimelineStates((current) =>
-            updateTimelineState(current, turn.chatId, (state) => startTimelineTurn(state, turn))
-        );
-    }, []);
+            if (next === current) {
+                return;
+            }
 
-    const updateReply = React.useCallback((update: ChatReplyUpdate) => {
-        setTimelineStates((current) =>
-            updateTimelineState(current, update.turn.chatId, (state) =>
-                updateTimelineReply(state, update)
-            )
-        );
-    }, []);
-
-    const updateTurnStatus = React.useCallback((update: ChatTurnStatusUpdate) => {
-        setTimelineStates((current) =>
-            updateTimelineState(current, update.turn.chatId, (state) =>
-                updateTimelineTurnStatus(state, update)
-            )
-        );
-    }, []);
-
-    const patchProgress = React.useCallback(
-        (input: { step: ChatTurnProgressStep; timestamp: string; turn: ChatTurn }) => {
-            setTimelineStates((current) =>
-                updateTimelineState(current, input.turn.chatId, (state) =>
-                    patchTimelineProgress(state, input)
-                )
-            );
+            timelineStatesRef.current = next;
+            setTimelineStates(next);
         },
         []
     );
 
-    const clearTurn = React.useCallback((input: { chatId: string; runId?: string }) => {
-        setTimelineStates((current) =>
-            updateTimelineState(current, input.chatId, (state) =>
+    const setLog = React.useCallback(
+        (chatId: string, log: ChatLogOutput | undefined) => {
+            setTimelineState(chatId, (state) => applyLogSnapshot(state, log));
+        },
+        [setTimelineState]
+    );
+
+    const setReply = React.useCallback(
+        (chatId: string, activeReply: ChatActiveReply | null) => {
+            setTimelineState(chatId, (state) => applyReplySnapshot(state, activeReply));
+        },
+        [setTimelineState]
+    );
+
+    const startTurn = React.useCallback(
+        (turn: ChatTurn) => {
+            setTimelineState(turn.chatId, (state) => startTimelineTurn(state, turn));
+        },
+        [setTimelineState]
+    );
+
+    const updateReply = React.useCallback(
+        (update: ChatReplyUpdate) => {
+            setTimelineState(update.turn.chatId, (state) => updateTimelineReply(state, update));
+        },
+        [setTimelineState]
+    );
+
+    const showSteerNotice = React.useCallback(
+        (input: { chatId: string; content: string; runId: string; timestamp: string }) => {
+            const state = timelineStatesRef.current[input.chatId] ?? emptyTimelineState();
+            const previousNotice = readTimelineSteerNotice(state, { runId: input.runId });
+
+            setTimelineState(input.chatId, (current) =>
+                patchTimelineWithSteerNotice(current, input)
+            );
+
+            return previousNotice;
+        },
+        [setTimelineState]
+    );
+
+    const rollbackSteerNotice = React.useCallback(
+        (input: {
+            chatId: string;
+            content: string;
+            previousNotice: ChatLogSteerNoticeSnapshot | null;
+            runId: string;
+        }) => {
+            setTimelineState(input.chatId, (state) => rollbackTimelineSteerNotice(state, input));
+        },
+        [setTimelineState]
+    );
+
+    const updateTurnStatus = React.useCallback(
+        (update: ChatTurnStatusUpdate) => {
+            setTimelineState(update.turn.chatId, (state) =>
+                updateTimelineTurnStatus(state, update)
+            );
+        },
+        [setTimelineState]
+    );
+
+    const patchProgress = React.useCallback(
+        (input: { step: ChatTurnProgressStep; timestamp: string; turn: ChatTurn }) => {
+            setTimelineState(input.turn.chatId, (state) => patchTimelineProgress(state, input));
+        },
+        [setTimelineState]
+    );
+
+    const clearTurn = React.useCallback(
+        (input: { chatId: string; runId?: string }) => {
+            setTimelineState(input.chatId, (state) =>
                 clearTimelineTurn(state, {
                     runId: input.runId,
                 })
-            )
-        );
-    }, []);
+            );
+        },
+        [setTimelineState]
+    );
 
-    const optimisticallyStopTurn = React.useCallback((input: { chatId: string; runId: string }) => {
-        setTimelineStates((current) =>
-            updateTimelineState(current, input.chatId, (state) =>
+    const optimisticallyStopTurn = React.useCallback(
+        (input: { chatId: string; runId: string }) => {
+            setTimelineState(input.chatId, (state) =>
                 optimisticallyStopTimelineTurn(state, {
                     chatId: input.chatId,
                     runId: input.runId,
                     stoppedAt: new Date().toISOString(),
                 })
-            )
-        );
-    }, []);
+            );
+        },
+        [setTimelineState]
+    );
 
-    const removeOptimisticStop = React.useCallback((input: { chatId: string; runId: string }) => {
-        setTimelineStates((current) =>
-            updateTimelineState(current, input.chatId, (state) =>
+    const removeOptimisticStop = React.useCallback(
+        (input: { chatId: string; runId: string }) => {
+            setTimelineState(input.chatId, (state) =>
                 removeOptimisticStoppedTurn(state, { runId: input.runId })
-            )
-        );
-    }, []);
+            );
+        },
+        [setTimelineState]
+    );
 
     const completeTurn = React.useCallback(
         (input: { chatId: string; completedAt: string; turn: ChatTurn }) => {
-            setTimelineStates((current) =>
-                updateTimelineState(current, input.chatId, (state) =>
-                    completeTimelineTurn(state, {
-                        completedAt: input.completedAt,
-                        turn: input.turn,
-                    })
-                )
+            setTimelineState(input.chatId, (state) =>
+                completeTimelineTurn(state, {
+                    completedAt: input.completedAt,
+                    turn: input.turn,
+                })
             );
         },
-        []
+        [setTimelineState]
     );
 
     const failTurn = React.useCallback(
         (input: { chatId: string; error: string; turn: ChatTurn }) => {
-            setTimelineStates((current) =>
-                updateTimelineState(current, input.chatId, (state) =>
-                    failTimelineTurn(state, {
-                        error: input.error,
-                        turn: input.turn,
-                    })
-                )
+            setTimelineState(input.chatId, (state) =>
+                failTimelineTurn(state, {
+                    error: input.error,
+                    turn: input.turn,
+                })
             );
         },
-        []
+        [setTimelineState]
     );
 
-    const dismissFailure = React.useCallback((input: { chatId: string; responseId: string }) => {
-        setTimelineStates((current) =>
-            updateTimelineState(current, input.chatId, (state) =>
+    const dismissFailure = React.useCallback(
+        (input: { chatId: string; responseId: string }) => {
+            setTimelineState(input.chatId, (state) =>
                 dismissTimelineFailure(state, { responseId: input.responseId })
-            )
-        );
-    }, []);
+            );
+        },
+        [setTimelineState]
+    );
 
     const actions = React.useMemo<TimelineActionsValue>(
         () => ({
@@ -189,8 +250,10 @@ export function TimelineContextProvider({ children }: PropsWithChildren) {
             optimisticallyStopTurn,
             patchProgress,
             removeOptimisticStop,
+            rollbackSteerNotice,
             setLog,
             setReply,
+            showSteerNotice,
             startTurn,
             updateReply,
             updateTurnStatus,
@@ -203,8 +266,10 @@ export function TimelineContextProvider({ children }: PropsWithChildren) {
             optimisticallyStopTurn,
             patchProgress,
             removeOptimisticStop,
+            rollbackSteerNotice,
             setLog,
             setReply,
+            showSteerNotice,
             startTurn,
             updateReply,
             updateTurnStatus,

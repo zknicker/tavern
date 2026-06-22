@@ -97,11 +97,14 @@ message metadata. It forwards text into the live agent turn and returns
 `steered: true` only after Runtime accepts and records the steer. Steering does
 not create a durable user message; accepted steers are represented as response
 activity. Clients may project that activity as a visible user-style transcript
-row without rendering a separate system notice, but message totals and durable
-message search remain unchanged. Messages with attachments or model overrides
-must use the normal message send path. App clients should only offer steering
-before final reply text starts streaming; after that point an accepted engine
-steer may be too late to affect the answer.
+row without rendering a separate system notice, and may do that optimistically
+while the mutation is pending. If Runtime rejects the steer or the call fails,
+clients should remove the optimistic row and restore any local queued draft.
+Message totals and durable message search remain unchanged. Messages with
+attachments or model overrides must use the normal message send path. App
+clients should offer steering while the turn is still active. Progress,
+narration, and tool activity do not close the steering window; a completed turn
+or durable assistant reply does.
 
 ## Messages
 

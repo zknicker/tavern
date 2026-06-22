@@ -48,11 +48,11 @@ happen, and keep the durable timeline as context.
 * **Mid-turn steering.** The chat composer stays available while an agent turn
   is running. Drafts entered during an active turn are queued for the same chat
   and agent, then sent when the active response settles. A queued text-only
-  draft can be steered into the active turn before final reply text starts
-  streaming; queued drafts with attachments or a model override stay normal
-  next-turn messages because steering carries only text. Explicit stopping
-  remains a separate control. A stopped turn settles as `cancelled`; late
-  engine output from that turn is not delivered as the assistant reply.
+  draft can be steered into the active turn while that turn is still live;
+  queued drafts with attachments or a model override stay normal next-turn
+  messages because steering carries only text. Explicit stopping remains a
+  separate control. A stopped turn settles as `cancelled`; late engine output
+  from that turn is not delivered as the assistant reply.
 * **Composer context.** The composer keeps a compositional input shell with
   tool, model, attachment, queue, and submit slots. Attachments and per-chat
   model choices are Tavern controls backed by managed Hermes capabilities and
@@ -170,12 +170,13 @@ metadata.
 
 The queued draft action follows the payload:
 
-* text-only draft while a turn is active and no final reply text has streamed:
-  call Runtime steering for the active run. If Hermes accepts the steer, remove
-  the queued draft; if Hermes rejects it, keep the draft queued.
-* text-only draft after final reply text has started: keep it as a normal
-  queued draft. The steering window is closed because the engine may have
-  already decided the visible answer.
+* text-only draft while a turn is active:
+  hide the queued draft immediately, show the steered text in the chat, and
+  call Runtime steering for the active run. Assistant progress and tool activity
+  do not close this window. If Runtime rejects the steer or the call fails,
+  restore the queued draft.
+* text-only draft after the active turn settles: keep it as a normal queued
+  draft for the next turn.
 * draft with attachments or a model override while a turn is active: promote it
   to the queue head and stop the active run. After the stop settles, the draft
   sends through the normal message path so attachment staging and model
@@ -195,6 +196,8 @@ When Hermes accepts an explicit mid-turn steer, Runtime records a
 activity as a user-styled transcript row at the point it was accepted. It does
 not render a separate steering system notice. The projected steer row is not a
 durable Tavern message and does not change message counts or resend behavior.
+The app may show the projected steer row optimistically while Runtime accepts
+the steer, then remove it if Runtime rejects the call.
 
 Other engine gateway signals surface the same way — as durable activity rows
 that also patch live through `turn.progress` steps:

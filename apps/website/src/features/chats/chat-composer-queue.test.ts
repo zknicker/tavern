@@ -1,9 +1,15 @@
 import { expect, test } from 'vitest';
 import {
     type ChatComposerQueuedMessage,
+    canStartQueuedSteer,
+    hasPendingSteerAtQueueHead,
     isQueuedMessageSteerable,
     moveQueuedMessage,
     promoteQueuedMessage,
+    removeQueuedMessage,
+    removeStoredQueuedMessage,
+    reorderVisibleQueuedMessages,
+    restoreQueuedMessage,
     shouldInterruptActiveTurnForQueuedMessage,
 } from './chat-composer-queue.ts';
 import { getQueuedDragVisualIndex } from './chat-composer-queue-panel.tsx';
@@ -87,6 +93,63 @@ test('moveQueuedMessage reorders queued messages one slot at a time', () => {
     ]);
 });
 
+test('removeQueuedMessage hides a queued message immediately', () => {
+    expect(removeQueuedMessage(queue, 'queued_2').map((entry) => entry.id)).toEqual([
+        'queued_1',
+        'queued_3',
+    ]);
+});
+
+test('restoreQueuedMessage puts a failed optimistic steer back in place', () => {
+    const removed = removeQueuedMessage(queue, 'queued_2');
+    const restored = restoreQueuedMessage(removed, queue[1]!, 1);
+
+    expect(restored.map((entry) => entry.id)).toEqual(['queued_1', 'queued_2', 'queued_3']);
+    expect(restoreQueuedMessage(restored, queue[1]!, 1)).toEqual(restored);
+});
+
+test('reorderVisibleQueuedMessages keeps hidden pending steer entries stored', () => {
+    const reordered = reorderVisibleQueuedMessages(
+        queue,
+        [queue[2]!, queue[0]!],
+        new Set(['queued_2'])
+    );
+
+    expect(reordered.map((entry) => entry.id)).toEqual(['queued_3', 'queued_2', 'queued_1']);
+});
+
+test('pending steer blocks queue dispatch only while it owns the stored head', () => {
+    expect(hasPendingSteerAtQueueHead(queue, new Set(['queued_1']))).toBe(true);
+    expect(hasPendingSteerAtQueueHead(queue, new Set(['queued_2']))).toBe(false);
+    expect(hasPendingSteerAtQueueHead([], new Set(['queued_1']))).toBe(false);
+});
+
+test('pending steer blocks starting another queued steer', () => {
+    expect(canStartQueuedSteer({ pendingSteerIds: new Set(), steerPending: false })).toBe(true);
+    expect(
+        canStartQueuedSteer({ pendingSteerIds: new Set(['queued_1']), steerPending: false })
+    ).toBe(false);
+    expect(canStartQueuedSteer({ pendingSteerIds: new Set(), steerPending: true })).toBe(false);
+});
+
+test('removeStoredQueuedMessage removes an accepted steer draft from storage', () => {
+    const { localStorage, restore } = installWindowLocalStorage();
+
+    try {
+        localStorage.setItem('tavern.chat.composerQueue.v1:chat-1', JSON.stringify(queue));
+
+        removeStoredQueuedMessage('chat-1', 'queued_2');
+
+        expect(
+            JSON.parse(localStorage.getItem('tavern.chat.composerQueue.v1:chat-1') ?? '[]').map(
+                (entry: ChatComposerQueuedMessage) => entry.id
+            )
+        ).toEqual(['queued_1', 'queued_3']);
+    } finally {
+        restore();
+    }
+});
+
 test('queued drag visual index shifts displaced cards into open tiers', () => {
     expect(
         [0, 1, 2].map((index) =>
@@ -165,5 +228,51 @@ function message(id: string, content: string): ChatComposerQueuedMessage {
         content,
         createdAt: '2026-06-09T00:00:00.000Z',
         id,
+    };
+}
+
+function installWindowLocalStorage() {
+    const localStorage = createMemoryLocalStorage();
+    const hadWindow = 'window' in globalThis;
+    const previousWindow = (globalThis as { window?: unknown }).window;
+
+    Object.defineProperty(globalThis, 'window', {
+        configurable: true,
+        value: { localStorage },
+        writable: true,
+    });
+
+    return {
+        localStorage,
+        restore: () => {
+            if (hadWindow) {
+                Object.defineProperty(globalThis, 'window', {
+                    configurable: true,
+                    value: previousWindow,
+                    writable: true,
+                });
+                return;
+            }
+
+            Object.defineProperty(globalThis, 'window', {
+                configurable: true,
+                value: undefined,
+                writable: true,
+            });
+        },
+    };
+}
+
+function createMemoryLocalStorage() {
+    const values = new Map<string, string>();
+
+    return {
+        getItem: (key: string) => values.get(key) ?? null,
+        removeItem: (key: string) => {
+            values.delete(key);
+        },
+        setItem: (key: string, value: string) => {
+            values.set(key, value);
+        },
     };
 }

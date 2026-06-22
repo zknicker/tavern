@@ -116,6 +116,48 @@ test('renders live tool progress before the final reply', async ({ page }) => {
     });
 });
 
+test('steers a queued draft immediately during live tool progress', async ({ page }) => {
+    test.setTimeout(240_000);
+
+    const expectedReply = `QUEUED-STEER-${Date.now()}`;
+    const expectedProgress = 'I will inspect the workspace before running the command.';
+    const queuedSteer = `Queued steer e2e ${Date.now()}: make it 11 cities instead`;
+    const prompt = `Live tool progress qa check. Mid-turn progress qa. Run the slow QA command, then reply exactly \`${expectedReply}\`.`;
+
+    await page.goto('/dashboard/overview');
+
+    await fillComposer(page, '#home-prompt', prompt);
+    await page.getByRole('button', { name: 'Start chat' }).click();
+
+    await waitForRealChatRoute(page);
+    await expect(page.getByRole('button', { name: commandWorkGroupName }).first()).toBeVisible({
+        timeout: 30_000,
+    });
+    await expect(transcriptParagraph(page, expectedProgress)).toBeVisible({ timeout: 90_000 });
+    await expect(transcriptParagraph(page, expectedReply)).toHaveCount(0);
+
+    await fillChatComposer(page, queuedSteer);
+    await page.getByRole('button', { name: 'Queue message' }).click();
+
+    const queuedCard = page.getByRole('listitem', {
+        name: new RegExp(`Queued message 1: ${escapeRegExp(queuedSteer)}`),
+    });
+    await expect(queuedCard).toBeVisible({ timeout: 1000 });
+    await queuedCard.hover();
+
+    const steerButton = page.getByRole('button', { name: 'Steer queued message now' });
+    await expect(steerButton).toBeVisible({ timeout: 1000 });
+
+    const startedAt = Date.now();
+    await steerButton.click();
+
+    await expect(userPromptParagraph(page, queuedSteer)).toBeVisible({ timeout: 750 });
+    await expect(queuedCard).toHaveCount(0, { timeout: 750 });
+    expect(Date.now() - startedAt).toBeLessThan(1000);
+
+    await expect(transcriptParagraph(page, expectedReply)).toBeVisible({ timeout: 90_000 });
+});
+
 test('renders Rich Response specs in the final reply', async ({ page }) => {
     test.setTimeout(240_000);
 
@@ -334,6 +376,16 @@ async function enableInlineThinking(page: Page) {
     await page.addInitScript(() => {
         window.localStorage.setItem('tavern.chat.thinking-display.enabled', '1');
     });
+}
+
+async function fillChatComposer(page: Page, text: string) {
+    const composer = page.getByRole('textbox', { name: 'Chat message' });
+
+    await composer.click();
+    await page.keyboard.press(process.platform === 'darwin' ? 'Meta+A' : 'Control+A');
+    await page.keyboard.press('Backspace');
+    await page.keyboard.insertText(text);
+    await expect(composer).toContainText(text, { timeout: 5000 });
 }
 
 async function expectActiveTurnIndicator(page: Page) {

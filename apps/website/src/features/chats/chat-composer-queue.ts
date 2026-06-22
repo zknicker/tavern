@@ -38,7 +38,11 @@ export function useChatComposerQueue(chatId: string) {
     );
 
     const remove = React.useCallback((id: string) => {
-        setQueue((current) => current.filter((entry) => entry.id !== id));
+        setQueue((current) => removeQueuedMessage(current, id));
+    }, []);
+
+    const restore = React.useCallback((entry: ChatComposerQueuedMessage, index: number) => {
+        setQueue((current) => restoreQueuedMessage(current, entry, index));
     }, []);
 
     const promote = React.useCallback((id: string) => {
@@ -60,7 +64,32 @@ export function useChatComposerQueue(chatId: string) {
         queue,
         reorder,
         remove,
+        restore,
     };
+}
+
+export function removeQueuedMessage(
+    queue: readonly ChatComposerQueuedMessage[],
+    id: string
+): ChatComposerQueuedMessage[] {
+    return queue.filter((entry) => entry.id !== id);
+}
+
+export function removeStoredQueuedMessage(chatId: string, id: string) {
+    saveQueue(chatId, removeQueuedMessage(loadQueue(chatId), id));
+}
+
+export function restoreQueuedMessage(
+    queue: readonly ChatComposerQueuedMessage[],
+    entry: ChatComposerQueuedMessage,
+    index: number
+): ChatComposerQueuedMessage[] {
+    if (queue.some((queued) => queued.id === entry.id)) {
+        return [...queue];
+    }
+
+    const boundedIndex = Math.max(0, Math.min(index, queue.length));
+    return [...queue.slice(0, boundedIndex), entry, ...queue.slice(boundedIndex)];
 }
 
 export function promoteQueuedMessage(
@@ -110,6 +139,51 @@ export function moveQueuedMessage(
     next[index] = target;
     next[nextIndex] = entry;
     return next;
+}
+
+export function reorderVisibleQueuedMessages(
+    currentQueue: readonly ChatComposerQueuedMessage[],
+    nextVisibleQueue: readonly ChatComposerQueuedMessage[],
+    hiddenIds: ReadonlySet<string>
+): ChatComposerQueuedMessage[] {
+    if (hiddenIds.size === 0) {
+        return [...nextVisibleQueue];
+    }
+
+    const nextVisibleEntries = nextVisibleQueue.filter((entry) => !hiddenIds.has(entry.id));
+    const nextQueue: ChatComposerQueuedMessage[] = [];
+    let nextVisibleIndex = 0;
+
+    for (const entry of currentQueue) {
+        if (hiddenIds.has(entry.id)) {
+            nextQueue.push(entry);
+            continue;
+        }
+
+        const nextVisibleEntry = nextVisibleEntries[nextVisibleIndex];
+        nextVisibleIndex += 1;
+
+        if (nextVisibleEntry) {
+            nextQueue.push(nextVisibleEntry);
+        }
+    }
+
+    return [...nextQueue, ...nextVisibleEntries.slice(nextVisibleIndex)];
+}
+
+export function hasPendingSteerAtQueueHead(
+    queue: readonly ChatComposerQueuedMessage[],
+    pendingSteerIds: ReadonlySet<string>
+) {
+    const head = queue[0];
+    return Boolean(head && pendingSteerIds.has(head.id));
+}
+
+export function canStartQueuedSteer(input: {
+    pendingSteerIds: ReadonlySet<string>;
+    steerPending: boolean;
+}) {
+    return !input.steerPending && input.pendingSteerIds.size === 0;
 }
 
 export function isQueuedMessageSteerable(entry: ChatComposerQueuedMessage) {
