@@ -2,6 +2,21 @@
 
 All notable changes to this project will be documented in this file.
 
+## v1.4.27 - 2026-06-21
+
+Runtime floor raised to 1.4.27 for managed agent progress guidance.
+
+App changes:
+
+- Requires Runtime 1.4.27 so upgraded apps use managed agent instructions that
+  preserve visible progress guidance.
+
+Runtime changes:
+
+- Keeps generated visible progress, memory, Vault, and skill-maintenance
+  guidance ahead of large Rich Response instructions so managed agents still
+  receive preamble and update guidance after Hermes context-file truncation.
+
 ## v1.4.26 - 2026-06-21
 
 Runtime floor raised to 1.4.26 for managed agent guidance and chat/runtime
