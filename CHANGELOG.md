@@ -2,6 +2,25 @@
 
 All notable changes to this project will be documented in this file.
 
+## v1.4.26 - 2026-06-21
+
+Runtime floor raised to 1.4.26 for managed agent guidance and chat/runtime
+presentation correctness.
+
+App changes:
+
+- Requires Runtime 1.4.26 so upgraded apps use the latest managed agent
+  instructions and chat presentation fixes.
+- Stabilized chat scroll compensation and full-size Rich Response chart
+  rendering.
+
+Runtime changes:
+
+- Clarifies generated managed agent guidance for skill add, install, and update
+  work so agents inspect and patch available skills before creating new ones.
+- Shows terminal command text in tool rows and suppresses wrapper text around
+  scheduled chat deliveries.
+
 ## v1.4.25 - 2026-06-21
 
 Runtime floor raised to 1.4.25 for json-render Rich Response correctness.
