@@ -133,7 +133,9 @@ export function ChatTranscript({
             {transcriptRows.map((row) =>
                 row.kind === 'hiddenCount' && hiddenCount === 0 ? null : (
                     <TranscriptRenderRowView
-                        activePresenceVerb={row.kind === 'presence' ? activePresenceVerb : null}
+                        activePresenceVerb={
+                            row.kind === 'entry' && row.showPresence ? activePresenceVerb : null
+                        }
                         activeReply={
                             transcriptRenderRowUsesActiveReply(row, activeReply)
                                 ? activeReply

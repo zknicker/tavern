@@ -11,6 +11,7 @@ import {
     getEstimatedTranscriptBottomOffset,
     getEstimatedTranscriptTailVirtualItems,
     shouldLoadPreviousVirtualizedChatPage,
+    shouldReconcileVirtualizedTranscriptEnd,
 } from './virtualized-chat-transcript.tsx';
 
 test('virtualized chat loads previous rows only when the real viewport is near top', () => {
@@ -151,6 +152,18 @@ test('virtualized chat respects explicit scroll behavior requests', () => {
     ).toBe('smooth');
 });
 
+test('virtualized chat reconciles the measured end while following', () => {
+    expect(
+        shouldReconcileVirtualizedTranscriptEnd({ distanceFromEnd: 64, mode: 'following' })
+    ).toBe(true);
+    expect(shouldReconcileVirtualizedTranscriptEnd({ distanceFromEnd: 0, mode: 'following' })).toBe(
+        false
+    );
+    expect(shouldReconcileVirtualizedTranscriptEnd({ distanceFromEnd: 64, mode: 'free' })).toBe(
+        false
+    );
+});
+
 test('virtualized chat estimates blank thinking presence without fake bottom space', () => {
     const entries = buildTranscriptEntries({
         activeReply: {
@@ -183,13 +196,14 @@ test('virtualized chat does not reserve reply space for hidden thinking progress
     });
     const rows = buildTranscriptRenderRows(entries, 0);
 
-    const presenceRow = rows.find((row) => row.kind === 'presence');
+    const agentRow = rows.find((row) => row.kind === 'entry');
 
-    expect(rows.map((row) => row.kind)).toEqual(['dayDivider', 'presence']);
-    expect(getEstimatedTranscriptRowSize(presenceRow)).toBe(32);
+    expect(rows.map((row) => row.kind)).toEqual(['dayDivider', 'entry']);
+    expect(agentRow?.kind === 'entry' ? agentRow.showPresence : false).toBe(true);
+    expect(getEstimatedTranscriptRowSize(agentRow)).toBe(56);
 });
 
-test('virtualized chat keeps the presence row stable when first visible reply appears', () => {
+test('virtualized chat keeps the agent row stable when first visible reply appears', () => {
     const thinkingReply = {
         agentId: 'agent-1',
         isThinking: true,
@@ -220,9 +234,14 @@ test('virtualized chat keeps the presence row stable when first visible reply ap
         0
     );
 
-    expect(thinkingRows.map((row) => row.kind)).toEqual(['dayDivider', 'presence']);
-    expect(streamingRows.map((row) => row.kind)).toEqual(['dayDivider', 'entry', 'presence']);
-    expect(thinkingRows.at(-1)?.id).toBe(streamingRows.at(-1)?.id);
+    const thinkingAgentRow = thinkingRows.at(-1);
+    const streamingAgentRow = streamingRows.at(-1);
+
+    expect(thinkingRows.map((row) => row.kind)).toEqual(['dayDivider', 'entry']);
+    expect(streamingRows.map((row) => row.kind)).toEqual(['dayDivider', 'entry']);
+    expect(thinkingAgentRow?.id).toBe(streamingAgentRow?.id);
+    expect(thinkingAgentRow?.kind === 'entry' ? thinkingAgentRow.showPresence : false).toBe(true);
+    expect(streamingAgentRow?.kind === 'entry' ? streamingAgentRow.showPresence : false).toBe(true);
 });
 
 type ChatRow = NonNullable<ChatLogOutput>['rows'][number];

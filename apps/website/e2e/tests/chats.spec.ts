@@ -109,6 +109,50 @@ test('renders durable response activity kinds after reload', async ({ page }) =>
     await expect(page.getByRole('button', { name: /Tool diagnostic/u })).toBeVisible();
 });
 
+test('keeps Rich Response table generation pinned to the latest reply', async ({ page }) => {
+    test.setTimeout(90_000);
+    await enableScrollDebug(page);
+
+    await startChat(page, {
+        expectedReply: /^Here is the table\.\s+QA_RICH_RESPONSE_TABLE_SCROLL_FIRST_OK$/u,
+        prompt: 'Rich response progress table scroll qa. Read `QA_KICKOFF_TASK.md`, render a tall table, and reply exactly `QA_RICH_RESPONSE_TABLE_SCROLL_FIRST_OK`.',
+    });
+    await expect(page.getByText('Investigating variance').first()).toBeVisible();
+    await expect
+        .poll(() => chatTranscriptBottomDistance(page), { timeout: 10_000 })
+        .toBeLessThanOrEqual(4);
+
+    const scrollSamples = await collectScrollSamplesDuring(page, async () => {
+        await sendFollowUp(page, {
+            expectedReply: /^Here is the table\.\s+QA_RICH_RESPONSE_TABLE_SCROLL_SECOND_OK$/u,
+            prompt: 'Second rich response progress table scroll qa. Read `QA_KICKOFF_TASK.md`, render a tall table, and reply exactly `QA_RICH_RESPONSE_TABLE_SCROLL_SECOND_OK`.',
+        });
+    });
+
+    expect(getIncreasingScrollStepCount(scrollSamples)).toBeGreaterThanOrEqual(3);
+    const largestStep = getLargestScrollStep(scrollSamples);
+
+    if (largestStep > 180) {
+        throw new Error(
+            `Expected smooth follow scroll step <= 180px, received ${largestStep}px. ${JSON.stringify(
+                {
+                    debugTail: await getScrollDebugTail(page),
+                    scrollJump: getLargestScrollStepWindow(scrollSamples),
+                    sampleCount: scrollSamples.length,
+                }
+            )}`
+        );
+    }
+
+    await expect
+        .poll(() => chatTranscriptBottomDistance(page), { timeout: 10_000 })
+        .toBeLessThanOrEqual(4);
+    await expect
+        .poll(() => latestAgentEyesTailClearance(page), { timeout: 10_000 })
+        .toBeGreaterThanOrEqual(8);
+    await expect(page.getByRole('button', { name: 'Jump to latest message' })).toHaveCount(0);
+});
+
 function runtimeToken() {
     return process.env.TAVERN_RUNTIME_TOKEN?.trim() || undefined;
 }
@@ -262,7 +306,7 @@ async function startChat(
         expectedReply,
         prompt,
     }: {
-        expectedReply: string;
+        expectedReply: string | RegExp;
         prompt: string;
     }
 ) {
@@ -285,7 +329,7 @@ async function sendFollowUp(
         expectedReply,
         prompt,
     }: {
-        expectedReply: string;
+        expectedReply: string | RegExp;
         prompt: string;
     }
 ) {
@@ -388,6 +432,16 @@ async function enableChatTiming(page: Page) {
     });
 }
 
+async function enableScrollDebug(page: Page) {
+    await page.addInitScript(() => {
+        (
+            window as typeof window & {
+                __TAVERN_SCROLL_DEBUG__?: unknown[];
+            }
+        ).__TAVERN_SCROLL_DEBUG__ = [];
+    });
+}
+
 async function enableInlineThinking(page: Page) {
     await page.addInitScript(() => {
         window.localStorage.setItem('tavern.chat.thinking-display.enabled', '1');
@@ -433,6 +487,152 @@ async function waitForRealChatRoute(page: Page) {
     }
 
     return chatId;
+}
+
+async function chatTranscriptBottomDistance(page: Page) {
+    return page.evaluate(() => {
+        const viewport = Array.from(document.querySelectorAll('main div')).find((element) => {
+            if (!(element instanceof HTMLElement)) {
+                return false;
+            }
+
+            const style = window.getComputedStyle(element);
+            return style.overflowY === 'auto' && element.scrollHeight > element.clientHeight;
+        });
+
+        if (!(viewport instanceof HTMLElement)) {
+            throw new Error('Chat scroll viewport not found.');
+        }
+
+        return viewport.scrollHeight - viewport.scrollTop - viewport.clientHeight;
+    });
+}
+
+async function latestAgentEyesTailClearance(page: Page) {
+    return page.evaluate(() => {
+        const viewport = Array.from(document.querySelectorAll('main div')).find((element) => {
+            if (!(element instanceof HTMLElement)) {
+                return false;
+            }
+
+            const style = window.getComputedStyle(element);
+            return style.overflowY === 'auto' && element.scrollHeight > element.clientHeight;
+        });
+        const agentEyes = Array.from(
+            document.querySelectorAll('output[aria-label^="Agent "]')
+        ).filter((element): element is HTMLElement => element instanceof HTMLElement);
+        const latestAgentEyes = agentEyes.at(-1);
+
+        if (!(viewport instanceof HTMLElement && latestAgentEyes)) {
+            throw new Error('Chat presence geometry not found.');
+        }
+
+        return (
+            viewport.getBoundingClientRect().bottom - latestAgentEyes.getBoundingClientRect().bottom
+        );
+    });
+}
+
+async function collectScrollSamplesDuring(page: Page, action: () => Promise<void>) {
+    const handle = await page.evaluateHandle(() => {
+        const samples: number[] = [];
+        let frameId = 0;
+        const readScrollTop = () => {
+            const viewport = Array.from(document.querySelectorAll('main div')).find((element) => {
+                if (!(element instanceof HTMLElement)) {
+                    return false;
+                }
+
+                const style = window.getComputedStyle(element);
+                return style.overflowY === 'auto' && element.scrollHeight > element.clientHeight;
+            });
+
+            if (viewport instanceof HTMLElement) {
+                samples.push(viewport.scrollTop);
+            }
+
+            frameId = window.requestAnimationFrame(readScrollTop);
+        };
+
+        frameId = window.requestAnimationFrame(readScrollTop);
+
+        return {
+            read: () => samples,
+            stop: () => window.cancelAnimationFrame(frameId),
+        };
+    });
+
+    try {
+        await action();
+        return await handle.evaluate((collector) => {
+            collector.stop();
+            return collector.read();
+        });
+    } finally {
+        await handle.dispose();
+    }
+}
+
+function getIncreasingScrollStepCount(samples: number[]) {
+    let steps = 0;
+    let previous = samples[0] ?? 0;
+
+    for (const sample of samples.slice(1)) {
+        if (sample > previous + 0.5) {
+            steps += 1;
+        }
+
+        previous = sample;
+    }
+
+    return steps;
+}
+
+function getLargestScrollStep(samples: number[]) {
+    let largestStep = 0;
+    let previous = samples[0] ?? 0;
+
+    for (const sample of samples.slice(1)) {
+        largestStep = Math.max(largestStep, sample - previous);
+        previous = sample;
+    }
+
+    return largestStep;
+}
+
+function getLargestScrollStepWindow(samples: number[]) {
+    let largestStep = 0;
+    let largestIndex = 0;
+    let previous = samples[0] ?? 0;
+
+    for (const [offset, sample] of samples.slice(1).entries()) {
+        const step = sample - previous;
+
+        if (step > largestStep) {
+            largestStep = step;
+            largestIndex = offset + 1;
+        }
+
+        previous = sample;
+    }
+
+    return {
+        largestIndex,
+        largestStep,
+        samples: samples.slice(Math.max(largestIndex - 6, 0), largestIndex + 7),
+    };
+}
+
+async function getScrollDebugTail(page: Page) {
+    return page.evaluate(() => {
+        const debug = (
+            window as typeof window & {
+                __TAVERN_SCROLL_DEBUG__?: unknown[];
+            }
+        ).__TAVERN_SCROLL_DEBUG__;
+
+        return debug?.slice(-24) ?? [];
+    });
 }
 
 async function getAgentHoverMetadata(page: Page) {

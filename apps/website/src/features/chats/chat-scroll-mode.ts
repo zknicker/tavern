@@ -10,7 +10,7 @@ export type ChatScrollEvent =
     | { type: 'anchorStarted' }
     | { type: 'contentResized' }
     | { type: 'followRequested' }
-    | { type: 'scrolled'; isAtBottom: boolean }
+    | { type: 'scrolled'; isAtBottom: boolean; userInitiated: boolean }
     | { type: 'userScrolled'; isAtBottom: boolean };
 
 export type ChatScrollAction = 'none' | 'pinBottom' | 'scrollToBottom';
@@ -46,6 +46,10 @@ export function transitionChatScrollMode(
                 return { action: 'none', mode };
             }
 
+            if (mode === 'following' && !event.isAtBottom && !event.userInitiated) {
+                return { action: 'pinBottom', mode: 'following' };
+            }
+
             return { action: 'none', mode: event.isAtBottom ? 'following' : 'free' };
         case 'userScrolled':
             return { action: 'none', mode: event.isAtBottom ? 'following' : 'free' };
@@ -59,14 +63,24 @@ export function shouldAnchorVirtualizerToEnd(mode: ChatScrollMode) {
 }
 
 const suppressVirtualizerSizeAdjustment = () => false;
+const followVirtualizerSizeAdjustment = () => true;
 
 export function getVirtualizerSizeAdjustmentPredicate(mode: ChatScrollMode) {
-    return mode === 'anchored' ? suppressVirtualizerSizeAdjustment : undefined;
+    if (mode === 'anchored') {
+        return suppressVirtualizerSizeAdjustment;
+    }
+
+    if (mode === 'following') {
+        return followVirtualizerSizeAdjustment;
+    }
+
+    return undefined;
 }
 
-// "Near bottom" tolerance: small enough that reading history never follows,
-// large enough that sub-pixel rounding and momentum overshoot still count.
-const bottomTolerancePx = 72;
+// "Near bottom" tolerance: smaller than the virtualized transcript end inset
+// so a clipped tail row never counts as bottom, but still roomy enough for
+// sub-pixel rounding and momentum overshoot.
+const bottomTolerancePx = 48;
 
 export function isNearBottom(metrics: {
     clientHeight: number;

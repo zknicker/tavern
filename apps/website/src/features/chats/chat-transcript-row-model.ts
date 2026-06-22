@@ -10,12 +10,7 @@ export type TranscriptRenderRow =
           followsRuntimeNotice: boolean;
           id: string;
           kind: 'entry';
-          turnStartedAt: string | null;
-      }
-    | {
-          entry: Extract<TranscriptEntry, { kind: 'turn' }>;
-          id: string;
-          kind: 'presence';
+          showPresence: boolean;
           turnStartedAt: string | null;
       };
 
@@ -46,25 +41,18 @@ export function buildTranscriptRenderRows(entries: TranscriptEntry[], hiddenCoun
             });
         }
 
-        if (shouldRenderTranscriptEntry(entry)) {
+        const showPresence =
+            entry.kind === 'turn' &&
+            entry.participant === 'agent' &&
+            entry.id === latestAgentEntryId;
+
+        if (shouldRenderTranscriptEntry(entry) || showPresence) {
             rows.push({
                 entry,
                 followsRuntimeNotice: isRuntimeNoticeEntry(previousEntry),
                 id: entry.id,
                 kind: 'entry',
-                turnStartedAt,
-            });
-        }
-
-        if (
-            entry.kind === 'turn' &&
-            entry.participant === 'agent' &&
-            entry.id === latestAgentEntryId
-        ) {
-            rows.push({
-                entry,
-                id: `presence:${entry.id}`,
-                kind: 'presence',
+                showPresence,
                 turnStartedAt,
             });
         }
@@ -96,10 +84,6 @@ export function getEstimatedTranscriptRowSize(row: TranscriptRenderRow | undefin
 
     if (row.kind === 'dayDivider') {
         return 36;
-    }
-
-    if (row.kind === 'presence') {
-        return 32;
     }
 
     if (row.entry.kind === 'system') {

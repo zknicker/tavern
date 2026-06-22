@@ -10,7 +10,7 @@ import type {
     TranscriptRow,
 } from './chat-transcript-model.ts';
 import type { TranscriptRenderRow } from './chat-transcript-row-model.ts';
-import { AgentPresenceTranscriptRow, TranscriptEntryView } from './chat-transcript-turn.tsx';
+import { TranscriptEntryView } from './chat-transcript-turn.tsx';
 
 interface TranscriptRenderRowViewProps {
     activePresenceVerb?: string | null;
@@ -51,30 +51,20 @@ export const TranscriptRenderRowView = React.memo(
             return <DayDivider className="mx-3 mt-3 mb-1" label={row.label} />;
         }
 
-        if (row.kind === 'presence') {
-            return (
-                <AgentPresenceTranscriptRow
-                    activePresenceVerb={activePresenceVerb}
-                    activeReply={activeReply}
-                    agentPresenceColor={agentPresenceColor}
-                    conversationLayout={conversationLayout}
-                    entry={row.entry}
-                    failedTurn={failedTurn}
-                    presenceRows={presenceRows}
-                    turnStartedAt={row.turnStartedAt}
-                />
-            );
-        }
-
         return (
             <TranscriptEntryView
+                activePresenceVerb={row.showPresence ? activePresenceVerb : null}
                 activeReply={activeReply}
+                agentPresenceColor={agentPresenceColor}
                 chatId={chatId}
                 conversationLayout={conversationLayout}
                 currentSessionKey={currentSessionKey}
                 defaultOpenWorkGroups={defaultOpenWorkGroups}
                 entry={row.entry}
+                failedTurn={failedTurn}
                 followsRuntimeNotice={row.followsRuntimeNotice}
+                presenceRows={presenceRows}
+                showPresence={row.showPresence}
                 turnStartedAt={row.turnStartedAt}
             />
         );
@@ -108,7 +98,7 @@ function arePresencePropsEqual(
     previous: TranscriptRenderRowViewProps,
     next: TranscriptRenderRowViewProps
 ) {
-    if (!(previous.row.kind === 'presence' || next.row.kind === 'presence')) {
+    if (!(rowShowsPresence(previous.row) || rowShowsPresence(next.row))) {
         return true;
     }
 
@@ -139,20 +129,16 @@ function areRenderRowsEqual(
         );
     }
 
-    if (previous.kind === 'presence' || next.kind === 'presence') {
-        return (
-            previous.kind === 'presence' &&
-            next.kind === 'presence' &&
-            previous.turnStartedAt === next.turnStartedAt &&
-            areEntriesEqual(previous.entry, next.entry)
-        );
-    }
-
     return (
         previous.followsRuntimeNotice === next.followsRuntimeNotice &&
+        previous.showPresence === next.showPresence &&
         previous.turnStartedAt === next.turnStartedAt &&
         areEntriesEqual(previous.entry, next.entry)
     );
+}
+
+function rowShowsPresence(row: TranscriptRenderRow) {
+    return row.kind === 'entry' && row.showPresence;
 }
 
 function areEntriesEqual(previous: TranscriptEntry, next: TranscriptEntry) {

@@ -69,7 +69,11 @@ describe('transitionChatScrollMode', () => {
 
     test('scroll events from anchor writes do not cancel the anchor', () => {
         expect(
-            transitionChatScrollMode('anchored', { isAtBottom: false, type: 'scrolled' })
+            transitionChatScrollMode('anchored', {
+                isAtBottom: false,
+                type: 'scrolled',
+                userInitiated: false,
+            })
         ).toEqual({ action: 'none', mode: 'anchored' });
     });
 
@@ -82,11 +86,44 @@ describe('transitionChatScrollMode', () => {
         ).toEqual({ action: 'none', mode: 'following' });
     });
 
-    test('scrolling tracks following versus free by bottom proximity', () => {
+    test('passive scroll drift while following re-pins bottom instead of leaving follow mode', () => {
         expect(
-            transitionChatScrollMode('following', { isAtBottom: false, type: 'scrolled' })
+            transitionChatScrollMode('following', {
+                isAtBottom: false,
+                type: 'scrolled',
+                userInitiated: false,
+            })
+        ).toEqual({ action: 'pinBottom', mode: 'following' });
+    });
+
+    test('user-initiated scrolling tracks following versus free by bottom proximity', () => {
+        expect(
+            transitionChatScrollMode('following', {
+                isAtBottom: false,
+                type: 'scrolled',
+                userInitiated: true,
+            })
         ).toEqual({ action: 'none', mode: 'free' });
-        expect(transitionChatScrollMode('free', { isAtBottom: true, type: 'scrolled' })).toEqual({
+        expect(
+            transitionChatScrollMode('free', {
+                isAtBottom: true,
+                type: 'scrolled',
+                userInitiated: true,
+            })
+        ).toEqual({
+            action: 'none',
+            mode: 'following',
+        });
+    });
+
+    test('passive scroll to bottom resumes following from free mode', () => {
+        expect(
+            transitionChatScrollMode('free', {
+                isAtBottom: true,
+                type: 'scrolled',
+                userInitiated: false,
+            })
+        ).toEqual({
             action: 'none',
             mode: 'following',
         });
@@ -112,17 +149,17 @@ describe('virtualizer ownership helpers', () => {
         expect(shouldAnchorVirtualizerToEnd('anchored')).toBe(false);
     });
 
-    test('TanStack size-change adjustment uses the library default except during drawer anchoring', () => {
-        expect(getVirtualizerSizeAdjustmentPredicate('following')).toBeUndefined();
+    test('TanStack size-change adjustment keeps tail row growth pinned while following', () => {
+        expect(getVirtualizerSizeAdjustmentPredicate('following')?.()).toBe(true);
         expect(getVirtualizerSizeAdjustmentPredicate('free')).toBeUndefined();
         expect(getVirtualizerSizeAdjustmentPredicate('anchored')?.()).toBe(false);
     });
 });
 
 describe('isNearBottom', () => {
-    test('applies the 72px tolerance', () => {
+    test('applies the near-bottom tolerance', () => {
         expect(isNearBottom({ clientHeight: 600, scrollHeight: 1000, scrollTop: 400 })).toBe(true);
-        expect(isNearBottom({ clientHeight: 600, scrollHeight: 1000, scrollTop: 328 })).toBe(true);
-        expect(isNearBottom({ clientHeight: 600, scrollHeight: 1000, scrollTop: 327 })).toBe(false);
+        expect(isNearBottom({ clientHeight: 600, scrollHeight: 1000, scrollTop: 352 })).toBe(true);
+        expect(isNearBottom({ clientHeight: 600, scrollHeight: 1000, scrollTop: 351 })).toBe(false);
     });
 });

@@ -65,6 +65,7 @@ export function ChatDetailFrame({
         followContentResizes: !enableVirtualization,
         followKey,
         initialScrollKey: enableVirtualization ? null : initialScrollKey,
+        pinPassiveScrollDrift: !enableVirtualization,
     });
     // The scroll controller owns its own viewport listeners; this handler only
     // drives the non-virtualized previous-page fetch.

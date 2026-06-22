@@ -73,21 +73,31 @@ const reducedPresenceLabelTransition = { duration: 0.08 } satisfies Transition;
 
 export function TranscriptEntryView({
     activeReply,
+    activePresenceVerb = null,
+    agentPresenceColor = null,
     chatId,
     conversationLayout,
     currentSessionKey,
     defaultOpenWorkGroups = false,
     entry,
+    failedTurn = null,
     followsRuntimeNotice,
+    presenceRows = [],
+    showPresence = false,
     turnStartedAt,
 }: {
     activeReply: ChatActiveReply | null;
+    activePresenceVerb?: string | null;
+    agentPresenceColor?: string | null;
     chatId?: string;
     conversationLayout: ConversationMessageLayout;
     currentSessionKey?: string | null;
     defaultOpenWorkGroups?: boolean;
     entry: TranscriptEntry;
+    failedTurn?: ChatTurnFailure | null;
     followsRuntimeNotice?: boolean;
+    presenceRows?: TranscriptRow[];
+    showPresence?: boolean;
     turnStartedAt?: string | null;
 }) {
     if (entry.kind === 'system') {
@@ -124,23 +134,27 @@ export function TranscriptEntryView({
 
     return (
         <AgentTurn
+            activePresenceVerb={activePresenceVerb}
             activeReply={activeReply}
+            agentPresenceColor={agentPresenceColor}
             chatId={chatId}
             currentSessionKey={currentSessionKey}
             defaultOpenWorkGroups={defaultOpenWorkGroups}
             entry={entry}
+            failedTurn={failedTurn}
             followsRuntimeNotice={Boolean(followsRuntimeNotice)}
             layout={conversationLayout}
+            presenceRows={presenceRows}
+            showPresence={showPresence}
             turnStartedAt={turnStartedAt}
         />
     );
 }
 
-export function AgentPresenceTranscriptRow({
+function AgentPresenceBlock({
     activeReply,
     activePresenceVerb,
     agentPresenceColor,
-    conversationLayout,
     entry,
     failedTurn,
     presenceRows,
@@ -149,7 +163,6 @@ export function AgentPresenceTranscriptRow({
     activeReply: ChatActiveReply | null;
     activePresenceVerb?: string | null;
     agentPresenceColor: string | null;
-    conversationLayout: ConversationMessageLayout;
     entry: Extract<TranscriptEntry, { kind: 'turn' }>;
     failedTurn: ChatTurnFailure | null;
     presenceRows: TranscriptRow[];
@@ -162,8 +175,6 @@ export function AgentPresenceTranscriptRow({
     const presenceActiveReply = activeRunStopped ? null : activeReply;
     const turnActive = isActiveTurn(items, activeReply, lastMessage);
     const activityItems = items.filter(isActivityItem);
-    const displayName = actorProfile?.name ?? getTurnFallbackName(entry) ?? 'Agent';
-    const presenceOnlyTurn = items.every((item) => item.kind === 'activeStatus');
     // While live, anchor the active timer to the turn start so it does
     // not reset when the first tool activity lands. Completed turns keep the
     // eyes but no timing text.
@@ -178,7 +189,7 @@ export function AgentPresenceTranscriptRow({
               verb: activePresenceVerb ?? getActivePresenceVerb(activeReply?.runId ?? entry.id),
           })
         : null;
-    const presence = (
+    return (
         <AgentPresenceRow
             label={presenceTimingLabel}
             presence={
@@ -193,21 +204,6 @@ export function AgentPresenceTranscriptRow({
             }
         />
     );
-
-    if (conversationLayout.showAgentIdentity) {
-        return (
-            <div className={cn(rowClassName, presenceOnlyTurn ? newTurnGapClassName : null)}>
-                {presenceOnlyTurn ? (
-                    <div className="mb-1.5 min-w-0 truncate font-medium text-[0.8125rem] text-muted-foreground/80 leading-none">
-                        {displayName}
-                    </div>
-                ) : null}
-                {presence}
-            </div>
-        );
-    }
-
-    return <div className={rowClassName}>{presence}</div>;
 }
 
 function UserTurn({
@@ -263,21 +259,31 @@ function UserTurn({
 
 function AgentTurn({
     activeReply,
+    activePresenceVerb,
+    agentPresenceColor,
     chatId,
     currentSessionKey,
     defaultOpenWorkGroups,
     entry,
+    failedTurn,
     followsRuntimeNotice,
     layout,
+    presenceRows,
+    showPresence,
     turnStartedAt,
 }: {
     activeReply: ChatActiveReply | null;
+    activePresenceVerb: string | null;
+    agentPresenceColor: string | null;
     chatId?: string;
     currentSessionKey?: string | null;
     defaultOpenWorkGroups: boolean;
     entry: Extract<TranscriptEntry, { kind: 'turn' }>;
+    failedTurn: ChatTurnFailure | null;
     followsRuntimeNotice: boolean;
     layout: ConversationMessageLayout;
+    presenceRows: TranscriptRow[];
+    showPresence: boolean;
     turnStartedAt?: string | null;
 }) {
     const actorProfile = useActorProfile(entry.actor);
@@ -321,6 +327,17 @@ function AgentTurn({
                                     turnStopped={turnStopped}
                                 />
                             ))}
+                            {showPresence ? (
+                                <AgentPresenceBlock
+                                    activePresenceVerb={activePresenceVerb}
+                                    activeReply={activeReply}
+                                    agentPresenceColor={agentPresenceColor}
+                                    entry={entry}
+                                    failedTurn={failedTurn}
+                                    presenceRows={presenceRows}
+                                    turnStartedAt={turnStartedAt}
+                                />
+                            ) : null}
                         </div>
                     </div>
                 </div>

@@ -1,15 +1,15 @@
 # Chat Scroll Controller (Plan A)
 
-Status: implemented (`chat-scroll-mode.ts` + `use-chat-scroll-controller.ts`).
+Status: implemented (`chat-scroll-mode.ts` + `use-chat-scroll-controller.ts` +
+`chat-scroll-animation.ts`).
 Consolidates app-owned chat scroll writes into one controller so the recurring
 animation-hitch bug class becomes structurally impossible. Virtualized
 transcripts let TanStack Virtual own item measurement compensation, prepend
 anchoring, pinned-end anchoring, and follow-on-append. Notes from the
 implementation: the controller attaches its own viewport listeners (scroll,
 wheel, touchmove, transitionend) instead of exposing `handleScroll`, so no
-consumer can forget one; the 12-frame initial scroll loop was deleted —
-initial `following` mode plus content ResizeObserver re-pins settle the first
-render; the manual 120Hz feel-test below remains the final gate.
+consumer can forget one; the 12-frame initial scroll loop was deleted; the
+manual 120Hz feel-test below remains the final gate.
 
 ## Problem
 
@@ -31,18 +31,25 @@ instead of removing the race.
 
 ## Design
 
-One controller owns app-issued `scrollTop` writes. TanStack Virtual owns
-virtualized measurement and range adjustments. Explicit modes:
+One controller owns user intent and non-virtualized app-issued `scrollTop`
+writes. TanStack Virtual owns virtualized measurement, range adjustments, and
+passive follow reconciliation in the detailed transcript. Explicit modes:
 
 | Mode | Entered when | Who may write scrollTop |
 | --- | --- | --- |
-| `following` | near bottom (72px tolerance); also the initial mode | controller pins bottom on every content resize |
+| `following` | near bottom (48px tolerance); also the initial mode | controller pins non-virtual content resizes; virtualized transcript reconciles measured end |
 | `anchored` | pointer-down/keydown on a disclosure trigger | controller pins the trigger's viewport Y each frame |
-| `free` | user scrolls up | nobody from Tavern — TanStack Virtual may apply its default compensation for items above the viewport |
+| `free` | user-initiated scrolls move away from bottom | nobody from Tavern — TanStack Virtual may apply its default compensation for items above the viewport |
 
-`anchored` exits on a bubbling `transitionend` (`propertyName === 'height'`)
-reaching the viewport, +1 frame, with a ~600ms time fallback for reduced
-motion. User wheel/touch input during an anchor cancels it — user intent wins.
+`following` treats passive scroll drift as layout/measurement drift and re-pins
+the bottom instead of leaving follow mode. In virtualized detailed chats, the
+controller tracks that mode but does not perform the passive drift write; the
+virtualizer does, so TanStack remains the only passive follow writer for
+measured rows. Wheel, touch, scrollbar, and keyboard scroll intent is
+short-lived and applies to the next scroll event. `anchored` exits on a
+bubbling `transitionend` (`propertyName === 'height'`) reaching the viewport,
++1 frame, with a ~600ms time fallback for reduced motion. User scroll input
+during an anchor cancels it — user intent wins.
 
 Two files:
 
@@ -55,11 +62,24 @@ Two files:
    ResizeObserver, scroll + transitionend listeners) exposing
    `{ isAtBottom, scrollToBottom, beginAnchor }` through a React context so
    deep components reach it without window events.
+3. `chat-scroll-animation.ts` — shared DOM-side follow animation for controller
+   and virtualizer writes. TanStack calls still use `behavior: 'auto'`; the DOM
+   animation starts its clock on the first animation frame and caps per-frame
+   catch-up so a delayed table render cannot turn into one visible jump.
 
-Virtualized transcript rule: leave TanStack Virtual's
-`shouldAdjustScrollPositionOnItemSizeChange` undefined during normal scrolling
-so the library keeps its backward-scroll guard. Set a suppressing predicate
-only while Tavern disclosure anchoring is active.
+Virtualized transcript rule: while `following`, pass TanStack Virtual a size
+adjustment predicate that accepts row growth and shrinkage, including late
+growth inside the last row. This keeps active presence and Rich Response tail
+content pinned after the row was already rendered. While `free`, leave the
+predicate undefined so the library keeps its backward-scroll guard. While
+`anchored`, set a suppressing predicate so disclosure anchoring owns the
+scroll offset. The virtualized transcript also reconciles to TanStack's
+measured end from both React-rendered `getTotalSize()` changes and the
+virtualizer `onChange` callback while following; the callback path matters
+because direct DOM updates can apply late browser/renderer measurements without
+a React render. Follow-on-append stays `auto`: TanStack's smooth state skips
+item-size compensation, which is the wrong tradeoff for streaming text and
+Rich Responses that keep growing after the row exists.
 
 ## Migration steps
 

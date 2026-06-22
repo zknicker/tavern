@@ -157,12 +157,53 @@ function shouldRenderRichResponse(prompt: string) {
 
 function richResponseReply(prompt: string) {
     const marker = prompt.match(/reply exactly `([^`]+)`/iu)?.[1] ?? 'QA_HERMES_OK';
+
+    if (/table/i.test(prompt)) {
+        return richResponseTableReply(marker);
+    }
+
     return [
         'Here is the revenue chart.',
         '',
         '```spec',
         '{"op":"add","path":"/root","value":"chart"}',
         '{"op":"add","path":"/elements/chart","value":{"type":"BarChart","props":{"data":[{"month":"Jan","revenue":12500},{"month":"Feb","revenue":18250},{"month":"Mar","revenue":21750}],"series":[{"key":"revenue","label":"Revenue"}],"title":"E2E Rich Response revenue","unit":"USD","xKey":"month"},"children":[]}}',
+        '```',
+        '',
+        marker,
+    ].join('\n');
+}
+
+function richResponseTableReply(marker: string) {
+    const rows = Array.from({ length: 24 }, (_, index) => ({
+        amount: `$${((index + 1) * 1234).toLocaleString('en-US')}`,
+        owner: `Team ${String.fromCharCode(65 + (index % 6))}`,
+        quarter: `Q${(index % 4) + 1} 2026`,
+        status: index % 3 === 0 ? 'Investigating variance' : 'On track',
+    }));
+
+    return [
+        'Here is the table.',
+        '',
+        '```spec',
+        JSON.stringify({ op: 'add', path: '/root', value: 'table' }),
+        JSON.stringify({
+            op: 'add',
+            path: '/elements/table',
+            value: {
+                children: [],
+                props: {
+                    columns: [
+                        { key: 'quarter', label: 'Quarter' },
+                        { key: 'owner', label: 'Owner' },
+                        { align: 'right', key: 'amount', label: 'Amount' },
+                        { key: 'status', label: 'Status' },
+                    ],
+                    rows,
+                },
+                type: 'Table',
+            },
+        }),
         '```',
         '',
         marker,

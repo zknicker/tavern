@@ -3,10 +3,13 @@ import {
     type Rect,
     useVirtualizer,
     type VirtualItem,
+    type Virtualizer,
 } from '@tanstack/react-virtual';
 import * as React from 'react';
 import type { ChatActiveReply, ChatTurnFailure } from '../../hooks/chats/chat-timeline-state.ts';
+import { useChatFollowScrollAnimation } from './chat-scroll-animation.ts';
 import {
+    type ChatScrollMode,
     getVirtualizerSizeAdjustmentPredicate,
     shouldAnchorVirtualizerToEnd,
 } from './chat-scroll-mode.ts';
@@ -19,12 +22,19 @@ import {
     transcriptRenderRowUsesActiveReply,
 } from './chat-transcript-row-model.ts';
 import { TranscriptRenderRowView } from './chat-transcript-rows.tsx';
-import { useChatScrollControllerMode } from './use-chat-scroll-controller.ts';
+import {
+    useChatScrollControllerHandle,
+    useChatScrollControllerMode,
+} from './use-chat-scroll-controller.ts';
 
 const previousPageScrollThreshold = 160;
 const transcriptPinnedEndThreshold = 1;
 const transcriptFallbackOverscan = 8;
 const transcriptEndInset = 64;
+// Smooth append scroll keeps TanStack Virtual in smooth-scroll state, where it
+// skips item-size compensation. Chat tail rows grow while text and Rich
+// Responses stream, so following needs exact pinned-end writes.
+export const chatVirtualizerFollowOnAppendBehavior = 'auto' satisfies ScrollBehavior;
 
 export function VirtualizedChatTranscript({
     activeReply,
@@ -64,17 +74,50 @@ export function VirtualizedChatTranscript({
     const initialScrollKeyRef = React.useRef<string | null>(null);
     const initialScrollMeasureKeyRef = React.useRef<string | null>(null);
     const initialScrollPendingRef = React.useRef(false);
+    const chatScrollController = useChatScrollControllerHandle();
     const chatScrollMode = useChatScrollControllerMode();
+    const chatScrollModeRef = React.useRef(chatScrollMode);
+    const endReconcileFrameRef = React.useRef<number | null>(null);
     const virtualizerAnchorsToEnd = shouldAnchorVirtualizerToEnd(chatScrollMode);
     const virtualizerSizeAdjustmentPredicate =
         getVirtualizerSizeAdjustmentPredicate(chatScrollMode);
+    chatScrollModeRef.current = chatScrollMode;
+    const getLatestChatScrollMode = React.useCallback(
+        () => chatScrollController?.getMode() ?? chatScrollModeRef.current,
+        [chatScrollController]
+    );
+    const followScrollAnimation = useChatFollowScrollAnimation({
+        getMode: getLatestChatScrollMode,
+        isInitialScrollPending: () => initialScrollPendingRef.current,
+    });
+    const scheduleVirtualizerEndReconcile = React.useCallback(
+        (instance: Virtualizer<HTMLDivElement, HTMLDivElement>) => {
+            if (endReconcileFrameRef.current !== null) {
+                return;
+            }
+
+            endReconcileFrameRef.current = window.requestAnimationFrame(() => {
+                endReconcileFrameRef.current = null;
+
+                if (
+                    shouldReconcileVirtualizedTranscriptEnd({
+                        distanceFromEnd: instance.getDistanceFromEnd(),
+                        mode: getLatestChatScrollMode(),
+                    })
+                ) {
+                    instance.scrollToEnd({ behavior: 'auto' });
+                }
+            });
+        },
+        [getLatestChatScrollMode]
+    );
     const virtualizer = useVirtualizer<HTMLDivElement, HTMLDivElement>({
         anchorTo: virtualizerAnchorsToEnd ? 'end' : 'start',
         count: rows.length,
         directDomUpdates: true,
         directDomUpdatesMode: 'transform',
         estimateSize: (index) => getEstimatedTranscriptRowSize(rows[index]),
-        followOnAppend: 'smooth',
+        followOnAppend: chatVirtualizerFollowOnAppendBehavior,
         gap: transcriptRenderRowGap,
         getItemKey: (index) => rows[index]?.id ?? index,
         getScrollElement: () => scrollViewportRef.current,
@@ -85,6 +128,9 @@ export function VirtualizedChatTranscript({
                 getInitialTranscriptViewportHeight(scrollViewportRef.current),
                 transcriptEndInset
             ),
+        onChange: (instance) => {
+            scheduleVirtualizerEndReconcile(instance);
+        },
         overscan: 8,
         paddingEnd: transcriptEndInset,
         scrollEndThreshold: transcriptPinnedEndThreshold,
@@ -100,12 +146,12 @@ export function VirtualizedChatTranscript({
             });
             const nextOffset = offset + adjustments;
 
-            if (instance.options.horizontal) {
-                scrollElement.scrollTo({ behavior: resolvedBehavior, left: nextOffset });
-                return;
-            }
-
-            scrollElement.scrollTo({ behavior: resolvedBehavior, top: nextOffset });
+            followScrollAnimation.scrollTo({
+                axis: instance.options.horizontal ? 'left' : 'top',
+                behavior: resolvedBehavior,
+                element: scrollElement,
+                target: nextOffset,
+            });
         },
     });
     const totalSize = virtualizer.getTotalSize();
@@ -131,6 +177,30 @@ export function VirtualizedChatTranscript({
             controlledVirtualizer.shouldAdjustScrollPositionOnItemSizeChange = undefined;
         };
     }, [virtualizer, virtualizerSizeAdjustmentPredicate]);
+
+    React.useLayoutEffect(() => {
+        if (totalSize <= 0) {
+            return;
+        }
+
+        if (
+            shouldReconcileVirtualizedTranscriptEnd({
+                distanceFromEnd: virtualizer.getDistanceFromEnd(),
+                mode: chatScrollMode,
+            })
+        ) {
+            virtualizer.scrollToEnd({ behavior: 'auto' });
+        }
+    }, [chatScrollMode, totalSize, virtualizer]);
+
+    React.useEffect(() => {
+        return () => {
+            if (endReconcileFrameRef.current !== null) {
+                window.cancelAnimationFrame(endReconcileFrameRef.current);
+                endReconcileFrameRef.current = null;
+            }
+        };
+    }, []);
 
     React.useLayoutEffect(() => {
         const measureChanged = initialScrollMeasureKeyRef.current !== initialScrollMeasureKey;
@@ -222,7 +292,9 @@ export function VirtualizedChatTranscript({
                         virtualizer={virtualizer}
                     >
                         <TranscriptRenderRowView
-                            activePresenceVerb={row.kind === 'presence' ? activePresenceVerb : null}
+                            activePresenceVerb={
+                                row.kind === 'entry' && row.showPresence ? activePresenceVerb : null
+                            }
                             activeReply={rendersActiveReply ? activeReply : null}
                             agentPresenceColor={agentPresenceColor}
                             chatId={chatId}
@@ -302,6 +374,16 @@ export function shouldLoadPreviousVirtualizedChatPage({
     }
 
     return true;
+}
+
+export function shouldReconcileVirtualizedTranscriptEnd({
+    distanceFromEnd,
+    mode,
+}: {
+    distanceFromEnd: number;
+    mode: ChatScrollMode;
+}) {
+    return mode === 'following' && distanceFromEnd > transcriptPinnedEndThreshold;
 }
 
 export function getEstimatedTranscriptBottomOffset(
