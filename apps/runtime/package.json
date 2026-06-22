@@ -23,6 +23,7 @@
     "@tavern/api": "workspace:*",
     "@tavern/codex-usage": "workspace:*",
     "bunqueue": "2.6.38",
+    "chokidar": "4.0.3",
     "ws": "8.20.1",
     "yaml": "2.9.0"
   },

@@ -20,6 +20,7 @@ import { onSessionUpdate } from './session/on-update.ts';
 import { onSkillUpdate } from './skill/on-update.ts';
 import { createRouter } from './trpc.ts';
 import { onLiveUsageUpdate } from './usage/on-live-update.ts';
+import { onVaultUpdate } from './vault/on-update.ts';
 import { onWorkersUpdate } from './worker/on-update.ts';
 
 export const wsRouter = createRouter({
@@ -65,6 +66,9 @@ export const wsRouter = createRouter({
     }),
     usage: createRouter({
         onLiveUpdate: onLiveUsageUpdate,
+    }),
+    vault: createRouter({
+        onUpdate: onVaultUpdate,
     }),
     worker: createRouter({
         onUpdate: onWorkersUpdate,

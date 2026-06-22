@@ -25,6 +25,7 @@ export const tavernEventNames = {
     sessionUpdated: 'session.updated',
     skillUpdated: 'skill.updated',
     usageLiveUpdated: 'usage.live.updated',
+    vaultUpdated: 'vault.updated',
     workersUpdated: 'workers.updated',
 } as const;
 
@@ -140,6 +141,21 @@ export function emitAgentRuntimeCapabilityUpdated() {
 
 export function emitUsageLiveUpdated() {
     emitTavernEvent(tavernEventNames.usageLiveUpdated);
+}
+
+export function emitVaultUpdated(input: {
+    paths?: string[];
+    reason?: string;
+    scope: 'content' | 'root';
+    timestamp?: string;
+}) {
+    emitTavernEvent(tavernEventNames.vaultUpdated, {
+        ...createInvalidationEvent(),
+        paths: input.paths ?? [],
+        reason: input.reason,
+        scope: input.scope,
+        timestamp: input.timestamp,
+    });
 }
 
 export function emitWorkersUpdated() {

@@ -23,6 +23,20 @@ test('engine restart events reject unknown phases', () => {
     );
 });
 
+test('vault changed events carry coarse invalidation hints', () => {
+    const event = agentRuntimeEventSchema.parse({
+        paths: ['Projects/Alpha.md'],
+        reason: 'watch',
+        scope: 'content',
+        timestamp: '2026-06-21T12:00:00.000Z',
+        type: 'vault.changed',
+    });
+
+    assert.equal(event.type, 'vault.changed');
+    assert.deepEqual(event.paths, ['Projects/Alpha.md']);
+    assert.equal(event.scope, 'content');
+});
+
 test('rich response progress events carry renderable payloads', () => {
     const event = agentRuntimeEventSchema.parse({
         step: {

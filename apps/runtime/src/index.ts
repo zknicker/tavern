@@ -11,6 +11,8 @@ import { log } from './log';
 import { seedDevelopmentChatDemos } from './tavern/development-chat-demos';
 import { startTavernRuntimeServer } from './tavern/server';
 import { recoverInterruptedChatResponses } from './tavern/turn-recovery';
+import { resolveVaultConfig } from './vault/store';
+import { closeVaultWatcher, restartVaultWatcher, startVaultWatcher } from './vault/watcher';
 import { closeAgentNotesWatchers } from './workspace/notes-watcher';
 
 let runtimeServer: ReturnType<typeof startTavernRuntimeServer> | null = null;
@@ -35,6 +37,9 @@ async function main(): Promise<void> {
     if (demoSeed.seeded > 0) {
         log.info('Development chat demos ready', { count: demoSeed.seeded });
     }
+    void startVaultWatcher(resolveVaultConfig).catch((err) => {
+        log.warn('Vault live updates failed to start', { err });
+    });
     runtimeJobs = await startRuntimeJobsManager();
 
     runtimeServer = startTavernRuntimeServer();
@@ -43,11 +48,18 @@ async function main(): Promise<void> {
     hermesStartup = startHermesForRuntime()
         .then(async (handle) => {
             hermes = handle;
+            await restartVaultWatcher({ emitRootChanged: false }).catch((err) => {
+                log.warn('Vault live updates failed to refresh after engine startup', {
+                    err,
+                });
+            });
             await refreshRuntimeCapabilities({
                 ids: ['vault', 'gateway'],
                 publishUpdated: true,
             }).catch((err) => {
-                log.warn('Vault capability refresh failed after Hermes startup', { err });
+                log.warn('Vault capability refresh failed after Hermes startup', {
+                    err,
+                });
             });
             if (shuttingDown) {
                 void handle.stop();
@@ -76,6 +88,9 @@ async function shutdown(signal: string): Promise<void> {
     shuttingDown = true;
     log.info('Shutdown signal received', { signal });
     closeAgentNotesWatchers();
+    log.info('Stopping Vault live updates');
+    await closeVaultWatcher();
+    log.info('Vault live updates stopped');
     log.info('Stopping Runtime jobs');
     await runtimeJobs?.stop();
     log.info('Runtime jobs stopped');

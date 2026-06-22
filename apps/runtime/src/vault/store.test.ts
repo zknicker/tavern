@@ -1,9 +1,19 @@
 import fs from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
-import { afterEach, beforeEach, describe, expect, test } from 'vitest';
+import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 import { closeDb, initTestDb } from '../db/connection.ts';
 import { ensureRuntimeSchema } from '../db/schema.ts';
+
+vi.mock('./watcher.ts', () => ({
+    getVaultWatcherFreshness: () => ({
+        live: false,
+        reason: 'Vault watcher disabled in store tests.',
+        state: 'idle',
+    }),
+    restartVaultWatcher: vi.fn(async () => undefined),
+}));
+
 import {
     createVaultFolder,
     createVaultPage,

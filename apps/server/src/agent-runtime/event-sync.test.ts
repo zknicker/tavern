@@ -17,11 +17,13 @@ const [
     { applyObservedAgentRuntimeEvent },
     connectionService,
     { listReachableAgentRuntimeConnections },
+    { subscribeToTavernEvent, tavernEventNames },
 ] = await Promise.all([
     import('../db/bootstrap.ts'),
     import('./event-sync.ts'),
     import('../agent-runtime-connection/service.ts'),
     import('../storage/agent-runtime-connections.ts'),
+    import('../api/invalidation-events.ts'),
 ]);
 
 ensureDatabaseSchema();
@@ -49,13 +51,18 @@ test('capability.updated refreshes the cached runtime capability snapshot', asyn
     // Connect while the runtime still reports its engine checks as warming.
     // The first confirm seeds the environment record; the second mirrors the
     // post-subscribe confirm at boot, which caches the capability snapshot.
-    runtimeCapabilityStates = { apiServer: 'unavailable', gateway: 'unavailable' };
+    runtimeCapabilityStates = {
+        apiServer: 'unavailable',
+        gateway: 'unavailable',
+    };
     assert.equal(await connectionService.confirmAgentRuntimeConnection(), true);
     assert.equal(await connectionService.confirmAgentRuntimeConnection(), true);
 
     // The runtime flips healthy after the server cached the warming snapshot.
     runtimeCapabilityStates = { apiServer: 'healthy', gateway: 'healthy' };
-    const stale = await connectionService.getAgentRuntimeConnection({ refreshStatus: false });
+    const stale = await connectionService.getAgentRuntimeConnection({
+        refreshStatus: false,
+    });
     assert.equal(capabilityState(stale, 'gateway'), 'unavailable');
 
     const [connection] = await listReachableAgentRuntimeConnections();
@@ -69,9 +76,31 @@ test('capability.updated refreshes the cached runtime capability snapshot', asyn
         connection
     );
 
-    const refreshed = await connectionService.getAgentRuntimeConnection({ refreshStatus: false });
+    const refreshed = await connectionService.getAgentRuntimeConnection({
+        refreshStatus: false,
+    });
     assert.equal(capabilityState(refreshed, 'gateway'), 'healthy');
     assert.equal(capabilityState(refreshed, 'apiServer'), 'healthy');
+});
+
+test('vault.changed emits a Vault invalidation event', async () => {
+    const invalidation = nextVaultInvalidation();
+
+    await applyObservedAgentRuntimeEvent({
+        paths: ['Projects/Alpha.md'],
+        reason: 'watch',
+        scope: 'content',
+        timestamp: '2026-06-21T12:00:00.000Z',
+        type: 'vault.changed',
+    });
+
+    await assert.doesNotReject(async () => {
+        const event = await invalidation;
+        assert.deepEqual(event.paths, ['Projects/Alpha.md']);
+        assert.equal(event.reason, 'watch');
+        assert.equal(event.scope, 'content');
+        assert.equal(event.timestamp, '2026-06-21T12:00:00.000Z');
+    });
 });
 
 function capabilityState(
@@ -106,4 +135,25 @@ function buildCapabilitySnapshot(states: Record<string, AgentRuntimeCapabilityHe
             version: '1.0.0',
         },
     };
+}
+
+async function nextVaultInvalidation() {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => {
+        controller.abort();
+    }, 5000);
+
+    try {
+        for await (const event of subscribeToTavernEvent(
+            tavernEventNames.vaultUpdated,
+            controller.signal
+        )) {
+            clearTimeout(timeout);
+            return event;
+        }
+    } finally {
+        clearTimeout(timeout);
+    }
+
+    throw new Error('Timed out waiting for Vault invalidation.');
 }

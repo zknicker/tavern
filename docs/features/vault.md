@@ -36,7 +36,12 @@ surface.
 * **Search.** Vault performs lightweight filename, title, frontmatter, and body
   search over Markdown files.
 * **Status.** Vault reports the resolved path, config source, page count,
-  `INDEX.md` presence, and filesystem access.
+  `INDEX.md` presence, filesystem access, and live-update freshness.
+* **Live updates.** Runtime watches the Vault root for Markdown file changes and
+  the app refetches affected Vault reads. Large bursts refetch the active Vault
+  surface without relying on individual path hints.
+* **Draft conflicts.** If the selected page changes on disk while the editor has
+  unsaved text, Tavern keeps the draft and offers reload or keep-draft actions.
 * **Settings.** Settings -> Vault lets the user set the wiki path. If
   `TAVERN_VAULT_PATH` is set, the environment path wins.
 
@@ -55,6 +60,10 @@ Runtime exposes a small read/write API for path-safe Markdown file operations.
 Tavern App renders the Vault tab from that API. Agents maintain the same files
 through the managed `vault` skill: normal wiki work routes to the Obsidian
 skill, and bounded research folders route to the llm-wiki skill.
+
+Runtime freshness is file-change driven. The watcher does not poll, index, or
+read page bodies; it emits invalidation hints and clients recover by refetching
+normal Vault reads.
 
 ## Boundary
 

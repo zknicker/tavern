@@ -16,6 +16,7 @@ import {
     emitEngineRestartUpdated,
     emitModelUpdated,
     emitSessionUpdated,
+    emitVaultUpdated,
     emitWorkersUpdated,
 } from '../api/invalidation-events.ts';
 import { enqueueRuntimeSkillInventoryRefresh } from '../skills/inventory-job.ts';
@@ -115,6 +116,16 @@ export async function applyObservedAgentRuntimeEvent(
                 console.warn('[tavern] failed to sync cron run event', error);
             });
             emitCronUpdated();
+            return;
+        }
+        case 'vault.changed': {
+            emitObservedAgentRuntimeEvent(event);
+            emitVaultUpdated({
+                paths: event.paths,
+                reason: event.reason,
+                scope: event.scope,
+                timestamp: event.timestamp,
+            });
             return;
         }
         case 'engine.restart': {

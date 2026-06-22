@@ -4,7 +4,7 @@ import * as React from 'react';
 
 const SIDEBAR_STORAGE_KEY = 'sidebar_state';
 const SIDEBAR_WIDTH_STORAGE_KEY = 'sidebar_width';
-const SIDEBAR_KEYBOARD_SHORTCUT = 'b';
+const SIDEBAR_KEYBOARD_SHORTCUT = '\\';
 const MOBILE_BREAKPOINT = 768;
 const DEFAULT_SIDEBAR_WIDTH = 276;
 const MIN_SIDEBAR_WIDTH = 220;
@@ -135,7 +135,7 @@ export function SidebarProvider({
 
     React.useEffect(() => {
         const handleKeyDown = (event: KeyboardEvent) => {
-            if (event.key === SIDEBAR_KEYBOARD_SHORTCUT && (event.metaKey || event.ctrlKey)) {
+            if (shouldToggleSidebarShortcut(event)) {
                 event.preventDefault();
                 toggleSidebar();
             }
@@ -191,4 +191,36 @@ export function SidebarProvider({
             </div>
         </SidebarContext.Provider>
     );
+}
+
+type SidebarShortcutEvent = Pick<
+    KeyboardEvent,
+    'altKey' | 'ctrlKey' | 'defaultPrevented' | 'key' | 'metaKey' | 'shiftKey' | 'target'
+>;
+
+export function shouldToggleSidebarShortcut(event: SidebarShortcutEvent) {
+    return (
+        !event.defaultPrevented &&
+        event.key === SIDEBAR_KEYBOARD_SHORTCUT &&
+        (event.metaKey || event.ctrlKey) &&
+        !event.altKey &&
+        !event.shiftKey &&
+        !isEditableShortcutTarget(event.target)
+    );
+}
+
+function isEditableShortcutTarget(target: EventTarget | null) {
+    if (typeof Element === 'undefined' || !(target instanceof Element)) {
+        return false;
+    }
+
+    if (
+        typeof HTMLElement !== 'undefined' &&
+        target instanceof HTMLElement &&
+        target.isContentEditable
+    ) {
+        return true;
+    }
+
+    return Boolean(target.closest('input, textarea, select, [contenteditable="true"]'));
 }

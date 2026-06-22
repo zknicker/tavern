@@ -19,6 +19,8 @@ user's Markdown wiki.
 * Backlinks are derived from `[[wikilinks]]` and Markdown links.
 * Search is lightweight title, path, frontmatter, and body matching.
 * `configSource` is `environment`, `settings`, or `default`.
+* `status.freshness` reports whether live file-change notifications are
+  watching, idle, or degraded.
 * Content writes require Tavern mutation headers and stay inside the Vault root.
 * Dot directories, absolute paths, and traversal segments are rejected.
 
@@ -44,7 +46,10 @@ The tRPC app router exposes the same reads under `vault.status`,
 `vault.settings`, `vault.list`, `vault.get`, `vault.backlinks`, and
 `vault.search`. Content mutations use `vault.createPage`, `vault.savePage`,
 `vault.createFolder`, `vault.deletePage`, `vault.deleteFolder`, and
-`vault.movePath`. Settings writes use `vault.saveSettings`.
+`vault.movePath`. Settings writes use `vault.saveSettings`. The live
+subscription `vault.onUpdate` emits best-effort invalidation hints with
+`scope`, `reason`, and optional Markdown `paths`; clients refetch normal Vault
+reads for canonical state.
 
 ## Related Docs
 

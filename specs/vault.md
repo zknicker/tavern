@@ -25,6 +25,7 @@ Runtime owns:
 * page body saves that preserve frontmatter
 * page and folder deletion
 * page and folder moves or renames
+* best-effort file-change notifications
 * light frontmatter parsing
 * `[[wikilink]]` and Markdown link extraction
 * backlink derivation
@@ -40,6 +41,21 @@ Runtime does not own:
 * todo queues
 * wiki maintenance jobs
 * automatic wiki rewrites beyond user or agent requests
+
+## Freshness
+
+Runtime watches the resolved Vault root while Runtime is running. File changes
+emit `vault.changed` events with best-effort Markdown path hints. The event is
+an invalidation signal only; clients refetch Vault reads instead of treating the
+event payload as canonical file state.
+
+The watcher does not poll, read file bodies, index the wiki, or couple refresh
+to agent turns. It ignores dot directories and non-Markdown files. Large bursts
+emit a coarse `bulk` invalidation with no path hints.
+
+Settings -> Vault path changes restart the watcher and emit a root invalidation.
+If the operating-system watcher fails, Vault status reports degraded freshness
+while path-safe reads and writes continue when filesystem access allows them.
 
 ## Agent Contract
 
@@ -61,6 +77,8 @@ The Vault tab shows:
 * edit, split, and preview modes
 * Markdown formatting toolbar
 * read-only wiki preview
+* live updates from external file changes
+* dirty-draft conflict notice when a selected page changes on disk
 * file metadata
 * wikilinks and backlinks
 * search

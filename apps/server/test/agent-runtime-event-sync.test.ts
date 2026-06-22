@@ -24,6 +24,7 @@ const emitSkillInvalidationCascade = mock(() => undefined);
 const emitSkillUpdated = mock(() => undefined);
 const emitTavernEvent = mock(() => undefined);
 const emitUsageLiveUpdated = mock(() => undefined);
+const emitVaultUpdated = mock(() => undefined);
 const emitWorkersUpdated = mock(() => undefined);
 const markAgentRuntimeConnectionFailure = mock(async () => undefined);
 const markAgentRuntimeConnectionReachable = mock(async () => undefined);
@@ -71,6 +72,7 @@ mock.module('../src/api/invalidation-events.ts', () => ({
     emitSkillUpdated,
     emitTavernEvent,
     emitUsageLiveUpdated,
+    emitVaultUpdated,
     emitWorkersUpdated,
 }));
 
@@ -126,6 +128,7 @@ beforeEach(async () => {
     emitChatUpdated.mockClear();
     emitTavernEvent.mockClear();
     emitUsageLiveUpdated.mockClear();
+    emitVaultUpdated.mockClear();
     emitWorkersUpdated.mockClear();
     emitObservedAgentRuntimeEvent.mockClear();
     confirmAgentRuntimeConnection.mockClear();

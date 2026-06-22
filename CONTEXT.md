@@ -39,6 +39,15 @@ A normal Tavern App React component used to render validated rich-response props
 visual system.
 _Avoid_: Model component, widget primitive
 
+**Vault root**:
+The user-owned Markdown directory that Vault reads and edits.
+_Avoid_: Runtime Vault directory, managed storage, memory store
+
+**Vault surface**:
+The Tavern Runtime-owned access surface for the Vault root: path resolution, safe reads, writes,
+freshness, and status.
+_Avoid_: Wiki pipeline, ingestion system, maintenance job
+
 **Charts**:
 The Rich Response Component family for agent-authored chart displays.
 _Avoid_: Chart kit

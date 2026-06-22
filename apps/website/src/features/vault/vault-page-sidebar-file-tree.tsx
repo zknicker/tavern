@@ -362,7 +362,7 @@ const treeHostStyle: TreeHostStyle = {
     '--trees-file-icon-color': 'var(--sidebar-foreground)',
     '--trees-focus-ring-color-override': 'var(--sidebar-ring)',
     '--trees-font-family-override': 'inherit',
-    '--trees-font-size-override': '13px',
+    '--trees-font-size-override': 'var(--text-sm)',
     '--trees-item-margin-x-override': '0px',
     '--trees-item-padding-x-override': '8px',
     '--trees-level-gap-override': '8px',

@@ -23,6 +23,7 @@ import {
     searchVault,
 } from '../../vault/service.ts';
 import { createRouter, publicProcedure } from '../trpc.ts';
+import { onVaultUpdate } from './on-update.ts';
 
 export const vaultRouter = createRouter({
     backlinks: publicProcedure
@@ -47,6 +48,7 @@ export const vaultRouter = createRouter({
     movePath: publicProcedure
         .input(vaultMovePathSchema)
         .mutation(({ input }) => moveVaultPath(input)),
+    onUpdate: onVaultUpdate,
     savePage: publicProcedure
         .input(vaultSavePageSchema)
         .mutation(({ input }) => saveVaultPage(input)),

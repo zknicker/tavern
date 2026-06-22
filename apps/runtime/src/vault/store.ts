@@ -19,6 +19,7 @@ import type {
 import { readConfigValue, resolveConfiguredPath } from '../config.ts';
 import { getDb } from '../db/connection.ts';
 import { namedParams } from '../db/sqlite.ts';
+import { getVaultWatcherFreshness, restartVaultWatcher } from './watcher.ts';
 
 const vaultSettingsMetadataKey = 'vault:settings';
 const defaultVaultPath = '~/wiki';
@@ -46,6 +47,7 @@ export async function getVaultStatus(): Promise<VaultStatus> {
 
     return {
         configSource: config.source,
+        freshness: getVaultWatcherFreshness(),
         indexExists: await isMarkdownFile(path.join(config.vaultPath, 'INDEX.md')),
         pageCount: files.length,
         readable: await canAccess(config.vaultPath, fsConstants.R_OK),
@@ -87,6 +89,7 @@ export async function saveVaultSettings(
         );
 
     await prepareVaultRoot(resolveConfiguredPath(vaultPath));
+    await restartVaultWatcher({ emitRootChanged: true });
     return await getVaultSettings();
 }
 

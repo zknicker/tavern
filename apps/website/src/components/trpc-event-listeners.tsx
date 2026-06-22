@@ -13,6 +13,7 @@ import { useModelEvents } from '../hooks/models/use-model-events.ts';
 import { useUsageEvents } from '../hooks/models/use-usage-events.ts';
 import { useSessionEvents } from '../hooks/sessions/use-session-events.ts';
 import { useSkillEvents } from '../hooks/skills/use-events.ts';
+import { useVaultEvents } from '../hooks/vault/use-vault-events.ts';
 import { useWorkerEvents } from '../hooks/workers/use-worker-events.ts';
 
 export function TrpcEventListeners() {
@@ -29,6 +30,7 @@ export function TrpcEventListeners() {
     useSessionEvents();
     useSkillEvents();
     useUsageEvents();
+    useVaultEvents();
     useWorkerEvents();
 
     return null;

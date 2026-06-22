@@ -29,7 +29,7 @@ export function VaultMarkdownViewer({
     }
 
     return (
-        <div className="space-y-4 text-foreground text-sm leading-6">
+        <div className="text-foreground text-sm leading-7">
             {blocks.map((block) => (
                 <MarkdownBlockContent
                     block={block}
@@ -51,7 +51,7 @@ function MarkdownBlockContent({
     switch (block.kind) {
         case 'blockquote':
             return (
-                <blockquote className="border-border border-l-2 pl-3 text-muted-foreground">
+                <blockquote className="my-4 border-border border-l-2 py-0.5 pl-3 text-muted-foreground">
                     {block.lines.map((line) => (
                         <p key={`${block.startLine}:quote:${line}`}>
                             {renderInlineMarkdown(
@@ -65,7 +65,7 @@ function MarkdownBlockContent({
             );
         case 'code':
             return (
-                <pre className="overflow-x-auto rounded-lg bg-muted/50 px-3 py-2 font-mono text-code leading-6">
+                <pre className="my-4 overflow-x-auto rounded-lg bg-muted/50 px-3 py-2 font-mono text-code leading-6">
                     <code>{block.code}</code>
                 </pre>
             );
@@ -74,7 +74,7 @@ function MarkdownBlockContent({
         case 'list': {
             const List = block.ordered ? 'ol' : 'ul';
             return (
-                <List className="list-outside space-y-1 pl-5 marker:text-muted-foreground">
+                <List className="my-3 list-outside space-y-1.5 pl-5 marker:text-muted-foreground">
                     {block.items.map((item) => (
                         <li key={`${block.startLine}:item:${item}`}>
                             {renderInlineMarkdown(
@@ -89,7 +89,7 @@ function MarkdownBlockContent({
         }
         case 'paragraph':
             return (
-                <p className="whitespace-pre-wrap">
+                <p className="my-3 whitespace-pre-wrap">
                     {renderInlineMarkdown(
                         block.lines.join('\n'),
                         `${block.startLine}:paragraph`,
@@ -112,14 +112,20 @@ function MarkdownHeading({
     const content = renderInlineMarkdown(block.text, `${block.startLine}:heading`, onNavigate);
 
     if (block.depth === 1) {
-        return <h1 className="font-semibold text-2xl tracking-tight">{content}</h1>;
+        return (
+            <h1 className="mt-0 mb-3 font-semibold text-2xl leading-tight tracking-tight">
+                {content}
+            </h1>
+        );
     }
 
     if (block.depth === 2) {
-        return <h2 className="pt-2 font-semibold text-lg">{content}</h2>;
+        return (
+            <h2 className="mt-7 mb-2 font-semibold text-lg leading-tight first:mt-0">{content}</h2>
+        );
     }
 
-    return <h3 className="pt-1 font-medium text-base">{content}</h3>;
+    return <h3 className="mt-6 mb-2 font-medium text-base leading-snug first:mt-0">{content}</h3>;
 }
 
 function MarkdownTable({
@@ -132,7 +138,7 @@ function MarkdownTable({
     const [header, ...rows] = block.rows;
 
     return (
-        <div className="overflow-hidden rounded-lg border border-border/70">
+        <div className="my-4 overflow-hidden rounded-lg border border-border/70">
             <Table className="table-auto">
                 {header ? (
                     <TableHeader>

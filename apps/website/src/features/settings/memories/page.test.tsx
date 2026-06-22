@@ -17,6 +17,11 @@ test('VaultSettingsCard renders path setting and Vault status', () => {
             }}
             status={{
                 configSource: 'settings',
+                freshness: {
+                    live: true,
+                    reason: null,
+                    state: 'watching',
+                },
                 indexExists: true,
                 pageCount: 42,
                 readable: true,

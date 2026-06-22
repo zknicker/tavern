@@ -10,6 +10,7 @@ import {
     useSaveVaultPage,
 } from '../../hooks/vault/use-vault-mutations.ts';
 import { useVaultPage } from '../../hooks/vault/use-vault-page.ts';
+import type { VaultPageDetail } from './types.ts';
 import {
     getErrorMessage,
     isPathInFolder,
@@ -37,7 +38,9 @@ import { type VaultEditorMode, VaultTopbar } from './vault-topbar.tsx';
 
 export function Vault() {
     const [searchParams] = useSearchParams();
-    const [selectedPage, setSelectedPage] = React.useState<{ path: string } | null>(() => {
+    const [selectedPage, setSelectedPage] = React.useState<{
+        path: string;
+    } | null>(() => {
         const path = searchParams.get('path');
         return path ? { path } : null;
     });
@@ -50,9 +53,19 @@ export function Vault() {
     const [draft, setDraft] = React.useState('');
     const [editorMode, setEditorMode] = React.useState<VaultEditorMode>('edit');
     const [inspectorOpen, setInspectorOpen] = React.useState(false);
+    const [externalChangeState, setExternalChangeState] = React.useState<
+        'changed' | 'missing' | null
+    >(null);
+    const [restoreError, setRestoreError] = React.useState<string | null>(null);
+    const syncedPageRef = React.useRef<VaultPageDetail | null>(null);
     const [list] = useVaultListSuspense();
-    const pageNode = resolveSelectedPage(list, selectedPage);
-    const pageDetailQuery = useVaultPage(pageNode ? { path: pageNode.path } : null);
+    const selectedPageExists = selectedPage
+        ? list.pages.some((page) => page.path === selectedPage.path)
+        : false;
+    const selectedPageMissing = Boolean(selectedPage && !selectedPageExists);
+    const pageNode = selectedPageMissing ? null : resolveSelectedPage(list, selectedPage);
+    const selectedPath = selectedPage?.path ?? pageNode?.path ?? null;
+    const pageDetailQuery = useVaultPage(selectedPageMissing ? selectedPage : pageNode);
     const createPage = useCreateVaultPage();
     const savePage = useSaveVaultPage();
     const createFolder = useCreateVaultFolder();
@@ -60,23 +73,62 @@ export function Vault() {
     const deleteFolder = useDeleteVaultFolder();
     const movePath = useMoveVaultPath();
     const pageDetail = pageDetailQuery.data ?? null;
-    const pageBody = pageDetail?.body ?? '';
-    const pagePath = pageDetail?.path ?? '';
-    const isDirty = pageDetail ? draft !== pageBody : false;
-    const canSave = Boolean(pageDetail && isDirty && !savePage.isPending);
+    const syncedPage = syncedPageRef.current;
+    const hasDirtyDraft = Boolean(syncedPage && draft !== syncedPage.body);
+    const hasDirtyDraftForSelectedPath = Boolean(
+        hasDirtyDraft && syncedPage && syncedPage.path === selectedPath
+    );
+    const visiblePage = pageDetail ?? (hasDirtyDraftForSelectedPath ? syncedPage : null);
+    const pagePath = visiblePage?.path ?? '';
+    const isDirty = visiblePage ? draft !== visiblePage.body : false;
+    const isPersistingPage = savePage.isPending || createPage.isPending;
+    const canSave = Boolean(pageDetail && isDirty && !isPersistingPage);
 
     React.useEffect(() => {
         if (pageNode && (!selectedPage || pageNode.path !== selectedPage.path)) {
             setSelectedPage({ path: pageNode.path });
         }
-        if (!pageNode && selectedPage) {
+        if (selectedPageMissing && selectedPage && !hasDirtyDraft) {
             setSelectedPage(null);
         }
-    }, [pageNode, selectedPage]);
+    }, [hasDirtyDraft, pageNode, selectedPage, selectedPageMissing]);
 
     React.useEffect(() => {
-        setDraft(pagePath ? pageBody : '');
-    }, [pageBody, pagePath]);
+        if (!pageDetail) {
+            const previous = syncedPageRef.current;
+            if (previous && previous.path === selectedPath && draft !== previous.body) {
+                setExternalChangeState('missing');
+                return;
+            }
+
+            syncedPageRef.current = null;
+            setDraft('');
+            setExternalChangeState(null);
+            setRestoreError(null);
+            return;
+        }
+
+        const previous = syncedPageRef.current;
+        const samePage = previous?.path === pageDetail.path;
+        const wasDirty = Boolean(samePage && draft !== previous.body);
+        const serverChanged =
+            !samePage ||
+            previous.body !== pageDetail.body ||
+            previous.updatedAt !== pageDetail.updatedAt;
+
+        syncedPageRef.current = pageDetail;
+
+        if (!(samePage && wasDirty)) {
+            setDraft(pageDetail.body);
+            setExternalChangeState(null);
+            setRestoreError(null);
+            return;
+        }
+
+        if (serverChanged) {
+            setExternalChangeState('changed');
+        }
+    }, [draft, pageDetail, selectedPath]);
 
     function handleCreate(kind: 'folder' | 'page', parentPath?: string) {
         setPathDialogError(null);
@@ -130,7 +182,9 @@ export function Vault() {
             } else if (target.kind === 'folder') {
                 setSelectedPage((current) =>
                     current
-                        ? { path: replacePathPrefix(current.path, target.fromPath, result.path) }
+                        ? {
+                              path: replacePathPrefix(current.path, target.fromPath, result.path),
+                          }
                         : null
                 );
             }
@@ -189,7 +243,9 @@ export function Vault() {
             } else if (target.kind === 'folder') {
                 setSelectedPage((current) =>
                     current
-                        ? { path: replacePathPrefix(current.path, target.fromPath, result.path) }
+                        ? {
+                              path: replacePathPrefix(current.path, target.fromPath, result.path),
+                          }
                         : null
                 );
             }
@@ -202,7 +258,56 @@ export function Vault() {
         if (!pageDetailQuery.data) {
             return;
         }
-        await savePage.mutateAsync({ body, path: pageDetailQuery.data.path });
+        const result = await savePage.mutateAsync({
+            body,
+            path: pageDetailQuery.data.path,
+        });
+        if (result.page) {
+            syncedPageRef.current = result.page;
+            setDraft(result.page.body);
+        }
+        setExternalChangeState(null);
+        setRestoreError(null);
+    }
+
+    function handleReloadExternalChange() {
+        if (!pageDetail) {
+            syncedPageRef.current = null;
+            setDraft('');
+            setExternalChangeState(null);
+            setRestoreError(null);
+            setSelectedPage(null);
+            return;
+        }
+
+        syncedPageRef.current = pageDetail;
+        setDraft(pageDetail.body);
+        setExternalChangeState(null);
+        setRestoreError(null);
+    }
+
+    async function handleRecreateMissingPage() {
+        const previous = syncedPageRef.current;
+        if (!(previous && previous.path === selectedPath)) {
+            return;
+        }
+
+        setRestoreError(null);
+        try {
+            const result = await createPage.mutateAsync({
+                body: draft,
+                path: previous.path,
+            });
+            if (result.page) {
+                syncedPageRef.current = result.page;
+                setDraft(result.page.body);
+                setSelectedPage({ path: result.page.path });
+                setExternalChangeState(null);
+                setRestoreError(null);
+            }
+        } catch (error) {
+            setRestoreError(getErrorMessage(error));
+        }
     }
 
     function handleNavigate(target: string) {
@@ -236,7 +341,7 @@ export function Vault() {
                     canSave={canSave}
                     editorMode={editorMode}
                     inspectorOpen={inspectorOpen}
-                    isSaving={savePage.isPending}
+                    isSaving={isPersistingPage}
                     onEditorModeChange={setEditorMode}
                     onInspectorOpenChange={setInspectorOpen}
                     onSave={() => void handleSave(draft)}
@@ -254,16 +359,23 @@ export function Vault() {
                     <VaultDocumentPane
                         draft={draft}
                         editorMode={editorMode}
+                        externalChangeState={externalChangeState}
                         inspectorOpen={inspectorOpen}
                         isLoading={pageDetailQuery.isFetching}
-                        isSaving={savePage.isPending}
+                        isSaving={isPersistingPage}
+                        onDiscardMissingPage={handleReloadExternalChange}
                         onDraftChange={setDraft}
+                        onKeepDraft={() => setExternalChangeState(null)}
                         onNavigate={handleNavigate}
+                        onRecreateMissingPage={() => void handleRecreateMissingPage()}
+                        onReloadPage={handleReloadExternalChange}
                         onSave={handleSave}
                         onSelectPage={setSelectedPage}
-                        page={pageDetail}
+                        page={visiblePage}
                         saveDisabled={!canSave}
-                        saveErrorMessage={savePage.error ? getErrorMessage(savePage.error) : null}
+                        saveErrorMessage={
+                            savePage.error ? getErrorMessage(savePage.error) : restoreError
+                        }
                     />
                 </div>
             </main>

@@ -1033,8 +1033,21 @@ export const vaultBacklinkListSchema = z.object({
     targetPath: z.string().trim().min(1),
 });
 
+export const vaultFreshnessStateSchema = z.enum(['idle', 'watching', 'degraded']);
+
+export const vaultFreshnessSchema = z.object({
+    live: z.boolean(),
+    reason: z.string().trim().min(1).nullable(),
+    state: vaultFreshnessStateSchema,
+});
+
 export const vaultStatusSchema = z.object({
     configSource: vaultConfigSourceSchema,
+    freshness: vaultFreshnessSchema.default({
+        live: false,
+        reason: 'Vault live updates have not started.',
+        state: 'idle',
+    }),
     indexExists: z.boolean(),
     pageCount: z.number().int().nonnegative(),
     readable: z.boolean(),
@@ -1741,6 +1754,7 @@ export const agentRuntimeEventTypeSchema = z.enum([
     'cron.deleted',
     'cron.runStarted',
     'cron.runFinished',
+    'vault.changed',
     'turn.started',
     'turn.progress',
     'turn.replyUpdated',
@@ -1851,6 +1865,17 @@ export const agentRuntimeCronRunFinishedEventSchema = z.object({
     type: z.literal('cron.runFinished'),
 });
 
+export const agentRuntimeVaultChangedScopeSchema = z.enum(['content', 'root']);
+export const agentRuntimeVaultChangedReasonSchema = z.enum(['watch', 'bulk', 'settings']);
+
+export const agentRuntimeVaultChangedEventSchema = z.object({
+    paths: z.array(z.string().trim().min(1)).default([]),
+    reason: agentRuntimeVaultChangedReasonSchema.optional(),
+    scope: agentRuntimeVaultChangedScopeSchema,
+    timestamp: z.string().datetime(),
+    type: z.literal('vault.changed'),
+});
+
 export const agentRuntimeCapabilityUpdatedEventSchema = z.object({
     capability: z.string().trim().min(1),
     timestamp: z.string().datetime(),
@@ -1952,6 +1977,7 @@ export const agentRuntimeEventSchema = z.discriminatedUnion('type', [
     agentRuntimeCronDeletedEventSchema,
     agentRuntimeCronRunStartedEventSchema,
     agentRuntimeCronRunFinishedEventSchema,
+    agentRuntimeVaultChangedEventSchema,
     agentRuntimeCapabilityUpdatedEventSchema,
     agentRuntimeTurnStartedEventSchema,
     agentRuntimeTurnProgressEventSchema,
@@ -2057,6 +2083,8 @@ export type VaultBacklink = z.infer<typeof vaultBacklinkSchema>;
 export type VaultBacklinkList = z.infer<typeof vaultBacklinkListSchema>;
 export type VaultConfigSource = z.infer<typeof vaultConfigSourceSchema>;
 export type VaultCreatePage = z.infer<typeof vaultCreatePageSchema>;
+export type VaultFreshness = z.infer<typeof vaultFreshnessSchema>;
+export type VaultFreshnessState = z.infer<typeof vaultFreshnessStateSchema>;
 export type VaultMovePath = z.infer<typeof vaultMovePathSchema>;
 export type VaultPage = z.infer<typeof vaultPageSchema>;
 export type VaultPageList = z.infer<typeof vaultPageListSchema>;
