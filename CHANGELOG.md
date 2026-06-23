@@ -2,6 +2,27 @@
 
 All notable changes to this project will be documented in this file.
 
+## v1.4.29 - 2026-06-22
+
+Runtime floor raised to 1.4.29 for native Hermes memory and managed Runtime
+memory config cleanup.
+
+App changes:
+
+- Requires Runtime 1.4.29 so upgraded apps use managed Hermes's built-in memory
+  files instead of the removed Mnemosyne provider.
+- Renders markdown headings correctly in chat replies.
+- Renders Vault wikilinks correctly in the editor.
+
+Runtime changes:
+
+- Enables Hermes built-in `MEMORY.md` and `USER.md` memory, clears the external
+  memory provider, and stops packaging Mnemosyne plugin and Python artifacts.
+- Removes the Mnemosyne Runtime capability and stale memory provider env var
+  handling from managed config rewrites.
+- Updates generated agent guidance and memory docs around built-in memory files
+  plus Vault recall.
+
 ## v1.4.28 - 2026-06-22
 
 Runtime floor raised to 1.4.28 for Vault live refreshes, agent execution
