@@ -184,6 +184,7 @@ async function resetTavernSession(
 
 function formatSessionBindingStatus(input: {
     liveSessionId: string | null;
+    model?: { model: string; provider: string } | null;
     sessionKey: string;
     state: string;
     storedSessionId: string | null;
@@ -199,6 +200,7 @@ function formatSessionBindingStatus(input: {
         'Agent Session Status',
         '',
         `State: ${state}`,
+        `Model: ${input.model?.model ?? 'unknown'} (${input.model?.provider ?? 'unknown'})`,
         `Session key: ${input.sessionKey}`,
     ];
 

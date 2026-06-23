@@ -13,6 +13,10 @@ const hermesClient = vi.hoisted(() => ({
     close: vi.fn(),
     getSessionBindingStatus: vi.fn(async () => ({
         liveSessionId: 'live-session',
+        model: {
+            model: 'gpt-5.5',
+            provider: 'openai-codex',
+        },
         sessionKey: 'agent:agt_hermes:tavern:channel:cht_1',
         state: 'live',
         storedSessionId: 'stored-session',
@@ -227,6 +231,7 @@ describe('Tavern command execution policy', () => {
 
         expect(body.status).toBe('completed');
         expect(body.output).toContain('Agent Session Status');
+        expect(body.output).toContain('Model: gpt-5.5 (openai-codex)');
         expect(body.output).toContain('Bound session: stored-session');
         expect(body.output).toContain('Live session: live-session');
         expect(hermesClient.getSessionBindingStatus).toHaveBeenCalledWith(

@@ -1,4 +1,5 @@
 import fs from 'node:fs/promises';
+import { createServer as createHttpServer, type Server as HttpServer } from 'node:http';
 import { createServer } from 'node:net';
 import os from 'node:os';
 import path from 'node:path';
@@ -8,6 +9,7 @@ import { WebSocketServer } from 'ws';
 describe('LocalHermesClient session routing', () => {
     const originalRuntimeRoot = process.env.TAVERN_RUNTIME_ROOT;
     let runtimeRoot: string;
+    let httpServer: HttpServer | null = null;
     let server: WebSocketServer | null = null;
 
     const expectedHermesWorkspace = () => path.join(runtimeRoot, 'hermes', 'workspace');
@@ -22,6 +24,8 @@ describe('LocalHermesClient session routing', () => {
     afterEach(async () => {
         server?.close();
         server = null;
+        await closeHttpServer(httpServer);
+        httpServer = null;
         await closeRuntimeTestDb();
         if (originalRuntimeRoot === undefined) {
             process.env.TAVERN_RUNTIME_ROOT = undefined;
@@ -366,28 +370,22 @@ describe('LocalHermesClient session routing', () => {
     });
 
     it('reports binding status without opening or resuming a gateway session', async () => {
-        const requests: Array<{ method: string; params: Record<string, unknown> }> = [];
-
-        server = new WebSocketServer({
-            host: '127.0.0.1',
-            port: await getFreePort(),
+        const httpPaths: string[] = [];
+        httpServer = createHttpServer((request, response) => {
+            const url = new URL(request.url ?? '/', 'http://127.0.0.1');
+            httpPaths.push(url.pathname);
+            response.writeHead(200, { 'content-type': 'application/json' });
+            response.end(
+                JSON.stringify({
+                    id: 'stored-session',
+                    model: 'gpt-5.5',
+                })
+            );
         });
-        server.on('connection', (socket) => {
-            socket.on('message', (message) => {
-                const request = JSON.parse(message.toString()) as {
-                    id: string;
-                    method: string;
-                    params?: Record<string, unknown>;
-                };
-                requests.push({ method: request.method, params: request.params ?? {} });
-                socket.send(JSON.stringify({ id: request.id, jsonrpc: '2.0', result: {} }));
-            });
-        });
-
-        await new Promise<void>((resolve) => server?.once('listening', () => resolve()));
-        const address = server.address();
+        await listenHttpServer(httpServer);
+        const address = httpServer.address();
         if (!(address && typeof address === 'object')) {
-            throw new Error('Test WebSocket server did not bind a port.');
+            throw new Error('Test HTTP server did not bind a port.');
         }
 
         const { LocalHermesClient } = await import('./local-client');
@@ -405,12 +403,117 @@ describe('LocalHermesClient session routing', () => {
             client.getSessionBindingStatus('agent:main:tavern:cht_1')
         ).resolves.toMatchObject({
             liveSessionId: null,
+            model: {
+                model: 'gpt-5.5',
+                provider: 'unknown',
+            },
             state: 'bound',
             storedSessionId: 'stored-session',
         });
         client.close();
 
-        expect(requests).toEqual([]);
+        expect(httpPaths).toEqual(['/api/sessions/stored-session']);
+    });
+
+    it('reports live binding status with the live gateway model and provider', async () => {
+        const requests: Array<{ method: string; params: Record<string, unknown> }> = [];
+
+        server = new WebSocketServer({
+            host: '127.0.0.1',
+            port: await getFreePort(),
+        });
+        server.on('connection', (socket) => {
+            socket.on('message', (message) => {
+                const request = JSON.parse(message.toString()) as {
+                    id: string;
+                    method: string;
+                    params?: Record<string, unknown>;
+                };
+                const params = request.params ?? {};
+                requests.push({ method: request.method, params });
+
+                if (request.method === 'session.create') {
+                    socket.send(
+                        JSON.stringify({
+                            id: request.id,
+                            jsonrpc: '2.0',
+                            result: {
+                                session_id: 'live-session',
+                                stored_session_id: 'stored-session',
+                            },
+                        })
+                    );
+                    return;
+                }
+
+                if (request.method === 'model.options') {
+                    socket.send(
+                        JSON.stringify({
+                            id: request.id,
+                            jsonrpc: '2.0',
+                            result: {
+                                current_model: 'gpt-5.5',
+                                current_provider: 'openai-codex',
+                            },
+                        })
+                    );
+                    return;
+                }
+
+                socket.send(JSON.stringify({ id: request.id, jsonrpc: '2.0', result: {} }));
+                if (request.method === 'prompt.submit') {
+                    socket.send(
+                        `${JSON.stringify({
+                            jsonrpc: '2.0',
+                            method: 'event',
+                            params: {
+                                payload: { text: 'done' },
+                                session_id: params.session_id,
+                                type: 'message.complete',
+                            },
+                        })}\n`
+                    );
+                }
+            });
+        });
+
+        await new Promise<void>((resolve) => server?.once('listening', () => resolve()));
+        const address = server.address();
+        if (!(address && typeof address === 'object')) {
+            throw new Error('Test WebSocket server did not bind a port.');
+        }
+
+        const { LocalHermesClient } = await import('./local-client');
+        const client = new LocalHermesClient({
+            baseUrl: `http://127.0.0.1:${address.port}`,
+            token: null,
+        });
+
+        await drain(
+            client.streamChat({
+                content: 'prime live session',
+                sessionKey: 'agent:main:tavern:cht_1',
+            })
+        );
+
+        await expect(
+            client.getSessionBindingStatus('agent:main:tavern:cht_1')
+        ).resolves.toMatchObject({
+            liveSessionId: 'live-session',
+            model: {
+                model: 'gpt-5.5',
+                provider: 'openai-codex',
+            },
+            state: 'live',
+            storedSessionId: 'stored-session',
+        });
+        client.close();
+
+        expect(requests.map((request) => request.method)).toEqual([
+            'session.create',
+            'prompt.submit',
+            'model.options',
+        ]);
     });
 
     it('serializes overlapping turns for one Tavern session key', async () => {
@@ -2067,6 +2170,22 @@ function deferred<T>() {
 
 async function delay(ms: number) {
     await new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+async function listenHttpServer(server: HttpServer) {
+    await new Promise<void>((resolve, reject) => {
+        server.once('error', reject);
+        server.listen(0, '127.0.0.1', () => resolve());
+    });
+}
+
+async function closeHttpServer(server: HttpServer | null) {
+    if (!server) {
+        return;
+    }
+    await new Promise<void>((resolve, reject) => {
+        server.close((error) => (error ? reject(error) : resolve()));
+    });
 }
 
 async function getFreePort() {

@@ -161,8 +161,10 @@ and new work appears normally. History stays durable; rows keep their
 sequence slots, and the old engine session remains stored execution evidence
 in both cases.
 
-`/status` reports the binding Runtime will use for the next chat turn. It must
-not create, resume, or rotate an engine session just to inspect status.
+`/status` reports the binding Runtime will use for the next chat turn and the
+best-known session model as `Model: <model> (<provider>)`. It must not create,
+resume, or rotate an engine session just to inspect status. Missing model or
+provider values are shown as `unknown`.
 
 ## Dismissal
 

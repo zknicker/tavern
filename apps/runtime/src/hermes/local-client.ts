@@ -169,9 +169,14 @@ export class LocalHermesClient extends LocalHermesUnsupportedSurfaces {
     async getSessionBindingStatus(sessionKey: string) {
         const liveSessionId = this.#liveSessions.get(sessionKey) ?? null;
         const mapping = await getHermesSessionMapping(sessionKey);
+        const model = await this.#readSessionStatusModel({
+            liveSessionId,
+            storedSessionId: mapping?.hermesSessionKey ?? null,
+        });
 
         return {
             liveSessionId,
+            model,
             sessionKey,
             state: liveSessionId ? 'live' : mapping ? 'bound' : 'empty',
             storedSessionId: mapping?.hermesSessionKey ?? null,
@@ -1000,6 +1005,52 @@ export class LocalHermesClient extends LocalHermesUnsupportedSurfaces {
         });
     }
 
+    async #readSessionStatusModel(input: {
+        liveSessionId: string | null;
+        storedSessionId: string | null;
+    }) {
+        if (input.liveSessionId) {
+            const liveModel = await this.#readLiveSessionModel(input.liveSessionId);
+            if (liveModel.model !== 'unknown' || liveModel.provider !== 'unknown') {
+                return liveModel;
+            }
+        }
+
+        if (input.storedSessionId) {
+            return await this.#readStoredSessionModel(input.storedSessionId);
+        }
+
+        return unknownSessionModel();
+    }
+
+    async #readLiveSessionModel(sessionId: string) {
+        try {
+            const result = await this.#gateway.request('model.options', {
+                session_id: sessionId,
+            });
+            return sessionStatusModel({
+                model: readStringFromUnknown(result, ['current_model', 'model']),
+                provider: readStringFromUnknown(result, ['current_provider', 'provider']),
+            });
+        } catch {
+            return unknownSessionModel();
+        }
+    }
+
+    async #readStoredSessionModel(sessionId: string) {
+        try {
+            const result = await this.#http.get(`/api/sessions/${encodeURIComponent(sessionId)}`);
+            const response = asRecord(result);
+            const session = response.session ?? response.data ?? result;
+            return sessionStatusModel({
+                model: readStringFromUnknown(session, ['model']),
+                provider: readStringFromUnknown(session, ['provider']),
+            });
+        } catch {
+            return unknownSessionModel();
+        }
+    }
+
     async #buildPromptText(input: {
         attachments: AgentRuntimeSessionMessageAttachment[];
         content: string;
@@ -1585,6 +1636,17 @@ function readStringFromUnknown(value: unknown, keys: string[]) {
     return value && typeof value === 'object'
         ? readString(value as Record<string, unknown>, keys)
         : undefined;
+}
+
+function sessionStatusModel(input: { model?: string | null; provider?: string | null }) {
+    return {
+        model: input.model?.trim() || 'unknown',
+        provider: input.provider?.trim() || 'unknown',
+    };
+}
+
+function unknownSessionModel() {
+    return sessionStatusModel({});
 }
 
 function isClarifyToolPayload(payload: Record<string, unknown>) {

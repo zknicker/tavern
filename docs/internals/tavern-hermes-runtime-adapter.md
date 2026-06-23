@@ -221,8 +221,11 @@ drop the stored binding, and let the next turn or command create a fresh Hermes
 session under the same Tavern key. `/clear` also clears the Tavern chat timeline.
 
 `/status` is a binding read. It reports the live cached session id, stored
-Hermes session id, or empty binding state for the Tavern session key without
-creating, resuming, or rotating a Hermes session.
+Hermes session id, and best-known session model for the Tavern session key
+without creating, resuming, or rotating a Hermes session. The model line always
+uses `Model: <model> (<provider>)`; Runtime reads live model/provider from the
+Gateway when a live session exists, reads stored session model metadata when
+only a bound session exists, and fills missing values with `unknown`.
 
 ## Cron Delivery
 
