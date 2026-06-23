@@ -89,7 +89,7 @@ test('ChatTranscript animates only local optimistic user messages', () => {
     assert.match(markup, /style="transform-origin:bottom right;opacity:0;transform/);
 });
 
-test('ChatTranscript renders constrained inline markdown in message text', () => {
+test('ChatTranscript renders chat markdown headings and inline markup in message text', () => {
     const markup = renderTranscript([
         {
             actor: { id: 'tiny', kind: 'agent' },
@@ -101,7 +101,7 @@ test('ChatTranscript renders constrained inline markdown in message text', () =>
             message: {
                 tavernAgentId: 'tiny',
                 content:
-                    '# Test\nI use **gpt-5.4-mini**, *carefully*, with `OPENAI_API_KEY`, [OpenAI](https://openai.com), www.example.com, <u>raw</u>, and [bad](javascript:alert(1)).',
+                    '# Test\n\n## Test 2\n\n### Test 3\nI use **gpt-5.4-mini**, *carefully*, with `OPENAI_API_KEY`, [OpenAI](https://openai.com), www.example.com, <u>raw</u>, and [bad](javascript:alert(1)).',
                 id: 'message-markdown',
                 sender: 'Tiny',
                 senderType: 'agent',
@@ -112,7 +112,9 @@ test('ChatTranscript renders constrained inline markdown in message text', () =>
         },
     ]);
 
-    assert.match(markup, /# Test/);
+    assert.match(markup, /<h1 class="[^"]*">Test<\/h1>/);
+    assert.match(markup, /<h2 class="[^"]*">Test 2<\/h2>/);
+    assert.match(markup, /<h3 class="[^"]*">Test 3<\/h3>/);
     assert.match(markup, /<strong class="font-semibold">gpt-5\.4-mini<\/strong>/);
     assert.match(markup, /<em class="italic">carefully<\/em>/);
     assert.match(
@@ -123,7 +125,7 @@ test('ChatTranscript renders constrained inline markdown in message text', () =>
     assert.match(markup, /href="https:\/\/www\.example\.com\/"/);
     assert.match(markup, />www\.example\.com<\/a>/);
     assert.match(markup, /&lt;u&gt;raw&lt;\/u&gt;/);
-    assert.doesNotMatch(markup, /<h1/);
+    assert.doesNotMatch(markup, /# Test/);
     assert.doesNotMatch(markup, /href="javascript:/);
 });
 

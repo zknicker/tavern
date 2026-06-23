@@ -23,7 +23,7 @@ import { AgentRichResponse } from '../../rich-responses/render-rich-response.tsx
 import { AgentPresenceIndicator } from './agent-presence-indicator.tsx';
 import { getActivePresenceVerb } from './chat-active-presence-verb.ts';
 import { CommandRunEntry } from './chat-command-card.tsx';
-import { ChatInlineMarkdownText } from './chat-inline-markdown-text.tsx';
+import { ChatMarkdownText } from './chat-markdown-text.tsx';
 import { useStreamingTextRanges } from './chat-streaming-text-ranges.ts';
 import {
     ChatTranscriptActivity,
@@ -772,7 +772,7 @@ function AssistantReplyText({
                     message={message}
                 />
             ) : (
-                <ChatInlineMarkdownText animatedRanges={animatedRanges} content={revealedText} />
+                <ChatMarkdownText animatedRanges={animatedRanges} content={revealedText} />
             )}
         </ChatMessage>
     );

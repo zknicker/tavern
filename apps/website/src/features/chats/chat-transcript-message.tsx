@@ -3,8 +3,8 @@ import { cn } from '../../lib/utils.ts';
 import { readMentionsFromMetadata } from '../mentions/mention-metadata.ts';
 import { CollapsibleText } from '../rows/collapsible-text.tsx';
 import { getMessageDisplay } from '../rows/message-display.ts';
-import { ChatInlineMarkdownText } from './chat-inline-markdown-text.tsx';
 import type { ChatTextAnimationRange } from './chat-inline-text-animation.tsx';
+import { ChatMarkdownText } from './chat-markdown-text.tsx';
 import { ChatMessageImage } from './chat-message-image.tsx';
 
 export type TranscriptMessage =
@@ -51,7 +51,7 @@ export function ChatTranscriptMessageContent({
 
     return (
         <CollapsibleText className={cn('text-sm', textClassName ?? 'text-foreground')}>
-            <ChatInlineMarkdownText
+            <ChatMarkdownText
                 animatedRanges={animatedRanges}
                 content={content}
                 mentions={mentions}

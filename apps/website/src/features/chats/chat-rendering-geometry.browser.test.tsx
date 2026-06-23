@@ -2,7 +2,7 @@ import { afterAll, beforeAll, expect, test } from 'bun:test';
 import { type Browser, chromium, type Page } from '@playwright/test';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { ChatMessage } from '../../components/chats/chat-message.tsx';
-import { ChatInlineMarkdownText } from './chat-inline-markdown-text.tsx';
+import { ChatMarkdownText } from './chat-markdown-text.tsx';
 import {
     ChatTranscriptMessageContent,
     renderTranscriptMessageAttachments,
@@ -92,7 +92,7 @@ test('active and durable assistant reply wrappers keep the same text geometry', 
             animateEnter={false}
             from="assistant"
         >
-            <ChatInlineMarkdownText content={appointmentText} />
+            <ChatMarkdownText content={appointmentText} />
         </ChatMessage>
     );
     const durableMarkup = renderToStaticMarkup(

@@ -1,7 +1,4 @@
 import type * as React from 'react';
-import { MentionChip } from '../mentions/mention-chip.tsx';
-import type { Mention } from '../mentions/mention-types.ts';
-import { splitMentionText } from '../mentions/render-mention-text.tsx';
 import { MarkdownLink, matchBareUrl, matchMarkdownLink } from './chat-inline-markdown-link.tsx';
 import {
     type ChatTextAnimationRange,
@@ -10,43 +7,7 @@ import {
 
 const maxParseDepth = 6;
 
-export function ChatInlineMarkdownText({
-    animatedRanges = [],
-    content,
-    mentions,
-}: {
-    animatedRanges?: readonly ChatTextAnimationRange[];
-    content: string;
-    mentions?: readonly Mention[];
-}) {
-    if (!mentions || mentions.length === 0) {
-        return renderInlineMarkdown(content, 'message', 0, {
-            animatedRanges,
-            sourceOffset: 0,
-        });
-    }
-
-    return splitMentionText(content, mentions).flatMap((fragment, index) => {
-        if (fragment.type === 'mention') {
-            return (
-                <MentionChip
-                    id={fragment.mention.id}
-                    key={`mention:${fragment.mention.start}:${fragment.mention.end}`}
-                    kind={fragment.mention.kind}
-                    label={fragment.mention.label}
-                    metadata={fragment.mention.metadata}
-                />
-            );
-        }
-
-        return renderInlineMarkdown(fragment.text, `text:${fragment.start}:${index}`, 0, {
-            animatedRanges,
-            sourceOffset: fragment.start,
-        });
-    });
-}
-
-function renderInlineMarkdown(
+export function renderInlineMarkdown(
     text: string,
     keyPrefix: string,
     depth: number,

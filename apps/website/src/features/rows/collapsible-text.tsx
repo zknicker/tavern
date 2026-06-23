@@ -8,8 +8,8 @@ export function CollapsibleText({
     className?: string;
 }) {
     return (
-        <p className={cn('whitespace-pre-wrap break-words', className)} data-selectable-text="">
+        <div className={cn('whitespace-pre-wrap break-words', className)} data-selectable-text="">
             {children}
-        </p>
+        </div>
     );
 }

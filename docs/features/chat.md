@@ -129,7 +129,9 @@ transcript only grows:
 * Streamed reply text reveals at a paced rate while the reply is live.
   Completed handoff replies and durable history load full assistant text
   immediately without transcript entrance motion. The live reply renders the
-  same inline markdown as the durable message so completion does not reflow.
+  same compact chat Markdown as the durable message so completion does not
+  reflow. Chat Markdown supports ATX heading markers with a compact H1-H3
+  visual hierarchy, plus inline emphasis, strong text, code, and safe links.
 * The streamed reply and its durable message share one React key
   (`reply:<runId>`), so the end-of-turn swap does not remount.
 * Agent turns render visible work and reply content in timeline order; there is
