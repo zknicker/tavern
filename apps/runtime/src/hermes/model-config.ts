@@ -18,6 +18,7 @@ import { getHermesExecutionSettings } from './execution-settings.ts';
 import { type HermesModelDomain, mergeHermesGeneratedConfig } from './generated-config.ts';
 import { prepareManagedVaultIntegration, resolveManagedVaultPath } from './managed-vault.ts';
 import { resolveConfiguredPermissionsDomain } from './permission-settings.ts';
+import { removeRetiredManagedSkillCopies } from './retired-managed-skills.ts';
 import { ensureManagedTavernSkill } from './tavern-skill.ts';
 
 export interface HermesModelConfig extends HermesModelDomain {
@@ -192,6 +193,7 @@ export async function prepareManagedHermesModelConfig(): Promise<HermesModelConf
         path.join(HERMES_HOME, 'auth.json'),
         await loadVaultBackedCodexCredentials().catch(() => null)
     );
+    await removeRetiredManagedSkillCopies();
     await prepareManagedVaultIntegration();
     await ensureManagedTavernSkill();
     return config;

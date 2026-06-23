@@ -216,6 +216,13 @@ those skills is normal Hermes agent-managed skill work: the agent edits or
 merges the source copy, and Runtime only refreshes the visible inventory after
 Hermes observes the change.
 
+Runtime also removes retired Tavern-owned managed skill copies when they carry
+an old Tavern marker. The legacy `cortex-wiki` package was replaced by Vault;
+if an older runtime home still has `HERMES_HOME/skills/cortex-wiki/TAVERN.md`
+with the old Tavern-owned package marker, startup deletes that stale managed
+copy. User-created or hub-installed skills with the same directory name are
+left alone unless they carry that marker.
+
 ## Managed Assistant Memory
 
 Runtime configures managed Hermes to use the engine's built-in prompt-time
