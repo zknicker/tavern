@@ -46,7 +46,11 @@ export function isAssistantNarrationItem(item: TranscriptItem): item is Extract<
 }
 
 export function isActiveActivityItem(item: ActivityItem) {
-    if (item.row.kind === 'tool' || item.row.kind === 'worker') {
+    if (item.row.kind === 'tool') {
+        return !(item.row.completedAt || hasFailedToolStatus(item.row.toolCall.status));
+    }
+
+    if (item.row.kind === 'worker') {
         return !item.row.completedAt;
     }
 
@@ -231,5 +235,20 @@ function isNarrationTitle(value: string, label: string) {
         normalizedValue === 'assistant reply' ||
         normalizedValue === 'preamble' ||
         (normalizedLabel.length > 0 && normalizedValue === normalizedLabel)
+    );
+}
+
+function hasFailedToolStatus(status: string | null) {
+    if (!status) {
+        return false;
+    }
+
+    const normalized = status.toLowerCase();
+    return (
+        normalized.includes('error') ||
+        normalized.includes('forbidden') ||
+        normalized.includes('failed') ||
+        normalized.includes('timeout') ||
+        normalized.includes('timed out')
     );
 }

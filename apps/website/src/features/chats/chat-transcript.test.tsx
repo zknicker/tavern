@@ -285,6 +285,73 @@ test('ChatTranscript renders tool calls and agent responses through one surface'
     assert.doesNotMatch(markup, /aria-expanded="true"/);
 });
 
+test('ChatTranscript labels recovered tool failures without making the final reply look failed', () => {
+    const markup = renderTranscript([
+        {
+            actor: { id: 'tiny', kind: 'agent' },
+            completedAt: '2026-03-31T15:00:01.000Z',
+            connectsToNext: true,
+            connectsToPrevious: false,
+            id: 'tool-failed-read',
+            isFirstInGroup: true,
+            kind: 'tool',
+            sessionKey: 'agent:tiny:session-1',
+            spawnedRelationships: [],
+            startedAt: '2026-03-31T15:00:00.000Z',
+            toolCall: {
+                callId: 'call-failed-read',
+                facts: [{ label: 'Error', tone: 'danger', value: 'HTTP 400' }],
+                label: 'read · bad-upload.png',
+                name: 'read_file',
+                status: 'error',
+                summaryParts: ['bad-upload.png'],
+            },
+        },
+        {
+            actor: { id: 'tiny', kind: 'agent' },
+            completedAt: '2026-03-31T15:00:02.000Z',
+            connectsToNext: true,
+            connectsToPrevious: true,
+            id: 'tool-success-write',
+            isFirstInGroup: false,
+            kind: 'tool',
+            sessionKey: 'agent:tiny:session-1',
+            spawnedRelationships: [],
+            startedAt: '2026-03-31T15:00:01.000Z',
+            toolCall: {
+                callId: 'call-success-write',
+                facts: [],
+                label: 'write · Vault/Notes.md',
+                name: 'write_file',
+                status: 'ok',
+                summaryParts: ['Vault/Notes.md'],
+            },
+        },
+        {
+            actor: { id: 'tiny', kind: 'agent' },
+            connectsToNext: false,
+            connectsToPrevious: true,
+            id: 'message-recovered',
+            isFirstInGroup: false,
+            kind: 'message',
+            message: {
+                tavernAgentId: 'tiny',
+                content: 'Done.',
+                id: 'message-recovered',
+                sender: 'Tiny',
+                senderType: 'agent',
+                sourceSessionId: null,
+                sourceSessionKey: 'agent:tiny:session-1',
+                timestamp: '2026-03-31T15:00:03.000Z',
+            },
+        },
+    ]);
+
+    assert.match(markup, /Recovered after failed file read: bad-upload\.png/);
+    assert.match(markup, /Done\./);
+    assert.doesNotMatch(markup, /Final reply failed/);
+});
+
 test('ChatTranscript renders chart Rich Responses inline', () => {
     const markup = renderTranscript([richResponseRow('ui-chart')]);
 
@@ -849,6 +916,45 @@ test('ToolStep renders completed verbs in neutral text and the whole row as the 
     assert.match(markup, /cursor-default/);
     assert.doesNotMatch(markup, /cursor-pointer/);
     assert.doesNotMatch(markup, /thinking-indicator-text/);
+});
+
+test('ToolStep scopes generic failures to the failed tool target', () => {
+    const markup = renderToStaticMarkup(
+        <ToolStep
+            index={0}
+            isLast
+            row={{
+                actor: { id: 'tiny', kind: 'agent' },
+                completedAt: '2026-03-31T15:00:05.000Z',
+                connectsToNext: false,
+                connectsToPrevious: false,
+                id: 'tool-read-failed',
+                isFirstInGroup: true,
+                kind: 'tool',
+                sessionKey: 'agent:tiny:session-1',
+                spawnedRelationships: [],
+                startedAt: '2026-03-31T15:00:00.000Z',
+                toolCall: {
+                    callId: null,
+                    facts: [
+                        {
+                            label: 'Error',
+                            tone: 'danger',
+                            value: 'HTTP 400: Unsupported content type',
+                        },
+                    ],
+                    label: 'read · bad-upload.png',
+                    name: 'read',
+                    status: 'error',
+                    summaryParts: ['bad-upload.png'],
+                },
+            }}
+        />
+    );
+
+    assert.match(markup, />Failed</);
+    assert.match(markup, /read bad-upload\.png/);
+    assert.doesNotMatch(markup, /Unsupported content type/);
 });
 
 test('ToolStep renders terminal rows with the command instead of the tool name', () => {

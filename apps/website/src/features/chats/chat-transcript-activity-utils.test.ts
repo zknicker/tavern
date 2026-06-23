@@ -6,6 +6,7 @@ import {
     formatWorkGroupSummary,
     getActiveWorkLabel,
     getToolIntent,
+    isActiveActivityItem,
     mappedToolIntentNames,
 } from './chat-transcript-activity-utils.ts';
 
@@ -105,6 +106,56 @@ test('work group summary keeps file reads and code search distinct', () => {
     expect(formatWorkGroupSummary(items)).toBe('Read 2 files, searched code');
 });
 
+test('work group header scopes recovered tool failures', () => {
+    const items = [
+        toolItem({
+            name: 'read_file',
+            status: 'error',
+            summaryParts: ['bad-upload.png'],
+        }),
+        toolItem({
+            id: 'tool-2',
+            name: 'write_file',
+            summaryParts: ['Vault/Notes.md'],
+        }),
+    ];
+
+    expect(formatWorkGroupHeader(items)).toBe('Recovered after failed file read: bad-upload.png');
+});
+
+test('active work group header scopes recovery after a failed tool', () => {
+    const items = [
+        toolItem({
+            name: 'read_file',
+            status: 'error',
+            summaryParts: ['bad-upload.png'],
+        }),
+        toolItem({
+            id: 'tool-2',
+            name: 'write_file',
+            running: true,
+            summaryParts: ['Vault/Notes.md'],
+        }),
+    ];
+
+    expect(formatActiveWorkGroupHeader(items)).toBe(
+        'Recovering from failed file read: bad-upload.png'
+    );
+});
+
+test('errored tool rows are not active when completion is missing', () => {
+    expect(
+        isActiveActivityItem(
+            toolItem({
+                name: 'read_file',
+                running: true,
+                status: 'error',
+                summaryParts: ['bad-upload.png'],
+            })
+        )
+    ).toBe(false);
+});
+
 test('work group summary does not treat memory search as code search', () => {
     const items = [toolItem({ name: 'memory_search', summaryParts: ['SOUL.md'] })];
 
@@ -150,6 +201,7 @@ function toolItem(input: {
     label?: string;
     name: string;
     running?: boolean;
+    status?: string | null;
     summaryParts: string[];
 }): ActivityItem {
     return {
@@ -170,7 +222,7 @@ function toolItem(input: {
                 facts: [],
                 label: input.label ?? input.summaryParts.join(' '),
                 name: input.name,
-                status: null,
+                status: input.status ?? null,
                 summaryParts: input.summaryParts,
             },
         },

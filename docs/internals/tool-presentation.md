@@ -46,8 +46,11 @@ custom presentation for a specific tool.
   appear in the header; long commands, approval commands, browser payloads, and
   search queries stay in the drawer. Active headers latch meaningful copy and
   animate short text changes with SlotText, so fast tool state changes do not
-  flash between raw commands and "Working". Expanding the drawer reveals the
-  individual tool rows, which remain the inspect-drawer triggers.
+  flash between raw commands and "Working". If a failed tool is followed by
+  later successful tool work, the header says the failure was recovered; the
+  failed row keeps the specific tool and target, while the raw error stays in
+  details. Expanding the drawer reveals the individual tool rows, which remain
+  the inspect-drawer triggers.
 
 ## Adding custom presentation for a tool
 

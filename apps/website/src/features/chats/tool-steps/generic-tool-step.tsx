@@ -14,6 +14,9 @@ export function GenericToolStep({
     row,
 }: ToolStepRendererProps) {
     const target = getToolTarget(row);
+    const visibleTarget = hasErrorStatus(row.toolCall.status)
+        ? getFailedToolTarget(row, target)
+        : target;
 
     return (
         <ToolTimelineStep
@@ -22,7 +25,13 @@ export function GenericToolStep({
             icon={resolveToolStepIcon(row.toolCall.name)}
             index={index}
             isLast={isLast}
-            label={<InlineToolLabel row={row} target={target} verb={getToolVerb(row, target)} />}
+            label={
+                <InlineToolLabel
+                    row={row}
+                    target={visibleTarget}
+                    verb={getToolVerb(row, visibleTarget)}
+                />
+            }
             row={row}
         >
             {row.spawnedRelationships.length > 0 ? (
@@ -48,6 +57,28 @@ export function GenericToolStep({
             ) : null}
         </ToolTimelineStep>
     );
+}
+
+function getFailedToolTarget(row: ToolStepRendererProps['row'], target: string) {
+    const toolName = row.toolCall.name.trim();
+
+    if (!toolName) {
+        return target;
+    }
+
+    const normalizedName = toolName.toLowerCase();
+    const normalizedTarget = target.toLowerCase();
+
+    if (
+        normalizedTarget === normalizedName ||
+        normalizedTarget.startsWith(`${normalizedName} `) ||
+        normalizedTarget.startsWith(`${normalizedName}:`) ||
+        normalizedTarget.startsWith(`${normalizedName} ·`)
+    ) {
+        return target;
+    }
+
+    return `${toolName} ${target}`;
 }
 
 function getToolVerb(row: ToolStepRendererProps['row'], target: string) {

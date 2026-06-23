@@ -18,6 +18,12 @@ export function getActiveWorkLabel(items: ActivityItem[]) {
 }
 
 export function formatActiveWorkGroupHeader(items: ActivityItem[]) {
+    const recoveryLabel = formatFailureWorkGroupHeader(items, 'active');
+
+    if (recoveryLabel) {
+        return recoveryLabel;
+    }
+
     const activeIntent = findLatestActiveIntent(items);
     const summary = formatWorkGroupSummary(items);
     const intentCount = getMeaningfulIntents(items).length;
@@ -40,6 +46,12 @@ export function formatActiveWorkGroupHeader(items: ActivityItem[]) {
 }
 
 export function formatWorkGroupHeader(items: ActivityItem[]) {
+    const failureLabel = formatFailureWorkGroupHeader(items, 'completed');
+
+    if (failureLabel) {
+        return failureLabel;
+    }
+
     const summary = formatWorkGroupSummary(items);
 
     if (summary) {
@@ -85,6 +97,117 @@ function findLatestActiveIntent(items: ActivityItem[]) {
     }
 
     return null;
+}
+
+function formatFailureWorkGroupHeader(items: ActivityItem[], mode: 'active' | 'completed') {
+    const failedIndex = findLastFailedToolIndex(items);
+
+    if (failedIndex === -1) {
+        return null;
+    }
+
+    const failedItem = items[failedIndex];
+
+    if (!failedItem) {
+        return null;
+    }
+
+    const failure = formatFailedToolIntent(failedItem);
+    const recovered = hasCompletedWorkAfter(items, failedIndex);
+
+    if (mode === 'active') {
+        return recovered ? `Recovering after ${failure}` : `Recovering from ${failure}`;
+    }
+
+    return recovered ? `Recovered after ${failure}` : capitalize(failure);
+}
+
+function findLastFailedToolIndex(items: ActivityItem[]) {
+    for (let index = items.length - 1; index >= 0; index -= 1) {
+        const item = items[index];
+
+        if (item?.row.kind === 'tool' && hasFailedToolStatus(item.row.toolCall.status)) {
+            return index;
+        }
+    }
+
+    return -1;
+}
+
+function hasCompletedWorkAfter(items: ActivityItem[], index: number) {
+    return items.slice(index + 1).some((item) => {
+        if (item.row.kind === 'tool') {
+            return Boolean(item.row.completedAt && !hasFailedToolStatus(item.row.toolCall.status));
+        }
+
+        if (item.row.kind === 'worker') {
+            return Boolean(item.row.completedAt);
+        }
+
+        return false;
+    });
+}
+
+function formatFailedToolIntent(item: ActivityItem) {
+    const intent = getToolIntent(item);
+    const target =
+        intent?.subject && intent.subjectVisibility === 'header' ? `: ${intent.subject}` : '';
+    const noun = intent ? failedIntentNoun(intent.kind) : 'tool';
+
+    return `failed ${noun}${target}`;
+}
+
+function failedIntentNoun(kind: ToolIntentKind) {
+    switch (kind) {
+        case 'approval':
+            return 'approval';
+        case 'automation':
+            return 'automation';
+        case 'browser':
+            return 'browser action';
+        case 'calendar':
+            return 'calendar check';
+        case 'code':
+            return 'code run';
+        case 'code-search':
+            return 'code search';
+        case 'command':
+            return 'command';
+        case 'computer':
+            return 'computer action';
+        case 'clarification':
+            return 'question';
+        case 'document':
+            return 'document check';
+        case 'file-edit':
+            return 'file edit';
+        case 'file-list':
+            return 'file listing';
+        case 'file-read':
+            return 'file read';
+        case 'home':
+            return 'Home Assistant action';
+        case 'image':
+            return 'media action';
+        case 'memory':
+            return 'memory check';
+        case 'message':
+            return 'message';
+        case 'skill':
+            return 'skill check';
+        case 'task':
+            return 'task update';
+        case 'thinking':
+            return 'thinking step';
+        case 'tool':
+            return 'tool';
+        case 'voice':
+            return 'audio generation';
+        case 'web':
+            return 'web search';
+        case 'worker':
+            return 'agent task';
+    }
 }
 
 function getToolIntents(items: ActivityItem[]) {
@@ -161,4 +284,23 @@ function joinHeaderParts(parts: string[]) {
 
     const [first, second] = normalizedParts;
     return `${first}, ${second.charAt(0).toLowerCase()}${second.slice(1)}`;
+}
+
+function hasFailedToolStatus(status: string | null) {
+    if (!status) {
+        return false;
+    }
+
+    const normalized = status.toLowerCase();
+    return (
+        normalized.includes('error') ||
+        normalized.includes('forbidden') ||
+        normalized.includes('failed') ||
+        normalized.includes('timeout') ||
+        normalized.includes('timed out')
+    );
+}
+
+function capitalize(value: string) {
+    return value.charAt(0).toUpperCase() + value.slice(1);
 }
