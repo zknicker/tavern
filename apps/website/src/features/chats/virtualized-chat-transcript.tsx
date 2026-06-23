@@ -7,6 +7,7 @@ import {
 } from '@tanstack/react-virtual';
 import * as React from 'react';
 import type { ChatActiveReply, ChatTurnFailure } from '../../hooks/chats/chat-timeline-state.ts';
+import { writeChatScrollAnchor } from './chat-scroll-anchor-memory.ts';
 import { useChatFollowScrollAnimation } from './chat-scroll-animation.ts';
 import {
     type ChatScrollMode,
@@ -26,6 +27,8 @@ import {
     useChatScrollControllerHandle,
     useChatScrollControllerMode,
 } from './use-chat-scroll-controller.ts';
+import { useVirtualizedChatAnchorRestore } from './use-virtualized-chat-anchor-restore.ts';
+import { getVirtualizedChatScrollAnchorSnapshotFromRenderedRows } from './virtualized-chat-scroll-anchor.ts';
 
 const previousPageScrollThreshold = 160;
 const transcriptPinnedEndThreshold = 1;
@@ -71,17 +74,21 @@ export function VirtualizedChatTranscript({
     rows: TranscriptRenderRow[];
     scrollViewportRef: React.RefObject<HTMLDivElement | null>;
 }) {
-    const initialScrollKeyRef = React.useRef<string | null>(null);
-    const initialScrollMeasureKeyRef = React.useRef<string | null>(null);
     const initialScrollPendingRef = React.useRef(false);
+    const anchorRestorePendingRef = React.useRef(false);
     const chatScrollController = useChatScrollControllerHandle();
     const chatScrollMode = useChatScrollControllerMode();
     const chatScrollModeRef = React.useRef(chatScrollMode);
     const endReconcileFrameRef = React.useRef<number | null>(null);
+    const userScrollIntentPendingRef = React.useRef(false);
+    const scrollAnchorCaptureAllowsPendingRef = React.useRef(false);
+    const scrollAnchorCaptureFrameRef = React.useRef<number | null>(null);
+    const latestChatIdRef = React.useRef(chatId);
     const virtualizerAnchorsToEnd = shouldAnchorVirtualizerToEnd(chatScrollMode);
     const virtualizerSizeAdjustmentPredicate =
         getVirtualizerSizeAdjustmentPredicate(chatScrollMode);
     chatScrollModeRef.current = chatScrollMode;
+    latestChatIdRef.current = chatId;
     const getLatestChatScrollMode = React.useCallback(
         () => chatScrollController?.getMode() ?? chatScrollModeRef.current,
         [chatScrollController]
@@ -90,6 +97,57 @@ export function VirtualizedChatTranscript({
         getMode: getLatestChatScrollMode,
         isInitialScrollPending: () => initialScrollPendingRef.current,
     });
+    const rememberRenderedScrollAnchor = React.useCallback(
+        (options: { allowPending?: boolean } = {}) => {
+            const viewport = scrollViewportRef.current;
+            const atBottom = viewport
+                ? viewport.scrollHeight - viewport.scrollTop - viewport.clientHeight <=
+                  transcriptPinnedEndThreshold
+                : false;
+
+            if (initialScrollPendingRef.current && atBottom) {
+                initialScrollPendingRef.current = false;
+                return;
+            }
+
+            if (initialScrollPendingRef.current && options.allowPending) {
+                initialScrollPendingRef.current = false;
+            }
+
+            if (
+                !(chatId && viewport) ||
+                latestChatIdRef.current !== chatId ||
+                initialScrollPendingRef.current ||
+                anchorRestorePendingRef.current
+            ) {
+                return;
+            }
+
+            const viewportTop = viewport.getBoundingClientRect().top;
+            const renderedRows = Array.from(
+                viewport.querySelectorAll<HTMLElement>('[data-chat-transcript-row-id]')
+            ).map((rowElement) => {
+                const rect = rowElement.getBoundingClientRect();
+
+                return {
+                    bottom: rect.bottom,
+                    height: rect.height,
+                    rowId: rowElement.getAttribute('data-chat-transcript-row-id'),
+                    top: rect.top,
+                };
+            });
+            const snapshot = getVirtualizedChatScrollAnchorSnapshotFromRenderedRows({
+                isAtBottom: atBottom,
+                renderedRows,
+                viewportTop,
+            });
+
+            if (snapshot) {
+                writeChatScrollAnchor(chatId, snapshot);
+            }
+        },
+        [chatId, scrollViewportRef]
+    );
     const scheduleVirtualizerEndReconcile = React.useCallback(
         (instance: Virtualizer<HTMLDivElement, HTMLDivElement>) => {
             if (endReconcileFrameRef.current !== null) {
@@ -111,6 +169,25 @@ export function VirtualizedChatTranscript({
         },
         [getLatestChatScrollMode]
     );
+    const scheduleScrollAnchorCapture = React.useCallback(
+        (options: { allowPending?: boolean } = {}) => {
+            if (options.allowPending) {
+                scrollAnchorCaptureAllowsPendingRef.current = true;
+            }
+
+            if (scrollAnchorCaptureFrameRef.current !== null) {
+                window.cancelAnimationFrame(scrollAnchorCaptureFrameRef.current);
+            }
+
+            scrollAnchorCaptureFrameRef.current = window.requestAnimationFrame(() => {
+                scrollAnchorCaptureFrameRef.current = null;
+                const allowPending = scrollAnchorCaptureAllowsPendingRef.current;
+                scrollAnchorCaptureAllowsPendingRef.current = false;
+                rememberRenderedScrollAnchor({ allowPending });
+            });
+        },
+        [rememberRenderedScrollAnchor]
+    );
     const virtualizer = useVirtualizer<HTMLDivElement, HTMLDivElement>({
         anchorTo: virtualizerAnchorsToEnd ? 'end' : 'start',
         count: rows.length,
@@ -130,6 +207,7 @@ export function VirtualizedChatTranscript({
             ),
         onChange: (instance) => {
             scheduleVirtualizerEndReconcile(instance);
+            scheduleScrollAnchorCapture();
         },
         overscan: 8,
         paddingEnd: transcriptEndInset,
@@ -166,6 +244,18 @@ export function VirtualizedChatTranscript({
           )
         : virtualItems;
     const firstEntryIndex = virtualItems.find((item) => rows[item.index]?.kind === 'entry')?.index;
+    useVirtualizedChatAnchorRestore({
+        anchorRestorePendingRef,
+        chatId,
+        chatScrollController,
+        initialScrollKey,
+        initialScrollMeasureKey,
+        initialScrollPendingRef,
+        pinnedEndThreshold: transcriptPinnedEndThreshold,
+        rows,
+        virtualItems,
+        virtualizer,
+    });
 
     React.useLayoutEffect(() => {
         const controlledVirtualizer = virtualizer as SizeAdjustmentControlledVirtualizer;
@@ -186,12 +276,12 @@ export function VirtualizedChatTranscript({
         if (
             shouldReconcileVirtualizedTranscriptEnd({
                 distanceFromEnd: virtualizer.getDistanceFromEnd(),
-                mode: chatScrollMode,
+                mode: getLatestChatScrollMode(),
             })
         ) {
             virtualizer.scrollToEnd({ behavior: 'auto' });
         }
-    }, [chatScrollMode, totalSize, virtualizer]);
+    }, [getLatestChatScrollMode, totalSize, virtualizer]);
 
     React.useEffect(() => {
         return () => {
@@ -202,47 +292,64 @@ export function VirtualizedChatTranscript({
         };
     }, []);
 
-    React.useLayoutEffect(() => {
-        const measureChanged = initialScrollMeasureKeyRef.current !== initialScrollMeasureKey;
-        initialScrollMeasureKeyRef.current = initialScrollMeasureKey;
-
-        if (initialScrollKey && rows.length > 0) {
-            const keyChanged = initialScrollKeyRef.current !== initialScrollKey;
-
-            if (keyChanged) {
-                initialScrollPendingRef.current = true;
-            }
-
-            initialScrollKeyRef.current = initialScrollKey;
-
-            if (
-                initialScrollPendingRef.current &&
-                (keyChanged || measureChanged) &&
-                !virtualizer.isAtEnd(transcriptPinnedEndThreshold)
-            ) {
-                virtualizer.scrollToEnd({ behavior: 'auto' });
-                return;
-            }
-
-            if (initialScrollPendingRef.current && (keyChanged || measureChanged)) {
-                initialScrollPendingRef.current = false;
-            }
-        }
-    }, [initialScrollKey, initialScrollMeasureKey, rows.length, virtualizer]);
-
     React.useEffect(() => {
-        if (!initialScrollKey) {
+        const viewport = scrollViewportRef.current;
+
+        if (!viewport) {
             return;
         }
 
-        const timer = window.setTimeout(() => {
-            if (initialScrollKeyRef.current === initialScrollKey) {
-                initialScrollPendingRef.current = false;
-            }
-        }, 1200);
+        const markUserScrollIntent = () => {
+            userScrollIntentPendingRef.current = true;
+        };
+        const captureAfterScroll = () => {
+            const allowPending = userScrollIntentPendingRef.current;
+            userScrollIntentPendingRef.current = false;
+            scheduleScrollAnchorCapture({ allowPending });
+        };
 
-        return () => window.clearTimeout(timer);
-    }, [initialScrollKey]);
+        viewport.addEventListener('wheel', markUserScrollIntent, { passive: true });
+        viewport.addEventListener('touchstart', markUserScrollIntent, { passive: true });
+        viewport.addEventListener('scroll', captureAfterScroll, { passive: true });
+
+        return () => {
+            viewport.removeEventListener('wheel', markUserScrollIntent);
+            viewport.removeEventListener('touchstart', markUserScrollIntent);
+            viewport.removeEventListener('scroll', captureAfterScroll);
+            userScrollIntentPendingRef.current = false;
+
+            if (scrollAnchorCaptureFrameRef.current !== null) {
+                window.cancelAnimationFrame(scrollAnchorCaptureFrameRef.current);
+                scrollAnchorCaptureFrameRef.current = null;
+            }
+
+            scrollAnchorCaptureAllowsPendingRef.current = false;
+        };
+    }, [scheduleScrollAnchorCapture, scrollViewportRef]);
+
+    React.useEffect(() => {
+        const captureBeforeInteraction = () => {
+            rememberRenderedScrollAnchor({ allowPending: true });
+        };
+
+        document.addEventListener('pointerdown', captureBeforeInteraction, { capture: true });
+        document.addEventListener('mousedown', captureBeforeInteraction, { capture: true });
+        document.addEventListener('click', captureBeforeInteraction, { capture: true });
+        window.addEventListener('pagehide', captureBeforeInteraction);
+
+        return () => {
+            document.removeEventListener('pointerdown', captureBeforeInteraction, {
+                capture: true,
+            });
+            document.removeEventListener('mousedown', captureBeforeInteraction, {
+                capture: true,
+            });
+            document.removeEventListener('click', captureBeforeInteraction, {
+                capture: true,
+            });
+            window.removeEventListener('pagehide', captureBeforeInteraction);
+        };
+    }, [rememberRenderedScrollAnchor]);
 
     React.useEffect(() => {
         const viewport = scrollViewportRef.current;
@@ -288,6 +395,7 @@ export function VirtualizedChatTranscript({
                     <TranscriptVirtualRow
                         key={virtualItem.key}
                         positionsWithReact={usingEstimatedTail}
+                        rowId={row.id}
                         virtualItem={virtualItem}
                         virtualizer={virtualizer}
                     >
@@ -324,17 +432,20 @@ type SizeAdjustmentControlledVirtualizer = ReactVirtualizer<HTMLDivElement, HTML
 function TranscriptVirtualRow({
     children,
     positionsWithReact,
+    rowId,
     virtualItem,
     virtualizer,
 }: {
     children: React.ReactNode;
     positionsWithReact: boolean;
+    rowId: string;
     virtualItem: VirtualItem;
     virtualizer: ReactVirtualizer<HTMLDivElement, HTMLDivElement>;
 }) {
     return (
         <div
             className="absolute top-0 left-0 w-full [overflow-anchor:none]"
+            data-chat-transcript-row-id={rowId}
             data-index={virtualItem.index}
             ref={virtualizer.measureElement}
             style={

@@ -20,6 +20,7 @@ const anchorFallbackMs = 600;
 export interface ChatScrollControllerHandle {
     beginAnchor: (trigger: HTMLElement) => void;
     getMode: () => ChatScrollMode;
+    restoreScrollPosition: (state: { isAtBottom: boolean }) => void;
     subscribeMode: (listener: () => void) => () => void;
 }
 
@@ -159,6 +160,20 @@ export function useChatScrollController({
 
         window.clearTimeout(anchor.fallbackTimer);
     }, []);
+
+    const restoreScrollPosition = React.useCallback(
+        ({ isAtBottom: restoredAtBottom }: { isAtBottom: boolean }) => {
+            clearAnchor();
+
+            dispatch(
+                restoredAtBottom
+                    ? { type: 'followRequested' }
+                    : { isAtBottom: false, type: 'userScrolled' }
+            );
+            setIsAtBottom(restoredAtBottom);
+        },
+        [clearAnchor, dispatch]
+    );
 
     const clearUserScrollIntent = React.useCallback(() => {
         userScrollIntentRef.current = false;
@@ -418,9 +433,10 @@ export function useChatScrollController({
         () => ({
             beginAnchor,
             getMode,
+            restoreScrollPosition,
             subscribeMode,
         }),
-        [beginAnchor, getMode, subscribeMode]
+        [beginAnchor, getMode, restoreScrollPosition, subscribeMode]
     );
 
     return {

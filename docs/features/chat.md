@@ -162,7 +162,9 @@ transcript only grows:
   library's default size-change adjustment in place so upward scroll input wins,
   and suppresses it only while disclosure anchoring is active. The local scroll
   controller still tracks bottom state and owns disclosure anchoring for
-  non-virtualized chat surfaces.
+  non-virtualized chat surfaces. While the app is running, returning to a chat
+  restores the first visible transcript row and offset unless the user last left
+  that chat at the bottom, where it resumes following latest content.
 
 Queued composer drafts are app-local until dispatched or explicitly steered. A
 queued draft does not create a durable Tavern message, response, Hermes session

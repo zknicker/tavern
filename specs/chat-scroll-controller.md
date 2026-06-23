@@ -81,6 +81,17 @@ a React render. Follow-on-append stays `auto`: TanStack's smooth state skips
 item-size compensation, which is the wrong tradeoff for streaming text and
 Rich Responses that keep growing after the row exists.
 
+Virtualized detail chats also keep process-local scroll memory keyed by chat.
+The stored value is either `atBottom` or the first visible transcript row id
+plus its offset. On remount, the row anchor restores before the initial
+scroll-to-bottom path; missing rows fall back to bottom so stale anchors never
+strand the viewport. `atBottom` snapshots use the virtualizer's measured end
+state, not the app scroll mode, because scroll mode can lag the physical
+viewport by one scroll callback. Nonzero row-offset restores wait until the
+scroll element has nonzero scroll capacity; calling TanStack `scrollToOffset`
+before that would clamp the target through a max offset of `0` and land at the
+top.
+
 ## Migration steps
 
 1. Build controller + pure tests (no consumers touched).

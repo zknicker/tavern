@@ -1,4 +1,5 @@
 import { expect, test } from 'bun:test';
+import type { VirtualItem } from '@tanstack/react-virtual';
 import type { ChatLogOutput } from '../../lib/trpc.tsx';
 import { buildTranscriptEntries } from './chat-transcript-model.ts';
 import type { TranscriptRenderRow } from './chat-transcript-row-model.ts';
@@ -6,6 +7,15 @@ import {
     buildTranscriptRenderRows,
     getEstimatedTranscriptRowSize,
 } from './chat-transcript-row-model.ts';
+import {
+    getEstimatedTranscriptOffsetForIndex,
+    getRenderedVirtualizedChatAnchorScrollCorrection,
+    getVirtualizedChatAnchorRestoreTarget,
+    getVirtualizedChatScrollAnchorSnapshot,
+    getVirtualizedChatScrollAnchorSnapshotFromRenderedRows,
+    getVirtualizedChatScrollAnchorSnapshotFromState,
+    shouldDeferVirtualizedChatOffsetRestore,
+} from './virtualized-chat-scroll-anchor.ts';
 import {
     getChatVirtualizerScrollBehavior,
     getEstimatedTranscriptBottomOffset,
@@ -164,6 +174,141 @@ test('virtualized chat reconciles the measured end while following', () => {
     );
 });
 
+test('virtualized chat captures the first visible row as a restorable anchor', () => {
+    const rows = transcriptRows(['one', 'two', 'three']);
+
+    expect(
+        getVirtualizedChatScrollAnchorSnapshot({
+            isAtBottom: false,
+            rows,
+            scrollTop: 150,
+            virtualItems: [
+                virtualItem({ end: 100, index: 0, key: 'one', size: 100, start: 0 }),
+                virtualItem({ end: 220, index: 1, key: 'two', size: 100, start: 120 }),
+                virtualItem({ end: 340, index: 2, key: 'three', size: 100, start: 240 }),
+            ],
+        })
+    ).toEqual({ atBottom: false, offsetPx: 30, rowId: 'two' });
+});
+
+test('virtualized chat captures rendered row anchors from viewport geometry', () => {
+    expect(
+        getVirtualizedChatScrollAnchorSnapshotFromRenderedRows({
+            isAtBottom: false,
+            renderedRows: [
+                { bottom: 90, height: 80, rowId: 'one', top: 10 },
+                { bottom: 240, height: 140, rowId: 'two', top: 100 },
+            ],
+            viewportTop: 150,
+        })
+    ).toEqual({ atBottom: false, offsetPx: 50, rowId: 'two' });
+});
+
+test('virtualized chat stores bottom state instead of a row anchor at the tail', () => {
+    expect(
+        getVirtualizedChatScrollAnchorSnapshot({
+            isAtBottom: true,
+            rows: transcriptRows(['one']),
+            scrollTop: 0,
+            virtualItems: [virtualItem({ end: 100, index: 0, key: 'one', size: 100, start: 0 })],
+        })
+    ).toEqual({ atBottom: true });
+});
+
+test('virtualized chat capture trusts physical end state over stale following mode', () => {
+    const rows = transcriptRows(['one', 'two', 'three']);
+
+    expect(
+        getVirtualizedChatScrollAnchorSnapshotFromState({
+            isAtEnd: false,
+            mode: 'following',
+            rows,
+            scrollTop: 150,
+            virtualItems: [
+                virtualItem({ end: 100, index: 0, key: 'one', size: 100, start: 0 }),
+                virtualItem({ end: 220, index: 1, key: 'two', size: 100, start: 120 }),
+                virtualItem({ end: 340, index: 2, key: 'three', size: 100, start: 240 }),
+            ],
+        })
+    ).toEqual({ atBottom: false, offsetPx: 30, rowId: 'two' });
+});
+
+test('virtualized chat restores row anchors from measured items first', () => {
+    const rows = transcriptRows(['one', 'two', 'three']);
+
+    expect(
+        getVirtualizedChatAnchorRestoreTarget({
+            anchor: { atBottom: false, offsetPx: 24, rowId: 'two' },
+            rows,
+            virtualItems: [virtualItem({ end: 200, index: 1, key: 'two', size: 80, start: 120 })],
+        })
+    ).toEqual({ kind: 'offset', measured: true, offset: 144 });
+});
+
+test('virtualized chat falls back to estimated row offsets before measurement', () => {
+    const rows = transcriptRows(['one', 'two', 'three']);
+
+    expect(getEstimatedTranscriptOffsetForIndex(rows, 2)).toBe(200);
+    expect(
+        getVirtualizedChatAnchorRestoreTarget({
+            anchor: { atBottom: false, offsetPx: 28, rowId: 'three' },
+            rows,
+            virtualItems: [],
+        })
+    ).toEqual({ kind: 'offset', measured: false, offset: 228 });
+});
+
+test('virtualized chat defers nonzero anchor restores until scroll capacity exists', () => {
+    expect(
+        shouldDeferVirtualizedChatOffsetRestore({
+            hasScrollElement: true,
+            maxScrollOffset: 0,
+            targetOffset: 228,
+        })
+    ).toBe(true);
+    expect(
+        shouldDeferVirtualizedChatOffsetRestore({
+            hasScrollElement: false,
+            maxScrollOffset: 500,
+            targetOffset: 228,
+        })
+    ).toBe(true);
+    expect(
+        shouldDeferVirtualizedChatOffsetRestore({
+            hasScrollElement: true,
+            maxScrollOffset: 500,
+            targetOffset: 228,
+        })
+    ).toBe(false);
+});
+
+test('virtualized chat corrects rendered anchor restores with viewport geometry', () => {
+    expect(
+        getRenderedVirtualizedChatAnchorScrollCorrection({
+            anchorOffsetPx: 532,
+            rowTop: -181,
+            viewportTop: 0,
+        })
+    ).toBe(351);
+    expect(
+        getRenderedVirtualizedChatAnchorScrollCorrection({
+            anchorOffsetPx: 532,
+            rowTop: -532,
+            viewportTop: 0,
+        })
+    ).toBe(0);
+});
+
+test('virtualized chat treats missing anchor rows as stale', () => {
+    expect(
+        getVirtualizedChatAnchorRestoreTarget({
+            anchor: { atBottom: false, offsetPx: 8, rowId: 'gone' },
+            rows: transcriptRows(['one', 'two']),
+            virtualItems: [],
+        })
+    ).toEqual({ kind: 'missing' });
+});
+
 test('virtualized chat estimates blank thinking presence without fake bottom space', () => {
     const entries = buildTranscriptEntries({
         activeReply: {
@@ -245,6 +390,42 @@ test('virtualized chat keeps the agent row stable when first visible reply appea
 });
 
 type ChatRow = NonNullable<ChatLogOutput>['rows'][number];
+
+function transcriptRows(ids: string[]) {
+    return ids.map((id) => ({
+        entry: {
+            actor: null,
+            id,
+            items: [],
+            key: `user:${id}`,
+            kind: 'turn',
+            participant: 'user',
+            responseId: null,
+            timestamp: null,
+        },
+        followsRuntimeNotice: false,
+        id,
+        kind: 'entry',
+        showPresence: false,
+        turnStartedAt: null,
+    })) satisfies TranscriptRenderRow[];
+}
+
+function virtualItem({
+    end,
+    index,
+    key,
+    size,
+    start,
+}: {
+    end: number;
+    index: number;
+    key: string;
+    size: number;
+    start: number;
+}) {
+    return { end, index, key, lane: 0, size, start } satisfies VirtualItem;
+}
 
 function thinkingRow(id: string): ChatRow {
     return {
