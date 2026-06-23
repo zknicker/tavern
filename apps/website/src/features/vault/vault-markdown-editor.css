@@ -155,6 +155,12 @@
     padding-left: 0.75rem;
 }
 
+.vault-mdx-content a {
+    color: var(--primary);
+    text-decoration-line: underline;
+    text-underline-offset: 2px;
+}
+
 .vault-mdx-content code {
     border-radius: var(--radius-sm);
     background: var(--muted);

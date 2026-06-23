@@ -18,6 +18,7 @@ import * as React from 'react';
 import { cn } from '../../lib/utils.ts';
 import { getMarkdownStats } from './vault-markdown-editor-utils.ts';
 import { VaultEditorToolbar } from './vault-mdx-toolbar.tsx';
+import { fromMdxEditorMarkdown, toMdxEditorMarkdown } from './vault-wikilink-markdown.ts';
 import './vault-markdown-editor.css';
 
 interface VaultMarkdownEditorProps {
@@ -38,7 +39,8 @@ export function VaultMarkdownEditor({
     value,
 }: VaultMarkdownEditorProps) {
     const editorRef = React.useRef<MDXEditorMethods>(null);
-    const lastAppliedValueRef = React.useRef(value);
+    const editorMarkdown = React.useMemo(() => toMdxEditorMarkdown(value), [value]);
+    const lastAppliedValueRef = React.useRef(editorMarkdown);
     const [editorError, setEditorError] = React.useState<string | null>(null);
     const stats = React.useMemo(() => getMarkdownStats(value), [value]);
     const plugins = React.useMemo(
@@ -73,14 +75,14 @@ export function VaultMarkdownEditor({
     );
 
     React.useEffect(() => {
-        if (lastAppliedValueRef.current === value) {
+        if (lastAppliedValueRef.current === editorMarkdown) {
             return;
         }
 
-        lastAppliedValueRef.current = value;
-        editorRef.current?.setMarkdown(value);
+        lastAppliedValueRef.current = editorMarkdown;
+        editorRef.current?.setMarkdown(editorMarkdown);
         setEditorError(null);
-    }, [value]);
+    }, [editorMarkdown]);
 
     function handleChange(markdown: string, initialMarkdownNormalize: boolean) {
         if (initialMarkdownNormalize) {
@@ -89,7 +91,7 @@ export function VaultMarkdownEditor({
 
         lastAppliedValueRef.current = markdown;
         setEditorError(null);
-        onChange(markdown);
+        onChange(fromMdxEditorMarkdown(markdown));
     }
 
     function handleKeyDown(event: React.KeyboardEvent<HTMLDivElement>) {
@@ -110,7 +112,7 @@ export function VaultMarkdownEditor({
             <MDXEditor
                 className="vault-mdx-editor min-h-0 flex-1"
                 contentEditableClassName="vault-mdx-content"
-                markdown={value}
+                markdown={editorMarkdown}
                 onChange={handleChange}
                 onError={(payload) => setEditorError(payload.error)}
                 placeholder="# Untitled"
