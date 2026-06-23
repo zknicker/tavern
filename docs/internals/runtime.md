@@ -105,7 +105,8 @@ load Tavern-specific instructions from the session cwd.
 
 When generation writes the file, Runtime also clears unsupported legacy
 companion bootstrap files from the managed workspace. It does not clear
-`SOUL.md`.
+`SOUL.md` or the engine's native memory files under the managed home
+`memories/` directory.
 
 Runtime also has to pass the managed workspace as the Hermes execution context.
 Chat sessions use `session.create.cwd`; Tavern-created cron jobs use `workdir`.

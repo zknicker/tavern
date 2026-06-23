@@ -1,10 +1,11 @@
 # Memories
 
-Memory in Tavern is Vault wiki plus prompt-time context.
+Memory in Tavern is assistant hot memory plus the Vault wiki.
 
-Durable knowledge lives in the Vault wiki. Tavern Runtime exposes that wiki
-through the Vault API and Vault tab, but it does not own a separate memory
-database.
+Assistant hot memory lives in the engine's native `MEMORY.md` and `USER.md`
+files and enters prompt context as a bounded snapshot. Durable inspectable
+knowledge lives in the Vault wiki. Tavern Runtime exposes the wiki through the
+Vault API and Vault tab, but it does not own a separate memory database.
 
 Managed Tavern Hermes does not use Lossless Claw. Prompt-time context is
 separate from durable wiki knowledge.
@@ -16,8 +17,10 @@ as plain Markdown. Agents use the managed `vault` skill to create and maintain
 those files.
 
 Tavern does not add a parallel `memory_records` table for normal memory. If a
-user corrects memory, an agent edits the relevant wiki page. If a user forgets
-something, an agent archives, rewrites, or deletes the relevant wiki material.
+user corrects compact hot memory, an agent updates `MEMORY.md` or `USER.md`
+through the memory tool. If the correction affects durable knowledge, an agent
+edits the relevant wiki page. If a user forgets something, an agent archives,
+rewrites, or deletes the relevant memory entry or wiki material.
 
 ## Memory Inspection
 
@@ -39,8 +42,8 @@ identity matters.
 ## Prompt Continuity
 
 Prompt-facing context is rendered from live state and selected source material.
-It can include stable identity context, recent activity, participant context,
-Hermes prompt-time context, and relevant wiki pages.
+It can include stable identity context, assistant memory, recent activity,
+participant context, Hermes prompt-time context, and relevant wiki pages.
 
 The prompt view remains bounded. It must not become a dump of every wiki page or
 every recent search result.

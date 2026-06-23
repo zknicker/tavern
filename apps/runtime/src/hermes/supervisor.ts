@@ -210,7 +210,7 @@ async function prepareManagedHermesSetup(): Promise<string> {
             },
         });
         await ensureTavernMessengerPlugin();
-        await prepareManagedHermesModelConfig({ hermesBinary: resolved.binaryPath });
+        await prepareManagedHermesModelConfig();
         return resolved.binaryPath;
     } catch (err) {
         const message = err instanceof Error ? err.message : String(err);

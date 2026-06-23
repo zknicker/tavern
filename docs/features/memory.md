@@ -9,11 +9,11 @@ read_when:
 
 Tavern has two memory surfaces:
 
-* **Assistant memory.** Runtime configures the managed agent with the local
-  Mnemosyne memory provider. It is prompt-time memory tooling, exposed to the
-  agent as `memory_*` tools and surfaced operationally through Runtime
-  capabilities. The provider is not a skill package and does not appear in the
-  skills list.
+* **Assistant memory.** Runtime enables the engine's built-in prompt-time
+  memory files: `MEMORY.md` for compact assistant operating notes and
+  `USER.md` for stable user profile facts. Agents write them through the
+  native `memory` tool. The files are not Vault pages and are not skill
+  packages.
 * **Vault knowledge.** Vault is the browsable wiki. Durable knowledge that
   users inspect lives in Markdown files. Agents use the managed Vault skill to
   route normal wiki work to Obsidian and bounded research folders to llm-wiki.
@@ -33,9 +33,9 @@ User-facing knowledge visibility is file-backed. The Memory and Vault surfaces
 read wiki Markdown. They do not expose model settings, hidden queues, generated
 schemas, or internal repair controls.
 
-Assistant memory is an execution capability. It can affect what the agent
+Assistant memory is engine execution state. It can affect what the agent
 recalls during work, but it is not the Vault wiki and is not edited through the
-wiki browser.
+wiki browser. Durable, inspectable knowledge belongs in Vault.
 
 ## Boundary
 

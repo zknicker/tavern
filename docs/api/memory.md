@@ -16,10 +16,9 @@ API as read-only Markdown pages, search results, and backlinks. There is no
 separate Tavern-owned memory table, vector index, schema-addition store, or
 capture pipeline for Vault.
 
-Assistant memory is separate. Runtime configures the managed agent with the
-local Mnemosyne memory provider and reports its readiness through Runtime
-capabilities. Assistant memory is available to the agent through `memory_*`
-tools; it is not a skill package and is not listed by the Skills API.
+Assistant memory is separate. Runtime leaves the engine's built-in
+`MEMORY.md` and `USER.md` stores enabled. They are prompt-time memory files,
+not Tavern database tables, not Vault pages, and not skill packages.
 
 ## Contract
 
@@ -28,7 +27,7 @@ tools; it is not a skill package and is not listed by the Skills API.
 * Vault pages expose the Markdown files under the configured Vault root.
 * Vault search is a lightweight lexical scan over wiki Markdown.
 * Backlinks are derived from `[[wikilinks]]` in page bodies.
-* Prompt-time assistant memory remains execution state, not Vault wiki
+* Prompt-time assistant memory remains engine execution state, not Vault wiki
   content.
 * Wiki maintenance, imports, and research are agent workflows. Runtime does not
   own hidden wiki maintenance jobs.
@@ -36,8 +35,9 @@ tools; it is not a skill package and is not listed by the Skills API.
 ## Agent Boundary
 
 Runtime installs the managed `vault` skill. Agents use that skill for Vault
-work, use memory tools for assistant memory, and use the Vault API when they
-need to browse the current wiki state from Tavern.
+work, use the native `memory` tool for compact prompt-time assistant memory,
+and use the Vault API when they need to browse the current wiki state from
+Tavern.
 
 Runtime only exposes the wiki and checks that the configured root is reachable.
 

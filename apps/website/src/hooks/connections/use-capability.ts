@@ -26,7 +26,6 @@ const capabilityLabels = {
     codexOAuth: 'Codex OAuth',
     dashboardServer: 'Agent engine',
     gateway: 'Agent connection',
-    mnemosyneMemory: 'Assistant memory',
     models: 'Models',
     skills: 'Skills',
     vault: 'Vault',

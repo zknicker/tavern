@@ -1,10 +1,10 @@
 import type { HermesConfigFixup } from './types.ts';
 
 export const requiredHermesMemoryConfig = {
-    memoryEnabled: false,
-    provider: 'mnemosyne',
+    memoryEnabled: true,
+    provider: '',
     memorySlot: 'none',
-    userProfileEnabled: false,
+    userProfileEnabled: true,
 } as const;
 
 export const enforceMemoryFixup: HermesConfigFixup = {

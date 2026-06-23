@@ -242,9 +242,8 @@ share/tavern/node_modules/@tavern/sdk/
 share/tavern/runtime-assets/
 ```
 
-`runtime-assets/` carries the bundled Hermes installer snapshot and the
-Mnemosyne Python wheelhouse, so first-run engine setup needs no operator
-Python or Hermes work.
+`runtime-assets/` carries the bundled Hermes installer snapshot, so first-run
+engine setup needs no operator Hermes work.
 
 By default, production **runs the pinned engine and ignores any Hermes already
 on the host** — a user's `~/.local/bin/hermes`, `~/.hermes`, shell config, and

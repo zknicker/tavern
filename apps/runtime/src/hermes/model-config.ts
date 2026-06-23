@@ -15,23 +15,14 @@ import { syncHermesCodexAuth } from './auth-store.ts';
 import { resolveConnectorsDomain } from './connectors.ts';
 import { quoteEnvValue, readEnvEntries, readManagedHermesEnvValue } from './env.ts';
 import { getHermesExecutionSettings } from './execution-settings.ts';
-import {
-    type HermesModelDomain,
-    managedMnemosyneEnv,
-    mergeHermesGeneratedConfig,
-} from './generated-config.ts';
+import { type HermesModelDomain, mergeHermesGeneratedConfig } from './generated-config.ts';
 import { prepareManagedVaultIntegration, resolveManagedVaultPath } from './managed-vault.ts';
-import { ensureManagedMnemosynePackage, ensureManagedMnemosynePlugin } from './mnemosyne.ts';
 import { resolveConfiguredPermissionsDomain } from './permission-settings.ts';
 import { ensureManagedTavernSkill } from './tavern-skill.ts';
 
 export interface HermesModelConfig extends HermesModelDomain {
     openAiApiKey: string | null;
     openRouterApiKey: string | null;
-}
-
-interface ManagedHermesModelConfigInput {
-    hermesBinary?: string;
 }
 
 export interface ManagedHermesModelRouteInput {
@@ -195,9 +186,7 @@ async function clearLegacyDefaultModelState() {
     });
 }
 
-export async function prepareManagedHermesModelConfig(
-    input: ManagedHermesModelConfigInput = {}
-): Promise<HermesModelConfig> {
+export async function prepareManagedHermesModelConfig(): Promise<HermesModelConfig> {
     const config = await writeManagedHermesConfigFile();
     await syncHermesCodexAuth(
         path.join(HERMES_HOME, 'auth.json'),
@@ -205,10 +194,6 @@ export async function prepareManagedHermesModelConfig(
     );
     await prepareManagedVaultIntegration();
     await ensureManagedTavernSkill();
-    await ensureManagedMnemosynePlugin();
-    if (input.hermesBinary) {
-        await ensureManagedMnemosynePackage({ hermesBinary: input.hermesBinary });
-    }
     return config;
 }
 
@@ -268,10 +253,7 @@ export async function mergeHermesEnvFile(
     }
 
     entries.set('TAVERN_VAULT_PATH', resolveManagedVaultPath());
-
-    for (const [key, value] of Object.entries(managedMnemosyneEnv)) {
-        entries.set(key, value);
-    }
+    entries.delete('MNEMOSYNE_HOST_LLM_ENABLED');
 
     if (input.config.openAiApiKey) {
         entries.set('OPENAI_API_KEY', input.config.openAiApiKey);

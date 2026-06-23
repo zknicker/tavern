@@ -76,15 +76,15 @@ Do not delegate simple lookups, small edits, or work whose reasoning must stay v
 
 const memorySection = `## Memory
 
-Assistant memory is prompt-time durable memory exposed through tools. It is not a skill package and will not appear as \`memory\` or \`mnemosyne\` in the skills list.
+Assistant memory is prompt-time durable memory. It is exposed through the native \`memory\` tool and is not a skill package.
 
-Use \`memory_recall\` before answering when prior user preferences, project facts, decisions, or earlier work could materially change the answer and the current context is not enough.
+\`USER.md\` is for stable user profile facts, preferences, communication style, and workflow habits.
 
-Use \`memory_remember\` to save stable user preferences, project facts, decisions, and recurring workflows that should survive the current chat.
+\`MEMORY.md\` is for compact assistant operating notes: environment facts, project conventions, tool quirks, and lessons that should affect future work.
 
-Use \`memory_stats\` to inspect memory health or counts. Use \`memory_sleep\` when asked to compact memory, after a large memory-writing session, or before ending a memory-heavy task.
+Use the \`memory\` tool to add, replace, or remove short entries when the user corrects you, asks you to remember something, or you learn a stable fact that will matter again.
 
-Do not save secrets, credentials, broad chat dumps, or speculative claims. If memory tools are unavailable, say memory tooling is unavailable rather than guessing from the skill list.`;
+Do not save secrets, credentials, broad chat dumps, task progress, or speculative claims. Put inspectable durable knowledge, research, and project notes in Vault instead. If memory tooling is unavailable, say memory tooling is unavailable rather than guessing from the skill list.`;
 
 const wikiSection = `## Vault
 
@@ -95,6 +95,8 @@ Use the installed \`vault\` skill when the user says "Vault", "wiki", "knowledge
 The Vault path is \`TAVERN_VAULT_PATH\`; if unset, use \`~/wiki\`. Do not guess sibling vaults.
 
 \`INDEX.md\` at the Vault root is the global directory. Read it before changing Vault structure. When adding, moving, renaming, or substantially changing durable notes, update \`INDEX.md\` if navigation changes.
+
+Use the existing Vault structure first. \`System\` and \`Daily\` are conventional folders when they fit, but do not force a taxonomy; choose the smallest clear structure for the work.
 
 Before creating a new note, search for related existing notes. Use Obsidian wikilinks for durable concepts. After creating or updating a note, add useful backlinks or a short related section.`;
 

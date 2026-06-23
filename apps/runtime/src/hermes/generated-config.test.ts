@@ -62,18 +62,9 @@ describe('generated Hermes config composer', () => {
                 { base_url: 'http://127.0.0.1:1234/v1', model: 'local', provider: 'custom' },
             ],
             memory: {
-                memory_enabled: false,
-                mnemosyne: {
-                    auto_sleep: true,
-                    ignore_patterns: [
-                        '^Traceback \\(most recent call last\\)',
-                        '^Error:',
-                        '^\\s+at ',
-                    ],
-                    sleep_threshold: 20,
-                },
-                provider: 'mnemosyne',
-                user_profile_enabled: false,
+                memory_enabled: true,
+                provider: '',
+                user_profile_enabled: true,
             },
             model: {
                 default: 'gpt-5.4-mini',
@@ -128,13 +119,11 @@ describe('generated Hermes config composer', () => {
         expect(doc.getIn(['model', 'provider'])).toBe('openai-codex');
         expect(doc.getIn(['model', 'base_url'])).toBeUndefined();
         expect(doc.getIn(['model', 'api_key'])).toBeUndefined();
-        expect(doc.getIn(['memory', 'provider'])).toBe('mnemosyne');
-        expect(doc.getIn(['memory', 'memory_enabled'])).toBe(false);
-        expect(doc.getIn(['memory', 'user_profile_enabled'])).toBe(false);
-        expect(doc.getIn(['memory', 'memory_char_limit'])).toBeUndefined();
-        expect(doc.getIn(['memory', 'user_char_limit'])).toBeUndefined();
-        expect(doc.getIn(['memory', 'mnemosyne', 'auto_sleep'])).toBe(true);
-        expect(doc.getIn(['memory', 'mnemosyne', 'sleep_threshold'])).toBe(20);
+        expect(doc.getIn(['memory', 'provider'])).toBe('');
+        expect(doc.getIn(['memory', 'memory_enabled'])).toBe(true);
+        expect(doc.getIn(['memory', 'user_profile_enabled'])).toBe(true);
+        expect(doc.getIn(['memory', 'memory_char_limit'])).toBe(2200);
+        expect(doc.getIn(['memory', 'user_char_limit'])).toBe(1375);
         expect(doc.has('fallback_providers')).toBe(false);
         expect(doc.has('timezone')).toBe(false);
     });
@@ -156,7 +145,7 @@ describe('generated Hermes config composer', () => {
 
         const doc = await readConfig(configPath);
         expect(doc.has('model')).toBe(false);
-        expect(doc.getIn(['memory', 'provider'])).toBe('mnemosyne');
+        expect(doc.getIn(['memory', 'provider'])).toBe('');
     });
 
     it('writes a custom provider base URL for local Hermes e2e runs', async () => {

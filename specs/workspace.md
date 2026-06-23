@@ -70,4 +70,6 @@ The app does not expose `AGENTS.md` for editing.
 Generation clears unsupported legacy companion bootstrap files such as
 `TOOLS.md`, `IDENTITY.md`, `USER.md`, `HEARTBEAT.md`, `BOOTSTRAP.md`,
 `MEMORY.md`, and `ROLE.md` from the managed workspace. It does not clear
-`SOUL.md`. The app does not expose those legacy files.
+`SOUL.md`, and it does not touch the engine's native memory files under the
+managed home `memories/` directory. The app does not expose the legacy
+workspace-root files.

@@ -248,28 +248,11 @@ function applyPermissionsDomain(
     }
 }
 
-export const managedMnemosyneConfig = {
-    autoSleep: true,
-    ignorePatterns: ['^Traceback \\(most recent call last\\)', '^Error:', '^\\s+at '],
-    sleepThreshold: 20,
-} as const;
-
-export const managedMnemosyneEnv = {
-    MNEMOSYNE_HOST_LLM_ENABLED: 'true',
-} as const;
-
 function applyMemoryDomain(doc: GeneratedConfigDocument) {
-    doc.setIn(['memory', 'provider'], 'mnemosyne');
-    doc.setIn(['memory', 'memory_enabled'], false);
-    doc.setIn(['memory', 'user_profile_enabled'], false);
-    doc.deleteIn(['memory', 'memory_char_limit']);
-    doc.deleteIn(['memory', 'user_char_limit']);
-    doc.setIn(['memory', 'mnemosyne', 'auto_sleep'], managedMnemosyneConfig.autoSleep);
-    doc.setIn(['memory', 'mnemosyne', 'sleep_threshold'], managedMnemosyneConfig.sleepThreshold);
-    doc.setIn(
-        ['memory', 'mnemosyne', 'ignore_patterns'],
-        [...managedMnemosyneConfig.ignorePatterns]
-    );
+    doc.setIn(['memory', 'memory_enabled'], true);
+    doc.setIn(['memory', 'user_profile_enabled'], true);
+    doc.setIn(['memory', 'provider'], '');
+    doc.deleteIn(['memory', 'mnemosyne']);
 }
 
 function applyDisplayDomain(doc: GeneratedConfigDocument) {

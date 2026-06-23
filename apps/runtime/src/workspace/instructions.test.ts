@@ -106,8 +106,9 @@ describe('generated agent instructions', () => {
         expect(content).toContain('send a brief update');
         expect(content).toContain('## Delegation');
         expect(content).toContain('## Memory');
-        expect(content).toContain('memory_recall');
-        expect(content).toContain('memory_remember');
+        expect(content).toContain('native `memory` tool');
+        expect(content).toContain('`USER.md`');
+        expect(content).toContain('`MEMORY.md`');
         expect(content).toContain('not a skill package');
         expect(content).toContain('## Vault');
         expect(content).toContain("Vault is the user's central knowledge hub");
@@ -115,6 +116,7 @@ describe('generated agent instructions', () => {
         expect(content).toContain('"Vault", "wiki", "knowledge base", or "durable knowledge"');
         expect(content).toContain('The Vault path is `TAVERN_VAULT_PATH`');
         expect(content).toContain('`INDEX.md` at the Vault root is the global directory');
+        expect(content).toContain('`System` and `Daily` are conventional folders');
         expect(content).toContain('search for related existing notes');
         expect(content).toContain('add useful backlinks');
     });

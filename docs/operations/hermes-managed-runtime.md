@@ -129,7 +129,7 @@ every Tavern-owned setting that lands in the file is a domain:
 | permissions | `approvals.*`, `command_allowlist` | `/permission-settings` store (untouched until first save) |
 | agent env | arbitrary non-reserved env names | `/agent-env` Vault-backed store |
 | connectors | `mcp_servers.<id>` + `TAVERN_MCP_*` env secrets | connector vault records |
-| memory | `memory.*` (mnemosyne), `MNEMOSYNE_HOST_LLM_ENABLED` | fixed managed policy |
+| memory | built-in `MEMORY.md` / `USER.md` memory enabled, external provider empty | fixed managed policy |
 | plugins | `plugins.enabled` messenger entry | fixed managed policy |
 
 Each domain only sets or deletes its own keys, so operator-managed keys
@@ -216,45 +216,22 @@ those skills is normal Hermes agent-managed skill work: the agent edits or
 merges the source copy, and Runtime only refreshes the visible inventory after
 Hermes observes the change.
 
-## Managed Memory Provider
+## Managed Assistant Memory
 
-Runtime configures managed Hermes to use the Mnemosyne memory provider:
+Runtime configures managed Hermes to use the engine's built-in prompt-time
+memory files and no external memory provider:
 
 ```yaml
 memory:
-  provider: mnemosyne
-  memory_enabled: false
-  user_profile_enabled: false
-  mnemosyne:
-    auto_sleep: true
-    sleep_threshold: 20
-    ignore_patterns:
-      - "^Traceback \\(most recent call last\\)"
-      - "^Error:"
-      - "^\\s+at "
+  memory_enabled: true
+  user_profile_enabled: true
+  provider: ""
 ```
 
-Runtime also materializes a managed `HERMES_HOME/plugins/mnemosyne` discovery
-shim and provisions `mnemosyne-hermes` into the Hermes Python environment before
-starting the dashboard. Release artifacts carry a bundled Mnemosyne wheelhouse
-under `runtime-assets/python/mnemosyne`; source runs fall back to the Python
-package index when the wheelhouse is absent. Operators do not run `pip`,
-`pipx`, or `hermes memory setup` for the managed instance.
-
-Runtime writes `MNEMOSYNE_HOST_LLM_ENABLED=true` into the managed Hermes `.env`
-so Mnemosyne sleep and consolidation route through Hermes's authenticated
-auxiliary model client.
-
-The managed Mnemosyne shim exposes provider tools with product names such as
-`memory_remember`, `memory_recall`, `memory_stats`, and `memory_sleep`, then
-dispatches those calls to the provider's native tools internally.
-
-Runtime resolves the Hermes Python interpreter from `TAVERN_HERMES_PYTHON_BIN`,
-then a `python` next to the resolved Hermes binary or its launcher target. When
-no interpreter is found, startup fails with a managed-Hermes setup error that
-lists the paths it tried and points to `TAVERN_HERMES_PYTHON_BIN`, instead of
-silently skipping memory setup. The same setup failure marks the managed Hermes
-Runtime capabilities unhealthy.
+Hermes stores compact assistant memory under its managed home as
+`memories/MEMORY.md` and `memories/USER.md`. Runtime does not install a memory
+plugin, provision Python packages, or write memory-provider env vars. Durable,
+inspectable knowledge belongs in Vault.
 
 ## Capability Checks
 
@@ -265,7 +242,6 @@ Managed Hermes readiness is split into primitive Runtime capabilities:
 | `dashboardServer` | Runtime can reach Hermes dashboard status. |
 | `apiServer` | Runtime can make an authenticated Hermes REST call. |
 | `gateway` | Runtime can open the Hermes Gateway WebSocket. |
-| `mnemosyneMemory` | Runtime has written the managed Mnemosyne config, host-LLM env flag, and plugin files. |
 | `models` | Runtime can read Hermes model inventory. |
 | `skills` | Runtime can read Hermes skill inventory. |
 

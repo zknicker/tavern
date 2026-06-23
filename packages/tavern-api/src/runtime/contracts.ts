@@ -10,7 +10,6 @@ export const agentRuntimeCapabilitySchema = z.enum([
     'dashboardServer',
     'apiServer',
     'gateway',
-    'mnemosyneMemory',
     'models',
     'skills',
 ]);
@@ -284,7 +283,7 @@ export const agentRuntimeSavePermissionSettingsResultSchema =
         restartScheduled: z.boolean(),
     });
 
-const agentRuntimeReservedEnvPrefixes = ['TAVERN_', 'HERMES_', 'MNEMOSYNE_'] as const;
+const agentRuntimeReservedEnvPrefixes = ['TAVERN_', 'HERMES_'] as const;
 const agentRuntimeReservedEnvNames = new Set(['OPENAI_API_KEY', 'OPENROUTER_API_KEY']);
 
 function isAgentRuntimeReservedEnvName(name: string) {

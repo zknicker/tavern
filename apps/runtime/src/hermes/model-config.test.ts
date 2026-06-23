@@ -3,8 +3,6 @@ import os from 'node:os';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { syncHermesCodexAuth } from './auth-store.ts';
-import { managedMnemosyneEnv } from './generated-config.ts';
-import { ensureManagedMnemosynePlugin } from './mnemosyne.ts';
 import {
     applySavedAgentModelRoute,
     mergeHermesEnvFile,
@@ -21,34 +19,6 @@ const codexEnvConfig = {
 };
 
 describe('managed Hermes model config', () => {
-    it('materializes the managed Mnemosyne provider shim', async () => {
-        const directory = await fs.mkdtemp(path.join(os.tmpdir(), 'tavern-mnemosyne-'));
-
-        const integration = await ensureManagedMnemosynePlugin({ hermesHome: directory });
-
-        expect(integration.managed).toBe(true);
-        await expect(
-            fs.readFile(path.join(integration.pluginPath, '__init__.py'), 'utf8')
-        ).resolves.toContain('MnemosyneMemoryProvider');
-        await expect(
-            fs.readFile(path.join(integration.pluginPath, 'plugin.yaml'), 'utf8')
-        ).resolves.toContain('mnemosyne-hermes');
-    });
-
-    it('preserves an existing unmanaged Mnemosyne plugin', async () => {
-        const directory = await fs.mkdtemp(path.join(os.tmpdir(), 'tavern-mnemosyne-'));
-        const pluginPath = path.join(directory, 'plugins', 'mnemosyne');
-        await fs.mkdir(pluginPath, { recursive: true });
-        await fs.writeFile(path.join(pluginPath, '__init__.py'), 'custom plugin');
-
-        const integration = await ensureManagedMnemosynePlugin({ hermesHome: directory });
-
-        expect(integration.managed).toBe(false);
-        await expect(fs.readFile(path.join(pluginPath, '__init__.py'), 'utf8')).resolves.toBe(
-            'custom plugin'
-        );
-    });
-
     it('preserves provider keys already saved in the managed Hermes env file', async () => {
         const directory = await fs.mkdtemp(path.join(os.tmpdir(), 'tavern-hermes-env-'));
         const envPath = path.join(directory, '.env');
@@ -74,17 +44,6 @@ describe('managed Hermes model config', () => {
         expect(env).toContain('OPENAI_API_KEY="old-openai"');
         expect(env).toContain('OPENROUTER_API_KEY="new-openrouter"');
         expect(env).toContain('KEEP_ME="still-here"');
-    });
-
-    it('writes managed Mnemosyne host LLM env without provider keys', async () => {
-        const directory = await fs.mkdtemp(path.join(os.tmpdir(), 'tavern-hermes-env-'));
-        const envPath = path.join(directory, '.env');
-
-        await mergeHermesEnvFile(envPath, { config: codexEnvConfig });
-
-        await expect(fs.readFile(envPath, 'utf8')).resolves.toContain(
-            `MNEMOSYNE_HOST_LLM_ENABLED="${managedMnemosyneEnv.MNEMOSYNE_HOST_LLM_ENABLED}"`
-        );
     });
 
     it('writes managed agent env vars and clears stale managed names only', async () => {

@@ -6,13 +6,8 @@ import type {
     AgentRuntimeCapabilityHealthId,
     AgentRuntimeCapabilityHealthState,
 } from '@tavern/api';
-import { parseDocument } from 'yaml';
-import { HERMES_HOME } from '../config.ts';
-import { readEnvEntries } from '../hermes/env.ts';
-import { managedMnemosyneConfig, managedMnemosyneEnv } from '../hermes/generated-config.ts';
 import { createLocalHermesClient } from '../hermes/local-client.ts';
 import { getManagedVaultSkillPath } from '../hermes/managed-vault.ts';
-import { getManagedMnemosynePluginPath } from '../hermes/mnemosyne.ts';
 import { getManagedHermesState } from '../hermes/state.ts';
 import { loadVaultBackedCodexCredentials } from '../model-access/codex-settings.ts';
 import { resolveVaultConfig } from '../vault/store.ts';
@@ -111,17 +106,6 @@ export const runtimeCapabilityDefinitions: RuntimeCapabilityDefinition[] = [
         },
     },
     {
-        check() {
-            return checkMnemosyneMemoryCapability();
-        },
-        displayName: 'Assistant memory',
-        id: 'mnemosyneMemory',
-        refresh: {
-            intervalMs: 5 * minuteMs,
-            runOnStart: true,
-        },
-    },
-    {
         async check() {
             return await checkManagedHermesCapability({
                 check: async (client) => {
@@ -211,84 +195,6 @@ function canAccess(targetPath: string, mode: number): boolean {
     } catch {
         return false;
     }
-}
-
-function checkMnemosyneMemoryCapability(): RuntimeCapabilityCheckResult {
-    const configPath = path.join(HERMES_HOME, 'config.yaml');
-    const envPath = path.join(HERMES_HOME, '.env');
-    const pluginPath = getManagedMnemosynePluginPath();
-    const metadata = {
-        configPath,
-        envPath,
-        pluginPath,
-        sleepThreshold: managedMnemosyneConfig.sleepThreshold,
-    };
-
-    if (!fs.existsSync(configPath)) {
-        return {
-            metadata,
-            reason: 'Assistant memory has not been configured yet.',
-            state: 'unavailable',
-            technicalMessage: configPath,
-        };
-    }
-
-    const config = parseHermesConfig(configPath);
-    if (config instanceof Error) {
-        return {
-            metadata,
-            reason: 'Assistant memory settings could not be read.',
-            state: 'degraded',
-            technicalMessage: config.message,
-        };
-    }
-
-    const memory = readRecord(readRecord(config).memory);
-    const mnemosyne = readRecord(memory.mnemosyne);
-    const ignorePatterns = readStringArray(mnemosyne.ignore_patterns);
-    const env = readEnvEntries(fs.existsSync(envPath) ? fs.readFileSync(envPath, 'utf8') : '');
-    const missingConfig = [
-        memory.provider === 'mnemosyne' ? null : 'memory.provider',
-        memory.memory_enabled === false ? null : 'memory.memory_enabled',
-        memory.user_profile_enabled === false ? null : 'memory.user_profile_enabled',
-        mnemosyne.auto_sleep === managedMnemosyneConfig.autoSleep
-            ? null
-            : 'memory.mnemosyne.auto_sleep',
-        mnemosyne.sleep_threshold === managedMnemosyneConfig.sleepThreshold
-            ? null
-            : 'memory.mnemosyne.sleep_threshold',
-        sameStringArray(ignorePatterns, [...managedMnemosyneConfig.ignorePatterns])
-            ? null
-            : 'memory.mnemosyne.ignore_patterns',
-        env.get('MNEMOSYNE_HOST_LLM_ENABLED') === managedMnemosyneEnv.MNEMOSYNE_HOST_LLM_ENABLED
-            ? null
-            : 'MNEMOSYNE_HOST_LLM_ENABLED',
-    ].filter((item): item is string => item !== null);
-
-    if (missingConfig.length > 0) {
-        return {
-            metadata: { ...metadata, missingConfig },
-            reason: 'Assistant memory settings need to be refreshed.',
-            state: 'degraded',
-            technicalMessage: missingConfig.join(', '),
-        };
-    }
-
-    if (
-        !(
-            fs.existsSync(path.join(pluginPath, 'plugin.yaml')) &&
-            fs.existsSync(path.join(pluginPath, '__init__.py'))
-        )
-    ) {
-        return {
-            metadata,
-            reason: 'Assistant memory provider has not been prepared yet.',
-            state: 'unavailable',
-            technicalMessage: pluginPath,
-        };
-    }
-
-    return { metadata, state: 'healthy' };
 }
 
 async function checkManagedHermesCapability(input: {
@@ -392,28 +298,4 @@ function canRunCommand(command: string) {
     });
 
     return !result.error && result.status === 0;
-}
-
-function parseHermesConfig(configPath: string): Error | unknown {
-    try {
-        return parseDocument(fs.readFileSync(configPath, 'utf8')).toJS() as unknown;
-    } catch (error) {
-        return error instanceof Error ? error : new Error(String(error));
-    }
-}
-
-function readRecord(value: unknown): Record<string, unknown> {
-    return typeof value === 'object' && value !== null && !Array.isArray(value)
-        ? (value as Record<string, unknown>)
-        : {};
-}
-
-function readStringArray(value: unknown) {
-    return Array.isArray(value)
-        ? value.filter((entry): entry is string => typeof entry === 'string')
-        : [];
-}
-
-function sameStringArray(left: string[], right: string[]) {
-    return left.length === right.length && left.every((entry, index) => entry === right[index]);
 }

@@ -77,10 +77,10 @@ Every engine command gets exactly one of three treatments:
      Tavern, session identity is the chat you have open, and chat history is
      canonical — "get back on track" is served by steering, `/compress`,
      `/clear`, and dismissal instead.
-   - They manage subsystems or presentation Tavern owns: `/memory` reviews
-     the write-approval queue of the engine's built-in curated memory, which
-     Tavern disables (`memory_enabled = false`) in favor of Vault plus the
-     managed Mnemosyne provider; `/yolo` toggles dangerous-command approval
+   - They manage subsystems or presentation Tavern owns: `/memory` opens the
+     engine's memory-management surface while Tavern routes normal memory
+     writes through the native memory tool and durable knowledge through Vault;
+     `/yolo` toggles dangerous-command approval
      skipping out from under Tavern's permission settings; `/footer` and
      `/voice` are messaging-platform reply presentation Tavern renders
      itself; `/help` prints the engine's full command list, contradicting

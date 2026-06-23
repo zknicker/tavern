@@ -50,9 +50,9 @@ describe('enforceHermesMemoryConfig', () => {
             },
         });
         expect(config.memory as unknown).toEqual({
-            memory_enabled: false,
-            provider: 'mnemosyne',
-            user_profile_enabled: false,
+            memory_enabled: true,
+            provider: '',
+            user_profile_enabled: true,
         });
         expect(isHermesMemoryConfigReady(config)).toBe(true);
     });
@@ -75,9 +75,9 @@ describe('enforceHermesMemoryConfig', () => {
                     },
                 },
                 memory: {
-                    memory_enabled: false,
-                    provider: 'mnemosyne',
-                    user_profile_enabled: false,
+                    memory_enabled: true,
+                    provider: '',
+                    user_profile_enabled: true,
                 },
             })
         ).toBe(false);
@@ -99,15 +99,15 @@ describe('enforceHermesMemoryConfig', () => {
                     },
                 },
                 memory: {
-                    memory_enabled: false,
-                    provider: 'mnemosyne',
-                    user_profile_enabled: false,
+                    memory_enabled: true,
+                    provider: '',
+                    user_profile_enabled: true,
                 },
             })
         ).toBe(false);
     });
 
-    test('reports missing Mnemosyne provider as not ready', () => {
+    test('reports disabled built-in memory as not ready', () => {
         expect(
             isHermesMemoryConfigReady({
                 memory: {

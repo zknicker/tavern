@@ -108,11 +108,9 @@ location and keep their normal Hermes editability. Tavern refreshes inventory
 after Hermes reports skill-related writes; it does not become the editor or
 merge owner for those files.
 
-Managed memory providers are not Tavern skills. Runtime configures Hermes to
-select the `mnemosyne` memory provider and writes the provider discovery shim
-under managed `HERMES_HOME/plugins/mnemosyne`. Runtime provisions the packaged
-provider dependency for the managed instance; Hermes still owns memory-provider
-activation and tool injection.
+Assistant memory is not a Tavern skill. Runtime leaves the engine's built-in
+`MEMORY.md` and `USER.md` memory enabled, and agents write compact memory
+through the native memory tool.
 
 Plugins stay owned by the runtime that exposes them. Hermes plugins may add
 skills, workflows, tools, channels, or runtime behavior. Codex native plugins

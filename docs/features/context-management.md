@@ -13,15 +13,17 @@ Managed Tavern Hermes does not use Lossless Claw. It is incompatible with the
 Codex app-server runtime path, so Runtime strips stale `lossless-claw` config
 instead of installing or enabling that plugin.
 
-Memory means the Vault wiki. The durable facts live in plain Markdown files.
+Assistant memory is the engine's prompt-time `MEMORY.md` and `USER.md`
+snapshot. Durable inspectable knowledge lives in the Vault wiki as plain
+Markdown files.
 
 ## Contract
 
 * Vault browses Markdown wiki files.
 * Context management may read wiki material, chat state, activity, and
   participant context when building bounded prompt context.
-* Context management does not create a durable memory database, memory record,
-  or long-term source of truth.
+* Context management does not create a Tavern-owned memory database, memory
+  record, or long-term source of truth.
 * Wiki filesystem failures and context-engine failures are separate readiness
   signals.
 
@@ -42,9 +44,10 @@ contains `memory`.
 Context management can place relevant wiki material into a prompt. It does not
 own the remembered fact.
 
-When an agent needs durable memory, it reads or queries the Vault wiki. When
-an active turn needs continuity, Hermes manages bounded prompt context without
-Lossless Claw in the managed Tavern runtime.
+When an agent needs compact prompt-time memory, it uses built-in assistant
+memory. When it needs durable, inspectable knowledge, it reads or queries the
+Vault wiki. When an active turn needs continuity, Hermes manages bounded prompt
+context without Lossless Claw in the managed Tavern runtime.
 
 ## Related Docs
 
