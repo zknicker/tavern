@@ -1,4 +1,4 @@
-import type { Dispatch, ReactNode, SetStateAction } from 'react';
+import type { ComponentProps, Dispatch, ReactNode, SetStateAction } from 'react';
 import {
     DialogDescription,
     DialogFooter,
@@ -9,7 +9,9 @@ import {
 import { Button } from '../../../components/ui/primitives/button.tsx';
 import { Input } from '../../../components/ui/primitives/input.tsx';
 import { Switch } from '../../../components/ui/switch.tsx';
+import { Tooltip, TooltipContent, TooltipTrigger } from '../../../components/ui/tooltip.tsx';
 import type { MerchbaseSettingsOutput } from '../../../lib/trpc.tsx';
+import { merchbaseEnvironmentLockTooltip } from './merchbase-settings-copy.ts';
 import type { MerchbaseSettingsDraft } from './merchbase-settings-model.ts';
 
 type MerchbaseSettings = NonNullable<MerchbaseSettingsOutput>;
@@ -31,6 +33,8 @@ export function MerchbaseSettingsDialogBody({
     onSave: () => void;
     settings: MerchbaseSettings;
 }) {
+    const environmentControlled = settings.enablementSource === 'environment';
+
     return (
         <form
             onSubmit={(event) => {
@@ -52,13 +56,20 @@ export function MerchbaseSettingsDialogBody({
                     <div className="space-y-0.5">
                         <div className="font-medium text-foreground text-sm">Enable MerchBase</div>
                         <div className="text-muted-foreground text-sm">
-                            Makes the skill, toolset, and widgets available to the agent.
+                            {environmentControlled
+                                ? 'Managed by your local Tavern configuration.'
+                                : 'Makes the skill, toolset, and widgets available to the agent.'}
                         </div>
                     </div>
-                    <Switch
-                        aria-label="Enable MerchBase"
+                    <MerchbaseDialogSwitch
+                        aria-label={
+                            environmentControlled
+                                ? 'MerchBase enablement is managed by local Tavern configuration'
+                                : 'Enable MerchBase'
+                        }
                         checked={draft.enabled}
-                        disabled={isSaving}
+                        disabled={isSaving || environmentControlled}
+                        environmentControlled={environmentControlled}
                         onCheckedChange={(enabled) =>
                             onDraftChange((current) => ({ ...current, enabled }))
                         }
@@ -183,6 +194,30 @@ export function MerchbaseSettingsDialogBody({
                 </Button>
             </DialogFooter>
         </form>
+    );
+}
+
+function MerchbaseDialogSwitch({
+    environmentControlled,
+    ...props
+}: ComponentProps<typeof Switch> & {
+    environmentControlled: boolean;
+}) {
+    const control = <Switch {...props} />;
+
+    if (!environmentControlled) {
+        return control;
+    }
+
+    return (
+        <Tooltip>
+            <TooltipTrigger render={<span className="inline-flex cursor-default" />}>
+                {control}
+            </TooltipTrigger>
+            <TooltipContent className="max-w-64" side="left">
+                {merchbaseEnvironmentLockTooltip}
+            </TooltipContent>
+        </Tooltip>
     );
 }
 

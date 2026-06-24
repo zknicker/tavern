@@ -57,6 +57,19 @@ TAVERN_MERCHBASE_DEFAULT_ACCOUNT
 TAVERN_MERCHBASE_DEFAULT_MARKETPLACE
 ```
 
+When `TAVERN_MERCHBASE_ENABLED` or `TAVERN_MERCHBASE_API_KEY` is present,
+Runtime reports MerchBase enablement as environment-controlled and the app
+disables the enablement switch. Set `TAVERN_MERCHBASE_ENABLED=false` to keep an
+env-provided API key configured while turning the Integration off.
+
+For a dev checkout that already has the MerchBase CLI configured, mirror the
+CLI account into the checkout `.env`: `~/.merchbase/config.json` `baseUrl`,
+`account`, and `marketplace` map to `TAVERN_MERCHBASE_BASE_URL`,
+`TAVERN_MERCHBASE_DEFAULT_ACCOUNT`, and
+`TAVERN_MERCHBASE_DEFAULT_MARKETPLACE`; the shell `MERCHBASE_API_KEY` maps to
+`TAVERN_MERCHBASE_API_KEY`; set `TAVERN_MERCHBASE_ENABLED=true`. Restart the dev
+stack after changing `.env`.
+
 MerchBase actions exposed through Tavern stay read-oriented. Sync, ripcord,
 ingestion control, setup repair, account switching, and secret changes remain
 settings/user-managed flows.

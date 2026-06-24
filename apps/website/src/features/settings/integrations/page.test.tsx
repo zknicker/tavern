@@ -13,6 +13,7 @@ describe('MerchBase Integration settings', () => {
                     defaultAccount: 'acct_123',
                     defaultMarketplace: 'US',
                     enabled: true,
+                    enablementSource: 'settings',
                     skillConflict: null,
                     updatedAt: '2026-06-23T12:00:00.000Z',
                 }}
@@ -20,9 +21,10 @@ describe('MerchBase Integration settings', () => {
         );
 
         expect(markup).toContain('MerchBase');
-        expect(markup).toContain('Enabled');
         expect(markup).toContain('Live sales data');
-        expect(markup).toContain('Configure');
+        expect(markup).toContain('Disable MerchBase');
+        expect(markup).not.toContain('Enabled');
+        expect(markup).not.toContain('Off');
         expect(markup).not.toContain('https://app.merchbase.co');
         expect(markup).not.toContain('acct_123');
         expect(markup).not.toContain('sk_live');
@@ -38,6 +40,7 @@ describe('MerchBase Integration settings', () => {
                     defaultAccount: null,
                     defaultMarketplace: 'US',
                     enabled: false,
+                    enablementSource: 'settings',
                     skillConflict: {
                         skillName: 'merchbase',
                         skillPath: '/tmp/hermes/skills/merchbase',
@@ -48,7 +51,29 @@ describe('MerchBase Integration settings', () => {
         );
 
         expect(markup).toContain('Skill conflict');
-        expect(markup).toContain('Off');
+        expect(markup).toContain('Enable MerchBase');
+        expect(markup).not.toContain('Off');
         expect(markup).not.toContain('/tmp/hermes/skills/merchbase');
+    });
+
+    test('marks environment-controlled enablement as locked', () => {
+        const markup = renderToString(
+            <MerchbaseSettingsCard
+                onSave={() => undefined}
+                settings={{
+                    apiKeyConfigured: true,
+                    baseUrl: 'https://app.merchbase.co',
+                    defaultAccount: 'acct_123',
+                    defaultMarketplace: 'US',
+                    enabled: true,
+                    enablementSource: 'environment',
+                    skillConflict: null,
+                    updatedAt: '2026-06-23T12:00:00.000Z',
+                }}
+            />
+        );
+
+        expect(markup).not.toContain('From .env');
+        expect(markup).toContain('MerchBase enablement is managed by local Tavern configuration');
     });
 });

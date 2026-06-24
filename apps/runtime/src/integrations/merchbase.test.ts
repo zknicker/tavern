@@ -24,7 +24,6 @@ const merchbaseClientMock = vi.hoisted(() => ({
 }));
 
 vi.mock('@merchbase/http-client', () => ({
-    DEFAULT_API_BASE_URL: 'https://app.merchbase.co',
     createMerchbaseClient: merchbaseClientMock.createClient,
 }));
 
@@ -71,6 +70,15 @@ describe('MerchBase Integration settings', () => {
         }
     });
 
+    test('defaults new settings to MerchBase production', () => {
+        expect(getMerchbaseSettings()).toMatchObject({
+            apiKeyConfigured: false,
+            baseUrl: 'https://app.merchbase.co',
+            enabled: false,
+            enablementSource: 'settings',
+        });
+    });
+
     test('stores config and secrets in dedicated Integration tables', () => {
         const settings = saveMerchbaseSettings({
             apiKey: 'secret-key',
@@ -85,6 +93,7 @@ describe('MerchBase Integration settings', () => {
             defaultAccount: 'acct_123',
             defaultMarketplace: 'US',
             enabled: true,
+            enablementSource: 'settings',
         });
         expect(getIntegration('merchbase').secrets).toEqual([{ hasValue: true, name: 'apiKey' }]);
         expect(
@@ -120,6 +129,7 @@ describe('MerchBase Integration settings', () => {
             defaultAccount: 'acct_env',
             defaultMarketplace: 'UK',
             enabled: true,
+            enablementSource: 'environment',
         });
         expect(getMerchbaseIntegration()).toMatchObject({
             config: {

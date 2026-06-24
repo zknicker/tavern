@@ -1,8 +1,4 @@
-import {
-    createMerchbaseClient,
-    DEFAULT_API_BASE_URL,
-    type MerchbaseClient,
-} from '@merchbase/http-client';
+import { createMerchbaseClient, type MerchbaseClient } from '@merchbase/http-client';
 import {
     type AgentRuntimeIntegration,
     type AgentRuntimeMerchbaseActionInput,
@@ -37,9 +33,10 @@ import {
 } from './store';
 
 const integrationId = 'merchbase' as const;
+const merchbaseProductionBaseUrl = 'https://app.merchbase.co';
 
 const storedMerchbaseConfigSchema = z.object({
-    baseUrl: z.string().trim().url().default(DEFAULT_API_BASE_URL),
+    baseUrl: z.string().trim().url().default(merchbaseProductionBaseUrl),
     defaultAccount: z.string().trim().min(1).max(160).nullable().default(null),
     defaultMarketplace: z.string().trim().min(1).max(40).nullable().default(null),
 });
@@ -54,6 +51,7 @@ interface EffectiveMerchbaseSettings {
     defaultAccount: string | null;
     defaultMarketplace: string | null;
     enabled: boolean;
+    enablementSource: 'environment' | 'settings';
     updatedAt: string | null;
 }
 
@@ -86,6 +84,7 @@ export function getMerchbaseSettings(): AgentRuntimeMerchbaseSettings {
         defaultAccount: effective.defaultAccount,
         defaultMarketplace: effective.defaultMarketplace,
         enabled: effective.enabled,
+        enablementSource: effective.enablementSource,
         skillConflict: getMerchbaseSkillConflict({ hermesHome: resolveEffectiveHermesHome() }),
         updatedAt: effective.updatedAt,
     });
@@ -324,6 +323,7 @@ function resolveMerchbaseSettings(): EffectiveMerchbaseSettings {
     const stored = resolveStoredMerchbaseSettings();
     const envApiKey = readConfigValue('TAVERN_MERCHBASE_API_KEY');
     const envEnabled = parseBoolean(readConfigValue('TAVERN_MERCHBASE_ENABLED'));
+    const environmentControlsEnablement = envEnabled !== null || Boolean(envApiKey);
     return {
         apiKey: envApiKey ?? stored.secret.apiKey ?? null,
         baseUrl: readConfigValue('TAVERN_MERCHBASE_BASE_URL') ?? stored.config.baseUrl,
@@ -333,6 +333,7 @@ function resolveMerchbaseSettings(): EffectiveMerchbaseSettings {
             readConfigValue('TAVERN_MERCHBASE_DEFAULT_MARKETPLACE') ??
             stored.config.defaultMarketplace,
         enabled: envEnabled ?? (stored.enabled || Boolean(envApiKey)),
+        enablementSource: environmentControlsEnablement ? 'environment' : 'settings',
         updatedAt: stored.updatedAt,
     };
 }

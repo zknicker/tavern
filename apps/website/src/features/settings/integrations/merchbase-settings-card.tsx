@@ -14,8 +14,11 @@ import { FluidList, FluidListItem } from '../../../components/ui/fluid-list.tsx'
 import { Icon } from '../../../components/ui/icon.tsx';
 import { Button } from '../../../components/ui/primitives/button.tsx';
 import { Skeleton } from '../../../components/ui/skeleton.tsx';
+import { Switch } from '../../../components/ui/switch.tsx';
+import { Tooltip, TooltipContent, TooltipTrigger } from '../../../components/ui/tooltip.tsx';
 import type { MerchbaseSettingsOutput } from '../../../lib/trpc.tsx';
 import { cn } from '../../../lib/utils.ts';
+import { merchbaseEnvironmentLockTooltip } from './merchbase-settings-copy.ts';
 import { MerchbaseSettingsDialogBody } from './merchbase-settings-dialog.tsx';
 import {
     createDraft,
@@ -78,7 +81,7 @@ export function MerchbaseSettingsCard({
     }
 
     function requestSave(input: AgentRuntimeSaveMerchbaseSettings) {
-        if (needsReplaceConfirmation) {
+        if (settings?.skillConflict && input.enabled === true) {
             setPendingSave(input);
             setReplaceDialogOpen(true);
             return;
@@ -90,7 +93,12 @@ export function MerchbaseSettingsCard({
         <>
             <FluidList className="grid">
                 <FluidListItem className="-mx-3" index={0}>
-                    <MerchbaseIntegrationRow onSelect={openSettingsDialog} settings={settings} />
+                    <MerchbaseIntegrationRow
+                        isSaving={isSaving}
+                        onEnabledChange={(enabled) => requestSave({ enabled })}
+                        onSelect={openSettingsDialog}
+                        settings={settings}
+                    />
                 </FluidListItem>
             </FluidList>
 
@@ -129,57 +137,90 @@ export function MerchbaseSettingsCard({
 }
 
 function MerchbaseIntegrationRow({
+    isSaving,
+    onEnabledChange,
     onSelect,
     settings,
 }: {
+    isSaving: boolean;
+    onEnabledChange: (enabled: boolean) => void;
     onSelect: () => void;
     settings: MerchbaseSettings;
 }) {
+    const environmentControlled = settings.enablementSource === 'environment';
+
     return (
-        <button
-            className="flex w-full select-none items-center gap-4 rounded-xl px-3 py-2.5 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-            onClick={onSelect}
-            type="button"
-        >
-            <span
-                className={cn(
-                    'flex size-10 shrink-0 items-center justify-center rounded-[10px] border border-border/50 bg-muted/40 text-muted-foreground',
-                    !settings.enabled && 'opacity-55'
-                )}
+        <div className="flex select-none items-center gap-4 rounded-xl px-3 py-2.5">
+            <button
+                className="flex min-w-0 flex-1 items-center gap-4 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                onClick={onSelect}
+                type="button"
             >
-                <Icon className="size-5" icon={PlugIcon} />
-            </span>
-            <span className={cn('min-w-0 flex-1', !settings.enabled && 'opacity-70')}>
-                <span className="flex min-w-0 items-center gap-2">
-                    <span className="truncate font-medium text-[15px] text-foreground">
-                        MerchBase
+                <span
+                    className={cn(
+                        'flex size-10 shrink-0 items-center justify-center rounded-[10px] border border-border/50 bg-muted/40 text-muted-foreground',
+                        !settings.enabled && 'opacity-45'
+                    )}
+                >
+                    <Icon className="size-5" icon={PlugIcon} />
+                </span>
+                <span className={cn('min-w-0 flex-1', !settings.enabled && 'opacity-45')}>
+                    <span className="flex min-w-0 items-center gap-2">
+                        <span className="truncate font-medium text-[15px] text-foreground">
+                            MerchBase
+                        </span>
+                        {settings.skillConflict ? (
+                            <Badge size="sm" variant="warning">
+                                Skill conflict
+                            </Badge>
+                        ) : null}
+                        {settings.apiKeyConfigured ? null : (
+                            <Badge size="sm" variant="error">
+                                Needs setup
+                            </Badge>
+                        )}
                     </span>
-                    {settings.enabled ? (
-                        <Badge size="sm" variant="success">
-                            Enabled
-                        </Badge>
-                    ) : (
-                        <Badge size="sm" variant="secondary">
-                            Off
-                        </Badge>
-                    )}
-                    {settings.skillConflict ? (
-                        <Badge size="sm" variant="warning">
-                            Skill conflict
-                        </Badge>
-                    ) : null}
-                    {settings.apiKeyConfigured ? null : (
-                        <Badge size="sm" variant="error">
-                            Needs setup
-                        </Badge>
-                    )}
+                    <span className="mt-0.5 line-clamp-1 text-muted-foreground text-sm">
+                        Live sales data for Rich Responses and agent reads.
+                    </span>
                 </span>
-                <span className="mt-0.5 line-clamp-1 text-muted-foreground text-sm">
-                    Live sales data for Rich Responses and agent reads.
-                </span>
-            </span>
-            <span className="shrink-0 text-muted-foreground text-sm">Configure</span>
-        </button>
+            </button>
+            <MerchbaseEnablementSwitch
+                aria-label={
+                    environmentControlled
+                        ? 'MerchBase enablement is managed by local Tavern configuration'
+                        : `${settings.enabled ? 'Disable' : 'Enable'} MerchBase`
+                }
+                checked={settings.enabled}
+                disabled={isSaving || environmentControlled}
+                environmentControlled={environmentControlled}
+                onCheckedChange={onEnabledChange}
+            />
+        </div>
+    );
+}
+
+function MerchbaseEnablementSwitch({
+    environmentControlled,
+    ...props
+}: React.ComponentProps<typeof Switch> & {
+    environmentControlled: boolean;
+}) {
+    const control = <Switch {...props} />;
+
+    if (!environmentControlled) {
+        return control;
+    }
+
+    return (
+        <Tooltip>
+            <TooltipTrigger render={<span className="inline-flex cursor-default" />}>
+                {control}
+            </TooltipTrigger>
+            <TooltipContent className="max-w-64" side="left">
+                {merchbaseEnvironmentLockTooltip}
+            </TooltipContent>
+        </Tooltip>
     );
 }
 

@@ -473,6 +473,7 @@ export const agentRuntimeMerchbaseSettingsSchema = z
         defaultAccount: z.string().trim().min(1).max(160).nullable(),
         defaultMarketplace: z.string().trim().min(1).max(40).nullable(),
         enabled: z.boolean(),
+        enablementSource: z.enum(['environment', 'settings']),
         skillConflict: z
             .object({
                 skillName: z.literal('merchbase'),
@@ -564,13 +565,6 @@ const merchbasePaginationSchema = z
     .object({
         limit: z.number().int().min(1).max(100).default(25),
         offset: z.number().int().min(0).default(0),
-    })
-    .strict();
-const merchbaseProductFiltersSchema = z
-    .object({
-        facet: optionalMerchbaseFilterSchema,
-        facetName: optionalMerchbaseFilterSchema,
-        marketplace: optionalMerchbaseFilterSchema,
     })
     .strict();
 const merchbaseSalesFiltersSchema = z
@@ -774,13 +768,11 @@ export const agentRuntimeMerchbaseActionInputSchema = z.discriminatedUnion('acti
     z
         .object({
             action: z.literal('sales.breakdown'),
-            input: merchbaseSalesFiltersSchema
-                .merge(merchbasePaginationSchema)
-                .extend({
-                    direction: z.enum(['asc', 'desc']).default('desc'),
-                    groupBy: merchbaseSalesBreakdownGroupBySchema,
-                    sort: optionalMerchbaseFilterSchema,
-                }),
+            input: merchbaseSalesFiltersSchema.merge(merchbasePaginationSchema).extend({
+                direction: z.enum(['asc', 'desc']).default('desc'),
+                groupBy: merchbaseSalesBreakdownGroupBySchema,
+                sort: optionalMerchbaseFilterSchema,
+            }),
         })
         .strict(),
 ]);
