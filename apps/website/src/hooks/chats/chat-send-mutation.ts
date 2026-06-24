@@ -33,6 +33,7 @@ export interface ChatSendMutationUtils {
         };
     };
     timelineMessage: {
+        prepareForAppend: () => void;
         add: (input: {
             attachments?: ChatMessageAttachmentInput[];
             chatId: string;
@@ -73,6 +74,7 @@ export function createChatSendMutationHandlers(utils: ChatSendMutationUtils) {
             const timestamp = new Date().toISOString();
             const timelineMessageId = input.clientMessageId ?? `msg_${crypto.randomUUID()}`;
             const optimisticRunId = createChatRunId(timelineMessageId);
+            utils.timelineMessage.prepareForAppend();
             utils.timelineMessage.add({
                 ...(input.attachments?.length ? { attachments: input.attachments } : {}),
                 chatId: input.chatId,

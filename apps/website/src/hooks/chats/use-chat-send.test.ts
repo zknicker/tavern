@@ -15,6 +15,7 @@ test('useChatSend stores the local user row in app state until the log catches u
         messageId: string;
         sessionKey?: string | null;
     }> = [];
+    const appendOrder: string[] = [];
     const startedTurns: Array<{
         agentId: string;
         chatId: string;
@@ -44,7 +45,11 @@ test('useChatSend stores the local user row in app state until the log catches u
             },
         },
         timelineMessage: {
+            prepareForAppend: () => {
+                appendOrder.push('prepare');
+            },
             add: (message) => {
+                appendOrder.push('add');
                 timelineMessages.push(message);
             },
             setSession: (message) => {
@@ -91,6 +96,7 @@ test('useChatSend stores the local user row in app state until the log catches u
     const context = await mutation.onMutate(input);
 
     expect(timelineMessages).toHaveLength(1);
+    expect(appendOrder).toEqual(['prepare', 'add']);
     expect(timelineMessages[0]).toMatchObject({
         chatId: 'chat-1',
         content: 'love to hear it',
@@ -158,6 +164,7 @@ test('useChatSend removes the local user row if the send fails', async () => {
             },
         },
         timelineMessage: {
+            prepareForAppend: () => undefined,
             add: () => undefined,
             setSession: () => undefined,
             remove: (message) => {

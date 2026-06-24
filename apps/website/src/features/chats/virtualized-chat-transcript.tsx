@@ -49,6 +49,7 @@ export function VirtualizedChatTranscript({
     defaultOpenWorkGroups = false,
     failedTurn = null,
     fetchPreviousPage,
+    followKey = null,
     hasPreviousPage,
     hiddenCount,
     initialScrollKey = null,
@@ -66,6 +67,7 @@ export function VirtualizedChatTranscript({
     defaultOpenWorkGroups?: boolean;
     failedTurn?: ChatTurnFailure | null;
     fetchPreviousPage?: () => void;
+    followKey?: string | null;
     hasPreviousPage: boolean;
     hiddenCount: number;
     initialScrollKey?: string | null;
@@ -256,6 +258,29 @@ export function VirtualizedChatTranscript({
         virtualItems,
         virtualizer,
     });
+
+    React.useLayoutEffect(() => {
+        if (!chatScrollController) {
+            return;
+        }
+
+        return chatScrollController.registerScrollToBottomWriter((behavior) => {
+            virtualizer.scrollToEnd({ behavior });
+        });
+    }, [chatScrollController, virtualizer]);
+
+    React.useLayoutEffect(() => {
+        if (!followKey) {
+            return;
+        }
+
+        if (chatScrollController) {
+            chatScrollController.scrollToBottom('auto');
+            return;
+        }
+
+        virtualizer.scrollToEnd({ behavior: 'auto' });
+    }, [chatScrollController, followKey, virtualizer]);
 
     React.useLayoutEffect(() => {
         const controlledVirtualizer = virtualizer as SizeAdjustmentControlledVirtualizer;

@@ -20,9 +20,13 @@ const anchorFallbackMs = 600;
 export interface ChatScrollControllerHandle {
     beginAnchor: (trigger: HTMLElement) => void;
     getMode: () => ChatScrollMode;
+    registerScrollToBottomWriter: (writer: ChatScrollToBottomWriter) => () => void;
     restoreScrollPosition: (state: { isAtBottom: boolean }) => void;
+    scrollToBottom: (behavior?: ScrollBehavior) => void;
     subscribeMode: (listener: () => void) => () => void;
 }
+
+export type ChatScrollToBottomWriter = (behavior: ScrollBehavior) => void;
 
 const ChatScrollControllerContext = React.createContext<ChatScrollControllerHandle | null>(null);
 
@@ -75,6 +79,7 @@ export function useChatScrollController({
     const modeRef = React.useRef<ChatScrollMode>(initialChatScrollMode);
     const modeListenersRef = React.useRef(new Set<() => void>());
     const anchorRef = React.useRef<ActiveAnchor | null>(null);
+    const scrollToBottomWriterRef = React.useRef<ChatScrollToBottomWriter | null>(null);
     const userScrollIntentRef = React.useRef(false);
     const userScrollIntentTimerRef = React.useRef<number | null>(null);
     const [isAtBottom, setIsAtBottom] = React.useState(true);
@@ -136,10 +141,27 @@ export function useChatScrollController({
         [followScrollAnimation]
     );
 
+    const registerScrollToBottomWriter = React.useCallback((writer: ChatScrollToBottomWriter) => {
+        scrollToBottomWriterRef.current = writer;
+
+        return () => {
+            if (scrollToBottomWriterRef.current === writer) {
+                scrollToBottomWriterRef.current = null;
+            }
+        };
+    }, []);
+
     const scrollToBottom = React.useCallback(
         (behavior: ScrollBehavior = 'smooth') => {
             dispatch({ type: 'followRequested' });
-            writeScrollToBottom(behavior);
+            const scrollToBottomWriter = scrollToBottomWriterRef.current;
+
+            if (scrollToBottomWriter) {
+                scrollToBottomWriter(behavior);
+            } else {
+                writeScrollToBottom(behavior);
+            }
+
             setIsAtBottom(true);
         },
         [dispatch, writeScrollToBottom]
@@ -433,10 +455,19 @@ export function useChatScrollController({
         () => ({
             beginAnchor,
             getMode,
+            registerScrollToBottomWriter,
             restoreScrollPosition,
+            scrollToBottom,
             subscribeMode,
         }),
-        [beginAnchor, getMode, restoreScrollPosition, subscribeMode]
+        [
+            beginAnchor,
+            getMode,
+            registerScrollToBottomWriter,
+            restoreScrollPosition,
+            scrollToBottom,
+            subscribeMode,
+        ]
     );
 
     return {

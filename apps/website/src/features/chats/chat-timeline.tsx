@@ -12,6 +12,7 @@ export function ChatTimeline({
     fetchPreviousPage,
     failedTurn,
     hasPreviousPage = false,
+    followKey = null,
     initialScrollKey = null,
     isFetchingPreviousPage = false,
     rows,
@@ -26,6 +27,7 @@ export function ChatTimeline({
     defaultOpenWorkGroups?: boolean;
     fetchPreviousPage?: () => void;
     failedTurn?: ChatTurnFailure | null;
+    followKey?: string | null;
     hasPreviousPage?: boolean;
     initialScrollKey?: string | null;
     isFetchingPreviousPage?: boolean;
@@ -46,6 +48,7 @@ export function ChatTimeline({
                 defaultOpenWorkGroups={defaultOpenWorkGroups}
                 failedTurn={failedTurn}
                 fetchPreviousPage={fetchPreviousPage}
+                followKey={followKey}
                 hasPreviousPage={hasPreviousPage}
                 hiddenCount={hiddenCount}
                 initialScrollKey={initialScrollKey}

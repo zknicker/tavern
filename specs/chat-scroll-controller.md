@@ -9,7 +9,10 @@ anchoring, pinned-end anchoring, and follow-on-append. Notes from the
 implementation: the controller attaches its own viewport listeners (scroll,
 wheel, touchmove, transitionend) instead of exposing `handleScroll`, so no
 consumer can forget one; the 12-frame initial scroll loop was deleted; the
-manual 120Hz feel-test below remains the final gate.
+virtualized transcript registers TanStack Virtual as the controller's explicit
+bottom-scroll writer; the send path pre-scrolls through the controller before
+adding the optimistic user row; the manual 120Hz feel-test below remains the
+final gate.
 
 ## Problem
 
@@ -51,7 +54,7 @@ bubbling `transitionend` (`propertyName === 'height'`) reaching the viewport,
 +1 frame, with a ~600ms time fallback for reduced motion. User scroll input
 during an anchor cancels it — user intent wins.
 
-Two files:
+Core files:
 
 1. `chat-scroll-mode.ts` — PURE transition function `(mode, event) → (mode,
    action)`, bun:test covered. Known regressions become test cases: anchor
@@ -61,7 +64,9 @@ Two files:
 2. `use-chat-scroll-controller.ts` — thin DOM layer (viewport/content refs,
    ResizeObserver, scroll + transitionend listeners) exposing
    `{ isAtBottom, scrollToBottom, beginAnchor }` through a React context so
-   deep components reach it without window events.
+   deep components reach it without window events. Virtualized transcripts use
+   the same context to register their `scrollToEnd` writer, keeping explicit
+   latest-message and jump-button requests inside TanStack Virtual.
 3. `chat-scroll-animation.ts` — shared DOM-side follow animation for controller
    and virtualizer writes. TanStack calls still use `behavior: 'auto'`; the DOM
    animation starts its clock on the first animation frame and caps per-frame
@@ -92,6 +97,16 @@ scroll element has nonzero scroll capacity; calling TanStack `scrollToOffset`
 before that would clamp the target through a max offset of `0` and land at the
 top.
 
+Optimistic sends call the controller's explicit latest-message request before
+adding the local user row. This matches the virtualized detail path and prevents
+the new row from being appended below an old scroll offset.
+
+Manual work disclosure expansion must call `beginAnchor` before changing drawer
+height. The controller pins the trigger/header's viewport Y while the panel
+grows or collapses below it, then exits on height transition completion or the
+reduced-motion fallback. Bottom-follow and virtualized measured-row writes must
+not move the clicked header during that anchored window.
+
 ## Migration steps
 
 1. Build controller + pure tests (no consumers touched).
@@ -110,10 +125,11 @@ top.
 
 ## Regression checklist (sign-off matrix)
 
-Initial open lands at bottom · new turn scrolls to bottom from anywhere
-(`followKey`) · jump-button visibility · streaming follows at bottom, never
-yanks when scrolled up · auto-collapse stays bottom-pinned · manual
-expand/collapse pins the trigger at top/middle/bottom · history page-load
+Initial open lands at bottom · optimistic send pre-scrolls before local row
+append · new turn scrolls to bottom from anywhere (`followKey`) · jump-button
+visibility · streaming follows at bottom, never yanks when scrolled up ·
+auto-collapse stays bottom-pinned · manual expand/collapse pins the trigger at
+top/middle/bottom and expands the drawer below the header · history page-load
 prepend does not shift the view · reduced-motion anchors end via fallback.
 
 Manual feel-testing on a 120Hz display is the final gate.

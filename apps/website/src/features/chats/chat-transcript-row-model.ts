@@ -14,6 +14,11 @@ export type TranscriptRenderRow =
           turnStartedAt: string | null;
       };
 
+export interface StableTranscriptRenderRowsState {
+    byId: Map<string, TranscriptRenderRow>;
+    result: TranscriptRenderRow[];
+}
+
 export const transcriptRenderRowGap = 12;
 
 export function buildTranscriptRenderRows(entries: TranscriptEntry[], hiddenCount: number) {
@@ -65,6 +70,29 @@ export function buildTranscriptRenderRows(entries: TranscriptEntry[], hiddenCoun
     return rows;
 }
 
+export function computeStableTranscriptRenderRows(
+    rows: TranscriptRenderRow[],
+    previous: StableTranscriptRenderRowsState
+): StableTranscriptRenderRowsState {
+    const next = new Map<string, TranscriptRenderRow>();
+    let anyChanged = rows.length !== previous.byId.size;
+    const result = rows.map((row, index) => {
+        const previousRow = previous.byId.get(row.id);
+        const nextRow =
+            previousRow && isTranscriptRenderRowUnchanged(previousRow, row) ? previousRow : row;
+
+        next.set(row.id, nextRow);
+
+        if (!anyChanged && previous.result[index] !== nextRow) {
+            anyChanged = true;
+        }
+
+        return nextRow;
+    });
+
+    return anyChanged ? { byId: next, result } : previous;
+}
+
 function getLatestAgentEntryId(entries: TranscriptEntry[]) {
     for (let index = entries.length - 1; index >= 0; index -= 1) {
         const entry = entries[index];
@@ -75,6 +103,29 @@ function getLatestAgentEntryId(entries: TranscriptEntry[]) {
     }
 
     return null;
+}
+
+function isTranscriptRenderRowUnchanged(a: TranscriptRenderRow, b: TranscriptRenderRow) {
+    if (a.kind !== b.kind || a.id !== b.id) {
+        return false;
+    }
+
+    if (a.kind === 'hiddenCount') {
+        return true;
+    }
+
+    if (a.kind === 'dayDivider') {
+        return a.label === (b as typeof a).label;
+    }
+
+    const next = b as typeof a;
+
+    return (
+        a.entry === next.entry &&
+        a.followsRuntimeNotice === next.followsRuntimeNotice &&
+        a.showPresence === next.showPresence &&
+        a.turnStartedAt === next.turnStartedAt
+    );
 }
 
 export function getEstimatedTranscriptRowSize(row: TranscriptRenderRow | undefined) {

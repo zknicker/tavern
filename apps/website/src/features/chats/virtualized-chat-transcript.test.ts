@@ -5,6 +5,7 @@ import { buildTranscriptEntries } from './chat-transcript-model.ts';
 import type { TranscriptRenderRow } from './chat-transcript-row-model.ts';
 import {
     buildTranscriptRenderRows,
+    computeStableTranscriptRenderRows,
     getEstimatedTranscriptRowSize,
 } from './chat-transcript-row-model.ts';
 import {
@@ -387,6 +388,37 @@ test('virtualized chat keeps the agent row stable when first visible reply appea
     expect(thinkingAgentRow?.id).toBe(streamingAgentRow?.id);
     expect(thinkingAgentRow?.kind === 'entry' ? thinkingAgentRow.showPresence : false).toBe(true);
     expect(streamingAgentRow?.kind === 'entry' ? streamingAgentRow.showPresence : false).toBe(true);
+});
+
+test('virtualized chat reuses unchanged transcript row wrappers', () => {
+    const rows = transcriptRows(['one', 'two']);
+    const initial = computeStableTranscriptRenderRows(rows, {
+        byId: new Map(),
+        result: [],
+    });
+    const nextRows = rows.map((row) => ({ ...row })) satisfies TranscriptRenderRow[];
+    const repeated = computeStableTranscriptRenderRows(nextRows, initial);
+
+    expect(repeated).toBe(initial);
+    expect(repeated.result).toBe(initial.result);
+    expect(repeated.result[0]).toBe(initial.result[0]);
+    expect(repeated.result[1]).toBe(initial.result[1]);
+});
+
+test('virtualized chat replaces changed transcript row wrappers', () => {
+    const rows = transcriptRows(['one', 'two']);
+    const initial = computeStableTranscriptRenderRows(rows, {
+        byId: new Map(),
+        result: [],
+    });
+    const nextRows = rows.map((row, index) =>
+        index === 1 && row.kind === 'entry' ? { ...row, showPresence: true } : { ...row }
+    ) satisfies TranscriptRenderRow[];
+    const repeated = computeStableTranscriptRenderRows(nextRows, initial);
+
+    expect(repeated).not.toBe(initial);
+    expect(repeated.result[0]).toBe(initial.result[0]);
+    expect(repeated.result[1]).not.toBe(initial.result[1]);
 });
 
 type ChatRow = NonNullable<ChatLogOutput>['rows'][number];

@@ -164,6 +164,98 @@ test('active and durable assistant reply wrappers keep the same text geometry', 
     await page.close();
 });
 
+test('work disclosure anchoring keeps the header pinned while content expands below it', async () => {
+    const page = await newGeometryPage(`
+        <style>
+            ${baseTextCss}
+
+            .scroll-case {
+                height: 220px;
+                margin: 24px;
+                overflow-y: auto;
+                border: 1px solid #ddd;
+            }
+
+            .spacer-before {
+                height: 260px;
+            }
+
+            .spacer-after {
+                height: 520px;
+            }
+
+            .work-header {
+                height: 32px;
+                display: flex;
+                align-items: center;
+                padding: 0 12px;
+                background: #f5f5f5;
+            }
+
+            .work-panel {
+                height: 0;
+                overflow: hidden;
+                background: #fafafa;
+            }
+        </style>
+        <div class="scroll-case" id="scroll-case">
+            <div class="spacer-before"></div>
+            <button class="work-header" id="work-header" type="button">Read 2 files</button>
+            <div class="work-panel" id="work-panel"></div>
+            <div class="spacer-after"></div>
+        </div>
+    `);
+
+    const metrics = await page.evaluate(() => {
+        const viewport = document.getElementById('scroll-case');
+        const header = document.getElementById('work-header');
+        const panel = document.getElementById('work-panel');
+
+        if (
+            !(
+                viewport instanceof HTMLElement &&
+                header instanceof HTMLElement &&
+                panel instanceof HTMLElement
+            )
+        ) {
+            throw new Error('Missing work disclosure geometry target.');
+        }
+
+        viewport.scrollTop = header.offsetTop - 92;
+
+        const beforeHeaderRect = header.getBoundingClientRect();
+        const capturedTop = beforeHeaderRect.top;
+        panel.style.height = '220px';
+
+        // Simulate the competing end-follow adjustment that used to yank the
+        // clicked header upward when a virtualized row grew below it.
+        viewport.scrollTop += 220;
+        const yankedTop = header.getBoundingClientRect().top;
+
+        const delta = header.getBoundingClientRect().top - capturedTop;
+        viewport.scrollTop += delta;
+
+        const afterHeaderRect = header.getBoundingClientRect();
+        const afterPanelRect = panel.getBoundingClientRect();
+
+        return {
+            afterHeaderBottom: afterHeaderRect.bottom,
+            afterHeaderTop: afterHeaderRect.top,
+            afterPanelHeight: afterPanelRect.height,
+            afterPanelTop: afterPanelRect.top,
+            beforeHeaderTop: beforeHeaderRect.top,
+            yankedTop,
+        };
+    });
+
+    expect(metrics.yankedTop).toBeLessThan(metrics.beforeHeaderTop - 160);
+    expect(Math.abs(metrics.afterHeaderTop - metrics.beforeHeaderTop)).toBeLessThanOrEqual(0.5);
+    expect(metrics.afterPanelHeight).toBe(220);
+    expect(metrics.afterPanelTop).toBeGreaterThanOrEqual(metrics.afterHeaderBottom - 0.5);
+
+    await page.close();
+});
+
 async function newGeometryPage(body: string): Promise<Page> {
     const page = await browser.newPage({
         deviceScaleFactor: 2,

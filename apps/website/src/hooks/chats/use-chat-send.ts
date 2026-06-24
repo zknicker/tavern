@@ -1,9 +1,11 @@
+import { useChatScrollControllerHandle } from '../../features/chats/use-chat-scroll-controller.ts';
 import { trpc } from '../../lib/trpc.tsx';
 import { createChatSendMutationHandlers } from './chat-send-mutation.ts';
 import { useChatTimelineStore } from './use-chat-timeline-store.tsx';
 import { useTimelineActions } from './use-timeline-context.tsx';
 
 export function useChatSend() {
+    const chatScroll = useChatScrollControllerHandle();
     const utils = trpc.useUtils();
     const timeline = useChatTimelineStore();
     const timelineState = useTimelineActions();
@@ -12,6 +14,9 @@ export function useChatSend() {
         createChatSendMutationHandlers({
             chat: utils.chat,
             timelineMessage: {
+                prepareForAppend: () => {
+                    chatScroll?.scrollToBottom('auto');
+                },
                 add: ({ attachments, chatId, ...input }) => {
                     timeline.addMessage({
                         attachments,

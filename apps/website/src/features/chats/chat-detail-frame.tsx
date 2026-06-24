@@ -63,7 +63,7 @@ export function ChatDetailFrame({
     const chatScroll = useChatScrollController({
         enabled: !isInitialTranscriptPending && hasTimelineContent,
         followContentResizes: !enableVirtualization,
-        followKey,
+        followKey: enableVirtualization ? null : followKey,
         initialScrollKey: enableVirtualization ? null : initialScrollKey,
         pinPassiveScrollDrift: !enableVirtualization,
     });
@@ -117,6 +117,7 @@ export function ChatDetailFrame({
                                     defaultOpenWorkGroups={defaultOpenWorkGroups}
                                     failedTurn={failedTurn}
                                     fetchPreviousPage={fetchPreviousPage}
+                                    followKey={enableVirtualization ? followKey : null}
                                     hasPreviousPage={hasPreviousPage}
                                     initialScrollKey={
                                         enableVirtualization ? initialScrollKey : null

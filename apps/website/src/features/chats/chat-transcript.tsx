@@ -10,6 +10,8 @@ import {
 } from './chat-transcript-model.ts';
 import {
     buildTranscriptRenderRows,
+    computeStableTranscriptRenderRows,
+    type StableTranscriptRenderRowsState,
     transcriptRenderRowUsesActiveReply,
 } from './chat-transcript-row-model.ts';
 import { TranscriptRenderRowView } from './chat-transcript-rows.tsx';
@@ -30,6 +32,7 @@ export function ChatTranscript({
     fetchPreviousPage,
     failedTurn = null,
     hasPreviousPage = false,
+    followKey = null,
     hiddenCount = 0,
     initialScrollKey = null,
     isFetchingPreviousPage = false,
@@ -46,6 +49,7 @@ export function ChatTranscript({
     fetchPreviousPage?: () => void;
     failedTurn?: ChatTurnFailure | null;
     hasPreviousPage?: boolean;
+    followKey?: string | null;
     hiddenCount?: number;
     initialScrollKey?: string | null;
     isFetchingPreviousPage?: boolean;
@@ -65,10 +69,11 @@ export function ChatTranscript({
             }),
         [activeReply, failedTurn, rows, thinkingTextVisible]
     );
-    const transcriptRows = React.useMemo(
+    const rawTranscriptRows = React.useMemo(
         () => buildTranscriptRenderRows(entries, hiddenCount),
         [entries, hiddenCount]
     );
+    const transcriptRows = useStableTranscriptRenderRows(rawTranscriptRows);
     const latestAgentMessage = React.useMemo(() => getLatestAgentMessage(rows), [rows]);
     const activePresenceVerb = useActivePresenceVerb(activeReply);
 
@@ -117,6 +122,7 @@ export function ChatTranscript({
                 defaultOpenWorkGroups={defaultOpenWorkGroups}
                 failedTurn={failedTurn}
                 fetchPreviousPage={fetchPreviousPage}
+                followKey={followKey}
                 hasPreviousPage={hasPreviousPage}
                 hiddenCount={hiddenCount}
                 initialScrollKey={initialScrollKey}
@@ -156,6 +162,19 @@ export function ChatTranscript({
             )}
         </>
     );
+}
+
+function useStableTranscriptRenderRows(rows: ReturnType<typeof buildTranscriptRenderRows>) {
+    const stateRef = React.useRef<StableTranscriptRenderRowsState>({
+        byId: new Map(),
+        result: [],
+    });
+
+    return React.useMemo(() => {
+        const nextState = computeStableTranscriptRenderRows(rows, stateRef.current);
+        stateRef.current = nextState;
+        return nextState.result;
+    }, [rows]);
 }
 
 function useActivePresenceVerb(activeReply: ChatActiveReply | null) {
