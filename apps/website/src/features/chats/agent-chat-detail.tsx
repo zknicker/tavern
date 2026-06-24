@@ -31,7 +31,8 @@ export const chatDetailLogLimit = 24;
 export function AgentChatDetail({ chatId }: { chatId: string }) {
     const location = useLocation();
     const routeState = getChatDraftRouteState(location.state);
-    const chatQuery = useChatGet({ chatId });
+    const isDraftRoute = chatId === 'new';
+    const chatQuery = useChatGet({ chatId }, { enabled: !isDraftRoute });
     const drafts = useChatStartDrafts();
     const routeDraft = drafts.getDraft(routeState?.draftChatId);
     const handoffState = useChatRuntimeTimelineState(chatId);
@@ -81,7 +82,7 @@ export function AgentChatDetail({ chatId }: { chatId: string }) {
         };
     }, [chat, chatId, handoffState, routeDraft]);
 
-    if (chatId === 'new') {
+    if (isDraftRoute) {
         if (!routeDraft) {
             return <Navigate replace to="/dashboard/overview" />;
         }

@@ -1,7 +1,9 @@
+import { flushSync } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
 import { buildNewChatDraftPath } from '../../features/chats/chat-path.ts';
 import { markChatTiming } from '../../lib/chat-timing.ts';
 import type { ChatMessageAttachmentInput } from '../../lib/trpc.tsx';
+import type { ChatStartDraft } from './use-chat-start-drafts.tsx';
 import { useChatStartDrafts } from './use-chat-start-drafts.tsx';
 import { useChatTimelineStore } from './use-chat-timeline-store.tsx';
 
@@ -24,17 +26,27 @@ export function useChatDraftLaunch() {
 
     return (input: LaunchChatDraftInput) => {
         markChatTiming('submit', { agentId: input.agentId });
-        const draft = drafts.createDraft(input);
-        markChatTiming('draft.created', { draftChatId: draft.id });
+        const committedDraft: { current?: ChatStartDraft } = {};
 
-        timeline.addMessage({
-            attachments: draft.attachments,
-            chatId: draft.id,
-            content: draft.content,
-            id: draft.clientMessageId,
-            metadata: draft.metadata,
-            timestamp: draft.createdAt,
+        flushSync(() => {
+            const draft = drafts.createDraft(input);
+            committedDraft.current = draft;
+            markChatTiming('draft.created', { draftChatId: draft.id });
+
+            timeline.addMessage({
+                attachments: draft.attachments,
+                chatId: draft.id,
+                content: draft.content,
+                id: draft.clientMessageId,
+                metadata: draft.metadata,
+                timestamp: draft.createdAt,
+            });
         });
+
+        const draft = committedDraft.current;
+        if (!draft) {
+            return;
+        }
 
         navigate(buildNewChatDraftPath(), {
             flushSync: true,
