@@ -13,6 +13,7 @@ import type { RouteTab } from '../../hooks/dashboard/use-route-tab.ts';
 import { SettingsSidebarNav } from '../settings/layout/sidebar-nav.tsx';
 import { AppSidebarChatList } from './sidebar-chat-list.tsx';
 import { AppSidebarNav } from './sidebar-nav.tsx';
+import { SidebarUpdateMenuItem } from './sidebar-update-menu-item.tsx';
 
 interface AppSidebarProps {
     activeTab: RouteTab | null;
@@ -53,6 +54,7 @@ export function AppSidebar({
             {isSettingsRoute ? null : (
                 <SidebarFooter>
                     <SidebarMenu>
+                        <SidebarUpdateMenuItem />
                         <SidebarMenuItem>
                             <SidebarMenuButton onClick={onNavigateToSettings}>
                                 <Icon

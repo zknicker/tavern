@@ -1,12 +1,11 @@
-import { AlertCircleIcon, SystemUpdate01Icon } from '@hugeicons/core-free-icons';
+import { AlertCircleIcon } from '@hugeicons/core-free-icons';
 import { CheckmarkCircle01Icon, Download04Icon } from '@hugeicons-pro/core-stroke-rounded';
-import { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { type TavernUpdateStatus, useTavernUpdate } from '../hooks/desktop/use-tavern-update.ts';
+import type { TavernUpdateStatus } from '../hooks/desktop/use-tavern-update.ts';
+import { useTavernUpdateIndicator } from '../hooks/desktop/use-tavern-update-indicator.ts';
 import { cn } from '../lib/utils.ts';
 import { Icon } from './ui/icon.tsx';
 import { Button } from './ui/primitives/button.tsx';
-import { toastManager } from './ui/toast.tsx';
+import { Spinner } from './ui/spinner.tsx';
 import { Tooltip, TooltipContent, TooltipTrigger } from './ui/tooltip.tsx';
 
 interface DesktopUpdateIndicatorProps {
@@ -14,47 +13,13 @@ interface DesktopUpdateIndicatorProps {
 }
 
 export function DesktopUpdateIndicator({ placement = 'inline' }: DesktopUpdateIndicatorProps) {
-    const { status, updateAndRestart } = useTavernUpdate();
-    const navigate = useNavigate();
-    const [shouldRender, setShouldRender] = useState(false);
-    const isVisible =
-        status.phase === 'app-update-required' ||
-        status.phase === 'available' ||
-        status.phase === 'staging-runtime' ||
-        status.phase === 'downloading-app' ||
-        status.phase === 'failed' ||
-        status.phase === 'runtime-disconnected' ||
-        status.phase === 'ready' ||
-        status.phase === 'restarting-runtime' ||
-        status.phase === 'restarting-app';
+    const update = useTavernUpdateIndicator();
 
-    useEffect(() => {
-        if (!isVisible) {
-            setShouldRender(false);
-            return;
-        }
-
-        const timeoutId = window.setTimeout(() => {
-            setShouldRender(true);
-        }, 360);
-
-        return () => {
-            window.clearTimeout(timeoutId);
-        };
-    }, [isVisible]);
-
-    if (!(isVisible && shouldRender)) {
+    if (!update) {
         return null;
     }
 
-    const canAct =
-        status.phase === 'app-update-required' ||
-        status.phase === 'available' ||
-        status.phase === 'failed' ||
-        status.phase === 'runtime-disconnected' ||
-        status.phase === 'ready';
-    const label = getUpdateLabel(status);
-    const progress = status.phase === 'downloading-app' ? status.progress : undefined;
+    const { canAct, label, progress, status } = update;
 
     return (
         <div
@@ -82,18 +47,7 @@ export function DesktopUpdateIndicator({ placement = 'inline' }: DesktopUpdateIn
                                 status.phase === 'restarting-runtime' ||
                                 status.phase === 'restarting-app'
                             }
-                            onClick={() => {
-                                if (status.phase === 'runtime-disconnected') {
-                                    navigate('/dashboard/settings/agent-runtime');
-                                    return;
-                                }
-
-                                toastManager.add({
-                                    title: 'Runtime update downloading…',
-                                    type: 'info',
-                                });
-                                updateAndRestart().catch(() => undefined);
-                            }}
+                            onClick={update.activate}
                             size="icon-sm"
                             type="button"
                             variant={
@@ -105,7 +59,7 @@ export function DesktopUpdateIndicator({ placement = 'inline' }: DesktopUpdateIn
                                       : 'brand-soft'
                             }
                         >
-                            <UpdateIcon phase={status.phase} progress={progress} />
+                            <TavernUpdateIcon phase={status.phase} progress={progress} />
                         </Button>
                     }
                 />
@@ -124,7 +78,7 @@ export function DesktopUpdateIndicator({ placement = 'inline' }: DesktopUpdateIn
     );
 }
 
-function UpdateIcon({
+export function TavernUpdateIcon({
     phase,
     progress,
 }: {
@@ -137,6 +91,10 @@ function UpdateIcon({
 
     if (phase === 'staging-runtime') {
         return <IndeterminateDonut />;
+    }
+
+    if (phase === 'restarting-runtime' || phase === 'restarting-app') {
+        return <Spinner aria-hidden="true" className="size-4 shrink-0" />;
     }
 
     if (phase === 'ready') {
@@ -167,11 +125,7 @@ function UpdateIcon({
         <Icon
             aria-hidden="true"
             className="size-4.5 shrink-0"
-            icon={
-                phase === 'restarting-runtime' || phase === 'restarting-app'
-                    ? SystemUpdate01Icon
-                    : Download04Icon
-            }
+            icon={Download04Icon}
             size={18}
             strokeWidth={2.4}
         />
@@ -208,29 +162,4 @@ function IndeterminateDonut() {
             }}
         />
     );
-}
-
-function getUpdateLabel(status: TavernUpdateStatus) {
-    switch (status.phase) {
-        case 'available':
-            return 'Update';
-        case 'app-update-required':
-            return 'Tavern Update Required';
-        case 'staging-runtime':
-            return 'Staging Runtime';
-        case 'downloading-app':
-            return `Updating ${Math.round((status.progress ?? 0) * 100)}%`;
-        case 'ready':
-            return 'Ready to install';
-        case 'failed':
-            return 'Update Failed';
-        case 'runtime-disconnected':
-            return 'Runtime Disconnected';
-        case 'restarting-runtime':
-            return 'Restarting Runtime';
-        case 'restarting-app':
-            return 'Restarting';
-        default:
-            return 'Update';
-    }
 }
