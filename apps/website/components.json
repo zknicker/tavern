@@ -10,6 +10,7 @@
     "cssVariables": true,
     "prefix": ""
   },
+  "iconLibrary": "lucide",
   "aliases": {
     "components": "@/components",
     "utils": "@/lib/utils",
@@ -18,7 +19,7 @@
     "hooks": "@/hooks"
   },
   "registries": {
-    "@bklit": "https://ui.bklit.com/r/{name}.json"
-  },
-  "iconLibrary": "lucide"
+    "@bklit": "https://ui.bklit.com/r/{name}.json",
+    "@coss": "https://coss.com/ui/r/{name}.json"
+  }
 }

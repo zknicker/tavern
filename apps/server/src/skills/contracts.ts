@@ -1,4 +1,5 @@
 import {
+    agentRuntimeIntegrationIdSchema,
     agentRuntimeMcpCatalogInstallSchema,
     agentRuntimeMcpServerCreateSchema,
     agentRuntimeSkillHubTapSchema,
@@ -70,6 +71,14 @@ export const skillDependencyStateSchema = z.enum(['missing', 'ready', 'unknown']
 export const skillPluginUsabilitySchema = z.enum(['disabled', 'enabled', 'not_usable']);
 export const skillRuntimeSurfaceSchema = z.literal('hermes');
 
+export const skillIntegrationRefSchema = z
+    .object({
+        displayName: z.string().trim().min(1),
+        enabled: z.boolean(),
+        id: agentRuntimeIntegrationIdSchema,
+    })
+    .strict();
+
 export const skillSummarySchema = z.object({
     allowedTools: z.string().nullable(),
     description: z.string().nullable(),
@@ -78,7 +87,9 @@ export const skillSummarySchema = z.object({
     diagnostic: z.string().nullable(),
     dependencyState: skillDependencyStateSchema,
     enabled: z.boolean(),
+    integration: skillIntegrationRefSchema.nullable(),
     missing: agentRuntimeSkillRequirementsSchema,
+    readOnly: z.boolean(),
     surface: skillRuntimeSurfaceSchema,
     updatedAt: z.string().datetime().nullable(),
     usability: skillPluginUsabilitySchema,
@@ -91,6 +102,7 @@ export const toolsetSummarySchema = z.object({
     diagnostic: z.string().nullable(),
     enabled: z.boolean(),
     id: z.string().min(1),
+    integration: skillIntegrationRefSchema.nullable(),
     name: z.string().min(1),
     tools: z.array(z.string().min(1)),
     usability: skillPluginUsabilitySchema,

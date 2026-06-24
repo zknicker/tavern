@@ -8,6 +8,7 @@ read_when:
   - verifying that multiple Tavern worktrees can run managed Hermes simultaneously
   - cold-start testing a real engine install or the no-co-opt / version-pin guarantees
   - changing the managed Vault skill package or Vault path handling
+  - changing managed Integration skills or toolset plugins
   - changing managed Hermes live patches
   - changing the managed Cortex wiki skill package or managed wiki crons
 ---
@@ -130,7 +131,7 @@ every Tavern-owned setting that lands in the file is a domain:
 | agent env | arbitrary non-reserved env names | `/agent-env` Vault-backed store |
 | connectors | `mcp_servers.<id>` + `TAVERN_MCP_*` env secrets | connector vault records |
 | memory | built-in `MEMORY.md` / `USER.md` memory enabled, external provider empty | fixed managed policy |
-| plugins | `plugins.enabled` messenger entry | fixed managed policy |
+| plugins | `plugins.enabled` messenger and first-party Integration toolset plugins | fixed managed policy |
 
 Each domain only sets or deletes its own keys, so operator-managed keys
 elsewhere in the file survive every merge. Runtime storage is the source of
@@ -205,16 +206,40 @@ user. Runtime owns the content and refreshes it on every startup; the
 generated `AGENTS.md` points the agent at it. The contract lives in
 [tavern-skill.md](../../specs/tavern-skill.md).
 
-Runtime writes the managed `vault` and `tavern` skill directories read-only and
-the skill text tells agents not to edit them. On the next startup Runtime first
-makes the old managed copy replaceable, deletes it, copies the bundled source,
-and writes it read-only again. Other skills under `HERMES_HOME/skills` remain
+Runtime also installs Integration starter guidance when the Integration is a
+first-party Tavern product surface. The first one is MerchBase. Its source is
+`apps/runtime/assets/hermes/skills/merchbase`, which teaches the agent the
+`merchbase` Hermes toolset and when to prefer `MerchBaseSalesChart`.
+Runtime installs the companion `merchbase` plugin into
+`HERMES_HOME/plugins/merchbase` and keeps it enabled in `plugins.enabled`; the
+plugin registers the agent-executable `merchbase` toolset and bundles the
+collision-safe plugin skill `merchbase:merchbase`.
+The MerchBase Integration setting owns whether the `merchbase` skill and
+toolset are enabled for the agent. Tavern Settings shows the `merchbase`
+toolset row in the Integrations tab and, when Runtime owns a flat
+`skills/merchbase` copy, shows that skill row in the Skills Integrations tab.
+Both rows reject direct enablement edits; Runtime best-effort syncs the
+underlying Hermes skill and toolset when the Integration is toggled. The
+plugin-provided `merchbase:merchbase` skill is collision-safe guidance loaded
+through `skill_view`, not an editable flat skill row.
+
+Runtime writes the managed `vault`, `tavern`, and Integration starter skill
+directories read-only and the skill text tells agents not to edit them. On the
+next startup Runtime first makes the old managed copy replaceable, deletes it,
+copies the bundled source, and writes it read-only again. Integration starter
+skills also use the Hermes plugin-skill mechanism so a user-owned flat skill
+with the same name does not block the managed guidance before the Integration is
+enabled. If `skills/merchbase` already exists without Tavern's ownership marker,
+Runtime reports a settings conflict so the UI can warn before enablement. Enabling
+MerchBase reserves the flat `merchbase` name: Runtime deletes the existing flat
+skill and installs the managed copy, while `merchbase:merchbase` remains
+available through `skill_view`. Other skills under `HERMES_HOME/skills` remain
 Hermes-owned skill state: hub-installed and agent-created skills stay
 agent-editable and, with the default managed home, live under the Runtime root
-backup unit across Tavern Runtime updates and Hermes pin changes. Updating
-those skills is normal Hermes agent-managed skill work: the agent edits or
-merges the source copy, and Runtime only refreshes the visible inventory after
-Hermes observes the change.
+backup unit across Tavern Runtime updates and Hermes pin changes. Updating those
+skills is normal Hermes agent-managed skill work: the agent edits or merges the
+source copy, and Runtime only refreshes the visible inventory after Hermes
+observes the change.
 
 Runtime also removes retired Tavern-owned managed skill copies when they carry
 an old Tavern marker. The legacy `cortex-wiki` package was replaced by Vault;

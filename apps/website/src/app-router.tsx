@@ -235,6 +235,16 @@ export function createAppRouter() {
                                             ),
                                         },
                                         {
+                                            path: 'integrations',
+                                            lazy: lazyRoute(
+                                                () =>
+                                                    import(
+                                                        './routes/dashboard/settings-integrations-page.tsx'
+                                                    ),
+                                                'SettingsIntegrationsPage'
+                                            ),
+                                        },
+                                        {
                                             path: 'connectors',
                                             lazy: lazyRoute(
                                                 () =>

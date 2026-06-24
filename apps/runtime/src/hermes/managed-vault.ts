@@ -78,7 +78,16 @@ function resolveSourceAssetsRoot() {
     return candidates.find((candidate) => fsSync.existsSync(candidate)) ?? candidates.at(-1)!;
 }
 
-export async function syncManagedSkillDirectory(source: string, target: string) {
+interface SyncManagedSkillDirectoryOptions {
+    markerContent?: string;
+    markerFile?: string;
+}
+
+export async function syncManagedSkillDirectory(
+    source: string,
+    target: string,
+    options: SyncManagedSkillDirectoryOptions = {}
+) {
     await prepareExistingManagedSkillForReplacement(target);
     await fs.rm(target, { force: true, recursive: true });
     await fs.mkdir(path.dirname(target), { recursive: true });
@@ -88,6 +97,12 @@ export async function syncManagedSkillDirectory(source: string, target: string) 
         recursive: true,
         verbatimSymlinks: true,
     });
+    if (options.markerFile) {
+        await fs.writeFile(
+            path.join(target, options.markerFile),
+            options.markerContent ?? 'Managed by Tavern Runtime.\n'
+        );
+    }
     await protectManagedSkillDirectory(target);
 }
 

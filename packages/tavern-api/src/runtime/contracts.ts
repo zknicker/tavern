@@ -12,6 +12,7 @@ export const agentRuntimeCapabilitySchema = z.enum([
     'gateway',
     'models',
     'skills',
+    'integration.merchbase',
 ]);
 
 export const agentRuntimeCapabilityHealthIdSchema = agentRuntimeCapabilitySchema;
@@ -438,6 +439,358 @@ export const agentRuntimeThinkingLevelSchema = z.enum([
 ]);
 
 const agentRuntimeJsonRecordSchema = z.record(z.string(), z.unknown());
+
+export const agentRuntimeIntegrationIdSchema = z.enum(['merchbase']);
+
+const agentRuntimeIntegrationSecretFieldSchema = z
+    .object({
+        hasValue: z.boolean(),
+        name: z.string().trim().min(1).max(128),
+    })
+    .strict();
+
+export const agentRuntimeIntegrationSchema = z
+    .object({
+        config: agentRuntimeJsonRecordSchema,
+        displayName: z.string().trim().min(1),
+        enabled: z.boolean(),
+        id: agentRuntimeIntegrationIdSchema,
+        secrets: z.array(agentRuntimeIntegrationSecretFieldSchema),
+        updatedAt: z.string().datetime().nullable(),
+    })
+    .strict();
+
+export const agentRuntimeIntegrationListSchema = z
+    .object({
+        integrations: z.array(agentRuntimeIntegrationSchema),
+    })
+    .strict();
+
+export const agentRuntimeMerchbaseSettingsSchema = z
+    .object({
+        apiKeyConfigured: z.boolean(),
+        baseUrl: z.string().trim().url(),
+        defaultAccount: z.string().trim().min(1).max(160).nullable(),
+        defaultMarketplace: z.string().trim().min(1).max(40).nullable(),
+        enabled: z.boolean(),
+        skillConflict: z
+            .object({
+                skillName: z.literal('merchbase'),
+                skillPath: z.string().trim().min(1),
+            })
+            .strict()
+            .nullable(),
+        updatedAt: z.string().datetime().nullable(),
+    })
+    .strict();
+
+export const agentRuntimeSaveMerchbaseSettingsSchema = z
+    .object({
+        apiKey: z.string().trim().min(1).max(4096).nullable().optional(),
+        baseUrl: z.string().trim().url().optional(),
+        defaultAccount: z.string().trim().min(1).max(160).nullable().optional(),
+        defaultMarketplace: z.string().trim().min(1).max(40).nullable().optional(),
+        enabled: z.boolean().optional(),
+    })
+    .strict();
+
+export const agentRuntimeMerchbaseSalesBucketSchema = z.enum(['day', 'week', 'month']);
+
+const optionalMerchbaseFilterSchema = z.string().trim().min(1).max(160).optional();
+const merchbasePaginationDefaults = { limit: 25, offset: 0 } as const;
+const merchbaseSalesFilterDefaults = { range: '30d' } as const;
+const merchbaseSalesSeriesInputDefault = { bucket: 'day', range: '30d' } as const;
+const merchbasePaginatedSalesDefaults = {
+    ...merchbaseSalesFilterDefaults,
+    ...merchbasePaginationDefaults,
+} as const;
+const merchbaseSalesBreakdownGroupBySchema = z.enum([
+    'marketplace',
+    'asin',
+    'productType',
+    'fit',
+    'color',
+    'facet',
+]);
+
+export const agentRuntimeMerchbaseSalesSeriesInputSchema = z
+    .object({
+        asin: optionalMerchbaseFilterSchema,
+        bucket: agentRuntimeMerchbaseSalesBucketSchema.default('day'),
+        color: optionalMerchbaseFilterSchema,
+        facet: optionalMerchbaseFilterSchema,
+        facetName: optionalMerchbaseFilterSchema,
+        fit: optionalMerchbaseFilterSchema,
+        marketplace: optionalMerchbaseFilterSchema,
+        productType: optionalMerchbaseFilterSchema,
+        range: z.string().trim().min(1).max(80).default('30d'),
+    })
+    .strict();
+
+export const agentRuntimeMerchbaseSalesPointSchema = z
+    .object({
+        bucketEnd: z.string().trim().min(1),
+        bucketStart: z.string().trim().min(1),
+        currencyCode: z.string().trim().min(1),
+        netUnits: z.number(),
+        revenue: z.number(),
+        royalties: z.number(),
+        unitsCancelled: z.number(),
+        unitsReturned: z.number(),
+        unitsSold: z.number(),
+    })
+    .strict();
+
+const merchbaseChartValueSchema = z.union([z.string(), z.number(), z.null()]);
+
+export const agentRuntimeMerchbaseSalesSeriesSchema = z
+    .object({
+        chartData: z
+            .object({
+                data: z.array(z.record(z.string(), merchbaseChartValueSchema)),
+                title: z.string().trim().min(1),
+                unit: z.string().trim().min(1),
+                x: z.string().trim().min(1),
+                y: z.string().trim().min(1),
+            })
+            .strict(),
+        query: agentRuntimeMerchbaseSalesSeriesInputSchema,
+        series: z.array(agentRuntimeMerchbaseSalesPointSchema),
+    })
+    .strict();
+
+const merchbaseEmptyInputSchema = z.object({}).strict();
+const merchbasePaginationSchema = z
+    .object({
+        limit: z.number().int().min(1).max(100).default(25),
+        offset: z.number().int().min(0).default(0),
+    })
+    .strict();
+const merchbaseProductFiltersSchema = z
+    .object({
+        facet: optionalMerchbaseFilterSchema,
+        facetName: optionalMerchbaseFilterSchema,
+        marketplace: optionalMerchbaseFilterSchema,
+    })
+    .strict();
+const merchbaseSalesFiltersSchema = z
+    .object({
+        asin: optionalMerchbaseFilterSchema,
+        color: optionalMerchbaseFilterSchema,
+        facet: optionalMerchbaseFilterSchema,
+        facetName: optionalMerchbaseFilterSchema,
+        fit: optionalMerchbaseFilterSchema,
+        marketplace: optionalMerchbaseFilterSchema,
+        productType: optionalMerchbaseFilterSchema,
+        range: z.string().trim().min(1).max(80).default('30d'),
+    })
+    .strict();
+
+export const agentRuntimeMerchbaseActionNameSchema = z.enum([
+    'accounts.get',
+    'setup.status',
+    'merchAccount.get',
+    'merchAccount.statusCounts.get',
+    'products.list',
+    'products.search',
+    'products.get',
+    'products.metadata',
+    'products.catalog.get',
+    'products.catalog.options',
+    'products.catalog.product',
+    'designs.list',
+    'designs.get',
+    'designs.facets.get',
+    'designs.facets.status',
+    'sales.summary',
+    'sales.records',
+    'sales.series',
+    'sales.breakdown',
+]);
+
+export const agentRuntimeMerchbaseActionInputSchema = z.discriminatedUnion('action', [
+    z
+        .object({
+            action: z.literal('accounts.get'),
+            input: merchbaseEmptyInputSchema.default({}),
+        })
+        .strict(),
+    z
+        .object({
+            action: z.literal('setup.status'),
+            input: merchbaseEmptyInputSchema.default({}),
+        })
+        .strict(),
+    z
+        .object({
+            action: z.literal('merchAccount.get'),
+            input: merchbaseEmptyInputSchema.default({}),
+        })
+        .strict(),
+    z
+        .object({
+            action: z.literal('merchAccount.statusCounts.get'),
+            input: merchbaseEmptyInputSchema.default({}),
+        })
+        .strict(),
+    z
+        .object({
+            action: z.literal('products.list'),
+            input: merchbasePaginationSchema
+                .extend({
+                    marketplace: optionalMerchbaseFilterSchema,
+                    status: optionalMerchbaseFilterSchema,
+                })
+                .default(merchbasePaginationDefaults),
+        })
+        .strict(),
+    z
+        .object({
+            action: z.literal('products.search'),
+            input: merchbasePaginationSchema
+                .extend({
+                    facet: optionalMerchbaseFilterSchema,
+                    facetName: optionalMerchbaseFilterSchema,
+                    marketplace: optionalMerchbaseFilterSchema,
+                    query: optionalMerchbaseFilterSchema,
+                })
+                .default(merchbasePaginationDefaults),
+        })
+        .strict(),
+    z
+        .object({
+            action: z.literal('products.get'),
+            input: z
+                .object({
+                    asin: z.string().trim().min(1).max(40),
+                    marketplace: optionalMerchbaseFilterSchema,
+                })
+                .strict(),
+        })
+        .strict(),
+    z
+        .object({
+            action: z.literal('products.metadata'),
+            input: z
+                .object({
+                    asin: optionalMerchbaseFilterSchema,
+                    marketplace: optionalMerchbaseFilterSchema,
+                })
+                .strict()
+                .default({}),
+        })
+        .strict(),
+    z
+        .object({
+            action: z.literal('products.catalog.get'),
+            input: merchbaseEmptyInputSchema.default({}),
+        })
+        .strict(),
+    z
+        .object({
+            action: z.literal('products.catalog.options'),
+            input: z
+                .object({
+                    productType: optionalMerchbaseFilterSchema,
+                })
+                .strict()
+                .default({}),
+        })
+        .strict(),
+    z
+        .object({
+            action: z.literal('products.catalog.product'),
+            input: z
+                .object({
+                    productType: z.string().trim().min(1).max(160),
+                })
+                .strict(),
+        })
+        .strict(),
+    z
+        .object({
+            action: z.literal('designs.list'),
+            input: merchbasePaginationSchema
+                .extend({
+                    facet: optionalMerchbaseFilterSchema,
+                    facetName: optionalMerchbaseFilterSchema,
+                    query: optionalMerchbaseFilterSchema,
+                })
+                .default(merchbasePaginationDefaults),
+        })
+        .strict(),
+    z
+        .object({
+            action: z.literal('designs.get'),
+            input: z
+                .object({
+                    designId: z.string().trim().min(1).max(160),
+                })
+                .strict(),
+        })
+        .strict(),
+    z
+        .object({
+            action: z.literal('designs.facets.get'),
+            input: z
+                .object({
+                    designId: z.string().trim().min(1).max(160),
+                })
+                .strict(),
+        })
+        .strict(),
+    z
+        .object({
+            action: z.literal('designs.facets.status'),
+            input: z
+                .object({
+                    jobId: z.string().trim().min(1).max(160),
+                })
+                .strict(),
+        })
+        .strict(),
+    z
+        .object({
+            action: z.literal('sales.summary'),
+            input: merchbaseSalesFiltersSchema.default(merchbaseSalesFilterDefaults),
+        })
+        .strict(),
+    z
+        .object({
+            action: z.literal('sales.records'),
+            input: merchbaseSalesFiltersSchema
+                .merge(merchbasePaginationSchema)
+                .default(merchbasePaginatedSalesDefaults),
+        })
+        .strict(),
+    z
+        .object({
+            action: z.literal('sales.series'),
+            input: agentRuntimeMerchbaseSalesSeriesInputSchema.default(
+                merchbaseSalesSeriesInputDefault
+            ),
+        })
+        .strict(),
+    z
+        .object({
+            action: z.literal('sales.breakdown'),
+            input: merchbaseSalesFiltersSchema
+                .merge(merchbasePaginationSchema)
+                .extend({
+                    direction: z.enum(['asc', 'desc']).default('desc'),
+                    groupBy: merchbaseSalesBreakdownGroupBySchema,
+                    sort: optionalMerchbaseFilterSchema,
+                }),
+        })
+        .strict(),
+]);
+
+export const agentRuntimeMerchbaseActionResultSchema = z
+    .object({
+        action: agentRuntimeMerchbaseActionNameSchema,
+        result: z.unknown(),
+    })
+    .strict();
 
 export const agentRuntimeHermesConfigSchema = z.record(z.string(), z.unknown());
 
@@ -2082,6 +2435,25 @@ export type AgentRuntimeCapabilityHealthState = z.infer<
 export type AgentRuntimeRefreshCapabilities = z.infer<typeof agentRuntimeRefreshCapabilitiesSchema>;
 export type PlatformInboundMode = z.infer<typeof agentRuntimeInboundModeSchema>;
 export type AgentRuntimeInfo = z.infer<typeof agentRuntimeInfoSchema>;
+export type AgentRuntimeIntegration = z.infer<typeof agentRuntimeIntegrationSchema>;
+export type AgentRuntimeIntegrationId = z.infer<typeof agentRuntimeIntegrationIdSchema>;
+export type AgentRuntimeIntegrationList = z.infer<typeof agentRuntimeIntegrationListSchema>;
+export type AgentRuntimeMerchbaseSalesSeries = z.infer<
+    typeof agentRuntimeMerchbaseSalesSeriesSchema
+>;
+export type AgentRuntimeMerchbaseSalesSeriesInput = z.input<
+    typeof agentRuntimeMerchbaseSalesSeriesInputSchema
+>;
+export type AgentRuntimeMerchbaseActionInput = z.input<
+    typeof agentRuntimeMerchbaseActionInputSchema
+>;
+export type AgentRuntimeMerchbaseActionResult = z.infer<
+    typeof agentRuntimeMerchbaseActionResultSchema
+>;
+export type AgentRuntimeMerchbaseSettings = z.infer<typeof agentRuntimeMerchbaseSettingsSchema>;
+export type AgentRuntimeSaveMerchbaseSettings = z.infer<
+    typeof agentRuntimeSaveMerchbaseSettingsSchema
+>;
 export type AgentRuntimeBinding = z.infer<typeof agentRuntimeBindingSchema>;
 export type AgentRuntimeBindingList = z.infer<typeof agentRuntimeBindingListSchema>;
 export type AgentRuntimeBindingMatch = z.infer<typeof agentRuntimeBindingMatchSchema>;

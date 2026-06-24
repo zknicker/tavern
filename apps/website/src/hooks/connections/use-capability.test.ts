@@ -41,6 +41,10 @@ describe('Runtime capability gates', () => {
         expect(settingsCapabilityRequirements.memories).toEqual(['vault']);
     });
 
+    test('gates Integrations settings on Runtime API access', () => {
+        expect(settingsCapabilityRequirements.integrations).toEqual(['apiServer']);
+    });
+
     test('gates Stats settings on model inventory', () => {
         expect(settingsCapabilityRequirements.stats).toEqual(['models']);
     });

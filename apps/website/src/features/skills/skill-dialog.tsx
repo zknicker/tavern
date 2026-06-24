@@ -32,7 +32,9 @@ export interface SkillDialogSubject {
     enabled?: boolean;
     identifier: null | string;
     installed: boolean;
+    integration: null | { displayName: string; enabled: boolean; id: string };
     name: string;
+    readOnly: boolean;
     skillId: null | string;
     trustLevel?: 'builtin' | 'community' | 'trusted';
     uninstallName: null | string;
@@ -87,7 +89,7 @@ function SkillDialogBody({
                         {subject.trustLevel ? (
                             <SkillTrustBadge trustLevel={subject.trustLevel} />
                         ) : null}
-                        {subject.installed && subject.skillId ? (
+                        {subject.installed && subject.skillId && !subject.readOnly ? (
                             <Switch
                                 aria-label={`${subject.enabled ? 'Disable' : 'Enable'} ${subject.name}`}
                                 checked={subject.enabled === true}
@@ -110,6 +112,13 @@ function SkillDialogBody({
             </DialogHeader>
 
             <DialogPanel className="grid gap-4">
+                {subject.integration ? (
+                    <p className="rounded-lg border border-border/70 bg-muted/25 px-3 py-2 text-muted-foreground text-sm">
+                        Managed by the {subject.integration.displayName} Integration. Enable or
+                        disable it from Settings -&gt; Integrations.
+                    </p>
+                ) : null}
+
                 {subject.installed || !scanQuery.data ? null : (
                     <div className="flex flex-wrap items-center gap-2">
                         <SkillScanBadge scan={scanQuery.data} />

@@ -20,6 +20,8 @@ export function SkillsPage() {
     const skillsQuery = useSkillList();
     const availableQuery = useSkillHubAvailable({ enabled: true });
     const skills = skillsQuery.data?.skills ?? [];
+    const installedSkills = skills.filter((skill) => !skill.integration);
+    const integrationSkills = skills.filter((skill) => skill.integration);
     const hubByName = React.useMemo(() => {
         const byName = new Map<string, { identifier: string; trustLevel: null | string }>();
         for (const [identifier, entry] of Object.entries(availableQuery.data?.installed ?? {})) {
@@ -47,7 +49,10 @@ export function SkillsPage() {
             <div className="grid gap-5">
                 <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
                     <SkillsTabBar
-                        counts={{ installed: skills.length }}
+                        counts={{
+                            installed: installedSkills.length,
+                            integrations: integrationSkills.length,
+                        }}
                         onChange={setTab}
                         value={tab}
                     />
@@ -64,7 +69,15 @@ export function SkillsPage() {
                 {tab === 'installed' ? (
                     <InstalledSkillsList
                         onSelect={(skill) => setSubject(installedSubject(skill, hubByName))}
-                        skills={skills}
+                        skills={installedSkills}
+                    />
+                ) : tab === 'integrations' ? (
+                    <InstalledSkillsList
+                        emptyDescription="Integration skills appear here when enabled from Integrations."
+                        emptyTitle="No Integration skills"
+                        onSelect={(skill) => setSubject(installedSubject(skill, hubByName))}
+                        searchPlaceholder="Search Integration skills..."
+                        skills={integrationSkills}
                     />
                 ) : (
                     <AvailableSkillsList
@@ -104,10 +117,12 @@ function installedSubject(skill: SkillSummary, hubByName: HubByName): SkillDialo
         description: skill.description,
         enabled: skill.enabled,
         identifier: hubEntry?.identifier ?? null,
+        integration: skill.integration,
         installed: true,
         name: skill.name,
+        readOnly: skill.readOnly,
         skillId: skill.id,
-        trustLevel: narrowTrustLevel(hubEntry?.trustLevel),
+        trustLevel: skill.integration ? 'builtin' : narrowTrustLevel(hubEntry?.trustLevel),
         uninstallName: hubEntry ? skill.name : null,
     };
 }
@@ -125,8 +140,10 @@ function availableSubject(
         description: item.description || null,
         enabled: inventorySkill?.enabled,
         identifier: item.identifier,
+        integration: inventorySkill?.integration ?? null,
         installed: installedEntry !== undefined,
         name: item.name,
+        readOnly: inventorySkill?.readOnly ?? false,
         skillId: inventorySkill?.id ?? null,
         trustLevel: item.trustLevel,
         uninstallName: installedEntry ? item.name : null,
@@ -149,7 +166,9 @@ function refreshSubject(
         ...subject,
         enabled: inventorySkill?.enabled ?? subject.enabled,
         identifier: subject.identifier ?? hubEntry?.identifier ?? null,
+        integration: inventorySkill?.integration ?? subject.integration,
         installed,
+        readOnly: inventorySkill?.readOnly ?? subject.readOnly,
         skillId: inventorySkill?.id ?? null,
         uninstallName: hubEntry ? subject.name : null,
     };

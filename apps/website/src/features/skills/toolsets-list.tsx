@@ -14,14 +14,20 @@ import { formatSkillName } from './skill-name-format.ts';
 type ToolsetSummary = SkillListOutput['toolsets'][number];
 
 export function ToolsetsList({
+    emptyDescription,
+    emptyTitle,
     onConfigure,
     onSetEnabled,
     savingToolsetIds,
+    searchPlaceholder = 'Search toolsets...',
     toolsets,
 }: {
+    emptyDescription?: string;
+    emptyTitle?: string;
     onConfigure: (toolset: ToolsetSummary) => void;
     onSetEnabled: (input: { enabled: boolean; toolsetId: string }) => void;
     savingToolsetIds: Set<string>;
+    searchPlaceholder?: string;
     toolsets: ToolsetSummary[];
 }) {
     const [search, setSearch] = React.useState('');
@@ -35,7 +41,7 @@ export function ToolsetsList({
                 className="w-full [&_[data-slot=input-control]]:h-11 [&_[data-slot=input-control]]:rounded-full"
                 name="toolset-search"
                 onChange={(event) => setSearch(event.target.value)}
-                placeholder="Search toolsets..."
+                placeholder={searchPlaceholder}
                 value={search}
             />
 
@@ -60,9 +66,12 @@ export function ToolsetsList({
                     description={
                         search.trim().length > 0
                             ? 'Try a different name, tool, or description.'
-                            : 'Runtime toolsets will appear here when the agent engine reports them.'
+                            : (emptyDescription ??
+                              'Runtime toolsets will appear here when the agent engine reports them.')
                     }
-                    title={search.trim().length > 0 ? 'No matches' : 'No toolsets yet'}
+                    title={
+                        search.trim().length > 0 ? 'No matches' : (emptyTitle ?? 'No toolsets yet')
+                    }
                 />
             )}
         </div>
@@ -81,6 +90,7 @@ function ToolsetRow({
     toolset: ToolsetSummary;
 }) {
     const needsSetup = toolset.usability === 'not_usable';
+    const integrationLocked = toolset.integration !== null;
 
     return (
         <div className="flex select-none items-center gap-4 rounded-xl px-3 py-2.5">
@@ -106,12 +116,17 @@ function ToolsetRow({
                             {toolset.diagnostic ?? 'Needs setup'}
                         </Badge>
                     ) : null}
+                    {toolset.integration ? (
+                        <Badge size="sm" variant="secondary">
+                            Integration
+                        </Badge>
+                    ) : null}
                 </span>
                 <span className="mt-0.5 line-clamp-1 text-muted-foreground text-sm">
                     {toolset.description ?? toolset.id}
                 </span>
             </span>
-            {needsSetup ? (
+            {needsSetup && !toolset.integration ? (
                 <Button
                     className="shrink-0 rounded-full"
                     onClick={onConfigure}
@@ -124,8 +139,12 @@ function ToolsetRow({
             <Switch
                 aria-label={`${toolset.enabled ? 'Disable' : 'Enable'} ${toolset.name}`}
                 checked={toolset.enabled}
-                disabled={saving}
-                onCheckedChange={onSetEnabled}
+                disabled={saving || integrationLocked}
+                onCheckedChange={(enabled) => {
+                    if (!integrationLocked) {
+                        onSetEnabled(enabled);
+                    }
+                }}
             />
         </div>
     );

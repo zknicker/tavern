@@ -20,6 +20,7 @@
     "test:watch": "bunx --bun vitest"
   },
   "dependencies": {
+    "@merchbase/http-client": "4.0.0",
     "@tavern/api": "workspace:*",
     "@tavern/codex-usage": "workspace:*",
     "bunqueue": "2.6.38",

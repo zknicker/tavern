@@ -15,6 +15,11 @@ describe('Rich Response json-render catalog', () => {
         expect(prompt).toContain('AVAILABLE ACTIONS:');
         expect(prompt).toContain('STATE WATCHERS:');
         expect(prompt).toContain('ComposedChart');
+        expect(prompt).toContain('MerchBaseSalesChart');
+        expect(prompt).toContain(
+            'Default to the 10-day trend range for today/current sales requests'
+        );
+        expect(prompt).toContain('Use endDate to anchor the active day');
         expect(prompt).toContain('CalendarEvent');
         expect(prompt).toContain('xKey');
         expect(prompt).toContain('barSeries');

@@ -181,8 +181,7 @@ export function normalizeLineChartData(props: ChartValueProps) {
 
     return props.data.map((point, index) => {
         const xValue = point[props.xKey];
-        const parsedDate =
-            typeof xValue === 'string' || typeof xValue === 'number' ? new Date(xValue) : null;
+        const parsedDate = parseChartDate(xValue);
 
         return {
             ...point,
@@ -232,6 +231,24 @@ function axisMarginMax(unit?: string) {
     return unit ? 72 : 48;
 }
 
+function parseChartDate(value: unknown) {
+    if (typeof value === 'number') {
+        return new Date(value);
+    }
+
+    if (typeof value !== 'string') {
+        return null;
+    }
+
+    const dateOnlyMatch = dateOnlyPattern.exec(value);
+    if (!dateOnlyMatch) {
+        return new Date(value);
+    }
+
+    const [, year, month, day] = dateOnlyMatch;
+    return new Date(Number(year), Number(month) - 1, Number(day));
+}
+
 const chartSeriesColors = [
     'var(--chart-line-primary)',
     'var(--chart-line-secondary)',
@@ -240,3 +257,4 @@ const chartSeriesColors = [
 ];
 
 const decimalFmt = new Intl.NumberFormat('en-US', { maximumFractionDigits: 2 });
+const dateOnlyPattern = /^(\d{4})-(\d{2})-(\d{2})$/u;

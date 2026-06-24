@@ -16,6 +16,7 @@ import {
     richResponseComposedChartPropsSchema,
     richResponseLineChartPropsSchema,
 } from '@tavern/api/rich-responses/charts';
+import { richResponseMerchBaseSalesChartPropsSchema } from '@tavern/api/rich-responses/merchbase';
 import {
     Table,
     TableBody,
@@ -32,6 +33,7 @@ import {
     RichResponseComposedChart,
     RichResponseLineChart,
 } from './charts.tsx';
+import { RichResponseMerchBaseSalesChart } from './merchbase-sales-chart.tsx';
 
 type RichResponseRow = Extract<
     NonNullable<ChatLogOutput>['rows'][number],
@@ -111,6 +113,14 @@ const richResponseRegistry: Record<string, ComponentRenderer> = {
     LineChart: ({ element }) => {
         const parsed = richResponseLineChartPropsSchema.safeParse(element.props);
         return parsed.success ? <RichResponseLineChart props={parsed.data} /> : null;
+    },
+    MerchBaseSalesChart: ({ element }) => {
+        const parsed = richResponseMerchBaseSalesChartPropsSchema.safeParse(element.props);
+        return parsed.success ? (
+            <RichResponseMerchBaseSalesChart props={parsed.data} />
+        ) : (
+            <RichResponseFallback error={parsed.error.message} text="MerchBase sales chart." />
+        );
     },
     Separator: ({ element }) => {
         const parsed = richResponseSeparatorPropsSchema.safeParse(element.props);

@@ -13,6 +13,10 @@ import {
     richResponseLineChartComponentType,
     richResponseLineChartPropsSchema,
 } from './charts/contracts.ts';
+import {
+    richResponseMerchBaseSalesChartComponentType,
+    richResponseMerchBaseSalesChartPropsSchema,
+} from './merchbase/contracts.ts';
 
 export const richResponseComponentId = 'tavern.rich_response' as const;
 export const richResponseTargetSchema = z.enum(['chat.inline']);
@@ -34,6 +38,7 @@ export const richResponseComponentTypeSchema = z.enum([
     richResponseComposedChartComponentType,
     richResponseCalendarEventComponentType,
     richResponseCalendarDayComponentType,
+    richResponseMerchBaseSalesChartComponentType,
 ]);
 
 export const richResponseStackPropsSchema = z
@@ -321,5 +326,7 @@ function richResponsePropsSchemaForType(type: RichResponseComponentType) {
             return richResponseCalendarEventPropsSchema;
         case richResponseCalendarDayComponentType:
             return richResponseCalendarDayPropsSchema;
+        case richResponseMerchBaseSalesChartComponentType:
+            return richResponseMerchBaseSalesChartPropsSchema;
     }
 }

@@ -4,6 +4,7 @@ import { chatRouter } from './chat/router.ts';
 import { connectorRouter } from './connector/router.ts';
 import { cronRouter } from './cron/router.ts';
 import { hermesConfigRouter } from './hermes-config/router.ts';
+import { integrationRouter } from './integration/router.ts';
 import { jobsRouter } from './jobs/router.ts';
 import { logRouter } from './log/router.ts';
 import { mentionRouter } from './mention/router.ts';
@@ -34,6 +35,7 @@ export const appRouter = createRouter({
     model: modelRouter,
     openAiSettings: openAiSettingsRouter,
     hermesConfig: hermesConfigRouter,
+    integration: integrationRouter,
     openRouterSettings: openRouterSettingsRouter,
     participant: participantRouter,
     agentRuntime: agentRuntimeRouter,

@@ -79,6 +79,11 @@ import {
     readStringArray,
     truncate,
 } from './mappers';
+import {
+    isManagedMerchbaseSkillInstalled,
+    managedMerchbaseSkillRuntimeSource,
+    merchbaseSkillName,
+} from './merchbase-skill';
 import type { HermesSseEvent, LocalHermesClientOptions } from './protocol';
 import {
     deleteHermesSessionMapping,
@@ -104,6 +109,25 @@ const editableHermesAgentFiles = [
 
 export function createLocalHermesClient() {
     return new LocalHermesClient(readHermesConnectionOptions());
+}
+
+async function markManagedIntegrationSkills(skills: AgentRuntimeSkillSummary[]) {
+    const merchbaseManaged = await isManagedMerchbaseSkillInstalled().catch(() => false);
+    return skills.map((skill) => {
+        if (
+            merchbaseManaged &&
+            (skill.id === merchbaseSkillName ||
+                skill.name === merchbaseSkillName ||
+                skill.skillKey === merchbaseSkillName)
+        ) {
+            return {
+                ...skill,
+                runtimeSource: managedMerchbaseSkillRuntimeSource,
+                source: 'builtin' as const,
+            };
+        }
+        return skill;
+    });
 }
 
 export class LocalHermesClient extends LocalHermesUnsupportedSurfaces {
@@ -731,7 +755,8 @@ export class LocalHermesClient extends LocalHermesUnsupportedSurfaces {
         agentId?: string;
     }): Promise<{ skills: AgentRuntimeSkillSummary[] }> {
         const response = await this.#http.get('/api/skills');
-        return { skills: readArray(response, ['skills', 'data', 'items']).map(mapHermesSkill) };
+        const skills = readArray(response, ['skills', 'data', 'items']).map(mapHermesSkill);
+        return { skills: await markManagedIntegrationSkills(skills) };
     }
 
     async listToolsets(): Promise<{ toolsets: AgentRuntimeToolset[] }> {

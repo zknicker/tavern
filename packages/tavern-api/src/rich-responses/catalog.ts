@@ -25,6 +25,7 @@ import {
     richResponseTableCanonicalPropsSchema,
     richResponseTextPropsSchema,
 } from './contracts.ts';
+import { richResponseMerchBaseSalesChartPropsSchema } from './merchbase/contracts.ts';
 
 type JsonRenderZodSchema = Parameters<PromptContext['formatZodType']>[0];
 
@@ -136,6 +137,11 @@ export const richResponseJsonRenderCatalog = defineCatalog(richResponseJsonRende
         ComposedChart: {
             description: 'Combined bar and line chart for related quantities sharing one x-axis.',
             props: jsonRenderPropsSchema(richResponseComposedChartPropsSchema),
+        },
+        MerchBaseSalesChart: {
+            description:
+                'Preferred way to present MerchBase sales trends over a date range. Fetches live MerchBase sales, renders Sales as bars and royalties as a line, includes a date range selector, and shows hover-driven sold/cancelled/returned/royalties stats for the active day. Default to the 10-day trend range for today/current sales requests; omit rangeDays or use 10 unless the user explicitly asks for a one-day chart. Use endDate to anchor the active day.',
+            props: jsonRenderPropsSchema(richResponseMerchBaseSalesChartPropsSchema),
         },
         CalendarDay: {
             description: 'Single-day agenda with zero or more same-day events.',

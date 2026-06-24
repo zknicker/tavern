@@ -1,5 +1,6 @@
 import type { AgentRuntimeSkillSummary } from '@tavern/api';
 import type { TavernAgentRuntimeClient } from '../agent-runtime/client.ts';
+import { listAgentRuntimeIntegrations } from '../agent-runtime/integrations.ts';
 import { listAgentRuntimeSkills, setAgentRuntimeSkillEnabled } from '../agent-runtime/skills.ts';
 import {
     listAgentRuntimeToolsets,
@@ -17,18 +18,28 @@ import {
     type ToolsetSummary,
 } from './contracts.ts';
 import {
+    listMissingIntegrationToolsets,
+    rejectIntegrationSkillEnablement,
+    rejectIntegrationToolsetEnablement,
+    resolveSkillIntegration,
+    resolveToolsetIntegration,
+    type SkillIntegrationRef,
+} from './integration-capabilities.ts';
+import {
     enqueueRuntimeSkillInventoryRefresh,
     enqueueRuntimeSkillInventoryRefreshIfStale,
 } from './inventory-job.ts';
 import { getCachedRuntimeSkillInventory, refreshRuntimeSkillInventory } from './inventory-sync.ts';
 
 export async function listSkills(): Promise<SkillList> {
-    const [runtime, toolsets] = await Promise.all([
+    const [runtime, toolsets, integrations] = await Promise.all([
         getActiveAgentRuntimeConnection(),
         listAgentRuntimeToolsets().catch(() => []),
+        listAgentRuntimeIntegrations().catch(() => []),
     ]);
     const skillRuntimeId = getSkillInventoryRuntimeId(runtime);
     const runtimeToolsets = toolsets ?? [];
+    const runtimeIntegrations = integrations ?? [];
     const cachedInventory = skillRuntimeId
         ? await getCachedRuntimeSkillInventory(skillRuntimeId).catch(() => null)
         : null;
@@ -37,14 +48,27 @@ export async function listSkills(): Promise<SkillList> {
 
     return skillListSchema.parse({
         skills: filterRuntimeVisibleSkills(cachedInventory?.skills ?? []).map((skill) =>
-            buildSkillSummary(skill)
+            buildSkillSummary(skill, runtimeIntegrations)
         ),
-        toolsets: runtimeToolsets.map(buildToolsetSummary),
+        toolsets: [
+            ...runtimeToolsets,
+            ...listMissingIntegrationToolsets(
+                runtimeIntegrations,
+                new Set(runtimeToolsets.map((toolset) => toolset.id))
+            ),
+        ].map((toolset) => buildToolsetSummary(toolset, runtimeIntegrations)),
     });
 }
 
 export async function setSkillEnabled(input: unknown): Promise<SkillList> {
     const parsed = setSkillEnabledInputSchema.parse(input);
+    const runtime = await getActiveAgentRuntimeConnection();
+    const skillRuntimeId = getSkillInventoryRuntimeId(runtime);
+    const cachedInventory = skillRuntimeId
+        ? await getCachedRuntimeSkillInventory(skillRuntimeId).catch(() => null)
+        : null;
+    const skill = cachedInventory?.skills.find((candidate) => candidate.id === parsed.skillId);
+    rejectIntegrationSkillEnablement(skill ?? parsed.skillId);
     const updated = await setAgentRuntimeSkillEnabled(parsed.skillId, { enabled: parsed.enabled });
     if (!updated) {
         throw new Error('Runtime skill enablement is unavailable.');
@@ -60,6 +84,7 @@ export async function setSkillEnabled(input: unknown): Promise<SkillList> {
 
 export async function setToolsetEnabled(input: unknown): Promise<SkillList> {
     const parsed = setToolsetEnabledInputSchema.parse(input);
+    rejectIntegrationToolsetEnablement(parsed.toolsetId);
     const updated = await setAgentRuntimeToolsetEnabled(parsed.toolsetId, {
         enabled: parsed.enabled,
     });
@@ -102,20 +127,26 @@ function isRuntimeVisibleSkill(skill: AgentRuntimeSkillSummary) {
     return skill.blockedByAllowlist !== true;
 }
 
-function buildSkillSummary(skill: AgentRuntimeSkillSummary) {
+function buildSkillSummary(
+    skill: AgentRuntimeSkillSummary,
+    integrations: Awaited<ReturnType<typeof listAgentRuntimeIntegrations>>
+) {
+    const integration = resolveSkillIntegration(skill, integrations ?? []);
     const dependencyState = resolveDependencyState(skill);
-    const enabled = isSkillEnabled(skill);
+    const enabled = integration ? integration.enabled : isSkillEnabled(skill);
     const usability = resolveSkillUsability({ dependencyState, enabled });
 
     return skillSummarySchema.parse({
         allowedTools: skill.allowedTools,
-        diagnostic: buildSkillDiagnostic(skill, dependencyState),
+        diagnostic: buildSkillDiagnostic(skill, dependencyState, integration),
         dependencyState,
         description: skill.description,
         enabled,
         id: skill.id,
+        integration,
         missing: skill.missing,
         name: skill.name,
+        readOnly: integration !== null,
         surface: resolveSkillSurface(),
         updatedAt: skill.updatedAt,
         usability,
@@ -127,26 +158,54 @@ function resolveSkillSurface(): SkillSummary['surface'] {
     return 'hermes';
 }
 
-function buildToolsetSummary(toolset: {
-    configured: boolean;
-    description: null | string;
-    enabled: boolean;
-    id: string;
-    label: string;
-    tools: string[];
-}): ToolsetSummary {
-    const diagnostic =
-        toolset.enabled && !toolset.configured ? 'Required provider keys are missing.' : null;
+function buildToolsetSummary(
+    toolset: {
+        configured: boolean;
+        description: null | string;
+        enabled: boolean;
+        id: string;
+        label: string;
+        placeholder?: boolean;
+        tools: string[];
+    },
+    integrations: Awaited<ReturnType<typeof listAgentRuntimeIntegrations>>
+): ToolsetSummary {
+    const integration = resolveToolsetIntegration(
+        { ...toolset, name: toolset.label },
+        integrations ?? []
+    );
+    const enabled = integration ? integration.enabled : toolset.enabled;
+    const diagnostic = resolveToolsetDiagnostic({ enabled, integration, toolset });
     return {
         configured: toolset.configured,
         description: toolset.description,
         diagnostic,
-        enabled: toolset.enabled,
+        enabled,
         id: toolset.id,
+        integration,
         name: toolset.label,
         tools: toolset.tools,
-        usability: diagnostic ? 'not_usable' : toolset.enabled ? 'enabled' : 'disabled',
+        usability: diagnostic ? 'not_usable' : enabled ? 'enabled' : 'disabled',
     };
+}
+
+function resolveToolsetDiagnostic(input: {
+    enabled: boolean;
+    integration: SkillIntegrationRef | null;
+    toolset: { configured: boolean; placeholder?: boolean };
+}) {
+    if (input.integration && !input.integration.enabled) {
+        return `Enable ${input.integration.displayName} in Integrations.`;
+    }
+    if (input.integration && 'placeholder' in input.toolset) {
+        return `Restart the agent engine to load ${input.integration.displayName} tools.`;
+    }
+    if (input.enabled && !input.toolset.configured) {
+        return input.integration
+            ? `Finish ${input.integration.displayName} setup in Integrations.`
+            : 'Required provider keys are missing.';
+    }
+    return null;
 }
 
 function resolveSkillUsability(input: {
@@ -168,8 +227,12 @@ function isSkillEnabled(skill: AgentRuntimeSkillSummary) {
 
 function buildSkillDiagnostic(
     skill: AgentRuntimeSkillSummary,
-    dependencyState: SkillSummary['dependencyState']
+    dependencyState: SkillSummary['dependencyState'],
+    integration: SkillIntegrationRef | null
 ) {
+    if (integration && !integration.enabled) {
+        return `Enable ${integration.displayName} in Integrations.`;
+    }
     if (dependencyState !== 'missing') {
         return null;
     }

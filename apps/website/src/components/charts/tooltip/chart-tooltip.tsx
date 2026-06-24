@@ -25,6 +25,8 @@ import { TooltipIndicator } from "./tooltip-indicator";
 export interface ChartTooltipProps {
   /** Whether to show the date pill at bottom. Default: true */
   showDatePill?: boolean;
+  /** Distance from the chart container bottom to the date pill bottom. Default: 4. */
+  datePillBottom?: number;
   /** Whether to show the vertical crosshair line. Default: true */
   showCrosshair?: boolean;
   /** Whether to show dots on the lines. Default: true */
@@ -82,6 +84,7 @@ interface ChartTooltipInnerProps extends ChartTooltipProps {
 
 const ChartTooltipInner = memo(function ChartTooltipInner({
   showDatePill = true,
+  datePillBottom = 4,
   showCrosshair = true,
   showDots = true,
   indicatorColor: indicatorColorProp,
@@ -298,6 +301,7 @@ const ChartTooltipInner = memo(function ChartTooltipInner({
         currentIndex={tooltipData?.index ?? 0}
         discreteInteraction={discreteInteraction}
         enabled={showDatePill && !isHorizontal}
+        bottom={datePillBottom}
         labels={dateLabels}
         springConfig={springConfig}
         visible={visible}
@@ -329,6 +333,7 @@ export function ChartTooltip(props: ChartTooltipProps) {
 ChartTooltip.displayName = "ChartTooltip";
 
 interface DatePillTrackerProps {
+  bottom: number;
   enabled: boolean;
   visible: boolean;
   labels: string[];
@@ -349,6 +354,7 @@ function DatePillTracker(props: DatePillTrackerProps) {
 
 function DatePillTrackerInner({
   labels,
+  bottom,
   currentIndex,
   xWithMargin,
   discreteInteraction,
@@ -374,7 +380,7 @@ function DatePillTrackerInner({
       style={{
         left: discreteInteraction ? xWithMargin : animatedX,
         transform: "translateX(-50%)",
-        bottom: 4,
+        bottom,
       }}
     >
       <DateTicker

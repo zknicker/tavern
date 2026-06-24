@@ -13,8 +13,9 @@ can use from the runtime-managed Hermes instance.
 ## In the box
 
 * **Skills page, Installed tab.** The inventory: enabled, disabled (visibly
-  muted), and needs-setup skills, each with an enable toggle. Rows open the
-  skill dialog.
+  muted), and needs-setup user-managed skills. Rows open the skill dialog.
+* **Skills page, Integrations tab.** Runtime-provided Integration starter
+  skills. These rows are read-only reflections of Settings -> Integrations.
 * **Skills page, Available tab.** Installable skills grouped by source: your
   GitHub repos (taps, including private repos the runtime can access) and the
   engine's built-in library of official optional skills. Installed items show
@@ -25,10 +26,14 @@ can use from the runtime-managed Hermes instance.
   available skills, and Uninstall for hub-installed skills.
 * **Manage sources.** A dialog on the Skills page that adds and removes tap
   repos. Removing a repo never uninstalls skills installed from it.
-* **Toolsets page.** Enable or disable Hermes tool groups such as browser,
-  file, MCP, or provider-backed tools, with the Add toolset dialog (curated MCP
-  catalog plus custom HTTP/stdio servers) and the Set up dialog (the engine's
-  provider matrix: pick a provider, save keys, run the install step).
+* **Toolsets page.** Enable or disable user-managed Hermes tool groups such as
+  browser, file, MCP, or provider-backed tools, with the Add toolset dialog
+  (curated MCP catalog plus custom HTTP/stdio servers) and the Set up dialog
+  (the engine's provider matrix: pick a provider, save keys, run the install
+  step).
+* **Toolsets page, Integrations tab.** Integration-provided toolsets. These rows
+  show what an Integration contributes to the agent, but enablement is locked to
+  Settings -> Integrations.
 
 ## Contract
 
@@ -101,12 +106,22 @@ Runtime-owned workflow packages can still be prepared as managed skills when
 they are part of Tavern's product contract. Vault is the current example:
 Runtime bundles the `vault` managed skill so normal wiki work can route to
 Obsidian and bounded research folders can route to llm-wiki.
-The Runtime-owned `vault` and `tavern` skill copies are read-only and refreshed
-from Tavern assets on startup. Agent-created, hub-installed, workspace,
-personal, extra-directory, and plugin-owned skills remain owned by their source
-location and keep their normal Hermes editability. Tavern refreshes inventory
-after Hermes reports skill-related writes; it does not become the editor or
-merge owner for those files.
+Runtime also bundles first-party product skills such as `tavern` and
+Integration starter skills such as `merchbase`. Integration starter skills
+teach the agent when to use Integration-owned toolsets; executable Integration
+capability lives in Hermes toolsets, not in the skill body.
+Integration-owned skill and toolset rows are segregated into Integrations tabs
+and their toggles are locked because the Integration record owns enablement.
+If an Integration reserves a flat skill name already used by a user-owned skill,
+the user resolves that conflict from Settings -> Integrations. Confirming
+enablement replaces the existing skill with the Runtime-owned Integration
+starter guide.
+The Runtime-owned `vault`, `tavern`, and Integration starter skill copies are
+read-only and refreshed from Tavern assets on startup. Agent-created,
+hub-installed, workspace, personal, extra-directory, and plugin-owned skills
+remain owned by their source location and keep their normal Hermes editability.
+Tavern refreshes inventory after Hermes reports skill-related writes; it does
+not become the editor or merge owner for those files.
 
 Assistant memory is not a Tavern skill. Runtime leaves the engine's built-in
 `MEMORY.md` and `USER.md` memory enabled, and agents write compact memory

@@ -17,6 +17,8 @@ import { quoteEnvValue, readEnvEntries, readManagedHermesEnvValue } from './env.
 import { getHermesExecutionSettings } from './execution-settings.ts';
 import { type HermesModelDomain, mergeHermesGeneratedConfig } from './generated-config.ts';
 import { prepareManagedVaultIntegration, resolveManagedVaultPath } from './managed-vault.ts';
+import { ensureManagedMerchbaseSkill } from './merchbase-skill.ts';
+import { ensureManagedMerchbaseToolsetPlugin } from './merchbase-toolset-plugin.ts';
 import { resolveConfiguredPermissionsDomain } from './permission-settings.ts';
 import { removeRetiredManagedSkillCopies } from './retired-managed-skills.ts';
 import { ensureManagedTavernSkill } from './tavern-skill.ts';
@@ -196,6 +198,8 @@ export async function prepareManagedHermesModelConfig(): Promise<HermesModelConf
     await removeRetiredManagedSkillCopies();
     await prepareManagedVaultIntegration();
     await ensureManagedTavernSkill();
+    await ensureManagedMerchbaseSkill();
+    await ensureManagedMerchbaseToolsetPlugin();
     return config;
 }
 

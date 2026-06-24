@@ -12,10 +12,16 @@ import { formatSkillName } from './skill-name-format.ts';
 type SkillSummary = SkillListOutput['skills'][number];
 
 export function InstalledSkillsList({
+    emptyDescription,
+    emptyTitle,
     onSelect,
+    searchPlaceholder = 'Search skills...',
     skills,
 }: {
+    emptyDescription?: string;
+    emptyTitle?: string;
     onSelect: (skill: SkillSummary) => void;
+    searchPlaceholder?: string;
     skills: SkillSummary[];
 }) {
     const [search, setSearch] = React.useState('');
@@ -29,7 +35,7 @@ export function InstalledSkillsList({
                 className="w-full [&_[data-slot=input-control]]:h-11 [&_[data-slot=input-control]]:rounded-full"
                 name="skill-search"
                 onChange={(event) => setSearch(event.target.value)}
-                placeholder="Search skills..."
+                placeholder={searchPlaceholder}
                 value={search}
             />
 
@@ -47,9 +53,13 @@ export function InstalledSkillsList({
                     description={
                         search.trim().length > 0
                             ? 'Try a different name or description.'
-                            : 'Install skills from the Available tab.'
+                            : (emptyDescription ?? 'Install skills from the Available tab.')
                     }
-                    title={search.trim().length > 0 ? 'No matches' : 'No skills installed'}
+                    title={
+                        search.trim().length > 0
+                            ? 'No matches'
+                            : (emptyTitle ?? 'No skills installed')
+                    }
                 />
             )}
         </div>
@@ -81,6 +91,11 @@ function SkillRow({ onSelect, skill }: { onSelect: () => void; skill: SkillSumma
                     {needsSetup ? (
                         <Badge size="sm" variant="error">
                             {skill.diagnostic ?? 'Needs setup'}
+                        </Badge>
+                    ) : null}
+                    {skill.integration ? (
+                        <Badge size="sm" variant="secondary">
+                            Integration
                         </Badge>
                     ) : null}
                 </span>

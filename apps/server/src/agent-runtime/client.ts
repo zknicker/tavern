@@ -31,6 +31,9 @@ import {
     type AgentRuntimeDiscordBinding,
     type AgentRuntimeExecutionSettings,
     type AgentRuntimeHermesConfigSnapshot,
+    type AgentRuntimeIntegration,
+    type AgentRuntimeIntegrationId,
+    type AgentRuntimeIntegrationList,
     type AgentRuntimeJobDetail,
     type AgentRuntimeJobList,
     type AgentRuntimeJobSlug,
@@ -41,6 +44,11 @@ import {
     type AgentRuntimeMcpServerCreate,
     type AgentRuntimeMcpServerList,
     type AgentRuntimeMcpServerTestResult,
+    type AgentRuntimeMerchbaseActionInput,
+    type AgentRuntimeMerchbaseActionResult,
+    type AgentRuntimeMerchbaseSalesSeries,
+    type AgentRuntimeMerchbaseSalesSeriesInput,
+    type AgentRuntimeMerchbaseSettings,
     type AgentRuntimeMessageAccepted,
     type AgentRuntimeModelAccess,
     type AgentRuntimeModels,
@@ -62,6 +70,7 @@ import {
     type AgentRuntimeSaveDiscordBinding,
     type AgentRuntimeSaveExecutionSettings,
     type AgentRuntimeSaveExecutionSettingsResult,
+    type AgentRuntimeSaveMerchbaseSettings,
     type AgentRuntimeSaveModelProviderApiKey,
     type AgentRuntimeSaveOpenAiSettings,
     type AgentRuntimeSaveOpenRouterSettings,
@@ -147,6 +156,9 @@ import {
     agentRuntimeErrorSchema,
     agentRuntimeExecutionSettingsSchema,
     agentRuntimeHermesConfigSnapshotSchema,
+    agentRuntimeIntegrationIdSchema,
+    agentRuntimeIntegrationListSchema,
+    agentRuntimeIntegrationSchema,
     agentRuntimeJobDetailSchema,
     agentRuntimeJobListSchema,
     agentRuntimeJobSlugSchema,
@@ -157,6 +169,11 @@ import {
     agentRuntimeMcpServerListSchema,
     agentRuntimeMcpServerSchema,
     agentRuntimeMcpServerTestResultSchema,
+    agentRuntimeMerchbaseActionInputSchema,
+    agentRuntimeMerchbaseActionResultSchema,
+    agentRuntimeMerchbaseSalesSeriesInputSchema,
+    agentRuntimeMerchbaseSalesSeriesSchema,
+    agentRuntimeMerchbaseSettingsSchema,
     agentRuntimeMessageAcceptedSchema,
     agentRuntimeModelAccessSchema,
     agentRuntimeModelProviderOAuthCancelSchema,
@@ -185,6 +202,7 @@ import {
     agentRuntimeSaveDiscordBindingSchema,
     agentRuntimeSaveExecutionSettingsResultSchema,
     agentRuntimeSaveExecutionSettingsSchema,
+    agentRuntimeSaveMerchbaseSettingsSchema,
     agentRuntimeSaveModelProviderApiKeySchema,
     agentRuntimeSaveOpenAiSettingsSchema,
     agentRuntimeSaveOpenRouterSettingsSchema,
@@ -309,7 +327,9 @@ export interface TavernAgentRuntimeClient {
     getCronJob(jobId: string): Promise<AgentRuntimeCron>;
     getExecutionSettings(): Promise<AgentRuntimeExecutionSettings>;
     getHermesConfig(): Promise<AgentRuntimeHermesConfigSnapshot>;
+    getIntegration(id: AgentRuntimeIntegrationId): Promise<AgentRuntimeIntegration>;
     getMcpCatalog(): Promise<AgentRuntimeMcpCatalog>;
+    getMerchbaseSettings(): Promise<AgentRuntimeMerchbaseSettings>;
     getModelAccess(): Promise<AgentRuntimeModelAccess>;
     getModels(): Promise<AgentRuntimeModels>;
     getOpenAiSettings(): Promise<AgentRuntimeOpenAiSettings>;
@@ -341,6 +361,7 @@ export interface TavernAgentRuntimeClient {
     listCronJobs(): Promise<AgentRuntimeCronList>;
     listCronRuns(jobId?: string): Promise<{ runs: AgentRuntimeCronRun[] }>;
     listDiscordBindings(): Promise<{ bindings: AgentRuntimeDiscordBinding[] }>;
+    listIntegrations(): Promise<AgentRuntimeIntegrationList>;
     listMacApps(options?: { limit?: number; query?: string }): Promise<AgentRuntimeMacAppList>;
     listMcpServers(): Promise<AgentRuntimeMcpServerList>;
     listRuntimeJobs(): Promise<AgentRuntimeJobList>;
@@ -366,6 +387,12 @@ export interface TavernAgentRuntimeClient {
         input: AgentRuntimeCreateMessage
     ): Promise<AgentRuntimeMessageAccepted>;
     previewSkillHubSkill(identifier: string): Promise<AgentRuntimeSkillHubPreview>;
+    queryMerchbaseAction(
+        input: AgentRuntimeMerchbaseActionInput
+    ): Promise<AgentRuntimeMerchbaseActionResult>;
+    queryMerchbaseSalesSeries(
+        input: AgentRuntimeMerchbaseSalesSeriesInput
+    ): Promise<AgentRuntimeMerchbaseSalesSeries>;
     refreshCapability(id: AgentRuntimeCapabilityHealthId): Promise<AgentRuntimeCapabilityHealth>;
     removeMcpServer(name: string): Promise<{ ok: boolean }>;
     removeSkillHubTap(repo: string): Promise<AgentRuntimeSkillHubTapList>;
@@ -401,6 +428,9 @@ export interface TavernAgentRuntimeClient {
     saveExecutionSettings(
         input: AgentRuntimeSaveExecutionSettings
     ): Promise<AgentRuntimeSaveExecutionSettingsResult>;
+    saveMerchbaseSettings(
+        input: AgentRuntimeSaveMerchbaseSettings
+    ): Promise<AgentRuntimeMerchbaseSettings>;
     saveModelProviderApiKey(input: AgentRuntimeSaveModelProviderApiKey): Promise<{ ok: boolean }>;
     saveOpenAiSettings(input: AgentRuntimeSaveOpenAiSettings): Promise<AgentRuntimeOpenAiSettings>;
     saveOpenRouterSettings(
@@ -1628,6 +1658,110 @@ class HttpTavernAgentRuntimeClient implements TavernAgentRuntimeClient {
         }
 
         return agentRuntimeConnectorListSchema.parse(await response.json());
+    }
+
+    async listIntegrations() {
+        const response = await fetch(`${this.#baseUrl}${agentRuntimeRoutes.integrations}`, {
+            headers: this.#authHeaders,
+        });
+
+        if (!response.ok) {
+            await readErrorResponse(response);
+        }
+
+        return agentRuntimeIntegrationListSchema.parse(await response.json());
+    }
+
+    async getIntegration(id: AgentRuntimeIntegrationId) {
+        const response = await fetch(
+            `${this.#baseUrl}${agentRuntimeRoutes.integration(
+                agentRuntimeIntegrationIdSchema.parse(id)
+            )}`,
+            { headers: this.#authHeaders }
+        );
+
+        if (!response.ok) {
+            await readErrorResponse(response);
+        }
+
+        return agentRuntimeIntegrationSchema.parse(await response.json());
+    }
+
+    async getMerchbaseSettings() {
+        const response = await fetch(
+            `${this.#baseUrl}${agentRuntimeRoutes.integrationMerchbaseSettings}`,
+            { headers: this.#authHeaders }
+        );
+
+        if (!response.ok) {
+            await readErrorResponse(response);
+        }
+
+        return agentRuntimeMerchbaseSettingsSchema.parse(await response.json());
+    }
+
+    async saveMerchbaseSettings(input: AgentRuntimeSaveMerchbaseSettings) {
+        const payload = agentRuntimeSaveMerchbaseSettingsSchema.parse(input);
+        const response = await fetch(
+            `${this.#baseUrl}${agentRuntimeRoutes.integrationMerchbaseSettings}`,
+            {
+                body: JSON.stringify(payload),
+                headers: {
+                    ...this.#authHeaders,
+                    'content-type': 'application/json',
+                    [agentRuntimeMutationHeaders.origin]: agentRuntimeMutationOrigins.tavern,
+                },
+                method: 'PUT',
+            }
+        );
+
+        if (!response.ok) {
+            await readErrorResponse(response);
+        }
+
+        return agentRuntimeMerchbaseSettingsSchema.parse(await response.json());
+    }
+
+    async queryMerchbaseSalesSeries(input: AgentRuntimeMerchbaseSalesSeriesInput) {
+        const payload = agentRuntimeMerchbaseSalesSeriesInputSchema.parse(input);
+        const response = await fetch(
+            `${this.#baseUrl}${agentRuntimeRoutes.integrationMerchbaseSalesSeries}`,
+            {
+                body: JSON.stringify(payload),
+                headers: {
+                    ...this.#authHeaders,
+                    'content-type': 'application/json',
+                },
+                method: 'POST',
+            }
+        );
+
+        if (!response.ok) {
+            await readErrorResponse(response);
+        }
+
+        return agentRuntimeMerchbaseSalesSeriesSchema.parse(await response.json());
+    }
+
+    async queryMerchbaseAction(input: AgentRuntimeMerchbaseActionInput) {
+        const payload = agentRuntimeMerchbaseActionInputSchema.parse(input);
+        const response = await fetch(
+            `${this.#baseUrl}${agentRuntimeRoutes.integrationMerchbaseAction}`,
+            {
+                body: JSON.stringify(payload),
+                headers: {
+                    ...this.#authHeaders,
+                    'content-type': 'application/json',
+                },
+                method: 'POST',
+            }
+        );
+
+        if (!response.ok) {
+            await readErrorResponse(response);
+        }
+
+        return agentRuntimeMerchbaseActionResultSchema.parse(await response.json());
     }
 
     async createConnector(input: AgentRuntimeSaveConnector) {

@@ -11,6 +11,8 @@ import { LINE_LOADING_PULSE_EASE } from "./line-loading-timing";
 const X_AXIS_POSITION_TWEEN_MS = DEFAULT_Y_DOMAIN_TWEEN_MS;
 
 export interface XAxisProps {
+  /** Distance from the chart container bottom to the tick label bottom. Default: 12. */
+  labelBottom?: number;
   /** Number of ticks to show (including first and last). Default: 5. */
   numTicks?: number;
   /** Width of the date ticker box for fade calculation. Default: 50 */
@@ -34,6 +36,7 @@ interface XAxisLabelProps {
   crosshairX: number | null;
   hoveredLabel: string | null;
   isHovering: boolean;
+  labelBottom: number;
   tickerHalfWidth: number;
   animatePosition: boolean;
 }
@@ -44,6 +47,7 @@ function XAxisLabel({
   crosshairX,
   hoveredLabel,
   isHovering,
+  labelBottom,
   tickerHalfWidth,
   animatePosition,
 }: XAxisLabelProps) {
@@ -67,7 +71,7 @@ function XAxisLabel({
       className="absolute"
       style={{
         left: x,
-        bottom: 12,
+        bottom: labelBottom,
         width: 0,
         display: "flex",
         justifyContent: "center",
@@ -573,6 +577,7 @@ export function XAxis(props: XAxisProps) {
 }
 
 const XAxisInner = memo(function XAxisInner({
+  labelBottom = 12,
   numTicks = 5,
   tickerHalfWidth = 50,
   tickMode = "data",
@@ -651,6 +656,7 @@ const XAxisInner = memo(function XAxisInner({
           crosshairX={crosshairX}
           hoveredLabel={hoveredLabel}
           isHovering={isHovering}
+          labelBottom={labelBottom}
           key={`${item.date.getTime()}-${item.x}`}
           label={item.label}
           tickerHalfWidth={tickerHalfWidth}

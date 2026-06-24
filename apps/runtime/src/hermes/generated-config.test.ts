@@ -71,7 +71,7 @@ describe('generated Hermes config composer', () => {
                 provider: 'openai-codex',
             },
             plugins: {
-                enabled: ['tavern-messenger-platform'],
+                enabled: ['tavern-messenger-platform', 'merchbase'],
             },
             timezone: 'America/New_York',
         });
@@ -391,11 +391,13 @@ describe('generated Hermes config composer', () => {
         expect((await readConfig(configPath)).has('mcp_servers')).toBe(false);
     });
 
-    it('keeps an existing plugins list and appends the messenger plugin once', async () => {
+    it('keeps an existing plugins list and appends managed plugins once', async () => {
         const configPath = await tempConfigPath();
         await fs.writeFile(
             configPath,
-            ['plugins:', '  enabled:', '    - custom-plugin', ''].join('\n')
+            ['plugins:', '  enabled:', '    - custom-plugin', '    - tavern-merchbase', ''].join(
+                '\n'
+            )
         );
 
         await mergeHermesGeneratedConfig(configPath, {
@@ -414,7 +416,11 @@ describe('generated Hermes config composer', () => {
         const config = (await readConfig(configPath)).toJS() as {
             plugins: { enabled: string[] };
         };
-        expect(config.plugins.enabled).toEqual(['custom-plugin', 'tavern-messenger-platform']);
+        expect(config.plugins.enabled).toEqual([
+            'custom-plugin',
+            'tavern-messenger-platform',
+            'merchbase',
+        ]);
     });
 });
 

@@ -76,6 +76,12 @@ export const settingsNavItems = [
     },
     {
         icon: PlugSocketIcon,
+        id: 'integrations',
+        label: 'Integrations',
+        to: '/dashboard/settings/integrations',
+    },
+    {
+        icon: PlugSocketIcon,
         id: 'connectors',
         label: 'Connectors',
         to: '/dashboard/settings/connectors',
@@ -113,7 +119,16 @@ export const settingsNavSections = [
     },
     {
         id: 'agent',
-        itemIds: ['agent', 'notes-md', 'soul-md', 'skills', 'toolsets', 'connectors', 'memories'],
+        itemIds: [
+            'agent',
+            'notes-md',
+            'soul-md',
+            'skills',
+            'toolsets',
+            'integrations',
+            'connectors',
+            'memories',
+        ],
         label: 'Agent',
     },
     {

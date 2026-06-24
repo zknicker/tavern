@@ -122,6 +122,23 @@ describe('Tavern Runtime Chat API store', () => {
             status: 'completed',
             title: 'Rich Response',
         });
+        expect(getResponseActivity('act_demo_merchbase_sales_chart')).toMatchObject({
+            id: 'act_demo_merchbase_sales_chart',
+            kind: 'rich_response',
+            metadata: {
+                richResponse: {
+                    props: {
+                        spec: {
+                            elements: {
+                                chart: { type: 'MerchBaseSalesChart' },
+                            },
+                        },
+                    },
+                },
+            },
+            status: 'completed',
+            title: 'Rich Response',
+        });
         expect(getResponseActivity('act_demo_calendar_event_rich_response')).toMatchObject({
             id: 'act_demo_calendar_event_rich_response',
             kind: 'rich_response',
@@ -152,6 +169,7 @@ describe('Tavern Runtime Chat API store', () => {
         expect(listMessages(developmentChatDemoIds.calendarDay).messages).toHaveLength(2);
         expect(listMessages(developmentChatDemoIds.composedChart).messages).toHaveLength(2);
         expect(listMessages(developmentChatDemoIds.calendarEvent).messages).toHaveLength(2);
+        expect(listMessages(developmentChatDemoIds.merchbaseSalesChart).messages).toHaveLength(2);
         expect(listMessages(developmentChatDemoIds.richResponseCatalog).messages).toHaveLength(2);
         expect(listMessages(developmentChatDemoIds.attachment).messages[0]?.attachments).toEqual([
             expect.objectContaining({ filename: 'weather-request.txt', type: 'file' }),

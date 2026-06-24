@@ -35,6 +35,7 @@ capabilities. It is not a second product API.
 | Runtime events | `/events`, websocket `/events` |
 | Managed Hermes | `/hermes-config`, `/execution-settings`, `/permission-settings`, `/agent-env` |
 | Connectors | `/connectors`, `/connectors/{id}`, `/connectors/{id}/test` |
+| Integrations | `/integrations`, `/integrations/{id}`, `/integrations/merchbase/settings`, `/integrations/merchbase/action`, `/integrations/merchbase/sales/series` |
 | Agents and files | `/agents`, `/agents/{id}`, `/agents/{id}/config`, `/agents/{id}/files`, `/agents/{id}/files/{path}` |
 | Sessions and execution evidence | `/hermes/sessions`, `/hermes/sessions/previews`, `/hermes/sessions/{sessionKey}/messages`, `/hermes/sessions/{sessionKey}/graph`, `/hermes/sessions/{sessionKey}/prompt`, `/hermes/sessions/{sessionKey}/resync` |
 | Jobs | `/jobs`, `/jobs/{slug}`, `/jobs/{slug}/run` |
@@ -76,6 +77,12 @@ runtime config as `${ENV}` references backed by the managed env file; reads
 return only `{name, hasValue}` masks. Saves and deletes rewrite the generated
 config and restart managed Hermes. `POST /connectors/{id}/test` checks command
 resolution or URL reachability without touching the running engine.
+
+`/integrations` owns Tavern Runtime Integration records. Settings and write-only
+secrets live in dedicated Runtime Integration tables, health lives in Runtime
+capabilities, and read-oriented domain actions such as
+`/integrations/merchbase/action` and `/integrations/merchbase/sales/series`
+use the Integration client.
 
 `/model-access/api-key` writes provider API keys through the managed Hermes
 environment API. `/model-access/oauth/{providerId}/start` starts the

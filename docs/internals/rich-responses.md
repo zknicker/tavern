@@ -86,6 +86,11 @@ The initial catalog is intentionally small:
   accepts keyed row objects and model-friendly matrix rows such as
   `columns: ["State", "Population"]` with `rows: [["California", "39,538,223"]]`.
 - `BarChart`, `LineChart`, `ComposedChart`: existing chart displays with typed props.
+- `MerchBaseSalesChart`: Integration-backed sales trend display. It is the
+  preferred way to present MerchBase sales trends over a date range. It renders
+  Sales as bars, royalties as a line, hover-driven active-day stats, and a date
+  range selector for live re-queries. Current-day sales requests default to a
+  10-day trend unless the user explicitly asks for a one-day chart.
 - `CalendarDay`, `CalendarEvent`: existing calendar displays with typed props.
 
 Rich Responses do not accept model-authored HTML, JSX, CSS, `className`, event

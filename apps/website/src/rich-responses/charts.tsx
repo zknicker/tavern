@@ -3,11 +3,12 @@ import type {
     RichResponseComposedChartProps,
     RichResponseLineChartProps,
 } from '@tavern/api/rich-responses/charts';
-import { type ReactNode, useState } from 'react';
+import { type ReactNode, useEffect, useState } from 'react';
 import { Area, AreaChart } from '../components/charts/area-chart.tsx';
 import { Bar } from '../components/charts/bar.tsx';
 import { BarChart } from '../components/charts/bar-chart.tsx';
 import { BarXAxis } from '../components/charts/bar-x-axis.tsx';
+import { type Margin, useChartHover } from '../components/charts/chart-context.tsx';
 import { ChartLegendHoverProvider } from '../components/charts/chart-legend-hover.tsx';
 import { ComposedChart } from '../components/charts/composed-chart.tsx';
 import { Grid } from '../components/charts/grid.tsx';
@@ -135,13 +136,37 @@ export function RichResponseLineChart({ props }: { props: RichResponseLineChartP
 }
 
 export function RichResponseComposedChart({ props }: { props: RichResponseComposedChartProps }) {
+    return (
+        <ChartFrame title={props.title}>
+            <RichResponseComposedChartBody props={props} />
+        </ChartFrame>
+    );
+}
+
+export function RichResponseComposedChartBody({
+    chartMargin,
+    datePillBottom,
+    onActiveIndexChange,
+    props,
+    showLegend = true,
+    xAxisLabelBottom,
+    xAxisTickCount,
+}: {
+    chartMargin?: Partial<Margin>;
+    datePillBottom?: number;
+    onActiveIndexChange?: (index: null | number) => void;
+    props: RichResponseComposedChartProps;
+    showLegend?: boolean;
+    xAxisLabelBottom?: number;
+    xAxisTickCount?: number;
+}) {
     const [hoveredSeriesIndex, setHoveredSeriesIndex] = useState<null | number>(null);
     const chartSeries = buildComposedSeries(props);
     const chartData = normalizeLineChartData({ ...props, series: chartSeries });
     const legendItems = buildLegendItems({ ...props, series: chartSeries }, (_series, index) =>
         composedSeriesUnit(props, index)
     );
-    const margin = buildComposedChartMargin(chartData, props);
+    const margin = { ...buildComposedChartMargin(chartData, props), ...chartMargin };
     const barUnit = composedBarUnit(props);
     const lineUnit = composedLineUnit(props);
 
@@ -150,69 +175,85 @@ export function RichResponseComposedChart({ props }: { props: RichResponseCompos
             hoveredIndex={hoveredSeriesIndex}
             onHoverChange={setHoveredSeriesIndex}
         >
-            <ChartFrame title={props.title}>
-                <ComposedChart
-                    aspectRatio={richResponseChartAspectRatio}
-                    barGap={6}
-                    data={chartData}
-                    margin={margin}
-                    maxBarSize={52}
-                    xDataKey={props.xKey}
-                >
-                    <Grid horizontal={true} />
-                    {props.barSeries.map((series, index) => (
-                        <SeriesBar
-                            dataKey={series.key}
-                            fadedOpacity={0.18}
-                            fill={seriesColor(index)}
-                            key={series.key}
-                            radius={10}
-                        />
-                    ))}
-                    {props.lineSeries.map((series, index) => {
-                        const colorIndex = props.barSeries.length + index;
+            <ComposedChart
+                aspectRatio={richResponseChartAspectRatio}
+                barGap={6}
+                data={chartData}
+                margin={margin}
+                maxBarSize={52}
+                xDataKey={props.xKey}
+            >
+                <Grid horizontal={true} />
+                {props.barSeries.map((series, index) => (
+                    <SeriesBar
+                        dataKey={series.key}
+                        fadedOpacity={0.18}
+                        fill={seriesColor(index)}
+                        key={series.key}
+                        radius={10}
+                    />
+                ))}
+                {props.lineSeries.map((series, index) => {
+                    const colorIndex = props.barSeries.length + index;
 
-                        return (
-                            <Line
-                                dataKey={series.key}
-                                fadeEdges={true}
-                                key={series.key}
-                                markers={composedLineMarkerStyle(seriesColor(colorIndex))}
-                                showMarkers={true}
-                                stroke={seriesColor(colorIndex)}
-                                strokeWidth={2.5}
-                                yAxisId="right"
-                            />
-                        );
-                    })}
-                    <YAxis
-                        formatValue={(value) => formatChartValue(value, barUnit)}
-                        yAxisId="left"
-                    />
-                    <YAxis
-                        formatValue={(value) => formatChartValue(value, lineUnit)}
-                        orientation="right"
-                        yAxisId="right"
-                    />
-                    <XAxis />
-                    <ChartTooltip
-                        indicatorColor={seriesColor(0)}
-                        rows={(point) =>
-                            buildTooltipRows(chartSeries, point, (_series, index) =>
-                                composedSeriesUnit(props, index)
-                            )
-                        }
-                        showCrosshair={false}
-                    />
-                </ComposedChart>
+                    return (
+                        <Line
+                            dataKey={series.key}
+                            fadeEdges={true}
+                            key={series.key}
+                            markers={composedLineMarkerStyle(seriesColor(colorIndex))}
+                            showMarkers={true}
+                            stroke={seriesColor(colorIndex)}
+                            strokeWidth={2.5}
+                            yAxisId="right"
+                        />
+                    );
+                })}
+                <YAxis formatValue={(value) => formatChartValue(value, barUnit)} yAxisId="left" />
+                <YAxis
+                    formatValue={(value) => formatChartValue(value, lineUnit)}
+                    orientation="right"
+                    yAxisId="right"
+                />
+                <XAxis labelBottom={xAxisLabelBottom} numTicks={xAxisTickCount} />
+                <ChartTooltip
+                    datePillBottom={datePillBottom}
+                    indicatorColor={seriesColor(0)}
+                    rows={(point) =>
+                        buildTooltipRows(chartSeries, point, (_series, index) =>
+                            composedSeriesUnit(props, index)
+                        )
+                    }
+                    showCrosshair={false}
+                />
+                {onActiveIndexChange ? (
+                    <ComposedChartActiveIndexObserver onActiveIndexChange={onActiveIndexChange} />
+                ) : null}
+            </ComposedChart>
+            {showLegend ? (
                 <ChartLegend
                     hoveredIndex={hoveredSeriesIndex}
                     items={legendItems}
                     onHoverChange={setHoveredSeriesIndex}
                 />
-            </ChartFrame>
+            ) : null}
         </ChartLegendHoverProvider>
     );
+}
+
+function ComposedChartActiveIndexObserver({
+    onActiveIndexChange,
+}: {
+    onActiveIndexChange: (index: null | number) => void;
+}) {
+    const { tooltipData } = useChartHover();
+    const index = tooltipData?.index ?? null;
+
+    useEffect(() => {
+        onActiveIndexChange(index);
+    }, [index, onActiveIndexChange]);
+
+    return null;
 }
 
 function ChartFrame({ children, title }: { children: ReactNode; title: string }) {

@@ -1,6 +1,7 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import { parseDocument } from 'yaml';
+import { merchbaseToolsetPluginName } from './merchbase-toolset-plugin.ts';
 import { tavernMessengerPluginName } from './tavern-messenger-plugin.ts';
 
 /**
@@ -69,6 +70,7 @@ export interface HermesGeneratedConfigDomains {
 }
 
 export const managedHermesContextFileMaxChars = 64_000;
+const staleManagedHermesPluginNames = new Set(['tavern-merchbase']);
 
 export async function mergeHermesGeneratedConfig(
     filePath: string,
@@ -87,7 +89,7 @@ export async function mergeHermesGeneratedConfig(
     applyDisplayDomain(doc);
     applyMemoryDomain(doc);
     applyCronDomain(doc);
-    applyPluginsDomain(doc, tavernMessengerPluginName());
+    applyPluginsDomain(doc, [tavernMessengerPluginName(), merchbaseToolsetPluginName()]);
 
     await fs.mkdir(path.dirname(filePath), { recursive: true });
     await fs.writeFile(filePath, doc.toString(), { mode: 0o600 });
@@ -264,15 +266,18 @@ function applyCronDomain(doc: GeneratedConfigDocument) {
     doc.setIn(['cron', 'wrap_response'], false);
 }
 
-function applyPluginsDomain(doc: GeneratedConfigDocument, pluginName: string) {
+function applyPluginsDomain(doc: GeneratedConfigDocument, pluginNames: string[]) {
     const enabled = (doc.toJS() as { plugins?: { enabled?: unknown } } | null)?.plugins?.enabled;
     const values = Array.isArray(enabled)
         ? enabled.filter((item): item is string => typeof item === 'string')
         : [];
 
-    if (values.includes(pluginName)) {
-        return;
+    const next = values.filter((item) => !staleManagedHermesPluginNames.has(item));
+    for (const pluginName of pluginNames) {
+        if (!next.includes(pluginName)) {
+            next.push(pluginName);
+        }
     }
 
-    doc.setIn(['plugins', 'enabled'], [...values, pluginName]);
+    doc.setIn(['plugins', 'enabled'], next);
 }

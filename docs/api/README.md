@@ -37,5 +37,6 @@ Tavern's shape is clear:
 | Automations | [Automations API](automations.md) |
 | Skills | [Skills API](skills.md) |
 | Stats | [Stats API](stats.md) |
+| Integrations | [Integrations API](integrations.md) |
 
 The TypeScript client wrapper lives in [TypeScript SDK](../sdk.md).

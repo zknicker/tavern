@@ -22,6 +22,7 @@ import { handleMcpRequest } from '../hermes/mcp-routes';
 import { handlePermissionSettingsRequest } from '../hermes/permission-settings';
 import { handleSkillHubRequest } from '../hermes/skill-hub-routes';
 import { handleToolsetSetupRequest } from '../hermes/toolset-setup-routes';
+import { handleIntegrationsRequest } from '../integrations/routes';
 import { handleRuntimeJobsRequest } from '../jobs/routes';
 import { listMacApps } from '../mac-apps/inventory';
 import { handleModelAccessRequest } from '../model-access/model-access';
@@ -113,6 +114,11 @@ export async function handleTavernRuntimeRequest(request: Request): Promise<Resp
     const connectorsResponse = await handleConnectorsRequest(request);
     if (connectorsResponse) {
         return connectorsResponse;
+    }
+
+    const integrationsResponse = await handleIntegrationsRequest(request);
+    if (integrationsResponse) {
+        return integrationsResponse;
     }
 
     const commandsResponse = await handleCommandsRequest(request);

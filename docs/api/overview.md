@@ -52,6 +52,7 @@ cache, and shape data for React, but it does not define a separate product API.
 | Automations | [Automations API](automations.md) |
 | Skills | [Skills API](skills.md) |
 | Stats | [Stats API](stats.md) |
+| Integrations | [Integrations API](integrations.md) |
 | Realtime | [Realtime](realtime.md) |
 | Auth | [Auth](auth.md) |
 
