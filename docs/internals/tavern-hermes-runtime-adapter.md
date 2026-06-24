@@ -28,11 +28,13 @@ maps its controls onto managed Hermes surfaces:
   passed as Hermes-readable `@file:` references before `prompt.submit`
 * the agent-facing prompt includes Hermes-readable context refs such as
   `@file:`, `@folder:`, `@url:`, and `@image:` after attachment staging
-* model inventory and default model selection come from managed Hermes config
-  and model APIs
-* session-scoped model changes use the same Hermes session config path the
-  Desktop app uses, then Tavern records the selected model on the message or
-  response metadata
+* model inventory and default model selection come from managed Hermes model
+  APIs
+* newly created Hermes sessions normally rely on the Hermes default model;
+  explicit per-message model choices pass model/provider in `session.create`
+* model changes on an existing Hermes session use the same Gateway `config.set`
+  path the Desktop app uses, then Tavern records the selected model on the
+  message or response metadata
 * active-turn queueing is Tavern App state until the queued draft is dispatched
   through Runtime or explicitly steered into the live turn
 * text-only queued steering calls Hermes Gateway `session.steer` while the
@@ -70,18 +72,23 @@ Accepted Tavern messages are durable before model work starts.
    `sessionKey`.
 2. Runtime creates the Tavern user message.
 3. Runtime creates a running `chat_response` for the agent.
-4. Runtime stages image attachments into the managed Hermes session, writes
+4. Runtime opens or resumes the managed Hermes session for the chat participant.
+   When Runtime creates a new Hermes session, it lets Hermes apply the current
+   default model unless the message carries an explicit model override. Settings
+   changes use Hermes `POST /api/model/set`; display reads Hermes
+   `GET /api/model/auxiliary`.
+5. Runtime stages image attachments into the managed Hermes session, writes
    non-image inline attachments into the managed workspace, and resolves
    Hermes-readable context refs. Tavern message records carry attachment
    arrays.
-5. Runtime applies any session-scoped model choice through Gateway `config.set`
-   with `key: "model"`.
-6. Runtime starts `runHermesTurn(...)` with the existing `chatId`,
+6. Runtime applies any model change for an existing Hermes session through
+   Gateway `config.set` with `key: "model"`.
+7. Runtime starts `runHermesTurn(...)` with the existing `chatId`,
    `requestMessageId`, `responseId`, `runId`, `sessionKey`, resolved prompt
    text, attachment metadata, and model metadata.
-7. Hermes streams turn events through Runtime.
-8. Runtime upserts durable response activity while work runs.
-9. Runtime creates the final assistant delivery and marks the response
+8. Hermes streams turn events through Runtime.
+9. Runtime upserts durable response activity while work runs.
+10. Runtime creates the final assistant delivery and marks the response
    completed, or marks it failed.
 
 Duplicate ids and nonces reconcile through the normal Chat API. Runtime must not

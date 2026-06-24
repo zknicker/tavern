@@ -1,21 +1,15 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
-import type { AgentRuntimeHermesModelName } from '@tavern/api';
 import { HERMES_HOME, readConfigValue } from '../config.ts';
 import { loadVaultBackedCodexCredentials } from '../model-access/codex-settings.ts';
 import { getOpenAiApiKey } from '../model-access/openai-settings.ts';
 import { getOpenRouterApiKey } from '../model-access/openrouter-settings.ts';
-import {
-    readHermesAdapterState,
-    resolveHermesConfiguredAgentState,
-    updateHermesAdapterState,
-} from './adapter-state.ts';
 import { resolveAgentEnvEntries } from './agent-env.ts';
 import { syncHermesCodexAuth } from './auth-store.ts';
 import { resolveConnectorsDomain } from './connectors.ts';
 import { quoteEnvValue, readEnvEntries, readManagedHermesEnvValue } from './env.ts';
 import { getHermesExecutionSettings } from './execution-settings.ts';
-import { type HermesModelDomain, mergeHermesGeneratedConfig } from './generated-config.ts';
+import { mergeHermesGeneratedConfig } from './generated-config.ts';
 import { prepareManagedVaultIntegration, resolveManagedVaultPath } from './managed-vault.ts';
 import { ensureManagedMerchbaseSkill } from './merchbase-skill.ts';
 import { ensureManagedMerchbaseToolsetPlugin } from './merchbase-toolset-plugin.ts';
@@ -23,9 +17,13 @@ import { resolveConfiguredPermissionsDomain } from './permission-settings.ts';
 import { removeRetiredManagedSkillCopies } from './retired-managed-skills.ts';
 import { ensureManagedTavernSkill } from './tavern-skill.ts';
 
-export interface HermesModelConfig extends HermesModelDomain {
+export interface HermesModelConfig {
+    apiKey: string | null;
+    baseUrl: null | string;
+    model: null | string;
     openAiApiKey: string | null;
     openRouterApiKey: string | null;
+    provider: null | string;
 }
 
 export interface ManagedHermesModelRouteInput {
@@ -37,6 +35,12 @@ export interface ManagedHermesModelRouteInput {
     explicitProvider: null | string;
     openAiApiKey: null | string;
     openRouterApiKey: null | string;
+}
+
+export function hasExplicitManagedHermesModelSelection() {
+    return Boolean(
+        readConfigValue('TAVERN_HERMES_PROVIDER') && readConfigValue('TAVERN_HERMES_MODEL')
+    );
 }
 
 export async function resolveManagedHermesModelConfig(): Promise<HermesModelConfig> {
@@ -66,19 +70,7 @@ export async function resolveManagedHermesModelConfig(): Promise<HermesModelConf
         openRouterApiKey,
     });
 
-    const state = explicitProvider || explicitModel ? null : await readHermesAdapterState();
-    const configured = state ? resolveHermesConfiguredAgentState(state) : null;
-    const savedModel = configured?.settings.hermesModelName ?? null;
-    if (savedModel && configured?.legacy && isSameModelRoute(savedModel, route)) {
-        await clearLegacyDefaultModelState();
-    }
-    return applySavedAgentModelRoute({
-        config: route,
-        explicitModel,
-        explicitProvider,
-        savedModel,
-        savedModelLegacy: configured?.legacy ?? false,
-    });
+    return route;
 }
 
 export function resolveManagedHermesModelRoute(
@@ -138,57 +130,6 @@ export function resolveManagedHermesModelRoute(
     };
 }
 
-export function applySavedAgentModelRoute(input: {
-    config: HermesModelConfig;
-    explicitModel: null | string;
-    explicitProvider: null | string;
-    savedModel: AgentRuntimeHermesModelName | null | undefined;
-    savedModelLegacy?: boolean;
-}): HermesModelConfig {
-    if (input.explicitProvider || input.explicitModel || !input.savedModel) {
-        return input.config;
-    }
-
-    if (input.savedModelLegacy && isSameModelRoute(input.savedModel, input.config)) {
-        return input.config;
-    }
-
-    return {
-        ...input.config,
-        baseUrl:
-            input.savedModel.baseUrl ??
-            (input.savedModel.provider === input.config.provider ? input.config.baseUrl : null),
-        model: input.savedModel.model,
-        provider: input.savedModel.provider,
-    };
-}
-
-function isSameModelRoute(
-    savedModel: AgentRuntimeHermesModelName,
-    config: HermesModelConfig
-): boolean {
-    return (
-        savedModel.model === config.model &&
-        savedModel.provider === config.provider &&
-        (savedModel.baseUrl ?? null) === (config.baseUrl ?? null)
-    );
-}
-
-async function clearLegacyDefaultModelState() {
-    await updateHermesAdapterState((state) => {
-        if (!state.agent?.hermesModelName) {
-            return state;
-        }
-
-        const { hermesModelName, ...agentConfigured } = state.agent;
-        return {
-            ...state,
-            agent: undefined,
-            agentConfigured: Object.keys(agentConfigured).length > 0 ? agentConfigured : undefined,
-        };
-    });
-}
-
 export async function prepareManagedHermesModelConfig(): Promise<HermesModelConfig> {
     const config = await writeManagedHermesConfigFile();
     await syncHermesCodexAuth(
@@ -216,7 +157,6 @@ export async function writeManagedHermesConfigFile(): Promise<HermesModelConfig>
     await mergeHermesGeneratedConfig(path.join(HERMES_HOME, 'config.yaml'), {
         connectors: connectors.domain,
         execution: getHermesExecutionSettings(),
-        model: config,
         permissions: await resolveConfiguredPermissionsDomain(),
     });
     await mergeHermesEnvFile(path.join(HERMES_HOME, '.env'), {

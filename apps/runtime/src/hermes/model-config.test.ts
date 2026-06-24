@@ -3,11 +3,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { syncHermesCodexAuth } from './auth-store.ts';
-import {
-    applySavedAgentModelRoute,
-    mergeHermesEnvFile,
-    resolveManagedHermesModelRoute,
-} from './model-config.ts';
+import { mergeHermesEnvFile, resolveManagedHermesModelRoute } from './model-config.ts';
 
 const codexEnvConfig = {
     apiKey: null,
@@ -108,104 +104,21 @@ describe('managed Hermes model config', () => {
         });
     });
 
-    it('keeps the saved agent model instead of falling back to the credential default', () => {
+    it('leaves explicit env provider routes to Hermes model APIs', () => {
         expect(
-            applySavedAgentModelRoute({
-                config: codexEnvConfig,
-                explicitModel: null,
-                explicitProvider: null,
-                savedModel: {
-                    model: 'gpt-5.5',
-                    provider: 'openai-codex',
-                },
-                savedModelLegacy: false,
+            resolveManagedHermesModelRoute({
+                codexCredentialsAvailable: true,
+                codexModel: null,
+                explicitApiKey: null,
+                explicitBaseUrl: null,
+                explicitModel: 'claude-opus-4-8',
+                explicitProvider: 'anthropic',
+                openAiApiKey: null,
+                openRouterApiKey: null,
             })
         ).toMatchObject({
-            model: 'gpt-5.5',
-            provider: 'openai-codex',
-        });
-    });
-
-    it('leaves an explicit env model route in control', () => {
-        expect(
-            applySavedAgentModelRoute({
-                config: {
-                    ...codexEnvConfig,
-                    model: 'gpt-5.4-mini',
-                    provider: 'openai-codex',
-                },
-                explicitModel: 'gpt-5.4-mini',
-                explicitProvider: 'openai-codex',
-                savedModel: {
-                    model: 'gpt-5.5',
-                    provider: 'openai-codex',
-                },
-                savedModelLegacy: false,
-            })
-        ).toMatchObject({
-            model: 'gpt-5.4-mini',
-            provider: 'openai-codex',
-        });
-    });
-
-    it('keeps same-provider base URL but does not leak it across providers', () => {
-        const openAiRoute = {
-            ...codexEnvConfig,
-            baseUrl: 'https://api.openai.com/v1',
-            provider: 'openai',
-        };
-
-        expect(
-            applySavedAgentModelRoute({
-                config: openAiRoute,
-                explicitModel: null,
-                explicitProvider: null,
-                savedModel: { model: 'gpt-5.5', provider: 'openai' },
-                savedModelLegacy: false,
-            }).baseUrl
-        ).toBe('https://api.openai.com/v1');
-
-        expect(
-            applySavedAgentModelRoute({
-                config: openAiRoute,
-                explicitModel: null,
-                explicitProvider: null,
-                savedModel: { model: 'kimi-k2.5', provider: 'openrouter' },
-                savedModelLegacy: false,
-            }).baseUrl
-        ).toBeNull();
-    });
-
-    it('does not treat legacy state matching the Tavern default as a user override', () => {
-        expect(
-            applySavedAgentModelRoute({
-                config: codexEnvConfig,
-                explicitModel: null,
-                explicitProvider: null,
-                savedModel: {
-                    model: 'gpt-5.4-mini',
-                    provider: 'openai-codex',
-                },
-                savedModelLegacy: true,
-            })
-        ).toBe(codexEnvConfig);
-    });
-
-    it('keeps a legacy non-default model as a likely user override', () => {
-        expect(
-            applySavedAgentModelRoute({
-                config: codexEnvConfig,
-                explicitModel: null,
-                explicitProvider: null,
-                savedModel: {
-                    model: 'gpt-5.5',
-                    provider: 'openai-codex',
-                },
-                savedModelLegacy: true,
-            })
-        ).toMatchObject({
-            model: 'gpt-5.5',
-            provider: 'openai-codex',
+            model: 'claude-opus-4-8',
+            provider: 'anthropic',
         });
     });
 

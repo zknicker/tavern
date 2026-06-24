@@ -122,7 +122,6 @@ every Tavern-owned setting that lands in the file is a domain:
 
 | Domain | Keys | Source of truth |
 | --- | --- | --- |
-| model | `model.*` | explicit env, saved agent model, or credentialed default route |
 | execution | `fallback_providers`, `timezone`, `delegation.*`, `compression.*`, `auxiliary.web_extract.*` | `/execution-settings` store |
 | context files | `context_file_max_chars` | fixed managed policy |
 | display | `display.tool_progress`, `display.interim_assistant_messages` | fixed managed policy |
@@ -135,12 +134,20 @@ every Tavern-owned setting that lands in the file is a domain:
 
 Each domain only sets or deletes its own keys, so operator-managed keys
 elsewhere in the file survive every merge. Runtime storage is the source of
-truth and the YAML is always derived; settings changes rewrite the file and
-schedule a managed Hermes restart. Restarts are coalesced — a burst of saves
-produces one restart, debounced and deferred (bounded) while a chat turn is
-active (`apps/runtime/src/hermes/restart-coordinator.ts`). Per-agent live settings (name, model,
-thinking, appearance) are not config domains — saved values live in the
-adapter's configured-agent state and flow through the engine API instead.
+truth and the YAML is always derived; settings changes that require process
+reload rewrite the file and schedule a managed Hermes restart. Restarts are
+coalesced — a burst of saves produces one restart, debounced and deferred
+(bounded) while a chat turn is active
+(`apps/runtime/src/hermes/restart-coordinator.ts`).
+
+Default model selection is Hermes-owned. Runtime updates it through
+`POST /api/model/set` and reads the selected main model for display through
+`GET /api/model/auxiliary`; the generated config composer does not write
+`model.*` keys. On startup, Runtime applies an explicit
+`TAVERN_HERMES_PROVIDER` plus `TAVERN_HERMES_MODEL` selection through the Hermes
+API, or applies the credentialed fallback only when Hermes reports no current
+main model. Per-agent live settings such as name, thinking, and appearance stay
+in adapter state and engine APIs without owning generated config keys.
 
 Explicit env wins:
 
@@ -158,19 +165,18 @@ credentialed route:
 2. OpenAI API when an OpenAI key is configured.
 3. OpenRouter when an OpenRouter key is configured.
 
-When no route is configured, Runtime leaves Hermes without a generated default
+When no route is configured, Runtime leaves Hermes without a managed default
 model and reports the setup gap through capabilities instead of inventing an
 unusable provider.
 
-Startup applies the credentialed route as the engine default without saving it
-as user intent. Saved settings stores only carry user/API intent; absence means
-Tavern should use the current default. Once the user saves an agent model in
-Tavern, that saved model remains the generated default across managed runtime
-restarts and app updates. `TAVERN_HERMES_PROVIDER` or `TAVERN_HERMES_MODEL`
-still explicitly forces a route.
+Startup applies an explicit route as the engine default without duplicating it
+into generated config. Without explicit provider/model env values, Runtime
+keeps Hermes's current default when one exists and only applies the credentialed
+route when Hermes reports no main model.
 
-When Runtime resolves a route, Tavern applies it as Hermes's default runtime. It does not set
-`model.openai_runtime: codex_app_server`; that remains a Hermes opt-in.
+When Runtime resolves a route, Tavern applies it through Hermes's model API. It
+does not set `model.openai_runtime: codex_app_server`; that remains a Hermes
+opt-in.
 
 Runtime also syncs Vault-backed Codex OAuth material into managed Hermes
 `auth.json` when available.

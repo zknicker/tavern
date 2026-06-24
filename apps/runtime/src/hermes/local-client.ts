@@ -317,14 +317,28 @@ export class LocalHermesClient extends LocalHermesUnsupportedSurfaces {
     async listAgents() {
         const state = await readHermesAdapterState();
         const configured = resolveHermesConfiguredAgentState(state)?.settings ?? {};
+        const adapterConfigured = { ...configured, hermesModelName: undefined };
+        const hermesModelName = await this.getMainModelAssignment().catch(() => null);
         return agentRuntimeAgentListSchema.parse({
             agents: [
                 {
                     ...defaultHermesAgent(),
-                    ...configured,
+                    ...adapterConfigured,
+                    ...(hermesModelName ? { hermesModelName } : {}),
                 },
             ],
         });
+    }
+
+    async getMainModelAssignment() {
+        const response = asRecord(await this.#http.get('/api/model/auxiliary'));
+        const main = asRecord(response.main);
+        const model = readString(main, ['model']);
+        const provider = readString(main, ['provider']);
+        if (!(model && provider)) {
+            return null;
+        }
+        return { model, provider };
     }
 
     async getAgentConfig(agentId: string) {
@@ -414,10 +428,6 @@ export class LocalHermesClient extends LocalHermesUnsupportedSurfaces {
 
     async updateAgentModel(_agentId: string, input: AgentRuntimeUpdateAgentModel) {
         const result = await this.#setMainModel(input.model);
-        await updateHermesConfiguredAgentState((settings) => ({
-            ...settings,
-            hermesModelName: input.model,
-        }));
         return toHermesConfigSnapshot({
             hash: `model:${input.model.provider}/${input.model.model}`,
             model: input.model,
@@ -1187,7 +1197,7 @@ export class LocalHermesClient extends LocalHermesUnsupportedSurfaces {
             });
 
             try {
-                if (input.modelRef) {
+                if (input.modelRef && !session.created) {
                     await this.#setSessionModel(liveSessionId, modelRefConfigValue(input.modelRef));
                 }
                 assertHermesTurnNotCancelled(input.signal);
@@ -1218,7 +1228,11 @@ export class LocalHermesClient extends LocalHermesUnsupportedSurfaces {
     async #openGatewaySession(sessionKey: string, title?: string | null) {
         const cachedLiveSessionId = this.#liveSessions.get(sessionKey);
         if (cachedLiveSessionId) {
-            return { hermesSessionKey: cachedLiveSessionId, liveSessionId: cachedLiveSessionId };
+            return {
+                created: false,
+                hermesSessionKey: cachedLiveSessionId,
+                liveSessionId: cachedLiveSessionId,
+            };
         }
 
         const mapped = await getHermesSessionMapping(sessionKey);
@@ -1238,6 +1252,7 @@ export class LocalHermesClient extends LocalHermesUnsupportedSurfaces {
                 }
                 this.#liveSessions.set(sessionKey, liveSessionId);
                 return {
+                    created: false,
                     hermesSessionKey:
                         readString(resumed, ['resumed', 'session_key', 'stored_session_id']) ??
                         mapped.hermesSessionKey,
@@ -1270,7 +1285,7 @@ export class LocalHermesClient extends LocalHermesUnsupportedSurfaces {
             tavernSessionKey: sessionKey,
         });
         this.#liveSessions.set(sessionKey, liveSessionId);
-        return { hermesSessionKey, liveSessionId };
+        return { created: true, hermesSessionKey, liveSessionId };
     }
 
     async #resolveHermesSessionKey(sessionKey: string) {
@@ -1284,13 +1299,14 @@ function toHermesConfigSnapshot(input: {
     model?: AgentRuntimeUpdateAgentModel['model'];
     result?: unknown;
 }) {
-    const baseUrl = asRecord(input.result).base_url;
+    const resultRecord = asRecord(input.result);
+    const baseUrl = readString(resultRecord, ['base_url']) ?? input.model?.baseUrl;
     const config = {
         ...(input.agent ? { agent: input.agent } : {}),
         ...(input.model
             ? {
                   model: {
-                      ...(typeof baseUrl === 'string' && baseUrl ? { base_url: baseUrl } : {}),
+                      ...(baseUrl ? { base_url: baseUrl } : {}),
                       default: input.model.model,
                       provider: input.model.provider,
                   },

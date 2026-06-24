@@ -1,10 +1,9 @@
 ---
-summary: Live Tavern-managed patches applied to the pinned Hermes engine install, including rationale, evidence, source touchpoints, and removal rules.
+summary: Process for Tavern-managed patches applied to the pinned Hermes engine install.
 read_when:
   - changing managed Hermes live patches or the engine patch applicator
   - debugging managed Hermes behavior that differs from upstream Hermes
   - upgrading the Hermes engine while Tavern carries live patches
-  - changing Codex Responses streaming, assistant deltas, or final message delivery
 ---
 
 # Hermes Engine Patches
@@ -20,16 +19,18 @@ written to `~/.tavern/engine/<pin>/install.json`.
 
 The patch manifest lives in `apps/runtime/src/hermes/engine-patches.ts`.
 
-## Patch Lifecycle
+## Applicator Contract
 
-1. Add a patch entry to `managedHermesEnginePatches`.
-2. Keep the patch id stable and descriptive.
-3. Match the smallest exact upstream source block that proves the expected
-   engine shape.
-4. Replace only the lines required for the managed contract.
-5. Document the context in this file before shipping.
-6. Run managed Runtime tests and a real managed-engine smoke when the bug needs
-   live provider evidence.
+Each entry in `managedHermesEnginePatches` is one logical upstream fix. A patch
+can contain multiple file edits when those edits are required to deliver the
+same fixed contract.
+
+Each edit:
+
+* names one target file inside the managed Hermes source tree
+* matches the smallest exact upstream source block that proves the expected
+  engine shape
+* replaces only the lines required for the managed contract
 
 Patch application is idempotent. If the replacement already exists, startup
 continues. If the expected source block no longer exists, startup fails with a
@@ -41,135 +42,69 @@ silently skipped.
 apply only to Tavern-managed engine installs because those are the installs
 Tavern acquires and pins.
 
-## Live Patches
+## Patch Lifecycle
 
-There are no active live patches.
+1. Add one patch entry per upstream correctness bug.
+2. Keep the patch id stable and descriptive.
+3. Use multiple edits in that one entry only when they fix the same contract.
+4. Add or update a focused managed-engine bootstrap test.
+5. Document the patch in `docs/patches/`.
+6. Link the patch doc from the index below.
+7. Run managed Runtime tests and a real managed-engine smoke when the bug needs
+   live provider evidence.
 
-The patch applicator remains in Runtime so Tavern can carry a narrow managed
-engine patch when a future pinned-engine correctness issue requires it. Keep
-this page current whenever `managedHermesEnginePatches` is non-empty.
+Patch docs must state:
 
-## Retired Candidate: `suppress-openai-codex-unstable-output-text-delta`
+* the managed engine pin
+* the user-visible symptom
+* the upstream source shape
+* the exact managed contract Tavern needs
+* verification evidence
+* when the patch can be removed
 
-### Contract Under Investigation
+## Engine Upgrade Audit
 
-Hermes Gateway `message.delta` must be an append-only prefix of the eventual
-`message.complete.text` for the same assistant message.
+Every Hermes engine pin update must audit live patches before shipping the
+pin. The audit is always required; removal validation is only required when
+the Hermes update gives strong evidence that upstream may now satisfy the
+patched contract.
 
-Tavern relies on that contract so live assistant text can stream app-locally
-and then reconcile to the durable final message without visible reflow. If
-Hermes emits one text source live and a different text source at completion,
-Tavern cannot repair the stream without either hiding the response until
-completion or inventing provider-specific text replacement semantics.
+For each live patch:
 
-### Observed Failure
+1. Read the patch doc in `docs/patches/`.
+2. Review the Hermes changelog, merged PRs, and changed source files that
+   overlap the patch target or contract.
+3. If the update does not touch the relevant contract, keep the patch and only
+   update its source match if the upstream file shape changed.
+4. If the update appears to fix the exact contract, temporarily remove only
+   that patch entry from `apps/runtime/src/hermes/engine-patches.ts`.
+5. Start from a clean managed install for the new pin, or run
+   `tavern engine repair` when the install already exists and the patch source
+   still matches.
+6. Run the patch doc's removal-validation smoke exactly as written.
+7. If the smoke passes without the patch, remove the patch entry, remove its
+   index row below, and move or delete the patch doc according to whether the
+   history is still useful.
+8. If the smoke fails, keep the patch, update its source match for the new
+   engine shape, and refresh the patch doc's upstream context and evidence.
 
-On June 17, 2026, Tavern debug logging captured an `openai-codex` turn where
-raw Hermes Gateway events diverged:
+Patch docs must make this audit runnable by a future updater. Each live patch
+doc needs a `Removal Validation` section with:
 
-* live `message.delta` frames carried assistant text with `textNewlines: 0`
-* final `message.complete` carried the same response with `textNewlines: 15`
-* `reasoning.available` also carried the final formatted text
+* the precise user-visible bug that should reappear if upstream still lacks
+  the fix
+* setup steps to reproduce on an unpatched new pin
+* pass/fail criteria
+* database, log, or UI evidence to inspect
+* cleanup steps for any real chats or sessions created by the smoke
 
-The visible result was a reply streaming as one long line:
+If upstream has a related PR but does not cover the exact Tavern symptom, say
+which gap remains. If the patch depends on provider credentials or account
+state, state that too.
 
-```text
-The morning opens, slow and still,with blue sky spilling on the sill.Cold brew waits...
-```
+## Patch Index
 
-and then reformatting at completion:
-
-```text
-The morning opens, slow and still,
-with blue sky spilling on the sill.
-Cold brew waits...
-```
-
-At first this looked like proof that Hermes was not emitting live newlines.
-That conclusion was wrong. Tavern's raw Gateway logger used the same trimmed
-string reader as the stream mapper, so whitespace-only deltas were logged as
-empty strings with `textLength: 0`.
-
-### Hermes Source Shape
-
-The managed engine pin was:
-
-```text
-c9863772368720a892faaa6e1f3402dbea72f4bf
-```
-
-Relevant upstream files at that pin:
-
-| File | Behavior |
-| --- | --- |
-| `tui_gateway/server.py` | The Gateway `_stream(delta)` callback appends the delta and emits `message.delta` with `{"text": delta}`. |
-| `agent/codex_runtime.py` | `_consume_codex_event_stream` reads `response.output_text.delta`, appends it to `collected_text_deltas`, and calls `on_text_delta(delta_text)`. `run_codex_stream._on_text_delta` then calls `agent._fire_stream_delta(text)`. |
-| `agent/codex_responses_adapter.py` | `_normalize_codex_response` builds the final assistant content from `response.output_item.done` message items first, and only falls back to `response.output_text` when no message item exists. |
-
-That means live and final text come from different Responses event families:
-
-```text
-live:  response.output_text.delta  -> message.delta
-final: response.output_item.done    -> message.complete
-```
-
-The Tavern bug had two layers:
-
-* `apps/runtime/src/hermes/local-client.ts` read Gateway stream text through
-  `readString(...)`, and `readString` returns a value only when
-  `value.trim()` is non-empty. Newline-only or space-only Gateway deltas were
-  therefore dropped before they reached `hermes-turn-runner.ts`, and the debug
-  logger produced misleading `textLength: 0` evidence for those frames.
-* `apps/runtime/src/tavern/hermes-turn-runner.ts` then read the already mapped
-  `assistant.delta` through its own trimmed `readString(...)`. After the
-  client fix, raw newline chunks reached the runner but were still discarded
-  before `turn.replyUpdated` reached the app.
-
-### Retired Patch Behavior
-
-The patch is intentionally narrow:
-
-* it only changes `run_codex_stream._on_text_delta`
-* it still collects `output_text.delta` into `_codex_streamed_text_parts`
-* it suppresses `agent._fire_stream_delta(text)` only when
-  `agent.provider == "openai-codex"`
-* other Responses-compatible providers keep their existing live
-  `output_text.delta` streaming behavior
-
-This patch was tested and immediately retired. It prevented the reflow, but it
-also removed live answer streaming for `openai-codex`, because the visible text
-deltas were the path it suppressed.
-
-### Actual Fix
-
-Tavern now reads stream text with raw string readers that preserve
-whitespace-only strings. The Gateway-client fix applies to:
-
-* `message.delta` -> `assistant.delta`
-* `message.complete.text` -> `assistant.completed.content`
-* `reasoning.delta` and `reasoning.available`
-* `status.update.text`
-* debug logging for raw Gateway stream events
-
-The turn-runner fix applies the same rule to:
-
-* `assistant.delta` live reply accumulation and `turn.replyUpdated`
-* `reasoning.delta` accumulation for stored Thinking activity
-
-The normal trimmed `readString(...)` helper remains right for ids, labels,
-tool names, model names, and status kinds. It is not right for streamed text.
-
-### Why Not Suppress Hermes Deltas
-
-Suppressing Hermes deltas is the wrong fallback for this failure mode. It makes
-the final answer correct, but removes live answer streaming. If this symptom
-returns, first verify the raw Gateway text with `TAVERN_CHAT_DEBUG=1` after the
-raw-reader fix:
-
-```text
-joined(message.delta.text) == message.complete.text
-```
-
-For poem/list/paragraph turns, the debug logs should show whitespace-only
-`message.delta` frames with non-zero `textLength` and `textNewlines` when the
-provider streams line breaks separately.
+| Status | Patch id | Docs |
+| --- | --- | --- |
+| Live | `gateway-default-model-runtime` | [Hermes default model runtime](../patches/hermes-default-model-runtime.md) |
+| Retired candidate | `suppress-openai-codex-unstable-output-text-delta` | [OpenAI Codex stream delta candidate](../patches/openai-codex-stream-delta-retired.md) |

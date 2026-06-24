@@ -12,13 +12,6 @@ import { tavernMessengerPluginName } from './tavern-messenger-plugin.ts';
  * keys, so operator-managed keys elsewhere in the file survive every merge.
  */
 
-export interface HermesModelDomain {
-    apiKey: string | null;
-    baseUrl: null | string;
-    model: null | string;
-    provider: null | string;
-}
-
 interface HermesModelRef {
     baseUrl?: string;
     model: string;
@@ -64,7 +57,6 @@ export interface HermesConnectorsDomain {
 export interface HermesGeneratedConfigDomains {
     connectors: HermesConnectorsDomain;
     execution: HermesExecutionDomain;
-    model: HermesModelDomain;
     /** null = never configured in Tavern; the domain leaves the file untouched. */
     permissions: HermesPermissionsDomain | null;
 }
@@ -79,7 +71,6 @@ export async function mergeHermesGeneratedConfig(
     const existing = await fs.readFile(filePath, 'utf8').catch(() => '');
     const doc = parseDocument(existing || '{}');
 
-    applyModelDomain(doc, domains.model);
     applyExecutionDomain(doc, domains.execution);
     applyContextFilesDomain(doc);
     applyConnectorsDomain(doc, domains.connectors);
@@ -97,25 +88,6 @@ export async function mergeHermesGeneratedConfig(
 }
 
 type GeneratedConfigDocument = ReturnType<typeof parseDocument>;
-
-function applyModelDomain(doc: GeneratedConfigDocument, model: HermesModelDomain) {
-    if (!(model.model && model.provider)) {
-        doc.deleteIn(['model']);
-        return;
-    }
-    doc.setIn(['model', 'default'], model.model);
-    doc.setIn(['model', 'provider'], model.provider);
-    if (model.baseUrl) {
-        doc.setIn(['model', 'base_url'], model.baseUrl);
-    } else {
-        doc.deleteIn(['model', 'base_url']);
-    }
-    if (model.apiKey) {
-        doc.setIn(['model', 'api_key'], model.apiKey);
-    } else {
-        doc.deleteIn(['model', 'api_key']);
-    }
-}
 
 function applyExecutionDomain(doc: GeneratedConfigDocument, execution: HermesExecutionDomain) {
     if (execution.fallbackModels.length > 0) {

@@ -144,12 +144,12 @@ describe('managed Hermes bootstrap', () => {
             fs.readFile(
                 path.join(
                     path.resolve(path.dirname(engineBinaryPath(pin)), '..', '..'),
-                    'agent',
-                    'codex_runtime.py'
+                    'tui_gateway',
+                    'server.py'
                 ),
                 'utf8'
             )
-        ).resolves.toContain('agent._fire_stream_delta(text)');
+        ).resolves.toContain('failed to resolve configured model runtime at build');
     });
 
     it('force-installs the managed engine even when an allowed system binary exists', async () => {
@@ -325,6 +325,34 @@ describe('managed Hermes bootstrap', () => {
     def _on_text_delta(text: str) -> None:
         agent._codex_streamed_text_parts.append(text)
         agent._fire_stream_delta(text)
+`
+        );
+        const gatewayServerPath = path.join(installDir, 'tui_gateway', 'server.py');
+        await fs.mkdir(path.dirname(gatewayServerPath), { recursive: true });
+        await fs.writeFile(
+            gatewayServerPath,
+            `                kw = {"session_db": session_db}
+                if resume_sid := current.get("resume_session_id"):
+                    kw["session_id"] = resume_sid
+                # Model/effort/fast the desktop picked for a brand-new chat ride
+                # in as per-session overrides so the first build uses them
+                # directly (no global config, no build-then-switch).
+                if override := current.get("model_override"):
+                    kw["model_override"] = override
+                if (reasoning := current.get("create_reasoning_override")) is not None:
+                    kw["reasoning_config_override"] = reasoning
+                if (tier := current.get("create_service_tier_override")) is not None:
+                    kw["service_tier_override"] = tier
+                agent = _make_agent(sid, key, **kw)
+            finally:
+                _clear_session_context(tokens)
+
+            # Session DB row deferred to first run_conversation() call.
+            # pending_title applied post-first-message (see cli.exec handler).
+            current["agent"] = agent
+            # Baseline for the per-turn config sync; the profile home
+            # override is still active here.
+            current["config_model_seen"] = _config_model_target()
 `
         );
     }

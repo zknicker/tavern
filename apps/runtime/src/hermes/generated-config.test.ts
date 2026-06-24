@@ -14,12 +14,6 @@ const emptyExecution = {
     webExtractSummarizer: null,
 };
 const emptyConnectors = { servers: {}, staleIds: [] };
-const codexModel = {
-    apiKey: null,
-    baseUrl: null,
-    model: 'gpt-5.4-mini',
-    provider: 'openai-codex',
-};
 
 async function tempConfigPath() {
     const directory = await fs.mkdtemp(path.join(os.tmpdir(), 'tavern-hermes-config-'));
@@ -44,7 +38,6 @@ describe('generated Hermes config composer', () => {
                 ],
                 timezone: 'America/New_York',
             },
-            model: codexModel,
             permissions: null,
         });
 
@@ -66,10 +59,6 @@ describe('generated Hermes config composer', () => {
                 provider: '',
                 user_profile_enabled: true,
             },
-            model: {
-                default: 'gpt-5.4-mini',
-                provider: 'openai-codex',
-            },
             plugins: {
                 enabled: ['tavern-messenger-platform', 'merchbase'],
             },
@@ -77,7 +66,7 @@ describe('generated Hermes config composer', () => {
         });
     });
 
-    it('preserves operator-managed keys while setting the model route', async () => {
+    it('preserves Hermes-owned model keys while setting Tavern domains', async () => {
         const configPath = await tempConfigPath();
         await fs.writeFile(
             configPath,
@@ -93,6 +82,7 @@ describe('generated Hermes config composer', () => {
                 'model:',
                 '  default: old-model',
                 '  provider: old-provider',
+                '  api_mode: anthropic_messages',
                 'memory:',
                 '  memory_char_limit: 2200',
                 '  user_char_limit: 1375',
@@ -103,7 +93,6 @@ describe('generated Hermes config composer', () => {
         await mergeHermesGeneratedConfig(configPath, {
             connectors: emptyConnectors,
             execution: emptyExecution,
-            model: codexModel,
             permissions: null,
         });
 
@@ -115,8 +104,9 @@ describe('generated Hermes config composer', () => {
         expect(doc.getIn(['cron', 'wrap_response'])).toBe(false);
         expect(doc.getIn(['display', 'tool_progress'])).toBe('all');
         expect(doc.getIn(['display', 'interim_assistant_messages'])).toBe(true);
-        expect(doc.getIn(['model', 'default'])).toBe('gpt-5.4-mini');
-        expect(doc.getIn(['model', 'provider'])).toBe('openai-codex');
+        expect(doc.getIn(['model', 'default'])).toBe('old-model');
+        expect(doc.getIn(['model', 'provider'])).toBe('old-provider');
+        expect(doc.getIn(['model', 'api_mode'])).toBe('anthropic_messages');
         expect(doc.getIn(['model', 'base_url'])).toBeUndefined();
         expect(doc.getIn(['model', 'api_key'])).toBeUndefined();
         expect(doc.getIn(['memory', 'provider'])).toBe('');
@@ -128,46 +118,18 @@ describe('generated Hermes config composer', () => {
         expect(doc.has('timezone')).toBe(false);
     });
 
-    it('omits the model route when Runtime has no runnable provider', async () => {
+    it('does not create model config from an empty file', async () => {
         const configPath = await tempConfigPath();
 
         await mergeHermesGeneratedConfig(configPath, {
             connectors: emptyConnectors,
             execution: emptyExecution,
-            model: {
-                apiKey: null,
-                baseUrl: null,
-                model: null,
-                provider: null,
-            },
             permissions: null,
         });
 
         const doc = await readConfig(configPath);
         expect(doc.has('model')).toBe(false);
         expect(doc.getIn(['memory', 'provider'])).toBe('');
-    });
-
-    it('writes a custom provider base URL for local Hermes e2e runs', async () => {
-        const configPath = await tempConfigPath();
-
-        await mergeHermesGeneratedConfig(configPath, {
-            connectors: emptyConnectors,
-            execution: emptyExecution,
-            model: {
-                apiKey: 'tavern-e2e-mock-key',
-                baseUrl: 'http://127.0.0.1:44080/v1',
-                model: 'tavern-e2e-tools',
-                provider: 'custom',
-            },
-            permissions: null,
-        });
-
-        const doc = await readConfig(configPath);
-        expect(doc.getIn(['model', 'default'])).toBe('tavern-e2e-tools');
-        expect(doc.getIn(['model', 'provider'])).toBe('custom');
-        expect(doc.getIn(['model', 'base_url'])).toBe('http://127.0.0.1:44080/v1');
-        expect(doc.getIn(['model', 'api_key'])).toBe('tavern-e2e-mock-key');
     });
 
     it('removes execution keys when fallbacks and timezone are cleared', async () => {
@@ -179,14 +141,12 @@ describe('generated Hermes config composer', () => {
                 fallbackModels: [{ model: 'kimi-k2.5', provider: 'openrouter' }],
                 timezone: 'Europe/Berlin',
             },
-            model: codexModel,
             permissions: null,
         });
 
         await mergeHermesGeneratedConfig(configPath, {
             connectors: emptyConnectors,
             execution: emptyExecution,
-            model: codexModel,
             permissions: null,
         });
 
@@ -205,7 +165,6 @@ describe('generated Hermes config composer', () => {
                 subagentEffort: 'high',
                 subagentModel: { model: 'claude-haiku-4-5', provider: 'anthropic' },
             },
-            model: codexModel,
             permissions: null,
         });
 
@@ -220,7 +179,6 @@ describe('generated Hermes config composer', () => {
         await mergeHermesGeneratedConfig(configPath, {
             connectors: emptyConnectors,
             execution: emptyExecution,
-            model: codexModel,
             permissions: null,
         });
 
@@ -254,7 +212,6 @@ describe('generated Hermes config composer', () => {
                     timeoutSeconds: 360,
                 },
             },
-            model: codexModel,
             permissions: null,
         });
 
@@ -269,7 +226,6 @@ describe('generated Hermes config composer', () => {
         await mergeHermesGeneratedConfig(configPath, {
             connectors: emptyConnectors,
             execution: emptyExecution,
-            model: codexModel,
             permissions: null,
         });
 
@@ -284,7 +240,6 @@ describe('generated Hermes config composer', () => {
         await mergeHermesGeneratedConfig(configPath, {
             connectors: emptyConnectors,
             execution: emptyExecution,
-            model: codexModel,
             permissions: {
                 approvalMode: 'ask',
                 automationApprovalMode: 'allow',
@@ -313,7 +268,6 @@ describe('generated Hermes config composer', () => {
         await mergeHermesGeneratedConfig(configPath, {
             connectors: emptyConnectors,
             execution: emptyExecution,
-            model: codexModel,
             permissions: null,
         });
         const untouched = await readConfig(configPath);
@@ -323,7 +277,6 @@ describe('generated Hermes config composer', () => {
         await mergeHermesGeneratedConfig(configPath, {
             connectors: emptyConnectors,
             execution: emptyExecution,
-            model: codexModel,
             permissions: {
                 approvalMode: 'deny',
                 automationApprovalMode: 'deny',
@@ -355,7 +308,6 @@ describe('generated Hermes config composer', () => {
                 staleIds: ['removed-connector'],
             },
             execution: emptyExecution,
-            model: codexModel,
             permissions: null,
         });
 
@@ -377,14 +329,12 @@ describe('generated Hermes config composer', () => {
         await mergeHermesGeneratedConfig(configPath, {
             connectors: { servers: { solo: { url: 'https://mcp.example.com' } }, staleIds: [] },
             execution: emptyExecution,
-            model: codexModel,
             permissions: null,
         });
 
         await mergeHermesGeneratedConfig(configPath, {
             connectors: { servers: {}, staleIds: ['solo'] },
             execution: emptyExecution,
-            model: codexModel,
             permissions: null,
         });
 
@@ -403,13 +353,11 @@ describe('generated Hermes config composer', () => {
         await mergeHermesGeneratedConfig(configPath, {
             connectors: emptyConnectors,
             execution: emptyExecution,
-            model: codexModel,
             permissions: null,
         });
         await mergeHermesGeneratedConfig(configPath, {
             connectors: emptyConnectors,
             execution: emptyExecution,
-            model: codexModel,
             permissions: null,
         });
 

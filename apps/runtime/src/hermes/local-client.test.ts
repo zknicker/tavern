@@ -8,6 +8,7 @@ import { WebSocketServer } from 'ws';
 
 describe('LocalHermesClient session routing', () => {
     const originalRuntimeRoot = process.env.TAVERN_RUNTIME_ROOT;
+    const originalModelRouteEnv = captureModelRouteEnv();
     let runtimeRoot: string;
     let httpServer: HttpServer | null = null;
     let server: WebSocketServer | null = null;
@@ -17,6 +18,8 @@ describe('LocalHermesClient session routing', () => {
     beforeEach(async () => {
         runtimeRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'tavern-hermes-client-'));
         process.env.TAVERN_RUNTIME_ROOT = runtimeRoot;
+        clearModelRouteEnv();
+        process.env.CODEX_HOME = path.join(runtimeRoot, 'empty-codex-home');
         vi.resetModules();
         await initRuntimeTestDb();
     });
@@ -32,6 +35,7 @@ describe('LocalHermesClient session routing', () => {
         } else {
             process.env.TAVERN_RUNTIME_ROOT = originalRuntimeRoot;
         }
+        restoreModelRouteEnv(originalModelRouteEnv);
         vi.resetModules();
         await fs.rm(runtimeRoot, { force: true, recursive: true });
     });
@@ -759,16 +763,17 @@ describe('LocalHermesClient session routing', () => {
                     method: string;
                     params?: Record<string, unknown>;
                 };
+                const params = request.params ?? {};
                 requests.push(request.method);
 
-                if (request.method === 'session.create') {
+                if (request.method === 'session.resume') {
                     socket.send(
                         JSON.stringify({
                             id: request.id,
                             jsonrpc: '2.0',
                             result: {
+                                resumed: params.session_id,
                                 session_id: 'live-created',
-                                stored_session_id: 'stored-session',
                             },
                         })
                     );
@@ -802,6 +807,11 @@ describe('LocalHermesClient session routing', () => {
             token: null,
         });
         const controller = new AbortController();
+        const { saveHermesSessionMapping } = await import('./session-map');
+        await saveHermesSessionMapping({
+            hermesSessionKey: 'stored-session',
+            tavernSessionKey: 'agent:main:tavern:cht_1',
+        });
 
         const events = collect(
             client.streamChat({
@@ -824,7 +834,7 @@ describe('LocalHermesClient session routing', () => {
         ).resolves.toBe('cancelled');
         client.close();
 
-        expect(requests).toEqual(['session.create', 'config.set']);
+        expect(requests).toEqual(['session.resume', 'config.set']);
     });
 
     it('resumes the Hermes stored session when a new client loses the live id', async () => {
@@ -1122,24 +1132,15 @@ describe('LocalHermesClient session routing', () => {
 
         expect(requests.map((request) => request.method)).toEqual([
             'session.create',
-            'config.set',
             'image.attach_bytes',
             'prompt.submit',
         ]);
-        expect(requests.slice(0, 3)).toEqual([
+        expect(requests.slice(0, 2)).toEqual([
             {
                 method: 'session.create',
                 params: {
                     cwd: expectedHermesWorkspace(),
                     title: 'agent:main:tavern:cht_1',
-                },
-            },
-            {
-                method: 'config.set',
-                params: {
-                    key: 'model',
-                    session_id: 'live-created',
-                    value: 'gpt-5 --provider openai',
                 },
             },
             {
@@ -1683,6 +1684,7 @@ describe('LocalHermesClient session routing', () => {
 
 describe('LocalHermesClient adapter-owned state', () => {
     const originalRuntimeRoot = process.env.TAVERN_RUNTIME_ROOT;
+    const originalModelRouteEnv = captureModelRouteEnv();
     let runtimeRoot: string;
     let httpServer: ReturnType<typeof Bun.serve> | null = null;
 
@@ -1691,6 +1693,8 @@ describe('LocalHermesClient adapter-owned state', () => {
     beforeEach(async () => {
         runtimeRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'tavern-hermes-state-'));
         process.env.TAVERN_RUNTIME_ROOT = runtimeRoot;
+        clearModelRouteEnv();
+        process.env.CODEX_HOME = path.join(runtimeRoot, 'empty-codex-home');
         vi.resetModules();
         await initRuntimeTestDb();
     });
@@ -1704,6 +1708,7 @@ describe('LocalHermesClient adapter-owned state', () => {
         } else {
             process.env.TAVERN_RUNTIME_ROOT = originalRuntimeRoot;
         }
+        restoreModelRouteEnv(originalModelRouteEnv);
         vi.resetModules();
         await fs.rm(runtimeRoot, { force: true, recursive: true });
     });
@@ -1714,6 +1719,12 @@ describe('LocalHermesClient adapter-owned state', () => {
                 const url = new URL(request.url);
                 if (request.method === 'POST' && url.pathname === '/api/model/set') {
                     return Response.json({ ok: true });
+                }
+                if (request.method === 'GET' && url.pathname === '/api/model/auxiliary') {
+                    return Response.json({
+                        main: { model: 'gpt-5.5', provider: 'openai-codex' },
+                        tasks: [],
+                    });
                 }
                 return new Response('not found', { status: 404 });
             },
@@ -1746,6 +1757,57 @@ describe('LocalHermesClient adapter-owned state', () => {
             },
             name: 'Tavern Hermes',
             thinkingDefault: 'medium',
+        });
+    });
+
+    it('reads the selected model for display from Hermes model APIs', async () => {
+        const setBodies: unknown[] = [];
+        httpServer = Bun.serve({
+            fetch: async (request) => {
+                const url = new URL(request.url);
+                if (request.method === 'POST' && url.pathname === '/api/model/set') {
+                    setBodies.push(await request.json());
+                    return Response.json({
+                        base_url: 'https://api.anthropic.com',
+                        ok: true,
+                    });
+                }
+                if (request.method === 'GET' && url.pathname === '/api/model/auxiliary') {
+                    return Response.json({
+                        main: { model: 'claude-opus-4-8', provider: 'anthropic' },
+                        tasks: [],
+                    });
+                }
+                return new Response('not found', { status: 404 });
+            },
+            port: 0,
+        });
+
+        const { LocalHermesClient } = await import('./local-client');
+        const client = new LocalHermesClient({
+            baseUrl: `http://127.0.0.1:${httpServer.port}`,
+            token: null,
+        });
+
+        await client.updateAgentModel('agt_hermes', {
+            model: {
+                model: 'claude-opus-4-8',
+                provider: 'anthropic',
+            },
+        });
+
+        const agents = await client.listAgents();
+
+        expect(setBodies).toEqual([
+            {
+                model: 'claude-opus-4-8',
+                provider: 'anthropic',
+                scope: 'main',
+            },
+        ]);
+        expect(agents.agents[0]?.hermesModelName).toMatchObject({
+            model: 'claude-opus-4-8',
+            provider: 'anthropic',
         });
     });
 
@@ -2215,4 +2277,36 @@ async function initRuntimeTestDb() {
 async function closeRuntimeTestDb() {
     const { closeDb } = await import('../db/connection');
     closeDb();
+}
+
+const modelRouteEnvKeys = [
+    'CODEX_HOME',
+    'CODEX_MODEL',
+    'OPENAI_API_KEY',
+    'OPENROUTER_API_KEY',
+    'TAVERN_HERMES_API_KEY',
+    'TAVERN_HERMES_BASE_URL',
+    'TAVERN_HERMES_MODEL',
+    'TAVERN_HERMES_PROVIDER',
+] as const;
+
+function captureModelRouteEnv() {
+    return Object.fromEntries(modelRouteEnvKeys.map((key) => [key, process.env[key]] as const));
+}
+
+function clearModelRouteEnv() {
+    for (const key of modelRouteEnvKeys) {
+        process.env[key] = '';
+    }
+}
+
+function restoreModelRouteEnv(values: ReturnType<typeof captureModelRouteEnv>) {
+    for (const key of modelRouteEnvKeys) {
+        const value = values[key];
+        if (value === undefined) {
+            delete process.env[key];
+        } else {
+            process.env[key] = value;
+        }
+    }
 }

@@ -19,7 +19,11 @@ import { ensureHermesBinary } from './bootstrap';
 import { isManagedHermesSetupError } from './errors';
 import { buildRuntimeApiBaseUrl, createLocalHermesClient } from './local-client';
 import { resolveManagedVaultPath } from './managed-vault';
-import { prepareManagedHermesModelConfig, resolveManagedHermesModelConfig } from './model-config';
+import {
+    hasExplicitManagedHermesModelSelection,
+    prepareManagedHermesModelConfig,
+    resolveManagedHermesModelConfig,
+} from './model-config';
 import { createRestartCoordinator, type RestartCoordinator } from './restart-coordinator';
 import {
     markManagedHermesApiReady,
@@ -335,6 +339,13 @@ async function waitForHermesReady(port: number, child: ChildProcess) {
 }
 
 async function applyManagedHermesModelConfig(client: ReturnType<typeof createLocalHermesClient>) {
+    if (!hasExplicitManagedHermesModelSelection()) {
+        const existing = await client.getMainModelAssignment().catch(() => null);
+        if (existing) {
+            return;
+        }
+    }
+
     const config = await resolveManagedHermesModelConfig();
     if (!(config.model && config.provider)) {
         log.warn('Managed Hermes model config has no runnable default route');
