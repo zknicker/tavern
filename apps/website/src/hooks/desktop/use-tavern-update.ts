@@ -22,10 +22,13 @@ export type TavernUpdateStatus =
     | { phase: 'restarting-app'; detail: string; version: string }
     | { phase: 'failed'; detail: string };
 
+type TavernUpdatePendingAction = 'download-app' | 'none' | 'stage-runtime';
+
 export function useTavernUpdate() {
     const utils = trpc.useUtils();
     const runtimeConnection = useRuntimeConnection();
     const desktopUpdate = useDesktopUpdate();
+    const [pendingAction, setPendingAction] = React.useState<TavernUpdatePendingAction>('none');
     const versionMismatchKind =
         runtimeConnection.status === 'version-mismatch' && runtimeConnection.connection !== null
             ? getRuntimeVersionMismatchKind(runtimeConnection.connection)
@@ -62,6 +65,7 @@ export function useTavernUpdate() {
         finalRestartPhase,
         isRuntimeDisconnected,
         needsRuntimeUpdate,
+        pendingAction,
         runtimeConnection: runtimeConnection.connection,
         runtimeUpdateError: needsRuntimeUpdate
             ? (runtimeUpdateStatus.error?.message ??
@@ -74,22 +78,42 @@ export function useTavernUpdate() {
 
     const updateAndRestart = React.useCallback(async () => {
         if (appNeedsUpdate) {
-            await desktopUpdate.updateAndRestart();
+            if (desktopUpdate.status.phase === 'ready') {
+                setFinalRestartPhase('app');
+            } else {
+                setPendingAction('download-app');
+            }
+
+            try {
+                await desktopUpdate.updateAndRestart();
+            } finally {
+                setPendingAction('none');
+            }
             return;
         }
 
         if (needsRuntimeUpdate) {
             if (runtimeUpdateStatus.data?.phase !== 'staged') {
-                await startRuntimeUpdate.mutateAsync();
-                await waitForRuntimeUpdateStaged({
-                    getStatus: () => utils.agentRuntime.updateStatus.fetch(),
-                });
+                setPendingAction('stage-runtime');
+                try {
+                    await startRuntimeUpdate.mutateAsync();
+                    await waitForRuntimeUpdateStaged({
+                        getStatus: () => utils.agentRuntime.updateStatus.fetch(),
+                    });
+                } finally {
+                    setPendingAction('none');
+                }
             }
 
             const desktopAction = getRuntimeUpdateDesktopAction(desktopUpdate.status);
 
             if (desktopAction === 'download-app-before-runtime-restart') {
-                await desktopUpdate.updateAndRestart();
+                setPendingAction('download-app');
+                try {
+                    await desktopUpdate.updateAndRestart();
+                } finally {
+                    setPendingAction('none');
+                }
                 return;
             }
 
@@ -112,7 +136,12 @@ export function useTavernUpdate() {
         }
 
         if (desktopUpdate.status.phase !== 'ready') {
-            await desktopUpdate.updateAndRestart();
+            setPendingAction('download-app');
+            try {
+                await desktopUpdate.updateAndRestart();
+            } finally {
+                setPendingAction('none');
+            }
             return;
         }
 
@@ -155,6 +184,7 @@ export function getTavernUpdateStatus(input: {
     finalRestartPhase: 'idle' | 'runtime' | 'app';
     isRuntimeDisconnected: boolean;
     needsRuntimeUpdate: boolean;
+    pendingAction?: TavernUpdatePendingAction;
     runtimeConnection: AgentRuntimeConnectionOutput;
     runtimeUpdateError: null | string;
     runtimeUpdateStatus: null | {
@@ -164,6 +194,11 @@ export function getTavernUpdateStatus(input: {
         targetVersion: null | string;
     };
 }): TavernUpdateStatus {
+    const pendingStatus = getPendingUpdateStatus(input);
+    if (pendingStatus) {
+        return pendingStatus;
+    }
+
     if (input.runtimeUpdateError) {
         return { detail: input.runtimeUpdateError, phase: 'failed' };
     }
@@ -272,6 +307,45 @@ export function getTavernUpdateStatus(input: {
     }
 
     return desktopStatus;
+}
+
+function getPendingUpdateStatus(input: {
+    desktopUpdateStatus: DesktopUpdateStatus;
+    pendingAction?: TavernUpdatePendingAction;
+    runtimeConnection: AgentRuntimeConnectionOutput;
+}): TavernUpdateStatus | null {
+    if (input.pendingAction === 'download-app') {
+        const version = getDesktopVersion(input.desktopUpdateStatus);
+        const progress =
+            input.desktopUpdateStatus.phase === 'downloading'
+                ? input.desktopUpdateStatus.progress
+                : 0;
+
+        return {
+            detail:
+                version === 'latest'
+                    ? 'Downloading Tavern update.'
+                    : `Downloading Tavern v${version}.`,
+            phase: 'downloading-app',
+            progress,
+            version,
+        };
+    }
+
+    if (input.pendingAction === 'stage-runtime') {
+        const version = getRuntimeTargetVersion(input.runtimeConnection);
+
+        return {
+            detail:
+                version === 'latest'
+                    ? 'Downloading Tavern Runtime.'
+                    : `Downloading Tavern Runtime v${version}.`,
+            phase: 'staging-runtime',
+            version,
+        };
+    }
+
+    return null;
 }
 
 function fromDesktopUpdateStatus(status: DesktopUpdateStatus): TavernUpdateStatus {

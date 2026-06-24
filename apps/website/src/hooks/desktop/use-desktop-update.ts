@@ -97,6 +97,8 @@ async function checkForDesktopUpdate({ install }: { install: boolean }) {
         return;
     }
 
+    setDesktopUpdateStatus({ phase: 'checking' });
+
     activeTask = checkForDesktopUpdateTask({ install }).finally(() => {
         activeTask = null;
     });
@@ -169,6 +171,9 @@ async function installCurrentDesktopUpdate(options?: { unavailableMessage?: stri
         }
         return;
     }
+
+    const version = currentStatus.version;
+    setDesktopUpdateStatus({ phase: 'downloading', progress: 0, version });
 
     try {
         await bridge.downloadUpdate();

@@ -105,6 +105,47 @@ describe('Tavern update status', () => {
         });
     });
 
+    test('shows app download progress as soon as the user requests an update', () => {
+        const status = getTavernUpdateStatus({
+            appNeedsUpdate: false,
+            desktopUpdateStatus: { phase: 'available', version: '1.2.5' },
+            finalRestartPhase: 'idle',
+            isRuntimeDisconnected: false,
+            needsRuntimeUpdate: false,
+            pendingAction: 'download-app',
+            runtimeConnection: createRuntimeConnection(),
+            runtimeUpdateError: null,
+            runtimeUpdateStatus: null,
+        });
+
+        expect(status).toMatchObject({
+            phase: 'downloading-app',
+            progress: 0,
+            version: '1.2.5',
+        });
+    });
+
+    test('shows Runtime staging as soon as the user requests a Runtime update', () => {
+        const status = getTavernUpdateStatus({
+            appNeedsUpdate: false,
+            desktopUpdateStatus: { phase: 'current' },
+            finalRestartPhase: 'idle',
+            isRuntimeDisconnected: false,
+            needsRuntimeUpdate: true,
+            pendingAction: 'stage-runtime',
+            runtimeConnection: createRuntimeConnection({
+                requiredRuntimeVersion: '1.2.4',
+            }),
+            runtimeUpdateError: null,
+            runtimeUpdateStatus: null,
+        });
+
+        expect(status).toMatchObject({
+            phase: 'staging-runtime',
+            version: '1.2.4',
+        });
+    });
+
     test('does not run the desktop updater for runtime-only updates', () => {
         expect(getRuntimeUpdateDesktopAction({ phase: 'current' })).toBe('none');
     });
