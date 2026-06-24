@@ -89,8 +89,10 @@ The initial catalog is intentionally small:
 - `MerchBaseSalesChart`: Integration-backed sales trend display. It is the
   preferred way to present MerchBase sales trends over a date range. It renders
   Sales as bars, royalties as a line, hover-driven active-day stats, and a date
-  range selector for live re-queries. Current-day sales requests default to a
-  10-day trend unless the user explicitly asks for a one-day chart.
+  range selector for live re-queries. Daily ranges render every selected day;
+  missing days render as zero-sales buckets, including the current selected
+  day. Current-day sales requests default to a 10-day trend unless the user
+  explicitly asks for a one-day chart.
 - `CalendarDay`, `CalendarEvent`: existing calendar displays with typed props.
 
 Rich Responses do not accept model-authored HTML, JSX, CSS, `className`, event
@@ -125,8 +127,8 @@ catalog with a description, child-slot metadata, and Zod props schema; prompt
 text, Runtime compilation, and validation all read from that catalog instead of
 duplicating per-component examples in generated instructions. Tavern appends
 only product-specific rules such as chat compactness, `Stack` child ownership,
-and component-choice guidance. Detailed component schemas live in
-`packages/tavern-api/src/rich-responses`.
+component-choice guidance, and avoiding identical prose inside and outside Rich Responses.
+Detailed component schemas live in `packages/tavern-api/src/rich-responses`.
 
 ## Ownership
 

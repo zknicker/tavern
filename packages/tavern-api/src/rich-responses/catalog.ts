@@ -98,6 +98,7 @@ const richResponseJsonRenderSchema = defineSchema(
             'Use Table for rows and columns instead of Markdown tables.',
             'Use charts for rankings, totals, trends, and comparable numeric series.',
             'Use calendar components for prepared agendas or events.',
+            'Avoid repeating identical prose inside and outside a Rich Response.',
             'If the answer does not need app-rendered UI, or you are unsure the spec is valid, respond with text only.',
         ],
     }
@@ -140,7 +141,7 @@ export const richResponseJsonRenderCatalog = defineCatalog(richResponseJsonRende
         },
         MerchBaseSalesChart: {
             description:
-                'Preferred way to present MerchBase sales trends over a date range. Fetches live MerchBase sales, renders Sales as bars and royalties as a line, includes a date range selector, and shows hover-driven sold/cancelled/returned/royalties stats for the active day. Default to the 10-day trend range for today/current sales requests; omit rangeDays or use 10 unless the user explicitly asks for a one-day chart. Use endDate to anchor the active day.',
+                'Preferred way to present MerchBase sales trends over a date range. Fetches live MerchBase sales, renders Sales as bars and royalties as a line, includes a date range selector, and shows hover-driven sold/cancelled/returned/royalties stats for the active day. The chart fills missing days in the selected daily range as zero-sales buckets, including the current endDate. Default to the 10-day trend range for today/current sales requests; omit rangeDays or use 10 unless the user explicitly asks for a one-day chart. Use endDate to anchor the active day.',
             props: jsonRenderPropsSchema(richResponseMerchBaseSalesChartPropsSchema),
         },
         CalendarDay: {

@@ -108,8 +108,10 @@ secret changes.
 MerchBase sales trends over a date range. It stores query intent durably and
 fetches live sales data through Runtime when rendered. The display includes a
 date range selector, Sales bars, a royalties line, and hover-driven stats for
-the active day in the selected range. Current-day sales requests default to a
-10-day trend unless the user explicitly asks for a one-day chart.
+the active day in the selected range. Daily ranges render every selected day,
+including zero-sales days that MerchBase omits from the upstream series.
+Current-day sales requests default to a 10-day trend unless the user explicitly
+asks for a one-day chart.
 
 ## Adding an Integration
 

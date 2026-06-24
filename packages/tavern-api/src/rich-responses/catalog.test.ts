@@ -19,6 +19,12 @@ describe('Rich Response json-render catalog', () => {
         expect(prompt).toContain(
             'Default to the 10-day trend range for today/current sales requests'
         );
+        expect(prompt).toContain(
+            'fills missing days in the selected daily range as zero-sales buckets'
+        );
+        expect(prompt).toContain(
+            'Avoid repeating identical prose inside and outside a Rich Response'
+        );
         expect(prompt).toContain('Use endDate to anchor the active day');
         expect(prompt).toContain('CalendarEvent');
         expect(prompt).toContain('xKey');

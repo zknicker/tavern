@@ -11,6 +11,7 @@ import { chartStyleVars } from './chart-view-model.ts';
 import { RichResponseComposedChartBody } from './charts.tsx';
 import { dateKeyFromBucketStart, formatIsoDate, shiftIsoDate } from './merchbase-date.ts';
 import { DateRangeSelector } from './merchbase-date-range-selector.tsx';
+import { buildMerchBaseSalesChartView } from './merchbase-sales-chart-model.ts';
 
 export function RichResponseMerchBaseSalesChart({
     props,
@@ -63,10 +64,12 @@ export function RichResponseMerchBaseSalesChart({
             <div className="min-w-0" style={chartStyleVars}>
                 <MerchBaseSalesChartBody
                     data={query.data}
+                    endDate={endDate}
                     error={query.error}
                     key={range}
                     loading={query.isLoading}
                     selectedDate={endDate}
+                    startDate={startDate}
                     title={props.title}
                 />
             </div>
@@ -76,21 +79,25 @@ export function RichResponseMerchBaseSalesChart({
 
 function MerchBaseSalesChartBody({
     data,
+    endDate,
     error,
     loading,
     selectedDate,
+    startDate,
     title,
 }: {
     data: MerchbaseSalesSeriesOutput | undefined;
+    endDate: string;
     error: { message: string } | null;
     loading: boolean;
     selectedDate: string;
+    startDate: string;
     title: string;
 }) {
     const [activeIndex, setActiveIndex] = useState<null | number>(null);
-    const chartProps = useMemo(
-        () => (data && data.series.length > 0 ? toComposedChartProps(data, title) : null),
-        [data, title]
+    const chartView = useMemo(
+        () => (data ? buildMerchBaseSalesChartView({ data, endDate, startDate, title }) : null),
+        [data, endDate, startDate, title]
     );
     const handleActiveIndexChange = useCallback((nextIndex: null | number) => {
         setActiveIndex((currentIndex) => (currentIndex === nextIndex ? currentIndex : nextIndex));
@@ -104,15 +111,17 @@ function MerchBaseSalesChartBody({
         return <ChartState text={error.message} tone="error" />;
     }
 
-    if (!(data && chartProps && data.series.length > 0)) {
+    if (!chartView) {
         return <ChartState text="No MerchBase sales found for this range." />;
     }
 
     const activePoint =
-        (activeIndex === null ? null : data.series[activeIndex]) ??
-        data.series.find((item) => dateKeyFromBucketStart(item.bucketStart) === selectedDate) ??
-        data.series.at(-1);
-    const xAxisTickCount = Math.min(data.series.length, merchBaseXAxisMaxTicks);
+        (activeIndex === null ? null : chartView.series[activeIndex]) ??
+        chartView.series.find(
+            (item) => dateKeyFromBucketStart(item.bucketStart) === selectedDate
+        ) ??
+        chartView.series.at(-1);
+    const xAxisTickCount = Math.min(chartView.series.length, merchBaseXAxisMaxTicks);
 
     return (
         <>
@@ -121,7 +130,7 @@ function MerchBaseSalesChartBody({
                 chartMargin={merchBaseChartMargin}
                 datePillBottom={merchBaseDatePillBottom}
                 onActiveIndexChange={handleActiveIndexChange}
-                props={chartProps}
+                props={chartView.chartProps}
                 showLegend={false}
                 xAxisLabelBottom={merchBaseXAxisLabelBottom}
                 xAxisTickCount={xAxisTickCount}
@@ -195,23 +204,6 @@ function SummaryMetric({ color, label, value }: { color?: string; label: string;
             </div>
         </div>
     );
-}
-
-function toComposedChartProps(data: MerchbaseSalesSeriesOutput, title: string) {
-    const currencyCode = data.series.find((point) => point.currencyCode)?.currencyCode ?? 'USD';
-
-    return {
-        barSeries: [{ key: 'sales', label: 'Sales' }],
-        data: data.series.map((point) => ({
-            bucket: dateKeyFromBucketStart(point.bucketStart),
-            sales: point.netUnits,
-            royalties: point.royalties,
-        })),
-        lineSeries: [{ key: 'royalties', label: 'Royalties' }],
-        lineUnit: currencyCode,
-        title,
-        xKey: 'bucket',
-    };
 }
 
 function formatMoney(value: number, currencyCode: string) {
