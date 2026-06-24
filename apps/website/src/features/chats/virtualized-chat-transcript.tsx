@@ -14,15 +14,15 @@ import {
     getVirtualizerSizeAdjustmentPredicate,
     shouldAnchorVirtualizerToEnd,
 } from './chat-scroll-mode.ts';
-import type { ConversationMessageLayout, TranscriptRow } from './chat-transcript-model.ts';
+import type { TranscriptRow } from './chat-transcript-model.ts';
+import { useTranscriptRenderContext } from './chat-transcript-render-context.tsx';
 import {
     getEstimatedTranscriptRowSize,
     getEstimatedTranscriptRowsSize,
     type TranscriptRenderRow,
     transcriptRenderRowGap,
-    transcriptRenderRowUsesActiveReply,
 } from './chat-transcript-row-model.ts';
-import { TranscriptRenderRowView } from './chat-transcript-rows.tsx';
+import { TranscriptRenderRowItem } from './chat-transcript-rows.tsx';
 import {
     useChatScrollControllerHandle,
     useChatScrollControllerMode,
@@ -43,15 +43,10 @@ export function VirtualizedChatTranscript({
     activeReply,
     activePresenceVerb = null,
     agentPresenceColor = null,
-    chatId,
-    conversationLayout,
-    currentSessionKey,
-    defaultOpenWorkGroups = false,
     failedTurn = null,
     fetchPreviousPage,
     followKey = null,
     hasPreviousPage,
-    hiddenCount,
     initialScrollKey = null,
     isFetchingPreviousPage,
     presenceRows,
@@ -61,21 +56,17 @@ export function VirtualizedChatTranscript({
     activeReply: ChatActiveReply | null;
     activePresenceVerb?: string | null;
     agentPresenceColor?: string | null;
-    chatId?: string;
-    conversationLayout: ConversationMessageLayout;
-    currentSessionKey?: string | null;
-    defaultOpenWorkGroups?: boolean;
     failedTurn?: ChatTurnFailure | null;
     fetchPreviousPage?: () => void;
     followKey?: string | null;
     hasPreviousPage: boolean;
-    hiddenCount: number;
     initialScrollKey?: string | null;
     isFetchingPreviousPage: boolean;
     presenceRows: TranscriptRow[];
     rows: TranscriptRenderRow[];
     scrollViewportRef: React.RefObject<HTMLDivElement | null>;
 }) {
+    const { chatId, hiddenCount } = useTranscriptRenderContext();
     const initialScrollPendingRef = React.useRef(false);
     const anchorRestorePendingRef = React.useRef(false);
     const chatScrollController = useChatScrollControllerHandle();
@@ -414,8 +405,6 @@ export function VirtualizedChatTranscript({
                     return null;
                 }
 
-                const rendersActiveReply = transcriptRenderRowUsesActiveReply(row, activeReply);
-
                 return (
                     <TranscriptVirtualRow
                         key={virtualItem.key}
@@ -424,18 +413,11 @@ export function VirtualizedChatTranscript({
                         virtualItem={virtualItem}
                         virtualizer={virtualizer}
                     >
-                        <TranscriptRenderRowView
-                            activePresenceVerb={
-                                row.kind === 'entry' && row.showPresence ? activePresenceVerb : null
-                            }
-                            activeReply={rendersActiveReply ? activeReply : null}
+                        <TranscriptRenderRowItem
+                            activePresenceVerb={activePresenceVerb}
+                            activeReply={activeReply}
                             agentPresenceColor={agentPresenceColor}
-                            chatId={chatId}
-                            conversationLayout={conversationLayout}
-                            currentSessionKey={currentSessionKey}
-                            defaultOpenWorkGroups={defaultOpenWorkGroups}
                             failedTurn={failedTurn}
-                            hiddenCount={hiddenCount}
                             presenceRows={presenceRows}
                             row={row}
                         />

@@ -3,46 +3,74 @@ import { DayDivider } from '../../components/ui/day-divider.tsx';
 import type { ChatActiveReply, ChatTurnFailure } from '../../hooks/chats/chat-timeline-state.ts';
 import { SessionLogHiddenCount } from '../sessions/session-log-hidden-count.tsx';
 import type {
-    ConversationMessageLayout,
     TranscriptActor,
     TranscriptEntry,
     TranscriptItem,
     TranscriptRow,
 } from './chat-transcript-model.ts';
-import type { TranscriptRenderRow } from './chat-transcript-row-model.ts';
+import { useTranscriptRenderContext } from './chat-transcript-render-context.tsx';
+import {
+    type TranscriptRenderRow,
+    transcriptRenderRowUsesActiveReply,
+} from './chat-transcript-row-model.ts';
 import { TranscriptEntryView } from './chat-transcript-turn.tsx';
+
+interface TranscriptRenderRowProps {
+    activePresenceVerb?: string | null;
+    activeReply: ChatActiveReply | null;
+    agentPresenceColor?: string | null;
+    failedTurn?: ChatTurnFailure | null;
+    presenceRows: TranscriptRow[];
+    row: TranscriptRenderRow;
+}
 
 interface TranscriptRenderRowViewProps {
     activePresenceVerb?: string | null;
     activeReply: ChatActiveReply | null;
     agentPresenceColor?: string | null;
-    chatId?: string;
-    conversationLayout: ConversationMessageLayout;
-    currentSessionKey?: string | null;
-    defaultOpenWorkGroups?: boolean;
     failedTurn?: ChatTurnFailure | null;
-    hiddenCount: number;
     presenceRows: TranscriptRow[];
     row: TranscriptRenderRow;
+}
+
+export function TranscriptRenderRowItem({
+    activePresenceVerb = null,
+    activeReply,
+    row,
+    ...props
+}: TranscriptRenderRowProps) {
+    return (
+        <TranscriptRenderRowView
+            activePresenceVerb={
+                row.kind === 'entry' && row.showPresence ? activePresenceVerb : null
+            }
+            activeReply={transcriptRenderRowUsesActiveReply(row, activeReply) ? activeReply : null}
+            row={row}
+            {...props}
+        />
+    );
 }
 
 // Entry and item wrappers are rebuilt on every streaming update, but the
 // underlying row objects keep their identity. Comparing structurally lets
 // historical rows skip re-rendering while text streams into the live turn.
-export const TranscriptRenderRowView = React.memo(
+const TranscriptRenderRowView = React.memo(
     ({
         activeReply,
         activePresenceVerb = null,
         agentPresenceColor = null,
-        chatId,
-        conversationLayout,
-        currentSessionKey,
-        defaultOpenWorkGroups = false,
         failedTurn = null,
-        hiddenCount,
         presenceRows,
         row,
     }: TranscriptRenderRowViewProps) => {
+        const {
+            chatId,
+            conversationLayout,
+            currentSessionKey,
+            defaultOpenWorkGroups,
+            hiddenCount,
+        } = useTranscriptRenderContext();
+
         if (row.kind === 'hiddenCount') {
             return <SessionLogHiddenCount hiddenCount={hiddenCount} />;
         }
@@ -81,15 +109,7 @@ function areTranscriptRenderRowViewPropsEqual(
     return (
         previous.activeReply === next.activeReply &&
         previous.activePresenceVerb === next.activePresenceVerb &&
-        previous.chatId === next.chatId &&
-        previous.currentSessionKey === next.currentSessionKey &&
-        previous.defaultOpenWorkGroups === next.defaultOpenWorkGroups &&
-        previous.hiddenCount === next.hiddenCount &&
         arePresencePropsEqual(previous, next) &&
-        previous.conversationLayout.showAgentIdentity ===
-            next.conversationLayout.showAgentIdentity &&
-        previous.conversationLayout.showHumanIdentity ===
-            next.conversationLayout.showHumanIdentity &&
         areRenderRowsEqual(previous.row, next.row)
     );
 }

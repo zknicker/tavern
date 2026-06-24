@@ -9,12 +9,15 @@ import {
     type TranscriptRow,
 } from './chat-transcript-model.ts';
 import {
+    type TranscriptRenderContextValue,
+    TranscriptRenderProvider,
+} from './chat-transcript-render-context.tsx';
+import {
     buildTranscriptRenderRows,
     computeStableTranscriptRenderRows,
     type StableTranscriptRenderRowsState,
-    transcriptRenderRowUsesActiveReply,
 } from './chat-transcript-row-model.ts';
-import { TranscriptRenderRowView } from './chat-transcript-rows.tsx';
+import { TranscriptRenderRowItem } from './chat-transcript-rows.tsx';
 import { VirtualizedChatTranscript } from './virtualized-chat-transcript.tsx';
 
 const directConversationMessageLayout: ConversationMessageLayout = {
@@ -76,6 +79,17 @@ export function ChatTranscript({
     const transcriptRows = useStableTranscriptRenderRows(rawTranscriptRows);
     const latestAgentMessage = React.useMemo(() => getLatestAgentMessage(rows), [rows]);
     const activePresenceVerb = useActivePresenceVerb(activeReply);
+    const renderContext = React.useMemo(
+        () =>
+            ({
+                chatId,
+                conversationLayout,
+                currentSessionKey,
+                defaultOpenWorkGroups,
+                hiddenCount,
+            }) satisfies TranscriptRenderContextValue,
+        [chatId, conversationLayout, currentSessionKey, defaultOpenWorkGroups, hiddenCount]
+    );
 
     React.useEffect(() => {
         if (!activeReply) {
@@ -110,57 +124,39 @@ export function ChatTranscript({
         });
     }, [latestAgentMessage]);
 
-    if (scrollViewportRef) {
-        return (
-            <VirtualizedChatTranscript
-                activePresenceVerb={activePresenceVerb}
-                activeReply={activeReply}
-                agentPresenceColor={agentPresenceColor}
-                chatId={chatId}
-                conversationLayout={conversationLayout}
-                currentSessionKey={currentSessionKey}
-                defaultOpenWorkGroups={defaultOpenWorkGroups}
-                failedTurn={failedTurn}
-                fetchPreviousPage={fetchPreviousPage}
-                followKey={followKey}
-                hasPreviousPage={hasPreviousPage}
-                hiddenCount={hiddenCount}
-                initialScrollKey={initialScrollKey}
-                isFetchingPreviousPage={isFetchingPreviousPage}
-                presenceRows={rows}
-                rows={transcriptRows}
-                scrollViewportRef={scrollViewportRef}
-            />
-        );
-    }
-
     return (
-        <>
-            {transcriptRows.map((row) =>
-                row.kind === 'hiddenCount' && hiddenCount === 0 ? null : (
-                    <TranscriptRenderRowView
-                        activePresenceVerb={
-                            row.kind === 'entry' && row.showPresence ? activePresenceVerb : null
-                        }
-                        activeReply={
-                            transcriptRenderRowUsesActiveReply(row, activeReply)
-                                ? activeReply
-                                : null
-                        }
-                        agentPresenceColor={agentPresenceColor}
-                        chatId={chatId}
-                        conversationLayout={conversationLayout}
-                        currentSessionKey={currentSessionKey}
-                        defaultOpenWorkGroups={defaultOpenWorkGroups}
-                        failedTurn={failedTurn}
-                        hiddenCount={hiddenCount}
-                        key={row.id}
-                        presenceRows={rows}
-                        row={row}
-                    />
+        <TranscriptRenderProvider value={renderContext}>
+            {scrollViewportRef ? (
+                <VirtualizedChatTranscript
+                    activePresenceVerb={activePresenceVerb}
+                    activeReply={activeReply}
+                    agentPresenceColor={agentPresenceColor}
+                    failedTurn={failedTurn}
+                    fetchPreviousPage={fetchPreviousPage}
+                    followKey={followKey}
+                    hasPreviousPage={hasPreviousPage}
+                    initialScrollKey={initialScrollKey}
+                    isFetchingPreviousPage={isFetchingPreviousPage}
+                    presenceRows={rows}
+                    rows={transcriptRows}
+                    scrollViewportRef={scrollViewportRef}
+                />
+            ) : (
+                transcriptRows.map((row) =>
+                    row.kind === 'hiddenCount' && hiddenCount === 0 ? null : (
+                        <TranscriptRenderRowItem
+                            activePresenceVerb={activePresenceVerb}
+                            activeReply={activeReply}
+                            agentPresenceColor={agentPresenceColor}
+                            failedTurn={failedTurn}
+                            key={row.id}
+                            presenceRows={rows}
+                            row={row}
+                        />
+                    )
                 )
             )}
-        </>
+        </TranscriptRenderProvider>
     );
 }
 
