@@ -1,9 +1,5 @@
 import type { IconSvgElement } from '@hugeicons/react';
-import {
-    Database02Icon,
-    Joystick04Icon,
-    RubiksCubeIcon,
-} from '@hugeicons-pro/core-stroke-rounded';
+import { Database02Icon, Joystick04Icon, RubiksCubeIcon } from '@hugeicons-pro/core-stroke-rounded';
 import { TavernLogo } from '../../components/tavern-logo.tsx';
 import { Icon } from '../../components/ui/icon.tsx';
 import type { RouteTab } from '../../hooks/dashboard/use-route-tab.ts';
