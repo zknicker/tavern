@@ -19,14 +19,13 @@ export function SidebarUpdateMenuItem() {
         <SidebarMenuItem>
             <Button
                 aria-label={`${update.sidebarLabel}: ${update.status.detail}`}
-                className="max-w-full justify-start px-2"
+                className="h-[1.875rem] w-full max-w-full justify-start overflow-hidden px-2 text-sm"
                 disabled={!update.canAct}
                 onClick={update.activate}
-                size="sm"
                 variant={isIssue ? 'destructive-soft' : 'brand-soft'}
             >
                 <TavernUpdateIcon phase={update.status.phase} progress={update.progress} />
-                <span className="truncate leading-none">{update.sidebarLabel}</span>
+                <span className="min-w-0 truncate">{update.sidebarLabel}</span>
             </Button>
         </SidebarMenuItem>
     );

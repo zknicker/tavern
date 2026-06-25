@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { toastManager } from '../../components/ui/toast.tsx';
 import { type TavernUpdateStatus, useTavernUpdate } from './use-tavern-update.ts';
 
 export function useTavernUpdateIndicator() {
@@ -30,10 +29,6 @@ export function useTavernUpdateIndicator() {
             return;
         }
 
-        toastManager.add({
-            title: 'Update started',
-            type: 'info',
-        });
         updateAndRestart().catch(() => undefined);
     }, [navigate, status.phase, updateAndRestart]);
 
