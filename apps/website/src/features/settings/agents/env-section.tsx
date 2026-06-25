@@ -5,9 +5,9 @@ import { Card, CardFrame } from '../../../components/ui/card.tsx';
 import { Icon } from '../../../components/ui/icon.tsx';
 import { Button } from '../../../components/ui/primitives/button.tsx';
 import { Input } from '../../../components/ui/primitives/input.tsx';
+import { SecretInput } from '../../../components/ui/secret-input.tsx';
 import { Separator } from '../../../components/ui/separator.tsx';
 import { SettingsRow } from '../../../components/ui/settings-row.tsx';
-import { EnvSecretInput } from './env-secret-input.tsx';
 
 export interface AgentEnvVariable {
     hasValue: boolean;
@@ -118,7 +118,7 @@ export function AgentEnvSection({
                         }
                     >
                         <div className="grid gap-2 sm:grid-cols-[minmax(0,1fr)_auto_auto]">
-                            <EnvSecretInput
+                            <SecretInput
                                 ariaLabel={`${variable.name} value`}
                                 disabled={disabled}
                                 name={`agent-env-${variable.name}`}
@@ -193,7 +193,7 @@ export function AgentEnvSection({
                                       placeholder="NAME"
                                       value={draftName}
                                   />
-                                  <EnvSecretInput
+                                  <SecretInput
                                       ariaLabel="New env var value"
                                       disabled={disabled}
                                       name="agent-env-value"

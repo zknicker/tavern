@@ -1,10 +1,12 @@
 import { EyeIcon, EyeOff } from '@hugeicons-pro/core-stroke-rounded';
 import type { KeyboardEventHandler } from 'react';
-import { Icon } from '../../../components/ui/icon.tsx';
-import { Button } from '../../../components/ui/primitives/button.tsx';
-import { Input } from '../../../components/ui/primitives/input.tsx';
+import { Icon } from './icon.tsx';
+import { Button } from './primitives/button.tsx';
+import { Input } from './primitives/input.tsx';
 
-export function EnvSecretInput({
+// Shared masked-secret field: mono input with a reveal toggle. Used for env
+// variables, integration API keys, and anywhere a secret is entered or edited.
+export function SecretInput({
     ariaLabel,
     disabled,
     name,
