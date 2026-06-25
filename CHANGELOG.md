@@ -2,6 +2,33 @@
 
 All notable changes to this project will be documented in this file.
 
+## v1.4.30 - 2026-06-24
+
+Runtime floor raised to 1.4.30 for MerchBase Integrations, managed agent
+toolset wiring, and default model runtime correctness.
+
+App changes:
+
+- Requires Runtime 1.4.30 so upgraded apps can configure MerchBase Integrations,
+  read MerchBase sales, and render MerchBase Rich Response charts.
+- Adds MerchBase Integration settings and chart rendering, including sparse-day
+  sales data handling and date range controls.
+- Shows Tavern updater state in the sidebar and surfaces updater progress as
+  soon as staging begins.
+- Stabilizes chat scroll anchoring, new chat draft launch, and recovered tool
+  failure presentation.
+- Shows the selected session model in status surfaces.
+
+Runtime changes:
+
+- Adds Runtime-owned MerchBase Integration settings, health, sales reads,
+  capability exposure, managed skill guidance, and toolset plugin wiring.
+- Applies the configured default model runtime before the first prompt in a
+  fresh managed agent session.
+- Removes retired Cortex wiki skill packaging from managed installs.
+- Preserves chat scroll and transcript activity facts needed by the updated app
+  presentation.
+
 ## v1.4.29 - 2026-06-22
 
 Runtime floor raised to 1.4.29 for native Hermes memory and managed Runtime
