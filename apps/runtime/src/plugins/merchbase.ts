@@ -1,18 +1,18 @@
 import { createMerchbaseClient, type MerchbaseClient } from '@merchbase/http-client';
 import {
-    type AgentRuntimeIntegration,
     type AgentRuntimeMerchbaseActionInput,
     type AgentRuntimeMerchbaseActionResult,
     type AgentRuntimeMerchbaseSalesSeries,
     type AgentRuntimeMerchbaseSalesSeriesInput,
     type AgentRuntimeMerchbaseSettings,
+    type AgentRuntimePlugin,
     type AgentRuntimeSaveMerchbaseSettings,
-    agentRuntimeIntegrationSchema,
     agentRuntimeMerchbaseActionInputSchema,
     agentRuntimeMerchbaseActionResultSchema,
     agentRuntimeMerchbaseSalesSeriesInputSchema,
     agentRuntimeMerchbaseSalesSeriesSchema,
     agentRuntimeMerchbaseSettingsSchema,
+    agentRuntimePluginSchema,
     agentRuntimeSaveMerchbaseSettingsSchema,
 } from '@tavern/api';
 import * as z from 'zod';
@@ -25,14 +25,14 @@ import {
     isManagedMerchbaseSkillInstalled,
 } from '../hermes/merchbase-skill';
 import {
-    getIntegration,
-    readIntegrationConfig,
-    readIntegrationSecret,
-    writeIntegrationConfig,
-    writeIntegrationSecret,
+    getPlugin,
+    readPluginConfig,
+    readPluginSecret,
+    writePluginConfig,
+    writePluginSecret,
 } from './store';
 
-const integrationId = 'merchbase' as const;
+const pluginId = 'merchbase' as const;
 const merchbaseProductionBaseUrl = 'https://app.merchbase.co';
 
 const storedMerchbaseConfigSchema = z.object({
@@ -55,15 +55,15 @@ interface EffectiveMerchbaseSettings {
     updatedAt: string | null;
 }
 
-export function listRuntimeIntegrations(): AgentRuntimeIntegration[] {
-    return [getMerchbaseIntegration()];
+export function listRuntimePlugins(): AgentRuntimePlugin[] {
+    return [getMerchbasePlugin()];
 }
 
-export function getMerchbaseIntegration(): AgentRuntimeIntegration {
-    const stored = getIntegration(integrationId);
+export function getMerchbasePlugin(): AgentRuntimePlugin {
+    const stored = getPlugin(pluginId);
     const effective = resolveMerchbaseSettings();
 
-    return agentRuntimeIntegrationSchema.parse({
+    return agentRuntimePluginSchema.parse({
         ...stored,
         config: {
             baseUrl: effective.baseUrl,
@@ -107,11 +107,11 @@ export function saveMerchbaseSettings(
                 : parsed.defaultMarketplace,
     };
     const enabled = parsed.enabled ?? current.enabled;
-    writeIntegrationConfig({ config, enabled, id: integrationId });
+    writePluginConfig({ config, enabled, id: pluginId });
 
     if (parsed.apiKey !== undefined) {
-        writeIntegrationSecret({
-            id: integrationId,
+        writePluginSecret({
+            id: pluginId,
             secret: parsed.apiKey ? { apiKey: parsed.apiKey } : {},
         });
     }
@@ -129,11 +129,9 @@ export async function ensureMerchbaseSkillForEnablement(input: { hermesHome?: st
 export async function applyMerchbaseAgentCapabilityEnablement(enabled: boolean) {
     const client = createLocalHermesClient();
     try {
-        const operations: Promise<unknown>[] = [
-            client.updateToolsetEnabled(integrationId, { enabled }),
-        ];
+        const operations: Promise<unknown>[] = [client.updateToolsetEnabled(pluginId, { enabled })];
         if (await isManagedMerchbaseSkillInstalled()) {
-            operations.push(client.updateSkillEnabled(integrationId, { enabled }));
+            operations.push(client.updateSkillEnabled(pluginId, { enabled }));
         }
         await Promise.allSettled(operations);
     } finally {
@@ -339,12 +337,12 @@ function resolveMerchbaseSettings(): EffectiveMerchbaseSettings {
 }
 
 function resolveStoredMerchbaseSettings() {
-    const integration = getIntegration(integrationId);
+    const plugin = getPlugin(pluginId);
     return {
-        config: readIntegrationConfig(integrationId, storedMerchbaseConfigSchema),
-        enabled: integration.enabled,
-        secret: readIntegrationSecret(integrationId, storedMerchbaseSecretSchema) ?? {},
-        updatedAt: integration.updatedAt,
+        config: readPluginConfig(pluginId, storedMerchbaseConfigSchema),
+        enabled: plugin.enabled,
+        secret: readPluginSecret(pluginId, storedMerchbaseSecretSchema) ?? {},
+        updatedAt: plugin.updatedAt,
     };
 }
 

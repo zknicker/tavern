@@ -32,8 +32,8 @@ export interface SkillDialogSubject {
     enabled?: boolean;
     identifier: null | string;
     installed: boolean;
-    integration: null | { displayName: string; enabled: boolean; id: string };
     name: string;
+    plugin: null | { displayName: string; enabled: boolean; id: string };
     readOnly: boolean;
     skillId: null | string;
     trustLevel?: 'builtin' | 'community' | 'trusted';
@@ -112,10 +112,10 @@ function SkillDialogBody({
             </DialogHeader>
 
             <DialogPanel className="grid gap-4">
-                {subject.integration ? (
+                {subject.plugin ? (
                     <p className="rounded-lg border border-border/70 bg-muted/25 px-3 py-2 text-muted-foreground text-sm">
-                        Managed by the {subject.integration.displayName} Integration. Enable or
-                        disable it from Settings -&gt; Integrations.
+                        Managed by the {subject.plugin.displayName} Plugin. Enable or disable it
+                        from Settings -&gt; Plugins.
                     </p>
                 ) : null}
 

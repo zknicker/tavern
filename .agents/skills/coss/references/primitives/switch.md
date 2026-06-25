@@ -73,7 +73,7 @@ Disabled switch:
 - with description: `p-switch-3`
 - customizing size: `p-switch-6`
 - card style: `p-switch-4`
-- form integration: `p-switch-5`
+- form wiring: `p-switch-5`
 
 ## Common pitfalls
 

@@ -2,7 +2,7 @@
 name: merchbase
 description: >
   Use for MerchBase sales questions, Amazon Merch sales trends, MerchBase
-  Integration health, and when to present the MerchBase sales chart.
+  Plugin health, and when to present the MerchBase sales chart.
 ---
 
 # MerchBase
@@ -11,7 +11,7 @@ Managed by Tavern Runtime. Do not edit this skill directory; Runtime refreshes
 it on startup. For durable agent-managed skill changes, create or update a
 separate skill in your normal skills directory.
 
-MerchBase is a Tavern Integration. Tavern Runtime owns its settings, health,
+MerchBase is a Tavern Plugin. Tavern Runtime owns its settings, health,
 secrets, and read-oriented data actions.
 
 ## Tools
@@ -20,7 +20,7 @@ Use the `merchbase` toolset. These are the agent-facing MerchBase tools:
 
 | Tool | Use |
 | --- | --- |
-| `merchbase_status` | Read masked Integration settings and health. |
+| `merchbase_status` | Read masked Plugin settings and health. |
 | `merchbase_sales_summary` | Sales totals for a range. |
 | `merchbase_sales_records` | Paginated sale rows for inspection. |
 | `merchbase_sales_series` | Time series for trend reasoning. |
@@ -61,6 +61,6 @@ numbers in prose, compare periods, or answer without a Rich Response.
 - Do not run sync, ripcord, ingestion, account switching, setup repair, or
   secret-changing flows.
 - Do not read or change API keys. MerchBase credentials live in Settings ->
-  Integrations.
+  Plugins.
 - If MerchBase is disabled or unhealthy, say that and direct the user to
-  Settings -> Integrations.
+  Settings -> Plugins.

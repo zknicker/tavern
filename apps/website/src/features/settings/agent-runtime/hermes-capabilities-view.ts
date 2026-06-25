@@ -3,7 +3,7 @@ import type { AgentRuntimeConnectionOutput } from '../../../lib/trpc.tsx';
 type RuntimeConnection = NonNullable<AgentRuntimeConnectionOutput>;
 type RuntimeCapability = RuntimeConnection['capabilities'][number];
 type CapabilityId = RuntimeCapability['capability'];
-type CapabilityCategoryId = 'extensions' | 'integrations' | 'knowledge' | 'runtimeCore';
+type CapabilityCategoryId = 'extensions' | 'knowledge' | 'plugins' | 'runtimeCore';
 export type CapabilityCriticality = 'primary' | 'required' | 'supporting';
 
 export interface CapabilityView {
@@ -22,7 +22,7 @@ const categories: CapabilityCategory[] = [
     { id: 'runtimeCore', label: 'Runtime core' },
     { id: 'knowledge', label: 'Knowledge & memory' },
     { id: 'extensions', label: 'Skills & models' },
-    { id: 'integrations', label: 'Integrations' },
+    { id: 'plugins', label: 'Plugins' },
 ];
 
 const capabilityCategories: Partial<Record<CapabilityId, CapabilityCategoryId>> = {
@@ -30,7 +30,7 @@ const capabilityCategories: Partial<Record<CapabilityId, CapabilityCategoryId>> 
     codexOAuth: 'runtimeCore',
     dashboardServer: 'runtimeCore',
     gateway: 'runtimeCore',
-    'integration.merchbase': 'integrations',
+    'plugin.merchbase': 'plugins',
     models: 'extensions',
     skills: 'extensions',
     vault: 'knowledge',
@@ -44,7 +44,7 @@ const capabilityDisplayOrder: CapabilityId[] = [
     'vault',
     'models',
     'skills',
-    'integration.merchbase',
+    'plugin.merchbase',
 ];
 
 const capabilityDisplayRank = new Map(

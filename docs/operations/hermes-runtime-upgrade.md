@@ -8,7 +8,7 @@ read_when:
 
 # Hermes Runtime Upgrade
 
-Hermes upgrades are Runtime integration changes. Tavern keeps the runtime
+Hermes upgrades are Runtime adapter changes. Tavern keeps the runtime
 namespace stable as `tavern-hermes-managed`, starts a managed Hermes dashboard,
 and maps Hermes sessions, turns, tools, thinking, and assistant output into
 Tavern Runtime records.

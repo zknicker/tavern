@@ -1,10 +1,10 @@
 import { TabsSubtle, TabsSubtleItem, TabsSubtleList } from '../../components/ui/tabs-subtle.tsx';
 
-export type SkillsTab = 'available' | 'installed' | 'integrations';
+export type SkillsTab = 'available' | 'installed' | 'plugins';
 
 const tabs: Array<{ id: SkillsTab; label: string }> = [
     { id: 'installed', label: 'Installed' },
-    { id: 'integrations', label: 'Integrations' },
+    { id: 'plugins', label: 'Plugins' },
     { id: 'available', label: 'Available' },
 ];
 

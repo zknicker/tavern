@@ -1,6 +1,6 @@
 import type { AgentRuntimeSkillSummary } from '@tavern/api';
 import type { TavernAgentRuntimeClient } from '../agent-runtime/client.ts';
-import { listAgentRuntimeIntegrations } from '../agent-runtime/integrations.ts';
+import { listAgentRuntimePlugins } from '../agent-runtime/plugins.ts';
 import { listAgentRuntimeSkills, setAgentRuntimeSkillEnabled } from '../agent-runtime/skills.ts';
 import {
     listAgentRuntimeToolsets,
@@ -18,28 +18,28 @@ import {
     type ToolsetSummary,
 } from './contracts.ts';
 import {
-    listMissingIntegrationToolsets,
-    rejectIntegrationSkillEnablement,
-    rejectIntegrationToolsetEnablement,
-    resolveSkillIntegration,
-    resolveToolsetIntegration,
-    type SkillIntegrationRef,
-} from './integration-capabilities.ts';
-import {
     enqueueRuntimeSkillInventoryRefresh,
     enqueueRuntimeSkillInventoryRefreshIfStale,
 } from './inventory-job.ts';
 import { getCachedRuntimeSkillInventory, refreshRuntimeSkillInventory } from './inventory-sync.ts';
+import {
+    listMissingPluginToolsets,
+    rejectPluginSkillEnablement,
+    rejectPluginToolsetEnablement,
+    resolveSkillPlugin,
+    resolveToolsetPlugin,
+    type SkillPluginRef,
+} from './plugin-capabilities.ts';
 
 export async function listSkills(): Promise<SkillList> {
-    const [runtime, toolsets, integrations] = await Promise.all([
+    const [runtime, toolsets, plugins] = await Promise.all([
         getActiveAgentRuntimeConnection(),
         listAgentRuntimeToolsets().catch(() => []),
-        listAgentRuntimeIntegrations().catch(() => []),
+        listAgentRuntimePlugins().catch(() => []),
     ]);
     const skillRuntimeId = getSkillInventoryRuntimeId(runtime);
     const runtimeToolsets = toolsets ?? [];
-    const runtimeIntegrations = integrations ?? [];
+    const runtimePlugins = plugins ?? [];
     const cachedInventory = skillRuntimeId
         ? await getCachedRuntimeSkillInventory(skillRuntimeId).catch(() => null)
         : null;
@@ -48,15 +48,15 @@ export async function listSkills(): Promise<SkillList> {
 
     return skillListSchema.parse({
         skills: filterRuntimeVisibleSkills(cachedInventory?.skills ?? []).map((skill) =>
-            buildSkillSummary(skill, runtimeIntegrations)
+            buildSkillSummary(skill, runtimePlugins)
         ),
         toolsets: [
             ...runtimeToolsets,
-            ...listMissingIntegrationToolsets(
-                runtimeIntegrations,
+            ...listMissingPluginToolsets(
+                runtimePlugins,
                 new Set(runtimeToolsets.map((toolset) => toolset.id))
             ),
-        ].map((toolset) => buildToolsetSummary(toolset, runtimeIntegrations)),
+        ].map((toolset) => buildToolsetSummary(toolset, runtimePlugins)),
     });
 }
 
@@ -68,7 +68,7 @@ export async function setSkillEnabled(input: unknown): Promise<SkillList> {
         ? await getCachedRuntimeSkillInventory(skillRuntimeId).catch(() => null)
         : null;
     const skill = cachedInventory?.skills.find((candidate) => candidate.id === parsed.skillId);
-    rejectIntegrationSkillEnablement(skill ?? parsed.skillId);
+    rejectPluginSkillEnablement(skill ?? parsed.skillId);
     const updated = await setAgentRuntimeSkillEnabled(parsed.skillId, { enabled: parsed.enabled });
     if (!updated) {
         throw new Error('Runtime skill enablement is unavailable.');
@@ -84,7 +84,7 @@ export async function setSkillEnabled(input: unknown): Promise<SkillList> {
 
 export async function setToolsetEnabled(input: unknown): Promise<SkillList> {
     const parsed = setToolsetEnabledInputSchema.parse(input);
-    rejectIntegrationToolsetEnablement(parsed.toolsetId);
+    rejectPluginToolsetEnablement(parsed.toolsetId);
     const updated = await setAgentRuntimeToolsetEnabled(parsed.toolsetId, {
         enabled: parsed.enabled,
     });
@@ -129,24 +129,24 @@ function isRuntimeVisibleSkill(skill: AgentRuntimeSkillSummary) {
 
 function buildSkillSummary(
     skill: AgentRuntimeSkillSummary,
-    integrations: Awaited<ReturnType<typeof listAgentRuntimeIntegrations>>
+    plugins: Awaited<ReturnType<typeof listAgentRuntimePlugins>>
 ) {
-    const integration = resolveSkillIntegration(skill, integrations ?? []);
+    const plugin = resolveSkillPlugin(skill, plugins ?? []);
     const dependencyState = resolveDependencyState(skill);
-    const enabled = integration ? integration.enabled : isSkillEnabled(skill);
+    const enabled = plugin ? plugin.enabled : isSkillEnabled(skill);
     const usability = resolveSkillUsability({ dependencyState, enabled });
 
     return skillSummarySchema.parse({
         allowedTools: skill.allowedTools,
-        diagnostic: buildSkillDiagnostic(skill, dependencyState, integration),
+        diagnostic: buildSkillDiagnostic(skill, dependencyState, plugin),
         dependencyState,
         description: skill.description,
         enabled,
         id: skill.id,
-        integration,
         missing: skill.missing,
         name: skill.name,
-        readOnly: integration !== null,
+        plugin,
+        readOnly: plugin !== null,
         surface: resolveSkillSurface(),
         updatedAt: skill.updatedAt,
         usability,
@@ -168,22 +168,19 @@ function buildToolsetSummary(
         placeholder?: boolean;
         tools: string[];
     },
-    integrations: Awaited<ReturnType<typeof listAgentRuntimeIntegrations>>
+    plugins: Awaited<ReturnType<typeof listAgentRuntimePlugins>>
 ): ToolsetSummary {
-    const integration = resolveToolsetIntegration(
-        { ...toolset, name: toolset.label },
-        integrations ?? []
-    );
-    const enabled = integration ? integration.enabled : toolset.enabled;
-    const diagnostic = resolveToolsetDiagnostic({ enabled, integration, toolset });
+    const plugin = resolveToolsetPlugin({ ...toolset, name: toolset.label }, plugins ?? []);
+    const enabled = plugin ? plugin.enabled : toolset.enabled;
+    const diagnostic = resolveToolsetDiagnostic({ enabled, plugin, toolset });
     return {
         configured: toolset.configured,
         description: toolset.description,
         diagnostic,
         enabled,
         id: toolset.id,
-        integration,
         name: toolset.label,
+        plugin,
         tools: toolset.tools,
         usability: diagnostic ? 'not_usable' : enabled ? 'enabled' : 'disabled',
     };
@@ -191,18 +188,18 @@ function buildToolsetSummary(
 
 function resolveToolsetDiagnostic(input: {
     enabled: boolean;
-    integration: SkillIntegrationRef | null;
+    plugin: SkillPluginRef | null;
     toolset: { configured: boolean; placeholder?: boolean };
 }) {
-    if (input.integration && !input.integration.enabled) {
-        return `Enable ${input.integration.displayName} in Integrations.`;
+    if (input.plugin && !input.plugin.enabled) {
+        return `Enable ${input.plugin.displayName} in Plugins.`;
     }
-    if (input.integration && 'placeholder' in input.toolset) {
-        return `Restart the agent engine to load ${input.integration.displayName} tools.`;
+    if (input.plugin && 'placeholder' in input.toolset) {
+        return `Restart the agent engine to load ${input.plugin.displayName} tools.`;
     }
     if (input.enabled && !input.toolset.configured) {
-        return input.integration
-            ? `Finish ${input.integration.displayName} setup in Integrations.`
+        return input.plugin
+            ? `Finish ${input.plugin.displayName} setup in Plugins.`
             : 'Required provider keys are missing.';
     }
     return null;
@@ -228,10 +225,10 @@ function isSkillEnabled(skill: AgentRuntimeSkillSummary) {
 function buildSkillDiagnostic(
     skill: AgentRuntimeSkillSummary,
     dependencyState: SkillSummary['dependencyState'],
-    integration: SkillIntegrationRef | null
+    plugin: SkillPluginRef | null
 ) {
-    if (integration && !integration.enabled) {
-        return `Enable ${integration.displayName} in Integrations.`;
+    if (plugin && !plugin.enabled) {
+        return `Enable ${plugin.displayName} in Plugins.`;
     }
     if (dependencyState !== 'missing') {
         return null;

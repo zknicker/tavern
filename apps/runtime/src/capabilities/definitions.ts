@@ -9,8 +9,8 @@ import type {
 import { createLocalHermesClient } from '../hermes/local-client.ts';
 import { getManagedVaultSkillPath } from '../hermes/managed-vault.ts';
 import { getManagedHermesState } from '../hermes/state.ts';
-import { checkMerchbaseCapability } from '../integrations/merchbase.ts';
 import { loadVaultBackedCodexCredentials } from '../model-access/codex-settings.ts';
+import { checkMerchbaseCapability } from '../plugins/merchbase.ts';
 import { resolveVaultConfig } from '../vault/store.ts';
 
 export interface RuntimeCapabilityCheckResult {
@@ -145,7 +145,7 @@ export const runtimeCapabilityDefinitions: RuntimeCapabilityDefinition[] = [
             return await checkMerchbaseCapability();
         },
         displayName: 'MerchBase',
-        id: 'integration.merchbase',
+        id: 'plugin.merchbase',
         refresh: {
             intervalMs: 5 * minuteMs,
             runOnStart: true,

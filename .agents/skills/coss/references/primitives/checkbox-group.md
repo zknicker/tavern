@@ -91,5 +91,5 @@ See `p-checkbox-group-1` through `p-checkbox-group-5` for disabled items, parent
 - with disabled item: `p-checkbox-group-2`
 - parent checkbox: `p-checkbox-group-3`
 - nested parent checkbox: `p-checkbox-group-4`
-- form integration: `p-checkbox-group-5`
+- form wiring: `p-checkbox-group-5`
 - form composition references: `p-form-1`, `p-form-2`, `p-input-group-24`

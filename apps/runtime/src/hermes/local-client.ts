@@ -111,7 +111,7 @@ export function createLocalHermesClient() {
     return new LocalHermesClient(readHermesConnectionOptions());
 }
 
-async function markManagedIntegrationSkills(skills: AgentRuntimeSkillSummary[]) {
+async function markManagedPluginSkills(skills: AgentRuntimeSkillSummary[]) {
     const merchbaseManaged = await isManagedMerchbaseSkillInstalled().catch(() => false);
     return skills.map((skill) => {
         if (
@@ -766,7 +766,7 @@ export class LocalHermesClient extends LocalHermesUnsupportedSurfaces {
     }): Promise<{ skills: AgentRuntimeSkillSummary[] }> {
         const response = await this.#http.get('/api/skills');
         const skills = readArray(response, ['skills', 'data', 'items']).map(mapHermesSkill);
-        return { skills: await markManagedIntegrationSkills(skills) };
+        return { skills: await markManagedPluginSkills(skills) };
     }
 
     async listToolsets(): Promise<{ toolsets: AgentRuntimeToolset[] }> {

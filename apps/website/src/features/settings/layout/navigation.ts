@@ -78,9 +78,9 @@ export const settingsNavItems = [
     },
     {
         icon: PuzzleIcon,
-        id: 'integrations',
-        label: 'Integrations',
-        to: '/dashboard/settings/integrations',
+        id: 'plugins',
+        label: 'Plugins',
+        to: '/dashboard/settings/plugins',
     },
     {
         icon: PlugSocketIcon,
@@ -127,7 +127,7 @@ export const settingsNavSections = [
             'soul-md',
             'skills',
             'toolsets',
-            'integrations',
+            'plugins',
             'connectors',
             'memories',
         ],

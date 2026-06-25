@@ -73,10 +73,12 @@ manage businesses, complete knowledge work, and automate routine tasks.
 * **Cron automations.** Scheduled agent work with run history, delivery targets,
   and clear follow-up state, even while the app is closed.
 * **Skills & Toolsets.** Reusable instruction packages and Hermes tool groups.
+* **Plugins.** First-party external service capabilities with settings-owned
+  setup, health, and agent-readable tools.
 * **Stats.** Usage, spend, runtime health, and operational signal without
   reading logs.
 * **Pets and rewards.** A playful layer for long-running agent work.
-* **TypeScript SDK + integrations.** A typed client for the Tavern API: Tavern
+* **TypeScript SDK.** A typed client for the Tavern API: Tavern
   App, chat, memory inspection, Vault browsing, automations, webhooks,
   local tools, and managed Hermes.
 
@@ -91,9 +93,10 @@ manage businesses, complete knowledge work, and automate routine tasks.
 | Memory | [Memory](features/memory.md) |
 | Automations | [Automations](features/automations.md) |
 | Skills & Toolsets | [Skills & Toolsets](features/skills.md) |
+| Plugins | [Plugins](features/plugins.md) |
 | Stats | [Stats](features/stats.md) |
 | Pets and rewards | [Pets and rewards](features/pets.md) |
-| TypeScript SDK + integrations | [TypeScript SDK](sdk.md) |
+| TypeScript SDK | [TypeScript SDK](sdk.md) |
 
 ## Internals
 

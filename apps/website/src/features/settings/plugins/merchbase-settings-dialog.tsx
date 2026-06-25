@@ -5,15 +5,15 @@ import { FieldError } from '../../../components/ui/primitives/field.tsx';
 import { Input } from '../../../components/ui/primitives/input.tsx';
 import { SecretInput } from '../../../components/ui/secret-input.tsx';
 import type { MerchbaseSettingsOutput } from '../../../lib/trpc.tsx';
-import {
-    IntegrationDialog,
-    IntegrationField,
-    IntegrationFieldRow,
-    IntegrationLockSwitch,
-    IntegrationNotice,
-} from './integration-dialog.tsx';
 import { merchbaseEnvironmentLockTooltip } from './merchbase-settings-copy.ts';
 import type { MerchbaseSettingsDraft } from './merchbase-settings-model.ts';
+import {
+    PluginDialog,
+    PluginField,
+    PluginFieldRow,
+    PluginLockSwitch,
+    PluginNotice,
+} from './plugin-dialog.tsx';
 
 type MerchbaseSettings = NonNullable<MerchbaseSettingsOutput>;
 
@@ -42,7 +42,7 @@ export function MerchbaseSettingsDialog({
     const [apiKeyRevealed, setApiKeyRevealed] = useState(false);
 
     return (
-        <IntegrationDialog
+        <PluginDialog
             description="Powers MerchBase agent tools and sales widgets."
             footer={
                 <Button
@@ -55,7 +55,7 @@ export function MerchbaseSettingsDialog({
                 </Button>
             }
             headerAction={
-                <IntegrationLockSwitch
+                <PluginLockSwitch
                     aria-label={
                         environmentControlled
                             ? 'MerchBase enablement is managed by local Tavern configuration'
@@ -79,9 +79,9 @@ export function MerchbaseSettingsDialog({
             }}
             open={open}
             title="MerchBase"
-            titleSuffix="Integration"
+            titleSuffix="Plugin"
         >
-            <IntegrationField label="Base URL">
+            <PluginField label="Base URL">
                 <Input
                     aria-label="MerchBase base URL"
                     className="font-mono"
@@ -94,10 +94,10 @@ export function MerchbaseSettingsDialog({
                     }
                     value={draft.baseUrl}
                 />
-            </IntegrationField>
+            </PluginField>
 
-            <IntegrationFieldRow>
-                <IntegrationField label="Default account">
+            <PluginFieldRow>
+                <PluginField label="Default account">
                     <Input
                         aria-label="MerchBase default account"
                         disabled={isSaving}
@@ -110,9 +110,9 @@ export function MerchbaseSettingsDialog({
                         placeholder="Use MerchBase default"
                         value={draft.defaultAccount}
                     />
-                </IntegrationField>
+                </PluginField>
 
-                <IntegrationField label="Default marketplace">
+                <PluginField label="Default marketplace">
                     <Input
                         aria-label="MerchBase default marketplace"
                         disabled={isSaving}
@@ -125,10 +125,10 @@ export function MerchbaseSettingsDialog({
                         placeholder="Use MerchBase default"
                         value={draft.defaultMarketplace}
                     />
-                </IntegrationField>
-            </IntegrationFieldRow>
+                </PluginField>
+            </PluginFieldRow>
 
-            <IntegrationField label="API key">
+            <PluginField label="API key">
                 <SecretInput
                     ariaLabel="MerchBase API key"
                     disabled={isSaving}
@@ -141,17 +141,17 @@ export function MerchbaseSettingsDialog({
                     revealed={apiKeyRevealed}
                     value={draft.apiKey}
                 />
-            </IntegrationField>
+            </PluginField>
 
             {settings.skillConflict ? (
-                <IntegrationNotice title="Skill conflict">
+                <PluginNotice title="Skill conflict">
                     Existing skill at{' '}
                     <span className="font-mono">{settings.skillConflict.skillPath}</span>. Enabling
                     MerchBase will replace it after confirmation.
-                </IntegrationNotice>
+                </PluginNotice>
             ) : null}
 
             {error ? <FieldError>{error}</FieldError> : null}
-        </IntegrationDialog>
+        </PluginDialog>
     );
 }

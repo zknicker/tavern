@@ -29,7 +29,7 @@ CREATE TABLE IF NOT EXISTS runtime_capabilities (
   updated_at        TEXT NOT NULL
 );
 
-CREATE TABLE IF NOT EXISTS runtime_integrations (
+CREATE TABLE IF NOT EXISTS runtime_plugins (
   id          TEXT PRIMARY KEY,
   enabled     INTEGER NOT NULL CHECK (enabled IN (0, 1)),
   config_json TEXT NOT NULL DEFAULT '{}',
@@ -37,12 +37,12 @@ CREATE TABLE IF NOT EXISTS runtime_integrations (
   updated_at  TEXT NOT NULL
 );
 
-CREATE TABLE IF NOT EXISTS runtime_integration_secrets (
-  integration_id TEXT PRIMARY KEY,
-  secret_json    TEXT NOT NULL,
-  created_at     TEXT NOT NULL,
-  updated_at     TEXT NOT NULL,
-  FOREIGN KEY(integration_id) REFERENCES runtime_integrations(id) ON DELETE CASCADE
+CREATE TABLE IF NOT EXISTS runtime_plugin_secrets (
+  plugin_id   TEXT PRIMARY KEY,
+  secret_json TEXT NOT NULL,
+  created_at  TEXT NOT NULL,
+  updated_at  TEXT NOT NULL,
+  FOREIGN KEY(plugin_id) REFERENCES runtime_plugins(id) ON DELETE CASCADE
 );
 
 CREATE TABLE IF NOT EXISTS workspace_agent_instructions (
@@ -110,7 +110,7 @@ CREATE TABLE IF NOT EXISTS chats (
 CREATE TABLE IF NOT EXISTS chat_participants (
   chat_id       TEXT NOT NULL,
   id            TEXT NOT NULL,
-  kind          TEXT NOT NULL CHECK (kind IN ('user', 'agent', 'system', 'integration')),
+  kind          TEXT NOT NULL CHECK (kind IN ('user', 'agent', 'system', 'plugin')),
   label         TEXT,
   metadata_json TEXT NOT NULL DEFAULT '{}',
   PRIMARY KEY(chat_id, id),

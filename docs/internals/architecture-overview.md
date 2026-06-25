@@ -9,7 +9,7 @@ read_when:
 
 Tavern is an always-on local chat server plus a polished Mac client.
 
-Tavern Runtime owns the canonical chat server and local integration. Tavern App
+Tavern Runtime owns the canonical chat server and local service connections. Tavern App
 is the first-party client for that server. Hermes owns native agent execution.
 
 ```mermaid

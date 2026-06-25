@@ -31,9 +31,6 @@ import {
     type AgentRuntimeDiscordBinding,
     type AgentRuntimeExecutionSettings,
     type AgentRuntimeHermesConfigSnapshot,
-    type AgentRuntimeIntegration,
-    type AgentRuntimeIntegrationId,
-    type AgentRuntimeIntegrationList,
     type AgentRuntimeJobDetail,
     type AgentRuntimeJobList,
     type AgentRuntimeJobSlug,
@@ -55,6 +52,9 @@ import {
     type AgentRuntimeOpenAiSettings,
     type AgentRuntimeOpenRouterSettings,
     type AgentRuntimePermissionSettings,
+    type AgentRuntimePlugin,
+    type AgentRuntimePluginId,
+    type AgentRuntimePluginList,
     type AgentRuntimePollModelProviderOAuth,
     type AgentRuntimeRenderedWorkspaceInstructions,
     type AgentRuntimeRunCommand,
@@ -156,9 +156,6 @@ import {
     agentRuntimeErrorSchema,
     agentRuntimeExecutionSettingsSchema,
     agentRuntimeHermesConfigSnapshotSchema,
-    agentRuntimeIntegrationIdSchema,
-    agentRuntimeIntegrationListSchema,
-    agentRuntimeIntegrationSchema,
     agentRuntimeJobDetailSchema,
     agentRuntimeJobListSchema,
     agentRuntimeJobSlugSchema,
@@ -186,6 +183,9 @@ import {
     agentRuntimeOpenAiSettingsSchema,
     agentRuntimeOpenRouterSettingsSchema,
     agentRuntimePermissionSettingsSchema,
+    agentRuntimePluginIdSchema,
+    agentRuntimePluginListSchema,
+    agentRuntimePluginSchema,
     agentRuntimePollModelProviderOAuthSchema,
     agentRuntimeRenderedWorkspaceInstructionsSchema,
     agentRuntimeRoutes,
@@ -327,7 +327,6 @@ export interface TavernAgentRuntimeClient {
     getCronJob(jobId: string): Promise<AgentRuntimeCron>;
     getExecutionSettings(): Promise<AgentRuntimeExecutionSettings>;
     getHermesConfig(): Promise<AgentRuntimeHermesConfigSnapshot>;
-    getIntegration(id: AgentRuntimeIntegrationId): Promise<AgentRuntimeIntegration>;
     getMcpCatalog(): Promise<AgentRuntimeMcpCatalog>;
     getMerchbaseSettings(): Promise<AgentRuntimeMerchbaseSettings>;
     getModelAccess(): Promise<AgentRuntimeModelAccess>;
@@ -335,6 +334,7 @@ export interface TavernAgentRuntimeClient {
     getOpenAiSettings(): Promise<AgentRuntimeOpenAiSettings>;
     getOpenRouterSettings(): Promise<AgentRuntimeOpenRouterSettings>;
     getPermissionSettings(): Promise<AgentRuntimePermissionSettings>;
+    getPlugin(id: AgentRuntimePluginId): Promise<AgentRuntimePlugin>;
     getRuntimeJob(slug: AgentRuntimeJobSlug): Promise<AgentRuntimeJobDetail | null>;
     getSessionGraph(sessionKey: string): Promise<AgentRuntimeSessionGraph>;
     getSessionPrompt(sessionKey: string): Promise<AgentRuntimeSessionPrompt | null>;
@@ -361,9 +361,9 @@ export interface TavernAgentRuntimeClient {
     listCronJobs(): Promise<AgentRuntimeCronList>;
     listCronRuns(jobId?: string): Promise<{ runs: AgentRuntimeCronRun[] }>;
     listDiscordBindings(): Promise<{ bindings: AgentRuntimeDiscordBinding[] }>;
-    listIntegrations(): Promise<AgentRuntimeIntegrationList>;
     listMacApps(options?: { limit?: number; query?: string }): Promise<AgentRuntimeMacAppList>;
     listMcpServers(): Promise<AgentRuntimeMcpServerList>;
+    listPlugins(): Promise<AgentRuntimePluginList>;
     listRuntimeJobs(): Promise<AgentRuntimeJobList>;
     listSessionMessages(
         sessionKey: string,
@@ -1660,8 +1660,8 @@ class HttpTavernAgentRuntimeClient implements TavernAgentRuntimeClient {
         return agentRuntimeConnectorListSchema.parse(await response.json());
     }
 
-    async listIntegrations() {
-        const response = await fetch(`${this.#baseUrl}${agentRuntimeRoutes.integrations}`, {
+    async listPlugins() {
+        const response = await fetch(`${this.#baseUrl}${agentRuntimeRoutes.plugins}`, {
             headers: this.#authHeaders,
         });
 
@@ -1669,14 +1669,12 @@ class HttpTavernAgentRuntimeClient implements TavernAgentRuntimeClient {
             await readErrorResponse(response);
         }
 
-        return agentRuntimeIntegrationListSchema.parse(await response.json());
+        return agentRuntimePluginListSchema.parse(await response.json());
     }
 
-    async getIntegration(id: AgentRuntimeIntegrationId) {
+    async getPlugin(id: AgentRuntimePluginId) {
         const response = await fetch(
-            `${this.#baseUrl}${agentRuntimeRoutes.integration(
-                agentRuntimeIntegrationIdSchema.parse(id)
-            )}`,
+            `${this.#baseUrl}${agentRuntimeRoutes.plugin(agentRuntimePluginIdSchema.parse(id))}`,
             { headers: this.#authHeaders }
         );
 
@@ -1684,12 +1682,12 @@ class HttpTavernAgentRuntimeClient implements TavernAgentRuntimeClient {
             await readErrorResponse(response);
         }
 
-        return agentRuntimeIntegrationSchema.parse(await response.json());
+        return agentRuntimePluginSchema.parse(await response.json());
     }
 
     async getMerchbaseSettings() {
         const response = await fetch(
-            `${this.#baseUrl}${agentRuntimeRoutes.integrationMerchbaseSettings}`,
+            `${this.#baseUrl}${agentRuntimeRoutes.pluginMerchbaseSettings}`,
             { headers: this.#authHeaders }
         );
 
@@ -1703,7 +1701,7 @@ class HttpTavernAgentRuntimeClient implements TavernAgentRuntimeClient {
     async saveMerchbaseSettings(input: AgentRuntimeSaveMerchbaseSettings) {
         const payload = agentRuntimeSaveMerchbaseSettingsSchema.parse(input);
         const response = await fetch(
-            `${this.#baseUrl}${agentRuntimeRoutes.integrationMerchbaseSettings}`,
+            `${this.#baseUrl}${agentRuntimeRoutes.pluginMerchbaseSettings}`,
             {
                 body: JSON.stringify(payload),
                 headers: {
@@ -1725,7 +1723,7 @@ class HttpTavernAgentRuntimeClient implements TavernAgentRuntimeClient {
     async queryMerchbaseSalesSeries(input: AgentRuntimeMerchbaseSalesSeriesInput) {
         const payload = agentRuntimeMerchbaseSalesSeriesInputSchema.parse(input);
         const response = await fetch(
-            `${this.#baseUrl}${agentRuntimeRoutes.integrationMerchbaseSalesSeries}`,
+            `${this.#baseUrl}${agentRuntimeRoutes.pluginMerchbaseSalesSeries}`,
             {
                 body: JSON.stringify(payload),
                 headers: {
@@ -1746,7 +1744,7 @@ class HttpTavernAgentRuntimeClient implements TavernAgentRuntimeClient {
     async queryMerchbaseAction(input: AgentRuntimeMerchbaseActionInput) {
         const payload = agentRuntimeMerchbaseActionInputSchema.parse(input);
         const response = await fetch(
-            `${this.#baseUrl}${agentRuntimeRoutes.integrationMerchbaseAction}`,
+            `${this.#baseUrl}${agentRuntimeRoutes.pluginMerchbaseAction}`,
             {
                 body: JSON.stringify(payload),
                 headers: {

@@ -2,8 +2,8 @@ import { describe, expect, test } from 'bun:test';
 import { renderToString } from 'react-dom/server';
 import { MerchbaseSettingsCard } from './page.tsx';
 
-describe('MerchBase Integration settings', () => {
-    test('renders the integration row without exposing connection details', () => {
+describe('MerchBase Plugin settings', () => {
+    test('renders the plugin row without exposing connection details', () => {
         const markup = renderToString(
             <MerchbaseSettingsCard
                 onSave={() => undefined}

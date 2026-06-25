@@ -2,7 +2,7 @@
 summary: Tavern API architecture for OpenAPI chat/realtime, typed admin contracts, Runtime handlers, SDK wrapper, and contract rules.
 read_when:
   - changing tRPC routers, runtime HTTP routes, websocket behavior, or SDK methods
-  - adding integrations, bots, webhooks, automations, or external clients
+  - adding Plugins, bots, webhooks, automations, or external clients
 ---
 
 # API Overview
@@ -52,7 +52,7 @@ cache, and shape data for React, but it does not define a separate product API.
 | Automations | [Automations API](automations.md) |
 | Skills | [Skills API](skills.md) |
 | Stats | [Stats API](stats.md) |
-| Integrations | [Integrations API](integrations.md) |
+| Plugins | [Plugins API](plugins.md) |
 | Realtime | [Realtime](realtime.md) |
 | Auth | [Auth](auth.md) |
 

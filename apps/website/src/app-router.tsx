@@ -235,13 +235,13 @@ export function createAppRouter() {
                                             ),
                                         },
                                         {
-                                            path: 'integrations',
+                                            path: 'plugins',
                                             lazy: lazyRoute(
                                                 () =>
                                                     import(
-                                                        './routes/dashboard/settings-integrations-page.tsx'
+                                                        './routes/dashboard/settings-plugins-page.tsx'
                                                     ),
-                                                'SettingsIntegrationsPage'
+                                                'SettingsPluginsPage'
                                             ),
                                         },
                                         {

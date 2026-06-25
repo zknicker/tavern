@@ -204,7 +204,7 @@ connection status.
 ## Capability Examples
 
 Runtime capabilities cover first-party Runtime services, managed Hermes
-integration points, and external dependencies.
+adapter checks, and external dependencies.
 
 | Capability | Healthy when |
 | --- | --- |
@@ -214,7 +214,7 @@ integration points, and external dependencies.
 | `vault` | The configured Vault root can be read and the managed `vault` skill has been prepared. Runtime reports write access in capability metadata because agent wiki maintenance needs it, but read-only roots remain browseable. |
 | `models` | Runtime can reach managed Hermes model inventory at `/api/model/options`. |
 | `skills` | Runtime can reach managed Hermes skill inventory at `/api/skills`. App-side capability methods under `skills` also track the skill hub (`skill-hub.*`), toolset setup (`toolsets.config`/`toolsets.setup`), and MCP management (`mcp.*`) surfaces. |
-| `integration.merchbase` | Runtime has an enabled MerchBase Integration, an API key, and can read the configured MerchBase account. |
+| `plugin.merchbase` | Runtime has an enabled MerchBase Plugin, an API key, and can read the configured MerchBase account. |
 
 Plain Tavern CRUD, timeline, mentions, cron, and logging surfaces are not
 capabilities by themselves. Add a capability only when a user-facing action

@@ -13,7 +13,7 @@ import { useSkillList } from '../../hooks/skills/use-skill-list.ts';
 import { useToolsetEnabledSet } from '../../hooks/skills/use-toolset-enabled-set.ts';
 import type { SkillListOutput } from '../../lib/trpc.tsx';
 
-type ToolsetsTab = 'standard' | 'integrations';
+type ToolsetsTab = 'plugins' | 'standard';
 
 export function ToolsetsPage() {
     const [addToolsetOpen, setAddToolsetOpen] = React.useState(false);
@@ -24,8 +24,8 @@ export function ToolsetsPage() {
     const setToolsetEnabled = useToolsetEnabledSet();
     const skillsQuery = useSkillList();
     const toolsets = skillsQuery.data?.toolsets ?? [];
-    const standardToolsets = toolsets.filter((toolset) => !toolset.integration);
-    const integrationToolsets = toolsets.filter((toolset) => toolset.integration);
+    const standardToolsets = toolsets.filter((toolset) => !toolset.plugin);
+    const pluginToolsets = toolsets.filter((toolset) => toolset.plugin);
     const savingToolsetIds = React.useMemo(
         () =>
             setToolsetEnabled.isPending && setToolsetEnabled.variables
@@ -63,7 +63,7 @@ export function ToolsetsPage() {
             <section className="grid gap-4">
                 <ToolsetsTabBar
                     counts={{
-                        integrations: integrationToolsets.length,
+                        plugins: pluginToolsets.length,
                         standard: standardToolsets.length,
                     }}
                     onChange={setTab}
@@ -71,20 +71,18 @@ export function ToolsetsPage() {
                 />
                 <ToolsetsList
                     emptyDescription={
-                        tab === 'integrations'
-                            ? 'Integration toolsets appear here when Integrations expose agent tools.'
+                        tab === 'plugins'
+                            ? 'Plugin toolsets appear here when Plugins expose agent tools.'
                             : undefined
                     }
-                    emptyTitle={tab === 'integrations' ? 'No Integration toolsets' : undefined}
+                    emptyTitle={tab === 'plugins' ? 'No Plugin toolsets' : undefined}
                     onConfigure={setSetupToolset}
                     onSetEnabled={(input) => setToolsetEnabled.mutate(input)}
                     savingToolsetIds={savingToolsetIds}
                     searchPlaceholder={
-                        tab === 'integrations'
-                            ? 'Search Integration toolsets...'
-                            : 'Search toolsets...'
+                        tab === 'plugins' ? 'Search Plugin toolsets...' : 'Search toolsets...'
                     }
-                    toolsets={tab === 'integrations' ? integrationToolsets : standardToolsets}
+                    toolsets={tab === 'plugins' ? pluginToolsets : standardToolsets}
                 />
             </section>
 
@@ -112,7 +110,7 @@ export function ToolsetsPage() {
 
 const toolsetTabs: Array<{ id: ToolsetsTab; label: string }> = [
     { id: 'standard', label: 'Toolsets' },
-    { id: 'integrations', label: 'Integrations' },
+    { id: 'plugins', label: 'Plugins' },
 ];
 
 function ToolsetsTabBar({

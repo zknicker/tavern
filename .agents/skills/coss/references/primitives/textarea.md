@@ -53,14 +53,14 @@ Sizes: `sm`, `default`, `lg` on `Textarea`.
 
 ### More examples
 
-See `p-textarea-1` through `p-textarea-6` for sizes, disabled, label, and form integration patterns.
+See `p-textarea-1` through `p-textarea-6` for sizes, disabled, label, and form wiring patterns.
 
 ## Common pitfalls
 
 - Using textarea when a constrained single-line input is expected.
 - Missing labels/descriptions for required long-form fields.
 - Forgetting explicit submit button type handling in textarea forms.
-- Using `FieldControl render={<textarea .../>}` for basic textarea fields when `Textarea` already provides the correct control integration.
+- Using `FieldControl render={<textarea .../>}` for basic textarea fields when `Textarea` already provides the correct control wiring.
 
 ## Useful particle references
 
@@ -68,4 +68,4 @@ See `p-textarea-1` through `p-textarea-6` for sizes, disabled, label, and form i
 - large size: `p-textarea-3`
 - disabled: `p-textarea-4`
 - with label: `p-textarea-5`
-- form integration: `p-textarea-6`
+- form wiring: `p-textarea-6`

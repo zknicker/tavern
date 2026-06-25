@@ -233,7 +233,7 @@ not a second Hermes transcript.
 
 ## ACP
 
-ACP is not part of Tavern Messenger. ACP may remain useful for IDE or client harness integration,
+ACP is not part of Tavern Messenger. ACP may remain useful for IDE or client harness adapters,
 but Tavern Messenger is the primary channel for Tavern chat because it preserves richer Tavern
 concepts such as chat identity, participants, approvals, active reply state, tool execution, and
 delivery metadata.

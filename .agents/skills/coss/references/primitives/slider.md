@@ -53,7 +53,7 @@ Range slider (two thumbs):
 
 ### More examples
 
-See `p-slider-1` through `p-slider-5` for label, range, vertical, and form integration patterns.
+See `p-slider-1` through `p-slider-5` for label, range, vertical, and form wiring patterns.
 
 ## Common pitfalls
 
@@ -66,4 +66,4 @@ See `p-slider-1` through `p-slider-5` for label, range, vertical, and form integ
 - with label and value: `p-slider-2`
 - range slider: `p-slider-3`
 - vertical: `p-slider-4`
-- form integration: `p-slider-5`
+- form wiring: `p-slider-5`

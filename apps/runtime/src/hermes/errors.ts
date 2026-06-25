@@ -20,9 +20,7 @@ export function isManagedHermesSetupError(err: unknown): err is Error & { code: 
 }
 
 export function unsupportedHermesSurface(message: string): never {
-    const error = new Error(
-        `${message} is not supported by the agent engine integration yet.`
-    ) as Error & {
+    const error = new Error(`${message} is not supported by the agent engine yet.`) as Error & {
         code?: string;
     };
     error.code = 'unsupported_hermes_surface';

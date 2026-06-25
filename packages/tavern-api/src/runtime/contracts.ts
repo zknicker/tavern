@@ -12,7 +12,7 @@ export const agentRuntimeCapabilitySchema = z.enum([
     'gateway',
     'models',
     'skills',
-    'integration.merchbase',
+    'plugin.merchbase',
 ]);
 
 export const agentRuntimeCapabilityHealthIdSchema = agentRuntimeCapabilitySchema;
@@ -440,29 +440,29 @@ export const agentRuntimeThinkingLevelSchema = z.enum([
 
 const agentRuntimeJsonRecordSchema = z.record(z.string(), z.unknown());
 
-export const agentRuntimeIntegrationIdSchema = z.enum(['merchbase']);
+export const agentRuntimePluginIdSchema = z.enum(['merchbase']);
 
-const agentRuntimeIntegrationSecretFieldSchema = z
+const agentRuntimePluginSecretFieldSchema = z
     .object({
         hasValue: z.boolean(),
         name: z.string().trim().min(1).max(128),
     })
     .strict();
 
-export const agentRuntimeIntegrationSchema = z
+export const agentRuntimePluginSchema = z
     .object({
         config: agentRuntimeJsonRecordSchema,
         displayName: z.string().trim().min(1),
         enabled: z.boolean(),
-        id: agentRuntimeIntegrationIdSchema,
-        secrets: z.array(agentRuntimeIntegrationSecretFieldSchema),
+        id: agentRuntimePluginIdSchema,
+        secrets: z.array(agentRuntimePluginSecretFieldSchema),
         updatedAt: z.string().datetime().nullable(),
     })
     .strict();
 
-export const agentRuntimeIntegrationListSchema = z
+export const agentRuntimePluginListSchema = z
     .object({
-        integrations: z.array(agentRuntimeIntegrationSchema),
+        plugins: z.array(agentRuntimePluginSchema),
     })
     .strict();
 
@@ -2427,9 +2427,9 @@ export type AgentRuntimeCapabilityHealthState = z.infer<
 export type AgentRuntimeRefreshCapabilities = z.infer<typeof agentRuntimeRefreshCapabilitiesSchema>;
 export type PlatformInboundMode = z.infer<typeof agentRuntimeInboundModeSchema>;
 export type AgentRuntimeInfo = z.infer<typeof agentRuntimeInfoSchema>;
-export type AgentRuntimeIntegration = z.infer<typeof agentRuntimeIntegrationSchema>;
-export type AgentRuntimeIntegrationId = z.infer<typeof agentRuntimeIntegrationIdSchema>;
-export type AgentRuntimeIntegrationList = z.infer<typeof agentRuntimeIntegrationListSchema>;
+export type AgentRuntimePlugin = z.infer<typeof agentRuntimePluginSchema>;
+export type AgentRuntimePluginId = z.infer<typeof agentRuntimePluginIdSchema>;
+export type AgentRuntimePluginList = z.infer<typeof agentRuntimePluginListSchema>;
 export type AgentRuntimeMerchbaseSalesSeries = z.infer<
     typeof agentRuntimeMerchbaseSalesSeriesSchema
 >;

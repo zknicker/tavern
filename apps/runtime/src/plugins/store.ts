@@ -1,35 +1,35 @@
 import {
-    type AgentRuntimeIntegration,
-    type AgentRuntimeIntegrationId,
-    agentRuntimeIntegrationIdSchema,
-    agentRuntimeIntegrationSchema,
+    type AgentRuntimePlugin,
+    type AgentRuntimePluginId,
+    agentRuntimePluginIdSchema,
+    agentRuntimePluginSchema,
 } from '@tavern/api';
 import type * as z from 'zod';
 import { getDb } from '../db/connection';
 import { namedParams } from '../db/sqlite';
 
-export interface IntegrationDefinition {
+export interface PluginDefinition {
     displayName: string;
-    id: AgentRuntimeIntegrationId;
+    id: AgentRuntimePluginId;
 }
 
-export const integrationDefinitions = [
+export const pluginDefinitions = [
     {
         displayName: 'MerchBase',
         id: 'merchbase',
     },
-] satisfies IntegrationDefinition[];
+] satisfies PluginDefinition[];
 
-export function listIntegrations(): AgentRuntimeIntegration[] {
-    return integrationDefinitions.map((definition) => getIntegration(definition.id));
+export function listPlugins(): AgentRuntimePlugin[] {
+    return pluginDefinitions.map((definition) => getPlugin(definition.id));
 }
 
-export function getIntegration(id: AgentRuntimeIntegrationId): AgentRuntimeIntegration {
-    const definition = getIntegrationDefinition(id);
-    const row = readIntegrationRow(id);
-    const secrets = readIntegrationSecretRow(id);
+export function getPlugin(id: AgentRuntimePluginId): AgentRuntimePlugin {
+    const definition = getPluginDefinition(id);
+    const row = readPluginRow(id);
+    const secrets = readPluginSecretRow(id);
 
-    return agentRuntimeIntegrationSchema.parse({
+    return agentRuntimePluginSchema.parse({
         config: row?.config ?? {},
         displayName: definition.displayName,
         enabled: row?.enabled ?? false,
@@ -43,20 +43,20 @@ export function getIntegration(id: AgentRuntimeIntegrationId): AgentRuntimeInteg
     });
 }
 
-export function readIntegrationConfig<T>(id: AgentRuntimeIntegrationId, schema: z.ZodType<T>): T {
-    const config = readIntegrationRow(id)?.config ?? {};
+export function readPluginConfig<T>(id: AgentRuntimePluginId, schema: z.ZodType<T>): T {
+    const config = readPluginRow(id)?.config ?? {};
     return schema.parse(config);
 }
 
-export function writeIntegrationConfig(input: {
+export function writePluginConfig(input: {
     config: Record<string, unknown>;
     enabled: boolean;
-    id: AgentRuntimeIntegrationId;
+    id: AgentRuntimePluginId;
 }) {
     const now = new Date().toISOString();
     getDb()
         .prepare(
-            `INSERT INTO runtime_integrations (id, enabled, config_json, created_at, updated_at)
+            `INSERT INTO runtime_plugins (id, enabled, config_json, created_at, updated_at)
              VALUES ($id, $enabled, $configJson, $now, $now)
              ON CONFLICT(id) DO UPDATE SET
                enabled = excluded.enabled,
@@ -73,26 +73,23 @@ export function writeIntegrationConfig(input: {
         );
 }
 
-export function readIntegrationSecret<T>(
-    id: AgentRuntimeIntegrationId,
-    schema: z.ZodType<T>
-): T | null {
-    const row = readIntegrationSecretRow(id);
+export function readPluginSecret<T>(id: AgentRuntimePluginId, schema: z.ZodType<T>): T | null {
+    const row = readPluginSecretRow(id);
     return row ? schema.parse(row.secret) : null;
 }
 
-export function writeIntegrationSecret(input: {
-    id: AgentRuntimeIntegrationId;
+export function writePluginSecret(input: {
+    id: AgentRuntimePluginId;
     secret: Record<string, unknown>;
 }) {
-    ensureIntegrationRow(input.id);
+    ensurePluginRow(input.id);
     const now = new Date().toISOString();
     getDb()
         .prepare(
-            `INSERT INTO runtime_integration_secrets
-             (integration_id, secret_json, created_at, updated_at)
+            `INSERT INTO runtime_plugin_secrets
+             (plugin_id, secret_json, created_at, updated_at)
              VALUES ($id, $secretJson, $now, $now)
-             ON CONFLICT(integration_id) DO UPDATE SET
+             ON CONFLICT(plugin_id) DO UPDATE SET
                secret_json = excluded.secret_json,
                updated_at = excluded.updated_at`
         )
@@ -105,23 +102,23 @@ export function writeIntegrationSecret(input: {
         );
 }
 
-function ensureIntegrationRow(id: AgentRuntimeIntegrationId) {
-    if (readIntegrationRow(id)) {
+function ensurePluginRow(id: AgentRuntimePluginId) {
+    if (readPluginRow(id)) {
         return;
     }
-    writeIntegrationConfig({ config: {}, enabled: false, id });
+    writePluginConfig({ config: {}, enabled: false, id });
 }
 
-function getIntegrationDefinition(id: AgentRuntimeIntegrationId) {
-    return integrationDefinitions.find((definition) => definition.id === id)!;
+function getPluginDefinition(id: AgentRuntimePluginId) {
+    return pluginDefinitions.find((definition) => definition.id === id)!;
 }
 
-function readIntegrationRow(id: AgentRuntimeIntegrationId) {
-    const parsedId = agentRuntimeIntegrationIdSchema.parse(id);
+function readPluginRow(id: AgentRuntimePluginId) {
+    const parsedId = agentRuntimePluginIdSchema.parse(id);
     const row = getDb()
         .prepare(
             `SELECT enabled, config_json, updated_at
-             FROM runtime_integrations
+             FROM runtime_plugins
              WHERE id = $id`
         )
         .get(namedParams({ id: parsedId })) as
@@ -137,13 +134,13 @@ function readIntegrationRow(id: AgentRuntimeIntegrationId) {
         : null;
 }
 
-function readIntegrationSecretRow(id: AgentRuntimeIntegrationId) {
-    const parsedId = agentRuntimeIntegrationIdSchema.parse(id);
+function readPluginSecretRow(id: AgentRuntimePluginId) {
+    const parsedId = agentRuntimePluginIdSchema.parse(id);
     const row = getDb()
         .prepare(
             `SELECT secret_json, updated_at
-             FROM runtime_integration_secrets
-             WHERE integration_id = $id`
+             FROM runtime_plugin_secrets
+             WHERE plugin_id = $id`
         )
         .get(namedParams({ id: parsedId })) as
         | { secret_json: string; updated_at: string }
@@ -162,5 +159,5 @@ function parseJsonRecord(value: string): Record<string, unknown> {
     if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
         return parsed as Record<string, unknown>;
     }
-    throw new Error('Stored Integration JSON is invalid; re-save it.');
+    throw new Error('Stored Plugin JSON is invalid; re-save it.');
 }

@@ -28,7 +28,7 @@ directly.
 
 - `tavern.md`: product relationship between Tavern, Tavern Runtime, and Hermes.
 - `runtime-chat-server.md`: always-on runtime-owned chat server design.
-- `integration-boundary.md`: ownership boundaries and runtime expectations.
+- `runtime-boundary.md`: ownership boundaries and runtime expectations.
 - `sync-model.md`: runtime mapping, freshness, deletion, edit, event, and job behavior.
 - `agents.md`, `chats.md`, `sessions.md`, `messages.md`, `cron.md`: core runtime-owned
   primitives as Tavern presents them.

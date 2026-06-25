@@ -10,7 +10,7 @@ Runtime APIs and events when Tavern needs to render or inspect them later.
   runtime activity, memory, generated Hermes config inputs, and operational jobs.
 - Tavern App owns React Query cache, presentation state, optimistic UI, and app settings.
 - Tavern API / SDK exposes stable chat, realtime, automation, admin, Runtime control, memory, skill,
-  stats, and integration contracts.
+  stats, and Plugin contracts.
 - Hermes owns native agent execution, sessions, turns, transcripts, logs, agent files, tool calls,
   model calls, context management, applied native config, and Gateway behavior.
 - Runtime persists any Hermes-produced data Tavern may render, inspect, recover, or navigate later.
@@ -36,7 +36,7 @@ Runtime APIs and events when Tavern needs to render or inspect them later.
 
 ## Runtime Records
 
-- Runtime records use stable product ids or stable source ids from the owning runtime/integration.
+- Runtime records use stable product ids or stable source ids from the owning runtime or Plugin.
 - Runtime evidence rows include the managed Hermes namespace when the source is managed Hermes.
 - Runtime adapters normalize source-specific chat, participant, session, and tool facts before data
   reaches product records.
@@ -62,7 +62,7 @@ Runtime APIs and events when Tavern needs to render or inspect them later.
 
 - Observed execution history includes sessions, turns, tool calls, model calls, logs, cron runs,
   worker activity, and recoverable response activity.
-- Observed history remains labeled with its source runtime/integration.
+- Observed history remains labeled with its source runtime or Plugin.
 - Observed history is upserted by stable source identifiers.
 - Observed history survives managed Hermes reinstall/reset when Runtime storage is preserved.
 - Runtime writes accepted messages, active responses, and response activity before notifying clients.

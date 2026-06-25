@@ -4,7 +4,6 @@ import { chatRouter } from './chat/router.ts';
 import { connectorRouter } from './connector/router.ts';
 import { cronRouter } from './cron/router.ts';
 import { hermesConfigRouter } from './hermes-config/router.ts';
-import { integrationRouter } from './integration/router.ts';
 import { jobsRouter } from './jobs/router.ts';
 import { logRouter } from './log/router.ts';
 import { mentionRouter } from './mention/router.ts';
@@ -14,6 +13,7 @@ import { modelAccessRouter } from './model-access/router.ts';
 import { openAiSettingsRouter } from './openai-settings/router.ts';
 import { openRouterSettingsRouter } from './openrouter-settings/router.ts';
 import { participantRouter } from './participant/router.ts';
+import { pluginRouter } from './plugin/router.ts';
 import { sessionRouter } from './session/router.ts';
 import { skillRouter } from './skill/router.ts';
 import { subAgentRouter } from './sub-agent/router.ts';
@@ -35,9 +35,9 @@ export const appRouter = createRouter({
     model: modelRouter,
     openAiSettings: openAiSettingsRouter,
     hermesConfig: hermesConfigRouter,
-    integration: integrationRouter,
     openRouterSettings: openRouterSettingsRouter,
     participant: participantRouter,
+    plugin: pluginRouter,
     agentRuntime: agentRuntimeRouter,
     session: sessionRouter,
     skill: skillRouter,

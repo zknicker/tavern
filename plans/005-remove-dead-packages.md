@@ -34,7 +34,7 @@ clean breaks over carrying remnants.
 
 - `packages/tavern-openclaw-messenger/` — contains only `src/actions.js`
   (~7.7 KB). No `package.json`, so bun does not treat it as a workspace.
-  Likely a leftover from a renamed/removed integration (git history references
+  Likely a leftover from a renamed/removed adapter package (git history references
   `packages/openclaw-gateway-adapter`, also gone).
 - `packages/honcho-graph/` — a full package (~856 LoC in `src/`). Verified at
   planning time: `grep -rln "honcho" apps packages jobs scripts` (excluding

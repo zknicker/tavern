@@ -7,32 +7,30 @@ import { prepareVaultRoot, resolveVaultConfigSync } from '../vault/store';
 
 export const managedVaultSkillName = 'vault';
 
-interface ManagedVaultIntegrationInput {
+interface ManagedVaultPackageInput {
     assetsRoot?: string;
     hermesHome?: string;
 }
 
-export interface ManagedVaultIntegration {
+export interface ManagedVaultPackage {
     skillPath: string;
     vaultPath: string;
 }
 
-export function getManagedVaultSkillPath(input: ManagedVaultIntegrationInput = {}) {
+export function getManagedVaultSkillPath(input: ManagedVaultPackageInput = {}) {
     return path.join(input.hermesHome ?? HERMES_HOME, 'skills', managedVaultSkillName);
 }
 
-export function getManagedVaultPaths(
-    input: ManagedVaultIntegrationInput = {}
-): ManagedVaultIntegration {
+export function getManagedVaultPaths(input: ManagedVaultPackageInput = {}): ManagedVaultPackage {
     return {
         skillPath: getManagedVaultSkillPath(input),
         vaultPath: resolveManagedVaultPath(),
     };
 }
 
-export async function prepareManagedVaultIntegration(
-    input: ManagedVaultIntegrationInput = {}
-): Promise<ManagedVaultIntegration> {
+export async function prepareManagedVaultPackage(
+    input: ManagedVaultPackageInput = {}
+): Promise<ManagedVaultPackage> {
     const assetsRoot = input.assetsRoot ?? resolveRuntimeAssetsRoot();
     const skillSource = path.join(assetsRoot, 'hermes', 'skills', managedVaultSkillName);
     const { skillPath, vaultPath } = getManagedVaultPaths(input);

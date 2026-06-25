@@ -3,12 +3,12 @@ import os from 'node:os';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 import {
-    prepareManagedVaultIntegration,
+    prepareManagedVaultPackage,
     resolveManagedVaultPath,
     resolveRuntimeAssetsRoot,
 } from './managed-vault.ts';
 
-describe('managed Vault integration', () => {
+describe('managed Vault package', () => {
     it('materializes the managed skill and Vault root', async () => {
         const directory = await fs.mkdtemp(path.join(os.tmpdir(), 'tavern-managed-vault-'));
         const assetsRoot = path.join(directory, 'assets');
@@ -24,24 +24,24 @@ describe('managed Vault integration', () => {
                 '---\nname: vault\n---\n\nVault body.\n'
             );
 
-            const integration = await prepareManagedVaultIntegration({
+            const vaultPackage = await prepareManagedVaultPackage({
                 assetsRoot,
                 hermesHome,
             });
 
             await expect(
-                fs.readFile(path.join(integration.skillPath, 'SKILL.md'), 'utf8')
+                fs.readFile(path.join(vaultPackage.skillPath, 'SKILL.md'), 'utf8')
             ).resolves.toContain('Vault body.');
-            await expectOwnerWriteDisabled(integration.skillPath);
-            await expectOwnerWriteDisabled(path.join(integration.skillPath, 'SKILL.md'));
+            await expectOwnerWriteDisabled(vaultPackage.skillPath);
+            await expectOwnerWriteDisabled(path.join(vaultPackage.skillPath, 'SKILL.md'));
             await expect(
-                fs.readFile(path.join(integration.vaultPath, 'INDEX.md'), 'utf8')
+                fs.readFile(path.join(vaultPackage.vaultPath, 'INDEX.md'), 'utf8')
             ).resolves.toBe('# Vault\n');
-            expect(integration.vaultPath).toBe(vaultPath);
+            expect(vaultPackage.vaultPath).toBe(vaultPath);
 
             await expect(
-                prepareManagedVaultIntegration({ assetsRoot, hermesHome })
-            ).resolves.toMatchObject({ skillPath: integration.skillPath });
+                prepareManagedVaultPackage({ assetsRoot, hermesHome })
+            ).resolves.toMatchObject({ skillPath: vaultPackage.skillPath });
         } finally {
             restoreEnv('TAVERN_VAULT_PATH', previousVaultPath);
             await removeWritable(directory);

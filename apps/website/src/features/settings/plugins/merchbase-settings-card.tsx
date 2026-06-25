@@ -57,7 +57,7 @@ export function MerchbaseSettingsCard({
     }, [settings]);
 
     if (isLoading) {
-        return <MerchbaseIntegrationSkeleton />;
+        return <MerchbasePluginSkeleton />;
     }
 
     if (!settings) {
@@ -93,7 +93,7 @@ export function MerchbaseSettingsCard({
         <>
             <FluidList className="grid">
                 <FluidListItem className="-mx-3" index={0}>
-                    <MerchbaseIntegrationRow
+                    <MerchbasePluginRow
                         isSaving={isSaving}
                         onEnabledChange={(enabled) => requestSave({ enabled })}
                         onSelect={openSettingsDialog}
@@ -134,7 +134,7 @@ export function MerchbaseSettingsCard({
     );
 }
 
-function MerchbaseIntegrationRow({
+function MerchbasePluginRow({
     isSaving,
     onEnabledChange,
     onSelect,
@@ -222,7 +222,7 @@ function MerchbaseEnablementSwitch({
     );
 }
 
-function MerchbaseIntegrationSkeleton() {
+function MerchbasePluginSkeleton() {
     return (
         <div className="-mx-3 flex items-center gap-4 rounded-xl px-3 py-2.5">
             <Skeleton className="size-10 rounded-[10px]" />

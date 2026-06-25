@@ -17,13 +17,13 @@ canonical chat server.
   narrow result.
 * **Product logic owns product nouns.** Chat, agents, memory, automations,
   skills, stats, and settings live under their capability, not under
-  integration folders.
+  generic service folders.
 * **Chat history is runtime-owned.** Tavern Runtime owns chats, messages,
   participants, sequence, events, reads, soft deletes, and the product timeline.
 * **Agent records are runtime-owned.** Tavern App lists, reads, and edits agents
   through first-class Tavern APIs hosted by Runtime. App storage may keep
   presentation overlays, but it does not decide whether an agent exists.
-* **Runtime integration stays behind adapters.** Hermes Gateway payloads and
+* **Runtime adapters stay behind adapters.** Hermes Gateway payloads and
   plugin-specific details do not leak into product domains.
 * **Settings save product intent.** App settings call narrow tRPC mutations such
   as agent name, model, thinking default, and messaging binding updates. The app
@@ -42,7 +42,7 @@ Canonical chat, agent, participant, session, and execution evidence records
 belong in Tavern Runtime.
 
 Keep table names in product language. Attach runtime ownership with columns such
-as `runtime_id`, `source`, or `last_synced_at`; do not create integration-shaped
+  as `runtime_id`, `source`, or `last_synced_at`; do not create adapter-shaped
 table families for first-party Tavern behavior.
 
 ## Capability State

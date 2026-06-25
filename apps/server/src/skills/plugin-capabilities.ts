@@ -1,19 +1,19 @@
 import type {
-    AgentRuntimeIntegration,
-    AgentRuntimeIntegrationId,
+    AgentRuntimePlugin,
+    AgentRuntimePluginId,
     AgentRuntimeSkillSummary,
     AgentRuntimeToolset,
 } from '@tavern/api';
 
-export interface SkillIntegrationRef {
+export interface SkillPluginRef {
     displayName: string;
     enabled: boolean;
-    id: AgentRuntimeIntegrationId;
+    id: AgentRuntimePluginId;
 }
 
-interface IntegrationCapabilityDefinition {
+interface PluginCapabilityDefinition {
     displayName: string;
-    id: AgentRuntimeIntegrationId;
+    id: AgentRuntimePluginId;
     skillNames: readonly string[];
     skillRuntimeSources: readonly string[];
     tools: readonly string[];
@@ -22,11 +22,11 @@ interface IntegrationCapabilityDefinition {
     toolsetLabel: string;
 }
 
-const integrationCapabilityDefinitions = [
+const pluginCapabilityDefinitions = [
     {
         displayName: 'MerchBase',
         id: 'merchbase',
-        skillRuntimeSources: ['tavern-integration:merchbase'],
+        skillRuntimeSources: ['tavern-plugin:merchbase'],
         skillNames: ['merchbase'],
         toolsetDescription: 'Read-only MerchBase sales, product, catalog, and design tools.',
         toolsetLabel: 'MerchBase',
@@ -49,9 +49,9 @@ const integrationCapabilityDefinitions = [
             'merchbase_design_facets_get',
         ],
     },
-] satisfies IntegrationCapabilityDefinition[];
+] satisfies PluginCapabilityDefinition[];
 
-export interface IntegrationToolsetPlaceholder {
+export interface PluginToolsetPlaceholder {
     configured: boolean;
     description: string;
     enabled: boolean;
@@ -61,18 +61,18 @@ export interface IntegrationToolsetPlaceholder {
     tools: string[];
 }
 
-export function listMissingIntegrationToolsets(
-    integrations: AgentRuntimeIntegration[],
+export function listMissingPluginToolsets(
+    plugins: AgentRuntimePlugin[],
     existingToolsetIds: Set<string>
-): IntegrationToolsetPlaceholder[] {
-    return integrationCapabilityDefinitions
+): PluginToolsetPlaceholder[] {
+    return pluginCapabilityDefinitions
         .filter((definition) => !definition.toolsetIds.some((id) => existingToolsetIds.has(id)))
         .map((definition) => {
-            const integration = buildIntegrationRef(definition, integrations);
+            const plugin = buildPluginRef(definition, plugins);
             return {
                 configured: false,
                 description: definition.toolsetDescription,
-                enabled: integration.enabled,
+                enabled: plugin.enabled,
                 id: definition.toolsetIds[0] ?? definition.id,
                 label: definition.toolsetLabel,
                 placeholder: true,
@@ -81,39 +81,37 @@ export function listMissingIntegrationToolsets(
         });
 }
 
-export function resolveSkillIntegration(
+export function resolveSkillPlugin(
     skill: Pick<AgentRuntimeSkillSummary, 'id' | 'name' | 'runtimeSource'>,
-    integrations: AgentRuntimeIntegration[]
-): SkillIntegrationRef | null {
-    const definition = integrationCapabilityDefinitions.find(
+    plugins: AgentRuntimePlugin[]
+): SkillPluginRef | null {
+    const definition = pluginCapabilityDefinitions.find(
         (candidate) =>
             Boolean(skill.runtimeSource) &&
             candidate.skillRuntimeSources.includes(skill.runtimeSource ?? '') &&
             (candidate.skillNames.includes(skill.name) || candidate.skillNames.includes(skill.id))
     );
-    return definition ? buildIntegrationRef(definition, integrations) : null;
+    return definition ? buildPluginRef(definition, plugins) : null;
 }
 
-export function resolveToolsetIntegration(
+export function resolveToolsetPlugin(
     toolset: Pick<AgentRuntimeToolset, 'id' | 'name'>,
-    integrations: AgentRuntimeIntegration[]
-): SkillIntegrationRef | null {
-    const definition = integrationCapabilityDefinitions.find(
+    plugins: AgentRuntimePlugin[]
+): SkillPluginRef | null {
+    const definition = pluginCapabilityDefinitions.find(
         (candidate) =>
             candidate.toolsetIds.includes(toolset.id) || candidate.toolsetIds.includes(toolset.name)
     );
-    return definition ? buildIntegrationRef(definition, integrations) : null;
+    return definition ? buildPluginRef(definition, plugins) : null;
 }
 
-export function rejectIntegrationSkillEnablement(
+export function rejectPluginSkillEnablement(
     skill: string | Pick<AgentRuntimeSkillSummary, 'id' | 'name' | 'runtimeSource'>
 ) {
     const definition =
         typeof skill === 'string'
-            ? integrationCapabilityDefinitions.find((candidate) =>
-                  candidate.skillNames.includes(skill)
-              )
-            : integrationCapabilityDefinitions.find(
+            ? pluginCapabilityDefinitions.find((candidate) => candidate.skillNames.includes(skill))
+            : pluginCapabilityDefinitions.find(
                   (candidate) =>
                       Boolean(skill.runtimeSource) &&
                       candidate.skillRuntimeSources.includes(skill.runtimeSource ?? '') &&
@@ -122,30 +120,30 @@ export function rejectIntegrationSkillEnablement(
               );
     if (definition) {
         throw new Error(
-            `${definition.displayName} skill enablement is managed from Settings -> Integrations.`
+            `${definition.displayName} skill enablement is managed from Settings -> Plugins.`
         );
     }
 }
 
-export function rejectIntegrationToolsetEnablement(toolsetId: string) {
-    const definition = integrationCapabilityDefinitions.find((candidate) =>
+export function rejectPluginToolsetEnablement(toolsetId: string) {
+    const definition = pluginCapabilityDefinitions.find((candidate) =>
         candidate.toolsetIds.includes(toolsetId)
     );
     if (definition) {
         throw new Error(
-            `${definition.displayName} toolset enablement is managed from Settings -> Integrations.`
+            `${definition.displayName} toolset enablement is managed from Settings -> Plugins.`
         );
     }
 }
 
-function buildIntegrationRef(
-    definition: IntegrationCapabilityDefinition,
-    integrations: AgentRuntimeIntegration[]
-): SkillIntegrationRef {
-    const integration = integrations.find((candidate) => candidate.id === definition.id);
+function buildPluginRef(
+    definition: PluginCapabilityDefinition,
+    plugins: AgentRuntimePlugin[]
+): SkillPluginRef {
+    const plugin = plugins.find((candidate) => candidate.id === definition.id);
     return {
-        displayName: integration?.displayName ?? definition.displayName,
-        enabled: integration?.enabled ?? false,
+        displayName: plugin?.displayName ?? definition.displayName,
+        enabled: plugin?.enabled ?? false,
         id: definition.id,
     };
 }

@@ -27,14 +27,14 @@ describe('managed MerchBase skill', () => {
         expect(skill).toContain('Use the `merchbase` toolset');
         expect(skill).toContain('merchbase_products_search');
         expect(skill).toContain('merchbase_sales_summary');
-        expect(skill).not.toContain('/integrations/merchbase/action');
+        expect(skill).not.toContain('/plugins/merchbase/action');
         expect(skill).not.toContain('curl');
         expect(skill).not.toContain('TAVERN_RUNTIME_TOKEN');
         expect(skill).toContain('MerchBaseSalesChart');
-        expect(skill).toContain('Settings -> Integrations');
+        expect(skill).toContain('Settings -> Plugins');
         await expect(
             fs.readFile(path.join(skillPath, managedMerchbaseSkillMarkerFile), 'utf8')
-        ).resolves.toContain('tavern-integration:merchbase');
+        ).resolves.toContain('tavern-plugin:merchbase');
         await expectOwnerWriteDisabled(skillPath);
         await expectOwnerWriteDisabled(path.join(skillPath, 'SKILL.md'));
     });
@@ -81,7 +81,7 @@ describe('managed MerchBase skill', () => {
         );
         await expect(
             fs.readFile(path.join(skillPath, managedMerchbaseSkillMarkerFile), 'utf8')
-        ).resolves.toContain('tavern-integration:merchbase');
+        ).resolves.toContain('tavern-plugin:merchbase');
         expect(getMerchbaseSkillConflict({ hermesHome })).toBeNull();
     });
 });

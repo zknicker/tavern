@@ -4,7 +4,7 @@ import { HERMES_HOME } from '../config';
 import { resolveRuntimeAssetsRoot, syncManagedSkillDirectory } from './managed-vault';
 
 export const merchbaseSkillName = 'merchbase';
-export const managedMerchbaseSkillRuntimeSource = 'tavern-integration:merchbase';
+export const managedMerchbaseSkillRuntimeSource = 'tavern-plugin:merchbase';
 export const managedMerchbaseSkillMarkerFile = '.tavern-managed-skill';
 
 interface ManagedMerchbaseSkillInput {
@@ -22,7 +22,7 @@ export interface MerchbaseSkillState {
 
 /**
  * Install the managed `merchbase` skill: the agent's starter guide for using
- * Tavern's MerchBase Integration and choosing the MerchBase sales Rich Response.
+ * Tavern's MerchBase Plugin and choosing the MerchBase sales Rich Response.
  */
 export async function ensureManagedMerchbaseSkill(input: ManagedMerchbaseSkillInput = {}) {
     const assetsRoot = input.assetsRoot ?? resolveRuntimeAssetsRoot();
@@ -90,7 +90,7 @@ function isLegacyManagedMerchbaseSkill(skill: string) {
     return (
         skill.includes('name: merchbase') &&
         skill.includes('Managed by Tavern Runtime') &&
-        skill.includes('MerchBase Integration')
+        skill.includes('MerchBase Plugin')
     );
 }
 

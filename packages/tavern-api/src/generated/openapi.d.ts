@@ -338,7 +338,7 @@ export interface components {
         Participant: {
             id: components["schemas"]["ParticipantId"];
             /** @enum {string} */
-            kind: "user" | "agent" | "system" | "integration";
+            kind: "user" | "agent" | "system" | "plugin";
             label: string | null;
             metadata: components["schemas"]["JsonObject"];
         };

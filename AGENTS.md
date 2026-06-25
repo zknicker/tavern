@@ -77,7 +77,7 @@ so `docs:list` routes future agents correctly.
 - Each feature exposes a `router.ts` plus one file per procedure when the feature has multiple
   procedures.
 - Keep API procedures thin: validate input, call product logic, and return a narrow result.
-- Put business logic under product nouns. Keep external-system code behind integration adapters.
+- Put business logic under product nouns. Keep external-system code behind adapters.
 - Define server-to-client invalidation events in `apps/server/src/api/invalidation-events.ts`.
 - Prefer named domain subscriptions such as `chat.onTurnStarted` or `agent.onUpdate` over generic
   event buckets.
@@ -130,7 +130,7 @@ so `docs:list` routes future agents correctly.
 
 ## Testing And Smoke
 
-- Prefer unit/integration tests or the deterministic app e2e mock runtime over manual smoke
+- Prefer unit/service tests or the deterministic app e2e mock runtime over manual smoke
   chats in a real local runtime.
 - Runtime tests should use real temp SQLite databases and temp directories when testing storage,
   idempotency, ordering, recovery, or projection behavior.

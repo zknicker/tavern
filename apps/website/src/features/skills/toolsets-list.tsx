@@ -90,7 +90,7 @@ function ToolsetRow({
     toolset: ToolsetSummary;
 }) {
     const needsSetup = toolset.usability === 'not_usable';
-    const integrationLocked = toolset.integration !== null;
+    const pluginLocked = toolset.plugin !== null;
 
     return (
         <div className="flex select-none items-center gap-4 rounded-xl px-3 py-2.5">
@@ -116,9 +116,9 @@ function ToolsetRow({
                             {toolset.diagnostic ?? 'Needs setup'}
                         </Badge>
                     ) : null}
-                    {toolset.integration ? (
+                    {toolset.plugin ? (
                         <Badge size="sm" variant="secondary">
-                            Integration
+                            Plugin
                         </Badge>
                     ) : null}
                 </span>
@@ -126,7 +126,7 @@ function ToolsetRow({
                     {toolset.description ?? toolset.id}
                 </span>
             </span>
-            {needsSetup && !toolset.integration ? (
+            {needsSetup && !toolset.plugin ? (
                 <Button
                     className="shrink-0 rounded-full"
                     onClick={onConfigure}
@@ -139,9 +139,9 @@ function ToolsetRow({
             <Switch
                 aria-label={`${toolset.enabled ? 'Disable' : 'Enable'} ${toolset.name}`}
                 checked={toolset.enabled}
-                disabled={saving || integrationLocked}
+                disabled={saving || pluginLocked}
                 onCheckedChange={(enabled) => {
-                    if (!integrationLocked) {
+                    if (!pluginLocked) {
                         onSetEnabled(enabled);
                     }
                 }}

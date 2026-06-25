@@ -55,8 +55,8 @@ The API covers:
   `skill.addMcpServer`, `skill.removeMcpServer`, `skill.testMcpServer`,
   `skill.setMcpServerEnabled`, `skill.mcpCatalog`,
   `skill.installMcpCatalogEntry`)
-* identify Integration-owned skills and toolsets with Integration metadata so
-  clients can show them in Integrations tabs and lock their enablement controls
+* identify Plugin-owned skills and toolsets with Plugin metadata so clients can
+  show them in Plugins tabs and lock their enablement controls
 
 ## Runtime Boundary
 
@@ -79,12 +79,12 @@ Toolsets remain Hermes-owned. Tavern reads them from Hermes and sends supported
 enablement changes back through Runtime. Codex app-server skills are not merged
 into the Tavern skill catalog.
 
-Integration-owned skills and toolsets are different from user-managed rows:
-their enablement is controlled by Settings -> Integrations. The Skills &
-Toolsets API returns the Integration reference on those summaries and rejects
+Plugin-owned skills and toolsets are different from user-managed rows: their
+enablement is controlled by Settings -> Plugins. The Skills & Toolsets API
+returns the Plugin reference on those summaries and rejects
 direct enablement mutations for them.
-When an enabled Integration reserves a flat skill name, the Integration settings
-flow owns the replacement warning and enablement action. Skills settings only
+When an enabled Plugin reserves a flat skill name, the Plugin settings flow owns
+the replacement warning and enablement action. Skills settings only
 shows the resulting Runtime-owned row.
 
 Install mechanics stay engine-owned: quarantine, scanning, install policy, and

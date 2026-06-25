@@ -635,7 +635,7 @@ components:
           $ref: '#/components/schemas/ParticipantId'
         kind:
           type: string
-          enum: [user, agent, system, integration]
+          enum: [user, agent, system, plugin]
         label:
           type: [string, 'null']
         metadata:

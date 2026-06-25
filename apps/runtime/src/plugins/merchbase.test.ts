@@ -9,13 +9,13 @@ import { ensureRuntimeSchema } from '../db/schema';
 import { subscribeToRuntimeEvents } from '../tavern/runtime-events';
 import {
     ensureMerchbaseSkillForEnablement,
-    getMerchbaseIntegration,
+    getMerchbasePlugin,
     getMerchbaseSettings,
     queryMerchbaseAction,
     saveMerchbaseSettings,
 } from './merchbase';
-import { handleIntegrationsRequest } from './routes';
-import { getIntegration } from './store';
+import { handlePluginsRequest } from './routes';
+import { getPlugin } from './store';
 
 const merchbaseClientMock = vi.hoisted(() => ({
     accountsGetQuery: vi.fn(),
@@ -38,7 +38,7 @@ const envKeys = [
 
 const tempDirs: string[] = [];
 
-describe('MerchBase Integration settings', () => {
+describe('MerchBase Plugin settings', () => {
     beforeEach(async () => {
         for (const key of envKeys) {
             process.env[key] = '';
@@ -79,7 +79,7 @@ describe('MerchBase Integration settings', () => {
         });
     });
 
-    test('stores config and secrets in dedicated Integration tables', () => {
+    test('stores config and secrets in dedicated Plugin tables', () => {
         const settings = saveMerchbaseSettings({
             apiKey: 'secret-key',
             baseUrl: 'https://app.merchbase.co',
@@ -95,10 +95,10 @@ describe('MerchBase Integration settings', () => {
             enabled: true,
             enablementSource: 'settings',
         });
-        expect(getIntegration('merchbase').secrets).toEqual([{ hasValue: true, name: 'apiKey' }]);
+        expect(getPlugin('merchbase').secrets).toEqual([{ hasValue: true, name: 'apiKey' }]);
         expect(
             getDb()
-                .prepare('SELECT config_json FROM runtime_integrations WHERE id = $id')
+                .prepare('SELECT config_json FROM runtime_plugins WHERE id = $id')
                 .get({ $id: 'merchbase' })
         ).toMatchObject({
             config_json: JSON.stringify({
@@ -109,9 +109,7 @@ describe('MerchBase Integration settings', () => {
         });
         expect(
             getDb()
-                .prepare(
-                    'SELECT secret_json FROM runtime_integration_secrets WHERE integration_id = $id'
-                )
+                .prepare('SELECT secret_json FROM runtime_plugin_secrets WHERE plugin_id = $id')
                 .get({ $id: 'merchbase' })
         ).toMatchObject({ secret_json: JSON.stringify({ apiKey: 'secret-key' }) });
     });
@@ -131,7 +129,7 @@ describe('MerchBase Integration settings', () => {
             enabled: true,
             enablementSource: 'environment',
         });
-        expect(getMerchbaseIntegration()).toMatchObject({
+        expect(getMerchbasePlugin()).toMatchObject({
             config: {
                 baseUrl: 'https://env.merchbase.test',
                 defaultAccount: 'acct_env',
@@ -142,7 +140,7 @@ describe('MerchBase Integration settings', () => {
         });
     });
 
-    test('runs read actions through the configured Integration client', async () => {
+    test('runs read actions through the configured Plugin client', async () => {
         saveMerchbaseSettings({
             apiKey: 'secret-key',
             baseUrl: 'https://app.merchbase.co',
@@ -175,7 +173,7 @@ describe('MerchBase Integration settings', () => {
         });
     });
 
-    test('replaces a user-owned merchbase skill when enabling the Integration', async () => {
+    test('replaces a user-owned merchbase skill when enabling the Plugin', async () => {
         const hermesHome = await makeTempDir();
         const skillPath = path.join(hermesHome, 'skills', 'merchbase');
         await fs.mkdir(skillPath, { recursive: true });
@@ -192,8 +190,8 @@ describe('MerchBase Integration settings', () => {
 
     test('refreshes and publishes MerchBase capability after settings saves', async () => {
         saveMerchbaseSettings({ enabled: false });
-        await refreshRuntimeCapabilities({ ids: ['integration.merchbase'] });
-        expect(getRuntimeCapability('integration.merchbase')).toMatchObject({
+        await refreshRuntimeCapabilities({ ids: ['plugin.merchbase'] });
+        expect(getRuntimeCapability('plugin.merchbase')).toMatchObject({
             healthy: false,
             state: 'unavailable',
         });
@@ -214,8 +212,8 @@ describe('MerchBase Integration settings', () => {
         });
 
         try {
-            const response = await handleIntegrationsRequest(
-                new Request('http://runtime.test/integrations/merchbase/settings', {
+            const response = await handlePluginsRequest(
+                new Request('http://runtime.test/plugins/merchbase/settings', {
                     body: JSON.stringify({
                         apiKey: 'new-key',
                         enabled: true,
@@ -228,7 +226,7 @@ describe('MerchBase Integration settings', () => {
             );
 
             expect(response?.status).toBe(200);
-            expect(getRuntimeCapability('integration.merchbase')).toMatchObject({
+            expect(getRuntimeCapability('plugin.merchbase')).toMatchObject({
                 healthy: true,
                 metadata: {
                     accountId: 'acct_123',
@@ -237,7 +235,7 @@ describe('MerchBase Integration settings', () => {
                 },
                 state: 'healthy',
             });
-            expect(events).toContain('integration.merchbase');
+            expect(events).toContain('plugin.merchbase');
         } finally {
             unsubscribe();
         }
@@ -245,7 +243,7 @@ describe('MerchBase Integration settings', () => {
 });
 
 async function makeTempDir() {
-    const directory = await fs.mkdtemp(path.join(os.tmpdir(), 'merchbase-integration-'));
+    const directory = await fs.mkdtemp(path.join(os.tmpdir(), 'merchbase-plugin-'));
     tempDirs.push(directory);
     return directory;
 }

@@ -4,7 +4,7 @@
 
 - Structured form validation and submission flows.
 - Forms with field-level labels, descriptions, and errors.
-- Integrations with external form libraries (for example React Hook Form / TanStack Form).
+- Wiring with external form libraries (for example React Hook Form / TanStack Form).
 
 ## Install
 
@@ -46,7 +46,7 @@ import { Input } from "@/components/ui/input"
 
 ## Patterns from coss particles
 
-- `Form` usage in particles is intentionally lightweight; use the Base UI forms handbook patterns below for deeper validation/library integrations.
+- `Form` usage in particles is intentionally lightweight; use the Base UI forms handbook patterns below for deeper validation/library wiring.
 - **Dialog / sheet / drawer:** Header **outside** the form; **`Form className="contents"`** wraps **panel + footer** only (`p-dialog-1`, `p-sheet-1`, `p-sheet-2`, `p-drawer-10`, `p-drawer-12`).
 
 ## Patterns from coss/Base UI forms
@@ -56,8 +56,8 @@ import { Input } from "@/components/ui/input"
 - **Accessible names**: prefer visible labels (`FieldLabel`, `SelectLabel`, etc.); use `aria-label` only when no visible label exists.
 - **Grouped controls**: for radio/checkbox groups or multi-control sections, use fieldset-style grouping (`Fieldset` + `Field.Item`) instead of ad-hoc wrappers.
 - **Validation rendering**: pair constraints/custom validation with `FieldError`; keep error output semantically tied to the same field.
-- **Textarea integration**: use coss `Textarea` directly inside `Field`; it already integrates with Base UI field control semantics, so `FieldControl render={...}` is not required for standard textarea usage.
-- **External library integration**: when using RHF/TanStack, forward refs/input refs to the underlying control and map invalid/touched/dirty state into `Field`.
+- **Textarea wiring**: use coss `Textarea` directly inside `Field`; it already works with Base UI field control semantics, so `FieldControl render={...}` is not required for standard textarea usage.
+- **External library wiring**: when using RHF/TanStack, forward refs/input refs to the underlying control and map invalid/touched/dirty state into `Field`.
 
 ## Common pitfalls
 
@@ -66,14 +66,13 @@ import { Input } from "@/components/ui/input"
 - Missing input `type` and button `type`.
 - Showing validation messages without matching invalid semantics.
 - Using grouped checkboxes/radios without proper group legend/structure.
-- Not forwarding refs in RHF/TanStack integration, which breaks focus-on-error behavior.
+- Not forwarding refs in RHF/TanStack wiring, which breaks focus-on-error behavior.
 
 ## Useful particle references
 
-- `p-form-1` (basic integration)
+- `p-form-1` (basic wiring)
 - `p-form-2` (zod usage)
 
 ## Further reading
 
 - Base UI Forms handbook: `https://base-ui.com/react/handbook/forms.md`
-

@@ -114,7 +114,7 @@ Add raw-frame or fixture-backed tests for behavior Tavern depends on.
 
 ## Manual Smoke Hygiene
 
-Manual real-runtime chats are rare. Prefer deterministic e2e or unit/integration
+Manual real-runtime chats are rare. Prefer deterministic e2e or unit/service
 tests.
 
 If manual validation creates real Tavern chats, use an obvious temporary first

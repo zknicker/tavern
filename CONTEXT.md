@@ -29,33 +29,33 @@ _Avoid_: Plugin registry, arbitrary component set, model component library
 A single allowed component in the Rich Response Catalog, rendered by Tavern from validated props.
 _Avoid_: React component, model component, widget tool
 
-**Integration**:
+**Plugin**:
 A first-party Tavern product capability for an external system, owning its configuration, status,
 runtime actions, normalized view models, and any related Rich Response Components.
-_Avoid_: Skill, plugin, connector, CLI dependency
+_Avoid_: Skill, connector, CLI dependency
 
-**Integration health**:
-Runtime-owned readiness for an Integration, including whether its required configuration and upstream
+**Plugin health**:
+Runtime-owned readiness for a Plugin, including whether its required configuration and upstream
 access are usable.
 _Avoid_: Skill setup, tool availability, connection wizard state
 
-**Integration settings**:
-Runtime-owned durable Integration configuration, stored in dedicated Integration tables and edited
+**Plugin settings**:
+Runtime-owned durable Plugin configuration, stored in dedicated Plugin tables and edited
 through Tavern settings.
 _Avoid_: Runtime metadata key, Hermes config, CLI config, skill config
 
-**Integration secret**:
-Write-only credential material for an Integration, stored in the Runtime Integration secret store and
+**Plugin secret**:
+Write-only credential material for a Plugin, stored in the Runtime Plugin secret store and
 masked in API reads.
 _Avoid_: Environment variable, Hermes home file, checked-in config
 
-**Integration action**:
-A Runtime-owned operation exposed by an Integration to Tavern surfaces such as Rich Responses,
+**Plugin action**:
+A Runtime-owned operation exposed by a Plugin to Tavern surfaces such as Rich Responses,
 agent tools, or settings.
 _Avoid_: CLI command, skill tool, raw upstream API call
 
 **Host adapter**:
-A small integration file in Runtime, Server, or Website that connects a Rich Response contract to that
+A small adapter file in Runtime, Server, or Website that connects a Rich Response contract to that
 layer's existing event, projection, or rendering pipeline.
 _Avoid_: Rich Response implementation, plugin loader
 

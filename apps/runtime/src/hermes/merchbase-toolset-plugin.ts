@@ -97,7 +97,7 @@ def _runtime_token() -> str:
 def _check_merchbase_configured() -> bool:
     if not _runtime_url():
         return False
-    settings = _runtime_request("/integrations/merchbase/settings")
+    settings = _runtime_request("/plugins/merchbase/settings")
     return bool(settings.get("enabled") and settings.get("apiKeyConfigured"))
 
 
@@ -152,7 +152,7 @@ def _respond(payload: Dict[str, Any]) -> str:
 def _action(action: str, input_payload: Optional[Dict[str, Any]] = None) -> str:
     return _respond(
         _runtime_request(
-            "/integrations/merchbase/action",
+            "/plugins/merchbase/action",
             method="POST",
             payload={"action": action, "input": _clean_args(input_payload)},
         )
@@ -160,8 +160,8 @@ def _action(action: str, input_payload: Optional[Dict[str, Any]] = None) -> str:
 
 
 def _handle_status(args: Dict[str, Any], **_kw) -> str:
-    settings = _runtime_request("/integrations/merchbase/settings")
-    capability = _runtime_request("/capabilities/integration.merchbase")
+    settings = _runtime_request("/plugins/merchbase/settings")
+    capability = _runtime_request("/capabilities/plugin.merchbase")
     return _respond({"settings": settings, "capability": capability})
 
 
@@ -176,7 +176,7 @@ def _handle_sales_records(args: Dict[str, Any], **_kw) -> str:
 def _handle_sales_series(args: Dict[str, Any], **_kw) -> str:
     return _respond(
         _runtime_request(
-            "/integrations/merchbase/sales/series",
+            "/plugins/merchbase/sales/series",
             method="POST",
             payload=_clean_args(args),
         )
@@ -340,7 +340,7 @@ DESIGN_ID_SCHEMA = _schema(
 
 
 TOOLS = (
-    ("merchbase_status", _schema("Read MerchBase Integration health and masked settings."), _handle_status, "🏷️"),
+    ("merchbase_status", _schema("Read MerchBase Plugin health and masked settings."), _handle_status, "🏷️"),
     ("merchbase_sales_summary", SALES_FILTER_SCHEMA, _handle_sales_summary, "📈"),
     ("merchbase_sales_records", SALES_RECORDS_SCHEMA, _handle_sales_records, "🧾"),
     ("merchbase_sales_series", SALES_SERIES_SCHEMA, _handle_sales_series, "📊"),
@@ -362,7 +362,7 @@ def register(ctx) -> None:
     ctx.register_skill(
         "merchbase",
         Path(__file__).parent / "skills" / "merchbase" / "SKILL.md",
-        "MerchBase Integration guidance for tools and sales widgets.",
+        "MerchBase Plugin guidance for tools and sales widgets.",
     )
     for name, schema, handler, emoji in TOOLS:
         ctx.register_tool(

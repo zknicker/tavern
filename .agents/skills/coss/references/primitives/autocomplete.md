@@ -108,11 +108,11 @@ Grouped lists:
 
 Async search: use `filter={null}`, control `value`/`onValueChange`, and provide `itemToStringValue` for object results.
 
-Form integration: place `Autocomplete` inside `Field name="..."` with `FieldLabel`/`FieldError`.
+Form wiring: place `Autocomplete` inside `Field name="..."` with `FieldLabel`/`FieldError`.
 
 ### More examples
 
-See `p-autocomplete-1` through `p-autocomplete-15` for sizes, matching behavior, groups, limited results, async, form integration, and pill input patterns.
+See `p-autocomplete-1` through `p-autocomplete-15` for sizes, matching behavior, groups, limited results, async, form wiring, and pill input patterns.
 
 ## Common pitfalls
 
@@ -130,5 +130,5 @@ See `p-autocomplete-1` through `p-autocomplete-15` for sizes, matching behavior,
 - grouped options: `p-autocomplete-10`
 - limited results with status message: `p-autocomplete-11`
 - async search with loading/error status: `p-autocomplete-12`
-- form integration: `p-autocomplete-13`
+- form wiring: `p-autocomplete-13`
 - style variant (pill input): `p-autocomplete-15`

@@ -82,7 +82,7 @@ const id = useId()
 - disabled: `p-checkbox-2`
 - with description: `p-checkbox-3`
 - card style: `p-checkbox-4`
-- form integration: `p-checkbox-5`
+- form wiring: `p-checkbox-5`
 
 ## Common pitfalls
 

@@ -1,8 +1,8 @@
 ---
 summary: TypeScript SDK guide for @tavern/api contracts, @tavern/sdk client shape, bot/webhook/local tool usage, capabilities, and compatibility rules.
 read_when:
-  - changing @tavern/api, @tavern/sdk, or client integration examples
-  - adding bots, webhooks, automations, local tools, or runtime integrations
+  - changing @tavern/api, @tavern/sdk, or client examples
+  - adding bots, webhooks, automations, local tools, or runtime Plugins
 ---
 
 # TypeScript SDK

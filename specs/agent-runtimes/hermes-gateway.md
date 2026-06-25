@@ -1,11 +1,11 @@
 # Hermes Gateway
 
-Tavern integrates with Hermes through Hermes Gateway's native WebSocket operator protocol. The
-gateway is the source of truth for Tavern's Hermes integration; Tavern does not compare gateway
+Tavern connects to Hermes through Hermes Gateway's native WebSocket operator protocol. The
+gateway is the source of truth for Tavern's Hermes adapter; Tavern does not compare gateway
 payloads against raw Hermes files or CLI output during normal operation.
 
 Tavern currently supports one runtime product, Hermes. The separate Tavern runtime protocol is a
-product boundary, not evidence of multiple live runtime integrations.
+product boundary, not evidence of multiple live runtime plugins.
 
 ## Shape
 

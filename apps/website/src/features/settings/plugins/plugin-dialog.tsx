@@ -15,11 +15,11 @@ import { Switch } from '../../../components/ui/switch.tsx';
 import { Tooltip, TooltipContent, TooltipTrigger } from '../../../components/ui/tooltip.tsx';
 import { cn } from '../../../lib/utils.ts';
 
-// Reusable shell + field kit for integration config dialogs. Mirrors the skill
+// Reusable shell + field kit for plugin config dialogs. Mirrors the skill
 // inspection dialog: circle icon, header-aligned toggle, compact fields, and a
 // borderless action row at the foot of the body.
 
-export function IntegrationDialog({
+export function PluginDialog({
     children,
     description,
     footer,
@@ -90,7 +90,7 @@ export function IntegrationDialog({
     );
 }
 
-export function IntegrationField({
+export function PluginField({
     children,
     description,
     label,
@@ -109,11 +109,11 @@ export function IntegrationField({
 }
 
 // Lays out two or more fields side by side, collapsing to one column when narrow.
-export function IntegrationFieldRow({ children }: { children: ReactNode }) {
+export function PluginFieldRow({ children }: { children: ReactNode }) {
     return <div className="grid gap-4 sm:grid-cols-2">{children}</div>;
 }
 
-export function IntegrationNotice({
+export function PluginNotice({
     children,
     title,
     variant = 'warning',
@@ -137,7 +137,7 @@ export function IntegrationNotice({
 }
 
 // A switch that wraps itself in an explanatory tooltip when locked by config.
-export function IntegrationLockSwitch({
+export function PluginLockSwitch({
     locked,
     lockTooltip,
     ...props

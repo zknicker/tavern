@@ -65,7 +65,7 @@ Single key shortcut in a button:
 
 ### More examples
 
-- input group integration: `p-input-group-11`
+- input group wiring: `p-input-group-11`
 
 ## Common pitfalls
 

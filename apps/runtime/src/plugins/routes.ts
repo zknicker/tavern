@@ -1,7 +1,4 @@
 import {
-    agentRuntimeIntegrationIdSchema,
-    agentRuntimeIntegrationListSchema,
-    agentRuntimeIntegrationSchema,
     agentRuntimeMerchbaseActionInputSchema,
     agentRuntimeMerchbaseActionResultSchema,
     agentRuntimeMerchbaseSalesSeriesInputSchema,
@@ -9,6 +6,9 @@ import {
     agentRuntimeMerchbaseSettingsSchema,
     agentRuntimeMutationHeaders,
     agentRuntimeMutationOrigins,
+    agentRuntimePluginIdSchema,
+    agentRuntimePluginListSchema,
+    agentRuntimePluginSchema,
     agentRuntimeRoutes,
     agentRuntimeSaveMerchbaseSettingsSchema,
 } from '@tavern/api';
@@ -17,45 +17,37 @@ import { badRequest, forbidden, json, notFound } from '../tavern/http';
 import {
     applyMerchbaseAgentCapabilityEnablement,
     ensureMerchbaseSkillForEnablement,
-    getMerchbaseIntegration,
+    getMerchbasePlugin,
     getMerchbaseSettings,
-    listRuntimeIntegrations,
+    listRuntimePlugins,
     queryMerchbaseAction,
     queryMerchbaseSalesSeries,
     saveMerchbaseSettings,
 } from './merchbase';
 
-export async function handleIntegrationsRequest(request: Request): Promise<Response | null> {
+export async function handlePluginsRequest(request: Request): Promise<Response | null> {
     const url = new URL(request.url);
     const segments = url.pathname.split('/').filter(Boolean).map(decodeURIComponent);
-    if (segments[0] !== 'integrations') {
+    if (segments[0] !== 'plugins') {
         return null;
     }
 
     if (request.method === 'GET' && !segments[1]) {
-        return json(
-            agentRuntimeIntegrationListSchema.parse({ integrations: listRuntimeIntegrations() })
-        );
+        return json(agentRuntimePluginListSchema.parse({ plugins: listRuntimePlugins() }));
     }
 
     if (request.method === 'GET' && segments[1] && !segments[2]) {
-        const parsedId = agentRuntimeIntegrationIdSchema.safeParse(segments[1]);
+        const parsedId = agentRuntimePluginIdSchema.safeParse(segments[1]);
         return parsedId.success
-            ? json(agentRuntimeIntegrationSchema.parse(getMerchbaseIntegration()))
+            ? json(agentRuntimePluginSchema.parse(getMerchbasePlugin()))
             : notFound();
     }
 
-    if (
-        request.method === 'GET' &&
-        url.pathname === agentRuntimeRoutes.integrationMerchbaseSettings
-    ) {
+    if (request.method === 'GET' && url.pathname === agentRuntimeRoutes.pluginMerchbaseSettings) {
         return json(agentRuntimeMerchbaseSettingsSchema.parse(getMerchbaseSettings()));
     }
 
-    if (
-        request.method === 'PUT' &&
-        url.pathname === agentRuntimeRoutes.integrationMerchbaseSettings
-    ) {
+    if (request.method === 'PUT' && url.pathname === agentRuntimeRoutes.pluginMerchbaseSettings) {
         const forbiddenResponse = requireTavernMutation(request, 'MerchBase settings');
         if (forbiddenResponse) {
             return forbiddenResponse;
@@ -75,7 +67,7 @@ export async function handleIntegrationsRequest(request: Request): Promise<Respo
             await applyMerchbaseAgentCapabilityEnablement(settings.enabled).catch(() => undefined);
         }
         await refreshRuntimeCapabilities({
-            ids: ['integration.merchbase'],
+            ids: ['plugin.merchbase'],
             publishUpdated: true,
         });
         return json(agentRuntimeMerchbaseSettingsSchema.parse(settings));
@@ -83,7 +75,7 @@ export async function handleIntegrationsRequest(request: Request): Promise<Respo
 
     if (
         request.method === 'POST' &&
-        url.pathname === agentRuntimeRoutes.integrationMerchbaseSalesSeries
+        url.pathname === agentRuntimeRoutes.pluginMerchbaseSalesSeries
     ) {
         try {
             const input = agentRuntimeMerchbaseSalesSeriesInputSchema.parse(
@@ -97,10 +89,7 @@ export async function handleIntegrationsRequest(request: Request): Promise<Respo
         }
     }
 
-    if (
-        request.method === 'POST' &&
-        url.pathname === agentRuntimeRoutes.integrationMerchbaseAction
-    ) {
+    if (request.method === 'POST' && url.pathname === agentRuntimeRoutes.pluginMerchbaseAction) {
         try {
             const input = agentRuntimeMerchbaseActionInputSchema.parse(await readJson(request));
             return json(

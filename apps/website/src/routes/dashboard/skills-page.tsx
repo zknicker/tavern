@@ -20,8 +20,8 @@ export function SkillsPage() {
     const skillsQuery = useSkillList();
     const availableQuery = useSkillHubAvailable({ enabled: true });
     const skills = skillsQuery.data?.skills ?? [];
-    const installedSkills = skills.filter((skill) => !skill.integration);
-    const integrationSkills = skills.filter((skill) => skill.integration);
+    const installedSkills = skills.filter((skill) => !skill.plugin);
+    const pluginSkills = skills.filter((skill) => skill.plugin);
     const hubByName = React.useMemo(() => {
         const byName = new Map<string, { identifier: string; trustLevel: null | string }>();
         for (const [identifier, entry] of Object.entries(availableQuery.data?.installed ?? {})) {
@@ -51,7 +51,7 @@ export function SkillsPage() {
                     <SkillsTabBar
                         counts={{
                             installed: installedSkills.length,
-                            integrations: integrationSkills.length,
+                            plugins: pluginSkills.length,
                         }}
                         onChange={setTab}
                         value={tab}
@@ -71,13 +71,13 @@ export function SkillsPage() {
                         onSelect={(skill) => setSubject(installedSubject(skill, hubByName))}
                         skills={installedSkills}
                     />
-                ) : tab === 'integrations' ? (
+                ) : tab === 'plugins' ? (
                     <InstalledSkillsList
-                        emptyDescription="Integration skills appear here when enabled from Integrations."
-                        emptyTitle="No Integration skills"
+                        emptyDescription="Plugin skills appear here when enabled from Plugins."
+                        emptyTitle="No Plugin skills"
                         onSelect={(skill) => setSubject(installedSubject(skill, hubByName))}
-                        searchPlaceholder="Search Integration skills..."
-                        skills={integrationSkills}
+                        searchPlaceholder="Search Plugin skills..."
+                        skills={pluginSkills}
                     />
                 ) : (
                     <AvailableSkillsList
@@ -117,12 +117,12 @@ function installedSubject(skill: SkillSummary, hubByName: HubByName): SkillDialo
         description: skill.description,
         enabled: skill.enabled,
         identifier: hubEntry?.identifier ?? null,
-        integration: skill.integration,
+        plugin: skill.plugin,
         installed: true,
         name: skill.name,
         readOnly: skill.readOnly,
         skillId: skill.id,
-        trustLevel: skill.integration ? 'builtin' : narrowTrustLevel(hubEntry?.trustLevel),
+        trustLevel: skill.plugin ? 'builtin' : narrowTrustLevel(hubEntry?.trustLevel),
         uninstallName: hubEntry ? skill.name : null,
     };
 }
@@ -140,7 +140,7 @@ function availableSubject(
         description: item.description || null,
         enabled: inventorySkill?.enabled,
         identifier: item.identifier,
-        integration: inventorySkill?.integration ?? null,
+        plugin: inventorySkill?.plugin ?? null,
         installed: installedEntry !== undefined,
         name: item.name,
         readOnly: inventorySkill?.readOnly ?? false,
@@ -166,7 +166,7 @@ function refreshSubject(
         ...subject,
         enabled: inventorySkill?.enabled ?? subject.enabled,
         identifier: subject.identifier ?? hubEntry?.identifier ?? null,
-        integration: inventorySkill?.integration ?? subject.integration,
+        plugin: inventorySkill?.plugin ?? subject.plugin,
         installed,
         readOnly: inventorySkill?.readOnly ?? subject.readOnly,
         skillId: inventorySkill?.id ?? null,

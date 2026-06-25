@@ -1,4 +1,4 @@
-# Integration Boundary
+# Runtime Boundary
 
 Tavern owns the product surfaces it presents, even when connected runtimes own the underlying
 execution state.

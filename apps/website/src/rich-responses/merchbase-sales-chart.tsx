@@ -28,7 +28,7 @@ export function RichResponseMerchBaseSalesChart({
         setStartDate(nextStartDate);
         setEndDate(nextEndDate);
     }, []);
-    const query = trpc.integration.merchbaseSalesSeries.useQuery(
+    const query = trpc.plugin.merchbaseSalesSeries.useQuery(
         {
             asin: props.asin,
             bucket: 'day',

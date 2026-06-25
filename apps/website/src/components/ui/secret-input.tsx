@@ -5,7 +5,7 @@ import { Button } from './primitives/button.tsx';
 import { Input } from './primitives/input.tsx';
 
 // Shared masked-secret field: mono input with a reveal toggle. Used for env
-// variables, integration API keys, and anywhere a secret is entered or edited.
+// variables, plugin API keys, and anywhere a secret is entered or edited.
 export function SecretInput({
     ariaLabel,
     disabled,

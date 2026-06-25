@@ -8,12 +8,12 @@ read_when:
 # Tavern Runtime
 
 Tavern Runtime is the local always-on server. It owns canonical chat history and
-local integration. It is not the product UI and it is not a replacement agent
+local service connections. It is not the product UI and it is not a replacement agent
 executor.
 
 ## Ownership
 
-* **Tavern Runtime owns chat and local integration.** It stores canonical chats,
+* **Tavern Runtime owns chat and local service connections.** It stores canonical chats,
   messages, participants, events, reads, automations, agents, and delivery
   state. It starts managed Hermes, carries runtime events, stores runtime
   settings, exposes Vault reads, and exposes Tavern tools to agents.

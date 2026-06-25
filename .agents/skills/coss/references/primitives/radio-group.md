@@ -85,7 +85,7 @@ const [value, setValue] = useState("default")
 
 ### More examples
 
-See `p-radio-group-1` through `p-radio-group-5` for disabled, description, card-style, and form integration patterns.
+See `p-radio-group-1` through `p-radio-group-5` for disabled, description, card-style, and form wiring patterns.
 
 ## Common pitfalls
 
@@ -98,5 +98,5 @@ See `p-radio-group-1` through `p-radio-group-5` for disabled, description, card-
 - disabled: `p-radio-group-2`
 - with description: `p-radio-group-3`
 - card style: `p-radio-group-4`
-- form integration: `p-radio-group-5`
+- form wiring: `p-radio-group-5`
 - form composition references: `p-form-1`, `p-form-2`, `p-input-group-24`

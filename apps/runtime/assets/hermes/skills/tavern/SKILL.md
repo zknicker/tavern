@@ -70,7 +70,7 @@ direct the user to the exact place:
 | Durable notes and instructions / personality | Settings -> NOTES.md / SOUL.md |
 | Skills and toolsets | Settings -> Skills & Toolsets |
 | MCP servers | Settings -> Connectors |
-| MerchBase and other first-party Integration settings | Settings -> Integrations |
+| MerchBase and other first-party Plugin settings | Settings -> Plugins |
 | Model provider accounts and keys | Settings -> Models |
 | Assistant memory health | Settings -> Tavern Runtime |
 | Browsable knowledge wiki | Settings -> Vault |

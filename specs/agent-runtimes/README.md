@@ -28,7 +28,7 @@ Hermes agents.
 
 - `agent-runtimes.md`: Hermes ownership and runtime mapping model.
 - `tavern-messenger.md`: first-party Tavern chat channel/plugin expectations.
-- `hermes-gateway.md`: implemented Hermes Gateway integration contract.
+- `hermes-gateway.md`: implemented Hermes Gateway adapter contract.
 - `capability-degradation.md`: capability-level Hermes degradation model.
 - `communication-regression.md`: deterministic Hermes communication regression scenarios.
 - `agents.md`: Hermes agent expectations.

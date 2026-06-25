@@ -26,7 +26,7 @@ describe('managed tavern skill', () => {
         expect(skill).not.toContain('## Assistant Memory');
         expect(skill).toContain('Vault status');
         expect(skill).toContain('Settings -> Connectors');
-        expect(skill).toContain('Settings -> Integrations');
+        expect(skill).toContain('Settings -> Plugins');
         await expectOwnerWriteDisabled(skillPath);
         await expectOwnerWriteDisabled(path.join(skillPath, 'SKILL.md'));
     });

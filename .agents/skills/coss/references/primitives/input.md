@@ -67,7 +67,7 @@ Sizes: `sm`, `default`, `lg`. Always specify `type` explicitly.
 - file: `p-input-5`
 - with label: `p-input-6`
 - with button: `p-input-7`
-- form integration: `p-form-1`
+- form wiring: `p-form-1`
 
 ## Common pitfalls
 
@@ -77,4 +77,4 @@ Sizes: `sm`, `default`, `lg`. Always specify `type` explicitly.
 
 ## Useful particle references
 
-See `p-input-1` through `p-input-7` for size/variant combinations, `p-form-1` for form integration.
+See `p-input-1` through `p-input-7` for size/variant combinations, `p-form-1` for form wiring.

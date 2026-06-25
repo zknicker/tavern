@@ -4,14 +4,14 @@ All notable changes to this project will be documented in this file.
 
 ## v1.4.30 - 2026-06-24
 
-Runtime floor raised to 1.4.30 for MerchBase Integrations, managed agent
+Runtime floor raised to 1.4.30 for MerchBase Plugins, managed agent
 toolset wiring, and default model runtime correctness.
 
 App changes:
 
-- Requires Runtime 1.4.30 so upgraded apps can configure MerchBase Integrations,
+- Requires Runtime 1.4.30 so upgraded apps can configure MerchBase Plugins,
   read MerchBase sales, and render MerchBase Rich Response charts.
-- Adds MerchBase Integration settings and chart rendering, including sparse-day
+- Adds MerchBase Plugin settings and chart rendering, including sparse-day
   sales data handling and date range controls.
 - Shows Tavern updater state in the sidebar and surfaces updater progress as
   soon as staging begins.
@@ -21,7 +21,7 @@ App changes:
 
 Runtime changes:
 
-- Adds Runtime-owned MerchBase Integration settings, health, sales reads,
+- Adds Runtime-owned MerchBase Plugin settings, health, sales reads,
   capability exposure, managed skill guidance, and toolset plugin wiring.
 - Applies the configured default model runtime before the first prompt in a
   fresh managed agent session.
@@ -567,7 +567,7 @@ floor stays at 1.4.2.
 
 - Replaced the GBrain/PGlite Cortex stack with a read-only Cortex wiki hub browser and managed Hermes wiki skill.
 - Updated Runtime packaging, Homebrew assets, capability checks, and docs for the Cortex wiki hub.
-- Raised the required Runtime floor to 1.3.0 for the new Cortex API, wiki hub, and managed Hermes integration.
+- Raised the required Runtime floor to 1.3.0 for the new Cortex API, wiki hub, and managed Hermes adapter.
 
 ## v1.2.9 - 2026-06-06
 

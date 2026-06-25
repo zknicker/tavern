@@ -78,7 +78,7 @@ of explaining every detail itself.
 
 A feature is something Tavern exposes as a product capability. Good feature
 names are `Chat`, `Agents`, `Memory`, `Vault`, `Cron automations`,
-`Skills`, `Stats`, `Pets and rewards`, and `TypeScript SDK + integrations`.
+`Skills`, `Plugins`, `Stats`, `Pets and rewards`, and `TypeScript SDK`.
 
 Implementation nouns are not features. Avoid feature pages named `Frontend`,
 `Server`, `Sessions`, `Runtime records`, `Hermes plugin`, or `Runtime status`.
@@ -147,7 +147,7 @@ SDK docs:
 * **Include examples.** Tavern App, bot, webhook, automation, and local tool
   examples use the real SDK surface.
 
-Hermes is one runtime behind Tavern. Document it as an adapter or integration,
+Hermes is one runtime behind Tavern. Document it as an adapter,
 not as the shape of the API itself.
 
 ## Internals Docs
