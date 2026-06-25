@@ -2,6 +2,37 @@
 
 All notable changes to this project will be documented in this file.
 
+## v1.4.31 - 2026-06-25
+
+Runtime floor raised to 1.4.31 for inspectable workspace artifacts and
+workspace file browsing.
+
+App changes:
+
+- Requires Runtime 1.4.31 so upgraded apps can browse agent workspace files and
+  open linked workspace artifacts.
+- Adds a chat-scoped Artifact Panel for Markdown, HTML, image, Vault, and
+  workspace outputs opened from assistant links.
+- Adds a top-level Workspace page with the same file browser and preview
+  behavior used by the Artifact Panel.
+- Renames the top-level Memory surface to Workspace while keeping assistant
+  memory configuration in Settings.
+- Polishes Vault and Workspace file trees with shared file icons, search,
+  resizable sidebars, middle filename truncation, and compact tab chrome.
+- Refreshes Plugin/settings dialogs with clearer naming, icons, contrast, and
+  layout controls.
+- Tightens cron editor and dialog spacing.
+
+Runtime changes:
+
+- Adds read-only Runtime routes for registered agent workspace listings and
+  file previews, with traversal, symlink, sensitive-file, and generated-folder
+  protections.
+- Adds managed agent guidance for linking inspectable outputs with
+  `tavern://workspace/...` and `tavern://vault/...` Markdown links.
+- Seeds development workspace and Vault demo files for the artifact and
+  workspace browsing flows.
+
 ## v1.4.30 - 2026-06-24
 
 Runtime floor raised to 1.4.30 for MerchBase Plugins, managed agent
