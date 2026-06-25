@@ -99,35 +99,33 @@ export function SimpleCodeEditor({
     const lineNumbers = React.useMemo(() => buildLineNumbers(value), [value]);
 
     return (
-        <div className={cn('min-h-0 flex-1 overflow-auto overscroll-none', className)}>
-            <div className="grid min-h-full grid-cols-[auto_minmax(0,1fr)]">
+        <div
+            className={cn('flex min-h-0 flex-1 flex-col overflow-auto overscroll-none', className)}
+        >
+            <div className="grid flex-1 grid-cols-[auto_minmax(0,1fr)]">
                 <pre
                     aria-hidden="true"
                     className="sticky left-0 min-h-full min-w-14 select-none border-border/50 border-r bg-muted/50 px-3 py-[12px] text-right font-mono text-code text-muted-foreground tabular-nums leading-[1.65]"
                 >
                     {lineNumbers}
                 </pre>
-                <div
+                <Editor
                     className={cn(
-                        'tavern-simple-code-editor min-h-full',
+                        'tavern-simple-code-editor min-h-full font-mono text-code leading-[1.65]',
                         readOnly && 'tavern-simple-code-editor--plain'
                     )}
-                >
-                    <Editor
-                        className="min-h-full font-mono text-code leading-[1.65]"
-                        disabled={disabled}
-                        highlight={(code) => highlightCode(code, language.prism)}
-                        insertSpaces
-                        onValueChange={onChange ?? noop}
-                        padding={12}
-                        placeholder={placeholder}
-                        preClassName="min-h-full"
-                        readOnly={readOnly}
-                        tabSize={4}
-                        textareaClassName="min-h-full w-full outline-none"
-                        value={value}
-                    />
-                </div>
+                    disabled={disabled}
+                    highlight={(code) => highlightCode(code, language.prism)}
+                    insertSpaces
+                    onValueChange={onChange ?? noop}
+                    padding={12}
+                    placeholder={placeholder}
+                    preClassName="min-h-full"
+                    readOnly={readOnly}
+                    tabSize={4}
+                    textareaClassName="min-h-full w-full outline-none"
+                    value={value}
+                />
             </div>
         </div>
     );
