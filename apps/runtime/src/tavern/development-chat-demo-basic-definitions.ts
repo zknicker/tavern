@@ -89,6 +89,24 @@ export function lineChartDemo(): DevelopmentChatDemo {
     };
 }
 
+export function artifactLinksDemo(): DevelopmentChatDemo {
+    return completedTextDemo({
+        chatId: developmentChatDemoIds.artifactLinks,
+        request: 'Show me the inspectable outputs you created.',
+        reply: [
+            'Created two inspectable Vault notes:',
+            '',
+            '- [Artifact Panel brief](tavern://vault/Demos/Panel%20Brief.md)',
+            '- [Inspectable output rules](tavern://vault/Demos/Output%20Rules.md)',
+            '',
+            'Workspace links use the same shape. This one opens the panel with the current unsupported state: [preview.html](tavern://workspace/out/preview.html).',
+        ].join('\n'),
+        slug: 'artifact_links',
+        summary: 'Linked inspectable outputs for the Artifact Panel demo.',
+        title: 'Demo: Artifact Links',
+    });
+}
+
 export function calendarEventDemo(): DevelopmentChatDemo {
     const eventProps = richResponseCalendarEventPropsSchema.parse(calendarEventDemoProps());
     const chatId = developmentChatDemoIds.calendarEvent;

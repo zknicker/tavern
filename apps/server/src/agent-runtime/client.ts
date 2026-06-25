@@ -119,6 +119,9 @@ import {
     type AgentRuntimeUpdateToolsetEnabled,
     type AgentRuntimeUpsertBinding,
     type AgentRuntimeVaultSettings,
+    type AgentRuntimeWorkspaceFileContent,
+    type AgentRuntimeWorkspaceFileList,
+    type AgentRuntimeWorkspaceFileListInput,
     type AgentRuntimeWorkspaceInstructions,
     agentRuntimeAgentEnvSchema,
     agentRuntimeAgentFileContentSchema,
@@ -251,6 +254,9 @@ import {
     agentRuntimeUpdateToolsetEnabledSchema,
     agentRuntimeUpsertBindingSchema,
     agentRuntimeVaultSettingsSchema,
+    agentRuntimeWorkspaceFileContentSchema,
+    agentRuntimeWorkspaceFileListInputSchema,
+    agentRuntimeWorkspaceFileListSchema,
     agentRuntimeWorkspaceInstructionsSchema,
     type VaultBacklinkList,
     type VaultCreatePage,
@@ -344,6 +350,7 @@ export interface TavernAgentRuntimeClient {
     getVaultPage(input: { path: string }): Promise<VaultPage | null>;
     getVaultSettings(): Promise<AgentRuntimeVaultSettings>;
     getVaultStatus(): Promise<VaultStatus>;
+    getWorkspaceFile(agentId: string, path: string): Promise<AgentRuntimeWorkspaceFileContent>;
     getWorkspaceInstructions(agentId: string): Promise<AgentRuntimeRenderedWorkspaceInstructions>;
     installMcpCatalogEntry(
         input: AgentRuntimeMcpCatalogInstall
@@ -380,6 +387,10 @@ export interface TavernAgentRuntimeClient {
     listToolsets(): Promise<AgentRuntimeToolsetList>;
     listVaultBacklinks(input: { path: string }): Promise<VaultBacklinkList>;
     listVaultPages(): Promise<VaultPageList>;
+    listWorkspaceFiles(
+        agentId: string,
+        input?: AgentRuntimeWorkspaceFileListInput
+    ): Promise<AgentRuntimeWorkspaceFileList>;
     moveVaultPath(input: VaultMovePath): Promise<VaultPathMutationResult>;
     pollModelProviderOAuth(input: AgentRuntimePollModelProviderOAuth): Promise<unknown>;
     postMessage(
@@ -628,6 +639,40 @@ class HttpTavernAgentRuntimeClient implements TavernAgentRuntimeClient {
         }
 
         return agentRuntimeAgentFileContentSchema.parse(await response.json());
+    }
+
+    async listWorkspaceFiles(
+        agentId: string,
+        input: AgentRuntimeWorkspaceFileListInput = { path: '' }
+    ) {
+        const payload = agentRuntimeWorkspaceFileListInputSchema.parse(input);
+        const url = new URL(`${this.#baseUrl}${agentRuntimeRoutes.workspaceAgentFiles(agentId)}`);
+        if (payload.path) {
+            url.searchParams.set('path', payload.path);
+        }
+
+        const response = await fetch(url, {
+            headers: this.#authHeaders,
+        });
+
+        if (!response.ok) {
+            await readErrorResponse(response);
+        }
+
+        return agentRuntimeWorkspaceFileListSchema.parse(await response.json());
+    }
+
+    async getWorkspaceFile(agentId: string, path: string) {
+        const response = await fetch(
+            `${this.#baseUrl}${agentRuntimeRoutes.workspaceAgentFile(agentId, path)}`,
+            { headers: this.#authHeaders }
+        );
+
+        if (!response.ok) {
+            await readErrorResponse(response);
+        }
+
+        return agentRuntimeWorkspaceFileContentSchema.parse(await response.json());
     }
 
     async saveAgentFile(agentId: string, path: string, input: AgentRuntimeSaveAgentFile) {

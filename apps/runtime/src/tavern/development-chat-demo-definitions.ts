@@ -4,6 +4,7 @@ import {
     streamingStackDemo,
 } from './development-chat-demo-activity-definitions';
 import {
+    artifactLinksDemo,
     attachmentDemo,
     calendarDayDemo,
     calendarEventDemo,
@@ -24,6 +25,7 @@ export const developmentChatDemos: DevelopmentChatDemo[] = [
     calendarEventDemo(),
     merchbaseSalesChartDemo(),
     richResponseCatalogDemo(),
+    artifactLinksDemo(),
     longContentDemo(),
     attachmentDemo(),
     activityTurnDemo(),

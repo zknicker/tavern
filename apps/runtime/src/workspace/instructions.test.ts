@@ -104,6 +104,11 @@ describe('generated agent instructions', () => {
         expect(content).toContain('## Visible Progress');
         expect(content).toContain('send one short preamble');
         expect(content).toContain('send a brief update');
+        expect(content).toContain('## Inspectable Outputs');
+        expect(content).toContain('Link inspectable outputs in final replies');
+        expect(content).toContain('[name](tavern://workspace/path)');
+        expect(content).toContain('[name](tavern://vault/path)');
+        expect(content).toContain('Do not mention the Artifacts panel');
         expect(content).toContain('## Delegation');
         expect(content).toContain('## Memory');
         expect(content).toContain('native `memory` tool');
@@ -127,6 +132,7 @@ describe('generated agent instructions', () => {
 
         expect(content.indexOf('## Visible Progress')).toBeGreaterThan(-1);
         expect(content.indexOf('## Visible Progress')).toBeLessThan(hermesContextHeadChars);
+        expect(content.indexOf('## Inspectable Outputs')).toBeLessThan(hermesContextHeadChars);
         expect(content.indexOf('## Notes And Skills')).toBeLessThan(hermesContextHeadChars);
         expect(content.indexOf('## Memory')).toBeLessThan(hermesContextHeadChars);
         expect(content.indexOf('## Vault')).toBeLessThan(hermesContextHeadChars);

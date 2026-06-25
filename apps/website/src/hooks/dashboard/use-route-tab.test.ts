@@ -6,17 +6,17 @@ describe('dashboard route tab', () => {
         expect(routeTabs.find((tab) => tab.id === 'cron')?.label).toBe('Tasks');
     });
 
-    test('exposes Memory as a dashboard tab', () => {
-        expect(routeTabs.find((tab) => tab.id === 'memory')).toEqual({
-            id: 'memory',
-            label: 'Memory',
-            path: '/dashboard/memory',
+    test('exposes Workspace as a dashboard tab', () => {
+        expect(routeTabs.find((tab) => tab.id === 'workspace')).toEqual({
+            id: 'workspace',
+            label: 'Workspace',
+            path: '/dashboard/workspace',
         });
     });
 
     test('returns the matching dashboard tab for primary routes', () => {
         expect(getRouteTab('/dashboard/overview')).toBe('overview');
-        expect(getRouteTab('/dashboard/memory')).toBe('memory');
+        expect(getRouteTab('/dashboard/workspace')).toBe('workspace');
         expect(getRouteTab('/dashboard/vault')).toBe('vault');
     });
 

@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { MemoryRouter } from 'react-router-dom';
-import { MemoryOverview } from './memory.tsx';
+import { MemoryOverview } from './memory-overview.tsx';
 
 test('MemoryOverview renders Aside-style memory settings and hub status', () => {
     const markup = renderToStaticMarkup(

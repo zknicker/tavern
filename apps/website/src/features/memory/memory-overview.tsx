@@ -1,6 +1,6 @@
 import { ArrowRight01Icon } from '@hugeicons-pro/core-solid-rounded';
 import { Folder01Icon, HourglassIcon } from '@hugeicons-pro/core-stroke-rounded';
-import * as React from 'react';
+import type * as React from 'react';
 import { NavLink } from 'react-router-dom';
 import { Badge } from '../../components/ui/badge.tsx';
 import { Card, CardFrame } from '../../components/ui/card.tsx';
@@ -9,29 +9,13 @@ import { Icon } from '../../components/ui/icon.tsx';
 import { Button } from '../../components/ui/primitives/button.tsx';
 import { Separator } from '../../components/ui/separator.tsx';
 import { SettingsRow, SettingsValue } from '../../components/ui/settings-row.tsx';
-import { Skeleton } from '../../components/ui/skeleton.tsx';
 import { Switch } from '../../components/ui/switch.tsx';
-import { useVaultStatusSuspense } from '../../hooks/vault/use-vault-status.ts';
 import {
     formatVaultAccess,
     formatVaultConfigSource,
     getVaultHealth,
     type VaultHubStatus,
 } from './wiki-status-format.ts';
-
-function MemoryContent() {
-    const [status] = useVaultStatusSuspense();
-
-    return <MemoryOverview status={status ?? null} />;
-}
-
-export function Memory() {
-    return (
-        <React.Suspense fallback={<MemoryLoadingState />}>
-            <MemoryContent />
-        </React.Suspense>
-    );
-}
 
 export function MemoryOverview({ status }: { status: VaultHubStatus | null }) {
     const health = getVaultHealth(status);
@@ -172,40 +156,6 @@ function MemorySection({ children, title }: { children: React.ReactNode; title: 
             <h2 className="font-medium text-foreground text-sm">{title}</h2>
             <CardFrame>
                 <Card className="overflow-hidden p-0">{children}</Card>
-            </CardFrame>
-        </section>
-    );
-}
-
-function MemoryLoadingState() {
-    return (
-        <div className="min-h-0 flex-1 overflow-y-auto [scrollbar-gutter:stable]">
-            <main className="mx-auto flex w-full max-w-3xl flex-col gap-8 px-8 pt-12 pb-24">
-                <header className="space-y-3">
-                    <Skeleton className="h-8 w-32" />
-                    <Skeleton className="h-4 w-full max-w-xl" />
-                    <Skeleton className="h-4 w-96 max-w-full" />
-                </header>
-
-                <MemorySkeletonSection />
-                <MemorySkeletonSection />
-            </main>
-        </div>
-    );
-}
-
-function MemorySkeletonSection() {
-    return (
-        <section className="space-y-3">
-            <Skeleton className="h-5 w-24" />
-            <CardFrame>
-                <Card className="overflow-hidden p-0">
-                    <Skeleton className="h-17 rounded-none" />
-                    <Separator />
-                    <Skeleton className="h-17 rounded-none" />
-                    <Separator />
-                    <Skeleton className="h-17 rounded-none" />
-                </Card>
             </CardFrame>
         </section>
     );

@@ -37,6 +37,6 @@ context omits wiki material instead of adding filler.
 * Memory context stays bounded.
 * Managed Tavern Hermes does not use Lossless Claw.
 * Vault remains the durable knowledge system.
-* The Memory page inspects wiki readiness; it is not a separate memory
-  database.
+* Memory settings can show assistant-memory and Vault readiness; Tavern does not
+  maintain a separate memory database.
 * The Vault page browses wiki pages; it is not a separate store.

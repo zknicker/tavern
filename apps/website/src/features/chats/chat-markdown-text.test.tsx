@@ -1,5 +1,6 @@
 import { expect, test } from 'bun:test';
 import { renderToStaticMarkup } from 'react-dom/server';
+import { ArtifactPanelOpenProvider } from './artifact-panel-context.tsx';
 import { ChatMarkdownText } from './chat-markdown-text.tsx';
 import {
     ChatTranscriptMessageContent,
@@ -45,6 +46,17 @@ test('ChatMarkdownText renders compact heading blocks', () => {
     expect(markup).toContain('<h3');
     expect(markup).toContain('Test 3</h3>');
     expect(markup).not.toContain('# Test');
+});
+
+test('ChatMarkdownText renders Tavern resource links', () => {
+    const markup = renderToStaticMarkup(
+        <ArtifactPanelOpenProvider onOpen={() => undefined}>
+            <ChatMarkdownText content="[INDEX.md](tavern://vault/INDEX.md)" />
+        </ArtifactPanelOpenProvider>
+    );
+
+    expect(markup).toContain('href="tavern://vault/INDEX.md"');
+    expect(markup).toContain('INDEX.md');
 });
 
 test('ChatMarkdownText keeps heading markers literal inside fenced text', () => {

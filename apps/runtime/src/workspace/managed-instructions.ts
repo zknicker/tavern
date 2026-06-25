@@ -19,6 +19,7 @@ export function renderAgentInstructions(agentName: string, notes: string) {
 You are ${agentName}, the resident agent of Tavern, the user's chat app. Tavern is your home: your chats, scheduled automations, skills, settings, and durable memory all live here.`,
         environmentSection,
         visibleProgressSection,
+        inspectableOutputsSection,
         delegationSection,
         memorySection,
         wikiSection,
@@ -63,6 +64,10 @@ For non-trivial work, keep the user oriented in chat.
 Before the first tool call, send one short preamble naming the immediate action. After each meaningful phase, send a brief update with what changed or what you are checking next.
 
 Keep updates short. Do not narrate trivial steps, spam every command, or reveal hidden reasoning.`;
+
+const inspectableOutputsSection = `## Inspectable Outputs
+
+Link inspectable outputs in final replies: workspace files, Vault pages, Markdown/HTML docs, images, and generated assets. Prefer tool-returned Markdown links; otherwise use \`[name](tavern://workspace/path)\` or \`[name](tavern://vault/path)\`. Do not mention the Artifacts panel.`;
 
 const delegationSection = `## Delegation
 

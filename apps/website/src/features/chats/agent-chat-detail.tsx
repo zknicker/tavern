@@ -11,12 +11,14 @@ import { useChatVirtualizationPreference } from '../../hooks/chats/use-chat-virt
 import { useChatRuntimeTimelineState } from '../../hooks/chats/use-timeline-context.tsx';
 import { useModelList } from '../../hooks/models/use-model-list.ts';
 import { MissingAgentState } from '../agents/missing-agent-state.tsx';
+import { ArtifactPanelOpenProvider } from './artifact-panel-context.tsx';
 import {
     ChatApprovalFlow,
     ChatApprovalFlowComposer,
     ChatApprovalPrompt,
     useChatApprovalPromptState,
 } from './chat-approval-prompt.tsx';
+import { ChatArtifactPanel, useChatArtifactPanelState } from './chat-artifact-panel.tsx';
 import { getChatContextFullness } from './chat-context-fullness.ts';
 import { ChatDetailFrame } from './chat-detail-frame.tsx';
 import { ChatDraftDetail } from './chat-draft-detail.tsx';
@@ -175,65 +177,71 @@ function SyncedAgentChatDetail({ chat, chatId }: { chat: ChatListItem; chatId: s
               rows,
           })
         : null;
+    const artifactPanel = useChatArtifactPanelState(chatId);
 
     if (!(agent || agentsQuery.isPending)) {
         return <MissingAgentState agentId={agentId} />;
     }
 
     return (
-        <ChatDetailFrame
-            activeReply={timeline.activeReply}
-            agentPresenceColor={agent?.effectivePrimaryColor ?? null}
-            chatId={chat.id}
-            conversationLayout={conversationLayout}
-            emptyLabel="No synced messages for this chat yet."
-            enableVirtualization={chatVirtualization.enabled}
-            error={timeline.error}
-            failedTurn={timeline.failedTurn}
-            fetchPreviousPage={timeline.fetchPreviousPage}
-            footer={
-                <ChatApprovalFlow active={approvalPrompt.isActive}>
-                    <ChatApprovalPrompt
-                        chatId={chat.id}
-                        hasError={approvalPrompt.hasError}
-                        onAnswerError={approvalPrompt.markAnswerError}
-                        onAnswered={approvalPrompt.markAnswered}
-                        prompt={approvalPrompt.prompt}
-                    />
-                    <ChatApprovalFlowComposer>
-                        <ChatMessageComposer
-                            activeRunId={
-                                timeline.activeTurn?.runId ?? timeline.activeReply?.runId ?? null
-                            }
-                            agentRuntimeSyncLabel={chat.agentRuntimeSyncLabel}
-                            agents={agents}
-                            blockReason={pendingApprovalBlockReason}
-                            boundAgentIds={chat.boundAgentIds}
-                            canSend={chat.canSend}
+        <ArtifactPanelOpenProvider onOpen={artifactPanel.open}>
+            <ChatDetailFrame
+                activeReply={timeline.activeReply}
+                agentPresenceColor={agent?.effectivePrimaryColor ?? null}
+                artifactPanel={<ChatArtifactPanel agentId={agentId} state={artifactPanel} />}
+                chatId={chat.id}
+                conversationLayout={conversationLayout}
+                emptyLabel="No synced messages for this chat yet."
+                enableVirtualization={chatVirtualization.enabled}
+                error={timeline.error}
+                failedTurn={timeline.failedTurn}
+                fetchPreviousPage={timeline.fetchPreviousPage}
+                footer={
+                    <ChatApprovalFlow active={approvalPrompt.isActive}>
+                        <ChatApprovalPrompt
                             chatId={chat.id}
-                            contextFullness={contextFullness}
-                            isDisabled={chat.isDisabled}
-                            isReplyActive={isBlockingActiveTurn({
-                                activeReply: timeline.activeReply,
-                                activeTurn: timeline.activeTurn,
-                                agentsPending: agentsQuery.isPending,
-                            })}
-                            steerRunId={getSteerableRunId({
-                                activeReply: timeline.activeReply,
-                                activeTurn: timeline.activeTurn,
-                                rows,
-                            })}
+                            hasError={approvalPrompt.hasError}
+                            onAnswerError={approvalPrompt.markAnswerError}
+                            onAnswered={approvalPrompt.markAnswered}
+                            prompt={approvalPrompt.prompt}
                         />
-                    </ChatApprovalFlowComposer>
-                </ChatApprovalFlow>
-            }
-            hasPreviousPage={timeline.hasPreviousPage}
-            historyLoaded={timeline.historyLoaded}
-            isFetchingPreviousPage={timeline.isFetchingPreviousPage}
-            isPending={timeline.isPending}
-            rows={rows}
-            totalMessages={totalMessages}
-        />
+                        <ChatApprovalFlowComposer>
+                            <ChatMessageComposer
+                                activeRunId={
+                                    timeline.activeTurn?.runId ??
+                                    timeline.activeReply?.runId ??
+                                    null
+                                }
+                                agentRuntimeSyncLabel={chat.agentRuntimeSyncLabel}
+                                agents={agents}
+                                blockReason={pendingApprovalBlockReason}
+                                boundAgentIds={chat.boundAgentIds}
+                                canSend={chat.canSend}
+                                chatId={chat.id}
+                                contextFullness={contextFullness}
+                                isDisabled={chat.isDisabled}
+                                isReplyActive={isBlockingActiveTurn({
+                                    activeReply: timeline.activeReply,
+                                    activeTurn: timeline.activeTurn,
+                                    agentsPending: agentsQuery.isPending,
+                                })}
+                                steerRunId={getSteerableRunId({
+                                    activeReply: timeline.activeReply,
+                                    activeTurn: timeline.activeTurn,
+                                    rows,
+                                })}
+                            />
+                        </ChatApprovalFlowComposer>
+                    </ChatApprovalFlow>
+                }
+                hasPreviousPage={timeline.hasPreviousPage}
+                historyLoaded={timeline.historyLoaded}
+                isFetchingPreviousPage={timeline.isFetchingPreviousPage}
+                isPending={timeline.isPending}
+                rows={rows}
+                totalMessages={totalMessages}
+            />
+        </ArtifactPanelOpenProvider>
     );
 }
 

@@ -66,10 +66,12 @@ manage businesses, complete knowledge work, and automate routine tasks.
   summaries, and final replies in one timeline.
 * **Agents.** Model, tool, memory, skill, and toolset configuration for the
   people you actually work with in Tavern.
+* **Workspace.** A browsable view of the managed agent workspace and generated
+  files or assets.
 * **Vault.** A browsable Markdown wiki with pages, backlinks, search, and
   agent-authored notes.
 * **Context management.** Prompt-time continuity for active Hermes turns.
-* **Memory.** Vault readiness plus prompt-time context inspection.
+* **Memory.** Bounded prompt-time assistant memory configured through Settings.
 * **Cron automations.** Scheduled agent work with run history, delivery targets,
   and clear follow-up state, even while the app is closed.
 * **Skills & Toolsets.** Reusable instruction packages and Hermes tool groups.

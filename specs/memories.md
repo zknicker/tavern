@@ -24,8 +24,9 @@ rewrites, or deletes the relevant memory entry or wiki material.
 
 ## Memory Inspection
 
-The Memory page shows wiki readiness and counts. The Vault page is the browsable
-wiki surface.
+Memory settings show assistant-memory configuration and Vault readiness where
+needed. The Vault page is the browsable wiki surface. The Workspace page is the
+browsable managed agent workspace.
 
 The inspection model favors readable Markdown over graph visualization,
 embedding settings, hidden repair queues, or generated schema controls.

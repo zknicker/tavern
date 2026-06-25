@@ -31,6 +31,7 @@ export function VaultTopbar({
     isSaving,
     onEditorModeChange,
     onInspectorOpenChange,
+    onSelectPath,
     onSave,
     pagePath,
     pageSelected,
@@ -41,6 +42,7 @@ export function VaultTopbar({
     isSaving: boolean;
     onEditorModeChange: (mode: VaultEditorMode) => void;
     onInspectorOpenChange: (open: boolean) => void;
+    onSelectPath: (path: string) => void;
     onSave: () => void;
     pagePath: string;
     pageSelected: boolean;
@@ -48,7 +50,9 @@ export function VaultTopbar({
     return (
         <header className="grid h-12 shrink-0 grid-cols-[minmax(0,1fr)_auto] items-center border-border/70 border-b">
             <div className="min-w-0 px-4">
-                {pagePath ? <VaultPathBreadcrumb path={pagePath} /> : null}
+                {pagePath ? (
+                    <VaultPathBreadcrumb onSelectPath={onSelectPath} path={pagePath} />
+                ) : null}
             </div>
             {pageSelected ? (
                 <div className="flex items-center justify-end gap-3 py-0 pr-[10px] pl-4">
@@ -89,7 +93,13 @@ export function VaultTopbar({
     );
 }
 
-function VaultPathBreadcrumb({ path }: { path: string }) {
+function VaultPathBreadcrumb({
+    onSelectPath,
+    path,
+}: {
+    onSelectPath: (path: string) => void;
+    path: string;
+}) {
     const crumbs = path
         .split('/')
         .filter(Boolean)
@@ -129,14 +139,18 @@ function VaultPathBreadcrumb({ path }: { path: string }) {
                                     <span className="truncate">{crumb.label}</span>
                                 </BreadcrumbPage>
                             ) : (
-                                <span className="flex min-w-0 items-center gap-1 text-muted-foreground">
+                                <button
+                                    className="-my-1 flex min-w-0 cursor-pointer items-center gap-1 rounded-md px-1.5 py-1 text-muted-foreground transition-colors hover:bg-muted/45 hover:text-foreground"
+                                    onClick={() => onSelectPath(crumb.path)}
+                                    type="button"
+                                >
                                     <Icon
                                         aria-hidden="true"
                                         className="size-3.5 shrink-0"
                                         icon={Folder01Icon}
                                     />
                                     <span className="truncate">{crumb.label}</span>
-                                </span>
+                                </button>
                             )}
                         </BreadcrumbItem>
                     </Fragment>

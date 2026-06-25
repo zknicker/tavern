@@ -8,11 +8,15 @@ import { type ManagedHermesHandle, startHermesForRuntime } from './hermes/superv
 import { type RuntimeJobsManager, startRuntimeJobsManager } from './jobs/manager';
 import { ensureRuntimeJobsSchema } from './jobs/schema';
 import { log } from './log';
+import { demoAgentId } from './tavern/development-chat-demo-types';
 import { seedDevelopmentChatDemos } from './tavern/development-chat-demos';
+import { seedDevelopmentVaultDemos } from './tavern/development-vault-demos';
 import { startTavernRuntimeServer } from './tavern/server';
 import { recoverInterruptedChatResponses } from './tavern/turn-recovery';
 import { resolveVaultConfig } from './vault/store';
 import { closeVaultWatcher, restartVaultWatcher, startVaultWatcher } from './vault/watcher';
+import { seedDevelopmentWorkspaceDemos } from './workspace/development-demos';
+import { getAgentWorkspaceSource } from './workspace/instructions';
 import { closeAgentNotesWatchers } from './workspace/notes-watcher';
 
 let runtimeServer: ReturnType<typeof startTavernRuntimeServer> | null = null;
@@ -36,6 +40,17 @@ async function main(): Promise<void> {
     const demoSeed = seedDevelopmentChatDemos({ db });
     if (demoSeed.seeded > 0) {
         log.info('Development chat demos ready', { count: demoSeed.seeded });
+    }
+    const demoWorkspaceSource = getAgentWorkspaceSource(db, demoAgentId);
+    const workspaceDemoSeed = demoWorkspaceSource
+        ? await seedDevelopmentWorkspaceDemos({ sources: [demoWorkspaceSource] })
+        : { seeded: 0 };
+    if (workspaceDemoSeed.seeded > 0) {
+        log.info('Development workspace demos ready', { count: workspaceDemoSeed.seeded });
+    }
+    const vaultDemoSeed = await seedDevelopmentVaultDemos();
+    if (vaultDemoSeed.seeded > 0) {
+        log.info('Development Vault demos ready', { count: vaultDemoSeed.seeded });
     }
     void startVaultWatcher(resolveVaultConfig).catch((err) => {
         log.warn('Vault live updates failed to start', { err });

@@ -1,6 +1,26 @@
 import type * as React from 'react';
+import { useArtifactPanelOpen } from './artifact-panel-context.tsx';
+import { parseTavernResourceLink } from './tavern-resource-link.ts';
 
 export function MarkdownLink({ children, href }: { children: React.ReactNode; href: string }) {
+    const openArtifactPanel = useArtifactPanelOpen();
+    const tavernTarget = parseTavernResourceLink(href);
+
+    if (tavernTarget && openArtifactPanel) {
+        return (
+            <a
+                className="cursor-pointer text-primary underline underline-offset-2 hover:text-primary/85"
+                href={href}
+                onClick={(event) => {
+                    event.preventDefault();
+                    openArtifactPanel(tavernTarget);
+                }}
+            >
+                {children}
+            </a>
+        );
+    }
+
     return (
         <a
             className="text-primary underline underline-offset-2 hover:text-primary/85"
@@ -67,6 +87,10 @@ export function matchBareUrl(text: string) {
 
 function sanitizeUrl(value: string) {
     const href = value.startsWith('www.') ? `https://${value}` : value;
+
+    if (parseTavernResourceLink(href)) {
+        return href;
+    }
 
     try {
         const url = new URL(href);

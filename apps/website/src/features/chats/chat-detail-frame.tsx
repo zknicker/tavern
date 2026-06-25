@@ -23,6 +23,7 @@ export function ChatDetailFrame({
     emptyLabel,
     enableVirtualization = true,
     error,
+    artifactPanel,
     fetchPreviousPage,
     failedTurn,
     footer,
@@ -41,6 +42,7 @@ export function ChatDetailFrame({
     emptyLabel: string;
     enableVirtualization?: boolean;
     error?: unknown;
+    artifactPanel?: React.ReactNode;
     fetchPreviousPage?: () => void;
     failedTurn?: ChatTurnFailure | null;
     footer: React.ReactNode;
@@ -86,74 +88,79 @@ export function ChatDetailFrame({
     };
     return (
         <ChatScrollControllerProvider value={chatScroll.handle}>
-            <div className="flex min-h-0 flex-1 flex-col">
-                <div className="absolute top-3 left-1/2 z-10 -translate-x-1/2">
-                    <ChatTranscriptLoadingIndicator
-                        className="shrink-0"
-                        visible={isInitialTranscriptPending}
-                    />
-                </div>
+            <div className="flex min-h-0 flex-1 overflow-hidden">
+                <div className="relative flex min-w-0 flex-1 flex-col">
+                    <div className="absolute top-3 left-1/2 z-10 -translate-x-1/2">
+                        <ChatTranscriptLoadingIndicator
+                            className="shrink-0"
+                            visible={isInitialTranscriptPending}
+                        />
+                    </div>
 
-                <div className="relative min-h-0 flex-1">
-                    <div
-                        className="h-full min-h-0 overflow-y-auto px-6 py-4 [scrollbar-gutter:stable]"
-                        onScroll={handleScroll}
-                        ref={chatScroll.viewportRef}
-                    >
+                    <div className="relative min-h-0 flex-1">
                         <div
-                            className="mx-auto min-h-full w-full max-w-[60rem]"
-                            ref={chatScroll.contentRef}
+                            className="h-full min-h-0 overflow-y-auto px-6 py-4 [scrollbar-gutter:stable]"
+                            onScroll={handleScroll}
+                            ref={chatScroll.viewportRef}
                         >
-                            {isInitialTranscriptPending ? null : error ? (
-                                <div className="px-2 py-4 text-muted-foreground text-sm">
-                                    Unable to load this chat transcript right now.
-                                </div>
-                            ) : hasTimelineContent ? (
-                                <ChatTimeline
-                                    activeReply={activeReply}
-                                    agentPresenceColor={agentPresenceColor}
-                                    chatId={chatId}
-                                    conversationLayout={conversationLayout}
-                                    defaultOpenWorkGroups={defaultOpenWorkGroups}
-                                    failedTurn={failedTurn}
-                                    fetchPreviousPage={fetchPreviousPage}
-                                    followKey={enableVirtualization ? followKey : null}
-                                    hasPreviousPage={hasPreviousPage}
-                                    initialScrollKey={
-                                        enableVirtualization ? initialScrollKey : null
-                                    }
-                                    isFetchingPreviousPage={isFetchingPreviousPage}
-                                    rows={rows}
-                                    scrollViewportRef={
-                                        enableVirtualization ? chatScroll.viewportRef : undefined
-                                    }
-                                    totalMessages={totalMessages}
-                                />
-                            ) : (
-                                <div className="px-2 py-4 text-muted-foreground text-sm">
-                                    {emptyLabel}
-                                </div>
-                            )}
+                            <div
+                                className="mx-auto min-h-full w-full max-w-[60rem]"
+                                ref={chatScroll.contentRef}
+                            >
+                                {isInitialTranscriptPending ? null : error ? (
+                                    <div className="px-2 py-4 text-muted-foreground text-sm">
+                                        Unable to load this chat transcript right now.
+                                    </div>
+                                ) : hasTimelineContent ? (
+                                    <ChatTimeline
+                                        activeReply={activeReply}
+                                        agentPresenceColor={agentPresenceColor}
+                                        chatId={chatId}
+                                        conversationLayout={conversationLayout}
+                                        defaultOpenWorkGroups={defaultOpenWorkGroups}
+                                        failedTurn={failedTurn}
+                                        fetchPreviousPage={fetchPreviousPage}
+                                        followKey={enableVirtualization ? followKey : null}
+                                        hasPreviousPage={hasPreviousPage}
+                                        initialScrollKey={
+                                            enableVirtualization ? initialScrollKey : null
+                                        }
+                                        isFetchingPreviousPage={isFetchingPreviousPage}
+                                        rows={rows}
+                                        scrollViewportRef={
+                                            enableVirtualization
+                                                ? chatScroll.viewportRef
+                                                : undefined
+                                        }
+                                        totalMessages={totalMessages}
+                                    />
+                                ) : (
+                                    <div className="px-2 py-4 text-muted-foreground text-sm">
+                                        {emptyLabel}
+                                    </div>
+                                )}
+                            </div>
                         </div>
                     </div>
+
+                    {hasTimelineContent && !chatScroll.isAtBottom ? (
+                        <div className="pointer-events-none relative z-10 flex justify-center">
+                            <Button
+                                aria-label="Jump to latest message"
+                                className="pointer-events-auto -mt-11 rounded-full bg-background/92 shadow-black/10 shadow-lg backdrop-blur"
+                                onClick={() => chatScroll.scrollToBottom()}
+                                size="icon"
+                                type="button"
+                                variant="outline"
+                            >
+                                <Icon className="size-4" icon={ArrowDown01Icon} />
+                            </Button>
+                        </div>
+                    ) : null}
+
+                    {footer}
                 </div>
-
-                {hasTimelineContent && !chatScroll.isAtBottom ? (
-                    <div className="pointer-events-none relative z-10 flex justify-center">
-                        <Button
-                            aria-label="Jump to latest message"
-                            className="pointer-events-auto -mt-11 rounded-full bg-background/92 shadow-black/10 shadow-lg backdrop-blur"
-                            onClick={() => chatScroll.scrollToBottom()}
-                            size="icon"
-                            type="button"
-                            variant="outline"
-                        >
-                            <Icon className="size-4" icon={ArrowDown01Icon} />
-                        </Button>
-                    </div>
-                ) : null}
-
-                {footer}
+                {artifactPanel}
             </div>
         </ChatScrollControllerProvider>
     );

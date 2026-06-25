@@ -18,12 +18,12 @@ Tavern has two memory surfaces:
   users inspect lives in Markdown files. Agents use the managed Vault skill to
   route normal wiki work to Obsidian and bounded research folders to llm-wiki.
 
-## In Vault
+## In The App
 
-The Memory page summarizes Vault readiness and maintenance paths. Vault remains
-the file browser for the underlying Markdown knowledge.
+Memory is configured through Settings. The top-level Workspace page browses the
+managed agent workspace, and the Vault page browses durable wiki knowledge.
 
-Users can inspect:
+Users can inspect Vault knowledge through Vault:
 
 * the resolved Vault path
 * Markdown page counts
@@ -32,13 +32,14 @@ Users can inspect:
 
 ## Contract
 
-User-facing knowledge visibility is file-backed. The Memory and Vault surfaces
-read wiki Markdown. They do not expose model settings, hidden queues, generated
-schemas, or internal repair controls.
+User-facing durable knowledge visibility is file-backed. Vault reads wiki
+Markdown. Workspace reads managed agent workspace files. Neither surface exposes
+model settings, hidden queues, generated schemas, or internal repair controls.
 
 Assistant memory is engine execution state. It can affect what the agent
 recalls during work, but it is not the Vault wiki and is not edited through the
-wiki browser. Durable, inspectable knowledge belongs in Vault.
+wiki browser. Durable, inspectable knowledge belongs in Vault; generated files
+and assets belong in Workspace.
 
 ## Boundary
 

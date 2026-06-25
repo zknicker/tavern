@@ -87,6 +87,10 @@ export const agentRuntimeRoutes = {
     health: '/health',
     workspaceAgentInstructions: (agentId: string) =>
         `/workspace/agents/${encodeURIComponent(agentId)}/instructions`,
+    workspaceAgentFile: (agentId: string, path: string) =>
+        `/workspace/agents/${encodeURIComponent(agentId)}/files/${encodeURIComponent(path)}`,
+    workspaceAgentFiles: (agentId: string) =>
+        `/workspace/agents/${encodeURIComponent(agentId)}/files`,
     models: '/models',
     binding: (id: string) => `/bindings/${id}`,
     bindings: '/bindings',

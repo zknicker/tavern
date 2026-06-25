@@ -1,3 +1,7 @@
+import {
+    agentRuntimeWorkspaceFileListInputSchema,
+    agentRuntimeWorkspaceFilePathSchema,
+} from '@tavern/api';
 import { z } from 'zod';
 import { createAgentRuntimeClientForConnection } from '../../agent-runtime/client-factory.ts';
 import { getAgent } from '../../agents/catalog.ts';
@@ -14,6 +18,18 @@ const agentWorkspaceFileInputSchema = z.object({
 
 const saveAgentWorkspaceFileInputSchema = agentWorkspaceFileInputSchema.extend({
     content: z.string(),
+});
+
+const agentWorkspaceFileListInputSchema = z.object({
+    agentId: z.string().trim().min(1),
+    path: agentRuntimeWorkspaceFileListInputSchema.shape.path.optional().default(''),
+});
+
+const agentWorkspaceReadableFileInputSchema = z.object({
+    agentId: z.string().trim().min(1),
+    path: agentRuntimeWorkspaceFilePathSchema.refine((value) => value.length > 0, {
+        message: 'Workspace file path is required.',
+    }),
 });
 
 export const getAgentWorkspaceFile = publicProcedure
@@ -39,6 +55,30 @@ export const saveAgentWorkspaceFile = publicProcedure
             });
             emitAgentInstructionsUpdated({ agentId: input.agentId });
             return file;
+        } finally {
+            client.close();
+        }
+    });
+
+export const listAgentWorkspaceFiles = publicProcedure
+    .input(agentWorkspaceFileListInputSchema)
+    .query(async ({ input }) => {
+        const client = await createClientForAgent(input.agentId);
+
+        try {
+            return await client.listWorkspaceFiles(input.agentId, { path: input.path });
+        } finally {
+            client.close();
+        }
+    });
+
+export const getAgentWorkspaceReadableFile = publicProcedure
+    .input(agentWorkspaceReadableFileInputSchema)
+    .query(async ({ input }) => {
+        const client = await createClientForAgent(input.agentId);
+
+        try {
+            return await client.getWorkspaceFile(input.agentId, input.path);
         } finally {
             client.close();
         }

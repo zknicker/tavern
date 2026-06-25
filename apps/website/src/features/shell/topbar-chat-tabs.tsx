@@ -1,16 +1,15 @@
 import { Archive02Icon } from '@hugeicons/core-free-icons';
-import { CancelCircleIcon as CancelCircleDuotoneIcon } from '@hugeicons-pro/core-duotone-rounded';
 import { HashtagIcon } from '@hugeicons-pro/core-solid-rounded';
 import {
     BubbleChatIcon,
     BubbleChatTemporaryIcon,
-    CancelCircleIcon,
     MoreHorizontalIcon,
     PlusSignIcon,
 } from '@hugeicons-pro/core-stroke-rounded';
 import * as React from 'react';
 import { NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { resolveTavernChatName } from '../../components/chats/chat-display.ts';
+import { CloseableTab } from '../../components/ui/closeable-tab.tsx';
 import { Icon } from '../../components/ui/icon.tsx';
 import { Menu, MenuItem, MenuPopup, MenuTrigger } from '../../components/ui/menu.tsx';
 import { Button } from '../../components/ui/primitives/button.tsx';
@@ -597,7 +596,13 @@ function TopbarRecentChatTab({
             onRename={onRename}
             triggerClassName="no-drag h-7 shrink-0 overflow-hidden"
         >
-            <div className="group/tab relative h-7">
+            <CloseableTab
+                className="h-7"
+                closeable={canClose}
+                closeLabel={`Close ${title}`}
+                closeSide="left"
+                onClose={() => onCloseTab(chat)}
+            >
                 <TabsSubtleItem
                     aria-current={isActive ? 'page' : undefined}
                     className={topbarChatTabButtonClassName({
@@ -626,36 +631,7 @@ function TopbarRecentChatTab({
                         />
                     ) : null}
                 </TabsSubtleItem>
-                {canClose ? (
-                    <button
-                        aria-label="Close tab"
-                        className="no-drag group/close absolute top-1/2 left-1.5 z-20 hidden size-5 -translate-y-1/2 items-center justify-center rounded-full text-[var(--topbar-tab-close)] transition-colors hover:text-[var(--topbar-tab-close-hover)] group-hover/tab:flex"
-                        onClick={(event) => {
-                            event.preventDefault();
-                            event.stopPropagation();
-                            onCloseTab(chat);
-                        }}
-                        onPointerDown={(event) => {
-                            event.stopPropagation();
-                        }}
-                        title="Close tab"
-                        type="button"
-                    >
-                        <Icon
-                            aria-hidden="true"
-                            className="size-4 group-hover/close:hidden"
-                            icon={CancelCircleIcon}
-                            size={16}
-                        />
-                        <Icon
-                            aria-hidden="true"
-                            className="hidden size-4 group-hover/close:block [&_path:first-child]:opacity-20"
-                            icon={CancelCircleDuotoneIcon}
-                            size={16}
-                        />
-                    </button>
-                ) : null}
-            </div>
+            </CloseableTab>
         </SidebarChatContextMenu>
     );
 }

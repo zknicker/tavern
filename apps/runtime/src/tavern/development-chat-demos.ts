@@ -1,6 +1,8 @@
 import type { TavernCreateMessageRequest } from '@tavern/api';
+import { HERMES_WORKSPACE } from '../config';
 import type { Database } from '../db/sqlite';
 import { namedParams } from '../db/sqlite';
+import { registerAgentWorkspace } from '../workspace/instructions';
 import {
     createChat,
     createMessage,
@@ -25,6 +27,12 @@ export function seedDevelopmentChatDemos({
     if (!enabled) {
         return { seeded: 0 };
     }
+
+    registerAgentWorkspace(db, {
+        agentId: demoAgentId,
+        agentName: 'Tavern',
+        workspaceDir: HERMES_WORKSPACE,
+    });
 
     for (const demo of developmentChatDemos) {
         createChat(

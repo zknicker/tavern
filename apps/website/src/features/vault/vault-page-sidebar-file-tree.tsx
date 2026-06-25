@@ -22,19 +22,29 @@ type TreeHostStyle = React.CSSProperties & Record<`--${string}`, string>;
 
 interface VaultPageFileTreeProps {
     folders: string[];
-    onCreate: (kind: 'folder' | 'page', parentPath?: string) => void;
-    onDelete: (target: VaultDeleteTarget) => void;
-    onMove: (target: VaultMoveTarget) => void;
-    onRenamePath: (target: VaultRenameTarget) => void;
+    onCreate?: (kind: 'folder' | 'page', parentPath?: string) => void;
+    onDelete?: (target: VaultDeleteTarget) => void;
+    onMove?: (target: VaultMoveTarget) => void;
+    onRenamePath?: (target: VaultRenameTarget) => void;
     onSelect: (page: VaultPageNode) => void;
     pages: VaultPageNode[];
     query: string;
+    readOnly?: boolean;
     selectedPageKey: string | null;
 }
 
 const treeUnsafeCss = `
 button[data-type='item'] {
+  --tavern-tree-row-bg: var(--trees-bg);
   border-radius: 8px;
+}
+
+button[data-type='item']:hover {
+  --tavern-tree-row-bg: var(--trees-bg-muted);
+}
+
+button[data-type='item'][aria-selected='true'] {
+  --tavern-tree-row-bg: var(--trees-selected-bg);
 }
 
 button[data-type='item'][data-item-dragging='true'] {
@@ -55,8 +65,10 @@ export function VaultPageFileTree({
     onSelect,
     pages,
     query,
+    readOnly = false,
     selectedPageKey,
 }: VaultPageFileTreeProps) {
+    const canEdit = !readOnly && onCreate && onDelete && onMove && onRenamePath;
     const treePaths = React.useMemo(
         () => buildVaultFileTreePaths(pages, folders),
         [folders, pages]
@@ -75,20 +87,33 @@ export function VaultPageFileTree({
     });
     const initialSelectedPath = selectedPageKey ? toTreePagePath(selectedPageKey) : undefined;
     const { model } = useFileTree({
-        composition: {
-            contextMenu: {
-                buttonVisibility: 'when-needed',
-                enabled: true,
-                triggerMode: 'both',
-            },
-        },
         density: 'compact',
-        dragAndDrop: {
-            onDropComplete(event) {
-                handleDropComplete(event, callbacksRef.current.onMove);
-            },
-            openOnDropDelay: 420,
-        },
+        ...(canEdit
+            ? {
+                  composition: {
+                      contextMenu: {
+                          buttonVisibility: 'when-needed' as const,
+                          enabled: true,
+                          triggerMode: 'both' as const,
+                      },
+                  },
+                  dragAndDrop: {
+                      onDropComplete(event: FileTreeDropResult) {
+                          if (callbacksRef.current.onMove) {
+                              handleDropComplete(event, callbacksRef.current.onMove);
+                          }
+                      },
+                      openOnDropDelay: 420,
+                  },
+                  renaming: {
+                      onRename(event: FileTreeRenameEvent) {
+                          if (callbacksRef.current.onRenamePath) {
+                              handleRename(event, callbacksRef.current.onRenamePath);
+                          }
+                      },
+                  },
+              }
+            : {}),
         fileTreeSearchMode: 'hide-non-matches',
         flattenEmptyDirectories: false,
         initialExpansion: 'open',
@@ -107,11 +132,6 @@ export function VaultPageFileTree({
             }
         },
         paths: treePaths,
-        renaming: {
-            onRename(event) {
-                handleRename(event, callbacksRef.current.onRenamePath);
-            },
-        },
         sort: compareFileTreeEntries,
         unsafeCSS: treeUnsafeCss,
     });
@@ -133,15 +153,19 @@ export function VaultPageFileTree({
         <TreesFileTree
             className="h-full min-h-0 w-full flex-1 overflow-hidden"
             model={model}
-            renderContextMenu={(item, context) => (
-                <VaultTreeContextMenu
-                    context={context}
-                    item={item}
-                    model={model}
-                    onCreate={onCreate}
-                    onDelete={onDelete}
-                />
-            )}
+            renderContextMenu={
+                canEdit
+                    ? (item, context) => (
+                          <VaultTreeContextMenu
+                              context={context}
+                              item={item}
+                              model={model}
+                              onCreate={onCreate}
+                              onDelete={onDelete}
+                          />
+                      )
+                    : undefined
+            }
             style={treeHostStyle}
         />
     );
@@ -289,7 +313,7 @@ function toVaultDeleteTarget(item: FileTreeContextMenuItem): VaultDeleteTarget {
 }
 
 function toTreePagePath(path: string) {
-    return normalizeVaultPath(path).replace(/\.md$/iu, '');
+    return normalizeVaultPath(path);
 }
 
 function toVaultPagePath(path: string) {
@@ -353,7 +377,7 @@ function syncTreeSelection(
 }
 
 const treeHostStyle: TreeHostStyle = {
-    '--trees-bg-override': 'transparent',
+    '--trees-bg-override': 'var(--sidebar)',
     '--trees-bg-muted-override': 'var(--sidebar-accent)',
     '--trees-border-color-override': 'var(--sidebar-border)',
     '--trees-border-radius-override': '8px',

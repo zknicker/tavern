@@ -976,6 +976,60 @@ export const agentRuntimeRenderedWorkspaceInstructionsSchema = z.object({
     updatedAt: z.string().datetime().nullable(),
 });
 
+export const agentRuntimeWorkspaceFilePathSchema = z
+    .string()
+    .trim()
+    .refine((value) => value.length === 0 || !value.startsWith('/'), {
+        message: 'Workspace path must be relative.',
+    })
+    .refine((value) => !value.includes('\\'), {
+        message: 'Workspace path must use forward slashes.',
+    })
+    .refine(
+        (value) =>
+            value.length === 0 ||
+            value
+                .split('/')
+                .every((segment) => segment.length > 0 && segment !== '.' && segment !== '..'),
+        {
+            message: 'Workspace path must stay inside the workspace.',
+        }
+    );
+
+export const agentRuntimeWorkspaceFileKindSchema = z.enum(['directory', 'file']);
+
+export const agentRuntimeWorkspaceFileEntrySchema = z.object({
+    kind: agentRuntimeWorkspaceFileKindSchema,
+    mediaType: z.string().trim().min(1).nullable(),
+    name: z.string().trim().min(1),
+    path: z.string().trim().min(1),
+    sizeBytes: z.number().int().nonnegative().nullable(),
+    updatedAt: z.string().datetime().nullable(),
+});
+
+export const agentRuntimeWorkspaceFileListInputSchema = z.object({
+    path: agentRuntimeWorkspaceFilePathSchema.default(''),
+});
+
+export const agentRuntimeWorkspaceFileListSchema = z.object({
+    entries: z.array(agentRuntimeWorkspaceFileEntrySchema),
+    path: agentRuntimeWorkspaceFilePathSchema,
+    workspaceRoot: z.string().trim().min(1),
+});
+
+export const agentRuntimeWorkspaceFileContentSchema = z.object({
+    binary: z.boolean(),
+    content: z.string(),
+    encoding: z.enum(['base64', 'utf8']),
+    language: z.string().trim().min(1).nullable(),
+    mediaType: z.string().trim().min(1),
+    path: z.string().trim().min(1),
+    sizeBytes: z.number().int().nonnegative(),
+    truncated: z.boolean(),
+    updatedAt: z.string().datetime().nullable(),
+    workspaceRoot: z.string().trim().min(1),
+});
+
 export const agentRuntimeSkillFileSchema = z.object({
     path: z.string().trim().min(1),
     sizeBytes: z.number().int().nonnegative(),
@@ -2573,6 +2627,14 @@ export type AgentRuntimeRenderedWorkspaceInstructions = z.infer<
 >;
 export type AgentRuntimeWorkspaceInstructions = z.infer<
     typeof agentRuntimeWorkspaceInstructionsSchema
+>;
+export type AgentRuntimeWorkspaceFileContent = z.infer<
+    typeof agentRuntimeWorkspaceFileContentSchema
+>;
+export type AgentRuntimeWorkspaceFileEntry = z.infer<typeof agentRuntimeWorkspaceFileEntrySchema>;
+export type AgentRuntimeWorkspaceFileList = z.infer<typeof agentRuntimeWorkspaceFileListSchema>;
+export type AgentRuntimeWorkspaceFileListInput = z.infer<
+    typeof agentRuntimeWorkspaceFileListInputSchema
 >;
 export type AgentRuntimeWorkspaceInstructionsUpdatedEvent = z.infer<
     typeof agentRuntimeWorkspaceInstructionsUpdatedEventSchema

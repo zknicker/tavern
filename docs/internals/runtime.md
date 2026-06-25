@@ -113,6 +113,18 @@ Chat sessions use `session.create.cwd`; Tavern-created cron jobs use `workdir`.
 Without that context, Hermes runs but does not inject the generated `AGENTS.md`,
 including Tavern skills and visible-progress guidance.
 
+Generated instructions also include a compact inspectable-output rule. When an
+agent creates or updates workspace files, Vault pages, Markdown or HTML docs,
+images, or generated assets, its final reply links them with a Markdown link.
+Tools may return the canonical link; otherwise agents use Tavern internal
+links such as `tavern://workspace/path` or `tavern://vault/path`. The app
+renderer contract is to resolve those links to Artifact Panel targets under
+the current runtime scope; they are not local absolute paths or external URLs.
+Runtime exposes workspace targets through read-only
+`/workspace/agents/{id}/files` routes that resolve inside the registered agent
+workspace, block traversal and sensitive files, and return preview content.
+Vault targets resolve through the Vault API.
+
 The agent's operational access to Tavern ships as the managed `tavern` skill
 (`apps/runtime/src/hermes/tavern-skill.ts`): chat reads and searches, attributed
 deliveries into chats, read-only self-configuration lookups, and the settings

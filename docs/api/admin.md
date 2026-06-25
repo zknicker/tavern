@@ -36,7 +36,7 @@ capabilities. It is not a second product API.
 | Managed Hermes | `/hermes-config`, `/execution-settings`, `/permission-settings`, `/agent-env` |
 | Connectors | `/connectors`, `/connectors/{id}`, `/connectors/{id}/test` |
 | Plugins | `/plugins`, `/plugins/{id}`, `/plugins/merchbase/settings`, `/plugins/merchbase/action`, `/plugins/merchbase/sales/series` |
-| Agents and files | `/agents`, `/agents/{id}`, `/agents/{id}/config`, `/agents/{id}/files`, `/agents/{id}/files/{path}` |
+| Agents and files | `/agents`, `/agents/{id}`, `/agents/{id}/config`, `/agents/{id}/files`, `/agents/{id}/files/{path}`, `/workspace/agents/{id}/files`, `/workspace/agents/{id}/files/{path}` |
 | Sessions and execution evidence | `/hermes/sessions`, `/hermes/sessions/previews`, `/hermes/sessions/{sessionKey}/messages`, `/hermes/sessions/{sessionKey}/graph`, `/hermes/sessions/{sessionKey}/prompt`, `/hermes/sessions/{sessionKey}/resync` |
 | Jobs | `/jobs`, `/jobs/{slug}`, `/jobs/{slug}/run` |
 | Cron | `/cron-jobs`, `/cron-jobs/{id}`, `/cron-jobs/{id}/run`, `/cron-jobs/{id}/runs`, `/cron-runs`, `/cron-runs/{id}` |
@@ -70,6 +70,12 @@ engine are imported into the visible allowlist.
 agent process. Values live in Tavern Vault, reads return saved values for the
 local settings UI, and saves rewrite the generated managed env file and restart
 managed Hermes to apply them.
+
+`/workspace/agents/{id}/files` and `/workspace/agents/{id}/files/{path}` expose
+read-only browsing for the registered agent workspace. Paths are relative to
+that workspace, traversal is rejected, hidden and generated dependency folders
+are omitted from listings, and sensitive files such as `.env` and key material
+are blocked. Tavern App uses these routes to preview linked workspace artifacts.
 
 `/connectors` owns Tavern-stored MCP server records. Secret env and header
 values live in Tavern Vault and are materialized into the generated managed

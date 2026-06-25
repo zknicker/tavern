@@ -54,6 +54,33 @@ A Runtime-owned operation exposed by a Plugin to Tavern surfaces such as Rich Re
 agent tools, or settings.
 _Avoid_: CLI command, skill tool, raw upstream API call
 
+**Artifact**:
+A durable Runtime-owned output that can be rendered, reopened, and referenced from chat.
+_Avoid_: Preview, attachment, tool result, generated file
+
+**Artifact Panel**:
+The app-owned side surface where users open and inspect Artifact Panel targets beside chat.
+_Avoid_: Workbench, browser shell, output pane, Artifact Space
+
+**Artifact Panel target**:
+A Tavern-owned openable target such as a chat Artifact, Vault page, workspace file, image, or
+generated asset.
+_Avoid_: Local path, browser URL, tool result blob
+
+**Artifact pane**:
+One open view inside the Artifact Panel, backed by one Artifact Panel target.
+_Avoid_: Tab content, preview card, drawer
+
+**Artifact open action**:
+A user action that opens an Artifact pane from a chat row, activity row, or linked inspectable
+output. Tavern does not auto-open the Artifact Panel when targets are created.
+_Avoid_: Canvas trigger, automatic artifact presentation, artifact launch
+
+**Inspectable output**:
+A workspace file, Vault page, Markdown or HTML doc, image, or generated asset an agent created or
+updated for the user to inspect.
+_Avoid_: Tavern resource, tool result, attachment
+
 **Host adapter**:
 A small adapter file in Runtime, Server, or Website that connects a Rich Response contract to that
 layer's existing event, projection, or rendering pipeline.

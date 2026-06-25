@@ -37,6 +37,7 @@ app-local UI state, not durable Runtime chat rows.
 | Chat | Demonstrates |
 | --- | --- |
 | `cht_demo_activity_turn` | Assistant progress messages and grouped tool activity in one completed turn. |
+| `cht_demo_artifact_links` | Assistant Markdown links that open inspectable Vault and workspace targets in the Artifact Panel. |
 | `cht_demo_approval_flow` | A running response blocked on approval activity. |
 | `cht_demo_attachment` | Durable user message attachment rendering. |
 | `cht_demo_calendar_day` | Calendar Day Rich Response activity rendered inline in a real chat. |

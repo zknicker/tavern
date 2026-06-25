@@ -1,5 +1,12 @@
+import {
+    agentRuntimeWorkspaceFileContentSchema,
+    agentRuntimeWorkspaceFileListInputSchema,
+    agentRuntimeWorkspaceFileListSchema,
+} from '@tavern/api';
 import { getDb } from '../db/connection';
 import { json } from '../tavern/http';
+import { seedDevelopmentWorkspaceDemos } from './development-demos';
+import { listWorkspaceFiles, readWorkspaceFile } from './files';
 import {
     generateAgentInstructions,
     readRenderedAgentInstructions,
@@ -22,6 +29,25 @@ export async function handleWorkspaceRequest(request: Request): Promise<Response
         return json(rendered);
     }
 
+    if (request.method === 'GET' && segments[3] === 'files' && !segments[4]) {
+        const input = agentRuntimeWorkspaceFileListInputSchema.parse({
+            path: url.searchParams.get('path') ?? '',
+        });
+        return json(
+            agentRuntimeWorkspaceFileListSchema.parse(
+                await listWorkspaceFiles(getDb(), { agentId, path: input.path })
+            )
+        );
+    }
+
+    if (request.method === 'GET' && segments[3] === 'files' && segments[4]) {
+        return json(
+            agentRuntimeWorkspaceFileContentSchema.parse(
+                await readWorkspaceFile(getDb(), { agentId, path: segments[4] })
+            )
+        );
+    }
+
     if (request.method === 'PUT' && segments[3] === 'instructions') {
         const body = await readJson(request);
         const source = registerAgentWorkspace(getDb(), {
@@ -31,6 +57,7 @@ export async function handleWorkspaceRequest(request: Request): Promise<Response
         });
         const generated = await generateAgentInstructions(getDb(), agentId);
         ensureAgentNotesWatcher(getDb(), agentId);
+        await seedDevelopmentWorkspaceDemos({ sources: [source] });
 
         return json({
             agentId: source.agentId,

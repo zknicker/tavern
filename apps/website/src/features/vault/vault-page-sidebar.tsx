@@ -48,7 +48,7 @@ export function VaultPageSidebar({
     selectedPageKey: string | null;
 }) {
     return (
-        <aside className="flex h-full min-h-0 w-[276px] shrink-0 flex-col overflow-x-hidden border-border/70 border-r bg-sidebar/35 text-sidebar-foreground">
+        <aside className="flex h-full min-h-0 w-full shrink-0 flex-col overflow-x-hidden border-border/70 border-r bg-sidebar/35 text-sidebar-foreground">
             <VaultPageSidebarContent
                 folders={folders}
                 onCreate={onCreate}

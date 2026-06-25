@@ -1,5 +1,9 @@
 import * as React from 'react';
 import { useSearchParams } from 'react-router-dom';
+import {
+    ResizablePaneRail,
+    useResizablePaneWidth,
+} from '../../components/ui/resizable-pane-rail.tsx';
 import { useVaultListSuspense } from '../../hooks/vault/use-vault-list.ts';
 import {
     useCreateVaultFolder,
@@ -53,6 +57,12 @@ export function Vault() {
     const [draft, setDraft] = React.useState('');
     const [editorMode, setEditorMode] = React.useState<VaultEditorMode>('edit');
     const [inspectorOpen, setInspectorOpen] = React.useState(false);
+    const sidebarWidth = useResizablePaneWidth({
+        defaultWidth: 276,
+        maxWidth: 440,
+        minWidth: 220,
+        storageKey: 'tavern.vault.sidebar.width',
+    });
     const [externalChangeState, setExternalChangeState] = React.useState<
         'changed' | 'missing' | null
     >(null);
@@ -320,9 +330,29 @@ export function Vault() {
         }
     }
 
+    function handleSelectBreadcrumbPath(path: string) {
+        const exactPage = list.pages.find((page) => page.path === path);
+        const folderPage = list.pages.find((page) => isPathInFolder(page.path, path));
+        const nextPage = exactPage ?? folderPage;
+        if (nextPage) {
+            setSelectedPage({ path: nextPage.path });
+        }
+    }
+
     return (
-        <div className="grid h-full min-h-0 flex-1 grid-cols-[276px_minmax(0,1fr)] grid-rows-[48px_minmax(0,1fr)] overflow-hidden bg-background">
-            <div className="col-start-1 row-span-2 row-start-1 min-h-0">
+        <div
+            className="grid h-full min-h-0 flex-1 grid-rows-[48px_minmax(0,1fr)] overflow-hidden bg-background"
+            style={{ gridTemplateColumns: `${sidebarWidth.width}px minmax(0, 1fr)` }}
+        >
+            <div className="relative col-start-1 row-span-2 row-start-1 min-h-0">
+                <ResizablePaneRail
+                    maxWidth={440}
+                    minWidth={220}
+                    onWidthChange={sidebarWidth.setWidth}
+                    onWidthCommit={sidebarWidth.persistWidth}
+                    side="right"
+                    width={sidebarWidth.width}
+                />
                 <VaultPageSidebar
                     folders={list.folders}
                     onCreate={handleCreate}
@@ -345,6 +375,7 @@ export function Vault() {
                     onEditorModeChange={setEditorMode}
                     onInspectorOpenChange={setInspectorOpen}
                     onSave={() => void handleSave(draft)}
+                    onSelectPath={handleSelectBreadcrumbPath}
                     pagePath={pagePath}
                     pageSelected={Boolean(pageDetail)}
                 />
