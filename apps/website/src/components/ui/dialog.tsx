@@ -89,14 +89,16 @@ export function DialogContent({
     showCloseButton = true,
     closeProps,
     size = 'sm',
+    surfaceOffset = dialogSurfaceOffset,
     ...props
 }: Omit<DialogPrimitive.Popup.Props, 'render'> & {
     showCloseButton?: boolean;
     closeProps?: DialogPrimitive.Close.Props;
     size?: 'sm' | 'lg';
+    surfaceOffset?: number;
 }): React.ReactElement {
     const substrate = useSurface();
-    const dialogLevel = Math.min(substrate + dialogSurfaceOffset, 8);
+    const dialogLevel = Math.min(substrate + surfaceOffset, 8);
 
     return (
         <DialogPortal>
