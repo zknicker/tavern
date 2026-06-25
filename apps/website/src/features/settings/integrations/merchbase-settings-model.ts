@@ -6,7 +6,6 @@ type MerchbaseSettings = NonNullable<MerchbaseSettingsOutput>;
 export interface MerchbaseSettingsDraft {
     apiKey: string;
     baseUrl: string;
-    clearApiKey: boolean;
     defaultAccount: string;
     defaultMarketplace: string;
     enabled: boolean;
@@ -16,7 +15,6 @@ export function createDraft(settings: MerchbaseSettings | null): MerchbaseSettin
     return {
         apiKey: '',
         baseUrl: settings?.baseUrl ?? '',
-        clearApiKey: false,
         defaultAccount: settings?.defaultAccount ?? '',
         defaultMarketplace: settings?.defaultMarketplace ?? '',
         enabled: settings?.enabled ?? false,
@@ -27,7 +25,6 @@ export function normalizeDraft(draft: MerchbaseSettingsDraft): MerchbaseSettings
     return {
         apiKey: draft.apiKey.trim(),
         baseUrl: draft.baseUrl.trim(),
-        clearApiKey: draft.clearApiKey,
         defaultAccount: draft.defaultAccount.trim(),
         defaultMarketplace: draft.defaultMarketplace.trim(),
         enabled: draft.enabled,
@@ -36,7 +33,7 @@ export function normalizeDraft(draft: MerchbaseSettingsDraft): MerchbaseSettings
 
 export function toSaveInput(draft: MerchbaseSettingsDraft): AgentRuntimeSaveMerchbaseSettings {
     return {
-        apiKey: draft.clearApiKey ? null : draft.apiKey || undefined,
+        apiKey: draft.apiKey || undefined,
         baseUrl: draft.baseUrl,
         defaultAccount: nullableString(draft.defaultAccount),
         defaultMarketplace: nullableString(draft.defaultMarketplace),
@@ -50,7 +47,6 @@ export function hasDraftChanges(settings: MerchbaseSettings, draft: MerchbaseSet
         draft.baseUrl !== settings.baseUrl ||
         nullableString(draft.defaultAccount) !== settings.defaultAccount ||
         nullableString(draft.defaultMarketplace) !== settings.defaultMarketplace ||
-        draft.clearApiKey ||
         Boolean(draft.apiKey)
     );
 }

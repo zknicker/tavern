@@ -1,28 +1,31 @@
-import type { ComponentProps, Dispatch, ReactNode, SetStateAction } from 'react';
-import {
-    DialogDescription,
-    DialogFooter,
-    DialogHeader,
-    DialogPanel,
-    DialogTitle,
-} from '../../../components/ui/dialog.tsx';
+import { PlugIcon } from '@hugeicons-pro/core-stroke-rounded';
+import { type Dispatch, type SetStateAction, useState } from 'react';
 import { Button } from '../../../components/ui/primitives/button.tsx';
+import { FieldError } from '../../../components/ui/primitives/field.tsx';
 import { Input } from '../../../components/ui/primitives/input.tsx';
-import { Switch } from '../../../components/ui/switch.tsx';
-import { Tooltip, TooltipContent, TooltipTrigger } from '../../../components/ui/tooltip.tsx';
+import { SecretInput } from '../../../components/ui/secret-input.tsx';
 import type { MerchbaseSettingsOutput } from '../../../lib/trpc.tsx';
+import {
+    IntegrationDialog,
+    IntegrationField,
+    IntegrationFieldRow,
+    IntegrationLockSwitch,
+    IntegrationNotice,
+} from './integration-dialog.tsx';
 import { merchbaseEnvironmentLockTooltip } from './merchbase-settings-copy.ts';
 import type { MerchbaseSettingsDraft } from './merchbase-settings-model.ts';
 
 type MerchbaseSettings = NonNullable<MerchbaseSettingsOutput>;
 
-export function MerchbaseSettingsDialogBody({
+export function MerchbaseSettingsDialog({
     canSave,
     draft,
     error,
     isSaving,
     onDraftChange,
+    onOpenChange,
     onSave,
+    open,
     settings,
 }: {
     canSave: boolean;
@@ -30,71 +33,71 @@ export function MerchbaseSettingsDialogBody({
     error?: string | null;
     isSaving: boolean;
     onDraftChange: Dispatch<SetStateAction<MerchbaseSettingsDraft>>;
+    onOpenChange: (open: boolean) => void;
     onSave: () => void;
+    open: boolean;
     settings: MerchbaseSettings;
 }) {
     const environmentControlled = settings.enablementSource === 'environment';
+    const [apiKeyRevealed, setApiKeyRevealed] = useState(false);
 
     return (
-        <form
-            onSubmit={(event) => {
-                event.preventDefault();
+        <IntegrationDialog
+            description="Powers MerchBase agent tools and sales widgets."
+            footer={
+                <Button
+                    className="ml-auto"
+                    disabled={!canSave || isSaving}
+                    loading={isSaving}
+                    type="submit"
+                >
+                    Save
+                </Button>
+            }
+            headerAction={
+                <IntegrationLockSwitch
+                    aria-label={
+                        environmentControlled
+                            ? 'MerchBase enablement is managed by local Tavern configuration'
+                            : `${draft.enabled ? 'Disable' : 'Enable'} MerchBase`
+                    }
+                    checked={draft.enabled}
+                    disabled={isSaving || environmentControlled}
+                    locked={environmentControlled}
+                    lockTooltip={merchbaseEnvironmentLockTooltip}
+                    onCheckedChange={(enabled) =>
+                        onDraftChange((current) => ({ ...current, enabled }))
+                    }
+                />
+            }
+            icon={PlugIcon}
+            onOpenChange={onOpenChange}
+            onSubmit={() => {
                 if (canSave) {
                     onSave();
                 }
             }}
+            open={open}
+            title="MerchBase"
+            titleSuffix="Integration"
         >
-            <DialogHeader>
-                <DialogTitle>MerchBase</DialogTitle>
-                <DialogDescription>
-                    Configure the Integration that powers MerchBase agent tools and sales widgets.
-                </DialogDescription>
-            </DialogHeader>
+            <IntegrationField label="Base URL">
+                <Input
+                    aria-label="MerchBase base URL"
+                    className="font-mono"
+                    disabled={isSaving}
+                    onChange={(event) =>
+                        onDraftChange((current) => ({
+                            ...current,
+                            baseUrl: event.currentTarget.value,
+                        }))
+                    }
+                    value={draft.baseUrl}
+                />
+            </IntegrationField>
 
-            <DialogPanel className="grid gap-4">
-                <div className="flex items-center justify-between gap-4 rounded-xl border border-border/70 bg-muted/20 px-3.5 py-3">
-                    <div className="space-y-0.5">
-                        <div className="font-medium text-foreground text-sm">Enable MerchBase</div>
-                        <div className="text-muted-foreground text-sm">
-                            {environmentControlled
-                                ? 'Managed by your local Tavern configuration.'
-                                : 'Makes the skill, toolset, and widgets available to the agent.'}
-                        </div>
-                    </div>
-                    <MerchbaseDialogSwitch
-                        aria-label={
-                            environmentControlled
-                                ? 'MerchBase enablement is managed by local Tavern configuration'
-                                : 'Enable MerchBase'
-                        }
-                        checked={draft.enabled}
-                        disabled={isSaving || environmentControlled}
-                        environmentControlled={environmentControlled}
-                        onCheckedChange={(enabled) =>
-                            onDraftChange((current) => ({ ...current, enabled }))
-                        }
-                    />
-                </div>
-
-                <DialogField description="Defaults to MerchBase production." label="Base URL">
-                    <Input
-                        aria-label="MerchBase base URL"
-                        className="font-mono"
-                        disabled={isSaving}
-                        onChange={(event) =>
-                            onDraftChange((current) => ({
-                                ...current,
-                                baseUrl: event.currentTarget.value,
-                            }))
-                        }
-                        value={draft.baseUrl}
-                    />
-                </DialogField>
-
-                <DialogField
-                    description="Optional account header for multi-account setups."
-                    label="Default account"
-                >
+            <IntegrationFieldRow>
+                <IntegrationField label="Default account">
                     <Input
                         aria-label="MerchBase default account"
                         disabled={isSaving}
@@ -107,12 +110,9 @@ export function MerchbaseSettingsDialogBody({
                         placeholder="Use MerchBase default"
                         value={draft.defaultAccount}
                     />
-                </DialogField>
+                </IntegrationField>
 
-                <DialogField
-                    description="Optional marketplace fallback for sales reads."
-                    label="Default marketplace"
-                >
+                <IntegrationField label="Default marketplace">
                     <Input
                         aria-label="MerchBase default marketplace"
                         disabled={isSaving}
@@ -125,118 +125,33 @@ export function MerchbaseSettingsDialogBody({
                         placeholder="Use MerchBase default"
                         value={draft.defaultMarketplace}
                     />
-                </DialogField>
+                </IntegrationField>
+            </IntegrationFieldRow>
 
-                <DialogField
-                    description={
-                        settings.apiKeyConfigured
-                            ? 'Leave blank to keep the existing key.'
-                            : 'Required before the Integration can be healthy.'
+            <IntegrationField label="API key">
+                <SecretInput
+                    ariaLabel="MerchBase API key"
+                    disabled={isSaving}
+                    name="merchbase-api-key"
+                    onChange={(value) =>
+                        onDraftChange((current) => ({ ...current, apiKey: value }))
                     }
-                    label="API key"
-                >
-                    <div className="flex max-w-full flex-col gap-2 sm:flex-row sm:items-center">
-                        <Input
-                            aria-label="MerchBase API key"
-                            className="font-mono sm:flex-1"
-                            disabled={isSaving}
-                            onChange={(event) =>
-                                onDraftChange((current) => ({
-                                    ...current,
-                                    apiKey: event.currentTarget.value,
-                                    clearApiKey: false,
-                                }))
-                            }
-                            placeholder={settings.apiKeyConfigured ? 'Configured' : 'Paste API key'}
-                            type="password"
-                            value={draft.apiKey}
-                        />
-                        <Button
-                            disabled={isSaving || !settings.apiKeyConfigured}
-                            onClick={() =>
-                                onDraftChange((current) => ({
-                                    ...current,
-                                    apiKey: '',
-                                    clearApiKey: true,
-                                }))
-                            }
-                            size="sm"
-                            type="button"
-                            variant="ghost"
-                        >
-                            Clear
-                        </Button>
-                    </div>
-                </DialogField>
+                    onRevealToggle={() => setApiKeyRevealed((revealed) => !revealed)}
+                    placeholder={settings.apiKeyConfigured ? '••••••••••••••••' : 'Enter API key'}
+                    revealed={apiKeyRevealed}
+                    value={draft.apiKey}
+                />
+            </IntegrationField>
 
-                {settings.skillConflict ? (
-                    <div className="rounded-xl border border-warning/25 bg-warning/8 px-3.5 py-3 text-sm">
-                        <div className="font-medium text-foreground">Skill conflict</div>
-                        <div className="mt-1 text-muted-foreground">
-                            Existing skill at{' '}
-                            <span className="font-mono">{settings.skillConflict.skillPath}</span>.
-                            Enabling MerchBase will replace it after confirmation.
-                        </div>
-                    </div>
-                ) : null}
+            {settings.skillConflict ? (
+                <IntegrationNotice title="Skill conflict">
+                    Existing skill at{' '}
+                    <span className="font-mono">{settings.skillConflict.skillPath}</span>. Enabling
+                    MerchBase will replace it after confirmation.
+                </IntegrationNotice>
+            ) : null}
 
-                {error ? <p className="text-error text-sm">{error}</p> : null}
-            </DialogPanel>
-
-            <DialogFooter>
-                <div className="mr-auto flex items-center text-muted-foreground text-sm">
-                    {settings.apiKeyConfigured && !draft.clearApiKey
-                        ? 'API key configured'
-                        : 'API key missing'}
-                </div>
-                <Button disabled={!canSave || isSaving} loading={isSaving} type="submit">
-                    Save
-                </Button>
-            </DialogFooter>
-        </form>
-    );
-}
-
-function MerchbaseDialogSwitch({
-    environmentControlled,
-    ...props
-}: ComponentProps<typeof Switch> & {
-    environmentControlled: boolean;
-}) {
-    const control = <Switch {...props} />;
-
-    if (!environmentControlled) {
-        return control;
-    }
-
-    return (
-        <Tooltip>
-            <TooltipTrigger render={<span className="inline-flex cursor-default" />}>
-                {control}
-            </TooltipTrigger>
-            <TooltipContent className="max-w-64" side="left">
-                {merchbaseEnvironmentLockTooltip}
-            </TooltipContent>
-        </Tooltip>
-    );
-}
-
-function DialogField({
-    children,
-    description,
-    label,
-}: {
-    children: ReactNode;
-    description: ReactNode;
-    label: ReactNode;
-}) {
-    return (
-        <label className="grid gap-2">
-            <span className="space-y-0.5">
-                <span className="block font-medium text-foreground text-sm">{label}</span>
-                <span className="block text-muted-foreground text-sm">{description}</span>
-            </span>
-            {children}
-        </label>
+            {error ? <FieldError>{error}</FieldError> : null}
+        </IntegrationDialog>
     );
 }

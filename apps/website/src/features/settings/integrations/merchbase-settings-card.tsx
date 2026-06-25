@@ -19,7 +19,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from '../../../components/ui/
 import type { MerchbaseSettingsOutput } from '../../../lib/trpc.tsx';
 import { cn } from '../../../lib/utils.ts';
 import { merchbaseEnvironmentLockTooltip } from './merchbase-settings-copy.ts';
-import { MerchbaseSettingsDialogBody } from './merchbase-settings-dialog.tsx';
+import { MerchbaseSettingsDialog } from './merchbase-settings-dialog.tsx';
 import {
     createDraft,
     hasDraftChanges,
@@ -102,19 +102,17 @@ export function MerchbaseSettingsCard({
                 </FluidListItem>
             </FluidList>
 
-            <Dialog onOpenChange={setSettingsDialogOpen} open={settingsDialogOpen}>
-                <DialogContent className="sm:max-w-2xl">
-                    <MerchbaseSettingsDialogBody
-                        canSave={canSave}
-                        draft={draft}
-                        error={error}
-                        isSaving={isSaving}
-                        onDraftChange={setDraft}
-                        onSave={() => requestSave(toSaveInput(normalized))}
-                        settings={settings}
-                    />
-                </DialogContent>
-            </Dialog>
+            <MerchbaseSettingsDialog
+                canSave={canSave}
+                draft={draft}
+                error={error}
+                isSaving={isSaving}
+                onDraftChange={setDraft}
+                onOpenChange={setSettingsDialogOpen}
+                onSave={() => requestSave(toSaveInput(normalized))}
+                open={settingsDialogOpen}
+                settings={settings}
+            />
 
             <Dialog onOpenChange={setReplaceDialogOpen} open={replaceDialogOpen}>
                 <DialogContent showCloseButton={false}>
