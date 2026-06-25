@@ -121,7 +121,10 @@ export function createAppRouter() {
                                 },
                                 {
                                     path: 'memory',
-                                    element: <Navigate replace to="/dashboard/vault" />,
+                                    lazy: lazyRoute(
+                                        () => import('./routes/dashboard/memory-page.tsx'),
+                                        'MemoryPage'
+                                    ),
                                 },
                                 {
                                     path: 'pulse',
@@ -129,7 +132,7 @@ export function createAppRouter() {
                                 },
                                 {
                                     path: 'memories',
-                                    element: <Navigate replace to="/dashboard/vault" />,
+                                    element: <Navigate replace to="/dashboard/memory" />,
                                 },
                                 {
                                     path: 'vault',

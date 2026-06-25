@@ -20,6 +20,9 @@ Tavern has two memory surfaces:
 
 ## In Vault
 
+The Memory page summarizes Vault readiness and maintenance paths. Vault remains
+the file browser for the underlying Markdown knowledge.
+
 Users can inspect:
 
 * the resolved Vault path

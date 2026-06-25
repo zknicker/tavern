@@ -61,6 +61,7 @@ export const hermesCapabilityRequirements = [
 export const routeTabCapabilityRequirements = {
     // Tasks are hidden unless managed Hermes is fully ready because create/run actions execute through Hermes.
     cron: hermesCapabilityRequirements,
+    memory: ['vault'],
     overview: [],
     vault: ['vault'],
 } as const satisfies Record<RouteTab, readonly RuntimeCapabilityId[]>;

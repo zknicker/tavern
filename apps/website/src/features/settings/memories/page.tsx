@@ -12,10 +12,12 @@ import {
     useVaultSettings,
     useVaultStatus,
 } from '../../../hooks/vault/use-vault-status.ts';
-import type { VaultSettingsOutput, VaultStatusOutput } from '../../../lib/trpc.tsx';
-
-type VaultSettings = NonNullable<VaultSettingsOutput>;
-type VaultStatus = NonNullable<VaultStatusOutput>;
+import {
+    formatVaultAccess,
+    formatVaultConfigSource,
+    type VaultHubStatus,
+    type VaultSettings,
+} from '../../memory/wiki-status-format.ts';
 
 export function MemoriesSettings() {
     const statusQuery = useVaultStatus();
@@ -57,7 +59,7 @@ export function VaultSettingsCard({
     isSaving?: boolean;
     onSave: (vaultPath: string) => Promise<unknown> | undefined;
     settings: VaultSettings | null;
-    status: VaultStatus | null;
+    status: VaultHubStatus | null;
 }) {
     const [vaultPath, setVaultPath] = React.useState('');
 
@@ -144,7 +146,7 @@ export function VaultSettingsCard({
                 </SettingsRow>
                 <Separator />
                 <SettingsRow title="Config source">
-                    <SettingsValue>{formatConfigSource(settings.configSource)}</SettingsValue>
+                    <SettingsValue>{formatVaultConfigSource(settings.configSource)}</SettingsValue>
                 </SettingsRow>
                 <Separator />
                 <SettingsRow title="Markdown pages">
@@ -156,7 +158,7 @@ export function VaultSettingsCard({
                 </SettingsRow>
                 <Separator />
                 <SettingsRow title="Access">
-                    <SettingsValue>{formatAccess(status)}</SettingsValue>
+                    <SettingsValue>{formatVaultAccess(status)}</SettingsValue>
                 </SettingsRow>
                 {error ? (
                     <>
@@ -167,27 +169,4 @@ export function VaultSettingsCard({
             </Card>
         </CardFrame>
     );
-}
-
-function formatAccess(status: Pick<VaultStatus, 'readable' | 'writable'>) {
-    if (status.readable && status.writable) {
-        return 'Readable and writable';
-    }
-
-    if (status.readable) {
-        return 'Read-only';
-    }
-
-    return 'Unavailable';
-}
-
-function formatConfigSource(source: VaultSettings['configSource']) {
-    switch (source) {
-        case 'default':
-            return 'Default';
-        case 'environment':
-            return 'Environment';
-        case 'settings':
-            return 'Settings';
-    }
 }

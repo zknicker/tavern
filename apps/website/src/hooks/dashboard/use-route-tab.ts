@@ -4,6 +4,7 @@ import { useLocation, useNavigate } from 'react-router-dom';
 export const routeTabs = [
     { id: 'overview', label: 'Tavern', path: '/dashboard/overview' },
     { id: 'cron', label: 'Tasks', path: '/dashboard/cron' },
+    { id: 'memory', label: 'Memory', path: '/dashboard/memory' },
     { id: 'vault', label: 'Vault', path: '/dashboard/vault' },
 ] as const;
 
