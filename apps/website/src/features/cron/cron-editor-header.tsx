@@ -109,13 +109,13 @@ export function CronEditorHeader({
                     {isPending ? (
                         'Saving...'
                     ) : isNew ? (
-                        <>
+                        <span>
                             Create<span className="hidden sm:inline"> automation</span>
-                        </>
+                        </span>
                     ) : (
-                        <>
+                        <span>
                             Save<span className="hidden sm:inline"> changes</span>
-                        </>
+                        </span>
                     )}
                 </Button>
             </div>
