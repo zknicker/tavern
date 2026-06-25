@@ -9,7 +9,9 @@ import {
     HourglassIcon,
     PaintBrush03Icon,
     PlugSocketIcon,
+    PuzzleIcon,
     SystemUpdate01Icon,
+    ToolsIcon,
     ZapIcon,
 } from '@hugeicons-pro/core-stroke-rounded';
 
@@ -69,13 +71,13 @@ export const settingsNavItems = [
         to: '/dashboard/settings/skills',
     },
     {
-        icon: PlugSocketIcon,
+        icon: ToolsIcon,
         id: 'toolsets',
         label: 'Toolsets',
         to: '/dashboard/settings/toolsets',
     },
     {
-        icon: PlugSocketIcon,
+        icon: PuzzleIcon,
         id: 'integrations',
         label: 'Integrations',
         to: '/dashboard/settings/integrations',
