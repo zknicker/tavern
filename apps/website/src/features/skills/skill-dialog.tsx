@@ -76,7 +76,7 @@ function SkillDialogBody({
 
     return (
         <>
-            <DialogHeader className="gap-3">
+            <DialogHeader className="gap-3 pe-0">
                 <div className="flex size-12 items-center justify-center rounded-full border border-border/70 bg-background text-muted-foreground">
                     <Icon className="size-6" icon={CubeIcon} />
                 </div>
