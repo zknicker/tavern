@@ -344,6 +344,7 @@ export interface TavernAgentRuntimeClient {
     getRuntimeJob(slug: AgentRuntimeJobSlug): Promise<AgentRuntimeJobDetail | null>;
     getSessionGraph(sessionKey: string): Promise<AgentRuntimeSessionGraph>;
     getSessionPrompt(sessionKey: string): Promise<AgentRuntimeSessionPrompt | null>;
+    getSkill(skillId: string): Promise<AgentRuntimeSkill>;
     getSkillHubAvailable(): Promise<AgentRuntimeSkillHubAvailable>;
     getToolsetConfig(toolsetId: string): Promise<AgentRuntimeToolsetConfig>;
     getUpdateStatus(): Promise<AgentRuntimeUpdate>;
@@ -1889,6 +1890,18 @@ class HttpTavernAgentRuntimeClient implements TavernAgentRuntimeClient {
         }
 
         return agentRuntimeSkillListSchema.parse(await response.json());
+    }
+
+    async getSkill(skillId: string) {
+        const response = await fetch(`${this.#baseUrl}${agentRuntimeRoutes.skill(skillId)}`, {
+            headers: this.#authHeaders,
+        });
+
+        if (!response.ok) {
+            await readErrorResponse(response);
+        }
+
+        return agentRuntimeSkillSchema.parse(await response.json());
     }
 
     async listToolsets() {

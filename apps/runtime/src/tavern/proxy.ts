@@ -198,6 +198,9 @@ async function dispatchSkills({ client, request, url }: RouteContext, segments: 
     if (!skillId) {
         return undefined;
     }
+    if (request.method === 'GET' && !segments[2]) {
+        return await client.getSkill(skillId);
+    }
     if (request.method === 'PUT' && segments[2] === 'enabled') {
         return await client.updateSkillEnabled(skillId, await readJson(request));
     }

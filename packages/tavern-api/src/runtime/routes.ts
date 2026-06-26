@@ -96,6 +96,7 @@ export const agentRuntimeRoutes = {
     bindings: '/bindings',
     discordBinding: (id: string) => `/bindings/discord/${encodeURIComponent(id)}`,
     discordBindings: '/bindings/discord',
+    skill: (id: string) => `/skills/${encodeURIComponent(id)}`,
     skillEnabled: (id: string) => `/skills/${id}/enabled`,
     skillHubAvailable: '/skills/hub/available',
     skillHubInstall: '/skills/hub/install',

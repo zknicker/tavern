@@ -128,6 +128,8 @@ catalog.
 
 - Tavern reads runtime-visible skills through the runtime's skill inventory
   surface.
+- Tavern reads one installed skill's source-backed detail through
+  `/skills/{id}` when the user previews `SKILL.md`.
 - Tavern reads runtime toolsets through Runtime's managed Hermes proxy.
 - Tavern reads available skills (built-in library, tap listings, and the
   installed lockfile map) through Runtime's `/skills/hub/available` route —
@@ -168,15 +170,14 @@ catalog.
 ## UI Model
 
 - Skills and Toolsets are separate settings pages.
-- The Skills page has Installed and Available tabs. Installed is the inventory:
-  enabled, disabled (visibly muted), and needs-setup skills. Available lists
-  installable skills grouped by source; installed items show an installed mark
-  instead of an add action.
-- A skill dialog is the detail surface for both tabs: the rendered SKILL.md,
-  the enable toggle for installed skills, an Uninstall action for hub-installed
-  skills, and an Install action (gated by the scan verdict) for available
-  skills. Skills the hub lockfile does not know (workspace or managed skills)
-  are not uninstallable.
+- The Skills page is a full-height file-tree browser. Installed skills, Plugin
+  skills, tap skills, and the built-in library are grouped as folders in the
+  settings sidebar, and each skill exposes a `SKILL.md` file row.
+- Selecting `SKILL.md` opens the detail preview beside the tree: rendered
+  Markdown, the enable toggle for installed skills, an Uninstall action for
+  hub-installed skills, and an Install action (gated by the scan verdict) for
+  available skills. Skills the hub lockfile does not know (workspace or managed
+  skills) are not uninstallable.
 - A sources dialog on the Skills page adds and removes tap repos.
 - The Toolsets page contains Hermes toolsets visible to Tavern, the Add
   toolset dialog, and the toolset setup dialog.

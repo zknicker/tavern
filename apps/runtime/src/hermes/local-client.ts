@@ -21,6 +21,7 @@ import {
     type AgentRuntimeSessionPreviewList,
     type AgentRuntimeSessionPrompt,
     type AgentRuntimeSessionResync,
+    type AgentRuntimeSkill,
     type AgentRuntimeSkillSummary,
     type AgentRuntimeStartModelProviderOAuth,
     type AgentRuntimeSubmitModelProviderOAuth,
@@ -53,6 +54,7 @@ import {
     agentRuntimeSessionMessageListSchema,
     agentRuntimeSessionPreviewListSchema,
     agentRuntimeSessionResyncSchema,
+    agentRuntimeSkillSchema,
     agentRuntimeStartModelProviderOAuthSchema,
     agentRuntimeSubmitModelProviderOAuthSchema,
 } from '@tavern/api';
@@ -769,6 +771,27 @@ export class LocalHermesClient extends LocalHermesUnsupportedSurfaces {
         return { skills: await markManagedPluginSkills(skills) };
     }
 
+    async getSkill(skillId: string): Promise<AgentRuntimeSkill> {
+        const summary = (await this.listSkills()).skills.find((skill) => skill.id === skillId);
+        if (!summary) {
+            throw unsupportedHermesSurface(`Hermes skill "${skillId}"`);
+        }
+
+        const detail = await this.#readSkillContent(summary);
+        return agentRuntimeSkillSchema.parse({
+            ...summary,
+            contentMarkdown: detail.content,
+            filePath: detail.path ?? summary.filePath ?? null,
+            files: [
+                {
+                    path: 'SKILL.md',
+                    sizeBytes: new TextEncoder().encode(detail.content).byteLength,
+                },
+            ],
+            installSource: null,
+        });
+    }
+
     async listToolsets(): Promise<{ toolsets: AgentRuntimeToolset[] }> {
         const response = await this.#http.get('/api/tools/toolsets');
         return {
@@ -1286,6 +1309,15 @@ export class LocalHermesClient extends LocalHermesUnsupportedSurfaces {
         });
         this.#liveSessions.set(sessionKey, liveSessionId);
         return { created: true, hermesSessionKey, liveSessionId };
+    }
+
+    async #readSkillContent(summary: AgentRuntimeSkillSummary) {
+        const params = new URLSearchParams({ name: summary.skillKey ?? summary.name });
+        const response = asRecord(await this.#http.get(`/api/skills/content?${params.toString()}`));
+        return {
+            content: readString(response, ['content']) ?? '',
+            path: readString(response, ['path']),
+        };
     }
 
     async #resolveHermesSessionKey(sessionKey: string) {

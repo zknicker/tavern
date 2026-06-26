@@ -1979,6 +1979,47 @@ describe('LocalHermesClient adapter-owned state', () => {
         });
     });
 
+    it('reads Hermes skill content by runtime skill name', async () => {
+        httpServer = Bun.serve({
+            fetch: async (request) => {
+                const url = new URL(request.url);
+                if (request.method === 'GET' && url.pathname === '/api/skills') {
+                    return Response.json([
+                        {
+                            description: 'Reads pages.',
+                            enabled: true,
+                            name: 'browser',
+                        },
+                    ]);
+                }
+                if (request.method === 'GET' && url.pathname === '/api/skills/content') {
+                    return Response.json({
+                        content: '# Browser\n\nRead pages.',
+                        name: url.searchParams.get('name'),
+                        path: '/tmp/hermes/skills/browser/SKILL.md',
+                    });
+                }
+                return new Response('not found', { status: 404 });
+            },
+            port: 0,
+        });
+
+        const { LocalHermesClient } = await import('./local-client');
+        const client = new LocalHermesClient({
+            baseUrl: `http://127.0.0.1:${httpServer.port}`,
+            token: null,
+        });
+
+        const skill = await client.getSkill('browser');
+
+        expect(skill).toMatchObject({
+            contentMarkdown: '# Browser\n\nRead pages.',
+            filePath: '/tmp/hermes/skills/browser/SKILL.md',
+            files: [{ path: 'SKILL.md', sizeBytes: 22 }],
+            id: 'browser',
+        });
+    });
+
     it('toggles Hermes toolsets by runtime toolset name', async () => {
         const requests: Array<{ body: unknown; method: string; pathname: string }> = [];
         let enabled = true;

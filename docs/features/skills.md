@@ -12,18 +12,13 @@ can use from the runtime-managed Hermes instance.
 
 ## In the box
 
-* **Skills page, Installed tab.** The inventory: enabled, disabled (visibly
-  muted), and needs-setup user-managed skills. Rows open the skill dialog.
-* **Skills page, Plugins tab.** Runtime-provided Plugin starter skills. These
-  rows are read-only reflections of Settings -> Plugins.
-* **Skills page, Available tab.** Installable skills grouped by source: your
-  GitHub repos (taps, including private repos the runtime can access) and the
-  engine's built-in library of official optional skills. Installed items show
-  an installed mark; the rest show an add action. There is no marketplace
-  search — you find skills on the internet and add the repo here.
-* **Skill dialog.** One detail surface for installed and available skills: the
-  rendered SKILL.md, the enable toggle, the security scan verdict, Install for
-  available skills, and Uninstall for hub-installed skills.
+* **Skills page.** A full-height file-tree browser groups installed skills,
+  Plugin skills, tap skills, and the built-in library. The tree is the settings
+  page sidebar. Each skill exposes a `SKILL.md` file in the tree; selecting it
+  opens the rendered preview beside the tree.
+* **Skill preview.** One detail surface for installed and available skills: the
+  rendered `SKILL.md`, the enable toggle, the security scan verdict, Install
+  for available skills, and Uninstall for hub-installed skills.
 * **Manage sources.** A dialog on the Skills page that adds and removes tap
   repos. Removing a repo never uninstalls skills installed from it.
 * **Toolsets page.** Enable or disable user-managed Hermes tool groups such as

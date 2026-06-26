@@ -1,0 +1,273 @@
+import {
+    AddCircleIcon,
+    Delete02Icon,
+    FileEmpty02Icon,
+    MoreHorizontalIcon,
+} from '@hugeicons-pro/core-stroke-rounded';
+import type * as React from 'react';
+import { Icon } from '../../components/ui/icon.tsx';
+import { Menu, MenuItem, MenuPopup, MenuTrigger } from '../../components/ui/menu.tsx';
+import { Button } from '../../components/ui/primitives/button.tsx';
+import { Spinner } from '../../components/ui/spinner.tsx';
+import { Switch } from '../../components/ui/switch.tsx';
+import { useSkillEnabledSet } from '../../hooks/skills/use-skill-enabled-set.ts';
+import { useSkillHubInstall } from '../../hooks/skills/use-skill-hub-install.ts';
+import { useSkillHubPreview } from '../../hooks/skills/use-skill-hub-preview.ts';
+import { useSkillHubScan } from '../../hooks/skills/use-skill-hub-scan.ts';
+import { useSkillHubUninstall } from '../../hooks/skills/use-skill-hub-uninstall.ts';
+import { useSkillPreview } from '../../hooks/skills/use-skill-preview.ts';
+import { VaultMarkdownViewer } from '../vault/vault-markdown-viewer.tsx';
+import { formatSkillName } from './skill-name-format.ts';
+import {
+    formatSkillPreviewDate,
+    getSkillCreator,
+    mergeKeywords,
+    parseSkillMarkdownMetadata,
+    stripFrontmatter,
+} from './skill-preview-metadata.ts';
+import type { SkillTreeSubject } from './skill-tree-model.ts';
+
+export function SkillPreviewPane({ subject }: { subject: null | SkillTreeSubject }) {
+    if (!subject) {
+        return <SkillPreviewEmpty detail="Select a SKILL.md file from the skills tree." />;
+    }
+
+    return <SelectedSkillPreview key={subject.treePath} subject={subject} />;
+}
+
+function SelectedSkillPreview({ subject }: { subject: SkillTreeSubject }) {
+    const setEnabled = useSkillEnabledSet();
+    const install = useSkillHubInstall();
+    const uninstall = useSkillHubUninstall();
+    const installedPreview = useSkillPreview({
+        skillId: subject.installed ? subject.skillId : null,
+    });
+    const hubPreview = useSkillHubPreview({
+        identifier: subject.installed ? null : subject.identifier,
+    });
+    const scanQuery = useSkillHubScan({
+        identifier: subject.installed ? null : subject.identifier,
+    });
+    const scanBlocked = scanQuery.data?.policy === 'block';
+    const mutationError = install.error ?? uninstall.error ?? setEnabled.error;
+    const rawMarkdown = installedPreview.data?.contentMarkdown ?? hubPreview.data?.skillMd ?? '';
+    const markdownMetadata = parseSkillMarkdownMetadata(rawMarkdown);
+    const markdown = stripFrontmatter(rawMarkdown);
+    const keywords = mergeKeywords(markdownMetadata.keywords, hubPreview.data?.tags ?? []);
+    const isLoading =
+        (installedPreview.isPending && subject.installed && subject.skillId) ||
+        (hubPreview.isPending && !subject.installed && subject.identifier);
+    const previewError = installedPreview.error ?? hubPreview.error;
+
+    return (
+        <div className="flex h-full min-h-0 flex-col bg-background">
+            <div className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden px-3 pt-4 pb-3">
+                <header className="px-2">
+                    <div className="flex items-start gap-3">
+                        <div className="min-w-0 flex-1">
+                            <h2 className="truncate font-semibold text-foreground text-xl leading-tight">
+                                {formatSkillName(subject.name)}
+                            </h2>
+                        </div>
+                        <SkillPreviewActions
+                            install={install}
+                            scanBlocked={scanBlocked}
+                            setEnabled={setEnabled}
+                            subject={subject}
+                            uninstall={uninstall}
+                        />
+                    </div>
+                    <SkillDetailSummary
+                        createdBy={markdownMetadata.createdBy ?? getSkillCreator(subject)}
+                        description={subject.description}
+                        keywords={keywords}
+                        updatedAt={subject.updatedAt}
+                    />
+                    {mutationError ? (
+                        <p className="mt-3 text-error text-sm">{mutationError.message}</p>
+                    ) : null}
+                </header>
+
+                <SkillMarkdownPreview
+                    error={previewError?.message ?? null}
+                    isLoading={Boolean(isLoading)}
+                    markdown={markdown}
+                />
+            </div>
+        </div>
+    );
+}
+
+function SkillDetailSummary({
+    createdBy,
+    description,
+    keywords,
+    updatedAt,
+}: {
+    createdBy: string;
+    description: null | string;
+    keywords: string[];
+    updatedAt: null | string;
+}) {
+    return (
+        <div className="mt-6">
+            <div className="grid grid-cols-[max-content_max-content] gap-x-10 gap-y-1">
+                <span className="font-semibold text-muted-foreground text-sm">Created by</span>
+                <span className="font-semibold text-muted-foreground text-sm">Last updated at</span>
+                <span className="text-foreground text-sm leading-5">{createdBy}</span>
+                <span className="text-foreground text-sm leading-5">
+                    {formatSkillPreviewDate(updatedAt)}
+                </span>
+            </div>
+            {description ? (
+                <div className="mt-4 max-w-[48rem]">
+                    <p className="font-semibold text-muted-foreground text-sm">Description</p>
+                    <p className="mt-1 text-foreground text-sm leading-5">{description}</p>
+                </div>
+            ) : null}
+            {keywords.length > 0 ? (
+                <div className="mt-3 flex flex-wrap gap-1.5">
+                    {keywords.slice(0, 8).map((keyword) => (
+                        <span
+                            className="inline-flex h-6 items-center rounded-md border border-border/70 bg-muted/20 px-2 text-muted-foreground text-sm leading-none"
+                            key={keyword}
+                        >
+                            Keyword&nbsp;
+                            <strong className="font-semibold text-foreground">{keyword}</strong>
+                        </span>
+                    ))}
+                </div>
+            ) : null}
+        </div>
+    );
+}
+
+function SkillPreviewActions({
+    install,
+    scanBlocked,
+    setEnabled,
+    subject,
+    uninstall,
+}: {
+    install: ReturnType<typeof useSkillHubInstall>;
+    scanBlocked: boolean;
+    setEnabled: ReturnType<typeof useSkillEnabledSet>;
+    subject: SkillTreeSubject;
+    uninstall: ReturnType<typeof useSkillHubUninstall>;
+}) {
+    const canUninstall = Boolean(subject.installed && subject.uninstallName);
+
+    return (
+        <div className="flex shrink-0 items-center gap-1.5">
+            {subject.installed && subject.skillId && !subject.readOnly ? (
+                <Switch
+                    aria-label={`${subject.enabled ? 'Disable' : 'Enable'} ${subject.name}`}
+                    checked={subject.enabled === true}
+                    className="data-[checked]:bg-success"
+                    disabled={setEnabled.isPending}
+                    onCheckedChange={(checked) =>
+                        setEnabled.mutate({ enabled: checked, skillId: subject.skillId! })
+                    }
+                />
+            ) : null}
+            {subject.installed || !subject.identifier ? null : (
+                <Button
+                    disabled={install.isPending || scanBlocked}
+                    onClick={() => install.mutate({ identifier: subject.identifier! })}
+                    size="sm"
+                    title={scanBlocked ? 'The security scan blocked this skill.' : undefined}
+                >
+                    {install.isPending ? (
+                        <Spinner className="size-4" />
+                    ) : (
+                        <Icon icon={AddCircleIcon} />
+                    )}
+                    Install
+                </Button>
+            )}
+            <Menu>
+                <MenuTrigger
+                    render={
+                        <Button
+                            aria-label={`${subject.name} actions`}
+                            className="text-foreground"
+                            size="icon-sm"
+                            title="Skill actions"
+                            variant="ghost"
+                        />
+                    }
+                >
+                    <Icon className="size-4" icon={MoreHorizontalIcon} />
+                </MenuTrigger>
+                <MenuPopup align="end">
+                    <MenuItem
+                        disabled={!canUninstall || uninstall.isPending}
+                        onClick={() => {
+                            if (subject.uninstallName) {
+                                uninstall.mutate({ name: subject.uninstallName });
+                            }
+                        }}
+                    >
+                        {uninstall.isPending ? (
+                            <Spinner className="size-4" />
+                        ) : (
+                            <Icon className="size-4" icon={Delete02Icon} />
+                        )}
+                        Uninstall
+                    </MenuItem>
+                </MenuPopup>
+            </Menu>
+        </div>
+    );
+}
+
+function SkillMarkdownPreview({
+    error,
+    isLoading,
+    markdown,
+}: {
+    error: null | string;
+    isLoading: boolean;
+    markdown: string;
+}) {
+    if (isLoading) {
+        return (
+            <SkillPreviewState>
+                <Spinner className="size-5" />
+            </SkillPreviewState>
+        );
+    }
+    if (error) {
+        return (
+            <SkillPreviewState>
+                <p className="px-8 text-center text-error text-sm">{error}</p>
+            </SkillPreviewState>
+        );
+    }
+    if (markdown.trim().length === 0) {
+        return <SkillPreviewEmpty detail="No SKILL.md content is available for this skill." />;
+    }
+    return (
+        <article className="mt-5 min-w-0 rounded-xl border border-border/70 bg-card px-9 py-7 [&_>div]:text-base [&_>div]:leading-7 [&_a]:break-all [&_blockquote]:break-words [&_h1]:mb-4 [&_h1]:text-[1.25rem] [&_h1]:leading-7 [&_h1]:tracking-normal [&_h2]:mt-7 [&_h2]:mb-3 [&_h2]:text-[1.0625rem] [&_h2]:leading-6 [&_h3]:text-base [&_li]:break-words [&_p]:my-4 [&_p]:break-words [&_pre]:rounded-lg [&_pre]:border [&_pre]:border-border/60 [&_pre]:bg-background [&_pre]:px-4 [&_pre]:py-3">
+            <VaultMarkdownViewer value={markdown} />
+        </article>
+    );
+}
+
+function SkillPreviewState({ children }: { children: React.ReactNode }) {
+    return <div className="grid h-full min-h-[28rem] place-items-center">{children}</div>;
+}
+
+function SkillPreviewEmpty({ detail }: { detail: string }) {
+    return (
+        <SkillPreviewState>
+            <div className="grid justify-items-center gap-3 px-8 text-center">
+                <span className="flex size-12 items-center justify-center rounded-full border border-border/60 bg-muted/30 text-muted-foreground">
+                    <Icon className="size-6" icon={FileEmpty02Icon} />
+                </span>
+                <p className="font-medium text-foreground text-sm">No preview</p>
+                <p className="max-w-sm text-muted-foreground text-sm">{detail}</p>
+            </div>
+        </SkillPreviewState>
+    );
+}

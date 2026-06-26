@@ -1,4 +1,5 @@
 import { createRouter } from '../trpc.ts';
+import { getSkillProcedure } from './get.ts';
 import { skillHubAvailableProcedure } from './hub-available.ts';
 import { skillHubInstallProcedure } from './hub-install.ts';
 import { skillHubPreviewProcedure } from './hub-preview.ts';
@@ -32,6 +33,7 @@ import {
 
 export const skillRouter = createRouter({
     list: listSkillsProcedure,
+    get: getSkillProcedure,
     runtimeList: listRuntimeSkillsProcedure,
     onUpdate: onSkillUpdate,
     setEnabled: setSkillEnabledProcedure,

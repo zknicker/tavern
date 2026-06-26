@@ -1,4 +1,4 @@
-import { Outlet } from 'react-router-dom';
+import { Outlet, useLocation } from 'react-router-dom';
 import { useAppLayoutPreference } from '../../../hooks/dashboard/use-app-layout-preference.ts';
 import { useLayoutContext } from '../../shell/use-layout-context.ts';
 import { SettingsSidebarNav } from './sidebar-nav.tsx';
@@ -26,9 +26,24 @@ function SettingsContent({
 }: {
     layoutContext: ReturnType<typeof useLayoutContext>;
 }) {
+    const location = useLocation();
+    const isFullContentRoute = location.pathname === '/dashboard/settings/skills';
+
     return (
-        <section className="flex min-h-0 flex-1 flex-col overflow-y-scroll [scrollbar-gutter:stable]">
-            <div className="mx-auto w-full max-w-5xl px-12 pt-6 pb-16">
+        <section
+            className={
+                isFullContentRoute
+                    ? 'flex min-h-0 flex-1 flex-col overflow-hidden'
+                    : 'flex min-h-0 flex-1 flex-col overflow-y-scroll [scrollbar-gutter:stable]'
+            }
+        >
+            <div
+                className={
+                    isFullContentRoute
+                        ? 'h-full min-h-0 w-full flex-1'
+                        : 'mx-auto w-full max-w-5xl px-12 pt-6 pb-16'
+                }
+            >
                 <Outlet context={layoutContext} />
             </div>
         </section>

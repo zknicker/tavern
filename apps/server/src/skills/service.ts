@@ -1,7 +1,11 @@
 import type { AgentRuntimeSkillSummary } from '@tavern/api';
 import type { TavernAgentRuntimeClient } from '../agent-runtime/client.ts';
 import { listAgentRuntimePlugins } from '../agent-runtime/plugins.ts';
-import { listAgentRuntimeSkills, setAgentRuntimeSkillEnabled } from '../agent-runtime/skills.ts';
+import {
+    getAgentRuntimeSkill,
+    listAgentRuntimeSkills,
+    setAgentRuntimeSkillEnabled,
+} from '../agent-runtime/skills.ts';
 import {
     listAgentRuntimeToolsets,
     setAgentRuntimeToolsetEnabled,
@@ -13,6 +17,7 @@ import {
     type SkillSummary,
     setSkillEnabledInputSchema,
     setToolsetEnabledInputSchema,
+    skillIdSchema,
     skillListSchema,
     skillSummarySchema,
     type ToolsetSummary,
@@ -58,6 +63,15 @@ export async function listSkills(): Promise<SkillList> {
             ),
         ].map((toolset) => buildToolsetSummary(toolset, runtimePlugins)),
     });
+}
+
+export async function getSkill(input: unknown) {
+    const parsed = skillIdSchema.parse(input);
+    const skill = await getAgentRuntimeSkill(parsed);
+    if (!skill) {
+        throw new Error('Runtime skill details are unavailable.');
+    }
+    return skill;
 }
 
 export async function setSkillEnabled(input: unknown): Promise<SkillList> {

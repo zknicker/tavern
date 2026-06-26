@@ -36,6 +36,28 @@ export async function listAgentRuntimeSkillIds(
     return skills?.map((skill) => skill.id) ?? null;
 }
 
+export async function getAgentRuntimeSkill(
+    skillId: string,
+    client: TavernAgentRuntimeClient | null = createConfiguredAgentRuntimeClient(),
+    runtimeId?: string | null
+) {
+    if (!client) {
+        return null;
+    }
+
+    const capabilityRuntimeId = runtimeId ?? getCurrentConfiguredAgentRuntimeConnection()?.id;
+    return capabilityRuntimeId
+        ? await withCapabilityStatus(
+              {
+                  capability: 'skills',
+                  method: 'skills.get',
+                  runtimeId: capabilityRuntimeId,
+              },
+              async () => await client.getSkill(skillId)
+          )
+        : await client.getSkill(skillId);
+}
+
 export async function setAgentRuntimeSkillEnabled(
     skillId: string,
     input: { enabled: boolean },

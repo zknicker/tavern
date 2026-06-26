@@ -11,6 +11,7 @@ import { handleHermesProxyRequest } from './proxy';
 const hermesMock = vi.hoisted(() => ({
     close: vi.fn(),
     getAgentFile: vi.fn(),
+    getSkill: vi.fn(),
     listSkills: vi.fn(),
     listSessionPreviews: vi.fn(),
     listToolsets: vi.fn(),
@@ -111,6 +112,37 @@ describe('Hermes proxy routes', () => {
         expect(hermesMock.updateSkillEnabled).toHaveBeenCalledWith('browser', {
             enabled: false,
         });
+    });
+
+    it('routes skill detail reads to managed Hermes', async () => {
+        hermesMock.getSkill.mockResolvedValueOnce({
+            contentMarkdown: '# Browser\n',
+            files: [{ path: 'SKILL.md', sizeBytes: 10 }],
+            id: 'browser',
+            installSource: null,
+            name: 'browser',
+        });
+
+        const response = await handleHermesProxyRequest(
+            new Request('http://runtime.test/skills/browser')
+        );
+
+        expect(response?.status).toBe(200);
+        expect(hermesMock.getSkill).toHaveBeenCalledWith('browser');
+        await expect(response?.json()).resolves.toMatchObject({
+            contentMarkdown: '# Browser\n',
+            id: 'browser',
+            name: 'browser',
+        });
+    });
+
+    it('does not treat nested skill routes as skill detail reads', async () => {
+        const response = await handleHermesProxyRequest(
+            new Request('http://runtime.test/skills/browser/config')
+        );
+
+        expect(response).toBeNull();
+        expect(hermesMock.getSkill).not.toHaveBeenCalled();
     });
 
     it('returns the managed Hermes toolset list', async () => {

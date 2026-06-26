@@ -36,6 +36,8 @@ also exposes a concrete skill for it.
 The API covers:
 
 * list visible skills
+* read one installed skill's detail, rendered from Runtime-owned skill source
+  content
 * enable or disable runtime-managed Hermes skills
 * read setup requirements
 * list Hermes toolsets visible to Tavern

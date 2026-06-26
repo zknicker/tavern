@@ -194,6 +194,8 @@ export async function handleTavernRuntimeRequest(request: Request): Promise<Resp
         );
     }
 
+    const segments = url.pathname.split('/').filter(Boolean).map(decodeURIComponent);
+
     if (request.method === 'GET' && url.pathname === agentRuntimeRoutes.agents) {
         const response = await handleHermesProxyRequest(request);
         return response ?? notFound();
@@ -214,6 +216,11 @@ export async function handleTavernRuntimeRequest(request: Request): Promise<Resp
         return response ?? notFound();
     }
 
+    if (request.method === 'GET' && segments[0] === 'skills' && segments[1] && !segments[2]) {
+        const response = await handleHermesProxyRequest(request);
+        return response ?? notFound();
+    }
+
     if (request.method === 'GET' && url.pathname === agentRuntimeRoutes.sessions) {
         const response = await handleHermesProxyRequest(request);
         return response ?? notFound();
@@ -224,7 +231,6 @@ export async function handleTavernRuntimeRequest(request: Request): Promise<Resp
         return response ?? notFound();
     }
 
-    const segments = url.pathname.split('/').filter(Boolean).map(decodeURIComponent);
     if (
         request.method === 'GET' &&
         segments[0] === 'agents' &&
